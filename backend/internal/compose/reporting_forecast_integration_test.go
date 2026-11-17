@@ -21,6 +21,7 @@ import (
 )
 
 func TestReportingForecastEditionRechecksProjectionPermission(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	selection := f.selection()
 	selection.Metrics = []crmcontracts.ReportingMetricID{"forecast_landing"}
@@ -76,6 +77,7 @@ func TestReportingForecastEditionRechecksProjectionPermission(t *testing.T) {
 }
 
 func TestReportingForecastReconcilesEverySupportSegmentWithSourceEvidence(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	selection := f.selection()
 	selection.Metrics = []crmcontracts.ReportingMetricID{"forecast_landing"}
@@ -121,6 +123,7 @@ func TestReportingForecastReconcilesEverySupportSegmentWithSourceEvidence(t *tes
 // reverse id order moves them on disk and changes no figure. The receipt still
 // holds, and a changed amount must refuse it.
 func TestReportingForecastReceiptHoldsWhenTheDealRowsMoveAndRefusesARealChange(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	selection := f.selection()
 	selection.Metrics = []crmcontracts.ReportingMetricID{"forecast_landing"}
@@ -150,6 +153,7 @@ func TestReportingForecastReceiptHoldsWhenTheDealRowsMoveAndRefusesARealChange(t
 }
 
 func TestReportingHTTPLiveEvidenceReceiptAndExport(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	handler := reportingHTTPRouter(f)
 	query := url.Values{"scope_kind": {"workspace"}, "pipeline_id": {f.env.pipeline.String()}, "period": {"this_month"}}

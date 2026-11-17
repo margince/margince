@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -35,7 +36,7 @@ func hiddenNoiseMail(t *testing.T, e *integration.Env, senders ...string) (*Coun
 		verdicts[disposition.String()] = capture.KindSpam
 		mail[sender] = id
 	}
-	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{verdicts: verdicts}, CaptureConfig{}, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: verdicts}, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
@@ -60,6 +61,7 @@ func hasContent(t *testing.T, e *integration.Env, id ids.UUID) bool {
 // A legal hold, an open subject request and a colleague's import each keep a
 // message out of every destructive path. The noise sweep is one.
 func TestTheNoiseSweepLeavesProtectedMailStanding(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const held, requested, shared, plain = "held@bulk.example", "asked@bulk.example", "shared@bulk.example", "plain@bulk.example"
 	engine, mail := hiddenNoiseMail(t, e, held, requested, shared, plain)
@@ -97,6 +99,7 @@ func TestTheNoiseSweepLeavesProtectedMailStanding(t *testing.T) {
 // The Message-ID and the reply links stay with the redacted row. They are the
 // tombstone that ties a later arrival of the same message to what was judged.
 func TestRedactedNoiseMailKeepsItsMessageIdentity(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	engine, mail := hiddenNoiseMail(t, e, "loud@bulk.example")
 	noise := mail["loud@bulk.example"]
@@ -131,6 +134,7 @@ func TestRedactedNoiseMailKeepsItsMessageIdentity(t *testing.T) {
 // every pass. A page of one proves the sweep walks past it; the default page
 // proves the two messages do not share a transaction.
 func TestOneNoiseMessageThatFailsDoesNotHoldBackTheRest(t *testing.T) {
+	t.Parallel()
 	for _, pageSize := range []int{1, 0} {
 		e := integration.Setup(t)
 		engine, mail := hiddenNoiseMail(t, e, "stuck@bulk.example", "next@bulk.example")

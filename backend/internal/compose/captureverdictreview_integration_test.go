@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -34,13 +35,14 @@ import (
 // created while the disposition closes as `real`, both on the redemption's
 // transaction — the only path by which an `unsure` sender becomes a record.
 func TestCounterpartyAcceptCreatesTheRecordsAndClosesTheDisposition(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	activityID := seedCapturedMail(t, e, "dana@acceptco.example", "about your services")
 	dispositionID := seedPendingDisposition(t, e, "dana@acceptco.example", "acceptco.example", activityID)
 	retireToUnsure(t, e, dispositionID)
 
 	svc := NewApprovalsServiceWithEffects(e.Pool)
-	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN}, CaptureConfig{}, slog.Default())
 	if err := seedLegacySenderReviews(t, e, engine); err != nil {
 		t.Fatalf("staging reviews: %v", err)
 	}
@@ -89,13 +91,14 @@ func TestCounterpartyAcceptCreatesTheRecordsAndClosesTheDisposition(t *testing.T
 // It could, and silently: the decision commits before the effect runs, so the
 // human saw an approved proposal whose records were never created.
 func TestEditingTheCapturedMessageDoesNotCancelItsWaitingReview(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	activityID := seedCapturedMail(t, e, "dana@editco.example", "about your services")
 	dispositionID := seedPendingDisposition(t, e, "dana@editco.example", "editco.example", activityID)
 	retireToUnsure(t, e, dispositionID)
 
 	svc := NewApprovalsServiceWithEffects(e.Pool)
-	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN}, CaptureConfig{}, slog.Default())
 	if err := seedLegacySenderReviews(t, e, engine); err != nil {
 		t.Fatalf("staging reviews: %v", err)
 	}
@@ -183,12 +186,13 @@ func stagedProposalID(t *testing.T, e *integration.Env, dispositionID ids.UUID) 
 // it is stranded exactly where nobody looks: still `pending`, invisible to the
 // review queue, and holding a slot against the deferral ceiling forever.
 func TestAnExhaustedDispositionIsRetiredRatherThanStranded(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	activityID := seedCapturedMail(t, e, "stuck@limbo.example", "hello")
 	dispositionID := seedPendingDisposition(t, e, "stuck@limbo.example", "limbo.example", activityID)
 	spendAttempts(t, e, dispositionID, capture.PendingMaxAttempts)
 
-	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN}, CaptureConfig{}, slog.Default())
 	if err := engine.ReconcileLedgerWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
 		t.Fatalf("reconciling the ledger: %v", err)
 	}
@@ -210,13 +214,14 @@ func TestAnExhaustedDispositionIsRetiredRatherThanStranded(t *testing.T) {
 // row stays `unsure`, gets re-staged on the next tick, and asks the same contact
 // the same question every hour forever while holding a cap slot.
 func TestADeclinedReviewClosesTheDispositionInsteadOfReasking(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	activityID := seedCapturedMail(t, e, "declined@maybe.example", "hi")
 	dispositionID := seedPendingDisposition(t, e, "declined@maybe.example", "maybe.example", activityID)
 	retireToUnsure(t, e, dispositionID)
 
 	svc := NewApprovalsServiceWithEffects(e.Pool)
-	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN}, CaptureConfig{}, slog.Default())
 	if err := seedLegacySenderReviews(t, e, engine); err != nil {
 		t.Fatalf("staging reviews: %v", err)
 	}
@@ -265,12 +270,13 @@ func spendAttempts(t *testing.T, e *integration.Env, id ids.UUID, attempts int) 
 // ceiling and against its sender's address the whole time. That tail is what
 // makes filling the ceiling worth an outsider's while.
 func TestAnUnansweredReviewAgesOutAndTakesItsOfferWithIt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	activityID := seedCapturedMail(t, e, "ignored@maybe.example", "hi")
 	dispositionID := seedPendingDisposition(t, e, "ignored@maybe.example", "maybe.example", activityID)
 	retireToUnsure(t, e, dispositionID)
 
-	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN}, CaptureConfig{}, slog.Default())
 	if err := seedLegacySenderReviews(t, e, engine); err != nil {
 		t.Fatalf("staging reviews: %v", err)
 	}
@@ -325,13 +331,14 @@ func TestAnUnansweredReviewAgesOutAndTakesItsOfferWithIt(t *testing.T) {
 // must win. Losing that race would create the records AND record the question as
 // closed unanswered — the ledger describing an outcome the database contradicts.
 func TestAgeingOutLosesToAHumanWhoDecidedFirst(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	activityID := seedCapturedMail(t, e, "decided@maybe.example", "hi")
 	dispositionID := seedPendingDisposition(t, e, "decided@maybe.example", "maybe.example", activityID)
 	retireToUnsure(t, e, dispositionID)
 
 	svc := NewApprovalsServiceWithEffects(e.Pool)
-	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN}, CaptureConfig{}, slog.Default())
 	if err := seedLegacySenderReviews(t, e, engine); err != nil {
 		t.Fatalf("staging reviews: %v", err)
 	}
@@ -363,6 +370,7 @@ func TestAgeingOutLosesToAHumanWhoDecidedFirst(t *testing.T) {
 // that colleague has left, the question is staged for nobody. The row also
 // leaves the backlog, so it cannot hold up senders who can still be asked.
 func TestASenderQuestionWhoseMailboxOwnerLeftIsStagedForNobody(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	askable := seedPendingDisposition(t, e, "erin@stays.example", "stays.example", seedCapturedMail(t, e, "erin@stays.example", "hello"))
 	orphaned := seedPendingDisposition(t, e, "finn@left.example", "left.example", seedCapturedMail(t, e, "finn@left.example", "hello"))
@@ -371,7 +379,7 @@ func TestASenderQuestionWhoseMailboxOwnerLeftIsStagedForNobody(t *testing.T) {
 	e.WsExec(t, `UPDATE capture_pending_counterparty SET owner_id = $2 WHERE id = $1`, orphaned, e.Rep3)
 	e.WsExec(t, `UPDATE app_user SET status = 'deactivated' WHERE id = $1`, e.Rep3)
 
-	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN}, CaptureConfig{}, slog.Default())
 	if err := seedLegacySenderReviews(t, e, engine); err != nil {
 		t.Fatalf("staging reviews: %v", err)
 	}
@@ -417,12 +425,13 @@ func assertSenderReviewCount(t *testing.T, e *integration.Env, owner ids.UUID, w
 }
 
 func TestSenderReviewHealthFollowsTheOfferExpiryAndDecider(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	activityID := seedCapturedMail(t, e, "dana@offerco.example", "about your services")
 	dispositionID := seedPendingDisposition(t, e, "dana@offerco.example", "offerco.example", activityID)
 	retireToUnsure(t, e, dispositionID)
 	assertSenderReviewCount(t, e, e.Rep1, 0)
-	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN}, CaptureConfig{}, slog.Default())
 	if err := seedLegacySenderReviews(t, e, engine); err != nil {
 		t.Fatal(err)
 	}

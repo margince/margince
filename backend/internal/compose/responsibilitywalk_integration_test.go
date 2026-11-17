@@ -17,6 +17,7 @@ import (
 )
 
 func TestReassignedTasksLeavePersonalWorkEvenOnAResumedWalk(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := clocktest.Now(t)
 	due := now.Add(-time.Hour)

@@ -18,6 +18,7 @@ import (
 // A role change reaches the member's mailbox on the next sweep. The wired seam
 // makes the connection due at once, not at the end of its wait.
 func TestChangingARoleMakesTheMembersMailboxDueNow(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.GrantRole(t, e.Rep1, "rep")
 	owner := integration.OwnerConn(t)

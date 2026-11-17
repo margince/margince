@@ -72,6 +72,7 @@ func failMailboxSync(t *testing.T, e *integration.Env) {
 }
 
 func TestAFailedMailboxSyncReachesItsOwnersSystemViewAndNoOtherSellers(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	failMailboxSync(t, e)
 	owner := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)

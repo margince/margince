@@ -27,6 +27,7 @@ import (
 // TestAWalkResumesForTheReaderWhoStartedIt is the ordinary case, and the one
 // every refusal below is measured against.
 func TestAWalkResumesForTheReaderWhoStartedIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	clock := &testClock{at: time.Date(2026, 9, 4, 9, 0, 0, 0, time.UTC)}
 	snaps := worklistsnap.New(e.Pool, clock.Now)
@@ -58,6 +59,7 @@ func TestAWalkResumesForTheReaderWhoStartedIt(t *testing.T) {
 // this proves the SELECT is too — a walk is one contact's position and reading
 // somebody else's would hand over the order their day was ranked in.
 func TestAColleaguesWalkIsNotResumable(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	clock := &testClock{at: time.Date(2026, 9, 4, 9, 0, 0, 0, time.UTC)}
 	snaps := worklistsnap.New(e.Pool, clock.Now)
@@ -82,6 +84,7 @@ func TestAColleaguesWalkIsNotResumable(t *testing.T) {
 // either way — start a fresh snapshot — so there is nothing a distinct answer
 // would buy the honest caller.
 func TestAnExpiredWalkIsRefusedTheSameWayAStolenOneIs(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	clock := &testClock{at: time.Date(2026, 9, 4, 9, 0, 0, 0, time.UTC)}
 	snaps := worklistsnap.New(e.Pool, clock.Now)
@@ -113,6 +116,7 @@ func TestAnExpiredWalkIsRefusedTheSameWayAStolenOneIs(t *testing.T) {
 // reader into an answer they did not ask for — page two of "my tasks"
 // continuing into "the team's deals".
 func TestAWalkIsNotResumableUnderADifferentQuestion(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	clock := &testClock{at: time.Date(2026, 9, 4, 9, 0, 0, 0, time.UTC)}
 	snaps := worklistsnap.New(e.Pool, clock.Now)
@@ -136,6 +140,7 @@ func TestAWalkIsNotResumableUnderADifferentQuestion(t *testing.T) {
 // the honest cut: the walk somebody started most recently is the one they are
 // still on.
 func TestARepsOldestWalksAreSweptAway(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	clock := &testClock{at: time.Date(2026, 9, 4, 9, 0, 0, 0, time.UTC)}
 	snaps := worklistsnap.New(e.Pool, clock.Now)
@@ -187,6 +192,7 @@ func TestARepsOldestWalksAreSweptAway(t *testing.T) {
 // to hold, and writing one against a zero id would be a row every agent shared
 // and any of them could resume into.
 func TestAnAgentHoldsNoWalk(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	clock := &testClock{at: time.Date(2026, 9, 4, 9, 0, 0, 0, time.UTC)}
 	snaps := worklistsnap.New(e.Pool, clock.Now)

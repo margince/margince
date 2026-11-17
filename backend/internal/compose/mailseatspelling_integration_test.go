@@ -37,6 +37,7 @@ func mailSeatIdentities(t *testing.T, e *integration.Env) map[string][]string {
 // spellings. The SQL side compares stored header addresses, and Postgres
 // cannot fold IDNA.
 func TestAUnicodeLoginOwnsItsPunycodeSpellingToo(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.WsExec(t, `UPDATE app_user SET email = 'anna@bücher.example' WHERE id = $1`, e.Rep1)
 
@@ -52,6 +53,7 @@ func TestAUnicodeLoginOwnsItsPunycodeSpellingToo(t *testing.T) {
 // unambiguous holder. Folded only by case, they used to look like two
 // different addresses, each owned by one seat.
 func TestTwoSpellingsOfOneMailboxOnTwoSeatsBelongToNeither(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.WsExec(t, `UPDATE app_user SET email = 'anna@bücher.example' WHERE id = $1`, e.Rep1)
 	if _, err := integration.OwnerConn(t).Exec(context.Background(), `
@@ -72,6 +74,7 @@ func TestTwoSpellingsOfOneMailboxOnTwoSeatsBelongToNeither(t *testing.T) {
 // The restoring read carries every spelling too, so stored mail a seat received
 // in either spelling is still the seat's.
 func TestTheRestoringReadCarriesBothSpellingsOfAUnicodeLogin(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.WsExec(t, `UPDATE app_user SET email = 'anna@bücher.example' WHERE id = $1`, e.Rep1)
 	var got map[string][]string
@@ -124,6 +127,7 @@ func provedIdentities(t *testing.T, e *integration.Env) map[string][]string {
 // A proved mailbox is the seat's in both spellings. Proved by two seats in two
 // spellings, it is one mailbox two seats claim, and proves neither.
 func TestAProvedMailboxIsOneMailboxInEitherSpelling(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	connectMailbox(t, e, e.Rep1, "gmail", "anna@bücher.example")
 	for _, want := range []string{"anna@xn--bcher-kva.example", "anna@bücher.example"} {

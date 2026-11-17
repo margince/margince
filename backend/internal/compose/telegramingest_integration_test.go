@@ -80,6 +80,7 @@ const telegramIngestKickedJSON = `{
 // The job queue is not a request.
 // The worker must build its tenant context from job.Args alone, or it lands the activity in the wrong tenant.
 func TestIngestWorkerReestablishesWorkspaceContextFromArgs(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	connID, rawID := telegramIngestFixture(t, e)
 
@@ -164,6 +165,7 @@ func (uniqueViolationSink) Upsert(context.Context, connector.NormalizedRecord) (
 // The loser of two concurrent first messages must redeliver.
 // Swallowing it would silently drop a customer's message.
 func TestIngestWorkerTreatsAUniqueViolationAsRetryable(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	connID, rawID := telegramIngestFixture(t, e)
 	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
@@ -191,6 +193,7 @@ func TestIngestWorkerTreatsAUniqueViolationAsRetryable(t *testing.T) {
 // proof that a my_chat_member update reaches the same worker path a message does.
 // It must land as a reachability change only.
 func TestIngestWorkerAppliesMembershipWithoutCapturingAnActivity(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	connID, _ := telegramIngestFixture(t, e)
 
@@ -236,6 +239,7 @@ const telegramIngestGroupJSON = `{
 // The worker must ack the delivery and capture nothing.
 // Otherwise a rep's reply would route to the sender's private chat, not the group.
 func TestIngestWorkerCapturesNothingFromAGroupChat(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	connID, _ := telegramIngestFixture(t, e)
 	rawID := e.SeedRawCapture(t, "telegram", "300", []byte(telegramIngestGroupJSON))

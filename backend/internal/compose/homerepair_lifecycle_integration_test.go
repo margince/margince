@@ -20,6 +20,7 @@ import (
 )
 
 func TestReviewedLifecycleRepairWithdrawsContradictedChangesAndPreservesUncertainty(t *testing.T) {
+	t.Parallel()
 	for _, change := range []string{"contract", "project", "workstream", "unknown"} {
 		t.Run(change, func(t *testing.T) {
 			e := integration.Setup(t)
@@ -91,6 +92,7 @@ func proposeAutomaticRepairLifecycle(t *testing.T, e *integration.Env) int {
 }
 
 func TestReviewedLifecycleRepairPreservesAProposalThatBecomesCurrentAgain(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := seedAccountAtStage(t, e, "customer")
 	seedOpenContractEnded(t, e, company)

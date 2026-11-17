@@ -92,6 +92,7 @@ func onRecord(entityType string, id ids.UUID) activities.ActivityLinkInput {
 }
 
 func TestACanceledCalendarMeetingLeavesTheDealClock(t *testing.T) {
+	t.Parallel()
 	f := newClockFixture(t)
 	deal := f.newDeal(t, "Clock calendar deal", nil)
 	heldAt := f.now.AddDate(0, 0, -10)
@@ -115,6 +116,7 @@ func TestACanceledCalendarMeetingLeavesTheDealClock(t *testing.T) {
 }
 
 func TestANoShowLoggedMeetingLeavesTheDealClock(t *testing.T) {
+	t.Parallel()
 	f := newClockFixture(t)
 	deal := f.newDeal(t, "Clock no-show deal", nil)
 	heldAt, missedAt := f.now.AddDate(0, 0, -10), f.now.AddDate(0, 0, -2)
@@ -130,6 +132,7 @@ func TestANoShowLoggedMeetingLeavesTheDealClock(t *testing.T) {
 }
 
 func TestABookedFutureMeetingDoesNotMoveTheDealClockBeforeItStarts(t *testing.T) {
+	t.Parallel()
 	f := newClockFixture(t)
 	deal := f.newDeal(t, "Clock future deal", nil)
 	heldAt := f.now.AddDate(0, 0, -10)
@@ -139,6 +142,7 @@ func TestABookedFutureMeetingDoesNotMoveTheDealClockBeforeItStarts(t *testing.T)
 }
 
 func TestACanceledCalendarMeetingLeavesTheContactClock(t *testing.T) {
+	t.Parallel()
 	f := newClockFixture(t)
 	contact := f.e.SeedContact(t, "Clock Contact", nil)
 	clock := func() *time.Time {
@@ -161,6 +165,7 @@ func TestACanceledCalendarMeetingLeavesTheContactClock(t *testing.T) {
 // The company reads its deals' meetings too, so the called-off meeting is
 // filed on the deal and only the company's deal branch can see it.
 func TestANoShowOnItsDealLeavesTheCompanyClock(t *testing.T) {
+	t.Parallel()
 	f := newClockFixture(t)
 	company := f.e.SeedCompany(t, "Clock Co", nil)
 	companyID := ids.From[ids.CompanyKind](company)

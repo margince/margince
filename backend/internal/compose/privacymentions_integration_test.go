@@ -29,6 +29,7 @@ func logMentionNote(t *testing.T, e *integration.Env, subject, body string, link
 }
 
 func TestContactErasureScrubsUnlinkedNoteMentionsAndKeepsHoldsAndLinkedNotes(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.WsExec(t, `INSERT INTO role_assignment(user_id,role_id) SELECT $1,id FROM role WHERE key='admin' ON CONFLICT DO NOTHING`, e.AdminUser)
 	contact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Anna Berg", Source: "manual", Emails: []contacts.ContactEmailInput{{Email: "anna+crm@example.test", EmailType: "work", IsPrimary: true}}})
@@ -102,6 +103,7 @@ func TestContactErasureScrubsUnlinkedNoteMentionsAndKeepsHoldsAndLinkedNotes(t *
 }
 
 func TestContactErasureLeavesAmbiguousOneWordNameMentionsForReview(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.WsExec(t, `INSERT INTO role_assignment(user_id,role_id) SELECT $1,id FROM role WHERE key='admin' ON CONFLICT DO NOTHING`, e.AdminUser)
 	contact := e.SeedContact(t, "Anna", nil)
@@ -118,6 +120,7 @@ func TestContactErasureLeavesAmbiguousOneWordNameMentionsForReview(t *testing.T)
 }
 
 func TestContactErasureFlagsRetainedDescriptionsSignaturesAndUploadedText(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.WsExec(t, `INSERT INTO role_assignment(user_id,role_id) SELECT $1,id FROM role WHERE key='admin' ON CONFLICT DO NOTHING`, e.AdminUser)
 	subject := e.SeedContact(t, "Anna Berg", nil)
@@ -163,6 +166,7 @@ func TestContactErasureFlagsRetainedDescriptionsSignaturesAndUploadedText(t *tes
 }
 
 func TestContactErasureMatchesPunctuationAndUnicodeNamesAsWholeNames(t *testing.T) {
+	t.Parallel()
 	for _, name := range []string{"Anna Berg.", "Élodie Müller", "Jean-Luc O’Neil"} {
 		t.Run(name, func(t *testing.T) {
 			e := integration.Setup(t)

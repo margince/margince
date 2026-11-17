@@ -29,6 +29,7 @@ func putProviderSettings(t *testing.T, h aiRoutingHandlers, e *integration.Env, 
 }
 
 func TestSettingAProvidersHostRepointsEveryLaneOnIt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := ai.NewRoutingStore(NewSettingsStore(e.Pool), StoredConfig(e.Pool))
 	h := aiRoutingHandlers{store: store}
@@ -63,6 +64,7 @@ func TestSettingAProvidersHostRepointsEveryLaneOnIt(t *testing.T) {
 }
 
 func TestClearingAHostALaneStillNeedsIsRefusedNamingTheLanes(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := ai.NewRoutingStore(NewSettingsStore(e.Pool), StoredConfig(e.Pool))
 	planted, err := ai.ParseRouting([]byte(pinnedBrokerRouting))
@@ -84,6 +86,7 @@ func TestClearingAHostALaneStillNeedsIsRefusedNamingTheLanes(t *testing.T) {
 }
 
 func TestAProviderThisBuildDoesNotKnowIsNotFound(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	h := aiRoutingHandlers{store: ai.NewRoutingStore(NewSettingsStore(e.Pool), StoredConfig(e.Pool))}
 
@@ -98,6 +101,7 @@ func TestAProviderThisBuildDoesNotKnowIsNotFound(t *testing.T) {
 // GET answers, so a client may send it straight back as If-Match, and its tier
 // routing is what was written, so sending the body back freezes nothing.
 func TestAWritesAnswerIsTheDocumentGETReadsBack(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := ai.NewRoutingStore(NewSettingsStore(e.Pool), StoredConfig(e.Pool))
 	h := aiRoutingHandlers{store: store}

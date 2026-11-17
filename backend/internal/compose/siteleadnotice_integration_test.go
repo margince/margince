@@ -95,6 +95,7 @@ func (l *noticeLaneEnv) noticeRecord(t *testing.T, id ids.ApprovalID) string {
 }
 
 func TestAnAcceptedWebsiteLeadIsToldBeforeAnythingElseIsSent(t *testing.T) {
+	t.Parallel()
 	l := setupNoticeLane(t)
 	id := l.stage(t, annaOnTheTeamPage)
 	if err := l.accept(id); err != nil {
@@ -136,6 +137,7 @@ func TestAnAcceptedWebsiteLeadIsToldBeforeAnythingElseIsSent(t *testing.T) {
 }
 
 func TestADecisionRedrivenAfterTheReviewChangedSendsNothing(t *testing.T) {
+	t.Parallel()
 	l := setupNoticeLane(t)
 	id := l.stage(t, annaOnTheTeamPage)
 	l.notices.reviewed++
@@ -156,6 +158,7 @@ func TestADecisionRedrivenAfterTheReviewChangedSendsNothing(t *testing.T) {
 }
 
 func TestTheNoticeLinkOpensTheDisclosureForTheLead(t *testing.T) {
+	t.Parallel()
 	l := setupNoticeLane(t)
 	if err := l.accept(l.stage(t, annaOnTheTeamPage)); err != nil {
 		t.Fatalf("accepting the website lead: %v", err)
@@ -183,6 +186,7 @@ func TestTheNoticeLinkOpensTheDisclosureForTheLead(t *testing.T) {
 }
 
 func TestABouncedNoticeDeletesTheLeadAndLeavesARecordNamingNobody(t *testing.T) {
+	t.Parallel()
 	l := setupNoticeLane(t)
 	id := l.stage(t, annaOnTheTeamPage)
 	if err := l.accept(id); err != nil {
@@ -223,6 +227,7 @@ func TestABouncedNoticeDeletesTheLeadAndLeavesARecordNamingNobody(t *testing.T) 
 }
 
 func TestAWebsiteLeadWithoutAPublishedAddressIsNeverKept(t *testing.T) {
+	t.Parallel()
 	l := setupNoticeLane(t)
 	unaddressed := annaOnTheTeamPage
 	unaddressed.PublishedEmail = ""
@@ -257,6 +262,7 @@ const (
 )
 
 func TestANoticeTheEngineRefusesKeepsNoLead(t *testing.T) {
+	t.Parallel()
 	l := setupNoticeLane(t)
 	id := l.stage(t, annaOnTheTeamPage)
 	// A dead mailbox: the engine refuses the notice, so the capture rolls back.
@@ -275,6 +281,7 @@ func TestANoticeTheEngineRefusesKeepsNoLead(t *testing.T) {
 }
 
 func TestAnAddressAnotherLeadHoldsKeepsNothingFromTheWebsite(t *testing.T) {
+	t.Parallel()
 	l := setupNoticeLane(t)
 	e := l.e
 	name, address := "Anna M.", annasAddress
@@ -308,6 +315,7 @@ func TestAnAddressAnotherLeadHoldsKeepsNothingFromTheWebsite(t *testing.T) {
 // The address became a contact's while the proposal waited. The accept asks again:
 // no lead, no notice, and the decider is told they are already a contact.
 func TestAWebsiteLeadForAnExistingContactKeepsNothing(t *testing.T) {
+	t.Parallel()
 	l := setupNoticeLane(t)
 	e := l.e
 	id := l.stage(t, annaOnTheTeamPage)
@@ -335,6 +343,7 @@ func TestAWebsiteLeadForAnExistingContactKeepsNothing(t *testing.T) {
 }
 
 func TestAFailedRecordOfAnUntoldLeadIsRetriedByDecidingAgain(t *testing.T) {
+	t.Parallel()
 	l := setupNoticeLane(t)
 	unaddressed := annaOnTheTeamPage
 	unaddressed.PublishedEmail = ""
@@ -359,6 +368,7 @@ func TestAFailedRecordOfAnUntoldLeadIsRetriedByDecidingAgain(t *testing.T) {
 }
 
 func TestAWebsiteLeadIsNotHandedOnWhileItsNoticeIsPending(t *testing.T) {
+	t.Parallel()
 	l := setupNoticeLane(t)
 	if err := l.accept(l.stage(t, annaOnTheTeamPage)); err != nil {
 		t.Fatalf("accepting the website lead: %v", err)
@@ -379,6 +389,7 @@ func TestAWebsiteLeadIsNotHandedOnWhileItsNoticeIsPending(t *testing.T) {
 // still inside the bounce window: each holds the lead. Only a notice sent,
 // unbounced and out for the window lets it go.
 func TestTheNoticeHoldFailsClosed(t *testing.T) {
+	t.Parallel()
 	l := setupNoticeLane(t)
 	e := l.e
 	rep := e.As(e.Rep1, nil, integration.AdminPerms)
@@ -415,6 +426,7 @@ func TestTheNoticeHoldFailsClosed(t *testing.T) {
 // The writers of the notice and of its erasure act on what the accept itself
 // recorded, never on a column a request can set.
 func TestTheNoticeWritersRefuseAnyOtherRecord(t *testing.T) {
+	t.Parallel()
 	l := setupNoticeLane(t)
 	e := l.e
 	other := l.otherLead(t)
@@ -465,6 +477,7 @@ func TestTheNoticeWritersRefuseAnyOtherRecord(t *testing.T) {
 // A request cannot move a website lead out of the hold, and cannot create a
 // lead under the website source in the first place.
 func TestARequestCannotDodgeTheNoticeHold(t *testing.T) {
+	t.Parallel()
 	l := setupNoticeLane(t)
 	if err := l.accept(l.stage(t, annaOnTheTeamPage)); err != nil {
 		t.Fatalf("accepting the website lead: %v", err)
@@ -492,6 +505,7 @@ func TestARequestCannotDodgeTheNoticeHold(t *testing.T) {
 }
 
 func TestErasingTheContactAWebsiteLeadBecameRemovesTheNoticeLink(t *testing.T) {
+	t.Parallel()
 	l := setupNoticeLane(t)
 	if err := l.accept(l.stage(t, annaOnTheTeamPage)); err != nil {
 		t.Fatalf("accepting the website lead: %v", err)

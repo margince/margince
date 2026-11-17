@@ -27,6 +27,7 @@ import (
 // `whereArchivedNull` base its neighbours carry, the report would answer 0 for
 // the two statuses the board needs.
 func TestLeadsByStatusCountsTheTerminalLeadsEveryOtherReadHides(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 
 	// Live leads, which any list would also return.
@@ -54,6 +55,7 @@ func TestLeadsByStatusCountsTheTerminalLeadsEveryOtherReadHides(t *testing.T) {
 // the lead grant reads every lead. A count narrowed to the reader's own work
 // would print 2 above a column showing three rows.
 func TestLeadsByStatusCountsEveryLeadTheTerminalColumnLists(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedLeadAt(t, e, "new", false, nil)
 	// The reader's own, a colleague's, and one nobody has claimed: the three
@@ -75,6 +77,7 @@ func TestLeadsByStatusCountsEveryLeadTheTerminalColumnLists(t *testing.T) {
 // The board's owner dial is an owner filter: naming a colleague is refused for
 // a rep, as on every install-wide report.
 func TestLeadsByStatusRefusesARepsOwnerDialOnAColleague(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedLeadAt(t, e, "disqualified", true, &e.Rep3)
 

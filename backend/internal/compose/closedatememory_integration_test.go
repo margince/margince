@@ -48,6 +48,7 @@ func (e *closeDateEnv) leaveMeAlone(t *testing.T, user ids.UUID) {
 // unanswered and left the deal standing on a machine's guess with nothing on
 // the page saying so.
 func TestADealIsCorrectedForARepWhoHasSaidNothing(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	id := e.seedSweepDeal(t, "Nobody objected", e.early, new(95), new(-10), 3)
 
@@ -64,6 +65,7 @@ func TestADealIsCorrectedForARepWhoHasSaidNothing(t *testing.T) {
 
 // And a rep who switched it off is left alone.
 func TestADealIsLeftAloneForARepWhoAskedToBe(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	e.leaveMeAlone(t, e.Rep1)
 	id := e.seedSweepDeal(t, "Hands off", e.early, new(95), new(-10), 3)
@@ -86,6 +88,7 @@ func TestADealIsLeftAloneForARepWhoAskedToBe(t *testing.T) {
 // switch would take it as a yes — the failure mode of comparing against
 // "not manual" instead of against auto.
 func TestADealIsLeftAloneForARepOnVeto(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	if _, err := e.owner.Exec(context.Background(),
 		`INSERT INTO approval_autonomy_policy (id, user_id, kind, mode, veto_window)

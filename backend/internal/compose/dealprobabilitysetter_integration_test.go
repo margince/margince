@@ -43,6 +43,7 @@ func probabilitySetter(reader context.Context, t *testing.T, store *deals.Store,
 }
 
 func TestAnUndoneStageMoveStillNamesTheColleagueWhoSetTheProbability(t *testing.T) {
+	t.Parallel()
 	v := setupStageMove(t)
 	setByHand(v.Admin(), t, v.Deals, v.deal)
 	v.run(t)
@@ -61,6 +62,7 @@ func TestAnUndoneStageMoveStillNamesTheColleagueWhoSetTheProbability(t *testing.
 }
 
 func TestAnUndoneCloseStillNamesTheColleagueWhoSetTheProbability(t *testing.T) {
+	t.Parallel()
 	c := setupCloseLost(t)
 	setByHand(c.Admin(), t, c.Deals, c.silent)
 	if got := c.run(t); got != 1 {

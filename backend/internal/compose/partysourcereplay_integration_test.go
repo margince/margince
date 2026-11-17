@@ -21,6 +21,7 @@ import (
 )
 
 func TestCapturedPartiesReplaysStoredRecipientProofWithoutInventingFolders(t *testing.T) {
+	t.Parallel()
 	for _, excludedFolder := range []bool{false, true} {
 		t.Run(map[bool]string{false: "no folder exclusion", true: "folder provenance unavailable"}[excludedFolder], func(t *testing.T) {
 			e := integration.Setup(t)
@@ -86,6 +87,7 @@ func TestCapturedPartiesReplaysStoredRecipientProofWithoutInventingFolders(t *te
 }
 
 func TestCapturedPartiesRecipientProofRetiresWithTheProviderOriginal(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ref := capturePartiesMailUsing(t, e, newCaptureSink(e.Pool, CaptureConfig{}).WithEnsurer(nil, nil), partyMailProof{outbound: true, sentByOwner: true}, "Bob Buyer <bob@buyer.test>", "", "Could we discuss the product requirements?")
 	if e.WsCount(t, `SELECT count(*) FROM capture_party_source WHERE activity_id=$1`, ref.ID) != 1 {
@@ -103,6 +105,7 @@ func TestCapturedPartiesRecipientProofRetiresWithTheProviderOriginal(t *testing.
 }
 
 func TestHistoricalCalendarReplayKeepsProviderPrivacy(t *testing.T) {
+	t.Parallel()
 	for _, provider := range []string{"gcal", "graphcal"} {
 		for _, privacy := range []string{"normal", "private", "confidential", "personal", "malformed"} {
 			if provider == "gcal" && privacy == "personal" {

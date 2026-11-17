@@ -20,6 +20,7 @@ import (
 // never shown is named back. The proposal writes nothing: the initiative list
 // stays empty.
 func TestTheSetupProposalResolvesTheCatalogTheReaderMaySee(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	start := clocktest.Now(t).UTC().Truncate(time.Second)
 	ctx := initiativeManager(e)
@@ -59,6 +60,7 @@ func TestTheSetupProposalResolvesTheCatalogTheReaderMaySee(t *testing.T) {
 }
 
 func TestTheSetupProposalRefusesWithoutALane(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	ctx := initiativeManager(e)
 	setups := newReportSetups(newReportingService(e.Pool, func() time.Time { return clocktest.Now(t) }), deals.NewStore(InstallationDB(e.Pool), DealsInstallation()), e.Pool)

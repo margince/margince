@@ -195,6 +195,7 @@ func senderPromiseReply(t *testing.T, message, promiser ids.UUID, confidence flo
 // The sender opens their own message and the task, and nothing else on the
 // thread. A third colleague finds neither.
 func TestTheSenderOfACopiedMailHoldsTheirPromiseAndOpensOnlyThatMail(t *testing.T) {
+	t.Parallel()
 	m := seedSenderMail(t, true)
 	e := m.e
 	if got := e.WsScalar(t, `SELECT coalesce(sent_by_colleague::text, '') FROM activity WHERE id = $1`, m.sent); got != m.sender.String() {
@@ -269,6 +270,7 @@ func TestTheSenderOfACopiedMailHoldsTheirPromiseAndOpensOnlyThatMail(t *testing.
 // An unsure promise is put to the sender alone. They accept it, and the task is
 // filed under the records the reader chose, which the sender could not attach.
 func TestTheSenderAcceptsTheirOwnPromiseFromAnotherMembersPrivateMail(t *testing.T) {
+	t.Parallel()
 	m := seedSenderMail(t, true)
 	e := m.e
 	m.runSenderCheck(t)
@@ -317,6 +319,7 @@ func TestTheSenderAcceptsTheirOwnPromiseFromAnotherMembersPrivateMail(t *testing
 // never the sender of mail from that address. DMARC passing does not change it.
 // Its mail grants it nothing and gives it no work.
 func TestASeatAtAForeignDomainGainsNothingFromMailFromItsAddress(t *testing.T) {
+	t.Parallel()
 	m := seedSenderMail(t, false)
 	e := m.e
 	if got := e.WsScalar(t, `SELECT coalesce(sent_by_colleague::text, '') FROM activity WHERE id = $1`, m.sent); got != "" {
@@ -342,6 +345,7 @@ func TestASeatAtAForeignDomainGainsNothingFromMailFromItsAddress(t *testing.T) {
 // longer does. The copy is received mail again and the seat is not its sender.
 // The seat cannot open it. A second run changes nothing.
 func TestTheSenderCheckTurnsBackAStampAtADomainThatIsNotOurs(t *testing.T) {
+	t.Parallel()
 	m := seedSenderMail(t, true)
 	e := m.e
 	e.WsExec(t, `DELETE FROM workspace_email_domain WHERE domain = $1`, senderOwnDomain)
@@ -397,6 +401,7 @@ func joinSorted(a, b ids.UUID) string {
 // Every record the task is filed under is private to the mailbox owner. The
 // sender still finds their own task, and a third colleague finds no row.
 func TestTheSenderFindsTheirTaskWhenEveryRecordItIsFiledUnderIsPrivate(t *testing.T) {
+	t.Parallel()
 	m := seedSenderMail(t, true)
 	e := m.e
 	e.WsExec(t, `UPDATE company SET visibility = 'owner', owner_id = $1`, m.owner)
@@ -435,6 +440,7 @@ func TestTheSenderFindsTheirTaskWhenEveryRecordItIsFiledUnderIsPrivate(t *testin
 // Acceptance reads the copy as it stands. Once it is received mail again, the
 // sender may not accept the promise, and the request stays pending.
 func TestASenderWhoseCopyWasTurnedBackCannotAcceptThePromise(t *testing.T) {
+	t.Parallel()
 	m := seedSenderMail(t, true)
 	e := m.e
 	m.runSenderCheck(t)

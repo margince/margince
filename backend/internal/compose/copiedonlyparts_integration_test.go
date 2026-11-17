@@ -28,6 +28,7 @@ import (
 // syncs first, and the addressed seat's mailbox connects after. Files are
 // staged for a new activity only, so the join is where they can still land.
 func TestACopiedMailboxWithholdsUntilAnAddressedSeatArrives(t *testing.T) {
+	t.Parallel()
 	ctx, db, tag := captureWorkspace(t)
 	blob := blobstore.NewMemory()
 	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blob))
@@ -107,6 +108,7 @@ func TestACopiedMailboxWithholdsUntilAnAddressedSeatArrives(t *testing.T) {
 // A file removed while it waited is not given bytes by a later arrival. The
 // addressed seat still joins the message; the removed row stays withheld.
 func TestARemovedWithheldFileIsNotGivenBytes(t *testing.T) {
+	t.Parallel()
 	ctx, db, tag := captureWorkspace(t)
 	blob := blobstore.NewMemory()
 	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blob))

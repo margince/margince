@@ -72,6 +72,7 @@ func (v *dealVerdictEnv) ownedBy(t *testing.T, name, status string, archived boo
 }
 
 func TestTheTeamListShowsEveryDealTheNightlyCheckSkipsForWantOfALiveOwner(t *testing.T) {
+	t.Parallel()
 	v := setupDealVerdict(t)
 	unowned := v.createDeal(t, "Nobody's deal", nil)
 	v.WsExec(t, `UPDATE deal SET owner_id = NULL WHERE id = $1`, unowned)
@@ -126,8 +127,9 @@ func (l lowConfidenceLane) Complete(context.Context, model.Request) (model.Respo
 }
 
 func TestTheOwnerReadsWhyMarginceChangedNothingAndAColleagueDoesNot(t *testing.T) {
+	t.Parallel()
 	v := setupDealVerdict(t)
-	v.pass.brain = dealVerdictRefs(lowConfidenceLane{cite: &v.note})
+	v.pass.brain = dealVerdictRefs(t, lowConfidenceLane{cite: &v.note})
 	if _, _, err := v.Activities.LogActivity(v.Admin(), activities.LogActivityInput{
 		Kind: "note", Body: new("Account context."), Source: "manual",
 		Links: []activities.ActivityLinkInput{{EntityType: "deal", EntityID: v.deal}},
@@ -182,6 +184,7 @@ func TestTheOwnerReadsWhyMarginceChangedNothingAndAColleagueDoesNot(t *testing.T
 }
 
 func TestAnAppliedChangeLeavesNoCheckOnTheCard(t *testing.T) {
+	t.Parallel()
 	v := setupDealVerdict(t)
 	v.run(t)
 	check, err := latestCheck(v.owner(t), InstallationDB(v.Pool), v.deal)
@@ -191,6 +194,7 @@ func TestAnAppliedChangeLeavesNoCheckOnTheCard(t *testing.T) {
 }
 
 func TestTheTeamListCountsTheValueEachKindOfChangeMoved(t *testing.T) {
+	t.Parallel()
 	v := setupDealVerdict(t)
 	v.run(t)
 	report, err := v.Deals.TeamChanges(v.colleague(), []ids.UUID{v.Rep1}, v.now.Add(-24*time.Hour))
@@ -262,6 +266,7 @@ func (v *dealVerdictEnv) ownersAgentReader() context.Context {
 }
 
 func TestAnAgentActingForTheOwnerReadsNoReasonOnEitherRead(t *testing.T) {
+	t.Parallel()
 	v := setupDealVerdict(t)
 	v.run(t)
 	agent := v.ownersAgentReader()
@@ -279,7 +284,7 @@ func TestAnAgentActingForTheOwnerReadsNoReasonOnEitherRead(t *testing.T) {
 	}
 
 	nothing := setupDealVerdict(t)
-	nothing.pass.brain = dealVerdictRefs(lowConfidenceLane{cite: &nothing.note})
+	nothing.pass.brain = dealVerdictRefs(t, lowConfidenceLane{cite: &nothing.note})
 	nothing.run(t)
 	check, err := latestCheck(nothing.ownersAgentReader(), InstallationDB(nothing.Pool), nothing.deal)
 	if err != nil {
@@ -308,6 +313,7 @@ func (v *dealVerdictEnv) moved(t *testing.T) (map[string]int64, map[ids.UUID]int
 }
 
 func TestALaterEditDoesNotRewriteTheValueAChangeMoved(t *testing.T) {
+	t.Parallel()
 	v := setupBundle(t)
 	groups, rows := v.moved(t)
 	if groups[deals.VerdictStageMoveCorrection] == 0 || groups[deals.VerdictProbabilityCorrection] == 0 || len(rows) != 2 {
@@ -351,9 +357,10 @@ func (l *amountLane) Complete(context.Context, model.Request) (model.Response, e
 }
 
 func TestTwoAmountChangesOnOneDealCountTheirNetMoveOnce(t *testing.T) {
+	t.Parallel()
 	v := setupDealVerdict(t)
 	lane := &amountLane{cite: &v.note, whole: 45000}
-	v.pass.brain = dealVerdictRefs(lane)
+	v.pass.brain = dealVerdictRefs(t, lane)
 	v.run(t)
 	v.note = v.logBuyerMessage(t, "The board raised it: 50,000 EUR a year.")
 	lane.whole = 50000

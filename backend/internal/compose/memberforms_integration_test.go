@@ -17,6 +17,7 @@ import (
 )
 
 func TestAnActiveWebsiteFormMustBeResolvedBeforeItsOwnerIsMerged(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	manager := memberManagerFor(t, e)
 	perms := integration.AdminWithSignals

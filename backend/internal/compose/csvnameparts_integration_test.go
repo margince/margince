@@ -26,6 +26,7 @@ import (
 //
 // Mutation: drop withNamePartsOverStoredEmail, and the address stays the name.
 func TestAReimportNamesAContactCreatedUnderItsAddress(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	w, id := importedContact(t, e, contacts.CreateContactInput{
 		FullName: "jane@acme.test", Source: "manual",
@@ -46,6 +47,7 @@ func TestAReimportNamesAContactCreatedUnderItsAddress(t *testing.T) {
 }
 
 func TestAReimportedNameFollowsTheStoreRule(t *testing.T) {
+	t.Parallel()
 	long := strings.Repeat("b", contacts.ContactNameLimit*2/3)
 	cases := []struct {
 		name, storedFull, storedLast, wantFull, wantFirst string

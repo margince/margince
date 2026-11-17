@@ -127,6 +127,7 @@ func (e *tagScoutEnv) worklistTagSuggestions(ctx context.Context, t *testing.T) 
 }
 
 func TestASuggestibleTagIsProposedOnTheWorklistAndAcceptedAsTheHuman(t *testing.T) {
+	t.Parallel()
 	e := setupTagScout(t)
 	productX := e.tag(t, "Product X", "demo of product x, product x pricing", true)
 	e.tag(t, "Webinar", "demo", false)
@@ -164,6 +165,7 @@ func TestASuggestibleTagIsProposedOnTheWorklistAndAcceptedAsTheHuman(t *testing.
 }
 
 func TestADismissedTagSuggestionReturnsOnlyOnNewerEvidence(t *testing.T) {
+	t.Parallel()
 	e := setupTagScout(t)
 	e.tag(t, "Product X", "product x pricing", true)
 	dana := e.SeedContact(t, "Dana Buyer", &e.Rep1)
@@ -198,6 +200,7 @@ func TestADismissedTagSuggestionReturnsOnlyOnNewerEvidence(t *testing.T) {
 }
 
 func TestATagSuggestionFromOwnerOnlyMailIsShownOnlyToItsOwner(t *testing.T) {
+	t.Parallel()
 	e := setupTagScout(t)
 	e.tag(t, "Product X", "product x demo", true)
 	dana := e.SeedContact(t, "Dana Buyer", &e.Rep1)
@@ -225,6 +228,7 @@ func TestATagSuggestionFromOwnerOnlyMailIsShownOnlyToItsOwner(t *testing.T) {
 }
 
 func TestATagSuggestionsAuditRowAndEventNameNeitherTheTagNorTheRecord(t *testing.T) {
+	t.Parallel()
 	e := setupTagScout(t)
 	productX := e.tag(t, "Product X", "product x demo", true)
 	dana := e.SeedContact(t, "Dana Buyer", &e.Rep1)
@@ -254,6 +258,7 @@ func TestATagSuggestionsAuditRowAndEventNameNeitherTheTagNorTheRecord(t *testing
 }
 
 func TestADecidedTagSuggestionIsGoneFromReadsAndConflictsOnlyForAWriter(t *testing.T) {
+	t.Parallel()
 	e := setupTagScout(t)
 	e.tag(t, "Product X", "product x pricing", true)
 	dana := e.SeedContact(t, "Dana Buyer", &e.Rep1)
@@ -291,6 +296,7 @@ func TestADecidedTagSuggestionIsGoneFromReadsAndConflictsOnlyForAWriter(t *testi
 }
 
 func TestATagSuggestionCitingRestrictedMailIsRetiredAndFreesTheRecord(t *testing.T) {
+	t.Parallel()
 	e := setupTagScout(t)
 	e.tag(t, "Product X", "product x pricing", true)
 	dana := e.SeedContact(t, "Dana Buyer", &e.Rep1)

@@ -36,6 +36,7 @@ func (v *viabilityEnv) contactOnTheDeal(t *testing.T, deal ids.UUID) string {
 // A receipt that stays current over changed evidence is the worse failure.
 // The deal counts as judged and fine until the next nightly pass.
 func TestEveryInputTheAssessmentReadsMovesTheFingerprint(t *testing.T) {
+	t.Parallel()
 	t.Run("a participant's role", func(t *testing.T) {
 		v := setupViability(t)
 		contact := v.contactOnTheDeal(t, v.supported)

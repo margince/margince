@@ -41,6 +41,7 @@ func productOf(lead crmcontracts.Lead) *ids.UUID {
 // A product retired after it was chosen stays on the lead, and an edit that
 // echoes it back still lands.
 func TestALeadKeepsAProductRetiredSinceItWasChosen(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	product := seedProduct(t, e, "Retiring plan")
 	name := "Asked before it retired"
@@ -66,6 +67,7 @@ func TestALeadKeepsAProductRetiredSinceItWasChosen(t *testing.T) {
 // A lead names the product it is interested in when it is written. It may
 // change or clear it, and cannot name a product the catalog retired.
 func TestALeadNamesTheProductItIsInterestedIn(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	suite := seedProduct(t, e, "Suite")
 	onboarding := seedProduct(t, e, "Onboarding")
@@ -116,6 +118,7 @@ func TestALeadNamesTheProductItIsInterestedIn(t *testing.T) {
 // A web form names the product its leads ask about, as it names their owner.
 // It refuses a product the catalog retired when it is saved, not on a post.
 func TestAWebFormNamesTheProductItsLeadsAskAbout(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	suite := seedProduct(t, e, "Suite")
 	retired := seedProduct(t, e, "Retired plan")

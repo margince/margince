@@ -63,6 +63,7 @@ func (privateCalendar) Busy(context.Context, ids.UserID, string, string, time.Ti
 }
 
 func TestMeetingCapabilitiesAreExportedSafelyAndErased(t *testing.T) {
+	t.Parallel()
 	for _, anonymize := range []bool{false, true} {
 		name := "erasure"
 		if anonymize {
@@ -134,6 +135,7 @@ func verifyMeetingPrivacy(t *testing.T, anonymize bool) {
 }
 
 func TestInvitationRecipientMustBelongToAVisibleContact(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Booking guest", nil)
 	address := "guest@example.test"

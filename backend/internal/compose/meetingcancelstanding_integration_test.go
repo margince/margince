@@ -20,6 +20,7 @@ import (
 // A cancellation must wait for the seat's own import row still in flight.
 // Otherwise it judges the seat a stranger, and the meeting stays booked.
 func TestACancellationWaitsForTheSeatsImportInFlight(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id := captureMeeting(t, e, e.AdminUser)
 

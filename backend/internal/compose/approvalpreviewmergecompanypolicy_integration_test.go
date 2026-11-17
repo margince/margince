@@ -17,6 +17,7 @@ import (
 )
 
 func TestCompanyMergePreviewMatchesReceiptRetentionAndHandoffMovement(t *testing.T) {
+	t.Parallel()
 	for _, occupied := range []bool{false, true} {
 		name := "vacant"
 		if occupied {

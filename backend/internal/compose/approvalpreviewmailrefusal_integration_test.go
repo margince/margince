@@ -17,6 +17,7 @@ import (
 )
 
 func TestMailApprovalDoesNotPresentAnIncompleteMessageAsReady(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name   string
 		change map[string]any

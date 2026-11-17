@@ -88,6 +88,7 @@ func (h *aliasHosts) host(t *testing.T, address string) string {
 }
 
 func TestABookingAliasOpensTheSamePageAsTheSlugAndBecomesTheSharedAddress(t *testing.T) {
+	t.Parallel()
 	h := newAliasHosts(t)
 	before, err := h.store.SchedulingProfile(h.ada)
 	if err != nil {
@@ -124,6 +125,7 @@ func TestABookingAliasOpensTheSamePageAsTheSlugAndBecomesTheSharedAddress(t *tes
 }
 
 func TestAnAliasIsRefusedWithAFieldErrorWhenInvalidReservedOrTaken(t *testing.T) {
+	t.Parallel()
 	h := newAliasHosts(t)
 	h.claim(t, h.ada, "ada")
 	h.refused(t, h.ben, "ADA", "taken")
@@ -141,6 +143,7 @@ func TestAnAliasIsRefusedWithAFieldErrorWhenInvalidReservedOrTaken(t *testing.T)
 }
 
 func TestARetiredAliasNeverMovesToAnotherHost(t *testing.T) {
+	t.Parallel()
 	h := newAliasHosts(t)
 	h.claim(t, h.ada, "team")
 	h.claim(t, h.ada, "ada") // rename: "team" is retired
@@ -162,6 +165,7 @@ func TestARetiredAliasNeverMovesToAnotherHost(t *testing.T) {
 }
 
 func TestAHostMayTakeBackTheirOwnRetiredAliasAtOnce(t *testing.T) {
+	t.Parallel()
 	h := newAliasHosts(t)
 	h.claim(t, h.ada, "ada")
 	h.claim(t, h.ada, "") // clear
@@ -182,6 +186,7 @@ func TestAHostMayTakeBackTheirOwnRetiredAliasAtOnce(t *testing.T) {
 }
 
 func TestReplaceAddressRetiresTheAliasWithTheOldSlug(t *testing.T) {
+	t.Parallel()
 	h := newAliasHosts(t)
 	before := h.claim(t, h.ada, "ada")
 	replace := true
@@ -207,6 +212,7 @@ func TestReplaceAddressRetiresTheAliasWithTheOldSlug(t *testing.T) {
 }
 
 func TestADeactivatedHostsAliasOpensNothingAndStaysTheirs(t *testing.T) {
+	t.Parallel()
 	h := newAliasHosts(t)
 	h.claim(t, h.ada, "ada")
 	h.e.WsExec(t, `UPDATE app_user SET status = 'deactivated' WHERE id = $1`, h.e.AdminUser)
@@ -221,6 +227,7 @@ func TestADeactivatedHostsAliasOpensNothingAndStaysTheirs(t *testing.T) {
 }
 
 func TestTwoHostsClaimingOneAliasAtOnceGetOneWinnerAndOneFieldError(t *testing.T) {
+	t.Parallel()
 	h := newAliasHosts(t)
 	var wg sync.WaitGroup
 	results := make([]error, 2)

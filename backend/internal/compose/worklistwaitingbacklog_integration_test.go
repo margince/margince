@@ -397,6 +397,7 @@ func (w *waitingBacklog) assertTailIsTheFold(t *testing.T) {
 // A message the reader may not read is never judged by the tail. No position
 // the tail hands out names it, and the cards are the lane's fold of the rest.
 func TestNoTailPositionNamesAMessageTheReaderCannotRead(t *testing.T) {
+	t.Parallel()
 	r := setupReminders(t)
 	w := waitingBacklog{
 		r: r, contact: r.e.SeedContact(t, "Dana Buyer", nil),

@@ -22,6 +22,7 @@ import (
 )
 
 func TestAnAdmissionWorkerPreservesTheSharedSessionBudgetSnooze(t *testing.T) {
+	t.Parallel()
 	b := setupBackfillWire(t)
 	runID := strandedBackfill(t, b)
 	ctx := backfillWorkContext(principal.WithWorkspaceID(context.Background(), b.env.WS), t, b)
@@ -51,6 +52,7 @@ func TestAnAdmissionWorkerPreservesTheSharedSessionBudgetSnooze(t *testing.T) {
 }
 
 func TestARecoveredRunningJobGetsANewExecutionWithoutDuplicatingTheSuccessor(t *testing.T) {
+	t.Parallel()
 	b := setupBackfillWire(t)
 	runID := strandedBackfill(t, b)
 	ctx := backfillWorkContext(principal.WithWorkspaceID(context.Background(), b.env.WS), t, b)
@@ -95,6 +97,7 @@ func TestARecoveredRunningJobGetsANewExecutionWithoutDuplicatingTheSuccessor(t *
 }
 
 func TestALegacyRunningImportEntersTheAdmissionBudget(t *testing.T) {
+	t.Parallel()
 	b := setupBackfillWire(t)
 	runID := strandedBackfill(t, b)
 	ctx := backfillWorkContext(principal.WithWorkspaceID(context.Background(), b.env.WS), t, b)
@@ -125,6 +128,7 @@ func (c *admissionJobClock) Now() time.Time       { return c.at }
 func (c *admissionJobClock) NowOrNil() *time.Time { return &c.at }
 
 func TestARunningReconcileCannotSuppressALaterRecoveryWindow(t *testing.T) {
+	t.Parallel()
 	b := setupBackfillWire(t)
 	ctx := context.Background()
 	clock := &admissionJobClock{at: clocktest.Now(t)}

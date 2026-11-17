@@ -37,6 +37,7 @@ func (e *forecastEnv) teamLensManagerCtx(user ids.UUID, teams []ids.UUID) contex
 }
 
 func TestALeadCountNeverExceedsTheCallersOwnList(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 
 	// The manager's own, and a colleague's who is on no team: the case a reader

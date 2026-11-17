@@ -90,6 +90,7 @@ func runStatus(t *testing.T, e *integration.Env, handler string) string {
 // a grant exists while the listing still hides the card, so this asks the
 // service the HTTP surface asks.
 func TestAnAutomationStagedActionIsVisibleAndDecidable(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := NewApprovalsServiceWithEffects(e.Pool)
 	contact := e.SeedContact(t, "Reassignment Target", nil)
@@ -107,6 +108,7 @@ func TestAnAutomationStagedActionIsVisibleAndDecidable(t *testing.T) {
 // The title case of the issue, for the one kind whose whole effect is the
 // asking: request_approval's yes is the outcome, so the run finishes.
 func TestApprovingAnAskingOnlyStagingCompletesItsRun(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := NewApprovalsServiceWithEffects(e.Pool)
 	contact := e.SeedContact(t, "Asked About", nil)
@@ -129,6 +131,7 @@ func TestApprovingAnAskingOnlyStagingCompletesItsRun(t *testing.T) {
 // The consumer's two arms share one entry point, so the arm that was there
 // first is asserted beside the arm that was added.
 func TestRefusingAnAskingOnlyStagingStillBlocksItsRun(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := NewApprovalsServiceWithEffects(e.Pool)
 	contact := e.SeedContact(t, "Asked About", nil)
@@ -159,6 +162,7 @@ func TestRefusingAnAskingOnlyStagingStillBlocksItsRun(t *testing.T) {
 // A run that reached a terminal outcome must not be reopened by a late
 // approved event — the one ordering the predicate exists to refuse.
 func TestACompletionDoesNotReviveABlockedRun(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := NewApprovalsServiceWithEffects(e.Pool)
 	contact := e.SeedContact(t, "Asked About", nil)
@@ -207,6 +211,7 @@ func decidedEnvelope(t *testing.T, id ids.ApprovalID, verdict, kind string) keve
 // emptied, and the contact kept the owner they had — a human's authorization
 // spent on nothing, with the run still reading as waiting for it.
 func TestApprovingAReassignmentMovesTheOwnerAndCompletesItsRun(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := NewApprovalsServiceWithEffects(e.Pool)
 	newOwner := e.Rep1
@@ -234,6 +239,7 @@ func TestApprovingAReassignmentMovesTheOwnerAndCompletesItsRun(t *testing.T) {
 // completes in the write's own transaction, so a failed reassignment leaves its
 // firing parked.
 func TestAFailedReassignmentDoesNotMarkItsRunApplied(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := NewApprovalsServiceWithEffects(e.Pool)
 	contact := e.SeedContact(t, "Reassignment Fails", nil)
@@ -269,6 +275,7 @@ func TestAFailedReassignmentDoesNotMarkItsRunApplied(t *testing.T) {
 // and have their own suite; skipping them here is scoped, not silent — the loop
 // says which kinds it covered.
 func TestApprovingAnyStageableKindLeavesItsRunTerminal(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := NewApprovalsServiceWithEffects(e.Pool)
 	registered := map[string]bool{}

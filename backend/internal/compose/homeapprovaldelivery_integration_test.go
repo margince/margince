@@ -110,6 +110,7 @@ func assertCaptureReviewDelivery(t *testing.T, e *integration.Env, approval ids.
 }
 
 func TestCounterpartyStagingKeepsEachImportOwnersDecision(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := approvals.NewService(e.DB())
 	activity := seedCapturedMail(t, e, "staging@agenda.example", "A possible contact")

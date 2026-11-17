@@ -102,6 +102,7 @@ func (e *mergeEnv) rejectMerge(t *testing.T, leadID ids.UUID) {
 // payload's diff hash; the identity earns its place in the test below, where the
 // payload has moved.
 func TestARejectedMergeIsNotProposedAgainOnTheNextSync(t *testing.T) {
+	t.Parallel()
 	e := setupMerge(t)
 	incumbent := e.capturedLead(t, "apollo", "a-1", "Dana Dup", "dana@example.test")
 	e.capturedLead(t, "legacy_crm", "h-9", "Dana Duplicate", "dana@example.test")
@@ -129,6 +130,7 @@ func TestARejectedMergeIsNotProposedAgainOnTheNextSync(t *testing.T) {
 // question, with a different payload. Since provider fields drift constantly,
 // this is the common case rather than the exotic one.
 func TestARejectedMergeStaysRefusedWhenTheCapturedFieldsChange(t *testing.T) {
+	t.Parallel()
 	e := setupMerge(t)
 	incumbent := e.capturedLead(t, "apollo", "a-1", "Dana Dup", "dana@example.test")
 	e.capturedLead(t, "legacy_crm", "h-9", "Dana Duplicate", "dana@example.test")
@@ -148,6 +150,7 @@ func TestARejectedMergeStaysRefusedWhenTheCapturedFieldsChange(t *testing.T) {
 // target-only key would mean one "no" ends dedupe on that lead permanently: a
 // genuinely new collision on a second address would never be raised.
 func TestADifferentAddressIsStillProposedAfterARefusal(t *testing.T) {
+	t.Parallel()
 	e := setupMerge(t)
 	incumbent := e.capturedLead(t, "apollo", "a-1", "Dana Dup", "dana@example.test")
 	e.capturedLead(t, "legacy_crm", "h-9", "Dana Duplicate", "dana@example.test")
@@ -172,6 +175,7 @@ func TestADifferentAddressIsStillProposedAfterARefusal(t *testing.T) {
 // quietly stops raising proposals and every other test still passes, because
 // each one seeds its own lead.
 func TestARejectedMergeOnOneLeadDoesNotSilenceAnother(t *testing.T) {
+	t.Parallel()
 	e := setupMerge(t)
 	declined := e.capturedLead(t, "apollo", "a-1", "Dana Dup", "dana@example.test")
 	e.capturedLead(t, "legacy_crm", "h-9", "Dana Duplicate", "dana@example.test")
@@ -196,6 +200,7 @@ func TestARejectedMergeOnOneLeadDoesNotSilenceAnother(t *testing.T) {
 // questions and forget a refusal the first time a provider changed its mind
 // about case.
 func TestARejectedMergeStaysRefusedWhenTheAddressCaseChanges(t *testing.T) {
+	t.Parallel()
 	e := setupMerge(t)
 	incumbent := e.capturedLead(t, "apollo", "a-1", "Dana Dup", "dana@example.test")
 	e.capturedLead(t, "legacy_crm", "h-9", "Dana Duplicate", "dana@example.test")

@@ -67,6 +67,7 @@ func teamWeekRows(t *testing.T, e *integration.Env) map[string]int {
 }
 
 func TestIndividualPerformanceOffFreezesNoTeamWeekAndKeepsEachRepsOwn(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	w := teamSnapshotWorker(e)
 	seedManagerRoles(t, e, e.Rep1, e.Rep2, e.Rep3)
@@ -95,6 +96,7 @@ func TestIndividualPerformanceOffFreezesNoTeamWeekAndKeepsEachRepsOwn(t *testing
 
 // A week frozen while the switch was on is not served once it is off.
 func TestIndividualPerformanceOffRefusesATeamWeekFrozenBefore(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	w := teamSnapshotWorker(e)
 	seedManagerRoles(t, e, e.Rep1, e.Rep2, e.Rep3)
@@ -144,6 +146,7 @@ func preparedTeamWeekly(t *testing.T, e *mailEnv) (ids.UUID, weeklyMailCandidate
 // A switch turned off after the team's week was built, and before the mail
 // goes, stops the mail: the setting is read again at submission.
 func TestIndividualPerformanceOffBeforeSubmissionSendsNoTeamWeek(t *testing.T) {
+	t.Parallel()
 	e := setupWeeklyMail(t)
 	reviewID, candidate, now := preparedTeamWeekly(t, e)
 	showIndividualPerformanceIn(t, e.Env, false)
@@ -154,6 +157,7 @@ func TestIndividualPerformanceOffBeforeSubmissionSendsNoTeamWeek(t *testing.T) {
 }
 
 func TestATeamWeeklyStillGoesWhileIndividualPerformanceStaysOn(t *testing.T) {
+	t.Parallel()
 	e := setupWeeklyMail(t)
 	reviewID, candidate, now := preparedTeamWeekly(t, e)
 	e.worker.sendWeeklyMail(e.repCtx, reviewID, candidate, now)

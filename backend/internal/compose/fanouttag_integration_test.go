@@ -66,6 +66,7 @@ type inertWorker[T river.JobArgs] struct {
 func (inertWorker[T]) Work(context.Context, *river.Job[T]) error { return nil }
 
 func TestARealFanOutInsertCarriesTheSweepTagIntoRiversTagsColumn(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
 

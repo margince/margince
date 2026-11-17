@@ -75,6 +75,7 @@ func (o *owedEnv) evidence(t *testing.T, candidate activities.RepliedRequest) []
 
 // A reply that lost its thread leaves the request owed until the model judges it.
 func TestARequestAnsweredOffItsThreadSettlesOnThatAnswer(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
 	request := o.askOf(t, "Signed NDA", o.now.Add(-3*time.Hour))
@@ -113,6 +114,7 @@ func TestARequestAnsweredOffItsThreadSettlesOnThatAnswer(t *testing.T) {
 
 // A meeting held with the sender is an answer the model reads, marked as one.
 func TestAHeldMeetingWithTheSenderIsSettlementEvidence(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	pat := o.contact(t, "Pat Buyer", "pat@customer.example")
 	request := o.askOf(t, "Can we talk next week", o.now.Add(-5*time.Hour))
@@ -140,6 +142,7 @@ func TestAHeldMeetingWithTheSenderIsSettlementEvidence(t *testing.T) {
 
 // A meeting with somebody else answers nothing of this sender's.
 func TestAMeetingWithSomebodyElseOffersNothing(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
 	robin := o.contact(t, "Robin Buyer", "robin@other.example")
@@ -153,6 +156,7 @@ func TestAMeetingWithSomebodyElseOffersNothing(t *testing.T) {
 
 // A thread reply that also meets the off-thread rule is read once, as thread mail.
 func TestAReplyOnTheThreadReachesTheModelOnce(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
 	request := o.capture(t, owedMail{
@@ -188,6 +192,7 @@ func TestAReplyOnTheThreadReachesTheModelOnce(t *testing.T) {
 
 // Past the window's size the newest answer stays in it: the verdict is recorded through it.
 func TestTheNewestAnswerIsInTheWindowPastItsSize(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
 	request := o.askOf(t, "Signed NDA", o.now.Add(-20*time.Hour))
@@ -214,6 +219,7 @@ func TestTheNewestAnswerIsInTheWindowPastItsSize(t *testing.T) {
 
 // Our thread reply to their colleague, with them in copy, still reaches the model as thread mail.
 func TestAReplyOnTheThreadFoundBySubjectIsNotCalledASeparateEmail(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
 	request := o.capture(t, owedMail{
@@ -250,6 +256,7 @@ func TestAReplyOnTheThreadFoundBySubjectIsNotCalledASeparateEmail(t *testing.T) 
 
 // Our reply at a day-dated request's stored instant answers it (occurredday.Answers), under any subject.
 func TestADayTieReplyFiledFirstReachesTheModel(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
 	reply := o.weWrite(t, owedMail{
@@ -313,6 +320,7 @@ func (o *owedEnv) askWithTiedCorrection(t *testing.T) (request, correction ids.U
 
 // Their second mail in the request's own second is no answer, but the model still reads it: it may correct the ask.
 func TestTheirMailAtTheRequestsInstantReachesTheModel(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	request, correction := o.askWithTiedCorrection(t)
 
@@ -330,6 +338,7 @@ func TestTheirMailAtTheRequestsInstantReachesTheModel(t *testing.T) {
 
 // The verdict is bound to their tied mail as well. Edited after the model read it, the verdict is dropped.
 func TestAVerdictOverAnEditedTiedMailIsDropped(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	request, correction := o.askWithTiedCorrection(t)
 	candidate, ok := o.offered(t, request)
@@ -353,6 +362,7 @@ func TestAVerdictOverAnEditedTiedMailIsDropped(t *testing.T) {
 }
 
 func TestSettlementReadsTheFilesOnTheActualAnswer(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
 	request := o.askOf(t, "Send the report", o.now.Add(-3*time.Hour))

@@ -54,6 +54,7 @@ func phoneReply(numbers ...string) []map[string]any {
 }
 
 func TestEveryNumberASignatureListsIsRecorded(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := seedEnrichContact(t, e, "bob@numbers.example", fourNumberSignature(germany))
 	brain := &signatureScriptBrain{fields: phoneReply(germany, vietnam, singapore, thailand)}
@@ -135,6 +136,7 @@ func TestEveryNumberASignatureListsIsRecorded(t *testing.T) {
 // A trimmed signature that also changes one number replaces that number's own
 // predecessor, never the number it simply stopped listing.
 func TestAChangedNumberReplacesItsOwnCountryNotAnOmittedOne(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := seedEnrichContact(t, e, "bob@trim.example", fourNumberSignature(germany))
 	brain := &signatureScriptBrain{fields: phoneReply(germany, vietnam, singapore, thailand)}

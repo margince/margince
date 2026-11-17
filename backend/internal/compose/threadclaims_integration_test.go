@@ -39,6 +39,7 @@ func threadReadableBy(t *testing.T, e *integration.Env, seat ids.UUID, message s
 }
 
 func TestForgedReferenceChainsCannotClaimAnotherSeatsConversation(t *testing.T) {
+	t.Parallel()
 	for _, variant := range []string{"first arrival", "legacy neighbour", "legacy replay", "archived foreign message"} {
 		t.Run(variant, func(t *testing.T) {
 			e := integration.Setup(t)
@@ -87,6 +88,7 @@ func TestForgedReferenceChainsCannotClaimAnotherSeatsConversation(t *testing.T) 
 }
 
 func TestSharedConversationKeysStillJoinWhenBothSeatsHoldEveryMessage(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	both := seatAddress(t, e, e.Rep1) + ", " + seatAddress(t, e, e.Rep2)
 	for i, root := range []string{"first@example.test", "second@example.test"} {
@@ -103,6 +105,7 @@ func TestSharedConversationKeysStillJoinWhenBothSeatsHoldEveryMessage(t *testing
 }
 
 func TestAChosenMessageIDCannotReuseAnotherSeatsHeaderRoot(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	captureThreadMail(t, e, e.Rep2, threadMail(seatAddress(t, e, e.Rep2), "foreign@example.test", "Mon, 01 Jun 2026 08:00:00 +0000", "future@example.test", "future@example.test"))
 	captureThreadMail(t, e, e.Rep1, threadMail(seatAddress(t, e, e.Rep1), "future@example.test", "Tue, 02 Jun 2026 08:00:00 +0000", ""))
@@ -112,6 +115,7 @@ func TestAChosenMessageIDCannotReuseAnotherSeatsHeaderRoot(t *testing.T) {
 }
 
 func TestAReplyToAnIsolatedMessageKeepsItsConversation(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	captureThreadMail(t, e, e.Rep2, threadMail(seatAddress(t, e, e.Rep2), "foreign@example.test", "Mon, 01 Jun 2026 08:00:00 +0000", "future@example.test", "future@example.test"))
 	captureThreadMail(t, e, e.Rep1, threadMail(seatAddress(t, e, e.Rep1), "future@example.test", "Tue, 02 Jun 2026 08:00:00 +0000", ""))
@@ -133,6 +137,7 @@ func TestAReplyToAnIsolatedMessageKeepsItsConversation(t *testing.T) {
 // A colleague's private reply does not split the seat off a conversation it
 // shares. Its later mail joins, and the private reply stays private.
 func TestAConversationWithAnUnheldPrivateReplyStaysOneConversation(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	both := seatAddress(t, e, e.Rep1) + ", " + seatAddress(t, e, e.Rep2)
 	raw := threadMail(both, "shared@example.test", "Mon, 01 Jun 2026 08:00:00 +0000", "")
@@ -156,6 +161,7 @@ func TestAConversationWithAnUnheldPrivateReplyStaysOneConversation(t *testing.T)
 // A reply whose header root is another seat's conversation still joins the
 // parent its seat holds, and leaves the other conversation where it was.
 func TestAReplyToAHeldParentUnderAForeignRootJoinsTheParent(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	captureThreadMail(t, e, e.Rep2, threadMail(seatAddress(t, e, e.Rep2), "foreign@example.test", "Mon, 01 Jun 2026 08:00:00 +0000", ""))
 	captureThreadMail(t, e, e.Rep1, threadMail(seatAddress(t, e, e.Rep1), "mine@example.test", "Tue, 02 Jun 2026 08:00:00 +0000", ""))

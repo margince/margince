@@ -21,6 +21,7 @@ import (
 )
 
 func TestReportingPipelineCaptureCannotBecomeAWholeTeamOpeningOrShare(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	f.at = time.Date(2026, 9, 7, 12, 0, 0, 0, time.UTC)
 	scope := crmcontracts.ReportingScope{Kind: "team", Id: ptrUUID(f.env.Team1)}
@@ -67,6 +68,7 @@ func TestReportingPipelineCaptureCannotBecomeAWholeTeamOpeningOrShare(t *testing
 }
 
 func TestDailyCaptureRecordsPopulationAndRemainsIdempotent(t *testing.T) {
+	t.Parallel()
 	e := setupSnapshotJob(t)
 	if err := e.run(t); err != nil {
 		t.Fatal(err)
@@ -88,6 +90,7 @@ func TestDailyCaptureRecordsPopulationAndRemainsIdempotent(t *testing.T) {
 }
 
 func TestFrameworkFailureDoesNotLoseWorkspaceCapture(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	if _, err := f.env.owner.Exec(context.Background(), `UPDATE reporting_framework_revision SET definition='{"template":7}'::jsonb`); err != nil {
 		t.Fatal(err)

@@ -18,6 +18,7 @@ import (
 // A seat that may not delete activities is refused the same way whether it asks
 // what a purge would destroy or confirms it.
 func TestAPurgePreviewRefusesWhereTheConfirmWould(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	mail := seedPurgeableMail(t, e, "anwalt@kanzlei.example", "meine", e.Rep1)
 	rule := seedOwnExclusion(t, e, e.Rep1, capture.ExclusionKindDomain, "kanzlei.example")

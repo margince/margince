@@ -36,6 +36,7 @@ func loginInUnicode(t *testing.T, e *integration.Env, seat ids.UUID, login strin
 // A calendar event naming a seat's login in punycode binds the seat whose
 // login is stored in Unicode. Both spellings are one mailbox.
 func TestAnEventNamingASeatsLoginInEitherSpellingBindsTheSeat(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	loginInUnicode(t, e, e.Rep3, "rep3@bücher.example")
 	captureCalendarEvent(t, e, e.Rep1, meetingmap.Event{
@@ -52,6 +53,7 @@ func TestAnEventNamingASeatsLoginInEitherSpellingBindsTheSeat(t *testing.T) {
 // An import naming an owner by the punycode spelling of a Unicode login
 // assigns that seat.
 func TestAnImportOwnerInEitherSpellingIsTheSeat(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	loginInUnicode(t, e, e.Rep3, "rep3@bücher.example")
 	const owner = "Rep3@xn--bcher-kva.example"

@@ -120,6 +120,7 @@ func runBackfill(t *testing.T, e *integration.Env) int {
 }
 
 func TestTheBackfillAttributesConnectorMailToItsMailboxOwner(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedConnection(t, e, e.Rep1)
 
@@ -142,6 +143,7 @@ func TestTheBackfillAttributesConnectorMailToItsMailboxOwner(t *testing.T) {
 // A bare stamp names no mailbox. The provider's only connection is not proof:
 // the stamp reads the same once a second seat's connection row is gone.
 func TestTheBackfillLeavesBareStampedMailUnowned(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedConnection(t, e, e.Rep1)
 	bare := seedLegacyActivity(t, e, "bf-bare-1", "connector:gmail", "inbound", "pat@counterparty.test")
@@ -155,6 +157,7 @@ func TestTheBackfillLeavesBareStampedMailUnowned(t *testing.T) {
 }
 
 func TestTheBackfillRefusesToGuessBetweenTwoMailboxes(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	// Two contacts have connected the same provider. An activity captured as
 	// 'connector:gmail' could be either mailbox and the row carries no
@@ -178,6 +181,7 @@ func TestTheBackfillRefusesToGuessBetweenTwoMailboxes(t *testing.T) {
 }
 
 func TestTheBackfillIsIdempotentAndTerminates(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedConnection(t, e, e.Rep1)
 	seedLegacyActivity(t, e, "bf-idem-1", "connector:gmail:"+e.Rep1.String(), "outbound", "pat@counterparty.test")
@@ -201,6 +205,7 @@ func TestTheBackfillIsIdempotentAndTerminates(t *testing.T) {
 }
 
 func TestTheBackfillDoesNotInventParticipantsForNotesAndTasks(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedConnection(t, e, e.Rep1)
 
@@ -264,6 +269,7 @@ func seedLegacyActivityOfKind(t *testing.T, e *integration.Env, sourceID, captur
 // edges the author had just corrected. The author would appear to land and
 // then silently come undone, which is worse than never naming one.
 func TestTheBackfillLeavesAuthoredHistoryAlone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedConnection(t, e, e.Rep1)
 
@@ -357,6 +363,7 @@ func outsideParties(t *testing.T, e *integration.Env, activityID ids.UUID) (cont
 // and neither is a contact the timeline links to such a mail. An alias another
 // seat typed speaks for that seat alone. Our side is written in every case.
 func TestTheBackfillWritesNoSeatAddressAsAnOutsideParty(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedConnection(t, e, e.Rep1)
 	connectMailbox(t, e, e.Rep2, "gmail", "rep2@bücher.example")

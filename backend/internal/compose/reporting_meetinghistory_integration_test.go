@@ -17,6 +17,7 @@ import (
 )
 
 func TestReportingMixedMeetingHistoryPreservesRecordedCredit(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	human := reportingActor(e)
 	at := time.Date(2026, 9, 25, 12, 0, 0, 0, time.UTC)
@@ -92,6 +93,7 @@ func TestReportingMixedMeetingHistoryPreservesRecordedCredit(t *testing.T) {
 // team counts it once. An organizer who declined their own meeting is not
 // credited with it.
 func TestReportingMeetingsHeldCreditsEveryAttendeeAndCountsATeamOnce(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	exec := func(t *testing.T, sql string, args ...any) {
 		t.Helper()

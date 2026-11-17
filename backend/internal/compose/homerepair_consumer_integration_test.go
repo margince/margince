@@ -27,6 +27,7 @@ import (
 )
 
 func TestReviewedRepairArchivesHistoricalWorkWithoutRecreatingIt(t *testing.T) {
+	t.Parallel()
 	t.Run("untouched automatic work", func(t *testing.T) { runReviewedRepair(t, "unchanged") })
 	t.Run("selected audience creation", func(t *testing.T) { runReviewedRepair(t, "selected") })
 	t.Run("human edit after review", func(t *testing.T) { runReviewedRepair(t, "edited") })

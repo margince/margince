@@ -16,6 +16,7 @@ import (
 )
 
 func TestSignatureWatermarkOrdersEqualTimeMailAndRejectsAnOlderCompletion(t *testing.T) {
+	t.Parallel()
 	h := setupHistory(t)
 	first := h.writes(t, 0, signed("Director"))
 	second := h.writes(t, 0, signed("Head of Procurement"))

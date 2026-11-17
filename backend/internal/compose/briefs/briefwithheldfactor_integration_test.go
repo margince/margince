@@ -39,6 +39,7 @@ func edgeBlindPerms() principal.Permissions {
 }
 
 func TestABriefNamesTheFactorItCouldNotRead(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 
 	blind, err := b.engine.SnapshotRun(b.As(b.Rep1, []ids.UUID{b.Team1}, edgeBlindPerms()), briefClock)
@@ -56,6 +57,7 @@ func TestABriefNamesTheFactorItCouldNotRead(t *testing.T) {
 // withheld are different answers, and a client that had to tell them apart by
 // guessing would render every brief as withheld or none of them.
 func TestABriefThatReadEveryFactorOmitsNone(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 
 	seeing, err := b.engine.SnapshotRun(b.As(b.Rep1, []ids.UUID{b.Team1}, integration.RepPerms), briefClock)
@@ -96,6 +98,7 @@ func TestABriefThatReadEveryFactorOmitsNone(t *testing.T) {
 // to carry nobody must still report the factor withheld — an answer inferred
 // from the first refusal cannot, because there is no read to be refused.
 func TestABriefNamesWarmthWhenItMayReadSeatsButNotContacts(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 
 	perms := integration.RepPerms

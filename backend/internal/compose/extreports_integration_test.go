@@ -47,7 +47,6 @@ func registerVisitReports(t *testing.T, extra ...extension.Extension) {
 	for _, stmt := range []string{
 		`CREATE SCHEMA IF NOT EXISTS ext`,
 		`GRANT USAGE ON SCHEMA ext TO margince_app`,
-		`DROP TABLE IF EXISTS ext.` + reportDemoTable,
 		`CREATE TABLE ext.` + reportDemoTable + ` (id uuid PRIMARY KEY DEFAULT uuidv7(), archived_at timestamptz, code text NOT NULL UNIQUE, site text, tier integer NOT NULL DEFAULT 2)`,
 		`GRANT SELECT, INSERT, UPDATE, DELETE ON ext.` + reportDemoTable + ` TO margince_app`,
 	} {
@@ -77,9 +76,6 @@ func registerVisitReports(t *testing.T, extra ...extension.Extension) {
 	t.Cleanup(func() {
 		recordkinds.Reset()
 		registerReports(nil)
-		if _, err := owner.Exec(context.Background(), `DROP TABLE IF EXISTS ext.`+reportDemoTable); err != nil {
-			t.Errorf("dropping the visit table: %v", err)
-		}
 	})
 }
 
@@ -128,6 +124,7 @@ func runRegisteredReport(ctx context.Context, t *testing.T, e *integration.Env, 
 	return extensionReportAnswer{}
 }
 
+//testdb:serial registers into a process-wide unit registry
 func TestARegisteredBreakdownCountsLiveRowsOfTheKind(t *testing.T) {
 	e := integration.Setup(t)
 	registerVisitReports(t)
@@ -151,6 +148,7 @@ func TestARegisteredBreakdownCountsLiveRowsOfTheKind(t *testing.T) {
 	}
 }
 
+//testdb:serial registers into a process-wide unit registry
 func TestAReaderWithoutTheKindsReadRightCannotRunItsReports(t *testing.T) {
 	e := integration.Setup(t)
 	registerVisitReports(t)
@@ -163,6 +161,7 @@ func TestAReaderWithoutTheKindsReadRightCannotRunItsReports(t *testing.T) {
 	}
 }
 
+//testdb:serial registers into a process-wide unit registry
 func TestTheFloorWithholdsTheSmallestGroupsAndTheTotal(t *testing.T) {
 	e := integration.Setup(t)
 	registerVisitReports(t)
@@ -185,6 +184,7 @@ func TestTheFloorWithholdsTheSmallestGroupsAndTheTotal(t *testing.T) {
 	}
 }
 
+//testdb:serial registers into a process-wide unit registry
 func TestAFieldMaskExcludesTheKindsRowsAndCountsThem(t *testing.T) {
 	e := integration.Setup(t)
 	registerVisitReports(t)
@@ -205,6 +205,7 @@ func TestAFieldMaskExcludesTheKindsRowsAndCountsThem(t *testing.T) {
 	}
 }
 
+//testdb:serial registers into a process-wide unit registry
 func TestABreakdownByANonTextColumnKeepsItsKeys(t *testing.T) {
 	e := integration.Setup(t)
 	registerVisitReports(t)
@@ -216,6 +217,7 @@ func TestABreakdownByANonTextColumnKeepsItsKeys(t *testing.T) {
 	}
 }
 
+//testdb:serial registers into a process-wide unit registry
 func TestAMultiselectCustomFieldSplitsDealsByCombinationWithoutDoubleCounting(t *testing.T) {
 	e := integration.Setup(t)
 	catalog := customfields.NewService(e.Pool, integration.SchemaPool(t))

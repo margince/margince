@@ -134,6 +134,7 @@ func seedCatalog(t *testing.T, e *integration.Env) map[string]ids.UUID {
 }
 
 func TestEveryAuditEntryNamesTheRecordItIsAbout(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	admin := e.Admin()
 	want := seedCatalog(t, e)
@@ -171,6 +172,7 @@ func TestEveryAuditEntryNamesTheRecordItIsAbout(t *testing.T) {
 }
 
 func TestAnAuditEntryOutsideTheReadersScopeReadsNull(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	admin := e.Admin()
 	mine := e.SeedContact(t, "Dana Weiss", &e.Rep1)
@@ -220,6 +222,7 @@ func TestAnAuditEntryOutsideTheReadersScopeReadsNull(t *testing.T) {
 }
 
 func TestAnErasedRecordsEntriesReadNull(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	admin := e.Admin()
 	erased := e.SeedContact(t, "Erika Mustermann", nil)

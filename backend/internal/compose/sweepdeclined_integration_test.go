@@ -53,6 +53,7 @@ func (b *withholdingWhere) Complete(ctx context.Context, req model.Request) (mod
 }
 
 func TestTheOwedPassJudgesPastAMessageTheModelsDecline(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	hostile := seedWaitingMail(t, e, "Invoice "+hostileMarker)
 	ordinary := seedWaitingMail(t, e, "Monatsreporting Juli")
@@ -72,6 +73,7 @@ func TestTheOwedPassJudgesPastAMessageTheModelsDecline(t *testing.T) {
 }
 
 func TestTheClassifyPassLabelsPastAMessageTheModelsDecline(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	hostile := seedUnlabeledEmail(t, e, "Invoice "+hostileMarker)
 	ordinary := seedUnlabeledEmail(t, e, "please send the offer")
@@ -94,6 +96,7 @@ func TestTheClassifyPassLabelsPastAMessageTheModelsDecline(t *testing.T) {
 }
 
 func TestTheSettlePassJudgesPastAConversationTheModelsDecline(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	hostile := seedAnsweredRequest(t, e, "Invoice "+hostileMarker)
 	ordinary := seedAnsweredRequest(t, e, "Monatsreporting Juli")
@@ -123,6 +126,7 @@ func TestTheSettlePassJudgesPastAConversationTheModelsDecline(t *testing.T) {
 // backlog it would be the oldest row forever, re-read with nine fresh messages
 // every iteration and splitting each batch it rode in into single calls.
 func TestTheClassifyPassAsksADeclinedMessageOnceAcrossPasses(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	hostile := seedUnlabeledEmail(t, e, "Invoice "+hostileMarker)
 	var ordinary []ids.UUID
@@ -151,6 +155,7 @@ func TestTheClassifyPassAsksADeclinedMessageOnceAcrossPasses(t *testing.T) {
 }
 
 func TestTheOwedPassAsksADeclinedMessageOnceAcrossPasses(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	hostile := seedWaitingMail(t, e, "Invoice "+hostileMarker)
 	var ordinary []ids.UUID
@@ -321,6 +326,7 @@ func (b *standInBrain) Complete(context.Context, model.Request) (model.Response,
 // about any message. Recording it as the models' decline would strand the whole
 // backlog on the day a provider is bound, so the pass stops instead.
 func TestAPassWithNoProviderBoundDeclinesNothing(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	waiting := seedWaitingMail(t, e, "Monatsreporting Juli")
 	unlabeled := seedUnlabeledEmail(t, e, "please send the offer")

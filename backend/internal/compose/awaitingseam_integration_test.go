@@ -77,6 +77,7 @@ func awaited(rows []attention.AwaitedReply, id ids.UUID) *attention.AwaitedReply
 }
 
 func TestTheFollowUpSeamNamesTheSentMessageAndTheMeeting(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	sent, met := seedFollowUps(t, e)
 	seam := attentionAwaiting{store: activities.NewStore(e.DB())}

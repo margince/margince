@@ -90,6 +90,7 @@ func taskDoneState(t *testing.T, e *integration.Env, id openapi_types.UUID) stri
 }
 
 func TestBulkCompletingThreeTasksAndUndoingOpensAllThreeAgain(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Herr Vogt", &e.Rep1)
 	items := make([]crmcontracts.BulkItem, 3)
@@ -138,6 +139,7 @@ func TestBulkCompletingThreeTasksAndUndoingOpensAllThreeAgain(t *testing.T) {
 
 // A personal completion cannot settle an unassigned team claim.
 func TestABulkCompletionRefusesUnassignedClaimsAndReportsWhatItLeftAlone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Frau Adler", &e.Rep1)
 	task := seedWorklistTask(t, e, contact, "Send the quote")
@@ -203,6 +205,7 @@ func settledPromise(t *testing.T, e *integration.Env, contact ids.UUID) crmcontr
 // activities, which the Worklist's own promise read requires, is no longer told
 // about them.
 func TestABatchStopsNamingAPromiseOnceItsRequesterLosesActivityRead(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Herr Baum", &e.Rep1)
 	task := seedWorklistTask(t, e, contact, "Call the buyer")
@@ -233,6 +236,7 @@ func TestABatchStopsNamingAPromiseOnceItsRequesterLosesActivityRead(t *testing.T
 // A user's agent reaches a promise as its user does, and the write names the
 // agent. Automatic work is refused it.
 func TestAUsersAgentSettlesAPromiseAndAutomaticWorkIsRefused(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Frau Keller", &e.Rep1)
 	promise := seedWorklistPromise(t, e, contact, "Confirm the delivery date")
@@ -272,6 +276,7 @@ func TestAUsersAgentSettlesAPromiseAndAutomaticWorkIsRefused(t *testing.T) {
 // The Worklist offers Done, and with it the Mark done checkbox, only on a row
 // the reader's write would be admitted on.
 func TestTheWorklistOffersDoneOnlyWhereTheReaderMayWrite(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Herr Vogt", &e.Rep1)
 	task := seedWorklistTask(t, e, contact, "Call back")
@@ -301,6 +306,7 @@ func TestTheWorklistOffersDoneOnlyWhereTheReaderMayWrite(t *testing.T) {
 // A worklist_item names only a claim a Worklist promise row could name: a
 // promise the customer made is no Worklist row, so the change finds nothing.
 func TestABulkCompletionReachesOnlyTheReadersOwnPromises(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Frau Adler", &e.Rep1)
 	theirs := seedClaim(t, e, contact, "We will send the signed order", "commitment_theirs")
@@ -319,6 +325,7 @@ func TestABulkCompletionReachesOnlyTheReadersOwnPromises(t *testing.T) {
 // A user's agent that may read the contact but not change it is refused as its
 // user would be.
 func TestAnAgentWithoutWriteAuthorityOverTheContactLeavesThePromiseOpen(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Herr Lang", &e.Rep1)
 	promise := seedWorklistPromise(t, e, contact, "Call back on Monday")
@@ -355,6 +362,7 @@ func worklistReader(grants map[string]principal.ObjectGrant) principal.Permissio
 // An id that names no live task and no Worklist promise is left alone as
 // not_found: another kind of activity, an archived task, or nothing at all.
 func TestABulkCompletionFindsNothingThatIsNoWorklistItem(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Herr Vogt", &e.Rep1)
 	subject := "Thanks for the call"
@@ -387,6 +395,7 @@ func TestABulkCompletionFindsNothingThatIsNoWorklistItem(t *testing.T) {
 // row: one without the update grants, and a colleague in another team, who
 // reads every contact and task but changes only their team's.
 func TestABulkCompletionLeavesRowsTheReaderMayNotChange(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Frau Adler", &e.Rep1)
 	task := seedWorklistTask(t, e, contact, "Send the quote")
@@ -422,6 +431,7 @@ func TestABulkCompletionLeavesRowsTheReaderMayNotChange(t *testing.T) {
 // A batch's stored skips name a task to its requester while they may read
 // activities, and stop naming it once they may not.
 func TestABatchNamesItsSkippedTasksOnlyWhileTheRequesterReadsThem(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Herr Lang", &e.Rep1)
 	open := seedWorklistTask(t, e, contact, "Call back")
@@ -455,6 +465,7 @@ func TestABatchNamesItsSkippedTasksOnlyWhileTheRequesterReadsThem(t *testing.T) 
 
 // A preview must not offer a personal completion for an unassigned team claim.
 func TestTheWorklistTargetLocksTasksButNotUnassignedTeamClaims(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Frau Keller", &e.Rep1)
 	task := seedWorklistTask(t, e, contact, "Send the quote")

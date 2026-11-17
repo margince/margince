@@ -44,6 +44,7 @@ func namesOf(rows []agents.SlippingDeal) []string {
 // This is the whole point of the second threshold, and it is the case the
 // stalled flag cannot express.
 func TestAShortWindowFindsADealTheStalledThresholdCannotSeeYet(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	pipeline, stage, _ := integration.DealFixture(t, e)
 	quiet := e.SeedDeal(t, "Quiet three weeks", pipeline, stage, &e.AdminUser)
@@ -74,6 +75,7 @@ func TestAShortWindowFindsADealTheStalledThresholdCannotSeeYet(t *testing.T) {
 // A deal past the stalled threshold reaches BOTH windows. Without this the test
 // above passes just as well against a lister that returns nothing at all.
 func TestALongIdleDealReachesBothWindows(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	pipeline, stage, _ := integration.DealFixture(t, e)
 	old := e.SeedDeal(t, "Quiet since spring", pipeline, stage, &e.AdminUser)
@@ -94,6 +96,7 @@ func TestALongIdleDealReachesBothWindows(t *testing.T) {
 // fresh for on the idle clock alone. That arm is independent of the threshold
 // and must not be lost when the window narrows.
 func TestAnOverdueCloseDateAdmitsADealThatIsNotQuietAtAll(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	pipeline, stage, _ := integration.DealFixture(t, e)
 	late := e.SeedDeal(t, "Closing last month", pipeline, stage, &e.AdminUser)
@@ -116,6 +119,7 @@ func TestAnOverdueCloseDateAdmitsADealThatIsNotQuietAtAll(t *testing.T) {
 // A won deal never slips, at any window. The suppression lives in the shared
 // rule rather than in each caller, and narrowing the window must not lose it.
 func TestAClosedDealNeverSlipsAtEitherWindow(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	pipeline, stage, _ := integration.DealFixture(t, e)
 	won := e.SeedDeal(t, "Won in spring", pipeline, stage, &e.AdminUser)

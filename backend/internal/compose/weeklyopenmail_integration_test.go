@@ -19,6 +19,7 @@ import (
 // A week read on its Wednesday still owes its Friday. The Worklist files that
 // task as upcoming, and the weekly mail must read it from there too.
 func TestTheWeeklyMailNamesATaskDueLaterInTheReportedWeek(t *testing.T) {
+	t.Parallel()
 	e := setupWeeklyMail(t)
 	wednesday := time.Date(2026, 7, 8, 10, 0, 0, 0, time.UTC)
 	friday := wednesday.AddDate(0, 0, 2)

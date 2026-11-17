@@ -92,6 +92,7 @@ func (e *reconcileEnv) heldDraftFor(t *testing.T, dealID ids.UUID) (ids.Approval
 
 // An email thread earns the reply itself, not a task telling a rep to write one.
 func TestAnEmailThreadWithNoNextStepStagesADraftedReply(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Answerable", e.pipeline, e.open, &e.Rep1)
 	anchor := e.seedAnswerableThread(t, deal, "Kickoff")
@@ -130,6 +131,7 @@ func TestAnEmailThreadWithNoNextStepStagesADraftedReply(t *testing.T) {
 // account, not theirs, and a rep who sends it without noticing has sent our
 // CRM's internal shorthand to the buyer.
 func TestTheDraftedBodyCarriesNoInternalLabels(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	const dealName = "Weber GmbH — Rahmenvertrag"
 	deal := e.SeedDeal(t, dealName, e.pipeline, e.open, &e.Rep1)
@@ -157,6 +159,7 @@ func TestTheDraftedBodyCarriesNoInternalLabels(t *testing.T) {
 
 // The card's line describes a reply waiting, not a task to write one.
 func TestTheDraftedReplySummaryDescribesAReply(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Weber GmbH", e.pipeline, e.open, &e.Rep1)
 	e.seedAnswerableThread(t, deal, "Rueckfragen zum Angebot")
@@ -190,6 +193,7 @@ func TestTheDraftedReplySummaryDescribesAReply(t *testing.T) {
 // another outbound email, which becomes the next night's latest evidence, and
 // the deal generates a fresh approval every night forever.
 func TestOurOwnOutboundEmailIsNotAThreadToAnswer(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "We wrote last", e.pipeline, e.open, &e.Rep1)
 	sent := e.seedInteraction(t, deal, "email", "Unser Angebot", 1)
@@ -217,6 +221,7 @@ func TestOurOwnOutboundEmailIsNotAThreadToAnswer(t *testing.T) {
 // under held_draft, so a second email arriving while the first draft still
 // waits produced two approvable replies on one deal. Approving both sends both.
 func TestASecondEmailDoesNotStackASecondPendingReply(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Wrote twice", e.pipeline, e.open, &e.Rep1)
 	e.seedAnswerableThread(t, deal, "Erste Frage")
@@ -237,6 +242,7 @@ func TestASecondEmailDoesNotStackASecondPendingReply(t *testing.T) {
 
 // A call has no thread to answer, so it keeps the task proposal.
 func TestACallWithNoNextStepStillStagesTheTaskProposal(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Unanswerable", e.pipeline, e.open, &e.Rep1)
 	// A counterparty WITH a reachable address, so what keeps this on the task
@@ -264,6 +270,7 @@ func TestACallWithNoNextStepStillStagesTheTaskProposal(t *testing.T) {
 // which is the thing worth saying, and the missing address only decides HOW it
 // can be answered.
 func TestAThreadWithNoReplyAddressFallsBackToTheTaskProposal(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "No address", e.pipeline, e.open, &e.Rep1)
 	// An inbound email with no participant and no contact behind it.
@@ -285,6 +292,7 @@ func TestAThreadWithNoReplyAddressFallsBackToTheTaskProposal(t *testing.T) {
 // A thread that already has its task gets no drafted reply once an address
 // shows up: the rep has the follow-up, done or not.
 func TestAThreadThatGotItsTaskIsNotDraftedLater(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Address found later", e.pipeline, e.open, &e.Rep1)
 	anchor := e.seedInteraction(t, deal, "email", "From a stranger", 1)
@@ -306,6 +314,7 @@ func TestAThreadThatGotItsTaskIsNotDraftedLater(t *testing.T) {
 
 // A rejected draft is not redrafted the next night.
 func TestARejectedDraftedReplyIsNotOfferedAgain(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Declined draft", e.pipeline, e.open, &e.Rep1)
 	e.seedAnswerableThread(t, deal, "Kickoff")
@@ -329,6 +338,7 @@ func TestARejectedDraftedReplyIsNotOfferedAgain(t *testing.T) {
 
 // The identity is the THREAD, so a later conversation is drafted again.
 func TestANewThreadIsDraftedAfterAnEarlierDraftWasDeclined(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Wrote again", e.pipeline, e.open, &e.Rep1)
 	declined := e.seedAnswerableThread(t, deal, "Kickoff")
@@ -361,6 +371,7 @@ func TestANewThreadIsDraftedAfterAnEarlierDraftWasDeclined(t *testing.T) {
 // fail AFTER a human approved it — the one place a failure cannot be taken
 // back. The assertion is that the mail goes out and the approval is spent.
 func TestADraftedFollowUpReleasesWithNoWorkflowRunBehindIt(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Send it", e.pipeline, e.open, &e.Rep1)
 	e.seedAnswerableThread(t, deal, "Kickoff")
@@ -393,6 +404,7 @@ func TestADraftedFollowUpReleasesWithNoWorkflowRunBehindIt(t *testing.T) {
 // A drafted reply is a held_draft, and the pass may not invent a second kind
 // for the same question.
 func TestTheDraftedFollowUpUsesTheExistingHeldDraftKind(t *testing.T) {
+	t.Parallel()
 	if automation.HeldDraftKind == deals.FollowUpReconcileKind {
 		t.Fatal("the two proposal kinds collapsed into one, so this test proves nothing")
 	}
@@ -445,6 +457,7 @@ func TestTheDraftedFollowUpUsesTheExistingHeldDraftKind(t *testing.T) {
 // An owner who lacks contact:read gets the TASK proposal: the rep is still told
 // the deal has no next step, and no address reaches the card.
 func TestADraftIsNotComposedForAnOwnerWhoMayNotReadContacts(t *testing.T) {
+	t.Parallel()
 	e := setupReconcileWithOwnerPolicy(t, `{"objects":{"activity":{"create":true,"read":true,"update":true},
 		  "deal":{"read":true,"update":true},"company":{"read":true},
 		  "pipeline":{"read":true}},"row_scope":"all"}`)
@@ -470,6 +483,7 @@ func TestADraftIsNotComposedForAnOwnerWhoMayNotReadContacts(t *testing.T) {
 // DELETE SET NULL clears it when a member is removed, so this state is ordinary.
 // It stages nothing: no draft under the sweep's own principal, and no task.
 func TestAnUnownedDealGetsNoFollowUp(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Orphaned", e.pipeline, e.open, &e.Rep1)
 	e.seedAnswerableThread(t, deal, "Kickoff")
@@ -490,6 +504,7 @@ func TestAnUnownedDealGetsNoFollowUp(t *testing.T) {
 }
 
 func TestTheNightlyDraftAnswersTheLatestEligibleDealMessage(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	now := time.Date(2026, 10, 5, 12, 0, 0, 0, time.UTC)
 	e.reconciler.SetClock(func() time.Time { return now })

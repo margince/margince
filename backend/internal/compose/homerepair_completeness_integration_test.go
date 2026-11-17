@@ -77,6 +77,7 @@ func previewVerdictRepair(operator context.Context, t *testing.T, o *owedEnv, br
 }
 
 func TestTheClassificationRepairReadsOnlyMailReadInFull(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name, ask, prior string
 		reclassified     bool
@@ -132,6 +133,7 @@ func TestTheClassificationRepairReadsOnlyMailReadInFull(t *testing.T) {
 // Applying a correction rechecks the same rule, so a plan cannot write a
 // verdict over a mail that was not read in full.
 func TestApplyingAClassificationCorrectionRefusesMailNotReadInFull(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.now = clocktest.Now(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")

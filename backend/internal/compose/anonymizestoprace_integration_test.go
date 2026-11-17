@@ -49,6 +49,7 @@ func waitForStopLockWaiters(t *testing.T, n int, returned <-chan struct{}) {
 // Mutation: drop the stop lock from anonymiseOneContact, or the anonymized
 // read from Suppress, and the returning address is mailable again.
 func TestAStopRecordedDuringAnAnonymizeStillStopsTheAddress(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const address = "rosa.race@example.test"
 	subject := e.SeedContact(t, "Rosa Race", &e.AdminUser)

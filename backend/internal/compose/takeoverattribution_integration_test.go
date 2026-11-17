@@ -105,6 +105,7 @@ func (r takeoverReading) tasks(t *testing.T) string {
 }
 
 func TestATakenOverPromiseKeepsOneTaskWhenALaterReadingNamesItsPromiser(t *testing.T) {
+	t.Parallel()
 	r := newTakeoverReading(t)
 	const contract = "I will send the signed contract by Friday."
 	if got := r.dispatchOnce(t, r.reading(contract, nil)); got != CommitmentPromiserUnassignable {

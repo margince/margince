@@ -23,13 +23,13 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"os"
 	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -40,6 +40,7 @@ import (
 const numericValueOutOfRange = "22003"
 
 func TestTheTwoSpellingsOfWeightedValueAgree(t *testing.T) {
+	t.Parallel()
 	conn := connectForExpressionParity(t)
 	// The two column references the expression carries, supplied by a derived
 	// table each, so the constant under test needs no rewriting to run.
@@ -115,6 +116,7 @@ func TestTheTwoSpellingsOfWeightedValueAgree(t *testing.T) {
 // a range error from its own narrowing cast, and a change that made either one
 // return quietly would be a lie about money that no report would flag.
 func TestNeitherSpellingOfWeightedValueWrapsWhenTheResultDoesNotFit(t *testing.T) {
+	t.Parallel()
 	conn := connectForExpressionParity(t)
 	query := fmt.Sprintf(
 		`SELECT %s FROM (SELECT $1::bigint AS amount_minor) t, (SELECT $2::int AS win_probability) s`,
@@ -143,15 +145,10 @@ func TestNeitherSpellingOfWeightedValueWrapsWhenTheResultDoesNotFit(t *testing.T
 }
 
 // connectForExpressionParity opens one connection for evaluating an SQL
-// expression over literals. It reads no table, so it needs neither the schema
-// reset nor the workspace GUC every row-reading suite in this package sets up.
+// expression over literals. It reads no table, so it needs no workspace GUC.
 func connectForExpressionParity(t *testing.T) *pgx.Conn {
 	t.Helper()
-	dsn := os.Getenv("MARGINCE_TEST_DSN")
-	if dsn == "" {
-		t.Fatal("MARGINCE_TEST_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
-	conn, err := pgx.Connect(context.Background(), dsn)
+	conn, err := pgx.Connect(context.Background(), testdb.For(t).OwnerDSN)
 	if err != nil {
 		t.Fatalf("connecting to the test database: %v", err)
 	}

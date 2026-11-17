@@ -96,6 +96,7 @@ func (o *owedEnv) runEventPass(t *testing.T, brain *askedBrain) {
 // Conversations the pass may not read are refused before its cap. More of them
 // than the cap holds cannot keep a readable conversation waiting for good.
 func TestConversationsNotReadInFullDoNotFillTheEventPass(t *testing.T) {
+	t.Parallel()
 	o := signalEnv(t)
 	const readable = "We are happy with the service."
 	o.customerSays(t, "readable@customer.example", "", readable, "", o.now.Add(-10*time.Hour))
@@ -117,6 +118,7 @@ func TestConversationsNotReadInFullDoNotFillTheEventPass(t *testing.T) {
 // A later message read only in part may withdraw an older one. The pass reads
 // neither, so the older statement is not raised as the current state.
 func TestALaterMessageReadOnlyInPartKeepsAnOlderEventFromBeingRaised(t *testing.T) {
+	t.Parallel()
 	ended := "We are ending the agreement with your company."
 	for _, tc := range []struct {
 		name, later string
@@ -153,6 +155,7 @@ func TestALaterMessageReadOnlyInPartKeepsAnOlderEventFromBeingRaised(t *testing.
 // A conversation blocked by an unassessed message is read once the data task
 // assesses it, and not again while nothing changes.
 func TestAnAssessedConversationIsReadOnce(t *testing.T) {
+	t.Parallel()
 	o := signalEnv(t)
 	const first, more = "Thanks for the call.", "We would like to add ten seats."
 	o.customerSays(t, "assess-1@customer.example", "", first, "", o.now.Add(-3*time.Hour))

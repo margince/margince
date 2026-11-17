@@ -43,6 +43,7 @@ func exportedEditionRows(reader context.Context, t *testing.T, q *questionEditio
 // it as the screen judges it. The sender gets the count. A reader who may not
 // ask the question gets only that it was withheld.
 func TestAnEditionExportCarriesItsKeptAnswers(t *testing.T) {
+	t.Parallel()
 	q := newQuestionEditions(t)
 	q.keepForAYear(t)
 	edition := q.send(t)

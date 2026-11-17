@@ -47,6 +47,7 @@ func latestDerivedEvent(t *testing.T, e *integration.Env, kind string, id ids.UU
 }
 
 func TestAHistoryMintedContactDoesNotTurnItsLiveMailIntoHistory(t *testing.T) {
+	t.Parallel()
 	b := setupBackfillWire(t)
 	if _, err := capture.NewSettings(NewSettingsStore(b.env.Pool), StoredConfig(b.env.Pool)).Update(b.env.Admin(), capture.SettingsPatch{MailSharing: new(true), SignatureEnrich: new(true)}); err != nil {
 		t.Fatal(err)
@@ -131,6 +132,7 @@ func TestAHistoryMintedContactDoesNotTurnItsLiveMailIntoHistory(t *testing.T) {
 }
 
 func TestAContactRelinkDoesNotReopenAnotherSendersSignature(t *testing.T) {
+	t.Parallel()
 	h := setupHistory(t)
 	integration.ApplyRiverSchema(t)
 	mail := h.writes(t, 0, signed("Director"))

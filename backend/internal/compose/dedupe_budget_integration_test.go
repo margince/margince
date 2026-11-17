@@ -47,6 +47,7 @@ func connectorCtx(e *integration.Env) context.Context {
 }
 
 func TestCaptureDedupeStagesMergeInsteadOfDuplicating(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	sink := capture.NewSink(e.DB()).WithStager(mergeStager{svc: approvals.NewService(e.DB())})
 	ctx := connectorCtx(e)
@@ -105,6 +106,7 @@ func TestCaptureDedupeStagesMergeInsteadOfDuplicating(t *testing.T) {
 }
 
 func TestSeatDerivedBudget(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	// The harness seeds four full-seat humans: three reps and the admin seat.
 	const seats = 4
@@ -148,6 +150,7 @@ func TestSeatDerivedBudget(t *testing.T) {
 // sink, and the verdict goes through the real approvals service with its
 // registered effect. Nothing here supplies its own version of either.
 func TestAcceptingACaptureCollisionFillsTheLeadsEmptyFields(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	// The production wiring, not a service a test assembled: the registry is
 	// exactly what decides whether accepting this card does anything, so a test
@@ -232,6 +235,7 @@ func pendingCollisionFor(t *testing.T, e *integration.Env, target ids.UUID) ids.
 // a way for a connector to quietly rewrite a human's work, which is the reason
 // it is gated behind a human decision in the first place.
 func TestAcceptingACaptureCollisionNeverOverwritesWhatIsAlreadyThere(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := NewApprovalsServiceWithEffects(e.Pool)
 	sink := capture.NewSink(e.DB()).WithStager(mergeStager{svc: svc})

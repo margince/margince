@@ -14,6 +14,7 @@ import (
 )
 
 func TestTranscriptReadingRetainsItsWrittenExplanationLanguage(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct{ language, text string }{{"en", "states no next steps"}, {"de", "keine nächsten Schritte"}, {"vi", "không nêu rõ"}} {
 		t.Run(tc.language, func(t *testing.T) {
 			env := setupTranscript(t)

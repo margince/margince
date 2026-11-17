@@ -65,6 +65,7 @@ func seedSenderContact(t *testing.T, e *integration.Env, address string) ids.UUI
 }
 
 func TestASenderNamesOnlyAContactItsReaderMaySee(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const open, private, shared, none = "open@kunde.example", "private@kunde.example",
 		"shared@kunde.example", "none@kunde.example"
@@ -105,6 +106,7 @@ func TestASenderNamesOnlyAContactItsReaderMaySee(t *testing.T) {
 }
 
 func TestASendersMailIsCountedFromTheSeatsOwnMailbox(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const sender = "zaehlen@kunde.example"
 	now := clocktest.Now(t).UTC().Truncate(time.Microsecond)
@@ -141,6 +143,7 @@ func TestASendersMailIsCountedFromTheSeatsOwnMailbox(t *testing.T) {
 // The ledger keeps a closed question beside the one its sender's next message
 // opened. The page shows the sender once, with the newest answer.
 func TestOneSenderIsOneRowAcrossLedgerRows(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const sender = "wieder@kunde.example"
 	closed := seedPendingDisposition(t, e, sender, "kunde.example", seedCapturedMail(t, e, sender, "Alt"))
@@ -164,6 +167,7 @@ func TestOneSenderIsOneRowAcrossLedgerRows(t *testing.T) {
 // verdict behind a fresh question still names its deletion, and the override
 // still cancels it.
 func TestAnOlderPersonalVerdictStillNamesItsDeletion(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const sender = "mama@familie.example"
 	resolvePersonal(t, e, sender, seedPurgeableMail(t, e, sender, "Sonntag", e.Rep1), e.Rep1, true)
@@ -183,6 +187,7 @@ func TestAnOlderPersonalVerdictStillNamesItsDeletion(t *testing.T) {
 // An exclusion names the member who added it, and nobody for a rule no member
 // added or one whose member has left.
 func TestAnExclusionNamesTheMemberWhoAddedIt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := capture.NewExclusionStore(InstallationDB(e.Pool))
 	seat := purgeCtx(e, e.Rep1)

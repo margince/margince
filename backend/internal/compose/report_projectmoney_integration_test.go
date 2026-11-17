@@ -20,6 +20,7 @@ import (
 // over the phase counts it as zero. A project with a deal no rate can price
 // leaves the phase's sum, average, minimum and maximum without an answer.
 func TestAPhasesMoneyFoldsItsProjectsAsTheirRowsRead(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	company := e.seedID(t, `INSERT INTO company (id, display_name, source, captured_by)
 		VALUES ($1, 'Fold Co', 'manual', 'human:x')`)

@@ -23,6 +23,7 @@ import (
 )
 
 func TestDealsByStageWeightedReconcilesToPerDealRounding(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 
 	// Two equal deals whose OWN weighted values each round UP (12341×60% =
@@ -58,6 +59,7 @@ func TestDealsByStageWeightedReconcilesToPerDealRounding(t *testing.T) {
 // "Explain This Number" resolves the measure too: its drill-through rows
 // reconcile to the cent with the displayed weighted_minor, as AC-F1 asks.
 func TestDealsByStageWeightedDerivationReconcilesExactly(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	e.seedOpenDeal(t, "Alpha", 60, nil, new(int64(12341)))
 	e.seedOpenDeal(t, "Beta", 60, nil, new(int64(12341)))
@@ -96,6 +98,7 @@ func TestDealsByStageWeightedDerivationReconcilesExactly(t *testing.T) {
 // draws as cards and the drill-through opens. A total narrowed to the reader's
 // own work printed "1 deal" above eight cards.
 func TestDealsByStageMeasuresEveryDealTheReaderMaySee(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	e.seedOpenDeal(t, "Mine", 60, &e.Rep1, new(int64(10000)))
 	e.seedOpenDeal(t, "Theirs", 60, &e.Rep3, new(int64(20000)))
@@ -125,6 +128,7 @@ func TestDealsByStageMeasuresEveryDealTheReaderMaySee(t *testing.T) {
 // The board's owner dial is an owner filter: naming a colleague is refused for
 // a rep, as on every install-wide report.
 func TestDealsByStageRefusesARepsOwnerDialOnAColleague(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	e.seedOpenDeal(t, "Theirs", 60, &e.Rep3, new(int64(20000)))
 
@@ -140,6 +144,7 @@ func TestDealsByStageRefusesARepsOwnerDialOnAColleague(t *testing.T) {
 // deal list. `owner_id = $me` never matches NULL, so without the unowned arm
 // the deal would vanish from the rep's board while it sits on their worklist.
 func TestDealsByStageCountsAnUnownedDealForARep(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	e.seedOpenDeal(t, "Unowned", 60, nil, new(int64(10000)))
 	e.seedOpenDeal(t, "Mine", 60, &e.Rep1, new(int64(5000)))
@@ -157,6 +162,7 @@ func TestDealsByStageCountsAnUnownedDealForARep(t *testing.T) {
 // The same unowned deal must count toward a TEAM manager's default
 // (ScopeKindManagedTeams) population too, for the identical reason.
 func TestDealsByStageCountsAnUnownedDealForATeamManager(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	e.seedOpenDeal(t, "Unowned", 60, nil, new(int64(10000)))
 
@@ -173,6 +179,7 @@ func TestDealsByStageCountsAnUnownedDealForATeamManager(t *testing.T) {
 // A deal owned by a seat who shares none of the caller's teams is on the
 // manager's board, so it is in the board's totals too.
 func TestDealsByStageCountsAnUnrelatedSeatsDealForATeamManager(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	e.seedOpenDeal(t, "Theirs", 60, &e.Rep3, new(int64(20000)))
 
@@ -188,6 +195,7 @@ func TestDealsByStageCountsAnUnrelatedSeatsDealForATeamManager(t *testing.T) {
 // The board's column totals split a stage's total by currency, so a
 // mixed-currency column can decline to sum.
 func TestDealsByStageGroupsByCurrencySeparately(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, amount_minor, currency, source, captured_by)
 		VALUES ($1, 'EUR deal', $2, $3, 100000, 'EUR', 'manual', 'human:x')`, e.pipeline, e.stages[60])
@@ -219,6 +227,7 @@ func TestDealsByStageGroupsByCurrencySeparately(t *testing.T) {
 }
 
 func TestDealsByStageFiltersByCompanyID(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	companyA := e.seedID(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'A', 'manual', 'human:x')`)
 	companyB := e.seedID(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'B', 'manual', 'human:x')`)
@@ -243,6 +252,7 @@ func TestDealsByStageFiltersByCompanyID(t *testing.T) {
 // brought us. It was unanswerable while partner_sourced was a filter alone —
 // the report could say "these deals came from some partner" and never say which.
 func TestDealsByStageGroupsRevenueByPartner(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	northgate := e.seedID(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Northgate', 'manual', 'human:x')`)
 	kestrel := e.seedID(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Kestrel', 'manual', 'human:x')`)
@@ -276,6 +286,7 @@ func TestDealsByStageGroupsRevenueByPartner(t *testing.T) {
 // A deal read masks partner_company_id when the company is out of reach, and
 // without the reference-scope clause an aggregate would hand back that id.
 func TestGroupingByPartnerDoesNotNameAPartnerTheCallerCannotOpen(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	// Capture-private to Rep3: readable to its owner, invisible to every other
 	// seat, exactly as a connector-captured company can be.
@@ -315,6 +326,7 @@ func TestGroupingByPartnerDoesNotNameAPartnerTheCallerCannotOpen(t *testing.T) {
 }
 
 func TestDealsByStageFiltersByPartnerSourced(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	partner := e.seedID(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Partner', 'manual', 'human:x')`)
 	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, partner_company_id, partner_attribution, amount_minor, currency, source, captured_by)
@@ -336,6 +348,7 @@ func TestDealsByStageFiltersByPartnerSourced(t *testing.T) {
 // deals-by-stage joins stage, which has its own created_at, so the stalled
 // predicate must arrive alias-qualified or the query fails as ambiguous SQL.
 func TestDealsByStageStalledFilterWorksUnderTheStageJoin(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, amount_minor, currency, source, captured_by, created_at)
 		VALUES ($1, 'Idle', $2, $3, 10000, 'EUR', 'manual', 'human:x', now() - interval '90 days')`, e.pipeline, e.stages[60])
@@ -356,6 +369,7 @@ func TestDealsByStageStalledFilterWorksUnderTheStageJoin(t *testing.T) {
 // margins are tens of days because the SQL side reads the live now(); the
 // boundary-exact case is formulas_test.go's job, against a fixed clock.
 func TestDealsByStageStalledFilterAgreesWithIsStalled(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	now := time.Now().UTC()
 	days := func(n int) time.Time { return now.AddDate(0, 0, n) }
@@ -412,6 +426,7 @@ func dealsByStageRow(t *testing.T, result reportResultWire, stageID string) map[
 // the report accepts every dial. A refused one answers 422, and the board
 // would count its loaded cards as though they were the total.
 func TestDealsByStageNarrowsToOnePartner(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	wanted := e.seedID(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Wanted', 'manual', 'human:x')`)
 	other := e.seedID(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Other', 'manual', 'human:x')`)

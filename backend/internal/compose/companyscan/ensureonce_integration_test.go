@@ -27,6 +27,7 @@ import (
 // Two opens of one account at once queue one read, however they overlap. A
 // change after the read settled is seen by the next request.
 func TestConcurrentOpensQueueOneReadAndAChangeIsSeenAfterwards(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Kranich Fördertechnik GmbH", &e.AdminUser))

@@ -37,6 +37,7 @@ func opsSeat(e *integration.Env) context.Context {
 }
 
 func TestAContactsSocialLinkAColleagueSetSinceIsNotPutBack(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	admin := e.Admin()
 	id := e.SeedContact(t, "Social Contact", nil)
@@ -62,6 +63,7 @@ func TestAContactsSocialLinkAColleagueSetSinceIsNotPutBack(t *testing.T) {
 }
 
 func TestACompanysDomainsAColleagueSetSinceAreNotPutBack(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	admin := e.Admin()
 	id := e.SeedCompany(t, "Domain Co", nil)
@@ -84,6 +86,7 @@ func TestACompanysDomainsAColleagueSetSinceAreNotPutBack(t *testing.T) {
 }
 
 func TestAFreshActivityDateChangeCanBePutBackWhateverZoneTheWriterRunsIn(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	admin := e.Admin()
 	zone := time.FixedZone("ICT", 7*3600)
@@ -105,6 +108,7 @@ func TestAFreshActivityDateChangeCanBePutBackWhateverZoneTheWriterRunsIn(t *test
 }
 
 func TestAnAmountStepCanBePutBackOnceALaterMoneyChangeWasPutBack(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	admin := e.Admin()
 	pipeline, open, _ := integration.DealFixture(t, e)
@@ -136,6 +140,7 @@ func TestAnAmountStepCanBePutBackOnceALaterMoneyChangeWasPutBack(t *testing.T) {
 }
 
 func TestRestoringAnArchivedCompanyNamesTheLinkItCouldNotBringBack(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	admin := e.Admin()
 	company := e.SeedCompany(t, "Old Employer", nil)
@@ -162,6 +167,7 @@ func TestRestoringAnArchivedCompanyNamesTheLinkItCouldNotBringBack(t *testing.T)
 }
 
 func TestUndoingABulkRemoveFromListKeepsEachMembersNoteAndAddedTime(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	admin := e.Admin()
 	lists := collections.NewStore(e.DB())
@@ -212,6 +218,7 @@ func TestUndoingABulkRemoveFromListKeepsEachMembersNoteAndAddedTime(t *testing.T
 // Walking back through one's own run of edits still works: each reversal writes
 // the value the earlier entry left, so the earlier entry reads as unmoved.
 func TestSocialLinksWalkBackThroughTheirOwnHistory(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	admin := e.Admin()
 	id := e.SeedContact(t, "Walk Back", nil)
@@ -241,6 +248,7 @@ func TestSocialLinksWalkBackThroughTheirOwnHistory(t *testing.T) {
 // The seat that may read a record and write none is shown the refusal the
 // press would give, not a button, on every record type with a write gate.
 func TestAReadOnlySeatIsToldItMayNotWriteAContactCompanyOrDealChange(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	admin := e.Admin()
 	// ReadOnlyPerms reads no company, which would refuse the company case for
@@ -278,6 +286,7 @@ func TestAReadOnlySeatIsToldItMayNotWriteAContactCompanyOrDealChange(t *testing.
 // Only a timestamp column is compared as an instant: a title that happens to
 // spell the same instant in another zone is still somebody else's text.
 func TestATextThatSpellsTheSameInstantIsStillAColleaguesEdit(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	admin := e.Admin()
 	id := e.SeedContact(t, "Look Alike", nil)
@@ -300,6 +309,7 @@ func TestATextThatSpellsTheSameInstantIsStillAColleaguesEdit(t *testing.T) {
 // A company's domains come back from their table in no promised order, so a
 // walk back through two edits must not read the same set as moved.
 func TestDomainsWalkBackWhateverOrderTheyAreReadIn(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	admin := e.Admin()
 	id := e.SeedCompany(t, "Two Domains", nil)

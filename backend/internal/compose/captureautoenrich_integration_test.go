@@ -28,6 +28,7 @@ import (
 )
 
 func TestAutoEnrichLaneAppliesDirectlyInsteadOfStaging(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := insertCompany(t, e, e.Rep1, "acme.example", "")
 	store := capture.NewAutoEnrichStore(e.DB())
@@ -101,6 +102,7 @@ func insertDomainCompany(t *testing.T, e *integration.Env, domain string) ids.Co
 }
 
 func TestAutoEnrichStoreEligibilityAndCap(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := capture.NewAutoEnrichStore(e.DB())
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
@@ -165,6 +167,7 @@ func runReadTo(t *testing.T, e *integration.Env, companyID ids.CompanyID, seedUR
 }
 
 func TestTheInstallationsOwnCompanyIsNeverSwept(t *testing.T) {
+	t.Parallel()
 	// This test carries more weight than it used to. The anchor was excluded as
 	// a SIDE EFFECT of being human-named, and the sweep no longer selects on
 	// that — so `NOT o.is_anchor` is now the only thing keeping the company the
@@ -194,6 +197,7 @@ func TestTheInstallationsOwnCompanyIsNeverSwept(t *testing.T) {
 }
 
 func TestACancelledReadDoesNotRetireACompanyForever(t *testing.T) {
+	t.Parallel()
 	// A read cancelled because the operator had auto-enrich off when the worker
 	// claimed it produced no dossier at all. Turning the setting back on has to
 	// reach that company, or the sweep's self-healing stops at exactly the companies
@@ -217,6 +221,7 @@ func TestACancelledReadDoesNotRetireACompanyForever(t *testing.T) {
 }
 
 func TestAutoEnrichExpireExhausted(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := capture.NewAutoEnrichStore(e.DB())
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
@@ -271,6 +276,7 @@ func TestAutoEnrichExpireExhausted(t *testing.T) {
 // A page of one against three eligible companies is the same shape as 500
 // against a day's arrivals, and it is the shape the assertion can actually read.
 func TestTheOldestCompanyIsSweptFirstSoNoneWaitsForever(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := capture.NewAutoEnrichStore(e.DB())
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)

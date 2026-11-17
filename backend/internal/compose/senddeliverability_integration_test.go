@@ -29,6 +29,7 @@ import (
 const toolSurfaceBaseURL = "https://mail.example.test"
 
 func TestToolSurfaceSendCarriesTheUnsubscribeSurface(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	consentStore := consent.NewStore(InstallationDB(e.Pool))
 	admin := e.Admin()

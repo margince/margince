@@ -35,6 +35,7 @@ func serveShareRoute(
 }
 
 func TestAnIssuedShareIsListedWithoutItsToken(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	_, seat := e.seededIssuer(t, "wire@forecast.test")
 	routes := e.shareRoutes()
@@ -64,6 +65,7 @@ func TestAnIssuedShareIsListedWithoutItsToken(t *testing.T) {
 }
 
 func TestASeatThatCannotIssueSharesIsRefusedTheListOnTheWire(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	reader := e.forecastReader(e.dealReadCtx(e.Rep1, nil, principal.RowScopeAll))
 

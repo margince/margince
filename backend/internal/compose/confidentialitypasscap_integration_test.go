@@ -102,6 +102,7 @@ func runPass(t *testing.T, e *integration.Env, brain *answerEveryThreadBrain) {
 // Each pass reads the value saved before it started, not the one in force when
 // the engine was built.
 func TestThePassJudgesNoMoreThanTheSavedCapAndReadsItEveryRun(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedHeldThreads(t, e, 12)
 	brain := &answerEveryThreadBrain{}
@@ -138,6 +139,7 @@ func (b *unusableAnswerBrain) Complete(context.Context, model.Request) (model.Re
 // only the answered threads would let a failing model run the pass over every
 // thread that is due.
 func TestAFailingModelStillSpendsThePassCap(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedHeldThreads(t, e, 12)
 	brain := &unusableAnswerBrain{}
@@ -152,6 +154,7 @@ func TestAFailingModelStillSpendsThePassCap(t *testing.T) {
 
 // An installation nobody tuned runs the declared default.
 func TestAnUntunedInstallationRunsTheDeclaredPassCap(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := capture.NewThreadVerdictStore(InstallationDB(e.Pool))
 
@@ -167,6 +170,7 @@ func TestAnUntunedInstallationRunsTheDeclaredPassCap(t *testing.T) {
 // The gauge counts the threads the pass can still claim, and ages the oldest
 // from the capture of the message that opened it.
 func TestTheBacklogCountsWhatThePassStillOwesAndAgesTheOldest(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	db := InstallationDB(e.Pool)
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
@@ -211,6 +215,7 @@ func TestTheBacklogCountsWhatThePassStillOwesAndAgesTheOldest(t *testing.T) {
 // the classified posture is judged by nobody, and counting it would alarm on
 // mail no capacity could clear.
 func TestTheBacklogLeavesOutThreadsThePassWillNotClaim(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	db := InstallationDB(e.Pool)
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
@@ -240,6 +245,7 @@ func TestTheBacklogLeavesOutThreadsThePassWillNotClaim(t *testing.T) {
 // The scrape reads the backlog through the same installation binding as every
 // other capture read.
 func TestTheScrapeReaderAnswersTheBacklog(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedHeldThreads(t, e, 2)
 
@@ -256,6 +262,7 @@ func TestTheScrapeReaderAnswersTheBacklog(t *testing.T) {
 // pass cap read, never as a caught-up ledger. A pass that cannot read its cap
 // stops before it judges anything.
 func TestAnUnreachableDatabaseFailsThePassCapAndTheBacklogReads(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedHeldThreads(t, e, 1)
 	cancelled, cancel := context.WithCancel(principal.WithWorkspaceID(context.Background(), e.WS))

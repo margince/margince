@@ -88,6 +88,7 @@ func validateWorkerFor(e *integration.Env, h importHandlers) *importValidateWork
 }
 
 func TestARefusedTestRunReturnsToDraftWithItsReason(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.GrantRole(t, e.AdminUser, "admin")
 	h, profile := leadSourceHandlers(t, e)
@@ -111,6 +112,7 @@ func TestARefusedTestRunReturnsToDraftWithItsReason(t *testing.T) {
 }
 
 func TestUploadCreatesADraftAndRefusesOversizeWithoutARun(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	h, profile := leadSourceHandlers(t, e)
 	draft, err := migration.NewRunStore(e.DB()).GetStaged(importAdmin(e), migration.RunID(profile.RunId))
@@ -142,6 +144,7 @@ func TestUploadCreatesADraftAndRefusesOversizeWithoutARun(t *testing.T) {
 }
 
 func TestRunListViewsSeparateDraftsFromHistory(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	leadSourceHandlers(t, e)
 	store := migration.NewRunStore(e.DB())

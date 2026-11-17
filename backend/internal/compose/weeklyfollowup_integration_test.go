@@ -17,6 +17,7 @@ import (
 )
 
 func TestWeeklyCountsManualFollowUpsOncePerMeeting(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	ctx := reportingActor(e)
 	at := time.Date(2026, 9, 25, 15, 0, 0, 0, time.UTC)

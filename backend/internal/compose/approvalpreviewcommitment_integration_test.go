@@ -19,6 +19,7 @@ import (
 )
 
 func TestCommitmentPreviewWithholdsARecipientMadePrivate(t *testing.T) {
+	t.Parallel()
 	e := setupCompletionTranscript(t, "Priya Raman: Morgan, I will send you the recording.")
 	e.GrantRole(t, e.Rep2, "rep")
 	recipient := e.SeedContact(t, "Morgan Recipient", &e.Rep3)

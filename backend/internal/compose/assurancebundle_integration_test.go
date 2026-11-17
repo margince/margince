@@ -37,6 +37,7 @@ type bundledTask struct {
 
 // The pass hands a rep one task for a deal with several findings.
 func TestTheNightlyPassBundlesADealsFindingsIntoOneTask(t *testing.T) {
+	t.Parallel()
 	e := setupAssuranceJob(t)
 
 	if err := e.run(t); err != nil {
@@ -72,6 +73,7 @@ func TestTheNightlyPassBundlesADealsFindingsIntoOneTask(t *testing.T) {
 // The task goes to the deal's owner, not to the system principal the pass runs
 // as: an unassigned task waits in a queue nobody opens.
 func TestTheBundledTaskIsAssignedToTheDealsOwner(t *testing.T) {
+	t.Parallel()
 	e := setupAssuranceJob(t)
 
 	if err := e.run(t); err != nil {
@@ -94,6 +96,7 @@ func TestTheBundledTaskIsAssignedToTheDealsOwner(t *testing.T) {
 
 // The task is worded in its assignee's own language, not the server's.
 func TestTheBundledTaskReadsInItsAssigneesLanguage(t *testing.T) {
+	t.Parallel()
 	e := setupAssuranceJob(t)
 	if _, err := integration.OwnerConn(t).Exec(context.Background(),
 		`UPDATE app_user SET locale = 'vi' WHERE id = $1`, e.Rep1); err != nil {
@@ -117,6 +120,7 @@ func TestTheBundledTaskReadsInItsAssigneesLanguage(t *testing.T) {
 // An owner whose seat is gone by the time the task is minted costs the task its
 // assignee, not its existence. It lands unassigned, worded in the base language.
 func TestATaskWhoseOwnerSeatIsGoneLandsUnassigned(t *testing.T) {
+	t.Parallel()
 	e := setupAssuranceJob(t)
 	if err := e.run(t); err != nil {
 		t.Fatalf("the first check: %v", err)
@@ -158,6 +162,7 @@ func TestATaskWhoseOwnerSeatIsGoneLandsUnassigned(t *testing.T) {
 // One pass mints one task per deal, and a second pass files onto the task the
 // first left open rather than minting another.
 func TestASecondPassAdoptsTheTaskTheFirstOneLeftOpen(t *testing.T) {
+	t.Parallel()
 	e := setupAssuranceJob(t)
 
 	if err := e.run(t); err != nil {
@@ -184,6 +189,7 @@ func TestASecondPassAdoptsTheTaskTheFirstOneLeftOpen(t *testing.T) {
 }
 
 func TestAFindingStillTrueAfterSomebodyAnsweredItIsAskedAgain(t *testing.T) {
+	t.Parallel()
 	e := setupAssuranceJob(t)
 
 	if err := e.run(t); err != nil {
@@ -214,6 +220,7 @@ func TestAFindingStillTrueAfterSomebodyAnsweredItIsAskedAgain(t *testing.T) {
 }
 
 func TestTheDuplicatesAnEarlierBuildLeftBehindAreSettled(t *testing.T) {
+	t.Parallel()
 	e := setupAssuranceJob(t)
 
 	// One real pass, then two more tasks filed under cycles of their own —
@@ -277,6 +284,7 @@ func TestTheDuplicatesAnEarlierBuildLeftBehindAreSettled(t *testing.T) {
 }
 
 func TestATaskRelinkedToAnotherDealIsNeitherAdoptedNorArchived(t *testing.T) {
+	t.Parallel()
 	e := setupAssuranceJob(t)
 
 	if err := e.run(t); err != nil {
@@ -333,6 +341,7 @@ func TestATaskRelinkedToAnotherDealIsNeitherAdoptedNorArchived(t *testing.T) {
 // Every cycle the pass opens is closed when it finishes. Its scope is a run id
 // nobody revisits, so an open one would stay open for ever.
 func TestThePassClosesTheCycleItOpened(t *testing.T) {
+	t.Parallel()
 	e := setupAssuranceJob(t)
 
 	if err := e.run(t); err != nil {
@@ -353,6 +362,7 @@ func TestThePassClosesTheCycleItOpened(t *testing.T) {
 // The task is filed as system_remediation. So it is no recent activity on the
 // deal, and cannot switch off the check that filed it.
 func TestTheBundledTaskIsNotBuyerActivity(t *testing.T) {
+	t.Parallel()
 	e := setupAssuranceJob(t)
 
 	if err := e.run(t); err != nil {
@@ -390,6 +400,7 @@ func TestTheBundledTaskIsNotBuyerActivity(t *testing.T) {
 // A finding somebody deferred files no task tonight, or a deferral of two
 // weeks would bring a fresh task every night.
 func TestADeferredFindingIsNotBundledAgain(t *testing.T) {
+	t.Parallel()
 	e := setupAssuranceJob(t)
 
 	// One pass, so there are findings to defer.
@@ -421,6 +432,7 @@ func TestADeferredFindingIsNotBundledAgain(t *testing.T) {
 // The cycle closes even when the pass fails after opening it. The failure is
 // injected at the exception read, the return the close once sat below.
 func TestAFailedPassStillClosesItsCycle(t *testing.T) {
+	t.Parallel()
 	e := setupAssuranceJob(t)
 
 	run, err := e.runWithFindings(t, func(context.Context, pgx.Tx, ids.UUID) ([]assurance.Exception, error) {
@@ -509,6 +521,7 @@ func (e *assuranceJobEnv) bundledTasks(t *testing.T) []bundledTask {
 // The task is held while the findings are filed, so a completion cannot land
 // between the read that found it open and the write. A held share lock, not a timer.
 func TestTheBundlingHoldsTheTaskItFilesOnto(t *testing.T) {
+	t.Parallel()
 	e := setupAssuranceJob(t)
 
 	if err := e.run(t); err != nil {
@@ -588,6 +601,7 @@ func TestTheBundlingHoldsTheTaskItFilesOnto(t *testing.T) {
 // taskStillOpenTx's own answer when a completion landed before the transaction
 // opened. Asked of the function, because a whole pass skips a done task earlier.
 func TestTheHeldTaskReadsAsClosedOnceSomebodyAnswersIt(t *testing.T) {
+	t.Parallel()
 	e := setupAssuranceJob(t)
 
 	if err := e.run(t); err != nil {
@@ -638,6 +652,7 @@ func TestTheHeldTaskReadsAsClosedOnceSomebodyAnswersIt(t *testing.T) {
 // A task somebody archived is not adopted, and the night mints afresh. Unlike
 // a completed task, it is gone from the live read.
 func TestAnArchivedTaskIsNotAdoptedAndTheNightMintsAfresh(t *testing.T) {
+	t.Parallel()
 	e := setupAssuranceJob(t)
 
 	if err := e.run(t); err != nil {

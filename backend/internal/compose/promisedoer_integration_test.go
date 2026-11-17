@@ -36,6 +36,7 @@ var promiserOwnRecordsPerms = principal.Permissions{
 // when a teammate owns the customer and the record is read-only for them. The
 // task reaches the promiser's own lane, and never the contact owner's.
 func TestAPromiseInMyOwnMailIsMineWhoeverOwnsTheContact(t *testing.T) {
+	t.Parallel()
 	e, reply := seedMailedPromise(t, "active")
 	ines := ids.MustParse(e.WsScalar(t, `SELECT id::text FROM contact WHERE full_name = 'Ines Huber'`))
 	promiser := e.As(e.Rep2, []ids.UUID{e.Team1}, promiserOwnRecordsPerms)

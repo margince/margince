@@ -47,6 +47,7 @@ func (s *promotionSight) panelApproval(reader context.Context, targetType string
 // The record panel answers the same plan check the inbox does. The rep who
 // cannot open the company the agent's update names sees the proposal without it.
 func TestARecordPanelKeepsBackAPlanItsReaderCannotOpen(t *testing.T) {
+	t.Parallel()
 	s := newKindSight(t)
 	deal := s.deal("Harbor renewal", s.e.Rep2)
 	company := s.privateCompany("Quiet Holdings", s.e.Rep1)
@@ -78,6 +79,7 @@ func (s *promotionSight) failedDecision(reader context.Context, id ids.ApprovalI
 // Rep2 approved an update whose work then failed. Once their role masks the
 // field it changes, neither their failed list nor Home's lane repeats the plan.
 func TestAFailedDecisionKeepsItsPlanBackOnceItsDeciderMayNotSeeIt(t *testing.T) {
+	t.Parallel()
 	s := newKindSight(t)
 	s.svc.WithEffect(toolUpdateRecord, func(context.Context, ids.ApprovalID, json.RawMessage, string) error {
 		return errors.New("the record store refused the update")
@@ -112,6 +114,7 @@ func TestAFailedDecisionKeepsItsPlanBackOnceItsDeciderMayNotSeeIt(t *testing.T) 
 // deal is theirs, their failed decision shows its plan. Once the deal moves to
 // Rep1, the mask holds again, though Rep2 can still read the deal.
 func TestAFailedDecisionKeepsItsPlanBackOnceItsDeciderMayNoLongerWriteTheTarget(t *testing.T) {
+	t.Parallel()
 	s := newKindSight(t)
 	s.svc.WithEffect(toolUpdateRecord, func(context.Context, ids.ApprovalID, json.RawMessage, string) error {
 		return errors.New("the record store refused the update")
@@ -138,6 +141,7 @@ func TestAFailedDecisionKeepsItsPlanBackOnceItsDeciderMayNoLongerWriteTheTarget(
 // A decided mail's file is later withheld. The stored plan is then checked by
 // the rule a send applies, which refuses a withheld file, as the pending plan was.
 func TestADecidedPlanWhoseFileIsWithheldStaysBack(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := e.SeedCompany(t, "Harbor account", &e.AdminUser)
 	files := activities.NewStore(e.DB()).WithBlobstore(blobstore.NewMemory())

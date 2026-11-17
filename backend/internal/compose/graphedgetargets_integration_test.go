@@ -21,6 +21,7 @@ import (
 )
 
 func TestAMergeDropsTheSourceEdgesAndRefoldsTheSurvivor(t *testing.T) {
+	t.Parallel()
 	v := edgeEnv{integration.Setup(t)}
 	owner := integration.FreshOwnerConn(t)
 	ctx := context.Background()
@@ -52,6 +53,7 @@ func TestAMergeDropsTheSourceEdgesAndRefoldsTheSurvivor(t *testing.T) {
 }
 
 func TestRefoldingAContactRestoresItsEdgesAndDroppingRemovesThem(t *testing.T) {
+	t.Parallel()
 	v := edgeEnv{integration.Setup(t)}
 	owner := integration.FreshOwnerConn(t)
 	c := v.contact(t, "Refold Subject")
@@ -98,6 +100,7 @@ func (v edgeEnv) inTx(t *testing.T, fn func(pgx.Tx) error) error {
 // A write the database refuses must surface, whichever table it fails on, so
 // the bus retries the entry instead of acking a projection it did not fold.
 func TestAProjectionWriteTheDatabaseRefusesSurfaces(t *testing.T) {
+	t.Parallel()
 	v := edgeEnv{integration.Setup(t)}
 	owner := integration.FreshOwnerConn(t)
 	ctx := context.Background()
@@ -160,6 +163,7 @@ func TestAProjectionWriteTheDatabaseRefusesSurfaces(t *testing.T) {
 }
 
 func TestRefoldingNoActivitiesTouchesNothing(t *testing.T) {
+	t.Parallel()
 	v := edgeEnv{integration.Setup(t)}
 	if err := v.inTx(t, func(tx pgx.Tx) error { return search.RecomputeEdgesForActivities(v.e.Admin(), tx, nil) }); err != nil {
 		t.Fatalf("an empty refold errored: %v", err)
@@ -170,6 +174,7 @@ func TestRefoldingNoActivitiesTouchesNothing(t *testing.T) {
 // a refold of the whole projection does not bring them back until it is
 // restored.
 func TestArchivedContactEdgesDroppedDirectly(t *testing.T) {
+	t.Parallel()
 	v := edgeEnv{integration.Setup(t)}
 	owner := integration.FreshOwnerConn(t)
 	ctx := context.Background()

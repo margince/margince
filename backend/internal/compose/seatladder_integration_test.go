@@ -44,6 +44,7 @@ func captureColleagueThread(t *testing.T, e *integration.Env, sourceID string) i
 // subject of the mail, an outside party or a contact. The buyer stands in as
 // the subject.
 func TestACapturedColleaguesPrivateAddressIsNeverTheOutsideParty(t *testing.T) {
+	t.Parallel()
 	e := setupWithOwnMailbox(t)
 	connectSeatMailbox(t, e, e.Rep2, colleaguePrivate, "shared")
 

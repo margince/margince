@@ -23,6 +23,7 @@ import (
 )
 
 func TestStageDecisionCarriesAuthorizedCommercialContext(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	pipeline, open, won := integration.DealFixture(t, e)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Harbor account", &e.Rep1))

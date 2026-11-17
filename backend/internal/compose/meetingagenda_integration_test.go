@@ -50,6 +50,7 @@ func agendaPreparation(ctx context.Context, t *testing.T, store *activities.Stor
 }
 
 func TestOnlyTheInvitesOwnDescriptionAsksTheAttendeeToConfirmAgain(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	agendaInvite(t, e, "Agenda: pricing")
 	var id ids.UUID
@@ -110,6 +111,7 @@ func captureOccurrence(t *testing.T, e *integration.Env, eventID string, start t
 }
 
 func TestTwoOccurrencesOfOneSeriesNeverShareReadiness(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	thisWeek := captureOccurrence(t, e, "evt-weekly-1", laneDay.Add(2*time.Hour))
 	nextWeek := captureOccurrence(t, e, "evt-weekly-2", laneDay.AddDate(0, 0, 7).Add(2*time.Hour))

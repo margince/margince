@@ -33,6 +33,7 @@ func unknownEmploymentLink(ctx context.Context, t *testing.T, e *integration.Env
 }
 
 func TestUnknownEmploymentLinksBecomeCurrentThroughTheExecutor(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := e.SeedCompany(t, "Roster repair", nil)
 	first := unknownEmploymentLink(e.Admin(), t, e, "First colleague", company)
@@ -71,6 +72,7 @@ func TestUnknownEmploymentLinksBecomeCurrentThroughTheExecutor(t *testing.T) {
 }
 
 func TestUnknownEmploymentRepairRollsBackWithProgress(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := e.SeedCompany(t, "Rollback roster", nil)
 	id := unknownEmploymentLink(e.Admin(), t, e, "Colleague", company)
@@ -94,6 +96,7 @@ func TestUnknownEmploymentRepairRollsBackWithProgress(t *testing.T) {
 }
 
 func TestUnknownEmploymentRepairRejectsMalformedCursor(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	task := unknownEmploymentDataTask(e.Pool)
 	ctx := datatask.Acting(e.Admin(), task.ID)
@@ -107,6 +110,7 @@ func TestUnknownEmploymentRepairRejectsMalformedCursor(t *testing.T) {
 }
 
 func TestUnknownEmploymentRepairUsesDatesAndSkipsArchivedEndpoints(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name                           string
 		endYear                        int

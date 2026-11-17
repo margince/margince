@@ -34,6 +34,7 @@ const (
 )
 
 func TestAMergedRequestCoversOnlyTheAddressesItWasMadeOn(t *testing.T) {
+	t.Parallel()
 	requests := map[string]func(t *testing.T, e *integration.Env, store *consent.Store, asker ids.UUID){
 		"recorded by the rep": func(t *testing.T, e *integration.Env, store *consent.Store, asker ids.UUID) {
 			if _, err := store.RecordQualifyingEvent(e.Admin(), ids.From[ids.ContactKind](asker), consent.RecordQualifyingEventInput{
@@ -116,6 +117,7 @@ func quoteVerdictFor(t *testing.T, e *integration.Env, gate *consent.Gate, addre
 // The legacy correspondence verdict reads the same recorded request, so it is
 // bound the same way. The purpose gate a send still asks reads it.
 func TestAMergedRequestDoesNotOpenCorrespondenceToTheOtherAddress(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return consent.SeedDefaultPurposesTx(context.Background(), tx)
@@ -147,6 +149,7 @@ func TestAMergedRequestDoesNotOpenCorrespondenceToTheOtherAddress(t *testing.T) 
 // Both records hold the same enquiry, one message filed on each. The merge keeps
 // one event, and that event covers the addresses of both records.
 func TestASharedEnquiryKeepsTheAddressesOfBothRecords(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := consent.NewStore(InstallationDB(e.Pool))
 	asker := seedMergeContact(t, e, "Asker", askerAddress, contacts.Acquisition{})

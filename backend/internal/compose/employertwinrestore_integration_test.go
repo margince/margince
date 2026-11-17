@@ -22,6 +22,7 @@ import (
 )
 
 func TestRestoringAContactFilesItsSameEmployerTwin(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	acme := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme Robotics GmbH", nil))
@@ -53,6 +54,7 @@ func TestRestoringAContactFilesItsSameEmployerTwin(t *testing.T) {
 // Undoing a bulk archive restores many contacts in one transaction. Each one's
 // twin is filed after every row is back, so the run takes the lanes once, last.
 func TestUndoingABulkArchiveFilesEachRestoredContactsTwin(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	acme := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme Robotics GmbH", nil))
 	var items []crmcontracts.BulkItem

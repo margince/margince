@@ -44,6 +44,7 @@ import (
 // which of the two things it is — a refused token they re-paste, or a rival
 // consumer they go and find.
 func TestAPollWhoseTokenIsRefusedParksTheConnection(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
 	vault := keyvault.NewMemory()
@@ -87,6 +88,7 @@ func TestAPollWhoseTokenIsRefusedParksTheConnection(t *testing.T) {
 // retry counter: it clears the registration, then re-asks with no long-poll
 // interval and reads only the refusal.
 func TestAConflictThatSurvivesTheWebhookClearParksTheConnection(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
 	vault := keyvault.NewMemory()
@@ -121,6 +123,7 @@ func TestAConflictThatSurvivesTheWebhookClearParksTheConnection(t *testing.T) {
 // installation — which is the ordinary case when a bot moves from a webhook
 // deployment to this one.
 func TestAConflictAWebhookClearRepairsLeavesTheConnectionLive(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
 	vault := keyvault.NewMemory()
@@ -168,6 +171,7 @@ func TestAConflictAWebhookClearRepairsLeavesTheConnectionLive(t *testing.T) {
 //
 // The bot here carries NO webhook and meets a rival that holds one poll.
 func TestAConflictWithNoWebhookIsReportedAsARivalRatherThanAClear(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
 	vault := keyvault.NewMemory()

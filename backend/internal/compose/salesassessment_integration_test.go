@@ -46,6 +46,7 @@ func (l *assessmentLane) Complete(_ context.Context, req model.Request) (model.R
 // no cell carries is dropped. The result is served again for the same
 // figures, and a refresh asks the model again.
 func TestTheSalesAssessmentKeepsGroundedSentencesAndServesThemAgain(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	start := clocktest.Now(t).UTC().Truncate(time.Second)
 	seedInitiativeDeals(t, e, start)
@@ -91,6 +92,7 @@ func TestTheSalesAssessmentKeepsGroundedSentencesAndServesThemAgain(t *testing.T
 }
 
 func TestAssessmentUsesTheDisplayedReceiptAndSeparatesRoleContext(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	e, ctx, service := f.env, f.human, f.service
 	selection := crmcontracts.ReportingSelection{Scope: crmcontracts.ReportingScope{Kind: "owner", Id: ptrUUID(e.Rep1)}, Period: "this_quarter", TargetBasis: "fiscal_quarter", CloseWindow: "all_open", Metrics: []crmcontracts.ReportingMetricID{reportingOpenPipeline}, Blocks: []crmcontracts.ReportingBlockKind{}}
@@ -121,6 +123,7 @@ func TestAssessmentUsesTheDisplayedReceiptAndSeparatesRoleContext(t *testing.T) 
 }
 
 func TestAnEmptyAssessmentDoesNotAskForReassurance(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	at := clocktest.Now(t)
 	service := newReportingService(e.Pool, func() time.Time { return at })

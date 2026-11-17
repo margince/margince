@@ -20,11 +20,13 @@ import (
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestReplyJoinsSentMailBeforeMailboxEcho(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	address := seatAddress(t, e, e.Rep1)
 	root := "opening@counterparty.test"
@@ -82,6 +84,7 @@ func TestReplyJoinsSentMailBeforeMailboxEcho(t *testing.T) {
 }
 
 func TestJoinedSentMailNeedsSemanticSettlement(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name, body, verdict, remaining string
 		owed                           bool
@@ -130,7 +133,7 @@ func TestJoinedSentMailNeedsSemanticSettlement(t *testing.T) {
 				t.Fatal(err)
 			}
 			brain := ai.NewFakeClient().Script(string(reply))
-			settler := NewRequestSettler(o.e.Pool, inRefs{inner: brain, shown: []shownBy{requestShown}}, func() time.Time { return o.now }, slog.Default())
+			settler := NewRequestSettler(o.e.Pool, inRefs{inner: brain, ownerDSN: testdb.For(t).OwnerDSN, shown: []shownBy{requestShown}}, func() time.Time { return o.now }, slog.Default())
 			for range 2 {
 				if err := settler.RunWorkspace(o.judge(), 1); err != nil {
 					t.Fatal(err)
@@ -164,6 +167,7 @@ func TestJoinedSentMailNeedsSemanticSettlement(t *testing.T) {
 }
 
 func TestSentThreadJoinKeepsActorAndContentBoundaries(t *testing.T) {
+	t.Parallel()
 	for _, name := range []string{"agent send", "selected sender", "selected other member", "full references"} {
 		t.Run(name, func(t *testing.T) {
 			e := integration.Setup(t)

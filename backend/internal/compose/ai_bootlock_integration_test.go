@@ -50,6 +50,8 @@ const bootBinding = `MARGINCE_AI_ROUTING_BINDING={"profile":"eu_hosted","tiers":
 
 // A binding the environment sets is in force. The declared seed writes no row
 // that would act only once the variable is gone, and reports nothing discarded.
+//
+//testdb:serial binds the process-wide configuration (config.Bind)
 func TestABootSetBindingIsNeitherSeededNorReportedDiscarded(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.Admin()
@@ -74,6 +76,8 @@ func TestABootSetBindingIsNeitherSeededNorReportedDiscarded(t *testing.T) {
 
 // The watcher publishes the overrides the environment sets, over the ones an
 // admin saved before the operator set them.
+//
+//testdb:serial binds the process-wide configuration (config.Bind)
 func TestABootSetTaskOverrideReachesARunningRouter(t *testing.T) {
 	e := integration.Setup(t)
 	if rec := putTaskOverrides(overrideSeat(e), taskOverrideHandlers(e), `{"capture_classify":{"thinking":"low"}}`, ""); rec.Code != http.StatusOK {
@@ -93,6 +97,8 @@ func TestABootSetTaskOverrideReachesARunningRouter(t *testing.T) {
 
 // Spend is metered against the allowance the environment sets, over a saved
 // one: the meter reads it with no request behind it.
+//
+//testdb:serial binds the process-wide configuration (config.Bind)
 func TestTheSpendMeterReadsABootSetAllowance(t *testing.T) {
 	e := integration.Setup(t)
 	saved := int64(999)

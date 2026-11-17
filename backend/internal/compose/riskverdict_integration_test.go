@@ -165,6 +165,7 @@ func figureOf(m crmcontracts.ResponseMetrics) atRiskFigure {
 // hit, the days either side are misses, and only material at-risk deals are
 // judged at all.
 func TestTheSameDayNextStepFigureCountsWhatThePassRecorded(t *testing.T) {
+	t.Parallel()
 	e := setupVerdicts(t)
 	at := e.dayNoon(t)
 	e.passAt(t, at.Add(-24*time.Hour))
@@ -204,6 +205,7 @@ func TestTheSameDayNextStepFigureCountsWhatThePassRecorded(t *testing.T) {
 // A lead who may not read deals is refused the figure rather than shown one
 // over deals they cannot open.
 func TestALeadWithoutDealReadIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupVerdicts(t)
 	e.passAt(t, e.taskAt)
 	noDeals := e.As(e.Rep2, []ids.UUID{e.Team1}, principal.Permissions{
@@ -228,6 +230,7 @@ func TestALeadWithoutDealReadIsRefused(t *testing.T) {
 // created. The booked deal's own task counts only if it was created that same
 // day, which the suite reads off the rows rather than assuming.
 func TestOnlyALiveTaskIsANextStep(t *testing.T) {
+	t.Parallel()
 	e := setupVerdicts(t)
 	subject, ahead := "Quarterly review", time.Now().AddDate(0, 0, 3)
 	link := []activities.ActivityLinkInput{{EntityType: "deal", EntityID: e.other}}
@@ -268,6 +271,7 @@ func TestOnlyALiveTaskIsANextStep(t *testing.T) {
 
 // The day still running is not counted: its step can still be booked.
 func TestTodayIsNotCountedUntilItEnds(t *testing.T) {
+	t.Parallel()
 	e := setupVerdicts(t)
 	at := e.dayNoon(t)
 	e.passAt(t, at)
@@ -282,6 +286,7 @@ func TestTodayIsNotCountedUntilItEnds(t *testing.T) {
 // Nothing recorded is "no data", not 0%: the boundary is absent until the
 // first pass, then names the first recorded day.
 func TestTheFigureSaysWhenRecordingBegan(t *testing.T) {
+	t.Parallel()
 	e := setupVerdicts(t)
 	later := e.taskAt.Add(48 * time.Hour)
 
@@ -307,6 +312,7 @@ func TestTheFigureSaysWhenRecordingBegan(t *testing.T) {
 // The day's first pass records the morning set; a later pass that day adds
 // nothing, even for a deal that has turned material and at risk since.
 func TestTheDayCountsTheSetItBeganWith(t *testing.T) {
+	t.Parallel()
 	e := setupVerdicts(t)
 	at := e.dayNoon(t)
 	e.passAt(t, at)
@@ -340,6 +346,7 @@ func TestTheDayCountsTheSetItBeganWith(t *testing.T) {
 // A deal closing in three days is not at risk now and is at risk five days
 // on; judged at an instant five days on, it is in that day's set.
 func TestThePassJudgesAtTheInstantItFilesUnder(t *testing.T) {
+	t.Parallel()
 	e := setupVerdicts(t)
 	minor, currency, who, closes := int64(60_000_00), "EUR", ids.From[ids.UserKind](e.Rep1), time.Now().AddDate(0, 0, 3)
 	soon, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
@@ -368,6 +375,7 @@ func TestThePassJudgesAtTheInstantItFilesUnder(t *testing.T) {
 // Moving the installation to another zone does not move which tasks fell on
 // a day already recorded: the day's bounds were fixed when it was judged.
 func TestAZoneChangeDoesNotRewriteARecordedDay(t *testing.T) {
+	t.Parallel()
 	e := setupVerdicts(t)
 	e.WsExec(t, `UPDATE setting SET value = '"Pacific/Kiritimati"'::jsonb WHERE key = 'installation.timezone'`)
 	e.passAt(t, e.taskAt)
@@ -386,6 +394,7 @@ func TestAZoneChangeDoesNotRewriteARecordedDay(t *testing.T) {
 // masks withhold deal money is not shown a rate over deals chosen by amounts
 // they may not read — the whole group is absent, not zero.
 func TestAReaderWithDealMoneyMaskedGetsNoAtRiskFigure(t *testing.T) {
+	t.Parallel()
 	e := setupVerdicts(t)
 	e.passAt(t, e.taskAt)
 	later := e.taskAt.Add(48 * time.Hour)
@@ -405,6 +414,7 @@ func TestAReaderWithDealMoneyMaskedGetsNoAtRiskFigure(t *testing.T) {
 // Only the pass may write a verdict: a seat planting one would move a figure
 // that reports on what the product judged.
 func TestASeatCannotRecordAVerdict(t *testing.T) {
+	t.Parallel()
 	e := setupVerdicts(t)
 	now := time.Now()
 	_, err := e.Deals.RecordRiskDay(e.Admin(), deals.RiskDay{
@@ -417,6 +427,7 @@ func TestASeatCannotRecordAVerdict(t *testing.T) {
 
 // The verdicts age out on the seeded window, and go with their deal.
 func TestTheVerdictsAgeOutAndGoWithTheirDeal(t *testing.T) {
+	t.Parallel()
 	e := setupVerdicts(t)
 	at := e.dayNoon(t)
 	e.passAt(t, at.Add(-24*time.Hour))
@@ -459,6 +470,7 @@ func TestTheVerdictsAgeOutAndGoWithTheirDeal(t *testing.T) {
 // the day it started in, even when the clock has moved on by the time it
 // writes: the pass reads the clock once.
 func TestAPassCrossingMidnightKeepsItsDay(t *testing.T) {
+	t.Parallel()
 	e := setupVerdicts(t)
 	zone, err := installationZone(e.Admin(), e.Pool)
 	if err != nil {

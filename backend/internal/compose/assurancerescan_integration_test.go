@@ -68,6 +68,7 @@ func (e *freshnessEnv) queuedRescans(t *testing.T) int {
 // A one-deal pass clears that deal's finding and nothing of another deal's,
 // and its run is not read as a reading of the pipeline.
 func TestAOneDealPassCannotClearAnotherDealsFindings(t *testing.T) {
+	t.Parallel()
 	e := setupFreshness(t)
 	if _, err := e.Deals.UpdateDeal(e.Admin(), ids.From[ids.DealKind](e.healthy), deals.UpdateDealInput{
 		WinProbability: new(95),
@@ -130,6 +131,7 @@ func TestAOneDealPassCannotClearAnotherDealsFindings(t *testing.T) {
 // A delivery seen twice queues one job, and a job run twice raises no second
 // finding and records no second run.
 func TestADuplicateDeliveryQueuesOneJobAndNoSecondFinding(t *testing.T) {
+	t.Parallel()
 	e := setupFreshness(t)
 	inserter, err := jobs.NewInserter(e.Pool, slog.New(slog.DiscardHandler))
 	if err != nil {
@@ -159,6 +161,7 @@ func TestADuplicateDeliveryQueuesOneJobAndNoSecondFinding(t *testing.T) {
 // A change committed while the pass reads its deal is not the pass's to
 // clear: nothing commits, and the retry reads the newest generation.
 func TestAChangeDuringAOneDealPassIsReadByTheRetry(t *testing.T) {
+	t.Parallel()
 	e := setupFreshness(t)
 	e.deliver(t, e.editDeal(t, e.faulted, 4000000))
 	runs := e.WsCount(t, `SELECT count(*) FROM assurance_run`)
@@ -186,6 +189,7 @@ func TestAChangeDuringAOneDealPassIsReadByTheRetry(t *testing.T) {
 // A burst of edits to one deal is one job, and a burst across many deals
 // queues at most assuranceRescanBatchLimit jobs per read.
 func TestABurstOfEditsQueuesBoundedJobs(t *testing.T) {
+	t.Parallel()
 	e := setupFreshness(t)
 	inserter, err := jobs.NewInserter(e.Pool, slog.New(slog.DiscardHandler))
 	if err != nil {
@@ -216,6 +220,7 @@ func TestABurstOfEditsQueuesBoundedJobs(t *testing.T) {
 // A finding whose deal row is gone closes as departed. The tree has no writer
 // that deletes a deal yet, so the row is removed directly, as erasure would.
 func TestAFindingWhoseDealIsGoneCloses(t *testing.T) {
+	t.Parallel()
 	e := setupFreshness(t)
 	if len(e.findingsOf(t, e.faulted)) == 0 {
 		t.Fatal("the fixture needs findings on the faulted deal")
@@ -238,6 +243,7 @@ func TestAFindingWhoseDealIsGoneCloses(t *testing.T) {
 // still finishing, is deduplicated against the running job. The job sees the
 // marker again and asks to run again rather than leave it to the night.
 func TestAChangeAsTheJobFinishesRunsItAgain(t *testing.T) {
+	t.Parallel()
 	e := setupFreshness(t)
 	e.deliver(t, e.editDeal(t, e.faulted, 4400000))
 	worker := &assuranceDealRescanWorker{
@@ -265,6 +271,7 @@ func TestAChangeAsTheJobFinishesRunsItAgain(t *testing.T) {
 // Sustained edits stop queueing once a workspace has
 // assuranceRescanBacklogLimit checks waiting; the nightly pass reads the rest.
 func TestTheWaitingDealChecksHaveACeiling(t *testing.T) {
+	t.Parallel()
 	e := setupFreshness(t)
 	inserter, err := jobs.NewInserter(e.Pool, slog.New(slog.DiscardHandler))
 	if err != nil {

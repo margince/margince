@@ -191,6 +191,7 @@ func instantOf(t *testing.T, e *integration.Env, activity ids.UUID) *time.Time {
 // moves every one of them. The company has one contact, so its reading and
 // the contact's are the same history read twice.
 func TestOnlyAHumansMessageMovesTheRelationship(t *testing.T) {
+	t.Parallel()
 	f := newRelationshipFixture(t)
 	asked := f.mail(t, "pricing-question", f.contactAddr, f.seatAddr, "", 20)
 	answered := f.mail(t, "pricing-answer", f.seatAddr, f.contactAddr, "", 18)
@@ -222,6 +223,7 @@ func TestOnlyAHumansMessageMovesTheRelationship(t *testing.T) {
 // A thread the contact is only copied on is not the contact writing: the
 // contact page's inbound clock stays on what they sent.
 func TestACopiedContactHasNotWrittenTheThread(t *testing.T) {
+	t.Parallel()
 	f := newRelationshipFixture(t)
 	own := f.mail(t, "their-own-mail", f.contactAddr, f.seatAddr, "", 10)
 	f.mail(t, "a-colleague-writes", "Bob Colleague <bob@client.test>", f.seatAddr, f.contactAddr, 2)

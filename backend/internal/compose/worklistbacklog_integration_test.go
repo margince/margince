@@ -110,6 +110,7 @@ func totalOf(day crmcontracts.Worklist, category crmcontracts.WorklistCountCateg
 // when walked to its end. The walk reaches every task in every scope. The all
 // scope states no today total, and says so as a floor.
 func TestTheTaskTotalsMatchTheWalkInEveryScope(t *testing.T) {
+	t.Parallel()
 	r := setupReminders(t)
 	backlogTasks(t, r)
 	rep1 := r.e.As(r.e.Rep1, []ids.UUID{r.e.Team1}, integration.AdminPerms)
@@ -148,6 +149,7 @@ func TestTheTaskTotalsMatchTheWalkInEveryScope(t *testing.T) {
 // they have seen until the lane read is no longer cut, and scrolling on still
 // reaches every open task.
 func TestCompletingSeenTasksDoesNotEndTheTail(t *testing.T) {
+	t.Parallel()
 	r := setupReminders(t)
 	open := map[string]bool{}
 	for i := range plannedCapForTest + 8 {

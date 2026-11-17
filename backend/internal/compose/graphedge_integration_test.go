@@ -164,6 +164,7 @@ func (v edgeEnv) snapshot(t *testing.T) map[string][5]int {
 }
 
 func TestTheProjectionAnswersWhoKnowsThisContact(t *testing.T) {
+	t.Parallel()
 	v := edgeEnv{integration.Setup(t)}
 	now := time.Now().UTC()
 	contact := v.contact(t, "Pat Counterparty")
@@ -199,6 +200,7 @@ func TestTheProjectionAnswersWhoKnowsThisContact(t *testing.T) {
 }
 
 func TestBeingCopiedCountsButRanksBelowARealExchange(t *testing.T) {
+	t.Parallel()
 	v := edgeEnv{integration.Setup(t)}
 	now := time.Now().UTC()
 
@@ -247,6 +249,7 @@ func TestBeingCopiedCountsButRanksBelowARealExchange(t *testing.T) {
 }
 
 func TestRecomputingIsIdempotentUnderRedelivery(t *testing.T) {
+	t.Parallel()
 	v := edgeEnv{integration.Setup(t)}
 	now := time.Now().UTC()
 	contact := v.contact(t, "Repeat Contact")
@@ -267,6 +270,7 @@ func TestRecomputingIsIdempotentUnderRedelivery(t *testing.T) {
 }
 
 func TestAnEdgeThatLostItsEvidenceIsDeleted(t *testing.T) {
+	t.Parallel()
 	v := edgeEnv{integration.Setup(t)}
 	now := time.Now().UTC()
 	contact := v.contact(t, "Archived Evidence")
@@ -300,6 +304,7 @@ func TestAnEdgeThatLostItsEvidenceIsDeleted(t *testing.T) {
 // nightly rebuild, which is a week of recommending an introduction nobody can
 // make.
 func TestARelinkDropsTheEdgeToTheContactTheActivityLeft(t *testing.T) {
+	t.Parallel()
 	v := edgeEnv{integration.Setup(t)}
 	now := time.Now().UTC()
 	was := v.contact(t, "Dana Mistaken")
@@ -333,6 +338,7 @@ func TestARelinkDropsTheEdgeToTheContactTheActivityLeft(t *testing.T) {
 }
 
 func TestTheNightlyRebuildAgreesWithTheIncrementalPath(t *testing.T) {
+	t.Parallel()
 	v := edgeEnv{integration.Setup(t)}
 	now := time.Now().UTC()
 
@@ -383,6 +389,7 @@ func equalSnapshots(a, b map[string][5]int) bool {
 }
 
 func TestArchivingOneOfTwoInteractionsCorrectsTheCountsRatherThanNothing(t *testing.T) {
+	t.Parallel()
 	v := edgeEnv{integration.Setup(t)}
 	now := time.Now().UTC()
 	contact := v.contact(t, "Two Threads")
@@ -432,6 +439,7 @@ func TestArchivingOneOfTwoInteractionsCorrectsTheCountsRatherThanNothing(t *test
 }
 
 func TestOneMessageCountsOnceHoweverManyRolesItNames(t *testing.T) {
+	t.Parallel()
 	v := edgeEnv{integration.Setup(t)}
 	now := time.Now().UTC()
 	contact := v.contact(t, "Both To And Cc")
@@ -470,6 +478,7 @@ func TestOneMessageCountsOnceHoweverManyRolesItNames(t *testing.T) {
 }
 
 func TestOnlyTheSenderOfAMessageHasWrittenToTheContact(t *testing.T) {
+	t.Parallel()
 	v := edgeEnv{integration.Setup(t)}
 	now := clocktest.Now(t)
 	contact := v.contact(t, "Anna Buyer")
@@ -504,6 +513,7 @@ func sentCount(e search.InteractionEdge) int {
 }
 
 func TestAColleagueCopiedBothWaysIsNotInTouch(t *testing.T) {
+	t.Parallel()
 	v := edgeEnv{integration.Setup(t)}
 	now := clocktest.Now(t)
 	contact := v.contact(t, "Anna Buyer")
@@ -525,6 +535,7 @@ func TestAColleagueCopiedBothWaysIsNotInTouch(t *testing.T) {
 }
 
 func TestACallOrMeetingIsNotAMessageTheColleagueSent(t *testing.T) {
+	t.Parallel()
 	v := edgeEnv{integration.Setup(t)}
 	now := clocktest.Now(t)
 	contact := v.contact(t, "Anna Buyer")
@@ -544,6 +555,7 @@ func TestACallOrMeetingIsNotAMessageTheColleagueSent(t *testing.T) {
 }
 
 func TestAReaderWithoutActivityReadGetsNoSentCount(t *testing.T) {
+	t.Parallel()
 	v := edgeEnv{integration.Setup(t)}
 	now := clocktest.Now(t)
 	contact := v.contact(t, "Anna Buyer")

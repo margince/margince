@@ -34,6 +34,7 @@ func sharedKeyThreads(t *testing.T, o *owedEnv, betaCc string) (first, ours, bet
 }
 
 func TestMovingAConversationLeavesAnotherCorrespondenceOnItsKeyAlone(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	first, ours, beta, confirms := sharedKeyThreads(t, o, "")
 	project := ids.NewV7()
@@ -64,6 +65,7 @@ func TestMovingAConversationLeavesAnotherCorrespondenceOnItsKeyAlone(t *testing.
 }
 
 func TestMovingAnUnprovenConversationMovesOnlyItsSendersMail(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	first := o.capture(t, pricingMail("anna@customer.test", o.seat, pricingRoot, alphaAsks, 0, false))
 	ours := o.capture(t, pricingMail(o.seat, "anna@customer.test", "pricing-ours@ws.example", ourAnswer, 15, false))
@@ -92,6 +94,7 @@ func TestMovingAnUnprovenConversationMovesOnlyItsSendersMail(t *testing.T) {
 }
 
 func TestTheExtractionWindowReadsOneCorrespondence(t *testing.T) {
+	t.Parallel()
 	for name, resolved := range map[string][]string{
 		"both senders are contacts":   {"buyer@alpha.test", "orders@beta.test"},
 		"only the customer is known":  {"buyer@alpha.test"},

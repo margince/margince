@@ -22,6 +22,7 @@ import (
 )
 
 func TestReportingPublicationDoesNotLockLoginBookkeeping(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	system := principal.SystemActing(f.human, "system:authority-fence")
 	users := identity.NewService(f.env.Pool)
@@ -40,6 +41,7 @@ func TestReportingPublicationDoesNotLockLoginBookkeeping(t *testing.T) {
 }
 
 func TestReportingBudgetedSnapshotCannotPublishAfterAuthorityRevocation(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	system := principal.SystemActing(f.human, "system:authority-fence")
 	users := identity.NewService(f.env.Pool)
@@ -57,6 +59,7 @@ func TestReportingBudgetedSnapshotCannotPublishAfterAuthorityRevocation(t *testi
 }
 
 func TestReportingLeadTargetWritesRequireLiveTeamMembership(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	actor, ok := principal.Actor(f.human)
 	if !ok {

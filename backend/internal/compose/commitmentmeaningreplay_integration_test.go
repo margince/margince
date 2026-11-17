@@ -21,6 +21,7 @@ import (
 )
 
 func TestNonActionRereadPreservesExistingWorkAndRenewal(t *testing.T) {
+	t.Parallel()
 	for _, confidence := range []float64{0.75, 0.95} {
 		f := setupRenewalPrivacy(t, confidence)
 		assertNonActionRereadPreservesAdmission(t, f)

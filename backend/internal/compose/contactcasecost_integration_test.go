@@ -21,6 +21,7 @@ import (
 )
 
 func TestContactCaseCensusCostDoesNotGrowWithItsCases(t *testing.T) {
+	t.Parallel()
 	c := setupCases(t)
 	first := seedDistinctContactCase(t, c, 0)
 	sent := &sentStatements{}

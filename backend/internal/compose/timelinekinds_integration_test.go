@@ -69,6 +69,7 @@ func listTimeline(ctx context.Context, t *testing.T, e *integration.Env, params 
 }
 
 func TestATimelineNarrowedToSeveralKindsPagesOverThoseKindsAlone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
 	contact := seedBusyContact(reader, t, e)

@@ -140,6 +140,7 @@ func (e *pullEnv) notes(t *testing.T) []filedNote {
 }
 
 func TestAPullFilesOneNoteForAClosedEpisodeAndAReplayFilesNone(t *testing.T) {
+	t.Parallel()
 	e := setupPull(t)
 	e.say("acme", 1, 60, "Acme wants 12% off the secret-plan-zebra renewal")
 	e.say("acme", 2, 70, "OK, we can give 12% if they sign this week")
@@ -170,6 +171,7 @@ func TestAPullFilesOneNoteForAClosedEpisodeAndAReplayFilesNone(t *testing.T) {
 }
 
 func TestAnIrrelevantEpisodeFilesNothingAndMovesTheCursor(t *testing.T) {
+	t.Parallel()
 	e := setupPull(t)
 	e.say("acme", 1, 60, "lunch at noon?")
 	e.say("acme", 2, 61, "sure")
@@ -184,6 +186,7 @@ func TestAnIrrelevantEpisodeFilesNothingAndMovesTheCursor(t *testing.T) {
 }
 
 func TestWithNoModelAnEpisodeIsPassedOverUnfiled(t *testing.T) {
+	t.Parallel()
 	e := setupPull(t)
 	e.puller.Lane = nil
 	e.say("acme", 1, 60, "Acme wants 12% off")
@@ -216,6 +219,7 @@ func TestAnEpisodeWhoseAuthorRestrictedProcessingIsPassedOverUnfiled(t *testing.
 }
 
 func TestTalkFromBeforeTheLinkIsJudgedOnlyWhenAskedAndAtMostFiveTimes(t *testing.T) {
+	t.Parallel()
 	e := setupPull(t)
 	for i := range 7 {
 		e.say("acme", int64(i+1), -60*(7-i)-30, "price talk "+strconv.Itoa(i))
@@ -243,6 +247,7 @@ func TestTalkFromBeforeTheLinkIsJudgedOnlyWhenAskedAndAtMostFiveTimes(t *testing
 }
 
 func TestEachLinkReadsAndFilesOnlyItsOwnChannel(t *testing.T) {
+	t.Parallel()
 	e := setupPull(t)
 	project := ids.NewV7()
 	e.exec(t, `INSERT INTO project (id, name, source, captured_by) VALUES ($1, 'Other rollout', 'manual', 'system')`, project)
@@ -269,6 +274,7 @@ func TestEachLinkReadsAndFilesOnlyItsOwnChannel(t *testing.T) {
 }
 
 func TestAChosenMessageIsFiledOnceAsASummary(t *testing.T) {
+	t.Parallel()
 	e := setupPull(t)
 	e.say("acme", 1, 60, "The 12% is fine with me")
 	note, err := e.filer.FileMessage(e.memberCtx(), chatlinks.RecordDeal, e.deal, "<m:#acme:1|this message>", false)
@@ -288,6 +294,7 @@ func TestAChosenMessageIsFiledOnceAsASummary(t *testing.T) {
 }
 
 func TestAChosenMessageFromBeforeTheLinkAnswersAsMissing(t *testing.T) {
+	t.Parallel()
 	e := setupPull(t)
 	e.say("acme", 1, -30, "Before the link: Acme may walk")
 	e.say("acme", 2, 60, "After the link: the 12% is fine")
@@ -302,6 +309,7 @@ func TestAChosenMessageFromBeforeTheLinkAnswersAsMissing(t *testing.T) {
 }
 
 func TestAChosenThreadLeavesOutAReplyStampedBeforeTheLink(t *testing.T) {
+	t.Parallel()
 	e := setupPull(t)
 	e.sayIn("acme", dispacttest.Message{Seq: 1, Text: "Can we do 12%?", ReplyCount: 2}, 60)
 	e.sayIn("acme", dispacttest.Message{Seq: 2, Text: "Stamped before the link", ThreadSeq: 1}, -30)
@@ -363,6 +371,7 @@ func (u *unlinkingSummary) Complete(ctx context.Context, req model.Request) (mod
 }
 
 func TestAnUnlinkWhileTheModelReadsFilesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupPull(t)
 	e.puller.Lane = &unlinkingSummary{unlink: func() {
 		e.exec(t, `UPDATE chat_link SET archived_at = now() WHERE id = $1`, e.link)
@@ -376,6 +385,7 @@ func TestAnUnlinkWhileTheModelReadsFilesNothing(t *testing.T) {
 }
 
 func TestAnEpisodeCutByThePageCapIsFiledOnceWhole(t *testing.T) {
+	t.Parallel()
 	e := setupPull(t)
 	e.now = linkedAt.Add(12 * time.Hour)
 	for seq := int64(1); seq <= 10; seq++ {
@@ -397,6 +407,7 @@ func TestAnEpisodeCutByThePageCapIsFiledOnceWhole(t *testing.T) {
 }
 
 func TestAnEpisodeThatFillsTheWholeReadIsFiledSoTheLinkMovesOn(t *testing.T) {
+	t.Parallel()
 	e := setupPull(t)
 	e.now = linkedAt.Add(15 * time.Hour)
 	for seq := int64(1); seq <= 600; seq++ {
@@ -414,6 +425,7 @@ func TestAnEpisodeThatFillsTheWholeReadIsFiledSoTheLinkMovesOn(t *testing.T) {
 }
 
 func TestAThreadLongerThanOneReadIsNotFiledInPart(t *testing.T) {
+	t.Parallel()
 	e := setupPull(t)
 	e.sayIn("acme", dispacttest.Message{Seq: 1, Text: "Thread talk", ReplyCount: 599}, 60)
 	for seq := int64(2); seq <= 600; seq++ {
@@ -428,6 +440,7 @@ func TestAThreadLongerThanOneReadIsNotFiledInPart(t *testing.T) {
 }
 
 func TestANoteUnderAMessageKeyThatTheChatDidNotWriteIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupPull(t)
 	e.say("acme", 1, 60, "The 12% is fine with me")
 	planted := ids.NewV7()

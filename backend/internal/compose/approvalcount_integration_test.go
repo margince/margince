@@ -20,6 +20,7 @@ import (
 // CountPending has two readers: the Home lane count and the digest. Past the
 // engine's scan cap, both get the number a client counts over every page.
 func TestHomeAndDigestApprovalCountsAreExactPastTheScanCap(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	pipeline, open, _ := integration.DealFixture(t, e)
 	svc := NewApprovalsService(e.DB())

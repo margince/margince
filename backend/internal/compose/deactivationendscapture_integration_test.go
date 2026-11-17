@@ -28,6 +28,7 @@ import (
 // The whole point: the connection is withdrawn and the sealed credential is
 // gone, in the transaction that deactivated the seat.
 func TestDeactivatingASeatWithdrawsTheirCaptureConnections(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedCaptureConnection(t, e, e.Rep1, "gmail", []byte(`{"token":"live"}`))
 	seedCaptureConnection(t, e, e.Rep1, "imap", []byte(`{"password":"live"}`))
@@ -56,6 +57,7 @@ func TestDeactivatingASeatWithdrawsTheirCaptureConnections(t *testing.T) {
 // mailbox is not polled. Asserted through the poller's own selector rather
 // than through the row, because the row being right is only half of it.
 func TestADeactivatedSeatsMailboxIsNotDue(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedCaptureConnection(t, e, e.Rep1, "gmail", []byte(`{"token":"live"}`))
 
@@ -72,6 +74,7 @@ func TestADeactivatedSeatsMailboxIsNotDue(t *testing.T) {
 // written before this existed — the poll refuses it on the seat's liveness
 // alone. That is why the predicate is there as well as the cascade.
 func TestThePollRefusesADepartedSeatEvenOnAConnectedRow(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedCaptureConnection(t, e, e.Rep1, "gmail", []byte(`{"token":"live"}`))
 
@@ -97,6 +100,7 @@ func TestThePollRefusesADepartedSeatEvenOnAConnectedRow(t *testing.T) {
 // was withdrawn FROM — so the record says which mailboxes it actually stopped,
 // not merely that somebody left.
 func TestWithdrawingOnDeactivationLeavesAnAuditRowPerConnection(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedCaptureConnection(t, e, e.Rep1, "gmail", []byte(`{"token":"live"}`))
 	seedCaptureConnection(t, e, e.Rep1, "imap", []byte(`{"password":"live"}`))
@@ -174,6 +178,7 @@ func isDue(t *testing.T, e *integration.Env, owner ids.UUID, provider string) bo
 // The audit row says WHY, not just what: a withdrawal by departure and one by
 // hand leave the same field images, and only the evidence tells them apart.
 func TestTheWithdrawalAuditNamesTheDeactivation(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedCaptureConnection(t, e, e.Rep1, "gmail", []byte(`{"token":"live"}`))
 
@@ -192,6 +197,7 @@ func TestTheWithdrawalAuditNamesTheDeactivation(t *testing.T) {
 // to the vaulted secret is cleared, so nothing is left naming a blob that
 // should no longer exist.
 func TestReapingClearsTheCredentialPointerOfAWithdrawnConnection(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	vault := keyvault.NewMemory()
 	ref, err := vault.Put(e.Admin(), ids.From[ids.WorkspaceKind](e.WS), []byte(`{"token":"secret"}`))
@@ -228,6 +234,7 @@ func TestReapingClearsTheCredentialPointerOfAWithdrawnConnection(t *testing.T) {
 // had withdrawn. Reaping is for what a withdrawal left behind, and a pass
 // that reached a connected row would strand a secret it still needs.
 func TestReapingLeavesALiveConnectionAlone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedVaultedConnection(t, e, e.Rep1, "ref-still-in-use")
 
@@ -275,6 +282,7 @@ func credentialRef(t *testing.T, e *integration.Env, owner ids.UUID) *string {
 // work: a reaper nobody bound leaves the secret exactly where a reaper that
 // was never written would.
 func TestAWiredDeactivationDestroysTheVaultedCredential(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	vault := keyvault.NewMemory()
 	ref, err := vault.Put(e.Admin(), ids.From[ids.WorkspaceKind](e.WS), []byte(`{"token":"secret"}`))
@@ -306,6 +314,7 @@ func TestAWiredDeactivationDestroysTheVaultedCredential(t *testing.T) {
 // A role that composed no capture registry binds nothing and says so by not
 // panicking: deactivation still withdraws, and the secret waits for the sweep.
 func TestInstallingTheReaperWithoutACaptureRegistryBindsNothing(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	srv := Server{authHandlers: identity.NewHandlers(identity.NewService(e.Pool))}
 
@@ -322,6 +331,7 @@ func TestInstallingTheReaperWithoutACaptureRegistryBindsNothing(t *testing.T) {
 // A reap that cannot reach a vault is logged and swallowed rather than failing
 // a departure that already committed.
 func TestTheReaperAdapterDoesNotFailADepartureItCannotFinish(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedVaultedConnection(t, e, e.Rep1, "ref-with-no-vault")
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -360,6 +370,7 @@ func adminIdentity(e *integration.Env) identity.Identity {
 // credential stays decryptable — nor, worse, the reason a secret is destroyed
 // while the row still names it.
 func TestReapingSurvivesACallerThatHasAlreadyHungUp(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	vault := keyvault.NewMemory()
 	ref, err := vault.Put(e.Admin(), ids.From[ids.WorkspaceKind](e.WS), []byte(`{"token":"secret"}`))

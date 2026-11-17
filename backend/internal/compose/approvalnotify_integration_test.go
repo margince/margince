@@ -266,6 +266,7 @@ func (a approvalNotifyEnv) delivered(t *testing.T) []deliveredNotice {
 }
 
 func TestApprovalNotifyReachesTheSeatsThatCouldDecideAndNobodyElse(t *testing.T) {
+	t.Parallel()
 	a := newApprovalNotifyEnv(t)
 	a.grantRole(t, a.e.AdminUser)
 	// The deactivated manager holds the SAME grants as the admin, so the only
@@ -311,6 +312,7 @@ func TestApprovalNotifyReachesTheSeatsThatCouldDecideAndNobodyElse(t *testing.T)
 // parts rather than a pattern over the joined subject. A value with a comma in
 // it stays one value.
 func TestAnApprovalNoticeCarriesItsSummaryPartsToTheBell(t *testing.T) {
+	t.Parallel()
 	a := newApprovalNotifyEnv(t)
 	a.grantRole(t, a.e.AdminUser)
 	proposal, err := json.Marshal(deals.CloseDateCorrection{
@@ -344,6 +346,7 @@ func TestAnApprovalNoticeCarriesItsSummaryPartsToTheBell(t *testing.T) {
 }
 
 func TestApprovalNotifySaysNothingAboutAnApprovalThatStoppedBeingPending(t *testing.T) {
+	t.Parallel()
 	a := newApprovalNotifyEnv(t)
 	a.grantRole(t, a.e.AdminUser)
 	approvalID, env := a.stageCorrection(t)
@@ -378,6 +381,7 @@ func TestApprovalNotifySaysNothingAboutAnApprovalThatStoppedBeingPending(t *test
 // The member asked wants no mail about approvals, so they still get the card in
 // their own centre, and no message is staged about it.
 func TestApprovalNotifyRecordsTheLineButStagesNoMailForASeatWhoSwitchedApprovalsOff(t *testing.T) {
+	t.Parallel()
 	a := newApprovalNotifyEnv(t)
 	a.grantRole(t, a.e.AdminUser)
 	a.grantRole(t, a.e.Rep2)
@@ -402,6 +406,7 @@ func TestApprovalNotifyRecordsTheLineButStagesNoMailForASeatWhoSwitchedApprovals
 }
 
 func TestApprovalNotifyOnASelfOnlyKindReachesOnlyTheSeatItWasStagedFor(t *testing.T) {
+	t.Parallel()
 	a := newApprovalNotifyEnv(t)
 	// A step-up needs no object grant at all — the lender is the whole of its
 	// authority — so the admin here is the widest seat in the workspace and

@@ -99,6 +99,7 @@ func companyNameAndSource(t *testing.T, e *integration.Env, company ids.UUID) (s
 // forge two addresses at the target's domain must not be able to write the name
 // — the sweep asks a human instead.
 func TestCompanyNamePromotionAgreeingSignaturesStillAskAHuman(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := seedProvisionalCompany(t, e, "Gitex", "domain")
 	seedSigningEmployee(t, e, company, "Alice Signer", "Gitex Global")
@@ -130,6 +131,7 @@ func TestCompanyNamePromotionAgreeingSignaturesStillAskAHuman(t *testing.T) {
 }
 
 func TestCompanyNamePromotionAsksAboutASingleSignature(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := seedProvisionalCompany(t, e, "Gitex", "domain")
 	seedSigningEmployee(t, e, company, "Alice Signer", "Gitex Global")
@@ -160,6 +162,7 @@ func TestCompanyNamePromotionAsksAboutASingleSignature(t *testing.T) {
 }
 
 func TestCompanyNamePromotionNeverOverwritesAStrongerSource(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	for _, source := range []string{"human", "dossier", "signature"} {
 		t.Run("name_source "+source+" is untouchable", func(t *testing.T) {
@@ -183,6 +186,7 @@ func TestCompanyNamePromotionNeverOverwritesAStrongerSource(t *testing.T) {
 }
 
 func TestCompanyNamePromotionCorroboratedByTheDossier(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := seedProvisionalCompany(t, e, "Gitex", "domain")
 	seedSigningEmployee(t, e, company, "Alice Signer", "Gitex Global")
@@ -207,6 +211,7 @@ func TestCompanyNamePromotionCorroboratedByTheDossier(t *testing.T) {
 // every night on the same unresolvable rows, and a company behind them
 // whose corroborated name is ready to apply would never be reached at all.
 func TestCompanyNamePromotionReachesCandidatesBeyondTheFirstPage(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 
 	// Fill more than one page with companies that can never resolve: one
@@ -237,6 +242,7 @@ func TestCompanyNamePromotionReachesCandidatesBeyondTheFirstPage(t *testing.T) {
 // a decided-offer check it stages a fresh copy of what was just refused, every
 // night, because the signature that produced it never goes away.
 func TestCompanyNamePromotionDoesNotReofferADeclinedRename(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := seedProvisionalCompany(t, e, "Gitex", "domain")
 	seedSigningEmployee(t, e, company, "Alice Signer", "Gitex Global")
@@ -305,6 +311,7 @@ func declineTheStagedRename(t *testing.T, e *integration.Env, promoter *CompanyN
 // approve. The identity of the decision is the record and the proposed name;
 // nothing else.
 func TestCompanyNamePromotionRemembersADeclineAfterTheEvidenceMoves(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := seedProvisionalCompany(t, e, "Gitex", "domain")
 	seedSigningEmployee(t, e, company, "Alice Signer", "Gitex Global")
@@ -337,6 +344,7 @@ func TestCompanyNamePromotionRemembersADeclineAfterTheEvidenceMoves(t *testing.T
 // fresher offer supersedes the stale one instead of competing with it in the
 // inbox. Without it a human is asked the same question once per signer.
 func TestCompanyNamePromotionSupersedesAStalePendingOffer(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := seedProvisionalCompany(t, e, "Gitex", "domain")
 	seedSigningEmployee(t, e, company, "Alice Signer", "Gitex Global")
@@ -382,6 +390,7 @@ func TestCompanyNamePromotionSupersedesAStalePendingOffer(t *testing.T) {
 // exactly when a second signer arrives, which is also when the claim becomes
 // corroborated enough to apply without asking.
 func TestCompanyNamePromotionRemembersADeclineRecordedBeforeTheIdentityField(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := seedProvisionalCompany(t, e, "Gitex", "domain")
 	seedSigningEmployee(t, e, company, "Alice Signer", "Gitex Global")
@@ -419,6 +428,7 @@ func TestCompanyNamePromotionRemembersADeclineRecordedBeforeTheIdentityField(t *
 // corroboration that never consults the approval simply performs the rename the
 // human refused, with no offer, no inbox row and nothing to notice.
 func TestCompanyNamePromotionDoesNotAutoApplyADeclinedRename(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := seedProvisionalCompany(t, e, "Gitex", "domain")
 	seedSigningEmployee(t, e, company, "Alice Signer", "Gitex Global")
@@ -457,6 +467,7 @@ func TestCompanyNamePromotionDoesNotAutoApplyADeclinedRename(t *testing.T) {
 // assembled by the test would prove nothing about the one the product records,
 // and the recency rule the reader applies lives in the row that writer shapes.
 func TestASuppressedSignatureStopsCorroboratingARename(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := seedProvisionalCompany(t, e, "Gitex", "domain")
 	alice := seedSigningEmployee(t, e, company, "Alice Signer", "Gitex Global")
@@ -483,6 +494,7 @@ func TestASuppressedSignatureStopsCorroboratingARename(t *testing.T) {
 // A correction is not a veto: it counts, and the proposal carries the human's
 // value rather than the machine's.
 func TestACorrectedSignatureCorroboratesTheHumansValue(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := seedProvisionalCompany(t, e, "Gitex", "domain")
 	alice := seedSigningEmployee(t, e, company, "Alice Signer", "Gitex Global")

@@ -181,6 +181,7 @@ func (c *carryEnv) pressStatus(token string) error {
 // The press resolved its link to the retired contact before the merge
 // committed, and withdraws once it has: it must withdraw the survivor.
 func TestAnUnsubscribePressedDuringTheMergeWithdrawsTheSurvivor(t *testing.T) {
+	t.Parallel()
 	c := setupCarry(t)
 	retired := c.contactAt(t, "Race Unsub Retired", "race-unsub@carry.test")
 	survivor := c.contactAt(t, "Race Unsub Survivor", "race-unsub-survivor@carry.test")
@@ -205,6 +206,7 @@ func TestAnUnsubscribePressedDuringTheMergeWithdrawsTheSurvivor(t *testing.T) {
 // A send resolving its recipient while the merge moves that address mints the
 // preference link on the survivor.
 func TestAPreferenceLinkMintedDuringTheMergeLandsOnTheSurvivor(t *testing.T) {
+	t.Parallel()
 	c := setupCarry(t)
 	retired := c.contactAt(t, "Race Pref Retired", "race-pref@carry.test")
 	survivor := c.contactAt(t, "Race Pref Survivor", "race-pref-survivor@carry.test")
@@ -236,6 +238,7 @@ func TestAPreferenceLinkMintedDuringTheMergeLandsOnTheSurvivor(t *testing.T) {
 // An ask about the retired contact, made while the merge runs, is refused
 // rather than written onto a record no read returns.
 func TestAnAskMadeDuringTheMergeIsNotLeftOnTheRetiredContact(t *testing.T) {
+	t.Parallel()
 	c := setupCarry(t)
 	retired := c.contactAt(t, "Race Ask Retired", "race-ask@carry.test")
 	survivor := c.contactAt(t, "Race Ask Survivor", "race-ask-survivor@carry.test")
@@ -260,6 +263,7 @@ func TestAnAskMadeDuringTheMergeIsNotLeftOnTheRetiredContact(t *testing.T) {
 // A hand-recorded exchange naming the retired contact is refused; a booking's
 // inquiry follows the merge onto the survivor, because the booking happened.
 func TestQualifyingEventsWrittenDuringTheMergeAreNotLeftBehind(t *testing.T) {
+	t.Parallel()
 	c := setupCarry(t)
 	retired := c.contactAt(t, "Race Event Retired", "race-event@carry.test")
 	survivor := c.contactAt(t, "Race Event Survivor", "race-event-survivor@carry.test")
@@ -304,6 +308,7 @@ func TestQualifyingEventsWrittenDuringTheMergeAreNotLeftBehind(t *testing.T) {
 // A lead's unsubscribe link minted while its lead merge runs is refused rather
 // than stranded on the loser.
 func TestALeadLinkMintedDuringTheLeadMergeIsNotLeftOnTheLoser(t *testing.T) {
+	t.Parallel()
 	c := setupCarry(t)
 	winner := c.lead(t, "Rita Race", "", "Race & Co")
 	loser := c.lead(t, "Rita Racee", "rita@leadcarry.test", "Race & Co")
@@ -337,6 +342,7 @@ func TestALeadLinkMintedDuringTheLeadMergeIsNotLeftOnTheLoser(t *testing.T) {
 // That pause is the window: the merge must be waiting on the row, not reading
 // a snapshot of it from before.
 func TestAnAskCompletedWhileTheMergeWaitsIsNotCancelled(t *testing.T) {
+	t.Parallel()
 	c := setupCarry(t)
 	retired := c.contactAt(t, "Done Retired", "done@carry.test")
 	survivor := c.contactAt(t, "Done Survivor", "done-survivor@carry.test")

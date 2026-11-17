@@ -38,6 +38,7 @@ func endWorkLease(t *testing.T, env *integration.Env, lease *database.SessionLea
 }
 
 func TestVoiceBuildRecoversAsSoonAsItsSessionDies(t *testing.T) {
+	t.Parallel()
 	env, build := seedVoiceBuild(t, "Recoverable quote.", 6)
 	ctx := env.workerCtx(t)
 	lease, held, err := env.e.DB().TryWorkLease(ctx, "voice_build", build.ID, discardLogger())
@@ -76,6 +77,7 @@ func TestVoiceBuildRecoversAsSoonAsItsSessionDies(t *testing.T) {
 }
 
 func TestVoiceStagesAreFencedToTheClaimGeneration(t *testing.T) {
+	t.Parallel()
 	env, build := seedVoiceBuild(t, "Fenced quote.", 6)
 	ctx := env.workerCtx(t)
 	old, claimed, err := env.store.ClaimBuild(ctx, env.profile.ID, build.ID, time.Hour)
@@ -101,6 +103,7 @@ func TestVoiceStagesAreFencedToTheClaimGeneration(t *testing.T) {
 }
 
 func TestDocumentRetryUsesSessionDeathInsteadOfTheOldTimer(t *testing.T) {
+	t.Parallel()
 	env := integration.Setup(t)
 	ctx := env.Admin()
 	pipeline, stage, _ := integration.DealFixture(t, env)
@@ -155,6 +158,7 @@ func TestDocumentRetryUsesSessionDeathInsteadOfTheOldTimer(t *testing.T) {
 }
 
 func TestSessionLockedJobsInsertPastAbandonedRiverRows(t *testing.T) {
+	t.Parallel()
 	env := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
 	runner, err := jobs.NewInserter(env.Pool, discardLogger())
@@ -202,6 +206,7 @@ func TestSessionLockedJobsInsertPastAbandonedRiverRows(t *testing.T) {
 }
 
 func TestConcurrentSessionJobOffersCoalesceWhileWaiting(t *testing.T) {
+	t.Parallel()
 	env := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
 	runner, err := jobs.NewInserter(env.Pool, discardLogger())

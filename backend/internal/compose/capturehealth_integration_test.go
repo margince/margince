@@ -36,6 +36,7 @@ import (
 )
 
 func TestCaptureHealthCountsABacklogAnAdminCannotSee(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 
@@ -135,6 +136,7 @@ func ownerReader(e *integration.Env, user ids.UUID) context.Context {
 // address has no sender entry at all is the case that splits them if either
 // side is rebuilt from the senders list, which cannot see it.
 func TestTheOwnersWaitingListIsWhatTheAdminCountCounts(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	noEntry := seedOwnerPrivateContact(t, e, e.Rep1, "No Entry Yet", "noentry@waiting.test")
 	pending := seedOwnerPrivateContact(t, e, e.Rep1, "Asked Not Answered", "pending@waiting.test")
@@ -184,6 +186,7 @@ func TestTheOwnersWaitingListIsWhatTheAdminCountCounts(t *testing.T) {
 }
 
 func TestTheOwnersWaitingListRefusesAnAgent(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
 		// Bound to the owner's seat, so only the human rung can refuse it.
@@ -201,6 +204,7 @@ func TestTheOwnersWaitingListRefusesAnAgent(t *testing.T) {
 // message, meeting, sender or hold carries is planted, and neither a key nor a
 // value of the response may carry one.
 func TestCaptureHealthCarriesNoCorrespondence(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedOwnerPrivateContact(t, e, e.Rep1, "Planted Contact Name", "planted.sender@private.test")
 	seedFiledHeldMeetings(t, e, 1)
@@ -284,6 +288,7 @@ func serveCaptureHealth(t *testing.T, e *integration.Env) *httptest.ResponseReco
 // A calm installation is the common case, and the card refuses a report whose
 // required lists are null — so an empty backlog must travel as an empty list.
 func TestACalmInstallationReportsEmptyListsNotNull(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 
 	var report map[string]json.RawMessage
@@ -302,6 +307,7 @@ func TestACalmInstallationReportsEmptyListsNotNull(t *testing.T) {
 // The capture lane raises rows for calendars too, and a calendar row titled as
 // a mailbox sends the reader to fix the wrong thing.
 func TestTheCaptureHealthSeamTellsACalendarFromAMailbox(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	for _, provider := range []string{"gmail", "gcal", "graphcal", "imap"} {
 		e.WsExec(t, `INSERT INTO capture_connection (provider, user_id, status)
@@ -323,6 +329,7 @@ func TestTheCaptureHealthSeamTellsACalendarFromAMailbox(t *testing.T) {
 }
 
 func TestCaptureSummaryKeepsUnobservedSweepsAfterAFailedSweep(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	at := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)

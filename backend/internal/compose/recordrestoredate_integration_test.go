@@ -34,6 +34,7 @@ import (
 )
 
 func TestADateFieldGoesBackWhereItWas(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	pipeline, open, _ := integration.DealFixture(t, e)
@@ -83,6 +84,7 @@ func TestADateFieldGoesBackWhereItWas(t *testing.T) {
 // parses the image back, so the image's spelling and the parser's layout are one
 // change.
 func TestALinksDateGoesBackWhereItWas(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 

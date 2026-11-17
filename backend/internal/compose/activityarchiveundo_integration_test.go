@@ -34,6 +34,7 @@ func archivedSourceNote(t *testing.T, e *integration.Env) (ids.UUID, ids.UUID, i
 }
 
 func TestActivityArchiveUndoPreservesSourceAndCanBeRedone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id, archive, _ := archivedSourceNote(t, e)
 	if answer := advisoryAnswer(e.Admin(), t, e, entityTypeActivity, id, archive); !answer.Undoable {
@@ -65,6 +66,7 @@ func TestActivityArchiveUndoPreservesSourceAndCanBeRedone(t *testing.T) {
 }
 
 func TestActivityArchiveUndoRefusesStaleVersionAndMissingAuthority(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id, archive, _ := archivedSourceNote(t, e)
 	version := currentVersion(t, e, entityTypeActivity, id)
@@ -88,6 +90,7 @@ func TestActivityArchiveUndoRefusesStaleVersionAndMissingAuthority(t *testing.T)
 }
 
 func TestActivityArchiveUndoCannotCrossErasure(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id, archive, contact := archivedSourceNote(t, e)
 	if err := eraserWithGraph(e.DB()).EraseContact(e.Admin(), contact, "Subject requested erasure"); err != nil {
@@ -102,6 +105,7 @@ func TestActivityArchiveUndoCannotCrossErasure(t *testing.T) {
 }
 
 func TestActivityArchiveRestoreKeepsSelectedAudience(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Private notes", &e.AdminUser)
 	row, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{Kind: "note", Subject: new("Private source"), Source: "manual", Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}}})
@@ -126,6 +130,7 @@ func TestActivityArchiveRestoreKeepsSelectedAudience(t *testing.T) {
 }
 
 func TestDerivedMailAudienceCannotBeReplayedByGenericUndo(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id := seedHeldThreadOn(t, e, "owner-controlled-mail", "sender@example.test", e.AdminUser)
 	decideThread(t, e, e.AdminUser, "owner-controlled-mail", true)

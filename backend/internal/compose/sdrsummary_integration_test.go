@@ -102,6 +102,7 @@ func sdrServe(ctx context.Context, t *testing.T, e *forecastEnv, call func(sdrSu
 }
 
 func TestSdrSummaryAgesTheCurrentSubmissionAndDisclosesABlockedRecipient(t *testing.T) {
+	t.Parallel()
 	f := newSdrFixture(t, crmcontracts.ReportingFrameworkInputTemplateSdr)
 	e := f.e
 	returned := f.submit(t, "Returned prospect", &f.ae)
@@ -165,6 +166,7 @@ func TestSdrSummaryAgesTheCurrentSubmissionAndDisclosesABlockedRecipient(t *test
 }
 
 func TestSdrSummaryNeverAgesAHandoffPastItsAsOf(t *testing.T) {
+	t.Parallel()
 	f := newSdrFixture(t, crmcontracts.ReportingFrameworkInputTemplateSdr)
 	e := f.e
 	f.submit(t, "Earlier prospect", &f.ae)
@@ -188,6 +190,7 @@ func TestSdrSummaryNeverAgesAHandoffPastItsAsOf(t *testing.T) {
 }
 
 func TestSdrSummaryAcceptanceAfterResubmissionCountsOnce(t *testing.T) {
+	t.Parallel()
 	f := newSdrFixture(t, crmcontracts.ReportingFrameworkInputTemplateSdr)
 	e := f.e
 	handoff := f.submit(t, "Accepted prospect", &f.ae)
@@ -225,6 +228,7 @@ func TestSdrSummaryAcceptanceAfterResubmissionCountsOnce(t *testing.T) {
 }
 
 func TestSdrWaitingHandoffWithheldProspectIsRestricted(t *testing.T) {
+	t.Parallel()
 	f := newSdrFixture(t, crmcontracts.ReportingFrameworkInputTemplateSdr)
 	e := f.e
 	f.submit(t, "Private prospect", &f.ae)
@@ -252,6 +256,7 @@ func TestSdrWaitingHandoffWithheldProspectIsRestricted(t *testing.T) {
 }
 
 func TestSdrWaitingHandoffWithAMaskedLeadCompanyIsRestricted(t *testing.T) {
+	t.Parallel()
 	f := newSdrFixture(t, crmcontracts.ReportingFrameworkInputTemplateSdr)
 	e := f.e
 	lead := e.seedID(t, `INSERT INTO lead(id,full_name,company_name,source,captured_by) VALUES($1,'','Masked Company Ltd','inbound','system:fixture')`)
@@ -273,6 +278,7 @@ func TestSdrWaitingHandoffWithAMaskedLeadCompanyIsRestricted(t *testing.T) {
 }
 
 func TestSdrSummaryWithoutAHandoffWorkflowReadsNoHandoffs(t *testing.T) {
+	t.Parallel()
 	f := newSdrFixture(t, crmcontracts.ReportingFrameworkInputTemplateSales)
 	e := f.e
 	f.submit(t, "Waiting anyway", &f.ae)
@@ -303,6 +309,7 @@ func TestSdrSummaryWithoutAHandoffWorkflowReadsNoHandoffs(t *testing.T) {
 }
 
 func TestLeadsAwaitingResponseCountsTheUnansweredArrivalCohort(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	now := clocktest.Now(t)
 	arrived, replied := now.AddDate(0, 0, -2), now.AddDate(0, 0, -1)
@@ -343,6 +350,7 @@ func TestLeadsAwaitingResponseCountsTheUnansweredArrivalCohort(t *testing.T) {
 }
 
 func TestLeadEvidenceLabelHidesAMaskedCompanyName(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	now := clocktest.Now(t)
 	e.seedID(t, `INSERT INTO lead(id,full_name,company_name,source,captured_by,owner_id,created_at) VALUES($1,'','Masked Company Ltd','inbound','human:x',$2,$3)`, e.Rep1, now.AddDate(0, 0, -1))
@@ -361,6 +369,7 @@ func TestLeadEvidenceLabelHidesAMaskedCompanyName(t *testing.T) {
 // A summary read beside an evaluation counts at the evaluation's instant, not
 // at the clock's later one. A cutoff in the future is refused.
 func TestSdrSummaryCountsAtTheInstantItIsAskedFor(t *testing.T) {
+	t.Parallel()
 	f := newSdrFixture(t, crmcontracts.ReportingFrameworkInputTemplateSdr)
 	e := f.e
 	asked := f.at.Add(time.Minute)
@@ -406,6 +415,7 @@ func TestSdrSummaryCountsAtTheInstantItIsAskedFor(t *testing.T) {
 // A returned row names the reason of the round it is in. A later recycle does
 // not rewrite what the seat was told at an earlier instant.
 func TestAReturnedHandoffNamesTheReasonOfItsRoundAtAsOf(t *testing.T) {
+	t.Parallel()
 	f := newSdrFixture(t, crmcontracts.ReportingFrameworkInputTemplateSdr)
 	rows, err := f.e.Pool.Query(context.Background(), `SELECT id,label FROM sdr_handoff_reason WHERE applies_to='recycled' AND active ORDER BY sort_order LIMIT 2`)
 	if err != nil {
@@ -453,6 +463,7 @@ func TestAReturnedHandoffNamesTheReasonOfItsRoundAtAsOf(t *testing.T) {
 // as_of pairs a read with an evaluation moments earlier. An instant more than
 // sdrAsOfWindow back is refused on both routes, and the window's edge is kept.
 func TestAnSdrAsOfOlderThanTheWindowIsRefused(t *testing.T) {
+	t.Parallel()
 	f := newSdrFixture(t, crmcontracts.ReportingFrameworkInputTemplateSdr)
 	f.submit(t, "Waiting prospect", &f.ae)
 	h := newSdrSummaryHandlers(InstallationDB(f.e.Pool), func() time.Time { return f.at })

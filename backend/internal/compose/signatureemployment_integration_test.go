@@ -19,6 +19,7 @@ import (
 )
 
 func TestSignatureTitlesFillTheCurrentRoleAndKeepAHumansRoleChoice(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name    string
 		initial *string

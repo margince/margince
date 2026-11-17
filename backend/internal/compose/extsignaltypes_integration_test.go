@@ -28,6 +28,7 @@ func signalFiler(objects ...string) principal.Permissions {
 	return principal.Permissions{RoleKeys: []string{"filer"}, Objects: grants, RowScope: principal.RowScopeOwn}
 }
 
+//testdb:serial registers into a process-wide unit registry
 func TestAUnitFilesItsOwnSignalKindAndARepeatIsTheSameSignal(t *testing.T) {
 	w := setupReads(t)
 	extregistrytest.Reset(t)
@@ -69,6 +70,7 @@ func TestAUnitFilesItsOwnSignalKindAndARepeatIsTheSameSignal(t *testing.T) {
 	}
 }
 
+//testdb:serial registers into a process-wide unit registry
 func TestAUnitCannotFileASignalAboutARecordTheCallerCannotSee(t *testing.T) {
 	w := setupReads(t)
 	extregistrytest.Reset(t)

@@ -40,6 +40,7 @@ func (p pausedMemberInspection) Inspect(ctx context.Context, tx pgx.Tx, source i
 }
 
 func TestAMemberRetirementPreviewDoesNotHoldMutationLocks(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	manager := memberManagerFor(t, e)
 	pipeline, stage, _ := integration.DealFixture(t, e)
@@ -77,6 +78,7 @@ func TestAMemberRetirementPreviewDoesNotHoldMutationLocks(t *testing.T) {
 }
 
 func TestAConcurrentTaskAssignmentCannotLeaveWorkOnARetiredMember(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	manager := memberManagerFor(t, e)
 	ctx := e.As(e.AdminUser, nil, integration.AdminWithSignals)

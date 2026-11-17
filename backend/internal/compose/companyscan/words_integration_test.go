@@ -24,6 +24,7 @@ import (
 // A canceled meeting is no exchange, so the model never reads it as one and it
 // takes no slot from real correspondence in the window.
 func TestACanceledMeetingIsNotAnExchangeTheScanReads(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	company := e.SeedCompany(t, "Fold Scan Co", nil)
@@ -72,6 +73,7 @@ func TestACanceledMeetingIsNotAnExchangeTheScanReads(t *testing.T) {
 // The scan reads only what a reply's sender wrote. A quoted mail under it is not
 // shown to the model, and its words cannot be quoted as the reply's.
 func TestTheScanReadsOnlyWhatTheSenderWrote(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	company := e.SeedCompany(t, "Quote Scan Co", nil)
@@ -101,6 +103,7 @@ func TestTheScanReadsOnlyWhatTheSenderWrote(t *testing.T) {
 // A message dated after the scan's clock has not happened, so it is neither
 // read nor allowed to take a slot from real correspondence.
 func TestTheScanDoesNotReadAMessageDatedAfterNow(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	company := e.SeedCompany(t, "Future Scan Co", nil)
@@ -139,6 +142,7 @@ func TestTheScanDoesNotReadAMessageDatedAfterNow(t *testing.T) {
 // A reader who may not see partner programmes cannot rule one out, so deal
 // advice is withheld, and nothing names the account a partner.
 func TestAReaderWhoCannotSeePartnersGetsNoDealAdvice(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Unknown Standing Co", nil))
 	standing := func(ctx context.Context) (bool, bool) {

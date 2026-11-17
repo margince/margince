@@ -18,6 +18,7 @@ import (
 )
 
 func TestACSVLinkToATechnicalAddressNamesNoContact(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	conn := integration.OwnerConn(t)
 	machineAddressContact(t, e, conn, "HubSpot Logger", hubspotBCC)
@@ -41,6 +42,7 @@ func TestACSVLinkToATechnicalAddressNamesNoContact(t *testing.T) {
 }
 
 func TestAMeetingAttendeeAtATechnicalAddressIsNoContact(t *testing.T) {
+	t.Parallel()
 	w := newAttendeeWorld(t)
 	technical := w.contact(t, w.e.Rep1, hubspotBCC, "")
 	got, err := w.calendar.ResolveAttendees(w.e.Admin(), w.host, []string{hubspotBCC})

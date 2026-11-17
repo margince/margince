@@ -17,6 +17,7 @@ import (
 // A tool write names the seats and records it changed as the inbox does. A
 // view in a chat host has no way to look them up.
 func TestAToolWriteNamesTheSeatsAndRecordsItChanged(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seats := identity.NewServiceFor(e.DB())
 	for seat, name := range map[ids.UUID]string{e.Rep1: "Ana Rep", e.Rep2: "Sam Rep"} {
@@ -57,6 +58,7 @@ func TestAToolWriteNamesTheSeatsAndRecordsItChanged(t *testing.T) {
 }
 
 func TestAToolWriteNamesAnAmountInItsCurrency(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	current := map[string]json.RawMessage{"currency": json.RawMessage(`"EUR"`), "amount_minor": json.RawMessage(`null`)}
 	changes := map[string]json.RawMessage{"amount_minor": json.RawMessage(`120000`)}

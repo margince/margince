@@ -117,6 +117,7 @@ func onboardingPOST[T onboardingRequest](ctx context.Context, t *testing.T, path
 // TargetKindOnboarding is exactly the case a silently-untested branch here
 // would miss).
 func TestOnboardingSiteReadTransportPromotesAJoinedReadToo(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	human := e.As(e.Rep1, nil, integration.AdminPerms)
 	inserter := &fakeInserter{}
@@ -148,6 +149,7 @@ func TestOnboardingSiteReadTransportPromotesAJoinedReadToo(t *testing.T) {
 }
 
 func TestOnboardingSiteReadTransportStartsPollsAndConfirmsTheDraft(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	human := e.As(e.Rep1, nil, integration.AdminPerms)
 	inserter := &fakeInserter{}
@@ -244,6 +246,7 @@ func TestOnboardingSiteReadTransportStartsPollsAndConfirmsTheDraft(t *testing.T)
 }
 
 func TestOnboardingSiteReadPollKeepsTheDossierWhenOptionalRuntimeTelemetryFails(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	human := e.As(e.Rep1, nil, integration.AdminPerms)
 	ready := onboardingDraft(t, e)
@@ -295,6 +298,7 @@ func wantBlankNameRequired(t *testing.T, body []byte) {
 }
 
 func TestOnboardingSiteReadTransportRejectsInvalidManualInputs(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	human := e.As(e.Rep1, nil, integration.AdminPerms)
 	engine := newDeepReadTestEngine(e, &fakeInserter{})
@@ -366,6 +370,7 @@ func TestOnboardingSiteReadTransportRejectsInvalidManualInputs(t *testing.T) {
 }
 
 func TestOnboardingSiteReadConfirmsSelectedDataAndKeepsContactsSeparate(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ready := onboardingDraft(t, e)
 	if e.WsCount(t, `SELECT count(*) FROM company WHERE is_anchor`) != 0 ||
@@ -441,6 +446,7 @@ func TestOnboardingSiteReadConfirmsSelectedDataAndKeepsContactsSeparate(t *testi
 // What it must NOT do is launder the untouched facts alongside it (ADR-0065):
 // accepting what the page said keeps the page's evidence.
 func TestCorrectingAFactAtColdStartStoresItAsTheHumansOwnAssertion(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	human := e.As(e.Rep1, nil, integration.AdminPerms)
 	ready := onboardingDraft(t, e)
@@ -498,6 +504,7 @@ func TestCorrectingAFactAtColdStartStoresItAsTheHumansOwnAssertion(t *testing.T)
 }
 
 func TestCompanySiteReadRefreshRequiresConflictDecisionsAndPreservesProvenance(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	human := e.As(e.Rep1, nil, integration.AdminPerms)
 	humanOffer, humanICP, humanAddress := "Human-authored advisory", "Human-authored finance teams", "Human Road 1"
@@ -598,6 +605,7 @@ func TestCompanySiteReadRefreshRequiresConflictDecisionsAndPreservesProvenance(t
 }
 
 func TestOnboardingConfirmationRollsBackWhenSeparateContactsCannotStage(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ready := onboardingDraft(t, e)
 	offer, icp := "Employee onboarding software", "Growing RevOps teams"
@@ -630,6 +638,7 @@ func TestOnboardingConfirmationRollsBackWhenSeparateContactsCannotStage(t *testi
 }
 
 func TestOnboardingSiteReadStartRollsBackWhenQueueInsertFails(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
 	_, _, err := e.Contacts.StartOnboardingSiteRead(ctx, seedURL, "human:"+e.Rep1.String(),
@@ -653,6 +662,7 @@ func TestOnboardingSiteReadStartRollsBackWhenQueueInsertFails(t *testing.T) {
 // onboarding. Every existing confirm test staged somebody, so the whole suite
 // stayed green while the common path was broken.
 func TestConfirmingAReadThatNamedNobodySucceeds(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
 

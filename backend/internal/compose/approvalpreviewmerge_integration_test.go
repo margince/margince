@@ -18,6 +18,7 @@ import (
 )
 
 func TestRecordMergePreviewUsesTheNativeSurvivorshipPlan(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	permissions := integration.AdminPerms
 	permissions.Objects = maps.Clone(permissions.Objects)

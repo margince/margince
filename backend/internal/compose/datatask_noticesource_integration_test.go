@@ -21,6 +21,7 @@ import (
 )
 
 func TestUnverifiedNoticeCorrectionPagesReplaysAndPreservesConfirmedSources(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	now := clocktest.Now(t)
@@ -74,6 +75,7 @@ func TestUnverifiedNoticeCorrectionPagesReplaysAndPreservesConfirmedSources(t *t
 }
 
 func TestUnverifiedNoticeCorrectionRollsBackAndRejectsMalformedCursors(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	seedDirectSenderDuty(t, e, "unknown_legacy", "blocked", "connector:gmail")
@@ -104,6 +106,7 @@ func TestUnverifiedNoticeCorrectionRollsBackAndRejectsMalformedCursors(t *testin
 }
 
 func TestUnverifiedNoticeCorrectionUnassignsARetiredLegacyOwner(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	now := clocktest.Now(t)

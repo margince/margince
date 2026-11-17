@@ -127,6 +127,7 @@ func quotedKinds(pending map[string]struct{}) string {
 // the buffered channel, so the only way not to return promptly is to have
 // discarded something.
 func TestAWaitDoesNotDiscardAKindAnotherWaitIsOwed(t *testing.T) {
+	t.Parallel()
 	sub := make(chan *river.Event, 4)
 	for _, kind := range []string{"capture_trace_sweep", "close_date_sweep", "capture_enrich", "capture_classify"} {
 		sub <- &river.Event{Kind: river.EventKindJobCompleted, Job: &rivertype.JobRow{Kind: kind}}
@@ -142,6 +143,7 @@ func TestAWaitDoesNotDiscardAKindAnotherWaitIsOwed(t *testing.T) {
 }
 
 func TestRiverCloseDateSweepAppliesTheSameProvisionalAsDirectSweep(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	integration.ApplyRiverSchema(t)
 	// The exact fixture the direct-Sweep test uses: an overdue, active,

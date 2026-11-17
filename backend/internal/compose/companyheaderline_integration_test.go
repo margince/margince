@@ -38,6 +38,7 @@ func anchorDescription(t *testing.T, e *integration.Env) string {
 }
 
 func TestALongOfferSummaryStaysWholeInTheCompanyProfile(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
 	summary := strings.TrimSpace(strings.Repeat("We build warehouse robotics for mid-market logistics. ", 29))

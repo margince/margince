@@ -17,6 +17,7 @@ import (
 )
 
 func TestBookingApprovalShowsTheHostTimeAndCompleteFiling(t *testing.T) {
+	t.Parallel()
 	for _, rest := range []bool{false, true} {
 		t.Run(fmt.Sprintf("rest=%t", rest), func(t *testing.T) {
 			e := integration.Setup(t)
@@ -66,6 +67,7 @@ func TestBookingApprovalShowsTheHostTimeAndCompleteFiling(t *testing.T) {
 }
 
 func TestBookingApprovalRefusesACompanyMeeting(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := e.SeedCompany(t, "Harbor", &e.AdminUser)
 	raw, hash, err := diffhash.Canonical([]byte(fmt.Sprintf(`{"start":"2027-01-12T09:00:00Z","end":"2027-01-12T10:00:00Z","links":[{"entity_type":"company","entity_id":%q}]}`, company)))

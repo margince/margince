@@ -46,6 +46,7 @@ func lastWeek(t *testing.T, at time.Time) time.Time {
 // the lead arrived (leadsla.go COALESCEs the two). A count keyed on routed_at
 // alone would drop exactly the leads most likely to have been missed.
 func TestAnUnroutedLeadStillCountsInTheWeekItArrived(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	owner := integration.OwnerConn(t)
 	ctx := context.Background()
@@ -85,6 +86,7 @@ func TestAnUnroutedLeadStillCountsInTheWeekItArrived(t *testing.T) {
 // awaiting its outcome on the record page. Counting either would tell a rep
 // they met five customers when they met one.
 func TestOnlyMeetingsThatWereHeldCountTowardTheWeek(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	owner := integration.OwnerConn(t)
 	ctx := context.Background()
@@ -122,6 +124,7 @@ func TestOnlyMeetingsThatWereHeldCountTowardTheWeek(t *testing.T) {
 // A rep with a gap in their history has a prior week that is not last week, and
 // date arithmetic would find nothing and report every count as new.
 func TestThePriorWeekIsTheLastOneWritten(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 
 	// Three weeks back, then the closed one: a gap in between.
@@ -154,6 +157,7 @@ func TestThePriorWeekIsTheLastOneWritten(t *testing.T) {
 
 // A rep's first week has nothing to be compared against, and says so.
 func TestAFirstWeekNamesNoPriorReview(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 
 	review, _, err := e.engine.AssembleFor(e.repCtx, weekClock)
@@ -173,6 +177,7 @@ func TestAFirstWeekNamesNoPriorReview(t *testing.T) {
 // deal deleted, a lead answered late, a meeting cancelled after the fact must
 // all leave last week exactly as it was written.
 func TestTheNewCountsAreFrozenAgainstLaterEdits(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	owner := integration.OwnerConn(t)
 	ctx := context.Background()
@@ -234,6 +239,7 @@ func TestTheNewCountsAreFrozenAgainstLaterEdits(t *testing.T) {
 // weekly_review holds a difference — so a later author who adds one has to
 // come here and argue with this test rather than quietly introducing the drift.
 func TestNoDeltaIsStoredBesideTheTwoFrozenRows(t *testing.T) {
+	t.Parallel()
 	owner := integration.OwnerConn(t)
 	ctx := context.Background()
 

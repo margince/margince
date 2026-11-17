@@ -19,6 +19,7 @@ import (
 // A promise somebody settled or dismissed after a task was proposed for it is
 // not given that open task when the proposal is accepted later.
 func TestASettledPromiseCannotAcquireAnOpenTask(t *testing.T) {
+	t.Parallel()
 	for _, outcome := range []string{claimStatusDone, "dismissed"} {
 		t.Run(outcome, func(t *testing.T) {
 			k := seedKeptCommitment(t)

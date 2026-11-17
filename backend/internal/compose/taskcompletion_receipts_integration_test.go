@@ -22,6 +22,7 @@ import (
 )
 
 func TestHomeAndWorklistUndoTheCapturedMailCompletion(t *testing.T) {
+	t.Parallel()
 	for _, surface := range []string{"Home", "Worklist", "Sent attestation", "Durable send"} {
 		t.Run(surface, func(t *testing.T) {
 			e := integration.Setup(t)

@@ -215,6 +215,7 @@ func today() time.Time {
 // --- B-E09.19(a): the write layer rejects the invalid state at source ---
 
 func TestCloseDatePastRejectedOnOpenDealWrites(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	admin := e.Admin()
 	yesterday := today().AddDate(0, 0, -1)
@@ -249,6 +250,7 @@ func TestCloseDatePastRejectedOnOpenDealWrites(t *testing.T) {
 // The forecast report groups deals by the probability band their own
 // probability falls in, and its filter reads the same expression.
 func TestTheForecastReportGroupsDealsByTheirOwnProbability(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 
 	e.seedSweepDeal(t, "Healthy", e.late, new(95), new(30), 3)
@@ -277,6 +279,7 @@ func TestTheForecastReportGroupsDealsByTheirOwnProbability(t *testing.T) {
 // --- B-E09.20: the A6 tiers ---
 
 func TestCloseDateSweepRollsClearOverdueActiveDealProvisionally(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	// Early stage (20%), plainly overdue, touched 3 days ago, no forecast
 	// override → the §11 worked example's 🟢 case. Two open stages remain
@@ -326,6 +329,7 @@ func TestCloseDateSweepRollsClearOverdueActiveDealProvisionally(t *testing.T) {
 // read from, and changed_by exists to say who made it: "nobody" is not one of
 // the answers.
 func TestCloseDateSweepAttributesTheDateItMoved(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	// The worked example again: overdue, active, no override. That is the tier
 	// which re-dates the deal outright, so the move is the sweep's alone.
@@ -370,6 +374,7 @@ func TestCloseDateSweepAttributesTheDateItMoved(t *testing.T) {
 // that always mattered — a provisional date is a machine's estimate, and the
 // number must not count it.
 func TestCloseDateSweepRedatesAndExcludesAForecastBearingDeal(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	// Explicit commit + late stage: overdue, active — never auto-final.
 	id := e.seedSweepDeal(t, "Commit slipped", e.late, new(95), new(-10), 3)
@@ -416,6 +421,7 @@ func TestCloseDateSweepRedatesAndExcludesAForecastBearingDeal(t *testing.T) {
 //
 // Staged directly here, because the pass that used to make one does not.
 func TestALeftoverCardStillConfirmsTheDateAndClearsProvisional(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	id := e.seedSweepDeal(t, "Confirm me", e.late, new(95), new(-10), 3)
 	if err := e.sweep(); err != nil {
@@ -443,6 +449,7 @@ func TestALeftoverCardStillConfirmsTheDateAndClearsProvisional(t *testing.T) {
 
 // Quietness leaves the probability and a recorded future date intact.
 func TestCloseDateSweepDowngradesWithoutMovingAFutureDate(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	if _, err := e.owner.Exec(context.Background(), `UPDATE deal SET archived_at=now() WHERE pipeline_id=$1 AND status='won'`, e.pipeline); err != nil {
 		t.Fatal(err)
@@ -484,6 +491,7 @@ func TestCloseDateSweepDowngradesWithoutMovingAFutureDate(t *testing.T) {
 }
 
 func TestCloseDateSweepDowngradesQuietOverdueDealWithProvisionalDate(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	// Quiet AND overdue: the invariant forces a replacement date, but it
 	// lands provisional and the probability stays as it was.
@@ -509,6 +517,7 @@ func TestCloseDateSweepDowngradesQuietOverdueDealWithProvisionalDate(t *testing.
 // night starts with, no open deal survives the run with a past close
 // date — while closed deals keep their historical dates untouched.
 func TestCloseDateSweepLeavesNoOpenDealWithPastCloseDate(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	e.seedSweepDeal(t, "Auto tier", e.early, nil, new(-12), 3)
 	e.seedSweepDeal(t, "Provisional tier", e.late, new(95), new(-10), 3)
@@ -554,6 +563,7 @@ func TestCloseDateSweepLeavesNoOpenDealWithPastCloseDate(t *testing.T) {
 // the wait suppresses the 🔻 quiet branch, but its past date still takes
 // the 🟡 provisional path — a paused deal must not claim a past date.
 func TestCloseDateSweepWaitUntilSuppressesDowngradeButNotOverdue(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	id := e.seedSweepDeal(t, "Paused politely", e.early, nil, new(-5), 90)
 	if _, err := e.owner.Exec(context.Background(),
@@ -588,6 +598,7 @@ func TestCloseDateSweepWaitUntilSuppressesDowngradeButNotOverdue(t *testing.T) {
 // the overdue one created last so it sorts past the cut. A pass that reaches it
 // is a pass that walked its whole frozen set.
 func TestCloseDateSweepReachesDealsPastTheOldPageLimit(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 
 	// Healthy near-term dates: eligible for the pre-filter (inside the stalled
@@ -638,6 +649,7 @@ func TestCloseDateSweepReachesDealsPastTheOldPageLimit(t *testing.T) {
 // again at the first row — which is what made the worker's 5-minute deadline a
 // permanent cap rather than a pause.
 func TestCloseDateSweepResumesAnUnfinishedPass(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	for i := range 3 {
 		e.seedSweepDeal(t, fmt.Sprintf("Overdue %d", i), e.early, nil, new(-12), 3)
@@ -699,6 +711,7 @@ func TestCloseDateSweepResumesAnUnfinishedPass(t *testing.T) {
 // mid-pass keeps its place in the ledger with a reason. Both are what make
 // "checked N of M" reconcile instead of drifting with the live table.
 func TestCloseDateSweepFreezesItsMembershipAtTheStart(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	settled := e.seedSweepDeal(t, "Archived before the sweep runs", e.early, nil, new(-12), 3)
 	if _, err := e.owner.Exec(context.Background(),
@@ -736,6 +749,7 @@ func TestCloseDateSweepFreezesItsMembershipAtTheStart(t *testing.T) {
 // dropped. Losing it from the ledger would quietly shrink the denominator, and
 // "checked 9 of 9" would be true of a set that used to have ten deals in it.
 func TestCloseDateSweepSkipsAMemberArchivedMidPass(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	doomed := e.seedSweepDeal(t, "Archived after the freeze", e.early, nil, new(-12), 3)
 
@@ -806,6 +820,7 @@ func TestCloseDateSweepSkipsAMemberArchivedMidPass(t *testing.T) {
 // that never touched a deal — the same "machine work that changed nothing"
 // this ledger exists to expose.
 func TestCloseDateRunCountsOnlyWritesThatHappened(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	e.seedSweepDeal(t, "Overdue but maintenance is off", e.early, nil, new(-12), 3)
 
@@ -891,6 +906,7 @@ func (e *closeDateEnv) stageLegacyCard(t *testing.T, dealID ids.UUID, proposed t
 // ordinary hand-over. A hand-over after the page is read and before the row
 // lock waits for the next pass, which asks the new owner.
 func TestADealOwnedByAnOptedOutRepIsLeftAlone(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	id := e.seedSweepDeal(t, "Not to be touched", e.late, new(95), new(30), 90)
 	originalDate := today().AddDate(0, 0, 30)
@@ -931,6 +947,7 @@ func (e *closeDateEnv) optOutOfCorrections(t *testing.T, userID ids.UUID) {
 // approvals, and propagating the refusal took the entire receipt surface away
 // over a grant that has nothing to do with the rows it was hiding.
 func TestAReaderWithNoDealGrantStillSeesTheirOtherReceipts(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	seam := attentionReceipts{svc: e.svc, deals: deals.NewStore(e.DB(), DealsInstallation())}
 	// Everything a rep normally holds EXCEPT the deal object.

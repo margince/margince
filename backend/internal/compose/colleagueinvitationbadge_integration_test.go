@@ -26,6 +26,7 @@ import (
 // store's reader. A colleague's invitation captured before its
 // domain was registered carries no seat stamp, and both say nothing is owed.
 func TestTheBadgeAndTheWorklistReadOneOwnDomainListThroughTheProductionWiring(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.now = clocktest.Now(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
@@ -60,6 +61,7 @@ func TestTheBadgeAndTheWorklistReadOneOwnDomainListThroughTheProductionWiring(t 
 // workspace setting, so the colleague test reads it whoever asks. That reader
 // is not told a colleague's invitation waits on us.
 func TestWhoseMoveReadsOurDomainsForAReaderWithoutTheActivityGrant(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.now = clocktest.Now(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")

@@ -41,6 +41,7 @@ func memberManagerFor(t *testing.T, e *integration.Env) memberManager {
 }
 
 func TestAMemberMergeMovesOwnedWorkAndKeepsTheHistoricalIdentity(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	pipeline, stage, _ := integration.DealFixture(t, e)
 	deal := e.SeedDeal(t, "Account merge example", pipeline, stage, &e.Rep1)
@@ -84,6 +85,7 @@ func TestAMemberMergeMovesOwnedWorkAndKeepsTheHistoricalIdentity(t *testing.T) {
 }
 
 func TestAChangedMemberMergePreviewCannotRemoveTheAccount(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	manager := memberManagerFor(t, e)
 	preview, err := manager.Preview(e.As(e.AdminUser, nil, integration.AdminWithSignals), e.Rep1, &e.Rep2, true)
@@ -104,6 +106,7 @@ func TestAChangedMemberMergePreviewCannotRemoveTheAccount(t *testing.T) {
 }
 
 func TestMemberRemovalCannotBypassOwnershipOrAdministratorChecks(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	manager := memberManagerFor(t, e)
 	if _, err := manager.Preview(e.As(e.AdminUser, nil, integration.AdminWithSignals), e.AdminUser, nil, false); !errors.Is(err, apperrors.ErrConflict) {
@@ -131,6 +134,7 @@ func TestMemberRemovalCannotBypassOwnershipOrAdministratorChecks(t *testing.T) {
 }
 
 func TestAMemberMergePreservesPrivateCorrespondenceWithoutChangingItsAuthor(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	manager := memberManagerFor(t, e)
 	sourceCtx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms)
@@ -165,6 +169,7 @@ func TestAMemberMergePreservesPrivateCorrespondenceWithoutChangingItsAuthor(t *t
 }
 
 func TestRemovingADeactivatedMemberIsIdempotentAndCannotBecomeAMerge(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	manager := memberManagerFor(t, e)
 	ctx := e.As(e.AdminUser, nil, integration.AdminWithSignals)
@@ -194,6 +199,7 @@ func TestRemovingADeactivatedMemberIsIdempotentAndCannotBecomeAMerge(t *testing.
 }
 
 func TestAMemberMergeRetryKeepsTheSurvivorsAuthority(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	manager := memberManagerFor(t, e)
 	ctx := e.As(e.AdminUser, nil, integration.AdminWithSignals)
@@ -216,6 +222,7 @@ func TestAMemberMergeRetryKeepsTheSurvivorsAuthority(t *testing.T) {
 }
 
 func TestARetiredMembersCompletedTaskCannotBeReopenedOntoTheHiddenAccount(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	manager := memberManagerFor(t, e)
 	ctx := e.As(e.AdminUser, nil, integration.AdminWithSignals)
@@ -243,6 +250,7 @@ func TestARetiredMembersCompletedTaskCannotBeReopenedOntoTheHiddenAccount(t *tes
 // The test above covers the other door, reopening a task the retired member
 // already held, which the member_work_reference_retired check refuses.
 func TestATaskCannotBeAssignedToARetiredMember(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	manager := memberManagerFor(t, e)
 	ctx := e.As(e.AdminUser, nil, integration.AdminWithSignals)
@@ -269,6 +277,7 @@ func TestATaskCannotBeAssignedToARetiredMember(t *testing.T) {
 }
 
 func TestAMergedMemberKeepsItsPersonalWriteShare(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	manager := memberManagerFor(t, e)
 	ctx := e.As(e.AdminUser, nil, integration.AdminWithSignals)
@@ -296,6 +305,7 @@ func TestAMergedMemberKeepsItsPersonalWriteShare(t *testing.T) {
 }
 
 func TestAMergedMemberCanReadItsHistoricalPrivateSignal(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	manager := memberManagerFor(t, e)
 	ctx := e.As(e.AdminUser, nil, integration.AdminWithSignals)
@@ -333,6 +343,7 @@ func TestAMergedMemberCanReadItsHistoricalPrivateSignal(t *testing.T) {
 }
 
 func TestAMemberMergeRefusesAUsedSourceAndTheActingAdministratorsAccount(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	manager := memberManagerFor(t, e)
 	ctx := e.As(e.AdminUser, nil, integration.AdminWithSignals)
@@ -367,6 +378,7 @@ func TestAMemberMergeRefusesAUsedSourceAndTheActingAdministratorsAccount(t *test
 }
 
 func TestAnUnusedMembersUnreadableTaskMovesWithoutDisclosingItsContent(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	manager := memberManagerFor(t, e)
 	source := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms)
@@ -403,6 +415,7 @@ func TestAnUnusedMembersUnreadableTaskMovesWithoutDisclosingItsContent(t *testin
 }
 
 func TestReimportingAMergedMemberWhoseSurvivorWasRemovedRefusesPrecisely(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	manager := memberManagerFor(t, e)
 	ctx := e.As(e.AdminUser, nil, integration.AdminWithSignals)

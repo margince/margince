@@ -38,6 +38,7 @@ func bookingCards(ctx context.Context, t *testing.T, h *aliasHosts) []string {
 // Both hosts' pages are switched on and name a calendar nobody connected, so
 // both are paused. Only Ben copied his link.
 func TestHomeNamesAPausedBookingPageOnlyOnceItWasUsed(t *testing.T) {
+	t.Parallel()
 	h := newAliasHosts(t)
 	if err := h.store.MarkBookingPageShared(h.ben); err != nil {
 		t.Fatal(err)

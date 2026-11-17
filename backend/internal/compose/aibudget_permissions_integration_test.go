@@ -16,6 +16,7 @@ import (
 )
 
 func TestAllowanceReadingsPreserveTheirIndependentPermissions(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := ai.NewAdminStore(e.DB(), NewSettingsStore(e.Pool), StoredConfig(e.Pool), budgetFullUsers, aiDeferredWork(e.Pool))
 	for _, routing := range []bool{false, true} {

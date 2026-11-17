@@ -16,6 +16,7 @@ import (
 )
 
 func TestCurrentAdviceBatchesOwnerQueriesAcrossTheWholeCandidateSet(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	pipeline, stage, _ := integration.DealFixture(t, e)
 	at := time.Date(2026, 10, 12, 9, 0, 0, 0, time.UTC)

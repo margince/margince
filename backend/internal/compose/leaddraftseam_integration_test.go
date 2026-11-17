@@ -24,6 +24,7 @@ import (
 // Six notices newer than the lead's own message neither push it out of the
 // draft nor stand in for it. The lead's timeline keeps every record.
 func TestTheLeadDraftQuotesTheLeadNotTheNoticesAfterIt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	lead, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{
 		FullName: new("Noticed prospect"), LinkedInURL: new("https://www.linkedin.com/in/noticed-prospect"), Source: "manual",
@@ -87,6 +88,7 @@ func TestTheLeadDraftQuotesTheLeadNotTheNoticesAfterIt(t *testing.T) {
 // it out. They are a mail withheld from this reader, a note and an email dated ahead,
 // and canceled and no-show meetings.
 func TestFilteredRowsNewerThanTheLeadsMessageDoNotEmptyTheDraftHistory(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	lead, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{
 		FullName: new("Crowded prospect"), LinkedInURL: new("https://www.linkedin.com/in/crowded-prospect"), Source: "manual",

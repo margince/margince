@@ -60,6 +60,7 @@ func logWith(t *testing.T, e *integration.Env, acct quietAccount, kind, status s
 }
 
 func TestLastContactCountsMeetingsAndCallsButNotNotes(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	acct := employedAccount(t, e, "Met Only GmbH")
 	logWith(t, e, acct, "meeting", "held", acct.now.AddDate(0, 0, -10))
@@ -82,6 +83,7 @@ func TestLastContactCountsMeetingsAndCallsButNotNotes(t *testing.T) {
 }
 
 func TestANoteAloneIsNoLastContact(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	acct := employedAccount(t, e, "Noted GmbH")
 	logWith(t, e, acct, "note", "", acct.now.AddDate(0, 0, -1))

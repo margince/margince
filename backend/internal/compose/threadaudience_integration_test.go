@@ -33,6 +33,7 @@ import (
 )
 
 func TestAnOwnerSharesTheirOwnHeldThread(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id := seedHeldThreadOn(t, e, "thread-share", "kunde@example.test", e.Rep1)
 
@@ -46,6 +47,7 @@ func TestAnOwnerSharesTheirOwnHeldThread(t *testing.T) {
 }
 
 func TestAnOwnerKeepsAThreadPrivateAgainstTheClassifier(t *testing.T) {
+	t.Parallel()
 	// The click has to mean something permanent. A rep whose ordinary-looking
 	// thread turned personal keeps it private, and no later pass may re-open it
 	// — a classifier that could overturn an owner would make the click
@@ -71,6 +73,7 @@ func TestAnOwnerKeepsAThreadPrivateAgainstTheClassifier(t *testing.T) {
 }
 
 func TestOneOwnersShareCannotPublishAColleaguesHeldMessage(t *testing.T) {
+	t.Parallel()
 	// The whole per-owner model, at the point where it is easiest to break.
 	e := integration.Setup(t)
 	id := seedHeldThreadOn(t, e, "thread-both", "kunde@example.test", e.Rep1)
@@ -94,6 +97,7 @@ func TestOneOwnersShareCannotPublishAColleaguesHeldMessage(t *testing.T) {
 }
 
 func TestTheLastOwnersShareReportsTheMessageOpen(t *testing.T) {
+	t.Parallel()
 	// One message, two mailboxes, both `classified` at import — the default
 	// posture, so this is the ordinary two-importer case. The first owner's
 	// share is refused honestly: the colleague still holds. The second owner's
@@ -126,6 +130,7 @@ func TestTheLastOwnersShareReportsTheMessageOpen(t *testing.T) {
 }
 
 func TestAThreadYouDidNotImportIsNotFound(t *testing.T) {
+	t.Parallel()
 	// A thread key is the sender-controlled References root in a namespace the
 	// whole workspace shares, so it is guessable. Answering not-found rather
 	// than "nothing to do" keeps it from confirming that somebody else's
@@ -202,6 +207,7 @@ func recompute(t *testing.T, e *integration.Env, activityID ids.UUID) {
 }
 
 func TestTheHoldCountReadsOnlyTheCallersOwnMessages(t *testing.T) {
+	t.Parallel()
 	// A thread key is the RFC822 References root, taken verbatim from a
 	// sender's header — guessable, forgeable, and shared across one workspace
 	// namespace. Counting holders BY thread key would walk messages the caller
@@ -243,6 +249,7 @@ func TestTheHoldCountReadsOnlyTheCallersOwnMessages(t *testing.T) {
 // Messages and left out of the list: the decision reached it, and saying which
 // id it was would say that record exists.
 func TestAThreadDecisionNamesTheMessagesTheCallerCanRead(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id := seedHeldThreadOn(t, e, "thread-ids", "kunde@example.test", e.Rep1)
 
@@ -264,6 +271,7 @@ func TestAThreadDecisionNamesTheMessagesTheCallerCanRead(t *testing.T) {
 // correct body so nothing failed. A test that decodes what the handler
 // actually wrote is the only one that can see it.
 func TestTheThreadAudienceResponseCarriesEveryFieldItPromises(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id := seedHeldThreadOn(t, e, "thread-wire", "kunde@example.test", e.Rep1)
 

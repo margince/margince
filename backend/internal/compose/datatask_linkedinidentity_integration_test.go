@@ -31,6 +31,7 @@ func repairLead(t *testing.T, e *integration.Env, name string, email *string) id
 }
 
 func TestLinkedInIdentityTaskRollsBackAndRefusesAMalformedCursor(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	lead := repairLead(t, e, "Rollback Lead", nil)
@@ -74,6 +75,7 @@ func repairContact(t *testing.T, e *integration.Env, name string) ids.ContactID 
 }
 
 func TestLinkedInIdentityTaskNormalizesReadableProfilesAndLeavesOtherValues(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	lead := repairLead(t, e, "Regional Lead", nil)
@@ -106,6 +108,7 @@ func TestLinkedInIdentityTaskNormalizesReadableProfilesAndLeavesOtherValues(t *t
 }
 
 func TestLeadContactPairTaskMergesEveryUnambiguousPairAfterNormalization(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 
@@ -163,6 +166,7 @@ func TestLeadContactPairTaskMergesEveryUnambiguousPairAfterNormalization(t *test
 }
 
 func TestLeadContactPairTaskRollsBackWithItsPromotion(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	email := "pair-rollback@example.test"

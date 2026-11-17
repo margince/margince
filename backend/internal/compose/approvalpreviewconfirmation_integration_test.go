@@ -20,6 +20,7 @@ import (
 )
 
 func TestAutomationConfirmationShowsTheQuestionAndOnlyItsActualEffect(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Review account", nil)
 	svc := NewApprovalsService(e.DB())

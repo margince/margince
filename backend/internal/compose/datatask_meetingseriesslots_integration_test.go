@@ -77,6 +77,7 @@ func identitiesOf(t *testing.T, e *integration.Env, meeting ids.UUID) string {
 // key no longer names it. A one-off keeps its key: its stored original may
 // predate a reschedule.
 func TestTheSeriesSlotTaskRekeysAMovedOccurrenceBySlot(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	moved := tuesdaySlot.Add(5 * time.Hour)
@@ -179,6 +180,7 @@ func rerunSeriesSlotSteps(ctx context.Context, t *testing.T, e *integration.Env)
 // survivor, and the split is audited and announced. Running it again, page
 // by page, changes nothing.
 func TestTheSeriesSlotTaskSplitsTwoSlotsFoldedTogether(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	monday, tuesday := foldTuesdayOntoMonday(t, e, func(_, tuesday ids.UUID) {
@@ -255,6 +257,7 @@ func foldTheOlderWay(t *testing.T, e *integration.Env, monday, tuesday ids.UUID,
 // its own transaction inserted. Each must repeat a guest of the copy. A row
 // that transaction inserted from anywhere else leaves it unknown.
 func TestTheSeriesSlotTaskReadsAnOlderFoldsGuestsFromItsTransaction(t *testing.T) {
+	t.Parallel()
 	for name, tc := range map[string]struct{ stranger, split bool }{
 		"every row repeats a guest of the copy": {split: true},
 		"a row came from elsewhere":             {stranger: true},
@@ -284,6 +287,7 @@ func TestTheSeriesSlotTaskReadsAnOlderFoldsGuestsFromItsTransaction(t *testing.T
 // act reached, is left for review. The survivor is still re-keyed, so the
 // stale key resolves nothing.
 func TestTheSeriesSlotTaskLeavesAnUnsafeSplitForReview(t *testing.T) {
+	t.Parallel()
 	for name, tc := range map[string]struct {
 		before func(t *testing.T, e *integration.Env, monday, tuesday ids.UUID)
 		after  func(t *testing.T, e *integration.Env, monday, tuesday ids.UUID)
@@ -348,6 +352,7 @@ func TestTheSeriesSlotTaskLeavesAnUnsafeSplitForReview(t *testing.T) {
 // A refusal after the restore rolls the whole split back: the folded row
 // stays archived and the restore leaves no audit row.
 func TestARefusalAfterTheRestoreRollsTheSplitBack(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	_, tuesday := foldTuesdayOntoMonday(t, e, nil)
@@ -364,10 +369,6 @@ func TestARefusalAfterTheRestoreRollsTheSplitBack(t *testing.T) {
 	ownerExec(t, `CREATE TRIGGER take_folded_slot AFTER UPDATE OF archived_at ON activity
 		FOR EACH ROW WHEN (NEW.id = '`+tuesday.String()+`' AND OLD.archived_at IS NOT NULL AND NEW.archived_at IS NULL)
 		EXECUTE FUNCTION take_folded_slot()`)
-	t.Cleanup(func() {
-		ownerExec(t, `DROP TRIGGER take_folded_slot ON activity`)
-		ownerExec(t, `DROP FUNCTION take_folded_slot()`)
-	})
 
 	runCalendarDescriptionTask(ctx, t, e, meetingSeriesSlotsDataTask(e.Pool))
 
@@ -384,6 +385,7 @@ func TestARefusalAfterTheRestoreRollsTheSplitBack(t *testing.T) {
 // row in the same series keeps its key, and a claim that loses still retires
 // the claiming row's stale key.
 func TestAMeetingClaimRetiresOnlyItsOwnRowsKeysInTheSeries(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	mine := seedStoredOccurrence(t, e, "evt-mine", mondaySlot, mondaySlot)

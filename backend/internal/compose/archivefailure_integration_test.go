@@ -18,6 +18,7 @@ import (
 )
 
 func TestArchivingNamesTheFailedOwnershipRule(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	member := e.As(e.Rep1, nil, principal.Permissions{RowScope: principal.RowScopeAll, Objects: map[string]principal.ObjectGrant{"contact": {Read: true, Update: true}, "user_admin": {Read: true}}})
 	create := func() ids.ContactID {

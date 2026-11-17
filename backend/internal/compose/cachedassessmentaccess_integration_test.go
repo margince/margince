@@ -22,6 +22,7 @@ import (
 )
 
 func TestAnEarlierAssessmentRequiresItsUncitedInputToRemainReadable(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	pipeline, stage, _ := integration.DealFixture(t, e)
 	deal := e.SeedDeal(t, "Demo renewal", pipeline, stage, &e.Rep1)
@@ -78,6 +79,7 @@ func TestAnEarlierAssessmentRequiresItsUncitedInputToRemainReadable(t *testing.T
 }
 
 func TestAnEarlierAssessmentRequiresItsStakeholderContextToRemainReadable(t *testing.T) {
+	t.Parallel()
 	for _, loss := range []string{"relationship_grant", "archived_edge"} {
 		t.Run(loss, func(t *testing.T) {
 			e := integration.Setup(t)

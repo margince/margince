@@ -35,6 +35,7 @@ func itemFor(run BriefRun, dealID interface{ String() string }) *BriefRunItem {
 }
 
 func TestADealRankedYesterdayCarriesWhereItStood(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 	first, err := b.engine.SnapshotRun(b.repCtx, briefClock)
 	if err != nil {
@@ -73,6 +74,7 @@ func TestADealRankedYesterdayCarriesWhereItStood(t *testing.T) {
 }
 
 func TestADealThatDidNotRankYesterdayCarriesNoRankAndIsNotCalledNew(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 	owner := integration.OwnerConn(t)
 	if _, err := b.engine.SnapshotRun(b.repCtx, briefClock); err != nil {
@@ -112,6 +114,7 @@ func TestADealThatDidNotRankYesterdayCarriesNoRankAndIsNotCalledNew(t *testing.T
 }
 
 func TestAFirstMorningNamesNoPreviousDay(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 	if _, err := b.engine.SnapshotRun(b.repCtx, briefClock); err != nil {
 		t.Fatal(err)

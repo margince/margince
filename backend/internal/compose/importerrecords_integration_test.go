@@ -123,6 +123,7 @@ func recordWires(t *testing.T, e *integration.Env, system string, author wireAut
 }
 
 func TestADeclaredImporterLandsEveryRecordInsideItsNamespace(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	importer := e.As(e.AdminUser, nil, importerPerms())
 	for _, w := range recordWires(t, e, "mirror:hubspot", wireAuthor{}) {
@@ -141,6 +142,7 @@ func TestADeclaredImporterLandsEveryRecordInsideItsNamespace(t *testing.T) {
 // carrying the identical grants, and a human without import_run:create. Every
 // wire must still refuse both, or the door leaked past the handler's question.
 func TestTheRecordWiresStayClosedToEveryoneElse(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	callers := map[string]context.Context{
 		"agent with the grant":    e.AgentFor(t, e.AdminUser, nil, importerPerms()),

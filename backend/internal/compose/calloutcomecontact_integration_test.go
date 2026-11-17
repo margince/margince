@@ -21,6 +21,7 @@ import (
 // call back later or reached nobody does not. Changing a call's outcome later
 // refolds the clock. A call logged with no outcome counts, as every call did.
 func TestOnlyACallThatReachedSomebodyMovesTheContactClock(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Quiet Quinn", nil)
 	clock := func() *time.Time {
@@ -76,6 +77,7 @@ func TestOnlyACallThatReachedSomebodyMovesTheContactClock(t *testing.T) {
 // call_outcome as a clear, the activity store honours it, and the call counts
 // as contact again.
 func TestUndoingACallOutcomePutsTheCallBackToNoOutcome(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Undo Una", nil)
 	at := clocktest.Now(t).Add(-time.Hour).Truncate(time.Second)

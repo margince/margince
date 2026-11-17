@@ -122,6 +122,7 @@ func movedBy(latest crmcontracts.LatestInboundList) crmcontracts.LastExchangeWho
 }
 
 func TestAHandLoggedTieIsAnsweredOnlyWhenADayIsLogged(t *testing.T) {
+	t.Parallel()
 	for _, c := range handTies() {
 		t.Run(c.name, func(t *testing.T) {
 			o := setupOwed(t)
@@ -153,6 +154,7 @@ func TestAHandLoggedTieIsAnsweredOnlyWhenADayIsLogged(t *testing.T) {
 // Past the no-reply wait the account's strip says whose move the tie leaves,
 // by the same rule as the contact's last exchange.
 func TestAHandLoggedTieLeavesTheStripTheSameMove(t *testing.T) {
+	t.Parallel()
 	for _, c := range handTies() {
 		t.Run(c.name, func(t *testing.T) {
 			o := setupOwed(t)
@@ -181,6 +183,7 @@ type tieRow struct {
 // At one stored instant our day entry answers their instant, and our instant does not. So a page reads our side
 // of a tie as its day entry and theirs as its instant, whichever was logged last.
 func TestATieOfThreeReadsAsTheRowsThatDecideIt(t *testing.T) {
+	t.Parallel()
 	day, instant := crmcontracts.OccurredPrecisionOccurredPrecisionDay, crmcontracts.OccurredPrecisionOccurredPrecisionInstant
 	in, out := crmcontracts.CreateActivityRequestDirectionInbound, crmcontracts.CreateActivityRequestDirectionOutbound
 	for _, c := range []struct {
@@ -233,6 +236,7 @@ func stated(precision *crmcontracts.OccurredPrecision) string {
 // A deal's quiet sentence reads each side of a tie as the row that decides it: ours as its day entry, theirs as
 // its instant.
 func TestADealsQuietSidesReadATieAsTheRowsThatDecideIt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	pipeline, open, _ := integration.DealFixture(t, e)
 	dealUUID := e.SeedDeal(t, "Tie quiet deal", pipeline, open, nil)

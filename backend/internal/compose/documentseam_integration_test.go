@@ -208,6 +208,7 @@ func (h documentHarness) storedBytes(t *testing.T, attachment ids.UUID) []byte {
 }
 
 func TestAnAgentAttachesAPDFToEveryRecordKindAndListsItWhereTheTabDoes(t *testing.T) {
+	t.Parallel()
 	h := newDocumentHarness(t, documentRepPerms(true))
 	pipeline, open, _ := integration.DealFixture(t, h.e)
 	company := h.createAs(t, h.e.Rep1, `{"record_type":"company","fields":{"display_name":"Paper GmbH"}}`)
@@ -287,6 +288,7 @@ func (h documentHarness) assertTheTabsListWhatTheToolAttached(t *testing.T, comp
 }
 
 func TestAnAgentWhoseHumanMayNotChangeTheRecordIsRefusedAndNothingIsStored(t *testing.T) {
+	t.Parallel()
 	h := newDocumentHarness(t, documentRepPerms(false))
 	company := h.createAs(t, h.e.Rep1, `{"record_type":"company","fields":{"display_name":"Read Only AG"}}`)
 	_, err := h.attach(t, attachArgs("company", company, "terms.pdf", "application/pdf", []byte(minimalPDF)))
@@ -301,6 +303,7 @@ func TestAnAgentWhoseHumanMayNotChangeTheRecordIsRefusedAndNothingIsStored(t *te
 // Every record type reads workspace-wide, so the record hidden here is a
 // captured contact still private to the rep whose mailbox found it.
 func TestARecordTheAgentCannotSeeReadsAsMissing(t *testing.T) {
+	t.Parallel()
 	h := newDocumentHarness(t, documentRepPerms(true))
 	hidden := h.createAs(t, h.e.Rep3, `{"record_type":"contact","fields":{"linkedin_url":"`+integration.ContactProfile()+`","full_name":"Private Capture"}}`)
 	h.e.WsExec(t, `UPDATE contact SET visibility = 'owner', owner_id = $2 WHERE id = $1`, hidden, h.e.Rep3)
@@ -319,6 +322,7 @@ func TestARecordTheAgentCannotSeeReadsAsMissing(t *testing.T) {
 
 // A deal another team owns is readable and not the rep's to change, so its files are not either.
 func TestARecordAnotherTeamOwnsIsRefusedOnAuthority(t *testing.T) {
+	t.Parallel()
 	h := newDocumentHarness(t, documentRepPerms(true))
 	pipeline, open, _ := integration.DealFixture(t, h.e)
 	theirs := h.createAs(t, h.e.Rep3, `{"record_type":"deal","fields":{"name":"Other team's renewal","pipeline_id":"`+
@@ -333,6 +337,7 @@ func TestARecordAnotherTeamOwnsIsRefusedOnAuthority(t *testing.T) {
 }
 
 func TestAnSVGAndAnOversizeFileAreRefusedAndNothingIsStored(t *testing.T) {
+	t.Parallel()
 	h := newDocumentHarness(t, documentRepPerms(true))
 	company := h.createAs(t, h.e.Rep1, `{"record_type":"company","fields":{"display_name":"Refusals Inc"}}`)
 	_, err := h.attach(t, attachArgs("company", company, "logo.svg", "image/svg+xml", []byte("<svg/>")))
@@ -351,6 +356,7 @@ func TestAnSVGAndAnOversizeFileAreRefusedAndNothingIsStored(t *testing.T) {
 }
 
 func TestARetriedAttachUnderOneKeyStoresOneFile(t *testing.T) {
+	t.Parallel()
 	h := newDocumentHarness(t, documentRepPerms(true))
 	company := h.createAs(t, h.e.Rep1, `{"record_type":"company","fields":{"display_name":"Retry GmbH"}}`)
 	args := attachArgs("company", company, "terms.pdf", "application/pdf", []byte(minimalPDF))
@@ -374,6 +380,7 @@ func TestARetriedAttachUnderOneKeyStoresOneFile(t *testing.T) {
 // A retry's answer is a receipt for the write that already happened, so it is
 // replayed even after a human removed the file: only the parent is re-proved.
 func TestARetriedAttachReplaysItsReceiptAfterTheFileIsRemoved(t *testing.T) {
+	t.Parallel()
 	h := newDocumentHarness(t, documentRepPerms(true))
 	company := h.createAs(t, h.e.Rep1, `{"record_type":"company","fields":{"display_name":"Receipt GmbH"}}`)
 	args := attachArgs("company", company, "terms.pdf", "application/pdf", []byte(minimalPDF))
@@ -401,6 +408,7 @@ func TestARetriedAttachReplaysItsReceiptAfterTheFileIsRemoved(t *testing.T) {
 // An archived record stays readable by id, and so do its files: list_documents
 // answers what the record's Documents tab shows, on either kind of tab read.
 func TestAnArchivedRecordsDocumentsListAsItsTabShowsThem(t *testing.T) {
+	t.Parallel()
 	h := newDocumentHarness(t, documentRepPerms(true))
 	company := h.createAs(t, h.e.Rep1, `{"record_type":"company","fields":{"display_name":"Retired AG"}}`)
 	contact := h.createAs(t, h.e.Rep1, `{"record_type":"contact","fields":{"linkedin_url":"`+integration.ContactProfile()+`","full_name":"Rhea Retired"}}`)
@@ -445,6 +453,7 @@ func TestAnArchivedRecordsDocumentsListAsItsTabShowsThem(t *testing.T) {
 
 // A deal with more files than one page walks to the end on next_cursor, each file once.
 func TestListDocumentsWalksADealsFilesPageByPage(t *testing.T) {
+	t.Parallel()
 	h := newDocumentHarness(t, documentRepPerms(true))
 	pipeline, open, _ := integration.DealFixture(t, h.e)
 	deal := h.createAs(t, h.e.Rep1, `{"record_type":"deal","fields":{"name":"Paged renewal","pipeline_id":"`+
@@ -483,6 +492,7 @@ func TestListDocumentsWalksADealsFilesPageByPage(t *testing.T) {
 }
 
 func TestWithNoObjectStoreAnAttachIsRefusedAsNotImplemented(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	registry := registryWithGate(e.DB(), auth.NewGate(adminSeat{}), nil, SendPath{}, companyEnricher{},
 		nil, nil, nil, nil, nil, registryFeatures{})

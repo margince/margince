@@ -56,6 +56,7 @@ func meetingStatusOf(t *testing.T, e *integration.Env, id ids.UUID) string {
 }
 
 func TestTheRepairReopensOnlyAMeetingAGuestsCalendarCancelled(t *testing.T) {
+	t.Parallel()
 	for _, provider := range []string{sourceGCal, sourceGraphCal} {
 		t.Run(provider, func(t *testing.T) {
 			o := setupOwnership(t, provider)
@@ -108,6 +109,7 @@ func TestTheRepairReopensOnlyAMeetingAGuestsCalendarCancelled(t *testing.T) {
 // A guest's calendar also reports a cancellation the organizer made. Without
 // the guest's own decline the repair cannot tell the two apart, so it keeps it.
 func TestTheRepairKeepsACancellationAGuestsCalendarSawWithoutDeclining(t *testing.T) {
+	t.Parallel()
 	o := setupOwnership(t, sourceGraphCal)
 	e := o.e
 	organizer, guest := o.address[e.Rep1], o.address[e.Rep2]
@@ -144,6 +146,7 @@ func TestTheRepairKeepsACancellationAGuestsCalendarSawWithoutDeclining(t *testin
 // An organizer's cancellation after the guest's writes nothing. So anything the
 // meeting recorded after the guest's cancellation keeps it cancelled.
 func TestTheRepairKeepsACancellationSomethingLaterFollowed(t *testing.T) {
+	t.Parallel()
 	o := setupOwnership(t, sourceGCal)
 	e := o.e
 	organizer, guest := o.address[e.Rep1], o.address[e.Rep2]
@@ -165,6 +168,7 @@ func TestTheRepairKeepsACancellationSomethingLaterFollowed(t *testing.T) {
 // A candidate read is pinned: a status set between the read and the reopen
 // leaves the reopen writing nothing.
 func TestTheReopenWritesNothingWhenTheMeetingMovedAfterItWasRead(t *testing.T) {
+	t.Parallel()
 	o := setupOwnership(t, sourceGCal)
 	e := o.e
 	organizer, guest := o.address[e.Rep1], o.address[e.Rep2]
@@ -205,6 +209,7 @@ func TestTheReopenWritesNothingWhenTheMeetingMovedAfterItWasRead(t *testing.T) {
 // A meeting that enters the scope behind the walk is reached by its second
 // pass over the scope.
 func TestTheRepairRechecksTheScopeItWalkedPast(t *testing.T) {
+	t.Parallel()
 	o := setupOwnership(t, sourceGraphCal)
 	e := o.e
 	organizer, guest := o.address[e.Rep1], o.address[e.Rep2]
@@ -248,6 +253,7 @@ func TestTheRepairRechecksTheScopeItWalkedPast(t *testing.T) {
 }
 
 func TestTheRepairKeepsAStatusAHumanSetAfterTheCalendar(t *testing.T) {
+	t.Parallel()
 	o := setupOwnership(t, sourceGCal)
 	e := o.e
 	guests := map[string]string{o.address[e.Rep2]: "accepted", "buyer@customer.test": "accepted"}
@@ -287,6 +293,7 @@ func closedByTheBackfill(t *testing.T, e *integration.Env, meeting ids.UUID, eve
 }
 
 func TestTheRepairReopensABackfillClosureOnlyWhereTheOriginalNoLongerCancels(t *testing.T) {
+	t.Parallel()
 	o := setupOwnership(t, sourceGCal)
 	e := o.e
 	owner := o.address[e.Rep1]
@@ -320,6 +327,7 @@ func TestTheRepairReopensABackfillClosureOnlyWhereTheOriginalNoLongerCancels(t *
 }
 
 func TestTheRepairPagesReplaysAndRollsBackWithoutChangingAnythingTwice(t *testing.T) {
+	t.Parallel()
 	o := setupOwnership(t, sourceGraphCal)
 	e := o.e
 	guests := map[string]string{o.address[e.Rep2]: "accepted", "buyer@customer.test": "accepted"}

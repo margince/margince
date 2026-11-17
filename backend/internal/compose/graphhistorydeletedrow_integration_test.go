@@ -46,6 +46,7 @@ func (b *graphMarkBarrier) TraceQueryStart(ctx context.Context, _ *pgx.Conn, dat
 func (*graphMarkBarrier) TraceQueryEnd(context.Context, *pgx.Conn, pgx.TraceQueryEndData) {}
 
 func TestAConcurrentGraphDeletionCannotLoseAHistoricalArrival(t *testing.T) {
+	t.Parallel()
 	for _, test := range []struct {
 		name, table string
 		parties     int

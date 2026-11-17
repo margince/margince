@@ -16,6 +16,7 @@ import (
 // An assistant asks get_tag what retiring a word costs. A lead carrying the
 // word is part of that cost, so the tool reports it as the admin screen does.
 func TestGetTagCountsTheLeadsCarryingTheWord(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	tag := seedTag(t, e, "Trade Fair", false)
 	name, email := "Lena Lead", "lena@prospect.test"

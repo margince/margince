@@ -16,6 +16,7 @@ import (
 )
 
 func TestALaterReplyOnThePromiseThreadToItsRecipientAsksDone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	p := e.SeedPromiseThread(t)
 	reply := e.LogThreadMail(e.Admin(), t, p.Contact, "thread-listing", p.Address, "outbound", p.SentAt.AddDate(0, 0, 6))
@@ -40,6 +41,7 @@ func TestALaterReplyOnThePromiseThreadToItsRecipientAsksDone(t *testing.T) {
 }
 
 func TestOnlyOurReplyOnThePromiseThreadToItsRecipientAsksDone(t *testing.T) {
+	t.Parallel()
 	for name, mail := range map[string]struct{ thread, counterparty, direction string }{
 		"their acknowledgement on the thread":    {"thread-listing", "lena@kunde.example", "inbound"},
 		"our mail on the thread to someone else": {"thread-listing", "kollege@kunde.example", "outbound"},
@@ -61,6 +63,7 @@ func TestOnlyOurReplyOnThePromiseThreadToItsRecipientAsksDone(t *testing.T) {
 }
 
 func TestDoneIsNotAskedOverAReplyTheReaderMayNotOpen(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	perms := principal.Permissions{
 		RoleKeys: []string{"rep"},
@@ -87,6 +90,7 @@ func TestDoneIsNotAskedOverAReplyTheReaderMayNotOpen(t *testing.T) {
 }
 
 func TestDoneWithdrawsWhenTheReplyIsArchived(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	p := e.SeedPromiseThread(t)
 	reply := e.LogThreadMail(e.Admin(), t, p.Contact, "thread-listing", p.Address, "outbound", p.SentAt.AddDate(0, 0, 2))

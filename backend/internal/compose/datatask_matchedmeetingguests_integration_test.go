@@ -108,6 +108,7 @@ const guestRowsSQL = `SELECT count(*) FROM activity_participant WHERE activity_i
 // A meeting a calendar event was matched onto gains the event's guests from the
 // stored original, once, and a room stays off it.
 func TestTheRepairGivesAMatchedMeetingItsStoredGuests(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	conn := integration.OwnerConn(t)
 	grantContactScope(t, e, e.Rep1, "all")
@@ -132,6 +133,7 @@ func TestTheRepairGivesAMatchedMeetingItsStoredGuests(t *testing.T) {
 
 // The repair stamps as the calendar that stored the event, and nothing else.
 func TestTheRepairLeavesWhatItsCalendarCannotClaim(t *testing.T) {
+	t.Parallel()
 	cases := map[string]func(t *testing.T, e *integration.Env, conn *pgx.Conn) ids.UUID{
 		"a meeting only the import stamps": func(t *testing.T, e *integration.Env, conn *pgx.Conn) ids.UUID {
 			meeting := seedMatchedMeeting(t, e, conn, e.Rep1, rep1Address, matchedEventPayload(t, rep1Address, "client@acme.test", matchedGuests...))
@@ -166,6 +168,7 @@ func TestTheRepairLeavesWhatItsCalendarCannotClaim(t *testing.T) {
 
 // The repair files a guest's contact only where the seat itself may see it.
 func TestTheRepairLinksNoContactOutsideTheSeatsScope(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	conn := integration.OwnerConn(t)
 	grantContactScope(t, e, e.Rep2, "own")
@@ -214,6 +217,7 @@ func guest(address string) connector.MessageParticipant {
 
 // Two calendars on one meeting each settle only the rows their own roster wrote.
 func TestTwoCalendarsDoNotRetireEachOthersGuests(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	meeting := captureMeeting(t, e, e.AdminUser)
 	for seat, address := range map[ids.UUID]string{e.Rep1: rep1Address, e.Rep2: rep2Address} {
@@ -236,6 +240,7 @@ func TestTwoCalendarsDoNotRetireEachOthersGuests(t *testing.T) {
 
 // An archived meeting takes no guests and announces nothing.
 func TestAnArchivedMeetingTakesNoGuests(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	meeting := captureMeeting(t, e, e.AdminUser)
 	e.WsExec(t, `UPDATE activity SET archived_at = now() WHERE id = $1`, meeting)
@@ -254,6 +259,7 @@ func TestAnArchivedMeetingTakesNoGuests(t *testing.T) {
 
 // Two syncs adding one guest at once write one row and count it once.
 func TestConcurrentSyncsAddAGuestOnce(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	meeting := captureMeeting(t, e, e.AdminUser)
 	var wg sync.WaitGroup
@@ -276,6 +282,7 @@ func TestConcurrentSyncsAddAGuestOnce(t *testing.T) {
 
 // A roster adds guests only up to the party cap the meeting has left.
 func TestARosterAddsGuestsOnlyUpToThePartyCap(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	meeting := captureMeeting(t, e, e.AdminUser)
 	parties := make([]connector.MessageParticipant, 0, connector.MaxParticipants+3)
@@ -293,6 +300,7 @@ func TestARosterAddsGuestsOnlyUpToThePartyCap(t *testing.T) {
 }
 
 func TestAStoredOriginalCannotRetireOrReverseACurrentGuest(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	meeting := captureMeeting(t, e, e.AdminUser)
 	accepted := guest("buyer@client.test")

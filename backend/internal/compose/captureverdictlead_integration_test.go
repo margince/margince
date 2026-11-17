@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -30,6 +31,7 @@ func seedReviewLead(t *testing.T, e *integration.Env, address string) {
 }
 
 func TestALeadsAddressIsNotOfferedAsANewContact(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const address = "dana@leadco.example"
 	seedReviewLead(t, e, address)
@@ -37,7 +39,7 @@ func TestALeadsAddressIsNotOfferedAsANewContact(t *testing.T) {
 	dispositionID := seedPendingDisposition(t, e, address, "leadco.example", activityID)
 	retireToUnsure(t, e, dispositionID)
 
-	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN}, CaptureConfig{}, slog.Default())
 	if err := engine.StageReviewsWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("staging reviews: %v", err)
 	}
@@ -50,13 +52,14 @@ func TestALeadsAddressIsNotOfferedAsANewContact(t *testing.T) {
 }
 
 func TestAnOfferAcceptedAfterTheSenderBecameALeadMakesNoContact(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const address = "rui@leadco.example"
 	activityID := seedCapturedMail(t, e, address, "about your services")
 	dispositionID := seedPendingDisposition(t, e, address, "leadco.example", activityID)
 	retireToUnsure(t, e, dispositionID)
 	svc := NewApprovalsServiceWithEffects(e.Pool)
-	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN}, CaptureConfig{}, slog.Default())
 	if err := seedLegacySenderReviews(t, e, engine); err != nil {
 		t.Fatalf("staging reviews: %v", err)
 	}

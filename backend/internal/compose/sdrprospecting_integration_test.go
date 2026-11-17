@@ -97,6 +97,7 @@ func (f *sdrFixture) logMeeting(t *testing.T, name string, start time.Time, stat
 // A meeting booked after the instant asked for did not exist at that instant,
 // though it starts inside the window.
 func TestSdrUpcomingMeetingsLeaveOutOneBookedAfterAsOf(t *testing.T) {
+	t.Parallel()
 	f := newSdrFixture(t, crmcontracts.ReportingFrameworkInputTemplateSales)
 	asked := f.at
 	f.at = f.at.Add(time.Hour)
@@ -115,6 +116,7 @@ func TestSdrUpcomingMeetingsLeaveOutOneBookedAfterAsOf(t *testing.T) {
 // happened and start before its end count. The list's pages hold the counted
 // ones and no others.
 func TestSdrUpcomingMeetingsCountAndListShareOneWindow(t *testing.T) {
+	t.Parallel()
 	f := newSdrFixture(t, crmcontracts.ReportingFrameworkInputTemplateSales)
 	e := f.e
 	window := f.summary(f.ctx, t, e.Rep1).UpcomingWindow
@@ -157,6 +159,7 @@ func TestSdrUpcomingMeetingsCountAndListShareOneWindow(t *testing.T) {
 // A handoff sent back waits on its submitter. It leaves the waiting list and
 // appears on the returned list with its reason, aged from its return.
 func TestSdrReturnedHandoffsCarryTheirReason(t *testing.T) {
+	t.Parallel()
 	f := newSdrFixture(t, crmcontracts.ReportingFrameworkInputTemplateSdr)
 	e := f.e
 	handoff := f.submit(t, "Sent back prospect", &f.ae)
@@ -195,6 +198,7 @@ func TestSdrReturnedHandoffsCarryTheirReason(t *testing.T) {
 // A seat reviews its own handoff rounds. Nobody else may name that seat, not a
 // team manager and not a seat that may measure everyone.
 func TestSdrTeamReviewReadsOneSeatsOwnRounds(t *testing.T) {
+	t.Parallel()
 	f := newSdrTeamFixture(t)
 	e := f.e
 	accepted := f.submitAs(t, e.Rep1, "Accepted prospect")
@@ -243,6 +247,7 @@ func (f *sdrTeamFixture) ownReviewCode(reader context.Context, owner ids.UUID) i
 // A week no lead arrived in has no qualified-lead reading, while a week with
 // no held meeting is a measured zero.
 func TestWeeklyOutcomesLeaveAWeekWithNoCohortEmpty(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	now := clocktest.Now(t)
 	arrived := now.AddDate(0, 0, -10)
@@ -286,6 +291,7 @@ func TestWeeklyOutcomesLeaveAWeekWithNoCohortEmpty(t *testing.T) {
 // The clock moves on between the summary and its pages, past both meetings'
 // starts. Pages read in the summary's window still hold what it counted.
 func TestSdrUpcomingMeetingPagesKeepTheSummarysWindow(t *testing.T) {
+	t.Parallel()
 	f := newSdrFixture(t, crmcontracts.ReportingFrameworkInputTemplateSales)
 	e := f.e
 	first := f.logMeeting(t, "First booked", f.at.Add(time.Minute), "booked")

@@ -41,6 +41,7 @@ import (
 // behavioural proof: domain rows are gone, identity survives, and the
 // append-only audit ledger is untouched by the sweep it is itself gated by.
 func TestSweepWorkspaceDataClearsDomainKeepsIdentity(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 
@@ -145,6 +146,7 @@ func TestSweepWorkspaceDataClearsDomainKeepsIdentity(t *testing.T) {
 // pg_catalog query, so it genuinely fails on drift rather than agreeing with
 // the code under test.
 func TestPreserveSetIntegrity(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
@@ -196,6 +198,7 @@ func TestPreserveSetIntegrity(t *testing.T) {
 // (ADR-0091 §6) and an installation holds one, so there is no other tenant's
 // event to spare — every staged row belongs to the installation being reset.
 func TestClearWorkspaceOutboxEmptiesTheStagedEvents(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	e.WsExec(t, `INSERT INTO event_outbox (stream, envelope) VALUES ('t', jsonb_build_object('type', 'x'))`)
@@ -217,6 +220,7 @@ func TestClearWorkspaceOutboxEmptiesTheStagedEvents(t *testing.T) {
 // bootstrap does, preserves identity, and leaves one audit_log row
 // recording the reset itself.
 func TestResetRunRestoresBootstrapState(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	e.SeedContact(t, "Alice", nil)
@@ -270,22 +274,13 @@ func TestResetRunRestoresBootstrapState(t *testing.T) {
 // customfields definition that outlived a reset) is dropped, without
 // exercising the full customfields engine.
 func TestDropResetCustomFieldColumns(t *testing.T) {
+	t.Parallel()
 	sp := integration.SchemaPool(t)
 	ctx := context.Background()
 
 	if _, err := sp.Exec(ctx, `ALTER TABLE contact ADD COLUMN cf_zzz text`); err != nil {
 		t.Fatalf("seeding fake cf_ column: %v", err)
 	}
-	// cf_zzz is real schema on a database sibling tests in this package share;
-	// drop it on every exit path so a failure here never leaks a column into
-	// TestPreserveSetIntegrity / TestSweepTargetsCarryNoDeleteBlockingTrigger,
-	// which both introspect the live schema. IF NOT EXISTS: the assertion below
-	// proves the reset drop already removed it on the success path.
-	t.Cleanup(func() {
-		if _, err := sp.Exec(context.Background(), `ALTER TABLE contact DROP COLUMN IF EXISTS cf_zzz`); err != nil {
-			t.Errorf("cleaning up cf_zzz: %v", err)
-		}
-	})
 
 	if err := dropResetCustomFieldColumns(ctx, sp); err != nil {
 		t.Fatalf("dropResetCustomFieldColumns: %v", err)
@@ -406,6 +401,7 @@ var deleteGuardedSweepTargets = gatekit.Waive(map[string]string{
 })
 
 func TestSweepTargetsCarryNoDeleteBlockingTrigger(t *testing.T) {
+	t.Parallel()
 	defer deleteGuardedSweepTargets.AssertAllMatched(t)
 	e := integration.Setup(t)
 	ctx := e.Admin()
@@ -461,6 +457,7 @@ func TestSweepTargetsCarryNoDeleteBlockingTrigger(t *testing.T) {
 // moved: an implementation that tallied refs without redeeming them would look
 // identical from the evidence alone.
 func TestResetPurgesTheSealedCredentialsItsSweepOrphans(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 
@@ -550,6 +547,7 @@ func resetTestVault(t *testing.T, e *integration.Env) keyvault.Vault {
 // pointing at nothing or a blob nobody names, and neither failure is visible
 // until the next boot.
 func TestResetKeepsTheDeploymentCredentialsSealedBeforeIt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 
@@ -597,6 +595,7 @@ func TestResetKeepsTheDeploymentCredentialsSealedBeforeIt(t *testing.T) {
 // passport holds a RESTRICT key onto its grant, so a swept grant stops the
 // whole sweep.
 func TestAResetKeepsAConnectedAITool(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
@@ -642,6 +641,7 @@ func TestAResetKeepsAConnectedAITool(t *testing.T) {
 // reads every sealed setting's ref, or it deletes credentials the installation
 // still names.
 func TestResetKeepsTheSealedSettingsItsRowsStillName(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	vault := resetTestVault(t, e)
@@ -682,6 +682,7 @@ func TestResetKeepsTheSealedSettingsItsRowsStillName(t *testing.T) {
 // the counter on every fact delete the sweep makes. A counter left behind
 // would point at nothing and outlive the reset.
 func TestAResetLeavesNoFactRevision(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	company := technicalUndoCompany(t, e, "Reset Lookup GmbH")

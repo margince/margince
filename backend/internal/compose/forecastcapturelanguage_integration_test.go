@@ -21,6 +21,7 @@ import (
 )
 
 func TestForecastCaptureFailureKeepsItsWrittenLanguage(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	store := newForecastStoreFor(e.Pool)
 	writer := principal.WithCorrelationID(principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "system:capture-language"), ids.NewV7())

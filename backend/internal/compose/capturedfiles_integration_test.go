@@ -204,6 +204,7 @@ func filesFrom(ctx context.Context, t *testing.T, db *database.DB, system, sourc
 }
 
 func TestACapturedMessagesFileBecomesAnAttachment(t *testing.T) {
+	t.Parallel()
 	ctx, db, tag := captureWorkspace(t)
 	blob := blobstore.NewMemory()
 	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blob))
@@ -250,6 +251,7 @@ func TestACapturedMessagesFileBecomesAnAttachment(t *testing.T) {
 
 // DOC-AC-8: the same provider message pulled twice produces one row per part.
 func TestTheSameMessagePulledTwiceStoresItsFileOnce(t *testing.T) {
+	t.Parallel()
 	ctx, db, tag := captureWorkspace(t)
 	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blobstore.NewMemory()))
 
@@ -274,6 +276,7 @@ func TestTheSameMessagePulledTwiceStoresItsFileOnce(t *testing.T) {
 // This is what holds when two pulls of one mailbox overlap in time and both
 // reach the insert.
 func TestTheDatabaseRefusesASecondRowForTheSameProviderPart(t *testing.T) {
+	t.Parallel()
 	ctx, db, tag := captureWorkspace(t)
 	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blobstore.NewMemory()))
 
@@ -310,6 +313,7 @@ func TestTheDatabaseRefusesASecondRowForTheSameProviderPart(t *testing.T) {
 // A deployment with no object store keeps the correspondence and no files.
 // Refusing the message would lose a real exchange over an operator's omission.
 func TestWithNoObjectStoreTheMessageLandsAndItsFilesDoNot(t *testing.T) {
+	t.Parallel()
 	ctx, db, tag := captureWorkspace(t)
 	sink := capture.NewSink(db)
 
@@ -329,6 +333,7 @@ func TestWithNoObjectStoreTheMessageLandsAndItsFilesDoNot(t *testing.T) {
 // DOC-AC-12: what the bounds refused is observable, so a message whose files
 // were dropped is not silently identical to one that carried none.
 func TestARefusedFileLeavesAnObservableReason(t *testing.T) {
+	t.Parallel()
 	ctx, db, tag := captureWorkspace(t)
 	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blobstore.NewMemory()))
 
@@ -421,6 +426,7 @@ func onePhoto() connector.Part {
 // derivation collapsing to a constant — and a constant passes whichever arm it
 // happens to match. One test that watches both cannot be satisfied that way.
 func TestACapturedFilesCategoryNamesTheTransportThatCarriedIt(t *testing.T) {
+	t.Parallel()
 	ctx, db, tag := captureWorkspace(t)
 	blob := blobstore.NewMemory()
 	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blob))
@@ -458,6 +464,7 @@ func TestACapturedFilesCategoryNamesTheTransportThatCarriedIt(t *testing.T) {
 // row does not hold is worse than no image: the trail reads as authoritative and
 // is the thing a reader consults when the row is already gone.
 func TestTheAuditImageOfACapturedFileNamesTheCategoryTheRowHolds(t *testing.T) {
+	t.Parallel()
 	ctx, db, tag := captureWorkspace(t)
 	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blobstore.NewMemory()))
 
@@ -494,6 +501,7 @@ func TestTheAuditImageOfACapturedFileNamesTheCategoryTheRowHolds(t *testing.T) {
 // case, and not storing it is strictly better than storing it and deleting it
 // later.
 func TestAPrivateThreadsFilesAreNeverStored(t *testing.T) {
+	t.Parallel()
 	ctx, db, tag := captureWorkspace(t)
 	blob := blobstore.NewMemory()
 	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blob))
@@ -518,6 +526,7 @@ func TestAPrivateThreadsFilesAreNeverStored(t *testing.T) {
 // The ordinary case still stores, so the strip is bounded to threads that were
 // actually judged private rather than to anything carrying a thread key.
 func TestAThreadWithNoVerdictStillStoresItsFiles(t *testing.T) {
+	t.Parallel()
 	ctx, db, tag := captureWorkspace(t)
 	blob := blobstore.NewMemory()
 	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blob))
@@ -562,6 +571,7 @@ func activityExists(ctx context.Context, t *testing.T, db *database.DB, sourceID
 // classifier's reading. The files go either way; what must not happen is the
 // trail crediting a machine for a decision a human made.
 func TestAThreadHeldByItsOwnerWithholdsItsFilesToo(t *testing.T) {
+	t.Parallel()
 	ctx, db, tag := captureWorkspace(t)
 	blob := blobstore.NewMemory()
 	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blob))
@@ -613,6 +623,7 @@ func withheldVerdict(ctx context.Context, t *testing.T, db *database.DB, sourceI
 // A mail that links a Google Slides deck and an ordinary page records the deck
 // once. The test runs the real sink and the real keeper.
 func TestACapturedMailsDocumentLinkBecomesALinkRow(t *testing.T) {
+	t.Parallel()
 	ctx, db, tag := captureWorkspace(t)
 	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blobstore.NewMemory()))
 	rec := mailRecord("msg-with-link-" + tag)

@@ -31,6 +31,7 @@ import (
 // newer internal note. The meeting is past the timeline page, the note does not
 // hide it, and the draft does not write to them as a stranger.
 func TestAMeetingOlderThanAPageOfActivityStillCountsAsContact(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Einmal Getroffen", nil)
 	now := clocktest.Now(t)
@@ -87,6 +88,7 @@ func TestAMeetingOlderThanAPageOfActivityStillCountsAsContact(t *testing.T) {
 // A meeting the contact attended counts though nothing links it to them, as a
 // calendar files a meeting by its attendees. A note about a colleague does not.
 func TestAMeetingTheContactAttendedCountsWithoutALink(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	guest := e.SeedContact(t, "Priya Raman", nil)
 	colleague := e.SeedContact(t, "Bob Becker", nil)

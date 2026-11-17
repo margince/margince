@@ -20,6 +20,7 @@ import (
 )
 
 func TestMaintenanceKeepsTheTagRemovalThatCommitsWhileItWaits(t *testing.T) {
+	t.Parallel()
 	for _, commit := range []bool{true, false} {
 		t.Run(map[bool]string{true: "committed removal", false: "rolled back removal"}[commit], func(t *testing.T) {
 			e := integration.Setup(t)

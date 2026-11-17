@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -33,6 +34,7 @@ import (
 // mail that stays limited to its participants for good because nothing re-asks
 // a question the ledger already answered.
 func TestARealContactVerdictReopensTheMailThePostureHeld(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const sender = "chi@fvhospital.example"
 	mail := seedCapturedMail(t, e, sender, "FVH | Remaining specialities")
@@ -61,6 +63,7 @@ func TestARealContactVerdictReopensTheMailThePostureHeld(t *testing.T) {
 // mail a posture should stop holding — an advisor's most of all, since that
 // record is deliberately kept to its owner.
 func TestAVerdictThatIsRealButNotAContactPublishesNothing(t *testing.T) {
+	t.Parallel()
 	for _, kind := range []string{capture.KindAdvisor, capture.KindRoleMailbox, capture.KindCompanySender} {
 		t.Run(kind, func(t *testing.T) {
 			e := integration.Setup(t)
@@ -82,6 +85,7 @@ func TestAVerdictThatIsRealButNotAContactPublishesNothing(t *testing.T) {
 // Noise settles the sender in the other direction entirely, and its mail is the
 // mail the posture was right about.
 func TestANoiseVerdictLeavesThePostureHeldMailHeld(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const sender = "newsletter@versand.example"
 	mail := seedCapturedMail(t, e, sender, "Unser Newsletter")
@@ -98,6 +102,7 @@ func TestANoiseVerdictLeavesThePostureHeldMailHeld(t *testing.T) {
 // A `held` mailbox promises to hold whatever any classifier concludes. A
 // verdict is an answer to `classified`'s question, not to this one.
 func TestAClearedSenderNeverOpensAHeldMailbox(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const sender = "chi@fvhospital.example"
 	mail := seedCapturedMail(t, e, sender, "FVH | Remaining specialities")
@@ -116,6 +121,7 @@ func TestAClearedSenderNeverOpensAHeldMailbox(t *testing.T) {
 // would discard the other. The counterparty hold is the seat's separate
 // decision about this correspondent and no verdict speaks for it.
 func TestAClearedSenderDoesNotLiftACounterpartyHold(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const sender = "anwalt@studiolegal.example"
 	mail := seedCapturedMail(t, e, sender, "Aufhebungsvertrag")
@@ -134,6 +140,7 @@ func TestAClearedSenderDoesNotLiftACounterpartyHold(t *testing.T) {
 // without touching its reasons, so the exact-array match alone would not
 // notice it. The status clause is what refuses.
 func TestAThreadVerdictThatHeldOutranksAClearedSender(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const sender = "chi@fvhospital.example"
 	mail := seedCapturedMail(t, e, sender, "Gehaltsanpassung")
@@ -154,6 +161,7 @@ func TestAThreadVerdictThatHeldOutranksAClearedSender(t *testing.T) {
 // long thread keeps rows reading NULL after a `held` verdict has committed —
 // and those are precisely the messages a seat asked to keep back.
 func TestAHeldThreadsUnstampedMessagesAreNotPublishedByASenderVerdict(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const sender = "chi@fvhospital.example"
 	mail := seedCapturedMail(t, e, sender, "Gehaltsanpassung")
@@ -199,6 +207,7 @@ func holdThreadFor(t *testing.T, e *integration.Env, activityID, seat ids.UUID) 
 // which rule matched first. It is not PROVABLY posture-only, so it is refused
 // rather than guessed at — the same trade widenhistory makes.
 func TestMailCapturedBeforeReasonsWereRecordedStaysHeld(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const sender = "chi@fvhospital.example"
 	mail := seedCapturedMail(t, e, sender, "FVH | Remaining specialities")
@@ -217,6 +226,7 @@ func TestMailCapturedBeforeReasonsWereRecordedStaysHeld(t *testing.T) {
 // verdict just landed, so the kind filter has to hold there on its own — this is
 // the only place a non-contact `real` verdict can reach the release at all.
 func TestTheReconcilingPassLeavesARealButNonContactSenderHeld(t *testing.T) {
+	t.Parallel()
 	for _, kind := range []string{capture.KindAdvisor, capture.KindRoleMailbox, capture.KindCompanySender} {
 		t.Run(kind, func(t *testing.T) {
 			e := integration.Setup(t)
@@ -244,6 +254,7 @@ func TestTheReconcilingPassLeavesARealButNonContactSenderHeld(t *testing.T) {
 // mail nothing will ever revisit unless a pass goes looking. This is the half
 // that makes the fix reach mail already captured.
 func TestTheVerdictPassDrainsSendersClearedBeforeTheRelease(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const sender = "chi@fvhospital.example"
 	mail := seedCapturedMail(t, e, sender, "FVH | Remaining specialities")
@@ -271,6 +282,7 @@ func TestTheVerdictPassDrainsSendersClearedBeforeTheRelease(t *testing.T) {
 // A sender with more held mail than one pass may spend has to finish on a later
 // tick rather than holding a transaction open for all of it.
 func TestTheReconcilingPassStopsAtItsBudgetAndFinishesOnTheNextTick(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const sender = "chi@fvhospital.example"
 	const held = clearedSenderSweepBudget + 5
@@ -307,7 +319,7 @@ func TestTheReconcilingPassStopsAtItsBudgetAndFinishesOnTheNextTick(t *testing.T
 // reached the way production reaches it rather than by calling it directly.
 func judgeSenderAs(t *testing.T, e *integration.Env, dispositionID ids.UUID, kind string) {
 	t.Helper()
-	runVerdict(t, e, &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): kind}})
+	runVerdict(t, e, &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{dispositionID.String(): kind}})
 	if got := dispositionStatus(t, e, dispositionID); got == capture.PendingStatusPending {
 		t.Fatalf("the disposition is still pending: the scripted answer never reached the ledger, " +
 			"so this test asserts about a verdict that was never taken")

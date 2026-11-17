@@ -25,6 +25,7 @@ import (
 )
 
 func TestASecondGraphFoldNeverClaimsAnUnwrittenPair(t *testing.T) {
+	t.Parallel()
 	for _, test := range []struct {
 		table   string
 		parties int

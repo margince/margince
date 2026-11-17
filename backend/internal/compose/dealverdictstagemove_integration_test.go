@@ -78,7 +78,7 @@ func setupStageMoveLedger(t *testing.T, ledger bool) *stageMoveEnv {
 		recordLedger(t, v, criterion.Id.String(), v.note)
 	}
 	move := &stageMoveLane{note: v.note, to: next.String(), criterion: criterion.Id.String(), quote: "The board agreed"}
-	v.pass = newDealVerdictPass(v.Pool, dealVerdictRefs(move), slog.New(slog.DiscardHandler))
+	v.pass = newDealVerdictPass(v.Pool, dealVerdictRefs(t, move), slog.New(slog.DiscardHandler))
 	v.pass.now = func() time.Time { return v.now.Add(time.Minute) }
 	return &stageMoveEnv{dealVerdictEnv: v, next: next, move: move}
 }
@@ -119,6 +119,7 @@ func nextOpenStage(t *testing.T, v *dealVerdictEnv, from ids.StageID) ids.StageI
 }
 
 func TestMarginceMovesADealForwardAndUndoMovesItBack(t *testing.T) {
+	t.Parallel()
 	v := setupStageMove(t)
 	v.run(t)
 
@@ -162,6 +163,7 @@ func TestMarginceMovesADealForwardAndUndoMovesItBack(t *testing.T) {
 }
 
 func TestAMoveWhoseCriterionIsNotCitedChangesNothing(t *testing.T) {
+	t.Parallel()
 	v := setupStageMove(t)
 	v.move.criterion = ""
 	v.run(t)
@@ -174,6 +176,7 @@ func TestAMoveWhoseCriterionIsNotCitedChangesNothing(t *testing.T) {
 }
 
 func TestAColleaguesMoveWhileTheModelReadsStopsTheMove(t *testing.T) {
+	t.Parallel()
 	v := setupStageMove(t)
 	v.move.during = func() {
 		if _, err := v.Deals.AdvanceDeal(v.owner(t), ids.From[ids.DealKind](v.deal), deals.AdvanceDealInput{ToStageID: v.next}); err != nil {
@@ -187,6 +190,7 @@ func TestAColleaguesMoveWhileTheModelReadsStopsTheMove(t *testing.T) {
 }
 
 func TestAnUndoAfterAColleagueMovedTheDealOnIsRefused(t *testing.T) {
+	t.Parallel()
 	v := setupStageMove(t)
 	v.run(t)
 	later := nextOpenStage(t, v.dealVerdictEnv, v.next)
@@ -208,12 +212,8 @@ func TestAnUndoAfterAColleagueMovedTheDealOnIsRefused(t *testing.T) {
 }
 
 func TestAnAdminsStoredOffStopsEveryStageMove(t *testing.T) {
+	t.Parallel()
 	v := setupStageMove(t)
-	t.Cleanup(func() {
-		if _, err := v.Pool.Exec(context.Background(), `DELETE FROM setting WHERE key = $1`, deals.StageAutopilotEnabled.Key()); err != nil {
-			t.Errorf("restoring the default: %v", err)
-		}
-	})
 	if _, err := v.Pool.Exec(t.Context(), `INSERT INTO setting (key, value) VALUES ($1, 'false'::jsonb)
 		ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`, deals.StageAutopilotEnabled.Key()); err != nil {
 		t.Fatal(err)
@@ -225,12 +225,8 @@ func TestAnAdminsStoredOffStopsEveryStageMove(t *testing.T) {
 }
 
 func TestAnAdminsOffBetweenTheReadAndTheWriteStopsTheMove(t *testing.T) {
+	t.Parallel()
 	v := setupStageMove(t)
-	t.Cleanup(func() {
-		if _, err := v.Pool.Exec(context.Background(), `DELETE FROM setting WHERE key = $1`, deals.StageAutopilotEnabled.Key()); err != nil {
-			t.Errorf("restoring the default: %v", err)
-		}
-	})
 	v.move.during = func() {
 		if _, err := v.Pool.Exec(context.Background(), `INSERT INTO setting (key, value) VALUES ($1, 'false'::jsonb)
 			ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`, deals.StageAutopilotEnabled.Key()); err != nil {
@@ -299,6 +295,7 @@ func (v *stageMoveEnv) seedBuyer(t *testing.T, address string) {
 }
 
 func TestABuyerMilestoneNeedsMailFromABuyerOfTheDeal(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name, from   string
 		moves, moved bool
@@ -326,6 +323,7 @@ func TestABuyerMilestoneNeedsMailFromABuyerOfTheDeal(t *testing.T) {
 }
 
 func TestAMeetingThatWasNotHeldMeetsNoHeldEvent(t *testing.T) {
+	t.Parallel()
 	v := setupStageMove(t)
 	meeting := v.seedDealActivity(t, "meeting", "", "", "canceled", "Demo with the buyer, cancelled by them.")
 	v.buyerCriterion(t, deals.CriterionEventHeld, meeting, "Demo with the buyer")
@@ -339,6 +337,7 @@ func TestAMeetingThatWasNotHeldMeetsNoHeldEvent(t *testing.T) {
 }
 
 func TestACustomCriterionTheLedgerDoesNotRecordMovesNothing(t *testing.T) {
+	t.Parallel()
 	v := setupStageMoveLedger(t, false)
 	v.run(t)
 	if got := v.field(t, "stage_id"); got != v.stage.String() {
@@ -350,6 +349,7 @@ func TestACustomCriterionTheLedgerDoesNotRecordMovesNothing(t *testing.T) {
 // refuses the move. Taking the domain away changes nothing the deal's own
 // rows hold, and the next pass must read the deal again all the same.
 func TestRemovingAMistakenOwnDomainLetsTheNextPassMoveTheDeal(t *testing.T) {
+	t.Parallel()
 	v := setupStageMove(t)
 	own := capture.NewOwnDomainStore(v.DB())
 	if _, err := own.Add(v.Admin(), "customer.example"); err != nil {
@@ -375,6 +375,7 @@ func TestRemovingAMistakenOwnDomainLetsTheNextPassMoveTheDeal(t *testing.T) {
 // The ledger settles a custom criterion. An entry recorded after a pass found
 // none changes nothing on the deal's own rows, and still makes it due.
 func TestALedgerEntryRecordedAfterAPassLetsTheNextPassMoveTheDeal(t *testing.T) {
+	t.Parallel()
 	v := setupStageMoveLedger(t, false)
 	v.run(t)
 	if got := v.field(t, "stage_id"); got != v.stage.String() {
@@ -389,6 +390,7 @@ func TestALedgerEntryRecordedAfterAPassLetsTheNextPassMoveTheDeal(t *testing.T) 
 }
 
 func TestAStageThatAsksForNothingGetsNoMove(t *testing.T) {
+	t.Parallel()
 	v := setupStageMove(t)
 	v.WsExec(t, `UPDATE stage_exit_criterion SET archived_at = now() WHERE stage_id = $1`, v.stage)
 	v.move.criterion = ""
@@ -399,6 +401,7 @@ func TestAStageThatAsksForNothingGetsNoMove(t *testing.T) {
 }
 
 func TestAStageChangeBetweenTheReadAndTheWriteStopsTheMove(t *testing.T) {
+	t.Parallel()
 	cases := map[string]func(v *stageMoveEnv){
 		"the stages were reordered": func(v *stageMoveEnv) {
 			order := strings.Split(v.WsScalar(t, `SELECT string_agg(id::text, ',' ORDER BY position) FROM stage

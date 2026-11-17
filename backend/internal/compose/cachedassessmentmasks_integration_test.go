@@ -22,6 +22,7 @@ import (
 )
 
 func TestAnEarlierAssessmentWithholdsMoneyAfterAFieldMaskChanges(t *testing.T) {
+	t.Parallel()
 	for _, change := range []string{"mask", "owner"} {
 		t.Run(change, func(t *testing.T) {
 			e := integration.Setup(t)

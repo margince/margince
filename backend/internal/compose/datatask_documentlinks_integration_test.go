@@ -24,6 +24,7 @@ import (
 // Mail captured before link rows existed gets them from its stored original.
 // A second run writes nothing, and a link a human archived stays archived.
 func TestStoredMailGetsItsDocumentLinksOnceAndKeepsAnArchivedOne(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	at := time.Date(2026, 10, 21, 8, 0, 0, 0, time.UTC)
 	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)

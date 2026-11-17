@@ -114,6 +114,7 @@ func readMeetingStatus(t *testing.T, e *integration.Env, id ids.UUID) (string, b
 // The defect, end to end: a meeting captured while it was live is closed when
 // the calendar says it is off.
 func TestACancellationClosesTheCapturedMeeting(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id := captureMeeting(t, e, e.AdminUser)
 
@@ -137,6 +138,7 @@ func TestACancellationClosesTheCapturedMeeting(t *testing.T) {
 // alone answers "what is this meeting now" and cannot answer "how many fell
 // through last week".
 func TestACancellationRecordsItsTransition(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id := captureMeeting(t, e, e.AdminUser)
 
@@ -174,6 +176,7 @@ func TestACancellationRecordsItsTransition(t *testing.T) {
 // pull must write nothing: no second audit row, no second event on the bus, no
 // second transition doubling every cancellation count.
 func TestCancellingTwiceWritesOnce(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id := captureMeeting(t, e, e.AdminUser)
 
@@ -210,6 +213,7 @@ func TestCancellingTwiceWritesOnce(t *testing.T) {
 // were never worth capturing at all — an internal meeting, a solo block. It must
 // not fail, or one such event would stop a whole calendar sync.
 func TestCancellingAMeetingNobodyCapturedIsNotAFault(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	unknown := connector.NaturalKey{SourceSystem: calendarSystem, SourceID: "evt-never-captured"}
 	if err := calendarSink(e).CancelMeeting(calendarOwnerCtx(e, e.AdminUser), unknown, meetingStart); err != nil {
@@ -220,6 +224,7 @@ func TestCancellingAMeetingNobodyCapturedIsNotAFault(t *testing.T) {
 // An ARCHIVED meeting is left where somebody put it. A calendar sync is not the
 // caller entitled to move the status of a row a contact deliberately retired.
 func TestAnArchivedMeetingIsNotReopenedByASync(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id := captureMeeting(t, e, e.AdminUser)
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -247,6 +252,7 @@ func TestAnArchivedMeetingIsNotReopenedByASync(t *testing.T) {
 // schedule nobody is watching, and against the contact who took the trouble to
 // record it.
 func TestAnAnsweredMeetingKeepsItsOutcome(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	for _, answered := range []string{"held", "no_show"} {
 		t.Run(answered, func(t *testing.T) {
@@ -284,6 +290,7 @@ func TestAnAnsweredMeetingKeepsItsOutcome(t *testing.T) {
 // every fixture is, and what a deployment composing capture without the timeline
 // gets. It must not fail either.
 func TestASinkWithoutTheSeamDoesNotFail(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id := captureMeeting(t, e, e.AdminUser)
 
@@ -304,6 +311,7 @@ func TestASinkWithoutTheSeamDoesNotFail(t *testing.T) {
 // the same rule admitRecord states for a write ("a connector cannot claim to be
 // another one"), and it binds here for the same reason.
 func TestAConnectorCannotCancelAnotherConnectorsMeeting(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id := captureMeeting(t, e, e.AdminUser)
 
@@ -336,6 +344,7 @@ func TestAConnectorCannotCancelAnotherConnectorsMeeting(t *testing.T) {
 // are joined by a filter that could disagree with both — and a meeting the
 // reader can still see is the whole complaint, however correct the row is.
 func TestACancelledMeetingLeavesTodaysSchedule(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := calendarOwnerCtx(e, e.AdminUser)
 	captureMeeting(t, e, e.AdminUser)

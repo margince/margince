@@ -106,6 +106,7 @@ func approvedThroughDecision(t *testing.T, e *integration.Env, service *approval
 }
 
 func TestImportApprovalReleasesTheDisplayedRowsThroughTheQueuedWriter(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.GrantRole(t, e.AdminUser, "admin")
 	ctx := importAdmin(e)
@@ -186,6 +187,7 @@ func approvedAsShown(t *testing.T, e *integration.Env, handler importHandlers, r
 // A file renaming a stored company and naming it and a new one twice is shown
 // with each second spelling skipped. The approved import holds every row to that.
 func TestAnApprovedImportSkipsTheLookAlikeItsApproverWasShown(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.GrantRole(t, e.AdminUser, "admin")
 	handler, _ := leadSourceHandlers(t, e)
@@ -201,6 +203,7 @@ func TestAnApprovedImportSkipsTheLookAlikeItsApproverWasShown(t *testing.T) {
 // A ZIP whose contacts name a company of the same upload by its ref lands as
 // approved. The check before the commit caches nothing the commit then reads.
 func TestAnApprovedZipLinksItsContactsToItsOwnCompanies(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.GrantRole(t, e.AdminUser, "admin")
 	handler, _ := leadSourceHandlers(t, e)

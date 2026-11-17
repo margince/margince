@@ -61,6 +61,7 @@ func (f *relationshipFixture) awaited(t *testing.T, activity ids.UUID) bool {
 // delivery report on its thread. The customer's reply settles it. An
 // invitation the reader sent awaits nothing.
 func TestOnlyAHumansReplySettlesAnAwaitedQuestion(t *testing.T) {
+	t.Parallel()
 	f := newRelationshipFixture(t)
 	question := f.mail(t, "pricing-question", f.seatAddr, f.contactAddr, "", 4)
 	invite := f.mail(t, "kickoff-invite", f.seatAddr, f.contactAddr, "", 4, calendarBody("REQUEST")...)
@@ -106,6 +107,7 @@ func citesActivity(sentences []crmcontracts.CompanyBriefSentence, activity ids.U
 // human message out of the briefs and drafts. They read the rows a human
 // wrote before the cap. The page keeps every record.
 func TestAutomaticMailPastTheCapLeavesTheHumanMessageInTheBriefs(t *testing.T) {
+	t.Parallel()
 	f := newRelationshipFixture(t)
 	human := f.mail(t, "their-pricing-reply", f.contactAddr, f.seatAddr, "", 30)
 	for i := range 26 {
@@ -162,6 +164,7 @@ func TestAutomaticMailPastTheCapLeavesTheHumanMessageInTheBriefs(t *testing.T) {
 // Notes dated ahead, more than the page's timeline holds, cannot push the
 // human message out of the contact draft's rows. The page keeps them all.
 func TestPostDatedNotesPastTheCapLeaveTheHumanMessageInTheContactDraft(t *testing.T) {
+	t.Parallel()
 	f := newRelationshipFixture(t)
 	human := f.mail(t, "their-real-question", f.contactAddr, f.seatAddr, "", 30)
 	store := activities.NewStore(f.e.DB())

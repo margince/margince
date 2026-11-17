@@ -46,6 +46,7 @@ import (
 // record, and the archive then landed anyway because the write carried no
 // version clause. With the pin threaded through the seam, that write refuses.
 func TestAnArchiveAtAStaleVersionRefusesAndLeavesTheRecordLive(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	native := NewProvider(e.Pool)
 	admin := e.Admin()
@@ -76,6 +77,7 @@ func TestAnArchiveAtAStaleVersionRefusesAndLeavesTheRecordLive(t *testing.T) {
 // The current pin archives, so the guard above refuses skew rather than
 // refusing everything.
 func TestAnArchiveAtTheCurrentVersionRuns(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	native := NewProvider(e.Pool)
 	admin := e.Admin()
@@ -99,6 +101,7 @@ func TestAnArchiveAtTheCurrentVersionRuns(t *testing.T) {
 // An archive with NO pin still runs — the ordinary unapproved write, which
 // takes the row lock instead and must not have become a skew failure.
 func TestAnUnpinnedArchiveStillRuns(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	native := NewProvider(e.Pool)
 	admin := e.Admin()
@@ -232,6 +235,7 @@ func archivedAt(t *testing.T, e *integration.Env, table string, id ids.UUID) boo
 // advertise, and the 409 it can now provoke has to be a declared response.
 // Only a request through the real handler proves the chain either way.
 func TestTheRESTArchiveHonoursAStaleIfMatch(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	native := NewProvider(e.Pool)
 	admin := e.Admin()
@@ -255,6 +259,7 @@ func TestTheRESTArchiveHonoursAStaleIfMatch(t *testing.T) {
 // And the current version still archives, so the route refuses skew rather
 // than refusing every If-Match it is handed.
 func TestTheRESTArchiveAcceptsACurrentIfMatch(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	native := NewProvider(e.Pool)
 	admin := e.Admin()

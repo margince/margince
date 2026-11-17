@@ -25,6 +25,7 @@ import (
 )
 
 func TestPromotionPreviewNamesTheRestrictionsAndLinksActuallyCarried(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	perms := integration.AdminPerms
 	perms.Objects = maps.Clone(perms.Objects)
@@ -125,6 +126,7 @@ func TestPromotionPreviewNamesTheRestrictionsAndLinksActuallyCarried(t *testing.
 }
 
 func TestMergePreviewCarriesRestrictionsAndKeepsWithdrawalLinksUsable(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	consents := consent.NewStore(e.DB())

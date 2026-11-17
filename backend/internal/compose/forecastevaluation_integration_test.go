@@ -143,6 +143,7 @@ func wholeWorkspace(dataset forecasting.EvaluationDataset) []forecasting.Evaluat
 // reopen after the outcomes are read reaches neither. A deal created after
 // the snapshot counts toward no earlier vintage.
 func TestAnOutcomeIsTheVintagesOwnDealsAsTheirHistoryStood(t *testing.T) {
+	t.Parallel()
 	e := setupEvaluation(t)
 	vintages := wholeWorkspace(e.dataset(t))
 	if len(vintages) != 2 {
@@ -166,6 +167,7 @@ func TestAnOutcomeIsTheVintagesOwnDealsAsTheirHistoryStood(t *testing.T) {
 // The same rows read twice give one dataset and one report, and the file
 // holds no deal id.
 func TestAnEvaluationOfTheSameSnapshotsIsReproducible(t *testing.T) {
+	t.Parallel()
 	e := setupEvaluation(t)
 	plan := forecasting.EvaluationPlan{
 		TrainEnd: e.trainEnd, ValidationEnd: e.trainEnd.AddDate(0, 0, 1), HorizonEdges: []int{30},

@@ -32,6 +32,7 @@ import (
 )
 
 func TestASnoozeWaitingForAReplyLiftsWhenOneArrives(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 	owner := integration.OwnerConn(t)
 
@@ -77,6 +78,7 @@ func TestASnoozeWaitingForAReplyLiftsWhenOneArrives(t *testing.T) {
 // already sitting there when the rep set the item down — which is to say it
 // never takes at all.
 func TestAnInboundBeforeTheSnoozeIsNotTheReplyBeingWaitedFor(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 	owner := integration.OwnerConn(t)
 
@@ -106,6 +108,7 @@ func TestAnInboundBeforeTheSnoozeIsNotTheReplyBeingWaitedFor(t *testing.T) {
 // stamped for next week has not arrived, and treating it as one puts the item
 // back for something still to come.
 func TestAFutureDatedReplyDoesNotLiftASnoozeYet(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 	owner := integration.OwnerConn(t)
 
@@ -130,6 +133,7 @@ func TestAFutureDatedReplyDoesNotLiftASnoozeYet(t *testing.T) {
 // sets an item down and then sends a chaser has not been replied to, and
 // lifting on their own mail would put the work back the moment they did it.
 func TestOurOwnOutboundIsNotTheCustomerReplying(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 	owner := integration.OwnerConn(t)
 
@@ -153,6 +157,7 @@ func TestOurOwnOutboundIsNotTheCustomerReplying(t *testing.T) {
 }
 
 func TestASnoozeWaitingForAMeetingLiftsOnceItIsOver(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 	owner := integration.OwnerConn(t)
 
@@ -182,6 +187,7 @@ func TestASnoozeWaitingForAMeetingLiftsOnceItIsOver(t *testing.T) {
 // then cancelled is waiting for something that will never happen, and the only
 // outcome that actually loses work is holding the item forever.
 func TestACancelledMeetingReturnsTheWorkRatherThanHoldingItForever(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 	owner := integration.OwnerConn(t)
 
@@ -214,6 +220,7 @@ func TestACancelledMeetingReturnsTheWorkRatherThanHoldingItForever(t *testing.T)
 // item is a conflict when the read would already have re-surfaced it — and must
 // not be allowed to mark one the read still hides.
 func TestTheMarkGuardAgreesWithTheReadAboutAnEventSnooze(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 	owner := integration.OwnerConn(t)
 
@@ -245,6 +252,7 @@ func TestTheMarkGuardAgreesWithTheReadAboutAnEventSnooze(t *testing.T) {
 // caller can name a wait that means nothing. Each must answer as a validation
 // error the client can read, not as a constraint violation it cannot.
 func TestASnoozeShapeIsRefusedBeforeItReachesTheDatabase(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 
 	run, err := b.engine.SnapshotRun(b.repCtx, briefClock)
@@ -290,6 +298,7 @@ func seedInbound(t *testing.T, owner *pgx.Conn, subject string, at time.Time) id
 // because its occurred_at is already past, and an id naming a row the rep
 // cannot read would tell them when somebody else's meeting happened.
 func TestASnoozeCannotWaitForSomethingThatIsNotAMeeting(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 	owner := integration.OwnerConn(t)
 
@@ -324,6 +333,7 @@ func TestASnoozeCannotWaitForSomethingThatIsNotAMeeting(t *testing.T) {
 // meeting's start and its end. Lifting at occurred_at puts the work back while
 // the rep is still in the room, which is the one moment they cannot act on it.
 func TestAMeetingSnoozeHoldsUntilTheMeetingHasENDED(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 	owner := integration.OwnerConn(t)
 
@@ -352,6 +362,7 @@ func TestAMeetingSnoozeHoldsUntilTheMeetingHasENDED(t *testing.T) {
 // stops being something worth waiting for. Archiving is one; the record's own
 // status is the one a calendar sync actually writes.
 func TestACancelledMeetingStatusReturnsTheWork(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 	owner := integration.OwnerConn(t)
 

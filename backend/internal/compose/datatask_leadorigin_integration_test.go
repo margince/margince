@@ -38,6 +38,7 @@ func leadOriginState(t *testing.T, e *integration.Env) string {
 // origin only where a retained capture names one that resolves. A second run
 // finds nothing left to change, and a human's override and origin stay as set.
 func TestTheOriginTaskRescoresAndFillsOriginsAndReplaysSafely(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	referral, event := "referral", "event"

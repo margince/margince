@@ -89,6 +89,7 @@ func (p *closesDuringTheTierRead) Read(ctx context.Context, ref datasource.Entit
 }
 
 func TestAConcurrentCloseSurvivesTheAutoExecutedMoveThatRacedIt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	pipeline, open, won := integration.DealFixture(t, e)
 	human := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)

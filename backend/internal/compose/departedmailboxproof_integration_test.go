@@ -22,6 +22,7 @@ import (
 // A connection stays connected after its holder leaves, until somebody takes it
 // down. The label on it then attributes imports to a mailbox nobody holds.
 func TestADepartedSeatsMailboxProvesNothing(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	if _, err := integration.OwnerConn(t).Exec(context.Background(), `
 		INSERT INTO capture_connection (user_id, provider, status, credential_ref, account_label)

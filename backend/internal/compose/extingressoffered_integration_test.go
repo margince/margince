@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
+//testdb:serial binds the process-wide extension runtime
 func TestAFeedValueIsKeptBesideTheTypedOneAndReplacedByTheNextOffer(t *testing.T) {
 	e := setupCRMIngress(t)
 	first := e.companyEditedByAUser(t)
@@ -40,6 +41,7 @@ func TestAFeedValueIsKeptBesideTheTypedOneAndReplacedByTheNextOffer(t *testing.T
 	}
 }
 
+//testdb:serial binds the process-wide extension runtime
 func TestAnArchivedCompanyServesNoOfferedValues(t *testing.T) {
 	e := setupCRMIngress(t)
 	made := e.mustIngest(t, companyRecord("acct-1", extension.CompanyFields{DisplayName: "Acme", Industry: "education"}))
@@ -52,6 +54,7 @@ func TestAnArchivedCompanyServesNoOfferedValues(t *testing.T) {
 	}
 }
 
+//testdb:serial binds the process-wide extension runtime
 func TestErasingAnEmployeeDeletesTheOfferedValuesOfTheirCompany(t *testing.T) {
 	e := setupCRMIngress(t)
 	made := e.mustIngest(t, companyRecord("acct-1", extension.CompanyFields{DisplayName: "Acme", Description: "run by Erika"}))
@@ -70,6 +73,7 @@ func TestErasingAnEmployeeDeletesTheOfferedValuesOfTheirCompany(t *testing.T) {
 	}
 }
 
+//testdb:serial binds the process-wide extension runtime
 func TestOfferedValuesGoWithTheCompanyTheyDescribe(t *testing.T) {
 	e := setupCRMIngress(t)
 	made := e.mustIngest(t, companyRecord("acct-1", extension.CompanyFields{DisplayName: "Acme", Industry: "education"}))

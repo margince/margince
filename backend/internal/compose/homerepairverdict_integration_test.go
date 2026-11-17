@@ -29,6 +29,7 @@ import (
 )
 
 func TestReviewedClassificationUsesTrustedPredictionAndNativeWriter(t *testing.T) {
+	t.Parallel()
 	for _, change := range []string{"unchanged", "human_body_change", "source_access_changed", "uncertain", "human_prior_change"} {
 		t.Run(change, func(t *testing.T) { runReviewedClassification(t, change) })
 	}

@@ -69,6 +69,7 @@ func (o *owedEnv) unlinkOriginal(t *testing.T, message ids.UUID) {
 // The writer: a verdict from before the upgrade mints a request task only once
 // its mail was checked and read in full, and only once.
 func TestALegacyRequestBecomesATaskOnlyOnceItsMailIsReadInFull(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.now = clocktest.Now(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
@@ -110,6 +111,7 @@ func TestALegacyRequestBecomesATaskOnlyOnceItsMailIsReadInFull(t *testing.T) {
 // while its mail was read in full, and so does the needs-reply row. A task a
 // member wrote stands on its own.
 func TestCurrentWorkFromAMailNotReadInFullIsWithheld(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.now = clocktest.Now(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")

@@ -82,6 +82,7 @@ func individualRSVPRecord(t *testing.T, start time.Time, provider, owner, first,
 }
 
 func TestAnAttendeesOwnDeclineKeepsTheSharedMeetingAndSurvivesAColleaguesReplay(t *testing.T) {
+	t.Parallel()
 	for _, provider := range []string{sourceGCal, sourceGraphCal} {
 		for _, existingOnly := range []bool{false, true} {
 			mode := map[bool]string{false: "capture", true: "existing_only"}[existingOnly]
@@ -179,6 +180,7 @@ func TestAnAttendeesOwnDeclineKeepsTheSharedMeetingAndSurvivesAColleaguesReplay(
 }
 
 func TestAnExistingMeetingReplayCreatesNothingAndCannotUseAnotherSeatsKey(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	first := seatAddress(t, e, e.Rep1)
 	for _, seat := range []ids.UUID{e.Rep1, e.Rep2} {
@@ -211,6 +213,7 @@ func TestAnExistingMeetingReplayCreatesNothingAndCannotUseAnotherSeatsKey(t *tes
 }
 
 func TestAFirstDeclinedInvitationCreatesNothing(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := seatAddress(t, e, e.Rep1)
 	e.GrantRole(t, e.Rep1, "admin")
@@ -229,6 +232,7 @@ func TestAFirstDeclinedInvitationCreatesNothing(t *testing.T) {
 }
 
 func TestRemovingAnAttendeesCalendarCopyKeepsTheOrganizersMeeting(t *testing.T) {
+	t.Parallel()
 	for _, provider := range []string{sourceGCal, sourceGraphCal} {
 		t.Run(provider, func(t *testing.T) {
 			e := integration.Setup(t)

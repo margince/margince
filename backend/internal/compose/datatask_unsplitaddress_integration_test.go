@@ -47,6 +47,7 @@ func splitCompanies(t *testing.T, e *integration.Env, id ids.UUID) int {
 }
 
 func TestTheUnsplitAddressTaskSplitsThroughTheExecutorAndReplaysSafely(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	conn := integration.OwnerConn(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
@@ -85,6 +86,7 @@ func TestTheUnsplitAddressTaskSplitsThroughTheExecutorAndReplaysSafely(t *testin
 }
 
 func TestTheUnsplitAddressTaskRollsItsSplitsBackWithItsProgress(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	conn := integration.OwnerConn(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")

@@ -59,6 +59,7 @@ func (e *forecastEnv) teamScopedActivityReader() context.Context {
 // door must get a real count, not the 500 the population default's
 // hardcoded owner_id clause produced against a table with no such column.
 func TestActivitiesByKindAnalyticsQueryDoesNotCrashForATeamScopedReader(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	// Above analyticsquery.DefaultFloor (5): a count at or below the floor is
 	// WITHHELD by design (a separate mechanism from the population crash this
@@ -89,6 +90,7 @@ func TestActivitiesByKindAnalyticsQueryDoesNotCrashForATeamScopedReader(t *testi
 // credits the host the held transition recorded, not the one today's RSVPs
 // would name.
 func TestAHeldMeetingsCreditDoesNotFollowALaterResponse(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	// Above analyticsquery.DefaultFloor, or a withheld answer would read like a
 	// wrong one.
@@ -155,6 +157,7 @@ func (e *forecastEnv) creditedCount(t *testing.T, seat ids.UUID) int {
 // filtered to any one of them finds it. Comparing the single seat a listing
 // shows answered no for every colleague but that one.
 func TestAMeetingIsFoundByEveryColleagueItCredits(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	// Above the floor for both seats, or a withheld answer reads like a miss.
 	for range 6 {

@@ -35,6 +35,7 @@ func createFormOwnedBy(t *testing.T, e *integration.Env, owner ids.UUID) error {
 }
 
 func TestAFormMayHandItsLeadsToAColleagueOutsideTheConfigurersScope(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	if err := createFormOwnedBy(t, e, e.Rep3); err != nil {
 		t.Fatalf("naming a colleague outside the configurer's scope as the owner: %v", err)
@@ -42,6 +43,7 @@ func TestAFormMayHandItsLeadsToAColleagueOutsideTheConfigurersScope(t *testing.T
 }
 
 func TestAFormStillRefusesAnAgentSeatAsItsOwner(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seat := ids.NewV7()
 	if _, err := integration.OwnerConn(t).Exec(t.Context(), `

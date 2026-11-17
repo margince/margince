@@ -22,6 +22,7 @@ import (
 )
 
 func TestHiddenReassignedTaskIsNotRecreatedWhenAttributionIsLost(t *testing.T) {
+	t.Parallel()
 	for _, visibility := range []string{"private", "restricted"} {
 		t.Run(visibility, func(t *testing.T) {
 			e := setupTranscript(t)

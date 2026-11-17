@@ -22,6 +22,7 @@ import (
 )
 
 func TestARepWithNoDealsReadsCompanyTotalsAndIsToldTheirScopeIsEmpty(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	amount := int64(100_000)
 	e.seedOpenDeal(t, "Colleague's", 20, &e.Rep3, &amount)
@@ -56,6 +57,7 @@ func TestARepWithNoDealsReadsCompanyTotalsAndIsToldTheirScopeIsEmpty(t *testing.
 }
 
 func TestARepIsOfferedTheCompanyAndEveryLiveTeam(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	rep := e.ownLensRepCtx(e.Rep1)
 	err := forecasting.NewStore(InstallationDB(e.Pool)).InTx(e.forecastReader(rep), func(ctx context.Context, tx pgx.Tx) error {

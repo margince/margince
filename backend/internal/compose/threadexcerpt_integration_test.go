@@ -52,6 +52,7 @@ func seedThreadMail(t *testing.T, e *integration.Env, threadKey string, bodyRune
 }
 
 func TestAThreadReportsHowMuchOfItselfWasNotRead(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	key := "thread-" + ids.NewV7().String()
 
@@ -99,6 +100,7 @@ func TestAThreadReportsHowMuchOfItselfWasNotRead(t *testing.T) {
 // and the thread now looks read: the state says handled, nothing errored, and
 // nothing says content was skipped.
 func TestABackfillIsReadRatherThanMarkedRead(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	key := "backfill-" + ids.NewV7().String()
 
@@ -157,6 +159,7 @@ func TestABackfillIsReadRatherThanMarkedRead(t *testing.T) {
 // is interesting now, and a thread walking backwards through its history while
 // that sits there would be reading its least useful end.
 func TestNewMailIsReadBeforeTheOlderRange(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	key := "newmail-" + ids.NewV7().String()
 
@@ -227,6 +230,7 @@ func read(t *testing.T, e *integration.Env, thread *settledThread) {
 // pass. Sending either backwards reads nothing and the model is never called,
 // which is the defect this change exists to fix, reintroduced at the other end.
 func TestNothingOlderLeftFallsBackToTheNewestWindow(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	key := "sameinstant-" + ids.NewV7().String()
 
@@ -264,6 +268,7 @@ func TestNothingOlderLeftFallsBackToTheNewestWindow(t *testing.T) {
 // defect this change exists to fix, at a smaller scale — or, made inclusive,
 // re-reads it every pass and never gets past it.
 func TestAWindowOfMessagesAtOneInstantIsNotSplit(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	key := "sameclock-" + ids.NewV7().String()
 

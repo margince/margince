@@ -24,6 +24,7 @@ import (
 // An ensure holding one of those messages may be waiting for that contact, so
 // the release skips the message and a later pass opens it.
 func TestAClearedSenderReleaseSkipsAMessageAnEnsureHolds(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const sender = "chi@fvhospital.example"
 	mail := seedCapturedMail(t, e, sender, "FVH | Remaining specialities")

@@ -96,6 +96,7 @@ func logTask(t *testing.T, e *integration.Env, subject string, due time.Time, do
 // staging service and asserts the proposal arrives with the verb that answers
 // it — not a link to somewhere else it could be answered.
 func TestAStagedProposalReachesTheDecisionLane(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Anna Weber"})
 	if err != nil {
@@ -132,6 +133,7 @@ func TestAStagedProposalReachesTheDecisionLane(t *testing.T) {
 // A near-match found by the real dedupe ladder reaches the lane as a contact
 // case, with both contacts named, and the pair itself does not.
 func TestADetectedDuplicateReachesTheDecisionLane(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	if _, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Lucy Vo"}); err != nil {
 		t.Fatalf("creating the incumbent: %v", err)
@@ -168,6 +170,7 @@ func TestADetectedDuplicateReachesTheDecisionLane(t *testing.T) {
 // the morning it arrives has no warning of it. What must never appear is a task
 // somebody already did.
 func TestAnOverdueTaskReachesThePlannedLane(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := time.Now().UTC()
 	logTask(t, e, "Ring the buyer back", now.Add(-2*time.Hour), false)
@@ -196,6 +199,7 @@ func TestAnOverdueTaskReachesThePlannedLane(t *testing.T) {
 // and leave the lane empty. The day would read clear while the work was still
 // there, and nobody reports a quiet day as a bug.
 func TestAPileOfFinishedTasksDoesNotHideAnOverdueOne(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := time.Now().UTC()
 	// The overdue one is written FIRST so every finished task is newer, which
@@ -228,6 +232,7 @@ func containsAction(actions []crmcontracts.AttentionItemActions, want string) bo
 // product claiming nobody was asked about something somebody was asked about.
 // The lane now reads the decision's own marker, which a deletion cannot rewrite.
 func TestADepartedColleaguesDecisionIsNotReportedAsTheSystemsWork(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Anna Weber"})
 	if err != nil {
@@ -273,6 +278,7 @@ func TestADepartedColleaguesDecisionIsNotReportedAsTheSystemsWork(t *testing.T) 
 // clause written `<=` put a promise due at tomorrow 00:00 on today's list, which
 // reports work late a day before it is.
 func TestATaskDueExactlyAtTheBoundaryBelongsToTomorrow(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := time.Now().UTC()
 	endOfDay := now.Truncate(24 * time.Hour).Add(24 * time.Hour)
@@ -307,6 +313,7 @@ func TestATaskDueExactlyAtTheBoundaryBelongsToTomorrow(t *testing.T) {
 // a quiet night over work that just ran. The window is asked in SQL for exactly
 // this reason, and this seeds the shape that would otherwise starve.
 func TestARecentReceiptIsNotBuriedByNewerStagings(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := time.Now().UTC()
 	contact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Anna Weber"})
@@ -340,6 +347,7 @@ func TestARecentReceiptIsNotBuriedByNewerStagings(t *testing.T) {
 // A handled receipt names the record it acted on, read under the reader's
 // grants through the shipped wiring, so the Worklist's Record column can link it.
 func TestAHandledReceiptNamesItsRecord(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := time.Now().UTC()
 	contact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Anna Weber"})
@@ -392,6 +400,7 @@ func stageFor(t *testing.T, e *integration.Env, svc *approvals.Service,
 // not owed yet, and a seat west lost the evening's. The unit tests pin the
 // arithmetic; this pins that the composition actually asks.
 func TestTheWorklistsDayEndsAtTheInstallationsMidnight(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.WsExec(t, `UPDATE setting SET value = '"Asia/Ho_Chi_Minh"'::jsonb WHERE key = 'installation.timezone'`)
 
@@ -425,6 +434,7 @@ func TestTheWorklistsDayEndsAtTheInstallationsMidnight(t *testing.T) {
 // The lane shows a dozen; a rep with thirteen used to see twelve cards and a
 // badge of twelve, on a lane with no second page to reach the thirteenth by.
 func TestThePlannedBadgeCountsEveryTaskDueNotJustThePage(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	// A FIXED midday, not the clock: due-two-hours-from-now falls past the end
 	// of the day for the last two hours of it, and every task would drop off the
@@ -464,6 +474,7 @@ func logOpenTaskLoggedAt(t *testing.T, e *integration.Env, subject string, due, 
 // after a stale promise fill the cap and the promise never reaches the page —
 // the exact failure a "what do I owe today" surface exists to prevent.
 func TestThePlannedLaneCapKeepsTheMostOverdueNotTheNewestLogged(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := time.Date(2026, 8, 4, 12, 0, 0, 0, time.UTC)
 

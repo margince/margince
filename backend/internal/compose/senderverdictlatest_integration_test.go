@@ -23,6 +23,7 @@ import (
 )
 
 func TestANewerBusinessVerdictCancelsPersonalDestruction(t *testing.T) {
+	t.Parallel()
 	for _, kind := range []string{capture.KindCompanySender, capture.KindRoleMailbox} {
 		t.Run(kind, func(t *testing.T) {
 			e := integration.Setup(t)
@@ -62,6 +63,7 @@ func TestANewerBusinessVerdictCancelsPersonalDestruction(t *testing.T) {
 }
 
 func TestANewerBusinessVerdictKeepsAttachmentBytes(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := asConnectorFor(e.Admin(), "connector:imap", e.Rep1)
 	db, tag := InstallationDB(e.Pool), e.WS.String()
@@ -98,6 +100,7 @@ func TestANewerBusinessVerdictKeepsAttachmentBytes(t *testing.T) {
 }
 
 func TestANewerVerdictOfAnotherSeatDoesNotCancelPersonalDestruction(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const sender = "shared-address@example.test"
 	mail := seedPurgeableMail(t, e, sender, "Private correspondence", e.Rep1)
@@ -110,6 +113,7 @@ func TestANewerVerdictOfAnotherSeatDoesNotCancelPersonalDestruction(t *testing.T
 }
 
 func TestANewerBusinessVerdictInvalidatesAnAlreadySelectedPersonalPurge(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const sender = "rejudged@example.test"
 	mail := seedPurgeableMail(t, e, sender, "Business correspondence", e.Rep1)
@@ -145,6 +149,7 @@ func TestANewerBusinessVerdictInvalidatesAnAlreadySelectedPersonalPurge(t *testi
 }
 
 func TestALatePersonalResolutionCannotReplaceANewerBusinessQuestion(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const sender = "late-question@example.test"
 	mail := seedPurgeableMail(t, e, sender, "Business correspondence", e.Rep1)
@@ -207,6 +212,7 @@ func resolveCapturedSenderAs(ctx context.Context, t *testing.T, db *database.DB,
 }
 
 func TestAColleaguesImportAfterPersonalSelectionKeepsTheMessage(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const sender = "new-colleague@example.test"
 	mail := seedPurgeableMail(t, e, sender, "Shared correspondence", e.Rep1)

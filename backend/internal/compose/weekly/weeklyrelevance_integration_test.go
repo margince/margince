@@ -23,6 +23,7 @@ import (
 )
 
 func TestACompletionAtTheClosingBoundaryRemainsCarriedOver(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	due := weekClock.AddDate(0, 0, -7)
 	assignee := ids.From[ids.UserKind](e.Rep1)
@@ -67,6 +68,7 @@ func TestACompletionAtTheClosingBoundaryRemainsCarriedOver(t *testing.T) {
 }
 
 func TestAccountCoincidenceDoesNotProveAMeetingFollowUp(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	assignee := ids.From[ids.UserKind](e.Rep1)
 	contact, err := e.Contacts.CreateContact(e.repCtx, contacts.CreateContactInput{FullName: "Shared contact", Source: "manual"})
@@ -125,6 +127,7 @@ func TestAccountCoincidenceDoesNotProveAMeetingFollowUp(t *testing.T) {
 }
 
 func TestAnUnmeasuredTeamRecoversButAMeasuredWeekStaysFrozen(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	members := []TeamMember{{UserID: e.Rep1, DisplayName: "One"}, {UserID: e.Rep2, DisplayName: "Two"}}
 	empty, _, err := e.engine.AssembleTeamFor(e.repCtx, e.Team1, "Team", members, weekClock)
@@ -163,6 +166,7 @@ func TestAnUnmeasuredTeamRecoversButAMeasuredWeekStaysFrozen(t *testing.T) {
 }
 
 func TestTeamMoneyIsUnknownWhenMemberCurrenciesDiffer(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	for i, user := range []ids.UUID{e.Rep1, e.Rep2} {
 		currency := []string{"EUR", "USD"}[i]
@@ -181,6 +185,7 @@ func TestTeamMoneyIsUnknownWhenMemberCurrenciesDiffer(t *testing.T) {
 }
 
 func TestUndatedWorkCountsAsCompletedWithoutInventingADueDate(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	task, _, err := e.Activities.LogActivity(e.repCtx, activities.LogActivityInput{Kind: "task", Source: "manual"})
 	if err != nil {
@@ -226,6 +231,7 @@ func TestUndatedWorkCountsAsCompletedWithoutInventingADueDate(t *testing.T) {
 }
 
 func TestReopeningAfterTheCutoffDoesNotEraseCompletedWork(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	task, _, err := e.Activities.LogActivity(e.repCtx, activities.LogActivityInput{Kind: "task", Source: "manual"})
 	if err != nil {
@@ -257,6 +263,7 @@ func TestReopeningAfterTheCutoffDoesNotEraseCompletedWork(t *testing.T) {
 }
 
 func TestPersonalAuthorityCannotAssembleATeamReport(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	perms := integration.AdminPerms
 	perms.RowScope = principal.RowScopeOwn

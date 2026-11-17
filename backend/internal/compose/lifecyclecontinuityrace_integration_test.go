@@ -23,6 +23,7 @@ import (
 )
 
 func TestAnUncommittedEngagementChangePreventsEndingTheAccount(t *testing.T) {
+	t.Parallel()
 	for _, kind := range []string{"contract", "project", "new_contract", "new_project"} {
 		t.Run(kind, func(t *testing.T) {
 			e := integration.Setup(t)

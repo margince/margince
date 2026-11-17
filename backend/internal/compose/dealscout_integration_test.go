@@ -188,6 +188,7 @@ func (e *scoutEnv) signalReader() context.Context {
 }
 
 func TestAHeldMeetingAloneDoesNotProposeADeal(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	company := e.SeedCompany(t, "Maple Studio", nil)
 	buyer := e.employee(t, "Mira Buyer", company)
@@ -198,6 +199,7 @@ func TestAHeldMeetingAloneDoesNotProposeADeal(t *testing.T) {
 }
 
 func TestAMeetingAmongColleaguesOrWithTheOwnCompanySuggestsNothing(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	own, err := e.Contacts.SaveCompany(e.Admin(), contacts.SaveCompanyInput{DisplayName: "Our Company"})
 	if err != nil {
@@ -216,6 +218,7 @@ func TestAMeetingAmongColleaguesOrWithTheOwnCompanySuggestsNothing(t *testing.T)
 }
 
 func TestACompanyWithAnOpenDealIsNotSuggested(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	acme := e.SeedCompany(t, "Acme GmbH", nil)
 	dana := e.employee(t, "Dana Buyer", acme)
@@ -235,6 +238,7 @@ func TestACompanyWithAnOpenDealIsNotSuggested(t *testing.T) {
 }
 
 func TestADealClosedAfterTheEvidenceKeepsItFromBeingSuggested(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	acme := e.SeedCompany(t, "Acme GmbH", nil)
 	dana := e.employee(t, "Dana Buyer", acme)
@@ -269,6 +273,7 @@ func TestADealClosedAfterTheEvidenceKeepsItFromBeingSuggested(t *testing.T) {
 }
 
 func TestTheTwoSignalsWithinThirtyDaysSuggestADeal(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	acme := e.SeedCompany(t, "Acme GmbH", nil)
 	globex := e.SeedCompany(t, "Globex", nil)
@@ -301,6 +306,7 @@ func TestTheTwoSignalsWithinThirtyDaysSuggestADeal(t *testing.T) {
 }
 
 func TestSignalsFurtherApartThanThirtyDaysSuggestNothing(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	acme := e.SeedCompany(t, "Acme GmbH", nil)
 	mail, buyer := e.buyingEmail(t, acme, e.daysAgo(75), "buying-matter")
@@ -315,6 +321,7 @@ func TestSignalsFurtherApartThanThirtyDaysSuggestNothing(t *testing.T) {
 }
 
 func TestASentProposalCorroboratesAVerifiedBuyerRequest(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	acme := e.SeedCompany(t, "Acme GmbH", nil)
 	inbound := e.SeedCompany(t, "Inbound AG", nil)
@@ -348,6 +355,7 @@ func TestASentProposalCorroboratesAVerifiedBuyerRequest(t *testing.T) {
 }
 
 func TestAProposedAmountNeedsBothTheAmountAndTheCurrency(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	priced := e.SeedCompany(t, "Priced GmbH", nil)
 	bare := e.SeedCompany(t, "Bare GmbH", nil)
@@ -378,6 +386,7 @@ func TestAProposedAmountNeedsBothTheAmountAndTheCurrency(t *testing.T) {
 // PDF, so the test marks a later reading of the proposal as a chat by hand.
 // The scout still prices the deal from the deal facts.
 func TestALaterChatReadingDoesNotHideTheDealFacts(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	priced := e.SeedCompany(t, "Priced GmbH", nil)
 	proposal := e.document(t, e.email(t, "Angebot", "outbound", priced, e.daysAgo(2)), "Angebot.pdf", "application/pdf")
@@ -401,6 +410,7 @@ func TestALaterChatReadingDoesNotHideTheDealFacts(t *testing.T) {
 }
 
 func TestEvidenceFromAWithheldConversationIsIgnored(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	limited := e.SeedCompany(t, "Limited GmbH", nil)
 	dana := e.employee(t, "Dana Buyer", limited)

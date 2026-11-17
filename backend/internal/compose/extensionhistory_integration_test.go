@@ -35,7 +35,6 @@ func registerHistoryVisits(t *testing.T) {
 	for _, stmt := range []string{
 		`CREATE SCHEMA IF NOT EXISTS ext`,
 		`GRANT USAGE ON SCHEMA ext TO margince_app`,
-		`DROP TABLE IF EXISTS ext.` + historyDemoTable,
 		`CREATE TABLE ext.` + historyDemoTable + ` (id uuid PRIMARY KEY DEFAULT uuidv7(), archived_at timestamptz, code text NOT NULL UNIQUE, site text, visited_at timestamptz, contact_id uuid)`,
 		`GRANT SELECT, INSERT, UPDATE, DELETE ON ext.` + historyDemoTable + ` TO margince_app`,
 	} {
@@ -44,12 +43,7 @@ func registerHistoryVisits(t *testing.T) {
 		}
 	}
 	registerHistoryVisitKind()
-	t.Cleanup(func() {
-		recordkinds.Reset()
-		if _, err := owner.Exec(context.Background(), `DROP TABLE IF EXISTS ext.`+historyDemoTable); err != nil {
-			t.Errorf("dropping the visit table: %v", err)
-		}
-	})
+	t.Cleanup(recordkinds.Reset)
 }
 
 // registerHistoryVisitKind declares the visit kind over a table that already
@@ -82,6 +76,7 @@ func readExtensionHistory(ctx context.Context, t *testing.T, e *integration.Env,
 	return rec.Code, body.Data
 }
 
+//testdb:serial registers into a process-wide unit registry
 func TestAContactsHistoryCarriesExtensionRowsAndSignalsNewestFirst(t *testing.T) {
 	e := integration.Setup(t)
 	registerHistoryVisits(t)
@@ -154,6 +149,7 @@ func TestAContactsHistoryCarriesExtensionRowsAndSignalsNewestFirst(t *testing.T)
 	}
 }
 
+//testdb:serial registers into a process-wide unit registry
 func TestTheExtensionHistoryReadUsesTheSubjectIndex(t *testing.T) {
 	integration.Setup(t)
 	registerHistoryVisits(t)
@@ -198,6 +194,7 @@ func TestTheExtensionHistoryReadUsesTheSubjectIndex(t *testing.T) {
 // The handler has no database here, so a type that got past the check would
 // panic on the row probe instead of answering.
 func TestExtensionHistoryRefusesATypeOutsideTheContract(t *testing.T) {
+	t.Parallel()
 	for _, entity := range []string{"bogus", "ext:finance:ledger_account", ""} {
 		t.Run(entity, func(t *testing.T) {
 			w := httptest.NewRecorder()

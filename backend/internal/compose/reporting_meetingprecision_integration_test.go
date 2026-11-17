@@ -62,6 +62,7 @@ func (m meetingWeeks) heldCoverage(t *testing.T) crmcontracts.ReportingCoverage 
 // stays in the week of its held date. Read as noon UTC it would be Monday in
 // Auckland, the next week.
 func TestADayMeetingMovedLaterStaysOnTheDayItWasHeld(t *testing.T) {
+	t.Parallel()
 	m := setupMeetingWeeks(t)
 	sunday := occurredday.Anchor(time.Date(2026, 10, 11, 0, 0, 0, 0, time.UTC))
 	meeting := m.held(t, sunday, activities.PrecisionDay)
@@ -85,6 +86,7 @@ func TestADayMeetingMovedLaterStaysOnTheDayItWasHeld(t *testing.T) {
 // A meeting held at 12:00 UTC, then made a day entry for the same
 // date, keeps the instant it was held at: Monday 01:00 in Auckland.
 func TestANoonInstantStaysAnInstantWhenItsMeetingBecomesADay(t *testing.T) {
+	t.Parallel()
 	m := setupMeetingWeeks(t)
 	noon := time.Date(2026, 10, 11, 12, 0, 0, 0, time.UTC)
 	meeting := m.held(t, noon, activities.PrecisionInstant)
@@ -103,6 +105,7 @@ func TestANoonInstantStaysAnInstantWhenItsMeetingBecomesADay(t *testing.T) {
 // be a time or a date. The reading says so. Any other start is a time of day,
 // because a date is only ever stored at noon UTC.
 func TestAnOldNoonStartWithNoPrecisionMarksTheReadingPartial(t *testing.T) {
+	t.Parallel()
 	m := setupMeetingWeeks(t)
 	morning := m.held(t, time.Date(2026, 10, 6, 9, 15, 0, 0, time.UTC), activities.PrecisionInstant)
 	forgetMeetingPrecision(t, m.e.owner, morning)
@@ -122,6 +125,7 @@ func TestAnOldNoonStartWithNoPrecisionMarksTheReadingPartial(t *testing.T) {
 // This week runs from Monday 12 October, local midnight, to the cutoff. A
 // month target beside it counts every meeting of October up to the cutoff.
 func TestThisWeekCountsMeetingsFromLocalMondayAndTheMonthTargetCountsTheMonth(t *testing.T) {
+	t.Parallel()
 	m := setupMeetingWeeks(t)
 	m.held(t, time.Date(2026, 10, 8, 22, 0, 0, 0, time.UTC), activities.PrecisionInstant)
 	m.held(t, time.Date(2026, 10, 11, 10, 59, 0, 0, time.UTC), activities.PrecisionInstant)
@@ -150,6 +154,7 @@ func TestThisWeekCountsMeetingsFromLocalMondayAndTheMonthTargetCountsTheMonth(t 
 // A row written now must say how much of its start is known. IN over a NULL
 // is NULL, which a CHECK would let through, so the rule names NULL itself.
 func TestANewTransitionWithAStartAndNoPrecisionIsRefused(t *testing.T) {
+	t.Parallel()
 	m := setupMeetingWeeks(t)
 	meeting := m.held(t, time.Date(2026, 10, 6, 9, 15, 0, 0, time.UTC), activities.PrecisionInstant)
 	_, err := m.e.owner.Exec(context.Background(), `INSERT INTO activity_meeting_history
@@ -166,6 +171,7 @@ func TestANewTransitionWithAStartAndNoPrecisionIsRefused(t *testing.T) {
 // precision reads it as the Sunday, outside this week and this month. The
 // week starting that Monday is still partial, because the meeting may be in it.
 func TestAnOldNoonStartTaintsThePeriodItsGuessLeftOut(t *testing.T) {
+	t.Parallel()
 	m := setupMeetingWeeks(t)
 	cutoff := time.Date(2027, 2, 3, 0, 0, 0, 0, time.UTC)
 	m.clock = func() time.Time { return cutoff }

@@ -60,6 +60,7 @@ func worklistTaskRow(t *testing.T, e *integration.Env, task ids.UUID, at time.Ti
 
 // The automatic completion goes first: a task it closed is asked about nowhere.
 func TestATaskTheAnsweredRuleClosedIsNotAsked(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	p := e.SeedPromiseThread(t)
 	task := e.SeedPromiseTask(t, p)
@@ -89,6 +90,7 @@ func TestATaskTheAnsweredRuleClosedIsNotAsked(t *testing.T) {
 }
 
 func TestTheWorklistAsksDoneAsTheContactPageDoesAndHoldsItsNotYet(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	p := e.SeedPromiseThread(t)
 	task := e.SeedPromiseTask(t, p)
@@ -141,6 +143,7 @@ func TestTheWorklistAsksDoneAsTheContactPageDoesAndHoldsItsNotYet(t *testing.T) 
 }
 
 func TestANotYetForOneRecipientHoldsUntilWeWriteToAnyRecipientAgain(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	p := e.SeedPromiseThread(t)
 	task := e.SeedPromiseTask(t, p)
@@ -173,6 +176,7 @@ func TestANotYetForOneRecipientHoldsUntilWeWriteToAnyRecipientAgain(t *testing.T
 // A user's agent reads the question its user reads, and their Not yet holds for
 // it as it does on the contact page.
 func TestAUsersAgentIsAskedAsTheyAreAndSharesTheirNotYet(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	p := e.SeedPromiseThread(t)
 	task := e.SeedPromiseTask(t, p)
@@ -210,6 +214,7 @@ func TestAUsersAgentIsAskedAsTheyAreAndSharesTheirNotYet(t *testing.T) {
 
 // Automatic work has no user to answer for.
 func TestAutomaticWorkReadingTheWorklistIsAskedNothing(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	p := e.SeedPromiseThread(t)
 	task := e.SeedPromiseTask(t, p)
@@ -238,6 +243,7 @@ func TestAutomaticWorkReadingTheWorklistIsAskedNothing(t *testing.T) {
 // The company page asks about a promise task kept by mail as the Worklist does.
 // It names the same contact, mail, key and fingerprint, so one Not yet holds on both.
 func TestTheCompanyPageAsksDoneAsTheWorklistDoes(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	p := e.SeedPromiseThread(t)
 	task := e.SeedPromiseTask(t, p)

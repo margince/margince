@@ -17,6 +17,7 @@ import (
 )
 
 func TestRepairPreviewDoesNotLockSourceOrPendingDecisions(t *testing.T) {
+	t.Parallel()
 	for _, age := range []int{0, 90} {
 		t.Run(strconv.Itoa(age), func(t *testing.T) {
 			e := integration.Setup(t)

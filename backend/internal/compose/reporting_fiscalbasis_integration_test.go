@@ -85,6 +85,7 @@ func moveFiscalStart(ctx context.Context, t *testing.T, e *forecastEnv, month in
 // start moves. The move writes down the calendar each saved question was asked
 // in. The admin is told how many there are first.
 func TestASavedPeriodKeepsItsDatesWhenTheFiscalStartMoves(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	ctx := reportingActor(e)
 	year := clocktest.Now(t).Year() - 1
@@ -150,6 +151,7 @@ func TestASavedPeriodKeepsItsDatesWhenTheFiscalStartMoves(t *testing.T) {
 // A sent edition keeps the calendar it was captured under. A live read of the
 // same report follows the setting and says which start it read.
 func TestAFrozenEditionKeepsItsCalendarWhenTheFiscalStartMoves(t *testing.T) {
+	t.Parallel()
 	q := newQuestionEditions(t)
 	q.keepForAYear(t)
 	edition := q.send(t)
@@ -172,6 +174,7 @@ func TestAFrozenEditionKeepsItsCalendarWhenTheFiscalStartMoves(t *testing.T) {
 // page. The filter its saved question carries holds in the kept answer. A
 // native money sum stays answerable, because the currency filter is kept.
 func TestASentEditionAsksABoundCardWithItsFilters(t *testing.T) {
+	t.Parallel()
 	q := newQuestionEditions(t)
 	q.keepForAYear(t)
 	for range 3 {
@@ -212,6 +215,7 @@ func TestASentEditionAsksABoundCardWithItsFilters(t *testing.T) {
 // A kept question whose filter names a subject goes to that subject's access
 // request, and their erasure removes it, so the card answers no reader.
 func TestABoundFilterNamingASubjectIsHandedOverAndErased(t *testing.T) {
+	t.Parallel()
 	q := newQuestionEditions(t)
 	subject := q.e.seedID(t, `INSERT INTO contact(id,full_name,source,captured_by) VALUES($1,'Erika Mustermann','manual','human:x')`)
 	if _, err := q.e.owner.Exec(t.Context(), `INSERT INTO contact_email (contact_id, email, source, captured_by) VALUES ($1, 'erika@example.com', 'manual', 'human:x')`, subject); err != nil {

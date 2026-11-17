@@ -87,6 +87,7 @@ func provisionalKeys(t *testing.T, e *integration.Env) []string {
 }
 
 func TestTheReapDestroysAnOrphansBytesAndRetiresItsKey(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	blob := newReapBlobstore()
 	const key = "reap/attachment/orphan"
@@ -106,6 +107,7 @@ func TestTheReapDestroysAnOrphansBytesAndRetiresItsKey(t *testing.T) {
 }
 
 func TestAnObjectTheStoreWillNotDeleteStaysInTheLedger(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	blob := newReapBlobstore()
 	blob.refuseDelete = errors.New("the bucket said no")
@@ -161,6 +163,7 @@ var _ io.Reader = strings.NewReader("")
 // bytes that stay forever while the count reports a clean pass, and asking one
 // module's table about another's keys answers "unreferenced" for a live file.
 func TestTheSweepCollectsAnOrphanOfEveryDeclaredKind(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	blob := newReapBlobstore()
 	planted := map[storedobjects.Kind]string{}
@@ -205,6 +208,7 @@ func TestTheSweepCollectsAnOrphanOfEveryDeclaredKind(t *testing.T) {
 // uploading. That is a worse failure than the orphan it chases, and nothing about it
 // shows up in a test that only plants keys already past the grace.
 func TestAKeyStillInsideItsGracePeriodSurvivesAPass(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	blob := newReapBlobstore()
 	const key = "ws/attachment/inflight"
@@ -248,6 +252,7 @@ func TestAKeyStillInsideItsGracePeriodSurvivesAPass(t *testing.T) {
 // the bytes stay and the stale row goes, so it stops occupying a slot in every later
 // pass's limit.
 func TestAReferencedObjectOfEveryKindSurvivesTheSweep(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	blob := newReapBlobstore()
 	live := map[storedobjects.Kind]string{}
@@ -346,6 +351,7 @@ func referenceKeyFromItsOwner(t *testing.T, e *integration.Env, kind storedobjec
 // with nothing provisional reaches its owner with no keys every pass. Answering that
 // with a query is a round trip per kind per pass for a question with one answer.
 func TestEveryReferenceCheckRefusesASeatAndAnswersNothingForNoKeys(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owners := unreferencedKeysBy(InstallationDB(e.Pool))
 	if len(owners) == 0 {
@@ -378,6 +384,7 @@ func TestEveryReferenceCheckRefusesASeatAndAnswersNothingForNoKeys(t *testing.T)
 // system can catch that: both sides are internally consistent, and a sweep finding
 // no orphans is what a healthy installation looks like.
 func TestEachWriterDeclaresItsOwnKind(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	db := InstallationDB(e.Pool)
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
@@ -442,6 +449,7 @@ func TestEachWriterDeclaresItsOwnKind(t *testing.T) {
 // nothing here fakes — what this holds is the layer a lost database actually
 // presents.
 func TestAReferenceCheckThatCannotReachTheDatabaseSaysSoWithoutTheStatement(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owners := unreferencedKeysBy(InstallationDB(e.Pool))
 	if len(owners) == 0 {
@@ -477,6 +485,7 @@ func TestAReferenceCheckThatCannotReachTheDatabaseSaysSoWithoutTheStatement(t *t
 // A replaced logo a sent offer printed stays: the offer's issuer snapshot names
 // it, and the sent document embeds it on every later render.
 func TestALogoOnlyASentOfferNamesSurvivesTheSweep(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	blob := newReapBlobstore()
 	const printed, dropped = "ws/logo/printed-by-an-offer", "ws/logo/nobody-prints"

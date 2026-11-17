@@ -40,6 +40,7 @@ var byteArrayShaped = regexp.MustCompile(`\[(?:\d{1,3},){15}\d{1,3}\]`)
 
 // TestTheSubjectAccessPackageIsReadable is the gate the ticket asked for.
 func TestTheSubjectAccessPackageIsReadable(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := e.SeedContact(t, "Mara Kessler", nil)
 	// An employment, so relationships[] is populated — one of the two sections

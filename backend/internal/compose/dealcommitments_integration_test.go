@@ -89,6 +89,7 @@ func (w dealWatch) promiseWithSource(t *testing.T, deal ids.UUID, subject, body 
 // deal shows on that deal only. Working at the company is no proof of which
 // deal a promise is about.
 func TestADealWatchesOnlyThePromisesFiledOnIt(t *testing.T) {
+	t.Parallel()
 	w := seedDealWatch(t)
 	other := w.SeedDeal(t, "CRM project", w.pipeline, w.stage, &w.Rep1)
 	w.WsExec(t, `UPDATE deal SET company_id = (SELECT company_id FROM deal WHERE id = $2) WHERE id = $1`, other, w.deal)
@@ -108,6 +109,7 @@ func TestADealWatchesOnlyThePromisesFiledOnIt(t *testing.T) {
 // The deal page watches what the account's contacts committed to, with the
 // words and the message to check it against.
 func TestADealWatchesWhatItsCustomerCommittedTo(t *testing.T) {
+	t.Parallel()
 	w := seedDealWatch(t)
 	reader := w.As(w.Rep1, []ids.UUID{w.Team1}, dealWatchPerms)
 	got, err := newDealCommitmentHandlers(w.Pool, func() time.Time { return clocktest.Now(t) }).read(reader, ids.From[ids.DealKind](w.deal))
@@ -125,6 +127,7 @@ func TestADealWatchesWhatItsCustomerCommittedTo(t *testing.T) {
 
 // A commitment a rep dismissed is not watched any more.
 func TestADismissedCommitmentLeavesTheDeal(t *testing.T) {
+	t.Parallel()
 	w := seedDealWatch(t)
 	if err := w.Contacts.SettleConversationClaim(w.Admin(), w.claim, "dismissed"); err != nil {
 		t.Fatalf("dismissing: %v", err)
@@ -139,6 +142,7 @@ func TestADismissedCommitmentLeavesTheDeal(t *testing.T) {
 // A commitment whose contact the reader may not see is left out, and the list
 // says it is incomplete rather than that the customer owes nothing.
 func TestAHiddenCommitmentMakesTheListIncomplete(t *testing.T) {
+	t.Parallel()
 	w := seedDealWatch(t)
 	w.MakeCapturePrivate(t, "contact", w.contact, w.Rep3)
 	reader := w.As(w.Rep1, []ids.UUID{w.Team1}, dealWatchPerms)
@@ -152,6 +156,7 @@ func TestAHiddenCommitmentMakesTheListIncomplete(t *testing.T) {
 // A reader without the contact grant is refused rather than told nothing is owed,
 // on a deal with no company as on one with a company.
 func TestADealWatchNeedsTheContactGrant(t *testing.T) {
+	t.Parallel()
 	w := seedDealWatch(t)
 	perms := principal.Permissions{
 		RoleKeys: []string{"rep"}, RowScope: principal.RowScopeTeam,
@@ -173,6 +178,7 @@ func TestADealWatchNeedsTheContactGrant(t *testing.T) {
 // A reader without the activity grant is refused too: every row quotes a
 // message.
 func TestADealWatchNeedsTheActivityGrant(t *testing.T) {
+	t.Parallel()
 	w := seedDealWatch(t)
 	reader := w.As(w.Rep1, []ids.UUID{w.Team1}, principal.Permissions{
 		RoleKeys: []string{"rep"}, RowScope: principal.RowScopeTeam,
@@ -185,6 +191,7 @@ func TestADealWatchNeedsTheActivityGrant(t *testing.T) {
 
 // The card lists the most urgent commitments and says when there are more.
 func TestADealWatchSaysWhenMoreAreOwed(t *testing.T) {
+	t.Parallel()
 	w := seedDealWatch(t)
 	message, err := ids.Parse(w.WsScalar(t, `SELECT source_activity_id::text FROM conversation_claim`))
 	if err != nil {
@@ -221,6 +228,7 @@ var noCompanyWatchPerms = principal.Permissions{
 // company masked. A promise from the same company filed on another deal is
 // not this deal's.
 func TestADealWatchNeedsNoCompanyGrant(t *testing.T) {
+	t.Parallel()
 	w := seedDealWatch(t)
 	other := w.SeedDeal(t, "CRM project", w.pipeline, w.stage, &w.Rep1)
 	w.WsExec(t, `UPDATE deal SET company_id = (SELECT company_id FROM deal WHERE id = $2) WHERE id = $1`, other, w.deal)
@@ -246,6 +254,7 @@ func TestADealWatchNeedsNoCompanyGrant(t *testing.T) {
 // The same reader may not open the message a promise was read from. The
 // promise is withheld with its quote, and the list says it is incomplete.
 func TestADealWatchWithholdsAPromiseWhoseMessageIsHidden(t *testing.T) {
+	t.Parallel()
 	w := seedDealWatch(t)
 	colleague := w.Rep2
 	_, source := w.promiseWithSource(t, w.deal, "Pricing", "We will confirm the pricing.")

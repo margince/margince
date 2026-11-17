@@ -89,6 +89,7 @@ func walkPreview(ctx context.Context, t *testing.T, e *integration.Env, pageSize
 // A preview cursor continues only the filter that minted it. One from another
 // filter or another record type is refused, not read as a place to resume.
 func TestAFilterPreviewCursorContinuesOnlyItsOwnFilter(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedPagedContacts(t, e, e.Rep1, 3)
 	handlers := filterPreviewHandlers{pool: e.Pool, collections: NewCollectionsStore(e.Pool)}
@@ -120,6 +121,7 @@ func TestAFilterPreviewCursorContinuesOnlyItsOwnFilter(t *testing.T) {
 }
 
 func TestAFilterPreviewCursorVisitsEveryMatchOnceInIDOrder(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seeded := append(seedPagedContacts(t, e, e.Rep1, 4), seedPagedContacts(t, e, e.Rep2, 3)...)
 
@@ -133,6 +135,7 @@ func TestAFilterPreviewCursorVisitsEveryMatchOnceInIDOrder(t *testing.T) {
 // is capture privacy: a contact kept private to its owner. The update stands in
 // for the capture writer, as the other capture-privacy suites here do.
 func TestAFilterPreviewKeepsTheRowScopeOnEveryPage(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	visible := seedPagedContacts(t, e, e.Rep1, 5)
 	private := seedPagedContacts(t, e, e.Rep2, 5)
@@ -152,6 +155,7 @@ func TestAFilterPreviewKeepsTheRowScopeOnEveryPage(t *testing.T) {
 // lock over contact_email, which only it touches, while a rename commits. A row
 // read in its own snapshot would print the new name.
 func TestAFilterPreviewReadsItsRowsInTheSnapshotOfItsPage(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	target := seedPagedContacts(t, e, e.Rep1, 1)[0]
 	handlers := filterPreviewHandlers{pool: e.Pool, collections: NewCollectionsStore(e.Pool)}

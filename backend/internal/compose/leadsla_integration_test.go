@@ -110,6 +110,7 @@ func leadSLANoticeRecipients(t *testing.T, owner *pgx.Conn) []ids.UUID {
 }
 
 func TestLeadSLAEscalationLogsOneTaskOnTheLead(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	lead, ev, deadline, ctx := breachedLeadEvent(t, e, owner)
@@ -197,10 +198,6 @@ func TestLeadSLAEscalationLogsOneTaskOnTheLead(t *testing.T) {
 // the same seat: a target that no longer exists in app_user breaks the task's
 // own assignee foreign key first, so the pair would come out empty for the one
 // reason this case is not about.
-//
-// It is dropped in cleanup: the integration lane resets rows between tests but
-// keeps the schema, so a surviving trigger would break every later suite that
-// writes a notice.
 func failNoticeWrites(t *testing.T, owner *pgx.Conn) {
 	t.Helper()
 	ctx := context.Background()
@@ -212,25 +209,12 @@ func failNoticeWrites(t *testing.T, owner *pgx.Conn) {
 		END $$`); err != nil {
 		t.Fatalf("creating the fault-injection function: %v", err)
 	}
-	// Registered before the trigger is armed, not after both: a failure to arm
-	// would otherwise leave the function behind, which is the leak this cleanup
-	// exists to prevent. Cleanups run LIFO, so the trigger still drops first.
-	t.Cleanup(func() {
-		if _, err := owner.Exec(context.Background(), `DROP FUNCTION notice_write_fault()`); err != nil {
-			t.Errorf("dropping the fault-injection function: %v", err)
-		}
-	})
 	if _, err := owner.Exec(ctx, `
 		CREATE TRIGGER notice_write_fault_trigger
 		BEFORE INSERT ON notice
 		FOR EACH ROW EXECUTE FUNCTION notice_write_fault()`); err != nil {
 		t.Fatalf("arming the fault-injection trigger: %v", err)
 	}
-	t.Cleanup(func() {
-		if _, err := owner.Exec(context.Background(), `DROP TRIGGER notice_write_fault_trigger ON notice`); err != nil {
-			t.Errorf("dropping the fault-injection trigger: %v", err)
-		}
-	})
 }
 
 // TestLeadSLAEscalationWritesBothHalvesOrNeither holds the pair.
@@ -246,6 +230,7 @@ func failNoticeWrites(t *testing.T, owner *pgx.Conn) {
 // reached when the task fails. A test for "the task failed, so no notice" would
 // assert the absence of a write that no code path attempts.
 func TestLeadSLAEscalationWritesBothHalvesOrNeither(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	lead, ev, deadline, ctx := breachedLeadEvent(t, e, owner)
@@ -320,6 +305,7 @@ func TestARedeliveredLeadSLAEscalationWritesTheTaskAndNoticeOnce(t *testing.T) {
 // Both are stored, and the digest mail quotes the notice subject. A rep
 // reading their worklist in German must not find an English line in it.
 func TestTheSLAEscalationIsWrittenInTheInstallationsBaseLanguage(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 

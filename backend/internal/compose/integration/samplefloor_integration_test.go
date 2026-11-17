@@ -14,7 +14,6 @@ package integration
 
 import (
 	"context"
-	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -27,13 +26,9 @@ import (
 
 func TestAPercentileBelowTheSampleFloorIsBlankRatherThanWrong(t *testing.T) {
 	t.Parallel()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	if ownerDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN not set — run `make db-up` (integration tests fail " +
-			"loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,9 +37,6 @@ func TestAPercentileBelowTheSampleFloorIsBlankRatherThanWrong(t *testing.T) {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 
 	// The expression this spec actually renders, over a values list standing in
 	// for the deals. Running the REAL SQL rather than a paraphrase: a test that

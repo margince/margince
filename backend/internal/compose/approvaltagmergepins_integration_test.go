@@ -22,6 +22,7 @@ import (
 )
 
 func TestTagMergeToolRechecksBothReleasedVersions(t *testing.T) {
+	t.Parallel()
 	for _, changed := range []string{"neither", "source", "survivor"} {
 		t.Run(changed, func(t *testing.T) {
 			e := integration.Setup(t)

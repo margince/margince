@@ -37,6 +37,7 @@ func draftingAgentFor(t *testing.T, e *integration.Env, human ids.UUID) context.
 }
 
 func TestDraftEmailLeavesTheDraftForItsHumanAndNeverOverTheirs(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contactID := e.SeedContact(t, "Dana Buyer", nil)
 	address := openapi_types.Email("dana@example.test")

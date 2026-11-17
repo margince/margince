@@ -36,6 +36,7 @@ func (v edgeEnv) clearProjection(t *testing.T) {
 }
 
 func TestABatchFoldsLikeOneEventAtATimeAndLikeTheRebuild(t *testing.T) {
+	t.Parallel()
 	v := edgeEnv{integration.Setup(t)}
 	now := time.Now().UTC()
 	gen := search.NewGraphEdgeGen(search.NewStore(v.e.DB()))
@@ -112,6 +113,7 @@ func TestABatchFoldsLikeOneEventAtATimeAndLikeTheRebuild(t *testing.T) {
 }
 
 func TestABatchWithNothingToFoldTouchesNothing(t *testing.T) {
+	t.Parallel()
 	v := edgeEnv{integration.Setup(t)}
 	gen := search.NewGraphEdgeGen(search.NewStore(v.e.DB()))
 	envs := []kevents.Envelope{
@@ -134,6 +136,7 @@ func TestABatchWithNothingToFoldTouchesNothing(t *testing.T) {
 // A batch that cannot fold must say so, because the error is what sends its
 // entries down the per-entry path instead of acking them unfolded.
 func TestABatchThatCannotFoldReturnsTheError(t *testing.T) {
+	t.Parallel()
 	v := edgeEnv{integration.Setup(t)}
 	c := v.contact(t, "Unfolded")
 	activity := v.interaction(t, v.e.Rep1, c, time.Now().UTC().Add(-time.Minute), "inbound", "from")

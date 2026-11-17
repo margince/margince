@@ -107,6 +107,7 @@ func (w readWorld) readAs(t *testing.T, user ids.UUID, perms principal.Permissio
 }
 
 func TestAUnitReadsEachCoreRecordTypeThroughItsCallersAuthority(t *testing.T) {
+	t.Parallel()
 	w := setupReads(t)
 	err := w.readAs(t, w.user, readerPerms(principal.RowScopeAll, allReadable...), func(ctx context.Context, core extension.Core) error {
 		deal, err := core.Deals().Get(ctx, w.mineDeal.String())
@@ -138,6 +139,7 @@ func TestAUnitReadsEachCoreRecordTypeThroughItsCallersAuthority(t *testing.T) {
 }
 
 func TestAListFiltersByCustomFieldOutsideIdKindAndRecordLink(t *testing.T) {
+	t.Parallel()
 	w := setupReads(t)
 	err := w.readAs(t, w.user, readerPerms(principal.RowScopeAll, allReadable...), func(ctx context.Context, core extension.Core) error {
 		byField, err := core.Deals().List(ctx, extension.DealQuery{CustomFields: map[string]string{"cf_region": "apac"}})
@@ -174,6 +176,7 @@ func TestAListFiltersByCustomFieldOutsideIdKindAndRecordLink(t *testing.T) {
 // is what the product hides: a record a colleague's mailbox captured and has
 // not promoted.
 func TestARecordTheCallerCannotSeeReadsAsNotFoundAndIsLeftOutOfLists(t *testing.T) {
+	t.Parallel()
 	w := setupReads(t)
 	err := w.readAs(t, w.user, readerPerms(principal.RowScopeOwn, allReadable...), func(ctx context.Context, core extension.Core) error {
 		if _, err := core.Companies().Get(ctx, w.theirsCompany.String()); !errors.Is(err, extension.ErrNotFound) {
@@ -194,6 +197,7 @@ func TestARecordTheCallerCannotSeeReadsAsNotFoundAndIsLeftOutOfLists(t *testing.
 }
 
 func TestACallerWithoutTheObjectGrantIsForbidden(t *testing.T) {
+	t.Parallel()
 	w := setupReads(t)
 	err := w.readAs(t, w.user, readerPerms(principal.RowScopeAll, "company"), func(ctx context.Context, core extension.Core) error {
 		if _, err := core.Deals().List(ctx, extension.DealQuery{}); !errors.Is(err, extension.ErrForbidden) {
@@ -218,6 +222,7 @@ func TestACallerWithoutTheObjectGrantIsForbidden(t *testing.T) {
 // A unit that lists and then fails has still read the records, so its export
 // entry must survive the rollback it chose.
 func TestAnExportEntrySurvivesTheUnitRollingBack(t *testing.T) {
+	t.Parallel()
 	w := setupReads(t)
 	unitFailed := errors.New("the unit's own row could not be written")
 	err := w.readAs(t, w.user, readerPerms(principal.RowScopeAll, allReadable...), func(ctx context.Context, core extension.Core) error {
@@ -241,6 +246,7 @@ func TestAnExportEntrySurvivesTheUnitRollingBack(t *testing.T) {
 
 // A unit that panics after a list has read the records too.
 func TestAnExportEntrySurvivesTheUnitPanicking(t *testing.T) {
+	t.Parallel()
 	w := setupReads(t)
 	func() {
 		defer func() {
@@ -268,6 +274,7 @@ func TestAnExportEntrySurvivesTheUnitPanicking(t *testing.T) {
 
 // A cancelled call must not drop the entry either.
 func TestAnExportEntrySurvivesTheCallBeingCancelled(t *testing.T) {
+	t.Parallel()
 	w := setupReads(t)
 	ctx, cancel := context.WithTimeout(w.invocation(), coreBudget)
 	defer cancel()
@@ -299,6 +306,7 @@ func TestAnExportEntrySurvivesTheCallBeingCancelled(t *testing.T) {
 }
 
 func TestABulkReadIsAuditedAsAnExportCarriedByTheUnit(t *testing.T) {
+	t.Parallel()
 	w := setupReads(t)
 	err := w.readAs(t, w.user, readerPerms(principal.RowScopeAll, allReadable...), func(ctx context.Context, core extension.Core) error {
 		_, err := core.Deals().List(ctx, extension.DealQuery{Search: "Mine"})
@@ -334,6 +342,7 @@ func TestABulkReadIsAuditedAsAnExportCarriedByTheUnit(t *testing.T) {
 // error. A verb must turn that into a refusal class and not a panic or a
 // success, whichever statement it was on.
 func TestEveryReadVerbAndTheNoticeDoorRefuseOnAnAbortedTransaction(t *testing.T) {
+	t.Parallel()
 	w := setupReads(t)
 	company := w.mineCompany.String()
 	err := w.readAs(t, w.user, readerPerms(principal.RowScopeAll, allReadable...), func(ctx context.Context, core extension.Core) error {

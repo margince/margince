@@ -74,6 +74,7 @@ func dealUpdated(deal ids.UUID) kevents.Envelope {
 // deactivated, or replaced, after the fan-out authorized them gets nothing
 // sent under their name; with nothing in between, the event goes out.
 func TestAFirstWebhookAttemptIsCheckedAgainBeforeItsPost(t *testing.T) {
+	t.Parallel()
 	for name, tc := range map[string]struct {
 		between func(e *integration.Env)
 		posts   int
@@ -108,6 +109,7 @@ func TestAFirstWebhookAttemptIsCheckedAgainBeforeItsPost(t *testing.T) {
 // Two handovers of one member to different colleagues race. The one that
 // commits first keeps the webhook; the other finds it moved and leaves it.
 func TestTwoRacingHandoversLeaveAWebhookWithTheFirstSuccessor(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	hook := seedWebhook(t, e, e.Rep1, false)
 	admin := adminWithWebhooks(e)

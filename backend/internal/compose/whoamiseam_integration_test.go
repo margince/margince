@@ -20,6 +20,7 @@ import (
 )
 
 func TestTheAgentIsAlwaysToldWhichLanguageToWriteStoredProseIn(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	read := actingIdentity(e.Pool)
 
@@ -56,6 +57,7 @@ func TestTheAgentIsAlwaysToldWhichLanguageToWriteStoredProseIn(t *testing.T) {
 // a caller that reads it into a prompt would otherwise instruct the model in
 // nothing.
 func TestAnUnattributedCallStillNamesALanguage(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	who, err := actingIdentity(e.Pool)(context.Background())
 	if err != nil {

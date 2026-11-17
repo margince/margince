@@ -15,11 +15,13 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestTheWaitingListSaysWhatEachAddressWaitsOn(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	want := map[string]capture.AwaitingState{
 		"decided@state.test":     capture.AwaitingYourAnswerApplying,
@@ -63,6 +65,7 @@ func TestTheWaitingListSaysWhatEachAddressWaitsOn(t *testing.T) {
 // The states pair with the addresses by position, so a contact with two
 // addresses must carry each address's own state.
 func TestEachAddressOfAWaitingContactCarriesItsOwnState(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := seedOwnerPrivateContact(t, e, e.Rep1, "Two Addresses", "a@pair.test")
 	e.WsExec(t, `INSERT INTO contact_email (contact_id, email, source, captured_by)
@@ -92,6 +95,7 @@ func TestEachAddressOfAWaitingContactCarriesItsOwnState(t *testing.T) {
 // user worked on is out of both sweeps. The noise sweep keeps a sender the
 // workspace writes to. Those decisions are left to the owner.
 func TestADecisionNoPassAppliesIsLeftToTheOwner(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	want := map[string]capture.AwaitingState{
 		"untouched@kept.test":  capture.AwaitingYourAnswerApplying,
@@ -136,12 +140,13 @@ func TestADecisionNoPassAppliesIsLeftToTheOwner(t *testing.T) {
 // An `unsure` sender has a review offer, and no pass claims it. So the owner's
 // answer must put it back in the queue, or it changes nothing they can see.
 func TestAnOwnersAnswerAboutAnUnsureSenderIsAppliedByTheNextPass(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const email = "dana@answered.example"
 	activityID := seedCapturedMail(t, e, email, "about your services")
 	dispositionID := seedPendingDisposition(t, e, email, "answered.example", activityID)
 	retireToUnsure(t, e, dispositionID)
-	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN}, CaptureConfig{}, slog.Default())
 	if err := seedLegacySenderReviews(t, e, engine); err != nil {
 		t.Fatalf("staging the review offer: %v", err)
 	}
@@ -174,6 +179,7 @@ func TestAnOwnersAnswerAboutAnUnsureSenderIsAppliedByTheNextPass(t *testing.T) {
 // The answer is the owner's about their own mailbox, so a colleague's open
 // question about the same address is theirs to answer.
 func TestAnOwnersAnswerLeavesAColleaguesQuestionAlone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const email = "shared@answered.example"
 	activityID := seedCapturedMail(t, e, email, "hello")

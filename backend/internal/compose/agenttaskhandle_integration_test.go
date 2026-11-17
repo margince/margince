@@ -47,6 +47,7 @@ func asPassport(e *integration.Env, passport ids.UUID) context.Context {
 }
 
 func TestATaskHandleIsAnsweredToThePassportThatHoldsItAndToNoOther(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	tasks := toolTasks(e.Pool)
 	approvalID := stageApprovalForTask(t, e)

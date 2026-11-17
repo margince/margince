@@ -194,6 +194,7 @@ func userIDs(rs []extension.Responsible) []extension.UserID {
 
 func asUser(id ids.UUID) extension.UserID { return extension.UserID(id.String()) }
 
+//testdb:serial publishes the process-wide composed extension set
 func TestADeliveryReadsTheDealItHeardAbout(t *testing.T) {
 	s := setupSystemRead(t)
 	closeOn := clocktest.Now(t).AddDate(0, 4, 0).Truncate(24 * time.Hour)
@@ -233,6 +234,8 @@ func TestADeliveryReadsTheDealItHeardAbout(t *testing.T) {
 
 // A currency with no minor unit prints no decimals, which a unit could not
 // know without the core's table of currencies.
+//
+//testdb:serial publishes the process-wide composed extension set
 func TestAZeroDecimalAmountIsShownWithoutDecimals(t *testing.T) {
 	s := setupSystemRead(t)
 	for currency, want := range map[string]string{"JPY": "1,200,000 JPY", "VND": "1,200,000 VND"} {
@@ -255,6 +258,7 @@ func TestAZeroDecimalAmountIsShownWithoutDecimals(t *testing.T) {
 	})
 }
 
+//testdb:serial publishes the process-wide composed extension set
 func TestADealThatIsGoneReadsAsNotFound(t *testing.T) {
 	s := setupSystemRead(t)
 	erased := s.deal
@@ -278,6 +282,7 @@ func TestADealThatIsGoneReadsAsNotFound(t *testing.T) {
 	})
 }
 
+//testdb:serial publishes the process-wide composed extension set
 func TestTheResponsibleAreTheOwnerTheAssigneesAndTheAssignedTeamsLiveMembers(t *testing.T) {
 	s := setupSystemRead(t)
 	desk, closed := ids.NewV7(), ids.NewV7()
@@ -310,6 +315,7 @@ func TestTheResponsibleAreTheOwnerTheAssigneesAndTheAssignedTeamsLiveMembers(t *
 	}
 }
 
+//testdb:serial publishes the process-wide composed extension set
 func TestCanReadAnswersUnderTheColleaguesOwnGrants(t *testing.T) {
 	s := setupSystemRead(t)
 	if !s.canRead(t, s.Rep1, dealCardFields...) {
@@ -325,6 +331,8 @@ func TestCanReadAnswersUnderTheColleaguesOwnGrants(t *testing.T) {
 }
 
 // An agent seat is no colleague a unit may show a deal to, whatever it holds.
+//
+//testdb:serial publishes the process-wide composed extension set
 func TestCanReadAnswersNoForAnAgentSeat(t *testing.T) {
 	s := setupSystemRead(t)
 	agent := s.seat(t, "reader-agent@example.test", "active", true)
@@ -334,6 +342,7 @@ func TestCanReadAnswersNoForAnAgentSeat(t *testing.T) {
 	}
 }
 
+//testdb:serial publishes the process-wide composed extension set
 func TestAnOwnerWhoseRoleMasksTheAmountMayNotReadIt(t *testing.T) {
 	s := setupSystemRead(t)
 	// A mask binds only a bounded role, so Rep3 reads its own deals alone, and
@@ -359,6 +368,7 @@ func TestAnOwnerWhoseRoleMasksTheAmountMayNotReadIt(t *testing.T) {
 	}
 }
 
+//testdb:serial publishes the process-wide composed extension set
 func TestCanReadRefusesAQuestionItCannotAnswer(t *testing.T) {
 	s := setupSystemRead(t)
 	s.onDelivery(t, func(ctx context.Context, rt extension.Runtime) error {
@@ -381,6 +391,8 @@ func TestCanReadRefusesAQuestionItCannotAnswer(t *testing.T) {
 // A unit that invites at most a provider's cap of colleagues probes the
 // responsible list in order. Colleagues the probe refuses must not use up the
 // list before one it admits.
+//
+//testdb:serial publishes the process-wide composed extension set
 func TestColleaguesTheProbeRefusesDoNotCrowdOutOneItAdmits(t *testing.T) {
 	s := setupSystemRead(t)
 	const invitesPerCall = 100
@@ -417,6 +429,7 @@ func TestColleaguesTheProbeRefusesDoNotCrowdOutOneItAdmits(t *testing.T) {
 	}
 }
 
+//testdb:serial publishes the process-wide composed extension set
 func TestEmailsAnswerActiveHumanMembersOnly(t *testing.T) {
 	s := setupSystemRead(t)
 	s.WsExec(t, `UPDATE app_user SET status = 'deactivated' WHERE id = $1`, s.Rep2)
@@ -447,6 +460,8 @@ func TestEmailsAnswerActiveHumanMembersOnly(t *testing.T) {
 
 // On a call somebody is behind, a system read could hand that caller what their
 // own grants withhold, so every one of them refuses.
+//
+//testdb:serial publishes the process-wide composed extension set
 func TestASystemReadIsRefusedOnACallThatHasACaller(t *testing.T) {
 	s := setupSystemRead(t)
 	rt := runtimeFor(s.Admin(), "dealmirror", "1.0.0", "tool/probe", boundExtensionRuntime())
@@ -467,6 +482,8 @@ func TestASystemReadIsRefusedOnACallThatHasACaller(t *testing.T) {
 
 // A signed-in human may ask about themselves, and the answer is their own
 // grants', not the permissions the request carried.
+//
+//testdb:serial publishes the process-wide composed extension set
 func TestAnAttendedCanReadAnswersTheCallerUnderTheirOwnGrants(t *testing.T) {
 	s := setupSystemRead(t)
 	deal := extension.EntityRef{Type: "deal", ID: s.deal.String()}
@@ -485,6 +502,8 @@ func TestAnAttendedCanReadAnswersTheCallerUnderTheirOwnGrants(t *testing.T) {
 
 // A deal id no row holds is no deal anyone may open, even for a colleague
 // whose row scope is every deal.
+//
+//testdb:serial publishes the process-wide composed extension set
 func TestCanReadAnswersNoForADealThatDoesNotExist(t *testing.T) {
 	s := setupSystemRead(t)
 	var shown bool
@@ -513,6 +532,7 @@ func (s *systemReadEnv) canWrite(t *testing.T, user ids.UUID, deal ids.UUID) boo
 	return writable
 }
 
+//testdb:serial publishes the process-wide composed extension set
 func TestCanWriteAnswersUnderTheColleaguesOwnGrants(t *testing.T) {
 	s := setupSystemRead(t)
 	writer := s.seat(t, "writer@example.test", "active", false)
@@ -533,6 +553,8 @@ func TestCanWriteAnswersUnderTheColleaguesOwnGrants(t *testing.T) {
 }
 
 // The write scope and both verbs decide, not the update verb alone.
+//
+//testdb:serial publishes the process-wide composed extension set
 func TestCanWriteNeedsTheRowScopeAndTheReadVerb(t *testing.T) {
 	s := setupSystemRead(t)
 	ownOnly := s.seat(t, "own@example.test", "active", false)
@@ -548,6 +570,8 @@ func TestCanWriteNeedsTheRowScopeAndTheReadVerb(t *testing.T) {
 }
 
 // A read seat changes nothing, whatever its role holds, even on its own deal.
+//
+//testdb:serial publishes the process-wide composed extension set
 func TestCanWriteRefusesAReadSeat(t *testing.T) {
 	s := setupSystemRead(t)
 	reader := s.seat(t, "reader@example.test", "active", false)
@@ -566,6 +590,8 @@ func TestCanWriteRefusesAReadSeat(t *testing.T) {
 }
 
 // On an attended call CanWrite answers its human caller about themselves.
+//
+//testdb:serial publishes the process-wide composed extension set
 func TestAnAttendedCanWriteAnswersTheCaller(t *testing.T) {
 	s := setupSystemRead(t)
 	writer := s.seat(t, "writer@example.test", "active", false)

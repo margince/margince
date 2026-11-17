@@ -61,6 +61,7 @@ func stagePartyReply(t *testing.T, e *integration.Env) ids.UUID {
 }
 
 func TestCapturedPartiesWaitsForTheGovernedSendReceiptAndRecoversDerivation(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	sent := stagePartyReply(t, e)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms)

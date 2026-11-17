@@ -67,6 +67,7 @@ func stageMeetingPromise(
 // The contact is private to a rep in another team: the acceptance is refused
 // whole, no task is written, and the card still waits.
 func TestAcceptingAMeetingPromiseFiledUnderAContactTheDeciderCannotSeeIsRefused(t *testing.T) {
+	t.Parallel()
 	s := stageMeetingPromise(t, func(e *transcriptEnv) ids.UUID { return e.Rep3 }, true)
 
 	if _, err := s.svc.Decide(s.ctx, s.approval, true, nil); !errors.Is(err, apperrors.ErrNotFound) {
@@ -83,6 +84,7 @@ func TestAcceptingAMeetingPromiseFiledUnderAContactTheDeciderCannotSeeIsRefused(
 // The write asks again, for a record hidden after the precheck answered: run
 // with no precheck in front of it, the effect alone writes nothing.
 func TestTheAcceptedWriteRefusesALinkTheDeciderCannotSee(t *testing.T) {
+	t.Parallel()
 	s := stageMeetingPromise(t, func(e *transcriptEnv) ids.UUID { return e.Rep3 }, true)
 	writeOnly := approvals.NewService(s.DB())
 	writeOnly.WithEffect(CommitmentTaskKind, commitmentTaskEffect(writeOnly, s.Activities, s.Contacts))
@@ -98,6 +100,7 @@ func TestTheAcceptedWriteRefusesALinkTheDeciderCannotSee(t *testing.T) {
 // A card whose write was refused stays owed its task. Once the decider can see
 // the contact, deciding again re-drives the write, past the precheck's guard.
 func TestARefusedWriteIsRedrivenOnceTheDeciderCanSeeTheLink(t *testing.T) {
+	t.Parallel()
 	s := stageMeetingPromise(t, func(e *transcriptEnv) ids.UUID { return e.Rep3 }, true)
 	writeOnly := approvals.NewService(s.DB())
 	writeOnly.WithEffect(CommitmentTaskKind, commitmentTaskEffect(writeOnly, s.Activities, s.Contacts))
@@ -121,6 +124,7 @@ func TestARefusedWriteIsRedrivenOnceTheDeciderCanSeeTheLink(t *testing.T) {
 // The private contact is the decider's own, so they see every record the
 // meeting is filed under, and the task carries all of them.
 func TestAcceptingAMeetingPromiseTheDeciderCanSeeWholeCarriesItsLinks(t *testing.T) {
+	t.Parallel()
 	s := stageMeetingPromise(t, func(e *transcriptEnv) ids.UUID { return e.Rep1 }, true)
 
 	if _, err := s.svc.Decide(s.ctx, s.approval, true, nil); err != nil {
@@ -166,6 +170,7 @@ func TestAcceptingAMeetingPromiseOnAColleaguesRecordsCarriesItsLinks(t *testing.
 // A decider who may create activities but not change them cannot file one
 // under a project. The precheck asks what the write would, so the card waits.
 func TestADeciderWhoMayNotFileUnderAProjectLeavesTheCardPending(t *testing.T) {
+	t.Parallel()
 	s := stageMeetingPromise(t, func(e *transcriptEnv) ids.UUID { return e.Rep1 }, true)
 	createOnly := transcriptPerms
 	createOnly.Objects = maps.Clone(transcriptPerms.Objects)
@@ -183,6 +188,7 @@ func TestADeciderWhoMayNotFileUnderAProjectLeavesTheCardPending(t *testing.T) {
 // An agent deciding for its human through the tool surface spends the card the
 // server staged. The task is written under the agent's own bounds.
 func TestAnAgentAcceptingForItsHumanWritesTheTask(t *testing.T) {
+	t.Parallel()
 	s := stageMeetingPromise(t, func(e *transcriptEnv) ids.UUID { return e.Rep1 }, false)
 	passport := ids.NewV7()
 	if _, err := s.owner.Exec(context.Background(), `

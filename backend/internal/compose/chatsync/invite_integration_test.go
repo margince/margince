@@ -46,6 +46,7 @@ func (e *flushEnv) assignRoles(t *testing.T, roles map[ids.UUID]string) {
 // first, at most fifty. A member whose role grants no deal read is left out,
 // and the members over the cap are counted.
 func TestANewChannelInvitesWhoMaySeeTheDealUpToTheCap(t *testing.T) {
+	t.Parallel()
 	e := setupFlush(t)
 	e.exec(t, `DELETE FROM chat_link`)
 	outsider := ids.NewV7()

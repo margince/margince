@@ -12,6 +12,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -20,7 +21,7 @@ func runContactVerdict(t *testing.T, e *integration.Env, email, domain string) i
 	t.Helper()
 	activityID := seedCapturedMail(t, e, email, "hello")
 	dispositionID := seedPendingDisposition(t, e, email, domain, activityID)
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindContact}}
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{dispositionID.String(): capture.KindContact}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
@@ -39,6 +40,7 @@ func contactsAt(t *testing.T, e *integration.Env, email string) int {
 // no noise sweep or erasure label reaches the colleague's mail. The address
 // becomes a contact once the seat lets go of it.
 func TestASeatAddressVerdictStaysRealAndCapturesOnceTheSeatLetsGo(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const address = "rep1.home@private.example"
 	owned := capture.NewOwnerIdentityStore(e.DB())
@@ -68,6 +70,7 @@ func TestASeatAddressVerdictStaysRealAndCapturesOnceTheSeatLetsGo(t *testing.T) 
 // Another seat's typed alias does not refuse this seat's verdict: typing an
 // address proves nothing about who holds it.
 func TestAnotherSeatsTypedAliasDoesNotStopAVerdict(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const address = "buyer@bigcustomer.example"
 	rep2 := e.As(e.Rep2, []ids.UUID{e.Team1}, integration.AdminPerms)

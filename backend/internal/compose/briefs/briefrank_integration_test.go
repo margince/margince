@@ -125,6 +125,7 @@ func (b *briefEnv) seedBriefDeal(t *testing.T, owner *pgx.Conn, name string, sta
 }
 
 func TestBriefRankReproducesAKnownQueueOnAFixedSeedAndClock(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 
 	ranking, err := b.engine.Rank(b.repCtx, briefClock)
@@ -185,6 +186,7 @@ func TestBriefRankReproducesAKnownQueueOnAFixedSeedAndClock(t *testing.T) {
 // the factor equals the seam's own answer and the contributing
 // interactions join the evidence.
 func TestBriefWinnabilityIsTheDealsOwnProbability(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 	if _, err := b.Deals.UpdateDeal(b.Admin(), ids.DealID{UUID: b.dealB}, deals.UpdateDealInput{WinProbability: new(60)}); err != nil {
 		t.Fatal(err)
@@ -201,6 +203,7 @@ func TestBriefWinnabilityIsTheDealsOwnProbability(t *testing.T) {
 }
 
 func TestBriefWarmthComesFromTheStrengthSeam(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 	owner := integration.OwnerConn(t)
 	stakeholder := integration.SeedStakeholder(t, b.Env, owner, b.dealA, "inbound", "outbound")
@@ -236,6 +239,7 @@ func TestBriefWarmthComesFromTheStrengthSeam(t *testing.T) {
 }
 
 func TestBriefSnapshotRoundTripsTheReadModel(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 	owner := integration.OwnerConn(t)
 
@@ -291,6 +295,7 @@ func TestBriefSnapshotRoundTripsTheReadModel(t *testing.T) {
 
 // Marking is owner-only, audited, and never a silent overwrite.
 func TestBriefMarksAreOwnerOnlyAuditedAndConflictSafe(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 	owner := integration.OwnerConn(t)
 
@@ -333,6 +338,7 @@ func TestBriefMarksAreOwnerOnlyAuditedAndConflictSafe(t *testing.T) {
 }
 
 func TestBriefActedAndDismissedItemsLeaveTheNextQueue(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 	owner := integration.OwnerConn(t)
 
@@ -416,6 +422,7 @@ func TestBriefActedAndDismissedItemsLeaveTheNextQueue(t *testing.T) {
 // A big colleague deal is still VISIBLE; the team view is where breadth
 // belongs. What it may no longer do is consume a slot in this rep's morning.
 func TestTheQueueRanksTheReadersOwnWorkRatherThanEverythingVisible(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 	owner := integration.OwnerConn(t)
 
@@ -486,6 +493,7 @@ func queueHasDeal(queue []BriefQueueItem, dealID ids.UUID) bool {
 // deal back, so a line naming an offer or a stage move would describe a reason
 // that cannot be why the deal is here.
 func TestADismissedDealComesBackCarryingWhyItReturned(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 	owner := integration.OwnerConn(t)
 
@@ -536,6 +544,7 @@ func TestADismissedDealComesBackCarryingWhyItReturned(t *testing.T) {
 // An item nobody dismissed carries no lineage. Without this the test above
 // passes against an engine that attaches the same sentence to everything.
 func TestAnItemNobodyDismissedCarriesNoLineage(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 
 	run, err := b.engine.SnapshotRun(b.repCtx, briefClock)
@@ -556,6 +565,7 @@ func TestAnItemNobodyDismissedCarriesNoLineage(t *testing.T) {
 // The lineage survives the round trip through the row, because that is where it
 // is read from every morning after the one it was computed on.
 func TestTheLineageIsPersistedNotRecomputedOnEveryRead(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 	owner := integration.OwnerConn(t)
 
@@ -601,6 +611,7 @@ func TestTheLineageIsPersistedNotRecomputedOnEveryRead(t *testing.T) {
 // that on Wednesday, and a card telling them otherwise is describing an act
 // they did not perform on a day they did not perform it.
 func TestTheLineageIsDatedWhenTheRepActedNotWhenTheBriefWasFor(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 	owner := integration.OwnerConn(t)
 
@@ -643,6 +654,7 @@ func TestTheLineageIsDatedWhenTheRepActedNotWhenTheBriefWasFor(t *testing.T) {
 // the last thing the rep said about it, and reopening the dismissal would
 // reargue a point they have already closed.
 func TestALaterActRetiresTheDismissalLineage(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 	owner := integration.OwnerConn(t)
 
@@ -697,6 +709,7 @@ func TestALaterActRetiresTheDismissalLineage(t *testing.T) {
 // snooze runs out. An expired snooze is not a mark, so the item comes back with
 // the reason it returned.
 func TestAnExpiredSnoozeDoesNotRetireTheDismissalLineage(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 	owner := integration.OwnerConn(t)
 
@@ -753,6 +766,7 @@ func TestAnExpiredSnoozeDoesNotRetireTheDismissalLineage(t *testing.T) {
 // date arrives. Evidence of movement is bounded by the cutoff it is evidence
 // for.
 func TestAFutureDatedActivityIsNotOvernightMomentum(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 	owner := integration.OwnerConn(t)
 

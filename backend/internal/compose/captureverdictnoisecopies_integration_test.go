@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -29,6 +30,7 @@ import (
 const noiseQuote = "the message body"
 
 func TestRedactingNoiseMailDestroysEveryCopyOfItsText(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	noise := seedBulkCapturedMail(t, e, "deals@clearance.example", "spring clearance")
 	dispositionID := seedPendingDisposition(t, e, "deals@clearance.example", "clearance.example", noise)
@@ -39,7 +41,7 @@ func TestRedactingNoiseMailDestroysEveryCopyOfItsText(t *testing.T) {
 	seedDerivedCopies(t, e, kept, noiseQuote)
 	approvalID, evidenceID := seedDerivedCopies(t, e, noise, noiseQuote)
 
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindSpam}}
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{dispositionID.String(): capture.KindSpam}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	ws := principal.WithWorkspaceID(context.Background(), e.WS)
 	if err := engine.RunWorkspace(ws, 0); err != nil {
@@ -116,6 +118,7 @@ func seedDerivedCopies(t *testing.T, e *integration.Env, activityID ids.UUID, qu
 // The other two arms that empty a message clear its reply verdict too. A
 // verdict is a conclusion read from the words, so it does not outlive them.
 func TestTheRetentionSweepClearsTheReplyVerdictOfAMessageItEmpties(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.WsExec(t, `INSERT INTO retention_policy (object_type, category, retain_days, action)
 		VALUES ('activity', NULL, 100, 'erase')`)
@@ -135,6 +138,7 @@ func TestTheRetentionSweepClearsTheReplyVerdictOfAMessageItEmpties(t *testing.T)
 }
 
 func TestAControllerReleaseClearsTheReplyVerdictOfTheMessageItEmpties(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	// Seeded held, with the verdict it was given before the hold. The verdict
 	// writer refuses a restricted row. The restriction is pinned on insert for

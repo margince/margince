@@ -70,6 +70,7 @@ func slimmedOriginalOf(ctx context.Context, t *testing.T, db *database.DB, activ
 // the object rather than carrying the bytes, and gives the provider's exact
 // message back when the object is read.
 func TestANewMessagesOriginalNamesItsStoredFileInsteadOfCarryingIt(t *testing.T) {
+	t.Parallel()
 	ctx, db, tag := captureWorkspace(t)
 	blob := blobstore.NewMemory()
 	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blob))
@@ -118,6 +119,7 @@ func TestANewMessagesOriginalNamesItsStoredFileInsteadOfCarryingIt(t *testing.T)
 // An original whose file cannot be located in it, here one with no MIME parts,
 // is stored whole. The part sweep meets it as before.
 func TestAnOriginalNothingCanComeOutOfIsStoredWhole(t *testing.T) {
+	t.Parallel()
 	ctx, db, tag := captureWorkspace(t)
 	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blobstore.NewMemory()))
 	rec := withFiles(mailRecord("msg-whole-"+tag), onePDF())
@@ -141,6 +143,7 @@ func TestAnOriginalNothingCanComeOutOfIsStoredWhole(t *testing.T) {
 // only the part sweep can prove. The original keeps that file's bytes rather
 // than naming an object this capture staged and no row points at.
 func TestAFileRecordedBeforeKeepsItsBytesInTheOriginal(t *testing.T) {
+	t.Parallel()
 	ctx, db, tag := captureWorkspace(t)
 	sourceID := "msg-conflict-" + tag
 	if err := db.Tx(ctx, func(tx pgx.Tx) error {

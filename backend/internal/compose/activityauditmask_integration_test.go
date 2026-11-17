@@ -63,6 +63,7 @@ func setNoteBody(ctx context.Context, t *testing.T, e *integration.Env, id ids.U
 }
 
 func TestANoteEditThatAddedAPasswordCanBePutBack(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	admin := e.Admin()
 	id := noteWithBody(admin, t, e, notePlain)
@@ -77,6 +78,7 @@ func TestANoteEditThatAddedAPasswordCanBePutBack(t *testing.T) {
 // An edit that changed only the password leaves text that masks the same. So
 // the trail says whether the body was written since, not the masked text.
 func TestALaterPasswordChangeStillOvertakesTheEdit(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	admin := e.Admin()
 	id := noteWithBody(admin, t, e, notePlain)
@@ -90,6 +92,7 @@ func TestALaterPasswordChangeStillOvertakesTheEdit(t *testing.T) {
 }
 
 func TestANoteBodysFieldHistoryShowsThePasswordMasked(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	admin := e.Admin()
 	id := noteWithBody(admin, t, e, noteSecret)
@@ -115,6 +118,7 @@ func TestANoteBodysFieldHistoryShowsThePasswordMasked(t *testing.T) {
 // The trail keeps the password only masked, so putting the edit back would
 // overwrite the note's text with the marker.
 func TestANoteEditThatRemovedAPasswordCannotBePutBack(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	admin := e.Admin()
 	id := noteWithBody(admin, t, e, noteSecret)
@@ -136,6 +140,7 @@ func TestANoteEditThatRemovedAPasswordCannotBePutBack(t *testing.T) {
 
 // A mail is stored masked, so the masked text the trail kept is what it held.
 func TestAMailEditThatRemovedAPasswordCanBePutBack(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	admin := e.Admin()
 	body, direction := noteSecret, "inbound"
@@ -167,6 +172,7 @@ func agentConflicts(t *testing.T, e *integration.Env, id ids.UUID, body string) 
 // The human's image holds the marker, so the marker itself is not what the
 // human typed and proposing it overwrites their text.
 func TestProposingTheMaskedTextOfAHumansNoteIsAConflict(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	admin := e.Admin()
 	id := noteWithBody(admin, t, e, notePlain)
@@ -178,6 +184,7 @@ func TestProposingTheMaskedTextOfAHumansNoteIsAConflict(t *testing.T) {
 }
 
 func TestRestatingTheTextAHumanTypedIsNoConflict(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	admin := e.Admin()
 	id := noteWithBody(admin, t, e, notePlain)

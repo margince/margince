@@ -73,6 +73,7 @@ func (c *carryEnv) mergeCompanies(t *testing.T, from, into ids.CompanyID) {
 // A grantee who could reach only the retired company reaches the survivor, and
 // both records' histories say so.
 func TestACompanyMergeMovesAShareOntoTheSurvivor(t *testing.T) {
+	t.Parallel()
 	c := setupCarry(t)
 	retired, survivor := c.companyNamed(t, "Moved Retired GmbH"), c.companyNamed(t, "Moved Survivor GmbH")
 	c.share(t, "company", retired.UUID, c.e.Rep1, "write", nil)
@@ -105,6 +106,7 @@ func TestACompanyMergeMovesAShareOntoTheSurvivor(t *testing.T) {
 // Two live shares of one grantee become one: the higher access, and no expiry
 // over any expiry. The survivor's history records the before and after.
 func TestACompanyMergeFoldsTwoSharesOfOneGrantee(t *testing.T) {
+	t.Parallel()
 	c := setupCarry(t)
 	retired, survivor := c.companyNamed(t, "Fold Retired GmbH"), c.companyNamed(t, "Fold Survivor GmbH")
 	soon := time.Now().Add(48 * time.Hour)
@@ -140,6 +142,7 @@ func TestACompanyMergeFoldsTwoSharesOfOneGrantee(t *testing.T) {
 
 // Between two dated shares the later date wins.
 func TestAFoldKeepsTheLaterExpiry(t *testing.T) {
+	t.Parallel()
 	c := setupCarry(t)
 	retired, survivor := c.companyNamed(t, "Later Retired GmbH"), c.companyNamed(t, "Later Survivor GmbH")
 	sooner, later := time.Now().Add(24*time.Hour), time.Now().Add(30*24*time.Hour)
@@ -161,6 +164,7 @@ func TestAFoldKeepsTheLaterExpiry(t *testing.T) {
 // An expired share confers nothing, so folding it in lifts nothing. The
 // survivor's own read share stands unchanged and is not rewritten.
 func TestAnExpiredShareDoesNotLiftTheSurvivorsShare(t *testing.T) {
+	t.Parallel()
 	c := setupCarry(t)
 	retired, survivor := c.companyNamed(t, "Lapsed Retired GmbH"), c.companyNamed(t, "Lapsed Survivor GmbH")
 	soon := time.Now().Add(time.Hour)
@@ -191,6 +195,7 @@ func TestAnExpiredShareDoesNotLiftTheSurvivorsShare(t *testing.T) {
 
 // A contact merge and a lead merge carry their shares the same way.
 func TestContactAndLeadMergesMoveTheirShares(t *testing.T) {
+	t.Parallel()
 	c := setupCarry(t)
 	retired := c.contactAt(t, "Share Retired", "share-retired@carry.test")
 	survivor := c.contactAt(t, "Share Survivor", "share-survivor@carry.test")
@@ -227,6 +232,7 @@ func (c *carryEnv) leadNamed(t *testing.T, name string) ids.LeadID {
 }
 
 func TestAnUnwiredMergeRefusesWhenAShareWouldBeStranded(t *testing.T) {
+	t.Parallel()
 	c := setupCarry(t)
 	unwired := contacts.NewStore(c.e.DB()).WithStopCarrier(c.consent).WithSatelliteCarriers(c.consent, c.intros)
 	retired, survivor := c.companyNamed(t, "Unwired Retired GmbH"), c.companyNamed(t, "Unwired Survivor GmbH")
@@ -259,6 +265,7 @@ func (c *carryEnv) grantPreview(t *testing.T, kind string, source, target ids.UU
 }
 
 func TestGrantCarryRequiresWriteAuthorityOnBothSubjects(t *testing.T) {
+	t.Parallel()
 	for _, writeSource := range []bool{true, false} {
 		name := "target only"
 		if writeSource {

@@ -126,6 +126,7 @@ func contributionOfDeal(t *testing.T, rows []crmcontracts.ForecastContribution, 
 // With no recorded outcome from its stage, a deal is weighted by the typed
 // chance: today's forecast, unchanged.
 func TestWithNoRecordedOutcomeTheForecastUsesTheTypedChance(t *testing.T) {
+	t.Parallel()
 	f := newStageCohortFixture(t)
 	today := clocktest.Now(t)
 	deal := f.openDeal(t, f.stage(0), today)
@@ -154,6 +155,7 @@ func TestWithNoRecordedOutcomeTheForecastUsesTheTypedChance(t *testing.T) {
 // sync moved the second, and the third was saved before moves kept an origin. The tool answers the same
 // numbers as the HTTP door.
 func TestRecordedOutcomesMoveTheChanceAndImportedSyncedOrLegacyMovesDoNot(t *testing.T) {
+	t.Parallel()
 	f := newStageCohortFixture(t)
 	s0, s1 := f.stage(0), f.stage(1)
 	for range 20 {
@@ -239,6 +241,7 @@ func asToolRows(t *testing.T, rows []crmcontracts.ForecastContribution) []agents
 // own deals, with no owner on them. The colleagues' deals still count in the
 // totals.
 func TestIndividualPerformanceOffKeepsOnlyTheReadersOwnRows(t *testing.T) {
+	t.Parallel()
 	f := newStageCohortFixture(t)
 	s0 := f.stage(0)
 	today := clocktest.Now(t)
@@ -279,6 +282,7 @@ func TestIndividualPerformanceOffKeepsOnlyTheReadersOwnRows(t *testing.T) {
 // A seller reading their own forecast with the switch off loses no row, so
 // neither door says the rows are limited.
 func TestIndividualPerformanceOffLimitsNoRowsOfASellersOwnForecast(t *testing.T) {
+	t.Parallel()
 	f := newStageCohortFixture(t)
 	s0 := f.stage(0)
 	today := clocktest.Now(t)
@@ -315,6 +319,7 @@ func TestIndividualPerformanceOffLimitsNoRowsOfASellersOwnForecast(t *testing.T)
 
 // Off, every deal is weighted by its typed chance whatever was recorded.
 func TestSelfCorrectionOffWeighsByTheTypedChance(t *testing.T) {
+	t.Parallel()
 	f := newStageCohortFixture(t)
 	s0 := f.stage(0)
 	for range 20 {
@@ -353,6 +358,7 @@ func (f *stageCohortFixture) lose(t *testing.T, deal ids.DealID) {
 // row frozen under other signal rules count for nothing. A signal frozen on no
 // deal stays at 1.
 func TestARiskEffectIsLearnedFromSettledFrozenForecasts(t *testing.T) {
+	t.Parallel()
 	f := newStageCohortFixture(t)
 	s0 := f.stage(0)
 	var quiet, calm []ids.DealID
@@ -434,6 +440,7 @@ func (f *stageCohortFixture) win(t *testing.T, deal ids.DealID) {
 // A deal won before the cutoff and reopened after it still counts as won: the
 // evidence reads how each deal stood at the cutoff.
 func TestStageEvidenceReadsHowADealStoodAtTheCutoff(t *testing.T) {
+	t.Parallel()
 	f := newStageCohortFixture(t)
 	s0, s1 := f.stage(0), f.stage(1)
 	var won []ids.DealID
@@ -465,6 +472,7 @@ func TestStageEvidenceReadsHowADealStoodAtTheCutoff(t *testing.T) {
 // counts. Five won deals meet the floor; one of them archived keeps it met,
 // and one whose move predates provenance takes it below.
 func TestTheStuckPaceReadsRecordedStintsAndKeepsArchivedWins(t *testing.T) {
+	t.Parallel()
 	for name, tc := range map[string]struct {
 		archive, forget bool
 		paced           bool
@@ -506,6 +514,7 @@ func TestTheStuckPaceReadsRecordedStintsAndKeepsArchivedWins(t *testing.T) {
 // deal by the chance the headline uses, recorded evidence included. Off, both
 // weight by the typed chance.
 func TestTheForecastReportWeightsByTheChanceTheHeadlineUses(t *testing.T) {
+	t.Parallel()
 	f := newStageCohortFixture(t)
 	s0 := f.stage(0)
 	for range 20 {

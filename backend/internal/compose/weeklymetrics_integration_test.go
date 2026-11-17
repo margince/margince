@@ -26,10 +26,12 @@ import (
 )
 
 func TestWeeklyUsesAnalyticsDefinitionsAndKeepsFrozenFigures(t *testing.T) {
+	t.Parallel()
 	testWeeklyReportingPrivacy(t, false)
 }
 
 func TestRetentionAnonymizationRedactsFrozenReporting(t *testing.T) {
+	t.Parallel()
 	testWeeklyReportingPrivacy(t, true)
 }
 

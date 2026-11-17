@@ -61,6 +61,7 @@ func probeEngine(t *testing.T, e *integration.Env, now *time.Time, tasks ...data
 }
 
 func TestExecuteFinishesAutomaticWorkAndNamesWhatItCouldNotFinish(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := time.Date(2026, 9, 1, 8, 0, 0, 0, time.UTC)
 	probe := datatask.Task{ID: "core/100_probe", Version: 1, Title: "Probe", Steps: []datatask.Step{probeStep("write", probeBatch)}}
@@ -107,6 +108,7 @@ func TestExecuteFinishesAutomaticWorkAndNamesWhatItCouldNotFinish(t *testing.T) 
 }
 
 func TestExecuteStopsAtAFailedStepAndNamesIt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := time.Date(2026, 9, 1, 8, 0, 0, 0, time.UTC)
 	failing := datatask.Task{
@@ -143,6 +145,8 @@ func (t trapTransport) RoundTrip(*http.Request) (*http.Response, error) {
 
 // The release's whole catalog, through the command's own entry point. Nothing
 // leaves the database: no request, no queued job, no model call.
+//
+//testdb:serial replaces http.DefaultTransport, which every test's outbound calls use
 func TestExecuteRunsTheReleaseCatalogWithoutReachingOutside(t *testing.T) {
 	e := integration.Setup(t)
 	calls := &atomic.Int64{}
@@ -179,6 +183,7 @@ func TestExecuteRunsTheReleaseCatalogWithoutReachingOutside(t *testing.T) {
 // leftover rows are named. A step whose estimate counts input it keeps, and a
 // finished row from an older version, are not recounted.
 func TestTheRecountNamesRowsAStepLeftAndNothingElse(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	counting := func(n int64) func(context.Context, datatask.Querier, int64) (int64, bool, error) {

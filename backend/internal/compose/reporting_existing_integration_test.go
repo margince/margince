@@ -21,6 +21,7 @@ import (
 )
 
 func TestReportingExistingWinsMatchTheDealOwnerAndTarget(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	// Older installations have the deals, but neither attribution column existed.
 	if _, err := f.env.owner.Exec(f.human, "UPDATE deal_stage_history SET owner_id_at_change=NULL,pipeline_id_at_change=NULL"); err != nil {
@@ -69,6 +70,7 @@ func TestReportingExistingWinsMatchTheDealOwnerAndTarget(t *testing.T) {
 }
 
 func TestReportingUnassignedWinDoesNotRetainThePreviousOwner(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct{ language, label string }{{"en", "Unassigned"}, {"de", "Nicht zugewiesen"}, {"vi", "Chưa phân công"}} {
 		t.Run(tc.language, func(t *testing.T) { reportingUnassignedLanguage(t, tc.language, tc.label) })
 	}
@@ -106,6 +108,7 @@ func reportingUnassignedLanguage(t *testing.T, language, label string) {
 // the writers recorded, then degrades the twelve customer meetings' rows. The
 // internal meeting keeps the full history a new meeting gets.
 func TestReportingOlderHeldMeetingsUseKnownHostAndCustomerLinks(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	store := activities.NewStore(InstallationDB(f.env.Pool)).WithClock(func() time.Time { return f.at })
 	held := "held"
@@ -163,6 +166,7 @@ func TestReportingOlderHeldMeetingsUseKnownHostAndCustomerLinks(t *testing.T) {
 }
 
 func TestReportingFutureHeldTransitionDoesNotBorrowCurrentStatus(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	if _, err := f.env.owner.Exec(f.human, "UPDATE activity_meeting_history SET effective_at=$1", f.at.Add(time.Hour)); err != nil {
 		t.Fatal(err)
@@ -181,6 +185,7 @@ func TestReportingFutureHeldTransitionDoesNotBorrowCurrentStatus(t *testing.T) {
 }
 
 func TestReportingSavedSalesKeepTheirCapturedOwnerAfterReassignment(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	reportingWorkerIdentity(t, e)
 	closed, store, writer := reportingWrittenClose(t, e)
@@ -225,6 +230,7 @@ func TestReportingSavedSalesKeepTheirCapturedOwnerAfterReassignment(t *testing.T
 }
 
 func TestReportingTransferredWinsAndLossesMoveTargetsAndWinRateTogether(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	for _, transfer := range []struct {
 		name  string

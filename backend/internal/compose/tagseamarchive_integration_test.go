@@ -29,6 +29,7 @@ var tagAdminPerms = principal.Permissions{
 }
 
 func TestEnsureTagOnAnArchivedNameDoesNotPromiseARestoreThatDoesNotExist(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.AdminUser, nil, tagAdminPerms)
 	store := collections.NewStore(InstallationDB(e.Pool))
@@ -57,6 +58,7 @@ func TestEnsureTagOnAnArchivedNameDoesNotPromiseARestoreThatDoesNotExist(t *test
 // refusal, and nothing is written. This is the half a stub cannot prove — the
 // tag table has to still be empty afterwards.
 func TestResolveTagRefusesAnUnknownNameAndCoinsNothing(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.AdminUser, nil, tagAdminPerms)
 	store := collections.NewStore(InstallationDB(e.Pool))

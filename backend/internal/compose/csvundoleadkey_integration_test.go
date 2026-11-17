@@ -21,6 +21,7 @@ import (
 // An undone import frees the source key its lead held, so the same file lands
 // the same leads again instead of replaying the retired row.
 func TestUndoFreesTheSourceKeyOfAnImportedLead(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	system, ref, name := "csv:undo-key", "lead-1", "Imported Lead"
 	create := func() (ids.UUID, bool) {
@@ -49,6 +50,7 @@ func TestUndoFreesTheSourceKeyOfAnImportedLead(t *testing.T) {
 
 // A lead a colleague edited after the import stays, with its key.
 func TestUndoKeepsAHumanEditedLeadAndItsSourceKey(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	system, ref, name := "csv:undo-kept", "lead-1", "Edited Lead"
 	lead, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{

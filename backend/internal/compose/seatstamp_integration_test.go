@@ -34,6 +34,7 @@ func captureSentMail(t *testing.T, e *integration.Env, messageID, to string) ids
 // their login, still carries a participant row bound to that colleague. The
 // attendance arm reads only rows with a user_id.
 func TestAMailSentToAColleaguesProvedMailboxBindsTheColleague(t *testing.T) {
+	t.Parallel()
 	e := setupWithOwnMailbox(t)
 	const mailbox = "rep2.box@home.example"
 	connectSeatMailbox(t, e, e.Rep2, mailbox, "shared")

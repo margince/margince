@@ -20,6 +20,8 @@ import (
 
 // Maintenance switched off at boot stops the sweep's write over a saved row
 // that leaves it on. Not parallel: the binding is the process's own.
+//
+//testdb:serial binds the process-wide configuration (config.Bind)
 func TestABootSetMaintenanceOffStopsTheSweepsWrite(t *testing.T) {
 	e := setupCloseDate(t)
 	e.seedSweepDeal(t, "Overdue with maintenance off at boot", e.early, nil, new(-12), 3)
@@ -37,6 +39,8 @@ func TestABootSetMaintenanceOffStopsTheSweepsWrite(t *testing.T) {
 
 // A deployment's seed of legal review off writes no row under a boot value,
 // which would act only once that value is gone.
+//
+//testdb:serial binds the process-wide configuration (config.Bind)
 func TestABootSetLegalReviewIsNotSeeded(t *testing.T) {
 	e := integration.Setup(t)
 	bindForTest(t, "MARGINCE_DEALS_LEGAL_REVIEW_ENABLED=true")

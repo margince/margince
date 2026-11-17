@@ -211,6 +211,7 @@ func (v *voiceBuildEnv) workerCtx(t *testing.T) context.Context {
 }
 
 func TestVoiceBuildRunsToAnActiveVersion(t *testing.T) {
+	t.Parallel()
 	quote := "We ship on Monday, no excuses."
 	env, build := seedVoiceBuild(t, quote, 6)
 	ctx := env.workerCtx(t)
@@ -261,6 +262,7 @@ func TestVoiceBuildRunsToAnActiveVersion(t *testing.T) {
 }
 
 func TestVoiceBuildFailsWhenTheCorpusChangedSinceQueueing(t *testing.T) {
+	t.Parallel()
 	env, build := seedVoiceBuild(t, "A quote that will survive.", 6)
 	if _, _, _, err := env.store.IngestSource(env.owner, env.profile.ID, ai.IngestSourceInput{
 		Kind: "other", SourceLabel: "late addition", Content: "text arriving after the snapshot was taken",
@@ -286,6 +288,7 @@ func TestVoiceBuildFailsWhenTheCorpusChangedSinceQueueing(t *testing.T) {
 // The profile read carries the newest build in every status. A page opened
 // after the build ended elsewhere still learns that it failed and why.
 func TestVoiceProfileViewCarriesTheNewestBuild(t *testing.T) {
+	t.Parallel()
 	env, build := seedVoiceBuild(t, "A quote for the view.", 6)
 	queued, err := env.store.ProfileView(env.owner, env.profile.ID)
 	if err != nil {
@@ -315,6 +318,7 @@ func TestVoiceProfileViewCarriesTheNewestBuild(t *testing.T) {
 }
 
 func TestVoiceBuildDefersOnBudgetAndTheSweepFindsItWhenDue(t *testing.T) {
+	t.Parallel()
 	env, build := seedVoiceBuild(t, "Deferred quote.", 6)
 	ctx := env.workerCtx(t)
 	worker := newVoiceBuildWorker(env.e.Pool, &scriptedBuildBrain{budgetOut: true}, slog.New(slog.DiscardHandler))
@@ -375,6 +379,7 @@ func TestVoiceBuildDefersOnBudgetAndTheSweepFindsItWhenDue(t *testing.T) {
 // outcome, or the build sits "running" until reclaim and retries forever
 // while the UI polls a row that never concludes.
 func TestVoiceBuildRecordsFailureEvenWhenTheWorkContextIsSpent(t *testing.T) {
+	t.Parallel()
 	env, build := seedVoiceBuild(t, "Spent-context quote.", 6)
 	ctx := env.workerCtx(t)
 	worker := newVoiceBuildWorker(env.e.Pool, nil, slog.New(slog.DiscardHandler))
@@ -398,6 +403,7 @@ func TestVoiceBuildRecordsFailureEvenWhenTheWorkContextIsSpent(t *testing.T) {
 }
 
 func TestVoiceBuildStarterCorpusActivatesUnevaluated(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct{ language, explanation string }{{"en", "too small"}, {"de", "zu klein"}, {"vi", "quá nhỏ"}} {
 		t.Run(tc.language, func(t *testing.T) { voiceStarterLanguage(t, tc.language, tc.explanation) })
 	}
@@ -453,6 +459,7 @@ func voiceBuildJob(env *voiceBuildEnv, build ai.VoiceBuild) *river.Job[VoiceBuil
 }
 
 func TestVoiceBuildWorkEndToEnd(t *testing.T) {
+	t.Parallel()
 	quote := "Work-path quote."
 	env, build := seedVoiceBuild(t, quote, 6)
 	worker := newVoiceBuildWorker(env.e.Pool, &scriptedBuildBrain{judgeScore: 0.9, quote: quote}, slog.New(slog.DiscardHandler))
@@ -494,6 +501,7 @@ func TestVoiceBuildWorkEndToEnd(t *testing.T) {
 }
 
 func TestVoiceBuildWorkSkipsAnotherSessionOwner(t *testing.T) {
+	t.Parallel()
 	env, build := seedVoiceBuild(t, "Contended quote.", 6)
 	ctx := env.workerCtx(t)
 	lease, held, err := env.e.DB().TryWorkLease(ctx, "voice_build", build.ID, discardLogger())
@@ -519,6 +527,7 @@ func TestVoiceBuildWorkSkipsAnotherSessionOwner(t *testing.T) {
 }
 
 func TestVoiceBuildWorkWithoutABrainFailsClosed(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct{ language, explanation string }{{"en", "AI provider"}, {"de", "KI-Anbieter"}, {"vi", "nhà cung cấp AI"}} {
 		t.Run(tc.language, func(t *testing.T) {
 			env, build := seedVoiceBuild(t, "Brainless quote.", 6)
@@ -543,6 +552,7 @@ func TestVoiceBuildWorkWithoutABrainFailsClosed(t *testing.T) {
 }
 
 func TestVoiceDraftReadsAndLearningSignals(t *testing.T) {
+	t.Parallel()
 	quote := "The drafting read quote."
 	env, build := seedVoiceBuild(t, quote, 6)
 	ctx := env.workerCtx(t)
@@ -639,6 +649,7 @@ func builtVoiceEnv(t *testing.T, quote string) *voiceBuildEnv {
 	return env
 }
 
+//testdb:serial shares the type-checking importer, which is not safe for concurrent use
 func TestReplyDraftCarriesVoiceProvenanceEndToEnd(t *testing.T) {
 	env := builtVoiceEnv(t, "Provenance quote.")
 	activity := seedReplyActivity(t, env)
@@ -671,6 +682,7 @@ func TestReplyDraftCarriesVoiceProvenanceEndToEnd(t *testing.T) {
 }
 
 func TestReplyDraftFallsBackAndRecordsRejectionWhenTheFloorHolds(t *testing.T) {
+	t.Parallel()
 	env := builtVoiceEnv(t, "Fallback quote.")
 	activity := seedReplyActivity(t, env)
 	drafter := newReplyDrafter(env.e.Pool, &voicedDraftBrain{
@@ -695,6 +707,7 @@ func TestReplyDraftFallsBackAndRecordsRejectionWhenTheFloorHolds(t *testing.T) {
 }
 
 func TestVoiceBuildWorkRecordsAnInvalidModelAnswerAsFailed(t *testing.T) {
+	t.Parallel()
 	env, build := seedVoiceBuild(t, "A quote the brain will not honor.", 6)
 	worker := newVoiceBuildWorker(env.e.Pool, brainFunc(func(context.Context, model.Request) (model.Response, error) {
 		return model.Response{Text: "not the requested JSON object"}, nil
@@ -729,6 +742,7 @@ func (f brainFunc) Complete(ctx context.Context, req model.Request) (model.Respo
 // running product: a Gemini spending cap, an OpenRouter shared-pool throttle,
 // and a 429 whose cause nothing recognizes.
 func TestVoiceBuildTellsTheOwnerWhichProviderFailureItWas(t *testing.T) {
+	t.Parallel()
 	refusals := []struct {
 		name    string
 		err     error
@@ -794,6 +808,7 @@ func TestVoiceBuildTellsTheOwnerWhichProviderFailureItWas(t *testing.T) {
 // exactly like a slow build on the screen — and the screen polls, so nobody
 // finds out until they give up.
 func TestVoiceBuildAlwaysReachesATerminalState(t *testing.T) {
+	t.Parallel()
 	answers := map[string]string{
 		"prose instead of JSON":    "Sure! Here is the voice profile you asked for.",
 		"JSON truncated mid-way":   `{"identity_summary": "Direct and opera`,
@@ -838,6 +853,7 @@ func TestVoiceBuildAlwaysReachesATerminalState(t *testing.T) {
 // carries the cause is the provider name the --ai-fake config installs, so a
 // double that merely returns an error would prove nothing about production.
 func TestVoiceBuildOnAnUnconfiguredInstallationNamesTheSetting(t *testing.T) {
+	t.Parallel()
 	env, build := seedVoiceBuild(t, "A quote the stand-in will never cite.", 6)
 	ctx := env.workerCtx(t)
 	path, err := NewLocalModelPath(ai.FakeRoutingConfig())
@@ -885,6 +901,7 @@ func TestVoiceBuildOnAnUnconfiguredInstallationNamesTheSetting(t *testing.T) {
 // A build that stops running mid-run ends the worker at the next stage. It
 // asks the model nothing more and writes nothing over the row that stopped it.
 func TestAVoiceBuildThatStopsRunningEndsItsWorker(t *testing.T) {
+	t.Parallel()
 	quote := "A quote for a build that is stopped."
 	env, build := seedVoiceBuild(t, quote, 6)
 	scripted := &scriptedBuildBrain{judgeScore: 0.9, quote: quote}

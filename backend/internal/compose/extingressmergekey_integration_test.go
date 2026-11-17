@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/pkg/extension"
@@ -64,6 +65,8 @@ func (e *ingressEnv) ingest(t *testing.T, rec extension.Record) error {
 // address they were already known by, and the account they can be answered at.
 // Without the address the ladder cannot see the incumbent and mints a twin,
 // which nobody notices until a human opens the Duplicates surface.
+//
+//testdb:serial sets the process-wide sendable channel providers
 func TestADirectMessageFindsTheHumanAlreadyCapturedFromMail(t *testing.T) {
 	e := setupVouchingIngress(t)
 	registerProbeTransport(t, e)
@@ -106,6 +109,8 @@ func TestADirectMessageFindsTheHumanAlreadyCapturedFromMail(t *testing.T) {
 // record REFUSED rather than quietly stripped. Stripping would be worse: the
 // unit would believe it had contributed the evidence, and the duplicate it was
 // trying to prevent would appear anyway, with nothing saying why.
+//
+//testdb:serial sets the process-wide sendable channel providers
 func TestAnUndeclaredSourceCannotCorroborateByAddress(t *testing.T) {
 	e := setupIngress(t) // declares no merge key
 	registerProbeTransport(t, e)
@@ -137,7 +142,7 @@ func admitPendingSender(t *testing.T, e *ingressEnv, email string) {
 			 WHERE email = $1 AND status = 'pending'`, email).Scan(&dispositionID)
 	})
 
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindContact}}
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{dispositionID.String(): capture.KindContact}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("admitting %s by verdict: %v", email, err)

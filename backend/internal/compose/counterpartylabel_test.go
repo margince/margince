@@ -13,6 +13,7 @@ import (
 
 // A contact proposal is staged under who wrote, so its caption names the sender.
 func TestAContactProposalIsStagedUnderWhoWrote(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		row  capture.PendingCounterparty
 		want string

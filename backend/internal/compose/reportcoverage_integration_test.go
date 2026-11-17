@@ -16,6 +16,7 @@ import (
 )
 
 func TestBothQueryEnginesWithholdIncompleteConvertedAggregates(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	for _, fn := range []analyticsquery.AggFn{analyticsquery.Sum, analyticsquery.Avg, analyticsquery.Min, analyticsquery.Max, analyticsquery.Median, analyticsquery.P75} {
 		for _, sample := range []struct {
@@ -77,6 +78,7 @@ func TestBothQueryEnginesWithholdIncompleteConvertedAggregates(t *testing.T) {
 }
 
 func TestPrebuiltConvertedTotalsAndTheirEvidenceKeepMissingValues(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	for range 4 {
 		seedPricedDeal(t, e, "Priced", 10000, "EUR", "open")

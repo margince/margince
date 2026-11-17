@@ -59,6 +59,7 @@ func (e *forecastEnv) freezeScope(t *testing.T, scope forecasting.Scope) ids.UUI
 }
 
 func TestIndividualPerformanceOffWithholdsTheMovementOfANestedTeamsParent(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	teams := e.seedNestedTeams(t)
 	for _, owner := range []ids.UUID{teams.anna, teams.ben} {
@@ -83,6 +84,7 @@ func TestIndividualPerformanceOffWithholdsTheMovementOfANestedTeamsParent(t *tes
 // An edition captured while its team was safe is withheld once a new team
 // would leave one of its members on their own.
 func TestIndividualPerformanceOffWithholdsAnEditionANewTeamWouldExpose(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	members := e.addMembers(t, e.Team1, "anna@floor.test", "ben@floor.test", "chris@floor.test")
 	e.seedWinIn(t, members[0], "EUR")
@@ -145,6 +147,7 @@ func TestIndividualPerformanceOffWithholdsAnEditionANewTeamWouldExpose(t *testin
 // A floored report reads its membership and its figures in one
 // `REPEATABLE READ` snapshot. A door below it is refused rather than answered.
 func TestAFlooredReportRunsInOneSnapshot(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	teams := e.seedNestedTeams(t)
 	reader := e.forecastReader(e.dealReadCtx(e.Rep1, nil, principal.RowScopeAll))

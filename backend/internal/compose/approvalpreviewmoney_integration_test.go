@@ -20,6 +20,7 @@ import (
 )
 
 func TestClosingAndReopeningPreviewTheWritersFrozenValues(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	pipeline, open, won := integration.DealFixture(t, e)
@@ -85,6 +86,7 @@ func TestClosingAndReopeningPreviewTheWritersFrozenValues(t *testing.T) {
 }
 
 func TestRepricingAndReopeningKeepTheActualFrozenAuditBeforeImage(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	pipeline, open, won := integration.DealFixture(t, e)
@@ -131,6 +133,7 @@ func TestRepricingAndReopeningKeepTheActualFrozenAuditBeforeImage(t *testing.T) 
 }
 
 func TestALostReasonIsClearedOnEveryLandingThatIsNotLost(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	pipeline, open, won := integration.DealFixture(t, e)

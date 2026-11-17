@@ -17,6 +17,7 @@ import (
 // The health page's admission is one recorded check of four grants, any of
 // which opens it. A refusal names what would have let the caller in.
 func TestSystemHealthAsksOneCheckOfItsFourGrants(t *testing.T) {
+	t.Parallel()
 	ctx, recorded := auth.RecordChecksForTest(healthTestContext(nil))
 	rec := httptest.NewRecorder()
 	Server{}.GetSystemHealth(rec, httptest.NewRequestWithContext(ctx, http.MethodGet, "/v1/admin/system-health", nil))

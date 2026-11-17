@@ -150,6 +150,7 @@ func signalStatus(t *testing.T, e *integration.Env, signal ids.UUID) string {
 // The whole arc: the mail ends the contract, the record still says Prospect, a
 // human is asked, and their yes moves the account and settles the signal.
 func TestAcceptingTheOfferMovesTheAccountAndSettlesTheSignal(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := seedAccountAtStage(t, e, "prospect")
 	signal := seedOpenContractEnded(t, e, company)
@@ -181,6 +182,7 @@ func TestAcceptingTheOfferMovesTheAccountAndSettlesTheSignal(t *testing.T) {
 // An account in set-up or live is one we deliver for, so a mail ending its
 // contract asks the same question a customer's would.
 func TestAContractEndedMailOffersTheEndToAnAccountWeDeliverFor(t *testing.T) {
+	t.Parallel()
 	for _, stage := range []string{"onboarding", "live"} {
 		t.Run(stage, func(t *testing.T) {
 			e := integration.Setup(t)
@@ -205,6 +207,7 @@ func TestAContractEndedMailOffersTheEndToAnAccountWeDeliverFor(t *testing.T) {
 // A decider who edits the offer to live still cannot set it. The effect runs as
 // the system, and only a signed-in user may say the first scope is in use.
 func TestAnOfferEditedToLiveIsRefusedWhenTheSystemAppliesIt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := seedAccountAtStage(t, e, "onboarding")
 	seedOpenContractEnded(t, e, company)
@@ -230,6 +233,7 @@ func TestAnOfferEditedToLiveIsRefusedWhenTheSystemAppliesIt(t *testing.T) {
 // The signal that produced the offer stays open forever, so without a durable
 // memory of the refusal the same question comes back every hour.
 func TestARefusedOfferIsNotAskedAgain(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := seedAccountAtStage(t, e, "customer")
 	signal := seedOpenContractEnded(t, e, company)
@@ -263,6 +267,7 @@ func TestARefusedOfferIsNotAskedAgain(t *testing.T) {
 
 // An hourly reconciler must not stack the same question in the inbox.
 func TestTheSameContradictionIsOfferedOnce(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := seedAccountAtStage(t, e, "opportunity")
 	seedOpenContractEnded(t, e, company)
@@ -287,6 +292,7 @@ func TestTheSameContradictionIsOfferedOnce(t *testing.T) {
 // REFUSED rather than silently spent — the decider is told the record moved
 // under them, which is the one thing they need to know before deciding again.
 func TestAnAcceptOverACorrectedRecordIsRefused(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := seedAccountAtStage(t, e, "prospect")
 	seedOpenContractEnded(t, e, company)
@@ -318,6 +324,7 @@ func TestAnAcceptOverACorrectedRecordIsRefused(t *testing.T) {
 // An account already filed as over is not in conflict with the mail that says
 // so, and there is nothing to offer.
 func TestNoOfferIsMadeOnAnAccountAlreadyFiledAsOver(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := seedAccountAtStage(t, e, "former_customer")
 	seedOpenContractEnded(t, e, company)
@@ -328,6 +335,7 @@ func TestNoOfferIsMadeOnAnAccountAlreadyFiledAsOver(t *testing.T) {
 }
 
 func TestAcceptingSettlesOnlyTheCitedContradiction(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := seedAccountAtStage(t, e, "customer")
 	first := seedOpenContractEnded(t, e, company)
@@ -374,6 +382,7 @@ var teamScopedDecider = principal.Permissions{
 }
 
 func TestHiddenContradictionBlocksAccountLifecycleDecision(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := seedAccountAtStage(t, e, "customer")
 	e.WsExec(t, "UPDATE company SET owner_id = $1 WHERE id = $2", e.Rep1, company)
@@ -429,6 +438,7 @@ func seedOpenContractEndedOnContact(t *testing.T, e *integration.Env, company, c
 }
 
 func TestNewEvidenceSupersedesThePendingLifecycleDecision(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := seedAccountAtStage(t, e, "customer")
 	firstAt := time.Date(2026, 7, 1, 12, 0, 0, 0, time.UTC)
@@ -451,6 +461,7 @@ func TestNewEvidenceSupersedesThePendingLifecycleDecision(t *testing.T) {
 }
 
 func TestWhitespaceNormalizedSourceProofAllowsTheDecision(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := seedAccountAtStage(t, e, "customer")
 	signal := seedScopedContractEnded(t, e, company, "company", "We are ending\nall business\twith your company.")
@@ -467,6 +478,7 @@ func TestWhitespaceNormalizedSourceProofAllowsTheDecision(t *testing.T) {
 }
 
 func TestLifecycleProposalKeepsSourceWordsBehindTheSourceReader(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := seedAccountAtStage(t, e, "customer")
 	quote := "We are ending all business, including Atlas support, with your company."

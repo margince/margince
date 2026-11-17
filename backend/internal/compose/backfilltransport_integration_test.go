@@ -274,6 +274,7 @@ func (f faultyEstimator) EstimateBackfill(context.Context, capture.Mailbox, ids.
 // denominator is read back long after the preview that produced it, and a bar
 // dividing by a bound runs past its own end.
 func TestAFlooredEstimateSaysSoOnThePreviewAndOnTheRun(t *testing.T) {
+	t.Parallel()
 	b := setupBackfillWire(t)
 	b.gmail.estimateFloor = true
 
@@ -316,6 +317,7 @@ func TestAFlooredEstimateSaysSoOnThePreviewAndOnTheRun(t *testing.T) {
 }
 
 func TestBackfillPreviewDegradesOnEstimatorFault(t *testing.T) {
+	t.Parallel()
 	b := setupBackfillWire(t)
 	var logbuf bytes.Buffer
 	h := b.handlers
@@ -429,6 +431,7 @@ func (b *backfillWireEnv) cancelBackfill(p crmcontracts.CaptureProvider) func(ht
 }
 
 func TestBackfillWire(t *testing.T) {
+	t.Parallel()
 	b := setupBackfillWire(t)
 	worker := &captureBackfillWorker{registry: b.registry, log: b.handlers.log}
 
@@ -835,6 +838,7 @@ func (r backfillAuthority) AdmittedAuthority(ctx context.Context, ws, human, _ i
 // StartBackfill is given an enqueue that does nothing, so the run is committed
 // live with no pager, which is exactly the row a lost attempt leaves.
 func TestTheNightlyReconcileRestoresAPagerAndDoesNotDoubleOne(t *testing.T) {
+	t.Parallel()
 	b := setupBackfillWire(t)
 	ctx := principal.WithWorkspaceID(context.Background(), b.env.WS)
 	jobCtx := backfillWorkContext(ctx, t, b)
@@ -896,6 +900,7 @@ func pagersFor(t *testing.T, pool *pgxpool.Pool, runID ids.UUID) int {
 // An agent starts and cancels its own user's backfill. A colleague's agent finds
 // no run of theirs to cancel.
 func TestAnAgentStartsAndCancelsItsOwnUsersBackfill(t *testing.T) {
+	t.Parallel()
 	b := setupBackfillWire(t)
 	perms := principal.Permissions{
 		Objects:  map[string]principal.ObjectGrant{"activity": {Create: true, Read: true}},

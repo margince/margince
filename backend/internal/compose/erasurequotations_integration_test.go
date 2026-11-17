@@ -141,6 +141,7 @@ func countQuoting(t *testing.T, e *integration.Env, words string) int {
 // name, and the proposal read out of it is filed against the transcript rather
 // than against them.
 func TestErasureEmptiesTheQuotationAProposalWasReadFrom(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	subject, _, approvalID := transcriptSubject(t, e)
 
@@ -175,6 +176,7 @@ func TestErasureEmptiesTheQuotationAProposalWasReadFrom(t *testing.T) {
 // produced from them. Its schema means it to go by cascade, and that cascade
 // has never fired, because no engine deletes an activity.
 func TestErasureDropsTheReadingOfTheTranscriptItErased(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	subject, activityID, _ := transcriptSubject(t, e)
 
@@ -197,6 +199,7 @@ func TestErasureDropsTheReadingOfTheTranscriptItErased(t *testing.T) {
 // because the subject's address is still readable in the source it was quoted
 // from.
 func TestErasureLeavesTheQuotationOfAMeetingItMayNotDestroy(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	subject := e.SeedContact(t, "Mara Kessler", nil)
 	const addr = "mara.kessler@example.com"
@@ -238,6 +241,7 @@ func TestErasureLeavesTheQuotationOfAMeetingItMayNotDestroy(t *testing.T) {
 // action removes it.
 // A quotation left behind here is never revisited by anything.
 func TestRetentionErasingATranscriptEmptiesTheProposalQuotingIt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	integration.SeedRetentionPolicies(t, e)
 
@@ -276,6 +280,7 @@ func TestRetentionErasingATranscriptEmptiesTheProposalQuotingIt(t *testing.T) {
 // quotes is erased. Redemption reads the untouched diff_hash, not the blanked
 // payload, so a live token could still run the call. The verdict stays.
 func TestErasingAQuotedRecordSpendsTheTokenOfAnApprovedButUnredeemedProposal(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	integration.SeedRetentionPolicies(t, e)
 
@@ -313,6 +318,7 @@ func TestErasingAQuotedRecordSpendsTheTokenOfAnApprovedButUnredeemedProposal(t *
 // retention age-out would tell a supervisory authority that a window ran out on
 // a record where somebody actually decided.
 func TestAControllerReleasingARestrictionSaysSoOnTheCardsItWithdrew(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	integration.SeedRetentionPolicies(t, e)
 
@@ -377,6 +383,7 @@ func releaseControllerCtx(e *integration.Env) context.Context {
 // own words, and a subject told it was destroyed must have been able to see it
 // was held.
 func TestSubjectAccessHandsBackTheQuotationHeldAboutThem(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	subject, _, _ := transcriptSubject(t, e)
 
@@ -401,6 +408,7 @@ func TestSubjectAccessHandsBackTheQuotationHeldAboutThem(t *testing.T) {
 // sentence out of a meeting they were never part of, about contacts they have no
 // relationship to.
 func TestSubjectAccessWithholdsAQuotationFromARecordTheSubjectHasNoPartIn(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	subject := e.SeedContact(t, "Mara Kessler", nil)
 	const addr = "mara.kessler@example.com"

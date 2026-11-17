@@ -25,6 +25,7 @@ import (
 )
 
 func TestAnOutlookBoldFromReplyQuotingOurSignatureAddsNoMemberNumber(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.WsExec(t, `INSERT INTO email_signature (owner_id, body, phone) VALUES ($1, '', $2)`, e.AdminUser, memberNumber)
 	contact := seedEnrichContact(t, e, "bob@window.example", "Works for me.\n\nBob Contact\n"+bobOwnNumber+"\n\n"+
@@ -37,6 +38,7 @@ func TestAnOutlookBoldFromReplyQuotingOurSignatureAddsNoMemberNumber(t *testing.
 }
 
 func TestACardKeepsAMembersSwitchboard(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.WsExec(t, `INSERT INTO email_signature (owner_id, body, phone) VALUES ($1, '', $2)`, e.AdminUser, memberNumber)
 	kim := seedEnrichContact(t, e, "kim@shared.example", "Hello")
@@ -82,6 +84,7 @@ func signedAndNarrowed(t *testing.T, e *integration.Env) (contact, mail ids.UUID
 const narrowedReason = "the mail it was read from was narrowed"
 
 func TestNarrowingTakesTheSignatureTitleAndNumberOffTheContact(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact, mail := signedAndNarrowed(t, e)
 
@@ -103,6 +106,7 @@ func TestNarrowingTakesTheSignatureTitleAndNumberOffTheContact(t *testing.T) {
 }
 
 func TestARescopeOfAMailWidenedAgainLeavesItsSignatureFields(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact, mail := signedAndNarrowed(t, e)
 	e.WsExec(t, `UPDATE activity SET audience = 'workspace' WHERE id = $1`, mail)
@@ -116,6 +120,7 @@ func TestARescopeOfAMailWidenedAgainLeavesItsSignatureFields(t *testing.T) {
 }
 
 func TestANarrowingWaitsForTheSignatureWriterInsteadOfDeadlocking(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact, mail := signedAndNarrowed(t, e)
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
@@ -162,6 +167,7 @@ func TestANarrowingWaitsForTheSignatureWriterInsteadOfDeadlocking(t *testing.T) 
 }
 
 func TestTheRepairTakesBackANameReadFromAQuote(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	read := seedNamedContact(t, e, "mai@window.example", "Mai", "connector:gmail")
 	edited := seedNamedContact(t, e, "mai.edited@window.example", "Mai", "connector:gmail")
@@ -191,6 +197,7 @@ func TestTheRepairTakesBackANameReadFromAQuote(t *testing.T) {
 }
 
 func TestTheRepairTakesBackFieldsWhoseMailIsGone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	gone := map[string][]string{
 		"archived": {`UPDATE activity SET archived_at = occurred_at WHERE id = $1`},

@@ -29,6 +29,7 @@ func reminderOf(t *testing.T, o *owedEnv, mail ids.UUID) (string, string) {
 // filing goes stale. A narrowed mail then keeps a reminder that hides it from
 // the waiting lane. An opened one keeps a reminder its assignee alone reads.
 func TestAReminderFollowsTheReachOfItsMail(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.contact(t, "Buyer", "buyer@customer.example")
 	mail := o.capture(t, owedMail{
@@ -79,6 +80,7 @@ func TestAReminderFollowsTheReachOfItsMail(t *testing.T) {
 // So this is the path it takes most often, and the one a failure would be
 // loudest in.
 func TestAMailWithNoReminderIsLeftAlone(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.contact(t, "Buyer", "buyer@customer.example")
 	mail := o.capture(t, owedMail{
@@ -107,6 +109,7 @@ func TestAMailWithNoReminderIsLeftAlone(t *testing.T) {
 // A reminder a human set the audience of keeps it. ReasonManual is a lock no
 // derivation moves, so a later change to the mail leaves the human's choice.
 func TestAReminderAHumanNarrowedKeepsItsAudience(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.contact(t, "Buyer", "buyer@customer.example")
 	mail := o.capture(t, owedMail{

@@ -25,6 +25,7 @@ import (
 )
 
 func TestCompanyOfferCorrectionRunsThroughTheExecutor(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:test")
 	var idsToClear []ids.UUID

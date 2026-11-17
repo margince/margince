@@ -23,6 +23,7 @@ import (
 )
 
 func TestAHoldReleaseRetriesWhenItsEvidenceMovesToAnotherComponent(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const oldKey, newKey, email = "hold-old-component", "hold-new-component", "held@customer.example"
 	for _, input := range []activities.LogActivityInput{

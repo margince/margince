@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+//testdb:serial binds a process-wide job dependency
 func TestWebsiteAddressWritersQueueThroughTheConfiguredProductionBinding(t *testing.T) {
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)

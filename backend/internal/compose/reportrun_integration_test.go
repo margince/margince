@@ -131,6 +131,7 @@ func dealCount(t *testing.T, answer AnalyticsAnswer) float64 {
 // replay would have served the asker's numbers without ever consulting the
 // reader's grants.
 func TestASavedRunAnswersEachReaderUnderTheirOwnAuthority(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	amount := int64(100_000)
 	// Six deals: above the floor of five, so the answer is served whole and a
@@ -168,6 +169,7 @@ func TestASavedRunAnswersEachReaderUnderTheirOwnAuthority(t *testing.T) {
 // is the property the whole design rests on, and it is the one a cache would
 // silently break.
 func TestASavedRunIsRecomputedRatherThanReplayed(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	amount := int64(100_000)
 	for range 6 {
@@ -202,6 +204,7 @@ func TestASavedRunIsRecomputedRatherThanReplayed(t *testing.T) {
 // and a citation to one that does not are different facts, and the reader is
 // entitled to neither the rows nor the inference.
 func TestASavedRunIsRefusedToAReaderWhoMayNotReadThePopulation(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	amount := int64(100_000)
 	for range 6 {
@@ -231,6 +234,7 @@ func TestASavedRunIsRefusedToAReaderWhoMayNotReadThePopulation(t *testing.T) {
 
 // A citation to nothing is a 404, not a 500.
 func TestAnUnknownRunIsNotFound(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	if _, err := e.readRun(e.askerCtx(), t, ids.NewV7()); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("dereferencing an unknown run answered %v and should answer not-found", err)
@@ -242,6 +246,7 @@ func TestAnUnknownRunIsNotFound(t *testing.T) {
 // A report block re-asks a neighbouring question by editing this one, so a
 // round trip that drops a filter would silently widen what the next query asks.
 func TestASavedRunReturnsTheQuestionItSaved(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	amount := int64(100_000)
 	for range 6 {
@@ -276,6 +281,7 @@ func TestASavedRunReturnsTheQuestionItSaved(t *testing.T) {
 // meaning after somebody approved it, so a re-run is a NEW row. This asserts the
 // property the table has no version column for: asking twice yields two ids.
 func TestSavingTheSameQuestionTwiceMakesTwoRuns(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	amount := int64(100_000)
 	for range 6 {
@@ -295,6 +301,7 @@ func TestSavingTheSameQuestionTwiceMakesTwoRuns(t *testing.T) {
 // audit_log is append-only and outlives the run, so rows narrowed for one
 // contact must not be copied into an image every support engineer can read.
 func TestSavingARunAuditsTheQuestionAndNotTheRows(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	amount := int64(100_000)
 	for range 6 {
@@ -327,6 +334,7 @@ func TestSavingARunAuditsTheQuestionAndNotTheRows(t *testing.T) {
 // The drawer's whole job: a report block names a run and a cell, and this turns
 // that citation into rows somebody can read.
 func TestACitedCellOpensToItsRecords(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	amount := int64(100_000)
 	for range 6 {
@@ -355,6 +363,7 @@ func TestACitedCellOpensToItsRecords(t *testing.T) {
 // stopped the door reaching it would leave a citation explainable as a broader
 // cell than the one cited.
 func TestACitedCellIsRefusedWhenItNamesTheWrongNumberOfGroups(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	amount := int64(100_000)
 	for range 6 {
@@ -383,6 +392,7 @@ func TestACitedCellIsRefusedWhenItNamesTheWrongNumberOfGroups(t *testing.T) {
 
 // An unknown run explains to not-found, not to a server error.
 func TestAnUnknownRunHasNoCellToExplain(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	if _, err := e.explainRunCell(e.askerCtx(), t, ids.NewV7(), nil); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("explaining a cell of an unknown run answered %v", err)
@@ -400,6 +410,7 @@ func TestAnUnknownRunHasNoCellToExplain(t *testing.T) {
 // its own grant refusal on deal.read. Mutating either alone leaves
 // this green — defence in depth rather than a redundant check to delete.
 func TestACitedCellIsRefusedToAReaderWhoMayNotReadThePopulation(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	amount := int64(100_000)
 	for range 6 {
@@ -441,6 +452,7 @@ func (e *forecastEnv) explainRunCell(
 // The document carries a handle where the number goes; this is the proof that
 // the number arrives from the database rather than from the document.
 func TestAComposedReportResolvesItsFiguresFromTheRun(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	amount := int64(100_000)
 	for range 6 {
@@ -481,6 +493,7 @@ func TestAComposedReportResolvesItsFiguresFromTheRun(t *testing.T) {
 // The block still renders: a figure that vanished would leave the report
 // reading as complete while saying less.
 func TestAWithheldFigureRendersAsWithheld(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	amount := int64(100_000)
 	// Two deals, under the floor of five.
@@ -511,6 +524,7 @@ func TestAWithheldFigureRendersAsWithheld(t *testing.T) {
 
 // A report citing a run this reader may not read is refused whole.
 func TestAReportCitingAnUnreadableRunIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	amount := int64(100_000)
 	for range 6 {
@@ -558,6 +572,7 @@ func (e *forecastEnv) render(
 // drift, and the first sign of it would be a model reporting a number the
 // screen does not show.
 func TestTheReportToolAndTheRouteRenderTheSameDocument(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	amount := int64(100_000)
 	for range 6 {
@@ -631,6 +646,7 @@ func TestTheReportToolAndTheRouteRenderTheSameDocument(t *testing.T) {
 // its own reasoning and a handle beside it, and writing both looks like being
 // helpful. The refusal must reach it with the reason.
 func TestTheReportToolRefusesALiteralBesideAHandle(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	amount := int64(100_000)
 	for range 6 {

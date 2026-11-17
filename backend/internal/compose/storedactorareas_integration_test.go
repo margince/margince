@@ -38,6 +38,7 @@ func limitSeededPassport(t *testing.T, e *integration.Env, areas principal.WorkA
 }
 
 func TestQueuedWorkActsUnderThePassportsAreas(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	limitSeededPassport(t, e, salesWorkOnly)
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
@@ -53,6 +54,7 @@ func TestQueuedWorkActsUnderThePassportsAreas(t *testing.T) {
 }
 
 func TestARunningSessionIsHeldToAreasNarrowedAfterItAuthenticated(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	stamped := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:run", SeatType: principal.SeatFull,

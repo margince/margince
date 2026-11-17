@@ -23,6 +23,7 @@ import (
 )
 
 func TestExistingRequestTaskRequiresItsAssigneeToBeAddressed(t *testing.T) {
+	t.Parallel()
 	for _, scenario := range []string{"copied importer", "addressed assignee", "old addressed assignee", "withdrawn request", "answered request"} {
 		t.Run(scenario, func(t *testing.T) {
 			e := integration.Setup(t)

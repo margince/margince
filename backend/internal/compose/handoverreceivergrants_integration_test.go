@@ -19,6 +19,7 @@ import (
 )
 
 func TestHandoverResolvesReceiverGrantsAfterTheMembershipLock(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	memberManagerFor(t, e)
 	e.WsExec(t, `INSERT INTO role_assignment(user_id,role_id) SELECT @user::uuid,id FROM role WHERE key='admin'`, pgx.StrictNamedArgs{"user": e.Rep2})

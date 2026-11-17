@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
+//testdb:serial publishes the process-wide composed extension set
 func TestAConnectedUnitAppServesItsTokenAndKeepsItFromTheUnit(t *testing.T) {
 	e := setupExtRuntime(t)
 	v := &vendor{exchange: `{"access_token":"a1","refresh_token":"r1","expires_in":3600}`}
@@ -81,6 +82,7 @@ func TestAConnectedUnitAppServesItsTokenAndKeepsItFromTheUnit(t *testing.T) {
 	}
 }
 
+//testdb:serial publishes the process-wide composed extension set
 func TestTheAppListNamesAUnitAppWithItsTitleUnitAndCallback(t *testing.T) {
 	e := setupExtRuntime(t)
 	setComposedExtensions([]extension.Extension{{Name: "ledger", Version: "0.1.0", OAuthApps: []extension.OAuthApp{booksApp("https://auth.ledgerly.test/token")}}})

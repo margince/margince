@@ -19,7 +19,6 @@ package compose
 import (
 	"context"
 	"errors"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -28,9 +27,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
-	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/extsecrets"
 	"github.com/margince/margince/backend/internal/platform/testdb"
@@ -63,7 +60,7 @@ type ingressEnv struct {
 func setupIngress(t *testing.T) *ingressEnv {
 	t.Helper()
 	e := setupExtRuntime(t)
-	composeCapturingUnit(t, ingressUnit,
+	e.compose(composeCapturingUnit(ingressUnit,
 		// The probe unit SUPPLIES a transport as well as capturing from one, which
 		// is the shape a channel unit actually has — and what a unit may name on a
 		// message is bounded by this declaration, so a set without it would leave
@@ -71,26 +68,11 @@ func setupIngress(t *testing.T) *ingressEnv {
 		[]extension.Channel{{Provider: ingressProbeProvider, CredentialModel: extension.CredentialPerMember}},
 		extension.IngressSource{
 			System: ingressProbeSystem, Lands: []extension.RecordKind{extension.KindActivity},
-		})
-	bindCaptureForTest(t, e)
+		}))
+	e.composed.BindCapture(e.Pool, CaptureConfig{})
 	grantCapture(t, e, e.Rep1)
 	depositCredential(t, e, e.Rep1)
 	return &ingressEnv{extRuntimeEnv: e, member: e.Rep1}
-}
-
-// bindCaptureForTest binds the ONE capture pipeline and restores what was bound
-// before, rather than clearing to nil: a test that cleared would leave a
-// sibling refusing with errIngressUnwired, which names a deployment fault that
-// is not there.
-func bindCaptureForTest(t *testing.T, e *extRuntimeEnv) {
-	t.Helper()
-	previous := boundExtensionRuntime().captureSink
-	BindExtensionCapture(e.Pool, CaptureConfig{})
-	t.Cleanup(func() {
-		extensionRuntimeDeps.mu.Lock()
-		defer extensionRuntimeDeps.mu.Unlock()
-		extensionRuntimeDeps.captureSink = previous
-	})
 }
 
 // capturePolicy is the narrowest grant that lets a captured message land: the
@@ -181,7 +163,7 @@ func depositCredential(t *testing.T, e *extRuntimeEnv, member ids.UUID) {
 // context back would let a test pass the one context the port is designed not
 // to need.
 func (e *ingressEnv) ingestingRuntime() *callRuntime {
-	return jobRuntimeFor(e.callCtx(e.WS), ingressUnit, "1.0.0", "job/probe", boundExtensionRuntime())
+	return jobRuntimeFor(e.callCtx(e.WS), ingressUnit, "1.0.0", "job/probe", e.composed.binding())
 }
 
 // aProviderRecord is one directed message, keyed the way a connector keys one.
@@ -219,6 +201,7 @@ func mailDomainOf(email string) string {
 // provider record and the installation gains an activity, its raw evidence, a
 // ledger row and an outbox event — none of which the unit wrote or could write.
 func TestAUnitsRecordLandsAsAnActivityWithEvidenceAndTheWriteShape(t *testing.T) {
+	t.Parallel()
 	e := setupIngress(t)
 	rt := e.ingestingRuntime()
 
@@ -306,35 +289,9 @@ func aChannelMessage(key, senderEmail, account string) extension.Record {
 // have if the boot reconcile did not write it.
 func registerProbeTransport(t *testing.T, e *ingressEnv) {
 	t.Helper()
-	// The reconcile sets BOTH packages' in-memory sendable snapshots to what it
-	// was passed. Restore the pre-registry default rather than leaving this
-	// test's set behind, or a later test in the same process sees an
-	// installation with no Telegram transport — which is a failure that names
-	// somebody else's code.
-	t.Cleanup(func() {
-		activities.SetChannelProviders([]string{capture.ProviderTelegram})
-		comms.SetChannelProviders([]string{capture.ProviderTelegram})
-	})
-	if err := reconcileChannelProviders(context.Background(), e.Pool, []string{capture.ProviderTelegram}); err != nil {
+	if err := reconcileComposedProviders(context.Background(), e.Pool, []string{capture.ProviderTelegram}, e.composed); err != nil {
 		t.Fatalf("registering the unit's transport: %v", err)
 	}
-	t.Cleanup(func() {
-		// In dependency order, and the order itself is the finding: the registry
-		// row is a foreign-key parent of every message filed on it AND of every
-		// identity bound on it, which is what stops a live transport being
-		// deregistered out from under the conversations that reference it. That
-		// is also why the boot reconcile never deletes.
-		owner := integration.OwnerConn(t)
-		for _, statement := range []string{
-			`DELETE FROM activity WHERE channel_provider = $1`,
-			`DELETE FROM contact_channel_identity WHERE provider = $1`,
-			`DELETE FROM channel_provider WHERE provider = $1`,
-		} {
-			if _, err := owner.Exec(context.Background(), statement, ingressProbeProvider); err != nil {
-				t.Errorf("cleaning up after the probe transport (%s): %v", statement, err)
-			}
-		}
-	})
 }
 
 // A unit's captured chat message lands as a MESSAGE on the unit's own transport,
@@ -344,6 +301,7 @@ func registerProbeTransport(t *testing.T, e *ingressEnv) {
 // A message filed as a `note` is a conversation nothing can reply on.
 // The identity binding is what the reply path resolves its recipient from.
 func TestAUnitsChannelMessageLandsAsARepliableConversation(t *testing.T) {
+	t.Parallel()
 	e := setupIngress(t)
 	registerProbeTransport(t, e)
 	rt := e.ingestingRuntime()
@@ -395,6 +353,7 @@ func TestAUnitsChannelMessageLandsAsARepliableConversation(t *testing.T) {
 // send anchor. A rep replying on it would transmit from that bot to whoever
 // the unit linked.
 func TestAUnitCannotFileAMessageOnACoreConnectorsTransport(t *testing.T) {
+	t.Parallel()
 	e := setupIngress(t)
 	rt := e.ingestingRuntime()
 
@@ -416,6 +375,7 @@ func TestAUnitCannotFileAMessageOnACoreConnectorsTransport(t *testing.T) {
 // A replay is a no-op, which is the property the whole cursor rule rests on: a
 // unit may re-ingest anything it is not sure about, and does.
 func TestASecondIngestOfTheSameRecordLandsNothingNew(t *testing.T) {
+	t.Parallel()
 	e := setupIngress(t)
 	rt := e.ingestingRuntime()
 	record := aProviderRecord("ws-7:1042", "outside@example.test")
@@ -454,6 +414,7 @@ func TestASecondIngestOfTheSameRecordLandsNothingNew(t *testing.T) {
 // appears". A first-time corporate address is captured and DEFERRED to the
 // pending inbox, and that is the common case for a chat connector.
 func TestAFirstTimeCorporateSenderDefersItsCounterparty(t *testing.T) {
+	t.Parallel()
 	e := setupIngress(t)
 	rt := e.ingestingRuntime()
 
@@ -475,6 +436,7 @@ func TestAFirstTimeCorporateSenderDefersItsCounterparty(t *testing.T) {
 // in leaving no company question behind. Both arms are asserted because a suite that pinned only
 // one would describe the pipeline as doing whichever it happened to check.
 func TestAFreemailSenderDefersTheContactAndNamesNoCompany(t *testing.T) {
+	t.Parallel()
 	e := setupIngress(t)
 	rt := e.ingestingRuntime()
 
@@ -521,6 +483,7 @@ func TestAFreemailSenderDefersTheContactAndNamesNoCompany(t *testing.T) {
 // same gate and the reason this test seeds a verified domain rather than
 // assuming one.
 func TestAWhollyInternalMessageIsSkippedAsASuccess(t *testing.T) {
+	t.Parallel()
 	e := setupIngress(t)
 	registerOwnDomain(t, e.extRuntimeEnv, "authz.test")
 	rt := e.ingestingRuntime()
@@ -563,6 +526,7 @@ func registerOwnDomain(t *testing.T, e *extRuntimeEnv, domain string) {
 // row after a declaration changes, and what an operator can read has to be what
 // the core acts on.
 func TestACredentialUnderAnUndeclaredKeyIsNotConsent(t *testing.T) {
+	t.Parallel()
 	e := setupIngress(t)
 	ctx := e.callCtx(e.WS)
 	store := extsecrets.For(ingressUnit, e.Pool, e.vault)
@@ -585,6 +549,7 @@ func TestACredentialUnderAnUndeclaredKeyIsNotConsent(t *testing.T) {
 // The consent check, against the real store: a member who has deposited nothing
 // with this unit cannot be acted for, whatever the unit passes.
 func TestAMemberWhoDepositedNothingCannotBeActedFor(t *testing.T) {
+	t.Parallel()
 	e := setupIngress(t)
 	grantCapture(t, e.extRuntimeEnv, e.Rep2)
 	rt := e.ingestingRuntime()
@@ -604,6 +569,7 @@ func TestAMemberWhoDepositedNothingCannotBeActedFor(t *testing.T) {
 // the same member, the same record — refused after the member's grants are
 // taken away, with no restart and nothing re-bound.
 func TestADemotedMemberLandsNothingFromTheNextCallOn(t *testing.T) {
+	t.Parallel()
 	e := setupIngress(t)
 	rt := e.ingestingRuntime()
 
@@ -643,6 +609,7 @@ func TestADemotedMemberLandsNothingFromTheNextCallOn(t *testing.T) {
 // an archived one, and an id belonging to nobody at all. A not-found would be
 // the DISCLOSING answer, because only a lookup can tell those three apart.
 func TestAMemberOfAnotherWorkspaceCannotBeActedFor(t *testing.T) {
+	t.Parallel()
 	e := setupIngress(t)
 	rt := e.ingestingRuntime()
 
@@ -663,10 +630,11 @@ func TestAMemberOfAnotherWorkspaceCannotBeActedFor(t *testing.T) {
 // defect it guards is not a failure but a hang: the ingest would wait for the
 // only connection, which the unit's own transaction is holding.
 func TestAnIngestInsideAUnitsTransactionIsRefusedOnAPoolOfOne(t *testing.T) {
+	t.Parallel()
 	e := setupIngress(t)
 	single := singleConnectionPool(t)
 	rt := jobRuntimeFor(e.callCtx(e.WS), ingressUnit, "1.0.0", "job/probe",
-		extensionRuntimeBinding{pool: single, vault: e.vault, captureSink: boundExtensionRuntime().captureSink})
+		extensionRuntimeBinding{pool: single, vault: e.vault, captureSink: e.composed.binding().captureSink, composed: e.composed})
 
 	// A wall clock, because the failure this guards is a HANG: without the
 	// refusal this call waits for a connection that cannot come back, and a
@@ -690,11 +658,7 @@ func TestAnIngestInsideAUnitsTransactionIsRefusedOnAPoolOfOne(t *testing.T) {
 // process that stops.
 func singleConnectionPool(t *testing.T) *pgxpool.Pool {
 	t.Helper()
-	dsn := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if dsn == "" {
-		t.Fatal("MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
-	cfg, err := pgxpool.ParseConfig(dsn)
+	cfg, err := pgxpool.ParseConfig(testdb.For(t).AppDSN)
 	if err != nil {
 		t.Fatalf("parsing the app DSN: %v", err)
 	}
@@ -743,6 +707,7 @@ var _ = principal.PrincipalConnector
 // because the row is a COUNT and a writer that overwrote instead of
 // accumulating would report a broken connector as having dropped one record.
 func TestARefusedRecordIsCountedAgainstTheUnitThatSentIt(t *testing.T) {
+	t.Parallel()
 	e := setupIngress(t)
 	rt := e.ingestingRuntime()
 	ctx := context.Background()
@@ -798,6 +763,7 @@ func TestARefusedRecordIsCountedAgainstTheUnitThatSentIt(t *testing.T) {
 // the extension tier a retention and erasure question about third-party content
 // that the tier was deliberately built without.
 func TestTheBreadcrumbKeepsNoPartOfTheRefusedRecord(t *testing.T) {
+	t.Parallel()
 	e := setupIngress(t)
 	rt := e.ingestingRuntime()
 	ctx := context.Background()

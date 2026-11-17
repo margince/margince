@@ -17,6 +17,7 @@ import (
 )
 
 func TestABulkArchiveTakesTheRepsOwnDealsAndSkipsATeammates(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	pipeline, open, _ := integration.DealFixture(t, e)
 	item := func(owner ids.UUID) crmcontracts.BulkItem {

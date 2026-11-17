@@ -22,6 +22,7 @@ import (
 )
 
 func TestAMemberMergeStagesReviewsApprovesAndRedeemsThroughTheToolDoor(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	manager := memberManagerFor(t, e)
 	human := e.As(e.AdminUser, nil, integration.AdminWithSignals)

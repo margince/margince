@@ -77,6 +77,7 @@ func (f chatFixture) chatActivities(t *testing.T) int {
 }
 
 func TestAConfirmedChatScreenshotLandsAsOneMessageWithTheImageAttached(t *testing.T) {
+	t.Parallel()
 	f := readChatScreenshot(t, chatReply())
 	if n := f.chatActivities(t); n != 0 {
 		t.Fatalf("the reading filed %d activities before the user confirmed", n)
@@ -111,6 +112,7 @@ func TestAConfirmedChatScreenshotLandsAsOneMessageWithTheImageAttached(t *testin
 }
 
 func TestAnEditedOrEmptyChatTextIsTheUsersOwn(t *testing.T) {
+	t.Parallel()
 	for label, body := range map[string]*string{"edited": new("Lena: see you Thursday"), "empty": nil} {
 		t.Run(label, func(t *testing.T) {
 			f := readChatScreenshot(t, chatReply())
@@ -127,6 +129,7 @@ func TestAnEditedOrEmptyChatTextIsTheUsersOwn(t *testing.T) {
 }
 
 func TestAChatScreenshotIsStillFiledWhenTheModelCouldNotReadIt(t *testing.T) {
+	t.Parallel()
 	f := readChatScreenshot(t, reply(notStated(chatFieldText), notStated(chatFieldName), notStated(chatFieldPhone)))
 	if _, err := f.file(t, nil); err != nil {
 		t.Fatalf("a screenshot with no readable chat could not be filed: %v", err)
@@ -137,6 +140,7 @@ func TestAChatScreenshotIsStillFiledWhenTheModelCouldNotReadIt(t *testing.T) {
 }
 
 func TestAChatConfirmThatCannotBeTrustedWritesNothing(t *testing.T) {
+	t.Parallel()
 	f := readChatScreenshot(t, chatReply())
 	body := chatScreenshotText
 	_, err := NewChatCaptureFile(f.env.Pool, nil).File(f.env.Admin(), f.attachment, crmcontracts.FileChatCaptureRequest{
@@ -158,6 +162,7 @@ func TestAChatConfirmThatCannotBeTrustedWritesNothing(t *testing.T) {
 }
 
 func TestAChatIsReadOnlyFromAnImageTheReaderTakes(t *testing.T) {
+	t.Parallel()
 	env := integration.Setup(t)
 	ctx := env.Admin()
 	store := activities.NewStore(env.DB()).WithBlobstore(blobstore.NewMemory())
@@ -185,6 +190,7 @@ func TestAChatIsReadOnlyFromAnImageTheReaderTakes(t *testing.T) {
 // Art. 17: erasing the contact removes the filed screenshot's bytes, its row,
 // and the reading that holds the copied text.
 func TestErasingTheContactErasesTheFiledScreenshot(t *testing.T) {
+	t.Parallel()
 	f := readChatScreenshot(t, chatReply())
 	body := chatScreenshotText
 	filed, err := f.file(t, &body)
@@ -219,6 +225,7 @@ func TestErasingTheContactErasesTheFiledScreenshot(t *testing.T) {
 // checked against. The deal-facts poll does not return it, and an agent
 // cannot read it.
 func TestAChatReadingIsNotDealFactsAndNotForAnAgent(t *testing.T) {
+	t.Parallel()
 	f := readChatScreenshot(t, chatReply())
 	h := activities.NewHandlers(f.env.DB()).WithBlobstore(f.blob)
 	poll := func(ctx context.Context, question *crmcontracts.GetAttachmentExtractionParamsQuestion) *httptest.ResponseRecorder {

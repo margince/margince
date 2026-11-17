@@ -90,6 +90,7 @@ func inspectedByTheRepair(ctx context.Context, t *testing.T, h *historyEnv) (ins
 }
 
 func TestTheSignatureHistoryTaskReopensOnlyUntitledContactsWithOlderMail(t *testing.T) {
+	t.Parallel()
 	h := setupHistory(t)
 	ctx := principal.SystemActing(h.e.Admin(), "system:datatask-test")
 	older := h.writes(t, 0, signed("Head of Procurement"))

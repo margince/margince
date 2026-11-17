@@ -117,6 +117,7 @@ func (h previewHarness) auditRows(t *testing.T) int {
 }
 
 func TestPreviewListsEveryBadPathAndSavesNothing(t *testing.T) {
+	t.Parallel()
 	h := newPreviewHarness(t)
 	body, etag := h.documentWithTier(t, "cheap_cloud", `{"provider":{"sort":{"by":"fastest"},"only":["groq"]}}`)
 	audited := h.auditRows(t)
@@ -143,6 +144,7 @@ func TestPreviewListsEveryBadPathAndSavesNothing(t *testing.T) {
 }
 
 func TestPreviewShowsTheWireTheTierWillSend(t *testing.T) {
+	t.Parallel()
 	h := newPreviewHarness(t)
 	body, _ := h.documentWithTier(t, "cheap_cloud", `{"provider":{"sort":"latency"}}`)
 
@@ -174,6 +176,7 @@ func TestPreviewShowsTheWireTheTierWillSend(t *testing.T) {
 // The contract type drops a key it does not know, so the raw body is read: a
 // misspelt key the broker would ignore is refused by its path.
 func TestAnUnknownNestedKeyIsRefusedByItsPathOnSave(t *testing.T) {
+	t.Parallel()
 	h := newPreviewHarness(t)
 	body, etag := h.documentWithTier(t, "premium", `{"provider":{"sort_by":"price"}}`)
 	req := httptest.NewRequest(http.MethodPut, "/v1/ai/routing", strings.NewReader(body)).WithContext(h.ctx)
@@ -188,6 +191,7 @@ func TestAnUnknownNestedKeyIsRefusedByItsPathOnSave(t *testing.T) {
 }
 
 func TestTheRoutingSchemaIsServedToAnAdmin(t *testing.T) {
+	t.Parallel()
 	h := newPreviewHarness(t)
 	rec := httptest.NewRecorder()
 
@@ -205,6 +209,7 @@ func TestTheRoutingSchemaIsServedToAnAdmin(t *testing.T) {
 // A key the decoder refuses is a problem on that path, not a lane gone
 // missing: the preview still knows the tier's provider and judges the rest.
 func TestPreviewNamesAnUnknownKeyAndKeepsTheLane(t *testing.T) {
+	t.Parallel()
 	h := newPreviewHarness(t)
 	body, _ := h.documentWithTier(t, "cheap_cloud", `{"model":"x"}`)
 

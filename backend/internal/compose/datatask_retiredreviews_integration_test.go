@@ -55,6 +55,7 @@ func seedRetiredReviews(t *testing.T, e *integration.Env) retiredReviewFixture {
 }
 
 func TestTheRetiredReviewTaskClosesOnlyOpenReviewsAndReplaysSafely(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	f := seedRetiredReviews(t, e)
@@ -99,6 +100,7 @@ func TestTheRetiredReviewTaskClosesOnlyOpenReviewsAndReplaysSafely(t *testing.T)
 }
 
 func TestTheRetiredReviewBatchRollsBackWithItsTransaction(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	f := seedRetiredReviews(t, e)
@@ -125,6 +127,7 @@ func TestTheRetiredReviewBatchRollsBackWithItsTransaction(t *testing.T) {
 // A completion waits for an edit already under way and takes the new version.
 // One colleague's edit therefore cannot abort the batch.
 func TestAnEditDuringTheBatchDoesNotAbortTheTaskCompletion(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	f := seedRetiredReviews(t, e)
@@ -158,6 +161,7 @@ func TestAnEditDuringTheBatchDoesNotAbortTheTaskCompletion(t *testing.T) {
 // A task that still carries another open finding stays open: the review closes,
 // and the close_past finding filed under the same task keeps it.
 func TestTheRetiredReviewTaskLeavesATaskOtherFindingsStillNeed(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	f := seedRetiredReviews(t, e)

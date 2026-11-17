@@ -45,6 +45,7 @@ func (o *owedEnv) logMail(t *testing.T, contact ids.UUID, direction, subject str
 }
 
 func TestAHandLoggedReplyLeavesTheMoveWithUsWhereItLeavesTheMailOwed(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	company := ids.From[ids.CompanyKind](o.e.SeedCompany(t, "Logged By Hand GmbH", nil))
 	contact := o.contact(t, "Pat Logged", "pat@logged.example")
@@ -145,6 +146,7 @@ func (o *owedEnv) badgeOf(t *testing.T, activity ids.UUID) crmcontracts.EmailSum
 // A reply logged against the mail it answers joins that mail's thread, so the
 // thread rule reads it as the answer.
 func TestALoggedReplyOnTheMailsThreadAnswersIt(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	contact := o.contact(t, "Pat Threaded", "pat@threaded.example")
 	at := o.now.Add(-3 * time.Hour)
@@ -174,6 +176,7 @@ func TestALoggedReplyOnTheMailsThreadAnswersIt(t *testing.T) {
 // reply is accepted on a thread of its own, the mail stays owed, and the last
 // exchange says so.
 func TestAReplyToAMailWithNoThreadIsAcceptedAndTheMoveStaysOurs(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	contact := o.contact(t, "Pat Old", "pat@old.example")
 	theirs := o.logMail(t, contact, "inbound", "Can we talk pricing?", o.now.Add(-3*time.Hour))
@@ -201,6 +204,7 @@ func TestAReplyToAMailWithNoThreadIsAcceptedAndTheMoveStaysOurs(t *testing.T) {
 
 // Each check on the mail a reply names refuses the reply, naming the field.
 func TestAReplyIsRefusedForAMailItCannotJoin(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	pat := o.contact(t, "Pat Refused", "pat@refused.example")
 	sam := o.contact(t, "Sam Other", "sam@other.example")
@@ -270,6 +274,7 @@ func TestAReplyIsRefusedForAMailItCannotJoin(t *testing.T) {
 // A caller may not state a thread key in the form only a hand-logged mail
 // starts. Both the create mapping and the store every writer calls refuse it.
 func TestAStatedHandLoggedThreadKeyIsRefused(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	pat := o.contact(t, "Pat Stated", "pat@stated.example")
 	at := o.now.Add(-time.Hour)
@@ -303,6 +308,7 @@ func TestAStatedHandLoggedThreadKeyIsRefused(t *testing.T) {
 // Our mail to Alice, copying Bob, is matched with Alice's mail by its address.
 // Bob's newer mail is filed under the same reply and must not decide it.
 func TestACopiedContactsMailDoesNotDecideTheMove(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	alice := o.contact(t, "Alice Asked", "alice@cc.example")
 	bob := o.contact(t, "Bob Copied", "bob@cc.example")
@@ -342,6 +348,7 @@ func TestACopiedContactsMailDoesNotDecideTheMove(t *testing.T) {
 // A newer mail the reader may not open neither decides the move nor hides an
 // older mail they can read that is still owed.
 func TestAMailTheReaderCannotOpenDoesNotHideAnOwedOne(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	pat := o.contact(t, "Pat Private", "pat@private.example")
 	start := o.now.Add(-3 * time.Hour)

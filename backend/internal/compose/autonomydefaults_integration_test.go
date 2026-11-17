@@ -16,6 +16,7 @@ import (
 )
 
 func TestLifecycleProposalsFollowTheOwnersDefaultAndOffChoice(t *testing.T) {
+	t.Parallel()
 	for _, disabled := range []bool{false, true} {
 		name := "default on"
 		if disabled {
@@ -61,6 +62,7 @@ func prepareLifecycleOwner(t *testing.T, e *integration.Env, company ids.UUID) {
 }
 
 func TestAutomaticTerminationRechecksANewlyActiveAgreement(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := seedAccountAtStage(t, e, "customer")
 	prepareLifecycleOwner(t, e, company)

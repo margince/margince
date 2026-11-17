@@ -40,6 +40,7 @@ import (
 // the row it returns is shaped by the engine's authority filter and its
 // target-label freeze rather than by a fixture's idea of them.
 func TestADecisionWaitingReachesTheReceiptThroughTheRealApprovalsEngine(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	since := time.Now().Add(-time.Hour)
 	pipeline, open, _ := integration.DealFixture(t, e)
@@ -103,6 +104,7 @@ func TestADecisionWaitingReachesTheReceiptThroughTheRealApprovalsEngine(t *testi
 }
 
 func TestPersonalDecisionScopeAgreesAcrossHomeAndWorklist(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := time.Date(2026, 10, 18, 12, 0, 0, 0, time.UTC)
 	pipeline, open, _ := integration.DealFixture(t, e)

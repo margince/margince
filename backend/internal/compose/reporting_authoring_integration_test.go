@@ -21,6 +21,7 @@ import (
 )
 
 func TestReportingFrameworkRejectsAmbiguousQualificationAndCaptureScopes(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	framework, err := f.service.GetFramework(f.human)
 	if err != nil {
@@ -74,6 +75,7 @@ func TestReportingFrameworkRejectsAmbiguousQualificationAndCaptureScopes(t *test
 }
 
 func TestReportingSharedManagersCanReviseOnlyVisibleReports(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	actor, ok := principal.Actor(f.human)
 	if !ok {
@@ -155,6 +157,7 @@ func TestReportingWritesNameTheirNestedScope(t *testing.T) {
 }
 
 func TestReportingTargetsRejectAmbiguousPeriodsAndIdentityChanges(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	cases := []struct {
 		name   string
@@ -192,6 +195,7 @@ func TestReportingTargetsRejectAmbiguousPeriodsAndIdentityChanges(t *testing.T) 
 }
 
 func TestReportingTargetsTakeAPipelineOnlyWhereTheFigureFiltersByOne(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	for _, metric := range []crmcontracts.ReportingMetricID{"leads_promoted", "meetings_held", "accepted_opportunities"} {
 		input := f.target.Definition
@@ -215,6 +219,7 @@ func TestReportingTargetsTakeAPipelineOnlyWhereTheFigureFiltersByOne(t *testing.
 }
 
 func TestReportingStoredTargetOnAnUnfilteredPipelineStaysRevisableAndRetirable(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	input := f.target.Definition
 	input.Metric, input.PipelineId = "meetings_held", nil

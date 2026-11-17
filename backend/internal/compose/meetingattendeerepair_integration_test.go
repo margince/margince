@@ -89,6 +89,7 @@ func repairOutcome(t *testing.T, e *integration.Env, id ids.UUID) (string, bool)
 
 // A meeting past the cap is recorded as capped, not as one that named nobody.
 func TestTheRepairSaysCappedSeatsRatherThanFoundNone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedCalendarConnection(t, e)
 
@@ -122,6 +123,7 @@ func TestTheRepairSaysCappedSeatsRatherThanFoundNone(t *testing.T) {
 // record every meeting as capped — satisfying the case above while resolving
 // nobody, which is the same defect wearing the new outcome's name.
 func TestAMeetingUnderTheCapStillBindsItsAttendees(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedCalendarConnection(t, e)
 
@@ -148,6 +150,7 @@ func TestAMeetingUnderTheCapStillBindsItsAttendees(t *testing.T) {
 // arm nothing had run — and the capped outcome is decided after that parse, so a shape it
 // could not read would record `unreadable` and settle the meeting just the same.
 func TestTheRepairReadsAGraphCalendarTooAndSaysCappedSeats(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedGraphCalendarConnection(t, e)
 

@@ -52,6 +52,7 @@ func (w noticeWorld) connect(t *testing.T, user string) {
 	}
 }
 
+//testdb:serial publishes the process-wide composed extension set
 func TestAnUnattendedNoticeNeedsAnActor(t *testing.T) {
 	w := setupNotices(t)
 	if _, err := w.sendUnattended(t, w.aboutTheDeal(w.reader.String(), "")); !errors.Is(err, extension.ErrForbidden) {
@@ -67,6 +68,7 @@ func TestAnUnattendedNoticeNeedsAnActor(t *testing.T) {
 	}
 }
 
+//testdb:serial publishes the process-wide composed extension set
 func TestANoticeSentForAMemberNeedsThemToHaveConnectedTheUnitAndOpenTheRecord(t *testing.T) {
 	w := setupNotices(t)
 	if _, err := w.sendUnattended(t, w.aboutTheDeal(w.reader.String(), extension.UserID(w.reader.String()))); !errors.Is(err, extension.ErrForbidden) {
@@ -84,12 +86,14 @@ func TestANoticeSentForAMemberNeedsThemToHaveConnectedTheUnitAndOpenTheRecord(t 
 }
 
 func TestASendWithACallerCannotNameAnotherActor(t *testing.T) {
+	t.Parallel()
 	w := setupNotices(t)
 	if _, err := w.send(t, w.aboutTheDeal(w.reader.String(), extension.UserID(w.reader.String()))); !errors.Is(err, extension.ErrInvalid) {
 		t.Errorf("ActAs on a send with a caller = %v, want ErrInvalid", err)
 	}
 }
 
+//testdb:serial publishes the process-wide composed extension set
 func TestANoticeCannotBeSentForAMemberWhoHasLeft(t *testing.T) {
 	w := setupNotices(t)
 	w.connect(t, w.departed.String())

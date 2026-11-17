@@ -50,6 +50,7 @@ func (o *owedEnv) settledAs(reader context.Context, t *testing.T, message ids.UU
 // settles only on a settled verdict, as the Worklist's owed state does: a
 // reply alone discharges nothing.
 func TestAScanCitationSettlesByTheWorklistsRule(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
 	ask := o.customerWrites(t, "pat@customer.example", "Listing details", o.now.Add(-6*time.Hour))
@@ -92,6 +93,7 @@ func TestAScanCitationSettlesByTheWorklistsRule(t *testing.T) {
 // Our promise is kept, for the scan, by our later mail on its thread to the
 // contact it was made to. Mail to someone else on the thread keeps nothing.
 func TestAScanCitationOfOurPromiseSettlesOnOurFollowUp(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	pat := o.contact(t, "Pat Buyer", "pat@customer.example")
 	o.contact(t, "Lee Other", "lee@other.example")
@@ -118,6 +120,7 @@ func TestAScanCitationOfOurPromiseSettlesOnOurFollowUp(t *testing.T) {
 // One promise mailed to Alice at one account and Bob at another is kept for
 // an account only by a follow-up to its own contact.
 func TestAPromiseIsKeptOnlyForTheAccountItsFollowUpReached(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	alice := o.contact(t, "Alice Ahrens", "alice@a.example")
 	bob := o.contact(t, "Bob Berg", "bob@b.example")
@@ -140,6 +143,7 @@ func TestAPromiseIsKeptOnlyForTheAccountItsFollowUpReached(t *testing.T) {
 // Our reply held to its participants settles nothing for a reader outside
 // them: they may not know the reply exists. A reply they may read settles.
 func TestOnlyAReplyTheReaderMayReadSettlesTheirCitation(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
 	ask := o.customerWrites(t, "pat@customer.example", "Listing details", o.now.Add(-6*time.Hour))

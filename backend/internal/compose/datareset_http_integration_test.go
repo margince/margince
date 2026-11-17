@@ -27,6 +27,7 @@ import (
 )
 
 func TestResetDataEndpointGates(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.SeedContact(t, "Alice", nil)
 

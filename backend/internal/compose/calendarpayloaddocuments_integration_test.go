@@ -78,6 +78,7 @@ func namedInvitation(from, to string, at time.Time) []byte {
 }
 
 func TestAnInvitationsCalendarFileStaysOffEveryDocumentsList(t *testing.T) {
+	t.Parallel()
 	for name, invitation := range map[string]func(from, to string, at time.Time) []byte{
 		"an unnamed calendar part": googleInvitation,
 		"a named invite.ics":       namedInvitation,

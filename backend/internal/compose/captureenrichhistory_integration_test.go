@@ -167,6 +167,7 @@ func sameMails(got, want []ids.UUID) bool {
 }
 
 func TestAnOlderSignatureFillsTheTitleWhenTheNewestMailHasNone(t *testing.T) {
+	t.Parallel()
 	h := setupHistory(t)
 	older := h.writes(t, 0, signed("Head of Procurement"))
 	newest := h.writes(t, 3, unsigned)
@@ -189,6 +190,7 @@ func TestAnOlderSignatureFillsTheTitleWhenTheNewestMailHasNone(t *testing.T) {
 }
 
 func TestTheThirdMailBackCanSupplyTheTitle(t *testing.T) {
+	t.Parallel()
 	h := setupHistory(t)
 	oldest := h.writes(t, 0, signed("Purchasing Lead"))
 	middle := h.writes(t, 1, "Hi,\n\nPat Buyer\n+49 30 1234567")
@@ -210,6 +212,7 @@ func TestTheThirdMailBackCanSupplyTheTitle(t *testing.T) {
 }
 
 func TestANewerSignatureTitleWinsOverAnOlderOne(t *testing.T) {
+	t.Parallel()
 	h := setupHistory(t)
 	older := h.writes(t, 0, signed("Intern"))
 	newest := h.writes(t, 4, signed("Managing Director"))
@@ -227,6 +230,7 @@ func TestANewerSignatureTitleWinsOverAnOlderOne(t *testing.T) {
 }
 
 func TestAnOlderMailNeverReplacesATitleAHumanEntered(t *testing.T) {
+	t.Parallel()
 	h := setupHistory(t)
 	if _, err := h.e.Contacts.UpdateContact(h.reader(), ids.From[ids.ContactKind](h.contact),
 		contacts.UpdateContactInput{Title: new("Head of Sales")}); err != nil {
@@ -247,6 +251,7 @@ func TestAnOlderMailNeverReplacesATitleAHumanEntered(t *testing.T) {
 }
 
 func TestATitleEnteredWhileTheModelReadsOlderMailStands(t *testing.T) {
+	t.Parallel()
 	h := setupHistory(t)
 	older := h.writes(t, 0, signed("Intern"))
 	h.writes(t, 2, unsigned)
@@ -269,6 +274,7 @@ func TestATitleEnteredWhileTheModelReadsOlderMailStands(t *testing.T) {
 }
 
 func TestTheWalkStopsAtTheDepth(t *testing.T) {
+	t.Parallel()
 	h := setupHistory(t)
 	oldest := h.writes(t, 0, signed("Purchasing Lead"))
 	second := h.writes(t, 1, unsigned)
@@ -291,6 +297,7 @@ func TestTheWalkStopsAtTheDepth(t *testing.T) {
 }
 
 func TestAModelErrorInTheWalkLeavesTheContactACandidate(t *testing.T) {
+	t.Parallel()
 	h := setupHistory(t)
 	older := h.writes(t, 0, signed("Head of Procurement"))
 	h.writes(t, 3, unsigned)
@@ -328,6 +335,7 @@ func (h *historyEnv) writesTo(t *testing.T, seat string, days int, body string) 
 }
 
 func TestASwitchedOffMailboxNoLongerHidesAnOlderMail(t *testing.T) {
+	t.Parallel()
 	h := setupHistory(t)
 	seat := h.secondMailbox(t)
 	older := h.writes(t, 0, signed("Head of Procurement"))
@@ -349,6 +357,7 @@ func TestASwitchedOffMailboxNoLongerHidesAnOlderMail(t *testing.T) {
 // TestTheWalkReadsOnlyMailThisPassMayRead gives the contact a newest mail with
 // no signature and one older signed mail the pass must not read.
 func TestTheWalkReadsOnlyMailThisPassMayRead(t *testing.T) {
+	t.Parallel()
 	for name, older := range map[string]func(*testing.T, *historyEnv) ids.UUID{
 		"a body not read in full": func(t *testing.T, h *historyEnv) ids.UUID {
 			mail := h.writes(t, 0, signed("Head of Procurement"))
@@ -410,6 +419,7 @@ func TestTheWalkReadsOnlyMailThisPassMayRead(t *testing.T) {
 }
 
 func TestTwoMailsAtTheSameTimeAreBothRead(t *testing.T) {
+	t.Parallel()
 	h := setupHistory(t)
 	signedMail := h.writes(t, 0, signed("Head of Procurement"))
 	newest := h.writes(t, 0, unsigned)
@@ -427,6 +437,7 @@ func TestTwoMailsAtTheSameTimeAreBothRead(t *testing.T) {
 }
 
 func TestTheWalkStopsAtTheFirstTitle(t *testing.T) {
+	t.Parallel()
 	h := setupHistory(t)
 	oldest := h.writes(t, 0, signed("Intern"))
 	middle := h.writes(t, 1, signed("Head of Procurement"))

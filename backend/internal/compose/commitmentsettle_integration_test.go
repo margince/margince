@@ -103,6 +103,7 @@ func (k keptCommitment) claimStatus(t *testing.T) string {
 // Ticking the task settles the commitment it stands for, and delivering the
 // same event again, or the claim's own change that follows, changes nothing.
 func TestTickingACommitmentsTaskSettlesTheCommitment(t *testing.T) {
+	t.Parallel()
 	k := seedKeptCommitment(t)
 	k.setDone(t, true)
 	ticked := k.newest(t, eventActivityUpdated, `envelope->'entity'->>'id' = $2`, k.task.String())
@@ -119,6 +120,7 @@ func TestTickingACommitmentsTaskSettlesTheCommitment(t *testing.T) {
 
 // Settling the commitment as kept completes its task.
 func TestSettlingACommitmentAsKeptCompletesItsTask(t *testing.T) {
+	t.Parallel()
 	k := seedKeptCommitment(t)
 	if err := k.Contacts.SettleConversationClaim(k.Admin(), k.claim, claimStatusDone); err != nil {
 		t.Fatalf("settling the commitment: %v", err)
@@ -132,6 +134,7 @@ func TestSettlingACommitmentAsKeptCompletesItsTask(t *testing.T) {
 // A commitment a reader dismissed as never made leaves its task alone, and a
 // task reopened after it was kept leaves its commitment kept.
 func TestDismissingOrReopeningSettlesNothingElse(t *testing.T) {
+	t.Parallel()
 	k := seedKeptCommitment(t)
 	if err := k.Contacts.SettleConversationClaim(k.Admin(), k.claim, "dismissed"); err != nil {
 		t.Fatalf("dismissing the commitment: %v", err)
@@ -155,6 +158,7 @@ func TestDismissingOrReopeningSettlesNothingElse(t *testing.T) {
 // not change themselves: someone who may update contacts but no activity keeps
 // their hands off the colleague's task.
 func TestSettlingACommitmentLeavesATaskTheSettlerMayNotChange(t *testing.T) {
+	t.Parallel()
 	k := seedKeptCommitment(t)
 	k.WsExec(t, `DELETE FROM role_assignment WHERE user_id = $1`, k.Rep3)
 	key := "claims-only-" + k.Rep3.String()
@@ -178,6 +182,7 @@ func TestSettlingACommitmentLeavesATaskTheSettlerMayNotChange(t *testing.T) {
 // Ticking a task does not settle a commitment on a contact whoever ticks
 // it may not update.
 func TestTickingATaskLeavesACommitmentOnAContactTheyMayNotUpdate(t *testing.T) {
+	t.Parallel()
 	k := seedKeptCommitment(t)
 	k.WsExec(t, `UPDATE contact SET owner_id = $2 WHERE id = $1`, k.customer, k.Rep3)
 	k.setDone(t, true)
@@ -191,6 +196,7 @@ func TestTickingATaskLeavesACommitmentOnAContactTheyMayNotUpdate(t *testing.T) {
 // names them, and a settlement that event causes in turn is held to the same
 // human's rights. A human with no rights at all settles nothing.
 func TestASettlementIsMadeAsTheHumanWhoCausedIt(t *testing.T) {
+	t.Parallel()
 	k := seedKeptCommitment(t)
 	k.setDone(t, true)
 	k.deliver(t, k.newest(t, eventActivityUpdated, `envelope->'entity'->>'id' = $2`, k.task.String()))
@@ -211,6 +217,7 @@ func TestASettlementIsMadeAsTheHumanWhoCausedIt(t *testing.T) {
 // Ticking a task does not settle a commitment quoted from a conversation that
 // can no longer be read, as settling it directly would not.
 func TestTickingATaskLeavesACommitmentFromAConversationTheyMayNotRead(t *testing.T) {
+	t.Parallel()
 	k := seedKeptCommitment(t)
 	k.setDone(t, true)
 	k.WsExec(t, `UPDATE activity SET archived_at = now() WHERE id = $1`, k.activity.UUID)
@@ -224,6 +231,7 @@ func TestTickingATaskLeavesACommitmentFromAConversationTheyMayNotRead(t *testing
 // change: the task stays as the later edit left it. Both instants are the
 // database's own, so the comparison does not depend on two clocks agreeing.
 func TestAnOldSettlementDoesNotOverruleALaterChangeToTheTask(t *testing.T) {
+	t.Parallel()
 	k := seedKeptCommitment(t)
 	if err := k.Contacts.SettleConversationClaim(k.Admin(), k.claim, claimStatusDone); err != nil {
 		t.Fatalf("settling the commitment: %v", err)
@@ -243,6 +251,7 @@ func TestAnOldSettlementDoesNotOverruleALaterChangeToTheTask(t *testing.T) {
 // consumer cannot read: an agent acting for nobody, a seat that no longer
 // exists, a payload that will not decode, an event of another type.
 func TestATickNobodyAnswersForSettlesNothing(t *testing.T) {
+	t.Parallel()
 	k := seedKeptCommitment(t)
 	k.setDone(t, true)
 	ticked := k.newest(t, eventActivityUpdated, `envelope->'entity'->>'id' = $2`, k.task.String())
@@ -278,6 +287,7 @@ func TestATickNobodyAnswersForSettlesNothing(t *testing.T) {
 // The product acting for nobody is followed: a system tick settles the
 // commitment it stands for.
 func TestASystemTickSettlesTheCommitment(t *testing.T) {
+	t.Parallel()
 	k := seedKeptCommitment(t)
 	k.setDone(t, true)
 	ticked := k.newest(t, eventActivityUpdated, `envelope->'entity'->>'id' = $2`, k.task.String())
@@ -291,6 +301,7 @@ func TestASystemTickSettlesTheCommitment(t *testing.T) {
 // Completing is asked only of a live, open task: a task already done or gone
 // is left alone without an error, and a record that is no task is refused.
 func TestCompletingATaskAnswersForWhatTheTaskIsNow(t *testing.T) {
+	t.Parallel()
 	k := seedKeptCommitment(t)
 	ctx := k.Admin()
 	task := ids.From[ids.ActivityKind](k.task)
@@ -315,6 +326,7 @@ func TestCompletingATaskAnswersForWhatTheTaskIsNow(t *testing.T) {
 // contact read; a claim that is gone, or a settlement that is not its audit
 // row, has no task.
 func TestTheClaimTaskReadsNeedContactRead(t *testing.T) {
+	t.Parallel()
 	k := seedKeptCommitment(t)
 	blind := k.As(k.Rep2, []ids.UUID{k.Team1}, principal.Permissions{
 		RoleKeys: []string{"rep"},

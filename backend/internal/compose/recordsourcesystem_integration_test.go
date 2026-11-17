@@ -84,6 +84,7 @@ func seedStoreBuiltImports(t *testing.T, e *integration.Env, sourceSystem *strin
 }
 
 func TestTheRecordStoresWriteTheSourceSystemTheyWereGiven(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ordinary := "legacy_crm"
 	built := seedStoreBuiltImports(t, e, &ordinary)
@@ -103,6 +104,7 @@ func TestTheRecordStoresWriteTheSourceSystemTheyWereGiven(t *testing.T) {
 // The prefix is machinery for the replay key. A reader must never meet it, and
 // the read is the last place it could leak.
 func TestTheImporterPrefixNeverReachesAReader(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	stored := "mirror:hubspot"
 	built := seedStoreBuiltImportsRaw(t, e, stored)

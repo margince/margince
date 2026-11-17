@@ -114,6 +114,7 @@ func (f agentDrafts) draft(ctx context.Context, t *testing.T, args map[string]an
 // An agent acting for the report's editor saves a draft. The report keeps its
 // name and audience, and a reader still sees the published charts alone.
 func TestAnAgentSavesADraftOnAReportItsHumanEdits(t *testing.T) {
+	t.Parallel()
 	f := agentDraftsFixture(t)
 	drafted, err := f.draft(f.agentFor(f.human, t), t, map[string]any{"report_id": f.report.Id, "selection": f.shorter()})
 	if err != nil {
@@ -141,6 +142,7 @@ func TestAnAgentSavesADraftOnAReportItsHumanEdits(t *testing.T) {
 // With no report named, the agent creates a report only its human sees. The
 // human owns it, and the audit row and its event name the agent and passport.
 func TestAnAgentsNewReportIsPrivateToItsHuman(t *testing.T) {
+	t.Parallel()
 	f := agentDraftsFixture(t)
 	agent := f.agentFor(f.human, t)
 	created, err := f.draft(agent, t, map[string]any{
@@ -185,6 +187,7 @@ func TestAnAgentsNewReportIsPrivateToItsHuman(t *testing.T) {
 // An agent's new report publishes no charts. They wait as its draft, nothing
 // is evaluated from the empty published revision, and its human publishes them.
 func TestAnAgentsNewReportHoldsItsChartsAsADraft(t *testing.T) {
+	t.Parallel()
 	f := agentDraftsFixture(t)
 	created, err := f.draft(f.agentFor(f.human, t), t, map[string]any{"name": "Prepared by the agent", "selection": f.shorter()})
 	if err != nil {
@@ -221,6 +224,7 @@ func TestAnAgentsNewReportHoldsItsChartsAsADraft(t *testing.T) {
 // An agent lent by a rep who may read the report but not edit it is refused,
 // and the report holds no draft afterwards.
 func TestAnAgentActingForAReaderCannotDraft(t *testing.T) {
+	t.Parallel()
 	f := agentDraftsFixture(t)
 	if _, err := f.service.GetReport(f.reader, ids.UUID(f.report.Id)); err != nil {
 		t.Fatalf("the reader cannot open the report, so the refusal below proves nothing: %v", err)
@@ -237,6 +241,7 @@ func TestAnAgentActingForAReaderCannotDraft(t *testing.T) {
 // The tool takes no audience. A call that names one is refused whole, and the
 // report keeps the audience it had.
 func TestTheDraftToolCannotChangeWhoSeesAReport(t *testing.T) {
+	t.Parallel()
 	f := agentDraftsFixture(t)
 	for _, name := range []string{"draft_report", "change_reports"} {
 		spec, ok := f.registry.Spec(name)
@@ -262,6 +267,7 @@ func TestTheDraftToolCannotChangeWhoSeesAReport(t *testing.T) {
 // Publishing, discarding, sharing and archiving stay a human's. An agent with
 // a write passport is refused each, even on its own human's draft.
 func TestAnAgentCannotPublishOrShareAReport(t *testing.T) {
+	t.Parallel()
 	f := agentDraftsFixture(t)
 	agent := f.agentFor(f.human, t)
 	drafted, err := f.draft(agent, t, map[string]any{"report_id": f.report.Id, "selection": f.shorter()})
@@ -300,6 +306,7 @@ func TestAnAgentCannotPublishOrShareAReport(t *testing.T) {
 // An agent does not replace a draft an editor left open: editors preview it,
 // so it may be unpublished work. The editor's draft stays as they saved it.
 func TestAnAgentDoesNotReplaceAnOpenDraft(t *testing.T) {
+	t.Parallel()
 	f := agentDraftsFixture(t)
 	id := ids.UUID(f.report.Id)
 	saved, err := f.service.SaveReportDraft(f.human, id, f.report.Version,
@@ -324,6 +331,7 @@ func TestAnAgentDoesNotReplaceAnOpenDraft(t *testing.T) {
 // An agent reaches what its human reaches. A team manager who edits a team
 // report they do not own can have an agent draft on it.
 func TestAnAgentDraftsForAnEditorWhoDoesNotOwnTheReport(t *testing.T) {
+	t.Parallel()
 	f := agentDraftsFixture(t)
 	teamScope := f.selection()
 	teamScope.Scope = crmcontracts.ReportingScope{Kind: "team", Id: ptrUUID(f.env.Team1)}

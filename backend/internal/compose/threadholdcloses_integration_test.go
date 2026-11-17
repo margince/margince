@@ -120,6 +120,7 @@ func assertClosed(t *testing.T, e *integration.Env, thread reopenedThread, statu
 }
 
 func TestAHeldVerdictClosesTheMessagesTheThreadHadOpened(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	thread := openThenReopen(t, e, "held-root@counterparty.example", false)
 
@@ -129,6 +130,7 @@ func TestAHeldVerdictClosesTheMessagesTheThreadHadOpened(t *testing.T) {
 }
 
 func TestAnUnsureVerdictClosesTheMessagesTheThreadHadOpened(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	thread := openThenReopen(t, e, "unsure-root@counterparty.example", false)
 
@@ -142,6 +144,7 @@ func TestAnUnsureVerdictClosesTheMessagesTheThreadHadOpened(t *testing.T) {
 }
 
 func TestAHeldVerdictClosesMessagesTheOwnerHadShared(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	thread := openThenReopen(t, e, "shared-root@counterparty.example", true)
 	for _, id := range thread.opened {
@@ -158,6 +161,7 @@ func TestAHeldVerdictClosesMessagesTheOwnerHadShared(t *testing.T) {
 // A colleague who imported the same message keeps their own contribution. The
 // message still ends at the strictest of the two, which is now held.
 func TestAHeldVerdictLeavesAColleaguesOwnClearanceAlone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	thread := openThenReopen(t, e, "colleague-root@counterparty.example", false)
 	both := thread.opened[0]
@@ -182,6 +186,7 @@ func TestAHeldVerdictLeavesAColleaguesOwnClearanceAlone(t *testing.T) {
 
 // The owner can open the thread again after it was held.
 func TestAnOwnerCanShareAThreadAgainAfterItWasHeld(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	root := "reshare-root@counterparty.example"
 	thread := openThenReopen(t, e, root, false)
@@ -202,6 +207,7 @@ func TestAnOwnerCanShareAThreadAgainAfterItWasHeld(t *testing.T) {
 // One RecordOutcomeOnThreadTx pass takes 500 messages. A held verdict on a
 // longer thread still closes every message in the same transaction.
 func TestAHeldVerdictClosesEveryOpenedMessageOfALongThread(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	messages := seedOpenedUnderVerdict(t, e, "long-live", capture.VerdictCleared, capture.VerdictCleared, 620)
 	var question ids.UUID

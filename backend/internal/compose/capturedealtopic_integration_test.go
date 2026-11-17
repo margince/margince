@@ -30,6 +30,7 @@ func (m *countingTopicModel) Complete(ctx context.Context, req model.Request) (m
 // for the input it read. A candidate that no longer reads, or an input that
 // changed since the question was named, asks no model and abstains.
 func TestTheTopicCheckAsksOnlyAboutTheWholeUnchangedQuestion(t *testing.T) {
+	t.Parallel()
 	f := newDealRefileFixture(t, 0)
 	e := f.o.e
 	brain := &countingTopicModel{}

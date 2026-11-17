@@ -40,6 +40,7 @@ import (
 )
 
 func TestTheRetentionSweepDestroysAChannelMessagesOriginal(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	activity := captureOneTelegramMessage(t, e)
 
@@ -96,6 +97,7 @@ func captureOneTelegramMessage(t *testing.T, e *integration.Env) ids.UUID {
 // activity standing. A Telegram original is keyed apart from its activity, so
 // only the link reaches it.
 func TestTheRawCaptureStageAgesOutAChannelMessagesOriginal(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	activity := captureOneTelegramMessage(t, e)
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {

@@ -121,6 +121,7 @@ func (e *snapshotJobEnv) dailySnapshots(t *testing.T) (int, ids.UUID) {
 // shared CSV export serves one. Before this pass, nothing outside a test wrote
 // the table they all read.
 func TestTheDailyPassFreezesTheWorkspacesForecast(t *testing.T) {
+	t.Parallel()
 	e := setupSnapshotJob(t)
 
 	if err := e.run(t); err != nil {
@@ -182,6 +183,7 @@ func TestTheDailyPassFreezesTheWorkspacesForecast(t *testing.T) {
 // that let it surface as an error would fail every day after the first success
 // — loudly, and about the outcome it wanted.
 func TestASecondPassInOneDayFreezesNothingAndSucceeds(t *testing.T) {
+	t.Parallel()
 	e := setupSnapshotJob(t)
 	if err := e.run(t); err != nil {
 		t.Fatalf("the first pass: %v", err)
@@ -211,6 +213,7 @@ func TestASecondPassInOneDayFreezesNothingAndSucceeds(t *testing.T) {
 // deal stops the daily forecast for every other deal in the period, every day,
 // until somebody prices it.
 func TestASubscriptionDealDoesNotAbortTheDailySnapshot(t *testing.T) {
+	t.Parallel()
 	e := setupSnapshotJob(t)
 	owner := integration.OwnerConn(t)
 

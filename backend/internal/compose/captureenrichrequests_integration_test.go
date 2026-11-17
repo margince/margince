@@ -25,6 +25,7 @@ import (
 )
 
 func TestHistorySignatureRequestsSurviveDelayedDeliveryAndCancellation(t *testing.T) {
+	t.Parallel()
 	b := setupBackfillWire(t)
 	run := strandedBackfill(t, b)
 	ctx := storekit.WithBatch(b.env.Admin(), run)
@@ -81,6 +82,7 @@ func TestHistorySignatureRequestsSurviveDelayedDeliveryAndCancellation(t *testin
 }
 
 func TestHistoricalSignatureWorkCannotPostponeLiveMail(t *testing.T) {
+	t.Parallel()
 	b := setupBackfillWire(t)
 	run := strandedBackfill(t, b)
 	contact, err := b.env.Contacts.CreateContact(b.env.Admin(), contacts.CreateContactInput{FullName: "Shared correspondent", Source: "manual"})
@@ -124,6 +126,7 @@ func TestHistoricalSignatureWorkCannotPostponeLiveMail(t *testing.T) {
 }
 
 func TestOtherImportedMailDoesNotRequestSignatureWork(t *testing.T) {
+	t.Parallel()
 	b := setupBackfillWire(t)
 	contact, err := b.env.Contacts.CreateContact(b.env.Admin(), contacts.CreateContactInput{FullName: "Imported correspondent", Source: "manual"})
 	if err != nil {
@@ -151,6 +154,7 @@ func TestOtherImportedMailDoesNotRequestSignatureWork(t *testing.T) {
 }
 
 func TestHistoryArrivingDuringAFailedSignatureReadDoesNotEraseBackoff(t *testing.T) {
+	t.Parallel()
 	b := setupBackfillWire(t)
 	run := strandedBackfill(t, b)
 	contact, err := b.env.Contacts.CreateContact(b.env.Admin(), contacts.CreateContactInput{FullName: "Deferred correspondent", Source: "manual"})

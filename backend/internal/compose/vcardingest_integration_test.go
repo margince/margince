@@ -106,6 +106,7 @@ func capturedEnvelope(t *testing.T, activity ids.UUID) events.Envelope {
 // whose insert disagree compiles and then panics on the first mailed card.
 // Nothing short of actually inserting the job says so.
 func TestAMailedCardQueuesItsImport(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	// The queue's own tables: this test asserts on a row River writes, so the
 	// schema it writes into has to exist.
@@ -149,6 +150,7 @@ func TestAMailedCardQueuesItsImport(t *testing.T) {
 // before the trigger's insert was fixed. The two messages differ in nothing but
 // the audience, so what the admit arm proves is that the audience is the reason.
 func TestOnlyWorkspaceReadableMailLendsItsCard(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 
@@ -199,6 +201,7 @@ func cardKeysOf(ctx context.Context, t *testing.T, w *vcardIngestWorker, activit
 // resolves nothing at all, which is what a mutation of the switch clause turned
 // it into.
 func TestAMailedCardObeysTheMailboxsOwnSwitch(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 
@@ -226,6 +229,8 @@ func TestAMailedCardObeysTheMailboxsOwnSwitch(t *testing.T) {
 // A mailbox that never chose follows the workspace default. A boot-set default
 // wins over the row in the card path's SQL, as it does in the signature pass.
 // Not parallel: the binding is the process's own.
+//
+//testdb:serial binds the process-wide configuration (config.Bind)
 func TestABootSetMailReadingDefaultBindsTheCardPath(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.Admin()
@@ -286,6 +291,7 @@ var errNoActorBound = errors.New("the import context carries no actor")
 // touches: a real notice row a contact's Worklist would actually show, not an
 // audit row nothing renders.
 func TestAStagingFailureRaisesAWorklistNoticeForTheImporter(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	worker := newVCardIngestWorker(e.Pool, blobstore.NewMemory(), quietIngestLog())
 	activity := ids.NewV7()
@@ -322,6 +328,7 @@ func TestAStagingFailureRaisesAWorklistNoticeForTheImporter(t *testing.T) {
 // dedupe key this floods the importer's Worklist with one identical line per
 // attempt.
 func TestARetriedStagingFailureRaisesOnlyOneNotice(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	worker := newVCardIngestWorker(e.Pool, blobstore.NewMemory(), quietIngestLog())
 	activity := ids.NewV7()

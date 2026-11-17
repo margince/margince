@@ -62,6 +62,7 @@ func stageThenAge(t *testing.T, e *integration.Env, svc *approvals.Service, kind
 }
 
 func TestAnUnactionedStagingIsWrittenExpiredWithASystemActor(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := approvals.NewService(e.DB())
 	id := stageThenAge(t, e, svc, "advance_deal", time.Hour)
@@ -100,6 +101,7 @@ func TestAnUnactionedStagingIsWrittenExpiredWithASystemActor(t *testing.T) {
 // The sweep must not touch what is still live. This is the assertion that fails
 // if the predicate is ever loosened into "everything pending".
 func TestAStagingInsideItsWindowIsLeftAlone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := approvals.NewService(e.DB())
 	id := stageThenAge(t, e, svc, "advance_deal", 0)
@@ -121,6 +123,7 @@ func TestAStagingInsideItsWindowIsLeftAlone(t *testing.T) {
 // sweep that reaped it would recreate the silent stop the card exists to
 // prevent.
 func TestAKindThatNeverExpiresSurvivesTheSweep(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	if !approvals.ExpiresNever(approvals.KindScheduledSendHeld) {
 		t.Fatal("held scheduled sends are no longer exempt from expiry — the sweep will now reap a message whose subject is still waiting on it, and this test would have skipped rather than said so")
@@ -139,6 +142,7 @@ func TestAKindThatNeverExpiresSurvivesTheSweep(t *testing.T) {
 // Expiring twice would audit twice, and an audit trail that reports one event
 // as two is worse than one that reports none.
 func TestASweptStagingIsNotSweptAgain(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := approvals.NewService(e.DB())
 	id := stageThenAge(t, e, svc, "advance_deal", time.Hour)
@@ -163,6 +167,7 @@ func TestASweptStagingIsNotSweptAgain(t *testing.T) {
 // so a decision taken between the scan and the write is left exactly as its
 // decider left it — the clock loses that race, which is the right way round.
 func TestAHumanDecisionUnderTheWireBeatsTheSweep(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := approvals.NewService(e.DB())
 	id := stageThenAge(t, e, svc, "advance_deal", time.Hour)
@@ -187,6 +192,7 @@ func TestAHumanDecisionUnderTheWireBeatsTheSweep(t *testing.T) {
 // only thing that can distinguish them: a window that closes when the item says
 // it does rather than when the kind's default would.
 func TestAStagingsOwnWindowOverridesTheDefault(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := approvals.NewService(e.DB())
 	short := time.Second
@@ -217,6 +223,7 @@ func TestAStagingsOwnWindowOverridesTheDefault(t *testing.T) {
 // APPR-PARAM-1 pins, and the three days are what carry a Friday-afternoon
 // staging to a Monday-morning inbox.
 func TestTheDefaultWindowIsThreeDays(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := approvals.NewService(e.DB())
 	id := stageThenAge(t, e, svc, "advance_deal", 0)
@@ -242,6 +249,7 @@ func TestTheDefaultWindowIsThreeDays(t *testing.T) {
 // pending approval in the installation at once — each one audited as though the
 // clock had done it, with their name nowhere in the record.
 func TestOnlyTheClockMayExpireApprovals(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := approvals.NewService(e.DB())
 	id := stageThenAge(t, e, svc, "advance_deal", time.Hour)

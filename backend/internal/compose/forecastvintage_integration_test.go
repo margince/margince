@@ -23,6 +23,7 @@ import (
 )
 
 func TestAVintageRecordsTheMeasureItWasTakenUnder(t *testing.T) {
+	t.Parallel()
 	e := setupEvaluation(t)
 	before := wholeWorkspace(e.dataset(t))[1]
 	if before.Measure != string(forecasting.MeasureLikely) || before.Policy != "" {
@@ -33,6 +34,7 @@ func TestAVintageRecordsTheMeasureItWasTakenUnder(t *testing.T) {
 // The week's close is the second snapshot writer, and it stamps the same
 // basis. Its snapshot records a period already over, so it is no prediction.
 func TestAWeeksCloseStampsTheBasisAndIsNoPrediction(t *testing.T) {
+	t.Parallel()
 	e := setupEvaluation(t)
 	weekStart := e.quarter.Start.AddDate(0, 0, 7*4)
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
@@ -61,6 +63,7 @@ func TestAWeeksCloseStampsTheBasisAndIsNoPrediction(t *testing.T) {
 // The dataset read takes every deal id the snapshots froze, under no row
 // scope, so only the evaluation's own pass may run it.
 func TestOnlyTheEvaluationPassReadsTheDataset(t *testing.T) {
+	t.Parallel()
 	e := setupEvaluation(t)
 	store := newForecastStoreFor(e.Pool)
 	read := func(ctx context.Context) error {
@@ -81,6 +84,7 @@ func TestOnlyTheEvaluationPassReadsTheDataset(t *testing.T) {
 // With individual performance off, a vintage whose deals belong to one seat
 // is left out. A vintage below the deal floor is left out either way.
 func TestAVintageOfOneSeatOrFewDealsIsLeftOut(t *testing.T) {
+	t.Parallel()
 	e := setupEvaluation(t)
 	e.WsExec(t, `UPDATE deal SET owner_id = $1`, e.Rep1)
 	e.freeze(t, e.second.AddDate(0, 0, 2))
@@ -123,6 +127,7 @@ func TestAVintageOfOneSeatOrFewDealsIsLeftOut(t *testing.T) {
 // A frozen snapshot refuses an update to anything but its call link, a
 // contribution refuses every update, and both can still be deleted.
 func TestAFrozenForecastCannotBeRewritten(t *testing.T) {
+	t.Parallel()
 	e := setupEvaluation(t)
 	owner := integration.OwnerConn(t)
 	var snapshot ids.UUID

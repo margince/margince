@@ -14,6 +14,7 @@ import (
 // with no close date is its own NULL group. A month's drill-through opens the
 // deals that month counted.
 func TestOpenPipelineGroupsByCloseMonth(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	novemberOne := e.seedOpenDeal(t, "Nov one", 20, &e.Rep1, nil)
 	novemberTwo := e.seedOpenDeal(t, "Nov two", 20, &e.Rep1, nil)

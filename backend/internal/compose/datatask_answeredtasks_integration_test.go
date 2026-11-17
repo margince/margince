@@ -40,6 +40,7 @@ func answeredTaskFixture(t *testing.T, e *integration.Env, address string, answe
 }
 
 func TestTheAnsweredTasksTaskClosesStoredAnswersOncePageByPage(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	answered := []ids.UUID{answeredTaskFixture(t, e, "one@stored.test", true), answeredTaskFixture(t, e, "two@stored.test", true), answeredTaskFixture(t, e, "three@stored.test", true)}
@@ -80,6 +81,7 @@ func idStrings(named []ids.UUID) []string {
 }
 
 func TestTheAnsweredTasksTaskRollsBackWithItsProgress(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	answered := answeredTaskFixture(t, e, "rollback@stored.test", true)

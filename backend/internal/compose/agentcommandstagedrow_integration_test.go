@@ -55,6 +55,7 @@ var archiveContactPolicy = agentPolicy{
 // TestTheToolDoorRefusesAnExternallyHeldRecordItCanRead for the tool door.
 // Together with this test the claim is whole; neither half states it alone.
 func TestBothDoorsRefuseOneRecordNeitherCallerCanSee(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	native := NewProvider(e.Pool)
 	agent := scopedArchiveAgent(t, e)

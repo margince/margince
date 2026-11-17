@@ -120,6 +120,7 @@ func seedOwnedProject(t *testing.T, e *integration.Env) ids.UUID {
 // owner, the owner's audit row and the run in one transaction. The two audit
 // rows sharing one xmin is what proves the write used the caller's transaction.
 func TestALocalReassignmentCommitsTheRedemptionTheOwnerAndItsAuditTogether(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := NewApprovalsServiceWithEffects(e.Pool)
 	for _, record := range ownerRecords() {
@@ -159,6 +160,7 @@ func TestALocalReassignmentCommitsTheRedemptionTheOwnerAndItsAuditTogether(t *te
 // The failure comes from the write, after the redemption passed: the new owner
 // holds a read seat, which the owner check refuses.
 func TestAFailedLocalReassignmentLeavesTheApprovalUnconsumedAndRetryable(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := NewApprovalsServiceWithEffects(e.Pool)
 	for _, record := range ownerRecords() {
@@ -201,6 +203,7 @@ func TestAFailedLocalReassignmentLeavesTheApprovalUnconsumedAndRetryable(t *test
 // spent and the run is failed. The decider is told the change may have
 // happened, and deciding again sends nothing.
 func TestAnUnconfirmedRemoteReassignmentIsRecordedAndNeverResent(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := releaseThrough(e, remoteRecords{
 		SystemOfRecordProvider: NewProvider(e.Pool), writes: true, answer: errors.New("connection reset by peer"),
@@ -235,6 +238,7 @@ func TestAnUnconfirmedRemoteReassignmentIsRecordedAndNeverResent(t *testing.T) {
 // An adapter that refuses the write: nothing changed, so the run names the
 // refusal and the decider is not told the change may have happened.
 func TestARefusedRemoteReassignmentIsRecordedAsRefused(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := releaseThrough(e, remoteRecords{
 		SystemOfRecordProvider: NewProvider(e.Pool), answer: apperrors.ErrVersionSkew,
@@ -279,6 +283,7 @@ func assertNotRetryable(t *testing.T, e *integration.Env, svc *approvals.Service
 // An adapter that refuses with a typed refusal, here the built-in provider
 // turning down a read-seat owner. Nothing landed, so it is recorded as refused.
 func TestATypedRemoteRefusalIsRecordedAsRefused(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := releaseThrough(e, remoteRecords{SystemOfRecordProvider: NewProvider(e.Pool), writes: true})
 	contact := e.SeedContact(t, "Refused By Seat", nil)
@@ -301,6 +306,7 @@ func TestATypedRemoteRefusalIsRecordedAsRefused(t *testing.T) {
 // The adapter confirms the change and the decider's request is cancelled at
 // that moment. The change landed, so the run must still finish.
 func TestACancelledRequestStillFinishesTheRunOfAConfirmedRemoteReassignment(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx, cancel := context.WithCancel(decider(e))
 	defer cancel()
@@ -323,6 +329,7 @@ func TestACancelledRequestStillFinishesTheRunOfAConfirmedRemoteReassignment(t *t
 // The adapter confirms the change and the run cannot be marked. The decider is
 // told the change was made, never that the work did not run.
 func TestAConfirmedRemoteReassignmentWhoseRunCannotFinishSaysTheChangeLanded(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	unreachable, err := testdb.OwnPoolFromConfig(context.Background(), e.Pool.Config())
 	if err != nil {

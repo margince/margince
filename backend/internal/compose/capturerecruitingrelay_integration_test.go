@@ -26,6 +26,7 @@ import (
 const recruitingRelay = "group-11111111-2222-4333-8444-555555555555@hire.lever.co"
 
 func TestRecruitingRelayMailKeepsItsThreadParticipantsAndFiles(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	mailbox := seatAddress(t, e, e.Rep1)
 	sent := strings.ReplaceAll(string(threadMail(recruitingRelay, "relay-sent@example.test", "Mon, 06 Jul 2026 12:00:00 +0000", "")),
@@ -60,6 +61,7 @@ func TestRecruitingRelayMailKeepsItsThreadParticipantsAndFiles(t *testing.T) {
 }
 
 func TestRelayRepairRevisitsFinishedTasksAndPreservesHumanRecords(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	if _, err := e.Contacts.CreateCompany(e.Admin(), contacts.CreateCompanyInput{
@@ -155,6 +157,7 @@ func TestRelayRepairRevisitsFinishedTasksAndPreservesHumanRecords(t *testing.T) 
 }
 
 func TestRelaySenderRepairRevisitsTheFinishedClassifier(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	finished := machineSenderDataTask()

@@ -68,6 +68,7 @@ func reportingResponse[T any](t *testing.T, response *httptest.ResponseRecorder)
 }
 
 func TestReportingHTTPRevisionsSchedulesAndFrozenHistory(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	handler := reportingHTTPRouter(f)
 	input := crmcontracts.ReportingReportInput{Name: "Operating review", Audience: "workspace", Selection: f.selection()}
@@ -153,6 +154,7 @@ func reportingAssertLibrary(t *testing.T, f *reportingBusinessFixture, handler h
 }
 
 func TestReportingHTTPFrameworkAndTargetVersions(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	handler := reportingHTTPRouter(f)
 	framework := reportingResponse[crmcontracts.ReportingFramework](t, reportingRequest(f.human, t, handler, http.MethodGet, "framework", nil, -1, http.StatusOK))

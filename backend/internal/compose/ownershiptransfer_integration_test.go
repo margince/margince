@@ -137,6 +137,7 @@ func ownerChangeAudits(t *testing.T, e *integration.Env, table string, id, from,
 // it move to the colleague who asked, each with its own audit row. A won deal
 // and a third colleague's work stay where they are.
 func TestAnAcceptedHandoverMovesTheCompanyAndTheOwnersOpenWorkOnIt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	grantHandoverRole(t, e, e.Rep3)
 	company := e.SeedCompany(t, "BAER Pharma", &e.Rep1)
@@ -204,6 +205,7 @@ func TestAnAcceptedHandoverMovesTheCompanyAndTheOwnersOpenWorkOnIt(t *testing.T)
 // deal names no company. It takes a task only when the task is filed under it
 // alone. Everything else is somebody else's business too and stays.
 func TestAHandedOverContactTakesOnlyTheWorkThatIsItsAlone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	grantHandoverRole(t, e, e.Rep3)
 	contact := e.SeedContact(t, "Pat Example", &e.Rep1)
@@ -264,6 +266,7 @@ func TestAHandedOverContactTakesOnlyTheWorkThatIsItsAlone(t *testing.T) {
 // The receiver's seat is held until the handover commits, so a suspension
 // cannot land between the check and the move.
 func TestTheReceiverIsHeldUntilTheHandoverCommits(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	err := database.WithWorkspaceTx(giver(e), e.Pool, func(tx pgx.Tx) error {
 		if err := auth.EnsureHandOverRecipient(giver(e), tx, e.Rep3); err != nil {
@@ -284,6 +287,7 @@ func TestTheReceiverIsHeldUntilTheHandoverCommits(t *testing.T) {
 // Declined and run out: the record stays, and the colleague who asked is told
 // each time. Declining leaves them free to ask again at once.
 func TestADeclinedOrExpiredRequestLeavesTheRecordAndTellsTheAsker(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := e.SeedCompany(t, "Kept GmbH", &e.Rep1)
 
@@ -321,6 +325,7 @@ func TestADeclinedOrExpiredRequestLeavesTheRecordAndTellsTheAsker(t *testing.T) 
 // is withdrawn and its asker told. A request whose giver lost the record by a
 // path that told nobody is refused on accept, and stays pending to decline.
 func TestARecordThatChangedHandsClosesItsRequest(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	grantHandoverRole(t, e, e.Rep3)
 	company := e.SeedCompany(t, "Moved AG", &e.Rep1)
@@ -369,6 +374,7 @@ func TestARecordThatChangedHandsClosesItsRequest(t *testing.T) {
 // A colleague and their agent hold one request. Each reads and withdraws what the
 // other filed, and a third colleague's agent reads nothing.
 func TestAColleagueAndTheirAgentHoldOneOwnershipRequest(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	grantHandoverRole(t, e, e.Rep3)
 	transfers := newOwnershipTransfers(e.Pool)

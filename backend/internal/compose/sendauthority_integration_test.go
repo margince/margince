@@ -21,6 +21,7 @@ import (
 )
 
 func TestARecipientRoleChangeWaitsForTheSendReservation(t *testing.T) {
+	t.Parallel()
 	a := newApprovalNotifyEnv(t)
 	manager := memberManagerFor(t, a.e)
 	a.grantCommitmentRole(t, a.e.Rep1)
@@ -49,6 +50,7 @@ func TestARecipientRoleChangeWaitsForTheSendReservation(t *testing.T) {
 }
 
 func TestACommittedRoleChangeInvalidatesThePreviouslyReadSendBasis(t *testing.T) {
+	t.Parallel()
 	a := newApprovalNotifyEnv(t)
 	manager := memberManagerFor(t, a.e)
 	a.grantCommitmentRole(t, a.e.Rep1)
@@ -77,6 +79,7 @@ func TestACommittedRoleChangeInvalidatesThePreviouslyReadSendBasis(t *testing.T)
 }
 
 func TestACombinedClaimHoldsAuthorityBeforeCheckingItsBasis(t *testing.T) {
+	t.Parallel()
 	e := setupWeeklyMail(t)
 	manager := memberManagerFor(t, e.Env)
 	seedWorkFor(t, e.Env, weeklyMailClock, e.Rep1)
@@ -102,6 +105,7 @@ func TestACombinedClaimHoldsAuthorityBeforeCheckingItsBasis(t *testing.T) {
 }
 
 func TestRoutineClaimsWaitForAuthorityBeforeWritingAnEdition(t *testing.T) {
+	t.Parallel()
 	for _, edition := range []string{"combined", "morning"} {
 		t.Run(edition, func(t *testing.T) {
 			e := setupWeeklyMail(t)
@@ -149,6 +153,7 @@ func TestRoutineClaimsWaitForAuthorityBeforeWritingAnEdition(t *testing.T) {
 }
 
 func TestACombinedWeekQuotesOnlySourcesTheRecipientCanStillRead(t *testing.T) {
+	t.Parallel()
 	for _, revoke := range []bool{false, true} {
 		t.Run(map[bool]string{false: "readable", true: "revoked"}[revoke], func(t *testing.T) {
 			e := setupWeeklyMail(t)
@@ -196,6 +201,7 @@ func TestACombinedWeekQuotesOnlySourcesTheRecipientCanStillRead(t *testing.T) {
 }
 
 func TestASendReservationRestoresTheCallersLockWait(t *testing.T) {
+	t.Parallel()
 	a := newApprovalNotifyEnv(t)
 	a.grantCommitmentRole(t, a.e.Rep1)
 	decision := stagePromisedDecision(t, a, a.e.Rep1, "Send the pricing")

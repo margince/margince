@@ -128,6 +128,7 @@ func (e *noticeMailEnv) seatAddress(t *testing.T) string {
 // of those may reach it: a colleague told twice that the same decision is
 // waiting learns to read neither message.
 func TestAnApprovalWaitingOnAnEmailSeatIsMailedOnce(t *testing.T) {
+	t.Parallel()
 	e := setupNoticeMail(t)
 	notice := e.pendingNotice(t)
 
@@ -164,6 +165,7 @@ func TestAnApprovalWaitingOnAnEmailSeatIsMailedOnce(t *testing.T) {
 // An installation that has not been told its own origin mails the message
 // WITHOUT the closing line, rather than a link built on an empty base.
 func TestWithNoPublicOriginTheNotificationMailCarriesNoLink(t *testing.T) {
+	t.Parallel()
 	e := setupNoticeMail(t)
 	e.worker.mail.PublicBaseURL = ""
 	notice := e.pendingNotice(t)
@@ -187,6 +189,7 @@ func TestWithNoPublicOriginTheNotificationMailCarriesNoLink(t *testing.T) {
 // Worklist like every other notice — which is why the branch says so at Warn
 // and api/jobs.yaml waives it by name.
 func TestAWorkerWithNoRelaySpendsNoClaim(t *testing.T) {
+	t.Parallel()
 	e := setupNoticeMail(t)
 	notice := e.pendingNotice(t)
 	e.worker.mail = NotificationMailConfig{}
@@ -212,6 +215,7 @@ func TestAWorkerWithNoRelaySpendsNoClaim(t *testing.T) {
 // colleague may have opened the card. The attempt stays UNSPENT, because
 // nothing was attempted.
 func TestANoticeAlreadyReadInAppIsNotMailed(t *testing.T) {
+	t.Parallel()
 	e := setupNoticeMail(t)
 	notice := e.pendingNotice(t)
 
@@ -236,6 +240,7 @@ func TestANoticeAlreadyReadInAppIsNotMailed(t *testing.T) {
 // archived_at alone would mail a departed colleague. Nothing is recorded as a
 // cause either: the product did not fail to send, it correctly declined to.
 func TestADeactivatedSeatIsNotMailedTheirNotice(t *testing.T) {
+	t.Parallel()
 	e := setupNoticeMail(t)
 	notice := e.pendingNotice(t)
 	e.e.WsExec(t, `UPDATE app_user SET status = 'deactivated' WHERE id = $1`, e.e.AdminUser)
@@ -255,6 +260,7 @@ func TestADeactivatedSeatIsNotMailedTheirNotice(t *testing.T) {
 // from a delivered one. The cause is written onto the row, and the cancelled
 // job is what job health counts.
 func TestARefusedNotificationMailSpendsTheClaimAndRecordsWhy(t *testing.T) {
+	t.Parallel()
 	e := setupNoticeMail(t)
 	e.relay.fail = errors.New("relay refused the recipient")
 	notice := e.pendingNotice(t)
@@ -284,6 +290,7 @@ func TestARefusedNotificationMailSpendsTheClaimAndRecordsWhy(t *testing.T) {
 // preference changed" in the place an operator reads to find out why a message
 // they expected never arrived.
 func TestAPreferenceChangedBeforeTheSendIsASkipAndNotAFailure(t *testing.T) {
+	t.Parallel()
 	e := setupNoticeMail(t)
 	notice := e.pendingNotice(t)
 
@@ -311,6 +318,7 @@ func TestAPreferenceChangedBeforeTheSendIsASkipAndNotAFailure(t *testing.T) {
 // "From:" line in a message a colleague reads as the product's is the whole
 // reason every interpolated value goes through OneLine.
 func TestAnApprovalNoticeWithoutADecisionCannotInventAnEmail(t *testing.T) {
+	t.Parallel()
 	e := setupNoticeMail(t)
 	// The approval class, on its standing default, because it is the only class
 	// with a sending leg — the others are refused the word and so could never
@@ -337,6 +345,7 @@ func TestAnApprovalNoticeWithoutADecisionCannotInventAnEmail(t *testing.T) {
 }
 
 func TestOnlyAnEmailSeatsNoticeStagesAMailJob(t *testing.T) {
+	t.Parallel()
 	e := setupNoticeMail(t)
 	e.grantRole(t, e.e.AdminUser)
 
@@ -382,6 +391,7 @@ func TestOnlyAnEmailSeatsNoticeStagesAMailJob(t *testing.T) {
 }
 
 func TestASeatReadingTheirQueueOnScreenStagesNoMailJob(t *testing.T) {
+	t.Parallel()
 	e := setupNoticeMail(t)
 	e.grantRole(t, e.e.AdminUser)
 	seatCtx := e.e.As(e.e.AdminUser, nil, integration.AdminPerms)
@@ -402,17 +412,13 @@ func TestASeatReadingTheirQueueOnScreenStagesNoMailJob(t *testing.T) {
 }
 
 func TestAnApprovalReadFailureIsRecordedAfterTheNoticeClaim(t *testing.T) {
+	t.Parallel()
 	e := setupNoticeMail(t)
 	notice := e.pendingNotice(t)
 	owner := integration.OwnerConn(t)
 	if _, err := owner.Exec(context.Background(), `ALTER TABLE approval RENAME TO unavailable_approval`); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() {
-		if _, err := owner.Exec(context.Background(), `ALTER TABLE unavailable_approval RENAME TO approval`); err != nil {
-			t.Errorf("restoring the approval table: %v", err)
-		}
-	})
 	e.work(t, notice)
 	stamp, cause := e.emailState(t, notice)
 	if stamp == nil || cause == nil || e.relay.count() != 0 {
@@ -421,6 +427,7 @@ func TestAnApprovalReadFailureIsRecordedAfterTheNoticeClaim(t *testing.T) {
 }
 
 func TestAWithdrawnApprovalIsNotMailedAsAPendingDecision(t *testing.T) {
+	t.Parallel()
 	e := setupNoticeMail(t)
 	notice := e.pendingNotice(t)
 	if _, err := integration.OwnerConn(t).Exec(context.Background(), `UPDATE approval SET status='rejected',decided_at=now(),decided_by=$1 WHERE id=(SELECT split_part(dedupe_key,':',2)::uuid FROM notice WHERE id=$2)`, e.e.AdminUser, notice); err != nil {
@@ -436,6 +443,7 @@ func TestAWithdrawnApprovalIsNotMailedAsAPendingDecision(t *testing.T) {
 // sends it once. A relay down for a few minutes then costs a delay, not the
 // mail.
 func TestAMailTheRelayNeverTookIsSentOnTheNextRung(t *testing.T) {
+	t.Parallel()
 	e := setupNoticeMail(t)
 	e.relay.fail = &mailer.NotTakenError{Err: errors.New("relay unreachable")}
 	notice := e.pendingNotice(t)
@@ -465,6 +473,7 @@ func TestAMailTheRelayNeverTookIsSentOnTheNextRung(t *testing.T) {
 // On the last rung an untaken mail is final: the cause is on the row and the
 // cancelled job is counted dead.
 func TestTheLastRungOfAnUntakenMailRecordsWhyAndCountsAsDead(t *testing.T) {
+	t.Parallel()
 	e := setupNoticeMail(t)
 	e.relay.fail = &mailer.NotTakenError{Err: errors.New("relay unreachable")}
 	notice := e.pendingNotice(t)

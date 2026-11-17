@@ -25,6 +25,7 @@ import (
 )
 
 func TestTheOldestPromiseLeadsEvenPastTheSectionCap(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := seedLinkedContact(t, e, "vielbeschaeftigt@kunde.example")
 	contactID := ids.From[ids.ContactKind](contact)
@@ -72,6 +73,7 @@ func TestTheOldestPromiseLeadsEvenPastTheSectionCap(t *testing.T) {
 // due_at and is_done but not assignee_id, so every assembled task looked
 // unassigned and every reader was told they owed a colleague's work.
 func TestAnAssignedPromiseKeepsItsHolderThroughTheSection(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := seedLinkedContact(t, e, "zugewiesen@kunde.example")
 	contactID := ids.From[ids.ContactKind](contact)

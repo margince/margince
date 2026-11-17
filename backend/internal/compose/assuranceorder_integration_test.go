@@ -19,6 +19,7 @@ import (
 // finding in a currency with no rate comes after every priced one. The raw
 // amounts here run in the opposite order, so a ranking on them fails.
 func TestFindingsRankByTheirAmountInTheBaseCurrency(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	seedRate(t, e, "0.5", 1)
 
