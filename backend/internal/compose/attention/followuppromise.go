@@ -108,19 +108,7 @@ func (s *Service) readingFollowUpPromises(ctx context.Context, day crmcontracts.
 	if s.backlog.tasks == nil || s.backlog.until.IsZero() || !todayCut && !laterCut {
 		return &scoped
 	}
-	onTheDay, tasked := map[string]bool{}, map[string]bool{}
-	for _, task := range day.Planned {
-		onTheDay[task.Id] = true
-		if task.SourceRecord != nil {
-			tasked[task.SourceRecord.Id.String()] = true
-		}
-	}
-	var sources []ids.UUID
-	for _, row := range s.followUps.rows {
-		if email := derivedFrom(row); email != "" && !tasked[email] {
-			sources = append(sources, ids.UUID(row.item.SourceRecord.Id))
-		}
-	}
+	sources, onTheDay := s.emailsWithoutTheirTask(day)
 	if len(sources) == 0 {
 		return &scoped
 	}
@@ -131,18 +119,9 @@ func (s *Service) readingFollowUpPromises(ctx context.Context, day crmcontracts.
 	}
 	var tasks []Task
 	err := s.degradable(ctx, "follow_up_promises", laneBudget, func(ctx context.Context) error {
-		for after, more := "", true; more; {
-			var page []Positioned[Task]
-			var err error
-			if page, more, err = s.backlog.tasks.TasksAfter(ctx, window, after, promisePage); err != nil {
-				return err
-			}
-			for _, task := range page {
-				tasks, after = append(tasks, task.Row), task.After
-			}
-			more = more && len(page) > 0
-		}
-		return nil
+		var err error
+		tasks, err = s.everyTaskAfter(ctx, window)
+		return err
 	})
 	if err != nil {
 		slog.Log(ctx, laneFailureLevel(ctx), "the tasks behind follow-up reminders could not be read; each stays its own row",
@@ -157,4 +136,39 @@ func (s *Service) readingFollowUpPromises(ctx context.Context, day crmcontracts.
 	items := plannedItems(tasks, day.AsOf, s.backlog.until, zone)
 	scoped.followUps.promises = appendLane(nil, sourceTask, &items, day.AsOf, classifyTask)
 	return &scoped
+}
+
+// emailsWithoutTheirTask names the follow-up reminders' emails that no task on
+// the day was derived from, and the ids of the tasks on the day.
+func (s *Service) emailsWithoutTheirTask(day crmcontracts.Attention) ([]ids.UUID, map[string]bool) {
+	onTheDay, tasked := map[string]bool{}, map[string]bool{}
+	for _, task := range day.Planned {
+		onTheDay[task.Id] = true
+		if task.SourceRecord != nil {
+			tasked[task.SourceRecord.Id.String()] = true
+		}
+	}
+	var sources []ids.UUID
+	for _, row := range s.followUps.rows {
+		if email := derivedFrom(row); email != "" && !tasked[email] {
+			sources = append(sources, ids.UUID(row.item.SourceRecord.Id))
+		}
+	}
+	return sources, onTheDay
+}
+
+// everyTaskAfter reads the whole window through the backlog, page by page.
+func (s *Service) everyTaskAfter(ctx context.Context, window TaskWindow) ([]Task, error) {
+	var tasks []Task
+	for after, more := "", true; more; {
+		page, next, err := s.backlog.tasks.TasksAfter(ctx, window, after, promisePage)
+		if err != nil {
+			return nil, err
+		}
+		for _, task := range page {
+			tasks, after = append(tasks, task.Row), task.After
+		}
+		more = next && len(page) > 0
+	}
+	return tasks, nil
 }

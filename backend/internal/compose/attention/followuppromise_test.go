@@ -43,8 +43,10 @@ func newFollowUpDay() followUpDay {
 // when it is set.
 func (d followUpDay) otherTask(subject string, source *ids.UUID) Task {
 	due := rankInstant.Add(3 * time.Hour)
-	return Task{ID: ids.NewV7(), AssigneeID: &pageSeat, Subject: subject, DueAt: &due, SourceActivityID: source,
-		LinkType: string(subjectContact), LinkID: d.contact}
+	return Task{
+		ID: ids.NewV7(), AssigneeID: &pageSeat, Subject: subject, DueAt: &due, SourceActivityID: source,
+		LinkType: string(subjectContact), LinkID: d.contact,
+	}
 }
 
 func (d followUpDay) worklist(t *testing.T, tasks []Task, followUps []ranked) crmcontracts.Worklist {
