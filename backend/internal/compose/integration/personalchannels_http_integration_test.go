@@ -65,6 +65,81 @@ func TestAChatClientsFileLandsAndTheMemberCanReplyOnTheChat(t *testing.T) {
 		t.Fatalf("replying on the chat → %d, want 202 queued for the member's client", status)
 	}
 
+	// The worker queues a send's reply, and this server runs no worker. The
+	// row is written here as the worker would write it.
+	if _, err := e.Owner.Exec(t.Context(), `
+		INSERT INTO personal_channel_reply (connection_id, activity_id, delivery_key, network, thread_id, recipient_account, body)
+		SELECT id, $1, 'dk-e2e', 'whatsapp', '', '84901234567@s.whatsapp.net', 'Thanks, received' FROM personal_channel_connection`, activity); err != nil {
+		t.Fatal(err)
+	}
+	var pulled struct {
+		Replies []struct {
+			DeliveryID string `json:"delivery_id"`
+			Attempt    int    `json:"attempt"`
+			Body       string `json:"body"`
+		} `json:"replies"`
+		Connection struct {
+			RepliesWaiting int `json:"replies_waiting"`
+		} `json:"connection"`
+	}
+	if status := e.Call(t, "POST", "/v1/personal-channels/replies/pull", map[string]any{"max": 10}, bridge, &pulled); status != http.StatusOK ||
+		len(pulled.Replies) != 1 || pulled.Replies[0].Body != "Thanks, received" || pulled.Connection.RepliesWaiting != 1 {
+		t.Fatalf("pulling → %d %+v, want the member's reply", status, pulled)
+	}
+	delivery := pulled.Replies[0].DeliveryID
+	ack := func(attempt int, outcome string) string {
+		var answered struct {
+			Results []struct {
+				Result string `json:"result"`
+			} `json:"results"`
+		}
+		item := map[string]any{"delivery_id": delivery, "attempt": attempt, "outcome": outcome}
+		if status := e.Call(t, "POST", "/v1/personal-channels/replies/ack", map[string]any{"acks": []map[string]any{item}}, bridge, &answered); status != http.StatusOK || len(answered.Results) != 1 {
+			t.Fatalf("acking → %d %+v", status, answered)
+		}
+		return answered.Results[0].Result
+	}
+	if got := ack(pulled.Replies[0].Attempt+1, "failed"); got != "superseded" {
+		t.Fatalf("an ack for another attempt = %q, want superseded", got)
+	}
+	if got := ack(pulled.Replies[0].Attempt, "sent"); got != "recorded" {
+		t.Fatalf("the ack for the attempt pulled = %q, want recorded", got)
+	}
+	if got := ack(pulled.Replies[0].Attempt, "sent"); got != "already_settled" {
+		t.Fatalf("a second ack = %q, want already_settled", got)
+	}
+	// A reply the client could not deliver settles as not delivered, with its delivery.
+	if _, err := e.Owner.Exec(t.Context(), `
+		INSERT INTO comms_outbound (id, activity_id, user_id, provider, channel_user_id, body, consent_purpose, status, sent_at,
+		                            recipients, cc, subject, references_chain)
+		SELECT uuidv7(), $1, user_id, 'personal_channels', 'whatsapp/84901234567/' || id::text, 'Second', 'transactional', 'sent', now(),
+		       NULL, NULL, NULL, NULL
+		  FROM personal_channel_connection`, activity); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.Owner.Exec(t.Context(), `
+		INSERT INTO personal_channel_reply (connection_id, activity_id, delivery_key, network, thread_id, recipient_account, body)
+		SELECT id, $1, 'dk-e2e-2', 'whatsapp', '', '84901234567@s.whatsapp.net', 'Second' FROM personal_channel_connection`, activity); err != nil {
+		t.Fatal(err)
+	}
+	if status := e.Call(t, "POST", "/v1/personal-channels/replies/pull", map[string]any{"max": 10}, bridge, &pulled); status != http.StatusOK || len(pulled.Replies) != 1 {
+		t.Fatalf("pulling the second reply → %d %+v", status, pulled)
+	}
+	delivery = pulled.Replies[0].DeliveryID
+	if got := ack(pulled.Replies[0].Attempt, "failed"); got != "recorded" {
+		t.Fatalf("the failed ack = %q, want recorded", got)
+	}
+	var bounced int
+	if err := e.Owner.QueryRow(t.Context(), `SELECT count(*) FROM comms_outbound WHERE provider = 'personal_channels' AND bounced_at IS NOT NULL`).Scan(&bounced); err != nil || bounced != 1 {
+		t.Fatalf("the failed reply's delivery bounced = %d, %v; want it marked not delivered", bounced, err)
+	}
+	var connection struct {
+		Enabled bool `json:"enabled"`
+	}
+	if status := e.Call(t, "GET", "/v1/personal-channels/connection", nil, nil, &connection); status != http.StatusOK || !connection.Enabled {
+		t.Fatalf("reading the connection → %d %+v", status, connection)
+	}
+
 	if status := e.Call(t, "PATCH", "/v1/personal-channels/connection", map[string]any{"enabled": false}, nil, nil); status != http.StatusOK {
 		t.Fatalf("turning personal channels off → %d", status)
 	}

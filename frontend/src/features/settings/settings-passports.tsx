@@ -81,7 +81,11 @@ function PersonalChannelsApi({ onMint }: Readonly<{ onMint: () => void }>) {
             <Button
               variant="link"
               onClick={() =>
-                window.open(PERSONAL_CHANNELS_GUIDE, "_blank", "noreferrer")
+                window.open(
+                  PERSONAL_CHANNELS_GUIDE,
+                  "_blank",
+                  "noopener,noreferrer",
+                )
               }
             >
               {t("personalChannels.readGuide")}
