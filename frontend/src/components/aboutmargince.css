@@ -48,9 +48,10 @@
   list-style: none;
 }
 
-/* The title stands as far from the brand as the brand from the list. */
-.modal > .form-stack:has(> .aboutmargince-in-dialog) {
-  gap: var(--space-8);
+/* With the stack's own --space-3 gap, the title stands --space-8 from the
+   brand, as far as the brand stands from the list. */
+.aboutmargince-in-dialog {
+  padding-block-start: var(--space-5);
 }
 
 /* One step past the panel's own inset above the mark. */
