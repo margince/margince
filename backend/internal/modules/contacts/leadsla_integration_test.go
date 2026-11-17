@@ -117,18 +117,9 @@ func TestAWebsiteFormEnquiryStartsTheFirstResponseClock(t *testing.T) {
 		id, provenance.WebFormSource, provenance.WebFormSourceID(form, submission), e.user, createdAt); err != nil {
 		t.Fatal(err)
 	}
-	note := ids.NewV7()
-	if _, err := e.owner.Exec(ctx,
-		`INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by, source_system, source_id)
-		 VALUES ($1, 'note', 'Website enquiry', $2, 'system', 'system', $3, $4)`,
-		note, createdAt, provenance.WebFormSource, provenance.WebFormSourceID(form, submission)); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := e.owner.Exec(ctx,
-		`INSERT INTO activity_link (activity_id, entity_type, lead_id) VALUES ($1, 'lead', $2)`, note, id); err != nil {
-		t.Fatal(err)
-	}
 	lead := ids.From[ids.LeadKind](id)
+	e.seedLeadTouchFrom(t, lead, "note", "", "system", "system", createdAt,
+		provenance.WebFormSource, provenance.WebFormSourceID(form, submission))
 
 	read, err := e.store.GetLead(e.ctx, lead, storekit.LiveOnly)
 	if err != nil {
@@ -553,18 +544,21 @@ func TestFirstResponseKeepsTheEarliestReplyWhateverTheDeliveryOrder(t *testing.T
 // to survive the window between the activity's commit and the projection.
 func (e *promoteConsentEnv) seedLeadTouch(t *testing.T, lead ids.LeadID, kind, direction, capturedBy, source string, at time.Time) {
 	t.Helper()
+	e.seedLeadTouchFrom(t, lead, kind, direction, capturedBy, source, at, "", "")
+}
+
+// seedLeadTouchFrom is seedLeadTouch for an activity a source system wrote;
+// a blank sourceSystem and sourceID leave both NULL.
+func (e *promoteConsentEnv) seedLeadTouchFrom(t *testing.T, lead ids.LeadID, kind, direction, capturedBy, source string, at time.Time, sourceSystem, sourceID string) {
+	t.Helper()
 	id := ids.NewV7()
 	ctx := context.Background()
 	// direction is NULL for a note: the column's CHECK admits inbound and
 	// outbound and nothing else, and a note has neither.
-	var carried *string
-	if direction != "" {
-		carried = &direction
-	}
 	if _, err := e.owner.Exec(ctx,
-		`INSERT INTO activity (id, kind, subject, direction, occurred_at, source, captured_by)
-		 VALUES ($1, $2, 'Reply', $3, $4, $5, $6)`,
-		id, kind, carried, at, source, capturedBy); err != nil {
+		`INSERT INTO activity (id, kind, subject, direction, occurred_at, source, captured_by, source_system, source_id)
+		 VALUES ($1, $2, 'Reply', NULLIF($3, ''), $4, $5, $6, NULLIF($7, ''), NULLIF($8, ''))`,
+		id, kind, direction, at, source, capturedBy, sourceSystem, sourceID); err != nil {
 		t.Fatalf("seeding the %s activity: %v", kind, err)
 	}
 	if _, err := e.owner.Exec(ctx,
