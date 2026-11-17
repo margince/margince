@@ -135,8 +135,8 @@ func lockOpenPairs(ctx context.Context, tx pgx.Tx, after ids.UUID) ([]openPair, 
 	return queryOpenPairs(ctx, tx, `
 		   AND d.id > @after
 		 ORDER BY d.id
-		 LIMIT @limit
-		   FOR UPDATE OF d SKIP LOCKED`, pgx.StrictNamedArgs{afterCursorArg: after, "limit": dedupeRecheckBatch})
+		 LIMIT @pair_batch
+		   FOR UPDATE OF d SKIP LOCKED`, pgx.StrictNamedArgs{afterCursorArg: after, "pair_batch": dedupeRecheckBatch})
 }
 
 // queryOpenPairs narrows openPairsSQL by filter, so the pairs' select list has one reader.
@@ -161,9 +161,9 @@ func queryOpenPairs(ctx context.Context, tx pgx.Tx, filter string, args pgx.Stri
 func closeRenamedCompanyPairs(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) error {
 	pairs, err := queryOpenPairs(ctx, tx, `
 		   AND d.entity_type = '`+entityCompany+`'
-		   AND (d.left_company_id = @company OR d.right_company_id = @company)
+		   AND (d.left_company_id = @renamed_company OR d.right_company_id = @renamed_company)
 		 ORDER BY d.id
-		   FOR UPDATE OF d SKIP LOCKED`, pgx.StrictNamedArgs{"company": companyID})
+		   FOR UPDATE OF d SKIP LOCKED`, pgx.StrictNamedArgs{"renamed_company": companyID})
 	if err != nil {
 		return err
 	}
@@ -176,7 +176,8 @@ func closeRenamedCompanyPairs(ctx context.Context, tx pgx.Tx, companyID ids.Comp
 // closeUnfiledPairs archives each pair the rule `files` no longer files, and its
 // audit row records the score the pair holds now. It answers how many it closed.
 func closeUnfiledPairs(ctx context.Context, tx pgx.Tx, pairs []openPair,
-	files func(openPair) (bool, float64, error)) (int, error) {
+	files func(openPair) (bool, float64, error),
+) (int, error) {
 	closed := 0
 	for _, pair := range pairs {
 		filed, score, err := files(pair)
