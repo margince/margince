@@ -20,7 +20,7 @@ import { CompanyRail } from "./companyrail";
 
 // The company's register facts in its details. One is the VAT number, which
 // Registration's Edit opens on its own write. The other is the postal address,
-// six parts in About's form. The registered address
+// six parts in its own section's form. The registered address
 // is a Profile tab field (companyprofiledetails.test.tsx), never a row of this
 // column.
 
@@ -487,18 +487,19 @@ describe("the grouped postal address", () => {
   it("keeps the six parts behind one editor even when the address is empty", async () => {
     const user = userEvent.setup();
     await renderSettledGrid(COMPANY);
-    await user.click(screen.getByRole("button", { name: "Edit About" }));
-    const about = await screen.findByRole("dialog", { name: "About" });
+    await user.click(screen.getByRole("button", { name: /Show \d+ empty/ }));
+    await user.click(screen.getByRole("button", { name: "Edit Address" }));
+    const address = await screen.findByRole("dialog", { name: "Address" });
     for (const label of PART_LABELS)
-      expect(within(about).getByLabelText(new RegExp(label))).toBeVisible();
+      expect(within(address).getByLabelText(new RegExp(label))).toBeVisible();
   });
   it("opens with all existing address parts", async () => {
     const user = userEvent.setup();
     await renderSettledGrid(COMPANY_WITH_CITY);
-    await user.click(screen.getByRole("button", { name: "Edit About" }));
-    const about = await screen.findByRole("dialog", { name: "About" });
-    expect(within(about).getByDisplayValue("Berlin")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Edit Address" }));
+    const address = await screen.findByRole("dialog", { name: "Address" });
+    expect(within(address).getByDisplayValue("Berlin")).toBeVisible();
     for (const label of PART_LABELS)
-      expect(within(about).getByLabelText(new RegExp(label))).toBeVisible();
+      expect(within(address).getByLabelText(new RegExp(label))).toBeVisible();
   });
 });

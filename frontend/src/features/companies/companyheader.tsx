@@ -104,9 +104,8 @@ type CompanyFieldPress = Readonly<{
 // companyReadOnlyReason says why this record cannot be edited, when there is
 // something worth saying.
 //
-// Exported for the details' section Edits, which gate on it too. Why an
-// archived account is read-only is a fact about the record, not about which
-// component draws it.
+// Shared with the details' section Edits: read-only is a fact about the record,
+// not about the component drawing it.
 export function useCompanyReadOnlyReason(company: Company): string | undefined {
   const t = useT();
   // The per-ROW question only. The object grant and the seat ceiling are the
@@ -255,11 +254,8 @@ function useOwnerSave(
 // answer: the verb stays visible and says why, because a missing button reads
 // as a build without the feature.
 //
-// An unowned record is refused like any other the server marks unwritable.
-// The write gate treats an ownerless row as nobody's to change, so Edit on it
-// could only fail. The way in stays open regardless: the owner flow keeps its
-// claim door on its own predicate (useCompanyOwnerFlow). That is the verb an
-// unowned account offers.
+// An unowned record is refused too: its way in is the claim door, which
+// useCompanyOwnerFlow keeps on its own predicate.
 export function useCompanyVerbRefusal(company: Company): string | undefined {
   const t = useT();
   return useRecordWriteRefusal("company", company, {

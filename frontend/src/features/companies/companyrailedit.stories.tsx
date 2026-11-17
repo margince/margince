@@ -13,8 +13,8 @@ import {
 import { CompanyProfileDetails } from "./companyprofiledetails";
 import { CompanyRail } from "./companyrail";
 
-// The account's own fields in the record's edit form: the details' About
-// dialog, and the Profile tab's grouped rows that open the same form.
+// The account's own fields in the record's edit form. The details' About and
+// Address dialogs open it, and so do the Profile tab's grouped rows.
 
 const meta: Meta = {
   title: "Records/Company 360/Edit form",
@@ -98,16 +98,37 @@ export const AboutDialog: Story = {
     );
     const dialog = await screen.findByRole("dialog", { name: "About" });
     await waitFor(() =>
-      expect(within(dialog).getByDisplayValue("Werkstraße 12")).toBeVisible(),
+      expect(within(dialog).getByDisplayValue("brandt.example")).toBeVisible(),
     );
-    await expect(
-      within(dialog).getByDisplayValue("brandt.example"),
-    ).toBeVisible();
+    await expect(within(dialog).queryByLabelText("City")).toBeNull();
   },
 };
 
 export const AboutDialogPhone: Story = {
   ...AboutDialog,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+
+// The six address parts are their own section, with their own small form.
+export const AddressDialog: Story = {
+  render: () => <Details />,
+  play: async ({ canvasElement }) => {
+    const user = userEvent.setup();
+    await user.click(
+      await within(canvasElement).findByRole("button", {
+        name: "Edit Address",
+      }),
+    );
+    const dialog = await screen.findByRole("dialog", { name: "Address" });
+    await waitFor(() =>
+      expect(within(dialog).getByDisplayValue("Werkstraße 12")).toBeVisible(),
+    );
+  },
+};
+
+export const AddressDialogPhone: Story = {
+  ...AddressDialog,
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
 };

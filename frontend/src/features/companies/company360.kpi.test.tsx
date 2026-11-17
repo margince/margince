@@ -31,10 +31,8 @@ afterEach(() => {
 // unchecked. That lets a shape drift off the contract while every test passes.
 type StateStrip360 = NonNullable<Company360["state_strip"]>;
 
-// The page's two lifecycle readings, header first: the header's control (the
-// design system's dropdown worn as a button) and the details' About row. One
-// control, so a second mount point fails here. An account nobody has assessed
-// has an empty lifecycle row, which folds behind "Show N empty fields".
+// The header's one lifecycle control, then the details' About reading; a second
+// control fails here. An unassessed stage folds behind "Show N empty fields".
 async function lifecycleControls(): Promise<HTMLElement[]> {
   const header = await screen.findAllByRole("combobox", { name: "Lifecycle" });
   const unfold = screen.queryByRole("button", {

@@ -38,7 +38,7 @@ describe("the details' Edit links", () => {
   it("offer each section's Edit to a reader who may change it, and no pencil on a row", async () => {
     stub();
     renderRail();
-    for (const section of ["About", "Ownership", "Registration"]) {
+    for (const section of ["About", "Address", "Ownership", "Registration"]) {
       expect(
         await screen.findByRole("button", { name: `Edit ${section}` }),
       ).toHaveTextContent(/^Edit$/);
@@ -62,7 +62,7 @@ describe("the details' Edit links", () => {
     for (const name of [/^Industry/, /^Employees/, /^Lifecycle/]) {
       expect(within(about).getByRole("combobox", { name })).toBeVisible();
     }
-    expect(within(about).getByLabelText("City")).toBeVisible();
+    expect(within(about).queryByLabelText("City")).toBeNull();
     expect(
       within(about).queryByRole("combobox", { name: /^Owner/ }),
     ).toBeNull();
@@ -135,7 +135,7 @@ describe("CompanyRail", () => {
     );
     expect(screen.getByText("Industry")).toBeVisible();
     expect(screen.getByText("Employees")).toBeVisible();
-    expect(screen.getByText("Address")).toBeVisible();
+    expect(screen.getByRole("region", { name: "Address" })).toBeVisible();
     expect(
       screen.getByRole("button", { name: "Hide empty fields" }),
     ).toBeInTheDocument();
@@ -385,11 +385,11 @@ describe("CompanyRail", () => {
     });
     renderRail();
     const user = userEvent.setup();
-    const about = await openSection(user, "About");
-    const input = within(about).getByLabelText("City");
+    const address = await openSection(user, "Address");
+    const input = within(address).getByLabelText("City");
     await user.clear(input);
     await user.type(input, "Stuttgart");
-    await user.click(within(about).getByRole("button", { name: "Save" }));
+    await user.click(within(address).getByRole("button", { name: "Save" }));
     await waitFor(() =>
       expect(patchBody).toMatchObject({
         // `country` survives from the existing address though this edit never

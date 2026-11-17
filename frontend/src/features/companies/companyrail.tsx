@@ -111,10 +111,12 @@ function RailBody({
   const gate = useCompanyEditGate(company);
   const edit = useCompanyEdit(company, gate.canEdit);
   const about = useAboutSection(company, view, loading, edit);
+  const address = useAddressSection(company, edit);
   const ownership = useOwnershipSection(company, edit);
   const registration = useRegistrationSection(company, edit, gate);
   const sections: DetailSection[] = [
     about.section,
+    address.section,
     ownership.section,
     registration.section,
   ];
@@ -133,6 +135,7 @@ function RailBody({
         footnote={refusal && <span id={refusal.id}>{refusal.text}</span>}
       />
       {about.element}
+      {address.element}
       {ownership.element}
       {registration.element}
     </>
@@ -252,13 +255,8 @@ export function useRowBuilders(company: Company, edit: Edit) {
   return { text, choice, compound };
 }
 
-const ABOUT_KEYS = [
-  "domains",
-  "industry",
-  "size_band",
-  "lifecycle",
-  ...ADDRESS_FIELDS.map((field) => field.key),
-];
+const ABOUT_KEYS = ["domains", "industry", "size_band", "lifecycle"];
+const ADDRESS_KEYS = ADDRESS_FIELDS.map((field) => field.key);
 
 function useAboutSection(
   company: Company,
@@ -278,6 +276,39 @@ function useAboutSection(
   return { section, element: about.element };
 }
 
+function useAddressSection(company: Company, edit: RailEdit) {
+  const t = useT();
+  const label = t("co.address.summary");
+  const address = postalLines(company.address);
+  const change = useSectionEdit(edit, { label, keys: ADDRESS_KEYS });
+  const section: DetailSection = {
+    key: "address",
+    label,
+    edit: change.edit,
+    rows: [
+      {
+        key: "address",
+        term: label,
+        empty: !address,
+        value: (
+          <>
+            {address}
+            {company.address_country_mismatch && (
+              <>
+                {" "}
+                <AddressCountryMismatchBadge
+                  mismatch={company.address_country_mismatch}
+                />
+              </>
+            )}
+          </>
+        ),
+      },
+    ],
+  };
+  return { section, element: change.element };
+}
+
 // The rows the design reads under About: each set one shows, each empty one
 // folds behind "Show N empty fields". The account's other fields live on the
 // Profile tab (companyprofiledetails.tsx).
@@ -289,7 +320,6 @@ function useAboutRows(
   const t = useT();
   const industries = useIndustryOptions(company);
   const website = companyWebsite(company);
-  const address = postalLines(company.address);
   const wayIn = useWayIn(company, view, loading);
   const choice = (
     key: "size_band" | "lifecycle" | "industry",
@@ -328,24 +358,6 @@ function useAboutRows(
         label: t(labelFor(LIFECYCLE_LABELS, value)),
       })),
     ),
-    {
-      key: "address",
-      term: t("co.address.summary"),
-      empty: !address,
-      value: (
-        <>
-          {address}
-          {company.address_country_mismatch && (
-            <>
-              {" "}
-              <AddressCountryMismatchBadge
-                mismatch={company.address_country_mismatch}
-              />
-            </>
-          )}
-        </>
-      ),
-    },
     ...(wayIn
       ? [
           {

@@ -122,7 +122,7 @@ export const Editable: Story = {
   render: () => <Details company={company} />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    for (const section of ["About", "Ownership", "Registration"]) {
+    for (const section of ["About", "Address", "Ownership", "Registration"]) {
       await expect(
         await canvas.findByRole("button", { name: `Edit ${section}` }),
       ).toBeVisible();
