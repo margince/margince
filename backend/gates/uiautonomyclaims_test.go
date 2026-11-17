@@ -10,10 +10,9 @@ package gates
 // No shipped UI string promises that nothing sends without a human's approval
 // while the generated policy table says the send verbs auto-execute.
 //
-// This is the defect it exists for, and it shipped. The product moved sending
-// from confirm-first to auto-execute for a good reason — a person who asks their
-// own assistant to send has decided, so a second confirmation made the agent
-// weaker than the person behind it — and the copy did not move with it.
+// This is the defect it exists for, and it shipped. The product moved attended
+// sending from confirm-first to auto-execute, because a user who asks their own
+// assistant to send has already decided. The copy did not move with it.
 // Three English strings, plus their German and Vietnamese translations, went on
 // telling users that nothing leaves the building without their say-so. Every
 // other gate was green: the strings were valid, the screens rendered, the

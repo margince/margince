@@ -58,11 +58,9 @@ const (
 	ownReleaseAllowed ownRelease = true
 )
 
-// ownReleaseFor answers it for one proposal. A credential acts for its human
-// with that human's permissions, so what the human could release in the CRM it
-// may release too — but only an undoable change, because a human who sees it
-// afterwards can still put it back. agentMayDecide refuses any approval from
-// an unattended run before it reads this answer.
+// ownReleaseFor answers it for one proposal. A credential may release what its
+// human could release in the CRM, but only an undoable change, which the human
+// can still put back. agentMayDecide refuses an unattended run before this.
 func (s *Service) ownReleaseFor(ctx context.Context, q Queryer, a row) ownRelease {
 	if s.undoable == nil {
 		return ownReleaseRefused
