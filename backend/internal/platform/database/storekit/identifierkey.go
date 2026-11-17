@@ -39,20 +39,32 @@ var boundSuppressionKey atomic.Pointer[identifierKey]
 // UseSuppressionKey binds the key this process hashes erased identifiers
 // under. A program calls it once with its configuration; nil binds none, and
 // identifiers are then hashed without a key.
-func UseSuppressionKey(secret []byte) {
+func UseSuppressionKey(secret []byte) { boundSuppressionKey.Store(newIdentifierKey(secret)) }
+
+type suppressionKeyCtx struct{}
+
+// WithSuppressionKey is ctx hashing erased identifiers under secret, the key
+// of the program it serves. A nil secret hashes them without a key.
+func WithSuppressionKey(ctx context.Context, secret []byte) context.Context {
+	return context.WithValue(ctx, suppressionKeyCtx{}, newIdentifierKey(secret))
+}
+
+func newIdentifierKey(secret []byte) *identifierKey {
 	if secret == nil {
-		boundSuppressionKey.Store(nil)
-		return
+		return nil
 	}
 	mac := hmac.New(sha256.New, secret)
 	mac.Write([]byte("key-id"))
-	boundSuppressionKey.Store(&identifierKey{secret: secret, id: hex.EncodeToString(mac.Sum(nil)[:keyIDBytes])})
+	return &identifierKey{secret: secret, id: hex.EncodeToString(mac.Sum(nil)[:keyIDBytes])}
 }
 
-// currentIdentifierKey is the key this process hashes erased identifiers
-// under, or false when the installation configures no root key.
-func currentIdentifierKey() (identifierKey, bool) {
-	key := boundSuppressionKey.Load()
+// currentIdentifierKey is the key of the program ctx serves, else the one this
+// process bound, or false when the installation configures no root key.
+func currentIdentifierKey(ctx context.Context) (identifierKey, bool) {
+	key, carried := ctx.Value(suppressionKeyCtx{}).(*identifierKey)
+	if !carried {
+		key = boundSuppressionKey.Load()
+	}
 	if key == nil {
 		return identifierKey{}, false
 	}
@@ -75,8 +87,8 @@ func (k identifierKey) keyed(digest string) string {
 
 // SuppressionKeyID is the key_id a hash SuppressionHash writes now is stamped
 // with, or nil for an unkeyed hash.
-func SuppressionKeyID() *string {
-	key, ok := currentIdentifierKey()
+func SuppressionKeyID(ctx context.Context) *string {
+	key, ok := currentIdentifierKey(ctx)
 	if !ok {
 		return nil
 	}
@@ -87,8 +99,8 @@ func SuppressionKeyID() *string {
 // keyed hash comes first when a key is bound. The unkeyed one follows, as rows
 // written before the key, or without one, hold it. Every reader matches against
 // all of them, so a row the re-hash has not reached yet still suppresses.
-func SuppressionForms(values ...string) []string {
-	key, keyed := currentIdentifierKey()
+func SuppressionForms(ctx context.Context, values ...string) []string {
+	key, keyed := currentIdentifierKey(ctx)
 	forms := make([]string, 0, 2*len(values))
 	for _, value := range values {
 		digest := identifierDigest(value)
@@ -102,8 +114,8 @@ func SuppressionForms(values ...string) []string {
 
 // RekeySuppressionHash is the keyed form of a stored unkeyed hash, made with
 // the key SuppressionKeyID names. It reports false when no key is bound.
-func RekeySuppressionHash(digest string) (string, bool) {
-	key, keyed := currentIdentifierKey()
+func RekeySuppressionHash(ctx context.Context, digest string) (string, bool) {
+	key, keyed := currentIdentifierKey(ctx)
 	if !keyed {
 		return "", false
 	}
@@ -118,7 +130,7 @@ type RowQuerier interface {
 // CountUnkeyedIdentifiers counts the rows selector names, stopping one past
 // maximum. It answers zero when no key is bound, since nothing can be re-keyed.
 func CountUnkeyedIdentifiers(ctx context.Context, q RowQuerier, selector string, maximum int64) (int64, error) {
-	if SuppressionKeyID() == nil {
+	if SuppressionKeyID(ctx) == nil {
 		return 0, nil
 	}
 	var count int64
@@ -143,7 +155,7 @@ func RefuseForeignSuppressionKey(ctx context.Context, pool *pgxpool.Pool) error 
 		return nil
 	}
 	current := ""
-	if key, ok := currentIdentifierKey(); ok {
+	if key, ok := currentIdentifierKey(ctx); ok {
 		current = key.id
 	}
 	var foreign bool

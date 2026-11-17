@@ -4,7 +4,6 @@
 package consent
 
 import (
-	"context"
 	"io/fs"
 	"maps"
 	"slices"
@@ -16,17 +15,18 @@ import (
 )
 
 // A posture the environment sets is the one every decision reads, without the
-// database. Not parallel: the binding is the process's own.
+// database.
 func TestABootSetPostureIsTheOneEveryDecisionReads(t *testing.T) {
+	t.Parallel()
 	boot := enforceEveryCategory()
 	var entries []string
 	for _, category := range slices.Sorted(maps.Keys(boot)) {
 		boot[category] = "observe"
 		entries = append(entries, category+":observe")
 	}
-	configtest.Bind(t, configtest.MustLoadEnv(t, ConfigSettings(), "MARGINCE_CONSENT_AUTHORIZATION_MODES="+strings.Join(entries, ",")))
+	ctx := config.WithBound(t.Context(), configtest.MustLoadEnv(t, ConfigSettings(), "MARGINCE_CONSENT_AUTHORIZATION_MODES="+strings.Join(entries, ",")))
 
-	modes, err := authorizationModesTx(context.Background(), nil)
+	modes, err := authorizationModesTx(ctx, nil)
 	if err != nil {
 		t.Fatalf("reading the boot-set posture: %v", err)
 	}

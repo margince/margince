@@ -25,6 +25,7 @@ func captureConfig(cfg apiConfig, logger *slog.Logger) compose.CaptureConfig {
 // settingOptions are the options the deployment's settings alone decide.
 func settingOptions(cfg apiConfig, logger *slog.Logger) []compose.Option {
 	return []compose.Option{
+		compose.WithConfig(cfg.settings),
 		compose.WithCompanyContextRollout(config.Val(cfg.settings, compose.CompanyContextRollout)),
 		compose.WithListsEnabled(config.Val(cfg.settings, programsettings.ListsEnabled)),
 		compose.WithDisabledCoreFeatures(config.Val(cfg.settings, programsettings.CoreFeaturesDisabled)),

@@ -129,7 +129,7 @@ func seedSuppressedEmail(t *testing.T, email string) {
 	owner := integration.OwnerConn(t)
 	if _, err := owner.Exec(context.Background(), `
 		INSERT INTO erasure_suppression (kind, value_hash) VALUES ('email', $1)
-		ON CONFLICT DO NOTHING`, storekit.SuppressionHash(email)); err != nil {
+		ON CONFLICT DO NOTHING`, storekit.SuppressionHash(t.Context(), email)); err != nil {
 		t.Fatalf("seeding the suppression: %v", err)
 	}
 }
@@ -270,7 +270,7 @@ func TestTheExportedListNeverCarriesTheIdentifierItself(t *testing.T) {
 	}
 
 	reader, _, err := store.Get(e.Admin(),
-		"erasure-suppression/email/"+storekit.SuppressionHash(resurrectedAddress))
+		"erasure-suppression/email/"+storekit.SuppressionHash(t.Context(), resurrectedAddress))
 	if err != nil {
 		t.Fatalf("reading the exported entry: %v", err)
 	}

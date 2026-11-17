@@ -15,10 +15,10 @@ import (
 
 // Locks lists the settings of surface that a boot source sets. It is never
 // nil, so a response says "nothing is locked" as [].
-func Locks(cfg *config.Config, surface []config.Any) []crmcontracts.SettingLock {
+func Locks(ctx context.Context, cfg *config.Config, surface []config.Any) []crmcontracts.SettingLock {
 	locks := []crmcontracts.SettingLock{}
 	for _, s := range surface {
-		if origin, locked := cfg.Locked(s.Key()); locked {
+		if origin, locked := cfg.Locked(ctx, s.Key()); locked {
 			locks = append(locks, crmcontracts.SettingLock{Key: s.Key(), Origin: settingOrigin(origin)})
 		}
 	}
@@ -27,8 +27,8 @@ func Locks(cfg *config.Config, surface []config.Any) []crmcontracts.SettingLock 
 
 // loadedLocks is Locks over the loaded configuration, as a response field.
 // Modules take it through their WithLocks and name their own surfaces.
-func loadedLocks(surface []config.Any) *[]crmcontracts.SettingLock {
-	locks := Locks(loadedConfig(), surface)
+func loadedLocks(ctx context.Context, surface []config.Any) *[]crmcontracts.SettingLock {
+	locks := Locks(ctx, loadedConfig(ctx), surface)
 	return &locks
 }
 

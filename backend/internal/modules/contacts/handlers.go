@@ -30,7 +30,7 @@ import (
 type Handlers struct {
 	// locks reports the settings a boot source sets on each settings response;
 	// nil leaves the field out.
-	locks func(surface []config.Any) *[]crmcontracts.SettingLock
+	locks func(ctx context.Context, surface []config.Any) *[]crmcontracts.SettingLock
 	// stageMatches turns suggested LinkedIn matches into approvals. See
 	// WithMatchStager for why it is injected.
 	stageMatches func(context.Context) error

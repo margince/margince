@@ -157,7 +157,7 @@ func (s *AdminStore) ReplaceBudget(ctx context.Context, change BudgetChange) (cr
 		// other value as locked. Resent, it reaches the no-op below, because
 		// the current snapshot reads the boot value.
 		sameBudget := func(boot BudgetConfig) bool { return boot.Revision() == change.Config.Revision() }
-		if _, err := config.LockedChange(s.cfg, BudgetSettings, sameBudget); err != nil {
+		if _, err := config.LockedChange(ctx, s.cfg, BudgetSettings, sameBudget); err != nil {
 			return err
 		}
 		// Validate the submitted config strictly BEFORE the no-op short-circuit

@@ -53,7 +53,7 @@ func seedSuppressionAt(t *testing.T, email string, at time.Time) {
 	t.Helper()
 	if _, err := integration.OwnerConn(t).Exec(context.Background(), `
 		INSERT INTO erasure_suppression (kind, value_hash, created_at) VALUES ('email', $1, $2)`,
-		storekit.SuppressionHash(email), at); err != nil {
+		storekit.SuppressionHash(t.Context(), email), at); err != nil {
 		t.Fatalf("seeding the suppression: %v", err)
 	}
 }

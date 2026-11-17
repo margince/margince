@@ -9,6 +9,7 @@ package compose
 // audit-only write.
 
 import (
+	"context"
 	"net/http"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -31,7 +32,7 @@ func (h captureSettingsHandlers) GetCaptureSettings(w http.ResponseWriter, r *ht
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, toContractCaptureSettings(settings))
+	httperr.WriteJSON(w, http.StatusOK, toContractCaptureSettings(r.Context(), settings))
 }
 
 func (h captureSettingsHandlers) UpdateCaptureSettings(w http.ResponseWriter, r *http.Request) {
@@ -69,11 +70,11 @@ func (h captureSettingsHandlers) UpdateCaptureSettings(w http.ResponseWriter, r 
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, toContractCaptureSettings(settings))
+	httperr.WriteJSON(w, http.StatusOK, toContractCaptureSettings(r.Context(), settings))
 }
 
 // toContractCaptureSettings maps the posture in force onto the wire shape.
-func toContractCaptureSettings(s capture.Settings) crmcontracts.CaptureSettings {
+func toContractCaptureSettings(ctx context.Context, s capture.Settings) crmcontracts.CaptureSettings {
 	return crmcontracts.CaptureSettings{
 		InternalMail:         contractInternalMailSettings(s.InternalMail),
 		AutoEnrich:           s.AutoEnrich,
@@ -91,6 +92,6 @@ func toContractCaptureSettings(s capture.Settings) crmcontracts.CaptureSettings 
 		VerdictPassCap:          s.VerdictPassCap,
 		ClassifyPassCap:         s.ClassifyPassCap,
 		OwedClassifyPassCap:     s.OwedClassifyPassCap,
-		Locks:                   loadedLocks(capture.ConfigSettings()),
+		Locks:                   loadedLocks(ctx, capture.ConfigSettings()),
 	}
 }

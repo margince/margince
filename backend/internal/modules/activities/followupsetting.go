@@ -92,7 +92,7 @@ func sharePrivateQuoteRequests(ctx context.Context, tx pgx.Tx) (bool, error) {
 // the boot value the program bound.
 func followUpAfterDays(ctx context.Context, tx pgx.Tx) (int, error) {
 	days, err := database.Remember(tx, settings.ValueMemoKey(FollowUpAfterDays.Key()), func() (int, error) {
-		return config.StoredApplyTx(ctx, tx, config.Bound(), FollowUpAfterDays)
+		return config.StoredApplyTx(ctx, tx, config.Bound(ctx), FollowUpAfterDays)
 	})
 	if err != nil {
 		return 0, fmt.Errorf("read %s: %w", FollowUpAfterDays.Key(), err)

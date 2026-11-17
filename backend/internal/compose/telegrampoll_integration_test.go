@@ -394,7 +394,7 @@ func suppressChannelAccount(t *testing.T, e *integration.Env, account string) {
 		_, err := tx.Exec(ctx, `
 			INSERT INTO erasure_suppression (kind, value_hash)
 			VALUES ('channel_identity', $1)`,
-			storekit.ChannelIdentityHash(telegram.Provider, account))
+			storekit.ChannelIdentityHash(ctx, telegram.Provider, account))
 		return err
 	}); err != nil {
 		t.Fatalf("arming the erasure suppression for account %s: %v", account, err)

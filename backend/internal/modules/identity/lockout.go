@@ -261,7 +261,7 @@ func (s *Service) recordFailedLogin(ctx context.Context, email string) error {
 			`INSERT INTO system_log (actor_type, actor_id, action, detail)
 			 VALUES ('human', 'human:unauthenticated', 'login', jsonb_strip_nulls(
 			         jsonb_build_object('outcome', $1::text, 'email_hash', $2::text, 'email_key_id', $3::text)))`,
-			outcome, storekit.SuppressionHash(target), storekit.SuppressionKeyID())
+			outcome, storekit.SuppressionHash(ctx, target), storekit.SuppressionKeyID(ctx))
 		return err
 	})
 }

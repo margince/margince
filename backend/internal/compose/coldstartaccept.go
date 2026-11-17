@@ -56,7 +56,7 @@ func NewApprovalsServiceWithEffects(pool *pgxpool.Pool) *approvals.Service {
 // for the services that only stage.
 func approvalsServiceTelling(pool *pgxpool.Pool, notices *siteLeadNoticeLane) *approvals.Service {
 	captureConfig := CaptureConfig{}
-	if loaded := config.Bound(); loaded != nil {
+	if loaded := config.Bound(context.Background()); loaded != nil {
 		captureConfig = CaptureConfigFromDeploy(loaded, slog.Default())
 	}
 	svc := NewApprovalsService(InstallationDB(pool)).

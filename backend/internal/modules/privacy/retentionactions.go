@@ -186,8 +186,8 @@ func anonymizeContactRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, eraser 
 		  source_author_name = NULL, greeting_register = NULL,
 		  anonymized_address_hashes = $3, anonymized_address_key_id = $4,
 		  archived_at = coalesce(archived_at, now())%s
-		WHERE id = $1`, nullColumnAssignments(contactCustom)), id, erasedName, addressHashes(subjectEmails),
-		storekit.SuppressionKeyID())
+		WHERE id = $1`, nullColumnAssignments(contactCustom)), id, erasedName, addressHashes(ctx, subjectEmails),
+		storekit.SuppressionKeyID(ctx))
 	if err == nil {
 		err = deleteConsentCredentials(ctx, tx, id)
 	}

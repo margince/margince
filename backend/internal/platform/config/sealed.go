@@ -116,13 +116,14 @@ func saveSealed[T any](ctx context.Context, c *Config, s *Setting[T], v T) error
 // that was never stored succeeds. A boot source that sets it refuses the
 // removal, like any other change.
 func RemoveSecret[T any](ctx context.Context, c *Config, s *Setting[T]) error {
+	c = c.serving(ctx)
 	if err := requireSealed(s); err != nil {
 		return err
 	}
 	if err := settings.RequireWrite(ctx, s.sealed); err != nil {
 		return err
 	}
-	if origin, locked := c.Locked(s.Key()); locked {
+	if origin, locked := c.Locked(ctx, s.Key()); locked {
 		return LockedError{Key: s.Key(), Origin: origin}
 	}
 	db, err := c.database(s.Key())

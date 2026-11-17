@@ -7,7 +7,7 @@ package testdb
 
 import (
 	"context"
-	"fmt"
+	"crypto/rand"
 	"os"
 	"slices"
 	"strings"
@@ -29,13 +29,12 @@ import (
 // Each test gets its own database: the path is set per-database and would
 // otherwise outlive the test for every suite that connected afterwards.
 
-//testdb:serial sets the environment or working directory, which Go refuses in a parallel test
 func TestTheDatabaseApplierMovesAnUnqualifiedNowForTheAppRole(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
-	t.Setenv(clockskew.EnvVar, "database:200")
 
 	owner, probe := shadowProbeDB(t)
-	if err := installClockShadow(ctx, owner); err != nil {
+	if err := installClockShadowAt(ctx, owner, skewOf(t, "database:200")); err != nil {
 		t.Fatalf("installing the shadow: %v", err)
 	}
 
@@ -79,16 +78,15 @@ func TestTheDatabaseApplierMovesAnUnqualifiedNowForTheAppRole(t *testing.T) {
 	}
 }
 
-//testdb:serial sets the environment or working directory, which Go refuses in a parallel test
 func TestEveryOtherApplierLeavesTheDatabaseClockAlone(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 
 	for _, value := range []string{"", "machine:200", "fixture:200"} {
 		t.Run("applier="+value, func(t *testing.T) {
-			t.Setenv(clockskew.EnvVar, value)
-
+			t.Parallel()
 			owner, _ := shadowProbeDB(t)
-			if err := installClockShadow(ctx, owner); err != nil {
+			if err := installClockShadowAt(ctx, owner, skewOf(t, value)); err != nil {
 				t.Fatalf("installing the shadow: %v", err)
 			}
 			if shadowInstalled(t, owner) {
@@ -102,19 +100,16 @@ func TestEveryOtherApplierLeavesTheDatabaseClockAlone(t *testing.T) {
 // lives in pg_db_role_setting rather than in a schema, so re-migrating does not
 // remove it. An ordinary run would otherwise inherit a previous drift run's path,
 // with nothing set and nothing printed.
-//
-//testdb:serial sets the environment or working directory, which Go refuses in a parallel test
 func TestAnOrdinaryRunClearsAPreviousDriftRunsResidue(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
-	t.Setenv(clockskew.EnvVar, "database:200")
 
 	owner, probe := shadowProbeDB(t)
-	if err := installClockShadow(ctx, owner); err != nil {
+	if err := installClockShadowAt(ctx, owner, skewOf(t, "database:200")); err != nil {
 		t.Fatalf("installing the shadow: %v", err)
 	}
 
-	t.Setenv(clockskew.EnvVar, "")
-	if err := installClockShadow(ctx, owner); err != nil {
+	if err := installClockShadowAt(ctx, owner, skewOf(t, "")); err != nil {
 		t.Fatalf("the ordinary run: %v", err)
 	}
 
@@ -152,9 +147,9 @@ func shadowInstalled(t *testing.T, owner *pgx.Conn) bool {
 func shadowProbeDB(t *testing.T) (*pgx.Conn, string) {
 	t.Helper()
 
-	// Named for the process, so two packages running side by side in the
-	// parallel lane never share one probe.
-	name := fmt.Sprintf("clockshadow_probe_%d", os.Getpid())
+	// Named for the test, so two tests or packages running side by side never
+	// share one probe.
+	name := "clockshadow_probe_" + strings.ToLower(rand.Text())
 	ctx := context.Background()
 	quoted := pgx.Identifier{name}.Sanitize()
 
@@ -217,4 +212,14 @@ func connectAs(t *testing.T, dsn, database string) *pgx.Conn {
 		}
 	})
 	return conn
+}
+
+// skewOf is the skew a run with value in the clock variable applies.
+func skewOf(t *testing.T, value string) clockskew.Skew {
+	t.Helper()
+	skew, err := clockskew.Parse(value)
+	if err != nil {
+		t.Fatalf("parsing the skew %q: %v", value, err)
+	}
+	return skew
 }

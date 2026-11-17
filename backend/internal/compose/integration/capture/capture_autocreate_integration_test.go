@@ -254,7 +254,7 @@ func TestCaptureRefusesToDeriveARecord(t *testing.T) {
 		err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			_, err := tx.Exec(context.Background(), `
 				INSERT INTO erasure_suppression (kind, value_hash)
-				VALUES ('email', $1)`, storekit.SuppressionHash("dave@dead.example"))
+				VALUES ('email', $1)`, storekit.SuppressionHash(t.Context(), "dave@dead.example"))
 			return err
 		})
 		if err != nil {

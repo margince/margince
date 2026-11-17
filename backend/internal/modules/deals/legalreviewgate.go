@@ -146,7 +146,7 @@ func legalReviewOnForDecision(ctx context.Context, tx pgx.Tx) (bool, error) {
 	if err := settings.ShareLockForDecision(ctx, tx, LegalReviewEnabled.Key()); err != nil {
 		return false, err
 	}
-	return config.StoredApplyTx(ctx, tx, config.Bound(), LegalReviewEnabled)
+	return config.StoredApplyTx(ctx, tx, config.Bound(ctx), LegalReviewEnabled)
 }
 
 type reviewStanding struct {

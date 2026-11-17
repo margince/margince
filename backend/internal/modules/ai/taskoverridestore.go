@@ -92,7 +92,7 @@ func (s *RoutingStore) ReplaceTaskOverrides(ctx context.Context, next TaskOverri
 		}
 		// A boot value may spell a reset task as {}, which a save drops.
 		sameOverrides := func(boot TaskOverrides) bool { return boot.withoutEmpty().Revision() == saved.Revision() }
-		if locked, err := config.LockedChange(s.cfg, TaskOverridesSetting, sameOverrides); locked || err != nil {
+		if locked, err := config.LockedChange(ctx, s.cfg, TaskOverridesSetting, sameOverrides); locked || err != nil {
 			return err
 		}
 		if err := next.refusedAgainst(current); err != nil {

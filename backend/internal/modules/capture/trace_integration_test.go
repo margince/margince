@@ -283,7 +283,7 @@ func TestAnErasedAddressIsNeverWrittenEvenWithPayloadsOn(t *testing.T) {
 		// a stray space resurrects an erased subject.
 		_, err := tx.Exec(ctx, `
 			INSERT INTO erasure_suppression (kind, value_hash)
-			VALUES ('email', $1)`, storekit.SuppressionHash(erased))
+			VALUES ('email', $1)`, storekit.SuppressionHash(ctx, erased))
 		return err
 	}); err != nil {
 		t.Fatalf("seeding the suppression list: %v", err)
@@ -374,7 +374,7 @@ func TestTraceWithholdsTheNameOfAnErasedChannelIdentity(t *testing.T) {
 			// The derivation the reader uses, not a hand-rolled equivalent: a test
 			// that seeded its own spelling would pass while production looked
 			// somewhere else.
-			storekit.ChannelIdentityHash(provider, account))
+			storekit.ChannelIdentityHash(ctx, provider, account))
 		return err
 	}); err != nil {
 		t.Fatalf("seeding the suppression list: %v", err)

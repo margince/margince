@@ -63,7 +63,7 @@ func TestAnErasedAddressBooksAndIsAnsweredAsACleanOne(t *testing.T) {
 	var kept int
 	if err := e.Owner.QueryRow(context.Background(),
 		`SELECT count(*) FROM erasure_suppression WHERE kind = 'email' AND value_hash = $1`,
-		storekit.SuppressionHash(erasedBooker)).Scan(&kept); err != nil {
+		storekit.SuppressionHash(t.Context(), erasedBooker)).Scan(&kept); err != nil {
 		t.Fatal(err)
 	}
 	if kept != 1 {

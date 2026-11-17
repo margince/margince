@@ -97,7 +97,7 @@ type signingEntity struct {
 }
 
 func signingEntityTx(ctx context.Context, tx pgx.Tx, user, sending ids.UUID) (signingEntity, error) {
-	workspace, err := config.StoredApplyTx(ctx, tx, config.Bound(), SignatureTemplate)
+	workspace, err := config.StoredApplyTx(ctx, tx, config.Bound(ctx), SignatureTemplate)
 	if err != nil {
 		return signingEntity{}, err
 	}

@@ -66,6 +66,15 @@ func ledgerRebuildReason(reason string) string {
 // ledgerAtHead compares what each tracking table recorded against what this
 // binary embeds, and returns the first disagreement in words.
 func ledgerAtHead(ctx context.Context, owner *pgx.Conn) (string, error) {
+	extra, err := testExtensionNamespaces()
+	if err != nil {
+		return "", err
+	}
+	return ledgerAtHeadWith(ctx, owner, extra)
+}
+
+// ledgerAtHeadWith is ledgerAtHead with extra as the composed extensions.
+func ledgerAtHeadWith(ctx context.Context, owner *pgx.Conn, extra []dbmigrate.Namespace) (string, error) {
 	core, err := migrations.Core()
 	if err != nil {
 		return "", fmt.Errorf("loading the embedded core migrations: %w", err)
@@ -73,10 +82,6 @@ func ledgerAtHead(ctx context.Context, owner *pgx.Conn) (string, error) {
 	custom, err := migrations.Custom()
 	if err != nil {
 		return "", fmt.Errorf("loading the embedded custom migrations: %w", err)
-	}
-	extra, err := testExtensionNamespaces()
-	if err != nil {
-		return "", err
 	}
 	if reason, err := unlistedExtensionLedger(ctx, owner, extra); err != nil || reason != "" {
 		return reason, err

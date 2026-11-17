@@ -62,7 +62,7 @@ func TestAKeptStopLosesItsPlaintextAddress(t *testing.T) {
 				id).Scan(&address, &hash); err != nil {
 				t.Fatal(err)
 			}
-			if address != nil || hash != storekit.SuppressionHash(was) {
+			if address != nil || hash != storekit.SuppressionHash(ctx, was) {
 				t.Errorf("%s the stop on %s holds address %v and hash %q, want its hash alone", when, was, address, hash)
 			}
 		}

@@ -332,7 +332,7 @@ func seedLegalReview(ctx context.Context, tx pgx.Tx, seeds deployconfig.Seeds) e
 	if seeds.LegalReview == nil || *seeds.LegalReview {
 		return nil
 	}
-	_, err := config.SeedTx(ctx, tx, loadedConfig(), deals.LegalReviewEnabled, false)
+	_, err := config.SeedTx(ctx, tx, loadedConfig(ctx), deals.LegalReviewEnabled, false)
 	return err
 }
 
@@ -381,7 +381,7 @@ func seedRetentionPosture(ctx context.Context, tx pgx.Tx, seeds deployconfig.See
 	// The seed writes only where no row exists, so it never replaces a saved
 	// posture. Under a boot-set posture it writes nothing: the boot value is in
 	// force, and the deployment's seed of true is dropped.
-	_, err := config.SeedTx(ctx, tx, loadedConfig(), privacy.RetainOnly, true)
+	_, err := config.SeedTx(ctx, tx, loadedConfig(ctx), privacy.RetainOnly, true)
 	return err
 }
 
@@ -410,7 +410,7 @@ func seedRoutingBinding(ctx context.Context, tx pgx.Tx, declared yaml.Node, disc
 	if err != nil || !declaredAny {
 		return err
 	}
-	boot := loadedConfig()
+	boot := loadedConfig(ctx)
 	stored, err := config.SeedTx(ctx, tx, boot, ai.Routing, cfg)
 	if err != nil {
 		return err
@@ -423,7 +423,7 @@ func seedRoutingBinding(ctx context.Context, tx pgx.Tx, declared yaml.Node, disc
 	// zero egress, while the installation serves a cloud vendor the previous
 	// one chose. That is text leaving for somewhere nobody chose, and nothing
 	// else in the boot would mention it.
-	if _, locked := boot.Locked(ai.RoutingKey); !stored && !locked {
+	if _, locked := boot.Locked(ctx, ai.RoutingKey); !stored && !locked {
 		*discarded = append(*discarded, ai.RoutingKey)
 	}
 	return nil

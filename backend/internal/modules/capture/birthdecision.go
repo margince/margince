@@ -254,7 +254,7 @@ func decideBirthTx(
 func standingHoldsTx(
 	ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, fields ActivityFields,
 ) (birthDecision, error) {
-	sharing, err := config.StoredApplyTx(ctx, tx, config.Bound(), MailSharing)
+	sharing, err := config.StoredApplyTx(ctx, tx, config.Bound(ctx), MailSharing)
 	if err != nil {
 		return birthDecision{}, fmt.Errorf("capture: reading the mail-sharing posture: %w", err)
 	}

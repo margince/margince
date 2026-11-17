@@ -175,7 +175,7 @@ func liveSuppression(ctx context.Context, tx pgx.Tx, contactID string, r connect
 	// One row per (kind, purpose_id). Two narrow rows for the same kind but
 	// different purposes are two different stops, and collapsing them would
 	// drop one of them. The newest recorded_at of each is kept.
-	lowered, hashes := storekit.StopAddressArgs(r.Email)
+	lowered, hashes := storekit.StopAddressArgs(ctx, r.Email)
 	rows, err := tx.Query(ctx, `
 		SELECT kind, purpose_id, max(recorded_at), string_agg(id::text, ',' ORDER BY id) FROM communication_suppression s
 		 WHERE revoked_at IS NULL

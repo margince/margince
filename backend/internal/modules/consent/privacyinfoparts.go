@@ -88,7 +88,7 @@ func disclosureRecipients() []string {
 // particulars. A further entity that answers for the record (recordEntityTx)
 // puts its own legal name and address in place of the installation's.
 func readControllerTx(ctx context.Context, tx pgx.Tx, out *PrivacyInformation, who ruleSubject) error {
-	identity, err := config.StoredApplyTx(ctx, tx, config.Bound(), ControllerIdentity)
+	identity, err := config.StoredApplyTx(ctx, tx, config.Bound(ctx), ControllerIdentity)
 	if err != nil {
 		return fmt.Errorf("consent: reading who answers for this data: %w", err)
 	}

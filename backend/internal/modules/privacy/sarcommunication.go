@@ -12,6 +12,8 @@ package privacy
 // DONE.
 
 import (
+	"context"
+
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -31,7 +33,7 @@ import (
 // subject's own history. A contact-keyed section would silently withhold the
 // earliest part of their record, which is the half they are least likely to
 // know about and most likely to be asking after.
-func sarCommunicationSections(
+func sarCommunicationSections(ctx context.Context,
 	pkg *SARPackage, emails []string, leads, identities []ids.UUID,
 ) []sarSection {
 	return []sarSection{
@@ -86,7 +88,7 @@ func sarCommunicationSections(
 		   LEFT JOIN consent_purpose p ON p.id = s.purpose_id
 		   WHERE s.contact_id = ANY($1) OR s.lead_id = ANY($2)
 		      OR ` + storekit.StopOnAddressesSQL("s", "$3", "$4"),
-			append([]any{identities, leads}, stopAddressArgs(emails)...),
+			append([]any{identities, leads}, stopAddressArgs(ctx, emails)...),
 		},
 		// A rep vouching that a machine refusal may be overruled for this
 		// subject. No address arm, unlike the suppression above: an override
@@ -127,7 +129,7 @@ func identityStrings(identities []ids.UUID) []string {
 
 // stopAddressArgs is storekit.StopAddressArgs as query arguments, so a kept
 // stop that holds only the hash of the subject's address is exported too.
-func stopAddressArgs(emails []string) []any {
-	lowered, hashes := storekit.StopAddressArgs(emails...)
+func stopAddressArgs(ctx context.Context, emails []string) []any {
+	lowered, hashes := storekit.StopAddressArgs(ctx, emails...)
 	return []any{lowered, hashes}
 }

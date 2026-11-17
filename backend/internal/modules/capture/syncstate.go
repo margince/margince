@@ -102,7 +102,7 @@ func backoffDelay(consecutiveFailures int) time.Duration {
 // A successful pull and its health share the snapshot-fenced transaction.
 func (r *Registry) recordSyncSuccessTx(ctx context.Context, tx pgx.Tx, connectionID ids.UUID, receivedAt *time.Time) error {
 	now := r.now()
-	interval, err := config.StoredApplyTx(ctx, tx, config.Bound(), MailSyncIntervalSeconds)
+	interval, err := config.StoredApplyTx(ctx, tx, config.Bound(ctx), MailSyncIntervalSeconds)
 	if err != nil {
 		return err
 	}
@@ -383,7 +383,7 @@ func parkForbiddenTx(ctx context.Context, tx pgx.Tx, connectionID ids.UUID) (tim
 	if err := storekit.CaptureFactsChangedBy(ctx, tx, parked); err != nil {
 		return 0, err
 	}
-	interval, err := config.StoredApplyTx(ctx, tx, config.Bound(), MailSyncIntervalSeconds)
+	interval, err := config.StoredApplyTx(ctx, tx, config.Bound(ctx), MailSyncIntervalSeconds)
 	if err != nil {
 		return 0, err
 	}

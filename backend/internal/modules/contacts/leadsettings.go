@@ -139,7 +139,7 @@ func loadLeadSLAPolicy(ctx context.Context, tx pgx.Tx, cfg *config.Config) (lead
 func (s *Store) slaPolicy(ctx context.Context) (leadSLAPolicy, error) {
 	var policy leadSLAPolicy
 	err := s.tx(ctx, func(tx pgx.Tx) (err error) {
-		policy, err = loadLeadSLAPolicy(ctx, tx, s.bootConfig())
+		policy, err = loadLeadSLAPolicy(ctx, tx, s.bootConfig(ctx))
 		return err
 	})
 	return policy, err
@@ -165,11 +165,11 @@ func (s *Store) FirstResponseTracked(ctx context.Context) (bool, error) {
 
 // bootConfig is the configuration this store reads boot values from: the
 // injected one, which the lead-settings writes lock against, else the program's.
-func (s *Store) bootConfig() *config.Config {
+func (s *Store) bootConfig(ctx context.Context) *config.Config {
 	if s.settings != nil {
 		return s.settings
 	}
-	return config.Bound()
+	return config.Bound(ctx)
 }
 
 // WithSettings wires the configuration the lead-settings endpoints read and
@@ -196,7 +196,7 @@ func (s *Store) GetLeadSettings(ctx context.Context) (crmcontracts.LeadSettings,
 	// naming somebody who has since been suspended reads null here for the
 	// same reason it escalates to nobody there.
 	if err := s.tx(ctx, func(tx pgx.Tx) error {
-		target, configured, err := unassignedEscalationTarget(ctx, tx, s.bootConfig())
+		target, configured, err := unassignedEscalationTarget(ctx, tx, s.bootConfig(ctx))
 		if err != nil {
 			return err
 		}
@@ -264,7 +264,7 @@ func (s *Store) UpdateLeadSettings(ctx context.Context, in UpdateLeadSettingsInp
 // Whether a field is locked does not depend on the value sent.
 func (s *Store) saveEscalationSeatTx(ctx context.Context, tx pgx.Tx, seat *ids.UserID) error {
 	named := seat.String()
-	locked, err := config.LockedChange(s.settings, UnassignedEscalationUserID, func(boot string) bool { return boot == named })
+	locked, err := config.LockedChange(ctx, s.settings, UnassignedEscalationUserID, func(boot string) bool { return boot == named })
 	if locked || err != nil {
 		return err
 	}

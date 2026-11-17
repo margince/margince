@@ -56,9 +56,10 @@ type returnDoor struct {
 
 func openReturnDoor(t *testing.T) *returnDoor {
 	t.Helper()
-	apptest.BindEnv(t, []string{"MARGINCE_KEYVAULT_ROOT_KEY=" + returnRootKey})
+	boot := apptest.LoadEnv(t, []string{"MARGINCE_KEYVAULT_ROOT_KEY=" + returnRootKey})
 	box := returnMailbox{sent: make(chan returnMail, 8)}
-	e, _ := setupBookingProvider(t, compose.WithOperatorMail(box), compose.WithPublicBaseURL("https://crm.example.test"))
+	e, _ := setupBookingProvider(t, compose.WithOperatorMail(box), compose.WithPublicBaseURL("https://crm.example.test"), compose.WithConfig(boot))
+	e.Config = boot
 	e.BootstrapWorkspace(t)
 	apptest.EnableGoogleBookingPage(t, e)
 	return &returnDoor{
@@ -115,13 +116,13 @@ func (d *returnDoor) replay() {
 	// One store for both, as blobstore.ResolveJournal answers when no separate
 	// journal store is set.
 	store := blobstore.NewMemory()
-	if _, err := compose.ReplayErasureSuppressions(context.Background(), d.e.Pool, store, store, true); err != nil {
+	if _, err := compose.ReplayErasureSuppressions(d.e.Ctx(context.Background()), d.e.Pool, store, store, true); err != nil {
 		d.t.Fatalf("replaying erasures: %v", err)
 	}
 }
 
-//testdb:serial binds the process-wide configuration (config.Bind)
 func TestAnErasedSubjectIsStoredAgainOnlyThroughTheMailedLink(t *testing.T) {
+	t.Parallel()
 	d := openReturnDoor(t)
 	d.bookAndErase()
 
@@ -154,9 +155,8 @@ func TestAnErasedSubjectIsStoredAgainOnlyThroughTheMailedLink(t *testing.T) {
 
 // A link names the erasure it was mailed for. A second erasure of the same
 // address, while the list still refuses it, spends the link.
-//
-//testdb:serial binds the process-wide configuration (config.Bind)
 func TestASecondErasureSpendsALinkMailedBeforeIt(t *testing.T) {
+	t.Parallel()
 	d := openReturnDoor(t)
 	d.bookAndErase()
 	early := d.link()
@@ -173,9 +173,8 @@ func TestASecondErasureSpendsALinkMailedBeforeIt(t *testing.T) {
 
 // Every spelling of one mailbox shares one budget of one link a day. The link
 // goes to the spelling the erasure list matches, and that is what is stored.
-//
-//testdb:serial binds the process-wide configuration (config.Bind)
 func TestEverySpellingOfAnAddressSharesOneBudget(t *testing.T) {
+	t.Parallel()
 	d := openReturnDoor(t)
 	d.bookAndErase()
 
@@ -198,9 +197,8 @@ func TestEverySpellingOfAnAddressSharesOneBudget(t *testing.T) {
 
 // The wording the confirm records is this installation's own. A caller cannot
 // put words of its own on the subject's consent.
-//
-//testdb:serial binds the process-wide configuration (config.Bind)
 func TestTheRecordedConsentIsTheServersWording(t *testing.T) {
+	t.Parallel()
 	d := openReturnDoor(t)
 	d.bookAndErase()
 	forged := AnyMap{
@@ -228,9 +226,8 @@ func TestTheRecordedConsentIsTheServersWording(t *testing.T) {
 // The return adopts a contact a booking made while the address was erased,
 // which already holds the grant. The lift still cites a consent event the
 // return wrote, and the replay keeps the adopted contact.
-//
-//testdb:serial binds the process-wide configuration (config.Bind)
 func TestAnAdoptedContactCitesTheReturnsOwnGrantAndOutlivesTheReplay(t *testing.T) {
+	t.Parallel()
 	d := openReturnDoor(t)
 	d.bookAndErase()
 	adopted := d.book(returnAddress)
@@ -257,9 +254,8 @@ func TestAnAdoptedContactCitesTheReturnsOwnGrantAndOutlivesTheReplay(t *testing.
 
 // The replay keeps the contact the return created, and still erases a
 // restored contact from before the erasure that holds the same mailbox.
-//
-//testdb:serial binds the process-wide configuration (config.Bind)
 func TestTheReplayKeepsTheReturnAndErasesWhatARestoreBroughtBack(t *testing.T) {
+	t.Parallel()
 	d := openReturnDoor(t)
 	d.bookAndErase()
 	if status := d.confirm(d.link()); status != http.StatusNoContent {

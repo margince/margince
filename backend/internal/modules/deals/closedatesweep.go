@@ -279,7 +279,7 @@ func (c *CloseDateCorrector) passBounds(ctx context.Context) (closeDateBounds, e
 	var horizon int
 	if err := c.db.Tx(ctx, func(tx pgx.Tx) error {
 		var readErr error
-		horizon, readErr = config.StoredApplyTx(ctx, tx, config.Bound(), SilentCloseDays)
+		horizon, readErr = config.StoredApplyTx(ctx, tx, config.Bound(ctx), SilentCloseDays)
 		return readErr
 	}); err != nil {
 		return closeDateBounds{}, fmt.Errorf("deals: reading the silent close days the estimate stops at: %w", err)
@@ -363,7 +363,7 @@ func (c *CloseDateCorrector) apply(ctx context.Context, cand closeDateCandidate,
 		// The kill switch is read here rather than once per pass. An operator
 		// who switches maintenance off mid-sweep stops the next deal's write.
 		// A halted write is not a failure; the pass carries on assessing.
-		on, err := config.StoredApplyTx(ctx, tx, config.Bound(), MaintenanceWritesEnabled)
+		on, err := config.StoredApplyTx(ctx, tx, config.Bound(ctx), MaintenanceWritesEnabled)
 		if err != nil {
 			return fmt.Errorf("read whether deal maintenance may write: %w", err)
 		}

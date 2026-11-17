@@ -60,7 +60,7 @@ var BaseLanguage = config.DefineStored(config.Spec[string]{
 // is worse than one that comes out in English, which is what those
 // installations get today anyway.
 func BaseLanguageOf(ctx context.Context, tx pgx.Tx) (string, error) {
-	return config.StoredValTx(ctx, tx, config.Bound(), BaseLanguage)
+	return config.StoredValTx(ctx, tx, config.Bound(ctx), BaseLanguage)
 }
 
 // BaseLanguageForPrompt resolves the base language for a caller that holds a

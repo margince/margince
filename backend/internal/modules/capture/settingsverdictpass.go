@@ -47,6 +47,6 @@ var ConfidentialityPassCap = config.DefineStored(config.Spec[int]{
 // and never held on the engine, so an admin's change is the next pass's cap.
 func (s *ThreadVerdictStore) PassCap(ctx context.Context) (int, error) {
 	return readPassCap(ctx, s.db, ConfidentialityPassCap.Key(), func(tx pgx.Tx) (int, error) {
-		return config.StoredApplyTx(ctx, tx, config.Bound(), ConfidentialityPassCap)
+		return config.StoredApplyTx(ctx, tx, config.Bound(ctx), ConfidentialityPassCap)
 	})
 }

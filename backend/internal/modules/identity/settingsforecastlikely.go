@@ -35,7 +35,7 @@ var ForecastLikelyThreshold = config.DefineStored(config.Spec[int]{
 // ForecastLikelyThresholdTx reads the threshold inside a transaction the caller
 // already holds, ungated: every forecast obeys it, whatever the reader's grants.
 func ForecastLikelyThresholdTx(ctx context.Context, tx pgx.Tx) (int, error) {
-	return config.StoredApplyTx(ctx, tx, config.Bound(), ForecastLikelyThreshold)
+	return config.StoredApplyTx(ctx, tx, config.Bound(ctx), ForecastLikelyThreshold)
 }
 
 func (s *InstallationSettingsStore) readForecastLikelyThreshold(ctx context.Context, out *InstallationSettings) error {

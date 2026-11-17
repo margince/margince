@@ -4,6 +4,7 @@
 package deals
 
 import (
+	"context"
 	"errors"
 	"io"
 	"net/http"
@@ -119,7 +120,7 @@ func (h Handlers) GetLegalReviewSettings(w http.ResponseWriter, r *http.Request)
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, crmcontracts.LegalReviewSettings{Enabled: on, Locks: h.settingLocks(LegalReviewEnabled)})
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.LegalReviewSettings{Enabled: on, Locks: h.settingLocks(r.Context(), LegalReviewEnabled)})
 }
 
 // UpdateLegalReviewSettings switches legal review on or off.
@@ -136,20 +137,20 @@ func (h Handlers) UpdateLegalReviewSettings(w http.ResponseWriter, r *http.Reque
 		httperr.Write(w, r, err)
 		return
 	}
-	req.Locks = h.settingLocks(LegalReviewEnabled)
+	req.Locks = h.settingLocks(r.Context(), LegalReviewEnabled)
 	httperr.WriteJSON(w, http.StatusOK, req)
 }
 
 // WithLocks binds what reports the settings a boot source sets.
-func (h Handlers) WithLocks(locks func(surface []config.Any) *[]crmcontracts.SettingLock) Handlers {
+func (h Handlers) WithLocks(locks func(ctx context.Context, surface []config.Any) *[]crmcontracts.SettingLock) Handlers {
 	h.locks = locks
 	return h
 }
 
 // settingLocks are the locks among surface, the settings one response carries.
-func (h Handlers) settingLocks(surface ...config.Any) *[]crmcontracts.SettingLock {
+func (h Handlers) settingLocks(ctx context.Context, surface ...config.Any) *[]crmcontracts.SettingLock {
 	if h.locks == nil {
 		return nil
 	}
-	return h.locks(surface)
+	return h.locks(ctx, surface)
 }

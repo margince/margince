@@ -104,10 +104,12 @@ func scheduleSettings() []string {
 // DefaultSchedules is the book read without a database: what a boot source
 // sets, and the registered default for the rest. It is what the worker runs
 // when its first read fails, and what the census schedules from.
-func DefaultSchedules() *ScheduleBook { return schedulesWithoutDatabase(loadedConfig()) }
+func DefaultSchedules() *ScheduleBook {
+	return schedulesWithoutDatabase(loadedConfig(context.Background()))
+}
 
 func schedulesWithoutDatabase(c *config.Config) *ScheduleBook {
-	read := func(s *config.Setting[int]) (int, error) { return bootOrDefault(c, s) }
+	read := func(s *config.Setting[int]) (int, error) { return bootOrDefault(context.Background(), c, s) }
 	values := map[string]time.Duration{}
 	for _, key := range scheduleSettings() {
 		value, err := scheduleValue(key, read)
@@ -179,7 +181,7 @@ func installationSettingReader(ctx context.Context, pool *pgxpool.Pool) (func(*c
 	cfg, readCtx := StoredConfig(pool), bootCtx(ctx, ws, scheduleReadActor)
 	return func(s *config.Setting[int]) (int, error) {
 		if ws.IsZero() {
-			return bootOrDefault(cfg, s)
+			return bootOrDefault(ctx, cfg, s)
 		}
 		return config.StoredVal(readCtx, cfg, s)
 	}, nil
@@ -187,8 +189,8 @@ func installationSettingReader(ctx context.Context, pool *pgxpool.Pool) (func(*c
 
 // bootOrDefault is a setting read with no database: the value a boot source
 // sets, or else its registered default.
-func bootOrDefault(c *config.Config, s *config.Setting[int]) (int, error) {
-	if v, ok := config.BootVal(c, s); ok {
+func bootOrDefault(ctx context.Context, c *config.Config, s *config.Setting[int]) (int, error) {
+	if v, ok := config.BootVal(ctx, c, s); ok {
 		return v, nil
 	}
 	return settingDefault(s)

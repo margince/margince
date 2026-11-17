@@ -44,11 +44,11 @@ func keyEnviron() []string {
 }
 
 // installationCtx is the system on the installation's workspace, as the boot
-// and the routing path read settings.
+// and the routing path read settings, serving e's program.
 func installationCtx(t *testing.T, e *apptest.AppEnv) context.Context {
 	t.Helper()
 	ws := apptest.InstallationWorkspaceUUID(context.Background(), t, e.Pool)
-	return principal.SystemActing(principal.WithWorkspaceID(context.Background(), ws), "test-provider-keys")
+	return principal.SystemActing(principal.WithWorkspaceID(e.Ctx(context.Background()), ws), "test-provider-keys")
 }
 
 func secretsHeld(t *testing.T, vault keyvault.Vault) int {
@@ -87,8 +87,8 @@ func sealedEarlier(ctx context.Context, t *testing.T, e *apptest.AppEnv, vault k
 	return string(ref)
 }
 
-//testdb:serial binds the process-wide configuration (config.Bind)
 func TestAnEnvProviderKeyWinsAndIsNeverCopiedIntoTheVault(t *testing.T) {
+	t.Parallel()
 	vault := keyvault.NewMemory()
 	e := apptest.SetupAppWithEnv(t, keyEnviron(), compose.WithKeyvault(vault))
 	e.BootstrapWorkspace(t)
@@ -102,7 +102,7 @@ func TestAnEnvProviderKeyWinsAndIsNeverCopiedIntoTheVault(t *testing.T) {
 	}
 
 	// The boot path that used to seal an environment key into the vault.
-	if _, err := compose.ResolveRouting(context.Background(), e.Pool, "", compose.RoutingKeys(config.Bound()), discard()); err != nil {
+	if _, err := compose.ResolveRouting(e.Ctx(context.Background()), e.Pool, "", compose.RoutingKeys(e.Config), discard()); err != nil {
 		t.Fatalf("ResolveRouting: %v", err)
 	}
 	if n := vaultRows(t, e); n != 0 {
@@ -130,9 +130,8 @@ func TestAnEnvProviderKeyWinsAndIsNeverCopiedIntoTheVault(t *testing.T) {
 // A key a boot source sets refuses every write over HTTP, before the value
 // sent is judged. It refuses a change and its own value, which would confirm a
 // guess of it. It refuses a bad credential, both fields, and a removal.
-//
-//testdb:serial binds the process-wide configuration (config.Bind)
 func TestAProviderKeySetByEnvIsLockedAgainstAChange(t *testing.T) {
+	t.Parallel()
 	vault := keyvault.NewMemory()
 	e := apptest.SetupAppWithEnv(t, keyEnviron(), compose.WithKeyvault(vault))
 	e.BootstrapWorkspace(t)
@@ -169,9 +168,8 @@ func TestAProviderKeySetByEnvIsLockedAgainstAChange(t *testing.T) {
 
 // The boot key appears in no error, no log line, no API body and no overview:
 // only its name and origin do.
-//
-//testdb:serial binds the process-wide configuration (config.Bind)
 func TestASecretNeverAppearsInAnErrorALogOrTheOverview(t *testing.T) {
+	t.Parallel()
 	vault := keyvault.NewMemory()
 	e := apptest.SetupAppWithEnv(t, keyEnviron(), compose.WithKeyvault(vault))
 	e.BootstrapWorkspace(t)
@@ -205,12 +203,12 @@ func TestASecretNeverAppearsInAnErrorALogOrTheOverview(t *testing.T) {
 		t.Fatalf("encoding the overview: %v", err)
 	}
 	seen["the overview"] = string(overview)
-	seen["the trace"] = strings.Join(config.Bound().TraceLines(), "\n")
+	seen["the trace"] = strings.Join(e.Config.TraceLines(), "\n")
 
 	var logged bytes.Buffer
 	log := slog.New(slog.NewTextHandler(&logged, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	sealedEarlier(ctx, t, e, vault, ai.GeminiKey, "sk-unopenable")
-	if _, err := compose.ResolveRouting(context.Background(), e.Pool, "", compose.RoutingKeys(config.Bound()), log); err != nil {
+	if _, err := compose.ResolveRouting(e.Ctx(context.Background()), e.Pool, "", compose.RoutingKeys(e.Config), log); err != nil {
 		t.Fatalf("ResolveRouting: %v", err)
 	}
 	ai.KeyLookup(ctx, compose.StoredConfig(e.Pool), log)("GEMINI_API_KEY")

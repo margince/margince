@@ -145,7 +145,7 @@ func communicationStopKeysTx(ctx context.Context, tx pgx.Tx, recipients []connec
 		}
 	}
 	keys = append(keys, storekit.SubjectLockKeys(channels, emails)...)
-	keys = append(keys, storekit.StopAddressLockKeys(emails, nil)...)
+	keys = append(keys, storekit.StopAddressLockKeys(ctx, emails, nil)...)
 	slices.Sort(keys)
 	return slices.Compact(keys), nil
 }

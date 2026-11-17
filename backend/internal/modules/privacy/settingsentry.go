@@ -58,7 +58,7 @@ const settingsAuditVerb = "update"
 // retainOnlyTx is the posture every retention decision reads, inside the
 // caller's transaction, under the boot value the program bound.
 func retainOnlyTx(ctx context.Context, tx pgx.Tx) (bool, error) {
-	return config.StoredValTx(ctx, tx, config.Bound(), RetainOnly)
+	return config.StoredValTx(ctx, tx, config.Bound(ctx), RetainOnly)
 }
 
 // ConfigSettings are this module's settings in the configuration registry.

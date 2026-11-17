@@ -66,9 +66,9 @@ type allowanceValues [6]int
 // policy is the one reading of the six values, for the meter and the page
 // alike. A length a boot source sets has no change waiting: a saved one would
 // otherwise take over from it at the next reset.
-func (v allowanceValues) policy(c *config.Config) agentvolume.Policy {
+func (v allowanceValues) policy(ctx context.Context, c *config.Config) agentvolume.Policy {
 	plan := agentvolume.WindowPlan{Length: time.Duration(v[3]) * time.Hour}
-	if _, locked := c.Locked(AgentWindowHours.Key()); v[4] > 0 && !locked {
+	if _, locked := c.Locked(ctx, AgentWindowHours.Key()); v[4] > 0 && !locked {
 		plan.Next = time.Duration(v[4]) * time.Hour
 		plan.NextFrom = time.Unix(int64(v[5]), 0).UTC()
 	}
@@ -109,7 +109,7 @@ func AgentPolicyTx(ctx context.Context, tx pgx.Tx, c *config.Config) (agentvolum
 	if err != nil {
 		return agentvolume.Policy{}, err
 	}
-	policy := values.policy(c)
+	policy := values.policy(ctx, c)
 	policy.Roles = roleValuesOf(chosen, maps).Roles()
 	return policy, nil
 }
@@ -177,7 +177,7 @@ func (s *InstallationSettingsStore) readAgentPolicy(ctx context.Context) (agentv
 		if err != nil {
 			return err
 		}
-		policy = values.policy(s.config)
+		policy = values.policy(ctx, s.config)
 		held := roleValuesOf(chosen, maps)
 		live, err := liveRolesTx(ctx, tx)
 		if err != nil {
@@ -199,7 +199,7 @@ func (s *InstallationSettingsStore) scheduleAgentWindowTx(ctx context.Context, t
 	if requested == nil {
 		return nil
 	}
-	if _, locked := s.config.Locked(AgentWindowHours.Key()); locked {
+	if _, locked := s.config.Locked(ctx, AgentWindowHours.Key()); locked {
 		// Nothing waits for a reset under a boot-set length: SaveTx refuses
 		// any other length and takes the same one as a no-op.
 		return config.SaveTx(ctx, s.config, tx, AgentWindowHours, *requested)
