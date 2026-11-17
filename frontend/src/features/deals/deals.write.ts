@@ -257,10 +257,7 @@ export function openDealEdit(deal: Deal): FieldRecord {
   return { ...dealEditRecord(deal), original: deal };
 }
 
-/**
- * The one write of a deal's fields, wherever they are edited: the form's
- * `values` against the deal as `openDealEdit` opened it, pinned to its version.
- */
+/** `opened` comes from `openDealEdit`; the write is pinned to its version. */
 export function saveDealEdit(
   opened: FieldRecord,
   values: Record<string, unknown>,
