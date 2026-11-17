@@ -21,6 +21,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/sweepreach"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	extdecl "github.com/margince/margince/backend/pkg/extension/privacy"
 )
@@ -214,7 +215,7 @@ func anonymizeContactRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, eraser 
 		err = deleteIdentifyingSatellites(ctx, tx, id)
 	}
 	if err == nil {
-		err = purgeAnonymizedContactJudgments(ctx, tx, id, subjectEmails)
+		err = purgeAnonymizedContactJudgments(ctx, tx, eraser.extensions.Reach(), id, subjectEmails)
 	}
 	if err == nil {
 		// Against the addresses READ AT THE TOP, not a subquery over
@@ -249,7 +250,7 @@ func anonymizeContactRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, eraser 
 	return err
 }
 
-func purgeAnonymizedContactJudgments(ctx context.Context, tx pgx.Tx, id ids.UUID, subjectEmails []string) error {
+func purgeAnonymizedContactJudgments(ctx context.Context, tx pgx.Tx, reached sweepreach.Set, id ids.UUID, subjectEmails []string) error {
 	if err := redactSubjectReporting(ctx, tx, ids.From[ids.ContactKind](id), subjectEmails); err != nil {
 		return err
 	}
@@ -304,7 +305,7 @@ func purgeAnonymizedContactJudgments(ctx context.Context, tx pgx.Tx, id ids.UUID
 		// the two acts differ only by the suppression list. Nothing cascades to
 		// these rows. An anonymize that skipped them would leave the subject's
 		// name beside an "Erased Subject" record.
-		err = redactDeclaredTables(ctx, tx, ids.From[ids.ContactKind](id))
+		err = redactDeclaredTables(ctx, tx, reached, ids.From[ids.ContactKind](id))
 	}
 	if err == nil {
 		_, err = tx.Exec(ctx,

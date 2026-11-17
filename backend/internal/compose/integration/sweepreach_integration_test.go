@@ -18,15 +18,16 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose"
-	"github.com/margince/margince/backend/internal/compose/corereach"
+	"github.com/margince/margince/backend/internal/compose/extensionprivacy"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/sweepreach"
+	"github.com/margince/margince/backend/internal/platform/extprivacy"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/pkg/extension"
+	extdecl "github.com/margince/margince/backend/pkg/extension/privacy"
 	"github.com/margince/margince/backend/pkg/extension/reach"
 )
 
@@ -46,9 +47,7 @@ var unitNote = reach.Table{
 	},
 }
 
-// withUnitNoteTable creates the unit table and installs its declaration beside
-// the core ones. The declarations are process state, so they go back when the
-// test ends.
+// withUnitNoteTable creates the unit table.
 func withUnitNoteTable(t *testing.T) {
 	t.Helper()
 	ctx := context.Background()
@@ -68,13 +67,20 @@ func withUnitNoteTable(t *testing.T) {
 		if err := owner.Close(context.Background()); err != nil {
 			t.Errorf("closing the owner connection: %v", err)
 		}
-		if err := corereach.Install(nil); err != nil {
-			t.Errorf("restoring the core declarations: %v", err)
-		}
 	})
-	if err := corereach.Install([]extension.Extension{{Name: "reachtest", Reach: []reach.Table{unitNote}}}); err != nil {
+}
+
+// unitNoteData is the privacy registry of a composition whose unit declares
+// the note's reach and the given privacy tables, beside the core declarations.
+func unitNoteData(t *testing.T, privacyTables ...extdecl.Table) extprivacy.Registry {
+	t.Helper()
+	data, err := extensionprivacy.Registry([]extension.Extension{{
+		Name: "reachtest", Reach: []reach.Table{unitNote}, Privacy: privacyTables,
+	}})
+	if err != nil {
 		t.Fatal(err)
 	}
+	return data
 }
 
 // seedPlanLines writes one plan line per (kind, record) on one week's plan.
@@ -138,11 +144,11 @@ func TestEveryMergeMovesThePlanLinesTheWeeklyPlanDeclared(t *testing.T) {
 
 // The kind column decides which rows move. A contact-kind row holding the
 // merged company's uuid names some other record and stays where it is.
-//
-//testdb:serial installs process-wide unit declarations (corereach.Install)
 func TestACompanyMergeLeavesARowOfAnotherKindWithTheSameID(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	withUnitNoteTable(t)
+	e.Contacts.WithExtensions(unitNoteData(t))
 	src, tgt := seedMergePair(t, e, "Same id")
 	e.WsExec(t, `INSERT INTO ext.ext_reachtest_note (record_type, record_id, body) VALUES ('company', $1, 'a'), ('contact', $1, 'b')`, src)
 	const movedAudits = `SELECT count(*) FROM audit_log a JOIN ext.ext_reachtest_note n ON n.id = a.entity_id
@@ -176,11 +182,11 @@ func TestACompanyMergeLeavesARowOfAnotherKindWithTheSameID(t *testing.T) {
 
 // A unit's declared company column follows the company merge; a row naming a
 // third company is left alone.
-//
-//testdb:serial installs process-wide unit declarations (corereach.Install)
 func TestACompanyMergeMovesAUnitsDeclaredColumn(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	withUnitNoteTable(t)
+	e.Contacts.WithExtensions(unitNoteData(t))
 	src, tgt := seedMergePair(t, e, "Unit notes")
 	bystander := e.SeedCompany(t, "Unit notes Bystander", nil)
 	e.WsExec(t, `INSERT INTO ext.ext_reachtest_note (company_id, body) VALUES ($1, 'a'), ($2, 'b')`, src, bystander)
@@ -205,9 +211,8 @@ func TestACompanyMergeMovesAUnitsDeclaredColumn(t *testing.T) {
 
 // The declared relink runs in the caller's transaction, so a merge that rolls
 // back leaves the unit's rows where they were.
-//
-//testdb:serial installs process-wide unit declarations (corereach.Install)
 func TestADeclaredRelinkRollsBackWithItsTransaction(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	withUnitNoteTable(t)
 	src, tgt := seedMergePair(t, e, "Rolled back")
@@ -216,7 +221,7 @@ func TestADeclaredRelinkRollsBackWithItsTransaction(t *testing.T) {
 	abort := errors.New("abort the merge")
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
-		if _, err := sweepreach.Relink(ctx, tx, reach.Company, src.UUID, tgt.UUID); err != nil {
+		if _, err := unitNoteData(t).Reach().Relink(ctx, tx, reach.Company, src.UUID, tgt.UUID); err != nil {
 			return err
 		}
 		return abort
@@ -231,9 +236,8 @@ func TestADeclaredRelinkRollsBackWithItsTransaction(t *testing.T) {
 
 // The erasure clears what a unit's table says about the subject, leaves a row
 // about somebody else, and tombstones each row it cleared.
-//
-//testdb:serial installs process-wide unit declarations (corereach.Install)
 func TestTheErasureClearsAUnitsDeclaredColumns(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	withUnitNoteTable(t)
 	subject, other := e.SeedContact(t, "Anna Weber", nil), e.SeedContact(t, "Ben Ott", nil)
@@ -241,7 +245,7 @@ func TestTheErasureClearsAUnitsDeclaredColumns(t *testing.T) {
 	e.WsExec(t, `INSERT INTO ext.ext_reachtest_note (id, contact_id, body) VALUES ($1, $2, 'Anna wants a call'), ($3, $4, 'Ben wants a call')`,
 		named, subject, kept, other)
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), subject, "subject request"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithExtensions(unitNoteData(t)).EraseContact(e.Admin(), subject, "subject request"); err != nil {
 		t.Fatalf("erase: %v", err)
 	}
 	if got := e.WsScalar(t, `SELECT body || '|' || coalesce(contact_id::text, '') FROM ext.ext_reachtest_note WHERE id = $1`, named); got != "(erased: the contact this named exercised erasure)|" {

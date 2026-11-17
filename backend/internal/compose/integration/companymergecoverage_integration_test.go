@@ -274,7 +274,7 @@ func declaredCompanyLinks(t *testing.T) map[string]bool {
 	if err != nil {
 		t.Fatalf("reading the merge's call into the declared tables: %v", err)
 	}
-	if !strings.Contains(string(body), "sweepreach.Relink(") {
+	if !strings.Contains(string(body), "reached.Relink(") {
 		return nil
 	}
 	declared := map[string]bool{}

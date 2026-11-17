@@ -10,12 +10,10 @@ package sweepreach
 import (
 	"cmp"
 	"context"
-	"errors"
 	"fmt"
 	"slices"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/jackc/pgx/v5"
 
@@ -31,63 +29,37 @@ type Owned struct {
 	Table  reach.Table
 }
 
-// installed is this process's set. Sealed at boot by the composition root and
-// read on every merge and erasure.
-var installed struct {
-	mu     sync.RWMutex
-	sealed bool
+// Set is one composition's declared tables, ordered by table name. The
+// composition builds it at boot and hands it to every merge and erasure door,
+// so two compositions in one process never read each other's tables. The zero
+// Set declares no table.
+type Set struct {
 	tables []Owned
 }
 
-// ErrNotSealed refuses a merge or an erasure in a process that never installed
-// the set. Running with an empty one would leave declared rows naming a retired
-// record, or holding an erased subject, and report success.
-var ErrNotSealed = errors.New("sweepreach: the declared tables were never installed in this process, so the merge or erasure would miss them; install them at boot (compose.RegisterExtensions)")
-
-// Install validates the whole set and then replaces the installed one. A set
-// with one bad entry installs none, so a refused boot leaves nothing half
-// reached.
-func Install(set []Owned) error {
-	seen := make(map[string]string, len(set))
-	for _, o := range set {
+// NewSet validates the whole set. A set with one bad entry is refused whole, so
+// a refused boot reaches nothing.
+func NewSet(owned []Owned) (Set, error) {
+	seen := make(map[string]string, len(owned))
+	for _, o := range owned {
 		if err := o.Table.Validate(); err != nil {
-			return fmt.Errorf("sweepreach: %s: %w", o.Owner, err)
+			return Set{}, fmt.Errorf("sweepreach: %s: %w", o.Owner, err)
 		}
 		if o.Schema != "" && o.Schema != "ext" {
-			return fmt.Errorf("sweepreach: %s declares table %q in schema %q; a table is core or ext", o.Owner, o.Table.Name, o.Schema)
+			return Set{}, fmt.Errorf("sweepreach: %s declares table %q in schema %q; a table is core or ext", o.Owner, o.Table.Name, o.Schema)
 		}
 		if prior, dup := seen[o.Table.Name]; dup {
-			return fmt.Errorf("sweepreach: table %q is declared by both %s and %s", o.Table.Name, prior, o.Owner)
+			return Set{}, fmt.Errorf("sweepreach: table %q is declared by both %s and %s", o.Table.Name, prior, o.Owner)
 		}
 		seen[o.Table.Name] = o.Owner
 	}
-	sorted := slices.Clone(set)
+	sorted := slices.Clone(owned)
 	slices.SortFunc(sorted, func(a, b Owned) int { return cmp.Compare(a.Table.Name, b.Table.Name) })
-	installed.mu.Lock()
-	defer installed.mu.Unlock()
-	installed.tables, installed.sealed = sorted, true
-	return nil
+	return Set{tables: sorted}, nil
 }
 
-// InstallForTestDatabase seals an empty set when nothing is installed yet. A
-// test database calls it, so a module's own suite merges with no declared
-// tables. It never replaces an installed set.
-func InstallForTestDatabase() {
-	installed.mu.Lock()
-	defer installed.mu.Unlock()
-	installed.sealed = true
-}
-
-// Tables returns the installed set, ordered by table name, and whether one was
-// installed at all.
-func Tables() ([]Owned, error) {
-	installed.mu.RLock()
-	defer installed.mu.RUnlock()
-	if !installed.sealed {
-		return nil, ErrNotSealed
-	}
-	return slices.Clone(installed.tables), nil
-}
+// Tables returns the set, ordered by table name.
+func (s Set) Tables() []Owned { return slices.Clone(s.tables) }
 
 // entity is the audit entity a row of the table is recorded under.
 func (o Owned) entity() string { return cmp.Or(o.Table.Entity, o.Table.Name) }
@@ -110,13 +82,9 @@ type Relinked struct {
 // survivor, in the caller's transaction. A plain UPDATE is right because a
 // declared link is a pointer and nothing makes it unique per record. The
 // caller writes the audit row for each moved row, as for each row Erase clears.
-func Relink(ctx context.Context, tx pgx.Tx, record reach.Record, source, target ids.UUID) ([]Relinked, error) {
-	tables, err := Tables()
-	if err != nil {
-		return nil, err
-	}
+func (s Set) Relink(ctx context.Context, tx pgx.Tx, record reach.Record, source, target ids.UUID) ([]Relinked, error) {
 	var out []Relinked
-	for _, o := range tables {
+	for _, o := range s.tables {
 		for _, l := range o.Table.Links {
 			if !movesFor(l, record) {
 				continue
@@ -167,16 +135,12 @@ type Moved struct {
 // kind is merged away, and which of its rows. The merge's dependents check
 // reads it. A row the merge carries onto the survivor never blocks that merge,
 // and a row it leaves behind still does.
-func MovedColumns(record reach.Record) (map[Column]Moved, error) {
+func (s Set) MovedColumns(record reach.Record) (map[Column]Moved, error) {
 	if err := record.Validate(); err != nil {
 		return nil, err
 	}
-	tables, err := Tables()
-	if err != nil {
-		return nil, err
-	}
 	moved := map[Column]Moved{}
-	for _, o := range tables {
+	for _, o := range s.tables {
 		for _, l := range o.Table.Links {
 			if movesFor(l, record) {
 				moved[Column{Schema: o.Schema, Table: o.Table.Name, Name: l.Column}] = Moved{KindColumn: l.KindColumn}
@@ -196,13 +160,9 @@ type Cleared struct {
 // Erase clears the declared columns on every row a contact link names the
 // subject in, in the caller's transaction. tombstone is the text a Tombstone
 // column receives. The caller writes the audit row for each cleared row.
-func Erase(ctx context.Context, tx pgx.Tx, subject ids.UUID, tombstone string) ([]Cleared, error) {
-	tables, err := Tables()
-	if err != nil {
-		return nil, err
-	}
+func (s Set) Erase(ctx context.Context, tx pgx.Tx, subject ids.UUID, tombstone string) ([]Cleared, error) {
 	var out []Cleared
-	for _, o := range tables {
+	for _, o := range s.tables {
 		if len(o.Table.Erase) == 0 {
 			continue
 		}

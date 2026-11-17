@@ -37,22 +37,21 @@ func Tables() []sweepreach.Owned {
 	return set
 }
 
-// Install seals the core declarations and every unit's, refusing a unit table
-// outside the unit's own namespace. It is the only production caller of
-// sweepreach.Install, so a sealed set always carries the core declarations.
-func Install(exts []extension.Extension) error {
+// Set is the core declarations and every unit's, refusing a unit table outside
+// the unit's own namespace. Every set it builds carries the core declarations.
+func Set(exts []extension.Extension) (sweepreach.Set, error) {
 	set := Tables()
 	for _, e := range exts {
 		namespace, err := e.Name.Namespace()
 		if err != nil {
-			return fmt.Errorf("compose: extension %q: %w", e.Name, err)
+			return sweepreach.Set{}, fmt.Errorf("compose: extension %q: %w", e.Name, err)
 		}
 		for _, t := range e.Reach {
 			if !strings.HasPrefix(t.Name, namespace+"_") {
-				return fmt.Errorf("compose: extension %q declares reach into %q, which is not one of its own %s_ tables", e.Name, t.Name, namespace)
+				return sweepreach.Set{}, fmt.Errorf("compose: extension %q declares reach into %q, which is not one of its own %s_ tables", e.Name, t.Name, namespace)
 			}
 			set = append(set, sweepreach.Owned{Owner: string(e.Name), Schema: "ext", Table: t})
 		}
 	}
-	return sweepreach.Install(set)
+	return sweepreach.NewSet(set)
 }

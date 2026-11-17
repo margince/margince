@@ -23,10 +23,11 @@ import (
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/modules/weeklyplan"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/extprivacy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func (e *Env) bindStores(db *database.DB) {
+func (e *Env) bindStores(db *database.DB, data extprivacy.Registry) {
 	e.Activities = activities.NewStore(db).WithIdentityProver(capture.ProvedUnambiguouslyTx)
 	// A no-op rename: the installation-name edge is compose's, which this package
 	// cannot import, and compose's installationname suites prove it.
@@ -43,7 +44,8 @@ func (e *Env) bindStores(db *database.DB) {
 		WithFeedbackCarryReader(ai.NewFeedbackStore(db)).
 		// As production wires it: a merge keeps the former owner's access.
 		WithGrantCarrier(identity.NewServiceFor(db)).
-		WithInstallationRenamer(func(context.Context, pgx.Tx, string) error { return nil })
+		WithInstallationRenamer(func(context.Context, pgx.Tx, string) error { return nil }).
+		WithExtensions(data)
 	e.Deals = deals.NewStore(db, installseam.Deals())
 	e.Projects = ProjectsStore(db)
 	e.Contracts = ContractsStore(db, e.Deals)

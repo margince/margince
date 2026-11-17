@@ -24,7 +24,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/dbmigrate"
-	"github.com/margince/margince/backend/internal/platform/sweepreach"
 	"github.com/margince/margince/backend/internal/shared/clockskew"
 )
 
@@ -127,7 +126,6 @@ func inPlaceRequested() bool { return os.Getenv(InPlaceEnv) == "1" }
 // every pool opened on it is closed.
 func create(t testing.TB, inPlace bool) Database {
 	t.Helper()
-	sweepreach.InstallForTestDatabase()
 	if inPlace {
 		return laneDatabase(t)
 	}

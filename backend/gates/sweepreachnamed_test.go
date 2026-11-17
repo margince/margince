@@ -52,16 +52,16 @@ func TestNoCoreCodeWritesADeclaredColumnByName(t *testing.T) {
 	}
 }
 
-// TestOnlyTheBootSealsTheDeclaredTables holds the two ways the set is sealed to
-// their one caller each. corereach.Install always carries the core modules'
-// declarations, so a sealed production set cannot lack them; the empty test
-// seal belongs to the test database alone.
-func TestOnlyTheBootSealsTheDeclaredTables(t *testing.T) {
+// TestOnlyTheBootBuildsTheDeclaredTables holds the set a merge or erasure
+// reaches to its one builder and its one hand-over. corereach.Set always
+// carries the core modules' declarations, and only the composition's privacy
+// registry carries a set to a door, so no production door reaches fewer.
+func TestOnlyTheBootBuildsTheDeclaredTables(t *testing.T) {
 	t.Parallel()
 	root := gatekit.ModuleRoot(t)
 	want := map[string]string{
-		"sweepreach.Install(":                "internal/compose/corereach/corereach.go",
-		"sweepreach.InstallForTestDatabase(": "internal/platform/testdb/",
+		"sweepreach.NewSet(": "internal/compose/corereach/corereach.go",
+		".WithReach(":        "internal/compose/extensionprivacy/",
 	}
 	found := map[string]int{}
 	for _, dir := range []string{"internal", "cmd"} {
@@ -83,7 +83,7 @@ func TestOnlyTheBootSealsTheDeclaredTables(t *testing.T) {
 				}
 				found[call]++
 				if !strings.HasPrefix(filepath.ToSlash(rel), owner) {
-					t.Errorf("%s calls %s; only %s may seal the declared tables", rel, call, owner)
+					t.Errorf("%s calls %s; only %s may build or hand over the declared tables", rel, call, owner)
 				}
 			}
 		}

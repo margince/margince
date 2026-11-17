@@ -31,7 +31,7 @@ func (e *Eraser) redactWorkingRecords(ctx context.Context, tx pgx.Tx, subject id
 	if err := e.purgeTextNaming(ctx, tx, keys); err != nil {
 		return err
 	}
-	if err := redactDeclaredTables(ctx, tx, subject); err != nil {
+	if err := redactDeclaredTables(ctx, tx, e.extensions.Reach(), subject); err != nil {
 		return err
 	}
 	// And what they wrote about the subject while asking each other for an
@@ -51,8 +51,8 @@ const erasedMention = "(erased: the contact this named exercised erasure)"
 // row. A weekly plan commitment is one: a rep's free text about a contact that
 // no foreign key ties to the subject. The owner names the columns, because only
 // it knows which of them its constraints bind together.
-func redactDeclaredTables(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) error {
-	cleared, err := sweepreach.Erase(ctx, tx, contactID.UUID, erasedMention)
+func redactDeclaredTables(ctx context.Context, tx pgx.Tx, reached sweepreach.Set, contactID ids.ContactID) error {
+	cleared, err := reached.Erase(ctx, tx, contactID.UUID, erasedMention)
 	if err != nil {
 		return fmt.Errorf("privacy: redacting the declared tables naming the subject: %w", err)
 	}

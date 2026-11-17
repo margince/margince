@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/sweepreach"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -101,7 +102,7 @@ func (s *Store) mergeCompanyTx(
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}
-	targetIsPartner, err := relinkCompanyAssociations(ctx, tx, sourceID, targetID)
+	targetIsPartner, err := relinkCompanyAssociations(ctx, tx, s.extensions.Reach(), sourceID, targetID)
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}
@@ -150,7 +151,7 @@ func (s *Store) mergeCompanyTx(
 // onto the survivor — domains (demoting a duplicate primary), relationship
 // edges, activity/list/tag rows, and the deal/hierarchy/partner references
 // — and reports whether the survivor ends up holding a partner row.
-func relinkCompanyAssociations(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.CompanyID) (bool, error) {
+func relinkCompanyAssociations(ctx context.Context, tx pgx.Tx, reached sweepreach.Set, sourceID, targetID ids.CompanyID) (bool, error) {
 	if _, err := relinkDemotingPrimary(ctx, tx,
 		`UPDATE company_domain a SET company_id = @target, is_primary = `+mergeDomainPrimary+` WHERE `+mergeCompanyDomainSource,
 		sourceID.UUID, targetID.UUID); err != nil {
@@ -168,7 +169,7 @@ func relinkCompanyAssociations(ctx context.Context, tx pgx.Tx, sourceID, targetI
 	if err := moveCompanyRelationshipTypes(ctx, tx, sourceID, targetID); err != nil {
 		return false, err
 	}
-	return absorbCompanyReferences(ctx, tx, sourceID, targetID)
+	return absorbCompanyReferences(ctx, tx, reached, sourceID, targetID)
 }
 
 // fillCompanySurvivorship folds the merged-away company's fields into the survivor
@@ -239,7 +240,7 @@ func finalizeCompanyMerge(ctx context.Context, tx pgx.Tx, sourceID, targetID ids
 // company hierarchy, the 1:1 partner extension, and the merge redirect
 // chain — and reports whether the survivor ends up holding a partner
 // row (the A41 classification invariant needs to know).
-func absorbCompanyReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.CompanyID) (bool, error) {
+func absorbCompanyReferences(ctx context.Context, tx pgx.Tx, reached sweepreach.Set, sourceID, targetID ids.CompanyID) (bool, error) {
 	for _, stmt := range []string{
 		// The project moves FIRST, and the order is load-bearing: the
 		// deal_project_same_company trigger is INITIALLY IMMEDIATE, so moving a
@@ -319,7 +320,7 @@ func absorbCompanyReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 	// accumulated, the money owed against it, the jobs reading it, and the
 	// per-reader rows. mergerelink_company.go carries them, and
 	// companyfkcoverage proves none was forgotten.
-	if err := relinkCompanySatellites(ctx, tx, sourceID, targetID); err != nil {
+	if err := relinkCompanySatellites(ctx, tx, reached, sourceID, targetID); err != nil {
 		return false, err
 	}
 	return targetIsPartner, nil

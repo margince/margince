@@ -15,7 +15,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/dbmigrate"
-	"github.com/margince/margince/backend/internal/platform/sweepreach"
 	"github.com/margince/margince/backend/migrations"
 )
 
@@ -33,9 +32,6 @@ var (
 // test's copy, once per process. A copy is at head already. The bench targets
 // (InPlaceEnv) and a suite that makes its own database rely on the rebuild.
 func EnsureSchema(ctx context.Context, owner *pgx.Conn) error {
-	// A suite merges and erases on a test database without booting; one that
-	// needs the declared tables installs them itself (integration.Setup).
-	sweepreach.InstallForTestDatabase()
 	if isCopy(owner.Config().Database) {
 		return nil
 	}

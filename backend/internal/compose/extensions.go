@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/margince/margince/backend/internal/compose/corereach"
 	"github.com/margince/margince/backend/internal/compose/extensionprivacy"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -77,12 +76,13 @@ func RegisterExtensions(exts []extension.Extension, verbs []extension.Verb, jobD
 	if err != nil {
 		return nil, err
 	}
-	// The last fallible step, because it also installs. It seals the set the
-	// merge and the erasure refuse to run without.
-	if err := corereach.Install(exts); err != nil {
+	// The privacy registry and the tables the merge and the erasure reach,
+	// refused whole before anything is applied.
+	data, err := extensionprivacy.Registry(exts)
+	if err != nil {
 		return nil, err
 	}
-	installExtensionData(composed)
+	installExtensionData(composed, data)
 	for _, e := range exts {
 		for _, p := range e.Jurisdictions {
 			jurisdiction.Register(p)
