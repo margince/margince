@@ -219,7 +219,7 @@ func TestAReadSeatCannotReceiveOrOpenARetainedSignatureReview(t *testing.T) {
 		t.Fatalf("stored read seat was admitted: %v", err)
 	}
 	if err := e.DB().Tx(e.Admin(), func(tx pgx.Tx) error {
-		recipients, err := identity.PrivacyReviewOperatorsTx(principal.SystemActing(e.Admin(), "system:privacy_review_test"), tx, "contact")
+		recipients, err := identity.PrivacyReviewOperatorsTx(principal.SystemActing(e.Admin(), "system:privacy_review_test"), tx, identity.RbacObjects{}, "contact")
 		if err != nil {
 			return err
 		}

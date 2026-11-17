@@ -71,7 +71,7 @@ func New(pool *pgxpool.Pool, log *slog.Logger, exts *Extensions, opts ...Option)
 	// hold: both are stateless readers over the same rows, and the login service
 	// is composed here while that store is assembled elsewhere.
 	authPolicy := identity.NewInstallationSettings(InstallationDB(pool), NewSettingsStore(pool), StoredConfig(pool))
-	identitySvc := identity.NewService(pool).
+	identitySvc := IdentityService(pool).
 		WithConfig(StoredConfig(pool)).
 		WithRequireSSO(authPolicy.SSOEnforced).
 		WithRequireMFA(authPolicy.MFARequired).

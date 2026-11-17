@@ -17,7 +17,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -165,5 +164,5 @@ func liveMemberAuthority(ctx context.Context, pool *pgxpool.Pool, workspace, mem
 	if pool == nil {
 		return authz.RBAC{}, "", errExtensionRuntimeUnwired
 	}
-	return identity.NewService(pool).EffectiveAuthority(ctx, workspace, member)
+	return IdentityService(pool).EffectiveAuthority(ctx, workspace, member)
 }

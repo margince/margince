@@ -17,11 +17,18 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
-// Viewers is chatlinks.Viewers: each live human member is judged by the read
-// admission the record's own page passes (auth.AdmitReaders), under that
-// member's live grants. Members are read once and judged a hundred to a
-// statement, so a large team costs a few statements, not one per member.
-func Viewers(ctx context.Context, tx pgx.Tx, kind string, id ids.UUID) ([]chatlinks.Viewer, error) {
+// Viewers is chatlinks.Viewers under the composition's RBAC vocabulary.
+func Viewers(rbac identity.RbacObjects) chatlinks.Viewers {
+	return func(ctx context.Context, tx pgx.Tx, kind string, id ids.UUID) ([]chatlinks.Viewer, error) {
+		return viewers(ctx, tx, rbac, kind, id)
+	}
+}
+
+// viewers judges each live human member by the read admission the record's own
+// page passes (auth.AdmitReaders), under that member's live grants. Members are
+// read once and judged a hundred to a statement, so a large team costs a few
+// statements, not one per member.
+func viewers(ctx context.Context, tx pgx.Tx, rbac identity.RbacObjects, kind string, id ids.UUID) ([]chatlinks.Viewer, error) {
 	rows, err := tx.Query(ctx, `SELECT u.id, u.email FROM app_user u
 		WHERE `+workforce.LiveMemberSQL("u")+` AND NOT u.is_agent ORDER BY u.id`)
 	if err != nil {
@@ -38,7 +45,7 @@ func Viewers(ctx context.Context, tx pgx.Tx, kind string, id ids.UUID) ([]chatli
 	for i, m := range members {
 		memberIDs[i] = m.ID
 	}
-	principals, err := identity.MemberPrincipalsTx(ctx, tx, memberIDs)
+	principals, err := identity.MemberPrincipalsTx(ctx, tx, rbac, memberIDs)
 	if err != nil {
 		return nil, err
 	}

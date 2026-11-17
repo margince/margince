@@ -80,7 +80,6 @@ func TestTwoUnitsDerivingOneRbacObjectAreRefusedByName(t *testing.T) {
 	// identifier like ext_crm_demo_widget names a table, a ledger subject and an
 	// event subject either unit could own. The check above remains the one that
 	// catches two units declaring one object they did not both DERIVE.
-	t.Cleanup(identity.ResetRbacObjectsForTest)
 	_, bootErr := RegisterExtensions(composableAll([]extension.Extension{
 		{Name: "crm", Version: "0.1.0"}, {Name: "crm-demo", Version: "0.1.0"},
 	}), []extension.Verb{crm, crmDemo}, nil)
@@ -129,45 +128,45 @@ func TestOverlappingUnitNamespacesAreRefused(t *testing.T) {
 	}
 }
 
-func TestRegisterRbacObjectsWidensTheVocabulary(t *testing.T) {
-	t.Cleanup(identity.ResetRbacObjectsForTest)
+func TestNewRbacObjectsWidensTheVocabulary(t *testing.T) {
+	t.Parallel()
 	const object = "ext_crm_demo_widget"
-	if identity.RBACObjectGrantable(object) {
-		t.Fatal("the object is grantable before registration")
+	if (identity.RbacObjects{}).Grantable(object) {
+		t.Fatal("the object is grantable in a vocabulary that does not register it")
 	}
-	if err := RegisterRbacObjects([]identity.RbacObject{object}); err != nil {
+	rbac, err := NewRbacObjects([]identity.RbacObject{object}, nil)
+	if err != nil {
 		t.Fatal(err)
 	}
-	if !identity.RBACObjectGrantable(object) {
+	if !rbac.Grantable(object) {
 		t.Fatal("a registered object is not grantable, so an authority requirement naming it can never be satisfied")
 	}
-	// Empty is a no-op rather than an error: it is what every unit in the tree
-	// composes to today, and a boot must not have to special-case it.
-	if err := RegisterRbacObjects(nil); err != nil {
-		t.Fatalf("RegisterRbacObjects(nil) = %v, want nil", err)
+	// Empty is not an error: it is what most units compose to, and a boot must
+	// not have to special-case it.
+	if _, err := NewRbacObjects(nil, nil); err != nil {
+		t.Fatalf("NewRbacObjects(nil) = %v, want nil", err)
 	}
 }
 
-// TestRegisterRbacObjectsRefusesANameOutsideTheNamespace: the refusal is the
+// TestNewRbacObjectsRefusesANameOutsideTheNamespace: the refusal is the
 // module's own (identity's internal policy grammar), and it has to arrive here
-// wrapped rather than swallowed — a boot that registered "deal" would let a
+// wrapped rather than swallowed. A boot that registered "deal" would let a
 // dropped-in directory widen what a core role document grants.
-func TestRegisterRbacObjectsRefusesANameOutsideTheNamespace(t *testing.T) {
-	t.Cleanup(identity.ResetRbacObjectsForTest)
-	err := RegisterRbacObjects([]identity.RbacObject{"ext_crm_demo_widget", "deal"})
+func TestNewRbacObjectsRefusesANameOutsideTheNamespace(t *testing.T) {
+	t.Parallel()
+	rbac, err := NewRbacObjects([]identity.RbacObject{"ext_crm_demo_widget", "deal"}, nil)
 	if err == nil || !strings.Contains(err.Error(), "compose:") {
 		t.Fatalf("err = %v, want a compose-prefixed refusal", err)
 	}
-	if identity.RBACObjectGrantable("ext_crm_demo_widget") {
-		t.Fatal("a name in the failing set registered anyway — the registration is not validate-then-apply")
+	if rbac.Grantable("ext_crm_demo_widget") {
+		t.Fatal("a name in the failing set registered anyway; the vocabulary is not validate-then-apply")
 	}
 }
 
-// TestRegisterExtensionsRegistersTheDeclaredObjects is the boot path end to end:
-// nothing else in the process calls RegisterRbacObjects, so if this reconciliation
-// stopped doing it the vocabulary would silently be core-only again.
+// TestRegisterExtensionsRegistersTheDeclaredObjects is the boot path end to end.
+// Nothing else builds a composition's vocabulary. Without it the vocabulary
+// would silently be core-only again.
 func TestRegisterExtensionsRegistersTheDeclaredObjects(t *testing.T) {
-	t.Cleanup(identity.ResetRbacObjectsForTest)
 	gated := unitVerb("crm-demo", "demo_sync", extension.TierAutoExecute, extension.ScopeRead)
 	gated.RbacObject = "ext_crm_demo_widget"
 	gated.RbacAction = extension.RbacRead
@@ -175,8 +174,11 @@ func TestRegisterExtensionsRegistersTheDeclaredObjects(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !identity.RBACObjectGrantable("ext_crm_demo_widget") {
+	if !composed.RbacObjects().Grantable("ext_crm_demo_widget") {
 		t.Fatal("the boot did not register the object its composed set declares")
+	}
+	if !installedRbacObjects().Grantable("ext_crm_demo_widget") {
+		t.Fatal("the identity services built without the composition do not see the object it declares")
 	}
 	// And the verb set is recorded, because the route mounting reads it later —
 	// after the Server is assembled, which is after this ran.
@@ -188,7 +190,6 @@ func TestRegisterExtensionsRegistersTheDeclaredObjects(t *testing.T) {
 // TestRegisterExtensionsRefusesAnObjectOutsideTheNamespace: the boot aborts
 // rather than serving a set whose vocabulary it could not apply.
 func TestRegisterExtensionsRefusesAnObjectOutsideTheNamespace(t *testing.T) {
-	t.Cleanup(identity.ResetRbacObjectsForTest)
 	// Verb.Validate refuses a CROSS-UNIT object, so the escape this checks is
 	// the one it cannot see: a name correctly inside the unit's namespace that
 	// the VOCABULARY still refuses (a doubled underscore is not a legal SQL

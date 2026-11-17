@@ -49,7 +49,7 @@ func newAttentionNames(db *database.DB) attentionNames {
 		deals:       deals.NewStore(db, DealsInstallation()),
 		activities:  activities.NewStore(db),
 		projects:    projects.NewStore(db),
-		identity:    identity.NewServiceFor(db),
+		identity:    identityServiceFor(db),
 		collections: collections.NewStore(db),
 	}
 }

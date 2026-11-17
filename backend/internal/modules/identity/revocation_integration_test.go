@@ -121,6 +121,13 @@ func TestStoredWorkSeesARevocationAfterTheSnapshotBegan(t *testing.T) {
 
 func setupRevocationEnv(t *testing.T, slug string) *revocationEnv {
 	t.Helper()
+	return setupRevocationEnvWith(t, slug, RbacObjects{})
+}
+
+// setupRevocationEnvWith is setupRevocationEnv for a composition whose units
+// extend the RBAC vocabulary, so the installation is seeded with their grants.
+func setupRevocationEnvWith(t *testing.T, slug string, rbac RbacObjects) *revocationEnv {
+	t.Helper()
 	owner, pool := setupIdentityDB(t)
 	ctx := context.Background()
 	// Unique per ENV, not per run: setupIdentityDB resets the database once per
@@ -138,7 +145,7 @@ func setupRevocationEnv(t *testing.T, slug string) *revocationEnv {
 	var wsID ids.WorkspaceID
 	err := database.WithInfraTx(ctx, pool, func(tx pgx.Tx) error {
 		var err error
-		wsID, err = createInstallation(ctx, tx, nil, InstallationBootstrap{
+		wsID, err = createInstallation(ctx, tx, rbac, nil, InstallationBootstrap{
 			CompanyName: slug,
 			AdminEmail:  adminEmail, AdminName: "Admin",
 			AdminPassword: bootstrapPassword,
@@ -150,7 +157,7 @@ func setupRevocationEnv(t *testing.T, slug string) *revocationEnv {
 	}
 	// Bound to the workspace just created: this suite seeds one per env, so
 	// there is no installation singleton to resolve.
-	svc := NewServiceFor(database.BindTo(pool, wsID)).WithConfig(unlockedConfig(t, pool))
+	svc := NewServiceFor(database.BindTo(pool, wsID)).WithConfig(unlockedConfig(t, pool)).WithRbacObjects(rbac)
 	// Described, as onboarding leaves it. Contacts owns the anchor and identity
 	// may not import it; the compose suite asks the real owner.
 	svc.installationDescribed = func(context.Context) (bool, error) { return true, nil }

@@ -13,7 +13,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -42,7 +41,7 @@ func newBulkEngine(db *database.DB, gate *auth.Gate) *bulkEngine {
 // to, so the change is admitted against the counter it is paid into.
 func (s *Server) wireBulkSurface(pool *pgxpool.Pool) {
 	s.bulkHandlers = bulkHandlers{
-		engine: newBulkEngine(InstallationDB(pool), auth.NewGate(identity.NewService(pool), auth.WithVolumeMeter(s.volumeMeter))),
+		engine: newBulkEngine(InstallationDB(pool), auth.NewGate(IdentityService(pool), auth.WithVolumeMeter(s.volumeMeter))),
 	}
 }
 

@@ -124,7 +124,7 @@ func (w *importRunSweepWorker) Work(ctx context.Context, _ *river.Job[ImportRunS
 // role works jobs, so only it runs the pass.
 func addImportRunSweepJob(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log *slog.Logger) []*river.PeriodicJob {
 	addDeclaredWorker[ImportRunSweepArgs](reg, &importRunSweepWorker{
-		identity: identity.NewService(pool), pool: pool, log: log,
+		identity: IdentityService(pool), pool: pool, log: log,
 	})
 	return periodicFor(cfg, ImportRunSweepArgs{})
 }

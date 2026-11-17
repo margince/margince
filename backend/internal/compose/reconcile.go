@@ -24,7 +24,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -235,7 +234,7 @@ func NewFollowUpReconciler(pool *pgxpool.Pool, log *slog.Logger) *deals.FollowUp
 		svc:   NewApprovalsService(db),
 		tasks: activities.NewStore(db),
 		draft: drafter,
-		owner: dealOwnerAuthority{db: db, users: identity.NewServiceFor(db)},
+		owner: dealOwnerAuthority{db: db, users: identityServiceFor(db)},
 		pool:  pool,
 	}
 	return deals.NewFollowUpReconciler(db, stager, log).WithBaseLanguage(installationLanguage(pool))

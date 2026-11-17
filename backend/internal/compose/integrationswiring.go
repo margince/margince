@@ -173,5 +173,5 @@ func providerRequesterHoldsCompany(ctx context.Context, tx pgx.Tx, userID string
 	if err != nil {
 		return false, fmt.Errorf("compose: run requester %q is not a user id: %w", userID, err)
 	}
-	return identity.IssuerStillHolds(ctx, tx, ids.From[ids.UserKind](id), "company", principal.ActionRead)
+	return identity.IssuerStillHolds(ctx, tx, installedRbacObjects(), ids.From[ids.UserKind](id), "company", principal.ActionRead)
 }

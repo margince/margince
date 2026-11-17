@@ -87,15 +87,15 @@ type grant struct {
 // a role-editing endpoint lands (`/roles` CRUD is deferred), that WRITE path is
 // where an unknown object must be refused: refusing input a human just typed
 // costs them a correction, while refusing stored data costs them their session.
-func Parse(raw []byte) (Document, error) {
+func Parse(raw []byte, vocabulary Vocabulary) (Document, error) {
 	var doc Document
 	if err := json.Unmarshal(raw, &doc); err != nil {
 		return Document{}, fmt.Errorf("policy: malformed permissions document: %w", err)
 	}
 	for object := range doc.Objects {
 		// The GRANTABLE vocabulary, not the core one: a composed extension
-		// registers its ext_<unit>_<object> names at boot (composable.go).
-		if IsGrantableObject(object) {
+		// registers its ext_<unit>_<object> names (composable.go).
+		if vocabulary.IsGrantable(object) {
 			continue
 		}
 		// Deleted from the parsed document, so the grant cannot reach
@@ -143,8 +143,8 @@ func readRowScope(scope principal.RowScope) (principal.RowScope, error) {
 // Merge resolves a user's assigned roles into the effective permission
 // set: grants union (any role allowing an action allows it), row scope
 // widens to the maximum any role holds. Zero roles yield zero grants.
-func Merge(byRole map[string]Document) principal.Permissions {
-	extensionObjects := RegisteredObjects()
+func Merge(byRole map[string]Document, vocabulary Vocabulary) principal.Permissions {
+	extensionObjects := vocabulary.Registered()
 	merged := principal.Permissions{
 		Objects:  make(map[string]principal.ObjectGrant, len(coreObjects)+len(extensionObjects)),
 		RowScope: principal.RowScopeOwn,

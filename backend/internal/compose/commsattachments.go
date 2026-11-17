@@ -41,7 +41,7 @@ type commsAttachments struct {
 //nolint:ireturn // returns the comms.AttachmentAuthority seam by design: the concrete type is unexported and every caller holds the interface
 func NewSendAttachmentAuthority(pool *pgxpool.Pool, blob blobstore.Store) comms.AttachmentAuthority {
 	return commsAttachments{
-		authority: identity.NewService(pool),
+		authority: IdentityService(pool),
 		// WithBlobstore is what lets ReadForSend open the objects. A worker
 		// wired without one can still run the gate — that reads rows — and
 		// fails at the read, which is the fault this argument exists to make

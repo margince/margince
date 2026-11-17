@@ -17,7 +17,7 @@ import (
 // RequirePrivacyReviewTx admits only a signed-in human whom the stored policy
 // names as privacy reviewer for object. It holds the authorization lock so a
 // grant cannot change during the caller's transaction.
-func (*Service) RequirePrivacyReviewTx(ctx context.Context, tx pgx.Tx, object string) error {
+func (s *Service) RequirePrivacyReviewTx(ctx context.Context, tx pgx.Tx, object string) error {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID.IsZero() {
 		return apperrors.ErrPermissionDenied
@@ -26,7 +26,7 @@ func (*Service) RequirePrivacyReviewTx(ctx context.Context, tx pgx.Tx, object st
 		return err
 	}
 	// The same stored policy selects notice recipients and admits the reviewer.
-	reviewers, err := PrivacyReviewOperatorsTx(principal.SystemActing(ctx, "system:privacy_review"), tx, object)
+	reviewers, err := PrivacyReviewOperatorsTx(principal.SystemActing(ctx, "system:privacy_review"), tx, s.rbac, object)
 	if err != nil {
 		return err
 	}

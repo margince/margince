@@ -66,7 +66,7 @@ func TestBootstrapsRoleStepDoesNotAssignARoleThatWasNeverCreated(t *testing.T) {
 	t.Parallel()
 	tx := &refusingTx{err: errRoleInsertRefused}
 
-	err := seedSystemRolesForBootstrap(context.Background(), tx, ids.From[ids.UserKind](ids.NewV7()))
+	err := seedSystemRolesForBootstrap(context.Background(), tx, RbacObjects{}, ids.From[ids.UserKind](ids.NewV7()))
 	if !errors.Is(err, errRoleInsertRefused) {
 		t.Fatalf("the bootstrap role step answered %v, want the refusal underneath it", err)
 	}

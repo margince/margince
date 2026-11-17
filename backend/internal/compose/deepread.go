@@ -32,7 +32,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/webread"
@@ -210,7 +209,7 @@ func newSiteDeepReadWorker(pool *pgxpool.Pool, brain, factBrain, triageBrain com
 		fetch:       fetcher,
 		blob:        blob,
 		approvals:   NewApprovalsService(InstallationDB(pool)),
-		authority:   identity.NewService(pool),
+		authority:   IdentityService(pool),
 		autoEnrich:  capture.NewAutoEnrichStore(InstallationDB(pool)),
 		settings:    capture.NewSettings(NewSettingsStore(pool), StoredConfig(pool)),
 		log:         log,

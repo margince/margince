@@ -25,7 +25,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -78,7 +77,7 @@ func approvalsServiceTelling(pool *pgxpool.Pool, notices *siteLeadNoticeLane) *a
 	svc.WithEffect(lifecycleProposalKind, lifecycleAcceptEffect(svc, store, time.Now))
 	svc.WithEffect(vcardCreateKind, vcardCreateAcceptEffect(svc,
 		newContactsStore(InstallationDB(pool)).WithShareRequests(contactShareRequests(pool))))
-	svc.WithEffect(contactShareKind, contactShareAcceptEffect(svc, identity.NewServiceFor(InstallationDB(pool))))
+	svc.WithEffect(contactShareKind, contactShareAcceptEffect(svc, identityServiceFor(InstallationDB(pool))))
 	// Both halves: the colleague who asked is told how their request ended.
 	transfers := newOwnershipTransfers(pool)
 	svc.WithEffect(ownershipTransferKind, ownershipTransferAcceptEffect(svc, transfers))

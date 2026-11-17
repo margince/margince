@@ -31,7 +31,7 @@ func TestPrivateProspectOwnerCanRepairAHandoffWithoutMemberAdministration(t *tes
 	memberManagerFor(t, e)
 	ctx := e.Admin()
 	if err := e.DB().Tx(ctx, func(tx pgx.Tx) error {
-		members, err := identity.MemberPrincipalsTx(ctx, tx, []ids.UUID{e.Rep2})
+		members, err := identity.MemberPrincipalsTx(ctx, tx, identity.RbacObjects{}, []ids.UUID{e.Rep2})
 		if err != nil {
 			return err
 		}
@@ -54,7 +54,7 @@ func TestPrivateProspectOwnerCanRepairAHandoffWithoutMemberAdministration(t *tes
 	if err != nil {
 		t.Fatal(err)
 	}
-	server := Server{handoffHandlers: memberhandoff.NewHandlers(e.DB())}
+	server := Server{handoffHandlers: memberhandoff.NewHandlers(e.DB(), identity.RbacObjects{})}
 	read := func(ctx context.Context) *httptest.ResponseRecorder {
 		response := httptest.NewRecorder()
 		server.GetHandoffAssignee(response, httptest.NewRequestWithContext(ctx, http.MethodGet, "/", nil), crmcontracts.Id(handoff))

@@ -94,7 +94,7 @@ func NewApprovalNotify(pool *pgxpool.Pool, db *database.DB, mail noticeMailQueue
 		db:        db,
 		approvals: NewApprovalsService(db),
 		notices:   notices.NewStore(db),
-		identity:  identity.NewService(pool),
+		identity:  IdentityService(pool),
 		mail:      mail,
 	}
 }

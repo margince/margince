@@ -15,7 +15,7 @@ import (
 
 func TestEverySystemRoleHasAValidDefaultDocument(t *testing.T) {
 	for key := range defaults {
-		doc, err := Parse(MustDefaultJSON(key))
+		doc, err := Parse(MustDefaultJSON(key), Vocabulary{})
 		if err != nil {
 			t.Errorf("seeded default for %q does not pass its own validator: %v", key, err)
 			continue
@@ -37,7 +37,7 @@ func TestParseRejectsDishonestDocuments(t *testing.T) {
 		"malformed json":    `{"objects":`,
 	}
 	for name, raw := range cases {
-		if _, err := Parse([]byte(raw)); err == nil {
+		if _, err := Parse([]byte(raw), Vocabulary{}); err == nil {
 			t.Errorf("Parse accepted a document with %s", name)
 		}
 	}
@@ -59,9 +59,9 @@ func TestParseRejectsDishonestDocuments(t *testing.T) {
 func TestParseDropsAnObjectThisInstallationDoesNotKnow(t *testing.T) {
 	// `ext_departed_note` is exactly the shape a removed unit leaves behind: a
 	// well-formed extension object name that no installation composes.
-	doc, err := Parse([]byte(`{"objects":{"contact":{"read":true,"update":true},` +
-		`"ext_departed_note":{"create":true,"read":true,"update":true,"delete":true}},` +
-		`"row_scope":"team"}`))
+	doc, err := Parse([]byte(`{"objects":{"contact":{"read":true,"update":true},`+
+		`"ext_departed_note":{"create":true,"read":true,"update":true,"delete":true}},`+
+		`"row_scope":"team"}`), Vocabulary{})
 	if err != nil {
 		t.Fatalf("a stored document naming a departed unit's object must still parse — "+
 			"refusing it fails the LOGIN, not the screen: %v", err)
@@ -78,7 +78,7 @@ func TestParseDropsAnObjectThisInstallationDoesNotKnow(t *testing.T) {
 		t.Errorf("row_scope = %q, want team", doc.RowScope)
 	}
 	// And it grants nothing, which is the whole reason dropping is safe.
-	perms := Merge(map[string]Document{"admin": doc})
+	perms := Merge(map[string]Document{"admin": doc}, Vocabulary{})
 	if perms.Allows("ext_departed_note", principal.ActionRead) {
 		t.Error("the dropped object still allows an action")
 	}
@@ -89,7 +89,7 @@ func TestParseDropsAnObjectThisInstallationDoesNotKnow(t *testing.T) {
 // strictness was written for, and it is still answered — the grant does
 // nothing — but by a log line rather than by refusing to authenticate the user.
 func TestParseDropsAnUnknownCoreLikeObjectToo(t *testing.T) {
-	doc, err := Parse([]byte(`{"objects":{"invoice":{"read":true}},"row_scope":"all"}`))
+	doc, err := Parse([]byte(`{"objects":{"invoice":{"read":true}},"row_scope":"all"}`), Vocabulary{})
 	if err != nil {
 		t.Fatalf("a typo'd object must not fail a login: %v", err)
 	}
@@ -99,7 +99,7 @@ func TestParseDropsAnUnknownCoreLikeObjectToo(t *testing.T) {
 }
 
 func TestParseDefaultsAnUnsetScopeToNarrowest(t *testing.T) {
-	doc, err := Parse([]byte(`{"objects":{"contact":{"read":true}}}`))
+	doc, err := Parse([]byte(`{"objects":{"contact":{"read":true}}}`), Vocabulary{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -109,9 +109,9 @@ func TestParseDefaultsAnUnsetScopeToNarrowest(t *testing.T) {
 }
 
 func TestMergeUnionsGrantsAndWidensScope(t *testing.T) {
-	rep, _ := Parse(MustDefaultJSON("rep"))
-	readonly, _ := Parse(MustDefaultJSON("read_only"))
-	merged := Merge(map[string]Document{"rep": rep, "read_only": readonly})
+	rep, _ := Parse(MustDefaultJSON("rep"), Vocabulary{})
+	readonly, _ := Parse(MustDefaultJSON("read_only"), Vocabulary{})
+	merged := Merge(map[string]Document{"rep": rep, "read_only": readonly}, Vocabulary{})
 
 	// Union: rep's writes survive the read-only role being added.
 	if !merged.Allows("contact", principal.ActionCreate) {
@@ -130,7 +130,7 @@ func TestMergeUnionsGrantsAndWidensScope(t *testing.T) {
 	// scope is still reachable — an operator's custom role may carry it, and the
 	// write predicate still renders its arm.
 	team := Document{Objects: rep.Objects, RowScope: principal.RowScopeTeam}
-	if scoped := Merge(map[string]Document{"rep": rep, "team_role": team}); scoped.RowScope != principal.RowScopeTeam {
+	if scoped := Merge(map[string]Document{"rep": rep, "team_role": team}, Vocabulary{}); scoped.RowScope != principal.RowScopeTeam {
 		t.Errorf("own merged with team gives %q, want team (the wider of the two)", scoped.RowScope)
 	}
 	if len(merged.RoleKeys) != 2 {
@@ -140,11 +140,11 @@ func TestMergeUnionsGrantsAndWidensScope(t *testing.T) {
 
 func TestEmbeddingReindexGrants(t *testing.T) {
 	for _, key := range []string{"admin", "ops"} {
-		doc, err := Parse(MustDefaultJSON(key))
+		doc, err := Parse(MustDefaultJSON(key), Vocabulary{})
 		if err != nil {
 			t.Fatalf("role %q: %v", key, err)
 		}
-		merged := Merge(map[string]Document{key: doc})
+		merged := Merge(map[string]Document{key: doc}, Vocabulary{})
 		if !merged.Allows("embedding_reindex", principal.ActionUpdate) {
 			t.Errorf("role %q should be able to update embedding_reindex (trigger a reindex)", key)
 		}
@@ -153,11 +153,11 @@ func TestEmbeddingReindexGrants(t *testing.T) {
 		}
 	}
 	for _, key := range []string{"manager", "rep", "read_only"} {
-		doc, err := Parse(MustDefaultJSON(key))
+		doc, err := Parse(MustDefaultJSON(key), Vocabulary{})
 		if err != nil {
 			t.Fatalf("role %q: %v", key, err)
 		}
-		merged := Merge(map[string]Document{key: doc})
+		merged := Merge(map[string]Document{key: doc}, Vocabulary{})
 		if merged.Allows("embedding_reindex", principal.ActionRead) {
 			t.Errorf("role %q must not be able to read embedding_reindex (admin/ops-only)", key)
 		}
@@ -173,11 +173,11 @@ func TestRateObjectsAreAdminOnly(t *testing.T) {
 		// sheets are strict append-forward, so NO role holds delete: removing
 		// a model's whole entry is gated on update, not on a verb of its own.
 		for _, key := range []string{"admin", "ops"} {
-			doc, err := Parse(MustDefaultJSON(key))
+			doc, err := Parse(MustDefaultJSON(key), Vocabulary{})
 			if err != nil {
 				t.Fatalf("role %q: %v", key, err)
 			}
-			merged := Merge(map[string]Document{key: doc})
+			merged := Merge(map[string]Document{key: doc}, Vocabulary{})
 			for _, act := range []principal.Action{
 				principal.ActionCreate, principal.ActionRead, principal.ActionUpdate,
 			} {
@@ -192,11 +192,11 @@ func TestRateObjectsAreAdminOnly(t *testing.T) {
 		// Every non-admin/ops role is denied ALL four actions — the editor is
 		// company-gated in the SPA, so these roles have no legitimate consumer.
 		for _, key := range []string{"manager", "rep", "read_only"} {
-			doc, err := Parse(MustDefaultJSON(key))
+			doc, err := Parse(MustDefaultJSON(key), Vocabulary{})
 			if err != nil {
 				t.Fatalf("role %q: %v", key, err)
 			}
-			merged := Merge(map[string]Document{key: doc})
+			merged := Merge(map[string]Document{key: doc}, Vocabulary{})
 			for _, act := range []principal.Action{
 				principal.ActionCreate, principal.ActionRead,
 				principal.ActionUpdate, principal.ActionDelete,
@@ -291,7 +291,7 @@ func TestTheServiceIngestRoleGrantsOnlyTheLandingWrites(t *testing.T) {
 }
 
 func TestZeroRolesDenyEverything(t *testing.T) {
-	merged := Merge(nil)
+	merged := Merge(nil, Vocabulary{})
 	for _, object := range coreObjects {
 		for _, a := range []principal.Action{principal.ActionCreate, principal.ActionRead, principal.ActionUpdate, principal.ActionDelete} {
 			if merged.Allows(object, a) {

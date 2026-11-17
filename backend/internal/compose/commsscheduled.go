@@ -14,7 +14,6 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/corefeatures"
@@ -132,7 +131,7 @@ func newScheduledSendWorker(pool *pgxpool.Pool, delivery DeliveryMachinery, blob
 		// transactional ones beside it go out — which is what it did, and what
 		// nothing noticed, because every fixture scheduled a transactional one.
 		store:   sendStore(pool, origin.sendPath()).WithBlobstore(blob),
-		actors:  storedActor{authority: identity.NewService(pool)},
+		actors:  storedActor{authority: IdentityService(pool)},
 		consent: consentGateFor(pool),
 		// The SAME machinery every other send stages with, handed in rather
 		// than built here: firing enqueues a delivery job, and a second

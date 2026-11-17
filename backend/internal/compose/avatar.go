@@ -78,7 +78,7 @@ type avatarPictures struct {
 
 func newAvatarPictures(db *database.DB, blob blobstore.Store, fetch assetFetcher, log *slog.Logger) *avatarPictures {
 	return &avatarPictures{
-		db: db, users: identity.NewServiceFor(db), ledger: storedobjects.NewLedger(db),
+		db: db, users: identityServiceFor(db), ledger: storedobjects.NewLedger(db),
 		blob: blob, fetch: fetch, log: log,
 	}
 }

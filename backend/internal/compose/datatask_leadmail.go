@@ -12,7 +12,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -25,7 +24,7 @@ import (
 func leadMailDataTask(pool *pgxpool.Pool) datatask.Task {
 	db := InstallationDB(pool)
 	tasks := newLeadWorkTasks(db, slog.Default())
-	repair := capture.LeadFilingRepair{Authority: identity.NewService(pool), Filer: ActivityLeadFiler{Tasks: &tasks}}
+	repair := capture.LeadFilingRepair{Authority: IdentityService(pool), Filer: ActivityLeadFiler{Tasks: &tasks}}
 	return datatask.Task{
 		ID: "core/1792859022_captured_mail_filed_under_leads", Version: 1,
 		Title: systemtext.Literal("datatask.title.core.1792859022_captured_mail_filed_under_leads"), Requires: []string{introductionValidationMigration},

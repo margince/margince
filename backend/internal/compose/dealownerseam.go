@@ -98,7 +98,7 @@ func lockedDealOwner(ctx context.Context, tx pgx.Tx, dealID ids.UUID) (ids.UUID,
 // colleagueAuthority reads as any one colleague, for a card that hands work to
 // them, through the same snapshot asOwner takes.
 func colleagueAuthority(db *database.DB) carddoer.ColleagueAuthority {
-	return dealOwnerAuthority{db: db, users: identity.NewServiceFor(db)}.asOwner
+	return dealOwnerAuthority{db: db, users: identityServiceFor(db)}.asOwner
 }
 
 // asOwner binds one member as the acting principal.

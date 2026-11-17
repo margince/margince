@@ -13,8 +13,8 @@ package identity
 // leaving the failure this exists to prevent — a screen that typechecks, gates
 // on an object the client never learns the user holds, renders nothing, and looks
 // like a frontend bug — entirely possible. Registration is exercised through the
-// exported seam the composition root calls (RegisterRbacObjects), so nothing
-// here reaches around the boot path.
+// exported seam the composition root calls (NewRbacObjects), so nothing here
+// reaches around the boot path.
 
 import (
 	"context"
@@ -26,14 +26,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// registerForTest registers objects and unregisters them afterwards, so one
-// test's vocabulary is never another's.
-func registerForTest(t *testing.T, objects ...RbacObject) {
+// registerForTest builds the vocabulary of a composition that registers objects.
+func registerForTest(t *testing.T, objects ...RbacObject) RbacObjects {
 	t.Helper()
-	if err := RegisterRbacObjects(objects...); err != nil {
+	rbac, err := NewRbacObjects(objects, nil)
+	if err != nil {
 		t.Fatalf("registering %v: %v", objects, err)
 	}
-	t.Cleanup(ResetRbacObjectsForTest)
+	return rbac
 }
 
 // meObjects renders /me for a principal holding permissions and returns the
@@ -60,8 +60,9 @@ func meObjects(t *testing.T, perms principal.Permissions) map[string]map[string]
 }
 
 func TestExtensionRbacObjectReachesTheMeSnapshot(t *testing.T) {
+	t.Parallel()
 	const object = "ext_notes_widget"
-	registerForTest(t, object)
+	rbac := registerForTest(t, object)
 
 	// Step 1 — a stored role document may now GRANT it. Without registration
 	// this is where the whole thing stops: Parse DROPS an object outside the
@@ -69,13 +70,13 @@ func TestExtensionRbacObjectReachesTheMeSnapshot(t *testing.T) {
 	// it. (It drops rather than refuses because Parse reads stored data that
 	// outlives the code defining the vocabulary — see policy.Parse and the
 	// UAT's F4.)
-	doc, err := policy.Parse([]byte(`{"objects":{"` + object + `":{"create":false,"read":true,"update":true,"delete":false}},"row_scope":"team"}`))
+	doc, err := policy.Parse([]byte(`{"objects":{"`+object+`":{"create":false,"read":true,"update":true,"delete":false}},"row_scope":"team"}`), rbac.vocabulary)
 	if err != nil {
 		t.Fatalf("a role document granting a registered extension object must parse: %v", err)
 	}
 
 	// Step 2 — the merge carries it into the effective permissions.
-	perms := policy.Merge(map[string]policy.Document{"rep": doc})
+	perms := policy.Merge(map[string]policy.Document{"rep": doc}, rbac.vocabulary)
 	if got := perms.Objects[object]; !got.Read || !got.Update || got.Create || got.Delete {
 		t.Fatalf("merged grant on %s = %+v, want read+update only", object, got)
 	}
@@ -107,20 +108,20 @@ func TestExtensionRbacObjectReachesTheMeSnapshot(t *testing.T) {
 // named its object. Dropping keeps the vocabulary closed where it matters —
 // nothing is granted — without making stored data unreadable.
 func TestAnUnregisteredExtensionObjectReachesNothing(t *testing.T) {
-	t.Cleanup(ResetRbacObjectsForTest)
+	t.Parallel()
 	const object = "ext_notes_widget"
-	// Nothing registered.
-	doc, err := policy.Parse([]byte(`{"objects":{"` + object + `":{"read":true}},"row_scope":"team"}`))
+	var rbac RbacObjects // Nothing registered.
+	doc, err := policy.Parse([]byte(`{"objects":{"`+object+`":{"read":true}},"row_scope":"team"}`), rbac.vocabulary)
 	if err != nil {
 		t.Fatalf("a document granting an unregistered object must still parse: %v", err)
 	}
-	if perms := policy.Merge(map[string]policy.Document{"rep": doc}); perms.Objects[object].Read {
+	if perms := policy.Merge(map[string]policy.Document{"rep": doc}, rbac.vocabulary); perms.Objects[object].Read {
 		t.Fatal("an unregistered object reached the effective permissions — the vocabulary is not closed")
 	}
-	if _, ok := meObjects(t, policy.Merge(map[string]policy.Document{"rep": doc}))[object]; ok {
+	if _, ok := meObjects(t, policy.Merge(map[string]policy.Document{"rep": doc}, rbac.vocabulary))[object]; ok {
 		t.Fatal("/me carries an object nothing registered, so a screen would gate on a grant no server enforces")
 	}
-	if RBACObjectGrantable(object) {
+	if rbac.Grantable(object) {
 		t.Fatal("an unregistered object reports as grantable, so an authority requirement naming it would look satisfiable")
 	}
 }
@@ -133,16 +134,17 @@ func TestAnUnregisteredExtensionObjectReachesNothing(t *testing.T) {
 // for every principal not explicitly granted it, and the unit's screen could
 // not tell the two apart.
 func TestARegisteredObjectIsInTheSnapshotEvenUngranted(t *testing.T) {
+	t.Parallel()
 	const object = "ext_notes_widget"
-	registerForTest(t, object)
+	rbac := registerForTest(t, object)
 
 	// A role document that grants a core object and says nothing about the
 	// extension one.
-	doc, err := policy.Parse([]byte(`{"objects":{"deal":{"read":true}},"row_scope":"own"}`))
+	doc, err := policy.Parse([]byte(`{"objects":{"deal":{"read":true}},"row_scope":"own"}`), rbac.vocabulary)
 	if err != nil {
 		t.Fatal(err)
 	}
-	objects := meObjects(t, policy.Merge(map[string]policy.Document{"rep": doc}))
+	objects := meObjects(t, policy.Merge(map[string]policy.Document{"rep": doc}, rbac.vocabulary))
 	got, ok := objects[object]
 	if !ok {
 		t.Fatalf("/me omits the registered object entirely, so the client cannot distinguish "+
@@ -162,7 +164,7 @@ func TestARegisteredObjectIsInTheSnapshotEvenUngranted(t *testing.T) {
 // widens what a role document may grant, which is exactly the kind of seam a
 // unit could otherwise use to grant itself authority over core records.
 func TestTheExtensionVocabularyIsNotAWayIntoTheCoreOne(t *testing.T) {
-	t.Cleanup(ResetRbacObjectsForTest)
+	t.Parallel()
 	for _, name := range []RbacObject{
 		"deal",                // a core object
 		"widget",              // unnamespaced
@@ -171,17 +173,14 @@ func TestTheExtensionVocabularyIsNotAWayIntoTheCoreOne(t *testing.T) {
 		"ext_crm-demo_widget", // a hyphen, which no SQL identifier holds unquoted
 		"",
 	} {
-		if err := RegisterRbacObjects(name); err == nil {
-			t.Errorf("RegisterRbacObjects(%q) = nil, want a refusal", string(name))
+		if _, err := NewRbacObjects([]RbacObject{name}, nil); err == nil {
+			t.Errorf("NewRbacObjects(%q) = nil, want a refusal", string(name))
 		}
 	}
 	// And registering one twice is an error rather than a no-op: two claims on
 	// one object name is a wiring defect where each side thinks it owns the
 	// grants.
-	if err := RegisterRbacObjects("ext_notes_widget"); err != nil {
-		t.Fatal(err)
-	}
-	if err := RegisterRbacObjects("ext_notes_widget"); err == nil {
-		t.Fatal("re-registering an object succeeded; want the duplicate refusal")
+	if _, err := NewRbacObjects([]RbacObject{"ext_notes_widget", "ext_notes_widget"}, nil); err == nil {
+		t.Fatal("registering an object twice succeeded; want the duplicate refusal")
 	}
 }

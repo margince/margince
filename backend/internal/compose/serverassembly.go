@@ -62,7 +62,7 @@ import (
 // ADR-0054 reason as the stager.
 func newContactsHandlers(pool *pgxpool.Pool, companyTypes companytypes.Registry) contactsHandlers {
 	return withContactMergeCarriers(InstallationDB(pool), contacts.NewHandlers(InstallationDB(pool)).WithCompanyTypes(companyTypes)).
-		WithPrivacyReviewer(identity.NewServiceFor(InstallationDB(pool))).
+		WithPrivacyReviewer(identityServiceFor(InstallationDB(pool))).
 		WithRetainedSignaturePreview(func(source string) (string, error) {
 			markup, _, err := activities.SignatureMarkup(source)
 			return markup, err
@@ -107,7 +107,7 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 		// The public booking capture seams (feedback/14): contacts is the
 		// idempotent-on-email contact path, consent records the
 		// passthrough — both injected here, never sibling imports.
-		WithPublicBooking(hostauthority.BookerContacts{Store: newContactsStore(InstallationDB(pool)), Seats: identity.NewService(pool)}, bookingConsentAdapter{
+		WithPublicBooking(hostauthority.BookerContacts{Store: newContactsStore(InstallationDB(pool)), Seats: IdentityService(pool)}, bookingConsentAdapter{
 			store: consent.NewStore(InstallationDB(pool)),
 		}).
 		// The RFC 8058 unsubscribe linker (B-E11.32): consent mints the
@@ -130,7 +130,7 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 		// including the human an agent acts on behalf of — and that resolution
 		// must be the same one the audit log records, so it is injected rather
 		// than re-derived here.
-		WithSenderName(identity.NewServiceFor(InstallationDB(pool))).
+		WithSenderName(identityServiceFor(InstallationDB(pool))).
 		// Which domains are our own, for the waiting queue's colleague rule.
 		// capture owns workspace_email_domain and the rule for which entries
 		// count as vouched-for, so the edge is injected rather than restated.
@@ -217,7 +217,7 @@ func (s *Server) wireSurfaces(pool *pgxpool.Pool, log *slog.Logger) {
 	s.wireOnboardingSurface(pool)
 	s.wireSystemOfRecordReads(pool)
 	s.wireBulkSurface(pool)
-	s.companyContactShareHandlers = companyContactShareHandlers{db: InstallationDB(pool), grants: identity.NewService(pool)}
+	s.companyContactShareHandlers = companyContactShareHandlers{db: InstallationDB(pool), grants: IdentityService(pool)}
 	s.wireHandoverSurface()
 }
 
@@ -260,7 +260,7 @@ func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {
 	s.reportingHandlers = reporting.NewHandlers(reportingService, openingSelection())
 	s.reportingExportHandlers = reportingExportHandlers{service: reportingService}
 	s.reportingReaderPreviewHandlers = reportingReaderPreviewHandlers{
-		reports: reportingService, roles: identity.NewServiceFor(InstallationDB(pool)),
+		reports: reportingService, roles: identityServiceFor(InstallationDB(pool)),
 	}
 	s.forecastHandlers = newForecastHandlers(pool, func() time.Time { return time.Now().UTC() })
 	// The floor comes from the constant rather than a setting for now: one

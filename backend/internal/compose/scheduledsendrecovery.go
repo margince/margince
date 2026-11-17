@@ -136,6 +136,6 @@ func addScheduledSendRecoveryJob(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRu
 		return nil
 	}
 	addDeclaredWorker[ScheduledSendRecoveryArgs](reg, newScheduledSendRecoveryWorker(
-		identity.NewService(pool), sendStore(pool, cfg.SendOrigin.sendPath()), NewScheduleTimer(inserter), log))
+		IdentityService(pool), sendStore(pool, cfg.SendOrigin.sendPath()), NewScheduleTimer(inserter), log))
 	return periodicFor(cfg, ScheduledSendRecoveryArgs{})
 }

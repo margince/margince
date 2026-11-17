@@ -51,7 +51,7 @@ func (s *Service) PreviewAccess(ctx context.Context, actor Identity, role string
 	}
 	var out Access
 	err = s.db.Tx(ctx, func(tx pgx.Tx) (err error) {
-		out, err = accessFor(ctx, tx, []string{role}, teamIDs)
+		out, err = accessFor(ctx, tx, s.rbac, []string{role}, teamIDs)
 		return err
 	})
 	return out, err
@@ -66,7 +66,7 @@ func (s *Service) RoleReach(ctx context.Context, role string) (principal.Permiss
 	}
 	var out Access
 	err := s.db.Tx(ctx, func(tx pgx.Tx) (err error) {
-		out, err = accessFor(ctx, tx, []string{role}, nil)
+		out, err = accessFor(ctx, tx, s.rbac, []string{role}, nil)
 		return err
 	})
 	return out.Permissions, err
@@ -99,7 +99,7 @@ func (s *Service) UserAccess(ctx context.Context, actor Identity, userID ids.Use
 		if err != nil {
 			return err
 		}
-		roles, teams, _, err := loadGrants(ctx, tx, userID)
+		roles, teams, _, err := loadGrants(ctx, tx, s.rbac, userID)
 		if err != nil {
 			return err
 		}
@@ -107,7 +107,7 @@ func (s *Service) UserAccess(ctx context.Context, actor Identity, userID ids.Use
 		for _, t := range teams {
 			teamIDs = append(teamIDs, t.UUID)
 		}
-		out, err = accessFor(ctx, tx, roles, teamIDs)
+		out, err = accessFor(ctx, tx, s.rbac, roles, teamIDs)
 		out.MemberStatus = status
 		return err
 	})
@@ -117,7 +117,7 @@ func (s *Service) UserAccess(ctx context.Context, actor Identity, userID ids.Use
 // accessFor is the one evaluation both doors share: the role documents
 // merged the way login merges them, the field masks the loader loads, and
 // the teams resolved to rows.
-func accessFor(ctx context.Context, tx pgx.Tx, roleKeys []string, teamIDs []ids.UUID) (Access, error) {
+func accessFor(ctx context.Context, tx pgx.Tx, rbac RbacObjects, roleKeys []string, teamIDs []ids.UUID) (Access, error) {
 	byRole := map[string]policy.Document{}
 	for _, key := range roleKeys {
 		var raw []byte
@@ -128,13 +128,13 @@ func accessFor(ctx context.Context, tx pgx.Tx, roleKeys []string, teamIDs []ids.
 		if err != nil {
 			return Access{}, err
 		}
-		doc, err := policy.Parse(raw)
+		doc, err := policy.Parse(raw, rbac.vocabulary)
 		if err != nil {
 			return Access{}, err
 		}
 		byRole[key] = doc
 	}
-	perms := policy.Merge(byRole)
+	perms := policy.Merge(byRole, rbac.vocabulary)
 	masks, err := loadFieldMasks(ctx, tx, roleKeys)
 	if err != nil {
 		return Access{}, err

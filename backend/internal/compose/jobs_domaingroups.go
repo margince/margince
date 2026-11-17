@@ -20,7 +20,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/aiactivity"
-	"github.com/margince/margince/backend/internal/modules/identity"
 )
 
 // addBriefGenerateJobs registers the overnight Morning-Brief assembly. Its own
@@ -35,7 +34,7 @@ func addBriefGenerateJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger
 	addDeclaredWorker[BriefGenerateArgs](reg, &briefGenerateWorker{
 		engine: routineBriefEngine(pool),
 		pool:   pool,
-		users:  identity.NewService(pool),
+		users:  IdentityService(pool),
 		now:    time.Now,
 		log:    log,
 		mail:   mail,
@@ -49,11 +48,11 @@ func addBriefGenerateJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger
 func addAIActivitySweepJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger) {
 	db := InstallationDB(pool)
 	addDeclaredWorker[AIActivityReconcileArgs](reg, &aiActivityReconcileWorker{
-		activities: activities.NewStore(db), identity: identity.NewService(pool),
+		activities: activities.NewStore(db), identity: IdentityService(pool),
 		now: time.Now, log: log,
 	})
 	addDeclaredWorker[AIActivityRetentionArgs](reg, &aiActivityRetentionWorker{
-		projection: aiactivity.NewStore(db), identity: identity.NewService(pool),
+		projection: aiactivity.NewStore(db), identity: IdentityService(pool),
 		now: time.Now, log: log,
 	})
 }

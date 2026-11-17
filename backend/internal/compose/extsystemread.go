@@ -25,7 +25,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/companyscan"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -382,7 +381,7 @@ func asColleague(ctx context.Context, pool *pgxpool.Pool, colleague ids.UUID) (c
 	if !bound {
 		correlation = ids.NewV7()
 	}
-	ownCtx, err := companyscan.WorkerContext(ctx, identity.NewService(pool), ids.From[ids.UserKind](colleague), correlation)
+	ownCtx, err := companyscan.WorkerContext(ctx, IdentityService(pool), ids.From[ids.UserKind](colleague), correlation)
 	if errors.Is(err, apperrors.ErrNotFound) {
 		return nil, principal.Principal{}, false, nil
 	}

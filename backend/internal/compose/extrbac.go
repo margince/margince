@@ -10,9 +10,9 @@ package compose
 // Why the seam exists rather than the objects simply being in policy.coreObjects:
 // coreObjects is compiled in, mirrored by the contract's RbacObject enum, and
 // held equal to it by a merge-blocking parity test. An installation's units are
-// none of those things. So the vocabulary gains a registration path, and the
-// registration happens at boot alongside every other extension reconciliation —
-// before any surface serves, and refusing the whole set on one bad name.
+// none of those things. So each composition builds its own vocabulary at boot,
+// alongside every other extension reconciliation, refusing the whole set on one
+// bad name.
 
 import (
 	"fmt"
@@ -36,23 +36,18 @@ import (
 // keyed by plain string), but the generated TypeScript union will not carry it
 // until the composed-types lane emits client types from the merged contract.
 
-// RegisterRbacObjects extends the RBAC object vocabulary with the extension
-// objects the composed set declares, so a role document may grant them, an
-// authority requirement naming one is satisfiable, and /me reports the holder's
-// grant on them.
+// NewRbacObjects builds the RBAC object vocabulary of a composed set. It holds
+// the extension objects the set declares and the starting grants on them. A
+// role document may grant those objects, and /me reports the holder's grant.
 //
-// The plan sketched this as taking []policy.Object. It cannot: policy is
-// identity's internal package and unreachable from here. identity.RbacObject is
-// an alias for exactly that type, so the grammar a name must clear is still
-// policy's own — see identity/rbacobjects.go.
-func RegisterRbacObjects(objects []identity.RbacObject) error {
-	if len(objects) == 0 {
-		return nil
+// identity.RbacObject is an alias for policy's own object type, so the grammar
+// a name must clear is still policy's own (identity/rbacobjects.go).
+func NewRbacObjects(objects []identity.RbacObject, defaults []identity.RbacDefault) (identity.RbacObjects, error) {
+	rbac, err := identity.NewRbacObjects(objects, defaults)
+	if err != nil {
+		return identity.RbacObjects{}, fmt.Errorf("compose: %w", err)
 	}
-	if err := identity.RegisterRbacObjects(objects...); err != nil {
-		return fmt.Errorf("compose: %w", err)
-	}
-	return nil
+	return rbac, nil
 }
 
 // THE NAMESPACE IS NOT INJECTIVE, and this is where that is handled.

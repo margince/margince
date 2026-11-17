@@ -69,7 +69,7 @@ func (e *revocationEnv) resolve(t *testing.T, userID ids.UserID) Identity {
 	id := Identity{UserID: userID, WorkspaceID: e.admin.WorkspaceID, SeatType: string(principal.SeatFull)}
 	err := e.svc.db.Tx(e.wsCtx(e.admin), func(tx pgx.Tx) error {
 		var err error
-		id.Roles, id.Teams, id.Permissions, err = loadGrants(context.Background(), tx, userID)
+		id.Roles, id.Teams, id.Permissions, err = loadGrants(context.Background(), tx, RbacObjects{}, userID)
 		return err
 	})
 	if err != nil {
@@ -114,14 +114,13 @@ func (e *revocationEnv) roleID(t *testing.T, key string) ids.UUID {
 
 // A copy keeps what its source stores, including a grant on an extension this
 // installation no longer composes, and the source's field masks.
-//
-//testdb:serial registers into the process-wide RBAC object registry
 func TestACopiedRoleKeepsItsSourcesGrantsAndMasks(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "role-copy")
-	registerExtObject(t)
+	e.registerExtObject(t)
 	source := e.customRole(t, "Field sales", "rep", map[string]storedGrant{extObject: {Read: true}})
 	e.maskRole(t, source)
-	ResetRbacObjectsForTest()
+	e.svc.WithRbacObjects(RbacObjects{})
 
 	copied, err := e.svc.CreateRole(e.wsCtx(e.admin), e.admin, source, "  Field sales DACH ")
 	if err != nil {

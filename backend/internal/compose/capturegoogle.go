@@ -22,7 +22,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/gdocs"
 	"github.com/margince/margince/backend/internal/modules/capture/gmail"
 	"github.com/margince/margince/backend/internal/modules/capture/googleconn"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 )
 
@@ -298,7 +297,7 @@ func WithGmailCapture(c GmailConfig, cfg CaptureConfig) Option {
 		s.ImportHandlers = gmailsignature.ImportHandlers{Source: registry}
 		s.connectorHandlers = connectorHandlers{
 			registry:      registry,
-			authority:     identity.NewService(pool),
+			authority:     IdentityService(pool),
 			oauth:         gmailOAuth,
 			gmailAPI:      gmail.NewAPIWithQuota(c.httpClient(), "", cfg.GmailMailboxQuota, cfg.GmailProjectQuota),
 			gcalOAuth:     gcalOAuth,

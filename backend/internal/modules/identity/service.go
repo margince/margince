@@ -109,6 +109,9 @@ type Service struct {
 	// pictureFill stores a sign-in's provider picture as the seat's own. Nil
 	// leaves every seat's picture as it is. See providerpicture.go.
 	pictureFill ProviderPictureFill
+	// rbac is the extension RBAC vocabulary of the composition this service
+	// serves (rbacobjects.go).
+	rbac RbacObjects
 }
 
 func NewService(pool *pgxpool.Pool) *Service {
@@ -285,18 +288,17 @@ func SeedSystemRoles(ctx context.Context, tx pgx.Tx) (adminRoleID ids.UUID, err 
 			adminRoleID = roleID
 		}
 	}
-	// A new installation gets the composed units' starting grants with its roles.
-	if err := fillRegisteredDefaults(ctx, tx); err != nil {
-		return ids.Nil, err
-	}
 	return adminRoleID, nil
 }
 
-// seedSystemRolesForBootstrap is the provisioning half: the role set, plus the
-// admin role on the workspace's first user.
-func seedSystemRolesForBootstrap(ctx context.Context, tx pgx.Tx, adminUserID ids.UserID) error {
+// seedSystemRolesForBootstrap is the provisioning half: the role set with the
+// composed units' starting grants, plus the admin role on the workspace's first user.
+func seedSystemRolesForBootstrap(ctx context.Context, tx pgx.Tx, rbac RbacObjects, adminUserID ids.UserID) error {
 	adminRoleID, err := SeedSystemRoles(ctx, tx)
 	if err != nil {
+		return err
+	}
+	if err := fillRegisteredDefaults(ctx, tx, rbac); err != nil {
 		return err
 	}
 	_, err = tx.Exec(ctx,
@@ -402,7 +404,7 @@ func (s *Service) Authenticate(ctx context.Context, rawToken string) (Identity, 
 		}
 
 		var loadErr error
-		id.Roles, id.Teams, id.Permissions, loadErr = loadGrants(ctx, tx, userID)
+		id.Roles, id.Teams, id.Permissions, loadErr = loadGrants(ctx, tx, s.rbac, userID)
 		if loadErr != nil {
 			return loadErr
 		}

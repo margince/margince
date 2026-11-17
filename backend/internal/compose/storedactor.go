@@ -167,7 +167,7 @@ func activationActor(ctx context.Context, pool *pgxpool.Pool, activation datatas
 	stored := migration.StoredActor{Type: principal.PrincipalAgent, ID: activation.Operator}
 	if agent := activation.Agent; agent != nil {
 		stored.UserID, stored.PassportID, stored.ConnectionID, stored.OnBehalfOf = agent.UserID, agent.PassportID, agent.ConnectionID, agent.OnBehalfOf
-		actor, err := (storedActor{authority: identity.NewService(pool)}).rebuild(ctx, stored, principal.ScopeWrite)
+		actor, err := (storedActor{authority: IdentityService(pool)}).rebuild(ctx, stored, principal.ScopeWrite)
 		if err != nil {
 			return principal.Principal{}, err
 		}
@@ -181,5 +181,5 @@ func activationActor(ctx context.Context, pool *pgxpool.Pool, activation datatas
 	if !ok {
 		return principal.Principal{}, apperrors.ErrPermissionDenied
 	}
-	return (storedActor{authority: identity.NewService(pool)}).rebuild(ctx, migration.StoredActor{Type: principal.PrincipalHuman, UserID: human})
+	return (storedActor{authority: IdentityService(pool)}).rebuild(ctx, migration.StoredActor{Type: principal.PrincipalHuman, UserID: human})
 }

@@ -43,7 +43,7 @@ func (s *Service) LiveMemberAuthorities(ctx context.Context, users []ids.UUID) (
 		for user := range seats {
 			live = append(live, user)
 		}
-		grants, err := loadGrantsFor(ctx, tx, live)
+		grants, err := loadGrantsFor(ctx, tx, s.rbac, live)
 		if err != nil {
 			return err
 		}

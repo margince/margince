@@ -298,7 +298,7 @@ var _ comms.SeatAuthority = commsSeats{}
 //
 //nolint:ireturn // returns the comms.SeatAuthority seam by design: the concrete type is unexported and every caller holds the interface
 func NewSendSeatAuthority(pool *pgxpool.Pool) comms.SeatAuthority {
-	return commsSeats{authority: identity.NewService(pool)}
+	return commsSeats{authority: IdentityService(pool)}
 }
 
 func (s commsSeats) ActiveSeat(ctx context.Context, userID ids.UserID) (bool, string, error) {

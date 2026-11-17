@@ -35,7 +35,7 @@ func prepareRoutineDigest(ctx context.Context, pool *pgxpool.Pool, user ids.UUID
 	if settings.CombineRoutine == nil || !*settings.CombineRoutine {
 		return part, nil
 	}
-	window, allowed, err := routineWindowFor(ctx, identity.NewService(pool), now, settings)
+	window, allowed, err := routineWindowFor(ctx, IdentityService(pool), now, settings)
 	if err != nil || !allowed {
 		return part, err
 	}

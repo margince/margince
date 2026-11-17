@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/extensionprivacy"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/extprivacy"
 	"github.com/margince/margince/backend/internal/shared/ports/companytypes"
 	"github.com/margince/margince/backend/pkg/extension"
@@ -47,7 +48,7 @@ func RecordComposition(
 	if err := ReconcileChannelProviders(ctx, pool, composed); err != nil {
 		return fmt.Errorf("compose: registering this binary's channel vocabulary: %w", err)
 	}
-	if err := FillExtensionRbacDefaults(ctx, pool, log); err != nil {
+	if err := FillExtensionRbacDefaults(ctx, pool, log, composed); err != nil {
 		return fmt.Errorf("compose: filling the units' default role grants: %w", err)
 	}
 	if err := EnsureExtensionServiceMembers(ctx, pool, log, exts); err != nil {
@@ -56,18 +57,29 @@ func RecordComposition(
 	return nil
 }
 
-// extensionData holds the composed units the privacy registry is derived from.
+// extensionData holds the composed units the privacy registry is derived from,
+// and the RBAC vocabulary built from them.
 // RegisterExtensions installs it in its apply phase, beside corereach.Install,
 // and the mutex orders that write against every later read.
 var extensionData struct {
 	mu    sync.RWMutex
 	units []extension.Extension
+	rbac  identity.RbacObjects
 }
 
-func installExtensionData(units []extension.Extension) {
+func installExtensionData(composed *Extensions) {
 	extensionData.mu.Lock()
 	defer extensionData.mu.Unlock()
-	extensionData.units = units
+	extensionData.units = composed.units
+	extensionData.rbac = composed.rbac
+}
+
+// installedRbacObjects is the RBAC vocabulary of the installed composition, for
+// the identity services built where no composition is in reach.
+func installedRbacObjects() identity.RbacObjects {
+	extensionData.mu.RLock()
+	defer extensionData.mu.RUnlock()
+	return extensionData.rbac
 }
 
 // ExtensionData is the registry every eraser, export and merge store outside a test is handed.

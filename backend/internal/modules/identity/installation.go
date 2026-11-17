@@ -119,7 +119,7 @@ func (s *Service) BootstrapInstallation(ctx context.Context, create func() (Inst
 		if err != nil {
 			return err
 		}
-		wsID, err = createInstallation(ctx, tx, s.config, in, originConfigured, seed, &discarded)
+		wsID, err = createInstallation(ctx, tx, s.rbac, s.config, in, originConfigured, seed, &discarded)
 		created = err == nil
 		return err
 	})
@@ -208,7 +208,7 @@ const (
 // untouched error paths into lines that read as changed to anything comparing
 // against the previous revision. The values it collects are a second OUTCOME of
 // a successful create, not a second result of the call.
-func createInstallation(ctx context.Context, tx pgx.Tx, c *config.Config, in InstallationBootstrap, origin provisioningOrigin, seed func(ctx context.Context, tx pgx.Tx) error, discarded *[]string) (ids.WorkspaceID, error) {
+func createInstallation(ctx context.Context, tx pgx.Tx, rbac RbacObjects, c *config.Config, in InstallationBootstrap, origin provisioningOrigin, seed func(ctx context.Context, tx pgx.Tx) error, discarded *[]string) (ids.WorkspaceID, error) {
 	in = in.underBootValues(ctx, c)
 	boot := BootstrapInput{
 		WorkspaceName: in.CompanyName,
@@ -264,7 +264,7 @@ func createInstallation(ctx context.Context, tx pgx.Tx, c *config.Config, in Ins
 		origin == originConfigured, owndomain.StoredOfAddress(boot.AdminEmail)).Scan(&userID); err != nil {
 		return ids.WorkspaceID{}, err
 	}
-	if err := seedSystemRolesForBootstrap(ctx, tx, userID); err != nil {
+	if err := seedSystemRolesForBootstrap(ctx, tx, rbac, userID); err != nil {
 		return ids.WorkspaceID{}, err
 	}
 	// Any outstanding claim credential is retired here, on BOTH paths. The

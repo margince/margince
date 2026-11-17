@@ -234,7 +234,7 @@ func (s *Service) CompleteMFAChallenge(ctx context.Context, userID ids.UserID, c
 			return err
 		}
 		var idErr error
-		id, idErr = signedInIdentity(ctx, tx, wsID, userID)
+		id, idErr = signedInIdentity(ctx, tx, s.rbac, wsID, userID)
 		return idErr
 	})
 	if err == nil {
@@ -311,8 +311,8 @@ func spendMFAChallenge(ctx context.Context, tx pgx.Tx, jti string) error {
 // query). A member who stopped being live between the password step and the
 // second factor is refused as neutrally as a wrong code: the challenge outlives
 // the standing it was minted under, and must not out-vote it.
-func signedInIdentity(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, userID ids.UserID) (Identity, error) {
-	id, err := liveMemberIdentity(ctx, tx, wsID, userID)
+func signedInIdentity(ctx context.Context, tx pgx.Tx, rbac RbacObjects, wsID ids.WorkspaceID, userID ids.UserID) (Identity, error) {
+	id, err := liveMemberIdentity(ctx, tx, rbac, wsID, userID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Identity{}, errBadMFACode
 	}
@@ -321,7 +321,7 @@ func signedInIdentity(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, user
 
 // liveMemberIdentity reads a live member's Identity inside the caller's
 // transaction, answering pgx.ErrNoRows when the member is not live.
-func liveMemberIdentity(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, userID ids.UserID) (Identity, error) {
+func liveMemberIdentity(ctx context.Context, tx pgx.Tx, rbac RbacObjects, wsID ids.WorkspaceID, userID ids.UserID) (Identity, error) {
 	id := Identity{UserID: userID, WorkspaceID: wsID}
 	err := tx.QueryRow(ctx,
 		`SELECT email, display_name, seat_type FROM app_user
@@ -333,7 +333,7 @@ func liveMemberIdentity(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, us
 	if err := readSeatProfile(ctx, tx, &id); err != nil {
 		return Identity{}, err
 	}
-	if id.Roles, id.Teams, id.Permissions, err = loadGrants(ctx, tx, userID); err != nil {
+	if id.Roles, id.Teams, id.Permissions, err = loadGrants(ctx, tx, rbac, userID); err != nil {
 		return Identity{}, err
 	}
 	// Coalesced to empty for the reason Login's read is: failing on an unnamed

@@ -23,7 +23,7 @@ func recipientMailCopy(ctx context.Context, pool *pgxpool.Pool) mailcopy.Copy {
 // recipientLanguage is the signed-in member's saved language, else the
 // installation's. Their weekly mail and their weekly sentence both read it.
 func recipientLanguage(ctx context.Context, pool *pgxpool.Pool) string {
-	profile, err := identity.NewService(pool).ActorProfile(ctx)
+	profile, err := IdentityService(pool).ActorProfile(ctx)
 	if err != nil {
 		slog.WarnContext(ctx, "recipient language unavailable; using installation fallback", "cause", err)
 		return identity.BaseLanguageForPrompt(ctx, pool)
@@ -35,7 +35,7 @@ func recipientLanguage(ctx context.Context, pool *pgxpool.Pool) string {
 }
 
 func roomInviteIdentity(ctx context.Context, pool *pgxpool.Pool) (string, string, error) {
-	name, _, err := identity.NewService(pool).ActorIdentity(ctx)
+	name, _, err := IdentityService(pool).ActorIdentity(ctx)
 	if err != nil {
 		return "", "", err
 	}
@@ -49,7 +49,7 @@ func roomInviteIdentity(ctx context.Context, pool *pgxpool.Pool) (string, string
 }
 
 func recipientDeadline(ctx context.Context, pool *pgxpool.Pool, at time.Time) time.Time {
-	hours, _, err := identity.NewService(pool).MyWorkingHours(ctx)
+	hours, _, err := IdentityService(pool).MyWorkingHours(ctx)
 	if err == nil {
 		var zone *time.Location
 		zone, err = hours.Location()

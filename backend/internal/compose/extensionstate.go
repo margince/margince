@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/ports/companytypes"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -32,6 +33,7 @@ type Extensions struct {
 	tools []mcp.Tool
 	subs  []ComposedSubscription
 	jobs  []composedJob
+	rbac  identity.RbacObjects
 
 	// mu orders the runtime binding and the channel vocabulary, which the boot
 	// writes after the pool exists and every call reads.
@@ -65,6 +67,15 @@ func (x *Extensions) Subscriptions() []ComposedSubscription {
 		return nil
 	}
 	return slices.Clone(x.subs)
+}
+
+// RbacObjects returns the RBAC object vocabulary the composition's units extend
+// core's with, and the starting grants they declare.
+func (x *Extensions) RbacObjects() identity.RbacObjects {
+	if x == nil {
+		return identity.RbacObjects{}
+	}
+	return x.rbac
 }
 
 // CompanyTypes returns the company types the composition's units declare.
@@ -169,7 +180,7 @@ func ExtensionsWithSubscriptionsForTest(subs []ComposedSubscription) *Extensions
 // binding of its own. Parallel tests that share one registration each bind
 // their own pool to a fork.
 func (x *Extensions) ForkForTest() *Extensions {
-	fork := &Extensions{units: x.units, verbs: x.verbs, jobs: x.jobs}
+	fork := &Extensions{units: x.units, verbs: x.verbs, jobs: x.jobs, rbac: x.rbac}
 	for _, tool := range x.tools {
 		if adapted, ok := tool.(extensionTool); ok {
 			adapted.composed = fork

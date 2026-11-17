@@ -11,7 +11,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
@@ -51,6 +50,6 @@ func mailDealsDataTask(pool *pgxpool.Pool) datatask.Task {
 func mailDealRepair(pool *pgxpool.Pool) capture.DealRepair {
 	return capture.DealRepair{
 		Candidates: deals.NewStore(InstallationDB(pool), DealsInstallation()),
-		Authority:  identity.NewService(pool), Filer: ActivityDealFiler{},
+		Authority:  IdentityService(pool), Filer: ActivityDealFiler{},
 	}
 }

@@ -11,7 +11,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/knowledge"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -36,7 +35,7 @@ func unreferencedKeysBy(db *database.DB) map[storedobjects.Kind]storedobjectreap
 			deals.NewStore(db, DealsInstallation()).UnreferencedIssuerLogoKeys),
 		storedobjects.KindOffer:  deals.NewStore(db, DealsInstallation()).UnreferencedOfferKeys,
 		storedobjects.KindImport: migration.NewRunStore(db).UnreferencedImportKeys,
-		storedobjects.KindAvatar: identity.NewServiceFor(db).UnreferencedAvatarKeys,
+		storedobjects.KindAvatar: identityServiceFor(db).UnreferencedAvatarKeys,
 	}
 }
 

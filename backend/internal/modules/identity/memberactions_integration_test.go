@@ -86,7 +86,7 @@ func callMemberVerb(e *revocationEnv, h Handlers, caller Identity, action member
 	case actionHandOver:
 		// The handover is served outside this module, behind this gate.
 		ctx := actorCtx(e.wsCtx(caller), caller)
-		if err := e.svc.db.Tx(ctx, func(tx pgx.Tx) error { return AdmitMemberHandover(ctx, tx, target) }); err != nil {
+		if err := e.svc.db.Tx(ctx, func(tx pgx.Tx) error { return AdmitMemberHandover(ctx, tx, RbacObjects{}, target) }); err != nil {
 			return http.StatusForbidden
 		}
 		return http.StatusOK

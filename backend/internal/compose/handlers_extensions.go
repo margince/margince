@@ -93,10 +93,10 @@ func composedExtensionInventory(exts []extension.Extension, verbs []extension.Ve
 
 // unitRbacObjects collects the distinct objects this unit's operations gate on.
 //
-// Read off the VERBS rather than off the RBAC registry, deliberately. The
-// registry (policy.RegisteredObjects) knows every registered name but not which
-// unit declared it — the `ext_<unit>_` prefix looks like it would answer that
-// and does not, because the namespace is not injective: a hyphenated unit name
+// Read off the verbs rather than off the RBAC vocabulary. The vocabulary
+// (identity.RbacObjects) knows every registered name but not which unit
+// declared it. The `ext_<unit>_` prefix does not answer that, because the
+// namespace is not injective: a hyphenated unit name
 // underscores, so `crm-demo`/`widget` and `crm`/`demo_widget` derive one name
 // (see extrbac.go). Splitting the prefix back apart would attribute an object to
 // the wrong unit; the verb carries its declaring unit as data and cannot.

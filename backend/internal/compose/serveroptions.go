@@ -271,7 +271,7 @@ func WithKeyvault(vault keyvault.Vault) Option {
 		if s.connectorHandlers.registry == nil {
 			s.connectorHandlers = connectorHandlers{
 				registry:             NewCaptureRegistry(pool, vault, s.captureConfig),
-				authority:            identity.NewService(pool),
+				authority:            IdentityService(pool),
 				googleCredentials:    s.googleAppResolver,
 				microsoftCredentials: s.microsoftAppResolver,
 				publicOrigin:         s.originStatus,

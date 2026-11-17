@@ -43,7 +43,7 @@ func newDataTaskEngine(pool *pgxpool.Pool, composed *Extensions, release string,
 func dataTaskFailureNotice(pool *pgxpool.Pool) func(context.Context, pgx.Tx, datatask.Progress) error {
 	return func(ctx context.Context, tx pgx.Tx, p datatask.Progress) error {
 		ctx = datatask.Acting(ctx, p.TaskID)
-		recipients, err := identity.DataTaskOperatorsTx(ctx, tx)
+		recipients, err := identity.DataTaskOperatorsTx(ctx, tx, installedRbacObjects())
 		if err != nil {
 			return err
 		}

@@ -17,7 +17,7 @@ import (
 // MemberPrincipalsTx is MemberPrincipal for several members, read on the
 // caller's transaction so the answer is the one that holds under the caller's
 // locks. A member who is not live is absent from the answer.
-func MemberPrincipalsTx(ctx context.Context, tx pgx.Tx, users []ids.UUID) (map[ids.UUID]principal.Principal, error) {
+func MemberPrincipalsTx(ctx context.Context, tx pgx.Tx, rbac RbacObjects, users []ids.UUID) (map[ids.UUID]principal.Principal, error) {
 	rows, err := tx.Query(ctx, `SELECT id, seat_type FROM app_user WHERE id = ANY($1) AND `+LiveMemberSQL(""), users)
 	if err != nil {
 		return nil, fmt.Errorf("identity: reading members' seats: %w", err)
@@ -34,7 +34,7 @@ func MemberPrincipalsTx(ctx context.Context, tx pgx.Tx, users []ids.UUID) (map[i
 	for i, s := range seats {
 		live[i] = s.ID
 	}
-	grants, err := loadGrantsFor(ctx, tx, live)
+	grants, err := loadGrantsFor(ctx, tx, rbac, live)
 	if err != nil {
 		return nil, err
 	}

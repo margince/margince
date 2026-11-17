@@ -52,7 +52,7 @@ type approvalNoticeReconcileWorker struct {
 
 func newApprovalNoticeReconcileWorker(pool *pgxpool.Pool) *approvalNoticeReconcileWorker {
 	db := InstallationDB(pool)
-	ident := identity.NewService(pool)
+	ident := IdentityService(pool)
 	store := notices.NewStore(db)
 	return &approvalNoticeReconcileWorker{
 		db: db, identity: ident,

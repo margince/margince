@@ -109,7 +109,7 @@ type vcardIngestWorker struct {
 }
 
 func newVCardIngestWorker(pool *pgxpool.Pool, blob blobstore.Store, log *slog.Logger) *vcardIngestWorker {
-	return &vcardIngestWorker{pool: pool, blob: blob, users: identity.NewService(pool), log: log}
+	return &vcardIngestWorker{pool: pool, blob: blob, users: IdentityService(pool), log: log}
 }
 
 // Work imports one message's cards.

@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/chatlinks"
 	"github.com/margince/margince/backend/internal/modules/chatlinks/dispact"
 	"github.com/margince/margince/backend/internal/modules/chatlinks/dispact/dispacttest"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
@@ -104,7 +105,7 @@ func setupFlush(t *testing.T) *flushEnv {
 	t.Cleanup(srv.Close)
 	db := database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws))
 	chats := httpChats{client: dispact.New(srv.Client(), srv.URL, "gwapp_test"), connection: connection}
-	e.store = chatlinks.NewStore(db, chats, noFlush{}, Viewers)
+	e.store = chatlinks.NewStore(db, chats, noFlush{}, Viewers(identity.RbacObjects{}))
 	e.sync = New(e.pool, db, e.store)
 	e.flusher = NewFlusher(e.pool, chats, e.store, "https://crm.test", slog.Default())
 	return e

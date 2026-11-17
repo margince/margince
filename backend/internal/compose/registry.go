@@ -28,7 +28,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/corefeatures"
@@ -53,7 +52,7 @@ func NewRegistryFor(db *database.DB, send SendPath) *agents.Registry {
 	// The gate resolves seats through identity, and identity binds the same
 	// handle: a registry built for a named workspace must not admit through a
 	// service that resolves a different one.
-	return registryWithGate(db, auth.NewGate(identity.NewServiceFor(db)), nil, send, companyEnricher{}, nil, nil, nil,
+	return registryWithGate(db, auth.NewGate(identityServiceFor(db)), nil, send, companyEnricher{}, nil, nil, nil,
 		meetingBriefReader(newMeetingBriefService(db)), slog.Default(), registryFeatures{})
 }
 
@@ -76,9 +75,9 @@ func registryWithDraftBrain(pool *pgxpool.Pool, brain completer, send SendPath, 
 	db := InstallationDB(pool)
 	brief := meetingBriefReader(newMeetingBriefService(db))
 	if brain == nil {
-		return registryWithGate(db, auth.NewGate(identity.NewService(pool)), nil, send, companyEnricher{}, nil, nil, nil, brief, slog.Default(), features)
+		return registryWithGate(db, auth.NewGate(IdentityService(pool)), nil, send, companyEnricher{}, nil, nil, nil, brief, slog.Default(), features)
 	}
-	return registryWithGate(db, auth.NewGate(identity.NewService(pool)), newReplyDrafter(pool, brain, nil), send, companyEnricher{}, nil, nil, nil, brief, slog.Default(), features)
+	return registryWithGate(db, auth.NewGate(IdentityService(pool)), newReplyDrafter(pool, brain, nil), send, companyEnricher{}, nil, nil, nil, brief, slog.Default(), features)
 }
 
 // registryWithGate composes the tool surface. The volume budget charger arrives as
@@ -103,7 +102,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	opts = append(opts, agents.WithCallAvailability(coreCallAvailability(features.coreFeatures)), withContractTierFloor(), agents.WithToolGate(clientCheckGate(pool, log)),
 		agents.WithIdempotency(toolIdempotency(pool)), agents.WithReplayReader(provider),
 		agents.WithBaseLanguage(installationLanguage(pool)),
-		agents.WithSeatNamer(seatNamer(identity.NewServiceFor(db))), agents.WithActivityListCalendar(activityListCalendar(captureHealthRegistry(db))),
+		agents.WithSeatNamer(seatNamer(identityServiceFor(db))), agents.WithActivityListCalendar(activityListCalendar(captureHealthRegistry(db))),
 		agents.WithChangeWords(agentChangeWords(db)),
 		agents.WithContactCaseMerger(contactCaseMergerSeam(db)),
 		agents.WithDealTaskSettler(dealclosetasks.New(activities.NewStore(db), db)),

@@ -118,7 +118,7 @@ func NewRunnerService(pool *pgxpool.Pool, brain runner.Brain, draftBrain complet
 	svc := &RunnerService{
 		pool:       pool,
 		store:      runner.NewStore(InstallationDB(pool)),
-		identity:   identity.NewService(pool),
+		identity:   IdentityService(pool),
 		specByName: ScheduledAgentSpecByName,
 		retriever:  retriever,
 		log:        log,

@@ -46,7 +46,7 @@ func (RequestProofExpiryArgs) InsertOpts() river.InsertOpts {
 func newRequestProofExpiryWorker(pool *pgxpool.Pool, now func() time.Time, log *slog.Logger) *requestProofExpiryWorker {
 	return &requestProofExpiryWorker{
 		requests: consent.NewStore(InstallationDB(pool)).WithRightsCaseRetirer(privacy.RetireExpiredRightsCaseTx),
-		identity: identity.NewService(pool), now: now, log: log,
+		identity: IdentityService(pool), now: now, log: log,
 	}
 }
 

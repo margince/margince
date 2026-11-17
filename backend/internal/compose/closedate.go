@@ -164,7 +164,7 @@ func (r quietReviewReader) nameCounterparties(ctx context.Context, tx pgx.Tx, fa
 // the worker process role.
 func NewCloseDateCorrector(pool *pgxpool.Pool, log *slog.Logger) *deals.CloseDateCorrector {
 	db := InstallationDB(pool)
-	owner := dealOwnerAuthority{db: db, users: identity.NewServiceFor(db)}
+	owner := dealOwnerAuthority{db: db, users: identityServiceFor(db)}
 	return deals.NewCloseDateCorrector(db,
 		closeDatePolicy{owner: owner},
 		quietReviewReader{db: db, owner: owner},

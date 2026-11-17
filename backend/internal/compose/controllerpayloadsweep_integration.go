@@ -19,7 +19,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 )
 
@@ -38,7 +37,7 @@ func DriveControllerPayloadSweepForTest(
 ) error {
 	db := InstallationDB(pool)
 	worker := newControllerPayloadSweepWorker(
-		identity.NewService(pool),
+		IdentityService(pool),
 		comms.NewStore(db, time.Now, activities.NewStore(db), opts...),
 		controllerPayloads{v: vault},
 		receiptAlarm{db: db},

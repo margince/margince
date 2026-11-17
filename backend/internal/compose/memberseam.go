@@ -41,7 +41,7 @@ type memberManager struct{ service *identity.Service }
 
 func newMemberManager(db *database.DB) memberManager {
 	engine := newBulkEngine(db, nil)
-	return memberManager{identity.NewServiceFor(db).WithMemberWork(memberWork{newHandoverSeam(engine)})}
+	return memberManager{identityServiceFor(db).WithMemberWork(memberWork{newHandoverSeam(engine)})}
 }
 
 func (m memberManager) Preview(ctx context.Context, source ids.UUID, target *ids.UUID, merge bool) (crmcontracts.MemberRetirementPreview, error) {

@@ -339,7 +339,7 @@ func (s *AnalyticsShareStore) Resolve(
 	}
 	// The issuer's standing, as it stands now rather than as it stood when
 	// they issued it. A link is not a grant that outlives the seat behind it.
-	holds, err := identity.IssuerStillHolds(ctx, tx, out.CreatedBy, objectForecast, principal.ActionRead)
+	holds, err := identity.IssuerStillHolds(ctx, tx, installedRbacObjects(), out.CreatedBy, objectForecast, principal.ActionRead)
 	if err != nil {
 		return Share{}, err
 	}

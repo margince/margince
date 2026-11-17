@@ -73,7 +73,7 @@ func newNotificationDigestWorker(
 	return &notificationDigestWorker{
 		pool:    pool,
 		notices: notices.NewStore(InstallationDB(pool)),
-		users:   identity.NewService(pool),
+		users:   IdentityService(pool),
 		mail:    mail,
 		log:     log,
 		now:     time.Now,

@@ -338,7 +338,7 @@ func recordDependency(ctx context.Context, tx pgx.Tx, record notices.Target) ([]
 // seatAuthorityTx binds the recipient's authority as this transaction reads
 // it. A recipient who is no longer a live member answers false.
 func seatAuthorityTx(ctx context.Context, tx pgx.Tx, seat ids.UUID) (context.Context, bool, error) {
-	rbac, seatType, err := identity.EffectiveAuthorityTx(ctx, tx, seat)
+	rbac, seatType, err := identity.EffectiveAuthorityTx(ctx, tx, installedRbacObjects(), seat)
 	if errors.Is(err, apperrors.ErrNotFound) {
 		return ctx, false, nil
 	}

@@ -66,6 +66,9 @@ func RegisterExtensions(exts []extension.Extension, verbs []extension.Verb, jobD
 	if rbacObjects, rbacDefaults, err = withRecordKindRbac(exts, rbacObjects, rbacDefaults); err != nil {
 		return nil, err
 	}
+	if composed.rbac, err = NewRbacObjects(rbacObjects, rbacDefaults); err != nil {
+		return nil, err
+	}
 	// Still the validate phase: joining a unit's Go job behavior to its
 	// contract-declared kinds can refuse the set (an undeclared job, a
 	// confirm-first tier, an outbound scope), and it must do so before a
@@ -79,7 +82,7 @@ func RegisterExtensions(exts []extension.Extension, verbs []extension.Verb, jobD
 	if err := corereach.Install(exts); err != nil {
 		return nil, err
 	}
-	installExtensionData(exts)
+	installExtensionData(composed)
 	for _, e := range exts {
 		for _, p := range e.Jurisdictions {
 			jurisdiction.Register(p)
@@ -100,19 +103,9 @@ func RegisterExtensions(exts []extension.Extension, verbs []extension.Verb, jobD
 		compliancedocs.Register(e.Documents)
 	}
 	registerExtensionKinds(exts)
-	// After the jurisdiction packs, and still in the apply phase: the RBAC
-	// vocabulary is validate-then-apply inside RegisterRbacObjects itself (a set
-	// with one bad name registers none), so it cannot half-widen what a role
-	// document may grant. Two fallible apply steps follow it — the composed job
-	// kinds and their failure vocabulary — so a failure in any of the three
-	// leaves the packs applied and the boot aborting, and an aborting boot
-	// serves nothing either way.
-	if err := RegisterRbacObjects(rbacObjects); err != nil {
-		return nil, err
-	}
-	if err := registerRbacDefaults(rbacDefaults); err != nil {
-		return nil, err
-	}
+	// Two fallible apply steps follow the packs, the composed job kinds and
+	// their failure vocabulary. A failure in either leaves the packs applied
+	// and the boot aborting, and an aborting boot serves nothing either way.
 	// The composed job kinds join the declaration table before any runner is
 	// built, because everything the runner then asks about them — the wall
 	// clock Govern hands River, the queue a fan-out child lands on, the

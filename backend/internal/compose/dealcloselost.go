@@ -52,7 +52,7 @@ func newSilentDealCloser(pool *pgxpool.Pool, log *slog.Logger) silentDealCloser 
 	return silentDealCloser{
 		pool:       pool,
 		deals:      deals.NewStore(InstallationDB(pool), DealsInstallation()),
-		users:      identity.NewService(pool),
+		users:      IdentityService(pool),
 		activities: activities.NewStore(InstallationDB(pool)),
 		now:        func() time.Time { return time.Now().UTC() },
 		log:        log,

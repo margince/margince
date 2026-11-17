@@ -19,7 +19,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/graph"
 	"github.com/margince/margince/backend/internal/modules/capture/graphcal"
-	"github.com/margince/margince/backend/internal/modules/identity"
 )
 
 // GraphConfig is the composed Microsoft (Graph) OAuth app for a deployment:
@@ -176,7 +175,7 @@ func WithGraphCapture(c GraphConfig) Option {
 		}
 		if s.connectorHandlers.registry == nil {
 			s.connectorHandlers.registry = NewCaptureRegistry(pool, s.vault, s.captureConfig)
-			s.authority = identity.NewService(pool)
+			s.authority = IdentityService(pool)
 		}
 		// Outside the branch above: the registry may already exist because
 		// Google's wiring ran first, and these three are what CONSENT needs
