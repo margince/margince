@@ -13,7 +13,11 @@
 // outside member administration is shown every colleague judged without their
 // teams, and a count of the colleagues a team adds.
 
-import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  infiniteQueryOptions,
+  useInfiniteQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { type ReactNode, useEffect } from "react";
 import { api, FIRST_PAGE } from "../../api/client";
 import type { components } from "../../api/schema";
@@ -51,6 +55,32 @@ export function recordAccessKey(kind: AccessKind, id: string) {
 
 // One page as wide as the contract allows; a larger company loads more.
 const PAGE = 200;
+
+function recordAccessQuery(kind: AccessKind, id: string) {
+  return infiniteQueryOptions({
+    queryKey: recordAccessKey(kind, id),
+    initialPageParam: FIRST_PAGE,
+    queryFn: ({ pageParam }) => fetchAccess(kind, id, pageParam),
+    getNextPageParam: (last) => last.page.next_cursor ?? null,
+  });
+}
+
+/**
+ * The record's owner, as the access answer names it. It observes the read the
+ * panel makes, so the share screen asks for it once.
+ */
+export function useRecordOwnerId(
+  kind: string,
+  id: string,
+  enabled: boolean,
+): string | undefined {
+  const accessKind = isAccessKind(kind) ? kind : undefined;
+  const query = useInfiniteQuery({
+    ...recordAccessQuery(accessKind ?? "contact", id),
+    enabled: enabled && accessKind !== undefined,
+  });
+  return accessKind ? (query.data?.pages[0]?.owner_id ?? undefined) : undefined;
+}
 
 async function fetchAccess(
   kind: AccessKind,
@@ -274,12 +304,7 @@ export function WhoCanSeePanel({
   const { locale } = useLocale();
   const zone = useViewerZone();
   const queryClient = useQueryClient();
-  const query = useInfiniteQuery({
-    queryKey: recordAccessKey(kind, recordId),
-    initialPageParam: FIRST_PAGE,
-    queryFn: ({ pageParam }) => fetchAccess(kind, recordId, pageParam),
-    getNextPageParam: (last) => last.page.next_cursor ?? null,
-  });
+  const query = useInfiniteQuery(recordAccessQuery(kind, recordId));
   // Armed again after every read and counted from it, so a read that came back
   // before the lapse (the same refresh_at) still schedules the next one.
   const refreshAt = query.data?.pages[0]?.refresh_at;

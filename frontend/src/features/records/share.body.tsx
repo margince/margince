@@ -42,7 +42,11 @@ import {
 import { useLocale, usePlural, useT } from "../../i18n";
 import { throwProblem } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
-import { isAccessKind, WhoCanSeePanel } from "./recordaccesspanel";
+import {
+  isAccessKind,
+  useRecordOwnerId,
+  WhoCanSeePanel,
+} from "./recordaccesspanel";
 import { ShareConfirmation } from "./share.confirmation";
 import {
   ApprovalRequiredError,
@@ -98,13 +102,17 @@ export function ShareScreenBody({
     skipped: number;
   } | null>(null);
 
+  // The owner already sees and edits the record, so a share to them adds
+  // nothing and would list them twice.
+  const ownerId = useRecordOwnerId(recordType, recordId, !contactsOnly);
   const filteredRoster = useMemo(() => {
     const words = searchWords(term);
-    if (words.length === 0) {
-      return roster;
-    }
-    return roster.filter((r) => holdsEveryWord(words, [r.name, r.note]));
-  }, [roster, term]);
+    return roster.filter(
+      (r) =>
+        !(r.kind === "user" && r.id === ownerId) &&
+        (words.length === 0 || holdsEveryWord(words, [r.name, r.note])),
+    );
+  }, [roster, term, ownerId]);
 
   function resetForm() {
     setTerm("");

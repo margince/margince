@@ -338,6 +338,35 @@ describe("ShareScreen", () => {
     expect(screen.queryByText("SDR Bot")).toBeNull();
   });
 
+  it("leaves a contact's owner out of the colleagues to share it with", async () => {
+    installBaseFetch({
+      "/contacts/c-1/access": () =>
+        jsonResponse({
+          visibility: "owner",
+          owner_id: "u-1",
+          archived: false,
+          detail: false,
+          you: {
+            can_change: true,
+            read_reasons: [{ code: "owner" }],
+            change_reasons: [{ code: "owner" }],
+          },
+          data: [],
+          page: { has_more: false, total: 0 },
+          group_counts: { owner: 0, shared: 0, team_shared: 0, everyone: 0 },
+          can_change_count: 0,
+          team_access_count: 0,
+          refresh_at: null,
+        }),
+    });
+    render(<ShareScreen recordType="contact" recordId="c-1" />);
+
+    await screen.findByRole("button", { name: /Mor Adler/ });
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: /Priya Shah/ })).toBeNull(),
+    );
+  });
+
   // POST /record-grants is idempotent on
   // (record_type, record_id, subject_type, subject_id) and a re-assert
   // RESTATES the grant, so an already-granted subject is offered rather than
