@@ -6070,9 +6070,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.qualify.stage": "Phase",
   "lead.qualify.dealName": "Deal-Name",
   "lead.qualify.amount": "Betrag ({currency})",
-  "lead.qualify.amountHint":
-    "Optional. Ganze Einheiten in der Basiswährung der Installation.",
-  "lead.qualify.amountInvalid": "Gib eine Zahl ein oder lass das Feld leer.",
+  "lead.qualify.amountHint": "Optional. In der Basiswährung der Installation.",
   "lead.qualify.amountNoCurrency":
     "Die Basiswährung ist noch nicht geladen. Versuche es gleich erneut oder lass den Betrag leer.",
   "lead.qualify.why": "Warum",

@@ -7,6 +7,7 @@ import {
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { fieldRefusalSentence } from "../../components/create.refusals";
 import { EntityRef } from "../../components/entityref";
 import {
   Checkbox,
@@ -16,12 +17,18 @@ import {
 } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { Heading } from "../../design-system/heading";
+import { MoneyInput } from "../../design-system/moneyinput";
 import { Select } from "../../design-system/select";
-import { toMinorUnits } from "../../format/minorunits";
+import { formatMoney } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import { leadPromotePreviewKey, leadWriteKeys } from "../../lib/leadkeys";
 import { defaultPipelineOf, usePipelines } from "../../lib/pipelines.queries";
-import { problemMessageOf, unwrap } from "../../lib/problem";
+import {
+  problemFieldErrorsOf,
+  problemMessageOf,
+  unwrap,
+} from "../../lib/problem";
 import { useInstallationSettings } from "../../lib/uploadlimit";
 import { useViewerZone } from "../../lib/viewerzone";
 import { useLeadCompanyNameReading } from "./leadcompany";
@@ -100,39 +107,44 @@ export function usePromotePreview(
 export { triggerFor } from "./leads.qualifyreason";
 
 // dealBlock is the wire's deal request from the dialog's fields. The money
-// pair holds from birth: an amount only travels with the currency, and an
-// empty or unreadable amount travels as no money at all.
+// pair holds from birth: an amount only travels with the currency, and no
+// amount travels as no money at all.
 function dealBlock(input: {
   pipelineId: string | undefined;
   stageId: string | undefined;
   name: string;
-  amount: string;
+  amountMinor: number | null;
   currency: string | undefined;
 }): NonNullable<PromoteLeadRequest["deal"]> {
-  const parsed = Number(input.amount);
-  const priced =
-    input.amount.trim() !== "" && Number.isFinite(parsed) && input.currency;
+  const priced = input.amountMinor !== null && input.currency;
   return {
     pipeline_id: input.pipelineId ?? null,
     stage_id: input.stageId ?? null,
     name: input.name.trim() || null,
-    // priced is false without a currency, so the code below is always the
-    // real one — a lead promoted at a dong price is stored as dong, not as a
-    // hundredth of one.
-    amount_minor: priced ? toMinorUnits(parsed, input.currency ?? "") : null,
+    amount_minor: priced ? input.amountMinor : null,
     currency: priced ? (input.currency ?? null) : null,
   };
 }
 
-// amountState is what the typed amount does to the confirm: an unreadable
-// number is refused, and a number with no currency to carry it waits — sent
-// as-is it would be dropped on the way to the server, which is worse than a
-// wait.
-function amountState(amount: string, currency: string | undefined) {
-  const typed = amount.trim() !== "";
+// amountState is what the amount does to the confirm. A negative one is
+// refused. One with no currency to carry it waits, because the server would
+// drop it on the way.
+function amountState(amountMinor: number | null, currency: string | undefined) {
   return {
-    amountInvalid: typed && !Number.isFinite(Number(amount)),
-    amountWaitsForCurrency: typed && !currency,
+    amountInvalid: amountMinor !== null && amountMinor < 0,
+    amountWaitsForCurrency: amountMinor !== null && !currency,
+  };
+}
+
+// qualifyRefusals splits a failed promotion: a refusal of the amount stands
+// under the field, and the foot of the dialog keeps everything else.
+function qualifyRefusals(error: unknown, t: (key: MessageKey) => string) {
+  const faults = problemFieldErrorsOf(error);
+  const amount = faults.find((fault) => fault.field === "amount_minor");
+  return {
+    amount: amount && fieldRefusalSentence(amount, t),
+    foot:
+      amount && faults.length === 1 ? undefined : problemMessageOf(error, t),
   };
 }
 
@@ -231,7 +243,7 @@ function QualificationForm({
   const [pipelineId, setPipelineId] = useState("");
   const [stageId, setStageId] = useState("");
   const [dealName, setDealName] = useState("");
-  const [amount, setAmount] = useState("");
+  const [amountMinor, setAmountMinor] = useState<number | null>(null);
   const [note, setNote] = useState("");
   const typedCompany = preview.data?.typed_company;
 
@@ -296,7 +308,7 @@ function QualificationForm({
             pipelineId: chosenPipeline?.id,
             stageId: chosenStage?.id,
             name: dealName.trim() || suggestedName,
-            amount,
+            amountMinor,
             currency,
           })
         : undefined,
@@ -304,9 +316,10 @@ function QualificationForm({
   };
 
   const { amountInvalid, amountWaitsForCurrency } = amountState(
-    amount,
+    amountMinor,
     currency,
   );
+  const refused = qualifyRefusals(qualify.error, t);
   const confirmation = qualificationConfirmState(
     { selectedDeal, withDeal, invalidSelection },
     preview,
@@ -325,7 +338,7 @@ function QualificationForm({
       confirmDisabled={confirmation.disabled}
       onConfirm={submit}
       pending={qualify.isPending}
-      error={qualify.isError ? problemMessageOf(qualify.error, t) : undefined}
+      error={qualify.isError ? refused.foot : undefined}
     >
       <section className="lead-qualify-block">
         <Heading size="xsmall" as="h3">
@@ -399,18 +412,29 @@ function QualificationForm({
             hint={t("lead.qualify.amountHint")}
             error={
               amountInvalid
-                ? t("lead.qualify.amountInvalid")
+                ? t("create.amountNegative")
                 : amountWaitsForCurrency
                   ? t("lead.qualify.amountNoCurrency")
-                  : undefined
+                  : refused.amount
             }
           >
             {(control) => (
-              <TextInput
+              <MoneyInput
                 {...control}
+                valueMinor={amountMinor ?? 0}
+                blankWhenZero={amountMinor === null}
+                currency={currency ?? ""}
+                min={0}
                 inputMode="decimal"
-                value={amount}
-                onChange={(event) => setAmount(event.target.value)}
+                display={
+                  currency
+                    ? (minor) => formatMoney(minor, currency, locale)
+                    : undefined
+                }
+                onChangeMinor={(minor) =>
+                  setAmountMinor(Number.isNaN(minor) ? null : minor)
+                }
+                onClear={() => setAmountMinor(null)}
               />
             )}
           </Field>

@@ -5998,9 +5998,7 @@ export const en = {
   "lead.qualify.stage": "Stage",
   "lead.qualify.dealName": "Deal name",
   "lead.qualify.amount": "Amount ({currency})",
-  "lead.qualify.amountHint":
-    "Optional. Whole units in the installation’s base currency.",
-  "lead.qualify.amountInvalid": "Enter a number, or leave it empty.",
+  "lead.qualify.amountHint": "Optional. In the installation’s base currency.",
   "lead.qualify.amountNoCurrency":
     "Base currency not loaded yet. Retry shortly, or leave the amount empty.",
   "lead.qualify.why": "Why",
