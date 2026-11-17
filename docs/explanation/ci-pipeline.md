@@ -517,9 +517,9 @@ What each job of `ci.yml` checks: [ci-jobs.md](../reference/ci-jobs.md). `determ
   needed about `340s`, of which vitest alone needed about `207s`.
 - **`live-boot`** exists because the integration shards never boot the api or run the seed script.
   Without it, the seed that runs through the API and the boot proof would break with no one seeing.
-- **`home-budget`** runs on every PR that can reach Home, `develop` included. It fails a PR that makes Home slower
-  than its merge base, measured on the same runner. The fixed budgets stay the bar for making it required.
-  What it runs and when it skips: [ci-jobs.md](../reference/ci-jobs.md).
+- **`home-budget`** is switched off (its `if` is `false`). On, it runs on every PR that can reach Home and fails a PR
+  that makes Home slower than its merge base, measured on the same runner. The fixed budgets stay the bar for making it
+  required. What it runs and when it skips: [ci-jobs.md](../reference/ci-jobs.md).
 
 ### What `secret-scan` runs
 
