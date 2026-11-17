@@ -281,15 +281,8 @@ func touchAt(t *testing.T, e *apptest.AppEnv, id string, at time.Time) {
 
 func TestADayRunsFromOneMidnightToTheNext(t *testing.T) {
 	e, _ := listsApp(t, true)
-	var zone string
-	if err := e.Owner.QueryRow(t.Context(), `SELECT current_setting('TimeZone')`).Scan(&zone); err != nil {
-		t.Fatal(err)
-	}
-	loc, err := time.LoadLocation(zone)
-	if err != nil {
-		t.Fatalf("session time zone %q: %v", zone, err)
-	}
-	midnight := time.Date(2026, 3, 10, 0, 0, 0, 0, loc)
+	// App pools use UTC even when the maintenance session uses another zone.
+	midnight := time.Date(2026, 3, 10, 0, 0, 0, 0, time.UTC)
 	onTheStroke := createdID(t, e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Stroke Of Midnight", "source": "manual"})
 	justBefore := createdID(t, e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Second Before", "source": "manual"})
 	lastSecond := createdID(t, e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Last Second Of Day", "source": "manual"})
