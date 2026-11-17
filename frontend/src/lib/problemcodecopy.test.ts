@@ -55,31 +55,30 @@ it.each([en, de, vi])("localizes the contract merge refusal", (catalog) => {
 });
 
 describe("a lead's refusals read as the product's own sentences", () => {
-  const phoneFault = (code: string, message: string) => ({
+  const phoneFault = (code: string) => ({
     code: "validation_error",
-    details: { errors: [{ field: "phone", code, message }] },
+    details: {
+      errors: [{ field: "phone", code, message: "English server detail" }],
+    },
   });
 
-  it.each([en, de, vi])(
-    "asks for the country code a phone lacks",
-    (catalog) => {
-      const says = problemMessage(
-        phoneFault(
-          "phone_needs_country_code",
-          "the number needs its country prefix (+49…, 0049…)",
-        ),
-        (key) => catalog[key],
-      );
-      expect(says).toBe(catalog["common.phone.needsCountryCode"]);
-    },
-  );
-
-  it.each([en, de, vi])("says what a malformed phone lacks", (catalog) => {
+  const phoneCopy: [string, MessageKey][] = [
+    ["phone_empty", "common.phone.empty"],
+    ["phone_needs_country_code", "common.phone.needsCountryCode"],
+    ["phone_malformed", "common.phone.malformed"],
+  ];
+  it.each(
+    phoneCopy.flatMap(([code, key]) =>
+      Object.entries({ en, de, vi }).map(
+        ([locale, catalog]) => [code, locale, key, catalog] as const,
+      ),
+    ),
+  )("reads a refused phone's %s in %s copy", (code, _locale, key, catalog) => {
     const says = problemMessage(
-      phoneFault("phone_malformed", "not an E.164 number (+ and 8–15 digits)"),
-      (key) => catalog[key],
+      phoneFault(code),
+      (messageKey) => catalog[messageKey],
     );
-    expect(says).toBe(catalog["common.phone.malformed"]);
+    expect(says).toBe(catalog[key]);
   });
 
   it("names the deal that keeps a qualification from being reversed", () => {
