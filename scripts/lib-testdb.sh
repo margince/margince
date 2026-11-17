@@ -167,7 +167,7 @@ db_admin() {
 #                         own, so each opens its own pools.
 #   LANE_CONNS_PER_PACKAGE  what one package may hold at once:
 #                           LANE_TEST_PARALLEL x (2 x LANE_POOL_MAX_CONNS + 8)
-#                           = 2 x (2 x 8 + 8) = 48. Per test that is the owner
+#                           = 3 x (2 x 8 + 8) = 72. Per test that is the owner
 #                           and app pools testdb keys by DSN, plus 8 for the
 #                           connections a fixture dials itself.
 #   LANE_FIXED_CONNS      what the lane costs beyond the packages: one admin
@@ -176,12 +176,12 @@ db_admin() {
 #                         superuser_reserved_connections (3), and an operator's
 #                         own psql or a metrics scrape while the lane runs (3).
 #
-# At CI's 8 jobs: 8 x (48 + 1) + 8 = 400, under the 408 in docker-compose.dev.yml.
+# At CI's 8 jobs: 8 x (72 + 1) + 8 = 592, under the 600 postgres-test allows.
 # Raise the concurrency and every term moves with it. That is the point: the
 # guard reads these, not a number somebody wrote down once.
 LANE_POOL_MAX_CONNS=8
-LANE_TEST_PARALLEL=2
-LANE_CONNS_PER_PACKAGE=48
+LANE_TEST_PARALLEL=3
+LANE_CONNS_PER_PACKAGE=72
 LANE_FIXED_CONNS=8
 
 # declare_lane_budget <jobs> — export the ceiling the harness applies and the
