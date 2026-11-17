@@ -248,24 +248,50 @@ func (t attentionTasks) TasksAfter(
 }
 
 // TasksOnDeals reads every open task of the window filed under any of these
-// deals, under the lane's own narrowing (openTasksDueBy). The service judges
-// which of them stand in for their deal.
-func (t attentionTasks) TasksOnDeals(
-	ctx context.Context, window attention.TaskWindow, deals []ids.UUID,
+// deals. The service judges which of them stand in for their deal.
+func (t attentionTasks) TasksOnDeals(ctx context.Context, window attention.TaskWindow, deals []ids.UUID) ([]attention.Task, error) {
+	if len(deals) == 0 {
+		return nil, nil
+	}
+	return t.everyTask(ctx, window, activities.ListActivitiesInput{LinkedToDeals: deals}, t.taskRows)
+}
+
+// FollowUpPromises names the reader's own open tasks derived from these emails.
+func (t attentionTasks) FollowUpPromises(ctx context.Context, emails []ids.UUID) ([]activities.FollowUpPromise, error) {
+	return t.store.FollowUpPromises(ctx, emails)
+}
+
+// TasksIn reads these tasks of the window, drawn as the planned lane draws them.
+func (t attentionTasks) TasksIn(ctx context.Context, window attention.TaskWindow, tasks []ids.UUID) ([]attention.Task, error) {
+	if len(tasks) == 0 {
+		return nil, nil
+	}
+	named := activities.ListActivitiesInput{}
+	for _, task := range tasks {
+		named.IDs = append(named.IDs, ids.From[ids.ActivityKind](task))
+	}
+	return t.everyTask(ctx, window, named, t.asTasks)
+}
+
+// everyTask reads every open task of the window that among's ids or deals
+// keep, under the lane's own narrowing (openTasksDueBy), each drawn by draw.
+func (t attentionTasks) everyTask(
+	ctx context.Context, window attention.TaskWindow, among activities.ListActivitiesInput,
+	draw func(context.Context, []crmcontracts.Activity, attention.TaskScope, time.Time) ([]attention.Task, error),
 ) ([]attention.Task, error) {
 	in, ok := openTasksDueBy(ctx, window.AsOf, window.Until, window.Scope, window.Owner, window.Team)
-	if !ok || len(deals) == 0 {
+	if !ok {
 		return nil, nil
 	}
 	page := reminderPage
-	in.LinkedToDeals, in.Limit = deals, &page
+	in.IDs, in.LinkedToDeals, in.Limit = among.IDs, among.LinkedToDeals, &page
 	var tasks []attention.Task
 	for {
 		rows, next, err := t.listTaskPage(ctx, in)
 		if err != nil {
 			return nil, err
 		}
-		pageTasks, err := t.taskRows(ctx, rows, window.Scope, window.AsOf)
+		pageTasks, err := draw(ctx, rows, window.Scope, window.AsOf)
 		if err != nil {
 			return nil, err
 		}
@@ -345,7 +371,7 @@ func (t attentionTasks) markReadOnly(ctx context.Context, tasks []attention.Task
 		if err != nil {
 			return err
 		}
-		unchecked, err := t.store.UncheckableRequestReminders(ctx, sourced(tasks), asOf)
+		unchecked, err := t.store.UncheckableRequestReminders(ctx, attention.Sourced(tasks), asOf)
 		if err != nil {
 			return err
 		}
@@ -366,18 +392,6 @@ func (t attentionTasks) markReadOnly(ctx context.Context, tasks []attention.Task
 		return nil, err
 	}
 	return t.withMayBeDone(ctx, tasks, asOf)
-}
-
-// sourced names the tasks read out of a message, the only ones a request
-// reminder can be.
-func sourced(tasks []attention.Task) []ids.UUID {
-	var named []ids.UUID
-	for _, task := range tasks {
-		if task.SourceActivityID != nil {
-			named = append(named, task.ID)
-		}
-	}
-	return named
 }
 
 func (t attentionTasks) withRecipients(ctx context.Context, tasks []attention.Task, named []ids.UUID) ([]attention.Task, error) {
@@ -416,7 +430,7 @@ func (t attentionTasks) withMayBeDone(ctx context.Context, tasks []attention.Tas
 	if answers := auth.Allows(ctx, "activity", principal.ActionRead) && auth.RequireHumanOrItsAgent(ctx) == nil; t.db == nil || !answers {
 		return tasks, nil
 	}
-	candidates := doneCandidates(tasks)
+	candidates := attention.DoneCandidates(tasks)
 	if len(candidates) == 0 {
 		return tasks, nil
 	}
@@ -438,23 +452,4 @@ func (t attentionTasks) withMayBeDone(ctx context.Context, tasks []attention.Tas
 		}
 	}
 	return tasks, nil
-}
-
-// doneCandidates are the promise tasks with a source message, each with its
-// open recipients.
-func doneCandidates(tasks []attention.Task) []momentaction.DoneCandidate {
-	var out []momentaction.DoneCandidate
-	for _, task := range tasks {
-		if !task.Commitment || task.SourceActivityID == nil {
-			continue
-		}
-		candidate := momentaction.DoneCandidate{TaskID: task.ID, SourceActivityID: *task.SourceActivityID, Assignee: task.AssigneeID}
-		for _, recipient := range task.Recipients {
-			if momentaction.OpenRecipient(string(recipient.Status)) {
-				candidate.Recipients = append(candidate.Recipients, ids.UUID(recipient.ContactId))
-			}
-		}
-		out = append(out, candidate)
-	}
-	return out
 }

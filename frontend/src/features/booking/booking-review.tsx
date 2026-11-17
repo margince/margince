@@ -21,8 +21,8 @@ import { wallClockIntent } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { proposalEmailBody } from "../../lib/booking-proposal-message";
+import { fromHere } from "../../lib/navigatefrom";
 import { unwrap } from "../../lib/problem";
-import { navigate } from "../../lib/router";
 import { refreshContactMeetings } from "../contacts/contactmeetings.waiting";
 import { ComposeModal } from "../mail/compose";
 import { useBookingIntent } from "./booking-common";
@@ -340,9 +340,11 @@ function InviteSend({
         }),
       );
     },
-    onSuccess: async (value, body) => {
+    onMutate: fromHere,
+    // Replacing: Back to the sent form would offer to send it again.
+    onSuccess: async (value, body, from) => {
       await refreshContactMeetings(client, body.contact_id);
-      navigate({ screen: "book", id: `meeting-${value.id}` });
+      from.navigateReplacing({ screen: "book", id: `meeting-${value.id}` });
     },
   });
   return (

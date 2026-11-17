@@ -14,7 +14,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { formatDayFull, formatTimeRange } from "../../format/meetingtime";
 import { browserZone } from "../../format/timezone";
-import { routeHash } from "../../lib/router";
+import { routeHash, watchAddress } from "../../lib/router";
 import { bookingInvitation } from "../../testing/book.testkit";
 import {
   installFetchStub,
@@ -81,10 +81,10 @@ it("names the meeting in its heading, with its delivery as a badge and its time 
 
 it("takes a meeting opened cold home rather than back out of the app", async () => {
   const user = userEvent.setup();
-  const back = vi.spyOn(globalThis.history, "back");
+  const go = vi.spyOn(globalThis.history, "go");
   host({ status: "confirmed" });
   await user.click(await screen.findByRole("button", { name: "Back" }));
-  expect(back).not.toHaveBeenCalled();
+  expect(go).not.toHaveBeenCalled();
   expect(globalThis.location.hash).toBe(routeHash({ screen: "home" }));
 });
 
@@ -202,4 +202,32 @@ it("offers a retry of the same invitation before cancelling when the calendar re
   await waitFor(() =>
     expect(changes).toEqual([{ action: "retry", version: 4 }]),
   );
+});
+
+// Placed last: the address store it starts keeps counting for any case after it.
+it("steps back once for two presses before the browser has moved", async () => {
+  const unwatch = watchAddress(() => undefined);
+  const arrive = async (hash: string) => {
+    const moved = new Promise((resolve) =>
+      globalThis.addEventListener("hashchange", resolve, { once: true }),
+    );
+    globalThis.location.hash = hash;
+    await moved;
+  };
+  await arrive("#/contacts/p-anna");
+  await arrive(`#/meetings/${bookingInvitation.id}`);
+  const user = userEvent.setup();
+  const go = vi
+    .spyOn(globalThis.history, "go")
+    .mockImplementation(() => undefined);
+  host({ status: "confirmed" });
+  const back = await screen.findByRole("button", { name: "Back" });
+
+  await user.click(back);
+  await user.click(back);
+
+  expect(go.mock.calls).toEqual([[-1]]);
+  go.mockRestore();
+  globalThis.history.go(-1);
+  unwatch();
 });

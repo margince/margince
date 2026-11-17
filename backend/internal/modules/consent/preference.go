@@ -42,6 +42,10 @@ const PurposeTransactional = "transactional"
 // literal in either would drift from the seed without anything failing.
 const PurposeMarketingEmail = "marketing_email"
 
+// PurposeBusinessCorrespondence is the seeded purpose of ordinary business
+// mail, which the privacy page names when nothing else is on record.
+const PurposeBusinessCorrespondence = "business_correspondence"
+
 // LockedPurpose reports whether a purpose may not be changed from the
 // public preference surface. Locked purposes also carry no unsubscribe
 // header — there is nothing to unsubscribe from.

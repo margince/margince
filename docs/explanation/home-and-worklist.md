@@ -33,7 +33,8 @@ the cut. The Worklist drawer reads the queue itself when it opens.
 
 Worklist snapshots and ranked search queries share the pool's read allowance in
 `database/readadmission.go`. They wait for that allowance before they use a connection.
-This leaves room for short transactions such as the signed-in user's profile.
+The `database.read_concurrency` boot setting sizes that allowance, bounded by half the pool
+with at least one slot. This leaves room for short transactions such as the signed-in user's profile.
 The wait ends when the caller leaves or the queue deadline expires.
 
 Joining a snapshot shares its allowance and keeps its isolation and access checks.
@@ -480,6 +481,8 @@ Home's address is `#/home` in every language. `parseHash` in `router.tsx` sends 
 query kept. `WorklistRedirect` in `brief.queue.tsx` sends `#/worklist` and its owner or `unassigned` form
 to Home with the queue open, its `queue_scope` dial set and its filters kept. The queue drawer has its own
 `queue_scope`, so changing it never changes the Morning or Weekly view behind it.
+
+`openQueue` opens the drawer on a new entry, so Back closes it. `closeQueue` goes back to the Home entry under it. When none is there, it replaces the entry of the drawer with Home, without the dials of the drawer.
 
 Quiet relationships use the same scoped read and row renderer in a separate optional
 list. They join the work queue and Focus only when the reader pins them. A pin

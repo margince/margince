@@ -30,10 +30,21 @@ import { outgoingBody, taskRequestFields } from "../lib/activitybody";
 import { activityFollowUpsKey } from "../lib/activitykeys";
 import { useActivity } from "../lib/activityread";
 import { useViewerZone } from "../lib/viewerzone";
+import { ActivityBodyField } from "./activitybodyfield";
 import { FollowUpTaskFields } from "./followuptaskfields";
 import { useMeetingCustomFields } from "./meetingoutcome.custom";
 import { type OutcomeDraft, OutcomeEditFields } from "./meetingoutcome.fields";
-import { writeMeetingOutcome } from "./taskactions.rowwrites";
+import {
+  writeMeetingNotes,
+  writeMeetingOutcome,
+} from "./taskactions.rowwrites";
+
+/**
+ * What the dialog was opened to do. `held` answers "It happened": notes and
+ * the next step. `edit` is the whole outcome. `notes` writes only the notes
+ * of a meeting whose outcome already stands.
+ */
+export type MeetingDialogMode = "held" | "edit" | "notes";
 
 function followUpFor(draft: OutcomeDraft, zone: string) {
   return draft.status === "held" && draft.followUp
@@ -61,8 +72,44 @@ function outcomeSaveDisabled(
 type OutcomeSeed = {
   start: ActivityMoment;
   day: string;
+  body: string;
   version: number | undefined;
 };
+
+/** The notes an outcome carries: none when untouched, so a bare answer leaves them be. */
+function changedNotes(
+  draft: OutcomeDraft,
+  seed: OutcomeSeed,
+  transcript: boolean,
+): { body?: string | null } {
+  return draft.body === seed.body
+    ? {}
+    : { body: outgoingBody(draft.body, transcript) };
+}
+
+/** The meeting's subject, notes and start, which only the edit mode rewrites. */
+function editedWords(
+  draft: OutcomeDraft,
+  transcript: boolean,
+  moved: MovedStart | undefined,
+) {
+  return {
+    subject: draft.subject.trim(),
+    // An emptied box clears the note rather than storing "": null
+    // is what the column holds for a meeting nobody wrote about.
+    body: outgoingBody(draft.body, transcript),
+    start: moved,
+  };
+}
+
+function dialogHeading(
+  mode: MeetingDialogMode,
+  title: string | undefined,
+  t: ReturnType<typeof useT>,
+): string {
+  if (mode === "held") return t("worklist.verb.meetingHowDidItGo");
+  return title ?? t("worklist.verb.meetingUpdateTitle");
+}
 
 type MovedStart = {
   occurred_at: string;
@@ -104,6 +151,84 @@ function heldDays(
   };
 }
 
+type SaveInput = {
+  mode: MeetingDialogMode;
+  draft: OutcomeDraft;
+  seed: OutcomeSeed;
+  moved: MovedStart | undefined;
+  transcript: boolean;
+  managed: boolean;
+  zone: string;
+  custom: Record<string, unknown>;
+};
+
+async function saveMeeting(
+  id: string,
+  input: SaveInput,
+  t: ReturnType<typeof useT>,
+): Promise<void> {
+  const { mode, draft, seed, transcript } = input;
+  if (mode === "notes") {
+    await writeMeetingNotes(
+      {
+        id,
+        version: seed.version,
+        body: outgoingBody(draft.body, transcript),
+      },
+      t,
+    );
+    return;
+  }
+  // A calendar-managed meeting keeps the calendar's subject, notes and
+  // start; only its outcome is written.
+  let words = {};
+  if (!input.managed) {
+    words =
+      mode === "edit"
+        ? editedWords(draft, transcript, input.moved)
+        : changedNotes(draft, seed, transcript);
+  }
+  await writeMeetingOutcome(
+    {
+      id,
+      version: seed.version,
+      status: draft.status,
+      // The workspace's own fields, which no calendar holds.
+      custom: input.custom,
+      followUpTask: followUpFor(draft, input.zone),
+      ...words,
+    },
+    t,
+  );
+}
+
+/** The notes alone, as "It happened" and a held meeting's "Edit notes" ask for them. */
+function MeetingNotesField({
+  draft,
+  transcript,
+  saving,
+  onChange,
+}: Readonly<{
+  draft: OutcomeDraft;
+  transcript: boolean;
+  // The save carries the notes as they were pressed, so typing waits for it.
+  saving: boolean;
+  onChange: (draft: OutcomeDraft) => void;
+}>) {
+  const t = useT();
+  return (
+    <ActivityBodyField
+      label={t("worklist.verb.meetingNotes")}
+      hint={t("worklist.verb.meetingBodyHint")}
+      transcript={transcript}
+      rows={4}
+      disabled={saving}
+      value={draft.body}
+      onChange={(body) => onChange({ ...draft, body })}
+    />
+  );
+}
+
 /**
  * The composer, bound to one meeting.
  *
@@ -116,13 +241,13 @@ export function MeetingOutcomeDialog({
   title,
   invalidateKeys,
   onClose,
-  outcomeOnly,
+  mode,
 }: Readonly<{
   id: string;
   title: string | undefined;
   invalidateKeys: readonly QueryKey[];
   onClose: () => void;
-  outcomeOnly: boolean;
+  mode: MeetingDialogMode;
 }>) {
   const t = useT();
   const toast = useToast();
@@ -138,7 +263,7 @@ export function MeetingOutcomeDialog({
   const meeting = useActivity(id);
   const transcript = meeting.data ? isTranscriptActivity(meeting.data) : false;
   const managed = meeting.data?.calendar_managed === true;
-  const editsWords = !managed && !outcomeOnly;
+  const editsWords = !managed && mode === "edit";
   const custom = useMeetingCustomFields(meeting.data);
   // Seeded during render, not in an effect: an effect paints an empty form first
   // and replaces words typed into that frame.
@@ -148,10 +273,11 @@ export function MeetingOutcomeDialog({
       meeting.data.occurred_precision,
       readerZone,
     );
+    const body = meeting.data.body ?? "";
     setDraft({
       status: "held",
       subject: meeting.data.subject ?? "",
-      body: meeting.data.body ?? "",
+      body,
       day,
     });
     setSeed({
@@ -160,60 +286,34 @@ export function MeetingOutcomeDialog({
         precision: meeting.data.occurred_precision,
       },
       day,
+      body,
       version: meeting.data.version,
     });
   }
   const days = heldDays(seed, readerZone);
   const save = useMutation({
     // Fields travel as variables: a closure would read the last committed render.
-    mutationFn: async (input: {
-      draft: OutcomeDraft;
-      seed: OutcomeSeed;
-      moved: MovedStart | undefined;
-      transcript: boolean;
-      editsWords: boolean;
-      zone: string;
-      custom: Record<string, unknown>;
-    }) => {
-      await writeMeetingOutcome(
-        {
-          id,
-          version: input.seed.version,
-          status: input.draft.status,
-          // The workspace's own fields, which no calendar holds.
-          custom: input.custom,
-          followUpTask: followUpFor(input.draft, input.zone),
-          // A calendar-managed meeting keeps the calendar's subject, notes
-          // and start; only its outcome is written.
-          ...(!input.editsWords
-            ? {}
-            : {
-                subject: input.draft.subject.trim(),
-                // An emptied box clears the note rather than storing "": null
-                // is what the column holds for a meeting nobody wrote about.
-                body: outgoingBody(input.draft.body, input.transcript),
-                start: input.moved,
-              }),
-        },
-        t,
-      );
-    },
+    mutationFn: (input: SaveInput) => saveMeeting(id, input, t),
     onSuccess: () => {
       for (const queryKey of invalidateKeys) {
         queryClient.invalidateQueries({ queryKey });
       }
       queryClient.invalidateQueries({ queryKey: ["activity", id] });
       queryClient.invalidateQueries({ queryKey: activityFollowUpsKey(id) });
-      toast.show(t("worklist.verb.meetingOutcomeRecorded"));
+      toast.show(
+        t(
+          mode === "notes"
+            ? "worklist.verb.meetingNotesSaved"
+            : "worklist.verb.meetingOutcomeRecorded",
+        ),
+      );
       onClose();
     },
   });
   return (
     <Modal open onClose={onClose} labelledBy={titleId} intent="form">
       <Heading size="large" id={titleId} className="t-h2 modal-title">
-        {outcomeOnly
-          ? t("worklist.verb.meetingNextStep")
-          : (title ?? t("worklist.verb.meetingUpdateTitle"))}
+        {dialogHeading(mode, title, t)}
       </Heading>
       {meeting.isPending && (
         <p className="t-caption">{t("worklist.verb.meetingReading")}</p>
@@ -236,10 +336,9 @@ export function MeetingOutcomeDialog({
               }
               let moved: MovedStart | undefined;
               try {
-                moved =
-                  managed || outcomeOnly
-                    ? undefined
-                    : movedStart(seed, draft.day, readerZone, new Date());
+                moved = editsWords
+                  ? movedStart(seed, draft.day, readerZone, new Date())
+                  : undefined;
               } catch (error) {
                 // A day the record zone skipped has no start to keep, so
                 // nothing is sent and the reader picks another date.
@@ -249,17 +348,18 @@ export function MeetingOutcomeDialog({
               }
               setDayRefused(false);
               save.mutate({
+                mode,
                 draft,
                 seed,
                 moved,
                 transcript,
-                editsWords,
+                managed,
                 zone: readerZone,
-                custom: outcomeOnly ? {} : custom.patch(),
+                custom: mode === "edit" ? custom.patch() : {},
               });
             }}
           >
-            {!outcomeOnly && (
+            {mode === "edit" && (
               <OutcomeEditFields
                 draft={draft}
                 managed={managed}
@@ -271,7 +371,20 @@ export function MeetingOutcomeDialog({
                 {custom.controls}
               </OutcomeEditFields>
             )}
-            {draft.status === "held" && (
+            {mode !== "edit" &&
+              (managed ? (
+                <p className="t-caption">
+                  {t("worklist.verb.meetingCalendarManaged")}
+                </p>
+              ) : (
+                <MeetingNotesField
+                  draft={draft}
+                  transcript={transcript}
+                  saving={save.isPending}
+                  onChange={setDraft}
+                />
+              ))}
+            {mode !== "notes" && draft.status === "held" && (
               <FollowUpTaskFields
                 value={draft.followUp}
                 onChange={(followUp) => setDraft({ ...draft, followUp })}
@@ -286,16 +399,17 @@ export function MeetingOutcomeDialog({
             <Button variant="ghost" type="button" onClick={onClose}>
               {t("common.close")}
             </Button>
-            {outcomeOnly && (
+            {mode === "held" && (
               <Button
                 pending={save.isPending}
                 onClick={() =>
                   save.mutate({
+                    mode,
                     draft: { ...draft, followUp: undefined },
                     seed,
                     moved: undefined,
                     transcript,
-                    editsWords: false,
+                    managed,
                     zone: readerZone,
                     custom: {},
                   })

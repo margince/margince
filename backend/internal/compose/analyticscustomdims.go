@@ -5,9 +5,7 @@ package compose
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"hash"
 	"maps"
 	"slices"
 	"strings"
@@ -274,56 +272,4 @@ func analyticsCustomFieldsOf(entity analyticsquery.Entity) *[]crmcontracts.Analy
 		return nil
 	}
 	return &out
-}
-
-// describeCustomFields names each custom dimension for a model, which has no
-// other way to learn what an installation's cf_ column means. An administrator
-// typed the labels and choices, so each is JSON-quoted. A comma or a line break
-// inside one then cannot read as a second choice or a new line.
-func describeCustomFields(out *strings.Builder, entity analyticsquery.Entity) {
-	header := false
-	for _, name := range entity.FieldNames(analyticsquery.KindDimension) {
-		field := entity.Fields[name]
-		if field.Label == "" {
-			continue
-		}
-		if !header {
-			out.WriteString("  custom fields, each with the label and choices an administrator gave it:\n")
-			header = true
-		}
-		choices := field.Options
-		if field.Shape == analyticsquery.ShapeBoolean {
-			choices = []string{jsonTrue, jsonFalse}
-		}
-		fmt.Fprintf(out, "    %s %s: %s", name, jsonText(field.Label), jsonText(choices))
-		if strings.HasPrefix(name, analyticsquery.CompanyCustomFieldPrefix) {
-			out.WriteString(", the deal's company's field")
-		}
-		if field.Coverage != nil {
-			fmt.Fprintf(out, ", held by %d of %d live deals you can read", field.Coverage.WithValue, field.Coverage.Records)
-		}
-		out.WriteString("\n")
-	}
-}
-
-// writeCustomMeaning adds a custom dimension's label and choices to the schema
-// digest, so a renamed field or changed choice moves the version. A built-in
-// field writes nothing, which keeps every existing version as it was.
-func writeCustomMeaning(sum hash.Hash, field analyticsquery.Field) {
-	if field.Label == "" {
-		return
-	}
-	sum.Write([]byte(jsonText(field.Label) + jsonText(field.Options)))
-}
-
-// jsonText is v as JSON, with < > & left as typed, since a model reads it and
-// no browser does. A string or a slice of strings always encodes.
-func jsonText[T string | []string](v T) string {
-	var out strings.Builder
-	enc := json.NewEncoder(&out)
-	enc.SetEscapeHTML(false)
-	if err := enc.Encode(v); err != nil {
-		return ""
-	}
-	return strings.TrimSuffix(out.String(), "\n")
 }

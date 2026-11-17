@@ -73,6 +73,17 @@ export const TheAsk: Story = {
   ),
 };
 
+export const TheAskDark: Story = {
+  ...TheAsk,
+  globals: { theme: "dark" },
+};
+
+export const TheAskPhone: Story = {
+  ...TheAsk,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+
 /** A purpose nobody may switch off. No button at all — a control that always
  * fails is worse than an absent one — and the reason instead. */
 export const LockedPurpose: Story = {

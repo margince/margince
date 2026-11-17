@@ -12094,14 +12094,16 @@
      "The recipient has reached the marketing message limit for now. This clears automatically.",
     "promotion_restriction/text/hard_bounce":
      "This address does not accept mail. Correct the address; an override does not apply.",
+    "promotion_restriction/text/lawful_basis_unconfirmed":
+     "No lawful basis is recorded for this contact, and the warning was not confirmed before sending.",
     "promotion_restriction/text/legacy_transactional_unevidenced":
      "This message uses an old purpose that nothing on record supports.",
     "promotion_restriction/text/marketing_consent_required":
-     "Marketing to a recipient in this country needs their prior consent. No exception can replace it.",
+     "Marketing to a recipient in this country needs their prior consent.",
     "promotion_restriction/text/marketing_objection":
      "The recipient objected to marketing, so no marketing goes to them. A reply or a message they asked for can still go.",
     "promotion_restriction/text/marketing_permission_required":
-     "This marketing message has no recorded permission under the applicable rules. A staff exception cannot replace consent or the required evidence.",
+     "This marketing message has no recorded permission under the applicable rules. Record consent or the required evidence.",
     "promotion_restriction/text/no_compatible_evidence":
      "Sending is refused until a reason is recorded.",
     "promotion_restriction/text/no_marketing_consent":
@@ -12128,14 +12130,16 @@
      "The recipient has reached the marketing message limit for now. This clears automatically.",
     "promotion_restriction/lifecycle/hard_bounce":
      "This address does not accept mail. Correct the address; an override does not apply.",
+    "promotion_restriction/lifecycle/lawful_basis_unconfirmed":
+     "No lawful basis is recorded for this contact, and the warning was not confirmed before sending.",
     "promotion_restriction/lifecycle/legacy_transactional_unevidenced":
      "This message uses an old purpose that nothing on record supports.",
     "promotion_restriction/lifecycle/marketing_consent_required":
-     "Marketing to a recipient in this country needs their prior consent. No exception can replace it.",
+     "Marketing to a recipient in this country needs their prior consent.",
     "promotion_restriction/lifecycle/marketing_objection":
      "The recipient objected to marketing, so no marketing goes to them. A reply or a message they asked for can still go.",
     "promotion_restriction/lifecycle/marketing_permission_required":
-     "This marketing message has no recorded permission under the applicable rules. A staff exception cannot replace consent or the required evidence.",
+     "This marketing message has no recorded permission under the applicable rules. Record consent or the required evidence.",
     "promotion_restriction/lifecycle/no_compatible_evidence":
      "Sending is refused until a reason is recorded.",
     "promotion_restriction/lifecycle/no_marketing_consent":
@@ -31960,14 +31964,16 @@
      "Die empfangende Person hat das Limit für Marketingnachrichten vorerst erreicht. Das Limit wird automatisch zurückgesetzt.",
     "promotion_restriction/text/hard_bounce":
      "Diese Adresse nimmt keine E-Mails an. Korrigiere die Adresse. Eine Ausnahme ist hier nicht möglich.",
+    "promotion_restriction/text/lawful_basis_unconfirmed":
+     "Für diesen Kontakt ist keine Rechtsgrundlage erfasst, und die Warnung wurde vor dem Senden nicht bestätigt.",
     "promotion_restriction/text/legacy_transactional_unevidenced":
      "Diese Nachricht nutzt einen alten Zweck, den nichts im Datensatz belegt.",
     "promotion_restriction/text/marketing_consent_required":
-     "Marketing an eine empfangende Person in diesem Land braucht ihre vorherige Einwilligung. Keine Ausnahme kann sie ersetzen.",
+     "Marketing an eine empfangende Person in diesem Land braucht ihre vorherige Einwilligung.",
     "promotion_restriction/text/marketing_objection":
      "Die empfangende Person hat dem Marketing widersprochen, daher geht kein Marketing an sie. Eine Antwort oder eine Nachricht, um die sie gebeten hat, kann weiterhin gesendet werden.",
     "promotion_restriction/text/marketing_permission_required":
-     "Für diese Marketingnachricht ist nach den geltenden Regeln keine Erlaubnis belegt. Eine Ausnahme durch Mitarbeitende ersetzt weder die Einwilligung noch die erforderlichen Nachweise.",
+     "Für diese Marketingnachricht ist nach den geltenden Regeln keine Erlaubnis belegt. Erfasse die Einwilligung oder die erforderlichen Nachweise.",
     "promotion_restriction/text/no_compatible_evidence":
      "Der Versand wird abgelehnt, bis ein Grund erfasst ist.",
     "promotion_restriction/text/no_marketing_consent":
@@ -31994,14 +32000,16 @@
      "Die empfangende Person hat das Limit für Marketingnachrichten vorerst erreicht. Das Limit wird automatisch zurückgesetzt.",
     "promotion_restriction/lifecycle/hard_bounce":
      "Diese Adresse nimmt keine E-Mails an. Korrigiere die Adresse. Eine Ausnahme ist hier nicht möglich.",
+    "promotion_restriction/lifecycle/lawful_basis_unconfirmed":
+     "Für diesen Kontakt ist keine Rechtsgrundlage erfasst, und die Warnung wurde vor dem Senden nicht bestätigt.",
     "promotion_restriction/lifecycle/legacy_transactional_unevidenced":
      "Diese Nachricht nutzt einen alten Zweck, den nichts im Datensatz belegt.",
     "promotion_restriction/lifecycle/marketing_consent_required":
-     "Marketing an eine empfangende Person in diesem Land braucht ihre vorherige Einwilligung. Keine Ausnahme kann sie ersetzen.",
+     "Marketing an eine empfangende Person in diesem Land braucht ihre vorherige Einwilligung.",
     "promotion_restriction/lifecycle/marketing_objection":
      "Die empfangende Person hat dem Marketing widersprochen, daher geht kein Marketing an sie. Eine Antwort oder eine Nachricht, um die sie gebeten hat, kann weiterhin gesendet werden.",
     "promotion_restriction/lifecycle/marketing_permission_required":
-     "Für diese Marketingnachricht ist nach den geltenden Regeln keine Erlaubnis belegt. Eine Ausnahme durch Mitarbeitende ersetzt weder die Einwilligung noch die erforderlichen Nachweise.",
+     "Für diese Marketingnachricht ist nach den geltenden Regeln keine Erlaubnis belegt. Erfasse die Einwilligung oder die erforderlichen Nachweise.",
     "promotion_restriction/lifecycle/no_compatible_evidence":
      "Der Versand wird abgelehnt, bis ein Grund erfasst ist.",
     "promotion_restriction/lifecycle/no_marketing_consent":
@@ -51826,14 +51834,16 @@
      "Người nhận đã chạm giới hạn tin tiếp thị trong thời gian này. Hạn chế này sẽ tự hết.",
     "promotion_restriction/text/hard_bounce":
      "Địa chỉ này không nhận thư. Sửa lại địa chỉ; trường hợp này không thể bỏ qua.",
+    "promotion_restriction/text/lawful_basis_unconfirmed":
+     "Chưa có căn cứ xử lý được ghi nhận cho liên hệ này và cảnh báo chưa được xác nhận trước khi gửi.",
     "promotion_restriction/text/legacy_transactional_unevidenced":
      "Tin nhắn này dùng một mục đích kiểu cũ mà không dữ liệu nào xác nhận.",
     "promotion_restriction/text/marketing_consent_required":
-     "Tin tiếp thị gửi người nhận ở quốc gia này cần sự đồng ý trước của họ. Không có ngoại lệ nào thay thế được.",
+     "Tin tiếp thị gửi người nhận ở quốc gia này cần sự đồng ý trước của họ.",
     "promotion_restriction/text/marketing_objection":
      "Người nhận đã phản đối tin tiếp thị, nên không gửi tin tiếp thị cho họ. Thư trả lời hoặc thư họ đã yêu cầu vẫn có thể gửi.",
     "promotion_restriction/text/marketing_permission_required":
-     "Chưa có căn cứ cho phép gửi tin tiếp thị này theo quy tắc áp dụng. Ngoại lệ của nhân viên không thay thế sự đồng ý hoặc bằng chứng bắt buộc.",
+     "Chưa có căn cứ cho phép gửi tin tiếp thị này theo quy tắc áp dụng. Hãy ghi nhận sự đồng ý hoặc bằng chứng bắt buộc.",
     "promotion_restriction/text/no_compatible_evidence":
      "Không thể gửi cho đến khi ghi nhận lý do.",
     "promotion_restriction/text/no_marketing_consent":
@@ -51860,14 +51870,16 @@
      "Người nhận đã chạm giới hạn tin tiếp thị trong thời gian này. Hạn chế này sẽ tự hết.",
     "promotion_restriction/lifecycle/hard_bounce":
      "Địa chỉ này không nhận thư. Sửa lại địa chỉ; trường hợp này không thể bỏ qua.",
+    "promotion_restriction/lifecycle/lawful_basis_unconfirmed":
+     "Chưa có căn cứ xử lý được ghi nhận cho liên hệ này và cảnh báo chưa được xác nhận trước khi gửi.",
     "promotion_restriction/lifecycle/legacy_transactional_unevidenced":
      "Tin nhắn này dùng một mục đích kiểu cũ mà không dữ liệu nào xác nhận.",
     "promotion_restriction/lifecycle/marketing_consent_required":
-     "Tin tiếp thị gửi người nhận ở quốc gia này cần sự đồng ý trước của họ. Không có ngoại lệ nào thay thế được.",
+     "Tin tiếp thị gửi người nhận ở quốc gia này cần sự đồng ý trước của họ.",
     "promotion_restriction/lifecycle/marketing_objection":
      "Người nhận đã phản đối tin tiếp thị, nên không gửi tin tiếp thị cho họ. Thư trả lời hoặc thư họ đã yêu cầu vẫn có thể gửi.",
     "promotion_restriction/lifecycle/marketing_permission_required":
-     "Chưa có căn cứ cho phép gửi tin tiếp thị này theo quy tắc áp dụng. Ngoại lệ của nhân viên không thay thế sự đồng ý hoặc bằng chứng bắt buộc.",
+     "Chưa có căn cứ cho phép gửi tin tiếp thị này theo quy tắc áp dụng. Hãy ghi nhận sự đồng ý hoặc bằng chứng bắt buộc.",
     "promotion_restriction/lifecycle/no_compatible_evidence":
      "Không thể gửi cho đến khi ghi nhận lý do.",
     "promotion_restriction/lifecycle/no_marketing_consent":

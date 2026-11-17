@@ -8,7 +8,8 @@ import type { MessageKey } from "../../i18n/en";
 import { asksWhy } from "../../lib/compose-context";
 import { remedyCategoryOf } from "../../lib/sendstatus";
 import type { Activity } from "./compose";
-import { ComposeOutcome, ComposeWhy, MailSendNotices } from "./compose.parts";
+import { DraftContentNotice } from "./compose.notices";
+import { ComposeOutcome, MailSendNotices } from "./compose.parts";
 import { RecordConversationFact } from "./composecontextfact";
 import { ComposeDeal, type DealChoiceState } from "./composedeal";
 import type { ComposeFields } from "./composefields";
@@ -18,6 +19,8 @@ import {
   type ReasonTarget,
 } from "./composereason";
 import type { ComposeSend } from "./composesend";
+import { ComposeWhy } from "./composewhy";
+import { pickReason } from "./reasonanchor";
 
 type Preview = components["schemas"]["SendAuthorizationPreview"];
 
@@ -110,6 +113,7 @@ export function ComposeBlockers({
     : alternativeReasonOf(send.permission);
   // Until the message says why it is written, the engine has judged no reason.
   // Its missing-reason refusal would then ask the same question twice.
+  const chooseReason = pickReason(fields);
   const whyMissing = asksWhy(anchorActivity) && fields.context === "";
   const asksWhyAgain =
     whyMissing &&
@@ -119,9 +123,13 @@ export function ComposeBlockers({
     <div className="compose-blockers">
       <ComposeWhy
         anchorActivity={anchorActivity}
+        needsReason={
+          fields.context !== "" ||
+          sendStatus(send.permission).kind === "missingContext"
+        }
         flagged={send.flagged}
         context={fields.context}
-        onContextChange={fields.setContext}
+        onContextChange={chooseReason}
       />
       <ComposeDeal
         choice={dealChoice}
@@ -146,10 +154,7 @@ export function ComposeBlockers({
           renderOpener={(opener) =>
             drawPermission(
               alternative ? (
-                <ReasonSwitch
-                  reason={alternative}
-                  onSwitch={fields.setContext}
-                />
+                <ReasonSwitch reason={alternative} onSwitch={chooseReason} />
               ) : (
                 opener
               ),
@@ -163,6 +168,9 @@ export function ComposeBlockers({
         bodyKey={bodyKey}
         sendUnavailable={fields.sendUnavailable}
         send={send}
+      />
+      <DraftContentNotice
+        findings={send.permission.preview?.content_findings}
       />
     </div>
   );

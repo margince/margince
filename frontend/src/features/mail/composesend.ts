@@ -5,6 +5,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { useLawfulBasisGate } from "../../components/lawfulbasiswarning";
+import { useSettledValue } from "../../design-system/debouncedsearch";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import { entityTimelineKeys } from "../../lib/activitykeys";
@@ -31,6 +33,7 @@ import type { RelinkKind } from "./composerelink";
 import type { useSavedDraft } from "./composesaveddraft";
 import { scheduleFields } from "./composeschedule";
 import { sendHoldOf } from "./composesendhold";
+import { dealOf, reasonEvidence, useReasonForAnchor } from "./reasonanchor";
 import { SCHEDULED_SCREEN } from "./scheduledqueue";
 import { sendReviewOf } from "./sendreview";
 
@@ -278,6 +281,7 @@ export function useComposeSend({
   const queryClient = useQueryClient();
   const toast = useToast();
   const { setSendUnavailable } = fields;
+  useReasonForAnchor(answering, fields);
   // What every sent message does next, whichever door sent it: the draft is
   // spent, the timeline reads again, and the composer closes.
   const finishSent = () => {
@@ -334,8 +338,7 @@ export function useComposeSend({
       finishSent();
     },
   });
-  // Clearing the refusal and draft after staging keeps this composer from
-  // offering the same held message again.
+  // Clearing the refusal and draft after staging stops a resend of the held message.
   const directSent = () => {
     send.reset();
     toast.show(t("directSend.queued"));
@@ -368,20 +371,27 @@ export function useComposeSend({
     grounding,
     projectId,
   );
-  const contextDealId = (answering ? anchorActivity?.links : links)?.find(
-    (link) => link.entity_type === "deal",
-  )?.entity_id;
-  const evidence = contextDealId ? { deal_id: contextDealId } : undefined;
+  const contextDealId = dealOf(answering ? anchorActivity?.links : links);
+  const evidence = reasonEvidence(contextDealId, fields.meetingEvidence);
   // The engine's answer, asked while the rep writes. Bcc is in the question,
   // because consent is owed to everyone who receives the message.
+  // A marketing draft is checked against its recipients' content rules.
+  const settledSubject = useSettledValue(fields.subject);
+  const settledBody = useSettledValue(fields.body);
   const answer = useSendPermission({
     recipients: [...fields.to, ...fields.cc, ...fields.bcc],
     anchorActivityId: answering,
     links,
     context: claimedContext,
     evidence,
+    draft:
+      claimedContext === "marketing"
+        ? { subject: settledSubject, body: settledBody }
+        : undefined,
     enabled: open && !isChannelReply,
   });
+  // Send waits for the sender to confirm a recipient with no lawful basis on record.
+  const lawfulBasis = useLawfulBasisGate(answer.preview);
   // A consent refusal joins the engine's answer as one status, and only while
   // it is about this message. A stale one would sit red beside a newer check.
   const request = sendRequest(fields, {
@@ -444,16 +454,18 @@ export function useComposeSend({
     }
     setDirectOpen(false);
     const askedWithReason = hold.withReason;
-    send.mutate(request, {
-      onError: (error) => {
-        if (
-          askedWithReason &&
-          sendReviewOf(error)?.actions.includes("direct_send")
-        ) {
-          setDirectOpen(true);
-        }
-      },
-    });
+    lawfulBasis.gate(() =>
+      send.mutate(request, {
+        onError: (error) => {
+          if (
+            askedWithReason &&
+            sendReviewOf(error)?.actions.includes("direct_send")
+          ) {
+            setDirectOpen(true);
+          }
+        },
+      }),
+    );
   };
   // What this client already knows will stop the send. The mark beside Send
   // makes no passed claim while any of it stands.
@@ -481,6 +493,7 @@ export function useComposeSend({
     hold,
     directOpen,
     setDirectOpen,
+    lawfulBasisDialog: lawfulBasis.dialog,
   };
 }
 

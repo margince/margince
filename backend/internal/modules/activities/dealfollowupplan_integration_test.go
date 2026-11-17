@@ -182,6 +182,36 @@ func forgetAllButLinkStatistics(ctx context.Context, t *testing.T, tx pgx.Tx) {
 // one under each other deal, and logs a larger volume of unrelated mail after
 // them. Every row goes through the tables' own triggers, so the linked slice
 // stays small and lands before the bulk the link triggers would otherwise read.
+// Every mail row runs the activity triggers, so all the other mail in one
+// INSERT nears the statement ceiling on a busy runner. A batch stays far below.
+const otherMailBatch = 1000
+
+// seedOtherMailInBatches writes plan_other: linked mail first, then the rest.
+func seedOtherMailInBatches(ctx context.Context, t *testing.T, tx pgx.Tx) {
+	t.Helper()
+	for from := 1; from <= planOtherMail; from += otherMailBatch {
+		batch := pgx.NamedArgs{"from": from, "to": from + otherMailBatch - 1}
+		if _, err := tx.Exec(ctx, `
+		INSERT INTO contact (id, full_name, source, captured_by)
+		  SELECT contact, 'Other '||g, 'manual', 'human:seed' FROM plan_other, plan_seed s
+		   WHERE g BETWEEN @from AND @to AND g <= s.linked_mail`, batch); err != nil {
+			t.Fatalf("seeding the other mail's contacts: %v", err)
+		}
+		if _, err := tx.Exec(ctx, `
+		INSERT INTO activity (id, kind, subject, occurred_at, direction, source, captured_by, thread_key)
+		  SELECT mail, 'email', 'Other mail '||g, s.at - interval '2 days', 'outbound', 'manual', 'human:seed', 'other'||g
+		    FROM plan_other, plan_seed s WHERE g BETWEEN @from AND @to`, batch); err != nil {
+			t.Fatalf("seeding the other mail: %v", err)
+		}
+		if _, err := tx.Exec(ctx, `
+		INSERT INTO activity_link (activity_id, entity_type, contact_id)
+		  SELECT mail, 'contact', contact FROM plan_other, plan_seed s
+		   WHERE g BETWEEN @from AND @to AND g <= s.linked_mail`, batch); err != nil {
+			t.Fatalf("linking the other mail: %v", err)
+		}
+	}
+}
+
 func seedDealMeetingsAmongOtherMail(ctx context.Context, t *testing.T, tx pgx.Tx, rep ids.UUID) []ids.UUID {
 	t.Helper()
 	if _, err := tx.Exec(ctx, `CREATE TEMP TABLE plan_seed AS
@@ -209,19 +239,10 @@ func seedDealMeetingsAmongOtherMail(ctx context.Context, t *testing.T, tx pgx.Tx
 	INSERT INTO activity_link (activity_id, entity_type, contact_id) SELECT id, 'contact', contact FROM plan_meeting;
 	INSERT INTO activity_link (activity_id, entity_type, deal_id) SELECT id, 'deal', deal FROM plan_meeting;
 	CREATE TEMP TABLE plan_other AS
-	  SELECT gen_random_uuid() mail, gen_random_uuid() contact, g FROM plan_seed s, generate_series(1, s.other_mail) g;
-	INSERT INTO contact (id, full_name, source, captured_by)
-	  SELECT contact, 'Other '||g, 'manual', 'human:seed' FROM plan_other, plan_seed s WHERE g <= s.linked_mail;
-	INSERT INTO activity (id, kind, subject, occurred_at, direction, source, captured_by, thread_key)
-	  SELECT mail, 'email', 'Other mail '||g, s.at - interval '2 days', 'outbound', 'manual', 'human:seed', 'other'||g
-	    FROM plan_other, plan_seed s WHERE g <= s.linked_mail;
-	INSERT INTO activity_link (activity_id, entity_type, contact_id)
-	  SELECT mail, 'contact', contact FROM plan_other, plan_seed s WHERE g <= s.linked_mail;
-	INSERT INTO activity (id, kind, subject, occurred_at, direction, source, captured_by, thread_key)
-	  SELECT mail, 'email', 'Other mail '||g, s.at - interval '2 days', 'outbound', 'manual', 'human:seed', 'other'||g
-	    FROM plan_other, plan_seed s WHERE g > s.linked_mail`); err != nil {
+	  SELECT gen_random_uuid() mail, gen_random_uuid() contact, g FROM plan_seed s, generate_series(1, s.other_mail) g`); err != nil {
 		t.Fatalf("seeding the meetings: %v", err)
 	}
+	seedOtherMailInBatches(ctx, t, tx)
 	rows, err := tx.Query(ctx, `SELECT id FROM plan_deal ORDER BY n`)
 	if err != nil {
 		t.Fatal(err)

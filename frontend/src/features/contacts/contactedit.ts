@@ -13,6 +13,7 @@ import { rawRecord } from "../../components/recordfieldtypes";
 import { useRecordOwners } from "../../components/recordowners";
 import { useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
+import { fromHere } from "../../lib/navigatefrom";
 import { mayLeaveReach, useLeaveIfOutOfReach } from "../../lib/outofreach";
 import { useViewerId } from "../../lib/session";
 
@@ -57,6 +58,7 @@ export function useContactEdit(contact: Contact): RailEdit {
     resolveExisting: (_code, id) => ({ screen: "contacts", id }),
     save: async (values, rows, opened, extra) => {
       const patch = { ...mapContactUpdate(values, rows), ...extra };
+      const from = fromHere();
       const saved = await saveRecordEdit("contact", rawRecord(opened), patch);
       // Handing a private contact to a colleague can take it out of the
       // giver's reach; the page would then fail on its own refetch.
@@ -73,6 +75,7 @@ export function useContactEdit(contact: Contact): RailEdit {
               owners.options.find((option) => option.value === owner)?.label ??
               "",
           }),
+          from,
         );
       }
       return saved;

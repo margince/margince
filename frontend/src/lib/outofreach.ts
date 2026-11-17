@@ -5,8 +5,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { api } from "../api/client";
 import { useToast } from "../design-system/toast";
+import type { Departure } from "./navigatefrom";
 import { recordWriteKeys } from "./recordwritekeys";
-import { navigateReplacing } from "./router";
 
 export type ReachableKind = "contact" | "company";
 
@@ -36,14 +36,14 @@ export function useLeaveIfOutOfReach(kind: ReachableKind) {
   const queryClient = useQueryClient();
   const toast = useToast();
   return useCallback(
-    async (id: string, message: string): Promise<boolean> => {
+    async (id: string, message: string, from: Departure): Promise<boolean> => {
       if (!(await gone(kind, id))) {
         return false;
       }
       toast.show(message);
-      // Replacing, and forgetting the record's reads: Back must not return
-      // the reader to a page drawn from a cache the server now refuses.
-      navigateReplacing({ screen: LIST[kind] });
+      // Closed onto the list, and the record's reads forgotten. Back must not
+      // return the reader to a page drawn from a cache the server refuses.
+      from.closeOnto({ screen: LIST[kind] });
       for (const queryKey of recordWriteKeys(kind, id)) {
         queryClient.removeQueries({ queryKey });
       }

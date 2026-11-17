@@ -184,7 +184,10 @@ describe("the seat's own readings when the report answers with nothing", () => {
     expect(
       await screen.findByText(en["analytics.baseValueUnnamed"]),
     ).toBeTruthy();
-    expect(screen.getByText(en["analytics.noBaseCurrency"])).toBeTruthy();
+    // Found, not got: the value line can draw a render after its label.
+    expect(
+      await screen.findByText(en["analytics.noBaseCurrency"]),
+    ).toBeTruthy();
     expect(screen.getByText(en["analytics.noBaseCurrencyWhy"])).toBeTruthy();
   });
 

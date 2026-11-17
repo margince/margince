@@ -150,11 +150,17 @@ func (g *Gate) transmitVerdictTx(
 	// for a reason nobody looked at, so it never widens this flag. A stop
 	// recorded after staging, or a refusal beyond the exception giver's
 	// authority, keeps the flag down and the message parks.
-	givenByAdmin, err := exceptionGivenByAdminTx(ctx, tx, req.DeliveryID)
+	exception, err := deliveryExceptionTx(ctx, tx, req.DeliveryID)
 	if err != nil {
 		return commsauthz.TransmitTicket{}, nil, err
 	}
-	ticket.ConsentRefused = !ticket.Allowed && set.ExceptionMayAnswer(givenByAdmin)
+	if !ticket.Allowed && set.ExceptionMayAnswer(exception.givenByAdmin) {
+		answers, err := instructionStillAnswers(ctx, tx, exception.shown, exception.directedAt, set)
+		if err != nil {
+			return commsauthz.TransmitTicket{}, nil, err
+		}
+		ticket.ConsentRefused = answers
+	}
 	// The message that goes must be the message that was authorized. Asked of
 	// every message that might go, refused ones included: a directed send
 	// leaves on a human's decision about specific words. applyWordingVerdict

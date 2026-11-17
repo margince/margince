@@ -143,7 +143,7 @@ func TestARecordOnAReadSeatOffersNoActionAndRefusesEachMutation(t *testing.T) {
 		rename     AnyMap
 	}{
 		{
-			"/v1/contacts/" + createdID(t, e, "/v1/contacts", AnyMap{"full_name": "Seat Contact", "source": "manual"}),
+			"/v1/contacts/" + createdID(t, e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Seat Contact", "source": "manual"}),
 			true, true,
 			AnyMap{"title": "Renamed"},
 		},

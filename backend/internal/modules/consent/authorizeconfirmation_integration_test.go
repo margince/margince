@@ -137,7 +137,7 @@ func plantNarrowObjection(t *testing.T, e *resolveEnv, contact ids.ContactID) {
 
 // TestANarrowObjectionStillOwesTheSubjectLevelAcknowledgement pins the
 // EXISTS's deliberate blindness to purpose_id: a marketing_objection scoped to
-// one newsletter is still a marketing_objection, and Decree 91 Art. 16 owes an
+// one newsletter is still a marketing_objection, and Decree 91/2020 Art. 20 owes an
 // acknowledgement of THAT REFUSAL regardless of which newsletter it named. A
 // reader that started matching on purpose (rowPurpose equals the send's
 // resolved purpose, the rule applySuppression uses to BIND a send) would
@@ -198,8 +198,8 @@ func withdrawThroughThePress(t *testing.T, e *resolveEnv, key string, class Clas
 }
 
 // TestAWithdrawnMarketingPurposeOwesAnAcknowledgement. An unsubscribe press
-// withdraws a marketing purpose and records no suppression, and Decree 91
-// Art. 16 owes it an acknowledgement all the same.
+// withdraws a marketing purpose and records no suppression, and Decree 91/2020
+// Art. 20 owes it an acknowledgement all the same.
 func TestAWithdrawnMarketingPurposeOwesAnAcknowledgement(t *testing.T) {
 	e := setupResolve(t)
 	withdrawThroughThePress(t, e, "press-newsletter", ClassMarketing)

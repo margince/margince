@@ -3,6 +3,7 @@ import type { components } from "../../api/schema";
 import type { ReadingTone } from "../../design-system/readingtone";
 import { StageLadder, type StageStep } from "../../design-system/stageladder";
 import { useT } from "../../i18n";
+import { useCanWriteRecord } from "../../lib/capability";
 
 type Deal = components["schemas"]["Deal"];
 type Stage = components["schemas"]["Stage"];
@@ -19,6 +20,8 @@ type Stage = components["schemas"]["Stage"];
 
 /**
  * DealStageLadder draws the pipeline and, where no move is on offer, says why.
+ * A reader who may not write the deal gets its stages as names only, since
+ * the server refuses them every move.
  *
  * `advanceRefused` is where this deal cannot be moved AT ALL — archived, not
  * this caller's to write, or already closed. `advancing` is narrower and different in kind: one
@@ -51,6 +54,7 @@ export function DealStageLadder({
   subs?: ReadonlyMap<string, ReactNode>;
 }>) {
   const t = useT();
+  const canWrite = useCanWriteRecord("deal", deal);
   // WHY THE LADDER REFUSES, said once and pointed at.
   //
   // Every rung is refused for the same cause, so they name ONE element rather
@@ -66,7 +70,7 @@ export function DealStageLadder({
   // did — the disabled moment passes on its own.
   const ownReasonId = useId();
   const ownReason =
-    advanceRefused && refusedReasonId === undefined
+    canWrite && advanceRefused && refusedReasonId === undefined
       ? t("deal.closedTakesNoStage")
       : undefined;
   return (
@@ -80,7 +84,7 @@ export function DealStageLadder({
         stages,
         refused: advancing || advanceRefused,
         reasonId: advanceRefused ? (refusedReasonId ?? ownReasonId) : undefined,
-        onAdvance,
+        onAdvance: canWrite ? onAdvance : undefined,
       }).map((step) =>
         subs?.has(step.key) ? { ...step, sub: subs.get(step.key) } : step,
       )}
@@ -110,7 +114,8 @@ function dealStageSteps({
    * Every rung points at it rather than drawing its own copy — a ladder refused
    * for one cause says it once. */
   reasonId?: string;
-  onAdvance: (toStage: Stage) => void;
+  // Absent where this reader may not move the deal: the rungs are then names.
+  onAdvance?: (toStage: Stage) => void;
 }>): StageStep[] {
   const here = stages.find((stage) => stage.id === deal.stage_id);
   return stages.map((stage) => ({
@@ -120,8 +125,10 @@ function dealStageSteps({
     current: stage.id === deal.stage_id,
     // Won and lost are the two ways out rather than two more rungs.
     terminal: stage.semantic !== "open",
-    disabled: refused,
-    reasonId,
-    onPick: () => onAdvance(stage),
+    ...(onAdvance && {
+      disabled: refused,
+      reasonId,
+      onPick: () => onAdvance(stage),
+    }),
   }));
 }

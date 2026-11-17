@@ -20,7 +20,7 @@ import (
 func TestARestPatchOnAColleaguesPassportOverwritesAHumanWrittenNameAtOnce(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	contactID := createdID(t, e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Ines Human"})
+	contactID := createdID(t, e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Ines Human"})
 	bearer := agentBearer(t, e, "patch agent")
 
 	var problem struct {

@@ -65,7 +65,7 @@ func TestTheIntroNoteIsWrittenInTheLanguageTheContactWroteIn(t *testing.T) {
 
 	var contact AnyMap
 	if status := e.Call(t, "POST", "/v1/contacts",
-		AnyMap{"source": "manual", "full_name": "Philipp Königs"}, nil, &contact); status != http.StatusCreated {
+		AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Philipp Königs"}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("creating the contact: %d %v", status, contact)
 	}
 	contactID, _ := contact["id"].(string)
@@ -104,7 +104,7 @@ func TestAnIntroNoteWithNoCorrespondenceSaysTheLanguageIsUndetermined(t *testing
 
 	var contact AnyMap
 	if status := e.Call(t, "POST", "/v1/contacts",
-		AnyMap{"source": "manual", "full_name": "Brandt GmbH Kontakt"}, nil, &contact); status != http.StatusCreated {
+		AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Brandt GmbH Kontakt"}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("creating the contact: %d %v", status, contact)
 	}
 	contactID, _ := contact["id"].(string)

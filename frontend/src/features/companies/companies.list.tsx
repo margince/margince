@@ -241,6 +241,9 @@ export function CompaniesScreen({
             header: t("company.website"),
             // Sorted by the host the cell prints; the scheme is a constant.
             sort: "website_url",
+            phone: "caption",
+            folded: (company: Company) =>
+              company.website_url ? displayHost(company.website_url) : null,
             cell: (company: Company) =>
               company.website_url ? (
                 <a
@@ -278,6 +281,7 @@ export function CompaniesScreen({
             key: "class",
             header: t("company.lifecycle"),
             sort: "lifecycle",
+            phone: "end",
             // Reads lifecycle, because nothing writes classification. A column
             // on classification would show stale values forever.
             cell: (company: Company) =>

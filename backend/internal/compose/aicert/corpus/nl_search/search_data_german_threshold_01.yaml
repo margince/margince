@@ -1,0 +1,57 @@
+{
+  "name": "search_data_german_threshold",
+  "task": "nl_search",
+  "site": "search_data_plan",
+  "source": "hand_authored",
+  "sanitized_by": "hand_authored/codex",
+  "fixture": {
+    "now": "2026-11-16T12:00:00Z",
+    "context": {
+      "timezone": "UTC",
+      "base_currency": "EUR",
+      "as_of": "2026-11-16T12:00:00Z",
+      "default_scope": {
+        "kind": "owner",
+        "id": "019f0000-0000-7000-8000-000000000001",
+        "label": "Me"
+      },
+      "allowed_scopes": [
+        {
+          "kind": "owner",
+          "id": "019f0000-0000-7000-8000-000000000001",
+          "label": "Me"
+        }
+      ],
+      "capabilities": {
+        "submit_manager_forecast": false,
+        "view_manager_forecast": false
+      }
+    },
+    "self_user_id": "019f0000-0000-7000-8000-000000000001",
+    "objects": [
+      "deal",
+      "company",
+      "contact",
+      "forecast",
+      "report_definition",
+      "installation_settings",
+      "pipeline",
+      "activity"
+    ],
+    "question": "Welche offenen Deals schließen diesen Monat über 50k EUR?"
+  },
+  "expect": {
+    "outcome": "accepted",
+    "answer": {
+      "engine": "records",
+      "count": false,
+      "arguments": "{\"plan\": {\"version\": \"v1\", \"target\": \"deal\", \"where\": [{\"field\": \"status\", \"op\": \"eq\", \"value\": \"open\"}, {\"field\": \"currency\", \"op\": \"eq\", \"value\": \"EUR\"}, {\"field\": \"expected_close_date\", \"op\": \"gte\", \"value\": \"2026-11-01\"}, {\"field\": \"expected_close_date\", \"op\": \"lt\", \"value\": \"2026-12-01\"}, {\"field\": \"amount_minor\", \"op\": \"gt\", \"value\": 5000000}]}}"
+    },
+    "bands": {
+      "certified_min": 80,
+      "degraded_min": 60,
+      "floor": 50
+    },
+    "rubric": "Preserve every filter and explicit currency. The planner supplies major units; production parsing scales the threshold to the expected minor units."
+  }
+}

@@ -37,6 +37,8 @@ type NoticeSubject struct {
 type NoticeUse struct {
 	PurposeKey string
 	Basis      string
+	// Since is when a consent use was granted; nil for any other basis.
+	Since *time.Time
 }
 
 // NoticeRetention is one retention rule that acts on the subject's data.
@@ -218,7 +220,11 @@ func recordedUses(consent, bases []map[string]any) []NoticeUse {
 	}
 	for _, row := range consent {
 		if key, ok := row["purpose"].(string); ok && row["state"] == "granted" {
-			add(NoticeUse{PurposeKey: key, Basis: "consent"})
+			use := NoticeUse{PurposeKey: key, Basis: "consent"}
+			if at, ok := row["captured_at"].(time.Time); ok {
+				use.Since = &at
+			}
+			add(use)
 		}
 	}
 	now := time.Now()

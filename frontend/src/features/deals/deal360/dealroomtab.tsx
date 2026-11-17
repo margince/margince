@@ -50,14 +50,16 @@ import "./dealroomtab.css";
 type DealRoom = components["schemas"]["DealRoom"];
 
 /**
- * DealRoomTab is the record's own door into the room: the same reading and
- * editable text the room's own page draws, without the page's identity band
- * or its verbs. A deal with no room yet gets the one control that opens one.
+ * DealRoomTab is the record's own door into the room. It draws the room
+ * page's reading and editable text, without its identity band or verbs.
+ * A deal with no room yet offers to open one. Only a reader who may write the
+ * deal gets that offer, because opening a room is a write on the deal.
  */
 export function DealRoomTab({
   dealId,
   dealName,
-}: Readonly<{ dealId: string; dealName: string }>) {
+  dealWritable,
+}: Readonly<{ dealId: string; dealName: string; dealWritable: boolean }>) {
   const t = useT();
   const roomQuery = useDealRoom(dealId);
   const room = roomQuery.data?.data?.[0];
@@ -78,7 +80,7 @@ export function DealRoomTab({
             mayWrite={mayWrite}
             onInvite={() => setInviting(true)}
           />
-        ) : roomQuery.isSuccess ? (
+        ) : roomQuery.isSuccess && dealWritable ? (
           <OpenRoomCard dealId={dealId} dealName={dealName} />
         ) : null}
       </QueryStates>

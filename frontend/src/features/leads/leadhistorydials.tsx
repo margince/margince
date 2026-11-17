@@ -3,18 +3,18 @@
 
 import { Search } from "lucide-react";
 import { type ReactNode, useId, useState } from "react";
-import { SegmentedControl } from "../../design-system/atoms";
 import { IconAction } from "../../design-system/iconaction";
 import type {
   ActivityKind,
   TimelineFilters,
 } from "../../design-system/recordtimeline";
+import { Select } from "../../design-system/select";
 import { TimelineFilterBar } from "../../design-system/timelinefilterbar";
 import { useT } from "../../i18n";
 import type { TimelineFilter } from "../../lib/timelinefilter";
 import "./leads.css";
 
-// One row of cuts in the History head: the whole record, one kind of
+// The cuts in the History head: the whole record, one kind of
 // exchange, or what changed. A kind cut writes `filters.kind`, the same value
 // the narrowing row's kind select writes, so the two never disagree.
 const HISTORY_CUTS = [
@@ -30,6 +30,10 @@ type KindCut = Exclude<HistoryCut, "all" | "changes">;
 
 function isKindCut(kind: ActivityKind | undefined): kind is KindCut {
   return HISTORY_CUTS.some((cut) => cut === kind);
+}
+
+function isHistoryCut(value: string): value is HistoryCut {
+  return HISTORY_CUTS.some((cut) => cut === value);
 }
 
 function historyCutOf(
@@ -104,12 +108,18 @@ export function useLeadHistoryDials({
             onClick={toggle}
           />
         )}
-        <SegmentedControl
-          options={HISTORY_CUTS}
+        <Select
+          aria-label={t("chronology.label")}
+          options={HISTORY_CUTS.map((cut) => ({
+            value: cut,
+            label: labels[cut],
+          }))}
           value={historyCutOf(filter, filters)}
-          onChange={pick}
-          labels={labels}
-          label={t("chronology.label")}
+          onChange={(next) => {
+            if (isHistoryCut(next)) {
+              pick(next);
+            }
+          }}
         />
       </span>
     ),

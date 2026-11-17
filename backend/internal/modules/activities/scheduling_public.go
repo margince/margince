@@ -134,6 +134,9 @@ type BookingMarketing struct {
 	// authenticated booking names a linked contact rather than typing an email,
 	// so there is no second address for the two to disagree about.
 	TickedFrom string
+	// AskedBySubject is true when the contact ticked the box on the public
+	// page, and false when a signed-in user's booking asked on their behalf.
+	AskedBySubject bool
 }
 
 // requestedPurpose is the purpose id a form NAMED, or nothing. The contract's
@@ -205,9 +208,11 @@ const (
 	// MarketingPendingConfirmation is the ordinary success: the question was
 	// mailed and the grant waits on the subject answering it.
 	MarketingPendingConfirmation MarketingOutcome = "pending_confirmation"
-	// MarketingNotAsked is a question this installation could not put: no live
-	// mailbox on the record, a purpose archived since the form was published,
-	// or a mail lane that refused it. The booking stands either way.
+	// MarketingNotAsked is a question this installation could not put. The
+	// record has no live mailbox, the purpose was archived after the form was
+	// published, or a mail lane refused it. A user's booking for a contact whose
+	// rules need their own request first is not asked either. The booking
+	// stands in every case.
 	MarketingNotAsked MarketingOutcome = "not_asked"
 )
 
@@ -431,7 +436,7 @@ func (h Handlers) bookPublicMeetingForLead(w http.ResponseWriter, r *http.Reques
 // way to name one: a parameter of that type would have to restate the whole
 // literal, field tags included.
 func (h Handlers) admitBookingMarketing(w http.ResponseWriter, r *http.Request, c crmcontracts.CaptureConsent, tickedFrom string) (*BookingMarketing, bool) {
-	marketing, err := prepareBookingMarketing(r.Context(), c, tickedFrom, h.publicConsent)
+	marketing, err := prepareBookingMarketing(r.Context(), c, tickedFrom, true, h.publicConsent)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return nil, false

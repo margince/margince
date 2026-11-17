@@ -45,7 +45,7 @@ import {
 import { receiptBasis, receiptSummary } from "../../lib/receiptcopy";
 import { isOpenReceipt, receiptAuditId } from "../../lib/receiptstate";
 import { useRememberedUndoRun } from "../../lib/undorun";
-import { replaceDial, useUrlParams } from "../../lib/urlstate";
+import { useAddressWriters, useUrlParams } from "../../lib/urlstate";
 import { useViewerZone } from "../../lib/viewerzone";
 import { listReadState } from "../../lib/worklist.listread";
 import { subjectHref } from "../../lib/worklistcopy";
@@ -212,11 +212,12 @@ function useArrivalJump(ready: boolean): boolean {
   const asked = params.get(WORKLIST_SECTION_PARAM) === CHANGE_HISTORY_SECTION;
   const [arrived] = useState(asked);
   const jump = useJumpTo();
+  const { replaceDial } = useAddressWriters();
   useEffect(() => {
     if (!asked || !ready) return;
     jump(CHANGE_HISTORY_ID);
     replaceDial(WORKLIST_SECTION_PARAM, undefined);
-  }, [asked, ready, jump]);
+  }, [asked, ready, jump, replaceDial]);
   return arrived;
 }
 

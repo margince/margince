@@ -4,12 +4,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, waitFor } from "@testing-library/react";
+import { act, cleanup, render, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { de } from "../i18n/de";
 import { en } from "../i18n/en";
+import { navigateReplacing } from "../lib/router";
+import { replaceDial } from "../lib/urlstate";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { AgentRail } from "./agentrail";
 
@@ -441,5 +443,16 @@ describe("work the rail cannot name", () => {
     expect(coreState()).toBe("idle");
     expect(runningSection(opened)).toBeUndefined();
     expect(opened.textContent).not.toContain(en["agent.panel.unnamedLive"]);
+  });
+});
+
+describe("the agent panel over a page that changes", () => {
+  it("closes once the page under it is another one", async () => {
+    globalThis.history.replaceState(null, "", "#/deals");
+    await openPanel();
+    act(() => replaceDial("stage", "won"));
+    expect(document.querySelector(".arpanel")).not.toBeNull();
+    act(() => navigateReplacing({ screen: "contacts" }));
+    expect(document.querySelector(".arpanel")).toBeNull();
   });
 });

@@ -150,8 +150,10 @@ func TestAGrantNamesThePublishedQuestionItAnswered(t *testing.T) {
 		t.Errorf("the proof names the %q wording — a subscription consent is given to the "+
 			"question on the page, not to the mail that carried the link", key)
 	}
-	if proof.text != body {
-		t.Errorf("policy_text and the row it names disagree:\n  proof: %q\n  row:   %q",
+	// The row keeps the sender's placeholder and the proof carries it filled,
+	// with the fallback name while the installation states none.
+	if filled := strings.ReplaceAll(body, "{controller}", "The sender"); proof.text != filled {
+		t.Errorf("policy_text is not the row it names, filled:\n  proof: %q\n  row:   %q",
 			proof.text, body)
 	}
 	// THE ANSWERS ARE IN IT. What somebody agreed to is the question and the
@@ -264,6 +266,11 @@ func TestAGermanConsentLinkRecordsTheSentenceThePageShows(t *testing.T) {
 		AnyMap{"base_language": "de"}, nil, nil); status != http.StatusOK {
 		t.Fatalf("switching the installation to German → %d", status)
 	}
+	if status := c.Call(t, "PUT", "/v1/privacy/controller-particulars", AnyMap{
+		"legal_name": "Beispiel GmbH", "privacy_page": "https://beispiel.test/datenschutz",
+	}, nil, nil); status != http.StatusOK {
+		t.Fatalf("stating the controller → %d", status)
+	}
 	if status := c.Call(t, "POST", "/v1/contacts/"+c.contactID+"/consent/double-opt-in",
 		AnyMap{"purpose_id": c.purposes["marketing_email"]}, nil, nil); status >= 400 {
 		t.Fatalf("minting the double-opt-in link → %d", status)
@@ -273,8 +280,10 @@ func TestAGermanConsentLinkRecordsTheSentenceThePageShows(t *testing.T) {
 	grantWithServedQuestion(t, c.AppEnv, token)
 
 	words := mailcopy.For("de")
-	want := strings.ReplaceAll(words.ConfirmSubscriptionAsk, "{purpose}", words.MarketingPurpose) + "\n" +
-		words.ConfirmSubscriptionConfirm
+	want := strings.NewReplacer(
+		"{purpose}", words.MarketingPurpose, "{controller}", "Beispiel GmbH",
+		"{frequency}", words.FrequencyMonthly, "{privacy_page}", "https://beispiel.test/datenschutz",
+	).Replace(words.ConfirmSubscriptionAsk) + "\n" + words.ConfirmSubscriptionConfirm
 	if served.Text != want {
 		t.Errorf("the German page was served\n  %q\nwant\n  %q", served.Text, want)
 	}

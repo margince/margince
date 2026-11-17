@@ -104,13 +104,18 @@ export function useTrialDay(endsAt: string | undefined): string {
  * Without a `standing` the trial has ended and its day is not this reader's to
  * know: a seat without `license:read` reaches the dialog from the lock screen.
  */
+/** Why a locked installation is locked: its trial ended, or its license lapsed. */
+export type LockReason = "trial" | "license";
+
 export function TrialContactDialog({
   standing,
   seatsUsed,
+  lockReason = "trial",
   onClose,
 }: Readonly<{
   standing?: TrialStanding;
   seatsUsed?: number;
+  lockReason?: LockReason;
   onClose: () => void;
 }>) {
   const t = useT();
@@ -142,7 +147,7 @@ export function TrialContactDialog({
         {t("trial.contact.title")}
       </Heading>
       <div className="form-stack">
-        <TrialStatus standing={standing} day={day} />
+        <TrialStatus standing={standing} day={day} lockReason={lockReason} />
         <ChoiceList
           legend={t("trial.contact.legend")}
           layout="cards"
@@ -206,16 +211,22 @@ export function TrialContactDialog({
 function TrialStatus({
   standing,
   day,
-}: Readonly<{ standing?: TrialStanding; day: string }>) {
+  lockReason,
+}: Readonly<{
+  standing?: TrialStanding;
+  day: string;
+  lockReason: LockReason;
+}>) {
   const t = useT();
   if (standing === undefined) {
+    const lapsed = lockReason === "license";
     return (
       <Callout
         kind="standing"
         tone="danger"
-        title={t("trial.notice.endedTitle")}
+        title={t(lapsed ? "license.locked.title" : "trial.notice.endedTitle")}
       >
-        {t("trial.locked.body")}
+        {t(lapsed ? "license.locked.body" : "trial.locked.body")}
       </Callout>
     );
   }

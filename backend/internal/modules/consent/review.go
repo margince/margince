@@ -311,7 +311,7 @@ func refusedRecipientOf(d commsauthz.Decision) RefusedRecipient {
 		SendingEntity: zeroUUIDAsNull(d.SendingEntity),
 		// The same answer the preview sends, so the composer picks the same
 		// deciding recipient before and after Send.
-		CanBeOverruled:    d.CanBeOverruledByCategory(),
+		CanBeOverruled:    d.OverrulableForOneMessage(),
 		RequestedCategory: string(d.Requested),
 	}
 	if !d.SubjectID.IsZero() {

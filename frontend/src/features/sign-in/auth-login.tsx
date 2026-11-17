@@ -7,6 +7,7 @@ import { Button, Field, TextInput } from "../../design-system/atoms";
 import { usePasswordReveal } from "../../design-system/passwordreveal";
 import { useT } from "../../i18n";
 import { problemMessageOf, unwrap } from "../../lib/problem";
+import { useAddressWriters } from "../../lib/urlstate";
 import {
   type OidcProviders,
   ProviderButtons,
@@ -43,6 +44,7 @@ export function LoginForm({
   onChallenge: (challenge: string) => void;
 }>) {
   const t = useT();
+  const writers = useAddressWriters();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [capsLock, setCapsLock] = useState(false);
@@ -85,7 +87,7 @@ export function LoginForm({
       return null;
     },
     onSuccess: (pending) =>
-      pending ? onChallenge(pending.challenge) : landSignedIn(onPhase),
+      pending ? onChallenge(pending.challenge) : landSignedIn(onPhase, writers),
     onError: (error) => {
       onPhase("error");
       if (error instanceof LoginError && error.failure === "credentials") {

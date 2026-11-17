@@ -33,6 +33,9 @@ func TestARefusalOffersOnlyWhatThisCallerCanDo(t *testing.T) {
 		refused(commsauthz.ReasonNoEvidence), refused(commsauthz.ReasonHardBounce),
 	}}
 	objected := consent.Review{IntentID: held.IntentID, Refusals: []consent.RefusedRecipient{refused(commsauthz.ReasonObjection)}}
+	objectedBeside := consent.Review{IntentID: held.IntentID, Refusals: []consent.RefusedRecipient{
+		refused(commsauthz.ReasonMarketingConsentRequired), refused(commsauthz.ReasonObjection),
+	}}
 	holdsTheGrant := func(roleKeys ...string) principal.Principal {
 		return principal.Principal{
 			Type: principal.PrincipalHuman,
@@ -92,6 +95,16 @@ func TestARefusalOffersOnlyWhatThisCallerCanDo(t *testing.T) {
 			review: objected,
 		},
 		{
+			// The stop wins over a refusal the grant could pass.
+			name: "an admin, refused for an objection beside a passable refusal", actor: holdsTheGrant("admin"),
+			review: objectedBeside,
+		},
+		{
+			// A bounce is a fact about the address, whoever holds the grant.
+			name: "a grant holder refused for a dead address", actor: holdsTheGrant("admin"),
+			review: bounced,
+		},
+		{
 			// Holding the grant does not conjure a message to send. A refusal
 			// with nothing held offers nothing, whoever is asking.
 			name: "a grant holder with no message to decide about",
@@ -110,6 +123,7 @@ func TestARefusalOffersOnlyWhatThisCallerCanDo(t *testing.T) {
 			name: "a passportless agent", actor: principal.Principal{Type: principal.PrincipalAgent}, review: held,
 		},
 		{
+			// The decision is the user's own, so their agent is not offered it.
 			name: "a user's agent holding the grant",
 			actor: principal.Principal{
 				Type: principal.PrincipalAgent, PassportID: ids.NewV7(), OnBehalfOf: ids.NewV7(),
@@ -119,7 +133,7 @@ func TestARefusalOffersOnlyWhatThisCallerCanDo(t *testing.T) {
 					},
 				},
 			},
-			review: held, want: []string{"direct_send"},
+			review: held,
 		},
 		{
 			name:   "a user's agent without the grant",

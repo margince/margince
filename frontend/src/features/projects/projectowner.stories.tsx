@@ -6,6 +6,7 @@ import { screen, userEvent, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import { AssignProjectOwnerAction } from "./projectowner";
@@ -38,6 +39,7 @@ const project: Project = {
 
 function Action({ owner = null }: Readonly<{ owner?: string | null }>) {
   installFetchStub({
+    "GET /me": meRoute({}),
     "GET /users": () =>
       jsonResponse({
         data: [

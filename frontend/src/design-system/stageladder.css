@@ -148,6 +148,21 @@
   border-color: transparent;
 }
 
+/* A stage the reader may not move to is a name, not a control. It keeps a
+   rung's box so the row reads the same, and a climbed one keeps its fill. */
+.stage-ladder-stage {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--controlHeight);
+  padding-inline: var(--space-3);
+  border-radius: var(--r-full);
+  corner-shape: round;
+  color: var(--textPrimary);
+}
+.stage-ladder-step.is-done > .stage-ladder-stage {
+  background: var(--bgChip);
+}
+
 /* A way OUT stands off from the run of open stages: won and lost are
    alternatives to each other rather than two more rungs of one ladder. */
 .stage-ladder-step.is-terminal {

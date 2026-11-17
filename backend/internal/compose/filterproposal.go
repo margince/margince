@@ -3,13 +3,8 @@
 
 package compose
 
-// Proposing a filter from plain words (POST /filters/propose).
-//
-// It lives in compose for filter preview's reason and one more: it reads the
-// collections store's vocabulary, the custom-field catalogue's labels and the
-// nl_search model lane, and only compose may hold all three. What it answers is
-// never saved — the builder shows the proposal as ordinary clauses, the preview
-// counts it, and a human presses Save.
+// Compose joins the collections vocabulary, custom-field labels and nl_search lane.
+// Proposals stay unsaved until a human saves the builder.
 
 import (
 	"context"

@@ -791,6 +791,42 @@
             },
             "AdvertiserContact": {
               "type": "string"
+            },
+            "PrivacyPage": {
+              "type": "string"
+            },
+            "ArchivePurpose": {
+              "type": "string"
+            },
+            "Translations": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "Language": {
+                    "type": "string"
+                  },
+                  "LegalName": {
+                    "type": "string"
+                  },
+                  "PostalAddress": {
+                    "type": "string"
+                  },
+                  "PrivacyContact": {
+                    "type": "string"
+                  },
+                  "ObjectionRoute": {
+                    "type": "string"
+                  },
+                  "AdvertiserContact": {
+                    "type": "string"
+                  },
+                  "ArchivePurpose": {
+                    "type": "string"
+                  }
+                }
+              }
             }
           }
         }
@@ -869,6 +905,31 @@
       ],
       "additionalProperties": false,
       "properties": {
+        "connection_idle_time": {
+          "description": "Time a connection above `pool_min_conns` can stay open while not in use. Applies to API and worker app pools. A `pool_max_conn_idle_time` value in the DSN wins. Restart to apply.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": "5m0s"
+        },
+        "connection_lifetime": {
+          "description": "Time a connection in the API or worker app pool can stay open, plus up to `20%` more. The pool checks the age when a query ends and on each health check. Closing a direct Postgres connection returns memory kept after planning. A `pool_max_conn_lifetime` value in the DSN wins. Restart to apply.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": "10m0s"
+        },
+        "read_concurrency": {
+          "description": "Limit on concurrent Worklist and ranked-search reads per process, capped at half the pool with at least one slot. Restart to apply.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "default": 3
+        },
         "worker_max_connections": {
           "description": "Worker connection limit, with the River listener counted. Also bounded by the DSN and queue worker count. Count every process when sizing the installation.",
           "type": [

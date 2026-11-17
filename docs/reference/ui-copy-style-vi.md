@@ -337,8 +337,8 @@ trị viên or ai where they read naturally.
   so thẻ stays unambiguous.
 - **lưu trữ is retention**, so archive takes kho lưu trữ. **nhóm quyết định mua** and **việc tiếp theo**
   have no settled loanword, and theo dõi is watch, which the product also does.
-- **máy chủ, tệp, trang web**: the reader is a sales team, not engineers; thu thập is the verb of Nghị định
-  13/2023/NĐ-CP on data protection.
+- **máy chủ, tệp, trang web**: the reader is a sales team, not engineers; thu thập is the verb of Luật
+  91/2025/QH15 and Nghị định 356/2025/NĐ-CP on personal data protection.
 
 ## Before you write Vietnamese
 

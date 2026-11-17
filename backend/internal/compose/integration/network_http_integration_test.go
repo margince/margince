@@ -61,7 +61,7 @@ func TestContactNetworkAnswersHonestlyWhenNobodyKnowsThem(t *testing.T) {
 
 	var contact AnyMap
 	if status := e.Call(t, "POST", "/v1/contacts",
-		AnyMap{"source": "manual", "full_name": "Unknown Contact"}, nil, &contact); status != http.StatusCreated {
+		AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Unknown Contact"}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("creating the contact: %d", status)
 	}
 	id, _ := contact["id"].(string)
@@ -92,7 +92,7 @@ func TestContactNetworkNoticesAnInvitedSeatWithoutListingItAsAColleague(t *testi
 
 	var contact AnyMap
 	if status := e.Call(t, "POST", "/v1/contacts",
-		AnyMap{"source": "manual", "full_name": "Outside Contact"}, nil, &contact); status != http.StatusCreated {
+		AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Outside Contact"}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("creating the contact: %d", status)
 	}
 	id, _ := contact["id"].(string)
@@ -395,7 +395,7 @@ func contactAt(t *testing.T, e *apptest.AppEnv, company, name, endedAt string) s
 	t.Helper()
 	var contact AnyMap
 	if status := e.Call(t, "POST", "/v1/contacts",
-		AnyMap{"source": "manual", "full_name": name}, nil, &contact); status != http.StatusCreated {
+		AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": name}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("creating %s: %d", name, status)
 	}
 	id, _ := contact["id"].(string)

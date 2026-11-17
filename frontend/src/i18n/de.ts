@@ -2177,7 +2177,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.schedule.more":
     "Lade weitere Agenda-Einträge, um die übrigen Termine zu sehen.",
   "brief.schedule.notConnected":
-    "Die heutigen Termine können nicht angezeigt werden, da kein Kalender verbunden ist.",
+    "Kein Kalender verbunden. Angezeigt werden Termine, die in Margince gebucht, erfasst oder importiert wurden.",
   "brief.schedule.unreadable":
     "Die heutigen Termine können nicht angezeigt werden, da dein Kalender nicht synchronisiert ist.",
   "brief.schedule.connect": "Kalender verbinden",
@@ -2377,6 +2377,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.brief_overnight": "Nächtliche Zusammenfassung",
   "systemJob.captured_deal_refile": "Erfasste Gespräche zuordnen",
   "systemJob.capture": "E-Mail-Erfassung",
+  "systemJob.privacy_request_task": "Aufgaben zu Datenanfragen",
   "systemJob.capture_auto_enrich":
     "Anreicherung von Unternehmensdaten aus E-Mails",
   "systemJob.capture_classify": "E-Mail-Sortierung",
@@ -2986,7 +2987,27 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "palette.searching": "Datensätze werden durchsucht…",
   "palette.searchFailedTitle": "Suche fehlgeschlagen",
   "palette.searchFailed": "Die Befehle oben funktionieren weiterhin.",
-  "palette.askRow": "Margince fragen: „{query}“",
+  "palette.askDataRow": "CRM-Daten fragen: „{query}“",
+  "palette.openAnalytics": "In Analytics öffnen",
+  "palette.dataUnsupportedOnly":
+    "Diese Frage konnte nicht mit CRM-Daten beantwortet werden.",
+  "palette.dataUnsupported":
+    "Diese Frage konnte nicht aus den CRM-Daten beantwortet werden. Hier steht, was das Handbuch dazu sagt.",
+  "palette.dataSource": "Quelle: {source}",
+  "palette.dataPlan": "Verwendete Abfrage",
+  "create.contactChannelRequired":
+    "Ergänze mindestens eine E-Mail, Telefonnummer oder LinkedIn-URL.",
+  "import.reason.contact_channel_missing":
+    "Der Kontakt hat keine E-Mail, Telefonnummer oder LinkedIn-URL. Ergänze eine Kontaktmöglichkeit.",
+  "palette.recordsCoverage":
+    "Abdeckung: {coverage}. Bis zu {limit} Datensätze.",
+  "palette.noDataRecords": "Keine Datensätze passen zu dieser Frage.",
+  "palette.dataUnavailable": "CRM-Daten konnten nicht gelesen werden",
+  "palette.coverageExact": "Genaue Treffer",
+  "palette.coveragePartial": "Begrenzte Treffer",
+  "palette.crmRecords": "CRM-Datensätze",
+  "palette.recordName": "Datensatz",
+  "palette.askRow": "Handbuch fragen: „{query}“",
   "palette.asking": "Margince wird gefragt…",
   "palette.answerAria": "Antwort von Margince",
   "palette.answerFrom": "Aus {name}",
@@ -3051,6 +3072,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.card.summary": "Deal-Zusammenfassung: {name}",
   "deal.card.email": "E-Mail schreiben: {name}",
   "deal.card.addTask": "Aufgabe hinzufügen: {name}",
+  "deal.card.summaryItem": "Deal-Zusammenfassung",
+  "deal.card.moveTo": "Nach {stage} verschieben",
+  "deal.card.markWon": "Als gewonnen markieren",
+  "deal.card.markLost": "Als verloren markieren",
+  "deal.card.changeCloseDate": "Abschlussdatum ändern",
+  "deal.card.closedReopen":
+    "Dieser Deal ist abgeschlossen. Öffne ihn auf seiner Seite wieder, um ihn zu verschieben.",
+  "deal.card.copyLink": "Link kopieren",
+  "deal.card.linkCopied": "Link kopiert",
+  "deal.card.copyFailed":
+    "Der Link konnte nicht kopiert werden. Öffne den Deal und kopiere die Adresse aus der Adressleiste des Browsers.",
   "deal.mail.sent": "Gesendet {ago}",
   "deal.mail.received": "Erhalten {ago}",
   "deal.mail.sentOn": "Gesendet am {date}",
@@ -3426,6 +3458,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "roster.failedTeams": "Die Teams konnten nicht geladen werden.",
   "owner.rosterFailed":
     "Die Teammitglieder konnten nicht geladen werden. Lade die Seite neu, um eines zu wählen.",
+  "ownerPick.change": "Verantwortung ändern",
+  "ownerPick.search": "Teammitglieder suchen",
+  "ownerPick.done": "{name} zugewiesen",
   "ref.notInRoster":
     "Aktuell zugewiesen (nicht mehr in der Liste der Nutzenden)",
   "picker.noMatch": "Kein Treffer",
@@ -3662,6 +3697,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Mails, die die Sperre zurückgehalten hat, können wieder gesendet werden.",
   "consent.stopReason": "Grund (bleibt im Verlauf des Datensatzes)",
   "consent.manage": "Einwilligungen und Nachweisverlauf verwalten",
+  "consent.optOutRecords": "Abmeldenachweise herunterladen",
   "contact.consent": "Einwilligung",
   "consent.grant": "Einwilligung erfassen",
   "consent.operatorWording":
@@ -5988,9 +6024,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Disqualifiziert. Dieser Lead ist schreibgeschützt.",
   "lead.marker": "Lead",
   "lead.assignToMe": "Mir zuweisen",
-  "lead.assignChoose": "Teammitglied wählen",
-  "lead.assignNobodyElse":
-    "Kein weiteres Teammitglied, dem dieser Lead zugewiesen werden kann.",
   "lead.saveOverride": "Überschreibung speichern",
   "lead.overrideScoreValue": "Score",
   "lead.trigger.inboundReply": "Eingehende Antwort",
@@ -6506,7 +6539,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.archivedReadOnly":
     "Dieser Deal ist archiviert und lässt keine Änderungen zu.",
   "deal.notYoursToChange":
-    "Du kannst diesen Deal nicht ändern. Frage die verantwortliche Person, ob sie ihn mit dir teilt, oder einen Admin nach Bearbeitungsrechten.",
+    "Du kannst Aktivitäten erfassen und Aufgaben hinzufügen. Um diesen Deal zu ändern, muss die verantwortliche Person ihn mit dir teilen.",
   "deal.closedTakesNoStage":
     "Dieser Deal ist abgeschlossen. Öffne den Deal wieder, um ihn in eine andere Phase zu verschieben.",
   "deal.reopen": "Wieder öffnen",
@@ -7087,9 +7120,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.readings.needsPrep_other": "{count} brauchen Vorbereitung",
   "brief.readings.prepUnknown": "Vorbereitung nicht geprüft",
   "brief.readings.prepared": "Alle vorbereitet",
-  "brief.readings.calendarNotConnected": "Nicht verbunden",
   "brief.readings.calendarNotConnectedWhy":
-    "Verbinde deinen Kalender, um Termine zu zählen.",
+    "Verbinde deinen Kalender, um auch seine Termine zu zählen.",
   "brief.readings.calendarUnreadable": "Synchronisiert nicht",
   "brief.readings.calendarUnreadableWhy":
     "Verbinde deinen Kalender neu, um Termine zu zählen.",
@@ -7263,6 +7295,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "create.firstName": "Vorname",
   "create.lastName": "Nachname",
   "create.contactTitle": "Jobtitel",
+  "create.acquisitionSource": "Herkunft des Kontakts",
+  "create.acquisitionSourceHint":
+    "Diese Angabe erscheint auf der Datenschutzseite des Kontakts.",
+  "create.acquisitionNote": "Angaben zur Herkunft",
+  "create.source.metInPerson": "Persönlich kennengelernt",
+  "create.source.businessCard": "Visitenkarte",
+  "create.source.referral": "Empfehlung",
+  "create.source.website": "Website",
+  "create.source.other": "Andere",
   "create.email": "E-Mail",
   "create.phone": "Telefon",
   "create.linkedin": "LinkedIn",
@@ -8002,6 +8043,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.why.contract": "Vertrag der Gegenseite",
   "compose.why.account": "Kundenbeziehung der Gegenseite",
   "compose.why.marketing": "Marketing",
+  "sendPermission.stopWithReason": "Senden braucht deine Begründung",
   "sendPermission.refused": "Nachricht kann nicht gesendet werden",
   "sendPermission.sayWhy": "Kontaktgrund erfassen",
   "sendPermission.unproven":
@@ -8013,6 +8055,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "sendPermission.missingContext": "Für diese Nachricht fehlt eine Angabe",
   "sendPermission.missingPermission": "Für diese Nachricht fehlt die Erlaubnis",
   "sendPermission.reason.chooseDeal": "Wähle den Deal für dieses Follow-up.",
+  "sendPermission.reason.lawfulBasisUnconfirmed":
+    "Für diesen Kontakt ist keine Rechtsgrundlage erfasst, und die Warnung wurde vor dem Senden nicht bestätigt.",
   "sendPermission.appliesTo": "Das betrifft {address}.",
   "sendPermission.recipientLine": "{address}: {reason}",
   "sendPermission.unansweredHeld":
@@ -8033,6 +8077,29 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "sendPermission.markName": "Sendestatus dieser Nachricht",
   "sendPermission.checking":
     "Wird geprüft, ob diese Nachricht gesendet werden kann…",
+  "lawfulBasis.title": "Keine gültige Grundlage erfasst",
+  "lawfulBasis.body":
+    "Für diesen Kontakt ist keine nach vietnamesischem Recht gültige Grundlage erfasst: weder seine Einwilligung noch ein Fall, in dem das Gesetz die Verarbeitung ohne sie erlaubt. Du sendest auf eigenes Risiko.",
+  "lawfulBasis.confirm": "Trotzdem senden",
+  "lawfulBasis.askConsent": "Um Einwilligung bitten",
+  "lawfulBasis.askFailed":
+    "Die Anfrage nach Einwilligung wurde nicht gesendet. Versuche es erneut.",
+  "lawfulBasis.asked":
+    "Anfrage nach Einwilligung an {address} gesendet. Deine Nachricht wurde nicht gesendet.",
+  "lawfulBasis.askPartial":
+    "Anfrage nach Einwilligung an {asked} gesendet. An {failed} wurde sie nicht gesendet. Versuche es erneut, um nur sie zu fragen.",
+  "lawfulBasis.failed":
+    "Deine Bestätigung wurde nicht gespeichert. Versuche es erneut.",
+  "privacynotice.purposeLine": "{purpose}: {basis}",
+  "privacynotice.basisOn.consent": "Ihre Einwilligung vom {date}",
+  "privacynotice.basisOn.agreement":
+    "Erfüllung der Vereinbarung zwischen Ihnen und {controller}",
+  "privacynotice.basisOn.us": "uns",
+  "privacynotice.basis.none":
+    "Für diese Nutzung ist keine Rechtsgrundlage erfasst.",
+  "privacynotice.basisOn.none": "keine Rechtsgrundlage erfasst",
+  "confirm.done.bodyNamed":
+    "Ihre Antwort wurde erfasst. Das Team von {controller} bearbeitet Ihre Anfrage. Wird mehr Zeit benötigt, erhalten Sie die Gründe. Dieser Link kann nun nicht mehr verwendet werden.",
   "sendPermission.unanswered":
     "Die Versandprüfung konnte nicht abgeschlossen werden. Beim Senden wird die Prüfung erneut ausgeführt.",
   "sendPermission.reason.objected":
@@ -8048,9 +8115,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "sendPermission.reason.optedOutAfterRequest":
     "Die empfangende Person hat sich nach ihrer Anfrage vom Marketing abgemeldet. Kläre mit ihr, ob sie das Angebot noch möchte, und erfasse dann ihre neue Anfrage.",
   "sendPermission.reason.permissionRequired":
-    "Für diese Marketingnachricht ist nach den geltenden Regeln keine Erlaubnis belegt. Eine Ausnahme durch Mitarbeitende ersetzt weder die Einwilligung noch die erforderlichen Nachweise.",
+    "Für diese Marketingnachricht ist nach den geltenden Regeln keine Erlaubnis belegt. Erfasse die Einwilligung oder die erforderlichen Nachweise.",
   "sendPermission.reason.consentRequired":
-    "Marketing an eine empfangende Person in diesem Land braucht ihre vorherige Einwilligung. Keine Ausnahme kann sie ersetzen.",
+    "Marketing an eine empfangende Person in diesem Land braucht ihre vorherige Einwilligung.",
   "sendPermission.reason.dealNotRequested":
     "Ein Deal allein zeigt nicht, dass die empfangende Person diese Verhandlung angefragt hat. Erfasst sein muss eine Anfrage der Person, zum Beispiel aus einem Anruf oder Termin.",
   "sendPermission.reason.tooMany":
@@ -8218,6 +8285,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Erstellt, weil dieser Lead geschrieben oder einen Termin gebucht hat. Eine Antwort wandelt niemanden um: Qualifiziere den Lead, wenn er so weit ist.",
   "tasks.origin.assurance":
     "Erstellt von der nächtlichen Prognoseprüfung: Angaben zu diesem Deal brauchen Aufmerksamkeit. Die Deal-Seite listet sie auf.",
+  "tasks.origin.privacy_request":
+    "Erstellt, als der Kontakt die Korrektur, Löschung oder das Ende der Nutzung seiner Daten verlangt hat. Das Recht seines Landes legt die Fristen dieser Aufgabe fest.",
   "tasks.origin.analytics_decision":
     "Aus einem Vertriebstermin festgehalten: eine Entscheidung mit Verantwortlichem und Prüftermin. Halte das Ergebnis unter Entscheidungen aus dem letzten Termin fest.",
   "tasks.origin.overnight_reconcile":
@@ -9219,25 +9288,24 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "workArea.hint.admin_settings":
     "Einstellungen, die mehr Rechte brauchen, als der Vertrieb hat",
   "workArea.hint.own_account": "Dein Profil und deine Präferenzen",
-  "workArea.legend": "Wo er arbeiten darf",
+  "workArea.legend": "Wo gearbeitet werden darf",
   "workArea.mode.all": "Alle Bereiche",
   "workArea.mode.allNote":
     "Alles, was deine Rolle erreicht, auch später hinzugefügte Bereiche",
   "workArea.mode.custom": "Bereiche auswählen",
   "workArea.mode.customNote":
     "Nur die ausgewählten Bereiche. Ein neuer Bereich ist zunächst deaktiviert",
-  "workArea.pickLegend": "Bereiche, in denen er arbeiten darf",
+  "workArea.pickLegend": "Bereiche, in denen gearbeitet werden darf",
   "workArea.pickOne": "Wähle mindestens einen Bereich aus.",
   "passportAreas.open": "Bereiche ändern",
   "passportAreas.openNamed": "Bereiche für {name} ändern",
-  "passportAreas.for":
-    "Für {name}. Seine Berechtigungen bleiben, wie sie sind.",
-  "passportAreas.gains": "Er arbeitet dann auch in: {areas}.",
+  "passportAreas.for": "Für {name}. Die Berechtigungen bleiben, wie sie sind.",
+  "passportAreas.gains": "Dann auch erlaubt: {areas}.",
   "passportAreas.loses":
-    "Er arbeitet dann nicht mehr in: {areas}. Sein nächster Aufruf dort wird abgelehnt.",
+    "Dann nicht mehr erlaubt: {areas}. Der nächste Aufruf dort wird abgelehnt.",
   "passportAreas.unchanged": "Ändere zuerst einen Bereich.",
   "passportAreas.closesLater":
-    "Später hinzugefügte Bereiche und Werkzeuge einer Erweiterung bleiben für ihn deaktiviert.",
+    "Später hinzugefügte Bereiche und neue Werkzeuge aus Erweiterungen bleiben dafür deaktiviert.",
   "passportAreas.refusalTitle":
     "Was ein Agent erfährt, wenn ein Bereich deaktiviert ist",
   "passportAreas.refusal":
@@ -9884,7 +9952,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.tierRead":
     "Lesen, zusammenfassen, entwerfen: läuft sofort und wird vollständig protokolliert.",
   "settings.tierSend":
-    "E-Mails senden, Termine buchen, einen Kontakt oder Deal ändern: läuft sofort, wenn der Agent diese Berechtigung hat. Mit der Berechtigung ist die Freigabe bereits erteilt.",
+    "Laufende Änderungen laufen automatisch und lassen sich rückgängig machen. Vor dem Versand braucht der Assistent deine Freigabe oder einen direkten Auftrag. Unbeaufsichtigter Versand wartet.",
   "settings.tierWait": "Anreicherung aus dem Web: wartet in Freigaben.",
   "settings.tierAdvance":
     "Deal-Phase ändern oder Deal abschließen, Aktivitäten einem Projekt zuordnen: läuft sofort, wenn der Agent die Berechtigung hat.",
@@ -10420,6 +10488,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "import.problem.new_tag": "Neuer Tag",
   "import.problem.duplicate": "Duplikat",
   "import.problem.permission": "Keine Berechtigung",
+  "import.problem.incomplete_identity": "Kontaktmöglichkeit fehlt",
   "import.problem.unusable_row": "Unbrauchbare Zeile",
   "settings.dangerZone": "Gefahrenbereich",
   "settings.resetDataDesc":
@@ -10872,6 +10941,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privacy.purposeKey": "Schlüssel",
   "privacy.purposeLabel": "Bezeichnung",
   "privacy.purposeDoi": "Double-Opt-in erforderlich",
+  "privacy.purposeFrequency": "Wie oft",
+  "privacy.purposeFrequency.weekly": "Etwa einmal pro Woche",
+  "privacy.purposeFrequency.monthly": "Etwa einmal im Monat",
+  "privacy.purposeFrequency.quarterly": "Etwa einmal im Quartal",
   "privacy.purposeCreate": "Zweck erstellen",
   "privacy.purposeAppendOnly":
     "Ein Zweck lässt sich nach dem Erstellen weder umbenennen noch entfernen. Der Katalog kann nur ergänzt werden. Wähle den Schlüssel mit Bedacht.",
@@ -11090,7 +11163,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ihre Daten stammen aus einer Liste, die gekauft oder importiert wurde.",
   "privacynotice.source.unknown":
     "Wir können nicht sagen, wie Ihre Daten zu uns gelangt sind.",
-  "privacynotice.purposes.title": "Wofür wir Ihre Daten nutzen",
+  "privacynotice.source.stated.metInPerson":
+    "Wir haben Sie persönlich kennengelernt.",
+  "privacynotice.source.stated.businessCard":
+    "Sie haben uns Ihre Visitenkarte gegeben.",
+  "privacynotice.source.stated.referral": "Jemand hat Sie uns empfohlen.",
+  "privacynotice.source.stated.website":
+    "Wir haben Ihre Daten auf einer Website gefunden.",
+  "privacynotice.source.stated.other": "Eine andere Quelle, unten beschrieben.",
+  "privacynotice.source.statedNote": "Unsere Angabe dazu: {note}",
+  "privacynotice.purposes.title":
+    "Wofür wir Ihre Daten nutzen und auf welcher Grundlage",
   "privacynotice.rights.title": "Ihre Rechte an diesen Daten",
   "privacynotice.rights.how":
     "Um eines dieser Rechte zu nutzen, antworten Sie auf die Nachricht, die Sie hierher geführt hat, oder kontaktieren Sie uns über die Adresse auf unserer Website.",
@@ -11148,6 +11231,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privacynotice.retention.keptByLaw":
     "Laut Gesetz bewahren wir Nachrichten zu einer Bestellung oder einem Vertrag mindestens {period} auf, auch wo hier eine kürzere Frist steht.",
   "privacynotice.recipients.title": "Wer die Daten sieht",
+  "privacynotice.transfers.title":
+    "KI-Dienste, Übermittlungen und automatisierte Entscheidungen",
+  "privacynotice.transfers.body":
+    "Wir nutzen KI-Dienste, um unsere Korrespondenz mit Ihnen zu sortieren, zusammenzufassen und Texte zu entwerfen. Welcher Anbieter diese Texte erhält und wo er sie verarbeitet, legen wir fest: ein Modell, das wir selbst betreiben, oder ein Anbieter wie Anthropic, OpenAI, Google (Gemini, Vertex AI), Mistral oder OpenRouter. Wählen wir einen Standort in der EU oder den EU-Dienst von OpenRouter, bleibt die Verarbeitung in der EU. Andernfalls kann sie außerhalb der EU stattfinden, auch in den USA, auf Grundlage des Vertrags des Anbieters mit uns. Keine Entscheidung mit rechtlicher Wirkung für Sie oder ähnlich erheblicher Wirkung wird ausschließlich automatisiert getroffen: Die KI macht Vorschläge, und ob wir Ihnen schreiben dürfen, entscheiden feste Regeln zu Ihrer Einwilligung und Ihren Anfragen.",
   "privacynotice.recipient.colleagues":
     "Mitarbeitende, die mit unserem CRM arbeiten.",
   "privacynotice.recipient.serviceProviders":
@@ -11158,11 +11245,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privacynotice.retention.afterDays_other": "{count} Tagen",
   "privacynotice.retention.title": "Wie lange wir die Daten speichern",
   "privacynotice.retention.archive":
-    "{scope}: nach {days} aus der täglichen Nutzung genommen.",
+    "{scope}: nach {days} ab der Erfassung in ein Archiv mit eingeschränktem Zugriff verschoben, um {purpose}. Gelöscht werden sie, wenn sie für diesen Zweck nicht mehr nötig sind, wenn Sie dies verlangen oder wenn Ihr Datensatz gelöscht wird.",
+  "privacynotice.retention.archivePurpose":
+    "auf Rechtsansprüche zu antworten und Geschäftsunterlagen aufzubewahren",
   "privacynotice.retention.anonymize": "{scope}: nach {days} anonymisiert.",
   "privacynotice.retention.erase": "{scope}: nach {days} gelöscht.",
   "privacynotice.retention.rest":
-    "Alles andere speichern wir, solange wir es für die oben genannten Zwecke nutzen. Bitten Sie uns um Löschung, löschen wir, was das Gesetz uns zu löschen erlaubt.",
+    "Alles andere speichern wir, solange wir es für die Zwecke unter „Wofür wir Ihre Daten nutzen und auf welcher Grundlage“ nutzen. Bitten Sie uns um Löschung, löschen wir, was das Gesetz uns zu löschen erlaubt.",
   "privacynotice.retention.scope.activity":
     "E-Mails, Termine und Anrufe mit Ihnen",
   "privacynotice.retention.scope.activityTranscript":
@@ -11301,6 +11390,49 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privacy.legalHold":
     "Die Löschung hat hier keinen Vorrang, da für diesen Kontakt eine gesetzliche Aufbewahrungsfrist läuft (Art. 17 Abs. 3 lit. b). Die Sperre gilt für jede Rolle, auch für Admins, und lässt sich nicht übersteuern. Der Versuch wurde im Audit-Log festgehalten.",
 
+  "archivePurpose.title": "Zweck des Archivs",
+  "archivePurpose.intro":
+    "Nach ihrer Aufbewahrungsfrist kommen erfasste E-Mails, Termine und Anrufe in ein Archiv mit eingeschränktem Zugriff. Die Datenschutzseite nennt, wozu das Archiv sie aufbewahrt, und du löschst, was diesem Zweck nicht mehr dient.",
+  "archivePurpose.label": "Zweck des Archivs",
+  "archivePurpose.translationLabel": "Zweck des Archivs auf {language}",
+  "archivePurpose.hint":
+    "Beendet den Satz „in ein Archiv mit eingeschränktem Zugriff verschoben, um …“. Leer steht auf der Seite „{purpose}“.",
+  "archiveReview.title": "Archiv prüfen",
+  "archiveReview.intro":
+    "Archivierte E-Mails, Termine und Anrufe, die ältesten zuerst. Lösche, was dem Zweck des Archivs nicht mehr dient. Margince löscht hier nichts von selbst.",
+  "archiveReview.filters": "Archivfilter",
+  "archiveReview.before": "Vor dem",
+  "archiveReview.contact": "Kontakt",
+  "archiveReview.company": "Unternehmen",
+  "archiveReview.record": "Eintrag",
+  "archiveReview.with": "Mit",
+  "archiveReview.withNobody": "Kein Kontakt und kein Unternehmen",
+  "archiveReview.status": "Löschen",
+  "archiveReview.deletable": "Kann gelöscht werden",
+  "archiveReview.kept.legalHold": "Bleibt: Legal Hold",
+  "archiveReview.kept.optOutRecord": "Bleibt: Abmeldenachweis",
+  "archiveReview.kept.byLaw": "Bleibt per Gesetz",
+  "archiveReview.kept.notArchived": "Nicht mehr im Archiv",
+  "archiveReview.kept.notFound": "Nicht gefunden",
+  "archiveReview.empty": "Kein archivierter Eintrag passt zu diesen Filtern.",
+  "archiveReview.deleteShown_one": "{count} angezeigten Eintrag löschen",
+  "archiveReview.deleteShown_other": "{count} angezeigte Einträge löschen",
+  "archiveReview.confirmTitle": "Archivierte Einträge löschen?",
+  "archiveReview.confirmBody_one":
+    "Der Inhalt von {count} archivierten Eintrag wird endgültig gelöscht. Mit wem und wann bleibt erhalten. Einträge unter Legal Hold, Abmeldenachweise und Einträge mit gesetzlicher Frist bleiben, wie sie sind.",
+  "archiveReview.confirmBody_other":
+    "Der Inhalt von {count} archivierten Einträgen wird endgültig gelöscht. Mit wem und wann bleibt erhalten. Einträge unter Legal Hold, Abmeldenachweise und Einträge mit gesetzlicher Frist bleiben, wie sie sind.",
+  "archiveReview.confirm": "Löschen",
+  "archiveReview.doneTitle": "Löschen abgeschlossen",
+  "archiveReview.partialTitle": "Erledigt, bevor das Löschen abbrach",
+  "archiveReview.deleted_one": "{count} Eintrag gelöscht.",
+  "archiveReview.deleted_other": "{count} Einträge gelöscht.",
+  "archiveReview.keptCount_one": "{reason}: {count} Eintrag",
+  "archiveReview.keptCount_other": "{reason}: {count} Einträge",
+  "archiveReview.failed_one":
+    "{count} Eintrag konnte nicht gelöscht werden und bleibt, wie er war.",
+  "archiveReview.failed_other":
+    "{count} Einträge konnten nicht gelöscht werden und bleiben, wie sie waren.",
   "restricted.title": "Eingeschränkte Datensätze",
   "restricted.sub":
     "Datensätze, die eine gesetzliche Aufbewahrungspflicht nach einer Löschung sperrt: welcher Datensatz, warum und bis wann. Die Korrespondenz selbst ist ausgeblendet, damit sie nicht gelesen wird.",
@@ -12423,6 +12555,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Jemand, der geschrieben hat, arbeitet bereits dort.",
   "worklist.domainQuestion.suggested": "Vorgeschlagenes Unternehmen: {name}.",
   "worklist.domainQuestion.confirm": "Unternehmen bestätigen",
+  "worklist.domainQuestion.confirmNamed": "{name} bestätigen",
+  "worklist.domainReview.anotherLabel": "Anderes Unternehmen",
+  "worklist.domainReview.newLabel": "Neues Unternehmen",
+  "worklist.domainReview.siteLabel": "Die Website",
+  "worklist.domainReview.vendorLabel": "Mail- oder Hosting-Anbieter",
+  "worklist.domainReview.laterLabel": "Später",
+  "worklist.domainReview.mailboxesLabel": "Deine Postfächer",
   "worklist.domainQuestion.confirmEffectNone":
     "Bestätigen verknüpft {domain} mit {company}. Kontakte, die schon bei einem anderen Unternehmen sind, behalten es.",
   "worklist.domainQuestion.confirmEffect_one":
@@ -12509,7 +12648,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "E-Mails werden automatisch zu Kontakten, Unternehmen und Aktivitäten.",
   "ob.s4.scope2Lead": "Senden ist enthalten.",
   "ob.s4.scope2Rest":
-    "Margince kann aus diesem Postfach senden, wenn du sendest und wenn du einem Agenten einen Passport gibst, der das Senden erlaubt. Mit diesem Passport ist die Freigabe bereits erteilt. Du kannst den Passport jederzeit entziehen.",
+    "Margince kann aus diesem Postfach senden, wenn du sendest oder deinen Assistenten direkt damit beauftragst. Die Sendeberechtigung allein gibt keine Nachricht frei. Unbeaufsichtigter Versand wartet auf Freigabe. Du kannst den Zugriff jederzeit entziehen.",
   "ob.s4.scope3Lead": "Die Daten bleiben in deinem Unternehmen.",
   "ob.s4.scope3Rest": "Alles jederzeit exportieren oder löschen.",
   "ob.s4.scope4Lead": "Trennen mit einem Klick.",
@@ -13464,9 +13603,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Auswahl ist freiwillig. Sie können Ihre Kontaktdaten korrigieren, ohne Neuigkeiten zu abonnieren.",
   "confirm.marketing.title": "Gelegentlich Neuigkeiten erhalten?",
   "confirm.marketing.ask":
-    "Sie erhalten von Zeit zu Zeit Neuigkeiten, etwa einmal im Monat. Ihre Entscheidung wird respektiert.",
+    "{controller} verwendet Ihren Namen und Ihre E-Mail-Adresse, um Ihnen etwa einmal im Monat per E-Mail Neuigkeiten zu eigenen Produkten und Dienstleistungen zu senden. Sie können Ihre Einwilligung jederzeit über den Abmeldelink in jeder E-Mail widerrufen.",
   "confirm.marketing.yes": "Neuigkeiten abonnieren",
   "confirm.marketing.no": "Keine Neuigkeiten senden",
+  "confirm.controllerFallback": "das Unternehmen",
+  "confirm.frequency.weekly": "einmal pro Woche",
+  "confirm.frequency.monthly": "einmal im Monat",
+  "confirm.frequency.quarterly": "einmal im Quartal",
   "confirm.provenance.title": "Herkunft Ihrer Angaben",
   "confirm.provenance.empty": "Für diese Angaben ist keine Quelle erfasst.",
   "confirm.provenance.line": "{field}: aus {source}, erfasst am {date}",
@@ -13476,7 +13619,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "confirm.submit": "Angaben bestätigen",
   "confirm.subscription.title": "Bestätigen Sie Ihr Abonnement",
   "confirm.subscription.ask":
-    "Bestätigen Sie, dass Sie {purpose} erhalten möchten.",
+    "Bestätigen Sie, dass {controller} Ihren Namen und Ihre E-Mail-Adresse verwenden darf, um Ihnen etwa {frequency} {purpose} per E-Mail zu senden. Sie können Ihre Einwilligung jederzeit über den Abmeldelink in jeder E-Mail widerrufen. Informationen zu Ihren Rechten: {privacy_page}.",
   "confirm.subscription.confirm": "Abonnement bestätigen",
   "confirm.subscription.alreadyTitle": "Abonnement aktiv",
   "confirm.subscription.alreadyBody":
@@ -13488,7 +13631,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "confirm.receipt.rectify": "Korrektur angefordert",
   "confirm.receipt.erasure": "Löschung angefordert",
   "confirm.done.body":
-    "Ihre Antwort wurde erfasst. Änderungen gehen zur Übernahme an eine Person aus dem Team. Dieser Link kann nun nicht mehr verwendet werden.",
+    "Ihre Antwort wurde erfasst. Das zuständige Team bearbeitet Ihre Anfrage. Wird mehr Zeit benötigt, erhalten Sie die Gründe. Dieser Link kann nun nicht mehr verwendet werden.",
   "confirm.invalidLink":
     "Dieser Link ist nicht mehr gültig. Er wurde vielleicht schon verwendet oder ist abgelaufen. Wenn Sie noch etwas brauchen, antworten Sie auf die E-Mail, die Sie hierher geführt hat.",
   "confirm.questionChanged":
@@ -14542,9 +14685,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Alles funktioniert weiter, und nichts ist begrenzt. Konfiguriere ein Lizenz-Token für diese Installation, damit die Plätze mit dem Lizenzumfang abgeglichen werden.",
   "license.refused.title": "Die Lizenz dieser Installation wurde abgelehnt",
   "license.refused.body":
-    "Das für diese Installation konfigurierte Lizenz-Token wurde vorgelegt und abgelehnt. Belegte volle Plätze funktionieren weiter, und bis das Token ersetzt wird, kommt kein voller Platz über das hinzu, was die letzte gültige Lizenz gewährt hat. Prüfe das Token und die Uhr der Installation.",
-  "license.refused.bodyUncapped":
-    "Das für diese Installation konfigurierte Lizenz-Token wurde vorgelegt und abgelehnt. Alles funktioniert ohne Begrenzung weiter, bis das Token ersetzt wird. Prüfe das Token und die Uhr der Installation.",
+    "Das für diese Installation konfigurierte Lizenz-Token wurde vorgelegt und abgelehnt. Margince ist gesperrt, bis eine Prüfung das Token annimmt. Prüfe das Token und die Uhr der Installation und prüfe danach erneut.",
   "license.seats.capacityOnly":
     "Deine Rolle darf den Lizenzumfang nicht sehen.",
   "license.seats.title": "Plätze",
@@ -14565,7 +14706,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "license.holder.id": "Lizenz-ID",
   "license.grace.title": "Diese Lizenz ist abgelaufen",
   "license.grace.body":
-    "Die Lizenz ist am {expiry} abgelaufen und funktioniert noch für einen begrenzten Zeitraum. Erneuere die Lizenz, damit die Installation in Betrieb bleibt.",
+    "Die Lizenz ist am {expiry} abgelaufen. Margince ist gesperrt, bis eine gültige Lizenz eingerichtet ist.",
   "license.renewal.title": "Lizenz muss erneuert werden",
   "license.renewal.body":
     "Die Lizenz läuft am {expiry} ab. Vor diesem Datum ändert sich nichts.",
@@ -15602,11 +15743,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "trial.locked.member":
     "Deine Admins können eine Lizenz vom Margince-Team bekommen. Du kannst dem Team auch selbst schreiben.",
   "common.trialEnded":
-    "Die Testphase dieser Installation ist beendet, deshalb wartet diese Änderung auf eine Lizenz. Deine Daten bleiben, wie sie sind.",
+    "Die Testphase dieser Installation ist beendet, deshalb wurde diese Änderung nicht gespeichert. Nimm sie erneut vor, sobald eine Lizenz da ist. Deine Daten bleiben, wie sie sind.",
+  "license.locked.pageTitle": "Lizenz nicht gültig",
+  "license.locked.title": "Deine Margince-Lizenz ist nicht mehr gültig",
+  "license.locked.body":
+    "Die Lizenz ist abgelaufen oder wurde abgelehnt. Margince ist gesperrt, und die Arbeit im Hintergrund ruht, bis eine gültige Lizenz da ist. Deine Daten bleiben, wie sie sind, und nichts wird gelöscht.",
+  "common.licenseLapsed":
+    "Die Lizenz dieser Installation ist abgelaufen oder wurde abgelehnt, deshalb wurde diese Änderung nicht gespeichert. Nimm sie erneut vor, sobald eine gültige Lizenz da ist. Deine Daten bleiben, wie sie sind.",
   "licensebanner.link": "{tab} öffnen",
   "licensebanner.grace.title": "Lizenz abgelaufen",
   "licensebanner.grace.body":
-    "Die Lizenz dieser Installation ist abgelaufen und in der Übergangsfrist. Margince läuft weiter, startet nach dem Ende der Übergangsfrist aber nicht mehr. Erneuere die Lizenz vorher.",
+    "Die Lizenz dieser Installation ist abgelaufen. Margince ist gesperrt, bis eine gültige Lizenz eingerichtet ist.",
 
   "aicalls.title": "KI-Aufrufprotokoll",
   "aicalls.withheld":
@@ -18136,13 +18283,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "consent.redirectsTo": "Margince sendet die Autorisierung zurück an {host}.",
   "consent.redirectsToLoopback":
     "Das ist eine Adresse auf diesem Computer, und diese Verbindung kann nicht belegen, welches Programm dort lauscht.",
-  "consent.scopeNote.read": "sieht, was du sehen kannst",
-  "consent.scopeNote.draft": "bereitet Nachrichten zu deiner Prüfung vor",
+  "consent.scopeNote.read": "Sieht, was du sehen kannst",
+  "consent.scopeNote.draft": "Bereitet Nachrichten zu deiner Prüfung vor",
   "consent.scopeNote.write":
-    "erstellt, bearbeitet und archiviert Datensätze in deinem Namen",
+    "Erstellt, bearbeitet und archiviert Datensätze in deinem Namen",
   "consent.scopeNote.send":
-    "sendet Nachrichten in deinem Namen, ohne vorher zu fragen",
-  "consent.scopeNote.enrich": "führt KI-Arbeit aus und kauft Kontaktdaten",
+    "Erlaubt den Versand; der Assistent muss vorher deine Freigabe oder einen direkten Auftrag erhalten. Die Berechtigung allein ist keine Freigabe",
+  "consent.scopeNote.enrich": "Führt KI-Arbeit aus und kauft Kontaktdaten",
+  "consent.scopesLegend": "Was das Tool tun darf",
   "consent.ceiling":
     "Nie mehr als deine eigenen Berechtigungen. Du kannst die Verbindung jederzeit in den Einstellungen unter KI-Assistenten trennen.",
   "consent.preset.label": "Assistentenrechte",
@@ -19381,6 +19529,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lists.saveFilterConflict":
     "Jemand hat diese Liste geändert, nachdem du sie geöffnet hast. Öffne die Liste erneut, um die Änderung zu sehen, und bearbeite dann den Filter.",
   "lists.history.someone": "Jemand",
+  "lists.history.created": "Liste angelegt",
+  "lists.history.renamed": "Umbenannt von {before} in {after}",
+  "lists.history.repurposed": "Zweck geändert",
+  "lists.history.reshared": "Geändert, wer sie findet",
+  "lists.history.handedOver": "Zuständigkeit neu vergeben",
+  "lists.history.refiltered": "Filter geändert",
+  "lists.history.filterBefore": "Vorher: {sentence}",
+  "lists.history.filterAfter": "Danach: {sentence}",
+  "lists.history.noFilter": "keine Bedingungen",
   "lists.changes.since": "Seit deinem Besuch am {when}:",
   "lists.changes.joined_one": "{count} hinzugekommen",
   "lists.changes.joined_other": "{count} hinzugekommen",
@@ -19649,9 +19806,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "project.owner": "Verantwortlich",
   "project.ownerMe": "Selbst",
   "project.assignOwner": "Einem Teammitglied zuweisen",
-  "project.assignOwnerTitle": "Einem Teammitglied zuweisen",
-  "project.assignOwnerSearch": "Teammitglieder suchen",
-  "project.assignOwnerDone": "{name} zugewiesen",
   "project.description": "Beschreibung",
   "project.targetEnd": "Geplantes Enddatum",
   "project.new": "Neues Projekt",
@@ -20758,7 +20912,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.promiseSettleFailed":
     "Die Zusage konnte nicht als eingehalten markiert werden. Bitte versuche es erneut.",
   "worklist.verb.meetingSkipNextStep": "Nächsten Schritt überspringen",
-  "worklist.verb.meetingNextStep": "Wie geht es weiter?",
+  "worklist.verb.meetingNotes": "Notizen",
+  "worklist.verb.meetingEditNotes": "Notizen bearbeiten",
+  "worklist.verb.meetingNotesSaved": "Notizen gespeichert",
   "worklist.verb.meetingHowDidItGo": "Wie lief es?",
   "worklist.verb.meetingAddNotes": "Notizen hinzufügen",
   "worklist.verb.meetingUpdateTitle": "Termin",
@@ -20775,6 +20931,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.meetingDayMissing":
     "Dieses Datum gibt es in der Zeitzone des Unternehmens nicht. Wähle ein anderes Datum.",
   "worklist.verb.meetingAddNotesFor": "Notizen hinzufügen: {subject}",
+  "worklist.verb.meetingEditNotesFor": "Notizen bearbeiten: {subject}",
   "worklist.verb.meetingHeldFor": "Hat stattgefunden: {subject}",
   "worklist.verb.meetingCanceledFor": "Hat nicht stattgefunden: {subject}",
   "worklist.verb.meetingCancelInCalendar":
@@ -20986,8 +21143,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "die Website des Unternehmens analysieren und über die Befunde berichten",
   "firstRun.ignite.draft":
     "Entwürfe in dem Schreibstil schreiben, den du trainiert hast",
-  "firstRun.ignite.act":
-    "ohne deine Freigabe etwas senden oder einen Datensatz ändern",
+  "firstRun.ignite.act": "ohne direkten Auftrag oder Freigabe senden",
   "firstRun.ignite.carryOn": "Weiter",
   "firstRun.ignite.leaving": "Einrichtung wird geprüft…",
   "firstRun.step.model": "Modell",
@@ -21366,12 +21522,24 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "magic.action.create_lead": "Lead erstellt:",
   "magic.action.create_project": "Projekt erstellt:",
   "magic.action.create_activity": "E-Mail oder Termin gespeichert:",
+  "magic.action.create_activity_email": "E-Mail gespeichert:",
+  "magic.action.create_activity_meeting": "Termin gespeichert:",
+  "magic.action.create_activity_call": "Anruf erfasst:",
+  "magic.action.create_activity_note": "Notiz gespeichert:",
+  "magic.action.create_activity_task": "Aufgabe erstellt:",
+  "magic.action.create_activity_message": "Nachricht gespeichert:",
   "magic.action.archive_contact": "Kontakt archiviert:",
   "magic.action.archive_company": "Unternehmen archiviert:",
   "magic.action.archive_deal": "Deal archiviert:",
   "magic.action.archive_lead": "Lead archiviert:",
   "magic.action.archive_project": "Projekt archiviert:",
   "magic.action.archive_activity": "E-Mail oder Termin archiviert:",
+  "magic.action.archive_activity_email": "E-Mail archiviert:",
+  "magic.action.archive_activity_meeting": "Termin archiviert:",
+  "magic.action.archive_activity_call": "Anruf archiviert:",
+  "magic.action.archive_activity_note": "Notiz archiviert:",
+  "magic.action.archive_activity_task": "Aufgabe archiviert:",
+  "magic.action.archive_activity_message": "Nachricht archiviert:",
   "magic.why.mail_filed": "Die Absendeadresse gehört zu diesem Kontakt.",
   "magic.why.data_correction": "Ein Update hat ältere Datensätze korrigiert.",
   "magic.why.public_records":
@@ -22566,6 +22734,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die normale CRM-Arbeit kann weitergehen. Bei einem Ausfall kann die Wiederherstellung länger dauern oder mehr neue Daten verlieren, als die Ziele vorsehen.",
   "health.effect.automatic":
     "Automatische Aufgaben erreichen möglicherweise die falschen Teammitglieder. Folgeaufgaben bleiben dann bis zur Korrektur falsch zugewiesen.",
+  "health.effect.receipts":
+    "Die Widersprüche gelten, und Werbung an diese Kontakte bleibt gestoppt. Die Kontakte wurden nicht informiert, was die Regeln ihres Landes sofort verlangen.",
   "health.effect.readFailed":
     "Diese Prüfung kann den aktuellen Zustand nicht anzeigen. Eine fehlgeschlagene Prüfung belegt keinen Ausfall der eigentlichen Funktion.",
   "health.reportCopyFailed": "Technischer Bericht konnte nicht kopiert werden",
@@ -22659,6 +22829,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "health.source.updates": "Datenaktualisierungen",
   "health.source.recovery": "Wiederherstellungsnachweise",
   "health.source.automatic": "Qualität automatischer Arbeit",
+  "health.source.receipts": "Bestätigungen von Werbewidersprüchen",
   "health.scope": "Betroffener Umfang",
   "health.window": "Berichtszeitraum",
   "health.observed": "Letzte Beobachtung",
@@ -22685,6 +22856,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Einen erfolgreichen Wiederherstellungstest innerhalb der Zeit- und Datenverlustziele erfassen.",
   "health.recovery.automatic":
     "Die Ergebnisse der Zuweisung anhand einer ausreichend großen Stichprobe prüfen.",
+  "health.recovery.receipts":
+    "Zu jedem Widerspruch der letzten 30 Tage muss eine Bestätigung versendet oder die Warnung erledigt sein.",
   "health.ownerHandoff":
     "Postfachinhaber nehmen vorgeschlagene Kontakte unter Worklist → Entscheidungen an oder lehnen sie ab. Zurückgehaltene Gespräche werden unter Verbindungen im Bereich Aktivität geprüft.",
   "health.operatorHandoff":
@@ -22765,6 +22938,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Keine Schwelle zur Zuweisungsprüfung in der Stichprobe überschritten",
   "health.code.automatic_routing":
     "Die Zuweisung automatischer Arbeit muss geprüft werden",
+  "health.code.receipts_sent":
+    "Keine Bestätigung der letzten 30 Tage fehlt oder ist überfällig",
+  "health.code.receipts_missed":
+    "Einige Bestätigungen von Werbewidersprüchen wurden nicht versendet",
   "health.code.capture_thread_processing": "Unterhaltungen werden eingeordnet",
   "health.code.capture_thread_uncertain": "Private Gespräche prüfen",
   "health.queueCoverage":
@@ -22787,6 +22964,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der Wiederherstellungstest hat seine Ziele verfehlt. Frage den Systembetreiber, die Ursache zu beheben und erneut zu testen.",
   "health.impact.automatic":
     "Aufgaben werden möglicherweise falsch zugewiesen. Prüfe die Weiterleitung und korrigiere die Zuweisung.",
+  "health.impact.receipts":
+    "Kontakte, die Werbung widersprochen haben, haben die gesetzlich geforderte Bestätigung nicht erhalten. Öffne die Benachrichtigungen zu fehlenden Bestätigungen und korrigiere die Adresse oder die E-Mail-Einrichtung.",
   "analytics.outlook.calledAt": "Prognose vom {at}",
   "analytics.prospect.weeksByQualification":
     "Jeder Lead zählt in der Woche seiner ersten Qualifizierung.",
@@ -23023,4 +23202,25 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "goals.withdrawTitle": "Ziele von {name} für {year} zurückziehen?",
   "goals.withdrawBody":
     "Alle zwölf Monate zählen nicht mehr als Ziele. Der Verlauf behält sie.",
+  "particulars.title": "Firmenangaben in E-Mails",
+  "particulars.intro":
+    "Deine E-Mails enden mit den Angaben, die das Gesetz verlangt. Jedes Feld fasst bis zu 500 Zeichen.",
+  "particulars.legalName": "Rechtlicher Name",
+  "particulars.postalAddress": "Postanschrift",
+  "particulars.privacyContact": "Kontakt zum Datenschutz",
+  "particulars.objectionRoute": "So lehnt man Werbung ab",
+  "particulars.advertiserContact": "Kontaktdaten des werbenden Unternehmens",
+  "particulars.objectionMeans":
+    "Nenne eine Webseite oder einen Link zu einem sozialen Netzwerk, eine E-Mail-Adresse und eine Telefonnummer. Ein Antwortwort wie STOP kann dazukommen.",
+  "particulars.translationTitle": "Auf {language}",
+  "particulars.translationIntro":
+    "E-Mails und Seiten auf {language} zeigen diesen Text, wo du ihn ausfüllst. Werbung, die auf {language} sein muss, geht erst raus, wenn Ablehnung und Kontaktdaten des werbenden Unternehmens hier ausgefüllt sind.",
+  "particulars.objectionExample": "Beispiel: {example}",
+  "compose.contentFinding.title": "Werberegeln für diese E-Mail",
+  "compose.contentFinding.claim":
+    "„{words}“ darfst du nur mit Nachweis behaupten. Ergänze Name, Nummer und Datum des Nachweises in der E-Mail.",
+  "compose.contentFinding.language":
+    "Schreibe diese E-Mail zuerst auf {language}. Text in einer anderen Sprache steht darunter und ist nicht größer als der Text auf {language}.",
+  "compose.contentFinding.foreignAdvertiser":
+    "Dein Unternehmen ist nicht in {country} niedergelassen. Ein ausländisches Unternehmen, das in {country} nicht tätig ist, darf dort nur über ein Werbeunternehmen aus {country} werben. Dafür ist dein Unternehmen verantwortlich.",
 };

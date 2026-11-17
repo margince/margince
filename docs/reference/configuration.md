@@ -266,7 +266,7 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 
 | Key | Env | Flag | Type | Default | Programs | Doc |
 |---|---|---|---|---|---|---|
-| `activities.follow_up_after_days` | `MARGINCE_ACTIVITIES_FOLLOW_UP_AFTER_DAYS` | — | `int`, 1 to 30, stored | `2` | api, worker | Days a sent message may go without a reply before its sender is asked to follow up. |
+| `activities.follow_up_after_days` | `MARGINCE_ACTIVITIES_FOLLOW_UP_AFTER_DAYS` | — | `int`, `1` to `30`, stored | `2` | api, worker | Days a sent message may go without a reply before its sender is asked to follow up. |
 
 ### `ai`
 
@@ -302,8 +302,8 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 | Key | Env | Flag | Type | Default | Programs | Doc |
 |---|---|---|---|---|---|---|
 | `capture.auto_enrich` | `MARGINCE_CAPTURE_AUTO_ENRICH` | — | `bool`, stored | `true` | api, worker | Read a new contact's company web page automatically. |
-| `capture.auto_enrich_daily_cap` | `MARGINCE_CAPTURE_AUTO_ENRICH_DAILY_CAP` | — | `int`, 1 to 20000, stored | `500` | api, worker | Automatic company web-page reads the installation may start in one UTC day. |
-| `capture.confidentiality_pass_cap` | `MARGINCE_CAPTURE_CONFIDENTIALITY_PASS_CAP` | — | `int`, 1 to 200, stored | `40` | api, worker | Held mail threads one review pass may judge; the rest wait for the next pass. |
+| `capture.auto_enrich_daily_cap` | `MARGINCE_CAPTURE_AUTO_ENRICH_DAILY_CAP` | — | `int`, `1` to `20000`, stored | `500` | api, worker | Automatic company web-page reads the installation may start in one UTC day. |
+| `capture.confidentiality_pass_cap` | `MARGINCE_CAPTURE_CONFIDENTIALITY_PASS_CAP` | — | `int`, `1` to `200`, stored | `40` | api, worker | Held mail threads one review pass may judge; the rest wait for the next pass. |
 | `capture.freemail_extra` | `MARGINCE_CAPTURE_FREEMAIL_EXTRA` | — | `list<string>` | — | api, worker | Ignored, with a warning at boot; the consumer-mail list is edited under Settings. |
 | `capture.freemail_never` | `MARGINCE_CAPTURE_FREEMAIL_NEVER` | — | `list<string>` | — | api, worker | Ignored, with a warning at boot; the consumer-mail list is edited under Settings. |
 | `capture.gmail_mailbox_quota` | `MARGINCE_CAPTURE_GMAIL_MAILBOX_QUOTA` | — | `int` | `6000` | api, worker | Effective Gmail quota units per minute per mailbox. Shared across live and history requests and OAuth apps; 100 units are kept free. Match the limit shown by Google. |
@@ -311,13 +311,13 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 | `capture.history_concurrency` | `MARGINCE_CAPTURE_HISTORY_CONCURRENCY` | — | `int` | `1` | api, worker | Limit on history imports running at once across the installation. Use the same value in every process. |
 | `capture.history_hold` | `MARGINCE_CAPTURE_HISTORY_HOLD` | — | `bool` | `false` | api, worker | Accept queued history requests without starting another page. Stop older history workers before starting workers with a new admission protocol. |
 | `capture.mail_sharing` | `MARGINCE_CAPTURE_MAIL_SHARING` | — | `bool`, stored | `true` | api, worker | Let every colleague who can see a contact read the email captured with them; off keeps new mail to those on it. |
-| `capture.mail_sync_interval_seconds` | `MARGINCE_CAPTURE_MAIL_SYNC_INTERVAL_SECONDS` | — | `int`, 30 to 3600, stored | `120` | api, worker | Seconds a working mailbox connection waits between polls. |
+| `capture.mail_sync_interval_seconds` | `MARGINCE_CAPTURE_MAIL_SYNC_INTERVAL_SECONDS` | — | `int`, `30` to `3600`, stored | `120` | api, worker | Seconds a working mailbox connection waits between polls. |
 | `capture.max_backfill_months` | `MARGINCE_CAPTURE_MAX_BACKFILL_MONTHS` | — | `int` | `0` | api, worker | How far back a mailbox import may reach, for the whole installation; 0 is no cap. |
 | `capture.shared_posture_allowed` | `MARGINCE_CAPTURE_SHARED_POSTURE_ALLOWED` | — | `bool`, stored | `false` | api, worker | Allow a seat to share their mailbox with colleagues as mail lands; turn it on only where a works agreement allows it. |
 | `capture.signature_enrich` | `MARGINCE_CAPTURE_SIGNATURE_ENRICH` | — | `bool`, stored | `true` | api, worker | Read contact details from the signatures and attached cards of captured mail, for every mailbox that has made no choice of its own. |
-| `capture.site_read_max_mib` | `MARGINCE_CAPTURE_SITE_READ_MAX_MIB` | — | `int`, 1 to 128, stored | `32` | api, worker | MiB one company web-page read may hold, over all its pages. |
-| `capture.site_read_max_pages` | `MARGINCE_CAPTURE_SITE_READ_MAX_PAGES` | — | `int`, 1 to 200, stored | `60` | api, worker | Pages one company web-page read may fetch. |
-| `capture.site_read_wall_seconds` | `MARGINCE_CAPTURE_SITE_READ_WALL_SECONDS` | — | `int`, 30 to 600, stored | `240` | api, worker | Seconds one company web-page read may run before it stops and extracts what it has. |
+| `capture.site_read_max_mib` | `MARGINCE_CAPTURE_SITE_READ_MAX_MIB` | — | `int`, `1` to `128`, stored | `32` | api, worker | MiB one company web-page read may hold, over all its pages. |
+| `capture.site_read_max_pages` | `MARGINCE_CAPTURE_SITE_READ_MAX_PAGES` | — | `int`, `1` to `200`, stored | `60` | api, worker | Pages one company web-page read may fetch. |
+| `capture.site_read_wall_seconds` | `MARGINCE_CAPTURE_SITE_READ_WALL_SECONDS` | — | `int`, `30` to `600`, stored | `240` | api, worker | Seconds one company web-page read may run before it stops and extracts what it has. |
 | `capture.skip_reserved_domain_proposals` | `MARGINCE_CAPTURE_SKIP_RESERVED_DOMAIN_PROPOSALS` | — | `bool` | `true` | api, worker | Raise no contact proposal for a sender on an RFC 2606 reserved name; the mail is still captured. |
 | `capture.trace_payloads` | `MARGINCE_CAPTURE_TRACE_PAYLOADS` | — | `bool` | `true` | api, worker | Keep each traced message's sender and a bounded subject in the 24-hour capture trace, dropped messages included. |
 | `capture.transactional_extra` | `MARGINCE_CAPTURE_TRANSACTIONAL_EXTRA` | — | `list<string>` | — | api, worker | Domains of mail services added to the built-in list; their mail keeps the activity and derives no counterparty. |
@@ -341,7 +341,7 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 | Key | Env | Flag | Type | Default | Programs | Doc |
 |---|---|---|---|---|---|---|
 | `contacts.first_response_enabled` | `MARGINCE_CONTACTS_FIRST_RESPONSE_ENABLED` | — | `bool`, stored | `false` | api, worker | Track a first-response target on every lead. |
-| `contacts.first_response_target_minutes` | `MARGINCE_CONTACTS_FIRST_RESPONSE_TARGET_MINUTES` | — | `int`, 15 to 10080, stored | `240` | api, worker | Minutes a lead may wait for its first real response once its clock starts. |
+| `contacts.first_response_target_minutes` | `MARGINCE_CONTACTS_FIRST_RESPONSE_TARGET_MINUTES` | — | `int`, `15` to `10080`, stored | `240` | api, worker | Minutes a lead may wait for its first real response once its clock starts. |
 | `contacts.shared_merge_reviews` | `MARGINCE_CONTACTS_SHARED_MERGE_REVIEWS` | — | `bool`, stored | `false` | api, worker | Let any owner of a possible duplicate merge the whole case, keeping the other owners' access to the remaining contact through a record grant. |
 | `contacts.signature_template` | `MARGINCE_CONTACTS_SIGNATURE_TEMPLATE` | — | `string`, stored | — | api, worker | Workspace email signature template, used when the sender has no personal HTML; empty means none. |
 | `contacts.unassigned_escalation_user_id` | `MARGINCE_CONTACTS_UNASSIGNED_ESCALATION_USER_ID` | — | `string`, stored | — | api, worker | The user id of the colleague who answers for a lead nobody owns, or whose owner has left, once it misses its target; empty means nobody, and a boot value that names no active colleague reaches nobody and logs a warning. |
@@ -356,6 +356,9 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 
 | Key | Env | Flag | Type | Default | Programs | Doc |
 |---|---|---|---|---|---|---|
+| `database.connection_idle_time` | `MARGINCE_DATABASE_CONNECTION_IDLE_TIME` | — | `duration`, at least `1m0s` | `5m0s` | api, worker | Time a connection above `pool_min_conns` can stay open while not in use. Applies to API and worker app pools. A `pool_max_conn_idle_time` value in the DSN wins. Restart to apply. |
+| `database.connection_lifetime` | `MARGINCE_DATABASE_CONNECTION_LIFETIME` | — | `duration`, at least `1m0s` | `10m0s` | api, worker | Time a connection in the API or worker app pool can stay open, plus up to `20%` more. The pool checks the age when a query ends and on each health check. Closing a direct Postgres connection returns memory kept after planning. A `pool_max_conn_lifetime` value in the DSN wins. Restart to apply. |
+| `database.read_concurrency` | `MARGINCE_DATABASE_READ_CONCURRENCY` | — | `int`, at least `1` | `3` | api, worker | Limit on concurrent Worklist and ranked-search reads per process, capped at half the pool with at least one slot. Restart to apply. |
 | `database.worker_max_connections` | `MARGINCE_WORKER_MAX_CONNECTIONS` | `--worker-max-connections` | `int` | `12` | worker | Worker connection limit, with the River listener counted. Also bounded by the DSN and queue worker count. Count every process when sizing the installation. |
 | `database.worker_statement_cache_capacity` | `MARGINCE_WORKER_STATEMENT_CACHE_CAPACITY` | `--worker-statement-cache-capacity` | `int` | `256` | worker | Limit on cached statements and result types per worker connection. The DSN may lower it. Zero needs a compatible DSN `default_query_exec_mode`. |
 
@@ -365,7 +368,7 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 |---|---|---|---|---|---|---|
 | `deals.legal_review_enabled` | `MARGINCE_DEALS_LEGAL_REVIEW_ENABLED` | — | `bool`, stored | `true` | api, worker | Let a deal be sent to legal for review, and let a `legal_reviewed` criterion hold a deal at its stage. |
 | `deals.maintenance_writes_enabled` | `MARGINCE_DEALS_MAINTENANCE_WRITES_ENABLED` | — | `bool`, stored | `true` | api, worker | Let the nightly close-date sweep write to a deal. Off stops every automatic write the sweep makes. |
-| `deals.silent_close_days` | `MARGINCE_DEALS_SILENT_CLOSE_DAYS` | — | `int`, 60 to 730, stored | `120` | api, worker | Days without word from the customer after which Margince closes an open deal as lost. |
+| `deals.silent_close_days` | `MARGINCE_DEALS_SILENT_CLOSE_DAYS` | — | `int`, `60` to `730`, stored | `120` | api, worker | Days without word from the customer after which Margince closes an open deal as lost. |
 | `deals.stage_autopilot_enabled` | `MARGINCE_DEALS_STAGE_AUTOPILOT_ENABLED` | — | `bool`, stored | `true` | api, worker | Let Margince move a deal to a later stage when the evidence on the deal shows it reached that stage; off stops every automatic move. |
 
 ### `email`
@@ -402,43 +405,43 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 
 | Key | Env | Flag | Type | Default | Programs | Doc |
 |---|---|---|---|---|---|---|
-| `installation.agent_calls_per_window` | `MARGINCE_INSTALLATION_AGENT_CALLS_PER_WINDOW` | — | `int`, 50 to 20000, stored | `1000` | api, worker | Calls of any kind, tool or API, one agent passport may make per window. |
-| `installation.agent_egress_per_window` | `MARGINCE_INSTALLATION_AGENT_EGRESS_PER_WINDOW` | — | `int`, 1 to 200, stored | `20` | api, worker | Calls that send something out of the workspace one agent passport may make per window. |
+| `installation.agent_calls_per_window` | `MARGINCE_INSTALLATION_AGENT_CALLS_PER_WINDOW` | — | `int`, `50` to `20000`, stored | `1000` | api, worker | Calls of any kind, tool or API, one agent passport may make per window. |
+| `installation.agent_egress_per_window` | `MARGINCE_INSTALLATION_AGENT_EGRESS_PER_WINDOW` | — | `int`, `1` to `200`, stored | `20` | api, worker | Calls that send something out of the workspace one agent passport may make per window. |
 | `installation.agent_role_calls_per_window` | `MARGINCE_INSTALLATION_AGENT_ROLE_CALLS_PER_WINDOW` | — | `map<string,int>`, stored | — | api, worker | Calls of any kind, tool or API, one agent passport may make per window, by the role key of the user who connected it, as role:count pairs; 0 uses the installation value. An agent gets the highest value of its user's roles; a role with no value counts as the installation value. Admin gets 20000 while neither Admin nor the installation count has a value set. |
 | `installation.agent_role_egress_per_window` | `MARGINCE_INSTALLATION_AGENT_ROLE_EGRESS_PER_WINDOW` | — | `map<string,int>`, stored | — | api, worker | Calls that send something out of the workspace one agent passport may make per window, by the role key of the user who connected it, as role:count pairs; 0 uses the installation value. An agent gets the highest value of its user's roles; a role with no value counts as the installation value. |
 | `installation.agent_role_writes_per_window` | `MARGINCE_INSTALLATION_AGENT_ROLE_WRITES_PER_WINDOW` | — | `map<string,int>`, stored | — | api, worker | Changing calls one agent passport may make per window, by the role key of the user who connected it, as role:count pairs; 0 uses the installation value. An agent gets the highest value of its user's roles; a role with no value counts as the installation value. Admin gets 2000 while neither Admin nor the installation count has a value set. |
-| `installation.agent_runner_interval_seconds` | `MARGINCE_INSTALLATION_AGENT_RUNNER_INTERVAL_SECONDS` | — | `int`, 10 to 3600, stored | `30` | api, worker | Seconds between the passes of the agent scheduler. |
-| `installation.agent_window_hours` | `MARGINCE_INSTALLATION_AGENT_WINDOW_HOURS` | — | `int`, 1 to 168, stored | `24` | api, worker | Hours in the window the agent limits count over; set at boot, it also keeps a length an admin saved for the next reset from taking over. |
-| `installation.agent_writes_per_window` | `MARGINCE_INSTALLATION_AGENT_WRITES_PER_WINDOW` | — | `int`, 10 to 5000, stored | `200` | api, worker | Changing calls one agent passport may make per window. |
+| `installation.agent_runner_interval_seconds` | `MARGINCE_INSTALLATION_AGENT_RUNNER_INTERVAL_SECONDS` | — | `int`, `10` to `3600`, stored | `30` | api, worker | Seconds between the passes of the agent scheduler. |
+| `installation.agent_window_hours` | `MARGINCE_INSTALLATION_AGENT_WINDOW_HOURS` | — | `int`, `1` to `168`, stored | `24` | api, worker | Hours in the window the agent limits count over; set at boot, it also keeps a length an admin saved for the next reset from taking over. |
+| `installation.agent_writes_per_window` | `MARGINCE_INSTALLATION_AGENT_WRITES_PER_WINDOW` | — | `int`, `10` to `5000`, stored | `200` | api, worker | Changing calls one agent passport may make per window. |
 | `installation.base_language` | `MARGINCE_INSTALLATION_BASE_LANGUAGE` | — | `string`, stored, kept by a reset | `en` | api, worker | The language AI writes the shared record in: en, de or vi. |
 | `installation.call_telegram` | `MARGINCE_INSTALLATION_CALL_TELEGRAM` | — | `bool`, stored, kept by a reset | `true` | api, worker | Show a Telegram chat link next to a contact's phone number that starts with a country code. |
 | `installation.call_whatsapp` | `MARGINCE_INSTALLATION_CALL_WHATSAPP` | — | `bool`, stored, kept by a reset | `true` | api, worker | Show a WhatsApp chat link next to a contact's phone number that starts with a country code. |
 | `installation.call_zalo` | `MARGINCE_INSTALLATION_CALL_ZALO` | — | `bool`, stored, kept by a reset | `true` | api, worker | Show a Zalo chat link next to a contact's phone number that starts with a country code. |
-| `installation.close_date_sweep_interval_seconds` | `MARGINCE_INSTALLATION_CLOSE_DATE_SWEEP_INTERVAL_SECONDS` | — | `int`, 3600 to 604800, stored | `86400` | api, worker | Seconds between the close-date sweeps. |
+| `installation.close_date_sweep_interval_seconds` | `MARGINCE_INSTALLATION_CLOSE_DATE_SWEEP_INTERVAL_SECONDS` | — | `int`, `3600` to `604800`, stored | `86400` | api, worker | Seconds between the close-date sweeps. |
 | `installation.country` | `MARGINCE_INSTALLATION_COUNTRY` | — | `string`, stored, kept by a reset | `""` | api, worker | Where the installation is established, as a two-letter ISO 3166-1 code in small letters; empty for none. |
 | `installation.date_format` | `MARGINCE_INSTALLATION_DATE_FORMAT` | — | `string`, stored, kept by a reset | `locale` | api, worker | How dates are written: locale, dmy, mdy or ymd. |
 | `installation.dead_work_banner_hours` | `MARGINCE_INSTALLATION_DEAD_WORK_BANNER_HOURS` | — | `int`, stored, kept by a reset | `24` | api, worker | Hours the job-health banner looks back before it calls dead work a problem. |
 | `installation.fiscal_year_start_month` | `MARGINCE_INSTALLATION_FISCAL_YEAR_START_MONTH` | — | `int`, stored, kept by a reset | `1` | api, worker | The month the business year begins, 1 to 12. |
-| `installation.follow_up_reconcile_interval_seconds` | `MARGINCE_INSTALLATION_FOLLOW_UP_RECONCILE_INTERVAL_SECONDS` | — | `int`, 3600 to 604800, stored | `86400` | api, worker | Seconds between the follow-up reconcile passes. |
+| `installation.follow_up_reconcile_interval_seconds` | `MARGINCE_INSTALLATION_FOLLOW_UP_RECONCILE_INTERVAL_SECONDS` | — | `int`, `3600` to `604800`, stored | `86400` | api, worker | Seconds between the follow-up reconcile passes. |
 | `installation.forecast_forward_measure` | `MARGINCE_INSTALLATION_FORECAST_FORWARD_MEASURE` | — | `string`, stored, kept by a reset | `likely` | api, worker | Which remaining-pipeline reading a projected landing is built from. |
 | `installation.forecast_likely_threshold` | `MARGINCE_INSTALLATION_FORECAST_LIKELY_THRESHOLD` | — | `int`, stored, kept by a reset | `90` | api, worker | The level, 1 to 100, from which the Likely forecast counts an open deal with a confirmed close date. |
 | `installation.forecast_self_correcting` | `MARGINCE_INSTALLATION_FORECAST_SELF_CORRECTING` | — | `bool`, stored, kept by a reset | `true` | api, worker | Let the forecast correct itself: each stage's rate moves with the outcome of the deals recorded from it, and a risk signal counts once frozen forecasts show its effect. Off, the forecast uses the rate set on each stage. |
 | `installation.geocode_backfill_interval_seconds` | `MARGINCE_INSTALLATION_GEOCODE_BACKFILL_INTERVAL_SECONDS` | — | `int`, stored | `3600` | api, worker | Seconds between the sweeps that add missing map points, or 0 for off. |
-| `installation.gmail_watch_renew_within_hours` | `MARGINCE_INSTALLATION_GMAIL_WATCH_RENEW_WITHIN_HOURS` | — | `int`, 24 to 144, stored | `48` | api, worker | Hours before a Gmail push subscription ends that it is renewed. |
-| `installation.gmail_watch_scan_interval_seconds` | `MARGINCE_INSTALLATION_GMAIL_WATCH_SCAN_INTERVAL_SECONDS` | — | `int`, 600 to 43200, stored | `21600` | api, worker | Seconds between the scans for Gmail push subscriptions due for renewal. |
-| `installation.graph_watch_renew_within_hours` | `MARGINCE_INSTALLATION_GRAPH_WATCH_RENEW_WITHIN_HOURS` | — | `int`, 24 to 60, stored | `24` | api, worker | Hours before a Microsoft Graph mail subscription ends that it is renewed. |
-| `installation.graph_watch_scan_interval_seconds` | `MARGINCE_INSTALLATION_GRAPH_WATCH_SCAN_INTERVAL_SECONDS` | — | `int`, 600 to 43200, stored | `21600` | api, worker | Seconds between the scans for Microsoft Graph mail subscriptions due for renewal. |
+| `installation.gmail_watch_renew_within_hours` | `MARGINCE_INSTALLATION_GMAIL_WATCH_RENEW_WITHIN_HOURS` | — | `int`, `24` to `144`, stored | `48` | api, worker | Hours before a Gmail push subscription ends that it is renewed. |
+| `installation.gmail_watch_scan_interval_seconds` | `MARGINCE_INSTALLATION_GMAIL_WATCH_SCAN_INTERVAL_SECONDS` | — | `int`, `600` to `43200`, stored | `21600` | api, worker | Seconds between the scans for Gmail push subscriptions due for renewal. |
+| `installation.graph_watch_renew_within_hours` | `MARGINCE_INSTALLATION_GRAPH_WATCH_RENEW_WITHIN_HOURS` | — | `int`, `24` to `60`, stored | `24` | api, worker | Hours before a Microsoft Graph mail subscription ends that it is renewed. |
+| `installation.graph_watch_scan_interval_seconds` | `MARGINCE_INSTALLATION_GRAPH_WATCH_SCAN_INTERVAL_SECONDS` | — | `int`, `600` to `43200`, stored | `21600` | api, worker | Seconds between the scans for Microsoft Graph mail subscriptions due for renewal. |
 | `installation.individual_performance` | `MARGINCE_INSTALLATION_INDIVIDUAL_PERFORMANCE` | — | `bool`, stored, kept by a reset | `true` | api, worker | Show each colleague's figures in reports, forecasts and team reviews. Off, each member sees their own figures and team totals only. |
 | `installation.name` | `MARGINCE_INSTALLATION_NAME` | — | `string`, stored, kept by a reset | — | api, worker | The company's name. Set at boot, it also refuses a different name on the company profile. |
-| `installation.oauth_access_token_ttl_minutes` | `MARGINCE_INSTALLATION_OAUTH_ACCESS_TOKEN_TTL_MINUTES` | — | `int`, 5 to 129600, stored | `43200` | api, worker | Minutes an access token from the OAuth handshake of a connector lives, for the first token and every refresh. |
-| `installation.retention_sweep_interval_seconds` | `MARGINCE_INSTALLATION_RETENTION_SWEEP_INTERVAL_SECONDS` | — | `int`, 3600 to 604800, stored | `86400` | api, worker | Seconds between the retention sweeps. |
-| `installation.send_max_age_hours` | `MARGINCE_INSTALLATION_SEND_MAX_AGE_HOURS` | — | `int`, 1 to 168, stored | `24` | api, worker | Hours a delivery held back by the send rate may wait before it stops with a reason. |
-| `installation.send_rate_limit` | `MARGINCE_INSTALLATION_SEND_RATE_LIMIT` | — | `int`, 1 to 1000, stored | `30` | api, worker | Messages one mailbox may send per send-rate window. |
-| `installation.send_rate_window_seconds` | `MARGINCE_INSTALLATION_SEND_RATE_WINDOW_SECONDS` | — | `int`, 10 to 3600, stored | `60` | api, worker | Seconds in the window the send rate is counted over. |
+| `installation.oauth_access_token_ttl_minutes` | `MARGINCE_INSTALLATION_OAUTH_ACCESS_TOKEN_TTL_MINUTES` | — | `int`, `5` to `129600`, stored | `43200` | api, worker | Minutes an access token from the OAuth handshake of a connector lives, for the first token and every refresh. |
+| `installation.retention_sweep_interval_seconds` | `MARGINCE_INSTALLATION_RETENTION_SWEEP_INTERVAL_SECONDS` | — | `int`, `3600` to `604800`, stored | `86400` | api, worker | Seconds between the retention sweeps. |
+| `installation.send_max_age_hours` | `MARGINCE_INSTALLATION_SEND_MAX_AGE_HOURS` | — | `int`, `1` to `168`, stored | `24` | api, worker | Hours a delivery held back by the send rate may wait before it stops with a reason. |
+| `installation.send_rate_limit` | `MARGINCE_INSTALLATION_SEND_RATE_LIMIT` | — | `int`, `1` to `1000`, stored | `30` | api, worker | Messages one mailbox may send per send-rate window. |
+| `installation.send_rate_window_seconds` | `MARGINCE_INSTALLATION_SEND_RATE_WINDOW_SECONDS` | — | `int`, `10` to `3600`, stored | `60` | api, worker | Seconds in the window the send rate is counted over. |
 | `installation.technical_backfill_interval_seconds` | `MARGINCE_INSTALLATION_TECHNICAL_BACKFILL_INTERVAL_SECONDS` | — | `int`, stored | `21600` | api, worker | Seconds between the sweeps that add missing technical profiles, or 0 for off. |
 | `installation.time_format` | `MARGINCE_INSTALLATION_TIME_FORMAT` | — | `string`, stored, kept by a reset | `locale` | api, worker | How times of day are written: locale, 24h or 12h. |
-| `installation.time_scan_interval_seconds` | `MARGINCE_INSTALLATION_TIME_SCAN_INTERVAL_SECONDS` | — | `int`, 60 to 86400, stored | `3600` | api, worker | Seconds between the time-scan passes. |
-| `installation.webhook_retry_interval_seconds` | `MARGINCE_INSTALLATION_WEBHOOK_RETRY_INTERVAL_SECONDS` | — | `int`, 10 to 3600, stored | `30` | api, worker | Seconds between the passes that retry failed webhook deliveries. |
+| `installation.time_scan_interval_seconds` | `MARGINCE_INSTALLATION_TIME_SCAN_INTERVAL_SECONDS` | — | `int`, `60` to `86400`, stored | `3600` | api, worker | Seconds between the time-scan passes. |
+| `installation.webhook_retry_interval_seconds` | `MARGINCE_INSTALLATION_WEBHOOK_RETRY_INTERVAL_SECONDS` | — | `int`, `10` to `3600`, stored | `30` | api, worker | Seconds between the passes that retry failed webhook deliveries. |
 
 ### `integrations`
 
@@ -492,10 +495,10 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 
 | Key | Env | Flag | Type | Default | Programs | Doc |
 |---|---|---|---|---|---|---|
-| `uploads.attachment_mb` | `MARGINCE_UPLOADS_ATTACHMENT_MB` | — | `int`, 1 to 100 | `25` | api, worker | Largest request POST `/v1/attachments` takes, in decimal MB. |
-| `uploads.csv_import_mb` | `MARGINCE_UPLOADS_CSV_IMPORT_MB` | — | `int`, 1 to 100 | `10` | api, worker | Largest request POST `/v1/imports/sources` and the vCard import take, in decimal MB. |
-| `uploads.knowledge_document_mb` | `MARGINCE_UPLOADS_KNOWLEDGE_DOCUMENT_MB` | — | `int`, 1 to 100 | `5` | api, worker | Largest document POST `/v1/knowledge/corpora/{id}/documents` takes, in decimal MB. |
-| `uploads.linkedin_import_mb` | `MARGINCE_UPLOADS_LINKEDIN_IMPORT_MB` | — | `int`, 1 to 100 | `8` | api, worker | Largest request POST `/v1/me/linkedin-connections` takes, in decimal MB. |
+| `uploads.attachment_mb` | `MARGINCE_UPLOADS_ATTACHMENT_MB` | — | `int`, `1` to `100` | `25` | api, worker | Largest request POST `/v1/attachments` takes, in decimal MB. |
+| `uploads.csv_import_mb` | `MARGINCE_UPLOADS_CSV_IMPORT_MB` | — | `int`, `1` to `100` | `10` | api, worker | Largest request POST `/v1/imports/sources` and the vCard import take, in decimal MB. |
+| `uploads.knowledge_document_mb` | `MARGINCE_UPLOADS_KNOWLEDGE_DOCUMENT_MB` | — | `int`, `1` to `100` | `5` | api, worker | Largest document POST `/v1/knowledge/corpora/{id}/documents` takes, in decimal MB. |
+| `uploads.linkedin_import_mb` | `MARGINCE_UPLOADS_LINKEDIN_IMPORT_MB` | — | `int`, `1` to `100` | `8` | api, worker | Largest request POST `/v1/me/linkedin-connections` takes, in decimal MB. |
 
 ### `web`
 
@@ -507,19 +510,19 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 
 | Key | Env | Flag | Type | Default | Programs | Doc |
 |---|---|---|---|---|---|---|
-| `webforms.throttle.block_after_minutes` | `MARGINCE_WEBFORMS_THROTTLE_BLOCK_AFTER_MINUTES` | — | `int`, 1 to 60 | `5` | api | Minutes in a row over a limit after which every post is refused for a while (a block). |
-| `webforms.throttle.cooldown_minutes` | `MARGINCE_WEBFORMS_THROTTLE_COOLDOWN_MINUTES` | — | `int`, 1 to 1440 | `15` | api | Minutes a first block lasts. Each block that follows soon after another lasts twice as long. |
-| `webforms.throttle.form_expiry_seconds` | `MARGINCE_WEBFORMS_THROTTLE_FORM_EXPIRY_SECONDS` | — | `int`, 1 to 86400 | `120` | api | Seconds a known form address is used without reading it again, even while loads fail. |
-| `webforms.throttle.form_refresh_seconds` | `MARGINCE_WEBFORMS_THROTTLE_FORM_REFRESH_SECONDS` | — | `int`, 1 to 3600 | `30` | api | Seconds between loads of every form address the intake knows. A form made on another server is taken within it. |
-| `webforms.throttle.max_cooldown_hours` | `MARGINCE_WEBFORMS_THROTTLE_MAX_COOLDOWN_HOURS` | — | `int`, 1 to 168 | `24` | api | Longest a block lasts, in hours. A block always ends on its own. |
-| `webforms.throttle.min_senders` | `MARGINCE_WEBFORMS_THROTTLE_MIN_SENDERS` | — | `int`, 1 to 100000 | `10` | api | Distinct addresses a minute over the workspace or installation limit must hold before all forms are blocked. Fewer only get 429. |
-| `webforms.throttle.per_address_per_minute` | `MARGINCE_WEBFORMS_THROTTLE_PER_ADDRESS_PER_MINUTE` | — | `int`, 1 to 10000 | `10` | api | Posts one address may send to all web forms together in a minute before it gets 429. |
-| `webforms.throttle.per_form_per_minute` | `MARGINCE_WEBFORMS_THROTTLE_PER_FORM_PER_MINUTE` | — | `int`, 1 to 100000 | `30` | api | Posts one web form takes in a minute, from every address together, before it gets 429. |
-| `webforms.throttle.per_installation_per_minute` | `MARGINCE_WEBFORMS_THROTTLE_PER_INSTALLATION_PER_MINUTE` | — | `int`, 1 to 10000000 | `600` | api | Posts all web forms of the installation take in a minute before they get 429. |
-| `webforms.throttle.per_ip_per_minute` | `MARGINCE_WEBFORMS_THROTTLE_PER_IP_PER_MINUTE` | — | `int`, 1 to 10000 | `5` | api | Posts one address may send to one web form in a minute before it gets 429. |
-| `webforms.throttle.per_workspace_per_minute` | `MARGINCE_WEBFORMS_THROTTLE_PER_WORKSPACE_PER_MINUTE` | — | `int`, 1 to 1000000 | `120` | api | Posts all web forms of one workspace take in a minute before they get 429. |
-| `webforms.throttle.preflights_per_minute` | `MARGINCE_WEBFORMS_THROTTLE_PREFLIGHTS_PER_MINUTE` | — | `int`, 1 to 10000 | `20` | api | OPTIONS requests a browser asks before a post, that one address may send to all web forms in a minute before it gets 429. |
-| `webforms.throttle.unknown_keys_per_minute` | `MARGINCE_WEBFORMS_THROTTLE_UNKNOWN_KEYS_PER_MINUTE` | — | `int`, 1 to 100000 | `60` | api | Lookups of form addresses not yet known, from all senders together, in a minute. Past it such an address is answered as one that names no form. |
+| `webforms.throttle.block_after_minutes` | `MARGINCE_WEBFORMS_THROTTLE_BLOCK_AFTER_MINUTES` | — | `int`, `1` to `60` | `5` | api | Minutes in a row over a limit after which every post is refused for a while (a block). |
+| `webforms.throttle.cooldown_minutes` | `MARGINCE_WEBFORMS_THROTTLE_COOLDOWN_MINUTES` | — | `int`, `1` to `1440` | `15` | api | Minutes a first block lasts. Each block that follows soon after another lasts twice as long. |
+| `webforms.throttle.form_expiry_seconds` | `MARGINCE_WEBFORMS_THROTTLE_FORM_EXPIRY_SECONDS` | — | `int`, `1` to `86400` | `120` | api | Seconds a known form address is used without reading it again, even while loads fail. |
+| `webforms.throttle.form_refresh_seconds` | `MARGINCE_WEBFORMS_THROTTLE_FORM_REFRESH_SECONDS` | — | `int`, `1` to `3600` | `30` | api | Seconds between loads of every form address the intake knows. A form made on another server is taken within it. |
+| `webforms.throttle.max_cooldown_hours` | `MARGINCE_WEBFORMS_THROTTLE_MAX_COOLDOWN_HOURS` | — | `int`, `1` to `168` | `24` | api | Longest a block lasts, in hours. A block always ends on its own. |
+| `webforms.throttle.min_senders` | `MARGINCE_WEBFORMS_THROTTLE_MIN_SENDERS` | — | `int`, `1` to `100000` | `10` | api | Distinct addresses a minute over the workspace or installation limit must hold before all forms are blocked. Fewer only get 429. |
+| `webforms.throttle.per_address_per_minute` | `MARGINCE_WEBFORMS_THROTTLE_PER_ADDRESS_PER_MINUTE` | — | `int`, `1` to `10000` | `10` | api | Posts one address may send to all web forms together in a minute before it gets 429. |
+| `webforms.throttle.per_form_per_minute` | `MARGINCE_WEBFORMS_THROTTLE_PER_FORM_PER_MINUTE` | — | `int`, `1` to `100000` | `30` | api | Posts one web form takes in a minute, from every address together, before it gets 429. |
+| `webforms.throttle.per_installation_per_minute` | `MARGINCE_WEBFORMS_THROTTLE_PER_INSTALLATION_PER_MINUTE` | — | `int`, `1` to `10000000` | `600` | api | Posts all web forms of the installation take in a minute before they get 429. |
+| `webforms.throttle.per_ip_per_minute` | `MARGINCE_WEBFORMS_THROTTLE_PER_IP_PER_MINUTE` | — | `int`, `1` to `10000` | `5` | api | Posts one address may send to one web form in a minute before it gets 429. |
+| `webforms.throttle.per_workspace_per_minute` | `MARGINCE_WEBFORMS_THROTTLE_PER_WORKSPACE_PER_MINUTE` | — | `int`, `1` to `1000000` | `120` | api | Posts all web forms of one workspace take in a minute before they get 429. |
+| `webforms.throttle.preflights_per_minute` | `MARGINCE_WEBFORMS_THROTTLE_PREFLIGHTS_PER_MINUTE` | — | `int`, `1` to `10000` | `20` | api | OPTIONS requests a browser asks before a post, that one address may send to all web forms in a minute before it gets 429. |
+| `webforms.throttle.unknown_keys_per_minute` | `MARGINCE_WEBFORMS_THROTTLE_UNKNOWN_KEYS_PER_MINUTE` | — | `int`, `1` to `100000` | `60` | api | Lookups of form addresses not yet known, from all senders together, in a minute. Past it such an address is answered as one that names no form. |
 
 <!-- generated:config:end -->
 

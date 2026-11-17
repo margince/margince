@@ -2,6 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
+import { phoneRow } from "../../testing/phonerow";
 import {
   installFetchStub,
   jsonResponse,
@@ -151,5 +153,60 @@ export const PartnersList: Story = {
         <PartnersScreen />
       </StoryProviders>
     );
+  },
+};
+
+/** At 390px line one ends in the stage; under it the kinds as words and the certification. */
+export const PartnersListPhone: Story = {
+  parameters: { layout: "fullscreen" },
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: () => {
+    installFetchStub({
+      "GET /me": meRoute({}),
+      "GET /partners": () =>
+        jsonResponse({
+          data: [
+            {
+              ...partner,
+              partner_kinds: ["hosting", "referral"],
+              stage_label: "Live",
+            },
+            {
+              ...partner,
+              company_id: "o-2",
+              partner_kinds: [],
+              cert_status: "applied",
+              stage_label: "Research",
+            },
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+      "GET /records/references": () =>
+        jsonResponse({
+          data: [
+            { id: "o-1", name: "Nordlicht Hosting GmbH", archived: false },
+            { id: "o-2", name: "Fjord Analytics", archived: false },
+          ],
+        }),
+    });
+    return (
+      <StoryProviders>
+        <PartnersScreen />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const live = phoneRow(await canvas.findByText("Nordlicht Hosting GmbH"));
+    await expect([live.end, live.caption]).toEqual([
+      ["Live"],
+      ["Hosting, Referral", "Certified"],
+    ]);
+    const fresh = phoneRow(await canvas.findByText("Fjord Analytics"));
+    await expect([fresh.end, fresh.caption]).toEqual([
+      ["Research"],
+      ["Applied"],
+    ]);
   },
 };

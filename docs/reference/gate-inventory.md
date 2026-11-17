@@ -180,6 +180,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `pollcadenceparity_test.go` | H3 | A connector that postpones a tick on an unreachable provider asks to run again after a fixed delay; that delay has to equal the cadence its dispatcher already ticks at, and has to survive the seam's ceiling on the way to the queue. |
 | `preservedtableparity_test.go` | H3 | Two lists say which tables a wipe must leave alone, and this fails when they disagree. |
 | `previewauthority_test.go` | H2 | The authority levels a composer can receive are the ones the engine can send. |
+| `privacypagefallback_test.go` | H3 | TestThePrivacyPageFallbackIsOneOnBothSides holds the subscription question's rights link to one order. |
 | `processingrecord_test.go` | H3 | The Art. 30 processing record names the code that enforces each entry, and this fails when that code is not there any more. |
 | `promptwindow_test.go` | H1 | runner.MinimumPromptWindow is the supported floor (the smallest prompt window any provider this build binds will carry), and this holds it equal to the adapter that owns the figure. |
 | `providercategoryallowlist_test.go` | H2 | The allow-list of provider-defined containers lives in two places (the CHECK on capture\_exclusion and the Go the writer consults), and the two must agree. |
@@ -461,6 +462,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `scorecolumnbounds_test.go` | H2 | Every column holding a bounded quantity states the bound in the schema. |
 | `scrubbedentitytypes_test.go` | H2 | Which record types a scrub verb is ever written against. |
 | `scrubverbs_test.go` | H2 | Every verb the privacy module writes is judged a scrub or ratified as not one. |
+| `searchdatapermissions_test.go` | H2 | _(no doc comment)_ |
 | `seatemploymentwriters_test.go` | H2 | Every function in a module that infers an employment edge asks whether the contact is a workspace seat first. |
 | `seatfanout_test.go` | H2 | A nightly agent acts for a seat, and the identity of one night's work has to say which seat. |
 | `sendcontext_test.go` | H2 | Every send says why it is being sent. |
@@ -486,6 +488,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `textbounds_test.go` | H2 | The column must sit in the condition's bounds and in the refusal's. |
 | `toolongcarriesmax_test.go` | H2 | Every too\_long field refusal states the limit it refused at, so the screen can say "at most 2,000 characters" in the reader's language. |
 | `uiautonomyclaims_test.go` | H2 | No shipped UI string promises that nothing sends without a human's approval while the generated policy table says the send verbs auto-execute. |
+| `uipermissionisapproval_test.go` | H2 | No shipped UI string says that granting the send permission approves a message. |
 | `undoreasoncensus_test.go` | H2 | One refusal set, three spellings. |
 | `uniquenessclaimscorpus_test.go` | H2 | Where the claim sweep looks, as against what it looks for. |
 | `unvalidatedconstraints_test.go` | H2 | A constraint left NOT VALID is declared, with the reason it stays that way. |

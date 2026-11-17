@@ -144,6 +144,9 @@ func validateOptOutAcknowledgement(
 	default:
 		return unsupported, nil
 	}
+	// Under a pack that follows the recipient, a restriction and a withdrawal
+	// of any purpose are answered too, by the request receipt.
+	_, recipientBound := recipientDataProtection(subject.Country.Code)
 	// KIND ONLY, DELIBERATELY NOT purpose_id. A narrow marketing_objection
 	// (communication_suppression.purpose_id set to one newsletter) still keeps
 	// kind = 'marketing_objection', so this EXISTS already matches it — an
@@ -151,7 +154,7 @@ func validateOptOutAcknowledgement(
 	// acknowledgement is subject-level ("we received your opt-out"), not
 	// purpose-level ("we received your opt-out of THIS newsletter"). Filtering
 	// by purpose here would refuse the acknowledgement a narrow objection
-	// equally owes, under-serving the subject Art. 16 exists to protect.
+	// equally owes, under-serving the subject Decree 91/2020 Art. 20 exists to protect.
 	var standing bool
 	// An unsubscribe press writes no suppression, only marketing withdrawals.
 	// So a standing marketing-class withdrawal is evidence too; no other class is.
@@ -167,9 +170,9 @@ func validateOptOutAcknowledgement(
 		    WHERE cc.contact_id = $1
 		      AND cc.state = 'withdrawn'
 		      AND cp.archived_at IS NULL
-		      AND cp.class = ANY($3)
-		)`, subject.ID, acknowledgeableKinds(),
-		classesCovering(commsauthz.CategoryMarketing)).Scan(&standing); err != nil {
+		      AND (cp.class = ANY($3) OR $4)
+		)`, subject.ID, receiptEvidenceKinds(recipientBound),
+		classesCovering(commsauthz.CategoryMarketing), recipientBound).Scan(&standing); err != nil {
 		return resolution{}, fmt.Errorf("consent: reading the stop this would acknowledge: %w", err)
 	}
 	if !standing {

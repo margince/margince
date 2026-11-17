@@ -26,6 +26,7 @@ import {
   subjectHref,
   whenText,
 } from "../../lib/worklistcopy";
+import { emailNamesRow } from "../../lib/worklistemailrow";
 import {
   conditionOf,
   eyebrowKeyFor,
@@ -39,7 +40,7 @@ import {
   PutDownByThumb,
   useRowPutDown,
 } from "./worklist.dispositions";
-import { WaitingEmailLine } from "./worklist.emailtitle";
+import { PromiseEmailLine, WaitingEmailLine } from "./worklist.emailtitle";
 import { hostText } from "./worklist.meetingparties";
 import { useRowSource } from "./worklist.noticesource";
 import { lastTouch } from "./worklist.pane";
@@ -219,7 +220,7 @@ export function WorklistRow({
   // AND somewhere to open it, the title line otherwise. Held as the opener
   // rather than as a flag, so the row cannot be drawn without one — a caller
   // with no drawer keeps the title instead of losing the row's name with it.
-  const emailOpener = item.email_summary != null ? onOpenEmail : undefined;
+  const emailOpener = emailNamesRow(item) ? onOpenEmail : undefined;
   // WHICH RECORD THE ROW IS ABOUT, linked, on the one row that does not link
   // it: a waiting message names its sender as text, where every other title
   // names and links its record (`itemTitle`, `rowHref`). A FRAMED row names it
@@ -336,6 +337,7 @@ export function WorklistRow({
               titleEnd={titleEnd}
             />
           )}
+          <PromiseEmailLine item={item} onOpen={onOpenEmail} />
           <RowAsk item={item} framed={framed} />
           <PreparationNote item={item} />
           {responsibility && <p className="t-caption">{responsibility}</p>}
@@ -367,7 +369,7 @@ export function WorklistRow({
             equals={answer.equals}
             onReview={onReview}
             context={context}
-            menu={menu}
+            menu={joinedMenu(menu, answer.menu)}
             framed={framed}
             titled={titleLinks(emailOpener, href, source.open)}
           />
@@ -380,6 +382,17 @@ export function WorklistRow({
         {source.drawer}
       </PutDownByThumb>
     </PanelRow>
+  );
+}
+
+// The surface's menu lines first, then the lane's rarer answers.
+function joinedMenu(surface: ReactNode, lane: ReactNode): ReactNode {
+  if (!lane) return surface;
+  return (
+    <>
+      {surface}
+      {lane}
+    </>
   );
 }
 

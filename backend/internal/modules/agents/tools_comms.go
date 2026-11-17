@@ -18,6 +18,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/draftreason"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
@@ -229,7 +230,8 @@ func (t draftEmailTool) Handle(ctx context.Context, in json.RawMessage) (json.Ra
 		noteFirstDraftEvidence(ctx, links, draft.Grounding)
 		return json.Marshal(DraftEmailResult{
 			Subject: draft.Subject, Body: draft.Body, Links: links, To: draft.To,
-			AIGenerated: draft.AIGenerated, AIDisclosure: draft.AIDisclosure,
+			CommunicationContext: string(draftreason.ForInstruction(args.Intent)),
+			AIGenerated:          draft.AIGenerated, AIDisclosure: draft.AIDisclosure,
 			SavedDraftID: draft.SavedDraftID, NotSaved: draft.NotSaved,
 		})
 	}
@@ -247,6 +249,7 @@ func (t draftEmailTool) Handle(ctx context.Context, in json.RawMessage) (json.Ra
 	noteEvidence(ctx, datasource.EntityActivity, *args.ActivityID)
 	return json.Marshal(DraftEmailResult{
 		Subject: subject, Body: body, InReplyToActivityID: args.ActivityID,
+		CommunicationContext: string(draftreason.ForInstruction(args.Intent)),
 	})
 }
 

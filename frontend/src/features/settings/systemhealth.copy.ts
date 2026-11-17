@@ -24,6 +24,7 @@ export const healthSourceLabels: Readonly<Record<string, MessageKey>> = {
   updates: "health.source.updates",
   recovery: "health.source.recovery",
   automatic: "health.source.automatic",
+  receipts: "health.source.receipts",
 };
 export const healthCodes: Readonly<Record<string, MessageKey>> = {
   queue_checked: "health.code.queue_checked",
@@ -71,6 +72,8 @@ export const healthCodes: Readonly<Record<string, MessageKey>> = {
   recovery_unverified: "health.code.recovery_unverified",
   automatic_checked: "health.code.automatic_checked",
   automatic_routing: "health.code.automatic_routing",
+  receipts_sent: "health.code.receipts_sent",
+  receipts_missed: "health.code.receipts_missed",
   withheld: "health.withheld",
   read_failed: "health.failed",
   unknown: "health.unknown",
@@ -109,6 +112,7 @@ export const healthRecovery: Readonly<Record<string, MessageKey>> = {
   updates: "health.recovery.updates",
   recovery: "health.recovery.recovery",
   automatic: "health.recovery.automatic",
+  receipts: "health.recovery.receipts",
 };
 
 export const healthImpacts: Readonly<Record<string, MessageKey>> = {
@@ -120,6 +124,7 @@ export const healthImpacts: Readonly<Record<string, MessageKey>> = {
   updates: "health.impact.updates",
   recovery: "health.impact.recovery",
   automatic: "health.impact.automatic",
+  receipts: "health.impact.receipts",
 };
 
 export function diagnosticSummary(

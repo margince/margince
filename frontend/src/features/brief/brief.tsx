@@ -24,13 +24,11 @@ import { useCanWrite } from "../../lib/capability";
 import { markJourney } from "../../lib/journeymarks";
 import { useMagic } from "../../lib/magic.queries";
 import { usePendingMarginceChanges } from "../../lib/marginchanges";
-import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
 import { TASK_PARAM } from "../../lib/taskreminders";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import { readerTask } from "../../lib/worklistcopy";
 import { pillFigure } from "../../lib/worklistcounts";
-import { WORKLIST_VIEW_PARAM } from "../../lib/worklistrouting";
 import { DEFAULT_VIEW } from "../../lib/worklistviews";
 import { MagicPanel, WAITING_LANES } from "../sign-in/magic";
 import {
@@ -64,7 +62,13 @@ import { BriefGlance } from "./brief.glance";
 import { homeJourneyMarks } from "./brief.journey";
 import { CustomerPaymentsCard } from "./brief.payments";
 import { useMorningBrief, useWeeklyReview } from "./brief.queries";
-import { BriefQueue, loadWorklistScreen } from "./brief.queue";
+import {
+  BriefQueue,
+  closeQueue,
+  drawerOpen,
+  loadWorklistScreen,
+  openQueue,
+} from "./brief.queue";
 import { BriefReadingsPending, BriefReadingsStrip } from "./brief.readings";
 import { SchedulePanel } from "./brief.schedule";
 import { BriefSuggestions } from "./brief.suggestions";
@@ -72,16 +76,6 @@ import { taskName } from "./brief.taskcard";
 import { addressFrom, type BriefAddress, paramsFor } from "./brief.view";
 import { BriefCoverage } from "./briefcoverage";
 import "./brief.css";
-
-// The dials that narrow the drawer. The Home button clears them, so it always
-// opens the reader's own Today with every category.
-const DRAWER_DIALS = [
-  "queue_scope",
-  WORKLIST_VIEW_PARAM,
-  "filter",
-  "owner",
-  "selected",
-];
 
 export function BriefScreen() {
   const t = useT();
@@ -91,7 +85,7 @@ export function BriefScreen() {
   const query = useHomeDay(Boolean(params.get(FOCUS_PARAM)));
   const address = addressFrom(params);
   const day = briefDay(query.data?.pages);
-  const drawerOpen = params.get("queue") === "1";
+  const queueOpen = drawerOpen(params);
   const review = useWeeklyReview(address.week, address.view === "weekly");
   const firstName = greetingNameOf(me.data?.user);
   const brief = useMorningBrief();
@@ -108,22 +102,13 @@ export function BriefScreen() {
   const queueToggle = (
     <PageAsideToggle
       controlled={{
-        open: drawerOpen,
+        open: queueOpen,
         ...(day && pillFigure(day, "all", DEFAULT_VIEW)),
         labels: {
           show: t("brief.queue.show"),
           hide: t("brief.queue.hide"),
         },
-        onToggle: () => {
-          const next = new Map(params);
-          if (next.get("queue") === "1") {
-            next.delete("queue");
-          } else {
-            for (const dial of DRAWER_DIALS) next.delete(dial);
-            next.set("queue", "1");
-          }
-          navigate({ screen: "home" }, next);
-        },
+        onToggle: queueOpen ? closeQueue : openQueue,
       }}
     />
   );

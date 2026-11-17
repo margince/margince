@@ -21,7 +21,7 @@ export function TaskDetailModal({
     <TaskDetailDialog
       {...props}
       openerFor={openerFor}
-      why={item && <WorklistWhy item={item} />}
+      why={item && <WorklistWhy item={item} groundsShown />}
     />
   );
 }

@@ -71,3 +71,27 @@ export const LongRunInANarrowCard: Story = {
     }
   },
 };
+
+/**
+ * The same deal for a reader who may not move it. The stages read as names,
+ * and no move or way out is offered.
+ */
+export const ReadingOnly: Story = {
+  render: () => (
+    <div style={{ inlineSize: 720 }}>
+      <LadderBars
+        label="Stage"
+        steps={steps.map(({ onPick: _move, ...step }) => step)}
+        tone="neutral"
+      />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const ladder = within(
+      await within(canvasElement).findByRole("group", { name: "Stage" }),
+    );
+    await expect(ladder.getByText("Proposal Sent")).toBeVisible();
+    await expect(ladder.queryByText("Closed Won")).toBeNull();
+    await expect(ladder.queryByText(/Move to/)).toBeNull();
+  },
+};

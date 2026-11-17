@@ -615,9 +615,19 @@ describe("one status for the message", () => {
       "Marketing needs the recipient’s consent, and none is on record.",
     ],
     [
+      { reason_code: "frequency_cap_reached", can_be_overruled: true },
+      "Sending needs your reason",
+      "The recipient has reached the marketing message limit for now. This clears automatically.",
+    ],
+    [
       { reason_code: "marketing_objection" },
       "Message cannot be sent",
       "The recipient objected to marketing, so no marketing goes to them. A reply or a message they asked for can still go.",
+    ],
+    [
+      { reason_code: "hard_bounce" },
+      "Message cannot be sent",
+      "This address does not accept mail. Correct the address; an override does not apply.",
     ],
   ] as const)("explains %o in its own words", (over, title, sentence) => {
     render(

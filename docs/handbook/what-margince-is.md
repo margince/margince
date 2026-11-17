@@ -193,10 +193,18 @@ Also called: keys, shortcut list, keyboard, key for a page.
 
 ### Where is the handbook, and how do I ask it a question?
 To ask the Margince handbook a question, type it into **Search or ask Margince** in the top bar and press Enter. You can also open it with ⌘K (Ctrl+K).
-1. A question such as "How do I change my time zone?" gets the row **Ask Margince: "…"** at the top. Enter asks it.
+1. A question such as "How do I change my time zone?" gets the row **Ask the handbook: "…"** at the top. Enter asks it.
 2. The answer shows above the records that match. It names the set it came from, and its numbers open the handbook page at the quoted line.
 3. When the answer is a settings page you may open, **Open Settings → …** takes you there.
 The handbook is in English, so questions in English work best.
+Questions about CRM data, such as "How many deals did I win this month?", offer **Ask CRM data**.
+
+The answer uses the same figures as Analytics and the same records the reader can open. It names
+its source and period. Use **Open in Analytics** to check a figure, or open a record in the answer.
+
+When the data cannot answer the question, the handbook is asked. A question neither can answer
+still offers Analytics.
+
 Also called: help, FAQ, knowledge base, ask Margince.
 
 When the handbook does not cover a question, Margince asks your company's default document set next and says so. When neither covers it, you get **Not covered by this set** instead of a guess. To ask one set of your choice, choose **Ask your documents** under the search field. Pick a **Document set**, type in **Your question** and choose **Ask**.
@@ -286,8 +294,19 @@ Its license is BUSL-1.1, and you get the source.
 
 ### Is there a Margince mobile app?
 There is no Margince app to get from an app store. Margince runs in the browser on a phone as well as on a computer. On a phone, a bar at the foot of the screen holds **Home**, **Contacts** and **Deals**, the agent between them, and **More** for everything else.
-Dragging deal cards on the board does not work on touch screens; use the deal's **Stage** ladder instead.
+Dragging deal cards on the board does not work on touch screens; use the card's **…** menu or the deal's **Stage** ladder instead.
 Also called: iPhone app, Android app, phone app, use Margince on mobile.
+
+### What does a list show on a phone?
+On a phone or a narrow window, most record lists show each record in two lines. Line 1 has the company's logo or a picture made from the contact's or lead's name, its name and at most one mark. Line 2 has a few facts, and a fact the record does not have is left out.
+- **Contacts**: job title and employer, with no mark.
+- **Companies**: the website, and the lifecycle as the mark.
+- **Leads**: the company, next task and due date, and the status as the mark.
+- **Projects**: the customer, and the phase as the mark.
+- **Deals** table: the company, stage and close date, and the amount as the mark.
+- **Partners**: the kinds and certification, and the stage as the mark.
+The other columns are not shown. Open the record to see everything, or use a wider window. On these lists **View** has no **Columns** step, so your columns do not change these rows. Other tables, such as the members of a list, show every column, each value with its label.
+Also called: mobile list, small screen, phone layout.
 
 ## Where to go next
 

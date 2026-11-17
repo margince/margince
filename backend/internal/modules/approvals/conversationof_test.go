@@ -30,6 +30,7 @@ func TestOnlyAConnectedClientOutsideARunIsAConversation(t *testing.T) {
 	}{
 		{"a connected client", context.Background(), connected, colleague},
 		{"a scheduled run on that client's passport", run, connected, ids.Nil},
+		{"an unattended runner without a persisted run ID", principal.WithUnattended(context.Background()), connected, ids.Nil},
 		{"a passport minted without a connection", context.Background(), minted, ids.Nil},
 		{"a human", context.Background(), human, ids.Nil},
 	} {

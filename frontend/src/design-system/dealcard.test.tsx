@@ -1,10 +1,12 @@
 /** @vitest-environment happy-dom */
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import ages from "../../../backend/internal/shared/kernel/elapsed/testdata/ages.json";
 import { browserZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
+import { Button } from "./button";
 import { DealCard } from "./dealcard";
 import type { BoardDeal } from "./pipelineboard";
 
@@ -82,5 +84,93 @@ describe("deal ages agree with the server calendar", () => {
       );
       expect(screen.queryByText(/d ago$/)).not.toBeInTheDocument();
     }
+  });
+});
+
+describe("DealCard menu", () => {
+  const quiet: BoardDeal = {
+    id: "d1",
+    name: "ERP connector",
+    company: "",
+    companyId: "",
+    valueMinor: 100_000,
+    currency: "EUR",
+    idleSince: "2026-06-01T12:00:00Z",
+    measuredAt: Date.parse("2026-06-10T12:00:00Z"),
+  };
+  const onOpen = vi.fn();
+  const onCopy = vi.fn();
+  // A press on the trigger never settles under the fake clock above.
+  beforeEach(() => {
+    vi.useRealTimers();
+  });
+  afterEach(() => {
+    onOpen.mockReset();
+    onCopy.mockReset();
+  });
+
+  function renderCard(deal: BoardDeal) {
+    return render(
+      <LocaleProvider initial="en">
+        <DealCard
+          deal={deal}
+          href="#/deals/d1"
+          zone={browserZone()}
+          onOpen={onOpen}
+          actions={{
+            onSummary: () => undefined,
+            menu: <Button onClick={onCopy}>Copy link</Button>,
+          }}
+        />
+      </LocaleProvider>,
+    );
+  }
+
+  it("closes the verb row with a menu named for its deal", () => {
+    const { container } = renderCard(quiet);
+    const verbs = container.querySelector<HTMLElement>(".deal-actions");
+    if (!verbs) throw new Error("the card drew no verb row");
+    const buttons = within(verbs).getAllByRole("button");
+    expect(buttons.map((button) => button.getAttribute("aria-label"))).toEqual([
+      "Deal summary: ERP connector",
+      "More actions for ERP connector",
+    ]);
+  });
+
+  it("draws its foot for the menu alone", () => {
+    render(
+      <LocaleProvider initial="en">
+        <DealCard
+          deal={quiet}
+          href="#/deals/d1"
+          zone={browserZone()}
+          actions={{ menu: <Button>Copy link</Button> }}
+        />
+      </LocaleProvider>,
+    );
+    expect(
+      screen.getByRole("button", { name: "More actions for ERP connector" }),
+    ).toBeInTheDocument();
+  });
+
+  it("offers a staged card no menu", () => {
+    renderCard({ ...quiet, staged: true });
+    expect(
+      screen.queryByRole("button", { name: /^More actions for/ }),
+    ).toBeNull();
+  });
+
+  it("opens its items and runs one without opening the deal", async () => {
+    const user = userEvent.setup();
+    renderCard(quiet);
+    const trigger = screen.getByRole("button", {
+      name: "More actions for ERP connector",
+    });
+    await user.click(trigger);
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+    await user.click(screen.getByRole("button", { name: "Copy link" }));
+    expect(onCopy).toHaveBeenCalledTimes(1);
+    expect(onOpen).not.toHaveBeenCalled();
+    expect(window.location.hash).toBe("");
   });
 });

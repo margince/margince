@@ -61,6 +61,9 @@ type DisclosureQuery struct {
 	// Entity is the legal entity the message goes out for; zero is the
 	// installation's default entity.
 	Entity ids.UUID
+	// Language is the language the message is written in. Each particular
+	// stated in it is printed in it; empty prints the default text.
+	Language string
 }
 
 // Disclosures answers what this message must disclose, opening its own
@@ -75,7 +78,7 @@ type DisclosureQuery struct {
 // it reads is committed record and settings state and an in-process pack
 // registry, none of which the outer transaction writes.
 func (s *Store) Disclosures(
-	ctx context.Context, category commsauthz.Category, recipients []string, entity ids.UUID,
+	ctx context.Context, category commsauthz.Category, recipients []string, entity ids.UUID, language string,
 ) ([]DisclosureLine, error) {
 	var out []DisclosureLine
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
@@ -86,7 +89,7 @@ func (s *Store) Disclosures(
 			}
 		}
 		out, err = s.DisclosuresFor(ctx, tx, DisclosureQuery{
-			Category: category, Recipients: recipients, Entity: entity,
+			Category: category, Recipients: recipients, Entity: entity, Language: language,
 		})
 		return err
 	})
@@ -97,9 +100,10 @@ func (s *Store) Disclosures(
 // installation can say it.
 //
 // Two selectors meet here. Who the controller is and who answers about the
-// data are data protection, owed under the sending entity's pack. How to
-// object and who advertises are marketing rules, owed under each recipient's
-// pack. One body goes to all recipients, so it carries every recipient's.
+// data are data protection, owed under the sending entity's pack. A recipient
+// whose pack follows the recipient owes them too. How to object and who
+// advertises are marketing rules, owed under each recipient's pack. One body
+// goes to all recipients, so it carries every recipient's.
 //
 // Answers an empty slice where no pack applies. That is not a claim that
 // nothing is owed; it is the baseline, and the caller treats it the same way.
@@ -118,13 +122,23 @@ func (s *Store) DisclosuresFor(
 	if senderRules, _, found := applicableRules(senderCountry); found {
 		owed = appendOwed(owed, senderRules.Disclosures, true)
 	}
+	layout := disclosureLayout{language: q.Language}
 	for _, address := range q.Recipients {
 		country, err := recipientCountryOf(ctx, tx, connector.Recipient{Email: address})
 		if err != nil {
 			return nil, err
 		}
-		if rules, _, found := applicableRules(country.Code); found {
-			owed = appendOwed(owed, rules.Disclosures, false)
+		if marketingRules, _, found := applicableRules(country.Code); found {
+			owed = appendOwed(owed, marketingRules.Disclosures, false)
+			// One body leads with one language, so the first recipient's
+			// pack that names one decides it.
+			if layout.packLanguage == "" {
+				layout.packLanguage = marketingRules.DisclosureLanguage
+			}
+			layout.refusalLast = layout.refusalLast || marketingRules.RefusalSectionLast
+		}
+		if rules, follows := recipientDataProtection(country.Code); follows {
+			owed = appendOwed(owed, rules.Disclosures, true)
 		}
 	}
 	if len(owed) == 0 {
@@ -137,45 +151,38 @@ func (s *Store) DisclosuresFor(
 	if err != nil {
 		return nil, err
 	}
-	particulars := controllerOf(installation, entity)
 	// An UNKNOWN category is treated as not-marketing, which is the safe
 	// direction: it carries the obligations binding every first contact and
 	// leaves out the advertising-only ones. A send that names no category is
 	// usually an older caller with a legacy purpose key, and putting an
 	// objection route under what may be an invoice is the error that reads as
 	// an invitation to stop receiving invoices.
-	marketing := q.Category == commsauthz.CategoryMarketing
-	out := make([]DisclosureLine, 0, len(owed))
-	for _, d := range owed {
-		// MarketingOnly is the pack's own narrowing. The objection route is
-		// owed on advertising and not on an invoice, where it would read as an
-		// unsubscribe line under a payment reminder.
-		if d.MarketingOnly && !marketing {
-			continue
-		}
-		out = append(out, DisclosureLine{
-			Kind: string(d.Kind),
-			Text: particularFor(d.Kind, particulars),
-		})
-	}
-	return out, nil
+	layout.marketing = q.Category == commsauthz.CategoryMarketing
+	layout.baseLanguage = s.mailLanguage(ctx, tx)
+	return layoutDisclosures(owed, controllerOf(installation, entity), layout), nil
 }
 
 // appendOwed adds the declared disclosures of one selector's pack: the
 // data-protection kinds from the sender's, the rest from a recipient's. A kind
 // already owed is not owed twice; a MarketingOnly copy yields to one that binds
-// every message.
+// every message. The owed kind asks for the means of both copies.
 func appendOwed(owed, declared []messagingrules.Disclosure, dataProtection bool) []messagingrules.Disclosure {
 	for _, d := range declared {
 		if dataProtectionDisclosure(d.Kind) != dataProtection {
 			continue
 		}
 		i := slices.IndexFunc(owed, func(o messagingrules.Disclosure) bool { return o.Kind == d.Kind })
-		switch {
-		case i < 0:
+		if i < 0 {
 			owed = append(owed, d)
-		case !d.MarketingOnly:
+			continue
+		}
+		if !d.MarketingOnly {
 			owed[i].MarketingOnly = false
+		}
+		for _, m := range d.Means {
+			if !slices.Contains(owed[i].Means, m) {
+				owed[i].Means = append(slices.Clone(owed[i].Means), m)
+			}
 		}
 	}
 	return owed

@@ -21,6 +21,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"slices"
 	"strings"
 	"testing"
 
@@ -793,8 +794,10 @@ func TestARefusedSendNamesItsReviewWhereAMachineCanReadIt(t *testing.T) {
 			"body cannot find the work this left behind",
 			problem.Details.ReviewID, reviews[0].id)
 	}
-	if len(problem.Details.AvailableActions) != 0 {
-		t.Errorf("unsupported marketing offers %v, want no staff exception", problem.Details.AvailableActions)
+	// The session holds the exception grant, so the one message may still go
+	// with a recorded reason.
+	if !slices.Equal(problem.Details.AvailableActions, []string{"direct_send"}) {
+		t.Errorf("unsupported marketing offers %v, want direct_send", problem.Details.AvailableActions)
 	}
 	// The engine's own reason per address, so the composer says why this
 	// recipient stopped instead of one consent sentence for every refusal.

@@ -146,6 +146,7 @@ func (s *Service) worklistIn(
 	withPins = withPins.readingBacklog(ctx, day, beside, token == "")
 	withPins, planErr := withPins.readingPlan(ctx, resolved, day.AsOf)
 	withPins, awaitingErrs := withPins.readingAwaiting(ctx, day.AsOf, beside.zone)
+	withPins = withPins.readingFollowUpPromises(ctx, day)
 	horizon := reader.meetingHorizon(ctx, day, beside.until)
 	failed := append(append([]*crmcontracts.WorklistSourceUnavailable{waitingErr, planErr}, awaitingErrs...), beside.failed...)
 	out := withPins.worklistFrom(
@@ -198,7 +199,7 @@ func (s *Service) worklistFrom(
 	waits, waitNote := s.rankedWaits(ctx, waiting, day.AsOf, scope)
 	// One admission rule for every row the page, Focus and counts will read.
 	rows, refused := admitBySource(ctx, slices.Concat(
-		classifyDay(day, day.AsOf, s.money), s.planRows, s.followUps.rows, waits))
+		classifyDay(day, day.AsOf, s.money), s.planRows, s.followUps.rows, s.followUps.promises, waits))
 	// What the night thought of each deal, onto whichever row is about it — the
 	// brief's own row, and the at-risk row the fold below keeps. Stamped BEFORE
 	// the fold so the surviving row can inherit a score even where the night's
@@ -231,6 +232,8 @@ func (s *Service) worklistFrom(
 	// Before anything is counted, so a row the reader marked done is gone from
 	// the figures as well as from the list.
 	rows = dropDone(rows, s.marked, day.AsOf)
+	// After Done, so a reminder the reader put down joins no task.
+	rows = foldFollowUpsIntoPromises(rows, readerOf(ctx))
 	scoped := rowNote.merge(waitNote)
 	bounded := boundedSources(day)
 	if !s.relationshipsChosen() {

@@ -39,6 +39,7 @@ export function refusalKindOf(
     case "unconfirmed_double_opt_in":
     case "marketing_consent_required":
     case "marketing_permission_required":
+    case "lawful_basis_unconfirmed":
       return "missingPermission";
     default:
       return "restricted";
@@ -76,6 +77,8 @@ export function sendPermissionReasonKey(
       return "sendPermission.reason.ambiguous" as const;
     case "unconfirmed_double_opt_in":
       return "sendPermission.reason.unconfirmed" as const;
+    case "lawful_basis_unconfirmed":
+      return "sendPermission.reason.lawfulBasisUnconfirmed" as const;
     case "no_compatible_evidence":
       return dealFollowup
         ? ("sendPermission.reason.chooseDeal" as const)
