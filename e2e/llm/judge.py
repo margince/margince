@@ -79,7 +79,7 @@ import tempfile
 # The criteria Haiku misread were sharpened rather than the labels moved to meet
 # it — a criterion a weaker reader gets wrong is usually a criterion that left a
 # case unstated, and the fixtures still discriminate for every model.
-DEFAULT_MODEL = "claude-haiku-4-5-20251001"
+DEFAULT_MODEL = "claude-haiku-5-5"
 
 # The judge's own reply is one line of JSON. The instruction is the one
 # backend/internal/compose/certjudge.go sends its grader, in this lane's

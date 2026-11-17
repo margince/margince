@@ -17,7 +17,7 @@ scripts/test-e2e-llm-check.sh states which. So this drives that suite with a
 LIVE judge and reads its own pass/fail lines — no second copy of the harness,
 and no labels this file invents.
 
-    python3 e2e/llm/judge-eval.py claude-haiku-4-5-20251001
+    python3 e2e/llm/judge-eval.py claude-haiku-5-5
 
 It bills tokens (one live judge call per judged criterion) and writes
 backend/internal/compose/aicert/records/judge_eval/<model>.json, which
@@ -58,7 +58,7 @@ def main():
     if not MODEL_ID.match(model):
         print(
             f"not a model id: {model!r} — expected something like "
-            "claude-haiku-4-5-20251001",
+            "claude-haiku-5-5",
             file=sys.stderr,
         )
         return 2
