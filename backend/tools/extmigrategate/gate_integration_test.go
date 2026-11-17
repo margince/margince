@@ -32,20 +32,6 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// ownerDSN is the vanilla throwaway database this package migrates for itself
-// in TestMain — NOT the clone of the shared template the integration lane hands
-// it, which carries every enabled unit's extension tables and is therefore the
-// one database this gate cannot run on. See throwawaydb_integration_test.go for
-// why that is structural rather than tidiness. Fails loudly rather than
-// skipping: a gate suite that skips reports green while proving nothing.
-func ownerDSN(t *testing.T) string {
-	t.Helper()
-	if gateDSN == "" {
-		t.Fatal("the throwaway gate database was not provisioned — run this package through `make test-it DIR=backend/tools/extmigrategate`")
-	}
-	return gateDSN
-}
-
 // unitName mints a unit name unique to this test and this process. The role
 // the gate creates is CLUSTER-scoped and named from the unit, so two tests
 // sharing a name would drop each other's role mid-run; the pid also keeps two
@@ -79,19 +65,26 @@ func migrationDir(t *testing.T, up, down string) string {
 	return dir
 }
 
-// runGate is the whole gate, in-process. The command's own error is what a
-// caller sees on stderr, so asserting on it is asserting on the real output.
+// runGate is the whole gate, in-process, on a database of t's own. The
+// command's own error is what a caller sees on stderr, so asserting on it is
+// asserting on the real output.
 func runGate(t *testing.T, unit, dir string) error {
 	t.Helper()
-	return run(context.Background(), unit, dir, ownerDSN(t))
+	return runGateOn(t, gateDatabase(t), unit, dir)
+}
+
+// runGateOn is runGate for a test that prepared the database first.
+func runGateOn(t *testing.T, dsn, unit, dir string) error {
+	t.Helper()
+	return run(context.Background(), unit, dir, dsn)
 }
 
 // admin opens the owner connection tests use for the out-of-band setup an
 // operator would do (installing an FDW, say) — never for anything the unit's
 // own migrations are supposed to do.
-func admin(t *testing.T) *pgx.Conn {
+func admin(t *testing.T, dsn string) *pgx.Conn {
 	t.Helper()
-	conn, err := pgx.Connect(context.Background(), ownerDSN(t))
+	conn, err := pgx.Connect(context.Background(), dsn)
 	if err != nil {
 		t.Fatalf("connecting as the owner: %v", err)
 	}
@@ -171,13 +164,14 @@ func scaffoldDown(ns string) string {
 	return fmt.Sprintf("DROP TABLE IF EXISTS ext.%s_note;\n", ns)
 }
 
-//testdb:serial shares the one throwaway database and role that TestMain makes for the gate
 func TestGateAcceptsTheScaffoldedShape(t *testing.T) {
+	t.Parallel()
 	unit := unitName(t, "ok")
 	ns := namespaceOf(t, unit)
 	dir := migrationDir(t, scaffoldUp(ns), scaffoldDown(ns))
+	dsn := gateDatabase(t)
 
-	if err := runGate(t, unit, dir); err != nil {
+	if err := runGateOn(t, dsn, unit, dir); err != nil {
 		t.Fatalf("the scaffolded shape must pass: %v", err)
 	}
 
@@ -185,7 +179,7 @@ func TestGateAcceptsTheScaffoldedShape(t *testing.T) {
 	// throwaway, but a leaked LOGIN role is a standing credential on the whole
 	// cluster, and the throwaway is on the same cluster as everything else.
 	var roles int
-	if err := admin(t).QueryRow(context.Background(),
+	if err := admin(t, dsn).QueryRow(context.Background(),
 		`SELECT count(*) FROM pg_roles WHERE rolname = $1`, ns).Scan(&roles); err != nil {
 		t.Fatalf("checking for a leaked role: %v", err)
 	}
@@ -197,9 +191,8 @@ func TestGateAcceptsTheScaffoldedShape(t *testing.T) {
 // A workspace column is refused rather than ignored. It separates nothing on an
 // installation that holds one workspace, and left in place it reads to the next
 // author as a tenant boundary the tier no longer has.
-//
-//testdb:serial shares the one throwaway database and role that TestMain makes for the gate
 func TestGateRejectsTableWithWorkspaceID(t *testing.T) {
+	t.Parallel()
 	unit := unitName(t, "ws")
 	ns := namespaceOf(t, unit)
 	up := noteTable(ns, "", tenantColumnSQL) + noteGrant(ns)
@@ -216,9 +209,8 @@ func TestGateRejectsTableWithWorkspaceID(t *testing.T) {
 // Any policy at all, whatever it says. The gate used to pin the predicate's
 // rendered form and enumerate the ways to get it wrong; with no tenant to key
 // on there is nothing a policy here can mean, so the rule is the simpler one.
-//
-//testdb:serial shares the one throwaway database and role that TestMain makes for the gate
 func TestGateRejectsAnyPolicy(t *testing.T) {
+	t.Parallel()
 	unit := unitName(t, "pol")
 	ns := namespaceOf(t, unit)
 	up := noteTable(ns, "", "") +
@@ -232,9 +224,8 @@ func TestGateRejectsAnyPolicy(t *testing.T) {
 
 // Row-level security with no policy at all: the shape that denies every row to
 // a non-owner while looking, at a glance, like a table someone protected.
-//
-//testdb:serial shares the one throwaway database and role that TestMain makes for the gate
 func TestGateRejectsRowLevelSecurity(t *testing.T) {
+	t.Parallel()
 	unit := unitName(t, "rls")
 	ns := namespaceOf(t, unit)
 	up := noteTable(ns, "", "") + noteRLS(ns) + noteGrant(ns)
@@ -249,9 +240,8 @@ func TestGateRejectsRowLevelSecurity(t *testing.T) {
 // as ext_<name> makes — as the dev/CI owner (a superuser) this INSERT would
 // succeed and would have to be detected afterwards, which needs a rule per way
 // of writing a core table.
-//
-//testdb:serial shares the one throwaway database and role that TestMain makes for the gate
 func TestGateRejectsDMLOnCoreRelations(t *testing.T) {
+	t.Parallel()
 	unit := unitName(t, "dml")
 	ns := namespaceOf(t, unit)
 	up := scaffoldUp(ns) + `
@@ -267,11 +257,11 @@ VALUES ('smuggled', 'gate', 'gate');
 // not merely absent, it is impossible. Skipping them in the enumeration — the
 // obvious reading of "check the tables" — is therefore the silent hole, and
 // both are rejected outright.
-//
-//testdb:serial shares the one throwaway database and role that TestMain makes for the gate
 func TestGateRejectsForeignTable(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
-	owner := admin(t)
+	dsn := gateDatabase(t)
+	owner := admin(t, dsn)
 
 	// The operator's step, out of band, exactly as installing an extension is:
 	// the gate itself grants the unit nothing here. USAGE goes to PUBLIC because
@@ -299,7 +289,7 @@ func TestGateRejectsForeignTable(t *testing.T) {
 		up := fmt.Sprintf(`CREATE FOREIGN TABLE ext.%[1]s_remote (id uuid, body text) SERVER %[2]s OPTIONS (table_name 'anything');`, ns, server)
 		down := fmt.Sprintf(`DROP FOREIGN TABLE IF EXISTS ext.%s_remote;`, ns)
 
-		err := runGate(t, unit, migrationDir(t, up, down))
+		err := runGateOn(t, dsn, unit, migrationDir(t, up, down))
 		requireRefusal(t, err, "ext."+ns+"_remote", "FOREIGN TABLE", "outside this database")
 	})
 
@@ -310,7 +300,7 @@ func TestGateRejectsForeignTable(t *testing.T) {
 			"CREATE MATERIALIZED VIEW ext.%[1]s_digest AS SELECT body, count(*) AS n FROM ext.%[1]s_note GROUP BY 1;\n", ns)
 		down := fmt.Sprintf("DROP MATERIALIZED VIEW IF EXISTS ext.%s_digest;\n", ns) + scaffoldDown(ns)
 
-		err := runGate(t, unit, migrationDir(t, up, down))
+		err := runGateOn(t, dsn, unit, migrationDir(t, up, down))
 		requireRefusal(t, err, "ext."+ns+"_digest", "MATERIALIZED VIEW", "standing copy")
 	})
 }
@@ -318,9 +308,8 @@ func TestGateRejectsForeignTable(t *testing.T) {
 // The namespace is what keeps two units sharing the ext schema from colliding
 // or addressing each other's rows, so an unprefixed name is a tenancy break
 // between EXTENSIONS rather than between workspaces.
-//
-//testdb:serial shares the one throwaway database and role that TestMain makes for the gate
 func TestGateRejectsObjectOutsideNamespace(t *testing.T) {
+	t.Parallel()
 	unit := unitName(t, "outns")
 	ns := namespaceOf(t, unit)
 	up := scaffoldUp(ns) + "CREATE TABLE ext.other_thing (id uuid NOT NULL PRIMARY KEY);\n"
@@ -333,9 +322,9 @@ func TestGateRejectsObjectOutsideNamespace(t *testing.T) {
 // connectAs opens a session as an arbitrary role on the same database. Only
 // the concurrency test needs it: to prove the gate refuses a role another run
 // is holding, something has to hold one.
-func connectAs(t *testing.T, user, password string) *pgx.Conn {
+func connectAs(t *testing.T, dsn, user, password string) *pgx.Conn {
 	t.Helper()
-	config, err := pgx.ParseConfig(ownerDSN(t))
+	config, err := pgx.ParseConfig(dsn)
 	if err != nil {
 		t.Fatalf("parsing the test DSN: %v", err)
 	}
