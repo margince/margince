@@ -3170,10 +3170,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "commission.column.rate": "Tỷ lệ",
   "commission.column.basis": "Giá trị deal",
   "commission.column.status": "Trạng thái",
+  "commission.column.date": "Ngày",
   "commission.status.accrued": "Đã ghi nhận",
   "commission.status.approved": "Đã duyệt",
   "commission.status.paid": "Đã thanh toán",
   "commission.status.void": "Đã đảo ngược",
+  "commission.status.reversal": "Khoản bù trừ",
   "commission.outstanding": "Chưa thanh toán",
   "commission.outstandingDetail_one": "1 khoản · đã ghi nhận hoặc đã duyệt",
   "commission.outstandingDetail_other":

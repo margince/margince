@@ -126,11 +126,12 @@ describe("the commission panel", () => {
     // 20% of a €1,000 deal, read per cell: asserting the row as one string
     // would pass just as happily with the earned and basis figures swapped.
     // The deal leads, because an entry's first question is "on what?".
-    expect(cells[1]).toBe("€200.00");
+    expect(cells[1]).toBe("01/08/2026");
+    expect(cells[2]).toBe("€200.00");
     // The rate is the tier a human agreed to, not the basis points stored.
-    expect(cells[2]).toBe("20%");
-    expect(cells[3]).toBe("€1,000.00");
-    expect(cells[4]).toContain("Accrued");
+    expect(cells[3]).toBe("20%");
+    expect(cells[4]).toBe("€1,000.00");
+    expect(cells[5]).toContain("Accrued");
   });
 
   // A ledger of bare figures cannot be reconciled against anything: the entry
@@ -196,7 +197,38 @@ describe("the commission panel", () => {
     const rows = [...ledger.querySelectorAll("tbody tr")];
 
     expect(rows).toHaveLength(2);
-    expect(rows[1]?.textContent).toContain("Reversed");
+    expect(rows[1]?.textContent).toContain(en["commission.status.reversal"]);
+  });
+
+  it("draws a reversal as a negative offsetting line with its date and reason", async () => {
+    stubCommissions([
+      {
+        ...accrued,
+        id: "c-2",
+        status: "void",
+        reversal_of: "c-1",
+        void_reason: "the deal was reopened",
+        created_at: "2026-09-15T10:00:00Z",
+      },
+      { ...accrued, status: "void", void_reason: "the deal was reopened" },
+    ]);
+
+    render(<PartnerCommissions companyId="o-1" />);
+    const ledger = await screen.findByTestId("commission-ledger");
+    const [reversal, original] = [...ledger.querySelectorAll("tbody tr")];
+
+    const earned = formatMoney(20000, "EUR", "en");
+    expect(reversal?.textContent).toContain(formatMoney(-20000, "EUR", "en"));
+    expect(reversal?.textContent).toContain(en["commission.status.reversal"]);
+    expect(reversal?.textContent).toContain("the deal was reopened");
+    expect(reversal?.textContent).toContain("15/09/2026");
+    expect(original?.textContent).toContain(earned);
+    expect(original?.textContent).not.toContain(
+      formatMoney(-20000, "EUR", "en"),
+    );
+    expect(original?.textContent).toContain(en["commission.status.void"]);
+    expect(original?.textContent).toContain("01/08/2026");
+    expect(original?.textContent).not.toContain("the deal was reopened");
   });
 
   // Reading page one and stopping would under-report what a partner earned,

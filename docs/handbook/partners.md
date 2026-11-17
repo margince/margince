@@ -119,19 +119,19 @@ Commission in Margince is added on its own when a deal that a partner **sourced*
 
 The partner's margin tier is fixed on the commission when it is added. So changing a partner's tier later does not change what they have already earned. A partner with no tier earns nothing, and no commission line shows at all. A zero would say "we owe them nothing"; no line says "we owe them nothing yet".
 
-If a partner earned commission on a win, opening the deal again does not delete it. A line that takes it back is added, and the first line is marked **Reversed**. A deal that was won, opened again and won again shows three lines. Nothing is written over.
+If a partner earned commission on a win, opening the deal again does not delete it. A line marked **Reversal** that takes it back is added, and the first line is marked **Reversed**. A deal that was won, opened again and won again shows three lines. Nothing is written over.
 
 ### How do I approve or pay a partner's commission?
 To approve or mark a partner's commission paid in Margince, open the partner company's **Partner** tab and use the line's action in its **Commission** panel.
 1. **Approve** an **Accrued** line: "It pays nothing: settle the payment in your finance system, then mark it paid here."
 2. **Mark as paid** an **Approved** line once your finance system has paid it. Margince moves no money.
-3. **Reverse** a line that should not stand, with a **Reversal reason**. A line that takes it back is added; nothing is deleted.
+3. **Reverse** a line that should not stand, with a **Reversal reason**. A **Reversal** line that takes it back is added, with the amount as a minus figure and the reason under its status. Nothing is deleted.
 Without permission the column reads **No permission to decide**.
 Also called: pay a partner, partner payout, referral fee.
 
 ### The Commission panel
 
-The **Commission** panel on a partner's page holds a line for each deal. Each line shows the **Deal**, what was **Earned**, the **Rate**, the **Deal value** it was taken from, and a **Status**. Above it sits **Outstanding**: lines that are accrued or approved. Nothing earned yet reads "No commission yet".
+The **Commission** panel on a partner's page holds a line for each deal. Each line shows the **Deal**, the **Date** it was written, what was **Earned**, the **Rate**, the **Deal value** it was taken from, and a **Status**. Above it sits **Outstanding**: lines that are accrued or approved. Nothing earned yet reads "No commission yet".
 
 | Status | What it means |
 |---|---|
@@ -139,3 +139,4 @@ The **Commission** panel on a partner's page holds a line for each deal. Each li
 | **Approved** | Approved for payment |
 | **Paid** | Paid |
 | **Reversed** | Taken back, with the first line left in place |
+| **Reversal** | The line that takes a reversed one back, as a minus figure with its reason |
