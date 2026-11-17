@@ -124,9 +124,9 @@ type Instruction struct {
 //
 // GATED ON THREE THINGS, and each answers a different question.
 //
-// A user or their agent, because the row says a named user took this on. A
-// connector has that user's grants and was not asked, so it is refused. An agent
-// acts for the user who asked it, and the row names both.
+// A human at the keyboard, because the row says a named user took this on. An
+// agent or a connector holds that user's grants and was not the one deciding,
+// so both are refused.
 //
 // auth.Require on communication_exception:create, because directing a send is
 // its own authority. A seat that may edit a contact has not thereby been given
@@ -204,13 +204,13 @@ func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInpu
 		arguments := []any{
 			reviewID, director, in.ReasonCode, in.Explanation,
 			in.WarningVersion, message.RecordedAt, review.OpenedAt, out.ValidUntil,
-			acknowledged, givenByAdmin, nil, nullableText(message.Scope),
+			acknowledged, givenByAdmin, nullableText(message.Scope),
 		}
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO communication_instruction
 			  (review_id, directed_by, reason_code, explanation, warning_version,
 			   acknowledged_at, facts_as_of, valid_until, acknowledged_wording, given_by_admin,
-			   directed_by_agent, acknowledged_scope)
+			   acknowledged_scope)
 			VALUES (`+database.Placeholders(arguments)+`)
 			RETURNING id`, arguments...).Scan(&out.ID); err != nil {
 			// A DECISION ALREADY STANDS ON THIS REVIEW, which is what the

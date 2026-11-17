@@ -193,7 +193,7 @@ installation that handed over the first has not handed over the second with it.
 
 The check is `requireAHumanAtTheKeyboard` plus the grant, so only the user takes the decision, in a
 session. The route is human-only, and no agent or connector records one. `directed_by` names the user.
-`directed_by_agent` is set only on decisions recorded before agents lost this route.
+`directed_by_agent` is never written; older rows may carry it.
 
 Every role that sends mail holds the grant: `rep`, `manager`, `management` and `admin`. The grant
 alone does not say which refusals a seat may send past. Each refusal reason declares what can

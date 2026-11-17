@@ -62,6 +62,12 @@ describe("fillFromDraft", () => {
     expect(form.setReasonFromDraft).toHaveBeenCalledWith(false);
   });
 
+  it("names no reason for a draft the sender's own words held back", () => {
+    const form = { ...formWith(""), body: "My own words" };
+    fillFromDraft(moved, form);
+    expect(form.setContext).not.toHaveBeenCalled();
+  });
+
   it("keeps a drafted reason through a rewrite verb", () => {
     const form = formWith("requested_followup", true, false);
     fillFromDraft(

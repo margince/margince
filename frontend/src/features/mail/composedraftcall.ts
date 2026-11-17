@@ -162,7 +162,6 @@ export function fillFromDraft(
   }>,
 ): boolean {
   const drafted = result.draft;
-  takeDraftedReason(drafted, form);
   // A subject holding only the project tag has no words of the rep's yet, so
   // the drafted subject fills in behind the tag.
   const written = stripEveryKeyTag(form.subject).trim();
@@ -175,6 +174,8 @@ export function fillFromDraft(
   }
   const replacesBody = !form.body || form.rewrite === true;
   if (replacesBody) {
+    // The reason follows the words on screen, so a held-back draft names none.
+    takeDraftedReason(drafted, form);
     form.setBody(drafted.body);
     form.setServedBody(drafted.body);
     form.setDraftRef(drafted.draft_ref ?? null);

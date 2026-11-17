@@ -290,7 +290,7 @@ func (g *Gate) AuthorizeDirectedExecutionTx(
 func (s *Store) HeldMessageForReview(ctx context.Context, reviewID ids.UUID) (ids.UUID, error) {
 	// The same door DirectSend uses. A connector holds the granting user's
 	// communication_exception:create and would learn which reviews exist.
-	if err := requireAUserOrTheirAgent(ctx); err != nil {
+	if err := requireAHumanAtTheKeyboard(ctx); err != nil {
 		return ids.UUID{}, err
 	}
 	// CREATE here, not read: this lookup exists to serve DIRECTING a send, and

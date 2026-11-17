@@ -17751,9 +17751,9 @@ export interface paths {
          *     instruction rather than under the engine's permission. A subject asking later why they
          *     received it is shown the refusal AND the decision, never a grant nobody made.
          *
-         *     THE DECISION IS THE USER'S. A user's agent may carry it out, and asks that user first. The
-         *     row names that user as the one who took it on, and names the agent that acted for them. A
-         *     connector may not. It also needs the `communication_exception` object at `create`: directing
+         *     THE DECISION IS THE USER'S, taken in their own session. The row names them as the one who
+         *     took it on. An agent or a connector is refused: it may read the review and send its user
+         *     there. It also needs the `communication_exception` object at `create`: directing
          *     a send is its own authority, and a seat that may edit a contact has not thereby been given
          *     the right to act against the engine's answer about them.
          *
@@ -54644,7 +54644,7 @@ export interface components {
              *     review's refusals changed since then, the decision is refused with `instruction_stale`
              *     and the director opens the review again. Without it, a decision cannot pass a refusal
              *     the subject made themselves (an objection, a withdrawal, a restriction or a request to
-             *     stop), and neither can an agent's.
+             *     stop).
              */
             shown_reasons?: string[];
         };

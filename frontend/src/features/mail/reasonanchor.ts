@@ -24,6 +24,20 @@ export function useReasonForAnchor(
   }
 }
 
+/** A reason the sender picks, which drops what a drafted reason rested on. */
+export function pickReason(
+  fields: Pick<
+    ComposeFields,
+    "setContext" | "setMeetingEvidence" | "setReasonFromDraft"
+  >,
+): (next: ComposeFields["context"]) => void {
+  return (next) => {
+    fields.setContext(next);
+    fields.setMeetingEvidence(undefined);
+    fields.setReasonFromDraft(false);
+  };
+}
+
 /** The deal among a message's links, which a deal follow-up rests on. */
 export function dealOf(
   links:

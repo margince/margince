@@ -339,6 +339,8 @@ export function useComposeFields({
     setBody(saved.body);
     setHtml(saved.html);
     setContext(saved.context);
+    setMeetingEvidence(undefined);
+    setReasonFromDraft(false);
     setSendAtValue(saved.sendAt);
     setSendSchedule(saved.sendSchedule);
     const state = saved.editorState;
@@ -399,6 +401,8 @@ export function useComposeFields({
     setIntent(next.intent);
     setDraftedIntent(next.draftedIntent);
     setContext(next.context);
+    setMeetingEvidence(undefined);
+    setReasonFromDraft(false);
     setSendAtValue(next.sendAt);
     setSendSchedule(next.sendSchedule);
     setProvenance(next.provenance);
