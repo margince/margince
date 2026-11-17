@@ -306,8 +306,9 @@ describe("About Margince at the foot of Help and feedback", () => {
     ).toBeNull();
   });
 
-  it("opens the About dialog from the keyboard, and hands focus back to the trigger", async () => {
+  it("opens the About dialog from the keyboard on its copy verb, and hands focus back to the trigger", async () => {
     bundle.release = "v1.4.0";
+    bundle.revision = "0123456789abcdef0123456789abcdef01234567";
     const user = userEvent.setup();
     renderMenu();
     await openHelpByKeyboard(user);
@@ -320,6 +321,9 @@ describe("About Margince at the foot of Help and feedback", () => {
     });
     expect(screen.queryByRole("menu")).toBeNull();
     expect(within(dialog).getByText("v1.4.0")).toBeVisible();
+    expect(document.activeElement).toBe(
+      within(dialog).getByRole("button", { name: "Copy version details" }),
+    );
 
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("dialog", { name: "About Margince" })).toBeNull();

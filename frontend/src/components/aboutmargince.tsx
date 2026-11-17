@@ -202,6 +202,16 @@ export function AboutMarginceDialog({
       labelledBy={titleId}
       intent="form"
       returnFocusTo={returnFocusTo}
+      // Not the first focusable: on a core build that is the commit link, and
+      // an Enter on arrival would leave the app.
+      initialFocusTo={() =>
+        document
+          .getElementById(titleId)
+          ?.closest<HTMLElement>("[role=dialog]")
+          ?.querySelector<HTMLElement>(
+            ".aboutmargince-build .copy-action button",
+          ) ?? null
+      }
     >
       <Heading size="large" id={titleId} className="modal-title">
         {t("about.title")}
