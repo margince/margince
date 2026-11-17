@@ -133,8 +133,6 @@ function driver() {
   return userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
 }
 
-// The employer changes from its row in the About section's dialog, which
-// steps aside for the employer's own dialog.
 async function changeEmployer(user: ReturnType<typeof driver>) {
   await user.click(await screen.findByRole("button", { name: "Edit About" }));
   const about = await screen.findByRole("dialog", { name: "About" });
