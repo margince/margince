@@ -75,6 +75,9 @@ func purposeClassTx(ctx context.Context, tx pgx.Tx, purposeID ids.PurposeID) (me
 	return messagingrules.PurposeClass(class), nil
 }
 
+// codeInvalid is the field code of a 422 that names a value the rules refuse.
+const codeInvalid = "invalid"
+
 // NoSubjectRequestError refuses a consent-confirmation mail a user asked for
 // when the recipient's rules need the contact's own request and none is on
 // record.
@@ -84,7 +87,7 @@ func (e *NoSubjectRequestError) Error() string { return "consent: " + contactIDK
 
 // FieldFault answers the refusal as a 422 naming the contact.
 func (e *NoSubjectRequestError) FieldFault() (field, code, message string) {
-	return contactIDKey, "invalid", e.reason()
+	return contactIDKey, codeInvalid, e.reason()
 }
 
 func (e *NoSubjectRequestError) reason() string {
