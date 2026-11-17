@@ -75,10 +75,11 @@ func (s *Store) ResolveConfirmToken(
 			    OR EXISTS (SELECT 1 FROM lead l
 			                WHERE l.id = ct.lead_id AND l.archived_at IS NULL))
 			RETURNING ct.contact_id, ct.lead_id, ct.id, ct.delivered_to, ct.kind, ct.purpose_id,
-			          ct.question_locale, ct.question_key, ct.question_version`,
+			          ct.question_locale, ct.question_key, ct.question_version, ct.asks_news,
+			          coalesce(ct.subject_request_id, '00000000-0000-0000-0000-000000000000')`,
 			hashPublicToken(token), s.now().UTC(), by == FetchByAHuman).Scan(
 			&contactID, &leadID, &ref.TokenID, &ref.DeliveredTo, &ref.Kind, &purposeID,
-			&language, &questionKey, &questionVersion)
+			&language, &questionKey, &questionVersion, &ref.AsksNews, &ref.SubjectRequest)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}

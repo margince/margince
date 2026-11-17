@@ -1,11 +1,11 @@
 {
   "totals": {
-    "sites": 61,
+    "sites": 62,
     "sites_best_current": 44,
     "sites_best_partial": 0,
     "sites_best_stale": 16,
-    "sites_absent": 1,
-    "scenarios": 331,
+    "sites_absent": 2,
+    "scenarios": 338,
     "records": 400,
     "bindings": 18,
     "self_judged_records": 0
@@ -8628,7 +8628,7 @@
     {
       "name": "Gemini",
       "answer": "mostly",
-      "sites_shipped": 61,
+      "sites_shipped": 62,
       "sites_measured": 60,
       "ready": 43,
       "usable_with_care": 16,
@@ -9541,7 +9541,7 @@
     {
       "name": "GPT",
       "answer": "mostly",
-      "sites_shipped": 61,
+      "sites_shipped": 62,
       "sites_measured": 54,
       "ready": 37,
       "usable_with_care": 11,
@@ -10371,7 +10371,7 @@
     {
       "name": "Mistral",
       "answer": "mostly",
-      "sites_shipped": 61,
+      "sites_shipped": 62,
       "sites_measured": 50,
       "ready": 23,
       "usable_with_care": 17,
@@ -11165,7 +11165,7 @@
     {
       "name": "Gemma",
       "answer": "not_enough_tested",
-      "sites_shipped": 61,
+      "sites_shipped": 62,
       "sites_measured": 6,
       "ready": 1,
       "usable_with_care": 1,
@@ -22470,6 +22470,60 @@
           "stale_reason": ""
         }
       ]
+    },
+    {
+      "task": "nl_search",
+      "site": "search_data_plan",
+      "key": "nl_search/search_data_plan",
+      "scope": "full_invocation",
+      "missing_context_scopes": [],
+      "best_state": "absent",
+      "recommended": null,
+      "scenarios": [
+        {
+          "name": "search_data_counts_open_deals",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/nl_search/search_data_counts_open_deals_01.yaml"
+        },
+        {
+          "name": "search_data_counts_won_deals_in_a_period",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/nl_search/search_data_counts_won_deals_in_a_period_01.yaml"
+        },
+        {
+          "name": "search_data_eur_threshold",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/nl_search/search_data_eur_threshold_01.yaml"
+        },
+        {
+          "name": "search_data_falls_back_for_a_handbook_question",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/nl_search/search_data_falls_back_for_a_handbook_question_01.yaml"
+        },
+        {
+          "name": "search_data_german_threshold",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/nl_search/search_data_german_threshold_01.yaml"
+        },
+        {
+          "name": "search_data_jpy_threshold",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/nl_search/search_data_jpy_threshold_01.yaml"
+        },
+        {
+          "name": "search_data_vietnamese_threshold",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/nl_search/search_data_vietnamese_threshold_01.yaml"
+        }
+      ],
+      "records": []
     },
     {
       "task": "offer_draft",

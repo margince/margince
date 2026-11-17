@@ -24,10 +24,8 @@ const IDENTITY_DEPTH: Readonly<Record<Screen, number>> = {
   leads: 2,
   deals: WHOLE_ADDRESS,
   projects: WHOLE_ADDRESS,
-  // #/worklist/<owner> reaches the screen as `opensOn`, read in useState
-  // initialisers, so only a remount applies a new owner. A lower depth shows
-  // the manager's own queue under a colleague's address.
-  // features/worklist/worklist.identity.test.tsx holds this.
+  // #/worklist/<owner> only redirects to Home's drawer, and the redirect
+  // re-reads its owner on every address (features/brief/brief.queue.tsx).
   worklist: WHOLE_ADDRESS,
   // #/analytics/<section>: each section is a view of one screen.
   analytics: 1,

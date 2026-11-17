@@ -31,10 +31,11 @@ import (
 // watcher that holds it. The caller starts the watcher's re-check loop and
 // wires its posture into whatever reports it.
 //
-// Two postures refuse the boot: a license the bundled module will not honor, and
-// a module that could not run at all. No license is not one of them. A
-// production installation without one runs on its trial (installtrial.Trial),
-// and a development or test one runs unlicensed with no trial at all.
+// One posture refuses the boot: a module that could not run at all, which is a
+// fault in this build. A license the module refuses, or one past its expiry,
+// starts the role locked (installtrial.Lapsed), so every seat sees why. A
+// production installation without a license runs on its trial
+// (installtrial.Trial), and a development or test one runs unlicensed.
 func EnsureLicense(ctx context.Context, log *slog.Logger, pool *pgxpool.Pool, vault keyvault.Vault, cfg *config.Config, env runtimeenv.Environment) (*licensecheck.Watcher, error) {
 	// The SOURCE is handed over, not a token: the watcher re-reads it. A
 	// license.token_file renewed in place takes effect on the next re-check;
@@ -51,7 +52,7 @@ func EnsureLicense(ctx context.Context, log *slog.Logger, pool *pgxpool.Pool, va
 		// known: platform's check is handed a token, not a configuration file.
 		return nil, fmt.Errorf("%w — %s", err, correctTheToken(cfg))
 	}
-	licensereport.LogPosture(ctx, log, watcher.Posture(), licenseTokenOrigin(cfg, watcher.Posture()), env)
+	licensereport.LogPosture(ctx, log, watcher.Posture(), licenseTokenOrigin(cfg, watcher.Posture()), correctTheToken(cfg), env)
 	return watcher, nil
 }
 
@@ -115,7 +116,7 @@ func WithLicensePosture(posture func() licensecheck.Posture) Option {
 func WithInstallationTrial(env runtimeenv.Environment, posture func() licensecheck.Posture, now func() time.Time) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		trial := installtrial.New(pool, env, posture, now)
-		s.authHandlers = s.WithTrialLock(trial.Ended)
+		s.authHandlers = s.WithInstallationLock(trial.Lock)
 		s.trial = trial
 	}
 }

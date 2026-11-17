@@ -84,6 +84,11 @@ async function submit(button: string) {
   );
   await user.click(screen.getByTestId(button));
   await user.type(screen.getByLabelText("Full name *"), "Dana Buyer");
+  if (button === "new-record") await user.click(screen.getByText("Add email"));
+  await user.type(
+    screen.getByLabelText(button === "quick-capture" ? "Email" : "Email *"),
+    "dana@example.test",
+  );
   await user.click(screen.getByRole("button", { name: "Create" }));
   await screen.findByText("This is already a lead.");
   return user;

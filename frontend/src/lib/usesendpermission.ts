@@ -55,6 +55,12 @@ export function useSendPermission(args: {
    * "unproven" about a message the send allows.
    */
   evidence?: components["schemas"]["CommunicationEvidence"];
+  /**
+   * The text written so far, checked against the advertising content rules of
+   * the recipients' packs. Settled by the caller, so typing does not ask once
+   * per key.
+   */
+  draft?: Readonly<{ subject: string; body: string }>;
   /** Off while the rep is still choosing a recipient — nothing to ask about yet. */
   enabled?: boolean;
 }): {
@@ -88,6 +94,7 @@ export function useSendPermission(args: {
     args.marketingPurpose ?? "",
     args.consentPurpose ?? "",
     args.evidence ?? {},
+    args.draft ?? {},
   ];
   const query = useQuery({
     queryKey,
@@ -103,6 +110,8 @@ export function useSendPermission(args: {
         marketing_purpose: args.marketingPurpose,
         consent_purpose: args.consentPurpose,
         evidence: args.evidence,
+        subject: args.draft?.subject,
+        body: args.draft?.body,
       };
       const answered = args.anchorActivityId
         ? await api.POST("/activities/{id}/send-email:preview", {

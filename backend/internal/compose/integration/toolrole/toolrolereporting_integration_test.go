@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -266,7 +267,10 @@ func reportingSeeders(s sweepSeed) map[string]func() string {
 // sweep asks a model for.
 type sweepLane struct{ reply string }
 
-func (l sweepLane) Complete(context.Context, model.Request) (model.Response, error) {
+func (l sweepLane) Complete(_ context.Context, request model.Request) (model.Response, error) {
+	if strings.HasPrefix(request.System, "Translate the question into exactly one typed READ request.") {
+		return model.Response{Text: `{"engine":"unsupported","arguments":"{}","count":false}`}, nil
+	}
 	return model.Response{Text: l.reply}, nil
 }
 

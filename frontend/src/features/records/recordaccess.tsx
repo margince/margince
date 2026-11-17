@@ -28,6 +28,7 @@ import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useRecordWriteRefusal } from "../../lib/capability";
 import { useMemberName } from "../../lib/membernames";
+import { fromHere } from "../../lib/navigatefrom";
 import { mayLeaveReach, useLeaveIfOutOfReach } from "../../lib/outofreach";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { invalidateRecord } from "../../lib/recordwritekeys";
@@ -143,10 +144,11 @@ export function RecordAccess({
       toast.show(failure(error), { tone: "danger" });
       await invalidateRecord(queryClient, kind, id);
     },
-    onSuccess: async (_, { id, visibility, mayLoseAccess }) => {
+    onMutate: fromHere,
+    onSuccess: async (_, { id, visibility, mayLoseAccess }, from) => {
       if (
         mayLoseAccess &&
-        (await leaveIfOutOfReach(id, t(copy.leftYourAccess)))
+        (await leaveIfOutOfReach(id, t(copy.leftYourAccess), from))
       ) {
         return;
       }

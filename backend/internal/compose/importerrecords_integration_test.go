@@ -91,8 +91,9 @@ func recordWires(t *testing.T, e *integration.Env, system string, author wireAut
 	return []recordWire{
 		{
 			"contact", "/v1/contacts", encode(json.Marshal(crmcontracts.CreateContactRequest{
-				Source:   "manual",
-				FullName: "Imported Contact", SourceSystem: &system, SourceAuthorId: author.id, SourceAuthorName: author.name,
+				LinkedinUrl: new(integration.ContactProfile()),
+				Source:      "manual",
+				FullName:    "Imported Contact", SourceSystem: &system, SourceAuthorId: author.id, SourceAuthorName: author.name,
 			})),
 			func(w http.ResponseWriter, r *http.Request) {
 				c.CreateContact(w, r, crmcontracts.CreateContactParams{})

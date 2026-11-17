@@ -566,6 +566,9 @@ var queryMinimumTable = map[string][]queryMinimum{
 	"GET /v1/relationships": {
 		{Name: "limit", Minimum: 1},
 	},
+	"GET /v1/retention/archive": {
+		{Name: "limit", Minimum: 1},
+	},
 	"GET /v1/retention/legal-holds": {
 		{Name: "limit", Minimum: 1},
 	},

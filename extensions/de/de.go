@@ -112,7 +112,10 @@ func (retention) Classes() []jurisdiction.RetentionClass {
 func messagingRules() messaging.Rules {
 	return messaging.Rules{
 		Jurisdiction: "de",
-		Version:      1,
+		Version:      2,
+		// German law has not settled whether a details check that also asks
+		// for news is advertising, so the check asks no news question.
+		RecordConfirmationWithoutNews: true,
 		// Twelve and six months as calendar-ish durations. Hours because the
 		// type is a time.Duration and a month is not one; the engine compares
 		// against a recorded timestamp, so the small drift against calendar

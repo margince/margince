@@ -67,6 +67,7 @@ const PROBLEM_TONE = {
   duplicate: "info",
   permission: "danger",
   unusable_row: "danger",
+  incomplete_identity: "warning",
 } as const satisfies Record<ImportProblemKind, string>;
 
 // The report's parts in the format's order. An older report of one CSV has no

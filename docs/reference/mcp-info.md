@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 273.7 KB |
+| Tool catalog | 273.9 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 71468 |
+| Approx. wire tokens | 71520 |
 | Largest tool | `read_details` (17.4 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 51.5 KB | 18% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 53.4 KB | 19% | Yes, every step |
-| Input schemas | 156.9 KB | 57% | Yes, every step |
+| Input schemas | 157.1 KB | 57% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 4% | Partly |
-| **Description + input schema** | **210.4 KB** | **76%** | **the recurring cost** |
+| **Description + input schema** | **210.6 KB** | **76%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -91,7 +91,7 @@ descriptions and input schemas are what each step pays for.
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes | [`ui://margince/approval-queue.html`](#approval_queue_view) | 474 |
 | [`list_documents`](#list_documents) | List a record's documents or read one | yes |  | 331 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1012 |
-| [`read_analytics`](#read_analytics) | Write a report or query data | yes |  | 1020 |
+| [`read_analytics`](#read_analytics) | Write a report or query data | yes |  | 1067 |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
 | [`read_attention`](#read_attention) | See what needs attention | yes | [`ui://margince/attention.html`](#attention_view) | 365 |
 | [`read_context`](#read_context) | Get the story so far | yes | [`ui://margince/context.html`](#context_view) | 413 |
@@ -105,7 +105,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_reports`](#read_reports) | Read sales reports | yes |  | 2784 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 358 |
 | [`read_view`](#read_view) | Read a view | yes |  | 1889 |
-| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2775 |
+| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2779 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 1344 |
 | [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 484 |
@@ -6841,6 +6841,10 @@ read_reports for the standard metrics and named reports. Keep a saved query's id
       },
       "type": "array"
     },
+    "request_body": {
+      "description": "ask only: The chosen action's request body; read_workspace topic actions lists its shape",
+      "type": "object"
+    },
     "save": {
       "description": "query only: Persist the run; the answer then carries a citable run_id.",
       "type": "boolean"
@@ -6858,8 +6862,9 @@ read_reports for the standard metrics and named reports. Keep a saved query's id
       ]
     },
     "step": {
-      "description": "query: ask a question of the data; compose: build a report document from saved queries",
+      "description": "query: ask a typed question of the data; compose: build a report document from saved queries; ask: ask a plain-language data question",
       "enum": [
+        "ask",
         "compose",
         "query"
       ],
@@ -12094,6 +12099,7 @@ and stage_id for a deal. Take every name verbatim; a custom field is spelled cf_
         "change_state",
         "change_tags",
         "list_documents",
+        "read_analytics",
         "read_details",
         "read_reports",
         "read_workspace",

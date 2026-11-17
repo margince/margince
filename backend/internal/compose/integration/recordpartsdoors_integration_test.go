@@ -121,7 +121,7 @@ func TestProjectCompaniesAndStakeholdersAnswerAsTheirRoutes(t *testing.T) {
 	d := newTwoDoors(t, "project-part-doors", "read", "write")
 	customer := createdRecord(t, d.e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Part Customer"})
 	partner := createdRecord(t, d.e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Part Partner"})
-	contact := createdRecord(t, d.e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Petra Sponsor"})
+	contact := createdRecord(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Petra Sponsor"})
 	viaREST := createdRecord(t, d.e, "/v1/projects", AnyMap{"name": "Part rollout REST", "company_id": customer, "source": "manual"})
 	viaTool := createdRecord(t, d.e, "/v1/projects", AnyMap{"name": "Part rollout tool", "company_id": customer, "source": "manual"})
 
@@ -240,7 +240,7 @@ func TestListRecordsNarrowsCompaniesAndLeadsToAListsMembers(t *testing.T) {
 // activities route's entity pair and waiting_reply do.
 func TestListRecordsNarrowsTheTimelineToARecordsUnansweredMail(t *testing.T) {
 	d := newTwoDoors(t, "timeline-doors", "read")
-	contact := createdID(t, d.e, "/v1/contacts", AnyMap{"full_name": "Wanda Waiting", "source": "manual"})
+	contact := createdID(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Wanda Waiting", "source": "manual"})
 	waiting := createdID(t, d.e, "/v1/activities", AnyMap{
 		"kind": "email", "direction": "inbound", "subject": "Contract?", "body": "Where is the contract", "source": "manual",
 		"links": []AnyMap{{"entity_type": "contact", "entity_id": contact}},
@@ -282,7 +282,7 @@ func namesCode(refusal, code string) bool {
 func TestChangeRecordPartsRefusesWhatItsRoutesRefuse(t *testing.T) {
 	d := newTwoDoors(t, "part-refusal-doors", "read", "write")
 	company := createdRecord(t, d.e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Refusal Works"})
-	contact := createdRecord(t, d.e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Rafa Refused"})
+	contact := createdRecord(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Rafa Refused"})
 	project := createdRecord(t, d.e, "/v1/projects", AnyMap{"name": "Refusal rollout", "company_id": company, "source": "manual"})
 	deal := openDeal(t, d.e, apptest.DiscoverSeededPipeline(t, d.e), "Refusal renewal")
 	offer := recordIDOf(t, d.toolSeed(t, "create_record", map[string]any{"record_type": "offer", "fields": map[string]any{

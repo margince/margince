@@ -84,7 +84,7 @@ type featureReference struct {
 func createFeatureReferences(t *testing.T, e *apptest.AppEnv) []featureReference {
 	t.Helper()
 	company := createdRecord(t, e, "/v1/companies", AnyMap{"display_name": "Reference company", "source": "manual"})
-	contact := createdRecord(t, e, "/v1/contacts", AnyMap{"full_name": "Reference contact", "source": "manual"})
+	contact := createdRecord(t, e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Reference contact", "source": "manual"})
 	lead := createdRecord(t, e, "/v1/leads", AnyMap{"full_name": "Reference lead", "source": "manual"})
 	deal := openDeal(t, e, apptest.DiscoverSeededPipeline(t, e), "Reference deal")
 	project := createdRecord(t, e, "/v1/projects", AnyMap{"name": "Reference project", "company_id": company, "source": "manual"})

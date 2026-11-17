@@ -84,6 +84,7 @@ function stubApi(
 
 async function openNewContact(
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+  withChannel = true,
 ) {
   const user = userEvent.setup();
   render(
@@ -95,6 +96,11 @@ async function openNewContact(
   );
   await user.click(screen.getByTestId("new-record"));
   await user.type(await screen.findByLabelText("Full name *"), "Dana Buyer");
+  if (withChannel)
+    await user.type(
+      screen.getByLabelText("LinkedIn"),
+      "https://www.linkedin.com/in/dana-buyer",
+    );
   return user;
 }
 
@@ -306,5 +312,23 @@ describe("New contact’s Company field", () => {
         ),
       ),
     );
+  });
+});
+
+it("requires an email, phone or LinkedIn URL before creating a contact", async () => {
+  const { posted } = stubApi();
+  const user = await openNewContact(undefined, false);
+  expect(
+    screen.getByText("Add at least one email, phone or LinkedIn URL."),
+  ).toBeVisible();
+  expect(screen.getByRole("button", { name: "Create" })).toBeDisabled();
+  await user.type(
+    screen.getByLabelText("LinkedIn"),
+    "https://www.linkedin.com/in/dana-buyer",
+  );
+  await user.click(screen.getByRole("button", { name: "Create" }));
+  await waitFor(() => expect(posted).toHaveLength(1));
+  expect(posted[0]).toMatchObject({
+    social: { linkedin: "https://www.linkedin.com/in/dana-buyer" },
   });
 });

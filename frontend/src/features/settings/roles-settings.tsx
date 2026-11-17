@@ -37,7 +37,11 @@ import {
   useCreateRole,
   useRoles,
 } from "../../lib/roles.queries";
-import { replaceDial, useUrlParams } from "../../lib/urlstate";
+import {
+  replaceDial,
+  useAddressWriters,
+  useUrlParams,
+} from "../../lib/urlstate";
 import { RoleBadges, RoleDrawer } from "./roles-drawer";
 import "./roles-settings.css";
 
@@ -151,11 +155,12 @@ function useLinkedRole(
     !roles.isFetching &&
     searched.isSuccess &&
     !searched.isFetching;
+  const writers = useAddressWriters();
   useEffect(() => {
     if (unknown) {
-      replaceDial(ROLE_PARAM, undefined);
+      writers.replaceDial(ROLE_PARAM, undefined);
     }
-  }, [unknown]);
+  }, [unknown, writers]);
   return linked;
 }
 

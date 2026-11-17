@@ -309,7 +309,7 @@ func decodePreferenceChoices(w http.ResponseWriter, r *http.Request) ([]Preferen
 	for _, c := range req.Choices {
 		state, err := ParseRecordableState(c.State)
 		if err != nil {
-			httperr.Write(w, r, httperr.Validation(fieldState, "invalid", "must be granted or withdrawn"))
+			httperr.Write(w, r, httperr.Validation(fieldState, codeInvalid, "must be granted or withdrawn"))
 			return nil, false
 		}
 		// Normalized HERE, as the engine will read it, so a duplicate

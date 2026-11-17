@@ -42,6 +42,11 @@ type NotOffered = Readonly<{
 // Keyed by page, or by `page/tab` for a name one tab draws.
 const DRAWN_NOT_OFFERED: Readonly<Record<string, readonly NotOffered[]>> = {
   members: [{ key: "users.search", why: "record-filter" }],
+  "privacy/retention": [
+    { key: "archiveReview.before", why: "record-filter" },
+    { key: "archiveReview.contact", why: "record-filter" },
+    { key: "archiveReview.company", why: "record-filter" },
+  ],
   "connections/activity": [
     { key: "captureActivity.scope.label", why: "grant" },
   ],

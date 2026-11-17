@@ -16,11 +16,11 @@ func TestTheContactDoorsCarryTheOutsideIDAndRefuseOneWithNoSystem(t *testing.T) 
 		"client":   ContactCreationInput,
 		"importer": contactCreateInputFromImporter,
 	} {
-		in, err := door(crmcontracts.CreateContactRequest{Source: "manual", FullName: "X", SourceSystem: &system, SourceId: &id})
+		in, err := door(crmcontracts.CreateContactRequest{LinkedinUrl: new("https://www.linkedin.com/in/fixture-contact"), Source: "manual", FullName: "X", SourceSystem: &system, SourceId: &id})
 		if err != nil || in.SourceID == nil || *in.SourceID != id {
 			t.Errorf("%s door: SourceID = %v, err %v; want %q carried", name, in.SourceID, err, id)
 		}
-		_, err = door(crmcontracts.CreateContactRequest{Source: "manual", FullName: "X", SourceId: &id})
+		_, err = door(crmcontracts.CreateContactRequest{LinkedinUrl: new("https://www.linkedin.com/in/fixture-contact"), Source: "manual", FullName: "X", SourceId: &id})
 		if _, refused := err.(*provenance.SourceIDError); !refused {
 			t.Errorf("%s door: an id with no system = %v, want a *provenance.SourceIDError", name, err)
 		}

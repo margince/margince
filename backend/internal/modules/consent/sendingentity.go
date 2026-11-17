@@ -72,6 +72,12 @@ func controllerOf(installation ControllerParticulars, entity sendingEntityFacts)
 	}
 	out := installation
 	out.LegalName, out.PostalAddress = entity.legalName, entity.address
+	// A translated name and address are the installation's, never the entity's.
+	out.Translations = make([]ParticularsTranslation, 0, len(installation.Translations))
+	for _, t := range installation.Translations {
+		t.LegalName, t.PostalAddress = "", ""
+		out.Translations = append(out.Translations, t)
+	}
 	return out
 }
 

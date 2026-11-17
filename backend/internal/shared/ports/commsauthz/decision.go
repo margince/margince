@@ -211,6 +211,14 @@ type Decision struct {
 	// claimed one fails. Only a preview fills them, and none is ever applied:
 	// the sender switches the reason and the engine is asked again.
 	SupportedAlternatives []Category
+
+	// LawfulBasisMissing says the recipient's pack has no legitimate-interest
+	// basis and the record holds neither their consent nor an agreement with
+	// them. Only a preview fills it, and it refuses nothing: the screen warns.
+	LawfulBasisMissing bool
+	// ConsentPurpose is the purpose a consent request to a LawfulBasisMissing
+	// recipient would ask about, zero when none can be asked.
+	ConsentPurpose ids.UUID
 }
 
 // DecisionSet holds the per-recipient answers for one delivery and phase.

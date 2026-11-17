@@ -6,10 +6,15 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "../../api/client";
 import { useSettledValue } from "../../design-system/debouncedsearch";
 import { postMultipart } from "../../lib/multipart";
+import { fromHere } from "../../lib/navigatefrom";
 import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import { settingsHref } from "../../lib/settingsrouting";
-import { useAddressedRun, usePresetContact } from "./importaddress";
+import {
+  addressedRunNow,
+  useAddressedRun,
+  usePresetContact,
+} from "./importaddress";
 import {
   choicesOf,
   type DraftPatch,
@@ -277,11 +282,14 @@ export function useImportWizard() {
     // as canceled.
     cancel: () => {
       if (runId === null) return;
+      const from = fromHere();
       cancelRun.mutate(runId, {
         // Cancelling a draft another tab is testing only stops that test and
         // leaves the draft, so the page stays on it until it is cancelled.
         onSuccess: (stopped) => {
-          if (stopped?.status !== "cancelled") return;
+          // A reader who moved on keeps the page, and the run they now hold.
+          const holdsIt = from.stillHere() && addressedRunNow() === runId;
+          if (stopped?.status !== "cancelled" || !holdsIt) return;
           reset();
           navigate(settingsHref("import"));
         },

@@ -28,15 +28,16 @@ func (s *Store) PreviewMailFooter(ctx context.Context, origin SendOrigin, links 
 	if err != nil {
 		return MailFooterPreview{}, err
 	}
-	owed, err := s.requiredDisclosures(ctx, string(surface.disclosureCategory()), in.Recipients, in.SendingEntity)
+	lang := s.footerLanguage(ctx, in.Body, in.Subject)
+	owed, err := s.requiredDisclosures(ctx, string(surface.disclosureCategory()), in.Recipients, in.SendingEntity, string(lang))
 	if err != nil {
 		return MailFooterPreview{}, err
 	}
 	return MailFooterPreview{Disclosures: owed, OffersUnsubscribe: surface.carries()}, nil
 }
 
-func (s *Store) requiredDisclosures(ctx context.Context, category string, recipients []string, entity ids.UUID) ([]DisclosureLine, error) {
-	owed, err := s.disclosuresFor(ctx, category, recipients, entity)
+func (s *Store) requiredDisclosures(ctx context.Context, category string, recipients []string, entity ids.UUID, language string) ([]DisclosureLine, error) {
+	owed, err := s.disclosuresFor(ctx, category, recipients, entity, language)
 	if err != nil {
 		return nil, err
 	}

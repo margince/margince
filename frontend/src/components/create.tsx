@@ -11,6 +11,7 @@ import { Button } from "../design-system/atoms";
 import { useT } from "../i18n";
 import { binding, shortcutTip } from "../lib/keymap";
 import { leaveCreateForm } from "../lib/listreturn";
+import { fromHere } from "../lib/navigatefrom";
 import {
   ProblemError,
   problemExistingId,
@@ -18,6 +19,7 @@ import {
 } from "../lib/problem";
 import { navigate, type Route, type Screen } from "../lib/router";
 import { useShortcutAria } from "../lib/shortcuts";
+import { useAddressWriters } from "../lib/urlstate";
 import { catalogOfScreen, useSettledOpen } from "./create.dialog";
 import "./create.css";
 import "../design-system/querystates.css";
@@ -108,11 +110,14 @@ export function useCreateRecord<Created extends { id: string }>({
       idempotencyKey: string;
       extra?: Record<string, unknown>;
     }) => create(values, rows, idempotencyKey, extra),
-    onSuccess: (created) => {
+    onMutate: fromHere,
+    onSuccess: (created, _vars, from) => {
+      // Asked before onDone, which may close the form's own address.
+      const opens = !stay && from.stillHere();
       queryClient.invalidateQueries({ queryKey: [invalidate] });
       onCreated?.(created);
       onDone();
-      if (!stay) {
+      if (opens) {
         navigate({ screen, id: created.id });
       }
     },
@@ -191,6 +196,7 @@ export function CreateAction<Created extends { id: string }>({
   // Counts this session's saves, which empties the form between them. Not a
   // boolean: two saves in a row must read as two distinct clears.
   const [saved, setSaved] = useState(0);
+  const writers = useAddressWriters();
   const { key: idempotencyKey, renew } = useIdempotencyKey();
   const mutation = useCreateRecord({
     create,
@@ -211,7 +217,7 @@ export function CreateAction<Created extends { id: string }>({
   function close() {
     setCreating(false);
     if (listCreate) {
-      leaveCreateForm(screen);
+      leaveCreateForm(screen, writers);
     }
   }
   const existing =

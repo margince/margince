@@ -55,6 +55,7 @@ func (h Handlers) meResponse(ctx context.Context, id Identity) crmcontracts.MeRe
 	for i, t := range id.Teams {
 		teams[i] = openapi_types.UUID(t.UUID)
 	}
+	trialEnded, licenseLapsed := h.lockForMe(ctx)
 	return crmcontracts.MeResponse{
 		User: crmcontracts.User{
 			Id:           openapi_types.UUID(id.UserID.UUID),
@@ -84,7 +85,8 @@ func (h Handlers) meResponse(ctx context.Context, id Identity) crmcontracts.MeRe
 		AdminPasswordLink:        adminPasswordLink,
 		ConfirmRequestsSendable:  &confirmRequests,
 		ReaderRenderingAvailable: &readerRendering,
-		TrialEnded:               h.trialEndedForMe(ctx),
+		TrialEnded:               trialEnded,
+		LicenseLapsed:            licenseLapsed,
 		Authorization: &crmcontracts.Authorization{
 			SeatType: contractSeatType(id.SeatType),
 			Objects:  contractObjectGrants(id.Permissions.Objects),

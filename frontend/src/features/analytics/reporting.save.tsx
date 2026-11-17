@@ -10,6 +10,7 @@ import { Heading } from "../../design-system/heading";
 import { Modal } from "../../design-system/modal";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
+import { type Departure, fromHere } from "../../lib/navigatefrom";
 import { throwProblem, unwrap } from "../../lib/problem";
 import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import { ReportComposition, useComposition } from "./reporting.composition";
@@ -29,7 +30,8 @@ export function SaveReportingDialog({
   // What saving does not change, said where the reader decides to save.
   note?: string;
   onClose: () => void;
-  onSaved: (report: ReportingReport) => void;
+  // `from` is where the reader pressed Save, for a caller that moves them on.
+  onSaved: (report: ReportingReport, from: Departure) => void;
 }>) {
   const t = useT();
   const title = useId();
@@ -73,7 +75,8 @@ export function SaveReportingDialog({
       if (response.error) throwProblem(response.error);
       return response.data;
     },
-    onSuccess: async (report) => {
+    onMutate: fromHere,
+    onSuccess: async (report, _vars, from) => {
       await queryClient.invalidateQueries({ queryKey: ["reporting-reports"] });
       await queryClient.invalidateQueries({
         queryKey: ["reporting-report", report.id],
@@ -84,7 +87,7 @@ export function SaveReportingDialog({
       await queryClient.invalidateQueries({
         queryKey: reportRevisionsKey(report.id),
       });
-      onSaved(report);
+      onSaved(report, from);
     },
   });
   // An open draft takes every edit until it is published or discarded, so a

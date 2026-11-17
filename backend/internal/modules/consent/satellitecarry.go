@@ -239,15 +239,29 @@ func carryQualifyingSubjectEvents(ctx context.Context, tx pgx.Tx, source, target
 		args); err != nil {
 		return fmt.Errorf("consent: joining the addresses of a qualifying event both records hold: %w", err)
 	}
+	// A link naming a duplicate names the survivor's copy instead, since the
+	// link moves to the survivor. A grant cannot be rewritten and stays on the
+	// source, so the request it answered stays there with it.
+	if _, err := tx.Exec(ctx, `
+ UPDATE confirm_token r SET subject_request_id = b.id
+   FROM consent_qualifying_event a JOIN consent_qualifying_event b
+     ON b.`+toColumn+` = @target AND b.source_entity_type = a.source_entity_type
+    AND b.source_entity_id = a.source_entity_id
+  WHERE r.subject_request_id = a.id AND a.`+fromColumn+` = @source AND a.source_entity_id IS NOT NULL`, args); err != nil {
+		return fmt.Errorf("consent: pointing a link at the request the survivor keeps: %w", err)
+	}
 	dropped, err := collectIDs(ctx, tx, `
- DELETE FROM consent_qualifying_event a WHERE a.`+fromColumn+`=@source AND `+qualifyingCarryDuplicate(target.column)+` RETURNING id`, args)
+ DELETE FROM consent_qualifying_event a WHERE a.`+fromColumn+`=@source AND `+qualifyingCarryDuplicate(target.column)+`
+   AND NOT `+answeredByAGrant+` RETURNING id`, args)
 	if err != nil {
 		return fmt.Errorf("consent: dropping qualifying events the survivor already records: %w", err)
 	}
 	moved, err := collectIDs(ctx, tx,
-		`UPDATE consent_qualifying_event SET contact_id = @contact, lead_id = @lead
- WHERE `+fromColumn+` = @source RETURNING id`, pgx.StrictNamedArgs{
-			entityContact: zeroAsNull(subjectKindID(target, entityContact)), entityLead: zeroAsNull(subjectKindID(target, entityLead)), carrySourceArg: source.id,
+		`UPDATE consent_qualifying_event a SET contact_id = @contact, lead_id = @lead
+ WHERE a.`+fromColumn+` = @source AND NOT (`+qualifyingCarryDuplicate(target.column)+` AND `+answeredByAGrant+`)
+ RETURNING id`, pgx.StrictNamedArgs{
+			entityContact: zeroAsNull(subjectKindID(target, entityContact)), entityLead: zeroAsNull(subjectKindID(target, entityLead)),
+			carrySourceArg: source.id, carryTargetArg: target.id,
 		})
 	if err != nil {
 		return fmt.Errorf("consent: carrying the qualifying events: %w", err)
@@ -256,6 +270,10 @@ func carryQualifyingSubjectEvents(ctx context.Context, tx pgx.Tx, source, target
 	noteRows(carry.dropped, "consent_qualifying_event", dropped)
 	return nil
 }
+
+// answeredByAGrant matches a qualifying event `a` a grant names as the request
+// it answered.
+const answeredByAGrant = `EXISTS (SELECT 1 FROM consent_event ce WHERE ce.subject_request_id = a.id)`
 
 // auditSatelliteCarry writes one row on the SURVIVOR, the record whose links
 // now act differently, naming every row moved and where it came from.
