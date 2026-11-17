@@ -30,5 +30,31 @@
       "type": "image/png",
       "purpose": "maskable"
     }
+  ],
+  "shortcuts": [
+    {
+      "name": "Home",
+      "short_name": "Home",
+      "url": "/#/home",
+      "icons": [
+        { "src": "/favicon-96x96.png", "sizes": "96x96", "type": "image/png" }
+      ]
+    },
+    {
+      "name": "Worklist",
+      "short_name": "Worklist",
+      "url": "/#/worklist",
+      "icons": [
+        { "src": "/favicon-96x96.png", "sizes": "96x96", "type": "image/png" }
+      ]
+    },
+    {
+      "name": "Deals",
+      "short_name": "Deals",
+      "url": "/#/deals",
+      "icons": [
+        { "src": "/favicon-96x96.png", "sizes": "96x96", "type": "image/png" }
+      ]
+    }
   ]
 }

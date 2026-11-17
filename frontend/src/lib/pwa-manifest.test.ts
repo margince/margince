@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, isAbsolute, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parse } from "node-html-parser";
 import { describe, expect, it } from "vitest";
 import { normalize, themes } from "../design-system/tokens-testing";
+import { parseHash, routeHash } from "./router";
 
 // What a browser reads before it offers to install the app. That every icon
 // exists at the size it declares is sharepreview.test.ts's.
@@ -21,7 +22,16 @@ interface ManifestIcon {
   purpose?: string;
 }
 
+interface ManifestShortcut {
+  name: string;
+  short_name: string;
+  url: string;
+  icons: ManifestIcon[];
+}
+
 interface Manifest {
+  scope: string;
+  shortcuts: ManifestShortcut[];
   theme_color: string;
   background_color: string;
   icons: ManifestIcon[];
@@ -92,6 +102,38 @@ describe("the install manifest", () => {
       .filter((icon) => purposeOf(icon).trim().split(/\s+/).length !== 1)
       .map((icon) => `${icon.src}: "${purposeOf(icon)}"`);
     expect(shared).toEqual([]);
+  });
+});
+
+describe("the install manifest shortcuts", () => {
+  const origin = "https://app.example";
+  const scope = new URL(manifest.scope, origin);
+
+  it("offers a few shortcuts with short labels", () => {
+    expect(manifest.shortcuts.length).toBeGreaterThanOrEqual(2);
+    expect(manifest.shortcuts.length).toBeLessThanOrEqual(3);
+    for (const shortcut of manifest.shortcuts) {
+      expect(shortcut.short_name.length, shortcut.name).toBeLessThanOrEqual(12);
+    }
+  });
+
+  it("opens only addresses inside the scope that the router answers", () => {
+    for (const shortcut of manifest.shortcuts) {
+      const url = new URL(shortcut.url, origin);
+      expect(url.pathname.startsWith(scope.pathname), shortcut.url).toBe(true);
+      const route = parseHash(url.hash);
+      expect(route.screen, shortcut.url).not.toBe("not-found");
+      expect(url.hash, shortcut.url).toBe(routeHash(route));
+    }
+  });
+
+  it("draws each shortcut icon from a file public/ holds", () => {
+    for (const shortcut of manifest.shortcuts) {
+      expect(shortcut.icons.length, shortcut.name).toBeGreaterThan(0);
+      for (const icon of shortcut.icons) {
+        expect(existsSync(join(publicDir, icon.src)), icon.src).toBe(true);
+      }
+    }
   });
 });
 
