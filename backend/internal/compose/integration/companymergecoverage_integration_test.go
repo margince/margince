@@ -302,7 +302,7 @@ func declaredLinks(t *testing.T, kind reach.Record) map[string]bool {
 	if err != nil {
 		t.Fatalf("reading the merge's call into the declared tables: %v", err)
 	}
-	if !strings.Contains(string(body), "sweepreach.Relink(") {
+	if !strings.Contains(string(body), "reached.Relink(") {
 		return nil
 	}
 	declared := map[string]bool{}

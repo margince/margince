@@ -29,10 +29,11 @@ import (
 	"github.com/margince/margince/backend/internal/modules/weeklyplan"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/extprivacy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func (e *Env) bindStores(t testing.TB, db *database.DB) {
+func (e *Env) bindStores(t testing.TB, db *database.DB, data extprivacy.Registry) {
 	e.Activities = activities.NewStore(db).WithIdentityProver(capture.ProvedUnambiguouslyTx)
 	// A no-op rename: the installation-name edge is compose's, which this package
 	// cannot import, and compose's installationname suites prove it.
@@ -54,7 +55,8 @@ func (e *Env) bindStores(t testing.TB, db *database.DB) {
 		WithGrantCarrier(identity.NewServiceFor(db)).
 		WithStopCarrier(consent.NewStore(db)).
 		WithSatelliteCarriers(consent.NewStore(db), introductions.NewStore(db, func() time.Time { return clocktest.Now(t) })).
-		WithInstallationRenamer(func(context.Context, pgx.Tx, string) error { return nil })
+		WithInstallationRenamer(func(context.Context, pgx.Tx, string) error { return nil }).
+		WithExtensions(data)
 	e.Deals = deals.NewStore(db, installseam.Deals())
 	e.Projects = ProjectsStore(db)
 	e.Contracts = ContractsStore(db, e.Deals)

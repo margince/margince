@@ -20,8 +20,8 @@ import (
 // MoveKindIDRows moves the polymorphic references of a merged-away contact or
 // company. They carry no foreign key, so the schema cannot stop an
 // (entity_type, entity_id) pair from pointing at an archived record.
-func MoveKindIDRows(ctx context.Context, tx pgx.Tx, entityType string, sourceID, targetID ids.UUID) error {
-	if err := moveKindIDSingles(ctx, tx, entityType, sourceID, targetID); err != nil {
+func MoveKindIDRows(ctx context.Context, tx pgx.Tx, reached sweepreach.Set, entityType string, sourceID, targetID ids.UUID) error {
+	if err := moveKindIDSingles(ctx, tx, reached, entityType, sourceID, targetID); err != nil {
 		return err
 	}
 	if err := moveKindIDOwned(ctx, tx, entityType, sourceID, targetID); err != nil {
@@ -58,7 +58,7 @@ func moveRecordLinks(ctx context.Context, tx pgx.Tx, entityType string, sourceID
 
 // moveKindIDSingles moves the rows nothing makes unique per record, so a plain
 // UPDATE can neither collide nor lose one.
-func moveKindIDSingles(ctx context.Context, tx pgx.Tx, entityType string, sourceID, targetID ids.UUID) error {
+func moveKindIDSingles(ctx context.Context, tx pgx.Tx, reached sweepreach.Set, entityType string, sourceID, targetID ids.UUID) error {
 	for _, stmt := range []string{
 		`UPDATE signal SET entity_id = $2 WHERE entity_type = $3 AND entity_id = $1`,
 		`UPDATE attachment SET entity_id = $2 WHERE entity_type = $3 AND entity_id = $1`,
@@ -71,7 +71,7 @@ func moveKindIDSingles(ctx context.Context, tx pgx.Tx, entityType string, source
 	// The declared tables follow every record kind the merge moves, the
 	// company's fixed links among them. Each moved row's own history names the
 	// survivor from here on.
-	relinked, err := sweepreach.Relink(ctx, tx, reach.Record(entityType), sourceID, targetID)
+	relinked, err := reached.Relink(ctx, tx, reach.Record(entityType), sourceID, targetID)
 	if err != nil {
 		return err
 	}

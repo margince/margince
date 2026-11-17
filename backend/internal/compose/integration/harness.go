@@ -14,7 +14,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/margince/margince/backend/internal/compose/corereach"
+	"github.com/margince/margince/backend/internal/compose/extensionprivacy"
 	"github.com/margince/margince/backend/internal/compose/installseam"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -97,10 +97,6 @@ func Setup(t *testing.T) *Env {
 		t.Fatal(err)
 	}
 	seedInstallationIdentity(ctx, t, owner)
-	// The boot seals these in RegisterExtensions, which no test here runs.
-	if err := corereach.Install(nil); err != nil {
-		t.Fatal(err)
-	}
 	for i, user := range []ids.UUID{e.Rep1, e.Rep2, e.Rep3, e.AdminUser} {
 		address := string(rune('a'+i)) + "@authz.test"
 		if _, err := owner.Exec(ctx,
@@ -140,7 +136,13 @@ func Setup(t *testing.T) *Env {
 	// last and sees a package that has genuinely stopped.
 	testdb.AssertPoolsQuiesced(t)
 	e.Pool = pool
-	e.bindStores(t, harnessDB(pool, e.WS))
+	// The registry a composition of no units hands its merge doors: the core
+	// modules' declared tables.
+	core, err := extensionprivacy.Registry(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	e.bindStores(t, harnessDB(pool, e.WS), core)
 	return e
 }
 

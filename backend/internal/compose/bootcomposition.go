@@ -57,21 +57,22 @@ func RecordComposition(
 	return nil
 }
 
-// extensionData holds the composed units the privacy registry is derived from,
-// and the RBAC vocabulary built from them.
-// RegisterExtensions installs it in its apply phase, beside corereach.Install,
-// and the mutex orders that write against every later read.
+// extensionData holds the composed units, the RBAC vocabulary built from them
+// and their privacy registry. RegisterExtensions installs it in its apply
+// phase, and the mutex orders that write against every later read.
 var extensionData struct {
-	mu    sync.RWMutex
-	units []extension.Extension
-	rbac  identity.RbacObjects
+	mu        sync.RWMutex
+	installed bool
+	units     []extension.Extension
+	rbac      identity.RbacObjects
+	registry  extprivacy.Registry
 }
 
-func installExtensionData(composed *Extensions) {
+func installExtensionData(composed *Extensions, registry extprivacy.Registry) {
 	extensionData.mu.Lock()
 	defer extensionData.mu.Unlock()
-	extensionData.units = composed.units
-	extensionData.rbac = composed.rbac
+	extensionData.installed, extensionData.registry = true, registry
+	extensionData.units, extensionData.rbac = composed.units, composed.rbac
 }
 
 // installedRbacObjects is the RBAC vocabulary of the installed composition, for
@@ -82,11 +83,25 @@ func installedRbacObjects() identity.RbacObjects {
 	return extensionData.rbac
 }
 
+// coreData is the registry of a process that composed nothing: no unit tables,
+// and the core modules' own reach. Those are fixed in the source, so a refusal
+// is a build defect.
+var coreData = sync.OnceValue(func() extprivacy.Registry {
+	registry, err := extensionprivacy.Registry(nil)
+	if err != nil {
+		panic("compose: the core modules' reach declarations: " + err.Error())
+	}
+	return registry
+})
+
 // ExtensionData is the registry every eraser, export and merge store outside a test is handed.
 func ExtensionData() extprivacy.Registry {
 	extensionData.mu.RLock()
 	defer extensionData.mu.RUnlock()
-	return extensionprivacy.Registry(extensionData.units)
+	if !extensionData.installed {
+		return coreData()
+	}
+	return extensionData.registry
 }
 
 // installedCompanyTypes is the company types the installed units declare, for

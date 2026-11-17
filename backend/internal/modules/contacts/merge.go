@@ -179,7 +179,7 @@ func (s *Store) mergeContactCarryingTx(ctx context.Context, tx pgx.Tx, sourceID,
 	if err := yieldPreferredSlots(ctx, tx, sourceID, targetID, prefer); err != nil {
 		return crmcontracts.Contact{}, nil, err
 	}
-	counts, err := relinkContactReferences(ctx, tx, sourceID, targetID)
+	counts, err := relinkContactReferences(ctx, tx, s.extensions.Reach(), sourceID, targetID)
 	if err != nil {
 		return crmcontracts.Contact{}, nil, err
 	}

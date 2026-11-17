@@ -20,6 +20,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/recordmerge"
+	"github.com/margince/margince/backend/internal/platform/sweepreach"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -31,7 +32,7 @@ import (
 // chain — and returns the accounting the contact.merged event carries.
 //
 //nolint:cyclop // the rename added no branch: this body is what it was under the old noun.
-func relinkContactReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID) (relinkCounts, error) {
+func relinkContactReferences(ctx context.Context, tx pgx.Tx, reached sweepreach.Set, sourceID, targetID ids.ContactID) (relinkCounts, error) {
 	counts := relinkCounts{}
 	var err error
 	if counts.Emails, err = relinkDemotingPrimary(ctx, tx,
@@ -87,7 +88,7 @@ func relinkContactReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 	if counts.ActivityLinks, err = recordmerge.RelinkLinkRows(ctx, tx, contactEntity, sourceID.UUID, targetID.UUID); err != nil {
 		return counts, fmt.Errorf("relink activity/list/tag rows: %w", err)
 	}
-	if err := recordmerge.MoveKindIDRows(ctx, tx, contactEntity, sourceID.UUID, targetID.UUID); err != nil {
+	if err := recordmerge.MoveKindIDRows(ctx, tx, reached, contactEntity, sourceID.UUID, targetID.UUID); err != nil {
 		return counts, err
 	}
 	if err := relinkParticipantRows(ctx, tx, sourceID, targetID); err != nil {
