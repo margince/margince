@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import * as nodeCrypto from "node:crypto";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -759,5 +760,40 @@ describe("web form snippets", () => {
     );
     expect(code).toContain("process.env.MARGINCE_FORM_SECRET");
     expect(code).not.toContain("mwf_");
+  });
+
+  it("sends a server lead again, freshly signed, while the form is busy", async () => {
+    const module = serverSnippet({ ...contactForm, sender: "server" }, url)
+      .replace('import crypto from "node:crypto";', "")
+      .replace("export async function", "async function");
+    const statuses = [503, 503, 202];
+    const fetch = vi.fn(
+      async (_url: string, _init: { headers: Record<string, string> }) =>
+        new Response(null, { status: statuses.shift() }),
+    );
+    const sendLead = new Function(
+      "crypto",
+      "fetch",
+      "process",
+      "setTimeout",
+      `${module}\nreturn sendLead;`,
+    )(
+      nodeCrypto,
+      fetch,
+      { env: { MARGINCE_FORM_SECRET: "s3cret" } },
+      (resume: () => void) => resume(),
+    ) as (fields: object) => Promise<void>;
+
+    await sendLead({ email: "lead@example.com" });
+    expect(fetch).toHaveBeenCalledTimes(3);
+    const nonces = fetch.mock.calls.map(
+      ([, init]) => init.headers["X-Margince-Nonce"],
+    );
+    expect(new Set(nonces).size).toBe(3);
+
+    statuses.push(503, 503, 503);
+    await expect(sendLead({ email: "lead@example.com" })).rejects.toThrow(
+      "Margince refused the lead: 503",
+    );
   });
 });
