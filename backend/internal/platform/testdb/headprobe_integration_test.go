@@ -88,14 +88,12 @@ func TestADeclaredRenumberIsJudgedAsTheMigratorLeavesIt(t *testing.T) {
 	}
 }
 
-// TestEveryWayALedgerCanLieIsRefused walks the six shapes a tracking table can
-// take that all LOOK migrated. Each is a real failure mode: a template built
-// before the newest migration landed; one the history built, which lacks the
-// baseline's row; one whose migration was renumbered under
-// it; one migrated by a binary that recorded no digest; one whose migration was
-// edited after it was applied; and a clone taken from a template another branch
-// built, which is at head for that branch and carries objects this one never
-// created.
+// TestEveryWayALedgerCanLieIsRefused walks the shapes a tracking table can
+// take that all look migrated. Each is a real failure mode. A template was
+// built before the newest migration landed, or by the history, without the
+// baseline's row. A migration was renumbered or edited under it, or a binary
+// recorded no digest. A clone came from another branch's template, at head for
+// that branch and holding objects this one never created.
 func TestEveryWayALedgerCanLieIsRefused(t *testing.T) {
 	ns := coreNamespace(t)
 	newest := ns.Migrations[len(ns.Migrations)-1]

@@ -75,9 +75,9 @@ func laterThanBaseline(core dbmigrate.Namespace) int {
 	})
 }
 
-// An empty database takes the baseline. It records each version the baseline
-// replaces under that version's own name and digest, so datatask requirements
-// and the repairs that read applied_at find their rows.
+// An empty database takes the baseline. Each version it replaces is recorded
+// under its own name and digest, so the datatask requirements and the repairs
+// that read applied_at find their rows.
 func TestAnEmptyDatabaseTakesTheBaselineAndRecordsWhatItReplaces(t *testing.T) {
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)

@@ -23,11 +23,10 @@
 // name, and dbmigrate stops there rather than skip a migration as done. That
 // stop is the intended outcome — rebuild the database (make dev-fresh).
 //
-// baseline/core/ holds a second baseline, for the installations that must be
-// kept: one file that builds what core's versions through a release built, and
-// replaces.txt, which names that release and the versions the file stands for.
-// The replaced files stay in core/, so a database that applied them upgrades
-// as it always did, and dbmigrate records the baseline beside them.
+// baseline/core/ holds a second baseline, for installations that must be kept.
+// One file builds what core's versions through a release built. replaces.txt
+// names that release and the versions the file stands for. The replaced files
+// stay in core/, so a database that applied them upgrades as it always did.
 //
 // What the baseline BUILDS is committed too, in testdata/head_catalog.txt,
 // and TestMigrationsBuildTheCommittedSchema compares the two. So a migration
