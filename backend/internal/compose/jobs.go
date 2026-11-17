@@ -410,9 +410,8 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 	periodic := slices.Concat(
 		addDataTaskJobs(reg, pool, cfg, log),
 		addMeetingDeliveryJob(reg, pool, cfg),
-		// The passes that register themselves: each helper wires its own
-		// workers and hands back the schedules that go with them, so this
-		// wiring stays one line as those surfaces grow.
+		// The passes that register themselves: each helper wires its workers and
+		// hands back their schedules, so this wiring stays one line per surface.
 		addGraphJobs(reg, pool, cfg, log),
 		addEmbedDriftSweepJob(reg, pool, cfg, log),
 		addScheduledSendRecoveryJob(reg, pool, cfg, log),

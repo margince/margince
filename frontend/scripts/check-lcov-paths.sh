@@ -24,7 +24,8 @@ if [[ -z "$REPORT" ]]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+# LCOV_REPO_ROOT lets the test stand a unit screen up in a scratch tree.
+REPO_ROOT="${LCOV_REPO_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 
 if [[ ! -f "$REPORT" ]]; then
   echo "FAIL: no coverage report at $REPORT — the sonarcloud job would scan with none" >&2

@@ -94,16 +94,24 @@ expect_refusal "a report holding no frontend/src file" \
 # product tree, so the arm that names those trees would count them — while the
 # scanner files them as tests and receives no product coverage. It is the same
 # defect as the tooling-only case arriving through the tree the check trusts.
+# No unit in this tree ships a screen, so these two cases read a scratch tree
+# that holds one.
+UNIT_ROOT="$TMP/unit-root"
+mkdir -p "$UNIT_ROOT/frontend/src/features/contacts" "$UNIT_ROOT/extensions/demo/frontend"
+touch "$UNIT_ROOT/frontend/src/features/contacts/contactprovider.test.tsx" \
+  "$UNIT_ROOT/extensions/demo/frontend/screen.test.tsx" "$UNIT_ROOT/extensions/demo/frontend/screen.tsx"
+export LCOV_REPO_ROOT="$UNIT_ROOT"
 expect_refusal "a report holding only test files" \
   "$(write_report tests-only.info \
     "frontend/src/features/contacts/contactprovider.test.tsx" \
-    "extensions/openchannel/frontend/screen.test.tsx")" \
+    "extensions/demo/frontend/screen.test.tsx")" \
   "no record under frontend/src"
 
 # The unit tier's product screens, which is what that lane is for. Named here so
 # the case above cannot be satisfied by refusing everything under extensions/.
 expect_accepted "a report holding a unit's product screen" \
-  "$(write_report unit-product.info "extensions/openchannel/frontend/endpointcard.tsx")"
+  "$(write_report unit-product.info "extensions/demo/frontend/screen.tsx")"
+unset LCOV_REPO_ROOT
 
 # An empty report is what a failed instrumentation run leaves behind, and it is
 # indistinguishable downstream from a suite that covers nothing.
