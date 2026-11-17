@@ -7881,7 +7881,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lawfulBasis.asked":
     "Đã gửi yêu cầu xin sự đồng ý đến {address}. Thư của bạn chưa được gửi.",
   "lawfulBasis.askPartial":
-    "Đã gửi yêu cầu xin sự đồng ý đến {asked}. Chưa gửi được đến {failed}. Hãy thử lại để chỉ hỏi những người này.",
+    "Đã gửi yêu cầu xin sự đồng ý đến {asked}. Chưa gửi được đến {failed}. Hãy thử lại để chỉ gửi đến những địa chỉ này.",
   "lawfulBasis.failed": "Chưa ghi nhận được xác nhận. Hãy thử lại.",
   "privacynotice.purposeLine": "{purpose}: {basis}",
   "privacynotice.basisOn.consent": "sự đồng ý của quý khách ngày {date}",
