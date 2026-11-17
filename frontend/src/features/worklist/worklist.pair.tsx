@@ -26,11 +26,7 @@
 import { type ReactNode, useState } from "react";
 import { ContactCaseReview } from "../../components/contactcase";
 import { EvidenceLine } from "../../components/contactcase.evidence";
-import {
-  type MergeSide,
-  mergeDone,
-  mergeQuestion,
-} from "../../components/merge";
+import { type MergeSide, mergeSentence } from "../../components/merge";
 import { AppLink } from "../../design-system/applink";
 import { Button, Card } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
@@ -171,7 +167,7 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
     const { kept, archived } = merging(keptId);
     answer("merge", keptId, () => {
       setConfirming(null);
-      toast.show(mergeDone(t, archived, kept));
+      toast.show(mergeSentence(t, "merge.done", archived, kept));
     });
   };
   // Saying they differ changes neither record, so it takes no question and
@@ -206,7 +202,14 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
           pending={decide.isPending}
           onConfirm={() => merge(confirming)}
         >
-          <p>{mergeQuestion(t, confirmed.archived, confirmed.kept)}</p>
+          <p>
+            {mergeSentence(
+              t,
+              "merge.confirm",
+              confirmed.archived,
+              confirmed.kept,
+            )}
+          </p>
         </ConfirmModal>
       )}
       {/* THE QUESTION, as the block's lead line. What follows it is the two

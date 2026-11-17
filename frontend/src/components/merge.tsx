@@ -35,23 +35,14 @@ function mergeSideLabel(t: ReturnType<typeof useT>, side: MergeSide): string {
     : side.name;
 }
 
-export function mergeQuestion(
+// The question asked before a merge, or the answer after it.
+export function mergeSentence(
   t: ReturnType<typeof useT>,
+  key: "merge.confirm" | "merge.done",
   source: MergeSide,
   target: MergeSide,
 ): string {
-  return t("merge.confirm", {
-    source: mergeSideLabel(t, source),
-    target: mergeSideLabel(t, target),
-  });
-}
-
-export function mergeDone(
-  t: ReturnType<typeof useT>,
-  source: MergeSide,
-  target: MergeSide,
-): string {
-  return t("merge.done", {
+  return t(key, {
     source: mergeSideLabel(t, source),
     target: mergeSideLabel(t, target),
   });
@@ -119,7 +110,7 @@ export function MergeAction<Survivor extends { id: string }>({
       queryClient.invalidateQueries({ queryKey: [recordKey, survivor.id] });
       setOpen(false);
       if (target) {
-        toast.show(mergeDone(t, source, target));
+        toast.show(mergeSentence(t, "merge.done", source, target));
       }
       from.closeOnto(survivorRoute(survivor.id));
     },
@@ -161,7 +152,7 @@ export function MergeAction<Survivor extends { id: string }>({
             }
             disabled={mutation.isPending}
           />
-          {target && <p>{mergeQuestion(t, source, target)}</p>}
+          {target && <p>{mergeSentence(t, "merge.confirm", source, target)}</p>}
           <ErrorLine error={mutation.error} />
         </div>
         <div className="actions">
