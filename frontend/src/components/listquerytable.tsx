@@ -290,8 +290,8 @@ export function ListTable<Row>({
     }
   }, [query.q]);
 
-  // A word still settling when the reader leaves must not land where they went:
-  // another entry (Back, Forward, a link) or a page replaced in place. A dial
+  // A word still settling when the reader leaves must not land elsewhere:
+  // on another entry (Back, Forward, a link) or a replaced page. A dial
   // this list turns keeps both. The box takes the word of the address it was
   // drawn for, which a list held by the leave question still shows.
   const dropPendingWord = useEffectEvent(() => {

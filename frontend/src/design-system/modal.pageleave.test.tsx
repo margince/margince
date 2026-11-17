@@ -9,9 +9,8 @@ import { Heading } from "./heading";
 import { Modal } from "./modal";
 
 // A dialog the shell holds (the approval and source drawers, the shortcuts
-// dialog) sits outside every routed screen, so no remount closes it when the
-// reader moves. These cases draw it there. A dialog inside a routed screen is
-// App.views.overlays.test.tsx's.
+// dialog) sits outside every routed screen. No remount closes it. These cases
+// draw it there. A dialog inside a routed screen is App.views.overlays.test.tsx's.
 
 beforeEach(() => {
   globalThis.history.replaceState(null, "", "#/contacts/c1/overview");

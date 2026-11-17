@@ -55,8 +55,8 @@ export function fromHere(): Departure {
 
 /**
  * Close what is on screen onto `route`. When the nearest earlier entry outside
- * this screen's own tabs is that page, history goes back to it, dials as the
- * reader left them, so no entry is left that reopens what was closed.
+ * this screen's own tabs is that page, history goes back to it with dials as
+ * the reader left them. No entry is left that reopens what was closed.
  * Otherwise the entry on screen becomes `route`.
  */
 export function closeOnto(route: Route, dials?: UrlParams): void {

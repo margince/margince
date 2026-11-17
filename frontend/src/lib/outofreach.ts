@@ -41,8 +41,8 @@ export function useLeaveIfOutOfReach(kind: ReachableKind) {
         return false;
       }
       toast.show(message);
-      // Closed onto the list, and the record's reads forgotten: Back must not
-      // return the reader to a page drawn from a cache the server now refuses.
+      // Closed onto the list, and the record's reads forgotten. Back must not
+      // return the reader to a page drawn from a cache the server refuses.
       from.closeOnto({ screen: LIST[kind] });
       for (const queryKey of recordWriteKeys(kind, id)) {
         queryClient.removeQueries({ queryKey });
