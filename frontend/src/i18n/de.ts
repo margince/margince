@@ -3055,6 +3055,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.card.moveTo": "Nach {stage} verschieben",
   "deal.card.markWon": "Als gewonnen markieren",
   "deal.card.markLost": "Als verloren markieren",
+  "deal.card.changeCloseDate": "Abschlussdatum ändern",
   "deal.card.closedReopen":
     "Dieser Deal ist abgeschlossen. Öffne ihn auf seiner Seite wieder, um ihn zu verschieben.",
   "deal.card.copyLink": "Link kopieren",

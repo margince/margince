@@ -2,24 +2,28 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useEffect, useEffectEvent, useId } from "react";
-import { api } from "../../api/client";
-import { ifMatch, requireVersion } from "../../api/version";
 import { AddToShortlistAction } from "../../components/addtoshortlist";
 import { ArchiveAction } from "../../components/archive";
 import { OwnerPick } from "../../components/ownerpick";
+import { useRailText } from "../../components/railfield";
 import { Button } from "../../design-system/button";
 import { useClipboardCopy } from "../../design-system/clipboardcopy";
+import { DateInput, isoOrBlank } from "../../design-system/dateinput";
 import type { DealCardActions } from "../../design-system/dealcard";
+import {
+  FieldEditDialog,
+  useFieldEditor,
+} from "../../design-system/fieldeditdialog";
 import { ListPopover } from "../../design-system/listpopover";
 import { useCloseOverflowMenu } from "../../design-system/overflowmenu";
 import { type useOwnToast, useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
-import { unwrap } from "../../lib/problem";
 import { appHref } from "../../lib/recordaddress";
 import { routeHash } from "../../lib/router";
 import type { Deal, Stage } from "./deals";
-import { archiveDeal } from "./deals.write";
+import { dealCloseDateField } from "./deals.fields";
+import { archiveDeal, openDealEdit, saveDealEdit } from "./deals.write";
 
 type CardVerbs = Pick<DealCardActions, "onSummary" | "onEmail" | "onAddTask">;
 type RefusalSlot = ReturnType<typeof useOwnToast>;
@@ -51,6 +55,7 @@ export function DealCardMenu({
       {live && canWrite && (
         <>
           <DealMoves deal={deal} stages={stages} onAdvance={onAdvance} />
+          <DealCloseDate deal={deal} />
           <DealOwnerPick deal={deal} />
         </>
       )}
@@ -140,20 +145,60 @@ function DealMoves({
   );
 }
 
+// The record page's own one-field save: its write, its refusals, its reads made stale.
+function DealCloseDate({ deal }: Readonly<{ deal: Deal }>) {
+  const t = useT();
+  const write = useRailText(
+    {
+      kind: "deal",
+      record: openDealEdit(deal),
+      fields: [dealCloseDateField],
+      canEdit: true,
+      save: (values, _rows, opened) =>
+        saveDealEdit(opened, values, deal.masked_fields ?? []),
+    },
+    dealCloseDateField,
+  );
+  const { open, editing } = useFieldEditor(
+    write.canEdit,
+    write.onEditingChange,
+  );
+  return (
+    <>
+      <Button onClick={() => editing(true)}>
+        {t("deal.card.changeCloseDate")}
+      </Button>
+      <FieldEditDialog
+        open={open}
+        label={t(dealCloseDateField.label)}
+        value={write.stored}
+        onClose={() => editing(false)}
+        onSave={write.onSave}
+        onDirtyChange={write.onDirtyChange}
+      >
+        {({ control, draft, setDraft, saving }) => (
+          <DateInput
+            {...control}
+            value={isoOrBlank(draft)}
+            readOnly={saving}
+            onChange={(event) => setDraft(event.target.value)}
+          />
+        )}
+      </FieldEditDialog>
+    </>
+  );
+}
+
 function DealOwnerPick({ deal }: Readonly<{ deal: Deal }>) {
   const closeMenu = useCloseOverflowMenu();
   return (
     <OwnerPick
       ownerId={deal.owner_id}
-      assign={async (ownerId) =>
-        unwrap(
-          await api.PATCH("/deals/{id}", {
-            params: {
-              path: { id: deal.id },
-              ...ifMatch(requireVersion(deal.version)),
-            },
-            body: { owner_id: ownerId },
-          }),
+      assign={(ownerId) =>
+        saveDealEdit(
+          openDealEdit(deal),
+          { owner_id: ownerId },
+          deal.masked_fields ?? [],
         )
       }
       invalidate="deals"

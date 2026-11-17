@@ -2966,6 +2966,7 @@ export const en = {
   "deal.card.moveTo": "Move to {stage}",
   "deal.card.markWon": "Mark won",
   "deal.card.markLost": "Mark lost",
+  "deal.card.changeCloseDate": "Change close date",
   "deal.card.closedReopen":
     "This deal is closed. Reopen it on its page to move it.",
   "deal.card.copyLink": "Copy link",

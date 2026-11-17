@@ -355,7 +355,7 @@ function withColleague(
 }
 
 describe("changing a deal's owner from its card", () => {
-  it("sits right after the moves", async () => {
+  it("sits right after the close date, which follows the moves", async () => {
     vi.stubGlobal("fetch", withColleague(stubBackend([deal({})])));
     const user = userEvent.setup();
     render(<DealsScreen />);
@@ -365,7 +365,11 @@ describe("changing a deal's owner from its card", () => {
     const names = menu
       .getAllByRole("button")
       .map((button) => button.textContent);
-    expect(names.indexOf("Change owner")).toBe(names.indexOf("Mark won") + 1);
+    const moves = names.indexOf("Mark won");
+    expect(names.slice(moves + 1, moves + 3)).toEqual([
+      "Change close date",
+      "Change owner",
+    ]);
   });
 
   it("PATCHes owner_id once with the drawn version, says so and closes the menu", async () => {
@@ -456,5 +460,134 @@ describe("changing a deal's owner from its card", () => {
     await menu.findByRole("button", { name: "Copy link" });
 
     expect(menu.queryByRole("button", { name: "Change owner" })).toBeNull();
+  });
+});
+
+async function openCloseDate(user: ReturnType<typeof userEvent.setup>) {
+  const menu = await openCardMenu(user);
+  await user.click(menu.getByRole("button", { name: "Change close date" }));
+  return within(await screen.findByRole("dialog", { name: "Expected close" }));
+}
+
+describe("changing a deal's close date from its card", () => {
+  it("PATCHes only the close date once, pinned to the drawn version", async () => {
+    const patches: [unknown, string | null][] = [];
+    vi.stubGlobal(
+      "fetch",
+      stubBackend([deal({ expected_close_date: "2027-03-14" })], {
+        onPatch: (body, ifMatch) => patches.push([body, ifMatch]),
+      }),
+    );
+    const user = userEvent.setup();
+    const client = newClient();
+    const invalidate = vi.spyOn(client, "invalidateQueries");
+    render(<DealsScreen />, client);
+    const dialog = await openCloseDate(user);
+    const box = dialog.getByRole("textbox", { name: "Expected close" });
+    expect(box).toHaveValue("14/03/2027");
+    await user.clear(box);
+    await user.type(box, "2027-04-30{Enter}");
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(patches).toEqual([[{ expected_close_date: "2027-04-30" }, "4"]]);
+    expect(invalidate).toHaveBeenCalledWith(
+      expect.objectContaining({ queryKey: ["deals"] }),
+    );
+  });
+
+  it("writes nothing when the date is saved unchanged", async () => {
+    const patches: unknown[] = [];
+    vi.stubGlobal(
+      "fetch",
+      stubBackend([deal({ expected_close_date: "2027-03-14" })], {
+        onPatch: (body) => patches.push(body),
+      }),
+    );
+    const user = userEvent.setup();
+    const client = newClient();
+    render(<DealsScreen />, client);
+    const dialog = await openCloseDate(user);
+    await user.click(dialog.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    await settled(client);
+    expect(patches).toEqual([]);
+  });
+
+  it("keeps a refused date in the dialog, saying why", async () => {
+    vi.stubGlobal(
+      "fetch",
+      withColleague(stubBackend([deal({})]), {
+        status: 422,
+        title: "Unprocessable",
+        detail: "An open deal cannot close in the past.",
+      }),
+    );
+    const user = userEvent.setup();
+    render(<DealsScreen />);
+    const dialog = await openCloseDate(user);
+    await user.type(
+      dialog.getByRole("textbox", { name: "Expected close" }),
+      "2020-01-02{Enter}",
+    );
+
+    expect(await dialog.findByRole("alert")).toHaveTextContent(
+      "An open deal cannot close in the past.",
+    );
+    expect(dialog.getByRole("textbox", { name: "Expected close" })).toHaveValue(
+      "02/01/2020",
+    );
+  });
+
+  it("opens from the keyboard and gives focus back to the menu's trigger on Escape", async () => {
+    vi.stubGlobal("fetch", stubBackend([deal({})]));
+    const user = userEvent.setup();
+    render(<DealsScreen />);
+    const menu = await openCardMenu(user);
+    menu.getByRole("button", { name: "Change close date" }).focus();
+    await user.keyboard("{Enter}");
+    const dialog = await screen.findByRole("dialog", {
+      name: "Expected close",
+    });
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        within(dialog).getByRole("textbox", { name: "Expected close" }),
+      ),
+    );
+
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "More actions for Fleet retrofit" }),
+    );
+  });
+
+  // The record's details form keeps the forecast day of a won deal editable.
+  it("is offered on a won deal", async () => {
+    vi.stubGlobal(
+      "fetch",
+      stubBackend([deal({ status: "won", stage_id: "s3" })]),
+    );
+    const user = userEvent.setup();
+    render(<DealsScreen />);
+    const dialog = await openCloseDate(user);
+    expect(dialog.getByRole("textbox", { name: "Expected close" })).toHaveValue(
+      "",
+    );
+  });
+
+  it.each([
+    ["an archived deal", { archived_at: "2026-06-02T00:00:00Z" }],
+    ["a deal the seat may not change", { writable: false }],
+  ])("is not offered on %s", async (_, overrides) => {
+    vi.stubGlobal("fetch", stubBackend([deal(overrides)]));
+    const user = userEvent.setup();
+    render(<DealsScreen />);
+    const menu = await openCardMenu(user);
+    await menu.findByRole("button", { name: "Copy link" });
+
+    expect(
+      menu.queryByRole("button", { name: "Change close date" }),
+    ).toBeNull();
   });
 });

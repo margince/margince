@@ -18,7 +18,7 @@ import { DealCardMenu } from "./dealcardmenu";
 import type { Deal, Stage } from "./deals";
 
 // One card's "…" menu on an open, a won and an archived deal, opened on the
-// card, and the owner list it opens.
+// card, and the close-date dialog and owner list it opens.
 
 const stages: Stage[] = (
   [
@@ -87,6 +87,8 @@ function CardWithMenu({ deal }: Readonly<{ deal: Deal }>) {
     measuredAt: Date.parse("2026-09-15T12:00:00Z"),
     probabilityPct: 75,
     archived,
+    closeDate: deal.expected_close_date ?? null,
+    closeDateProvisional: deal.close_date_provisional ?? false,
   };
   const verbs = {
     onSummary: () => undefined,
@@ -322,4 +324,123 @@ export const OwnerLongNamesPhone: Story = {
   ...ownerLongNames,
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
+};
+
+function closingOn(extra: Partial<Deal>, routes?: RouteMap) {
+  return () => (
+    <MenuOnCard
+      deal={wire({ expected_close_date: "2027-03-14", ...extra })}
+      routes={routes}
+    />
+  );
+}
+
+async function openCloseDate(context: { canvasElement: HTMLElement }) {
+  await openMenuShowing("Change close date")(context);
+  await userEvent.click(
+    screen.getByRole("button", { name: "Change close date" }),
+  );
+  return within(await screen.findByRole("dialog", { name: "Expected close" }));
+}
+
+async function typeCloseDate(
+  dialog: ReturnType<typeof within>,
+  day: string,
+): Promise<void> {
+  const box = dialog.getByRole("textbox", { name: "Expected close" });
+  await userEvent.clear(box);
+  await userEvent.type(box, day);
+  await userEvent.click(dialog.getByRole("button", { name: "Save" }));
+}
+
+/** The one-field dialog, opened on the deal's close date. */
+const closeDate = {
+  render: closingOn({}),
+  play: async (context: { canvasElement: HTMLElement }) => {
+    const dialog = await openCloseDate(context);
+    await expect(
+      dialog.getByRole("textbox", { name: "Expected close" }),
+    ).not.toHaveValue("");
+  },
+};
+export const CloseDate: Story = closeDate;
+export const CloseDateDark: Story = {
+  ...closeDate,
+  globals: { theme: "dark" },
+};
+export const CloseDatePhone: Story = {
+  ...closeDate,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+
+/** A new day typed and the PATCH still out. */
+export const CloseDateSaving: Story = {
+  render: closingOn(
+    {},
+    { "PATCH /deals/d-1": () => new Promise(() => undefined) },
+  ),
+  play: async (context) => {
+    const dialog = await openCloseDate(context);
+    await typeCloseDate(dialog, "2027-04-30");
+    await expect(dialog.getByRole("button", { name: "Save" })).toHaveAttribute(
+      "aria-busy",
+      "true",
+    );
+  },
+};
+
+/** The server refused the day: the dialog stays open over its reason. */
+const closeDateRefused = {
+  render: closingOn(
+    {},
+    {
+      "PATCH /deals/d-1": () =>
+        jsonResponse(
+          {
+            title: "Unprocessable",
+            status: 422,
+            detail: "An open deal cannot close in the past.",
+          },
+          422,
+        ),
+    },
+  ),
+  play: async (context: { canvasElement: HTMLElement }) => {
+    const dialog = await openCloseDate(context);
+    await typeCloseDate(dialog, "2020-01-02");
+    await dialog.findByRole("alert");
+  },
+};
+export const CloseDateRefused: Story = closeDateRefused;
+export const CloseDateRefusedDark: Story = {
+  ...closeDateRefused,
+  globals: { theme: "dark" },
+};
+export const CloseDateRefusedPhone: Story = {
+  ...closeDateRefused,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+
+/** A won deal keeps its forecast day editable, as its details form does. */
+export const CloseDateWonDeal: Story = {
+  render: closingOn({ status: "won", stage_id: "won" }),
+  play: async (context) => {
+    await openCloseDate(context);
+  },
+};
+
+/** A passed day nobody confirmed, in the card's warning tone, beside its fix. */
+const closeDateUnconfirmed = {
+  render: closingOn({
+    expected_close_date: "2026-09-01",
+    close_date_provisional: true,
+  }),
+  play: openMenuShowing("Change close date"),
+};
+export const CloseDateUnconfirmed: Story = closeDateUnconfirmed;
+export const CloseDateUnconfirmedDark: Story = {
+  ...closeDateUnconfirmed,
+  globals: { theme: "dark" },
 };

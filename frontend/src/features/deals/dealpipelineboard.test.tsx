@@ -227,6 +227,8 @@ describe("DealPipelineBoard", () => {
         "Move to stage",
         "Mark won",
         "Mark lost",
+        "Change close date",
+        "Change owner",
         "Deal summary",
         "Add task",
         "Copy link",
