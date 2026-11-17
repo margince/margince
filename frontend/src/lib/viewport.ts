@@ -33,15 +33,8 @@ export function widthMedia(maxWidth: number): string {
 export const COARSE_POINTER = "(pointer: coarse)";
 
 /**
- * Whether `media` matches.
- *
  * Subscribed rather than measured once: a window is resized and a phone is
- * rotated while the app is open, and chrome that read the width at mount would
- * keep the other width's arrangement for the rest of the session.
- *
- * `matchMedia` is absent in some embedded contexts, and a missing media query is
- * a DEFAULT rather than an error — the answer is then "no", which for a width
- * is the arrangement that works at any width.
+ * rotated while the app is open. Where `matchMedia` is absent the answer is no.
  */
 export function useMediaMatch(media: string): boolean {
   const [matches, setMatches] = useState(

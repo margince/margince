@@ -58,8 +58,7 @@ function appleTouchDevice(): boolean {
   );
 }
 
-// An app's own webview leaves `Safari/` out of its agent and has no Share sheet
-// that adds to the home screen; Chrome, Edge and Firefox on iOS keep it.
+// An app's own webview leaves `Safari/` out of its agent and cannot add to the home screen.
 function addsToHomeScreen(): boolean {
   return /Safari\//.test(navigator.userAgent);
 }

@@ -541,8 +541,7 @@ test("help and feedback and the keyboard shortcuts meet AA", async ({
   await expect(accountTrigger(page)).toBeFocused();
 });
 
-// Headless Chromium never offers to install, so the test makes the offer the
-// way the browser does; the stored schedule puts the reader on a later day.
+// Headless Chromium never offers to install, so the test makes the offer itself.
 for (const colorScheme of ["light", "dark"] as const) {
   test.describe(`the install hint on Home at 390px in ${colorScheme}`, () => {
     test.use({
