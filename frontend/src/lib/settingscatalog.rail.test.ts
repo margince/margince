@@ -71,8 +71,7 @@ describe("what the rail carries and what it leaves behind", () => {
       // domains is not wanted, that CARD's grant is the thing to change — the
       // rail is only reporting what the card already allows.
       "capture",
-      // About is the last System page and opens for every seat. Its reading is
-      // the act, so it lands in `acts` for every reader, rep included.
+      // Reading About is the act, so it lands in `acts` for every reader.
       "about",
     ]);
   });

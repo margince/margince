@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { ExternalLink } from "lucide-react";
 import { type KeyboardEvent, type RefObject, useEffect } from "react";
-import { OffsiteLink } from "../design-system/offsitelink";
+import { NewTabMark, OffsiteLink } from "../design-system/offsitelink";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
@@ -57,11 +56,8 @@ function HelpLinkRow({
       {...seat}
       onClick={onLeave}
     >
-      <span className="acctrowlabel">
-        {t(labelKey)}
-        <span className="sr-only"> {t("common.opensNewTab")}</span>
-      </span>
-      <ExternalLink size={14} className="acctmore" aria-hidden />
+      <span className="acctrowlabel">{t(labelKey)}</span>
+      <NewTabMark size={14} className="acctmore" />
     </OffsiteLink>
   );
 }

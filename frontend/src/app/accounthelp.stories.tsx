@@ -10,8 +10,7 @@ import {
 } from "../testing/accountmenu-story";
 import { HelpSubmenu } from "./accounthelp";
 
-// The places off the app come first, then the rows that open a dialog. The
-// build, its license and the notices sit behind About Margince.
+// The places off the app come first, then the rows that open a dialog.
 const meta: Meta<typeof HelpSubmenu> = {
   title: "Shell/Account help and feedback",
   component: HelpSubmenu,

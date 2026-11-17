@@ -2795,6 +2795,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "about.title": "Giới thiệu Margince",
   "about.version": "Phiên bản",
   "about.devBuild": "Bản dựng phát triển",
+  "about.instanceBuild": "Bản dựng triển khai",
   "about.coreRelease": "Core {version}",
   "about.copyHint": "(Sao chép vào bộ nhớ tạm)",
   "about.copiedVersion": "Đã sao chép phiên bản vào bộ nhớ tạm",

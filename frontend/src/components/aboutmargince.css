@@ -22,14 +22,9 @@
 .aboutmargince .aboutmargince-facts {
   gap: var(--space-4);
 }
-/* Each term is one plain line, so the gap alone parts one row's text from the
-   next; a value's note hugs it from below. */
+/* No value here is a 32px control, so a term is one text line and the gap alone sets the rhythm. */
 .aboutmargince .factlist-flat .factlist-term {
   padding-block: 0;
-}
-/* A flat list clips its values, and a clipped control loses its focus ring. */
-.aboutmargince .factlist-flat .factlist-value {
-  overflow: visible;
 }
 
 /* The version, its commit link and any copy failure stand at a note's distance. */
@@ -50,11 +45,6 @@
 
 /* With the stack's own --space-3 gap, the title stands --space-8 from the
    brand, as far as the brand stands from the list. */
-.aboutmargince-in-dialog {
+.aboutmargince-dialogbody {
   padding-block-start: var(--space-5);
-}
-
-/* One step past the panel's own inset above the mark. */
-.aboutmargince-in-page {
-  padding-block-start: var(--space-1);
 }

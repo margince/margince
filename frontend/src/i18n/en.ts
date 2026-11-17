@@ -2775,6 +2775,7 @@ export const en = {
   "about.title": "About Margince",
   "about.version": "Version",
   "about.devBuild": "Development build",
+  "about.instanceBuild": "Instance build",
   "about.coreRelease": "core {version}",
   "about.copyHint": "(Copies to clipboard)",
   "about.copiedVersion": "Copied version to clipboard",

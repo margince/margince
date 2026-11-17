@@ -14,7 +14,8 @@ export const RELEASE_NOTES_HREF = `${REPOSITORY}/releases`;
 
 /**
  * What this bundle knows of its build. A stamped core release marks an instance
- * build, whose own release may still be unstamped. `revision` is the full commit.
+ * build; its own release, which may be unstamped, and its `revision` are the
+ * instance repository's. `revision` is a full, comparable commit or undefined.
  */
 export type BuildRelease =
   | Readonly<{
@@ -56,4 +57,30 @@ export function reportedRelease(build: BuildRelease): string | undefined {
     default:
       return shortRevision(build.revision);
   }
+}
+
+/**
+ * The build as one line of plain text, for a problem report. English in every
+ * locale: it is pasted into the core's issue tracker.
+ */
+export function buildReport(build: BuildRelease): string {
+  switch (build.kind) {
+    case "instance": {
+      const instance = build.instance
+        ? `instance ${build.instance}`
+        : "instance build";
+      const commit = build.revision
+        ? ` (instance commit ${build.revision})`
+        : "";
+      return `Margince core ${build.core}, ${instance}${commit}`;
+    }
+    case "core":
+      return `Margince ${build.release}${commitOf(build.revision)}`;
+    default:
+      return `Margince development build${commitOf(build.revision)}`;
+  }
+}
+
+function commitOf(revision: string | undefined): string {
+  return revision ? ` (commit ${revision})` : "";
 }

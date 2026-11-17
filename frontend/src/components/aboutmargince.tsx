@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { ExternalLink } from "lucide-react";
 import { type ReactNode, useEffect, useId, useState } from "react";
 import { AppLink } from "../design-system/applink";
 import { Button } from "../design-system/button";
@@ -10,55 +9,25 @@ import { FactList } from "../design-system/factlist";
 import { Heading } from "../design-system/heading";
 import { Logomark } from "../design-system/logomark";
 import { Modal } from "../design-system/modal";
-import { OffsiteLink } from "../design-system/offsitelink";
+import { NewTabMark, OffsiteLink } from "../design-system/offsitelink";
 import { type Translator, useT } from "../i18n";
 import {
   type BuildRelease,
+  buildReport,
   RELEASE_NOTES_HREF,
   REPOSITORY,
 } from "../lib/buildrelease";
-import { comparableRelease, shortRevision } from "../lib/release";
+import { shortRevision } from "../lib/release";
 import "./aboutmargince.css";
 
 const WEBSITE_HREF = "https://margince.com/";
 const LICENSING_HREF = `${REPOSITORY}/blob/main/LICENSING.md`;
 const THIRD_PARTY_LICENSES_HREF = "/licenses/THIRD-PARTY-NOTICES.txt";
 
-function knownRevision(build: BuildRelease): string | undefined {
-  return comparableRelease(build.revision) ? build.revision : undefined;
-}
-
-/**
- * The build as one line of plain text, for a problem report. English in every
- * locale: it is pasted into the core's issue tracker.
- */
-export function buildReport(build: BuildRelease): string {
-  const revision = knownRevision(build);
-  const commit = revision ? ` (commit ${revision})` : "";
-  switch (build.kind) {
-    case "instance":
-      return build.instance
-        ? `Margince core ${build.core}, instance ${build.instance}${commit}`
-        : `Margince core ${build.core}${commit}`;
-    case "core":
-      return `Margince ${build.release}${commit}`;
-    default:
-      return `Margince development build${commit}`;
-  }
-}
-
 function NewTabLink({
   href,
   children,
 }: Readonly<{ href: string; children: ReactNode }>) {
-  const t = useT();
-  const content = (
-    <>
-      {children}
-      <span className="sr-only"> {t("common.opensNewTab")}</span>
-      <ExternalLink aria-hidden />
-    </>
-  );
   if (href.startsWith("/")) {
     return (
       <AppLink
@@ -67,36 +36,40 @@ function NewTabLink({
         target="_blank"
         rel="noopener noreferrer"
       >
-        {content}
+        {children}
+        <NewTabMark />
       </AppLink>
     );
   }
-  return <OffsiteLink href={href}>{content}</OffsiteLink>;
+  return (
+    <OffsiteLink href={href}>
+      {children}
+      <NewTabMark />
+    </OffsiteLink>
+  );
 }
 
-/** The release with its short commit, as the one line a reader quotes. */
 function versionLine(build: BuildRelease, t: Translator): string {
-  const short = shortRevision(knownRevision(build));
   let release: string;
   if (build.kind === "core") {
     release = build.release;
   } else if (build.kind === "instance") {
-    release = build.instance ?? t("about.coreRelease", { version: build.core });
+    release = build.instance ?? t("about.instanceBuild");
   } else {
     release = t("about.devBuild");
   }
+  const short = shortRevision(build.revision);
   return short ? `${release} · ${short}` : release;
 }
 
 function versionNote(build: BuildRelease, t: Translator): ReactNode {
-  return build.kind === "instance" && build.instance
+  return build.kind === "instance"
     ? t("about.coreRelease", { version: build.core })
     : undefined;
 }
 
 const COPIED_MS = 3000;
 
-/** The version, pressed to copy the whole build line with its full commit. */
 function VersionCopy({ build }: Readonly<{ build: BuildRelease }>) {
   const t = useT();
   const report = buildReport(build);
@@ -120,10 +93,17 @@ function VersionCopy({ build }: Readonly<{ build: BuildRelease }>) {
   const copied = copies !== null;
   // Only a core build's commit is in the core repository; an instance's is in
   // the repository of whoever built it.
-  const revision = build.kind === "core" ? knownRevision(build) : undefined;
+  const revision = build.kind === "core" ? build.revision : undefined;
   return (
     <div className="aboutmargince-version">
-      <Button variant="link" align="start" onClick={copy.copy}>
+      <Button
+        variant="link"
+        align="start"
+        onClick={() => {
+          setCopies(null);
+          copy.copy();
+        }}
+      >
         {copied ? (
           t("about.copiedVersion")
         ) : (
@@ -147,17 +127,11 @@ function VersionCopy({ build }: Readonly<{ build: BuildRelease }>) {
   );
 }
 
-/**
- * What this build of Margince is, under which license, and where it lives.
- * `surface` sets the space around it for the dialog or the settings page.
- */
-export function AboutMargince({
-  build,
-  surface,
-}: Readonly<{ build: BuildRelease; surface: "dialog" | "page" }>) {
+/** What this build of Margince is, under which license, and where it lives. */
+export function AboutMargince({ build }: Readonly<{ build: BuildRelease }>) {
   const t = useT();
   return (
-    <div className={`aboutmargince aboutmargince-in-${surface}`}>
+    <div className="aboutmargince">
       <div className="aboutmargince-brand">
         <Logomark />
         {t("shell.logoAria")}
@@ -244,7 +218,9 @@ export function AboutMarginceDialog({
         <Heading size="large" id={titleId}>
           {t("about.title")}
         </Heading>
-        <AboutMargince build={build} surface="dialog" />
+        <div className="aboutmargince-dialogbody">
+          <AboutMargince build={build} />
+        </div>
       </div>
     </Modal>
   );

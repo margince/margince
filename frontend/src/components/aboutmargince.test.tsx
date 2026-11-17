@@ -3,7 +3,14 @@
 
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
-import { act, cleanup, render, screen, within } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { stubClipboard } from "../design-system/clipboard-testing";
@@ -24,7 +31,7 @@ afterEach(() => {
 function renderAbout(build: BuildRelease) {
   render(
     <LocaleProvider initial="en">
-      <AboutMargince build={build} surface="page" />
+      <AboutMargince build={build} />
     </LocaleProvider>,
   );
 }
@@ -43,8 +50,8 @@ describe("the version", () => {
   it.each<[string, BuildRelease, string, string | undefined]>([
     [
       "a core build",
-      { kind: "core", release: "2026.2.1", revision: SHA },
-      "2026.2.1 · 0123456",
+      { kind: "core", release: CORE, revision: SHA },
+      `${CORE} · 0123456`,
       undefined,
     ],
     [
@@ -59,10 +66,10 @@ describe("the version", () => {
       `core ${CORE}`,
     ],
     [
-      "an instance build without its own release",
+      "an instance build without its own release, whose commit is still its own",
       { kind: "instance", core: CORE, revision: SHA },
-      `core ${CORE} · 0123456`,
-      undefined,
+      "Instance build · 0123456",
+      `core ${CORE}`,
     ],
     [
       "an unstamped build",
@@ -76,12 +83,6 @@ describe("the version", () => {
       "Development build",
       undefined,
     ],
-    [
-      "a revision of dev, which no build knows",
-      { kind: "core", release: "2026.2.1", revision: "dev" },
-      "2026.2.1",
-      undefined,
-    ],
   ])("is one button for %s", (_, build, line, note) => {
     renderAbout(build);
     expect(versionButton()).toHaveAccessibleName(`${line}${HINT}`);
@@ -90,7 +91,7 @@ describe("the version", () => {
   });
 
   it("links a core build's commit to the core repository, at the size of the text around it", () => {
-    renderAbout({ kind: "core", release: "2026.2.1", revision: SHA });
+    renderAbout({ kind: "core", release: CORE, revision: SHA });
     const commit = screen.getByRole("link", { name: /^View commit on GitHub/ });
     expect(commit).toHaveAttribute(
       "href",
@@ -102,10 +103,7 @@ describe("the version", () => {
   });
 
   it.each<[string, BuildRelease]>([
-    [
-      "an instance build",
-      { kind: "instance", core: "2026.2.1", revision: SHA },
-    ],
+    ["an instance build", { kind: "instance", core: CORE, revision: SHA }],
     ["an unstamped build", { kind: "unstamped", revision: SHA }],
   ])("links no commit for %s", (_, build) => {
     renderAbout(build);
@@ -113,75 +111,77 @@ describe("the version", () => {
   });
 });
 
+/** Let the clipboard write and the hook's settling run, with no clock moving. */
+async function settle() {
+  await act(async () => {
+    for (let tick = 0; tick < 10; tick++) {
+      await Promise.resolve();
+    }
+  });
+}
+
 describe("copying the version", () => {
-  it.each<[string, BuildRelease, string]>([
-    [
-      "a core build",
-      { kind: "core", release: "2026.2.1", revision: SHA },
-      `Margince 2026.2.1 (commit ${SHA})`,
-    ],
-    [
-      "an instance build",
-      { kind: "instance", instance: "v0.4.1", core: "v0.0.5", revision: SHA },
-      `Margince core v0.0.5, instance v0.4.1 (commit ${SHA})`,
-    ],
-    [
-      "an instance build without its own release",
-      { kind: "instance", core: "v0.0.5", revision: SHA },
-      `Margince core v0.0.5 (commit ${SHA})`,
-    ],
-    [
-      "an unstamped build",
-      { kind: "unstamped", revision: SHA },
-      `Margince development build (commit ${SHA})`,
-    ],
-    [
-      "an unstamped build without a revision",
-      { kind: "unstamped" },
-      "Margince development build",
-    ],
-  ])(
-    "copies one plain line for %s, with the full commit",
-    async (_, build, line) => {
-      const user = userEvent.setup();
-      const clipboard = stubClipboard("accepts");
-      renderAbout(build);
-      await user.click(versionButton());
-      await screen.findByRole("button", { name: COPIED });
-      expect(clipboard.written).toEqual([line]);
-    },
-  );
+  it("copies the build's one report line", async () => {
+    const user = userEvent.setup();
+    const clipboard = stubClipboard("accepts");
+    renderAbout({ kind: "core", release: CORE, revision: SHA });
+    await user.click(versionButton());
+    await screen.findByRole("button", { name: COPIED });
+    expect(clipboard.written).toEqual([`Margince ${CORE} (commit ${SHA})`]);
+  });
 
-  it("says it copied, in the button and to a screen reader, then shows the version again", async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  it("says it copied, in the button and to a screen reader, for three seconds", async () => {
     stubClipboard("accepts");
-    renderAbout({ kind: "core", release: "2026.2.1", revision: SHA });
+    renderAbout({ kind: "core", release: CORE, revision: SHA });
     const button = versionButton();
-    await user.click(button);
+    vi.useFakeTimers();
+    fireEvent.click(button);
+    await settle();
 
-    expect(await screen.findByRole("button", { name: COPIED })).toBe(button);
+    expect(button).toHaveAccessibleName(COPIED);
     expect(screen.getByRole("status")).toHaveTextContent(COPIED);
 
     act(() => {
-      vi.advanceTimersByTime(10_000);
+      vi.advanceTimersByTime(2999);
     });
-    expect(button).toHaveAccessibleName(`2026.2.1 · 0123456${HINT}`);
+    expect(button).toHaveAccessibleName(COPIED);
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(button).toHaveAccessibleName(`${CORE} · 0123456${HINT}`);
     expect(screen.getByRole("status")).toHaveTextContent("");
   });
 
   it("hands over the whole line to copy by hand when the clipboard refuses", async () => {
     const user = userEvent.setup();
     stubClipboard("refuses");
-    renderAbout({ kind: "core", release: "2026.2.1", revision: SHA });
+    renderAbout({ kind: "core", release: CORE, revision: SHA });
     await user.click(versionButton());
 
     expect(
       await screen.findByText("Select the version below and copy it by hand."),
     ).toBeVisible();
     expect(screen.getByRole("textbox", { name: "Version" })).toHaveTextContent(
-      `Margince 2026.2.1 (commit ${SHA})`,
+      `Margince ${CORE} (commit ${SHA})`,
     );
+  });
+
+  it("drops the copied claim when a second press fails", async () => {
+    const user = userEvent.setup();
+    const accepting = stubClipboard("accepts");
+    renderAbout({ kind: "core", release: CORE, revision: SHA });
+    await user.click(versionButton());
+    const button = await screen.findByRole("button", { name: COPIED });
+
+    accepting.restore();
+    stubClipboard("refuses");
+    await user.click(button);
+
+    expect(
+      await screen.findByText("Select the version below and copy it by hand."),
+    ).toBeVisible();
+    expect(button).toHaveAccessibleName(`${CORE} · 0123456${HINT}`);
+    expect(screen.getByRole("status")).toHaveTextContent("");
   });
 });
 

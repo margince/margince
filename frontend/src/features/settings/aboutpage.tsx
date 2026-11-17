@@ -4,12 +4,15 @@
 import { AboutMargince } from "../../components/aboutmargince";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { buildRelease } from "../../lib/buildrelease";
+import "./aboutpage.css";
 
 export function AboutPage() {
   return (
     <Panel>
       <PanelBody>
-        <AboutMargince build={buildRelease()} surface="page" />
+        <div className="aboutpage">
+          <AboutMargince build={buildRelease()} />
+        </div>
       </PanelBody>
     </Panel>
   );
