@@ -63,6 +63,8 @@ type Dispatcher struct {
 	// demands. Nil on an installation that declares no country, and on every
 	// test store that has no opinion about compliance packs.
 	requirements RequirementChecker
+	// channelSends answers which channel transports can carry a reply.
+	channelSends func(provider string) bool
 }
 
 // defaultMaxAttempts bounds a dispatcher whose ladder length was not
@@ -118,7 +120,15 @@ func NewDispatcher(
 		store: store, resolver: resolver, seats: seats, attachments: attachments,
 		consent: consent, policies: policies,
 		now: now, maxAge: maxAge, maxAttempts: maxAttempts,
+		channelSends: PreRegistryChannelSending,
 	}
+}
+
+// WithChannelSending sets which channel transports can carry a reply, as the
+// composition registered them.
+func (d *Dispatcher) WithChannelSending(sends func(provider string) bool) *Dispatcher {
+	d.channelSends = sends
+	return d
 }
 
 // WithControllerRelay wires the transport for the installation's own mail, and

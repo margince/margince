@@ -167,7 +167,7 @@ func TestAReplyIsNeverAddressedToAColleagueAtAnInternationalOwnDomain(t *testing
 	if _, err := capture.NewOwnDomainStore(InstallationDB(e.Pool)).Add(e.Admin(), "bücher.example"); err != nil {
 		t.Fatal(err)
 	}
-	comms := newCommsAdapter(e.Pool, nil, SendPath{})
+	comms := newCommsAdapter(e.Pool, nil, nil, SendPath{})
 	for _, colleague := range []string{"anna@bücher.example", "ANNA@BÜCHER.EXAMPLE", "anna@xn--bcher-kva.example"} {
 		_, err := comms.ReplyAddress(e.Admin(), seedMeetingWith(t, e, colleague))
 		var refusal *activities.NoReplyAddressError

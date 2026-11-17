@@ -65,9 +65,8 @@ func (e *ingressEnv) ingest(t *testing.T, rec extension.Record) error {
 // address they were already known by, and the account they can be answered at.
 // Without the address the ladder cannot see the incumbent and mints a twin,
 // which nobody notices until a human opens the Duplicates surface.
-//
-//testdb:serial sets the process-wide sendable channel providers
 func TestADirectMessageFindsTheHumanAlreadyCapturedFromMail(t *testing.T) {
+	t.Parallel()
 	e := setupVouchingIngress(t)
 	registerProbeTransport(t, e)
 	const sender = "known.contact@globex.example"
@@ -109,9 +108,8 @@ func TestADirectMessageFindsTheHumanAlreadyCapturedFromMail(t *testing.T) {
 // record REFUSED rather than quietly stripped. Stripping would be worse: the
 // unit would believe it had contributed the evidence, and the duplicate it was
 // trying to prevent would appear anyway, with nothing saying why.
-//
-//testdb:serial sets the process-wide sendable channel providers
 func TestAnUndeclaredSourceCannotCorroborateByAddress(t *testing.T) {
+	t.Parallel()
 	e := setupIngress(t) // declares no merge key
 	registerProbeTransport(t, e)
 	const sender = "stranger@gmail.com"

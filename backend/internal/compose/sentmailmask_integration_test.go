@@ -44,7 +44,7 @@ func TestASentMailKeepsOneMaskedRowThroughItsEcho(t *testing.T) {
 	}
 	const secret = "Hunter2-Example!"
 	stager := &recordingStager{}
-	adapter := newCommsAdapter(e.Pool, nil, SendPath{PublicBaseURL: toolSurfaceBaseURL, Delivery: stager})
+	adapter := newCommsAdapter(e.Pool, nil, nil, SendPath{PublicBaseURL: toolSurfaceBaseURL, Delivery: stager})
 	sent, err := adapter.SendEmail(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms), anchor, agents.SendEmailArgs{
 		To: []string{"pat@counterparty.example"}, Subject: "Zugang Passwort: " + secret,
 		Body: "Hallo Pat,\nPasswort: " + secret + "\nBis bald", ConsentPurpose: "transactional",

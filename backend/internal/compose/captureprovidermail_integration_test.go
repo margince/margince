@@ -203,7 +203,7 @@ func TestMailboxDeletionPreservesMailWrittenByTheCRM(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	adapter := newCommsAdapter(e.Pool, nil, SendPath{PublicBaseURL: toolSurfaceBaseURL, Delivery: &recordingStager{}})
+	adapter := newCommsAdapter(e.Pool, nil, nil, SendPath{PublicBaseURL: toolSurfaceBaseURL, Delivery: &recordingStager{}})
 	sent, err := adapter.SendEmail(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms), anchor, agents.SendEmailArgs{To: []string{"pat@counterparty.example"}, Subject: "Re: Angebot", Body: "I will send the draft.", ConsentPurpose: "transactional"})
 	if err != nil {
 		t.Fatal(err)

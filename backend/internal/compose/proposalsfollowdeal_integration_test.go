@@ -569,7 +569,7 @@ func TestADraftComposedForAnOwnerWhoLeftIsDroppedAndRedraftedNextSweep(t *testin
 		svc:   e.svc,
 		tasks: e.Activities,
 		draft: reassigningDrafter{
-			followUpReplySeam: newCommsAdapter(e.Pool, nil, SendPath{}),
+			followUpReplySeam: newCommsAdapter(e.Pool, nil, nil, SendPath{}),
 			during:            func() { e.reassign(t, deal, e.Rep2) },
 		},
 		owner: dealOwnerAuthority{db: e.DB(), users: identity.NewServiceFor(e.DB())},
@@ -712,7 +712,7 @@ func TestADraftingFailureStagesNothingInsteadOfATask(t *testing.T) {
 	stager := followUpStager{
 		svc:   e.svc,
 		tasks: e.Activities,
-		draft: failingDrafter{followUpReplySeam: newCommsAdapter(e.Pool, nil, SendPath{})},
+		draft: failingDrafter{followUpReplySeam: newCommsAdapter(e.Pool, nil, nil, SendPath{})},
 		owner: dealOwnerAuthority{db: e.DB(), users: identity.NewServiceFor(e.DB())},
 		pool:  e.Pool,
 	}

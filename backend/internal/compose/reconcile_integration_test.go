@@ -74,7 +74,7 @@ func setupReconcile(t *testing.T) *reconcileEnv {
 	stager := followUpStager{
 		svc:   e.svc,
 		tasks: e.Activities,
-		draft: newCommsAdapter(e.Pool, nil, SendPath{}),
+		draft: newCommsAdapter(e.Pool, nil, nil, SendPath{}),
 		owner: dealOwnerAuthority{db: e.DB(), users: identity.NewServiceFor(e.DB())},
 		pool:  e.Pool,
 	}

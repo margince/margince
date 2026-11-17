@@ -41,7 +41,7 @@ import (
 // through nor a connection the provider never granted the send scope is repaired
 // by waiting; the scope one names reconnecting, which is the act that repairs it.
 func (d *Dispatcher) gateSendAuthority(ctx context.Context, del Delivery, granted []string) (Outcome, time.Duration, error) {
-	switch scope, capability := SendScopeFor(del.Provider); capability {
+	switch scope, capability := SendScopeFor(del.Provider, d.channelSends); capability {
 	case CannotSend:
 		return d.park(ctx, del.ID, fmt.Sprintf("provider %q cannot send messages", del.Provider))
 	case SendsWithScope:

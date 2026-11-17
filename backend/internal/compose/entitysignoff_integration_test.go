@@ -58,7 +58,7 @@ func TestAnEntitySenderSignsWithTheEntityThroughTheRealSend(t *testing.T) {
 	if preview := previewSignOff(ctx, t, e); preview.Kind != "template" || preview.Text != wantText {
 		t.Fatalf("the composer previews %+v, want Vienna's template", preview)
 	}
-	adapter := newCommsAdapter(e.Pool, nil, SendPath{PublicBaseURL: toolSurfaceBaseURL, Delivery: realDeliveryStager(t, e)})
+	adapter := newCommsAdapter(e.Pool, nil, nil, SendPath{PublicBaseURL: toolSurfaceBaseURL, Delivery: realDeliveryStager(t, e)})
 	if _, err := adapter.SendEmail(ctx, anchorID, agents.SendEmailArgs{
 		To: []string{recipient}, Subject: "Angebot", Body: signOffBody, ConsentPurpose: "transactional",
 	}); err != nil {

@@ -33,7 +33,7 @@ func stagePartyReply(t *testing.T, e *integration.Env) ids.UUID {
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms)
 	delivery := realDeliveryStager(t, e)
 	path := SendPath{PublicBaseURL: toolSurfaceBaseURL, Delivery: delivery}
-	adapter := newCommsAdapter(e.Pool, nil, path)
+	adapter := newCommsAdapter(e.Pool, nil, nil, path)
 	consents := consent.NewStore(e.DB())
 	var purpose ids.PurposeID
 	if err := e.DB().Tx(e.Admin(), func(tx pgx.Tx) error {

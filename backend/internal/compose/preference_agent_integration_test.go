@@ -41,7 +41,7 @@ func TestPreferenceCenterOptOutBlocksAgentSend(t *testing.T) {
 	// The REAL delivery machinery for the same reason, one layer down: this
 	// suite's whole claim is that an opt-out REFUSES the next send, and the
 	// engine refuses at staging — inside commsStager, which a double replaces.
-	adapter := newCommsAdapter(e.Pool, nil, SendPath{
+	adapter := newCommsAdapter(e.Pool, nil, nil, SendPath{
 		PublicBaseURL: "https://crm.margince.test",
 		Delivery:      realDeliveryStager(t, e),
 	})
