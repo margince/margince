@@ -39,6 +39,8 @@ type analyticsQueryHandlers struct {
 	// names labels an explanation's records under the reader's grants — the
 	// seam the report drawer names its rows through (derivationlabels.go).
 	names attention.Names
+	// extensions is the composition whose reports the directory answers.
+	extensions *Extensions
 }
 
 func newAnalyticsQueryHandlers(

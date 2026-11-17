@@ -34,6 +34,8 @@ type Extensions struct {
 	subs  []ComposedSubscription
 	jobs  []composedJob
 	rbac  identity.RbacObjects
+	// reportSet is the units' counts and breakdowns, ordered by name.
+	reportSet []registeredReport
 
 	// mu orders the runtime binding and the channel vocabulary, which the boot
 	// writes after the pool exists and every call reads.
@@ -91,6 +93,14 @@ func (x *Extensions) servedJobs() []composedJob {
 		return nil
 	}
 	return x.jobs
+}
+
+// reports answers the units' counts and breakdowns, ordered by name.
+func (x *Extensions) reports() []registeredReport {
+	if x == nil {
+		return nil
+	}
+	return x.reportSet
 }
 
 // unit finds the named unit in the composition.
@@ -163,6 +173,7 @@ func (s *Server) bindExtensions() {
 	s.connectorAppHandlers.extensions = s.extensions
 	s.installationSettingsHandlers.extensions = s.extensions
 	s.dataTaskHandlers.extensions = s.extensions
+	s.analyticsQueryHandlers.extensions = s.extensions
 }
 
 // ExtensionsWithSubscriptionsForTest is a composition holding only listeners.
@@ -180,7 +191,7 @@ func ExtensionsWithSubscriptionsForTest(subs []ComposedSubscription) *Extensions
 // binding of its own. Parallel tests that share one registration each bind
 // their own pool to a fork.
 func (x *Extensions) ForkForTest() *Extensions {
-	fork := &Extensions{units: x.units, verbs: x.verbs, jobs: x.jobs, rbac: x.rbac}
+	fork := &Extensions{units: x.units, verbs: x.verbs, jobs: x.jobs, rbac: x.rbac, reportSet: x.reportSet}
 	for _, tool := range x.tools {
 		if adapted, ok := tool.(extensionTool); ok {
 			adapted.composed = fork

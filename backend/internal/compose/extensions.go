@@ -50,7 +50,7 @@ func RegisterExtensions(exts []extension.Extension, verbs []extension.Verb, jobD
 	// tools to the core seam can (in principle — preflightTools already
 	// precludes it, but this stays fail-closed) fail, and it must not fail
 	// with a jurisdiction pack already half-applied.
-	composed := &Extensions{units: exts, verbs: verbs}
+	composed := &Extensions{units: exts, verbs: verbs, reportSet: composedReports(exts)}
 	tools, err := buildExtensionTools(composed, exts, verbs)
 	if err != nil {
 		return nil, err

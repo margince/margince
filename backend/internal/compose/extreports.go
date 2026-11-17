@@ -16,7 +16,6 @@ import (
 	"fmt"
 	"slices"
 	"strings"
-	"sync"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -46,12 +45,9 @@ type registeredReport struct {
 	// population is a record kind's full name, or the key of a core population.
 	population string
 	by         string
+	// overKind is the unit's own kind the population names, nil for a core one.
+	overKind *recordkinds.Declared
 }
-
-var (
-	extReportsMu sync.RWMutex
-	extReports   []registeredReport
-)
 
 // preflightReports refuses a count or breakdown core could not run, and a name
 // one unit uses twice. A core population must be one the report catalog serves,
@@ -119,26 +115,28 @@ func coreBreakdownServed(b extension.ReportBreakdown) error {
 	return nil
 }
 
-// registerReports fills the registry the Reports and Home endpoint reads.
-func registerReports(exts []extension.Extension) {
-	extReportsMu.Lock()
-	defer extReportsMu.Unlock()
-	extReports = extReports[:0]
+// composedReports resolves every unit's counts and breakdowns, ordered by name.
+// The composition holds the result, and the Reports and Home endpoint reads it.
+func composedReports(exts []extension.Extension) []registeredReport {
+	var out []registeredReport
 	for _, e := range exts {
 		for _, c := range e.ReportCounts {
-			extReports = append(extReports, registeredReport{
+			out = append(out, registeredReport{
 				name: extension.ReportName(e.Name, c.Name), label: c.Label, kind: extReportCount,
 				unit: e.Name, population: resolvedPopulation(e.Name, c.Population),
+				overKind: populationKind(e, c.Population),
 			})
 		}
 		for _, b := range e.ReportBreakdowns {
-			extReports = append(extReports, registeredReport{
+			out = append(out, registeredReport{
 				name: extension.ReportName(e.Name, b.Name), label: b.Label, kind: extReportBreakdown,
 				unit: e.Name, population: resolvedPopulation(e.Name, b.Population), by: b.By,
+				overKind: populationKind(e, b.Population),
 			})
 		}
 	}
-	slices.SortFunc(extReports, func(a, b registeredReport) int { return strings.Compare(a.name, b.name) })
+	slices.SortFunc(out, func(a, b registeredReport) int { return strings.Compare(a.name, b.name) })
+	return out
 }
 
 func resolvedPopulation(unit extension.Name, population string) string {
@@ -148,10 +146,16 @@ func resolvedPopulation(unit extension.Name, population string) string {
 	return extension.RecordKindName(unit, population)
 }
 
-func registeredReports() []registeredReport {
-	extReportsMu.RLock()
-	defer extReportsMu.RUnlock()
-	return slices.Clone(extReports)
+// populationKind is the unit's own kind a population names. A core population
+// and a short name the unit did not declare answer nil.
+func populationKind(e extension.Extension, population string) *recordkinds.Declared {
+	for _, k := range e.RecordKinds {
+		if k.Kind == population {
+			declared := recordkinds.Declare(e.Name, k)
+			return &declared
+		}
+	}
+	return nil
 }
 
 // extSchemaPrefix opens the table of every spec over a unit's own rows.
@@ -227,8 +231,8 @@ func multiselectColumns(ctx context.Context, tx pgx.Tx, object datasource.Entity
 // specFor builds the spec one registered report runs over, and says false for a
 // breakdown whose custom field this installation does not define.
 func (r registeredReport) specFor(ctx context.Context, pool *pgxpool.Pool) (reportSpec, bool, error) {
-	if declared, ok := recordkinds.Lookup(r.population); ok {
-		return extensionKindSpec(declared, r.by), true, nil
+	if r.overKind != nil {
+		return extensionKindSpec(*r.overKind, r.by), true, nil
 	}
 	spec, ok := prebuiltReports[r.population]
 	if !ok {
