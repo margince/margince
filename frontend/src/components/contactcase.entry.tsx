@@ -21,14 +21,18 @@ export function ContactCaseEntry({
   const plural = usePlural();
   const { locale } = useLocale();
   const [open, setOpen] = useState(false);
-  const others = otherCaseMembers(useContactCase(contactId).data);
+  const contactCase = useContactCase(contactId).data;
+  const others = otherCaseMembers(contactCase);
   if (others < 1) return null;
+  // A case too large to list in full shows only some members. Their count is
+  // then a floor, and the label says so with a plus.
+  const count = contactCase?.too_large
+    ? `${formatNumber(contactCase.members.length, locale)}+`
+    : formatNumber(others, locale);
   return (
     <>
       <Button onClick={() => setOpen(true)} data-testid="contact-case-entry">
-        {plural("contactCase.entry", others, {
-          count: formatNumber(others, locale),
-        })}
+        {plural("contactCase.entry", others, { count })}
       </Button>
       <ContactCaseReview
         contactId={contactId}
