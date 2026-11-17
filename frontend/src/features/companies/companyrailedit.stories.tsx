@@ -13,8 +13,7 @@ import {
 import { CompanyProfileDetails } from "./companyprofiledetails";
 import { CompanyRail } from "./companyrail";
 
-// The account's own fields in the record's edit form. The details' About and
-// Address dialogs open it, and so do the Profile tab's grouped rows.
+// The company edit form, opened by About, Address and the Profile tab's rows.
 
 const meta: Meta = {
   title: "Records/Company 360/Edit form",
