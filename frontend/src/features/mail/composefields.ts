@@ -166,6 +166,8 @@ export function useComposeFields({
   const [context, setContext] = useState<CommunicationContext | "">(
     edit?.context ?? initialReason ?? "",
   );
+  // The meeting a drafted reason rests on, when the draft was written from it.
+  const [meetingEvidence, setMeetingEvidence] = useState<string | undefined>();
   // The send-later moment as datetime-local text in the rep's zone. It
   // becomes an instant at submit (see scheduleFields).
   const [sendAt, setSendAtValue] = useState(edit?.sendAt ?? "");
@@ -426,6 +428,8 @@ export function useComposeFields({
     setDraftedIntent,
     context,
     setContext,
+    meetingEvidence,
+    setMeetingEvidence,
     sendAt,
     sendSchedule,
     scheduleControl: { sendAt, timezone: scheduleZone },

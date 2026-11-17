@@ -120,6 +120,10 @@ export function ComposeBlockers({
     <div className="compose-blockers">
       <ComposeWhy
         anchorActivity={anchorActivity}
+        needsReason={
+          fields.context !== "" ||
+          sendStatus(send.permission).kind === "missingContext"
+        }
         flagged={send.flagged}
         context={fields.context}
         onContextChange={fields.setContext}

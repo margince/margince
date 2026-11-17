@@ -408,3 +408,31 @@ func capturedMeetingSQL(asOf string) string {
 		  AND a.captured_by LIKE 'connector:%'
 		  AND ` + relstrength.MeetingInTouchSQL("a", asOf)
 }
+
+// agreedAppointment reports whether the subject takes part in a calendar
+// meeting still to come, nobody having called it off. A message about moving
+// it continues something the subject agreed to. A named meeting must be that
+// meeting; with none named, any such meeting answers. A hand-typed meeting is
+// no evidence, for the reason capturedMeetingSQL gives.
+func agreedAppointment(ctx context.Context, tx pgx.Tx, contactID string, named *ids.UUID, asOf time.Time, entity ids.UUID) (bool, error) {
+	args := []any{contactID, asOf, entity, named}
+	visible, err := activityEvidenceSQL(ctx, "$3", &args)
+	if err != nil {
+		return false, err
+	}
+	var found bool
+	err = tx.QueryRow(ctx, `
+		SELECT EXISTS (
+		  SELECT 1 FROM activity a
+		  JOIN activity_participant p ON p.activity_id = a.id AND p.contact_id = $1::uuid
+		  WHERE a.kind = 'meeting' AND a.archived_at IS NULL
+		    AND a.counterparty_email IS NULL
+		    AND a.captured_by LIKE 'connector:%'
+		    AND `+relstrength.MeetingAheadSQL("a", "$2")+`
+		    AND ($4::uuid IS NULL OR a.id = $4::uuid)
+		    AND `+visible+`)`, args...).Scan(&found)
+	if err != nil {
+		return false, fmt.Errorf("read the agreed appointment: %w", err)
+	}
+	return found, nil
+}

@@ -395,17 +395,20 @@ export function ComposeBody({
 // reply derives its category from the thread it answers, which the checks say.
 export function ComposeWhy({
   anchorActivity,
+  needsReason,
   flagged,
   context,
   onContextChange,
 }: Readonly<{
   anchorActivity: Activity | undefined;
+  /** The check could not settle why a reply is written, or a reason is set. */
+  needsReason: boolean;
   flagged: ReadonlySet<MissingField>;
   context: CommunicationContext | "";
   onContextChange: (next: CommunicationContext | "") => void;
 }>) {
   const t = useT();
-  if (!asksWhy(anchorActivity)) {
+  if (!asksWhy(anchorActivity, needsReason)) {
     return null;
   }
   const missing = context === "";

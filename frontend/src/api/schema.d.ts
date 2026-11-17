@@ -43832,6 +43832,20 @@ export interface components {
             /** @description True when the sender's voice could not even be looked up, so this draft may be missing a voice its sender built. Distinct from voice_profile_version being null, which also covers the ordinary no-profile case. A client should say so: the sender cannot detect a missing voice by reading the text. Absent reads as false. */
             readonly voice_degraded?: boolean;
             /**
+             * @description What the drafting instruction says this message is, for the composer to send
+             *     with it. `requested_followup` when the instruction asks to move an appointment,
+             *     in English, German or Vietnamese. Absent when the instruction says nothing the
+             *     send check can use, which leaves the reason to the thread or the sender. The
+             *     send check still needs its own evidence, here an agreed appointment with the
+             *     recipient.
+             */
+            readonly communication_context?: components["schemas"]["CommunicationContext"];
+            /**
+             * @description The record the drafted reason rests on: the meeting itself, when the draft was
+             *     written from it. Absent otherwise.
+             */
+            readonly evidence?: components["schemas"]["CommunicationEvidence"];
+            /**
              * @description The language this draft is written in: the `language` the request named, else the one the server resolved from the correspondence. The model draft and the deterministic fallback report it alike. A client shows it as the composer's current choice and names it again on a rewrite that must keep it.
              * @enum {string}
              */

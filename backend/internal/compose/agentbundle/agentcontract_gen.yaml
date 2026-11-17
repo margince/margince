@@ -41338,6 +41338,22 @@ components:
         voice_profile_version: {type: [integer, 'null'], readOnly: true, minimum: 1, description: 'The Voice DNA PROFILE version (not a model version) that styled this draft — the "built from your corpus · vN" provenance; null when no ready voice profile shaped it.'}
         draft_ref: {type: [string, 'null'], readOnly: true, description: 'Opaque reference identifying this served voice draft for learning feedback (rejectVoiceDraft); null when no voice profile styled it.'}
         voice_degraded: {type: boolean, readOnly: true, description: 'True when the sender''s voice could not even be looked up, so this draft may be missing a voice its sender built. A client should say so: the sender cannot detect a missing voice by reading the text. Absent reads as false.'}
+        communication_context:
+          allOf: [{$ref: '#/components/schemas/CommunicationContext'}]
+          readOnly: true
+          description: |-
+            What the drafting instruction says this message is, for the composer to send
+            with it. `requested_followup` when the instruction asks to move an appointment,
+            in English, German or Vietnamese. Absent when the instruction says nothing the
+            send check can use, which leaves the reason to the thread or the sender. The
+            send check still needs its own evidence, here an agreed appointment with the
+            recipient.
+        evidence:
+          allOf: [{$ref: '#/components/schemas/CommunicationEvidence'}]
+          readOnly: true
+          description: |-
+            The record the drafted reason rests on: the meeting itself, when the draft was
+            written from it. Absent otherwise.
         language:
           type: string
           enum: [en, de, vi]

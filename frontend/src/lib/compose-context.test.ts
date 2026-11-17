@@ -45,10 +45,8 @@ describe("repliesToTheSubject", () => {
 });
 
 describe("contextFor", () => {
-  it("claims NOTHING when the anchor already says it is a reply", () => {
-    // The engine derives reply_to_inbound from the thread. A claim on top could
-    // only agree — adding noise to the decision record — or contradict it,
-    // which is recorded as a claim the evidence does not carry.
+  it("claims nothing on a reply nobody gave a reason for", () => {
+    // The engine derives reply_to_inbound from the thread.
     expect(
       contextFor({
         anchor: { kind: "email", direction: "inbound" },
@@ -57,16 +55,16 @@ describe("contextFor", () => {
     ).toBeUndefined();
   });
 
-  it("keeps claiming nothing even if something was chosen earlier", () => {
-    // A reader who picked a category and then opened a reply must not have
-    // their stale pick travel: the thread is the stronger evidence and the
-    // server would record the disagreement.
+  it("sends a reason picked or drafted for a reply", () => {
+    // A reason other than marketing yields to the thread on the server, so a
+    // reply loses nothing by naming one. The composer clears a reason picked
+    // for another anchor before it reaches here.
     expect(
       contextFor({
         anchor: { kind: "email", direction: "inbound" },
-        chosen: "marketing",
+        chosen: "requested_followup",
       }),
-    ).toBeUndefined();
+    ).toBe("requested_followup");
   });
 
   it("sends what the reader chose when there is no anchor to derive from", () => {

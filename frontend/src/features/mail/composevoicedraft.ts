@@ -183,6 +183,9 @@ export function useVoiceDraft({
         setProvenance: fields.setProvenance,
         setReasoning: account.setReasoning,
         setScope: account.setScope,
+        context: fields.context,
+        setContext: fields.setContext,
+        setMeetingEvidence: fields.setMeetingEvidence,
       });
       // The rep's words stood in the way, so say the new draft was dropped.
       fields.setDraftKept(!written);

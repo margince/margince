@@ -280,6 +280,14 @@ export function useComposeSend({
   const queryClient = useQueryClient();
   const toast = useToast();
   const { setSendUnavailable } = fields;
+  // A reason belongs to the message it was picked or drafted for. When the same
+  // composer moves onto another anchor, it starts without one.
+  const [reasonAnchor, setReasonAnchor] = useState(answering);
+  if (reasonAnchor !== answering) {
+    setReasonAnchor(answering);
+    fields.setContext("");
+    fields.setMeetingEvidence(undefined);
+  }
   // What every sent message does next, whichever door sent it: the draft is
   // spent, the timeline reads again, and the composer closes.
   const finishSent = () => {
@@ -372,7 +380,15 @@ export function useComposeSend({
   const contextDealId = (answering ? anchorActivity?.links : links)?.find(
     (link) => link.entity_type === "deal",
   )?.entity_id;
-  const evidence = contextDealId ? { deal_id: contextDealId } : undefined;
+  const evidence =
+    contextDealId || fields.meetingEvidence
+      ? {
+          ...(contextDealId ? { deal_id: contextDealId } : {}),
+          ...(fields.meetingEvidence
+            ? { activity_id: fields.meetingEvidence }
+            : {}),
+        }
+      : undefined;
   // The engine's answer, asked while the rep writes. Bcc is in the question,
   // because consent is owed to everyone who receives the message.
   // A marketing draft is checked against its recipients' content rules.

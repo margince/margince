@@ -46,39 +46,31 @@ export function repliesToTheSubject(anchor: Anchor | undefined): boolean {
 }
 
 /**
- * What the composer should say this message is, or nothing.
+ * What the composer should say this message is, or nothing when nobody said.
  *
- * Three answers, and the difference between the first two matters more than it
- * looks:
- *
- *  - `undefined` — say nothing, because the anchor already says it. The engine
- *    resolves `reply_to_inbound` from the thread, and a claim added on top
- *    could only agree with it or contradict it.
- *  - a category — the reader answered the question, because there was no anchor
- *    to answer it for them.
- *  - `undefined` with `asks` true — nobody has answered yet.
+ * A reply sends a reason too once one was picked or drafted. Where the thread
+ * shows it is a reply, a reason other than marketing yields to that reading on
+ * the server, so the claim cannot cost a reply the thread already allows.
  */
 export function contextFor(args: {
   anchor: Anchor | undefined;
   chosen: CommunicationContext | "";
 }): CommunicationContext | undefined {
-  if (repliesToTheSubject(args.anchor)) {
-    return undefined;
-  }
   return args.chosen === "" ? undefined : args.chosen;
 }
 
 /**
  * Whether the composer has to ask the reader why they are writing.
  *
- * Only where nothing else answers it. A reply derives, so asking would be
- * asking a reader to restate what the thread in front of them already says —
- * and a question with an obvious answer trains contacts to answer without
- * reading, which is how the purpose dropdown this replaces came to be set to
- * whatever was first in the list.
+ * Only where nothing else answers it. A reply usually derives its reason from
+ * the thread, so it asks only when the check could not (needsReason), and a
+ * question with an obvious answer trains readers to answer without reading.
  */
-export function asksWhy(anchor: Anchor | undefined): boolean {
-  return !repliesToTheSubject(anchor);
+export function asksWhy(
+  anchor: Anchor | undefined,
+  needsReason = false,
+): boolean {
+  return needsReason || !repliesToTheSubject(anchor);
 }
 
 // The categories a rep may claim, in the order a first message is usually
