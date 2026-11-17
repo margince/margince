@@ -9,7 +9,6 @@ import (
 	"context"
 	"errors"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -24,23 +23,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 )
 
-// confirmRulesCountry is one minted code under both confirm-link rules: a
-// record check asks no news, and a consent mail needs the subject's request.
-// One code because the package has few to spare, and no test here reads both.
-var confirmRulesCountry struct {
-	once sync.Once
-	code jurisdiction.Code
-}
-
 func placeUnderConfirmRules(t *testing.T, e *channelConsentEnv) {
 	t.Helper()
-	confirmRulesCountry.once.Do(func() {
-		confirmRulesCountry.code = testMessagingRules(t, messagingrules.Rules{
-			Version:                       1,
-			RecordConfirmationWithoutNews: true, ConsentConfirmationNeedsRequest: true,
-		})
+	code := testMessagingRules(t, messagingrules.Rules{
+		Version: 1, RecordConfirmationWithoutNews: true, ConsentConfirmationNeedsRequest: true,
 	})
-	placeContact(t, e.owner, e.contact, confirmRulesCountry.code)
+	placeContact(t, e.owner, e.contact, code)
 }
 
 // publishQuestions publishes the questions a link pins, as the boot does.
