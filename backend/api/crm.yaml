@@ -61679,8 +61679,9 @@ components:
             Whether the sender may send this one message past the refusal by recording a
             reason. True for every policy refusal, the subject's own stops included: the
             refusal and the stop stay on the record, and the reason is kept with the message.
-            False only for a hard bounce, because no decision makes a dead address accept
-            mail. The caller still needs the `communication_exception` grant, and the refused
+            False for a hard bounce, because no decision makes a dead address accept mail, and
+            for a recipient that resolves to nobody or to two contacts, whose stops were never
+            read. The caller still needs the `communication_exception` grant, and the refused
             send's review offers `direct_send` only to a caller who holds it.
         decided_by:
           type: string
@@ -74911,6 +74912,16 @@ components:
           description: |
             The tick. Refused when false — the acknowledgement is the act, and an instruction written
             without one would record a decision nobody made.
+        shown_reasons:
+          type: array
+          maxItems: 100
+          items: { type: string, maxLength: 100 }
+          description: |
+            The refusal reason codes the director was shown, from the review's `refusals`. When the
+            review's refusals changed since then, the decision is refused with `instruction_stale`
+            and the director opens the review again. Without it, a decision cannot pass a refusal
+            the subject made themselves (an objection, a withdrawal, a restriction or a request to
+            stop), and neither can an agent's.
 
     ConfirmSubmission:
       type: object

@@ -27,8 +27,9 @@ const (
 //
 // Every policy refusal takes the one-message exception: a human sender may
 // always send past the engine with a recorded reason, and the refusal and any
-// stop stay on the record. Only a dead address is no policy answer, because no
-// decision makes the provider accept it.
+// stop stay on the record. Two refusals are not policy answers. No decision
+// makes a dead address accept mail, and a recipient that resolves to nobody,
+// or to two contacts, was never checked for the stops a reviewer would weigh.
 var remedies = map[string][]Remedy{
 	ReasonNoEvidence:                     {RemedyAnswer, RemedyFact, RemedyException},
 	ReasonDealNotRequested:               {RemedyAnswer, RemedyFact, RemedyException},
@@ -47,9 +48,9 @@ var remedies = map[string][]Remedy{
 	ReasonMarketingPermissionRequired: {RemedyException},
 	ReasonFrequencyCapReached:         {RemedyException},
 	ReasonUnconfirmedDOI:              {RemedyException},
-	ReasonNoSubject:                   {RemedyException},
 
 	ReasonHardBounce: {},
+	ReasonNoSubject:  {},
 
 	// Allows, not refusals.
 	ReasonAllowed:           {},

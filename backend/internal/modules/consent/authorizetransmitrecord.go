@@ -268,6 +268,7 @@ func deliveryAuthorityTx(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (s
 type deliveryException struct {
 	givenByAdmin bool
 	shown        []RefusedRecipient
+	directedAt   time.Time
 }
 
 // deliveryExceptionTx reads it. A delivery with no decision reads as none given
@@ -275,11 +276,11 @@ type deliveryException struct {
 func deliveryExceptionTx(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (deliveryException, error) {
 	var out deliveryException
 	err := tx.QueryRow(ctx, `
-		SELECT i.given_by_admin, r.refusals
+		SELECT i.given_by_admin, r.refusals, i.directed_at
 		  FROM comms_outbound o
 		  JOIN communication_instruction i ON i.id = o.instruction_id
 		  JOIN communication_review r ON r.id = i.review_id
-		 WHERE o.id = $1`, deliveryID).Scan(&out.givenByAdmin, &out.shown)
+		 WHERE o.id = $1`, deliveryID).Scan(&out.givenByAdmin, &out.shown, &out.directedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return deliveryException{}, nil
 	}

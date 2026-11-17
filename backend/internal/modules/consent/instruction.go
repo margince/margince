@@ -106,6 +106,8 @@ type DirectInput struct {
 	// act, and an instruction written without one would record a decision
 	// nobody made.
 	Acknowledged bool
+	// ShownReasons are the refusal reasons the director read (refusalsAsShown).
+	ShownReasons []string
 }
 
 // Instruction is one recorded decision.
@@ -137,6 +139,9 @@ func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInpu
 	if err := requireAUserOrTheirAgent(ctx); err != nil {
 		return Instruction{}, err
 	}
+	if err := requireSomebodyPresent(ctx); err != nil {
+		return Instruction{}, err
+	}
 	if err := auth.Require(ctx, entityCommunicationException, principal.ActionCreate); err != nil {
 		return Instruction{}, err
 	}
@@ -158,6 +163,9 @@ func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInpu
 		}
 		if !directableBy(ctx, review.Refusals) {
 			return refuseDirection(ctx, review.Refusals)
+		}
+		if err := refusalsAsShown(ctx, in.ShownReasons, review.Refusals); err != nil {
+			return err
 		}
 		// Recorded so the re-check at staging and dispatch knows which
 		// refusals this exception may answer (DecisionSet.ExceptionMayAnswer).
@@ -437,8 +445,14 @@ func requireAUserOrTheirAgent(ctx context.Context) error {
 	if !ok || !actor.HumanOrItsAgent() {
 		return fmt.Errorf("this is a user's own statement: %w", apperrors.ErrPermissionDenied)
 	}
+	return nil
+}
+
+// requireSomebodyPresent refuses a decision from work nobody is watching. A
+// scheduled run may read a review, but only a user present can decide it.
+func requireSomebodyPresent(ctx context.Context) error {
 	if principal.Unattended(ctx) {
-		return fmt.Errorf("an unattended agent cannot state its user's decision: %w", apperrors.ErrPermissionDenied)
+		return fmt.Errorf("an unattended agent cannot record its user's decision: %w", apperrors.ErrPermissionDenied)
 	}
 	return nil
 }

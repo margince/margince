@@ -54632,6 +54632,14 @@ export interface components {
              *     without one would record a decision nobody made.
              */
             acknowledged: boolean;
+            /**
+             * @description The refusal reason codes the director was shown, from the review's `refusals`. When the
+             *     review's refusals changed since then, the decision is refused with `instruction_stale`
+             *     and the director opens the review again. Without it, a decision cannot pass a refusal
+             *     the subject made themselves (an objection, a withdrawal, a restriction or a request to
+             *     stop), and neither can an agent's.
+             */
+            shown_reasons?: string[];
         };
         /**
          * @description What a subject typed into the confirm link we mailed them, and what somebody decided about

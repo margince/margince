@@ -117,7 +117,7 @@ func (g *Gate) validateRequestedFollowup(ctx context.Context, tx pgx.Tx, req com
 	if err != nil {
 		return resolution{}, err
 	}
-	if !found && subject.Kind == entityContact {
+	if !found && subject.Kind == entityContact && category == commsauthz.CategoryRequestedFollowup {
 		if found, err = subjectHasAnAgreedAppointment(ctx, tx, req, subject); err != nil {
 			return resolution{}, err
 		}

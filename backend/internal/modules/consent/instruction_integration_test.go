@@ -337,7 +337,8 @@ func TestAnErasureCanTombstoneTheWordsAndNothingElse(t *testing.T) {
 }
 
 // A rep holding the grant, like an admin, directs one message past a contact's
-// own stop, and the decision records who gave it.
+// own stop when they name the refusals they read, and the decision records who
+// gave it. A stale or missing list of what they read is refused.
 //
 // Mutation: drop the stops' exception in remedies and every case is refused.
 func TestASenderDirectsOneMessagePastAContactsStop(t *testing.T) {
@@ -351,6 +352,8 @@ func TestASenderDirectsOneMessagePastAContactsStop(t *testing.T) {
 	}
 
 	for _, reason := range []string{"marketing_objection", "consent_withdrawn", "processing_restricted", "subject_request", "no_marketing_consent"} {
+		input := input
+		input.ShownReasons = []string{reason}
 		repReview := seedOpenReviewFor(ctx, t, e, reason)
 		if _, err := e.store.DirectSend(senderCtx(e.ws, e.user), repReview, input); err != nil {
 			t.Errorf("a rep directing past %s: %v", reason, err)
@@ -366,10 +369,21 @@ func TestASenderDirectsOneMessagePastAContactsStop(t *testing.T) {
 	}
 
 	review := seedOpenReviewFor(ctx, t, e, "marketing_objection")
-	if _, err := e.store.DirectSend(senderCtx(e.ws, e.user), review, input); err != nil {
+	stale := input
+	stale.ShownReasons = []string{"no_marketing_consent"}
+	var staleErr *InstructionStaleError
+	if _, err := e.store.DirectSend(senderCtx(e.ws, e.user), review, stale); !errors.As(err, &staleErr) {
+		t.Errorf("a direction naming refusals the review no longer holds: err = %v, want it stale", err)
+	}
+	if _, err := e.store.DirectSend(senderCtx(e.ws, e.user), review, input); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a direction past an objection naming nothing it was shown: err = %v, want permission denied", err)
+	}
+	shown := input
+	shown.ShownReasons = []string{"marketing_objection"}
+	if _, err := e.store.DirectSend(senderCtx(e.ws, e.user), review, shown); err != nil {
 		t.Fatalf("a rep directing past an objection: %v", err)
 	}
-	if _, err := e.store.DirectSend(senderCtx(e.ws, e.user), review, input); !errors.Is(err, ErrDecisionAlreadyRecorded) {
+	if _, err := e.store.DirectSend(senderCtx(e.ws, e.user), review, shown); !errors.Is(err, ErrDecisionAlreadyRecorded) {
 		t.Errorf("a second direction on the same review: err = %v, want the recorded decision to stand", err)
 	}
 }

@@ -12,7 +12,7 @@ import (
 
 // The composer offers a recorded reason where the preview says a refusal can be
 // overruled. So the preview offers it for every policy refusal the registry
-// lists, and never for a dead address that no reason makes deliverable.
+// lists, and never for a dead address or a recipient that resolves to nobody.
 func TestThePreviewOffersAReasonForEveryPolicyRefusal(t *testing.T) {
 	t.Parallel()
 	for _, code := range commsauthz.RefusalCodes() {
@@ -26,7 +26,7 @@ func TestThePreviewOffersAReasonForEveryPolicyRefusal(t *testing.T) {
 		if got == nil {
 			t.Fatalf("%s: can_be_overruled is absent", code)
 		}
-		if want := code != commsauthz.ReasonHardBounce; *got != want {
+		if want := code != commsauthz.ReasonHardBounce && code != commsauthz.ReasonNoSubject; *got != want {
 			t.Errorf("%s: can_be_overruled = %v, want %v", code, *got, want)
 		}
 	}

@@ -69,12 +69,13 @@ func TestNoStaffExceptionAnswersAHardBounce(t *testing.T) {
 }
 
 // A rep may send one message past every policy refusal the registry lists. A
-// dead address is no policy answer, so it stops the message whoever decided.
+// dead address and an unresolved recipient are no policy answers, so they stop
+// the message whoever decided.
 func TestARepMaySendPastEveryPolicyRefusalButNotADeadAddress(t *testing.T) {
 	t.Parallel()
 	for _, reason := range RefusalCodes() {
 		refused := Decision{Verdict: VerdictDeny, ReasonCode: reason}
-		mayPass := reason != ReasonHardBounce
+		mayPass := reason != ReasonHardBounce && reason != ReasonNoSubject
 		if got := (DecisionSet{Decisions: []Decision{refused}}).ExceptionMayAnswer(false); got != mayPass {
 			t.Errorf("a rep's exception over %q = %v, want %v", reason, got, mayPass)
 		}

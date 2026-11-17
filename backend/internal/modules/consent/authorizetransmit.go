@@ -154,8 +154,13 @@ func (g *Gate) transmitVerdictTx(
 	if err != nil {
 		return commsauthz.TransmitTicket{}, nil, err
 	}
-	ticket.ConsentRefused = !ticket.Allowed && set.ExceptionMayAnswer(exception.givenByAdmin) &&
-		everyRefusalWasShown(exception.shown, set)
+	if !ticket.Allowed && set.ExceptionMayAnswer(exception.givenByAdmin) {
+		answers, err := instructionStillAnswers(ctx, tx, exception.shown, exception.directedAt, set)
+		if err != nil {
+			return commsauthz.TransmitTicket{}, nil, err
+		}
+		ticket.ConsentRefused = answers
+	}
 	// The message that goes must be the message that was authorized. Asked of
 	// every message that might go, refused ones included: a directed send
 	// leaves on a human's decision about specific words. applyWordingVerdict

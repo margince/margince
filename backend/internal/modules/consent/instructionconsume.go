@@ -37,6 +37,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -73,6 +74,7 @@ type LiveInstruction struct {
 	// GivenByAdmin says an admin gave the exception, so it may answer a refusal
 	// only an admin may (DecisionSet.ExceptionMayAnswer).
 	GivenByAdmin bool
+	DirectedAt   time.Time
 }
 
 // InstructionStaleError refuses an instruction that no longer describes the
@@ -116,7 +118,7 @@ func liveInstructionForIntentTx(ctx context.Context, tx pgx.Tx, intentID ids.UUI
 	err := tx.QueryRow(ctx, `
 		SELECT i.id, i.review_id, r.delivery_intent_id,
 		       coalesce(i.corrected_wording, i.acknowledged_wording),
-		       i.given_by_admin, r.refusals, coalesce(i.acknowledged_scope, '')
+		       i.given_by_admin, r.refusals, coalesce(i.acknowledged_scope, ''), i.directed_at
 		  FROM communication_instruction i
 		  JOIN communication_review r ON r.id = i.review_id
 		 WHERE r.delivery_intent_id = $1
@@ -124,7 +126,7 @@ func liveInstructionForIntentTx(ctx context.Context, tx pgx.Tx, intentID ids.UUI
 		 ORDER BY i.directed_at DESC
 		 LIMIT 1
 		   FOR UPDATE OF i`, intentID).
-		Scan(&out.ID, &out.ReviewID, &out.IntentID, &out.Acknowledged, &out.GivenByAdmin, &out.Refusals, &out.Scope)
+		Scan(&out.ID, &out.ReviewID, &out.IntentID, &out.Acknowledged, &out.GivenByAdmin, &out.Refusals, &out.Scope, &out.DirectedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return LiveInstruction{}, nil
 	}
@@ -254,8 +256,11 @@ func (g *Gate) AuthorizeDirectedExecutionTx(
 	}
 	// A stop recorded since the decision, or a refusal beyond the authority of
 	// whoever gave it: the decision stays unspent and the refusal stands.
-	if !set.ExceptionMayAnswer(inst.GivenByAdmin) || !everyRefusalWasShown(inst.Refusals, set) {
+	if !set.ExceptionMayAnswer(inst.GivenByAdmin) {
 		return ids.UUID{}, nil
+	}
+	if answers, err := instructionStillAnswers(ctx, tx, inst.Refusals, inst.DirectedAt, set); err != nil || !answers {
+		return ids.UUID{}, err
 	}
 	if err := instructionScopeStillFits(ctx, tx, inst.Refusals, set); err != nil {
 		return ids.UUID{}, err

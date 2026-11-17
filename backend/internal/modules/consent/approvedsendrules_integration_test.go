@@ -200,8 +200,8 @@ func (e *resolveEnv) suppressAt(t *testing.T, kind string, at time.Time) {
 }
 
 // A quote resting on a request alone, to somebody who opted out of marketing
-// after asking, is refused with its own reason. Nobody sends past it, an admin
-// included; the rep confirms with the contact first.
+// after asking, is refused with its own reason. The rep confirms with the
+// contact first, or sends this one quote with a recorded reason.
 //
 // Mutation: drop objectionBindsResolution from decideResolved and the quote is
 // allowed past the objection.
@@ -218,8 +218,8 @@ func TestAnOptOutAfterTheRequestStopsAQuoteWithNoDealBehindIt(t *testing.T) {
 	if d.Resolved != commsauthz.CategoryPrecontractQuote || d.Suppression != commsauthz.ReasonObjection {
 		t.Errorf("resolved %q under %q, want the quote it is under the objection", d.Resolved, d.Suppression)
 	}
-	if (commsauthz.DecisionSet{Decisions: []commsauthz.Decision{d}}).ExceptionMayAnswer(true) {
-		t.Error("an admin's exception answers the opt-out after the request")
+	if !(commsauthz.DecisionSet{Decisions: []commsauthz.Decision{d}}).ExceptionMayAnswer(false) {
+		t.Error("a rep's exception does not answer the opt-out after the request")
 	}
 }
 
@@ -430,8 +430,9 @@ func (e *resolveEnv) putUnderException(t *testing.T, delivery ids.UUID, givenByA
 	if err := e.owner.QueryRow(ctx, `
 		INSERT INTO communication_review (state, kind, reason_code, refusals)
 		VALUES ('needs_repair', 'single', 'no_marketing_consent',
-		        jsonb_build_array(jsonb_build_object('address', $1::text, 'reason_code', 'no_marketing_consent')))
-		RETURNING id`, e.address).Scan(&review); err != nil {
+		        jsonb_build_array(jsonb_build_object('address', $1::text, 'reason_code', 'no_marketing_consent',
+		          'subject_kind', 'contact', 'subject_id', $2::text)))
+		RETURNING id`, e.address, e.contact.String()).Scan(&review); err != nil {
 		t.Fatalf("seeding the review: %v", err)
 	}
 	if err := e.owner.QueryRow(ctx, `
@@ -450,10 +451,11 @@ func (e *resolveEnv) putUnderException(t *testing.T, delivery ids.UUID, givenByA
 }
 
 // An exception over missing marketing consent does not reach a stop recorded
-// after the message was queued. The transmit ticket stops offering the refusal
-// to the exception, so the dispatcher parks it.
+// after the message was queued, because nobody decided about that stop. The
+// transmit ticket stops offering the refusal to the exception, so the
+// dispatcher parks it.
 //
-// Mutation: drop set.ExceptionMayAnswer from AuthorizeTransmit and the second
+// Mutation: drop instructionStillAnswers from AuthorizeTransmit and the second
 // ticket still offers the refusal to the exception.
 func TestAStopRecordedAfterQueueingIsNotOneAnExceptionAnswers(t *testing.T) {
 	e := setupResolve(t)

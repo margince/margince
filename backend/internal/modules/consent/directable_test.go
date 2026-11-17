@@ -16,8 +16,8 @@ import (
 )
 
 // A rep, like an admin, may direct one message past every policy refusal the
-// registry lists. A dead address and a missing check are never directable, and
-// neither is anything for a seat without the exception grant.
+// registry lists. A dead address, an unresolved recipient and a missing check
+// are never directable, and neither is anything for a seat without the grant.
 func TestARepMayDirectASendPastEveryPolicyRefusal(t *testing.T) {
 	seat := func(role string, grant bool) context.Context {
 		return principal.WithActor(context.Background(), principal.Principal{
@@ -32,7 +32,7 @@ func TestARepMayDirectASendPastEveryPolicyRefusal(t *testing.T) {
 		t.Run(role, func(t *testing.T) {
 			ctx := seat(role, true)
 			for _, reason := range commsauthz.RefusalCodes() {
-				want := reason != commsauthz.ReasonHardBounce
+				want := reason != commsauthz.ReasonHardBounce && reason != commsauthz.ReasonNoSubject
 				if got := directableBy(ctx, []RefusedRecipient{{ReasonCode: reason}}); got != want {
 					t.Errorf("directable past %s = %v, want %v", reason, got, want)
 				}
@@ -48,20 +48,23 @@ func TestARepMayDirectASendPastEveryPolicyRefusal(t *testing.T) {
 }
 
 // An agent may record its user's decision in their conversation. A scheduled
-// run has nobody present, so it may not state that decision for them.
+// run has nobody present, so it may read a review but not decide it.
 func TestOnlyAnAttendedAgentStatesItsUsersDecision(t *testing.T) {
 	agent := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:t", OnBehalfOf: ids.NewV7(), PassportID: ids.NewV7(),
 	})
-	if err := requireAUserOrTheirAgent(agent); err != nil {
+	if err := requireSomebodyPresent(agent); err != nil {
 		t.Fatalf("an attended agent was refused: %v", err)
 	}
 	for name, ctx := range map[string]context.Context{
 		"unattended":    principal.WithUnattended(agent),
 		"scheduled run": principal.WithAgentRunID(agent, ids.NewV7()),
 	} {
-		if err := requireAUserOrTheirAgent(ctx); !errors.Is(err, apperrors.ErrPermissionDenied) {
-			t.Errorf("%s agent = %v, want ErrPermissionDenied", name, err)
+		if err := requireAUserOrTheirAgent(ctx); err != nil {
+			t.Errorf("%s agent may not read the review: %v", name, err)
+		}
+		if err := requireSomebodyPresent(ctx); !errors.Is(err, apperrors.ErrPermissionDenied) {
+			t.Errorf("%s agent deciding = %v, want ErrPermissionDenied", name, err)
 		}
 	}
 }

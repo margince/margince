@@ -51963,6 +51963,16 @@ components:
           description: |-
             The tick. Refused when false — the acknowledgement is the act, and an instruction written
             without one would record a decision nobody made.
+        shown_reasons:
+          type: array
+          maxItems: 100
+          items: {type: string, maxLength: 100}
+          description: |-
+            The refusal reason codes the director was shown, from the review's `refusals`. When the
+            review's refusals changed since then, the decision is refused with `instruction_stale`
+            and the director opens the review again. Without it, a decision cannot pass a refusal
+            the subject made themselves (an objection, a withdrawal, a restriction or a request to
+            stop), and neither can an agent's.
     ConfirmSubmission:
       type: object
       description: |-

@@ -49061,6 +49061,13 @@ type DirectCommunicationSendRequest struct {
 	// on a contract clause".
 	ReasonCode DirectCommunicationSendRequestReasonCode `json:"reason_code"`
 
+	// ShownReasons The refusal reason codes the director was shown, from the review's `refusals`. When the
+	// review's refusals changed since then, the decision is refused with `instruction_stale`
+	// and the director opens the review again. Without it, a decision cannot pass a refusal
+	// the subject made themselves (an objection, a withdrawal, a restriction or a request to
+	// stop), and neither can an agent's.
+	ShownReasons *[]string `json:"shown_reasons,omitempty"`
+
 	// WarningVersion The compliance text they were shown. Recorded because a record naming no version cannot
 	// say what they were told, and the text changes.
 	WarningVersion string `json:"warning_version"`
