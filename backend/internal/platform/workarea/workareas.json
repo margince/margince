@@ -110,6 +110,7 @@
     "askAboutCompany": "business",
     "askCorpus": "business",
     "askForWeeklyPlanHelp": "business",
+    "askSearchData": "business",
     "assessNoticeSource": "compliance",
     "assessSalesReview": "business",
     "assignLegalEntityMember": "admin_settings",
@@ -983,6 +984,7 @@
     "askAboutCompany": "companies",
     "askCorpus": "knowledge",
     "askForWeeklyPlanHelp": "worklist",
+    "askSearchData": "search",
     "assessNoticeSource": "privacy_notices",
     "assessSalesReview": "reports",
     "assignLeads": "leads",
@@ -1023,6 +1025,7 @@
     "confirmCompanyProfileField": "companies",
     "confirmMeetingReady": "worklist",
     "confirmMyTotp": "own_security",
+    "confirmSendWithoutLawfulBasis": "consent",
     "connectChannel": "connectors",
     "connectConnector": "connectors",
     "connectExtOauth": "extensions",
@@ -1110,6 +1113,7 @@
     "deleteAiProviderKey": "ai_models",
     "deleteAnchorCompanyLogo": "company_profile",
     "deleteAnchorCompanyLogoIcon": "company_profile",
+    "deleteArchivedActivities": "retention",
     "deleteAttachment": "documents",
     "deleteAutomation": "automations",
     "deleteCaptureCounterpartyHold": "capture_triage",
@@ -1477,6 +1481,7 @@
     "listAiProviderKeys": "ai_models",
     "listApprovalPreferences": "agent_limits",
     "listApprovals": "agent_limits",
+    "listArchivedActivities": "retention",
     "listAssignableRoles": "members",
     "listAtRiskRelationships": "deals",
     "listAttachments": "documents",
@@ -2176,6 +2181,9 @@
     ],
     "ask_knowledge_corpus": [
       "knowledge"
+    ],
+    "ask_search_data": [
+      "search"
     ],
     "assess_sales_review": [
       "reports"
@@ -4293,6 +4301,9 @@
       "business"
     ],
     "ask_knowledge_corpus": [
+      "business"
+    ],
+    "ask_search_data": [
       "business"
     ],
     "assess_sales_review": [

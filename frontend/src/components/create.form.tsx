@@ -109,7 +109,7 @@ export function RecordFormBody({
   });
   const refusals = new Map(
     shown.flatMap((field) => {
-      const refusal = field.validate?.(values[field.key] ?? "");
+      const refusal = field.validate?.(values[field.key] ?? "", values, rows);
       return refusal ? [[field.key, refusal] as const] : [];
     }),
   );

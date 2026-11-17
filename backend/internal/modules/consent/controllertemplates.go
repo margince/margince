@@ -35,6 +35,9 @@ import (
 const (
 	// TemplateRecordConfirmation asks a contact to check what is held about them.
 	TemplateRecordConfirmation = "record_confirmation"
+	// TemplateRecordCheck is the same check for a recipient whose rules bar
+	// asking about news in it, so it says nothing about news.
+	TemplateRecordCheck = "record_check"
 	// TemplateConsentConfirmation carries the double-opt-in link.
 	TemplateConsentConfirmation = "consent_confirmation"
 	// TemplatePrivacyNotice tells a contact what is held about them and asks
@@ -58,6 +61,10 @@ const (
 	// TemplateRestrictionLift tells a contact, before it happens, that their
 	// restriction of processing is lifted (GDPR Art. 18(3)). It carries no link.
 	TemplateRestrictionLift = "restriction_lift"
+	// TemplateRequestReceipt is the first answer a data-subject request is
+	// owed under a pack that sets one. It says when the request arrived and
+	// when it will be carried out, and carries no link.
+	TemplateRequestReceipt = "request_receipt"
 )
 
 // Rendered is one template resolved into the words that will be sent.
@@ -143,21 +150,28 @@ type controllerTemplate struct {
 // — which is both a deliverability problem and a fair reaction.
 var controllerTemplates = map[string]controllerTemplate{
 	TemplateRecordConfirmation: {
-		version:  4,
+		version:  5,
 		category: commsauthz.CategoryRecordConfirmation,
 		subject:  func(w mailcopy.Copy) string { return w.ConfirmRecordSubject },
 		intro:    func(w mailcopy.Copy) string { return w.ConfirmRecordBody },
 		closing:  func(w mailcopy.Copy) string { return w.ConfirmRecordIgnore },
 	},
+	TemplateRecordCheck: {
+		version:  1,
+		category: commsauthz.CategoryRecordConfirmation,
+		subject:  func(w mailcopy.Copy) string { return w.ConfirmRecordSubject },
+		intro:    func(w mailcopy.Copy) string { return w.ConfirmRecordCheckBody },
+		closing:  func(w mailcopy.Copy) string { return w.ConfirmRecordCheckIgnore },
+	},
 	TemplateConsentConfirmation: {
-		version:  6,
+		version:  7,
 		category: commsauthz.CategoryConsentConfirmation,
 		subject:  func(w mailcopy.Copy) string { return w.ConfirmConsentSubject },
 		intro:    func(w mailcopy.Copy) string { return w.ConfirmConsentBody },
 		closing:  func(w mailcopy.Copy) string { return w.ConfirmConsentIgnore },
 	},
 	TemplatePrivacyNotice: {
-		version:  4,
+		version:  5,
 		category: commsauthz.CategoryPrivacyNotice,
 		subject:  func(w mailcopy.Copy) string { return w.NoticeSubject },
 		intro:    func(w mailcopy.Copy) string { return w.NoticeBody },
@@ -177,12 +191,22 @@ var controllerTemplates = map[string]controllerTemplate{
 		unbranded:    true,
 	},
 	TemplateRestrictionLift: {
-		version:  2,
+		version:  3,
 		category: commsauthz.CategoryPrivacyNotice,
 		subject:  func(w mailcopy.Copy) string { return w.RestrictionLiftSubject },
 		intro:    func(w mailcopy.Copy) string { return w.RestrictionLiftBody },
 		closing:  func(w mailcopy.Copy) string { return w.NoticeIgnore },
 		linkless: true,
+	},
+	TemplateRequestReceipt: {
+		version:      1,
+		category:     commsauthz.CategoryOptoutConfirmation,
+		subject:      func(w mailcopy.Copy) string { return w.RequestAckSubject },
+		intro:        func(w mailcopy.Copy) string { return w.RequestAckBody },
+		closing:      func(w mailcopy.Copy) string { return w.OptOutAckIgnore },
+		linkless:     true,
+		refusalTimes: true,
+		unbranded:    true,
 	},
 }
 
@@ -223,7 +247,21 @@ func ControllerTemplateVersion(key string) (int, bool) {
 // the two meet in memory at dispatch — so the link is absent from the delivery
 // row, the timeline, the audit entry and the outbox event alike.
 func RenderControllerTemplate(key string, expiresAt time.Time, language string) (Rendered, commsauthz.Category, error) {
-	return renderTemplateContext(key, expiresAt, language, "")
+	return renderTemplate(key, linkExpiry{at: expiresAt}, language, "")
+}
+
+// linkExpiry is when a link stops working, already on the reader's clock.
+// country names that clock in the mail; empty prints the offset alone.
+type linkExpiry struct {
+	at      time.Time
+	country string
+}
+
+func (e linkExpiry) text(words mailcopy.Copy) string {
+	if e.country == "" {
+		return words.Instant(e.at)
+	}
+	return words.CountryInstant(e.at, e.country)
 }
 
 // RefusalTimes are the two instants an opt-out receipt prints, and the offset
@@ -243,11 +281,21 @@ const refusalInstantLayout = "15:04, 02/01/2006"
 // RenderOptOutAcknowledgement resolves the opt-out receipt with the times of
 // the refusal it answers.
 func RenderOptOutAcknowledgement(language string, times RefusalTimes) (Rendered, commsauthz.Category, error) {
+	return renderReceipt(TemplateOptOutAcknowledgement, language, times)
+}
+
+// RenderRequestReceipt renders the request receipt. StoppedAt carries the
+// date the request is carried out by.
+func RenderRequestReceipt(language string, times RefusalTimes) (Rendered, commsauthz.Category, error) {
+	return renderReceipt(TemplateRequestReceipt, language, times)
+}
+
+func renderReceipt(key, language string, times RefusalTimes) (Rendered, commsauthz.Category, error) {
 	if times.ReceivedAt.IsZero() || times.StoppedAt.IsZero() {
-		return Rendered{}, "", errors.New("consent: an opt-out receipt states when the refusal arrived and when sending stopped")
+		return Rendered{}, "", errors.New("consent: a receipt states when the request arrived and when it takes effect")
 	}
 	zone := time.FixedZone("", int(times.UTCOffset.Seconds()))
-	return renderLinkless(TemplateOptOutAcknowledgement, language,
+	return renderLinkless(key, language,
 		times.ReceivedAt.In(zone).Format(refusalInstantLayout), times.StoppedAt.In(zone).Format(refusalInstantLayout),
 		"UTC"+times.StoppedAt.In(zone).Format("-07:00"))
 }
@@ -275,7 +323,7 @@ func renderLinkless(key, language string, args ...any) (Rendered, commsauthz.Cat
 	}, t.category, nil
 }
 
-func renderTemplateContext(key string, expiresAt time.Time, language, purpose string) (Rendered, commsauthz.Category, error) {
+func renderTemplate(key string, expiry linkExpiry, language, purpose string) (Rendered, commsauthz.Category, error) {
 	t, ok := controllerTemplates[key]
 	if !ok {
 		return Rendered{}, "", fmt.Errorf("consent: %q is not a registered controller template", key)
@@ -301,12 +349,12 @@ func renderTemplateContext(key string, expiresAt time.Time, language, purpose st
 		body.WriteString(words.ConsentPurposeLabel + ": " + mailcopy.OneLine(purpose) + "\n\n")
 	}
 	body.WriteString(controllerAction(key, words) + "\n  " + linkPlaceholder + "\n\n" + words.ConfirmPersonal)
-	if !expiresAt.IsZero() {
+	if !expiry.at.IsZero() {
 		// Appended to the personal-link sentence rather than substituted into
 		// it: the shipped English replaced a phrase inside its own body text,
 		// which stops working the moment a language spells that sentence
 		// differently.
-		fmt.Fprintf(&body, words.ConfirmExpiry, words.Instant(expiresAt))
+		fmt.Fprintf(&body, words.ConfirmExpiry, expiry.text(words))
 	}
 	body.WriteString("\n\n" + t.closing(words) + "\n")
 	return Rendered{Key: key, Version: t.version, Subject: subject, Body: body.String(), Language: language}, t.category, nil
@@ -364,15 +412,15 @@ func controllerLetterhead(key, brand, logoContentID string, words mailcopy.Copy)
 func historicalControllerVersion(key string, version int) bool {
 	switch key {
 	case TemplateRecordConfirmation:
-		return version == 2 || version == 3
+		return version >= 2 && version <= 4
 	case TemplateConsentConfirmation:
-		return version >= 3 && version <= 5
+		return version >= 3 && version <= 6
 	case TemplatePrivacyNotice:
-		return version >= 1 && version <= 3
+		return version >= 1 && version <= 4
 	case TemplateOptOutAcknowledgement:
 		return version >= 1 && version <= 3
 	case TemplateRestrictionLift:
-		return version == 1
+		return version == 1 || version == 2
 	}
 	return false
 }

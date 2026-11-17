@@ -25,7 +25,7 @@ func TestAnEditCannotBlankARecordsRequiredNameOverHTTP(t *testing.T) {
 		kind, path, field string
 		create            AnyMap
 	}{
-		{"contact", "/v1/contacts", "full_name", AnyMap{"full_name": "Ada Lovelace", "source": "manual"}},
+		{"contact", "/v1/contacts", "full_name", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Ada Lovelace", "source": "manual"}},
 		{"company", "/v1/companies", "display_name", AnyMap{"display_name": "Northwind", "source": "manual"}},
 		{"deal", "/v1/deals", "name", AnyMap{"name": "Rollout", "pipeline_id": stages.PipelineID, "stage_id": stages.Open, "source": "manual"}},
 		{"lead", "/v1/leads", "full_name", AnyMap{"full_name": "Lee Lead", "email": "lee@lead.test", "source": "manual"}},

@@ -145,3 +145,44 @@ export const NoDocumentSets: Story = {
   render: () =>
     frame({ ...base, error: new NoDocumentSetsError(), result: undefined }),
 };
+
+export const DataQuestionNotCovered: Story = {
+  render: () =>
+    frame({
+      ...base,
+      result: {
+        ...answered,
+        question: "How many deals did I win from 2024 to 2026?",
+        answer: {
+          ...answered.answer,
+          outcome: "not_covered",
+          summary: "Not covered by this set",
+          claims: [],
+        },
+      },
+    }),
+};
+export const DataQuestionNotCoveredDark: Story = {
+  ...DataQuestionNotCovered,
+  globals: { theme: "dark" },
+};
+
+export const NoHandbookDataFallback: Story = {
+  render: () => (
+    <StoryProviders>
+      <PaletteAnswer
+        pending={false}
+        error={null}
+        result={{
+          question: "How many deals did I win?",
+          unsupportedData: true,
+        }}
+        onLeave={() => {}}
+      />
+    </StoryProviders>
+  ),
+};
+export const NoHandbookDataFallbackDark: Story = {
+  ...NoHandbookDataFallback,
+  globals: { theme: "dark" },
+};

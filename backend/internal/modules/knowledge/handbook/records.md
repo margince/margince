@@ -40,25 +40,26 @@ A lead's company starts as text, and imports create no company. **Link to** offe
 
 ## Contacts
 
-A contact needs a name and a source. Everything else is up to you. To check its source, see [Review a contact source](source-review.md).
+Every contact has a name and a source. To check its source, see [Review a contact source](source-review.md).
 
 ### How do I add a new contact?
 To add a new contact in Margince, open **Contacts** in the sidebar and choose **New contact**.
-1. Enter the **Full name** (required).
+1. Enter the **Full name** and at least one email, phone number or LinkedIn profile link.
 2. If you like, fill **First name**, **Last name**, **Title**, **Company** and **LinkedIn**.
 3. Choose **Add email** for each address and set its **Type** (Work, Personal or Other); choose **Add phone** for each number.
-4. Fill any custom fields, then choose **Create**. It stays turned off until the full name is filled.
+4. Fill any custom fields, then choose **Create**. Create stays off until the name and a contact channel are filled.
 
 The **Company** box lists the companies that match what you type: pick one to link it, or type a name to create one. Until you use the box, a work email fills it with the company whose domain covers the address, such as `example.com` for `dana@eu.example.com`. Margince never makes up a company from a domain alone. On a company's **Contacts** tab, **New contact** files the contact under that company, without the box.
 
 If the contact is already in Margince, **View existing record** opens it instead. If a live lead holds the email or LinkedIn profile, Margince offers **Convert the lead**. It does not create another contact. An email that belongs to a sending system, such as `noreply@` or `receipts@`, is refused.
 
 ### How do I add a contact quickly, or import contacts from vCards?
-To add a contact quickly in Margince, open **Contacts** and choose **Quick capture**. To add many from a card file, choose **Import vCards**.
-- **Quick capture** asks for **Full name** (required), **Title**, **Company**, **LinkedIn**, **Email** and **Phone**, and confirms with "{name} saved"; the form stays open. Its **Company** box lists and creates companies as in **New contact**, but its **Email** does not fill it. If the email or LinkedIn profile belongs to a live lead, it offers to convert that lead instead. On a company's **Contacts** tab it files the contact under that company, without the **Company** box, if you may change the company.
-- **Import vCards** opens **Import business cards**: choose **Select file or photo** for a **vCard file or card photo**. Each card is Added, Updated, Possible duplicate, Waiting for approval or Skipped; a card for a live lead offers **Convert the lead**. A model reads a photo of up to 20 cards, so every card from a photo waits for your approval. A photo card whose email is already a contact is Skipped. Each field of a card from a file says Imported, "Replaced, old value can be restored", "Record value kept" or "Not in the card". **Next vCard** clears the result for the next card.
+To add a contact quickly in Margince, open **Contacts** and choose **Quick capture**. To add many from a .vcf file, choose **Import vCards**.
+- **Quick capture** requires **Full name** and at least one **LinkedIn**, **Email** or **Phone**. It also asks for **Title** and **Company**, and confirms with "{name} saved"; the form stays open. Its **Company** box lists and creates companies as in **New contact**, but its **Email** does not fill it. If the email or LinkedIn profile belongs to a live lead, it offers to convert that lead instead. On a company's **Contacts** tab it files the contact under that company, without the **Company** box, if you may change the company.
+- **Import vCards** opens **Import business cards**: choose **Select file or photo** for a **vCard file or card photo**. A name-only card is kept with a warning to add an email, phone or LinkedIn profile link. Each card is Added, Updated, Possible duplicate, Waiting for approval or Skipped; a card for a live lead offers **Convert the lead**. A model reads a photo of up to 20 cards, so every card from a photo waits for your approval.
+
+  A photo card whose email is already a contact is Skipped. Each field of a card from a file says Imported, "Replaced, old value can be restored", "Record value kept" or "Not in the card". **Next vCard** clears the result for the next card.
 - A card photo must be a JPEG or PNG. An iPhone converts it automatically when you pick it. A photo in another format is refused until you save it as JPEG or PNG.
-Also called: import contacts, upload a .vcf, scan a business card, import cards from a photo.
 
 ### How do I edit a contact?
 To edit a contact in Margince, open it and press the value to change in the **Details** panel next to the record. There is no Edit button. A value you may change shows a box and an edit mark when the pointer is over it. On a touch screen the mark always shows.
@@ -67,7 +68,6 @@ To edit a contact in Margince, open it and press the value to change in the **De
 3. **Email**, **Phone** and **Address** open a dialog with several fields. Each email or phone is one row with **Type**, **Primary** and buttons to move or remove it. **About** lists every email and phone with its type, **Primary** first. Past three, a **more** link opens the rest. Pressing the email address or phone number still starts a message or a call. The box around it and its mark open the dialog.
 
 **Title**, **LinkedIn**, **Owner**, custom fields and the **Full name** at the top of the page change the same way. First and last name are set only when the contact is created. **LinkedIn** shows as a chip with the LinkedIn logo and the record's name: the chip opens the profile, and the mark opens the dialog. A company's **LinkedIn URL** and a lead's LinkedIn show the same chip, but a lead's cannot be changed. An address on another host shows as plain text.
-Also called: update a contact, change a phone number, rename.
 ### Why can't I edit a contact or company?
 A contact or company in Margince takes no edits when it is archived ("This contact is archived and takes no changes."). It also takes none when it is not yours to change: "You cannot edit this contact. Ask the owner to hand it over or share it, or ask an administrator."
 

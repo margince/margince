@@ -15,6 +15,8 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
 type routeSearchPage struct {
@@ -71,11 +73,11 @@ type searchDoorsSeed struct {
 func seedSearchDoors(t *testing.T, d *twoDoors) searchDoorsSeed {
 	t.Helper()
 	seed := searchDoorsSeed{
-		strong:    createdRecord(t, d.e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Zephyrwind Zephyrwind Mara"}),
-		weak:      createdRecord(t, d.e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Quentin Zephyrwind"}),
+		strong:    createdRecord(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Zephyrwind Zephyrwind Mara"}),
+		weak:      createdRecord(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Quentin Zephyrwind"}),
 		company:   createdRecord(t, d.e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Zephyrwind Werke"}),
-		employee:  createdRecord(t, d.e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Ida Fenn"}),
-		unrelated: createdRecord(t, d.e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Bernd Unrelated"}),
+		employee:  createdRecord(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Ida Fenn"}),
+		unrelated: createdRecord(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Bernd Unrelated"}),
 	}
 	linkEdge(t, d.e, AnyMap{"kind": "employment", "contact_id": seed.employee, "company_id": seed.company, "source": "manual"})
 	return seed
@@ -231,7 +233,7 @@ func TestBothDoorsRefuseAGroupedPageWithACursor(t *testing.T) {
 
 func TestBothDoorsOfferTheSameNearMatchesWhenNothingMatches(t *testing.T) {
 	d := newTwoDoors(t, "search-near-doors", "read")
-	anna := createdRecord(t, d.e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Anna Kowalczyk"})
+	anna := createdRecord(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Anna Kowalczyk"})
 
 	var route struct {
 		Data        []any `json:"data"`

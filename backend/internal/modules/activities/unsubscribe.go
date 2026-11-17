@@ -341,7 +341,8 @@ func (s *Store) deliverability(
 	// German objection route and the Vietnamese advertiser contact — from
 	// exactly the sends that carry an unsubscribe surface and are therefore
 	// advertising by the product's own reckoning.
-	owed, err := s.requiredDisclosures(ctx, string(surface.disclosureCategory()), recipients, entity)
+	lang := s.footerLanguage(ctx, body, subject)
+	owed, err := s.requiredDisclosures(ctx, string(surface.disclosureCategory()), recipients, entity, string(lang))
 	if err != nil {
 		return sendDeliverability{}, err
 	}
@@ -386,7 +387,6 @@ func (s *Store) deliverability(
 	if err := s.publicOriginUsable(); err != nil {
 		return sendDeliverability{}, err
 	}
-	lang := s.footerLanguage(ctx, body, subject)
 	words := mailcopy.For(string(lang))
 	// Asked AFTER the stop token, and its failure is not the send's. A
 	// recipient who cannot be given a preference centre can still be given a

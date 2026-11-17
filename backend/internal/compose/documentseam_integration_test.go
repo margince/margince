@@ -213,7 +213,7 @@ func TestAnAgentAttachesAPDFToEveryRecordKindAndListsItWhereTheTabDoes(t *testin
 	company := h.createAs(t, h.e.Rep1, `{"record_type":"company","fields":{"display_name":"Paper GmbH"}}`)
 	records := map[string]ids.UUID{
 		"company": company,
-		"contact": h.createAs(t, h.e.Rep1, `{"record_type":"contact","fields":{"full_name":"Paula Paper"}}`),
+		"contact": h.createAs(t, h.e.Rep1, `{"record_type":"contact","fields":{"linkedin_url":"`+integration.ContactProfile()+`","full_name":"Paula Paper"}}`),
 		// A human's lead arrives unassigned, and an unowned row is nobody's to change.
 		"lead": h.createAs(t, h.e.Rep1, `{"record_type":"lead","fields":{"email":"lead@paper.example","owner_id":"`+
 			h.e.Rep1.String()+`"}}`),
@@ -302,7 +302,7 @@ func TestAnAgentWhoseHumanMayNotChangeTheRecordIsRefusedAndNothingIsStored(t *te
 // captured contact still private to the rep whose mailbox found it.
 func TestARecordTheAgentCannotSeeReadsAsMissing(t *testing.T) {
 	h := newDocumentHarness(t, documentRepPerms(true))
-	hidden := h.createAs(t, h.e.Rep3, `{"record_type":"contact","fields":{"full_name":"Private Capture"}}`)
+	hidden := h.createAs(t, h.e.Rep3, `{"record_type":"contact","fields":{"linkedin_url":"`+integration.ContactProfile()+`","full_name":"Private Capture"}}`)
 	h.e.WsExec(t, `UPDATE contact SET visibility = 'owner', owner_id = $2 WHERE id = $1`, hidden, h.e.Rep3)
 	_, err := h.attach(t, attachArgs("contact", hidden, "terms.pdf", "application/pdf", []byte(minimalPDF)))
 	if !errors.Is(err, apperrors.ErrNotFound) {
@@ -403,7 +403,7 @@ func TestARetriedAttachReplaysItsReceiptAfterTheFileIsRemoved(t *testing.T) {
 func TestAnArchivedRecordsDocumentsListAsItsTabShowsThem(t *testing.T) {
 	h := newDocumentHarness(t, documentRepPerms(true))
 	company := h.createAs(t, h.e.Rep1, `{"record_type":"company","fields":{"display_name":"Retired AG"}}`)
-	contact := h.createAs(t, h.e.Rep1, `{"record_type":"contact","fields":{"full_name":"Rhea Retired"}}`)
+	contact := h.createAs(t, h.e.Rep1, `{"record_type":"contact","fields":{"linkedin_url":"`+integration.ContactProfile()+`","full_name":"Rhea Retired"}}`)
 	for entityType, id := range map[string]ids.UUID{"company": company, "contact": contact} {
 		if _, err := h.attach(t, attachArgs(entityType, id, "terms.pdf", "application/pdf", []byte(minimalPDF))); err != nil {
 			t.Fatalf("attaching to the %s: %v", entityType, err)

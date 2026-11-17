@@ -32,6 +32,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Only placeholders and punctuation, with no word to translate.
   "compose.aboutWhen",
   "sendPermission.recipientLine",
+  "privacynotice.purposeLine",
   "changes.check.outcome",
   "captureConcern.title",
   "companyReach.functionCount",

@@ -56,6 +56,16 @@ const TemplateMarketingQuestion = "marketing_question"
 // change exists to end, and the one an earlier attempt shipped.
 const TemplateSubscriptionQuestion = "subscription_question"
 
+// TemplateSubscriptionQuestionUnscheduled is the subscription question for a
+// purpose that is not advertising. It states no frequency, because the
+// recorded grant would otherwise promise one for correspondence.
+const TemplateSubscriptionQuestionUnscheduled = "subscription_question_unscheduled"
+
+// publishedQuestionKeys are the questions this build publishes.
+func publishedQuestionKeys() []string {
+	return []string{TemplateMarketingQuestion, TemplateSubscriptionQuestion, TemplateSubscriptionQuestionUnscheduled}
+}
+
 // marketingQuestionVersion is bumped when the question or either answer
 // changes. A version that moved for any other reason would tell a reader the
 // proposition changed when it did not.
@@ -65,7 +75,7 @@ const TemplateSubscriptionQuestion = "subscription_question"
 // against the frontend's own strings, and by
 // TestEveryPublishedQuestionIsPinnedToItsVersion, which pins the words to this
 // version.
-const marketingQuestionVersion = 5
+const marketingQuestionVersion = 6
 
 // QuestionKeyForLink names which published question a link will ask.
 //
@@ -78,11 +88,16 @@ const marketingQuestionVersion = 5
 // about WHICH question is asked. They can still disagree about its exact words
 // and language; see boundquestion.go for what the pin does and does not
 // settle.
-func QuestionKeyForLink(kind string) string {
-	if kind == LinkConsentConfirmation {
+// A consent link for a purpose that is not advertising asks the question that
+// states no frequency.
+func QuestionKeyForLink(kind string, advertising bool) string {
+	switch {
+	case kind != LinkConsentConfirmation:
+		return TemplateMarketingQuestion
+	case advertising:
 		return TemplateSubscriptionQuestion
 	}
-	return TemplateMarketingQuestion
+	return TemplateSubscriptionQuestionUnscheduled
 }
 
 // RenderQuestion resolves one published question into the body a proof row
@@ -95,11 +110,11 @@ func QuestionKeyForLink(kind string) string {
 // make the version mean something different for each.
 func RenderQuestion(key, language string) string {
 	words := mailcopy.For(language)
-	if key == TemplateSubscriptionQuestion {
-		return strings.Join([]string{
-			words.ConfirmSubscriptionAsk,
-			words.ConfirmSubscriptionConfirm,
-		}, "\n")
+	switch key {
+	case TemplateSubscriptionQuestion:
+		return strings.Join([]string{words.ConfirmSubscriptionAsk, words.ConfirmSubscriptionConfirm}, "\n")
+	case TemplateSubscriptionQuestionUnscheduled:
+		return strings.Join([]string{words.ConfirmSubscriptionAskUnscheduled, words.ConfirmConsentConfirm}, "\n")
 	}
 	return RenderMarketingQuestion(language)
 }
@@ -125,7 +140,7 @@ func RenderMarketingQuestion(language string) string {
 // published only for the current setting would disappear from a later boot and
 // the proof would name a row nobody could read.
 func PublishMarketingQuestionTx(ctx context.Context, tx pgx.Tx, now time.Time) error {
-	for _, key := range []string{TemplateMarketingQuestion, TemplateSubscriptionQuestion} {
+	for _, key := range publishedQuestionKeys() {
 		for _, language := range mailcopy.Languages() {
 			if _, err := PublishTextVersionTx(ctx, tx, TextVersion{
 				Key:         key,

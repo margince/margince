@@ -36,6 +36,7 @@ import (
 	"github.com/margince/margince/backend/pkg/extension"
 	"github.com/margince/margince/backend/pkg/extension/jurisdiction"
 	"github.com/margince/margince/backend/pkg/extension/messaging"
+	"github.com/margince/margince/backend/pkg/extension/subjectrights"
 )
 
 // New returns the unit's declaration (the ADR-0120 §4 constructor contract the
@@ -47,6 +48,7 @@ func New() extension.Extension {
 		Description:   "Vietnamese jurisdiction pack: the Decree 91/2020/ND-CP advertising-email rules — prior consent, the subject label, advertiser identity, the daily ceiling and the acknowledged opt-out.",
 		Jurisdictions: []jurisdiction.Pack{pack{}},
 		Messaging:     []messaging.Rules{messagingRules()},
+		SubjectRights: []subjectrights.Rules{subjectRights()},
 	}
 }
 
@@ -115,6 +117,25 @@ func vnInstruments() []messaging.Instrument {
 	}
 }
 
+// refusalMeans are the ways Decree 91/2020/ND-CP Art. 20.2 requires a
+// recipient to be able to refuse advertising email.
+func refusalMeans() []messaging.ContactMeans {
+	return []messaging.ContactMeans{messaging.MeansWeb, messaging.MeansEmail, messaging.MeansPhone}
+}
+
+// superlatives are the claims Law on Advertising Art. 8.11 and Circular
+// 12/2026/TT-BVHTTDL Art. 3 allow only with a listed proof shown in the mail.
+// Art. 3.1 reaches a claim of a leading, unique or absolute position in any
+// language, so the English forms are listed too. "nhất" alone also catches the
+// forms built on it ("lớn nhất", "rẻ nhất"). "the only" and not "only": a bare
+// "only" limits ("only three days left") far more often than it ranks.
+func superlatives() []string {
+	return []string{
+		"nhất", "duy nhất", "tốt nhất", "số một", "số 1", "hàng đầu",
+		"best", "no. 1", "number one", "leading", "the only", "unique",
+	}
+}
+
 // messagingRules is what Vietnamese law requires of an outbound message, stated
 // as data the core engine applies. Nothing here decides a send.
 //
@@ -159,12 +180,13 @@ func vnInstruments() []messaging.Instrument {
 func messagingRules() messaging.Rules {
 	return messaging.Rules{
 		Jurisdiction: "vn",
-		// 2, because the instruments below changed. The obligations the engine
-		// applies did not: a decision recording version 1 was judged under
-		// Decree 91/2020 alone, and one recording version 2 was judged under
-		// the same decree as amended. The number is what tells those two apart
-		// in a record read years later, which is the only reason it moves.
-		Version:            2,
+		// 2 stated the 2025 instruments. 3 applied them: the data-protection
+		// rules follow the recipient, no use rests on legitimate interests, and
+		// the receipt is due at once in Vietnam time. 4 adds that a consent
+		// mail answers the recipient's own request. 5 asks three refusal
+		// means, ends advertising with the refusal section and flags claims
+		// that need a proof. The number tells a decision under each set apart.
+		Version:            5,
 		Instruments:        vnInstruments(),
 		ReplyWindow:        365 * 24 * time.Hour,
 		DealFollowUpWindow: 182 * 24 * time.Hour,
@@ -175,10 +197,14 @@ func messagingRules() messaging.Rules {
 		Disclosures: []messaging.Disclosure{
 			{Kind: messaging.ControllerIdentity},
 			{Kind: messaging.PrivacyContact},
-			{Kind: messaging.ObjectionRoute, MarketingOnly: true},
+			{Kind: messaging.ObjectionRoute, MarketingOnly: true, Means: refusalMeans()},
 			{Kind: messaging.AdvertiserContact, MarketingOnly: true},
 		},
-		SubjectPrefix: advertisingLabel,
+		RefusalSectionLast: true,
+		ClaimsNeedProof:    superlatives(),
+		// Law on Advertising Art. 39.2. The customer is the advertiser.
+		ForeignAdvertiserNeedsLocalAgency: true,
+		SubjectPrefix:                     advertisingLabel,
 		FrequencyCap: &messaging.FrequencyCap{
 			Messages: vnAdvertisingMessagesPerDay,
 			Window:   vnAdvertisingWindow,
@@ -192,5 +218,39 @@ func messagingRules() messaging.Rules {
 		// Art. 11.7 keeps registrations, refusals and receipts at least one
 		// year; 366 days holds across a leap year.
 		OptOutRecordsKeep: 366 * 24 * time.Hour,
+		// Law 91/2025/QH15 Art. 1.2(c) reaches a foreign controller that
+		// processes a Vietnamese citizen's data.
+		DataProtectionFollowsRecipient: true,
+		DisclosureLanguage:             "vi",
+		// Art. 9 and 11.1 need consent before collection, unless an Art. 19.1
+		// case applies. The law has no legitimate-interest basis.
+		NoLegitimateInterests: true,
+		// Decree 91/2020/ND-CP Art. 11.2: a consent request the recipient did
+		// not ask for is itself an unsolicited message.
+		ConsentConfirmationNeedsRequest: true,
+		// Art. 11.2 governs advertising, so only the advertising classes need it.
+		ConsentRequestFirstFor: messaging.AdvertisingPurposeClasses(),
+	}
+}
+
+// subjectRights are the Decree 356/2025/ND-CP Art. 5 deadlines. Every request
+// is owed a first answer in 2 working days. It is carried out in 10 days to
+// correct (Art. 5.3), 20 to erase (Art. 5.4) and 15 to restrict (Art. 5.2),
+// counted in calendar days. Access keeps the core month.
+func subjectRights() subjectrights.Rules {
+	return subjectrights.Rules{
+		Jurisdiction: "vn",
+		Version:      1,
+		Instruments: []messaging.Instrument{
+			{Name: "Decree 356/2025/ND-CP, Art. 5", EffectiveFrom: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)},
+		},
+		Deadlines: map[subjectrights.RequestKind]subjectrights.Deadline{
+			subjectrights.Rectify:     {Period: jurisdiction.Period{Days: 10}},
+			subjectrights.Erasure:     {Period: jurisdiction.Period{Days: 20}},
+			subjectrights.Restriction: {Period: jurisdiction.Period{Days: 15}},
+		},
+		ReplyWithinWorkingDays: 2,
+		// Working days are Vietnamese days.
+		UTCOffset: 7 * time.Hour,
 	}
 }

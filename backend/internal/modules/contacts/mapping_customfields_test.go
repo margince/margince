@@ -28,7 +28,7 @@ func decodeInto(t *testing.T, raw string, into any) {
 
 func TestContactCreateInputCarriesCustomFieldKeys(t *testing.T) {
 	var req crmcontracts.CreateContactRequest
-	decodeInto(t, `{"full_name":"Ada","source":"manual","cf_tier":"gold","cf_seats":12}`, &req)
+	decodeInto(t, `{"full_name":"Ada","source":"manual","linkedin_url":"https://www.linkedin.com/in/ada","cf_tier":"gold","cf_seats":12}`, &req)
 
 	in, err := ContactCreationInput(req)
 	if err != nil {

@@ -18,7 +18,7 @@ func TestTheContact360TimelineSaysTheSameWritableAsTheSingleRead(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
-	contact := createdRecord(t, e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Dana Buyer"})
+	contact := createdRecord(t, e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Dana Buyer"})
 	activity := createdRecord(t, e, "/v1/activities", AnyMap{
 		"kind": "note", "subject": "Call notes",
 		"links": []AnyMap{{"entity_type": "contact", "entity_id": contact}},

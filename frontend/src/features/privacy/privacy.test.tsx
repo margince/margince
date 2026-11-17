@@ -69,10 +69,12 @@ describe("ConsentPurposesCard", () => {
     // same `sent` array — filter for the POST specifically rather than
     // trusting it stayed last.
     const posts = sent.filter((s) => s.key === "POST /consent-purposes");
+    // Monthly unless picked: the subscription question states it.
     expect(posts.at(-1)?.body).toEqual({
       key: "events",
       label: "Events",
       requires_double_opt_in: false,
+      frequency: "monthly",
     });
   });
 

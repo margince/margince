@@ -1,0 +1,10 @@
+{
+  "verb": "ask_search_data",
+  "checks": [
+    "activity.read,deal.read,lead.read,project.read",
+    "deal.read,contact.read,company.read,lead.read,project.read,report_definition.read",
+    "forecast.read",
+    "installation_settings.read",
+    "report_definition.read"
+  ]
+}

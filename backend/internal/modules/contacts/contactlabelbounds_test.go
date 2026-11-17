@@ -16,7 +16,7 @@ import (
 // factories set sourceNames in code and keep a source's full name.
 func TestTypedContactNamesUseTheLabelBoundForEveryCaller(t *testing.T) {
 	name := strings.Repeat("界", values.TextLabelCharacters)
-	if _, err := ContactCreationInput(crmcontracts.CreateContactRequest{FullName: name, Source: "manual"}); err != nil {
+	if _, err := ContactCreationInput(crmcontracts.CreateContactRequest{FullName: name, Source: "manual", LinkedinUrl: new("https://www.linkedin.com/in/contact")}); err != nil {
 		t.Fatalf("name at the character bound: %v", err)
 	}
 	name += "界"
@@ -24,7 +24,7 @@ func TestTypedContactNamesUseTheLabelBoundForEveryCaller(t *testing.T) {
 		"a caller":            ContactCreationInput,
 		"a declared importer": contactCreateInputFromImporter,
 	} {
-		in, err := mapInput(crmcontracts.CreateContactRequest{FullName: name, Source: "manual"})
+		in, err := mapInput(crmcontracts.CreateContactRequest{FullName: name, Source: "manual", LinkedinUrl: new("https://www.linkedin.com/in/contact")})
 		if err == nil || in.sourceNames {
 			t.Errorf("%s: a typed name past the label bound = %+v, %v; want a refusal", caller, in, err)
 		}

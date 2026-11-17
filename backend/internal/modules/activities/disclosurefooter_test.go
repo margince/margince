@@ -110,7 +110,7 @@ type stubDisclosures struct {
 	entities []ids.UUID
 }
 
-func (s *stubDisclosures) DisclosuresFor(_ context.Context, category string, _ []string, entity ids.UUID) ([]DisclosureLine, error) {
+func (s *stubDisclosures) DisclosuresFor(_ context.Context, category string, _ []string, entity ids.UUID, _ string) ([]DisclosureLine, error) {
 	s.asked = append(s.asked, category)
 	s.entities = append(s.entities, entity)
 	return s.lines, nil
@@ -346,5 +346,39 @@ func TestAMetObligationStillSends(t *testing.T) {
 	}
 	if !strings.Contains(got.transmitted, "Beispiel GmbH") {
 		t.Errorf("the disclosure is not in the body:\n%s", got.transmitted)
+	}
+}
+
+// TestAVietnameseAdvertisingMailEndsWithTheAdvertiserThenTheRefusal. consent
+// orders the lines, and the send keeps that order. The opt-out links follow
+// the refusal directly, and nothing comes after them.
+func TestAVietnameseAdvertisingMailEndsWithTheAdvertiserThenTheRefusal(t *testing.T) {
+	advertiser := "Công ty Ví dụ\nĐiện thoại +84 28 3822 9999, email hello@example.com, trang https://example.com"
+	refusal := "Quý khách có quyền từ chối nhận tất cả quảng cáo của Công ty Ví dụ. Cách từ chối:\n" +
+		"gửi email đến privacy@example.com, gọi số +84 00 0000 0000 hoặc dùng trang https://example.com/stop"
+	stub := &stubDisclosures{lines: []DisclosureLine{
+		{Kind: "privacy_contact", Text: "privacy@example.com"},
+		{Kind: "advertiser_contact", Text: advertiser},
+		{Kind: "objection_route", Text: refusal},
+	}}
+	store := (&Store{}).WithDisclosures(stub).WithUnsubscribe(stubUnsubscribeLinker{token: "tok", ok: true})
+	store.publicBaseURL = "https://mail.example.test"
+
+	got, err := store.deliverability(context.Background(), "Ưu đãi tháng này dành cho quý khách.", "[QC] Ưu đãi",
+		[]string{"an@example.vn"}, unsubscribeSurface{category: commsauthz.CategoryMarketing}, ids.Nil)
+	if err != nil {
+		t.Fatalf("deriving the message: %v", err)
+	}
+	body := got.transmitted
+	at := strings.Index(body, advertiser)
+	if at < 0 || !strings.HasPrefix(body[at+len(advertiser):], "\n\n"+refusal) {
+		t.Fatalf("the advertiser block is not directly before the refusal section:\n%s", body)
+	}
+	rest := body[at+len(advertiser)+2+len(refusal):]
+	if want := appendUnsubscribeFooter("", got.links, got.words); rest != want {
+		t.Errorf("after the refusal comes %q, want only the opt-out links %q", rest, want)
+	}
+	if !strings.Contains(rest, "/#/unsubscribe/tok/") || !strings.Contains(rest, "/#/preferences/tok") {
+		t.Errorf("the opt-out links %q do not carry the recipient's stop and preference links", rest)
 	}
 }

@@ -63,6 +63,9 @@ type resolution struct {
 	// recorded request alone, and RequestedAt is that request's date.
 	MarketingStopsBind bool
 	RequestedAt        time.Time
+	// BasisMissing says the recipient's pack has no legitimate-interest basis
+	// and the record holds no basis that pack accepts for this use.
+	BasisMissing bool
 }
 
 // resolveCategory works out what this message is for one recipient.

@@ -31,7 +31,7 @@ import (
 
 // lifetimeFloor is the number of tables known to carry `expires_at`. A reading
 // below it means the catalog query stopped seeing the class.
-const lifetimeFloor = 23
+const lifetimeFloor = 24
 
 // unboundedLifetime is the table whose expiry is written before its creation by
 // design, with the reason beside it.
@@ -48,7 +48,7 @@ func TestEveryExpiringRowExpiresAfterItWasCreated(t *testing.T) {
 
 	rows, err := conn.Query(ctx, `
 		SELECT c.relname,
-		       max(CASE WHEN a.attname IN ('created_at', 'issued_at', 'fetched_at') THEN a.attname END),
+		       max(CASE WHEN a.attname IN ('created_at', 'confirmed_at', 'issued_at', 'fetched_at') THEN a.attname END),
 		       (SELECT coalesce(array_agg(pg_get_constraintdef(k.oid)), '{}')
 		          FROM pg_constraint k
 		         WHERE k.conrelid = c.oid AND k.contype = 'c'
@@ -98,7 +98,7 @@ func TestEveryExpiringRowExpiresAfterItWasCreated(t *testing.T) {
 			continue
 		}
 		if e.creation == "" {
-			t.Errorf("%s carries expires_at and none of created_at, issued_at or fetched_at, "+
+			t.Errorf("%s carries expires_at and none of created_at, confirmed_at, issued_at or fetched_at, "+
 				"so its lifetime cannot be bounded: give it a creation column or say here why "+
 				"it has none", e.table)
 			continue

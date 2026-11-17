@@ -70,6 +70,11 @@ func TestCompanyDescriptionsAdmitTheWholeDocumentWithoutTruncation(t *testing.T)
 
 func TestAnUpgradeBoundsCustomTextWithoutChangingEarlierValues(t *testing.T) {
 	f := setupCFV(t)
+	// Created while every column exists: the guard downs also drop columns the contact writer fills.
+	created, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{FullName: "Earlier custom text", Source: "manual"})
+	if err != nil {
+		t.Fatal(err)
+	}
 	apply := withoutTextGuards(f.ctx, t)
 	owner := SchemaPool(t)
 	column := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Earlier note", Type: customfields.TypeText, Source: "manual"})
@@ -84,12 +89,12 @@ func TestAnUpgradeBoundsCustomTextWithoutChangingEarlierValues(t *testing.T) {
 		t.Fatal(err)
 	}
 	earlier := strings.Repeat("界", values.TextDocumentCharacters+1)
-	created, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{FullName: "Earlier custom text", Source: "manual", CustomFields: map[string]any{column: earlier}})
-	if err != nil {
+	id := ContactIDOf(ids.UUID(created.Id))
+	if _, err := owner.Exec(f.ctx, fmt.Sprintf("UPDATE public.contact SET %s = @earlier WHERE id = @id", pgx.Identifier{column}.Sanitize()),
+		pgx.NamedArgs{"earlier": earlier, "id": id}); err != nil {
 		t.Fatal(err)
 	}
 	apply()
-	id := ContactIDOf(ids.UUID(created.Id))
 	renamed := "Updated contact"
 	if _, err := f.store.UpdateContact(f.ctx, id, contacts.UpdateContactInput{FullName: &renamed, CustomFields: map[string]any{column: earlier}}); err != nil {
 		t.Fatalf("unchanged earlier text: %v", err)
