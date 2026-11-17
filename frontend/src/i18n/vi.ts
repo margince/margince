@@ -5238,6 +5238,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.contacts.band.untried":
     "{count} chưa liên hệ · {waiting} đang chờ bạn trả lời",
   "co.contacts.board.nobodyHolds": "Chưa ai giữ vai trò này",
+  "co.contacts.board.count_one": "{count} liên hệ",
+  "co.contacts.board.count_other": "{count} liên hệ",
   "co.contacts.band.noOpenDeal": "Không có deal đang mở",
   "co.contacts.band.noOpenDealWhy": "Vai trò gán theo từng deal",
   "co.contacts.band.committeePartial": "Bị ẩn một phần",
@@ -5271,7 +5273,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "{count} trong nhóm quyết định mua · chỉ deal đã chọn.",
   "co.contacts.map.routesWithheld":
     "Các hướng tiếp cận đến liên hệ này bị ẩn với bạn",
-  "co.contacts.map.assignHint": "Chưa ai chịu trách nhiệm deal này",
   "co.contacts.map.scopePartial":
     "{count} trong nhóm quyết định mua · {hidden} liên hệ khác bị ẩn.",
   "co.contacts.board.readFromMessages": "Đọc từ tin nhắn của họ",

@@ -5324,6 +5324,8 @@ export const en = {
   "co.contacts.band.untried":
     "{count} not contacted · {waiting} awaiting your reply",
   "co.contacts.board.nobodyHolds": "No one holds this role",
+  "co.contacts.board.count_one": "{count} contact",
+  "co.contacts.board.count_other": "{count} contacts",
   "co.contacts.band.noOpenDeal": "No open deal",
   "co.contacts.band.noOpenDealWhy": "Roles are set per deal",
   "co.contacts.band.committeePartial": "Partly hidden",
@@ -5346,7 +5348,7 @@ export const en = {
     "Select a contact to see the best route to them.",
   "co.contacts.map.ourSide": "Your team",
   "co.contacts.map.account": "Company",
-  "co.contacts.map.missing": "{role} missing",
+  "co.contacts.map.missing": "No {role} yet",
   "co.contacts.map.awaiting": "awaiting reply",
   "co.contacts.map.owed": "reply owed",
   "co.contacts.map.replied": "they replied",
@@ -5354,7 +5356,6 @@ export const en = {
   "co.contacts.map.onDeal": "on the deal",
   "co.contacts.map.routesWithheld":
     "Routes to this contact are hidden from you",
-  "co.contacts.map.assignHint": "No one owns this deal",
   "co.contacts.map.scope":
     "{count} on the buying committee · selected deal only.",
   "co.contacts.map.scopePartial":

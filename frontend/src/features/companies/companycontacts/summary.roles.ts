@@ -17,6 +17,15 @@ export const ROLE_LABELS = {
   user: "co.role.user",
 } as const;
 
+/** The same roles as a heading or a field's value, capitalised as labels are. */
+export const ROLE_HEADINGS = {
+  champion: "co.roleLabel.champion",
+  economic_buyer: "co.roleLabel.economic_buyer",
+  influencer: "co.roleLabel.influencer",
+  blocker: "co.roleLabel.blocker",
+  user: "co.roleLabel.user",
+} as const;
+
 function isCatalogRole(role: string): role is keyof typeof ROLE_LABELS {
   return Object.hasOwn(ROLE_LABELS, role);
 }
@@ -31,5 +40,5 @@ export function buyingRoleLabel(
   role: string,
   t: ReturnType<typeof useT>,
 ): string {
-  return isCatalogRole(role) ? t(ROLE_LABELS[role]) : role.replace(/_/g, " ");
+  return isCatalogRole(role) ? t(ROLE_HEADINGS[role]) : role.replace(/_/g, " ");
 }

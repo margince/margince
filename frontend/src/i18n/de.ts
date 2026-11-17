@@ -5381,6 +5381,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.contacts.band.untried":
     "Nicht kontaktiert: {count} · Wartet auf deine Antwort: {waiting}",
   "co.contacts.board.nobodyHolds": "Niemand hat diese Rolle",
+  "co.contacts.board.count_one": "Kontakt: {count}",
+  "co.contacts.board.count_other": "Kontakte: {count}",
   "co.contacts.band.noOpenDeal": "Kein offener Deal",
   "co.contacts.band.noOpenDealWhy": "Rollen werden pro Deal vergeben",
   "co.contacts.band.committeePartial": "Teilweise ausgeblendet",
@@ -5412,7 +5414,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.contacts.map.onDeal": "am Deal beteiligt",
   "co.contacts.map.routesWithheld":
     "Zugänge zu diesem Kontakt sind für dich ausgeblendet",
-  "co.contacts.map.assignHint": "Für diesen Deal ist niemand verantwortlich",
   "co.contacts.map.scope":
     "{count} im Buying Center · nur der ausgewählte Deal.",
   "co.contacts.map.scopePartial":
