@@ -13,7 +13,7 @@ A lead needs no origin. Email and LinkedIn address are the fields used to find c
 ### How do I create a lead?
 To create a lead in Margince, open **Leads** in the sidebar and choose **New lead**.
 1. Enter the **Full name** (required).
-2. You may fill **Email**, **LinkedIn URL**, **Title** and **Company**. The company is free text.
+2. You may fill **Email**, **LinkedIn URL**, **Title**, **Company** and **Industry**. The company is free text.
 3. Pick the **Owner** (required; **Unassigned** is one of the choices).
 4. Pick the **Origin** if you know it: where the lead came from, such as a referral or an event. You may add an **Origin note**, such as the event name. Only the origin counts for the score, and a lead with none gets no points for it.
 5. Pick **Referred by partner** if a partner sent the lead. The choice shows once a company is a partner, and only to a role that may see companies and partners.
@@ -24,7 +24,7 @@ Also called: add a prospect, new lead.
 ### What if someone is already a contact?
 Someone is either a lead or a contact, never both. Open a deal when an existing contact has a new opportunity.
 
-When a new lead carries an email or LinkedIn profile already held by a contact, Margince creates no lead. It opens the contact when you enter the lead by hand. An automatic request is filed on the contact. Its owner gets a task to review it.
+When a new lead carries an email or LinkedIn profile already held by a contact, Margince creates no lead. When you enter the lead by hand, the form says "A contact already has this email address or LinkedIn profile, so no lead was created." and offers **View existing record**, which opens the contact. An automatic request is filed on the contact. Its owner gets a task to review it.
 ### The ladder
 
 A lead has five statuses. The first three are open, the last two are final.
@@ -82,7 +82,7 @@ A deal opened in the same step takes the lead's owner and the contact's employer
 installation.
 
 ### How do I reverse a qualification?
-To reverse a lead qualification in Margince, open the qualified lead and choose **Reverse qualification**.
+To reverse a lead qualification in Margince, open the qualified lead, choose **More**, then **Reverse qualification**.
 1. Enter a **Reason (recorded in the audit trail)**. Without one the dialog says "Enter a reason first."
 2. Choose **Reverse**.
 
@@ -110,7 +110,7 @@ To disqualify several at once, tick them on the **Leads** list and choose **Disq
 Leads have no archive action; disqualifying is how you close one.
 Also called: reject a lead, close a lead, archive a lead.
 
-Disqualifying archives the lead. It records a reason, from a list that administrators manage, and a note if you add one. You can still open the lead, but it becomes read-only: "This lead is closed and cannot be changed."
+Disqualifying archives the lead. It records a reason, from a list that administrators manage, and a note if you add one. You can still open the lead, but it becomes read-only: "Disqualified. This lead is read-only."
 
 ### How do I reopen a disqualified lead?
 To reopen a disqualified lead in Margince, open the lead and choose **Reopen**, then **Reopen lead** in the **Reopen this lead?** dialog.
@@ -123,7 +123,7 @@ To edit a lead in Margince, open it from **Leads** and press the value to change
 1. Press a value or the name at the top, change it in the dialog, and press **Save**. Nothing is stored until **Save**; **Cancel** or Esc closes without saving. Pressing the **Email** address starts a message; press the box around it or its mark to change it.
 2. Fields: **Full name**, **Email**, **Phone**, **Title**, **Company**, **Industry**. The owner has its own control; see [How do I change a lead's owner?](#how-do-i-change-a-leads-owner). More fields: **Company routing key**, **Project**, **Origin**, **Origin note**, **Referred by partner**, custom fields. **Added via** shows how the row came into Margince, and Margince writes it.
 
-**LinkedIn URL** cannot be changed on a lead. Status moves on the **Lead status** ladder; score moves with **Override score** and a reason. A closed lead "cannot be changed".
+**LinkedIn URL** cannot be changed on a lead. Status moves on the **Lead status** ladder; score moves with **Override score** and a reason. A closed lead is read-only.
 Also called: update a lead, rename a lead, correct a prospect.
 
 **Referred by partner** shows once a company is a partner, to a role that may see companies and partners. On a lead that names a partner, a role that may change partners then sees **Accept for partner**; see [Partners and commission](partners.md#what-does-activated-mean). The **Leads** table then has a **Referred by partner** column. A lead that no one has accepted for its partner yet says **Awaiting acceptance** there.
