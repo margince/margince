@@ -2,8 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useEffect, useEffectEvent, useId } from "react";
+import { api } from "../../api/client";
+import { ifMatch, requireVersion } from "../../api/version";
 import { AddToShortlistAction } from "../../components/addtoshortlist";
 import { ArchiveAction } from "../../components/archive";
+import { OwnerPick } from "../../components/ownerpick";
 import { Button } from "../../design-system/button";
 import { useClipboardCopy } from "../../design-system/clipboardcopy";
 import type { DealCardActions } from "../../design-system/dealcard";
@@ -12,6 +15,7 @@ import { useCloseOverflowMenu } from "../../design-system/overflowmenu";
 import { type useOwnToast, useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
+import { unwrap } from "../../lib/problem";
 import { appHref } from "../../lib/recordaddress";
 import { routeHash } from "../../lib/router";
 import type { Deal, Stage } from "./deals";
@@ -45,7 +49,10 @@ export function DealCardMenu({
   return (
     <>
       {live && canWrite && (
-        <DealMoves deal={deal} stages={stages} onAdvance={onAdvance} />
+        <>
+          <DealMoves deal={deal} stages={stages} onAdvance={onAdvance} />
+          <DealOwnerPick deal={deal} />
+        </>
       )}
       {verbs.onSummary && (
         <Button onClick={verbs.onSummary}>{t("deal.card.summaryItem")}</Button>
@@ -130,6 +137,30 @@ function DealMoves({
         </Button>
       ))}
     </>
+  );
+}
+
+function DealOwnerPick({ deal }: Readonly<{ deal: Deal }>) {
+  const closeMenu = useCloseOverflowMenu();
+  return (
+    <OwnerPick
+      ownerId={deal.owner_id}
+      assign={async (ownerId) =>
+        unwrap(
+          await api.PATCH("/deals/{id}", {
+            params: {
+              path: { id: deal.id },
+              ...ifMatch(requireVersion(deal.version)),
+            },
+            body: { owner_id: ownerId },
+          }),
+        )
+      }
+      invalidate="deals"
+      recordKey="deal"
+      recordId={deal.id}
+      onAssigned={closeMenu}
+    />
   );
 }
 

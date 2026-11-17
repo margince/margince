@@ -7,10 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
 import { translate } from "../../i18n";
 import { leadKey } from "../../lib/leadkeys";
-import {
-  changeChoice,
-  openChoiceDialog,
-} from "../../testing/choicedialog.testkit";
+import { openChoiceDialog } from "../../testing/choicedialog.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { LeadScreen, promoteEligible, scoreTone, terminalBadge } from "./leads";
 import {
@@ -525,14 +522,18 @@ describe("LeadScreen — owner display + assign to me (P-11)", () => {
 
     await waitFor(() => expect(screen.getByText("Unassigned")).toBeTruthy());
     // One control, not a self-assign button beside a picker: the viewer is
-    // its first option (ADR-0108).
-    await changeChoice(userEvent.setup(), "Owner", "Assign to me");
+    // one of its options (ADR-0108).
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "Change owner" }),
+    );
+    await user.click(await screen.findByRole("option", { name: "Me" }));
 
     await waitFor(() => expect(claimed).toBe(String(lead.version)));
     expect(patched).toBe(false);
   });
 
-  it("saves the owner against the version the dialog opened on", async () => {
+  it("writes the owner against the version on screen when the colleague is picked", async () => {
     let served = lead.version;
     let ifMatch: string | null = null;
     stubFetchWithMe(async (url, method, request) => {
@@ -556,15 +557,16 @@ describe("LeadScreen — owner display + assign to me (P-11)", () => {
     });
     render(<LeadScreen id="l-1" />, client);
     const user = userEvent.setup();
-    const { chooser, save } = await openChoiceDialog(user, "Owner");
+    await screen.findByRole("button", { name: "Change owner" });
 
-    // The lead moves on while the dialog is open.
     served = lead.version + 1;
     await act(() => client.refetchQueries({ queryKey: leadKey("l-1") }));
-    await pickOption(user, chooser, "Dana Fischer");
-    await user.click(save);
+    await user.click(screen.getByRole("button", { name: "Change owner" }));
+    await user.click(
+      await screen.findByRole("option", { name: "Dana Fischer" }),
+    );
 
-    await waitFor(() => expect(ifMatch).toBe(String(lead.version)));
+    await waitFor(() => expect(ifMatch).toBe(String(lead.version + 1)));
   });
 
   // The fixture above says `writable: true`, which an ownerless lead is not.
@@ -587,8 +589,9 @@ describe("LeadScreen — owner display + assign to me (P-11)", () => {
     render(<LeadScreen id="l-1" />);
 
     expect(
-      await screen.findByRole("button", { name: /^Change Owner Unassigned/ }),
+      await screen.findByRole("button", { name: "Change owner" }),
     ).toBeEnabled();
+    expect(screen.getByText("Unassigned")).toBeInTheDocument();
   });
 
   // Dropping the per-row half of the write answer must not drop the other two.
@@ -622,7 +625,7 @@ describe("LeadScreen — owner display + assign to me (P-11)", () => {
     render(<LeadScreen id="l-1" />);
 
     const owner = await screen.findByText("Unassigned");
-    expect(screen.queryByRole("button", { name: /^Change Owner/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Change owner" })).toBeNull();
     // The plain value says why, in the seat's words: a role change would not lift it.
     const reason = translate("en", "settings.seatRefused");
     await waitFor(() => expect(owner).toHaveAttribute("title", reason));

@@ -7,25 +7,13 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
-import { mayOwnRecords } from "../../components/assigneepicker";
-import {
-  EntityRef,
-  RosterFailedLine,
-  useRoster,
-  useRosterPartial,
-  useRosterPartialHint,
-} from "../../components/entityref";
+import { EntityRef } from "../../components/entityref";
+import { OwnerPick } from "../../components/ownerpick";
 import { fetchGrants } from "../../components/share.parts";
 import { Badge } from "../../design-system/atoms";
-import { EditableValue } from "../../design-system/editablevalue";
-import {
-  type FieldEditControl,
-  FieldEditDialog,
-} from "../../design-system/fieldeditdialog";
 import { IdentityLine } from "../../design-system/identityline";
-import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 import { useCanWrite, useWriteRefusal } from "../../lib/capability";
 import { labelFor } from "../../lib/labelfor";
@@ -130,165 +118,8 @@ export function LeadPulse({ lead }: Readonly<{ lead: Lead }>): ReactNode {
   );
 }
 
-// How one candidate reads in the assignment list. The viewer reads as "Me": a
-// rep scanning this list looks for themselves, not for their own name among
-// colleagues'. A user with no display name still has to be pickable, so the
-// id stands in rather than rendering a blank row.
-function candidateLabel(
-  entry: Readonly<{ id: string; display_name?: string }>,
-  meId: string | undefined,
-  t: ReturnType<typeof useT>,
-): string {
-  if (entry.id === meId) {
-    return t("lead.assignToMe");
-  }
-  return entry.display_name ?? entry.id;
-}
-
-// The assignee list's four readings, as early returns rather than one chained
-// conditional: a roster still arriving, a roster that failed, a workspace
-// with nobody else in it, and the picker itself.
-function AssigneePicker({
-  field,
-  roster,
-  rosterPartial,
-  candidates,
-  meId,
-}: Readonly<{
-  field: FieldEditControl;
-  roster: ReturnType<typeof useRoster>;
-  rosterPartial: boolean;
-  candidates: readonly Readonly<{ id: string; display_name?: string }>[];
-  meId: string | undefined;
-}>) {
-  const t = useT();
-  if (roster.isPending) {
-    return <span>{t("share.rosterLoading")}</span>;
-  }
-  if (roster.isError) {
-    return <RosterFailedLine kind="user" roster={roster} />;
-  }
-  // "Nobody else" is a claim about the WHOLE workspace, so only a roster read
-  // to its end may make it. Over a walk that stopped early it would report a
-  // lead as unassignable when the colleague to hand it to sits on a page
-  // nothing here read.
-  if (candidates.length === 0 && !rosterPartial) {
-    return <span>{t("lead.assignNobodyElse")}</span>;
-  }
-  const { control, draft, setDraft, saving } = field;
-  return (
-    <Select
-      {...control}
-      placeholder={t("lead.assignChoose")}
-      value={draft}
-      disabled={saving}
-      aria-busy={saving || undefined}
-      options={candidates.map((entry) => ({
-        value: entry.id,
-        label: candidateLabel(entry, meId, t),
-      }))}
-      onChange={setDraft}
-    />
-  );
-}
-
-// Ownership: who holds the lead, and reassignment to any workspace user.
-// The owner reads as a name. EntityRef resolves it by id and falls back to the
-// id only once that read has settled without one. So a reader is never handed
-// a bare uuid while a name is still on its way.
-// Reassignment is a plain owner change. The server audits it and keeps
-// whatever routing decision it overrides. So the only thing this control owes
-// the reader is the list of who they can hand it to.
-function LeadOwner({
-  lead,
-  meId,
-  editable,
-  readOnlyReason,
-  refusedReasonId,
-  onAssign,
-}: Readonly<{
-  lead: Lead;
-  meId: string | undefined;
-  editable: boolean;
-  readOnlyReason?: string;
-  refusedReasonId?: string;
-  onAssign: (ownerId: string, opened: Lead) => Promise<unknown>;
-}>) {
-  const t = useT();
-  const [picking, setPicking] = useState(false);
-  // Save sends the version the reader opened on, never a later refetch's.
-  const [opened, setOpened] = useState(lead);
-  const roster = useRoster("user", picking);
-  const rosterPartial = useRosterPartial("user", picking);
-  const partialHint = useRosterPartialHint(rosterPartial);
-  // Everyone but the current owner, with the viewer first: assigning to
-  // yourself is the common case on a small team.
-  const candidates = (roster.data ?? [])
-    .filter(mayOwnRecords)
-    .filter((entry) => entry.id !== lead.owner_id)
-    .sort((a, b) => {
-      if (a.id === meId) return -1;
-      if (b.id === meId) return 1;
-      return 0;
-    });
-  const label = t("lead.ownerLabel");
-  let owner: ReactNode = t("lead.unassigned");
-  if (lead.owner_id) {
-    owner =
-      lead.owner_id === meId ? (
-        t("lead.ownerYou")
-      ) : (
-        <EntityRef kind="user" id={lead.owner_id} />
-      );
-  }
-  return (
-    <>
-      {editable || picking ? (
-        <EditableValue
-          editLabel={t("inlineChoice.change", { field: label })}
-          onEdit={() => {
-            setOpened(lead);
-            setPicking(true);
-          }}
-        >
-          {owner}
-        </EditableValue>
-      ) : (
-        <span title={readOnlyReason} aria-describedby={refusedReasonId}>
-          {owner}
-        </span>
-      )}
-      {/* The draft starts unpicked: the current owner is no candidate, and
-          Save on no pick is no write. */}
-      <FieldEditDialog
-        open={picking}
-        label={label}
-        value=""
-        hint={partialHint}
-        onClose={() => setPicking(false)}
-        onSave={async (ownerId) => {
-          await onAssign(ownerId, opened);
-        }}
-      >
-        {(field) => (
-          <AssigneePicker
-            field={field}
-            roster={roster}
-            rosterPartial={rosterPartial}
-            candidates={candidates}
-            meId={meId}
-          />
-        )}
-      </FieldEditDialog>
-    </>
-  );
-}
-
-// The lead's owner, with the control that hands it on.
-//
-// Its own component rather than inline in the header's props, because what
-// makes it pressable is three separate questions and they belong beside each
-// other rather than spread through a JSX attribute list.
+// EntityRef falls back to the owner's id only once its read settled without a
+// name, so a bare uuid never stands in while the name is on its way.
 export function LeadOwnerControl({
   lead,
   writer,
@@ -316,19 +147,39 @@ export function LeadOwnerControl({
     grant: t("record.actionRefused"),
   });
   const refused = Boolean(lead.archived_at) || !mayAssign;
-  const refusal = lead.archived_at
-    ? writer.readOnlyReason
-    : me.data && assignRefusal;
   const meId = me.data?.user?.id;
+  let owner: ReactNode = t("lead.unassigned");
+  if (lead.owner_id) {
+    owner =
+      lead.owner_id === meId ? (
+        t("lead.ownerYou")
+      ) : (
+        <EntityRef kind="user" id={lead.owner_id} />
+      );
+  }
+  if (refused) {
+    return (
+      <span
+        title={
+          lead.archived_at ? writer.readOnlyReason : me.data && assignRefusal
+        }
+        aria-describedby={lead.archived_at ? terminalReasonId : undefined}
+      >
+        {owner}
+      </span>
+    );
+  }
   return (
-    <LeadOwner
-      lead={lead}
-      meId={meId}
-      editable={!refused && !writer.patch.isPending && !writer.assigning}
-      readOnlyReason={refusal}
-      refusedReasonId={lead.archived_at ? terminalReasonId : undefined}
-      onAssign={(ownerId, opened) => writer.assign(ownerId, opened, meId)}
-    />
+    <>
+      <span>{owner}</span>{" "}
+      <OwnerPick
+        ownerId={lead.owner_id}
+        assign={(ownerId) => writer.assign(ownerId, lead, meId)}
+        invalidate="leads"
+        recordKey="lead"
+        recordId={lead.id}
+      />
+    </>
   );
 }
 
