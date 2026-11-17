@@ -293,11 +293,7 @@ export function LicenseReading({
               tone="warning"
               title={t("license.refused.title")}
             >
-              {/* A refused license holds the last valid ceiling when one
-                  existed; with none, nothing caps the seats. */}
-              {capped
-                ? t("license.refused.body")
-                : t("license.refused.bodyUncapped")}
+              {t("license.refused.body")}
             </Callout>
           )}
           {entitlement.state === "absent" &&

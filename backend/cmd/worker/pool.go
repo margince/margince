@@ -15,7 +15,7 @@ import (
 )
 
 func openWorkerPool(ctx context.Context, cfg workerConfig, log *slog.Logger) (*pgxpool.Pool, error) {
-	pool, err := database.NewWorkerPool(ctx, cfg.dsn, compose.WorkerQueueConcurrency(), cfg.databaseConnections, cfg.databaseCache)
+	pool, err := database.NewWorkerPool(ctx, dbsettings.PoolDSN(cfg.dsn, cfg.settings), compose.WorkerQueueConcurrency(), cfg.databaseConnections, cfg.databaseCache)
 	if err != nil {
 		return nil, err
 	}

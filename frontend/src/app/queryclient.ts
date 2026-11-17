@@ -305,9 +305,10 @@ export function createQueryClient(): QueryClient {
     mutationCache: new MutationCache({
       onError: (error) => {
         logUnexpectedError(error);
-        // The trial ended under an open session: show the lock now, not at
-        // the next read of /me.
-        if (problemCodeOf(error) === "trial_ended") {
+        // The installation locked under an open session: show the lock now,
+        // not at the next read of /me.
+        const code = problemCodeOf(error);
+        if (code === "trial_ended" || code === "license_lapsed") {
           refreshTrialLock(client);
         }
       },

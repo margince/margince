@@ -18,7 +18,7 @@ import (
 //
 //nolint:ireturn // the vault seam has two providers behind one Vault; returning the interface is the design, and this only carries what ForRole handed back.
 func openInstallation(ctx context.Context, cfg apiConfig) (*pgxpool.Pool, keyvault.Vault, error) {
-	pool, err := boundPool(ctx, cfg.dsn)
+	pool, err := boundPool(ctx, dbsettings.PoolDSN(cfg.dsn, cfg.settings))
 	if err != nil {
 		return nil, nil, err
 	}

@@ -69,7 +69,9 @@ func TestEnsureLicenseBootsUnlicensedInNonProductionAndSaysSo(t *testing.T) {
 // A refused license refuses the boot in EVERY posture. Only the ABSENT case
 // bends for a development installation: naming yourself non-production is how
 // you say you have no license, not a way to run one the module judged.
-func TestEnsureLicenseRefusesTheBootOnALicenseTheModuleWillNotHonor(t *testing.T) {
+// A license the module refuses starts the role locked, and the boot line says
+// so with the module and the one setting to correct.
+func TestEnsureLicenseStartsLockedOnALicenseTheModuleWillNotHonor(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "license")
 	if err := os.WriteFile(path, []byte("not.a.license"), 0o600); err != nil {
 		t.Fatalf("write token file: %v", err)
@@ -77,20 +79,25 @@ func TestEnsureLicenseRefusesTheBootOnALicenseTheModuleWillNotHonor(t *testing.T
 	cfg := licenseSettings(t, "license:\n  token_file: "+path+"\n")
 
 	for _, env := range []runtimeenv.Environment{runtimeenv.Production, runtimeenv.Development} {
-		_, err := EnsureLicense(context.Background(), slog.New(slog.DiscardHandler), nil, nil, cfg, env)
-		if err == nil {
-			t.Fatalf("EnsureLicense booted a %s installation on a license the bundled module refuses", env)
+		var log bytes.Buffer
+		logger := slog.New(slog.NewTextHandler(&log, &slog.HandlerOptions{Level: slog.LevelInfo}))
+		watcher, err := EnsureLicense(context.Background(), logger, nil, nil, cfg, env)
+		if err != nil {
+			t.Fatalf("EnsureLicense refused to start a %s installation on a refused license: %v", env, err)
 		}
-		// The refusal names the setting THIS deployment used, which is the whole
-		// job: an operator is otherwise left guessing which of three places the
-		// token came from.
-		if !strings.Contains(err.Error(), "license.token_file") {
-			t.Errorf("boot refusal %q (%s) does not name license.token_file, the source it read", err, env)
+		if got := watcher.Posture().State; got != licensecheck.StateRejected {
+			t.Fatalf("%s: posture = %q, want %q", env, got, licensecheck.StateRejected)
 		}
-		// And names only that one. Listing the alternatives it did NOT read
-		// sends an operator to a knob that is not holding their bad token.
-		if strings.Contains(err.Error(), LicenseToken.Env()) {
-			t.Errorf("boot refusal %q (%s) names %s, which was not the source", err, env, LicenseToken.Env())
+		line := log.String()
+		for _, want := range []string{"level=ERROR", "locked", licensecheck.ModuleVersion(), "license.token_file"} {
+			if !strings.Contains(line, want) {
+				t.Errorf("%s: the boot line %q does not carry %q", env, line, want)
+			}
+		}
+		// Only the source it read. Listing the alternatives it did not read sends
+		// an operator to a knob that is not holding their bad token.
+		if strings.Contains(line, LicenseToken.Env()) {
+			t.Errorf("%s: the boot line %q names %s, which was not the source", env, line, LicenseToken.Env())
 		}
 	}
 }

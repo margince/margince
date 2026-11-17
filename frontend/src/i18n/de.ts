@@ -3076,6 +3076,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.card.moveTo": "Nach {stage} verschieben",
   "deal.card.markWon": "Als gewonnen markieren",
   "deal.card.markLost": "Als verloren markieren",
+  "deal.card.changeCloseDate": "Abschlussdatum ändern",
   "deal.card.closedReopen":
     "Dieser Deal ist abgeschlossen. Öffne ihn auf seiner Seite wieder, um ihn zu verschieben.",
   "deal.card.copyLink": "Link kopieren",
@@ -3457,6 +3458,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "roster.failedTeams": "Die Teams konnten nicht geladen werden.",
   "owner.rosterFailed":
     "Die Teammitglieder konnten nicht geladen werden. Lade die Seite neu, um eines zu wählen.",
+  "ownerPick.change": "Verantwortung ändern",
+  "ownerPick.search": "Teammitglieder suchen",
+  "ownerPick.done": "{name} zugewiesen",
   "ref.notInRoster":
     "Aktuell zugewiesen (nicht mehr in der Liste der Nutzenden)",
   "picker.noMatch": "Kein Treffer",
@@ -6020,9 +6024,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Disqualifiziert. Dieser Lead ist schreibgeschützt.",
   "lead.marker": "Lead",
   "lead.assignToMe": "Mir zuweisen",
-  "lead.assignChoose": "Teammitglied wählen",
-  "lead.assignNobodyElse":
-    "Kein weiteres Teammitglied, dem dieser Lead zugewiesen werden kann.",
   "lead.saveOverride": "Überschreibung speichern",
   "lead.overrideScoreValue": "Score",
   "lead.trigger.inboundReply": "Eingehende Antwort",
@@ -14683,9 +14684,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Alles funktioniert weiter, und nichts ist begrenzt. Konfiguriere ein Lizenz-Token für diese Installation, damit die Plätze mit dem Lizenzumfang abgeglichen werden.",
   "license.refused.title": "Die Lizenz dieser Installation wurde abgelehnt",
   "license.refused.body":
-    "Das für diese Installation konfigurierte Lizenz-Token wurde vorgelegt und abgelehnt. Belegte volle Plätze funktionieren weiter, und bis das Token ersetzt wird, kommt kein voller Platz über das hinzu, was die letzte gültige Lizenz gewährt hat. Prüfe das Token und die Uhr der Installation.",
-  "license.refused.bodyUncapped":
-    "Das für diese Installation konfigurierte Lizenz-Token wurde vorgelegt und abgelehnt. Alles funktioniert ohne Begrenzung weiter, bis das Token ersetzt wird. Prüfe das Token und die Uhr der Installation.",
+    "Das für diese Installation konfigurierte Lizenz-Token wurde vorgelegt und abgelehnt. Margince ist gesperrt, bis eine Prüfung das Token annimmt. Prüfe das Token und die Uhr der Installation und prüfe danach erneut.",
   "license.seats.capacityOnly":
     "Deine Rolle darf den Lizenzumfang nicht sehen.",
   "license.seats.title": "Plätze",
@@ -14706,7 +14705,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "license.holder.id": "Lizenz-ID",
   "license.grace.title": "Diese Lizenz ist abgelaufen",
   "license.grace.body":
-    "Die Lizenz ist am {expiry} abgelaufen und funktioniert noch für einen begrenzten Zeitraum. Erneuere die Lizenz, damit die Installation in Betrieb bleibt.",
+    "Die Lizenz ist am {expiry} abgelaufen. Margince ist gesperrt, bis eine gültige Lizenz eingerichtet ist.",
   "license.renewal.title": "Lizenz muss erneuert werden",
   "license.renewal.body":
     "Die Lizenz läuft am {expiry} ab. Vor diesem Datum ändert sich nichts.",
@@ -15743,11 +15742,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "trial.locked.member":
     "Deine Admins können eine Lizenz vom Margince-Team bekommen. Du kannst dem Team auch selbst schreiben.",
   "common.trialEnded":
-    "Die Testphase dieser Installation ist beendet, deshalb wartet diese Änderung auf eine Lizenz. Deine Daten bleiben, wie sie sind.",
+    "Die Testphase dieser Installation ist beendet, deshalb wurde diese Änderung nicht gespeichert. Nimm sie erneut vor, sobald eine Lizenz da ist. Deine Daten bleiben, wie sie sind.",
+  "license.locked.pageTitle": "Lizenz nicht gültig",
+  "license.locked.title": "Deine Margince-Lizenz ist nicht mehr gültig",
+  "license.locked.body":
+    "Die Lizenz ist abgelaufen oder wurde abgelehnt. Margince ist gesperrt, und die Arbeit im Hintergrund ruht, bis eine gültige Lizenz da ist. Deine Daten bleiben, wie sie sind, und nichts wird gelöscht.",
+  "common.licenseLapsed":
+    "Die Lizenz dieser Installation ist abgelaufen oder wurde abgelehnt, deshalb wurde diese Änderung nicht gespeichert. Nimm sie erneut vor, sobald eine gültige Lizenz da ist. Deine Daten bleiben, wie sie sind.",
   "licensebanner.link": "{tab} öffnen",
   "licensebanner.grace.title": "Lizenz abgelaufen",
   "licensebanner.grace.body":
-    "Die Lizenz dieser Installation ist abgelaufen und in der Übergangsfrist. Margince läuft weiter, startet nach dem Ende der Übergangsfrist aber nicht mehr. Erneuere die Lizenz vorher.",
+    "Die Lizenz dieser Installation ist abgelaufen. Margince ist gesperrt, bis eine gültige Lizenz eingerichtet ist.",
 
   "aicalls.title": "KI-Aufrufprotokoll",
   "aicalls.withheld":
@@ -19800,9 +19805,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "project.owner": "Verantwortlich",
   "project.ownerMe": "Selbst",
   "project.assignOwner": "Einem Teammitglied zuweisen",
-  "project.assignOwnerTitle": "Einem Teammitglied zuweisen",
-  "project.assignOwnerSearch": "Teammitglieder suchen",
-  "project.assignOwnerDone": "{name} zugewiesen",
   "project.description": "Beschreibung",
   "project.targetEnd": "Geplantes Enddatum",
   "project.new": "Neues Projekt",

@@ -4,7 +4,6 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
-import { changeChoice } from "../../testing/choicedialog.testkit";
 import { LeadScreen } from "./leads";
 import {
   jsonResponse,
@@ -432,7 +431,13 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     }, "u-9");
     render(<LeadScreen id="l-1" />);
 
-    await changeChoice(userEvent.setup(), "Owner", "Dana Fischer");
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "Change owner" }),
+    );
+    await user.click(
+      await screen.findByRole("option", { name: "Dana Fischer" }),
+    );
 
     await waitFor(() => expect(patchBody).toBeTruthy());
     expect(patchBody).toMatchObject({ owner_id: "u-42" });
