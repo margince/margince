@@ -5195,7 +5195,7 @@
     },
     {
       "name": "schedule_meeting",
-      "tokens": 484,
+      "tokens": 487,
       "agents": [],
       "required_by_cases": [
         "case46_get_us_in_a_room"
