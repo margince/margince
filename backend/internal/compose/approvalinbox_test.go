@@ -126,7 +126,7 @@ func TestTheToolSurfaceDecidesThroughAnEngineThatCanReleaseEveryKind(t *testing.
 		t.Fatal("no late effect is registered anywhere — this gate checked nothing")
 	}
 	// The engine the registry actually composes carries both halves.
-	approvalQueue(decidingApprovalsService(nil, SendPath{}, nil))
+	approvalQueue(decidingApprovalsService(nil, SendPath{}, nil, nil))
 
 	// And the one the registration list alone produces does not, so the check
 	// above is a check rather than a formality.
@@ -169,7 +169,7 @@ func TestEveryReleasableKindSaysWhetherItsReleaseSends(t *testing.T) {
 		// Moves a record and its open work to a colleague.
 		"ownership_transfer": true,
 	}
-	kinds := decidingApprovalsService(nil, SendPath{}, nil).EffectKinds()
+	kinds := decidingApprovalsService(nil, SendPath{}, nil, nil).EffectKinds()
 	if len(kinds) == 0 {
 		t.Fatal("the deciding engine registers no effect at all — this census counted nothing")
 	}

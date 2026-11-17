@@ -226,7 +226,7 @@ func (s *Server) wireSurfaces(pool *pgxpool.Pool, log *slog.Logger) {
 // queue rather than two readings of it; a second engine here is how the two
 // would come to disagree.
 func (s *Server) wireStagedSurfaces(pool *pgxpool.Pool) {
-	staged := NewApprovalsServiceWithEffects(pool)
+	staged := approvalsServiceTelling(pool, &siteLeadNoticeLane{}, s.queues)
 	s.homeCache = homecache.New(pool)
 	s.attentionHandlers = newAttentionHandlers(pool, staged).WithHomeCache(s.homeCache)
 	s.magicService = newMagicService(pool, staged, time.Now)
@@ -374,7 +374,7 @@ func (s *Server) wireOnboardingSurface(pool *pgxpool.Pool) {
 	// form's write shape is contacts's, the transport is compose's.
 	s.companyHandlers = companyHandlers{
 		store: newContactsStore(InstallationDB(pool)).WithInstallationRenamer(installationRenamer(pool)).
-			WithGeocodeEnqueue(boundGeocodeEnqueue),
+			WithGeocodeEnqueue(s.queues.geocodeEnqueue),
 		rollout: companyContextRolloutOnboarding,
 	}
 	s.siteReadHandlers = siteReadHandlers{companyContextRollout: companyContextRolloutOnboarding}

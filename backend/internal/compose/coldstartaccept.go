@@ -34,29 +34,31 @@ import (
 // approvalsHandlersWithEffects adds the HTTP volume releaser, error logger,
 // and website-lead notice lane to the shared decision effects.
 func approvalsHandlersWithEffects(
-	pool *pgxpool.Pool, volume approvals.VolumeReleaser, log *slog.Logger,
+	pool *pgxpool.Pool, volume approvals.VolumeReleaser, log *slog.Logger, queues *storeQueues,
 ) (approvals.Handlers, *siteLeadNoticeLane) {
 	notices := newSiteLeadNoticeLane()
-	return approvals.NewHandlers(approvalsServiceTelling(pool, notices).WithVolumeReleaser(volume).WithLogger(log)), notices
+	return approvals.NewHandlers(approvalsServiceTelling(pool, notices, queues).WithVolumeReleaser(volume).WithLogger(log)), notices
 }
 
 // NewApprovalsServiceWithEffects wires the decision effects used by automatic
-// approval runs. Website-lead decisions need the HTTP notice lane instead.
+// approval runs, which queue no follow-up work. Website-lead decisions need the
+// HTTP notice lane instead.
 func NewApprovalsServiceWithEffects(pool *pgxpool.Pool) *approvals.Service {
-	return approvalsServiceTelling(pool, &siteLeadNoticeLane{})
+	return approvalsServiceTelling(pool, &siteLeadNoticeLane{}, nil)
 }
 
 // approvalsServiceTelling is NewApprovalsServiceWithEffects with the lane a website
-// lead is told through. An empty lane refuses every site lead, which is right
-// for the services that only stage.
-func approvalsServiceTelling(pool *pgxpool.Pool, notices *siteLeadNoticeLane) *approvals.Service {
+// lead is told through and the queues its stores enqueue through. An empty lane
+// refuses every site lead, which is right for the services that only stage.
+func approvalsServiceTelling(pool *pgxpool.Pool, notices *siteLeadNoticeLane, queues *storeQueues) *approvals.Service {
 	captureConfig := CaptureConfig{}
 	if loaded := config.Bound(context.Background()); loaded != nil {
 		captureConfig = CaptureConfigFromDeploy(loaded, slog.Default())
 	}
+	captureConfig.queues = queues
 	svc := NewApprovalsService(InstallationDB(pool)).
 		WithUndoableRelease(undoableAgentRelease(activities.FilingsStayUndoable))
-	store := newCounterpartyStore(pool)
+	store := newCounterpartyStoreAt(pool, time.Now, queues)
 	svc.WithEffect("coldstart", coldstartAcceptEffect(svc, store))
 	svc.WithEffect(enrichProposalKind, scrapeAcceptEffect(svc, store))
 	svc.WithEffect(deepReadProposalKind, deepReadAcceptEffect(svc, store))

@@ -251,7 +251,7 @@ func WithDeepRead(inserter *jobs.Runner, brain completer) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		engine := &deepReadEngine{
 			contacts: newContactsStore(InstallationDB(pool)).WithInstallationRenamer(installationRenamer(pool)).
-				WithGeocodeEnqueue(boundGeocodeEnqueue),
+				WithGeocodeEnqueue(s.queues.geocodeEnqueue),
 			approvals: NewApprovalsService(InstallationDB(pool)),
 			runtime:   ai.NewRunTransparency(InstallationDB(pool)), brain: brain, enqueue: inserter, log: s.log,
 			// Read here AND written by WithBlobstore, so neither option order

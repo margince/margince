@@ -293,6 +293,7 @@ func WithGmailCapture(c GmailConfig, cfg CaptureConfig) Option {
 		if c.canSync() {
 			gmailOAuth, gcalOAuth, gdocsOAuth = newGmailOAuth(c), newGcalOAuth(c), newGdocsOAuth(c)
 		}
+		cfg.queues = s.queues
 		registry := newCaptureRegistryWithGoogle(pool, s.vault, s.googleAppResolver, c, cfg)
 		s.ImportHandlers = gmailsignature.ImportHandlers{Source: registry}
 		s.connectorHandlers = connectorHandlers{

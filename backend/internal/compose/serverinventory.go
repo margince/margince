@@ -338,13 +338,12 @@ type Server struct {
 	confirmRunner   *jobs.Runner
 	siteLeadNotices *siteLeadNoticeLane
 
-	// captureConfig is the deployment's capture suppression-list config
-	// (CAP-PARAM-5/6, ADR-0072), injected by WithCaptureConfig. The options
-	// that rebuild the capture registry (WithKeyvault, WithGraphCapture) read
-	// it so the transactional/free-mail additions apply on EVERY registry, not
-	// only the Gmail one WithGmailCapture threads it into. Zero value = the
-	// pinned baselines.
+	// captureConfig is the deployment's capture config, from WithCaptureConfig.
+	// Every option that rebuilds the capture registry reads it, so its
+	// additions apply on every registry. The zero value is the pinned baselines.
 	captureConfig CaptureConfig
+	// queues is what this composition's contacts stores queue after a write.
+	queues *storeQueues
 
 	// gmailAppConfigured records whether the ENVIRONMENT carries a Google app.
 	// The send pre-flight asks googleAppResolver too, so false still finds an

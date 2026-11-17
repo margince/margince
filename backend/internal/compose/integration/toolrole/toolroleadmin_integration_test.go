@@ -133,7 +133,7 @@ func adminSeeders(s sweepSeed) map[string]func() string {
 		// The fleet-wide reindex another role started runs to its end through
 		// the worker, so the next start finds none running.
 		"idle_reindex": func() string {
-			worker, err := compose.EmbedReindexWorkerForTest(s.e.Pool, sweepEmbedder)
+			worker, err := compose.EmbedReindexWorkerForTest(s.e.Pool, sweepServices.of(s.t, s.e).embedder)
 			if err != nil {
 				s.t.Fatalf("building the reindex worker: %v", err)
 			}

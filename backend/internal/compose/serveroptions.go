@@ -270,7 +270,7 @@ func WithKeyvault(vault keyvault.Vault) Option {
 		// gmail-carrying registry when the app is configured.
 		if s.connectorHandlers.registry == nil {
 			s.connectorHandlers = connectorHandlers{
-				registry:             NewCaptureRegistry(pool, vault, s.captureConfig),
+				registry:             NewCaptureRegistry(pool, vault, s.capturing()),
 				authority:            IdentityService(pool),
 				googleCredentials:    s.googleAppResolver,
 				microsoftCredentials: s.microsoftAppResolver,

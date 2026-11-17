@@ -174,7 +174,7 @@ func WithGraphCapture(c GraphConfig) Option {
 			return
 		}
 		if s.connectorHandlers.registry == nil {
-			s.connectorHandlers.registry = NewCaptureRegistry(pool, s.vault, s.captureConfig)
+			s.connectorHandlers.registry = NewCaptureRegistry(pool, s.vault, s.capturing())
 			s.authority = IdentityService(pool)
 		}
 		// Outside the branch above: the registry may already exist because

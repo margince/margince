@@ -22,7 +22,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -325,27 +324,6 @@ func WithGeocoding(inserter *jobs.Runner) Option {
 		s.contactsHandlers = s.contactsHandlers.WithGeocodeEnqueue(enqueue)
 		// And every store compose builds from a pool: the approval effects,
 		// the company form and the site-read confirmation write an address too.
-		geocodeBinding.mu.Lock()
-		defer geocodeBinding.mu.Unlock()
-		geocodeBinding.enqueue = enqueue
+		s.queues.bindGeocode(enqueue)
 	}
-}
-
-// geocodeBinding is the enqueue for the stores compose builds from a pool
-// alone, which cannot reach the job runner; vatCheckBinding has the same shape.
-var geocodeBinding struct {
-	mu      sync.RWMutex
-	enqueue contacts.GeocodeEnqueue
-}
-
-// Stores may be built before options run, so enqueue resolves the binding when
-// an address lands. Without a configured geocoder it queues nothing.
-func boundGeocodeEnqueue(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) error {
-	geocodeBinding.mu.RLock()
-	enqueue := geocodeBinding.enqueue
-	geocodeBinding.mu.RUnlock()
-	if enqueue == nil {
-		return nil
-	}
-	return enqueue(ctx, tx, companyID)
 }

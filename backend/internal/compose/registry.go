@@ -69,6 +69,8 @@ type registryFeatures struct {
 	reclaim deals.RetiredRendering
 	// extensions is the composition whose units' tools join the surface.
 	extensions *Extensions
+	// queues is what a released approval's stores enqueue through.
+	queues *storeQueues
 }
 
 func registryWithDraftBrain(pool *pgxpool.Pool, brain completer, send SendPath, features registryFeatures) *agents.Registry {
@@ -108,7 +110,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 		agents.WithDealTaskSettler(dealclosetasks.New(activities.NewStore(db), db)),
 		agents.WithRecordSidecars(recordSidecars(db)))
 	// Approval decisions need the same registered effects as the HTTP path.
-	approvalsSvc := decidingApprovalsService(pool, send, log)
+	approvalsSvc := decidingApprovalsService(pool, send, log, features.queues)
 	registry := agents.NewRegistry(approvalsAdapter{svc: approvalsSvc}, gate, opts...)
 	agents.RegisterCoreTools(registry, provider, provider, provider, newConsumerMailSeam(db),
 		openDuplicatesFor(pool), tagOfferSeam(db))
@@ -262,8 +264,8 @@ func reportToolRunner(engine *reportEngine) agents.ReportRunner {
 
 // decidingApprovalsService adds send-dependent releases to tool decisions.
 // Its logger retains failures that happen after a decision commits.
-func decidingApprovalsService(pool *pgxpool.Pool, send SendPath, log *slog.Logger) *approvals.Service {
-	svc := NewApprovalsServiceWithEffects(pool)
+func decidingApprovalsService(pool *pgxpool.Pool, send SendPath, log *slog.Logger, queues *storeQueues) *approvals.Service {
+	svc := approvalsServiceTelling(pool, &siteLeadNoticeLane{}, queues)
 	registerLateApprovalEffects(svc, pool, send)
 	if log != nil {
 		svc = svc.WithLogger(log)

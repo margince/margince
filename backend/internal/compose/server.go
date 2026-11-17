@@ -197,6 +197,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, exts *Extensions, authH aut
 	introStore := introductions.NewStore(InstallationDB(pool), time.Now)
 	srv := Server{
 		extensions: exts,
+		queues:     &storeQueues{},
 		// Built here rather than behind an option: an endpoint's own request
 		// rate is not a feature a deployment opts into, and every role that
 		// serves /v1 comes through this constructor.
@@ -363,7 +364,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, exts *Extensions, authH aut
 	// the gate and the registry take: a step-up refused against one counter and
 	// released into another would read, from the human's side, as an approval
 	// that did nothing.
-	srv.approvalsHandlers, srv.siteLeadNotices = approvalsHandlersWithEffects(pool, connectionReleaser{meter: srv.volumeMeter, pool: pool}, log)
+	srv.approvalsHandlers, srv.siteLeadNotices = approvalsHandlersWithEffects(pool, connectionReleaser{meter: srv.volumeMeter, pool: pool}, log, srv.queues)
 	srv.wireSurfaces(pool, log)
 	// toolRegistry backs ListAgentTools AND the MCP tool transport.
 	//
