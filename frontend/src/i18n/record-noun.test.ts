@@ -832,6 +832,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "legalReview.settingsHint",
     "legalReview.col.requestedBy",
     "legalReview.col.decidedBy",
+    "ownerPick.change",
     // A human being on the committee, or who owns or sets something, not the record type.
     "co.overview.noEconomicBuyer",
     "co.aside.visibleEveryone",
