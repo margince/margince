@@ -129,9 +129,8 @@ Also called: update a lead, rename a lead, correct a prospect.
 **Referred by partner** shows once a company is a partner, to a role that may see companies and partners. On a lead that names a partner, a role that may change partners then sees **Accept for partner**; see [Partners and commission](partners.md#what-does-activated-mean). The **Leads** table then has a **Referred by partner** column. A lead that no one has accepted for its partner yet says **Awaiting acceptance** there.
 
 ### How do I change a lead's owner?
-To change or set the owner of a lead in Margince, open the lead and press **Change owner** beside the **Owner** value under **Ownership** in its **Details** panel. Search under **Search colleagues** and pick a colleague. The pick saves at once, with no **Save** button, and confirms "Assigned to {name}".
-1. Pick yourself on a lead with no owner to claim the lead.
-2. Pick anyone else to hand the lead over. The current owner is marked; picking them changes nothing.
+To change or set the owner of a lead in Margince, open the lead. Press **Change owner** beside the **Owner** value under **Ownership** in its **Details** panel. Search under **Search colleagues** and pick a colleague. The pick saves at once, with no **Save** button, and confirms "Assigned to {name}".
+1. Pick yourself on a lead with no owner to claim it, or anyone else to hand it over. The current owner is marked; picking them changes nothing.
 For many leads, tick them on the **Leads** table and use **Choose owner** → **Assign**.
 The new owner must be "an active colleague you may assign work to".
 Also called: assign a lead, reassign a prospect, take a lead, claim a lead.
@@ -207,6 +206,7 @@ Also called: change the amount, update deal size, switch to dollars.
 
 ### How do I change a deal's expected close date?
 To change when a deal is expected to close, open the deal, click **Expected close** in its **Details** panel and pick the date. On the **Board** view, open the card's **…** menu and choose **Change close date**.
+
 An open deal cannot get a date in the past: "an open deal cannot claim a close date in the past; pick today or later". A closed deal keeps its dates open to edits, past ones included.
 To hold a deal until a date without moving its close date, set **Wait until** instead. **How it stands** reads **On hold** until that day, and **Follow-up overdue** from that day on.
 Also called: push the close date, change closing date, slip a deal.
@@ -294,7 +294,7 @@ The company is not in this form: add or take off companies in the project's **Co
 Also called: update a project, change the project's end date.
 
 ### How do I change a project's owner?
-To reassign a project in Margince, open it and choose **More actions** → **Assign to a colleague**. Search under **Search colleagues** and pick one. The pick saves at once, with no **Assign** button. It confirms "Assigned to {name}".
+To reassign a project in Margince, open it and choose **More actions** → **Assign to a colleague**. Search under **Search colleagues** and pick one. The pick saves at once, with no **Assign** button, and confirms "Assigned to {name}".
 **Edit project** also has **Owner**, which lists the colleagues you may assign to, then **Unassigned**, which releases the project. A project cannot be claimed, so only a role that edits every project or someone it is shared with at **Write** can assign one.
 Also called: hand over a project, change project lead, transfer a project, release a project.
 
