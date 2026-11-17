@@ -280,11 +280,12 @@ describe("LicenseCard", () => {
     expect(screen.getAllByText(/refused/i)).toHaveLength(1);
     expect(screen.queryByText("This installation has no license")).toBeNull();
     expect(screen.queryByRole("alert")).toBeNull();
-    // No ceiling came with the refusal, so nothing caps the seats.
-    expect(screen.getByText(/Everything keeps working, uncapped/)).toBeTruthy();
+    expect(
+      screen.getByText(/Margince is locked until a check accepts it/),
+    ).toBeTruthy();
   });
 
-  it("says a refused license still holds the last valid ceiling it carries", async () => {
+  it("says a refused license locks the installation, whatever ceiling it carried", async () => {
     vi.stubGlobal(
       "fetch",
       backendFor({
@@ -299,9 +300,7 @@ describe("LicenseCard", () => {
 
     expect(
       await waitFor(() =>
-        screen.getByText(
-          /no full seat is added beyond what the last valid license granted/,
-        ),
+        screen.getByText(/Margince is locked until a check accepts it/),
       ),
     ).toBeTruthy();
     expect(screen.queryByText(/uncapped/)).toBeNull();
@@ -514,7 +513,7 @@ describe("the licensee", () => {
   // Past expiry and still accepted. Stated in the danger family and NOT
   // announced: the expiry is true as the tab renders, so the one interruption
   // on this screen stays with the seat breach an admin has to act on.
-  it("states the grace period without interrupting", async () => {
+  it("says an expired license locks the installation, without interrupting", async () => {
     vi.stubGlobal(
       "fetch",
       backendFor({
@@ -531,9 +530,9 @@ describe("the licensee", () => {
     expect(
       await waitFor(() => screen.getByText("This license expired")),
     ).toBeTruthy();
-    expect(screen.getByText(/still works/i)).toBeTruthy();
+    expect(screen.getByText(/Margince is locked/)).toBeTruthy();
     expect(screen.queryByRole("alert")).toBeNull();
-    // One notice, not two: the grace state supersedes the renewal warning.
+    // One notice, not two: the expiry supersedes the renewal warning.
     expect(screen.queryByText("License needs renewal")).toBeNull();
   });
 

@@ -2987,6 +2987,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.card.moveTo": "Chuyển sang {stage}",
   "deal.card.markWon": "Đánh dấu thắng",
   "deal.card.markLost": "Đánh dấu thua",
+  "deal.card.changeCloseDate": "Đổi ngày chốt",
   "deal.card.closedReopen":
     "Deal này đã đóng. Mở lại deal trên trang của deal để chuyển giai đoạn.",
   "deal.card.copyLink": "Sao chép liên kết",
@@ -3361,6 +3362,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "roster.failedTeams": "Không thể tải danh sách nhóm.",
   "owner.rosterFailed":
     "Không thể tải danh sách thành viên. Hãy tải lại trang để chọn một người.",
+  "ownerPick.change": "Đổi người chịu trách nhiệm",
+  "ownerPick.search": "Tìm đồng nghiệp",
+  "ownerPick.done": "Đã giao cho {name}",
   "ref.notInRoster":
     "Hiện đang được giao (không còn trong danh sách thành viên)",
   "picker.noMatch": "Không có kết quả phù hợp",
@@ -5866,8 +5870,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.terminalDisqualified": "Đã loại. Lead này ở chế độ chỉ xem.",
   "lead.marker": "Lead",
   "lead.assignToMe": "Giao cho tôi",
-  "lead.assignChoose": "Chọn một đồng nghiệp",
-  "lead.assignNobodyElse": "Không có thành viên nào khác để giao lead này.",
   "lead.saveOverride": "Lưu ghi đè",
   "lead.overrideScoreValue": "Điểm",
   "lead.trigger.inboundReply": "Thư trả lời đến",
@@ -14325,9 +14327,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Mọi thứ vẫn hoạt động và không bị giới hạn. Cấu hình token giấy phép cho bản cài đặt này để tính số tài khoản theo mức được cấp.",
   "license.refused.title": "Giấy phép của bản cài đặt này bị từ chối",
   "license.refused.body":
-    "Token giấy phép cấu hình cho bản cài đặt này đã được xuất trình và bị từ chối. Các tài khoản đầy đủ quyền đang dùng vẫn hoạt động, và cho đến khi token được thay, không thêm tài khoản đầy đủ quyền nào vượt quá số tài khoản đầy đủ quyền mà giấy phép hợp lệ gần nhất đã cấp. Kiểm tra token và đồng hồ của bản cài đặt.",
-  "license.refused.bodyUncapped":
-    "Token giấy phép cấu hình cho bản cài đặt này đã được xuất trình và bị từ chối. Mọi thứ vẫn hoạt động, không giới hạn, cho đến khi token được thay. Kiểm tra token và đồng hồ của bản cài đặt.",
+    "Token giấy phép cấu hình cho bản cài đặt này đã được xuất trình và bị từ chối, nên Margince bị khóa cho đến khi một lần kiểm tra chấp nhận token. Kiểm tra token và đồng hồ của bản cài đặt, rồi kiểm tra lại.",
   "license.seats.capacityOnly":
     "Vai trò hiện tại không có quyền xem số tài khoản được cấp phép.",
   "license.seats.title": "Tài khoản",
@@ -14348,7 +14348,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "license.holder.id": "Mã giấy phép",
   "license.grace.title": "Giấy phép này đã hết hạn",
   "license.grace.body":
-    "Giấy phép đã hết hạn vào {expiry}. Giấy phép vẫn hoạt động trong một thời gian có hạn. Gia hạn để bản cài đặt tiếp tục hoạt động.",
+    "Giấy phép đã hết hạn vào {expiry}, nên Margince bị khóa cho đến khi có giấy phép hợp lệ.",
   "license.renewal.title": "Giấy phép cần gia hạn",
   "license.renewal.body":
     "Giấy phép hết hạn vào {expiry}. Không có gì thay đổi trước ngày đó.",
@@ -15367,11 +15367,17 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "trial.locked.member":
     "Quản trị viên của bạn có thể nhận giấy phép từ đội ngũ Margince. Bạn cũng có thể tự viết cho họ.",
   "common.trialEnded":
-    "Thời gian dùng thử của bản cài đặt này đã kết thúc, nên thay đổi này phải chờ có giấy phép. Dữ liệu của bạn vẫn được giữ nguyên.",
+    "Thời gian dùng thử của bản cài đặt này đã kết thúc, nên thay đổi này chưa được lưu. Hãy thực hiện lại khi đã có giấy phép. Dữ liệu của bạn vẫn được giữ nguyên.",
+  "license.locked.pageTitle": "Giấy phép không hợp lệ",
+  "license.locked.title": "Giấy phép Margince của bạn không còn hiệu lực",
+  "license.locked.body":
+    "Giấy phép đã hết hạn hoặc bị từ chối, nên Margince đang bị khóa và tác vụ nền đang tạm dừng cho đến khi có giấy phép hợp lệ. Dữ liệu của bạn vẫn được giữ nguyên, không có gì bị xóa.",
+  "common.licenseLapsed":
+    "Giấy phép của bản cài đặt này đã hết hạn hoặc bị từ chối, nên thay đổi này chưa được lưu. Hãy thực hiện lại khi đã có giấy phép hợp lệ. Dữ liệu của bạn vẫn được giữ nguyên.",
   "licensebanner.link": "Mở {tab}",
   "licensebanner.grace.title": "Giấy phép đã hết hạn",
   "licensebanner.grace.body":
-    "Giấy phép của bản cài đặt này đã hết hạn và đang trong thời gian ân hạn. Margince vẫn tiếp tục chạy, nhưng sẽ không khởi động lại được sau khi thời gian ân hạn kết thúc. Hãy gia hạn giấy phép trước thời điểm đó.",
+    "Giấy phép của bản cài đặt này đã hết hạn, nên Margince bị khóa cho đến khi có giấy phép hợp lệ.",
 
   "aicalls.title": "Dấu vết lượt gọi AI",
   "aicalls.withheld":
@@ -19341,9 +19347,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "project.owner": "Người chịu trách nhiệm",
   "project.ownerMe": "Tôi",
   "project.assignOwner": "Giao cho một đồng nghiệp",
-  "project.assignOwnerTitle": "Giao cho một đồng nghiệp",
-  "project.assignOwnerSearch": "Tìm đồng nghiệp",
-  "project.assignOwnerDone": "Đã giao cho {name}",
   "project.description": "Mô tả",
   "project.targetEnd": "Ngày kết thúc dự kiến",
   "project.new": "Dự án mới",

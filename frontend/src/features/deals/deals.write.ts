@@ -1,6 +1,8 @@
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
+import { saveRecordEdit } from "../../components/recordedit";
+import { type FieldRecord, rawRecord } from "../../components/recordfieldtypes";
 import { toMajorUnits, toMinorUnits } from "../../format/minorunits";
 import { commercialMotion, dealPriority } from "../../lib/dealcommercialvalues";
 import { partnerAttribution } from "../../lib/dealcreate";
@@ -248,6 +250,27 @@ function withoutMasked(
     }
   }
   return out as UpdateDealRequest;
+}
+
+/** The deal as an editor opens on it: the form's values beside the wire's. */
+export function openDealEdit(deal: Deal): FieldRecord {
+  return { ...dealEditRecord(deal), original: deal };
+}
+
+/**
+ * `opened` comes from `openDealEdit`. A version refusal re-reads the deal and
+ * retries only while the fields this edit touches have not moved.
+ */
+export function saveDealEdit(
+  opened: FieldRecord,
+  values: Record<string, unknown>,
+  masked: readonly string[],
+) {
+  return saveRecordEdit(
+    "deal",
+    rawRecord(opened),
+    mapDealUpdate({ ...opened, ...values }, opened, masked),
+  );
 }
 
 // Pinned to the version the reader saw, so an archive never lands on a deal

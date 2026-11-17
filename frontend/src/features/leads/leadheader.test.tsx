@@ -146,7 +146,7 @@ describe("the lead page's head", () => {
     await screen.findByRole("heading", { level: 1, name: "Jonas Petersen" });
     const details = document.querySelector(".record-aside") as HTMLElement;
     expect(
-      await within(details).findAllByRole("button", { name: /^Change Owner/ }),
+      await within(details).findAllByRole("button", { name: "Change owner" }),
     ).toHaveLength(1);
     // No facts strip is left in the head to hold a second copy.
     expect(

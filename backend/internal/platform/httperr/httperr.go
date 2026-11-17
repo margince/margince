@@ -52,6 +52,7 @@ var mapping = []struct {
 	{apperrors.ErrSeatTierInsufficient, http.StatusForbidden, "seat_tier_insufficient"},
 	{apperrors.ErrSeatLimitReached, http.StatusForbidden, "seat_limit_reached"},
 	{apperrors.ErrTrialEnded, http.StatusForbidden, "trial_ended"},
+	{apperrors.ErrLicenseLapsed, http.StatusForbidden, "license_lapsed"},
 	{apperrors.ErrConsentNotGranted, http.StatusConflict, "consent_not_granted"},
 	{apperrors.ErrBudgetExceeded, http.StatusTooManyRequests, "rate_limited"},
 	{apperrors.ErrUnsupportedBySoR, http.StatusUnprocessableEntity, "unsupported_by_sor"},

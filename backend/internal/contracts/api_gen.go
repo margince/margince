@@ -55311,7 +55311,8 @@ type LicenseEntitlement struct {
 	// license is configured, every agent tool call is refused with `trial_ended`, and so is
 	// every HTTP change except these: the license routes, `POST /v1/exports`, the data-subject
 	// request routes, and a seat's own credential routes. Background jobs wait instead of
-	// running; they do not fail.
+	// running; they do not fail. A license that was refused, or is past its expiry, locks the
+	// installation the same way with `license_lapsed`, also with no grace period.
 	Trial *LicenseTrial `json:"trial,omitempty"`
 }
 
@@ -55376,7 +55377,8 @@ type LicenseHolder struct {
 // license is configured, every agent tool call is refused with `trial_ended`, and so is
 // every HTTP change except these: the license routes, `POST /v1/exports`, the data-subject
 // request routes, and a seat's own credential routes. Background jobs wait instead of
-// running; they do not fail.
+// running; they do not fail. A license that was refused, or is past its expiry, locks the
+// installation the same way with `license_lapsed`, also with no grace period.
 type LicenseTrial struct {
 	// Ended Whether `ends_at` has passed, as the server decides it, so a client with a wrong clock shows the state the installation acts on.
 	Ended bool `json:"ended"`
@@ -56620,6 +56622,9 @@ type MeResponse struct {
 
 	// InstallationBrand The installation's own company as every seat already sees it on screen: its name and its marks, for the app's brand block. Absent until the installation has described itself. Deliberately nothing else — the rest of the company profile (`getAnchorCompany`) is an administrator's read, and this projection is not a way around it.
 	InstallationBrand *InstallationBrand `json:"installation_brand,omitempty"`
+
+	// LicenseLapsed True when this installation's license was refused or is past its expiry. There is no grace period. The installation is locked as `trial_ended` describes, and refused changes answer `license_lapsed`, until a valid license is configured. Every seat gets it. Absent while the license is valid or the installation runs on its trial.
+	LicenseLapsed *bool `json:"license_lapsed,omitempty"`
 
 	// NonProduction True when the installation runs a non-production posture (MARGINCE_ENV=dev|test). DEPRECATED as the gate for the "Reset data" action — read `data_reset_available` instead. A deployment being non-production is not consent to purge its tenant data, and inferring one from the other is why a `staging` installation full of real internal users could be wiped through the API.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
