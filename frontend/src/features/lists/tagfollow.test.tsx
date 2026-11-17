@@ -200,7 +200,7 @@ describe("tagging a company offers the tag to its contacts", () => {
   ) {
     const sent: { path: string; body: unknown }[] = [];
     const annaTagReads = { count: 0 };
-    const rosterReads = { count: 0 };
+    const rosterReads = { count: 0, limits: [] as (string | null)[] };
     installFetchStub({
       "GET /me": meRoute({
         company: ["update"],
@@ -214,8 +214,9 @@ describe("tagging a company offers the tag to its contacts", () => {
       [`GET /records/company/${COMPANY}/tags`]: () =>
         jsonResponse({ data: [], withheld: false }),
       "POST /tags/t-1/apply": () => new Response(null, { status: 204 }),
-      "GET /contacts": () => {
+      "GET /contacts": (_body, url) => {
         rosterReads.count += 1;
+        rosterReads.limits.push(url.searchParams.get("limit"));
         return jsonResponse({
           data: roster,
           page: { has_more: false, next_cursor: null },
@@ -261,7 +262,7 @@ describe("tagging a company offers the tag to its contacts", () => {
     timeout: ELEVEN_WAITS_TEST_MS,
   }, async () => {
     const user = userEvent.setup();
-    const { sent, annaTagReads } = mountCompany();
+    const { sent, annaTagReads, rosterReads } = mountCompany();
     await applyProductX(user);
     await waitFor(() => expect(annaTagReads.count).toBe(1));
 
@@ -276,6 +277,8 @@ describe("tagging a company offers the tag to its contacts", () => {
     });
     expect(clara).toBeChecked();
     expect(clara).toBeDisabled();
+    // One row decides the offer; the whole roster waits for the press.
+    expect(rosterReads.limits).toEqual(["1", "200"]);
     await user.click(chooser.getByRole("checkbox", { name: "Anna Weber" }));
     await user.click(chooser.getByRole("checkbox", { name: "Ben Ott" }));
     await user.click(
@@ -324,7 +327,7 @@ describe("tagging a company offers the tag to its contacts", () => {
 
   it("writes nothing to the contacts when the reader dismisses the offer", async () => {
     const user = userEvent.setup();
-    const { sent } = mountCompany();
+    const { sent, rosterReads } = mountCompany();
     await applyProductX(user);
 
     await user.click(
@@ -335,6 +338,7 @@ describe("tagging a company offers the tag to its contacts", () => {
       screen.queryByRole("button", { name: en["tags.offerContactsAccept"] }),
     ).toBeNull();
     expect(sent).toEqual([]);
+    expect(rosterReads.limits).toEqual(["1"]);
   });
 
   it("offers nothing when no contact works at the company now", async () => {
