@@ -649,8 +649,8 @@ func builtVoiceEnv(t *testing.T, quote string) *voiceBuildEnv {
 	return env
 }
 
-//testdb:serial shares the type-checking importer, which is not safe for concurrent use
 func TestReplyDraftCarriesVoiceProvenanceEndToEnd(t *testing.T) {
+	t.Parallel()
 	env := builtVoiceEnv(t, "Provenance quote.")
 	activity := seedReplyActivity(t, env)
 	drafter := newReplyDrafter(env.e.Pool, &voicedDraftBrain{judgeScore: 0.9}, slog.New(slog.DiscardHandler))

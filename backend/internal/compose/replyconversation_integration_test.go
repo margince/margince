@@ -142,8 +142,8 @@ func (plainReplyStub) DraftEmail(context.Context, ids.UUID, string) (string, str
 	return "Another subject", "An editable draft", nil
 }
 
-//testdb:serial shares the type-checking importer, which is not safe for concurrent use
 func TestReplyEndpointNormalizesTheSubjectForEveryDraftAdapter(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	anchor := logReplyMessage(e.Admin(), t, e, "", "Re: Pricing", "Selected proposal", 0)
 	for name, drafter := range map[string]activities.EmailDrafter{

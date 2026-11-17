@@ -111,8 +111,8 @@ func realDeliveryStager(t *testing.T, e *integration.Env) DeliveryMachinery {
 
 const pricingReplySubject = "Re: Pricing question"
 
-//testdb:serial shares the type-checking importer, which is not safe for concurrent use
 func TestCommsAdapterSharesTheGovernedPaths(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	// The REAL delivery machinery, because this suite asserts that an
 	// unconsented send is refused and the engine refuses at staging — inside
