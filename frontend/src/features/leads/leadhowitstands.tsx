@@ -99,6 +99,7 @@ export function LeadHowItStands({
         ) : (
           verdict.sentence
         ),
+        note: verdict.note,
         tone: verdict.tone,
       }}
       latest={latestWord(thread.activities, {
