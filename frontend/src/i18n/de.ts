@@ -6044,7 +6044,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.evidenceNote": "Notiz zum Beleg (optional)",
   "lead.segregationTitle": "Leads bleiben von Kontakten getrennt",
   "lead.segregation":
-    "Qualifizierst du einen Lead, wird er zum Kontakt. Um einen vorhandenen Kontakt als Lead zu bearbeiten, öffne den Kontakt und wähle „Als Lead bearbeiten“.",
+    "Qualifizierst du einen Lead, wird er zum Kontakt. Hat ein Kontakt ein neues Geschäft, lege einen Deal an.",
   "lead.segregationDismiss": "Hinweis ausblenden",
   "list.emptyMine": "Keine {unit}, für die du verantwortlich bist.",
   "list.showAll": "Alle anzeigen",
@@ -6240,7 +6240,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "field.unset": "Nicht festgelegt",
   "deal.standing.figure.offer": "Angebot {number} · Version {revision}",
   "deal.standing.figure.next": "Nächster Schritt",
-  "standing.noneYet": "Noch keiner",
+  "standing.noneYet": "Noch nichts",
   "deal.standing.figure.daysInStage": "Tage in der Phase",
   "deal.standing.figure.daysToClose": "Tage bis Abschluss",
   "deal.standing.figure.openedOn": "eröffnet am {date}",

@@ -5888,7 +5888,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.evidenceNote": "Ghi chú bằng chứng (không bắt buộc)",
   "lead.segregationTitle": "Lead được giữ tách biệt với liên hệ",
   "lead.segregation":
-    "Khi xác nhận đủ điều kiện, lead sẽ trở thành liên hệ. Muốn xử lý một liên hệ đã có như lead, mở liên hệ đó và chọn “Xử lý như lead”.",
+    "Khi xác nhận đủ điều kiện, lead sẽ trở thành liên hệ. Khi một liên hệ có cơ hội kinh doanh mới, hãy tạo một deal.",
   "lead.segregationDismiss": "Ẩn thông báo này",
   "list.emptyMine": "Bạn không chịu trách nhiệm {unit} nào.",
   "list.showAll": "Hiển thị tất cả",
