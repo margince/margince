@@ -622,6 +622,20 @@ describe("LeadsScreen — archived marking (P-3)", () => {
   });
 });
 
+describe("LeadsScreen — the count line", () => {
+  it("names one lead in the singular", async () => {
+    stubFetch(async () =>
+      jsonResponse({
+        data: [lead],
+        page: { next_cursor: null, has_more: false },
+      }),
+    );
+    render(<LeadsScreen />);
+    expect(await screen.findByText(/1 to 1 of 1 lead\b/)).toBeTruthy();
+    expect(screen.queryByText(/of 1 leads/)).toBeNull();
+  });
+});
+
 describe("LeadsScreen — the one ownership dial (DM-VOCAB-OWN-1)", () => {
   it("opens on my queue and sends the origin filter to the server", async () => {
     const user = userEvent.setup();

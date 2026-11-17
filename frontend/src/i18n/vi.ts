@@ -3023,6 +3023,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "record.fieldsRetry": "Thử lại",
 
   "record.companyRoutingKey": "Khóa định tuyến công ty",
+  "record.companyRoutingKeyWhy": "Khóa định tuyến công ty dùng để làm gì",
+  "record.companyRoutingKeyHelp":
+    "Tên miền web của công ty, ví dụ example.com, hoặc một tên ngắn của công ty. Quy tắc phân bổ lead có thể so khớp với nó, và tên miền mà một công ty trong Margince đang giữ sẽ gợi ý công ty đó.",
   "record.finishFieldEdit":
     "Lưu hoặc hủy chỉnh sửa hiện tại trước khi đóng chi tiết.",
   "record.save": "Lưu",
@@ -3467,6 +3470,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "unit.companies": "công ty",
   "unit.deals": "deal",
   "unit.leads": "lead",
+  "unit.contact": "liên hệ",
+  "unit.company": "công ty",
+  "unit.lead": "lead",
   "unit.worklistItems": "việc và cam kết",
   "unit.partners": "đối tác",
   "unit.products": "sản phẩm",

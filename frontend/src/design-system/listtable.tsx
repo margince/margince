@@ -80,6 +80,7 @@ export function ListTable<Row>({
   onRowClick,
   rowHref,
   unit,
+  unitOne,
   emptyNote,
   search,
   sort,
@@ -166,6 +167,8 @@ export function ListTable<Row>({
   title?: ReactNode;
   /** Plural noun for the count and the empty state — "contacts", "leads". */
   unit: string;
+  /** Singular noun for a count of one — "contact", "lead". Defaults to `unit`. */
+  unitOne?: string;
   /**
    * A likelier cause than "there is nothing here", for a caller that knows one.
    *
@@ -405,6 +408,7 @@ export function ListTable<Row>({
           ? bodyCount
           : rangeLine(pending, {
               unit,
+              unitOne,
               first: paging.from + 1,
               last: paging.from + paging.pageRows.length,
               total: serverTotal ?? rows.length,

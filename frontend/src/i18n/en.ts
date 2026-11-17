@@ -3027,6 +3027,9 @@ export const en = {
   "record.fieldsRetry": "Retry",
 
   "record.companyRoutingKey": "Company routing key",
+  "record.companyRoutingKeyWhy": "What the company routing key is",
+  "record.companyRoutingKeyHelp":
+    "The company’s web domain, such as example.com, or a short name for it. Lead routing rules can match it, and a domain a company in Margince holds suggests that company.",
   "record.finishFieldEdit":
     "Save or cancel the current edit before closing details.",
   "record.save": "Save",
@@ -3513,6 +3516,9 @@ export const en = {
   "unit.companies": "companies",
   "unit.deals": "deals",
   "unit.leads": "leads",
+  "unit.contact": "contact",
+  "unit.company": "company",
+  "unit.lead": "lead",
   "unit.worklistItems": "tasks and commitments",
   "unit.partners": "partners",
   "unit.products": "products",

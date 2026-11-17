@@ -3116,6 +3116,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "record.fieldsRetry": "Erneut versuchen",
 
   "record.companyRoutingKey": "Zuordnungsschlüssel des Unternehmens",
+  "record.companyRoutingKeyWhy": "Wofür der Zuordnungsschlüssel ist",
+  "record.companyRoutingKeyHelp":
+    "Die Webdomain des Unternehmens, etwa example.com, oder ein kurzer Name dafür. Regeln zur Lead-Zuweisung können darauf prüfen, und eine Domain, die ein Unternehmen in Margince hat, schlägt dieses Unternehmen vor.",
   "record.finishFieldEdit":
     "Speichere oder verwirf die aktuelle Änderung, bevor du die Details schließt.",
   "record.save": "Speichern",
@@ -3577,6 +3580,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "unit.companies": "Unternehmen",
   "unit.deals": "Deals",
   "unit.leads": "Leads",
+  "unit.contact": "Kontakt",
+  "unit.company": "Unternehmen",
+  "unit.lead": "Lead",
   "unit.worklistItems": "Aufgaben und Zusagen",
   "unit.partners": "Partner",
   "unit.products": "Produkte",

@@ -271,6 +271,7 @@ function LeadsWorkbench({
         bodyOwnsPaging={view === "board" && refused.length === 0}
         state={state}
         unit="unit.leads"
+        unitOne="unit.lead"
         action={
           <CreateAction
             label={t("create.lead")}

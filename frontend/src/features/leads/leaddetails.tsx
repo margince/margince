@@ -17,6 +17,7 @@ import {
   CopyEmail,
   EmailFace,
 } from "../../design-system/contactlink";
+import { InfoTip } from "../../design-system/infotip";
 import { InlineChoice } from "../../design-system/inlinechoice";
 import { InlineText } from "../../design-system/inlinetext";
 import {
@@ -119,6 +120,42 @@ function EmailValue({
             </ContactLink>
             <CopyEmail address={lead.email} />
           </span>
+        )
+      }
+      placeholder={t("field.unset")}
+      canEdit={canEdit}
+      readOnlyReason={readOnlyReason}
+      onSave={onSave}
+    />
+  );
+}
+
+// The number dials, as on a contact; the box around it still edits it.
+function PhoneValue({
+  lead,
+  canEdit,
+  readOnlyReason,
+  onSave,
+}: Readonly<{
+  lead: Lead;
+  canEdit: boolean;
+  readOnlyReason?: string;
+  onSave: (next: string) => Promise<void>;
+}>) {
+  const t = useT();
+  return (
+    <InlineText
+      label={t("create.phone")}
+      value={lead.phone ?? ""}
+      link={
+        lead.phone && (
+          <ContactLink
+            kind="phone"
+            value={lead.phone}
+            record={{ entityType: "lead", entityId: lead.id }}
+            className="link-button lead-row-link"
+            textClassName="lead-row-link"
+          />
         )
       }
       placeholder={t("field.unset")}
@@ -258,7 +295,19 @@ function useAboutRows(
         />
       ),
     },
-    text("phone", "create.phone"),
+    {
+      key: "phone",
+      term: t("create.phone"),
+      empty: isBlank(lead.phone),
+      value: (
+        <PhoneValue
+          lead={lead}
+          canEdit={canEdit}
+          readOnlyReason={reason}
+          onSave={save("phone")}
+        />
+      ),
+    },
     {
       key: "origin",
       term: t("lead.origin"),
@@ -306,7 +355,19 @@ function useAboutRows(
         <span title={t("record.leadProfileReadOnly")}>{t("field.unset")}</span>
       ),
     },
-    text("candidate_company_key", "record.companyRoutingKey"),
+    {
+      ...text("candidate_company_key", "record.companyRoutingKey"),
+      term: (
+        <>
+          {t("record.companyRoutingKey")}
+          <InfoTip
+            label={t("record.companyRoutingKeyWhy")}
+            text={t("record.companyRoutingKeyHelp")}
+            mark="help"
+          />
+        </>
+      ),
+    },
     {
       key: "project_id",
       term: t("lead.project"),
