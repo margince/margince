@@ -150,3 +150,36 @@ func TestLedgerAtHeadKeepsAReplacedVersionWhoseFileIsGone(t *testing.T) {
 		t.Errorf("with the replaced files gone: %s", got)
 	}
 }
+
+// ledgerOf is the ledger rows of entries, as Up reads them back.
+func ledgerOf(entries ...LedgerEntry) map[string]LedgerRow {
+	ledger := map[string]LedgerRow{}
+	for _, e := range entries {
+		digest := e.Digest
+		ledger[e.Version] = LedgerRow{Name: e.Name, Digest: &digest}
+	}
+	return ledger
+}
+
+// Once the replaced files are gone, only the manifest says what their rows
+// must hold. A row that disagrees is refused before anything is written.
+func TestPlanBaselineRefusesAReplacedRowThatDisagreesWithTheManifest(t *testing.T) {
+	ns := baselineNamespace()
+	ns.Migrations = ns.Migrations[2:]
+	b := ns.Baseline
+	own := LedgerEntry{Version: b.Migration.Version, Name: b.Migration.Name, Digest: Digest(b.Migration)}
+	edited := b.Replaces[1]
+	edited.Digest = "another"
+
+	for name, ledger := range map[string]map[string]LedgerRow{
+		"at the release":        ledgerOf(b.Replaces[0], edited),
+		"the baseline recorded": ledgerOf(b.Replaces[0], edited, own),
+	} {
+		if _, err := planBaseline(ns, ledger); err == nil || !strings.Contains(err.Error(), "other content than the baseline") {
+			t.Errorf("%s: err = %v, want a refusal of %s", name, err, edited.Version)
+		}
+	}
+	if plan, err := planBaseline(ns, ledgerOf(b.Replaces...)); err != nil || plan.apply || len(plan.rows) != 1 {
+		t.Errorf("a matching ledger at the release: plan %+v, err %v; want the baseline's row alone", plan, err)
+	}
+}

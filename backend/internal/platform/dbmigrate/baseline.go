@@ -115,6 +115,9 @@ func planBaseline(ns Namespace, done map[string]LedgerRow) (baselinePlan, error)
 	if b == nil {
 		return baselinePlan{}, nil
 	}
+	if err := assertReplacedRowsMatch(ns, done); err != nil {
+		return baselinePlan{}, err
+	}
 	if _, ok := done[b.Migration.Version]; ok {
 		if err := assertLedgerMatches(ns.Name, done, b.Migration); err != nil {
 			return baselinePlan{}, err
@@ -139,6 +142,27 @@ func planBaseline(ns Namespace, done map[string]LedgerRow) (baselinePlan, error)
 			ns.Name, present, len(b.Replaces), b.Migration.Version, b.Migration.Name, b.Release)
 	}
 	return baselinePlan{rows: []LedgerEntry{own}}, nil
+}
+
+// assertReplacedRowsMatch compares each recorded replaced version whose file
+// is gone with its manifest entry. A shipped file's row is checked like any
+// other migration's, against the file.
+func assertReplacedRowsMatch(ns Namespace, done map[string]LedgerRow) error {
+	shipped := make(map[string]bool, len(ns.Migrations))
+	for _, m := range ns.Migrations {
+		shipped[m.Version] = true
+	}
+	for _, r := range ns.Baseline.Replaces {
+		row, ok := done[r.Version]
+		if !ok || shipped[r.Version] || (row.Name == r.Name && row.Digest != nil && *row.Digest == r.Digest) {
+			continue
+		}
+		return fmt.Errorf(
+			"pgmigrate: %s %s: the ledger records %q with other content than the baseline %s lists as %q. "+
+				"This database did not build the schema the baseline stands for; restore it from a backup or rebuild it (make dev-fresh)",
+			ns.Name, r.Version, row.Name, ns.Baseline.Migration.Version, r.Name)
+	}
+	return nil
 }
 
 // settleBaseline writes what planBaseline decided, in one transaction, and
