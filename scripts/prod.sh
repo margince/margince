@@ -20,7 +20,7 @@ state="$root/.tmp/production"
 stack="$state/stack"
 # One project per checkout, as the settings are: a fixed name would hand one
 # checkout's database volume to another checkout's new credentials.
-project="margince-prod-$(printf %s "$root" | cksum | cut -d' ' -f1)"
+project="margince-prod-$(printf %s "$root" | git hash-object --stdin | cut -c1-16)"
 port="${PROD_PORT:-8090}"
 
 # compose runs with MARGINCE_ENV empty, because a value exported in the
