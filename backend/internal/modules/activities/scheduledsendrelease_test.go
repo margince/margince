@@ -13,7 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-func TestOnlyAPersonOrTheirAttendedSendingAgentReleasesAHeldMessage(t *testing.T) {
+func TestOnlyAUserOrTheirAttendedSendingAgentReleasesAHeldMessage(t *testing.T) {
 	agent := func(scopes ...principal.Scope) principal.Principal {
 		return principal.Principal{Type: principal.PrincipalAgent, ID: "agent:t", OnBehalfOf: ids.NewV7(), Scopes: principal.NewScopeSet(scopes...)}
 	}
@@ -25,7 +25,7 @@ func TestOnlyAPersonOrTheirAttendedSendingAgentReleasesAHeldMessage(t *testing.T
 		actor   principal.Principal
 		release bool
 	}{
-		{"person", attended, principal.Principal{Type: principal.PrincipalHuman, UserID: ids.NewV7()}, true},
+		{"user", attended, principal.Principal{Type: principal.PrincipalHuman, UserID: ids.NewV7()}, true},
 		{"attended agent with send", attended, agent(principal.ScopeWrite, principal.ScopeSend), true},
 		{"attended agent with write only", attended, agent(principal.ScopeWrite), false},
 		{"unattended agent with send", principal.WithUnattended(attended), agent(principal.ScopeWrite, principal.ScopeSend), false},

@@ -487,7 +487,8 @@ The eight shapes, what each is for, and how each one silently passes:
 | `taskdeadlinereaders_test.go` | H2 | _(no doc comment)_ |
 | `textbounds_test.go` | H2 | The column must sit in the condition's bounds and in the refusal's. |
 | `toolongcarriesmax_test.go` | H2 | Every too\_long field refusal states the limit it refused at, so the screen can say "at most 2,000 characters" in the reader's language. |
-| `uiautonomyclaims_test.go` | H2 | Shipped locale copy must not claim every record update requires approval or that standing send permission approves a message. |
+| `uiautonomyclaims_test.go` | H2 | No shipped UI string promises that nothing sends without a human's approval while the generated policy table says the send verbs auto-execute. |
+| `uipermissionisapproval_test.go` | H2 | No shipped UI string says that granting the send permission approves a message. |
 | `undoreasoncensus_test.go` | H2 | One refusal set, three spellings. |
 | `uniquenessclaimscorpus_test.go` | H2 | Where the claim sweep looks, as against what it looks for. |
 | `unvalidatedconstraints_test.go` | H2 | A constraint left NOT VALID is declared, with the reason it stays that way. |
