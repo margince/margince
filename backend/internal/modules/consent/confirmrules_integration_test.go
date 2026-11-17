@@ -9,7 +9,6 @@ import (
 	"context"
 	"errors"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -24,24 +23,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 )
 
-// confirmRulesCountry is one minted code under both confirm-link rules: a
-// record check asks no news, and a consent mail needs the subject's request.
-// One code because the package has few to spare, and no test here reads both.
-var confirmRulesCountry struct {
-	once sync.Once
-	code jurisdiction.Code
-}
-
 func placeUnderConfirmRules(t *testing.T, e *channelConsentEnv) {
 	t.Helper()
-	confirmRulesCountry.once.Do(func() {
-		confirmRulesCountry.code = testJurisdiction(t)
-		messagingrules.Register(messagingrules.Rules{
-			Jurisdiction: confirmRulesCountry.code, Version: 1,
-			RecordConfirmationWithoutNews: true, ConsentConfirmationNeedsRequest: true,
-		})
+	code := testMessagingRules(t, messagingrules.Rules{
+		Version: 1, RecordConfirmationWithoutNews: true, ConsentConfirmationNeedsRequest: true,
 	})
-	placeContact(t, e.owner, e.contact, confirmRulesCountry.code)
+	placeContact(t, e.owner, e.contact, code)
 }
 
 // publishQuestions publishes the questions a link pins, as the boot does.
@@ -132,6 +119,26 @@ func TestAConsentMailWithoutTheSubjectsRequestIsRefused(t *testing.T) {
 	placeUnderConfirmRules(t, e)
 
 	requireNoSubjectRequestRefusal(t, e)
+}
+
+// TestAPackNamingNoClassNeedsTheRequestForEveryPurpose. A pack that asks a
+// request for consent mail and names no purpose class asks it for all of
+// them, correspondence included.
+func TestAPackNamingNoClassNeedsTheRequestForEveryPurpose(t *testing.T) {
+	e := setupChannelConsent(t)
+	seedDefaultCatalog(t, e.owner)
+	seedSubjectAddress(t, e)
+	placeUnderConfirmRules(t, e)
+	var correspondence ids.PurposeID
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT id FROM consent_purpose WHERE key = $1`, string(ClassBusinessCorrespondence)).Scan(&correspondence); err != nil {
+		t.Fatalf("reading the seeded correspondence purpose: %v", err)
+	}
+
+	var missing *NoSubjectRequestError
+	if _, err := e.store.IssueConsentLink(e.ctx, e.contact, correspondence, "", ""); !errors.As(err, &missing) {
+		t.Fatalf("a correspondence consent mail with no request on record: %v, want the refusal", err)
+	}
 }
 
 // requireNoSubjectRequestRefusal asks for a consent link as a user and wants

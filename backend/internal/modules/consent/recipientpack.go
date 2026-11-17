@@ -14,10 +14,12 @@ package consent
 
 import (
 	"context"
+	"errors"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
@@ -113,6 +115,85 @@ func settlePackBasisTx(ctx context.Context, tx pgx.Tx, subject subjectRef, res r
 	}
 	res.Basis, res.BasisMissing = "", true
 	return res, nil
+}
+
+// consentPurposeTx is the purpose the preview offers a consent request for,
+// for a recipient whose basis is missing. Zero when none can be asked. Only
+// the preview asks it, because only the composer offers the request.
+func consentPurposeTx(ctx context.Context, tx pgx.Tx, d commsauthz.Decision) (ids.UUID, error) {
+	if !d.LawfulBasisMissing || d.SubjectKind != entityContact {
+		return ids.UUID{}, nil
+	}
+	contactID := ids.From[ids.ContactKind](d.SubjectID)
+	gate, err := requestGateTx(ctx, tx, contactID)
+	if err != nil {
+		return ids.UUID{}, err
+	}
+	return askablePurposeTx(ctx, tx, contactID, d.Resolved, gate)
+}
+
+// requestGateTx reads what the mint will judge a user's consent mail to this
+// contact by, without writing anything. A contact with no live address has
+// none, and the mint refuses them before the gate.
+func requestGateTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) (requestGate, error) {
+	country, err := recipientCountryTx(ctx, tx, ruleSubject{Kind: entityContact, ID: contactID.String()})
+	if err != nil {
+		return requestGate{}, err
+	}
+	rules, _, found := applicableRules(country.Code)
+	gate := requestGate{
+		needsRequest: found && rules.ConsentConfirmationNeedsRequest, classes: rules.ConsentRequestFirstFor,
+	}
+	if !gate.needsRequest {
+		return gate, nil
+	}
+	address, err := deliveryAddressTx(ctx, tx, contactID)
+	var noAddress *ValidationError
+	if err != nil && !errors.As(err, &noAddress) {
+		return requestGate{}, err
+	}
+	ask, err := subjectAskTx(ctx, tx, contactID, address)
+	gate.asked = ask.found
+	return gate, err
+}
+
+// askablePurposeTx is the purpose a consent request to this contact would ask
+// about for this use. It is the oldest live purpose whose class covers the use,
+// that the contact has not withdrawn and that mayAskByMail passes. Zero when
+// none is.
+func askablePurposeTx(
+	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, category commsauthz.Category, gate requestGate,
+) (ids.UUID, error) {
+	classes := classesCovering(category)
+	if len(classes) == 0 {
+		return ids.UUID{}, nil
+	}
+	rows, err := tx.Query(ctx, `
+		SELECT cp.id, cp.requires_double_opt_in, cp.class FROM consent_purpose cp
+		 WHERE cp.archived_at IS NULL AND cp.class = ANY($2)
+		   AND NOT EXISTS (SELECT 1 FROM contact_consent cc
+		                    WHERE cc.contact_id = $1 AND cc.purpose_id = cp.id AND cc.state = 'withdrawn')
+		 ORDER BY cp.created_at, cp.id`, contactID, classes)
+	if err != nil {
+		return ids.UUID{}, wrapEvidenceRead("the purpose a consent request would ask about", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var purpose ids.UUID
+		var asked askedPurpose
+		var class string
+		if err := rows.Scan(&purpose, &asked.requiresDOI, &class); err != nil {
+			return ids.UUID{}, wrapEvidenceRead("the purpose a consent request would ask about", err)
+		}
+		asked.class = messagingrules.PurposeClass(class)
+		if mayAskByMail(asked, gate) {
+			return purpose, nil
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return ids.UUID{}, wrapEvidenceRead("the purpose a consent request would ask about", err)
+	}
+	return ids.UUID{}, nil
 }
 
 // consentCoversTx answers whether the subject has granted consent to a

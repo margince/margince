@@ -46,7 +46,7 @@ func signatureBoundaries(lines []string) []int {
 	var starts []int
 	dash := -1
 	for i, line := range lines {
-		if isClosing(line) {
+		if IsClosing(line) {
 			starts = append(starts, i)
 		}
 		if dash < 0 && textlang.IsSigDash(line) {

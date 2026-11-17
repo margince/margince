@@ -24,7 +24,7 @@ import (
 // section last. The installation and the env contact are both in it.
 func advertisingPack(t *testing.T, e *channelConsentEnv, code string) *Store {
 	t.Helper()
-	messagingrules.Register(messagingrules.Rules{
+	testMessagingRules(t, messagingrules.Rules{
 		Jurisdiction: jurisdiction.Code(code), Version: 1,
 		Disclosures: []messagingrules.Disclosure{
 			{Kind: messagingrules.ControllerIdentity},
@@ -33,10 +33,11 @@ func advertisingPack(t *testing.T, e *channelConsentEnv, code string) *Store {
 			}},
 			{Kind: messagingrules.AdvertiserContact, MarketingOnly: true},
 		},
-		DataProtectionFollowsRecipient: true,
-		DisclosureLanguage:             "vi",
-		ClaimsNeedProof:                []string{"tốt nhất"},
-		RefusalSectionLast:             true,
+		DataProtectionFollowsRecipient:    true,
+		DisclosureLanguage:                "vi",
+		ClaimsNeedProof:                   []string{"tốt nhất"},
+		RefusalSectionLast:                true,
+		ForeignAdvertiserNeedsLocalAgency: true,
 	})
 	livesIn(t, e, code)
 	return e.store.WithInstallationCountry(
@@ -138,5 +139,36 @@ func TestCheckAdvertisingDraftAsksTheRecipientsPack(t *testing.T) {
 		"Offer", "Dear customer,\n\nThis is the best service for your company and its whole team.")
 	if err != nil || len(found) != 0 {
 		t.Errorf("a recipient under no pack answered %+v, %v; want nothing", found, err)
+	}
+}
+
+// An installation established outside the recipient's country is told, before
+// an advertising send, to advertise there through a local business. One
+// established there is not.
+func TestAnAdvertiserFromElsewhereIsToldToUseALocalAgency(t *testing.T) {
+	e := setupChannelConsent(t)
+	inside := advertisingPack(t, e, "yd")
+	ctx := withActivityCreate(e.ctx)
+	recipient := recipientAddress(e)
+	vietnameseOffer := "Kính gửi quý khách,\n\nChúng tôi xin giới thiệu dịch vụ của chúng tôi cho doanh nghiệp."
+
+	found, err := inside.CheckAdvertisingDraft(ctx, []string{recipient}, "[QC] Ưu đãi", vietnameseOffer)
+	if err != nil {
+		t.Fatalf("checking the draft: %v", err)
+	}
+	if len(found) != 0 {
+		t.Errorf("an installation inside the recipient's country got %+v, want no notice", found)
+	}
+
+	abroad := inside.WithInstallationCountry(
+		InstallationCountryFunc(func(context.Context, pgx.Tx) (jurisdiction.Code, error) {
+			return "yz", nil
+		}))
+	found, err = abroad.CheckAdvertisingDraft(ctx, []string{recipient}, "[QC] Ưu đãi", vietnameseOffer)
+	if err != nil {
+		t.Fatalf("checking the draft: %v", err)
+	}
+	if len(found) != 1 || found[0].Requirement != DraftForeignAdvertiser || found[0].Country != "yd" {
+		t.Fatalf("an installation outside the recipient's country got %+v, want the foreign-advertiser notice for yd", found)
 	}
 }
