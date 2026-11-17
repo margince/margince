@@ -41860,6 +41860,11 @@ type CompanyEmailDraft struct {
 	// Body Plain text, end to end. There is no rich-text storage format, no paste sanitiser and no HTML+text send pair, so a formatted draft would be a wire change rather than a toolbar.
 	Body string `json:"body"`
 
+	// CommunicationContext What the drafting instruction says this message is, for the composer to send with it:
+	// `requested_followup` when it asks to move an appointment. Absent otherwise. The send
+	// check still needs an agreed appointment with the recipient.
+	CommunicationContext *CommunicationContext `json:"communication_context,omitempty"`
+
 	// DraftRef Opaque reference identifying this served draft. Null here: recording a draft for voice learning is a WRITE, and this operation performs none.
 	DraftRef *string `json:"draft_ref,omitempty"`
 
@@ -49065,7 +49070,7 @@ type DirectCommunicationSendRequest struct {
 	// review's refusals changed since then, the decision is refused with `instruction_stale`
 	// and the director opens the review again. Without it, a decision cannot pass a refusal
 	// the subject made themselves (an objection, a withdrawal, a restriction or a request to
-	// stop), and neither can an agent's.
+	// stop).
 	ShownReasons *[]string `json:"shown_reasons,omitempty"`
 
 	// WarningVersion The compliance text they were shown. Recorded because a record naming no version cannot
@@ -119321,8 +119326,6 @@ func (siw *ServerInterfaceWrapper) DirectCommunicationSend(w http.ResponseWriter
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 

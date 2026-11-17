@@ -10,14 +10,32 @@ type Evidence = components["schemas"]["CommunicationEvidence"];
  */
 export function useReasonForAnchor(
   answering: string | undefined,
-  fields: Pick<ComposeFields, "setContext" | "setMeetingEvidence">,
+  fields: Pick<
+    ComposeFields,
+    "setContext" | "setMeetingEvidence" | "setReasonFromDraft"
+  >,
 ): void {
   const [reasonAnchor, setReasonAnchor] = useState(answering);
   if (reasonAnchor !== answering) {
     setReasonAnchor(answering);
     fields.setContext("");
     fields.setMeetingEvidence(undefined);
+    fields.setReasonFromDraft(false);
   }
+}
+
+/** A reason the sender picks, which drops what a drafted reason rested on. */
+export function pickReason(
+  fields: Pick<
+    ComposeFields,
+    "setContext" | "setMeetingEvidence" | "setReasonFromDraft"
+  >,
+): (next: ComposeFields["context"]) => void {
+  return (next) => {
+    fields.setContext(next);
+    fields.setMeetingEvidence(undefined);
+    fields.setReasonFromDraft(false);
+  };
 }
 
 /** The deal among a message's links, which a deal follow-up rests on. */

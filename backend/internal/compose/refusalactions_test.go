@@ -115,6 +115,7 @@ func TestARefusalOffersOnlyWhatThisCallerCanDo(t *testing.T) {
 			name: "a passportless agent", actor: principal.Principal{Type: principal.PrincipalAgent}, review: held,
 		},
 		{
+			// The decision is the user's own, so their agent is not offered it.
 			name: "a user's agent holding the grant",
 			actor: principal.Principal{
 				Type: principal.PrincipalAgent, PassportID: ids.NewV7(), OnBehalfOf: ids.NewV7(),
@@ -124,7 +125,7 @@ func TestARefusalOffersOnlyWhatThisCallerCanDo(t *testing.T) {
 					},
 				},
 			},
-			review: held, want: []string{"direct_send"},
+			review: held,
 		},
 		{
 			name:   "a user's agent without the grant",

@@ -47,24 +47,23 @@ func TestARepMayDirectASendPastEveryPolicyRefusal(t *testing.T) {
 	}
 }
 
-// An agent may record its user's decision in their conversation. A scheduled
-// run has nobody present, so it may read a review but not decide it.
-func TestOnlyAnAttendedAgentStatesItsUsersDecision(t *testing.T) {
+// A refused send's decision is the user's own, so only a human at the keyboard
+// records it or finds its held message. An agent on their passport may read the
+// review, and may not decide it, attended or not.
+func TestOnlyAHumanDecidesARefusedSend(t *testing.T) {
+	human := principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalHuman, ID: "human:rep", UserID: ids.NewV7()})
+	if err := requireAHumanAtTheKeyboard(human); err != nil {
+		t.Fatalf("a human was refused: %v", err)
+	}
 	agent := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:t", OnBehalfOf: ids.NewV7(), PassportID: ids.NewV7(),
 	})
-	if err := requireSomebodyPresent(agent); err != nil {
-		t.Fatalf("an attended agent was refused: %v", err)
+	if err := requireAUserOrTheirAgent(agent); err != nil {
+		t.Errorf("an agent may not read the review: %v", err)
 	}
-	for name, ctx := range map[string]context.Context{
-		"unattended":    principal.WithUnattended(agent),
-		"scheduled run": principal.WithAgentRunID(agent, ids.NewV7()),
-	} {
-		if err := requireAUserOrTheirAgent(ctx); err != nil {
-			t.Errorf("%s agent may not read the review: %v", name, err)
-		}
-		if err := requireSomebodyPresent(ctx); !errors.Is(err, apperrors.ErrPermissionDenied) {
-			t.Errorf("%s agent deciding = %v, want ErrPermissionDenied", name, err)
+	for name, ctx := range map[string]context.Context{"attended": agent, "unattended": principal.WithUnattended(agent)} {
+		if err := requireAHumanAtTheKeyboard(ctx); !errors.Is(err, apperrors.ErrPermissionDenied) {
+			t.Errorf("an %s agent deciding = %v, want ErrPermissionDenied", name, err)
 		}
 	}
 }

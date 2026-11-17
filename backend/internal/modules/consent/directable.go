@@ -28,7 +28,8 @@ func (r Review) DirectableBy(ctx context.Context) bool {
 }
 
 func directableBy(ctx context.Context, refusals []RefusedRecipient) bool {
-	if len(refusals) == 0 || !auth.Allows(ctx, entityCommunicationException, principal.ActionCreate) {
+	if len(refusals) == 0 || requireAHumanAtTheKeyboard(ctx) != nil ||
+		!auth.Allows(ctx, entityCommunicationException, principal.ActionCreate) {
 		return false
 	}
 	for _, refusal := range refusals {
@@ -71,14 +72,14 @@ func mayDirect(ctx context.Context, shown []string, refusals []RefusedRecipient)
 	if !directableBy(ctx, refusals) {
 		return refuseDirection(ctx, refusals)
 	}
-	return refusalsAsShown(ctx, shown, refusals)
+	return refusalsAsShown(shown, refusals)
 }
 
 // refusalsAsShown holds a decision to the refusals its director read. A resend
 // can rewrite the review's refusals while it waits, so a list that no longer
 // matches is stale. Only a user who named what they read passes a subject's own
-// stop. An agent never does.
-func refusalsAsShown(ctx context.Context, shown []string, refusals []RefusedRecipient) error {
+// stop.
+func refusalsAsShown(shown []string, refusals []RefusedRecipient) error {
 	if shown != nil {
 		now := make([]string, 0, len(refusals))
 		for _, r := range refusals {
@@ -88,7 +89,7 @@ func refusalsAsShown(ctx context.Context, shown []string, refusals []RefusedReci
 			return &InstructionStaleError{Why: "the refusals changed since you read them; open the review again"}
 		}
 	}
-	if shown != nil && actingAgent(ctx) == nil {
+	if shown != nil {
 		return nil
 	}
 	for _, r := range refusals {

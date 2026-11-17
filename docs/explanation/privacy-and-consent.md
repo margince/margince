@@ -191,9 +191,9 @@ consent's settings. The two are different authorities. Consent's settings decide
 rules. This decides who may act against the answer those rules gave about one contact. An
 installation that handed over the first has not handed over the second with it.
 
-The check is `requireAUserOrTheirAgent` plus the grant, so a connector cannot make one. A user's agent
-carries out the user's own decision on `send_outbound`, with the `send` scope, and asks first.
-`directed_by` names the user who took it on and `directed_by_agent` names the agent.
+The check is `requireAHumanAtTheKeyboard` plus the grant, so only the user takes the decision, in a
+session. The route is human-only, and no agent or connector records one. `directed_by` names the user.
+`directed_by_agent` is never written; older rows may carry it.
 
 Every role that sends mail holds the grant: `rep`, `manager`, `management` and `admin`. The grant
 alone does not say which refusals a seat may send past. Each refusal reason declares what can
@@ -206,7 +206,7 @@ resolve it in `commsauthz.RemediesFor`.
 - A hard bounce and a recipient that resolves to no single contact list nothing. No decision makes
   a dead address accept mail, and an unresolved recipient was never checked for its stops.
 - A decision past a contact's own stop needs the reasons the user deciding was shown (`shown_reasons`).
-  An agent cannot take it, and neither can a scheduled run take any decision.
+  No agent takes any of these decisions.
 
 `Review.DirectableBy` is the check both `DirectSend` and a refusal's actions ask.
 Staging and the transmit check ask `DecisionSet.ExceptionMayAnswer` and
