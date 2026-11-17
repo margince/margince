@@ -25,7 +25,6 @@ func TestEveryReasonDeclaresItsRemedy(t *testing.T) {
 	}
 }
 
-
 // TestNoAnswerOrFactSuppliesConsentOrLiftsAStop holds that advertising and every
 // stop stay out of reach of a sender's answer or a recorded fact.
 func TestNoAnswerOrFactSuppliesConsentOrLiftsAStop(t *testing.T) {
@@ -52,7 +51,6 @@ func TestRemediesForReturnsACopyAndNothingForAnUnknownReason(t *testing.T) {
 		t.Error("an undeclared reason offers a remedy")
 	}
 }
-
 
 // A bounced address stops the message, whoever recorded the exception.
 func TestNoStaffExceptionAnswersAHardBounce(t *testing.T) {

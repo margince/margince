@@ -9,7 +9,7 @@ import { asksWhy } from "../../lib/compose-context";
 import { remedyCategoryOf } from "../../lib/sendstatus";
 import type { Activity } from "./compose";
 import { DraftContentNotice } from "./compose.notices";
-import { ComposeOutcome, ComposeWhy, MailSendNotices } from "./compose.parts";
+import { ComposeOutcome, MailSendNotices } from "./compose.parts";
 import { RecordConversationFact } from "./composecontextfact";
 import { ComposeDeal, type DealChoiceState } from "./composedeal";
 import type { ComposeFields } from "./composefields";
@@ -19,6 +19,7 @@ import {
   type ReasonTarget,
 } from "./composereason";
 import type { ComposeSend } from "./composesend";
+import { ComposeWhy } from "./composewhy";
 
 type Preview = components["schemas"]["SendAuthorizationPreview"];
 
