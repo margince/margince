@@ -3212,6 +3212,7 @@
   "lawfulBasis.askConsent": "Xin sự đồng ý",
   "lawfulBasis.askFailed": "Chưa gửi được yêu cầu xin sự đồng ý. Hãy thử lại.",
   "lawfulBasis.asked": "Đã gửi yêu cầu xin sự đồng ý đến {address}. Thư của bạn chưa được gửi.",
+  "lawfulBasis.askPartial": "Đã gửi yêu cầu xin sự đồng ý đến {asked}. Chưa gửi được đến {failed}. Hãy thử lại để chỉ hỏi những người này.",
   "lawfulBasis.failed": "Chưa ghi nhận được xác nhận. Hãy thử lại.",
   "sendPermission.unanswered": "Lần kiểm tra trước khi gửi chưa hoàn tất. Khi gửi sẽ kiểm tra lại.",
   "sendPermission.reason.objected": "Người nhận đã phản đối tin tiếp thị, nên không gửi tin tiếp thị cho họ. Thư trả lời hoặc thư họ đã yêu cầu vẫn có thể gửi.",

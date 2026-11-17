@@ -215,9 +215,7 @@ export function useLawfulBasisGate(preview: Preview | undefined) {
       confirmVariant="danger"
       pending={record.isPending}
       confirmDisabled={ask.isPending}
-      error={
-        record.error ? problemMessageOf(record.error, t) : askMessage
-      }
+      error={record.error ? problemMessageOf(record.error, t) : askMessage}
       actionsLead={
         requests.length > 0 ? (
           <Button
