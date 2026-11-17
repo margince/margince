@@ -3458,6 +3458,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "roster.failedTeams": "Die Teams konnten nicht geladen werden.",
   "owner.rosterFailed":
     "Die Teammitglieder konnten nicht geladen werden. Lade die Seite neu, um eines zu wählen.",
+  "ownerPick.change": "Verantwortung ändern",
+  "ownerPick.search": "Teammitglieder suchen",
+  "ownerPick.done": "{name} zugewiesen",
   "ref.notInRoster":
     "Aktuell zugewiesen (nicht mehr in der Liste der Nutzenden)",
   "picker.noMatch": "Kein Treffer",
@@ -19791,9 +19794,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "project.owner": "Verantwortlich",
   "project.ownerMe": "Selbst",
   "project.assignOwner": "Einem Teammitglied zuweisen",
-  "ownerPick.change": "Verantwortung ändern",
-  "ownerPick.search": "Teammitglieder suchen",
-  "ownerPick.done": "{name} zugewiesen",
   "project.description": "Beschreibung",
   "project.targetEnd": "Geplantes Enddatum",
   "project.new": "Neues Projekt",

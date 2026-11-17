@@ -3360,6 +3360,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "roster.failedTeams": "Không thể tải danh sách nhóm.",
   "owner.rosterFailed":
     "Không thể tải danh sách thành viên. Hãy tải lại trang để chọn một người.",
+  "ownerPick.change": "Đổi người chịu trách nhiệm",
+  "ownerPick.search": "Tìm đồng nghiệp",
+  "ownerPick.done": "Đã giao cho {name}",
   "ref.notInRoster":
     "Hiện đang được giao (không còn trong danh sách thành viên)",
   "picker.noMatch": "Không có kết quả phù hợp",
@@ -19295,9 +19298,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "project.owner": "Người chịu trách nhiệm",
   "project.ownerMe": "Tôi",
   "project.assignOwner": "Giao cho một đồng nghiệp",
-  "ownerPick.change": "Đổi người chịu trách nhiệm",
-  "ownerPick.search": "Tìm đồng nghiệp",
-  "ownerPick.done": "Đã giao cho {name}",
   "project.description": "Mô tả",
   "project.targetEnd": "Ngày kết thúc dự kiến",
   "project.new": "Dự án mới",

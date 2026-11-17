@@ -118,8 +118,6 @@ export function LeadPulse({ lead }: Readonly<{ lead: Lead }>): ReactNode {
   );
 }
 
-// EntityRef falls back to the owner's id only once its read settled without a
-// name, so a bare uuid never stands in while the name is on its way.
 export function LeadOwnerControl({
   lead,
   writer,
@@ -173,11 +171,11 @@ export function LeadOwnerControl({
     <>
       <span>{owner}</span>{" "}
       <OwnerPick
-        ownerId={lead.owner_id}
-        assign={(ownerId) => writer.assign(ownerId, lead, meId)}
+        record={lead}
+        assign={(ownerId, opened) => writer.assign(ownerId, opened, meId)}
         invalidate="leads"
         recordKey="lead"
-        recordId={lead.id}
+        pending={writer.patch.isPending}
       />
     </>
   );

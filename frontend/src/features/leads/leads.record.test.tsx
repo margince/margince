@@ -533,7 +533,7 @@ describe("LeadScreen — owner display + assign to me (P-11)", () => {
     expect(patched).toBe(false);
   });
 
-  it("writes the owner against the version on screen when the colleague is picked", async () => {
+  it("writes the owner against the version the list opened on", async () => {
     let served = lead.version;
     let ifMatch: string | null = null;
     stubFetchWithMe(async (url, method, request) => {
@@ -557,16 +557,55 @@ describe("LeadScreen — owner display + assign to me (P-11)", () => {
     });
     render(<LeadScreen id="l-1" />, client);
     const user = userEvent.setup();
-    await screen.findByRole("button", { name: "Change owner" });
+    await user.click(
+      await screen.findByRole("button", { name: "Change owner" }),
+    );
+    const option = await screen.findByRole("option", { name: "Dana Fischer" });
 
+    // The lead moves on while the list is open.
     served = lead.version + 1;
     await act(() => client.refetchQueries({ queryKey: leadKey("l-1") }));
-    await user.click(screen.getByRole("button", { name: "Change owner" }));
+    await user.click(option);
+
+    await waitFor(() => expect(ifMatch).toBe(String(lead.version)));
+  });
+
+  it("refuses an owner pick while another write on the lead is out", async () => {
+    const reassigned: unknown[] = [];
+    stubFetchWithMe(async (url, method, request) => {
+      if (url.includes("/users")) {
+        return jsonResponse({
+          data: [{ id: "u-42", display_name: "Dana Fischer" }],
+          page: { next_cursor: null, has_more: false },
+        });
+      }
+      if (method === "PATCH" && url.includes("/leads/l-1")) {
+        const body = JSON.parse(await request.text());
+        if ("owner_id" in body) {
+          reassigned.push(body);
+        }
+        // The score write never answers, so it stays out for the whole test.
+        return new Promise<Response>(() => undefined);
+      }
+      return jsonResponse({
+        ...lead,
+        score: 90,
+        score_override_reason: "Strong buying signal",
+        score_computed: 72,
+      });
+    }, "u-9");
+    render(<LeadScreen id="l-1" />);
+    const user = userEvent.setup();
     await user.click(
-      await screen.findByRole("option", { name: "Dana Fischer" }),
+      await screen.findByRole("button", { name: "Clear override" }),
     );
 
-    await waitFor(() => expect(ifMatch).toBe(String(lead.version + 1)));
+    await user.click(screen.getByRole("button", { name: "Change owner" }));
+    const option = await screen.findByRole("option", { name: "Dana Fischer" });
+    expect(option).toHaveAttribute("aria-disabled", "true");
+    await user.click(option);
+
+    expect(reassigned).toEqual([]);
   });
 
   // The fixture above says `writable: true`, which an ownerless lead is not.

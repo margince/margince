@@ -18,7 +18,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { ProblemError } from "../lib/problem";
-import { OwnerPick } from "./ownerpick";
+import { meFixture } from "../testing/mefixture";
+import { type OpenedRecord, OwnerPick } from "./ownerpick";
 
 afterEach(() => {
   cleanup();
@@ -51,11 +52,15 @@ const COLLEAGUES = [
 
 type RosterAnswer = "everyone" | "refused" | "endless";
 
-function stubRoster(answer: RosterAnswer = "everyone") {
+function stubRoster(answer: RosterAnswer = "everyone", viewer = "u-viewer") {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL) => {
       const url = input instanceof Request ? input.url : String(input);
+      if (new URL(url, "https://test.local").pathname.endsWith("/me")) {
+        const me = meFixture();
+        return jsonResponse({ ...me, user: { ...me.user, id: viewer } });
+      }
       if (!url.includes("/users")) {
         return jsonResponse({ data: [], page: { next_cursor: null } });
       }
@@ -76,36 +81,43 @@ function stubRoster(answer: RosterAnswer = "everyone") {
   );
 }
 
-function render({
-  ownerId = null,
-  assign = vi.fn(async () => undefined),
-  onAssigned,
-}: Readonly<{
+type Harness = Readonly<{
   ownerId?: string | null;
-  assign?: (ownerId: string) => Promise<unknown>;
+  version?: number;
+  assign?: (ownerId: string, opened: OpenedRecord) => Promise<unknown>;
   onAssigned?: () => void;
-}> = {}) {
+  pending?: boolean;
+}>;
+
+function render(props: Harness = {}) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  rtlRender(
+  const ui = ({
+    ownerId = null,
+    version = 5,
+    assign = vi.fn(async () => undefined),
+    onAssigned,
+    pending,
+  }: Harness) => (
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
         <ToastProvider>
           <OwnerPick
-            ownerId={ownerId}
+            record={{ id: "r-1", version, owner_id: ownerId }}
             assign={assign}
             invalidate="projects"
             recordKey="project"
-            recordId="r-1"
             onAssigned={onAssigned}
+            pending={pending}
           />
           <ToastRegion />
         </ToastProvider>
       </LocaleProvider>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
-  return client;
+  const { rerender } = rtlRender(ui(props));
+  return { client, rerender: (next: Harness) => rerender(ui(next)) };
 }
 
 async function openPicker(user: ReturnType<typeof userEvent.setup>) {
@@ -142,7 +154,10 @@ describe("OwnerPick", () => {
 
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(assign).toHaveBeenCalledTimes(1);
-    expect(assign).toHaveBeenCalledWith("u-42");
+    expect(assign).toHaveBeenCalledWith(
+      "u-42",
+      expect.objectContaining({ id: "r-1", version: 5 }),
+    );
     expect(onAssigned).toHaveBeenCalledTimes(1);
     expect(await screen.findByText("Assigned to Jane Doe")).toBeInTheDocument();
   });
@@ -151,7 +166,7 @@ describe("OwnerPick", () => {
     stubRoster();
     const write = heldWrite();
     const user = userEvent.setup();
-    const client = render({ assign: write.assign });
+    const { client } = render({ assign: write.assign });
 
     const panel = await openPicker(user);
     await user.click(await panel.findByRole("option", { name: "Jane Doe" }));
@@ -286,5 +301,51 @@ describe("OwnerPick", () => {
     await panel.findByRole("option", { name: "Jane Doe" });
 
     expect(panel.getByText("Showing part of the list")).toBeInTheDocument();
+  });
+
+  it("writes against the record as the list opened on it, though it changed since", async () => {
+    stubRoster();
+    const assign = vi.fn(async () => undefined);
+    const user = userEvent.setup();
+    const { rerender } = render({ assign, version: 5 });
+
+    const panel = await openPicker(user);
+    await panel.findByRole("option", { name: "Jane Doe" });
+    rerender({ assign, version: 6 });
+    await user.click(panel.getByRole("option", { name: "Jane Doe" }));
+
+    await waitFor(() => expect(assign).toHaveBeenCalledTimes(1));
+    expect(assign).toHaveBeenCalledWith(
+      "u-42",
+      expect.objectContaining({ version: 5 }),
+    );
+  });
+
+  it("refuses a pick while another write on the record is out", async () => {
+    stubRoster();
+    const assign = vi.fn(async () => undefined);
+    const user = userEvent.setup();
+    render({ assign, pending: true });
+
+    const panel = await openPicker(user);
+    const option = await panel.findByRole("option", { name: "Jane Doe" });
+    expect(option).toHaveAttribute("aria-disabled", "true");
+    await user.click(option);
+
+    expect(assign).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("lists the viewer first, under their own name", async () => {
+    stubRoster("everyone", "u-7");
+    const user = userEvent.setup();
+    render();
+
+    const panel = await openPicker(user);
+    await waitFor(() =>
+      expect(
+        panel.getAllByRole("option").map((option) => option.textContent),
+      ).toEqual(["Omar Haddad", "Jane Doe"]),
+    );
   });
 });

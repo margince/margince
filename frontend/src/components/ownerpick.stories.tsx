@@ -5,9 +5,11 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, within } from "storybook/test";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { ProblemError } from "../lib/problem";
+import { meFixture } from "../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../testing/story-utils";
 import { OwnerPick } from "./ownerpick";
@@ -22,10 +24,12 @@ const meta: Meta = {
 export default meta;
 type Story = StoryObj;
 
+const VIEWER = meFixture().user.id;
+
 const COLLEAGUES = [
   { id: "u-42", display_name: "Jane Doe", email: "jane@example.test" },
   { id: "u-7", display_name: "Omar Haddad", email: "omar@example.test" },
-  { id: "u-9", display_name: "Lena Brandt", email: "lena@example.test" },
+  { id: VIEWER, display_name: "Lena Brandt", email: "lena@example.test" },
 ];
 
 const LONG_NAMES = [
@@ -56,14 +60,14 @@ function rosterAnswer(roster: Roster, url: URL): Response {
       403,
     );
   }
-  const people = {
+  const listed = {
     colleagues: COLLEAGUES,
     partial: COLLEAGUES,
     long: LONG_NAMES,
     empty: [],
   }[roster];
   return jsonResponse({
-    data: url.searchParams.has("cursor") ? [] : people,
+    data: url.searchParams.has("cursor") ? [] : listed,
     page: { next_cursor: roster === "partial" ? "more" : null },
   });
 }
@@ -86,16 +90,18 @@ function Picker({
   write = "lands",
   ownerId = "u-7",
 }: Readonly<{ roster?: Roster; write?: Write; ownerId?: string | null }>) {
-  installFetchStub({ "GET /users": (_, url) => rosterAnswer(roster, url) });
+  installFetchStub({
+    "GET /me": meRoute({}),
+    "GET /users": (_, url) => rosterAnswer(roster, url),
+  });
   return (
     <StoryProviders>
       <ToastProvider>
         <OwnerPick
-          ownerId={ownerId}
+          record={{ id: "p-1", version: 3, owner_id: ownerId }}
           assign={() => assign(write)}
           invalidate="projects"
           recordKey="project"
-          recordId="p-1"
         />
         <ToastRegion />
       </ToastProvider>
@@ -119,7 +125,7 @@ async function pickJane(canvasElement: HTMLElement) {
 /** The trigger at rest. */
 export const Default: Story = { render: () => <Picker /> };
 
-/** Opened on the roster, the current owner marked. */
+/** Opened on the roster: the viewer first, the current owner marked. */
 export const Open: Story = {
   render: () => <Picker />,
   play: async ({ canvasElement }) => {
@@ -127,6 +133,9 @@ export const Open: Story = {
     await expect(
       await list.findByRole("option", { name: "Omar Haddad" }),
     ).toHaveAttribute("aria-selected", "true");
+    await expect(list.getAllByRole("option")[0]).toHaveTextContent(
+      "Lena Brandt",
+    );
   },
 };
 export const OpenDark: Story = { ...Open, globals: { theme: "dark" } };

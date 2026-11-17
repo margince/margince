@@ -3378,6 +3378,9 @@ export const en = {
   "roster.failedUsers": "Colleagues did not load.",
   "roster.failedTeams": "Teams did not load.",
   "owner.rosterFailed": "Colleagues did not load. Reload the page to pick one.",
+  "ownerPick.change": "Change owner",
+  "ownerPick.search": "Search colleagues",
+  "ownerPick.done": "Assigned to {name}",
   "ref.notInRoster": "Currently assigned (no longer in the user list)",
 
   // A record search that ANSWERED and found nothing. Distinct from a search
@@ -19620,9 +19623,6 @@ export const en = {
   "project.owner": "Owner",
   "project.ownerMe": "Me",
   "project.assignOwner": "Assign to a colleague",
-  "ownerPick.change": "Change owner",
-  "ownerPick.search": "Search colleagues",
-  "ownerPick.done": "Assigned to {name}",
   "project.description": "Description",
   "project.targetEnd": "Target end date",
   "project.new": "New project",

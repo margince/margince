@@ -193,17 +193,12 @@ function DealOwnerPick({ deal }: Readonly<{ deal: Deal }>) {
   const closeMenu = useCloseOverflowMenu();
   return (
     <OwnerPick
-      ownerId={deal.owner_id}
-      assign={(ownerId) =>
-        saveDealEdit(
-          openDealEdit(deal),
-          { owner_id: ownerId },
-          deal.masked_fields ?? [],
-        )
+      record={openDealEdit(deal)}
+      assign={(ownerId, opened) =>
+        saveDealEdit(opened, { owner_id: ownerId }, deal.masked_fields ?? [])
       }
       invalidate="deals"
       recordKey="deal"
-      recordId={deal.id}
       onAssigned={closeMenu}
     />
   );

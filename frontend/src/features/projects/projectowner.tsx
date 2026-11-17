@@ -20,13 +20,13 @@ export function AssignProjectOwnerAction({
   const t = useT();
   return (
     <OwnerPick
-      ownerId={project.owner_id}
-      assign={async (ownerId) =>
+      record={project}
+      assign={async (ownerId, opened) =>
         unwrap(
           await api.PATCH("/projects/{id}", {
             params: {
-              path: { id: project.id },
-              ...ifMatch(requireVersion(project.version)),
+              path: { id: opened.id },
+              ...ifMatch(requireVersion(opened.version)),
             },
             body: { owner_id: ownerId },
           }),
@@ -34,7 +34,6 @@ export function AssignProjectOwnerAction({
       }
       invalidate="projects"
       recordKey="project"
-      recordId={project.id}
       label={t("project.assignOwner")}
       reasonId={disabledReasonId}
     />

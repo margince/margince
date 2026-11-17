@@ -186,8 +186,8 @@ const COLLEAGUES = [
   { id: "u-4", display_name: "Omar Haddad", email: "omar@example.test" },
 ];
 
-function roster(people: readonly unknown[]): Response {
-  return jsonResponse({ data: people, page: { next_cursor: null } });
+function roster(colleagues: readonly unknown[]): Response {
+  return jsonResponse({ data: colleagues, page: { next_cursor: null } });
 }
 
 function ownedBy(routes?: RouteMap) {
