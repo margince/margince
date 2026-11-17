@@ -28,7 +28,10 @@ const FIELD_LABELS: Readonly<Record<string, MessageKey>> = {
   domain: "contactCase.field.domain",
 };
 
-function EvidenceLine({ evidence }: Readonly<{ evidence: Evidence }>) {
+// A Worklist pair row carries the same comparison without a score.
+export function EvidenceLine({
+  evidence,
+}: Readonly<{ evidence: Pick<Evidence, "field"> & Partial<Evidence> }>) {
   const t = useT();
   const values = [evidence.left_value, evidence.right_value].filter(Boolean);
   return (

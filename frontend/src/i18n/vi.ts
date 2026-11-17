@@ -19536,6 +19536,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.pair.notDuplicate": "Không trùng nhau",
   "worklist.pair.mergeBlocked":
     "Không thể gộp hai hồ sơ này: cả hai đều có dự án đang chạy, và không có gì cho biết công việc nào thuộc về hồ sơ nào. Vẫn có thể đánh dấu là không trùng nhau.",
+  "worklist.pair.created": "Tạo ngày {date}",
+  "worklist.pair.dismissed": "Đã đánh dấu là không trùng nhau.",
   "worklist.pair.related": "{count} hồ sơ liên kết",
   "worklist.pair.failed": "Không thể xử lý cặp này. Thử lại.",
   "worklist.pair.refused":

@@ -19813,6 +19813,8 @@ export const en = {
   "worklist.pair.notDuplicate": "Not duplicates",
   "worklist.pair.mergeBlocked":
     "These records cannot be merged: both have live projects, and nothing shows which work belongs where. You can still mark them as not duplicates.",
+  "worklist.pair.created": "Created {date}",
+  "worklist.pair.dismissed": "Marked as not duplicates.",
   "worklist.pair.related": "{count} linked",
   "worklist.pair.failed": "Pair was not resolved. Retry.",
   "worklist.pair.refused":

@@ -20039,6 +20039,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.pair.notDuplicate": "Keine Duplikate",
   "worklist.pair.mergeBlocked":
     "Diese Datensätze können nicht zusammengeführt werden, da beide laufende Projekte haben und nicht erkennbar ist, welche Arbeit wohin gehört. Du kannst trotzdem festhalten, dass es keine Duplikate sind.",
+  "worklist.pair.created": "Erstellt am {date}",
+  "worklist.pair.dismissed": "Als keine Duplikate markiert.",
   "worklist.pair.related": "{count} verknüpft",
   "worklist.pair.failed":
     "Das Paar konnte nicht geklärt werden. Bitte versuche es erneut.",
