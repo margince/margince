@@ -16,7 +16,7 @@ import (
 // the process's one binding, which every other load here also writes.
 func TestTheWorkerLoadLocksAStoredSettingItsEnvironmentSets(t *testing.T) {
 	t.Cleanup(func() { compose.UseConfig(nil) })
-	_, loaded, err := loadWorkerConfig(nil, []string{workerTestDSN, "MARGINCE_INSTALLATION_SEND_RATE_LIMIT=7"})
+	_, loaded, err := bootWorkerConfig(nil, []string{workerTestDSN, "MARGINCE_INSTALLATION_SEND_RATE_LIMIT=7"})
 	if err != nil {
 		t.Fatal(err)
 	}

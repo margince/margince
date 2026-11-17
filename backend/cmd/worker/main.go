@@ -276,7 +276,7 @@ type workerBoot struct {
 // None opens a core connection, so a misconfigured deployment fails before a
 // pool, bus client or listener exists. A unit's Start may do its own I/O.
 func configureWorker(ctx context.Context, args []string, stdout io.Writer) (workerBoot, error) {
-	cfg, loaded, err := loadWorkerConfig(args, config.Environ())
+	cfg, loaded, err := bootWorkerConfig(args, config.Environ())
 	if err != nil {
 		return workerBoot{}, err
 	}

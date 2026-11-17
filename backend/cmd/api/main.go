@@ -72,7 +72,7 @@ func start(ctx context.Context, args []string, stdout io.Writer) error {
 // listener — and the order it reads in is the order the process depends on;
 // boot.go holds the phases.
 func run(ctx context.Context, args []string, stdout io.Writer) error {
-	cfg, loaded, err := loadAPIConfig(args, config.Environ())
+	cfg, loaded, err := bootAPIConfig(args, config.Environ())
 	if err != nil {
 		return err
 	}
