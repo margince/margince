@@ -1,8 +1,8 @@
 /** @vitest-environment happy-dom */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-// Each case gets the modules as a fresh page load has them: the history depth
-// counted, and any traversal still in flight, belong to one load.
+// Each case gets the modules as a fresh page load has them. The history depth
+// and an in-flight traversal belong to one load.
 let depth: typeof import("./historydepth");
 let nav: typeof import("./navigatefrom");
 
