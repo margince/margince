@@ -3,9 +3,17 @@
 
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ANA, contactCase } from "../testing/contactcase.fixtures";
+import { ToastProvider, ToastRegion } from "../design-system/toast";
+import { routeHash } from "../lib/router";
+import {
+  ANA,
+  BEN,
+  contactCase,
+  previewOutcome,
+} from "../testing/contactcase.fixtures";
 import {
   jsonResponse,
   StoryProviders,
@@ -16,14 +24,18 @@ import { ContactCaseEntry } from "./contactcase.entry";
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  globalThis.location.hash = "";
 });
 
 const CASE_PATH = `/dedupe/contact-cases/${ANA}`;
 
-function mount() {
+function mount(followSurvivor = false) {
   return render(
     <StoryProviders>
-      <ContactCaseEntry contactId={ANA} />
+      <ToastProvider>
+        <ContactCaseEntry contactId={ANA} followSurvivor={followSurvivor} />
+        <ToastRegion />
+      </ToastProvider>
     </StoryProviders>,
   );
 }
@@ -52,5 +64,46 @@ describe("the door to a contact's duplicate case", () => {
     expect(
       await screen.findByRole("button", { name: "Possible duplicates (4+)" }),
     ).toBeVisible();
+  });
+
+  it("opens the contact that remained, and says the merge happened", async () => {
+    let merged = false;
+    const outcome = previewOutcome({
+      survivor_id: BEN,
+      merged_ids: [ANA],
+      committed: true,
+    });
+    stubWithSession(
+      {
+        [`GET ${CASE_PATH}`]: () =>
+          merged ? jsonResponse(null) : jsonResponse(contactCase()),
+        [`POST ${CASE_PATH}/preview`]: () =>
+          jsonResponse({ ...outcome, committed: false }),
+        [`POST ${CASE_PATH}/merge`]: () => {
+          merged = true;
+          return jsonResponse(outcome);
+        },
+      },
+      {},
+    );
+    const user = userEvent.setup();
+    mount(true);
+    await user.click(await screen.findByTestId("contact-case-entry"));
+    await user.click(
+      await screen.findByRole("checkbox", { name: /Mira Kovač/ }),
+    );
+    await user.click(
+      screen.getByRole("radio", { name: "Keep details of Mira Kovač" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Preview merge" }));
+    await user.click(
+      await screen.findByRole("button", { name: "Merge 2 contacts" }),
+    );
+    await waitFor(() =>
+      expect(globalThis.location.hash).toBe(
+        routeHash({ screen: "contacts", id: BEN }),
+      ),
+    );
+    expect(await screen.findByText("Contacts merged")).toBeVisible();
   });
 });
