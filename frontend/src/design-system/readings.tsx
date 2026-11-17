@@ -231,7 +231,7 @@ export function Chip({
     // It is a size on the primitive, like `Meter`'s dense rung, so one author
     // owns the geometry.
     dense?: boolean;
-    // A name the reader must read whole, such as a person's: it breaks across
+    // A name the reader must read whole, such as a contact's: it breaks across
     // lines inside its container instead of running past it.
     wrap?: boolean;
   } & (
