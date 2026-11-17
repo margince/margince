@@ -51,6 +51,18 @@
   ],
   "judges": [
     {
+      "model": "claude-haiku-5-5",
+      "scored": 154,
+      "passed": 152,
+      "failed": 2,
+      "harness_artifacts": 1,
+      "accuracy": "98.7%",
+      "errors": [
+        "case22/claims-everything-is-synced",
+        "case23/lists-slots-and-says-nothing-about-her"
+      ]
+    },
+    {
       "model": "claude-opus-5",
       "scored": 113,
       "passed": 111,
@@ -64,17 +76,15 @@
     },
     {
       "model": "claude-haiku-4-5-20251001",
-      "scored": 113,
-      "passed": 108,
-      "failed": 5,
+      "scored": 154,
+      "passed": 151,
+      "failed": 3,
       "harness_artifacts": 1,
-      "accuracy": "95.6%",
+      "accuracy": "98.1%",
       "errors": [
-        "case22/claims-the-feeds-were-checked",
-        "case32/folds-the-wrong-word-away",
-        "case6/disagrees-about-something-else",
-        "case6/implies-an-october-recurrence",
-        "case6/invents-a-second-october-event"
+        "case22/claims-everything-is-synced",
+        "case50/reports-the-two-causes",
+        "case6/implies-an-october-recurrence"
       ]
     },
     {

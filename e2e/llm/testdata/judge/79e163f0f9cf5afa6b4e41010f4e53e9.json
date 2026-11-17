@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer reports counts and that Strategic Accts is folded into Strategic Account, but never states the exec-sponsor meaning for Strategic Account.",
+  "model": "claude-haiku-5-5",
+  "criterion": "Criterion 3. The answer reports that the word which survives, Strategic Account, now carries the meaning the user asked for — an account with a named exec sponsor. Any wording of that meaning will do, in any language. Answer no if the answer never reports the description at all, and no if the description it reports belongs to the word that goes. Read the spelling, not the answer's own account of the fold: the meaning must be reported on Strategic Account. An answer that reports it on Strategic Accts answers no, also when that answer itself calls Strategic Accts the survivor.",
+  "answer": "The tag list holds both, and their own reads carry the counts: Strategic Account 41 accounts, Strategic Accts 3.\n\nStrategic Accts is the one that goes, and its 3 records move onto Strategic Account. The fold has gone through, so the records already carry the surviving word.\n\nThat leaves you with one word for this again."
+}
