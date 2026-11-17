@@ -25,6 +25,21 @@ import (
 )
 
 func runDataTasks(ctx context.Context, args []string, stdout, stderr io.Writer) error {
+	return dataTaskCommand{
+		operation: compose.DataTaskOperation, executor: compose.DataTaskExecute, useConfig: compose.UseConfig,
+	}.run(ctx, args, stdout, stderr)
+}
+
+// dataTaskCommand holds the two ways in to the corrections, and how the command
+// binds its configuration to the process. A test replaces them, to prove
+// execute never reaches the operation that queues work for the worker.
+type dataTaskCommand struct {
+	operation func(context.Context, *pgxpool.Pool, string) ([]datatask.Progress, error)
+	executor  func(context.Context, *pgxpool.Pool, int) (compose.DataTaskRun, error)
+	useConfig func(*config.Config)
+}
+
+func (c dataTaskCommand) run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	if len(args) == 0 {
 		return errors.New("usage: migrate data-tasks <status|estimate|run|execute> [--wait] [--max-batches n] --dsn <dsn>")
 	}
@@ -59,7 +74,8 @@ func runDataTasks(ctx context.Context, args []string, stdout, stderr io.Writer) 
 	}
 	defer pool.Close()
 	// The corrections hash under the keys the root key derives, as the worker's do.
-	compose.UseConfig(dsn.loaded)
+	c.useConfig(dsn.loaded)
+	ctx = compose.ConfigContext(ctx, dsn.loaded)
 	if err := storekit.RefuseForeignSuppressionKey(ctx, pool); err != nil {
 		return fmt.Errorf("migrate: %w", err)
 	}
@@ -69,14 +85,14 @@ func runDataTasks(ctx context.Context, args []string, stdout, stderr io.Writer) 
 			return fmt.Errorf("migrate: open original storage: %w", err)
 		}
 		ctx = originalstore.Bind(ctx, compose.InstallationDB(pool), blob)
-		return executeDataTasks(ctx, pool, *maxBatches, stdout)
+		return c.execute(ctx, pool, *maxBatches, stdout)
 	}
-	progress, err := dataTaskOperation(ctx, pool, action)
+	progress, err := c.operation(ctx, pool, action)
 	if err != nil {
 		return err
 	}
 	if *wait {
-		progress, err = waitForDataTasks(ctx, pool, progress)
+		progress, err = c.wait(ctx, pool, progress)
 		if err != nil {
 			return err
 		}
@@ -103,7 +119,7 @@ func dataTasksFinished(progress []datatask.Progress) (bool, error) {
 	return done, nil
 }
 
-func waitForDataTasks(ctx context.Context, pool *pgxpool.Pool, progress []datatask.Progress) ([]datatask.Progress, error) {
+func (c dataTaskCommand) wait(ctx context.Context, pool *pgxpool.Pool, progress []datatask.Progress) ([]datatask.Progress, error) {
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 	for {
@@ -119,7 +135,7 @@ func waitForDataTasks(ctx context.Context, pool *pgxpool.Pool, progress []datata
 			return nil, ctx.Err()
 		case <-ticker.C:
 		}
-		progress, err = dataTaskOperation(ctx, pool, "status")
+		progress, err = c.operation(ctx, pool, "status")
 		if err != nil {
 			return nil, err
 		}
@@ -131,23 +147,16 @@ func waitForDataTasks(ctx context.Context, pool *pgxpool.Pool, progress []datata
 // them for the worker, for a copy whose worker must not start.
 const dataTasksExecute = "execute"
 
-// The two ways in to the corrections, held as values. A test proves execute
-// never reaches the one that queues work for the worker.
-var (
-	dataTaskOperation = compose.DataTaskOperation
-	dataTaskExecutor  = compose.DataTaskExecute
-)
-
 // dataTasksReport is what execute prints: the verdict, then every step.
 type dataTasksReport struct {
 	Verdict compose.DataTaskVerdict         `json:"verdict"`
 	Steps   []crmcontracts.DataTaskProgress `json:"steps"`
 }
 
-// executeDataTasks prints the report. It fails unless every step finished and
-// none left rows in its scope, so a script cannot read either as done.
-func executeDataTasks(ctx context.Context, pool *pgxpool.Pool, maxBatches int, stdout io.Writer) error {
-	run, err := dataTaskExecutor(ctx, pool, maxBatches)
+// execute prints the report. It fails unless every step finished and none left
+// rows in its scope, so a script cannot read either as done.
+func (c dataTaskCommand) execute(ctx context.Context, pool *pgxpool.Pool, maxBatches int, stdout io.Writer) error {
+	run, err := c.executor(ctx, pool, maxBatches)
 	if err != nil {
 		return err
 	}
