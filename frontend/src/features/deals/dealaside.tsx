@@ -130,6 +130,12 @@ function DealAsideBody({
       ],
     },
     {
+      key: "value",
+      label: t("deals.amount"),
+      edit: change.value,
+      rows: valueRows(facts),
+    },
+    {
       key: "ownership",
       label: t("record.details.ownership"),
       edit: change.ownership,
@@ -171,12 +177,15 @@ function useSectionEdits(deal: Deal, edit: RailEdit, locale: Locale) {
   const about = useSectionEdit(edit, {
     label: t("record.details.about"),
     keys: [
-      ...MONEY_KEYS,
       ...(closed ? [] : ["expected_close_date", "win_probability"]),
       "wait_until",
       "commercial_motion",
       "priority",
     ],
+  });
+  const value = useSectionEdit(edit, {
+    label: t("deals.amount"),
+    keys: MONEY_KEYS,
     readOnly: moneyLocks(deal, edit, locale),
   });
   const ownership = useSectionEdit(edit, {
@@ -189,11 +198,13 @@ function useSectionEdits(deal: Deal, edit: RailEdit, locale: Locale) {
   });
   return {
     about: about.edit,
+    value: value.edit,
     ownership: ownership.edit,
     registration: registration.edit,
     element: (
       <>
         {about.element}
+        {value.element}
         {ownership.element}
         {registration.element}
       </>
@@ -283,8 +294,25 @@ function day(value: string | null | undefined, facts: Facts) {
   return value ? formatDateAbbrev(value, facts.locale, facts.zone) : null;
 }
 
+function valueRows({ deal, locale, row }: Facts): DetailRow[] {
+  return [
+    row(
+      "value",
+      "deals.amount",
+      money(deal.amount_minor, deal.currency, locale),
+      "amount_minor",
+    ),
+    row(
+      "expected_arr",
+      "deal.expectedArr",
+      money(deal.expected_arr_minor, deal.currency, locale),
+      "expected_arr_minor",
+    ),
+  ];
+}
+
 function aboutRows(facts: Facts, stages: readonly Stage[]): DetailRow[] {
-  const { deal, t, locale, row } = facts;
+  const { deal, t, row } = facts;
   const stageName = stages.find((stage) => stage.id === deal.stage_id)?.name;
   const closed = deal.status === "won" || deal.status === "lost";
   const probabilityHint = (
@@ -307,18 +335,6 @@ function aboutRows(facts: Facts, stages: readonly Stage[]): DetailRow[] {
       : row("account", "deal.aside.account", null, "company_id");
   return [
     account,
-    row(
-      "value",
-      "deals.amount",
-      money(deal.amount_minor, deal.currency, locale),
-      "amount_minor",
-    ),
-    row(
-      "expected_arr",
-      "deal.expectedArr",
-      money(deal.expected_arr_minor, deal.currency, locale),
-      "expected_arr_minor",
-    ),
     row("stage", "deals.stage", stageName),
     row(
       "close",

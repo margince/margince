@@ -10,6 +10,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import type { components } from "../../api/schema";
+import { FORM_DIALOG_MAX_FIELDS } from "../../design-system/modal";
 import { en } from "../../i18n/en";
 import {
   installFetchStub,
@@ -87,7 +88,7 @@ function labels(dialog: HTMLElement): string[] {
 
 it("offers one Edit per section to a reader who may change the deal", async () => {
   mount(["read", "update"]);
-  for (const section of ["About", "Ownership", "Registration"]) {
+  for (const section of ["About", "Value", "Ownership", "Registration"]) {
     expect(
       await screen.findByRole("button", { name: `Edit ${section}` }),
     ).toHaveTextContent(en["record.edit"]);
@@ -98,25 +99,39 @@ it("offers one Edit per section to a reader who may change the deal", async () =
 
 it("offers no Edit to a reader without the update grant", async () => {
   mount(["read"]);
-  await screen.findByText("Value");
+  await screen.findByRole("region", { name: "Value" });
   expect(screen.queryByRole("button", { name: /^Edit / })).toBeNull();
   expect(screen.queryByRole("button", { name: /^Change / })).toBeNull();
 });
 
-it("opens About with only the fields About shows", async () => {
+it("opens About and Value each with only the fields that section shows", async () => {
   const user = userEvent.setup();
   mount(["read", "update"]);
   const about = await openSection(user, "About");
   expect(labels(about)).toEqual([
-    en["create.amount"],
-    en["deal.expectedArr"],
-    en["create.currency"],
     en["create.expectedClose"],
     en["deal.winProbability"],
     en["deal.waitUntil"],
     en["deal.motion"],
     en["deal.priority"],
   ]);
+  await user.click(within(about).getByRole("button", { name: "Cancel" }));
+  const value = await openSection(user, "Value");
+  expect(labels(value)).toEqual([
+    en["create.amount"],
+    en["deal.expectedArr"],
+    en["create.currency"],
+  ]);
+});
+
+it("keeps every section within a small dialog's fields", async () => {
+  const user = userEvent.setup();
+  mount(["read", "update"]);
+  for (const section of ["About", "Value", "Ownership", "Registration"]) {
+    const dialog = await openSection(user, section);
+    expect(labels(dialog).length).toBeLessThanOrEqual(FORM_DIALOG_MAX_FIELDS);
+    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+  }
 });
 
 it("opens Ownership with the owner and Registration with the acquisition source", async () => {
@@ -132,11 +147,11 @@ it("opens Ownership with the owner and Registration with the acquisition source"
 it("saves a changed value as that field alone, in one PATCH against the version shown", async () => {
   const user = userEvent.setup();
   const sent = mount(["read", "update"]);
-  const about = await openSection(user, "About");
-  const amount = within(about).getByRole("spinbutton", { name: "Value" });
+  const value = await openSection(user, "Value");
+  const amount = within(value).getByRole("spinbutton", { name: "Value" });
   await user.clear(amount);
   await user.type(amount, "52000");
-  await user.click(within(about).getByRole("button", { name: "Save" }));
+  await user.click(within(value).getByRole("button", { name: "Save" }));
   await waitFor(() =>
     expect(sent).toEqual([
       {
@@ -146,7 +161,7 @@ it("saves a changed value as that field alone, in one PATCH against the version 
     ]),
   );
   await waitFor(() =>
-    expect(screen.queryByRole("dialog", { name: "About" })).toBeNull(),
+    expect(screen.queryByRole("dialog", { name: "Value" })).toBeNull(),
   );
 });
 
@@ -160,18 +175,18 @@ it("leaves a closed deal's close day and probability out of About", async () => 
   const about = await openSection(user, "About");
   expect(labels(about)).not.toContain(en["create.expectedClose"]);
   expect(labels(about)).not.toContain(en["deal.winProbability"]);
-  expect(within(about).getByRole("spinbutton", { name: "Value" })).toBeTruthy();
+  expect(labels(about)).toContain(en["deal.waitUntil"]);
 });
 
 it("shows the ARR an offer set in its currency, locked with the reason", async () => {
   const user = userEvent.setup();
   mount(["read", "update"], { ...deal, arr_source_offer_id: "o1" });
-  const about = await openSection(user, "About");
-  expect(within(about).getByRole("spinbutton", { name: "Value" })).toBeTruthy();
+  const value = await openSection(user, "Value");
+  expect(within(value).getByRole("spinbutton", { name: "Value" })).toBeTruthy();
   expect(
-    within(about).queryByRole("spinbutton", { name: "Expected ARR" }),
+    within(value).queryByRole("spinbutton", { name: "Expected ARR" }),
   ).toBeNull();
-  const arr = within(about).getByRole("group", { name: "Expected ARR" });
+  const arr = within(value).getByRole("group", { name: "Expected ARR" });
   expect(arr).toHaveTextContent("€12,000");
   expect(arr).toHaveAccessibleDescription(en["deal.arrFromOffer"]);
 });
@@ -179,9 +194,9 @@ it("shows the ARR an offer set in its currency, locked with the reason", async (
 it("keeps a figure the reader may not see locked as not shown", async () => {
   const user = userEvent.setup();
   mount(["read", "update"], { ...deal, masked_fields: ["amount_minor"] });
-  const about = await openSection(user, "About");
-  expect(within(about).queryByRole("spinbutton", { name: "Value" })).toBeNull();
+  const value = await openSection(user, "Value");
+  expect(within(value).queryByRole("spinbutton", { name: "Value" })).toBeNull();
   expect(
-    within(about).getByRole("group", { name: "Value" }),
+    within(value).getByRole("group", { name: "Value" }),
   ).toHaveAccessibleDescription(en["record.notShown"]);
 });

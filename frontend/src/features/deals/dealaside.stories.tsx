@@ -188,25 +188,28 @@ export const ProbabilityReason: Story = {
   },
 };
 
-// One Edit per section for a seat that may change the deal; About opens with
-// the fields About shows and nothing else.
-export const EditAbout: Story = {
+// One Edit per section for a seat that may change the deal; Value opens with
+// the money and nothing else.
+export const EditValue: Story = {
   name: "Edit opens the section's fields",
   render: () => <LoweredColumn />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
+    await canvas.findByRole("button", { name: "Edit About" });
     await canvas.findByRole("button", { name: "Edit Ownership" });
     await canvas.findByRole("button", { name: "Edit Registration" });
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Edit About" }),
+      await canvas.findByRole("button", { name: "Edit Value" }),
     );
-    const about = within(
-      await within(document.body).findByRole("dialog", { name: "About" }),
+    const value = within(
+      await within(document.body).findByRole("dialog", { name: "Value" }),
     );
     await expect(
-      about.getByRole("spinbutton", { name: "Value" }),
+      value.getByRole("spinbutton", { name: "Value" }),
     ).toBeVisible();
-    await expect(about.queryByRole("combobox", { name: "Owner" })).toBeNull();
+    await expect(
+      value.queryByRole("spinbutton", { name: "Probability" }),
+    ).toBeNull();
   },
 };
 
