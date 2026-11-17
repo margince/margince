@@ -15,12 +15,12 @@ import (
 // EnsureRiverSchema layers River's own schema onto the migrated test database,
 // at most once per database.
 //
-// Call it AFTER EnsureSchema: a rebuild opens with DROP SCHEMA public CASCADE,
+// Call it after EnsureSchema: a rebuild opens with DROP SCHEMA public CASCADE,
 // which takes River's tables with it.
 //
 // The guard is river_migration's existence, not a flag. A test's copy of the
-// template already holds River's tables, because the lane migrates the template
-// with cmd/migrate up, River included; a rebuilt database holds none. The
+// template already holds River's tables: the lane migrates the template with
+// cmd/migrate up, River included. A rebuilt database holds none. The
 // check-then-migrate window needs no lock: one test owns its database.
 //
 // migrate arrives as a parameter rather than an import. The layering permits the

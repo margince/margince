@@ -124,9 +124,7 @@ func dropCandidates(ctx context.Context, owner *pgx.Conn, selector string) ([]st
 // final schema drop is 18.
 //
 // At 653, EnsureSchema stops being the statement that alone cannot share the
-// instance. Sizing the instance for the lane's remaining steady-state demand
-// is a separate matter, and is done where the instance is defined —
-// docker-compose.dev.yml, which CI runs via `make db-up`.
+// instance. The instance itself is sized in docker-compose.dev.yml.
 //
 // The split is the fix and the ceiling is the headroom, in that order and not the
 // other way round: the arithmetic depends on the schema's size and the lane's
@@ -165,11 +163,9 @@ func dropPublicSchema(ctx context.Context, owner *pgx.Conn) error {
 				break
 			}
 		}
-		// CASCADE, and the batch is named in ONE statement: two tables in the
-		// same batch may reference each other, and dropping them one at a time
-		// would refuse on the dependency rather than remove it. Same injection
-		// posture as every other catalog read here — every name is quote_ident()
-		// over pg_class, schema-qualified, never caller input.
+		// CASCADE, and the batch in one statement. Two tables in a batch may
+		// reference each other, and one at a time would refuse on the dependency.
+		// Every name is quote_ident() over pg_class, never caller input.
 		if _, err := owner.Exec(ctx, `DROP TABLE `+strings.Join(tables, `, `)+` CASCADE`); err != nil {
 			return fmt.Errorf("dropping tables: %w", err)
 		}

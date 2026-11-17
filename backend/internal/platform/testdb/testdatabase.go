@@ -151,12 +151,7 @@ func inPlace(t testing.TB) Database {
 	if err != nil {
 		t.Fatalf("testdb: connecting to %s: %v", name, err)
 	}
-	defer func() {
-		if err := owner.Close(context.Background()); err != nil {
-			t.Errorf("testdb: closing the owner connection: %v", err)
-		}
-	}()
-	if err := EnsureSchema(t.Context(), owner); err != nil {
+	if err := errors.Join(EnsureSchema(t.Context(), owner), owner.Close(t.Context())); err != nil {
 		t.Fatalf("testdb: %v", err)
 	}
 	databasesMu.Lock()

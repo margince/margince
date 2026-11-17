@@ -76,8 +76,7 @@ func settingsStoreFor(t *testing.T) *config.Config {
 		t.Fatal(err)
 	}
 	// Registered where the pool is handed out, before the test adds any
-	// cleanup of its own, so it runs last and sees a package that has
-	// genuinely stopped.
+	// cleanup of its own, so it runs last.
 	testdb.AssertPoolsQuiesced(t)
 	return configtest.StoredOver(t, pool, ConfigSettings())
 }

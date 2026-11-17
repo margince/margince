@@ -3,8 +3,8 @@
 
 //go:build integration
 
-// Package testdb gives each integration test a database of its own: a copy of
-// the migrated template (New, For), with pools sized to the lane's budget.
+// Package testdb gives each integration test a database of its own, a copy of
+// the migrated template (New, For). Its pools fit the lane's budget.
 package testdb
 
 import (

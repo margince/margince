@@ -20,9 +20,8 @@ import (
 )
 
 // AssertPoolsQuiesced fails the test if it ends while still holding a pooled
-// connection to its own database. Call it where the pool is handed out; it
-// registers its own cleanup, which runs after every cleanup the test adds later
-// and before the database is dropped.
+// connection to its own database. Call it where the pool is handed out. Its
+// cleanup runs after every cleanup the test adds later, and before the drop.
 //
 // A goroutine the test left running would otherwise lose its database mid-query
 // and fail in whichever test runs then. Only the test's own database is asked,

@@ -40,9 +40,9 @@ func composerCtx(e *channelConsentEnv) context.Context {
 	return principal.WithActor(e.ctx, actor)
 }
 
-// THE CODE IS MINTED, never written down. testJurisdiction (authorizecaplock)
-// hands out the qm-qz range, so a literal here takes a code that helper will
-// hand to somebody else, and Register panics for every test after it.
+// The code is minted, never written down. testJurisdiction (authorizecaplock)
+// hands out the qm-qz range. A literal here takes a code that helper hands to
+// another test, and Register then panics.
 //
 // The label is the decree's own, which is why it is a constant rather than a
 // parameter: a test that could choose it would be testing string comparison,

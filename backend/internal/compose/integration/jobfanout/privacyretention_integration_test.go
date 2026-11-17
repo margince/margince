@@ -56,10 +56,8 @@ func seedOverageLead(t *testing.T, owner *pgx.Conn, ws ids.UUID) ids.UUID {
 
 // failLeadWrites makes every lead write raise.
 //
-// A trigger is the fault seam because nothing in the fixture data can produce
-// this failure: the retention pass fails on SQL errors, not on record shapes,
-// so a test that only varied the seed could never reach the path where a pass
-// fails.
+// A trigger is the fault seam. The retention pass fails on SQL errors, not on
+// record shapes, so no seed reaches that path.
 func failLeadWrites(t *testing.T, owner *pgx.Conn) {
 	t.Helper()
 	ctx := context.Background()

@@ -15,11 +15,9 @@ import (
 // TestPoolRefusesBeforeTheSchemaIsMigrated drives the one branch that keeps a
 // pooled connection from predating the migration's DROP SCHEMA.
 //
-// It is an internal test because the state it needs to reach is internal:
-// EnsureSchema's sync.Once has already fired by the time any test in this binary
-// runs, so the unmigrated case is unreachable from outside. Clearing the flag for
-// one call is safe: this test runs alone, and Pool returns before it touches the
-// pool map, so the process keeps whatever pools it already had.
+// It is an internal test because the state it needs is internal: the flag is
+// unreachable from outside. Clearing it for one call is safe. This test runs
+// alone, and Pool returns before it touches the pool map.
 //
 // Without this, deleting the check leaves every suite green while a session from
 // a too-early pool blocks the migration's DROP SCHEMA — see ErrSchemaNotReady for

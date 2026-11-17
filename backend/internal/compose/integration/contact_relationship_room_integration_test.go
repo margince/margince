@@ -42,14 +42,6 @@ var roomFixedNow = time.Date(2026, 8, 4, 12, 0, 0, 0, time.UTC)
 
 // roomAgo and roomAhead place a fixture's timestamp against the SAME clock the
 // services under test are given.
-//
-// The database's `now()` is a different clock, and a fixture that mixes the two
-// measures the distance between them: it drifts one day further from the frozen
-// now for every real day that passes. A row seeded at `now() - 20 days` was
-// nearly 20 days old to the frozen clock the week this suite was written, and
-// exactly 6.9 days old on 2026-08-17 — one hour under the seven-day rule the
-// gone-quiet rung applies, which is the day the suite began failing with nothing
-// changed but the date.
 func roomAgo(d time.Duration) time.Time { return roomFixedNow.Add(-d) }
 
 // roomTomorrow is a day after the frozen now: comfortably inside the 72-hour
@@ -208,15 +200,6 @@ func TestCorrectionLedgerSurvivesRederivation(t *testing.T) {
 
 // The other direction, which the test above passes without: a correction must
 // not outlive the value it was correcting.
-//
-// The sequence is real and every step of it is an ordinary day. A pass writes a
-// title; a human reads it, disagrees, and records their own; then something
-// writes a newer, better value to the same field — an accepted research claim,
-// a fresh enrichment, an edit through another door — and contact_profile_field's
-// updated_at moves. Without a recency check the page keeps serving the human's
-// correction, and the reader is told the current value is one the record does
-// not hold. Asked what somebody's title is, an assistant answers with a value
-// no row carries, which reads as a hallucination and is a data contradiction.
 //
 // Driven against a REAL row rather than the ruling alone, because the ruling is
 // only half the fix: it has to be handed the date the VALUE took its current
@@ -890,15 +873,6 @@ func TestMergeCarriesTheEnrichmentSidecarToTheSurvivor(t *testing.T) {
 // A captured channel message reaches the page NAMING THE TRANSPORT THAT CARRIED
 // IT, and this test exists because it did not.
 //
-// Since ADR-0107/A158 the kind says only that an interaction was a message —
-// which transport carried it is `channel_provider`, a separate column. The 360's
-// timeline read is a hand-written sibling of activities.activityColumns, and
-// when the narrowing added the column there, nothing pointed at the copy. So
-// every activity on every contact page reported a null provider: the memory card
-// rendered "message" where it should have said the transport's name, and the
-// composer could not tell a contact reachable on a unit's channel from one
-// reachable nowhere.
-//
 // The guard is a ROW-TO-PAYLOAD assertion rather than a source grep, because
 // what regressed was a SELECT list — a grep for the column name would have
 // passed on a query that selected it into a variable nobody scanned.
@@ -977,14 +951,6 @@ func TestTheContact360TimelineCarriesTheVersionAWriteNeeds(t *testing.T) {
 }
 
 // The THIRD instance of the same defect class, and the one a customer met.
-//
-// source_system is what says a meeting was logged as a transcript. The contact
-// timeline's hand-written SELECT did not carry it, so a transcript logged
-// against a contact reached that contact's own history as an ordinary meeting:
-// no card offering its reading, no proposal count, nothing to open. The same
-// activity showed all of it on the company and on the deal, which read through
-// activities.activityColumns — so the contact who was actually in the room was
-// the one place the reading was invisible.
 //
 // A row-to-payload assertion again, for the reason the siblings give: what
 // regressed is a SELECT list, and a grep for the column name passes on a query

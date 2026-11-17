@@ -162,13 +162,6 @@ func TestAnInvoiceReachesTheCustomersBillingContact(t *testing.T) {
 
 // AND IT STILL REACHES THEM ONE PHASE LATER.
 //
-// The evidence that supported this message at staging is not written to the
-// decision row — communication_decision has an evidence column and nothing
-// fills it — so stagedRequestFor rebuilds the transmit question with the
-// category and the thread key and NOTHING ELSE. validateInvoice then reads a
-// zero InvoiceID, finds no invoice, and the message falls through to the
-// legacy purpose arm.
-//
 // That fall-through used to end in the transactional class's unconditional
 // allow, which is what hid the evidence loss: the invoice went out on the
 // purpose key rather than on the invoice, and the two answers happened to
@@ -242,19 +235,6 @@ func TestAnEvidencedInvoiceSurvivesToTransmit(t *testing.T) {
 //
 // This is the security half of carrying evidence, and it is why the decision
 // row takes its ids from the DECISION rather than from the request.
-//
-// refuseUnreadableEvidence lives inside validate, and validate runs only for
-// arm 3 of resolution — a message already answered by the thread arm or the
-// live-deal arm never reaches it. So a sender can be allowed by an open deal
-// while naming an invoice id in the same request, and nothing has asked whether
-// they hold finance.read.
-//
-// If that id reached the row, the transmit phase would read it back and put it
-// to the invoice validator — under the SYSTEM principal, for which auth.Require
-// returns nil unconditionally. An id the sender could not open at staging would
-// authorize their message one phase later. That is a privilege escalation with
-// no race and no tampering: file a message under a deal you can see, name an
-// invoice you cannot, and let the worker do the reading.
 //
 // The fixture is exactly that shape: a live deal the recipient is a stakeholder
 // on, so the deal arm answers first. A real invoice of a company they are the
@@ -709,12 +689,6 @@ func (e *resolveEnv) acquisition(t *testing.T, kind string, when time.Time) {
 
 // A FILED ACTIVITY IS NOT SOMETHING THE CONTACT WROTE.
 //
-// activity_link is a FILING link with no author concept, and a caller may post
-// an activity with direction=inbound and a link to any contact they can read
-// (CreateActivityRequest passes direction, occurred_at and links through). So a
-// follow-up arm that asked activity_link would let anybody manufacture their own
-// evidence for writing to anybody.
-//
 // Mutation: ask activity_link instead of activity_participant with role 'from'
 // — the shape this shipped as — and this passes with forged evidence.
 func TestAFiledActivityIsNotSomethingTheContactWrote(t *testing.T) {
@@ -887,14 +861,6 @@ func (e *resolveEnv) dropGrant(t *testing.T, object string) {
 }
 
 // A STOP THAT DOES NOT REACH THIS MESSAGE LEAVES ITS GROUND ON THE RECORD.
-//
-// The basis write asked whether the subject carried any live suppression at
-// all, which is a different question from whether one binds THIS send. An
-// objection to direct marketing does not reach a reply on a thread the subject
-// started: the reply goes out, lawfully, and the ground it went out on was not
-// written down. Their own Art. 15 export then answered "we relied on nothing"
-// for a send that was in fact lawful — the exact gap recordBasis exists to
-// close, reopened one condition to the left.
 //
 // The pair is the point. The objection binds nothing here and the ground is
 // recorded; the restriction binds the same message and it is not. One case

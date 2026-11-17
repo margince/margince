@@ -12,8 +12,8 @@ import (
 )
 
 // dataTables selects every relation a test can write rows to: ordinary tables
-// in public and ext, minus the migration ledgers and the reference tables the
-// migrations seed. The emptiness proof of a fresh copy reads exactly these.
+// in public and ext. It leaves out the migration ledgers and the reference
+// tables the migrations seed. The emptiness proof of a fresh copy reads these.
 const dataTables = `
 	FROM pg_class c
 	JOIN pg_namespace n ON n.oid = c.relnamespace

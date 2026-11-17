@@ -290,10 +290,9 @@ func TestAnUndestroyableCachedBriefStopsTheWholeErasure(t *testing.T) {
 // let go. No other fixture writes it.
 const refusedFingerprint = "refuse-this-delete"
 
-// refuseBriefDeletes makes the DELETE of one cached brief fail, which is how a
-// statement inside somebody else's transaction can be made to fail without
-// touching the rows the test is about. It fires only for the fingerprint the
-// test writes, so every other brief delete still runs.
+// refuseBriefDeletes makes the DELETE of one cached brief fail. That is how a
+// statement inside another transaction fails without touching the rows under
+// test. It fires only for the fingerprint the test writes.
 func refuseBriefDeletes(t *testing.T) {
 	t.Helper()
 	ctx := context.Background()

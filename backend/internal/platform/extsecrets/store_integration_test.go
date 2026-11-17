@@ -5,14 +5,8 @@
 
 package extsecrets_test
 
-// The store's whole job is a wall between namespaces, and every wall it
-// builds is made of SQL predicates — so the suite is an integration suite by
-// necessity: a fake pool would test the wall's drawing, not the wall.
-//
-// The fixture is package-local (its own owner connection and app pool on
-// the test's own database) rather than a shared helper: promoting one
-// would be a change to how every suite in the tree is set up, which is not
-// this package's call to make.
+// The store's job is a wall between namespaces, built from SQL predicates. A
+// fake pool would test the drawing of that wall, not the wall.
 
 import (
 	"context"
