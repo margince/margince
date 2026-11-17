@@ -34,7 +34,7 @@ import {
   worklistKey,
 } from "./worklist.queries";
 import { MeetingReadyVerb, needsReadiness } from "./worklist.ready";
-import { replyTarget, WaitingReply } from "./worklist.reply";
+import { repliedMessage, replyTarget, WaitingReply } from "./worklist.reply";
 import { answerBelow } from "./worklist.suggestion";
 
 /**
@@ -146,7 +146,7 @@ const ANSWER_BY_SOURCE: Partial<
           inquiry={item.kind === "website_inquiry"}
         />
       );
-      const replyTo = replyTarget(item);
+      const replyTo = repliedMessage(item) ? replyTarget(item) : undefined;
       return replyTo
         ? {
             primary: <WaitingReply item={item} to={replyTo} />,

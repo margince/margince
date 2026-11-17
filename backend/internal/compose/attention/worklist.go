@@ -233,7 +233,7 @@ func (s *Service) worklistFrom(
 	// the figures as well as from the list.
 	rows = dropDone(rows, s.marked, day.AsOf)
 	// After Done, so a reminder the reader put down joins no task.
-	rows = foldFollowUpsIntoPromises(rows)
+	rows = foldFollowUpsIntoPromises(rows, readerOf(ctx))
 	scoped := rowNote.merge(waitNote)
 	bounded := boundedSources(day)
 	if !s.relationshipsChosen() {

@@ -18,6 +18,7 @@ import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
 import { taskTypeOf } from "../../lib/tasktype";
 import { briefContextTitle } from "../../lib/worklistcopy";
+import { emailNamesRow } from "../worklist/worklist.emailtitle";
 import type { WorklistItem } from "../worklist/worklist.queries";
 import { OneRowWrite, useRowDone, WorklistRow } from "../worklist/worklist.row";
 import { useListed } from "../worklist/worklist.row.captions";
@@ -132,7 +133,7 @@ export function Triage({
                   <LeadTick item={lead} />
                   <div className="brief-triage-body">
                     <div className="brief-triage-lead-head">
-                      {lead.email_summary && (
+                      {emailNamesRow(lead) && (
                         <div className="brief-triage-title">
                           <Heading size="small" as="h3">
                             {taskName(lead, viewer, t, locale)}
@@ -166,7 +167,7 @@ export function Triage({
                       }
                       context={cardVerbs}
                       menu={step.others}
-                      titleEnd={lead.email_summary ? undefined : nextLink}
+                      titleEnd={emailNamesRow(lead) ? undefined : nextLink}
                       quiet={step.fills}
                       // The card around this row says whose it is, why it is
                       // here and where it stands in the day, each once.

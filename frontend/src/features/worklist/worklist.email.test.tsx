@@ -273,6 +273,23 @@ describe("a promise read out of a message nobody answered", () => {
     ).toBeTruthy();
   });
 
+  it("offers no follow-up when the task names no message to answer", async () => {
+    const { move: _drafted, ...unanchored } = promise;
+    stubWithDrawer(day({ queue: [waitingChat, unanchored as WorklistItem] }));
+    const promised = await promiseRow();
+
+    for (const name of [
+      /draft follow-up/i,
+      en["compose.reply"],
+      en["compose.writeEmail"],
+    ]) {
+      expect(promised.queryByRole("button", { name })).toBeNull();
+    }
+    expect(
+      promised.getByRole("button", { name: en["tasks.complete"] }),
+    ).toBeTruthy();
+  });
+
   it("drafts the follow-up on the message, not on the task", async () => {
     stubWithDrawer(day({ queue: [waitingChat, promise] }));
     const served = globalThis.fetch;

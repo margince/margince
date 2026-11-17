@@ -64,8 +64,6 @@ type ListActivitiesInput struct {
 	// completes itself through this rather than by widening the page for every
 	// account that has no long thread.
 	SourceActivityID *ids.ActivityID
-	// SourceActivityIn keeps the tasks derived from any of these activities.
-	SourceActivityIn []ids.UUID
 	ThreadKey        *string
 	// SentBy narrows to messages this contact is the From participant of, so a
 	// reply can read the addressee's mail a long thread's page cut off.

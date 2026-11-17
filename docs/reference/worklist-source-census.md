@@ -20,7 +20,7 @@ that can remove or merge a source's rows.
 | D | `relationshipChoices` (`relationshipchoices.go`) | Moves `relationship_decay` rows out of the queue unless pinned; drops one whose contact is already on another row |
 | E | `foldBriefIntoRisk` (`briefdedupe.go`) | Merges a `brief_item` onto the row about the same deal |
 | F | `dropDone` (`done.go`) | Drops rows the reader marked done that have not come back |
-| F2 | `foldFollowUpsIntoPromises` (`followuppromise.go`) | Puts an `awaiting_reply` row onto each open task derived from its email, and drops the reminder |
+| F2 | `foldFollowUpsIntoPromises` (`followuppromise.go`) | Puts an `awaiting_reply` row onto the reader's own earliest-due open task derived from its email, and drops the reminder. That task counts under `tasks` even when it is due later |
 | G | `foldAndRepin` and `foldRoutineDecisionsBounded` (`batches.go`, `pins.go`) | Folds routine decisions and system incidents into `batch` rows at `batchFloor` = 3 members; skipped for `filter=decisions` and `filter=system` |
 | H | `keepFiltered` (`page.go`) | Applies the `filter` value |
 | I | `markCrowding` (`crowding.go`) | Marks rows past the lead of one source; removes none |

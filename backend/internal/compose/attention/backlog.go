@@ -12,6 +12,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -26,9 +27,6 @@ type TaskWindow struct {
 	// Team is the seats a team view keeps, plus unassigned work. Nil reads the
 	// scope unnarrowed.
 	Team []ids.UUID
-	// DerivedFrom keeps only the tasks derived from these activities. Only
-	// TasksAfter reads it; nil keeps every task.
-	DerivedFrom []ids.UUID
 }
 
 // TaskBacklog counts a task window whole and continues it past the lane's
@@ -45,6 +43,12 @@ type TaskBacklog interface {
 	// TasksOnDeals reads every task of the window filed under any of these
 	// deals, drawn as the lane draws them.
 	TasksOnDeals(ctx context.Context, window TaskWindow, deals []ids.UUID) ([]Task, error)
+	// FollowUpPromises names the reader's own open tasks derived from any of
+	// these emails, with their due dates.
+	FollowUpPromises(ctx context.Context, emails []ids.UUID) ([]activities.FollowUpPromise, error)
+	// TasksIn reads these tasks of the window, drawn as the lane draws them. A
+	// task the lane would not draw is not answered.
+	TasksIn(ctx context.Context, window TaskWindow, tasks []ids.UUID) ([]Task, error)
 }
 
 // Positioned is one row a backlog read returned, with the position that

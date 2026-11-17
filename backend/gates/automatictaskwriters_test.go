@@ -132,6 +132,7 @@ var openTaskReadersElsewhere = map[string]string{
 	"modules/activities/bulkcomplete.go:LockTaskForBulkTx":                "locks one task a human chose to complete",
 	"modules/activities/requestcheck.go:uncheckableReminders":             "annotates tasks the lane already chose; it surfaces no open work of its own",
 	"modules/activities/awaitingreply.go:promiseKeptSQL":                  "ends a follow-up reminder once its own mail's tasks are all done; any open one, current or not, keeps the reminder, and it surfaces no task",
+	"modules/activities/followuppromises.go:followUpPromisesSQL":          "names the reader's open tasks of a mail by id and due date only; the Worklist draws one only through the task lane's own read, which applies the clause",
 	"compose/reportprojects.go:projectCommitmentsSpec":                    "a report over the project's recorded promises, not a personal queue",
 	"modules/activities/companyscope.go:ownQueueClause":                   "narrows a list the caller already gates with the worklist clauses",
 	"modules/activities/companyscope.go:unassignedQueueClause":            "narrows a list the caller already gates with the worklist clauses",

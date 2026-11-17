@@ -388,9 +388,15 @@ var awaitingRepliesSQL = `
 // on the worklist, so completing it completes the reminder too.
 func promiseKeptSQL(reader string) string {
 	derived := `SELECT 1 FROM activity promise
-	    WHERE promise.source_activity_id = a.id AND promise.kind = 'task'
-	      AND promise.archived_at IS NULL AND promise.assignee_id = ` + reader
+	    WHERE promise.source_activity_id = a.id AND promise.kind = 'task' AND ` + readersPromiseSQL("promise", reader)
 	return `(EXISTS (` + derived + ` AND promise.is_done) AND NOT EXISTS (` + derived + ` AND NOT promise.is_done))`
+}
+
+// readersPromiseSQL is a live row the reader holds. A task matched to a mail
+// by its source_activity_id is then that mail's promise. The Worklist fold
+// (attention.ownPromise) takes a task by the same terms.
+func readersPromiseSQL(alias, reader string) string {
+	return alias + `.archived_at IS NULL AND ` + alias + `.assignee_id = ` + reader
 }
 
 // threadNeedSQL names each of candidates and the live rows on its thread. A

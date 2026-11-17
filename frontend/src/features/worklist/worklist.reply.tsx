@@ -75,10 +75,13 @@ function followsUp(item: WorklistItem): boolean {
 
 /**
  * The message the reply answers. A task's own id names the task, so its
- * follow-up answers the mail the promise was read out of.
+ * follow-up answers the mail the promise was read out of. A task with no such
+ * mail has nothing to answer.
  */
-function repliedMessage(item: WorklistItem): string {
-  return item.source === "task" ? (item.move?.activity_id ?? item.id) : item.id;
+export function repliedMessage(item: WorklistItem): string | undefined {
+  return item.source === "task"
+    ? (item.move?.activity_id ?? undefined)
+    : item.id;
 }
 
 /**
@@ -104,6 +107,10 @@ export function WaitingReply({
   if (item.source === "meeting_follow_up") {
     return <MeetingFollowUp item={item} />;
   }
+  const message = repliedMessage(item);
+  if (!message) {
+    return null;
+  }
   const prepared = replyIsTheMove(item)
     ? {
         // Not `moveLabel`: its "Read and reply" names a link to the record.
@@ -127,7 +134,7 @@ export function WaitingReply({
   }
   return (
     <ChannelReplyAction
-      activityId={repliedMessage(item)}
+      activityId={message}
       kind="email"
       entityType={to.type}
       entityId={to.id}

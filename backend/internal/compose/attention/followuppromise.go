@@ -3,10 +3,11 @@
 
 package attention
 
-// One follow-up is one row: an unanswered sent email and an open task derived
-// from it. The task leads with what was promised; the email stays as the reason.
-// The task's source activity must be the reminder's own email. The reminder is
-// keyed by that email, not its thread, and a shared contact joins nothing.
+// One follow-up is one row: an unanswered sent email and the reader's own open
+// task derived from it. The task leads with what was promised; the email stays
+// as the reason. The task's source activity must be the reminder's own email.
+// The reminder is keyed by that email, not its thread, and a shared contact
+// joins nothing.
 
 import (
 	"context"
@@ -31,38 +32,81 @@ func derivedFrom(row ranked) string {
 	return record.Id.String()
 }
 
-// foldFollowUpsIntoPromises puts each follow-up reminder onto the open tasks
-// derived from its email and drops the reminder. A reminder no task names
-// stays as it was.
-func foldFollowUpsIntoPromises(rows []ranked) []ranked {
+// ownPromise says whether a task row is the reader's own open task derived
+// from an email. The lane holds only live open tasks. So this is the rule
+// readersPromiseSQL (modules/activities/awaitingreply.go) spells for the
+// reminder's end: same email, a task, held by the reader.
+func ownPromise(row ranked, reader ids.UUID) bool {
+	return row.item.Source == sourceTask && !reader.IsZero() &&
+		row.ownerRef == ownedBy(reader) && derivedFrom(row) != ""
+}
+
+// dueOrder is a task's place in the store's due order: undated last, then by
+// id, as the task lane sorts.
+type dueOrder struct {
+	due time.Time
+	id  string
+}
+
+func (a dueOrder) before(b dueOrder) bool {
+	switch {
+	case a.due.IsZero() != b.due.IsZero():
+		return b.due.IsZero()
+	case !a.due.Equal(b.due):
+		return a.due.Before(b.due)
+	}
+	return a.id < b.id
+}
+
+func dueOrderOf(row ranked) dueOrder {
+	return dueOrder{due: row.deadlineAt, id: row.item.Id}
+}
+
+// foldFollowUpsIntoPromises puts each follow-up reminder onto the reader's
+// earliest-due promise of its email and drops the reminder. Their other
+// tasks from that email stay plain rows. A reminder with no promise of the
+// reader's stays as it was.
+func foldFollowUpsIntoPromises(rows []ranked, reader ids.UUID) []ranked {
 	reminders := map[string]ranked{}
 	for _, row := range rows {
 		if row.item.Source == sourceAwaitingReply {
 			reminders[derivedFrom(row)] = row
 		}
 	}
-	if len(reminders) == 0 {
+	promises := map[string]int{}
+	for i, row := range rows {
+		email := derivedFrom(row)
+		if _, waits := reminders[email]; !waits || !ownPromise(row, reader) {
+			continue
+		}
+		if at, held := promises[email]; !held || dueOrderOf(row).before(dueOrderOf(rows[at])) {
+			promises[email] = i
+		}
+	}
+	if len(promises) == 0 {
 		return rows
 	}
-	folded := map[string]bool{}
 	kept := make([]ranked, 0, len(rows))
-	for _, row := range rows {
+	for i, row := range rows {
 		email := derivedFrom(row)
-		if reminder, ok := reminders[email]; ok && row.item.Source == sourceTask {
-			row = withFollowUp(row, reminder)
-			folded[email] = true
+		at, held := promises[email]
+		switch {
+		case held && i == at:
+			row = withFollowUp(row, reminders[email])
+		case held && row.item.Source == sourceAwaitingReply:
+			continue
 		}
 		kept = append(kept, row)
 	}
-	return slices.DeleteFunc(kept, func(row ranked) bool {
-		return row.item.Source == sourceAwaitingReply && folded[derivedFrom(row)]
-	})
+	return kept
 }
 
-// withFollowUp is the promise row carrying its reminder: the email, why it
-// waits, and the follow-up the composer drafts from it. The task's own verbs
-// stay, so completing the row completes the task. The row is never less
-// urgent than the reminder it replaces.
+// withFollowUp is the promise row carrying its reminder. That is the email,
+// why it waits, and the follow-up the composer drafts from it. The task's own
+// verbs stay, so completing the row completes the task. The row is never less
+// urgent than the reminder it replaces. A reminder due now keeps a later
+// promise in today's work, because the email is unanswered today. A snooze
+// moves only the task's date.
 func withFollowUp(promise, reminder ranked) ranked {
 	item := &promise.item
 	item.EmailSummary = reminder.item.EmailSummary
@@ -71,9 +115,7 @@ func withFollowUp(promise, reminder ranked) ranked {
 	if slices.Contains(reminder.item.Actions, reply) && !slices.Contains(item.Actions, reply) {
 		item.Actions = append(slices.Clone(item.Actions), reply)
 	}
-	if item.Move == nil {
-		item.Move = reminder.item.Move
-	}
+	item.Move = reminder.item.Move
 	if item.Contact == nil {
 		item.Contact = reminder.item.Contact
 	}
@@ -83,6 +125,9 @@ func withFollowUp(promise, reminder ranked) ranked {
 	}
 	if promise.contact.IsZero() {
 		promise.contact = reminder.contact
+	}
+	if item.Category == categoryUpcoming && reminder.item.Category != categoryUpcoming {
+		item.Category, promise.pulledForward = reminder.item.Category, true
 	}
 	if level := reminder.item.Level; level < semanticLevelOf(promise) {
 		if promise.reminded {
@@ -94,33 +139,34 @@ func withFollowUp(promise, reminder ranked) ranked {
 	return promise
 }
 
-// promisePage is the store's largest page, so the tasks behind the reminders
-// are usually one read.
-const promisePage = 200
-
-// readingFollowUpPromises reads, past the planned lane's cap, the open tasks
-// derived from the emails the follow-up reminders are about. Without them the
-// reminder and its task, met later in the tail, are two rows and two counts.
-// A lane read whole already holds every such task, so it reads nothing.
+// readingFollowUpPromises reads the reader's promises of the reminders' emails
+// that the planned lane cut, when due before the email's promise on the day.
+// A lane read whole holds every such task, so it reads nothing. Every page
+// reads it: a frozen walk takes its rows from this read, and without it shows
+// the reminder alone and counts the promise gone. A Done check needs it only
+// for an asked reminder.
 func (s *Service) readingFollowUpPromises(ctx context.Context, day crmcontracts.Attention) *Service {
 	scoped := *s
+	reader := readerOf(ctx)
 	todayCut, laterCut := plannedWindowsAtCap(day.Planned, true)
-	if s.backlog.tasks == nil || s.backlog.until.IsZero() || !todayCut && !laterCut {
+	probedWithoutReminder := s.marked.probe != nil && len(s.marked.asked[sourceAwaitingReply]) == 0
+	if s.backlog.tasks == nil || s.backlog.until.IsZero() || reader.IsZero() || !todayCut && !laterCut || probedWithoutReminder {
 		return &scoped
 	}
-	sources, onTheDay := s.emailsWithoutTheirTask(day)
-	if len(sources) == 0 {
+	var emails []ids.UUID
+	for _, row := range s.followUps.rows {
+		if row.item.Source == sourceAwaitingReply && derivedFrom(row) != "" {
+			emails = append(emails, ids.UUID(row.item.SourceRecord.Id))
+		}
+	}
+	if len(emails) == 0 {
 		return &scoped
 	}
 	defer timeStage(ctx, "follow_up_promises")()
-	window := TaskWindow{
-		AsOf: day.AsOf, Until: s.backlog.until.AddDate(0, 0, upcomingHorizonDays),
-		Scope: s.taskScope, Owner: s.taskOwner, Team: s.rosterSeats(), DerivedFrom: sources,
-	}
 	var tasks []Task
 	err := s.degradable(ctx, "follow_up_promises", laneBudget, func(ctx context.Context) error {
 		var err error
-		tasks, err = s.everyTaskAfter(ctx, window)
+		tasks, err = s.promisesPastTheCap(ctx, day, reader, emails)
 		return err
 	})
 	if err != nil {
@@ -128,7 +174,6 @@ func (s *Service) readingFollowUpPromises(ctx context.Context, day crmcontracts.
 			"error", err)
 		return &scoped
 	}
-	tasks = slices.DeleteFunc(tasks, func(task Task) bool { return onTheDay[task.ID.String()] })
 	zone := s.backlog.zone
 	if zone == nil {
 		zone = time.UTC
@@ -138,37 +183,38 @@ func (s *Service) readingFollowUpPromises(ctx context.Context, day crmcontracts.
 	return &scoped
 }
 
-// emailsWithoutTheirTask names the follow-up reminders' emails that no task on
-// the day was derived from, and the ids of the tasks on the day.
-func (s *Service) emailsWithoutTheirTask(day crmcontracts.Attention) ([]ids.UUID, map[string]bool) {
-	onTheDay, tasked := map[string]bool{}, map[string]bool{}
+// promisesPastTheCap reads the reader's promises of these emails that are not
+// on the day, through the lane's own read. It skips one due after the reader's
+// first promise of the same email on the day.
+func (s *Service) promisesPastTheCap(ctx context.Context, day crmcontracts.Attention, reader ids.UUID, emails []ids.UUID) ([]Task, error) {
+	promises, err := s.backlog.tasks.FollowUpPromises(ctx, emails)
+	if err != nil {
+		return nil, err
+	}
+	onTheDay, first := map[string]bool{}, map[string]dueOrder{}
 	for _, task := range day.Planned {
 		onTheDay[task.Id] = true
-		if task.SourceRecord != nil {
-			tasked[task.SourceRecord.Id.String()] = true
+		record := task.SourceRecord
+		if record == nil || record.Type != crmcontracts.AttentionSubjectTypeActivity ||
+			task.AssigneeId == nil || ids.UUID(*task.AssigneeId) != reader {
+			continue
+		}
+		order := dueOrder{due: deadlineOf(task.DueAt), id: task.Id}
+		if held, ok := first[record.Id.String()]; !ok || order.before(held) {
+			first[record.Id.String()] = order
 		}
 	}
-	var sources []ids.UUID
-	for _, row := range s.followUps.rows {
-		if email := derivedFrom(row); email != "" && !tasked[email] {
-			sources = append(sources, ids.UUID(row.item.SourceRecord.Id))
+	var cut []ids.UUID
+	for _, promise := range promises {
+		order := dueOrder{due: deadlineOf(promise.DueAt), id: promise.ID.String()}
+		if held, ok := first[promise.Email.String()]; onTheDay[order.id] || ok && held.before(order) {
+			continue
 		}
+		cut = append(cut, promise.ID)
 	}
-	return sources, onTheDay
-}
-
-// everyTaskAfter reads the whole window through the backlog, page by page.
-func (s *Service) everyTaskAfter(ctx context.Context, window TaskWindow) ([]Task, error) {
-	var tasks []Task
-	for after, more := "", true; more; {
-		page, next, err := s.backlog.tasks.TasksAfter(ctx, window, after, promisePage)
-		if err != nil {
-			return nil, err
-		}
-		for _, task := range page {
-			tasks, after = append(tasks, task.Row), task.After
-		}
-		more = next && len(page) > 0
+	if len(cut) == 0 {
+		return nil, nil
 	}
-	return tasks, nil
+	window := TaskWindow{AsOf: day.AsOf, Until: s.backlog.until.AddDate(0, 0, upcomingHorizonDays), Scope: TasksMine}
+	return s.backlog.tasks.TasksIn(ctx, window, cut)
 }

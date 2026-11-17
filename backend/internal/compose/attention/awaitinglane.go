@@ -61,8 +61,8 @@ func (a AwaitedReply) sent() occurredday.Moment {
 // read says the source ran, cut that it stopped at its bound.
 type followUpRead struct {
 	rows []ranked
-	// promises are the tasks derived from these rows' emails that the
-	// planned lane cut (readingFollowUpPromises).
+	// promises are the reader's tasks derived from these rows' emails that
+	// the planned lane cut (readingFollowUpPromises).
 	promises     []ranked
 	read         bool
 	cut          bool
