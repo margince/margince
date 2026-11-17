@@ -7,13 +7,14 @@ import { ProvenanceTag } from "../../../design-system/trust";
 import { formatNumber } from "../../../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../../../i18n";
 import { labelFor } from "../../../lib/labelfor";
+import { dealRoleLabel } from "../../../lib/recordlabels";
 import { useViewerId } from "../../../lib/session";
 import { useUrlParams } from "../../../lib/urlstate";
 import { ENGAGEMENT_LABELS, ENGAGEMENT_TONES } from "./contacts";
 import { IntroRequestModal, type IntroTarget } from "./introrequest";
 import { ASK_INTRO, introTargetFor, mapModelFromCoverage } from "./mapmodel";
 import type { Coverage, Seat } from "./summary";
-import { ROLE_HEADINGS, ROLE_LABELS, ROLES } from "./summary.roles";
+import { ROLE_LABELS, ROLES } from "./summary.roles";
 import { SuggestRoles, useCommitteeWrites } from "./summary.writes";
 
 /**
@@ -78,7 +79,7 @@ export function CommitteeBoard({
   const columns = [
     ...ROLES.map((role) => ({
       stage: role,
-      label: t(ROLE_HEADINGS[role]),
+      label: dealRoleLabel(role, t),
       deals: committee.seats
         .filter((seat) => seat.role === role)
         .map((seat) => ({ id: seat.contact_id, name: seat.full_name, seat })),
@@ -228,11 +229,11 @@ function mapCopy(t: ReturnType<typeof useT>) {
     ourSide: t("co.contacts.map.ourSide"),
     account: t("co.contacts.map.account"),
     roles: {
-      champion: t(ROLE_HEADINGS.champion),
-      economic_buyer: t(ROLE_HEADINGS.economic_buyer),
-      influencer: t(ROLE_HEADINGS.influencer),
-      blocker: t(ROLE_HEADINGS.blocker),
-      user: t(ROLE_HEADINGS.user),
+      champion: dealRoleLabel("champion", t),
+      economic_buyer: dealRoleLabel("economic_buyer", t),
+      influencer: dealRoleLabel("influencer", t),
+      blocker: dealRoleLabel("blocker", t),
+      user: dealRoleLabel("user", t),
     },
     otherRoles: t("co.contacts.board.otherRoles"),
     missing: (role: (typeof ROLES)[number]) =>
