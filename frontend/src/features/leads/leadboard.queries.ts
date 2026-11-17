@@ -132,12 +132,15 @@ export function useLeadStatusCounts(query: ListQuery) {
 }
 
 // The /leads query for one terminal column: the list's dials, held to that
-// status and widened to the archived rows every terminal lead is.
+// status, which reads the archived rows every terminal lead is.
 export function terminalLeadsQueryParams(
   query: ListQuery,
   status: Lead["status"],
 ) {
-  return { ...leadsQueryParams(query), status, include_archived: true };
+  return leadsQueryParams({
+    ...query,
+    filters: { ...query.filters, status },
+  });
 }
 
 // The leads in one terminal column, read only while it is open. A status dial

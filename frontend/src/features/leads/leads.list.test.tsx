@@ -78,6 +78,27 @@ describe("LeadsScreen — search/sort/pagination + status filter (P-14)", () => 
     );
   });
 
+  it("a status filter naming a closed status reads the archived leads it names", async () => {
+    // Qualifying or disqualifying archives the lead, so the filter alone would
+    // match nothing while Show archived is off.
+    const user = userEvent.setup();
+    const { urls } = stubFetch(async () => emptyPage());
+    render(<LeadsScreen />);
+    await waitFor(() => expect(urls.length).toBeGreaterThan(0));
+
+    await pickFilter(user, "Status", "Disqualified");
+
+    await waitFor(() =>
+      expect(
+        urls.some(
+          (url) =>
+            url.includes("status=disqualified") &&
+            url.includes("include_archived=true"),
+        ),
+      ).toBe(true),
+    );
+  });
+
   it("an overdue lead wears the badge, and the Overdue view asks for sla_state=breached", async () => {
     // The badge is the first-response clock as the list shows it. A lead within
     // target carries no badge, so the list stays quiet until something needs a hand.
