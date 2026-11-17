@@ -279,3 +279,37 @@ export const FoldsAndReturnsWithWidth: Story = {
     );
   },
 };
+
+// A tab pressed while the strip is scrolled out of view, as a keyboard reader
+// can: the pane scrolls up just far enough to show the strip, and no further.
+export const PressedOutOfView: Story = {
+  render: () => <InPane />,
+  play: async ({ canvasElement }) => {
+    const pane = within(canvasElement).getByTestId("pane");
+    const row = canvasElement.querySelector(".recordtabs-row");
+    if (!(row instanceof HTMLElement)) throw new Error("no tab strip drawn");
+    const stripTop = () =>
+      row.getBoundingClientRect().top - pane.getBoundingClientRect().top;
+    pane.scrollTop += stripTop() + 200;
+    await waitFor(() => expect(stripTop()).toBeLessThan(-150));
+    within(canvasElement)
+      .getByRole("button", { name: /Activity/ })
+      .click();
+    await waitFor(() => expect(Math.abs(stripTop())).toBeLessThanOrEqual(1));
+    await expect(pane.scrollTop).toBeGreaterThan(0);
+  },
+};
+
+function InPane() {
+  return (
+    <div
+      data-testid="pane"
+      className="scroll"
+      style={{ display: "block", blockSize: "24rem", overflowY: "auto" }}
+    >
+      <div style={{ blockSize: "16rem" }}>Record header</div>
+      <Live initial="overview" />
+      <div style={{ blockSize: "60rem" }}>Tab body</div>
+    </div>
+  );
+}

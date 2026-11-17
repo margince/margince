@@ -327,10 +327,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                   legalReview={legalReview}
                   thread={threadQuery}
                   value={shownTab}
-                  onChange={(next) => {
-                    setTab(next);
-                    scrollPageToTop();
-                  }}
+                  onChange={setTab}
                 />
               }
             >

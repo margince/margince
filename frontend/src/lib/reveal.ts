@@ -52,9 +52,9 @@ export function revealOnceMounted(anchor: string, frames = 30): void {
 }
 
 /**
- * Takes the reader back to the top of the page pane, smoothly: for a tab
- * strip stuck under the top bar, where a reader deep in one tab's body
- * chooses another and would otherwise land part-way down the new one.
+ * Takes the reader back to the top of the page pane, smoothly: for a door in
+ * one tab's body that opens another tab, where the reader would otherwise land
+ * part-way down the new one.
  *
  * `.scroll` is the shell's one scrolling pane (app/shell.css); the window
  * itself never scrolls. Motion follows the reader's own setting: a reduced-
@@ -63,6 +63,56 @@ export function revealOnceMounted(anchor: string, frames = 30): void {
 export function scrollPageToTop(): void {
   const pane = document.querySelector(".scroll");
   pane?.scrollTo?.({ top: 0, behavior: scrollBehavior() });
+}
+
+export function placeAfterTabChange(
+  strip: HTMLElement,
+): { pane: HTMLElement; top: number } | null {
+  const pane = strip.closest<HTMLElement>(".scroll");
+  if (!pane) return null;
+  // The pane runs up behind the top bar by the bar's height (app/shell.css).
+  const underBar = Math.max(
+    0,
+    -Number.parseFloat(getComputedStyle(pane).marginTop) || 0,
+  );
+  const visibleTop = pane.getBoundingClientRect().top + underBar;
+  const above = visibleTop - strip.getBoundingClientRect().top;
+  return { pane, top: pane.scrollTop - Math.max(0, above) };
+}
+
+// A loading body is too short for `top`, and the clamp outlasts its growth.
+// Not useScrollMemory: it keys on history entries, and a deal's tab adds none.
+export function holdScrollTop(pane: HTMLElement, top: number): () => void {
+  const start = pane.scrollTop;
+  const clamped = () =>
+    pane.scrollTop < top &&
+    pane.scrollTop >= pane.scrollHeight - pane.clientHeight - 1;
+  const gliding = () => pane.scrollTop < start && pane.scrollTop > top;
+  const gestures = ["wheel", "touchstart", "keydown"] as const;
+  const growth = new MutationObserver(() => {
+    if (clamped()) pane.scrollTo?.({ top, behavior: "auto" });
+  });
+  const moved = () => {
+    if (Math.abs(pane.scrollTop - top) >= 1 && !clamped() && !gliding()) {
+      release();
+    }
+  };
+  const release = () => {
+    growth.disconnect();
+    pane.removeEventListener("scroll", moved);
+    for (const gesture of gestures) pane.removeEventListener(gesture, release);
+  };
+  growth.observe(pane, { childList: true, subtree: true });
+  pane.addEventListener("scroll", moved, { passive: true });
+  for (const gesture of gestures) {
+    pane.addEventListener(gesture, release, { passive: true });
+  }
+  if (Math.abs(start - top) >= 1) {
+    // Upward is the strip coming back into sight, so it may glide.
+    const behavior = top < start ? scrollBehavior() : "auto";
+    pane.scrollTo?.({ top, behavior });
+  }
+  return release;
 }
 
 // Motion follows the reader's own setting: a reduced-motion preference makes

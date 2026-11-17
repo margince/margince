@@ -49,6 +49,7 @@ import { useDisabledCoreFeatures } from "../../lib/corefeatures";
 import { useViewerZone } from "../../lib/viewerzone";
 import {
   navigateKeepingReturn,
+  openContactTab,
   WorklistReturnLink,
 } from "../worklist/worklist.return";
 import {
@@ -312,7 +313,7 @@ export function ContactPageV2({
               <ContactRecordTabs
                 view={view.data}
                 value={tab}
-                onChange={openTab}
+                onChange={(next) => openContactTab(id, next)}
               />
             }
           >

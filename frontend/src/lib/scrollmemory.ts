@@ -99,14 +99,25 @@ export function forgetScrollMemory(): void {
 
 const offsets = new Map<string, number>();
 
+function arrivalOffset(place: string, sameView: boolean): number | null {
+  const remembered = offsets.get(place);
+  if (remembered !== undefined) {
+    return remembered;
+  }
+  // `null` rather than the current offset: seeking assigns `scrollTop`, which
+  // cuts short a smooth scroll the tab strip has started.
+  return sameView ? null : 0;
+}
+
 /**
  * Keep `column` at the offset this history entry was left at.
  *
  * `address` is the trigger: it changes on every move, including the ones the
  * browser makes for Back and Forward. On the way OUT the current offset is
  * recorded against the entry being left; on the way IN a recorded one is
- * restored and anything else opens at the top, because a page nobody has
- * visited has no place to return to.
+ * restored. A new entry with the same `view` as the one left (another tab of
+ * the record on screen) keeps the offset it arrives with, and anything else
+ * opens at the top, because a page nobody has visited has no place to return to.
  *
  * The restore is RETRIED while the column grows. A list restores its rows a
  * moment after the address arrives, so the first attempt lands against a column
@@ -130,11 +141,16 @@ export function useScrollMemory(
   address: string,
   lane = "page",
   span: "entry" | "load" = "entry",
+  view?: string,
 ): void {
   // Recomputed per address rather than read in the effect, so the id belongs to
   // the entry being LEFT when the cleanup runs — by then `history.state` is
   // already the next entry's.
-  const [entry, setEntry] = useState(historyEntryId);
+  const [entry, setEntry] = useState(() => ({
+    id: historyEntryId(),
+    sameView: false,
+  }));
+  const viewLeft = useRef(view);
   const wanted = useRef<number | null>(null);
   // `address` is the TRIGGER and not a value the body reads: a move is what
   // makes the entry worth asking about again, and `history.state` is where the
@@ -143,8 +159,11 @@ export function useScrollMemory(
   // is not leaving the page.
   // biome-ignore lint/correctness/useExhaustiveDependencies: trigger-only dep
   useEffect(() => {
-    setEntry(historyEntryId());
-  }, [address]);
+    const id = historyEntryId();
+    const sameView = view !== undefined && view === viewLeft.current;
+    viewLeft.current = view;
+    setEntry((shown) => (shown.id === id ? shown : { id, sameView }));
+  }, [address, view]);
 
   // The element this lane scrolls, as a value the effect below can depend on.
   //
@@ -170,9 +189,13 @@ export function useScrollMemory(
     if (!scroller) {
       return;
     }
-    const place = span === "load" ? `load:${lane}` : `${entry}:${lane}`;
-    const target = offsets.get(place) ?? 0;
+    const place = span === "load" ? `load:${lane}` : `${entry.id}:${lane}`;
+    const target = arrivalOffset(place, entry.sameView);
     wanted.current = target;
+    if (target === null) {
+      offsets.set(place, scroller.scrollTop);
+    }
+    const retries = target !== null && target > 0;
     const seek = () => {
       if (wanted.current === null) {
         return;
@@ -180,7 +203,7 @@ export function useScrollMemory(
       // Nor ours to WRITE once the reader has moved on: the element may now
       // belong to the surface that replaced this one, and scrolling it would
       // move a page the reader is currently reading.
-      if (historyEntryId() !== entry) {
+      if (historyEntryId() !== entry.id) {
         wanted.current = null;
         return;
       }
@@ -241,7 +264,7 @@ export function useScrollMemory(
       // as every table does, and that zero was filed under the list's entry —
       // a reader who had scrolled a long way down came back to the first row.
       // The element is no longer ours to read, whatever it still reports.
-      if (historyEntryId() !== entry) {
+      if (historyEntryId() !== entry.id) {
         return;
       }
       // Gone from the document, where every measurement answers zero. React
@@ -284,12 +307,12 @@ export function useScrollMemory(
     // that settles without any node changing (a row that grows when its logo
     // loads). Either one is another chance at an offset the browser had to clamp.
     const growth =
-      target > 0 && typeof MutationObserver === "function"
+      retries && typeof MutationObserver === "function"
         ? new MutationObserver(seek)
         : null;
     growth?.observe(scroller, { childList: true, subtree: true });
     const resize =
-      target > 0 && typeof ResizeObserver === "function"
+      retries && typeof ResizeObserver === "function"
         ? new ResizeObserver(seek)
         : null;
     resize?.observe(scroller);

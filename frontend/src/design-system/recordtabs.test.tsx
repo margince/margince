@@ -10,6 +10,7 @@ import {
   render,
   screen,
 } from "@testing-library/react";
+import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { Button } from "./atoms";
@@ -294,5 +295,125 @@ describe("RecordTabs folds to one stable row", () => {
     expect(shown()).toEqual(["b"]);
     act(() => resized());
     expect(shown()).toEqual(["b"]);
+  });
+});
+
+// The page pane runs up behind a 56px top bar and stands at `offset`; the
+// strip sits `stripTop` px from the pane's top edge.
+function inPane(stripTop: number, offset = 1000) {
+  let clampAt = Number.POSITIVE_INFINITY;
+  let shown: HTMLElement | null = null;
+  function Live() {
+    const [value, setValue] = useState<Body>("overview");
+    return (
+      <div className="scroll" style={{ marginTop: "-56px" }}>
+        <RecordTabs
+          options={["overview", "contacts"]}
+          value={value}
+          onChange={(next) => {
+            setValue(next);
+            if (shown) shown.scrollTop = Math.min(shown.scrollTop, clampAt);
+          }}
+          labels={LABELS}
+        />
+      </div>
+    );
+  }
+  const view = render(
+    <LocaleProvider initial="en">
+      <Live />
+    </LocaleProvider>,
+  );
+  const pane = view.container.querySelector<HTMLElement>(".scroll");
+  const row = view.container.querySelector<HTMLElement>(".recordtabs-row");
+  if (!pane || !row) {
+    throw new Error("the strip was not drawn inside its pane");
+  }
+  shown = pane;
+  pane.scrollTop = offset;
+  const scrollTo = vi.fn((options?: ScrollToOptions | number) => {
+    const top = typeof options === "object" ? (options.top ?? 0) : 0;
+    pane.scrollTop = Math.min(top, clampAt);
+  });
+  pane.scrollTo = scrollTo;
+  vi.spyOn(pane, "getBoundingClientRect").mockReturnValue(
+    new DOMRect(0, 0, 390, 844),
+  );
+  vi.spyOn(row, "getBoundingClientRect").mockReturnValue(
+    new DOMRect(0, stripTop, 390, 44),
+  );
+  // A body too short for the offset: the browser clamps it.
+  const shorten = (bottom: number) => {
+    clampAt = bottom;
+  };
+  return { pane, scrollTo, shorten };
+}
+
+const press = (name: string) =>
+  fireEvent.click(screen.getByRole("button", { name }));
+
+describe("RecordTabs keeps the reader's place across a press", () => {
+  it("leaves the pane where it was while the strip is in view", () => {
+    const { pane, scrollTo } = inPane(120);
+    press("Contacts");
+    expect(screen.getByRole("button", { name: "Contacts" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(scrollTo).not.toHaveBeenCalled();
+    expect(pane.scrollTop).toBe(1000);
+  });
+
+  it("holds the place while a body that was still loading grows", async () => {
+    const { pane, shorten } = inPane(120);
+    shorten(200);
+    press("Contacts");
+    expect(pane.scrollTop).toBe(200);
+
+    shorten(Number.POSITIVE_INFINITY);
+    act(() => {
+      pane.append(document.createElement("div"));
+    });
+    await vi.waitFor(() => expect(pane.scrollTop).toBe(1000));
+  });
+
+  it("lets go once the reader takes hold of the pane", async () => {
+    const { pane, scrollTo, shorten } = inPane(120);
+    shorten(200);
+    press("Contacts");
+    fireEvent.wheel(pane);
+    scrollTo.mockClear();
+
+    shorten(Number.POSITIVE_INFINITY);
+    act(() => {
+      pane.append(document.createElement("div"));
+    });
+    await Promise.resolve();
+    expect(scrollTo).not.toHaveBeenCalled();
+    expect(pane.scrollTop).toBe(200);
+  });
+
+  it("scrolls up just far enough to show a strip left above the screen", () => {
+    const { pane, scrollTo } = inPane(-300);
+    press("Contacts");
+    // 300px above the pane's edge and 56 more under the bar.
+    expect(scrollTo).toHaveBeenCalledOnce();
+    expect(scrollTo).toHaveBeenCalledWith({ top: 644, behavior: "smooth" });
+    expect(pane.scrollTop).toBe(644);
+  });
+
+  it("jumps rather than glides for a reader who asked for less motion", () => {
+    vi.stubGlobal("matchMedia", (query: string) => ({
+      matches: query === "(prefers-reduced-motion: reduce)",
+    }));
+    const { scrollTo } = inPane(-300);
+    press("Contacts");
+    expect(scrollTo).toHaveBeenCalledWith({ top: 644, behavior: "auto" });
+  });
+
+  it("does not move for a press on the tab already open", () => {
+    const { scrollTo } = inPane(-300);
+    press("Overview");
+    expect(scrollTo).not.toHaveBeenCalled();
   });
 });

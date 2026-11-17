@@ -17,8 +17,9 @@
 // two unrelated layouts behind one name for the sake of one shared signature.
 
 import { ChevronDown } from "lucide-react";
-import { type ReactNode, useRef } from "react";
+import { type ReactNode, useEffect, useRef } from "react";
 import { useT } from "../i18n";
+import { holdScrollTop, placeAfterTabChange } from "../lib/reveal";
 import { Button, OptionCount } from "./atoms";
 import { OverflowMenu } from "./overflowmenu";
 import { useFocusKeptOnFold, useFoldedTabs } from "./recordtabs.fold";
@@ -111,6 +112,31 @@ export function RecordTabs<Option extends string>({
     value,
   );
   const keepFocus = useFocusKeptOnFold(stripRef, folded, value);
+  const rowRef = useRef<HTMLDivElement>(null);
+  const held = useRef<{ option: Option; release: () => void } | null>(null);
+  useEffect(() => {
+    if (held.current && held.current.option !== value) {
+      held.current.release();
+      held.current = null;
+    }
+  }, [value]);
+  useEffect(() => {
+    const hold = held;
+    return () => hold.current?.release();
+  }, []);
+  const choose = (option: Option) => {
+    if (option !== value && rowRef.current) {
+      held.current?.release();
+      // Taken before the new body renders, which can shorten the pane, and
+      // held past a body that suspends: hiding it drops layout effects.
+      const place = placeAfterTabChange(rowRef.current);
+      held.current = place && {
+        option,
+        release: holdScrollTop(place.pane, place.top),
+      };
+    }
+    onChange?.(option);
+  };
   const tabBody = (option: Option) => {
     const count = counts?.[option];
     return (
@@ -126,7 +152,7 @@ export function RecordTabs<Option extends string>({
 
   return (
     <div className="recordtabs">
-      <div className="recordtabs-row">
+      <div className="recordtabs-row" ref={rowRef}>
         {/* A fieldset, like every other group of controls here: a tablist
             would promise arrow-key navigation between the tabs and panels
             wired to them by id, and these are buttons that route to a page.
@@ -162,7 +188,7 @@ export function RecordTabs<Option extends string>({
                   className="recordtabs-tab"
                   data-tab={option}
                   aria-pressed={option === value}
-                  onClick={() => onChange(option)}
+                  onClick={() => choose(option)}
                 >
                   {tabBody(option)}
                 </button>
@@ -186,7 +212,7 @@ export function RecordTabs<Option extends string>({
                 align="start"
               >
                 {folded.map((option) => (
-                  <Button key={option} onClick={() => onChange(option)}>
+                  <Button key={option} onClick={() => choose(option)}>
                     {tabBody(option)}
                   </Button>
                 ))}

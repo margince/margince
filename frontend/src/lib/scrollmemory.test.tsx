@@ -127,6 +127,62 @@ describe("returning to a page", () => {
   });
 });
 
+describe("another tab of the same record", () => {
+  // `view` is what the address is about, as lib/routeidentity.ts derives it:
+  // a record's tabs share one, and each record has its own.
+  function Page({
+    address,
+    view,
+  }: Readonly<{ address: string; view: string }>) {
+    const column = useRef<HTMLDivElement>(null);
+    useScrollMemory(column, address, "page", "entry", view);
+    return <div ref={column} data-testid="column" />;
+  }
+
+  function openTimeline() {
+    const { container, rerender } = render(
+      <Page address="#/contacts/c-1" view="#/contacts/c-1" />,
+    );
+    scrollTo(container, 900);
+    const overview = window.history.state;
+    window.history.pushState(null, "", "#/contacts/c-1/timeline");
+    rerender(<Page address="#/contacts/c-1/timeline" view="#/contacts/c-1" />);
+    return { container, rerender, overview };
+  }
+
+  it("keeps the reader's place when the new entry shows the same record", () => {
+    const { container } = openTimeline();
+    expect(offsetOf(container)).toBe(900);
+  });
+
+  it("opens another record at its top", () => {
+    const { container, rerender } = openTimeline();
+    window.history.pushState(null, "", "#/contacts/c-2");
+    rerender(<Page address="#/contacts/c-2" view="#/contacts/c-2" />);
+    expect(offsetOf(container)).toBe(0);
+  });
+
+  it("restores the offset a tab was left at when the reader goes Back to it", () => {
+    const { container, rerender, overview } = openTimeline();
+    scrollTo(container, 300);
+    // Back: the browser puts the earlier entry's state, its id included, back.
+    window.history.pushState(overview, "", "#/contacts/c-1");
+    rerender(<Page address="#/contacts/c-1" view="#/contacts/c-1" />);
+    expect(offsetOf(container)).toBe(900);
+  });
+
+  it("remembers the kept place for the tab, so Back to it returns there", () => {
+    const { container, rerender } = openTimeline();
+    const timeline = window.history.state;
+    window.history.pushState(null, "", "#/deals");
+    rerender(<Page address="#/deals" view="#/deals" />);
+    expect(offsetOf(container)).toBe(0);
+    window.history.pushState(timeline, "", "#/contacts/c-1/timeline");
+    rerender(<Page address="#/contacts/c-1/timeline" view="#/contacts/c-1" />);
+    expect(offsetOf(container)).toBe(900);
+  });
+});
+
 describe("a lane kept for the whole load", () => {
   function Drawer({ address }: Readonly<{ address: string }>) {
     const column = useRef<HTMLDivElement>(null);
