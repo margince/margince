@@ -54,7 +54,7 @@ var refusalFacts = map[string]string{
 }
 
 // refusalNextMove says what may still be done about a refusal, read from
-// commsauthz.RemediesFor. A dead address lists nothing, so nobody sends past it.
+// commsauthz.RemediesFor. A stop lists nothing, so nobody sends past it.
 func refusalNextMove(reason string) string {
 	switch {
 	case commsauthz.HasRemedy(reason, commsauthz.RemedyException):

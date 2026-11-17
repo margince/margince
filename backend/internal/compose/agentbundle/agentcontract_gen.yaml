@@ -42106,12 +42106,14 @@ components:
           type: boolean
           description: |-
             Whether the sender may send this one message past the refusal by recording a
-            reason. True for every policy refusal, the subject's own stops included: the
-            refusal and the stop stay on the record, and the reason is kept with the message.
-            False for a hard bounce, because no decision makes a dead address accept mail, and
-            for a recipient that resolves to nobody or to two contacts, whose stops were never
-            read. The caller still needs the `communication_exception` grant, and the refused
-            send's review offers `direct_send` only to a caller who holds it.
+            reason. True for every policy refusal except the subject's own stops: the refusal
+            stays on the record, and the reason is kept with the message. False for a stop
+            (`decided_by` is `subject`), which nobody sends past, admin included. False for a
+            hard bounce, because no decision makes a dead address accept mail, and for a
+            recipient that resolves to nobody or to two contacts, whose stops were never read.
+            Only a user in their own session sends past it, never an agent, and only with the
+            `communication_exception` grant. The refused send's review offers `direct_send` only
+            to such a caller.
         decided_by:
           type: string
           enum: [machine, user, admin, subject]
@@ -42119,8 +42121,7 @@ components:
             Whose decision this answer is, which is what says whether anybody may overrule
             it. `machine` is the engine reading an incomplete record and a rep who knows
             better may say so. `subject` is the contact's own act — an objection or a
-            withdrawal. Nobody lifts it for good, but a sender may still send one message
-            past it with a recorded reason (`can_be_overruled`).
+            withdrawal. Nobody in the installation lifts it or sends past it, admin included.
     SendCompanyEmailRequest:
       type: object
       required: [subject, body, to, links]

@@ -114,10 +114,9 @@ func (l AuthorityLevel) CanRevoke(decided AuthorityLevel) bool {
 // which fails when a new absolute reason is added without an arm here.
 func LevelForReason(reasonCode string) AuthorityLevel {
 	switch reasonCode {
-	// THE SUBJECT'S OWN ACT. An objection, a withdrawal, a restriction and a
-	// request to stop are things the contact did, and Art. 21 makes the first
-	// absolute. No answer, recorded fact or exception lifts these, an admin's
-	// included (see RemediesFor).
+	// The subject's own act: an objection, a withdrawal, a restriction, a
+	// request to stop, an opt-out after a request. Nobody lifts or sends past
+	// these, an admin included (RemediesFor). Other refusals a rep may pass once.
 	case ReasonObjection, ReasonRestricted, ReasonSubjectRequest, ReasonConsentWithdrawn,
 		ReasonOptedOutAfterRequest:
 		return LevelSubject

@@ -31,7 +31,7 @@
   "catalog": {
     "tools": 48,
     "system_frame_tokens": 672,
-    "tokens": 51184,
+    "tokens": 51187,
     "median_tool_tokens": 797,
     "mean_tool_tokens": 1065
   },
@@ -205,7 +205,7 @@
     },
     {
       "name": "schedule_meeting",
-      "tokens": 484
+      "tokens": 487
     },
     {
       "name": "list_approvals",

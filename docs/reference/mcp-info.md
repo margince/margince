@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 273.7 KB |
+| Tool catalog | 273.9 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 71480 |
+| Approx. wire tokens | 71535 |
 | Largest tool | `read_details` (17.4 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,10 +33,10 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 51.5 KB | 18% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 53.3 KB | 19% | Yes, every step |
+| Descriptions (incl. governance clause) | 53.5 KB | 19% | Yes, every step |
 | Input schemas | 157.1 KB | 57% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 4% | Partly |
-| **Description + input schema** | **210.4 KB** | **76%** | **the recurring cost** |
+| **Description + input schema** | **210.6 KB** | **76%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -108,7 +108,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2779 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 1344 |
-| [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 484 |
+| [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 487 |
 | [`send_outbound`](#send_outbound) | Send a message |  |  | 1678 |
 | [`update_record`](#update_record) | Update a record |  | [`ui://margince/update.html`](#update_view) | 626 |
 | [`whoami`](#whoami) | Who this passport acts for | yes |  | 129 |
@@ -11849,7 +11849,10 @@ of the name topics is a prerequisite: each tool refuses an unknown name with the
 find_records to find a customer contact; colleagues are seats here. Use read_forecast with
 view=input_sources to learn whether a number can be trusted: how complete and current the data is.
 user_id is what assignee_id and owner_id take; never assign to an is_agent seat. Keep pipeline_id
-and stage_id for a deal. Take every name verbatim; a custom field is spelled cf_<slug>.
+and stage_id for a deal. Take every name verbatim; a custom field is spelled cf_<slug>. (Runs
+immediately; the user's yes is needed for the actions ai_call, ai_calls, member_retirement, so tell
+them what the call will surface and get it before calling, unless they asked for this call
+themselves.)
 ```
 
 <details><summary>Input schema</summary>
@@ -12554,12 +12557,13 @@ scope "enrich".)
 ```text
 Put a meeting on the host's calendar. invite creates the calendar event and the provider sends the
 invitation to every attendee: the contact, and any further addresses. invite reaches attendees
-outside the workspace, so name them and the time and get the user's yes first; the call stages for
-approval. Read check_availability before choosing a time. A start_intent (the user's local time)
-replaces start, and end moves with it so the meeting keeps its length. Use change_activities with
-log to record a meeting without inviting anyone, or one that already happened. Keep the invitation
-id and inspect its status before claiming it was delivered. A refused or failed invite invited
-nobody. (Governance: a human approves every call before it runs; requires passport scope "send".)
+outside the workspace. The call queues it and returns it pending, so name them and the time and get
+the user's yes first. Read check_availability before choosing a time. A start_intent (the user's
+local time) replaces start, and end moves with it so the meeting keeps its length. Use
+change_activities with log to record a meeting without inviting anyone, or one that already
+happened. Keep the invitation id and inspect its status before claiming it was delivered. A refused
+or failed invite invited nobody. (Governance: a human approves every call before it runs; requires
+passport scope "send".)
 ```
 
 <details><summary>Input schema</summary>

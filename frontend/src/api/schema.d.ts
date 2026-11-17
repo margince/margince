@@ -17751,6 +17751,10 @@ export interface paths {
          *     instruction rather than under the engine's permission. A subject asking later why they
          *     received it is shown the refusal AND the decision, never a grant nobody made.
          *
+         *     A SUBJECT'S OWN STOP IS NEVER PASSED. A review that holds an objection, a withdrawal, a
+         *     restriction or a request to stop is refused with 403, admin included, even beside a refusal
+         *     a decision could pass.
+         *
          *     THE DECISION IS THE USER'S, taken in their own session. The row names them as the one who
          *     took it on. An agent or a connector is refused: it may read the review and send its user
          *     there. It also needs the `communication_exception` object at `create`: directing
@@ -44684,20 +44688,21 @@ export interface components {
             would_refuse?: boolean;
             /**
              * @description Whether the sender may send this one message past the refusal by recording a
-             *     reason. True for every policy refusal, the subject's own stops included: the
-             *     refusal and the stop stay on the record, and the reason is kept with the message.
-             *     False for a hard bounce, because no decision makes a dead address accept mail, and
-             *     for a recipient that resolves to nobody or to two contacts, whose stops were never
-             *     read. The caller still needs the `communication_exception` grant, and the refused
-             *     send's review offers `direct_send` only to a caller who holds it.
+             *     reason. True for every policy refusal except the subject's own stops: the refusal
+             *     stays on the record, and the reason is kept with the message. False for a stop
+             *     (`decided_by` is `subject`), which nobody sends past, admin included. False for a
+             *     hard bounce, because no decision makes a dead address accept mail, and for a
+             *     recipient that resolves to nobody or to two contacts, whose stops were never read.
+             *     Only a user in their own session sends past it, never an agent, and only with the
+             *     `communication_exception` grant. The refused send's review offers `direct_send` only
+             *     to such a caller.
              */
             can_be_overruled?: boolean;
             /**
              * @description Whose decision this answer is, which is what says whether anybody may overrule
              *     it. `machine` is the engine reading an incomplete record and a rep who knows
              *     better may say so. `subject` is the contact's own act — an objection or a
-             *     withdrawal. Nobody lifts it for good, but a sender may still send one message
-             *     past it with a recorded reason (`can_be_overruled`).
+             *     withdrawal. Nobody in the installation lifts it or sends past it, admin included.
              *
              *     It is sent rather than derived because the rule lives in Go
              *     (`commsauthz.LevelForReason`), and a surface that mapped reason codes to
@@ -54642,9 +54647,8 @@ export interface components {
             /**
              * @description The refusal reason codes the director was shown, from the review's `refusals`. When the
              *     review's refusals changed since then, the decision is refused with `instruction_stale`
-             *     and the director opens the review again. Without it, a decision cannot pass a refusal
-             *     the subject made themselves (an objection, a withdrawal, a restriction or a request to
-             *     stop).
+             *     and the director opens the review again. A refusal the subject made themselves (an
+             *     objection, a withdrawal, a restriction or a request to stop) is never passed.
              */
             shown_reasons?: string[];
         };

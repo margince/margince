@@ -200,8 +200,8 @@ func (e *resolveEnv) suppressAt(t *testing.T, kind string, at time.Time) {
 }
 
 // A quote resting on a request alone, to somebody who opted out of marketing
-// after asking, is refused with its own reason. The rep confirms with the
-// contact first, or sends this one quote with a recorded reason.
+// after asking, is refused with its own reason. Nobody sends past it, an admin
+// included; the rep confirms with the contact first.
 //
 // Mutation: drop objectionBindsResolution from decideResolved and the quote is
 // allowed past the objection.
@@ -218,8 +218,8 @@ func TestAnOptOutAfterTheRequestStopsAQuoteWithNoDealBehindIt(t *testing.T) {
 	if d.Resolved != commsauthz.CategoryPrecontractQuote || d.Suppression != commsauthz.ReasonObjection {
 		t.Errorf("resolved %q under %q, want the quote it is under the objection", d.Resolved, d.Suppression)
 	}
-	if !(commsauthz.DecisionSet{Decisions: []commsauthz.Decision{d}}).ExceptionMayAnswer(false) {
-		t.Error("a rep's exception does not answer the opt-out after the request")
+	if (commsauthz.DecisionSet{Decisions: []commsauthz.Decision{d}}).ExceptionMayAnswer(true) {
+		t.Error("an admin's exception answers the opt-out after the request")
 	}
 }
 
