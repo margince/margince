@@ -16,7 +16,7 @@ To make a company a partner in Margince, open the company, choose **More actions
 2. Choose **More actions** → **Set up partner program**. The **Partner** tab opens on "Not a partner yet" and the **Make this a partner** form.
 3. Pick one or more **Partner kinds** (required) and fill what you already know.
 4. Choose **Create**.
-The company now shows on the **Partners** list and in every deal's **via partner** picker.
+The company now shows on the **Partners** list and in every deal's **Referring partner** picker.
 Also called: add a partner, onboard a reseller, start a partner programme.
 
 ### Who may set up a partner program?
@@ -105,10 +105,10 @@ Also called: new partner tier, new partner kind.
 ## Partners on a deal
 
 ### How do I record that a partner brought a deal?
-To give a partner credit for a deal in Margince, set **via partner** to the partner and choose the **Partner attribution**. Both are on the deal's form and in its **Details** panel.
-1. On **New deal**, or in an open deal's **Details**, pick the partner under **via partner**.
+To give a partner credit for a deal in Margince, set **Referring partner** to the partner and choose the **Partner attribution**. Both are on the deal's form and in its **Details** panel.
+1. On **New deal**, or in an open deal's **Details**, pick the partner under **Referring partner**. The deal page shows it as **Partner**.
 2. Under **Partner attribution**, choose **Sourced the deal (earns commission)** or **Influenced an existing deal (no commission)**.
-If you leave it empty, it reads **Not set (counted as sourced)**. With no partner company yet, the field asks you to have an admin add one. Once set, the partner shows under the deal's name.
+If you leave it empty, it reads **Not set (counted as sourced)**. With no partner company yet, the field says to set one up from a company's **More actions**. Once set, the partner shows under the deal's name.
 Also called: partner-sourced deal, referral, partner influenced.
 
 A partner's own **Partner** tab lists **Partner deals**: the deals of other companies that came through this partner, sourced or influenced. Each shows the **Customer**, the **Attribution**, the **Deal value** and the **Status**. The partner's own Deals tab does not show them, because each of those deals belongs to its customer. On **Deals**, the **Partner-sourced** and **Partner** filters cut the list down to deals through any partner, or through one.

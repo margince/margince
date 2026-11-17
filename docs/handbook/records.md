@@ -138,7 +138,7 @@ A company needs a display name and a source.
 ### How do I add a company?
 To add a company (a new customer, client or account) in Margince, open **Companies** in the sidebar and choose **New company**.
 1. Enter the **Company name** (required).
-2. If you like, fill **Legal name**, **Industry** and **Company size**. You pick **Industry** from a list.
+2. If you like, fill **Legal name**, **Industry**, **Employees**, **Phone** and **Email**. You pick **Industry** from a list.
 3. Choose **Add domain** for each domain; a domain row you add must be filled.
 4. Fill any custom fields, then choose **Create**.
 If the company is already in Margince, **View existing record** opens it instead. The website address comes from the main domain, so there is no website box.
@@ -146,16 +146,18 @@ If the company is already in Margince, **View existing record** opens it instead
 A new company with a domain lists the unlinked contacts with an email address on it, none ticked. Margince links those with no current job to it each day, ticked or not, so ticks matter most for contacts with another employer. Tick those who work there and choose **Link contacts**, or choose **Review contacts** on its **Contacts** tab later. Also called: new account, new business, add a client or customer.
 
 ### How do I edit a company?
-To edit a company in Margince, open it and press the value to change in its **Details** panel. There is no Edit button. A value you may change shows a box and an edit mark when the pointer is over it. On a touch screen the mark always shows. **Description** is on **Profile** and shows on its own when its text differs from the offer.
-1. If the panel is hidden, choose **Show details**.
+To edit a company in Margince, open it and press the value to change. There is no Edit button. A value you may change shows a box and an edit mark when the pointer is over it. On a touch screen the mark always shows. **Description** is on **Profile** and shows on its own when its text differs from the offer.
+1. If the panel beside the tabs is hidden, choose **Show details**.
 2. Press a value or its mark, change it in the dialog, and press **Save**. Nothing is stored until **Save**; **Cancel** or `Esc` closes without saving. **Address**, **Domain**, **Parent company** and **Relationship type** open a dialog with several fields.
 
-To rename the company, press its name at the top of the page, type the new **Company name** in the dialog and press **Save**. The fields are **Company name**, **Legal name**, **Industry**, **Company size**, **Owner**, **Lifecycle** and **Relationship type**. Then come **LinkedIn URL**, **Address**, **Domain**, **Parent company**, custom fields, and **VAT ID** under **Registration**. The website follows the main domain. **Industry** is a fixed list, and an import's text that names none of it goes into the **Description**.
+The panel beside the tabs holds **Domain**, **Industry**, **Employees**, **Lifecycle** and **Address** under **About**. **Owner** is under **Ownership**, and **VAT ID** under **Registration**. The **Profile** tab holds **Legal name**, **Relationship type**, **Parent company**, **LinkedIn URL**, **Phone**, **Email** and **Registered address** under **Details**. Custom fields are on **Profile** too.
+
+To rename the company, press its name at the top of the page, type the new **Company name** in the dialog and press **Save**. The website follows the main domain. **Industry** is a fixed list, and an import's text that names none of it goes into the **Description**.
 Also called: rename a company, update an account.
 
 ### How do I check a company's VAT number?
-To check a VAT number with the EU VAT register, type it into **VAT ID** in the company's **Details** panel. Margince checks a new number on its own.
-1. Open the company, and find **VAT ID** under **Registration** in **Details**.
+To check a VAT number with the EU VAT register, type it into **VAT ID** in the panel beside the company's tabs. Margince checks a new number on its own.
+1. Open the company, and find **VAT ID** under **Registration** beside the tabs.
 2. Press the number, type it as it is written in the dialog, and press **Save**.
 3. Press the mark that shows the check result, beside the number, to read the answer.
 The mark shows **Valid**, **Not valid**, or "not yet checked with the register". **Check with the register** or **Check again** asks once more. The answer arrives a few seconds later, while the button shows "Checking with register…". A number checked in the last five minutes is not checked again.
@@ -170,12 +172,12 @@ A grey question mark means the answer could not be loaded; press it to try again
 Also called: VAT ID valid, VAT receipt, Registered to.
 
 ### How do I change the owner of a contact or company?
-To change who owns a contact or company in Margince, open the record and press the **Owner** row of its **Details** panel. Pick a colleague in the dialog and press **Save**. You need edit rights on the record: your own, your team's, one shared with you for writing, or a role that edits every record. A private contact must keep an owner ("This field is required."). To give many records to a colleague at once, see [Lists, filters and views](lists-filters-and-views.md).
+To change who owns a contact or company in Margince, open the record and press **Owner** under **Ownership**, beside the tabs. Pick a colleague in the dialog and press **Save**. You need edit rights on the record: your own, your team's, one shared with you for writing, or a role that edits every record. A private contact must keep an owner ("This field is required."). To give many records to a colleague at once, see [Lists, filters and views](lists-filters-and-views.md).
 Also called: reassign a contact, hand over an account, transfer ownership, account owner.
 
 ### How do I claim a company nobody owns?
 To claim a company nobody owns in Margince, open it and press **Owner** in the facts under its name. Pick yourself in the dialog and press **Save** to make it yours.
-Everyone can read a company nobody owns, and nobody can edit it. So its **Details** panel takes no changes until someone claims it. Any role that may edit companies can claim one; nobody can claim an archived company.
+Everyone can read a company nobody owns, and nobody can edit it. So its fields take no changes until someone claims it. Any role that may edit companies can claim one; nobody can claim an archived company.
 Also called: take an unowned account, assign a company to me, claim an account.
 
 Two fields describe a company, and many users mix them up.

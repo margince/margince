@@ -6093,7 +6093,8 @@ export const en = {
   "deal.ownerMe": "Assign to me",
   "deal.ownerUnassign": "Unassign",
   "deal.partnerCompany": "Referring partner",
-  "deal.partnerNoneYet": "No partners yet. Ask an admin to add one.",
+  "deal.partnerNoneYet":
+    "No partners yet. Set one up from a company’s More actions.",
   "deal.referredBy": "Referred by",
   "deal.supportedBy": "Supported by",
   "deal.referral.sourced": "(sourced)",

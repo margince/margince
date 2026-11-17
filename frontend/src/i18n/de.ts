@@ -6170,7 +6170,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.ownerMe": "Mir zuweisen",
   "deal.ownerUnassign": "Zuweisung aufheben",
   "deal.partnerCompany": "Vermittelndes Partnerunternehmen",
-  "deal.partnerNoneYet": "Noch keine Partner. Ein Admin kann einen anlegen.",
+  "deal.partnerNoneYet":
+    "Noch keine Partner. Richte einen in einem Unternehmen unter „Weitere Aktionen“ ein.",
   "deal.referredBy": "Partner",
   "deal.supportedBy": "Partner",
   "deal.referral.sourced": "(vermittelt)",
