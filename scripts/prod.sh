@@ -122,9 +122,9 @@ stop() {
 		compose down --volumes --remove-orphans
 		# A settings folder shared through a symlink is deleted where it lives.
 		rm -rf "$(cd "$state" && pwd -P)"
-		rm -f "$state"
 		# The lock went with the folder; a later run's lock is not this run's.
 		trap - EXIT
+		if [[ -L "$state" ]]; then rm -f "$state"; fi
 		echo "prod: stopped, and its data and settings are deleted."
 		return
 	fi
