@@ -94,9 +94,10 @@ func orderByLeadNextTaskDue(ctx context.Context, arg func(any) int) (string, err
 	return leadNextTaskDueSQL(work), nil
 }
 
-// orderByLeadStatusRung orders by the status's place in leadStatusOrder.
+// orderByLeadStatusRung orders by the status's place in the lead's lifecycle:
+// the open ladder, then the terminal pair.
 func orderByLeadStatusRung(context.Context, func(any) int) (string, error) {
-	return leadStatusRungSQL, nil
+	return LeadStatusRungSQL("lead.status", true), nil
 }
 
 // orderByLeadSourceLabel orders by the words the Source column prints rather

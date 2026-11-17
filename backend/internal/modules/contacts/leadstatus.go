@@ -37,21 +37,23 @@ const (
 // boundary — TestLadderClimbsFromActivityAndNeverDescends holds the ladder.
 var openLeadStatuses = []LeadStatus{LeadStatusNew, LeadStatusContacted, LeadStatusEngaged}
 
-// leadStatusOrder is every status in the order a lead moves through them: the
-// open ladder, then the terminal pair.
-var leadStatusOrder = append(slices.Clone(openLeadStatuses), LeadStatusPromoted, LeadStatusDisqualified)
-
-// leadStatusRungSQL is a lead's index in leadStatusOrder. Each status is a Go
-// constant, never a request value, so it is formatted in.
-var leadStatusRungSQL = func() string {
-	var b strings.Builder
-	b.WriteString("(CASE lead.status")
-	for i, status := range leadStatusOrder {
-		fmt.Fprintf(&b, " WHEN '%s' THEN %d", status, i)
+// LeadStatusRungSQL ranks the lead status in column by its place in ladder
+// order. withTerminal ranks promoted and disqualified after the open ladder;
+// without it they rank -1, off the ladder, as any other value does. Each status
+// is a Go constant and column a caller's literal, so both are formatted in.
+func LeadStatusRungSQL(column string, withTerminal bool) string {
+	statuses := openLeadStatuses
+	if withTerminal {
+		statuses = append(slices.Clone(openLeadStatuses), LeadStatusPromoted, LeadStatusDisqualified)
 	}
-	b.WriteString(" END)")
+	var b strings.Builder
+	b.WriteString("(CASE " + column)
+	for rung, status := range statuses {
+		fmt.Fprintf(&b, " WHEN '%s' THEN %d", status, rung)
+	}
+	b.WriteString(" ELSE -1 END)")
 	return b.String()
-}()
+}
 
 // OpenLeadStatuses answers the statuses a lead may be written with, in ladder
 // order: the ones a file or an edit may place by hand.
