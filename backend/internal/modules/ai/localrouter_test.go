@@ -302,8 +302,8 @@ func TestNewLocalRouterPayloadCaptureKeepsTheWholeText(t *testing.T) {
 	}
 }
 
-// The input-count cap bounds an ai_call_payload row as the rune caps do, so the
-// trace capture lifts it too: no embedded input goes missing from a trace.
+// The input-count cap bounds an ai_call_payload row, as the rune caps do. The
+// trace capture lifts it too, so no embedded input goes missing from a trace.
 func TestNewLocalRouterPayloadCaptureKeepsEveryEmbedInput(t *testing.T) {
 	store := &memCallStore{}
 	r, err := NewLocalRouter(localFakeConfig(), WithCallStore(store), WithoutResultCache(), WithFakeClient(NewFakeClient()), WithPayloadCapture())
