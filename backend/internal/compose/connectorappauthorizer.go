@@ -175,7 +175,7 @@ func newGmailAuthorizer(resolve appResolver, c GmailConfig) googleAppAuthorizer 
 		env:     env,
 		build: func(app capture.ConnectorApp) googleconn.Authorizer {
 			return gmail.NewOAuth(gmail.OAuthConfig{
-				ClientID: app.ClientID, ClientSecret: app.ClientSecretRef, Scopes: gmailScopes,
+				ClientID: app.ClientID, ClientSecret: app.ClientSecretRef, Scopes: gmailScopes, HTTPClient: c.httpClient(),
 			})
 		},
 	}
@@ -191,7 +191,7 @@ func newGcalAuthorizer(resolve appResolver, c GmailConfig) googleAppAuthorizer {
 		resolve: resolve,
 		env:     env,
 		build: func(app capture.ConnectorApp) googleconn.Authorizer {
-			return gcal.NewOAuth(gcal.OAuthConfig{ClientID: app.ClientID, ClientSecret: app.ClientSecretRef})
+			return gcal.NewOAuth(gcal.OAuthConfig{ClientID: app.ClientID, ClientSecret: app.ClientSecretRef, HTTPClient: c.httpClient()})
 		},
 	}
 }
@@ -206,7 +206,7 @@ func newGdocsAuthorizer(resolve appResolver, c GmailConfig) googleAppAuthorizer 
 		resolve: resolve,
 		env:     env,
 		build: func(app capture.ConnectorApp) googleconn.Authorizer {
-			return gdocs.NewOAuth(gdocs.OAuthConfig{ClientID: app.ClientID, ClientSecret: app.ClientSecretRef})
+			return gdocs.NewOAuth(gdocs.OAuthConfig{ClientID: app.ClientID, ClientSecret: app.ClientSecretRef, HTTPClient: c.httpClient()})
 		},
 	}
 }

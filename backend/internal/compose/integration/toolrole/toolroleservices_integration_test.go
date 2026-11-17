@@ -73,9 +73,6 @@ func toolRoleApp(t *testing.T, slug string, more ...compose.Option) *apptest.Two
 	vault := keyvault.NewMemory()
 	calendar := apptest.NewBookingProvider(sweepGmail{next: http.DefaultTransport})
 	sweepCalendar = calendar
-	previous := http.DefaultTransport
-	http.DefaultTransport = calendar
-	t.Cleanup(func() { http.DefaultTransport = previous })
 	// Each role's seat signs in from its own address through the loopback, so
 	// no seat spends another's sign-in budget.
 	loopback, err := httpserver.ParseTrustedProxies("127.0.0.1/32")
@@ -89,6 +86,7 @@ func toolRoleApp(t *testing.T, slug string, more ...compose.Option) *apptest.Two
 		compose.WithChatLinks(jobs, true, sweepLane{reply: sweepChatSummaryReply}), compose.WithGmailCapture(compose.GmailConfig{
 			ClientID: "calendar-fixture", ClientSecret: "calendar-fixture",
 			StateKey: "0123456789abcdef0123456789abcdef", PublicBaseURL: "https://mail.example.test",
+			Transport: calendar,
 		}, compose.CaptureConfig{}), compose.WithCaptureBackfill(jobs),
 		compose.WithTranscriptRead(jobs), compose.WithDocumentRead(jobs), compose.WithDeepRead(jobs, siteReads.ColdStart),
 		compose.WithRoleProposals(models.ProposeRoles), compose.WithEmbedReindex(embeddings, jobs),

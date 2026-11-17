@@ -39,7 +39,7 @@ func pictureWire(t *testing.T, status int) (chainWire, chan offeredPicture, func
 	c.h.picture = newConnectPicture(identity.NewServiceFor(c.env.DB()), func(_ context.Context, user ids.UserID, pictureURL string) error {
 		offered <- offeredPicture{user, pictureURL}
 		return nil
-	})
+	}, nil)
 	c.h.picture.userinfo = googleconn.NewUserinfo(userinfo.Client(), userinfo.URL)
 	return c, offered, release
 }

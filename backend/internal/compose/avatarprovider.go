@@ -34,7 +34,7 @@ func installAvatarPictures(s *Server, pool *pgxpool.Pool, log *slog.Logger) {
 	s.avatarHandlers = avatarHandlers{pictures: pictures}
 	if s.blob != nil {
 		s.authHandlers = s.WithProviderPictureFill(pictures.FillFromPictureURL)
-		s.picture = newConnectPicture(pictures.users, pictures.FillFromPictureURL)
+		s.picture = newConnectPicture(pictures.users, pictures.FillFromPictureURL, s.googleHTTP)
 	}
 }
 

@@ -217,7 +217,7 @@ func baseRow(row string) string {
 	return base
 }
 
-//testdb:serial replaces http.DefaultTransport, which every test's outbound calls use
+//testdb:serial binds the process-wide VAT check enqueue (compose.BindVatChecking)
 func TestTheLeadListProbeIgnoresOtherCallsLinkedLeads(t *testing.T) {
 	recorded := newToolCheckRecorder()
 	d := toolRoleApp(t, "lead-list-probe", compose.WithToolChecksRecordedForTest(recorded.note))

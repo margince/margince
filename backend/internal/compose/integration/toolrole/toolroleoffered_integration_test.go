@@ -31,7 +31,7 @@ type listingPass struct {
 // allows that role, and the matrix names every seeded role. It runs on every
 // PR, so a tools/list change shows against the committed matrix at once.
 //
-//testdb:serial replaces http.DefaultTransport, which every test's outbound calls use
+//testdb:serial binds the process-wide VAT check enqueue (compose.BindVatChecking)
 func TestToolsListOffersEachSeededRoleItsAllowedCells(t *testing.T) {
 	d := toolRoleApp(t, "tool-role-cells")
 	var keys []string
