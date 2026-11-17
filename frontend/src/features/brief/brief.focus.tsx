@@ -18,7 +18,7 @@ import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
 import { taskTypeOf } from "../../lib/tasktype";
 import { briefContextTitle } from "../../lib/worklistcopy";
-import { emailNamesRow } from "../worklist/worklist.emailtitle";
+import { emailNamesRow } from "../../lib/worklistemailrow";
 import type { WorklistItem } from "../worklist/worklist.queries";
 import { OneRowWrite, useRowDone, WorklistRow } from "../worklist/worklist.row";
 import { useListed } from "../worklist/worklist.row.captions";

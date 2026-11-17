@@ -26,6 +26,7 @@ import {
   subjectHref,
   whenText,
 } from "../../lib/worklistcopy";
+import { emailNamesRow } from "../../lib/worklistemailrow";
 import {
   conditionOf,
   eyebrowKeyFor,
@@ -39,11 +40,7 @@ import {
   PutDownByThumb,
   useRowPutDown,
 } from "./worklist.dispositions";
-import {
-  emailNamesRow,
-  PromiseEmailLine,
-  WaitingEmailLine,
-} from "./worklist.emailtitle";
+import { PromiseEmailLine, WaitingEmailLine } from "./worklist.emailtitle";
 import { hostText } from "./worklist.meetingparties";
 import { useRowSource } from "./worklist.noticesource";
 import { lastTouch } from "./worklist.pane";

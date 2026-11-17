@@ -70,14 +70,6 @@ export function WaitingEmailLine({
 }
 
 /**
- * Whether the message names the row. A task keeps its own name, the promise,
- * even when it carries the email it was read out of.
- */
-export function emailNamesRow(item: WorklistItem): boolean {
-  return item.email_summary != null && item.source !== "task";
-}
-
-/**
  * The email a promise was read out of, drawn under the promise as the reason
  * it waits. Null on every other row, and where nothing can open the message.
  */

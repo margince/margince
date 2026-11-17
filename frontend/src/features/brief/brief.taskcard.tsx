@@ -61,10 +61,10 @@ import {
   subjectHref,
   whenText,
 } from "../../lib/worklistcopy";
+import { emailNamesRow } from "../../lib/worklistemailrow";
 import { eyebrowKeyFor } from "../../lib/worklisteyebrow";
 import { eventLine, useHappenedClock } from "../../lib/worklisthappened";
 import type { WorklistItem } from "../../lib/worklisttypes";
-import { emailNamesRow } from "../worklist/worklist.emailtitle";
 
 /** The name a card goes by, the way the row in hand names it. */
 export function taskName(
