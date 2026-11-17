@@ -3907,7 +3907,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.aside.visibleTheOwnerAndShared_other":
     "Die verantwortliche Person · {count} Freigaben",
   "co.aside.vatId": "USt-IdNr.",
-  "co.aside.add": "Hinzufügen…",
   "co.strip.unanswered": "Unbeantwortet",
   "co.strip.engagement.never_contacted": "Nie kontaktiert",
   "co.strip.engagement.active": "Aktiv",

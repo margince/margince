@@ -3788,7 +3788,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.aside.visibleTheOwnerAndShared_other":
     "Người chịu trách nhiệm · {count} lượt chia sẻ",
   "co.aside.vatId": "Mã số thuế",
-  "co.aside.add": "Thêm…",
   "co.strip.unanswered": "Chưa trả lời",
   "co.strip.engagement.never_contacted": "Chưa từng liên hệ",
   "co.strip.engagement.active": "Đang hoạt động",

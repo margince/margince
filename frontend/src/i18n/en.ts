@@ -3844,7 +3844,6 @@ export const en = {
   "co.aside.visibleTheOwnerAndShared_one": "The owner · {count} share",
   "co.aside.visibleTheOwnerAndShared_other": "The owner · {count} shares",
   "co.aside.vatId": "VAT ID",
-  "co.aside.add": "Add…",
   "co.strip.unanswered": "Unanswered",
   "co.strip.engagement.never_contacted": "Never contacted",
   "co.strip.engagement.active": "Active",
