@@ -481,6 +481,7 @@ Home's address is `#/home` in every language. `parseHash` in `router.tsx` sends 
 query kept. `WorklistRedirect` in `brief.queue.tsx` sends `#/worklist` and its owner or `unassigned` form
 to Home with the queue open, its `queue_scope` dial set and its filters kept. The queue drawer has its own
 `queue_scope`, so changing it never changes the Morning or Weekly view behind it.
+`openQueue` opens the drawer on a new entry, so Back closes it. `closeQueue` goes back to the Home entry under it, or, when none is there, replaces the drawer's entry with Home without the drawer's dials.
 
 Quiet relationships use the same scoped read and row renderer in a separate optional
 list. They join the work queue and Focus only when the reader pins them. A pin
