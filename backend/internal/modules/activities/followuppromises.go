@@ -46,7 +46,8 @@ func (s *Store) FollowUpPromises(ctx context.Context, emails []ids.UUID) ([]Foll
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		args := []any{}
 		arg := func(v any) string { args = append(args, v); return sprintf("$%d", len(args)) }
-		rows, err := tx.Query(ctx, followUpPromisesSQL(arg(emails), arg(reader)), args...)
+		query := followUpPromisesSQL(arg(emails), arg(reader))
+		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
 			return err
 		}
