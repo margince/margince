@@ -11,6 +11,7 @@ package dbmigrate
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -56,7 +57,7 @@ func ParseBaselineManifest(text string) (release string, replaces []LedgerEntry,
 		return "", nil, err
 	}
 	if release == "" || len(replaces) == 0 {
-		return "", nil, fmt.Errorf("baseline manifest: want a release line and at least one replaced version")
+		return "", nil, errors.New("baseline manifest: want a release line and at least one replaced version")
 	}
 	return release, replaces, nil
 }
