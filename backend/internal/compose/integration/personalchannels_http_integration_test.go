@@ -208,14 +208,24 @@ func TestAChatClientIsToldWhatItAskedWrong(t *testing.T) {
 			Status string `json:"status"`
 		} `json:"results"`
 	}
-	bad := map[string]any{"message_id": "wamid.bad", "network": "whatsapp", "body": "hi",
-		"from": map[string]any{"account": "has:colon"}, "to": map[string]any{"account": "me"}}
-	twice := map[string]any{"message_id": "wamid.twice", "network": "whatsapp", "body": "hi",
-		"from": map[string]any{"account": "84900000002"}, "to": map[string]any{"account": "me"},
-		"files": []map[string]any{{"upload_id": "01a1e7c4-128b-7c75-aac7-1c8828b9ccff"}, {"upload_id": "01a1e7c4-128b-7c75-aac7-1c8828b9ccff"}}}
-	missing := map[string]any{"message_id": "wamid.missing", "network": "whatsapp", "body": "hi",
-		"from": map[string]any{"account": "84900000003"}, "to": map[string]any{"account": "me"},
-		"files": []map[string]any{{"upload_id": "01a1e7c4-128b-7c75-aac7-1c8828b9ccf0"}}}
+	chat := func(id, account string, files ...map[string]any) map[string]any {
+		out := map[string]any{
+			"message_id": id,
+			"network":    "whatsapp",
+			"body":       "hi",
+			"from":       map[string]any{"account": account},
+			"to":         map[string]any{"account": "me"},
+		}
+		if len(files) > 0 {
+			out["files"] = files
+		}
+		return out
+	}
+	const someUpload = "01a1e7c4-128b-7c75-aac7-1c8828b9ccff"
+	bad := chat("wamid.bad", "has:colon")
+	twice := chat("wamid.twice", "84900000002",
+		map[string]any{"upload_id": someUpload}, map[string]any{"upload_id": someUpload})
+	missing := chat("wamid.missing", "84900000003", map[string]any{"upload_id": "01a1e7c4-128b-7c75-aac7-1c8828b9ccf0"})
 	if status := e.Call(t, "POST", "/v1/personal-channels/chats", map[string]any{"messages": []map[string]any{bad, twice, missing, message}}, headers, &batch); status != http.StatusOK ||
 		len(batch.Results) != 4 || batch.Results[0].Status != "refused" || batch.Results[1].Status != "refused" ||
 		batch.Results[2].Status != "refused" || batch.Results[3].Status != "landed" {
