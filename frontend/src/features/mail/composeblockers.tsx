@@ -116,6 +116,7 @@ export function ComposeBlockers({
   const chooseReason = (next: CommunicationContext | "") => {
     fields.setContext(next);
     fields.setMeetingEvidence(undefined);
+    fields.setReasonFromDraft(false);
   };
   const whyMissing = asksWhy(anchorActivity) && fields.context === "";
   const asksWhyAgain =

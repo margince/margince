@@ -5,7 +5,11 @@ import { reasonEvidence, useReasonForAnchor } from "./reasonanchor";
 
 describe("useReasonForAnchor", () => {
   it("clears the reason and its meeting when the composer moves to another anchor", () => {
-    const fields = { setContext: vi.fn(), setMeetingEvidence: vi.fn() };
+    const fields = {
+      setContext: vi.fn(),
+      setMeetingEvidence: vi.fn(),
+      setReasonFromDraft: vi.fn(),
+    };
     const { rerender } = renderHook(
       ({ anchor }: { anchor: string | undefined }) =>
         useReasonForAnchor(anchor, fields),

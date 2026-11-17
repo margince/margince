@@ -169,7 +169,7 @@ The answers are:
 - Their customer relationship
 - Marketing
 
-A reply to their own message needs no reason, unless the check cannot tell why you write; then the reply asks too. When you ask the assistant to move a meeting in a reply draft, such as "Termin verschieben", it picks **Follow-up they requested**. A meeting from your calendar with them, still to come, supports it. On a contact's page,
+A reply to their own message needs no reason, unless the check cannot tell why you write; then the reply asks too. When you ask the assistant to move a meeting, such as "Termin verschieben", the draft picks **Follow-up they requested**. A meeting from your calendar with them, still to come, supports it. On a contact's page,
 **Active deal** adds **Deal this follow-up is about**: pick their open deal before **Send**.
 
 The consent check reads the reason, and it runs *before* you send. Beside

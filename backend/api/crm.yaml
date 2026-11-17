@@ -60729,6 +60729,13 @@ components:
         deterministic floor is a real outcome here rather than an error.
       required: [subject, body, reasoning, generated_by, ai_generated]
       properties:
+        communication_context:
+          allOf: [{ $ref: '#/components/schemas/CommunicationContext' }]
+          readOnly: true
+          description: |
+            What the drafting instruction says this message is, for the composer to send with it:
+            `requested_followup` when it asks to move an appointment. Absent otherwise. The send
+            check still needs an agreed appointment with the recipient.
         subject: { type: string }
         body:
           type: string

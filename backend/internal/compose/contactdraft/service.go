@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/draftreason"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -191,7 +192,7 @@ func (s *Service) Draft(
 	if err != nil {
 		return crmcontracts.CompanyEmailDraft{}, nil, err
 	}
-	out := Wire(draft, by, voice.Degraded, req.Envelope.Language)
+	out := Wire(draft, by, voice.Degraded, req.Envelope.Language, req.Intent)
 	// The scoped read's own report of what the narrowing kept, so the
 	// composer's scope line counts what the draft was actually written from.
 	out.Scope = view.Scope
@@ -216,8 +217,9 @@ func (s *Service) Draft(
 //
 // lang is the DRAFT's language, from the envelope its caller resolved. Passed
 // rather than read here because the two callers resolve their own, and a wire
-// mapper that went looking for one would be a second resolver.
-func Wire(draft Draft, by crmcontracts.WrittenBy, voiceDegraded bool, lang string) crmcontracts.CompanyEmailDraft {
+// mapper that went looking for one would be a second resolver. intent is the
+// drafting instruction, which may name the message's reason (draftreason).
+func Wire(draft Draft, by crmcontracts.WrittenBy, voiceDegraded bool, lang, intent string) crmcontracts.CompanyEmailDraft {
 	aiWritten := by == crmcontracts.WrittenByModel
 	out := crmcontracts.CompanyEmailDraft{
 		Subject:       draft.Subject,
@@ -236,6 +238,10 @@ func Wire(draft Draft, by crmcontracts.WrittenBy, voiceDegraded bool, lang strin
 	}
 	out.AiDisclosure = draftfloor.AIProvenanceNoticeFor(aiWritten, textlang.Lang(lang))
 	out.Language = draftfloor.Reported[crmcontracts.CompanyEmailDraftLanguage](textlang.Lang(lang))
+	if reason := draftreason.ForInstruction(intent); reason != "" {
+		wire := crmcontracts.CommunicationContext(reason)
+		out.CommunicationContext = &wire
+	}
 	return out
 }
 

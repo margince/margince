@@ -10,13 +10,17 @@ type Evidence = components["schemas"]["CommunicationEvidence"];
  */
 export function useReasonForAnchor(
   answering: string | undefined,
-  fields: Pick<ComposeFields, "setContext" | "setMeetingEvidence">,
+  fields: Pick<
+    ComposeFields,
+    "setContext" | "setMeetingEvidence" | "setReasonFromDraft"
+  >,
 ): void {
   const [reasonAnchor, setReasonAnchor] = useState(answering);
   if (reasonAnchor !== answering) {
     setReasonAnchor(answering);
     fields.setContext("");
     fields.setMeetingEvidence(undefined);
+    fields.setReasonFromDraft(false);
   }
 }
 

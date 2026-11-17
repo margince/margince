@@ -43903,6 +43903,12 @@ export interface components {
          *     deterministic floor is a real outcome here rather than an error.
          */
         CompanyEmailDraft: {
+            /**
+             * @description What the drafting instruction says this message is, for the composer to send with it:
+             *     `requested_followup` when it asks to move an appointment. Absent otherwise. The send
+             *     check still needs an agreed appointment with the recipient.
+             */
+            readonly communication_context?: components["schemas"]["CommunicationContext"];
             subject: string;
             /** @description Plain text, end to end. There is no rich-text storage format, no paste sanitiser and no HTML+text send pair, so a formatted draft would be a wire change rather than a toolbar. */
             body: string;
