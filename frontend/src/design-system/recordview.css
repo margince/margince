@@ -334,7 +334,7 @@
 .record-split-feed {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--gapCards);
   padding: var(--space-6) var(--space-6) var(--space-8);
   min-inline-size: 0;
 }
@@ -380,6 +380,22 @@
   }
   .record-split-feed {
     padding: var(--padPane);
+  }
+}
+/* A phone shows one block at a time, so every tab keeps one rhythm: the card
+   gap between blocks, a smaller step from a heading to the card it heads. */
+@media (max-width: 700px) {
+  .record-split-feed :is(.record-stack, .chapters) {
+    gap: var(--gapCards);
+  }
+  .record-split-feed .chapter {
+    gap: var(--space-3);
+  }
+  .record-split-feed .timeline-header {
+    margin-block: var(--space-3);
+  }
+  .record-split-feed .record-timeline:not(:first-child) {
+    margin-block-start: var(--gapCards);
   }
 }
 

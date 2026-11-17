@@ -204,8 +204,8 @@ export const Narrow: Story = {
   args: { ...Default.args },
 };
 
-// At 390px both cards take the phone inset, and the first tab still stands
-// over the feed's first card.
+// At 390px the head, the tabs and the feed take the phone inset, and the first
+// tab still stands over the feed's first card.
 export const Phone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
@@ -216,7 +216,7 @@ export const Phone: Story = {
       .getPropertyValue("--space-3")
       .trim();
     for (const part of [
-      ".record-split-details",
+      ".record-split-head",
       ".record-split-tabs",
       ".record-split-feed",
     ]) {

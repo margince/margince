@@ -7,7 +7,7 @@
    a container query on the tab itself, never a media query. */
 .pn-stack {
   display: grid;
-  gap: var(--space-4);
+  gap: var(--gapCards);
   container-type: inline-size;
   container-name: network;
 }
