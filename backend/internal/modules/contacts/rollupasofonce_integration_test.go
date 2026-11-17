@@ -22,8 +22,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+//testdb:serial swaps the package-level rollupClock, which its parallel siblings read
 func TestOneCompanyReadBindsOneAsOfDate(t *testing.T) {
-	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{

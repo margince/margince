@@ -136,8 +136,8 @@ func TestSLAStateReadsAndFiltersAlike(t *testing.T) {
 	}
 }
 
+//testdb:serial swaps the package-level leadSLAClock, which its parallel siblings read
 func TestDefaultLeadQueueOrdersSLAThenScoreDeterministically(t *testing.T) {
-	t.Parallel()
 	e := setupPromoteConsent(t)
 	e.enableFirstResponseSLA(t)
 	now := time.Now().UTC().Truncate(time.Second)
@@ -219,8 +219,9 @@ func TestLeadQuickFindIncludesExactEmailAndLinkedIn(t *testing.T) {
 // that sat unowned for a week is a week overdue the instant somebody picks it
 // up — they inherit a breach earned while the row was nobody's. That is the
 // state a website read leaves behind, which is why it matters now.
+//
+//testdb:serial swaps the package-level leadSLAClock, which its parallel siblings read
 func TestTakingOnAnUnownedLeadStartsItsResponseClock(t *testing.T) {
-	t.Parallel()
 	now := pinLeadAuditClock(t)
 	e := setupPromoteConsent(t)
 	id := ids.NewV7()
@@ -426,8 +427,9 @@ func TestTakingOnALeadClearsTheBreachItEarnedWhileUnowned(t *testing.T) {
 // A human moving the lead off `new` is a first response; the stamp is set
 // once and a later status change does not move it. Disqualifying an
 // unanswered lead is an explicit disposition and stamps it too.
+//
+//testdb:serial swaps the package-level leadSLAClock, which its parallel siblings read
 func TestFirstResponseFromHumanStatusChangeAndDisposition(t *testing.T) {
-	t.Parallel()
 	e := setupPromoteConsent(t)
 	now := pinLeadAuditClock(t)
 	worked := e.seedLeadCreatedAt(t, "worked@example.test", now.Add(-time.Hour))
@@ -601,8 +603,9 @@ func TestTheScanReadsTheActivitiesRatherThanTheProjection(t *testing.T) {
 // And the scan still breaches a lead nobody answered: a version that returned
 // "answered" for everything would pass the test above while switching the
 // whole target off.
+//
+//testdb:serial swaps the package-level leadSLAClock, which its parallel siblings read
 func TestTheScanStillBreachesALeadNobodyAnswered(t *testing.T) {
-	t.Parallel()
 	now := pinLeadAuditClock(t)
 	e := setupPromoteConsent(t)
 	e.enableFirstResponseSLA(t)
@@ -828,8 +831,9 @@ func TestAnIntakeSeatMustBeAbleToReadTheLeadsItAnswersFor(t *testing.T) {
 // The application and database clocks can disagree by seconds. A human's
 // first response is stamped with the module clock, floored at created_at.
 // A clock that already reads later is kept as it is.
+//
+//testdb:serial swaps the package-level leadSLAClock, which its parallel siblings read
 func TestAFirstResponseIsNeverStampedBeforeTheLeadExisted(t *testing.T) {
-	t.Parallel()
 	created := time.Date(2099, time.January, 1, 9, 0, 0, 0, time.UTC)
 	for _, tc := range []struct {
 		name  string
