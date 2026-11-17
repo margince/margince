@@ -19,7 +19,6 @@ import { ShownAddressSink } from "../lib/screenaddress";
 import { useScrollMemory } from "../lib/scrollmemory";
 import { useShortcutDispatcher, useShortcutHandler } from "../lib/shortcuts";
 import { readStored, STORAGE_KEYS, writeStored } from "../lib/storage";
-import { hashWithParams, parseParams } from "../lib/urlstate";
 import { AgentEdge } from "./agent-edge";
 import { CaptureChip } from "./capture-chip";
 import { CaptureHealthBanner } from "./capturehealthbanner";
@@ -29,7 +28,7 @@ import { EmbedReindexBanner } from "./embedreindexbanner";
 import { LicenseBanner } from "./licensebanner";
 import { type NavCounts, RAIL_LESS_SCREENS } from "./nav";
 import { NavWalkProvider, useNavWalk } from "./navlevel";
-import { useReadingColumn } from "./readingcolumn";
+import { isRecordPage, useReadingColumn } from "./readingcolumn";
 import { usePublishedScrollerHeight } from "./scrollerheight";
 import { TopBar } from "./topbar";
 import "./shell.css";
@@ -152,13 +151,9 @@ export function Shell({
   const [shown, setShown] = useState<string | null>(null);
   const live = useLiveHash();
   const address = shown ?? live;
-  // A new page opens at its top. A page met again opens where it was left,
-  // and another tab of the same record stays put. All three live in
-  // lib/scrollmemory.ts. The second needs an identity
-  // for the history entry, which the browser does not give, and a retry while the
-  // column grows. A list restores its rows a moment after the address arrives,
-  // so a single assignment lands on a column still short and gets clamped.
-  useScrollMemory(scroller, address, "page", "entry", sameRecordView(address));
+  // A new page opens at its top and a page met again where it was left. Another
+  // tab of the record on screen keeps the reader's place.
+  useScrollMemory(scroller, address, { view: recordShown(address) });
   const screen = (
     <ShownAddressSink.Provider value={setShown}>
       {children}
@@ -300,11 +295,8 @@ function ShellBanners() {
   );
 }
 
-// The record an address shows, with its dials. Another tab of it is the same
-// view, and a move of the dials alone is a new page.
-function sameRecordView(address: string): string {
-  return hashWithParams(
-    routeIdentity(parseHash(address)),
-    parseParams(address),
-  );
+// The record a record page shows, whichever tab and dials it has open.
+function recordShown(address: string): string | undefined {
+  const route = parseHash(address);
+  return isRecordPage(route) ? routeIdentity(route) : undefined;
 }

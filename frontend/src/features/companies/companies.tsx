@@ -218,6 +218,7 @@ function CompanyRecord({
         options={visibleTabs}
         value={tab}
         onChange={onTab}
+        keepPlace
         counts={companyTabCounts(assembled)}
         labels={{
           // "360", not the shared "Overview": this tab is the account's

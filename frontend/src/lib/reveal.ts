@@ -65,6 +65,10 @@ export function scrollPageToTop(): void {
   pane?.scrollTo?.({ top: 0, behavior: scrollBehavior() });
 }
 
+/**
+ * Where the page pane should stand after a press on `strip`. That is where it
+ * is, or higher by just enough to show the strip under the top bar.
+ */
 export function placeAfterTabChange(
   strip: HTMLElement,
 ): { pane: HTMLElement; top: number } | null {
@@ -78,44 +82,6 @@ export function placeAfterTabChange(
   const visibleTop = pane.getBoundingClientRect().top + underBar;
   const above = visibleTop - strip.getBoundingClientRect().top;
   return { pane, top: pane.scrollTop - Math.max(0, above) };
-}
-
-// A loading body is too short for `top`, and the clamp outlasts its growth.
-// Not useScrollMemory: it keys on history entries, and a deal's tab adds none.
-export function holdScrollTop(pane: HTMLElement, top: number): () => void {
-  const start = pane.scrollTop;
-  const clamped = () =>
-    pane.scrollTop < top &&
-    pane.scrollTop >= pane.scrollHeight - pane.clientHeight - 1;
-  const gliding = () => pane.scrollTop < start && pane.scrollTop > top;
-  const gestures = ["wheel", "touchstart", "keydown"] as const;
-  // Not `clamped()`: by the time the body has grown, the pane is off its foot.
-  const growth = new MutationObserver(() => {
-    if (Math.abs(pane.scrollTop - top) >= 1) {
-      pane.scrollTo?.({ top, behavior: "auto" });
-    }
-  });
-  const moved = () => {
-    if (Math.abs(pane.scrollTop - top) >= 1 && !clamped() && !gliding()) {
-      release();
-    }
-  };
-  const release = () => {
-    growth.disconnect();
-    pane.removeEventListener("scroll", moved);
-    for (const gesture of gestures) pane.removeEventListener(gesture, release);
-  };
-  growth.observe(pane, { childList: true, subtree: true });
-  pane.addEventListener("scroll", moved, { passive: true });
-  for (const gesture of gestures) {
-    pane.addEventListener(gesture, release, { passive: true });
-  }
-  if (Math.abs(start - top) >= 1) {
-    // Upward is the strip coming back into sight, so it may glide.
-    const behavior = top < start ? scrollBehavior() : "auto";
-    pane.scrollTo?.({ top, behavior });
-  }
-  return release;
 }
 
 // Motion follows the reader's own setting: a reduced-motion preference makes

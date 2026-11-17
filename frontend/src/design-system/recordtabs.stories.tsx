@@ -38,7 +38,7 @@ const LABELS: Record<Body, string> = {
 };
 
 // Live, so the underline can be judged moving to the tab the reader picked.
-function Live(props: Readonly<{ initial: Body }>) {
+function Live(props: Readonly<{ initial: Body; keepPlace?: boolean }>) {
   const [value, setValue] = useState<Body>(props.initial);
   return (
     <RecordTabs
@@ -46,6 +46,7 @@ function Live(props: Readonly<{ initial: Body }>) {
       options={["overview", "contacts", "activity", "brief"]}
       value={value}
       onChange={setValue}
+      keepPlace={props.keepPlace}
       labels={LABELS}
       counts={{ contacts: 10, activity: 27 }}
       marks={{ brief: true }}
@@ -308,7 +309,7 @@ function InPane() {
       style={{ display: "block", blockSize: "24rem", overflowY: "auto" }}
     >
       <div style={{ blockSize: "16rem" }}>Record header</div>
-      <Live initial="overview" />
+      <Live initial="overview" keepPlace />
       <div style={{ blockSize: "60rem" }}>Tab body</div>
     </div>
   );

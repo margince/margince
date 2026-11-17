@@ -104,6 +104,7 @@ function DealTabs({
       options={tabsOf(deal, legalReview)}
       value={value}
       onChange={onChange}
+      keepPlace
       counts={counts}
       labels={{
         overview: t("tab.overview"),

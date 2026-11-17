@@ -135,7 +135,7 @@ describe("another tab of the same record", () => {
     view,
   }: Readonly<{ address: string; view: string }>) {
     const column = useRef<HTMLDivElement>(null);
-    useScrollMemory(column, address, "page", "entry", view);
+    useScrollMemory(column, address, { view });
     return <div ref={column} data-testid="column" />;
   }
 
@@ -186,7 +186,7 @@ describe("another tab of the same record", () => {
 describe("a lane kept for the whole load", () => {
   function Drawer({ address }: Readonly<{ address: string }>) {
     const column = useRef<HTMLDivElement>(null);
-    useScrollMemory(column, address, "drawer", "load");
+    useScrollMemory(column, address, { lane: "drawer", span: "load" });
     return <div ref={column} data-testid="column" />;
   }
 

@@ -67,6 +67,7 @@ export function ContactRecordTabs({
       )}
       value={value}
       onChange={onChange}
+      keepPlace
       labels={{
         overview: t(TAB_LABEL_KEYS.overview),
         timeline: t(TAB_LABEL_KEYS.timeline),

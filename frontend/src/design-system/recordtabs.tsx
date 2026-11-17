@@ -19,7 +19,8 @@
 import { ChevronDown } from "lucide-react";
 import { type ReactNode, useEffect, useRef } from "react";
 import { useT } from "../i18n";
-import { holdScrollTop, placeAfterTabChange } from "../lib/reveal";
+import { placeAfterTabChange } from "../lib/reveal";
+import { seekScrollTop } from "../lib/scrollmemory";
 import { Button, OptionCount } from "./atoms";
 import { OverflowMenu } from "./overflowmenu";
 import { useFocusKeptOnFold, useFoldedTabs } from "./recordtabs.fold";
@@ -61,6 +62,9 @@ type RecordTabsCommon<Option extends string> = Readonly<{
 type RecordTabsChoice<Option extends string> = Readonly<{
   options: readonly Option[];
   onChange: (next: Option) => void;
+  // A record's tabs: a press keeps the reader's offset in the page pane, or
+  // raises it just enough to show the strip. Elsewhere a new tab opens at top.
+  keepPlace?: boolean;
 }>;
 
 // A record read in ONE body: the lone tab names the page the reader is already
@@ -74,6 +78,7 @@ type RecordTabsChoice<Option extends string> = Readonly<{
 type RecordTabsLone<Option extends string> = Readonly<{
   options: readonly [Option];
   onChange?: never;
+  keepPlace?: never;
 }>;
 
 /**
@@ -99,6 +104,7 @@ export function RecordTabs<Option extends string>({
   marks,
   label,
   trailing,
+  keepPlace,
 }: RecordTabsCommon<Option> &
   (RecordTabsChoice<Option> | RecordTabsLone<Option>)) {
   const t = useT();
@@ -113,28 +119,23 @@ export function RecordTabs<Option extends string>({
   );
   const keepFocus = useFocusKeptOnFold(stripRef, folded, value);
   const rowRef = useRef<HTMLDivElement>(null);
-  const held = useRef<{ option: Option; release: () => void } | null>(null);
+  const pressed = useRef<{
+    option: Option;
+    place: { pane: HTMLElement; top: number };
+  } | null>(null);
+  // After the commit, not at the press: the new body is what can be too short.
   useEffect(() => {
-    if (held.current && held.current.option !== value) {
-      held.current.release();
-      held.current = null;
-    }
+    const press = pressed.current;
+    pressed.current = null;
+    if (press?.option !== value) return;
+    return seekScrollTop(press.place.pane, press.place.top);
   }, [value]);
-  useEffect(() => {
-    const hold = held;
-    return () => hold.current?.release();
-  }, []);
   const choose = (option: Option) => {
-    if (option !== value && rowRef.current) {
-      held.current?.release();
-      // Taken before the new body renders, which can shorten the pane, and
-      // held past a body that suspends: hiding it drops layout effects.
-      const place = placeAfterTabChange(rowRef.current);
-      held.current = place && {
-        option,
-        release: holdScrollTop(place.pane, place.top),
-      };
-    }
+    const place =
+      keepPlace && option !== value && rowRef.current
+        ? placeAfterTabChange(rowRef.current)
+        : null;
+    pressed.current = place && { option, place };
     onChange?.(option);
   };
   const tabBody = (option: Option) => {
