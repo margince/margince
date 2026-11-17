@@ -123,9 +123,14 @@ export function RecordTabs<Option extends string>({
     option: Option;
     place: { pane: HTMLElement; below: number };
   } | null>(null);
+  const valueShown = useRef(value);
   // After the commit, not at the press. The new tab can change what stands
   // above the strip, and its body can be too short for the offset.
   useEffect(() => {
+    // Only a change of tab spends the press. A press can land before this
+    // effect's first run, which must leave it for the run after.
+    if (valueShown.current === value) return;
+    valueShown.current = value;
     const press = pressed.current;
     pressed.current = null;
     const strip = rowRef.current;
