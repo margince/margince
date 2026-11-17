@@ -5,6 +5,7 @@ package contacts
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -81,6 +82,8 @@ type Store struct {
 	// settings is the configuration the lead and signature-template settings
 	// are read and saved through; nil means they are read-only on this store.
 	settings *config.Config
+	// warnings is where a read reports a setting it cannot honour; nil is slog.Default().
+	warnings *slog.Logger
 	// dealOpener opens the deal a qualify call asks for, inside the promote
 	// transaction; compose binds the deals store. Nil refuses such calls.
 	dealOpener LeadDealOpener

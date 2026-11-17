@@ -88,20 +88,16 @@ func TestABootSetTemplateIsTheOneASendSignsWith(t *testing.T) {
 }
 
 // A boot-set seat no colleague holds escalates to nobody, and the log names
-// the setting and the variable that set it. Not parallel: the log and the
-// binding are the process's own.
-//
-//testdb:serial replaces a process-wide default (slog or time.Local)
+// the setting and the variable that set it.
 func TestABootSetSeatNoColleagueHoldsIsWarnedAbout(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	locked := configtest.StoredOver(t, e.store.db.Pool(), ConfigSettings(),
 		"MARGINCE_CONTACTS_UNASSIGNED_ESCALATION_USER_ID="+ids.NewV7().String())
 	var logged bytes.Buffer
-	restore := slog.Default()
-	slog.SetDefault(slog.New(slog.NewTextHandler(&logged, &slog.HandlerOptions{Level: slog.LevelWarn})))
-	t.Cleanup(func() { slog.SetDefault(restore) })
+	warnings := slog.New(slog.NewTextHandler(&logged, &slog.HandlerOptions{Level: slog.LevelWarn}))
 
-	got, err := e.store.WithSettings(locked).GetLeadSettings(e.ctx)
+	got, err := e.store.WithSettings(locked).WithWarnings(warnings).GetLeadSettings(e.ctx)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -13,6 +13,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -174,6 +175,19 @@ func (s *Store) WithSettings(cfg *config.Config) *Store {
 	return s
 }
 
+// WithWarnings sends the store's warnings about a setting to log.
+func (s *Store) WithWarnings(log *slog.Logger) *Store {
+	s.warnings = log
+	return s
+}
+
+func (s *Store) warningLog() *slog.Logger {
+	if s.warnings == nil {
+		return slog.Default()
+	}
+	return s.warnings
+}
+
 // GetLeadSettings answers the installation's lead handling.
 func (s *Store) GetLeadSettings(ctx context.Context) (crmcontracts.LeadSettings, error) {
 	if err := auth.Require(ctx, leadVocabularyObject, principal.ActionRead); err != nil {
@@ -191,7 +205,7 @@ func (s *Store) GetLeadSettings(ctx context.Context) (crmcontracts.LeadSettings,
 	// naming somebody who has since been suspended reads null here for the
 	// same reason it escalates to nobody there.
 	if err := s.tx(ctx, func(tx pgx.Tx) error {
-		target, configured, err := unassignedEscalationTarget(ctx, tx, s.bootConfig(ctx))
+		target, configured, err := unassignedEscalationTarget(ctx, tx, s.bootConfig(ctx), s.warningLog())
 		if err != nil {
 			return err
 		}

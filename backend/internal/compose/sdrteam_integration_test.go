@@ -32,6 +32,8 @@ type sdrTeamFixture struct {
 	*sdrFixture
 	second, manager ids.UUID
 	now             time.Time
+	// memberRows, when set, is the review's page of members.
+	memberRows int
 }
 
 func newSdrTeamFixture(t *testing.T) *sdrTeamFixture {
@@ -97,6 +99,9 @@ func (f *sdrTeamFixture) review(ctx context.Context, t *testing.T, kind crmcontr
 	period := crmcontracts.GetSdrTeamReviewParamsPeriodLastWeek
 	var out crmcontracts.SdrTeamReview
 	body := sdrServe(ctx, t, f.e, func(h sdrSummaryHandlers, w http.ResponseWriter, r *http.Request) {
+		if f.memberRows > 0 {
+			h.memberRows = f.memberRows
+		}
 		h.GetSdrTeamReview(w, r, crmcontracts.GetSdrTeamReviewParams{ScopeKind: &kind, ScopeId: (*openapi_types.UUID)(scope), Period: &period})
 	}, f.now)
 	if err := json.Unmarshal(body, &out); err != nil {
@@ -376,15 +381,12 @@ func TestSdrTeamReviewFollowsTodaysTeamForAMemberWhoLeft(t *testing.T) {
 
 // The member rows are read for a page of members in name order, however many
 // the team has, and the answer says when more exist.
-//
-//testdb:serial changes a process-wide page size
 func TestSdrTeamReviewReadsOnlyAPageOfMembers(t *testing.T) {
+	t.Parallel()
 	f := newSdrTeamFixture(t)
 	e := f.e
 	f.submitAs(t, f.second, "Second SDR's")
-	previous := sdrTeamMemberRows
-	sdrTeamMemberRows = 1
-	t.Cleanup(func() { sdrTeamMemberRows = previous })
+	f.memberRows = 1
 	got := f.review(f.as(f.manager), t, crmcontracts.GetSdrTeamReviewParamsScopeKindTeam, &e.Team1)
 	if len(got.Members) != 1 || !got.MembersTruncated || got.Members[0].Label != "Rep" {
 		t.Fatalf("one row, the first by name, and a sign that more exist: %+v", got.Members)

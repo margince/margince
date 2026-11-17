@@ -97,9 +97,9 @@ func loadAPIConfig(args, environ []string) (apiConfig, *config.Config, error) {
 	return cfg, loaded, nil
 }
 
-// bootAPIConfig is loadAPIConfig for the process that boots: it hands compose
-// the result before anything composes, so every stored setting a boot source
-// sets is locked.
+// bootAPIConfig is loadAPIConfig for the process that boots. It hands compose
+// the result before anything composes, so a stored setting a boot source sets
+// is locked.
 func bootAPIConfig(args, environ []string) (apiConfig, *config.Config, error) {
 	cfg, loaded, err := loadAPIConfig(args, environ)
 	if err == nil {

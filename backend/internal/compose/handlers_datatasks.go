@@ -24,6 +24,9 @@ type dataTaskHandlers struct {
 	classifier *OwedClassifier
 	pool       *pgxpool.Pool
 	clock      func() time.Time
+	// lossDealPage is the most deals one loss-mapping run changes; zero is
+	// maxReviewedLossDeals.
+	lossDealPage int
 }
 
 func (h dataTaskHandlers) now() time.Time {
@@ -31,6 +34,13 @@ func (h dataTaskHandlers) now() time.Time {
 		return h.clock()
 	}
 	return time.Now()
+}
+
+func (h dataTaskHandlers) lossDeals() int {
+	if h.lossDealPage > 0 {
+		return h.lossDealPage
+	}
+	return maxReviewedLossDeals
 }
 
 func (h dataTaskHandlers) ListDataTasks(w http.ResponseWriter, r *http.Request) {

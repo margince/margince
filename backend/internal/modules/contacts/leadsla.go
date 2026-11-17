@@ -296,7 +296,7 @@ func leadTouchesFor(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, deadline 
 // It reads (id, true) when one is configured and can still work the queue.
 // The scan and the delivery of its event share it.
 func IntakeSeat(ctx context.Context, tx pgx.Tx) (ids.UUID, bool, error) {
-	return unassignedEscalationTarget(ctx, tx, config.Bound(ctx))
+	return unassignedEscalationTarget(ctx, tx, config.Bound(ctx), slog.Default())
 }
 
 // unassignedEscalationTarget reads the configured intake seat: (id, true) for a
@@ -304,7 +304,7 @@ func IntakeSeat(ctx context.Context, tx pgx.Tx) (ids.UUID, bool, error) {
 // but is no active colleague also logs a warning. The read is the ungated machinery
 // one, since the SLA sweep runs as the system principal. A value that will not
 // decode is an error: somebody wrote the row around its validator.
-func unassignedEscalationTarget(ctx context.Context, tx pgx.Tx, cfg *config.Config) (ids.UUID, bool, error) {
+func unassignedEscalationTarget(ctx context.Context, tx pgx.Tx, cfg *config.Config, log *slog.Logger) (ids.UUID, bool, error) {
 	configured, err := config.StoredApplyTx(ctx, tx, cfg, UnassignedEscalationUserID)
 	if err != nil {
 		return ids.UUID{}, false, fmt.Errorf("load the unassigned escalation seat: %w", err)
@@ -323,7 +323,7 @@ func unassignedEscalationTarget(ctx context.Context, tx pgx.Tx, cfg *config.Conf
 	// principal — and its eligibility half is exactly the question.
 	if err := auth.EnsureAssignee(ctx, tx, id); err != nil {
 		if errors.As(err, new(*auth.AssigneeNotAllowedError)) {
-			warnSeatAnswersNobody(ctx, cfg)
+			warnSeatAnswersNobody(ctx, cfg, log)
 			return ids.UUID{}, false, nil
 		}
 		return ids.UUID{}, false, fmt.Errorf("check the unassigned escalation seat: %w", err)
@@ -334,11 +334,11 @@ func unassignedEscalationTarget(ctx context.Context, tx pgx.Tx, cfg *config.Conf
 // warnSeatAnswersNobody names the setting and where its value comes from. No
 // save checks a boot value against the colleagues, so this is where an operator
 // learns the seat they set answers for nothing.
-func warnSeatAnswersNobody(ctx context.Context, cfg *config.Config) {
+func warnSeatAnswersNobody(ctx context.Context, cfg *config.Config, log *slog.Logger) {
 	source := "the database"
 	if origin, locked := cfg.Locked(ctx, UnassignedEscalationUserID.Key()); locked {
 		source = origin.String()
 	}
-	slog.WarnContext(ctx, "contacts: the unassigned escalation seat is not an active colleague, so a breach on a lead with no owner, or whose owner has left, escalates to nobody",
+	log.WarnContext(ctx, "contacts: the unassigned escalation seat is not an active colleague, so a breach on a lead with no owner, or whose owner has left, escalates to nobody",
 		"setting", UnassignedEscalationUserID.Key(), "origin", source)
 }

@@ -41,6 +41,9 @@ func ConfigContext(ctx context.Context, c *config.Config) context.Context {
 	return storekit.WithSuppressionKey(ctx, keyvault.DerivedKey(c, storekit.SuppressionKeyLabel))
 }
 
+// composedConfig is the configuration of the program a composition serves.
+type composedConfig struct{ config *config.Config }
+
 // WithConfig hands the composition the configuration its program loaded. Every
 // request it serves reads its locks from that one.
 func WithConfig(c *config.Config) Option {
@@ -57,9 +60,9 @@ func servingConfig(c *config.Config, next http.Handler) http.Handler {
 	})
 }
 
-// loadedConfig is the configuration of the program ctx serves, or for a
-// process that loaded none, such as a test composing stores, one where no boot
-// source sets anything.
+// loadedConfig is the configuration of the program ctx serves. A process that
+// loaded none, such as a test composing stores, reads one where no boot source
+// sets anything.
 func loadedConfig(ctx context.Context) *config.Config {
 	if c := config.Bound(ctx); c != nil {
 		return c
