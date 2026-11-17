@@ -462,6 +462,13 @@
 .btn-shell {
   display: contents;
 }
+/* A row's rules for its items (`.overflow-menu-items > * { flex-shrink: 0 }`)
+   land on the shell, which draws no box, so the button takes them from it. At
+   zero specificity, so a rule on the button itself still wins. */
+:where(.btn-shell) > * {
+  flex: inherit;
+  align-self: inherit;
+}
 .busy-mark {
   /* `transform: rotate()` rather than the standalone `rotate` property, which
      would be the only one in this tree — the three screen-local spinners this

@@ -96,19 +96,18 @@ func TestConsentRoutesSplitByWhoseDecisionTheyHold(t *testing.T) {
 	}
 }
 
-// Directing a refused send is the user's decision, carried out by their agent:
-// it spends send and asks first.
-func TestDirectingARefusedSendAsksFirstAndSpendsSend(t *testing.T) {
+// Directing a refused send is the user's own decision, so no agent records it:
+// the route is human-only and only a session reaches it.
+func TestOnlyItsUserDirectsARefusedSend(t *testing.T) {
 	pol, known := agentPolicies[http.MethodPost+" /v1/communication-reviews/{id}/direct-send"]
-	if !known || pol.Access != accessTool || pol.Scope != scopeSend {
-		t.Fatalf("the directed send must be an agent's action on send, got %+v (known %v)", pol, known)
+	if !known || pol.Access != accessHumanOnly || pol.HumanOnlyReason != humanOnlySecurity {
+		t.Fatalf("the directed send must be human-only for security, got %+v (known %v)", pol, known)
 	}
 	for _, v := range RouteVerbs() {
-		if v.Verb == pol.Tool && v.AskUserFirst {
-			return
+		if v.Op == pol.Op {
+			t.Errorf("%s still serves the directed send to agents", v.Verb)
 		}
 	}
-	t.Errorf("%s does not ask the user first", pol.Tool)
 }
 
 // These reach something a user could not safely hand over: they destroy data, take

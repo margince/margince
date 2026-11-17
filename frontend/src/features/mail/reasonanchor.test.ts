@@ -1,11 +1,15 @@
 /** @vitest-environment happy-dom */
 import { renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { reasonEvidence, useReasonForAnchor } from "./reasonanchor";
+import { pickReason, reasonEvidence, useReasonForAnchor } from "./reasonanchor";
 
 describe("useReasonForAnchor", () => {
   it("clears the reason and its meeting when the composer moves to another anchor", () => {
-    const fields = { setContext: vi.fn(), setMeetingEvidence: vi.fn() };
+    const fields = {
+      setContext: vi.fn(),
+      setMeetingEvidence: vi.fn(),
+      setReasonFromDraft: vi.fn(),
+    };
     const { rerender } = renderHook(
       ({ anchor }: { anchor: string | undefined }) =>
         useReasonForAnchor(anchor, fields),
@@ -16,6 +20,21 @@ describe("useReasonForAnchor", () => {
     rerender({ anchor: "act-2" });
     expect(fields.setContext).toHaveBeenCalledWith("");
     expect(fields.setMeetingEvidence).toHaveBeenCalledWith(undefined);
+    expect(fields.setReasonFromDraft).toHaveBeenCalledWith(false);
+  });
+});
+
+describe("pickReason", () => {
+  it("makes the reason the sender's own, dropping the drafted meeting", () => {
+    const fields = {
+      setContext: vi.fn(),
+      setMeetingEvidence: vi.fn(),
+      setReasonFromDraft: vi.fn(),
+    };
+    pickReason(fields)("marketing");
+    expect(fields.setContext).toHaveBeenCalledWith("marketing");
+    expect(fields.setMeetingEvidence).toHaveBeenCalledWith(undefined);
+    expect(fields.setReasonFromDraft).toHaveBeenCalledWith(false);
   });
 });
 

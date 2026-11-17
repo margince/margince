@@ -41860,6 +41860,11 @@ type CompanyEmailDraft struct {
 	// Body Plain text, end to end. There is no rich-text storage format, no paste sanitiser and no HTML+text send pair, so a formatted draft would be a wire change rather than a toolbar.
 	Body string `json:"body"`
 
+	// CommunicationContext What the drafting instruction says this message is, for the composer to send with it:
+	// `requested_followup` when it asks to move an appointment. Absent otherwise. The send
+	// check still needs an agreed appointment with the recipient.
+	CommunicationContext *CommunicationContext `json:"communication_context,omitempty"`
+
 	// DraftRef Opaque reference identifying this served draft. Null here: recording a draft for voice learning is a WRITE, and this operation performs none.
 	DraftRef *string `json:"draft_ref,omitempty"`
 
@@ -49063,9 +49068,8 @@ type DirectCommunicationSendRequest struct {
 
 	// ShownReasons The refusal reason codes the director was shown, from the review's `refusals`. When the
 	// review's refusals changed since then, the decision is refused with `instruction_stale`
-	// and the director opens the review again. Without it, a decision cannot pass a refusal
-	// the subject made themselves (an objection, a withdrawal, a restriction or a request to
-	// stop), and neither can an agent's.
+	// and the director opens the review again. A refusal the subject made themselves (an
+	// objection, a withdrawal, a restriction or a request to stop) is never passed.
 	ShownReasons *[]string `json:"shown_reasons,omitempty"`
 
 	// WarningVersion The compliance text they were shown. Recorded because a record naming no version cannot
@@ -65097,12 +65101,14 @@ type SendAuthorizationPreviewRecipient struct {
 	Basis *string `json:"basis,omitempty"`
 
 	// CanBeOverruled Whether the sender may send this one message past the refusal by recording a
-	// reason. True for every policy refusal, the subject's own stops included: the
-	// refusal and the stop stay on the record, and the reason is kept with the message.
-	// False for a hard bounce, because no decision makes a dead address accept mail, and
-	// for a recipient that resolves to nobody or to two contacts, whose stops were never
-	// read. The caller still needs the `communication_exception` grant, and the refused
-	// send's review offers `direct_send` only to a caller who holds it.
+	// reason. True for every policy refusal except the subject's own stops: the refusal
+	// stays on the record, and the reason is kept with the message. False for a stop
+	// (`decided_by` is `subject`), which nobody sends past, admin included. False for a
+	// hard bounce, because no decision makes a dead address accept mail, and for a
+	// recipient that resolves to nobody or to two contacts, whose stops were never read.
+	// Only a user in their own session sends past it, never an agent, and only with the
+	// `communication_exception` grant. The refused send's review offers `direct_send` only
+	// to such a caller.
 	CanBeOverruled *bool `json:"can_be_overruled,omitempty"`
 
 	// ConsentPurposeId For a recipient marked `lawful_basis_missing`: the purpose a consent request would ask
@@ -65116,8 +65122,7 @@ type SendAuthorizationPreviewRecipient struct {
 	// DecidedBy Whose decision this answer is, which is what says whether anybody may overrule
 	// it. `machine` is the engine reading an incomplete record and a rep who knows
 	// better may say so. `subject` is the contact's own act — an objection or a
-	// withdrawal. Nobody lifts it for good, but a sender may still send one message
-	// past it with a recorded reason (`can_be_overruled`).
+	// withdrawal. Nobody in the installation lifts it or sends past it, admin included.
 	//
 	// It is sent rather than derived because the rule lives in Go
 	// (`commsauthz.LevelForReason`), and a surface that mapped reason codes to
@@ -65184,8 +65189,7 @@ type SendAuthorizationPreviewRecipient struct {
 // SendAuthorizationPreviewRecipientDecidedBy Whose decision this answer is, which is what says whether anybody may overrule
 // it. `machine` is the engine reading an incomplete record and a rep who knows
 // better may say so. `subject` is the contact's own act — an objection or a
-// withdrawal. Nobody lifts it for good, but a sender may still send one message
-// past it with a recorded reason (`can_be_overruled`).
+// withdrawal. Nobody in the installation lifts it or sends past it, admin included.
 //
 // It is sent rather than derived because the rule lives in Go
 // (`commsauthz.LevelForReason`), and a surface that mapped reason codes to
@@ -119321,8 +119325,6 @@ func (siw *ServerInterfaceWrapper) DirectCommunicationSend(w http.ResponseWriter
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 

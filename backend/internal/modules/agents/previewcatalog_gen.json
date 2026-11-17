@@ -12087,7 +12087,7 @@
     "promotion_restriction/text/claim_contradicts_resolution":
      "The contact reason given does not match this thread.",
     "promotion_restriction/text/consent_withdrawn":
-     "The recipient withdrew consent for this kind of message.",
+     "The recipient withdrew consent for this kind of message, so it cannot go to them.",
     "promotion_restriction/text/deal_not_requested":
      "A deal alone does not show the recipient asked for this negotiation. Their request, for example on a call or in a meeting, needs to be on record.",
     "promotion_restriction/text/frequency_cap_reached":
@@ -12101,7 +12101,7 @@
     "promotion_restriction/text/marketing_consent_required":
      "Marketing to a recipient in this country needs their prior consent.",
     "promotion_restriction/text/marketing_objection":
-     "The recipient objected to marketing. A reply or a message they asked for is not marketing.",
+     "The recipient objected to marketing, so no marketing goes to them. A reply or a message they asked for can still go.",
     "promotion_restriction/text/marketing_permission_required":
      "This marketing message has no recorded permission under the applicable rules. Record consent or the required evidence.",
     "promotion_restriction/text/no_compatible_evidence":
@@ -12111,11 +12111,11 @@
     "promotion_restriction/text/opted_out_after_request":
      "The recipient opted out of marketing after asking for this quote. Confirm with them that they still want it, then record their new request.",
     "promotion_restriction/text/processing_restricted":
-     "The recipient’s data is under a processing restriction.",
+     "The recipient’s data is under a processing restriction. Only security, privacy and opt-out notices can still go to them.",
     "promotion_restriction/text/recipient_resolves_to_no_single_subject":
      "This address is on several records, or on none you can write to, so the recipient is unknown. Check the address, or merge the records that share it.",
     "promotion_restriction/text/subject_request":
-     "The recipient asked not to be contacted.",
+     "The recipient asked not to be contacted. Only security, privacy and opt-out notices can still go to them.",
     "promotion_restriction/text/unconfirmed_double_opt_in":
      "The recipient has not confirmed they want to receive messages. Only the recipient can confirm.",
     "promotion_restriction/text/unknown_purpose":
@@ -12123,7 +12123,7 @@
     "promotion_restriction/lifecycle/claim_contradicts_resolution":
      "The contact reason given does not match this thread.",
     "promotion_restriction/lifecycle/consent_withdrawn":
-     "The recipient withdrew consent for this kind of message.",
+     "The recipient withdrew consent for this kind of message, so it cannot go to them.",
     "promotion_restriction/lifecycle/deal_not_requested":
      "A deal alone does not show the recipient asked for this negotiation. Their request, for example on a call or in a meeting, needs to be on record.",
     "promotion_restriction/lifecycle/frequency_cap_reached":
@@ -12137,7 +12137,7 @@
     "promotion_restriction/lifecycle/marketing_consent_required":
      "Marketing to a recipient in this country needs their prior consent.",
     "promotion_restriction/lifecycle/marketing_objection":
-     "The recipient objected to marketing. A reply or a message they asked for is not marketing.",
+     "The recipient objected to marketing, so no marketing goes to them. A reply or a message they asked for can still go.",
     "promotion_restriction/lifecycle/marketing_permission_required":
      "This marketing message has no recorded permission under the applicable rules. Record consent or the required evidence.",
     "promotion_restriction/lifecycle/no_compatible_evidence":
@@ -12147,11 +12147,11 @@
     "promotion_restriction/lifecycle/opted_out_after_request":
      "The recipient opted out of marketing after asking for this quote. Confirm with them that they still want it, then record their new request.",
     "promotion_restriction/lifecycle/processing_restricted":
-     "The recipient’s data is under a processing restriction.",
+     "The recipient’s data is under a processing restriction. Only security, privacy and opt-out notices can still go to them.",
     "promotion_restriction/lifecycle/recipient_resolves_to_no_single_subject":
      "This address is on several records, or on none you can write to, so the recipient is unknown. Check the address, or merge the records that share it.",
     "promotion_restriction/lifecycle/subject_request":
-     "The recipient asked not to be contacted.",
+     "The recipient asked not to be contacted. Only security, privacy and opt-out notices can still go to them.",
     "promotion_restriction/lifecycle/unconfirmed_double_opt_in":
      "The recipient has not confirmed they want to receive messages. Only the recipient can confirm.",
     "promotion_restriction/lifecycle/unknown_purpose":
@@ -31957,7 +31957,7 @@
     "promotion_restriction/text/claim_contradicts_resolution":
      "Der angegebene Kontaktgrund passt nicht zu diesem Thread.",
     "promotion_restriction/text/consent_withdrawn":
-     "Die empfangende Person hat ihre Einwilligung für diese Art von Nachricht widerrufen.",
+     "Die empfangende Person hat ihre Einwilligung für diese Art von Nachricht widerrufen, daher kann sie nicht an sie gesendet werden.",
     "promotion_restriction/text/deal_not_requested":
      "Ein Deal allein zeigt nicht, dass die empfangende Person diese Verhandlung angefragt hat. Erfasst sein muss eine Anfrage der Person, zum Beispiel aus einem Anruf oder Termin.",
     "promotion_restriction/text/frequency_cap_reached":
@@ -31971,7 +31971,7 @@
     "promotion_restriction/text/marketing_consent_required":
      "Marketing an eine empfangende Person in diesem Land braucht ihre vorherige Einwilligung.",
     "promotion_restriction/text/marketing_objection":
-     "Die empfangende Person hat dem Marketing widersprochen. Eine Antwort oder eine Nachricht, um die sie gebeten hat, ist kein Marketing.",
+     "Die empfangende Person hat dem Marketing widersprochen, daher geht kein Marketing an sie. Eine Antwort oder eine Nachricht, um die sie gebeten hat, kann weiterhin gesendet werden.",
     "promotion_restriction/text/marketing_permission_required":
      "Für diese Marketingnachricht ist nach den geltenden Regeln keine Erlaubnis belegt. Erfasse die Einwilligung oder die erforderlichen Nachweise.",
     "promotion_restriction/text/no_compatible_evidence":
@@ -31981,11 +31981,11 @@
     "promotion_restriction/text/opted_out_after_request":
      "Die empfangende Person hat sich nach ihrer Anfrage vom Marketing abgemeldet. Kläre mit ihr, ob sie das Angebot noch möchte, und erfasse dann ihre neue Anfrage.",
     "promotion_restriction/text/processing_restricted":
-     "Für die Daten der empfangenden Person gilt eine Einschränkung der Verarbeitung.",
+     "Für die Daten der empfangenden Person gilt eine Einschränkung der Verarbeitung. Nur Sicherheits-, Datenschutz- und Abmeldehinweise können noch an sie gesendet werden.",
     "promotion_restriction/text/recipient_resolves_to_no_single_subject":
      "Diese Adresse steht in mehreren Datensätzen oder in keinem, an den du schreiben darfst. Daher ist unklar, wer die Nachricht erhält. Prüfe die Adresse oder führe die Datensätze zusammen, die sie teilen.",
     "promotion_restriction/text/subject_request":
-     "Die empfangende Person hat darum gebeten, nicht kontaktiert zu werden.",
+     "Die empfangende Person hat darum gebeten, nicht kontaktiert zu werden. Nur Sicherheits-, Datenschutz- und Abmeldehinweise können noch an sie gesendet werden.",
     "promotion_restriction/text/unconfirmed_double_opt_in":
      "Die empfangende Person hat nicht bestätigt, dass sie Nachrichten erhalten möchte. Nur die empfangende Person selbst kann das bestätigen.",
     "promotion_restriction/text/unknown_purpose":
@@ -31993,7 +31993,7 @@
     "promotion_restriction/lifecycle/claim_contradicts_resolution":
      "Der angegebene Kontaktgrund passt nicht zu diesem Thread.",
     "promotion_restriction/lifecycle/consent_withdrawn":
-     "Die empfangende Person hat ihre Einwilligung für diese Art von Nachricht widerrufen.",
+     "Die empfangende Person hat ihre Einwilligung für diese Art von Nachricht widerrufen, daher kann sie nicht an sie gesendet werden.",
     "promotion_restriction/lifecycle/deal_not_requested":
      "Ein Deal allein zeigt nicht, dass die empfangende Person diese Verhandlung angefragt hat. Erfasst sein muss eine Anfrage der Person, zum Beispiel aus einem Anruf oder Termin.",
     "promotion_restriction/lifecycle/frequency_cap_reached":
@@ -32007,7 +32007,7 @@
     "promotion_restriction/lifecycle/marketing_consent_required":
      "Marketing an eine empfangende Person in diesem Land braucht ihre vorherige Einwilligung.",
     "promotion_restriction/lifecycle/marketing_objection":
-     "Die empfangende Person hat dem Marketing widersprochen. Eine Antwort oder eine Nachricht, um die sie gebeten hat, ist kein Marketing.",
+     "Die empfangende Person hat dem Marketing widersprochen, daher geht kein Marketing an sie. Eine Antwort oder eine Nachricht, um die sie gebeten hat, kann weiterhin gesendet werden.",
     "promotion_restriction/lifecycle/marketing_permission_required":
      "Für diese Marketingnachricht ist nach den geltenden Regeln keine Erlaubnis belegt. Erfasse die Einwilligung oder die erforderlichen Nachweise.",
     "promotion_restriction/lifecycle/no_compatible_evidence":
@@ -32017,11 +32017,11 @@
     "promotion_restriction/lifecycle/opted_out_after_request":
      "Die empfangende Person hat sich nach ihrer Anfrage vom Marketing abgemeldet. Kläre mit ihr, ob sie das Angebot noch möchte, und erfasse dann ihre neue Anfrage.",
     "promotion_restriction/lifecycle/processing_restricted":
-     "Für die Daten der empfangenden Person gilt eine Einschränkung der Verarbeitung.",
+     "Für die Daten der empfangenden Person gilt eine Einschränkung der Verarbeitung. Nur Sicherheits-, Datenschutz- und Abmeldehinweise können noch an sie gesendet werden.",
     "promotion_restriction/lifecycle/recipient_resolves_to_no_single_subject":
      "Diese Adresse steht in mehreren Datensätzen oder in keinem, an den du schreiben darfst. Daher ist unklar, wer die Nachricht erhält. Prüfe die Adresse oder führe die Datensätze zusammen, die sie teilen.",
     "promotion_restriction/lifecycle/subject_request":
-     "Die empfangende Person hat darum gebeten, nicht kontaktiert zu werden.",
+     "Die empfangende Person hat darum gebeten, nicht kontaktiert zu werden. Nur Sicherheits-, Datenschutz- und Abmeldehinweise können noch an sie gesendet werden.",
     "promotion_restriction/lifecycle/unconfirmed_double_opt_in":
      "Die empfangende Person hat nicht bestätigt, dass sie Nachrichten erhalten möchte. Nur die empfangende Person selbst kann das bestätigen.",
     "promotion_restriction/lifecycle/unknown_purpose":
@@ -51827,7 +51827,7 @@
     "promotion_restriction/text/claim_contradicts_resolution":
      "Lý do liên hệ đã chọn không khớp với chuỗi thư này.",
     "promotion_restriction/text/consent_withdrawn":
-     "Người nhận đã rút lại sự đồng ý cho loại thư này.",
+     "Người nhận đã rút lại sự đồng ý cho loại thư này, nên không thể gửi thư này cho họ.",
     "promotion_restriction/text/deal_not_requested":
      "Chỉ một giao dịch thì chưa cho thấy người nhận đã yêu cầu cuộc thương lượng này. Yêu cầu của họ, ví dụ qua cuộc gọi hoặc cuộc họp, cần được ghi nhận.",
     "promotion_restriction/text/frequency_cap_reached":
@@ -51841,7 +51841,7 @@
     "promotion_restriction/text/marketing_consent_required":
      "Tin tiếp thị gửi người nhận ở quốc gia này cần sự đồng ý trước của họ.",
     "promotion_restriction/text/marketing_objection":
-     "Người nhận đã phản đối tin tiếp thị. Thư trả lời hoặc thư họ đã yêu cầu không phải là tin tiếp thị.",
+     "Người nhận đã phản đối tin tiếp thị, nên không gửi tin tiếp thị cho họ. Thư trả lời hoặc thư họ đã yêu cầu vẫn có thể gửi.",
     "promotion_restriction/text/marketing_permission_required":
      "Chưa có căn cứ cho phép gửi tin tiếp thị này theo quy tắc áp dụng. Hãy ghi nhận sự đồng ý hoặc bằng chứng bắt buộc.",
     "promotion_restriction/text/no_compatible_evidence":
@@ -51851,11 +51851,11 @@
     "promotion_restriction/text/opted_out_after_request":
      "Người nhận đã từ chối tin tiếp thị sau khi yêu cầu báo giá này. Hãy xác nhận lại với họ rằng họ vẫn muốn nhận, rồi ghi nhận yêu cầu mới của họ.",
     "promotion_restriction/text/processing_restricted":
-     "Dữ liệu của người nhận đang bị hạn chế xử lý.",
+     "Dữ liệu của người nhận đang bị hạn chế xử lý. Chỉ thông báo bảo mật, quyền riêng tư và xác nhận hủy đăng ký mới có thể gửi cho họ.",
     "promotion_restriction/text/recipient_resolves_to_no_single_subject":
      "Địa chỉ này nằm trên nhiều hồ sơ, hoặc không nằm trên hồ sơ nào bạn được gửi tới, nên chưa xác định được người nhận. Kiểm tra lại địa chỉ, hoặc gộp các hồ sơ dùng chung địa chỉ này.",
     "promotion_restriction/text/subject_request":
-     "Người nhận đã yêu cầu không được liên hệ.",
+     "Người nhận đã yêu cầu không được liên hệ. Chỉ thông báo bảo mật, quyền riêng tư và xác nhận hủy đăng ký mới có thể gửi cho họ.",
     "promotion_restriction/text/unconfirmed_double_opt_in":
      "Người nhận chưa xác nhận muốn nhận tin nhắn. Chỉ người nhận mới có thể xác nhận.",
     "promotion_restriction/text/unknown_purpose":
@@ -51863,7 +51863,7 @@
     "promotion_restriction/lifecycle/claim_contradicts_resolution":
      "Lý do liên hệ đã chọn không khớp với chuỗi thư này.",
     "promotion_restriction/lifecycle/consent_withdrawn":
-     "Người nhận đã rút lại sự đồng ý cho loại thư này.",
+     "Người nhận đã rút lại sự đồng ý cho loại thư này, nên không thể gửi thư này cho họ.",
     "promotion_restriction/lifecycle/deal_not_requested":
      "Chỉ một giao dịch thì chưa cho thấy người nhận đã yêu cầu cuộc thương lượng này. Yêu cầu của họ, ví dụ qua cuộc gọi hoặc cuộc họp, cần được ghi nhận.",
     "promotion_restriction/lifecycle/frequency_cap_reached":
@@ -51877,7 +51877,7 @@
     "promotion_restriction/lifecycle/marketing_consent_required":
      "Tin tiếp thị gửi người nhận ở quốc gia này cần sự đồng ý trước của họ.",
     "promotion_restriction/lifecycle/marketing_objection":
-     "Người nhận đã phản đối tin tiếp thị. Thư trả lời hoặc thư họ đã yêu cầu không phải là tin tiếp thị.",
+     "Người nhận đã phản đối tin tiếp thị, nên không gửi tin tiếp thị cho họ. Thư trả lời hoặc thư họ đã yêu cầu vẫn có thể gửi.",
     "promotion_restriction/lifecycle/marketing_permission_required":
      "Chưa có căn cứ cho phép gửi tin tiếp thị này theo quy tắc áp dụng. Hãy ghi nhận sự đồng ý hoặc bằng chứng bắt buộc.",
     "promotion_restriction/lifecycle/no_compatible_evidence":
@@ -51887,11 +51887,11 @@
     "promotion_restriction/lifecycle/opted_out_after_request":
      "Người nhận đã từ chối tin tiếp thị sau khi yêu cầu báo giá này. Hãy xác nhận lại với họ rằng họ vẫn muốn nhận, rồi ghi nhận yêu cầu mới của họ.",
     "promotion_restriction/lifecycle/processing_restricted":
-     "Dữ liệu của người nhận đang bị hạn chế xử lý.",
+     "Dữ liệu của người nhận đang bị hạn chế xử lý. Chỉ thông báo bảo mật, quyền riêng tư và xác nhận hủy đăng ký mới có thể gửi cho họ.",
     "promotion_restriction/lifecycle/recipient_resolves_to_no_single_subject":
      "Địa chỉ này nằm trên nhiều hồ sơ, hoặc không nằm trên hồ sơ nào bạn được gửi tới, nên chưa xác định được người nhận. Kiểm tra lại địa chỉ, hoặc gộp các hồ sơ dùng chung địa chỉ này.",
     "promotion_restriction/lifecycle/subject_request":
-     "Người nhận đã yêu cầu không được liên hệ.",
+     "Người nhận đã yêu cầu không được liên hệ. Chỉ thông báo bảo mật, quyền riêng tư và xác nhận hủy đăng ký mới có thể gửi cho họ.",
     "promotion_restriction/lifecycle/unconfirmed_double_opt_in":
      "Người nhận chưa xác nhận muốn nhận tin nhắn. Chỉ người nhận mới có thể xác nhận.",
     "promotion_restriction/lifecycle/unknown_purpose":

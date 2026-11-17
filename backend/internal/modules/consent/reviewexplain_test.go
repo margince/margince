@@ -11,11 +11,11 @@ import (
 )
 
 // Every refusal is explained by its own fact, and what the sentence offers is
-// what the remedy table declares. A dead address offers no exception and says
-// nobody sends past it; a refusal with an exception says so.
+// what the remedy table declares. A stop offers no exception and says nobody
+// sends past it; a refusal with an exception says so.
 //
-// Mutation: hard-code "needs a recorded exception" for the hard bounce and its
-// case fails.
+// Mutation: hard-code "needs a recorded exception" for the objection again and
+// its case fails.
 func TestEveryRefusalExplanationFollowsTheRemedyTable(t *testing.T) {
 	t.Parallel()
 	for _, reason := range commsauthz.RefusalCodes() {

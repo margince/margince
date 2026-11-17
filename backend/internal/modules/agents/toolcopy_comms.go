@@ -110,9 +110,8 @@ var sendOutboundCopy = toolCopy{
 		"their sign-in link where the installation can send mail, signature_template and " +
 		"my_signature set the sign-off every later mail carries, and double_opt_in, privacy_notice " +
 		"and details_confirmation mail a contact a link about their data: ask the user first. " +
-		"direct_send sends a message the engine refused and held: show the user the review's warning, " +
-		"call only once they have seen it and said yes, and give their reason. It names them as the one " +
-		"who took it on and you as the agent, and the refusal stays on record.",
+		"A message the engine refused and held is sent anyway only by the user, in the app: show " +
+		"them the review and its warning.",
 	Limits: "Every recipient must have granted the consent purpose the call names. A sent message " +
 		"cannot be recalled, and by default nothing holds it: where an installation has raised a " +
 		"send to confirm first, the answer is a staged approval instead. chat_reply cannot start a " +
@@ -134,6 +133,7 @@ var draftOutboundCopy = toolCopy{
 		"unsent draft of their own, is not saved, so show it in full. slipping_deals covers the deals " +
 		"whats_slipping_this_week reports, at most 25.",
 	Instead: "send_outbound sends an email once it is written.",
-	Retain: "Keep the subject, body, to and the activity_id or links a message echoes; the send " +
-		"takes them unchanged. Each follow-up comes back with its deal_id and draft_activity_id.",
+	Retain: "Keep the subject, body, to, the activity_id or links, and the communication_context " +
+		"a message echoes; the send takes them unchanged. Each follow-up comes back with its deal_id " +
+		"and draft_activity_id.",
 }

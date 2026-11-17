@@ -15,10 +15,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// A rep, like an admin, may direct one message past every policy refusal the
-// registry lists. A dead address, an unresolved recipient and a missing check
-// are never directable, and neither is anything for a seat without the grant.
-func TestARepMayDirectASendPastEveryPolicyRefusal(t *testing.T) {
+// A rep, like an admin, may direct one message past every policy refusal but
+// the subject's own stop. A stop, a dead address, an unresolved recipient and a
+// missing check are never directable, nor is anything for a seat without the
+// grant.
+func TestARepMayDirectASendPastEveryPolicyRefusalButAStop(t *testing.T) {
 	seat := func(role string, grant bool) context.Context {
 		return principal.WithActor(context.Background(), principal.Principal{
 			Type: principal.PrincipalHuman, ID: "human:reviewer",
@@ -32,10 +33,17 @@ func TestARepMayDirectASendPastEveryPolicyRefusal(t *testing.T) {
 		t.Run(role, func(t *testing.T) {
 			ctx := seat(role, true)
 			for _, reason := range commsauthz.RefusalCodes() {
-				want := reason != commsauthz.ReasonHardBounce && reason != commsauthz.ReasonNoSubject
+				want := reason != commsauthz.ReasonHardBounce && reason != commsauthz.ReasonNoSubject &&
+					commsauthz.LevelForReason(reason) != commsauthz.LevelSubject
 				if got := directableBy(ctx, []RefusedRecipient{{ReasonCode: reason}}); got != want {
 					t.Errorf("directable past %s = %v, want %v", reason, got, want)
 				}
+			}
+			stopBeside := []RefusedRecipient{
+				{ReasonCode: commsauthz.ReasonMarketingConsentRequired}, {ReasonCode: commsauthz.ReasonObjection},
+			}
+			if directableBy(ctx, stopBeside) {
+				t.Error("a stop beside a passable refusal is directable")
 			}
 			if directableBy(ctx, nil) {
 				t.Error("a missing check offers a send instruction")
@@ -47,24 +55,23 @@ func TestARepMayDirectASendPastEveryPolicyRefusal(t *testing.T) {
 	}
 }
 
-// An agent may record its user's decision in their conversation. A scheduled
-// run has nobody present, so it may read a review but not decide it.
-func TestOnlyAnAttendedAgentStatesItsUsersDecision(t *testing.T) {
+// A refused send's decision is the user's own, so only a human at the keyboard
+// records it or finds its held message. An agent on their passport may read the
+// review, and may not decide it, attended or not.
+func TestOnlyAHumanDecidesARefusedSend(t *testing.T) {
+	human := principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalHuman, ID: "human:rep", UserID: ids.NewV7()})
+	if err := requireAHumanAtTheKeyboard(human); err != nil {
+		t.Fatalf("a human was refused: %v", err)
+	}
 	agent := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:t", OnBehalfOf: ids.NewV7(), PassportID: ids.NewV7(),
 	})
-	if err := requireSomebodyPresent(agent); err != nil {
-		t.Fatalf("an attended agent was refused: %v", err)
+	if err := requireAUserOrTheirAgent(agent); err != nil {
+		t.Errorf("an agent may not read the review: %v", err)
 	}
-	for name, ctx := range map[string]context.Context{
-		"unattended":    principal.WithUnattended(agent),
-		"scheduled run": principal.WithAgentRunID(agent, ids.NewV7()),
-	} {
-		if err := requireAUserOrTheirAgent(ctx); err != nil {
-			t.Errorf("%s agent may not read the review: %v", name, err)
-		}
-		if err := requireSomebodyPresent(ctx); !errors.Is(err, apperrors.ErrPermissionDenied) {
-			t.Errorf("%s agent deciding = %v, want ErrPermissionDenied", name, err)
+	for name, ctx := range map[string]context.Context{"attended": agent, "unattended": principal.WithUnattended(agent)} {
+		if err := requireAHumanAtTheKeyboard(ctx); !errors.Is(err, apperrors.ErrPermissionDenied) {
+			t.Errorf("an %s agent deciding = %v, want ErrPermissionDenied", name, err)
 		}
 	}
 }

@@ -101,14 +101,15 @@ func seedOpenReview(ctx context.Context, t *testing.T, e *channelConsentEnv) ids
 }
 
 // seedOpenReviewFor opens a review refused for the given reason code.
-func seedOpenReviewFor(ctx context.Context, t *testing.T, e *channelConsentEnv, reason string) ids.UUID {
+func seedOpenReviewFor(ctx context.Context, t *testing.T, e *channelConsentEnv, reason string, more ...string) ids.UUID {
 	t.Helper()
 	var id ids.UUID
 	if err := e.owner.QueryRow(ctx, `
 		INSERT INTO communication_review (state, kind, reason_code, refusals)
-		VALUES ('needs_repair', 'single', $1,
-		        jsonb_build_array(jsonb_build_object('address', 'anna@example.test', 'reason_code', $1::text)))
-		RETURNING id`, reason).Scan(&id); err != nil {
+		SELECT 'needs_repair', 'single', $1,
+		       jsonb_agg(jsonb_build_object('address', 'anna@example.test', 'reason_code', r))
+		  FROM unnest($1::text || $2::text[]) AS r
+		RETURNING id`, reason, more).Scan(&id); err != nil {
 		t.Fatalf("seeding the refused send: %v", err)
 	}
 	return id
@@ -336,12 +337,13 @@ func TestAnErasureCanTombstoneTheWordsAndNothingElse(t *testing.T) {
 	}
 }
 
-// A rep holding the grant, like an admin, directs one message past a contact's
-// own stop when they name the refusals they read. The decision records who gave
-// it. A stale or missing list of what they read is refused.
+// A rep holding the grant, like an admin, directs one message past every
+// policy refusal but a contact's own stop. Nobody directs past a stop, an admin
+// included, and not beside a refusal a decision could pass either.
 //
-// Mutation: drop the stops' exception in remedies and every case is refused.
-func TestASenderDirectsOneMessagePastAContactsStop(t *testing.T) {
+// Mutation: give the stops RemedyException in commsauthz.remedies and the stop
+// cases below are allowed.
+func TestASenderDirectsPastAPolicyRefusalButNobodyPastAContactsStop(t *testing.T) {
 	e := setupChannelConsent(t)
 	ctx := context.Background()
 	input := DirectInput{
@@ -351,9 +353,24 @@ func TestASenderDirectsOneMessagePastAContactsStop(t *testing.T) {
 		Acknowledged:   true,
 	}
 
-	for _, reason := range []string{"marketing_objection", "consent_withdrawn", "processing_restricted", "subject_request", "no_marketing_consent"} {
-		input := input
-		input.ShownReasons = []string{reason}
+	for _, stop := range []string{"marketing_objection", "consent_withdrawn", "processing_restricted", "subject_request", "opted_out_after_request"} {
+		for _, reasons := range [][]string{{stop}, {"marketing_consent_required", stop}} {
+			in := input
+			in.ShownReasons = reasons
+			review := seedOpenReviewFor(ctx, t, e, reasons[0], reasons[1:]...)
+			if _, err := e.store.DirectSend(senderCtx(e.ws, e.user), review, in); !errors.Is(err, apperrors.ErrPermissionDenied) {
+				t.Errorf("a rep directing past %v: err = %v, want permission denied", reasons, err)
+			}
+			if _, err := e.store.DirectSend(directorCtx(e.ws, e.user), review, in); !errors.Is(err, apperrors.ErrPermissionDenied) {
+				t.Errorf("an admin directing past %v: err = %v, want permission denied", reasons, err)
+			}
+		}
+	}
+
+	for _, reason := range []string{
+		"no_marketing_consent", "marketing_consent_required", "marketing_permission_required",
+		"frequency_cap_reached", "unconfirmed_double_opt_in",
+	} {
 		repReview := seedOpenReviewFor(ctx, t, e, reason)
 		if _, err := e.store.DirectSend(senderCtx(e.ws, e.user), repReview, input); err != nil {
 			t.Errorf("a rep directing past %s: %v", reason, err)
@@ -368,20 +385,17 @@ func TestASenderDirectsOneMessagePastAContactsStop(t *testing.T) {
 		}
 	}
 
-	review := seedOpenReviewFor(ctx, t, e, "marketing_objection")
+	review := seedOpenReviewFor(ctx, t, e, "no_marketing_consent")
 	stale := input
-	stale.ShownReasons = []string{"no_marketing_consent"}
+	stale.ShownReasons = []string{"marketing_consent_required"}
 	var staleErr *InstructionStaleError
 	if _, err := e.store.DirectSend(senderCtx(e.ws, e.user), review, stale); !errors.As(err, &staleErr) {
 		t.Errorf("a direction naming refusals the review no longer holds: err = %v, want it stale", err)
 	}
-	if _, err := e.store.DirectSend(senderCtx(e.ws, e.user), review, input); !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Errorf("a direction past an objection naming nothing it was shown: err = %v, want permission denied", err)
-	}
 	shown := input
-	shown.ShownReasons = []string{"marketing_objection"}
+	shown.ShownReasons = []string{"no_marketing_consent"}
 	if _, err := e.store.DirectSend(senderCtx(e.ws, e.user), review, shown); err != nil {
-		t.Fatalf("a rep directing past an objection: %v", err)
+		t.Fatalf("a rep directing past missing marketing consent: %v", err)
 	}
 	if _, err := e.store.DirectSend(senderCtx(e.ws, e.user), review, shown); !errors.Is(err, ErrDecisionAlreadyRecorded) {
 		t.Errorf("a second direction on the same review: err = %v, want the recorded decision to stand", err)

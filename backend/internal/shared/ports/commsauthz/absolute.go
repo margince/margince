@@ -88,7 +88,8 @@ const (
 	ReasonAllowedByOverride = "allowed_by_override"
 )
 
-// absoluteDenials are the refusals no rollout mode may soften.
+// absoluteDenials are the refusals no rollout mode may soften. Who may send
+// past one is a different axis, declared in remedies.
 //
 // Held by: TestAbsoluteDenialsSurviveEveryMode (commsauthz_test.go), which
 // fails if any member stops denying under observe or warn.

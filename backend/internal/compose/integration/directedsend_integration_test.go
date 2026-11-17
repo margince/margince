@@ -55,8 +55,7 @@ func directed() AnyMap {
 	}
 }
 
-// directedShowing is directed, naming the refusals the director read. A subject's
-// own stop is passed only on such a list.
+// directedShowing is directed, naming the refusals the director read.
 func directedShowing(reasons ...string) AnyMap {
 	body := directed()
 	body["shown_reasons"] = reasons
@@ -176,15 +175,14 @@ func TestTheNextMessageToTheSameContactNeedsItsOwnDecision(t *testing.T) {
 	}
 }
 
-// A rep directs one message past a subject's own stop with a recorded reason.
-// The message goes under that decision, the stop stays live, no consent is
-// recorded, and the next message is refused again.
+// Nobody directs a send past a subject's own stop, an admin included, even one
+// who names the stop they read. The door refuses, nothing is queued, and the
+// stop stays where the subject put it.
 //
-// Mutation: drop subject_request's exception in commsauthz.remedies and the
-// direction is refused.
-func TestARepDirectsOneMessagePastASubjectsStop(t *testing.T) {
+// Mutation: give subject_request RemedyException in commsauthz.remedies and the
+// direction is accepted.
+func TestNobodyDirectsASendPastASubjectsStop(t *testing.T) {
 	c := setupConsent(t)
-	demoteToRep(t, c.AppEnv)
 
 	if _, err := c.Owner.Exec(context.Background(), `
 		INSERT INTO communication_suppression (contact_id, kind, source, captured_by, decided_by_level)
@@ -196,32 +194,67 @@ func TestARepDirectsOneMessagePastASubjectsStop(t *testing.T) {
 		t.Fatalf("marketing send against a stop → %d, want 409", status)
 	}
 	review := liveReviewID(t, c)
-	if status := c.Call(t, "POST", "/v1/communication-reviews/"+review+"/direct-send",
-		directed(), nil, nil); status != http.StatusForbidden {
-		t.Fatalf("a rep directing past the subject's stop without naming what they read → %d, want 403", status)
-	}
-	if status := c.Call(t, "POST", "/v1/communication-reviews/"+review+"/direct-send",
-		directedShowing("subject_request"), nil, nil); status != http.StatusCreated {
-		t.Fatalf("a rep directing past the subject's stop → %d, want 201", status)
+	for name, body := range map[string]AnyMap{
+		"naming nothing it read": directed(), "naming the stop": directedShowing("subject_request"),
+	} {
+		if status := c.Call(t, "POST", "/v1/communication-reviews/"+review+"/direct-send",
+			body, nil, nil); status != http.StatusForbidden {
+			t.Errorf("an admin directing past the subject's stop, %s → %d, want 403", name, status)
+		}
 	}
 
-	var live, deliveries, grants int
-	var authority string
+	var live, deliveries int
 	if err := c.Owner.QueryRow(context.Background(), `
 		SELECT (SELECT count(*) FROM communication_suppression
 		         WHERE contact_id = $1 AND kind = 'subject_request' AND revoked_at IS NULL),
-		       (SELECT count(*) FROM comms_outbound),
-		       (SELECT coalesce(min(execution_authority), '') FROM comms_outbound),
-		       (SELECT count(*) FROM contact_consent WHERE contact_id = $1)`,
-		c.contactID).Scan(&live, &deliveries, &authority, &grants); err != nil {
+		       (SELECT count(*) FROM comms_outbound)`,
+		c.contactID).Scan(&live, &deliveries); err != nil {
 		t.Fatalf("reading the stop and the deliveries: %v", err)
 	}
-	if live != 1 || deliveries != 1 || authority != "instruction" || grants != 0 {
-		t.Errorf("live stops = %d, deliveries = %d under %q, consent grants = %d; want 1, 1 under instruction, 0",
-			live, deliveries, authority, grants)
+	if live != 1 || deliveries != 0 {
+		t.Errorf("live stops = %d, deliveries = %d after a refused direction, want 1 and 0", live, deliveries)
+	}
+}
+
+// A rep holding the grant directs one message past a policy refusal with a
+// recorded reason. The message goes under that decision, no consent is
+// recorded, and the next message is refused again.
+//
+// Mutation: drop the refusal's RemedyException in commsauthz.remedies and the
+// direction is refused.
+func TestARepDirectsOneMessagePastAPolicyRefusal(t *testing.T) {
+	c := setupConsent(t)
+	demoteToRep(t, c.AppEnv)
+
+	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {
+		t.Fatalf("marketing send with no grant → %d, want 409", status)
+	}
+	review := liveReviewID(t, c)
+	var reason string
+	if err := c.Owner.QueryRow(context.Background(),
+		`SELECT reason_code FROM communication_review WHERE id = $1`, review).Scan(&reason); err != nil {
+		t.Fatalf("reading the refusal: %v", err)
+	}
+	if status := c.Call(t, "POST", "/v1/communication-reviews/"+review+"/direct-send",
+		directedShowing(reason), nil, nil); status != http.StatusCreated {
+		t.Fatalf("a rep directing past %s → %d, want 201", reason, status)
+	}
+
+	var deliveries, grants int
+	var authority string
+	if err := c.Owner.QueryRow(context.Background(), `
+		SELECT (SELECT count(*) FROM comms_outbound),
+		       (SELECT coalesce(min(execution_authority), '') FROM comms_outbound),
+		       (SELECT count(*) FROM contact_consent WHERE contact_id = $1)`,
+		c.contactID).Scan(&deliveries, &authority, &grants); err != nil {
+		t.Fatalf("reading the deliveries: %v", err)
+	}
+	if deliveries != 1 || authority != "instruction" || grants != 0 {
+		t.Errorf("deliveries = %d under %q, consent grants = %d; want 1 under instruction, 0",
+			deliveries, authority, grants)
 	}
 	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {
-		t.Errorf("the next message past the stop → %d, want 409", status)
+		t.Errorf("the next message past the refusal → %d, want 409", status)
 	}
 }
 
