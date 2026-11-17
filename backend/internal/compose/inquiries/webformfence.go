@@ -26,8 +26,6 @@ type WebFormFence struct {
 	budgets  *webFormBudgets
 	capacity func() int
 	bound    func(context.Context, chan struct{}) context.Context
-	attempts int
-	pause    func(context.Context) error
 }
 
 // An intake holds the form's lease for well under a second. A caller that
@@ -42,8 +40,6 @@ const (
 func NewWebFormFence(db *database.DB, bound func(context.Context, chan struct{}) context.Context) *WebFormFence {
 	return &WebFormFence{db: db, budgets: &sharedWebFormBudgets, bound: bound, capacity: func() int {
 		return max(1, int(db.Pool().Config().MaxConns)/4)
-	}, attempts: int(busyPatience / busyPoll), pause: func(ctx context.Context) error {
-		return backoff.Sleep(ctx, busyPoll)
 	}}
 }
 
@@ -85,7 +81,8 @@ func (f *WebFormFence) Within(ctx context.Context, id ids.UUID, work func(contex
 	} else if owned {
 		return work(ctx)
 	}
-	err := awaitLease(ctx, f.attempts, f.pause, func(ran *bool) error {
+	pause := func(ctx context.Context) error { return backoff.Sleep(ctx, busyPoll) }
+	err := awaitLease(ctx, int(busyPatience/busyPoll), pause, func(ran *bool) error {
 		held, err := f.db.WithWorkLease(f.bound(ctx, f.sessionSlots()), provenance.WebFormSource, id, slog.Default(),
 			func(leased context.Context) error {
 				*ran = true
