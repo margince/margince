@@ -27,7 +27,7 @@ import (
 
 func reportingHTTPRouter(f *reportingBusinessFixture) http.Handler {
 	authHandlers := identity.NewHandlers(identity.NewService(f.env.Pool))
-	server := newServer(f.env.Pool, slog.New(slog.DiscardHandler), authHandlers, deals.NewHandlers(InstallationDB(f.env.Pool), DealsInstallation()))
+	server := newServer(f.env.Pool, slog.New(slog.DiscardHandler), nil, authHandlers, deals.NewHandlers(InstallationDB(f.env.Pool), DealsInstallation()))
 	server.reportingHandlers = reporting.NewHandlers(f.service, openingSelection())
 	server.reportingExportHandlers = reportingExportHandlers{service: f.service}
 	return crmcontracts.HandlerFromMuxWithBaseURL(server, chi.NewRouter(), "/v1")

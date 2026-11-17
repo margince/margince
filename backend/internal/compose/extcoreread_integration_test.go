@@ -29,6 +29,9 @@ type readWorld struct {
 	mineDeal, theirsDeal       ids.UUID
 	mineCompany, theirsCompany ids.UUID
 	signal, activity           ids.UUID
+	// composed is the composition the unit was declared in. Nil declares
+	// nothing, which no read here needs.
+	composed *Extensions
 }
 
 func setupReads(t *testing.T) readWorld {
@@ -102,7 +105,7 @@ func (w readWorld) readAs(t *testing.T, user ids.UUID, perms principal.Permissio
 		Permissions: perms,
 	}
 	ctx = principal.WithActor(ctx, actor)
-	rt := runtimeFor(ctx, coreUnit, coreVersion, coreVia, extensionRuntimeBinding{pool: w.pool})
+	rt := runtimeFor(ctx, coreUnit, coreVersion, coreVia, extensionRuntimeBinding{pool: w.pool, composed: w.composed})
 	return rt.Tx(ctx, func(ctx context.Context, tx extension.Tx) error { return fn(ctx, tx.Core()) })
 }
 

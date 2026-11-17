@@ -31,20 +31,26 @@ import (
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
-// extRuntimeEnv is the fixture: the shared migrated database, plus an
-// in-memory custodian, plus the bound process-wide runtime dependencies a
-// role's boot would have bound.
+// extRuntimeEnv is the fixture: the test's own database, an in-memory
+// custodian, and the test's own composition. The composition is bound to both,
+// as a role's boot binds its own.
 type extRuntimeEnv struct {
 	*integration.Env
-	vault keyvault.Vault
+	vault    keyvault.Vault
+	composed *Extensions
 }
 
 func setupExtRuntime(t *testing.T) *extRuntimeEnv {
 	t.Helper()
 	e := integration.Setup(t)
 	vault := keyvault.NewMemory()
-	bindRuntimeForTest(t, e.Pool, vault)
-	return &extRuntimeEnv{Env: e, vault: vault}
+	return &extRuntimeEnv{Env: e, vault: vault, composed: boundForTest(e.Pool, vault)}
+}
+
+// compose gives the fixture's composition the units of another, before any
+// Runtime is minted from it.
+func (e *extRuntimeEnv) compose(units *Extensions) {
+	e.composed.units = units.Units()
 }
 
 // callCtx is what a governed tool call arrives with: a bound workspace, an
@@ -63,16 +69,15 @@ func (e *extRuntimeEnv) callCtx(ws ids.UUID) context.Context {
 // the core never produces.
 func (e *extRuntimeEnv) runtime(unit string) (*callRuntime, context.Context) {
 	ctx := e.callCtx(e.WS)
-	return runtimeFor(ctx, unit, "1.0.0", "tool/probe", extensionRuntimeBinding{pool: e.Pool, vault: e.vault}), ctx
+	return runtimeFor(ctx, unit, "1.0.0", "tool/probe", e.composed.binding()), ctx
 }
 
 // TestRuntimeTxOpensOneTransactionOnTheInvokingWorkspace: the callback is
 // handed the invocation's tenant and a single transaction. Two statements
 // reporting the same txid is what "one transaction" means from inside it —
 // a helper that opened a connection per statement would report two.
-//
-//testdb:serial binds the process-wide extension runtime
 func TestRuntimeTxOpensOneTransactionOnTheInvokingWorkspace(t *testing.T) {
+	t.Parallel()
 	e := setupExtRuntime(t)
 	rt, ctx := e.runtime("alpha")
 
@@ -102,13 +107,12 @@ func TestRuntimeTxOpensOneTransactionOnTheInvokingWorkspace(t *testing.T) {
 // TestRuntimeTxRefusesACallWithNoWorkspace: a Runtime is minted per
 // invocation, and an invocation with no tenant bound has no workspace to pin
 // to. The seam refuses rather than opening a transaction on behalf of nobody.
-//
-//testdb:serial binds the process-wide extension runtime
 func TestRuntimeTxRefusesACallWithNoWorkspace(t *testing.T) {
+	t.Parallel()
 	e := setupExtRuntime(t)
 	// Minted from an INVOCATION with no tenant: that, and not the context the
 	// handler passes, is where the workspace now comes from.
-	rt := runtimeFor(context.Background(), "alpha", "1.0.0", "tool/probe", extensionRuntimeBinding{pool: e.Pool, vault: e.vault})
+	rt := runtimeFor(context.Background(), "alpha", "1.0.0", "tool/probe", e.composed.binding())
 
 	ran := false
 	err := rt.Tx(context.Background(), func(context.Context, extension.Tx) error {
@@ -127,9 +131,8 @@ func TestRuntimeTxRefusesACallWithNoWorkspace(t *testing.T) {
 // verbs work, fn returning nil commits, fn returning an error rolls back.
 //
 // It runs against a table the unit owns, the only kind its SQL can reach.
-//
-//testdb:serial binds the process-wide extension runtime
 func TestRuntimeTxCommitsAndRollsBack(t *testing.T) {
+	t.Parallel()
 	e := setupExtRuntime(t)
 	unitsqltest.ScratchTable(t, probeTable)
 	rt, ctx := e.runtime("alpha")
@@ -212,9 +215,8 @@ func (e *extRuntimeEnv) seatName(ctx context.Context, t *testing.T, rt *callRunt
 // TestRuntimeQueryRowReportsAnEmptyMatchAsErrNoRows: the published Row.Scan
 // promises the extension's own sentinel, not pgx's — a unit that matched on
 // pgx.ErrNoRows would be binding a driver the surface never published.
-//
-//testdb:serial binds the process-wide extension runtime
 func TestRuntimeQueryRowReportsAnEmptyMatchAsErrNoRows(t *testing.T) {
+	t.Parallel()
 	e := setupExtRuntime(t)
 	unitsqltest.ScratchTable(t, probeTable)
 	rt, ctx := e.runtime("alpha")
@@ -235,9 +237,8 @@ func TestRuntimeQueryRowReportsAnEmptyMatchAsErrNoRows(t *testing.T) {
 // verbs, which are a SEPARATE namespace rather than a variation on the first
 // — a unit may hold an installation credential and a per-member one under
 // one key name, and the workspace read must not answer with the member's.
-//
-//testdb:serial binds the process-wide extension runtime
 func TestRuntimeSecretsReachTheUserScopedNamespace(t *testing.T) {
+	t.Parallel()
 	e := setupExtRuntime(t)
 	rt, ctx := e.runtime("alpha")
 	user := extension.UserID(e.Rep1.String())
@@ -271,9 +272,8 @@ func TestRuntimeSecretsReachTheUserScopedNamespace(t *testing.T) {
 // The SQLSTATE is what is asserted, not merely that an error came back: a
 // transaction that failed to open at all would also be non-nil, and would
 // prove nothing about the statement ever reaching Postgres.
-//
-//testdb:serial binds the process-wide extension runtime
 func TestRuntimeTxSurfacesTheDatabasesOwnRefusal(t *testing.T) {
+	t.Parallel()
 	e := setupExtRuntime(t)
 	rt, ctx := e.runtime("alpha")
 
@@ -311,9 +311,8 @@ func sqlState(err error) string {
 // build another; what it must not be able to do is make the transaction run
 // somewhere else. The core re-derives the tenant from the invocation every
 // time, so a context naming a different workspace is simply overwritten.
-//
-//testdb:serial binds the process-wide extension runtime
 func TestRuntimeTxIgnoresAWorkspaceTheHandlerSuppliesItself(t *testing.T) {
+	t.Parallel()
 	e := setupExtRuntime(t)
 	rt, _ := e.runtime("alpha")
 
@@ -358,9 +357,8 @@ func TestRuntimeTxIgnoresAWorkspaceTheHandlerSuppliesItself(t *testing.T) {
 // units, one key name, two Runtimes the core built. Beta's Runtime is not
 // beta's to point elsewhere — it closes over "beta" and every statement it
 // issues carries it — so alpha's secret is not merely denied, it is absent.
-//
-//testdb:serial binds the process-wide extension runtime
 func TestRuntimeSecretsCannotReachAnotherUnitsNamespace(t *testing.T) {
+	t.Parallel()
 	e := setupExtRuntime(t)
 	alpha, ctx := e.runtime("alpha")
 	if err := alpha.Secrets().Put(ctx, "signing", []byte("alpha's key")); err != nil {
@@ -400,9 +398,8 @@ func TestRuntimeSecretsCannotReachAnotherUnitsNamespace(t *testing.T) {
 // The units are named as STRINGS rather than imported: the backend reaches an
 // extension only through the generated composition (extensions_arch_test.go),
 // and a unit's name is what the core scopes a Runtime by anyway.
-//
-//testdb:serial binds the process-wide extension runtime
 func TestNotesSigningKeyIsUnreachableFromASecondUnit(t *testing.T) {
+	t.Parallel()
 	e := setupExtRuntime(t)
 	const key = "signing"
 	material := []byte("the demo workspace's HMAC key")

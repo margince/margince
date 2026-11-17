@@ -21,13 +21,10 @@ package compose
 // not: the escape hatch lives in the contract, where a reviewer sees it.
 
 import (
-	"context"
 	"encoding/json"
 	"sort"
 	"strings"
 	"testing"
-
-	"github.com/margince/margince/backend/pkg/extension"
 )
 
 func TestEveryDeclaredToolVerbIsRegistered(t *testing.T) {
@@ -76,9 +73,8 @@ func TestEveryRegisteredToolIsDeclared(t *testing.T) {
 	if len(specs) == 0 {
 		t.Fatal("the registry has no tools — this sweep checked nothing")
 	}
-	composed := composedToolNames()
 	for _, spec := range specs {
-		if declared[spec.Name] || composed[spec.Name] || spec.ProtocolOnly {
+		if declared[spec.Name] || spec.ProtocolOnly {
 			continue
 		}
 		// A router runs only as its targets, so it is granted what they are.
@@ -92,43 +88,6 @@ func TestEveryRegisteredToolIsDeclared(t *testing.T) {
 		}
 		t.Errorf("%s is registered but no operation declares it, so an agent may call a verb the "+
 			"contract never granted. Declare it in the x-mcp-tool of the route that runs it.", spec.Name)
-	}
-}
-
-// TestTheSweepSkipsExactlyWhatTheComposedSetRegisters: an extension tool reaches
-// the registry through the same NewRegistry the sweep above builds, so without
-// the composed-set skip an installation with one unit would fail a gate about
-// the CONTRACT — and be told to declare an `x-mcp-tool` that would be wrong for
-// it. The skip has to cover exactly what registration adds, no more.
-func TestTheSweepSkipsExactlyWhatTheComposedSetRegisters(t *testing.T) {
-	before := composedToolNames()
-	if before["yogi_quote"] {
-		t.Fatal("the composed set leaked in from another test — this one would prove nothing")
-	}
-	tools, err := buildExtensionTools([]extension.Extension{{
-		Name: "demo", Version: "1.0.0",
-		Tools: []extension.Tool{{
-			Name:   "yogi_quote",
-			Handle: func(context.Context, extension.Runtime, json.RawMessage) (json.RawMessage, error) { return nil, nil },
-		}},
-	}}, []extension.Verb{unitVerb("demo", "yogi_quote", extension.TierAutoExecute, extension.ScopeRead)})
-	if err != nil {
-		t.Fatal(err)
-	}
-	setComposedTools(tools)
-	t.Cleanup(func() { setComposedTools(nil) })
-
-	if !composedToolNames()["yogi_quote"] {
-		t.Fatal("a served extension tool is missing from the skip set the sweep consults")
-	}
-	registered := false
-	for _, spec := range NewRegistry(nil, SendPath{}).Specs() {
-		if spec.Name == "yogi_quote" {
-			registered = true
-		}
-	}
-	if !registered {
-		t.Fatal("the composed tool never reached the registry — the skip would be covering nothing")
 	}
 }
 

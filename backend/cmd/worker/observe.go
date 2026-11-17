@@ -129,7 +129,7 @@ func startObserveListener(ctx context.Context, cfg workerConfig, pool *pgxpool.P
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", httpserver.Healthz)
-	mux.HandleFunc("/readyz", httpserver.Readyz("", nil, workerReadyChecks(pool, rdb, boot)...))
+	mux.HandleFunc("/readyz", httpserver.Readyz("", nil, workerReadyChecks(pool, cfg.extensions, rdb, boot)...))
 	// Backlog and JobStats are nil because each is a fleet-wide read
 	// of a shared table the api already serves, and a second copy of one
 	// number is a worse operator surface than one copy.
@@ -257,7 +257,7 @@ func mountPprof(mux *http.ServeMux) {
 // accessor, so any answer here would be this file's guess about a dependency's
 // internals rather than a reading of it. The boot gate is what stands in its
 // place, and it reports only what this process actually knows.
-func workerReadyChecks(pool *pgxpool.Pool, rdb *redis.Client, boot *bootGate) []httpserver.ReadyCheck {
+func workerReadyChecks(pool *pgxpool.Pool, composed *compose.Extensions, rdb *redis.Client, boot *bootGate) []httpserver.ReadyCheck {
 	return []httpserver.ReadyCheck{
 		{Name: "boot", Check: boot.check},
 		{Name: "postgres", Check: pool.Ping},
@@ -270,7 +270,7 @@ func workerReadyChecks(pool *pgxpool.Pool, rdb *redis.Client, boot *bootGate) []
 		// with no request to fail: its dispatcher ticks on a cadence and a
 		// missing table is a recurring job fault nobody is waiting on, so an
 		// unready replica is the only thing that says so.
-		{Name: "schema-migrations", Check: compose.SchemaAtHead(pool)},
+		{Name: "schema-migrations", Check: compose.SchemaAtHead(pool, composed)},
 		{Name: "redis", Check: func(ctx context.Context) error { return rdb.Ping(ctx).Err() }},
 	}
 }

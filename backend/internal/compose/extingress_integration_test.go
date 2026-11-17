@@ -62,7 +62,7 @@ type ingressEnv struct {
 func setupIngress(t *testing.T) *ingressEnv {
 	t.Helper()
 	e := setupExtRuntime(t)
-	composeCapturingUnit(t, ingressUnit,
+	e.compose(composeCapturingUnit(ingressUnit,
 		// The probe unit SUPPLIES a transport as well as capturing from one, which
 		// is the shape a channel unit actually has — and what a unit may name on a
 		// message is bounded by this declaration, so a set without it would leave
@@ -70,26 +70,11 @@ func setupIngress(t *testing.T) *ingressEnv {
 		[]extension.Channel{{Provider: ingressProbeProvider, CredentialModel: extension.CredentialPerMember}},
 		extension.IngressSource{
 			System: ingressProbeSystem, Lands: []extension.RecordKind{extension.KindActivity},
-		})
-	bindCaptureForTest(t, e)
+		}))
+	e.composed.BindCapture(e.Pool, CaptureConfig{})
 	grantCapture(t, e, e.Rep1)
 	depositCredential(t, e, e.Rep1)
 	return &ingressEnv{extRuntimeEnv: e, member: e.Rep1}
-}
-
-// bindCaptureForTest binds the ONE capture pipeline and restores what was bound
-// before, rather than clearing to nil: a test that cleared would leave a
-// sibling refusing with errIngressUnwired, which names a deployment fault that
-// is not there.
-func bindCaptureForTest(t *testing.T, e *extRuntimeEnv) {
-	t.Helper()
-	previous := boundExtensionRuntime().captureSink
-	BindExtensionCapture(e.Pool, CaptureConfig{})
-	t.Cleanup(func() {
-		extensionRuntimeDeps.mu.Lock()
-		defer extensionRuntimeDeps.mu.Unlock()
-		extensionRuntimeDeps.captureSink = previous
-	})
 }
 
 // capturePolicy is the narrowest grant that lets a captured message land: the
@@ -180,7 +165,7 @@ func depositCredential(t *testing.T, e *extRuntimeEnv, member ids.UUID) {
 // context back would let a test pass the one context the port is designed not
 // to need.
 func (e *ingressEnv) ingestingRuntime() *callRuntime {
-	return jobRuntimeFor(e.callCtx(e.WS), ingressUnit, "1.0.0", "job/probe", boundExtensionRuntime())
+	return jobRuntimeFor(e.callCtx(e.WS), ingressUnit, "1.0.0", "job/probe", e.composed.binding())
 }
 
 // aProviderRecord is one directed message, keyed the way a connector keys one.
@@ -217,9 +202,8 @@ func mailDomainOf(email string) string {
 // The whole path, and the write shape at the end of it: a unit hands over one
 // provider record and the installation gains an activity, its raw evidence, a
 // ledger row and an outbox event — none of which the unit wrote or could write.
-//
-//testdb:serial binds the process-wide extension runtime
 func TestAUnitsRecordLandsAsAnActivityWithEvidenceAndTheWriteShape(t *testing.T) {
+	t.Parallel()
 	e := setupIngress(t)
 	rt := e.ingestingRuntime()
 
@@ -316,7 +300,7 @@ func registerProbeTransport(t *testing.T, e *ingressEnv) {
 		activities.SetChannelProviders([]string{capture.ProviderTelegram})
 		comms.SetChannelProviders([]string{capture.ProviderTelegram})
 	})
-	if err := reconcileChannelProviders(context.Background(), e.Pool, []string{capture.ProviderTelegram}); err != nil {
+	if err := reconcileChannelProviders(context.Background(), e.Pool, []string{capture.ProviderTelegram}, e.composed.Units()); err != nil {
 		t.Fatalf("registering the unit's transport: %v", err)
 	}
 }
@@ -332,7 +316,7 @@ func registerProbeTransport(t *testing.T, e *ingressEnv) {
 // its recipient FROM: without it the message is repliable in principle and
 // answers "nobody on this conversation can be reached" in practice.
 //
-//testdb:serial binds the process-wide extension runtime
+//testdb:serial sets the process-wide sendable channel providers
 func TestAUnitsChannelMessageLandsAsARepliableConversation(t *testing.T) {
 	e := setupIngress(t)
 	registerProbeTransport(t, e)
@@ -378,9 +362,8 @@ func TestAUnitsChannelMessageLandsAsARepliableConversation(t *testing.T) {
 // on it would transmit a message from the workspace's own bot to whoever the
 // unit linked, the unit choosing the target and the human supplying the
 // authority.
-//
-//testdb:serial binds the process-wide extension runtime
 func TestAUnitCannotFileAMessageOnACoreConnectorsTransport(t *testing.T) {
+	t.Parallel()
 	e := setupIngress(t)
 	rt := e.ingestingRuntime()
 
@@ -401,9 +384,8 @@ func TestAUnitCannotFileAMessageOnACoreConnectorsTransport(t *testing.T) {
 
 // A replay is a no-op, which is the property the whole cursor rule rests on: a
 // unit may re-ingest anything it is not sure about, and does.
-//
-//testdb:serial binds the process-wide extension runtime
 func TestASecondIngestOfTheSameRecordLandsNothingNew(t *testing.T) {
+	t.Parallel()
 	e := setupIngress(t)
 	rt := e.ingestingRuntime()
 	record := aProviderRecord("ws-7:1042", "outside@example.test")
@@ -431,9 +413,8 @@ func TestASecondIngestOfTheSameRecordLandsNothingNew(t *testing.T) {
 // The counterparty ladder, as it actually decides — which is NOT "a contact
 // appears". A first-time corporate address is captured and DEFERRED to the
 // pending inbox, and that is the common case for a chat connector.
-//
-//testdb:serial binds the process-wide extension runtime
 func TestAFirstTimeCorporateSenderDefersItsCounterparty(t *testing.T) {
+	t.Parallel()
 	e := setupIngress(t)
 	rt := e.ingestingRuntime()
 
@@ -454,9 +435,8 @@ func TestAFirstTimeCorporateSenderDefersItsCounterparty(t *testing.T) {
 // The other arm of the same ladder: a freemail sender ALSO defers, and differs
 // in leaving no company question behind. Both arms are asserted because a suite that pinned only
 // one would describe the pipeline as doing whichever it happened to check.
-//
-//testdb:serial binds the process-wide extension runtime
 func TestAFreemailSenderDefersTheContactAndNamesNoCompany(t *testing.T) {
+	t.Parallel()
 	e := setupIngress(t)
 	rt := e.ingestingRuntime()
 
@@ -502,9 +482,8 @@ func TestAFreemailSenderDefersTheContactAndNamesNoCompany(t *testing.T) {
 // at all: on a fresh install nothing is internal, which is a real arm of the
 // same gate and the reason this test seeds a verified domain rather than
 // assuming one.
-//
-//testdb:serial binds the process-wide extension runtime
 func TestAWhollyInternalMessageIsSkippedAsASuccess(t *testing.T) {
+	t.Parallel()
 	e := setupIngress(t)
 	registerOwnDomain(t, e.extRuntimeEnv, "authz.test")
 	rt := e.ingestingRuntime()
@@ -546,9 +525,8 @@ func registerOwnDomain(t *testing.T, e *extRuntimeEnv, domain string) {
 // anything the current manifest describes — extension_secret keeps the mapping
 // row after a declaration changes, and what an operator can read has to be what
 // the core acts on.
-//
-//testdb:serial binds the process-wide extension runtime
 func TestACredentialUnderAnUndeclaredKeyIsNotConsent(t *testing.T) {
+	t.Parallel()
 	e := setupIngress(t)
 	ctx := e.callCtx(e.WS)
 	store := extsecrets.For(ingressUnit, e.Pool, e.vault)
@@ -570,9 +548,8 @@ func TestACredentialUnderAnUndeclaredKeyIsNotConsent(t *testing.T) {
 
 // The consent check, against the real store: a member who has deposited nothing
 // with this unit cannot be acted for, whatever the unit passes.
-//
-//testdb:serial binds the process-wide extension runtime
 func TestAMemberWhoDepositedNothingCannotBeActedFor(t *testing.T) {
+	t.Parallel()
 	e := setupIngress(t)
 	grantCapture(t, e.extRuntimeEnv, e.Rep2)
 	rt := e.ingestingRuntime()
@@ -591,9 +568,8 @@ func TestAMemberWhoDepositedNothingCannotBeActedFor(t *testing.T) {
 // The authority is LIVE, and this is the assertion that says so: the same unit,
 // the same member, the same record — refused after the member's grants are
 // taken away, with no restart and nothing re-bound.
-//
-//testdb:serial binds the process-wide extension runtime
 func TestADemotedMemberLandsNothingFromTheNextCallOn(t *testing.T) {
+	t.Parallel()
 	e := setupIngress(t)
 	rt := e.ingestingRuntime()
 
@@ -632,9 +608,8 @@ func TestADemotedMemberLandsNothingFromTheNextCallOn(t *testing.T) {
 // unit under that id, which is equally true of a member of another workspace,
 // an archived one, and an id belonging to nobody at all. A not-found would be
 // the DISCLOSING answer, because only a lookup can tell those three apart.
-//
-//testdb:serial binds the process-wide extension runtime
 func TestAMemberOfAnotherWorkspaceCannotBeActedFor(t *testing.T) {
+	t.Parallel()
 	e := setupIngress(t)
 	rt := e.ingestingRuntime()
 
@@ -654,13 +629,12 @@ func TestAMemberOfAnotherWorkspaceCannotBeActedFor(t *testing.T) {
 // The nesting refusal, on a POOL OF ONE — which is the configuration where the
 // defect it guards is not a failure but a hang: the ingest would wait for the
 // only connection, which the unit's own transaction is holding.
-//
-//testdb:serial binds the process-wide extension runtime
 func TestAnIngestInsideAUnitsTransactionIsRefusedOnAPoolOfOne(t *testing.T) {
+	t.Parallel()
 	e := setupIngress(t)
 	single := singleConnectionPool(t)
 	rt := jobRuntimeFor(e.callCtx(e.WS), ingressUnit, "1.0.0", "job/probe",
-		extensionRuntimeBinding{pool: single, vault: e.vault, captureSink: boundExtensionRuntime().captureSink})
+		extensionRuntimeBinding{pool: single, vault: e.vault, captureSink: e.composed.binding().captureSink, composed: e.composed})
 
 	// A wall clock, because the failure this guards is a HANG: without the
 	// refusal this call waits for a connection that cannot come back, and a
@@ -732,9 +706,8 @@ var _ = principal.PrincipalConnector
 // unrepresentable presented as a quiet feed. Two ingests rather than one,
 // because the row is a COUNT and a writer that overwrote instead of
 // accumulating would report a broken connector as having dropped one record.
-//
-//testdb:serial binds the process-wide extension runtime
 func TestARefusedRecordIsCountedAgainstTheUnitThatSentIt(t *testing.T) {
+	t.Parallel()
 	e := setupIngress(t)
 	rt := e.ingestingRuntime()
 	ctx := context.Background()
@@ -789,9 +762,8 @@ func TestARefusedRecordIsCountedAgainstTheUnitThatSentIt(t *testing.T) {
 // participant's account id, a provider name — so a table holding it would give
 // the extension tier a retention and erasure question about third-party content
 // that the tier was deliberately built without.
-//
-//testdb:serial binds the process-wide extension runtime
 func TestTheBreadcrumbKeepsNoPartOfTheRefusedRecord(t *testing.T) {
+	t.Parallel()
 	e := setupIngress(t)
 	rt := e.ingestingRuntime()
 	ctx := context.Background()

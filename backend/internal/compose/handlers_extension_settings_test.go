@@ -53,7 +53,6 @@ func TestDeclaredViewShowsTheSavedValueOrTheDefault(t *testing.T) {
 }
 
 func TestExtensionSettingsRefuseWhatTheCallerMayNotDoAndAnUnknownUnit(t *testing.T) {
-	t.Cleanup(func() { setComposedExtensions(nil) })
 	human := func(role string, grants map[string]principal.ObjectGrant) context.Context {
 		return principal.WithActor(context.Background(), principal.Principal{
 			Type: principal.PrincipalHuman, Permissions: principal.Permissions{RoleKeys: []string{role}, Objects: grants},

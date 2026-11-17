@@ -22,7 +22,7 @@ func visitKind(unitNS string) extension.RecordKindDeclaration {
 func TestRegisterExtensionsRegistersDeclaredRecordKinds(t *testing.T) {
 	recordkinds.Reset()
 	t.Cleanup(recordkinds.Reset)
-	err := RegisterExtensions(composableAll([]extension.Extension{{
+	_, err := RegisterExtensions(composableAll([]extension.Extension{{
 		Name: "kinds-ok", Version: "0.0.1",
 		RecordKinds: []extension.RecordKindDeclaration{visitKind("ext_kinds_ok")},
 	}}), nil, nil)
@@ -49,7 +49,7 @@ func TestABadRecordKindDeclarationAbortsTheBoot(t *testing.T) {
 		{"table of another unit", []extension.RecordKindDeclaration{visitKind("ext_elsewhere")}, "namespace"},
 	} {
 		recordkinds.Reset()
-		err := RegisterExtensions(composableAll([]extension.Extension{{
+		_, err := RegisterExtensions(composableAll([]extension.Extension{{
 			Name: "kinds-bad", Version: "0.0.1", RecordKinds: c.kinds,
 		}}), nil, nil)
 		if err == nil || !strings.Contains(err.Error(), c.want) {

@@ -48,6 +48,9 @@ const declaredJobKindFloor = 45
 // wiring without one.
 type JobCensus struct {
 	wired map[string]wiredWorker
+	// cfg is the configuration the census wired, which the posture arm
+	// withholds one dependency at a time.
+	cfg JobRunnerConfig
 }
 
 // NewJobCensus assembles every worker a maximally-configured role would run.
@@ -57,14 +60,20 @@ type JobCensus struct {
 // declaration names, or a kind gated on the one it missed would be reported as
 // unwired when it is merely unconfigured here.
 func NewJobCensus() (*JobCensus, error) {
+	return newJobCensus(nil)
+}
+
+// newJobCensus is NewJobCensus over a role that serves the composition's jobs.
+func newJobCensus(composed *Extensions) (*JobCensus, error) {
 	cfg := censusJobConfig()
+	cfg.Extensions = composed
 	if err := everyDeclaredDependencySupplied(cfg); err != nil {
 		return nil, err
 	}
 	// The periodic entries are the schedule half, which jobschedule_test.go
 	// owns kind by kind; the census is about what is REGISTERED.
 	reg, _ := wireJobs(nil, slog.New(slog.DiscardHandler), cfg)
-	return &JobCensus{wired: reg.wired}, nil
+	return &JobCensus{wired: reg.wired, cfg: cfg}, nil
 }
 
 // Validate reports every disagreement between the contract and the wiring at
@@ -81,7 +90,7 @@ func (c *JobCensus) Validate() error {
 		c.everyArgsOwnedKindCarriesItsOwnInsertOpts(),
 		c.noArgsTypeAnswersToASecondKind(),
 		c.everyDeclaredQueueIsBuiltWithItsDeclaredBound(),
-		everyDeclaredPostureIsHonoured(),
+		everyDeclaredPostureIsHonoured(c.cfg),
 	)
 	if len(findings) == 0 {
 		return nil

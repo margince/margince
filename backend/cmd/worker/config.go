@@ -29,6 +29,9 @@ import (
 
 // workerConfig is the parsed boot configuration of the worker process.
 type workerConfig struct {
+	// extensions is the composition's extension state, registered before
+	// anything else runs and handed to every lane that serves a unit.
+	extensions          *compose.Extensions
 	dataTasksPace       time.Duration
 	databaseConnections int
 	databaseCache       int

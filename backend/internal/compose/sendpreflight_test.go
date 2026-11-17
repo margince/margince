@@ -230,9 +230,9 @@ func TestSendCapableAsksTheUnitRatherThanTheWorkspaceBotTable(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			declaresTransport(t, "mine", tc.channel)
+			composed := declaresTransport("mine", tc.channel)
 			grants := &stubGrants{channelBound: true}
-			authority := mailboxAuthority{grants: grants, mailAppConfigured: func(context.Context, string) (bool, error) { return false, nil }}
+			authority := mailboxAuthority{grants: grants, composed: composed, mailAppConfigured: func(context.Context, string) (bool, error) { return false, nil }}
 
 			got, err := authority.SendCapable(human, "mine_chat")
 
@@ -488,7 +488,7 @@ func TestWorkerMailAuthorityAnswersFromItsRegistry(t *testing.T) {
 		"a connector never registered": {withGoogle, "no_such_mailbox", false},
 	} {
 		t.Run(name, func(t *testing.T) {
-			got, err := workerMailAuthority(tc.registry).mailAppConfigured(context.Background(), tc.provider)
+			got, err := workerMailAuthority(tc.registry, nil).mailAppConfigured(context.Background(), tc.provider)
 			if err != nil {
 				t.Fatalf("mailAppConfigured: %v", err)
 			}

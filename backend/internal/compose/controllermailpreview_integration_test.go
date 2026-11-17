@@ -270,7 +270,7 @@ func TestTheTimelineNamesTheFromTheRelayActuallySentWith(t *testing.T) {
 	const workerFrom = "privacy@worker.example.test"
 	relay := testsmtp.Start(t, false)
 	host, port := relay.Address(t)
-	dispatcher := newSendDispatcher(l.e.Pool, nil, sendPace{limit: 10, window: time.Minute, maxAge: time.Hour}, nil, nil, nil).
+	dispatcher := newSendDispatcher(l.e.Pool, nil, nil, sendPace{limit: 10, window: time.Minute, maxAge: time.Hour}, nil, nil, nil).
 		WithControllerRelay(ControllerRelayFor(mailer.SMTP{Host: host, Port: port, FromAddress: workerFrom}), l.vault)
 	if outcome, _, err := dispatcher.DispatchWithWait(sendWorkerScope(l.ctx), deliveryID); err != nil || outcome != comms.OutcomeSent {
 		t.Fatalf("controller dispatch: %s %v", outcome, err)

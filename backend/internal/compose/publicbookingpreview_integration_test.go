@@ -63,7 +63,7 @@ func TestBookingPreviewNamesTheHostAndCompanyWithTheirLogoAndNoMargince(t *testi
 	theCompanyExists(t, e)
 	uploadMark(t, e, companyHandlers{store: e.Contacts, blob: blob}, logoFixture(t, 400, 100), "logo.png")
 	slug := hostWithBookingPage(t, e, true)
-	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), withConnectedCalendar(), WithBlobstore(blob), WithPublicBaseURL(previewOrigin))
+	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), nil, withConnectedCalendar(), WithBlobstore(blob), WithPublicBaseURL(previewOrigin))
 
 	response := fetchBookingPreview(t, server, http.MethodGet, slug)
 	body := response.Body.String()
@@ -124,7 +124,7 @@ func TestBookingPreviewWithoutALogoOrAnOriginIsATextCardWithNoURLs(t *testing.T)
 	theCompanyExists(t, e)
 	slug := hostWithBookingPage(t, e, true)
 	// The page was published on an origin; this server has none configured.
-	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), withConnectedCalendar())
+	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), nil, withConnectedCalendar())
 	response := fetchBookingPreview(t, server, http.MethodGet, slug)
 	body := response.Body.String()
 	if response.Code != http.StatusOK || !strings.Contains(body, "of Acme GmbH.") || !strings.Contains(body, `<meta name="twitter:card" content="summary">`) {
@@ -142,7 +142,7 @@ func TestPausedBookingPreviewNamesNobody(t *testing.T) {
 	e := integration.Setup(t)
 	theCompanyExists(t, e)
 	slug := hostWithBookingPage(t, e, false)
-	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), withConnectedCalendar(), WithPublicBaseURL(previewOrigin))
+	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), nil, withConnectedCalendar(), WithPublicBaseURL(previewOrigin))
 	response := fetchBookingPreview(t, server, http.MethodGet, slug)
 	body := response.Body.String()
 	if response.Code != http.StatusOK || !strings.Contains(body, "<title>Booking unavailable</title>") {
@@ -178,7 +178,7 @@ func TestRevokedAndMissingBookingPreviewsAre404WithNoHost(t *testing.T) {
 	if replaced.Slug == nil || *replaced.Slug == old {
 		t.Fatalf("Replace address kept the slug: %+v", replaced.Slug)
 	}
-	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), withConnectedCalendar(), WithPublicBaseURL(previewOrigin))
+	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), nil, withConnectedCalendar(), WithPublicBaseURL(previewOrigin))
 	for _, slug := range []string{old, "no-such-page"} {
 		for _, method := range []string{http.MethodGet, http.MethodHead} {
 			response := fetchBookingPreview(t, server, method, slug)
@@ -207,7 +207,7 @@ func TestABookingPageOfAHostWhoseAccountIsNotLiveIsGoneEverywhere(t *testing.T) 
 			e := integration.Setup(t)
 			theCompanyExists(t, e)
 			slug := hostWithBookingPage(t, e, true)
-			server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), withConnectedCalendar(), WithPublicBaseURL(previewOrigin))
+			server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), nil, withConnectedCalendar(), WithPublicBaseURL(previewOrigin))
 			if live := fetchBookingPreview(t, server, http.MethodGet, slug); live.Code != http.StatusOK {
 				t.Fatalf("live host: %d", live.Code)
 			}

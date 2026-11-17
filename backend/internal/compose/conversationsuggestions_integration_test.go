@@ -70,7 +70,7 @@ func TestConversationSuggestionsUseTheRealContactAndLeadRoutes(t *testing.T) {
 			if e.WsCount(t, `SELECT count(*) FROM contact_email WHERE lower(email)=ANY($1::text[])`, []string{"bob@buyer.test", "casey@buyer.test", "taylor@buyer.test"}) != 0 {
 				t.Fatal("inbound copies were automatically admitted")
 			}
-			server := newServer(e.Pool, quietLog(), authHandlers{}, dealsHandlers{})
+			server := newServer(e.Pool, quietLog(), nil, authHandlers{}, dealsHandlers{})
 			handler := crmcontracts.Handler(server)
 			read := func() crmcontracts.ConversationSuggestionListResponse {
 				t.Helper()

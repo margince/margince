@@ -53,7 +53,7 @@ import (
 
 // New wires the modules and returns the ready http.Handler: contract
 // routes under /v1, health probe, session middleware, panic recovery.
-func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
+func New(pool *pgxpool.Pool, log *slog.Logger, exts *Extensions, opts ...Option) http.Handler {
 	// The fieldcatalog seam for deals (newContactsHandlers carries the full
 	// note): active cf_* deal columns ride deal payloads on both surfaces.
 	dealsH := deals.NewHandlers(InstallationDB(pool), DealsInstallation()).
@@ -96,11 +96,12 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	// law requires it to keep.
 	announceStatutoryFloorFrom(pool, log)
 
-	srv := newServer(pool, log, authH, dealsH)
+	srv := newServer(pool, log, exts, authH, dealsH)
 	srv.views = &viewDoor{}
 	for _, opt := range opts {
 		opt(&srv, pool)
 	}
+	srv.bindExtensions()
 	srv.applySendPath(pool)
 	srv.publishCoreFeatures()
 	srv.publishListsAvailability(pool)
@@ -181,7 +182,7 @@ func newPrivacyHandlers(pool *pgxpool.Pool) privacy.Handlers {
 		WithRecordLabeler(newAttentionNames(InstallationDB(pool)))
 }
 
-func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH dealsHandlers) Server {
+func newServer(pool *pgxpool.Pool, log *slog.Logger, exts *Extensions, authH authHandlers, dealsH dealsHandlers) Server {
 	// The compiled-in ceilings, taken from the deployment-config defaults rather
 	// than restated here: one place resolves a default, so no composition can
 	// disagree with the file about what "unconfigured" means.
@@ -192,6 +193,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 	// due on one of them.
 	introStore := introductions.NewStore(InstallationDB(pool), time.Now)
 	srv := Server{
+		extensions: exts,
 		// Built here rather than behind an option: an endpoint's own request
 		// rate is not a feature a deployment opts into, and every role that
 		// serves /v1 comes through this constructor.

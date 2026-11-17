@@ -65,7 +65,7 @@ func contractAPI(srv Server, pool *pgxpool.Pool, identitySvc *identity.Service) 
 	// to remove.
 	registry := registryWithGate(InstallationDB(pool), gate, srv.replyDrafter, srv.send,
 		companyEnricher{}, srv.retrievalEmbedder, nil, importsFor(&srv),
-		meetingBriefReader(srv.meetingBriefSvc), srv.log, registryFeatures{coreFeatures: srv.coreFeatures, lists: srv.listsEnabled},
+		meetingBriefReader(srv.meetingBriefSvc), srv.log, registryFeatures{coreFeatures: srv.coreFeatures, lists: srv.listsEnabled, extensions: srv.extensions},
 		agents.WithVolumeCharger(srv.volumeMeter))
 	// The ADR-0055 admission layer and the MCP tool surface share one
 	// provider seam: agentGate's StageResolver reads exactly what the MCP
@@ -176,7 +176,7 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", httpserver.Healthz)
 	mux.HandleFunc("/readyz", httpserver.Readyz(srv.aiStateOrDefault(), srv.readyzEmbedState(), srv.readinessChecks(pool.Ping,
-		func(ctx context.Context) error { return AssertRuntimeRole(ctx, pool) }, SchemaAtHead(pool))...))
+		func(ctx context.Context) error { return AssertRuntimeRole(ctx, pool) }, SchemaAtHead(pool, srv.extensions))...))
 	// The claim surface, beside the probes rather than under /v1: the session
 	// middleware fronting /v1 resolves the singleton company first and
 	// answers 503 when there is none, so an endpoint that exists to run when no
@@ -190,7 +190,7 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 		Published: events.PublishedTotal,
 		Extra:     srv.writeMetricsSections,
 		JobStats: fleetSections(
-			dataTaskMetricsSection(pool),
+			dataTaskMetricsSection(pool, srv.extensions),
 			jobMetricsSection(func(ctx context.Context) (jobs.Snapshot, error) { return jobs.Stats(ctx, pool) }),
 			backfillFleetSection(backfillFleetReader(pool)),
 			threadBacklogSection(threadBacklogReader(pool)),
@@ -206,7 +206,7 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 	// workspace-scoped call like any other /v1 route, and mounting it on the
 	// operational mux instead would win the longest-pattern match against
 	// "/v1/" and serve without a session. See extensionEdge.
-	publicEdge := publicInstrument(ComposedExtensions(), newPublicInstrumentLimiter())(
+	publicEdge := publicInstrument(srv.extensions.Units(), newPublicInstrumentLimiter())(
 		publicForms(srv.webFormsHandlers)(
 			publicConfirm(newPublicConfirmLimiters())(
 				publicPreferences(consent.NewStore(InstallationDB(pool)), newPublicPreferenceLimiters())(
@@ -266,7 +266,7 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 		mux.HandleFunc("/.well-known/oauth-protected-resource/mcp", authH.ProtectedResourceMetadata)
 	}
 	mountProviderPushWebhooks(mux, srv, log)
-	mountInbound(mux, identitySvc, log)
+	mountInbound(mux, srv.extensions, identitySvc, log)
 	mountSecurityTxt(mux, srv.securityTxt)
 	return mux
 }
@@ -280,12 +280,12 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 // /v1/ entry that carries the session middleware, and the extension REST surface
 // would quietly stop requiring a session. This is a different prefix, not a
 // relocation of that one.
-func mountInbound(mux *http.ServeMux, identitySvc *identity.Service, log *slog.Logger) {
-	exts := ComposedExtensions()
+func mountInbound(mux *http.ServeMux, composed *Extensions, identitySvc *identity.Service, log *slog.Logger) {
+	exts := composed.Units()
 	if len(exts) == 0 || identitySvc == nil {
 		return
 	}
-	routes := MountInboundEndpoints(mux, exts, identitySvc.InstallationWorkspace, boundExtensionRuntime(), log)
+	routes := MountInboundEndpoints(mux, exts, identitySvc.InstallationWorkspace, composed.binding(), log)
 	if len(routes) == 0 {
 		return
 	}
@@ -450,19 +450,19 @@ func WithUploadLimits(limits UploadLimits) Option {
 // operation exists and is broken, when what is true is that this ROLE does not
 // serve it.
 func extensionEdge(srv Server, log *slog.Logger) func(http.Handler) http.Handler {
-	verbs := ComposedVerbs()
+	verbs := srv.extensions.Verbs()
 	if len(verbs) == 0 || srv.toolRegistry == nil {
 		return func(next http.Handler) http.Handler { return next }
 	}
 	return func(next http.Handler) http.Handler {
 		mux := http.NewServeMux()
 		mux.Handle("/", next)
-		// composedServedVerbs is this boot's SERVED set, keyed by (unit, tool) —
+		// servedVerbs is this composition's served set, keyed by (unit, tool):
 		// the verbs a unit shipped a Handle for, attributed to the unit that
 		// shipped them. A declared verb outside it is mounted and answers 501
 		// rather than reaching a registry that never heard of it, or worse
 		// reaching another unit's handler; see MountExtensionRoutes.
-		routes, err := MountExtensionRoutes(mux, verbs, composedServedVerbs(), srv.toolRegistry.Invoke)
+		routes, err := MountExtensionRoutes(mux, verbs, srv.extensions.servedVerbs(), srv.toolRegistry.Invoke)
 		if err != nil {
 			// A composed set that reached here invalid means RegisterExtensions
 			// accepted something this mounting cannot serve, which is a wiring

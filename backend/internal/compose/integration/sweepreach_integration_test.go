@@ -259,7 +259,7 @@ func TestTheErasureClearsAUnitsDeclaredColumns(t *testing.T) {
 // namespace, before anything is applied.
 func TestTheBootRefusesAUnitReachingATableItDoesNotOwn(t *testing.T) {
 	t.Parallel()
-	err := compose.RegisterExtensions([]extension.Extension{{
+	_, err := compose.RegisterExtensions([]extension.Extension{{
 		Name: "reachtest", Version: "1", Description: "Declares reach into a core table.",
 		Reach: []reach.Table{{Name: "finance_invoice", Links: []reach.Link{{Column: "company_id", Record: reach.Company}}}},
 	}}, nil, nil)

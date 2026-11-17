@@ -68,6 +68,8 @@ type registryFeatures struct {
 	served       *Server
 	// reclaim deletes a retired offer rendering where no Server holds the store.
 	reclaim deals.RetiredRendering
+	// extensions is the composition whose units' tools join the surface.
+	extensions *Extensions
 }
 
 func registryWithDraftBrain(pool *pgxpool.Pool, brain completer, send SendPath, features registryFeatures) *agents.Registry {
@@ -177,7 +179,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	agents.RegisterMeetingInvitationTool(registry, newCommsAdapter(pool, drafter, send), provider)
 	agents.RegisterClientCheckTool(registry, log)
 	agents.RegisterRouters(registry)
-	registerComposedTools(registry)
+	registerComposedTools(registry, features.extensions)
 	return registry
 }
 

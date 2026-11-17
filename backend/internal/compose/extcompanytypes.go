@@ -43,18 +43,6 @@ func registerCompanyTypes(exts []extension.Extension) {
 	}
 }
 
-// composedCompanyTypesFor returns the company types the named unit declared in
-// this boot's composition, composedChannelsFor's twin. What a unit may set is
-// what the boot validated.
-func composedCompanyTypesFor(unit string) []extension.CompanyType {
-	for _, ext := range ComposedExtensions() {
-		if string(ext.Name) == unit {
-			return ext.CompanyTypes
-		}
-	}
-	return nil
-}
-
 // SetExtensionTypes is the unit's one door onto a company's type field. The unit
 // names short types and the value stored is built here from its own name, so no
 // spelling reaches another unit's values. The edit is UpdateCompany's, which
@@ -74,7 +62,8 @@ func (c extensionCompanies) SetExtensionTypes(ctx context.Context, id string, ty
 	if err != nil {
 		return crm.Company{}, fmt.Errorf("%w: %q is not a UUID", extension.ErrInvalid, id)
 	}
-	declared := composedCompanyTypesFor(c.core.unit)
+	unit, _ := c.core.deps.composed.unit(c.core.unit)
+	declared := unit.CompanyTypes
 	values := make([]string, 0, len(types))
 	for _, t := range types {
 		if !slices.ContainsFunc(declared, func(d extension.CompanyType) bool { return d.Type == t }) {

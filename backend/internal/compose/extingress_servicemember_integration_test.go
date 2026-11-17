@@ -61,8 +61,8 @@ func declareServiceMemberFor(t *testing.T, unit string) ids.UUID {
 	return member
 }
 
-//testdb:serial binds the process-wide extension runtime
 func TestAFeedRunsAsItsServiceMemberAndOffboardingAColleagueDoesNotStopIt(t *testing.T) {
+	t.Parallel()
 	e := setupIngress(t)
 	member := declareServiceMemberFor(t, ingressUnit)
 	depositCredential(t, e.extRuntimeEnv, member)
@@ -95,8 +95,8 @@ func TestAFeedRunsAsItsServiceMemberAndOffboardingAColleagueDoesNotStopIt(t *tes
 	}
 }
 
-//testdb:serial binds the process-wide extension runtime
 func TestAServiceMemberDeclaredForAnotherUnitCannotBeActedFor(t *testing.T) {
+	t.Parallel()
 	e := setupIngress(t)
 	member := declareServiceMemberFor(t, "some-other-unit")
 	// The credential is on deposit under this unit, so only the declaration
@@ -110,8 +110,8 @@ func TestAServiceMemberDeclaredForAnotherUnitCannotBeActedFor(t *testing.T) {
 	}
 }
 
-//testdb:serial binds the process-wide extension runtime
 func TestAServiceMemberWithNoSecretOnDepositCannotBeActedFor(t *testing.T) {
+	t.Parallel()
 	e := setupIngress(t)
 	member := declareServiceMemberFor(t, ingressUnit)
 
@@ -122,8 +122,8 @@ func TestAServiceMemberWithNoSecretOnDepositCannotBeActedFor(t *testing.T) {
 	}
 }
 
-//testdb:serial binds the process-wide extension runtime
 func TestAnArchivedServiceMemberLandsNothing(t *testing.T) {
+	t.Parallel()
 	e := setupIngress(t)
 	member := declareServiceMemberFor(t, ingressUnit)
 	depositCredential(t, e.extRuntimeEnv, member)
@@ -144,9 +144,8 @@ func TestAnArchivedServiceMemberLandsNothing(t *testing.T) {
 
 // The secret is filed through the unit's own port, so the service member holds
 // it as a colleague would.
-//
-//testdb:serial binds the process-wide extension runtime
 func TestTheFeedsSecretIsReadBackFromTheServiceMember(t *testing.T) {
+	t.Parallel()
 	e := setupIngress(t)
 	member := declareServiceMemberFor(t, ingressUnit)
 	depositCredential(t, e.extRuntimeEnv, member)

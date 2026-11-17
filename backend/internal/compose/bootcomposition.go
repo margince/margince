@@ -11,6 +11,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sync"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -24,9 +25,8 @@ import (
 // grants, and the service member of each unit that lands records.
 //
 // One function because the ordering between them is not a caller's to choose.
-// The reconcile reads ComposedExtensions() and refuses a unit that shadows a
-// core transport, so it belongs after the set is observed and before anything
-// serves. A role that wired only the inventory would boot with units installed
+// The reconcile reads the composed set and refuses a unit that shadows a core
+// transport. So it belongs after the set is observed and before anything serves. A role that wired only the inventory would boot with units installed
 // and their transports unregistered. This step exists to make that state
 // unreachable.
 //
@@ -42,7 +42,7 @@ func RecordComposition(
 	if err := VerifyExtensionPrivacy(ctx, pool, exts); err != nil {
 		return fmt.Errorf("compose: checking the extensions' privacy declarations: %w", err)
 	}
-	if err := ReconcileChannelProviders(ctx, pool); err != nil {
+	if err := ReconcileChannelProviders(ctx, pool, exts); err != nil {
 		return fmt.Errorf("compose: registering this binary's channel vocabulary: %w", err)
 	}
 	if err := FillExtensionRbacDefaults(ctx, pool, log); err != nil {
@@ -54,8 +54,26 @@ func RecordComposition(
 	return nil
 }
 
+// extensionData holds the composed units the privacy registry is derived from.
+// RegisterExtensions installs it in its apply phase, beside corereach.Install,
+// and the mutex orders that write against every later read.
+var extensionData struct {
+	mu    sync.RWMutex
+	units []extension.Extension
+}
+
+func installExtensionData(units []extension.Extension) {
+	extensionData.mu.Lock()
+	defer extensionData.mu.Unlock()
+	extensionData.units = units
+}
+
 // ExtensionData is the registry every eraser, export and merge store outside a test is handed.
-func ExtensionData() extprivacy.Registry { return extensionprivacy.Registry(ComposedExtensions()) }
+func ExtensionData() extprivacy.Registry {
+	extensionData.mu.RLock()
+	defer extensionData.mu.RUnlock()
+	return extensionprivacy.Registry(extensionData.units)
+}
 
 // VerifyExtensionPrivacy checks the units' declarations at boot (extensionprivacy.Verify).
 func VerifyExtensionPrivacy(ctx context.Context, pool *pgxpool.Pool, exts []extension.Extension) error {

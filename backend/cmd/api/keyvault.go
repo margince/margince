@@ -26,14 +26,6 @@ import (
 // connection. A key that is set but malformed already failed the boot, never a
 // silent fallback to something weaker.
 func keyvaultOptions(pool *pgxpool.Pool, vault keyvault.Vault, settings *config.Config, stdout io.Writer) ([]compose.Option, error) {
-	// Bound BEFORE the unconfigured return, and with whatever the boot
-	// resolved: the extension tier's per-call Runtime needs the POOL for its
-	// workspace-pinned transactions whether or not a custodian exists, and a
-	// deployment with no keyvault should have its extension secrets refuse by
-	// name rather than have its extension database access silently disabled
-	// too. A nil vault here is the ErrNoCustodian posture the store already
-	// documents.
-	compose.BindExtensionRuntime(pool, vault)
 	if vault == nil {
 		return nil, nil
 	}

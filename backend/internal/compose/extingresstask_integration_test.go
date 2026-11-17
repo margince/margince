@@ -41,8 +41,8 @@ func (e *crmEnv) taskRows(t *testing.T, key string, assignee ids.UUID) int {
 		key, assignee, taskDue)
 }
 
-//testdb:serial binds the process-wide extension runtime
 func TestATaskFiledForAColleagueIsTheirsAndAReplayLeavesItAlone(t *testing.T) {
+	t.Parallel()
 	e := setupCRMIngress(t)
 	e.mustIngest(t, taskRecord("remind-1", e.Rep2))
 	if n := e.taskRows(t, "remind-1", e.Rep2); n != 1 {
@@ -63,8 +63,8 @@ func TestATaskFiledForAColleagueIsTheirsAndAReplayLeavesItAlone(t *testing.T) {
 	}
 }
 
-//testdb:serial binds the process-wide extension runtime
 func TestATaskForASeatThatCannotHoldWorkLandsNothing(t *testing.T) {
+	t.Parallel()
 	e := setupCRMIngress(t)
 	agent := ids.NewV7()
 	owner := integration.OwnerConn(t)

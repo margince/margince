@@ -88,7 +88,7 @@ func anAttendee(account, email, name string) extension.Participant {
 // record carried no participants field at all, so a captured group chat named
 // its sender and the member and nobody else in the room.
 //
-//testdb:serial binds the process-wide extension runtime
+//testdb:serial sets the process-wide sendable channel providers
 func TestAUnitsGroupRosterLandsAsParticipants(t *testing.T) {
 	e := setupIngress(t)
 	registerProbeTransport(t, e)

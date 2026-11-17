@@ -21,18 +21,13 @@ import (
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
-// composedJobsForTest installs a two-unit job set for one test and puts the
-// process back the way it found it. The set is boot state; a test that left its
-// own behind would govern every test after it.
-func composedJobsForTest(t *testing.T, decls ...extension.JobDeclaration) {
-	t.Helper()
-	before := servedExtensionJobs()
+// composedJobsForTest is a composition serving the declared jobs.
+func composedJobsForTest(decls ...extension.JobDeclaration) *Extensions {
 	set := make([]composedJob, 0, len(decls))
 	for _, decl := range decls {
 		set = append(set, composedJob{decl: decl})
 	}
-	setComposedJobs(set)
-	t.Cleanup(func() { setComposedJobs(before) })
+	return &Extensions{jobs: set}
 }
 
 func jobOf(unit, job string) extension.JobDeclaration {
@@ -42,13 +37,13 @@ func jobOf(unit, job string) extension.JobDeclaration {
 // wiredRuntime is one unit's per-call Runtime, pinned to a workspace and wired
 // to a pool it never reaches: every case below is refused before the queue, and
 // a pool that answered would be testing the queue rather than the bound.
-func wiredRuntime(unit string) *callRuntime {
+func wiredRuntime(composed *Extensions, unit string) *callRuntime {
 	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
 	return &callRuntime{
 		unit:    unit,
 		live:    true,
 		callCtx: ctx,
-		deps:    extensionRuntimeBinding{pool: &pgxpool.Pool{}},
+		deps:    extensionRuntimeBinding{pool: &pgxpool.Pool{}, composed: composed},
 	}
 }
 
@@ -57,7 +52,7 @@ func wiredRuntime(unit string) *callRuntime {
 // the same as "alpha asks for a job nobody declares", or the refusal tells a
 // unit what its neighbours have.
 func TestSyncNowReachesOnlyTheInvokingUnitsOwnJobs(t *testing.T) {
-	composedJobsForTest(t, jobOf("alpha", "refresh"), jobOf("beta", "reconcile"))
+	composed := composedJobsForTest(jobOf("alpha", "refresh"), jobOf("beta", "reconcile"))
 
 	for _, probe := range []struct {
 		what string
@@ -68,7 +63,7 @@ func TestSyncNowReachesOnlyTheInvokingUnitsOwnJobs(t *testing.T) {
 		{"the empty name", ""},
 	} {
 		t.Run(probe.what, func(t *testing.T) {
-			rt := wiredRuntime("alpha")
+			rt := wiredRuntime(composed, "alpha")
 			err := rt.SyncNow(context.Background(), extension.JobName(probe.job))
 			if !errors.Is(err, extension.ErrNoSuchJob) {
 				t.Errorf("err = %v, want ErrNoSuchJob — a unit reaches its own declarations and no others", err)
@@ -80,23 +75,23 @@ func TestSyncNowReachesOnlyTheInvokingUnitsOwnJobs(t *testing.T) {
 // And the resolver DOES find a unit's own job, so the test above is about
 // ownership rather than about every name being refused.
 //
-// Asserted on declaredJobFor rather than through SyncNow, because a name that
-// resolves goes on to the queue — and what this states is which declarations
-// the lookup can see, not what happens after it.
+// Asserted on declaredJob rather than through SyncNow, because a name that
+// resolves goes on to the queue. What this states is which declarations the
+// lookup can see, not what happens after it.
 func TestTheJobLookupIsScopedToTheDeclaringUnit(t *testing.T) {
-	composedJobsForTest(t, jobOf("alpha", "refresh"), jobOf("beta", "reconcile"))
+	composed := composedJobsForTest(jobOf("alpha", "refresh"), jobOf("beta", "reconcile"))
 
-	if _, found := declaredJobFor("alpha", "refresh"); !found {
+	if _, found := composed.declaredJob("alpha", "refresh"); !found {
 		t.Error("a unit's own declared job did not resolve")
 	}
-	if _, found := declaredJobFor("beta", "reconcile"); !found {
+	if _, found := composed.declaredJob("beta", "reconcile"); !found {
 		t.Error("the second unit's own declared job did not resolve")
 	}
 	// The pair that matters: each unit's name against the OTHER's job.
-	if _, found := declaredJobFor("alpha", "reconcile"); found {
+	if _, found := composed.declaredJob("alpha", "reconcile"); found {
 		t.Error("alpha resolved beta's job — the lookup is not scoped to the declaring unit")
 	}
-	if _, found := declaredJobFor("beta", "refresh"); found {
+	if _, found := composed.declaredJob("beta", "refresh"); found {
 		t.Error("beta resolved alpha's job")
 	}
 }
@@ -105,8 +100,8 @@ func TestTheJobLookupIsScopedToTheDeclaringUnit(t *testing.T) {
 // other, and a handler that stashed one and pressed save later must not be able
 // to keep the scheduler busy.
 func TestSyncNowFailsClosedAfterTheCallEnds(t *testing.T) {
-	composedJobsForTest(t, jobOf("alpha", "refresh"))
-	rt := wiredRuntime("alpha")
+	composed := composedJobsForTest(jobOf("alpha", "refresh"))
+	rt := wiredRuntime(composed, "alpha")
 	rt.release()
 	if err := rt.SyncNow(context.Background(), "refresh"); !errors.Is(err, extension.ErrRuntimeExpired) {
 		t.Errorf("err = %v, want ErrRuntimeExpired", err)

@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"sync"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
@@ -25,27 +24,6 @@ import (
 type composedJob struct {
 	decl   extension.JobDeclaration
 	handle extension.JobHandler
-}
-
-// composedJobs holds the served set of this boot, written once by
-// RegisterExtensions before any runner is built. Same shape and same reason as
-// composedTools: the mutex guards the write-then-read ordering across the
-// boot/serve boundary, not concurrent registrations.
-var composedJobs struct {
-	mu   sync.RWMutex
-	jobs []composedJob
-}
-
-func setComposedJobs(set []composedJob) {
-	composedJobs.mu.Lock()
-	defer composedJobs.mu.Unlock()
-	composedJobs.jobs = set
-}
-
-func servedExtensionJobs() []composedJob {
-	composedJobs.mu.RLock()
-	defer composedJobs.mu.RUnlock()
-	return composedJobs.jobs
 }
 
 // buildExtensionJobs joins every handler-bearing Jobs entry to the declaration
@@ -224,8 +202,8 @@ func composedFailureClasses(exts []extension.Extension, set []composedJob) map[s
 // process: the ext_ queues, kinds and ticks simply do not exist there, and that
 // is what keeps the composed lane a superset of the vanilla one rather than a
 // different program.
-func addExtensionJobs(reg *jobRegistry, pool *pgxpool.Pool, book *ScheduleBook, log *slog.Logger) []*river.PeriodicJob {
-	set := servedExtensionJobs()
+func addExtensionJobs(reg *jobRegistry, composed *Extensions, pool *pgxpool.Pool, book *ScheduleBook, log *slog.Logger) []*river.PeriodicJob {
+	set := composed.servedJobs()
 	if len(set) == 0 {
 		return nil
 	}
@@ -236,7 +214,7 @@ func addExtensionJobs(reg *jobRegistry, pool *pgxpool.Pool, book *ScheduleBook, 
 			&extJobDispatcherWorker{pool: pool, decl: j.decl})
 		addComposedWorker(reg,
 			extJobWorkspaceArgs{JobKind: j.decl.ChildKind()},
-			&extJobWorkspaceWorker{pool: pool, decl: j.decl, handle: j.handle, log: log})
+			&extJobWorkspaceWorker{pool: pool, composed: composed, decl: j.decl, handle: j.handle, log: log})
 		periodic = append(periodic, periodicForComposed(book, j.decl))
 	}
 	return periodic

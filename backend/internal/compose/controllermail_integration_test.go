@@ -349,7 +349,7 @@ func TestControllerStagingReachesReceivedAlternativesAndRetiresItsLink(t *testin
 	}
 	relay := testsmtp.Start(t, false)
 	host, port := relay.Address(t)
-	dispatcher := newSendDispatcher(lane.e.Pool, nil, sendPace{limit: 10, window: time.Minute, maxAge: time.Hour}, nil, nil, nil).
+	dispatcher := newSendDispatcher(lane.e.Pool, nil, nil, sendPace{limit: 10, window: time.Minute, maxAge: time.Hour}, nil, nil, nil).
 		WithControllerRelay(ControllerRelayFor(mailer.SMTP{Host: host, Port: port, FromAddress: "privacy@example.test"}), lane.vault)
 	outcome, _, err := dispatcher.DispatchWithWait(sendWorkerScope(lane.ctx), deliveryID)
 	if err != nil || outcome != comms.OutcomeSent {
@@ -401,7 +401,7 @@ func TestControllerHTMLCannotChangeAfterStagingAuthorization(t *testing.T) {
 		t.Fatal(err)
 	}
 	relay := &countingMailer{}
-	dispatcher := newSendDispatcher(lane.e.Pool, nil, sendPace{limit: 10, window: time.Minute, maxAge: time.Hour}, nil, nil, nil).
+	dispatcher := newSendDispatcher(lane.e.Pool, nil, nil, sendPace{limit: 10, window: time.Minute, maxAge: time.Hour}, nil, nil, nil).
 		WithControllerRelay(ControllerRelayFor(relay), lane.vault)
 	outcome, _, err := dispatcher.DispatchWithWait(sendWorkerScope(lane.ctx), id)
 	if err != nil || outcome != comms.OutcomeParked || relay.count() != 0 {
@@ -462,7 +462,7 @@ func TestAPrivacyNoticeShowsTheCompanyLogoUntilItIsRemoved(t *testing.T) {
 		}
 		relay := testsmtp.Start(t, false)
 		host, port := relay.Address(t)
-		dispatcher := newSendDispatcher(lane.e.Pool, nil, sendPace{limit: 10, window: time.Minute, maxAge: time.Hour}, blob, nil, nil).
+		dispatcher := newSendDispatcher(lane.e.Pool, nil, nil, sendPace{limit: 10, window: time.Minute, maxAge: time.Hour}, blob, nil, nil).
 			WithControllerRelay(ControllerRelayFor(mailer.SMTP{Host: host, Port: port, FromAddress: "privacy@example.test"}), lane.vault)
 		if outcome, _, err := dispatcher.DispatchWithWait(sendWorkerScope(lane.ctx), deliveryID); err != nil || outcome != comms.OutcomeSent {
 			t.Fatalf("controller dispatch: %s %v", outcome, err)

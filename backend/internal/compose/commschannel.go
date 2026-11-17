@@ -60,7 +60,7 @@ var _ channelSenders = (*capture.Registry)(nil)
 //
 //nolint:ireturn // implements comms.ConnectionResolver, whose contract returns the optional connector.MessageSender seam
 func (r commsResolver) ResolveChannel(ctx context.Context, userID ids.UserID, provider string) (connector.MessageSender, connector.Auth, error) {
-	if transport, supplied := composedUnitTransport(provider); supplied {
+	if transport, supplied := r.composed.unitTransport(provider); supplied {
 		return r.resolveUnitChannel(ctx, userID, transport)
 	}
 	sender, auth, err := r.channels.ChannelSenderFor(ctx, provider)

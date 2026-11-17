@@ -39,7 +39,7 @@ func confirmFirstUnit(t *testing.T) []mcp.Tool {
 	verb.InputSchema = json.RawMessage(`{"type":"object","required":["record_id"],
 		"properties":{"record_id":{"type":"string","format":"uuid"}}}`)
 	verb.Subject = extension.Subject{Arg: "record_id", Table: "ext_demo_record"}
-	tools, err := buildExtensionTools([]extension.Extension{{
+	tools, err := buildExtensionTools(nil, []extension.Extension{{
 		Name: "demo", Version: "1.0.0",
 		Tools: []extension.Tool{{Name: "forget_record", Handle: servedHandle}},
 	}}, []extension.Verb{verb})
@@ -89,7 +89,7 @@ func TestAServedConfirmFirstVerbIsAKindTheInboxCanDecide(t *testing.T) {
 // served 🟡 tool with no declared subject is the dead capability, and building
 // the set fails closed rather than registering one.
 func TestAServedConfirmFirstVerbWithNoSubjectNeverReachesTheRegistry(t *testing.T) {
-	_, err := buildExtensionTools([]extension.Extension{{
+	_, err := buildExtensionTools(nil, []extension.Extension{{
 		Name: "demo", Version: "1.0.0",
 		Tools: []extension.Tool{{Name: "forget_record", Handle: servedHandle}},
 	}}, []extension.Verb{unitVerb("demo", "forget_record", extension.TierConfirmationRequired, extension.ScopeWrite)})

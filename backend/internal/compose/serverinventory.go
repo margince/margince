@@ -378,8 +378,8 @@ type Server struct {
 
 	// log is the process logger, shared with the optional engines an
 	// option wires (e.g. the brief L2 ranker's degradation warnings).
-	log *slog.Logger
-
+	log        *slog.Logger
+	extensions *Extensions // the composition's units; bindExtensions hands it on
 	// offerDrafter is the AI-drafted offer regeneration orchestrator (arc
 	// 4b), injected by WithOfferDraft. Without it, offerregenerate.go's
 	// RegenerateOffer shadow stays mechanical-only — the same "declared

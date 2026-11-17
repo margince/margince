@@ -41,8 +41,7 @@ const gatedDependencyFloor = 20
 
 // everyDeclaredPostureIsHonoured withholds each declared dependency in turn and
 // reports every kind whose registration then disagrees with its declaration.
-func everyDeclaredPostureIsHonoured() []string {
-	full := censusJobConfig()
+func everyDeclaredPostureIsHonoured(full JobRunnerConfig) []string {
 	paths := slices.Sorted(maps.Keys(gatedDependencyPaths()))
 	var findings []string
 	for _, path := range paths {

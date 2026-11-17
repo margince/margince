@@ -26,24 +26,24 @@ import (
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
-//testdb:serial publishes the process-wide composed extension set
 func TestAConnectedUnitAppServesItsTokenAndKeepsItFromTheUnit(t *testing.T) {
+	t.Parallel()
 	e := setupExtRuntime(t)
 	v := &vendor{exchange: `{"access_token":"a1","refresh_token":"r1","expires_in":3600}`}
 	app := booksApp(v.serve(t).URL)
 	app.OnGrant = func(ctx context.Context, rt extension.Runtime, grant extension.OAuthGrant) error {
 		return rt.Secrets().Put(ctx, "company", []byte(grant.Params["realmId"]))
 	}
-	setComposedExtensions([]extension.Extension{{Name: "ledger", Version: "0.1.0", OAuthApps: []extension.OAuthApp{app}}})
-	t.Cleanup(func() { setComposedExtensions(nil) })
+	e.composed.units = []extension.Extension{{Name: "ledger", Version: "0.1.0", OAuthApps: []extension.OAuthApp{app}}}
 
 	system := e.callCtx(e.WS)
-	apps := capture.NewConnectorAppStore(NewSettingsStore(e.Pool), e.vault, nil).WithUnitApps(composedUnitApp)
+	apps := capture.NewConnectorAppStore(NewSettingsStore(e.Pool), e.vault, nil).WithUnitApps(e.composed.unitApp)
 	if err := apps.Set(system, "books", "ledgerly-client", "ledgerly-secret", ""); err != nil {
 		t.Fatalf("storing the unit's app: %v", err)
 	}
 
 	h := connectorHandlers{
+		extensions:    e.composed,
 		authority:     adminAuthority{},
 		signer:        newStateSigner([]byte(testStateKey)),
 		publicBaseURL: "https://app.test", apiBaseURL: "https://api.test",
@@ -82,13 +82,13 @@ func TestAConnectedUnitAppServesItsTokenAndKeepsItFromTheUnit(t *testing.T) {
 	}
 }
 
-//testdb:serial publishes the process-wide composed extension set
 func TestTheAppListNamesAUnitAppWithItsTitleUnitAndCallback(t *testing.T) {
+	t.Parallel()
 	e := setupExtRuntime(t)
-	setComposedExtensions([]extension.Extension{{Name: "ledger", Version: "0.1.0", OAuthApps: []extension.OAuthApp{booksApp("https://auth.ledgerly.test/token")}}})
-	t.Cleanup(func() { setComposedExtensions(nil) })
+	e.composed.units = []extension.Extension{{Name: "ledger", Version: "0.1.0", OAuthApps: []extension.OAuthApp{booksApp("https://auth.ledgerly.test/token")}}}
 	h := connectorAppHandlers{
-		store:               capture.NewConnectorAppStore(NewSettingsStore(e.Pool), e.vault, nil).WithUnitApps(composedUnitApp),
+		extensions:          e.composed,
+		store:               capture.NewConnectorAppStore(NewSettingsStore(e.Pool), e.vault, nil).WithUnitApps(e.composed.unitApp),
 		unitCallbackAPIBase: "https://api.test", unitCallbackPublicBase: "https://app.test",
 	}
 	if err := h.store.Set(e.callCtx(e.WS), "books", "ledgerly-client", "ledgerly-secret", ""); err != nil {

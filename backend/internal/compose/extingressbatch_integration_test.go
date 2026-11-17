@@ -15,8 +15,8 @@ import (
 
 const probeSource = extension.SourceName(ingressProbeSystem)
 
-//testdb:serial binds the process-wide extension runtime
 func TestABatchSavesItsPositionAfterEveryRecordIsAnswered(t *testing.T) {
+	t.Parallel()
 	e := setupIngress(t)
 	ctx := context.Background()
 	member := extension.UserID(e.member.String())
@@ -42,8 +42,8 @@ func TestABatchSavesItsPositionAfterEveryRecordIsAnswered(t *testing.T) {
 	}
 }
 
-//testdb:serial binds the process-wide extension runtime
 func TestAFailedBatchKeepsThePreviousPosition(t *testing.T) {
+	t.Parallel()
 	e := setupIngress(t)
 	ctx := context.Background()
 	member := extension.UserID(e.member.String())
@@ -69,8 +69,8 @@ func TestAFailedBatchKeepsThePreviousPosition(t *testing.T) {
 	}
 }
 
-//testdb:serial binds the process-wide extension runtime
 func TestABatchOrPositionReadIsRefusedWhenMalformedUndeclaredAttendedOrExpired(t *testing.T) {
+	t.Parallel()
 	e := setupIngress(t)
 	ctx := context.Background()
 	member := extension.UserID(e.member.String())
@@ -87,7 +87,7 @@ func TestABatchOrPositionReadIsRefusedWhenMalformedUndeclaredAttendedOrExpired(t
 		t.Errorf("IngestPosition on an undeclared source answered %v, want ErrIngressNotDeclared", err)
 	}
 
-	attended := runtimeFor(e.callCtx(e.WS), ingressUnit, "1.0.0", "invocation/probe", boundExtensionRuntime())
+	attended := runtimeFor(e.callCtx(e.WS), ingressUnit, "1.0.0", "invocation/probe", e.composed.binding())
 	if _, err := attended.IngestBatch(ctx, member, probeSource, recs, "p"); !errors.Is(err, extension.ErrAttendedIngest) {
 		t.Errorf("an attended batch answered %v, want ErrAttendedIngest", err)
 	}

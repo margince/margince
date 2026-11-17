@@ -204,18 +204,17 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		return err
 	}
 	defer stopJobs()
-	// AFTER the job runner, because that is where this role's unconditional
-	// BindExtensionRuntime happens and a delivery needs it: a unit's handler
-	// reaches the installation through the per-call Runtime, which refuses
-	// while nothing is bound. Started earlier, a retained entry redelivered in
-	// that window would fail on the wiring and then wait out the subscriber's
-	// whole reclaim interval before anyone tried again — on a worker with no
-	// model configured, which never reaches the runner lane's own binding.
+	// After the job runner, which makes this role's unconditional runtime
+	// binding. A delivery needs it: a unit's handler reaches the installation
+	// through the per-call Runtime, which refuses while nothing is bound.
+	// Started earlier, a retained entry redelivered in that window would fail on
+	// the wiring and wait out the subscriber's whole reclaim interval. A worker
+	// with no model configured never reaches the runner lane's own binding.
 	// The context is the LANES', which is this function's own ctx with their
 	// cancel around it (startEventLanes) — carried on the value rather than
 	// re-derived here, so this lane ends when its siblings do instead of
 	// outliving them under a second shutdown.
-	startExtensionSubscriptionLanes(lanes.ctx, pool, rdb, lanes.background, logger, stdout) //nolint:contextcheck // the lanes' ctx IS derived from this one; see above.
+	startExtensionSubscriptionLanes(lanes.ctx, cfg.extensions, pool, rdb, lanes.background, logger, stdout) //nolint:contextcheck // the lanes' ctx IS derived from this one; see above.
 	// Every phase a replica needs to do work has returned; /readyz may say so.
 	started.complete()
 	// Deferred AFTER complete, so LIFO runs it FIRST: readiness goes false at
@@ -250,12 +249,13 @@ func releaseSkewRefusal(refused <-chan error) error {
 // to the boot inventory: taking a second snapshot there would let the two
 // observe different declarations, and the inventory's whole job is to record
 // what this process is actually running.
-func registerComposedExtensions() ([]extension.Extension, error) {
+func registerComposedExtensions() ([]extension.Extension, *compose.Extensions, error) {
 	extensions := composition.Extensions()
-	if err := compose.RegisterExtensions(extensions, composition.Verbs(), composition.Jobs()); err != nil {
-		return nil, err
+	composed, err := compose.RegisterExtensions(extensions, composition.Verbs(), composition.Jobs())
+	if err != nil {
+		return nil, nil, err
 	}
-	return extensions, nil
+	return extensions, composed, nil
 }
 
 // workerBoot is everything decided before this process touches a network.
@@ -279,10 +279,11 @@ func configureWorker(ctx context.Context, args []string, stdout io.Writer) (work
 	if err != nil {
 		return workerBoot{}, err
 	}
-	extensions, err := registerComposedExtensions()
+	extensions, composed, err := registerComposedExtensions()
 	if err != nil {
 		return workerBoot{}, err
 	}
+	cfg.extensions = composed
 	compose.BindExtensionEgress(cfg.posture)
 	bootstrap, err := loadBootstrap(cfg)
 	if err != nil {

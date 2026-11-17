@@ -5,9 +5,7 @@ package compose
 
 import (
 	"fmt"
-	"slices"
 	"strings"
-	"sync"
 
 	"github.com/margince/margince/backend/internal/compose/corereach"
 	"github.com/margince/margince/backend/internal/compose/extensionprivacy"
@@ -31,38 +29,42 @@ import (
 // registered extension never serves. This is also where the manifest
 // emission and the approval filtering slot in: both
 // operate on the declared set before anything is applied.
-func RegisterExtensions(exts []extension.Extension, verbs []extension.Verb, jobDecls []extension.JobDeclaration) error {
+//
+// It returns the composition's own extension state, which the role hands to
+// everything that serves or runs a unit.
+func RegisterExtensions(exts []extension.Extension, verbs []extension.Verb, jobDecls []extension.JobDeclaration) (*Extensions, error) {
 	if err := validateExtensionSet(exts); err != nil {
-		return err
+		return nil, err
 	}
 	if err := validateVerbSet(verbs); err != nil {
-		return err
+		return nil, err
 	}
 	if err := preflightExtensionKinds(exts); err != nil {
-		return err
+		return nil, err
 	}
 	if err := preflightEntryObjects(exts, verbs); err != nil {
-		return err
+		return nil, err
 	}
 	// Do every fallible step before applying anything, so the whole
 	// reconciliation stays validate-then-apply: adapting the handler-bearing
 	// tools to the core seam can (in principle — preflightTools already
 	// precludes it, but this stays fail-closed) fail, and it must not fail
 	// with a jurisdiction pack already half-applied.
-	tools, err := buildExtensionTools(exts, verbs)
+	composed := &Extensions{units: exts, verbs: verbs}
+	tools, err := buildExtensionTools(composed, exts, verbs)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	rbacObjects, err := extensionRbacObjects(verbs)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	rbacDefaults, err := extensionRbacDefaults(verbs)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if rbacObjects, rbacDefaults, err = withRecordKindRbac(exts, rbacObjects, rbacDefaults); err != nil {
-		return err
+		return nil, err
 	}
 	// Still the validate phase: joining a unit's Go job behavior to its
 	// contract-declared kinds can refuse the set (an undeclared job, a
@@ -70,13 +72,14 @@ func RegisterExtensions(exts []extension.Extension, verbs []extension.Verb, jobD
 	// jurisdiction pack is applied.
 	composedSet, err := buildExtensionJobs(exts, jobDecls)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	// The last fallible step, because it also installs. It seals the set the
 	// merge and the erasure refuse to run without.
 	if err := corereach.Install(exts); err != nil {
-		return err
+		return nil, err
 	}
+	installExtensionData(exts)
 	for _, e := range exts {
 		for _, p := range e.Jurisdictions {
 			jurisdiction.Register(p)
@@ -105,10 +108,10 @@ func RegisterExtensions(exts []extension.Extension, verbs []extension.Verb, jobD
 	// leaves the packs applied and the boot aborting, and an aborting boot
 	// serves nothing either way.
 	if err := RegisterRbacObjects(rbacObjects); err != nil {
-		return err
+		return nil, err
 	}
 	if err := registerRbacDefaults(rbacDefaults); err != nil {
-		return err
+		return nil, err
 	}
 	// The composed job kinds join the declaration table before any runner is
 	// built, because everything the runner then asks about them — the wall
@@ -117,7 +120,7 @@ func RegisterExtensions(exts []extension.Extension, verbs []extension.Verb, jobD
 	// answered by jobs.SpecFor. Registering the workers first would mean
 	// registering them under the zero Spec, which is River's silent minute.
 	if err := jobs.RegisterComposed(composedJobSpecs(composedSet)); err != nil {
-		return err
+		return nil, err
 	}
 	// The failure VOCABULARY follows the kinds, and for the same reason: the
 	// read that turns a stored sentence back into a class and a remedy asks
@@ -131,7 +134,7 @@ func RegisterExtensions(exts []extension.Extension, verbs []extension.Verb, jobD
 	// vocabulary must abort rather than serve a surface that silently
 	// declines to classify.
 	if err := jobs.RegisterComposedFailureClasses(composedFailureClasses(exts, composedSet)); err != nil {
-		return err
+		return nil, err
 	}
 	// The staged KINDS follow the tools, and for the same reason the failure
 	// vocabulary follows the job specs: a confirm-first verb the registry
@@ -144,70 +147,11 @@ func RegisterExtensions(exts []extension.Extension, verbs []extension.Verb, jobD
 	// the error aborts the boot rather than serving a surface that stages into
 	// a dead end.
 	if err := approvals.RegisterExtensionKinds(extensionStagingKinds(tools)); err != nil {
-		return err
+		return nil, err
 	}
-	setComposedJobs(composedSet)
-	setComposedSubscriptions(buildExtensionSubscriptions(exts))
-	setComposedTools(tools)
-	setComposedVerbs(verbs)
-	setComposedExtensions(exts)
-	return nil
-}
-
-// composedExtensions holds this boot's declared unit set, written once by
-// RegisterExtensions before any surface serves. Same shape and same reason as
-// composedVerbs: the mutex guards the write-then-read ORDERING across the
-// boot/serve boundary, not concurrent registrations.
-//
-// It exists because the operator inventory (/v1/extensions, handlers_extensions.go)
-// needs the units THEMSELVES — a name and a version — and every other composed
-// accessor holds something derived from them. Recording the set here rather than
-// having the handler re-derive it is what keeps the answer equal to what the boot
-// reconciliation actually validated: a second source could describe a unit that is
-// not serving.
-var composedExtensions struct {
-	mu   sync.RWMutex
-	exts []extension.Extension
-}
-
-func setComposedExtensions(exts []extension.Extension) {
-	composedExtensions.mu.Lock()
-	defer composedExtensions.mu.Unlock()
-	composedExtensions.exts = exts
-}
-
-// ComposedExtensions returns this boot's declared extension units. Exported for
-// the same reason ComposedVerbs is: the surface that reads it is assembled after
-// RegisterExtensions has run.
-func ComposedExtensions() []extension.Extension {
-	composedExtensions.mu.RLock()
-	defer composedExtensions.mu.RUnlock()
-	return slices.Clone(composedExtensions.exts)
-}
-
-// composedVerbs holds the contract-declared operation set of this boot, written
-// once by RegisterExtensions before any surface serves. The route mounting reads
-// it, and so does the parity sweep that holds declaration and registration
-// equal. Same shape and same reason as composedTools: the mutex guards the
-// read/write ORDERING, not concurrent registrations.
-var composedVerbs struct {
-	mu    sync.RWMutex
-	verbs []extension.Verb
-}
-
-func setComposedVerbs(verbs []extension.Verb) {
-	composedVerbs.mu.Lock()
-	defer composedVerbs.mu.Unlock()
-	composedVerbs.verbs = verbs
-}
-
-// ComposedVerbs returns this boot's declared extension operations. Exported
-// because the composition root mounts their routes from it (routes.go) after the
-// Server is assembled, which is later than RegisterExtensions.
-func ComposedVerbs() []extension.Verb {
-	composedVerbs.mu.RLock()
-	defer composedVerbs.mu.RUnlock()
-	return slices.Clone(composedVerbs.verbs)
+	composed.tools, composed.jobs = tools, composedSet
+	composed.subs = buildExtensionSubscriptions(composed, exts)
+	return composed, nil
 }
 
 // validateExtensionSet preflights every unit and every capability —
@@ -369,49 +313,13 @@ func preflightSubscriptions(e extension.Extension) error {
 	return nil
 }
 
-// composedSubscriptions holds this boot's registered listeners, written once by
-// RegisterExtensions before any surface serves. Same shape and same reason as
-// composedTools: the mutex guards the write-then-read ORDERING across the
-// boot/serve boundary, not concurrent registrations.
-var composedSubscriptions struct {
-	mu   sync.RWMutex
-	subs []ComposedSubscription
-}
-
-func setComposedSubscriptions(subs []ComposedSubscription) {
-	composedSubscriptions.mu.Lock()
-	defer composedSubscriptions.mu.Unlock()
-	composedSubscriptions.subs = subs
-}
-
-// ComposedSubscriptions returns this boot's registered listeners, each already
-// carrying the unit identity its deliveries are attributed to. The worker role
-// reads it to start one consumer per listener; every other role composes them
-// and starts none, because consuming the bus is the worker's job.
-func ComposedSubscriptions() []ComposedSubscription {
-	composedSubscriptions.mu.RLock()
-	defer composedSubscriptions.mu.RUnlock()
-	return slices.Clone(composedSubscriptions.subs)
-}
-
-// SetComposedSubscriptionsForTest installs a listener set without a boot.
-//
-// Exported for the WORKER's own tests: the lane starter reads this registry,
-// and the thing worth testing there — that one unresolvable listener does not
-// cost the others their lane — needs a set containing one. cmd/worker cannot
-// reach an unexported setter, and reconstructing the registry there would be a
-// second source of the same fact.
-func SetComposedSubscriptionsForTest(subs []ComposedSubscription) {
-	setComposedSubscriptions(subs)
-}
-
 // buildExtensionSubscriptions flattens the validated set into one list of
 // listeners, each stamped with the unit that declared it.
-func buildExtensionSubscriptions(exts []extension.Extension) []ComposedSubscription {
+func buildExtensionSubscriptions(composed *Extensions, exts []extension.Extension) []ComposedSubscription {
 	var subs []ComposedSubscription
 	for _, e := range exts {
 		for _, sub := range e.Subscriptions {
-			subs = append(subs, ComposedSubscription{Unit: e.Name, Version: e.Version, Sub: sub})
+			subs = append(subs, ComposedSubscription{Unit: e.Name, Version: e.Version, Sub: sub, composed: composed})
 		}
 	}
 	return subs

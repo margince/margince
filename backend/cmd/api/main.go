@@ -80,14 +80,14 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	// failing registration aborts the boot (ADR-0120 EXT-P4). ONE
 	// snapshot serves registration and the boot inventory below, so both
 	// observe the same declarations.
-	extensions := composition.Extensions()
-	if err := compose.RegisterExtensions(extensions, composition.Verbs(), composition.Jobs()); err != nil {
+	composed, err := compose.RegisterExtensions(composition.Extensions(), composition.Verbs(), composition.Jobs())
+	if err != nil {
 		return err
 	}
 
 	// The flush is deferred before the pool and the other closers, so it runs
 	// last. Events logged while shutting down still leave.
-	if err := startInstrumentation(ctx, cfg, stdout); err != nil {
+	if err := startInstrumentation(ctx, composed, cfg, stdout); err != nil {
 		return err
 	}
 	defer compose.FlushInstrumentation(ctx)
@@ -108,6 +108,10 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		return err
 	}
 	defer pool.Close()
+	// Bound whether or not a custodian exists: the extension tier's per-call
+	// Runtime needs the pool for its workspace-pinned transactions. A nil vault
+	// is the ErrNoCustodian posture the secret store already documents.
+	composed.BindRuntime(pool, vault)
 
 	bootstrap, license, err := bindInstallation(ctx, cfg, pool, vault, logger)
 	if err != nil {
@@ -118,7 +122,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	// no workspace to record against; BEFORE the server is assembled, which
 	// loads the transport directory from the rows this writes. boot.go holds the
 	// phase and the order inside it.
-	if err := recordBootFacts(ctx, pool, logger, extensions); err != nil {
+	if err := recordBootFacts(ctx, pool, logger, composed.Units()); err != nil {
 		return err
 	}
 
@@ -177,7 +181,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	defer stopViewRefresh()
 	opts = append(opts, viewOpts...)
 
-	apiHandler := compose.New(pool, logger, opts...)
+	apiHandler := compose.New(pool, logger, composed, opts...)
 	// Only now: the flush it listens with is captured while the options run.
 	resetLane.listen(ctx, modelPath)
 	// An admin re-points a lane through this role, but the WORKER is a separate

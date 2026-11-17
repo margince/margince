@@ -33,7 +33,7 @@ import (
 // entity id's label, "" for a null one.
 func auditPageLabels(ctx context.Context, t *testing.T, e *integration.Env) map[ids.UUID]string {
 	t.Helper()
-	server := newServer(e.Pool, slog.New(slog.DiscardHandler),
+	server := newServer(e.Pool, slog.New(slog.DiscardHandler), nil,
 		identity.NewHandlers(identity.NewService(e.Pool)), deals.NewHandlers(InstallationDB(e.Pool), DealsInstallation()))
 	router := crmcontracts.HandlerFromMuxWithBaseURL(server, chi.NewRouter(), "/v1")
 	request := httptest.NewRequest(http.MethodGet, "/v1/audit-log?limit=200", nil).WithContext(ctx)

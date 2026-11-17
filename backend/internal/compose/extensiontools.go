@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"sync"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -18,17 +17,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/pkg/extension"
 )
-
-// composedTools holds the handler-bearing tools of the composed extension
-// set, built once by RegisterExtensions at boot and registered into every
-// agents.Registry compose constructs — the same reconcile-at-boot shape a
-// jurisdiction pack follows (Register once, consulted by every engine).
-// It is written before any registry is built; the mutex guards the
-// read/write ordering, not concurrent registrations.
-var composedTools struct {
-	mu    sync.RWMutex
-	tools []mcp.Tool
-}
 
 // buildExtensionTools adapts every handler-bearing tool in the composed
 // set to the core mcp.Tool seam. A tool without a handler is inert (it
@@ -45,7 +33,7 @@ var composedTools struct {
 // deliberately — the same trust a jurisdiction pack rides when it ships
 // enabled. A distributed, less-trusted unit is not the model until that
 // resolution lands.
-func buildExtensionTools(exts []extension.Extension, verbs []extension.Verb) ([]mcp.Tool, error) {
+func buildExtensionTools(composed *Extensions, exts []extension.Extension, verbs []extension.Verb) ([]mcp.Tool, error) {
 	// The declaration side, keyed by (unit, verb). A unit's Go Tools entry is
 	// only a verb and a function now; everything the adapted spec carries —
 	// tier, scope, prose, schemas, version — comes from the contract-declared
@@ -93,6 +81,7 @@ func buildExtensionTools(exts []extension.Extension, verbs []extension.Verb) ([]
 			if err != nil {
 				return nil, fmt.Errorf("compose: extension %q, tool %q: %w", e.Name, tool.Name, err)
 			}
+			adapted.composed = composed
 			tools = append(tools, adapted)
 		}
 	}
@@ -277,14 +266,6 @@ func verbKey(unit extension.Name, tool string) string {
 	return string(unit) + "\x00" + tool
 }
 
-// setComposedTools records the boot's tool set. Called once by
-// RegisterExtensions before any registry is built.
-func setComposedTools(tools []mcp.Tool) {
-	composedTools.mu.Lock()
-	defer composedTools.mu.Unlock()
-	composedTools.tools = tools
-}
-
 // registerComposedTools registers every composed extension tool into a
 // freshly built registry, so the MCP transport, the tool listing, and the
 // Surface-B runner all serve the same governed set. Extension-vs-extension
@@ -292,30 +273,17 @@ func setComposedTools(tools []mcp.Tool) {
 // tool whose name collides with a CORE tool still panics in Register — a
 // genuine boot-time wiring conflict, surfaced the same way a duplicate core
 // tool is.
-func registerComposedTools(registry *agents.Registry) {
-	composedTools.mu.RLock()
-	defer composedTools.mu.RUnlock()
-	for _, t := range composedTools.tools {
+func registerComposedTools(registry *agents.Registry, composed *Extensions) {
+	for _, t := range composed.composedTools() {
 		registry.Register(t)
 	}
 }
 
-// composedToolNames names the extension tools this boot registered. The
-// contract-parity sweeps use it to tell the third legitimate kind of registered
-// verb — one a unit manifest declares — from a core verb nothing declares.
-//
-// It answers a question about the GLOBAL registry namespace ("is this
-// registered verb an extension's?"), which is why a bare name is the right key
-// here. It is NOT the right key for deciding whether a unit's own route is
-// implemented — see composedServedVerbs.
-func composedToolNames() map[string]bool {
-	composedTools.mu.RLock()
-	defer composedTools.mu.RUnlock()
-	names := make(map[string]bool, len(composedTools.tools))
-	for _, t := range composedTools.tools {
-		names[t.Spec().Name] = true
+func (x *Extensions) composedTools() []mcp.Tool {
+	if x == nil {
+		return nil
 	}
-	return names
+	return x.tools
 }
 
 // OwningUnit satisfies mcp.UnitScopedTool: an adapted tool can name the unit
@@ -333,8 +301,8 @@ func composedToolNames() map[string]bool {
 // handler must not become some route's implementation by default.
 func (t extensionTool) OwningUnit() string { return t.unit }
 
-// composedServedVerbs is this boot's served set keyed by (unit, tool) — the
-// same verbKey the behavior-to-contract join uses, and for the same reason.
+// servedVerbs is this composition's served set keyed by (unit, tool): the same
+// verbKey the behavior-to-contract join uses, and for the same reason.
 //
 // Keying it on the tool name alone was a route-ownership defect, not a
 // shortcut. A tool NAME is unique across the whole registry (buildExtensionTools
@@ -345,11 +313,9 @@ func (t extensionTool) OwningUnit() string { return t.unit }
 // A's tier, scope, RBAC object and schemas under B's operation. Pairing the key
 // with the declaring unit is what makes "implemented" mean "THIS unit shipped
 // it".
-func composedServedVerbs() map[string]bool {
-	composedTools.mu.RLock()
-	defer composedTools.mu.RUnlock()
-	served := make(map[string]bool, len(composedTools.tools))
-	for _, t := range composedTools.tools {
+func (x *Extensions) servedVerbs() map[string]bool {
+	served := make(map[string]bool, len(x.composedTools()))
+	for _, t := range x.composedTools() {
 		owned, ok := t.(mcp.UnitScopedTool)
 		if !ok {
 			continue
@@ -410,6 +376,9 @@ type extensionTool struct {
 	// declaration and never from the handler.
 	subject extension.Subject
 	handle  extension.ToolHandler
+	// composed is the composition that adapted the tool, whose runtime binding
+	// every invocation's Runtime is built over.
+	composed *Extensions
 }
 
 func (t extensionTool) Spec() mcp.ToolSpec { return t.spec }
@@ -460,7 +429,7 @@ func (t extensionTool) Handle(ctx context.Context, in json.RawMessage) (json.Raw
 			return nil, err
 		}
 	}
-	deps := boundExtensionRuntime()
+	deps := t.composed.binding()
 	// ctx here is the INVOCATION's — the one the admission gate ran against —
 	// and the Runtime keeps it, so every capability re-derives the tenant from
 	// it rather than from whatever context the handler later passes back in.

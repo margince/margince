@@ -68,7 +68,7 @@ func TestJobHealthRefusesAnUnauthenticatedCall(t *testing.T) {
 // request then panics on the first query. There is no nil-pool branch in
 // the handler on purpose; this is what stands in its place.
 func TestTheJobHealthHandlerIsConstructedWithAPoolNotJustEmbedded(t *testing.T) {
-	srv := newServer(nil, quietTestLogger(), authHandlers{}, dealsHandlers{})
+	srv := newServer(nil, quietTestLogger(), nil, authHandlers{}, dealsHandlers{})
 	if srv.jobHealthHandlers.pool != nil {
 		t.Fatal("the fixture passed a pool; this test can no longer tell construction from embedding")
 	}
@@ -76,7 +76,7 @@ func TestTheJobHealthHandlerIsConstructedWithAPoolNotJustEmbedded(t *testing.T) 
 	// The real assertion: the composed server threads ITS pool through, so
 	// a handler constructed from a live pool holds that same pool.
 	live := &pgxpool.Pool{}
-	withPool := newServer(live, quietTestLogger(), authHandlers{}, dealsHandlers{})
+	withPool := newServer(live, quietTestLogger(), nil, authHandlers{}, dealsHandlers{})
 	if withPool.jobHealthHandlers.pool != live {
 		t.Error("newServer embedded jobHealthHandlers without constructing it; every " +
 			"authenticated read would reach a nil pool")

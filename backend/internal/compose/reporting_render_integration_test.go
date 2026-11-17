@@ -28,7 +28,7 @@ func assertReportingEditionTransports(ctx context.Context, t *testing.T, e *fore
 	t.Helper()
 	doc := reportdoc.Document{Blocks: []reportdoc.Block{{Kind: reportdoc.KindStatStrip, Cells: []reportdoc.Cell{{EditionRef: &crmcontracts.ReportEditionReference{EditionId: edition.Id, Metric: "bookings_won"}}}}}}
 	encoded := reportingPayload(t, doc)
-	server := newServer(e.Pool, slog.New(slog.DiscardHandler), identity.NewHandlers(identity.NewService(e.Pool)), deals.NewHandlers(InstallationDB(e.Pool), DealsInstallation()))
+	server := newServer(e.Pool, slog.New(slog.DiscardHandler), nil, identity.NewHandlers(identity.NewService(e.Pool)), deals.NewHandlers(InstallationDB(e.Pool), DealsInstallation()))
 	router := crmcontracts.HandlerFromMuxWithBaseURL(server, chi.NewRouter(), "/v1")
 	request := httptest.NewRequest(http.MethodPost, "/v1/analytics/reports/render", bytes.NewReader(encoded)).WithContext(ctx)
 	request.Header.Set("Content-Type", "application/json")

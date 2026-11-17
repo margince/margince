@@ -23,7 +23,7 @@ const noticeUnit = "dealmirror"
 // with its caller taken away and notices allowed.
 func (w noticeWorld) sendUnattended(t *testing.T, in extension.NoticeRequest) (extension.NoticeSent, error) {
 	t.Helper()
-	composeReader(t, extension.SystemReadDeals)
+	w.composed = composeReader(extension.SystemReadDeals)
 	var sent extension.NoticeSent
 	err := w.readAs(t, w.user, readerPerms(principal.RowScopeAll, "deal", "company"), func(ctx context.Context, core extension.Core) error {
 		unattended, ok := core.(extensionCore)
@@ -52,8 +52,8 @@ func (w noticeWorld) connect(t *testing.T, user string) {
 	}
 }
 
-//testdb:serial publishes the process-wide composed extension set
 func TestAnUnattendedNoticeNeedsAnActor(t *testing.T) {
+	t.Parallel()
 	w := setupNotices(t)
 	if _, err := w.sendUnattended(t, w.aboutTheDeal(w.reader.String(), "")); !errors.Is(err, extension.ErrForbidden) {
 		t.Errorf("a send with no service member and no ActAs = %v, want ErrForbidden", err)
@@ -68,8 +68,8 @@ func TestAnUnattendedNoticeNeedsAnActor(t *testing.T) {
 	}
 }
 
-//testdb:serial publishes the process-wide composed extension set
 func TestANoticeSentForAMemberNeedsThemToHaveConnectedTheUnitAndOpenTheRecord(t *testing.T) {
+	t.Parallel()
 	w := setupNotices(t)
 	if _, err := w.sendUnattended(t, w.aboutTheDeal(w.reader.String(), extension.UserID(w.reader.String()))); !errors.Is(err, extension.ErrForbidden) {
 		t.Errorf("ActAs a member who did not connect the unit = %v, want ErrForbidden", err)
@@ -93,8 +93,8 @@ func TestASendWithACallerCannotNameAnotherActor(t *testing.T) {
 	}
 }
 
-//testdb:serial publishes the process-wide composed extension set
 func TestANoticeCannotBeSentForAMemberWhoHasLeft(t *testing.T) {
+	t.Parallel()
 	w := setupNotices(t)
 	w.connect(t, w.departed.String())
 	if _, err := w.sendUnattended(t, w.aboutTheDeal(w.reader.String(), extension.UserID(w.departed.String()))); !errors.Is(err, extension.ErrForbidden) {

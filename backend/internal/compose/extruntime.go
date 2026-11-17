@@ -15,7 +15,6 @@ package compose
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"sync"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -36,19 +35,6 @@ import (
 // pointing them at their own lifetime for a deployment's wiring fault would
 // cost them the afternoon.
 var errExtensionRuntimeUnwired = errors.New("compose: this role bound no pool for the extension runtime, so no extension capability can be served")
-
-// extensionRuntimeDeps is the boot's binding of what every per-call Runtime
-// is built over. It is process-wide for the same reason composedTools is: a
-// role has one pool and one custodian, both settled at boot, and the tool
-// adapter that needs them is reached through a registry that cannot carry
-// them (mcp.Tool.Handle takes a context and raw JSON, nothing else).
-//
-// The mutex guards the write-then-read ordering across the boot/serve
-// boundary, not concurrent bindings — a role binds once.
-var extensionRuntimeDeps struct {
-	mu sync.RWMutex
-	extensionRuntimeBinding
-}
 
 // extensionRuntimeBinding is what one role bound for every per-call Runtime:
 // the pool a unit's own SQL and the governed core port both run on, and the
@@ -75,64 +61,9 @@ type extensionRuntimeBinding struct {
 	// impossible. Nil on a role that composed no capture, and the port then
 	// refuses by name rather than half-working.
 	captureSink *capture.Sink
-}
-
-// BindExtensionCapture records the capture pipeline a unit's ingress lands
-// through. A role that runs unattended extension work — a job tick, a
-// subscription delivery — calls it once at boot with the same deployment
-// capture config its own connectors run on.
-//
-// It takes the CONFIG and assembles the sink here rather than accepting one,
-// which is the whole point of the signature: newCaptureSink is the one spelling
-// that attaches the file keeper, the merge stager and the counterparty ensurer,
-// and a parameter of type *capture.Sink would let a caller hand over a
-// hand-assembled pipeline that lands activities and silently creates no contacts.
-//
-// Separate from BindExtensionRuntime rather than a third parameter on it,
-// because the two answer different questions: every role has a pool and a
-// custodian, and only some run work that can ingest. A role that never calls
-// this leaves ingress refusing with errIngressUnwired, which is the honest
-// answer for a process that has nowhere to put a captured record.
-func BindExtensionCapture(pool *pgxpool.Pool, cfg CaptureConfig) {
-	extensionRuntimeDeps.mu.Lock()
-	defer extensionRuntimeDeps.mu.Unlock()
-	extensionRuntimeDeps.captureSink = newCaptureSink(pool, cfg)
-}
-
-// BindExtensionRuntime records what a governed extension tool's per-call
-// Runtime reaches the installation through. Every role that serves or runs
-// agent tools calls it once at boot, after the pool and the custodian exist
-// — which is later than RegisterExtensions, because a declaration is inert
-// and needs neither.
-//
-// vault may be nil on a deployment that configured no keyvault: the secret
-// namespace then refuses by name (extsecrets.ErrNoCustodian) rather than
-// writing a mapping row naming material nothing could unseal. A nil pool
-// leaves the whole capability surface refusing with
-// errExtensionRuntimeUnwired.
-// A second bind to a DIFFERENT non-nil pool is a wiring fault: two pools in
-// one process means half the extension calls run on the wrong one, silently.
-// It is logged rather than refused because this is not the layer that gets to
-// end a boot, and because a test restoring a previous binding legitimately
-// rebinds — but it must never happen unremarked.
-func BindExtensionRuntime(pool *pgxpool.Pool, vault keyvault.Vault) {
-	extensionRuntimeDeps.mu.Lock()
-	defer extensionRuntimeDeps.mu.Unlock()
-	if prev := extensionRuntimeDeps.pool; prev != nil && pool != nil && prev != pool {
-		slog.Default().Warn("compose: the extension runtime was rebound to a different pool; " +
-			"every extension capability from now on runs against the new one")
-	}
-	extensionRuntimeDeps.extensionRuntimeBinding = extensionRuntimeBinding{pool: pool, vault: vault}
-}
-
-// boundExtensionRuntime reads the binding. Read per CALL rather than
-// captured at registry construction, so the ordering between binding and
-// building a registry cannot matter — only the ordering against the first
-// tool call, which is after the boot either way.
-func boundExtensionRuntime() extensionRuntimeBinding {
-	extensionRuntimeDeps.mu.RLock()
-	defer extensionRuntimeDeps.mu.RUnlock()
-	return extensionRuntimeDeps.extensionRuntimeBinding
+	// composed is the composition the invoked unit was declared in. Every
+	// check of what the unit declared reads it.
+	composed *Extensions
 }
 
 // callRuntime is ONE invocation's extension.Runtime.

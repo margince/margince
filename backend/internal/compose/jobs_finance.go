@@ -200,7 +200,7 @@ func (w *financeSyncWorker) Work(ctx context.Context, job *river.Job[FinanceSync
 func addFinanceJobs(
 	reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log *slog.Logger,
 ) []*river.PeriodicJob {
-	sweep := &financeSyncSweepWorker{pool: pool, log: log, sources: composedFinanceSources{}}
+	sweep := &financeSyncSweepWorker{pool: pool, log: log, sources: composedFinanceSources{composed: cfg.Extensions}}
 	addDeclaredWorker[FinanceSyncSweepArgs](reg, sweep)
 	addDeclaredWorker[FinanceSyncArgs](reg, &financeSyncWorker{sweep: sweep})
 	return periodicFor(cfg, FinanceSyncSweepArgs{})

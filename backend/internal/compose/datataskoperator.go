@@ -16,7 +16,7 @@ import (
 
 // DataTaskOperation shares the worker's catalog with the owner-credential CLI; it never executes a batch.
 func DataTaskOperation(ctx context.Context, pool *pgxpool.Pool, action string) ([]datatask.Progress, error) {
-	ctx, engine, err := dataTaskJobEngine(ctx, pool)
+	ctx, engine, err := dataTaskJobEngine(ctx, pool, nil)
 	if err != nil {
 		return nil, err
 	}

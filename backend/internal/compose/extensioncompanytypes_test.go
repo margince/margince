@@ -14,7 +14,7 @@ import (
 func TestRegisterExtensionsRegistersDeclaredCompanyTypes(t *testing.T) {
 	companytypes.Reset()
 	t.Cleanup(companytypes.Reset)
-	err := RegisterExtensions(composableAll([]extension.Extension{{
+	_, err := RegisterExtensions(composableAll([]extension.Extension{{
 		Name: "types-ok", Version: "0.0.1",
 		CompanyTypes: []extension.CompanyType{{Type: "reseller", Label: "Reseller"}},
 	}}), nil, nil)
@@ -38,7 +38,7 @@ func TestABadCompanyTypeDeclarationAbortsTheBoot(t *testing.T) {
 		{"declared twice", []extension.CompanyType{{Type: "reseller", Label: "a"}, {Type: "reseller", Label: "b"}}, "twice"},
 	} {
 		companytypes.Reset()
-		err := RegisterExtensions(composableAll([]extension.Extension{{
+		_, err := RegisterExtensions(composableAll([]extension.Extension{{
 			Name: "types-bad", Version: "0.0.1", CompanyTypes: c.types,
 		}}), nil, nil)
 		if err == nil || !strings.Contains(err.Error(), c.want) {

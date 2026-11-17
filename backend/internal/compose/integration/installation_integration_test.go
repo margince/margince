@@ -276,7 +276,7 @@ func TestSecondActiveWorkspaceTurnsTheSurfaceUnavailable(t *testing.T) {
 		ids.NewV7()); err != nil {
 		t.Fatal(err)
 	}
-	fresh := httptest.NewServer(compose.New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil))))
+	fresh := httptest.NewServer(compose.New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), nil))
 	t.Cleanup(fresh.Close)
 
 	resp, err := fresh.Client().Get(fresh.URL + "/v1/auth/capabilities")

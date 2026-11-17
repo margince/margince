@@ -68,7 +68,7 @@ func declaredStatusVerb() extension.Verb {
 // registry and the real admission gate, and hands back what a client would see.
 func mountedRouteResponse(t *testing.T, verb extension.Verb, payload string) *httptest.ResponseRecorder {
 	t.Helper()
-	tools, err := buildExtensionTools([]extension.Extension{{
+	tools, err := buildExtensionTools(nil, []extension.Extension{{
 		Name: "demo", Version: "1.0.0",
 		Tools: []extension.Tool{{
 			Name: verb.Tool,
@@ -152,7 +152,7 @@ func TestAMountedRouteAnswersTheBodyItsContractDeclares(t *testing.T) {
 // that stripped it everywhere would trade this defect for a worse one.
 func TestTheAgentPathKeepsTheEnvelope(t *testing.T) {
 	verb := declaredStatusVerb()
-	tools, err := buildExtensionTools([]extension.Extension{{
+	tools, err := buildExtensionTools(nil, []extension.Extension{{
 		Name: "demo", Version: "1.0.0",
 		Tools: []extension.Tool{{
 			Name: verb.Tool,

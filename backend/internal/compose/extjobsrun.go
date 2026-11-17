@@ -156,10 +156,13 @@ func extensionJobPrincipal(decl extension.JobDeclaration) principal.Principal {
 
 // extJobWorkspaceWorker runs ONE workspace's tick of one composed job.
 type extJobWorkspaceWorker struct {
-	pool   *pgxpool.Pool
-	decl   extension.JobDeclaration
-	handle extension.JobHandler
-	log    *slog.Logger
+	pool *pgxpool.Pool
+	// composed is the composition that served the job, whose runtime binding
+	// every tick's Runtime is built over.
+	composed *Extensions
+	decl     extension.JobDeclaration
+	handle   extension.JobHandler
+	log      *slog.Logger
 }
 
 func (w *extJobWorkspaceWorker) Work(ctx context.Context, job *river.Job[extJobWorkspaceArgs]) error {
@@ -210,7 +213,7 @@ func (w *extJobWorkspaceWorker) Work(ctx context.Context, job *river.Job[extJobW
 //     is precisely the text that must not land there. Converting it to an error
 //     here puts it back on the path every other worker's failure takes.
 func (w *extJobWorkspaceWorker) tick(ctx context.Context) (err error) {
-	deps := boundExtensionRuntime()
+	deps := w.composed.binding()
 	// No version: a job declaration carries none, and a tick writes no core
 	// record to attribute (Core refuses one outright), so the surface alone is
 	// the whole of what a tick's provenance could say.

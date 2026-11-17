@@ -58,7 +58,7 @@ const postponedTickDelay = 10 * time.Minute
 // on — during a real outage every attempt is the last one — and it is the one an
 // implementation could get wrong while every unit test stayed green.
 //
-//testdb:serial publishes the process-wide composed extension set
+//testdb:serial registers into a process-wide unit registry
 func TestAPostponedTickIsRescheduledOnItsLastAttempt(t *testing.T) {
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
@@ -66,11 +66,11 @@ func TestAPostponedTickIsRescheduledOnItsLastAttempt(t *testing.T) {
 
 	decl := testJobDecl()
 	decl.MaxAttempts = 1
-	composeJob(t, decl, func(context.Context, extension.Runtime) error {
+	composed := composeJob(t, decl, func(context.Context, extension.Runtime) error {
 		return extension.Reschedule(unreachableProvider, postponedTickDelay,
 			errNoSuchHost)
 	}, unreachableProvider)
-	startRunner(t, e.Pool)
+	startRunner(t, e.Pool, composed)
 
 	waitUntil(t, func() bool {
 		state, _, _, _ := postponedRow(t, e.Pool, decl.ChildKind())
@@ -106,17 +106,17 @@ func TestAPostponedTickIsRescheduledOnItsLastAttempt(t *testing.T) {
 // be inside that window, or an hour's outage leaves thirty live rows for one
 // workspace instead of one.
 //
-//testdb:serial publishes the process-wide composed extension set
+//testdb:serial registers into a process-wide unit registry
 func TestAPostponedTickSuppressesTheNextDispatch(t *testing.T) {
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
 	seedWorkspaces(t, e, 0)
 
 	decl := testJobDecl()
-	composeJob(t, decl, func(context.Context, extension.Runtime) error {
+	composed := composeJob(t, decl, func(context.Context, extension.Runtime) error {
 		return extension.Reschedule(unreachableProvider, postponedTickDelay, errNoSuchHost)
 	}, unreachableProvider)
-	runner, _ := startRunner(t, e.Pool)
+	runner, _ := startRunner(t, e.Pool, composed)
 
 	waitUntil(t, func() bool {
 		state, _, _, _ := postponedRow(t, e.Pool, decl.ChildKind())

@@ -92,7 +92,7 @@ func (h dataTaskHandlers) ActivateHomeRepair(w http.ResponseWriter, r *http.Requ
 		httperr.Write(w, r, err)
 		return
 	}
-	engine, err := newDataTaskEngine(h.pool, buildinfo.ReleaseVersion, h.now)
+	engine, err := newDataTaskEngine(h.pool, h.extensions, buildinfo.ReleaseVersion, h.now)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

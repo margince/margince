@@ -62,6 +62,8 @@ type AppEnv struct {
 	// wiring is the suite's extra compose options, kept so Reboot recomposes
 	// the same application rather than the default one.
 	wiring func(origin string) []compose.Option
+	// extensions is the composition the server serves; nil composes no unit.
+	extensions *compose.Extensions
 	// ownPool is set on an env from Reboot, whose pool no other env shares.
 	ownPool bool
 	// importJobs are the import workers over this server's own object store.
@@ -95,6 +97,18 @@ func SetupAppWithOptions(t *testing.T, opts ...compose.Option) *AppEnv {
 // composed, so the origin is known without booting twice.
 func SetupAppWithOriginOptions(t *testing.T, opts func(origin string) []compose.Option) *AppEnv {
 	t.Helper()
+	return setupApp(t, nil, opts)
+}
+
+// SetupAppComposing is SetupAppWithOptions serving a composition the suite
+// registered.
+func SetupAppComposing(t *testing.T, composed *compose.Extensions, opts ...compose.Option) *AppEnv {
+	t.Helper()
+	return setupApp(t, composed, func(string) []compose.Option { return opts })
+}
+
+func setupApp(t *testing.T, composed *compose.Extensions, opts func(origin string) []compose.Option) *AppEnv {
+	t.Helper()
 	db := testdb.New(t)
 	ctx := context.Background()
 	owner := connectOwner(t, db.OwnerDSN)
@@ -112,7 +126,7 @@ func SetupAppWithOriginOptions(t *testing.T, opts func(origin string) []compose.
 	if err != nil {
 		t.Fatalf("cookie jar: %v", err)
 	}
-	e := &AppEnv{Owner: owner, Pool: pool, Vault: keyvault.NewMemory(), wiring: opts}
+	e := &AppEnv{Owner: owner, Pool: pool, Vault: keyvault.NewMemory(), wiring: opts, extensions: composed}
 	return e.serve(t, jar)
 }
 
@@ -136,7 +150,7 @@ func (e *AppEnv) RebootWith(t *testing.T, tune func(*pgxpool.Config)) *AppEnv {
 		t.Fatalf("opening the rebooted app pool: %v", err)
 	}
 	t.Cleanup(pool.Close)
-	next := &AppEnv{Owner: e.Owner, Pool: pool, Vault: e.Vault, Config: e.Config, wiring: e.wiring, ownPool: true}
+	next := &AppEnv{Owner: e.Owner, Pool: pool, Vault: e.Vault, Config: e.Config, wiring: e.wiring, extensions: e.extensions, ownPool: true}
 	return next.serve(t, e.Client.Jar)
 }
 
@@ -205,7 +219,7 @@ func (e *AppEnv) serve(t *testing.T, jar http.CookieJar) *AppEnv {
 		compose.WithImportJobWorkersForTest(&e.importJobs, &importJobsErr),
 		compose.WithHomeRefreshSettlerForTest(&e.settleHomeRefreshes),
 	)
-	ts.Config.Handler = compose.New(e.Pool, slog.New(slog.NewTextHandler(os.Stderr, nil)), allOpts...)
+	ts.Config.Handler = compose.New(e.Pool, slog.New(slog.NewTextHandler(os.Stderr, nil)), e.extensions, allOpts...)
 	if importJobsErr != nil {
 		t.Fatalf("building the import workers: %v", importJobsErr)
 	}

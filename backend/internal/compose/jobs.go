@@ -70,6 +70,7 @@ func sweepInsertOpts() *river.InsertOpts {
 // Embedder registers nothing for the drift sweep and anyway for a reindex —
 // which is why the posture is stated per kind and never per field.
 type JobRunnerConfig struct {
+	Extensions           *Extensions // the composition's units, whose jobs join the runner; nil runs none
 	DisabledCoreFeatures []string
 	DataTasksPace        time.Duration
 	// Schedules is the interval every {setting: …} cadence runs at, read from
@@ -128,7 +129,6 @@ type JobRunnerConfig struct {
 	// the transactional ones beside them go out. No worker is gated on it,
 	// because a role that can fire a link-less message should still fire it.
 	SendOrigin SendOrigin
-
 	// WebhookRetry carries the retry dispatcher's cadence and the delivery
 	// engine one workspace's pass re-attempts through (jobs_webhookretry.go).
 	WebhookRetry WebhookRetryConfig
@@ -439,7 +439,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		registerChatLinkFlush(reg, pool, cfg, log),
 		// The composed extension jobs, if any. Empty on every vanilla process:
 		// the ext_ kinds and their ticks do not exist there at all.
-		addExtensionJobs(reg, pool, schedulesOf(cfg), log),
+		addExtensionJobs(reg, cfg.Extensions, pool, schedulesOf(cfg), log),
 		placedSchedules(cfg),
 	)
 
