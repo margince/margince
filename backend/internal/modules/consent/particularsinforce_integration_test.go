@@ -24,7 +24,7 @@ import (
 // section last. The installation and the env contact are both in it.
 func advertisingPack(t *testing.T, e *channelConsentEnv, code string) *Store {
 	t.Helper()
-	messagingrules.Register(messagingrules.Rules{
+	testMessagingRules(t, messagingrules.Rules{
 		Jurisdiction: jurisdiction.Code(code), Version: 1,
 		Disclosures: []messagingrules.Disclosure{
 			{Kind: messagingrules.ControllerIdentity},
