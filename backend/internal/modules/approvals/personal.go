@@ -86,7 +86,7 @@ func (a row) StagedInItsDecidersSession() bool {
 // That is an AI client connected on their own passport, outside a scheduled run.
 // A passport minted without a connection, as the overnight run's, is unattended.
 func conversationOf(ctx context.Context, p principal.Principal) ids.UUID {
-	_, unattended := principal.AgentRunID(ctx)
+	unattended := principal.Unattended(ctx)
 	connected := p.Type == principal.PrincipalAgent && !p.PassportID.IsZero() && !p.ConnectionID.IsZero()
 	if unattended || !connected || p.OnBehalfOf.IsZero() {
 		return ids.Nil

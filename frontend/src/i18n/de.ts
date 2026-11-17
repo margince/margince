@@ -9951,7 +9951,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.tierRead":
     "Lesen, zusammenfassen, entwerfen: läuft sofort und wird vollständig protokolliert.",
   "settings.tierSend":
-    "E-Mails senden, Termine buchen, einen Kontakt oder Deal ändern: läuft sofort, wenn der Agent diese Berechtigung hat. Mit der Berechtigung ist die Freigabe bereits erteilt.",
+    "Laufende Änderungen laufen automatisch und lassen sich rückgängig machen. Vor dem Versand braucht der Assistent deine Freigabe oder einen direkten Auftrag. Unbeaufsichtigter Versand wartet.",
   "settings.tierWait": "Anreicherung aus dem Web: wartet in Freigaben.",
   "settings.tierAdvance":
     "Deal-Phase ändern oder Deal abschließen, Aktivitäten einem Projekt zuordnen: läuft sofort, wenn der Agent die Berechtigung hat.",
@@ -12647,7 +12647,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "E-Mails werden automatisch zu Kontakten, Unternehmen und Aktivitäten.",
   "ob.s4.scope2Lead": "Senden ist enthalten.",
   "ob.s4.scope2Rest":
-    "Margince kann aus diesem Postfach senden, wenn du sendest und wenn du einem Agenten einen Passport gibst, der das Senden erlaubt. Mit diesem Passport ist die Freigabe bereits erteilt. Du kannst den Passport jederzeit entziehen.",
+    "Margince kann aus diesem Postfach senden, wenn du sendest oder deinen Assistenten direkt damit beauftragst. Die Sendeberechtigung allein gibt keine Nachricht frei. Unbeaufsichtigter Versand wartet auf Freigabe. Du kannst den Zugriff jederzeit entziehen.",
   "ob.s4.scope3Lead": "Die Daten bleiben in deinem Unternehmen.",
   "ob.s4.scope3Rest": "Alles jederzeit exportieren oder löschen.",
   "ob.s4.scope4Lead": "Trennen mit einem Klick.",
@@ -18287,7 +18287,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "consent.scopeNote.write":
     "Erstellt, bearbeitet und archiviert Datensätze in deinem Namen",
   "consent.scopeNote.send":
-    "Sendet Nachrichten in deinem Namen, ohne vorher zu fragen",
+    "Erlaubt den Versand; der Assistent muss vorher deine Freigabe oder einen direkten Auftrag erhalten. Die Berechtigung allein ist keine Freigabe",
   "consent.scopeNote.enrich": "Führt KI-Arbeit aus und kauft Kontaktdaten",
   "consent.scopesLegend": "Was das Tool tun darf",
   "consent.ceiling":
@@ -21142,8 +21142,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "die Website des Unternehmens analysieren und über die Befunde berichten",
   "firstRun.ignite.draft":
     "Entwürfe in dem Schreibstil schreiben, den du trainiert hast",
-  "firstRun.ignite.act":
-    "ohne deine Freigabe etwas senden oder einen Datensatz ändern",
+  "firstRun.ignite.act": "ohne direkten Auftrag oder Freigabe senden",
   "firstRun.ignite.carryOn": "Weiter",
   "firstRun.ignite.leaving": "Einrichtung wird geprüft…",
   "firstRun.step.model": "Modell",
