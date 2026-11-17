@@ -5,8 +5,8 @@ package compose
 
 // The system read of one mail's words. A job tick or a bus delivery has no
 // caller, so no grant narrows it. The read answers only mail the whole
-// workspace may read, as the mail-by-deal read does, and answers anything else
-// as a mail that does not exist, so an id cannot be used to probe.
+// workspace may read, as the mail-by-deal read does. Anything else answers as a
+// mail that does not exist, so an id cannot be used to probe.
 
 import (
 	"context"

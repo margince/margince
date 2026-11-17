@@ -4,9 +4,9 @@
 package compose
 
 // The system read of companies. A job tick or a bus delivery has no caller, so
-// no grant narrows it. What only some colleagues may see is left out instead:
-// the read answers a company whose visibility is the whole workspace, and gives
-// the facts a unit needs to push or match it, no contact, note or custom field.
+// no grant narrows it. What only some colleagues may see is left out instead.
+// The read answers a company visible to the whole workspace. It gives the facts
+// a unit needs to push or match it, and no contact, note or custom field.
 
 import (
 	"context"

@@ -247,7 +247,7 @@ type CompanyPageQuery struct {
 // delivery. A company only some colleagues may see is left out.
 type Companies interface {
 	// Get reads one company. A company that does not exist, was erased or is
-	// not visible to the whole workspace answers ErrNotFound; an id that is not
+	// not visible to the whole workspace answers ErrNotFound. An id that is not
 	// a canonical UUID answers ErrInvalid.
 	Get(ctx context.Context, companyID string) (CompanySummary, error)
 
@@ -290,13 +290,13 @@ type MailContent struct {
 
 // MailContents reads one email's words for a job tick or a bus delivery. No
 // caller's grants narrow it, so it answers only mail the whole workspace may
-// read. A unit that keeps what it read asks Authority().CanRead before it shows
-// that to a colleague.
+// read. A unit that keeps what it read asks Authority().CanRead first. It does
+// that before it shows the mail to a colleague.
 type MailContents interface {
-	// Get reads one mail by id. A mail that does not exist, is not an email, is
-	// private to its participants or a chosen few, is archived, or is held back
-	// from reading answers ErrNotFound, so an id cannot be used to probe. An id
-	// that is not a canonical UUID answers ErrInvalid. A mail whose subject or
+	// Get reads one mail by id. No such mail answers ErrNotFound. So do a mail
+	// that is not an email, one private to its participants or a chosen few, an
+	// archived one, and one held back. An id cannot be used to probe. An id that
+	// is not a canonical UUID answers ErrInvalid. A mail whose subject or
 	// body was redacted answers ContentState withheld with neither.
 	Get(ctx context.Context, mailID string) (MailContent, error)
 }
