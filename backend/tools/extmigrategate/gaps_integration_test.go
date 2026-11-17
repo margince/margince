@@ -26,9 +26,8 @@ import (
 // declaredTables returns [] with no error for this fixture. The table is
 // nevertheless created, and it reaches the catalog sweep carrying none of the
 // grants the tier requires — which is what the sweep, not the parser, catches.
-//
-//testdb:serial shares the one throwaway database and role that TestMain makes for the gate
 func TestGateCatchesATableCreatedInsideADoBlock(t *testing.T) {
+	t.Parallel()
 	unit := unitName(t, "doblk")
 	ns := namespaceOf(t, unit)
 	up := fmt.Sprintf(`
@@ -51,13 +50,13 @@ END $$;
 // Each fixture puts a fully correct scaffolded table in front of the
 // desynchronising statement, so the only thing left for the gate to object to
 // is the statement the textual rule went blind to.
-//
-//testdb:serial shares the one throwaway database and role that TestMain makes for the gate
 func TestGateCatchesATableHiddenByAMaskerDesync(t *testing.T) {
+	t.Parallel()
 	// declaredTables returns [note] with no error: the E'it\'s' default
 	// desynchronises the literal masker, which then blanks the rest of the file
 	// — including the CREATE TABLE after it.
 	t.Run("backslash-escaped quote in an E string", func(t *testing.T) {
+		t.Parallel()
 		unit := unitName(t, "desync")
 		ns := namespaceOf(t, unit)
 		up := scaffoldUp(ns) + fmt.Sprintf(`
@@ -78,6 +77,7 @@ CREATE TABLE ext.stowaway (id uuid NOT NULL PRIMARY KEY);
 	// between. A table the unit never declared is recorded, and one it did
 	// declare is missed.
 	t.Run("quote inside a double-quoted identifier", func(t *testing.T) {
+		t.Parallel()
 		unit := unitName(t, "dquote")
 		ns := namespaceOf(t, unit)
 		quoted := fmt.Sprintf(`ext."%s_it's"`, ns)
@@ -105,9 +105,8 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON %[2]s TO margince_app;
 // is not in the unit's namespace, and because indexes and tables share one
 // relation namespace it would collide with another unit's table of that name —
 // a collision neither unit can see in its own source.
-//
-//testdb:serial shares the one throwaway database and role that TestMain makes for the gate
 func TestGateCatchesANonTableRelationOutsideTheNamespace(t *testing.T) {
+	t.Parallel()
 	unit := unitName(t, "relns")
 	ns := namespaceOf(t, unit)
 	up := scaffoldUp(ns) + "CREATE INDEX other_unit_note_idx ON ext." + ns + "_note (body);\n"

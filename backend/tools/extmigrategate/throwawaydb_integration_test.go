@@ -57,17 +57,26 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"sync/atomic"
 	"syscall"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/platform/dbmigrate"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 )
 
-// gateDSN is the vanilla throwaway database every test in this package runs
-// against; ownerDSN returns it. Set once by TestMain, before any test runs.
-var gateDSN string
+// TestMain migrates gateTemplate once, and gateDatabase copies it for each
+// test. maintenance is where CREATE and DROP DATABASE run. All three are set
+// before any test runs.
+var (
+	harnessDSN   string
+	gateTemplate string
+	maintenance  *pgxpool.Pool
+	copies       atomic.Int64
+)
 
 func TestMain(m *testing.M) {
 	// os.Exit skips deferred functions, so the teardown is explicit and runs
@@ -82,58 +91,86 @@ func TestMain(m *testing.M) {
 }
 
 func runSuite(m *testing.M) (code int, err error) {
-	harness := os.Getenv("MARGINCE_TEST_DSN")
-	if harness == "" {
+	harnessDSN = os.Getenv("MARGINCE_TEST_DSN")
+	if harnessDSN == "" {
 		return 0, errors.New("MARGINCE_TEST_DSN is unset — run this package through `make test-it DIR=backend/tools/extmigrategate`")
 	}
 	ctx := context.Background()
 
 	// Named from the pid, like the unit names and therefore the cluster-scoped
-	// roles the gate mints: one process owns one database and one set of roles,
-	// so two shards of the integration lane on one cluster cannot collide.
-	name := fmt.Sprintf("margince_extgate_test_%d", os.Getpid())
-	maintenance, err := dsnForDatabase(harness, "postgres")
+	// roles the gate mints: two shards of the lane on one cluster cannot collide.
+	gateTemplate = fmt.Sprintf("margince_extgate_test_%d", os.Getpid())
+	maintenanceDSN, err := dsnForDatabase(harnessDSN, "postgres")
 	if err != nil {
 		return 0, err
 	}
-	gateDSN, err = dsnForDatabase(harness, name)
+	templateDSN, err := dsnForDatabase(harnessDSN, gateTemplate)
 	if err != nil {
 		return 0, err
 	}
 
-	admin, err := pgx.Connect(ctx, maintenance)
-	if err != nil {
+	if maintenance, err = pgxpool.New(ctx, maintenanceDSN); err != nil {
 		return 0, fmt.Errorf("connecting to the maintenance database: %w", err)
 	}
-	defer closeQuietly(ctx, admin)
+	defer maintenance.Close()
 
 	// WITH (FORCE): a previous run killed mid-test leaves backends attached,
 	// and a DROP that merely fails would make every later run of this suite
 	// fail on the CREATE instead of on whatever it was testing.
-	if _, err := admin.Exec(ctx, `DROP DATABASE IF EXISTS `+name+` WITH (FORCE)`); err != nil {
-		return 0, fmt.Errorf("dropping a leftover %s: %w", name, err)
+	if _, err := maintenance.Exec(ctx, `DROP DATABASE IF EXISTS `+gateTemplate+` WITH (FORCE)`); err != nil {
+		return 0, fmt.Errorf("dropping a leftover %s: %w", gateTemplate, err)
 	}
-	if err := reapAbandonedDatabases(ctx, admin, name); err != nil {
+	if err := reapAbandonedDatabases(ctx, maintenance, gateTemplate); err != nil {
 		return 0, err
 	}
-	if _, err := admin.Exec(ctx, `CREATE DATABASE `+name); err != nil {
-		return 0, fmt.Errorf("creating the throwaway %s: %w", name, err)
+	if _, err := maintenance.Exec(ctx, `CREATE DATABASE `+gateTemplate); err != nil {
+		return 0, fmt.Errorf("creating the throwaway %s: %w", gateTemplate, err)
 	}
 	defer func() {
-		if _, dropErr := admin.Exec(ctx, `DROP DATABASE IF EXISTS `+name+` WITH (FORCE)`); dropErr != nil {
-			dropErr = fmt.Errorf("dropping the throwaway %s — leaked on the test cluster: %w", name, dropErr)
-			if err == nil {
-				err = dropErr
-			} else {
-				err = fmt.Errorf("%w (and %w)", err, dropErr)
-			}
+		if dropErr := dropDatabase(ctx, gateTemplate); dropErr != nil {
+			err = errors.Join(err, dropErr)
 		}
 	}()
 
-	if err := migrateVanilla(ctx, gateDSN); err != nil {
+	if err := migrateVanilla(ctx, templateDSN); err != nil {
 		return 0, err
 	}
 	return m.Run(), nil
+}
+
+// gateDatabase copies the migrated template into a database of t's own and
+// drops it when t ends. The gate asserts that schema ext holds only the unit's
+// objects, so two units on one database would fail each other.
+func gateDatabase(t *testing.T) string {
+	t.Helper()
+	if maintenance == nil {
+		t.Fatal("the throwaway gate database was not provisioned — run this package through `make test-it DIR=backend/tools/extmigrategate`")
+	}
+	ctx := context.Background()
+	name := fmt.Sprintf("%s_%d", gateTemplate, copies.Add(1))
+	dsn, err := dsnForDatabase(harnessDSN, name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = maintenance.AcquireFunc(ctx, func(conn *pgxpool.Conn) error {
+		return dbmigrate.CopyDatabase(ctx, conn.Conn(), name, gateTemplate)
+	})
+	if err != nil {
+		t.Fatalf("copying the gate template: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := dropDatabase(context.Background(), name); err != nil {
+			t.Error(err)
+		}
+	})
+	return dsn
+}
+
+func dropDatabase(ctx context.Context, name string) error {
+	if _, err := maintenance.Exec(ctx, `DROP DATABASE IF EXISTS `+name+` WITH (FORCE)`); err != nil {
+		return fmt.Errorf("dropping the throwaway %s — leaked on the test cluster: %w", name, err)
+	}
+	return nil
 }
 
 // reapAbandonedDatabases drops every throwaway this suite has ever left behind
@@ -160,11 +197,11 @@ func runSuite(m *testing.M) (code int, err error) {
 //
 // `mine` is skipped because the caller has just dropped it WITH (FORCE), which
 // is right for this process's own name and wrong for anyone else's.
-func reapAbandonedDatabases(ctx context.Context, admin *pgx.Conn, mine string) error {
+func reapAbandonedDatabases(ctx context.Context, admin *pgxpool.Pool, mine string) error {
 	rows, err := admin.Query(ctx, `
-		SELECT quote_ident(d.datname), substring(d.datname from '[0-9]+$')::int
+		SELECT quote_ident(d.datname), substring(d.datname from '^margince_extgate_test_([0-9]+)')::int
 		  FROM pg_database d
-		 WHERE d.datname ~ '^margince_extgate_test_[0-9]+$'
+		 WHERE d.datname ~ '^margince_extgate_test_[0-9]+(_[0-9]+)?$'
 		   AND d.datname <> $1
 		   AND NOT EXISTS (SELECT 1 FROM pg_stat_activity a WHERE a.datname = d.datname)`, mine)
 	if err != nil {
@@ -188,7 +225,9 @@ func reapAbandonedDatabases(ctx context.Context, admin *pgx.Conn, mine string) e
 		return fmt.Errorf("looking for abandoned throwaway databases: %w", err)
 	}
 	for _, db := range abandoned {
-		if ownerAlive(db.pid) {
+		// A copy named with this pid comes from an earlier process that had it:
+		// this one has made none yet.
+		if db.pid != os.Getpid() && ownerAlive(db.pid) {
 			continue
 		}
 		// Not fatal: a database that acquired a backend between the query and
