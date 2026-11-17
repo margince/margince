@@ -7872,10 +7872,16 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "sendPermission.ready": "Đã kiểm tra người nhận",
   "sendPermission.markName": "Trạng thái liên lạc của tin nhắn này",
   "sendPermission.checking": "Đang kiểm tra xem có thể gửi tin nhắn này không…",
-  "lawfulBasis.title": "Chưa có sự đồng ý của liên hệ này",
+  "lawfulBasis.title": "Chưa ghi nhận căn cứ hợp lệ",
   "lawfulBasis.body":
-    "Theo pháp luật Việt Nam, bạn không được xử lý dữ liệu này khi chưa có sự đồng ý. Nếu gửi, bạn tự chịu rủi ro.",
+    "Chưa ghi nhận căn cứ hợp lệ theo pháp luật Việt Nam cho liên hệ này: không có sự đồng ý của họ, cũng không có trường hợp pháp luật cho phép xử lý mà không cần sự đồng ý. Nếu gửi, bạn tự chịu rủi ro.",
   "lawfulBasis.confirm": "Vẫn gửi",
+  "lawfulBasis.askConsent": "Xin sự đồng ý",
+  "lawfulBasis.askFailed": "Chưa gửi được yêu cầu xin sự đồng ý. Hãy thử lại.",
+  "lawfulBasis.asked":
+    "Đã gửi yêu cầu xin sự đồng ý đến {address}. Thư của bạn chưa được gửi.",
+  "lawfulBasis.askPartial":
+    "Đã gửi yêu cầu xin sự đồng ý đến {asked}. Chưa gửi được đến {failed}. Hãy thử lại để chỉ gửi đến những địa chỉ này.",
   "lawfulBasis.failed": "Chưa ghi nhận được xác nhận. Hãy thử lại.",
   "privacynotice.purposeLine": "{purpose}: {basis}",
   "privacynotice.basisOn.consent": "sự đồng ý của quý khách ngày {date}",
@@ -22513,4 +22519,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chỉ được dùng “{words}” khi có bằng chứng. Hãy thêm tên, số và ngày của tài liệu chứng minh vào email.",
   "compose.contentFinding.language":
     "Viết email này bằng {language} trước. Nội dung bằng ngôn ngữ khác đặt bên dưới và không lớn hơn phần bằng {language}.",
+  "compose.contentFinding.foreignAdvertiser":
+    "Công ty của bạn không được thành lập tại {country}. Tổ chức nước ngoài không hoạt động tại {country} phải quảng cáo tại đó thông qua một doanh nghiệp kinh doanh dịch vụ quảng cáo của {country}. Công ty của bạn chịu trách nhiệm về việc này.",
 };

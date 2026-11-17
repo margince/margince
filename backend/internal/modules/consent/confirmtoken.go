@@ -25,6 +25,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -35,6 +36,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/contactaddress"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
+	"github.com/margince/margince/backend/pkg/extension/messaging"
 )
 
 // contactIDKey names the subject in an audit payload, and the wire path a
@@ -160,13 +163,13 @@ func (s *Store) PreviewConsentLink(ctx context.Context, contactID ids.ContactID,
 	if err := httperr.RequireBodyID(purposeIDField, purposeID.UUID); err != nil {
 		return "", err
 	}
-	var address string
+	var admitted admittedLink
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		address, err = admitLinkTx(ctx, tx, linkRequest{contactID: contactID, purposeID: purposeID})
+		admitted, err = admitLinkTx(ctx, tx, linkRequest{contactID: contactID, purposeID: purposeID})
 		return err
 	})
-	return address, err
+	return admitted.deliveredTo, err
 }
 
 // IssueConsentLink mints the link a double-opt-in purpose is confirmed by.
@@ -266,40 +269,53 @@ func deliveryAddressTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) 
 // resolves only a live purpose, so the subject opens a 404 sent in the
 // installation's own name.
 //
-// A purpose that does not REQUIRE double opt-in is a different mistake — the
-// mail would ask somebody to confirm a subscription whose grant never needed
-// confirming, and the answer would be recorded as mailbox-proven evidence
-// nobody asked for. The endpoint's whole subject is the double-opt-in purpose.
-func requireConfirmablePurposeTx(ctx context.Context, tx pgx.Tx, purposeID ids.PurposeID) error {
+// A marketing purpose without double opt-in is refused: its grant never needs
+// confirming. Another class may be asked about, as the no-basis warning asks
+// for consent to correspondence.
+func requireConfirmablePurposeTx(ctx context.Context, tx pgx.Tx, purposeID ids.PurposeID) (askedPurpose, error) {
 	if purposeID.UUID == (ids.UUID{}) {
-		return nil
+		return askedPurpose{}, nil
 	}
-	var requiresDOI, archived bool
+	var asked askedPurpose
+	var archived bool
+	var class string
 	// Read WITHOUT the live filter, so absence and archival stay separable. The
 	// filtered read answered no-rows for both and had to guess which; it always
 	// guessed archived.
 	err := tx.QueryRow(ctx,
-		`SELECT requires_double_opt_in, archived_at IS NOT NULL FROM consent_purpose
-		  WHERE id = $1`, purposeID).Scan(&requiresDOI, &archived)
+		`SELECT requires_double_opt_in, archived_at IS NOT NULL, class FROM consent_purpose
+		  WHERE id = $1`, purposeID).Scan(&asked.requiresDOI, &archived, &class)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return apperrors.ErrNotFound
+		return askedPurpose{}, apperrors.ErrNotFound
 	}
 	if err != nil {
-		return err
+		return askedPurpose{}, err
 	}
+	asked.class = messagingrules.PurposeClass(class)
 	if archived {
-		return &ValidationError{
+		return askedPurpose{}, &ValidationError{
 			Field:  purposeIDField,
 			Reason: "this purpose is archived, so a link asking somebody to confirm it could not be answered",
 		}
 	}
-	if !requiresDOI {
-		return &ValidationError{
+	if !confirmableByMail(asked) {
+		return askedPurpose{}, &ValidationError{
 			Field:  purposeIDField,
 			Reason: "this purpose is not confirmed by double opt-in, so there is nothing for a mailed link to ask",
 		}
 	}
-	return nil
+	return asked, nil
+}
+
+// confirmableByMail reports whether a consent link may ask about a purpose: an
+// advertising one only when it is confirmed by double opt-in.
+func confirmableByMail(purpose askedPurpose) bool {
+	return purpose.requiresDOI || !advertisingClass(purpose.class)
+}
+
+// advertisingClass reports whether a purpose class advertises.
+func advertisingClass(class messagingrules.PurposeClass) bool {
+	return slices.Contains(messaging.AdvertisingPurposeClasses(), class)
 }
 
 // mailLanePolicy says what a mint owes an installation that cannot mail the

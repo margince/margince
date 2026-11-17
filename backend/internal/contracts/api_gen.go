@@ -12302,6 +12302,7 @@ func (e DomainQuestionSuggestionBasis) Valid() bool {
 const (
 	DraftContentFindingRequirementAdvertisingLanguageFirst DraftContentFindingRequirement = "advertising_language_first"
 	DraftContentFindingRequirementClaimWithoutProof        DraftContentFindingRequirement = "claim_without_proof"
+	DraftContentFindingRequirementForeignAdvertiser        DraftContentFindingRequirement = "foreign_advertiser"
 )
 
 // Valid indicates whether the value is a known member of the DraftContentFindingRequirement enum.
@@ -12310,6 +12311,8 @@ func (e DraftContentFindingRequirement) Valid() bool {
 	case DraftContentFindingRequirementAdvertisingLanguageFirst:
 		return true
 	case DraftContentFindingRequirementClaimWithoutProof:
+		return true
+	case DraftContentFindingRequirementForeignAdvertiser:
 		return true
 	default:
 		return false
@@ -49193,6 +49196,9 @@ type DomainQuestionSuggestionBasis string
 
 // DraftContentFinding defines model for DraftContentFinding.
 type DraftContentFinding struct {
+	// Country The recipient's country, lower-case ISO 3166-1 alpha-2, for `foreign_advertiser`.
+	Country *string `json:"country,omitempty"`
+
 	// Detail What was found, for the composer to read.
 	Detail string `json:"detail"`
 
@@ -49203,6 +49209,9 @@ type DraftContentFinding struct {
 	// proof (the document's name, number and date), and states none.
 	// `advertising_language_first`: the draft does not open in the pack's disclosure
 	// language, which advertising leads with.
+	// `foreign_advertiser`: the sending legal entity is not established in the recipient's
+	// country, whose pack asks an advertiser from elsewhere to advertise there through a
+	// local advertising service business. The customer answers for it.
 	Requirement DraftContentFindingRequirement `json:"requirement"`
 
 	// Words The claim words found, for `claim_without_proof`.
@@ -49213,6 +49222,9 @@ type DraftContentFinding struct {
 // proof (the document's name, number and date), and states none.
 // `advertising_language_first`: the draft does not open in the pack's disclosure
 // language, which advertising leads with.
+// `foreign_advertiser`: the sending legal entity is not established in the recipient's
+// country, whose pack asks an advertiser from elsewhere to advertise there through a
+// local advertising service business. The customer answers for it.
 type DraftContentFindingRequirement string
 
 // DraftSteering What every draft-email route takes to steer a draft: the caller's ask and, for a rewrite, the words on the composer's screen. Each route extends it with the fields its own record needs.
@@ -64924,6 +64936,14 @@ type SendAuthorizationPreviewRecipient struct {
 	// A recorded reason lifts one category, so a refusal that resolved to no single
 	// category, such as `unknown_purpose`, answers false.
 	CanBeOverruled *bool `json:"can_be_overruled,omitempty"`
+
+	// ConsentPurposeId For a recipient marked `lawful_basis_missing`: the purpose a consent request would ask
+	// about for this use: the oldest live purpose whose class covers it, that the contact has
+	// not withdrawn, and that this door may ask about (a marketing one only if double opt-in). `POST /contacts/{id}/consent/double-opt-in` with it mails
+	// the request. The recipient's pack says for which purpose classes the contact's own request
+	// must be on record first. Absent when no such purpose exists, or when the recipient is a
+	// lead.
+	ConsentPurposeId *openapi_types.UUID `json:"consent_purpose_id,omitempty"`
 
 	// DecidedBy Whose decision this answer is, which is what says whether anybody may overrule
 	// it. `machine` is the engine reading an incomplete record and a rep who knows

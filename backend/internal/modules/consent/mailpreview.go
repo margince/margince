@@ -79,14 +79,15 @@ func (s *Store) PreviewControllerMail(ctx context.Context, contactID ids.Contact
 var errMailPreviewDone = errors.New("consent: mail preview complete")
 
 func (s *Store) previewControllerMailTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, kind, language string) (ControllerMailPreview, error) {
-	to, err := admitLinkTx(ctx, tx, linkRequest{contactID: contactID, preview: true})
+	admitted, err := admitLinkTx(ctx, tx, linkRequest{contactID: contactID, preview: true})
 	if err != nil {
 		return ControllerMailPreview{}, err
 	}
+	to := admitted.deliveredTo
 	if !s.canSendConfirm() {
 		return ControllerMailPreview{}, ErrNoMailLane
 	}
-	rules, err := s.confirmRulesTx(ctx, tx, contactID, kind, to, false)
+	rules, err := s.confirmRulesTx(ctx, tx, contactID, kind, askedPurpose{}, to, false)
 	if err != nil {
 		return ControllerMailPreview{}, err
 	}

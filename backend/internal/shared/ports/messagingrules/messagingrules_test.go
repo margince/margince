@@ -337,14 +337,20 @@ func TestAFoldNamesTheJurisdictionsItUsedBecauseTheVersionCannot(t *testing.T) {
 }
 
 // A fold keeps every advertising content rule either side declares: the
-// refusal layout and every restricted claim.
+// refusal layout, the foreign-advertiser notice and every restricted claim.
 func TestAdvertisingContentRulesSurviveTheFold(t *testing.T) {
 	a := Rules{Jurisdiction: "aa", Version: 1, ClaimsNeedProof: []string{"best"}}
-	b := Rules{Jurisdiction: "bb", Version: 1, RefusalSectionLast: true, ClaimsNeedProof: []string{"best", "tốt nhất"}}
+	b := Rules{
+		Jurisdiction: "bb", Version: 1, RefusalSectionLast: true, ForeignAdvertiserNeedsLocalAgency: true,
+		ClaimsNeedProof: []string{"best", "tốt nhất"},
+	}
 
 	got := stricter(a, b)
 	if !got.RefusalSectionLast {
 		t.Error("the fold dropped the refusal layout")
+	}
+	if !got.ForeignAdvertiserNeedsLocalAgency {
+		t.Error("the fold dropped the foreign-advertiser notice")
 	}
 	if !slices.Equal(got.ClaimsNeedProof, []string{"best", "tốt nhất"}) {
 		t.Errorf("claims %v, want each restricted word once", got.ClaimsNeedProof)
@@ -377,5 +383,22 @@ func TestARecipientBoundLawSurvivesTheFold(t *testing.T) {
 		if !folded.DataProtectionFollowsRecipient || !folded.NoLegitimateInterests || folded.DisclosureLanguage != "vi" {
 			t.Errorf("fold = %+v, want the recipient-bound law and its language kept", folded)
 		}
+	}
+}
+
+// The request rule of a fold covers each class either side covers, and every
+// class when one side covers every class.
+func TestTheRequestRuleSurvivesTheFold(t *testing.T) {
+	narrow := Rules{
+		Jurisdiction: "aa", Version: 1, ConsentConfirmationNeedsRequest: true,
+		ConsentRequestFirstFor: []PurposeClass{"marketing"},
+	}
+	none := Rules{Jurisdiction: "bb", Version: 1}
+	if got := stricter(none, narrow); !slices.Equal(got.ConsentRequestFirstFor, []PurposeClass{"marketing"}) {
+		t.Errorf("classes %v, want the one side's marketing", got.ConsentRequestFirstFor)
+	}
+	every := Rules{Jurisdiction: "cc", Version: 1, ConsentConfirmationNeedsRequest: true}
+	if got := stricter(narrow, every); len(got.ConsentRequestFirstFor) != 0 || !got.ConsentConfirmationNeedsRequest {
+		t.Errorf("classes %v, want every class: one side asks a request for each", got.ConsentRequestFirstFor)
 	}
 }

@@ -11,11 +11,10 @@ package compose
 // is the edge compose injects: one entity type in, one owner's own gated write
 // out.
 //
-// The dispatch is the whole of the file on purpose. Everything a hold actually
-// DOES — the authority check, the row lock, the refusal of a no-op, the audit
-// row carrying the stated reason, the record's .updated event — is storekit.SetLegalHold, called by each
-// owner. Putting any of it here would make compose a sixth writer of records
-// it does not own.
+// This file only dispatches. storekit.SetLegalHold, called by each owner, does
+// the rest: the authority check, the row lock and the no-op refusal. It also
+// writes the audit row and the .updated event. Doing any of it here would make
+// compose a sixth writer of records it does not own.
 
 import (
 	"context"

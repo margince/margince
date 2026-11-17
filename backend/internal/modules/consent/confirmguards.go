@@ -42,6 +42,13 @@ type linkRequest struct {
 	preview bool
 }
 
+// admittedLink is what the guards settle for one mint: the address the link
+// goes to, and the purpose it asks about, read once.
+type admittedLink struct {
+	deliveredTo string
+	purpose     askedPurpose
+}
+
 // admitLinkTx runs every check a mint owes before it writes anything, and
 // returns the address the link must be delivered to.
 //
@@ -51,31 +58,32 @@ type linkRequest struct {
 // takes, so an erasure committing after an unheld probe cannot leave the
 // installation posting a link to somebody it was just told to forget. The
 // address is derived before the last two guards because both judge it.
-func admitLinkTx(ctx context.Context, tx pgx.Tx, req linkRequest) (string, error) {
+func admitLinkTx(ctx context.Context, tx pgx.Tx, req linkRequest) (admittedLink, error) {
 	hold := auth.HoldWritableLive
 	if req.preview {
 		hold = auth.EnsureWritableLive
 	}
 	if err := hold(ctx, tx, "contact", req.contactID.UUID); err != nil {
-		return "", err
+		return admittedLink{}, err
 	}
-	if err := requireConfirmablePurposeTx(ctx, tx, req.purposeID); err != nil {
-		return "", err
+	purpose, err := requireConfirmablePurposeTx(ctx, tx, req.purposeID)
+	if err != nil {
+		return admittedLink{}, err
 	}
 	deliveredTo, err := deliveryAddressTx(ctx, tx, req.contactID)
 	if err != nil {
-		return "", err
+		return admittedLink{}, err
 	}
 	if err := requireExpectedAddress(req.expectedAddress, deliveredTo); err != nil {
-		return "", err
+		return admittedLink{}, err
 	}
 	// THE SUBJECT'S OWN ASK IS NOT A RE-SOLICITATION. See the field.
 	if !req.askedByTheSubject {
 		if err := refuseWithdrawnPurposeTx(ctx, tx, req.contactID, req.purposeID); err != nil {
-			return "", err
+			return admittedLink{}, err
 		}
 	}
-	return deliveredTo, nil
+	return admittedLink{deliveredTo: deliveredTo, purpose: purpose}, nil
 }
 
 // requireExpectedAddress refuses a mint whose destination is not the address the

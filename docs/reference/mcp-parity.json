@@ -11,16 +11,16 @@
       "covered": 39,
       "sign_in": 1,
       "no_signed_in_user": 0,
-      "web_app_calls": 921,
-      "web_app_calls_open": 758,
-      "web_app_calls_ask_first": 106,
+      "web_app_calls": 922,
+      "web_app_calls_open": 759,
+      "web_app_calls_ask_first": 107,
       "web_app_calls_pending": 0,
       "web_app_calls_security": 137,
       "web_app_calls_covered": 25,
       "parity_signed_in_percent": 81.6,
       "parity_web_app_percent": 82.3
     },
-    "open_with_no_web_app_call_found": 109,
+    "open_with_no_web_app_call_found": 108,
     "parity_web_app_counting_covered_percent": 85,
     "parity_web_app_once_pending_is_open_percent": 85
   },
@@ -625,14 +625,14 @@
       "covered": 0,
       "sign_in": 0,
       "no_signed_in_user": 0,
-      "web_app_calls": 59,
-      "web_app_calls_open": 40,
-      "web_app_calls_ask_first": 16,
+      "web_app_calls": 60,
+      "web_app_calls_open": 41,
+      "web_app_calls_ask_first": 17,
       "web_app_calls_pending": 0,
       "web_app_calls_security": 19,
       "web_app_calls_covered": 0,
       "parity_signed_in_percent": 70,
-      "parity_web_app_percent": 67.7,
+      "parity_web_app_percent": 68.3,
       "areas": [
         {
           "key": "consent",
@@ -645,14 +645,14 @@
           "covered": 0,
           "sign_in": 0,
           "no_signed_in_user": 0,
-          "web_app_calls": 29,
-          "web_app_calls_open": 22,
-          "web_app_calls_ask_first": 12,
+          "web_app_calls": 30,
+          "web_app_calls_open": 23,
+          "web_app_calls_ask_first": 13,
           "web_app_calls_pending": 0,
           "web_app_calls_security": 7,
           "web_app_calls_covered": 0,
           "parity_signed_in_percent": 78.7,
-          "parity_web_app_percent": 75.8
+          "parity_web_app_percent": 76.6
         },
         {
           "key": "privacy_requests",
@@ -8378,7 +8378,8 @@
       "scope": "send",
       "verb": "issue_double_opt_in",
       "router": "send_outbound",
-      "action": "double_opt_in"
+      "action": "double_opt_in",
+      "web_app": "direct"
     },
     {
       "method": "GET",
