@@ -50,7 +50,7 @@ The web tier serves the app for a browser and sends other fetches to the public 
 The router removes it, so a `?utm=…` never ends up in a screen name.
 
 A routed screen can stay on screen after the bar has moved, while the next one
-loads or the unsaved question holds it. `ScreenView` (`App.views.tsx`) gives it
+loads or a draft holds it. `ScreenView` (`App.views.tsx`) gives it
 the full address it was drawn for through `ScreenAddress`
 (`lib/screenaddress.ts`). `useHash`, `useRoute` and `useUrlParams` answer with
 that address, so a held screen reads its own page. `useLiveHash` reads the bar,
@@ -64,12 +64,12 @@ bar has left the page.
 writer reached from such code.
 
 A move that follows an action starts from `fromHere()` in
-`lib/navigatefrom.ts`, called when the reader acts, and it moves only a reader
+`lib/navigatefrom.ts`, called when the reader acts. It moves only a reader
 still on that page. `closeOnto` leaves a record the work closed. It goes back
 through history when the nearest entry outside the record's tabs is the
-target, filters kept, and replaces the entry otherwise. Every traversal the app
-starts goes through `traverseTo` (`lib/historydepth.ts`), which refuses a
-second one while the first is in flight.
+target, filters kept, and replaces the entry otherwise. Every move through history
+that the app starts goes through `traverseTo` (`lib/historydepth.ts`), which
+refuses a second one while the first is in flight.
 
 ## The layers
 
