@@ -15202,10 +15202,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Quản trị viên của bạn có thể nhận giấy phép từ đội ngũ Margince. Bạn cũng có thể tự viết cho họ.",
   "common.trialEnded":
     "Thời gian dùng thử của bản cài đặt này đã kết thúc, nên thay đổi này phải chờ có giấy phép. Dữ liệu của bạn vẫn được giữ nguyên.",
-  "license.locked.pageTitle":
-    "Giấy phép không hợp lệ",
-  "license.locked.title":
-    "Giấy phép Margince của bạn không còn hiệu lực",
+  "license.locked.pageTitle": "Giấy phép không hợp lệ",
+  "license.locked.title": "Giấy phép Margince của bạn không còn hiệu lực",
   "license.locked.body":
     "Giấy phép đã hết hạn hoặc bị từ chối, nên Margince đang bị khóa và tác vụ nền đang tạm dừng cho đến khi có giấy phép hợp lệ. Dữ liệu của bạn vẫn được giữ nguyên, không có gì bị xóa.",
   "common.licenseLapsed":

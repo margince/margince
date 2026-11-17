@@ -15518,10 +15518,8 @@ export const en = {
     "Your admin can get a license from the Margince team. You can also write to them yourself.",
   "common.trialEnded":
     "This installation’s trial has ended, so this change waits for a license. Your data stays as it is.",
-  "license.locked.pageTitle":
-    "License not valid",
-  "license.locked.title":
-    "Your Margince license is no longer valid",
+  "license.locked.pageTitle": "License not valid",
+  "license.locked.title": "Your Margince license is no longer valid",
   "license.locked.body":
     "The license has expired or was refused, so Margince is locked and background work is paused until it has a valid license. Your data stays as it is, and nothing is deleted.",
   "common.licenseLapsed":

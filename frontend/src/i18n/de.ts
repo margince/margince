@@ -15610,10 +15610,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Deine Admins können eine Lizenz vom Margince-Team bekommen. Du kannst dem Team auch selbst schreiben.",
   "common.trialEnded":
     "Die Testphase dieser Installation ist beendet, deshalb wartet diese Änderung auf eine Lizenz. Deine Daten bleiben, wie sie sind.",
-  "license.locked.pageTitle":
-    "Lizenz nicht gültig",
-  "license.locked.title":
-    "Deine Margince-Lizenz ist nicht mehr gültig",
+  "license.locked.pageTitle": "Lizenz nicht gültig",
+  "license.locked.title": "Deine Margince-Lizenz ist nicht mehr gültig",
   "license.locked.body":
     "Die Lizenz ist abgelaufen oder wurde abgelehnt. Margince ist gesperrt, und die Arbeit im Hintergrund ruht, bis eine gültige Lizenz da ist. Deine Daten bleiben, wie sie sind, und nichts wird gelöscht.",
   "common.licenseLapsed":
