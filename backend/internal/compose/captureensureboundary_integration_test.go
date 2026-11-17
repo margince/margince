@@ -60,7 +60,7 @@ func (f *edgeEnsurer) EnsureCounterpartyTx(ctx context.Context, tx pgx.Tx, in ca
 func realEnsurer(t *testing.T, e *integration.Env) contactsEnsurer {
 	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
 	return contactsEnsurer{
-		store: newCounterpartyStoreAt(e.Pool, func() time.Time { return clocktest.Now(t) }), pool: e.Pool,
+		store: newCounterpartyStoreAt(e.Pool, func() time.Time { return clocktest.Now(t) }, nil), pool: e.Pool,
 		triage: newDomainTriageTrigger(e.Pool, quiet, true), log: quiet,
 	}
 }

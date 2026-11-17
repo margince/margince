@@ -20,9 +20,8 @@ import (
 // one file per verb, to the answer. The roles come from the database and the tools from the registry,
 // so neither is a second list. A cell holds what the gate says, not what the seed
 // document claims.
-//
-//testdb:serial binds the process-wide VAT check enqueue (compose.BindVatChecking)
 func TestTheToolRoleMatrixIsPublished(t *testing.T) {
+	t.Parallel()
 	recorded := newToolCheckRecorder()
 	d := toolRoleApp(t, "tool-role-matrix", compose.WithToolChecksRecordedForTest(recorded.note))
 	calls := toolRoleCalls(compose.NewRegistry(nil, compose.SendPath{}).Specs(), routeShapes())
@@ -106,9 +105,8 @@ func TestTheToolRoleMatrixIsPublished(t *testing.T) {
 // that may create tags and may not update deals. One lacks two checks only
 // some paths of a tool ask: a company create, and the installation settings
 // read. The last member holds rep and ops, whose grants merge to the widest.
-//
-//testdb:serial binds the process-wide VAT check enqueue (compose.BindVatChecking)
 func TestToolsListAgreesWithTheGateForAnOperatorsRoles(t *testing.T) {
+	t.Parallel()
 	recorded := newToolCheckRecorder()
 	d := toolRoleApp(t, "tool-role-listing", compose.WithToolChecksRecordedForTest(recorded.note))
 	eachSeat(t, "listing", nil, nil, operatorListings(t, d, recorded)...)

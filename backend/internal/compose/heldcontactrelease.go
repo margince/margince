@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -129,9 +130,9 @@ type heldContactReleaser struct {
 	log      *slog.Logger
 }
 
-func newHeldContactReleaser(pool *pgxpool.Pool, log *slog.Logger) *heldContactReleaser {
+func newHeldContactReleaser(pool *pgxpool.Pool, log *slog.Logger, queues *storeQueues) *heldContactReleaser {
 	return &heldContactReleaser{
-		pool: pool, contacts: newCounterpartyStore(pool), log: log,
+		pool: pool, contacts: newCounterpartyStoreAt(pool, time.Now, queues), log: log,
 	}
 }
 

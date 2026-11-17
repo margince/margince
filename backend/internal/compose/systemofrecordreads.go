@@ -42,7 +42,7 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 		contacts:   s.contactsStore,
 		exclusions: capture.NewExclusionStore(InstallationDB(pool)).WithRemovalRepair(purgerun.RepairRule),
 	}
-	s.threadAudience = NewThreadAudienceSetter(pool)
+	s.threadAudience = threadAudienceSetterWith(pool, s.queues)
 	s.captureSenderHandlers = captureSenderHandlers{
 		db:         InstallationDB(pool),
 		store:      newSenderOverrideStore(pool),
@@ -50,7 +50,7 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 	}
 	s.captureOwnerIdentityHandlers = captureOwnerIdentityHandlers{store: NewOwnerIdentityStore(pool, s.contactsStore)}
 	s.Endpoints = unroutedmail.Endpoints{Store: s.captureOwnerIdentityHandlers.store}
-	suggestionSink := sync.OnceValue(func() *capture.Sink { return newCaptureSink(pool, s.captureConfig) })
+	suggestionSink := sync.OnceValue(func() *capture.Sink { return newCaptureSink(pool, s.capturing()) })
 	s.conversationSuggestionHandlers = conversationSuggestionHandlers{read: func(ctx context.Context, anchor datasource.EntityRef) (capture.ConversationSuggestions, error) {
 		return suggestionSink().ConversationSuggestions(ctx, anchor)
 	}}

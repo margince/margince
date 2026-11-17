@@ -31,9 +31,8 @@ type listingPass struct {
 // A passport on each seeded role is offered the cells the published matrix
 // allows that role, and the matrix names every seeded role. It runs on every
 // PR, so a tools/list change shows against the committed matrix at once.
-//
-//testdb:serial binds the process-wide VAT check enqueue (compose.BindVatChecking)
 func TestToolsListOffersEachSeededRoleItsAllowedCells(t *testing.T) {
+	t.Parallel()
 	d := toolRoleApp(t, "tool-role-cells")
 	var keys []string
 	for _, role := range apptest.SeededRoles(t, d.E) {

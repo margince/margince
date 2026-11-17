@@ -68,12 +68,17 @@ type ThreadAudienceSetter struct {
 	released *heldContactReleaser
 }
 
-// NewThreadAudienceSetter builds the setter over one database.
+// NewThreadAudienceSetter builds the setter over one database. Its releases
+// queue no follow-up work.
 func NewThreadAudienceSetter(pool *pgxpool.Pool) *ThreadAudienceSetter {
+	return newThreadAudienceSetter(pool, nil)
+}
+
+func newThreadAudienceSetter(pool *pgxpool.Pool, queues *storeQueues) *ThreadAudienceSetter {
 	return &ThreadAudienceSetter{
 		pool:     pool,
 		threads:  capture.NewThreadVerdictStore(InstallationDB(pool)),
-		released: newHeldContactReleaser(pool, slog.Default()),
+		released: newHeldContactReleaser(pool, slog.Default(), queues),
 	}
 }
 

@@ -86,6 +86,8 @@ var graphScopes = []string{"offline_access", "User.Read", "Mail.Read", graph.Sen
 // workspace's own, edited in the settings surface and read per transaction, so
 // a correction takes effect on the next message instead of the next restart.
 type CaptureConfig struct {
+	// queues is the composition's store queues; a role that binds none has nil.
+	queues             *storeQueues
 	TransactionalExtra []string // capture.transactional_extra (CAP-PARAM-6 infra eSLDs)
 	TransactionalNever []string // capture.transactional_never (CAP-PARAM-6 allowlist)
 	// TracePayloads is capture.trace_payloads, already resolved against its
@@ -258,7 +260,7 @@ func NewCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 // which captures through the Sink directly without needing a registry.
 func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 	ensurer := contactsEnsurer{
-		store:  newCounterpartyStoreAt(pool, cfg.clock()),
+		store:  newCounterpartyStoreAt(pool, cfg.clock(), cfg.queues),
 		pool:   pool,
 		triage: newDomainTriageTrigger(pool, cfg.logger(), cfg.SkipReservedDomainProposals),
 		log:    cfg.logger(),
@@ -337,7 +339,7 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 			Ask:        newWhichDealAsker(pool, cfg.clock()).Ask,
 			Filer:      ActivityDealFiler{},
 			Check:      NewDealTopicCheck(pool, cfg.DealTopicBrain),
-			Hooks:      mailhooks.New(ComposedExtensions, pool),
+			Hooks:      mailhooks.New(installedUnits, pool),
 		}).
 		// The audience derivation, from the module that owns `activity`. It
 		// runs INSIDE the capture transaction because the audience it derives
