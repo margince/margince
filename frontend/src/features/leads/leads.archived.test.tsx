@@ -4,14 +4,26 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
+import { meFixture } from "../../testing/mefixture";
 import { LeadScreen } from "./leads";
 import {
   jsonResponse,
+  LEAD_GRANTS,
   lead,
   openLeadActions,
   render,
+  stubFetch,
   stubFetchWithMe,
 } from "./leads.testkit";
+
+// What the server answers for a disqualified lead: archived, so never
+// writable, whatever the reader's grants.
+const disqualifiedLead = {
+  ...lead,
+  status: "disqualified",
+  archived_at: "2026-07-13T00:00:00Z",
+  writable: false,
+};
 
 beforeEach(() => {
   globalThis.localStorage.setItem("margince.workspaceSlug", "acme");
@@ -39,6 +51,7 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
         score_override_reason: "set by hand",
         score_computed: 46,
         archived_at: "2026-07-13T00:00:00Z",
+        writable: false,
       });
     });
     render(<LeadScreen id="l-1" />);
@@ -124,11 +137,7 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
       if (url.includes("/score")) {
         return jsonResponse({ score: 72, explained: false });
       }
-      return jsonResponse({
-        ...lead,
-        status: "disqualified",
-        archived_at: "2026-07-13T00:00:00Z",
-      });
+      return jsonResponse(disqualifiedLead);
     });
     render(<LeadScreen id="l-1" />);
 
@@ -147,18 +156,34 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     await waitFor(() => expect(calls).toContain("POST /v1/leads/l-1/reopen"));
   });
 
+  // Reopening restores the row and clears its archive stamp, so the server
+  // asks for both grants; a reader holding update alone is refused there.
+  it("offers no Reopen to a reader who may not delete leads", async () => {
+    stubFetch(async (url) => {
+      if (url.endsWith("/v1/me")) {
+        return jsonResponse({
+          user: { id: "u-9", display_name: "Me" },
+          roles: ["rep"],
+          teams: [],
+          authorization: meFixture({
+            allow: { ...LEAD_GRANTS, lead: ["read", "create", "update"] },
+          }).authorization,
+        });
+      }
+      return jsonResponse(disqualifiedLead);
+    });
+    render(<LeadScreen id="l-1" />);
+
+    await openLeadActions();
+    expect(screen.queryByRole("button", { name: "Reopen" })).toBeNull();
+  });
+
   it("a disqualified lead keeps its controls DISABLED with the reason, never hidden", async () => {
     // Blocked by state rather than permission means visible and disabled
     // with the reason, since hiding the control hides the fact the reader
     // needs. A promoted lead never reaches this page; it redirects to the
     // contact it became.
-    stubFetchWithMe(async () =>
-      jsonResponse({
-        ...lead,
-        status: "disqualified",
-        archived_at: "2026-07-13T00:00:00Z",
-      }),
-    );
+    stubFetchWithMe(async () => jsonResponse(disqualifiedLead));
     render(<LeadScreen id="l-1" />);
 
     await waitFor(() =>
