@@ -107,19 +107,35 @@
   margin-block: var(--space-3) var(--space-2);
 }
 
-/* The kind chip and the work it labels read as one line, as on Home's cards.
-   Where the drawer has the width, the verbs stand beside the work. */
+/* The kind chip heads the work it labels, so a long kind reads whole and the
+   title keeps the card's width. Where the drawer has the width, the verbs
+   stand beside the work, which keeps a readable measure before they take any. */
 .worklist-embedded .worklist-list > li > .worklist-row {
-  --worklist-kind-w: 4.75rem;
+  grid-template-columns: auto minmax(0, 1fr);
   column-gap: var(--space-3);
+}
+.worklist-embedded .worklist-list > li > .worklist-row > .worklist-row-kind {
+  grid-column: 2;
+}
+.worklist-embedded .worklist-list > li > .worklist-row > .worklist-row-lead {
+  grid-row: 1 / span 2;
+}
+.worklist-embedded .worklist-list > li > .worklist-row > .worklist-row-text {
+  grid-column: 2;
+  margin-top: calc(var(--space-1) - var(--space-2));
+}
+.worklist-embedded .worklist-list > li > .worklist-row > .worklist-row-acts,
+.worklist-embedded .worklist-list > li > .worklist-row > :nth-child(n + 5) {
+  grid-column: 2 / -1;
 }
 @container (min-width: 44rem) {
   .worklist-embedded .worklist-list > li > .worklist-row {
     grid-template-columns:
-      auto var(--worklist-kind-w) minmax(0, 1fr)
+      auto minmax(min(24rem, 100%), 1fr)
       fit-content(var(--worklist-acts-w, 32rem));
   }
   .worklist-embedded .worklist-list > li > .worklist-row > .worklist-row-acts {
-    grid-column: 4;
+    grid-column: 3;
+    grid-row: 1 / span 2;
   }
 }
