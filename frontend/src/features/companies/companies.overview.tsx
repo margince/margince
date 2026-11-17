@@ -1,6 +1,6 @@
+import { MergedIntoLine } from "../../components/historymergedref";
 import { Callout } from "../../design-system/callout";
 import { useT } from "../../i18n";
-import { MergedIntoLine } from "../records/historymergedref";
 import { type CompanyOverviewProps, CompanyReading } from "./companyreading";
 import "./company360.css";
 

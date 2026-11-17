@@ -1,6 +1,6 @@
-import { EntityRef, useEntityName } from "../../components/entityref";
-import { useT } from "../../i18n";
-import type { EntityKind } from "../../lib/entity";
+import { useT } from "../i18n";
+import type { EntityKind } from "../lib/entity";
+import { EntityRef, useEntityName } from "./entityref";
 
 // The record a merge folded in, or folded this one into, by its name.
 // The name is read by id like any reference, so the record read decides

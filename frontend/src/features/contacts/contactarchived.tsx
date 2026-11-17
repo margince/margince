@@ -4,6 +4,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
+import { MergedIntoLine } from "../../components/historymergedref";
 import { Badge } from "../../design-system/atoms";
 import { IdentityLine } from "../../design-system/identityline";
 import { Panel, PanelBody } from "../../design-system/panel";
@@ -12,7 +13,6 @@ import { useT } from "../../i18n";
 import { invalidateRecord } from "../../lib/recordwritekeys";
 import { useViewerZone } from "../../lib/viewerzone";
 import { RecordHistoryTab } from "../records/history";
-import { MergedIntoLine } from "../records/historymergedref";
 import { RecordAccess } from "../records/recordaccess";
 import { WorklistReturnLink } from "../worklist/worklist.return";
 import { ContactActions } from "./contactactions";
