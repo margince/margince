@@ -8072,9 +8072,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lawfulBasis.confirm": "Trotzdem senden",
   "lawfulBasis.askConsent": "Um Einwilligung bitten",
   "lawfulBasis.askFailed":
-    "Die Bitte um Einwilligung wurde nicht gesendet. Versuche es erneut.",
+    "Die Anfrage nach Einwilligung wurde nicht gesendet. Versuche es erneut.",
   "lawfulBasis.asked":
-    "Bitte um Einwilligung an {address} gesendet. Deine Nachricht wurde nicht gesendet.",
+    "Anfrage nach Einwilligung an {address} gesendet. Deine Nachricht wurde nicht gesendet.",
   "lawfulBasis.failed":
     "Deine Bestätigung wurde nicht gespeichert. Versuche es erneut.",
   "privacynotice.purposeLine": "{purpose}: {basis}",
