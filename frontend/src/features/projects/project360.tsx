@@ -484,7 +484,7 @@ function ProjectActions({
         }}
         invalidate="projects"
         recordKey="project"
-        onArchived={(from) => from.navigateReplacing({ screen: "projects" })}
+        onArchived={(from) => from.closeOnto({ screen: "projects" })}
       />
     </OverflowMenu>
   );

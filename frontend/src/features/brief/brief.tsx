@@ -65,6 +65,7 @@ import { useMorningBrief, useWeeklyReview } from "./brief.queries";
 import {
   BriefQueue,
   closeQueue,
+  drawerOpen,
   loadWorklistScreen,
   openQueue,
 } from "./brief.queue";
@@ -84,7 +85,7 @@ export function BriefScreen() {
   const query = useHomeDay(Boolean(params.get(FOCUS_PARAM)));
   const address = addressFrom(params);
   const day = briefDay(query.data?.pages);
-  const drawerOpen = params.get("queue") === "1";
+  const queueOpen = drawerOpen(params);
   const review = useWeeklyReview(address.week, address.view === "weekly");
   const firstName = greetingNameOf(me.data?.user);
   const brief = useMorningBrief();
@@ -101,13 +102,13 @@ export function BriefScreen() {
   const queueToggle = (
     <PageAsideToggle
       controlled={{
-        open: drawerOpen,
+        open: queueOpen,
         ...(day && pillFigure(day, "all", DEFAULT_VIEW)),
         labels: {
           show: t("brief.queue.show"),
           hide: t("brief.queue.hide"),
         },
-        onToggle: drawerOpen ? closeQueue : openQueue,
+        onToggle: queueOpen ? closeQueue : openQueue,
       }}
     />
   );

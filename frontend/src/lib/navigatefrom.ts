@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { entryDepth, hashAt, traverseTo } from "./historydepth";
+import { depthBackOutOf, hashAt, traverseTo } from "./historydepth";
+import { routeIdentity } from "./routeidentity";
 import {
   navigate,
   navigateReplacing,
@@ -10,18 +11,21 @@ import {
   routeHash,
   samePage,
 } from "./router";
-import { hashWithParams, parseParams, type UrlParams } from "./urlstate";
+import type { UrlParams } from "./urlstate";
 
 /**
  * A move to make once an action's work is done, from the address the action
- * started on. Each move happens only while the reader is still on that page; a
- * dial turned on it is not leaving. A reader who left during the work keeps the
- * page they chose, and the work and its toast still land.
+ * started on. A move happens only while the reader is still on that page; a
+ * dial turned on it is not leaving. A reader who left during the work keeps
+ * the page they chose, and the work and its toast still land.
  */
 export type Departure = Readonly<{
   stillHere: () => boolean;
   navigate: (route: Route, dials?: UrlParams) => void;
   navigateReplacing: (route: Route, dials?: UrlParams) => void;
+  // Leaves a record the work closed. Another tab of that record is not
+  // leaving, because the record is gone from every tab.
+  closeOnto: (route: Route, dials?: UrlParams) => void;
 }>;
 
 /**
@@ -32,6 +36,9 @@ export type Departure = Readonly<{
 export function fromHere(): Departure {
   const origin = globalThis.location.hash;
   const stillHere = () => samePage(globalThis.location.hash, origin);
+  const screen = (hash: string) => routeIdentity(parseHash(hash));
+  const stillOnScreen = () =>
+    screen(globalThis.location.hash) === screen(origin);
   return {
     stillHere,
     navigate: (route, dials) => {
@@ -40,29 +47,29 @@ export function fromHere(): Departure {
     navigateReplacing: (route, dials) => {
       if (stillHere()) navigateReplacing(route, dials);
     },
+    closeOnto: (route, dials) => {
+      if (stillOnScreen()) closeOnto(route, dials);
+    },
   };
 }
 
-// One spelling per address, so `#/` and `#/home` or two dial orders compare equal.
-const spelled = (hash: string): string =>
-  hashWithParams(routeHash(parseHash(hash)), parseParams(hash));
-
 /**
- * Close what is on screen onto `route`. When the entry behind is that address,
- * history goes back to it, so no entry is left that reopens what was closed.
- * Otherwise the entry on screen becomes that address.
+ * Close what is on screen onto `route`. When the nearest earlier entry outside
+ * this screen's own tabs is that page, history goes back to it, dials as the
+ * reader left them, so no entry is left that reopens what was closed.
+ * Otherwise the entry on screen becomes `route`.
  */
 export function closeOnto(route: Route, dials?: UrlParams): void {
-  const target = spelled(hashWithParams(routeHash(route), dials ?? new Map()));
-  const depth = entryDepth();
-  const behind = depth === undefined ? undefined : hashAt(depth - 1);
-  if (
-    depth !== undefined &&
-    behind !== undefined &&
-    spelled(behind) === target
-  ) {
-    // Refused only while an earlier close is still on its way there.
-    traverseTo(depth - 1);
+  const target = routeHash(route);
+  const screen = routeIdentity(parseHash(globalThis.location.hash));
+  const at = depthBackOutOf(
+    (hash) =>
+      !samePage(hash, target) && routeIdentity(parseHash(hash)) === screen,
+  );
+  const behind = at === undefined ? undefined : hashAt(at);
+  if (at !== undefined && behind !== undefined && samePage(behind, target)) {
+    // Refused while any traversal is still in flight.
+    traverseTo(at);
     return;
   }
   navigateReplacing(route, dials);

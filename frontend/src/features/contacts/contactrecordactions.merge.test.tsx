@@ -27,7 +27,7 @@ const SOURCE = {
   updated_at: "2026-10-01T10:00:00Z",
 } satisfies components["schemas"]["Contact"];
 
-function mountMerging() {
+function mountMerging(whileMerging: () => void = () => undefined) {
   const docs = contactDocuments(1);
   vi.stubGlobal("fetch", async (request: Request) => {
     const url = new URL(request.url);
@@ -53,6 +53,7 @@ function mountMerging() {
       });
     }
     if (path === `/contacts/${SOURCE.id}/merge`) {
+      whileMerging();
       docs.becomes(2);
       return Response.json({ ...SOURCE, id: PROBED_CONTACT_ID });
     }
@@ -97,4 +98,19 @@ it("puts the survivor in the merged-away contact's place, so Back cannot reopen 
     expect(globalThis.location.hash).toBe(`#/contacts/${PROBED_CONTACT_ID}`),
   );
   expect(globalThis.history.length).toBe(entries);
+});
+
+it("opens the survivor for a reader who switched to another tab while it merged", async () => {
+  globalThis.history.replaceState(null, "", `#/contacts/${SOURCE.id}`);
+  mountMerging(() =>
+    globalThis.history.replaceState(
+      null,
+      "",
+      `#/contacts/${SOURCE.id}/timeline`,
+    ),
+  );
+  await mergeIntoDanaBuyer();
+  await waitFor(() =>
+    expect(globalThis.location.hash).toBe(`#/contacts/${PROBED_CONTACT_ID}`),
+  );
 });

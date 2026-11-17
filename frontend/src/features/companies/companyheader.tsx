@@ -449,7 +449,7 @@ export function CompanyActionBadges({
           }}
           invalidate="companies"
           recordKey="company"
-          onArchived={(from) => from.navigateReplacing({ screen: "companies" })}
+          onArchived={(from) => from.closeOnto({ screen: "companies" })}
         />
       </OverflowMenu>
     </>

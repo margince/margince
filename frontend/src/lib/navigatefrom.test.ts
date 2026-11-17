@@ -33,6 +33,30 @@ describe("fromHere", () => {
     expect(from.stillHere()).toBe(false);
   });
 
+  it("closes a record for a reader who only opened another tab of it during the work", () => {
+    globalThis.history.replaceState(null, "", "#/contacts/c1");
+    const from = fromHere();
+    globalThis.history.replaceState(null, "", "#/contacts/c1/timeline");
+    from.closeOnto({ screen: "contacts" });
+    expect(globalThis.location.hash).toBe("#/contacts");
+  });
+
+  it("leaves a reader who opened another record of the same list where they are", () => {
+    globalThis.history.replaceState(null, "", "#/contacts/c1");
+    const from = fromHere();
+    globalThis.history.replaceState(null, "", "#/contacts/c2");
+    from.closeOnto({ screen: "contacts" });
+    expect(globalThis.location.hash).toBe("#/contacts/c2");
+  });
+
+  it("leaves a reader who moved to another section where they are", () => {
+    globalThis.history.replaceState(null, "", "#/analytics/reports");
+    const from = fromHere();
+    globalThis.history.replaceState(null, "", "#/analytics/overview");
+    from.navigate({ screen: "analytics", id: "reports", id2: "r1" });
+    expect(globalThis.location.hash).toBe("#/analytics/overview");
+  });
+
   it("moves a reader who only turned a dial on the page during the work", () => {
     const from = fromHere();
     globalThis.history.replaceState(null, "", "#/deals/d1?tab=files");
@@ -60,11 +84,25 @@ describe("closeOnto", () => {
     vi.restoreAllMocks();
   });
 
-  it("goes back when the entry behind is the address it closes onto", () => {
+  it("goes back when the entry behind is the page it closes onto", () => {
     entries("#/home?view=week", "#/home?queue=1&view=week");
     const go = goPending();
     closeOnto({ screen: "home" }, new Map([["view", "week"]]));
     expect(go.mock.calls).toEqual([[-1]]);
+  });
+
+  it("goes back to the page behind with the dials the reader left on it", () => {
+    entries("#/contacts?owner=me", "#/contacts/c1");
+    const go = goPending();
+    closeOnto({ screen: "contacts" });
+    expect(go.mock.calls).toEqual([[-1]]);
+  });
+
+  it("steps back over the record's own tabs to the page it closes onto", () => {
+    entries("#/contacts?owner=me", "#/contacts/c1", "#/contacts/c1/timeline");
+    const go = goPending();
+    closeOnto({ screen: "contacts" });
+    expect(go.mock.calls).toEqual([[-2]]);
   });
 
   it("reads the bare entry as Home", () => {

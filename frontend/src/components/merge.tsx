@@ -74,13 +74,13 @@ export function MergeAction<Survivor extends { id: string }>({
   const mutation = useMutation({
     mutationFn: (targetId: string) => merge(targetId),
     onMutate: fromHere,
-    // Replacing: Back must not open the record merged away.
+    // Closed onto the survivor: Back must not open the record merged away.
     onSuccess: (survivor, _targetId, from) => {
       queryClient.invalidateQueries({ queryKey: [invalidate] });
       queryClient.invalidateQueries({ queryKey: [recordKey, sourceId] });
       queryClient.invalidateQueries({ queryKey: [recordKey, survivor.id] });
       setOpen(false);
-      from.navigateReplacing(survivorRoute(survivor.id));
+      from.closeOnto(survivorRoute(survivor.id));
     },
   });
 

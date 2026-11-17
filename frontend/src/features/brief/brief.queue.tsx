@@ -16,13 +16,14 @@ import type { DrawerSpan } from "../../design-system/modal";
 import { useT } from "../../i18n";
 import { lazy } from "../../i18n/lazy";
 import { closeOnto } from "../../lib/navigatefrom";
-import { navigate, navigateReplacing, useHash } from "../../lib/router";
+import { navigate, useHash } from "../../lib/router";
 import { useScrollMemory } from "../../lib/scrollmemory";
 import { readStored, STORAGE_KEYS, writeStored } from "../../lib/storage";
 import {
   currentParams,
   NO_URL_PARAMS,
   type UrlParams,
+  useAddressWriters,
   useUrlParams,
 } from "../../lib/urlstate";
 import { WORKLIST_VIEW_PARAM } from "../../lib/worklistrouting";
@@ -55,7 +56,9 @@ const DRAWER_DIALS = [
   "selected",
 ];
 
-const drawerOpen = (params: UrlParams) => params.get("queue") === "1";
+/** Whether these dials open Home's queue drawer. */
+export const drawerOpen = (params: UrlParams): boolean =>
+  params.get("queue") === "1";
 
 /** Close the drawer onto Home as it stood under it. */
 export function closeQueue(): void {
@@ -81,6 +84,7 @@ export function openQueue(): void {
 /** Older shared links open the same queue, including its owner and narrowing. */
 export function WorklistRedirect({ opensOn }: Readonly<{ opensOn?: string }>) {
   const [params] = useUrlParams();
+  const { navigateReplacing } = useAddressWriters();
   useEffect(() => {
     const next = new Map(params);
     next.set("queue", "1");
@@ -90,7 +94,7 @@ export function WorklistRedirect({ opensOn }: Readonly<{ opensOn?: string }>) {
     else if (opensOn === "unassigned") next.set("queue_scope", "unassigned");
     if (opensOn && opensOn !== "unassigned") next.set("owner", opensOn);
     navigateReplacing({ screen: "home" }, next);
-  }, [opensOn, params]);
+  }, [opensOn, params, navigateReplacing]);
   return null;
 }
 

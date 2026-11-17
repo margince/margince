@@ -347,7 +347,7 @@ export function DealActions({
             archive={() => archiveDeal(deal)}
             invalidate="deals"
             recordKey="deal"
-            onArchived={(from) => from.navigateReplacing({ screen: "deals" })}
+            onArchived={(from) => from.closeOnto({ screen: "deals" })}
           />
         )}
       </OverflowMenu>

@@ -10,10 +10,11 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import { noteHistoryEntry } from "../lib/historydepth";
 import type { Departure } from "../lib/navigatefrom";
 import { throwProblem } from "../lib/problem";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
@@ -223,9 +224,8 @@ describe("ArchiveAction", () => {
   });
 
   describe("leaving the archived record", () => {
-    // What a record page passes: the list, in place of the record's entry.
-    const toList = (from: Departure) =>
-      from.navigateReplacing({ screen: "contacts" });
+    // What a record page passes: close the record onto its list.
+    const toList = (from: Departure) => from.closeOnto({ screen: "contacts" });
 
     function archiveContact(archive: () => Promise<{ id: string }>) {
       render(
@@ -252,7 +252,7 @@ describe("ArchiveAction", () => {
       );
     }
 
-    it("puts the list in the record's place, so Back cannot reopen it", async () => {
+    it("puts the list in the place of a record opened from elsewhere", async () => {
       globalThis.history.replaceState(null, "", "#/contacts/c-1");
       const entries = globalThis.history.length;
       archiveContact(() => Promise.resolve({ id: "c-1" }));
@@ -282,6 +282,24 @@ describe("ArchiveAction", () => {
         "Contact archived.",
       );
       expect(globalThis.location.hash).toBe("#/deals/d-1");
+    });
+
+    it("goes back to the list it was opened from, filter and all", async () => {
+      globalThis.history.replaceState(null, "", "#/contacts?owner=me");
+      noteHistoryEntry("start");
+      globalThis.history.pushState(null, "", "#/contacts/c-1");
+      noteHistoryEntry("moved");
+      const go = vi
+        .spyOn(globalThis.history, "go")
+        .mockImplementation(() => undefined);
+      archiveContact(() => Promise.resolve({ id: "c-1" }));
+      await confirm();
+
+      expect(await screen.findByRole("status")).toHaveTextContent(
+        "Contact archived.",
+      );
+      expect(go.mock.calls).toEqual([[-1]]);
+      go.mockRestore();
     });
   });
 });

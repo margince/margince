@@ -135,7 +135,7 @@ export function ContactRecordActions({
         }}
         invalidate="contacts"
         recordKey="contact"
-        onArchived={(from) => from.navigateReplacing({ screen: "contacts" })}
+        onArchived={(from) => from.closeOnto({ screen: "contacts" })}
       />
     </>
   );
