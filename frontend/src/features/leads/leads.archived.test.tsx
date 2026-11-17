@@ -537,12 +537,7 @@ describe("LeadScreen — an archived lead does not ask for what the server refus
     });
     const { urls } = stubFetch(async (url, method) => {
       if (url.endsWith("/v1/me")) {
-        return jsonResponse({
-          user: { id: "u-9", display_name: "Me" },
-          roles: ["rep"],
-          teams: [],
-          ...me,
-        });
+        return jsonResponse({ ...me, roles: ["rep"] });
       }
       if (method === "DELETE") {
         closed = true;
