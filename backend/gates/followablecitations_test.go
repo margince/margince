@@ -259,8 +259,8 @@ func TestEveryTouchedFileExplainsWhatItCites(t *testing.T) {
 }
 
 // generatedSource answers whether a path is regenerated rather than edited.
-// A citation in one of these came from the contract it was generated from, and
-// the file to fix is that contract — which this gate scans on its own. Core's
+// A citation in one of these came from the contract it was generated from. The
+// file to fix is that contract, and this gate scans it on its own. Core's
 // baseline is written from the shipped migrations, which are never edited.
 func generatedSource(rel string) bool {
 	base := filepath.Base(rel)
