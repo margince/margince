@@ -9,10 +9,10 @@ import { translate } from "../../i18n";
 import { leadKey } from "../../lib/leadkeys";
 import { ACTION_PARAM, QUALIFY_ACTION } from "../../lib/leads.address";
 import { replaceDial } from "../../lib/urlstate";
-import { openChoiceDialog } from "../../testing/choicedialog.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { LeadScreen, promoteEligible, scoreTone, terminalBadge } from "./leads";
 import {
+  editSection,
   jsonResponse,
   LEAD_GRANTS,
   lead,
@@ -67,17 +67,13 @@ describe("LeadScreen — edit with If-Match (P-1)", () => {
     });
     render(<LeadScreen id="l-1" />);
 
-    // The lead has no title, so About folds the field away until asked.
-    await userEvent.click(
-      await screen.findByRole("button", {
-        name: /^Show \d+ empty fields?$/,
-      }),
+    const user = userEvent.setup();
+    const about = await editSection(user, "About");
+    await user.type(
+      within(about).getByRole("textbox", { name: "Title" }),
+      "VP Sales",
     );
-    await userEvent.click(
-      await screen.findByRole("button", { name: /^Change Title/ }),
-    );
-    const title = await screen.findByRole("textbox", { name: "Title" });
-    await userEvent.type(title, "VP Sales{Enter}");
+    await user.click(within(about).getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(patchBody).toBeTruthy());
     expect(patchHeader).toBe("1");
@@ -126,18 +122,14 @@ describe("LeadScreen — edit with If-Match (P-1)", () => {
       return jsonResponse(lead);
     });
     render(<LeadScreen id="l-1" />);
-    await user.click(
-      await screen.findByRole("button", { name: /^Show \d+ empty fields?$/ }),
-    );
-    // Named in full: "Change Origin" also begins "Change Origin note".
-    const { chooser, save } = await openChoiceDialog(
+    const about = await editSection(user, "About");
+    await pickOption(
       user,
-      "Origin",
-      await screen.findByRole("button", { name: "Change Origin Not set" }),
+      within(about).getByRole("combobox", { name: "Origin" }),
+      "Partner",
     );
-    await pickOption(user, chooser, "Partner");
     expect(patchBody).toBeNull();
-    await user.click(save);
+    await user.click(within(about).getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(patchBody).toBeTruthy());
     expect(patchBody).toMatchObject({ origin: "partner" });
@@ -527,7 +519,7 @@ describe("LeadScreen — owner display + assign to me (P-11)", () => {
     // one of its options (ADR-0108).
     const user = userEvent.setup();
     await user.click(
-      await screen.findByRole("button", { name: "Change owner" }),
+      await screen.findByRole("button", { name: "Edit Ownership" }),
     );
     await user.click(await screen.findByRole("option", { name: "Me" }));
 
@@ -560,7 +552,7 @@ describe("LeadScreen — owner display + assign to me (P-11)", () => {
     render(<LeadScreen id="l-1" />, client);
     const user = userEvent.setup();
     await user.click(
-      await screen.findByRole("button", { name: "Change owner" }),
+      await screen.findByRole("button", { name: "Edit Ownership" }),
     );
     const option = await screen.findByRole("option", { name: "Dana Fischer" });
 
@@ -602,7 +594,7 @@ describe("LeadScreen — owner display + assign to me (P-11)", () => {
       await screen.findByRole("button", { name: "Clear override" }),
     );
 
-    await user.click(screen.getByRole("button", { name: "Change owner" }));
+    await user.click(screen.getByRole("button", { name: "Edit Ownership" }));
     const option = await screen.findByRole("option", { name: "Dana Fischer" });
     expect(option).toHaveAttribute("aria-disabled", "true");
     await user.click(option);
@@ -630,7 +622,7 @@ describe("LeadScreen — owner display + assign to me (P-11)", () => {
     render(<LeadScreen id="l-1" />);
 
     expect(
-      await screen.findByRole("button", { name: "Change owner" }),
+      await screen.findByRole("button", { name: "Edit Ownership" }),
     ).toBeEnabled();
     expect(screen.getByText("Unassigned")).toBeInTheDocument();
   });
@@ -666,7 +658,7 @@ describe("LeadScreen — owner display + assign to me (P-11)", () => {
     render(<LeadScreen id="l-1" />);
 
     const owner = await screen.findByText("Unassigned");
-    expect(screen.queryByRole("button", { name: "Change owner" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Edit Ownership" })).toBeNull();
     // The plain value says why, in the seat's words: a role change would not lift it.
     const reason = translate("en", "settings.seatRefused");
     await waitFor(() => expect(owner).toHaveAttribute("title", reason));
@@ -725,7 +717,7 @@ describe("LeadScreen — owner display + assign to me (P-11)", () => {
 
     await waitFor(() => expect(screen.getByText("You")).toBeTruthy());
     await user.click(
-      await screen.findByRole("button", { name: "Change owner" }),
+      await screen.findByRole("button", { name: "Edit Ownership" }),
     );
     const own = await screen.findByRole("option", { name: "Me" });
     expect(own).toHaveAttribute("aria-selected", "true");
@@ -845,9 +837,8 @@ describe("LeadScreen — the header's Email verb", () => {
       data: [{ id: "g1", provider: "gmail", status: "connected", scopes: [] }],
     });
     render(<LeadScreen id="l-1" />);
-    // The row wraps the address in its edit pill once the grants answer.
-    // Read the address after that; pressing it still writes, never edits.
-    await screen.findByRole("button", { name: "Change Email" });
+    // The grants have answered once the section offers its Edit.
+    await screen.findByRole("button", { name: "Edit About" });
     const address = screen.getByRole("button", {
       name: "jonas@nordwind.example",
     });

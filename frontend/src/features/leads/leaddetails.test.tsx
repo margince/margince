@@ -3,15 +3,23 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { pickOption } from "../../design-system/select-testing";
 import { en } from "../../i18n/en";
-import { changeChoice } from "../../testing/choicedialog.testkit";
 import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import { listsMe } from "../../testing/lists.fixtures";
+import { meFixture } from "../../testing/mefixture";
 import { installFetchStub } from "../../testing/story-utils";
 import { LeadDetails } from "./leaddetails";
 import { LeadScreen } from "./leads";
 import { useLeadPatch } from "./leads.patch";
-import { jsonResponse, lead, render, stubFetch } from "./leads.testkit";
+import {
+  detailValue,
+  editSection,
+  jsonResponse,
+  lead,
+  render,
+  stubFetch,
+} from "./leads.testkit";
 
 beforeEach(() => {
   globalThis.localStorage.setItem("margince.workspaceSlug", "acme");
@@ -53,6 +61,16 @@ function serve(served: Record<string, unknown>) {
   return patches;
 }
 
+async function chooseIndustry(user: UserEvent, industry: string) {
+  const about = await editSection(user, "About");
+  await pickOption(
+    user,
+    within(about).getByRole("combobox", { name: "Industry" }),
+    industry,
+  );
+  await user.click(within(about).getByRole("button", { name: "Save" }));
+}
+
 async function showEmptyFields(user: UserEvent) {
   await user.click(
     await screen.findByRole("button", { name: /^Show \d+ empty fields?$/ }),
@@ -74,8 +92,9 @@ describe("a lead's company facts", () => {
         "These come from the company record. Change them on the company.",
       ),
     ).toBeTruthy();
+    const about = await editSection(userEvent.setup(), "About");
     expect(
-      screen.queryByRole("button", { name: /^Change Industry/ }),
+      within(about).queryByRole("combobox", { name: "Industry" }),
     ).toBeNull();
   });
 
@@ -93,7 +112,7 @@ describe("a lead's company facts", () => {
     expect(within(group).queryByText("Country")).toBeNull();
     expect(within(group).queryByText("Industry")).toBeNull();
 
-    await changeChoice(userEvent.setup(), "Industry", "Manufacturing");
+    await chooseIndustry(userEvent.setup(), "Manufacturing");
     await waitFor(() =>
       expect(patches).toEqual([
         expect.objectContaining({ industry: "manufacturing" }),
@@ -104,9 +123,7 @@ describe("a lead's company facts", () => {
   it("shows nothing from the company when the server sends no facts", async () => {
     serve({ ...lead, company_id: "c-7", industry: "software" });
     render(<LeadScreen id="l-1" />);
-    expect(
-      await screen.findByRole("button", { name: /^Change Industry/ }),
-    ).toHaveTextContent("Software");
+    expect(await detailValue("Industry")).toHaveTextContent("Software");
     expect(screen.queryByRole("region", { name: /^From / })).toBeNull();
   });
 
@@ -114,8 +131,7 @@ describe("a lead's company facts", () => {
     const patches = serve(lead);
     const user = userEvent.setup();
     render(<LeadScreen id="l-1" />);
-    await showEmptyFields(user);
-    await changeChoice(user, "Industry", "Logistics and Transport");
+    await chooseIndustry(user, "Logistics and Transport");
     await waitFor(() =>
       expect(patches).toEqual([
         expect.objectContaining({ industry: "logistics_transport" }),
@@ -131,17 +147,22 @@ describe("the About company row", () => {
   it("shows a linked lead's company name read-only, saying where it changes", async () => {
     serve({ ...linked, company_name: "Nordwind Logistik" });
     render(<LeadScreen id="l-1" />);
-    const name = await screen.findByText("Nordwind Holding SE", {
-      selector: ".inlinetext",
-    });
-    expect(name).toHaveAttribute(
-      "title",
+    const about = await screen.findByRole("region", { name: "About" });
+    await waitFor(() =>
+      expect(
+        within(about).getByText("Company").nextElementSibling,
+      ).toHaveTextContent("Nordwind Holding SE"),
+    );
+    expect(within(about).queryByText("Nordwind Logistik")).toBeNull();
+    const dialog = await editSection(userEvent.setup(), "About");
+    expect(
+      within(dialog).queryByRole("textbox", { name: "Company" }),
+    ).toBeNull();
+    const company = within(dialog).getByRole("group", { name: "Company" });
+    expect(company).toHaveTextContent("Nordwind Holding SE");
+    expect(company).toHaveAccessibleDescription(
       "The name comes from the linked company. Rename it on the company’s page.",
     );
-    expect(screen.queryByText("Nordwind Logistik")).toBeNull();
-    expect(
-      screen.queryByRole("button", { name: /^Change Company/ }),
-    ).toBeNull();
   });
 
   it("shows the unset text, not the typed name, when the linked company has no name", async () => {
@@ -153,11 +174,11 @@ describe("the About company row", () => {
     });
     render(<LeadScreen id="l-1" />);
     await showEmptyFields(userEvent.setup());
+    expect(await detailValue("Company")).toHaveTextContent("Not set");
     expect(
-      await screen.findByText("Not set", { selector: ".inlinetext" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByText("Nordwind Logistik", { selector: ".inlinetext" }),
+      within(screen.getByRole("region", { name: "About" })).queryByText(
+        "Nordwind Logistik",
+      ),
     ).toBeNull();
   });
 
@@ -165,13 +186,83 @@ describe("the About company row", () => {
     const patches = serve({ ...lead, company_name: "Nordwind Logistik" });
     const user = userEvent.setup();
     render(<LeadScreen id="l-1" />);
-    const change = await screen.findByRole("button", {
-      name: /^Change Company/,
-    });
-    expect(change).toHaveTextContent("Nordwind Logistik");
-    await user.click(change);
-    expect(await screen.findByDisplayValue("Nordwind Logistik")).toBeVisible();
+    const about = await editSection(user, "About");
+    expect(within(about).getByRole("textbox", { name: "Company" })).toHaveValue(
+      "Nordwind Logistik",
+    );
     expect(patches).toEqual([]);
+  });
+});
+
+describe("the details' Edit", () => {
+  it("offers no Edit to a reader without the lead's write grant", async () => {
+    stubFetch(async (url) =>
+      url.endsWith("/v1/me")
+        ? jsonResponse({
+            user: { id: "u-2", display_name: "Reader" },
+            roles: ["rep"],
+            teams: [],
+            authorization: meFixture({ allow: { lead: ["read"] } })
+              .authorization,
+          })
+        : jsonResponse(lead),
+    );
+    render(<LeadScreen id="l-1" />);
+    expect(await detailValue("Company")).toHaveTextContent("Nordwind Logistik");
+    expect(screen.queryByRole("button", { name: /^Edit / })).toBeNull();
+  });
+
+  it("opens only About's fields and saves them in one PATCH against the version shown", async () => {
+    const sent: { ifMatch: string | null; body: unknown }[] = [];
+    stubFetch(async (_url, method, request) => {
+      if (method === "PATCH") {
+        const body: Record<string, unknown> = JSON.parse(await request.text());
+        sent.push({ ifMatch: request.headers.get("If-Match"), body });
+        return jsonResponse({ ...lead, ...body, version: 2 });
+      }
+      return jsonResponse(lead);
+    });
+    const user = userEvent.setup();
+    render(<LeadScreen id="l-1" />);
+    const about = await editSection(user, "About");
+    expect(within(about).queryByRole("combobox", { name: "Owner" })).toBeNull();
+    const title = within(about).getByRole("textbox", { name: "Title" });
+    await user.type(title, "Head of fleet");
+    await user.click(within(about).getByRole("button", { name: "Save" }));
+    await waitFor(() =>
+      expect(sent).toEqual([
+        {
+          ifMatch: expect.stringContaining("1"),
+          body: expect.objectContaining({ title: "Head of fleet" }),
+        },
+      ]),
+    );
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog", { name: "About" })).toBeNull(),
+    );
+  });
+
+  it("leaves the dialog for the project search, and gives focus back to Edit", async () => {
+    serve(lead);
+    const user = userEvent.setup();
+    render(<LeadScreen id="l-1" />);
+    const about = await editSection(user, "About");
+    await user.click(
+      within(about).getByRole("button", { name: "Change Project" }),
+    );
+    const search = await screen.findByRole("dialog", {
+      name: en["lead.rail.project.attach"],
+    });
+    expect(screen.queryByRole("dialog", { name: "About" })).toBeNull();
+    expect(
+      within(search).getByRole("combobox", {
+        name: en["projectLinks.searchLabel"],
+      }),
+    ).toBeVisible();
+    await user.keyboard("{Escape}");
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Edit About" })).toHaveFocus(),
+    );
   });
 });
 

@@ -23,6 +23,27 @@ export async function openLeadActions(
   await user.click(await screen.findByRole("button", { name: "More actions" }));
 }
 
+// A details section changes through its Edit, which opens a dialog named for it.
+export async function editSection(
+  user: Pick<UserEvent, "click">,
+  section: string,
+): Promise<HTMLElement> {
+  await user.click(
+    await screen.findByRole("button", { name: `Edit ${section}` }),
+  );
+  return screen.findByRole("dialog", { name: section });
+}
+
+// The value a details row reads, found by its term.
+export async function detailValue(term: string): Promise<HTMLElement> {
+  const label = await screen.findByText(term, { selector: "dt" });
+  const value = label.nextElementSibling;
+  if (!(value instanceof HTMLElement)) {
+    throw new Error(`no value beside the term ${term}`);
+  }
+  return value;
+}
+
 // The seven shipped lead origins GET /lead-origins serves on a fresh install.
 export const SHIPPED_LEAD_ORIGINS = {
   data: [

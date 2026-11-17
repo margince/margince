@@ -58,6 +58,10 @@ function page(
   locale: Locale = "en",
   companyName?: string,
   listsOn = false,
+  allow: Parameters<typeof meRoute>[0] = {
+    lead: ["read", "update"],
+    company: ["read"],
+  },
 ) {
   return () => {
     installFetchStub({
@@ -89,10 +93,7 @@ function page(
               list: ["read", "create", "update"],
             },
           })
-        : meRoute(
-            { lead: ["read", "update"], company: ["read"] },
-            { roles: ["rep"] },
-          ),
+        : meRoute(allow, { roles: ["rep"] }),
     });
     return (
       <StoryProviders locale={locale}>
@@ -163,13 +164,13 @@ export const Lists: Story = {
   },
 };
 
-/** The owner is handed on from the list beside the Owner row's value: the pick is the save. */
+/** Ownership's one change is the owner, so its Edit opens the owner list at once: the pick is the save. */
 export const OwnerList: Story = {
   render: page({ ...base, owner_id: "u-2" }),
   play: async () => {
     const user = userEvent.setup();
     await user.click(
-      await screen.findByRole("button", { name: "Change owner" }),
+      await screen.findByRole("button", { name: "Edit Ownership" }),
     );
     const list = within(await screen.findByRole("dialog"));
     await expect(
@@ -179,3 +180,50 @@ export const OwnerList: Story = {
 };
 
 export const OwnerListPhone: Story = { ...OwnerList, tags: ["uat-phone"] };
+
+/** About's Edit opens one dialog with the fields the section shows; a linked company's name is fixed, with why. */
+export const AboutEdit: Story = {
+  render: page({ ...linked, title: "Head of fleet" }),
+  play: async () => {
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Edit About" }));
+    const about = within(await screen.findByRole("dialog", { name: "About" }));
+    await expect(about.getByRole("textbox", { name: "Title" })).toHaveValue(
+      "Head of fleet",
+    );
+    await expect(about.getByRole("group", { name: "Company" })).toBeVisible();
+  },
+};
+
+export const AboutEditDark: Story = {
+  ...AboutEdit,
+  globals: { theme: "dark" },
+};
+
+export const AboutEditPhone: Story = { ...AboutEdit, tags: ["uat-phone"] };
+
+/** The project row leaves the dialog for the project search, which stands alone. */
+export const ProjectFlow: Story = {
+  render: page(base),
+  play: async () => {
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Edit About" }));
+    const about = within(await screen.findByRole("dialog", { name: "About" }));
+    await user.click(about.getByRole("button", { name: "Change Project" }));
+    await expect(
+      await screen.findByRole("dialog", { name: "Attach project" }),
+    ).toBeVisible();
+  },
+};
+
+/** A reader who may only read the lead gets the readings and no Edit. */
+export const ReadOnly: Story = {
+  render: page(base, "en", undefined, false, {
+    lead: ["read"],
+    company: ["read"],
+  }),
+  play: async () => {
+    await screen.findByRole("region", { name: "About" });
+    await expect(screen.queryByRole("button", { name: /^Edit / })).toBeNull();
+  },
+};
