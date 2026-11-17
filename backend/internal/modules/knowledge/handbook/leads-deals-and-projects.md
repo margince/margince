@@ -130,7 +130,8 @@ Also called: update a lead, rename a lead, correct a prospect.
 
 ### How do I change a lead's owner?
 To change or set the owner of a lead in Margince, open the lead. Press **Change owner** beside the **Owner** value under **Ownership** in its **Details** panel. Search under **Search colleagues** and pick a colleague. The pick saves at once, with no **Save** button, and confirms "Assigned to {name}".
-1. Pick yourself on a lead with no owner to claim it, or anyone else to hand it over. The current owner is marked; picking them changes nothing.
+Pick yourself on a lead with no owner to claim it, or anyone else to hand it over. The current owner is marked; picking them changes nothing.
+
 For many leads, tick them on the **Leads** table and use **Choose owner** → **Assign**.
 The new owner must be "an active colleague you may assign work to".
 Also called: assign a lead, reassign a prospect, take a lead, claim a lead.
@@ -369,11 +370,7 @@ Companies on a project can be a customer, partner or subcontractor. These are la
 
 Stakeholder roles: champion, economic buyer, blocker, influencer, user, sponsor, project lead, delivery lead, subject-matter expert.
 
-You can add someone from either end. The project's own Stakeholders card adds,
-removes and changes roles, and so does the contact's page. The contact page
-offers the five delivery roles; the project card offers them all. The card goes
-read-only when the project is archived, or when your role does not allow adding
-stakeholders.
+You can add someone from either end. The project's own Stakeholders card adds, removes and changes roles, and so does the contact's page. The contact page offers the five delivery roles; the project card offers them all. The card goes read-only when the project is archived, or when your role does not allow adding stakeholders.
 
 ### How do I add a stakeholder to a project?
 To add a contact to a project in Margince, open the project and choose **Add stakeholder** in its **Stakeholders** card.
