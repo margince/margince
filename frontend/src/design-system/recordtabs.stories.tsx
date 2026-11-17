@@ -280,8 +280,8 @@ export const FoldsAndReturnsWithWidth: Story = {
   },
 };
 
-// A tab pressed while the strip is scrolled out of view, as a keyboard reader
-// can: the pane scrolls up just far enough to show the strip, and no further.
+// A keyboard reader can press a tab while the strip is out of view. The pane
+// then scrolls up just far enough to show the strip, and no further.
 export const PressedOutOfView: Story = {
   render: () => <InPane />,
   play: async ({ canvasElement }) => {

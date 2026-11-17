@@ -52,8 +52,8 @@ export function revealOnceMounted(anchor: string, frames = 30): void {
 }
 
 /**
- * Takes the reader back to the top of the page pane, smoothly: for a door in
- * one tab's body that opens another tab, where the reader would otherwise land
+ * Takes the reader back to the top of the page pane, smoothly. A door in one
+ * tab's body that opens another tab uses it, so the reader does not land
  * part-way down the new one.
  *
  * `.scroll` is the shell's one scrolling pane (app/shell.css); the window

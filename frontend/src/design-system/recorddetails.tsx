@@ -39,8 +39,8 @@ export type DetailSection = Readonly<{
  * The details under a record's head, each group a pane of its own: a small
  * label, then label/value rows. The empty rows of every group fold behind one
  * link, and a group with nothing left to show draws no pane. The `footnote` is
- * what the record says about itself (who may change it, what a verb will ask),
- * in a pane of the same shape at the foot.
+ * what the record says about itself, such as who may change it, in a pane of
+ * the same shape at the foot.
  */
 export function RecordDetails({
   sections,

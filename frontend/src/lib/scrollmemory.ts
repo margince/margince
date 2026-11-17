@@ -115,9 +115,9 @@ function arrivalOffset(place: string, sameView: boolean): number | null {
  * `address` is the trigger: it changes on every move, including the ones the
  * browser makes for Back and Forward. On the way OUT the current offset is
  * recorded against the entry being left; on the way IN a recorded one is
- * restored. A new entry with the same `view` as the one left (another tab of
- * the record on screen) keeps the offset it arrives with, and anything else
- * opens at the top, because a page nobody has visited has no place to return to.
+ * restored. A new entry with the same `view` as the one left, another tab of
+ * the record on screen, keeps the offset it arrives with. Anything else opens
+ * at the top: a page nobody has visited has no place to return to.
  *
  * The restore is RETRIED while the column grows. A list restores its rows a
  * moment after the address arrives, so the first attempt lands against a column

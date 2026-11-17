@@ -148,9 +148,9 @@ export function Shell({
   // render, so a dependency on the object would re-run this on every keystroke a
   // screen handles and fight a reader who has scrolled deliberately.
   const address = routeHash(route);
-  // A new page opens at its top; a page the reader is returning to opens where
-  // they left it, and another tab of the same record keeps the reader's place.
-  // All three live in lib/scrollmemory.ts. The second needs an identity
+  // A new page opens at its top. A page met again opens where it was left,
+  // and another tab of the same record stays put. All three live in
+  // lib/scrollmemory.ts. The second needs an identity
   // for the history entry, which the browser does not give, and a retry while the
   // column grows. A list restores its rows a moment after the address arrives,
   // so a single assignment lands on a column still short and gets clamped.

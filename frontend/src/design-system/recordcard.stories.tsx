@@ -161,11 +161,7 @@ export const WithAside: Story = {
   ),
 };
 
-/**
- * A narrow card inside a value that may break anywhere, as a record's details
- * pane is: the one-word badge keeps its word whole on one line, and the name
- * gives way first.
- */
+/** On a narrow card the name gives way before a one-word badge breaks. */
 export const NarrowWithOneWordBadge: Story = {
   decorators: [
     (Story) => (
