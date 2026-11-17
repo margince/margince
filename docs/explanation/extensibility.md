@@ -269,16 +269,12 @@ Go.
 
 ### 5. The boot step: check the set, then apply
 
-Each role binary wires the composed set in one place, its `main.go`:
+Each role binary wires the composed set in one place, its `main.go`. It hands the extension state it gets
+back to the server and the job runner:
 
 ```go
 composed, err := compose.RegisterExtensions(composition.Extensions(), composition.Verbs(), composition.Jobs())
-if err != nil { … }
 ```
-
-It returns the composition's own extension state. The role hands that value to the server, the job runner
-and the boot steps, and binds its pool to it once the pool exists. Nothing reads the set from a package
-variable.
 
 `RegisterExtensions` runs **two separate steps**, and keeping them apart is the key rule. First it
 *checks the whole set*: every name, version and capability, against both the declared set and the live
