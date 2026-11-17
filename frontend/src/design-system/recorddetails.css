@@ -9,7 +9,7 @@
 }
 .recorddetails-group,
 .recorddetails-note {
-  padding: var(--padPane);
+  padding: var(--space-3);
   border: 1px solid var(--groundEdge);
   border-radius: var(--r-md);
 }

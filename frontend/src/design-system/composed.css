@@ -662,12 +662,12 @@
 }
 
 /* The details card's panes, closer than a feed's stack: a detail is a glance.
-   The narrow inline inset leaves the panes most of the card's width. */
+   The narrow inset leaves the panes most of the card's width. */
 .record-aside {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  padding: var(--padPane) var(--space-3);
+  padding: var(--space-3);
 }
 
 /* The dials above the chronology: the cuts, then the narrowing. Its own

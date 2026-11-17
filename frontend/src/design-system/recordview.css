@@ -81,6 +81,9 @@
   line-clamp: 3;
   overflow: hidden;
 }
+.record-split-lines:empty {
+  display: none;
+}
 .record-split-lines {
   display: flex;
   flex-direction: column;
@@ -396,6 +399,55 @@
   }
   .record-split-feed .record-timeline:not(:first-child) {
     margin-block-start: var(--gapCards);
+  }
+}
+/* On a phone the head is one centred block: mark, name and facts close as one
+   identity, then the pills and the verbs one step further each. */
+@media (max-width: 700px) {
+  .record-split-head {
+    align-items: center;
+    gap: 0;
+    text-align: center;
+  }
+  .record-split-head > * + * {
+    margin-block-start: var(--space-3);
+  }
+  .record-split-head > .record-split-identity + .record-split-lines {
+    margin-block-start: var(--space-2);
+  }
+  .record-split-head > .record-split-lines + .record-split-lines {
+    margin-block-start: var(--space-1);
+  }
+  .record-split-head > .record-split-verbs {
+    align-self: stretch;
+  }
+  .record-split-identity {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  .record-split-identity > :is(.record-split-name, .record-split-rename) {
+    flex: none;
+    max-inline-size: 100%;
+  }
+  .record-split-lines {
+    align-items: center;
+  }
+  .record-split-pills {
+    justify-content: center;
+  }
+  /* The pencil trails the name, so the same room before it keeps the name centred. */
+  .record-split-rename .editable-value {
+    max-inline-size: 100%;
+    margin-inline-start: 0;
+    padding-inline-start: calc(1lh + 2 * var(--space-1));
+    text-align: center;
+  }
+}
+/* The visibility mark's 44px touch box spills into the space around its row,
+   so the pill keeps the head's step instead of floating in a band of air. */
+@media (max-width: 700px) and (pointer: coarse) {
+  .record-split-pills > button:has(> .visibility-opens) {
+    margin-block: calc(-1 * var(--space-2));
   }
 }
 

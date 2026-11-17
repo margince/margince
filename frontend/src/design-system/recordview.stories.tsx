@@ -204,8 +204,8 @@ export const Narrow: Story = {
   args: { ...Default.args },
 };
 
-// At 390px the head, the tabs and the feed take the phone inset, and the first
-// tab still stands over the feed's first card.
+// At 390px the head, the tabs and the feed take the phone inset. The head is
+// centred, with the mark above the name.
 export const Phone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
@@ -225,6 +225,28 @@ export const Phone: Story = {
       await expect(getComputedStyle(box).paddingLeft, part).toBe(phoneInset);
       await expect(getComputedStyle(box).paddingRight, part).toBe(phoneInset);
     }
+    const centre = (selector: string) => {
+      const box = canvasElement
+        .querySelector(selector)
+        ?.getBoundingClientRect();
+      if (!box) throw new Error(`no ${selector}`);
+      return box.left + box.width / 2;
+    };
+    const head = centre(".record-split-head");
+    for (const part of [
+      ".avatar",
+      ".record-split-name",
+      ".record-split-pills",
+    ]) {
+      await expect(Math.abs(centre(part) - head), part).toBeLessThan(1);
+    }
+    const mark = canvasElement
+      .querySelector(".avatar")
+      ?.getBoundingClientRect();
+    const name = canvasElement
+      .querySelector(".record-split-name")
+      ?.getBoundingClientRect();
+    await expect((mark?.bottom ?? 0) <= (name?.top ?? 0)).toBe(true);
   },
 };
 
