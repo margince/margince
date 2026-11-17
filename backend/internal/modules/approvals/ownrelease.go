@@ -64,7 +64,7 @@ const (
 // afterwards can still put it back, and only on an attended call: a
 // scheduled run has nobody behind it to have asked.
 func (s *Service) ownReleaseFor(ctx context.Context, q Queryer, a row) ownRelease {
-	if _, unattended := principal.AgentRunID(ctx); unattended || s.undoable == nil {
+	if principal.Unattended(ctx) || s.undoable == nil {
 		return ownReleaseRefused
 	}
 	call := StagedCall{Kind: a.Kind, Change: a.ProposedChange}
@@ -110,7 +110,7 @@ func (s *Service) ReleasableByCaller(ctx context.Context, kind, targetType strin
 		if err != nil || !decides {
 			return err
 		}
-		releasable = agentMayDecide(p, staged, true, s.ownReleaseFor(ctx, tx, staged)) == nil
+		releasable = agentMayDecide(ctx, p, staged, true, s.ownReleaseFor(ctx, tx, staged)) == nil
 		return nil
 	})
 	return err == nil && releasable
