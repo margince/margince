@@ -894,7 +894,6 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | --- | --- | --- | --- | --- |
 | `GET /communication-reviews/{id}` | getCommunicationReview | What a refused send was refused for, and for whom. | Read records | at once |
 | `POST /communication-reviews/{id}/context` | recordCommunicationContext | Answer a refusal by saying what happened away from the system. | Change records | at once |
-| `POST /communication-reviews/{id}/direct-send` | directCommunicationSend | Send a refused message anyway, on a named human's recorded decision. | Send messages | at once |
 
 ## Compliance
 

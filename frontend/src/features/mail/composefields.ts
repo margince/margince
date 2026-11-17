@@ -168,6 +168,8 @@ export function useComposeFields({
   );
   // The meeting a drafted reason rests on, when the draft was written from it.
   const [meetingEvidence, setMeetingEvidence] = useState<string | undefined>();
+  // The reason came from a drafting instruction, so a later one may replace it.
+  const [reasonFromDraft, setReasonFromDraft] = useState(false);
   // The send-later moment as datetime-local text in the rep's zone. It
   // becomes an instant at submit (see scheduleFields).
   const [sendAt, setSendAtValue] = useState(edit?.sendAt ?? "");
@@ -337,6 +339,8 @@ export function useComposeFields({
     setBody(saved.body);
     setHtml(saved.html);
     setContext(saved.context);
+    setMeetingEvidence(undefined);
+    setReasonFromDraft(false);
     setSendAtValue(saved.sendAt);
     setSendSchedule(saved.sendSchedule);
     const state = saved.editorState;
@@ -397,6 +401,8 @@ export function useComposeFields({
     setIntent(next.intent);
     setDraftedIntent(next.draftedIntent);
     setContext(next.context);
+    setMeetingEvidence(undefined);
+    setReasonFromDraft(false);
     setSendAtValue(next.sendAt);
     setSendSchedule(next.sendSchedule);
     setProvenance(next.provenance);
@@ -430,6 +436,8 @@ export function useComposeFields({
     setContext,
     meetingEvidence,
     setMeetingEvidence,
+    reasonFromDraft,
+    setReasonFromDraft,
     sendAt,
     sendSchedule,
     scheduleControl: { sendAt, timezone: scheduleZone },

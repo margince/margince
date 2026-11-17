@@ -5,7 +5,11 @@ import { describe, expect, it, vi } from "vitest";
 import type { CommunicationContext } from "../../lib/compose-context";
 import { fillFromDraft } from "./composedraftcall";
 
-function formWith(context: CommunicationContext | "") {
+function formWith(
+  context: CommunicationContext | "",
+  reasonFromDraft = false,
+  fromInstruction = true,
+) {
   return {
     subject: "",
     body: "",
@@ -18,9 +22,12 @@ function formWith(context: CommunicationContext | "") {
     setProvenance: vi.fn(),
     setReasoning: vi.fn(),
     setScope: vi.fn(),
+    fromInstruction,
     context,
+    reasonFromDraft,
     setContext: vi.fn(),
     setMeetingEvidence: vi.fn(),
+    setReasonFromDraft: vi.fn(),
   };
 }
 
@@ -41,6 +48,33 @@ describe("fillFromDraft", () => {
     fillFromDraft(moved, form);
     expect(form.setContext).toHaveBeenCalledWith("requested_followup");
     expect(form.setMeetingEvidence).toHaveBeenCalledWith("meeting-1");
+    expect(form.setReasonFromDraft).toHaveBeenCalledWith(true);
+  });
+
+  it("drops a drafted reason when a later instruction names none", () => {
+    const form = formWith("requested_followup", true);
+    fillFromDraft(
+      { available: true, draft: { subject: "Hi", body: "Thanks", to: [] } },
+      form,
+    );
+    expect(form.setContext).toHaveBeenCalledWith("");
+    expect(form.setMeetingEvidence).toHaveBeenCalledWith(undefined);
+    expect(form.setReasonFromDraft).toHaveBeenCalledWith(false);
+  });
+
+  it("names no reason for a draft the sender's own words held back", () => {
+    const form = { ...formWith(""), body: "My own words" };
+    fillFromDraft(moved, form);
+    expect(form.setContext).not.toHaveBeenCalled();
+  });
+
+  it("keeps a drafted reason through a rewrite verb", () => {
+    const form = formWith("requested_followup", true, false);
+    fillFromDraft(
+      { available: true, draft: { subject: "Hi", body: "Shorter", to: [] } },
+      form,
+    );
+    expect(form.setContext).not.toHaveBeenCalled();
   });
 
   it("never replaces a reason the sender picked", () => {

@@ -17755,9 +17755,9 @@ export interface paths {
          *     restriction or a request to stop is refused with 403, admin included, even beside a refusal
          *     a decision could pass.
          *
-         *     THE DECISION IS THE USER'S. A user's agent may carry it out, and asks that user first. The
-         *     row names that user as the one who took it on, and names the agent that acted for them. A
-         *     connector may not. It also needs the `communication_exception` object at `create`: directing
+         *     THE DECISION IS THE USER'S, taken in their own session. The row names them as the one who
+         *     took it on. An agent or a connector is refused: it may read the review and send its user
+         *     there. It also needs the `communication_exception` object at `create`: directing
          *     a send is its own authority, and a seat that may edit a contact has not thereby been given
          *     the right to act against the engine's answer about them.
          *
@@ -43907,6 +43907,12 @@ export interface components {
          *     deterministic floor is a real outcome here rather than an error.
          */
         CompanyEmailDraft: {
+            /**
+             * @description What the drafting instruction says this message is, for the composer to send with it:
+             *     `requested_followup` when it asks to move an appointment. Absent otherwise. The send
+             *     check still needs an agreed appointment with the recipient.
+             */
+            readonly communication_context?: components["schemas"]["CommunicationContext"];
             subject: string;
             /** @description Plain text, end to end. There is no rich-text storage format, no paste sanitiser and no HTML+text send pair, so a formatted draft would be a wire change rather than a toolbar. */
             body: string;
@@ -44686,8 +44692,10 @@ export interface components {
              *     stays on the record, and the reason is kept with the message. False for a stop
              *     (`decided_by` is `subject`), which nobody sends past, admin included. False for a
              *     hard bounce, because no decision makes a dead address accept mail, and for a
-             *     recipient that resolves to nobody or to two contacts, whose stops were never read. The caller still needs the `communication_exception` grant, and the refused
-             *     send's review offers `direct_send` only to a caller who holds it.
+             *     recipient that resolves to nobody or to two contacts, whose stops were never read.
+             *     Only a user in their own session sends past it, never an agent, and only with the
+             *     `communication_exception` grant. The refused send's review offers `direct_send` only
+             *     to such a caller.
              */
             can_be_overruled?: boolean;
             /**
