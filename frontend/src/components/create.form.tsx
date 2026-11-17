@@ -68,6 +68,7 @@ export function RecordFormBody({
   onClose,
   intent,
   dialog,
+  resetToken = 0,
 }: Readonly<{
   fields: CreateField[];
   values: Record<string, string>;
@@ -89,6 +90,8 @@ export function RecordFormBody({
   onClose: () => void;
   intent: SubmitIntent;
   dialog?: { open: boolean; title: string };
+  // Bumped when a save empties the form for the next record.
+  resetToken?: number;
 }>) {
   const t = useT();
   const formId = useId();
@@ -136,6 +139,18 @@ export function RecordFormBody({
       last?.scrollIntoView?.({ block: "nearest" });
     }
   }, [error, formId]);
+
+  // The emptied form is for the next record, so typing starts in its first box.
+  useEffect(() => {
+    if (resetToken > 0) {
+      document
+        .getElementById(formId)
+        ?.querySelector<HTMLElement>(
+          "input:not([type=hidden]), textarea, select",
+        )
+        ?.focus();
+    }
+  }, [resetToken, formId]);
 
   // Enter in a field submits without touching Save, so the form holds the
   // same latch the button does.

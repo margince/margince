@@ -81,4 +81,32 @@ describe("Quick capture", () => {
       expect(client.getQueryState(companiesList)?.isInvalidated).toBe(true),
     );
   });
+
+  it("puts the cursor back in Full name once a contact is saved", async () => {
+    stubApi();
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <ToastProvider>
+            <QuickCaptureAction />
+            <ToastRegion />
+          </ToastProvider>
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+    const user = userEvent.setup();
+
+    await user.click(screen.getByTestId("quick-capture"));
+    const fullName = await screen.findByLabelText("Full name *");
+    await user.type(fullName, "Dana Buyer");
+    await user.type(screen.getByLabelText("Email"), "dana@example.test");
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    expect(await screen.findByText("Dana Buyer saved")).toBeInTheDocument();
+    await waitFor(() => expect(fullName).toHaveValue(""));
+    expect(fullName).toHaveFocus();
+  });
 });
