@@ -159,7 +159,7 @@ func recordLedgerRows(table string, rows []LedgerEntry) (string, []any) {
 		pgx.Identifier{table}.Sanitize()), []any{versions, names, digests}
 }
 
-// LedgerAtHead is every row the ledger holds once Up has run: one per
+// LedgerAtHead lists the rows the ledger holds once Up has run: one per
 // migration, the baseline's, and one per replaced version whose file is gone.
 // The test-database probe reads it, so it expects what settleBaseline writes.
 func (ns Namespace) LedgerAtHead() []LedgerEntry {

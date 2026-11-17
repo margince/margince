@@ -127,7 +127,7 @@ func run(o options) error {
 	return os.WriteFile(filepath.Join(o.outDir, "replaces.txt"), []byte(manifest(o.release, replaced)), 0o600)
 }
 
-// replacedThrough is every core version up to and including through, read
+// replacedThrough lists the core versions up to and including through, read
 // from the history route so each carries the Digest its file has today.
 func replacedThrough(through string) ([]dbmigrate.Migration, error) {
 	core, err := migrations.CoreHistory()

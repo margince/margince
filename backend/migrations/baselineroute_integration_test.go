@@ -219,7 +219,7 @@ func TestTheBaselineRouteBuildsWhatTheHistoryBuilds(t *testing.T) {
 	}
 }
 
-// referenceRowProjection is every row the migrations wrote, one line each and
+// referenceRowProjection lists the rows the migrations wrote, one line each and
 // sorted, without its uuid and timestamptz columns: a run generates those.
 func referenceRowProjection(t *testing.T, conn *pgx.Conn) string {
 	t.Helper()
