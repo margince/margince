@@ -25,30 +25,62 @@ import (
 )
 
 func runDataTasks(ctx context.Context, args []string, stdout, stderr io.Writer) error {
+	return dataTaskCommand{
+		operation: compose.DataTaskOperation, executor: compose.DataTaskExecute, useConfig: compose.UseConfig,
+	}.run(ctx, args, stdout, stderr)
+}
+
+// dataTaskCommand holds the two ways in to the corrections, and how the command
+// binds its configuration to the process. A test replaces them, to prove
+// execute never reaches the operation that queues work for the worker.
+type dataTaskCommand struct {
+	operation func(context.Context, *pgxpool.Pool, string) ([]datatask.Progress, error)
+	executor  func(context.Context, *pgxpool.Pool, int) (compose.DataTaskRun, error)
+	useConfig func(*config.Config)
+}
+
+// dataTaskArgs is one data-tasks command line, checked.
+type dataTaskArgs struct {
+	action     string
+	dsn        *dsnSettings
+	wait       bool
+	maxBatches int
+}
+
+func parseDataTaskArgs(args []string, stderr io.Writer) (dataTaskArgs, error) {
 	if len(args) == 0 {
-		return errors.New("usage: migrate data-tasks <status|estimate|run|execute> [--wait] [--max-batches n] --dsn <dsn>")
+		return dataTaskArgs{}, errors.New("usage: migrate data-tasks <status|estimate|run|execute> [--wait] [--max-batches n] --dsn <dsn>")
 	}
 	action := args[0]
 	if action != "status" && action != "estimate" && action != "run" && action != dataTasksExecute {
-		return fmt.Errorf("unknown data-tasks operation %q", action)
+		return dataTaskArgs{}, fmt.Errorf("unknown data-tasks operation %q", action)
 	}
 	fs := flag.NewFlagSet("data-tasks", flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	dsn, err := addDSNFlags(fs)
 	if err != nil {
-		return err
+		return dataTaskArgs{}, err
 	}
 	wait := fs.Bool("wait", false, "wait for background corrections to finish (run only)")
 	maxBatches := fs.Int("max-batches", 100000, "the most batches execute commits before it reports (execute only)")
 	if err := fs.Parse(args[1:]); err != nil {
-		return config.FlagFault(fs, err)
+		return dataTaskArgs{}, config.FlagFault(fs, err)
 	}
 	if *maxBatches < 1 {
-		return errors.New("--max-batches must be at least 1")
+		return dataTaskArgs{}, errors.New("--max-batches must be at least 1")
 	}
 	if *wait && action != "run" {
-		return errors.New("--wait requires data-tasks run")
+		return dataTaskArgs{}, errors.New("--wait requires data-tasks run")
 	}
+	return dataTaskArgs{action: action, dsn: dsn, wait: *wait, maxBatches: *maxBatches}, nil
+}
+
+func (c dataTaskCommand) run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
+	parsed, err := parseDataTaskArgs(args, stderr)
+	if err != nil {
+		return err
+	}
+	action, dsn := parsed.action, parsed.dsn
 	resolved, err := dsn.resolve(config.Environ())
 	if err != nil {
 		return err
@@ -59,7 +91,8 @@ func runDataTasks(ctx context.Context, args []string, stdout, stderr io.Writer) 
 	}
 	defer pool.Close()
 	// The corrections hash under the keys the root key derives, as the worker's do.
-	compose.UseConfig(dsn.loaded)
+	c.useConfig(dsn.loaded)
+	ctx = compose.ConfigContext(ctx, dsn.loaded)
 	if err := storekit.RefuseForeignSuppressionKey(ctx, pool); err != nil {
 		return fmt.Errorf("migrate: %w", err)
 	}
@@ -69,14 +102,14 @@ func runDataTasks(ctx context.Context, args []string, stdout, stderr io.Writer) 
 			return fmt.Errorf("migrate: open original storage: %w", err)
 		}
 		ctx = originalstore.Bind(ctx, compose.InstallationDB(pool), blob)
-		return executeDataTasks(ctx, pool, *maxBatches, stdout)
+		return c.execute(ctx, pool, parsed.maxBatches, stdout)
 	}
-	progress, err := dataTaskOperation(ctx, pool, action)
+	progress, err := c.operation(ctx, pool, action)
 	if err != nil {
 		return err
 	}
-	if *wait {
-		progress, err = waitForDataTasks(ctx, pool, progress)
+	if parsed.wait {
+		progress, err = c.wait(ctx, pool, progress)
 		if err != nil {
 			return err
 		}
@@ -103,7 +136,7 @@ func dataTasksFinished(progress []datatask.Progress) (bool, error) {
 	return done, nil
 }
 
-func waitForDataTasks(ctx context.Context, pool *pgxpool.Pool, progress []datatask.Progress) ([]datatask.Progress, error) {
+func (c dataTaskCommand) wait(ctx context.Context, pool *pgxpool.Pool, progress []datatask.Progress) ([]datatask.Progress, error) {
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 	for {
@@ -119,7 +152,7 @@ func waitForDataTasks(ctx context.Context, pool *pgxpool.Pool, progress []datata
 			return nil, ctx.Err()
 		case <-ticker.C:
 		}
-		progress, err = dataTaskOperation(ctx, pool, "status")
+		progress, err = c.operation(ctx, pool, "status")
 		if err != nil {
 			return nil, err
 		}
@@ -131,23 +164,16 @@ func waitForDataTasks(ctx context.Context, pool *pgxpool.Pool, progress []datata
 // them for the worker, for a copy whose worker must not start.
 const dataTasksExecute = "execute"
 
-// The two ways in to the corrections, held as values. A test proves execute
-// never reaches the one that queues work for the worker.
-var (
-	dataTaskOperation = compose.DataTaskOperation
-	dataTaskExecutor  = compose.DataTaskExecute
-)
-
 // dataTasksReport is what execute prints: the verdict, then every step.
 type dataTasksReport struct {
 	Verdict compose.DataTaskVerdict         `json:"verdict"`
 	Steps   []crmcontracts.DataTaskProgress `json:"steps"`
 }
 
-// executeDataTasks prints the report. It fails unless every step finished, none
-// left rows in its scope and none left action needed, so a script cannot read these as done.
-func executeDataTasks(ctx context.Context, pool *pgxpool.Pool, maxBatches int, stdout io.Writer) error {
-	run, err := dataTaskExecutor(ctx, pool, maxBatches)
+// execute prints the report. It fails unless every step finished, none left
+// rows in its scope and none left action needed, so a script cannot read these as done.
+func (c dataTaskCommand) execute(ctx context.Context, pool *pgxpool.Pool, maxBatches int, stdout io.Writer) error {
+	run, err := c.executor(ctx, pool, maxBatches)
 	if err != nil {
 		return err
 	}
