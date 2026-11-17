@@ -221,6 +221,7 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
           options={LEAD_TABS}
           value={tab}
           onChange={setTab}
+          keepPlace
           labels={{
             overview: t("tab.overview"),
             deals: t("tab.deals"),

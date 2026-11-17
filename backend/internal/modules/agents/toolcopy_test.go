@@ -121,6 +121,23 @@ func TestDescribeForClientStatesEachTierDistinctly(t *testing.T) {
 	}
 }
 
+// A read tool that asks for the user's yes first must say so. The read scope
+// otherwise carries nothing more, which hid the ask. A read that surfaces AI
+// call diagnostics (get_ai_call) is then called unprompted by a client never
+// told to ask.
+func TestDescribeForClientSurfacesAnAskAReadRequires(t *testing.T) {
+	got := DescribeForClient(mcp.ToolSpec{
+		Name: "get_ai_call", Description: "Read one AI call.",
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, AskUserFirst: true,
+	})
+	if !strings.HasPrefix(got, "Read one AI call.") {
+		t.Errorf("description = %q, want it to open with the written text", got)
+	}
+	if !strings.Contains(got, "the user's yes is needed") {
+		t.Errorf("a read tool that asks first reads %q, want the ask-first sentence surfaced", got)
+	}
+}
+
 // A tool marked ask-first that runs with no human approval tells the client to get
 // the user's yes first. A call a human approves already has that yes.
 func TestDescribeForClientAsksTheUserFirstOnlyWhereNoHumanApproves(t *testing.T) {

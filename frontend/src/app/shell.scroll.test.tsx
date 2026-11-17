@@ -91,4 +91,33 @@ describe("the content column's place", () => {
     await moveTo("#/contacts/p-2");
     expect(column().scrollTop).toBe(0);
   });
+
+  it("keeps the place when a tab move drops a dial of the record", async () => {
+    window.history.replaceState(null, "", "#/contacts/p-1?thread=k");
+    render(
+      <Shell onOpenSearch={ignoreSearch}>
+        <ShowingTheBar />
+      </Shell>,
+    );
+    scrollColumnTo(300);
+
+    await moveTo("#/contacts/p-1/timeline");
+    expect(column().scrollTop).toBe(300);
+  });
+
+  it.each([
+    ["a settings tab", "#/settings/voice", "#/settings/voice/samples"],
+    ["an analytics section", "#/analytics/overview", "#/analytics/reports"],
+  ])("opens %s at the top", async (_name, from, to) => {
+    window.history.replaceState(null, "", from);
+    render(
+      <Shell onOpenSearch={ignoreSearch}>
+        <ShowingTheBar />
+      </Shell>,
+    );
+    scrollColumnTo(300);
+
+    await moveTo(to);
+    expect(column().scrollTop).toBe(0);
+  });
 });
