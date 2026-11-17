@@ -17,7 +17,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -136,7 +135,7 @@ func TestANoBasisRecipientCanBeAskedForConsentToCorrespondence(t *testing.T) {
 
 	h := Handlers{store: e.store.WithConfirmationLane(&recordingStager{}, &recordingVault{}, "https://crm.example.test")}
 	ctx := withContactUpdate(e.ctx)
-	if rec := askConsent(t, ctx, h, e.contact, correspondence); rec.Code != http.StatusCreated {
+	if rec := askConsent(ctx, t, h, e.contact, correspondence); rec.Code != http.StatusCreated {
 		t.Fatalf("asking for consent to correspondence answered %d %s, want 201", rec.Code, rec.Body.String())
 	}
 	var tokenID ids.UUID
@@ -159,7 +158,7 @@ func TestANoBasisRecipientCanBeAskedForConsentToCorrespondence(t *testing.T) {
 		t.Errorf("the link's audit row names %q, want the asking user %q", actor, want)
 	}
 
-	if rec := askConsent(t, ctx, h, e.contact, news); rec.Code != http.StatusUnprocessableEntity {
+	if rec := askConsent(ctx, t, h, e.contact, news); rec.Code != http.StatusUnprocessableEntity {
 		t.Errorf("asking for consent to the newsletter answered %d %s, want 422: the contact asked for nothing",
 			rec.Code, rec.Body.String())
 	}
@@ -216,7 +215,7 @@ func TestTheSeededCatalogLetsANoBasisContactBeAskedForConsent(t *testing.T) {
 
 	store := e.store.WithConfirmationLane(&recordingStager{}, &recordingVault{}, "https://crm.example.test")
 	ctx := withContactUpdate(e.ctx)
-	if rec := askConsent(t, ctx, Handlers{store: store}, e.contact, ids.From[ids.PurposeKind](correspondence)); rec.Code != http.StatusCreated {
+	if rec := askConsent(ctx, t, Handlers{store: store}, e.contact, ids.From[ids.PurposeKind](correspondence)); rec.Code != http.StatusCreated {
 		t.Fatalf("asking for consent answered %d %s, want 201", rec.Code, rec.Body.String())
 	}
 	issued, err := store.IssueConsentLink(ctx, e.contact, ids.From[ids.PurposeKind](correspondence), "", "")
@@ -244,7 +243,7 @@ func TestAMarketingPurposeWithoutDoubleOptInIsNotAskedByMail(t *testing.T) {
 		t.Fatal(err)
 	}
 	h := Handlers{store: e.store.WithConfirmationLane(&recordingStager{}, &recordingVault{}, "https://crm.example.test")}
-	rec := askConsent(t, withContactUpdate(e.ctx), h, e.contact, news)
+	rec := askConsent(withContactUpdate(e.ctx), t, h, e.contact, news)
 	if rec.Code != http.StatusUnprocessableEntity || !strings.Contains(rec.Body.String(), "purpose_id") {
 		t.Errorf("asking about a marketing purpose without double opt-in answered %d %s, want 422 naming purpose_id",
 			rec.Code, rec.Body.String())
@@ -269,7 +268,7 @@ func seedDefaultCatalog(t *testing.T, e *resolveEnv) {
 }
 
 // askConsent drives the double-opt-in door the composer's button posts to.
-func askConsent(t *testing.T, ctx context.Context, h Handlers, contact ids.ContactID, purpose ids.PurposeID) *httptest.ResponseRecorder {
+func askConsent(ctx context.Context, t *testing.T, h Handlers, contact ids.ContactID, purpose ids.PurposeID) *httptest.ResponseRecorder {
 	t.Helper()
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/v1/contacts/x/consent/double-opt-in",

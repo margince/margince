@@ -4,6 +4,7 @@
 package messaging
 
 import (
+	"errors"
 	"fmt"
 	"slices"
 )
@@ -32,7 +33,7 @@ func PurposeClasses() []PurposeClass {
 // named for a rule the pack does not declare.
 func (r Rules) validateRequestFirstFor() error {
 	if len(r.ConsentRequestFirstFor) > 0 && !r.ConsentConfirmationNeedsRequest {
-		return fmt.Errorf("purpose classes needing a request are named, but no consent mail needs one")
+		return errors.New("purpose classes needing a request are named, but no consent mail needs one")
 	}
 	for _, class := range r.ConsentRequestFirstFor {
 		if !slices.Contains(PurposeClasses(), class) {

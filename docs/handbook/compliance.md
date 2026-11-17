@@ -144,9 +144,9 @@ While you write sales mail to a recipient under Vietnamese law, notes above the 
 
 - The mail does not start in Vietnamese.
 - The mail claims to be the best, the first, the leading or the only one, in Vietnamese or in English, and names no proof. Name the proving document with its number and date in the mail.
-- Your company is not set up in Vietnam. A foreign company that does not operate in Vietnam must advertise there through a Vietnamese advertising business. Your company is responsible for this.
+- Your company is not set up under Vietnamese law. A company from outside that does not work there must send sales mail through a Vietnamese sales agent. Your company has to see to this.
 
-Vietnamese law does not ask for sales mail to go out from a server in Vietnam. Where your mail server is your own, ask whoever runs Margince to send sales mail to Vietnam through a mail server located in Vietnam where one is available.
+Vietnamese law does not ask for sales mail to go out from a Vietnamese mail server. If you run your own, ask whoever runs Margince to use a Vietnamese mail server where there is one.
 
 How long business mail is kept follows the legal entity of the colleague it belongs to. That is the colleague who sent it, or whose mailbox it arrived in. Mail that names no colleague follows the owner of the contact or deal it is filed under. A legal entity that follows another law keeps its colleagues' mail under that law, but never for a shorter time than the law chosen here. Mail that belongs to nobody uses the law chosen here. When the colleagues of one mail work under two different laws, the mail is kept for the longer time.
 

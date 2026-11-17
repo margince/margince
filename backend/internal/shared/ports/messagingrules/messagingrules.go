@@ -269,7 +269,7 @@ func requestFirstFor(a, b Rules) []PurposeClass {
 	return out
 }
 
-// unionOf is every word of a, then each word of b that a lacks, in a new slice.
+// unionOf returns the words of a, then the words of b that a lacks, in a new slice.
 func unionOf(a, b []string) []string {
 	out := slices.Clone(a)
 	for _, word := range b {
