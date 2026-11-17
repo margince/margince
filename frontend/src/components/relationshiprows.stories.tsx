@@ -130,7 +130,7 @@ export const StakeholderRoleInVietnamese: Story = {
   },
 };
 
-export const CompanyPeopleWithDates: Story = {
+export const CompanyContactsWithDates: Story = {
   render: () => {
     stubWithSession(
       {
@@ -180,29 +180,31 @@ export const CompanyPeopleWithDates: Story = {
   },
 };
 
+// One rect per text run, so the lines are the distinct tops, not the rects.
+function lineCount(boxes: DOMRectList): number {
+  return new Set([...boxes].map((box) => Math.round(box.top))).size;
+}
+
 // A dated range breaks only between its dates, and the page never scrolls.
 async function datesStayWhole(canvasElement: HTMLElement) {
   await within(canvasElement).findByText("Maximiliane Oberhauser-Lindqvist");
   const dates = [...canvasElement.querySelectorAll(".relationshiprows-date")];
   await expect(dates).toHaveLength(4);
   for (const date of dates) {
-    await waitFor(() => expect(date.getClientRects()).toHaveLength(1));
+    await waitFor(() => expect(lineCount(date.getClientRects())).toBe(1));
   }
   for (const cell of new Set(dates.map((date) => date.closest("td")))) {
     const text = document.createRange();
     if (cell) text.selectNodeContents(cell);
-    const lines = new Set(
-      [...text.getClientRects()].map((box) => Math.round(box.top)),
-    );
-    await expect(lines.size).toBeLessThanOrEqual(2);
+    await expect(lineCount(text.getClientRects())).toBeLessThanOrEqual(2);
   }
   const page = document.documentElement;
   await expect(page.scrollWidth).toBeLessThanOrEqual(page.clientWidth);
 }
 
 // Folded, every cell stays inside the table's box: nothing scrolls sideways.
-export const CompanyPeopleWithDatesPhone: Story = {
-  ...CompanyPeopleWithDates,
+export const CompanyContactsWithDatesPhone: Story = {
+  ...CompanyContactsWithDates,
   tags: ["uat-phone"],
   play: async ({ canvasElement }) => {
     await datesStayWhole(canvasElement);
@@ -221,7 +223,8 @@ export const CompanyPeopleWithDatesPhone: Story = {
   },
 };
 
-export const CompanyPeopleWithDatesPhoneDark: Story = {
-  ...CompanyPeopleWithDatesPhone,
+export const CompanyContactsWithDatesPhoneDark: Story = {
+  ...CompanyContactsWithDatesPhone,
   globals: { theme: "dark" },
+  tags: ["uat-phone"],
 };

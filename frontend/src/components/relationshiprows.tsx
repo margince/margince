@@ -297,9 +297,7 @@ export function RelationshipRows({
         // Each date stays whole; the range breaks only after its dash.
         return (
           <>
-            <span className="relationshiprows-date">
-              {start} {RANGE_DASH}
-            </span>{" "}
+            <span className="relationshiprows-date">{`${start} ${RANGE_DASH}`}</span>{" "}
             <span className="relationshiprows-date">{end}</span>
           </>
         );
