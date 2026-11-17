@@ -53,6 +53,7 @@ const deal = (over: Partial<Deal> = {}): Deal =>
     stalled: false,
     source: "manual",
     version: 1,
+    writable: true,
     created_at: "2026-01-01T00:00:00Z",
     updated_at: "2026-01-01T00:00:00Z",
     ...over,
@@ -116,6 +117,25 @@ export const LoggingRefused: Story = {
       ),
     );
     await expect(email).toBeDisabled();
+  },
+};
+
+/** A closed deal the server marks read-only: Reopen and the write verbs are absent, not refused. */
+export const ReadOnlyDeal: Story = {
+  render: () => actions({ status: "lost", writable: false }),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: "More actions",
+      }),
+    );
+    await screen.findByRole("button", { name: "Add task" });
+    await expect(
+      screen.queryByRole("button", { name: "Reopen" }),
+    ).not.toBeInTheDocument();
+    await expect(
+      screen.queryByRole("button", { name: "Archive deal" }),
+    ).not.toBeInTheDocument();
   },
 };
 
