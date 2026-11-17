@@ -18,16 +18,28 @@ set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 state="$root/.tmp/production"
 stack="$state/stack"
-project="margince-production"
+# One project per checkout, as the settings are: a fixed name would hand one
+# checkout's database volume to another checkout's new credentials.
+project="margince-prod-$(printf %s "$root" | cksum | cut -d' ' -f1)"
 port="${PROD_PORT:-8090}"
 
+# compose runs with MARGINCE_ENV empty, because a value exported in the
+# caller's shell outranks the stack's .env and would start it in dev mode.
 compose() {
-	docker compose --project-directory "$stack" --project-name "$project" "$@"
+	MARGINCE_ENV= docker compose --project-directory "$stack" --project-name "$project" "$@"
 }
 
 # write_env: the stack's settings, made once so a second run keeps its data.
+# A later run keeps the secrets and moves only the port: PROD_PORT when given,
+# else the port saved last time.
 write_env() {
 	if [[ -f "$state/.env" ]]; then
+		if [[ -z "${PROD_PORT:-}" ]]; then
+			port="$(sed -n 's/^MARGINCE_PORT=127\.0\.0\.1://p' "$state/.env")"
+		fi
+		sed -i.bak -e "s|^MARGINCE_PORT=.*|MARGINCE_PORT=127.0.0.1:$port|" \
+			-e "s|^MARGINCE_PUBLIC_BASE_URL=.*|MARGINCE_PUBLIC_BASE_URL=http://localhost:$port|" "$state/.env"
+		rm -f "$state/.env.bak"
 		return
 	fi
 	umask 077
