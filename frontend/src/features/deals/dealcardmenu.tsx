@@ -166,11 +166,7 @@ function DealCloseDate({ deal }: Readonly<{ deal: Deal }>) {
   );
   return (
     <>
-      <Button
-        pending={!write.canEdit}
-        busyLabel={t("common.saving")}
-        onClick={() => editing(true)}
-      >
+      <Button pending={!write.canEdit} onClick={() => editing(true)}>
         {t("deal.card.changeCloseDate")}
       </Button>
       <FieldEditDialog

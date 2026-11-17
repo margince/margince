@@ -623,7 +623,6 @@ describe("changing a deal's close date from its card", () => {
       .execute(undefined);
 
     await waitFor(() => expect(item).toHaveAttribute("aria-busy", "true"));
-    expect(item).toHaveAccessibleDescription("Saving…");
     await user.click(item);
     expect(screen.queryByRole("dialog", { name: "Expected close" })).toBeNull();
   });
