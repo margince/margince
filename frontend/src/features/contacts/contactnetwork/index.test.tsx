@@ -74,6 +74,28 @@ describe("a contact nobody here reaches", () => {
     // worse than no card, and the condition that drew it disagreed.
     expect(routesPanel()).toBeNull();
   });
+
+  it("draws no map of the contact alone and no handoff to start", async () => {
+    renderTab({
+      contact_id: CONTACT,
+      nodes: [anchor],
+      edges: [],
+      routes: [],
+      groups_omitted: [],
+    });
+
+    await screen.findByText(NO_ROUTE);
+    expect(
+      screen.queryByRole("group", { name: en["contact.intro.mapRegion"] }),
+    ).toBeNull();
+    expect(screen.queryByText(en["contact.intro.stepRoute"])).toBeNull();
+    // Recording an introduction made elsewhere is still the way to start.
+    expect(
+      screen.getByRole("button", { name: en["contact.intro.recordAction"] }),
+    ).toBeTruthy();
+    // With nothing to hold, a chapter frames no empty card.
+    expect(document.querySelector(".chapter-card")).toBeNull();
+  });
 });
 
 // A server that predates the candidate list answers with the singular `route`
