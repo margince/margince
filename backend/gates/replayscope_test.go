@@ -26,6 +26,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 
 	"gopkg.in/yaml.v3"
@@ -615,12 +616,17 @@ func forEachMapEntry(t *testing.T, name string, visit func(key string, value ast
 // asks about thirty routes parses the document once.
 // It is not a reason map and carries no marker: the values are the contract's
 // own formats, keyed by schema and field, and nothing here is waived.
-var contractProperties map[string]map[string]string
+var (
+	contractPropertiesMu sync.Mutex
+	contractProperties   map[string]map[string]string
+)
 
 // contractSchemaProperties maps each named schema to its top-level properties
 // and their `format`, which is how a uuid reference is told from a name.
 func contractSchemaProperties(t *testing.T) map[string]map[string]string {
 	t.Helper()
+	contractPropertiesMu.Lock()
+	defer contractPropertiesMu.Unlock()
 	if contractProperties != nil {
 		return contractProperties
 	}
