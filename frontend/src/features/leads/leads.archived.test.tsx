@@ -526,7 +526,7 @@ describe("LeadScreen — an archived lead does not ask for what the server refus
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
-  // The page still holds the live lead in the beat after a closure, so the
+  // The page still holds the live lead in the beat after a closure. The
   // writes' own refresh must not ask for the reads the closed lead refuses.
   it("closing the lead asks for neither the score breakdown nor the lists again", async () => {
     const user = userEvent.setup();

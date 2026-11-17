@@ -158,7 +158,7 @@ export function ListTable<Row>({
   title?: ReactNode;
   /** Plural noun for the count and the empty state — "contacts", "leads". */
   unit: string;
-  /** Singular noun for a count of one — "contact", "lead". Defaults to `unit`. */
+  /** Singular noun for a count of one ("contact", "lead"). Defaults to `unit`. */
   unitOne?: string;
   /**
    * A likelier cause than "there is nothing here", for a caller that knows one.

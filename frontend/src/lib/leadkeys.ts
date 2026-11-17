@@ -107,7 +107,7 @@ export function leadWriteKeys(id: string): QueryKey[] {
  * Marks stale what closing one lead changed, less the two reads the server
  * refuses for an archived lead: its score breakdown and its lists. Their
  * readers still hold the live lead in the beat after the write, so a refresh
- * then would only fail; they stop asking once the closed lead arrives.
+ * then would only fail. They stop asking once the closed lead arrives.
  */
 export function invalidateClosedLead(client: QueryClient, id: string): void {
   const refused = [leadScoreKey(id), recordListsKey("lead", id)];

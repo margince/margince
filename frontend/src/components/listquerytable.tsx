@@ -124,7 +124,7 @@ export function ListTable<Row>({
   rowRoute?: (row: Row) => Route;
   /** Message key for the plural noun in the count and the empty state. */
   unit: MessageKey;
-  /** The noun for a list that holds exactly one row: "1 to 1 of 1 lead". */
+  /** The noun for a list that holds one row: "1 to 1 of 1 lead". */
   unitOne?: MessageKey;
   /**
    * Names the table for the column widths and order it remembers. Defaults to
