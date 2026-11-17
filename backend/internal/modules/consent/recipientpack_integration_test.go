@@ -41,8 +41,7 @@ type packPair struct {
 // registerPackPair registers both packs. The recipient's writes its pages in
 // Vietnamese, has no legitimate-interest basis and sets the Decree 356/2025
 // deadlines; the installation's writes in German and sets none.
-// Registered once per process: the registries refuse a second set for a code,
-// and the package has a fixed number of test codes to share.
+// Subject-rights rules reject duplicate registration, so the pair is wired once.
 var (
 	packPairOnce sync.Once
 	sharedPair   packPair
@@ -56,14 +55,13 @@ func registerPackPair(t *testing.T) packPair {
 
 func registerPackPairOnce(t *testing.T) packPair {
 	t.Helper()
-	p := packPair{recipient: testJurisdiction(t), installation: testJurisdiction(t)}
-	messagingrules.Register(messagingrules.Rules{
-		Jurisdiction: p.recipient, Version: 1,
+	recipient := testMessagingRules(t, messagingrules.Rules{
+		Version:                        1,
 		Disclosures:                    []messaging.Disclosure{{Kind: messaging.ControllerIdentity}},
 		DataProtectionFollowsRecipient: true, DisclosureLanguage: string(mailcopy.Vietnamese),
 		NoLegitimateInterests: true, OptOutAcknowledgement: true,
 	})
-	messagingrules.Register(messagingrules.Rules{Jurisdiction: p.installation, Version: 1})
+	p := packPair{recipient: recipient, installation: testMessagingRules(t, messagingrules.Rules{Version: 1})}
 	subjectrightsrules.Register(subjectrightsrules.Rules{
 		Jurisdiction: p.recipient, Version: 1,
 		Instruments: []messaging.Instrument{{Name: "Test Decree 1/2026"}},

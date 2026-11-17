@@ -43,7 +43,7 @@ func inJurisdiction(
 	t *testing.T, e *channelConsentEnv, code string, ds ...messagingrules.Disclosure,
 ) *Store {
 	t.Helper()
-	messagingrules.Register(messagingrules.Rules{
+	testMessagingRules(t, messagingrules.Rules{
 		Jurisdiction: jurisdiction.Code(code), Version: 1, Disclosures: ds,
 	})
 	livesIn(t, e, code)

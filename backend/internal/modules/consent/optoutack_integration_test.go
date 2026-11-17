@@ -30,9 +30,8 @@ import (
 // stage it on.
 func owingAcknowledgement(t *testing.T, e *channelConsentEnv, owes bool) *recordingStager {
 	t.Helper()
-	code := testJurisdiction(t)
-	messagingrules.Register(messagingrules.Rules{
-		Jurisdiction: code, Version: 1, OptOutAcknowledgement: owes,
+	code := testMessagingRules(t, messagingrules.Rules{
+		Version: 1, OptOutAcknowledgement: owes,
 	})
 	// The receipt follows the stopping subject's country, not the
 	// installation's.
@@ -267,9 +266,8 @@ func TestAReceiptThatCannotBeStagedLeavesTheRefusalsFloor(t *testing.T) {
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 	stager := owingAcknowledgement(t, e, true)
-	code := testJurisdiction(t)
-	messagingrules.Register(messagingrules.Rules{
-		Jurisdiction: code, Version: 1, OptOutAcknowledgement: true, OptOutRecordsKeep: 366 * 24 * time.Hour,
+	code := testMessagingRules(t, messagingrules.Rules{
+		Version: 1, OptOutAcknowledgement: true, OptOutRecordsKeep: 366 * 24 * time.Hour,
 	})
 	if _, err := e.owner.Exec(context.Background(),
 		`UPDATE contact SET address_country = upper($2) WHERE id = $1`, e.contact, string(code)); err != nil {
