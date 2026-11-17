@@ -75,10 +75,10 @@ describe("the contact page on an archived row", () => {
       ...archivedContactRoutes(),
       "GET /contacts/p-1": () =>
         jsonResponse({ ...archivedContact, merged_into_id: "p-2" }),
-      ...recordNamesRoutes({ contact: { "p-2": "Kept Person" } }),
+      ...recordNamesRoutes({ contact: { "p-2": "Kept Contact" } }),
     });
 
-    const link = await screen.findByRole("link", { name: "Kept Person" });
+    const link = await screen.findByRole("link", { name: "Kept Contact" });
     expect(link.getAttribute("href")).toMatch(/#\/contacts\/p-2$/);
     expect(screen.getByText(en["history.field.merged_into_id"])).toBeTruthy();
   });
