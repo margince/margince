@@ -14,11 +14,10 @@ const (
 	// ReasonSubjectRequest is the subject asking us to stop, in their own
 	// words, relayed by whoever took the call.
 	//
-	// Distinct from ReasonRestricted because they are different facts and the
-	// difference decides two things: a statutory restriction is nobody's to
-	// overrule, where a request the subject made can be lifted by the subject;
-	// and a decision row that called one the other misstates a legal fact in a
-	// record the subject can obtain under Art. 15.
+	// Distinct from ReasonRestricted because they are different facts. A
+	// statutory restriction is not the subject's to lift, and a request they made
+	// is. A decision row that called one the other would misstate a legal fact in
+	// a record the subject can obtain under Art. 15.
 	ReasonSubjectRequest = "subject_request"
 	// ReasonHardBounce is an address that does not accept mail.
 	ReasonHardBounce = "hard_bounce"
@@ -71,7 +70,7 @@ const (
 	// negotiation. A deal we created is not their request.
 	ReasonDealNotRequested = "deal_not_requested"
 	// ReasonMarketingConsentRequired is marketing without consent to a
-	// recipient whose country's rules allow no exception in its place.
+	// recipient whose country's rules name no statutory route in its place.
 	ReasonMarketingConsentRequired = "marketing_consent_required"
 	// ReasonMarketingPermissionRequired is marketing without consent or a
 	// supported statutory route under the applicable rules or limited baseline.
@@ -236,15 +235,16 @@ func (d Decision) WouldRefuse(mode Mode) bool {
 	return mode == ModeEnforce
 }
 
-// CanBeOverruled reports whether a contact may lift this refusal by recording
-// why they are writing.
+// CanBeOverruled reports whether a standing, recorded reason may lift this
+// refusal for later messages too. The one-message exception is a different
+// answer (OverrulableForOneMessage).
 //
 // Both axes have to agree. LevelForReason says whose decision it is, and four
 // reasons are the engine's own reading AND absolute — a dead mailbox, a rolling
 // cap, an unresolvable recipient, an unconfirmed opt-in. Each is a fact to
-// correct rather than a decision to respect, and none is corrected by typing a
-// justification: the staging gate refuses an absolute denial whatever a rep
-// wrote. Offering the override there is a control that cannot do what it says.
+// correct rather than a decision to respect. No standing reason lifts an
+// absolute denial, so offering one there is a control that cannot do what it
+// says.
 //
 // Held by: TestOnlyANonAbsoluteMachineReadingCanBeOverruled (absolute_test.go)
 func (d Decision) CanBeOverruled() bool {
@@ -252,6 +252,14 @@ func (d Decision) CanBeOverruled() bool {
 		return false
 	}
 	return LevelForReason(d.ReasonCode) == LevelMachine && !Absolute(d.ReasonCode)
+}
+
+// OverrulableForOneMessage reports whether a human sender may send this one
+// message past the refusal by recording a reason. The preview, the review and
+// the composer all read this answer, so the offer matches what staging and
+// dispatch accept (DecisionSet.ExceptionMayAnswer).
+func (d Decision) OverrulableForOneMessage() bool {
+	return d.Verdict != VerdictAllow && HasRemedy(d.ReasonCode, RemedyException)
 }
 
 // CanBeOverruledByCategory reports whether a standing, per-category override may

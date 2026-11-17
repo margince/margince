@@ -1555,7 +1555,6 @@ verdict
 version
 very
 video
-vietnam
 view
 visibility
 visible

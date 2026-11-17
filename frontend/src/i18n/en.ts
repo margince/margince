@@ -8046,6 +8046,7 @@ export const en = {
   "compose.why.contract": "Their contract",
   "compose.why.account": "Their customer relationship",
   "compose.why.marketing": "Marketing",
+  "sendPermission.stopWithReason": "Sending needs your reason",
   "sendPermission.refused": "Message cannot be sent",
   "sendPermission.sayWhy": "Record reason for contact",
   "sendPermission.unproven": "No recorded reason to contact this recipient",
@@ -8100,21 +8101,21 @@ export const en = {
   "sendPermission.unanswered":
     "The send check did not complete. Sending runs the check again.",
   "sendPermission.reason.objected":
-    "The recipient objected to marketing, so no marketing goes to them. A reply or a message they asked for can still go.",
+    "The recipient objected to marketing. A reply or a message they asked for is not marketing.",
   "sendPermission.reason.withdrawn":
-    "The recipient withdrew consent for this kind of message, so it cannot go to them.",
+    "The recipient withdrew consent for this kind of message.",
   "sendPermission.reason.restricted":
-    "The recipient’s data is under a processing restriction. Only security, privacy and opt-out notices can still go to them.",
+    "The recipient’s data is under a processing restriction.",
   "sendPermission.reason.askedUsToStop":
-    "The recipient asked not to be contacted. Only security, privacy and opt-out notices can still go to them.",
+    "The recipient asked not to be contacted.",
   "sendPermission.reason.bounced":
     "This address does not accept mail. Correct the address; an override does not apply.",
   "sendPermission.reason.optedOutAfterRequest":
     "The recipient opted out of marketing after asking for this quote. Confirm with them that they still want it, then record their new request.",
   "sendPermission.reason.permissionRequired":
-    "This marketing message has no recorded permission under the applicable rules. A staff exception cannot replace consent or the required evidence.",
+    "This marketing message has no recorded permission under the applicable rules. Record consent or the required evidence.",
   "sendPermission.reason.consentRequired":
-    "Marketing to a recipient in this country needs their prior consent. No exception can replace it.",
+    "Marketing to a recipient in this country needs their prior consent.",
   "sendPermission.reason.dealNotRequested":
     "A deal alone does not show the recipient asked for this negotiation. Their request, for example on a call or in a meeting, needs to be on record.",
   "sendPermission.reason.tooMany":

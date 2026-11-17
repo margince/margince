@@ -95,9 +95,8 @@ export function decidingRecipient(
   const deciding = decidingRefusal(refusals);
   const recipient = deciding && refusing[refusals.indexOf(deciding)];
   if (!recipient) return { state: "allowed" };
-  // `can_be_overruled` and not `decided_by`, because the two disagree: a dead
-  // mailbox and a rolling frequency cap are the engine's own reading, and
-  // absolute. Absent means the server did not say, which is not a yes.
+  // `can_be_overruled` and not `decided_by`: a recipient's own stop is theirs,
+  // yet one message may pass it with a reason. Absent is not a yes.
   return {
     state: recipient.can_be_overruled ? "unproven" : "refused",
     recipient,
@@ -132,6 +131,21 @@ export function sendStatus({
 }: Answer): SendStatus {
   if (refusal) return refusedStatus(refusal.refusals);
   return previewStatus({ preview, asking, unanswered });
+}
+
+/**
+ * A stop a recorded reason can pass reads as a warning; only one nothing lifts
+ * reads as a danger, under "Message cannot be sent".
+ */
+function calloutLook(kind: RefusalKind, overrulable: boolean) {
+  const hardStop = kind === "restricted" && !overrulable;
+  const title: MessageKey =
+    kind === "restricted" && !hardStop
+      ? "sendPermission.stopWithReason"
+      : TITLE[kind];
+  return hardStop
+    ? { tone: "danger" as const, icon: ShieldAlert, title }
+    : { tone: "warning" as const, icon: ShieldQuestion, title };
 }
 
 const TITLE: Record<RefusalKind, MessageKey> = {
@@ -232,15 +246,19 @@ function PermissionNotice({
       ) : undefined))
     : undefined;
   const surface = { recordable: Boolean(control), picksReason };
+  const look = calloutLook(
+    status.kind,
+    status.deciding?.canBeOverruled === true,
+  );
   return (
     <Callout
-      tone={status.kind === "restricted" ? "danger" : "warning"}
+      tone={look.tone}
       kind={refusal ? "outcome" : "standing"}
       // `status` while the rep writes, so one who does not hear the answer
       // does not meet it at the Send button. A refused Send is an alert.
       live={refusal ? "alert" : "status"}
-      icon={status.kind === "restricted" ? ShieldAlert : ShieldQuestion}
-      title={t(TITLE[status.kind])}
+      icon={look.icon}
+      title={t(look.title)}
       actions={control ?? refusal?.remedies}
     >
       <RefusalDetail

@@ -49061,6 +49061,13 @@ type DirectCommunicationSendRequest struct {
 	// on a contract clause".
 	ReasonCode DirectCommunicationSendRequestReasonCode `json:"reason_code"`
 
+	// ShownReasons The refusal reason codes the director was shown, from the review's `refusals`. When the
+	// review's refusals changed since then, the decision is refused with `instruction_stale`
+	// and the director opens the review again. Without it, a decision cannot pass a refusal
+	// the subject made themselves (an objection, a withdrawal, a restriction or a request to
+	// stop), and neither can an agent's.
+	ShownReasons *[]string `json:"shown_reasons,omitempty"`
+
 	// WarningVersion The compliance text they were shown. Recorded because a record naming no version cannot
 	// say what they were told, and the text changes.
 	WarningVersion string `json:"warning_version"`
@@ -49603,9 +49610,21 @@ type EmailDraft struct {
 	AiGenerated *bool  `json:"ai_generated,omitempty"`
 	Body        string `json:"body"`
 
+	// CommunicationContext What the drafting instruction says this message is, for the composer to send
+	// with it. `requested_followup` when the instruction asks to move an appointment,
+	// in English, German or Vietnamese. Absent when the instruction says nothing the
+	// send check can use, which leaves the reason to the thread or the sender. The
+	// send check still needs its own evidence, here an agreed appointment with the
+	// recipient.
+	CommunicationContext *CommunicationContext `json:"communication_context,omitempty"`
+
 	// DraftRef Opaque reference identifying this served voice draft for learning feedback (rejectVoiceDraft); null when no voice profile styled it.
-	DraftRef            *string             `json:"draft_ref,omitempty"`
-	InReplyToActivityId *openapi_types.UUID `json:"in_reply_to_activity_id,omitempty"`
+	DraftRef *string `json:"draft_ref,omitempty"`
+
+	// Evidence The record the drafted reason rests on: the meeting itself, when the draft was
+	// written from it. Absent otherwise.
+	Evidence            *CommunicationEvidence `json:"evidence,omitempty"`
+	InReplyToActivityId *openapi_types.UUID    `json:"in_reply_to_activity_id,omitempty"`
 
 	// Language The language this draft is written in: the `language` the request named, else the one the server resolved from the correspondence. The model draft and the deterministic fallback report it alike. A client shows it as the composer's current choice and names it again on a rewrite that must keep it.
 	Language *EmailDraftLanguage    `json:"language,omitempty"`
@@ -65077,17 +65096,13 @@ type SendAuthorizationPreviewRecipient struct {
 	// Basis The lawful ground an allow would rest on.
 	Basis *string `json:"basis,omitempty"`
 
-	// CanBeOverruled Whether a contact may lift this refusal by recording why they are writing.
-	//
-	// It needs BOTH halves of a question the engine keeps on two axes, which is why it
-	// is answered here rather than derived. `decided_by` says whose decision it is, and
-	// an absolute reason says no rollout mode softens it — and the two disagree: a hard
-	// bounce, a rolling frequency cap, an unresolvable recipient and an unconfirmed
-	// opt-in are all the engine's own reading (`machine`) AND absolute. A surface that
-	// offered an override on those would render a button that cannot achieve what it
-	// promises, and the rep would type a justification the staging gate then ignores.
-	// A recorded reason lifts one category, so a refusal that resolved to no single
-	// category, such as `unknown_purpose`, answers false.
+	// CanBeOverruled Whether the sender may send this one message past the refusal by recording a
+	// reason. True for every policy refusal, the subject's own stops included: the
+	// refusal and the stop stay on the record, and the reason is kept with the message.
+	// False for a hard bounce, because no decision makes a dead address accept mail, and
+	// for a recipient that resolves to nobody or to two contacts, whose stops were never
+	// read. The caller still needs the `communication_exception` grant, and the refused
+	// send's review offers `direct_send` only to a caller who holds it.
 	CanBeOverruled *bool `json:"can_be_overruled,omitempty"`
 
 	// ConsentPurposeId For a recipient marked `lawful_basis_missing`: the purpose a consent request would ask
@@ -65101,7 +65116,8 @@ type SendAuthorizationPreviewRecipient struct {
 	// DecidedBy Whose decision this answer is, which is what says whether anybody may overrule
 	// it. `machine` is the engine reading an incomplete record and a rep who knows
 	// better may say so. `subject` is the contact's own act — an objection or a
-	// withdrawal — and nobody in the installation lifts it, admin included.
+	// withdrawal. Nobody lifts it for good, but a sender may still send one message
+	// past it with a recorded reason (`can_be_overruled`).
 	//
 	// It is sent rather than derived because the rule lives in Go
 	// (`commsauthz.LevelForReason`), and a surface that mapped reason codes to
@@ -65168,7 +65184,8 @@ type SendAuthorizationPreviewRecipient struct {
 // SendAuthorizationPreviewRecipientDecidedBy Whose decision this answer is, which is what says whether anybody may overrule
 // it. `machine` is the engine reading an incomplete record and a rep who knows
 // better may say so. `subject` is the contact's own act — an objection or a
-// withdrawal — and nobody in the installation lifts it, admin included.
+// withdrawal. Nobody lifts it for good, but a sender may still send one message
+// past it with a recorded reason (`can_be_overruled`).
 //
 // It is sent rather than derived because the rule lives in Go
 // (`commsauthz.LevelForReason`), and a surface that mapped reason codes to

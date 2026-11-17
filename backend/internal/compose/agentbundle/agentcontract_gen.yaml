@@ -41338,6 +41338,22 @@ components:
         voice_profile_version: {type: [integer, 'null'], readOnly: true, minimum: 1, description: 'The Voice DNA PROFILE version (not a model version) that styled this draft — the "built from your corpus · vN" provenance; null when no ready voice profile shaped it.'}
         draft_ref: {type: [string, 'null'], readOnly: true, description: 'Opaque reference identifying this served voice draft for learning feedback (rejectVoiceDraft); null when no voice profile styled it.'}
         voice_degraded: {type: boolean, readOnly: true, description: 'True when the sender''s voice could not even be looked up, so this draft may be missing a voice its sender built. A client should say so: the sender cannot detect a missing voice by reading the text. Absent reads as false.'}
+        communication_context:
+          allOf: [{$ref: '#/components/schemas/CommunicationContext'}]
+          readOnly: true
+          description: |-
+            What the drafting instruction says this message is, for the composer to send
+            with it. `requested_followup` when the instruction asks to move an appointment,
+            in English, German or Vietnamese. Absent when the instruction says nothing the
+            send check can use, which leaves the reason to the thread or the sender. The
+            send check still needs its own evidence, here an agreed appointment with the
+            recipient.
+        evidence:
+          allOf: [{$ref: '#/components/schemas/CommunicationEvidence'}]
+          readOnly: true
+          description: |-
+            The record the drafted reason rests on: the meeting itself, when the draft was
+            written from it. Absent otherwise.
         language:
           type: string
           enum: [en, de, vi]
@@ -42113,7 +42129,13 @@ components:
         can_be_overruled:
           type: boolean
           description: |-
-            Whether a contact may lift this refusal by recording why they are writing.
+            Whether the sender may send this one message past the refusal by recording a
+            reason. True for every policy refusal, the subject's own stops included: the
+            refusal and the stop stay on the record, and the reason is kept with the message.
+            False for a hard bounce, because no decision makes a dead address accept mail, and
+            for a recipient that resolves to nobody or to two contacts, whose stops were never
+            read. The caller still needs the `communication_exception` grant, and the refused
+            send's review offers `direct_send` only to a caller who holds it.
         decided_by:
           type: string
           enum: [machine, user, admin, subject]
@@ -42121,7 +42143,8 @@ components:
             Whose decision this answer is, which is what says whether anybody may overrule
             it. `machine` is the engine reading an incomplete record and a rep who knows
             better may say so. `subject` is the contact's own act — an objection or a
-            withdrawal — and nobody in the installation lifts it, admin included.
+            withdrawal. Nobody lifts it for good, but a sender may still send one message
+            past it with a recorded reason (`can_be_overruled`).
     SendCompanyEmailRequest:
       type: object
       required: [subject, body, to, links]
@@ -51941,6 +51964,16 @@ components:
           description: |-
             The tick. Refused when false — the acknowledgement is the act, and an instruction written
             without one would record a decision nobody made.
+        shown_reasons:
+          type: array
+          maxItems: 100
+          items: {type: string, maxLength: 100}
+          description: |-
+            The refusal reason codes the director was shown, from the review's `refusals`. When the
+            review's refusals changed since then, the decision is refused with `instruction_stale`
+            and the director opens the review again. Without it, a decision cannot pass a refusal
+            the subject made themselves (an objection, a withdrawal, a restriction or a request to
+            stop), and neither can an agent's.
     ConfirmSubmission:
       type: object
       description: |-

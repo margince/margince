@@ -5,6 +5,7 @@ package consent
 
 import (
 	"context"
+	"fmt"
 	"slices"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -62,4 +63,46 @@ func refuseDirection(ctx context.Context, refusals []RefusedRecipient) error {
 func undirectable(refusal RefusedRecipient) bool {
 	return !commsauthz.HasRemedy(refusal.ReasonCode, commsauthz.RemedyException) &&
 		!commsauthz.HasRemedy(refusal.ReasonCode, commsauthz.RemedyAdminException)
+}
+
+// mayDirect is DirectSend's whole eligibility test: a refusal the caller may
+// direct past (directableBy), as the caller read it (refusalsAsShown).
+func mayDirect(ctx context.Context, shown []string, refusals []RefusedRecipient) error {
+	if !directableBy(ctx, refusals) {
+		return refuseDirection(ctx, refusals)
+	}
+	return refusalsAsShown(ctx, shown, refusals)
+}
+
+// refusalsAsShown holds a decision to the refusals its director read. A resend
+// can rewrite the review's refusals while it waits, so a list that no longer
+// matches is stale. Only a user who named what they read passes a subject's own
+// stop. An agent never does.
+func refusalsAsShown(ctx context.Context, shown []string, refusals []RefusedRecipient) error {
+	if shown != nil {
+		now := make([]string, 0, len(refusals))
+		for _, r := range refusals {
+			now = append(now, r.ReasonCode)
+		}
+		if !sameReasons(shown, now) {
+			return &InstructionStaleError{Why: "the refusals changed since you read them; open the review again"}
+		}
+	}
+	if shown != nil && actingAgent(ctx) == nil {
+		return nil
+	}
+	for _, r := range refusals {
+		if commsauthz.LevelForReason(r.ReasonCode) == commsauthz.LevelSubject {
+			return fmt.Errorf("a user who read the refusals decides past the recipient's own stop: %w",
+				apperrors.ErrPermissionDenied)
+		}
+	}
+	return nil
+}
+
+func sameReasons(a, b []string) bool {
+	a, b = slices.Clone(a), slices.Clone(b)
+	slices.Sort(a)
+	slices.Sort(b)
+	return slices.Equal(slices.Compact(a), slices.Compact(b))
 }

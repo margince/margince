@@ -199,22 +199,19 @@ Every role that sends mail holds the grant: `rep`, `manager`, `management` and `
 alone does not say which refusals a seat may send past. Each refusal reason declares what can
 resolve it in `commsauthz.RemediesFor`.
 
-- A reason that lists the plain exception can be sent past by any holder of the grant. Missing
-  evidence is one such reason. It does not replace a required marketing basis.
-- A hard bounce, an opt-in not yet confirmed or an unknown recipient needs a fix. A rep exception cannot answer them.
-- An unknown purpose or a claim that conflicts with the record needs a corrected request.
-- A contact's own stop lists nothing, so nobody sends past it, an admin included. That covers an
-  objection, a withdrawal, a limit on processing and a request to stop. It also covers a quote that
-  rests on a request alone when the contact opted out of marketing after that request
-  (`opted_out_after_request`). A request recorded after the opt-out carries the quote again.
-- Some packs list nothing either. A pack that sets `ConsentOnly` (Vietnam does)
-  turns marketing without consent into `marketing_consent_required`. No exception and no standing
-  override answers it. Nobody sends past a pack's limit on advertising mail
-  (`frequency_cap_reached`); it clears with time.
+- Every policy refusal lists the plain exception, so any holder of the grant can send one message
+  past it with a recorded reason. That includes a contact's own stop (an objection, a withdrawal, a
+  limit on processing, a request to stop), a missing marketing basis, `marketing_consent_required`
+  and `frequency_cap_reached`. The stop, the consent rows and the engine's verdict stay as they were.
+- A hard bounce and a recipient that resolves to no single contact list nothing. No decision makes
+  a dead address accept mail, and an unresolved recipient was never checked for its stops.
+- A decision past a contact's own stop needs the reasons the user deciding was shown (`shown_reasons`).
+  An agent cannot take it, and neither can a scheduled run take any decision.
 
 `Review.DirectableBy` is the check both `DirectSend` and a refusal's actions ask.
-Staging and the transmit check ask `DecisionSet.ExceptionMayAnswer` again.
-A new stop leaves the direction not used. A new grant lets the held message go
+Staging and the transmit check ask `DecisionSet.ExceptionMayAnswer` and
+`instructionStillAnswers` again. A refusal the review did not show, or a stop or withdrawal
+recorded after the decision, leaves the direction not used. A new grant lets the held message go
 on that basis and records no exception instruction.
 
 A contact can be written to about a thread when three things hold:

@@ -7,6 +7,7 @@ import type { components } from "../../api/schema";
 import type { ProjectScope } from "../../design-system/projectpicker";
 import type { useT } from "../../i18n";
 import type { Locale } from "../../i18n/locale";
+import type { CommunicationContext } from "../../lib/compose-context";
 import { throwProblem } from "../../lib/problem";
 import type { RewriteVerb } from "../../lib/rewrites";
 import { stripEveryKeyTag, withSubjectTag } from "../projects/projectrecord";
@@ -64,6 +65,8 @@ export type DraftResult =
             | "voice_profile_version"
             | "voice_degraded"
             | "language"
+            | "communication_context"
+            | "evidence"
           >
         >;
       // Account path only: a reply explains itself by the message it answers.
@@ -118,9 +121,18 @@ export function fillFromDraft(
     setProvenance: (next: DraftProvenance) => void;
     setReasoning: (next: DraftReason[]) => void;
     setScope: (next: ProjectScope | undefined) => void;
+    // What the instruction says the message is. It fills an empty reason and
+    // never replaces one the sender picked.
+    context: CommunicationContext | "";
+    setContext: (next: CommunicationContext | "") => void;
+    setMeetingEvidence: (next: string | undefined) => void;
   }>,
 ): boolean {
   const drafted = result.draft;
+  if (drafted.communication_context && form.context === "") {
+    form.setContext(drafted.communication_context);
+    form.setMeetingEvidence(drafted.evidence?.activity_id ?? undefined);
+  }
   // A subject holding only the project tag has no words of the rep's yet, so
   // the drafted subject fills in behind the tag.
   const written = stripEveryKeyTag(form.subject).trim();

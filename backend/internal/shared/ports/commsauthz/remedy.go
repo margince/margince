@@ -24,39 +24,33 @@ const (
 // means nothing can. Every Reason constant has an entry, written out even when
 // empty. A reason added without one fails TestEveryReasonDeclaresItsRemedy
 // instead of becoming a silent dead end.
+//
+// Every policy refusal takes the one-message exception. A human sender may
+// always send past the engine with a recorded reason. The refusal and any stop
+// stay on the record. Two refusals are not policy answers. No decision makes a
+// dead address accept mail. A recipient that resolves to nobody, or to two
+// contacts, was never checked for the stops a reviewer would weigh.
 var remedies = map[string][]Remedy{
 	ReasonNoEvidence:                     {RemedyAnswer, RemedyFact, RemedyException},
 	ReasonDealNotRequested:               {RemedyAnswer, RemedyFact, RemedyException},
 	ReasonLegacyTransactionalUnevidenced: {RemedyAnswer, RemedyFact, RemedyException},
-	// Absolute for rollout modes (absoluteDenials), yet a sender's answer can
-	// correct the request that caused it. The two are different axes.
-	ReasonUnknownPurpose:             {RemedyAnswer},
-	ReasonClaimContradictsResolution: {RemedyAnswer},
-	// No answer or fact supplies marketing consent.
-	ReasonNoMarketingConsent: {RemedyException},
-	// A user who did not confirm the warning may still direct the send.
-	ReasonLawfulBasisUnconfirmed: {RemedyException},
+	ReasonUnknownPurpose:                 {RemedyAnswer, RemedyException},
+	ReasonClaimContradictsResolution:     {RemedyAnswer, RemedyException},
+	ReasonNoMarketingConsent:             {RemedyException},
+	ReasonLawfulBasisUnconfirmed:         {RemedyException},
 
-	// The subject's own stop: nobody sends past it, an admin included. A stop
-	// recorded by mistake is corrected on the record, which lifts the refusal.
-	ReasonObjection:        {},
-	ReasonRestricted:       {},
-	ReasonSubjectRequest:   {},
-	ReasonConsentWithdrawn: {},
-	// A request recorded after the objection lifts it, which is the rep
-	// confirming with the contact, not anybody sending past it.
-	ReasonOptedOutAfterRequest: {},
-	// Prior consent is the only route where the recipient's country says so
-	// (messaging.Rules.ConsentOnly), and the advertising ceiling of such a
-	// country clears with time. Nobody sends past either.
-	ReasonMarketingConsentRequired:    {},
-	ReasonMarketingPermissionRequired: {},
-	ReasonFrequencyCapReached:         {},
+	ReasonObjection:                   {RemedyException},
+	ReasonRestricted:                  {RemedyException},
+	ReasonSubjectRequest:              {RemedyException},
+	ReasonConsentWithdrawn:            {RemedyException},
+	ReasonOptedOutAfterRequest:        {RemedyException},
+	ReasonMarketingConsentRequired:    {RemedyException},
+	ReasonMarketingPermissionRequired: {RemedyException},
+	ReasonFrequencyCapReached:         {RemedyException},
+	ReasonUnconfirmedDOI:              {RemedyException},
 
-	// Correct the address, confirmation or subject before checking a new send.
-	ReasonHardBounce:     {},
-	ReasonUnconfirmedDOI: {},
-	ReasonNoSubject:      {},
+	ReasonHardBounce: {},
+	ReasonNoSubject:  {},
 
 	// Allows, not refusals.
 	ReasonAllowed:           {},
@@ -75,10 +69,10 @@ func HasRemedy(reason string, remedy Remedy) bool {
 }
 
 // ExceptionMayAnswer reports whether a recorded one-message exception may stand
-// over every refusal in this set. Staging and dispatch both ask it, so a stop
-// or an admin-only refusal recorded after the exception was given still stops
-// the message. givenByAdmin is the exception's own record of who gave it, never
-// the authority of whoever is sending now.
+// over every refusal in this set. A dead address found after it was given still
+// stops the message. A stop recorded after the decision is the consent
+// module's question (instructionStillAnswers). givenByAdmin is the exception's
+// own record of who gave it, never the authority of whoever is sending now.
 func (s DecisionSet) ExceptionMayAnswer(givenByAdmin bool) bool {
 	if len(s.Decisions) == 0 {
 		return false

@@ -83,13 +83,18 @@ func TestARefusalOffersOnlyWhatThisCallerCanDo(t *testing.T) {
 			review: held, want: []string{"direct_send"},
 		},
 		{
-			// No grant reaches a contact's own stop, an admin's included.
+			// A grant holder may send one message past a contact's own stop.
 			name: "a rep holding the grant, refused for an objection", actor: holdsTheGrant("rep"),
-			review: objected,
+			review: objected, want: []string{"direct_send"},
 		},
 		{
 			name: "an admin, refused for an objection", actor: holdsTheGrant("admin"),
-			review: objected,
+			review: objected, want: []string{"direct_send"},
+		},
+		{
+			// A bounce is a fact about the address, whoever holds the grant.
+			name: "a grant holder refused for a dead address", actor: holdsTheGrant("admin"),
+			review: bounced,
 		},
 		{
 			// Holding the grant does not conjure a message to send. A refusal
