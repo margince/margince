@@ -7323,9 +7323,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "create.region": "Bundesland oder Region",
   "create.postalCode": "Postleitzahl",
   "create.country": "Ländercode (ISO 3166)",
-  "lead.fillFromContact": "Aus einem Kontakt übernehmen",
-  "lead.fillFromContactSearch": "Kontakte nach Name oder E-Mail suchen",
-  "lead.create.fromContact": "Aus diesem Kontakt übernommen.",
   "create.companyName": "Unternehmen",
   "create.companyPicked":
     "Ordnet den Kontakt diesem bestehenden Unternehmen zu.",

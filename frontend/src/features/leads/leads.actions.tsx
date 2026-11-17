@@ -13,7 +13,6 @@ import { useUrlParams } from "../../lib/urlstate";
 import { RecordEmailVerb } from "../records/recordemail";
 import { ShareAction } from "../records/share";
 import { ReopenAction, terminalSentence } from "./leadband";
-import { LeadFillFromContact } from "./leadfillfromcontact";
 import { leadIdentityName } from "./leadname";
 import { promoteEligible } from "./leadpresentation";
 import type { Lead, LeadWriter } from "./leads";
@@ -65,7 +64,7 @@ export function LeadActions({
 }: Readonly<{
   lead: Lead;
   id: string;
-  // Fill from a contact saves through the page's one lead write.
+  // The closure sentence reads who may reopen the lead.
   writer: LeadWriter;
   onQualify: () => void;
   onDisqualify: () => void;
@@ -237,7 +236,6 @@ export function LeadActions({
             the reopen's. Neither is on a live lead. */}
         {lead.promoted_contact_id && <DemoteAction id={lead.id} />}
         <ReopenAction lead={lead} />
-        <LeadFillFromContact writer={writer} reasonId={refusedReasonId} />
         <ShareAction
           recordType="lead"
           recordId={lead.id}

@@ -57,7 +57,6 @@ import {
   useRefusalOf,
   useWithheldLeadDials,
 } from "./leads.companydials";
-import { leadIdentityFields } from "./leads.contactoffers";
 import "./leads.css";
 import { useViewerZone } from "../../lib/viewerzone";
 import { leadPartnerCreateFields, useLeadPartnerOptions } from "./leadpartner";
@@ -287,7 +286,13 @@ function LeadsWorkbench({
                 : { screen: "leads", id }
             }
             fields={[
-              ...leadIdentityFields,
+              // Typed, never offered from the contacts: someone is either a
+              // lead or a contact, and the server refuses a contact's address.
+              { key: "full_name", label: "create.fullName", required: true },
+              { key: "email", label: "create.email", type: "email" },
+              { key: "linkedin_url", label: "create.linkedinUrl" },
+              { key: "title", label: "create.contactTitle" },
+              { key: "company_name", label: "create.companyName" },
               {
                 key: "industry",
                 label: "create.industry",

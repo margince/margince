@@ -7152,9 +7152,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "create.region": "Tỉnh hoặc vùng",
   "create.postalCode": "Mã bưu chính",
   "create.country": "Mã quốc gia (ISO 3166)",
-  "lead.fillFromContact": "Điền từ liên hệ",
-  "lead.fillFromContactSearch": "Tìm liên hệ theo tên hoặc email",
-  "lead.create.fromContact": "Đã điền từ liên hệ này.",
   "create.companyName": "Công ty",
   "create.companyPicked": "Thêm liên hệ vào công ty có sẵn này.",
   "create.companyNew":
