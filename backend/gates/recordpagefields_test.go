@@ -12,7 +12,7 @@ package gates
 // schema whose `field` enum is its vocabulary. A page renders a kind when one of
 // its sources types a value with that schema. It renders a key when a literal
 // sits in a structure typed by the kind's key. That is a list or record whose
-// type names the key, or the `field` prop of a component whose props declare it.
+// type names the key, or the `field` of a component or hook whose props declare it.
 // A typed literal outside the vocabulary fails. So does a kind no page renders.
 // A census with no VAT ID or no fact key fails too: the scan has stopped
 // matching the pages.
@@ -133,6 +133,9 @@ var (
 	pageComponentDecl = regexp.MustCompile(`function (\w+)\(([^)]*)\)`)
 	pageConstDecl     = regexp.MustCompile(`const (\w+)(?::([^=]+))?\s*=\s*([\[{])`)
 	pageQuotedKey     = regexp.MustCompile(`"([a-z][a-z0-9_]*)"`)
+	pageTypeAlias     = regexp.MustCompile(`(?s)type (\w+)\s*=\s*(.*?);`)
+	pageFieldProp     = regexp.MustCompile(`\bfield="([a-z][a-z0-9_]*)"`)
+	pageFieldArg      = regexp.MustCompile(`\bfield:\s*"([a-z][a-z0-9_]*)"`)
 )
 
 // recordPageCensus is what the page sources render of each sidecar schema.
@@ -207,7 +210,8 @@ func pageKeyAliases(src string, vocab map[string][]string) map[string]string {
 	return keys
 }
 
-// keyedComponents names the components whose props declare `field` as a key type.
+// keyedComponents names the components and hooks whose props declare `field`
+// as a key type, directly or through an alias built from such props (a Pick).
 func pageKeyedComponents(src string, keyTypes map[string]string) map[string]string {
 	props := map[string]string{}
 	for _, m := range pagePropsDecl.FindAllStringSubmatch(src, -1) {
@@ -217,6 +221,15 @@ func pageKeyedComponents(src string, keyTypes map[string]string) map[string]stri
 			}
 		}
 	}
+	derived := map[string]string{}
+	for _, m := range pageTypeAlias.FindAllStringSubmatch(src, -1) {
+		for name, schema := range props {
+			if m[1] != name && regexp.MustCompile(`\b`+name+`\b`).MatchString(m[2]) {
+				derived[m[1]] = schema
+			}
+		}
+	}
+	maps.Copy(props, derived)
 	out := map[string]string{}
 	for _, m := range pageComponentDecl.FindAllStringSubmatch(src, -1) {
 		for name, schema := range props {
@@ -257,7 +270,8 @@ func pageTypedLists(src string, keyTypes map[string]string) []pageTypedKey {
 	return out
 }
 
-// componentFieldLiterals reads `field="…"` on the components keyed by a schema.
+// componentFieldLiterals reads `field="…"` on the components keyed by a schema,
+// and `field: "…"` in the argument of a call to a hook keyed by one.
 func pageComponentFields(src string, components map[string]string) []pageTypedKey {
 	var out []pageTypedKey
 	for name, schema := range components {
@@ -266,7 +280,16 @@ func pageComponentFields(src string, components map[string]string) []pageTypedKe
 			if next := strings.IndexByte(tag, '<'); next >= 0 {
 				tag = tag[:next]
 			}
-			if m := regexp.MustCompile(`\bfield="([a-z][a-z0-9_]*)"`).FindStringSubmatch(tag); m != nil {
+			if m := pageFieldProp.FindStringSubmatch(tag); m != nil {
+				out = append(out, pageTypedKey{schema, m[1]})
+			}
+		}
+		for _, at := range regexp.MustCompile(`\b`+name+`\(`).FindAllStringIndex(src, -1) {
+			end := pageClosingBracket(src, at[1]-1)
+			if end < 0 {
+				continue
+			}
+			if m := pageFieldArg.FindStringSubmatch(src[at[1]:end]); m != nil {
 				out = append(out, pageTypedKey{schema, m[1]})
 			}
 		}
