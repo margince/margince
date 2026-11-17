@@ -8074,6 +8074,8 @@ export const en = {
   "lawfulBasis.askFailed": "The consent request was not sent. Try again.",
   "lawfulBasis.asked":
     "Consent request sent to {address}. Your message was not sent.",
+  "lawfulBasis.askPartial":
+    "Consent request sent to {asked}. It was not sent to {failed}. Try again to ask only them.",
   "lawfulBasis.failed": "Your confirmation was not recorded. Try again.",
   "privacynotice.purposeLine": "{purpose}: {basis}",
   "privacynotice.basisOn.consent": "your consent of {date}",

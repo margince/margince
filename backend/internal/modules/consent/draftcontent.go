@@ -83,7 +83,7 @@ func (s *Store) CheckAdvertisingDraft(ctx context.Context, recipients []string, 
 				continue
 			}
 			packFindings := draftFindings(contentRules{
-				language: rules.DisclosureLanguage, claims: rules.ClaimsNeedProof, notClaims: rules.NotClaims,
+				language: rules.DisclosureLanguage, claims: rules.ClaimsNeedProof,
 			}, subject, body)
 			if rules.ForeignAdvertiserNeedsLocalAgency && sender != code {
 				packFindings = append(packFindings, foreignAdvertiser(code))
@@ -124,8 +124,8 @@ func foreignAdvertiser(country jurisdiction.Code) DraftFinding {
 
 // contentRules are the fields of one pack's rules a draft is checked against.
 type contentRules struct {
-	language          string
-	claims, notClaims []string
+	language string
+	claims   []string
 }
 
 // draftFindings checks one draft against one pack's content rules.
@@ -133,7 +133,7 @@ func draftFindings(rules contentRules, subject, body string) []DraftFinding {
 	var out []DraftFinding
 	language := rules.language
 	text := norm.NFC.String(subject + "\n" + body)
-	if found := claimsIn(text, rules.claims, rules.notClaims); len(found) > 0 && !statesProof(text) {
+	if found := claimsIn(text, rules.claims); len(found) > 0 && !statesProof(text) {
 		out = append(out, DraftFinding{
 			Requirement: DraftClaimWithoutProof,
 			Detail: fmt.Sprintf("the draft claims %q; state the proving document's name, number and date beside it",
@@ -153,14 +153,14 @@ func draftFindings(rules contentRules, subject, body string) []DraftFinding {
 }
 
 // claimsIn answers each claim word text uses as a whole word, ignoring case.
-// Phrases that claim nothing are blanked out first. Longer claims are matched
-// next and blanked out wherever they stand, so "tốt nhất" is not also reported
-// as "nhất".
-func claimsIn(text string, claims, notClaims []string) []string {
-	lowered := strings.ToLower(text)
-	for _, phrase := range notClaims {
-		lowered, _ = blankWholeWords(lowered, strings.ToLower(norm.NFC.String(phrase)))
-	}
+// A sign-off line ("Best,\nAn") ranks nothing and is skipped. Longer claims
+// are matched first and blanked out wherever they stand, so "tốt nhất" is not
+// also reported as "nhất".
+func claimsIn(text string, claims []string) []string {
+	lines := slices.DeleteFunc(strings.Split(text, "\n"), func(line string) bool {
+		return salutation.IsClosing(strings.TrimSpace(line))
+	})
+	lowered := strings.ToLower(strings.Join(lines, "\n"))
 	ordered := slices.Clone(claims)
 	slices.SortStableFunc(ordered, func(a, b string) int { return len(b) - len(a) })
 	var found []string

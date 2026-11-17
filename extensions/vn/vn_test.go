@@ -246,9 +246,6 @@ func TestSuperlativesNeedAProof(t *testing.T) {
 			t.Errorf("%q is not among the claims that need a proof", word)
 		}
 	}
-	if !slices.Contains(messagingRules().NotClaims, "best regards") {
-		t.Error("a closing \"best regards\" would be flagged as a claim")
-	}
 }
 
 // TestAForeignAdvertiserIsToldToUseAVietnameseAgency pins Law on Advertising
@@ -260,12 +257,12 @@ func TestAForeignAdvertiserIsToldToUseAVietnameseAgency(t *testing.T) {
 }
 
 // TestOnlyAdvertisingConsentNeedsTheRequestFirst pins Decree 91/2020/ND-CP
-// Art. 11.2, which governs advertising: a consent request for correspondence
-// needs no request of the contact's own.
+// Art. 11.2, which governs advertising by mail and by phone: a consent request
+// for correspondence needs no request of the contact's own.
 func TestOnlyAdvertisingConsentNeedsTheRequestFirst(t *testing.T) {
 	r := messagingRules()
-	if !r.ConsentConfirmationNeedsRequest ||
-		!slices.Equal(r.ConsentRequestFirstFor, []messaging.PurposeClass{messaging.PurposeClassMarketing}) {
-		t.Errorf("the request rule covers %v, want the advertising class only", r.ConsentRequestFirstFor)
+	want := []messaging.PurposeClass{messaging.PurposeClassMarketing, messaging.PurposeClassPhoneOutreach}
+	if !r.ConsentConfirmationNeedsRequest || !slices.Equal(r.ConsentRequestFirstFor, want) {
+		t.Errorf("the request rule covers %v, want the advertising classes %v", r.ConsentRequestFirstFor, want)
 	}
 }

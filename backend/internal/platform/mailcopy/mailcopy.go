@@ -326,10 +326,12 @@ type Copy struct {
 	// agreeing to something they were not asked. {purpose}, {controller},
 	// {frequency} and {privacy_page} are filled when a confirm page serves the
 	// question. The Unscheduled one, for a purpose that is not advertising,
-	// states no frequency.
+	// states no frequency, carries no unsubscribe link, and is confirmed by
+	// ConfirmConsentConfirm, because it is no subscription.
 	ConfirmSubscriptionAsk            string
 	ConfirmSubscriptionAskUnscheduled string
 	ConfirmSubscriptionConfirm        string
+	ConfirmConsentConfirm             string
 	// The words a purpose's frequency is named by inside that sentence.
 	FrequencyWeekly    string
 	FrequencyMonthly   string

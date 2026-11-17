@@ -107,7 +107,6 @@ func clone(r Rules) Rules {
 	}
 	out.Instruments = slices.Clone(r.Instruments)
 	out.ClaimsNeedProof = slices.Clone(r.ClaimsNeedProof)
-	out.NotClaims = slices.Clone(r.NotClaims)
 	out.ConsentRequestFirstFor = slices.Clone(r.ConsentRequestFirstFor)
 
 	if r.FrequencyCap != nil {
@@ -240,13 +239,11 @@ func stricter(a, b Rules) Rules {
 }
 
 // foldAdvertisingContent adds b's advertising content rules to out. A claim
-// either side restricts stays restricted. A phrase either side says claims
-// nothing stays excused, since it spells out the whole phrase it excuses.
+// either side restricts stays restricted.
 func foldAdvertisingContent(out *Rules, b Rules) {
 	out.RefusalSectionLast = out.RefusalSectionLast || b.RefusalSectionLast
 	out.ForeignAdvertiserNeedsLocalAgency = out.ForeignAdvertiserNeedsLocalAgency || b.ForeignAdvertiserNeedsLocalAgency
 	out.ClaimsNeedProof = unionOf(out.ClaimsNeedProof, b.ClaimsNeedProof)
-	out.NotClaims = unionOf(out.NotClaims, b.NotClaims)
 }
 
 // requestFirstFor is the classes either side's request rule covers. A side

@@ -29,7 +29,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"slices"
 	"strings"
 	"time"
 
@@ -141,10 +140,6 @@ type Rules struct {
 	// date. A draft that uses one without a proof is flagged before it is
 	// sent; nothing is refused.
 	ClaimsNeedProof []string
-
-	// NotClaims are phrases that hold a claim word and claim nothing, such as
-	// a closing greeting. The claim check skips them.
-	NotClaims []string
 
 	// ForeignAdvertiserNeedsLocalAgency says an advertiser not established in
 	// this jurisdiction must advertise here through a local advertising
@@ -469,10 +464,9 @@ func (r Rules) Validate() error {
 	return r.validateDisclosureLanguage()
 }
 
-// validateClaims refuses a claim word or a phrase that is not a claim when it
-// matches nothing or everything.
+// validateClaims refuses a claim word that matches nothing or everything.
 func (r Rules) validateClaims() error {
-	for _, word := range append(slices.Clone(r.ClaimsNeedProof), r.NotClaims...) {
+	for _, word := range r.ClaimsNeedProof {
 		if strings.TrimSpace(word) == "" || strings.TrimSpace(word) != word {
 			return fmt.Errorf("claim word %q is empty or padded, so it would flag every draft or none", word)
 		}

@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
+	"github.com/margince/margince/backend/pkg/extension/messaging"
 )
 
 // consentOnlyCountry is one minted code under a pack shaped like the
@@ -42,10 +43,46 @@ func placeUnderConsentOnly(t *testing.T, e *resolveEnv) {
 			Jurisdiction: consentOnlyCountry.code, Version: 1, ConsentOnly: true,
 			DataProtectionFollowsRecipient: true, DisclosureLanguage: string(mailcopy.Vietnamese),
 			NoLegitimateInterests: true, ConsentConfirmationNeedsRequest: true,
-			ConsentRequestFirstFor: []messagingrules.PurposeClass{messagingrules.PurposeClass(ClassMarketing)},
+			ConsentRequestFirstFor: messaging.AdvertisingPurposeClasses(),
 		})
 	})
 	placeContact(t, e.owner, e.contact, consentOnlyCountry.code)
+}
+
+// everyClassCountry is a pack like consentOnlyCountry whose request rule names
+// no class, so it covers correspondence too.
+var everyClassCountry struct {
+	once sync.Once
+	code jurisdiction.Code
+}
+
+// Where the contact's rules refuse a consent mail they did not ask for, the
+// preview offers no consent request, because the mint would refuse it.
+func TestNoConsentRequestIsOfferedThatTheMintWouldRefuse(t *testing.T) {
+	e := setupResolve(t)
+	everyClassCountry.once.Do(func() {
+		everyClassCountry.code = testJurisdiction(t)
+		messagingrules.Register(messagingrules.Rules{
+			Jurisdiction: everyClassCountry.code, Version: 1, ConsentOnly: true,
+			NoLegitimateInterests: true, ConsentConfirmationNeedsRequest: true,
+		})
+	})
+	placeContact(t, e.owner, e.contact, everyClassCountry.code)
+	e.capturedMail(t, "thread-matter", "cc", true)
+	seedDoubleOptInPurpose(t, e, "rp_refused_correspondence", "business_correspondence")
+
+	set, err := e.gate.Preview(e.ctx, commsauthz.Request{
+		Recipients: []connector.Recipient{{Email: e.address}}, ThreadKey: "thread-matter",
+	})
+	if err != nil {
+		t.Fatalf("previewing: %v", err)
+	}
+	if len(set.Decisions) != 1 || !set.Decisions[0].LawfulBasisMissing {
+		t.Fatalf("preview %+v, want the recipient marked", set.Decisions)
+	}
+	if got := set.Decisions[0].ConsentPurpose; !got.IsZero() {
+		t.Errorf("the preview offers a request for purpose %v, which the mint refuses: the contact asked for nothing", got)
+	}
 }
 
 // seedDoubleOptInPurpose plants a live purpose of class confirmed by double
@@ -112,13 +149,14 @@ func TestAdvertisingWithoutConsentUnderThePackIsRefusedNotWarned(t *testing.T) {
 // Asked through the double-opt-in door, that request goes without a request of
 // the contact's own, because the pack asks one only for advertising. Its link
 // names no request, and its audit row names the user who asked. A request for
-// the newsletter is still refused.
+// the newsletter or for sales calls is still refused.
 func TestANoBasisRecipientCanBeAskedForConsentToCorrespondence(t *testing.T) {
 	e := setupResolve(t)
 	placeUnderConsentOnly(t, e)
 	e.capturedMail(t, "thread-matter", "cc", true)
 	news := seedDoubleOptInPurpose(t, e, "rp_ask_news", "marketing")
 	correspondence := seedDoubleOptInPurpose(t, e, "rp_ask_correspondence", "business_correspondence")
+	calls := seedDoubleOptInPurpose(t, e, "rp_ask_calls", "phone_outreach")
 
 	set, err := e.gate.Preview(e.ctx, commsauthz.Request{
 		Recipients: []connector.Recipient{{Email: e.address}}, ThreadKey: "thread-matter",
@@ -162,6 +200,10 @@ func TestANoBasisRecipientCanBeAskedForConsentToCorrespondence(t *testing.T) {
 		t.Errorf("asking for consent to the newsletter answered %d %s, want 422: the contact asked for nothing",
 			rec.Code, rec.Body.String())
 	}
+	if rec := askConsent(ctx, t, h, e.contact, calls); rec.Code != http.StatusUnprocessableEntity {
+		t.Errorf("asking for consent to sales calls answered %d %s, want 422: calls advertise too, and the "+
+			"contact asked for nothing", rec.Code, rec.Body.String())
+	}
 }
 
 // With no purpose covering correspondence, the preview names no purpose and
@@ -193,7 +235,7 @@ func TestTheSeededCatalogLetsANoBasisContactBeAskedForConsent(t *testing.T) {
 	e := setupResolve(t)
 	placeUnderConsentOnly(t, e)
 	e.capturedMail(t, "thread-matter", "cc", true)
-	seedDefaultCatalog(t, e)
+	seedDefaultCatalog(t, e.owner)
 	var correspondence ids.UUID
 	if err := e.owner.QueryRow(context.Background(),
 		`SELECT id FROM consent_purpose WHERE key = $1`, string(ClassBusinessCorrespondence)).Scan(&correspondence); err != nil {
@@ -252,10 +294,10 @@ func TestAMarketingPurposeWithoutDoubleOptInIsNotAskedByMail(t *testing.T) {
 
 // seedDefaultCatalog plants the purposes a fresh installation starts with,
 // through the real seeder.
-func seedDefaultCatalog(t *testing.T, e *resolveEnv) {
+func seedDefaultCatalog(t *testing.T, owner *pgx.Conn) {
 	t.Helper()
 	ctx := context.Background()
-	tx, err := e.owner.Begin(ctx)
+	tx, err := owner.Begin(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}

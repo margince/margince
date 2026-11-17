@@ -10,25 +10,27 @@ import { LawfulBasisCallout, useLawfulBasisGate } from "./lawfulbasiswarning";
 
 type Preview = components["schemas"]["SendAuthorizationPreview"];
 
-// A recipient the server marks as having no lawful basis on record, beside one
-// it does not mark.
-const MARKED: Preview = {
-  allowed: true,
-  recipients: [
-    {
-      address: "lan@example.test",
-      verdict: "allow",
-      reason_code: "allowed",
-      lawful_basis_missing: true,
-      consent_purpose_id: "018f3a1b-0000-7000-8000-0000000000c0",
-      evidence_subject: {
-        entity_type: "contact",
-        entity_id: "018f3a1b-0000-7000-8000-000000000042",
-      },
-    },
-    { address: "anna@example.test", verdict: "allow", reason_code: "allowed" },
-  ],
+type Recipient = components["schemas"]["SendAuthorizationPreviewRecipient"];
+
+// A recipient the server marks as having no lawful basis on record, and one it
+// does not mark.
+const LAN: Recipient = {
+  address: "lan@example.test",
+  verdict: "allow",
+  reason_code: "allowed",
+  lawful_basis_missing: true,
+  consent_purpose_id: "018f3a1b-0000-7000-8000-0000000000c0",
+  evidence_subject: {
+    entity_type: "contact",
+    entity_id: "018f3a1b-0000-7000-8000-000000000042",
+  },
 };
+const ANNA: Recipient = {
+  address: "anna@example.test",
+  verdict: "allow",
+  reason_code: "allowed",
+};
+const MARKED: Preview = { allowed: true, recipients: [LAN, ANNA] };
 
 function Sender({
   preview,
@@ -161,12 +163,65 @@ describe("the no-lawful-basis warning", () => {
     expect(onSend).not.toHaveBeenCalled();
   });
 
+  it("names whom a partly failed request reached, and asks only the rest again", async () => {
+    const MINH: Recipient = {
+      ...LAN,
+      address: "minh@example.test",
+      evidence_subject: {
+        entity_type: "contact",
+        entity_id: "018f3a1b-0000-7000-8000-000000000043",
+      },
+    };
+    const sent = new Response(JSON.stringify({ queued: true }), {
+      status: 201,
+      headers: { "Content-Type": "application/json" },
+    });
+    const refused = new Response(
+      JSON.stringify({ title: "Unprocessable", status: 422 }),
+      { status: 422, headers: { "Content-Type": "application/problem+json" } },
+    );
+    const fetched = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(sent)
+      .mockResolvedValueOnce(refused)
+      .mockResolvedValueOnce(sent.clone());
+    const onSend = vi.fn();
+    draw({ allowed: true, recipients: [LAN, MINH] }, onSend);
+    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    const ask = screen.getByRole("button", {
+      name: translate("en", "lawfulBasis.askConsent"),
+    });
+
+    await userEvent.click(ask);
+    expect(
+      await screen.findByText(
+        translate("en", "lawfulBasis.askPartial", {
+          asked: "lan@example.test",
+          failed: "minh@example.test",
+        }),
+      ),
+    ).toBeInTheDocument();
+    expect(fetched).toHaveBeenCalledTimes(2);
+
+    await userEvent.click(ask);
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: "Send anyway" }),
+      ).not.toBeInTheDocument(),
+    );
+    expect(fetched).toHaveBeenCalledTimes(3);
+    const retried = fetched.mock.calls[2]?.[0];
+    expect(retried).toBeInstanceOf(Request);
+    expect(retried instanceof Request ? retried.url : "").toContain(
+      "/contacts/018f3a1b-0000-7000-8000-000000000043/consent/double-opt-in",
+    );
+    expect(onSend).not.toHaveBeenCalled();
+  });
+
   it("offers no consent request when no purpose asks for consent by mail", async () => {
     vi.spyOn(globalThis, "fetch");
-    const [marked, other] = MARKED.recipients;
-    if (!marked || !other) return;
-    const { consent_purpose_id: _dropped, ...withoutPurpose } = marked;
-    draw({ ...MARKED, recipients: [withoutPurpose, other] }, vi.fn());
+    const { consent_purpose_id: _dropped, ...withoutPurpose } = LAN;
+    draw({ ...MARKED, recipients: [withoutPurpose, ANNA] }, vi.fn());
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
 
     expect(
@@ -182,7 +237,7 @@ describe("the no-lawful-basis warning", () => {
     const onSend = vi.fn();
     const clean: Preview = {
       allowed: true,
-      recipients: [MARKED.recipients[1]].filter((r) => r !== undefined),
+      recipients: [ANNA],
     };
     draw(clean, onSend);
 

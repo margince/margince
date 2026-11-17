@@ -114,7 +114,7 @@ func RenderQuestion(key, language string) string {
 	case TemplateSubscriptionQuestion:
 		return strings.Join([]string{words.ConfirmSubscriptionAsk, words.ConfirmSubscriptionConfirm}, "\n")
 	case TemplateSubscriptionQuestionUnscheduled:
-		return strings.Join([]string{words.ConfirmSubscriptionAskUnscheduled, words.ConfirmSubscriptionConfirm}, "\n")
+		return strings.Join([]string{words.ConfirmSubscriptionAskUnscheduled, words.ConfirmConsentConfirm}, "\n")
 	}
 	return RenderMarketingQuestion(language)
 }

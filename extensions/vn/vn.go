@@ -136,11 +136,6 @@ func superlatives() []string {
 	}
 }
 
-// notClaims are the closing greetings that hold "best" and rank nothing.
-func notClaims() []string {
-	return []string{"best regards", "best wishes", "all the best"}
-}
-
 // messagingRules is what Vietnamese law requires of an outbound message, stated
 // as data the core engine applies. Nothing here decides a send.
 //
@@ -207,7 +202,6 @@ func messagingRules() messaging.Rules {
 		},
 		RefusalSectionLast: true,
 		ClaimsNeedProof:    superlatives(),
-		NotClaims:          notClaims(),
 		// Law on Advertising Art. 39.2. The customer is the advertiser.
 		ForeignAdvertiserNeedsLocalAgency: true,
 		SubjectPrefix:                     advertisingLabel,
@@ -234,8 +228,8 @@ func messagingRules() messaging.Rules {
 		// Decree 91/2020/ND-CP Art. 11.2: a consent request the recipient did
 		// not ask for is itself an unsolicited message.
 		ConsentConfirmationNeedsRequest: true,
-		// Art. 11.2 governs advertising, so only that class needs it.
-		ConsentRequestFirstFor: []messaging.PurposeClass{messaging.PurposeClassMarketing},
+		// Art. 11.2 governs advertising, so only the advertising classes need it.
+		ConsentRequestFirstFor: messaging.AdvertisingPurposeClasses(),
 	}
 }
 

@@ -134,6 +134,26 @@ func TestAConsentMailWithoutTheSubjectsRequestIsRefused(t *testing.T) {
 	requireNoSubjectRequestRefusal(t, e)
 }
 
+// TestAPackNamingNoClassNeedsTheRequestForEveryPurpose. A pack that asks a
+// request for consent mail and names no purpose class asks it for all of
+// them, correspondence included.
+func TestAPackNamingNoClassNeedsTheRequestForEveryPurpose(t *testing.T) {
+	e := setupChannelConsent(t)
+	seedDefaultCatalog(t, e.owner)
+	seedSubjectAddress(t, e)
+	placeUnderConfirmRules(t, e)
+	var correspondence ids.PurposeID
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT id FROM consent_purpose WHERE key = $1`, string(ClassBusinessCorrespondence)).Scan(&correspondence); err != nil {
+		t.Fatalf("reading the seeded correspondence purpose: %v", err)
+	}
+
+	var missing *NoSubjectRequestError
+	if _, err := e.store.IssueConsentLink(e.ctx, e.contact, correspondence, "", ""); !errors.As(err, &missing) {
+		t.Fatalf("a correspondence consent mail with no request on record: %v, want the refusal", err)
+	}
+}
+
 // requireNoSubjectRequestRefusal asks for a consent link as a user and wants
 // the request rule's refusal, with no link minted.
 func requireNoSubjectRequestRefusal(t *testing.T, e *channelConsentEnv) {

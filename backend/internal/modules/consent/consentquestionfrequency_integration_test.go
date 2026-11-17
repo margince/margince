@@ -65,7 +65,7 @@ func askedQuestion(t *testing.T, e *resolveEnv, store *Store, purpose ids.Purpos
 // mail, not on the page, and not in the sentence the grant records.
 func TestACorrespondenceConsentStatesNoFrequency(t *testing.T) {
 	e := setupResolve(t)
-	seedDefaultCatalog(t, e)
+	seedDefaultCatalog(t, e.owner)
 	var correspondence ids.PurposeID
 	if err := e.owner.QueryRow(context.Background(),
 		`SELECT id FROM consent_purpose WHERE key = $1`, string(ClassBusinessCorrespondence)).Scan(&correspondence); err != nil {
@@ -93,6 +93,28 @@ func TestACorrespondenceConsentStatesNoFrequency(t *testing.T) {
 	if recorded == "" || statesFrequency(recorded) {
 		t.Errorf("the grant records %q, want the served sentence with no frequency", recorded)
 	}
+	if word, found := promisesASubscription(recorded); found {
+		t.Errorf("the grant records %q, which names %q: correspondence carries no unsubscribe "+
+			"link and is no subscription", recorded, word)
+	}
+	for _, language := range mailcopy.Languages() {
+		published := RenderQuestion(TemplateSubscriptionQuestionUnscheduled, string(language))
+		if word, found := promisesASubscription(published); found {
+			t.Errorf("the %s correspondence question names %q:\n%s", language, word, published)
+		}
+	}
+}
+
+// promisesASubscription reports the first word in text, in any language this
+// build writes, that names an unsubscribe link or a subscription.
+func promisesASubscription(text string) (string, bool) {
+	lowered := strings.ToLower(text)
+	for _, word := range []string{"unsubscribe", "subscription", "abmeld", "abonn", "đăng ký"} {
+		if strings.Contains(lowered, word) {
+			return word, true
+		}
+	}
+	return "", false
 }
 
 // A consent request for advertising still states how often the mail comes.

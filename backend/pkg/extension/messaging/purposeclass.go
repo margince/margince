@@ -29,6 +29,12 @@ func PurposeClasses() []PurposeClass {
 	}
 }
 
+// AdvertisingPurposeClasses are the classes whose mail or calls advertise:
+// withdrawing one stops marketing.
+func AdvertisingPurposeClasses() []PurposeClass {
+	return []PurposeClass{PurposeClassMarketing, PurposeClassPhoneOutreach}
+}
+
 // validateRequestFirstFor refuses a class the core does not know, and classes
 // named for a rule the pack does not declare.
 func (r Rules) validateRequestFirstFor() error {

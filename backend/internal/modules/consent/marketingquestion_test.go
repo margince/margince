@@ -28,9 +28,9 @@ var pinnedQuestion = map[string]string{
 	"subscription_question@6@de":             "98a4d7ed1a0a8be667409b73473d9c07ab81726426ddf8a59634349efe25a2a6",
 	"subscription_question@6@en":             "f8fab3f8b7b4fc5d6c51cf6ffe5f387f578b0d90cc847dbc0b9407c26f42e231",
 	"subscription_question@6@vi":             "6dc15e6c17bb477d6ba49ea99c2a7df3c1ccebe76e9d59095505e7fe26fabcc2",
-	"subscription_question_unscheduled@6@de": "92099702121f9a73b0bc174e57167c9f8fb5bd27b774cf36c5bf57bac61518ae",
-	"subscription_question_unscheduled@6@en": "1578e4f4711d5011cf6b465b511d6d7983a5a94ed8792d9642af3b246ede1602",
-	"subscription_question_unscheduled@6@vi": "4301ef5bf791e6e6a6f266dabeff813451904976d1fdd6272811b5dab1b18df7",
+	"subscription_question_unscheduled@6@de": "d4fca7c94bc589d5420e609af3ac052108935c8f734931b099b8e2a1ae214b6c",
+	"subscription_question_unscheduled@6@en": "147570456f744be0b8c9c87c723ccee4993d8d1db55d36312ba4f7256a066aca",
+	"subscription_question_unscheduled@6@vi": "3189932b39c52d8780c955264bddcb2bf30587433cd0c93e1c69114510b787dc",
 }
 
 // TestEveryPublishedQuestionIsPinnedToItsVersion fails when a question's words

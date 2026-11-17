@@ -90,7 +90,7 @@ page the settings link opens. This meets `Law on Protection of Consumers' Rights
 
 `Law on Advertising` Art. 18 asks for advertising content in Vietnamese first. Text in another language
 comes below it, and its size is at most three fourths of the Vietnamese text. Art. 8.11 of that law and
-`Circular 12/2026/TT-BVHTTDL` Art. 3 cover a claim to be the best, the first or the only one. In any
+`Circular 12/2026/TT-BVHTTDL` Art. 3 cover a claim to be the best or the only one. In any
 language, such a claim needs a listed proof.
 
 In Vietnamese such a claim is `nhất`, `duy nhất`, `tốt nhất`, `số một` or `hàng đầu`. In English it is
@@ -103,8 +103,8 @@ Both are checked while a mail is written, and neither stops the send:
 - A draft that uses a word of `superlatives()` in `vn.go` gets a note, unless a line holds a document
   number and a date.
 
-The check leaves out a closing greeting that holds "best", such as "Best regards" (`notClaims()` in
-`vn.go`). It looks for "the only" and not "only", because a bare "only" most often sets a limit, as in
+The check leaves out a sign-off line that holds "best", such as "Best regards" or "Best," above a
+name. The core's sign-off check decides which lines those are. It looks for "the only" and not "only", because a bare "only" most often sets a limit, as in
 "only three days left".
 
 The size of text in another language is not checked. A plain text mail has one size, and the check

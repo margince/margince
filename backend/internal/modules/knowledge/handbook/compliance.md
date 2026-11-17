@@ -143,8 +143,8 @@ Under Vietnamese law, **How to refuse advertising** must name a web page or soci
 While you write sales mail to a recipient under Vietnamese law, notes above the send button say what the mail does not meet. None of them stops the send:
 
 - The mail does not start in Vietnamese.
-- The mail claims to be the best, the first, the leading or the only one, in Vietnamese or in English, and names no proof. Name the proving document with its number and date in the mail.
-- Your company is not set up under Vietnamese law. A company from outside that does not work there must send sales mail through a Vietnamese sales agent. Your company has to see to this.
+- The mail claims to be the best, the leading or the only one, in Vietnamese or in English, and names no proof. Name the proving document with its number and date in the mail.
+- Your company is not set up under Vietnamese law. A company from outside that does not work there must use a Vietnamese business whose service is sending sales mail for others. Your company has to see to this.
 
 Vietnamese law does not ask for sales mail to go out from a Vietnamese mail server. If you run your own, ask whoever runs Margince to use a Vietnamese mail server where there is one.
 

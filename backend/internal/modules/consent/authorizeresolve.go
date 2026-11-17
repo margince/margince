@@ -66,9 +66,6 @@ type resolution struct {
 	// BasisMissing says the recipient's pack has no legitimate-interest basis
 	// and the record holds no basis that pack accepts for this use.
 	BasisMissing bool
-	// ConsentPurpose is the purpose a consent request would ask about where
-	// the basis is missing, zero when none can be asked.
-	ConsentPurpose ids.UUID
 }
 
 // resolveCategory works out what this message is for one recipient.

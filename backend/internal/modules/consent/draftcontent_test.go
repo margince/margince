@@ -49,10 +49,10 @@ func TestAClaimBesideAStatedProofIsNotFlagged(t *testing.T) {
 
 // A claim word inside a longer word is not the claim.
 func TestAClaimMatchesWholeWordsOnly(t *testing.T) {
-	if got := claimsIn("Sản phẩm nhấtquán", vietnameseClaims, nil); len(got) != 0 {
+	if got := claimsIn("Sản phẩm nhấtquán", vietnameseClaims); len(got) != 0 {
 		t.Errorf("claims %v found inside a longer word", got)
 	}
-	if got := claimsIn("SỐ MỘT thị trường", vietnameseClaims, nil); !slices.Equal(got, []string{"số một"}) {
+	if got := claimsIn("SỐ MỘT thị trường", vietnameseClaims); !slices.Equal(got, []string{"số một"}) {
 		t.Errorf("claims %v, want the upper-case claim found", got)
 	}
 }
@@ -73,37 +73,40 @@ func TestADraftThatOpensInAnotherLanguageIsFlagged(t *testing.T) {
 
 // A digit continues a word, as in the draft checks: "số 1" is not "số 100".
 func TestANumberedClaimDoesNotMatchALongerNumber(t *testing.T) {
-	if got := claimsIn("Chúng tôi phục vụ số 100 khách hàng.", []string{"số 1"}, nil); len(got) != 0 {
+	if got := claimsIn("Chúng tôi phục vụ số 100 khách hàng.", []string{"số 1"}); len(got) != 0 {
 		t.Errorf("claims %v found inside a longer number", got)
 	}
-	if got := claimsIn("Chúng tôi là số 1.", []string{"số 1"}, nil); !slices.Equal(got, []string{"số 1"}) {
+	if got := claimsIn("Chúng tôi là số 1.", []string{"số 1"}); !slices.Equal(got, []string{"số 1"}) {
 		t.Errorf("claims %v, want the numbered claim found", got)
 	}
 }
 
 // Every use of a longer claim is taken out before a shorter one is sought.
 func TestALongerClaimUsedTwiceHidesItsShorterPart(t *testing.T) {
-	got := claimsIn("Tốt nhất cho bạn. Giá tốt nhất.", vietnameseClaims, nil)
+	got := claimsIn("Tốt nhất cho bạn. Giá tốt nhất.", vietnameseClaims)
 	if !slices.Equal(got, []string{"tốt nhất"}) {
 		t.Errorf("claims %v, want only \"tốt nhất\"", got)
 	}
 }
 
-// A claim in English counts as well as one in Vietnamese, and a closing
-// greeting the pack says claims nothing is not one.
+// A claim in English counts as well as one in Vietnamese. A sign-off line
+// that holds "best" ranks nothing, while "best" inside a sentence still does.
 func TestAnEnglishClaimInAVietnameseDraftIsFlagged(t *testing.T) {
-	rules := contentRules{
-		language:  "vi",
-		claims:    []string{"best", "hàng đầu"},
-		notClaims: []string{"best regards"},
-	}
+	rules := contentRules{language: "vi", claims: []string{"best", "hàng đầu"}}
 	body := vietnameseOffer + "\n\nChúng tôi là nhà cung cấp hàng đầu, the best in Vietnam."
 	f, ok := findingOf(draftFindings(rules, "[QC] Ưu đãi", body), DraftClaimWithoutProof)
 	if !ok || !slices.Equal(f.Words, []string{"hàng đầu", "best"}) {
 		t.Errorf("finding %+v, want both \"hàng đầu\" and \"best\" flagged", f)
 	}
-	greeting := vietnameseOffer + "\n\nBest regards,\nAn"
-	if _, ok := findingOf(draftFindings(rules, "[QC] Ưu đãi", greeting), DraftClaimWithoutProof); ok {
-		t.Error("a closing \"Best regards\" was flagged as a claim")
+	for _, closing := range []string{"Best regards,\nAn", "Best,\nAn", "All the best,\nAn"} {
+		signed := vietnameseOffer + "\n\n" + closing
+		if _, ok := findingOf(draftFindings(rules, "[QC] Ưu đãi", signed), DraftClaimWithoutProof); ok {
+			t.Errorf("the closing %q was flagged as a claim", closing)
+		}
+	}
+	brands := vietnameseOffer + "\n\nWe carry all the best brands."
+	if f, ok := findingOf(draftFindings(rules, "[QC] Ưu đãi", brands), DraftClaimWithoutProof); !ok ||
+		!slices.Equal(f.Words, []string{"best"}) {
+		t.Errorf("finding %+v, want \"best\" in \"all the best brands\" flagged", f)
 	}
 }

@@ -91,24 +91,80 @@ export function LawfulBasisCallout({
   );
 }
 
-/** Mails each contact the consent request for its purpose. */
+/** The requests one press of "Ask for consent" could not send, and why. */
+type AskOutcome = Readonly<{
+  failed: ConsentRequest[];
+  cause: unknown;
+}>;
+
+/**
+ * Mails each contact the consent request for its purpose. A contact asked once
+ * is not asked again while the dialog is open, so a retry after a partial
+ * failure asks only the contacts that failed.
+ */
 function useAskForConsent(requests: readonly ConsentRequest[]) {
   const t = useT();
-  return useMutation({
-    mutationFn: async () => {
-      for (const request of requests) {
-        const answered = await api.POST(
-          "/contacts/{id}/consent/double-opt-in",
-          {
-            params: { path: { id: request.contactId } },
-            body: { purpose_id: request.purposeId },
-          },
-        );
-        if (!answered.response.ok) {
-          throwProblem(answered.error ?? { title: t("lawfulBasis.askFailed") });
+  const [asked, setAsked] = useState<readonly ConsentRequest[]>([]);
+  const mutation = useMutation({
+    mutationFn: async (): Promise<AskOutcome> => {
+      const failed: ConsentRequest[] = [];
+      let cause: unknown = null;
+      for (const request of requests.filter((r) => !wasAsked(asked, r))) {
+        try {
+          const answered = await api.POST(
+            "/contacts/{id}/consent/double-opt-in",
+            {
+              params: { path: { id: request.contactId } },
+              body: { purpose_id: request.purposeId },
+            },
+          );
+          if (!answered.response.ok) {
+            throwProblem(
+              answered.error ?? { title: t("lawfulBasis.askFailed") },
+            );
+          }
+          setAsked((before) => [...before, request]);
+        } catch (error) {
+          failed.push(request);
+          cause ??= error;
         }
       }
+      return { failed, cause };
     },
+  });
+  const reset = () => {
+    mutation.reset();
+    setAsked([]);
+  };
+  return { mutation, asked, reset };
+}
+
+/** Whether a request for this contact and purpose already went out. */
+function wasAsked(
+  asked: readonly ConsentRequest[],
+  request: ConsentRequest,
+): boolean {
+  return asked.some(
+    (a) =>
+      a.contactId === request.contactId && a.purposeId === request.purposeId,
+  );
+}
+
+/** The line the dialog shows after a press that did not ask everyone. */
+function askFailure(
+  t: ReturnType<typeof useT>,
+  asked: readonly ConsentRequest[],
+  outcome: AskOutcome | undefined,
+): string | null {
+  if (!outcome || outcome.failed.length === 0) {
+    return null;
+  }
+  if (asked.length === 0) {
+    return problemMessageOf(outcome.cause, t, t("lawfulBasis.askFailed"));
+  }
+  return t("lawfulBasis.askPartial", {
+    asked: asked.map((r) => r.address).join(", "),
+    failed: outcome.failed.map((r) => r.address).join(", "),
   });
 }
 
@@ -125,7 +181,7 @@ export function useLawfulBasisGate(preview: Preview | undefined) {
   const subjects = confirmableSubjects(preview);
   const requests = askableRequests(preview);
   const [pending, setPending] = useState<(() => void) | null>(null);
-  const ask = useAskForConsent(requests);
+  const { mutation: ask, asked, reset: resetAsk } = useAskForConsent(requests);
   const record = useMutation({
     mutationFn: async () => {
       const answered = await api.POST("/lawful-basis-confirmations", {
@@ -140,9 +196,9 @@ export function useLawfulBasisGate(preview: Preview | undefined) {
   const close = () => {
     setPending(null);
     record.reset();
-    ask.reset();
+    resetAsk();
   };
-  const failure = record.error ?? ask.error;
+  const askMessage = askFailure(t, asked, ask.data);
   const gate = (proceed: () => void) => {
     if (missing.length === 0) {
       proceed();
@@ -159,14 +215,19 @@ export function useLawfulBasisGate(preview: Preview | undefined) {
       confirmVariant="danger"
       pending={record.isPending}
       confirmDisabled={ask.isPending}
-      error={failure ? problemMessageOf(failure, t) : null}
+      error={
+        record.error ? problemMessageOf(record.error, t) : askMessage
+      }
       actionsLead={
         requests.length > 0 ? (
           <Button
             pending={ask.isPending}
             onClick={() => {
               ask.mutate(undefined, {
-                onSuccess: () => {
+                onSuccess: (outcome) => {
+                  if (outcome.failed.length > 0) {
+                    return;
+                  }
                   close();
                   toast.show(
                     t("lawfulBasis.asked", {

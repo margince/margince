@@ -9,6 +9,8 @@ import (
 	"context"
 	"slices"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // grantedPurposesOf lists the keys of every purpose the subject has granted.
@@ -48,12 +50,12 @@ func purposeKeyOf(t *testing.T, e *channelConsentEnv) string {
 	return key
 }
 
-// Consent to advertising is given per purpose. The record page's subscribe
-// answer grants the advertising purpose alone, while a second live purpose
-// stands beside it.
+// Consent is given per purpose. The record page's subscribe answer grants the
+// advertising purpose alone, while the seeded catalog's correspondence purpose
+// and a second live purpose stand beside it.
 func TestTheSubscribeAnswerGrantsTheAdvertisingPurposeAlone(t *testing.T) {
 	e := setupChannelConsent(t)
-	seedMarketingPurpose(t, e)
+	seedDefaultCatalog(t, e.owner)
 	record := issueLink(t, e)
 
 	if _, err := e.store.SubmitConfirmation(e.ctx, record.Token, ConfirmSubmission{
@@ -66,11 +68,11 @@ func TestTheSubscribeAnswerGrantsTheAdvertisingPurposeAlone(t *testing.T) {
 	}
 }
 
-// A subscription link grants the one purpose it was minted for, and not the
-// advertising purpose beside it.
+// A subscription link grants the one purpose it was minted for, and neither
+// the advertising nor the correspondence purpose beside it.
 func TestASubscriptionLinkGrantsItsOwnPurposeAlone(t *testing.T) {
 	e := setupChannelConsent(t)
-	seedMarketingPurpose(t, e)
+	seedDefaultCatalog(t, e.owner)
 	seedSubjectAddress(t, e)
 
 	subscription, err := e.store.IssueConsentLink(e.ctx, e.contact, e.doiNews, "", "")
@@ -84,5 +86,31 @@ func TestASubscriptionLinkGrantsItsOwnPurposeAlone(t *testing.T) {
 	}
 	if got, want := grantedPurposesOf(t, e), purposeKeyOf(t, e); !slices.Equal(got, []string{want}) {
 		t.Errorf("the subscription link granted %v, want only %q", got, want)
+	}
+}
+
+// A consent link for correspondence grants correspondence alone, and not the
+// advertising purposes beside it.
+func TestACorrespondenceLinkGrantsCorrespondenceAlone(t *testing.T) {
+	e := setupChannelConsent(t)
+	seedDefaultCatalog(t, e.owner)
+	seedSubjectAddress(t, e)
+	var correspondence ids.PurposeID
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT id FROM consent_purpose WHERE key = $1`, string(ClassBusinessCorrespondence)).Scan(&correspondence); err != nil {
+		t.Fatalf("reading the seeded correspondence purpose: %v", err)
+	}
+
+	link, err := e.store.IssueConsentLink(e.ctx, e.contact, correspondence, "", "")
+	if err != nil {
+		t.Fatalf("minting a correspondence link: %v", err)
+	}
+	if _, err := e.store.SubmitConfirmation(e.ctx, link.Token, ConfirmSubmission{
+		MarketingChoice: string(StateGranted), MarketingWording: "Business correspondence.",
+	}); err != nil {
+		t.Fatalf("confirming the correspondence consent: %v", err)
+	}
+	if got, want := grantedPurposesOf(t, e), string(ClassBusinessCorrespondence); !slices.Equal(got, []string{want}) {
+		t.Errorf("the correspondence link granted %v, want only %q", got, want)
 	}
 }

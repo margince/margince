@@ -174,10 +174,6 @@ func TestAClaimWordMustMatchSomethingAndNotEverything(t *testing.T) {
 		if err := r.Validate(); (err == nil) != c.ok {
 			t.Errorf("Validate(%q) = %v, want ok=%v", c.words, err, c.ok)
 		}
-		notClaims := Rules{Jurisdiction: "zz", Version: 1, NotClaims: c.words}
-		if err := notClaims.Validate(); (err == nil) != c.ok {
-			t.Errorf("Validate(NotClaims %q) = %v, want ok=%v", c.words, err, c.ok)
-		}
 	}
 }
 
