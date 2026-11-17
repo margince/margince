@@ -18,15 +18,20 @@ set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 state="$root/.tmp/production"
 stack="$state/stack"
-# One project per checkout, as the settings are: a fixed name would hand one
-# checkout's database volume to another checkout's new credentials.
-project="margince-prod-$(printf %s "$root" | git hash-object --stdin | cut -c1-16)"
 port="${PROD_PORT:-8090}"
+
+# project is one Compose project per settings folder, named from its real path,
+# so a folder shared by a symlink shares its stack and no other folder does.
+# git -C "$root" keeps the hash in this checkout's object format.
+project() {
+	mkdir -p "$state"
+	printf 'margince-prod-%s' "$(cd "$state" && pwd -P | git -C "$root" hash-object --stdin | cut -c1-16)"
+}
 
 # compose runs with MARGINCE_ENV empty, because a value exported in the
 # caller's shell outranks the stack's .env and would start it in dev mode.
 compose() {
-	MARGINCE_ENV= docker compose --project-directory "$stack" --project-name "$project" "$@"
+	MARGINCE_ENV= docker compose --project-directory "$stack" --project-name "$(project)" "$@"
 }
 
 # write_env: the stack's settings, made once so a second run keeps its data.
