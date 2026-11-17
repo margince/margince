@@ -279,3 +279,15 @@ export async function waitForSendReady() {
     ).toBe(false),
   );
 }
+
+// The foot's own Schedule send, once it is enabled; the menu entry of the
+// same name is not it.
+export async function footScheduleConfirm() {
+  return waitFor(() => {
+    const found = screen
+      .queryAllByRole("button", { name: "Schedule send" })
+      .find((button) => !button.closest(".compose-sendmenu"));
+    if (!found || found.hasAttribute("disabled")) throw new Error("not ready");
+    return found;
+  });
+}

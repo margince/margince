@@ -148,6 +148,52 @@ describe("DirectSendAction", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
+  // A reopen whose read fails keeps the earlier review in the cache, and the
+  // form must not open over that stale copy.
+  it("opens no form over an earlier review when the reopening read fails", async () => {
+    let failing = false;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        failing
+          ? new Response(JSON.stringify({ code: "internal" }), {
+              status: 500,
+              headers: { "content-type": "application/problem+json" },
+            })
+          : new Response(
+              JSON.stringify({
+                id: "review-1",
+                state: "open",
+                kind: "single",
+                reason_code: "no_marketing_consent",
+                refusals: [],
+                warning: {
+                  version: "override-v1",
+                  text: "The refusal stands.",
+                },
+              }),
+              { status: 200, headers: { "content-type": "application/json" } },
+            ),
+      ),
+    );
+    const user = userEvent.setup();
+    draw(["direct_send"]);
+    const button = () =>
+      screen.getByRole("button", { name: /send with a recorded exception/i });
+
+    await user.click(button());
+    await screen.findByRole("dialog");
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    await vi.waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+    failing = true;
+    await user.click(button());
+    await vi.waitFor(() =>
+      expect(screen.getByText(/could not|couldn't/i)).toBeTruthy(),
+    );
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
   // The modal stores a refreshed review under the original's key. The
   // original is cancelled by then, so a reopening must ask for its replacement.
   it("reads the replacement review once the original was refreshed", async () => {

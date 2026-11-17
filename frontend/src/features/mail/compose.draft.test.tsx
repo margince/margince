@@ -19,6 +19,7 @@ import {
   DISCLOSURE,
   emptyResponse,
   fillSendableForm,
+  footScheduleConfirm,
   jsonResponse,
   PROVISIONAL_VOICE_PROFILE,
   pickWhy,
@@ -954,12 +955,7 @@ describe("ComposeModal send refusals", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: /Tomorrow morning/ }),
     );
-    const confirm = screen
-      .getAllByRole("button", { name: "Schedule send" })
-      .find((button) => !button.closest(".compose-sendmenu"));
-    if (!confirm) throw new Error("the foot offers no Schedule send");
-    await waitFor(() => expect(confirm.hasAttribute("disabled")).toBe(false));
-    await userEvent.click(confirm);
+    await userEvent.click(await footScheduleConfirm());
 
     await expectReconnect(onClose);
     const scheduled = sent.find(

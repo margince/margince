@@ -124,7 +124,7 @@ export function DirectSendAction({
           {t("directSend.alreadySettled")}
         </p>
       )}
-      {open && opened.data && !opened.isFetching && !settled && (
+      {open && opened.isSuccess && !opened.isFetching && !settled && (
         <DirectSendModal
           key={`${review.reviewId}:${opened.data.wording_correction?.version ?? "new"}`}
           open
