@@ -57,14 +57,18 @@ type SendPreview struct {
 	// them are the ones the contact the send makes will get.
 	NewContacts      map[string]bool
 	readableSubjects map[previewSubject]bool
+	// ContentFindings are the content rules an advertising draft does not
+	// meet. Advice only: none of them changes a decision.
+	ContentFindings []DraftContentFinding
 }
 
 // PreviewSendInput is a message a composer has not written yet.
 //
-// No subject and no body. Neither reaches a consent decision — the engine reads
-// recipients, the anchor, the links and the evidence — and asking a rep to write
-// the mail before learning whether they may send it is the wrong way round.
+// Subject and Body never reach a consent decision. When given, they are
+// checked against the advertising content rules alone.
 type PreviewSendInput struct {
+	Subject    string
+	Body       string
 	Recipients []string
 	Context    commsauthz.Category
 	// LegacyPurposeKey is carried for one reason: the SEND still consults it
@@ -127,6 +131,9 @@ func (s *Store) PreviewSend(ctx context.Context, origin SendOrigin, in PreviewSe
 		preview, err = s.previewFilingNewAddresses(ctx, in.Recipients, req, previewer)
 	}
 	if err != nil {
+		return SendPreview{}, err
+	}
+	if preview.ContentFindings, err = s.draftContentFindings(ctx, in, preview.Decisions); err != nil {
 		return SendPreview{}, err
 	}
 	return s.withReadablePreviewSubjects(ctx, preview)

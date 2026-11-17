@@ -113,16 +113,6 @@ export function CompanyFactsPanel({
   const t = useT();
   const { locale } = useLocale();
   const [adding, setAdding] = useState(false);
-  // The record page is not remounted when the reader opens a different account
-  // — CompanyScreen takes the id as a prop — so an open add form would carry
-  // its draft across, and the save would write what was typed about one company
-  // onto another. Resetting on the id is what makes the draft belong to the
-  // account it was typed about.
-  const [openFor, setOpenFor] = useState(companyId);
-  if (openFor !== companyId) {
-    setOpenFor(companyId);
-    setAdding(false);
-  }
   const factsQuery = useCompanyFacts(companyId);
 
   // The technical fields are excluded because the technical card claims them.

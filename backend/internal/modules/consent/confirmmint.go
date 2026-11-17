@@ -51,6 +51,9 @@ type mintRequest struct {
 	language string
 	// askedByTheSubject lifts the re-solicitation guard; see linkRequest.
 	askedByTheSubject bool
+	// operatorAsks marks the staff door to a consent link, which some
+	// recipients' rules allow only in answer to their own request.
+	operatorAsks bool
 }
 
 // mintedLink is what the mint produces, also without the plaintext.
@@ -87,7 +90,7 @@ func (s *Store) issueLinkTx(
 	contactID, kind, purposeID := req.contactID, req.kind, req.purposeID
 	var out mintedLink
 	err := func(tx pgx.Tx) error {
-		deliveredTo, err := admitLinkTx(ctx, tx, linkRequest{
+		admitted, err := admitLinkTx(ctx, tx, linkRequest{
 			contactID:         req.contactID,
 			purposeID:         purposeID,
 			expectedAddress:   req.expectedAddress,
@@ -96,11 +99,16 @@ func (s *Store) issueLinkTx(
 		if err != nil {
 			return err
 		}
+		deliveredTo := admitted.deliveredTo
 		// After admitLinkTx and not before it. The caller earns the existence
 		// answers first. Refusing earlier tells an id that names nothing apart
 		// from one the caller may not see.
 		if req.lane == refuseWithoutMailLane && !s.canSendConfirm() {
 			return ErrNoMailLane
+		}
+		rules, err := s.confirmRulesTx(ctx, tx, contactID, kind, admitted.purpose, deliveredTo, req.operatorAsks)
+		if err != nil {
+			return err
 		}
 		issued := s.now().UTC()
 		expires := issued.Add(confirmTokenTTL)
@@ -122,10 +130,14 @@ func (s *Store) issueLinkTx(
 		}
 		// The mail below is rendered in this same language, so the row and the
 		// page cannot disagree about which one.
-		questionLocale := s.sendLanguage(ctx, tx, req.language)
+		questionLocale, err := s.subjectSendLanguage(ctx, tx, ruleSubject{Kind: entityContact, ID: contactID.String()}, req.language)
+		if err != nil {
+			return err
+		}
 		tokenRowID, err := insertContactLinkTx(ctx, tx, contactLink{
 			contactID: contactID, tokenHash: req.tokenHash, deliveredTo: deliveredTo,
-			issued: issued, expires: expires, kind: kind, purposeID: purposeID, language: questionLocale,
+			issued: issued, expires: expires, kind: kind, purposeID: purposeID, purpose: admitted.purpose,
+			language: questionLocale, rules: rules,
 		})
 		if err != nil {
 			return err
@@ -155,6 +167,7 @@ func (s *Store) issueLinkTx(
 			tokenRowID: tokenRowID,
 			link:       req.link,
 			expiresAt:  expires,
+			asksNews:   rules.asksNews,
 		})
 		if err != nil {
 			return err
@@ -196,20 +209,32 @@ type contactLink struct {
 	issued, expires time.Time
 	kind            string
 	purposeID       ids.PurposeID
+	purpose         askedPurpose
 	language        string
+	rules           confirmRules
 }
 
 // insertContactLinkTx writes one link's row and pins the question it asks.
 // A grant read back at proof time could name wording the subject never saw.
+// A link that asks no news question pins none; its locale still names the
+// language its page opens in.
 func insertContactLinkTx(ctx context.Context, tx pgx.Tx, link contactLink) (ids.UUID, error) {
+	var key *string
+	var version *int
+	if link.rules.asksNews {
+		questionKey := QuestionKeyForLink(link.kind, advertisingClass(link.purpose.class))
+		questionVersion := marketingQuestionVersion
+		key, version = &questionKey, &questionVersion
+	}
 	args := []any{
 		link.contactID, link.tokenHash, link.deliveredTo, link.issued, link.expires, link.kind,
-		nullablePurpose(link.purposeID), QuestionKeyForLink(link.kind), link.language, marketingQuestionVersion,
+		nullablePurpose(link.purposeID), key, link.language, version,
+		link.rules.asksNews, zeroUUIDAsNull(link.rules.subjectRequest),
 	}
 	var id ids.UUID
 	err := tx.QueryRow(ctx, `
 		INSERT INTO confirm_token (contact_id, token_hash, delivered_to, issued_at, expires_at, kind, purpose_id,
-		                           question_key, question_locale, question_version)
+		                           question_key, question_locale, question_version, asks_news, subject_request_id)
 		VALUES (`+storekit.Placeholders(args)+`)
 		RETURNING id`, args...).Scan(&id)
 	return id, err

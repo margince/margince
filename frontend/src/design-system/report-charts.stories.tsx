@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { expect, userEvent, within } from "storybook/test";
 import { formatMoney } from "../format/format";
 import { LocaleProvider } from "../i18n";
 import {
@@ -284,5 +285,30 @@ export const StatusCounts: Story = {
 };
 export const StatusCountsDark: Story = {
   ...StatusCounts,
+  globals: { theme: "dark" },
+};
+
+export const CumulativeTable: Story = {
+  ...Cumulative,
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByText("Show readings"));
+    const table = canvasElement.querySelector(".report-chart-data table");
+    if (!table) throw new Error("the cumulative chart has no table");
+    const headers = Array.from(table.querySelectorAll("thead th"));
+    const label = headers[0];
+    if (!label) throw new Error("the cumulative chart has no label header");
+    await expect(["start", "left"]).toContain(
+      getComputedStyle(label).textAlign,
+    );
+    for (const cell of [
+      ...headers.slice(1),
+      ...table.querySelectorAll("tbody td"),
+    ]) {
+      await expect(getComputedStyle(cell).textAlign).toBe("end");
+    }
+  },
+};
+export const CumulativeTableDark: Story = {
+  ...CumulativeTable,
   globals: { theme: "dark" },
 };

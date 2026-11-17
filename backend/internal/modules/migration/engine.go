@@ -94,6 +94,8 @@ type EnsureResult struct {
 	// Problem names what the report says about the row beyond its outcome. It is
 	// the column, kind and value of a skip, or the warning a landed row carries.
 	Problem *SkippedRow
+	// Warnings retain independent disclosures when a row has more than one.
+	Warnings []SkippedRow
 }
 
 // AssocResult reports what one Writers.Associate did — an edge whose

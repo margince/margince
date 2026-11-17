@@ -22,9 +22,9 @@ import {
 } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { analyticsSectionHref } from "../../lib/analytics.address";
+import { fromHere } from "../../lib/navigatefrom";
 import { unwrap } from "../../lib/problem";
 import { REPORTING_EVALUATION_KEY } from "../../lib/reportingfigures";
-import { navigate } from "../../lib/router";
 import { useUrlParams } from "../../lib/urlstate";
 import { useAnalyticsContext } from "./analytics.context";
 import {
@@ -297,10 +297,11 @@ export function InitiativeDrawer({
           params: { path: { id: current.id }, ...ifMatch(current.version) },
         }),
       ),
-    onSuccess: (launched) => {
+    onMutate: fromHere,
+    onSuccess: (launched, _current, from) => {
       invalidate();
       onClose();
-      navigate(
+      from.navigate(
         { screen: "analytics", id: "overview" },
         initiativeDials(params, launched.id),
       );

@@ -14,6 +14,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/integration/contactfixture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -206,4 +207,9 @@ func SettleIntoInstall(t *testing.T, e *Env) {
 	if err != nil {
 		t.Fatalf("settling the seeded records into the installation: %v", err)
 	}
+}
+
+// ContactProfile gives each fixture a distinct manual-create identity.
+func ContactProfile() string {
+	return contactfixture.Profile()
 }

@@ -68,7 +68,7 @@ export function SystemHealthPage({
               view === "diagnostics" ? (
                 <Suspense fallback={<p role="status">{t("health.loading")}</p>}>
                   <Diagnostics
-                    key={`${scope}:${params.get("section") ?? ""}:${params.get("finding") ?? ""}:${params.get("kind") ?? ""}:${params.get("state") ?? ""}`}
+                    key={`${scope}:${params.get("section") ?? ""}:${params.get("finding") ?? ""}`}
                     report={report}
                   />
                 </Suspense>

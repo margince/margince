@@ -104,7 +104,8 @@ func TestContactExportCarriesTheReachableEmailAndPhone(t *testing.T) {
 		t.Fatalf("create contact → %d, want 201", status)
 	}
 	if status := e.Call(t, http.MethodPost, "/v1/contacts", AnyMap{
-		"source": "manual", "full_name": "No Channels",
+		"linkedin_url": apptest.ContactProfile(),
+		"source":       "manual", "full_name": "No Email Or Phone",
 	}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("create bare contact → %d, want 201", status)
 	}
@@ -129,7 +130,7 @@ func TestContactExportCarriesTheReachableEmailAndPhone(t *testing.T) {
 	if got := byName["Wilma Weber"][phoneAt]; got != "+4930123456" {
 		t.Errorf("primary_phone = %q, want the primary number as dialled", got)
 	}
-	if bare := byName["No Channels"]; bare[emailAt] != "" || bare[phoneAt] != "" {
+	if bare := byName["No Email Or Phone"]; bare[emailAt] != "" || bare[phoneAt] != "" {
 		t.Errorf("a contact with no channels exported %q / %q, want both empty", bare[emailAt], bare[phoneAt])
 	}
 }

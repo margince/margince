@@ -270,7 +270,7 @@ func restoreContactFromBefore(t *testing.T, e *apptest.AppEnv, address string) s
 	var created struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Vor der Loeschung"}, nil, &created); status != http.StatusCreated {
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Vor der Loeschung"}, nil, &created); status != http.StatusCreated {
 		t.Fatalf("creating the contact to restore → %d", status)
 	}
 	ctx := context.Background()

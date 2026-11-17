@@ -51,7 +51,8 @@ func createWithCF(t *testing.T, e *apptest.AppEnv, path string, body integration
 func assertContactWireRoundTrip(t *testing.T, e *apptest.AppEnv, col string) {
 	t.Helper()
 	created, id := createWithCF(t, e, "/v1/contacts", integration.AnyMap{
-		"full_name": "Ada Lovelace", "source": "manual", col: "gold",
+		"linkedin_url": apptest.ContactProfile(),
+		"full_name":    "Ada Lovelace", "source": "manual", col: "gold",
 	})
 	assertWireCF(t, created, col, "gold")
 
@@ -203,7 +204,7 @@ func assertSixTypesWireRoundTrip(t *testing.T, e *apptest.AppEnv) {
 		cols["picklist"]: "partner",
 		cols["boolean"]:  true,
 	}
-	body := integration.AnyMap{"full_name": "Grace Hopper", "source": "manual"}
+	body := integration.AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Grace Hopper", "source": "manual"}
 	maps.Copy(body, want)
 	created, id := createWithCF(t, e, "/v1/contacts", body)
 	for col, v := range want {
@@ -225,7 +226,8 @@ func assertPicklistOutsideOptions422(t *testing.T, e *apptest.AppEnv, col string
 	// field the typed shape does not name is still found.
 	var raw json.RawMessage
 	status := e.Call(t, "POST", "/v1/contacts", integration.AnyMap{
-		"full_name": "Bad Option", "source": "manual", col: "bogus",
+		"linkedin_url": apptest.ContactProfile(),
+		"full_name":    "Bad Option", "source": "manual", col: "bogus",
 	}, nil, &raw)
 	var problem customFieldProblem
 	if err := json.Unmarshal(raw, &problem); err != nil {

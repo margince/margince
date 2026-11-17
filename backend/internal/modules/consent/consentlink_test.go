@@ -91,7 +91,8 @@ func TestAConsentLinkReadServesOnlyTheSubscriptionQuestion(t *testing.T) {
 	for field := range ct.Fields() {
 		got[field.Name] = true
 	}
-	want := map[string]bool{"PurposeKey": true, "PurposeLabel": true, "State": true}
+	// Frequency is part of the subscription: the question states it.
+	want := map[string]bool{"PurposeKey": true, "PurposeLabel": true, "Frequency": true, "State": true}
 
 	for name := range got {
 		if !want[name] {

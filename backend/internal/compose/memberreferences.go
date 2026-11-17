@@ -123,6 +123,7 @@ var memberReferences = map[string]memberReference{
 	"intro_request.introducer_user_id":         {disposition: referenceResolve, live: `archived_at IS NULL AND closed_at IS NULL`, remedy: "introductions"},
 	"intro_request.requester_user_id":          {disposition: referenceRetain},
 	"intro_request.suggested_user_id":          {disposition: referenceRetain},
+	"lawful_basis_confirmation.confirmed_by":   {disposition: referenceRetain},
 	"lead.owner_id":                            {disposition: referenceHandover, live: memberLiveRows},
 	"lead.source_author_id":                    {disposition: referenceRetain},
 	"lead_manual_signal.set_by":                {disposition: referenceRetain},

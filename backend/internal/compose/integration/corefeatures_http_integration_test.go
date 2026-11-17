@@ -26,7 +26,7 @@ func TestCoreFeatureSwitchesBlockBothDoorsAndKeepDataForReenable(t *testing.T) {
 	})
 	apptest.BootstrapWorkspaceSession(t, e, "Feature switches", "switches@fable.test", "Admin")
 	company := createdRecord(t, e, "/v1/companies", AnyMap{"display_name": "Kept company", "source": "manual"})
-	contact := createdRecord(t, e, "/v1/contacts", AnyMap{"full_name": "Kept contact", "source": "manual"})
+	contact := createdRecord(t, e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Kept contact", "source": "manual"})
 	var before crmcontracts.MeResponse
 	mustCall(t, e, http.MethodGet, "/v1/me", nil, http.StatusOK, &before)
 	for _, phase := range []string{"enabled", "only deals disabled", "only contacts disabled", "only analytics disabled", "disabled", "enabled again"} {

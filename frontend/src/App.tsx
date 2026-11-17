@@ -52,7 +52,7 @@ import { markJourney } from "./lib/journeymarks";
 import { useWarmProgressName } from "./lib/progressreader";
 import { SPA_RELEASE } from "./lib/release";
 import { routePattern } from "./lib/routepattern";
-import { navigateReplacing, type Screen } from "./lib/router";
+import type { Screen } from "./lib/router";
 import { AuthProbeError, consumeAuthExitNotice, useMe } from "./lib/session";
 import {
   readStored,
@@ -62,7 +62,7 @@ import {
   writeStored,
 } from "./lib/storage";
 import { useTaskReminderNotifications } from "./lib/taskreminders";
-import { currentParams } from "./lib/urlstate";
+import { currentParams, useAddressWriters } from "./lib/urlstate";
 import {
   renderableViewerZone,
   useBrowserZoneOnFirstSignIn,
@@ -314,6 +314,7 @@ function AuthedApp({
   // own destination (onboarding) or destroy a request that cannot survive the
   // rewrite (oauth-consent).
   const { screen: gateScreen, id: gateId, id2: gateId2 } = route;
+  const { navigateReplacing } = useAddressWriters();
   useEffect(() => {
     if (
       authed &&
@@ -327,7 +328,15 @@ function AuthedApp({
       // onboarding by the one key that exists for getting out of things.
       navigateReplacing({ screen: "onboarding", id: "company" });
     }
-  }, [authed, described, progress.unfinished, gateScreen, gateId, gateId2]);
+  }, [
+    authed,
+    described,
+    progress.unfinished,
+    gateScreen,
+    gateId,
+    gateId2,
+    navigateReplacing,
+  ]);
 
   const { refusal, confinement } = useProbeAnswer(me);
   const sessionSeen = useSyncExternalStore(

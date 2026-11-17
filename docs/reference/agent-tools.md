@@ -54,7 +54,7 @@ Open the row to see each action, the verb it runs and its tier, for example `mer
 | `find_records` | 🟢 | `read` | no | 🔀 Find records by text, filters, a query, meaning or a name <details><summary>actions</summary>`identify` (`resolve_entities`, 🟢) `list` (`list_records`, 🟢) `meaning` (`search_context`, 🟢) `query` (`query_workspace`, 🟢) `search` (`search_records`, 🟢)</details> |
 | `list_approvals` | 🟢 | `read` | no | List what is waiting for a decision |
 | `list_documents` | 🟢 | `read` | no | List a record's documents or read one <details><summary>actions</summary>`download` (`download_attachment`, 🟢) `list` (`list_record_documents`, 🟢)</details> |
-| `read_analytics` | 🟢 | `read` | no | 🔀 Ask a question of the data, or build a report from it <details><summary>actions</summary>`compose` (`compose_analytics_report`, 🟢) `query` (`run_analytics_query`, 🟢)</details> |
+| `read_analytics` | 🟢 | `read` | no | 🔀 Ask a question of the data, or build a report from it <details><summary>actions</summary>`ask` (`ask_search_data`, 🟢) `compose` (`compose_analytics_report`, 🟢) `query` (`run_analytics_query`, 🟢)</details> |
 | `read_approval` | 🟢 | `read` | no | Read one staged action in full |
 | `read_attention` | 🟢 | `read` | no | 🔀 See the deals, relationships and promises that need you <details><summary>actions</summary>`at_risk` (`at_risk_relationships`, 🟢) `commitments` (`review_commitments`, 🟢) `slipping` (`whats_slipping_this_week`, 🟢)</details> |
 | `read_context` | 🟢 | `read` | no | 🔀 Get the story so far on a record, a meeting or the morning <details><summary>actions</summary>`brief` (`read_brief`, 🟢) `catch_up` (`catch_me_up_on`, 🟢) `meeting` (`prep_for_meeting`, 🟢)</details> |

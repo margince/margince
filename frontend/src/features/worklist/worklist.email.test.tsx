@@ -15,9 +15,10 @@
 // down through the body, to the row. A row rendered on its own would prove the
 // component and nothing about whether the page reaches it.
 
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en } from "../../i18n/en";
 import {
   day,
   findRowMenu,
@@ -214,5 +215,101 @@ describe("a waiting row on the queue", () => {
     expect(
       screen.queryAllByRole("button", { name: /ping about the quote/ }),
     ).toEqual([await findRowMenu()]);
+  });
+});
+
+// The unanswered message and the promise read out of it are one row. The
+// promise names the row, and the message stays under it as the reason. There
+// is one follow-up to draft, on the message, and the task's own completion.
+describe("a promise read out of a message nobody answered", () => {
+  const promise: WorklistItem = row({
+    id: "01a05500-0000-7000-8000-0000000000f2",
+    source: "task",
+    category: "tasks",
+    title: "Follow up with Mira and Ben about the team and revised pricing",
+    actions: ["complete", "snooze", "reply"],
+    subject: { type: "contact", id: "01a05500-0000-7000-8000-0000000000c2" },
+    move: { action: "draft_reply", activity_id: MESSAGE_ID },
+    because: [
+      { kind: "you_wrote_last" },
+      { kind: "no_reply_days", value: { kind: "days", days: 4 } },
+    ],
+    email_summary: {
+      ...waitingEmail.email_summary,
+      subject: "Delivery team and revised pricing",
+      direction: "outbound",
+      move: "waiting_for_them",
+    },
+  } as Partial<WorklistItem>);
+
+  // A second row ahead of it: the first becomes the focus card, and the claim
+  // is about the promise's row in the list.
+  async function promiseRow() {
+    const { container } = renderWorklist();
+    await screen.findAllByText(/Follow up with Mira and Ben/);
+    const rows = [...container.querySelectorAll(".worklist-row")];
+    const found = rows.find((el) => el.textContent?.includes("Mira and Ben"));
+    if (!found) {
+      throw new Error("the promise drew no row in the list");
+    }
+    return within(found as HTMLElement);
+  }
+
+  it("is named by the promise and keeps the message under it", async () => {
+    stubWithDrawer(day({ queue: [waitingChat, promise] }));
+    const promised = await promiseRow();
+
+    expect(promised.getByText(/Follow up with Mira and Ben/)).toBeTruthy();
+    expect(
+      promised.getByRole("button", {
+        name: /Delivery team and revised pricing/,
+      }),
+    ).toBeTruthy();
+    expect(
+      promised.getAllByRole("button", { name: /draft follow-up/i }),
+    ).toHaveLength(1);
+    expect(
+      promised.getByRole("button", { name: en["tasks.complete"] }),
+    ).toBeTruthy();
+  });
+
+  it("offers no follow-up when the task names no message to answer", async () => {
+    const { move: _drafted, ...unanchored } = promise;
+    stubWithDrawer(day({ queue: [waitingChat, unanchored as WorklistItem] }));
+    const promised = await promiseRow();
+
+    for (const name of [
+      /draft follow-up/i,
+      en["compose.reply"],
+      en["compose.writeEmail"],
+    ]) {
+      expect(promised.queryByRole("button", { name })).toBeNull();
+    }
+    expect(
+      promised.getByRole("button", { name: en["tasks.complete"] }),
+    ).toBeTruthy();
+  });
+
+  it("drafts the follow-up on the message, not on the task", async () => {
+    stubWithDrawer(day({ queue: [waitingChat, promise] }));
+    const served = globalThis.fetch;
+    const asked: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        asked.push(input instanceof Request ? input.url : String(input));
+        return served(input, init);
+      }),
+    );
+    const promised = await promiseRow();
+
+    await userEvent.click(
+      promised.getByRole("button", { name: /draft follow-up/i }),
+    );
+    await waitFor(() => expect(screen.getByRole("dialog")).toBeTruthy());
+    await waitFor(() =>
+      expect(asked.some((url) => url.includes(MESSAGE_ID))).toBe(true),
+    );
+    expect(asked.some((url) => url.includes(promise.id))).toBe(false);
   });
 });

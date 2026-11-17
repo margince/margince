@@ -39,17 +39,17 @@ const (
 	// ClassBusinessCorrespondence is 1:1 mail: replies, meeting follow-ups,
 	// answers to their own question. Allowed on a qualifying event, no consent
 	// object consulted.
-	ClassBusinessCorrespondence Class = "business_correspondence"
+	ClassBusinessCorrespondence = Class(messaging.PurposeClassBusinessCorrespondence)
 	// ClassTransactional is invoices and account notices — allowed while the
 	// business relationship exists.
-	ClassTransactional Class = "transactional"
+	ClassTransactional = Class(messaging.PurposeClassTransactional)
 	// ClassMarketing is »Werbung« read broadly: newsletters, campaigns, and
 	// feedback requests. Express consent with double-opt-in proof, or the
 	// existing-customer route where the pack grants it.
-	ClassMarketing Class = "marketing"
+	ClassMarketing = Class(messaging.PurposeClassMarketing)
 	// ClassPhoneOutreach is specced and dormant — no call provider is wired.
 	// The purpose exists so the model is complete, not because a path uses it.
-	ClassPhoneOutreach Class = "phone_outreach"
+	ClassPhoneOutreach = Class(messaging.PurposeClassPhoneOutreach)
 )
 
 // Verdict is the effective answer for one contact and one purpose.

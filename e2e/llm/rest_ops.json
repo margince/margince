@@ -784,6 +784,7 @@
     "POST /v1/scheduling/invitations": "invite_meeting",
     "POST /v1/scheduling/profile/shared": "mark_booking_page_shared",
     "POST /v1/scheduling/proposals": "create_meeting_proposal",
+    "POST /v1/search/data-answer": "ask_search_data",
     "POST /v1/signals": "create_signal",
     "POST /v1/signals/{id}/resolve": "resolve_signal",
     "POST /v1/stages": "create_stage",

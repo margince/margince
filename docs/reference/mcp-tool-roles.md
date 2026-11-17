@@ -39,7 +39,7 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 
 | Group | Calls | admin | management | manager | ops | read_only | rep |
 |---|---:|---|---|---|---|---|---|
-| [Business operations](#business-operations) | 382 | 381✓ 1✗ | 355✓ 27✗ | 356✓ 26✗ | 355✓ 27✗ | 178✓ 204✗ | 326✓ 56✗ |
+| [Business operations](#business-operations) | 383 | 382✓ 1✗ | 356✓ 27✗ | 357✓ 26✗ | 356✓ 27✗ | 179✓ 204✗ | 327✓ 56✗ |
 | [Compliance and privacy](#compliance-and-privacy) | 48 | 48✓ 0✗ | 28✓ 20✗ | 28✓ 20✗ | 32✓ 16✗ | 11✓ 37✗ | 27✓ 21✗ |
 | [Capture and connectors](#capture-and-connectors) | 49 | 49✓ 0✗ | 43✓ 6✗ | 43✓ 6✗ | 44✓ 5✗ | 28✓ 21✗ | 42✓ 7✗ |
 | [Workspace settings a non-admin can reach](#workspace-settings-a-non-admin-can-reach) | 39 | 39✓ 0✗ | 39✓ 0✗ | 39✓ 0✗ | 39✓ 0✗ | 34✓ 5✗ | 39✓ 0✗ |
@@ -406,6 +406,7 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 | `find_records.meaning` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `find_records.query` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `find_records.search` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `read_analytics.ask` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `read_context.catch_up` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `read_context.meeting` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `read_workspace.actions` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
@@ -1350,6 +1351,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Search and record context | `find_records.meaning` | `search_context` | `activity.read` `company.read` `relationship.read` |
 | Search and record context | `find_records.query` | `query_workspace` | `company.read` `deal.read` `project.read` |
 | Search and record context | `find_records.search` | `search_records` | `company.read` `contact.read` `relationship.read` |
+| Search and record context | `read_analytics.ask` | `ask_search_data` | `activity.read,deal.read,lead.read,project.read` `deal.read,contact.read,company.read,lead.read,project.read,report_definition.read` `forecast.read` `installation_settings.read` `report_definition.read` |
 | Search and record context | `read_context.catch_up` | `catch_me_up_on` | `activity.read,company.read,contact.read,lead.read,project.read` `company.read,contact.read,lead.read,project.read,relationship.read` |
 | Search and record context | `read_context.meeting` | `prep_for_meeting` | `company.read,contact.read,lead.read,project.read` |
 | Search and record context | `read_workspace.actions` | `describe_router_actions` |  |

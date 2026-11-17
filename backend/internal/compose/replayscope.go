@@ -143,12 +143,13 @@ const (
 // Reasons that recur across entries. Named so the same claim reads as one
 // claim rather than several that happen to agree.
 const (
-	noOwnerCatalog    = "catalog config, no owner column"
-	fieldCatalogGate  = "the field catalog is admin-gated inside customfields, which holds no policy.coreObjects entry"
-	noOwnerTemplate   = "workspace-shared template config, no owner column"
-	noOwnerStage      = "stage config under its pipeline, no owner column"
-	noOwnerSignal     = "company-level signal, no owner column"
-	profileVersionRow = "a profile version under its parent profile, with no owner column of its own"
+	noOwnerCatalog          = "catalog config, no owner column"
+	fieldCatalogGate        = "the field catalog is admin-gated inside customfields, which holds no policy.coreObjects entry"
+	noOwnerTemplate         = "workspace-shared template config, no owner column"
+	noOwnerStage            = "stage config under its pipeline, no owner column"
+	noOwnerSignal           = "company-level signal, no owner column"
+	profileVersionRow       = "a profile version under its parent profile, with no owner column of its own"
+	noBodyRetentionDecision = "the response carries no body, so a replay has no record to re-check; the retention authority governs the decision and retention_policy has no owner column"
 )
 
 // replayableOperations mirrors the contract operations that declare the
@@ -336,30 +337,18 @@ var replayableOperations = map[string]replayTarget{
 
 	// Workspace-shared configuration and catalog rows: no owner column, so
 	// object RBAC is the whole gate rather than half of it.
-	// The controller's two decisions about a held record (A165/ADR-0114 §4).
-	// Both answer 204 with no body, so there is no recorded record to probe:
-	// a replay re-serves the same empty answer, and the decision itself was
-	// already gated on the retention authority when it first ran.
-	"POST /v1/retention/restrictions/{activityId}/release": {
+	// The controller's decisions about a held record, a legal hold and the
+	// archive, each gated on the retention authority when it first ran. The
+	// four 204 decisions carry no body, so a replay re-serves the same empty
+	// answer. A legal hold also ran the record's own delete grant, which a
+	// replay does not re-check.
+	"POST /v1/retention/restrictions/{activityId}/release":         {object: objectRetentionPolicy, rowNote: noBodyRetentionDecision},
+	"POST /v1/retention/restrictions/{activityId}/pin":             {object: objectRetentionPolicy, rowNote: noBodyRetentionDecision}, //nolint:goconst // the replay gates read this map's keys as string literals
+	"POST /v1/retention/legal-holds/{entityType}/{recordId}/place": {object: objectRetentionPolicy, rowNote: noBodyRetentionDecision}, //nolint:goconst // the replay gates read this map's keys as string literals
+	"POST /v1/retention/legal-holds/{entityType}/{recordId}/lift":  {object: objectRetentionPolicy, rowNote: noBodyRetentionDecision},
+	"POST /v1/retention/archive/delete": {
 		object:  objectRetentionPolicy,
-		rowNote: "the response carries no body, so a replay has no record to re-check; the retention authority governs the decision and retention_policy has no owner column",
-	},
-	"POST /v1/retention/restrictions/{activityId}/pin": {
-		object:  objectRetentionPolicy,
-		rowNote: "the response carries no body, so a replay has no record to re-check; the retention authority governs the decision and retention_policy has no owner column",
-	},
-	// The two legal-hold decisions. Same shape as the pair above and for the
-	// same reasons: 204 with no body, so a replay re-serves the same empty
-	// answer, and the decision was gated on the retention authority when it
-	// first ran. The RECORD's own write gate ran too — each owning module takes
-	// the delete grant on its table — but that is not what a replay re-checks.
-	"POST /v1/retention/legal-holds/{entityType}/{recordId}/place": {
-		object:  objectRetentionPolicy,
-		rowNote: "the response carries no body, so a replay has no record to re-check; the retention authority governs the decision and retention_policy has no owner column",
-	},
-	"POST /v1/retention/legal-holds/{entityType}/{recordId}/lift": {
-		object:  objectRetentionPolicy,
-		rowNote: "the response carries no body, so a replay has no record to re-check; the retention authority governs the decision and retention_policy has no owner column",
+		rowNote: "the response names activity ids and keep reasons only, no record content; the retention authority governs the deletion and retention_policy has no owner column",
 	},
 	"POST /v1/pipelines":       {object: objectPipeline, rowNote: "pipeline has no owner and is governed by object grants only (auth.EnsureVisible's own note)"},
 	"PATCH /v1/pipelines/{id}": {object: objectPipeline, rowNote: "pipeline config, no owner column"},

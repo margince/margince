@@ -4,6 +4,7 @@
 package consent
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
@@ -83,5 +84,19 @@ func TestTwoRecipientsOweOneLinePerKind(t *testing.T) {
 	}
 	if owed[0].MarketingOnly {
 		t.Error("a pack owing the route on every message was narrowed to advertising by the other recipient's pack")
+	}
+}
+
+// A route owed under two packs names every means either pack asks for.
+func TestTwoRecipientsOweEveryMeansEitherPackAsks(t *testing.T) {
+	t.Parallel()
+	owed := appendOwed(nil, []messagingrules.Disclosure{{
+		Kind: messagingrules.ObjectionRoute, Means: []messagingrules.ContactMeans{messagingrules.MeansEmail},
+	}}, false)
+	owed = appendOwed(owed, []messagingrules.Disclosure{{
+		Kind: messagingrules.ObjectionRoute, Means: []messagingrules.ContactMeans{messagingrules.MeansEmail, messagingrules.MeansPhone},
+	}}, false)
+	if len(owed) != 1 || !slices.Equal(owed[0].Means, []messagingrules.ContactMeans{messagingrules.MeansEmail, messagingrules.MeansPhone}) {
+		t.Errorf("owed %+v, want one route asking for email and phone", owed)
 	}
 }

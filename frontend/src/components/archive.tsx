@@ -12,6 +12,7 @@ import { ConfirmModal } from "../design-system/confirmmodal";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { type RequiredGrant, useGrantRefused } from "../lib/capability";
+import { type Departure, fromHere } from "../lib/navigatefrom";
 import { problemMessageOf } from "../lib/problem";
 import "../design-system/querystates.css";
 
@@ -60,20 +61,22 @@ export function useArchiveRecord<Archived extends { id: string }, Vars = void>({
   // have one (pipelines) offers the undo where the archived record is listed
   // rather than in a toast that has already gone — see the top of this file.
   archivedMessage: string | ((archived: Archived) => string);
-  onDone: (archived: Archived) => void;
+  // `from` is where the reader confirmed, for a caller that moves them on.
+  onDone: (archived: Archived, from: Departure) => void;
 }>) {
   const queryClient = useQueryClient();
   const toast = useToast();
   return useMutation({
     mutationFn: archive,
-    onSuccess: (archived) => {
+    onMutate: fromHere,
+    onSuccess: (archived, _vars, from) => {
       for (const queryKey of typeof invalidate === "string"
         ? [[invalidate]]
         : invalidate) {
         queryClient.invalidateQueries({ queryKey });
       }
       queryClient.invalidateQueries({ queryKey: [recordKey, archived.id] });
-      onDone(archived);
+      onDone(archived, from);
       toast.show(
         typeof archivedMessage === "string"
           ? archivedMessage
@@ -107,7 +110,7 @@ export function ArchiveAction<Archived extends { id: string }>({
   recordKey: string;
   // What the reader is told once it is gone. See `useArchiveRecord`.
   archivedMessage: string;
-  onArchived: () => void;
+  onArchived: (from: Departure) => void;
   // Why this action is unavailable, when it is. STATE-4a settles the
   // absent-vs-disabled question by CAUSE: a control blocked by STATE
   // rather than permission — an archived record — stays visible and
@@ -134,9 +137,9 @@ export function ArchiveAction<Archived extends { id: string }>({
     invalidate,
     recordKey,
     archivedMessage,
-    onDone: () => {
+    onDone: (_archived, from) => {
       setConfirming(false);
-      onArchived();
+      onArchived(from);
     },
   });
 
