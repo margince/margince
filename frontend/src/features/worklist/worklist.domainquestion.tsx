@@ -141,13 +141,10 @@ export function useDomainQuestionConfirm(invalidateKeys: readonly QueryKey[]) {
 // company this is, and a filled button would repeat its guess. A suggestion
 // is confirmed by a person, never linked on its own.
 //
-// The DOMAIN is the row's id: an open question is identified by the domain
-// itself.
-//
-// Each button asks whether the row offers it. The verbs are answered by
-// different stores under different gates, and a control drawn past the
+// Each button asks whether the row offers it: a control drawn past the
 // server's offer is a button that 403s. Confirm and Choose need the company
-// grant, because both link the domain to a company.
+// grant, because both link the domain to a company. The line keeps those two;
+// the rarer answers are the row menu's (`DomainQuestionMenu`).
 export function DomainQuestionAnswer({
   item,
 }: Readonly<{ item: WorklistItem }>) {
@@ -157,54 +154,40 @@ export function DomainQuestionAnswer({
   const [review, setReview] = useState(false);
   const toast = useToast();
   const canLink = useCanWrite("company", "update");
-  const keep = useDomainQuestionKeep([worklistKey]);
   const confirm = useDomainQuestionConfirm([worklistKey]);
-  const discard = useDomainQuestionDiscard([worklistKey]);
-  const keepVendor = useDomainQuestionKeepVendor([worklistKey]);
-  const busy =
-    keep.isPending ||
-    confirm.isPending ||
-    discard.isPending ||
-    keepVendor.isPending;
   const domain = item.id;
-  const { actions } = item;
   const context = item.domain_context;
   const suggestion = context?.suggested_company;
-  const failed = (key: MessageKey) => () =>
-    toast.show(t(key), { tone: "danger" });
   return (
     <>
       {suggestion && canLink && (
-        <span className="t-caption">
-          {t("worklist.domainQuestion.suggested", { name: suggestion.name })}{" "}
-          {confirmEffect(
+        <Button
+          pending={confirm.isPending}
+          title={confirmEffect(
             { t, plural, locale },
             domain,
             suggestion.name,
             context,
           )}
-        </span>
-      )}
-      {suggestion && canLink && (
-        <Button
-          pending={confirm.isPending}
-          disabled={busy}
           onClick={() =>
             confirm.mutate(
               { domain, companyId: suggestion.id },
               {
                 onSuccess: () =>
                   toast.show(t("worklist.domainQuestion.confirmed")),
-                onError: failed("worklist.domainQuestion.confirmFailed"),
+                onError: () =>
+                  toast.show(t("worklist.domainQuestion.confirmFailed"), {
+                    tone: "danger",
+                  }),
               },
             )
           }
         >
-          {t("worklist.domainQuestion.confirm")}
+          {t("worklist.domainQuestion.confirmNamed", { name: suggestion.name })}
         </Button>
       )}
       {canLink && (
-        <Button disabled={busy} onClick={() => setReview(true)}>
+        <Button disabled={confirm.isPending} onClick={() => setReview(true)}>
           {t(
             suggestion
               ? "worklist.domainQuestion.chooseAnother"
@@ -215,24 +198,42 @@ export function DomainQuestionAnswer({
       {review && (
         <DomainReview domain={domain} onClose={() => setReview(false)} />
       )}
+    </>
+  );
+}
+
+// The answers a reader reaches for less often, as lines of the row's menu.
+export function DomainQuestionMenu({ item }: Readonly<{ item: WorklistItem }>) {
+  const t = useT();
+  const toast = useToast();
+  const keep = useDomainQuestionKeep([worklistKey]);
+  const discard = useDomainQuestionDiscard([worklistKey]);
+  const keepVendor = useDomainQuestionKeepVendor([worklistKey]);
+  const busy = keep.isPending || discard.isPending || keepVendor.isPending;
+  const domain = item.id;
+  const { actions } = item;
+  const failed = (key: MessageKey) => () =>
+    toast.show(t(key), { tone: "danger" });
+  return (
+    <>
       {actions.includes("keep") &&
-      item.domain_reason_code !== "forwarded_identity" ? (
+        item.domain_reason_code !== "forwarded_identity" && (
+          <Button
+            variant="ghost"
+            disabled={busy}
+            onClick={() =>
+              keep.mutate(domain, {
+                onSuccess: () => toast.show(t("worklist.verb.domainKept")),
+                onError: failed("worklist.verb.domainKeepFailed"),
+              })
+            }
+          >
+            {t("worklist.verb.keep")}
+          </Button>
+        )}
+      {actions.includes("keep_as_vendor") && (
         <Button
-          pending={keep.isPending}
-          disabled={busy}
-          onClick={() =>
-            keep.mutate(domain, {
-              onSuccess: () => toast.show(t("worklist.verb.domainKept")),
-              onError: failed("worklist.verb.domainKeepFailed"),
-            })
-          }
-        >
-          {t("worklist.verb.keep")}
-        </Button>
-      ) : null}
-      {actions.includes("keep_as_vendor") ? (
-        <Button
-          pending={keepVendor.isPending}
+          variant="ghost"
           disabled={busy}
           onClick={() =>
             keepVendor.mutate(domain, {
@@ -244,11 +245,10 @@ export function DomainQuestionAnswer({
         >
           {t("worklist.verb.keepAsVendor")}
         </Button>
-      ) : null}
-      {actions.includes("discard") ? (
+      )}
+      {actions.includes("discard") && (
         <Button
           variant="ghost"
-          pending={discard.isPending}
           disabled={busy}
           title={t("worklist.domainQuestion.stopCapturingEffect", { domain })}
           onClick={() =>
@@ -260,7 +260,7 @@ export function DomainQuestionAnswer({
         >
           {t("worklist.verb.discard")}
         </Button>
-      ) : null}
+      )}
     </>
   );
 }

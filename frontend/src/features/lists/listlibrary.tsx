@@ -27,9 +27,10 @@ import {
   listEntityTypeOf,
   RECORDS_COUNT_LABEL,
 } from "../../lib/filtersaddress";
+import { fromHere } from "../../lib/navigatefrom";
 import { problemMessageOf } from "../../lib/problem";
 import { recordKindLabel, useRecordKindDirectory } from "../../lib/recordkinds";
-import { navigate, routeHash } from "../../lib/router";
+import { routeHash } from "../../lib/router";
 import { EditFilterAction, mayEditFilter } from "./filterlistedit";
 import {
   isArchived,
@@ -394,7 +395,8 @@ export function NewShortlistAction({
         confirmDisabled={name.trim() === ""}
         pending={create.isPending}
         error={create.isError ? problemMessageOf(create.error, t) : null}
-        onConfirm={() =>
+        onConfirm={() => {
+          const from = fromHere();
           create.mutate(
             {
               name: name.trim(),
@@ -407,11 +409,11 @@ export function NewShortlistAction({
             {
               onSuccess: (list) => {
                 setOpen(false);
-                navigate({ screen: "lists", id: list.id });
+                from.navigate({ screen: "lists", id: list.id });
               },
             },
-          )
-        }
+          );
+        }}
       >
         <Field label={t("lists.name")}>
           {(control) => (

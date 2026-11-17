@@ -26,7 +26,10 @@ import {
   type BriefAnswer,
   BriefSetAsides,
 } from "./worklist.briefverbs";
-import { DomainQuestionAnswer } from "./worklist.domainquestion";
+import {
+  DomainQuestionAnswer,
+  DomainQuestionMenu,
+} from "./worklist.domainquestion";
 import { PlanWorkActions } from "./worklist.plan";
 import {
   useNudgeDismissal,
@@ -67,6 +70,8 @@ type RowPlacement = Readonly<{
   equals?: ReactNode;
   /** An answer carrying its own layout, under the row rather than in it. */
   below?: ReactNode;
+  /** The lane's rarer answers, as lines at the top of the row's menu. */
+  menu?: ReactNode;
 }>;
 
 // The answers the row itself is enough for, keyed by the source that carries
@@ -106,7 +111,10 @@ const ANSWER_BY_SOURCE: Partial<
   // reopen but never keep. The control asks the row again for each button.
   domain_question: {
     verbs: ["keep", "keep_as_vendor", "discard", "reopen"],
-    draw: (item) => ({ equals: <DomainQuestionAnswer item={item} /> }),
+    draw: (item) => ({
+      equals: <DomainQuestionAnswer item={item} />,
+      menu: <DomainQuestionMenu item={item} />,
+    }),
   },
   // Verbs of equal weight, so the row has no primary. Any answer is plausible
   // about a meeting the product knows nothing about. A filled verb would claim

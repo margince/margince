@@ -2986,6 +2986,7 @@ export const en = {
   "deal.card.moveTo": "Move to {stage}",
   "deal.card.markWon": "Mark won",
   "deal.card.markLost": "Mark lost",
+  "deal.card.changeCloseDate": "Change close date",
   "deal.card.closedReopen":
     "This deal is closed. Reopen it on its page to move it.",
   "deal.card.copyLink": "Copy link",
@@ -3377,6 +3378,9 @@ export const en = {
   "roster.failedUsers": "Colleagues did not load.",
   "roster.failedTeams": "Teams did not load.",
   "owner.rosterFailed": "Colleagues did not load. Reload the page to pick one.",
+  "ownerPick.change": "Change owner",
+  "ownerPick.search": "Search colleagues",
+  "ownerPick.done": "Assigned to {name}",
   "ref.notInRoster": "Currently assigned (no longer in the user list)",
 
   // A record search that ANSWERED and found nothing. Distinct from a search
@@ -5949,8 +5953,6 @@ export const en = {
   "lead.terminalDisqualified": "Disqualified. This lead is read-only.",
   "lead.marker": "Lead",
   "lead.assignToMe": "Assign to me",
-  "lead.assignChoose": "Choose a colleague",
-  "lead.assignNobodyElse": "No other user to assign this lead to.",
   "lead.saveOverride": "Save override",
   "lead.overrideScoreValue": "Score",
   "lead.trigger.inboundReply": "Inbound reply",
@@ -12507,6 +12509,13 @@ export const en = {
     "A sender already works there.",
   "worklist.domainQuestion.suggested": "Suggested company: {name}.",
   "worklist.domainQuestion.confirm": "Confirm company",
+  "worklist.domainQuestion.confirmNamed": "Confirm {name}",
+  "worklist.domainReview.anotherLabel": "Another company",
+  "worklist.domainReview.newLabel": "A new company",
+  "worklist.domainReview.siteLabel": "Their website",
+  "worklist.domainReview.vendorLabel": "A mail or hosting vendor",
+  "worklist.domainReview.laterLabel": "Later",
+  "worklist.domainReview.mailboxesLabel": "Your mailboxes",
   "worklist.domainQuestion.confirmEffectNone":
     "Confirming links {domain} to {company}. Contacts already at another company keep theirs.",
   "worklist.domainQuestion.confirmEffect_one":
@@ -14607,9 +14616,7 @@ export const en = {
     "Everything keeps working and nothing is capped. Configure a license token for this installation to count seats against a grant.",
   "license.refused.title": "This installation’s license was refused",
   "license.refused.body":
-    "The license token configured for this installation was presented and rejected. Full seats in use keep working, and no full seat is added beyond what the last valid license granted, until it is replaced. Check the token and the installation’s clock.",
-  "license.refused.bodyUncapped":
-    "The license token configured for this installation was presented and rejected. Everything keeps working, uncapped, until it is replaced. Check the token and the installation’s clock.",
+    "The license token configured for this installation was presented and rejected, so Margince is locked until a check accepts it. Check the token and the installation’s clock, then check again.",
   "license.seats.capacityOnly": "Your role cannot see the license entitlement.",
   "license.seats.title": "Seats",
   "license.seats.inUse": "Full seats in use",
@@ -14629,7 +14636,7 @@ export const en = {
   "license.holder.id": "License ID",
   "license.grace.title": "This license expired",
   "license.grace.body":
-    "The license expired on {expiry}. It still works for a limited period. Renew it to keep the installation in service.",
+    "The license expired on {expiry}, so Margince is locked until a valid license is set up.",
   "license.renewal.title": "License needs renewal",
   "license.renewal.body":
     "The license expires on {expiry}. Nothing changes before that date.",
@@ -15637,11 +15644,17 @@ export const en = {
   "trial.locked.member":
     "Your admin can get a license from the Margince team. You can also write to them yourself.",
   "common.trialEnded":
-    "This installation’s trial has ended, so this change waits for a license. Your data stays as it is.",
+    "This installation’s trial has ended, so this change was not saved. Make it again once there is a license. Your data stays as it is.",
+  "license.locked.pageTitle": "License not valid",
+  "license.locked.title": "Your Margince license is no longer valid",
+  "license.locked.body":
+    "The license has expired or was refused, so Margince is locked and background work is paused until it has a valid license. Your data stays as it is, and nothing is deleted.",
+  "common.licenseLapsed":
+    "This installation’s license has expired or was refused, so this change was not saved. Make it again once there is a valid license. Your data stays as it is.",
   "licensebanner.link": "Open {tab}",
   "licensebanner.grace.title": "License expired",
   "licensebanner.grace.body":
-    "This installation’s license expired and is in its grace period. Margince keeps running, but it does not start again after the grace period ends. Renew the license before then.",
+    "This installation’s license has expired, so Margince is locked until a valid license is set up.",
 
   "aicalls.title": "AI call trace",
   "aicalls.withheld":
@@ -19622,9 +19635,6 @@ export const en = {
   "project.owner": "Owner",
   "project.ownerMe": "Me",
   "project.assignOwner": "Assign to a colleague",
-  "project.assignOwnerTitle": "Assign to a colleague",
-  "project.assignOwnerSearch": "Search colleagues",
-  "project.assignOwnerDone": "Assigned to {name}",
   "project.description": "Description",
   "project.targetEnd": "Target end date",
   "project.new": "New project",

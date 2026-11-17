@@ -177,10 +177,12 @@ func (h Handlers) Middleware(next http.Handler) http.Handler {
 		ctx = principal.WithWorkspaceID(ctx, wsID.UUID)
 
 		if AdmittedWithoutSession(r) {
-			// Sign-in stays open after the trial, so a seat can reach the screen
-			// that says so. The anonymous booking surface is work, and stops.
+			// Sign-in stays open while locked, so a seat can reach the screen that
+			// says so. A chat notice only records a channel that is gone, and its
+			// pull waits for the paused worker. The anonymous booking surface is
+			// work, and stops.
 			if strings.HasPrefix(r.URL.Path, publicBookingPrefix) {
-				if err := h.refuseAfterTrial(ctx, r); err != nil {
+				if err := h.refuseWhenLocked(ctx, r); err != nil {
 					httperr.Write(w, r, err)
 					return
 				}

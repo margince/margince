@@ -12,6 +12,7 @@ import { Select } from "../../design-system/select";
 import { formatAnalyticsNumber, formatDateTime } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
+import { type Departure, fromHere } from "../../lib/navigatefrom";
 import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import { ReportingEvidenceDrawer } from "./analytics.drawers";
@@ -36,6 +37,20 @@ import {
   ReportVersions,
   useDraftEditing,
 } from "./reporting.versions";
+
+// Back must not reopen an archived report, and a snapshot leaves the reader on
+// the edition they are reading.
+function leaveAfter(
+  action: ReportAction,
+  created: string | undefined,
+  from: Departure,
+): void {
+  if (action.kind === "duplicate") {
+    from.navigate({ screen: "analytics", id: "reports", id2: created });
+  } else if (action.kind === "archive") {
+    from.navigateReplacing({ screen: "analytics", id: "reports" });
+  }
+}
 
 export function ReportingReportDetail({
   reportId,
@@ -117,14 +132,15 @@ export function ReportingReportDetail({
         }
       }
     },
-    onSuccess: async (result, action) => {
+    onMutate: fromHere,
+    onSuccess: async (result, action, from) => {
       if (action.kind === "freeze") setCapturePending(true);
       await client.invalidateQueries({ queryKey: ["reporting-reports"] });
       await client.invalidateQueries({
         queryKey: ["reporting-executions", reportId],
       });
       setRequestKey(crypto.randomUUID());
-      navigate({ screen: "analytics", id: "reports", id2: result.reportId });
+      leaveAfter(action, result.reportId, from);
     },
   });
   const allEditions = editions.data?.pages.flatMap((page) => page.data) ?? [];

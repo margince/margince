@@ -93,6 +93,12 @@ function companyEditField(
   };
 }
 
+export const dealCloseDateField = {
+  key: "expected_close_date",
+  label: "create.expectedClose",
+  type: "date",
+} satisfies CreateField;
+
 export function dealEditFields(
   t: (k: MessageKey) => string,
   opts: {
@@ -161,7 +167,7 @@ export function dealEditFields(
       noneYet: opts.noPartnersYet,
     }),
     ...(opts.closed ? [] : [winProbabilityField(t)]),
-    { key: "expected_close_date", label: "create.expectedClose", type: "date" },
+    dealCloseDateField,
     { key: "wait_until", label: "deal.waitUntil", type: "date" },
     {
       key: "__commercial__",

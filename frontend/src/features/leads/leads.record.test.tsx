@@ -7,10 +7,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
 import { translate } from "../../i18n";
 import { leadKey } from "../../lib/leadkeys";
-import {
-  changeChoice,
-  openChoiceDialog,
-} from "../../testing/choicedialog.testkit";
+import { ACTION_PARAM, QUALIFY_ACTION } from "../../lib/leads.address";
+import { replaceDial } from "../../lib/urlstate";
+import { openChoiceDialog } from "../../testing/choicedialog.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { LeadScreen, promoteEligible, scoreTone, terminalBadge } from "./leads";
 import {
@@ -525,14 +524,18 @@ describe("LeadScreen — owner display + assign to me (P-11)", () => {
 
     await waitFor(() => expect(screen.getByText("Unassigned")).toBeTruthy());
     // One control, not a self-assign button beside a picker: the viewer is
-    // its first option (ADR-0108).
-    await changeChoice(userEvent.setup(), "Owner", "Assign to me");
+    // one of its options (ADR-0108).
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "Change owner" }),
+    );
+    await user.click(await screen.findByRole("option", { name: "Me" }));
 
     await waitFor(() => expect(claimed).toBe(String(lead.version)));
     expect(patched).toBe(false);
   });
 
-  it("saves the owner against the version the dialog opened on", async () => {
+  it("writes the owner against the version the list opened on", async () => {
     let served = lead.version;
     let ifMatch: string | null = null;
     stubFetchWithMe(async (url, method, request) => {
@@ -556,15 +559,55 @@ describe("LeadScreen — owner display + assign to me (P-11)", () => {
     });
     render(<LeadScreen id="l-1" />, client);
     const user = userEvent.setup();
-    const { chooser, save } = await openChoiceDialog(user, "Owner");
+    await user.click(
+      await screen.findByRole("button", { name: "Change owner" }),
+    );
+    const option = await screen.findByRole("option", { name: "Dana Fischer" });
 
-    // The lead moves on while the dialog is open.
+    // The lead moves on while the list is open.
     served = lead.version + 1;
     await act(() => client.refetchQueries({ queryKey: leadKey("l-1") }));
-    await pickOption(user, chooser, "Dana Fischer");
-    await user.click(save);
+    await user.click(option);
 
     await waitFor(() => expect(ifMatch).toBe(String(lead.version)));
+  });
+
+  it("refuses an owner pick while another write on the lead is out", async () => {
+    const reassigned: unknown[] = [];
+    stubFetchWithMe(async (url, method, request) => {
+      if (url.includes("/users")) {
+        return jsonResponse({
+          data: [{ id: "u-42", display_name: "Dana Fischer" }],
+          page: { next_cursor: null, has_more: false },
+        });
+      }
+      if (method === "PATCH" && url.includes("/leads/l-1")) {
+        const body = JSON.parse(await request.text());
+        if ("owner_id" in body) {
+          reassigned.push(body);
+        }
+        // The score write never answers, so it stays out for the whole test.
+        return new Promise<Response>(() => undefined);
+      }
+      return jsonResponse({
+        ...lead,
+        score: 90,
+        score_override_reason: "Strong buying signal",
+        score_computed: 72,
+      });
+    }, "u-9");
+    render(<LeadScreen id="l-1" />);
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "Clear override" }),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Change owner" }));
+    const option = await screen.findByRole("option", { name: "Dana Fischer" });
+    expect(option).toHaveAttribute("aria-disabled", "true");
+    await user.click(option);
+
+    expect(reassigned).toEqual([]);
   });
 
   // The fixture above says `writable: true`, which an ownerless lead is not.
@@ -587,8 +630,9 @@ describe("LeadScreen — owner display + assign to me (P-11)", () => {
     render(<LeadScreen id="l-1" />);
 
     expect(
-      await screen.findByRole("button", { name: /^Change Owner Unassigned/ }),
+      await screen.findByRole("button", { name: "Change owner" }),
     ).toBeEnabled();
+    expect(screen.getByText("Unassigned")).toBeInTheDocument();
   });
 
   // Dropping the per-row half of the write answer must not drop the other two.
@@ -622,7 +666,7 @@ describe("LeadScreen — owner display + assign to me (P-11)", () => {
     render(<LeadScreen id="l-1" />);
 
     const owner = await screen.findByText("Unassigned");
-    expect(screen.queryByRole("button", { name: /^Change Owner/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Change owner" })).toBeNull();
     // The plain value says why, in the seat's words: a role change would not lift it.
     const reason = translate("en", "settings.seatRefused");
     await waitFor(() => expect(owner).toHaveAttribute("title", reason));
@@ -662,21 +706,39 @@ describe("LeadScreen — owner display + assign to me (P-11)", () => {
     expect(owner).toHaveAccessibleDescription(reason);
   });
 
-  it("hides Assign to me when the lead is already owned by the current user", async () => {
-    const { urls } = stubFetchWithMe(
-      async () => jsonResponse({ ...lead, owner_id: "u-9" }),
-      "u-9",
-    );
+  it("writes nothing when the viewer picks themselves on a lead they own", async () => {
+    const writes: string[] = [];
+    stubFetchWithMe(async (url, method) => {
+      if (method !== "GET") {
+        writes.push(`${method} ${new URL(url).pathname}`);
+      }
+      if (url.includes("/users")) {
+        return jsonResponse({
+          data: [{ id: "u-9", display_name: "Me" }],
+          page: { next_cursor: null, has_more: false },
+        });
+      }
+      return jsonResponse({ ...lead, owner_id: "u-9" });
+    }, "u-9");
     render(<LeadScreen id="l-1" />);
+    const user = userEvent.setup();
 
-    // LeadScreen subscribes to the /me probe up front, so a lead the viewer
-    // owns settles to the "You" owner line once /me resolves. Waiting on that,
-    // not the transient raw owner id, makes the self-assign assertion reliable.
     await waitFor(() => expect(screen.getByText("You")).toBeTruthy());
-    await waitFor(() =>
-      expect(urls.some((url) => url.endsWith("/v1/me"))).toBe(true),
+    await user.click(
+      await screen.findByRole("button", { name: "Change owner" }),
     );
-    expect(screen.queryByRole("button", { name: "Assign to me" })).toBeNull();
+    const own = await screen.findByRole("option", { name: "Me" });
+    expect(own).toHaveAttribute("aria-selected", "true");
+    await user.click(own);
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(
+      writes.filter(
+        (write) =>
+          write.endsWith("/records/lead/l-1/claim") ||
+          write === "PATCH /v1/leads/l-1",
+      ),
+    ).toEqual([]);
   });
 });
 
@@ -810,6 +872,26 @@ describe("LeadScreen — arriving to qualify", () => {
     stubFetch(async () => jsonResponse(lead));
     window.location.hash = "#/leads/l-1?action=qualify";
     render(<LeadScreen id="l-1" />);
+    expect(
+      await screen.findByRole("dialog", { name: /^Qualify / }),
+    ).toBeTruthy();
+  });
+
+  it("takes the ask out of the address when the reader closes it", async () => {
+    stubFetch(async () => jsonResponse(lead));
+    window.location.hash = "#/leads/l-1?action=qualify";
+    render(<LeadScreen id="l-1" />);
+    await screen.findByText("Evidence note (optional)");
+    const dialog = screen.getByRole("dialog", { name: /^Qualify / });
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "Close" }),
+    );
+    expect(window.location.hash).toBe("#/leads/l-1");
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog", { name: /^Qualify / })).toBeNull(),
+    );
+    // An entry that still carries the ask, reached by Back or Forward.
+    act(() => replaceDial(ACTION_PARAM, QUALIFY_ACTION));
     expect(
       await screen.findByRole("dialog", { name: /^Qualify / }),
     ).toBeTruthy();

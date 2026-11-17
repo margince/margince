@@ -4,9 +4,16 @@
 import { useEffect, useEffectEvent, useId } from "react";
 import { AddToShortlistAction } from "../../components/addtoshortlist";
 import { ArchiveAction } from "../../components/archive";
+import { OwnerPick } from "../../components/ownerpick";
+import { useRailText } from "../../components/railfield";
 import { Button } from "../../design-system/button";
 import { useClipboardCopy } from "../../design-system/clipboardcopy";
+import { DateInput, isoOrBlank } from "../../design-system/dateinput";
 import type { DealCardActions } from "../../design-system/dealcard";
+import {
+  FieldEditDialog,
+  useFieldEditor,
+} from "../../design-system/fieldeditdialog";
 import { ListPopover } from "../../design-system/listpopover";
 import { useCloseOverflowMenu } from "../../design-system/overflowmenu";
 import { type useOwnToast, useToast } from "../../design-system/toast";
@@ -15,7 +22,8 @@ import { useCanWriteRecord } from "../../lib/capability";
 import { appHref } from "../../lib/recordaddress";
 import { routeHash } from "../../lib/router";
 import type { Deal, Stage } from "./deals";
-import { archiveDeal } from "./deals.write";
+import { dealCloseDateField } from "./deals.fields";
+import { archiveDeal, openDealEdit, saveDealEdit } from "./deals.write";
 
 type CardVerbs = Pick<DealCardActions, "onSummary" | "onEmail" | "onAddTask">;
 type RefusalSlot = ReturnType<typeof useOwnToast>;
@@ -45,7 +53,12 @@ export function DealCardMenu({
   return (
     <>
       {live && canWrite && (
-        <DealMoves deal={deal} stages={stages} onAdvance={onAdvance} />
+        <>
+          <DealMoves deal={deal} stages={stages} onAdvance={onAdvance} />
+          {/* A closed deal's page shows the day it closed and offers no close date to change. */}
+          {deal.status === "open" && <DealCloseDate deal={deal} />}
+          <DealOwnerPick deal={deal} />
+        </>
       )}
       {verbs.onSummary && (
         <Button onClick={verbs.onSummary}>{t("deal.card.summaryItem")}</Button>
@@ -130,6 +143,65 @@ function DealMoves({
         </Button>
       ))}
     </>
+  );
+}
+
+// Saved as the record page's own close-date row saves it.
+function DealCloseDate({ deal }: Readonly<{ deal: Deal }>) {
+  const t = useT();
+  const write = useRailText(
+    {
+      kind: "deal",
+      record: openDealEdit(deal),
+      fields: [dealCloseDateField],
+      canEdit: true,
+      save: (values, _rows, opened) =>
+        saveDealEdit(opened, values, deal.masked_fields ?? []),
+    },
+    dealCloseDateField,
+  );
+  const { open, editing } = useFieldEditor(
+    write.canEdit,
+    write.onEditingChange,
+  );
+  return (
+    <>
+      <Button pending={!write.canEdit} onClick={() => editing(true)}>
+        {t("deal.card.changeCloseDate")}
+      </Button>
+      <FieldEditDialog
+        open={open}
+        label={t(dealCloseDateField.label)}
+        value={write.stored}
+        onClose={() => editing(false)}
+        onSave={write.onSave}
+        onDirtyChange={write.onDirtyChange}
+      >
+        {({ control, draft, setDraft, saving }) => (
+          <DateInput
+            {...control}
+            value={isoOrBlank(draft)}
+            readOnly={saving}
+            onChange={(event) => setDraft(event.target.value)}
+          />
+        )}
+      </FieldEditDialog>
+    </>
+  );
+}
+
+function DealOwnerPick({ deal }: Readonly<{ deal: Deal }>) {
+  const closeMenu = useCloseOverflowMenu();
+  return (
+    <OwnerPick
+      record={openDealEdit(deal)}
+      assign={(ownerId, opened) =>
+        saveDealEdit(opened, { owner_id: ownerId }, deal.masked_fields ?? [])
+      }
+      invalidate="deals"
+      recordKey="deal"
+      onAssigned={closeMenu}
+    />
   );
 }
 

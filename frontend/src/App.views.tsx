@@ -3,7 +3,7 @@ import {
   type ReactNode,
   Suspense,
   useDeferredValue,
-  useMemo,
+  useState,
 } from "react";
 import {
   AnalyticsScreen,
@@ -53,13 +53,21 @@ import { isContactTab } from "./lib/contacttab";
 import { screenEnabled, useDisabledCoreFeatures } from "./lib/corefeatures";
 import { bootsOnEssentialCopy } from "./lib/essentialscreens";
 import { EXTENSION_SCREEN } from "./lib/extensions";
+import { traversalInFlight, traverseTo } from "./lib/historydepth";
 import { routeIdentity } from "./lib/routeidentity";
-import { navigate, parseHash, routeHash, type Screen } from "./lib/router";
+import {
+  navigateReplacing,
+  parseHash,
+  type Route,
+  routeHash,
+  type Screen,
+  samePage,
+  useLiveHash,
+} from "./lib/router";
+import { ScreenAddress, useReportShownAddress } from "./lib/screenaddress";
+import { parseParams } from "./lib/urlstate";
 
-// The path segments below the screen. Only two of the four are dispatched on.
-// id3 belongs to the screens that read it themselves (the consent return's
-// provider), and nothing routes on it.
-type ScreenArgs = Readonly<{ id?: string; id2?: string }>;
+type ScreenArgs = Readonly<{ id?: string; id2?: string; id3?: string }>;
 
 // One entry per address, and `Record<Screen, …>` is what makes that set
 // complete. A screen added to the union in lib/router.tsx with no view here
@@ -171,17 +179,14 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
     "not-found": () => <ScreenNotice messageKey="shell.unknownPage" />,
   };
 
-// A displayed route as one string, and back. The guard below compares
-// addresses for equality, so the address it holds has to be a primitive. An
-// object is a new value on every render. The hash the router already speaks is
-// that primitive. `routeHash`/`parseHash` are the app's own serializer and
-// parser, so this adds no second spelling of an address. A segment cannot be
-// mangled by the round trip, because it came from a hash in the first place.
-//
-// Putting the address back is a normal navigation, through the one function
-// that performs them. The reader keeps their edit, and the URL returns to the
-// page they are on.
-const navigateToAddress = (address: string) => navigate(parseHash(address));
+// Through history, so the entries around the held one are kept. Never a replace
+// while a traversal is under way: that would rename the entry it lands on.
+function returnTo(address: string, depth: number | undefined): void {
+  if (traversalInFlight() || (depth !== undefined && traverseTo(depth))) {
+    return;
+  }
+  navigateReplacing(parseHash(address), parseParams(address));
+}
 
 // The view for a held address, parsed rather than threaded alongside the
 // string. That leaves one source for what is on screen: the address the guard
@@ -205,32 +210,70 @@ function screenWithLocale(address: string) {
 const identityOfAddress = (address: string) =>
   routeIdentity(parseHash(address));
 
+const withoutId3 = (route: Route) => routeHash({ ...route, id3: undefined });
+
+// App passes the route without its fourth segment, so the bar supplies that
+// and the dials. A route the bar does not spell (an unserved path's not-found,
+// a story with no address) is addressed by the route alone.
+function askedAddress(route: Route, live: string): string {
+  return withoutId3(parseHash(live)) === withoutId3(route)
+    ? live
+    : routeHash(route);
+}
+
+// Deferring a new page keeps the ordinary loading body, or the page before,
+// on screen while its code resolves, without committing Suspense's delayed
+// fallback. A dial is not deferred: the screen it turns reads it at once.
+function useShownAddress(asked: string): string | null {
+  const page = routeHash(parseHash(asked));
+  const shownPage = useDeferredValue<string | null>(page, null);
+  // What the shown page goes on reading once the bar has moved past it.
+  const [left, setLeft] = useState(asked);
+  if (shownPage === page && left !== asked) {
+    setLeft(asked);
+  }
+  if (shownPage === null) {
+    return null;
+  }
+  return shownPage === page ? asked : left;
+}
+
+function DrawnFor({
+  address,
+  children,
+}: Readonly<{ address: string; children: ReactNode }>) {
+  useReportShownAddress(address);
+  return (
+    <ScreenAddress.Provider value={address}>{children}</ScreenAddress.Provider>
+  );
+}
+
 export function ScreenView({
   screen,
   id,
   id2,
 }: Readonly<{ screen: Screen; id?: string; id2?: string }>) {
-  // Deferring the first route keeps the ordinary loading body on screen while
-  // its code resolves, without committing Suspense's delayed fallback.
   const disabled = useDisabledCoreFeatures();
-  const asked = useMemo(() => ({ screen, id, id2 }), [screen, id, id2]);
-  const shown = useDeferredValue<typeof asked | null>(asked, null);
-  const shownAddress = shown ? routeHash(shown) : null;
+  const shown = useShownAddress(
+    askedAddress({ screen, id, id2 }, useLiveHash()),
+  );
   return (
     <Suspense fallback={<ScreenPending />}>
       {/* The draft guard holds content while browser history can still move. */}
-      {shownAddress === null ? (
+      {shown === null ? (
         <ScreenPending />
       ) : (
-        <UnsavedGuard address={shownAddress} onKeep={navigateToAddress}>
+        <UnsavedGuard address={shown} samePlace={samePage} onKeep={returnTo}>
           {(held) => (
-            <Fragment key={identityOfAddress(held)}>
-              {screenEnabled(parseHash(held).screen, disabled) ? (
-                screenWithLocale(held)
-              ) : (
-                <ScreenNotice messageKey="shell.unknownPage" />
-              )}
-            </Fragment>
+            <DrawnFor address={held}>
+              <Fragment key={identityOfAddress(held)}>
+                {screenEnabled(parseHash(held).screen, disabled) ? (
+                  screenWithLocale(held)
+                ) : (
+                  <ScreenNotice messageKey="shell.unknownPage" />
+                )}
+              </Fragment>
+            </DrawnFor>
           )}
         </UnsavedGuard>
       )}

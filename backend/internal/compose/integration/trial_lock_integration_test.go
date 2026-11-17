@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/installtrial"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/licensecheck"
 	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
@@ -107,5 +108,44 @@ func TestAnUnlicensedInstallationLocksWhenItsTrialEnds(t *testing.T) {
 	}
 	if status := e.Call(t, "GET", "/v1/contacts", nil, nil, nil); status != http.StatusOK {
 		t.Errorf("list contacts after the trial → %d, want 200: the data stays readable", status)
+	}
+}
+
+// A license that was refused, or that the module still accepts past its expiry,
+// locks the installation through the real server. There is no grace period. A
+// change answers license_lapsed, /me tells every seat, and reads still answer.
+func TestALapsedLicenseLocksTheInstallation(t *testing.T) {
+	expired := func() licensecheck.Posture {
+		return licensecheck.Posture{State: licensecheck.StateValid, License: licensecheck.License{InGrace: true}}
+	}
+	for name, posture := range map[string]func() licensecheck.Posture{
+		"refused":         postureOf(licensecheck.StateRejected),
+		"past its expiry": expired,
+	} {
+		t.Run(name, func(t *testing.T) {
+			now := clocktest.Now(t)
+			e := apptest.SetupAppWithOptions(t,
+				compose.WithLicensePosture(posture),
+				compose.WithInstallationTrial(runtimeenv.Development, posture, func() time.Time { return now }))
+			// Describing the company is a change too, so the lock refuses it.
+			e.BootstrapWorkspace(t)
+
+			var refusal struct {
+				Code string `json:"code"`
+			}
+			if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "On A Lapsed License"}, nil, &refusal); status != http.StatusForbidden || refusal.Code != "license_lapsed" {
+				t.Fatalf("create a contact → %d %q, want 403 license_lapsed", status, refusal.Code)
+			}
+			var me struct {
+				TrialEnded    *bool `json:"trial_ended"`
+				LicenseLapsed *bool `json:"license_lapsed"`
+			}
+			if status := e.Call(t, "GET", "/v1/me", nil, nil, &me); status != http.StatusOK || me.LicenseLapsed == nil || !*me.LicenseLapsed || me.TrialEnded != nil {
+				t.Fatalf("/me → %d license_lapsed=%v trial_ended=%v, want 200, true and absent", status, me.LicenseLapsed, me.TrialEnded)
+			}
+			if status := e.Call(t, "GET", "/v1/contacts", nil, nil, nil); status != http.StatusOK {
+				t.Errorf("list contacts → %d, want 200: the data stays readable", status)
+			}
+		})
 	}
 }

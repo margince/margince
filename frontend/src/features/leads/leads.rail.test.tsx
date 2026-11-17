@@ -11,7 +11,6 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
-import { changeChoice } from "../../testing/choicedialog.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { RecordShell } from "../../testing/recordshell.testkit";
 import { LeadScreen } from "./leads";
@@ -113,6 +112,15 @@ function render(ui: ReactNode) {
   );
 }
 
+/** Hands the lead to a colleague from the Owner row; the pick is the write. */
+async function pickOwner(
+  user: ReturnType<typeof userEvent.setup>,
+  name: string,
+) {
+  await user.click(await screen.findByRole("button", { name: "Change owner" }));
+  await user.click(await screen.findByRole("option", { name }));
+}
+
 /** Start an override from the score card's head. */
 async function openOverride(user: ReturnType<typeof userEvent.setup>) {
   await user.click(
@@ -136,7 +144,7 @@ describe("the lead page's writes, read from two columns", () => {
     await user.type(screen.getByLabelText("Reason"), "Met the buyer");
 
     // Somebody else's write: the owner picker in the rail beside this form.
-    await changeChoice(user, "Owner", "Assign to me");
+    await pickOwner(user, "Me");
 
     // The override survives it.
     await waitFor(() =>
@@ -153,7 +161,7 @@ describe("the lead page's writes, read from two columns", () => {
     );
   });
 
-  it("states a refused owner write once, in its dialog, on the History tab", async () => {
+  it("states a refused owner write once, in its list, on the History tab", async () => {
     const user = userEvent.setup();
     stubFetch(() =>
       jsonResponse(
@@ -171,9 +179,9 @@ describe("the lead page's writes, read from two columns", () => {
     // The rail renders on every tab, so its writes can be refused on one the
     // ladder panel — where this sentence used to live — never reaches.
     await user.click(await screen.findByRole("button", { name: /^History/ }));
-    await changeChoice(user, "Owner", "Assign to me");
+    await pickOwner(user, "Me");
 
-    const dialog = await screen.findByRole("dialog", { name: "Owner" });
+    const dialog = await screen.findByRole("dialog");
     await waitFor(() =>
       expect(within(dialog).getByRole("alert").textContent).toMatch(
         /moved while you were reading it/,
@@ -183,8 +191,8 @@ describe("the lead page's writes, read from two columns", () => {
       screen.getAllByRole("alert").filter((alert) => !dialog.contains(alert)),
     ).toEqual([]);
 
-    // Cancel leaves no copy of the refusal behind on the page.
-    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    // Closing the list leaves no copy of the refusal behind on the page.
+    await user.keyboard("{Escape}");
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(screen.queryByText(/moved while you were reading it/)).toBeNull();
   });

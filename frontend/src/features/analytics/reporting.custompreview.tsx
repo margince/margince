@@ -12,8 +12,8 @@ import { QueryGate } from "../../design-system/querystates";
 import { useT } from "../../i18n";
 import { analyticsSectionHref } from "../../lib/analytics.address";
 import { useCanWrite } from "../../lib/capability";
+import { fromHere } from "../../lib/navigatefrom";
 import { unwrap } from "../../lib/problem";
-import { navigate } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
 import { useUrlParams } from "../../lib/urlstate";
 import { ReportingEvidenceDrawer } from "./analytics.drawers";
@@ -21,6 +21,7 @@ import { ReportingCharts } from "./reporting.charts";
 import {
   type CustomReportDraft,
   CustomReportDrawer,
+  forgetCustomReport,
   heldCustomReport,
 } from "./reporting.custombuilder";
 import { useSelectionEvidence } from "./reporting.evidenceselection";
@@ -82,9 +83,17 @@ function HeldPreview({
           },
         }),
       ),
-    onSuccess: async (report) => {
+    onMutate: fromHere,
+    onSuccess: async (report, _saved, from) => {
       await client.invalidateQueries({ queryKey: ["reporting-reports"] });
-      navigate({ screen: "analytics", id: "reports", id2: report.id });
+      from.navigateReplacing({
+        screen: "analytics",
+        id: "reports",
+        id2: report.id,
+      });
+      // The preview is spent: an address that reopens it must not offer a
+      // second Save.
+      forgetCustomReport();
     },
   });
   return (

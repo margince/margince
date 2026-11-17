@@ -121,7 +121,7 @@ Also called: restore a lead, undo a disqualification.
 ### How do I edit a lead?
 To edit a lead in Margince, open it from **Leads** and press the value to change in its **Details** panel. There is no Edit button. A value you may change shows a box and an edit mark when the pointer is over it. On a touch screen the mark always shows.
 1. Press a value or the name at the top, change it in the dialog, and press **Save**. Nothing is stored until **Save**; **Cancel** or Esc closes without saving. Pressing the **Email** address starts a message; press the box around it or its mark to change it.
-2. Fields: **Full name**, **Email**, **Phone**, **Title**, **Company**, **Industry**, **Owner**. More fields: **Company routing key**, **Project**, **Origin**, **Origin note**, **Referred by partner**, custom fields. **Added via** shows how the row came into Margince, and Margince writes it.
+2. Fields: **Full name**, **Email**, **Phone**, **Title**, **Company**, **Industry**. The owner has its own control; see [How do I change a lead's owner?](#how-do-i-change-a-leads-owner). More fields: **Company routing key**, **Project**, **Origin**, **Origin note**, **Referred by partner**, custom fields. **Added via** shows how the row came into Margince, and Margince writes it.
 
 **LinkedIn URL** cannot be changed on a lead. Status moves on the **Lead status** ladder; score moves with **Override score** and a reason. A closed lead "cannot be changed".
 Also called: update a lead, rename a lead, correct a prospect.
@@ -129,9 +129,9 @@ Also called: update a lead, rename a lead, correct a prospect.
 **Referred by partner** shows once a company is a partner, to a role that may see companies and partners. On a lead that names a partner, a role that may change partners then sees **Accept for partner**; see [Partners and commission](partners.md#what-does-activated-mean). The **Leads** table then has a **Referred by partner** column. A lead that no one has accepted for its partner yet says **Awaiting acceptance** there.
 
 ### How do I change a lead's owner?
-To change or set the owner of a lead in Margince, open the lead and press the **Owner** value under **Ownership** in its **Details** panel. Then pick a colleague under **Choose a colleague** and press **Save**.
-1. **Assign to me** is listed first; saving it on a lead with no owner claims the lead for you.
-2. Pick anyone else to hand the lead over.
+To change or set the owner of a lead in Margince, open the lead. Press **Change owner** beside the **Owner** value under **Ownership** in its **Details** panel. Search under **Search colleagues** and pick a colleague. The pick saves at once, with no **Save** button, and confirms "Assigned to {name}".
+Pick yourself on a lead with no owner to claim it, or anyone else to hand it over. The current owner is marked; picking them changes nothing.
+
 For many leads, tick them on the **Leads** table and use **Choose owner** → **Assign**.
 The new owner must be "an active colleague you may assign work to".
 Also called: assign a lead, reassign a prospect, take a lead, claim a lead.
@@ -206,7 +206,8 @@ The recurring value may come from an accepted offer. Then the row reads **Expect
 Also called: change the amount, update deal size, switch to dollars.
 
 ### How do I change a deal's expected close date?
-To change when a deal is expected to close, open the deal, click **Expected close** in its **Details** panel and pick the date.
+To change when a deal is expected to close, open the deal, click **Expected close** in its **Details** panel and pick the date. On the **Board** view, an open deal's card has **Change close date** in its **…** menu.
+
 An open deal cannot get a date in the past: "an open deal cannot claim a close date in the past; pick today or later". A closed deal keeps its dates open to edits, past ones included.
 To hold a deal until a date without moving its close date, set **Wait until** instead. **How it stands** reads **On hold** until that day, and **Follow-up overdue** from that day on.
 Also called: push the close date, change closing date, slip a deal.
@@ -220,7 +221,7 @@ Margince refuses to move a deal to another company while contracts filed on it n
 Also called: move a deal to another account, attach a deal to a project.
 
 ### How do I change the owner of a deal?
-To reassign a deal to a colleague in Margince, open the deal and press the **Owner** row of its **Details** panel. Pick the colleague in the dialog and press **Save**.
+To reassign a deal to a colleague in Margince, open the deal and press the **Owner** row of its **Details** panel. Pick the colleague in the dialog and press **Save**. On the **Board** view, open the card's **…** menu, choose **Change owner** and pick the colleague; that pick saves at once.
 
 To reassign many, switch **Deals** to **Table** and tick them. Use **Pick an owner** → **Assign owner** in the bulk bar, then **Change owner**.
 The new owner must be "an active colleague you may assign work to". That is any active colleague on a full seat, not an agent, even one whose records you cannot change. You may reassign only a deal you may change, or one with no owner.
@@ -294,7 +295,7 @@ The company is not in this form: add or take off companies in the project's **Co
 Also called: update a project, change the project's end date.
 
 ### How do I change a project's owner?
-To reassign a project in Margince, open it and choose **More actions** → **Assign to a colleague**. Search under **Search colleagues**, pick one and choose **Assign**. It confirms "Assigned to {name}".
+To reassign a project in Margince, open it and choose **More actions** → **Assign to a colleague**. Search under **Search colleagues** and pick one. The pick saves at once, with no **Assign** button, and confirms "Assigned to {name}".
 **Edit project** also has **Owner**, which lists the colleagues you may assign to, then **Unassigned**, which releases the project. A project cannot be claimed, so only a role that edits every project or someone it is shared with at **Write** can assign one.
 Also called: hand over a project, change project lead, transfer a project, release a project.
 
@@ -369,11 +370,7 @@ Companies on a project can be a customer, partner or subcontractor. These are la
 
 Stakeholder roles: champion, economic buyer, blocker, influencer, user, sponsor, project lead, delivery lead, subject-matter expert.
 
-You can add someone from either end. The project's own Stakeholders card adds,
-removes and changes roles, and so does the contact's page. The contact page
-offers the five delivery roles; the project card offers them all. The card goes
-read-only when the project is archived, or when your role does not allow adding
-stakeholders.
+You can add someone from either end. The project's own Stakeholders card adds, removes and changes roles, and so does the contact's page. The contact page offers the five delivery roles; the project card offers them all. The card goes read-only when the project is archived, or when your role does not allow adding stakeholders.
 
 ### How do I add a stakeholder to a project?
 To add a contact to a project in Margince, open the project and choose **Add stakeholder** in its **Stakeholders** card.

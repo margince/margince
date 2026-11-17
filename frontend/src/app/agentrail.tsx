@@ -20,6 +20,7 @@ import { usePrefersReducedMotion } from "../design-system/motion";
 import { formatMoney } from "../format/format";
 import { useNow } from "../format/now";
 import { type Translator, useLocale, usePlural, useT } from "../i18n";
+import { useClosesWithPage } from "../lib/pageleave";
 import { usePhoneViewport } from "../lib/viewport";
 import { clearAgentEdge, publishAgentEdge } from "./agent-edge-signal";
 import { useAgentFault } from "./agent-fault";
@@ -279,6 +280,7 @@ export function AgentRail({
     }
   }, []);
   usePopoverDismiss(open, panel, dismiss);
+  useClosesWithPage({ open, close: dismiss });
 
   const frame = usePanelFrame(block, well, bar, open, phone);
   const money =
