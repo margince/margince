@@ -17,6 +17,7 @@ import {
   currentParams,
   replaceParams,
   type UrlParams,
+  useAddressWriters,
   useUrlParams,
 } from "../../lib/urlstate";
 import type { AnalyticsScope } from "./analytics.context";
@@ -179,19 +180,20 @@ function useOverviewMemory(
   const shown = useRef<string | null>(null);
   const dials = view ? dialsOf(params, view) : {};
   const signature = `${view}:${JSON.stringify(restore ?? dials)}`;
+  const writers = useAddressWriters();
   // biome-ignore lint/correctness/useExhaustiveDependencies: the signature spells view, dials and restore
   useLayoutEffect(() => {
     if (!account || !view) return;
     const before = shown.current;
     shown.current = signature;
     if (restore) {
-      replaceParams(withContext(currentParams(), view, restore));
+      writers.replaceParams(withContext(currentParams(), view, restore));
       return;
     }
     const turned = before?.startsWith(`${view}:`) && before !== signature;
     if (turned) chooseContext(account, view, dials);
     else noteContext(account, view, dials);
-  }, [account, signature]);
+  }, [account, signature, writers]);
 }
 
 // An explicit choice of view is remembered and written to the address. Back

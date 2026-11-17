@@ -16,7 +16,8 @@ import (
 var growthTestAssume = growthAssumptions{RoundTrip: 3 * time.Millisecond, Stretch: 1}
 
 var growthTestLimits = growthLimits{
-	Line: 10 * time.Second, Horizon: 4, WarmServer: 2 * time.Second, ConnectionMemory: 300 << 20, CacheHits: 0.75,
+	Line: 10 * time.Second, Horizon: 4, WarmServer: 2 * time.Second, ConnectionMemory: 300 << 20,
+	ConnectionPrivate: 400 << 20, CacheHits: 0.75,
 }
 
 // growthTestSeries is a read whose cold time is at + per·years seconds, all
@@ -32,9 +33,11 @@ func growthTestSeries(at, per float64, years ...int) growthSeries {
 	return s
 }
 
+var growthTestMemory = growthMemory{Contexts: 10 << 20, Private: 20 << 20}
+
 // growthTestOther passes every step the test series measure, years 1 to 4.
 var growthTestOther = growthOther{
-	ConnectionMemory: map[int]int64{1: 10 << 20, 2: 10 << 20, 3: 10 << 20, 4: 10 << 20},
+	ConnectionMemory: map[int]growthMemory{1: growthTestMemory, 2: growthTestMemory, 3: growthTestMemory, 4: growthTestMemory},
 	Cache:            map[int]growthCache{1: {4, 5}, 2: {4, 5}, 3: {4, 5}, 4: {4, 5}},
 }
 
@@ -42,7 +45,7 @@ var growthTestOther = growthOther{
 const laterStep = 2
 
 // withLaterStep is growthTestOther with laterStep's readings replaced.
-func withLaterStep(memory *int64, cache *growthCache) growthOther {
+func withLaterStep(memory *growthMemory, cache *growthCache) growthOther {
 	years := laterStep
 	other := growthOther{ConnectionMemory: maps.Clone(growthTestOther.ConnectionMemory), Cache: maps.Clone(growthTestOther.Cache)}
 	if memory == nil {
@@ -131,8 +134,10 @@ func TestAStepWithNoSamplesFailsRatherThanPasses(t *testing.T) {
 func TestTheServerMemoryAndCacheBudgetsEachFail(t *testing.T) {
 	slow := growthTestSeries(1, 0, 1, 2)
 	slow.Steps[0].Warm[0].Server = 3 * time.Second
-	ok := int64(10 << 20)
-	heavy := withLaterStep(new(int64(400<<20)), nil)
+	ok := growthTestMemory
+	heavy := withLaterStep(&growthMemory{Contexts: 400 << 20, Private: 20 << 20}, nil)
+	heavyPrivate := withLaterStep(&growthMemory{Contexts: 10 << 20, Private: 500 << 20}, nil)
+	privateUnread := withLaterStep(&growthMemory{Contexts: 10 << 20}, nil)
 	// Full steps around it cannot carry a step that served nothing.
 	cold := withLaterStep(&ok, &growthCache{Hits: 0, Opens: 5})
 	unmeasured := withLaterStep(&ok, &growthCache{})
@@ -142,11 +147,13 @@ func TestTheServerMemoryAndCacheBudgetsEachFail(t *testing.T) {
 		other  growthOther
 		want   string
 	}{
-		"warm server time":  {slow, growthTestOther, "costs the database"},
-		"connection memory": {growthTestSeries(1, 0, 1, 2), heavy, "400 MB"},
-		"cache hit rate":    {growthTestSeries(1, 0, 1, 2), cold, "0 of 5"},
-		"no repeat open":    {growthTestSeries(1, 0, 1, 2), unmeasured, "hit rate is unknown"},
-		"no memory reading": {growthTestSeries(1, 0, 1, 2), noMemory, "no connection's memory"},
+		"warm server time":   {slow, growthTestOther, "costs the database"},
+		"connection memory":  {growthTestSeries(1, 0, 1, 2), heavy, "400 MB"},
+		"private memory":     {growthTestSeries(1, 0, 1, 2), heavyPrivate, "500 MB of private memory"},
+		"no private reading": {growthTestSeries(1, 0, 1, 2), privateUnread, "no backend's private memory"},
+		"cache hit rate":     {growthTestSeries(1, 0, 1, 2), cold, "0 of 5"},
+		"no repeat open":     {growthTestSeries(1, 0, 1, 2), unmeasured, "hit rate is unknown"},
+		"no memory reading":  {growthTestSeries(1, 0, 1, 2), noMemory, "no connection's memory"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			failures := growthFailures([]growthSeries{tc.series}, tc.other, growthTestLimits, growthTestAssume)

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useState } from "react";
+import { AppLink } from "../../../design-system/applink";
 import { Button } from "../../../design-system/atoms";
 import { ErrorLine } from "../../../design-system/errorline";
 import {
@@ -115,7 +116,11 @@ function LinkRow({
   const label = linkTypeLabel(types, link.link_type);
   const name = other.name ?? other.id;
   const route = recordRoute(other.type, other.id);
-  const target = route ? <a href={routeHash(route)}>{name}</a> : name;
+  const target = route ? (
+    <AppLink href={routeHash(route)}>{name}</AppLink>
+  ) : (
+    name
+  );
   return (
     <OverviewRow
       title={target}

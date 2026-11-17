@@ -18,6 +18,9 @@ import {
 import { useT } from "../../i18n";
 import { useCurrentMove } from "../../lib/currentmove";
 import { opensElsewhere } from "../../lib/linkclick";
+import { type Departure, fromHere } from "../../lib/navigatefrom";
+import { parseHash } from "../../lib/router";
+import { parseParams } from "../../lib/urlstate";
 import { useFoldedViewport } from "../../lib/viewport";
 import {
   moveHref,
@@ -301,15 +304,15 @@ function PreparedMove({
 }: Readonly<{ item: WorklistItem; onOpenEmail?: (id: string) => void }>) {
   const t = useT();
   const quiet = useQuietVerbs();
-  const check = useCurrentMove<{ activityId: string } | { href: string }>(
-    (target) => {
-      if ("activityId" in target) {
-        onOpenEmail?.(target.activityId);
-      } else {
-        globalThis.location.assign(target.href);
-      }
-    },
-  );
+  const check = useCurrentMove<
+    { activityId: string } | { href: string; from: Departure }
+  >((target) => {
+    if ("activityId" in target) {
+      onOpenEmail?.(target.activityId);
+    } else {
+      target.from.navigate(parseHash(target.href), parseParams(target.href));
+    }
+  });
   if (replyIsTheMove(item)) {
     return null;
   }
@@ -362,7 +365,7 @@ function PreparedMove({
           if (!receipt || opensElsewhere(event)) return;
           event.preventDefault();
           if (check.isPending) return;
-          check.mutate({ receipt, operand: { href: move } });
+          check.mutate({ receipt, operand: { href: move, from: fromHere() } });
         }}
       >
         {modelWrites && <Sparkles aria-hidden="true" />}

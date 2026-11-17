@@ -1,0 +1,11 @@
+/* The company search and its Match verb on one line, the verb at the end. */
+.domainreview-match {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gapActions);
+}
+.domainreview-match > :first-child {
+  flex: 1 1 16rem;
+  min-width: 0;
+}

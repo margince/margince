@@ -71,6 +71,8 @@ function page(
           ],
           page: { next_cursor: null, has_more: false },
         }),
+      "GET /users/names": () =>
+        jsonResponse({ data: [{ id: "u-2", display_name: "Dana Fischer" }] }),
       "GET /lead-signal-catalog": () => jsonResponse(SIGNAL_CATALOG),
       "GET /leads/l-1": () => jsonResponse(lead),
       "GET /companies/c-7": () =>
@@ -161,14 +163,19 @@ export const Lists: Story = {
   },
 };
 
-/** The owner is handed on in a dialog opened from the Owner row's value. */
-export const OwnerDialog: Story = {
-  render: page(base),
+/** The owner is handed on from the list beside the Owner row's value: the pick is the save. */
+export const OwnerList: Story = {
+  render: page({ ...base, owner_id: "u-2" }),
   play: async () => {
     const user = userEvent.setup();
     await user.click(
-      await screen.findByRole("button", { name: /^Change Owner/ }),
+      await screen.findByRole("button", { name: "Change owner" }),
     );
-    await screen.findByRole("combobox", { name: "Owner" });
+    const list = within(await screen.findByRole("dialog"));
+    await expect(
+      await list.findByRole("option", { name: "Dana Fischer" }),
+    ).toHaveAttribute("aria-selected", "true");
   },
 };
+
+export const OwnerListPhone: Story = { ...OwnerList, tags: ["uat-phone"] };

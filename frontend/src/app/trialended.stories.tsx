@@ -12,12 +12,18 @@ import { TrialEndedScreen } from "./trialended";
 
 const DAY = 86_400_000;
 
-function story(allow: GrantSpec, roles: string[]) {
+function story(
+  allow: GrantSpec,
+  roles: string[],
+  reason: "trial" | "license" = "trial",
+) {
   return () => {
     const ended = Date.now() - 2 * DAY;
+    const lock =
+      reason === "license" ? { license_lapsed: true } : { trial_ended: true };
     installFetchStub({
       "GET /me": () =>
-        jsonResponse({ ...meFixture({ allow, roles }), trial_ended: true }),
+        jsonResponse({ ...meFixture({ allow, roles }), ...lock }),
       "GET /installation/license": () =>
         jsonResponse({
           state: "absent",
@@ -33,7 +39,7 @@ function story(allow: GrantSpec, roles: string[]) {
     });
     return (
       <StoryProviders>
-        <TrialEndedScreen />
+        <TrialEndedScreen reason={reason} />
       </StoryProviders>
     );
   };
@@ -55,3 +61,7 @@ export const Admin: Story = {
 };
 // Every other seat is pointed at its admin, and can write to the team too.
 export const Member: Story = { render: story({}, ["rep"]) };
+// A license that expired or was refused locks the same way, and says so.
+export const LicenseLapsed: Story = {
+  render: story({ license: ["read"] }, ["admin"], "license"),
+};

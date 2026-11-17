@@ -52,7 +52,7 @@ export function ContactOverview({
         onAllTasks={openQueue}
         onAddTask={onAddTask}
       />
-      <ContactHowItStands view={view} />
+      <ContactHowItStands view={view} onOpenTab={onOpenTab} />
       <div className="pe-overview-grid">
         <div className="pe-overview-column">
           <ContactCommitmentsCard

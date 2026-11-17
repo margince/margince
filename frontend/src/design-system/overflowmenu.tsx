@@ -115,6 +115,7 @@ export function OverflowMenu({
   label,
   word,
   text,
+  face = "pill",
   icon = <MoreHorizontal aria-hidden="true" />,
   inline = false,
   align = "end",
@@ -126,6 +127,8 @@ export function OverflowMenu({
   label: string;
   /** A trigger that prints its verb after the glyph, as a pill; `label` stays its full name and starts with it. */
   text?: string;
+  /** How a `text` trigger is drawn: a `pill` over a picture, or a `button` beside other buttons, its word before the glyph. */
+  face?: "pill" | "button";
   /** The write an item started is out: the trigger shows it as `Button pending` does. */
   pending?: boolean;
   /** Where the panel hangs: off the trigger's `end` (a mark at a row's end), its `start`, or its `center`. */
@@ -291,9 +294,13 @@ export function OverflowMenu({
           )}
         </Button>
       ) : (
-        <Button className="overflow-menu-labelled" {...triggerProps}>
-          {icon}
+        <Button
+          className={face === "pill" ? "overflow-menu-labelled" : undefined}
+          {...triggerProps}
+        >
+          {face === "pill" && icon}
           {text}
+          {face === "button" && icon}
         </Button>
       )}
       {/* Hidden, never unmounted once mounted: the items own their dialogs, and
