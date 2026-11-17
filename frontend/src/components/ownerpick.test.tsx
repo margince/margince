@@ -14,6 +14,7 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
@@ -347,5 +348,60 @@ describe("OwnerPick", () => {
         panel.getAllByRole("option").map((option) => option.textContent),
       ).toEqual(["Omar Haddad", "Jane Doe"]),
     );
+  });
+
+  it("opens from a caller's own control, writes against the record as it opened, and hands focus back", async () => {
+    stubRoster();
+    const assign = vi.fn(async () => undefined);
+    const user = userEvent.setup();
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    function Section({ version }: Readonly<{ version: number }>) {
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <button type="button" onClick={() => setOpen(true)}>
+            Edit Ownership
+          </button>
+          <OwnerPick
+            opener="caller"
+            open={open}
+            onClose={() => setOpen(false)}
+            record={{ id: "r-1", version, owner_id: null }}
+            assign={assign}
+            invalidate="projects"
+            recordKey="project"
+          />
+        </>
+      );
+    }
+    const ui = (version: number) => (
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <ToastProvider>
+            <Section version={version} />
+          </ToastProvider>
+        </LocaleProvider>
+      </QueryClientProvider>
+    );
+    const { rerender } = rtlRender(ui(5));
+    expect(screen.getAllByRole("button")).toHaveLength(1);
+
+    const edit = screen.getByRole("button", { name: "Edit Ownership" });
+    await user.click(edit);
+    const sheet = within(
+      await screen.findByRole("dialog", { name: "Change owner" }),
+    );
+    await sheet.findByRole("option", { name: "Jane Doe" });
+    rerender(ui(6));
+    await user.click(sheet.getByRole("option", { name: "Jane Doe" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(assign).toHaveBeenCalledWith(
+      "u-42",
+      expect.objectContaining({ version: 5 }),
+    );
+    expect(document.activeElement).toBe(edit);
   });
 });
