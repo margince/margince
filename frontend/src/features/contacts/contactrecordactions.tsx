@@ -12,7 +12,9 @@ import type { RecordPickerCandidate } from "../../design-system/recordpicker";
 import { useT } from "../../i18n";
 import { fileListKeys } from "../../lib/attachmentkeys";
 import { unwrap } from "../../lib/problem";
+import { restoreLatestArchive } from "../../lib/recordrestore";
 import { invalidateRecord } from "../../lib/recordwritekeys";
+import { navigate } from "../../lib/router";
 
 // The contact header's merge and archive commands.
 
@@ -139,6 +141,18 @@ export function ContactRecordActions({
         invalidate="contacts"
         recordKey="contact"
         onArchived={(from) => from.closeOnto({ screen: "contacts" })}
+        undo={async (archived) => {
+          const restored = await restoreLatestArchive(
+            "contact",
+            archived.id,
+            requireVersion(archived.version),
+          );
+          await invalidateRecord(queryClient, "contact", archived.id);
+          await queryClient.invalidateQueries({ queryKey: ["contacts"] });
+          if (restored) {
+            navigate({ screen: "contacts", id: archived.id });
+          }
+        }}
       />
     </>
   );

@@ -218,7 +218,7 @@ An archived record leaves the live list; turn on **Show archived** on the list t
 Also called: remove, hide, deactivate a record.
 
 ### Can I restore or unarchive an archived record?
-Yes, for a contact, company or deal. Open the record with **Show archived** and go to its history. Find the entry that archived it and press **Undo**. The record comes back.
+Yes, for a contact, company or deal. Open the record with **Show archived** and go to its history. Find the entry that archived it and press **Undo**. The record comes back. Right after you archive a contact, the message that says so has **Undo** too, which brings the contact back and opens it.
 
 Its email addresses, phone numbers, links, list members and tags come back too, where they still can. Anything that could not come back is named in the history. Undo is refused when the record was archived again since, merged into another record, or erased. It is also refused when another record now holds its email address or domain.
 
