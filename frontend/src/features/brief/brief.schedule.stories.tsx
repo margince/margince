@@ -294,8 +294,6 @@ export const LongTitleAndAttendees: Story = {
   ),
 };
 
-// A name longer than the rail is wide: its chip breaks the name over lines
-// inside the panel, and a short name beside it keeps its one-line pill.
 const LONG_NAME = "Maximilian Konstantinopoulou-Wertheimer";
 
 export const LongAttendeeNamePhone: Story = {
