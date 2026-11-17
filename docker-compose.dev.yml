@@ -88,19 +88,20 @@ services:
     # their sum, not a round figure chosen to be comfortable:
     #
     #   INTEGRATION_JOBS                    8   (.github/workflows/_lane-integration.yml)
-    #   x LANE_CONNS_PER_PACKAGE           48   2 parallel tests, each with two
+    #   x LANE_CONNS_PER_PACKAGE           72   3 parallel tests, each with two
     #                                           pools at LANE_POOL_MAX_CONNS=8
     #                                           plus 8 the pin does not reach
     #   + one admin connection per slot     1   CREATE/DROP DATABASE at a handover
     #   ------------------------------------
-    #      8 x (48 + 1)                  = 392
+    #      8 x (72 + 1)                  = 584
     #   + LANE_FIXED_CONNS                  8   template migrate 2, superuser
     #                                           reserve 3, an operator's psql 3
     #   ------------------------------------
-    #                                    = 400
+    #                                    = 592
     #
-    # The setting is 408, a little above the sum: the gate holds
-    # `demand <= max_connections`, the direction that fails a lane.
+    # postgres-test sets 600, a little above the sum: the gate holds
+    # `demand <= max_connections`, the direction that fails a lane. This
+    # server keeps 408 for make dev and the migrator.
     #
     # Measured, so the terms are not guesses: at INTEGRATION_JOBS=16 the whole
     # cluster peaks at 86 backends and one package at 16, sampled every 100ms
@@ -184,7 +185,8 @@ services:
   # (docs/explanation/ci-pipeline.md). A crash can corrupt its data, and the
   # data is gone when the container stops, so it holds nothing worth keeping.
   # The lock, connection and shared-memory notes on `postgres` above hold here
-  # too; the lane's connection budget is checked against this service.
+  # too; the lane's connection budget is checked against this service. Its 600
+  # connections take about 40MB more shared memory than the 408 above.
   postgres-test:
     image: pgvector/pgvector:pg16@sha256:484e838076e04939d27d3e176e91c86eea96236126023be8d3059761122e579f
     shm_size: 1g
@@ -193,7 +195,7 @@ services:
       - -c
       - max_locks_per_transaction=512
       - -c
-      - max_connections=408
+      - max_connections=600
       - -c
       - fsync=off
       - -c
