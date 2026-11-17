@@ -32,14 +32,25 @@ const goPending = () =>
 
 const depthBehind = () => depth.depthBackOutOf(() => false);
 
-// The Navigation API as Chromium has it, reduced to the entry list.
+// The Navigation API as Chromium has it, reduced to the entry list and events.
 function browserEntries(hashes: string[], at: () => number) {
-  vi.stubGlobal("navigation", {
-    get currentEntry() {
-      return { index: at() };
-    },
+  const navigation = Object.assign(new EventTarget(), {
     entries: () => hashes.map((hash) => ({ url: `http://localhost/${hash}` })),
   });
+  Object.defineProperty(navigation, "currentEntry", {
+    get: () => ({ index: at() }),
+  });
+  vi.stubGlobal("navigation", navigation);
+  return navigation;
+}
+
+// What Chromium fires once a traversal is on its way to another document.
+function documentLoadStarts(navigation: EventTarget) {
+  const event = new Event("navigate");
+  Object.defineProperty(event, "destination", {
+    value: { sameDocument: false },
+  });
+  navigation.dispatchEvent(event);
 }
 
 describe("traverseTo", () => {
@@ -74,6 +85,28 @@ describe("traverseTo", () => {
     expect(depth.traverseTo(0)).toBe(true);
   });
 
+  it("reports a traversal in flight until the browser lands", () => {
+    depth.noteHistoryEntry("start");
+    push("#/deals");
+    goPending();
+    expect(depth.traversalInFlight()).toBe(false);
+
+    depth.traverseTo(0);
+    expect(depth.traversalInFlight()).toBe(true);
+
+    depth.noteHistoryEntry("moved");
+    expect(depth.traversalInFlight()).toBe(false);
+  });
+
+  it("reports no traversal when the browser had no entry to go to", () => {
+    browserEntries(["#/start"], () => 0);
+    depth.noteHistoryEntry("start");
+    goPending();
+
+    expect(depth.traverseTo(1)).toBe(false);
+    expect(depth.traversalInFlight()).toBe(false);
+  });
+
   it("stops waiting for a traversal the browser never carries out", () => {
     vi.useFakeTimers();
     depth.noteHistoryEntry("start");
@@ -84,6 +117,39 @@ describe("traverseTo", () => {
 
     vi.runAllTimers();
 
+    expect(depth.traverseTo(0)).toBe(true);
+  });
+});
+
+describe("traverseTo with the browser's entry list", () => {
+  it("refuses an entry the browser no longer has", () => {
+    let index = 0;
+    browserEntries(["#/start", "#/contacts"], () => index);
+    depth.noteHistoryEntry("start");
+    index = 1;
+    push("#/contacts");
+    const go = goPending();
+
+    expect(depth.traverseTo(2)).toBe(false);
+    expect(go).not.toHaveBeenCalled();
+    expect(depth.traverseTo(0)).toBe(true);
+  });
+
+  it("holds a traversal that loads a document until the page shows again", () => {
+    vi.useFakeTimers();
+    let index = 0;
+    const navigation = browserEntries(["#/start", "#/deals"], () => index);
+    depth.noteHistoryEntry("start");
+    index = 1;
+    push("#/deals");
+    goPending();
+    depth.traverseTo(0);
+
+    documentLoadStarts(navigation);
+    vi.runAllTimers();
+    expect(depth.traverseTo(0)).toBe(false);
+
+    globalThis.dispatchEvent(new Event("pageshow"));
     expect(depth.traverseTo(0)).toBe(true);
   });
 });

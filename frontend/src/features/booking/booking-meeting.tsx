@@ -20,7 +20,7 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { formatDayFull, formatTimeRange } from "../../format/meetingtime";
 import { useLocale, useT } from "../../i18n";
-import { depthBackOutOf, traverseTo } from "../../lib/historydepth";
+import { stepBackOutOf } from "../../lib/historydepth";
 import {
   meetingInvitationKey,
   useMeetingInvitation,
@@ -41,9 +41,10 @@ type Change = components["schemas"]["MeetingInvitationChange"];
 // of ours behind it, whatever else the tab visited, and lands on home instead.
 function leaveMeeting() {
   const here = globalThis.location.hash;
-  const before = depthBackOutOf((hash) => hash === here);
-  if (before === undefined) navigate({ screen: "home" });
-  else traverseTo(before);
+  stepBackOutOf(
+    (hash) => hash === here,
+    () => navigate({ screen: "home" }),
+  );
 }
 
 export function BookingMeetingScreen({

@@ -7,8 +7,8 @@
 
 const DEPTH_KEY = "marginceDepth";
 
-// Far longer than any traversal takes. A `go` the browser cannot carry out fires
-// nothing, and neither does a leave the reader refuses at the unload prompt.
+// A traversal the browser never carries out fires nothing: a `go` past either
+// end, or a leave refused at the unload prompt. One that loads a document is held.
 const UNANSWERED_MS = 1000;
 
 // The address at each depth, for the entries seen in this page load. A gap is
@@ -17,7 +17,8 @@ const seenAt: string[] = [];
 let depth: number | undefined;
 // The browser's own index of the entry at `depth`, where it reports one.
 let indexAtDepth: number | undefined;
-let traversal: ReturnType<typeof setTimeout> | undefined;
+let traversing = false;
+let unanswered: ReturnType<typeof setTimeout> | undefined;
 
 type Stamp = Readonly<{ depth: number; at: string }>;
 
@@ -53,6 +54,7 @@ function stamp(value: number): void {
 type BrowserEntries = Readonly<{
   currentEntry: NavigationHistoryEntry | null;
   entries: () => NavigationHistoryEntry[];
+  addEventListener: EventTarget["addEventListener"];
 }>;
 
 function isBrowserEntries(value: unknown): value is BrowserEntries {
@@ -60,7 +62,8 @@ function isBrowserEntries(value: unknown): value is BrowserEntries {
     typeof value === "object" &&
     value !== null &&
     "currentEntry" in value &&
-    typeof Reflect.get(value, "entries") === "function"
+    typeof Reflect.get(value, "entries") === "function" &&
+    typeof Reflect.get(value, "addEventListener") === "function"
   );
 }
 
@@ -168,23 +171,74 @@ export function depthBackOutOf(
  *
  * `history.go` lands a task later or more. A second press before then would
  * start a second traversal from the same depth, past the entry it means.
- * False when no traversal started.
+ * False when no traversal started, or the browser has no entry there.
  */
 export function traverseTo(targetDepth: number): boolean {
   if (
     depth === undefined ||
     targetDepth < 0 ||
     targetDepth === depth ||
-    traversal !== undefined
+    traversing ||
+    !browserHasEntry(targetDepth - depth)
   ) {
     return false;
   }
-  traversal = globalThis.setTimeout(settleTraversal, UNANSWERED_MS);
+  traversing = true;
+  unanswered = globalThis.setTimeout(settleTraversal, UNANSWERED_MS);
+  browserEntries()?.addEventListener("navigate", holdForDocumentLoad);
+  globalThis.addEventListener("pageshow", settleTraversal);
   globalThis.history.go(targetDepth - depth);
   return true;
 }
 
+/** Whether a traversal `traverseTo` started has yet to land or be given up. */
+export const traversalInFlight = (): boolean => traversing;
+
+/**
+ * Step back to the nearest earlier entry of ours that is not `here`, or call
+ * `elsewhere` when there is none. A press already off `here` is a repeat.
+ */
+export function stepBackOutOf(
+  here: (hash: string) => boolean,
+  elsewhere: () => void,
+): void {
+  if (!here(globalThis.location.hash)) {
+    return;
+  }
+  const before = depthBackOutOf(here);
+  if (before === undefined) {
+    elsewhere();
+  } else {
+    traverseTo(before);
+  }
+}
+
+// Without the Navigation API, a `go` past either end is sent and does nothing.
+function browserHasEntry(delta: number): boolean {
+  const index = browserIndex();
+  const count = browserEntries()?.entries().length;
+  return (
+    index === undefined ||
+    count === undefined ||
+    (index + delta >= 0 && index + delta < count)
+  );
+}
+
+// Fires once the unload prompt has let a document load go. Held until the page
+// leaves or comes back from the cache (`pageshow`); a press meanwhile overshoots.
+function holdForDocumentLoad(event: Event): void {
+  const destination: unknown = Reflect.get(event, "destination");
+  if (
+    traversing &&
+    typeof destination === "object" &&
+    destination !== null &&
+    Reflect.get(destination, "sameDocument") === false
+  ) {
+    globalThis.clearTimeout(unanswered);
+  }
+}
+
 function settleTraversal(): void {
-  globalThis.clearTimeout(traversal);
-  traversal = undefined;
+  globalThis.clearTimeout(unanswered);
+  traversing = false;
 }

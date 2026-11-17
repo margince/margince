@@ -19,6 +19,7 @@ import { useOutageRecovery } from "../../lib/connectivity";
 import { CONSENT_PATH, isConsentAddress } from "../../lib/recordaddress";
 import {
   isOidcFailureLanding,
+  keepReturnRoute,
   OIDC_FAILURE_HASH,
   takeReturnRoute,
 } from "../../lib/returnroute";
@@ -92,13 +93,14 @@ function clearOidcFailureMarker(): void {
   const { pathname, search } = globalThis.location;
   // The link the reader followed comes back, so a second attempt keeps it.
   const route = takeReturnRoute() ?? "";
+  if (pathname !== CONSENT_PATH || isConsentAddress(pathname, route)) {
+    rewriteAddress(`${pathname}${search}${route}`);
+    return;
+  }
   // Any other screen on the consent path is reloaded at the root
-  // (lib/recordaddress.ts), so the marker goes along for this screen there.
-  const kept =
-    pathname !== CONSENT_PATH || isConsentAddress(pathname, route)
-      ? route
-      : OIDC_FAILURE_HASH;
-  rewriteAddress(`${pathname}${search}${kept}`);
+  // (lib/recordaddress.ts). The marker and the route wait for this screen there.
+  keepReturnRoute(route);
+  rewriteAddress(`${pathname}${search}${OIDC_FAILURE_HASH}`);
 }
 
 // The entry's state is kept, because its history depth rides in it, and the

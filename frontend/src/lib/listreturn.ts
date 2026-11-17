@@ -1,4 +1,4 @@
-import { depthBackOutOf, traverseTo } from "./historydepth";
+import { stepBackOutOf } from "./historydepth";
 import {
   navigateReplacing,
   parseHash,
@@ -48,25 +48,19 @@ export function listAddress(screen: Screen): string {
 }
 
 /**
- * Leave a record for the screen before it. The installed app has no browser
- * Back. History is preferred because it restores the list's filter and scroll
- * offset; with no earlier screen of ours, the record's list is the way out.
- * A press while already off the record, or mid-traversal, is a repeat and does nothing.
+ * Leave a record for the screen before it, which history restores with its
+ * filter and scroll; with none of ours behind, the record's list.
  */
 export function leaveRecord(record: Route): void {
-  const onRecord = (hash: string) => {
-    const route = parseHash(hash);
-    return route.screen === record.screen && route.id === record.id;
-  };
-  if (!onRecord(globalThis.location.hash)) {
-    return;
-  }
-  const before = depthBackOutOf(onRecord);
-  if (before === undefined) {
-    globalThis.location.hash = listAddress(record.screen);
-    return;
-  }
-  traverseTo(before);
+  stepBackOutOf(
+    (hash) => {
+      const route = parseHash(hash);
+      return route.screen === record.screen && route.id === record.id;
+    },
+    () => {
+      globalThis.location.hash = listAddress(record.screen);
+    },
+  );
 }
 
 /** Close a list's create form onto the list, replacing the form's address so

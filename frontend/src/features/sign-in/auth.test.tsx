@@ -5,7 +5,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resetTheme } from "../../app/theme-reset";
 import { LOCALES, localeNameKey, translate } from "../../i18n";
 import { depthBackOutOf, entryDepth } from "../../lib/historydepth";
-import { keepReturnRoute, restoreReturnRoute } from "../../lib/returnroute";
+import {
+  keepReturnRoute,
+  restoreReturnRoute,
+  takeReturnRoute,
+} from "../../lib/returnroute";
 import { watchAddress } from "../../lib/router";
 import { STORAGE_KEYS } from "../../lib/storage";
 import { AuthScreen, AvailabilityScreen } from "./auth";
@@ -404,6 +408,27 @@ describe("OIDC failure notice", () => {
     await waitFor(() =>
       expect(reload).toHaveBeenCalledWith("/#/login?oidc=failed"),
     );
+    globalThis.history.replaceState(null, "", "/");
+  });
+
+  it("keeps a route that is not a consent request for the screen at the root", async () => {
+    const reload = vi
+      .spyOn(globalThis.location, "replace")
+      .mockImplementation(() => undefined);
+    globalThis.history.replaceState(null, "", "/consent#/deals?stage=won");
+    keepReturnRoute();
+    globalThis.history.replaceState(
+      null,
+      "",
+      "/consent#/oauth-consent?oidc=failed",
+    );
+    stubApi({ password: true, password_reset: true }, () => ok(200));
+    render(<AuthScreen onAuthed={vi.fn()} />);
+
+    await waitFor(() =>
+      expect(reload).toHaveBeenCalledWith("/#/login?oidc=failed"),
+    );
+    expect(takeReturnRoute()).toBe("#/deals?stage=won");
     globalThis.history.replaceState(null, "", "/");
   });
 
