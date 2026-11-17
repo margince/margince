@@ -29,7 +29,7 @@ A client sends messages with `POST /v1/personal-channels/chats`. The body holds 
 
 - `message_id` is the chat app's own id. A message sent again with the same id answers `duplicate`.
 - `network` names the chat app: lower-case letters, numbers and `_`, at most 32. No network means `generic`. Any new name works with no change in Margince.
-- `direction` is `outbound` for a message the member sent from their phone; `from` is then the member. A reply your client confirmed as sent, sent in again as `outbound` with its `provider_message_id` as the `message_id`, answers `duplicate`.
+- `direction` is `outbound` for a message the member sent from their phone; `from` is then the member. A reply your client confirmed as sent, sent in again as `outbound` with its `provider_message_id` as the `message_id`, answers `duplicate`. If the message goes in before the confirmation, name the reply's `delivery_id` in it: that settles the reply as sent and answers `duplicate`.
 - `from` and `to` each have an `account` and a `name`, and never an email address. An account may not hold `:` or `/`.
 - `group_id` names the group a message was sent in, if any.
 
@@ -52,12 +52,12 @@ A client confirms with `POST /v1/personal-channels/replies/ack`:
 
 ```json
 {"acks": [
-  {"delivery_id": "019a...", "outcome": "sent", "provider_message_id": "wamid.HBgM..."},
+  {"delivery_id": "019a...", "attempt": 1, "outcome": "sent", "provider_message_id": "wamid.HBgM..."},
   {"delivery_id": "019a...", "outcome": "failed", "reason": "the contact blocked this number"}
 ]}
 ```
 
-Each answer is `recorded`, `unknown_delivery` or `already_settled`. A `failed` reply shows as **Did not arrive** on the timeline and is not tried again; the member sends it again. A reply nobody confirms within 7 days is marked **Did not arrive** too. A confirmation still counts while personal channels are off.
+Name the `attempt` the pull gave. An answer for an earlier attempt is `superseded` and changes nothing, because the reply was offered again since. Each answer is `recorded`, `unknown_delivery`, `already_settled` or `superseded`. A `failed` reply shows as **Did not arrive** on the timeline and is not tried again; the member sends it again. A reply nobody confirms within 7 days is marked **Did not arrive** too. A confirmation still counts while personal channels are off.
 
 ### What do the error answers mean?
 - `409` with "personal channels are off": the member must turn them on in **Settings → Connections**.
