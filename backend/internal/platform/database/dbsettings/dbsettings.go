@@ -8,6 +8,7 @@ package dbsettings
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -39,13 +40,40 @@ var ReadConcurrency = config.Define(config.Spec[int]{
 	Doc:   "Limit on concurrent Worklist and ranked-search reads per process, capped at half the pool with at least one slot. Restart to apply.",
 })
 
+// ConnLifetime and ConnIdleTime retire the api's and the worker's pooled
+// connections; see database.DefaultConnLifetime for why.
+var (
+	ConnLifetime = config.Define(config.Spec[time.Duration]{
+		Key: "database.connection_lifetime", Env: "MARGINCE_DATABASE_CONNECTION_LIFETIME", Type: config.Duration,
+		Default: config.Some(database.DefaultConnLifetime), Min: config.Some(time.Minute),
+		Roles: []config.Role{config.RoleAPI, config.RoleWorker},
+		Doc: "Age at which a pooled connection closes, plus up to a fifth more at random. Postgres returns the memory a connection grew while planning only when it closes. " +
+			"The DSN's pool_max_conn_lifetime wins. Restart to apply.",
+	})
+	ConnIdleTime = config.Define(config.Spec[time.Duration]{
+		Key: "database.connection_idle_time", Env: "MARGINCE_DATABASE_CONNECTION_IDLE_TIME", Type: config.Duration,
+		Default: config.Some(database.DefaultConnIdleTime), Min: config.Some(time.Minute),
+		Roles: []config.Role{config.RoleAPI, config.RoleWorker},
+		Doc:   "Time an unused pooled connection waits before it closes. The DSN's pool_max_conn_idle_time wins. Restart to apply.",
+	})
+)
+
+// PoolDSN is dsn with the connection lifetime and idle time named in it, so
+// NewPool reads them. A value the DSN already names stays.
+func PoolDSN(dsn string, c *config.Config) string {
+	dsn = database.WithDSNParam(dsn, "pool_max_conn_lifetime", config.Val(c, ConnLifetime).String())
+	return database.WithDSNParam(dsn, "pool_max_conn_idle_time", config.Val(c, ConnIdleTime).String())
+}
+
 // ConfigureReadAdmission applies the boot setting before a pool serves traffic.
 func ConfigureReadAdmission(pool *pgxpool.Pool, c *config.Config) error {
 	return database.ConfigureReadAdmission(pool, config.Val(c, ReadConcurrency))
 }
 
 // Settings are this package's boot settings.
-func Settings() []config.Any { return []config.Any{DSN, OwnerDSN, ReadConcurrency} }
+func Settings() []config.Any {
+	return []config.Any{DSN, OwnerDSN, ReadConcurrency, ConnLifetime, ConnIdleTime}
+}
 
 // Require is the fault of a program that cannot start without DSN, worded as
 // the loader words a missing value.

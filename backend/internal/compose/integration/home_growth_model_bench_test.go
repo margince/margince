@@ -152,21 +152,32 @@ type growthLimits struct {
 	// WarmServer bounds the database's time for one warm read: the CPU a read
 	// costs the server, since a warm read waits on no disk.
 	WarmServer time.Duration
-	// ConnectionMemory bounds what one server connection still holds after
-	// Home's reads, in bytes.
+	// ConnectionMemory bounds what one server connection's memory contexts
+	// still hold after Home's reads, in bytes: its cached plans and caches.
 	ConnectionMemory int64
+	// ConnectionPrivate bounds the backend process's private memory after
+	// Home's reads, in bytes. It also counts the planner's working memory,
+	// which the allocator keeps until the connection closes.
+	ConnectionPrivate int64
 	// CacheHits is the least share of repeat opens the Home cache must serve.
 	CacheHits float64
 }
 
 // growthOther is what the bench measured besides the read times.
 type growthOther struct {
-	// ConnectionMemory is the most any connection held, per step, in bytes. A
-	// step with no entry measured none.
-	ConnectionMemory map[int]int64
+	// ConnectionMemory is the most any connection held, per step. A step with
+	// no entry measured none.
+	ConnectionMemory map[int]growthMemory
 	// Cache counts each step's repeat opens, judged step by step so a cache
 	// that breaks only at the largest step cannot average into a pass.
 	Cache map[int]growthCache
+}
+
+// growthMemory is the most any idle connection held, in bytes: in its memory
+// contexts, and in its backend's private memory (RssAnon). Private is zero
+// when the bench could not read the backend's /proc status.
+type growthMemory struct {
+	Contexts, Private int64
 }
 
 // growthCache is one step's repeat opens and how many the cache served.
@@ -205,12 +216,20 @@ func measuredYears(series []growthSeries) []int {
 // that measured neither fails, so a missing reading never reads as zero.
 func growthStepFailures(years int, other growthOther, limits growthLimits) []string {
 	var failures []string
-	switch held, measured := other.ConnectionMemory[years]; {
+	held, measured := other.ConnectionMemory[years]
+	switch {
 	case !measured:
 		failures = append(failures, fmt.Sprintf("year %d: no connection's memory was measured", years))
-	case held > limits.ConnectionMemory:
+	case held.Contexts > limits.ConnectionMemory:
 		failures = append(failures, fmt.Sprintf("year %d: a connection holds %d MB after Home's reads, budget %d MB",
-			years, held>>20, limits.ConnectionMemory>>20))
+			years, held.Contexts>>20, limits.ConnectionMemory>>20))
+	}
+	switch {
+	case measured && held.Private == 0:
+		failures = append(failures, fmt.Sprintf("year %d: no backend's private memory was read; the bench reads /proc/self/status through Postgres, which needs Postgres on Linux", years))
+	case held.Private > limits.ConnectionPrivate:
+		failures = append(failures, fmt.Sprintf("year %d: a backend keeps %d MB of private memory after Home's reads, budget %d MB",
+			years, held.Private>>20, limits.ConnectionPrivate>>20))
 	}
 	switch cache := other.Cache[years]; {
 	case cache.Opens == 0:

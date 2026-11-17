@@ -356,6 +356,8 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 
 | Key | Env | Flag | Type | Default | Programs | Doc |
 |---|---|---|---|---|---|---|
+| `database.connection_idle_time` | `MARGINCE_DATABASE_CONNECTION_IDLE_TIME` | — | `duration`, at least 1m0s | `5m0s` | api, worker | Time an unused pooled connection waits before it closes. The DSN's `pool_max_conn_idle_time` wins. Restart to apply. |
+| `database.connection_lifetime` | `MARGINCE_DATABASE_CONNECTION_LIFETIME` | — | `duration`, at least 1m0s | `10m0s` | api, worker | Age at which a pooled connection closes, plus up to a fifth more at random. Postgres returns the memory a connection grew while planning only when it closes. The DSN's `pool_max_conn_lifetime` wins. Restart to apply. |
 | `database.read_concurrency` | `MARGINCE_DATABASE_READ_CONCURRENCY` | — | `int`, at least 1 | `3` | api, worker | Limit on concurrent Worklist and ranked-search reads per process, capped at half the pool with at least one slot. Restart to apply. |
 | `database.worker_max_connections` | `MARGINCE_WORKER_MAX_CONNECTIONS` | `--worker-max-connections` | `int` | `12` | worker | Worker connection limit, with the River listener counted. Also bounded by the DSN and queue worker count. Count every process when sizing the installation. |
 | `database.worker_statement_cache_capacity` | `MARGINCE_WORKER_STATEMENT_CACHE_CAPACITY` | `--worker-statement-cache-capacity` | `int` | `256` | worker | Limit on cached statements and result types per worker connection. The DSN may lower it. Zero needs a compatible DSN `default_query_exec_mode`. |

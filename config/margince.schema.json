@@ -899,6 +899,22 @@
       ],
       "additionalProperties": false,
       "properties": {
+        "connection_idle_time": {
+          "description": "Time an unused pooled connection waits before it closes. The DSN's pool_max_conn_idle_time wins. Restart to apply.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": "5m0s"
+        },
+        "connection_lifetime": {
+          "description": "Age at which a pooled connection closes, plus up to a fifth more at random. Postgres returns the memory a connection grew while planning only when it closes. The DSN's pool_max_conn_lifetime wins. Restart to apply.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": "10m0s"
+        },
         "read_concurrency": {
           "description": "Limit on concurrent Worklist and ranked-search reads per process, capped at half the pool with at least one slot. Restart to apply.",
           "type": [

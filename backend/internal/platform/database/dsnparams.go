@@ -18,7 +18,7 @@ import "strings"
 // Held by: TestADSNParameterIsNamedInTheSpellingTheDSNUses
 // (backend/internal/platform/database/dsnparams_test.go)
 func WithDSNParam(dsn, name, value string) string {
-	if strings.Contains(dsn, name) {
+	if namesDSNParam(dsn, name) {
 		return dsn
 	}
 	param := name + "=" + value
@@ -30,6 +30,26 @@ func WithDSNParam(dsn, name, value string) string {
 		return dsn + sep + param
 	}
 	return dsn + " " + param
+}
+
+// namesDSNParam answers whether dsn names the parameter itself. A longer name
+// that starts with it does not count: pool_max_conn_lifetime_jitter does not
+// name pool_max_conn_lifetime.
+func namesDSNParam(dsn, name string) bool {
+	for rest := dsn; ; {
+		at := strings.Index(rest, name)
+		if at < 0 {
+			return false
+		}
+		rest = rest[at+len(name):]
+		if rest == "" || !isParamNameByte(rest[0]) {
+			return true
+		}
+	}
+}
+
+func isParamNameByte(b byte) bool {
+	return b == '_' || b >= 'a' && b <= 'z' || b >= 'A' && b <= 'Z' || b >= '0' && b <= '9'
 }
 
 // WithoutRequestCeilings lifts StatementCeiling and IdleTransactionCeiling from

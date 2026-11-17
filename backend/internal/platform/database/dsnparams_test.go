@@ -28,6 +28,7 @@ func TestADSNParameterIsNamedInTheSpellingTheDSNUses(t *testing.T) {
 		{"the postgresql scheme is the same form", "postgresql://h/db", "postgresql://h/db?statement_timeout=5000"},
 		{"a keyword/value DSN separates with a space", "host=h dbname=db", "host=h dbname=db statement_timeout=5000"},
 		{"a DSN that already names it keeps its own", "host=h statement_timeout=1", "host=h statement_timeout=1"},
+		{"a longer name that starts with it is another parameter", "host=h statement_timeout_x=1", "host=h statement_timeout_x=1 statement_timeout=5000"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
@@ -133,8 +134,9 @@ func TestAPoolRetiresItsConnectionsWithinMinutes(t *testing.T) {
 		lifetime, jitter time.Duration
 	}{
 		{"a bare DSN gets both defaults", "postgres://h/db", 10 * time.Minute, 2 * time.Minute},
-		{"a DSN lifetime wins", "postgres://h/db?pool_max_conn_lifetime=1h", time.Hour, 2 * time.Minute},
+		{"a DSN lifetime wins and its jitter is a fifth of it", "postgres://h/db?pool_max_conn_lifetime=1h", time.Hour, 12 * time.Minute},
 		{"a DSN jitter keeps the default lifetime", "postgres://h/db?pool_max_conn_lifetime_jitter=30s", 10 * time.Minute, 30 * time.Second},
+		{"a keyword/value DSN names both", "host=h pool_max_conn_lifetime_jitter=1m pool_max_conn_lifetime=20m", 20 * time.Minute, time.Minute},
 	} {
 		cfg, err := database.PoolConfig(tc.dsn)
 		if err != nil {

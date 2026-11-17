@@ -22,6 +22,16 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// A Postgres backend keeps the memory it grew while planning until its
+// connection closes: after Home's reads that is a few hundred MB per
+// connection, most of it never returned while the backend lives. Closing the connection is
+// the only thing that returns it, so a pooled connection lives this long, plus
+// up to a fifth more at random, and closes sooner when it sits idle.
+const (
+	DefaultConnLifetime = 10 * time.Minute
+	DefaultConnIdleTime = 5 * time.Minute
+)
+
 // PoolConfig is what a pool of this product IS: the operational limits, the
 // runtime parameters and the per-connection registration every pool needs,
 // settled from dsn and applied to nothing yet.
@@ -44,24 +54,23 @@ func PoolConfig(dsn string) (*pgxpool.Config, error) {
 	}
 	// ParseConfig already applied any pool_* DSN parameters; only fill
 	// the ones the DSN left unset.
-	if !strings.Contains(dsn, "pool_max_conns") {
+	if !namesDSNParam(dsn, "pool_max_conns") {
 		cfg.MaxConns = 16
 	}
-	if !strings.Contains(dsn, "pool_min_conns") {
+	if !namesDSNParam(dsn, "pool_min_conns") {
 		cfg.MinConns = 2
 	}
-	// A backend keeps its plan memory until the connection closes. Jitter
-	// spreads the closes; its name contains the lifetime's, so it is cut first.
-	if !strings.Contains(strings.ReplaceAll(dsn, "pool_max_conn_lifetime_jitter", ""), "pool_max_conn_lifetime") {
-		cfg.MaxConnLifetime = 10 * time.Minute
+	if !namesDSNParam(dsn, "pool_max_conn_lifetime") {
+		cfg.MaxConnLifetime = DefaultConnLifetime
 	}
-	if !strings.Contains(dsn, "pool_max_conn_lifetime_jitter") {
-		cfg.MaxConnLifetimeJitter = 2 * time.Minute
+	// Jitter spreads the closes, so the pool never replaces every backend at once.
+	if !namesDSNParam(dsn, "pool_max_conn_lifetime_jitter") {
+		cfg.MaxConnLifetimeJitter = cfg.MaxConnLifetime / 5
 	}
-	if !strings.Contains(dsn, "pool_max_conn_idle_time") {
-		cfg.MaxConnIdleTime = 5 * time.Minute
+	if !namesDSNParam(dsn, "pool_max_conn_idle_time") {
+		cfg.MaxConnIdleTime = DefaultConnIdleTime
 	}
-	if !strings.Contains(dsn, "pool_health_check_period") {
+	if !namesDSNParam(dsn, "pool_health_check_period") {
 		cfg.HealthCheckPeriod = time.Minute
 	}
 	// JIT is off for this workload, and the row-scope predicates are why.
