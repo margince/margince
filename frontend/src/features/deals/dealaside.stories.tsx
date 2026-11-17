@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import type { Locale } from "../../i18n";
 import { listsMe } from "../../testing/lists.fixtures";
 import { meFixture } from "../../testing/mefixture";
@@ -180,11 +180,44 @@ export const ProbabilityReason: Story = {
   render: () => <LoweredColumn />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await canvas.findByRole("button", { name: /^Change Probability/ });
+    await canvas.findByRole("button", { name: "Edit About" });
     canvas.getByRole("button", { name: "Why this probability" }).focus();
     await expect(
       await within(document.body).findByText(/No reply from Dana Ruiz/),
     ).toBeTruthy();
+  },
+};
+
+// One Edit per section for a seat that may change the deal; About opens with
+// the fields About shows and nothing else.
+export const EditAbout: Story = {
+  name: "Edit opens the section's fields",
+  render: () => <LoweredColumn />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole("button", { name: "Edit Ownership" });
+    await canvas.findByRole("button", { name: "Edit Registration" });
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Edit About" }),
+    );
+    const about = within(
+      await within(document.body).findByRole("dialog", { name: "About" }),
+    );
+    await expect(
+      about.getByRole("spinbutton", { name: "Value" }),
+    ).toBeVisible();
+    await expect(about.queryByRole("combobox", { name: "Owner" })).toBeNull();
+  },
+};
+
+// A seat that may only read the deal gets no Edit at all.
+export const ReadOnly: Story = {
+  name: "No Edit for a reader",
+  render: () => <Column locale="en" />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole("region", { name: "About" });
+    await expect(canvas.queryByRole("button", { name: /^Edit / })).toBeNull();
   },
 };
 
