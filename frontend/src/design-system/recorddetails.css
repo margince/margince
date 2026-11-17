@@ -25,6 +25,9 @@
   gap: var(--space-1);
   margin-block-end: var(--space-1);
 }
+.recorddetails-labelline:last-child {
+  margin-block-end: 0;
+}
 /* Scoped under the line so it outranks the heading's own size rule. */
 .recorddetails-labelline > .recorddetails-label.heading {
   font: var(--fontBodySmall);

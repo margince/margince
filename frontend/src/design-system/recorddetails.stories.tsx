@@ -134,6 +134,53 @@ export const EditablePhone: Story = {
   },
 };
 
+/** An editable section with every row still empty keeps its pane, so its
+ *  Edit link is the way to add the first value; a read-only one folds away. */
+export const EditableEmpty: Story = {
+  args: {
+    sections: [
+      {
+        key: "about",
+        label: "About",
+        edit: { onEdit: fn() },
+        rows: [{ key: "domain", term: "Domain", value: "brandt.example" }],
+      },
+      {
+        key: "address",
+        label: "Address",
+        edit: { onEdit: fn() },
+        rows: [
+          { key: "street", term: "Street", value: "Add…", empty: true },
+          { key: "city", term: "City", value: "Add…", empty: true },
+        ],
+      },
+      {
+        key: "registration",
+        label: "Registration",
+        rows: [{ key: "vat", term: "VAT ID", value: "Add…", empty: true }],
+      },
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      await canvas.findByRole("button", { name: "Edit Address" }),
+    ).toBeVisible();
+    await expect(
+      canvas.queryByRole("heading", { name: "Registration" }),
+    ).toBeNull();
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Show 3 empty fields" }),
+    );
+    await expect(await canvas.findByText("City")).toBeVisible();
+  },
+};
+export const EditableEmptyPhone: Story = {
+  ...EditableEmpty,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+
 /** The fold opened: the empty fields join their groups' panes, and the link
  *  under the panes folds them again. */
 export const EmptyFieldsShown: Story = {

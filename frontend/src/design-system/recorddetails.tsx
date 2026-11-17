@@ -97,7 +97,7 @@ function DetailGroup({
   const t = useT();
   const labelId = useId();
   const rows = (section.rows ?? []).filter((row) => showEmpty || !row.empty);
-  if (rows.length === 0 && !section.children) {
+  if (rows.length === 0 && !section.children && !section.edit) {
     return null;
   }
   return (

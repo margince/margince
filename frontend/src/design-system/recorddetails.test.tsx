@@ -72,6 +72,43 @@ describe("Record details", () => {
     expect(onEdit).toHaveBeenCalledTimes(1);
   });
 
+  it("keeps an editable section's pane and Edit link while all its rows are folded", async () => {
+    const user = userEvent.setup();
+    render(
+      <RecordDetails
+        sections={[
+          { key: "about", label: "About", rows: [domain] },
+          {
+            key: "address",
+            label: "Address",
+            edit: { onEdit: vi.fn() },
+            rows: [
+              { key: "street", term: "Street", value: "Add…", empty: true },
+            ],
+          },
+          {
+            key: "registration",
+            label: "Registration",
+            rows: [{ key: "vat", term: "VAT ID", value: "Add…", empty: true }],
+          },
+        ]}
+      />,
+    );
+    expect(
+      screen.getByRole("heading", { name: "Address" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Edit Address" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Street")).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Registration" })).toBeNull();
+
+    await user.click(
+      screen.getByRole("button", { name: "Show 2 empty fields" }),
+    );
+    expect(screen.getByText("Street")).toBeInTheDocument();
+  });
+
   it("offers no toggle when nothing is empty, and prints the footnote", () => {
     render(
       <RecordDetails
