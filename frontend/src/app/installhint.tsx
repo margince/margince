@@ -3,8 +3,8 @@
 
 import { Share } from "lucide-react";
 import { type RefObject, useEffect, useRef } from "react";
+import { InstallButton } from "../components/installbutton";
 import { Callout } from "../design-system/callout";
-import { InstallButton } from "../features/settings/thisdevice";
 import { calendarDay } from "../format/calendarday";
 import { useNow } from "../format/now";
 import { useT } from "../i18n";
