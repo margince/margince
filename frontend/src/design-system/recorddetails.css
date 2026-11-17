@@ -1,18 +1,17 @@
-/* RecordDetails: flat groups under the record's head. A group is a small
-   grey label over a flat `FactList`, parted from the next by a hairline;
-   nothing is boxed but the footnote. */
+/* RecordDetails: each group is a pane one step up the ladder, a grey label over
+   a flat `FactList`. The footnote shares the shape; "Show more" stays bare. */
 
 .recorddetails {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-3);
   min-inline-size: 0;
 }
-/* Space alone read as one long list; the rule says where a group ends. */
-.recorddetails-group + .recorddetails-group,
-.recorddetails-foot {
-  padding-block-start: var(--space-4);
-  border-block-start: 1px solid var(--borderSubtle);
+.recorddetails-group,
+.recorddetails-note {
+  padding: var(--padPane);
+  border: 1px solid var(--groundEdge);
+  border-radius: var(--r-md);
 }
 .recorddetails-group {
   display: flex;
@@ -58,9 +57,6 @@
 }
 .recorddetails-note {
   margin: 0;
-  padding: var(--space-3) var(--padCard);
-  border: 1px solid var(--groundEdge);
-  border-radius: var(--r-control);
   font: var(--fontBodySmall);
   color: var(--textPrimary);
   text-wrap: pretty;

@@ -5,8 +5,8 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Ellipsis } from "lucide-react";
 import { expect, screen, userEvent, within } from "storybook/test";
 import { Badge, Button } from "./atoms";
-import { FactList } from "./factlist";
 import { Panel, PanelBody } from "./panel";
+import { RecordDetails } from "./recorddetails";
 import { RecordBack, RecordView } from "./recordview";
 import type { TimelineEntry } from "./timelineentry";
 
@@ -55,13 +55,32 @@ const verbs = (
 );
 
 const details = (
-  <FactList
-    flat
-    facts={[
-      { key: "domain", term: "Domain", value: "brandt.example" },
-      { key: "industry", term: "Industry", value: "Automotive" },
-      { key: "owner", term: "Owner", value: "Lena Fischer" },
+  <RecordDetails
+    sections={[
+      {
+        key: "about",
+        label: "About",
+        rows: [
+          { key: "domain", term: "Domain", value: "brandt.example" },
+          { key: "industry", term: "Industry", value: "Automotive" },
+          { key: "legal", term: "Legal name", value: "Add…", empty: true },
+        ],
+      },
+      {
+        key: "ownership",
+        label: "Ownership",
+        rows: [{ key: "owner", term: "Owner", value: "Lena Fischer" }],
+      },
+      {
+        key: "registration",
+        label: "Registration",
+        rows: [
+          { key: "source", term: "Source", value: "Typed by a person" },
+          { key: "vat", term: "VAT ID", value: "Add…", empty: true },
+        ],
+      },
     ]}
+    footnote="View only. Ask Lena Fischer to share it."
   />
 );
 
@@ -95,6 +114,22 @@ export const Default: Story = {
         <PanelBody>The open tab's feed.</PanelBody>
       </Panel>
     ),
+  },
+};
+
+// The details opened past their empty fields: every group stays its own pane,
+// and the link under them folds the fields again.
+export const DetailsOpen: Story = {
+  args: Default.args,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Show 2 empty fields" }),
+    );
+    await expect(await canvas.findByText("VAT ID")).toBeVisible();
+    await expect(
+      canvas.getByRole("button", { name: "Hide empty fields" }),
+    ).toHaveAttribute("aria-expanded", "true");
   },
 };
 
