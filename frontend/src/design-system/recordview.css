@@ -398,7 +398,7 @@
     margin-block: var(--space-3);
   }
   .record-split-feed .record-timeline:not(:first-child) {
-    margin-block-start: var(--gapCards);
+    margin-block-start: 0;
   }
 }
 /* On a phone the head is one centred block: mark, name and facts close as one
@@ -435,11 +435,11 @@
   .record-split-pills {
     justify-content: center;
   }
-  /* The pencil trails the name, so the same room before it keeps the name centred. */
+  /* The pencil and its gap trail the name; the same room before it centres the name. */
   .record-split-rename .editable-value {
     max-inline-size: 100%;
     margin-inline-start: 0;
-    padding-inline-start: calc(1lh + 2 * var(--space-1));
+    padding-inline-start: calc(1lh + 3 * var(--space-1));
     text-align: center;
   }
 }
