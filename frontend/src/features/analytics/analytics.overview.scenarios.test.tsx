@@ -199,8 +199,8 @@ describe("the Overview scenario map", () => {
 });
 
 type Signature = () => Promise<unknown>;
-// Waits for the first match to be visible: a lazy card further down, such as
-// the closed history, can render its copy of the text before the one on show.
+// Waits for the first match to be visible. A lazy card further down, such as
+// the closed history, can render its copy before the one on show.
 const shows =
   (text: string | RegExp): Signature =>
   async () =>
