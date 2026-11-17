@@ -105,12 +105,9 @@ A contact also holds an owner, a consent record for each purpose, a relationship
 To merge two duplicate contacts in Margince, open the contact you want to remove, choose **More actions**, then **Merge contact**.
 1. Search for the other contact and pick it under **Select record to keep**.
 2. Read the question: "Merge {source} into {target}? This archives {source}." Each name carries its company, title and email, so two contacts with one name stay apart.
-3. Choose **Merge**. Margince opens the contact you kept and says "{source} was merged into {target}."
-The contact you merged away is archived, not deleted. Its page links the contact you kept under **Merged into**.
+3. Choose **Merge**. Margince opens the contact you kept and says "{source} was merged into {target}." The contact you merged away is archived, not deleted. Its page links the contact you kept under **Merged into**.
 
-A lead has no **Merge** of its own. Two leads that may be one show in **To review** in the Worklist. Press **Keep {name}** under "Which record should be kept?" and read the same question **Merge** asks. Choose **Merge**, and Margince merges the other lead into it.
-
-Two companies that may be one show there too. Each card links its record, says when it was created and lists why the two may be one. **Not duplicates** settles the pair, and **Undo** asks about it again.
+A lead has no **Merge** of its own. Two leads that may be one show in **To review** in the Worklist. Press **Keep {name}** under "Which record should be kept?" and read the same question **Merge** asks. Choose **Merge**, and Margince merges the other lead into it. Two companies that may be one show there too, with a link, a created date and the reasons on each card. **Not duplicates** settles the pair, and **Undo** asks about it again.
 
 Anyone the merged-away contact was shared with can open the contact you kept. Of their two shares, the higher access stays. The owner of the merged-away contact, when another colleague, keeps access too: edit access with a full seat, read with a read seat. A share they already held keeps its end date.
 
@@ -140,8 +137,7 @@ To add a company (a new customer, client or account) in Margince, open **Compani
 1. Enter the **Company name** (required).
 2. If you like, fill **Legal name**, **Industry**, **Employees**, **Phone** and **Email**. You pick **Industry** from a list.
 3. Choose **Add domain** for each domain; a domain row you add must be filled.
-4. Fill any custom fields, then choose **Create**.
-If the company is already in Margince, **View existing record** opens it instead. The website address comes from the main domain, so there is no website box.
+4. Fill any custom fields, then choose **Create**. If the company is already in Margince, **View existing record** opens it instead. The website address comes from the main domain, so there is no website box.
 
 A new company with a domain lists the unlinked contacts with an email address on it, none ticked. Margince links those with no current job to it each day, ticked or not, so ticks matter most for contacts with another employer. Tick those who work there and choose **Link contacts**, or choose **Review contacts** on its **Contacts** tab later. Also called: new account, new business, add a client or customer.
 
@@ -150,17 +146,14 @@ To edit a company in Margince, open it and press the value to change. There is n
 1. If the panel beside the tabs is hidden, choose **Show details**.
 2. Press a value or its mark, change it in the dialog, and press **Save**. Nothing is stored until **Save**; **Cancel** or `Esc` closes without saving. **Address**, **Domain**, **Parent company** and **Relationship type** open a dialog with several fields.
 
-The panel beside the tabs holds **Domain**, **Industry**, **Employees**, **Lifecycle** and **Address** under **About**. **Owner** is under **Ownership**, and **VAT ID** under **Registration**. The **Profile** tab holds **Legal name**, **Relationship type**, **Parent company**, **LinkedIn URL**, **Phone**, **Email** and **Registered address** under **Details**. Custom fields are on **Profile** too.
-
-To rename the company, press its name at the top of the page, type the new **Company name** in the dialog and press **Save**. The website follows the main domain. **Industry** is a fixed list, and an import's text that names none of it goes into the **Description**.
+The panel beside the tabs holds **Domain**, **Industry**, **Employees**, **Lifecycle** and **Address** under **About**, **Owner** under **Ownership** and **VAT ID** under **Registration**. The **Profile** tab holds **Legal name**, **Relationship type**, **Parent company**, **LinkedIn URL**, **Phone**, **Email** and **Registered address** under **Details**, and custom fields. To rename the company, press its name at the top of the page, type the new **Company name** in the dialog and press **Save**. The website follows the main domain. **Industry** is a fixed list, and an import's text that names none of it goes into the **Description**.
 Also called: rename a company, update an account.
 
 ### How do I check a company's VAT number?
 To check a VAT number with the EU VAT register, type it into **VAT ID** in the panel beside the company's tabs. Margince checks a new number on its own.
 1. Open the company, and find **VAT ID** under **Registration** beside the tabs.
 2. Press the number, type it as it is written in the dialog, and press **Save**.
-3. Press the mark that shows the check result, beside the number, to read the answer.
-The mark shows **Valid**, **Not valid**, or "not yet checked with the register". **Check with the register** or **Check again** asks once more. The answer arrives a few seconds later, while the button shows "Checking with register…". A number checked in the last five minutes is not checked again.
+3. Press the mark that shows the check result, beside the number, to read the answer. The mark shows **Valid**, **Not valid**, or "not yet checked with the register". **Check with the register** or **Check again** asks once more. The answer arrives a few seconds later, while the button shows "Checking with register…". A number checked in the last five minutes is not checked again.
 Also called: VIES check, check a VAT ID, tax number check.
 
 ### What does the VAT check answer mean?
@@ -188,16 +181,13 @@ Two fields describe a company, and many users mix them up.
 
 So a company can be a customer *and* a supplier. It cannot be both a prospect and a customer, because that is one question with one answer. Size bands are: 1-10, 11-50, 51-200, 201-500, 501-1000, 1001-5000, 5000+. The website address comes from the main domain; you do not type it.
 
-A company may have a parent company, and that parent may have a parent of its own. No company is its own parent, and none can sit under a company below it. On a parent's **Profile** tab, **Roll-up** adds in the companies under it that you can read. **Companies included** counts them with the parent.
-
-One company in your Margince is marked as the **anchor**: your own company, the one Margince knows things about for you.
+A company may have a parent company, and that parent may have a parent of its own. No company is its own parent, and none can sit under a company below it. On a parent's **Profile** tab, **Roll-up** adds in the companies under it that you can read. **Companies included** counts them with the parent. One company in your Margince is marked as the **anchor**: your own company, the one Margince knows things about for you.
 
 ### How do I merge duplicate companies?
 To merge two duplicate companies in Margince, open the company you want to remove, choose **More actions**, then **Merge company**.
 1. Search for the other company and pick it under **Select record to keep**.
 2. Read the question: "Merge {source} into {target}? This archives {source}." Each name carries its main domain, so two companies with one name stay apart.
-3. Choose **Merge**. Margince opens the company you kept and says "{source} was merged into {target}."
-The company you kept takes each empty field from the other, such as **Industry**, **Employees** or the address. Its **Lifecycle** is taken when it was still **Unknown**.
+3. Choose **Merge**. Margince opens the company you kept and says "{source} was merged into {target}." The company you kept takes each empty field from the other, such as **Industry**, **Employees** or the address. Its **Lifecycle** is taken when it was still **Unknown**.
 
 The company you merged away is archived, not deleted. You cannot merge an archived company. Its **Overview** says that it is archived, and **Merged into** links the company you kept. Some contacts work at both companies, with the merged-away company as current employer. They keep the company you kept as current employer.
 
