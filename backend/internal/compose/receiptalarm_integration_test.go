@@ -88,8 +88,8 @@ func (l *confirmLaneEnv) missedReceiptNotices(t *testing.T) []string {
 	return bodies
 }
 
-//testdb:serial registers into a process-wide unit registry
 func TestAReceiptThatCannotBePreparedReachesThePrivacyOperators(t *testing.T) {
+	t.Parallel()
 	l := receiptLane(t, receiptOwed)
 	// The receipt's language cannot be read, the way the preparation test in
 	// controllermail_integration_test.go breaks it.
@@ -111,8 +111,8 @@ func TestAReceiptThatCannotBePreparedReachesThePrivacyOperators(t *testing.T) {
 	}
 }
 
-//testdb:serial registers into a process-wide unit registry
 func TestAReceiptOwedToASubjectWithNoAddressReachesThePrivacyOperators(t *testing.T) {
+	t.Parallel()
 	l := receiptLane(t, receiptOwed)
 	l.e.WsExec(t, `DELETE FROM contact_email WHERE contact_id = $1`, l.contact)
 	l.object(t)
@@ -123,8 +123,8 @@ func TestAReceiptOwedToASubjectWithNoAddressReachesThePrivacyOperators(t *testin
 	}
 }
 
-//testdb:serial registers into a process-wide unit registry
 func TestARefusalThatOwesNoReceiptRaisesNothing(t *testing.T) {
+	t.Parallel()
 	l := receiptLane(t, "")
 	l.e.WsExec(t, `DELETE FROM contact_email WHERE contact_id = $1`, l.contact)
 	l.object(t)
@@ -135,9 +135,8 @@ func TestARefusalThatOwesNoReceiptRaisesNothing(t *testing.T) {
 }
 
 // An overdue receipt is raised once per stop act, and taken back when it is sent.
-//
-//testdb:serial registers into a process-wide unit registry
 func TestAnOverdueReceiptIsRaisedOnceAndSettledWhenSent(t *testing.T) {
+	t.Parallel()
 	l := receiptLane(t, receiptOwed)
 	l.object(t)
 	var dueAt time.Time
@@ -178,9 +177,8 @@ func (brokenAlarm) RaiseMissedReceiptTx(ctx context.Context, tx pgx.Tx, _ consen
 }
 
 // An alarm that fails is logged; it never takes the refusal down with it.
-//
-//testdb:serial registers into a process-wide unit registry
 func TestAFailingAlarmCannotRollBackTheRefusal(t *testing.T) {
+	t.Parallel()
 	l := receiptLane(t, receiptOwed)
 	l.e.WsExec(t, `DELETE FROM contact_email WHERE contact_id = $1`, l.contact)
 	l.store = l.store.WithMissedReceipts(brokenAlarm{})
@@ -210,9 +208,8 @@ func (l *confirmLaneEnv) liveNoticeTargets(t *testing.T, target ids.UUID) int {
 
 // A subject erased before the deadline is never raised, and a notice already
 // raised about them is taken back and stops naming them.
-//
-//testdb:serial registers into a process-wide unit registry
 func TestAnErasedSubjectKeepsNoMissedReceiptNotice(t *testing.T) {
+	t.Parallel()
 	t.Run("erased before the deadline", func(t *testing.T) {
 		l := receiptLane(t, receiptOwed)
 		l.object(t)
@@ -251,9 +248,8 @@ func TestAnErasedSubjectKeepsNoMissedReceiptNotice(t *testing.T) {
 }
 
 // A backlog longer than one page is raised and settled across passes.
-//
-//testdb:serial registers into a process-wide unit registry
 func TestAReceiptBacklogLongerThanAPageIsRaisedAndSettledInFull(t *testing.T) {
+	t.Parallel()
 	l := receiptLane(t, receiptOwed)
 	l.object(t)
 	second := l.e.SeedContact(t, "Second Refusal", &l.e.Rep1)
@@ -307,9 +303,8 @@ func TestAReceiptBacklogLongerThanAPageIsRaisedAndSettledInFull(t *testing.T) {
 }
 
 // A receipt owed where no mail lane can send it is raised, not dropped.
-//
-//testdb:serial registers into a process-wide unit registry
 func TestAReceiptOwedWithNoMailLaneReachesThePrivacyOperators(t *testing.T) {
+	t.Parallel()
 	l := receiptLane(t, receiptOwed)
 	l.store = consent.NewStore(InstallationDB(l.e.Pool)).WithMissedReceipts(receiptAlarm{db: InstallationDB(l.e.Pool)})
 	l.object(t)
@@ -321,9 +316,8 @@ func TestAReceiptOwedWithNoMailLaneReachesThePrivacyOperators(t *testing.T) {
 }
 
 // Two different refusals on one day each owe their own receipt.
-//
-//testdb:serial registers into a process-wide unit registry
 func TestTwoDifferentSameDayWithdrawalsEachGetAReceipt(t *testing.T) {
+	t.Parallel()
 	l := receiptLane(t, receiptOwed)
 	for _, key := range []string{"receipt_one", "receipt_two"} {
 		l.e.WsExec(t, `INSERT INTO consent_purpose (key, label, class) VALUES ($1, $1, 'marketing')`, key)
@@ -344,9 +338,8 @@ func TestTwoDifferentSameDayWithdrawalsEachGetAReceipt(t *testing.T) {
 
 // A press that withdraws the same purpose again after a re-grant is a second
 // refusal and owes a second receipt.
-//
-//testdb:serial registers into a process-wide unit registry
 func TestARepeatedSameDayWithdrawalOfOnePurposeGetsItsOwnReceipt(t *testing.T) {
+	t.Parallel()
 	l := receiptLane(t, receiptOwed)
 	l.e.WsExec(t, `INSERT INTO consent_purpose (key, label, class) VALUES ('receipt_again', 'receipt_again', 'marketing')`)
 	var purpose ids.PurposeID
@@ -377,9 +370,8 @@ func TestARepeatedSameDayWithdrawalOfOnePurposeGetsItsOwnReceipt(t *testing.T) {
 
 // A receipt the sweep read as overdue and an erasure scrubbed before the raise
 // raises nothing about the erased subject.
-//
-//testdb:serial registers into a process-wide unit registry
 func TestAReceiptErasedBetweenTheReadAndTheRaiseIsNotRaised(t *testing.T) {
+	t.Parallel()
 	l := receiptLane(t, receiptOwed)
 	l.object(t)
 	var dueAt time.Time

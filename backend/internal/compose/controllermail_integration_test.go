@@ -25,6 +25,7 @@ import (
 	"mime/multipart"
 	"net/mail"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -259,16 +260,21 @@ func lastIndex(s, sub string) int {
 // here cannot collide with a compiled-in pack.
 const ackJurisdiction jurisdiction.Code = "qz"
 
+// Each fixture code is registered once per process, because the registry
+// refuses a second set for one code.
+var registerAckRules, registerPlainAckRules sync.Once
+
 // TestAOnePurposeUnsubscribeIsAcknowledgedThroughTheRealEngine presses the
 // unsubscribe link a marketing send carries, under a pack that owes an
 // acknowledgement. The press writes a withdrawal and no suppression, and the
 // engine must still admit the acknowledgement it owes.
-//
-//testdb:serial registers into a process-wide unit registry
 func TestAOnePurposeUnsubscribeIsAcknowledgedThroughTheRealEngine(t *testing.T) {
+	t.Parallel()
 	l := setupConfirmLane(t)
-	messagingrules.Register(messagingrules.Rules{
-		Jurisdiction: ackJurisdiction, Version: 1, OptOutAcknowledgement: true, OptOutAcknowledgementWithin: 24 * time.Hour,
+	registerAckRules.Do(func() {
+		messagingrules.Register(messagingrules.Rules{
+			Jurisdiction: ackJurisdiction, Version: 1, OptOutAcknowledgement: true, OptOutAcknowledgementWithin: 24 * time.Hour,
+		})
 	})
 	// The receipt is owed under the subject's own country.
 	l.livesIn(t, ackJurisdiction)
@@ -409,11 +415,13 @@ func TestControllerHTMLCannotChangeAfterStagingAuthorization(t *testing.T) {
 	}
 }
 
-//testdb:serial registers into a process-wide unit registry
 func TestAReceiptPreparationSQLFailureCannotRollBackTheWithdrawal(t *testing.T) {
+	t.Parallel()
 	lane := setupConfirmLane(t)
 	const country jurisdiction.Code = "qh"
-	messagingrules.Register(messagingrules.Rules{Jurisdiction: country, Version: 1, OptOutAcknowledgement: true})
+	registerPlainAckRules.Do(func() {
+		messagingrules.Register(messagingrules.Rules{Jurisdiction: country, Version: 1, OptOutAcknowledgement: true})
+	})
 	lane.livesIn(t, country)
 	store := lane.store.
 		WithMailLanguage(consent.MailLanguageFunc(func(ctx context.Context, tx pgx.Tx) (string, error) {

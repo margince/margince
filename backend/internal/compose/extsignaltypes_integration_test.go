@@ -27,8 +27,8 @@ func signalFiler(objects ...string) principal.Permissions {
 	return principal.Permissions{RoleKeys: []string{"filer"}, Objects: grants, RowScope: principal.RowScopeOwn}
 }
 
-//testdb:serial registers into a process-wide unit registry
 func TestAUnitFilesItsOwnSignalKindAndARepeatIsTheSameSignal(t *testing.T) {
+	t.Parallel()
 	w := setupReads(t)
 	signaltypes.Register(coreUnit, []extension.SignalTypeDeclaration{{
 		Kind: "loss", Label: "Loss reported",
@@ -68,12 +68,14 @@ func TestAUnitFilesItsOwnSignalKindAndARepeatIsTheSameSignal(t *testing.T) {
 	}
 }
 
-//testdb:serial registers into a process-wide unit registry
 func TestAUnitCannotFileASignalAboutARecordTheCallerCannotSee(t *testing.T) {
+	t.Parallel()
 	w := setupReads(t)
-	signaltypes.Register(coreUnit, []extension.SignalTypeDeclaration{{Kind: "loss", Label: "Loss reported"}})
+	// A kind of its own, so the parallel test declaring "loss" with evidence
+	// cannot change what this one files.
+	signaltypes.Register(coreUnit, []extension.SignalTypeDeclaration{{Kind: "sighting", Label: "Sighting reported"}})
 	err := w.readAs(t, w.user, signalFiler("signal", "company"), func(ctx context.Context, core extension.Core) error {
-		_, _, err := core.Signals().Create(ctx, "loss",
+		_, _, err := core.Signals().Create(ctx, "sighting",
 			extension.SignalSubject{Type: "company", ID: w.theirsCompany.String()}, extension.SignalEvidence{}, "hidden-1")
 		if !errors.Is(err, extension.ErrNotFound) {
 			t.Errorf("a signal about another seat's private company answered %v, want ErrNotFound", err)
@@ -84,7 +86,7 @@ func TestAUnitCannotFileASignalAboutARecordTheCallerCannotSee(t *testing.T) {
 		t.Fatal(err)
 	}
 	err = w.readAs(t, w.user, signalFiler("company"), func(ctx context.Context, core extension.Core) error {
-		_, _, err := core.Signals().Create(ctx, "loss",
+		_, _, err := core.Signals().Create(ctx, "sighting",
 			extension.SignalSubject{Type: "company", ID: w.mineCompany.String()}, extension.SignalEvidence{}, "no-right-1")
 		if !errors.Is(err, extension.ErrForbidden) {
 			t.Errorf("a caller without the signal create right answered %v, want ErrForbidden", err)
