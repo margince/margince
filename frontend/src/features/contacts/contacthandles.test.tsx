@@ -50,7 +50,7 @@ const phone = (
 });
 
 function About({ page }: Readonly<{ page: typeof view }>) {
-  return <RecordDetails sections={useContactAboutSections(page)} />;
+  return <RecordDetails sections={useContactAboutSections(page).sections} />;
 }
 
 function show(emails: Email[], phones: Phone[] = []) {

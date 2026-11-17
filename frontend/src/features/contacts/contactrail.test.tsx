@@ -809,6 +809,26 @@ describe("the consent rail's transport row", () => {
     // The marketing grant is the Research tab's consent panel's to name.
     expect(screen.queryByText("Newsletter")).toBeNull();
   });
+
+  const editConsent = `Edit ${en["contact.aside.consent"]}`;
+
+  it("opens Manage consent from the section's Edit", async () => {
+    mount(reachable, marketingOnly);
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    await user.click(await screen.findByRole("button", { name: editConsent }));
+    expect(
+      await screen.findByRole("dialog", { name: en["consent.manage"] }),
+    ).toBeTruthy();
+  });
+
+  it("offers no consent Edit to a reader who may not change the contact", async () => {
+    mount(
+      { ...reachable, contact: { ...reachable.contact, writable: false } },
+      marketingOnly,
+    );
+    await screen.findByText("Business mail");
+    expect(screen.queryByRole("button", { name: editConsent })).toBeNull();
+  });
 });
 
 describe("the Lists group", () => {

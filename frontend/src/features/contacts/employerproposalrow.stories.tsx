@@ -48,7 +48,7 @@ function withSignatureCompany(company: string): Contact360 {
 }
 
 function About({ view }: Readonly<{ view: Contact360 }>) {
-  return <RecordDetails sections={useContactAboutSections(view)} />;
+  return <RecordDetails sections={useContactAboutSections(view).sections} />;
 }
 
 function rail(view: Contact360, width: number | string = 320) {

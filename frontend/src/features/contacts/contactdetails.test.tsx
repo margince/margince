@@ -219,7 +219,7 @@ it("adds the first phone from Details without changing email", async () => {
 
 describe("the address in the About group", () => {
   function About({ page }: Readonly<{ page: typeof view }>) {
-    return <RecordDetails sections={useContactAboutSections(page)} />;
+    return <RecordDetails sections={useContactAboutSections(page).sections} />;
   }
   const address = (
     id: string,
@@ -280,7 +280,7 @@ describe("the address in the About group", () => {
 
 describe("a postal address whose country does not fit", () => {
   function About({ page }: Readonly<{ page: typeof view }>) {
-    return <RecordDetails sections={useContactAboutSections(page)} />;
+    return <RecordDetails sections={useContactAboutSections(page).sections} />;
   }
   const berlin = { postal_code: "10115", city: "Berlin", country: "AT" };
 
@@ -350,5 +350,101 @@ it("converts the lead that holds an edited address by saving again", async () =>
   expect(sent[1]).toMatchObject({
     convert_lead_ids: ["lead-9"],
     emails: [expect.objectContaining({ email: "dana@lead.example" })],
+  });
+});
+
+describe("the left column's sections", () => {
+  function Column({ page }: Readonly<{ page: typeof view }>) {
+    const about = useContactAboutSections(page);
+    return (
+      <>
+        <RecordDetails sections={about.sections} />
+        {about.element}
+      </>
+    );
+  }
+  const placed = {
+    ...contact,
+    owner_id: "u-1",
+    address: { city: "Berlin", country: "DE" },
+  };
+
+  function showColumn(
+    allow: Parameters<typeof meRoute>[0],
+    patch: (body: unknown) => Response = () => jsonResponse(placed),
+  ) {
+    installFetchStub({
+      "GET /me": meRoute(allow, { seat: "full" }),
+      "PATCH /contacts/p-1": patch,
+    });
+    render(
+      <StoryProviders>
+        <Column page={{ ...view, contact: placed }} />
+      </StoryProviders>,
+    );
+  }
+
+  it("offers one Edit per section, and rests every value as a reading", async () => {
+    showColumn({ contact: ["read", "update"] });
+    for (const name of ["Edit About", "Edit Address", "Edit Ownership"]) {
+      expect(await screen.findByRole("button", { name })).toHaveTextContent(
+        en["record.edit"],
+      );
+    }
+    expect(screen.queryByRole("button", { name: /^Change / })).toBeNull();
+    expect(
+      screen.getByRole("link", { name: "dana@brandt.example" }),
+    ).toHaveAttribute("href", "mailto:dana@brandt.example");
+  });
+
+  it("offers no Edit to a reader who may not change the contact", async () => {
+    showColumn({ contact: ["read"] });
+    await screen.findByText("Director");
+    expect(screen.queryByRole("button", { name: /^Edit / })).toBeNull();
+  });
+
+  it("changes About's fields in one dialog and sends the changed title alone", async () => {
+    const user = userEvent.setup();
+    const sent: unknown[] = [];
+    showColumn({ contact: ["read", "update"] }, (body) => {
+      sent.push(body);
+      return jsonResponse({ ...placed, title: "CEO", version: 4 });
+    });
+    await user.click(await screen.findByRole("button", { name: "Edit About" }));
+    const dialog = within(await screen.findByRole("dialog", { name: "About" }));
+    expect(dialog.queryByRole("textbox", { name: "City" })).toBeNull();
+    expect(
+      dialog.getByRole("button", { name: "Change Employer" }),
+    ).toBeTruthy();
+    const title = dialog.getByRole("textbox", { name: "Title" });
+    await user.clear(title);
+    await user.type(title, "CEO");
+    await user.click(dialog.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(sent).toEqual([{ title: "CEO" }]));
+  });
+
+  it("changes the address in a dialog of its own", async () => {
+    const user = userEvent.setup();
+    const sent: unknown[] = [];
+    showColumn({ contact: ["read", "update"] }, (body) => {
+      sent.push(body);
+      return jsonResponse(placed);
+    });
+    await user.click(
+      await screen.findByRole("button", { name: "Edit Address" }),
+    );
+    const dialog = within(
+      await screen.findByRole("dialog", { name: "Address" }),
+    );
+    expect(dialog.queryByRole("textbox", { name: "Title" })).toBeNull();
+    const city = dialog.getByRole("textbox", { name: "City" });
+    await user.clear(city);
+    await user.type(city, "Hamburg");
+    await user.click(dialog.getByRole("button", { name: "Save" }));
+    await waitFor(() =>
+      expect(sent).toEqual([
+        { address: expect.objectContaining({ city: "Hamburg" }) },
+      ]),
+    );
   });
 });

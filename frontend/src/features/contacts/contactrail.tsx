@@ -12,11 +12,16 @@ import {
 import { omitted, type SectionState } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { useCanWriteRecord } from "../../lib/capability";
 import { labelFor } from "../../lib/labelfor";
 import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
 import { navigate } from "../../lib/router";
 import { useWriteRefusal } from "./contactactions";
-import { type ConsentRead, useConsentRows } from "./contactconsentpanel";
+import {
+  type ConsentRead,
+  useConsentRows,
+  useManageConsent,
+} from "./contactconsentpanel";
 import { useContactAboutSections } from "./contactdetails";
 import { ContactSourceReview } from "./contactsourcereview";
 
@@ -71,8 +76,8 @@ export function bodyState(withheld: boolean, count: number): SectionState {
 }
 
 /**
- * The left column under the head: About, Ownership, Consent & channels and an
- * unconfirmed source as flat groups. Then the lists the contact is on, the one link to the empty
+ * The left column under the head: About, Address, Ownership, Consent & channels
+ * and an unconfirmed source as flat groups. Then the lists the contact is on, the one link to the empty
  * fields, and the page's footnote. Employers, billing roles, tags, the record's
  * source and the consent proof live on the Network and Research tabs.
  */
@@ -100,11 +105,19 @@ export function ContactRail({
   );
   const about = useContactAboutSections(view);
   const consentRows = useConsentRows(view, consent);
+  const manageConsent = useManageConsent(view);
+  const mayManageConsent =
+    useCanWriteRecord("contact", view.contact) && !view.contact.archived_at;
   const listsOn = useListsAvailable();
   const reviews = view.privacy_source_reviews ?? [];
   const sections: DetailSection[] = [
-    ...about,
-    { key: "consent", label: t("contact.aside.consent"), rows: consentRows },
+    ...about.sections,
+    {
+      key: "consent",
+      label: t("contact.aside.consent"),
+      edit: mayManageConsent ? { onEdit: manageConsent.open } : undefined,
+      rows: consentRows,
+    },
     ...(reviews.length > 0
       ? [
           {
@@ -128,6 +141,8 @@ export function ContactRail({
       ) : (
         <RecordDetails sections={sections} footnote={footnote} />
       )}
+      {about.element}
+      {manageConsent.element}
       {!view.contact.archived_at && (
         <ConversationSuggestionsCard
           key={view.contact.id}

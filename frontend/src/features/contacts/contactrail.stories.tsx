@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, within } from "storybook/test";
+import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { ContactRail } from "./contactrail";
 import "./contact360.css";
@@ -441,5 +441,63 @@ export const LongAddress: Story = {
     await expect(domain.getBoundingClientRect().right).toBeLessThanOrEqual(
       column.getBoundingClientRect().right,
     );
+  },
+};
+
+const editable: View = {
+  ...granted,
+  contact: { ...contact, owner_id: "u-1", writable: true },
+};
+
+// Each section that holds a field this reader may change ends its label line
+// in Edit, and Escape hands focus back to it.
+export const SectionEdits: Story = {
+  name: "Section edits",
+  render: () => rail(editable),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const user = userEvent.setup();
+    for (const name of [
+      "Edit About",
+      "Edit Address",
+      "Edit Ownership",
+      "Edit Consent & channels",
+    ]) {
+      await expect(await canvas.findByRole("button", { name })).toBeVisible();
+    }
+    const about = canvas.getByRole("button", { name: "Edit About" });
+    await user.click(about);
+    const dialog = await screen.findByRole("dialog", { name: "About" });
+    await waitFor(() => expect(dialog).toBeVisible());
+    await expect(
+      within(dialog).queryByRole("textbox", { name: "City" }),
+    ).toBeNull();
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(about).toHaveFocus());
+  },
+};
+
+export const SectionEditsDark: Story = {
+  ...SectionEdits,
+  name: "Section edits, dark",
+  globals: { theme: "dark" },
+};
+
+export const SectionEditsPhone: Story = {
+  ...SectionEdits,
+  name: "Section edits, phone",
+  parameters: { layout: "fullscreen" },
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+
+// A reader without the write grant reads every section and is offered no Edit.
+export const SectionEditsReadOnly: Story = {
+  name: "Section edits, read only",
+  render: () => rail(editable, guard.entries, meRoute({ contact: ["read"] })),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByText("Head of Fleet");
+    await expect(canvas.queryByRole("button", { name: /^Edit / })).toBeNull();
   },
 };

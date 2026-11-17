@@ -57,7 +57,11 @@ export function useContactEdit(contact: Contact): RailEdit {
     },
     resolveExisting: (_code, id) => ({ screen: "contacts", id }),
     save: async (values, rows, opened, extra) => {
-      const patch = { ...mapContactUpdate(values, rows), ...extra };
+      const { social, ...rest } = mapContactUpdate(values, rows);
+      // The comparison reads an absent link as unlike "", so an untouched empty
+      // link would be sent as a change.
+      const untouchedLink = !linkedin && !values["social.linkedin"]?.trim();
+      const patch = { ...rest, ...(untouchedLink ? {} : { social }), ...extra };
       const from = fromHere();
       const saved = await saveRecordEdit("contact", rawRecord(opened), patch);
       // Handing a private contact to a colleague can take it out of the
