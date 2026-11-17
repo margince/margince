@@ -191,8 +191,8 @@ describe("log activity from a 360", () => {
     const outcomes = screen.getByRole("group", { name: "Outcome" });
     expect(
       within(outcomes)
-        .getAllByRole("button")
-        .map((button) => button.textContent),
+        .getAllByRole("radio")
+        .map((radio) => radio.closest("label")?.textContent),
     ).toEqual([
       "No outcome",
       "Reached",
@@ -201,12 +201,15 @@ describe("log activity from a 360", () => {
       "Call back later",
       "Put through",
     ]);
+    expect(
+      within(outcomes).getByRole("radio", { name: "No outcome" }),
+    ).toHaveProperty("checked", true);
     const log = screen.getByRole("button", { name: "Log" });
     expect(log.hasAttribute("disabled")).toBe(true);
 
     // An outcome alone is a whole call: no subject, no body.
     await user.click(
-      within(outcomes).getByRole("button", { name: "Not reached" }),
+      within(outcomes).getByRole("radio", { name: "Not reached" }),
     );
     expect(log.hasAttribute("disabled")).toBe(false);
     await user.click(log);
@@ -236,10 +239,8 @@ describe("log activity from a 360", () => {
     const user = userEvent.setup();
     await user.click(
       within(screen.getByRole("group", { name: "Outcome" })).getByRole(
-        "button",
-        {
-          name: "Reached",
-        },
+        "radio",
+        { name: "Reached" },
       ),
     );
     await pickOption(user, screen.getByLabelText("Type"), "Note");

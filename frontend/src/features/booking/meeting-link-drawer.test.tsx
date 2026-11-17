@@ -12,6 +12,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { pickOption } from "../../design-system/select-testing";
 import {
   bookingConnection,
   bookingHours,
@@ -161,7 +162,9 @@ it("saves the host's own address over the latest profile", async () => {
 it("takes any other length from 15 minutes to 8 hours and nothing outside it", async () => {
   const user = userEvent.setup();
   const { writes } = mount(legacy);
-  await user.click(await screen.findByRole("button", { name: "Other" }));
+  const length = await screen.findByRole("combobox", { name: "Length" });
+  expect(length.textContent).toBe("30 min");
+  await pickOption(user, length, "Other");
   const minutes = screen.getByRole("spinbutton", { name: "Length in minutes" });
   const save = screen.getByRole("button", { name: "Save link" });
   for (const outside of ["10", "481"]) {

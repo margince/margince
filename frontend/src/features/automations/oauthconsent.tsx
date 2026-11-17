@@ -6,20 +6,21 @@ import { type ReactNode, useEffect, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import {
+  AuthCardTitle,
+  AuthExperience,
+  type AuthPhase,
+} from "../../components/auth-core";
+import { Wordmark } from "../../components/auth-identity";
+import {
   ALL_AREAS,
   areasComplete,
   areasFormValue,
   type PassportAreas,
   WorkAreasChoice,
 } from "../../components/workareas";
-import {
-  Button,
-  Card,
-  Checkbox,
-  EmptyState,
-  SegmentedControl,
-} from "../../design-system/atoms";
-import { Heading } from "../../design-system/heading";
+import { Button, Card, SegmentedControl } from "../../design-system/atoms";
+import { ChoiceList } from "../../design-system/choicelist";
+import { Eyebrow } from "../../design-system/eyebrow";
 import { QueryGate } from "../../design-system/querystates";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
@@ -119,28 +120,37 @@ function ConsentErrorCard({
 }>) {
   const t = useT();
   return (
-    <Card>
-      <Heading size="xlarge">{t(titleKey)}</Heading>
-      <p>{t(bodyKey)}</p>
-      {children}
-      <Button variant="ghost" onClick={() => navigate({ screen: "home" })}>
-        {t("consent.backToApp")}
-      </Button>
-    </Card>
+    <ConsentFrame phase="unavailable">
+      <section className="auth-card">
+        <AuthCardTitle as="h1">{t(titleKey)}</AuthCardTitle>
+        <p>{t(bodyKey)}</p>
+        {children}
+        <div className="auth-actions">
+          <Button variant="ghost" onClick={() => navigate({ screen: "home" })}>
+            {t("consent.backToApp")}
+          </Button>
+        </div>
+      </section>
+    </ConsentFrame>
   );
 }
 
-// Toggling one scope in or out of the granted set. A plain ternary expression
-// statement reads as two ideas on one line (which branch, and the mutation
-// itself); this keeps the toggle to the one idea it is.
-function toggled(current: ReadonlySet<Scope>, scope: Scope): Set<Scope> {
-  const next = new Set(current);
-  if (next.has(scope)) {
-    next.delete(scope);
-  } else {
-    next.add(scope);
-  }
-  return next;
+// The sign-in surface in its notice form. The reader is already signed in, so
+// it does not greet them and its legal line claims nothing about access.
+function ConsentFrame({
+  phase,
+  wide = false,
+  children,
+}: Readonly<{ phase: AuthPhase; wide?: boolean; children: ReactNode }>) {
+  const t = useT();
+  return (
+    <AuthExperience phase={phase} notice wide={wide} core={false}>
+      <Wordmark alt={t("auth.title")} />
+      <Card as="div" className="oauthconsent-pane">
+        {children}
+      </Card>
+    </AuthExperience>
+  );
 }
 
 // The two common grants, offered as one choice above the boxes. "Read and
@@ -209,69 +219,75 @@ function ConsentSelector({
   const [areas, setAreas] = useState<PassportAreas>(ALL_AREAS);
 
   return (
-    <Card>
-      <Heading size="xlarge">{t("consent.title")}</Heading>
+    <>
       <p>{t("consent.asks", { client: data.client_name })}</p>
-      <RedirectDisclosure redirectURI={params.get("redirect_uri") ?? ""} />
-      <SegmentedControl
-        options={PRESETS}
-        value={presetOf(granted, data.scopes)}
-        onChange={(preset) =>
-          setGranted((current) => presetScopes(preset, data.scopes, current))
-        }
-        labels={{
-          readDraft: t("consent.preset.readDraft"),
-          full: t("consent.preset.full"),
-          custom: t("consent.preset.custom"),
-        }}
-        label={t("consent.preset.label")}
-      />
-      <div className="oauthconsent-scopes">
-        {data.scopes.map((scope) => (
-          <Checkbox
-            key={scope}
-            checked={granted.has(scope)}
-            onChange={() => setGranted((current) => toggled(current, scope))}
-            label={
-              <>
-                <strong>{t(`passport.scope.${scope}`)}</strong>{" "}
-                <span className="t-caption">
-                  {t(`consent.scopeNote.${scope}`)}
-                </span>
-              </>
+      <div className="oauthconsent-form">
+        <div className="oauthconsent-section">
+          <Eyebrow>{t("consent.preset.label")}</Eyebrow>
+          <SegmentedControl
+            options={PRESETS}
+            value={presetOf(granted, data.scopes)}
+            onChange={(preset) =>
+              setGranted((current) =>
+                presetScopes(preset, data.scopes, current),
+              )
             }
+            labels={{
+              readDraft: t("consent.preset.readDraft"),
+              full: t("consent.preset.full"),
+              custom: t("consent.preset.custom"),
+            }}
+            label={t("consent.preset.label")}
           />
-        ))}
+          <ChoiceList<Scope>
+            multiple
+            legend={t("consent.scopesLegend")}
+            hideLegend
+            value={data.scopes.filter((scope) => granted.has(scope))}
+            onChange={(scopes) => setGranted(new Set(scopes))}
+            choices={data.scopes.map((scope) => ({
+              value: scope,
+              label: t(`passport.scope.${scope}`),
+              description: t(`consent.scopeNote.${scope}`),
+            }))}
+          />
+        </div>
+        <WorkAreasChoice
+          reachable={data.areas}
+          value={areas}
+          onChange={setAreas}
+        />
+        <div className="oauthconsent-section">
+          <p className="t-caption">{t("consent.ceiling")}</p>
+          {data.offline && <p>{t("consent.offline")}</p>}
+          <RedirectDisclosure redirectURI={params.get("redirect_uri") ?? ""} />
+          {/* Deny first, as a dialog's footer reads, at every width. */}
+          <div className="oauthconsent-actions auth-actions">
+            <form method="post" action="/oauth/authorize">
+              <HiddenAuthorizeFields params={params} consent={consent} />
+              <input type="hidden" name="deny" value="1" />
+              <Button type="submit">{t("consent.deny")}</Button>
+            </form>
+            <form method="post" action="/oauth/authorize">
+              <HiddenAuthorizeFields params={params} consent={consent} />
+              <input type="hidden" name="scopes" value={scopeList} />
+              <input type="hidden" name="areas" value={areasFormValue(areas)} />
+              <Button
+                type="submit"
+                variant="primary"
+                disabled={granted.size === 0 || !areasComplete(areas)}
+              >
+                {t("consent.approve")}
+              </Button>
+            </form>
+          </div>
+          <div className="oauthconsent-hints">
+            {granted.size === 0 && <p>{t("consent.pickOne")}</p>}
+            {!areasComplete(areas) && <p>{t("workArea.pickOne")}</p>}
+          </div>
+        </div>
       </div>
-      <WorkAreasChoice
-        reachable={data.areas}
-        value={areas}
-        onChange={setAreas}
-      />
-      <p className="t-caption">{t("consent.ceiling")}</p>
-      {data.offline && <p>{t("consent.offline")}</p>}
-      <div className="oauthconsent-verbs">
-        <form method="post" action="/oauth/authorize">
-          <HiddenAuthorizeFields params={params} consent={consent} />
-          <input type="hidden" name="scopes" value={scopeList} />
-          <input type="hidden" name="areas" value={areasFormValue(areas)} />
-          <Button
-            type="submit"
-            variant="primary"
-            disabled={granted.size === 0 || !areasComplete(areas)}
-          >
-            {t("consent.approve")}
-          </Button>
-        </form>
-        <form method="post" action="/oauth/authorize">
-          <HiddenAuthorizeFields params={params} consent={consent} />
-          <input type="hidden" name="deny" value="1" />
-          <Button type="submit">{t("consent.deny")}</Button>
-        </form>
-        {granted.size === 0 && <p>{t("consent.pickOne")}</p>}
-        {!areasComplete(areas) && <p>{t("workArea.pickOne")}</p>}
-      </div>
-    </Card>
+    </>
   );
 }
 
@@ -329,9 +345,12 @@ export function OAuthConsent() {
 
   if (!consent && !errorCode) {
     return (
-      <div className="wrap narrow">
-        <EmptyState>{t("consent.reentering")}</EmptyState>
-      </div>
+      <ConsentFrame phase="idle">
+        <section className="auth-card">
+          <AuthCardTitle as="h1">{t("consent.title")}</AuthCardTitle>
+          <p>{t("consent.reentering")}</p>
+        </section>
+      </ConsentFrame>
     );
   }
 
@@ -343,12 +362,10 @@ export function OAuthConsent() {
   // view" with a Retry button that retries the wrong thing.
   if (errorCode === "invalid_request") {
     return (
-      <div className="wrap narrow">
-        <ConsentErrorCard
-          titleKey="consent.invalidTitle"
-          bodyKey="consent.invalidBody"
-        />
-      </div>
+      <ConsentErrorCard
+        titleKey="consent.invalidTitle"
+        bodyKey="consent.invalidBody"
+      />
     );
   }
   // A way of connecting the admin turned off: only the admin can change that.
@@ -356,17 +373,15 @@ export function OAuthConsent() {
   // without it while the read is out or when it fails.
   if (errorCode === "method_off") {
     return (
-      <div className="wrap narrow">
-        <ConsentErrorCard
-          titleKey="consent.methodOffTitle"
-          bodyKey="consent.methodOffBody"
-        >
-          <MethodOffFacts
-            clientName={query.data?.client_name}
-            redirectURI={params.get("redirect_uri") ?? ""}
-          />
-        </ConsentErrorCard>
-      </div>
+      <ConsentErrorCard
+        titleKey="consent.methodOffTitle"
+        bodyKey="consent.methodOffBody"
+      >
+        <MethodOffFacts
+          clientName={query.data?.client_name}
+          redirectURI={params.get("redirect_uri") ?? ""}
+        />
+      </ConsentErrorCard>
     );
   }
   // stale_consent says outright that the request is spent — and ANY arrival
@@ -375,23 +390,26 @@ export function OAuthConsent() {
   // offer a submission the server must refuse.
   if (errorCode === "stale_consent" || !consent) {
     return (
-      <div className="wrap narrow">
-        <ConsentErrorCard
-          titleKey="consent.staleTitle"
-          bodyKey="consent.staleBody"
-        />
-      </div>
+      <ConsentErrorCard
+        titleKey="consent.staleTitle"
+        bodyKey="consent.staleBody"
+      />
     );
   }
 
   return (
-    <div className="wrap narrow">
-      <QueryGate query={query} pendingLabel={t("consent.title")}>
-        {(data) => (
-          <ConsentSelector data={data} params={params} consent={consent} />
-        )}
-      </QueryGate>
-    </div>
+    <ConsentFrame phase="idle" wide>
+      <section className="auth-card">
+        <AuthCardTitle as="h1">{t("consent.title")}</AuthCardTitle>
+        <div className="oauthconsent-body">
+          <QueryGate query={query} pendingLabel={t("consent.title")}>
+            {(data) => (
+              <ConsentSelector data={data} params={params} consent={consent} />
+            )}
+          </QueryGate>
+        </div>
+      </section>
+    </ConsentFrame>
   );
 }
 

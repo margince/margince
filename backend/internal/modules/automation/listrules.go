@@ -370,7 +370,7 @@ func (r listRule) Plan(ctx context.Context, ev workflow.Event) (workflow.Effect,
 			subject = firing.taskSubject()
 			ctx = systemtext.WithMessage(ctx, &systemtext.Message{Subject: systemtext.Sentence(firing.taskCode())})
 		}
-		return configuredTaskEffect(ctx, r.ex, ev, subject, dueAt)
+		return configuredTaskEffect(ctx, r.ex, ev, taskWords{subject: subject, why: firing.taskReason}, dueAt)
 	case ActionTypeNotify:
 		return r.planNotice(ev, firing)
 	case ActionTypeAddToShortlist:
@@ -409,6 +409,14 @@ func (f listFiring) taskCode() string {
 		return "automation.list_left_task"
 	}
 	return "automation.list_joined_task"
+}
+
+// taskReason says the record crossed a list's filter, without naming the list.
+func (f listFiring) taskReason(record string) *systemtext.Component {
+	if f.Action == directionLeft {
+		return systemtext.Sentence("automation.why.list_left", systemtext.Text(record))
+	}
+	return systemtext.Sentence("automation.why.list_joined", systemtext.Text(record))
 }
 
 func (f listFiring) noticeCode() string {

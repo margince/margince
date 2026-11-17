@@ -5,6 +5,7 @@ package database
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"runtime"
 	"sync"
@@ -18,6 +19,9 @@ import (
 
 const readAdmissionTimeout = 15 * time.Second
 
+// DefaultReadConcurrency leaves room for short requests beside heavy reads.
+const DefaultReadConcurrency = 3
+
 var readAdmissions = struct {
 	sync.Mutex
 	pools map[weak.Pointer[pgxpool.Pool]]*readAdmission
@@ -25,6 +29,7 @@ var readAdmissions = struct {
 
 type readAdmission struct {
 	slots       *semaphore.Weighted
+	capacity    int64
 	attempts    atomic.Int64
 	wait        atomic.Int64
 	maxWait     atomic.Int64
@@ -48,7 +53,27 @@ func admissionOf(pool *pgxpool.Pool) *readAdmission {
 	if admission, ok := readAdmissions.pools[key]; ok {
 		return admission
 	}
-	admission := &readAdmission{slots: semaphore.NewWeighted(int64(max(1, min(4, pool.Stat().MaxConns()/2))))}
+	return newReadAdmission(pool, DefaultReadConcurrency)
+}
+
+// ConfigureReadAdmission runs before a pool serves reads, so no live permit changes owners.
+func ConfigureReadAdmission(pool *pgxpool.Pool, limit int) error {
+	if limit < 1 {
+		return errors.New("read concurrency must be positive")
+	}
+	readAdmissions.Lock()
+	defer readAdmissions.Unlock()
+	if _, exists := readAdmissions.pools[weak.Make(pool)]; exists {
+		return errors.New("read admission is already initialized")
+	}
+	newReadAdmission(pool, limit)
+	return nil
+}
+
+func newReadAdmission(pool *pgxpool.Pool, limit int) *readAdmission {
+	key := weak.Make(pool)
+	capacity := max(1, min(int64(limit), int64(pool.Stat().MaxConns()/2)))
+	admission := &readAdmission{slots: semaphore.NewWeighted(capacity), capacity: capacity}
 	readAdmissions.pools[key] = admission
 	runtime.AddCleanup(pool, func(key weak.Pointer[pgxpool.Pool]) {
 		readAdmissions.Lock()
@@ -114,6 +139,7 @@ func updatePeak(peak *atomic.Int64, value int64) {
 
 // ReadAdmissionCost separates work waiting outside the pool from pool checkout.
 type ReadAdmissionCost struct {
+	Capacity    int64
 	Attempts    int64
 	Wait        time.Duration
 	MaxWait     time.Duration
@@ -126,7 +152,7 @@ type ReadAdmissionCost struct {
 func ReadAdmissionStats(pool *pgxpool.Pool) ReadAdmissionCost {
 	a := admissionOf(pool)
 	return ReadAdmissionCost{
-		Attempts: a.attempts.Load(), Wait: time.Duration(a.wait.Load()), MaxWait: time.Duration(a.maxWait.Load()),
+		Capacity: a.capacity, Attempts: a.attempts.Load(), Wait: time.Duration(a.wait.Load()), MaxWait: time.Duration(a.maxWait.Load()),
 		Waiters: a.waiters.Load(), PeakWaiters: a.peakWaiters.Load(), Active: a.active.Load(),
 	}
 }

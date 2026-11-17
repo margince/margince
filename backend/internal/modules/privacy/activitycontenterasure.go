@@ -92,6 +92,9 @@ func (e *Eraser) purgeContentDerivedFrom(ctx context.Context, tx pgx.Tx, id ids.
 	if err := e.eraseCommitmentDerivatives(ctx, tx, []ids.UUID{id}, act); err != nil {
 		return err
 	}
+	if err := e.eraseRequestReminders(ctx, tx, id, act); err != nil {
+		return err
+	}
 	// What was promised, asked or decided in the message — and, on every one of
 	// these rows, a VERBATIM quotation of the words it was read from. The
 	// writer refuses a claim that carries neither the activity nor the snippet,

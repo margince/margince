@@ -286,8 +286,19 @@ Its license is BUSL-1.1, and you get the source.
 
 ### Is there a Margince mobile app?
 There is no Margince app to get from an app store. Margince runs in the browser on a phone as well as on a computer. On a phone, a bar at the foot of the screen holds **Home**, **Contacts** and **Deals**, the agent between them, and **More** for everything else.
-Dragging deal cards on the board does not work on touch screens; use the deal's **Stage** ladder instead.
+Dragging deal cards on the board does not work on touch screens; use the card's **…** menu or the deal's **Stage** ladder instead.
 Also called: iPhone app, Android app, phone app, use Margince on mobile.
+
+### What does a list show on a phone?
+On a phone or a narrow window, most record lists show each record in two lines. Line 1 has the company's logo or a picture made from the contact's or lead's name, its name and at most one mark. Line 2 has a few facts, and a fact the record does not have is left out.
+- **Contacts**: job title and employer, with no mark.
+- **Companies**: the website, and the lifecycle as the mark.
+- **Leads**: the company, next task and due date, and the status as the mark.
+- **Projects**: the customer, and the phase as the mark.
+- **Deals** table: the company, stage and close date, and the amount as the mark.
+- **Partners**: the kinds and certification, and the stage as the mark.
+The other columns are not shown. Open the record to see everything, or use a wider window. On these lists **View** has no **Columns** step, so your columns do not change these rows. Other tables, such as the members of a list, show every column, each value with its label.
+Also called: mobile list, small screen, phone layout.
 
 ## Where to go next
 

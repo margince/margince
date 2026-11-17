@@ -3,9 +3,8 @@
 
 package compose
 
-// The three answers the task's lifecycle reaches without a database: what the
-// task is called, whether a refusal was about the SEAT rather than the task,
-// and whether a task still names the subject it was raised for.
+// Two answers the task's lifecycle reaches without a database. Was a refusal
+// about the SEAT rather than the task? Does a task still name its subject?
 
 import (
 	"errors"
@@ -18,36 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
-	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
-
-// The subject line is what a rep reads on their list, and one finding is the
-// ordinary case — a plural there reads as a template nobody finished.
-func TestTheTaskCountsItsFindingsInWords(t *testing.T) {
-	t.Parallel()
-
-	for _, c := range []struct {
-		lang     textlang.Lang
-		findings int
-		want     string
-	}{
-		{textlang.English, 1, "1 forecast input needs attention"},
-		{textlang.English, 7, "7 forecast inputs need attention"},
-		{textlang.German, 1, "1 Angabe zur Prognose muss geprüft werden"},
-		{textlang.German, 2, "2 Angaben zur Prognose müssen geprüft werden"},
-		{textlang.Vietnamese, 3, "3 đầu vào dự báo cần xem lại"},
-	} {
-		got, err := bundleTaskSubject(c.findings).Render(c.lang)
-		if err != nil || got != c.want {
-			t.Errorf("bundleTaskSubject(%d) in %s = %q (%v), want %q", c.findings, c.lang, got, err, c.want)
-		}
-		// An English task stored before its descriptor is recognised, so the repair gives it one.
-		if recovered, err := systemtext.RecoverCanonicalText(c.want); c.lang == textlang.English && (err != nil || recovered == nil) {
-			t.Errorf("the stored subject %q is not recognised as catalog text (%v)", c.want, err)
-		}
-	}
-}
 
 // A refusal about WHO the task was aimed at is retried unassigned; anything
 // else is a real failure. Retrying the wrong one would mint a task nobody is

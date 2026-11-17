@@ -12,6 +12,7 @@ import (
 	"context"
 	"io"
 	"log/slog"
+	"sync/atomic"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -28,16 +29,15 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
-// triageBrainFake answers the classification call with one canned verdict and
-// counts how many times it was asked. Non-triage calls fall through to the
-// extraction fake, so one worker serves both lanes.
+// triageBrainFake answers the classification call with one canned verdict and counts the calls atomically,
+// because the read extracts its pages concurrently. A test can give the extraction lane its own instance as well.
 type triageBrainFake struct {
 	verdict string
-	calls   int
+	calls   atomic.Int64
 }
 
 func (f *triageBrainFake) Complete(_ context.Context, _ model.Request) (model.Response, error) {
-	f.calls++
+	f.calls.Add(1)
 	return model.Response{Text: f.verdict}, nil
 }
 
@@ -166,11 +166,11 @@ func TestTriageStopsAtTheLandingPageForAPersonalDomain(t *testing.T) {
 	if readStatus != "cancelled" {
 		t.Errorf("read status = %q, want cancelled — the crawl was supposed to stop", readStatus)
 	}
-	if triage.calls != 1 {
-		t.Errorf("%d classification calls, want exactly 1", triage.calls)
+	if triage.calls.Load() != 1 {
+		t.Errorf("%d classification calls, want exactly 1", triage.calls.Load())
 	}
-	if extract.calls != 0 {
-		t.Errorf("%d extraction calls on an aborted read, want 0 — the abort bought nothing", extract.calls)
+	if extract.calls.Load() != 0 {
+		t.Errorf("%d extraction calls on an aborted read, want 0 — the abort bought nothing", extract.calls.Load())
 	}
 }
 

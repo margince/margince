@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { toBoardDeal } from "../../components/boarddeal";
 import { DealStatusBadge } from "../../components/dealstatusbadge";
 import { EntityRef, type OwnerNaming } from "../../components/entityref";
@@ -19,6 +20,11 @@ import type { CompanyNaming } from "./dealcompanymarks";
 import { lastMailColumn } from "./dealmailaside";
 import type { Deal, Stage } from "./deals";
 
+/** A pipeline's stages by `position`, which is not the order the server lists. */
+export function stagesInOrder(stages: readonly Stage[]): Stage[] {
+  return [...stages].sort((a, b) => a.position - b.position);
+}
+
 export function buildColumns(
   stages: Stage[],
   deals: Deal[],
@@ -34,36 +40,34 @@ export function buildColumns(
   // Why a card's deal has its probability, shown on hover over its ring.
   probabilityReason?: (deal: Deal, stageName: string) => string | undefined,
 ): BoardMoneyColumn[] {
-  return [...stages]
-    .sort((a, b) => a.position - b.position)
-    .map((stage) => {
-      const stageDeals = deals.filter((deal) => deal.stage_id === stage.id);
-      const stageTotals = totals.get(stage.id);
-      return {
-        stage: stage.id,
-        label: stage.name,
-        probabilityPct: stage.win_probability,
-        // No totals row yet: the report is still in flight, or this stage was
-        // not in it. Either way the figure is unknown rather than zero, and the
-        // column draws it as absent while still stating the count below.
-        rawMinor: stageTotals?.baseMinor ?? null,
-        weightedMinor: stageTotals?.weightedBaseMinor ?? null,
-        currency: stageTotals?.currency ?? null,
-        deals: stageDeals.map((deal) => ({
-          ...toBoardDeal(deal, naming, owners, ownerPhotos),
-          probabilityReason: probabilityReason?.(deal, stage.name),
-        })),
-        count: columnCount(
-          stageTotals,
-          uncounted.has(stage.id) ? null : stageDeals.length,
-        ),
-        asOf: stageTotals?.asOf ?? null,
-        timezone: stageTotals?.timezone ?? null,
-        unpricedCount: stageTotals?.unpricedCount ?? null,
-        sumHidden: totalsWithheld !== undefined,
-        sumHiddenReason: totalsWithheld,
-      };
-    });
+  return stagesInOrder(stages).map((stage) => {
+    const stageDeals = deals.filter((deal) => deal.stage_id === stage.id);
+    const stageTotals = totals.get(stage.id);
+    return {
+      stage: stage.id,
+      label: stage.name,
+      probabilityPct: stage.win_probability,
+      // No totals row yet: the report is still in flight, or this stage was
+      // not in it. Either way the figure is unknown rather than zero, and the
+      // column draws it as absent while still stating the count below.
+      rawMinor: stageTotals?.baseMinor ?? null,
+      weightedMinor: stageTotals?.weightedBaseMinor ?? null,
+      currency: stageTotals?.currency ?? null,
+      deals: stageDeals.map((deal) => ({
+        ...toBoardDeal(deal, naming, owners, ownerPhotos),
+        probabilityReason: probabilityReason?.(deal, stage.name),
+      })),
+      count: columnCount(
+        stageTotals,
+        uncounted.has(stage.id) ? null : stageDeals.length,
+      ),
+      asOf: stageTotals?.asOf ?? null,
+      timezone: stageTotals?.timezone ?? null,
+      unpricedCount: stageTotals?.unpricedCount ?? null,
+      sumHidden: totalsWithheld !== undefined,
+      sumHiddenReason: totalsWithheld,
+    };
+  });
 }
 
 // The report's count over every matching deal. While the report is pending,
@@ -105,10 +109,10 @@ export function boardDealCount(
  * inside one is invalid markup, and the second route would go where the first
  * one already goes.
  */
-function CompanyCell({
-  deal,
-  field,
-}: Readonly<{ deal: Deal; field: "company_id" | "partner_company_id" }>) {
+function companyCell(
+  deal: Deal,
+  field: "company_id" | "partner_company_id",
+): ReactNode {
   if (deal.masked_fields?.includes(field)) {
     return <FieldGuard mode="masked" />;
   }
@@ -122,10 +126,7 @@ function CompanyCell({
 // The amount's three readings, in one place because both the list and the
 // board draw them. Withheld is not empty: reading a refused amount as an
 // unpriced deal is the defect this cell exists to prevent.
-function AmountCell({
-  deal,
-  locale,
-}: Readonly<{ deal: Deal; locale: Locale }>) {
+function amountCell(deal: Deal, locale: Locale): ReactNode {
   if (deal.masked_fields?.includes("amount_minor")) {
     return <FieldGuard mode="masked" />;
   }
@@ -171,7 +172,8 @@ export function dealColumns(
       key: "company",
       header: t("create.relatedCompany"),
       sort: "company_id",
-      cell: (deal) => <CompanyCell deal={deal} field="company_id" />,
+      cell: (deal) => companyCell(deal, "company_id"),
+      phone: "caption",
     },
     {
       // Which partner brought the deal, when one did. Optional: a workspace
@@ -181,7 +183,7 @@ export function dealColumns(
       key: "partner",
       header: t("deal.partnerCompany"),
       sort: "partner_company_id",
-      cell: (deal) => <CompanyCell deal={deal} field="partner_company_id" />,
+      cell: (deal) => companyCell(deal, "partner_company_id"),
     },
     {
       key: "stage",
@@ -192,13 +194,15 @@ export function dealColumns(
       sort: "stage_id",
       cell: (deal) =>
         deal.stage_id ? (stageName.get(deal.stage_id) ?? "") : "",
+      phone: "caption",
     },
     {
       key: "amount",
       header: t("deals.amount"),
       numeric: true,
       sort: "amount_minor",
-      cell: (deal) => <AmountCell deal={deal} locale={locale} />,
+      cell: (deal) => amountCell(deal, locale),
+      phone: "end",
     },
     {
       // The deal's own probability where one is set, else its stage's: the
@@ -218,6 +222,7 @@ export function dealColumns(
       header: t("deals.close"),
       holds: "date",
       sort: "close_day",
+      phone: "caption",
       cell: (deal) => {
         const day = closeDayOf(deal);
         return day ? formatDate(day, locale, recordZone) : null;
