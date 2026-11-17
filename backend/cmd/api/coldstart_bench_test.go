@@ -24,6 +24,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/search"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
@@ -42,13 +43,12 @@ const coldStartPatience = 30 * time.Second
 // /readyz answers 200, over a migrated database.
 func TestColdStartBudget(t *testing.T) {
 	ownerDSN, appDSN := os.Getenv("MARGINCE_TEST_DSN"), os.Getenv("MARGINCE_TEST_APP_DSN")
-	redisHost, redisDB := os.Getenv("MARGINCE_TEST_REDIS"), os.Getenv("MARGINCE_TEST_REDIS_DB")
-	if ownerDSN == "" || appDSN == "" || redisHost == "" || redisDB == "" {
-		t.Fatal("the test database and Redis are unset: run through make bench-coldstart")
+	if ownerDSN == "" || appDSN == "" {
+		t.Fatal("the test database is unset: run through make bench-coldstart")
 	}
 	boot := coldBoot{
-		binary: buildAPI(t), root: integration.RepositoryRoot(t), work: bootWorkdir(t),
-		appDSN: appDSN, ownerDSN: ownerDSN, redisAddr: redisHost + "/" + redisDB,
+		binary: buildAPI(t), root: integration.RepositoryRoot(t), work: bootWorkdir(t), appDSN: appDSN, ownerDSN: ownerDSN,
+		redisAddr: testdb.RedisAddr(t) + "/" + strconv.Itoa(testdb.RedisDB(t)),
 	}
 	if _, err := boot.once(t); err != nil {
 		t.Fatalf("the first boot, which writes the installation: %v", err)

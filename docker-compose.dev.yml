@@ -222,23 +222,27 @@ services:
     # family. renovate.json holds this image below 7.3; digest updates
     # within the 7.2 tag still flow, which is how patch releases arrive.
     image: redis:7.2@sha256:5b816bb37d9707a70f10ef5002ecf8ee431750d397010fc4314c93dca887962f
-    # 64 logical dbs, not the default 16. The integration lane gives each package
-    # its own db so two packages can never share one — several of them FLUSHDB
-    # between tests, which makes a shared db a silent corruption rather than a
-    # slowdown. The lane has more packages than 16 and keeps growing; keep this
-    # in step with REDIS_DBS in scripts/test-integration-parallel.sh, which
-    # refuses to run rather than wrap the mapping.
-    # 81 logical databases, in three blocks that must not overlap:
-    #   0        bare `make dev`
-    #   1..64    the parallel integration lane, one per package
-    #            (REDIS_DBS in scripts/test-integration-parallel.sh,
-    #             testdb.RedisDBs — the two must agree)
-    #   65..80   per-worktree dev stacks, one per slug (scripts/dev.sh)
-    # A slug sharing a db with a test package would have its streams FLUSHDB'd
-    # mid-run, and the test would read a dev stack's events as its own.
+    # 81 logical databases: db 0 for bare `make dev`, and 65..80 for the
+    # per-worktree dev stacks, one per slug (scripts/dev.sh). Tests never use
+    # this server; they use redis-test below.
     command: ["redis-server", "--databases", "81"]
     ports:
       - "16379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
+  # The integration lanes' Redis. Each test leases a database of its own for
+  # its life (testdb.RedisDB): db 0 holds the leases, 1..64 are leased. The
+  # count also tells a lease this server from `redis` above, so it must differ
+  # from that one's. It keeps nothing on disk.
+  redis-test:
+    image: redis:7.2@sha256:5b816bb37d9707a70f10ef5002ecf8ee431750d397010fc4314c93dca887962f
+    command: ["redis-server", "--databases", "65", "--save", "", "--appendonly", "no"]
+    ports:
+      - "16380:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 2s

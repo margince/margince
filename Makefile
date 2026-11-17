@@ -1236,7 +1236,8 @@ test-dev-dsn:
 	@./scripts/test-dev-dsn.sh
 
 ## test-testdb-redis — prove `make test-it` and scripts/test-integration-one.sh
-## settle on ONE Redis address, and that REDIS_PORT reaches both.
+## settle on ONE Redis address, the port compose publishes redis-test on, and
+## that TEST_REDIS_PORT reaches both.
 ##
 ## The failure it replaces: the script route left MARGINCE_TEST_REDIS unset, so
 ## every Redis-using test in the package failed naming Redis and telling the

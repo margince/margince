@@ -6,7 +6,8 @@ GO        ?= go
 PG_PORT   ?= 15432
 # The integration lanes' Postgres: postgres-test in docker-compose.dev.yml, in RAM.
 TEST_PG_PORT ?= 15433
-REDIS_PORT?= 16379
+# The integration lanes' Redis: redis-test in docker-compose.dev.yml.
+TEST_REDIS_PORT ?= 16380
 DB_NAME   ?= margince
 
 # The database THIS worktree's stack runs against, resolved by the same code
@@ -52,14 +53,11 @@ APP_DSN   ?= postgres://margince_app:margince_app_dev@localhost:$(PG_PORT)/$(DB_
 # truncate the call.
 REDACTED_OWNER_DSN = $(shell printf '%s' '$(OWNER_DSN)' | sed -E 's|//[^@/]*@|//***@|')
 
-# The integration lane runs on its OWN `_test`-suffixed namespace on the shared
-# containers, so `make dev` (DB `margince`, Redis logical db 0) and
+# The integration lane runs on servers of its own, so `make dev` and
 # `make test-integration` never touch the same mutable state and can run
-# concurrently. Postgres: a separate `margince_test` database (the parallel lane
-# clones per-package throwaways from a template of the same name; the serial
-# escape hatch runs directly on it). Redis: db 0 is reserved for `make dev`, so
-# the test lanes default to db 15 and the parallel runner fans packages across
-# 1..15 (see scripts/test-integration-parallel.sh) — no stream collisions.
+# concurrently. Postgres: a `margince_test` template on postgres-test, which the
+# lanes clone per package. Redis: redis-test, where each test leases a logical
+# database of its own (testdb.RedisDB).
 TEST_DB_NAME ?= margince_test
 export MARGINCE_TEST_DSN     ?= postgres://margince_owner:dev@localhost:$(TEST_PG_PORT)/$(TEST_DB_NAME)
 # The benchmark targets' own database. NOT the lane's template: the bench suite
@@ -76,8 +74,7 @@ BENCH_HOME_DB_NAME           ?= margince_bench_home
 BENCH_GROWTH_DB_NAME         ?= margince_bench_growth
 BENCH_GROWTH_TIMEOUT         ?= 60m
 export MARGINCE_TEST_APP_DSN ?= postgres://margince_app:margince_app_dev@localhost:$(TEST_PG_PORT)/$(TEST_DB_NAME)
-export MARGINCE_TEST_REDIS    ?= localhost:$(REDIS_PORT)
-export MARGINCE_TEST_REDIS_DB ?= 15
+export MARGINCE_TEST_REDIS    ?= localhost:$(TEST_REDIS_PORT)
 # Blobstore (MinIO) — the integration lane fails loudly without it, never
 # skips, so the endpoint/creds/bucket are part of the compose + CI contract.
 # The bucket is created by the store at first connect.

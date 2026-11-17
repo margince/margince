@@ -6,7 +6,7 @@
 package testdb_test
 
 import (
-	"context"
+	"fmt"
 	"os"
 	"regexp"
 	"strconv"
@@ -14,105 +14,131 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
+	"github.com/margince/margince/backend/internal/platform/events"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 )
 
-// How many logical databases exist, and who owns which, is stated in four
-// places that cannot check each other: this package's RedisDBs, REDIS_DBS in
-// the parallel runner, DEV_REDIS_DB_MIN/MAX in scripts/dev.sh, and --databases
-// in the compose file.
-//
-// Drift is silent in the direction that matters, in two ways. A lane db the
-// server does not serve fails the suite that drew it with `ERR DB index is out
-// of range`, naming Redis rather than the mismatch. And a DEV_SLUG stack
-// landing inside the lane's range is worse than that: the suite that owns the
-// db FLUSHDBs it between tests, so a developer's running stack loses its
-// streams mid-run while the suite reads that stack's events as its own. Both
-// failures point anywhere except here.
+// How many logical databases each Redis serves is stated in places that cannot
+// check each other. They are this package's RedisDBs, --databases for the two
+// compose services, DEV_REDIS_DB_MAX in scripts/dev.sh and the bus parser.
+// Drift fails a suite with `ERR DB index is out of range`, naming Redis rather
+// than the mismatch, or makes a lease unable to tell the two servers apart.
 //
 // Paths are relative to this package, which is three levels under backend/.
 const (
-	laneRunnerPath = "../../../../scripts/test-integration-parallel.sh"
-	composePath    = "../../../../docker-compose.dev.yml"
-	devScriptPath  = "../../../../scripts/dev.sh"
+	composePath   = "../../../../docker-compose.dev.yml"
+	devScriptPath = "../../../../scripts/dev.sh"
 )
 
 // The declarations this reads. Anchored to the assignment rather than any
 // mention, so a comment naming the number cannot satisfy the gate.
 var (
-	laneRunnerDecl = regexp.MustCompile(`(?m)^REDIS_DBS=(\d+)$`)
-	composeDecl    = regexp.MustCompile(`--databases",\s*"(\d+)"`)
-	devMinDecl     = regexp.MustCompile(`(?m)^DEV_REDIS_DB_MIN=(\d+)$`)
-	devMaxDecl     = regexp.MustCompile(`(?m)^DEV_REDIS_DB_MAX=(\d+)$`)
+	devComposeDecl  = regexp.MustCompile(`(?m)^  redis:\n(?:    .*\n)*?    command: \["redis-server", "--databases", "(\d+)"`)
+	testComposeDecl = regexp.MustCompile(`(?m)^  redis-test:\n(?:    .*\n)*?    command: \["redis-server", "--databases", "(\d+)"`)
+	devMaxDecl      = regexp.MustCompile(`(?m)^DEV_REDIS_DB_MAX=(\d+)$`)
 )
 
-func TestRedisDBCountAgreesWithTheLaneAndTheServer(t *testing.T) {
+func TestRedisDBCountAgreesWithTheComposeFileAndTheServer(t *testing.T) {
 	t.Parallel()
-	t.Run("the parallel runner assigns from the same range", func(t *testing.T) {
-		if got := declaredInt(t, laneRunnerPath, laneRunnerDecl); got != testdb.RedisDBs {
-			t.Errorf("REDIS_DBS=%d in %s but testdb.RedisDBs=%d — the runner would assign a db this package rejects, or reject one it would accept",
-				got, laneRunnerPath, testdb.RedisDBs)
+	t.Run("the test server serves the leased block and the lease db", func(t *testing.T) {
+		if got := declaredInt(t, composePath, testComposeDecl); got != testdb.RedisDBs+1 {
+			t.Errorf("redis-test serves --databases %d in %s but testdb.RedisDBs=%d: it must serve db 0 for the leases and 1..%d to lease",
+				got, composePath, testdb.RedisDBs, testdb.RedisDBs)
 		}
 	})
 
-	// Three blocks, in order and touching: db 0 is bare `make dev`, 1..RedisDBs
-	// is the lane, and DEV_REDIS_DB_MIN..MAX is the slugged dev stacks. The
-	// server must serve every index any of them can name.
-	t.Run("the slugged dev range starts above the lane", func(t *testing.T) {
-		devMin := declaredInt(t, devScriptPath, devMinDecl)
-		if devMin <= testdb.RedisDBs {
-			t.Errorf("DEV_REDIS_DB_MIN=%d in %s but the lane owns 1..%d — a slugged stack inside the lane's range has its streams FLUSHDB'd mid-run by the suite that believes it owns that db",
-				devMin, devScriptPath, testdb.RedisDBs)
+	// A lease refuses a server whose count is not the test server's, which is
+	// how it never flushes a dev stack's database.
+	t.Run("the dev server serves another count", func(t *testing.T) {
+		if got := declaredInt(t, composePath, devComposeDecl); got == testdb.RedisDBs+1 {
+			t.Errorf("redis serves --databases %d in %s, the same as redis-test: a lease pointed at the dev Redis would flush dev stacks' databases",
+				got, composePath)
 		}
 	})
 
-	t.Run("the compose file provisions every block", func(t *testing.T) {
+	t.Run("the dev server provisions every slugged stack", func(t *testing.T) {
 		devMax := declaredInt(t, devScriptPath, devMaxDecl)
-		if got := declaredInt(t, composePath, composeDecl); got != devMax+1 {
-			t.Errorf("--databases %d in %s but DEV_REDIS_DB_MAX=%d — Redis serves 0..databases-1, so it must be asked for %d for the highest slugged stack's db to exist",
+		if got := declaredInt(t, composePath, devComposeDecl); got != devMax+1 {
+			t.Errorf("--databases %d in %s but DEV_REDIS_DB_MAX=%d: Redis serves 0..databases-1, so it must be asked for %d for the highest slugged stack's db to exist",
 				got, composePath, devMax, devMax+1)
 		}
 	})
 
-	// The file is what the container was asked for; this is what it actually
-	// serves. They differ whenever a container outlives a change to the file,
-	// which is the case no amount of agreement between the two files can catch.
-	t.Run("the running server serves that many", func(t *testing.T) {
-		addr := os.Getenv("MARGINCE_TEST_REDIS")
-		if addr == "" {
-			t.Fatal("MARGINCE_TEST_REDIS not set — run `make db-up` (integration tests fail loudly, they never skip)")
+	// A test hands its leased db to the worker and the api as an address.
+	t.Run("the bus address parser accepts every leased db", func(t *testing.T) {
+		if _, err := events.ClientOptions(fmt.Sprintf("localhost:1/%d", testdb.RedisDBs), ""); err != nil {
+			t.Errorf("the highest leased db %d is refused as a bus address: %v", testdb.RedisDBs, err)
 		}
-		// Db 0, which every server has, rather than the db the lane assigned:
-		// go-redis SELECTs on the first command, so asking an under-provisioned
-		// server about a db it does not serve fails the SELECT and reports a
-		// Redis read error — naming Redis instead of the drift this test exists
-		// to name. Db 0 is the one a running `make dev` owns and no test may
-		// flush; CONFIG GET reads a server setting and touches no key in it.
+	})
+
+	// The file is what the container was asked for; this is what it actually
+	// serves. They differ whenever a container outlives a change to the file.
+	t.Run("the running test server serves that many", func(t *testing.T) {
+		addr := testdb.RedisAddr(t)
 		rdb := redis.NewClient(&redis.Options{Addr: addr, DB: 0})
 		t.Cleanup(func() {
 			if err := rdb.Close(); err != nil {
 				t.Errorf("closing redis: %v", err)
 			}
 		})
-		ctx := context.Background()
-		res, err := rdb.ConfigGet(ctx, "databases").Result()
+		res, err := rdb.ConfigGet(t.Context(), "databases").Result()
 		if err != nil {
 			t.Fatalf("reading the server's database count: %v", err)
 		}
-		raw, ok := res["databases"]
-		if !ok {
-			t.Fatalf("the server reported no `databases` setting (got %v)", res)
-		}
-		served, err := strconv.Atoi(raw)
-		if err != nil {
-			t.Fatalf("the server reported databases=%q, which is not a number", raw)
-		}
-		devMax := declaredInt(t, devScriptPath, devMaxDecl)
-		if served != devMax+1 {
-			t.Errorf("the server at %s serves %d databases but the blocks reach db %d — recreate the container (`make db-down && make db-up`); a container started before the count was raised keeps the old one",
-				addr, served, devMax)
+		if served := res["databases"]; served != strconv.Itoa(testdb.RedisDBs+1) {
+			t.Errorf("the server at %s serves %q databases but the test Redis serves %d: recreate the container (`make db-down && make db-up`); a container started before a change keeps the old count",
+				addr, served, testdb.RedisDBs+1)
 		}
 	})
+}
+
+func TestALeaseIsTheTestsOwnUntilItEnds(t *testing.T) {
+	t.Parallel()
+	addr := testdb.RedisAddr(t)
+	var first, second int
+	key := "lease-probe:" + t.Name()
+	t.Run("holder", func(t *testing.T) {
+		first = testdb.RedisDB(t)
+		if again := testdb.RedisDB(t); again != first {
+			t.Errorf("a second call in one test leased db %d, want the test's db %d", again, first)
+		}
+		t.Run("a test running beside it", func(t *testing.T) {
+			second = testdb.RedisDB(t)
+		})
+		writeProbe(t, addr, first, key)
+	})
+	if first == second {
+		t.Errorf("two tests running at once both leased db %d", first)
+	}
+	if n := countProbe(t, addr, first, key); n != 0 {
+		t.Errorf("db %d still holds the key its holder wrote after the lease ended", first)
+	}
+}
+
+func writeProbe(t *testing.T, addr string, db int, key string) {
+	t.Helper()
+	rdb := redis.NewClient(&redis.Options{Addr: addr, DB: db})
+	defer closeProbe(t, rdb)
+	if err := rdb.Set(t.Context(), key, "1", 0).Err(); err != nil {
+		t.Fatalf("writing to leased db %d: %v", db, err)
+	}
+}
+
+func countProbe(t *testing.T, addr string, db int, key string) int64 {
+	t.Helper()
+	rdb := redis.NewClient(&redis.Options{Addr: addr, DB: db})
+	defer closeProbe(t, rdb)
+	n, err := rdb.Exists(t.Context(), key).Result()
+	if err != nil {
+		t.Fatalf("reading db %d: %v", db, err)
+	}
+	return n
+}
+
+func closeProbe(t *testing.T, rdb *redis.Client) {
+	if err := rdb.Close(); err != nil {
+		t.Errorf("closing redis: %v", err)
+	}
 }
 
 // declaredInt reads the single number want matches in the file at path, failing
