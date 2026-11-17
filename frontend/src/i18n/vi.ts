@@ -7853,6 +7853,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.why.contract": "Hợp đồng của họ",
   "compose.why.account": "Quan hệ khách hàng của họ",
   "compose.why.marketing": "Tiếp thị",
+  "sendPermission.stopWithReason": "Cần lý do của bạn để gửi",
   "sendPermission.refused": "Không thể gửi tin nhắn",
   "sendPermission.sayWhy": "Ghi lý do liên hệ",
   "sendPermission.unproven":
@@ -7920,9 +7921,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "sendPermission.reason.optedOutAfterRequest":
     "Người nhận đã từ chối tin tiếp thị sau khi yêu cầu báo giá này. Hãy xác nhận lại với họ rằng họ vẫn muốn nhận, rồi ghi nhận yêu cầu mới của họ.",
   "sendPermission.reason.permissionRequired":
-    "Chưa có căn cứ cho phép gửi tin tiếp thị này theo quy tắc áp dụng. Ngoại lệ của nhân viên không thay thế sự đồng ý hoặc bằng chứng bắt buộc.",
+    "Chưa có căn cứ cho phép gửi tin tiếp thị này theo quy tắc áp dụng. Hãy ghi nhận sự đồng ý hoặc bằng chứng bắt buộc.",
   "sendPermission.reason.consentRequired":
-    "Tin tiếp thị gửi người nhận ở quốc gia này cần sự đồng ý trước của họ. Không có ngoại lệ nào thay thế được.",
+    "Tin tiếp thị gửi người nhận ở quốc gia này cần sự đồng ý trước của họ.",
   "sendPermission.reason.dealNotRequested":
     "Chỉ một giao dịch thì chưa cho thấy người nhận đã yêu cầu cuộc thương lượng này. Yêu cầu của họ, ví dụ qua cuộc gọi hoặc cuộc họp, cần được ghi nhận.",
   "sendPermission.reason.tooMany":
@@ -9682,7 +9683,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.tierRead":
     "Đọc, tóm tắt, soạn nháp: chạy ngay, ghi nhật ký đầy đủ.",
   "settings.tierSend":
-    "Gửi email, đặt lịch họp, cập nhật liên hệ hoặc deal: chạy ngay nếu agent có quyền đó. Cấp quyền chính là phê duyệt.",
+    "Cập nhật thường ngày tự động và có thể hoàn tác. Trợ lý phải có yêu cầu hoặc sự cho phép của bạn trước khi gửi; gửi tự động phải chờ duyệt.",
   "settings.tierWait": "Bổ sung dữ liệu từ web: chờ trong Phê duyệt.",
   "settings.tierAdvance":
     "Chuyển giai đoạn hoặc chốt deal, gắn hoạt động vào dự án: chạy ngay nếu trợ lý có quyền đó.",
@@ -12322,7 +12323,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "ob.s4.scope1Rest": "Thư tự động trở thành liên hệ, công ty và hoạt động.",
   "ob.s4.scope2Lead": "Bao gồm quyền gửi.",
   "ob.s4.scope2Rest":
-    "Margince có thể gửi từ hộp thư này khi bạn gửi, và khi bạn cấp cho một agent passport có quyền gửi. Cấp passport đó chính là phê duyệt. Có thể thu hồi passport bất cứ lúc nào.",
+    "Margince có thể gửi từ hộp thư này khi bạn tự gửi hoặc yêu cầu trực tiếp trợ lý gửi. Quyền gửi không phải là phê duyệt cho một tin nhắn. Gửi tự động phải chờ bạn duyệt. Có thể thu hồi quyền truy cập bất cứ lúc nào.",
   "ob.s4.scope3Lead": "Dữ liệu nằm trong công ty của bạn.",
   "ob.s4.scope3Rest": "Xuất hoặc xóa toàn bộ bất cứ lúc nào.",
   "ob.s4.scope4Lead": "Ngắt kết nối bằng một cú nhấp.",
@@ -17817,7 +17818,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "consent.scopeNote.write":
     "Tạo, sửa và chuyển hồ sơ vào kho lưu trữ với danh nghĩa của bạn",
   "consent.scopeNote.send":
-    "Gửi tin nhắn với danh nghĩa của bạn, không hỏi trước",
+    "Cho phép gửi; trợ lý phải nhận được sự cho phép hoặc yêu cầu trực tiếp trước khi gửi. Quyền gửi không phải là phê duyệt",
   "consent.scopeNote.enrich": "Chạy việc AI và mua dữ liệu liên hệ",
   "consent.scopesLegend": "Được làm những gì",
   "consent.ceiling":
@@ -20594,7 +20595,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "firstRun.ignite.read":
     "đọc trang web của công ty và báo cáo những gì tìm được",
   "firstRun.ignite.draft": "soạn theo giọng văn đã huấn luyện",
-  "firstRun.ignite.act": "gửi bất cứ thứ gì hay sửa hồ sơ khi bạn chưa duyệt",
+  "firstRun.ignite.act":
+    "gửi khi chưa có yêu cầu trực tiếp hoặc sự cho phép của bạn",
   "firstRun.ignite.carryOn": "Tiếp tục",
   "firstRun.ignite.leaving": "Đang kiểm tra thiết lập…",
   "firstRun.step.model": "Mô hình",

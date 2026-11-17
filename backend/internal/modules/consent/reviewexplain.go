@@ -48,9 +48,9 @@ var refusalFacts = map[string]string{
 		"on this deal; a deal we created is not their request",
 	commsauthz.ReasonOptedOutAfterRequest: "this contact opted out of marketing after asking for this " +
 		"quote; confirm with them that they still want it, and record their new request",
-	commsauthz.ReasonMarketingPermissionRequired: "this marketing message has neither recorded consent nor a supported statutory basis; staff cannot supply either",
+	commsauthz.ReasonMarketingPermissionRequired: "this marketing message has neither recorded consent nor a supported statutory basis",
 	commsauthz.ReasonMarketingConsentRequired: "marketing to this recipient needs their prior consent " +
-		"under the rules of their country, and nothing stands in for it",
+		"under the rules of their country",
 }
 
 // refusalNextMove says what may still be done about a refusal, read from

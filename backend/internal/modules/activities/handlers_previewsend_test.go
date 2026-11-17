@@ -11,18 +11,11 @@ import (
 )
 
 // The composer offers a recorded reason where the preview says a refusal can be
-// overruled. So the preview never promises one the record would refuse.
-func TestThePreviewOffersAnOverrideOnlyWhereARecordedReasonIsAccepted(t *testing.T) {
+// overruled. So the preview offers it for every policy refusal but the
+// subject's own stop, a dead address and a recipient that resolves to nobody.
+func TestThePreviewOffersAReasonForEveryPolicyRefusalButAStop(t *testing.T) {
 	t.Parallel()
-	cases := map[string]bool{
-		commsauthz.ReasonNoEvidence:                     true,
-		commsauthz.ReasonNoMarketingConsent:             true,
-		commsauthz.ReasonLegacyTransactionalUnevidenced: true,
-		commsauthz.ReasonUnknownPurpose:                 false,
-		commsauthz.ReasonClaimContradictsResolution:     false,
-		commsauthz.ReasonObjection:                      false,
-	}
-	for code, want := range cases {
+	for _, code := range commsauthz.RefusalCodes() {
 		decision := commsauthz.Decision{
 			Verdict:    commsauthz.VerdictDeny,
 			ReasonCode: code,
@@ -33,6 +26,8 @@ func TestThePreviewOffersAnOverrideOnlyWhereARecordedReasonIsAccepted(t *testing
 		if got == nil {
 			t.Fatalf("%s: can_be_overruled is absent", code)
 		}
+		want := code != commsauthz.ReasonHardBounce && code != commsauthz.ReasonNoSubject &&
+			commsauthz.LevelForReason(code) != commsauthz.LevelSubject
 		if *got != want {
 			t.Errorf("%s: can_be_overruled = %v, want %v", code, *got, want)
 		}

@@ -93,17 +93,20 @@ function stubEngine(
   return sent;
 }
 
-/** One preview answer that waits until the test releases it. */
+/**
+ * One preview answer that waits until the test releases it. Each check that
+ * asks gets its own response, because a body can be read only once.
+ */
 function heldAnswer() {
-  let release: (answer: Response) => void = () => {
+  let release: (preview: Preview) => void = () => {
     throw new Error("No preview is waiting");
   };
-  const answer = new Promise<Response>((resolve) => {
+  const settled = new Promise<Preview>((resolve) => {
     release = resolve;
   });
   return {
-    answer,
-    release: (preview: Preview) => release(jsonResponse(preview)),
+    answer: () => settled.then((preview) => jsonResponse(preview)),
+    release: (preview: Preview) => release(preview),
   };
 }
 
@@ -145,7 +148,7 @@ describe("Send follows the check", () => {
   it("is off for a refusal, waits while the check runs, and frees once it allows", async () => {
     let held: ReturnType<typeof heldAnswer> | undefined;
     stubEngine((addresses) =>
-      held ? held.answer : refusedPreview(addresses[0] ?? "", OBJECTED),
+      held ? held.answer() : refusedPreview(addresses[0] ?? "", OBJECTED),
     );
     openComposer();
     await fillSendableForm();
@@ -230,7 +233,9 @@ describe("Send follows the check", () => {
   // recipients is not one about the message now on screen.
   it("does not free Send with the answer for the recipients before a change", async () => {
     let held: ReturnType<typeof heldAnswer> | undefined;
-    stubEngine((addresses) => (held ? held.answer : allowedPreview(addresses)));
+    stubEngine((addresses) =>
+      held ? held.answer() : allowedPreview(addresses),
+    );
     openComposer();
     await fillSendableForm();
     await screen.findByRole("button", { name: /recipients checked/i });

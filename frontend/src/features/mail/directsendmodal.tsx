@@ -45,6 +45,8 @@ type DirectSendCommand = Readonly<{
   reasonCode: string;
   explanation: string;
   warningVersion: string;
+  // The refusals the director read. A review rewritten since then is stale.
+  shownReasons: readonly string[];
 }>;
 
 async function directSend(command: DirectSendCommand): Promise<string> {
@@ -56,6 +58,7 @@ async function directSend(command: DirectSendCommand): Promise<string> {
         reason_code: command.reasonCode as "other",
         explanation: command.explanation,
         warning_version: command.warningVersion,
+        shown_reasons: [...command.shownReasons],
         // The tick IS the acknowledgement, and the server refuses a decision
         // without one. It is sent as true because this function is only
         // reachable from a confirm the director could not press until they
@@ -176,6 +179,9 @@ export function DirectSendModal({
           reasonCode,
           explanation: said,
           warningVersion: review.warning?.version ?? "",
+          shownReasons: (review.refusals ?? []).map(
+            (refusal) => refusal.reason_code,
+          ),
         })
       }
     >

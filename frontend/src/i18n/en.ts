@@ -8046,6 +8046,7 @@ export const en = {
   "compose.why.contract": "Their contract",
   "compose.why.account": "Their customer relationship",
   "compose.why.marketing": "Marketing",
+  "sendPermission.stopWithReason": "Sending needs your reason",
   "sendPermission.refused": "Message cannot be sent",
   "sendPermission.sayWhy": "Record reason for contact",
   "sendPermission.unproven": "No recorded reason to contact this recipient",
@@ -8112,9 +8113,9 @@ export const en = {
   "sendPermission.reason.optedOutAfterRequest":
     "The recipient opted out of marketing after asking for this quote. Confirm with them that they still want it, then record their new request.",
   "sendPermission.reason.permissionRequired":
-    "This marketing message has no recorded permission under the applicable rules. A staff exception cannot replace consent or the required evidence.",
+    "This marketing message has no recorded permission under the applicable rules. Record consent or the required evidence.",
   "sendPermission.reason.consentRequired":
-    "Marketing to a recipient in this country needs their prior consent. No exception can replace it.",
+    "Marketing to a recipient in this country needs their prior consent.",
   "sendPermission.reason.dealNotRequested":
     "A deal alone does not show the recipient asked for this negotiation. Their request, for example on a call or in a meeting, needs to be on record.",
   "sendPermission.reason.tooMany":
@@ -9953,7 +9954,7 @@ export const en = {
   "settings.tierRead":
     "Read, summarize, draft: runs immediately and is fully logged.",
   "settings.tierSend":
-    "Send email, book meetings, update a contact or deal: runs immediately if the agent has that permission. Granting the permission is the approval.",
+    "Routine updates run automatically and can be undone. Clients must get approval or a direct instruction to send. Unattended sends wait for approval.",
   "settings.tierWait": "Enrichment from the web: waits in Approvals.",
   "settings.tierAdvance":
     "Advance or close a deal, or file activities under a project: runs immediately if the agent has that permission.",
@@ -12598,7 +12599,7 @@ export const en = {
     "Mail becomes contacts, companies and activities automatically.",
   "ob.s4.scope2Lead": "Sending is included.",
   "ob.s4.scope2Rest":
-    "Margince can send from this mailbox when you send, and when you give an agent a passport that allows sending. Giving that passport is the approval. You can withdraw it at any time.",
+    "Margince can send from this mailbox when you send or instruct your assistant to send. Send permission alone does not approve a message. Unattended sends wait for approval. Access can be withdrawn at any time.",
   "ob.s4.scope3Lead": "Data stays in your company.",
   "ob.s4.scope3Rest": "Export or delete everything at any time.",
   "ob.s4.scope4Lead": "Disconnect in one click.",
@@ -18095,7 +18096,8 @@ export const en = {
   "consent.scopeNote.read": "Sees what you can see",
   "consent.scopeNote.draft": "Prepares messages for your review",
   "consent.scopeNote.write": "Creates, edits and archives records as you",
-  "consent.scopeNote.send": "Sends messages as you, without asking first",
+  "consent.scopeNote.send":
+    "Allows sending; the client must get approval or a direct instruction first. Permission alone is not approval",
   "consent.scopeNote.enrich": "Runs AI work and buys contact data",
   "consent.scopesLegend": "What it may do",
   "consent.ceiling":
@@ -21061,8 +21063,7 @@ export const en = {
   "firstRun.ignite.cannot": "Cannot",
   "firstRun.ignite.read": "read the company website and report what it found",
   "firstRun.ignite.draft": "draft in the voice you trained",
-  "firstRun.ignite.act":
-    "send anything or change a record without your approval",
+  "firstRun.ignite.act": "send without a direct instruction or approval",
   "firstRun.ignite.carryOn": "Continue",
   "firstRun.ignite.leaving": "Checking setup…",
   "firstRun.ai.foot":

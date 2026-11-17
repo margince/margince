@@ -106,6 +106,8 @@ type DirectInput struct {
 	// act, and an instruction written without one would record a decision
 	// nobody made.
 	Acknowledged bool
+	// ShownReasons are the refusal reasons the director read (refusalsAsShown).
+	ShownReasons []string
 }
 
 // Instruction is one recorded decision.
@@ -122,9 +124,9 @@ type Instruction struct {
 //
 // GATED ON THREE THINGS, and each answers a different question.
 //
-// A user or their agent, because the row says a named user took this on. A
-// connector has that user's grants and was not asked, so it is refused. An agent
-// acts for the user who asked it, and the row names both.
+// A human at the keyboard, because the row says a named user took this on. An
+// agent or a connector holds that user's grants and was not the one deciding,
+// so both are refused.
 //
 // auth.Require on communication_exception:create, because directing a send is
 // its own authority. A seat that may edit a contact has not thereby been given
@@ -134,7 +136,7 @@ type Instruction struct {
 // already resolved, superseded or answered is a decision about a message that
 // is no longer waiting on one.
 func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInput) (Instruction, error) {
-	if err := requireAUserOrTheirAgent(ctx); err != nil {
+	if err := requireAHumanAtTheKeyboard(ctx); err != nil {
 		return Instruction{}, err
 	}
 	if err := auth.Require(ctx, entityCommunicationException, principal.ActionCreate); err != nil {
@@ -156,8 +158,8 @@ func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInpu
 		if err != nil {
 			return err
 		}
-		if !directableBy(ctx, review.Refusals) {
-			return refuseDirection(ctx, review.Refusals)
+		if err := mayDirect(ctx, in.ShownReasons, review.Refusals); err != nil {
+			return err
 		}
 		// Recorded so the re-check at staging and dispatch knows which
 		// refusals this exception may answer (DecisionSet.ExceptionMayAnswer).
@@ -202,13 +204,13 @@ func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInpu
 		arguments := []any{
 			reviewID, director, in.ReasonCode, in.Explanation,
 			in.WarningVersion, message.RecordedAt, review.OpenedAt, out.ValidUntil,
-			acknowledged, givenByAdmin, actingAgent(ctx), nullableText(message.Scope),
+			acknowledged, givenByAdmin, nullableText(message.Scope),
 		}
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO communication_instruction
 			  (review_id, directed_by, reason_code, explanation, warning_version,
 			   acknowledged_at, facts_as_of, valid_until, acknowledged_wording, given_by_admin,
-			   directed_by_agent, acknowledged_scope)
+			   acknowledged_scope)
 			VALUES (`+database.Placeholders(arguments)+`)
 			RETURNING id`, arguments...).Scan(&out.ID); err != nil {
 			// A DECISION ALREADY STANDS ON THIS REVIEW, which is what the
@@ -438,16 +440,6 @@ func requireAUserOrTheirAgent(ctx context.Context) error {
 		return fmt.Errorf("this is a user's own statement: %w", apperrors.ErrPermissionDenied)
 	}
 	return nil
-}
-
-// actingAgent names the agent carrying out a user's decision, and nil when the
-// user acted in their own session.
-func actingAgent(ctx context.Context) *string {
-	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalAgent {
-		return nil
-	}
-	return &actor.ID
 }
 
 // ErrDecisionAlreadyRecorded reports that this review already carries a
