@@ -245,8 +245,8 @@ func (s *Service) upsertCIMDClient(ctx context.Context, doc cimdDocument, ttl ti
 	})
 }
 
-// processCIMDClient is the HTTP client every metadata fetch rides — ONE of
-// them, for the process, which is the same discipline platform/webread and
+// processCIMDClient is the HTTP client every metadata fetch rides. There is
+// one for the process, the same discipline platform/webread and
 // modules/webhooks keep.
 //
 // Per-fetch was wrong in a way that does not look wrong: the Transport becomes
