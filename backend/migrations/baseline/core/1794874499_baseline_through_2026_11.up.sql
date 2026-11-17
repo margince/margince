@@ -1,7 +1,7 @@
 -- SPDX-License-Identifier: BUSL-1.1
 -- SPDX-FileCopyrightText: 2026 Gradion
 
--- The schema core's 851 versions through 1794412055 build, for a new installation.
+-- The schema core's 942 versions through 1794874498 build, for a new installation.
 -- dbmigrate applies it only to an empty ledger and records each of those
 -- versions beside it (replaces.txt). Written by scripts/migration-baseline.sh
 -- generate; scripts/migration-baseline.sh verify proves it builds what the
@@ -40,6 +40,17 @@ BEGIN
     RAISE EXCEPTION 'activity % carries a retention class with no evidence recording what qualified it', OLD.activity_id
       USING ERRCODE = 'check_violation',
             CONSTRAINT = 'activity_class_needs_evidence';
+  END IF;
+  RETURN NULL;
+END;
+$$;
+
+CREATE FUNCTION public.activity_clears_reply_settled() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  IF NEW.kind IN ('email', 'message') OR OLD.kind IN ('email', 'message') THEN
+    PERFORM clear_reply_settled(ARRAY[NEW.thread_key, OLD.thread_key], least(NEW.occurred_at, OLD.occurred_at));
   END IF;
   RETURN NULL;
 END;
@@ -578,7 +589,7 @@ $$;
 
 CREATE FUNCTION public.audit_privacy_reason_codes() RETURNS text[]
     LANGUAGE sql IMMUTABLE
-    AS $$SELECT ARRAY['retention','test','dsr_request','restriction_expired','the website lead could not be sent its privacy notice','subject_data_removed','legal hold ended: the postponed content erasure was completed','retention: the record''s content was erased','controller release: the record''s content was erased','noise disposition: the content of the message was erased']::text[]$$;
+    AS $$SELECT ARRAY['retention','test','dsr_request','restriction_expired','the website lead could not be sent its privacy notice','subject_data_removed','legal hold ended: the postponed content erasure was completed','retention: the record''s content was erased','controller release: the record''s content was erased','noise disposition: the content of the message was erased','archive review: the controller deleted the record''s content']::text[]$$;
 
 CREATE FUNCTION public.audit_redacted_evidence(certificate boolean, payload jsonb, verb text DEFAULT ''::text) RETURNS jsonb
     LANGUAGE plpgsql IMMUTABLE
@@ -724,6 +735,33 @@ BEGIN
     END LOOP;
     RETURN NEW;
 END $$;
+
+CREATE FUNCTION public.clear_reply_settled(threads text[], since timestamp with time zone) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  PERFORM clear_reply_settled_by_thread(threads, array_fill(since, ARRAY[cardinality(threads)]));
+END;
+$$;
+
+CREATE FUNCTION public.clear_reply_settled_by_thread(threads text[], sinces timestamp with time zone[]) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+  moving text := current_setting('margince.last_activity_move', true);
+BEGIN
+  PERFORM set_config('margince.last_activity_move', 'on', true);
+  UPDATE activity a
+     SET reply_settled_at = NULL
+    FROM unnest(threads, sinces) AS c(thread_key, since)
+   WHERE a.thread_key = c.thread_key
+     AND a.direction = 'inbound'
+     AND a.kind IN ('email', 'message')
+     AND a.restricted_at IS NULL
+     AND a.reply_settled_at >= coalesce(c.since, '-infinity');
+  PERFORM set_config('margince.last_activity_move', coalesce(moving, ''), true);
+END;
+$$;
 
 CREATE FUNCTION public.commit_home_read_fence() RETURNS trigger
     LANGUAGE plpgsql
@@ -951,6 +989,17 @@ $$;
 
 COMMENT ON FUNCTION public.company_open_pipeline_rollup(as_of date) IS 'Open pipeline per company in the installation base currency, as of the date the CALLER names. Open deals hold no frozen rate — that happens on close — so each foreign-currency deal converts at the latest fx_rate on or before as_of, across both currencies'' minor-unit scales (currency_minor_digits). The date is a parameter rather than CURRENT_DATE because two readers of one response must not select two different rates: the caller binds it from the same clock every other derived figure reads. A deal with no usable rate, or whose converted amount does not fit a bigint, contributes nothing and is still counted in open_deal_count, so a partial sum is detectable rather than silently short. The total itself answers NULL when it does not fit either.';
 
+CREATE FUNCTION public.company_profile_field_cites_only_a_meeting() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  IF NEW.source IS DISTINCT FROM 'meeting' THEN
+    NEW.source_activity_id := NULL;
+  END IF;
+  RETURN NEW;
+END
+$$;
+
 CREATE FUNCTION public.company_refuse_anchor_retirement() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
@@ -1009,6 +1058,20 @@ CREATE FUNCTION public.contact_address_country_goes_stale() RETURNS trigger
     LANGUAGE plpgsql
     AS $$BEGIN
   DELETE FROM contact_address_country WHERE contact_id = NEW.id;
+  RETURN NULL;
+END;
+$$;
+
+CREATE FUNCTION public.contact_email_clears_reply_settled() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  PERFORM clear_reply_settled(ARRAY(
+    SELECT DISTINCT a.thread_key FROM activity_participant p
+      JOIN activity a ON a.id = p.activity_id
+     WHERE p.role = 'from'
+       AND p.contact_id IN (CASE WHEN TG_OP = 'DELETE' THEN NULL ELSE NEW.contact_id END,
+                            CASE WHEN TG_OP = 'INSERT' THEN NULL ELSE OLD.contact_id END)), NULL);
   RETURN NULL;
 END;
 $$;
@@ -1085,6 +1148,24 @@ CREATE FUNCTION public.guard_instruction_wording_correction() RETURNS trigger
   RETURN NEW;
 END;$_$;
 
+CREATE FUNCTION public.keep_reply_settled(messages uuid[], settled timestamp with time zone[]) RETURNS bigint
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+  moving text := current_setting('margince.last_activity_move', true);
+  kept bigint;
+BEGIN
+  PERFORM set_config('margince.last_activity_move', 'on', true);
+  UPDATE activity a
+     SET reply_settled_at = s.at
+    FROM unnest(messages, settled) AS s(id, at)
+   WHERE a.id = s.id AND a.reply_settled_at IS NULL AND a.restricted_at IS NULL;
+  GET DIAGNOSTICS kept = ROW_COUNT;
+  PERFORM set_config('margince.last_activity_move', coalesce(moving, ''), true);
+  RETURN kept;
+END;
+$$;
+
 CREATE FUNCTION public.key_shipped_review_questions() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
@@ -1120,7 +1201,7 @@ CREATE FUNCTION public.last_activity_of_activity(aid uuid) RETURNS timestamp wit
     JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
      AND a.audience = 'workspace'
      AND a.origin NOT IN ('system_remediation', 'system_notice')
-     AND (a.kind IN ('email','message','meeting','call','note') AND ((a.kind <> 'meeting' OR ((a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')) AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now())))) AND (a.kind <> 'call' OR (a.call_outcome IS NULL OR a.call_outcome IN ('reached','put_through')))) AND NOT (a.kind = 'note' AND a.origin = 'agent') AND ((a.kind = 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now()))) OR (a.kind <> 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' OR a.occurred_at <= now())))))
+     AND (a.kind IN ('email','message','meeting','call','note') AND ((a.kind <> 'meeting' OR ((a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')) AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now())))) AND (a.kind <> 'call' OR (a.call_outcome IS NULL OR a.call_outcome IN ('reached','put_through')))) AND NOT (a.kind = 'note' AND a.origin = 'agent') AND NOT (a.kind = 'email' AND a.bulk_mail_attested) AND ((a.kind = 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now()))) OR (a.kind <> 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' OR a.occurred_at <= now())))))
    WHERE l.activity_id = aid
 $$;
 
@@ -1134,7 +1215,7 @@ CREATE FUNCTION public.last_activity_of_company(cid uuid) RETURNS timestamp with
       JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
        AND a.audience = 'workspace'
        AND a.origin NOT IN ('system_remediation', 'system_notice')
-       AND (a.kind IN ('email','message','meeting','call','note') AND ((a.kind <> 'meeting' OR ((a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')) AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now())))) AND (a.kind <> 'call' OR (a.call_outcome IS NULL OR a.call_outcome IN ('reached','put_through')))) AND NOT (a.kind = 'note' AND a.origin = 'agent') AND ((a.kind = 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now()))) OR (a.kind <> 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' OR a.occurred_at <= now())))))
+       AND (a.kind IN ('email','message','meeting','call','note') AND ((a.kind <> 'meeting' OR ((a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')) AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now())))) AND (a.kind <> 'call' OR (a.call_outcome IS NULL OR a.call_outcome IN ('reached','put_through')))) AND NOT (a.kind = 'note' AND a.origin = 'agent') AND NOT (a.kind = 'email' AND a.bulk_mail_attested) AND ((a.kind = 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now()))) OR (a.kind <> 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' OR a.occurred_at <= now())))))
      WHERE l.company_id = cid
     UNION ALL
     -- Filed against one of its deals.
@@ -1144,7 +1225,7 @@ CREATE FUNCTION public.last_activity_of_company(cid uuid) RETURNS timestamp with
       JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
        AND a.audience = 'workspace'
        AND a.origin NOT IN ('system_remediation', 'system_notice')
-       AND (a.kind IN ('email','message','meeting','call','note') AND ((a.kind <> 'meeting' OR ((a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')) AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now())))) AND (a.kind <> 'call' OR (a.call_outcome IS NULL OR a.call_outcome IN ('reached','put_through')))) AND NOT (a.kind = 'note' AND a.origin = 'agent') AND ((a.kind = 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now()))) OR (a.kind <> 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' OR a.occurred_at <= now())))))
+       AND (a.kind IN ('email','message','meeting','call','note') AND ((a.kind <> 'meeting' OR ((a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')) AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now())))) AND (a.kind <> 'call' OR (a.call_outcome IS NULL OR a.call_outcome IN ('reached','put_through')))) AND NOT (a.kind = 'note' AND a.origin = 'agent') AND NOT (a.kind = 'email' AND a.bulk_mail_attested) AND ((a.kind = 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now()))) OR (a.kind <> 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' OR a.occurred_at <= now())))))
      WHERE d.company_id = cid
     UNION ALL
     -- Filed against a contact it currently employs, sent while they worked there.
@@ -1154,7 +1235,7 @@ CREATE FUNCTION public.last_activity_of_company(cid uuid) RETURNS timestamp with
       JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
        AND a.audience = 'workspace'
        AND a.origin NOT IN ('system_remediation', 'system_notice')
-       AND (a.kind IN ('email','message','meeting','call','note') AND ((a.kind <> 'meeting' OR ((a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')) AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now())))) AND (a.kind <> 'call' OR (a.call_outcome IS NULL OR a.call_outcome IN ('reached','put_through')))) AND NOT (a.kind = 'note' AND a.origin = 'agent') AND ((a.kind = 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now()))) OR (a.kind <> 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' OR a.occurred_at <= now())))))
+       AND (a.kind IN ('email','message','meeting','call','note') AND ((a.kind <> 'meeting' OR ((a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')) AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now())))) AND (a.kind <> 'call' OR (a.call_outcome IS NULL OR a.call_outcome IN ('reached','put_through')))) AND NOT (a.kind = 'note' AND a.origin = 'agent') AND NOT (a.kind = 'email' AND a.bulk_mail_attested) AND ((a.kind = 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now()))) OR (a.kind <> 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' OR a.occurred_at <= now())))))
      WHERE r.company_id = cid AND r.kind = 'employment'
        AND r.ended_at IS NULL AND r.archived_at IS NULL
        AND (CASE WHEN r.started_at IS NOT NULL THEN (r.started_at::timestamp AT TIME ZONE 'UTC' <= a.occurred_at)
@@ -1173,7 +1254,7 @@ CREATE FUNCTION public.last_activity_of_company_activity(aid uuid, oid uuid) RET
       JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
        AND a.audience = 'workspace'
        AND a.origin NOT IN ('system_remediation', 'system_notice')
-       AND (a.kind IN ('email','message','meeting','call','note') AND ((a.kind <> 'meeting' OR ((a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')) AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now())))) AND (a.kind <> 'call' OR (a.call_outcome IS NULL OR a.call_outcome IN ('reached','put_through')))) AND NOT (a.kind = 'note' AND a.origin = 'agent') AND ((a.kind = 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now()))) OR (a.kind <> 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' OR a.occurred_at <= now())))))
+       AND (a.kind IN ('email','message','meeting','call','note') AND ((a.kind <> 'meeting' OR ((a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')) AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now())))) AND (a.kind <> 'call' OR (a.call_outcome IS NULL OR a.call_outcome IN ('reached','put_through')))) AND NOT (a.kind = 'note' AND a.origin = 'agent') AND NOT (a.kind = 'email' AND a.bulk_mail_attested) AND ((a.kind = 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now()))) OR (a.kind <> 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' OR a.occurred_at <= now())))))
      WHERE l.activity_id = aid AND l.company_id = oid
     UNION ALL
     -- Filed against one of its deals.
@@ -1183,7 +1264,7 @@ CREATE FUNCTION public.last_activity_of_company_activity(aid uuid, oid uuid) RET
       JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
        AND a.audience = 'workspace'
        AND a.origin NOT IN ('system_remediation', 'system_notice')
-       AND (a.kind IN ('email','message','meeting','call','note') AND ((a.kind <> 'meeting' OR ((a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')) AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now())))) AND (a.kind <> 'call' OR (a.call_outcome IS NULL OR a.call_outcome IN ('reached','put_through')))) AND NOT (a.kind = 'note' AND a.origin = 'agent') AND ((a.kind = 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now()))) OR (a.kind <> 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' OR a.occurred_at <= now())))))
+       AND (a.kind IN ('email','message','meeting','call','note') AND ((a.kind <> 'meeting' OR ((a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')) AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now())))) AND (a.kind <> 'call' OR (a.call_outcome IS NULL OR a.call_outcome IN ('reached','put_through')))) AND NOT (a.kind = 'note' AND a.origin = 'agent') AND NOT (a.kind = 'email' AND a.bulk_mail_attested) AND ((a.kind = 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now()))) OR (a.kind <> 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' OR a.occurred_at <= now())))))
      WHERE l.activity_id = aid AND d.company_id = oid
     UNION ALL
     -- Filed against a contact it currently employs, sent while they worked there.
@@ -1193,7 +1274,7 @@ CREATE FUNCTION public.last_activity_of_company_activity(aid uuid, oid uuid) RET
       JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
        AND a.audience = 'workspace'
        AND a.origin NOT IN ('system_remediation', 'system_notice')
-       AND (a.kind IN ('email','message','meeting','call','note') AND ((a.kind <> 'meeting' OR ((a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')) AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now())))) AND (a.kind <> 'call' OR (a.call_outcome IS NULL OR a.call_outcome IN ('reached','put_through')))) AND NOT (a.kind = 'note' AND a.origin = 'agent') AND ((a.kind = 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now()))) OR (a.kind <> 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' OR a.occurred_at <= now())))))
+       AND (a.kind IN ('email','message','meeting','call','note') AND ((a.kind <> 'meeting' OR ((a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')) AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now())))) AND (a.kind <> 'call' OR (a.call_outcome IS NULL OR a.call_outcome IN ('reached','put_through')))) AND NOT (a.kind = 'note' AND a.origin = 'agent') AND NOT (a.kind = 'email' AND a.bulk_mail_attested) AND ((a.kind = 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now()))) OR (a.kind <> 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' OR a.occurred_at <= now())))))
      WHERE l.activity_id = aid AND r.company_id = oid AND r.kind = 'employment'
        AND r.ended_at IS NULL AND r.archived_at IS NULL
        AND (CASE WHEN r.started_at IS NOT NULL THEN (r.started_at::timestamp AT TIME ZONE 'UTC' <= a.occurred_at)
@@ -1211,7 +1292,7 @@ CREATE FUNCTION public.last_activity_of_contact(cid uuid) RETURNS timestamp with
     JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
      AND a.audience = 'workspace'
      AND a.origin NOT IN ('system_remediation', 'system_notice')
-     AND (a.kind IN ('email','message','meeting','call','note') AND ((a.kind <> 'meeting' OR ((a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')) AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now())))) AND (a.kind <> 'call' OR (a.call_outcome IS NULL OR a.call_outcome IN ('reached','put_through')))) AND NOT (a.kind = 'note' AND a.origin = 'agent') AND ((a.kind = 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now()))) OR (a.kind <> 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' OR a.occurred_at <= now())))))
+     AND (a.kind IN ('email','message','meeting','call','note') AND ((a.kind <> 'meeting' OR ((a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')) AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now())))) AND (a.kind <> 'call' OR (a.call_outcome IS NULL OR a.call_outcome IN ('reached','put_through')))) AND NOT (a.kind = 'note' AND a.origin = 'agent') AND NOT (a.kind = 'email' AND a.bulk_mail_attested) AND ((a.kind = 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now()))) OR (a.kind <> 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' OR a.occurred_at <= now())))))
    WHERE l.contact_id = cid
 $$;
 
@@ -1223,7 +1304,7 @@ CREATE FUNCTION public.last_activity_of_deal(did uuid) RETURNS timestamp with ti
     JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
      AND a.audience = 'workspace'
      AND a.origin NOT IN ('system_remediation', 'system_notice')
-     AND (a.kind IN ('email','message','meeting','call','note') AND ((a.kind <> 'meeting' OR ((a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')) AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now())))) AND (a.kind <> 'call' OR (a.call_outcome IS NULL OR a.call_outcome IN ('reached','put_through')))) AND NOT (a.kind = 'note' AND a.origin = 'agent') AND ((a.kind = 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now()))) OR (a.kind <> 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' OR a.occurred_at <= now())))))
+     AND (a.kind IN ('email','message','meeting','call','note') AND ((a.kind <> 'meeting' OR ((a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')) AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now())))) AND (a.kind <> 'call' OR (a.call_outcome IS NULL OR a.call_outcome IN ('reached','put_through')))) AND NOT (a.kind = 'note' AND a.origin = 'agent') AND NOT (a.kind = 'email' AND a.bulk_mail_attested) AND ((a.kind = 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now()))) OR (a.kind <> 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' OR a.occurred_at <= now())))))
    WHERE l.deal_id = did
 $$;
 
@@ -1235,7 +1316,7 @@ CREATE FUNCTION public.last_activity_of_project(pid uuid) RETURNS timestamp with
     JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
      AND a.audience = 'workspace'
      AND a.origin NOT IN ('system_remediation', 'system_notice')
-     AND (a.kind IN ('email','message','meeting','call','note') AND ((a.kind <> 'meeting' OR ((a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')) AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now())))) AND (a.kind <> 'call' OR (a.call_outcome IS NULL OR a.call_outcome IN ('reached','put_through')))) AND NOT (a.kind = 'note' AND a.origin = 'agent') AND ((a.kind = 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now()))) OR (a.kind <> 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' OR a.occurred_at <= now())))))
+     AND (a.kind IN ('email','message','meeting','call','note') AND ((a.kind <> 'meeting' OR ((a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')) AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now())))) AND (a.kind <> 'call' OR (a.call_outcome IS NULL OR a.call_outcome IN ('reached','put_through')))) AND NOT (a.kind = 'note' AND a.origin = 'agent') AND NOT (a.kind = 'email' AND a.bulk_mail_attested) AND ((a.kind = 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now()))) OR (a.kind <> 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' OR a.occurred_at <= now())))))
    WHERE l.project_id = pid
 $$;
 
@@ -1318,6 +1399,40 @@ CREATE FUNCTION public.mail_topics_differ(parent_subject text, reply_subject tex
                    mail_topic_words(reply_subject) AS reply_words) AS topics;
 $$;
 
+CREATE FUNCTION public.maintain_intent_times() RETURNS trigger
+    LANGUAGE plpgsql
+    SET search_path TO 'pg_catalog'
+    AS $$
+DECLARE
+ prior jsonb := CASE WHEN TG_OP = 'UPDATE' THEN to_jsonb(OLD) ELSE '{}'::jsonb END;
+ requested jsonb := to_jsonb(NEW);
+ slot integer;
+ wall_name text;
+ zone_name text;
+ instant_name text;
+ requested_wall timestamp without time zone;
+ resolved record;
+BEGIN
+ FOR slot IN 0..TG_NARGS - 1 BY 3 LOOP
+  wall_name := TG_ARGV[slot];
+  zone_name := TG_ARGV[slot + 1];
+  instant_name := TG_ARGV[slot + 2];
+  requested_wall := (requested ->> wall_name)::timestamp without time zone;
+  IF TG_OP = 'UPDATE' AND requested ->> wall_name IS NOT DISTINCT FROM prior ->> wall_name
+   AND requested ->> zone_name IS NOT DISTINCT FROM prior ->> zone_name THEN
+   requested_wall := NULL;
+  END IF;
+  SELECT * INTO resolved FROM public.update_intent_time(
+   (prior ->> wall_name)::timestamp without time zone, prior ->> zone_name,
+   (prior ->> instant_name)::timestamp with time zone,
+   requested_wall, requested ->> zone_name, (requested ->> instant_name)::timestamp with time zone);
+  NEW := jsonb_populate_record(NEW, jsonb_build_object(
+   wall_name, resolved.wall_time, zone_name, resolved.timezone, instant_name, resolved.instant));
+ END LOOP;
+ RETURN NEW;
+END
+$$;
+
 CREATE FUNCTION public.meeting_invitation_attention_follows_status() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
@@ -1385,6 +1500,42 @@ BEGIN
 END;
 $$;
 
+CREATE FUNCTION public.named_time_zone(zone_name text) RETURNS boolean
+    LANGUAGE plpgsql STABLE STRICT
+    SET search_path TO 'pg_catalog'
+    AS $$
+DECLARE
+ canonical text;
+BEGIN
+ IF zone_name ~ '[0-9]' THEN
+  RETURN EXISTS (SELECT 1 FROM pg_timezone_names WHERE name = zone_name);
+ END IF;
+ IF zone_name ~* '^interval' THEN
+  RETURN false;
+ END IF;
+ BEGIN
+  PERFORM set_config('TimeZone', zone_name, true);
+  canonical := current_setting('TimeZone');
+  RAISE EXCEPTION USING ERRCODE = 'MZ001';
+ EXCEPTION
+  WHEN SQLSTATE 'MZ001' THEN RETURN canonical = zone_name;
+  WHEN invalid_parameter_value THEN RETURN false;
+ END;
+END
+$$;
+
+CREATE FUNCTION public.participant_clears_reply_settled() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  PERFORM clear_reply_settled(ARRAY(
+    SELECT a.thread_key FROM activity a
+     WHERE a.id IN (CASE WHEN TG_OP = 'DELETE' THEN NULL ELSE NEW.activity_id END,
+                    CASE WHEN TG_OP = 'INSERT' THEN NULL ELSE OLD.activity_id END)), NULL);
+  RETURN NULL;
+END;
+$$;
+
 CREATE FUNCTION public.project_health_assessment_is_append_only() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
@@ -1443,6 +1594,27 @@ BEGIN
 END;
 $$;
 
+CREATE FUNCTION public.refuse_oversized_text() RETURNS trigger
+    LANGUAGE plpgsql
+    SET search_path TO 'pg_catalog'
+    AS $$
+DECLARE
+ bound record;
+ inserted jsonb := to_jsonb(NEW);
+ previous jsonb;
+BEGIN
+ IF TG_OP = 'UPDATE' THEN previous := to_jsonb(OLD); END IF;
+ FOR bound IN SELECT key, value FROM jsonb_each(TG_ARGV[0]::jsonb)
+ LOOP
+  IF public.text_row_exceeds_bounds(inserted, previous, jsonb_build_object(bound.key, bound.value)) THEN
+   RAISE EXCEPTION 'text exceeds its character limit' USING ERRCODE = '22001',
+    CONSTRAINT = 'text_character_bound', COLUMN = bound.key, DETAIL = bound.value::text;
+  END IF;
+ END LOOP;
+ RAISE EXCEPTION 'text exceeds its character limit' USING ERRCODE = '22001';
+END
+$$;
+
 CREATE FUNCTION public.refuse_retired_member_work() RETURNS trigger
     LANGUAGE plpgsql
     AS $$DECLARE
@@ -1470,6 +1642,24 @@ CREATE FUNCTION public.refuse_service_member_delete() RETURNS trigger
 END;
 $$;
 
+CREATE FUNCTION public.rename_legacy_capture_labels(subjects uuid[]) RETURNS integer
+    LANGUAGE plpgsql
+    AS $$DECLARE
+    moving text := current_setting('margince.last_activity_move', true);
+    changed integer;
+BEGIN
+    PERFORM set_config('margince.last_activity_move', 'on', true);
+    UPDATE activity SET capture_label = 'other'
+     WHERE id = ANY(subjects) AND capture_label = 'noise' AND restricted_at IS NULL;
+    GET DIAGNOSTICS changed = ROW_COUNT;
+    PERFORM set_config('margince.last_activity_move', coalesce(moving, ''), true);
+    RETURN changed;
+EXCEPTION WHEN OTHERS THEN
+    PERFORM set_config('margince.last_activity_move', coalesce(moving, ''), true);
+    RAISE;
+END;
+$$;
+
 CREATE FUNCTION public.reopen_deleted_signature_source() RETURNS trigger
     LANGUAGE plpgsql
     AS $$BEGIN
@@ -1487,6 +1677,41 @@ CREATE FUNCTION public.reopen_deleted_signature_source() RETURNS trigger
            requested_generation=st.requested_generation+1,live_generation=st.requested_generation+1,due_at=now(),deferred_run_id=NULL;
     RETURN OLD;
 END;
+$$;
+
+CREATE FUNCTION public.resolve_intent_time(wall_clock timestamp without time zone, zone_name text) RETURNS timestamp with time zone
+    LANGUAGE plpgsql STABLE STRICT
+    SET search_path TO 'pg_catalog'
+    AS $$
+DECLARE
+ anchor timestamp with time zone := wall_clock AT TIME ZONE 'UTC';
+ probe timestamp with time zone;
+ zone_offset interval;
+ candidate timestamp with time zone;
+ candidates timestamp with time zone[] := ARRAY[]::timestamp with time zone[];
+ first_match timestamp with time zone;
+ low_instant timestamp with time zone;
+ high_instant timestamp with time zone;
+ middle timestamp with time zone;
+BEGIN
+ FOR probe IN SELECT generate_series(anchor - interval '48 hours', anchor + interval '48 hours', interval '24 hours') LOOP
+  zone_offset := (probe AT TIME ZONE zone_name) - (probe AT TIME ZONE 'UTC');
+  candidate := (wall_clock - zone_offset) AT TIME ZONE 'UTC';
+  candidates := array_append(candidates, candidate);
+  IF candidate AT TIME ZONE zone_name = wall_clock AND (first_match IS NULL OR candidate < first_match) THEN
+   first_match := candidate;
+  END IF;
+ END LOOP;
+ IF first_match IS NOT NULL THEN RETURN first_match; END IF;
+ SELECT min(value), max(value) INTO low_instant, high_instant FROM unnest(candidates) AS value;
+ WHILE high_instant - low_instant > interval '1 microsecond' LOOP
+  middle := low_instant + (high_instant - low_instant) / 2;
+  IF middle AT TIME ZONE zone_name < wall_clock THEN low_instant := middle;
+  ELSE high_instant := middle;
+  END IF;
+ END LOOP;
+ RETURN high_instant;
+END
 $$;
 
 CREATE FUNCTION public.retire_changed_system_text() RETURNS trigger
@@ -1559,6 +1784,21 @@ CREATE FUNCTION public.uuidv7() RETURNS uuid
       8, (get_byte(r, 8) & 63) | 128),
     'hex')::uuid
   FROM (SELECT uuid_send(gen_random_uuid()) AS r) AS gen
+$$;
+
+CREATE FUNCTION public.valid_intent_time(wall_clock timestamp without time zone, zone_name text) RETURNS boolean
+    LANGUAGE sql STABLE
+    SET search_path TO 'pg_catalog'
+    AS $$
+ SELECT CASE
+  WHEN wall_clock IS NULL AND zone_name IS NULL THEN true
+  WHEN wall_clock IS NOT NULL AND zone_name IS NOT NULL
+   AND isfinite(wall_clock) AND extract(year FROM wall_clock) BETWEEN 1 AND 9999
+   AND zone_name <> 'Local' AND btrim(zone_name) = zone_name
+   AND public.named_time_zone(zone_name)
+  THEN extract(year FROM public.resolve_intent_time(wall_clock, zone_name)) BETWEEN 1 AND 9999
+  ELSE false
+ END
 $$;
 
 CREATE TABLE public.activity (
@@ -1640,22 +1880,37 @@ CREATE TABLE public.activity (
     calendar_uid text,
     system_text jsonb,
     legal_entity_id uuid,
+    calendar_event jsonb,
+    task_type text,
+    due_wall timestamp without time zone,
+    due_zone text,
+    remind_wall timestamp without time zone,
+    remind_zone text,
+    meeting_wall timestamp without time zone,
+    meeting_zone text,
+    ai_assisted boolean DEFAULT false NOT NULL,
+    reply_settled_at timestamp with time zone,
+    owed_ask text,
     CONSTRAINT activity_audience_check CHECK ((audience = ANY (ARRAY['workspace'::text, 'participants'::text, 'selected'::text]))),
     CONSTRAINT activity_body_completeness_check CHECK ((body_completeness = ANY (ARRAY['complete'::text, 'partial'::text, 'unreadable'::text, 'forwarded'::text, 'unassessed'::text, 'unverifiable'::text]))),
+    CONSTRAINT activity_calendar_event_shape CHECK (((calendar_event IS NULL) OR ((jsonb_typeof(calendar_event) = 'object'::text) AND (octet_length((calendar_event)::text) <= 32768)))),
     CONSTRAINT activity_calendar_method_check CHECK ((calendar_method = ANY (ARRAY['PUBLISH'::text, 'REQUEST'::text, 'REPLY'::text, 'ADD'::text, 'CANCEL'::text, 'REFRESH'::text, 'COUNTER'::text, 'DECLINECOUNTER'::text]))),
     CONSTRAINT activity_call_outcome_check CHECK (((call_outcome IS NULL) OR (call_outcome = ANY (ARRAY['reached'::text, 'not_reached'::text, 'voicemail'::text, 'call_back_later'::text, 'put_through'::text])))),
     CONSTRAINT activity_call_outcome_kind_check CHECK (((call_outcome IS NULL) OR (kind = 'call'::text))),
-    CONSTRAINT activity_capture_label_check CHECK (((capture_label IS NULL) OR (capture_label = ANY (ARRAY['commitment'::text, 'meeting'::text, 'noise'::text])))),
+    CONSTRAINT activity_capture_label_check CHECK ((capture_label = ANY (ARRAY['commitment'::text, 'meeting'::text, 'other'::text, 'noise'::text]))),
     CONSTRAINT activity_capture_label_stamped CHECK (((capture_label IS NULL) = (capture_labeled_at IS NULL))),
     CONSTRAINT activity_colleague_mail_is_outbound CHECK (((sent_by_colleague IS NULL) OR (direction = 'outbound'::text))),
     CONSTRAINT activity_day_holds_no_host_slot CHECK (((occurred_precision = 'instant'::text) OR (NOT claims_host_slot))),
     CONSTRAINT activity_direction_check CHECK (((direction IS NULL) OR (direction = ANY (ARRAY['inbound'::text, 'outbound'::text])))),
     CONSTRAINT activity_done_at CHECK (((is_done = false) OR (done_at IS NOT NULL))),
+    CONSTRAINT activity_due_intent_pair CHECK (public.valid_intent_time(due_wall, due_zone)),
     CONSTRAINT activity_exact_booking_duration CHECK (((NOT booking_interval_exact) OR ((duration_seconds IS NOT NULL) AND (duration_seconds > 0)))),
     CONSTRAINT activity_guests_left_out_check CHECK ((guests_left_out >= 0)),
     CONSTRAINT activity_internal_mail_remains_restricted CHECK (((internal_mail_authorization IS NULL) OR ((kind = 'email'::text) AND (audience = ANY (ARRAY['participants'::text, 'selected'::text])) AND (jsonb_typeof(internal_mail_authorization) = 'object'::text) AND (internal_mail_authorization ?& ARRAY['connection_id'::text, 'owner_user_id'::text, 'provider'::text, 'generation'::text, 'enrolled_at'::text, 'enrolled_by'::text, 'policy_since'::text])))),
     CONSTRAINT activity_language_check CHECK (((language IS NULL) OR (language = ANY (ARRAY['de'::text, 'en'::text, 'vi'::text])))),
     CONSTRAINT activity_meeting_host CHECK (((host_user_id IS NULL) OR (kind = 'meeting'::text))),
+    CONSTRAINT activity_meeting_intent_kind CHECK (((meeting_wall IS NULL) OR ((kind = 'meeting'::text) AND (occurred_precision = 'instant'::text)))),
+    CONSTRAINT activity_meeting_intent_pair CHECK (public.valid_intent_time(meeting_wall, meeting_zone)),
     CONSTRAINT activity_meeting_status_check CHECK (((meeting_status IS NULL) OR (meeting_status = ANY (ARRAY['booked'::text, 'held'::text, 'no_show'::text, 'canceled'::text])))),
     CONSTRAINT activity_message_has_provider CHECK (((kind = 'message'::text) = (channel_provider IS NOT NULL))),
     CONSTRAINT activity_not_derived_from_itself CHECK (((source_activity_id IS NULL) OR (source_activity_id <> id))),
@@ -1664,6 +1919,7 @@ CREATE TABLE public.activity (
     CONSTRAINT activity_owed_verdict_check CHECK (((owed_verdict IS NULL) OR (owed_verdict = ANY (ARRAY['asks_us'::text, 'informs_us'::text])))),
     CONSTRAINT activity_owed_verdict_ruleset_shape CHECK (((owed_verdict_ruleset IS NULL) OR (owed_verdict IS NOT NULL))),
     CONSTRAINT activity_owed_verdict_stamped CHECK (((owed_verdict IS NULL) = (owed_verdict_at IS NULL))),
+    CONSTRAINT activity_reminder_intent_pair CHECK (public.valid_intent_time(remind_wall, remind_zone)),
     CONSTRAINT activity_reply_verdict_check CHECK (((reply_verdict IS NULL) OR (reply_verdict = ANY (ARRAY['positive'::text, 'negative'::text, 'neutral'::text])))),
     CONSTRAINT activity_reply_verdict_inbound CHECK (((reply_verdict IS NULL) OR (direction = 'inbound'::text))),
     CONSTRAINT activity_reply_verdict_stamped CHECK ((((reply_verdict IS NULL) = (reply_verdict_at IS NULL)) AND ((reply_verdict IS NULL) = (reply_verdict_by IS NULL)))),
@@ -1676,6 +1932,8 @@ CREATE TABLE public.activity (
     CONSTRAINT activity_source_author_needs_a_source CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL))),
     CONSTRAINT activity_system_text_shape CHECK (((system_text IS NULL) OR ((jsonb_typeof(system_text) = 'object'::text) AND (((system_text ->> 'schema_version'::text) = '1'::text) IS TRUE) AND (octet_length((system_text)::text) <= 8192)))),
     CONSTRAINT activity_task_fields CHECK (((kind = 'task'::text) OR ((due_at IS NULL) AND (assignee_id IS NULL) AND (is_done = false) AND (remind_at IS NULL)))),
+    CONSTRAINT activity_task_type_check CHECK ((task_type = ANY (ARRAY['reply'::text, 'reach_out'::text, 'meet'::text, 'review'::text, 'decide'::text, 'do'::text]))),
+    CONSTRAINT activity_task_type_kind_check CHECK (((task_type IS NULL) OR (kind = 'task'::text))),
     CONSTRAINT activity_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 );
 
@@ -1758,6 +2016,7 @@ CREATE TABLE public.activity_participant (
     domain_evidence_at timestamp with time zone,
     domain_evidence_precision text,
     domain_evidence_visible boolean,
+    relinked_at timestamp with time zone,
     CONSTRAINT activity_participant_identity CHECK (((user_id IS NOT NULL) OR (contact_id IS NOT NULL) OR (address IS NOT NULL) OR (channel_user_id IS NOT NULL))),
     CONSTRAINT activity_participant_past_party_cap_unresolved CHECK (((NOT past_party_cap) OR ((user_id IS NULL) AND (contact_id IS NULL)))),
     CONSTRAINT activity_participant_response_check CHECK ((response = ANY (ARRAY['accepted'::text, 'declined'::text, 'tentative'::text, 'needs_action'::text]))),
@@ -1894,6 +2153,37 @@ BEGIN
     RAISE EXCEPTION 'a tax rate is added and never changed or removed; record a new rate from a later day'
         USING ERRCODE = 'check_violation';
 END;
+$$;
+
+CREATE FUNCTION public.text_row_exceeds_bounds(new_row jsonb, old_row jsonb, bounds jsonb) RETURNS boolean
+    LANGUAGE sql IMMUTABLE PARALLEL SAFE
+    SET search_path TO 'pg_catalog'
+    AS $$
+SELECT EXISTS (SELECT 1 FROM jsonb_each_text(bounds) AS bound(key, maximum)
+ WHERE CASE jsonb_typeof(new_row -> bound.key)
+  WHEN 'string' THEN public.text_value_exceeds_bound(new_row ->> bound.key, old_row ->> bound.key, bound.maximum::integer)
+  WHEN 'array' THEN public.text_values_exceed_bound(
+   ARRAY(SELECT jsonb_array_elements_text(new_row -> bound.key)),
+   ARRAY(SELECT jsonb_array_elements_text(NULLIF(old_row -> bound.key, 'null'::jsonb))), bound.maximum::integer)
+  ELSE false END)
+$$;
+
+CREATE FUNCTION public.text_value_exceeds_bound(new_value text, old_value text, character_limit integer) RETURNS boolean
+    LANGUAGE sql IMMUTABLE PARALLEL SAFE
+    SET search_path TO 'pg_catalog'
+    AS $$
+SELECT new_value IS NOT NULL AND new_value COLLATE "C" IS DISTINCT FROM old_value COLLATE "C"
+ AND char_length(new_value) > character_limit
+$$;
+
+CREATE FUNCTION public.text_values_exceed_bound(new_values text[], old_values text[], character_limit integer) RETURNS boolean
+    LANGUAGE sql IMMUTABLE PARALLEL SAFE
+    SET search_path TO 'pg_catalog'
+    AS $$
+SELECT EXISTS (SELECT 1 FROM unnest(new_values) AS item(value)
+ WHERE char_length(value) > character_limit
+ AND NOT EXISTS (SELECT 1 FROM unnest(old_values) AS previous(value)
+                 WHERE previous.value COLLATE "C" = item.value COLLATE "C"))
 $$;
 
 CREATE FUNCTION public.trg_activity_last_activity() RETURNS trigger
@@ -2076,6 +2366,25 @@ BEGIN
 	RETURN NEW;
 END $$;
 
+CREATE FUNCTION public.update_intent_time(old_wall timestamp without time zone, old_zone text, old_instant timestamp with time zone, new_wall timestamp without time zone, new_zone text, new_instant timestamp with time zone) RETURNS TABLE(wall_time timestamp without time zone, timezone text, instant timestamp with time zone)
+    LANGUAGE sql STABLE
+    SET search_path TO 'pg_catalog'
+    AS $$
+ WITH kept AS MATERIALIZED (
+  SELECT CASE
+   WHEN new_wall IS NOT NULL THEN new_wall
+   WHEN old_wall IS NOT NULL AND old_zone IS NOT NULL AND new_instant IS NOT NULL
+    AND new_zone IS NOT DISTINCT FROM old_zone
+    AND (new_instant = old_instant OR new_instant = public.resolve_intent_time(old_wall, old_zone))
+   THEN old_wall
+   ELSE NULL
+  END AS wall_time
+ )
+ SELECT wall_time, CASE WHEN wall_time IS NOT NULL THEN new_zone ELSE NULL END,
+  COALESCE(public.resolve_intent_time(wall_time, new_zone), new_instant)
+ FROM kept
+$$;
+
 CREATE FUNCTION public.weekly_plan_commitment_forget_manager() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
@@ -2084,6 +2393,21 @@ BEGIN
        SET manager_response = '', manager_user_id = NULL, responded_at = NULL
      WHERE manager_user_id = OLD.id;
     RETURN OLD;
+END;
+$$;
+
+CREATE FUNCTION public.written_mail_clears_reply_settled() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  PERFORM clear_reply_settled_by_thread(array_agg(thread_key), array_agg(since))
+     FROM (SELECT thread_key,
+                  CASE WHEN bool_or(occurred_at IS NULL) THEN NULL ELSE min(occurred_at) END AS since
+             FROM written_mail
+            WHERE kind IN ('email', 'message') AND thread_key IS NOT NULL
+            GROUP BY thread_key) AS threads
+   HAVING count(*) > 0;
+  RETURN NULL;
 END;
 $$;
 
@@ -2157,6 +2481,29 @@ CREATE TABLE public.activity_link (
     CONSTRAINT activity_link_shape CHECK ((((entity_type = 'contact'::text) AND (contact_id IS NOT NULL) AND (company_id IS NULL) AND (deal_id IS NULL) AND (lead_id IS NULL) AND (project_id IS NULL)) OR ((entity_type = 'company'::text) AND (company_id IS NOT NULL) AND (contact_id IS NULL) AND (deal_id IS NULL) AND (lead_id IS NULL) AND (project_id IS NULL)) OR ((entity_type = 'deal'::text) AND (deal_id IS NOT NULL) AND (contact_id IS NULL) AND (company_id IS NULL) AND (lead_id IS NULL) AND (project_id IS NULL)) OR ((entity_type = 'lead'::text) AND (lead_id IS NOT NULL) AND (contact_id IS NULL) AND (company_id IS NULL) AND (deal_id IS NULL) AND (project_id IS NULL)) OR ((entity_type = 'project'::text) AND (project_id IS NOT NULL) AND (contact_id IS NULL) AND (company_id IS NULL) AND (deal_id IS NULL) AND (lead_id IS NULL))))
 );
 
+CREATE TABLE public.activity_link_suggestion (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    activity_id uuid NOT NULL,
+    entity_type text NOT NULL,
+    entity_id uuid NOT NULL,
+    unit text NOT NULL,
+    reason text NOT NULL,
+    score numeric(5,4) NOT NULL,
+    status text DEFAULT 'pending'::text NOT NULL,
+    decided_by text,
+    decided_at timestamp with time zone,
+    captured_by text NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT activity_link_suggestion_decided CHECK ((((status = 'pending'::text) AND (decided_at IS NULL) AND (decided_by IS NULL)) OR ((status <> 'pending'::text) AND (decided_at IS NOT NULL) AND (decided_by IS NOT NULL)))),
+    CONSTRAINT activity_link_suggestion_entity_type_check CHECK ((entity_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'project'::text]))),
+    CONSTRAINT activity_link_suggestion_reason_check CHECK (((char_length(reason) >= 1) AND (char_length(reason) <= 200))),
+    CONSTRAINT activity_link_suggestion_score_check CHECK (((score >= (0)::numeric) AND (score <= (1)::numeric))),
+    CONSTRAINT activity_link_suggestion_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'accepted'::text, 'rejected'::text]))),
+    CONSTRAINT activity_link_suggestion_version_check CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
 CREATE TABLE public.activity_mail_reference (
     activity_id uuid NOT NULL,
     referenced_id text NOT NULL,
@@ -2225,6 +2572,9 @@ CREATE TABLE public.activity_reader_state (
     set_at timestamp with time zone DEFAULT now() NOT NULL,
     reopen_on text,
     reopen_ref uuid,
+    snoozed_wall timestamp without time zone,
+    snoozed_zone text,
+    CONSTRAINT activity_reader_state_intent_pair CHECK (public.valid_intent_time(snoozed_wall, snoozed_zone)),
     CONSTRAINT activity_reader_state_known CHECK ((state = ANY (ARRAY['snoozed'::text, 'not_mine'::text, 'handled'::text]))),
     CONSTRAINT activity_reader_state_reopen_known CHECK (((reopen_on IS NULL) OR (reopen_on = ANY (ARRAY['time'::text, 'reply'::text, 'meeting'::text])))),
     CONSTRAINT activity_reader_state_reopen_ref_shaped CHECK ((NOT ((reopen_ref IS NOT NULL) IS DISTINCT FROM (NOT (reopen_on IS DISTINCT FROM 'meeting'::text))))),
@@ -2333,7 +2683,7 @@ CREATE TABLE public.activity_review_template (
     shipped_label_key text,
     label_key text GENERATED ALWAYS AS (public.label_key_while_shipped(label, shipped_label, shipped_label_key)) STORED,
     CONSTRAINT activity_review_template_key_shape CHECK ((key ~ '^[a-z][a-z0-9_]{0,62}$'::text)),
-    CONSTRAINT activity_review_template_label_shape CHECK (((btrim(label) <> ''::text) AND (char_length(label) <= 200))),
+    CONSTRAINT activity_review_template_label_shape CHECK ((btrim(label) <> ''::text)),
     CONSTRAINT activity_review_template_outcome_check CHECK ((outcome = ANY (ARRAY['won'::text, 'lost'::text]))),
     CONSTRAINT activity_review_template_questions_shape CHECK (((jsonb_typeof(questions) = 'array'::text) AND (jsonb_array_length(questions) > 0)))
 );
@@ -2692,7 +3042,7 @@ CREATE TABLE public.app_user (
     CONSTRAINT app_user_does_not_merge_into_itself CHECK (((merged_into_user_id IS NULL) OR (merged_into_user_id <> id))),
     CONSTRAINT app_user_failed_login_count_check CHECK ((failed_login_count >= 0)),
     CONSTRAINT app_user_forced_rotation_needs_a_password CHECK ((NOT (must_change_password AND (password_hash IS NULL)))),
-    CONSTRAINT app_user_greeting_name_length CHECK (((greeting_name IS NULL) OR ((char_length(greeting_name) >= 1) AND (char_length(greeting_name) <= 100)))),
+    CONSTRAINT app_user_greeting_name_length CHECK (((greeting_name IS NULL) OR ((char_length(greeting_name) >= 1) AND (char_length(greeting_name) <= 120)))),
     CONSTRAINT app_user_locale_shipped CHECK ((locale = ANY (ARRAY['en'::text, 'de'::text, 'vi'::text]))),
     CONSTRAINT app_user_merge_is_retired CHECK (((merged_into_user_id IS NULL) OR (removed_at IS NOT NULL))),
     CONSTRAINT app_user_morning_brief_delivery_check CHECK (((morning_brief_delivery IS NULL) OR (morning_brief_delivery = ANY (ARRAY['none'::text, 'email'::text])))),
@@ -2911,6 +3261,8 @@ CREATE TABLE public.assurance_run (
     read_through_generation bigint,
     subject_deal_id uuid,
     outbox_inputs_tracked boolean DEFAULT false NOT NULL,
+    eligible_deal_owners uuid[],
+    eligible_signal_owners uuid[],
     CONSTRAINT assurance_run_counts_are_tallies CHECK (((eligible_deals >= 0) AND (eligible_signals >= 0))),
     CONSTRAINT assurance_run_readiness_check CHECK (((readiness IS NULL) OR (readiness = ANY (ARRAY['ready'::text, 'ready_with_exceptions'::text, 'needs_review'::text, 'checks_incomplete'::text])))),
     CONSTRAINT assurance_run_readiness_matches_status CHECK (((status = 'running'::text) = (readiness IS NULL))),
@@ -3015,7 +3367,7 @@ CREATE TABLE public.attachment (
     CONSTRAINT attachment_byte_size_js_safe CHECK (((byte_size >= '-9007199254740991'::bigint) AND (byte_size <= '9007199254740991'::bigint))),
     CONSTRAINT attachment_category_check CHECK ((category = ANY (ARRAY['contract'::text, 'offer'::text, 'legal'::text, 'email_attachment'::text, 'message_attachment'::text, 'other'::text, 'link'::text]))),
     CONSTRAINT attachment_doc_state_check CHECK ((doc_state = ANY (ARRAY['draft'::text, 'current'::text, 'final'::text, 'superseded'::text]))),
-    CONSTRAINT attachment_entity_type_check CHECK ((entity_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'activity'::text, 'project'::text, 'relationship'::text, 'partner'::text, 'product'::text, 'offer_template'::text, 'offer'::text, 'commission'::text, 'deal_room'::text, 'deal_room_thread'::text, 'deal_room_comment'::text, 'deal_room_document'::text, 'deal_room_participant'::text]))),
+    CONSTRAINT attachment_entity_type_check CHECK (((entity_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'activity'::text, 'project'::text, 'relationship'::text, 'partner'::text, 'product'::text, 'offer_template'::text, 'offer'::text, 'commission'::text, 'deal_room'::text, 'deal_room_thread'::text, 'deal_room_comment'::text, 'deal_room_document'::text, 'deal_room_participant'::text])) OR (entity_type ~ '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'::text))),
     CONSTRAINT attachment_external_identity_complete CHECK (((external_source_id IS NULL) = (external_part_id IS NULL))),
     CONSTRAINT attachment_link_shape CHECK ((((category = 'link'::text) = (url IS NOT NULL)) AND ((category <> 'link'::text) OR ((storage_key = ''::text) AND bytes_withheld AND (url ~ '^https?://'::text) AND (length(url) <= 2048))))),
     CONSTRAINT attachment_supersedes_not_self CHECK (((supersedes_id IS NULL) OR (supersedes_id <> id)))
@@ -3102,6 +3454,7 @@ CREATE TABLE public.automation (
     archived_at timestamp with time zone,
     paused_reason text,
     setter_passport_id uuid,
+    enabled_from timestamp with time zone,
     CONSTRAINT automation_origin_check CHECK ((origin = ANY (ARRAY['catalog'::text, 'agent_authored'::text]))),
     CONSTRAINT automation_paused_reason_check CHECK ((paused_reason = ANY (ARRAY['list_archived'::text, 'list_invalid'::text, 'list_unavailable'::text, 'burst'::text, 'passport_revoked'::text]))),
     CONSTRAINT automation_tier_check CHECK ((tier = ANY (ARRAY['auto_execute'::text, 'confirmation_required'::text]))),
@@ -3114,7 +3467,8 @@ CREATE TABLE public.automation_effect_claim (
     occurrence_key text NOT NULL,
     effect_fingerprint text NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    applied_at timestamp with time zone
+    applied_at timestamp with time zone,
+    planned jsonb
 );
 
 CREATE TABLE public.booking_alias (
@@ -3153,8 +3507,10 @@ CREATE TABLE public.brief_item (
     returned_with_activity_at timestamp with time zone,
     reopen_on text,
     reopen_ref uuid,
+    snoozed_wall timestamp without time zone,
+    snoozed_zone text,
     CONSTRAINT brief_item_composite_check CHECK (((composite >= (0)::double precision) AND (composite <= (1)::double precision))),
-    CONSTRAINT brief_item_finding_length CHECK (((finding IS NULL) OR (char_length(finding) <= 600))),
+    CONSTRAINT brief_item_intent_pair CHECK (public.valid_intent_time(snoozed_wall, snoozed_zone)),
     CONSTRAINT brief_item_lineage_whole CHECK (((returned_after_dismissal_on IS NULL) = (returned_with_activity_at IS NULL))),
     CONSTRAINT brief_item_rank_check CHECK ((rank >= 1)),
     CONSTRAINT brief_item_reopen_belongs_to_a_snooze CHECK ((NOT ((reopen_on IS NOT NULL) IS DISTINCT FROM (state = 'snoozed'::text)))),
@@ -3183,7 +3539,7 @@ CREATE TABLE public.brief_run (
     CONSTRAINT brief_run_factors_omitted_vocabulary CHECK ((factors_omitted <@ ARRAY['warmth'::text])),
     CONSTRAINT brief_run_mail_error_length CHECK (((mail_error IS NULL) OR (char_length(mail_error) <= 500))),
     CONSTRAINT brief_run_mail_error_needs_an_attempt CHECK (((mail_error IS NULL) OR (mail_attempted_at IS NOT NULL))),
-    CONSTRAINT brief_run_narrative_length CHECK (((narrative IS NULL) OR (char_length(narrative) <= 600))),
+    CONSTRAINT brief_run_narrative_length CHECK (((narrative IS NULL) OR (char_length(narrative) <= 2000))),
     CONSTRAINT brief_run_narrative_needs_a_pass CHECK (((narrative IS NULL) OR (annotated_at IS NOT NULL))),
     CONSTRAINT brief_run_revenue_norm_currency_check CHECK (((revenue_norm_currency = ''::text) OR (revenue_norm_currency ~ '^[A-Z]{3}$'::text))),
     CONSTRAINT brief_run_revenue_norm_minor_check CHECK ((revenue_norm_minor > 0)),
@@ -3308,7 +3664,7 @@ CREATE TABLE public.capture_backfill_creation (
 CREATE TABLE public.capture_connection (
     id uuid DEFAULT public.uuidv7() NOT NULL,
     provider text NOT NULL,
-    user_id uuid NOT NULL,
+    user_id uuid,
     scopes text[] DEFAULT '{}'::text[] NOT NULL,
     status text DEFAULT 'disconnected'::text NOT NULL,
     auth bytea,
@@ -3337,9 +3693,14 @@ CREATE TABLE public.capture_connection (
     connected_at timestamp with time zone DEFAULT now() NOT NULL,
     silence_dismissed_since timestamp with time zone,
     legal_entity_id uuid,
+    connected_by uuid,
+    reader_team_id uuid,
+    backup_owner_id uuid,
+    CONSTRAINT capture_connection_backup_owner_is_shared CHECK (((backup_owner_id IS NULL) OR (user_id IS NULL))),
     CONSTRAINT capture_connection_history_baseline_check CHECK ((((history_baseline_date IS NULL) = (history_baseline_tz IS NULL)) AND ((history_baseline_date IS NULL) = (history_baseline_set_by IS NULL)) AND ((history_baseline_date IS NULL) = (history_baseline_set_at IS NULL)))),
     CONSTRAINT capture_connection_mail_posture_check CHECK ((mail_posture = ANY (ARRAY['shared'::text, 'classified'::text, 'held'::text]))),
     CONSTRAINT capture_connection_provider_check CHECK ((provider = ANY (ARRAY['gmail'::text, 'gcal'::text, 'gdocs'::text, 'imap'::text, 'graph'::text, 'graphcal'::text, 'whatsapp'::text, 'telegram'::text, 'offline_demo'::text, 'test_mailbox'::text]))),
+    CONSTRAINT capture_connection_shared_shape CHECK ((((user_id IS NOT NULL) AND (reader_team_id IS NULL)) OR ((user_id IS NULL) AND (reader_team_id IS NOT NULL) AND (account_label IS NOT NULL) AND (mail_posture <> 'classified'::text)))),
     CONSTRAINT capture_connection_status_check CHECK ((status = ANY (ARRAY['connected'::text, 'disconnected'::text, 'error'::text, 'reauth_required'::text]))),
     CONSTRAINT capture_connection_unread_period_whole CHECK ((((unread_from IS NULL) AND (unread_to IS NULL)) OR ((unread_from IS NOT NULL) AND (unread_to IS NOT NULL) AND (unread_from < unread_to))))
 );
@@ -3399,7 +3760,7 @@ CREATE TABLE public.capture_freemail_domain (
 CREATE TABLE public.capture_import (
     id uuid DEFAULT public.uuidv7() NOT NULL,
     activity_id uuid NOT NULL,
-    user_id uuid NOT NULL,
+    user_id uuid,
     posture_at_import text,
     verdict_status text,
     verdict_reason text,
@@ -3411,6 +3772,8 @@ CREATE TABLE public.capture_import (
     bcc_only boolean,
     provider_message_ids text[] DEFAULT '{}'::text[] NOT NULL,
     legal_entity_id uuid,
+    connection_id uuid,
+    CONSTRAINT capture_import_one_importer CHECK (((user_id IS NULL) <> (connection_id IS NULL))),
     CONSTRAINT capture_import_posture_check CHECK (((posture_at_import IS NULL) OR (posture_at_import = ANY (ARRAY['shared'::text, 'classified'::text, 'held'::text])))),
     CONSTRAINT capture_import_verdict_status_check CHECK (((verdict_status IS NULL) OR (verdict_status = ANY (ARRAY['pending'::text, 'cleared'::text, 'held'::text, 'unsure'::text, 'shared_by_owner'::text, 'held_by_owner'::text]))))
 );
@@ -3621,7 +3984,10 @@ CREATE TABLE public.channel_connection (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     archived_at timestamp with time zone,
-    CONSTRAINT channel_connection_provider_check CHECK ((provider = 'telegram'::text)),
+    address text,
+    events_credential_ref text,
+    CONSTRAINT channel_connection_address_check CHECK ((((provider = 'dispact'::text) = (address IS NOT NULL)) AND ((address IS NULL) OR (address ~ '^https?://'::text)))),
+    CONSTRAINT channel_connection_provider_check CHECK ((provider = ANY (ARRAY['telegram'::text, 'dispact'::text]))),
     CONSTRAINT channel_connection_status_check CHECK ((status = ANY (ARRAY['connected'::text, 'disconnected'::text, 'error'::text, 'reauth_required'::text]))),
     CONSTRAINT channel_connection_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 );
@@ -3635,6 +4001,57 @@ CREATE TABLE public.channel_provider (
     CONSTRAINT channel_provider_credential_model_check CHECK ((credential_model = ANY (ARRAY['workspace_bot'::text, 'per_member'::text]))),
     CONSTRAINT channel_provider_provider_grammar CHECK (((provider ~ '^[a-z][a-z0-9_]*$'::text) AND (char_length(provider) <= 32))),
     CONSTRAINT channel_provider_transport_check CHECK ((transport = ANY (ARRAY['core'::text, 'unit'::text])))
+);
+
+CREATE TABLE public.chat_link (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    connection_id uuid NOT NULL,
+    provider text NOT NULL,
+    channel_slug text NOT NULL,
+    channel_name text NOT NULL,
+    channel_external_key text,
+    deal_id uuid,
+    project_id uuid,
+    verbosity text DEFAULT 'important'::text NOT NULL,
+    card_message_id text,
+    card_fingerprint text,
+    history_cursor bigint,
+    history_synced_at timestamp with time zone,
+    backfill_requested boolean DEFAULT false NOT NULL,
+    status text DEFAULT 'active'::text NOT NULL,
+    linked_by uuid NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone,
+    CONSTRAINT chat_link_history_cursor_js_safe CHECK (((history_cursor IS NULL) OR ((history_cursor >= 0) AND (history_cursor <= '9007199254740991'::bigint)))),
+    CONSTRAINT chat_link_provider_check CHECK ((provider = 'dispact'::text)),
+    CONSTRAINT chat_link_record_check CHECK (((deal_id IS NOT NULL) OR (project_id IS NOT NULL))),
+    CONSTRAINT chat_link_status_check CHECK ((status = ANY (ARRAY['active'::text, 'channel_gone'::text]))),
+    CONSTRAINT chat_link_verbosity_check CHECK ((verbosity = ANY (ARRAY['everything'::text, 'important'::text, 'milestones'::text, 'silent'::text]))),
+    CONSTRAINT chat_link_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.chat_post_item (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    link_id uuid NOT NULL,
+    event_id uuid NOT NULL,
+    event_type text NOT NULL,
+    entity_type text NOT NULL,
+    entity_id uuid NOT NULL,
+    activity_id uuid,
+    tier text NOT NULL,
+    detail jsonb DEFAULT '{}'::jsonb NOT NULL,
+    post_id uuid,
+    message_id text,
+    attempts integer DEFAULT 0 NOT NULL,
+    last_error text,
+    posted_at timestamp with time zone,
+    withdrawn_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT chat_post_item_attempts_check CHECK ((attempts >= 0)),
+    CONSTRAINT chat_post_item_posted_check CHECK (((posted_at IS NULL) OR (post_id IS NOT NULL))),
+    CONSTRAINT chat_post_item_tier_check CHECK ((tier = ANY (ARRAY['milestone'::text, 'important'::text, 'everything'::text])))
 );
 
 CREATE TABLE public.close_date_run (
@@ -3748,6 +4165,7 @@ CREATE TABLE public.comms_outbound (
     delivery_due_at timestamp with time zone,
     from_address text,
     party_admission_pending boolean DEFAULT true NOT NULL,
+    kept_until timestamp with time zone,
     CONSTRAINT comms_outbound_attachments_shape CHECK (public.comms_outbound_attachments_well_formed(attachments)),
     CONSTRAINT comms_outbound_bounce_is_stated CHECK ((((bounced_at IS NULL) = (bounce_kind IS NULL)) AND ((bounce_reason IS NULL) OR (bounced_at IS NOT NULL)))),
     CONSTRAINT comms_outbound_bounce_kind_named CHECK (((bounce_kind IS NULL) OR (bounce_kind = ANY (ARRAY['hard'::text, 'soft'::text])))),
@@ -3916,6 +4334,8 @@ CREATE TABLE public.communication_suppression (
     recorded_for_addresses text[],
     recorded_through text DEFAULT 'unknown'::text NOT NULL,
     address_key_id text,
+    received_at timestamp with time zone,
+    kept_until timestamp with time zone,
     CONSTRAINT communication_suppression_decided_by_level CHECK ((decided_by_level = ANY (ARRAY['machine'::text, 'user'::text, 'admin'::text, 'subject'::text]))),
     CONSTRAINT communication_suppression_kind CHECK ((kind = ANY (ARRAY['marketing_objection'::text, 'processing_restriction'::text, 'hard_bounce'::text, 'subject_request'::text]))),
     CONSTRAINT communication_suppression_names_a_target CHECK (((contact_id IS NOT NULL) OR (lead_id IS NOT NULL) OR (address IS NOT NULL) OR (address_hash IS NOT NULL))),
@@ -3973,7 +4393,7 @@ CREATE TABLE public.company (
     phone text,
     email text,
     CONSTRAINT company_anchor_is_permanent CHECK (((NOT is_anchor) OR ((archived_at IS NULL) AND (merged_into_id IS NULL)))),
-    CONSTRAINT company_description_length CHECK (((description IS NULL) OR (length(description) <= 500))),
+    CONSTRAINT company_description_length CHECK (((description IS NULL) OR (length(description) <= 20000))),
     CONSTRAINT company_geocode_resolved_has_a_point CHECK (((geocode_status IS DISTINCT FROM 'ok'::text) OR ((geocode_lat IS NOT NULL) AND (geocode_lon IS NOT NULL) AND ((geocode_lat >= ('-90'::integer)::double precision) AND (geocode_lat <= (90)::double precision)) AND ((geocode_lon >= ('-180'::integer)::double precision) AND (geocode_lon <= (180)::double precision))))),
     CONSTRAINT company_geocode_status_check CHECK (((geocode_status IS NULL) OR (geocode_status = ANY (ARRAY['ok'::text, 'failed'::text, 'no_match'::text, 'stale'::text])))),
     CONSTRAINT company_lifecycle_check CHECK ((lifecycle = ANY (ARRAY['unknown'::text, 'target'::text, 'prospect'::text, 'opportunity'::text, 'onboarding'::text, 'live'::text, 'customer'::text, 'former_customer'::text, 'disqualified'::text]))),
@@ -4179,11 +4599,13 @@ CREATE TABLE public.company_profile_field (
     retrieved_at timestamp with time zone,
     verified_at timestamp with time zone,
     verified_by uuid,
+    source_activity_id uuid,
     CONSTRAINT company_profile_field_confidence_check CHECK (((confidence IS NULL) OR (((confidence)::double precision >= (0)::double precision) AND ((confidence)::double precision <= (1)::double precision)))),
     CONSTRAINT company_profile_field_field_check CHECK ((field = ANY (ARRAY['display_name'::text, 'offer_summary'::text, 'icp'::text, 'value_proposition'::text, 'usp'::text, 'customer_pains'::text, 'desired_outcomes'::text, 'buying_center'::text, 'buying_intents'::text, 'common_objections'::text, 'sales_motion'::text, 'legal_name'::text, 'registered_address'::text, 'register_vat'::text, 'industry'::text, 'history'::text, 'legal_form'::text, 'register_court'::text, 'register_number'::text]))),
-    CONSTRAINT company_profile_field_source_check CHECK ((source = ANY (ARRAY['human'::text, 'agent'::text, 'site_read'::text, 'connector'::text, 'migration'::text]))),
+    CONSTRAINT company_profile_field_source_check CHECK ((source = ANY (ARRAY['human'::text, 'agent'::text, 'site_read'::text, 'connector'::text, 'migration'::text, 'meeting'::text]))),
     CONSTRAINT company_profile_field_verified_pair CHECK (((verified_at IS NULL) = (verified_by IS NULL))),
     CONSTRAINT company_profile_field_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint))),
+    CONSTRAINT company_profile_meeting_evidence CHECK (((source <> 'meeting'::text) OR ((source_activity_id IS NOT NULL) AND (confidence IS NOT NULL) AND (COALESCE(evidence_snippet, ''::text) = ''::text)))),
     CONSTRAINT company_profile_site_evidence CHECK (((source <> 'site_read'::text) OR ((evidence_snippet IS NOT NULL) AND (evidence_snippet <> ''::text) AND (source_url IS NOT NULL) AND (source_url <> ''::text) AND (confidence IS NOT NULL))))
 );
 
@@ -4201,7 +4623,7 @@ CREATE TABLE public.company_relationship_type (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     archived_at timestamp with time zone,
-    CONSTRAINT company_relationship_type_relationship_type_check CHECK ((relationship_type = ANY (ARRAY['customer'::text, 'partner'::text, 'supplier'::text, 'investor'::text, 'portfolio_company'::text, 'competitor'::text, 'other'::text]))),
+    CONSTRAINT company_relationship_type_relationship_type_check CHECK (((relationship_type = ANY (ARRAY['customer'::text, 'partner'::text, 'supplier'::text, 'investor'::text, 'portfolio_company'::text, 'competitor'::text, 'other'::text])) OR (relationship_type ~ '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z0-9]+(_[a-z0-9]+)*$'::text))),
     CONSTRAINT company_relationship_type_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 );
 
@@ -4286,6 +4708,8 @@ CREATE TABLE public.confirm_token (
     question_locale text,
     question_version integer,
     lead_id uuid,
+    asks_news boolean DEFAULT true NOT NULL,
+    subject_request_id uuid,
     CONSTRAINT confirm_token_expires_after_creation CHECK ((expires_at > issued_at)),
     CONSTRAINT confirm_token_kind CHECK ((kind = ANY (ARRAY['record_confirmation'::text, 'consent_confirmation'::text, 'privacy_notice'::text]))),
     CONSTRAINT confirm_token_lead_is_only_told CHECK (((lead_id IS NULL) OR (kind = 'privacy_notice'::text))),
@@ -4337,6 +4761,8 @@ CREATE TABLE public.consent_event (
     confirm_ip text,
     confirm_user_agent text,
     consent_text_version_id uuid,
+    kept_until timestamp with time zone,
+    subject_request_id uuid,
     CONSTRAINT consent_event_new_state_check CHECK ((new_state = ANY (ARRAY['granted'::text, 'withdrawn'::text]))),
     CONSTRAINT consent_event_subject CHECK (((contact_id IS NULL) <> (lead_id IS NULL))),
     CONSTRAINT consent_event_wording_pairs CHECK (((policy_text IS NULL) = (policy_version IS NULL)))
@@ -4352,7 +4778,9 @@ CREATE TABLE public.consent_purpose (
     archived_at timestamp with time zone,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     class text DEFAULT 'marketing'::text NOT NULL,
-    CONSTRAINT consent_purpose_class_check CHECK ((class = ANY (ARRAY['business_correspondence'::text, 'transactional'::text, 'marketing'::text, 'phone_outreach'::text])))
+    frequency text DEFAULT 'monthly'::text NOT NULL,
+    CONSTRAINT consent_purpose_class_check CHECK ((class = ANY (ARRAY['business_correspondence'::text, 'transactional'::text, 'marketing'::text, 'phone_outreach'::text]))),
+    CONSTRAINT consent_purpose_frequency_check CHECK ((frequency = ANY (ARRAY['weekly'::text, 'monthly'::text, 'quarterly'::text])))
 );
 
 COMMENT ON COLUMN public.consent_purpose.class IS 'Which gate this purpose answers to (ADR-0098 D1). business_correspondence and transactional are never consent-gated; marketing needs DOI proof or the §7(3) flag.';
@@ -4478,8 +4906,10 @@ CREATE TABLE public.contact_acquisition_evidence (
     request_retracted_by text,
     recorded_for_addresses text[],
     legal_entity_id uuid,
+    stated_source text,
     CONSTRAINT contact_acquisition_evidence_kind CHECK ((kind = ANY (ARRAY['subject_initiated'::text, 'customer_contract'::text, 'requested_quote_or_meeting'::text, 'in_person_permission'::text, 'referral'::text, 'event_or_form'::text, 'public_or_business_source'::text, 'purchased_or_imported'::text, 'unknown_legacy'::text, 'crm_migration'::text, 'mailbox_history'::text]))),
-    CONSTRAINT contact_acquisition_evidence_source_shape CHECK (((source_entity_type IS NULL) = (source_entity_id IS NULL)))
+    CONSTRAINT contact_acquisition_evidence_source_shape CHECK (((source_entity_type IS NULL) = (source_entity_id IS NULL))),
+    CONSTRAINT contact_acquisition_evidence_stated_source_check CHECK ((stated_source = ANY (ARRAY['met_in_person'::text, 'business_card'::text, 'referral'::text, 'website'::text, 'other'::text])))
 );
 
 CREATE TABLE public.contact_address_country (
@@ -4533,7 +4963,7 @@ CREATE TABLE public.contact_confirm_submission (
     note text,
     CONSTRAINT contact_confirm_submission_field_matches_kind CHECK ((((kind = 'correction'::text) AND (field IS NOT NULL)) OR ((kind = 'erasure_request'::text) AND (field IS NULL)))),
     CONSTRAINT contact_confirm_submission_kind_check CHECK ((kind = ANY (ARRAY['correction'::text, 'erasure_request'::text]))),
-    CONSTRAINT contact_confirm_submission_note_length CHECK (((note IS NULL) OR (char_length(note) <= 500))),
+    CONSTRAINT contact_confirm_submission_note_length CHECK (((note IS NULL) OR (char_length(note) <= 2000))),
     CONSTRAINT contact_confirm_submission_note_shape CHECK (((note IS NULL) OR (resolution IS NOT NULL))),
     CONSTRAINT contact_confirm_submission_resolution_check CHECK (((resolution IS NULL) OR (resolution = ANY (ARRAY['accepted'::text, 'rejected'::text])))),
     CONSTRAINT contact_confirm_submission_resolved_together CHECK ((num_nonnulls(resolved_at, resolved_by, resolution) = ANY (ARRAY[0, 3])))
@@ -4649,6 +5079,13 @@ CREATE TABLE public.contact_signature_enrich_state (
     due_at timestamp with time zone DEFAULT now() NOT NULL,
     deferred_run_id uuid,
     read_snapshot pg_snapshot,
+    last_outcome text,
+    last_skip_reason text,
+    retry_activity_id uuid,
+    retry_count smallint DEFAULT 0 NOT NULL,
+    CONSTRAINT contact_signature_enrich_state_last_outcome_check CHECK ((last_outcome = ANY (ARRAY['applied'::text, 'nothing_to_apply'::text, 'skipped'::text]))),
+    CONSTRAINT contact_signature_enrich_state_last_skip_reason_check CHECK ((last_skip_reason = ANY (ARRAY['name_gate'::text, 'evidence_gate'::text, 'confidence'::text, 'narrowed'::text]))),
+    CONSTRAINT contact_signature_enrich_state_retry_count_check CHECK ((retry_count >= 0)),
     CONSTRAINT signature_work_generations CHECK (((processed_generation >= 0) AND (requested_generation >= processed_generation) AND (live_generation >= 0) AND (live_generation <= requested_generation)))
 );
 
@@ -4768,11 +5205,13 @@ CREATE TABLE public.custom_field (
     show_in_create boolean DEFAULT true NOT NULL,
     reportable boolean DEFAULT false NOT NULL,
     activity_kinds text[],
+    label_translations jsonb DEFAULT '{}'::jsonb NOT NULL,
+    option_translations jsonb DEFAULT '{}'::jsonb NOT NULL,
     CONSTRAINT custom_field_activity_kinds_check CHECK (((activity_kinds IS NULL) OR ((object = 'activity'::text) AND (cardinality(activity_kinds) > 0)))),
     CONSTRAINT custom_field_object_check CHECK ((object = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'activity'::text, 'project'::text, 'relationship'::text, 'partner'::text, 'contract'::text]))),
     CONSTRAINT custom_field_reportable_type_check CHECK (((NOT reportable) OR ((object = ANY (ARRAY['deal'::text, 'company'::text])) AND (type = ANY (ARRAY['picklist'::text, 'boolean'::text]))))),
     CONSTRAINT custom_field_status_check CHECK ((status = ANY (ARRAY['active'::text, 'retired'::text]))),
-    CONSTRAINT custom_field_type_check CHECK ((type = ANY (ARRAY['text'::text, 'number'::text, 'date'::text, 'currency'::text, 'picklist'::text, 'multiselect'::text, 'boolean'::text]))),
+    CONSTRAINT custom_field_type_check CHECK ((type = ANY (ARRAY['text'::text, 'number'::text, 'date'::text, 'currency'::text, 'picklist'::text, 'multiselect'::text, 'boolean'::text, 'record'::text]))),
     CONSTRAINT custom_field_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 );
 
@@ -4795,7 +5234,7 @@ CREATE TABLE public.data_subject_request (
     due_overridden boolean DEFAULT false NOT NULL,
     dispute_open boolean DEFAULT false NOT NULL,
     CONSTRAINT data_subject_request_channel CHECK (((channel IS NULL) OR (channel = ANY (ARRAY['confirm_link'::text, 'email'::text, 'phone'::text, 'letter'::text, 'in_person'::text, 'operator_ui'::text])))),
-    CONSTRAINT data_subject_request_kind_check CHECK ((kind = ANY (ARRAY['access'::text, 'rectify'::text, 'erasure'::text]))),
+    CONSTRAINT data_subject_request_kind_check CHECK ((kind = ANY (ARRAY['access'::text, 'rectify'::text, 'erasure'::text, 'restriction'::text]))),
     CONSTRAINT data_subject_request_status_check CHECK ((status = ANY (ARRAY['open'::text, 'in_progress'::text, 'fulfilled'::text, 'rejected'::text]))),
     CONSTRAINT dsr_resolution_shape CHECK (((status <> ALL (ARRAY['fulfilled'::text, 'rejected'::text])) OR (resolution IS NOT NULL)))
 );
@@ -5038,9 +5477,9 @@ CREATE TABLE public.deal_line_item (
     CONSTRAINT deal_line_item_billing_interval_check CHECK (((billing_interval_months IS NULL) OR (billing_interval_months = ANY (ARRAY[1, 3, 6, 12])))),
     CONSTRAINT deal_line_item_billing_model_check CHECK (((billing_model IS NULL) OR (billing_model = ANY (ARRAY['one_time'::text, 'recurring'::text])))),
     CONSTRAINT deal_line_item_billing_shape CHECK ((((billing_model IS NULL) AND (billing_interval_months IS NULL) AND (interval_count IS NULL)) OR ((billing_model = 'one_time'::text) AND (billing_interval_months IS NULL) AND (interval_count IS NULL)) OR ((billing_model = 'recurring'::text) AND (billing_interval_months IS NOT NULL)))),
-    CONSTRAINT deal_line_item_bounded CHECK (((length(unit) <= 100) AND ((catalog_name IS NULL) OR (length(catalog_name) <= 500)) AND ((sku IS NULL) OR (length(sku) <= 200)))),
+    CONSTRAINT deal_line_item_bounded CHECK (((char_length(unit) <= 120) AND ((catalog_name IS NULL) OR (length(catalog_name) <= 500)) AND ((sku IS NULL) OR (char_length(sku) <= 500)))),
     CONSTRAINT deal_line_item_component_kind_check CHECK (((component_kind IS NULL) OR (component_kind = ANY (ARRAY['software'::text, 'implementation'::text, 'other'::text])))),
-    CONSTRAINT deal_line_item_description_present CHECK (((btrim(description) <> ''::text) AND (length(description) <= 2000))),
+    CONSTRAINT deal_line_item_description_present CHECK (((btrim(description) <> ''::text) AND (char_length(description) <= 20000))),
     CONSTRAINT deal_line_item_discount_pct_check CHECK (((discount_pct >= (0)::numeric) AND (discount_pct <= (100)::numeric))),
     CONSTRAINT deal_line_item_interval_count_check CHECK (((interval_count IS NULL) OR (interval_count > 0))),
     CONSTRAINT deal_line_item_one_tax_source CHECK (((tax_rate IS NULL) <> (tax_category IS NULL))),
@@ -5447,12 +5886,19 @@ CREATE TABLE public.dedupe_candidate (
     archived_at timestamp with time zone,
     left_lead_id uuid,
     right_lead_id uuid,
+    left_ext_id uuid,
+    right_ext_id uuid,
     CONSTRAINT dedupe_candidate_confidence_check CHECK (((confidence >= (0)::numeric) AND (confidence <= (1)::numeric))),
     CONSTRAINT dedupe_candidate_disposed_shape CHECK (((disposition = 'open'::text) = (disposed_at IS NULL))),
     CONSTRAINT dedupe_candidate_disposition_check CHECK ((disposition = ANY (ARRAY['open'::text, 'merged'::text, 'not_a_duplicate'::text]))),
-    CONSTRAINT dedupe_candidate_entity_type_check CHECK ((entity_type = ANY (ARRAY['contact'::text, 'company'::text, 'lead'::text]))),
+    CONSTRAINT dedupe_candidate_entity_type_check CHECK (((entity_type = ANY (ARRAY['contact'::text, 'company'::text, 'lead'::text])) OR (entity_type ~ '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'::text))),
+    CONSTRAINT dedupe_candidate_ext_shape CHECK (
+CASE
+    WHEN (entity_type ~ '^ext:'::text) THEN ((left_ext_id IS NOT NULL) AND (right_ext_id IS NOT NULL) AND (left_ext_id < right_ext_id))
+    ELSE ((left_ext_id IS NULL) AND (right_ext_id IS NULL))
+END),
     CONSTRAINT dedupe_candidate_ordered CHECK ((COALESCE(left_contact_id, left_company_id, left_lead_id) < COALESCE(right_contact_id, right_company_id, right_lead_id))),
-    CONSTRAINT dedupe_candidate_shape CHECK ((((entity_type = 'contact'::text) AND (left_contact_id IS NOT NULL) AND (right_contact_id IS NOT NULL) AND (left_company_id IS NULL) AND (right_company_id IS NULL) AND (left_lead_id IS NULL) AND (right_lead_id IS NULL)) OR ((entity_type = 'company'::text) AND (left_company_id IS NOT NULL) AND (right_company_id IS NOT NULL) AND (left_contact_id IS NULL) AND (right_contact_id IS NULL) AND (left_lead_id IS NULL) AND (right_lead_id IS NULL)) OR ((entity_type = 'lead'::text) AND (left_lead_id IS NOT NULL) AND (right_lead_id IS NOT NULL) AND (left_contact_id IS NULL) AND (right_contact_id IS NULL) AND (left_company_id IS NULL) AND (right_company_id IS NULL)))),
+    CONSTRAINT dedupe_candidate_shape CHECK ((((entity_type ~ '^ext:'::text) AND (left_contact_id IS NULL) AND (right_contact_id IS NULL) AND (left_company_id IS NULL) AND (right_company_id IS NULL) AND (left_lead_id IS NULL) AND (right_lead_id IS NULL)) OR ((entity_type = 'contact'::text) AND (left_contact_id IS NOT NULL) AND (right_contact_id IS NOT NULL) AND (left_company_id IS NULL) AND (right_company_id IS NULL) AND (left_lead_id IS NULL) AND (right_lead_id IS NULL)) OR ((entity_type = 'company'::text) AND (left_company_id IS NOT NULL) AND (right_company_id IS NOT NULL) AND (left_contact_id IS NULL) AND (right_contact_id IS NULL) AND (left_lead_id IS NULL) AND (right_lead_id IS NULL)) OR ((entity_type = 'lead'::text) AND (left_lead_id IS NOT NULL) AND (right_lead_id IS NOT NULL) AND (left_contact_id IS NULL) AND (right_contact_id IS NULL) AND (left_company_id IS NULL) AND (right_company_id IS NULL)))),
     CONSTRAINT dedupe_candidate_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 );
 
@@ -5497,7 +5943,7 @@ CREATE TABLE public.embedding (
     model text NOT NULL,
     embedding public.vector NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT embedding_entity_type_check CHECK ((entity_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'activity'::text, 'project'::text, 'relationship'::text, 'partner'::text, 'product'::text, 'offer_template'::text, 'offer'::text, 'commission'::text, 'deal_room'::text, 'deal_room_thread'::text, 'deal_room_comment'::text, 'deal_room_document'::text, 'deal_room_participant'::text])))
+    CONSTRAINT embedding_entity_type_check CHECK (((entity_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'activity'::text, 'project'::text, 'relationship'::text, 'partner'::text, 'product'::text, 'offer_template'::text, 'offer'::text, 'commission'::text, 'deal_room'::text, 'deal_room_thread'::text, 'deal_room_comment'::text, 'deal_room_document'::text, 'deal_room_participant'::text])) OR (entity_type ~ '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'::text)))
 );
 
 CREATE TABLE public.erasure_suppression (
@@ -5505,7 +5951,11 @@ CREATE TABLE public.erasure_suppression (
     value_hash text NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     key_id text,
-    CONSTRAINT erasure_suppression_kind_check CHECK ((kind = ANY (ARRAY['email'::text, 'channel_identity'::text])))
+    lifted_at timestamp with time zone,
+    lift_consent_event_id uuid,
+    lift_contact_id uuid,
+    CONSTRAINT erasure_suppression_kind_check CHECK ((kind = ANY (ARRAY['email'::text, 'channel_identity'::text]))),
+    CONSTRAINT erasure_suppression_lift_is_whole CHECK ((((lifted_at IS NULL) = (lift_consent_event_id IS NULL)) AND ((lifted_at IS NULL) = (lift_contact_id IS NULL))))
 );
 
 CREATE TABLE public.event_outbox (
@@ -5618,7 +6068,7 @@ CREATE TABLE public.field_provenance (
     confidence numeric(4,3),
     evidence_ref text,
     CONSTRAINT field_provenance_confidence_check CHECK (((confidence IS NULL) OR (((confidence)::double precision >= (0)::double precision) AND ((confidence)::double precision <= (1)::double precision)))),
-    CONSTRAINT field_provenance_object_type_check CHECK ((object_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'activity'::text, 'project'::text, 'relationship'::text, 'partner'::text, 'product'::text, 'offer_template'::text, 'offer'::text, 'commission'::text, 'deal_room'::text, 'deal_room_thread'::text, 'deal_room_comment'::text, 'deal_room_document'::text, 'deal_room_participant'::text])))
+    CONSTRAINT field_provenance_object_type_check CHECK (((object_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'activity'::text, 'project'::text, 'relationship'::text, 'partner'::text, 'product'::text, 'offer_template'::text, 'offer'::text, 'commission'::text, 'deal_room'::text, 'deal_room_thread'::text, 'deal_room_comment'::text, 'deal_room_document'::text, 'deal_room_participant'::text])) OR (object_type ~ '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'::text)))
 );
 
 CREATE TABLE public.finance_connection (
@@ -5703,7 +6153,11 @@ CREATE TABLE public.finance_invoice (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     archived_at timestamp with time zone,
+    customer_link_id uuid,
+    dunning_level smallint,
+    CONSTRAINT finance_invoice_credit_note_status CHECK (((credits_invoice_id IS NULL) OR (status = ANY (ARRAY['credited'::text, 'void'::text])))),
     CONSTRAINT finance_invoice_credits_not_self CHECK (((credits_invoice_id IS NULL) OR (credits_invoice_id <> id))),
+    CONSTRAINT finance_invoice_dunning_level_range CHECK (((dunning_level >= 0) AND (dunning_level <= 99))),
     CONSTRAINT finance_invoice_fx_pair CHECK (((fx_rate_to_base IS NULL) = (fx_rate_date IS NULL))),
     CONSTRAINT finance_invoice_gross_minor_js_safe CHECK (((gross_minor >= '-9007199254740991'::bigint) AND (gross_minor <= '9007199254740991'::bigint))),
     CONSTRAINT finance_invoice_net_minor_js_safe CHECK (((net_minor >= '-9007199254740991'::bigint) AND (net_minor <= '9007199254740991'::bigint))),
@@ -5732,6 +6186,7 @@ CREATE TABLE public.finance_payment (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     archived_at timestamp with time zone,
+    customer_link_id uuid,
     CONSTRAINT finance_payment_amount_minor_js_safe CHECK (((amount_minor >= '-9007199254740991'::bigint) AND (amount_minor <= '9007199254740991'::bigint))),
     CONSTRAINT finance_payment_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 );
@@ -6105,6 +6560,19 @@ CREATE TABLE public.knowledge_document (
     CONSTRAINT knowledge_document_status_check CHECK ((ingest_status = ANY (ARRAY['queued'::text, 'running'::text, 'done'::text, 'failed'::text])))
 );
 
+CREATE TABLE public.lawful_basis_confirmation (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    contact_id uuid,
+    lead_id uuid,
+    confirmed_by uuid NOT NULL,
+    confirmed_at timestamp with time zone DEFAULT now() NOT NULL,
+    expires_at timestamp with time zone NOT NULL,
+    spent_at timestamp with time zone,
+    delivery_id uuid,
+    CONSTRAINT lawful_basis_confirmation_one_subject CHECK (((contact_id IS NULL) <> (lead_id IS NULL))),
+    CONSTRAINT lawful_basis_confirmation_window CHECK ((expires_at > confirmed_at))
+);
+
 CREATE TABLE public.lead (
     id uuid DEFAULT public.uuidv7() NOT NULL,
     full_name text,
@@ -6318,11 +6786,11 @@ CREATE TABLE public.legal_entity (
     CONSTRAINT legal_entity_default_reads_the_anchor CHECK (((NOT is_default) OR ((display_name IS NULL) AND (legal_name IS NULL) AND (address_line1 IS NULL) AND (address_line2 IS NULL) AND (address_postal_code IS NULL) AND (address_city IS NULL) AND (address_region IS NULL) AND (vat_id IS NULL) AND (register_court IS NULL) AND (register_number IS NULL) AND (logo_object_key IS NULL)))),
     CONSTRAINT legal_entity_default_signs_with_the_installation CHECK (((NOT is_default) OR (signature_template IS NULL))),
     CONSTRAINT legal_entity_iban_shape CHECK (((iban IS NULL) OR (iban ~ '^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$'::text))),
-    CONSTRAINT legal_entity_imprint_bounded CHECK (((imprint IS NULL) OR (length(imprint) <= 4000))),
+    CONSTRAINT legal_entity_imprint_bounded CHECK (((imprint IS NULL) OR (char_length(imprint) <= 20000))),
     CONSTRAINT legal_entity_language_shape CHECK (((default_language IS NULL) OR (default_language ~ '^[a-z]{2}$'::text))),
     CONSTRAINT legal_entity_names_itself CHECK ((is_default OR ((btrim(COALESCE(display_name, ''::text)) <> ''::text) AND (btrim(COALESCE(legal_name, ''::text)) <> ''::text) AND (country IS NOT NULL)))),
-    CONSTRAINT legal_entity_offering_bounded CHECK (((length(offer_summary) <= 4000) AND (length(icp) <= 4000) AND (length(value_proposition) <= 4000) AND (length(usp) <= 4000))),
-    CONSTRAINT legal_entity_signature_template_bounded CHECK (((signature_template IS NULL) OR (length(signature_template) <= 4000))),
+    CONSTRAINT legal_entity_offering_bounded CHECK (((char_length(offer_summary) <= 20000) AND (char_length(icp) <= 20000) AND (char_length(value_proposition) <= 20000) AND (char_length(usp) <= 20000))),
+    CONSTRAINT legal_entity_signature_template_bounded CHECK (((signature_template IS NULL) OR (char_length(signature_template) <= 20000))),
     CONSTRAINT legal_entity_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 );
 
@@ -6351,9 +6819,7 @@ CREATE TABLE public.legal_review (
     version bigint DEFAULT 1 NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT legal_review_comments_bounded CHECK (((comments IS NULL) OR (length(comments) <= 8000))),
     CONSTRAINT legal_review_decided_shape CHECK (((status = ANY (ARRAY['approved'::text, 'changes_needed'::text])) = (decided_at IS NOT NULL))),
-    CONSTRAINT legal_review_note_bounded CHECK (((note IS NULL) OR (length(note) <= 4000))),
     CONSTRAINT legal_review_status_check CHECK ((status = ANY (ARRAY['requested'::text, 'approved'::text, 'changes_needed'::text, 'withdrawn'::text]))),
     CONSTRAINT legal_review_value_minor_js_safe CHECK (((value_minor >= '-9007199254740991'::bigint) AND (value_minor <= '9007199254740991'::bigint))),
     CONSTRAINT legal_review_value_pair CHECK (((value_minor IS NULL) = (value_currency IS NULL))),
@@ -6409,7 +6875,7 @@ CREATE TABLE public.list (
     purpose text,
     steward_id uuid,
     sharing text DEFAULT 'team'::text NOT NULL,
-    CONSTRAINT list_entity_type_check CHECK ((entity_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'project'::text]))),
+    CONSTRAINT list_entity_type_check CHECK (((entity_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'project'::text])) OR (entity_type ~ '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'::text))),
     CONSTRAINT list_list_type_check CHECK ((list_type = ANY (ARRAY['static'::text, 'dynamic'::text]))),
     CONSTRAINT list_sharing_check CHECK ((sharing = ANY (ARRAY['private'::text, 'team'::text, 'workspace'::text]))),
     CONSTRAINT list_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
@@ -6433,7 +6899,7 @@ CREATE TABLE public.list_live_member (
     member_since timestamp with time zone NOT NULL,
     definition_version bigint NOT NULL,
     CONSTRAINT list_live_member_definition_version_js_safe CHECK (((definition_version >= '-9007199254740991'::bigint) AND (definition_version <= '9007199254740991'::bigint))),
-    CONSTRAINT list_live_member_entity_type_check CHECK ((entity_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'project'::text])))
+    CONSTRAINT list_live_member_entity_type_check CHECK (((entity_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'project'::text])) OR (entity_type ~ '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'::text)))
 );
 
 CREATE TABLE public.list_member (
@@ -6444,7 +6910,7 @@ CREATE TABLE public.list_member (
     added_by text NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     note text,
-    CONSTRAINT list_member_entity_type_check CHECK ((entity_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'project'::text])))
+    CONSTRAINT list_member_entity_type_check CHECK (((entity_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'project'::text])) OR (entity_type ~ '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'::text)))
 );
 
 CREATE TABLE public.list_member_event (
@@ -6459,9 +6925,10 @@ CREATE TABLE public.list_member_event (
     occurred_at timestamp with time zone DEFAULT now() NOT NULL,
     definition_version bigint,
     member_note text,
+    imported boolean DEFAULT false NOT NULL,
     CONSTRAINT list_member_event_action_check CHECK ((action = ANY (ARRAY['added'::text, 'removed'::text, 'entered'::text, 'left'::text]))),
     CONSTRAINT list_member_event_definition_version_js_safe CHECK (((definition_version >= '-9007199254740991'::bigint) AND (definition_version <= '9007199254740991'::bigint))),
-    CONSTRAINT list_member_event_entity_type_check CHECK ((entity_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'project'::text]))),
+    CONSTRAINT list_member_event_entity_type_check CHECK (((entity_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'project'::text])) OR (entity_type ~ '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'::text))),
     CONSTRAINT list_member_event_reason_check CHECK ((reason = ANY (ARRAY['chosen'::text, 'bulk'::text, 'record_archived'::text, 'record_restored'::text, 'evaluated'::text, 'filter_changed'::text, 'automation'::text])))
 );
 
@@ -6508,8 +6975,10 @@ CREATE TABLE public.mail_draft (
     scheduled_at timestamp with time zone,
     scheduled_tz text,
     editor_state jsonb DEFAULT '{}'::jsonb NOT NULL,
+    scheduled_wall timestamp without time zone,
     CONSTRAINT mail_draft_anchor_type CHECK ((anchor_type = ANY (ARRAY['activity'::text, 'contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'project'::text]))),
     CONSTRAINT mail_draft_communication_context CHECK (((communication_context IS NULL) OR (communication_context = ANY (ARRAY['reply_to_inbound'::text, 'requested_followup'::text, 'precontract_quote'::text, 'active_deal_followup'::text, 'customer_service'::text, 'account_notice'::text, 'contract_notice'::text, 'invoice_or_payment'::text, 'marketing'::text])))),
+    CONSTRAINT mail_draft_local_time_has_zone CHECK (((scheduled_wall IS NULL) OR public.valid_intent_time(scheduled_wall, scheduled_tz))),
     CONSTRAINT mail_draft_schedule_pair CHECK (((scheduled_at IS NULL) = (scheduled_tz IS NULL))),
     CONSTRAINT mail_draft_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 );
@@ -6617,7 +7086,7 @@ CREATE TABLE public.notice (
     retracted_at timestamp with time zone,
     subject_parts jsonb,
     system_text jsonb,
-    CONSTRAINT notice_content_bounded CHECK (((length(subject) <= 200) AND (length(body) <= 2000))),
+    CONSTRAINT notice_content_bounded CHECK ((length(body) <= 2000)),
     CONSTRAINT notice_email_error_after_attempt CHECK (((email_error IS NULL) OR (email_attempted_at IS NOT NULL))),
     CONSTRAINT notice_email_error_bounded CHECK ((length(email_error) <= 500)),
     CONSTRAINT notice_subject_present CHECK ((subject <> ''::text)),
@@ -6897,6 +7366,9 @@ CREATE TABLE public.passport (
     oauth_grant_id uuid,
     last_used_at timestamp with time zone,
     work_areas text[],
+    app_issuer text,
+    app_subject text,
+    CONSTRAINT passport_app_caller_pair CHECK (((app_issuer IS NULL) = (app_subject IS NULL))),
     CONSTRAINT passport_expires_after_creation CHECK ((expires_at > created_at))
 );
 
@@ -6958,7 +7430,7 @@ CREATE TABLE public.privacy_notice_case (
     CONSTRAINT privacy_notice_case_due_shape CHECK (((state <> ALL (ARRAY['open'::text, 'assigned'::text, 'queued'::text, 'delivery_failed'::text, 'blocked'::text])) OR (due_at IS NOT NULL))),
     CONSTRAINT privacy_notice_case_none_shape CHECK (((rule <> 'none'::text) OR ((due_at IS NULL) AND (completed_at IS NOT NULL) AND (cardinality(allowed_routes) = 0)))),
     CONSTRAINT privacy_notice_case_queued_names_its_delivery CHECK (((state <> 'queued'::text) OR (delivery_id IS NOT NULL))),
-    CONSTRAINT privacy_notice_case_resolution_note_length CHECK (((resolution_note IS NULL) OR (char_length(resolution_note) <= 500))),
+    CONSTRAINT privacy_notice_case_resolution_note_length CHECK (((resolution_note IS NULL) OR (char_length(resolution_note) <= 2000))),
     CONSTRAINT privacy_notice_case_resolution_shape CHECK (((state = ANY (ARRAY['exempt_with_reason'::text, 'provided_elsewhere'::text])) = (resolution_note IS NOT NULL))),
     CONSTRAINT privacy_notice_case_review_shape CHECK ((((state = 'source_review'::text) = (rule = 'unassessed'::text)) AND ((state <> 'source_review'::text) OR ((source_kind IS NULL) AND (due_at IS NULL) AND (cardinality(allowed_routes) = 0))))),
     CONSTRAINT privacy_notice_case_rule CHECK ((rule = ANY (ARRAY['unassessed'::text, 'none'::text, 'art13'::text, 'art14'::text]))),
@@ -6986,7 +7458,7 @@ CREATE TABLE public.privacy_request_proof (
     CONSTRAINT privacy_request_proof_actor_type CHECK ((completed_by_type = ANY (ARRAY['human'::text, 'agent'::text, 'connector'::text, 'system'::text]))),
     CONSTRAINT privacy_request_proof_counts_object CHECK ((jsonb_typeof(erased_counts) = 'object'::text)),
     CONSTRAINT privacy_request_proof_identity_check CHECK ((identity_check = ANY (ARRAY['confirm_link'::text, 'address_on_file'::text, 'id_document'::text, 'in_person'::text, 'not_verified'::text, 'unknown'::text]))),
-    CONSTRAINT privacy_request_proof_kind CHECK ((request_kind = ANY (ARRAY['access'::text, 'rectify'::text, 'erasure'::text]))),
+    CONSTRAINT privacy_request_proof_kind CHECK ((request_kind = ANY (ARRAY['access'::text, 'rectify'::text, 'erasure'::text, 'restriction'::text]))),
     CONSTRAINT privacy_request_proof_result CHECK ((result = ANY (ARRAY['fulfilled'::text, 'rejected'::text])))
 );
 
@@ -7033,7 +7505,7 @@ CREATE TABLE public.product_translation (
     version bigint DEFAULT 1 NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT product_translation_bounded CHECK (((length(name) <= 500) AND ((description IS NULL) OR (length(description) <= 4000)))),
+    CONSTRAINT product_translation_bounded CHECK (((description IS NULL) OR (char_length(description) <= 20000))),
     CONSTRAINT product_translation_language_shape CHECK ((language ~ '^[a-z]{2}$'::text)),
     CONSTRAINT product_translation_name_present CHECK ((btrim(name) <> ''::text)),
     CONSTRAINT product_translation_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
@@ -7090,7 +7562,6 @@ CREATE TABLE public.project_health_assessment (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     supersedes_assessment_id uuid,
     CONSTRAINT project_health_not_its_own_successor CHECK ((supersedes_assessment_id IS DISTINCT FROM id)),
-    CONSTRAINT project_health_note_bounded CHECK (((note IS NULL) OR (length(note) <= 4000))),
     CONSTRAINT project_health_state_known CHECK ((state = ANY (ARRAY['on_track'::text, 'at_risk'::text, 'off_track'::text]))),
     CONSTRAINT project_health_trouble_is_explained CHECK (((state = 'on_track'::text) OR ((note IS NOT NULL) AND (length(btrim(note)) > 0))))
 );
@@ -7304,10 +7775,29 @@ CASE
 END) STORED,
     CONSTRAINT record_grant_access_check CHECK ((access = ANY (ARRAY['read'::text, 'write'::text]))),
     CONSTRAINT record_grant_expires_after_creation CHECK ((expires_at > created_at)),
-    CONSTRAINT record_grant_record_shape CHECK ((num_nonnulls(contact_id, company_id, deal_id, lead_id, project_id) = 1)),
-    CONSTRAINT record_grant_record_type_check CHECK ((record_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'project'::text]))),
+    CONSTRAINT record_grant_record_shape CHECK ((num_nonnulls(contact_id, company_id, deal_id, lead_id, project_id) =
+CASE
+    WHEN (record_type ~ '^ext:'::text) THEN 0
+    ELSE 1
+END)),
+    CONSTRAINT record_grant_record_type_check CHECK (((record_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'project'::text])) OR (record_type ~ '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'::text))),
     CONSTRAINT record_grant_subject_type_check CHECK ((subject_type = ANY (ARRAY['user'::text, 'team'::text]))),
     CONSTRAINT record_grant_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.record_link (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    from_type text NOT NULL,
+    from_id uuid NOT NULL,
+    to_type text NOT NULL,
+    to_id uuid NOT NULL,
+    link_type text NOT NULL,
+    captured_by text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT record_link_from_type_check CHECK ((from_type = ANY (ARRAY['deal'::text, 'company'::text, 'contact'::text]))),
+    CONSTRAINT record_link_not_itself CHECK (((from_type <> to_type) OR (from_id <> to_id))),
+    CONSTRAINT record_link_to_type_check CHECK ((to_type = ANY (ARRAY['deal'::text, 'company'::text, 'contact'::text]))),
+    CONSTRAINT record_link_type_check CHECK (((link_type = ANY (ARRAY['follow_up_of'::text, 'renews'::text, 'related_to'::text])) OR (link_type ~ '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'::text)))
 );
 
 CREATE TABLE public.record_role (
@@ -7690,6 +8180,21 @@ CREATE TABLE public.sales_initiative_baseline (
     CONSTRAINT sales_initiative_baseline_amount_exact CHECK (((amount_minor_base >= '-9007199254740991'::bigint) AND (amount_minor_base <= '9007199254740991'::bigint)))
 );
 
+CREATE TABLE public.sales_initiative_enrolment (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    initiative_id uuid NOT NULL,
+    record_type text NOT NULL,
+    record_id uuid NOT NULL,
+    reason text NOT NULL,
+    joined_at timestamp with time zone NOT NULL,
+    left_at timestamp with time zone,
+    captured_by text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT sales_initiative_enrolment_dates_check CHECK (((left_at IS NULL) OR (left_at >= joined_at))),
+    CONSTRAINT sales_initiative_enrolment_reason_check CHECK ((reason = ANY (ARRAY['rule'::text, 'picked'::text, 'carried'::text]))),
+    CONSTRAINT sales_initiative_enrolment_type_check CHECK ((record_type = ANY (ARRAY['lead'::text, 'deal'::text])))
+);
+
 CREATE TABLE public.sales_initiative_member (
     initiative_id uuid NOT NULL,
     record_type text NOT NULL,
@@ -7752,7 +8257,7 @@ CREATE TABLE public.saved_view (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     archived_at timestamp with time zone,
-    CONSTRAINT saved_view_resource_check CHECK ((resource = ANY (ARRAY['contacts'::text, 'companies'::text, 'deals'::text, 'activities'::text, 'leads'::text, 'partners'::text, 'projects'::text]))),
+    CONSTRAINT saved_view_resource_check CHECK (((resource = ANY (ARRAY['contacts'::text, 'companies'::text, 'deals'::text, 'activities'::text, 'leads'::text, 'partners'::text, 'projects'::text])) OR (resource ~ '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'::text))),
     CONSTRAINT saved_view_shared_scope_check CHECK ((shared_scope = ANY (ARRAY['private'::text, 'team'::text, 'workspace'::text]))),
     CONSTRAINT saved_view_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 );
@@ -7779,9 +8284,12 @@ CREATE TABLE public.scheduled_send (
     agent_passport_id uuid,
     agent_on_behalf_of uuid,
     also_links jsonb,
+    scheduled_wall timestamp without time zone,
+    rearmed_at timestamp with time zone,
     CONSTRAINT scheduled_send_agent_provenance_shape CHECK ((((principal_kind = 'agent'::text) AND (agent_actor_id IS NOT NULL) AND (length(btrim(agent_actor_id)) > 0)) OR ((principal_kind <> 'agent'::text) AND (agent_actor_id IS NULL) AND (agent_passport_id IS NULL) AND (agent_on_behalf_of IS NULL)))),
     CONSTRAINT scheduled_send_also_links_shape CHECK (((also_links IS NULL) OR ((origin_kind = 'reply'::text) AND (jsonb_typeof(also_links) = 'array'::text)))),
     CONSTRAINT scheduled_send_held_shape CHECK ((((status = 'held'::text) AND (held_reason IS NOT NULL)) OR ((status <> 'held'::text) AND (held_reason IS NULL)))),
+    CONSTRAINT scheduled_send_local_time_has_zone CHECK (((scheduled_wall IS NULL) OR public.valid_intent_time(scheduled_wall, scheduled_tz))),
     CONSTRAINT scheduled_send_origin_kind CHECK ((origin_kind = ANY (ARRAY['reply'::text, 'account'::text]))),
     CONSTRAINT scheduled_send_origin_links_shape CHECK (((origin_links IS NULL) OR (jsonb_typeof(origin_links) = 'array'::text))),
     CONSTRAINT scheduled_send_origin_shape CHECK ((((origin_kind = 'reply'::text) AND (anchor_activity_id IS NOT NULL) AND (origin_links IS NULL)) OR ((origin_kind = 'account'::text) AND (anchor_activity_id IS NULL) AND (origin_links IS NOT NULL)))),
@@ -7940,8 +8448,8 @@ CASE
     ELSE NULL::uuid
 END)))),
     CONSTRAINT signal_entity_shape CHECK ((entity_unkeyed OR (entity_id IS NULL) OR (num_nonnulls(entity_deal_id, entity_company_id, entity_contact_id, entity_project_id) = 1))),
-    CONSTRAINT signal_entity_type_check CHECK (((entity_type IS NULL) OR (entity_type = ANY (ARRAY['deal'::text, 'company'::text, 'contact'::text, 'project'::text])))),
-    CONSTRAINT signal_kind_check CHECK ((kind = ANY (ARRAY['stalled_deal'::text, 'champion_left'::text, 'reengagement'::text, 'buying_intent'::text, 'risk'::text, 'other'::text, 'contract_ended'::text, 'new_opportunity'::text, 'commitment_made'::text, 'ghosted_thread'::text, 'project_gone_quiet'::text, 'funding'::text, 'leadership_change'::text, 'expansion'::text, 'product_launch'::text, 'technical_change'::text]))),
+    CONSTRAINT signal_entity_type_check CHECK (((entity_type IS NULL) OR (entity_type = ANY (ARRAY['deal'::text, 'company'::text, 'contact'::text, 'project'::text])) OR (entity_type ~ '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'::text))),
+    CONSTRAINT signal_kind_check CHECK (((kind = ANY (ARRAY['stalled_deal'::text, 'champion_left'::text, 'reengagement'::text, 'buying_intent'::text, 'risk'::text, 'other'::text, 'contract_ended'::text, 'new_opportunity'::text, 'commitment_made'::text, 'ghosted_thread'::text, 'project_gone_quiet'::text, 'funding'::text, 'leadership_change'::text, 'expansion'::text, 'product_launch'::text, 'technical_change'::text])) OR (kind ~ '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'::text))),
     CONSTRAINT signal_owner_private_names_its_owner CHECK (((visibility <> 'owner'::text) OR (owner_id IS NOT NULL))),
     CONSTRAINT signal_resolution_confidence_check CHECK (((resolution_confidence IS NULL) OR ((resolution_confidence >= (0)::numeric) AND (resolution_confidence <= (1)::numeric)))),
     CONSTRAINT signal_resolution_state_check CHECK ((resolution_state = ANY (ARRAY['resolved'::text, 'low_confidence'::text, 'unresolved'::text, 'dropped'::text]))),
@@ -8043,6 +8551,7 @@ CREATE TABLE public.stage (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     archived_at timestamp with time zone,
+    name_translations jsonb DEFAULT '{}'::jsonb NOT NULL,
     CONSTRAINT stage_semantic_check CHECK ((semantic = ANY (ARRAY['open'::text, 'won'::text, 'lost'::text]))),
     CONSTRAINT stage_terminal_prob CHECK ((((semantic = 'won'::text) AND (win_probability = 100)) OR ((semantic = 'lost'::text) AND (win_probability = 0)) OR (semantic = 'open'::text))),
     CONSTRAINT stage_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint))),
@@ -8223,7 +8732,7 @@ CREATE TABLE public.taggable (
     assigned_by_kind text,
     assigned_at timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT taggable_assigned_by_kind_check CHECK (((assigned_by_kind IS NULL) OR (assigned_by_kind = ANY (ARRAY['human'::text, 'agent'::text, 'import'::text])))),
-    CONSTRAINT taggable_entity_type_check CHECK ((entity_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'project'::text])))
+    CONSTRAINT taggable_entity_type_check CHECK (((entity_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'project'::text])) OR (entity_type ~ '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'::text)))
 );
 
 CREATE TABLE public.tax_rate (
@@ -8472,7 +8981,7 @@ CASE
     ELSE NULL::uuid
 END)))),
     CONSTRAINT user_record_view_entity_shape CHECK ((entity_unkeyed OR (num_nonnulls(entity_company_id, entity_contact_id) = 1))),
-    CONSTRAINT user_record_view_entity_type_check CHECK ((entity_type = ANY (ARRAY['company'::text, 'contact'::text])))
+    CONSTRAINT user_record_view_entity_type_check CHECK (((entity_type = ANY (ARRAY['company'::text, 'contact'::text])) OR (entity_type ~ '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'::text)))
 );
 
 CREATE TABLE public.vault_secret (
@@ -8677,11 +9186,13 @@ CREATE TABLE public.web_form (
     privacy_notice text,
     privacy_notice_url text,
     product_id uuid,
+    handling_automation_id uuid,
+    handling_cutover_at timestamp with time zone,
     CONSTRAINT web_form_admission CHECK ((((sender = 'browser'::text) AND (secret_ref IS NULL) AND (cardinality(allowed_origins) > 0)) OR ((sender <> 'browser'::text) AND ((secret_ref IS NOT NULL) OR (sender = 'webflow'::text)) AND (cardinality(allowed_origins) = 0)))),
     CONSTRAINT web_form_consent_wording_bounded CHECK (((consent_wording IS NULL) OR (length(consent_wording) <= 2000))),
     CONSTRAINT web_form_field_map_object CHECK ((jsonb_typeof(field_map) = 'object'::text)),
     CONSTRAINT web_form_key_shape CHECK ((form_key ~ '^[A-Za-z0-9_-]{16,64}$'::text)),
-    CONSTRAINT web_form_name_present CHECK (((length(btrim(name)) > 0) AND (length(name) <= 200))),
+    CONSTRAINT web_form_name_present CHECK ((length(btrim(name)) > 0)),
     CONSTRAINT web_form_privacy_notice_bounded CHECK (((privacy_notice IS NULL) OR (length(privacy_notice) <= 500))),
     CONSTRAINT web_form_privacy_notice_url_https CHECK (((privacy_notice_url IS NULL) OR ((privacy_notice_url ~* '^https://[^/?#:@][^/?#@]*([/?#]|$)'::text) AND (length(privacy_notice_url) <= 2000)))),
     CONSTRAINT web_form_redirect_https CHECK (((redirect_url IS NULL) OR (redirect_url ~ '^https://'::text))),
@@ -8879,7 +9390,7 @@ CREATE TABLE public.weekly_review (
     CONSTRAINT weekly_review_mail_error_length CHECK (((mail_error IS NULL) OR (char_length(mail_error) <= 500))),
     CONSTRAINT weekly_review_mail_error_needs_an_attempt CHECK (((mail_error IS NULL) OR (mail_attempted_at IS NOT NULL))),
     CONSTRAINT weekly_review_money_names_its_currency CHECK (((base_currency IS NULL) = ((pipeline_created_minor IS NULL) AND (pipeline_won_minor IS NULL) AND (pipeline_lost_minor IS NULL)))),
-    CONSTRAINT weekly_review_narrative_length CHECK (((narrative IS NULL) OR (char_length(narrative) <= 600))),
+    CONSTRAINT weekly_review_narrative_length CHECK (((narrative IS NULL) OR (char_length(narrative) <= 2000))),
     CONSTRAINT weekly_review_narrative_needs_a_pass CHECK (((narrative IS NULL) OR (narrated_at IS NOT NULL))),
     CONSTRAINT weekly_review_new_counts_are_tallies CHECK (((leads_routed >= 0) AND (leads_answered_in_target >= 0) AND (leads_breached >= 0) AND (meetings_held >= 0) AND (meetings_with_next_step >= 0) AND ((pipeline_created_minor IS NULL) OR (pipeline_created_minor >= 0)) AND ((pipeline_won_minor IS NULL) OR (pipeline_won_minor >= 0)) AND ((pipeline_lost_minor IS NULL) OR (pipeline_lost_minor >= 0)))),
     CONSTRAINT weekly_review_next_steps_were_meetings CHECK ((meetings_with_next_step <= meetings_held)),
@@ -8925,7 +9436,7 @@ CREATE TABLE public.weekly_review_learning (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT weekly_review_learning_kind_check CHECK ((kind = ANY (ARRAY['worked'::text, 'did_not_work'::text, 'pattern'::text, 'experiment'::text]))),
     CONSTRAINT weekly_review_learning_position_sane CHECK (("position" >= 0)),
-    CONSTRAINT weekly_review_learning_text_bound CHECK ((length(text) <= 400)),
+    CONSTRAINT weekly_review_learning_text_bound CHECK ((char_length(text) <= 500)),
     CONSTRAINT weekly_review_learning_text_present CHECK ((btrim(text) <> ''::text))
 );
 
@@ -9115,6 +9626,8 @@ INSERT INTO public.activity_kind (kind) VALUES ('task');
 INSERT INTO public.activity_kind (kind) VALUES ('message');
 INSERT INTO public.channel_provider (provider, transport, label, credential_model, supplies_transport) VALUES ('telegram', 'core', 'Telegram', 'workspace_bot', true);
 INSERT INTO public.channel_provider (provider, transport, label, credential_model, supplies_transport) VALUES ('whatsapp', 'core', 'WhatsApp', 'workspace_bot', false);
+INSERT INTO public.channel_provider (provider, transport, label, credential_model, supplies_transport) VALUES ('dispact', 'core', 'Dispact', 'workspace_bot', false);
+INSERT INTO public.channel_provider (provider, transport, label, credential_model, supplies_transport) VALUES ('linkedin', 'core', 'LinkedIn', 'workspace_bot', false);
 INSERT INTO public.legal_entity (id, is_default, display_name, legal_name, address_line1, address_line2, address_postal_code, address_city, address_region, vat_id, register_court, register_number, logo_object_key, country, default_language, bank_account_holder, iban, bic, imprint, captured_by, version, created_at, updated_at, archived_at, offer_summary, icp, value_proposition, usp, signature_template) VALUES (public.uuidv7(), true, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'system:migration', 1, now(), now(), NULL, NULL, NULL, NULL, NULL, NULL);
 INSERT INTO public.deal_acquisition_source (id, key, label, sort_order, active, system, version, created_at, updated_at, shipped_label, shipped_label_key) VALUES (public.uuidv7(), 'inbound', 'Inbound', 10, true, true, 2, now(), now(), 'Inbound', 'acqSources.builtin.inbound');
 INSERT INTO public.deal_acquisition_source (id, key, label, sort_order, active, system, version, created_at, updated_at, shipped_label, shipped_label_key) VALUES (public.uuidv7(), 'outbound', 'Outbound', 20, true, true, 2, now(), now(), 'Outbound', 'acqSources.builtin.outbound');
@@ -9190,7 +9703,7 @@ INSERT INTO public.maskable_field (object, field) VALUES ('deal', 'company_id');
 INSERT INTO public.maskable_field (object, field) VALUES ('deal', 'project_id');
 INSERT INTO public.maskable_field (object, field) VALUES ('deal', 'partner_company_id');
 INSERT INTO public.maskable_field (object, field) VALUES ('partner', 'margin_tier');
-INSERT INTO public.home_read_fence (singleton, generation) VALUES (true, 2);
+INSERT INTO public.home_read_fence (singleton, generation) VALUES (true, 3);
 INSERT INTO public.lead_source (id, key, label, intent, sort_order, active, system, version, created_at, updated_at) VALUES (public.uuidv7(), 'manual', 'Created manually', 'neutral', 10, true, true, 1, now(), now());
 INSERT INTO public.lead_source (id, key, label, intent, sort_order, active, system, version, created_at, updated_at) VALUES (public.uuidv7(), 'inbound', 'Inbound', 'high', 20, true, true, 1, now(), now());
 INSERT INTO public.lead_source (id, key, label, intent, sort_order, active, system, version, created_at, updated_at) VALUES (public.uuidv7(), 'webform', 'Web form', 'high', 30, true, true, 1, now(), now());
@@ -9246,6 +9759,9 @@ ALTER TABLE ONLY public.activity_kind
 
 ALTER TABLE ONLY public.activity_link
     ADD CONSTRAINT activity_link_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.activity_link_suggestion
+    ADD CONSTRAINT activity_link_suggestion_pkey PRIMARY KEY (id);
 
 ALTER TABLE ONLY public.activity_mail_reference
     ADD CONSTRAINT activity_mail_reference_pkey PRIMARY KEY (activity_id, referenced_id);
@@ -9560,6 +10076,12 @@ ALTER TABLE ONLY public.channel_connection
 
 ALTER TABLE ONLY public.channel_provider
     ADD CONSTRAINT channel_provider_pkey PRIMARY KEY (provider);
+
+ALTER TABLE ONLY public.chat_link
+    ADD CONSTRAINT chat_link_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.chat_post_item
+    ADD CONSTRAINT chat_post_item_pkey PRIMARY KEY (id);
 
 ALTER TABLE ONLY public.close_date_run_member
     ADD CONSTRAINT close_date_run_member_pkey PRIMARY KEY (run_id, deal_id);
@@ -9925,6 +10447,9 @@ ALTER TABLE ONLY public.finance_connection
     ADD CONSTRAINT finance_connection_pkey PRIMARY KEY (id);
 
 ALTER TABLE ONLY public.finance_customer_link
+    ADD CONSTRAINT finance_customer_link_mapping_key UNIQUE (id, connection_id, company_id);
+
+ALTER TABLE ONLY public.finance_customer_link
     ADD CONSTRAINT finance_customer_link_pkey PRIMARY KEY (id);
 
 ALTER TABLE ONLY public.finance_external_customer
@@ -9935,6 +10460,9 @@ ALTER TABLE ONLY public.finance_external_customer
 
 ALTER TABLE ONLY public.finance_invoice
     ADD CONSTRAINT finance_invoice_connection_id_external_id_key UNIQUE (connection_id, external_id);
+
+ALTER TABLE ONLY public.finance_invoice
+    ADD CONSTRAINT finance_invoice_owner_key UNIQUE (id, connection_id, company_id);
 
 ALTER TABLE ONLY public.finance_invoice
     ADD CONSTRAINT finance_invoice_pkey PRIMARY KEY (id);
@@ -10004,6 +10532,9 @@ ALTER TABLE ONLY public.knowledge_corpus
 
 ALTER TABLE ONLY public.knowledge_document
     ADD CONSTRAINT knowledge_document_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.lawful_basis_confirmation
+    ADD CONSTRAINT lawful_basis_confirmation_pkey PRIMARY KEY (id);
 
 ALTER TABLE ONLY public.lead_disqualify_reason
     ADD CONSTRAINT lead_disqualify_reason_pkey PRIMARY KEY (id);
@@ -10266,6 +10797,9 @@ ALTER TABLE ONLY public.record_grant
 ALTER TABLE ONLY public.record_grant
     ADD CONSTRAINT record_grant_unique UNIQUE (record_type, record_id, subject_type, subject_id);
 
+ALTER TABLE ONLY public.record_link
+    ADD CONSTRAINT record_link_pkey PRIMARY KEY (id);
+
 ALTER TABLE ONLY public.record_role
     ADD CONSTRAINT record_role_key_key UNIQUE (key);
 
@@ -10358,6 +10892,9 @@ ALTER TABLE ONLY public.sales_goal_plan_revision
 
 ALTER TABLE ONLY public.sales_initiative_baseline
     ADD CONSTRAINT sales_initiative_baseline_pkey PRIMARY KEY (initiative_id, deal_id);
+
+ALTER TABLE ONLY public.sales_initiative_enrolment
+    ADD CONSTRAINT sales_initiative_enrolment_pkey PRIMARY KEY (id);
 
 ALTER TABLE ONLY public.sales_initiative_member
     ADD CONSTRAINT sales_initiative_member_pkey PRIMARY KEY (initiative_id, record_type, record_id);
@@ -10801,6 +11338,10 @@ CREATE INDEX booking_alias_booking_page_idx ON public.booking_alias USING btree 
 
 CREATE UNIQUE INDEX booking_alias_one_live_per_host ON public.booking_alias USING btree (host_user_id) WHERE (retired_at IS NULL);
 
+CREATE UNIQUE INDEX capture_connection_shared_mailbox ON public.capture_connection USING btree (provider, lower(account_label)) WHERE (user_id IS NULL);
+
+CREATE UNIQUE INDEX capture_import_connection_activity_key ON public.capture_import USING btree (connection_id, activity_id) WHERE (connection_id IS NOT NULL);
+
 CREATE INDEX capture_import_user_idx ON public.capture_import USING btree (user_id, activity_id);
 
 CREATE INDEX capture_owner_identity_withdrawn_at_idx ON public.capture_owner_identity_withdrawn USING btree (withdrawn_at);
@@ -10911,6 +11452,10 @@ CREATE INDEX company_scan_company_ix ON public.company_scan USING btree (company
 
 CREATE INDEX confirm_token_live_by_kind ON public.confirm_token USING btree (contact_id, kind, purpose_id) WHERE (consumed_at IS NULL);
 
+CREATE INDEX confirm_token_subject_request_id_idx ON public.confirm_token USING btree (subject_request_id);
+
+CREATE INDEX consent_event_subject_request_id_idx ON public.consent_event USING btree (subject_request_id);
+
 CREATE INDEX consent_qualifying_event_contact_ix ON public.consent_qualifying_event USING btree (contact_id, occurred_at DESC);
 
 CREATE INDEX consent_qualifying_event_lead_idx ON public.consent_qualifying_event USING btree (lead_id, occurred_at DESC) WHERE (lead_id IS NOT NULL);
@@ -10991,17 +11536,27 @@ CREATE INDEX extension_secret_workspace_user ON public.extension_secret USING bt
 
 CREATE INDEX finance_customer_link_company_ix ON public.finance_customer_link USING btree (connection_id, company_id) WHERE (archived_at IS NULL);
 
+CREATE INDEX finance_customer_link_directory_idx ON public.finance_customer_link USING btree (connection_id, external_customer_id);
+
 CREATE UNIQUE INDEX finance_customer_link_external_ux ON public.finance_customer_link USING btree (connection_id, external_customer_id) WHERE (archived_at IS NULL);
 
 CREATE INDEX finance_invoice_account_ix ON public.finance_invoice USING btree (company_id, issued_at DESC);
 
+CREATE INDEX finance_invoice_credit_owner_idx ON public.finance_invoice USING btree (credits_invoice_id, connection_id, company_id);
+
 CREATE INDEX finance_invoice_credits_ix ON public.finance_invoice USING btree (credits_invoice_id) WHERE (credits_invoice_id IS NOT NULL);
+
+CREATE INDEX finance_invoice_customer_owner_idx ON public.finance_invoice USING btree (customer_link_id, connection_id, company_id);
 
 CREATE INDEX finance_invoice_open_ix ON public.finance_invoice USING btree (company_id) WHERE ((open_minor > 0) AND (void_at IS NULL));
 
 CREATE INDEX finance_payment_account_ix ON public.finance_payment USING btree (company_id, paid_at DESC);
 
+CREATE INDEX finance_payment_customer_owner_idx ON public.finance_payment USING btree (customer_link_id, connection_id, company_id);
+
 CREATE INDEX finance_payment_invoice_ix ON public.finance_payment USING btree (invoice_id) WHERE (invoice_id IS NOT NULL);
+
+CREATE INDEX finance_payment_invoice_owner_idx ON public.finance_payment USING btree (invoice_id, connection_id, company_id);
 
 CREATE INDEX idx_aam_subject ON public.activity_audience_member USING btree (subject_type, subject_id);
 
@@ -11011,15 +11566,19 @@ CREATE INDEX idx_activity_answer_touch ON public.activity USING btree (id, occur
 
 CREATE INDEX idx_activity_attested_counterparty ON public.activity USING btree (counterparty_email) WHERE counterparty_outbound_attested;
 
+CREATE INDEX idx_activity_calendar_sends ON public.activity USING btree (calendar_uid, occurred_at DESC, id) WHERE ((calendar_uid IS NOT NULL) AND (kind = 'email'::text));
+
 CREATE INDEX idx_activity_channel_thread ON public.activity USING btree (channel_provider, thread_key) WHERE (channel_provider IS NOT NULL);
 
 CREATE INDEX idx_activity_counterparty_email ON public.activity USING btree (counterparty_email) WHERE (counterparty_email IS NOT NULL);
 
-CREATE INDEX idx_activity_direction ON public.activity USING btree (direction, occurred_at DESC) WHERE ((direction IS NOT NULL) AND (archived_at IS NULL));
+CREATE INDEX idx_activity_direction_page ON public.activity USING btree (direction, occurred_at DESC, id DESC) WHERE ((direction IS NOT NULL) AND (archived_at IS NULL));
 
 CREATE INDEX idx_activity_kind ON public.activity USING btree (kind, occurred_at DESC) WHERE (archived_at IS NULL);
 
 CREATE INDEX idx_activity_labeled ON public.activity USING btree (capture_labeled_at) WHERE (capture_labeled_at IS NOT NULL);
+
+CREATE INDEX idx_activity_link_suggestion_pending ON public.activity_link_suggestion USING btree (created_at, id) WHERE (status = 'pending'::text);
 
 CREATE INDEX idx_activity_meeting_host ON public.activity USING btree (host_user_id, occurred_at) WHERE ((kind = 'meeting'::text) AND (archived_at IS NULL));
 
@@ -11034,6 +11593,8 @@ CREATE INDEX idx_activity_raw_capture ON public.activity USING btree (raw_captur
 CREATE INDEX idx_activity_receipt_order ON public.activity USING btree (created_at, id) WHERE (archived_at IS NULL);
 
 CREATE INDEX idx_activity_reminders ON public.activity USING btree (remind_at) WHERE ((kind = 'task'::text) AND (remind_at IS NOT NULL) AND (is_done = false) AND (archived_at IS NULL));
+
+CREATE INDEX idx_activity_reply_unstamped ON public.activity USING btree (occurred_at DESC, id) WHERE ((reply_settled_at IS NULL) AND (direction = 'inbound'::text) AND (kind = ANY (ARRAY['email'::text, 'message'::text])));
 
 CREATE INDEX idx_activity_reply_verdict_history_activity ON public.activity_reply_verdict_history USING btree (activity_id, decided_at DESC);
 
@@ -11151,6 +11712,10 @@ CREATE INDEX idx_attachment_extraction_activity_settled ON public.attachment_ext
 
 CREATE INDEX idx_attachment_extraction_latest ON public.attachment_extraction USING btree (attachment_id, created_at DESC);
 
+CREATE INDEX idx_attachment_held_copy ON public.attachment USING btree (checksum, byte_size) WHERE ((checksum IS NOT NULL) AND (NOT bytes_withheld));
+
+CREATE INDEX idx_attachment_storage_key ON public.attachment USING btree (storage_key) WHERE (storage_key <> ''::text);
+
 CREATE INDEX idx_audit_actor ON public.audit_log USING btree (actor_id, occurred_at DESC);
 
 CREATE INDEX idx_audit_entity ON public.audit_log USING btree (entity_type, entity_id, occurred_at DESC);
@@ -11214,6 +11779,16 @@ CREATE INDEX idx_capture_sync_due ON public.capture_sync_state USING btree (next
 CREATE INDEX idx_capture_test_mailbox_sent_unechoed ON public.capture_test_mailbox_sent USING btree (user_id, sent_at) WHERE (echoed_at IS NULL);
 
 CREATE INDEX idx_capture_watch_renew ON public.capture_connection USING btree (watch_expires_at) WHERE ((watch_expires_at IS NOT NULL) AND (status = 'connected'::text));
+
+CREATE INDEX idx_chat_link_connection ON public.chat_link USING btree (connection_id);
+
+CREATE INDEX idx_chat_link_deal ON public.chat_link USING btree (deal_id);
+
+CREATE INDEX idx_chat_link_project ON public.chat_link USING btree (project_id);
+
+CREATE INDEX idx_chat_post_item_activity ON public.chat_post_item USING btree (activity_id) WHERE (activity_id IS NOT NULL);
+
+CREATE INDEX idx_chat_post_item_pending ON public.chat_post_item USING btree (link_id, created_at) WHERE (posted_at IS NULL);
 
 CREATE INDEX idx_close_date_run_member_deal ON public.close_date_run_member USING btree (deal_id);
 
@@ -11284,6 +11859,8 @@ CREATE INDEX idx_company_name_trgm ON public.company USING gin (public.f_fold_ap
 CREATE INDEX idx_company_owner ON public.company USING btree (owner_id) WHERE (archived_at IS NULL);
 
 CREATE INDEX idx_company_parent ON public.company USING btree (parent_company_id) WHERE (parent_company_id IS NOT NULL);
+
+CREATE INDEX idx_company_profile_field_source_activity ON public.company_profile_field USING btree (source_activity_id) WHERE (source_activity_id IS NOT NULL);
 
 CREATE INDEX idx_company_rel_type_cascade ON public.company_relationship_type USING btree (company_id);
 
@@ -11356,6 +11933,8 @@ CREATE INDEX idx_contact_phone_dedupe_scan ON public.contact_phone USING btree (
 CREATE INDEX idx_contact_search ON public.contact USING gin (search_tsv);
 
 CREATE INDEX idx_contact_signature_enrich_state_activity ON public.contact_signature_enrich_state USING btree (activity_id);
+
+CREATE INDEX idx_contact_signature_enrich_state_retry_activity ON public.contact_signature_enrich_state USING btree (retry_activity_id) WHERE (retry_activity_id IS NOT NULL);
 
 CREATE INDEX idx_contact_social_linkedin_profile ON public.contact_social USING btree ("substring"(lower(handle), '^(?:https?://)?(?:[a-z0-9-]+\.)*linkedin\.com/in/([^/?#]+)'::text)) WHERE (platform = 'linkedin'::text);
 
@@ -11629,6 +12208,8 @@ CREATE INDEX idx_partner_stage ON public.partner USING btree (relationship_stage
 
 CREATE INDEX idx_partner_tier ON public.partner USING btree (margin_tier) WHERE (archived_at IS NULL);
 
+CREATE INDEX idx_passport_app_caller ON public.passport USING btree (app_issuer, app_subject, created_at DESC) WHERE (app_issuer IS NOT NULL);
+
 CREATE INDEX idx_passport_on_behalf_of ON public.passport USING btree (on_behalf_of);
 
 CREATE INDEX idx_pph_project ON public.project_phase_history USING btree (project_id, occurred_at DESC);
@@ -11678,6 +12259,8 @@ CREATE INDEX idx_record_grant_lead ON public.record_grant USING btree (lead_id) 
 CREATE INDEX idx_record_grant_project ON public.record_grant USING btree (project_id) WHERE (project_id IS NOT NULL);
 
 CREATE INDEX idx_record_grant_subject ON public.record_grant USING btree (subject_type, subject_id);
+
+CREATE INDEX idx_record_link_to ON public.record_link USING btree (to_type, to_id);
 
 CREATE INDEX idx_rel_employer_contacts ON public.relationship USING btree (company_id, contact_id) WHERE ((kind = 'employment'::text) AND (ended_at IS NULL) AND (archived_at IS NULL));
 
@@ -11893,6 +12476,18 @@ CREATE UNIQUE INDEX knowledge_document_one_per_content ON public.knowledge_docum
 
 CREATE UNIQUE INDEX knowledge_document_one_per_managed_page ON public.knowledge_document USING btree (corpus_id, filename) WHERE ((managed_source IS NOT NULL) AND (archived_at IS NULL));
 
+CREATE INDEX lawful_basis_confirmation_confirmed_by_cascade_idx ON public.lawful_basis_confirmation USING btree (confirmed_by);
+
+CREATE INDEX lawful_basis_confirmation_contact_id_cascade_idx ON public.lawful_basis_confirmation USING btree (contact_id);
+
+CREATE INDEX lawful_basis_confirmation_delivery ON public.lawful_basis_confirmation USING btree (delivery_id) WHERE (delivery_id IS NOT NULL);
+
+CREATE INDEX lawful_basis_confirmation_lead_id_cascade_idx ON public.lawful_basis_confirmation USING btree (lead_id);
+
+CREATE INDEX lawful_basis_confirmation_open_contact ON public.lawful_basis_confirmation USING btree (contact_id, confirmed_by) WHERE ((contact_id IS NOT NULL) AND (spent_at IS NULL));
+
+CREATE INDEX lawful_basis_confirmation_open_lead ON public.lawful_basis_confirmation USING btree (lead_id, confirmed_by) WHERE ((lead_id IS NOT NULL) AND (spent_at IS NULL));
+
 CREATE UNIQUE INDEX lead_disqualify_reason_label_once ON public.lead_disqualify_reason USING btree (lower(btrim(label)));
 
 CREATE INDEX lead_product_idx ON public.lead USING btree (product_id) WHERE (product_id IS NOT NULL);
@@ -11985,6 +12580,12 @@ CREATE INDEX reporting_stage_events ON public.deal_stage_history USING btree (de
 
 CREATE INDEX sales_initiative_baseline_deal_idx ON public.sales_initiative_baseline USING btree (deal_id);
 
+CREATE INDEX sales_initiative_enrolment_initiative_idx ON public.sales_initiative_enrolment USING btree (initiative_id);
+
+CREATE UNIQUE INDEX sales_initiative_enrolment_open_idx ON public.sales_initiative_enrolment USING btree (initiative_id, record_type, record_id) WHERE (left_at IS NULL);
+
+CREATE INDEX sales_initiative_enrolment_record_idx ON public.sales_initiative_enrolment USING btree (record_type, record_id);
+
 CREATE INDEX sales_initiative_member_record_idx ON public.sales_initiative_member USING btree (record_type, record_id);
 
 CREATE INDEX sales_initiative_status_idx ON public.sales_initiative USING btree (status) WHERE (archived_at IS NULL);
@@ -12023,6 +12624,8 @@ CREATE UNIQUE INDEX uq_activity_link ON public.activity_link USING btree (activi
 
 CREATE UNIQUE INDEX uq_activity_link_project ON public.activity_link USING btree (activity_id) WHERE (entity_type = 'project'::text);
 
+CREATE UNIQUE INDEX uq_activity_link_suggestion_target ON public.activity_link_suggestion USING btree (activity_id, entity_type, entity_id);
+
 CREATE UNIQUE INDEX uq_activity_participant ON public.activity_participant USING btree (activity_id, role, user_id, contact_id, address, channel_user_id) NULLS NOT DISTINCT;
 
 CREATE UNIQUE INDEX uq_activity_retention_evidence ON public.activity_retention_evidence USING btree (activity_id, deal_id, deal_name, project_id, project_name, basis) NULLS NOT DISTINCT WHERE ((basis <> 'controller_pin'::text) AND ((deal_id IS NOT NULL) OR (project_id IS NOT NULL)));
@@ -12044,6 +12647,16 @@ CREATE UNIQUE INDEX uq_capture_exclusion ON public.capture_exclusion USING btree
 CREATE UNIQUE INDEX uq_capture_freemail_domain ON public.capture_freemail_domain USING btree (domain);
 
 CREATE UNIQUE INDEX uq_channel_connection_provider ON public.channel_connection USING btree (provider) WHERE (archived_at IS NULL);
+
+CREATE UNIQUE INDEX uq_chat_link_channel ON public.chat_link USING btree (provider, channel_slug) WHERE (archived_at IS NULL);
+
+CREATE UNIQUE INDEX uq_chat_link_deal ON public.chat_link USING btree (deal_id) WHERE ((archived_at IS NULL) AND (deal_id IS NOT NULL));
+
+CREATE UNIQUE INDEX uq_chat_link_project ON public.chat_link USING btree (project_id) WHERE ((archived_at IS NULL) AND (project_id IS NOT NULL));
+
+CREATE UNIQUE INDEX uq_chat_post_item_activity ON public.chat_post_item USING btree (link_id, activity_id) WHERE (activity_id IS NOT NULL);
+
+CREATE UNIQUE INDEX uq_chat_post_item_event ON public.chat_post_item USING btree (link_id, event_id);
 
 CREATE UNIQUE INDEX uq_close_date_run_one_running ON public.close_date_run USING btree (status) WHERE (status = 'running'::text);
 
@@ -12094,6 +12707,8 @@ CREATE UNIQUE INDEX uq_deal_source ON public.deal USING btree (source_system, so
 CREATE UNIQUE INDEX uq_deal_suggestion_open_company ON public.deal_suggestion USING btree (company_id) WHERE (state = 'open'::text);
 
 CREATE UNIQUE INDEX uq_dedupe_candidate_pair ON public.dedupe_candidate USING btree (entity_type, COALESCE(left_contact_id, left_company_id, left_lead_id), COALESCE(right_contact_id, right_company_id, right_lead_id));
+
+CREATE UNIQUE INDEX uq_dedupe_candidate_pair_ext ON public.dedupe_candidate USING btree (entity_type, left_ext_id, right_ext_id) WHERE (left_ext_id IS NOT NULL);
 
 CREATE UNIQUE INDEX uq_forecast_snapshot_daily ON public.forecast_snapshot USING btree (period_start, period_end, scope_kind, scope_id, local_day) WHERE ((trigger = 'daily'::text) AND (pipeline_id IS NULL) AND (population_fingerprint = ''::text));
 
@@ -12156,6 +12771,8 @@ CREATE UNIQUE INDEX uq_record_assignment_deal_user ON public.record_assignment U
 CREATE UNIQUE INDEX uq_record_assignment_project_team ON public.record_assignment USING btree (project_id, role_id, team_id) WHERE ((project_id IS NOT NULL) AND (team_id IS NOT NULL) AND (archived_at IS NULL));
 
 CREATE UNIQUE INDEX uq_record_assignment_project_user ON public.record_assignment USING btree (project_id, role_id, user_id) WHERE ((project_id IS NOT NULL) AND (user_id IS NOT NULL) AND (archived_at IS NULL));
+
+CREATE UNIQUE INDEX uq_record_link_pair ON public.record_link USING btree (from_type, from_id, to_type, to_id, link_type);
 
 CREATE UNIQUE INDEX uq_rel_billing_contact ON public.relationship USING btree (company_id, contact_id, role) WHERE ((kind = 'billing_contact'::text) AND (archived_at IS NULL));
 
@@ -12231,6 +12848,8 @@ CREATE UNIQUE INDEX voice_profile_version_one_active ON public.voice_profile_ver
 
 CREATE INDEX voice_profile_version_predecessor_ix ON public.voice_profile_version USING btree (voice_profile_id, predecessor_version);
 
+CREATE UNIQUE INDEX web_form_handling_automation ON public.web_form USING btree (handling_automation_id) WHERE (handling_automation_id IS NOT NULL);
+
 CREATE INDEX web_form_product_idx ON public.web_form USING btree (product_id) WHERE (product_id IS NOT NULL);
 
 CREATE INDEX workflow_run_by_automation ON public.workflow_run USING btree (handler, "right"(idempotency_key, 36), created_at DESC, id DESC) WHERE (status <> 'skipped'::text);
@@ -12245,9 +12864,15 @@ CREATE TRIGGER activity_assignee_id_retirement_guard BEFORE INSERT OR UPDATE ON 
 
 CREATE CONSTRAINT TRIGGER activity_class_needs_evidence AFTER DELETE ON public.activity_retention_evidence DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION public.activity_class_needs_evidence();
 
+CREATE TRIGGER activity_clears_reply_settled AFTER UPDATE OF thread_key, kind, channel_provider, direction, archived_at, occurred_at, occurred_precision, counterparty_email ON public.activity FOR EACH ROW EXECUTE FUNCTION public.activity_clears_reply_settled();
+
 CREATE TRIGGER activity_due_time_follows_due_at BEFORE INSERT OR UPDATE OF due_at, due_has_time ON public.activity FOR EACH ROW EXECUTE FUNCTION public.activity_due_time_follows_due_at();
 
-CREATE TRIGGER activity_last_activity AFTER UPDATE OF occurred_at, archived_at, audience, origin, kind, meeting_status, occurred_precision, call_outcome ON public.activity FOR EACH ROW WHEN (((old.occurred_at IS DISTINCT FROM new.occurred_at) OR (old.archived_at IS DISTINCT FROM new.archived_at) OR (old.audience IS DISTINCT FROM new.audience) OR (old.origin IS DISTINCT FROM new.origin) OR (old.kind IS DISTINCT FROM new.kind) OR (old.meeting_status IS DISTINCT FROM new.meeting_status) OR (old.occurred_precision IS DISTINCT FROM new.occurred_precision) OR (old.call_outcome IS DISTINCT FROM new.call_outcome))) EXECUTE FUNCTION public.trg_activity_last_activity();
+CREATE TRIGGER activity_intent_insert BEFORE INSERT ON public.activity FOR EACH ROW WHEN (((new.due_wall IS NOT NULL) OR (new.remind_wall IS NOT NULL))) EXECUTE FUNCTION public.maintain_intent_times('due_wall', 'due_zone', 'due_at', 'remind_wall', 'remind_zone', 'remind_at');
+
+CREATE TRIGGER activity_intent_update BEFORE UPDATE OF due_wall, due_zone, due_at, remind_wall, remind_zone, remind_at ON public.activity FOR EACH ROW WHEN (((new.due_wall IS NOT NULL) OR (new.remind_wall IS NOT NULL) OR (old.due_wall IS NOT NULL) OR (old.remind_wall IS NOT NULL))) EXECUTE FUNCTION public.maintain_intent_times('due_wall', 'due_zone', 'due_at', 'remind_wall', 'remind_zone', 'remind_at');
+
+CREATE TRIGGER activity_last_activity AFTER UPDATE OF occurred_at, archived_at, audience, origin, kind, meeting_status, occurred_precision, call_outcome, bulk_mail_attested ON public.activity FOR EACH ROW WHEN (((old.occurred_at IS DISTINCT FROM new.occurred_at) OR (old.archived_at IS DISTINCT FROM new.archived_at) OR (old.audience IS DISTINCT FROM new.audience) OR (old.origin IS DISTINCT FROM new.origin) OR (old.kind IS DISTINCT FROM new.kind) OR (old.meeting_status IS DISTINCT FROM new.meeting_status) OR (old.occurred_precision IS DISTINCT FROM new.occurred_precision) OR (old.call_outcome IS DISTINCT FROM new.call_outcome) OR (old.bulk_mail_attested IS DISTINCT FROM new.bulk_mail_attested))) EXECUTE FUNCTION public.trg_activity_last_activity();
 
 CREATE TRIGGER activity_link_ceiling BEFORE INSERT ON public.activity_link FOR EACH ROW EXECUTE FUNCTION public.activity_link_refuses_past_the_ceiling();
 
@@ -12257,9 +12882,11 @@ CREATE TRIGGER activity_link_no_company_meeting BEFORE INSERT OR UPDATE ON publi
 
 CREATE TRIGGER activity_link_project_last_activity AFTER INSERT OR DELETE OR UPDATE ON public.activity_link FOR EACH ROW EXECUTE FUNCTION public.trg_activity_link_project_last_activity();
 
+CREATE TRIGGER activity_link_suggestion_touch BEFORE UPDATE ON public.activity_link_suggestion FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
 CREATE TRIGGER activity_no_company_meeting_on_rekind BEFORE UPDATE OF kind ON public.activity FOR EACH ROW EXECUTE FUNCTION public.activity_refuses_becoming_a_company_meeting();
 
-CREATE TRIGGER activity_project_last_activity AFTER UPDATE OF occurred_at, archived_at, audience, origin, kind, meeting_status, occurred_precision, call_outcome ON public.activity FOR EACH ROW WHEN (((old.occurred_at IS DISTINCT FROM new.occurred_at) OR (old.archived_at IS DISTINCT FROM new.archived_at) OR (old.audience IS DISTINCT FROM new.audience) OR (old.origin IS DISTINCT FROM new.origin) OR (old.kind IS DISTINCT FROM new.kind) OR (old.meeting_status IS DISTINCT FROM new.meeting_status) OR (old.occurred_precision IS DISTINCT FROM new.occurred_precision) OR (old.call_outcome IS DISTINCT FROM new.call_outcome))) EXECUTE FUNCTION public.trg_activity_project_last_activity();
+CREATE TRIGGER activity_project_last_activity AFTER UPDATE OF occurred_at, archived_at, audience, origin, kind, meeting_status, occurred_precision, call_outcome, bulk_mail_attested ON public.activity FOR EACH ROW WHEN (((old.occurred_at IS DISTINCT FROM new.occurred_at) OR (old.archived_at IS DISTINCT FROM new.archived_at) OR (old.audience IS DISTINCT FROM new.audience) OR (old.origin IS DISTINCT FROM new.origin) OR (old.kind IS DISTINCT FROM new.kind) OR (old.meeting_status IS DISTINCT FROM new.meeting_status) OR (old.occurred_precision IS DISTINCT FROM new.occurred_precision) OR (old.call_outcome IS DISTINCT FROM new.call_outcome) OR (old.bulk_mail_attested IS DISTINCT FROM new.bulk_mail_attested))) EXECUTE FUNCTION public.trg_activity_project_last_activity();
 
 CREATE TRIGGER activity_refuse_restricted_mutation BEFORE DELETE OR UPDATE ON public.activity FOR EACH ROW EXECUTE FUNCTION public.activity_refuse_restricted_mutation();
 
@@ -12299,6 +12926,8 @@ CREATE TRIGGER company_refuse_anchor_retirement BEFORE INSERT OR UPDATE OF merge
 
 CREATE TRIGGER consent_text_version_no_edit_after_publish BEFORE UPDATE ON public.consent_text_version FOR EACH ROW EXECUTE FUNCTION public.consent_text_version_is_immutable();
 
+CREATE TRIGGER contact_email_clears_reply_settled AFTER INSERT OR DELETE OR UPDATE ON public.contact_email FOR EACH ROW EXECUTE FUNCTION public.contact_email_clears_reply_settled();
+
 CREATE TRIGGER contact_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.contact FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION public.refuse_retired_member_work('owner_id');
 
 CREATE TRIGGER contract_set_updated_at BEFORE UPDATE ON public.contract FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
@@ -12319,6 +12948,8 @@ CREATE TRIGGER deal_room_thread_touch BEFORE UPDATE ON public.deal_room_thread F
 
 CREATE TRIGGER deal_room_touch BEFORE UPDATE ON public.deal_room FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
 
+CREATE TRIGGER deleted_mail_clears_reply_settled AFTER DELETE ON public.activity REFERENCING OLD TABLE AS written_mail FOR EACH STATEMENT EXECUTE FUNCTION public.written_mail_clears_reply_settled();
+
 CREATE TRIGGER forecast_contribution_is_frozen BEFORE UPDATE ON public.forecast_contribution FOR EACH ROW EXECUTE FUNCTION public.forecast_contribution_is_frozen();
 
 CREATE TRIGGER forecast_snapshot_is_frozen BEFORE UPDATE ON public.forecast_snapshot FOR EACH ROW EXECUTE FUNCTION public.forecast_snapshot_is_frozen();
@@ -12331,7 +12962,7 @@ CREATE TRIGGER home_read_fence_audience_member AFTER DELETE OR UPDATE ON public.
 
 CREATE TRIGGER home_read_fence_authority AFTER UPDATE ON public.report_projection_fence FOR EACH STATEMENT EXECUTE FUNCTION public.advance_home_read_fence();
 
-CREATE TRIGGER home_read_fence_capture_import AFTER UPDATE ON public.capture_import FOR EACH ROW WHEN (((old.user_id IS DISTINCT FROM new.user_id) OR (old.activity_id IS DISTINCT FROM new.activity_id))) EXECUTE FUNCTION public.advance_home_read_fence();
+CREATE TRIGGER home_read_fence_capture_import AFTER UPDATE ON public.capture_import FOR EACH ROW WHEN (((old.user_id IS DISTINCT FROM new.user_id) OR (old.activity_id IS DISTINCT FROM new.activity_id) OR (old.connection_id IS DISTINCT FROM new.connection_id))) EXECUTE FUNCTION public.advance_home_read_fence();
 
 CREATE TRIGGER home_read_fence_capture_import_removed AFTER DELETE ON public.capture_import FOR EACH STATEMENT EXECUTE FUNCTION public.advance_home_read_fence();
 
@@ -12369,9 +13000,19 @@ CREATE TRIGGER home_read_fence_record_grant AFTER DELETE OR UPDATE ON public.rec
 
 CREATE TRIGGER home_read_fence_scrub AFTER INSERT ON public.audit_log FOR EACH ROW WHEN ((new.action = ANY (ARRAY['erase'::text, 'anonymize'::text, 'restrict'::text]))) EXECUTE FUNCTION public.advance_home_read_fence();
 
+CREATE TRIGGER home_read_fence_shared_mailbox_readers AFTER UPDATE OF reader_team_id, mail_posture ON public.capture_connection FOR EACH ROW WHEN (((old.reader_team_id IS DISTINCT FROM new.reader_team_id) OR (old.mail_posture IS DISTINCT FROM new.mail_posture))) EXECUTE FUNCTION public.advance_home_read_fence();
+
+CREATE TRIGGER home_read_fence_team_archived AFTER UPDATE OF archived_at ON public.team FOR EACH ROW WHEN (((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL))) EXECUTE FUNCTION public.advance_home_read_fence();
+
+CREATE TRIGGER home_read_fence_team_membership_moved AFTER UPDATE OF team_id, user_id ON public.team_membership FOR EACH STATEMENT EXECUTE FUNCTION public.advance_home_read_fence();
+
+CREATE TRIGGER home_read_fence_team_membership_removed AFTER DELETE ON public.team_membership FOR EACH STATEMENT EXECUTE FUNCTION public.advance_home_read_fence();
+
 CREATE TRIGGER home_read_fence_workspace_domain AFTER UPDATE ON public.workspace_email_domain FOR EACH ROW WHEN (((old.domain IS DISTINCT FROM new.domain) OR (old.verified AND (NOT new.verified)))) EXECUTE FUNCTION public.advance_home_read_fence();
 
 CREATE TRIGGER home_read_fence_workspace_domain_removed AFTER DELETE ON public.workspace_email_domain FOR EACH STATEMENT EXECUTE FUNCTION public.advance_home_read_fence();
+
+CREATE TRIGGER inserted_mail_clears_reply_settled AFTER INSERT ON public.activity REFERENCING NEW TABLE AS written_mail FOR EACH STATEMENT EXECUTE FUNCTION public.written_mail_clears_reply_settled();
 
 CREATE TRIGGER intro_request_introducer_user_id_retirement_guard BEFORE INSERT OR UPDATE ON public.intro_request FOR EACH ROW WHEN (((new.introducer_user_id IS NOT NULL) AND ((new.archived_at IS NULL) AND (new.closed_at IS NULL)))) EXECUTE FUNCTION public.refuse_retired_member_work('introducer_user_id');
 
@@ -12387,6 +13028,10 @@ CREATE TRIGGER list_steward_id_retirement_guard BEFORE INSERT OR UPDATE ON publi
 
 CREATE TRIGGER mail_draft_author_id_retirement_guard BEFORE INSERT OR UPDATE ON public.mail_draft FOR EACH ROW WHEN (((new.author_id IS NOT NULL) AND true)) EXECUTE FUNCTION public.refuse_retired_member_work('author_id');
 
+CREATE TRIGGER meeting_intent_insert BEFORE INSERT ON public.activity FOR EACH ROW WHEN ((new.meeting_wall IS NOT NULL)) EXECUTE FUNCTION public.maintain_intent_times('meeting_wall', 'meeting_zone', 'occurred_at');
+
+CREATE TRIGGER meeting_intent_update BEFORE UPDATE OF meeting_wall, meeting_zone, occurred_at, meeting_status ON public.activity FOR EACH ROW WHEN ((((new.meeting_wall IS NOT NULL) OR (old.meeting_wall IS NOT NULL)) AND ((new.meeting_status IS NULL) OR (new.meeting_status = 'booked'::text) OR (old.meeting_status IS NULL) OR (old.meeting_status = 'booked'::text) OR (new.meeting_wall IS DISTINCT FROM old.meeting_wall) OR (new.meeting_zone IS DISTINCT FROM old.meeting_zone) OR (new.occurred_at IS DISTINCT FROM old.occurred_at)))) EXECUTE FUNCTION public.maintain_intent_times('meeting_wall', 'meeting_zone', 'occurred_at');
+
 CREATE TRIGGER meeting_invitation_attention_follows_status BEFORE INSERT OR UPDATE ON public.meeting_invitation FOR EACH ROW EXECUTE FUNCTION public.meeting_invitation_attention_follows_status();
 
 CREATE TRIGGER meeting_invitation_host_user_id_retirement_guard BEFORE INSERT OR UPDATE ON public.meeting_invitation FOR EACH ROW WHEN (((new.host_user_id IS NOT NULL) AND ((new.status <> ALL (ARRAY['canceled'::text, 'erased'::text])) OR (NOT new.cleanup_complete)))) EXECUTE FUNCTION public.refuse_retired_member_work('host_user_id');
@@ -12394,6 +13039,8 @@ CREATE TRIGGER meeting_invitation_host_user_id_retirement_guard BEFORE INSERT OR
 CREATE TRIGGER meeting_proposal_host_user_id_retirement_guard BEFORE INSERT OR UPDATE ON public.meeting_proposal FOR EACH ROW WHEN (((new.host_user_id IS NOT NULL) AND true)) EXECUTE FUNCTION public.refuse_retired_member_work('host_user_id');
 
 CREATE TRIGGER notice_system_text_retire BEFORE UPDATE ON public.notice FOR EACH ROW EXECUTE FUNCTION public.retire_changed_system_text();
+
+CREATE TRIGGER participant_clears_reply_settled AFTER INSERT OR DELETE OR UPDATE ON public.activity_participant FOR EACH ROW EXECUTE FUNCTION public.participant_clears_reply_settled();
 
 CREATE TRIGGER privacy_notice_case_owner_user_id_retirement_guard BEFORE INSERT OR UPDATE ON public.privacy_notice_case FOR EACH ROW WHEN (((new.owner_user_id IS NOT NULL) AND (new.state = ANY (ARRAY['open'::text, 'assigned'::text, 'queued'::text, 'delivery_failed'::text, 'blocked'::text, 'source_review'::text])))) EXECUTE FUNCTION public.refuse_retired_member_work('owner_user_id');
 
@@ -12447,7 +13094,1319 @@ CREATE TRIGGER settlement_evidence_share BEFORE INSERT OR DELETE OR UPDATE ON pu
 
 CREATE TRIGGER signal_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.signal FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND ((new.archived_at IS NULL) AND (new.status = 'open'::text)))) EXECUTE FUNCTION public.refuse_retired_member_work('owner_id');
 
+CREATE TRIGGER snooze_intent_insert BEFORE INSERT ON public.activity_reader_state FOR EACH ROW WHEN ((new.snoozed_wall IS NOT NULL)) EXECUTE FUNCTION public.maintain_intent_times('snoozed_wall', 'snoozed_zone', 'snoozed_until');
+
+CREATE TRIGGER snooze_intent_insert BEFORE INSERT ON public.brief_item FOR EACH ROW WHEN ((new.snoozed_wall IS NOT NULL)) EXECUTE FUNCTION public.maintain_intent_times('snoozed_wall', 'snoozed_zone', 'snoozed_until');
+
+CREATE TRIGGER snooze_intent_update BEFORE UPDATE OF snoozed_wall, snoozed_zone, snoozed_until ON public.activity_reader_state FOR EACH ROW WHEN (((new.snoozed_wall IS NOT NULL) OR (old.snoozed_wall IS NOT NULL))) EXECUTE FUNCTION public.maintain_intent_times('snoozed_wall', 'snoozed_zone', 'snoozed_until');
+
+CREATE TRIGGER snooze_intent_update BEFORE UPDATE OF snoozed_wall, snoozed_zone, snoozed_until ON public.brief_item FOR EACH ROW WHEN (((new.snoozed_wall IS NOT NULL) OR (old.snoozed_wall IS NOT NULL))) EXECUTE FUNCTION public.maintain_intent_times('snoozed_wall', 'snoozed_zone', 'snoozed_until');
+
 CREATE TRIGGER stamp_participant_domain_evidence BEFORE INSERT OR UPDATE ON public.activity_participant FOR EACH ROW EXECUTE FUNCTION public.stamp_participant_domain_evidence();
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.activity FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000, "origin": 20000, "source": 20000, "subject": 20000, "audience": 20000, "due_zone": 20000, "language": 20000, "owed_ask": 2000, "direction": 20000, "source_id": 20000, "task_type": 20000, "thread_key": 20000, "captured_by": 20000, "remind_zone": 20000, "calendar_uid": 20000, "call_outcome": 20000, "meeting_zone": 20000, "owed_verdict": 20000, "capture_label": 120, "reply_verdict": 20000, "source_system": 20000, "meeting_status": 20000, "audience_reason": 2000, "calendar_method": 20000, "redacted_fields": 20000, "retention_class": 20000, "channel_provider": 20000, "reply_verdict_by": 20000, "body_completeness": 20000, "deal_topic_digest": 20000, "restricted_reason": 2000, "agenda_fingerprint": 20000, "counterparty_email": 20000, "occurred_precision": 20000, "owed_verdict_ruleset": 20000, "owed_verdict_declined_ruleset": 20000, "capture_label_declined_ruleset": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"agenda_fingerprint":20000,"audience":20000,"audience_reason":2000,"body_completeness":20000,"calendar_method":20000,"calendar_uid":20000,"call_outcome":20000,"capture_label":120,"capture_label_declined_ruleset":20000,"captured_by":20000,"channel_provider":20000,"counterparty_email":20000,"deal_topic_digest":20000,"direction":20000,"due_zone":20000,"kind":20000,"language":20000,"meeting_status":20000,"meeting_zone":20000,"occurred_precision":20000,"origin":20000,"owed_ask":2000,"owed_verdict":20000,"owed_verdict_declined_ruleset":20000,"owed_verdict_ruleset":20000,"redacted_fields":20000,"remind_zone":20000,"reply_verdict":20000,"reply_verdict_by":20000,"restricted_reason":2000,"retention_class":20000,"source":20000,"source_id":20000,"source_system":20000,"subject":20000,"task_type":20000,"thread_key":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.activity_audience_member FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"created_by": 20000, "subject_type": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"created_by":20000,"subject_type":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.activity_calendar_method_backfill FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"outcome": 20000, "direction": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"direction":20000,"outcome":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.activity_commitment_admission FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"locator": 20000, "outcome": 20000, "summary": 500, "captured_by": 20000, "rule_version": 20000, "source_quote": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"locator":20000,"outcome":20000,"rule_version":20000,"source_quote":20000,"summary":500}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.activity_identity FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"attested_by": 20000, "identity_key": 20000, "identity_kind": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"attested_by":20000,"identity_key":20000,"identity_kind":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.activity_kind FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"kind":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.activity_link FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"entity_type": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"entity_type":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.activity_link_suggestion FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"unit": 20000, "reason": 500, "status": 20000, "decided_by": 20000, "captured_by": 20000, "entity_type": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"decided_by":20000,"entity_type":20000,"reason":500,"status":20000,"unit":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.activity_mail_reference FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"referenced_id": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"referenced_id":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.activity_meeting_attendee_repair FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"outcome": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"outcome":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.activity_meeting_history FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"actor": 20000, "status": 20000, "source_id": 20000, "source_system": 20000, "scheduled_precision": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"actor":20000,"scheduled_precision":20000,"source_id":20000,"source_system":20000,"status":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.activity_meeting_rsvp_backfill FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"outcome": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"outcome":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.activity_own_sent_mail_repair FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"outcome": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"outcome":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.activity_participant FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"role": 20000, "address": 20000, "response": 20000, "channel_user_id": 20000, "address_domain_folded": 20000, "domain_evidence_precision": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"address":20000,"address_domain_folded":20000,"channel_user_id":20000,"domain_evidence_precision":20000,"response":20000,"role":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.activity_participant_replay FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"outcome": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"outcome":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.activity_reader_state FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"state": 20000, "set_by": 20000, "reopen_on": 20000, "snoozed_zone": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"reopen_on":20000,"set_by":20000,"snoozed_zone":20000,"state":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.activity_reply_verdict_history FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"verdict": 20000, "decided_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"decided_by":20000,"verdict":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.activity_request_settlement FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"verdict": 20000, "remaining": 20000, "decided_by": 20000, "rule_version": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"decided_by":20000,"remaining":20000,"rule_version":20000,"verdict":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.activity_retention_evidence FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"basis": 20000, "reason": 2000, "deal_name": 120, "project_name": 120, "decided_by_name": 120}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"basis":20000,"deal_name":120,"decided_by_name":120,"project_name":120,"reason":2000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.activity_review_response FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"source": 20000, "outcome": 20000, "captured_by": 20000, "template_key": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"outcome":20000,"source":20000,"template_key":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.activity_review_template FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"key": 20000, "label": 120, "source": 20000, "outcome": 20000, "captured_by": 20000, "shipped_label": 120, "shipped_label_key": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"key":20000,"label":120,"outcome":20000,"shipped_label":120,"shipped_label_key":20000,"source":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.activity_sales_state FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000, "set_by": 20000, "thread_key": 20000, "channel_provider": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"channel_provider":20000,"kind":20000,"set_by":20000,"thread_key":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.agent_run FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"goal": 20000, "status": 20000, "agent_spec": 20000, "trigger_ref": 20000, "degrade_reason": 2000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"agent_spec":20000,"degrade_reason":2000,"goal":20000,"status":20000,"trigger_ref":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.agent_standing_grant FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"state": 20000, "agent_spec": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"agent_spec":20000,"state":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.agent_task FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"tool": 20000, "status": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"status":20000,"tool":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.ai_call FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000, "task": 20000, "tier": 20000, "model_id": 20000, "provider": 20000, "config_hash": 20000, "secret_kinds": 20000, "served_model": 20000, "subject_type": 20000, "finish_reason": 2000, "attempt_reason": 2000, "context_scopes": 20000, "error_sentinel": 20000, "decision_choice": 20000, "served_provider": 20000, "schema_downgrade": 20000, "context_fingerprint": 20000, "request_fingerprint": 20000, "served_identity_source": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"attempt_reason":2000,"config_hash":20000,"context_fingerprint":20000,"context_scopes":20000,"decision_choice":20000,"error_sentinel":20000,"finish_reason":2000,"kind":20000,"model_id":20000,"provider":20000,"request_fingerprint":20000,"schema_downgrade":20000,"secret_kinds":20000,"served_identity_source":20000,"served_model":20000,"served_provider":20000,"subject_type":20000,"task":20000,"tier":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.ai_call_config FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"hash": 20000, "prompt_version": 20000, "task_contract_hash": 20000, "routing_config_hash": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"hash":20000,"prompt_version":20000,"routing_config_hash":20000,"task_contract_hash":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.ai_feedback FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"note": 2000, "source": 20000, "verdict": 20000, "claim_key": 20000, "claim_kind": 20000, "captured_by": 20000, "value_shown": 20000, "subject_type": 20000, "corrected_value": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"claim_key":20000,"claim_kind":20000,"corrected_value":20000,"note":2000,"source":20000,"subject_type":20000,"value_shown":20000,"verdict":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.ai_model_rate FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"lane": 20000, "source": 20000, "model_id": 20000, "provider": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"lane":20000,"model_id":20000,"provider":20000,"source":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.ai_task_run FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000, "state": 20000, "source": 20000, "ai_task": 20000, "summary": 500, "actor_scope": 20000, "subject_type": 20000, "quantity_unit": 20000, "subject_label": 120, "degrade_reason": 2000, "occurrence_key": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"actor_scope":20000,"ai_task":20000,"degrade_reason":2000,"kind":20000,"occurrence_key":20000,"quantity_unit":20000,"source":20000,"state":20000,"subject_label":120,"subject_type":20000,"summary":500}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.ai_usage FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"task": 20000, "tier": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"task":20000,"tier":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.analytics_share FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000, "target": 20000, "scope_kind": 20000, "token_hash": 20000, "captured_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"kind":20000,"scope_kind":20000,"target":20000,"token_hash":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.app_user FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"email": 20000, "locale": 20000, "status": 20000, "timezone": 20000, "seat_type": 20000, "avatar_origin": 20000, "greeting_name": 120, "password_hash": 20000, "timezone_set_by": 20000, "weekly_delivery": 20000, "avatar_object_key": 20000, "service_extension": 20000, "routine_mail_scope": 20000, "email_domain_folded": 20000, "routine_delivery_time": 20000, "morning_brief_delivery": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"avatar_object_key":20000,"avatar_origin":20000,"email":20000,"email_domain_folded":20000,"greeting_name":120,"locale":20000,"morning_brief_delivery":20000,"password_hash":20000,"routine_delivery_time":20000,"routine_mail_scope":20000,"seat_type":20000,"service_extension":20000,"status":20000,"timezone":20000,"timezone_set_by":20000,"weekly_delivery":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.approval FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000, "status": 20000, "summary": 500, "diff_hash": 20000, "proposed_by": 20000, "target_label": 120, "context_digest": 20000, "effect_failure": 20000, "decision_reason": 2000, "target_entity_type": 20000, "co_target_entity_type": 20000, "requested_decider_source": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"co_target_entity_type":20000,"context_digest":20000,"decision_reason":2000,"diff_hash":20000,"effect_failure":20000,"kind":20000,"proposed_by":20000,"requested_decider_source":20000,"status":20000,"summary":500,"target_entity_type":20000,"target_label":120}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.approval_autonomy_policy FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"mode": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"mode":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.approval_preference FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"kind":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.assurance_cycle FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"scope": 20000, "opened_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"opened_by":20000,"scope":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.assurance_deal_receipt FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"outcome": 20000, "reasons": 2000, "captured_by": 20000, "policy_version": 20000, "input_fingerprint": 20000, "verdict_basis_digest": 20000, "verdict_input_checksum": 20000, "verdict_prompt_version": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"input_fingerprint":20000,"outcome":20000,"policy_version":20000,"reasons":2000,"verdict_basis_digest":20000,"verdict_input_checksum":20000,"verdict_prompt_version":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.assurance_exception FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"type": 20000, "status": 20000, "severity": 20000, "captured_by": 20000, "logical_key": 20000, "subject_kind": 20000, "delivery_state": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"delivery_state":20000,"logical_key":20000,"severity":20000,"status":20000,"subject_kind":20000,"type":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.assurance_input_change FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"subject_kind": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"subject_kind":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.assurance_resolution FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"reason": 2000, "outcome": 20000, "captured_by": 20000, "evidence_ref": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"evidence_ref":20000,"outcome":20000,"reason":2000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.assurance_run FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"digest": 20000, "status": 20000, "readiness": 20000, "captured_by": 20000, "requested_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"digest":20000,"readiness":20000,"requested_by":20000,"status":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.assurance_source_coverage FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"state": 20000, "source": 20000, "captured_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"source":20000,"state":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.assurance_task_item FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"state": 20000, "subject_kind": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"state":20000,"subject_kind":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.attachment FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"title": 120, "source": 20000, "category": 20000, "checksum": 20000, "filename": 20000, "doc_state": 20000, "captured_by": 20000, "entity_type": 20000, "storage_key": 20000, "content_type": 20000, "declared_type": 20000, "external_part_id": 20000, "external_source_id": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"category":20000,"checksum":20000,"content_type":20000,"declared_type":20000,"doc_state":20000,"entity_type":20000,"external_part_id":20000,"external_source_id":20000,"filename":20000,"source":20000,"storage_key":20000,"title":120}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.attachment_extraction FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"status": 20000, "question": 20000, "requested_by": 20000, "status_detail": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"question":20000,"requested_by":20000,"status":20000,"status_detail":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.auth_token FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"purpose": 20000, "token_hash": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"purpose":20000,"token_hash":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.automation FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"key": 20000, "name": 120, "tier": 20000, "origin": 20000, "paused_reason": 2000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"key":20000,"name":120,"origin":20000,"paused_reason":2000,"tier":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.automation_effect_claim FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"handler": 20000, "occurrence_key": 20000, "effect_fingerprint": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"effect_fingerprint":20000,"handler":20000,"occurrence_key":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.booking_alias FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"alias": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"alias":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.booking_page FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"slug": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"slug":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.brief_item FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"state": 20000, "finding": 500, "reopen_on": 20000, "snoozed_zone": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"finding":500,"reopen_on":20000,"snoozed_zone":20000,"state":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.brief_run FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"narrative": 2000, "mail_error": 500, "factors_omitted": 20000, "revenue_norm_currency": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"factors_omitted":20000,"mail_error":500,"narrative":2000,"revenue_norm_currency":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.bulk_confirmation FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"requested_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"requested_by":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.bulk_operation FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"verb": 20000, "record_type": 20000, "requested_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"record_type":20000,"requested_by":20000,"verb":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.capture_alias_refused FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"value": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"value":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.capture_alias_sighting FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"value": 20000, "source": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"source":20000,"value":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.capture_auto_enrich_state FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"last_outcome": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"last_outcome":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.capture_backfill FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"status": 20000, "last_error_class": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"last_error_class":20000,"status":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.capture_backfill_creation FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"kind":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.capture_connection FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"scopes": 20000, "status": 20000, "provider": 20000, "watch_ref": 20000, "mail_posture": 20000, "account_label": 120, "credential_ref": 20000, "provider_scopes": 20000, "history_baseline_tz": 20000, "history_baseline_set_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"account_label":120,"credential_ref":20000,"history_baseline_set_by":20000,"history_baseline_tz":20000,"mail_posture":20000,"provider":20000,"provider_scopes":20000,"scopes":20000,"status":20000,"watch_ref":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.capture_counterparty_hold FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000, "value": 20000, "created_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"created_by":20000,"kind":20000,"value":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.capture_exclusion FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000, "scope": 20000, "value": 20000, "created_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"created_by":20000,"kind":20000,"scope":20000,"value":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.capture_freemail_domain FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000, "domain": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"domain":20000,"kind":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.capture_import FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"delivered_by": 20000, "verdict_reason": 2000, "verdict_status": 20000, "verdict_reasons": 2000, "posture_at_import": 20000, "provider_message_ids": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"delivered_by":20000,"posture_at_import":20000,"provider_message_ids":20000,"verdict_reason":2000,"verdict_reasons":2000,"verdict_status":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.capture_owner_identity FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000, "value": 20000, "source": 20000, "created_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"created_by":20000,"kind":20000,"source":20000,"value":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.capture_owner_identity_withdrawn FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000, "value": 20000, "source": 20000, "created_by": 20000, "withdrawn_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"created_by":20000,"kind":20000,"source":20000,"value":20000,"withdrawn_by":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.capture_party_source FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"provider": 20000, "containers": 20000, "recipients": 20000, "policy_addresses": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"containers":20000,"policy_addresses":20000,"provider":20000,"recipients":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.capture_party_source_replay FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"outcome": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"outcome":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.capture_pending_counterparty FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000, "email": 20000, "domain": 20000, "status": 20000, "served_model": 20000, "disposition_reason": 2000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"disposition_reason":2000,"domain":20000,"email":20000,"kind":20000,"served_model":20000,"status":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.capture_sender_override FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"address": 20000, "decision": 20000, "captured_by": 20000, "overruled_kind": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"address":20000,"captured_by":20000,"decision":20000,"overruled_kind":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.capture_sweep_run FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"sweep": 20000, "outcome": 20000, "error_class": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"error_class":20000,"outcome":20000,"sweep":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.capture_sync_state FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"last_error_class": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"last_error_class":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.capture_test_mailbox_sent FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"subject": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"subject":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.capture_thread_verdict FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000, "status": 20000, "thread_key": 20000, "seen_addresses": 20000, "disposition_reason": 2000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"disposition_reason":2000,"kind":20000,"seen_addresses":20000,"status":20000,"thread_key":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.channel_connection FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"status": 20000, "address": 500, "provider": 20000, "channel_id": 20000, "channel_label": 120, "credential_ref": 20000, "events_credential_ref": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"address":500,"channel_id":20000,"channel_label":120,"credential_ref":20000,"events_credential_ref":20000,"provider":20000,"status":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.channel_provider FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"label": 120, "transport": 20000, "credential_model": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"credential_model":20000,"label":120,"transport":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.chat_link FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"status": 20000, "provider": 20000, "verbosity": 20000, "channel_name": 500, "channel_slug": 500, "card_message_id": 500, "card_fingerprint": 120, "channel_external_key": 500}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"card_fingerprint":120,"card_message_id":500,"channel_external_key":500,"channel_name":500,"channel_slug":500,"provider":20000,"status":20000,"verbosity":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.chat_post_item FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"tier": 20000, "event_type": 20000, "last_error": 500, "message_id": 500, "entity_type": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"entity_type":20000,"event_type":20000,"last_error":500,"message_id":500,"tier":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.close_date_run FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"status": 20000, "captured_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"status":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.close_date_run_member FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"outcome": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"outcome":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.commission_entry FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"status": 20000, "captured_by": 20000, "void_reason": 2000, "attribution_at_accrual": 20000, "margin_tier_at_accrual": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"attribution_at_accrual":20000,"captured_by":20000,"margin_tier_at_accrual":20000,"status":20000,"void_reason":2000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.comms_outbound FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"reason": 2000, "status": 20000, "subject": 20000, "provider": 20000, "message_id": 20000, "thread_key": 20000, "bounce_kind": 20000, "in_reply_to": 20000, "payload_ref": 20000, "sender_kind": 20000, "from_address": 20000, "template_key": 20000, "bounce_reason": 2000, "channel_user_id": 20000, "consent_purpose": 20000, "inline_logo_key": 20000, "redacted_fields": 20000, "bounce_recipient": 20000, "list_unsubscribe": 20000, "execution_authority": 20000, "provider_message_id": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"bounce_kind":20000,"bounce_reason":2000,"bounce_recipient":20000,"channel_user_id":20000,"consent_purpose":20000,"execution_authority":20000,"from_address":20000,"in_reply_to":20000,"inline_logo_key":20000,"list_unsubscribe":20000,"message_id":20000,"payload_ref":20000,"provider":20000,"provider_message_id":20000,"reason":2000,"redacted_fields":20000,"sender_kind":20000,"status":20000,"subject":20000,"template_key":20000,"thread_key":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.communication_basis FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000, "note": 2000, "thread_key": 20000, "captured_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"kind":20000,"note":2000,"thread_key":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.communication_decision FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"mode": 20000, "actor": 20000, "basis": 20000, "phase": 20000, "verdict": 20000, "purpose_key": 20000, "reason_code": 2000, "suppression": 20000, "subject_kind": 20000, "ruleset_codes": 20000, "legacy_verdict": 20000, "recipient_address": 20000, "resolved_category": 20000, "requested_category": 20000, "execution_authority": 20000, "data_protection_country": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"actor":20000,"basis":20000,"data_protection_country":20000,"execution_authority":20000,"legacy_verdict":20000,"mode":20000,"phase":20000,"purpose_key":20000,"reason_code":2000,"recipient_address":20000,"requested_category":20000,"resolved_category":20000,"ruleset_codes":20000,"subject_kind":20000,"suppression":20000,"verdict":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.communication_instruction FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"status": 20000, "explanation": 20000, "reason_code": 2000, "revoked_reason": 2000, "warning_version": 20000, "directed_by_agent": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"directed_by_agent":20000,"explanation":20000,"reason_code":2000,"revoked_reason":2000,"status":20000,"warning_version":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.communication_override FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"reason": 2000, "category": 20000, "captured_by": 20000, "decided_by_level": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"category":20000,"decided_by_level":20000,"reason":2000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.communication_review FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000, "state": 20000, "reason_code": 2000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"kind":20000,"reason_code":2000,"state":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.communication_suppression FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000, "source": 20000, "address": 20000, "captured_by": 20000, "address_hash": 20000, "address_key_id": 20000, "decided_by_level": 20000, "recorded_through": 20000, "recorded_for_addresses": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"address":20000,"address_hash":20000,"address_key_id":20000,"captured_by":20000,"decided_by_level":20000,"kind":20000,"recorded_for_addresses":20000,"recorded_through":20000,"source":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.company FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"email": 20000, "phone": 20000, "source": 20000, "industry": 20000, "lifecycle": 20000, "size_band": 20000, "legal_name": 500, "visibility": 20000, "captured_by": 20000, "description": 20000, "logo_origin": 20000, "name_source": 20000, "address_city": 20000, "linkedin_url": 20000, "address_line1": 500, "address_line2": 500, "source_system": 20000, "address_region": 20000, "geocode_status": 20000, "address_country": 20000, "logo_object_key": 20000, "geocode_provider": 20000, "logo_icon_origin": 20000, "geocode_input_hash": 20000, "address_postal_code": 20000, "logo_icon_object_key": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"address_city":20000,"address_country":20000,"address_line1":500,"address_line2":500,"address_postal_code":20000,"address_region":20000,"captured_by":20000,"description":20000,"email":20000,"geocode_input_hash":20000,"geocode_provider":20000,"geocode_status":20000,"industry":20000,"legal_name":500,"lifecycle":20000,"linkedin_url":20000,"logo_icon_object_key":20000,"logo_icon_origin":20000,"logo_object_key":20000,"logo_origin":20000,"name_source":20000,"phone":20000,"size_band":20000,"source":20000,"source_system":20000,"visibility":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.company_address_country FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"countries": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"countries":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.company_brief FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"fingerprint": 20000, "generated_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"fingerprint":20000,"generated_by":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.company_domain FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"domain": 20000, "source": 20000, "captured_by": 20000, "domain_folded": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"domain":20000,"domain_folded":20000,"source":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.company_domain_disposition FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"domain": 20000, "source": 20000, "status": 20000, "admission": 20000, "pending_reason": 2000, "admission_reason": 2000, "admission_source": 20000, "admission_reason_code": 2000, "admission_sender_kind": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"admission":20000,"admission_reason":2000,"admission_reason_code":2000,"admission_sender_kind":20000,"admission_source":20000,"domain":20000,"pending_reason":2000,"source":20000,"status":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.company_domain_question_reader FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"domain": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"domain":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.company_dossier FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"fingerprint": 20000, "generated_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"fingerprint":20000,"generated_by":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.company_fact FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"field": 20000, "value": 20000, "source": 20000, "category": 20000, "value_key": 20000, "source_url": 20000, "captured_by": 20000, "evidence_snippet": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"category":20000,"evidence_snippet":20000,"field":20000,"source":20000,"source_url":20000,"value":20000,"value_key":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.company_geocode_state FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"status": 20000, "provider": 20000, "input_hash": 20000, "last_outcome": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"input_hash":20000,"last_outcome":20000,"provider":20000,"status":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.company_growth_fit FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"fingerprint": 20000, "generated_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"fingerprint":20000,"generated_by":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.company_offered_value FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"field_key": 20000, "offered_value": 20000, "source_system": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"field_key":20000,"offered_value":20000,"source_system":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.company_profile_field FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"field": 20000, "value": 20000, "source": 20000, "source_url": 20000, "captured_by": 20000, "evidence_snippet": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"evidence_snippet":20000,"field":20000,"source":20000,"source_url":20000,"value":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.company_relationship_type FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"source": 20000, "captured_by": 20000, "relationship_type": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"relationship_type":20000,"source":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.company_scan FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"status": 20000, "fingerprint": 20000, "generated_by": 20000, "degrade_reason": 2000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"degrade_reason":2000,"fingerprint":20000,"generated_by":20000,"status":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.company_technical_state FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"lane": 20000, "last_outcome": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"lane":20000,"last_outcome":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.company_vat_check FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"status": 20000, "vat_number": 20000, "captured_by": 20000, "registered_name": 120, "registered_address": 20000, "consultation_number": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"consultation_number":20000,"registered_address":20000,"registered_name":120,"status":20000,"vat_number":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.confirm_token FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000, "token_hash": 20000, "delivered_to": 20000, "question_key": 20000, "question_locale": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"delivered_to":20000,"kind":20000,"question_key":20000,"question_locale":20000,"token_hash":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.consent_doi_token FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"token_hash": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"token_hash":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.consent_event FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"source": 20000, "new_state": 20000, "confirm_ip": 20000, "captured_by": 20000, "lawful_basis": 20000, "policy_version": 20000, "issuance_trigger": 20000, "confirm_user_agent": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"confirm_ip":20000,"confirm_user_agent":20000,"issuance_trigger":20000,"lawful_basis":20000,"new_state":20000,"policy_version":20000,"source":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.consent_purpose FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"key": 20000, "class": 20000, "label": 120, "frequency": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"class":20000,"frequency":20000,"key":20000,"label":120}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.consent_qualifying_event FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000, "note": 2000, "source": 20000, "captured_by": 20000, "retracted_by": 20000, "source_entity_type": 20000, "recorded_for_addresses": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"kind":20000,"note":2000,"recorded_for_addresses":20000,"retracted_by":20000,"source":20000,"source_entity_type":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.consent_text_version FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"key": 20000, "locale": 20000, "channel": 20000, "version": 20000, "content_hash": 20000, "jurisdiction": 20000, "subject_line": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"channel":20000,"content_hash":20000,"jurisdiction":20000,"key":20000,"locale":20000,"subject_line":20000,"version":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.contact FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"title": 120, "source": 20000, "visibility": 20000, "captured_by": 20000, "address_city": 20000, "photo_origin": 20000, "address_line1": 500, "address_line2": 500, "source_system": 20000, "address_region": 20000, "address_country": 20000, "narrowing_reason": 2000, "photo_object_key": 20000, "relationship_mark": 20000, "address_postal_code": 20000, "relationship_mark_set_by": 20000, "anonymized_address_hashes": 20000, "anonymized_address_key_id": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"address_city":20000,"address_country":20000,"address_line1":500,"address_line2":500,"address_postal_code":20000,"address_region":20000,"anonymized_address_hashes":20000,"anonymized_address_key_id":20000,"captured_by":20000,"narrowing_reason":2000,"photo_object_key":20000,"photo_origin":20000,"relationship_mark":20000,"relationship_mark_set_by":20000,"source":20000,"source_system":20000,"title":120,"visibility":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.contact_acquisition_evidence FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000, "note": 2000, "captured_by": 20000, "stated_source": 20000, "purpose_claimed": 20000, "source_entity_type": 20000, "request_retracted_by": 20000, "recorded_for_addresses": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"kind":20000,"note":2000,"purpose_claimed":20000,"recorded_for_addresses":20000,"request_retracted_by":20000,"source_entity_type":20000,"stated_source":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.contact_address_country FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"countries": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"countries":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.contact_brief FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"fingerprint": 20000, "generated_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"fingerprint":20000,"generated_by":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.contact_channel_identity FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"source": 20000, "provider": 20000, "username": 20000, "captured_by": 20000, "channel_user_id": 20000, "membership_bot_id": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"channel_user_id":20000,"membership_bot_id":20000,"provider":20000,"source":20000,"username":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.contact_confirm_submission FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000, "note": 2000, "field": 20000, "resolution": 20000, "resolved_by": 20000, "proposed_value": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"field":20000,"kind":20000,"note":2000,"proposed_value":20000,"resolution":20000,"resolved_by":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.contact_consent FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"state": 20000, "source": 20000, "lawful_basis": 20000, "policy_version": 20000, "recorded_for_addresses": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"lawful_basis":20000,"policy_version":20000,"recorded_for_addresses":20000,"source":20000,"state":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.contact_email FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"email": 20000, "source": 20000, "email_type": 20000, "captured_by": 20000, "email_domain_folded": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"email":20000,"email_domain_folded":20000,"email_type":20000,"source":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.contact_moment_dismissal FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"claim_key": 20000, "evidence_fingerprint": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"claim_key":20000,"evidence_fingerprint":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.contact_phone FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"phone": 20000, "source": 20000, "phone_type": 20000, "captured_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"phone":20000,"phone_type":20000,"source":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.contact_profile_field FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"field": 20000, "value": 20000, "source": 20000, "value_key": 20000, "source_ref": 20000, "captured_by": 20000, "evidence_snippet": 20000, "superseded_value": 20000, "superseded_captured_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"evidence_snippet":20000,"field":20000,"source":20000,"source_ref":20000,"superseded_captured_by":20000,"superseded_value":20000,"value":20000,"value_key":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.contact_provider_claim FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"source": 20000, "provider": 20000, "claim_key": 20000, "captured_by": 20000, "validation_status": 20000, "employment_processing_error": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"claim_key":20000,"employment_processing_error":20000,"provider":20000,"source":20000,"validation_status":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.contact_signature_enrich_state FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"last_outcome": 120, "last_skip_reason": 120}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"last_outcome":120,"last_skip_reason":120}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.contact_social FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"handle": 20000, "platform": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"handle":20000,"platform":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.contract FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"title": 120, "source": 20000, "status": 20000, "captured_by": 20000, "value_basis": 20000, "contract_number": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"contract_number":20000,"source":20000,"status":20000,"title":120,"value_basis":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.conversation_claim FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"body": 20000, "kind": 20000, "source": 20000, "status": 20000, "captured_by": 20000, "source_quote": 20000, "evidence_fingerprint": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"body":20000,"captured_by":20000,"evidence_fingerprint":20000,"kind":20000,"source":20000,"source_quote":20000,"status":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.custom_field FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"slug": 20000, "type": 20000, "label": 120, "object": 20000, "status": 20000, "column_name": 120, "activity_kinds": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"activity_kinds":20000,"column_name":120,"label":120,"object":20000,"slug":20000,"status":20000,"type":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.data_subject_request FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000, "status": 20000, "channel": 20000, "due_rule": 20000, "resolution": 20000, "subject_ref": 20000, "receipt_reference": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"channel":20000,"due_rule":20000,"kind":20000,"receipt_reference":20000,"resolution":20000,"status":20000,"subject_ref":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.data_task_review FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"task_id": 20000, "operator": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"operator":20000,"task_id":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.data_task_run FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"step": 20000, "status": 20000, "task_id": 20000, "first_release": 20000, "last_error_class": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"first_release":20000,"last_error_class":20000,"status":20000,"step":20000,"task_id":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.data_task_run_history FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"step": 20000, "task_id": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"step":20000,"task_id":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.deal FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"name": 120, "source": 20000, "status": 20000, "priority": 20000, "captured_by": 20000, "description": 20000, "lost_reason": 2000, "source_system": 20000, "commercial_mode": 20000, "lost_reason_code": 2000, "commercial_motion": 20000, "lost_reason_basis": 2000, "acquisition_source": 20000, "partner_attribution": 20000, "win_probability_set_by": 20000, "won_without_contract_detail": 20000, "won_without_contract_reason": 2000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"acquisition_source":20000,"captured_by":20000,"commercial_mode":20000,"commercial_motion":20000,"description":20000,"lost_reason":2000,"lost_reason_basis":2000,"lost_reason_code":2000,"name":120,"partner_attribution":20000,"priority":20000,"source":20000,"source_system":20000,"status":20000,"win_probability_set_by":20000,"won_without_contract_detail":20000,"won_without_contract_reason":2000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.deal_acquisition_source FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"key": 20000, "label": 120, "shipped_label": 120, "shipped_label_key": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"key":20000,"label":120,"shipped_label":120,"shipped_label_key":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.deal_correction FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"asking": 20000, "fields": 20000, "correction": 20000, "captured_by": 20000, "reversed_by": 20000, "standing_close_date": 20000, "remaining_open_stages": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"asking":20000,"captured_by":20000,"correction":20000,"fields":20000,"remaining_open_stages":20000,"reversed_by":20000,"standing_close_date":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.deal_document_hide FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"hidden_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"hidden_by":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.deal_line_item FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"sku": 500, "unit": 120, "captured_by": 20000, "description": 20000, "catalog_name": 500, "tax_category": 20000, "billing_model": 20000, "component_kind": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"billing_model":20000,"captured_by":20000,"catalog_name":500,"component_kind":20000,"description":20000,"sku":500,"tax_category":20000,"unit":120}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.deal_loss_reason FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"key": 20000, "label": 120, "shipped_label": 120, "shipped_label_key": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"key":20000,"label":120,"shipped_label":120,"shipped_label_key":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.deal_loss_reason_mapping FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"note_key": 20000, "decided_by": 20000, "reason_key": 2000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"decided_by":20000,"note_key":20000,"reason_key":2000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.deal_move_dismissal FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"fingerprint": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"fingerprint":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.deal_product FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"source": 20000, "component_kind": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"component_kind":20000,"source":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.deal_risk_day FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"captured_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.deal_room FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"state": 20000, "title": 120, "source": 20000, "captured_by": 20000, "welcome_message": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"source":20000,"state":20000,"title":120,"welcome_message":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.deal_room_comment FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"body": 20000, "source": 20000, "captured_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"body":20000,"captured_by":20000,"source":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.deal_room_document FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"title": 120, "source": 20000, "group_key": 20000, "captured_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"group_key":20000,"source":20000,"title":120}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.deal_room_engagement FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"kind":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.deal_room_invitation FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"source": 20000, "captured_by": 20000, "failure_reason": 2000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"failure_reason":2000,"source":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.deal_room_participant FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"email": 20000, "source": 20000, "capability": 20000, "captured_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"capability":20000,"captured_by":20000,"email":20000,"source":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.deal_room_session FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"source": 20000, "captured_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"source":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.deal_room_thread FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"state": 20000, "source": 20000, "captured_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"source":20000,"state":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.deal_stage_evidence FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"snippet": 500, "commitment": 20000, "author_side": 20000, "source_type": 20000, "extracted_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"author_side":20000,"commitment":20000,"extracted_by":20000,"snippet":500,"source_type":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.deal_stage_history FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"changed_by": 20000, "provenance": 20000, "semantic_at_change": 20000, "valuation_provenance": 20000, "lost_reason_code_at_change": 2000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"changed_by":20000,"lost_reason_code_at_change":2000,"provenance":20000,"semantic_at_change":20000,"valuation_provenance":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.deal_status_card FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"fingerprint": 20000, "generated_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"fingerprint":20000,"generated_by":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.deal_suggestion FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000, "state": 20000, "name_hint": 20000, "captured_by": 20000, "fingerprint": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"fingerprint":20000,"kind":20000,"name_hint":20000,"state":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.deal_suggestion_evidence FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"kind":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.dedupe_candidate FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"source": 20000, "captured_by": 20000, "disposition": 20000, "entity_type": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"disposition":20000,"entity_type":20000,"source":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.dedupe_scan_state FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"stream": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"stream":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.email_signature FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"phone": 20000, "title": 120}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"phone":20000,"title":120}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.embed_store_binding FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"status": 20000, "populated_identity": 20000, "reembedding_identity": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"populated_identity":20000,"reembedding_identity":20000,"status":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.embedding FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"model": 20000, "chunk_hash": 20000, "entity_type": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"chunk_hash":20000,"entity_type":20000,"model":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.erasure_suppression FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000, "key_id": 20000, "value_hash": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"key_id":20000,"kind":20000,"value_hash":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.existing_customer_notice FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"captured_by": 20000, "notice_text": 20000, "withdrawn_by": 20000, "customer_group": 20000, "withdrawn_reason": 2000, "collection_channel": 20000, "evidence_reference": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"collection_channel":20000,"customer_group":20000,"evidence_reference":20000,"notice_text":20000,"withdrawn_by":20000,"withdrawn_reason":2000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.extension_ingest_position FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"unit": 20000, "position": 20000, "source_system": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"position":20000,"source_system":20000,"unit":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.extension_ingest_refusal FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"unit": 20000, "refusal": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"refusal":20000,"unit":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.extension_secret FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"key": 20000, "vault_ref": 20000, "extension_name": 120}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"extension_name":120,"key":20000,"vault_ref":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.federated_identity FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"provider": 20000, "email_at_link": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"email_at_link":20000,"provider":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.field_mask FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"field": 20000, "object": 20000, "role_key": 20000, "condition": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"condition":20000,"field":20000,"object":20000,"role_key":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.field_provenance FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"source": 20000, "field_name": 120, "captured_by": 20000, "object_type": 20000, "evidence_ref": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"evidence_ref":20000,"field_name":120,"object_type":20000,"source":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.finance_connection FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"source": 20000, "status": 20000, "provider": 20000, "captured_by": 20000, "sync_cursor": 20000, "credential_ref": 20000, "last_error_code": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"credential_ref":20000,"last_error_code":20000,"provider":20000,"source":20000,"status":20000,"sync_cursor":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.finance_customer_link FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"source": 20000, "sync_hash": 20000, "captured_by": 20000, "external_customer_id": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"external_customer_id":20000,"source":20000,"sync_hash":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.finance_external_customer FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"source": 20000, "sync_hash": 20000, "captured_by": 20000, "external_customer_id": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"external_customer_id":20000,"source":20000,"sync_hash":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.finance_invoice FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"number": 20000, "source": 20000, "status": 20000, "sync_hash": 20000, "raw_status": 20000, "captured_by": 20000, "external_id": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"external_id":20000,"number":20000,"raw_status":20000,"source":20000,"status":20000,"sync_hash":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.finance_payment FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"source": 20000, "sync_hash": 20000, "captured_by": 20000, "external_id": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"external_id":20000,"source":20000,"sync_hash":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.forecast_call FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"note": 2000, "scope_kind": 20000, "captured_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"note":2000,"scope_kind":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.forecast_capture_status FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"failure": 20000, "context_key": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"context_key":20000,"failure":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.forecast_contribution FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"category": 20000, "captured_by": 20000, "risk_signals": 20000, "qualification": 20000, "exclusion_reason": 2000, "probability_source": 20000, "viability_disposition": 20000, "qualified_policy_version": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"category":20000,"exclusion_reason":2000,"probability_source":20000,"qualification":20000,"qualified_policy_version":20000,"risk_signals":20000,"viability_disposition":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.forecast_snapshot FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"trigger": 20000, "scope_kind": 20000, "captured_by": 20000, "range_version": 20000, "forward_measure": 20000, "landing_measure": 20000, "range_quantiles": 20000, "input_fingerprint": 20000, "definition_version": 20000, "risk_signals_version": 20000, "population_fingerprint": 20000, "qualified_policy_version": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"definition_version":20000,"forward_measure":20000,"input_fingerprint":20000,"landing_measure":20000,"population_fingerprint":20000,"qualified_policy_version":20000,"range_quantiles":20000,"range_version":20000,"risk_signals_version":20000,"scope_kind":20000,"trigger":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.geocode_cache FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"query": 20000, "provider": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"provider":20000,"query":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.geocode_country_cache FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"query": 20000, "provider": 20000, "country_codes": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"country_codes":20000,"provider":20000,"query":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.home_read_cache FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"read": 20000, "request_key": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"read":20000,"request_key":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.home_read_fence_pending FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"fence": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"fence":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.idempotency_key FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"key": 20000, "endpoint": 20000, "principal_id": 20000, "request_digest": 20000, "response_content_type": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"endpoint":20000,"key":20000,"principal_id":20000,"request_digest":20000,"response_content_type":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.intro_request FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"origin": 20000, "status": 20000, "route_type": 20000, "captured_by": 20000, "decision_reason": 2000, "fallback_policy": 20000, "internal_reason": 2000, "forwardable_note": 2000, "recorded_channel": 20000, "value_for_target": 20000, "note_generated_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"decision_reason":2000,"fallback_policy":20000,"forwardable_note":2000,"internal_reason":2000,"note_generated_by":20000,"origin":20000,"recorded_channel":20000,"route_type":20000,"status":20000,"value_for_target":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.knowledge_corpus FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"name": 120, "captured_by": 20000, "description": 20000, "managed_source": 20000, "topic_statement": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"description":20000,"managed_source":20000,"name":120,"topic_statement":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.knowledge_document FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"checksum": 20000, "filename": 20000, "captured_by": 20000, "storage_key": 20000, "content_type": 20000, "ingest_detail": 20000, "ingest_status": 20000, "managed_source": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"checksum":20000,"content_type":20000,"filename":20000,"ingest_detail":20000,"ingest_status":20000,"managed_source":20000,"storage_key":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.lead FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"email": 20000, "phone": 20000, "title": 120, "origin": 20000, "source": 20000, "status": 20000, "industry": 20000, "source_id": 20000, "captured_by": 20000, "company_name": 120, "linkedin_url": 20000, "origin_detail": 500, "source_system": 20000, "status_set_by": 20000, "disqualify_note": 2000, "email_domain_folded": 20000, "partner_accepted_by": 20000, "candidate_company_key": 20000, "score_override_reason": 2000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"candidate_company_key":20000,"captured_by":20000,"company_name":120,"disqualify_note":2000,"email":20000,"email_domain_folded":20000,"industry":20000,"linkedin_url":20000,"origin":20000,"origin_detail":500,"partner_accepted_by":20000,"phone":20000,"score_override_reason":2000,"source":20000,"source_id":20000,"source_system":20000,"status":20000,"status_set_by":20000,"title":120}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.lead_disqualify_reason FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"label": 120, "shipped_label": 120, "shipped_label_key": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"label":120,"shipped_label":120,"shipped_label_key":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.lead_manual_signal FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"band": 20000, "factor": 20000, "reason": 2000, "signal_kind": 20000, "superseded_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"band":20000,"factor":20000,"reason":2000,"signal_kind":20000,"superseded_by":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.lead_origin FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"key": 20000, "label": 120, "intent": 20000, "shipped_label": 120, "shipped_label_key": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"intent":20000,"key":20000,"label":120,"shipped_label":120,"shipped_label_key":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.lead_privacy_notice FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"state": 20000, "locale": 20000, "failure": 20000, "template_key": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"failure":20000,"locale":20000,"state":20000,"template_key":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.lead_score_history FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"override_reason": 2000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"override_reason":2000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.lead_source FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"key": 20000, "label": 120, "intent": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"intent":20000,"key":20000,"label":120}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.legal_entity FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"bic": 20000, "icp": 20000, "usp": 20000, "iban": 20000, "vat_id": 20000, "country": 20000, "imprint": 20000, "legal_name": 500, "captured_by": 20000, "address_city": 20000, "address_line1": 500, "address_line2": 500, "offer_summary": 20000, "address_region": 20000, "register_court": 20000, "logo_object_key": 20000, "register_number": 20000, "default_language": 20000, "value_proposition": 20000, "signature_template": 20000, "address_postal_code": 20000, "bank_account_holder": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"address_city":20000,"address_line1":500,"address_line2":500,"address_postal_code":20000,"address_region":20000,"bank_account_holder":20000,"bic":20000,"captured_by":20000,"country":20000,"default_language":20000,"iban":20000,"icp":20000,"imprint":20000,"legal_name":500,"logo_object_key":20000,"offer_summary":20000,"register_court":20000,"register_number":20000,"signature_template":20000,"usp":20000,"value_proposition":20000,"vat_id":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.legal_entity_member FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"assigned_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"assigned_by":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.legal_review FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"note": 2000, "status": 20000, "comments": 2000, "captured_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"comments":2000,"note":2000,"status":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.linkedin_account FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"profile_url": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"profile_url":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.linkedin_connection FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"email": 20000, "source": 20000, "position": 20000, "profile_url": 20000, "company_name": 120, "match_status": 20000, "normalized_name": 120, "normalized_company": 20000, "provider_member_ref": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"company_name":120,"email":20000,"match_status":20000,"normalized_company":20000,"normalized_name":120,"position":20000,"profile_url":20000,"provider_member_ref":20000,"source":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.list FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"name": 120, "purpose": 20000, "sharing": 20000, "list_type": 20000, "entity_type": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"entity_type":20000,"list_type":20000,"name":120,"purpose":20000,"sharing":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.list_evaluation FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"outcome": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"outcome":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.list_live_member FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"entity_type": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"entity_type":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.list_member FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"note": 2000, "added_by": 20000, "entity_type": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"added_by":20000,"entity_type":20000,"note":2000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.list_member_event FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"note": 2000, "actor": 20000, "action": 20000, "reason": 2000, "entity_type": 20000, "member_note": 2000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"action":20000,"actor":20000,"entity_type":20000,"member_note":2000,"note":2000,"reason":2000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.list_revision FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"name": 120, "purpose": 20000, "sharing": 20000, "changed_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"changed_by":20000,"name":120,"purpose":20000,"sharing":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.mail_draft FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"subject": 20000, "anchor_type": 20000, "cc_addresses": 20000, "scheduled_tz": 20000, "to_addresses": 20000, "bcc_addresses": 20000, "communication_context": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"anchor_type":20000,"bcc_addresses":20000,"cc_addresses":20000,"communication_context":20000,"scheduled_tz":20000,"subject":20000,"to_addresses":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.maskable_field FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"field": 20000, "object": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"field":20000,"object":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.meeting_calendar_episode FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"provider": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"provider":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.meeting_invitation FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"status": 20000, "command": 20000, "provider": 20000, "calendar_id": 20000, "management_ref": 20000, "management_hash": 20000, "reminder_status": 20000, "attention_reason": 2000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"attention_reason":2000,"calendar_id":20000,"command":20000,"management_hash":20000,"management_ref":20000,"provider":20000,"reminder_status":20000,"status":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.meeting_proposal FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"link_ref": 20000, "token_hash": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"link_ref":20000,"token_hash":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.meeting_readiness FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"revision": 20000, "captured_by": 20000, "agenda_fingerprint": 20000, "participants_fingerprint": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"agenda_fingerprint":20000,"captured_by":20000,"participants_fingerprint":20000,"revision":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.mfa_challenge_spent FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"jti": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"jti":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.mfa_recovery_code FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"code_hash": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"code_hash":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.notice FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"body": 2000, "kind": 20000, "subject": 500, "dedupe_key": 20000, "captured_by": 20000, "email_error": 500, "target_type": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"body":2000,"captured_by":20000,"dedupe_key":20000,"email_error":500,"kind":20000,"subject":500,"target_type":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.notification_digest_run FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"mail_error": 500}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"mail_error":500}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.notification_preference FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"class": 20000, "delivery": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"class":20000,"delivery":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.oauth_authorization_code FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"scopes": 20000, "resource": 20000, "client_id": 20000, "code_hash": 20000, "work_areas": 20000, "redirect_uri": 20000, "code_challenge": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"client_id":20000,"code_challenge":20000,"code_hash":20000,"redirect_uri":20000,"resource":20000,"scopes":20000,"work_areas":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.oauth_client FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"client_id": 20000, "client_name": 120, "created_via": 20000, "redirect_uris": 20000, "client_secret_hash": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"client_id":20000,"client_name":120,"client_secret_hash":20000,"created_via":20000,"redirect_uris":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.oauth_grant FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"scopes": 20000, "resource": 20000, "client_id": 20000, "work_areas": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"client_id":20000,"resource":20000,"scopes":20000,"work_areas":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.oauth_refresh_token FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"token_hash": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"token_hash":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.offer FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"source": 20000, "status": 20000, "language": 20000, "intro_text": 20000, "terms_text": 20000, "captured_by": 20000, "offer_number": 20000, "pdf_asset_ref": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"intro_text":20000,"language":20000,"offer_number":20000,"pdf_asset_ref":20000,"source":20000,"status":20000,"terms_text":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.offer_line_item FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"unit": 20000, "description": 20000, "tax_category": 20000, "billing_model": 20000, "proposal_state": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"billing_model":20000,"description":20000,"proposal_state":20000,"tax_category":20000,"unit":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.offer_template FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"name": 120, "locale": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"locale":20000,"name":120}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.onboarding_wizard_state FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"path": 20000, "step": 20000, "source_mode": 20000, "website_url": 20000, "selected_fact_keys": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"path":20000,"selected_fact_keys":20000,"source_mode":20000,"step":20000,"website_url":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.partner FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"source": 20000, "next_step": 20000, "captured_by": 20000, "cert_status": 20000, "margin_tier": 20000, "activated_by": 20000, "partner_kinds": 20000, "served_segments": 20000, "activation_basis": 20000, "relationship_stage": 20000, "partner_fit_override_reason": 2000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"activated_by":20000,"activation_basis":20000,"captured_by":20000,"cert_status":20000,"margin_tier":20000,"next_step":20000,"partner_fit_override_reason":2000,"partner_kinds":20000,"relationship_stage":20000,"served_segments":20000,"source":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.partner_stage FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"key": 20000, "label": 120, "meaning": 20000, "shipped_label": 120, "shipped_label_key": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"key":20000,"label":120,"meaning":20000,"shipped_label":120,"shipped_label_key":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.passport FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"label": 120, "scopes": 20000, "app_issuer": 500, "token_hash": 20000, "work_areas": 20000, "app_subject": 500}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"app_issuer":500,"app_subject":500,"label":120,"scopes":20000,"token_hash":20000,"work_areas":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.pipeline FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"name": 120}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"name":120}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.preference_token FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"token": 20000, "token_hash": 20000, "revoked_reason": 2000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"revoked_reason":2000,"token":20000,"token_hash":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.privacy_notice_case FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"rule": 20000, "state": 20000, "source_kind": 20000, "allowed_routes": 20000, "blocked_reason": 2000, "resolution_note": 2000, "source_review_note": 2000, "source_evidence_kind": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"allowed_routes":20000,"blocked_reason":2000,"resolution_note":2000,"rule":20000,"source_evidence_kind":20000,"source_kind":20000,"source_review_note":2000,"state":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.privacy_request_proof FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"result": 20000, "request_kind": 20000, "identity_check": 20000, "request_number": 20000, "completed_by_id": 20000, "requester_email": 20000, "erased_uncounted": 20000, "completed_by_type": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"completed_by_id":20000,"completed_by_type":20000,"erased_uncounted":20000,"identity_check":20000,"request_kind":20000,"request_number":20000,"requester_email":20000,"result":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.product FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"sku": 20000, "name": 120, "unit": 20000, "source": 20000, "captured_by": 20000, "description": 20000, "tax_category": 20000, "billing_model": 20000, "component_kind": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"billing_model":20000,"captured_by":20000,"component_kind":20000,"description":20000,"name":120,"sku":20000,"source":20000,"tax_category":20000,"unit":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.product_translation FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"name": 120, "language": 20000, "captured_by": 20000, "description": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"description":20000,"language":20000,"name":120}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.project FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"key": 20000, "name": 120, "phase": 20000, "source": 20000, "captured_by": 20000, "description": 20000, "closed_reason": 2000, "source_system": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"closed_reason":2000,"description":20000,"key":20000,"name":120,"phase":20000,"source":20000,"source_system":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.project_health_assessment FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"note": 2000, "state": 20000, "source": 20000, "captured_by": 20000, "source_author": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"note":2000,"source":20000,"source_author":20000,"state":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.project_phase_history FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"reason": 2000, "to_phase": 20000, "changed_by": 20000, "from_phase": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"changed_by":20000,"from_phase":20000,"reason":2000,"to_phase":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.provider_applied_field FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"provider": 20000, "captured_by": 20000, "target_field": 20000, "target_table": 20000, "applied_value": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"applied_value":20000,"captured_by":20000,"provider":20000,"target_field":20000,"target_table":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.provider_connection FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"mode": 20000, "preset": 20000, "status": 20000, "provider": 20000, "categories": 20000, "credential_ref": 20000, "last_safe_status_code": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"categories":20000,"credential_ref":20000,"last_safe_status_code":20000,"mode":20000,"preset":20000,"provider":20000,"status":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.provider_connection_budget FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"pool": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"pool":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.provider_employment_resolution FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"state": 20000, "episode_key": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"episode_key":20000,"state":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.provider_run FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"state": 20000, "trigger": 20000, "provider": 20000, "skip_reason": 2000, "subject_kind": 20000, "provider_job_id": 20000, "input_fingerprint": 20000, "requested_categories": 20000, "last_safe_status_code": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"input_fingerprint":20000,"last_safe_status_code":20000,"provider":20000,"provider_job_id":20000,"requested_categories":20000,"skip_reason":2000,"state":20000,"subject_kind":20000,"trigger":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.provider_run_category FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"category": 20000, "provider": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"category":20000,"provider":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.provider_run_reservation FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"pool": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"pool":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.record_assignment FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"source": 20000, "captured_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"source":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.record_grant FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"access": 20000, "reason": 2000, "record_type": 20000, "subject_type": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"access":20000,"reason":2000,"record_type":20000,"subject_type":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.record_link FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"to_type": 20000, "from_type": 20000, "link_type": 20000, "captured_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"from_type":20000,"link_type":20000,"to_type":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.record_role FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"key": 20000, "label": 120, "record_types": 20000, "shipped_label": 120, "assignee_kinds": 20000, "shipped_label_key": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"assignee_kinds":20000,"key":20000,"label":120,"record_types":20000,"shipped_label":120,"shipped_label_key":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.relationship FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000, "role": 20000, "source": 20000, "captured_by": 20000, "ended_precision": 20000, "employment_status": 20000, "started_precision": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"employment_status":20000,"ended_precision":20000,"kind":20000,"role":20000,"source":20000,"started_precision":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.relationship_nudge_dismissal FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"set_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"set_by":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.report_definition FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"name": 120, "audience": 20000, "description": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"audience":20000,"description":20000,"name":120}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.report_edition FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"publication_audience": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"publication_audience":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.report_edition_contribution FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"metric": 20000, "group_key": 20000, "context_id": 20000, "source_type": 20000, "contribution_key": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"context_id":20000,"contribution_key":20000,"group_key":20000,"metric":20000,"source_type":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.report_edition_question FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"entity": 20000, "reason": 2000, "card_id": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"card_id":20000,"entity":20000,"reason":2000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.report_edition_question_source FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"card_id": 20000, "source_type": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"card_id":20000,"source_type":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.report_execution FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"reason": 2000, "status": 20000, "request_hash": 20000, "execution_key": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"execution_key":20000,"reason":2000,"request_hash":20000,"status":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.report_run FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"captured_by": 20000, "schema_version": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"schema_version":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.report_schedule FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"timezone": 20000, "last_status": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"last_status":20000,"timezone":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.restore_drill FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"notes": 2000, "outcome": 20000, "operator": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"notes":2000,"operator":20000,"outcome":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.retention_policy FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"action": 20000, "category": 20000, "object_type": 20000, "lawful_basis": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"action":20000,"category":20000,"lawful_basis":20000,"object_type":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.role FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"key": 20000, "name": 120}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"key":20000,"name":120}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.runner_job FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"status": 20000, "agent_spec": 20000, "last_error": 20000, "trigger_ref": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"agent_spec":20000,"last_error":20000,"status":20000,"trigger_ref":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.sales_goal_plan_revision FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000, "origin": 20000, "reason": 2000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"kind":20000,"origin":20000,"reason":2000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.sales_initiative FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"name": 120, "source": 20000, "status": 20000, "captured_by": 20000, "description": 20000, "objective_metric": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"description":20000,"name":120,"objective_metric":20000,"source":20000,"status":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.sales_initiative_baseline FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"status": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"status":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.sales_initiative_enrolment FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"reason": 20000, "captured_by": 20000, "record_type": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"reason":20000,"record_type":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.sales_initiative_member FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"reason": 2000, "captured_by": 20000, "record_type": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"reason":2000,"record_type":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.sales_initiative_revision FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"reason": 2000, "created_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"created_by":20000,"reason":2000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.sales_target FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"unit": 20000, "metric": 20000, "scope_kind": 20000, "period_kind": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"metric":20000,"period_kind":20000,"scope_kind":20000,"unit":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.saved_view FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"name": 120, "resource": 20000, "shared_scope": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"name":120,"resource":20000,"shared_scope":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.scheduled_send FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"status": 20000, "held_reason": 2000, "origin_kind": 20000, "scheduled_tz": 20000, "agent_actor_id": 20000, "principal_kind": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"agent_actor_id":20000,"held_reason":2000,"origin_kind":20000,"principal_kind":20000,"scheduled_tz":20000,"status":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.sdr_handoff FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"note": 2000, "status": 20000, "captured_by": 20000, "reason_applies_to": 2000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"note":2000,"reason_applies_to":2000,"status":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.sdr_handoff_event FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"note": 2000, "actor": 20000, "to_status": 20000, "reason_applies_to": 2000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"actor":20000,"note":2000,"reason_applies_to":2000,"to_status":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.sdr_handoff_reason FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"label": 120, "applies_to": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"applies_to":20000,"label":120}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.session FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"token_hash": 20000, "user_agent": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"token_hash":20000,"user_agent":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.setting FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"key": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"key":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.setup_token FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"token_hash": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"token_hash":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.signal FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000, "source": 20000, "status": 20000, "raw_ref": 20000, "summary": 500, "severity": 20000, "visibility": 20000, "captured_by": 20000, "entity_type": 20000, "fingerprint": 20000, "source_channel": 20000, "resolution_state": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"entity_type":20000,"fingerprint":20000,"kind":20000,"raw_ref":20000,"resolution_state":20000,"severity":20000,"source":20000,"source_channel":20000,"status":20000,"summary":500,"visibility":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.signal_resolution FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"note": 2000, "source": 20000, "outcome": 20000, "matched_on": 20000, "captured_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"matched_on":20000,"note":2000,"outcome":20000,"source":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.signal_thread_scan FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"thread_key": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"thread_key":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.site_read FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"phase": 20000, "status": 20000, "seed_url": 20000, "logo_origin": 20000, "status_code": 20000, "target_kind": 20000, "requested_by": 20000, "proposal_hash": 20000, "status_detail": 20000, "stopped_reason": 2000, "logo_object_key": 20000, "logo_icon_origin": 20000, "logo_icon_object_key": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"logo_icon_object_key":20000,"logo_icon_origin":20000,"logo_object_key":20000,"logo_origin":20000,"phase":20000,"proposal_hash":20000,"requested_by":20000,"seed_url":20000,"status":20000,"status_code":20000,"status_detail":20000,"stopped_reason":2000,"target_kind":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.stage FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"name": 120, "semantic": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"name":120,"semantic":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.stage_exit_criterion FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"key": 20000, "hint": 500, "kind": 20000, "label": 120}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"hint":500,"key":20000,"kind":20000,"label":120}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.stage_progression_outcome FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"outcome": 20000, "evidence_kinds": 20000, "rejection_reason": 2000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"evidence_kinds":20000,"outcome":20000,"rejection_reason":2000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.stage_progression_policy FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"mode": 20000, "suspended_reason": 2000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"mode":20000,"suspended_reason":2000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.stored_object_intent FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000, "storage_key": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"kind":20000,"storage_key":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.suggestion_dismissal FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"fingerprint": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"fingerprint":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.system_log FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"action": 20000, "actor_id": 20000, "actor_type": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"action":20000,"actor_id":20000,"actor_type":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.tag FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"name": 120, "color": 20000, "description": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"color":20000,"description":20000,"name":120}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.tag_interest_read FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"content_digest": 20000, "vocabulary_digest": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"content_digest":20000,"vocabulary_digest":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.tag_suggestion FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"state": 20000, "captured_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"state":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.taggable FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"entity_type": 20000, "assigned_by_kind": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"assigned_by_kind":20000,"entity_type":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.tax_rate FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"country": 20000, "category": 20000, "captured_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"category":20000,"country":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.team FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"name": 120}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"name":120}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.team_weekly_review FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"summary": 500, "team_name": 120, "summary_language": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"summary":500,"summary_language":20000,"team_name":120}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.team_weekly_review_coverage FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"basis": 20000, "absent": 20000, "period_kind": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"absent":20000,"basis":20000,"period_kind":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.team_weekly_review_outlook FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"period_kind": 20000, "forward_measure": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"forward_measure":20000,"period_kind":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.team_weekly_review_rep FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"focus_kind": 20000, "focus_label": 120}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"focus_kind":20000,"focus_label":120}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.team_weekly_review_rep_funnel FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"stage_name": 120, "pipeline_name": 120, "next_stage_name": 120}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"next_stage_name":120,"pipeline_name":120,"stage_name":120}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.team_weekly_review_rep_pattern FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000, "label": 120}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"kind":20000,"label":120}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.technical_lookup_cache FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"query": 20000, "record_kind": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"query":20000,"record_kind":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.transcript_read FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"status": 20000, "requested_by": 20000, "status_detail": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"requested_by":20000,"status":20000,"status_detail":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.user_mfa FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"secret_ref": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"secret_ref":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.user_record_view FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"entity_type": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"entity_type":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.vault_secret FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"ref": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"ref":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.voice_build FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"stage": 20000, "reason": 2000, "status": 20000, "source_hash": 20000, "status_code": 20000, "status_detail": 20000, "candidate_action": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"candidate_action":20000,"reason":2000,"source_hash":20000,"stage":20000,"status":20000,"status_code":20000,"status_detail":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.voice_corpus_source FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000, "origin": 20000, "source": 20000, "register": 20000, "source_ref": 20000, "captured_by": 20000, "content_hash": 20000, "source_label": 500, "exclusion_reason": 2000, "extractor_version": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"content_hash":20000,"exclusion_reason":2000,"extractor_version":20000,"kind":20000,"origin":20000,"register":20000,"source":20000,"source_label":500,"source_ref":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.voice_learning_signal FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"source": 20000, "outcome": 20000, "captured_by": 20000, "final_captured_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"final_captured_by":20000,"outcome":20000,"source":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.voice_profile FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"scope": 20000, "source": 20000, "status": 20000, "model_ref": 20000, "captured_by": 20000, "personality_md": 20000, "active_source_hash": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"active_source_hash":20000,"captured_by":20000,"model_ref":20000,"personality_md":20000,"scope":20000,"source":20000,"status":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.voice_profile_delta FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"classification": 20000, "activation_outcome": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"activation_outcome":20000,"classification":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.voice_profile_version FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"reason": 2000, "source": 20000, "status": 20000, "model_name": 120, "captured_by": 20000, "source_hash": 20000, "model_provider": 20000, "review_reasons": 2000, "builder_version": 20000, "activation_policy_version": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"activation_policy_version":20000,"builder_version":20000,"captured_by":20000,"model_name":120,"model_provider":20000,"reason":2000,"review_reasons":2000,"source":20000,"source_hash":20000,"status":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.web_form FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"name": 120, "state": 20000, "sender": 20000, "form_key": 20000, "secret_ref": 20000, "captured_by": 20000, "lead_origin": 20000, "redirect_url": 20000, "privacy_notice": 500, "allowed_origins": 20000, "consent_wording": 2000, "success_message": 500, "consent_policy_version": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"allowed_origins":20000,"captured_by":20000,"consent_policy_version":20000,"consent_wording":2000,"form_key":20000,"lead_origin":20000,"name":120,"privacy_notice":500,"redirect_url":20000,"secret_ref":20000,"sender":20000,"state":20000,"success_message":500}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.webhook_delivery FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"status": 20000, "event_type": 20000, "entity_type": 20000, "content_type": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"content_type":20000,"entity_type":20000,"event_type":20000,"status":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.webhook_subscription FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"state": 20000, "target_url": 20000, "event_types": 20000, "body_template": 20000, "body_content_type": 20000, "signing_secret_ref": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"body_content_type":20000,"body_template":20000,"event_types":20000,"signing_secret_ref":20000,"state":20000,"target_url":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.weekly_plan FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"risks": 2000, "status": 20000, "captured_by": 20000, "capacity_note": 2000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"capacity_note":2000,"captured_by":20000,"risks":2000,"status":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.weekly_plan_commitment FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"label": 500, "state": 20000, "captured_by": 20000, "help_requested": 2000, "manager_response": 2000, "linked_record_type": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"help_requested":2000,"label":500,"linked_record_type":20000,"manager_response":2000,"state":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.weekly_review FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"narrative": 2000, "mail_error": 500, "learnings_state": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"learnings_state":20000,"mail_error":500,"narrative":2000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.weekly_review_deal FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"outcome": 20000, "deal_label": 120, "to_stage_label": 120}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"deal_label":120,"outcome":20000,"to_stage_label":120}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.weekly_review_driver FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"bar": 20000, "deal_label": 120, "period_kind": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"bar":20000,"deal_label":120,"period_kind":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.weekly_review_learning FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000, "text": 500}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"kind":20000,"text":500}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.weekly_review_learning_citation FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"label": 120, "subject_type": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"label":120,"subject_type":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.weekly_review_movement FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"bar": 20000, "period_kind": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"bar":20000,"period_kind":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.weekly_review_outlook FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"period_kind": 20000, "forward_measure": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"forward_measure":20000,"period_kind":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.withdrawal_credential FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"scope": 20000, "address": 20000, "token_hash": 20000, "revoked_reason": 2000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"address":20000,"revoked_reason":2000,"scope":20000,"token_hash":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.workflow_run FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"error": 20000, "status": 20000, "handler": 20000, "idempotency_key": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"error":20000,"handler":20000,"idempotency_key":20000,"status":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.worklist_done FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"row_id": 20000, "set_by": 20000, "source": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"row_id":20000,"set_by":20000,"source":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.worklist_pin FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"row_id": 20000, "set_by": 20000, "source": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"row_id":20000,"set_by":20000,"source":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.worklist_snapshot FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"params_fingerprint": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"params_fingerprint":20000}');
+
+CREATE TRIGGER text_bound_insert AFTER INSERT ON public.workspace_email_domain FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"domain": 20000, "source": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"domain":20000,"source":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.activity FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "origin": 20000, "source": 20000, "subject": 20000, "audience": 20000, "due_zone": 20000, "language": 20000, "owed_ask": 2000, "direction": 20000, "source_id": 20000, "task_type": 20000, "thread_key": 20000, "captured_by": 20000, "remind_zone": 20000, "calendar_uid": 20000, "call_outcome": 20000, "meeting_zone": 20000, "owed_verdict": 20000, "capture_label": 120, "reply_verdict": 20000, "source_system": 20000, "meeting_status": 20000, "audience_reason": 2000, "calendar_method": 20000, "redacted_fields": 20000, "retention_class": 20000, "channel_provider": 20000, "reply_verdict_by": 20000, "body_completeness": 20000, "deal_topic_digest": 20000, "restricted_reason": 2000, "agenda_fingerprint": 20000, "counterparty_email": 20000, "occurred_precision": 20000, "owed_verdict_ruleset": 20000, "owed_verdict_declined_ruleset": 20000, "capture_label_declined_ruleset": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"agenda_fingerprint":20000,"audience":20000,"audience_reason":2000,"body_completeness":20000,"calendar_method":20000,"calendar_uid":20000,"call_outcome":20000,"capture_label":120,"capture_label_declined_ruleset":20000,"captured_by":20000,"channel_provider":20000,"counterparty_email":20000,"deal_topic_digest":20000,"direction":20000,"due_zone":20000,"kind":20000,"language":20000,"meeting_status":20000,"meeting_zone":20000,"occurred_precision":20000,"origin":20000,"owed_ask":2000,"owed_verdict":20000,"owed_verdict_declined_ruleset":20000,"owed_verdict_ruleset":20000,"redacted_fields":20000,"remind_zone":20000,"reply_verdict":20000,"reply_verdict_by":20000,"restricted_reason":2000,"retention_class":20000,"source":20000,"source_id":20000,"source_system":20000,"subject":20000,"task_type":20000,"thread_key":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.activity_audience_member FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"created_by": 20000, "subject_type": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"created_by":20000,"subject_type":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.activity_calendar_method_backfill FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"outcome": 20000, "direction": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"direction":20000,"outcome":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.activity_commitment_admission FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"locator": 20000, "outcome": 20000, "summary": 500, "captured_by": 20000, "rule_version": 20000, "source_quote": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"locator":20000,"outcome":20000,"rule_version":20000,"source_quote":20000,"summary":500}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.activity_identity FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"attested_by": 20000, "identity_key": 20000, "identity_kind": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"attested_by":20000,"identity_key":20000,"identity_kind":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.activity_kind FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"kind":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.activity_link FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"entity_type": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"entity_type":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.activity_link_suggestion FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"unit": 20000, "reason": 500, "status": 20000, "decided_by": 20000, "captured_by": 20000, "entity_type": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"decided_by":20000,"entity_type":20000,"reason":500,"status":20000,"unit":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.activity_mail_reference FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"referenced_id": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"referenced_id":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.activity_meeting_attendee_repair FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"outcome": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"outcome":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.activity_meeting_history FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"actor": 20000, "status": 20000, "source_id": 20000, "source_system": 20000, "scheduled_precision": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"actor":20000,"scheduled_precision":20000,"source_id":20000,"source_system":20000,"status":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.activity_meeting_rsvp_backfill FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"outcome": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"outcome":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.activity_own_sent_mail_repair FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"outcome": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"outcome":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.activity_participant FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"role": 20000, "address": 20000, "response": 20000, "channel_user_id": 20000, "address_domain_folded": 20000, "domain_evidence_precision": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"address":20000,"address_domain_folded":20000,"channel_user_id":20000,"domain_evidence_precision":20000,"response":20000,"role":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.activity_participant_replay FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"outcome": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"outcome":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.activity_reader_state FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"state": 20000, "set_by": 20000, "reopen_on": 20000, "snoozed_zone": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"reopen_on":20000,"set_by":20000,"snoozed_zone":20000,"state":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.activity_reply_verdict_history FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"verdict": 20000, "decided_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"decided_by":20000,"verdict":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.activity_request_settlement FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"verdict": 20000, "remaining": 20000, "decided_by": 20000, "rule_version": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"decided_by":20000,"remaining":20000,"rule_version":20000,"verdict":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.activity_retention_evidence FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"basis": 20000, "reason": 2000, "deal_name": 120, "project_name": 120, "decided_by_name": 120}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"basis":20000,"deal_name":120,"decided_by_name":120,"project_name":120,"reason":2000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.activity_review_response FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "outcome": 20000, "captured_by": 20000, "template_key": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"outcome":20000,"source":20000,"template_key":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.activity_review_template FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "label": 120, "source": 20000, "outcome": 20000, "captured_by": 20000, "shipped_label": 120, "shipped_label_key": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"key":20000,"label":120,"outcome":20000,"shipped_label":120,"shipped_label_key":20000,"source":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.activity_sales_state FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "set_by": 20000, "thread_key": 20000, "channel_provider": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"channel_provider":20000,"kind":20000,"set_by":20000,"thread_key":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.agent_run FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"goal": 20000, "status": 20000, "agent_spec": 20000, "trigger_ref": 20000, "degrade_reason": 2000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"agent_spec":20000,"degrade_reason":2000,"goal":20000,"status":20000,"trigger_ref":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.agent_standing_grant FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"state": 20000, "agent_spec": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"agent_spec":20000,"state":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.agent_task FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"tool": 20000, "status": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"status":20000,"tool":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.ai_call FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "task": 20000, "tier": 20000, "model_id": 20000, "provider": 20000, "config_hash": 20000, "secret_kinds": 20000, "served_model": 20000, "subject_type": 20000, "finish_reason": 2000, "attempt_reason": 2000, "context_scopes": 20000, "error_sentinel": 20000, "decision_choice": 20000, "served_provider": 20000, "schema_downgrade": 20000, "context_fingerprint": 20000, "request_fingerprint": 20000, "served_identity_source": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"attempt_reason":2000,"config_hash":20000,"context_fingerprint":20000,"context_scopes":20000,"decision_choice":20000,"error_sentinel":20000,"finish_reason":2000,"kind":20000,"model_id":20000,"provider":20000,"request_fingerprint":20000,"schema_downgrade":20000,"secret_kinds":20000,"served_identity_source":20000,"served_model":20000,"served_provider":20000,"subject_type":20000,"task":20000,"tier":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.ai_call_config FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"hash": 20000, "prompt_version": 20000, "task_contract_hash": 20000, "routing_config_hash": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"hash":20000,"prompt_version":20000,"routing_config_hash":20000,"task_contract_hash":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.ai_feedback FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"note": 2000, "source": 20000, "verdict": 20000, "claim_key": 20000, "claim_kind": 20000, "captured_by": 20000, "value_shown": 20000, "subject_type": 20000, "corrected_value": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"claim_key":20000,"claim_kind":20000,"corrected_value":20000,"note":2000,"source":20000,"subject_type":20000,"value_shown":20000,"verdict":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.ai_model_rate FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"lane": 20000, "source": 20000, "model_id": 20000, "provider": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"lane":20000,"model_id":20000,"provider":20000,"source":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.ai_task_run FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "state": 20000, "source": 20000, "ai_task": 20000, "summary": 500, "actor_scope": 20000, "subject_type": 20000, "quantity_unit": 20000, "subject_label": 120, "degrade_reason": 2000, "occurrence_key": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"actor_scope":20000,"ai_task":20000,"degrade_reason":2000,"kind":20000,"occurrence_key":20000,"quantity_unit":20000,"source":20000,"state":20000,"subject_label":120,"subject_type":20000,"summary":500}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.ai_usage FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"task": 20000, "tier": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"task":20000,"tier":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.analytics_share FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "target": 20000, "scope_kind": 20000, "token_hash": 20000, "captured_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"kind":20000,"scope_kind":20000,"target":20000,"token_hash":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.app_user FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"email": 20000, "locale": 20000, "status": 20000, "timezone": 20000, "seat_type": 20000, "avatar_origin": 20000, "greeting_name": 120, "password_hash": 20000, "timezone_set_by": 20000, "weekly_delivery": 20000, "avatar_object_key": 20000, "service_extension": 20000, "routine_mail_scope": 20000, "email_domain_folded": 20000, "routine_delivery_time": 20000, "morning_brief_delivery": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"avatar_object_key":20000,"avatar_origin":20000,"email":20000,"email_domain_folded":20000,"greeting_name":120,"locale":20000,"morning_brief_delivery":20000,"password_hash":20000,"routine_delivery_time":20000,"routine_mail_scope":20000,"seat_type":20000,"service_extension":20000,"status":20000,"timezone":20000,"timezone_set_by":20000,"weekly_delivery":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.approval FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "status": 20000, "summary": 500, "diff_hash": 20000, "proposed_by": 20000, "target_label": 120, "context_digest": 20000, "effect_failure": 20000, "decision_reason": 2000, "target_entity_type": 20000, "co_target_entity_type": 20000, "requested_decider_source": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"co_target_entity_type":20000,"context_digest":20000,"decision_reason":2000,"diff_hash":20000,"effect_failure":20000,"kind":20000,"proposed_by":20000,"requested_decider_source":20000,"status":20000,"summary":500,"target_entity_type":20000,"target_label":120}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.approval_autonomy_policy FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"mode": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"mode":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.approval_preference FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"kind":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.assurance_cycle FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"scope": 20000, "opened_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"opened_by":20000,"scope":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.assurance_deal_receipt FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"outcome": 20000, "reasons": 2000, "captured_by": 20000, "policy_version": 20000, "input_fingerprint": 20000, "verdict_basis_digest": 20000, "verdict_input_checksum": 20000, "verdict_prompt_version": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"input_fingerprint":20000,"outcome":20000,"policy_version":20000,"reasons":2000,"verdict_basis_digest":20000,"verdict_input_checksum":20000,"verdict_prompt_version":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.assurance_exception FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"type": 20000, "status": 20000, "severity": 20000, "captured_by": 20000, "logical_key": 20000, "subject_kind": 20000, "delivery_state": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"delivery_state":20000,"logical_key":20000,"severity":20000,"status":20000,"subject_kind":20000,"type":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.assurance_input_change FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"subject_kind": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"subject_kind":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.assurance_resolution FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"reason": 2000, "outcome": 20000, "captured_by": 20000, "evidence_ref": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"evidence_ref":20000,"outcome":20000,"reason":2000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.assurance_run FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"digest": 20000, "status": 20000, "readiness": 20000, "captured_by": 20000, "requested_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"digest":20000,"readiness":20000,"requested_by":20000,"status":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.assurance_source_coverage FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"state": 20000, "source": 20000, "captured_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"source":20000,"state":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.assurance_task_item FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"state": 20000, "subject_kind": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"state":20000,"subject_kind":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.attachment FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"title": 120, "source": 20000, "category": 20000, "checksum": 20000, "filename": 20000, "doc_state": 20000, "captured_by": 20000, "entity_type": 20000, "storage_key": 20000, "content_type": 20000, "declared_type": 20000, "external_part_id": 20000, "external_source_id": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"category":20000,"checksum":20000,"content_type":20000,"declared_type":20000,"doc_state":20000,"entity_type":20000,"external_part_id":20000,"external_source_id":20000,"filename":20000,"source":20000,"storage_key":20000,"title":120}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.attachment_extraction FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "question": 20000, "requested_by": 20000, "status_detail": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"question":20000,"requested_by":20000,"status":20000,"status_detail":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.auth_token FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"purpose": 20000, "token_hash": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"purpose":20000,"token_hash":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.automation FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "name": 120, "tier": 20000, "origin": 20000, "paused_reason": 2000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"key":20000,"name":120,"origin":20000,"paused_reason":2000,"tier":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.automation_effect_claim FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"handler": 20000, "occurrence_key": 20000, "effect_fingerprint": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"effect_fingerprint":20000,"handler":20000,"occurrence_key":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.booking_alias FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"alias": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"alias":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.booking_page FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"slug": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"slug":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.brief_item FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"state": 20000, "finding": 500, "reopen_on": 20000, "snoozed_zone": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"finding":500,"reopen_on":20000,"snoozed_zone":20000,"state":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.brief_run FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"narrative": 2000, "mail_error": 500, "factors_omitted": 20000, "revenue_norm_currency": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"factors_omitted":20000,"mail_error":500,"narrative":2000,"revenue_norm_currency":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.bulk_confirmation FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"requested_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"requested_by":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.bulk_operation FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"verb": 20000, "record_type": 20000, "requested_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"record_type":20000,"requested_by":20000,"verb":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.capture_alias_refused FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"value": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"value":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.capture_alias_sighting FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"value": 20000, "source": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"source":20000,"value":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.capture_auto_enrich_state FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"last_outcome": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"last_outcome":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.capture_backfill FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "last_error_class": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"last_error_class":20000,"status":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.capture_backfill_creation FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"kind":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.capture_connection FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"scopes": 20000, "status": 20000, "provider": 20000, "watch_ref": 20000, "mail_posture": 20000, "account_label": 120, "credential_ref": 20000, "provider_scopes": 20000, "history_baseline_tz": 20000, "history_baseline_set_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"account_label":120,"credential_ref":20000,"history_baseline_set_by":20000,"history_baseline_tz":20000,"mail_posture":20000,"provider":20000,"provider_scopes":20000,"scopes":20000,"status":20000,"watch_ref":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.capture_counterparty_hold FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "value": 20000, "created_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"created_by":20000,"kind":20000,"value":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.capture_exclusion FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "scope": 20000, "value": 20000, "created_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"created_by":20000,"kind":20000,"scope":20000,"value":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.capture_freemail_domain FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "domain": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"domain":20000,"kind":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.capture_import FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"delivered_by": 20000, "verdict_reason": 2000, "verdict_status": 20000, "verdict_reasons": 2000, "posture_at_import": 20000, "provider_message_ids": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"delivered_by":20000,"posture_at_import":20000,"provider_message_ids":20000,"verdict_reason":2000,"verdict_reasons":2000,"verdict_status":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.capture_owner_identity FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "value": 20000, "source": 20000, "created_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"created_by":20000,"kind":20000,"source":20000,"value":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.capture_owner_identity_withdrawn FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "value": 20000, "source": 20000, "created_by": 20000, "withdrawn_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"created_by":20000,"kind":20000,"source":20000,"value":20000,"withdrawn_by":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.capture_party_source FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"provider": 20000, "containers": 20000, "recipients": 20000, "policy_addresses": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"containers":20000,"policy_addresses":20000,"provider":20000,"recipients":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.capture_party_source_replay FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"outcome": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"outcome":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.capture_pending_counterparty FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "email": 20000, "domain": 20000, "status": 20000, "served_model": 20000, "disposition_reason": 2000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"disposition_reason":2000,"domain":20000,"email":20000,"kind":20000,"served_model":20000,"status":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.capture_sender_override FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"address": 20000, "decision": 20000, "captured_by": 20000, "overruled_kind": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"address":20000,"captured_by":20000,"decision":20000,"overruled_kind":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.capture_sweep_run FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"sweep": 20000, "outcome": 20000, "error_class": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"error_class":20000,"outcome":20000,"sweep":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.capture_sync_state FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"last_error_class": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"last_error_class":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.capture_test_mailbox_sent FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"subject": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"subject":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.capture_thread_verdict FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "status": 20000, "thread_key": 20000, "seen_addresses": 20000, "disposition_reason": 2000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"disposition_reason":2000,"kind":20000,"seen_addresses":20000,"status":20000,"thread_key":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.channel_connection FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "address": 500, "provider": 20000, "channel_id": 20000, "channel_label": 120, "credential_ref": 20000, "events_credential_ref": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"address":500,"channel_id":20000,"channel_label":120,"credential_ref":20000,"events_credential_ref":20000,"provider":20000,"status":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.channel_provider FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"label": 120, "transport": 20000, "credential_model": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"credential_model":20000,"label":120,"transport":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.chat_link FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "provider": 20000, "verbosity": 20000, "channel_name": 500, "channel_slug": 500, "card_message_id": 500, "card_fingerprint": 120, "channel_external_key": 500}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"card_fingerprint":120,"card_message_id":500,"channel_external_key":500,"channel_name":500,"channel_slug":500,"provider":20000,"status":20000,"verbosity":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.chat_post_item FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"tier": 20000, "event_type": 20000, "last_error": 500, "message_id": 500, "entity_type": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"entity_type":20000,"event_type":20000,"last_error":500,"message_id":500,"tier":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.close_date_run FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "captured_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"status":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.close_date_run_member FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"outcome": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"outcome":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.commission_entry FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "captured_by": 20000, "void_reason": 2000, "attribution_at_accrual": 20000, "margin_tier_at_accrual": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"attribution_at_accrual":20000,"captured_by":20000,"margin_tier_at_accrual":20000,"status":20000,"void_reason":2000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.comms_outbound FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"reason": 2000, "status": 20000, "subject": 20000, "provider": 20000, "message_id": 20000, "thread_key": 20000, "bounce_kind": 20000, "in_reply_to": 20000, "payload_ref": 20000, "sender_kind": 20000, "from_address": 20000, "template_key": 20000, "bounce_reason": 2000, "channel_user_id": 20000, "consent_purpose": 20000, "inline_logo_key": 20000, "redacted_fields": 20000, "bounce_recipient": 20000, "list_unsubscribe": 20000, "execution_authority": 20000, "provider_message_id": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"bounce_kind":20000,"bounce_reason":2000,"bounce_recipient":20000,"channel_user_id":20000,"consent_purpose":20000,"execution_authority":20000,"from_address":20000,"in_reply_to":20000,"inline_logo_key":20000,"list_unsubscribe":20000,"message_id":20000,"payload_ref":20000,"provider":20000,"provider_message_id":20000,"reason":2000,"redacted_fields":20000,"sender_kind":20000,"status":20000,"subject":20000,"template_key":20000,"thread_key":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.communication_basis FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "note": 2000, "thread_key": 20000, "captured_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"kind":20000,"note":2000,"thread_key":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.communication_decision FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"mode": 20000, "actor": 20000, "basis": 20000, "phase": 20000, "verdict": 20000, "purpose_key": 20000, "reason_code": 2000, "suppression": 20000, "subject_kind": 20000, "ruleset_codes": 20000, "legacy_verdict": 20000, "recipient_address": 20000, "resolved_category": 20000, "requested_category": 20000, "execution_authority": 20000, "data_protection_country": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"actor":20000,"basis":20000,"data_protection_country":20000,"execution_authority":20000,"legacy_verdict":20000,"mode":20000,"phase":20000,"purpose_key":20000,"reason_code":2000,"recipient_address":20000,"requested_category":20000,"resolved_category":20000,"ruleset_codes":20000,"subject_kind":20000,"suppression":20000,"verdict":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.communication_instruction FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "explanation": 20000, "reason_code": 2000, "revoked_reason": 2000, "warning_version": 20000, "directed_by_agent": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"directed_by_agent":20000,"explanation":20000,"reason_code":2000,"revoked_reason":2000,"status":20000,"warning_version":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.communication_override FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"reason": 2000, "category": 20000, "captured_by": 20000, "decided_by_level": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"category":20000,"decided_by_level":20000,"reason":2000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.communication_review FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "state": 20000, "reason_code": 2000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"kind":20000,"reason_code":2000,"state":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.communication_suppression FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "source": 20000, "address": 20000, "captured_by": 20000, "address_hash": 20000, "address_key_id": 20000, "decided_by_level": 20000, "recorded_through": 20000, "recorded_for_addresses": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"address":20000,"address_hash":20000,"address_key_id":20000,"captured_by":20000,"decided_by_level":20000,"kind":20000,"recorded_for_addresses":20000,"recorded_through":20000,"source":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.company FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"email": 20000, "phone": 20000, "source": 20000, "industry": 20000, "lifecycle": 20000, "size_band": 20000, "legal_name": 500, "visibility": 20000, "captured_by": 20000, "description": 20000, "logo_origin": 20000, "name_source": 20000, "address_city": 20000, "linkedin_url": 20000, "address_line1": 500, "address_line2": 500, "source_system": 20000, "address_region": 20000, "geocode_status": 20000, "address_country": 20000, "logo_object_key": 20000, "geocode_provider": 20000, "logo_icon_origin": 20000, "geocode_input_hash": 20000, "address_postal_code": 20000, "logo_icon_object_key": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"address_city":20000,"address_country":20000,"address_line1":500,"address_line2":500,"address_postal_code":20000,"address_region":20000,"captured_by":20000,"description":20000,"email":20000,"geocode_input_hash":20000,"geocode_provider":20000,"geocode_status":20000,"industry":20000,"legal_name":500,"lifecycle":20000,"linkedin_url":20000,"logo_icon_object_key":20000,"logo_icon_origin":20000,"logo_object_key":20000,"logo_origin":20000,"name_source":20000,"phone":20000,"size_band":20000,"source":20000,"source_system":20000,"visibility":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.company_address_country FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"countries": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"countries":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.company_brief FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"fingerprint": 20000, "generated_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"fingerprint":20000,"generated_by":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.company_domain FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"domain": 20000, "source": 20000, "captured_by": 20000, "domain_folded": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"domain":20000,"domain_folded":20000,"source":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.company_domain_disposition FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"domain": 20000, "source": 20000, "status": 20000, "admission": 20000, "pending_reason": 2000, "admission_reason": 2000, "admission_source": 20000, "admission_reason_code": 2000, "admission_sender_kind": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"admission":20000,"admission_reason":2000,"admission_reason_code":2000,"admission_sender_kind":20000,"admission_source":20000,"domain":20000,"pending_reason":2000,"source":20000,"status":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.company_domain_question_reader FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"domain": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"domain":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.company_dossier FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"fingerprint": 20000, "generated_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"fingerprint":20000,"generated_by":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.company_fact FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"field": 20000, "value": 20000, "source": 20000, "category": 20000, "value_key": 20000, "source_url": 20000, "captured_by": 20000, "evidence_snippet": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"category":20000,"evidence_snippet":20000,"field":20000,"source":20000,"source_url":20000,"value":20000,"value_key":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.company_geocode_state FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "provider": 20000, "input_hash": 20000, "last_outcome": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"input_hash":20000,"last_outcome":20000,"provider":20000,"status":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.company_growth_fit FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"fingerprint": 20000, "generated_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"fingerprint":20000,"generated_by":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.company_offered_value FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"field_key": 20000, "offered_value": 20000, "source_system": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"field_key":20000,"offered_value":20000,"source_system":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.company_profile_field FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"field": 20000, "value": 20000, "source": 20000, "source_url": 20000, "captured_by": 20000, "evidence_snippet": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"evidence_snippet":20000,"field":20000,"source":20000,"source_url":20000,"value":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.company_relationship_type FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "captured_by": 20000, "relationship_type": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"relationship_type":20000,"source":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.company_scan FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "fingerprint": 20000, "generated_by": 20000, "degrade_reason": 2000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"degrade_reason":2000,"fingerprint":20000,"generated_by":20000,"status":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.company_technical_state FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"lane": 20000, "last_outcome": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"lane":20000,"last_outcome":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.company_vat_check FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "vat_number": 20000, "captured_by": 20000, "registered_name": 120, "registered_address": 20000, "consultation_number": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"consultation_number":20000,"registered_address":20000,"registered_name":120,"status":20000,"vat_number":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.confirm_token FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "token_hash": 20000, "delivered_to": 20000, "question_key": 20000, "question_locale": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"delivered_to":20000,"kind":20000,"question_key":20000,"question_locale":20000,"token_hash":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.consent_doi_token FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"token_hash": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"token_hash":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.consent_event FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "new_state": 20000, "confirm_ip": 20000, "captured_by": 20000, "lawful_basis": 20000, "policy_version": 20000, "issuance_trigger": 20000, "confirm_user_agent": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"confirm_ip":20000,"confirm_user_agent":20000,"issuance_trigger":20000,"lawful_basis":20000,"new_state":20000,"policy_version":20000,"source":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.consent_purpose FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "class": 20000, "label": 120, "frequency": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"class":20000,"frequency":20000,"key":20000,"label":120}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.consent_qualifying_event FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "note": 2000, "source": 20000, "captured_by": 20000, "retracted_by": 20000, "source_entity_type": 20000, "recorded_for_addresses": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"kind":20000,"note":2000,"recorded_for_addresses":20000,"retracted_by":20000,"source":20000,"source_entity_type":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.consent_text_version FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "locale": 20000, "channel": 20000, "version": 20000, "content_hash": 20000, "jurisdiction": 20000, "subject_line": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"channel":20000,"content_hash":20000,"jurisdiction":20000,"key":20000,"locale":20000,"subject_line":20000,"version":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.contact FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"title": 120, "source": 20000, "visibility": 20000, "captured_by": 20000, "address_city": 20000, "photo_origin": 20000, "address_line1": 500, "address_line2": 500, "source_system": 20000, "address_region": 20000, "address_country": 20000, "narrowing_reason": 2000, "photo_object_key": 20000, "relationship_mark": 20000, "address_postal_code": 20000, "relationship_mark_set_by": 20000, "anonymized_address_hashes": 20000, "anonymized_address_key_id": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"address_city":20000,"address_country":20000,"address_line1":500,"address_line2":500,"address_postal_code":20000,"address_region":20000,"anonymized_address_hashes":20000,"anonymized_address_key_id":20000,"captured_by":20000,"narrowing_reason":2000,"photo_object_key":20000,"photo_origin":20000,"relationship_mark":20000,"relationship_mark_set_by":20000,"source":20000,"source_system":20000,"title":120,"visibility":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.contact_acquisition_evidence FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "note": 2000, "captured_by": 20000, "stated_source": 20000, "purpose_claimed": 20000, "source_entity_type": 20000, "request_retracted_by": 20000, "recorded_for_addresses": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"kind":20000,"note":2000,"purpose_claimed":20000,"recorded_for_addresses":20000,"request_retracted_by":20000,"source_entity_type":20000,"stated_source":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.contact_address_country FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"countries": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"countries":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.contact_brief FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"fingerprint": 20000, "generated_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"fingerprint":20000,"generated_by":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.contact_channel_identity FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "provider": 20000, "username": 20000, "captured_by": 20000, "channel_user_id": 20000, "membership_bot_id": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"channel_user_id":20000,"membership_bot_id":20000,"provider":20000,"source":20000,"username":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.contact_confirm_submission FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "note": 2000, "field": 20000, "resolution": 20000, "resolved_by": 20000, "proposed_value": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"field":20000,"kind":20000,"note":2000,"proposed_value":20000,"resolution":20000,"resolved_by":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.contact_consent FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"state": 20000, "source": 20000, "lawful_basis": 20000, "policy_version": 20000, "recorded_for_addresses": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"lawful_basis":20000,"policy_version":20000,"recorded_for_addresses":20000,"source":20000,"state":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.contact_email FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"email": 20000, "source": 20000, "email_type": 20000, "captured_by": 20000, "email_domain_folded": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"email":20000,"email_domain_folded":20000,"email_type":20000,"source":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.contact_moment_dismissal FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"claim_key": 20000, "evidence_fingerprint": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"claim_key":20000,"evidence_fingerprint":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.contact_phone FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"phone": 20000, "source": 20000, "phone_type": 20000, "captured_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"phone":20000,"phone_type":20000,"source":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.contact_profile_field FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"field": 20000, "value": 20000, "source": 20000, "value_key": 20000, "source_ref": 20000, "captured_by": 20000, "evidence_snippet": 20000, "superseded_value": 20000, "superseded_captured_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"evidence_snippet":20000,"field":20000,"source":20000,"source_ref":20000,"superseded_captured_by":20000,"superseded_value":20000,"value":20000,"value_key":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.contact_provider_claim FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "provider": 20000, "claim_key": 20000, "captured_by": 20000, "validation_status": 20000, "employment_processing_error": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"claim_key":20000,"employment_processing_error":20000,"provider":20000,"source":20000,"validation_status":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.contact_signature_enrich_state FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"last_outcome": 120, "last_skip_reason": 120}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"last_outcome":120,"last_skip_reason":120}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.contact_social FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"handle": 20000, "platform": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"handle":20000,"platform":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.contract FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"title": 120, "source": 20000, "status": 20000, "captured_by": 20000, "value_basis": 20000, "contract_number": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"contract_number":20000,"source":20000,"status":20000,"title":120,"value_basis":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.conversation_claim FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"body": 20000, "kind": 20000, "source": 20000, "status": 20000, "captured_by": 20000, "source_quote": 20000, "evidence_fingerprint": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"body":20000,"captured_by":20000,"evidence_fingerprint":20000,"kind":20000,"source":20000,"source_quote":20000,"status":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.custom_field FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"slug": 20000, "type": 20000, "label": 120, "object": 20000, "status": 20000, "column_name": 120, "activity_kinds": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"activity_kinds":20000,"column_name":120,"label":120,"object":20000,"slug":20000,"status":20000,"type":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.data_subject_request FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "status": 20000, "channel": 20000, "due_rule": 20000, "resolution": 20000, "subject_ref": 20000, "receipt_reference": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"channel":20000,"due_rule":20000,"kind":20000,"receipt_reference":20000,"resolution":20000,"status":20000,"subject_ref":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.data_task_review FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"task_id": 20000, "operator": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"operator":20000,"task_id":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.data_task_run FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"step": 20000, "status": 20000, "task_id": 20000, "first_release": 20000, "last_error_class": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"first_release":20000,"last_error_class":20000,"status":20000,"step":20000,"task_id":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.data_task_run_history FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"step": 20000, "task_id": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"step":20000,"task_id":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.deal FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"name": 120, "source": 20000, "status": 20000, "priority": 20000, "captured_by": 20000, "description": 20000, "lost_reason": 2000, "source_system": 20000, "commercial_mode": 20000, "lost_reason_code": 2000, "commercial_motion": 20000, "lost_reason_basis": 2000, "acquisition_source": 20000, "partner_attribution": 20000, "win_probability_set_by": 20000, "won_without_contract_detail": 20000, "won_without_contract_reason": 2000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"acquisition_source":20000,"captured_by":20000,"commercial_mode":20000,"commercial_motion":20000,"description":20000,"lost_reason":2000,"lost_reason_basis":2000,"lost_reason_code":2000,"name":120,"partner_attribution":20000,"priority":20000,"source":20000,"source_system":20000,"status":20000,"win_probability_set_by":20000,"won_without_contract_detail":20000,"won_without_contract_reason":2000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.deal_acquisition_source FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "label": 120, "shipped_label": 120, "shipped_label_key": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"key":20000,"label":120,"shipped_label":120,"shipped_label_key":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.deal_correction FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"asking": 20000, "fields": 20000, "correction": 20000, "captured_by": 20000, "reversed_by": 20000, "standing_close_date": 20000, "remaining_open_stages": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"asking":20000,"captured_by":20000,"correction":20000,"fields":20000,"remaining_open_stages":20000,"reversed_by":20000,"standing_close_date":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.deal_document_hide FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"hidden_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"hidden_by":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.deal_line_item FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"sku": 500, "unit": 120, "captured_by": 20000, "description": 20000, "catalog_name": 500, "tax_category": 20000, "billing_model": 20000, "component_kind": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"billing_model":20000,"captured_by":20000,"catalog_name":500,"component_kind":20000,"description":20000,"sku":500,"tax_category":20000,"unit":120}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.deal_loss_reason FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "label": 120, "shipped_label": 120, "shipped_label_key": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"key":20000,"label":120,"shipped_label":120,"shipped_label_key":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.deal_loss_reason_mapping FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"note_key": 20000, "decided_by": 20000, "reason_key": 2000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"decided_by":20000,"note_key":20000,"reason_key":2000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.deal_move_dismissal FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"fingerprint": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"fingerprint":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.deal_product FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "component_kind": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"component_kind":20000,"source":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.deal_risk_day FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"captured_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.deal_room FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"state": 20000, "title": 120, "source": 20000, "captured_by": 20000, "welcome_message": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"source":20000,"state":20000,"title":120,"welcome_message":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.deal_room_comment FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"body": 20000, "source": 20000, "captured_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"body":20000,"captured_by":20000,"source":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.deal_room_document FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"title": 120, "source": 20000, "group_key": 20000, "captured_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"group_key":20000,"source":20000,"title":120}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.deal_room_engagement FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"kind":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.deal_room_invitation FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "captured_by": 20000, "failure_reason": 2000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"failure_reason":2000,"source":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.deal_room_participant FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"email": 20000, "source": 20000, "capability": 20000, "captured_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"capability":20000,"captured_by":20000,"email":20000,"source":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.deal_room_session FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "captured_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"source":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.deal_room_thread FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"state": 20000, "source": 20000, "captured_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"source":20000,"state":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.deal_stage_evidence FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"snippet": 500, "commitment": 20000, "author_side": 20000, "source_type": 20000, "extracted_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"author_side":20000,"commitment":20000,"extracted_by":20000,"snippet":500,"source_type":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.deal_stage_history FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"changed_by": 20000, "provenance": 20000, "semantic_at_change": 20000, "valuation_provenance": 20000, "lost_reason_code_at_change": 2000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"changed_by":20000,"lost_reason_code_at_change":2000,"provenance":20000,"semantic_at_change":20000,"valuation_provenance":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.deal_status_card FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"fingerprint": 20000, "generated_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"fingerprint":20000,"generated_by":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.deal_suggestion FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "state": 20000, "name_hint": 20000, "captured_by": 20000, "fingerprint": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"fingerprint":20000,"kind":20000,"name_hint":20000,"state":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.deal_suggestion_evidence FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"kind":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.dedupe_candidate FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "captured_by": 20000, "disposition": 20000, "entity_type": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"disposition":20000,"entity_type":20000,"source":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.dedupe_scan_state FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"stream": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"stream":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.email_signature FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"phone": 20000, "title": 120}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"phone":20000,"title":120}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.embed_store_binding FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "populated_identity": 20000, "reembedding_identity": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"populated_identity":20000,"reembedding_identity":20000,"status":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.embedding FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"model": 20000, "chunk_hash": 20000, "entity_type": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"chunk_hash":20000,"entity_type":20000,"model":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.erasure_suppression FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "key_id": 20000, "value_hash": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"key_id":20000,"kind":20000,"value_hash":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.existing_customer_notice FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"captured_by": 20000, "notice_text": 20000, "withdrawn_by": 20000, "customer_group": 20000, "withdrawn_reason": 2000, "collection_channel": 20000, "evidence_reference": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"collection_channel":20000,"customer_group":20000,"evidence_reference":20000,"notice_text":20000,"withdrawn_by":20000,"withdrawn_reason":2000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.extension_ingest_position FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"unit": 20000, "position": 20000, "source_system": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"position":20000,"source_system":20000,"unit":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.extension_ingest_refusal FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"unit": 20000, "refusal": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"refusal":20000,"unit":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.extension_secret FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "vault_ref": 20000, "extension_name": 120}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"extension_name":120,"key":20000,"vault_ref":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.federated_identity FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"provider": 20000, "email_at_link": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"email_at_link":20000,"provider":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.field_mask FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"field": 20000, "object": 20000, "role_key": 20000, "condition": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"condition":20000,"field":20000,"object":20000,"role_key":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.field_provenance FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "field_name": 120, "captured_by": 20000, "object_type": 20000, "evidence_ref": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"evidence_ref":20000,"field_name":120,"object_type":20000,"source":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.finance_connection FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "status": 20000, "provider": 20000, "captured_by": 20000, "sync_cursor": 20000, "credential_ref": 20000, "last_error_code": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"credential_ref":20000,"last_error_code":20000,"provider":20000,"source":20000,"status":20000,"sync_cursor":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.finance_customer_link FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "sync_hash": 20000, "captured_by": 20000, "external_customer_id": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"external_customer_id":20000,"source":20000,"sync_hash":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.finance_external_customer FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "sync_hash": 20000, "captured_by": 20000, "external_customer_id": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"external_customer_id":20000,"source":20000,"sync_hash":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.finance_invoice FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"number": 20000, "source": 20000, "status": 20000, "sync_hash": 20000, "raw_status": 20000, "captured_by": 20000, "external_id": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"external_id":20000,"number":20000,"raw_status":20000,"source":20000,"status":20000,"sync_hash":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.finance_payment FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "sync_hash": 20000, "captured_by": 20000, "external_id": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"external_id":20000,"source":20000,"sync_hash":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.forecast_call FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"note": 2000, "scope_kind": 20000, "captured_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"note":2000,"scope_kind":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.forecast_capture_status FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"failure": 20000, "context_key": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"context_key":20000,"failure":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.forecast_contribution FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"category": 20000, "captured_by": 20000, "risk_signals": 20000, "qualification": 20000, "exclusion_reason": 2000, "probability_source": 20000, "viability_disposition": 20000, "qualified_policy_version": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"category":20000,"exclusion_reason":2000,"probability_source":20000,"qualification":20000,"qualified_policy_version":20000,"risk_signals":20000,"viability_disposition":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.forecast_snapshot FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"trigger": 20000, "scope_kind": 20000, "captured_by": 20000, "range_version": 20000, "forward_measure": 20000, "landing_measure": 20000, "range_quantiles": 20000, "input_fingerprint": 20000, "definition_version": 20000, "risk_signals_version": 20000, "population_fingerprint": 20000, "qualified_policy_version": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"definition_version":20000,"forward_measure":20000,"input_fingerprint":20000,"landing_measure":20000,"population_fingerprint":20000,"qualified_policy_version":20000,"range_quantiles":20000,"range_version":20000,"risk_signals_version":20000,"scope_kind":20000,"trigger":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.geocode_cache FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"query": 20000, "provider": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"provider":20000,"query":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.geocode_country_cache FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"query": 20000, "provider": 20000, "country_codes": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"country_codes":20000,"provider":20000,"query":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.home_read_cache FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"read": 20000, "request_key": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"read":20000,"request_key":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.home_read_fence_pending FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"fence": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"fence":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.idempotency_key FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "endpoint": 20000, "principal_id": 20000, "request_digest": 20000, "response_content_type": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"endpoint":20000,"key":20000,"principal_id":20000,"request_digest":20000,"response_content_type":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.intro_request FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"origin": 20000, "status": 20000, "route_type": 20000, "captured_by": 20000, "decision_reason": 2000, "fallback_policy": 20000, "internal_reason": 2000, "forwardable_note": 2000, "recorded_channel": 20000, "value_for_target": 20000, "note_generated_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"decision_reason":2000,"fallback_policy":20000,"forwardable_note":2000,"internal_reason":2000,"note_generated_by":20000,"origin":20000,"recorded_channel":20000,"route_type":20000,"status":20000,"value_for_target":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.knowledge_corpus FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"name": 120, "captured_by": 20000, "description": 20000, "managed_source": 20000, "topic_statement": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"description":20000,"managed_source":20000,"name":120,"topic_statement":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.knowledge_document FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"checksum": 20000, "filename": 20000, "captured_by": 20000, "storage_key": 20000, "content_type": 20000, "ingest_detail": 20000, "ingest_status": 20000, "managed_source": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"checksum":20000,"content_type":20000,"filename":20000,"ingest_detail":20000,"ingest_status":20000,"managed_source":20000,"storage_key":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.lead FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"email": 20000, "phone": 20000, "title": 120, "origin": 20000, "source": 20000, "status": 20000, "industry": 20000, "source_id": 20000, "captured_by": 20000, "company_name": 120, "linkedin_url": 20000, "origin_detail": 500, "source_system": 20000, "status_set_by": 20000, "disqualify_note": 2000, "email_domain_folded": 20000, "partner_accepted_by": 20000, "candidate_company_key": 20000, "score_override_reason": 2000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"candidate_company_key":20000,"captured_by":20000,"company_name":120,"disqualify_note":2000,"email":20000,"email_domain_folded":20000,"industry":20000,"linkedin_url":20000,"origin":20000,"origin_detail":500,"partner_accepted_by":20000,"phone":20000,"score_override_reason":2000,"source":20000,"source_id":20000,"source_system":20000,"status":20000,"status_set_by":20000,"title":120}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.lead_disqualify_reason FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"label": 120, "shipped_label": 120, "shipped_label_key": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"label":120,"shipped_label":120,"shipped_label_key":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.lead_manual_signal FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"band": 20000, "factor": 20000, "reason": 2000, "signal_kind": 20000, "superseded_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"band":20000,"factor":20000,"reason":2000,"signal_kind":20000,"superseded_by":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.lead_origin FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "label": 120, "intent": 20000, "shipped_label": 120, "shipped_label_key": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"intent":20000,"key":20000,"label":120,"shipped_label":120,"shipped_label_key":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.lead_privacy_notice FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"state": 20000, "locale": 20000, "failure": 20000, "template_key": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"failure":20000,"locale":20000,"state":20000,"template_key":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.lead_score_history FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"override_reason": 2000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"override_reason":2000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.lead_source FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "label": 120, "intent": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"intent":20000,"key":20000,"label":120}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.legal_entity FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"bic": 20000, "icp": 20000, "usp": 20000, "iban": 20000, "vat_id": 20000, "country": 20000, "imprint": 20000, "legal_name": 500, "captured_by": 20000, "address_city": 20000, "address_line1": 500, "address_line2": 500, "offer_summary": 20000, "address_region": 20000, "register_court": 20000, "logo_object_key": 20000, "register_number": 20000, "default_language": 20000, "value_proposition": 20000, "signature_template": 20000, "address_postal_code": 20000, "bank_account_holder": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"address_city":20000,"address_line1":500,"address_line2":500,"address_postal_code":20000,"address_region":20000,"bank_account_holder":20000,"bic":20000,"captured_by":20000,"country":20000,"default_language":20000,"iban":20000,"icp":20000,"imprint":20000,"legal_name":500,"logo_object_key":20000,"offer_summary":20000,"register_court":20000,"register_number":20000,"signature_template":20000,"usp":20000,"value_proposition":20000,"vat_id":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.legal_entity_member FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"assigned_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"assigned_by":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.legal_review FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"note": 2000, "status": 20000, "comments": 2000, "captured_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"comments":2000,"note":2000,"status":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.linkedin_account FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"profile_url": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"profile_url":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.linkedin_connection FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"email": 20000, "source": 20000, "position": 20000, "profile_url": 20000, "company_name": 120, "match_status": 20000, "normalized_name": 120, "normalized_company": 20000, "provider_member_ref": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"company_name":120,"email":20000,"match_status":20000,"normalized_company":20000,"normalized_name":120,"position":20000,"profile_url":20000,"provider_member_ref":20000,"source":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.list FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"name": 120, "purpose": 20000, "sharing": 20000, "list_type": 20000, "entity_type": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"entity_type":20000,"list_type":20000,"name":120,"purpose":20000,"sharing":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.list_evaluation FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"outcome": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"outcome":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.list_live_member FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"entity_type": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"entity_type":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.list_member FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"note": 2000, "added_by": 20000, "entity_type": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"added_by":20000,"entity_type":20000,"note":2000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.list_member_event FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"note": 2000, "actor": 20000, "action": 20000, "reason": 2000, "entity_type": 20000, "member_note": 2000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"action":20000,"actor":20000,"entity_type":20000,"member_note":2000,"note":2000,"reason":2000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.list_revision FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"name": 120, "purpose": 20000, "sharing": 20000, "changed_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"changed_by":20000,"name":120,"purpose":20000,"sharing":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.mail_draft FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"subject": 20000, "anchor_type": 20000, "cc_addresses": 20000, "scheduled_tz": 20000, "to_addresses": 20000, "bcc_addresses": 20000, "communication_context": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"anchor_type":20000,"bcc_addresses":20000,"cc_addresses":20000,"communication_context":20000,"scheduled_tz":20000,"subject":20000,"to_addresses":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.maskable_field FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"field": 20000, "object": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"field":20000,"object":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.meeting_calendar_episode FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"provider": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"provider":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.meeting_invitation FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "command": 20000, "provider": 20000, "calendar_id": 20000, "management_ref": 20000, "management_hash": 20000, "reminder_status": 20000, "attention_reason": 2000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"attention_reason":2000,"calendar_id":20000,"command":20000,"management_hash":20000,"management_ref":20000,"provider":20000,"reminder_status":20000,"status":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.meeting_proposal FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"link_ref": 20000, "token_hash": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"link_ref":20000,"token_hash":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.meeting_readiness FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"revision": 20000, "captured_by": 20000, "agenda_fingerprint": 20000, "participants_fingerprint": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"agenda_fingerprint":20000,"captured_by":20000,"participants_fingerprint":20000,"revision":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.mfa_challenge_spent FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"jti": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"jti":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.mfa_recovery_code FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"code_hash": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"code_hash":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.notice FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"body": 2000, "kind": 20000, "subject": 500, "dedupe_key": 20000, "captured_by": 20000, "email_error": 500, "target_type": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"body":2000,"captured_by":20000,"dedupe_key":20000,"email_error":500,"kind":20000,"subject":500,"target_type":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.notification_digest_run FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"mail_error": 500}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"mail_error":500}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.notification_preference FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"class": 20000, "delivery": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"class":20000,"delivery":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.oauth_authorization_code FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"scopes": 20000, "resource": 20000, "client_id": 20000, "code_hash": 20000, "work_areas": 20000, "redirect_uri": 20000, "code_challenge": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"client_id":20000,"code_challenge":20000,"code_hash":20000,"redirect_uri":20000,"resource":20000,"scopes":20000,"work_areas":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.oauth_client FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"client_id": 20000, "client_name": 120, "created_via": 20000, "redirect_uris": 20000, "client_secret_hash": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"client_id":20000,"client_name":120,"client_secret_hash":20000,"created_via":20000,"redirect_uris":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.oauth_grant FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"scopes": 20000, "resource": 20000, "client_id": 20000, "work_areas": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"client_id":20000,"resource":20000,"scopes":20000,"work_areas":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.oauth_refresh_token FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"token_hash": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"token_hash":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.offer FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "status": 20000, "language": 20000, "intro_text": 20000, "terms_text": 20000, "captured_by": 20000, "offer_number": 20000, "pdf_asset_ref": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"intro_text":20000,"language":20000,"offer_number":20000,"pdf_asset_ref":20000,"source":20000,"status":20000,"terms_text":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.offer_line_item FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"unit": 20000, "description": 20000, "tax_category": 20000, "billing_model": 20000, "proposal_state": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"billing_model":20000,"description":20000,"proposal_state":20000,"tax_category":20000,"unit":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.offer_template FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"name": 120, "locale": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"locale":20000,"name":120}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.onboarding_wizard_state FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"path": 20000, "step": 20000, "source_mode": 20000, "website_url": 20000, "selected_fact_keys": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"path":20000,"selected_fact_keys":20000,"source_mode":20000,"step":20000,"website_url":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.partner FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "next_step": 20000, "captured_by": 20000, "cert_status": 20000, "margin_tier": 20000, "activated_by": 20000, "partner_kinds": 20000, "served_segments": 20000, "activation_basis": 20000, "relationship_stage": 20000, "partner_fit_override_reason": 2000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"activated_by":20000,"activation_basis":20000,"captured_by":20000,"cert_status":20000,"margin_tier":20000,"next_step":20000,"partner_fit_override_reason":2000,"partner_kinds":20000,"relationship_stage":20000,"served_segments":20000,"source":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.partner_stage FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "label": 120, "meaning": 20000, "shipped_label": 120, "shipped_label_key": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"key":20000,"label":120,"meaning":20000,"shipped_label":120,"shipped_label_key":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.passport FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"label": 120, "scopes": 20000, "app_issuer": 500, "token_hash": 20000, "work_areas": 20000, "app_subject": 500}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"app_issuer":500,"app_subject":500,"label":120,"scopes":20000,"token_hash":20000,"work_areas":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.pipeline FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"name": 120}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"name":120}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.preference_token FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"token": 20000, "token_hash": 20000, "revoked_reason": 2000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"revoked_reason":2000,"token":20000,"token_hash":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.privacy_notice_case FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"rule": 20000, "state": 20000, "source_kind": 20000, "allowed_routes": 20000, "blocked_reason": 2000, "resolution_note": 2000, "source_review_note": 2000, "source_evidence_kind": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"allowed_routes":20000,"blocked_reason":2000,"resolution_note":2000,"rule":20000,"source_evidence_kind":20000,"source_kind":20000,"source_review_note":2000,"state":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.privacy_request_proof FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"result": 20000, "request_kind": 20000, "identity_check": 20000, "request_number": 20000, "completed_by_id": 20000, "requester_email": 20000, "erased_uncounted": 20000, "completed_by_type": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"completed_by_id":20000,"completed_by_type":20000,"erased_uncounted":20000,"identity_check":20000,"request_kind":20000,"request_number":20000,"requester_email":20000,"result":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.product FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"sku": 20000, "name": 120, "unit": 20000, "source": 20000, "captured_by": 20000, "description": 20000, "tax_category": 20000, "billing_model": 20000, "component_kind": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"billing_model":20000,"captured_by":20000,"component_kind":20000,"description":20000,"name":120,"sku":20000,"source":20000,"tax_category":20000,"unit":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.product_translation FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"name": 120, "language": 20000, "captured_by": 20000, "description": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"description":20000,"language":20000,"name":120}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.project FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "name": 120, "phase": 20000, "source": 20000, "captured_by": 20000, "description": 20000, "closed_reason": 2000, "source_system": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"closed_reason":2000,"description":20000,"key":20000,"name":120,"phase":20000,"source":20000,"source_system":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.project_health_assessment FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"note": 2000, "state": 20000, "source": 20000, "captured_by": 20000, "source_author": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"note":2000,"source":20000,"source_author":20000,"state":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.project_phase_history FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"reason": 2000, "to_phase": 20000, "changed_by": 20000, "from_phase": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"changed_by":20000,"from_phase":20000,"reason":2000,"to_phase":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.provider_applied_field FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"provider": 20000, "captured_by": 20000, "target_field": 20000, "target_table": 20000, "applied_value": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"applied_value":20000,"captured_by":20000,"provider":20000,"target_field":20000,"target_table":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.provider_connection FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"mode": 20000, "preset": 20000, "status": 20000, "provider": 20000, "categories": 20000, "credential_ref": 20000, "last_safe_status_code": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"categories":20000,"credential_ref":20000,"last_safe_status_code":20000,"mode":20000,"preset":20000,"provider":20000,"status":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.provider_connection_budget FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"pool": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"pool":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.provider_employment_resolution FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"state": 20000, "episode_key": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"episode_key":20000,"state":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.provider_run FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"state": 20000, "trigger": 20000, "provider": 20000, "skip_reason": 2000, "subject_kind": 20000, "provider_job_id": 20000, "input_fingerprint": 20000, "requested_categories": 20000, "last_safe_status_code": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"input_fingerprint":20000,"last_safe_status_code":20000,"provider":20000,"provider_job_id":20000,"requested_categories":20000,"skip_reason":2000,"state":20000,"subject_kind":20000,"trigger":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.provider_run_category FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"category": 20000, "provider": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"category":20000,"provider":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.provider_run_reservation FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"pool": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"pool":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.record_assignment FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "captured_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"source":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.record_grant FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"access": 20000, "reason": 2000, "record_type": 20000, "subject_type": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"access":20000,"reason":2000,"record_type":20000,"subject_type":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.record_link FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"to_type": 20000, "from_type": 20000, "link_type": 20000, "captured_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"from_type":20000,"link_type":20000,"to_type":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.record_role FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "label": 120, "record_types": 20000, "shipped_label": 120, "assignee_kinds": 20000, "shipped_label_key": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"assignee_kinds":20000,"key":20000,"label":120,"record_types":20000,"shipped_label":120,"shipped_label_key":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.relationship FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "role": 20000, "source": 20000, "captured_by": 20000, "ended_precision": 20000, "employment_status": 20000, "started_precision": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"employment_status":20000,"ended_precision":20000,"kind":20000,"role":20000,"source":20000,"started_precision":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.relationship_nudge_dismissal FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"set_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"set_by":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.report_definition FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"name": 120, "audience": 20000, "description": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"audience":20000,"description":20000,"name":120}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.report_edition FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"publication_audience": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"publication_audience":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.report_edition_contribution FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"metric": 20000, "group_key": 20000, "context_id": 20000, "source_type": 20000, "contribution_key": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"context_id":20000,"contribution_key":20000,"group_key":20000,"metric":20000,"source_type":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.report_edition_question FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"entity": 20000, "reason": 2000, "card_id": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"card_id":20000,"entity":20000,"reason":2000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.report_edition_question_source FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"card_id": 20000, "source_type": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"card_id":20000,"source_type":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.report_execution FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"reason": 2000, "status": 20000, "request_hash": 20000, "execution_key": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"execution_key":20000,"reason":2000,"request_hash":20000,"status":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.report_run FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"captured_by": 20000, "schema_version": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"schema_version":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.report_schedule FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"timezone": 20000, "last_status": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"last_status":20000,"timezone":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.restore_drill FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"notes": 2000, "outcome": 20000, "operator": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"notes":2000,"operator":20000,"outcome":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.retention_policy FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"action": 20000, "category": 20000, "object_type": 20000, "lawful_basis": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"action":20000,"category":20000,"lawful_basis":20000,"object_type":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.role FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "name": 120}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"key":20000,"name":120}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.runner_job FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "agent_spec": 20000, "last_error": 20000, "trigger_ref": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"agent_spec":20000,"last_error":20000,"status":20000,"trigger_ref":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.sales_goal_plan_revision FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "origin": 20000, "reason": 2000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"kind":20000,"origin":20000,"reason":2000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.sales_initiative FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"name": 120, "source": 20000, "status": 20000, "captured_by": 20000, "description": 20000, "objective_metric": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"description":20000,"name":120,"objective_metric":20000,"source":20000,"status":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.sales_initiative_baseline FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"status":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.sales_initiative_enrolment FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"reason": 20000, "captured_by": 20000, "record_type": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"reason":20000,"record_type":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.sales_initiative_member FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"reason": 2000, "captured_by": 20000, "record_type": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"reason":2000,"record_type":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.sales_initiative_revision FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"reason": 2000, "created_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"created_by":20000,"reason":2000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.sales_target FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"unit": 20000, "metric": 20000, "scope_kind": 20000, "period_kind": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"metric":20000,"period_kind":20000,"scope_kind":20000,"unit":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.saved_view FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"name": 120, "resource": 20000, "shared_scope": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"name":120,"resource":20000,"shared_scope":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.scheduled_send FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "held_reason": 2000, "origin_kind": 20000, "scheduled_tz": 20000, "agent_actor_id": 20000, "principal_kind": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"agent_actor_id":20000,"held_reason":2000,"origin_kind":20000,"principal_kind":20000,"scheduled_tz":20000,"status":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.sdr_handoff FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"note": 2000, "status": 20000, "captured_by": 20000, "reason_applies_to": 2000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"note":2000,"reason_applies_to":2000,"status":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.sdr_handoff_event FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"note": 2000, "actor": 20000, "to_status": 20000, "reason_applies_to": 2000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"actor":20000,"note":2000,"reason_applies_to":2000,"to_status":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.sdr_handoff_reason FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"label": 120, "applies_to": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"applies_to":20000,"label":120}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.session FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"token_hash": 20000, "user_agent": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"token_hash":20000,"user_agent":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.setting FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"key":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.setup_token FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"token_hash": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"token_hash":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.signal FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "source": 20000, "status": 20000, "raw_ref": 20000, "summary": 500, "severity": 20000, "visibility": 20000, "captured_by": 20000, "entity_type": 20000, "fingerprint": 20000, "source_channel": 20000, "resolution_state": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"entity_type":20000,"fingerprint":20000,"kind":20000,"raw_ref":20000,"resolution_state":20000,"severity":20000,"source":20000,"source_channel":20000,"status":20000,"summary":500,"visibility":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.signal_resolution FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"note": 2000, "source": 20000, "outcome": 20000, "matched_on": 20000, "captured_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"matched_on":20000,"note":2000,"outcome":20000,"source":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.signal_thread_scan FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"thread_key": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"thread_key":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.site_read FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"phase": 20000, "status": 20000, "seed_url": 20000, "logo_origin": 20000, "status_code": 20000, "target_kind": 20000, "requested_by": 20000, "proposal_hash": 20000, "status_detail": 20000, "stopped_reason": 2000, "logo_object_key": 20000, "logo_icon_origin": 20000, "logo_icon_object_key": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"logo_icon_object_key":20000,"logo_icon_origin":20000,"logo_object_key":20000,"logo_origin":20000,"phase":20000,"proposal_hash":20000,"requested_by":20000,"seed_url":20000,"status":20000,"status_code":20000,"status_detail":20000,"stopped_reason":2000,"target_kind":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.stage FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"name": 120, "semantic": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"name":120,"semantic":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.stage_exit_criterion FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "hint": 500, "kind": 20000, "label": 120}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"hint":500,"key":20000,"kind":20000,"label":120}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.stage_progression_outcome FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"outcome": 20000, "evidence_kinds": 20000, "rejection_reason": 2000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"evidence_kinds":20000,"outcome":20000,"rejection_reason":2000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.stage_progression_policy FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"mode": 20000, "suspended_reason": 2000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"mode":20000,"suspended_reason":2000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.stored_object_intent FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "storage_key": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"kind":20000,"storage_key":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.suggestion_dismissal FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"fingerprint": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"fingerprint":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.system_log FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"action": 20000, "actor_id": 20000, "actor_type": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"action":20000,"actor_id":20000,"actor_type":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.tag FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"name": 120, "color": 20000, "description": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"color":20000,"description":20000,"name":120}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.tag_interest_read FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"content_digest": 20000, "vocabulary_digest": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"content_digest":20000,"vocabulary_digest":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.tag_suggestion FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"state": 20000, "captured_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"state":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.taggable FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"entity_type": 20000, "assigned_by_kind": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"assigned_by_kind":20000,"entity_type":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.tax_rate FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"country": 20000, "category": 20000, "captured_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"category":20000,"country":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.team FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"name": 120}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"name":120}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.team_weekly_review FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"summary": 500, "team_name": 120, "summary_language": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"summary":500,"summary_language":20000,"team_name":120}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.team_weekly_review_coverage FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"basis": 20000, "absent": 20000, "period_kind": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"absent":20000,"basis":20000,"period_kind":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.team_weekly_review_outlook FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"period_kind": 20000, "forward_measure": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"forward_measure":20000,"period_kind":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.team_weekly_review_rep FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"focus_kind": 20000, "focus_label": 120}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"focus_kind":20000,"focus_label":120}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.team_weekly_review_rep_funnel FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"stage_name": 120, "pipeline_name": 120, "next_stage_name": 120}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"next_stage_name":120,"pipeline_name":120,"stage_name":120}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.team_weekly_review_rep_pattern FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "label": 120}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"kind":20000,"label":120}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.technical_lookup_cache FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"query": 20000, "record_kind": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"query":20000,"record_kind":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.transcript_read FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "requested_by": 20000, "status_detail": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"requested_by":20000,"status":20000,"status_detail":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.user_mfa FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"secret_ref": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"secret_ref":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.user_record_view FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"entity_type": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"entity_type":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.vault_secret FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"ref": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"ref":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.voice_build FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"stage": 20000, "reason": 2000, "status": 20000, "source_hash": 20000, "status_code": 20000, "status_detail": 20000, "candidate_action": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"candidate_action":20000,"reason":2000,"source_hash":20000,"stage":20000,"status":20000,"status_code":20000,"status_detail":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.voice_corpus_source FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "origin": 20000, "source": 20000, "register": 20000, "source_ref": 20000, "captured_by": 20000, "content_hash": 20000, "source_label": 500, "exclusion_reason": 2000, "extractor_version": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"content_hash":20000,"exclusion_reason":2000,"extractor_version":20000,"kind":20000,"origin":20000,"register":20000,"source":20000,"source_label":500,"source_ref":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.voice_learning_signal FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "outcome": 20000, "captured_by": 20000, "final_captured_by": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"final_captured_by":20000,"outcome":20000,"source":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.voice_profile FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"scope": 20000, "source": 20000, "status": 20000, "model_ref": 20000, "captured_by": 20000, "personality_md": 20000, "active_source_hash": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"active_source_hash":20000,"captured_by":20000,"model_ref":20000,"personality_md":20000,"scope":20000,"source":20000,"status":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.voice_profile_delta FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"classification": 20000, "activation_outcome": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"activation_outcome":20000,"classification":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.voice_profile_version FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"reason": 2000, "source": 20000, "status": 20000, "model_name": 120, "captured_by": 20000, "source_hash": 20000, "model_provider": 20000, "review_reasons": 2000, "builder_version": 20000, "activation_policy_version": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"activation_policy_version":20000,"builder_version":20000,"captured_by":20000,"model_name":120,"model_provider":20000,"reason":2000,"review_reasons":2000,"source":20000,"source_hash":20000,"status":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.web_form FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"name": 120, "state": 20000, "sender": 20000, "form_key": 20000, "secret_ref": 20000, "captured_by": 20000, "lead_origin": 20000, "redirect_url": 20000, "privacy_notice": 500, "allowed_origins": 20000, "consent_wording": 2000, "success_message": 500, "consent_policy_version": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"allowed_origins":20000,"captured_by":20000,"consent_policy_version":20000,"consent_wording":2000,"form_key":20000,"lead_origin":20000,"name":120,"privacy_notice":500,"redirect_url":20000,"secret_ref":20000,"sender":20000,"state":20000,"success_message":500}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.webhook_delivery FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "event_type": 20000, "entity_type": 20000, "content_type": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"content_type":20000,"entity_type":20000,"event_type":20000,"status":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.webhook_subscription FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"state": 20000, "target_url": 20000, "event_types": 20000, "body_template": 20000, "body_content_type": 20000, "signing_secret_ref": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"body_content_type":20000,"body_template":20000,"event_types":20000,"signing_secret_ref":20000,"state":20000,"target_url":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.weekly_plan FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"risks": 2000, "status": 20000, "captured_by": 20000, "capacity_note": 2000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"capacity_note":2000,"captured_by":20000,"risks":2000,"status":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.weekly_plan_commitment FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"label": 500, "state": 20000, "captured_by": 20000, "help_requested": 2000, "manager_response": 2000, "linked_record_type": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"captured_by":20000,"help_requested":2000,"label":500,"linked_record_type":20000,"manager_response":2000,"state":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.weekly_review FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"narrative": 2000, "mail_error": 500, "learnings_state": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"learnings_state":20000,"mail_error":500,"narrative":2000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.weekly_review_deal FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"outcome": 20000, "deal_label": 120, "to_stage_label": 120}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"deal_label":120,"outcome":20000,"to_stage_label":120}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.weekly_review_driver FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"bar": 20000, "deal_label": 120, "period_kind": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"bar":20000,"deal_label":120,"period_kind":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.weekly_review_learning FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "text": 500}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"kind":20000,"text":500}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.weekly_review_learning_citation FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"label": 120, "subject_type": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"label":120,"subject_type":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.weekly_review_movement FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"bar": 20000, "period_kind": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"bar":20000,"period_kind":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.weekly_review_outlook FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"period_kind": 20000, "forward_measure": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"forward_measure":20000,"period_kind":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.withdrawal_credential FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"scope": 20000, "address": 20000, "token_hash": 20000, "revoked_reason": 2000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"address":20000,"revoked_reason":2000,"scope":20000,"token_hash":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.workflow_run FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"error": 20000, "status": 20000, "handler": 20000, "idempotency_key": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"error":20000,"handler":20000,"idempotency_key":20000,"status":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.worklist_done FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"row_id": 20000, "set_by": 20000, "source": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"row_id":20000,"set_by":20000,"source":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.worklist_pin FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"row_id": 20000, "set_by": 20000, "source": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"row_id":20000,"set_by":20000,"source":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.worklist_snapshot FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"params_fingerprint": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"params_fingerprint":20000}');
+
+CREATE TRIGGER text_bound_update AFTER UPDATE ON public.workspace_email_domain FOR EACH ROW WHEN (public.text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"domain": 20000, "source": 20000}'::jsonb)) EXECUTE FUNCTION public.refuse_oversized_text('{"domain":20000,"source":20000}');
 
 CREATE TRIGGER trg_activity_review_response_updated BEFORE UPDATE ON public.activity_review_response FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
@@ -12477,6 +14436,8 @@ CREATE TRIGGER trg_capture_sync_state_updated BEFORE UPDATE ON public.capture_sy
 
 CREATE TRIGGER trg_channel_connection_updated BEFORE UPDATE ON public.channel_connection FOR EACH ROW WHEN (((to_jsonb(old.*) - 'poll_offset'::text) IS DISTINCT FROM (to_jsonb(new.*) - 'poll_offset'::text))) EXECUTE FUNCTION public.set_updated_at_bump_version();
 
+CREATE TRIGGER trg_chat_link_updated BEFORE UPDATE ON public.chat_link FOR EACH ROW WHEN (((to_jsonb(old.*) - ARRAY['history_cursor'::text, 'history_synced_at'::text, 'card_message_id'::text, 'card_fingerprint'::text]) IS DISTINCT FROM (to_jsonb(new.*) - ARRAY['history_cursor'::text, 'history_synced_at'::text, 'card_message_id'::text, 'card_fingerprint'::text]))) EXECUTE FUNCTION public.set_updated_at_bump_version();
+
 CREATE TRIGGER trg_company_address_country_stale AFTER UPDATE OF address_postal_code, address_city, address_country ON public.company FOR EACH ROW WHEN (((old.address_postal_code IS DISTINCT FROM new.address_postal_code) OR (old.address_city IS DISTINCT FROM new.address_city) OR (old.address_country IS DISTINCT FROM new.address_country))) EXECUTE FUNCTION public.company_address_country_goes_stale();
 
 CREATE TRIGGER trg_company_domain_updated BEFORE UPDATE ON public.company_domain FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
@@ -12488,6 +14449,8 @@ CREATE TRIGGER trg_company_fact_updated BEFORE UPDATE ON public.company_fact FOR
 CREATE TRIGGER trg_company_geocode_state_stale AFTER UPDATE OF address_line1, address_line2, address_city, address_region, address_postal_code, address_country ON public.company FOR EACH ROW WHEN (((old.address_line1 IS DISTINCT FROM new.address_line1) OR (old.address_line2 IS DISTINCT FROM new.address_line2) OR (old.address_city IS DISTINCT FROM new.address_city) OR (old.address_region IS DISTINCT FROM new.address_region) OR (old.address_postal_code IS DISTINCT FROM new.address_postal_code) OR (old.address_country IS DISTINCT FROM new.address_country))) EXECUTE FUNCTION public.company_geocode_state_goes_stale();
 
 CREATE TRIGGER trg_company_no_cycle BEFORE INSERT OR UPDATE OF parent_company_id ON public.company FOR EACH ROW WHEN ((new.parent_company_id IS NOT NULL)) EXECUTE FUNCTION public.company_no_ancestor_cycle();
+
+CREATE TRIGGER trg_company_profile_field_citation BEFORE INSERT OR UPDATE ON public.company_profile_field FOR EACH ROW EXECUTE FUNCTION public.company_profile_field_cites_only_a_meeting();
 
 CREATE TRIGGER trg_company_profile_field_updated BEFORE UPDATE ON public.company_profile_field FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
 
@@ -12687,6 +14650,9 @@ ALTER TABLE ONLY public.activity_link
 
 ALTER TABLE ONLY public.activity_link
     ADD CONSTRAINT activity_link_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.project(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.activity_link_suggestion
+    ADD CONSTRAINT activity_link_suggestion_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES public.activity(id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.activity_mail_reference
     ADD CONSTRAINT activity_mail_reference_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES public.activity(id) ON DELETE CASCADE;
@@ -12941,10 +14907,19 @@ ALTER TABLE ONLY public.capture_backfill_creation
     ADD CONSTRAINT capture_backfill_creation_backfill_id_fkey FOREIGN KEY (backfill_id) REFERENCES public.capture_backfill(id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.capture_connection
+    ADD CONSTRAINT capture_connection_backup_owner_id_fkey FOREIGN KEY (backup_owner_id) REFERENCES public.app_user(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.capture_connection
+    ADD CONSTRAINT capture_connection_connected_by_fkey FOREIGN KEY (connected_by) REFERENCES public.app_user(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.capture_connection
     ADD CONSTRAINT capture_connection_context_tag_id_fkey FOREIGN KEY (context_tag_id) REFERENCES public.tag(id) ON DELETE SET NULL;
 
 ALTER TABLE ONLY public.capture_connection
     ADD CONSTRAINT capture_connection_legal_entity_id_fkey FOREIGN KEY (legal_entity_id) REFERENCES public.legal_entity(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.capture_connection
+    ADD CONSTRAINT capture_connection_reader_team_id_fkey FOREIGN KEY (reader_team_id) REFERENCES public.team(id) ON DELETE RESTRICT;
 
 ALTER TABLE ONLY public.capture_connection
     ADD CONSTRAINT capture_connection_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
@@ -12963,6 +14938,9 @@ ALTER TABLE ONLY public.capture_freemail_domain
 
 ALTER TABLE ONLY public.capture_import
     ADD CONSTRAINT capture_import_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES public.activity(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.capture_import
+    ADD CONSTRAINT capture_import_connection_id_fkey FOREIGN KEY (connection_id) REFERENCES public.capture_connection(id) ON DELETE RESTRICT;
 
 ALTER TABLE ONLY public.capture_import
     ADD CONSTRAINT capture_import_legal_entity_id_fkey FOREIGN KEY (legal_entity_id) REFERENCES public.legal_entity(id) ON DELETE RESTRICT;
@@ -13014,6 +14992,21 @@ ALTER TABLE ONLY public.capture_thread_verdict
 
 ALTER TABLE ONLY public.channel_connection
     ADD CONSTRAINT channel_connection_connected_by_fkey FOREIGN KEY (connected_by) REFERENCES public.app_user(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.chat_link
+    ADD CONSTRAINT chat_link_connection_id_fkey FOREIGN KEY (connection_id) REFERENCES public.channel_connection(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.chat_link
+    ADD CONSTRAINT chat_link_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES public.deal(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.chat_link
+    ADD CONSTRAINT chat_link_linked_by_fkey FOREIGN KEY (linked_by) REFERENCES public.app_user(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.chat_link
+    ADD CONSTRAINT chat_link_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.project(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.chat_post_item
+    ADD CONSTRAINT chat_post_item_link_id_fkey FOREIGN KEY (link_id) REFERENCES public.chat_link(id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.close_date_run_member
     ADD CONSTRAINT close_date_run_member_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES public.deal(id) ON DELETE CASCADE;
@@ -13171,6 +15164,9 @@ ALTER TABLE ONLY public.company
 ALTER TABLE ONLY public.company_profile_field
     ADD CONSTRAINT company_profile_field_company_fkey FOREIGN KEY (company_id) REFERENCES public.company(id) ON DELETE CASCADE;
 
+ALTER TABLE ONLY public.company_profile_field
+    ADD CONSTRAINT company_profile_field_source_activity_id_fkey FOREIGN KEY (source_activity_id) REFERENCES public.activity(id) ON DELETE CASCADE;
+
 ALTER TABLE ONLY public.company_relationship_type
     ADD CONSTRAINT company_relationship_typ_workspace_id_company_id_fkey FOREIGN KEY (company_id) REFERENCES public.company(id) ON DELETE CASCADE;
 
@@ -13198,6 +15194,9 @@ ALTER TABLE ONLY public.confirm_token
 ALTER TABLE ONLY public.confirm_token
     ADD CONSTRAINT confirm_token_purpose_id_fkey FOREIGN KEY (purpose_id) REFERENCES public.consent_purpose(id) ON DELETE RESTRICT;
 
+ALTER TABLE ONLY public.confirm_token
+    ADD CONSTRAINT confirm_token_subject_request_id_fkey FOREIGN KEY (subject_request_id) REFERENCES public.consent_qualifying_event(id) ON DELETE SET NULL;
+
 ALTER TABLE ONLY public.consent_doi_token
     ADD CONSTRAINT consent_doi_token_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES public.contact(id) ON DELETE CASCADE;
 
@@ -13215,6 +15214,9 @@ ALTER TABLE ONLY public.consent_event
 
 ALTER TABLE ONLY public.consent_event
     ADD CONSTRAINT consent_event_purpose_id_fkey FOREIGN KEY (purpose_id) REFERENCES public.consent_purpose(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.consent_event
+    ADD CONSTRAINT consent_event_subject_request_id_fkey FOREIGN KEY (subject_request_id) REFERENCES public.consent_qualifying_event(id) ON DELETE SET NULL;
 
 ALTER TABLE ONLY public.consent_qualifying_event
     ADD CONSTRAINT consent_qualifying_event_contact_fkey FOREIGN KEY (contact_id) REFERENCES public.contact(id) ON DELETE CASCADE;
@@ -13305,6 +15307,9 @@ ALTER TABLE ONLY public.contact_signature_enrich_state
 
 ALTER TABLE ONLY public.contact_signature_enrich_state
     ADD CONSTRAINT contact_signature_enrich_state_deferred_run_id_fkey FOREIGN KEY (deferred_run_id) REFERENCES public.capture_backfill(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.contact_signature_enrich_state
+    ADD CONSTRAINT contact_signature_enrich_state_retry_activity_id_fkey FOREIGN KEY (retry_activity_id) REFERENCES public.activity(id) ON DELETE SET NULL;
 
 ALTER TABLE ONLY public.contact_social
     ADD CONSTRAINT contact_social_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES public.contact(id) ON DELETE CASCADE;
@@ -13603,6 +15608,9 @@ ALTER TABLE ONLY public.finance_customer_link
 ALTER TABLE ONLY public.finance_customer_link
     ADD CONSTRAINT finance_customer_link_connection_fk FOREIGN KEY (connection_id) REFERENCES public.finance_connection(id) ON DELETE RESTRICT;
 
+ALTER TABLE ONLY public.finance_customer_link
+    ADD CONSTRAINT finance_customer_link_directory_fk FOREIGN KEY (connection_id, external_customer_id) REFERENCES public.finance_external_customer(connection_id, external_customer_id) ON DELETE RESTRICT;
+
 ALTER TABLE ONLY public.finance_external_customer
     ADD CONSTRAINT finance_external_customer_connection_fk FOREIGN KEY (connection_id) REFERENCES public.finance_connection(id) ON DELETE RESTRICT;
 
@@ -13615,6 +15623,12 @@ ALTER TABLE ONLY public.finance_invoice
 ALTER TABLE ONLY public.finance_invoice
     ADD CONSTRAINT finance_invoice_credits_fk FOREIGN KEY (credits_invoice_id) REFERENCES public.finance_invoice(id) ON DELETE RESTRICT;
 
+ALTER TABLE ONLY public.finance_invoice
+    ADD CONSTRAINT finance_invoice_credits_owner_fk FOREIGN KEY (credits_invoice_id, connection_id, company_id) REFERENCES public.finance_invoice(id, connection_id, company_id) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED;
+
+ALTER TABLE ONLY public.finance_invoice
+    ADD CONSTRAINT finance_invoice_customer_link_fk FOREIGN KEY (customer_link_id, connection_id, company_id) REFERENCES public.finance_customer_link(id, connection_id, company_id) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED;
+
 ALTER TABLE ONLY public.finance_payment
     ADD CONSTRAINT finance_payment_company_fk FOREIGN KEY (company_id) REFERENCES public.company(id) ON DELETE RESTRICT;
 
@@ -13622,7 +15636,13 @@ ALTER TABLE ONLY public.finance_payment
     ADD CONSTRAINT finance_payment_connection_fk FOREIGN KEY (connection_id) REFERENCES public.finance_connection(id) ON DELETE RESTRICT;
 
 ALTER TABLE ONLY public.finance_payment
+    ADD CONSTRAINT finance_payment_customer_link_fk FOREIGN KEY (customer_link_id, connection_id, company_id) REFERENCES public.finance_customer_link(id, connection_id, company_id) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED;
+
+ALTER TABLE ONLY public.finance_payment
     ADD CONSTRAINT finance_payment_invoice_fk FOREIGN KEY (invoice_id) REFERENCES public.finance_invoice(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.finance_payment
+    ADD CONSTRAINT finance_payment_invoice_owner_fk FOREIGN KEY (invoice_id, connection_id, company_id) REFERENCES public.finance_invoice(id, connection_id, company_id) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED;
 
 ALTER TABLE ONLY public.activity_participant
     ADD CONSTRAINT fk_participant_domain_evidence_version FOREIGN KEY (activity_id, domain_evidence_parent_version) REFERENCES public.activity(id, domain_evidence_version) ON UPDATE CASCADE ON DELETE CASCADE;
@@ -13683,6 +15703,18 @@ ALTER TABLE ONLY public.knowledge_chunk
 
 ALTER TABLE ONLY public.knowledge_document
     ADD CONSTRAINT knowledge_document_corpus_fk FOREIGN KEY (corpus_id) REFERENCES public.knowledge_corpus(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.lawful_basis_confirmation
+    ADD CONSTRAINT lawful_basis_confirmation_confirmed_by_fkey FOREIGN KEY (confirmed_by) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.lawful_basis_confirmation
+    ADD CONSTRAINT lawful_basis_confirmation_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES public.contact(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.lawful_basis_confirmation
+    ADD CONSTRAINT lawful_basis_confirmation_delivery_id_fkey FOREIGN KEY (delivery_id) REFERENCES public.comms_outbound(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.lawful_basis_confirmation
+    ADD CONSTRAINT lawful_basis_confirmation_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES public.lead(id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.lead
     ADD CONSTRAINT lead_company_id_fkey FOREIGN KEY (company_id) REFERENCES public.company(id) ON DELETE SET NULL;
@@ -14116,6 +16148,9 @@ ALTER TABLE ONLY public.sales_initiative_baseline
 ALTER TABLE ONLY public.sales_initiative_baseline
     ADD CONSTRAINT sales_initiative_baseline_initiative_id_fkey FOREIGN KEY (initiative_id) REFERENCES public.sales_initiative(id) ON DELETE CASCADE;
 
+ALTER TABLE ONLY public.sales_initiative_enrolment
+    ADD CONSTRAINT sales_initiative_enrolment_initiative_id_fkey FOREIGN KEY (initiative_id) REFERENCES public.sales_initiative(id) ON DELETE CASCADE;
+
 ALTER TABLE ONLY public.sales_initiative_member
     ADD CONSTRAINT sales_initiative_member_initiative_id_fkey FOREIGN KEY (initiative_id) REFERENCES public.sales_initiative(id) ON DELETE CASCADE;
 
@@ -14365,6 +16400,9 @@ ALTER TABLE ONLY public.voice_profile_version
 ALTER TABLE ONLY public.voice_profile_version
     ADD CONSTRAINT voice_profile_version_profile_fkey FOREIGN KEY (voice_profile_id) REFERENCES public.voice_profile(id) ON DELETE CASCADE;
 
+ALTER TABLE ONLY public.web_form
+    ADD CONSTRAINT web_form_handling_automation_id_fkey FOREIGN KEY (handling_automation_id) REFERENCES public.automation(id) ON DELETE RESTRICT;
+
 ALTER TABLE ONLY public.web_form_last_post
     ADD CONSTRAINT web_form_last_post_form_id_fkey FOREIGN KEY (form_id) REFERENCES public.web_form(id) ON DELETE CASCADE;
 
@@ -14469,6 +16507,7 @@ BEGIN
     GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.activity_identity TO margince_app;
     GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.activity_kind TO margince_app;
     GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.activity_link TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.activity_link_suggestion TO margince_app;
     GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.activity_mail_reference TO margince_app;
     GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.activity_meeting_attendee_repair TO margince_app;
     GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.activity_meeting_history TO margince_app;
@@ -14553,6 +16592,8 @@ BEGIN
     GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.capture_trace TO margince_app;
     GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.channel_connection TO margince_app;
     GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.channel_provider TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.chat_link TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.chat_post_item TO margince_app;
     GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.close_date_run TO margince_app;
     GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.close_date_run_member TO margince_app;
     GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.commission_entry TO margince_app;
@@ -14677,6 +16718,7 @@ BEGIN
     GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.knowledge_chunk TO margince_app;
     GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.knowledge_corpus TO margince_app;
     GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.knowledge_document TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.lawful_basis_confirmation TO margince_app;
     GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.lead TO margince_app;
     GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.lead_disqualify_reason TO margince_app;
     GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.lead_manual_signal TO margince_app;
@@ -14737,6 +16779,7 @@ BEGIN
     GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.raw_capture TO margince_app;
     GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.record_assignment TO margince_app;
     GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.record_grant TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.record_link TO margince_app;
     GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.record_role TO margince_app;
     GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.relationship TO margince_app;
     GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.relationship_nudge_dismissal TO margince_app;
@@ -14761,6 +16804,7 @@ BEGIN
     GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.sales_goal_plan_revision TO margince_app;
     GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.sales_initiative TO margince_app;
     GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.sales_initiative_baseline TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.sales_initiative_enrolment TO margince_app;
     GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.sales_initiative_member TO margince_app;
     GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.sales_initiative_revision TO margince_app;
     GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.sales_target TO margince_app;
