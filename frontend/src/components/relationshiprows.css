@@ -9,8 +9,7 @@
   justify-content: flex-end;
 }
 
-/* A date range reads as one value: the role and the name beside it wrap first,
-   and a table still too wide scrolls inside its own box. */
-.relationshiprows-dates {
+/* An ISO date breaks at its hyphens unless held whole. */
+.relationshiprows-date {
   white-space: nowrap;
 }

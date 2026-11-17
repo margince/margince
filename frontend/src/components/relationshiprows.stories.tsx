@@ -169,21 +169,56 @@ export const CompanyPeopleWithDates: Story = {
       </StoryProviders>
     );
   },
+  tags: ["uat-wide"],
   play: async ({ canvasElement }) => {
-    await within(canvasElement).findByText("Maximiliane Oberhauser-Lindqvist");
-    const ranges = canvasElement.querySelectorAll(".relationshiprows-dates");
-    await expect(ranges).toHaveLength(3);
-    for (const range of ranges) {
-      await waitFor(() => expect(range.getClientRects()).toHaveLength(1));
-    }
-    const page = document.documentElement;
-    await expect(page.scrollWidth).toBeLessThanOrEqual(page.clientWidth);
+    await datesStayWhole(canvasElement);
+    await expect(
+      within(canvasElement).getByRole("columnheader", { name: "Dates" }),
+    ).toBeVisible();
+    const row = canvasElement.querySelector("tbody > tr");
+    await expect(row && getComputedStyle(row).display).toBe("table-row");
   },
 };
 
+// A dated range breaks only between its dates, and the page never scrolls.
+async function datesStayWhole(canvasElement: HTMLElement) {
+  await within(canvasElement).findByText("Maximiliane Oberhauser-Lindqvist");
+  const dates = [...canvasElement.querySelectorAll(".relationshiprows-date")];
+  await expect(dates).toHaveLength(4);
+  for (const date of dates) {
+    await waitFor(() => expect(date.getClientRects()).toHaveLength(1));
+  }
+  for (const cell of new Set(dates.map((date) => date.closest("td")))) {
+    const text = document.createRange();
+    if (cell) text.selectNodeContents(cell);
+    const lines = new Set(
+      [...text.getClientRects()].map((box) => Math.round(box.top)),
+    );
+    await expect(lines.size).toBeLessThanOrEqual(2);
+  }
+  const page = document.documentElement;
+  await expect(page.scrollWidth).toBeLessThanOrEqual(page.clientWidth);
+}
+
+// Folded, every cell stays inside the table's box: nothing scrolls sideways.
 export const CompanyPeopleWithDatesPhone: Story = {
   ...CompanyPeopleWithDates,
   tags: ["uat-phone"],
+  play: async ({ canvasElement }) => {
+    await datesStayWhole(canvasElement);
+    const box = canvasElement.querySelector(".table-scroll");
+    if (!box) throw new Error("the table drew no scroll box");
+    await expect(box.scrollWidth).toBeLessThanOrEqual(box.clientWidth);
+    const edge = box.getBoundingClientRect().right;
+    for (const row of box.querySelectorAll("tbody > tr")) {
+      await expect(getComputedStyle(row).display).toBe("flex");
+      for (const cell of row.querySelectorAll("td")) {
+        await expect(cell.getBoundingClientRect().right).toBeLessThanOrEqual(
+          edge + 0.5,
+        );
+      }
+    }
+  },
 };
 
 export const CompanyPeopleWithDatesPhoneDark: Story = {

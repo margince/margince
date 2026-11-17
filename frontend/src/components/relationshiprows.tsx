@@ -14,7 +14,7 @@ import { api } from "../api/client";
 import { ifMatch, requireVersion } from "../api/version";
 import { Badge, Button, EmptyState } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
-import { DataTable } from "../design-system/datatable";
+import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { ErrorLine } from "../design-system/errorline";
 import { type Fact, FactList } from "../design-system/factlist";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
@@ -42,6 +42,7 @@ import {
   scopeCopy,
   scopeQueryKey,
 } from "./relationships";
+import { dateRangeParts, RANGE_DASH } from "./relationships.edges";
 
 /**
  * RelationshipsTab is the edges of one record, as a panel that names itself.
@@ -252,7 +253,7 @@ export function RelationshipRows({
   // The table's columns, named once outside the render callback: built inline,
   // the callback carried every column's own branching as well as the choice of
   // shape, and read as one function doing two jobs.
-  const columns = [
+  const columns: DataTableColumn<Relationship>[] = [
     ...(copy.singleKind
       ? []
       : [
@@ -272,6 +273,7 @@ export function RelationshipRows({
     {
       key: "counterparty",
       header: t("rel.counterparty"),
+      fold: "title",
       render: (rel: Relationship) => {
         const ref = counterpartyRef(rel, scope);
         return ref ? <EntityRef kind={ref.kind} id={ref.id} /> : <span>—</span>;
@@ -289,13 +291,25 @@ export function RelationshipRows({
     {
       key: "dates",
       header: t("rel.dates"),
-      render: (rel: Relationship) => (
-        <span className="relationshiprows-dates">{dateRange(rel, t)}</span>
-      ),
+      render: (rel: Relationship) => {
+        const { start, end } = dateRangeParts(rel, t);
+        if (!start || !end) return dateRange(rel, t);
+        // Each date stays whole; the range breaks only after its dash.
+        return (
+          <>
+            <span className="relationshiprows-date">
+              {start} {RANGE_DASH}
+            </span>{" "}
+            <span className="relationshiprows-date">{end}</span>
+          </>
+        );
+      },
     },
     {
       key: "actions",
-      header: "",
+      header: t("table.actions"),
+      headerHidden: true,
+      fold: "end",
       render: verbsFor,
     },
   ];
@@ -326,6 +340,7 @@ export function RelationshipRows({
           }
           return (
             <DataTable
+              fold
               label={t(copy.title)}
               columns={columns}
               rows={rows}
