@@ -17,9 +17,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
-	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -59,10 +57,11 @@ func TestTheDirectoryAndTheRegistryDescribeTheSameTransports(t *testing.T) {
 	// Loaded first, because the snapshot is filled at SERVER ASSEMBLY and this
 	// lane constructs no server: an unloaded snapshot would make this test
 	// report the very emptiness it exists to refuse.
-	if err := LoadChannelProviderDirectory(ctx, e.Pool); err != nil {
+	composed := &Extensions{}
+	if err := LoadChannelProviderDirectory(ctx, e.Pool, composed); err != nil {
 		t.Fatalf("loading the directory: %v", err)
 	}
-	registered, sending := ComposedChannelProviders()
+	registered, sending := composed.channelDirectory()
 	published := publishedChannelProviders(registered, sending)
 	if len(published) == 0 {
 		t.Fatal("the directory published nothing; every member's timeline would render raw provider ids")
@@ -156,26 +155,22 @@ func TestTheSeededLabelMatchesTheOneBootWrites(t *testing.T) {
 //
 // It is asserted by clearing the snapshot and loading it again from the table,
 // which is exactly what a role that never constructed a registry does.
-//
-//testdb:serial sets the process-wide sendable channel providers
 func TestTheDirectoryLoadsFromTheRegistryAndNotFromTheCaptureBoot(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := context.Background()
 
-	before, sending := ComposedChannelProviders()
-	t.Cleanup(func() { setComposedChannelProviders(before, sending) })
-
 	// The state a role that composed no capture registry starts in.
-	setComposedChannelProviders(nil, nil)
-	if registered, _ := ComposedChannelProviders(); len(registered) != 0 {
-		t.Fatalf("the snapshot did not clear, so this test would pass on stale data")
+	composed := &Extensions{}
+	if registered, _ := composed.channelDirectory(); len(registered) != 0 {
+		t.Fatalf("the snapshot did not start empty, so this test would pass on stale data")
 	}
 
-	if err := LoadChannelProviderDirectory(ctx, e.Pool); err != nil {
+	if err := LoadChannelProviderDirectory(ctx, e.Pool, composed); err != nil {
 		t.Fatalf("loading the directory: %v", err)
 	}
 
-	registered, _ := ComposedChannelProviders()
+	registered, _ := composed.channelDirectory()
 	if len(registered) == 0 {
 		t.Fatal("the directory is empty after loading from the registry; a vault-less install would publish no labels at all and report 200 while doing it")
 	}
@@ -195,25 +190,22 @@ func TestTheDirectoryLoadsFromTheRegistryAndNotFromTheCaptureBoot(t *testing.T) 
 // transport's messages are the company's correspondence or one contact's, and a
 // per-member account published as a workspace bot invites exactly the wrong
 // answer to that question.
-//
-//testdb:serial sets the process-wide sendable channel providers
 func TestTheDirectoryPublishesAUnitsOwnCredentialModel(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := context.Background()
-	defer activities.SetChannelProviders([]string{capture.ProviderTelegram})
-	defer comms.SetChannelProviders([]string{capture.ProviderTelegram})
 	composed := declaresTransport("mine", extension.Channel{
 		Provider: "mine_chat", CredentialModel: extension.CredentialPerMember,
 		Send: (&capturedSend{}).send, Live: answersLive(true, nil),
 	})
-	if err := reconcileChannelProviders(ctx, e.Pool, []string{capture.ProviderTelegram}, composed.Units()); err != nil {
+	if err := reconcileChannelProviders(ctx, e.Pool, []string{capture.ProviderTelegram}, composed); err != nil {
 		t.Fatalf("reconcileChannelProviders: %v", err)
 	}
-	if err := LoadChannelProviderDirectory(ctx, e.Pool); err != nil {
+	if err := LoadChannelProviderDirectory(ctx, e.Pool, composed); err != nil {
 		t.Fatalf("loading the directory: %v", err)
 	}
 
-	registered, sending := ComposedChannelProviders()
+	registered, sending := composed.channelDirectory()
 	var found bool
 	for _, entry := range publishedChannelProviders(registered, sending) {
 		if entry.Provider != "mine_chat" {

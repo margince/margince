@@ -34,15 +34,16 @@ import (
 // anything. Server assembly loads the transport directory from the rows written
 // here.
 func RecordComposition(
-	ctx context.Context, pool *pgxpool.Pool, log *slog.Logger, exts []extension.Extension,
+	ctx context.Context, pool *pgxpool.Pool, log *slog.Logger, composed *Extensions,
 ) error {
+	exts := composed.Units()
 	if err := ObserveExtensionInventory(ctx, pool, log, exts); err != nil {
 		return fmt.Errorf("compose: recording the composed extension set: %w", err)
 	}
 	if err := VerifyExtensionPrivacy(ctx, pool, exts); err != nil {
 		return fmt.Errorf("compose: checking the extensions' privacy declarations: %w", err)
 	}
-	if err := ReconcileChannelProviders(ctx, pool, exts); err != nil {
+	if err := ReconcileChannelProviders(ctx, pool, composed); err != nil {
 		return fmt.Errorf("compose: registering this binary's channel vocabulary: %w", err)
 	}
 	if err := FillExtensionRbacDefaults(ctx, pool, log); err != nil {

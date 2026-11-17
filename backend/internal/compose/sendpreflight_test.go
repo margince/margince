@@ -178,7 +178,7 @@ func assertLookupsAsked(t *testing.T, grants *stubGrants, provider string, wantG
 	if grants.calls != wantGrantCalls {
 		t.Fatalf("the grant lookup was asked %d time(s), want %d", grants.calls, wantGrantCalls)
 	}
-	_, capability := comms.SendScopeFor(provider)
+	_, capability := comms.SendScopeFor(provider, comms.PreRegistryChannelSending)
 	wantChannelCalls := 0
 	if capability == comms.SendsWithoutScope && actorPresent {
 		wantChannelCalls = 1
@@ -266,7 +266,7 @@ func TestSendableMailProviderNamesAMailboxTheSenderCanActuallySendFrom(t *testin
 	sendable := func(providers ...string) map[string][]string {
 		out := map[string][]string{}
 		for _, p := range providers {
-			scope, _ := comms.SendScopeFor(p)
+			scope, _ := comms.SendScopeFor(p, comms.PreRegistryChannelSending)
 			out[p] = []string{scope}
 		}
 		return out
@@ -370,7 +370,7 @@ func TestAStoredAppInstallationPassesTheSendPreflight(t *testing.T) {
 	human := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:x", UserID: ids.NewV7(),
 	})
-	scope, _ := comms.SendScopeFor(providerGmail)
+	scope, _ := comms.SendScopeFor(providerGmail, comms.PreRegistryChannelSending)
 	s := Server{googleAppResolver: func(context.Context) (capture.ConnectorApp, bool, error) {
 		return capture.ConnectorApp{ClientID: "stored-id", ClientSecretRef: "stored-secret"}, true, nil
 	}}

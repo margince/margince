@@ -150,7 +150,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	// One engine ranks search_records and resolves an intent tool's record_name.
 	recordSearch := recordSearchSeam(pool)
 	agents.RegisterIntentTools(registry, retriever, meetingBrief, recordSearch, provider, meetingReadiness{store: activities.NewStore(db)})
-	agents.RegisterChannelProviderTools(registry, channelProviderDirectory{})
+	agents.RegisterChannelProviderTools(registry, channelProviderDirectory{composed: features.extensions})
 	agents.RegisterContextSearchTool(registry, provider, retriever)
 	agents.RegisterRecordSearchTool(registry, provider, recordSearch)
 	agents.RegisterReportEvidenceTool(registry, provider, reportEvidenceSeam{
@@ -173,10 +173,10 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	agents.RegisterNetworkTools(registry, whoKnowsLister(pool, newContactsStore(InstallationDB(pool))), coverageReader(pool, newContactsStore(InstallationDB(pool))),
 		introPathLister(pool),
 		atRiskLister(pool, newContactsStore(InstallationDB(pool))))
-	comms := newCommsAdapter(pool, drafter, send)
+	comms := newCommsAdapter(pool, features.extensions, drafter, send)
 	comms.firstDrafts = features.firstDrafts
 	agents.RegisterCommsTools(registry, comms, provider)
-	agents.RegisterMeetingInvitationTool(registry, newCommsAdapter(pool, drafter, send), provider)
+	agents.RegisterMeetingInvitationTool(registry, newCommsAdapter(pool, features.extensions, drafter, send), provider)
 	agents.RegisterClientCheckTool(registry, log)
 	agents.RegisterRouters(registry)
 	registerComposedTools(registry, features.extensions)

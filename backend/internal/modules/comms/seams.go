@@ -11,9 +11,9 @@ package comms
 import (
 	"context"
 	"errors"
+	"slices"
 	"sort"
 	"strings"
-	"sync"
 
 	"github.com/jackc/pgx/v5"
 
@@ -312,29 +312,14 @@ const (
 	SendsWithoutScope
 )
 
-// channelProviders mirrors activities.SetChannelProviders/channelProviders —
-// a SEPARATE package-level set, because comms and activities are siblings
-// under internal/modules and neither may import the other. Both are set from
-// the SAME boot-time reconcile in internal/compose (DESIGN-SP4 §4), which is
-// what keeps the two from drifting apart independently, even though each
-// package still holds its own copy.
-var (
-	channelProvidersMu sync.RWMutex
-	channelProviders   = map[string]bool{"telegram": true}
-)
+// PreRegistryChannels are the channel transports a process sends on before its
+// boot registered any: Telegram, the one core channel connector. The
+// composition replaces them once its transports are registered.
+func PreRegistryChannels() []string { return []string{"telegram"} }
 
-// SetChannelProviders replaces the derived channel-provider set wholesale.
-// Last-write-wins, not once-only: see activities.SetChannelProviders's doc for
-// why a plain settable var is the right shape here, not a register-and-panic
-// one.
-func SetChannelProviders(providers []string) {
-	next := make(map[string]bool, len(providers))
-	for _, p := range providers {
-		next[p] = true
-	}
-	channelProvidersMu.Lock()
-	channelProviders = next
-	channelProvidersMu.Unlock()
+// PreRegistryChannelSending answers from PreRegistryChannels.
+func PreRegistryChannelSending(provider string) bool {
+	return slices.Contains(PreRegistryChannels(), provider)
 }
 
 // mailSendScopes are the OAuth permissions a MAIL grant must carry to transmit,
@@ -384,18 +369,13 @@ func MailSendProviders() []string {
 // kinds, so there is no registry to derive from. See that map for what holds
 // those strings to the first spelling.
 //
-// The CHANNEL arm derives from channelProviders — the same registry
-// activities.IsChannelKind reads — so a provider clearing it is answerable
-// for both "is this a channel conversation" and "can this installation send
-// on it" in one boot-time act.
-func SendScopeFor(provider string) (string, SendCapability) {
+// The CHANNEL arm asks channelSends, the composition's own answer to "can this
+// installation send on it", which its boot registers with the transports.
+func SendScopeFor(provider string, channelSends func(provider string) bool) (string, SendCapability) {
 	if scope, ok := mailSendScopes[provider]; ok {
 		return scope, SendsWithScope
 	}
-	channelProvidersMu.RLock()
-	isChannel := channelProviders[provider]
-	channelProvidersMu.RUnlock()
-	if isChannel {
+	if channelSends(provider) {
 		return "", SendsWithoutScope
 	}
 	return "", CannotSend

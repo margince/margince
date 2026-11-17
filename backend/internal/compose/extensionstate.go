@@ -32,10 +32,11 @@ type Extensions struct {
 	subs  []ComposedSubscription
 	jobs  []composedJob
 
-	// mu orders the runtime binding, which the boot writes after the pool
-	// exists and every capability call reads.
-	mu      sync.RWMutex
-	runtime extensionRuntimeBinding
+	// mu orders the runtime binding and the channel vocabulary, which the boot
+	// writes after the pool exists and every call reads.
+	mu       sync.RWMutex
+	runtime  extensionRuntimeBinding
+	channels channelVocabulary
 }
 
 // Units returns the composition's declared extension units.

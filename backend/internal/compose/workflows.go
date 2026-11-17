@@ -48,7 +48,7 @@ func workflowEngineWithDrafter(db *database.DB, drafter activities.EmailDrafter)
 		Provider:         NewProvider(db.Pool()),
 		Approvals:        automationApprovalsAdapter{svc: NewApprovalsService(db)},
 		// Drafts remain held until the approval send path checks delivery.
-		Comms:     newCommsAdapter(db.Pool(), drafter, SendPath{}),
+		Comms:     newCommsAdapter(db.Pool(), nil, drafter, SendPath{}),
 		Notifier:  noticesNotifier{store: notices.NewStore(db)},
 		Claims:    claims,
 		Language:  installationLanguage(db.Pool()),

@@ -173,7 +173,7 @@ func (m mailboxAuthority) SendCapable(ctx context.Context, provider string) (boo
 	if transport, supplied := m.composed.unitTransport(provider); supplied {
 		return unitSendCapable(ctx, m.composed, transport, ids.From[ids.UserKind](actor.UserID))
 	}
-	scope, capability := comms.SendScopeFor(provider)
+	scope, capability := comms.SendScopeFor(provider, m.composed.sendsOn)
 	switch capability {
 	case comms.CannotSend:
 		return false, nil

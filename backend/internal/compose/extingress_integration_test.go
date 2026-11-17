@@ -27,9 +27,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
-	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/extsecrets"
 	"github.com/margince/margince/backend/internal/platform/testdb"
@@ -291,16 +289,7 @@ func aChannelMessage(key, senderEmail, account string) extension.Record {
 // have if the boot reconcile did not write it.
 func registerProbeTransport(t *testing.T, e *ingressEnv) {
 	t.Helper()
-	// The reconcile sets BOTH packages' in-memory sendable snapshots to what it
-	// was passed. Restore the pre-registry default rather than leaving this
-	// test's set behind, or a later test in the same process sees an
-	// installation with no Telegram transport — which is a failure that names
-	// somebody else's code.
-	t.Cleanup(func() {
-		activities.SetChannelProviders([]string{capture.ProviderTelegram})
-		comms.SetChannelProviders([]string{capture.ProviderTelegram})
-	})
-	if err := reconcileChannelProviders(context.Background(), e.Pool, []string{capture.ProviderTelegram}, e.composed.Units()); err != nil {
+	if err := reconcileChannelProviders(context.Background(), e.Pool, []string{capture.ProviderTelegram}, e.composed); err != nil {
 		t.Fatalf("registering the unit's transport: %v", err)
 	}
 }
@@ -315,9 +304,8 @@ func registerProbeTransport(t *testing.T, e *ingressEnv) {
 // nothing can reply on. And the identity binding is what the reply path resolves
 // its recipient FROM: without it the message is repliable in principle and
 // answers "nobody on this conversation can be reached" in practice.
-//
-//testdb:serial sets the process-wide sendable channel providers
 func TestAUnitsChannelMessageLandsAsARepliableConversation(t *testing.T) {
+	t.Parallel()
 	e := setupIngress(t)
 	registerProbeTransport(t, e)
 	rt := e.ingestingRuntime()

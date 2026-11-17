@@ -91,7 +91,10 @@ func New(pool *pgxpool.Pool, log *slog.Logger, exts *Extensions, opts ...Option)
 	// newServer: route-level tests construct that one directly with a pool that
 	// was never dialled, and a struct constructor is the wrong place to reach a
 	// database anyway. Every role that serves /v1 comes through here.
-	loadChannelProviderDirectoryOrLog(pool, log)
+	if exts == nil {
+		exts = &Extensions{}
+	}
+	loadChannelProviderDirectoryOrLog(pool, exts, log)
 	// Said once, where an operator reads it: whether this build knows what the
 	// law requires it to keep.
 	announceStatutoryFloorFrom(pool, log)

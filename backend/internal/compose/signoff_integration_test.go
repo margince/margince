@@ -47,7 +47,7 @@ func TestASendSignsOffTheWayTheComposerPreviewSays(t *testing.T) {
 	e := integration.Setup(t)
 	anchorID, recipient := seedTransactionalReply(t, e)
 	stager := &recordingStager{}
-	adapter := newCommsAdapter(e.Pool, nil, SendPath{PublicBaseURL: toolSurfaceBaseURL, Delivery: stager})
+	adapter := newCommsAdapter(e.Pool, nil, nil, SendPath{PublicBaseURL: toolSurfaceBaseURL, Delivery: stager})
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms)
 
 	send := func() string {
@@ -92,7 +92,7 @@ func TestATemplateSignsAPlainSendInMarkupAndText(t *testing.T) {
 	e := integration.Setup(t)
 	anchorID, recipient := seedTransactionalReply(t, e)
 	stager := &recordingStager{}
-	adapter := newCommsAdapter(e.Pool, nil, SendPath{PublicBaseURL: toolSurfaceBaseURL, Delivery: stager})
+	adapter := newCommsAdapter(e.Pool, nil, nil, SendPath{PublicBaseURL: toolSurfaceBaseURL, Delivery: stager})
 	// The logo is the workspace's own company, which a seat reads like any other.
 	perms := integration.SchedulerPerms
 	perms.Objects = maps.Clone(perms.Objects)
@@ -208,7 +208,7 @@ func TestPersonalMarkupAndItsClearingReachBothAlternativesThroughTheRealSend(t *
 	e := integration.Setup(t)
 	anchorID, recipient := seedTransactionalReply(t, e)
 	stager := &recordingStager{}
-	adapter := newCommsAdapter(e.Pool, nil, SendPath{PublicBaseURL: toolSurfaceBaseURL, Delivery: stager})
+	adapter := newCommsAdapter(e.Pool, nil, nil, SendPath{PublicBaseURL: toolSurfaceBaseURL, Delivery: stager})
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms)
 	signatures := contacts.NewStore(InstallationDB(e.Pool)).WithSettings(StoredConfig(e.Pool))
 	if _, err := signatures.SaveSignatureTemplate(e.Admin(), "<p>Company template</p>"); err != nil {

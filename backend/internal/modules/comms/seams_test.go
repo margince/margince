@@ -19,7 +19,7 @@ import (
 // two-valued answer, "no scope" and "cannot send" were the same reply, so
 // Telegram would be classified capture-only and every reply would park.
 func TestSendScopeForReportsTelegramSendsWithoutAScope(t *testing.T) {
-	scope, capability := SendScopeFor("telegram")
+	scope, capability := SendScopeFor("telegram", PreRegistryChannelSending)
 	if capability != SendsWithoutScope {
 		t.Fatalf("SendScopeFor(\"telegram\") capability = %v, want SendsWithoutScope", capability)
 	}
@@ -32,11 +32,11 @@ func TestSendScopeForReportsTelegramSendsWithoutAScope(t *testing.T) {
 // the point: a provider nobody configured must still refuse, and Gmail must
 // still be scope-checked.
 func TestSendScopeForSeparatesScopedSendersFromProvidersThatCannotSend(t *testing.T) {
-	scope, capability := SendScopeFor("gmail")
+	scope, capability := SendScopeFor("gmail", PreRegistryChannelSending)
 	if capability != SendsWithScope || scope == "" {
 		t.Fatalf("SendScopeFor(\"gmail\") = (%q, %v), want a named scope with SendsWithScope", scope, capability)
 	}
-	if _, capability := SendScopeFor("carrier-pigeon"); capability != CannotSend {
+	if _, capability := SendScopeFor("carrier-pigeon", PreRegistryChannelSending); capability != CannotSend {
 		t.Fatalf("SendScopeFor on an unknown provider = %v, want CannotSend", capability)
 	}
 	// The zero value must be the refusal, so a capability nobody answered
@@ -47,28 +47,19 @@ func TestSendScopeForSeparatesScopedSendersFromProvidersThatCannotSend(t *testin
 	}
 }
 
-// The channel arm is derived the same way activities.IsChannelKind is
-// (mirror-tested against the SAME defect class): register a provider nobody
-// shipped with, and SendScopeFor answers SendsWithoutScope for it; drop it
-// again, and it falls back to CannotSend. The mail arm is untouched by either
-// call — gmail is not, and never will be, an activity_kind.
-func TestSendScopeForChannelArmIsDerivedFromSetChannelProviders(t *testing.T) {
-	// Restored to the pre-registry default, not nil/empty: a later test in
-	// this package (or compose's drift test) that assumes telegram is still
-	// sendable must not see the set this test leaves behind.
-	defer SetChannelProviders([]string{"telegram"})
-
-	SetChannelProviders([]string{"telegram", "fake-unit-provider"})
-	if _, capability := SendScopeFor("fake-unit-provider"); capability != SendsWithoutScope {
+// The channel arm answers from the composition's registered transports: a
+// provider it sends on answers SendsWithoutScope, and one it does not falls back
+// to CannotSend. The mail arm is untouched by either answer.
+func TestSendScopeForChannelArmAnswersFromTheRegisteredTransports(t *testing.T) {
+	t.Parallel()
+	registered := func(provider string) bool { return provider == "telegram" || provider == "fake-unit-provider" }
+	if _, capability := SendScopeFor("fake-unit-provider", registered); capability != SendsWithoutScope {
 		t.Fatalf("SendScopeFor(\"fake-unit-provider\") capability = %v, want SendsWithoutScope", capability)
 	}
-
-	SetChannelProviders([]string{"telegram"})
-	if _, capability := SendScopeFor("fake-unit-provider"); capability != CannotSend {
-		t.Fatalf("SendScopeFor(\"fake-unit-provider\") capability = %v, want CannotSend once deregistered", capability)
+	if _, capability := SendScopeFor("fake-unit-provider", PreRegistryChannelSending); capability != CannotSend {
+		t.Fatalf("SendScopeFor(\"fake-unit-provider\") capability = %v, want CannotSend when not registered", capability)
 	}
-
-	if scope, capability := SendScopeFor("gmail"); capability != SendsWithScope || scope == "" {
+	if scope, capability := SendScopeFor("gmail", registered); capability != SendsWithScope || scope == "" {
 		t.Fatalf("SendScopeFor(\"gmail\") = (%q, %v), want an unchanged SendsWithScope with a real scope", scope, capability)
 	}
 }

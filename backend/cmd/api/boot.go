@@ -36,7 +36,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/ratelimit"
 	"github.com/margince/margince/backend/internal/platform/replayguard"
 	"github.com/margince/margince/backend/internal/shared/buildinfo"
-	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // recordBootLedger writes what this binary is, into the ledger no request could
@@ -82,9 +81,9 @@ func boundPool(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
 // read from. It also cannot fail the boot, which is why it is called for effect
 // here and the error handling lives with the phase itself.
 func recordBootFacts(
-	ctx context.Context, pool *pgxpool.Pool, logger *slog.Logger, extensions []extension.Extension,
+	ctx context.Context, pool *pgxpool.Pool, logger *slog.Logger, composed *compose.Extensions,
 ) error {
-	if err := recordBootLedger(ctx, pool, logger, extensions); err != nil {
+	if err := recordBootLedger(ctx, pool, logger, composed); err != nil {
 		return err
 	}
 	fileReleaseHandbook(ctx, pool, logger)
@@ -92,7 +91,7 @@ func recordBootFacts(
 }
 
 func recordBootLedger(
-	ctx context.Context, pool *pgxpool.Pool, logger *slog.Logger, extensions []extension.Extension,
+	ctx context.Context, pool *pgxpool.Pool, logger *slog.Logger, composed *compose.Extensions,
 ) error {
 	if err := compose.RecordInstallationRelease(ctx, pool, logger, buildinfo.ReleaseVersion); err != nil {
 		return err
@@ -100,7 +99,7 @@ func recordBootLedger(
 	if err := compose.WarnOnArchivedPredecessor(ctx, pool, logger); err != nil {
 		return err
 	}
-	return compose.RecordComposition(ctx, pool, logger, extensions)
+	return compose.RecordComposition(ctx, pool, logger, composed)
 }
 
 // fileReleaseHandbook puts this release's operator handbook into the corpus the

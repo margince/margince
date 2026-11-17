@@ -21,6 +21,7 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
 	// Embedded tzdata: workspace timezones must resolve on scratch
 	// containers that ship no zoneinfo.
 	_ "time/tzdata"
@@ -44,7 +45,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/netguard"
 	"github.com/margince/margince/backend/internal/shared/buildinfo"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
-	"github.com/margince/margince/backend/pkg/extension"
 )
 
 func main() {
@@ -140,7 +140,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	// answers "can a reply leave this installation" from the same set; the
 	// write is an idempotent upsert, so whichever role boots second changes
 	// nothing.
-	if err := compose.RecordComposition(ctx, pool, logger, boot.extensions); err != nil {
+	if err := compose.RecordComposition(ctx, pool, logger, cfg.extensions); err != nil {
 		return err
 	}
 
@@ -245,27 +245,19 @@ func releaseSkewRefusal(refused <-chan error) error {
 // registerComposedExtensions registers the composed extension set before
 // anything else runs; a failing registration aborts the boot (ADR-0120 EXT-P4).
 //
-// It returns the SAME snapshot it registered, because run hands that value on
-// to the boot inventory: taking a second snapshot there would let the two
-// observe different declarations, and the inventory's whole job is to record
-// what this process is actually running.
-func registerComposedExtensions() ([]extension.Extension, *compose.Extensions, error) {
-	extensions := composition.Extensions()
-	composed, err := compose.RegisterExtensions(extensions, composition.Verbs(), composition.Jobs())
-	if err != nil {
-		return nil, nil, err
-	}
-	return extensions, composed, nil
+// It returns the composition it registered, which run hands on to the boot
+// inventory. So the inventory records the declarations this process runs.
+func registerComposedExtensions() (*compose.Extensions, error) {
+	return compose.RegisterExtensions(composition.Extensions(), composition.Verbs(), composition.Jobs())
 }
 
 // workerBoot is everything decided before this process touches a network.
 // That is the parsed flags, the file's seeds, the composed extension set, and
 // the logger the phases after it report through.
 type workerBoot struct {
-	cfg        workerConfig
-	deploy     deployconfig.Bootstrap
-	extensions []extension.Extension
-	log        *slog.Logger
+	cfg    workerConfig
+	deploy deployconfig.Bootstrap
+	log    *slog.Logger
 }
 
 // configureWorker runs the phases that can fail on configuration alone. In
@@ -279,7 +271,7 @@ func configureWorker(ctx context.Context, args []string, stdout io.Writer) (work
 	if err != nil {
 		return workerBoot{}, err
 	}
-	extensions, composed, err := registerComposedExtensions()
+	composed, err := registerComposedExtensions()
 	if err != nil {
 		return workerBoot{}, err
 	}
@@ -302,7 +294,7 @@ func configureWorker(ctx context.Context, args []string, stdout io.Writer) (work
 	// See cmd/api/main.go's identical comment: AllowTestMailbox is an
 	// operations.* kill switch, not a capture.* tuning knob.
 	cfg.captureConfig.AllowTestMailbox = config.Val(cfg.settings, ps.AllowTestMailbox)
-	return workerBoot{cfg: cfg, deploy: bootstrap, extensions: extensions, log: log}, nil
+	return workerBoot{cfg: cfg, deploy: bootstrap, log: log}, nil
 }
 
 // runResumeSubscriber consumes cg:overnight-agent: approval decisions

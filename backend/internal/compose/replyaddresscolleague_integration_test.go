@@ -39,7 +39,7 @@ func TestAReplyIsNeverAddressedToAColleagueOnTheOwnDomain(t *testing.T) {
 	t.Parallel()
 	e := integration.Setup(t)
 	e.WsExec(t, `INSERT INTO workspace_email_domain (domain, source, verified) VALUES ('ourcompany.test', 'admin', true)`)
-	comms := newCommsAdapter(e.Pool, nil, SendPath{})
+	comms := newCommsAdapter(e.Pool, nil, nil, SendPath{})
 
 	_, err := comms.ReplyAddress(e.Admin(), seedMeetingWith(t, e, "colleague@ourcompany.test"))
 	var refusal *activities.NoReplyAddressError

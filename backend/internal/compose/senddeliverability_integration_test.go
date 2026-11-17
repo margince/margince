@@ -65,7 +65,7 @@ func TestToolSurfaceSendCarriesTheUnsubscribeSurface(t *testing.T) {
 	stager := &recordingStager{}
 	// The SAME constructor registry.go builds the tool surface's seam with,
 	// carrying the SAME configuration the api role supplies.
-	adapter := newCommsAdapter(e.Pool, nil, SendPath{
+	adapter := newCommsAdapter(e.Pool, nil, nil, SendPath{
 		PublicBaseURL: toolSurfaceBaseURL,
 		Delivery:      stager,
 	})

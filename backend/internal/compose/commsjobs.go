@@ -366,7 +366,7 @@ func newSendDispatcher(pool *pgxpool.Pool, composed *Extensions, registry *captu
 		// the one construction every send goes through, so no surface can end
 		// up with a dispatcher that checks nothing and looks green doing it.
 	).WithRequirementChecker(requirementCheckerFor(pool)).
-		WithInlineImages(newSignatureLogo(blob)), relay, vault)
+		WithInlineImages(newSignatureLogo(blob)).WithChannelSending(composed.sendsOn), relay, vault)
 }
 
 // controllerLaneOn gives the dispatcher the transport for the installation's own
