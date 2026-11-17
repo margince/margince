@@ -3117,9 +3117,9 @@ export const en = {
   "merge.searchPlaceholder": "Search…",
   "merge.pickTarget": "Select record to keep",
   "merge.confirm": "Merge {source} into {target}? This archives {source}.",
-  // The picked record's detail line, so two look-alike names stay apart here too.
-  "merge.confirmDetail":
-    "Merge {source} into {target} ({detail})? This archives {source}.",
+  // A record's name with its detail line, so two look-alike names stay apart.
+  "merge.recordDetail": "{name} ({detail})",
+  "merge.done": "{source} was merged into {target}.",
   "merge.targetReadOnly":
     "You can only read this record, so it cannot be kept.",
   "merge.submit": "Merge",

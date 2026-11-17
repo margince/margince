@@ -104,8 +104,8 @@ A contact also holds an owner, a consent record for each purpose, a relationship
 ### How do I merge duplicate contacts?
 To merge two duplicate contacts in Margince, open the contact you want to remove, choose **More actions**, then **Merge contact**.
 1. Search for the other contact and pick it under **Select record to keep**.
-2. Read the question: "Merge {source} into {target}? This archives {source}."
-3. Choose **Merge**. Margince opens the contact you kept.
+2. Read the question: "Merge {source} into {target}? This archives {source}." Each name carries its company, title and email, so two contacts with one name stay apart.
+3. Choose **Merge**. Margince opens the contact you kept and says "{source} was merged into {target}."
 The contact you merged away is archived, not deleted. Its page links the contact you kept under **Merged into**. A lead has no **Merge** of its own. Two leads that may be one show in **To review** in the Worklist. Press **Keep {name}** under "Which record should be kept?", and Margince merges the other lead into it.
 
 Anyone the merged-away contact was shared with can open the contact you kept. Of their two shares, the higher access stays. The owner of the merged-away contact, when another colleague, keeps access too: edit access with a full seat, read with a read seat. A share they already held keeps its end date.
@@ -187,8 +187,8 @@ One company in your Margince is marked as the **anchor**: your own company, the 
 ### How do I merge duplicate companies?
 To merge two duplicate companies in Margince, open the company you want to remove, choose **More actions**, then **Merge company**.
 1. Search for the other company and pick it under **Select record to keep**.
-2. Read the question: "Merge {source} into {target}? This archives {source}."
-3. Choose **Merge**. Margince opens the company you kept.
+2. Read the question: "Merge {source} into {target}? This archives {source}." Each name carries its main domain, so two companys with one name stay apart.
+3. Choose **Merge**. Margince opens the company you kept and says "{source} was merged into {target}."
 The company you merged away is archived, not deleted. You cannot merge an archived company. Its **Overview** says that it is archived, and **Merged into** links the company you kept. Some contacts work at both companies, with the merged-away company as current employer. They keep the company you kept as current employer.
 
 Anyone the merged-away company was shared with can open the company you kept. Of their two shares, the higher access stays. Margince lists two companies as a possible duplicate when one has a domain under the other's, such as `cloud.example.com` under `example.com`. It never merges them by itself. The owner of one company of a possible duplicate may merge it into the other, which stays with its owner.

@@ -10,6 +10,7 @@ import {
   RecordPicker,
   type RecordPickerCandidate,
 } from "../design-system/recordpicker";
+import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { type RequiredGrant, useGrantRefused } from "../lib/capability";
 import { fromHere } from "../lib/navigatefrom";
@@ -24,10 +25,43 @@ import "../design-system/querystates.css";
 // resource-agnostic: the screen supplies the search transport, the merge
 // transport, and where the survivor's 360 lives.
 
+export type MergeSide = Readonly<{ name: string; detail?: string }>;
+
+// Each side by its name and its detail line, so the question asked before a
+// merge and the answer after it tell two records that share a name apart.
+function mergeSideLabel(t: ReturnType<typeof useT>, side: MergeSide): string {
+  return side.detail
+    ? t("merge.recordDetail", { name: side.name, detail: side.detail })
+    : side.name;
+}
+
+export function mergeQuestion(
+  t: ReturnType<typeof useT>,
+  source: MergeSide,
+  target: MergeSide,
+): string {
+  return t("merge.confirm", {
+    source: mergeSideLabel(t, source),
+    target: mergeSideLabel(t, target),
+  });
+}
+
+export function mergeDone(
+  t: ReturnType<typeof useT>,
+  source: MergeSide,
+  target: MergeSide,
+): string {
+  return t("merge.done", {
+    source: mergeSideLabel(t, source),
+    target: mergeSideLabel(t, target),
+  });
+}
+
 export function MergeAction<Survivor extends { id: string }>({
   label,
   sourceId,
   sourceName,
+  sourceDetail,
   searchTargets,
   merge,
   invalidate,
@@ -39,6 +73,8 @@ export function MergeAction<Survivor extends { id: string }>({
   label: string;
   sourceId: string;
   sourceName: string;
+  // The same detail line the picker draws under each candidate.
+  sourceDetail?: string;
   // May return the source row; it is dropped here, because a record is never
   // a merge target for itself.
   searchTargets: (q: string) => Promise<RecordPickerCandidate[]>;
@@ -62,9 +98,11 @@ export function MergeAction<Survivor extends { id: string }>({
   const t = useT();
   const refused = useGrantRefused(requires);
   const queryClient = useQueryClient();
+  const toast = useToast();
   const headingId = useId();
   const [open, setOpen] = useState(false);
   const [target, setTarget] = useState<RecordPickerCandidate | null>(null);
+  const source = { name: sourceName, detail: sourceDetail };
   const searchOthers = useCallback(
     async (q: string) =>
       (await searchTargets(q)).filter((candidate) => candidate.id !== sourceId),
@@ -80,6 +118,9 @@ export function MergeAction<Survivor extends { id: string }>({
       queryClient.invalidateQueries({ queryKey: [recordKey, sourceId] });
       queryClient.invalidateQueries({ queryKey: [recordKey, survivor.id] });
       setOpen(false);
+      if (target) {
+        toast.show(mergeDone(t, source, target));
+      }
       from.closeOnto(survivorRoute(survivor.id));
     },
   });
@@ -120,20 +161,7 @@ export function MergeAction<Survivor extends { id: string }>({
             }
             disabled={mutation.isPending}
           />
-          {target && (
-            <p>
-              {target.detail
-                ? t("merge.confirmDetail", {
-                    source: sourceName,
-                    target: target.name,
-                    detail: target.detail,
-                  })
-                : t("merge.confirm", {
-                    source: sourceName,
-                    target: target.name,
-                  })}
-            </p>
-          )}
+          {target && <p>{mergeQuestion(t, source, target)}</p>}
           <ErrorLine error={mutation.error} />
         </div>
         <div className="actions">

@@ -3213,8 +3213,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "merge.pickTarget": "Datensatz auswählen, der bleibt",
   "merge.confirm":
     "{source} mit {target} zusammenführen? {source} wird dabei archiviert.",
-  "merge.confirmDetail":
-    "{source} mit {target} ({detail}) zusammenführen? {source} wird dabei archiviert.",
+  "merge.recordDetail": "{name} ({detail})",
+  "merge.done": "{source} wurde mit {target} zusammengeführt.",
   "merge.targetReadOnly":
     "Du kannst diesen Datensatz nur lesen, deshalb kann er nicht bleiben.",
   "merge.submit": "Zusammenführen",
