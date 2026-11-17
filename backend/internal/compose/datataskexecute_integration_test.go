@@ -13,6 +13,8 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"net/http/httptest"
+	"net/http/httptrace"
 	"slices"
 	"sync/atomic"
 	"testing"
@@ -135,28 +137,41 @@ func TestExecuteStopsAtAFailedStepAndNamesIt(t *testing.T) {
 	}
 }
 
-// trapTransport fails every outbound request and counts it.
-type trapTransport struct{ calls *atomic.Int64 }
-
-func (t trapTransport) RoundTrip(*http.Request) (*http.Response, error) {
-	t.calls.Add(1)
-	return nil, errors.New("data-tasks execute made an outbound request")
+// outboundCounted is ctx counting every HTTP request made under it, through
+// the client trace every net/http transport reports a connection to.
+func outboundCounted(ctx context.Context, t *testing.T) (context.Context, *atomic.Int64) {
+	t.Helper()
+	calls := &atomic.Int64{}
+	ctx = httptrace.WithClientTrace(ctx, &httptrace.ClientTrace{GetConn: func(string) { calls.Add(1) }})
+	probe := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	defer probe.Close()
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, probe.URL, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	response, err := probe.Client().Do(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := response.Body.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if calls.Swap(0) != 1 {
+		t.Fatal("the trace did not count a request made under its context, so it would miss the run's")
+	}
+	return ctx, calls
 }
 
 // The release's whole catalog, through the command's own entry point. Nothing
 // leaves the database: no request, no queued job, no model call.
-//
-//testdb:serial replaces http.DefaultTransport, which every test's outbound calls use
 func TestExecuteRunsTheReleaseCatalogWithoutReachingOutside(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
-	calls := &atomic.Int64{}
-	saved := http.DefaultTransport
-	http.DefaultTransport = trapTransport{calls: calls}
-	t.Cleanup(func() { http.DefaultTransport = saved })
+	ctx, calls := outboundCounted(e.Admin(), t)
 	jobs := e.WsCount(t, `SELECT count(*) FROM river_job`)
 	models := e.WsCount(t, `SELECT count(*) FROM ai_call`)
 
-	run, err := DataTaskExecute(e.Admin(), e.Pool, 10000)
+	run, err := DataTaskExecute(ctx, e.Pool, 10000)
 	if err != nil {
 		t.Fatal(err)
 	}
