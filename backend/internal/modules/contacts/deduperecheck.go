@@ -107,24 +107,10 @@ func (s *Store) recheckBatch(ctx context.Context, after ids.UUID) (examined, clo
 		if err != nil {
 			return err
 		}
-		for _, pair := range pairs {
-			filed, score, err := stillFiled(ctx, tx, consumerMail, pair)
-			if err != nil {
-				return err
-			}
-			if filed {
-				continue
-			}
-			archived, err := archiveDedupeCandidateTx(ctx, tx, pair.id, archiveReasonNoLongerFiled,
-				map[string]any{auditKeyEntityType: pair.entityType, auditKeyConfidence: score})
-			if err != nil {
-				return err
-			}
-			if archived {
-				closed++
-			}
-		}
-		return nil
+		closed, err = closeUnfiledPairs(ctx, tx, pairs, func(pair openPair) (bool, float64, error) {
+			return stillFiled(ctx, tx, consumerMail, pair)
+		})
+		return err
 	})
 	return examined, closed, last, err
 }
@@ -180,20 +166,35 @@ func closeRenamedCompanyPairs(ctx context.Context, tx pgx.Tx, companyID ids.Comp
 	if err != nil {
 		return err
 	}
+	_, err = closeUnfiledPairs(ctx, tx, pairs, func(pair openPair) (bool, float64, error) {
+		return companyPairStillFiled(ctx, tx, pair)
+	})
+	return err
+}
+
+// closeUnfiledPairs archives each pair the rule `files` no longer files, and its
+// audit row records the score the pair holds now. It answers how many it closed.
+func closeUnfiledPairs(ctx context.Context, tx pgx.Tx, pairs []openPair,
+	files func(openPair) (bool, float64, error)) (int, error) {
+	closed := 0
 	for _, pair := range pairs {
-		filed, score, err := companyPairStillFiled(ctx, tx, pair)
+		filed, score, err := files(pair)
 		if err != nil {
-			return err
+			return closed, err
 		}
 		if filed {
 			continue
 		}
-		if _, err := archiveDedupeCandidateTx(ctx, tx, pair.id, archiveReasonNoLongerFiled,
-			map[string]any{auditKeyEntityType: pair.entityType, auditKeyConfidence: score}); err != nil {
-			return err
+		archived, err := archiveDedupeCandidateTx(ctx, tx, pair.id, archiveReasonNoLongerFiled,
+			map[string]any{auditKeyEntityType: pair.entityType, auditKeyConfidence: score})
+		if err != nil {
+			return closed, err
+		}
+		if archived {
+			closed++
 		}
 	}
-	return nil
+	return closed, nil
 }
 
 // stillFiled answers whether today's rule would file this pair, and its score
