@@ -113,16 +113,18 @@ report() {
 }
 
 stop() {
+	hold_lock
 	if [[ ! -f "$stack/compose.yaml" ]]; then
 		echo "prod: no stack under $stack, so nothing to stop."
 		return
 	fi
-	hold_lock
 	if [[ "${1:-}" == "--drop" ]]; then
 		compose down --volumes --remove-orphans
 		# A settings folder shared through a symlink is deleted where it lives.
 		rm -rf "$(cd "$state" && pwd -P)"
 		rm -f "$state"
+		# The lock went with the folder; a later run's lock is not this run's.
+		trap - EXIT
 		echo "prod: stopped, and its data and settings are deleted."
 		return
 	fi
