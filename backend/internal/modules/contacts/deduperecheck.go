@@ -61,6 +61,7 @@ type openPair struct {
 	left, right    ids.UUID
 	confidence     float64
 	phoneCollision bool
+	nameCollision  bool
 }
 
 // RecheckOpenDedupeCandidates closes every open pair the filing rule would no
@@ -128,35 +129,71 @@ func (s *Store) recheckBatch(ctx context.Context, after ids.UUID) (examined, clo
 	return examined, closed, last, err
 }
 
-// lockOpenPairs reads the next batch of open pairs nobody has decided. A pair
-// with a `resolve` in its history was judged by someone, even if the verdict
-// was later undone, and the re-check never second-guesses one.
-func lockOpenPairs(ctx context.Context, tx pgx.Tx, after ids.UUID) ([]openPair, error) {
-	rows, err := tx.Query(ctx, `
+// openPairsSQL reads the open pairs nobody has decided. A pair with a
+// `resolve` in its history was judged by someone, even if the verdict was later
+// undone, and the re-check never second-guesses one.
+var openPairsSQL = `
 		SELECT d.id, d.entity_type,
 		       coalesce(d.left_contact_id, d.left_company_id, d.left_lead_id),
 		       coalesce(d.right_contact_id, d.right_company_id, d.right_lead_id),
-		       d.confidence::float8, `+phoneCollisionEvidenceSQL+`
+		       d.confidence::float8, ` + collideEvidenceSQL(fieldPhone) + `,
+		       ` + collideEvidenceSQL(fieldDisplayName, fieldLegalName) + `
 		  FROM dedupe_candidate d
-		 WHERE d.disposition = 'open' AND d.archived_at IS NULL AND d.id > $1
+		 WHERE d.disposition = 'open' AND d.archived_at IS NULL
 		   AND NOT EXISTS (SELECT 1 FROM audit_log a
 		                    WHERE a.entity_type = 'dedupe_candidate' AND a.entity_id = d.id
-		                      AND a.action = 'resolve')
+		                      AND a.action = 'resolve')`
+
+// lockOpenPairs reads the next batch of open undecided pairs.
+func lockOpenPairs(ctx context.Context, tx pgx.Tx, after ids.UUID) ([]openPair, error) {
+	return queryOpenPairs(ctx, tx, openPairsSQL+`
+		   AND d.id > @after
 		 ORDER BY d.id
-		 LIMIT $2
-		   FOR UPDATE OF d SKIP LOCKED`, after, dedupeRecheckBatch)
+		 LIMIT @limit
+		   FOR UPDATE OF d SKIP LOCKED`, pgx.StrictNamedArgs{"after": after, "limit": dedupeRecheckBatch})
+}
+
+func queryOpenPairs(ctx context.Context, tx pgx.Tx, query string, args pgx.StrictNamedArgs) ([]openPair, error) {
+	rows, err := tx.Query(ctx, query, args)
 	if err != nil {
 		return nil, fmt.Errorf("read open dedupe candidates: %w", err)
 	}
 	pairs, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (openPair, error) {
 		var p openPair
-		err := row.Scan(&p.id, &p.entityType, &p.left, &p.right, &p.confidence, &p.phoneCollision)
+		err := row.Scan(&p.id, &p.entityType, &p.left, &p.right, &p.confidence, &p.phoneCollision, &p.nameCollision)
 		return p, err
 	})
 	if err != nil {
 		return nil, fmt.Errorf("read open dedupe candidates: %w", err)
 	}
 	return pairs, nil
+}
+
+// closeRenamedCompanyPairs archives the open pairs of a renamed company that
+// today's rule no longer files. A pair someone is deciding at that moment is skipped.
+func closeRenamedCompanyPairs(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) error {
+	pairs, err := queryOpenPairs(ctx, tx, openPairsSQL+`
+		   AND d.entity_type = '`+entityCompany+`'
+		   AND (d.left_company_id = @company OR d.right_company_id = @company)
+		 ORDER BY d.id
+		   FOR UPDATE OF d SKIP LOCKED`, pgx.StrictNamedArgs{"company": companyID})
+	if err != nil {
+		return err
+	}
+	for _, pair := range pairs {
+		filed, score, err := companyPairStillFiled(ctx, tx, pair)
+		if err != nil {
+			return err
+		}
+		if filed {
+			continue
+		}
+		if _, err := archiveDedupeCandidateTx(ctx, tx, pair.id, archiveReasonNoLongerFiled,
+			map[string]any{auditKeyEntityType: pair.entityType, auditKeyConfidence: score}); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // stillFiled answers whether today's rule would file this pair, and its score
@@ -367,7 +404,9 @@ func companyPairStillFiled(ctx context.Context, tx pgx.Tx, pair openPair) (bool,
 	if err != nil {
 		return true, pair.confidence, fmt.Errorf("read dedupe companies: %w", err)
 	}
-	if pair.confidence >= identityConflictConfidence {
+	// Two equal names also score 1.0, so only a pair filed on other evidence
+	// stands at that score unexamined.
+	if pair.confidence >= identityConflictConfidence && !pair.nameCollision {
 		return true, pair.confidence, nil
 	}
 	forward := bestCompanyNamePairing(leftDisplay, leftLegal, rightDisplay, rightLegal)
