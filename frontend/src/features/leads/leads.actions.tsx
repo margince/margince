@@ -40,6 +40,14 @@ function ClosedReason({
   ) : null;
 }
 
+// The kind each header verb opens the drawer on; Log starts on a note.
+const OPENING_KIND = {
+  log: undefined,
+  task: "task",
+  call: "call",
+  meet: "meeting",
+} as const;
+
 // The lead's identity row and its verbs. It stands apart from LeadScreen to
 // keep that render inside the complexity budget. A header is a unit of its own:
 // the name, why the verbs are gone when they are, and the verbs themselves.
@@ -164,7 +172,7 @@ export function LeadActions({
         onClick={() => setDrawer("call")}
       />
       <IconAction
-        label={t("contact.action.meetings")}
+        label={t("record.verb.meet")}
         word={t("record.verb.meet")}
         icon={<CalendarDays aria-hidden="true" />}
         disabled={logPending}
@@ -193,9 +201,7 @@ export function LeadActions({
         <LogActivityAction
           entityType="lead"
           entityId={id}
-          askedKind={
-            drawer === "task" || drawer === "call" ? drawer : undefined
-          }
+          askedKind={OPENING_KIND[drawer]}
           openOnMount
           onLogged={onLogged}
           onClose={() => setDrawer(null)}
