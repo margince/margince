@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { ChevronDown } from "lucide-react";
 import { expect, screen, userEvent, within } from "storybook/test";
 import { Button, Modal, OverflowMenu } from "./atoms";
 import { Heading } from "./heading";
@@ -69,6 +70,28 @@ export const Open: Story = {
     </OverflowMenu>
   ),
   play: openPanel,
+};
+
+// A `button` face: a worded dropdown beside other buttons, its chevron last.
+export const ButtonFace: Story = {
+  render: () => (
+    <OverflowMenu
+      label="Setup"
+      text="Setup"
+      face="button"
+      icon={<ChevronDown aria-hidden="true" />}
+    >
+      <Button>Targets</Button>
+      <Button>Metric definitions</Button>
+      <Button>Sales goals</Button>
+    </OverflowMenu>
+  ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", { name: "Setup" }),
+    );
+    await screen.findByRole("button", { name: "Metric definitions" });
+  },
 };
 
 // A pending item leads with its busy mark, and every other label keeps the
