@@ -193,3 +193,25 @@ func TestADisclosureLanguageNeedsARecipientBoundLawAndACode(t *testing.T) {
 		}
 	}
 }
+
+// Only a class the core knows may be named for the request rule, and only
+// beside the rule itself.
+func TestTheRequestRuleNamesKnownClasses(t *testing.T) {
+	narrow := Rules{
+		Jurisdiction: "zz", Version: 1, ConsentConfirmationNeedsRequest: true,
+		ConsentRequestFirstFor: []PurposeClass{PurposeClassMarketing},
+	}
+	if err := narrow.Validate(); err != nil {
+		t.Errorf("a known class was refused: %v", err)
+	}
+	unknown := narrow
+	unknown.ConsentRequestFirstFor = []PurposeClass{"newsletter"}
+	if unknown.Validate() == nil {
+		t.Error("a class the core does not know was accepted")
+	}
+	orphan := narrow
+	orphan.ConsentConfirmationNeedsRequest = false
+	if orphan.Validate() == nil {
+		t.Error("classes named for a rule the pack does not declare were accepted")
+	}
+}

@@ -8066,10 +8066,16 @@ export const en = {
   "sendPermission.ready": "Recipients checked",
   "sendPermission.markName": "Communication status for this message",
   "sendPermission.checking": "Checking whether this message can be sent…",
-  "lawfulBasis.title": "No consent on record for this contact",
+  "lawfulBasis.title": "No valid basis recorded",
   "lawfulBasis.body":
-    "Under Vietnamese law you may not process this recipient’s data without consent. Sending is at your own risk.",
+    "No valid basis under Vietnamese law is recorded for this contact: neither their consent nor a case where the law allows processing without it. Sending is at your own risk.",
   "lawfulBasis.confirm": "Send anyway",
+  "lawfulBasis.askConsent": "Ask for consent",
+  "lawfulBasis.askFailed": "The consent request was not sent. Try again.",
+  "lawfulBasis.asked":
+    "Consent request sent to {address}. Your message was not sent.",
+  "lawfulBasis.askPartial":
+    "Consent request sent to {asked}. It was not sent to {failed}. Try again to ask only them.",
   "lawfulBasis.failed": "Your confirmation was not recorded. Try again.",
   "privacynotice.purposeLine": "{purpose}: {basis}",
   "privacynotice.basisOn.consent": "your consent of {date}",
@@ -22851,6 +22857,8 @@ export const en = {
     "“{words}” is a claim you may make only with a proof. Add the name, number and date of the proving document to the mail.",
   "compose.contentFinding.language":
     "Write this mail in {language} first. Text in another language goes below it, no larger than the {language} text.",
+  "compose.contentFinding.foreignAdvertiser":
+    "Your company is not set up in {country}. A foreign company that does not operate in {country} must advertise there through an advertising business from {country}. Your company is responsible for this.",
 } as const;
 
 export type MessageKey = keyof typeof en;

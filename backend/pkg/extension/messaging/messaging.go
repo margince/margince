@@ -141,6 +141,12 @@ type Rules struct {
 	// sent; nothing is refused.
 	ClaimsNeedProof []string
 
+	// ForeignAdvertiserNeedsLocalAgency says an advertiser not established in
+	// this jurisdiction must advertise here through a local advertising
+	// service business. An advertising draft to a recipient here, from a
+	// sending entity established elsewhere, gets a notice; nothing is refused.
+	ForeignAdvertiserNeedsLocalAgency bool
+
 	// OptOutAcknowledgement records whether an opt-out is owed a confirming
 	// message. False means none is owed, which is the default.
 	//
@@ -182,10 +188,13 @@ type Rules struct {
 	// then pins no question, its page shows none and its submit takes none.
 	RecordConfirmationWithoutNews bool
 
-	// ConsentConfirmationNeedsRequest says a consent-confirmation mail may be
+	// ConsentConfirmationNeedsRequest says a mail asking for consent may be
 	// sent only when the recipient's own request to subscribe is on record. A
 	// mail asking for consent nobody requested is itself unsolicited.
 	ConsentConfirmationNeedsRequest bool
+
+	// ConsentRequestFirstFor are the purpose classes the rule above covers; empty covers all.
+	ConsentRequestFirstFor []PurposeClass
 }
 
 // ExceptionKind names a route to lawful advertising without consent. Closed:
@@ -447,6 +456,9 @@ func (r Rules) Validate() error {
 		}
 	}
 	if err := r.validateClaims(); err != nil {
+		return fmt.Errorf("messaging rules for %q: %w", string(r.Jurisdiction), err)
+	}
+	if err := r.validateRequestFirstFor(); err != nil {
 		return fmt.Errorf("messaging rules for %q: %w", string(r.Jurisdiction), err)
 	}
 	return r.validateDisclosureLanguage()

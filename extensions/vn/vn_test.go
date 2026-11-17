@@ -235,11 +235,34 @@ func TestAdvertisingIsVietnameseFirstAndEndsWithTheRefusal(t *testing.T) {
 	}
 }
 
-// TestSuperlativesNeedAProof pins Law on Advertising Art. 8.11.
+// TestSuperlativesNeedAProof pins Law on Advertising Art. 8.11 and Circular
+// 12/2026/TT-BVHTTDL Art. 3.1, which reaches a claim in any language.
 func TestSuperlativesNeedAProof(t *testing.T) {
-	for _, word := range []string{"nhất", "duy nhất", "tốt nhất", "số một"} {
+	for _, word := range []string{
+		"nhất", "duy nhất", "tốt nhất", "số một", "hàng đầu",
+		"best", "no. 1", "number one", "leading", "the only", "unique",
+	} {
 		if !slices.Contains(messagingRules().ClaimsNeedProof, word) {
 			t.Errorf("%q is not among the claims that need a proof", word)
 		}
+	}
+}
+
+// TestAForeignAdvertiserIsToldToUseAVietnameseAgency pins Law on Advertising
+// Art. 39.2.
+func TestAForeignAdvertiserIsToldToUseAVietnameseAgency(t *testing.T) {
+	if !messagingRules().ForeignAdvertiserNeedsLocalAgency {
+		t.Error("an advertiser outside Vietnam is not told to advertise through a Vietnamese agency")
+	}
+}
+
+// TestOnlyAdvertisingConsentNeedsTheRequestFirst pins Decree 91/2020/ND-CP
+// Art. 11.2, which governs advertising by mail and by phone: a consent request
+// for correspondence needs no request of the contact's own.
+func TestOnlyAdvertisingConsentNeedsTheRequestFirst(t *testing.T) {
+	r := messagingRules()
+	want := []messaging.PurposeClass{messaging.PurposeClassMarketing, messaging.PurposeClassPhoneOutreach}
+	if !r.ConsentConfirmationNeedsRequest || !slices.Equal(r.ConsentRequestFirstFor, want) {
+		t.Errorf("the request rule covers %v, want the advertising classes %v", r.ConsentRequestFirstFor, want)
 	}
 }
