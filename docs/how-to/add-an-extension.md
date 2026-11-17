@@ -1315,7 +1315,7 @@ Declare each group of reads your unit makes:
 SystemReads: []extension.SystemRead{
 	extension.SystemReadDeals,     // Deals().Get and Deals().Responsible
 	extension.SystemReadAuthority, // Authority().CanRead and CanWrite
-	extension.SystemReadDirectory, // Directory().Emails
+	extension.SystemReadDirectory, // Directory().Emails and ByRole
 	extension.SystemReadActivities, // Activities().Mail
 	extension.SystemReadSetAside, // SetAside().Contact and Contacts
 	extension.SystemReadCompanies, // Companies().Get and List
@@ -1343,6 +1343,12 @@ mail, err := rt.Activities().Mail(ctx, member, d.Entity.ID, extension.MailQuery{
   teams on it. It leaves out agents, members who cannot sign in, users taken off the deal, and archived teams. It stops at
   `extension.MaxResponsible` colleagues.
 - **`Emails` takes at most `extension.MaxResponsible` users**, so the list `Responsible` gave always fits.
+- **`ByRole` names who holds a role.** `Directory().ByRole(ctx, []string{"reviewer"})` answers the ids of the
+  human members who hold at least one of the roles, named by role key. A unit uses it to file a task for each
+  reviewer.
+
+  It leaves out agents and members who cannot sign in. The ids come in id order and stop at
+  `extension.MaxResponsible`. A key that names no role answers `ErrInvalid`.
 - **`Mail` answers the emails of one deal.** It tells a unit if a mail is sent and if a reply is in. Each
   `MailSummary` holds the id, the direction, the time, what kind of sender wrote it (empty for a human) and the
   deal id. It holds no subject, body, address or file. It leaves out mail kept private to its senders and

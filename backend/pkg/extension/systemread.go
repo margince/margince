@@ -32,7 +32,7 @@ const (
 	SystemReadDeals SystemRead = "deals"
 	// SystemReadAuthority admits Authority().CanRead and Authority().CanWrite.
 	SystemReadAuthority SystemRead = "authority"
-	// SystemReadDirectory admits Directory().Emails.
+	// SystemReadDirectory admits Directory().Emails and Directory().ByRole.
 	SystemReadDirectory SystemRead = "directory"
 	// SystemReadActivities admits Activities().Mail.
 	SystemReadActivities SystemRead = "activities"
@@ -138,6 +138,12 @@ type Directory interface {
 	// MaxResponsible users, or an id that is not a canonical UUID, answers
 	// ErrInvalid.
 	Emails(ctx context.Context, users []UserID) (map[UserID]string, error)
+
+	// ByRole answers the active human members who hold at least one of roles,
+	// named by role key. Agent seats and members who cannot sign in are left
+	// out. The ids come in id order and stop at MaxResponsible. More than
+	// MaxResponsible roles, or a key that names no role, answers ErrInvalid.
+	ByRole(ctx context.Context, roles []string) ([]UserID, error)
 }
 
 // MailSummary is one email on a deal as a background reader sees it.

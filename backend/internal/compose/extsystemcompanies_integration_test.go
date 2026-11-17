@@ -90,3 +90,26 @@ func TestTheMailContentReadGivesTheWordsOfWorkspaceMailOnly(t *testing.T) {
 		t.Errorf("redacted mail = %+v, want withheld with no words", withheld)
 	}
 }
+
+func TestTheRoleReadGivesTheLiveMembersWhoHoldARole(t *testing.T) {
+	s := setupSystemRead(t)
+	composeReader(t, extension.SystemReadDirectory)
+	s.WsExec(t, `INSERT INTO role (key, name) VALUES ('reviewer', 'Reviewer')`)
+	s.WsExec(t, `INSERT INTO role_assignment (role_id, user_id) SELECT r.id, $1 FROM role r WHERE r.key = 'reviewer'`, s.Rep1)
+	var got []extension.UserID
+	var unknown error
+	s.onDelivery(t, func(ctx context.Context, rt extension.Runtime) error {
+		var err error
+		if got, err = rt.Directory().ByRole(ctx, []string{"reviewer"}); err != nil {
+			return err
+		}
+		_, unknown = rt.Directory().ByRole(ctx, []string{"reviewer", "no-such-role"})
+		return nil
+	})
+	if len(got) != 1 || got[0] != extension.UserID(s.Rep1.String()) {
+		t.Errorf("ByRole = %v, want only the reviewer %s", got, s.Rep1)
+	}
+	if !errors.Is(unknown, extension.ErrInvalid) {
+		t.Errorf("an unknown role: err = %v, want ErrInvalid", unknown)
+	}
+}
