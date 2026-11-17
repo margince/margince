@@ -143,16 +143,18 @@ export function nextMeetingLine(
     : t("brief.readings.nextMeetingUntitled", { date });
 }
 
-// A calendar that could not count leads to where it is connected, because
-// that is the one thing a reader can do about a zero that measured nothing.
+// A calendar that could not count leads to where it is connected: that is what
+// a reader can do about a zero it left out. Without a calendar the zero is
+// still Margince's own count, so the figure stays.
 export function calendarStandIn(
   calendar: CalendarDay,
+  locale: Locale,
   t: Translator,
 ): StandIn | undefined {
   const open = () => navigate(settingsHref("connections"));
   if (calendar.state === "not_connected") {
     return {
-      value: t("brief.readings.calendarNotConnected"),
+      value: formatNumber(0, locale),
       detail: t("brief.readings.calendarNotConnectedWhy"),
       open,
     };

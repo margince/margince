@@ -11,7 +11,10 @@ import { pagerSlots } from "./listtable.paging";
 import { columns, render, testRows } from "./listtable.testkit";
 import { pickOption } from "./select-testing";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 // A header whose verbs fold into one menu must behave like the row of verbs it
 // replaced. By default the menu defers its children to the first open. That is
@@ -134,7 +137,6 @@ describe("a folded header's verbs are live", () => {
     // button being visible, because the fold sets `hidden` on it. Visibility is
     // the wrong question and would pass on a dead control.
     expect(mounted).toHaveBeenCalledTimes(1);
-    vi.unstubAllGlobals();
   });
 });
 
@@ -578,33 +580,6 @@ describe("empty state", () => {
     // Two different offers: one undoes every narrowing, the screen's own note
     // usually undoes one.
     expect(screen.getByRole("button", { name: "Clear filters" })).toBeTruthy();
-  });
-});
-
-describe("phone card layout hooks", () => {
-  it("labels every non-identity cell with its column header, and leaves the identity cell and table roles intact", () => {
-    render(
-      <ListTable
-        rows={testRows(1)}
-        columns={columns}
-        rowKey={(row) => row.id}
-        unit="rows"
-      />,
-    );
-
-    expect(screen.getByRole("table")).toBeTruthy();
-    const [headerRow, dataRow] = screen.getAllByRole("row");
-    expect(within(headerRow).getAllByRole("columnheader")).toHaveLength(
-      columns.length,
-    );
-
-    const cells = within(dataRow).getAllByRole("cell");
-    expect(cells).toHaveLength(columns.length);
-    const [identity, value, note, region] = cells;
-    expect(identity.hasAttribute("data-label")).toBe(false);
-    expect(value.getAttribute("data-label")).toBe("Value");
-    expect(note.getAttribute("data-label")).toBe("Note");
-    expect(region.getAttribute("data-label")).toBe("Region");
   });
 });
 

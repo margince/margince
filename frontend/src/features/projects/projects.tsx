@@ -243,6 +243,12 @@ export function ProjectsScreen({
             // By the company's NAME. One outside this reader's scope orders
             // the page by nothing rather than by a name it withholds.
             sort: "company_id",
+            phone: "caption",
+            // A list page carries no `companies`; each row reads its company's name.
+            folded: (project: Project) =>
+              project.company_id ? (
+                <EntityRef kind="company" id={project.company_id} asText />
+              ) : null,
           },
           {
             key: "phase",
@@ -251,6 +257,7 @@ export function ProjectsScreen({
             // closed — which is the arrangement the account page already uses.
             // Alphabetical would be that order shuffled.
             sort: "phase",
+            phone: "end",
             cell: (project: Project) => <PhaseBadge phase={project.phase} />,
           },
           ownerColumn<Project>(t),

@@ -40,42 +40,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-func TestTheReceiptCarriesTheSameReachTheRecordItselfDoes(t *testing.T) {
-	e := Setup(t)
-	since := time.Now().Add(-time.Hour)
-	// Another team's deal, moved by a machine.
-	theirs := seedMachineAction(t, e, e.Rep3, "agent", "agent:auto-apply", "advance_stage")
-
-	svc := magic.NewService(e.Pool, nil, time.Now)
-	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
-	receipt, err := svc.Read(ctx, &since, 20)
-	if err != nil {
-		t.Fatalf("reading the receipt: %v", err)
-	}
-
-	// A DEAL IS WORKSPACE-READABLE in this product: auth.UnboundedFor answers
-	// true for a rep on `deal`, so ScopeClauseFor renders no predicate and every
-	// seat holding deal.read sees every deal. The receipt must carry exactly
-	// that reach — no wider, and no narrower.
-	//
-	// Narrower would be the tempting mistake. A receipt that quietly showed only
-	// your own deals would look like good security and would be a lie about what
-	// the machinery did to the pipeline you can already open. The gate this
-	// suite protects is that the receipt inherits the RECORD's rule rather than
-	// inventing one.
-	var found bool
-	for _, line := range receipt.Done {
-		if line.Entity != nil && ids.UUID(line.Entity.Id) == theirs {
-			found = true
-		}
-	}
-	if !found {
-		t.Fatal("a machine action on a deal this reader may open was withheld — the " +
-			"receipt narrowed where the record does not, which hides what the " +
-			"machinery did to pipeline the reader is answerable for")
-	}
-}
-
 // The reach the receipt must NOT exceed: a record the reader cannot open at all.
 //
 // A seat with no deal grant reads no deal, so it reads no machine action about

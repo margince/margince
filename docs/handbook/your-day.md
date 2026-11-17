@@ -54,7 +54,7 @@ A task leads your Worklist and **Needs you** on **Home** when you hold it and it
 Only the colleague who holds the task is reminded. A colleague who opens your queue sees the task in its usual place, and a task nobody holds reminds nobody. A reminder stays at the top for 30 days after its time. Also called: reminder, remind me, notify me.
 
 ### Why is this on my list?
-The open card under **Needs you** on **Home** says what happened, what to do next and its one current reason. **View details** adds the messages, contact, deal and every fact behind the row. An approval card shows what the agent proposes, such as the task it would add with its due day and note. Its **View details** holds the decision, so you can approve, edit or reject it there.
+The open card under **Needs you** on **Home** says what happened, what to do next and its one current reason. A task Margince made opens with why it exists. It names the contact, company or deal and what changed, such as **Anna Weber asked: “Please send the report.”**. **View details** adds the messages, contact, deal and every fact behind the row. An approval card shows what the agent proposes, such as the task it would add with its due day and note. Its **View details** holds the decision, so you can approve, edit or reject it there.
 
 A meeting with no outcome asks **How did it go?** with **It happened** and **Add notes**, plus **Did not happen** unless Margince sent its invitation. A colleague's meeting you cannot change reads **No outcome yet for** the meeting. Press **Done** to take it off your list. A task Margince made for you says what made it. A reminder about a quiet contact, company, deal or lead says so, and asks you to get in touch and then press **Done**. Also called: what is this task, where did this task come from.
 
@@ -165,7 +165,7 @@ Each item names its record and shows the facts that call for action. A badge say
 - **Since your last brief**: what Margince did since your last brief, what waits on you, what it
   could not finish and what needs restoring.
 - **Done for you**, the deals Margince changed, to keep or undo, and the other work it finished; beside them **External meetings** and **Numbers**.
-- **External meetings** lists today's meetings with someone from outside your company, by start time. A meeting among colleagues is not on it. Each row names the account and the contacts you meet, each a link to their record. The next meeting says how soon it starts and offers **Prepare for meeting**. Margince then writes the brief for that meeting and opens it on Home.
+- **External meetings** lists today's meetings with someone from outside your company, by start time. A meeting among colleagues is not on it. Each row names the account and the contacts you meet, each a link to their record. The next meeting says how soon it starts and offers **Prepare for meeting**. Margince then writes the brief for that meeting and opens it on Home. With no calendar connected, the panel says so and shows the meetings booked, logged or imported in Margince.
 
 Also called: morning brief, daily brief, today, priorities, top cards.
 
@@ -186,7 +186,7 @@ A customer who waits for your reply, and a reply deadline that comes close, come
 Today names each source it could not read, with **Refresh brief**, and never shows it as a zero.
 - **Flagged pipeline value** adds up deal value without the deals that have no price, and says how many those are.
 - That value is the full deal amount, not the amount you expect to lose. It may not be complete, and it is not a forecast.
-- Meetings count calendar entries still to come. Margince does not say you are prepared unless the source says so.
+- Meetings count calendar entries still to come. With no calendar connected, they count the meetings Margince knows. Margince does not say you are prepared unless the source says so.
 
 The work counts come from the current Worklist read. Each part of Home can refresh at a different time. Home reads your day when it holds no copy under five minutes old, and again right after you act on it. For a few seconds, Home may show a copy up to 15 minutes old. It then reads your day again and shows the new copy on its own. Another Worklist page keeps the same members but reads their current state; pages do not share one fixed time.
 
@@ -197,7 +197,7 @@ The work counts come from the current Worklist read. Each part of Home can refre
 
 A short preview under the heading shows up to three recent changes in two lines, even when there are only small changes. Deal cards start closed. Press a card to read its changes; one deal is open at a time. **Small changes** starts closed and shows only its count until you open it.
 
-The small-changes card holds the work Margince did beside the deals, such as saving or filing an email. Open it to read the changes. Changes that read the same show as one step with a count, such as **Saved email or meeting** with **4 changes**. Each line in the step keeps its own **Undo**, and a line that touched more than one email or meeting opens with **View 2 changes**. **Details** under each one says when it happened, who did it, why, and why it cannot be undone when it cannot. When some activity could not be counted, a line under the card says so.
+The small-changes card holds the work Margince did beside the deals, such as saving or filing an email. It shows only records that you or your team own, or that someone shared with you. Changes that read the same show as one step with a count, such as **Saved an email** with **4 changes**. Each line keeps its own **Undo**, and one that touched several records opens with **View 2 changes**, which says what changed on each. **Details** under each one says when it happened, who did it, why, and why it cannot be undone when it cannot. When some activity could not be counted, a line under the card says so.
 
 An open card lists every change on the deal, newest first: what moved and when, and why Margince did it. When a change rests on the customer's own words, they show under "The customer wrote:". A deal Margince closed reads **Marked lost**, and "Reason unavailable" when you may not read why. Only the deal's owner reads why. A change a later one replaced is grey and reads "Replaced by a later change".
 

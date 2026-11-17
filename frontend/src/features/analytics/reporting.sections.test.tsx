@@ -153,7 +153,9 @@ describe("the Leads view", () => {
     const asked = showView("leads", reportingLeadsEvaluation);
 
     const created = await panel(titled(reportingMetricNames.leads_created));
-    await user.click(created.getByRole("button", { name: "Website: 12" }));
+    await user.click(
+      await created.findByRole("button", { name: "Website: 12" }),
+    );
 
     const drawer = within(await screen.findByRole("dialog"));
     expect(drawer.getByText(/Website/)).toBeVisible();
@@ -212,8 +214,10 @@ describe("the Partners view", () => {
 
     const pipeline = await panel(titled(reportingMetricNames.partner_pipeline));
     const amount = formatAnalyticsMoney(500_000, "EUR", "en");
+    // Found, not got: the first case of the file sees the panel's heading
+    // before its body.
     expect(
-      pipeline.getByRole("button", {
+      await pipeline.findByRole("button", {
         name: `Partner you cannot see · Sourced: ${amount}`,
       }),
     ).toBeVisible();
@@ -227,7 +231,7 @@ describe("the Partners view", () => {
       titled(reportingMetricNames.partner_commission),
     );
     expect(
-      commission.getByRole("columnheader", {
+      await commission.findByRole("columnheader", {
         name: en["reporting.recordCount"],
       }),
     ).toBeInTheDocument();

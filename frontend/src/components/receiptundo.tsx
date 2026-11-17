@@ -24,9 +24,16 @@ import { BundleUndo } from "./marginchanges";
 export function ReceiptUndo({
   receipt,
   onDone,
-}: Readonly<{ receipt: Receipt; onDone?: () => void }>) {
+  undoable = true,
+}: Readonly<{
+  receipt: Receipt;
+  onDone?: () => void;
+  // False where the page knows the reader may not write the changed record:
+  // the grant alone cannot see a colleague's deal shared read-only.
+  undoable?: boolean;
+}>) {
   const t = useT();
-  const writable = useCanWrite("deal", "update");
+  const writable = useCanWrite("deal", "update") && undoable;
   const receiptUndo = useReceiptUndo();
 
   const undo = receipt.undo;

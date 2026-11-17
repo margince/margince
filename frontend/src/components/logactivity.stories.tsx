@@ -59,6 +59,11 @@ export const OpenedOnACall: Story = {
     );
   },
 };
+export const OpenedOnACallPhone: Story = {
+  ...OpenedOnACall,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
 
 export const CallTranscript: Story = {
   ...OpenedOnACall,

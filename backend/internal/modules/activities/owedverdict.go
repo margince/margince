@@ -435,18 +435,24 @@ func rulesetStaleSQL(col, param string) string {
 // SetOwedVerdict retains the ordinary ruleset and read-time compare-and-swap.
 // readAt must be the database read timestamp so a slow prediction cannot replace a newer verdict.
 func (s *Store) SetOwedVerdict(ctx context.Context, id ids.UUID, verdict, ruleset string, readAt time.Time) (applied bool, err error) {
+	return s.SetOwedVerdictAsked(ctx, id, verdict, ruleset, readAt, "")
+}
+
+// SetOwedVerdictAsked is SetOwedVerdict that also keeps the sender's own
+// sentence for the ask, which the reminder filed later quotes.
+func (s *Store) SetOwedVerdictAsked(ctx context.Context, id ids.UUID, verdict, ruleset string, readAt time.Time, ask string) (applied bool, err error) {
 	if err := validateOwedVerdictWrite(ctx, verdict, ruleset); err != nil {
 		return false, err
 	}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var writeErr error
-		applied, writeErr = setOwedVerdictTx(ctx, tx, id, verdict, ruleset, readAt, nil)
+		applied, writeErr = setOwedVerdictTx(ctx, tx, id, verdict, ruleset, readAt, nil, ask)
 		return writeErr
 	})
 	return applied, err
 }
 
-func setOwedVerdictTx(ctx context.Context, tx pgx.Tx, id ids.UUID, verdict, ruleset string, readAt time.Time, evidence map[string]any) (bool, error) {
+func setOwedVerdictTx(ctx context.Context, tx pgx.Tx, id ids.UUID, verdict, ruleset string, readAt time.Time, evidence map[string]any, ask string) (bool, error) {
 	if err := validateOwedVerdictWrite(ctx, verdict, ruleset); err != nil {
 		return false, err
 	}
@@ -460,11 +466,11 @@ func setOwedVerdictTx(ctx context.Context, tx pgx.Tx, id ids.UUID, verdict, rule
 		return false, err
 	}
 	reviewed := evidence != nil
-	tag, err := tx.Exec(ctx, `UPDATE activity SET owed_verdict=@verdict,owed_verdict_at=now(),owed_verdict_ruleset=@rules
+	tag, err := tx.Exec(ctx, `UPDATE activity SET owed_verdict=@verdict,owed_verdict_at=now(),owed_verdict_ruleset=@rules,owed_ask=nullif(@ask,'')
  WHERE id=@id AND (@reviewed OR (`+rulesetStaleSQL("owed_verdict_ruleset", "@rules")+`
  AND (owed_verdict_at IS NULL OR owed_verdict_at<@read_at) AND NOT `+humanReviewedOwedSQL("activity")+`))
  AND archived_at IS NULL AND `+auth.WorkspaceAudienceSQL("activity")+` AND restricted_at IS NULL`,
-		pgx.NamedArgs{"id": id, "verdict": verdict, "rules": ruleset, "reviewed": reviewed, "read_at": readAt})
+		pgx.NamedArgs{"id": id, "verdict": verdict, "rules": ruleset, "reviewed": reviewed, "read_at": readAt, "ask": ask})
 	if err != nil || tag.RowsAffected() == 0 {
 		return false, err
 	}

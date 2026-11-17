@@ -104,9 +104,12 @@ function LinkCompanyOffer({
 // The company a lead names, without the offer: what a list row or a board card
 // draws. The link reads the company's own name, which a rename there may have
 // moved away from what the lead typed.
-export function LeadCompanyName({ lead }: Readonly<{ lead: Lead }>): ReactNode {
+export function LeadCompanyName({
+  lead,
+  asText = false,
+}: Readonly<{ lead: Lead; asText?: boolean }>): ReactNode {
   if (lead.company_id) {
-    return <EntityRef kind="company" id={lead.company_id} />;
+    return <EntityRef kind="company" id={lead.company_id} asText={asText} />;
   }
   const name = lead.company_name?.trim();
   return name ? <span>{name}</span> : null;

@@ -17,6 +17,7 @@ import { AppLink } from "./applink";
 import { Avatar, Badge } from "./atoms";
 import { DealOwner, handOnTo } from "./dealowner";
 import { IconAction } from "./iconaction";
+import { OverflowMenu } from "./overflowmenu";
 import type { BoardDeal } from "./pipelineboard";
 import { Popover } from "./popover";
 import { ProbabilityRing } from "./probabilityring";
@@ -43,6 +44,8 @@ export type DealCardActions = Readonly<{
   onSummary?: () => void;
   onEmail?: () => void;
   onAddTask?: () => void;
+  /** The items of the "…" menu that closes the row; a staged card draws none. */
+  menu?: ReactNode;
 }>;
 
 /** What a caller hangs on every card of a board, keyed by the deal. */
@@ -218,9 +221,11 @@ function DealCardFoot({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const menu = deal.staged ? undefined : actions?.menu;
   const verbs =
-    actions !== undefined &&
-    [actions.onSummary, actions.onEmail, actions.onAddTask].some(Boolean);
+    menu !== undefined ||
+    (actions !== undefined &&
+      [actions.onSummary, actions.onEmail, actions.onAddTask].some(Boolean));
   if (!deal.stalled && !deal.lastEmail && !deal.singleThreaded && !verbs) {
     return null;
   }
@@ -250,7 +255,9 @@ function DealCardFoot({
           <Badge tone="danger">{t("deal.singleThreaded")}</Badge>
         )}
       </span>
-      {verbs && <DealCardVerbs actions={actions} dealName={deal.name} />}
+      {verbs && (
+        <DealCardVerbs actions={{ ...actions, menu }} dealName={deal.name} />
+      )}
     </span>
   );
 }
@@ -301,6 +308,14 @@ function DealCardVerbs({
           icon={<ListPlus aria-hidden="true" />}
           onClick={actions.onAddTask}
         />
+      )}
+      {actions.menu !== undefined && (
+        <OverflowMenu
+          inline
+          label={t("record.moreActionsFor", { subject: dealName })}
+        >
+          {actions.menu}
+        </OverflowMenu>
       )}
     </span>
   );

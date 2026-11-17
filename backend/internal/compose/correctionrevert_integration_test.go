@@ -20,6 +20,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/magic"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
@@ -249,13 +250,12 @@ func TestConfirmingACardAfterAnUndoDoesNotReapplyIt(t *testing.T) {
 // answer; only this proves the answer is the right one for a correction.
 func (e *closeDateEnv) magicReceipt(t *testing.T, since time.Time) (crmcontracts.MagicReceipt, error) {
 	t.Helper()
-	seam := restoreSeamFor(e.Env)
 	svc := magic.NewService(e.Pool, nil, time.Now).
 		WithUndoJudge(magicUndoJudge{
-			seam:        seam,
+			seam:        restoreSeamFor(e.Env),
 			corrections: deals.NewStore(e.DB(), DealsInstallation()),
 		})
-	return svc.Read(e.Admin(), &since, 50)
+	return svc.Read(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms), &since, 50)
 }
 
 // The receipt offers an Undo on a correction the sweep actually made.
