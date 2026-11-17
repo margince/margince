@@ -47,7 +47,8 @@ The `@Margince` agent in Dispact calls this installation's MCP tools. It needs t
    (`<public_base_url>/icon.svg`), and the `events` block that points at
    `<public_base_url>/v1/channel-events/dispact`. The web tier lets another origin load that icon and
    no other file (`frontend/nginx.conf`). Dispact checks the events URL at install, and that check
-   fails with `401` until the bot is connected; see [Turn on push](#turn-on-push).
+   fails with `401` until the bot is connected with its events secret saved; see
+   [Turn on push](#turn-on-push).
 3. Dispact reads the tool list once, with the installing admin's token, and shows that list to every
    user. The admin needs no Margince seat for this. An app is served no resources and no prompts, so
    those two lists answer empty, and no tool names a view. The list is fixed, as agreed with Dispact: `Tools` in
