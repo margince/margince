@@ -118,8 +118,8 @@ func (d *returnDoor) replay() {
 	}
 }
 
-//testdb:serial replaces http.DefaultTransport, which every test's outbound calls use
 func TestAnErasedSubjectIsStoredAgainOnlyThroughTheMailedLink(t *testing.T) {
+	t.Parallel()
 	d := openReturnDoor(t)
 	d.bookAndErase()
 
@@ -152,9 +152,8 @@ func TestAnErasedSubjectIsStoredAgainOnlyThroughTheMailedLink(t *testing.T) {
 
 // A link names the erasure it was mailed for. A second erasure of the same
 // address, while the list still refuses it, spends the link.
-//
-//testdb:serial replaces http.DefaultTransport, which every test's outbound calls use
 func TestASecondErasureSpendsALinkMailedBeforeIt(t *testing.T) {
+	t.Parallel()
 	d := openReturnDoor(t)
 	d.bookAndErase()
 	early := d.link()
@@ -171,9 +170,8 @@ func TestASecondErasureSpendsALinkMailedBeforeIt(t *testing.T) {
 
 // Every spelling of one mailbox shares one budget of one link a day. The link
 // goes to the spelling the erasure list matches, and that is what is stored.
-//
-//testdb:serial replaces http.DefaultTransport, which every test's outbound calls use
 func TestEverySpellingOfAnAddressSharesOneBudget(t *testing.T) {
+	t.Parallel()
 	d := openReturnDoor(t)
 	d.bookAndErase()
 
@@ -196,9 +194,8 @@ func TestEverySpellingOfAnAddressSharesOneBudget(t *testing.T) {
 
 // The wording the confirm records is this installation's own. A caller cannot
 // put words of its own on the subject's consent.
-//
-//testdb:serial replaces http.DefaultTransport, which every test's outbound calls use
 func TestTheRecordedConsentIsTheServersWording(t *testing.T) {
+	t.Parallel()
 	d := openReturnDoor(t)
 	d.bookAndErase()
 	forged := AnyMap{
@@ -226,9 +223,8 @@ func TestTheRecordedConsentIsTheServersWording(t *testing.T) {
 // The return adopts a contact a booking made while the address was erased,
 // which already holds the grant. The lift still cites a consent event the
 // return wrote, and the replay keeps the adopted contact.
-//
-//testdb:serial replaces http.DefaultTransport, which every test's outbound calls use
 func TestAnAdoptedContactCitesTheReturnsOwnGrantAndOutlivesTheReplay(t *testing.T) {
+	t.Parallel()
 	d := openReturnDoor(t)
 	d.bookAndErase()
 	adopted := d.book(returnAddress)
@@ -255,9 +251,8 @@ func TestAnAdoptedContactCitesTheReturnsOwnGrantAndOutlivesTheReplay(t *testing.
 
 // The replay keeps the contact the return created, and still erases a
 // restored contact from before the erasure that holds the same mailbox.
-//
-//testdb:serial replaces http.DefaultTransport, which every test's outbound calls use
 func TestTheReplayKeepsTheReturnAndErasesWhatARestoreBroughtBack(t *testing.T) {
+	t.Parallel()
 	d := openReturnDoor(t)
 	d.bookAndErase()
 	if status := d.confirm(d.link()); status != http.StatusNoContent {
