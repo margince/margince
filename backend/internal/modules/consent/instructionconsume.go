@@ -254,7 +254,7 @@ func (g *Gate) AuthorizeDirectedExecutionTx(
 	}
 	// A stop recorded since the decision, or a refusal beyond the authority of
 	// whoever gave it: the decision stays unspent and the refusal stands.
-	if !set.ExceptionMayAnswer(inst.GivenByAdmin) {
+	if !set.ExceptionMayAnswer(inst.GivenByAdmin) || !everyRefusalWasShown(inst.Refusals, set) {
 		return ids.UUID{}, nil
 	}
 	if err := instructionScopeStillFits(ctx, tx, inst.Refusals, set); err != nil {

@@ -174,9 +174,7 @@ func previewResponse(preview SendPreview) crmcontracts.SendAuthorizationPreview 
 		// mail reaches a contact.
 		refuses := d.WouldRefuse(d.Mode)
 		entry.WouldRefuse = &refuses
-		// By category, because the reason a rep records names one category, and an
-		// unknown purpose resolved to none: the record would be refused.
-		overrulable := d.CanBeOverruledByCategory()
+		overrulable := d.OverrulableForOneMessage()
 		entry.CanBeOverruled = &overrulable
 		out.Recipients = append(out.Recipients, entry)
 	}

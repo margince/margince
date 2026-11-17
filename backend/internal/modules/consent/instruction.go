@@ -437,6 +437,9 @@ func requireAUserOrTheirAgent(ctx context.Context) error {
 	if !ok || !actor.HumanOrItsAgent() {
 		return fmt.Errorf("this is a user's own statement: %w", apperrors.ErrPermissionDenied)
 	}
+	if principal.Unattended(ctx) {
+		return fmt.Errorf("an unattended agent cannot state its user's decision: %w", apperrors.ErrPermissionDenied)
+	}
 	return nil
 }
 

@@ -336,13 +336,11 @@ func TestAnErasureCanTombstoneTheWordsAndNothingElse(t *testing.T) {
 	}
 }
 
-// Every sender may take the exception past missing marketing consent. Nobody
-// directs past a contact's own stop: not a rep holding the grant, and not an
-// admin.
+// A rep holding the grant, like an admin, directs one message past a contact's
+// own stop, and the decision records who gave it.
 //
-// Mutation: give the four stops their admin exception back in remedies and the
-// admin cases below are allowed.
-func TestASenderDirectsPastMissingConsentButNobodyPastAContactsStop(t *testing.T) {
+// Mutation: drop the stops' exception in remedies and every case is refused.
+func TestASenderDirectsOneMessagePastAContactsStop(t *testing.T) {
 	e := setupChannelConsent(t)
 	ctx := context.Background()
 	input := DirectInput{
@@ -352,32 +350,27 @@ func TestASenderDirectsPastMissingConsentButNobodyPastAContactsStop(t *testing.T
 		Acknowledged:   true,
 	}
 
-	for _, reason := range []string{"marketing_objection", "consent_withdrawn", "processing_restricted", "subject_request"} {
-		review := seedOpenReviewFor(ctx, t, e, reason)
-		if _, err := e.store.DirectSend(senderCtx(e.ws, e.user), review, input); !errors.Is(err, apperrors.ErrPermissionDenied) {
-			t.Errorf("a rep directing past %s: err = %v, want permission denied", reason, err)
+	for _, reason := range []string{"marketing_objection", "consent_withdrawn", "processing_restricted", "subject_request", "no_marketing_consent"} {
+		repReview := seedOpenReviewFor(ctx, t, e, reason)
+		if _, err := e.store.DirectSend(senderCtx(e.ws, e.user), repReview, input); err != nil {
+			t.Errorf("a rep directing past %s: %v", reason, err)
+		} else if givenByAdmin(ctx, t, e, repReview) {
+			t.Errorf("a rep's direction past %s is recorded as an admin's", reason)
 		}
-		if _, err := e.store.DirectSend(directorCtx(e.ws, e.user), review, input); !errors.Is(err, apperrors.ErrPermissionDenied) {
-			t.Errorf("an admin directing past %s: err = %v, want permission denied", reason, err)
+		adminReview := seedOpenReviewFor(ctx, t, e, reason)
+		if _, err := e.store.DirectSend(directorCtx(e.ws, e.user), adminReview, input); err != nil {
+			t.Errorf("an admin directing past %s: %v", reason, err)
+		} else if !givenByAdmin(ctx, t, e, adminReview) {
+			t.Errorf("an admin's direction past %s is not recorded as an admin's", reason)
 		}
 	}
 
-	review := seedOpenReviewFor(ctx, t, e, "no_marketing_consent")
+	review := seedOpenReviewFor(ctx, t, e, "marketing_objection")
 	if _, err := e.store.DirectSend(senderCtx(e.ws, e.user), review, input); err != nil {
-		t.Fatalf("a rep directing past missing marketing consent: %v", err)
+		t.Fatalf("a rep directing past an objection: %v", err)
 	}
 	if _, err := e.store.DirectSend(senderCtx(e.ws, e.user), review, input); !errors.Is(err, ErrDecisionAlreadyRecorded) {
 		t.Errorf("a second direction on the same review: err = %v, want the recorded decision to stand", err)
-	}
-	if byAdmin := givenByAdmin(ctx, t, e, review); byAdmin {
-		t.Error("a rep's direction is recorded as an admin's, so it would answer refusals only an admin may")
-	}
-	adminReview := seedOpenReviewFor(ctx, t, e, "no_marketing_consent")
-	if _, err := e.store.DirectSend(directorCtx(e.ws, e.user), adminReview, input); err != nil {
-		t.Fatalf("an admin directing past missing marketing consent: %v", err)
-	}
-	if byAdmin := givenByAdmin(ctx, t, e, adminReview); !byAdmin {
-		t.Error("an admin's direction is not recorded as an admin's")
 	}
 }
 

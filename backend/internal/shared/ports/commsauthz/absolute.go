@@ -254,6 +254,14 @@ func (d Decision) CanBeOverruled() bool {
 	return LevelForReason(d.ReasonCode) == LevelMachine && !Absolute(d.ReasonCode)
 }
 
+// OverrulableForOneMessage reports whether a human sender may send this one
+// message past the refusal by recording a reason. The preview, the review and
+// the composer all read this answer, so the offer matches what staging and
+// dispatch accept (DecisionSet.ExceptionMayAnswer).
+func (d Decision) OverrulableForOneMessage() bool {
+	return d.Verdict != VerdictAllow && HasRemedy(d.ReasonCode, RemedyException)
+}
+
 // CanBeOverruledByCategory reports whether a standing, per-category override may
 // answer this refusal. Stricter than CanBeOverruled: an override names ONE
 // category, so it can only answer a refusal that resolved to one.

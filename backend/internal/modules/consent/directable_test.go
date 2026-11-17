@@ -5,38 +5,85 @@ package consent
 
 import (
 	"context"
+	"errors"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-func TestAStaffInstructionCannotWaiveAnUnmetSendBoundary(t *testing.T) {
+// A rep, like an admin, may direct one message past every policy refusal the
+// registry lists. A dead address and a missing check are never directable, and
+// neither is anything for a seat without the exception grant.
+func TestARepMayDirectASendPastEveryPolicyRefusal(t *testing.T) {
+	seat := func(role string, grant bool) context.Context {
+		return principal.WithActor(context.Background(), principal.Principal{
+			Type: principal.PrincipalHuman, ID: "human:reviewer",
+			Permissions: principal.Permissions{
+				RoleKeys: []string{role}, RowScope: principal.RowScopeAll,
+				Objects: map[string]principal.ObjectGrant{entityCommunicationException: {Create: grant}},
+			},
+		})
+	}
 	for _, role := range []string{"rep", "admin"} {
 		t.Run(role, func(t *testing.T) {
-			ctx := principal.WithActor(context.Background(), principal.Principal{
-				Type: principal.PrincipalHuman, ID: "human:reviewer",
-				Permissions: principal.Permissions{
-					RoleKeys: []string{role}, RowScope: principal.RowScopeAll,
-					Objects: map[string]principal.ObjectGrant{entityCommunicationException: {Create: true}},
-				},
-			})
-			if !directableBy(ctx, []RefusedRecipient{{ReasonCode: commsauthz.ReasonNoEvidence}}) {
-				t.Fatal("the fixture cannot resolve a missing fact")
+			ctx := seat(role, true)
+			for _, reason := range commsauthz.RefusalCodes() {
+				want := reason != commsauthz.ReasonHardBounce
+				if got := directableBy(ctx, []RefusedRecipient{{ReasonCode: reason}}); got != want {
+					t.Errorf("directable past %s = %v, want %v", reason, got, want)
+				}
 			}
 			if directableBy(ctx, nil) {
 				t.Error("a missing check offers a send instruction")
 			}
-			for _, reason := range []string{
-				commsauthz.ReasonHardBounce, commsauthz.ReasonUnconfirmedDOI,
-				commsauthz.ReasonNoSubject, commsauthz.ReasonUnknownPurpose,
-				commsauthz.ReasonClaimContradictsResolution,
-				commsauthz.ReasonMarketingPermissionRequired,
-			} {
-				if directableBy(ctx, []RefusedRecipient{{ReasonCode: reason}}) {
-					t.Errorf("an instruction waives %s", reason)
-				}
-			}
 		})
+	}
+	if directableBy(seat("rep", false), []RefusedRecipient{{ReasonCode: commsauthz.ReasonNoEvidence}}) {
+		t.Error("a seat without the exception grant may direct a send")
+	}
+}
+
+// An agent may record its user's decision in their conversation. A scheduled
+// run has nobody present, so it may not state that decision for them.
+func TestOnlyAnAttendedAgentStatesItsUsersDecision(t *testing.T) {
+	agent := principal.WithActor(context.Background(), principal.Principal{
+		Type: principal.PrincipalAgent, ID: "agent:t", OnBehalfOf: ids.NewV7(), PassportID: ids.NewV7(),
+	})
+	if err := requireAUserOrTheirAgent(agent); err != nil {
+		t.Fatalf("an attended agent was refused: %v", err)
+	}
+	for name, ctx := range map[string]context.Context{
+		"unattended":    principal.WithUnattended(agent),
+		"scheduled run": principal.WithAgentRunID(agent, ids.NewV7()),
+	} {
+		if err := requireAUserOrTheirAgent(ctx); !errors.Is(err, apperrors.ErrPermissionDenied) {
+			t.Errorf("%s agent = %v, want ErrPermissionDenied", name, err)
+		}
+	}
+}
+
+// A decision answers the refusals its review showed. A new reason for the same
+// recipient, or a recipient the review never named, needs a new decision.
+func TestADecisionAnswersOnlyTheRefusalsItWasShown(t *testing.T) {
+	denied := func(email, reason string) commsauthz.Decision {
+		return commsauthz.Decision{Recipient: connector.Recipient{Email: email}, Verdict: commsauthz.VerdictDeny, ReasonCode: reason}
+	}
+	shown := []RefusedRecipient{{Address: "ana@example.test", ReasonCode: commsauthz.ReasonNoMarketingConsent}}
+	for name, tc := range map[string]struct {
+		now  []commsauthz.Decision
+		want bool
+	}{
+		"same refusal":    {[]commsauthz.Decision{denied("Ana@Example.test", commsauthz.ReasonNoMarketingConsent)}, true},
+		"new reason":      {[]commsauthz.Decision{denied("ana@example.test", commsauthz.ReasonObjection)}, false},
+		"new recipient":   {[]commsauthz.Decision{denied("ben@example.test", commsauthz.ReasonNoMarketingConsent)}, false},
+		"nothing refused": {nil, true},
+	} {
+		if got := everyRefusalWasShown(shown, commsauthz.DecisionSet{Decisions: tc.now}); got != tc.want {
+			t.Errorf("%s: shown = %v, want %v", name, got, tc.want)
+		}
 	}
 }

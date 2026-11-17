@@ -5,6 +5,7 @@ package consent
 
 import (
 	"context"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -48,4 +49,20 @@ func sameOptionalID(a, b *ids.UUID) bool {
 		return a == b
 	}
 	return *a == *b
+}
+
+// everyRefusalWasShown reports whether the human's decision saw each refusal
+// that stands now: the same recipient refused for the same reason. A reason
+// recorded after the decision, a new stop included, needs a decision of its own.
+// Staging and dispatch both ask it.
+func everyRefusalWasShown(shown []RefusedRecipient, current commsauthz.DecisionSet) bool {
+	for _, now := range refusedRecipientsOf(current) {
+		if !slices.ContainsFunc(shown, func(before RefusedRecipient) bool {
+			return before.Address == now.Address && before.SubjectKind == now.SubjectKind &&
+				before.SubjectID == now.SubjectID && before.ReasonCode == now.ReasonCode
+		}) {
+			return false
+		}
+	}
+	return true
 }

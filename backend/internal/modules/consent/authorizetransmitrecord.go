@@ -263,19 +263,30 @@ func deliveryAuthorityTx(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (s
 	return authority, instruction, nil
 }
 
-// exceptionGivenByAdminTx answers whether the exception this delivery goes out
-// under was given by an admin. A delivery with no exception answers false.
-func exceptionGivenByAdminTx(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (bool, error) {
-	var byAdmin bool
+// deliveryException is what dispatch needs from the decision a delivery goes
+// out under: who gave it, and which refusals its review showed them.
+type deliveryException struct {
+	givenByAdmin bool
+	shown        []RefusedRecipient
+}
+
+// deliveryExceptionTx reads it. A delivery with no decision reads as none given
+// and nothing shown, so no refusal is answered.
+func deliveryExceptionTx(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (deliveryException, error) {
+	var out deliveryException
 	err := tx.QueryRow(ctx, `
-		SELECT coalesce(bool_or(i.given_by_admin), false)
+		SELECT i.given_by_admin, r.refusals
 		  FROM comms_outbound o
 		  JOIN communication_instruction i ON i.id = o.instruction_id
-		 WHERE o.id = $1`, deliveryID).Scan(&byAdmin)
-	if err != nil {
-		return false, fmt.Errorf("consent: reading who gave the exception this delivery goes out under: %w", err)
+		  JOIN communication_review r ON r.id = i.review_id
+		 WHERE o.id = $1`, deliveryID).Scan(&out.givenByAdmin, &out.shown)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return deliveryException{}, nil
 	}
-	return byAdmin, nil
+	if err != nil {
+		return deliveryException{}, fmt.Errorf("consent: reading the decision this delivery goes out under: %w", err)
+	}
+	return out, nil
 }
 
 // authorityFor names the instruction on a refused row and the engine's own

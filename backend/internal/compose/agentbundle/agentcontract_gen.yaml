@@ -42113,7 +42113,12 @@ components:
         can_be_overruled:
           type: boolean
           description: |-
-            Whether a contact may lift this refusal by recording why they are writing.
+            Whether the sender may send this one message past the refusal by recording a
+            reason. True for every policy refusal, the subject's own stops included: the
+            refusal and the stop stay on the record, and the reason is kept with the message.
+            False only for a hard bounce, because no decision makes a dead address accept
+            mail. The caller still needs the `communication_exception` grant, and the refused
+            send's review offers `direct_send` only to a caller who holds it.
         decided_by:
           type: string
           enum: [machine, user, admin, subject]
@@ -42121,7 +42126,8 @@ components:
             Whose decision this answer is, which is what says whether anybody may overrule
             it. `machine` is the engine reading an incomplete record and a rep who knows
             better may say so. `subject` is the contact's own act — an objection or a
-            withdrawal — and nobody in the installation lifts it, admin included.
+            withdrawal. Nobody lifts it for good, but a sender may still send one message
+            past it with a recorded reason (`can_be_overruled`).
     SendCompanyEmailRequest:
       type: object
       required: [subject, body, to, links]
