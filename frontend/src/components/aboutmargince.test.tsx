@@ -11,7 +11,6 @@ import {
   screen,
   within,
 } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { stubClipboard } from "../design-system/clipboard-testing";
 import { LocaleProvider } from "../i18n";
@@ -111,8 +110,16 @@ describe("the version", () => {
   });
 });
 
-/** Let the clipboard write and the hook's settling run, with no clock moving. */
-async function settle() {
+/** Hold the clock: the copied state lasts three seconds. `userEvent` stalls on
+ *  a held clock in happy-dom, so a press is a plain click event. */
+function holdClock(build: BuildRelease) {
+  renderAbout(build);
+  vi.useFakeTimers();
+}
+
+/** Press the version, and let the clipboard write settle with no clock moving. */
+async function press(button: HTMLElement) {
+  fireEvent.click(button);
   await act(async () => {
     for (let tick = 0; tick < 10; tick++) {
       await Promise.resolve();
@@ -120,23 +127,25 @@ async function settle() {
   });
 }
 
+const CORE_BUILD: BuildRelease = { kind: "core", release: CORE, revision: SHA };
+const REMEDY = "Select the version below and copy it by hand.";
+
 describe("copying the version", () => {
   it("copies the build's one report line", async () => {
-    const user = userEvent.setup();
+    holdClock(CORE_BUILD);
     const clipboard = stubClipboard("accepts");
-    renderAbout({ kind: "core", release: CORE, revision: SHA });
-    await user.click(versionButton());
-    await screen.findByRole("button", { name: COPIED });
+    const button = versionButton();
+    await press(button);
+
+    expect(button).toHaveAccessibleName(COPIED);
     expect(clipboard.written).toEqual([`Margince ${CORE} (commit ${SHA})`]);
   });
 
   it("says it copied, in the button and to a screen reader, for three seconds", async () => {
+    holdClock(CORE_BUILD);
     stubClipboard("accepts");
-    renderAbout({ kind: "core", release: CORE, revision: SHA });
     const button = versionButton();
-    vi.useFakeTimers();
-    fireEvent.click(button);
-    await settle();
+    await press(button);
 
     expect(button).toHaveAccessibleName(COPIED);
     expect(screen.getByRole("status")).toHaveTextContent(COPIED);
@@ -153,33 +162,28 @@ describe("copying the version", () => {
   });
 
   it("hands over the whole line to copy by hand when the clipboard refuses", async () => {
-    const user = userEvent.setup();
+    holdClock(CORE_BUILD);
     stubClipboard("refuses");
-    renderAbout({ kind: "core", release: CORE, revision: SHA });
-    await user.click(versionButton());
+    await press(versionButton());
 
-    expect(
-      await screen.findByText("Select the version below and copy it by hand."),
-    ).toBeVisible();
+    expect(screen.getByText(REMEDY)).toBeVisible();
     expect(screen.getByRole("textbox", { name: "Version" })).toHaveTextContent(
       `Margince ${CORE} (commit ${SHA})`,
     );
   });
 
   it("drops the copied claim when a second press fails", async () => {
-    const user = userEvent.setup();
+    holdClock(CORE_BUILD);
     const accepting = stubClipboard("accepts");
-    renderAbout({ kind: "core", release: CORE, revision: SHA });
-    await user.click(versionButton());
-    const button = await screen.findByRole("button", { name: COPIED });
+    const button = versionButton();
+    await press(button);
+    expect(button).toHaveAccessibleName(COPIED);
 
     accepting.restore();
     stubClipboard("refuses");
-    await user.click(button);
+    await press(button);
 
-    expect(
-      await screen.findByText("Select the version below and copy it by hand."),
-    ).toBeVisible();
+    expect(screen.getByText(REMEDY)).toBeVisible();
     expect(button).toHaveAccessibleName(`${CORE} · 0123456${HINT}`);
     expect(screen.getByRole("status")).toHaveTextContent("");
   });
