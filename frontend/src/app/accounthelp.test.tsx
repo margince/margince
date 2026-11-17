@@ -111,11 +111,11 @@ describe("Help and feedback", () => {
     await user.keyboard("{ArrowDown}");
     expect(document.activeElement).toBe(helpItem(/^Request a feature/));
     await user.keyboard("{End}");
-    expect(document.activeElement).toBe(helpItem(/^Web app licenses/));
+    expect(document.activeElement).toBe(helpItem("About Margince"));
     await user.keyboard("{ArrowDown}");
     expect(document.activeElement).toBe(helpItem(/^Report a problem/));
     await user.keyboard("{ArrowUp}");
-    expect(document.activeElement).toBe(helpItem(/^Web app licenses/));
+    expect(document.activeElement).toBe(helpItem("About Margince"));
     await user.keyboard("{Home}");
     expect(document.activeElement).toBe(helpItem(/^Report a problem/));
     // The walk stayed inside: the account menu's own tabstop did not move.
@@ -277,126 +277,64 @@ describe("the shortcuts dialog on ?", () => {
   });
 });
 
-describe("the build at the foot of Help and feedback", () => {
-  it.each(["", "dev"])(
-    "says Development build when nothing is stamped (%j)",
-    async (release) => {
-      bundle.release = release;
-      const user = userEvent.setup();
-      renderMenu();
-      await openHelp(user);
-      const build = within(helpMenu()).getByText("Development build");
-      expect(build.closest("[role=menuitem]")).toBeNull();
-      expect(screen.queryByText(/^Version/)).toBeNull();
-    },
-  );
+describe("About Margince at the foot of Help and feedback", () => {
+  it("is the last item, with no separator before it, and says it opens a dialog", async () => {
+    const user = userEvent.setup();
+    renderMenu();
+    await openHelp(user);
+    const about = helpItem("About Margince");
+    expect(about).toHaveAttribute("aria-haspopup", "dialog");
+    expect(within(helpMenu()).getAllByRole("menuitem").at(-1)).toBe(about);
+    expect(about.previousElementSibling).toBe(helpItem(/^Release notes/));
+    expect(helpMenu().querySelector("hr")).toBeNull();
+  });
 
-  it("names the short revision of an unstamped build", async () => {
-    bundle.revision = "0123456789abcdef0123456789abcdef01234567";
+  it("names no version in the menu", async () => {
+    bundle.release = "v1.4.0";
+    const user = userEvent.setup();
+    renderMenu();
+    await openHelp(user);
+    expect(within(helpMenu()).queryByText(/v1\.4\.0/)).toBeNull();
+  });
+
+  it("leaves the licenses to About", async () => {
     const user = userEvent.setup();
     renderMenu();
     await openHelp(user);
     expect(
-      within(helpMenu()).getByText("Development build · 0123456"),
-    ).toBeVisible();
+      within(helpMenu()).queryByRole("menuitem", { name: /licenses/i }),
+    ).toBeNull();
   });
 
-  it("keeps Development build when the revision is unknown", async () => {
-    bundle.revision = "dev";
-    const user = userEvent.setup();
-    renderMenu();
-    await openHelp(user);
-    expect(within(helpMenu()).getByText("Development build")).toBeVisible();
-  });
-
-  it("shows only the release lines of a stamped build, revision or not", async () => {
-    bundle.release = "v1.4.0";
-    bundle.revision = "0123456789abcdef";
-    const user = userEvent.setup();
-    renderMenu();
-    await openHelp(user);
-    expect(within(helpMenu()).getByText("Version v1.4.0")).toBeVisible();
-    expect(screen.queryByText(/0123456/)).toBeNull();
-  });
-
-  // A statement, not a row. The keyboard walk ends on the last link above it.
-  it("names a stamped release, outside the menu's items", async () => {
+  it("opens the About dialog from the keyboard, and hands focus back to the trigger", async () => {
     bundle.release = "v1.4.0";
     const user = userEvent.setup();
     renderMenu();
     await openHelpByKeyboard(user);
-
-    const version = within(helpMenu()).getByText("Version v1.4.0");
-    expect(version.closest("[role=menuitem]")).toBeNull();
-    expect(
-      within(helpMenu()).getAllByRole("menuitem").at(-1)?.textContent,
-    ).toMatch(/^Web app licenses/);
     await user.keyboard("{End}");
-    expect(document.activeElement).toBe(helpItem(/^Web app licenses/));
+    expect(document.activeElement).toBe(helpItem("About Margince"));
+
+    await user.keyboard("{Enter}");
+    const dialog = await screen.findByRole("dialog", {
+      name: "About Margince",
+    });
+    expect(screen.queryByRole("menu")).toBeNull();
+    expect(within(dialog).getByText("v1.4.0")).toBeVisible();
+
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog", { name: "About Margince" })).toBeNull();
+    expect(document.activeElement).toBe(trigger());
   });
 
-  it("names the instance and the core release on an instance build", async () => {
-    bundle.release = "v0.4.1";
-    bundle.core = "v0.0.5";
+  it("opens the About dialog on a click", async () => {
     const user = userEvent.setup();
     renderMenu();
     await openHelp(user);
-    expect(within(helpMenu()).getByText("Instance v0.4.1")).toBeInTheDocument();
-    expect(within(helpMenu()).getByText("Core v0.0.5")).toBeInTheDocument();
-    expect(screen.queryByText(/^Version/)).toBeNull();
-  });
-
-  // Equal values are still two facts about two repositories.
-  it("keeps both lines when the instance and core releases are equal", async () => {
-    bundle.release = "v0.4.1";
-    bundle.core = "v0.4.1";
-    const user = userEvent.setup();
-    renderMenu();
-    await openHelp(user);
-    expect(screen.getByText("Instance v0.4.1")).toBeInTheDocument();
-    expect(screen.getByText("Core v0.4.1")).toBeInTheDocument();
-  });
-
-  it.each(["", "dev"])(
-    "an instance build with an unstamped instance release (%j) names only the core",
-    async (release) => {
-      bundle.release = release;
-      bundle.core = "v0.0.5";
-      const user = userEvent.setup();
-      renderMenu();
-      await openHelp(user);
-      expect(screen.getByText("Core v0.0.5")).toBeInTheDocument();
-      expect(screen.queryByText(/^Instance/)).toBeNull();
-      expect(screen.queryByText("Development build")).toBeNull();
-    },
-  );
-
-  // "dev" is what a plain docker build stamps, so it is no core release.
-  it('treats a core release of "dev" as a core-only build', async () => {
-    bundle.release = "v1.4.0";
-    bundle.core = "dev";
-    const user = userEvent.setup();
-    renderMenu();
-    await openHelp(user);
-    expect(screen.getByText("Version v1.4.0")).toBeInTheDocument();
-    expect(screen.queryByText(/^Core/)).toBeNull();
-  });
-
-  it("is not in the account menu itself", async () => {
-    bundle.release = "v1.4.0";
-    const user = userEvent.setup();
-    renderMenu();
-    await user.click(trigger());
-    await screen.findByRole("menu", { name: "Account" });
-    expect(screen.queryByText("Version v1.4.0")).toBeNull();
-  });
-  it("offers web app licenses without a settings grant", async () => {
-    const user = userEvent.setup();
-    renderMenu();
-    await openHelpByKeyboard(user);
-    const link = helpItem(/^Web app licenses/);
-    expect(link).toHaveAttribute("href", "/licenses/THIRD-PARTY-NOTICES.txt");
-    expect(link).toHaveAttribute("target", "_blank");
-    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    await user.click(helpItem("About Margince"));
+    const dialog = await screen.findByRole("dialog", {
+      name: "About Margince",
+    });
+    expect(screen.queryByRole("menu")).toBeNull();
+    expect(within(dialog).getByText("Development build")).toBeVisible();
   });
 });

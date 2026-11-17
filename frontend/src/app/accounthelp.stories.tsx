@@ -10,20 +10,18 @@ import {
 } from "../testing/accountmenu-story";
 import { HelpSubmenu } from "./accounthelp";
 
-// Help documents, licence notices and keyboard shortcuts stay available to every seat.
+// Help documents and keyboard shortcuts stay available to every seat; the
+// build, its license and the notices sit behind About Margince.
 const meta: Meta<typeof HelpSubmenu> = {
   title: "Shell/Account help and feedback",
   component: HelpSubmenu,
   parameters: { layout: "fullscreen" },
   play: async (context) => {
     await openHelpFlyout(context);
-    const link = within(document.body).getByRole("menuitem", {
-      name: /^Web app licenses/,
+    const about = within(document.body).getByRole("menuitem", {
+      name: "About Margince",
     });
-    await expect(link).toHaveAttribute(
-      "href",
-      "/licenses/THIRD-PARTY-NOTICES.txt",
-    );
+    await expect(about).toHaveAttribute("aria-haspopup", "dialog");
   },
   render: () => {
     stubSession();
@@ -33,18 +31,16 @@ const meta: Meta<typeof HelpSubmenu> = {
 export default meta;
 type Story = StoryObj<typeof HelpSubmenu>;
 
-export const DevelopmentBuild: Story = {
-  name: "Development build",
-};
+export const Open: Story = {};
 
-export const DevelopmentBuildDark: Story = {
-  name: "Development build (dark)",
+export const OpenDark: Story = {
+  name: "Open (dark)",
   globals: { theme: "dark" },
 };
 
 /** At phone width the flyout folds into the menu as an indented group. */
-export const DevelopmentBuildPhone: Story = {
-  name: "Development build (phone)",
+export const OpenPhone: Story = {
+  name: "Open (phone)",
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
 };

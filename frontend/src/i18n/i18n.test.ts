@@ -119,7 +119,10 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "nav.analytics",
   // "Core" is the product's name for the shared codebase, which every catalog
   // already uses as a term of art (ob.core.*).
-  "shell.coreVersion",
+  "about.core",
+  // A license's name and a copyright line are legal names, not prose.
+  "about.licenseName",
+  "about.copyright",
   // Two placeholders and a colon. The field name is already translated one
   // level down (factFieldLabelKey) and the value is the page's own word, so
   // there is nothing left in this string for a locale to translate either.
