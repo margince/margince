@@ -97,8 +97,8 @@ func runSuite(m *testing.M) (code int, err error) {
 	}
 	ctx := context.Background()
 
-	// Named from the pid, like the unit names and therefore the cluster-scoped
-	// roles the gate mints: two shards of the lane on one cluster cannot collide.
+	// Named from the pid, like the unit names and the roles the gate mints, so
+	// two shards of the lane on one cluster cannot collide.
 	gateTemplate = fmt.Sprintf("margince_extgate_test_%d", os.Getpid())
 	maintenanceDSN, err := dsnForDatabase(harnessDSN, "postgres")
 	if err != nil {

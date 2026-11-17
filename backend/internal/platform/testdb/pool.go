@@ -121,7 +121,13 @@ func poolParams() (map[string]string, error) {
 // change. A suite that drops the schema while this pool is live gets XX000
 // "cache lookup failed for type N", so it opens an OwnPool instead.
 func Pool(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
-	if !schemaReady.Load() && !onCopy(dsn) {
+	return sharedPool(ctx, dsn, schemaReady.Load())
+}
+
+// sharedPool is Pool with the process's schema readiness passed in, so a test
+// can drive the refusal without clearing the flag every other test reads.
+func sharedPool(ctx context.Context, dsn string, migrated bool) (*pgxpool.Pool, error) {
+	if !migrated && !onCopy(dsn) {
 		return nil, ErrSchemaNotReady
 	}
 	poolsMu.Lock()
