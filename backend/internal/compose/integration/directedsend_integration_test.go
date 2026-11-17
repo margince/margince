@@ -55,6 +55,14 @@ func directed() AnyMap {
 	}
 }
 
+// directedShowing is directed, naming the refusals the director read. A subject's
+// own stop is passed only on such a list.
+func directedShowing(reasons ...string) AnyMap {
+	body := directed()
+	body["shown_reasons"] = reasons
+	return body
+}
+
 // liveReviewID answers the review this installation's one refusal opened.
 func liveReviewID(t *testing.T, c *consentEnv) string {
 	t.Helper()
@@ -187,8 +195,13 @@ func TestARepDirectsOneMessagePastASubjectsStop(t *testing.T) {
 	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {
 		t.Fatalf("marketing send against a stop → %d, want 409", status)
 	}
-	if status := c.Call(t, "POST", "/v1/communication-reviews/"+liveReviewID(t, c)+"/direct-send",
-		directed(), nil, nil); status != http.StatusCreated {
+	review := liveReviewID(t, c)
+	if status := c.Call(t, "POST", "/v1/communication-reviews/"+review+"/direct-send",
+		directed(), nil, nil); status != http.StatusForbidden {
+		t.Fatalf("a rep directing past the subject's stop without naming what they read → %d, want 403", status)
+	}
+	if status := c.Call(t, "POST", "/v1/communication-reviews/"+review+"/direct-send",
+		directedShowing("subject_request"), nil, nil); status != http.StatusCreated {
 		t.Fatalf("a rep directing past the subject's stop → %d, want 201", status)
 	}
 

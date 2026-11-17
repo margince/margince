@@ -8043,6 +8043,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.why.contract": "Vertrag der Gegenseite",
   "compose.why.account": "Kundenbeziehung der Gegenseite",
   "compose.why.marketing": "Marketing",
+  "sendPermission.stopWithReason": "Senden braucht deine Begründung",
   "sendPermission.refused": "Nachricht kann nicht gesendet werden",
   "sendPermission.sayWhy": "Kontaktgrund erfassen",
   "sendPermission.unproven":

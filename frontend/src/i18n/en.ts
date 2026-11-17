@@ -8046,6 +8046,7 @@ export const en = {
   "compose.why.contract": "Their contract",
   "compose.why.account": "Their customer relationship",
   "compose.why.marketing": "Marketing",
+  "sendPermission.stopWithReason": "Sending needs your reason",
   "sendPermission.refused": "Message cannot be sent",
   "sendPermission.sayWhy": "Record reason for contact",
   "sendPermission.unproven": "No recorded reason to contact this recipient",

@@ -42,8 +42,8 @@ export type SendStatus = Readonly<{
   recipients: number;
 }>;
 
-// The order a rep is told about refusals in. A stop nobody here can lift
-// comes first, because fixing the others would still not send the message.
+// The order a rep is told about refusals in. A stop comes first, because
+// fixing the others would still not send the message without a reason.
 const SEVERITY: readonly RefusalKind[] = [
   "restricted",
   "missingPermission",

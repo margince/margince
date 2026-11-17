@@ -95,9 +95,8 @@ export function decidingRecipient(
   const deciding = decidingRefusal(refusals);
   const recipient = deciding && refusing[refusals.indexOf(deciding)];
   if (!recipient) return { state: "allowed" };
-  // `can_be_overruled` and not `decided_by`, because the two disagree: a dead
-  // mailbox and a rolling frequency cap are the engine's own reading, and
-  // absolute. Absent means the server did not say, which is not a yes.
+  // `can_be_overruled` and not `decided_by`: a recipient's own stop is theirs,
+  // yet one message may pass it with a reason. Absent is not a yes.
   return {
     state: recipient.can_be_overruled ? "unproven" : "refused",
     recipient,
@@ -232,15 +231,22 @@ function PermissionNotice({
       ) : undefined))
     : undefined;
   const surface = { recordable: Boolean(control), picksReason };
+  // A stop a recorded reason can pass is a warning; only one nothing lifts is a danger.
+  const hardStop =
+    status.kind === "restricted" && status.deciding?.canBeOverruled !== true;
   return (
     <Callout
-      tone={status.kind === "restricted" ? "danger" : "warning"}
+      tone={hardStop ? "danger" : "warning"}
       kind={refusal ? "outcome" : "standing"}
       // `status` while the rep writes, so one who does not hear the answer
       // does not meet it at the Send button. A refused Send is an alert.
       live={refusal ? "alert" : "status"}
-      icon={status.kind === "restricted" ? ShieldAlert : ShieldQuestion}
-      title={t(TITLE[status.kind])}
+      icon={hardStop ? ShieldAlert : ShieldQuestion}
+      title={
+        status.kind === "restricted" && !hardStop
+          ? t("sendPermission.stopWithReason")
+          : t(TITLE[status.kind])
+      }
       actions={control ?? refusal?.remedies}
     >
       <RefusalDetail

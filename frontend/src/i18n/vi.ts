@@ -7853,6 +7853,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.why.contract": "Hợp đồng của họ",
   "compose.why.account": "Quan hệ khách hàng của họ",
   "compose.why.marketing": "Tiếp thị",
+  "sendPermission.stopWithReason": "Cần lý do của bạn để gửi",
   "sendPermission.refused": "Không thể gửi tin nhắn",
   "sendPermission.sayWhy": "Ghi lý do liên hệ",
   "sendPermission.unproven":

@@ -83,6 +83,8 @@ describe("contextFor", () => {
 describe("asksWhy", () => {
   it("does not ask on a reply", () => {
     expect(asksWhy({ kind: "email", direction: "inbound" })).toBe(false);
+    // Unless the check could not tell why the reply is written.
+    expect(asksWhy({ kind: "email", direction: "inbound" }, true)).toBe(true);
   });
 
   it("asks on a first message", () => {
