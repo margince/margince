@@ -70,7 +70,7 @@ The relationship stage of a partner in Margince says where the relationship is. 
 | **No fit** | **Ended** | You looked, and it is a no |
 
 ### How do I plan a partner's next step?
-To plan a partner's next step in Margince, open the company's **Partner** tab and choose **Add task** under **Next step**. Name the colleague who does it and the day it is due. The task then shows on that colleague's Home and Worklist, whoever owns the company. **Next step** lists the company's open tasks, the soonest due first, with who does each one and when it is due.
+To plan a partner's next step in Margince, open the company's **Partner** tab and choose **Add task** under **Next step**. Name the colleague who does it and the day it is due. The task then shows under **Next step**, the soonest due first, and on that colleague's Home and Worklist, whoever owns the company.
 A next step an assistant gives when it sets up a partner also becomes a task, held by whoever it works for. A next step kept as plain text from before shows under **Next step**, with a note that no colleague does it.
 Also called: partner next step, who follows up with a partner.
 
@@ -125,7 +125,7 @@ If a partner earned commission on a win, opening the deal again does not delete 
 To approve or mark a partner's commission paid in Margince, open the partner company's **Partner** tab and use the line's action in its **Commission** panel.
 1. **Approve** an **Accrued** line: "It pays nothing: settle the payment in your finance system, then mark it paid here."
 2. **Mark as paid** an **Approved** line once your finance system has paid it. Margince moves no money.
-3. **Reverse** a line that should not stand, with a **Reversal reason**. A **Reversal** line that takes it back is added, with the amount as a minus figure and the reason under its status. Nothing is deleted.
+3. **Reverse** a line that should not stand, with a **Reversal reason**. A **Reversal** line takes it back, as a minus figure with the reason under its status. Nothing is deleted.
 Without permission the column reads **No permission to decide**.
 Also called: pay a partner, partner payout, referral fee.
 
