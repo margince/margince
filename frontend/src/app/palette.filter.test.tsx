@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The strip that narrows the palette to one type of record: it counts what the
-// whole answer found, and a pick asks the server for more of that type alone.
+// The strip that narrows the palette to one type of record. It counts what the
+// whole answer found. A pick asks the server for more of that type alone.
 
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";

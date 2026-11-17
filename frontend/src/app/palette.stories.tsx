@@ -268,8 +268,8 @@ export const WithRecordHitsDark: Story = {
   globals: { theme: "dark" },
 };
 
-// Narrowed to one type: the list asks for more of it and holds nothing else,
-// while the strip keeps every type's count from the whole answer.
+// Narrowed to one type, the list asks for more of it and holds nothing else.
+// The strip keeps every type's count from the whole answer.
 export const NarrowedToDeals: Story = {
   render: () =>
     palette((_, url) =>

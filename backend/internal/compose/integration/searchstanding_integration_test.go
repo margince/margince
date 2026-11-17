@@ -5,8 +5,8 @@
 
 package integration
 
-// A record hit says where it stands, so the search palette can show a deal's
-// stage and amount or a lead's status beside the name without a second read.
+// A record hit says where it stands. The search palette shows a deal's stage
+// and amount or a lead's status beside the name without a second read.
 
 import (
 	"context"
