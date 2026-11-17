@@ -241,7 +241,7 @@ describe("Help and feedback", () => {
     const user = userEvent.setup();
     renderMenu();
     await openHelpByKeyboard(user);
-    await user.keyboard("{ArrowDown}{ArrowDown}{ArrowDown}");
+    await user.keyboard("{ArrowDown}{ArrowDown}{ArrowDown}{ArrowDown}");
     expect(document.activeElement).toBe(helpItem("Keyboard shortcuts"));
 
     await user.keyboard("{Enter}");
@@ -285,8 +285,26 @@ describe("About Margince at the foot of Help and feedback", () => {
     const about = helpItem("About Margince");
     expect(about).toHaveAttribute("aria-haspopup", "dialog");
     expect(within(helpMenu()).getAllByRole("menuitem").at(-1)).toBe(about);
-    expect(about.previousElementSibling).toBe(helpItem(/^Release notes/));
+    expect(about.previousElementSibling).toBe(helpItem("Keyboard shortcuts"));
     expect(helpMenu().querySelector("hr")).toBeNull();
+  });
+
+  it("lists the places off the app first, then the rows that stay in it", async () => {
+    const user = userEvent.setup();
+    renderMenu();
+    await openHelp(user);
+    expect(
+      within(helpMenu())
+        .getAllByRole("menuitem")
+        .map((item) => item.textContent?.replace(" (Opens in a new tab)", "")),
+    ).toEqual([
+      "Report a problem",
+      "Request a feature",
+      "Help and resources",
+      "Release notes",
+      "Keyboard shortcuts",
+      "About Margince",
+    ]);
   });
 
   it("names no version in the menu", async () => {
@@ -306,7 +324,7 @@ describe("About Margince at the foot of Help and feedback", () => {
     ).toBeNull();
   });
 
-  it("opens the About dialog from the keyboard on its copy verb, and hands focus back to the trigger", async () => {
+  it("opens the About dialog from the keyboard on its version, and hands focus back to the trigger", async () => {
     bundle.release = "v1.4.0";
     bundle.revision = "0123456789abcdef0123456789abcdef01234567";
     const user = userEvent.setup();
@@ -320,9 +338,8 @@ describe("About Margince at the foot of Help and feedback", () => {
       name: "About Margince",
     });
     expect(screen.queryByRole("menu")).toBeNull();
-    expect(within(dialog).getByText("v1.4.0")).toBeVisible();
     expect(document.activeElement).toBe(
-      within(dialog).getByRole("button", { name: "Copy version details" }),
+      within(dialog).getByRole("button", { name: /^v1\.4\.0 · 0123456 / }),
     );
 
     await user.keyboard("{Escape}");
@@ -339,6 +356,8 @@ describe("About Margince at the foot of Help and feedback", () => {
       name: "About Margince",
     });
     expect(screen.queryByRole("menu")).toBeNull();
-    expect(within(dialog).getByText("Development build")).toBeVisible();
+    expect(
+      within(dialog).getByRole("button", { name: /^Development build / }),
+    ).toBeVisible();
   });
 });

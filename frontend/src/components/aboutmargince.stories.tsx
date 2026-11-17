@@ -2,7 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
+import {
+  holdClipboard,
+  stubClipboard,
+} from "../design-system/clipboard-testing";
 import type { BuildRelease } from "../lib/buildrelease";
 import { StoryProviders } from "../testing/story-utils";
 import { AboutMargince, AboutMarginceDialog } from "./aboutmargince";
@@ -36,8 +40,8 @@ const phone: Story = {
 
 const instance: BuildRelease = {
   kind: "instance",
-  instance: "v0.4.1",
-  core: "v0.0.5",
+  instance: "2026.2.1-acme.3",
+  core: "2026.2.1",
   revision: SHA,
 };
 
@@ -49,15 +53,18 @@ const longVersion: BuildRelease = {
   revision: SHA,
 };
 
+const dialogOf = (canvasElement: HTMLElement) =>
+  within(canvasElement.ownerDocument.body).getByRole("dialog", {
+    name: "About Margince",
+  });
+
 export const CoreBuild: Story = {
   name: "Core build",
   play: async ({ canvasElement }) => {
-    const dialog = within(canvasElement.ownerDocument.body).getByRole(
-      "dialog",
-      { name: "About Margince" },
-    );
     await expect(
-      within(dialog).getByRole("link", { name: /^0123456/ }),
+      within(dialogOf(canvasElement)).getByRole("link", {
+        name: /^View commit on GitHub/,
+      }),
     ).toHaveAttribute(
       "href",
       `https://github.com/margince/margince/commit/${SHA}`,
@@ -124,4 +131,44 @@ export const ContentOnly: Story = {
       <AboutMargince build={args.build} />
     </StoryProviders>
   ),
+};
+
+/** The version pressed: its text says so for a few seconds, then comes back. */
+export const Copied: Story = {
+  play: async ({ canvasElement }) => {
+    const clipboard = stubClipboard("accepts");
+    try {
+      const dialog = within(dialogOf(canvasElement));
+      await userEvent.click(
+        dialog.getByRole("button", { name: /^2026\.2\.1 · 0123456/ }),
+      );
+      await dialog.findByRole("button", {
+        name: "Copied version to clipboard",
+      });
+    } finally {
+      clipboard.restore();
+    }
+  },
+};
+
+/** No clipboard: the failure notice, and the whole line to copy by hand. */
+export const CopyRefused: Story = {
+  name: "Copy refused",
+  play: async ({ canvasElement }) => {
+    const browserClipboard = holdClipboard();
+    const user = userEvent.setup();
+    const clipboard = stubClipboard("absent");
+    try {
+      const dialog = within(dialogOf(canvasElement));
+      await user.click(
+        dialog.getByRole("button", { name: /^2026\.2\.1 · 0123456/ }),
+      );
+      await expect(
+        await dialog.findByRole("textbox", { name: "Version" }),
+      ).toHaveTextContent(`Margince 2026.2.1 (commit ${SHA})`);
+    } finally {
+      clipboard.restore();
+      browserClipboard();
+    }
+  },
 };

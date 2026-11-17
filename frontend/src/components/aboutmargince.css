@@ -1,40 +1,53 @@
 .aboutmargince {
   display: grid;
-  gap: var(--space-5);
+  gap: var(--space-4);
   min-inline-size: 0;
   overflow-wrap: anywhere;
 }
-/* The grid's gap is the only space between the blocks. */
-.aboutmargince > * {
-  margin: 0;
-}
 
+/* The mark is one line box tall, so it centres on the name, and its drawing
+   starts at the viewBox edge, so it stands on the terms' left edge. */
 .aboutmargince-brand {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  font: var(--fontHeadingSmall);
+  gap: var(--space-2);
+  font: var(--fontHeadingMedium);
+}
+.aboutmargince-brand svg {
+  block-size: 1lh;
+  inline-size: auto;
+  flex: none;
 }
 
-.aboutmargince-build {
+.aboutmargince .aboutmargince-facts {
+  gap: var(--space-4);
+}
+/* Each term is one plain line, so the gap alone parts one row's text from the
+   next; a value's note hugs it from below. */
+.aboutmargince .factlist-flat .factlist-term {
+  padding-block: 0;
+}
+/* A flat list clips its values, and a clipped control loses its focus ring. */
+.aboutmargince .factlist-flat .factlist-value {
+  overflow: visible;
+}
+
+.aboutmargince-copyfailed {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: start;
   gap: var(--space-2);
 }
 
 .aboutmargince-links {
-  display: grid;
-  justify-items: start;
-  gap: var(--space-1);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  margin: 0;
   padding: 0;
   list-style: none;
 }
-.aboutmargince-links a {
-  min-block-size: var(--controlHeight);
-}
 
-/* A flat list clips its values, and a clipped link loses its focus ring. */
-.aboutmargince .factlist-flat .factlist-value {
-  overflow: visible;
+/* The title and the brand under it keep the body's rhythm, not the default
+   space under a dialog title. */
+.modal > .form-stack.aboutmargince-dialog {
+  gap: var(--space-4);
 }

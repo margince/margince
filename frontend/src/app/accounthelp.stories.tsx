@@ -10,7 +10,7 @@ import {
 } from "../testing/accountmenu-story";
 import { HelpSubmenu } from "./accounthelp";
 
-// Help documents and keyboard shortcuts stay available to every seat; the
+// The places off the app come first, then the rows that open a dialog. The
 // build, its license and the notices sit behind About Margince.
 const meta: Meta<typeof HelpSubmenu> = {
   title: "Shell/Account help and feedback",
@@ -18,10 +18,13 @@ const meta: Meta<typeof HelpSubmenu> = {
   parameters: { layout: "fullscreen" },
   play: async (context) => {
     await openHelpFlyout(context);
-    const about = within(document.body).getByRole("menuitem", {
-      name: "About Margince",
+    const help = within(document.body).getByRole("menu", {
+      name: "Help and feedback",
     });
-    await expect(about).toHaveAttribute("aria-haspopup", "dialog");
+    const items = within(help).getAllByRole("menuitem");
+    await expect(items.at(-2)).toHaveTextContent("Keyboard shortcuts");
+    await expect(items.at(-1)).toHaveTextContent("About Margince");
+    await expect(items.at(-1)).toHaveAttribute("aria-haspopup", "dialog");
   },
   render: () => {
     stubSession();

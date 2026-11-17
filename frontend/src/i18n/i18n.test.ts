@@ -117,9 +117,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Vietnamese borrow it as a term of art rather than translating it. The
   // section labels UNDER it are translated normally.
   "nav.analytics",
-  // "Core" is the product's name for the shared codebase, which every catalog
-  // already uses as a term of art (ob.core.*).
-  "about.core",
   // A license's name and a copyright line are legal names, not prose.
   "about.licenseName",
   "about.copyright",

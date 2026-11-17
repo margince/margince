@@ -3,17 +3,22 @@
 
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { act, cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { stubClipboard } from "../design-system/clipboard-testing";
 import { LocaleProvider } from "../i18n";
 import type { BuildRelease } from "../lib/buildrelease";
 import { AboutMargince } from "./aboutmargince";
 
 const SHA = "0123456789abcdef0123456789abcdef01234567";
+const HINT = " (Copies to clipboard)";
+const COPIED = "Copied version to clipboard";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+});
 
 function renderAbout(build: BuildRelease) {
   render(
@@ -23,6 +28,8 @@ function renderAbout(build: BuildRelease) {
   );
 }
 
+const versionButton = () => screen.getByRole("button", { name: /Copies/ });
+
 /** Each term and its value, in the order the reader sees them. */
 function facts(): string[][] {
   return [...document.querySelectorAll(".factlist-row")].map((row) => [
@@ -31,71 +38,59 @@ function facts(): string[][] {
   ]);
 }
 
-async function copied(build: BuildRelease): Promise<readonly string[]> {
-  const user = userEvent.setup();
-  const clipboard = stubClipboard("accepts");
-  renderAbout(build);
-  await user.click(
-    screen.getByRole("button", { name: "Copy version details" }),
-  );
-  await screen.findByRole("button", { name: "Copied" });
-  return clipboard.written;
-}
-
-describe("the version block", () => {
-  it.each<[string, BuildRelease, string[][]]>([
+describe("the version", () => {
+  it.each<[string, BuildRelease, string, string | undefined]>([
     [
       "a core build",
       { kind: "core", release: "2026.2.1", revision: SHA },
-      [
-        ["Version", "2026.2.1"],
-        ["Commit", "0123456 (Opens in a new tab)"],
-      ],
+      "2026.2.1 · 0123456",
+      "View commit on GitHub (Opens in a new tab)",
     ],
     [
-      "an instance build, which names both repositories",
-      { kind: "instance", instance: "v0.4.1", core: "v0.4.1", revision: SHA },
-      [
-        ["Instance", "v0.4.1"],
-        ["Core", "v0.4.1"],
-        ["Commit", "0123456"],
-      ],
+      "an instance build, with its core under it",
+      {
+        kind: "instance",
+        instance: "2026.2.1-acme.3",
+        core: "2026.2.1",
+        revision: SHA,
+      },
+      "2026.2.1-acme.3 · 0123456",
+      "core 2026.2.1",
     ],
     [
       "an instance build without its own release",
-      { kind: "instance", core: "v0.0.5", revision: SHA },
-      [
-        ["Core", "v0.0.5"],
-        ["Commit", "0123456"],
-      ],
+      { kind: "instance", core: "2026.2.1", revision: SHA },
+      "core 2026.2.1 · 0123456",
+      undefined,
     ],
     [
       "an unstamped build",
       { kind: "unstamped", revision: SHA },
-      [
-        ["Version", "Development build"],
-        ["Commit", "0123456"],
-      ],
+      "Development build · 0123456",
+      undefined,
     ],
     [
       "an unstamped build without a revision",
       { kind: "unstamped" },
-      [["Version", "Development build"]],
+      "Development build",
+      undefined,
     ],
     [
       "a revision of dev, which no build knows",
       { kind: "core", release: "2026.2.1", revision: "dev" },
-      [["Version", "2026.2.1"]],
+      "2026.2.1",
+      undefined,
     ],
-  ])("names %s", (_, build, expected) => {
+  ])("is one button for %s", (_, build, line, note) => {
     renderAbout(build);
-    expect(facts().slice(0, expected.length)).toEqual(expected);
-    expect(facts()[expected.length]?.[0]).toBe("License");
+    expect(versionButton()).toHaveAccessibleName(`${line}${HINT}`);
+    const versionRow = document.querySelector(".factlist-row");
+    expect(versionRow?.querySelector(".factlist-note")?.textContent).toBe(note);
   });
 
   it("links a core build's commit to the core repository", () => {
     renderAbout({ kind: "core", release: "2026.2.1", revision: SHA });
-    const commit = screen.getByRole("link", { name: /^0123456/ });
+    const commit = screen.getByRole("link", { name: /^View commit on GitHub/ });
     expect(commit).toHaveAttribute(
       "href",
       `https://github.com/margince/margince/commit/${SHA}`,
@@ -105,15 +100,18 @@ describe("the version block", () => {
   });
 
   it.each<[string, BuildRelease]>([
-    ["an instance build", { kind: "instance", core: "v0.0.5", revision: SHA }],
+    [
+      "an instance build",
+      { kind: "instance", core: "2026.2.1", revision: SHA },
+    ],
     ["an unstamped build", { kind: "unstamped", revision: SHA }],
-  ])("leaves the commit of %s as text", (_, build) => {
+  ])("links no commit for %s", (_, build) => {
     renderAbout(build);
-    expect(screen.getByText("0123456").closest("a")).toBeNull();
+    expect(screen.queryByRole("link", { name: /commit/i })).toBeNull();
   });
 });
 
-describe("the copied version", () => {
+describe("copying the version", () => {
   it.each<[string, BuildRelease, string]>([
     [
       "a core build",
@@ -141,14 +139,62 @@ describe("the copied version", () => {
       "Margince development build",
     ],
   ])(
-    "is one plain line for %s, with the full commit",
+    "copies one plain line for %s, with the full commit",
     async (_, build, line) => {
-      expect(await copied(build)).toEqual([line]);
+      const user = userEvent.setup();
+      const clipboard = stubClipboard("accepts");
+      renderAbout(build);
+      await user.click(versionButton());
+      await screen.findByRole("button", { name: COPIED });
+      expect(clipboard.written).toEqual([line]);
     },
   );
+
+  it("says it copied, in the button and to a screen reader, then shows the version again", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    stubClipboard("accepts");
+    renderAbout({ kind: "core", release: "2026.2.1", revision: SHA });
+    const button = versionButton();
+    await user.click(button);
+
+    expect(await screen.findByRole("button", { name: COPIED })).toBe(button);
+    expect(screen.getByRole("status")).toHaveTextContent(COPIED);
+
+    act(() => {
+      vi.advanceTimersByTime(10_000);
+    });
+    expect(button).toHaveAccessibleName(`2026.2.1 · 0123456${HINT}`);
+    expect(screen.getByRole("status")).toHaveTextContent("");
+  });
+
+  it("hands over the whole line to copy by hand when the clipboard refuses", async () => {
+    const user = userEvent.setup();
+    stubClipboard("refuses");
+    renderAbout({ kind: "core", release: "2026.2.1", revision: SHA });
+    await user.click(versionButton());
+
+    expect(
+      await screen.findByText("Select the version below and copy it by hand."),
+    ).toBeVisible();
+    expect(screen.getByRole("textbox", { name: "Version" })).toHaveTextContent(
+      `Margince 2026.2.1 (commit ${SHA})`,
+    );
+  });
 });
 
-describe("the license and the links", () => {
+describe("the license, the copyright and the links", () => {
+  it("are rows under the version, in one column of values", () => {
+    renderAbout({ kind: "unstamped" });
+    expect(facts().map(([term]) => term)).toEqual([
+      "Version",
+      "License",
+      "Copyright",
+      "Links",
+    ]);
+    expect(facts()[2]).toEqual(["Copyright", "© 2026 Gradion"]);
+  });
+
   it("names the license, when it converts, and where its terms are", () => {
     renderAbout({ kind: "unstamped" });
     const license = screen.getByRole("link", {
@@ -163,7 +209,6 @@ describe("the license and the links", () => {
         "Each release converts to the Apache License 2.0 no later than two years after it ships.",
       ),
     ).toBeVisible();
-    expect(screen.getByText("© 2026 Gradion")).toBeVisible();
   });
 
   it("opens each place in a new tab, and says so", () => {

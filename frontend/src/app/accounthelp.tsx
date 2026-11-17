@@ -31,8 +31,8 @@ const RESOURCES_HREF = "https://margince.com/resources/";
 const REPORT_SEAT = 0;
 const REQUEST_SEAT = 1;
 const RESOURCES_SEAT = 2;
-const SHORTCUTS_SEAT = 3;
-const RELEASE_NOTES_SEAT = 4;
+const RELEASE_NOTES_SEAT = 3;
+const SHORTCUTS_SEAT = 4;
 const ABOUT_SEAT = 5;
 const SEAT_COUNT = 6;
 
@@ -133,6 +133,12 @@ export function HelpSubmenu({
         seat={seat(RESOURCES_SEAT)}
         onLeave={onLeave}
       />
+      <HelpLinkRow
+        href={RELEASE_NOTES_HREF}
+        labelKey="shell.help.releaseNotes"
+        seat={seat(RELEASE_NOTES_SEAT)}
+        onLeave={onLeave}
+      />
       <button
         type="button"
         className="acctrow"
@@ -143,12 +149,6 @@ export function HelpSubmenu({
       >
         {t("shell.help.shortcuts")}
       </button>
-      <HelpLinkRow
-        href={RELEASE_NOTES_HREF}
-        labelKey="shell.help.releaseNotes"
-        seat={seat(RELEASE_NOTES_SEAT)}
-        onLeave={onLeave}
-      />
       <button
         type="button"
         className="acctrow"

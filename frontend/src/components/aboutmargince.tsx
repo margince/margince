@@ -2,10 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { ExternalLink } from "lucide-react";
-import { type ReactNode, useId } from "react";
+import { type ReactNode, useEffect, useId, useState } from "react";
 import { AppLink } from "../design-system/applink";
-import { CopyAction } from "../design-system/clipboardcopy";
-import { type Fact, FactList } from "../design-system/factlist";
+import { Button } from "../design-system/button";
+import { CopyableText, useClipboardCopy } from "../design-system/clipboardcopy";
+import { FactList } from "../design-system/factlist";
 import { Heading } from "../design-system/heading";
 import { Logomark } from "../design-system/logomark";
 import { Modal } from "../design-system/modal";
@@ -73,52 +74,84 @@ function NewTabLink({
   return <OffsiteLink href={href}>{content}</OffsiteLink>;
 }
 
-// An instance build names both repositories, even when the two agree.
-function versionFacts(build: BuildRelease, t: Translator): Fact[] {
-  switch (build.kind) {
-    case "instance":
-      return [
-        ...(build.instance
-          ? [
-              {
-                key: "instance",
-                term: t("about.instance"),
-                value: build.instance,
-              },
-            ]
-          : []),
-        { key: "core", term: t("about.core"), value: build.core },
-      ];
-    case "core":
-      return [
-        { key: "version", term: t("about.version"), value: build.release },
-      ];
-    default:
-      return [
-        {
-          key: "version",
-          term: t("about.version"),
-          value: t("about.devBuild"),
-        },
-      ];
+/** The release with its short commit, as the one line a reader quotes. */
+function versionLine(build: BuildRelease, t: Translator): string {
+  const short = shortRevision(knownRevision(build));
+  let release: string;
+  if (build.kind === "core") {
+    release = build.release;
+  } else if (build.kind === "instance") {
+    release = build.instance ?? t("about.coreRelease", { version: build.core });
+  } else {
+    release = t("about.devBuild");
   }
+  return short ? `${release} · ${short}` : release;
 }
 
 // Only a core build's commit is in the core repository; an instance's is in
 // the repository of whoever built it.
-function commitFacts(build: BuildRelease, t: Translator): Fact[] {
+function versionNote(build: BuildRelease, t: Translator): ReactNode {
   const revision = knownRevision(build);
-  const short = shortRevision(revision);
-  if (!revision || !short) {
-    return [];
+  if (build.kind === "instance" && build.instance) {
+    return t("about.coreRelease", { version: build.core });
   }
-  const value =
-    build.kind === "core" ? (
-      <NewTabLink href={`${REPOSITORY}/commit/${revision}`}>{short}</NewTabLink>
-    ) : (
-      short
+  if (build.kind === "core" && revision) {
+    return (
+      <NewTabLink href={`${REPOSITORY}/commit/${revision}`}>
+        {t("about.viewCommit")}
+      </NewTabLink>
     );
-  return [{ key: "commit", term: t("about.commit"), value }];
+  }
+  return undefined;
+}
+
+const COPIED_MS = 3000;
+
+/** The version, pressed to copy the whole build line with its full commit. */
+function VersionCopy({ build }: Readonly<{ build: BuildRelease }>) {
+  const t = useT();
+  const report = buildReport(build);
+  const [copies, setCopies] = useState<number | null>(null);
+  const copy = useClipboardCopy(
+    report,
+    {
+      copy: t("about.copyHint"),
+      copied: t("about.copiedVersion"),
+      remedy: t("about.copyRemedy"),
+    },
+    () => setCopies((count) => (count ?? 0) + 1),
+  );
+  useEffect(() => {
+    if (copies === null) {
+      return;
+    }
+    const timer = setTimeout(() => setCopies(null), COPIED_MS);
+    return () => clearTimeout(timer);
+  }, [copies]);
+  const copied = copies !== null;
+  return (
+    <>
+      <Button variant="link" align="start" onClick={copy.copy}>
+        {copied ? (
+          t("about.copiedVersion")
+        ) : (
+          <>
+            {versionLine(build, t)}
+            <span className="sr-only"> {t("about.copyHint")}</span>
+          </>
+        )}
+      </Button>
+      <span className="sr-only" role="status">
+        {copied ? t("about.copiedVersion") : ""}
+      </span>
+      {copy.notice && (
+        <div className="aboutmargince-copyfailed">
+          {copy.notice}
+          <CopyableText text={report} label={t("about.version")} />
+        </div>
+      )}
+    </>
+  );
 }
 
 /** What this build of Margince is, under which license, and where it lives. */
@@ -127,26 +160,19 @@ export function AboutMargince({ build }: Readonly<{ build: BuildRelease }>) {
   return (
     <div className="aboutmargince">
       <div className="aboutmargince-brand">
-        <Logomark size={28} />
+        <Logomark />
         {t("shell.logoAria")}
-      </div>
-      <div className="aboutmargince-build">
-        <FactList
-          flat
-          facts={[...versionFacts(build, t), ...commitFacts(build, t)]}
-        />
-        <CopyAction
-          text={buildReport(build)}
-          labels={{
-            copy: t("about.copy"),
-            copied: t("about.copied"),
-            remedy: t("about.copyRemedy"),
-          }}
-        />
       </div>
       <FactList
         flat
+        className="aboutmargince-facts"
         facts={[
+          {
+            key: "version",
+            term: t("about.version"),
+            value: <VersionCopy build={build} />,
+            note: versionNote(build, t),
+          },
           {
             key: "license",
             term: t("about.license"),
@@ -157,27 +183,39 @@ export function AboutMargince({ build }: Readonly<{ build: BuildRelease }>) {
             ),
             note: t("about.licenseConversion"),
           },
+          {
+            key: "copyright",
+            term: t("about.copyrightTerm"),
+            value: t("about.copyright"),
+          },
+          {
+            key: "links",
+            term: t("about.links"),
+            value: (
+              <ul className="aboutmargince-links">
+                <li>
+                  <NewTabLink href={WEBSITE_HREF}>
+                    {t("about.website")}
+                  </NewTabLink>
+                </li>
+                <li>
+                  <NewTabLink href={REPOSITORY}>{t("about.source")}</NewTabLink>
+                </li>
+                <li>
+                  <NewTabLink href={RELEASE_NOTES_HREF}>
+                    {t("shell.help.releaseNotes")}
+                  </NewTabLink>
+                </li>
+                <li>
+                  <NewTabLink href={THIRD_PARTY_LICENSES_HREF}>
+                    {t("about.thirdParty")}
+                  </NewTabLink>
+                </li>
+              </ul>
+            ),
+          },
         ]}
       />
-      <p className="t-caption">{t("about.copyright")}</p>
-      <ul className="aboutmargince-links">
-        <li>
-          <NewTabLink href={WEBSITE_HREF}>{t("about.website")}</NewTabLink>
-        </li>
-        <li>
-          <NewTabLink href={REPOSITORY}>{t("about.source")}</NewTabLink>
-        </li>
-        <li>
-          <NewTabLink href={RELEASE_NOTES_HREF}>
-            {t("shell.help.releaseNotes")}
-          </NewTabLink>
-        </li>
-        <li>
-          <NewTabLink href={THIRD_PARTY_LICENSES_HREF}>
-            {t("about.thirdParty")}
-          </NewTabLink>
-        </li>
-      </ul>
     </div>
   );
 }
@@ -202,21 +240,13 @@ export function AboutMarginceDialog({
       labelledBy={titleId}
       intent="form"
       returnFocusTo={returnFocusTo}
-      // Not the first focusable: on a core build that is the commit link, and
-      // an Enter on arrival would leave the app.
-      initialFocusTo={() =>
-        document
-          .getElementById(titleId)
-          ?.closest<HTMLElement>("[role=dialog]")
-          ?.querySelector<HTMLElement>(
-            ".aboutmargince-build .copy-action button",
-          ) ?? null
-      }
     >
-      <Heading size="large" id={titleId} className="modal-title">
-        {t("about.title")}
-      </Heading>
-      <AboutMargince build={build} />
+      <div className="form-stack aboutmargince-dialog">
+        <Heading size="large" id={titleId}>
+          {t("about.title")}
+        </Heading>
+        <AboutMargince build={build} />
+      </div>
     </Modal>
   );
 }
