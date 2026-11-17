@@ -109,7 +109,7 @@ describe("the Vietnamese privacy page uses the statutory wording", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Email, cuộc họp và cuộc gọi với quý khách: lưu trong 3 năm kể từ khi ghi nhận, sau đó được chuyển sang lưu trữ hạn chế truy cập và chỉ bị xóa khi quý khách yêu cầu hoặc khi hồ sơ của quý khách bị xóa.",
+        "Email, cuộc họp và cuộc gọi với quý khách: được lưu trong 3 năm kể từ khi ghi nhận, sau đó được chuyển sang lưu trữ hạn chế truy cập để giải quyết khiếu nại pháp lý và lưu giữ hồ sơ kinh doanh và bị xóa khi không còn cần cho mục đích này, khi quý khách yêu cầu hoặc khi hồ sơ của quý khách bị xóa.",
       ),
     ).toBeInTheDocument();
 

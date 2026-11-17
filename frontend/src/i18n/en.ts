@@ -11192,7 +11192,9 @@ export const en = {
   "privacynotice.retention.afterDays_other": "{count} days",
   "privacynotice.retention.title": "How long we keep it",
   "privacynotice.retention.archive":
-    "{scope}: kept for {days} from when they were recorded, then moved to an archive with restricted access. They are deleted only when you ask or when your record is deleted.",
+    "{scope}: kept for {days} from when they were recorded, then moved to an archive with restricted access to {purpose}. They are deleted when they are no longer needed for this purpose, when you ask, or when your record is deleted.",
+  "privacynotice.retention.archivePurpose":
+    "answer legal claims and keep business records",
   "privacynotice.retention.anonymize": "{scope}: made anonymous after {days}.",
   "privacynotice.retention.erase": "{scope}: deleted after {days}.",
   "privacynotice.retention.rest":
@@ -11333,6 +11335,44 @@ export const en = {
   "privacy.legalHold":
     "This contact is inside a statutory retention window, so erasure does not take precedence here (Art. 17(3)(b)). The block applies to every role, including administrators, with no override. The attempt was audited.",
 
+  "archivePurpose.title": "Archive purpose",
+  "archivePurpose.intro":
+    "After its retention period, captured mail and meetings move to an archive with restricted access. The privacy page says why the archive keeps them, and you delete what no longer serves that purpose.",
+  "archivePurpose.label": "Purpose of the archive",
+  "archivePurpose.translationLabel": "Purpose of the archive in {language}",
+  "archivePurpose.hint":
+    "Finishes the sentence “moved to an archive with restricted access to …”. Empty, the page says “{purpose}”.",
+  "archiveReview.title": "Archive review",
+  "archiveReview.intro":
+    "Archived mail, meetings and calls, oldest first. Delete what no longer serves the archive’s purpose. Margince deletes nothing here by itself.",
+  "archiveReview.filters": "Archive filters",
+  "archiveReview.before": "Occurred before",
+  "archiveReview.contact": "Contact",
+  "archiveReview.company": "Company",
+  "archiveReview.record": "Record",
+  "archiveReview.with": "With",
+  "archiveReview.withNobody": "No contact or company",
+  "archiveReview.status": "Deletion",
+  "archiveReview.deletable": "Can be deleted",
+  "archiveReview.kept.legalHold": "Kept: legal hold",
+  "archiveReview.kept.optOutRecord": "Kept: opt-out record",
+  "archiveReview.kept.byLaw": "Kept by law",
+  "archiveReview.kept.notArchived": "No longer in the archive",
+  "archiveReview.kept.notFound": "Not found",
+  "archiveReview.empty": "Nothing archived matches these filters.",
+  "archiveReview.deleteShown_one": "Delete {count} shown record",
+  "archiveReview.deleteShown_other": "Delete {count} shown records",
+  "archiveReview.confirmTitle": "Delete archived records?",
+  "archiveReview.confirmBody_one":
+    "The content of {count} archived record is erased for good. Who it was with and when stays. Records under a legal hold or kept by law stay as they are.",
+  "archiveReview.confirmBody_other":
+    "The content of {count} archived records is erased for good. Who they were with and when stays. Records under a legal hold or kept by law stay as they are.",
+  "archiveReview.confirm": "Delete",
+  "archiveReview.doneTitle": "Deletion finished",
+  "archiveReview.deleted_one": "{count} record deleted.",
+  "archiveReview.deleted_other": "{count} records deleted.",
+  "archiveReview.keptCount_one": "{reason}: {count} record",
+  "archiveReview.keptCount_other": "{reason}: {count} records",
   "restricted.title": "Restricted records",
   "restricted.sub":
     "Records a statutory retention obligation holds after an erasure: which record, why and until when. The correspondence itself is hidden so that it is not read.",

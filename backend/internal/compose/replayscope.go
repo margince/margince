@@ -338,6 +338,12 @@ var replayableOperations = map[string]replayTarget{
 		object:  objectRetentionPolicy,
 		rowNote: "the response carries no body, so a replay has no record to re-check; the retention authority governs the decision and retention_policy has no owner column",
 	},
+	// The archive deletion answers only ids, deleted or kept: no record content
+	// a replay could disclose, and the retention authority governs the act.
+	"POST /v1/retention/archive/delete": {
+		object:  objectRetentionPolicy,
+		rowNote: "the response names activity ids and keep reasons only, no record content; the retention authority governs the deletion and retention_policy has no owner column",
+	},
 	// The two legal-hold decisions. Same shape as the pair above and for the
 	// same reasons: 204 with no body, so a replay re-serves the same empty
 	// answer, and the decision was gated on the retention authority when it

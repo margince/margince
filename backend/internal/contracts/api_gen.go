@@ -2338,6 +2338,33 @@ func (e ApprovalPreviewImportRowOutcome) Valid() bool {
 	}
 }
 
+// Defines values for ArchiveKeptReason.
+const (
+	ArchiveKeptReasonKeptByLaw    ArchiveKeptReason = "kept_by_law"
+	ArchiveKeptReasonLegalHold    ArchiveKeptReason = "legal_hold"
+	ArchiveKeptReasonNotArchived  ArchiveKeptReason = "not_archived"
+	ArchiveKeptReasonNotFound     ArchiveKeptReason = "not_found"
+	ArchiveKeptReasonOptOutRecord ArchiveKeptReason = "opt_out_record"
+)
+
+// Valid indicates whether the value is a known member of the ArchiveKeptReason enum.
+func (e ArchiveKeptReason) Valid() bool {
+	switch e {
+	case ArchiveKeptReasonKeptByLaw:
+		return true
+	case ArchiveKeptReasonLegalHold:
+		return true
+	case ArchiveKeptReasonNotArchived:
+		return true
+	case ArchiveKeptReasonNotFound:
+		return true
+	case ArchiveKeptReasonOptOutRecord:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AssemblyServedFrom.
 const (
 	AssemblyServedFromCache     AssemblyServedFrom = "cache"
@@ -35907,6 +35934,67 @@ type ApproveRequest struct {
 	Reason *string `json:"reason,omitempty"`
 }
 
+// ArchiveDeletionRequest defines model for ArchiveDeletionRequest.
+type ArchiveDeletionRequest struct {
+	// ActivityIds The archived activity to delete, at most 100 per request.
+	ActivityIds []openapi_types.UUID `json:"activity_ids" unique:"items"`
+}
+
+// ArchiveDeletionResult defines model for ArchiveDeletionResult.
+type ArchiveDeletionResult struct {
+	// Deleted The activity whose content was erased.
+	Deleted []openapi_types.UUID `json:"deleted"`
+
+	// Kept The activity left as it was, each with the reason.
+	Kept []ArchiveKeptActivity `json:"kept"`
+}
+
+// ArchiveKeptActivity defines model for ArchiveKeptActivity.
+type ArchiveKeptActivity struct {
+	ActivityId openapi_types.UUID `json:"activity_id"`
+
+	// Reason Why an archived activity is kept. `legal_hold`: a hold on a record it is linked to.
+	// `opt_out_record`: it is the receipt of a refusal, inside the period the law keeps it.
+	// `kept_by_law`: business correspondence inside its statutory retention period.
+	// `not_archived`: it is not in the archive, or was already deleted. `not_found`: no such activity.
+	Reason ArchiveKeptReason `json:"reason"`
+}
+
+// ArchiveKeptReason Why an archived activity is kept. `legal_hold`: a hold on a record it is linked to.
+// `opt_out_record`: it is the receipt of a refusal, inside the period the law keeps it.
+// `kept_by_law`: business correspondence inside its statutory retention period.
+// `not_archived`: it is not in the archive, or was already deleted. `not_found`: no such activity.
+type ArchiveKeptReason string
+
+// ArchivedActivity One archived activity, as the controller reviews it. `kept` says why a deletion would keep
+// it; absent means a deletion would erase it.
+type ArchivedActivity struct {
+	ActivityId openapi_types.UUID      `json:"activity_id"`
+	ArchivedAt time.Time               `json:"archived_at"`
+	Companies  []ArchivedActivityParty `json:"companies"`
+	Contacts   []ArchivedActivityParty `json:"contacts"`
+
+	// Kept Why an archived activity is kept. `legal_hold`: a hold on a record it is linked to.
+	// `opt_out_record`: it is the receipt of a refusal, inside the period the law keeps it.
+	// `kept_by_law`: business correspondence inside its statutory retention period.
+	// `not_archived`: it is not in the archive, or was already deleted. `not_found`: no such activity.
+	Kept       *ArchiveKeptReason `json:"kept,omitempty"`
+	Kind       string             `json:"kind"`
+	OccurredAt time.Time          `json:"occurred_at"`
+
+	// OccurredPrecision How much of an activity's time is known. `instant` is a real moment. `day` is a date with no time of day: the stored instant is noon UTC of that date, so its date is the UTC date, whatever the installation's zone. A meeting of this precision never holds its host's calendar slot.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
+
+	// Subject The subject line. Absent when the activity has none, or when the reader may not read its content.
+	Subject *string `json:"subject,omitempty"`
+}
+
+// ArchivedActivityParty defines model for ArchivedActivityParty.
+type ArchivedActivityParty struct {
+	Id   openapi_types.UUID `json:"id"`
+	Name string             `json:"name"`
+}
+
 // AssemblyServedFrom How this request got its answer. `cache` is the reader's stored assembly, still
 // matching the record, read in well under a second. `generated` is an assembly
 // written for this request, which is where the model's seconds go. A refresh the AI
@@ -45402,6 +45490,11 @@ type ControllerParticulars struct {
 	// as met.
 	AdvertiserContact *string `json:"advertiser_contact,omitempty"`
 
+	// ArchivePurpose Why captured correspondence is kept in the archive after its retention window, as the
+	// words that finish the privacy page's sentence about the archive. Empty prints the page's
+	// default purpose in the reader's language.
+	ArchivePurpose *string `json:"archive_purpose,omitempty"`
+
 	// DisclosureLanguages The languages the jurisdiction packs in force ask the objection route and the advertiser
 	// contact to be stated in. The packs in force are those of the installation's country and
 	// of each legal entity's country.
@@ -45443,6 +45536,7 @@ type ControllerParticulars struct {
 // ControllerParticularsTranslation The controller particulars in one more language. An empty field prints the default text.
 type ControllerParticularsTranslation struct {
 	AdvertiserContact *string `json:"advertiser_contact,omitempty"`
+	ArchivePurpose    *string `json:"archive_purpose,omitempty"`
 
 	// Language The language, as a base language the installation can send mail in.
 	Language       string  `json:"language"`
@@ -59113,6 +59207,9 @@ type PrincipalAttributionActorType string
 // PrivacyInformationController Who is responsible for the data, from the installation's own controller particulars, by the
 // rule the mail's disclosure lines use. A part the installation has not stated is absent.
 type PrivacyInformationController struct {
+	// ArchivePurpose Why archived correspondence is kept, in the language of the link. Absent when not stated, and the page then prints its default purpose.
+	ArchivePurpose *string `json:"archive_purpose,omitempty"`
+
 	// Identity The legal name and postal address, as lines. Absent unless both are stated.
 	Identity *string `json:"identity,omitempty"`
 
@@ -80109,6 +80206,55 @@ type ExplainReportParamsHandleVersion string
 // ExplainReportParamsScopeKind defines parameters for ExplainReport.
 type ExplainReportParamsScopeKind string
 
+// ListArchivedActivitiesParams defines parameters for ListArchivedActivities.
+type ListArchivedActivitiesParams struct {
+	// Before Only activity that occurred before this instant.
+	Before *time.Time `form:"before,omitempty" json:"before,omitempty"`
+
+	// ContactId Only activity linked to this contact.
+	ContactId *openapi_types.UUID `form:"contact_id,omitempty" json:"contact_id,omitempty"`
+
+	// CompanyId Only activity linked to this company.
+	CompanyId *openapi_types.UUID `form:"company_id,omitempty" json:"company_id,omitempty"`
+
+	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+	// effective `sort` of the originating request (field + direction) plus the last row's keyset
+	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// together with a `sort` that differs from the one the cursor was minted under returns
+	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+	// remaining pages see, so re-issue the query without the cursor when changing filters.
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
+}
+
+// DeleteArchivedActivitiesParams defines parameters for DeleteArchivedActivities.
+type DeleteArchivedActivitiesParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
 // ListLegalHoldsParams defines parameters for ListLegalHolds.
 type ListLegalHoldsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
@@ -82655,6 +82801,9 @@ type CreateRetentionPolicyJSONRequestBody = CreateRetentionPolicyRequest
 
 // UpdateRetentionPolicyJSONRequestBody defines body for UpdateRetentionPolicy for application/json ContentType.
 type UpdateRetentionPolicyJSONRequestBody = UpdateRetentionPolicyRequest
+
+// DeleteArchivedActivitiesJSONRequestBody defines body for DeleteArchivedActivities for application/json ContentType.
+type DeleteArchivedActivitiesJSONRequestBody = ArchiveDeletionRequest
 
 // LiftLegalHoldJSONRequestBody defines body for LiftLegalHold for application/json ContentType.
 type LiftLegalHoldJSONRequestBody = RetentionOverrideRequest
@@ -99024,6 +99173,12 @@ type ServerInterface interface {
 	// Edit a retention policy (admin/ops).
 	// (PATCH /retention-policies/{id})
 	UpdateRetentionPolicy(w http.ResponseWriter, r *http.Request, id Id)
+	// List archived activity, oldest first, for the controller to review against the archive's purpose.
+	// (GET /retention/archive)
+	ListArchivedActivities(w http.ResponseWriter, r *http.Request, params ListArchivedActivitiesParams)
+	// Delete archived activity that no longer serves the archive's purpose. Audited; held records are kept.
+	// (POST /retention/archive/delete)
+	DeleteArchivedActivities(w http.ResponseWriter, r *http.Request, params DeleteArchivedActivitiesParams)
 	// List the records a legal hold is preserving.
 	// (GET /retention/legal-holds)
 	ListLegalHolds(w http.ResponseWriter, r *http.Request, params ListLegalHoldsParams)
@@ -105123,6 +105278,18 @@ func (_ Unimplemented) DeleteRetentionPolicy(w http.ResponseWriter, r *http.Requ
 // Edit a retention policy (admin/ops).
 // (PATCH /retention-policies/{id})
 func (_ Unimplemented) UpdateRetentionPolicy(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List archived activity, oldest first, for the controller to review against the archive's purpose.
+// (GET /retention/archive)
+func (_ Unimplemented) ListArchivedActivities(w http.ResponseWriter, r *http.Request, params ListArchivedActivitiesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Delete archived activity that no longer serves the archive's purpose. Audited; held records are kept.
+// (POST /retention/archive/delete)
+func (_ Unimplemented) DeleteArchivedActivities(w http.ResponseWriter, r *http.Request, params DeleteArchivedActivitiesParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -147073,6 +147240,144 @@ func (siw *ServerInterfaceWrapper) UpdateRetentionPolicy(w http.ResponseWriter, 
 	handler.ServeHTTP(w, r)
 }
 
+// ListArchivedActivities operation middleware
+func (siw *ServerInterfaceWrapper) ListArchivedActivities(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListArchivedActivitiesParams
+
+	// ------------- Optional query parameter "before" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "before", r.URL.Query(), &params.Before, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "before"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "before", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "contact_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "contact_id", r.URL.Query(), &params.ContactId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "contact_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "contact_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "company_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "company_id", r.URL.Query(), &params.CompanyId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "company_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "company_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListArchivedActivities(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteArchivedActivities operation middleware
+func (siw *ServerInterfaceWrapper) DeleteArchivedActivities(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DeleteArchivedActivitiesParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteArchivedActivities(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListLegalHolds operation middleware
 func (siw *ServerInterfaceWrapper) ListLegalHolds(w http.ResponseWriter, r *http.Request) {
 
@@ -157569,6 +157874,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/retention-policies/{id}", wrapper.UpdateRetentionPolicy)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/retention/archive", wrapper.ListArchivedActivities)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/retention/archive/delete", wrapper.DeleteArchivedActivities)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/retention/legal-holds", wrapper.ListLegalHolds)

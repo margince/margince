@@ -3727,6 +3727,14 @@ func (stubs) UpdateRetentionPolicy(w nethttp.ResponseWriter, r *nethttp.Request,
 	httperr.NotImplemented(w, r, "UpdateRetentionPolicy")
 }
 
+func (stubs) ListArchivedActivities(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListArchivedActivitiesParams) {
+	httperr.NotImplemented(w, r, "ListArchivedActivities")
+}
+
+func (stubs) DeleteArchivedActivities(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.DeleteArchivedActivitiesParams) {
+	httperr.NotImplemented(w, r, "DeleteArchivedActivities")
+}
+
 func (stubs) ListLegalHolds(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListLegalHoldsParams) {
 	httperr.NotImplemented(w, r, "ListLegalHolds")
 }

@@ -21,7 +21,7 @@ import { problemFieldSentencesOf, throwProblem } from "../../lib/problem";
 type Particulars = components["schemas"]["ControllerParticulars"];
 type Translation = components["schemas"]["ControllerParticularsTranslation"];
 
-const QUERY_KEY = ["controller-particulars"] as const;
+export const PARTICULARS_QUERY_KEY = ["controller-particulars"] as const;
 
 const FIELDS = [
   "legal_name",
@@ -64,7 +64,7 @@ function textOf(source: Partial<Record<FieldKey, string | null>>): Text {
 
 // The languages the form offers: those a pack in force asks for, then any
 // already stated.
-function languagesOf(particulars: Particulars): string[] {
+export function languagesOf(particulars: Particulars): string[] {
   const stated = (particulars.translations ?? []).map((t) => t.language);
   return [...new Set([...(particulars.disclosure_languages ?? []), ...stated])];
 }
@@ -85,18 +85,35 @@ function draftOf(particulars: Particulars): Draft {
 }
 
 // A translation with nothing in it is not sent, so an empty section saves no
-// row.
-function bodyOf(draft: Draft): Particulars {
+// row. A save replaces the whole setting, so the fields other screens edit
+// (the privacy page and the archive purpose) go back as they were saved.
+function bodyOf(draft: Draft, saved: Particulars): Particulars {
+  const stated = new Map(
+    (saved.translations ?? []).map((t) => [t.language, t]),
+  );
   const translations: Translation[] = Object.entries(draft.translations)
-    .filter(([, text]) => FIELDS.some((key) => text[key].trim() !== ""))
-    .map(([language, text]) => ({ language, ...text }));
-  return { ...draft.text, translations };
+    .map(([language, text]) => ({
+      archive_purpose: stated.get(language)?.archive_purpose,
+      language,
+      ...text,
+    }))
+    .filter(
+      (translation) =>
+        FIELDS.some((key) => translation[key].trim() !== "") ||
+        (translation.archive_purpose ?? "").trim() !== "",
+    );
+  return {
+    privacy_page: saved.privacy_page,
+    archive_purpose: saved.archive_purpose,
+    ...draft.text,
+    translations,
+  };
 }
 
 export function ControllerParticularsCard() {
   const t = useT();
   const query = useQuery({
-    queryKey: QUERY_KEY,
+    queryKey: PARTICULARS_QUERY_KEY,
     queryFn: async () => {
       const { data, error, response } = await api.GET(
         "/privacy/controller-particulars",
@@ -135,13 +152,13 @@ function ParticularsEditor({
       }
       return data;
     },
-    onSuccess: (data) => client.setQueryData(QUERY_KEY, data),
+    onSuccess: (data) => client.setQueryData(PARTICULARS_QUERY_KEY, data),
   });
   const languages = Object.keys(value.translations);
   useSaveDraft({
     dirty: JSON.stringify(value) !== JSON.stringify(saved),
     save: async () => {
-      await save.mutateAsync(bodyOf(value));
+      await save.mutateAsync(bodyOf(value, particulars));
       setDraft(null);
     },
     placed: [

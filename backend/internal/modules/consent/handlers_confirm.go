@@ -287,8 +287,11 @@ func wireController(p ControllerParticulars) *crmcontracts.PrivacyInformationCon
 	if page := strings.TrimSpace(p.PrivacyPage); page != "" {
 		out.PrivacyPage = &page
 	}
+	if purpose := strings.TrimSpace(p.ArchivePurpose); purpose != "" {
+		out.ArchivePurpose = &purpose
+	}
 	if out.LegalName == nil && out.Identity == nil && out.PrivacyContact == nil && out.ObjectionRoute == nil &&
-		out.PrivacyPage == nil {
+		out.PrivacyPage == nil && out.ArchivePurpose == nil {
 		return nil
 	}
 	return &out

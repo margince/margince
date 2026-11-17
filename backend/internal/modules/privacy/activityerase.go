@@ -23,17 +23,22 @@ func (s *RetentionService) eraseActivityContent(ctx context.Context, tx pgx.Tx, 
 	if err := s.refuseIfShieldedNow(ctx, tx, id); err != nil {
 		return err
 	}
+	return s.eraser.eraseActivityContent(ctx, tx, id, theClockRanOut)
+}
+
+// eraseActivityContent is the one writer of an activity's content erasure, for
+// the nightly erase action and a controller's archive deletion alike. The
+// caller has already decided that nothing keeps the record.
+func (e *Eraser) eraseActivityContent(ctx context.Context, tx pgx.Tx, id ids.UUID, act erasureAct) error {
 	err := clearActivityContent(ctx, tx, id)
 	if err == nil {
-		// Everything the text left behind, through the call the restriction lift
-		// and the controller's release make too, so the three cannot drift.
-		err = s.eraser.purgeContentDerivedFrom(ctx, tx, id, theClockRanOut)
+		// The same purge the restriction lift and the release run, so none drift.
+		err = e.purgeContentDerivedFrom(ctx, tx, id, act)
 	}
-	if err == nil {
-		// Not in the shared helper: this arm removes an interaction the
-		// relationship aggregates counted, so it re-folds them here. The lift
-		// paths emit events, and the bus consumer re-folds for them.
-		err = s.invalidateGraph(ctx, tx, id)
+	if err == nil && e.invalidateEdges != nil {
+		// The aggregates counted this interaction. Without an invalidator, the
+		// retention.applied consumer re-folds them.
+		err = e.invalidateEdges(ctx, tx, []ids.UUID{id})
 	}
 	return err
 }

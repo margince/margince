@@ -10927,7 +10927,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "privacynotice.retention.afterDays_other": "{count} ngày",
   "privacynotice.retention.title": "Thời gian lưu",
   "privacynotice.retention.archive":
-    "{scope}: lưu trong {days} kể từ khi ghi nhận, sau đó được chuyển sang lưu trữ hạn chế truy cập và chỉ bị xóa khi quý khách yêu cầu hoặc khi hồ sơ của quý khách bị xóa.",
+    "{scope}: được lưu trong {days} kể từ khi ghi nhận, sau đó được chuyển sang lưu trữ hạn chế truy cập để {purpose} và bị xóa khi không còn cần cho mục đích này, khi quý khách yêu cầu hoặc khi hồ sơ của quý khách bị xóa.",
+  "privacynotice.retention.archivePurpose":
+    "giải quyết khiếu nại pháp lý và lưu giữ hồ sơ kinh doanh",
   "privacynotice.retention.anonymize": "{scope}: ẩn danh sau {days}.",
   "privacynotice.retention.erase": "{scope}: xóa sau {days}.",
   "privacynotice.retention.rest":
@@ -11069,6 +11071,44 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "privacy.legalHold":
     "Liên hệ này đang trong thời hạn lưu trữ theo luật định, nên quyền xóa không được ưu tiên ở đây (Điều 17(3)(b)). Lệnh chặn áp dụng cho mọi vai trò, kể cả quản trị viên, và không thể vượt qua. Lần thử xóa này đã được ghi vào nhật ký hoạt động.",
 
+  "archivePurpose.title": "Mục đích lưu trữ",
+  "archivePurpose.intro":
+    "Hết thời hạn lưu, email và cuộc họp đã ghi nhận được chuyển sang lưu trữ hạn chế truy cập. Trang quyền riêng tư nêu lý do lưu trữ, và bạn xóa những gì không còn phục vụ mục đích đó.",
+  "archivePurpose.label": "Mục đích lưu trữ",
+  "archivePurpose.translationLabel": "Mục đích lưu trữ bằng {language}",
+  "archivePurpose.hint":
+    "Hoàn thành câu “được chuyển sang lưu trữ hạn chế truy cập để …”. Để trống thì trang ghi “{purpose}”.",
+  "archiveReview.title": "Xem xét lưu trữ",
+  "archiveReview.intro":
+    "Email, cuộc họp và cuộc gọi đã lưu trữ, cũ nhất trước. Xóa những gì không còn phục vụ mục đích lưu trữ. Margince không tự xóa gì ở đây.",
+  "archiveReview.filters": "Bộ lọc lưu trữ",
+  "archiveReview.before": "Diễn ra trước",
+  "archiveReview.contact": "Liên hệ",
+  "archiveReview.company": "Công ty",
+  "archiveReview.record": "Mục",
+  "archiveReview.with": "Với",
+  "archiveReview.withNobody": "Không có liên hệ hay công ty",
+  "archiveReview.status": "Xóa",
+  "archiveReview.deletable": "Có thể xóa",
+  "archiveReview.kept.legalHold": "Giữ lại: lưu trữ pháp lý",
+  "archiveReview.kept.optOutRecord": "Giữ lại: hồ sơ từ chối nhận tin",
+  "archiveReview.kept.byLaw": "Giữ lại theo luật",
+  "archiveReview.kept.notArchived": "Không còn trong lưu trữ",
+  "archiveReview.kept.notFound": "Không tìm thấy",
+  "archiveReview.empty": "Không có mục lưu trữ nào khớp bộ lọc này.",
+  "archiveReview.deleteShown_one": "Xóa {count} mục đang hiển thị",
+  "archiveReview.deleteShown_other": "Xóa {count} mục đang hiển thị",
+  "archiveReview.confirmTitle": "Xóa các mục đã lưu trữ?",
+  "archiveReview.confirmBody_one":
+    "Nội dung của {count} mục đã lưu trữ bị xóa vĩnh viễn. Thông tin với ai và khi nào vẫn được giữ. Mục đang bị lưu trữ pháp lý hoặc được luật giữ lại không thay đổi.",
+  "archiveReview.confirmBody_other":
+    "Nội dung của {count} mục đã lưu trữ bị xóa vĩnh viễn. Thông tin với ai và khi nào vẫn được giữ. Mục đang bị lưu trữ pháp lý hoặc được luật giữ lại không thay đổi.",
+  "archiveReview.confirm": "Xóa",
+  "archiveReview.doneTitle": "Đã xóa xong",
+  "archiveReview.deleted_one": "Đã xóa {count} mục.",
+  "archiveReview.deleted_other": "Đã xóa {count} mục.",
+  "archiveReview.keptCount_one": "{reason}: {count} mục",
+  "archiveReview.keptCount_other": "{reason}: {count} mục",
   "restricted.title": "Mục bị hạn chế",
   "restricted.sub":
     "Các mục mà nghĩa vụ lưu trữ theo luật định còn giữ lại sau khi xóa: mục nào, vì sao và đến khi nào. Nội dung thư từ bị ẩn để không bị đọc.",
