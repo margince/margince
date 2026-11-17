@@ -269,13 +269,9 @@ func TestAPromotionWaitsForAConcurrentChangeToItsEvidence(t *testing.T) {
 
 // Engagement older than the waiting horizon no longer qualifies a lead. The read
 // stops offering it, and a promotion that must find it on the lead is refused.
-//
-//testdb:serial swaps the package-level leadSLAClock, which its parallel siblings read
 func TestEngagementOutsideTheWaitingHorizonNoLongerQualifies(t *testing.T) {
+	t.Parallel()
 	asOf := time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)
-	previous := leadSLAClock
-	leadSLAClock = func() time.Time { return asOf }
-	t.Cleanup(func() { leadSLAClock = previous })
 	horizon := storekit.DefaultWaitingHorizonDays * 24 * time.Hour
 	for _, tc := range []struct {
 		name    string
@@ -284,6 +280,7 @@ func TestEngagementOutsideTheWaitingHorizonNoLongerQualifies(t *testing.T) {
 	}{{"inside the horizon", horizon - time.Hour, true}, {"outside the horizon", horizon + time.Hour, false}} {
 		t.Run(tc.name, func(t *testing.T) {
 			e := setupPromoteConsent(t)
+			e.ctx = withPinnedSLANow(e.ctx, asOf)
 			lead := e.seedLead(t, "aged@evidence.test")
 			e.seedEvidence(t, &lead, evidenceSeed{kind: "email", direction: "inbound", at: asOf.Add(-tc.age)})
 			read, err := e.store.GetLead(e.ctx, lead, storekit.LiveOnly)

@@ -113,6 +113,8 @@ func LeadSettingsSurface() []config.Any {
 type leadSLAPolicy struct {
 	enabled bool
 	target  time.Duration
+	// asOf is the instant a scanned row's SLA state is judged against.
+	asOf time.Time
 }
 
 // atRisk is the tail of the target inside which an unanswered lead reads as
@@ -127,9 +129,9 @@ func (p leadSLAPolicy) targetMinutes() int { return int(p.target / time.Minute) 
 func loadLeadSLAPolicy(ctx context.Context, tx pgx.Tx, cfg *config.Config) (leadSLAPolicy, error) {
 	enabled, minutes, err := config.StoredApplyPairTx(ctx, tx, cfg, FirstResponseEnabled, FirstResponseTargetMinutes)
 	if err != nil {
-		return leadSLAPolicy{target: DefaultFirstResponseTarget}, fmt.Errorf("load lead sla policy: %w", err)
+		return leadSLAPolicy{target: DefaultFirstResponseTarget, asOf: slaNow(ctx)}, fmt.Errorf("load lead sla policy: %w", err)
 	}
-	return leadSLAPolicy{enabled: enabled, target: time.Duration(minutes) * time.Minute}, nil
+	return leadSLAPolicy{enabled: enabled, target: time.Duration(minutes) * time.Minute, asOf: slaNow(ctx)}, nil
 }
 
 // slaPolicy resolves the policy for a store operation that has not opened

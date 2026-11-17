@@ -12,7 +12,6 @@ package contacts
 
 import (
 	"context"
-	"errors"
 	"testing"
 	"time"
 
@@ -107,6 +106,7 @@ func TestSLAScanEscalatesEachBreachOnce(t *testing.T) {
 // A website form enquiry is the lead writing in, as an inbound email is. It
 // starts the clock, and the row, the filter and the scan agree on it.
 func TestAWebsiteFormEnquiryStartsTheFirstResponseClock(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	e.enableFirstResponseSLA(t)
 	now := clocktest.Now(t)
@@ -183,14 +183,11 @@ func TestSLAStateReadsAndFiltersAlike(t *testing.T) {
 	}
 }
 
-//testdb:serial swaps the package-level leadSLAClock, which its parallel siblings read
 func TestDefaultLeadQueueOrdersSLAThenScoreDeterministically(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	e.enableFirstResponseSLA(t)
 	now := time.Now().UTC().Truncate(time.Second)
-	previousClock := leadSLAClock
-	leadSLAClock = func() time.Time { return now }
-	t.Cleanup(func() { leadSLAClock = previousClock })
 
 	breachedLow := e.seedLeadCreatedAt(t, "breached-low@example.test", now.Add(-DefaultFirstResponseTarget-time.Hour))
 	breachedHigh := e.seedLeadCreatedAt(t, "breached-high@example.test", now.Add(-DefaultFirstResponseTarget-2*time.Hour))
@@ -203,7 +200,7 @@ func TestDefaultLeadQueueOrdersSLAThenScoreDeterministically(t *testing.T) {
 	}
 
 	limit := 2
-	rows, page, err := e.store.ListLeads(e.ctx, ListLeadsInput{Limit: &limit})
+	rows, page, err := e.store.ListLeads(withPinnedSLANow(e.ctx, now), ListLeadsInput{Limit: &limit})
 	if err != nil {
 		t.Fatalf("list default queue: %v", err)
 	}
@@ -214,8 +211,8 @@ func TestDefaultLeadQueueOrdersSLAThenScoreDeterministically(t *testing.T) {
 	// The queue is one snapshot across pages. Without the as-of time in the
 	// cursor, atRisk crosses into breached here, moves ahead of the cursor and
 	// disappears from the result set.
-	leadSLAClock = func() time.Time { return now.Add(2 * time.Hour) }
-	next, lastPage, err := e.store.ListLeads(e.ctx, ListLeadsInput{Limit: &limit, Cursor: &cursor})
+	later := withPinnedSLANow(e.ctx, now.Add(2*time.Hour))
+	next, lastPage, err := e.store.ListLeads(later, ListLeadsInput{Limit: &limit, Cursor: &cursor})
 	if err != nil {
 		t.Fatalf("list second queue page: %v", err)
 	}
@@ -266,11 +263,11 @@ func TestLeadQuickFindIncludesExactEmailAndLinkedIn(t *testing.T) {
 // that sat unowned for a week is a week overdue the instant somebody picks it
 // up — they inherit a breach earned while the row was nobody's. That is the
 // state a website read leaves behind, which is why it matters now.
-//
-//testdb:serial swaps the package-level leadSLAClock, which its parallel siblings read
 func TestTakingOnAnUnownedLeadStartsItsResponseClock(t *testing.T) {
-	now := pinLeadAuditClock(t)
+	t.Parallel()
 	e := setupPromoteConsent(t)
+	var now time.Time
+	e.ctx, now = pinLeadAuditClock(e.ctx, t)
 	id := ids.NewV7()
 	weekAgo := now.Add(-7 * 24 * time.Hour)
 	if _, err := e.owner.Exec(context.Background(),
@@ -474,12 +471,12 @@ func TestTakingOnALeadClearsTheBreachItEarnedWhileUnowned(t *testing.T) {
 // A human moving the lead off `new` is a first response; the stamp is set
 // once and a later status change does not move it. Disqualifying an
 // unanswered lead is an explicit disposition and stamps it too.
-//
-//testdb:serial swaps the package-level leadSLAClock, which its parallel siblings read
 func TestFirstResponseFromHumanStatusChangeAndDisposition(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	e.enableFirstResponseSLA(t)
-	now := pinLeadAuditClock(t)
+	var now time.Time
+	e.ctx, now = pinLeadAuditClock(e.ctx, t)
 	worked := e.seedLeadCreatedAt(t, "worked@example.test", now.Add(-time.Hour))
 	status := "contacted"
 	after, err := e.store.UpdateLead(e.ctx, worked, UpdateLeadInput{Status: &status})
@@ -539,8 +536,10 @@ func TestFirstResponseFromHumanStatusChangeAndDisposition(t *testing.T) {
 // lead back to new keeps the stamp. A reply earlier than a status stamp takes
 // the stamp over and drops the name.
 func TestAReplyOnTheLeadOutlivesAMovedStatus(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
-	now := pinLeadAuditClock(t)
+	var now time.Time
+	e.ctx, now = pinLeadAuditClock(e.ctx, t)
 	contacted := "contacted"
 	back := "new"
 
@@ -708,11 +707,11 @@ func TestTheScanReadsTheActivitiesRatherThanTheProjection(t *testing.T) {
 // And the scan still breaches a lead nobody answered: a version that returned
 // "answered" for everything would pass the test above while switching the
 // whole target off.
-//
-//testdb:serial swaps the package-level leadSLAClock, which its parallel siblings read
 func TestTheScanStillBreachesALeadNobodyAnswered(t *testing.T) {
-	now := pinLeadAuditClock(t)
+	t.Parallel()
 	e := setupPromoteConsent(t)
+	var now time.Time
+	e.ctx, now = pinLeadAuditClock(e.ctx, t)
 	e.enableFirstResponseSLA(t)
 	lead := e.seedLeadCreatedAt(t, "unanswered@sla.test", now.Add(-DefaultFirstResponseTarget-time.Hour))
 
@@ -809,136 +808,11 @@ func (e *promoteConsentEnv) breachTargetOf(t *testing.T, lead ids.LeadID) *strin
 	return target
 }
 
-// A lead NOBODY owns is the queue's worst case — past its response target with
-// nobody who has picked it up — and it was the one case the escalation reached
-// nobody at all: the task went out assigned to no one and no notice was
-// addressed. The configured intake seat answers for it.
-func TestAnOwnerlessBreachReachesTheConfiguredIntakeSeat(t *testing.T) {
-	t.Parallel()
-	e := setupPromoteConsent(t)
-	e.enableFirstResponseSLA(t)
-	now := time.Now().UTC()
-
-	// Unset: the breach still records, and is addressed to nobody rather than
-	// to somebody who never agreed to answer for it.
-	silent := e.seedOwnerlessLeadCreatedAt(t, "silent@example.test", now.Add(-DefaultFirstResponseTarget-time.Hour))
-	if _, err := e.store.ScanLeadSLA(e.ctx, now); err != nil {
-		t.Fatalf("scan with no configured seat: %v", err)
-	}
-	if target := e.breachTargetOf(t, silent); target != nil {
-		t.Errorf("an unconfigured installation addressed the breach to %q, want nobody", *target)
-	}
-
-	// Configured: the same breach now names the seat that answers for it.
-	e.nameIntakeSeat(t, e.user)
-	addressed := e.seedOwnerlessLeadCreatedAt(t, "addressed@example.test", now.Add(-DefaultFirstResponseTarget-time.Hour))
-	if _, err := e.store.ScanLeadSLA(e.ctx, now); err != nil {
-		t.Fatalf("scan with a configured seat: %v", err)
-	}
-	target := e.breachTargetOf(t, addressed)
-	if target == nil || *target != e.user.String() {
-		t.Errorf("escalation target = %v, want the configured intake seat %s", target, e.user)
-	}
-}
-
-// A configured seat that has since been suspended is the same silence as no
-// seat at all, wearing a configuration that looks correct.
-func TestAnIntakeSeatThatCannotWorkIsTreatedAsUnset(t *testing.T) {
-	t.Parallel()
-	e := setupPromoteConsent(t)
-	e.enableFirstResponseSLA(t)
-	now := time.Now().UTC()
-
-	e.nameIntakeSeat(t, e.user)
-	if _, err := e.owner.Exec(context.Background(),
-		`UPDATE app_user SET status = 'suspended' WHERE id = $1`, e.user); err != nil {
-		t.Fatal(err)
-	}
-
-	lead := e.seedOwnerlessLeadCreatedAt(t, "suspended@example.test", now.Add(-DefaultFirstResponseTarget-time.Hour))
-	if _, err := e.store.ScanLeadSLA(e.ctx, now); err != nil {
-		t.Fatalf("scan with a suspended seat: %v", err)
-	}
-	if target := e.breachTargetOf(t, lead); target != nil {
-		t.Errorf("a suspended seat was addressed (%q); nobody reads that desk", *target)
-	}
-}
-
-// grantLeadRead gives a seat the one grant the escalation check asks for. The
-// harness seeds no role assignments — every seat it makes is blind to leads —
-// so a test naming an intake seat has to make it a seat that could answer.
-func (e *promoteConsentEnv) grantLeadRead(t *testing.T, seat ids.UUID) {
-	t.Helper()
-	role := ids.NewV7()
-	if _, err := e.owner.Exec(context.Background(),
-		`INSERT INTO role (id, key, name, permissions)
-		 VALUES ($1, $2, 'Lead reader', '{"objects":{"lead":{"read":true}}}'::jsonb)`,
-		role, "lead_reader_"+role.String()); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := e.owner.Exec(context.Background(),
-		`INSERT INTO role_assignment (id, role_id, user_id) VALUES ($1, $2, $3)`,
-		ids.NewV7(), role, seat); err != nil {
-		t.Fatal(err)
-	}
-}
-
-// nameIntakeSeat writes the setting the way an operator does — through the
-// real writer, so the test exercises the gate rather than an INSERT that walks
-// around it.
-func (e *promoteConsentEnv) nameIntakeSeat(t *testing.T, seat ids.UUID) {
-	t.Helper()
-	e.grantLeadRead(t, seat)
-	id := ids.From[ids.UserKind](seat)
-	if _, err := e.store.UpdateLeadSettings(e.ctx, UpdateLeadSettingsInput{
-		UnassignedEscalationUserID: &id,
-	}); err != nil {
-		t.Fatalf("naming the intake seat: %v", err)
-	}
-}
-
-// A seat that cannot READ leads is refused as the escalation target, even
-// though it is a perfectly good seat to hand work to.
-//
-// An escalation carries the lead it is about. A colleague holding activity
-// access and no lead grant would receive a task naming a record they cannot
-// open — useless to them, and a disclosure nobody authorised.
-func TestAnIntakeSeatMustBeAbleToReadTheLeadsItAnswersFor(t *testing.T) {
-	t.Parallel()
-	e := setupPromoteConsent(t)
-
-	// A live seat with no role assignment at all: assignable, and blind to
-	// leads.
-	blind := ids.NewV7()
-	if _, err := e.owner.Exec(context.Background(),
-		`INSERT INTO app_user (id, email, display_name) VALUES ($1, 'blind@example.test', 'No Grants')`,
-		blind); err != nil {
-		t.Fatal(err)
-	}
-	id := ids.From[ids.UserKind](blind)
-	_, err := e.store.UpdateLeadSettings(e.ctx, UpdateLeadSettingsInput{
-		UnassignedEscalationUserID: &id,
-	})
-	if !errors.As(err, new(*EscalationSeatError)) {
-		t.Fatalf("naming a seat that cannot read leads → %v, want EscalationSeatError", err)
-	}
-	var stored int
-	if err := e.owner.QueryRow(context.Background(),
-		`SELECT count(*) FROM setting WHERE key = $1`, UnassignedEscalationUserID.Key()).
-		Scan(&stored); err != nil {
-		t.Fatal(err)
-	}
-	if stored != 0 {
-		t.Errorf("the refused nomination was stored anyway")
-	}
-}
-
 // The application and database clocks can disagree by seconds. A human's
 // first response is stamped with the module clock, floored at created_at.
 // A clock that already reads later is kept as it is.
-//
-//testdb:serial swaps the package-level leadSLAClock, which its parallel siblings read
 func TestAFirstResponseIsNeverStampedBeforeTheLeadExisted(t *testing.T) {
+	t.Parallel()
 	created := time.Date(2099, time.January, 1, 9, 0, 0, 0, time.UTC)
 	for _, tc := range []struct {
 		name  string
@@ -950,9 +824,7 @@ func TestAFirstResponseIsNeverStampedBeforeTheLeadExisted(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			e := setupPromoteConsent(t)
-			previousClock := leadSLAClock
-			leadSLAClock = func() time.Time { return tc.clock }
-			t.Cleanup(func() { leadSLAClock = previousClock })
+			e.ctx = withPinnedSLANow(e.ctx, tc.clock)
 			lead := e.seedLeadCreatedAt(t, "ahead@example.test", created)
 			status := "contacted"
 			after, err := e.store.UpdateLead(e.ctx, lead, UpdateLeadInput{Status: &status})

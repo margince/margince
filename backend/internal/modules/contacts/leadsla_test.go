@@ -14,8 +14,6 @@ import (
 // an answered or closed lead owes nothing.
 func TestLeadSLAFieldsFollowTheClock(t *testing.T) {
 	now := time.Date(2026, 8, 18, 12, 0, 0, 0, time.UTC)
-	leadSLAClock = func() time.Time { return now }
-	t.Cleanup(func() { leadSLAClock = time.Now })
 	routed := now.Add(-DefaultFirstResponseTarget + 10*time.Minute)
 	responded := now.Add(-time.Minute)
 	closed := now

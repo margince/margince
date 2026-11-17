@@ -22,8 +22,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-//testdb:serial swaps the package-level rollupClock, which its parallel siblings read
 func TestOneCompanyReadBindsOneAsOfDate(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
@@ -33,15 +33,13 @@ func TestOneCompanyReadBindsOneAsOfDate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	original := rollupClock
-	t.Cleanup(func() { rollupClock = original })
 	day := time.Date(2026, 6, 2, 23, 59, 0, 0, time.UTC)
 	var samples []time.Time
-	rollupClock = func() time.Time {
+	e.store.SetClock(func() time.Time {
 		samples = append(samples, day)
 		day = day.AddDate(0, 0, 1)
 		return samples[len(samples)-1]
-	}
+	})
 
 	if _, err := e.store.GetCompany(ctx,
 		ids.From[ids.CompanyKind](ids.UUID(company.Id)), storekit.LiveOnly); err != nil {

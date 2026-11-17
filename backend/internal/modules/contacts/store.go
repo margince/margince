@@ -41,6 +41,9 @@ type Store struct {
 	profileVerdictReader    ProfileVerdictReader
 	participantRosterReader ParticipantRosterReader
 	clock                   func() time.Time
+	// beforeTechnicalWrite runs between reading a contact and writing it. Tests
+	// set it to edit the contact in that window; production leaves it nil.
+	beforeTechnicalWrite func(ctx context.Context, id ids.ContactID)
 	// db binds the workspace this store runs for (ADR-0091 §9 step 3).
 	db *database.DB
 	// catalog is the fieldcatalog seam (custom-field columns); nil means

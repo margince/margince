@@ -203,7 +203,7 @@ func companyCommonFilters(in ListCompaniesInput) listFilters {
 // ListCompanies answers one page of accounts under the caller's row scope,
 // filtered by the dials the contract declares and ordered by the shared sort.
 func (s *Store) ListCompanies(ctx context.Context, in ListCompaniesInput) ([]crmcontracts.Company, storekit.Page, error) {
-	return listPage(ctx, s, in.Sort, in.Limit, companyListSpec(in, s.clock()))
+	return listPage(s.withRollupAsOf(ctx), s, in.Sort, in.Limit, companyListSpec(in, s.clock(), s.companyTypes))
 }
 
 // ListCompaniesTx is ListCompanies inside a caller-opened transaction. Same
@@ -213,8 +213,8 @@ func (s *Store) ListCompaniesTx(ctx context.Context, tx pgx.Tx, in ListCompanies
 	if err := auth.Require(ctx, companyEntity, principal.ActionRead); err != nil {
 		return nil, storekit.Page{}, err
 	}
-	spec := companyListSpec(in, s.clock())
-	ctx, err := spec.prepare(ctx, tx)
+	spec := companyListSpec(in, s.clock(), s.companyTypes)
+	ctx, err := spec.prepare(s.withRollupAsOf(ctx), tx)
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
@@ -225,7 +225,7 @@ func (s *Store) ListCompaniesTx(ctx context.Context, tx pgx.Tx, in ListCompanies
 	return recs, page, err
 }
 
-func companyListSpec(in ListCompaniesInput, now time.Time) listPageSpec[crmcontracts.Company] {
+func companyListSpec(in ListCompaniesInput, now time.Time, declared companytypes.Registry) listPageSpec[crmcontracts.Company] {
 	shared := companyCommonFilters(in)
 	// The ladder is the installation's setting, read in the page's own
 	// transaction before the filters render.
@@ -273,7 +273,7 @@ func companyListSpec(in ListCompaniesInput, now time.Time) listPageSpec[crmcontr
 			if err != nil {
 				return nil, err
 			}
-			return appendCompanyEnumClauses(where, in, arg)
+			return appendCompanyEnumClauses(where, in, declared, arg)
 		},
 		scan: scanCompanyPage,
 		attach: func(ctx context.Context, tx pgx.Tx, companies []crmcontracts.Company) error {
@@ -299,7 +299,7 @@ func companyListSpec(in ListCompaniesInput, now time.Time) listPageSpec[crmcontr
 			if err := stampCompanyCapabilities(ctx, tx, companies); err != nil {
 				return err
 			}
-			return attachCompanyCounts(ctx, tx, companies, rollupAsOf())
+			return attachCompanyCounts(ctx, tx, companies, rollupAsOf(ctx))
 		},
 		cursorKey: func(last crmcontracts.Company) (time.Time, ids.UUID) {
 			return last.CreatedAt, ids.UUID(last.Id)
@@ -314,7 +314,7 @@ func companyListSpec(in ListCompaniesInput, now time.Time) listPageSpec[crmcontr
 // nothing. An empty 200 page would tell the reader the account list is empty
 // when the contract never accepted the question. The check runs here, inside
 // the store, so it lands after listPage's auth.Require.
-func appendCompanyEnumClauses(where []string, in ListCompaniesInput, arg func(any) int) ([]string, error) {
+func appendCompanyEnumClauses(where []string, in ListCompaniesInput, declared companytypes.Registry, arg func(any) int) ([]string, error) {
 	if in.Status != nil {
 		if !crmcontracts.ListCompaniesParamsStatus(*in.Status).Valid() {
 			return nil, httperr.Validation(filterStatus, "not_a_known_value",
@@ -344,7 +344,7 @@ func appendCompanyEnumClauses(where []string, in ListCompaniesInput, arg func(an
 		where = append(where, relationshipTypeClause(arg(*in.RelationshipType)))
 	}
 	if in.ExtensionRelationshipType != nil {
-		if _, declared := companytypes.Lookup(*in.ExtensionRelationshipType); !declared {
+		if _, known := declared.Lookup(*in.ExtensionRelationshipType); !known {
 			return nil, httperr.Validation("extension_relationship_type", "not_a_known_value",
 				"filter by a company type an installed extension declares, or leave the parameter off")
 		}

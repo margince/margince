@@ -6,6 +6,7 @@ package contacts
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -248,7 +249,7 @@ func (s *Store) writeLeadInTx(
 		return none, err
 	}
 	in.Clear = storekit.CoreFieldClears(in.Clear, active, in.CustomFields)
-	p, resumeRecompute, err := buildLeadPatch(current, in)
+	p, resumeRecompute, err := buildLeadPatch(current, in, slaNow(ctx))
 	if err != nil {
 		return none, err
 	}
@@ -374,7 +375,7 @@ func recordRescoreHistory(
 // (formulas §3.1, A68/ADR-0053) is sticky: setting a score demands a
 // written reason and retains the machine value; clearing the reason
 // resumes recompute.
-func buildLeadPatch(current crmcontracts.Lead, in UpdateLeadInput) (*storekit.Patch, bool, error) {
+func buildLeadPatch(current crmcontracts.Lead, in UpdateLeadInput, now time.Time) (*storekit.Patch, bool, error) {
 	p := storekit.NewPatch()
 	clears, scoreNamed := withoutScoreOverrideClears(in.Clear)
 	in.ClearScoreOverride = in.ClearScoreOverride || scoreNamed
@@ -465,7 +466,7 @@ func buildLeadPatch(current crmcontracts.Lead, in UpdateLeadInput) (*storekit.Pa
 		// outside the record of the change that caused it. The two agree on the
 		// condition: no owner yet, and no clock yet.
 		if current.RoutedAt == nil && current.OwnerId == nil {
-			stampArrival(p, *in.OwnerID, leadSLAClock().UTC())
+			stampArrival(p, *in.OwnerID, now)
 		}
 	}
 	return p, resumeRecompute, nil

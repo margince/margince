@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"testing"
+	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -182,7 +183,7 @@ func TestANamedNullOnTheScorePairEndsTheOverride(t *testing.T) {
 		"both":         {leadScoreField, leadScoreOverrideReasonField},
 		"beside title": {leadScoreField, "title"},
 	} {
-		p, resume, err := buildLeadPatch(leadWithOverride(), UpdateLeadInput{Clear: clear})
+		p, resume, err := buildLeadPatch(leadWithOverride(), UpdateLeadInput{Clear: clear}, time.Now())
 		if err != nil {
 			t.Fatalf("%s: clearing the override was refused: %v", name, err)
 		}
@@ -198,7 +199,7 @@ func TestANamedNullOnTheScorePairEndsTheOverride(t *testing.T) {
 
 func TestANamedNullOnTheScoreKeepsOtherClears(t *testing.T) {
 	p, _, err := buildLeadPatch(crmcontracts.Lead{Score: 23, Title: new("CTO")},
-		UpdateLeadInput{Clear: []string{leadScoreField, "title"}})
+		UpdateLeadInput{Clear: []string{leadScoreField, "title"}}, time.Now())
 	if err != nil {
 		t.Fatalf("clear refused: %v", err)
 	}
@@ -209,7 +210,7 @@ func TestANamedNullOnTheScoreKeepsOtherClears(t *testing.T) {
 
 func TestANullPhoneClearsTheLeadsNumber(t *testing.T) {
 	p, _, err := buildLeadPatch(crmcontracts.Lead{Phone: new("+84901234567")},
-		UpdateLeadInput{Clear: []string{leadPhoneColumn}})
+		UpdateLeadInput{Clear: []string{leadPhoneColumn}}, time.Now())
 	if err != nil {
 		t.Fatalf("clearing the phone was refused: %v", err)
 	}
@@ -224,12 +225,12 @@ func TestANullPhoneClearsTheLeadsNumber(t *testing.T) {
 func TestALeadUpdateCannotRewriteHowTheLeadArrived(t *testing.T) {
 	current := crmcontracts.Lead{Source: "connector:gmail:abc"}
 	for _, sent := range []string{"manual", "", "csv_import"} {
-		_, _, err := buildLeadPatch(current, UpdateLeadInput{Source: new(sent)})
+		_, _, err := buildLeadPatch(current, UpdateLeadInput{Source: new(sent)}, time.Now())
 		if !isSourceFieldError(err) {
 			t.Fatalf("source %q: want a source field error, got %v", sent, err)
 		}
 	}
-	p, _, err := buildLeadPatch(current, UpdateLeadInput{Source: new(" connector:gmail:abc ")})
+	p, _, err := buildLeadPatch(current, UpdateLeadInput{Source: new(" connector:gmail:abc ")}, time.Now())
 	if err != nil {
 		t.Fatalf("echoing the stored source must pass: %v", err)
 	}

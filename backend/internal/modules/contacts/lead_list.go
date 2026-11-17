@@ -142,13 +142,13 @@ func (s *Store) ListLeads(ctx context.Context, in ListLeadsInput) ([]crmcontract
 	if in.Sort == nil || *in.Sort == "" {
 		return s.listLeadWorkQueue(ctx, in)
 	}
+	// One instant for this read. The sla_state filter is built for the page and
+	// for the total, and both must judge the same leads overdue.
+	ctx = withPinnedSLANow(ctx, slaNow(ctx))
 	policy, err := s.slaPolicy(ctx)
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
-	// One instant for this read: the sla_state filter is built once for the
-	// page and once for the total, and they must judge the same leads overdue.
-	ctx = pinSLANow(ctx)
 	return listPage(ctx, s, in.Sort, in.Limit, listPageSpec[crmcontracts.Lead]{
 		entity:    leadEntity,
 		firstPage: in.Cursor == nil || *in.Cursor == "",

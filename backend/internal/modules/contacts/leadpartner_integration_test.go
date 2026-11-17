@@ -53,11 +53,10 @@ func messageCode(err error) string {
 	return fieldCode(err)
 }
 
-//testdb:serial swaps the package-level leadSLAClock, which its parallel siblings read
 func TestAcceptingAPartnersFirstLeadActivatesIt(t *testing.T) {
-	pinLeadAuditClock(t)
+	t.Parallel()
 	e := setupDedupe(t)
-	ctx := asStageAdmin(e, stageAdminGrants())
+	ctx, _ := pinLeadAuditClock(asStageAdmin(e, stageAdminGrants()))
 	partnerID, _ := newPartnerCompany(ctx, t, e, "Referrer GmbH", UpsertPartnerInput{PartnerRole: "consulting", RelationshipStage: new("ready")})
 
 	first := acceptReferredLead(ctx, t, e, partnerID, "First Referral")
