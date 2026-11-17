@@ -374,11 +374,11 @@ back in asks the company question again.
 **Company questions** (Worklist → Decisions): Margince asks which company a contact works for when
 it cannot tell. The row names the contact and says why. The website could not be read, named no
 company, sent you on to another website, or looks like a mail provider. Hidden contacts are counted,
-never named. Margince suggests a company only when one company you can see fits, and no second one. **Confirm
-company** makes it the company of the contacts on the domain; contacts at another company keep theirs.
+never named. Margince suggests a company only when one company you can see fits, and no second one.
+**Confirm** with its name links that company; contacts at another company keep theirs.
 
-**Choose another** opens the question with a company search and **Create company**. **Not now** puts
-it off until new mail arrives. **Stop capturing in your mailboxes** stops saving mail from the domain.
+**Choose another** opens one row per answer: search, **Create company**, read the site again, or
+**Not now**. **Stop capturing in your mailboxes** is there and in the row's **⋯** menu.
 
 **Sender decisions** (Settings → Connections → Activity): every address that came in through your mailbox, and
 what Margince decided about each. That is a contact, a role mailbox, an

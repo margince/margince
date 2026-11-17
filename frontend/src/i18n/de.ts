@@ -12592,6 +12592,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Jemand, der geschrieben hat, arbeitet bereits dort.",
   "worklist.domainQuestion.suggested": "Vorgeschlagenes Unternehmen: {name}.",
   "worklist.domainQuestion.confirm": "Unternehmen bestätigen",
+  "worklist.domainQuestion.confirmNamed": "{name} bestätigen",
+  "worklist.domainReview.anotherLabel": "Anderes Unternehmen",
+  "worklist.domainReview.newLabel": "Neues Unternehmen",
+  "worklist.domainReview.siteLabel": "Die Website",
+  "worklist.domainReview.vendorLabel": "Mail- oder Hosting-Anbieter",
+  "worklist.domainReview.laterLabel": "Später",
+  "worklist.domainReview.mailboxesLabel": "Deine Postfächer",
   "worklist.domainQuestion.confirmEffectNone":
     "Bestätigen verknüpft {domain} mit {company}. Kontakte, die schon bei einem anderen Unternehmen sind, behalten es.",
   "worklist.domainQuestion.confirmEffect_one":
