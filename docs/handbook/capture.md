@@ -377,8 +377,8 @@ company, sent you on to another website, or looks like a mail provider. Hidden c
 never named. Margince suggests a company only when one company you can see fits, and no second one.
 **Confirm** with its name links that company; contacts at another company keep theirs.
 
-**Choose another** opens the question, one row per answer: search, **Create company**, read the site
-again, **Not now** (until new mail), or **Stop capturing in your mailboxes**, also in the row's **⋯**.
+**Choose another** opens one row per answer: search, **Create company**, read the site again, or
+**Not now**. **Stop capturing in your mailboxes** is there and in the row's **⋯** menu.
 
 **Sender decisions** (Settings → Connections → Activity): every address that came in through your mailbox, and
 what Margince decided about each. That is a contact, a role mailbox, an
