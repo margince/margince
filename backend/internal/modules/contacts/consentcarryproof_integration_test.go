@@ -26,6 +26,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -129,7 +130,7 @@ func (e *promoteConsentEnv) seedConsentSubject(t *testing.T, column consentSubje
 // backs it — the pair the carry has to keep together or deliberately separate.
 func (e *promoteConsentEnv) seedCarriedConsent(t *testing.T, column consentSubject, subject, purpose ids.UUID) {
 	t.Helper()
-	now := time.Now().UTC()
+	now := clocktest.Now(t)
 	ctx := context.Background()
 	if _, err := e.owner.Exec(ctx,
 		`INSERT INTO contact_consent (`+string(column)+`, purpose_id, state, captured_at, source)
@@ -225,7 +226,7 @@ func TestACarriedWithdrawalKeepsItsRetentionFloor(t *testing.T) {
 	lead := e.seedConsentSubject(t, consentSubjectLead)
 	contact := e.seedConsentSubject(t, consentSubjectContact)
 	e.seedCarriedConsent(t, consentSubjectContact, contact, e.newsletter)
-	kept := time.Now().UTC().Add(366 * 24 * time.Hour).Truncate(time.Microsecond)
+	kept := clocktest.Now(t).Add(366 * 24 * time.Hour)
 	if _, err := e.owner.Exec(ctx, `
 		WITH state AS (
 		  INSERT INTO contact_consent (lead_id, purpose_id, state, captured_at, source)

@@ -430,7 +430,7 @@ func TestTheCapRefusesTheMessageAfterTheCeiling(t *testing.T) {
 	e.seedMarketingSubject(t)
 	// A code no pack in the tree claims, so registering it here cannot collide
 	// with a real jurisdiction's rules and cannot be affected by one.
-	messagingrules.Register(messagingrules.Rules{
+	testMessagingRules(t, messagingrules.Rules{
 		Jurisdiction: "zc", Version: 1,
 		FrequencyCap: &messagingrules.FrequencyCap{Messages: 3, Window: 24 * time.Hour},
 	})
@@ -508,8 +508,8 @@ func TestNoCountryAndNoCeilingBothLeaveTheMessageAlone(t *testing.T) {
 	}
 	// Registered with no FrequencyCap: a real jurisdiction that imposes no
 	// ceiling, which must behave like no jurisdiction at all for this rule.
-	messagingrules.Register(messagingrules.Rules{Jurisdiction: "zu", Version: 1})
-	messagingrules.Register(messagingrules.Rules{
+	testMessagingRules(t, messagingrules.Rules{Jurisdiction: "zu", Version: 1})
+	testMessagingRules(t, messagingrules.Rules{
 		Jurisdiction: "zv", Version: 1,
 		FrequencyCap: &messagingrules.FrequencyCap{Messages: 3, Window: 24 * time.Hour},
 	})
