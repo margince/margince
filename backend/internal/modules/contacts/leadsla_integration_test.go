@@ -21,6 +21,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // seedLeadCreatedAt seeds a working lead whose clock started at createdAt.
@@ -97,6 +98,59 @@ func TestSLAScanEscalatesEachBreachOnce(t *testing.T) {
 	}
 	if n := e.countEvents(t, "lead.sla_breached", fresh.UUID); n != 0 {
 		t.Errorf("a lead inside its target was escalated")
+	}
+}
+
+// A website form enquiry is the lead writing in, as an inbound email is. It
+// starts the clock, and the row, the filter and the scan agree on it.
+func TestAWebsiteFormEnquiryStartsTheFirstResponseClock(t *testing.T) {
+	e := setupPromoteConsent(t)
+	e.enableFirstResponseSLA(t)
+	now := time.Now().UTC()
+	createdAt := now.Add(-DefaultFirstResponseTarget - time.Hour)
+	id := ids.NewV7()
+	ctx := context.Background()
+	form, submission := ids.NewV7().String(), "submission"
+	if _, err := e.owner.Exec(ctx,
+		`INSERT INTO lead (id, full_name, email, status, source, source_system, source_id, captured_by, owner_id, created_at)
+		 VALUES ($1, 'Web Lead', 'web@sla.test', 'new', 'inbound', $2, $3, 'system', $4, $5)`,
+		id, provenance.WebFormSource, provenance.WebFormSourceID(form, submission), e.user, createdAt); err != nil {
+		t.Fatal(err)
+	}
+	note := ids.NewV7()
+	if _, err := e.owner.Exec(ctx,
+		`INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by, source_system, source_id)
+		 VALUES ($1, 'note', 'Website enquiry', $2, 'system', 'system', $3, $4)`,
+		note, createdAt, provenance.WebFormSource, provenance.WebFormSourceID(form, submission)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.owner.Exec(ctx,
+		`INSERT INTO activity_link (activity_id, entity_type, lead_id) VALUES ($1, 'lead', $2)`, note, id); err != nil {
+		t.Fatal(err)
+	}
+	lead := ids.From[ids.LeadKind](id)
+
+	read, err := e.store.GetLead(e.ctx, lead, storekit.LiveOnly)
+	if err != nil {
+		t.Fatalf("get: %v", err)
+	}
+	if read.SlaState == nil || *read.SlaState != crmcontracts.LeadSlaStateLeadSlaStateBreached {
+		t.Errorf("an unanswered website enquiry reads sla_state=%v, want breached", read.SlaState)
+	}
+	breached := crmcontracts.ListLeadsParamsSlaState(crmcontracts.LeadSlaStateLeadSlaStateBreached)
+	page, _, err := e.store.ListLeads(e.ctx, ListLeadsInput{SLAState: &breached})
+	if err != nil {
+		t.Fatalf("list breached: %v", err)
+	}
+	if len(page) != 1 || page[0].Id != read.Id {
+		t.Errorf("sla_state=breached lists %d leads, want the website enquiry", len(page))
+	}
+	breaches, err := e.store.ScanLeadSLA(e.ctx, now)
+	if err != nil {
+		t.Fatalf("scan: %v", err)
+	}
+	if len(breaches) != 1 || breaches[0].LeadID != lead {
+		t.Errorf("breaches = %+v, want the website enquiry %s", breaches, lead)
 	}
 }
 

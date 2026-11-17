@@ -5752,7 +5752,7 @@ export const en = {
   "leadHandling.readOnly": "Your role cannot change this setting.",
   "leadHandling.firstResponse": "First-response target",
   "leadHandling.firstResponseHint":
-    "Off by default. When on, every open lead gets a reply deadline, the list gains an Overdue view, and overdue leads sort first.",
+    "Off by default. When on, every open lead that wrote to you by email or through a website form gets a reply deadline, the list gains an Overdue view, and overdue leads sort first.",
   "leadHandling.targetMinutes": "Target (minutes)",
   "leadHandling.targetOutOfRange":
     "Enter a whole number of minutes from 15 to 10,080 (7 days).",

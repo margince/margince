@@ -152,9 +152,9 @@ required. The override stops the score being updated until you clear it.
 The score falls over time: under the score the panel says "activity points halve every 14
 days".
 
-There is an optional target for the first response to a lead, **off by default**, set
-between 15 minutes and 7 days. When it is on, leads show as **On time**, **Due
-soon** or **Overdue**.
+An optional first-response target, **off by default**, runs 15 minutes to 7 days. When
+on, a lead that wrote to you by email or a website form shows as **On time**, **Due
+soon** or **Overdue**; a lead you typed in or imported gets no deadline.
 
 ## Deals
 

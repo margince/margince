@@ -5667,7 +5667,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Vai trò hiện tại không có quyền thay đổi cài đặt này.",
   "leadHandling.firstResponse": "Mục tiêu phản hồi đầu tiên",
   "leadHandling.firstResponseHint":
-    "Mặc định tắt. Khi bật, mọi lead đang mở có hạn trả lời, danh sách có thêm chế độ xem Quá hạn, và lead quá hạn được xếp trước.",
+    "Mặc định tắt. Khi bật, mọi lead đang mở đã liên hệ qua email hoặc biểu mẫu trang web có hạn trả lời, danh sách có thêm chế độ xem Quá hạn, và lead quá hạn được xếp trước.",
   "leadHandling.targetMinutes": "Mục tiêu (phút)",
   "leadHandling.targetOutOfRange":
     "Nhập số phút nguyên từ 15 đến 10.080 (7 ngày).",

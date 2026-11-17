@@ -5817,7 +5817,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "leadHandling.readOnly": "Deine Rolle darf diese Einstellung nicht ändern.",
   "leadHandling.firstResponse": "Zielzeit für die erste Antwort",
   "leadHandling.firstResponseHint":
-    "Standardmäßig deaktiviert. Ist die Zielzeit aktiviert, erhält jeder offene Lead eine Antwortfrist, die Liste bekommt die Ansicht „Überfällig“, und überfällige Leads stehen oben.",
+    "Standardmäßig deaktiviert. Ist die Zielzeit aktiviert, erhält jeder offene Lead, der dir per E-Mail oder über ein Website-Formular geschrieben hat, eine Antwortfrist, die Liste bekommt die Ansicht „Überfällig“, und überfällige Leads stehen oben.",
   "leadHandling.targetMinutes": "Zielzeit (Minuten)",
   "leadHandling.targetOutOfRange":
     "Gib eine ganze Zahl an Minuten von 15 bis 10.080 (7 Tage) ein.",
