@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useEffect } from "react";
-import { replaceDial } from "../../lib/urlstate";
+import { useAddressWriters } from "../../lib/urlstate";
 import type { Worklist, WorklistItem } from "../../lib/worklisttypes";
 
 /**
@@ -44,7 +44,8 @@ export function useStaleFocusCleared(
   found: WorklistItem | undefined,
   loaded: boolean,
 ): void {
+  const { replaceDial } = useAddressWriters();
   useEffect(() => {
     if (key && loaded && !found) replaceDial(FOCUS_PARAM, undefined);
-  }, [key, found, loaded]);
+  }, [key, found, loaded, replaceDial]);
 }

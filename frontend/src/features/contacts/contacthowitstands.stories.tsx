@@ -22,7 +22,7 @@ type Contact360 = components["schemas"]["Contact360"];
 function render(view: Contact360) {
   return () => (
     <StoryProviders>
-      <ContactHowItStands view={view} />
+      <ContactHowItStands view={view} onOpenTab={() => undefined} />
     </StoryProviders>
   );
 }

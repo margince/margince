@@ -12,6 +12,9 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { navigateReplacing } from "../lib/router";
+import { ScreenAddress } from "../lib/screenaddress";
+import { currentParams, replaceDial } from "../lib/urlstate";
 import {
   type ListPage,
   ListTable,
@@ -45,14 +48,16 @@ function SearchableList() {
   );
 }
 
-function renderList() {
+function renderList(drawnFor?: string) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <SearchableList />
+        <ScreenAddress.Provider value={drawnFor ?? null}>
+          <SearchableList />
+        </ScreenAddress.Provider>
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -140,5 +145,55 @@ describe("a search box the reader is leaving", () => {
     await act(async () => {});
 
     expect(globalThis.location.hash).toBe("#/companies?q=brandt&sort=name");
+  });
+
+  it("drops a word still settling when the app replaces the address with another page", async () => {
+    globalThis.history.replaceState(null, "", "#/companies?sort=name");
+    vi.useFakeTimers();
+    renderList();
+    fireEvent.change(screen.getByPlaceholderText("Search"), {
+      target: { value: "acme" },
+    });
+
+    // The palette's create key opens the list's own form in place.
+    act(() =>
+      navigateReplacing({ screen: "companies", id: "new" }, currentParams()),
+    );
+    await act(async () => {
+      vi.advanceTimersByTime(SEARCH_DEBOUNCE_MS);
+    });
+
+    expect(globalThis.location.hash).toBe("#/companies/new?sort=name");
+  });
+
+  it("keeps a word still settling while a dial of the list turns", async () => {
+    globalThis.history.replaceState(null, "", "#/companies");
+    vi.useFakeTimers();
+    renderList();
+    fireEvent.change(screen.getByPlaceholderText("Search"), {
+      target: { value: "acme" },
+    });
+
+    act(() => replaceDial("sort", "name"));
+    await act(async () => {
+      vi.advanceTimersByTime(SEARCH_DEBOUNCE_MS);
+    });
+
+    expect(globalThis.location.hash).toBe("#/companies?q=acme&sort=name");
+  });
+
+  it("falls back to its own entry's word while the leave question holds it", async () => {
+    globalThis.history.replaceState(null, "", "#/contacts?q=acme");
+    vi.useFakeTimers();
+    renderList("#/contacts?q=acme");
+    const box = screen.getByPlaceholderText("Search");
+    fireEvent.change(box, { target: { value: "acme gmbh" } });
+
+    backLandsOn("#/companies?q=brandt");
+    await act(async () => {
+      globalThis.dispatchEvent(new PopStateEvent("popstate"));
+    });
+
+    expect(screen.getByDisplayValue("acme")).toBe(box);
   });
 });

@@ -8,9 +8,9 @@ import { ConfirmModal } from "../../design-system/confirmmodal";
 import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { useT } from "../../i18n";
+import { fromHere } from "../../lib/navigatefrom";
 import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
 import { reloadReportingFigures } from "../../lib/reportingfigures";
-import { navigate } from "../../lib/router";
 import { dealProductsKey } from "./deal360/dealproducts";
 import type { Offer } from "./offers";
 
@@ -229,7 +229,8 @@ export function RegenerateOfferAction({ offer }: Readonly<{ offer: Offer }>) {
         }),
       );
     },
-    onSuccess: (newDraft) => {
+    onMutate: fromHere,
+    onSuccess: (newDraft, _vars, from) => {
       queryClient.setQueryData(["offer", newDraft.id], newDraft);
       // The new draft revision is a new offer row on the same deal. The deal's
       // offers panel (deals.overview.tsx) must see it too, as AcceptOfferAction
@@ -237,7 +238,7 @@ export function RegenerateOfferAction({ offer }: Readonly<{ offer: Offer }>) {
       queryClient.invalidateQueries({
         queryKey: ["deal-offers", newDraft.deal_id],
       });
-      navigate({ screen: "offers", id: newDraft.id });
+      from.navigate({ screen: "offers", id: newDraft.id });
     },
   });
 

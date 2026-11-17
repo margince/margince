@@ -11,7 +11,7 @@ import {
 import { useLocale, useT } from "./i18n";
 import type { MessageKey } from "./i18n/en";
 import { composedScreens, findExtension, unitTitle } from "./lib/extensions";
-import { navigate } from "./lib/router";
+import { useAddressWriters } from "./lib/urlstate";
 
 // Every route chunk, registered as it is declared. A screen is split so the
 // login screen does not carry the app. It is warmed once a session exists, so a
@@ -348,19 +348,11 @@ export function ShareRoute({
   );
 }
 
-// The reset form itself, so the two places that answer #/reset-password render
-// one form. The first is `App`, ahead of the session gate and inside the
-// pre-session frame. The second is the routed table, which is total over
-// `Screen` and so has an entry for every address, this one included.
-//
-// A stale or bare reset link has no token, so the embedded form renders as an
-// ordinary login rather than ResetForm. LoginForm's onSuccess restores the
-// originally requested route, so it never navigates to the Brief for a
-// non-empty hash, and this hash is never empty. Without a navigate here, a
-// sign-in from this route would leave the reader signed in but still looking
-// at a login form.
+// Drawn by `App` ahead of the session gate and by the routed table. Sign-in
+// replaces onto home, or the reader stays on a spent link Back would reopen.
 export function ResetRoute() {
-  return <AuthScreen onAuthed={() => navigate({ screen: "home" })} />;
+  const { navigateReplacing } = useAddressWriters();
+  return <AuthScreen onAuthed={() => navigateReplacing({ screen: "home" })} />;
 }
 
 // #/ext/<unit> (ADR-0120): the composed extension tier's one route into the
