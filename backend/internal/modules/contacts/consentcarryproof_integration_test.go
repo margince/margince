@@ -130,7 +130,7 @@ func (e *promoteConsentEnv) seedConsentSubject(t *testing.T, column consentSubje
 // backs it — the pair the carry has to keep together or deliberately separate.
 func (e *promoteConsentEnv) seedCarriedConsent(t *testing.T, column consentSubject, subject, purpose ids.UUID) {
 	t.Helper()
-	now := time.Now().UTC()
+	now := clocktest.Now(t)
 	ctx := context.Background()
 	if _, err := e.owner.Exec(ctx,
 		`INSERT INTO contact_consent (`+string(column)+`, purpose_id, state, captured_at, source)

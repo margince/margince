@@ -35,9 +35,8 @@ var confirmRulesCountry struct {
 func placeUnderConfirmRules(t *testing.T, e *channelConsentEnv) {
 	t.Helper()
 	confirmRulesCountry.once.Do(func() {
-		confirmRulesCountry.code = testJurisdiction(t)
-		messagingrules.Register(messagingrules.Rules{
-			Jurisdiction: confirmRulesCountry.code, Version: 1,
+		confirmRulesCountry.code = testMessagingRules(t, messagingrules.Rules{
+			Version:                       1,
 			RecordConfirmationWithoutNews: true, ConsentConfirmationNeedsRequest: true,
 		})
 	})

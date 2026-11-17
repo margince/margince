@@ -56,14 +56,14 @@ func registerPackPair(t *testing.T) packPair {
 
 func registerPackPairOnce(t *testing.T) packPair {
 	t.Helper()
-	p := packPair{recipient: testJurisdiction(t), installation: testJurisdiction(t)}
-	messagingrules.Register(messagingrules.Rules{
-		Jurisdiction: p.recipient, Version: 1,
+	p := packPair{}
+	p.recipient = testMessagingRules(t, messagingrules.Rules{
+		Version:                        1,
 		Disclosures:                    []messaging.Disclosure{{Kind: messaging.ControllerIdentity}},
 		DataProtectionFollowsRecipient: true, DisclosureLanguage: string(mailcopy.Vietnamese),
 		NoLegitimateInterests: true, OptOutAcknowledgement: true,
 	})
-	messagingrules.Register(messagingrules.Rules{Jurisdiction: p.installation, Version: 1})
+	p.installation = testMessagingRules(t, messagingrules.Rules{Version: 1})
 	subjectrightsrules.Register(subjectrightsrules.Rules{
 		Jurisdiction: p.recipient, Version: 1,
 		Instruments: []messaging.Instrument{{Name: "Test Decree 1/2026"}},
