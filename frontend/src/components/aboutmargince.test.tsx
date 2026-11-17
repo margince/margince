@@ -12,6 +12,7 @@ import type { BuildRelease } from "../lib/buildrelease";
 import { AboutMargince } from "./aboutmargince";
 
 const SHA = "0123456789abcdef0123456789abcdef01234567";
+const CORE = "2026.2.1";
 const HINT = " (Copies to clipboard)";
 const COPIED = "Copied version to clipboard";
 
@@ -23,7 +24,7 @@ afterEach(() => {
 function renderAbout(build: BuildRelease) {
   render(
     <LocaleProvider initial="en">
-      <AboutMargince build={build} />
+      <AboutMargince build={build} surface="page" />
     </LocaleProvider>,
   );
 }
@@ -44,23 +45,23 @@ describe("the version", () => {
       "a core build",
       { kind: "core", release: "2026.2.1", revision: SHA },
       "2026.2.1 · 0123456",
-      "View commit on GitHub (Opens in a new tab)",
+      undefined,
     ],
     [
       "an instance build, with its core under it",
       {
         kind: "instance",
         instance: "2026.2.1-acme.3",
-        core: "2026.2.1",
+        core: CORE,
         revision: SHA,
       },
       "2026.2.1-acme.3 · 0123456",
-      "core 2026.2.1",
+      `core ${CORE}`,
     ],
     [
       "an instance build without its own release",
-      { kind: "instance", core: "2026.2.1", revision: SHA },
-      "core 2026.2.1 · 0123456",
+      { kind: "instance", core: CORE, revision: SHA },
+      `core ${CORE} · 0123456`,
       undefined,
     ],
     [
@@ -88,13 +89,14 @@ describe("the version", () => {
     expect(versionRow?.querySelector(".factlist-note")?.textContent).toBe(note);
   });
 
-  it("links a core build's commit to the core repository", () => {
+  it("links a core build's commit to the core repository, at the size of the text around it", () => {
     renderAbout({ kind: "core", release: "2026.2.1", revision: SHA });
     const commit = screen.getByRole("link", { name: /^View commit on GitHub/ });
     expect(commit).toHaveAttribute(
       "href",
       `https://github.com/margince/margince/commit/${SHA}`,
     );
+    expect(commit.closest(".t-caption")).toBeNull();
     expect(commit).toHaveAttribute("target", "_blank");
     expect(commit).toHaveAttribute("rel", "noopener noreferrer");
   });

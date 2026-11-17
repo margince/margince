@@ -128,7 +128,7 @@ export const ContentOnly: Story = {
   name: "Content without the dialog",
   render: (args) => (
     <StoryProviders>
-      <AboutMargince build={args.build} />
+      <AboutMargince build={args.build} surface="page" />
     </StoryProviders>
   ),
 };

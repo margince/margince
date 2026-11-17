@@ -88,21 +88,10 @@ function versionLine(build: BuildRelease, t: Translator): string {
   return short ? `${release} · ${short}` : release;
 }
 
-// Only a core build's commit is in the core repository; an instance's is in
-// the repository of whoever built it.
 function versionNote(build: BuildRelease, t: Translator): ReactNode {
-  const revision = knownRevision(build);
-  if (build.kind === "instance" && build.instance) {
-    return t("about.coreRelease", { version: build.core });
-  }
-  if (build.kind === "core" && revision) {
-    return (
-      <NewTabLink href={`${REPOSITORY}/commit/${revision}`}>
-        {t("about.viewCommit")}
-      </NewTabLink>
-    );
-  }
-  return undefined;
+  return build.kind === "instance" && build.instance
+    ? t("about.coreRelease", { version: build.core })
+    : undefined;
 }
 
 const COPIED_MS = 3000;
@@ -129,8 +118,11 @@ function VersionCopy({ build }: Readonly<{ build: BuildRelease }>) {
     return () => clearTimeout(timer);
   }, [copies]);
   const copied = copies !== null;
+  // Only a core build's commit is in the core repository; an instance's is in
+  // the repository of whoever built it.
+  const revision = build.kind === "core" ? knownRevision(build) : undefined;
   return (
-    <>
+    <div className="aboutmargince-version">
       <Button variant="link" align="start" onClick={copy.copy}>
         {copied ? (
           t("about.copiedVersion")
@@ -144,21 +136,28 @@ function VersionCopy({ build }: Readonly<{ build: BuildRelease }>) {
       <span className="sr-only" role="status">
         {copied ? t("about.copiedVersion") : ""}
       </span>
-      {copy.notice && (
-        <div className="aboutmargince-copyfailed">
-          {copy.notice}
-          <CopyableText text={report} label={t("about.version")} />
-        </div>
+      {revision && (
+        <NewTabLink href={`${REPOSITORY}/commit/${revision}`}>
+          {t("about.viewCommit")}
+        </NewTabLink>
       )}
-    </>
+      {copy.notice}
+      {copy.notice && <CopyableText text={report} label={t("about.version")} />}
+    </div>
   );
 }
 
-/** What this build of Margince is, under which license, and where it lives. */
-export function AboutMargince({ build }: Readonly<{ build: BuildRelease }>) {
+/**
+ * What this build of Margince is, under which license, and where it lives.
+ * `surface` sets the space around it for the dialog or the settings page.
+ */
+export function AboutMargince({
+  build,
+  surface,
+}: Readonly<{ build: BuildRelease; surface: "dialog" | "page" }>) {
   const t = useT();
   return (
-    <div className="aboutmargince">
+    <div className={`aboutmargince aboutmargince-in-${surface}`}>
       <div className="aboutmargince-brand">
         <Logomark />
         {t("shell.logoAria")}
@@ -241,11 +240,11 @@ export function AboutMarginceDialog({
       intent="form"
       returnFocusTo={returnFocusTo}
     >
-      <div className="form-stack aboutmargince-dialog">
+      <div className="form-stack">
         <Heading size="large" id={titleId}>
           {t("about.title")}
         </Heading>
-        <AboutMargince build={build} />
+        <AboutMargince build={build} surface="dialog" />
       </div>
     </Modal>
   );

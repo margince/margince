@@ -9,7 +9,7 @@ export function AboutPage() {
   return (
     <Panel>
       <PanelBody>
-        <AboutMargince build={buildRelease()} />
+        <AboutMargince build={buildRelease()} surface="page" />
       </PanelBody>
     </Panel>
   );

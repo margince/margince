@@ -6,7 +6,7 @@ import { StoryProviders } from "../../testing/story-utils";
 import { AboutPage } from "./aboutpage";
 
 const meta = {
-  title: "Settings/System/About Margince",
+  title: "Settings/System/About Margince/Page",
   component: AboutPage,
   parameters: { layout: "padded" },
   render: () => (

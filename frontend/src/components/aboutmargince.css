@@ -1,6 +1,6 @@
 .aboutmargince {
   display: grid;
-  gap: var(--space-4);
+  gap: var(--space-8);
   min-inline-size: 0;
   overflow-wrap: anywhere;
 }
@@ -32,22 +32,28 @@
   overflow: visible;
 }
 
-.aboutmargince-copyfailed {
+/* The version, its commit link and any copy failure stand at a note's distance. */
+.aboutmargince-version {
   display: grid;
-  gap: var(--space-2);
+  justify-items: start;
+  gap: var(--space-1);
 }
 
 .aboutmargince-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1) var(--space-4);
+  display: grid;
+  justify-items: start;
+  gap: var(--space-2);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-/* The title and the brand under it keep the body's rhythm, not the default
-   space under a dialog title. */
-.modal > .form-stack.aboutmargince-dialog {
-  gap: var(--space-4);
+/* The title stands as far from the brand as the brand from the list. */
+.modal > .form-stack:has(> .aboutmargince-in-dialog) {
+  gap: var(--space-8);
+}
+
+/* One step past the panel's own inset above the mark. */
+.aboutmargince-in-page {
+  padding-block-start: var(--space-1);
 }
