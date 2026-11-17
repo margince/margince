@@ -184,8 +184,9 @@ func open(ctx context.Context, rt extension.Runtime, in json.RawMessage) (json.R
 
 `rt` is the **only** way a unit reaches the core. The core makes a new one for each call, and it stops
 working the moment the handler returns (`extension.ErrRuntimeExpired`). Today it gives `rt.Secrets()`,
-`rt.Tx()`, `rt.Caller()`, `rt.Ingest()` and `rt.SyncNow()`. A handler with nobody behind it also gets six system
-reads. They are `rt.Deals()`, `rt.Authority()`, `rt.Directory()`, `rt.Activities()` and `rt.SetAside()`
+`rt.Tx()`, `rt.Caller()`, `rt.Ingest()` and `rt.SyncNow()`. A handler with nobody behind it also gets these system
+reads. They are `rt.Deals()`, `rt.Authority()`, `rt.Directory()`, `rt.Activities()`, `rt.SetAside()`,
+`rt.Companies()` and `rt.MailContent()`
 (see [Read deals and colleagues from a handler](#read-deals-and-colleagues-from-a-handler)).
 
 What the surface will serve, and what it will not:
@@ -1291,7 +1292,7 @@ plan for:
 ### Read deals and colleagues from a handler
 
 Your SQL may touch only your own tables. So a handler reads a core deal, and the colleagues on it, through
-six system reads. No user's rights limit what they read. That is why they answer on a job tick or a bus
+system reads. No user's rights limit what they read. That is why they answer on a job tick or a bus
 delivery, where no user gets the answer.
 
 In all other places `Deals().Get`, `Deals().Responsible`,
@@ -1317,6 +1318,8 @@ SystemReads: []extension.SystemRead{
 	extension.SystemReadDirectory, // Directory().Emails
 	extension.SystemReadActivities, // Activities().Mail
 	extension.SystemReadSetAside, // SetAside().Contact and Contacts
+	extension.SystemReadCompanies, // Companies().Get and List
+	extension.SystemReadMailContent, // MailContent().Get
 },
 ```
 
@@ -1355,6 +1358,21 @@ mail, err := rt.Activities().Mail(ctx, member, d.Entity.ID, extension.MailQuery{
   It answers only for a colleague who connected your unit and has not left. Any other colleague answers `ErrForbidden`.
   It gives that colleague's own answer, never another's, and nothing else about the contact. A contact that is not
   there answers `none`. It only reads: the colleague changes it through the product's own routes.
+- **`Companies` reads the installation's companies.** `Get` answers a `CompanySummary`. It holds the name, legal
+  name, lifecycle and owner. It also holds the source system and source id, the time of the last change, and
+  whether the company is archived.
+
+  `List` gives pages in id order, at most `extension.MaxReadPage` each. It leaves out archived companies unless
+  you set `IncludeArchived`. A company only its owner may see is left out of both. `Get` answers `ErrNotFound`
+  for it, so an id cannot be used to probe.
+- **`MailContent` reads what one mail says.** `MailContent().Get(ctx, mailID)` answers the subject, body,
+  audience, content state, capture label, source id and time. Its `BulkMail` flag is true for a mail the sender sent to a list.
+  
+
+  It answers only mail that the whole workspace may read. A mail that is private to its senders and receivers,
+  archived, held back from reading, or not an email answers `ErrNotFound`. A mail whose subject or body was
+  taken out answers the content state `withheld` and gives neither. Ask `Authority().CanRead` before you show a
+  colleague what you kept from it.
 - **A private reply is not seen.** A reply that sits only in a private mailbox is not in `Mail`. So "no reply
   yet" is a reminder for a colleague to check, not a fact. Never act on it alone, for example by sending a
   message.
