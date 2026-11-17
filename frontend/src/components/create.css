@@ -3,3 +3,28 @@
 .create-view-existing {
   align-self: flex-start;
 }
+
+.form-flow {
+  border: none;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.form-flow > legend {
+  padding: 0;
+  margin-block-end: var(--fieldGap);
+}
+
+.form-flow-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.form-flow-reading {
+  min-width: 0;
+  overflow-wrap: break-word;
+}

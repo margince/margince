@@ -8,13 +8,20 @@ import {
 import { Button, Field } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { refuseUnreadableField } from "../design-system/formvalidity";
+import { DiscardDraftQuestion } from "../design-system/modal";
 import { useSinglePress } from "../design-system/presslatch";
 import { RecordFormDialog } from "../design-system/recordformdialog";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { navigate, type Route } from "../lib/router";
-import { fieldControl, MultiselectField } from "./create.controls";
 import {
+  FlowFieldRow,
+  fieldControl,
+  MultiselectField,
+  ReadOnlyFieldRow,
+} from "./create.controls";
+import {
+  answerless,
   type CreateField,
   type FormRows,
   fieldLabel,
@@ -93,15 +100,26 @@ export function RecordFormBody({
   const [edited, setEdited] = useState(false);
   const [editedOpen, setEditedOpen] = useState(dialog?.open);
   // Each opening starts unchanged; a close that is not a save asks only after an edit.
+  const [following, setFollowing] = useState<(() => void) | null>(null);
   if (dialog && dialog.open !== editedOpen) {
     setEditedOpen(dialog.open);
     setEdited(false);
+    setFollowing(null);
   }
+  const follow = (open: () => void) => {
+    if (edited) {
+      setFollowing(() => open);
+      return;
+    }
+    onClose();
+    open();
+  };
   const setVisibleValues = (next: Record<string, string>) => {
     setEdited(true);
     setValues(submittedValues(fields, next));
   };
   const requiredMissing = shown.some((field) => {
+    if (answerless(field)) return false;
     if (field.type === "repeatable") {
       return !rowsRequirementMet(field, rows[field.key] ?? []);
     }
@@ -109,6 +127,7 @@ export function RecordFormBody({
   });
   const refusals = new Map(
     shown.flatMap((field) => {
+      if (answerless(field)) return [];
       const refusal = field.validate?.(values[field.key] ?? "", values, rows);
       return refusal ? [[field.key, refusal] as const] : [];
     }),
@@ -149,6 +168,26 @@ export function RecordFormBody({
             <p className="form-divider t-label" key={field.key}>
               {fieldLabel(field, t)}
             </p>
+          );
+        }
+        if (field.flow) {
+          return (
+            <FlowFieldRow
+              key={field.key}
+              field={field}
+              flow={field.flow}
+              disabled={pending}
+              onFollow={follow}
+            />
+          );
+        }
+        if (field.readOnly) {
+          return (
+            <ReadOnlyFieldRow
+              key={field.key}
+              field={field}
+              readOnly={field.readOnly}
+            />
           );
         }
         if (field.type === "repeatable") {
@@ -226,6 +265,16 @@ export function RecordFormBody({
           reason is the only thing saying why the form is still open. */}
       {notice}
       {!notice && error && <ErrorLine>{error}</ErrorLine>}
+      <DiscardDraftQuestion
+        open={following !== null}
+        body={t("unsaved.dialogBody")}
+        onKeep={() => setFollowing(null)}
+        onDiscard={() => {
+          setFollowing(null);
+          onClose();
+          following?.();
+        }}
+      />
       {!notice && existing && resolveExisting && (
         <Button
           type="button"

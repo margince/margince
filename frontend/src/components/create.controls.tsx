@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 import {
   Button,
   Field,
@@ -28,6 +28,7 @@ import {
   joinMultiselectValue,
   splitMultiselectValue,
 } from "./create.multiselect";
+import "./create.css";
 
 // The control half of a field row. The wrapping `Field` owns the label, id and
 // described-by seam, so the wiring arrives whole as `control`. The picked
@@ -167,6 +168,61 @@ export function fieldControl(
       placeholder={field.placeholder}
       onChange={(event) => setValue(event.target.value)}
     />
+  );
+}
+
+// Text rather than a read-only input, which reads as a box to type in.
+export function ReadOnlyFieldRow({
+  field,
+  readOnly,
+}: Readonly<{
+  field: CreateField;
+  readOnly: NonNullable<CreateField["readOnly"]>;
+}>) {
+  const t = useT();
+  const reasonId = useId();
+  return (
+    <fieldset className="field form-flow" aria-describedby={reasonId}>
+      <legend className="t-label">{fieldLabel(field, t)}</legend>
+      {readOnly.reading && (
+        <span className="form-flow-reading">{readOnly.reading}</span>
+      )}
+      <p className="t-caption" id={reasonId}>
+        {readOnly.reason}
+      </p>
+    </fieldset>
+  );
+}
+
+export function FlowFieldRow({
+  field,
+  flow,
+  disabled,
+  onFollow,
+}: Readonly<{
+  field: CreateField;
+  flow: NonNullable<CreateField["flow"]>;
+  disabled: boolean;
+  onFollow: (open: () => void) => void;
+}>) {
+  const t = useT();
+  const label = fieldLabel(field, t);
+  return (
+    <fieldset className="field form-flow">
+      <legend className="t-label">{label}</legend>
+      <div className="form-flow-line">
+        <span className="form-flow-reading">
+          {flow.reading ?? t("field.unset")}
+        </span>
+        <Button
+          variant="link"
+          disabled={disabled}
+          onClick={() => onFollow(flow.open)}
+        >
+          {t("inlineChoice.change", { field: label })}
+        </Button>
+      </div>
+    </fieldset>
   );
 }
 
