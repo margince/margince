@@ -93,8 +93,8 @@ func toolNames(t *testing.T, body string) []string {
 	return names
 }
 
-//testdb:serial flushes and reads the package's one Redis database
 func TestDispactListsTheAgreedToolsAndNothingElse(t *testing.T) {
+	t.Parallel()
 	e := setupDispact(t)
 	resp := listTools(t, e.AppEnv, e.token(t, dispactAdmin, nil))
 	if resp.StatusCode != http.StatusOK {
@@ -114,8 +114,8 @@ func TestDispactListsTheAgreedToolsAndNothingElse(t *testing.T) {
 	}
 }
 
-//testdb:serial flushes and reads the package's one Redis database
 func TestADispactCallActsThroughTheCallersOwnPassport(t *testing.T) {
+	t.Parallel()
 	e := setupDispact(t)
 	resp := e.call(t, e.token(t, dispactAdmin, nil), "whoami")
 	if resp.StatusCode != http.StatusOK || strings.Contains(resp.Body, `"isError":true`) {
@@ -133,8 +133,8 @@ func TestADispactCallActsThroughTheCallersOwnPassport(t *testing.T) {
 	}
 }
 
-//testdb:serial flushes and reads the package's one Redis database
 func TestADispactCallCannotReachAToolOutsideTheList(t *testing.T) {
+	t.Parallel()
 	e := setupDispact(t)
 	resp := e.call(t, e.token(t, dispactAdmin, nil), "create_record")
 	if !strings.Contains(resp.Body, `"isError":true`) || !strings.Contains(resp.Body, "unknown tool") {
@@ -142,8 +142,8 @@ func TestADispactCallCannotReachAToolOutsideTheList(t *testing.T) {
 	}
 }
 
-//testdb:serial flushes and reads the package's one Redis database
 func TestTheRouteRefusesABadCallToken(t *testing.T) {
+	t.Parallel()
 	e := setupDispact(t)
 	replayed := e.token(t, dispactAdmin, nil)
 	if resp := listTools(t, e.AppEnv, replayed); resp.StatusCode != http.StatusOK {
@@ -161,8 +161,8 @@ func TestTheRouteRefusesABadCallToken(t *testing.T) {
 	}
 }
 
-//testdb:serial flushes and reads the package's one Redis database
 func TestACallerWithNoMemberIsListedButRefusedA403(t *testing.T) {
+	t.Parallel()
 	e := setupDispact(t)
 	if resp := listTools(t, e.AppEnv, e.token(t, "stranger@elsewhere.test", nil)); resp.StatusCode != http.StatusOK {
 		t.Fatalf("a seatless tools/list → %d %s, want the list", resp.StatusCode, resp.Body)

@@ -161,9 +161,8 @@ func readAgentPolicyAsMachinery(e *integration.Env) (agentvolume.Policy, error) 
 
 // The meter judges an agent by what an admin saved, read through the same
 // source the API composes.
-//
-//testdb:serial flushes and reads the package's one Redis database
 func TestAWriteAllowanceSavedByAnAdminBindsTheAgent(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	h := allowanceHandlers(e, wallClock(t))
 	at := clocktest.Now(t)
@@ -196,9 +195,8 @@ func TestAWriteAllowanceSavedByAnAdminBindsTheAgent(t *testing.T) {
 
 // A step-up on a connection's passport releases the connection's counter: the
 // passport the agent was refused on may have been renewed since.
-//
-//testdb:serial flushes and reads the package's one Redis database
 func TestAReleaseOfAConnectionsPassportWidensTheConnection(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	passport, grant := seedConnectionPassport(t, e)
@@ -260,9 +258,8 @@ func wallClock(t *testing.T) func() time.Time {
 
 // A step-up answered after its passport row is gone still decides. The
 // passport is counted as itself, as it was if it was not a connection's.
-//
-//testdb:serial flushes and reads the package's one Redis database
 func TestAReleaseOfAGonePassportStillDecides(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	meter := agentvolume.NewWithClock(redistest.Client(t), agentvolume.Limits{Writes: 1}, time.Hour, wallClock(t))

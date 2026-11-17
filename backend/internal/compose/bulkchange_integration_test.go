@@ -446,9 +446,8 @@ func TestAnExecutionNeverChangesARecordItsPreviewExcluded(t *testing.T) {
 // Two changes by one agent running at once, each of which alone fits the
 // budget left and together do not: exactly one commits, and the counter
 // ends at the limit rather than past it.
-//
-//testdb:serial flushes and reads the package's one Redis database
 func TestTwoConcurrentChangesCannotBothSpendTheSameRemainder(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	meter := agentvolume.New(redistest.Client(t), agentvolume.Limits{Writes: 30}, agentvolume.DefaultWindow)
 	engine := newBulkEngine(e.DB(), auth.NewGate(nil, auth.WithVolumeMeter(meter)))
@@ -516,9 +515,8 @@ func TestTheRetentionPassDeletesLapsedConfirmationsAndKeepsLiveOnes(t *testing.T
 
 // A reservation for a change that then fails to commit is given back, so the
 // agent is not charged for records that never changed.
-//
-//testdb:serial flushes and reads the package's one Redis database
 func TestAChangeThatDoesNotCommitGivesItsReservationBack(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	meter := agentvolume.New(redistest.Client(t), agentvolume.Limits{Writes: 30}, agentvolume.DefaultWindow)
 	engine := newBulkEngine(e.DB(), auth.NewGate(nil, auth.WithVolumeMeter(meter)))

@@ -15,8 +15,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 )
 
-//testdb:serial flushes and reads the package's one Redis database
 func TestWeightedPacingIsAtomicAcrossRedisRegistries(t *testing.T) {
+	t.Parallel()
 	ctx, rdb := sharedTestRedis(t)
 	first, second := Shared(rdb).NewPacer(func() time.Time { return clocktest.Now(t) }), Shared(rdb).NewPacer(func() time.Time { return clocktest.Now(t) })
 	budgets := []Budget{{Key: "shared-project", PerMinute: 100, Cost: 100}, {Key: "shared-mailbox", PerMinute: 100, Cost: 100}}
@@ -57,8 +57,8 @@ func TestWeightedPacingIsAtomicAcrossRedisRegistries(t *testing.T) {
 	}
 }
 
-//testdb:serial flushes and reads the package's one Redis database
 func TestRedisPauseExtendsOneSharedDeadlineWithoutShorteningIt(t *testing.T) {
+	t.Parallel()
 	ctx, rdb := sharedTestRedis(t)
 	first, second := Shared(rdb).NewPacer(func() time.Time { return clocktest.Now(t) }), Shared(rdb).NewPacer(func() time.Time { return clocktest.Now(t) })
 	if err := first.Pause(ctx, "mailbox", 2*time.Minute); err != nil {

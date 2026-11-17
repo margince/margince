@@ -23,9 +23,8 @@ const mcpCallsPerMinute = 240
 // The edge counts in fixed one-minute windows on the real clock, so a run may
 // cross one boundary. Two windows of calls then always reach a User's refusal,
 // and the first refusal can never come before the ceiling.
-//
-//testdb:serial flushes and reads the package's one Redis database
 func TestAnAdminsAgentIsUnpacedAndAUsersIsPacedOnMCP(t *testing.T) {
+	t.Parallel()
 	d := roleBoundDoors(t, "mcp-pacing")
 	d.E.DescribeCompany(t)
 	const email, password = "rep@mcp-pacing.test", "mcp-pacing-password"

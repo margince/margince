@@ -36,8 +36,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/testdb"
 )
 
-//testdb:serial flushes and reads the package's one Redis database
 func TestABootFailureAfterALaneStartedStillJoinsIt(t *testing.T) {
+	t.Parallel()
 	pool := workerTestPool(t)
 	rdb := redistest.Client(t)
 

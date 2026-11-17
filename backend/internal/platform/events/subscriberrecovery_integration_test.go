@@ -24,8 +24,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-//testdb:serial flushes and reads the package's one Redis database
 func TestSubscriberSurvivesItsGroupBeingPurged(t *testing.T) {
+	t.Parallel()
 	ctx, rdb := purgeTestRedis(t)
 	group := kevents.Groups()[0]
 

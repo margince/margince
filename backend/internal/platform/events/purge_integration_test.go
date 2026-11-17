@@ -11,45 +11,25 @@ package events
 import (
 	"context"
 	"fmt"
-	"os"
 	"testing"
 	"time"
 
 	"github.com/redis/go-redis/v9"
 
-	"github.com/margince/margince/backend/internal/platform/testdb"
+	"github.com/margince/margince/backend/internal/platform/redistest"
+
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 )
 
-// purgeTestRedis mirrors bus_integration_test.go's setup: a per-test Redis
-// db (never db 0, which a running `make dev` owns), flushed clean before
-// the test runs so purge assertions never inherit another test's keys.
+// purgeTestRedis is a Redis database of this test's own, flushed clean so
+// purge assertions never inherit another test's keys.
 func purgeTestRedis(t *testing.T) (context.Context, *redis.Client) {
 	t.Helper()
-	redisAddr := os.Getenv("MARGINCE_TEST_REDIS")
-	if redisAddr == "" {
-		t.Fatal("MARGINCE_TEST_REDIS not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
-	ctx := t.Context()
-
-	rdb := redis.NewClient(&redis.Options{Addr: redisAddr, DB: testdb.RedisDB(t)})
-	if err := rdb.Ping(ctx).Err(); err != nil {
-		t.Fatalf("redis at %s unreachable — run `make db-up`: %v", redisAddr, err)
-	}
-	if err := rdb.FlushDB(ctx).Err(); err != nil {
-		t.Fatalf("flushing test redis db: %v", err)
-	}
-	t.Cleanup(func() {
-		if err := rdb.Close(); err != nil {
-			t.Errorf("closing redis client: %v", err)
-		}
-	})
-
-	return ctx, rdb
+	return t.Context(), redistest.Client(t)
 }
 
-//testdb:serial flushes and reads the package's one Redis database
 func TestPurgeStreamsEmptiesEveryCatalogStreamAndRestoresEveryGroup(t *testing.T) {
+	t.Parallel()
 	ctx, rdb := purgeTestRedis(t)
 	for _, stream := range kevents.Streams() {
 		if err := rdb.XAdd(ctx, &redis.XAddArgs{Stream: stream, Values: map[string]any{"v": "{}"}}).Err(); err != nil {
@@ -89,8 +69,8 @@ func TestPurgeStreamsEmptiesEveryCatalogStreamAndRestoresEveryGroup(t *testing.T
 	}
 }
 
-//testdb:serial flushes and reads the package's one Redis database
 func TestPurgeDedupeDeletesOnlyDedupeKeys(t *testing.T) {
+	t.Parallel()
 	ctx, rdb := purgeTestRedis(t)
 	if err := rdb.Set(ctx, DedupeKeyPrefix+"cg:probe:abc", "1", time.Minute).Err(); err != nil {
 		t.Fatalf("seeding a dedupe key: %v", err)
@@ -118,9 +98,8 @@ func TestPurgeDedupeDeletesOnlyDedupeKeys(t *testing.T) {
 // forcing PurgeDedupe through its mid-scan flush (len(batch) == scanBatch) as
 // well as the final flush after the loop — a count that survives both is the
 // only way to know the batching itself drops no keys.
-//
-//testdb:serial flushes and reads the package's one Redis database
 func TestPurgeDedupeFlushesMidScan(t *testing.T) {
+	t.Parallel()
 	ctx, rdb := purgeTestRedis(t)
 	const seeded = scanBatch + 1
 

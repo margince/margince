@@ -39,9 +39,8 @@ import (
 // The write scope is what it holds, so this is not "a credential with nothing"
 // being turned away at a door that wants something — it is a credential that
 // was deliberately narrowed being held to the narrowing.
-//
-//testdb:serial flushes and reads the package's one Redis database
 func TestAPassportWithoutTheReadScopeIsRefusedOnTheRestDoor(t *testing.T) {
+	t.Parallel()
 	e, _ := boundedApp(t, "read-scope-rest", 100)
 	seedContacts(t, e, 2)
 

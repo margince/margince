@@ -12,8 +12,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/redistest"
 )
 
-//testdb:serial flushes and reads the package's one Redis database
 func TestAReleasedIDCanBeUsedOnceMore(t *testing.T) {
+	t.Parallel()
 	guard := New(redistest.Client(t))
 	ctx := t.Context()
 	for i, want := range []bool{true, false} {
