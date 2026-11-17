@@ -73,6 +73,8 @@ func (m Models) Complete(ctx context.Context, req extension.CompleteRequest) (st
 	switch {
 	case errors.Is(err, model.ErrSubjectRestricted):
 		return "", fmt.Errorf("%w: a contact this request carries is under a restriction of processing", extension.ErrForbidden)
+	case errors.Is(err, model.ErrAttachmentUnsupported):
+		return "", fmt.Errorf("%w: the model for this tier cannot read one of the attachments; ask for another tier", extension.ErrInvalid)
 	case err != nil:
 		slog.ErrorContext(ctx, "extcapability: an extension model call failed", "err", err, "unit", m.Unit)
 		return "", ErrModelFailed
@@ -123,7 +125,49 @@ func Request(req extension.CompleteRequest) (model.Request, error) {
 	if err != nil {
 		return model.Request{}, err
 	}
-	return model.Request{System: req.System, Messages: messages, MaxTokens: req.MaxTokens, Subjects: subjects}, nil
+	tier, err := tierOf(req.Tier)
+	if err != nil {
+		return model.Request{}, err
+	}
+	files, err := attachmentsOf(req.Attachments)
+	if err != nil {
+		return model.Request{}, err
+	}
+	return model.Request{
+		System: req.System, Messages: messages, MaxTokens: req.MaxTokens, Subjects: subjects,
+		Tier: tier, Attachments: files, ResponseSchema: req.JSONSchema,
+	}, nil
+}
+
+// tierOf names the router's rung for the tier a unit asked for.
+func tierOf(tier extension.ModelTier) (string, error) {
+	switch tier {
+	case extension.ModelTierDefault:
+		return "", nil
+	case extension.ModelTierCheap:
+		return string(ai.TierCheapCloud), nil
+	case extension.ModelTierPremium:
+		return string(ai.TierPremium), nil
+	}
+	return "", fmt.Errorf("%w: Tier is cheap or premium, not %q", extension.ErrInvalid, string(tier))
+}
+
+// attachmentsOf checks a unit's files before any byte reaches a provider.
+func attachmentsOf(files []extension.Attachment) ([]model.Attachment, error) {
+	if len(files) > extension.MaxAttachments {
+		return nil, fmt.Errorf("%w: a request carries at most %d attachments", extension.ErrInvalid, extension.MaxAttachments)
+	}
+	var out []model.Attachment
+	for _, file := range files {
+		if !slices.Contains([]string{"image/png", "image/jpeg", "image/webp", "image/gif", "application/pdf"}, file.ContentType) {
+			return nil, fmt.Errorf("%w: an attachment is an png, jpeg, webp or gif image or a PDF, not %q", extension.ErrInvalid, file.ContentType)
+		}
+		if len(file.Data) == 0 || len(file.Data) > extension.MaxAttachmentBytes {
+			return nil, fmt.Errorf("%w: an attachment holds 1 byte to %d bytes", extension.ErrInvalid, extension.MaxAttachmentBytes)
+		}
+		out = append(out, model.Attachment{MIME: file.ContentType, Bytes: file.Data, Name: file.Name})
+	}
+	return out, nil
 }
 
 func subjectsOf(req extension.CompleteRequest) (*model.Subjects, error) {

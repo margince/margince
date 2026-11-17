@@ -36,6 +36,12 @@ The declared needs are in `manifest.generated.json` and in the `needs` list that
 | Names the unit beside the call's correlation id in the audit trail | `system_log`, action `extension_model_call` |
 | Refuses a contact under a restriction of processing | the request's `About` list |
 
+`Tier` pins a request to the cheap or the premium model. The installation still decides which model that is. A tier with no model bound fails the call.
+
+`Attachments` sends images (`image/png`, `image/jpeg`, `image/webp`, `image/gif`) or `application/pdf` files, up to 8 files of 20 MB each. A model that cannot read a file's type fails the call with `ErrInvalid`. It never drops the file. A filled-in form is contact data, so name its record in `About`.
+
+`JSONSchema` makes the model answer one JSON value of that schema, and nothing around it.
+
 A request names the core records its text was built from in `About`, or says in `NoContactData` why it holds no contact's data. A request with neither is refused with `ErrInvalid`. A request that names a contact under a restriction of processing is refused with `ErrForbidden`.
 
 | Call | Answer |
