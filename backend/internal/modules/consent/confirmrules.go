@@ -88,9 +88,8 @@ func (g requestGate) refuses(class messagingrules.PurposeClass) bool {
 }
 
 // mayAskByMail is whether a user may send this contact a consent mail about
-// the purpose. The mint refuses what fails it, and the no-basis warning
-// offers only a purpose that passes, so the warning never offers a request
-// the mint refuses.
+// the purpose. The mint refuses what fails it. The no-basis warning offers
+// only a purpose that passes, so it never offers a request the mint refuses.
 func mayAskByMail(purpose askedPurpose, gate requestGate) bool {
 	return confirmableByMail(purpose) && !gate.refuses(purpose.class)
 }

@@ -99,8 +99,8 @@ type AskOutcome = Readonly<{
 
 /**
  * Mails each contact the consent request for its purpose. A contact asked once
- * is not asked again while the dialog is open, so a retry after a partial
- * failure asks only the contacts that failed.
+ * is not asked again while the dialog is open. So a retry asks only the
+ * contacts that failed.
  */
 function useAskForConsent(requests: readonly ConsentRequest[]) {
   const t = useT();
