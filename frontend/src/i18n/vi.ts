@@ -20287,7 +20287,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.promiseSettleFailed":
     "Không thể đánh dấu cam kết là đã hoàn thành. Thử lại.",
   "worklist.verb.meetingSkipNextStep": "Bỏ qua bước tiếp theo",
-  "worklist.verb.meetingNextStep": "Bước tiếp theo là gì?",
+  "worklist.verb.meetingNotes": "Ghi chú",
+  "worklist.verb.meetingEditNotes": "Sửa ghi chú",
+  "worklist.verb.meetingNotesSaved": "Đã lưu ghi chú",
   "worklist.verb.meetingHowDidItGo": "Cuộc họp thế nào?",
   "worklist.verb.meetingAddNotes": "Thêm ghi chú",
   "worklist.verb.meetingUpdateTitle": "Cuộc họp",
@@ -20303,6 +20305,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.meetingDayMissing":
     "Ngày này không có trong múi giờ của công ty. Chọn ngày khác.",
   "worklist.verb.meetingAddNotesFor": "Thêm ghi chú: {subject}",
+  "worklist.verb.meetingEditNotesFor": "Sửa ghi chú: {subject}",
   "worklist.verb.meetingHeldFor": "Đã diễn ra: {subject}",
   "worklist.verb.meetingCanceledFor": "Không diễn ra: {subject}",
   "worklist.verb.meetingCancelInCalendar":
