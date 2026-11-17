@@ -26,6 +26,9 @@ type TaskWindow struct {
 	// Team is the seats a team view keeps, plus unassigned work. Nil reads the
 	// scope unnarrowed.
 	Team []ids.UUID
+	// DerivedFrom keeps only the tasks derived from these activities. Only
+	// TasksAfter reads it; nil keeps every task.
+	DerivedFrom []ids.UUID
 }
 
 // TaskBacklog counts a task window whole and continues it past the lane's
@@ -42,9 +45,6 @@ type TaskBacklog interface {
 	// TasksOnDeals reads every task of the window filed under any of these
 	// deals, drawn as the lane draws them.
 	TasksOnDeals(ctx context.Context, window TaskWindow, deals []ids.UUID) ([]Task, error)
-	// TasksFromActivities reads every task of the window derived from any of
-	// these activities, drawn as the lane draws them.
-	TasksFromActivities(ctx context.Context, window TaskWindow, sources []ids.UUID) ([]Task, error)
 }
 
 // Positioned is one row a backlog read returned, with the position that

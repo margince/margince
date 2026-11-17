@@ -99,7 +99,7 @@ through a verb of their own: a task is completed, a decision is decided.
 
 The task source's admitted population is counted in SQL on a first page, only for a window its lane cut. Today's
 window is the planned lane's own count; the later window is `CountTasks`. When a window is cut,
-`TasksFromActivities` reads the open tasks derived from the follow-up reminders' emails, so step F2 meets each
+`TasksAfter`, narrowed by `TaskWindow.DerivedFrom`, reads the open tasks derived from the follow-up reminders' emails, so step F2 meets each
 task on the first page and the tail does not show it again. A team page reads, counts and continues
 its tasks through one roster arm (`TeamQueueOf` in `modules/activities`), so the lane's cap is spent on the rows step
 C keeps. On the `make bench-worklist-backlog` data, with 16,169 open tasks on one team, the roster count of today's

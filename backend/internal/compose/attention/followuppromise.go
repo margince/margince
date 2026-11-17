@@ -94,6 +94,10 @@ func withFollowUp(promise, reminder ranked) ranked {
 	return promise
 }
 
+// promisePage is the store's largest page, so the tasks behind the reminders
+// are usually one read.
+const promisePage = 200
+
 // readingFollowUpPromises reads, past the planned lane's cap, the open tasks
 // derived from the emails the follow-up reminders are about. Without them the
 // reminder and its task, met later in the tail, are two rows and two counts.
@@ -123,13 +127,22 @@ func (s *Service) readingFollowUpPromises(ctx context.Context, day crmcontracts.
 	defer timeStage(ctx, "follow_up_promises")()
 	window := TaskWindow{
 		AsOf: day.AsOf, Until: s.backlog.until.AddDate(0, 0, upcomingHorizonDays),
-		Scope: s.taskScope, Owner: s.taskOwner, Team: s.rosterSeats(),
+		Scope: s.taskScope, Owner: s.taskOwner, Team: s.rosterSeats(), DerivedFrom: sources,
 	}
 	var tasks []Task
 	err := s.degradable(ctx, "follow_up_promises", laneBudget, func(ctx context.Context) error {
-		var err error
-		tasks, err = s.backlog.tasks.TasksFromActivities(ctx, window, sources)
-		return err
+		for after, more := "", true; more; {
+			var page []Positioned[Task]
+			var err error
+			if page, more, err = s.backlog.tasks.TasksAfter(ctx, window, after, promisePage); err != nil {
+				return err
+			}
+			for _, task := range page {
+				tasks, after = append(tasks, task.Row), task.After
+			}
+			more = more && len(page) > 0
+		}
+		return nil
 	})
 	if err != nil {
 		slog.Log(ctx, laneFailureLevel(ctx), "the tasks behind follow-up reminders could not be read; each stays its own row",

@@ -194,7 +194,8 @@ func timelineNarrowings(in ListActivitiesInput, reminders string, arg func(any) 
 		where = append(where, sprintf("a.kind = 'task' AND a.source_activity_id = $%d", arg(*in.SourceActivityID)))
 	}
 	if in.SourceActivityIn != nil {
-		where = append(where, sprintf("a.kind = 'task' AND a.source_activity_id = ANY ($%d::uuid[])", arg(in.SourceActivityIn)))
+		// The literal IS NOT NULL keeps the partial index under a generic plan.
+		where = append(where, sprintf("a.kind = 'task' AND a.source_activity_id IS NOT NULL AND a.source_activity_id = ANY ($%d::uuid[])", arg(in.SourceActivityIn)))
 	}
 	if in.Kind != nil {
 		where = append(where, kindPredicate([]string{*in.Kind}, arg))

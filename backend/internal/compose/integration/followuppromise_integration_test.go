@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package compose
+package integration
 
 // One follow-up is one Worklist row: our email nobody answered and the promise
 // task read out of that email. The rows and the figures are read through the
@@ -14,11 +14,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/compose"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
@@ -26,8 +27,8 @@ import (
 // unansweredPromise is our promise mail to a customer contact, the task read
 // out of it, and a moment four days on, past the follow-up window.
 type unansweredPromise struct {
-	e       *integration.Env
-	p       integration.PromiseThread
+	e       *Env
+	p       PromiseThread
 	company ids.CompanyID
 	mail    ids.UUID
 	task    ids.UUID
@@ -37,7 +38,7 @@ type unansweredPromise struct {
 
 func seedUnansweredPromise(t *testing.T) unansweredPromise {
 	t.Helper()
-	e := integration.Setup(t)
+	e := Setup(t)
 	p := e.SeedPromiseThread(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Kunde GmbH", &e.AdminUser))
 	if _, err := e.Contacts.UpdateCompany(e.Admin(), company, contacts.UpdateCompanyInput{Lifecycle: new("customer")}); err != nil {
@@ -56,7 +57,7 @@ func seedUnansweredPromise(t *testing.T) unansweredPromise {
 
 func (u unansweredPromise) worklist(t *testing.T) crmcontracts.Worklist {
 	t.Helper()
-	page, err := newAttentionService(u.e.Pool, approvals.NewService(u.e.DB()), u.clock).
+	page, err := compose.NewAttentionService(u.e.Pool, approvals.NewService(u.e.DB()), u.clock).
 		Worklist(u.e.Admin(), "mine", "", ids.UUID{}, 100, "")
 	if err != nil {
 		t.Fatal(err)
@@ -132,7 +133,11 @@ func TestAReminderSetAsideLeavesItsPromiseOpen(t *testing.T) {
 	if _, shown := queued(page, "awaiting_reply", u.mail); shown {
 		t.Error("the reminder set aside is back on the Worklist")
 	}
-	if done := readTask(t, u.e, u.task).IsDone; done != nil && *done {
+	task, err := u.e.Activities.GetActivity(u.e.Admin(), ids.From[ids.ActivityKind](u.task), storekit.LiveOnly)
+	if err != nil {
+		t.Fatalf("reading the promise back: %v", err)
+	}
+	if done := task.IsDone; done != nil && *done {
 		t.Error("setting the reminder aside completed the promise")
 	}
 }

@@ -32,10 +32,6 @@ func (w *windowRecorder) TasksOnDeals(context.Context, TaskWindow, []ids.UUID) (
 	return nil, nil
 }
 
-func (w *windowRecorder) TasksFromActivities(context.Context, TaskWindow, []ids.UUID) ([]Task, error) {
-	return nil, nil
-}
-
 func tailToken(t *testing.T, rest *backlogCursor) string {
 	t.Helper()
 	token, err := storekit.EncodeOpaque(worklistCursor{At: 3, Params: fingerprint(scopeMine, "", ids.Nil), Rest: rest})

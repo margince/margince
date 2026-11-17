@@ -178,16 +178,20 @@ func TestAReminderMarkedDoneLeavesThePromiseAsItWas(t *testing.T) {
 }
 
 // fromActivities is a task backlog holding the tasks derived from activities,
-// and the sources each read asked for.
+// and the sources each read narrowed to.
 type fromActivities struct {
 	windowRecorder
 	tasks []Task
 	asked [][]ids.UUID
 }
 
-func (b *fromActivities) TasksFromActivities(_ context.Context, _ TaskWindow, sources []ids.UUID) ([]Task, error) {
-	b.asked = append(b.asked, sources)
-	return b.tasks, nil
+func (b *fromActivities) TasksAfter(_ context.Context, window TaskWindow, _ string, _ int) ([]Positioned[Task], bool, error) {
+	b.asked = append(b.asked, window.DerivedFrom)
+	read := make([]Positioned[Task], 0, len(b.tasks))
+	for _, task := range b.tasks {
+		read = append(read, Positioned[Task]{Row: task, After: task.ID.String()})
+	}
+	return read, false, nil
 }
 
 // A promise past the planned lane's cap is read for the reminder. The two are
