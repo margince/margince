@@ -39,8 +39,8 @@ How the licence goes in depends on where your server admin puts the key:
 - **In a licence file** (`license.token_file`, or a `${file:…}` value in `license.token`): an
   admin presses **Check now**. It is on the same screen and in **Settings → Seats and license**.
   Margince opens again at once.
-- **Typed into the configuration** (`license.token` or `MARGINCE_LICENSE`): the admin starts
-  Margince again, because that value is read only when Margince starts.
+- **From the environment** (`MARGINCE_LICENSE`, or a `${env:…}` value in `license.token`): the
+  admin starts Margince again, because that value is read only when Margince starts.
 
 Background work starts again on its own within about 15 minutes. An agent you connected stops
 too: every call it makes is refused. Margince sends no email until then, and that includes privacy notices
