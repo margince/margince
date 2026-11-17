@@ -225,8 +225,8 @@ There are three postures. This is what each one does at boot:
 | posture | boot | reported as |
 |---|---|---|
 | **no token set up** | starts. In production it runs on its [trial](#the-trial); under `MARGINCE_ENV` `dev` or `test` it runs with no license and no trial, with a warning | `margince_license_posture{state="absent"} 1` |
-| **token checked and good** | starts | `margince_license_posture{state="valid"} 1`, plus `margince_license_seats` when the license grants a seat count |
-| **token refused** | **refuses to boot** (api and worker both), naming the own reason of the module and the setting to fix | (none) |
+| **token checked and good** | starts. Past its end date it starts **locked**, as an ended trial is: there is no grace period | `margince_license_posture{state="valid"} 1`, plus `margince_license_seats` when the license grants a seat count |
+| **token refused** | starts **locked** (api and worker both), and logs an error with the own reason of the module and the setting to fix | `margince_license_posture{state="rejected"} 1` |
 
 Margince reads the token where it is declared, and never seals it. A token an earlier release sealed
 in the key vault is read only when nothing declares one. See
@@ -265,12 +265,15 @@ check reads the file in the api process that answers it. Any other api process k
 it starts again or makes its daily check. The worker reads the file within 5 minutes, and a
 snoozed job asks again within 10 minutes of that.
 
-A refused license refuses the boot in *every* posture. To name yourself as not
-production says you have no license. It does not let you run one the module has refused.
+A refused license, or one past its end date, locks the installation in *every* posture, the same
+way an ended trial does. Changes and agent calls answer `license_lapsed`, background work waits, and
+`/me` answers `license_lapsed: true`, so every seat sees the screen that says so. There is no grace
+period: the renewal notice warns 90 days before the end date. To name yourself as not production
+does not let you run a license the module has refused.
 
 **What Margince refuses.** A signature it does not trust, the wrong issuer, or no grant for this
 product at this generation. It also refuses a license whose end date is past the grace time the
-module carries. A module that cannot run at all is refused the same way, because that is a package
+module carries. A module that cannot run at all refuses the boot instead, because that is a package
 error. To read it as no license would lower the installation without a word.
 
 A `token_file` that is
@@ -278,9 +281,9 @@ set but cannot be read, or is empty, is also a boot error. So a wrong path does 
 to run with no license. Margince reads a `token_file` with the same size limit as a `${file:…}`
 reference, and drops the spaces and empty lines around the token.
 
-**An ended license never stops a running process.** A license that ends while the process
-runs leaves it serving. The api checks again daily, and its `/metrics` posture gets worse; nothing
-goes offline mid-month without a human there.
+A license that ends while the process runs locks it at the next check. The api checks again
+daily, or at once on **Check now**, and the worker every 5 minutes while it is locked. From that
+check on, the installation is locked as above. The data stays, and reads still answer.
 
 Each daily check reads the token file again: the file a `token: ${file:…}` reference names, or the
 `token_file` path. So a token replaced in that file applies within a day, without starting the

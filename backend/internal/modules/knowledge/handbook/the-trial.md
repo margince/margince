@@ -46,3 +46,10 @@ Background work starts again on its own within about 15 minutes. An agent you co
 too: every call it makes is refused. Margince sends no email until then, and that includes privacy notices
 and confirmation links.
 Also called: trial ended, trial expired, Margince stopped working, locked.
+
+### What happens when a licence ends?
+When your licence passes its end date, or its key is not valid, Margince locks in the same way.
+There is no grace period. **Settings → Seats and license** warns you 90 days before the end date.
+Every member sees **Your Margince license is no longer valid** in place of the app, with the same
+button to write to the team. Nothing is deleted, and the new licence goes in as described above.
+Also called: licence expired, licence ended, licence not valid, renew the licence.

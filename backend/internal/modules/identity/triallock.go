@@ -5,6 +5,7 @@ package identity
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strings"
 
@@ -12,48 +13,45 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
-// TrialEnded reports whether the installation's trial is over. The composition
-// root answers it from the license posture and the workspace's creation time,
-// neither of which this module owns.
-type TrialEnded func(context.Context) (bool, error)
+// InstallationLock answers why the installation is locked: ErrTrialEnded,
+// ErrLicenseLapsed, nil when it is not, or another error for a failed read. The
+// composition root answers it from the license posture and the workspace's
+// creation time, neither of which this module owns.
+type InstallationLock func(context.Context) error
 
-// WithTrialLock installs the check every admission door runs before a
+// WithInstallationLock installs the check every admission door runs before a
 // mutation, and that /me reports so every seat sees the lock, not only admins.
-func (h Handlers) WithTrialLock(ended TrialEnded) Handlers {
-	h.trialEnded = ended
+func (h Handlers) WithInstallationLock(lock InstallationLock) Handlers {
+	h.installationLock = lock
 	return h
 }
 
-// refuseAfterTrial answers ErrTrialEnded for a mutation the ended trial stops,
-// and nil for everything else. Reads stay open, so the data stays reachable.
-func (h Handlers) refuseAfterTrial(ctx context.Context, r *http.Request) error {
-	if h.trialEnded == nil || !isMutating(r.Method) || mayMutateAfterTrial(r) {
+// refuseWhenLocked answers the lock's error for a mutation it stops, and nil for
+// everything else. Reads stay open, so the data stays reachable.
+func (h Handlers) refuseWhenLocked(ctx context.Context, r *http.Request) error {
+	if h.installationLock == nil || !isMutating(r.Method) || mayMutateWhenLocked(r) {
 		return nil
 	}
-	ended, err := h.trialEnded(ctx)
-	if err != nil {
-		return err
-	}
-	if ended {
-		return apperrors.ErrTrialEnded
-	}
-	return nil
+	return h.installationLock(ctx)
 }
 
-// trialEndedForMe answers /me's flag. A failed read reports the trial as not
-// ended: /me is how a seat signs in, and the mutation gate still refuses.
-func (h Handlers) trialEndedForMe(ctx context.Context) *bool {
-	if h.trialEnded == nil {
-		return nil
+// lockForMe answers /me's two flags. A failed read reports no lock: /me is how
+// a seat signs in, and the mutation gate still refuses.
+func (h Handlers) lockForMe(ctx context.Context) (trialEnded, licenseLapsed *bool) {
+	if h.installationLock == nil {
+		return nil, nil
 	}
-	ended, err := h.trialEnded(ctx)
-	if err != nil || !ended {
-		return nil
+	locked := true
+	switch err := h.installationLock(ctx); {
+	case errors.Is(err, apperrors.ErrTrialEnded):
+		return &locked, nil
+	case errors.Is(err, apperrors.ErrLicenseLapsed):
+		return nil, &locked
 	}
-	return &ended
+	return nil, nil
 }
 
-// The mutations an ended trial still admits. A seat's own credentials (the
+// The mutations a locked installation still admits. A seat's own credentials (the
 // read-seat list) and the license that ends the lock keep a way out. A data
 // export and data-subject requests are owed whether or not it pays.
 var (
@@ -62,7 +60,7 @@ var (
 	dataSubjectRequestPathPrefix = httpserver.BaseURL + "/data-subject-requests"
 )
 
-func mayMutateAfterTrial(r *http.Request) bool {
+func mayMutateWhenLocked(r *http.Request) bool {
 	path := r.URL.Path
 	return readSeatMayMutate(r) ||
 		strings.HasPrefix(path, licensePathPrefix) ||

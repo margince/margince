@@ -27905,7 +27905,8 @@ export interface components {
          *     license is configured, every agent tool call is refused with `trial_ended`, and so is
          *     every HTTP change except these: the license routes, `POST /v1/exports`, the data-subject
          *     request routes, and a seat's own credential routes. Background jobs wait instead of
-         *     running; they do not fail.
+         *     running; they do not fail. A license that was refused, or is past its expiry, locks the
+         *     installation the same way with `license_lapsed`, also with no grace period.
          */
         LicenseTrial: {
             /**
@@ -48916,6 +48917,8 @@ export interface components {
         MeResponse: {
             /** @description True when this installation runs with no license and its 14-day trial is over. Every seat gets it, not only those who may read the license, because every seat is locked until a license is configured. `LicenseTrial` lists what the lock refuses. Absent while the installation is licensed or still on its trial. */
             trial_ended?: boolean;
+            /** @description True when this installation's license was refused or is past its expiry. There is no grace period. The installation is locked as `trial_ended` describes, and refused changes answer `license_lapsed`, until a valid license is configured. Every seat gets it. Absent while the license is valid or the installation runs on its trial. */
+            license_lapsed?: boolean;
             /** @description Whether this human caller may use the configured activity reader-rendering lane. Absent or false keeps generated text original until an explicit request. */
             reader_rendering_available?: boolean;
             analytics_startup?: components["schemas"]["AnalyticsStartup"];

@@ -14162,9 +14162,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Mọi thứ vẫn hoạt động và không bị giới hạn. Cấu hình token giấy phép cho bản cài đặt này để tính số tài khoản theo mức được cấp.",
   "license.refused.title": "Giấy phép của bản cài đặt này bị từ chối",
   "license.refused.body":
-    "Token giấy phép cấu hình cho bản cài đặt này đã được xuất trình và bị từ chối. Các tài khoản đầy đủ quyền đang dùng vẫn hoạt động, và cho đến khi token được thay, không thêm tài khoản đầy đủ quyền nào vượt quá số tài khoản đầy đủ quyền mà giấy phép hợp lệ gần nhất đã cấp. Kiểm tra token và đồng hồ của bản cài đặt.",
-  "license.refused.bodyUncapped":
-    "Token giấy phép cấu hình cho bản cài đặt này đã được xuất trình và bị từ chối. Mọi thứ vẫn hoạt động, không giới hạn, cho đến khi token được thay. Kiểm tra token và đồng hồ của bản cài đặt.",
+    "Token giấy phép cấu hình cho bản cài đặt này đã được xuất trình và bị từ chối, nên Margince bị khóa cho đến khi token được thay. Kiểm tra token và đồng hồ của bản cài đặt.",
   "license.seats.capacityOnly":
     "Vai trò hiện tại không có quyền xem số tài khoản được cấp phép.",
   "license.seats.title": "Tài khoản",
@@ -14185,7 +14183,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "license.holder.id": "Mã giấy phép",
   "license.grace.title": "Giấy phép này đã hết hạn",
   "license.grace.body":
-    "Giấy phép đã hết hạn vào {expiry}. Giấy phép vẫn hoạt động trong một thời gian có hạn. Gia hạn để bản cài đặt tiếp tục hoạt động.",
+    "Giấy phép đã hết hạn vào {expiry}, nên Margince bị khóa cho đến khi có giấy phép hợp lệ.",
   "license.renewal.title": "Giấy phép cần gia hạn",
   "license.renewal.body":
     "Giấy phép hết hạn vào {expiry}. Không có gì thay đổi trước ngày đó.",
@@ -15204,6 +15202,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Quản trị viên của bạn có thể nhận giấy phép từ đội ngũ Margince. Bạn cũng có thể tự viết cho họ.",
   "common.trialEnded":
     "Thời gian dùng thử của bản cài đặt này đã kết thúc, nên thay đổi này phải chờ có giấy phép. Dữ liệu của bạn vẫn được giữ nguyên.",
+  "license.locked.pageTitle":
+    "Giấy phép không hợp lệ",
+  "license.locked.title":
+    "Giấy phép Margince của bạn không còn hiệu lực",
+  "license.locked.body":
+    "Giấy phép đã hết hạn hoặc bị từ chối, nên Margince đang bị khóa và tác vụ nền đang tạm dừng cho đến khi có giấy phép hợp lệ. Dữ liệu của bạn vẫn được giữ nguyên, không có gì bị xóa.",
+  "common.licenseLapsed":
+    "Giấy phép của bản cài đặt này đã hết hạn hoặc bị từ chối, nên thay đổi này phải chờ có giấy phép hợp lệ. Dữ liệu của bạn vẫn được giữ nguyên.",
   "licensebanner.link": "Mở {tab}",
   "licensebanner.grace.title": "Giấy phép đã hết hạn",
   "licensebanner.grace.body":

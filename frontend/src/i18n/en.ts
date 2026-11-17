@@ -14489,9 +14489,7 @@ export const en = {
     "Everything keeps working and nothing is capped. Configure a license token for this installation to count seats against a grant.",
   "license.refused.title": "This installation’s license was refused",
   "license.refused.body":
-    "The license token configured for this installation was presented and rejected. Full seats in use keep working, and no full seat is added beyond what the last valid license granted, until it is replaced. Check the token and the installation’s clock.",
-  "license.refused.bodyUncapped":
-    "The license token configured for this installation was presented and rejected. Everything keeps working, uncapped, until it is replaced. Check the token and the installation’s clock.",
+    "The license token configured for this installation was presented and rejected, so Margince is locked until it is replaced. Check the token and the installation’s clock.",
   "license.seats.capacityOnly": "Your role cannot see the license entitlement.",
   "license.seats.title": "Seats",
   "license.seats.inUse": "Full seats in use",
@@ -14511,7 +14509,7 @@ export const en = {
   "license.holder.id": "License ID",
   "license.grace.title": "This license expired",
   "license.grace.body":
-    "The license expired on {expiry}. It still works for a limited period. Renew it to keep the installation in service.",
+    "The license expired on {expiry}, so Margince is locked until a valid license is set up.",
   "license.renewal.title": "License needs renewal",
   "license.renewal.body":
     "The license expires on {expiry}. Nothing changes before that date.",
@@ -15520,6 +15518,14 @@ export const en = {
     "Your admin can get a license from the Margince team. You can also write to them yourself.",
   "common.trialEnded":
     "This installation’s trial has ended, so this change waits for a license. Your data stays as it is.",
+  "license.locked.pageTitle":
+    "License not valid",
+  "license.locked.title":
+    "Your Margince license is no longer valid",
+  "license.locked.body":
+    "The license has expired or was refused, so Margince is locked and background work is paused until it has a valid license. Your data stays as it is, and nothing is deleted.",
+  "common.licenseLapsed":
+    "This installation’s license has expired or was refused, so this change waits for a valid license. Your data stays as it is.",
   "licensebanner.link": "Open {tab}",
   "licensebanner.grace.title": "License expired",
   "licensebanner.grace.body":

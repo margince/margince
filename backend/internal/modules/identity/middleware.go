@@ -180,7 +180,7 @@ func (h Handlers) Middleware(next http.Handler) http.Handler {
 			// Sign-in stays open after the trial, so a seat can reach the screen
 			// that says so. The anonymous booking surface is work, and stops.
 			if strings.HasPrefix(r.URL.Path, publicBookingPrefix) {
-				if err := h.refuseAfterTrial(ctx, r); err != nil {
+				if err := h.refuseWhenLocked(ctx, r); err != nil {
 					httperr.Write(w, r, err)
 					return
 				}

@@ -2,12 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // Package installtrial answers the trial of a production installation that has
-// no license. Its two inputs live in different layers: the license posture is
-// platform's, and the start is the workspace table's creation time.
+// no license, and whether the installation is locked. Its two inputs live in
+// different layers: the license posture is platform's, and the start is the
+// workspace table's creation time.
 package installtrial
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"sync/atomic"
@@ -17,6 +19,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/licensecheck"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
 
@@ -63,8 +66,7 @@ func (t *Trial) Current(ctx context.Context) (licensecheck.Trial, bool, error) {
 	return licensecheck.Trial{StartedAt: start}, true, nil
 }
 
-// Ended reports whether this installation's trial is over, which is the one
-// condition that locks it.
+// Ended reports whether this installation's trial is over.
 func (t *Trial) Ended(ctx context.Context) (bool, error) {
 	trial, ok, err := t.Current(ctx)
 	if err != nil || !ok {
@@ -73,16 +75,46 @@ func (t *Trial) Ended(ctx context.Context) (bool, error) {
 	return trial.Ended(t.now()), nil
 }
 
+// Lock answers why this installation is locked, and nil when it is not.
+// apperrors.ErrLicenseLapsed is a license refused or past its expiry.
+// apperrors.ErrTrialEnded is an unlicensed installation whose trial is over.
+// Any other error is a failed read.
+func (t *Trial) Lock(ctx context.Context) error {
+	if t == nil {
+		return nil
+	}
+	if Lapsed(t.posture()) {
+		return apperrors.ErrLicenseLapsed
+	}
+	ended, err := t.Ended(ctx)
+	if err != nil {
+		return err
+	}
+	if ended {
+		return apperrors.ErrTrialEnded
+	}
+	return nil
+}
+
+// Lapsed reports a license that no longer admits the installation. There is no
+// grace period: a license the module still accepts past its expiry locks too.
+func Lapsed(posture licensecheck.Posture) bool {
+	return posture.State == licensecheck.StateRejected ||
+		(posture.State == licensecheck.StateValid && posture.License.InGrace)
+}
+
 // Paused is the question every background lane asks before it works. A failed
 // read does not pause: the lane meets the same database failure and reports it.
 func (t *Trial) Paused(log *slog.Logger) func(context.Context) bool {
 	return func(ctx context.Context) bool {
-		ended, err := t.Ended(ctx)
-		if err != nil {
-			log.WarnContext(ctx, "reading whether the trial has ended failed", "err", err)
-			return false
+		err := t.Lock(ctx)
+		if errors.Is(err, apperrors.ErrLicenseLapsed) || errors.Is(err, apperrors.ErrTrialEnded) {
+			return true
 		}
-		return ended
+		if err != nil {
+			log.WarnContext(ctx, "reading whether the installation is locked failed", "err", err)
+		}
+		return false
 	}
 }
 
