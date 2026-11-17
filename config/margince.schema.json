@@ -906,7 +906,7 @@
       "additionalProperties": false,
       "properties": {
         "connection_idle_time": {
-          "description": "Time an unused pooled connection waits before it closes. The DSN's pool_max_conn_idle_time wins. Restart to apply.",
+          "description": "Time a connection above `pool_min_conns` can stay open while not in use. Applies to API and worker app pools. A `pool_max_conn_idle_time` value in the DSN wins. Restart to apply.",
           "type": [
             "string",
             "null"
@@ -914,7 +914,7 @@
           "default": "5m0s"
         },
         "connection_lifetime": {
-          "description": "Age at which a pooled connection closes, plus up to a fifth more at random. Postgres returns the memory a connection grew while planning only when it closes. The DSN's pool_max_conn_lifetime wins. Restart to apply.",
+          "description": "Time a connection in the API or worker app pool can stay open, plus up to `20%` more. The pool checks the age when a query ends and on each health check. Closing a direct Postgres connection returns memory kept after planning. A `pool_max_conn_lifetime` value in the DSN wins. Restart to apply.",
           "type": [
             "string",
             "null"

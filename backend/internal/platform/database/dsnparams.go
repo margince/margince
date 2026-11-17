@@ -3,20 +3,13 @@
 
 package database
 
-import "strings"
+import (
+	"strings"
 
-// WithDSNParam names a connection parameter in dsn, unless the DSN already
-// names it — PoolConfig's rule that an operator who stated a value meant it,
-// applied one level earlier so a ROLE can state one too.
-//
-// The two DSN spellings take different separators: the URL form carries
-// parameters as a query string, the keyword/value form as space-separated
-// pairs. Getting that wrong produces a DSN that parses and silently drops the
-// parameter, which is the failure this exists to avoid at two call sites
-// rather than one.
-//
-// Held by: TestADSNParameterIsNamedInTheSpellingTheDSNUses
-// (backend/internal/platform/database/dsnparams_test.go)
+	"github.com/jackc/pgx/v5/pgconn"
+)
+
+// WithDSNParam preserves explicit operator settings in either DSN spelling.
 func WithDSNParam(dsn, name, value string) string {
 	if namesDSNParam(dsn, name) {
 		return dsn
@@ -32,40 +25,23 @@ func WithDSNParam(dsn, name, value string) string {
 	return dsn + " " + param
 }
 
-// namesDSNParam answers whether dsn names the parameter itself. A longer name
-// that starts with it does not count: pool_max_conn_lifetime_jitter does not
-// name pool_max_conn_lifetime.
+// pgconn leaves pool settings in RuntimeParams, before pgxpool consumes them.
 func namesDSNParam(dsn, name string) bool {
-	for rest := dsn; ; {
-		at := strings.Index(rest, name)
-		if at < 0 {
-			return false
-		}
-		rest = rest[at+len(name):]
-		if rest == "" || !isParamNameByte(rest[0]) {
+	cfg, err := pgconn.ParseConfig(dsn)
+	if err != nil {
+		// Leave malformed DSNs unchanged so the pool opener reports their parse error.
+		return true
+	}
+	for key := range cfg.RuntimeParams {
+		if strings.EqualFold(key, name) {
 			return true
 		}
 	}
+	return false
 }
 
-func isParamNameByte(b byte) bool {
-	return b == '_' || b >= 'a' && b <= 'z' || b >= 'A' && b <= 'Z' || b >= '0' && b <= '9'
-}
-
-// WithoutRequestCeilings lifts StatementCeiling and IdleTransactionCeiling from
-// dsn, for the roles that run SCHEMA changes rather than serve requests: the
-// migrator's River lane and the API's custom-field schema pool.
-//
-// An index build or a table rewrite legitimately outruns any request-shaped
-// bound, and one cut half way leaves the schema short of head with nothing in
-// the failure to say that a timeout — rather than the DDL — is what ended it.
-// The advisory lock these paths queue on is a running statement too, so the
-// statement ceiling would end the WAIT as readily as the work.
-//
-// Postgres reads zero as no bound at all, which is why the lift is a value and
-// not a deletion: the parameter stays visible in the DSN, where an operator
-// reading it can see that this role has no ceiling and that saying so was
-// deliberate.
+// WithoutRequestCeilings lets schema changes outlive request timeouts.
+// Explicit operator limits still win, including zero for unbounded work.
 func WithoutRequestCeilings(dsn string) string {
 	lifted := WithDSNParam(dsn, "statement_timeout", "0")
 	return WithDSNParam(lifted, "idle_in_transaction_session_timeout", "0")

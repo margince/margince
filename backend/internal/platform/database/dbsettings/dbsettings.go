@@ -40,21 +40,22 @@ var ReadConcurrency = config.Define(config.Spec[int]{
 	Doc:   "Limit on concurrent Worklist and ranked-search reads per process, capped at half the pool with at least one slot. Restart to apply.",
 })
 
-// ConnLifetime and ConnIdleTime retire the api's and the worker's pooled
-// connections; see database.DefaultConnLifetime for why.
+// Connection ages bound how long a backend retains planner memory.
 var (
 	ConnLifetime = config.Define(config.Spec[time.Duration]{
 		Key: "database.connection_lifetime", Env: "MARGINCE_DATABASE_CONNECTION_LIFETIME", Type: config.Duration,
 		Default: config.Some(database.DefaultConnLifetime), Min: config.Some(time.Minute),
 		Roles: []config.Role{config.RoleAPI, config.RoleWorker},
-		Doc: "Age at which a pooled connection closes, plus up to a fifth more at random. Postgres returns the memory a connection grew while planning only when it closes. " +
-			"The DSN's pool_max_conn_lifetime wins. Restart to apply.",
+		Doc: "Time a connection in the API or worker app pool can stay open, plus up to `20%` more. " +
+			"The pool checks the age when a query ends and on each health check. Closing a direct Postgres connection returns memory kept after planning. " +
+			"A `pool_max_conn_lifetime` value in the DSN wins. Restart to apply.",
 	})
 	ConnIdleTime = config.Define(config.Spec[time.Duration]{
 		Key: "database.connection_idle_time", Env: "MARGINCE_DATABASE_CONNECTION_IDLE_TIME", Type: config.Duration,
 		Default: config.Some(database.DefaultConnIdleTime), Min: config.Some(time.Minute),
 		Roles: []config.Role{config.RoleAPI, config.RoleWorker},
-		Doc:   "Time an unused pooled connection waits before it closes. The DSN's pool_max_conn_idle_time wins. Restart to apply.",
+		Doc: "Time a connection above `pool_min_conns` can stay open while not in use. Applies to API and worker app pools. " +
+			"A `pool_max_conn_idle_time` value in the DSN wins. Restart to apply.",
 	})
 )
 

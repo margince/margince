@@ -8,6 +8,7 @@ package integration
 import (
 	"context"
 	"fmt"
+	"math"
 	"net/http"
 	"os"
 	"slices"
@@ -45,14 +46,13 @@ const (
 	growthRepeatOpens = 4
 )
 
-// growthBudgets come from the Worklist PoC's measurements on 8 years of bench
-// mail: 2.4 s of server CPU per read with open cases, 314 MB per connection.
-// The private memory budget is PLACEHOLDER.
+// The two-step demo corpus peaked at 340 MiB in contexts and 399 MiB in RssAnon.
+// Both memory budgets allow about 25% headroom for allocator variation.
 var growthBudgets = growthLimits{
 	Line:              10 * time.Second,
 	WarmServer:        2400 * time.Millisecond,
-	ConnectionMemory:  314 << 20,
-	ConnectionPrivate: 512 << 20,
+	ConnectionMemory:  425 << 20,
+	ConnectionPrivate: 500 << 20,
 	CacheHits:         0.75,
 }
 
@@ -146,6 +146,9 @@ func growthManagerOf(t *testing.T, seats Seats, owner Seat) Seat {
 // Idle pings are off, so the meter counts the reads' own trips.
 func meterGrowthPool(t *testing.T, cfg *pgxpool.Config, delay time.Duration) *testdb.RoundTripMeter {
 	t.Helper()
+	// Retirement must not erase the retained memory this bench measures.
+	cfg.MaxConnLifetime, cfg.MaxConnLifetimeJitter = 0, 0
+	cfg.MaxConnIdleTime = time.Duration(math.MaxInt64)
 	cfg.ShouldPing = func(context.Context, pgxpool.ShouldPingParams) bool { return false }
 	cfg.ConnConfig.TLSConfig = nil
 	cfg.ConnConfig.Fallbacks = nil
@@ -230,14 +233,8 @@ func timeGrowthRead(t *testing.T, env *apptest.AppEnv, read growthRead, meter *t
 	return growthSample{Elapsed: elapsed, Server: meter.ServerTime() - server, Trips: meter.Trips.Load() - trips}
 }
 
-// growthMemoryReader lets the app role read its own backend's memory, which
-// Postgres shows only to a privileged role. It lives in the throwaway bench
-// database and goes with it.
-//
-// RssAnon is the backend's private memory: the contexts, and the planner's
-// working memory that the allocator keeps until the connection closes. A
-// definer function reads its caller's backend, as /proc/self is that process.
-// It is null where Postgres has no /proc.
+// The definer reads only its caller's backend in the throwaway bench database.
+// RssAnon includes memory the allocator retains after planning.
 const growthMemoryReader = `CREATE OR REPLACE FUNCTION public.bench_growth_backend_memory()
       RETURNS TABLE (total bigint, private bigint, largest text)
       LANGUAGE sql SECURITY DEFINER SET search_path = pg_catalog
@@ -248,9 +245,8 @@ const growthMemoryReader = `CREATE OR REPLACE FUNCTION public.bench_growth_backe
                              GROUP BY name ORDER BY bytes DESC LIMIT 3) top)
               FROM pg_backend_memory_contexts $$`
 
-// growthConnectionMemory is the most memory any idle connection of the pool
-// holds, and the three largest kinds of the one with the most in contexts:
-// its plans and caches, which outlive the read.
+// Memory peaks are independent across connections; the largest context kinds
+// belong to the connection with the highest context total.
 func growthConnectionMemory(t *testing.T, e, env *apptest.AppEnv) (growthMemory, string, bool) {
 	t.Helper()
 	ctx := context.Background()
@@ -271,14 +267,15 @@ func growthConnectionMemory(t *testing.T, e, env *apptest.AppEnv) (growthMemory,
 		var kinds string
 		if err := conn.QueryRow(ctx, `SELECT total, private, largest FROM public.bench_growth_backend_memory()`,
 			pgx.QueryExecModeSimpleProtocol).Scan(&held, &private, &kinds); err != nil {
-			t.Fatalf("reading a connection's memory: %v", err)
+			t.Fatalf("reading backend memory (owner needs pg_read_server_files or superuser rights): %v", err)
 		}
 		if held > most.Contexts {
 			most.Contexts, largest = held, kinds
 		}
-		if private != nil {
-			most.Private = max(most.Private, *private)
+		if private == nil || *private <= 0 {
+			t.Fatal("reading backend RssAnon requires Postgres on Linux and an owner with pg_read_server_files or superuser rights")
 		}
+		most.Private = max(most.Private, *private)
 	}
 	return most, largest, len(idle) > 0
 }

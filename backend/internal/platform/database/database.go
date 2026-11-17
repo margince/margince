@@ -22,11 +22,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// A Postgres backend keeps the memory it grew while planning until its
-// connection closes: after Home's reads that is a few hundred MB per
-// connection, most of it never returned while the backend lives. Closing the connection is
-// the only thing that returns it, so a pooled connection lives this long, plus
-// up to a fifth more at random, and closes sooner when it sits idle.
+// Closing a connection returns the planner memory its backend retains.
+// Lifetime jitter spreads replanning across the pool.
 const (
 	DefaultConnLifetime = 10 * time.Minute
 	DefaultConnIdleTime = 5 * time.Minute
@@ -139,7 +136,7 @@ func setSessionUTC(cfg *pgxpool.Config) {
 // which Postgres reads as no bound at all and is how a role that must not be
 // bounded says so.
 func setRuntimeParam(cfg *pgxpool.Config, dsn, name, value string) {
-	if strings.Contains(dsn, name) {
+	if namesDSNParam(dsn, name) {
 		return
 	}
 	if cfg.ConnConfig.RuntimeParams == nil {

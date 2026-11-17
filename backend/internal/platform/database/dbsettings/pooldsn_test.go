@@ -22,10 +22,14 @@ func TestThePoolRetiresConnectionsAtTheConfiguredAges(t *testing.T) {
 		lifetime, idle, jitter time.Duration
 	}{
 		{"the defaults", "postgres://h/db", nil, 10 * time.Minute, 5 * time.Minute, 2 * time.Minute},
-		{"a configured lifetime and idle time", "postgres://h/db",
-			configured, 30 * time.Minute, 2 * time.Minute, 6 * time.Minute},
-		{"the DSN's own values win", "host=h pool_max_conn_lifetime=1h pool_max_conn_idle_time=90s",
-			configured, time.Hour, 90 * time.Second, 12 * time.Minute},
+		{
+			"a configured lifetime and idle time", "postgres://h/db",
+			configured, 30 * time.Minute, 2 * time.Minute, 6 * time.Minute,
+		},
+		{
+			"the DSN's own values win", "host=h pool_max_conn_lifetime=1h pool_max_conn_idle_time=90s",
+			configured, time.Hour, 90 * time.Second, 12 * time.Minute,
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			cfg := configtest.MustLoadEnv(t, dbsettings.Settings(), tc.env...)
