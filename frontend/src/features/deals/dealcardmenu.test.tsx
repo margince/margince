@@ -562,18 +562,70 @@ describe("changing a deal's close date from its card", () => {
     );
   });
 
-  // The record's details form keeps the forecast day of a won deal editable.
-  it("is offered on a won deal", async () => {
+  it.each([
+    ["won", { status: "won", stage_id: "s3" }],
+    ["lost", { status: "lost", stage_id: "s1" }],
+  ] as const)(
+    "is not offered on a %s deal, which keeps its owner change",
+    async (_, overrides) => {
+      vi.stubGlobal("fetch", withColleague(stubBackend([deal(overrides)])));
+      const user = userEvent.setup();
+      render(<DealsScreen />);
+      const menu = await openCardMenu(user);
+      await menu.findByRole("button", { name: "Change owner" });
+
+      expect(
+        menu.queryByRole("button", { name: "Change close date" }),
+      ).toBeNull();
+    },
+  );
+
+  it("keeps the opened version and the typed day across a refetch of the board", async () => {
+    const rows = [deal({ expected_close_date: "2027-03-14" })];
+    const patches: [unknown, string | null][] = [];
     vi.stubGlobal(
       "fetch",
-      stubBackend([deal({ status: "won", stage_id: "s3" })]),
+      stubBackend(rows, {
+        onPatch: (body, ifMatch) => patches.push([body, ifMatch]),
+      }),
     );
     const user = userEvent.setup();
-    render(<DealsScreen />);
+    const client = newClient();
+    render(<DealsScreen />, client);
     const dialog = await openCloseDate(user);
-    expect(dialog.getByRole("textbox", { name: "Expected close" })).toHaveValue(
-      "",
-    );
+    const box = dialog.getByRole("textbox", { name: "Expected close" });
+    await user.clear(box);
+    await user.type(box, "2027-04-30{Tab}");
+
+    rows[0] = deal({ expected_close_date: "2027-03-14", version: 5 });
+    await client.invalidateQueries({ queryKey: ["deals"] });
+    await settled(client);
+    expect(box).toHaveValue("30/04/2027");
+    await user.click(dialog.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(patches).toEqual([[{ expected_close_date: "2027-04-30" }, "4"]]);
+  });
+
+  it("shows itself busy, and opens nothing, while another write on the deal is out", async () => {
+    vi.stubGlobal("fetch", stubBackend([deal({})]));
+    const user = userEvent.setup();
+    const client = newClient();
+    render(<DealsScreen />, client);
+    const menu = await openCardMenu(user);
+    const item = menu.getByRole("button", { name: "Change close date" });
+    void client
+      .getMutationCache()
+      .build(client, {
+        mutationKey: ["deal-edit", "d1"],
+        mutationFn: () => new Promise<never>(() => undefined),
+      })
+      .execute(undefined);
+
+    await waitFor(() => expect(item).toHaveAttribute("aria-busy", "true"));
+    expect(item).toHaveAccessibleDescription("Saving…");
+    await user.click(item);
+    expect(screen.queryByRole("dialog", { name: "Expected close" })).toBeNull();
   });
 
   it.each([

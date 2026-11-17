@@ -55,7 +55,8 @@ export function DealCardMenu({
       {live && canWrite && (
         <>
           <DealMoves deal={deal} stages={stages} onAdvance={onAdvance} />
-          <DealCloseDate deal={deal} />
+          {/* A closed deal's page shows the day it closed and offers no close date to change. */}
+          {deal.status === "open" && <DealCloseDate deal={deal} />}
           <DealOwnerPick deal={deal} />
         </>
       )}
@@ -145,7 +146,7 @@ function DealMoves({
   );
 }
 
-// The record page's own one-field save: its write, its refusals, its reads made stale.
+// Saved as the record page's own close-date row saves it.
 function DealCloseDate({ deal }: Readonly<{ deal: Deal }>) {
   const t = useT();
   const write = useRailText(
@@ -165,7 +166,11 @@ function DealCloseDate({ deal }: Readonly<{ deal: Deal }>) {
   );
   return (
     <>
-      <Button onClick={() => editing(true)}>
+      <Button
+        pending={!write.canEdit}
+        busyLabel={t("common.saving")}
+        onClick={() => editing(true)}
+      >
         {t("deal.card.changeCloseDate")}
       </Button>
       <FieldEditDialog

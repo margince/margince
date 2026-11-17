@@ -423,12 +423,20 @@ export const CloseDateRefusedPhone: Story = {
   tags: ["uat-phone"],
 };
 
-/** A won deal keeps its forecast day editable, as its details form does. */
-export const CloseDateWonDeal: Story = {
+/** A won deal is offered its owner change but no close date. */
+const closeDateClosedDeal = {
   render: closingOn({ status: "won", stage_id: "won" }),
-  play: async (context) => {
-    await openCloseDate(context);
+  play: async (context: { canvasElement: HTMLElement }) => {
+    await openMenuShowing("Change owner")(context);
+    await expect(
+      screen.queryByRole("button", { name: "Change close date" }),
+    ).toBeNull();
   },
+};
+export const CloseDateClosedDeal: Story = closeDateClosedDeal;
+export const CloseDateClosedDealDark: Story = {
+  ...closeDateClosedDeal,
+  globals: { theme: "dark" },
 };
 
 /** A passed day nobody confirmed, in the card's warning tone, beside its fix. */

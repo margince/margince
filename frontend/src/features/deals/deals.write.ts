@@ -257,7 +257,10 @@ export function openDealEdit(deal: Deal): FieldRecord {
   return { ...dealEditRecord(deal), original: deal };
 }
 
-/** `opened` comes from `openDealEdit`; the write is pinned to its version. */
+/**
+ * `opened` comes from `openDealEdit`. A version refusal re-reads the deal and
+ * retries only while the fields this edit touches have not moved.
+ */
 export function saveDealEdit(
   opened: FieldRecord,
   values: Record<string, unknown>,
