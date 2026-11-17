@@ -4619,7 +4619,7 @@
     },
     {
       "name": "send_outbound",
-      "tokens": 1722,
+      "tokens": 1712,
       "agents": [],
       "required_by_cases": [
         "case44_chase_what_is_slipping"

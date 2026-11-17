@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 273.9 KB |
+| Tool catalog | 273.8 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 71520 |
+| Approx. wire tokens | 71507 |
 | Largest tool | `read_details` (17.4 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -36,7 +36,7 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Descriptions (incl. governance clause) | 53.4 KB | 19% | Yes, every step |
 | Input schemas | 157.1 KB | 57% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 4% | Partly |
-| **Description + input schema** | **210.6 KB** | **76%** | **the recurring cost** |
+| **Description + input schema** | **210.5 KB** | **76%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -109,7 +109,7 @@ descriptions and input schemas are what each step pays for.
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 1344 |
 | [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 484 |
-| [`send_outbound`](#send_outbound) | Send a message |  |  | 1722 |
+| [`send_outbound`](#send_outbound) | Send a message |  |  | 1712 |
 | [`update_record`](#update_record) | Update a record |  | [`ui://margince/update.html`](#update_view) | 626 |
 | [`whoami`](#whoami) | Who this passport acts for | yes |  | 129 |
 
@@ -12691,8 +12691,8 @@ subject, body and activity_id or links the draft produced, and keep the staged a
 approval binds that exact message, so changed text needs a new one. email_new answers with the new
 conversation's activity_id. (Runs immediately; the user's yes is needed for the actions
 add_room_document, answer_invitation, change_invitation, chat_reply, deal_room_invite,
-deal_room_resend, details_confirmation, direct_send, double_opt_in, email_new, email_reply,
-invite_member, link_channel, meeting_proposal, my_signature, open_room_thread, privacy_notice,
+deal_room_resend, details_confirmation, double_opt_in, email_new, email_reply, invite_member,
+link_channel, meeting_proposal, my_signature, open_room_thread, privacy_notice,
 remove_room_document, reply_room_thread, resend_member_invite, resume_room, set_room_expiry,
 signature_template, update_room, update_room_document, so tell them what the call will change and
 get it before calling, unless they asked for this call themselves; requires passport scope "send".)
@@ -12723,7 +12723,6 @@ get it before calling, unless they asked for this call themselves; requires pass
         "deal_room_invite",
         "deal_room_resend",
         "details_confirmation",
-        "direct_send",
         "double_opt_in",
         "email_new",
         "email_reply",
@@ -12800,7 +12799,7 @@ get it before calling, unless they asked for this call themselves; requires pass
       "type": "object"
     },
     "id": {
-      "description": "add_room_document, answer_invitation, change_invitation, deal_room_invite, deal_room_resend, details_confirmation, direct_send, double_opt_in, link_channel, open_room_thread, privacy_notice, remove_room_document, reply_room_thread, resend_member_invite, resume_room, set_room_expiry, update_room, update_room_document only",
+      "description": "add_room_document, answer_invitation, change_invitation, deal_room_invite, deal_room_resend, details_confirmation, double_opt_in, link_channel, open_room_thread, privacy_notice, remove_room_document, reply_room_thread, resend_member_invite, resume_room, set_room_expiry, update_room, update_room_document only",
       "type": "string"
     },
     "idempotency_key": {
@@ -12860,7 +12859,7 @@ get it before calling, unless they asked for this call themselves; requires pass
       "type": "string"
     },
     "request_body": {
-      "description": "add_room_document, answer_invitation, change_invitation, deal_room_invite, details_confirmation, direct_send, double_opt_in, invite_member, link_channel, meeting_proposal, my_signature, open_room_thread, privacy_notice, reply_room_thread, set_room_expiry, signature_template, update_room, update_room_document only: The chosen action's request body; read_workspace topic actions lists its shape",
+      "description": "add_room_document, answer_invitation, change_invitation, deal_room_invite, details_confirmation, double_opt_in, invite_member, link_channel, meeting_proposal, my_signature, open_room_thread, privacy_notice, reply_room_thread, set_room_expiry, signature_template, update_room, update_room_document only: The chosen action's request body; read_workspace topic actions lists its shape",
       "type": "object"
     },
     "scheduled_at": {

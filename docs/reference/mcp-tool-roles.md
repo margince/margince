@@ -40,7 +40,7 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 | Group | Calls | admin | management | manager | ops | read_only | rep |
 |---|---:|---|---|---|---|---|---|
 | [Business operations](#business-operations) | 383 | 382✓ 1✗ | 356✓ 27✗ | 357✓ 26✗ | 356✓ 27✗ | 179✓ 204✗ | 327✓ 56✗ |
-| [Compliance and privacy](#compliance-and-privacy) | 48 | 48✓ 0✗ | 28✓ 20✗ | 28✓ 20✗ | 32✓ 16✗ | 11✓ 37✗ | 27✓ 21✗ |
+| [Compliance and privacy](#compliance-and-privacy) | 47 | 47✓ 0✗ | 27✓ 20✗ | 27✓ 20✗ | 32✓ 15✗ | 11✓ 36✗ | 26✓ 21✗ |
 | [Capture and connectors](#capture-and-connectors) | 44 | 44✓ 0✗ | 38✓ 6✗ | 38✓ 6✗ | 44✓ 0✗ | 28✓ 16✗ | 37✓ 7✗ |
 | [Workspace settings a non-admin can reach](#workspace-settings-a-non-admin-can-reach) | 39 | 39✓ 0✗ | 39✓ 0✗ | 39✓ 0✗ | 39✓ 0✗ | 34✓ 5✗ | 39✓ 0✗ |
 | [Admin settings](#admin-settings) | 115 | 115✓ 0✗ | 10✓ 105✗ | 0✓ 115✗ | 82✓ 33✗ | 0✓ 115✗ | 0✓ 115✗ |
@@ -582,7 +582,6 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 | `read_details.lead_stops` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `read_workspace.confirm_submissions` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `send_outbound.details_confirmation` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
-| `send_outbound.direct_send` | ✓ | ✓ | ✓ | ✗ | ✗ | ✓ |
 | `send_outbound.double_opt_in` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `send_outbound.privacy_notice` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 
@@ -1485,7 +1484,6 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Consent and communication review | `read_details.lead_stops` | `list_lead_stops` | `lead.read` |
 | Consent and communication review | `read_workspace.confirm_submissions` | `list_confirm_submissions` | `contact.read` |
 | Consent and communication review | `send_outbound.details_confirmation` | `request_details_confirmation` | `activity.create` `activity.read` `contact.update` |
-| Consent and communication review | `send_outbound.direct_send` | `direct_communication_send` | `activity.create` `activity.read` `communication_exception.create` `contact.read` |
 | Consent and communication review | `send_outbound.double_opt_in` | `issue_double_opt_in` | `activity.create` `activity.read` `contact.update` |
 | Consent and communication review | `send_outbound.privacy_notice` | `send_privacy_notice` | `activity.create` `activity.read` `contact.update` |
 | Data subject requests | `change_compliance.open_data_subject_request` | `open_data_subject_request` | `privacy_request.update` |

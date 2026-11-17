@@ -136,7 +136,7 @@ type Instruction struct {
 // already resolved, superseded or answered is a decision about a message that
 // is no longer waiting on one.
 func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInput) (Instruction, error) {
-	if err := requireSomebodyPresent(ctx); err != nil {
+	if err := requireAHumanAtTheKeyboard(ctx); err != nil {
 		return Instruction{}, err
 	}
 	if err := auth.Require(ctx, entityCommunicationException, principal.ActionCreate); err != nil {
@@ -204,7 +204,7 @@ func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInpu
 		arguments := []any{
 			reviewID, director, in.ReasonCode, in.Explanation,
 			in.WarningVersion, message.RecordedAt, review.OpenedAt, out.ValidUntil,
-			acknowledged, givenByAdmin, actingAgent(ctx), nullableText(message.Scope),
+			acknowledged, givenByAdmin, nil, nullableText(message.Scope),
 		}
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO communication_instruction
@@ -440,28 +440,6 @@ func requireAUserOrTheirAgent(ctx context.Context) error {
 		return fmt.Errorf("this is a user's own statement: %w", apperrors.ErrPermissionDenied)
 	}
 	return nil
-}
-
-// requireSomebodyPresent admits a user or their agent, never work nobody is
-// watching. A scheduled run may read a review, but only a user present decides.
-func requireSomebodyPresent(ctx context.Context) error {
-	if err := requireAUserOrTheirAgent(ctx); err != nil {
-		return err
-	}
-	if principal.Unattended(ctx) {
-		return fmt.Errorf("an unattended agent cannot record its user's decision: %w", apperrors.ErrPermissionDenied)
-	}
-	return nil
-}
-
-// actingAgent names the agent carrying out a user's decision, and nil when the
-// user acted in their own session.
-func actingAgent(ctx context.Context) *string {
-	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalAgent {
-		return nil
-	}
-	return &actor.ID
 }
 
 // ErrDecisionAlreadyRecorded reports that this review already carries a

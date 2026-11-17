@@ -26164,8 +26164,9 @@ paths:
     post:
       tags: [Communication]
       operationId: directCommunicationSend
-      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      x-mcp-tool: { verb: direct_communication_send, router: send_outbound, action: direct_send, tier: auto_execute, scope: send, served_by: route, ask_user_first: true }
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security   # the user's own decision past a refusal; an agent may not record it
       summary: Send a refused message anyway, on a named human's recorded decision.
       description: |
         The engine refused this message and the refusal stands. This records that a designated human
