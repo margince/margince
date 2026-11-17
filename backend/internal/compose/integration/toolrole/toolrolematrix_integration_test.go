@@ -128,8 +128,13 @@ func isBudgetRefusal(text string) bool {
 func passportClients(t *testing.T, e *apptest.AppEnv, role string, n int) []*apptest.MCPClient {
 	t.Helper()
 	clients := make([]*apptest.MCPClient, n)
+	// Personal channels start off; the sweep measures the role grant, not the switch.
+	if _, err := e.Owner.Exec(t.Context(), `INSERT INTO personal_channel_connection (user_id, enabled)
+		SELECT id, true FROM app_user ON CONFLICT (user_id) DO UPDATE SET enabled = true`); err != nil {
+		t.Fatalf("turning personal channels on for the sweep: %v", err)
+	}
 	for i := range clients {
-		bearer, _ := apptest.PassportWithID(t, e, fmt.Sprintf("tool-role %s %d", role, i), "read", "write", "send", "draft", "enrich")
+		bearer, _ := apptest.PassportWithID(t, e, fmt.Sprintf("tool-role %s %d", role, i), "read", "write", "send", "draft", "enrich", "personal_channels")
 		clients[i] = apptest.NewMCPClient(e, strings.TrimPrefix(bearer["Authorization"], "Bearer "))
 	}
 	return clients

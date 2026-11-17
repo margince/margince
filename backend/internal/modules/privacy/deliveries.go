@@ -113,6 +113,9 @@ func redactDeliveries(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, to
 	if err := erasePayloads(ctx, tx, activityIDs, payloads); err != nil {
 		return err
 	}
+	if err := scrubPersonalChannelReplies(ctx, tx, activityIDs); err != nil {
+		return err
+	}
 	if _, err := tx.Exec(ctx, `
 		UPDATE comms_outbound
 		   SET recipients = '[]'::jsonb, cc = '[]'::jsonb, bcc = '[]'::jsonb, subject = $2,

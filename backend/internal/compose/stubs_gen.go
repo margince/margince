@@ -3227,6 +3227,30 @@ func (stubs) SetPassportAreas(w nethttp.ResponseWriter, r *nethttp.Request, id c
 	httperr.NotImplemented(w, r, "SetPassportAreas")
 }
 
+func (stubs) PushPersonalChannelMessages(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.PushPersonalChannelMessagesParams) {
+	httperr.NotImplemented(w, r, "PushPersonalChannelMessages")
+}
+
+func (stubs) GetPersonalChannelConnection(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetPersonalChannelConnection")
+}
+
+func (stubs) UpdatePersonalChannelConnection(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "UpdatePersonalChannelConnection")
+}
+
+func (stubs) AckPersonalChannelReplies(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.AckPersonalChannelRepliesParams) {
+	httperr.NotImplemented(w, r, "AckPersonalChannelReplies")
+}
+
+func (stubs) PullPersonalChannelReplies(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "PullPersonalChannelReplies")
+}
+
+func (stubs) UploadPersonalChannelFile(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "UploadPersonalChannelFile")
+}
+
 func (stubs) ListPipelines(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListPipelinesParams) {
 	httperr.NotImplemented(w, r, "ListPipelines")
 }

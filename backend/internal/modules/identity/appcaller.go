@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // AppCaller is one caller an installed chat app vouches for on one call. It
@@ -101,9 +102,9 @@ func newestAppBinding(ctx context.Context, tx pgx.Tx, c AppCaller) (appBinding, 
 	var b appBinding
 	var revokedAt *time.Time
 	err := tx.QueryRow(ctx, `
-		SELECT id, on_behalf_of, revoked_at, expires_at <= now() FROM passport
-		 WHERE app_issuer = $1 AND app_subject = $2
-		 ORDER BY created_at DESC, id DESC LIMIT 1`, c.Issuer, c.Subject).
+		SELECT p.id, p.on_behalf_of, p.revoked_at, NOT `+workforce.PassportUnexpiredSQL("p", "now()")+` FROM passport p
+		 WHERE p.app_issuer = $1 AND p.app_subject = $2
+		 ORDER BY p.created_at DESC, p.id DESC LIMIT 1`, c.Issuer, c.Subject).
 		Scan(&b.id, &b.onBehalfOf, &revokedAt, &b.expired)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return appBinding{}, false, nil

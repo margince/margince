@@ -222,8 +222,8 @@ describe("what a tool is called on screen", () => {
   // The core catalogue cannot know a unit's jobs, so an extension dispatcher
   // keeps its unit and job as words rather than losing its name.
   it("names an extension dispatcher from its kind", () => {
-    expect(tagText("agent:ext_openchannel_drain", "de")).toBe(
-      "Automatisiert durch openchannel drain",
+    expect(tagText("agent:ext_crm_relay_drain", "de")).toBe(
+      "Automatisiert durch crm relay drain",
     );
   });
 });

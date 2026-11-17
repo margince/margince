@@ -125,7 +125,7 @@ func sendableCarriage(sendable []string, core map[string]connector.Carriage) map
 func reconcileChannelProviders(ctx context.Context, pool *pgxpool.Pool, providers []string) error {
 	var units []channelProviderFacts
 	if err := database.WithInfraTx(ctx, pool, func(tx pgx.Tx) error {
-		reserved, err := reservedCoreProviders(ctx, tx, providers)
+		reserved, err := reservedCoreProviders(ctx, tx, append(slices.Clone(providers), corePerMemberProviders()...))
 		if err != nil {
 			return err
 		}
@@ -141,7 +141,8 @@ func reconcileChannelProviders(ctx context.Context, pool *pgxpool.Pool, provider
 		// what this call writes must be decided by the set it was handed, or a
 		// caller passing a transport this enumeration does not hold would silently
 		// write supplies_transport = false for it.
-		for _, facts := range append(channelProviderFactsFor(providers, sendableCarriage(providers, CoreChannelCarriage())), units...) {
+		core := append(channelProviderFactsFor(providers, sendableCarriage(providers, CoreChannelCarriage())), corePerMemberTransports()...)
+		for _, facts := range append(core, units...) {
 			if err := upsertChannelProvider(ctx, tx, facts); err != nil {
 				return err
 			}
@@ -160,7 +161,7 @@ func reconcileChannelProviders(ctx context.Context, pool *pgxpool.Pool, provider
 	// it would register, publish, capture — and park every reply a rep wrote
 	// under "this installation cannot send on that", which is the one failure a
 	// rep cannot tell from a broken provider.
-	sendable := slices.Clone(providers)
+	sendable := append(slices.Clone(providers), corePerMemberProviders()...)
 	for _, unit := range units {
 		if unit.suppliesTransport {
 			sendable = append(sendable, unit.provider)

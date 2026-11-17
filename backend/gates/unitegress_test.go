@@ -95,7 +95,7 @@ func TestNoUnitDialsAroundTheInstallationsEgressPolicy(t *testing.T) {
 	// corpus is other modules' source: a moved tree, a renamed fixtures
 	// directory, or a walk that stopped finding .go files all read exactly
 	// like a clean set of units.
-	if scanned < 20 {
+	if scanned < 15 {
 		t.Fatalf("read %d unit source file(s) across %v, and the tree ships more than that: this gate is "+
 			"looking somewhere the units are not", scanned, unitTrees)
 	}

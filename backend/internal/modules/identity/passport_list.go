@@ -30,7 +30,7 @@ type PassportRow struct {
 	Scopes    []string
 	Areas     principal.WorkAreas
 	CreatedAt time.Time
-	ExpiresAt time.Time
+	ExpiresAt *time.Time
 	RevokedAt *time.Time
 	// LastUsedAt is when a call last authenticated under this passport, or under
 	// any passport of its connection. Nil when none has.
@@ -178,5 +178,5 @@ func (p PassportRow) UsageSubject() string {
 // is narrower than agentLivenessWhere. This list is read by its signed-in owner,
 // who already passes that rule's checks of the owner.
 func (p PassportRow) live(now time.Time) bool {
-	return p.RevokedAt == nil && p.ExpiresAt.After(now)
+	return p.RevokedAt == nil && (p.ExpiresAt == nil || p.ExpiresAt.After(now))
 }

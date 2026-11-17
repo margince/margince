@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 274.1 KB |
+| Tool catalog | 272.6 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 71576 |
+| Approx. wire tokens | 71185 |
 | Largest tool | `read_details` (17.4 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 51.5 KB | 18% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 53.6 KB | 19% | Yes, every step |
-| Input schemas | 157.1 KB | 57% | Yes, every step |
+| Input schemas | 155.6 KB | 57% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 4% | Partly |
-| **Description + input schema** | **210.8 KB** | **76%** | **the recurring cost** |
+| **Description + input schema** | **209.3 KB** | **76%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -67,18 +67,18 @@ descriptions and input schemas are what each step pays for.
 | [`annotate_brief`](#annotate_brief) | Write findings onto the morning brief |  |  | 417 |
 | [`archive_record`](#archive_record) | Archive a record |  |  | 300 |
 | [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 798 |
-| [`change_access`](#change_access) | Share records and set up members and teams |  |  | 1074 |
+| [`change_access`](#change_access) | Share records and set up members and teams |  |  | 1061 |
 | [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 2821 |
-| [`change_attention`](#change_attention) | Act on proposals, notices and the weekly plan |  |  | 1775 |
-| [`change_capture`](#change_capture) | Decide what comes into the CRM |  |  | 1817 |
-| [`change_compliance`](#change_compliance) | Record consent, stops, holds and privacy work |  |  | 1274 |
+| [`change_attention`](#change_attention) | Act on proposals, notices and the weekly plan |  |  | 1762 |
+| [`change_capture`](#change_capture) | Decide what comes into the CRM |  |  | 1804 |
+| [`change_compliance`](#change_compliance) | Record consent, stops, holds and privacy work |  |  | 1261 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
-| [`change_my_settings`](#change_my_settings) | Change the user's own preferences and voice |  |  | 867 |
-| [`change_offers`](#change_offers) | Work offers, contracts and deal rooms |  |  | 1096 |
+| [`change_my_settings`](#change_my_settings) | Change the user's own preferences and voice |  |  | 854 |
+| [`change_offers`](#change_offers) | Work offers, contracts and deal rooms |  |  | 1083 |
 | [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 1017 |
-| [`change_relationships`](#change_relationships) | Work a company's relationships and briefs |  |  | 816 |
+| [`change_relationships`](#change_relationships) | Work a company's relationships and briefs |  |  | 803 |
 | [`change_reports`](#change_reports) | Work saved reports and the forecast |  |  | 1599 |
-| [`change_settings`](#change_settings) | Change how the workspace is set up |  |  | 3159 |
+| [`change_settings`](#change_settings) | Change how the workspace is set up |  |  | 3146 |
 | [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 2260 |
 | [`change_tags`](#change_tags) | Change tags |  |  | 652 |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 342 |
@@ -105,9 +105,9 @@ descriptions and input schemas are what each step pays for.
 | [`read_reports`](#read_reports) | Read sales reports | yes |  | 2784 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 358 |
 | [`read_view`](#read_view) | Read a view | yes |  | 1889 |
-| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2779 |
+| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2789 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
-| [`run_research`](#run_research) | Run AI work for your user |  |  | 1344 |
+| [`run_research`](#run_research) | Run AI work for your user |  |  | 1331 |
 | [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 487 |
 | [`send_outbound`](#send_outbound) | Send a message |  |  | 1722 |
 | [`update_record`](#update_record) | Update a record |  | [`ui://margince/update.html`](#update_view) | 626 |
@@ -1267,11 +1267,6 @@ before calling, unless they asked for this call themselves; requires passport sc
       "description": "add_team_member, assign_legal_entity, change_role, claim_record, deactivate_member, end_assignment, hand_over_work, offer_ownership, reactivate_member, remove_member, remove_team_member, request_ownership, share_contacts, unshare, update_assignment, update_member, update_record_role, update_team, withdraw_ownership_offer, withdraw_ownership_request only",
       "type": "string"
     },
-    "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
-      "maxLength": 255,
-      "type": "string"
-    },
     "if_version": {
       "description": "claim_record, unshare only: The version the caller read; the write is refused as skew if the record moved since",
       "type": "integer"
@@ -1741,11 +1736,6 @@ it before calling, unless they asked for this call themselves; requires passport
       "description": "accept_applied_change, accept_deal_suggestion, accept_tag_suggestion, acknowledge_company_view, acknowledge_contact_view, acknowledge_failed_approval, answer_teammate, archive_signal, ask_for_help, dismiss_company_suggestion, dismiss_contact_moment, dismiss_deal_move, dismiss_deal_suggestion, dismiss_nudge, dismiss_tag_suggestion, edit_commitment, mark_notice_read, resolve_signal, restore_company_suggestion, restore_contact_moment, restore_deal_move, restore_nudge, set_commitment_state, update_signal, visit_list only",
       "type": "string"
     },
-    "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
-      "maxLength": 255,
-      "type": "string"
-    },
     "if_version": {
       "description": "accept_applied_change, update_signal only: The version the caller read; the write is refused as skew if the record moved since",
       "type": "integer"
@@ -1879,11 +1869,6 @@ they asked for this call themselves; requires passport scope "write".)
       "description": "archive_corpus, cancel_import_run, disconnect_channel, lift_counterparty_hold, lift_exclusion, remove_consumer_mail_domain, restore_owner_identity, set_channel_verbosity, undo_import_run, unlink_channel, update_corpus, update_import_run, upload_corpus_document, validate_import_run, withdraw_owner_identity only",
       "type": "string"
     },
-    "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
-      "maxLength": 255,
-      "type": "string"
-    },
     "provider": {
       "description": "cancel_backfill, disconnect_mailbox, dismiss_mailbox_silence, set_context_tag, set_history_baseline, set_mail_posture, set_signature_enrichment only",
       "type": "string"
@@ -1978,11 +1963,6 @@ unless they asked for this call themselves; requires passport scope "write".)
     },
     "id": {
       "description": "assign_notice_case, assign_notice_case_review, confirm_notice_source, lift_lead_suppression, lift_suppression, record_communication_context, record_consent, record_lead_qualifying_event, record_qualifying_event, resolve_confirm_submission, retract_acquisition_request, retract_lead_qualifying_event, retract_qualifying_event, revoke_override, suppress_contact, update_data_subject_request only",
-      "type": "string"
-    },
-    "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
-      "maxLength": 255,
       "type": "string"
     },
     "overrideId": {
@@ -2341,11 +2321,6 @@ get it before calling, unless they asked for this call themselves; requires pass
       "description": "add_voice_source, apply_voice_version, archive_voice_profile, reject_voice_version, rollback_voice_version, update_voice_profile, update_voice_source only",
       "type": "string"
     },
-    "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
-      "maxLength": 255,
-      "type": "string"
-    },
     "if_version": {
       "description": "apply_voice_version, archive_voice_profile, reject_voice_version, update_voice_profile, update_voice_source only: The version the caller read; the write is refused as skew if the record moved since",
       "type": "integer"
@@ -2429,11 +2404,6 @@ themselves; requires passport scope "write".)
     },
     "id": {
       "description": "accept_offer, add_deal_line, archive_contract, archive_room, cancel_contract, close_room, pause_room, refresh_offer_from_deal, reject_offer, remove_deal_line, render_offer, renew_contract, resolve_room_thread, revoke_room_participant, send_offer, set_contract_status, set_deal_products, update_contract, update_deal_line, update_room_participant, use_deal_estimate only",
-      "type": "string"
-    },
-    "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
-      "maxLength": 255,
       "type": "string"
     },
     "if_version": {
@@ -2812,11 +2782,6 @@ update_record to change a company's or contact's fields. (Runs immediately; requ
     },
     "id": {
       "description": "apply_employment_import, cancel_intro_request, check_vat, complete_intro_request, decide_intro_request, link_contacts, reassign_handoff, record_introduction, record_promise, replace_intro_request, request_intro, restore_profile_field, save_research, settle_promise, take_over_promise only",
-      "type": "string"
-    },
-    "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
-      "maxLength": 255,
       "type": "string"
     },
     "request_body": {
@@ -3276,11 +3241,6 @@ get it before calling, unless they asked for this call themselves; requires pass
     },
     "id": {
       "description": "archive_automation, archive_exit_criterion, archive_legal_entity, archive_pipeline, archive_saved_view, archive_stage, archive_web_form, create_exit_criterion, delete_disqualify_reason, delete_lead_origin, delete_lead_source, handle_website_inquiries, put_product_translation, remove_legal_entity_logo, rename_custom_field, reorder_stages, restore_pipeline, retire_custom_field, retry_automation_run, update_acquisition_source, update_automation, update_custom_field_options, update_disqualify_reason, update_exit_criterion, update_lead_origin, update_lead_source, update_legal_entity, update_loss_reason, update_partner_stage, update_pipeline, update_review_template, update_saved_view, update_stage, update_web_form, upload_legal_entity_logo, upsert_partner only",
-      "type": "string"
-    },
-    "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
-      "maxLength": 255,
       "type": "string"
     },
     "if_version": {
@@ -12102,6 +12062,7 @@ themselves.)
         "change_state",
         "change_tags",
         "list_documents",
+        "personal_channels",
         "read_analytics",
         "read_details",
         "read_reports",
@@ -12279,6 +12240,7 @@ themselves.)
         "onboarding_company_proposal",
         "onboarding_state",
         "owner_identities",
+        "personal_channel",
         "pipelines",
         "provider_connections",
         "provider_locations",
@@ -12516,11 +12478,6 @@ scope "enrich".)
     },
     "id": {
       "description": "ask_about_company, ask_corpus, build_voice_profile, draft_intro_note, draft_intro_request, enrich_contact_from_provider, propose_deal_roles, refresh_company_brief, refresh_contact_brief, refresh_dossier, refresh_growth_fit, refresh_scan, regenerate_offer, research_contact only",
-      "type": "string"
-    },
-    "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
-      "maxLength": 255,
       "type": "string"
     },
     "project_id": {

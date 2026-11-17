@@ -2,7 +2,7 @@
 
 German is translated from the English catalog beside it: `frontend/src/i18n/en.ts`
 for `frontend/src/i18n/de.ts`, and the sibling `en.json` for each extension's
-`de.json` (for example `extensions/openchannel/frontend/i18n/en.json`).
+`de.json` (for example `extensions/de/frontend/i18n/en.json`).
 [ui-copy-style.md](ui-copy-style.md) binds it too. This page states only what
 German adds or changes. Vietnamese has its own page,
 [ui-copy-style-vi.md](ui-copy-style-vi.md).

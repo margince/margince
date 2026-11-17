@@ -92,9 +92,8 @@ type Server struct {
 	siteReadHandlers
 	technicalHandlers
 	transcriptReadHandlers
-	// transcriptOnLanding starts a reading when a transcript is WRITTEN, not
-	// only when one is requested. Set by WithTranscriptRead; nil in a
-	// deployment with no brain for it, and then a transcript is simply stored.
+	// transcriptOnLanding starts a reading when a transcript is written, not only
+	// when requested. WithTranscriptRead sets it; nil means a transcript is only stored.
 	transcriptOnLanding activities.TranscriptReadEnqueue
 	documentReadHandlers
 	scrapeHandlers
@@ -128,6 +127,7 @@ type Server struct {
 	channelHandlers
 	chatLinkHandlers
 	chatEventHandlers
+	personalChannelHandlers
 	traceHandlers
 	pipelineTraceHandlers
 	filteredExportHandlers

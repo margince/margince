@@ -244,6 +244,14 @@ func NewCaptureRegistry(pool *pgxpool.Pool, vault keyvault.Vault, cfg CaptureCon
 	return r
 }
 
+// boundCaptureConfig is the loaded deployment's capture configuration, or the defaults.
+func boundCaptureConfig() CaptureConfig {
+	if loaded := config.Bound(); loaded != nil {
+		return CaptureConfigFromDeploy(loaded, slog.Default())
+	}
+	return CaptureConfig{}
+}
+
 // NewCaptureSink is newCaptureSink for callers outside compose: the
 // integration suite captures through the sink production composes.
 func NewCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {

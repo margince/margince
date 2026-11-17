@@ -29,11 +29,11 @@
     }
   ],
   "catalog": {
-    "tools": 48,
+    "tools": 49,
     "system_frame_tokens": 672,
-    "tokens": 51224,
+    "tokens": 51551,
     "median_tool_tokens": 797,
-    "mean_tool_tokens": 1066
+    "mean_tool_tokens": 1051
   },
   "agents": [
     {
@@ -46,7 +46,7 @@
         "read_brief",
         "read_record"
       ],
-      "of_served_tools": 48,
+      "of_served_tools": 49,
       "tokens": 4367,
       "listing_tokens": 2048,
       "step_schema_tokens": 1646,
@@ -67,7 +67,7 @@
         "review_commitments",
         "whats_slipping_this_week"
       ],
-      "of_served_tools": 48,
+      "of_served_tools": 49,
       "tokens": 6632,
       "listing_tokens": 3347,
       "step_schema_tokens": 2613,
@@ -89,19 +89,19 @@
     },
     {
       "name": "change_settings",
-      "tokens": 3159
+      "tokens": 3146
     },
     {
       "name": "change_activities",
       "tokens": 2821
     },
     {
-      "name": "read_reports",
-      "tokens": 2784
+      "name": "read_workspace",
+      "tokens": 2789
     },
     {
-      "name": "read_workspace",
-      "tokens": 2779
+      "name": "read_reports",
+      "tokens": 2784
     },
     {
       "name": "change_state",
@@ -117,11 +117,11 @@
     },
     {
       "name": "change_capture",
-      "tokens": 1817
+      "tokens": 1804
     },
     {
       "name": "change_attention",
-      "tokens": 1775
+      "tokens": 1762
     },
     {
       "name": "send_outbound",
@@ -133,23 +133,23 @@
     },
     {
       "name": "run_research",
-      "tokens": 1344
+      "tokens": 1331
     },
     {
       "name": "change_compliance",
-      "tokens": 1274
+      "tokens": 1261
     },
     {
       "name": "change_offers",
-      "tokens": 1096
-    },
-    {
-      "name": "change_access",
-      "tokens": 1074
+      "tokens": 1083
     },
     {
       "name": "read_analytics",
       "tokens": 1067
+    },
+    {
+      "name": "change_access",
+      "tokens": 1061
     },
     {
       "name": "change_record_parts",
@@ -169,11 +169,11 @@
     },
     {
       "name": "change_my_settings",
-      "tokens": 867
+      "tokens": 854
     },
     {
       "name": "change_relationships",
-      "tokens": 816
+      "tokens": 803
     },
     {
       "name": "bulk_update_records",
@@ -210,6 +210,10 @@
     {
       "name": "list_approvals",
       "tokens": 474
+    },
+    {
+      "name": "personal_channels",
+      "tokens": 434
     },
     {
       "name": "decide_approvals",

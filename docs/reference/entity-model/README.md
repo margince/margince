@@ -30,10 +30,10 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 368 |
-| Columns | 4527 |
-| Foreign keys | 631 |
-| Owning areas | 40 |
+| Tables | 372 |
+| Columns | 4565 |
+| Foreign keys | 637 |
+| Owning areas | 41 |
 
 ## The 12 records everything else hangs off
 
@@ -41,10 +41,10 @@ Ranked by how many foreign keys point at them.
 
 | Record | Lives in | Columns | Foreign keys pointing at it |
 |---|---|--:|--:|
-| [`app_user`](identity.md#app_user) | [identity](identity.md) | 39 | 159 |
+| [`app_user`](identity.md#app_user) | [identity](identity.md) | 39 | 160 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 47 | 51 |
+| [`activity`](activities.md#activity) | [activities](activities.md) | 89 | 50 |
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 38 | 50 |
-| [`activity`](activities.md#activity) | [activities](activities.md) | 89 | 48 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 49 | 31 |
 | [`lead`](contacts.md#lead) | [contacts](contacts.md) | 48 | 20 |
 | [`project`](projects.md#project) | [projects](projects.md) | 24 | 13 |
@@ -60,16 +60,16 @@ erDiagram
     legal_entity ||--o{ company : assess_against_entity_id
     app_user ||--o{ company : owner_id
     app_user ||--o{ company : source_author_id
-    lead ||--o{ contact : converted_from_lead_id
-    activity ||--o{ contact : created_from_activity_id
-    app_user ||--o{ contact : owner_id
-    app_user ||--o{ contact : source_author_id
     app_user ||--o{ activity : assignee_id
     app_user ||--o{ activity : host_user_id
     app_user ||--o{ activity : invitation_sender
     legal_entity ||--o{ activity : legal_entity_id
     app_user ||--o{ activity : sent_by_colleague
     app_user ||--o{ activity : source_author_id
+    lead ||--o{ contact : converted_from_lead_id
+    activity ||--o{ contact : created_from_activity_id
+    app_user ||--o{ contact : owner_id
+    app_user ||--o{ contact : source_author_id
     company ||--o{ deal : company_id
     app_user ||--o{ deal : owner_id
     company ||--o{ deal : partner_company_id
@@ -124,6 +124,7 @@ erDiagram
 | [knowledge](knowledge.md) | 3 |
 | [migration](migration.md) | 2 |
 | [notices](notices.md) | 3 |
+| [personalchannels](personalchannels.md) | 4 |
 | [platform](platform.md) | 13 |
 | [privacy](privacy.md) | 2 |
 | [projects](projects.md) | 3 |
@@ -139,7 +140,7 @@ erDiagram
 
 | Table | Area | Columns | Referenced by |
 |---|---|--:|--:|
-| [`activity`](activities.md#activity) | activities | 89 | 48 |
+| [`activity`](activities.md#activity) | activities | 89 | 50 |
 | [`activity_audience_member`](activities.md#activity_audience_member) | activities | 5 | 0 |
 | [`activity_calendar_method_backfill`](activities.md#activity_calendar_method_backfill) | activities | 5 | 0 |
 | [`activity_clock_refold_mark`](activities.md#activity_clock_refold_mark) | activities | 3 | 0 |
@@ -176,7 +177,7 @@ erDiagram
 | [`ai_task_run`](aiactivity.md#ai_task_run) | aiactivity | 25 | 0 |
 | [`ai_usage`](ai.md#ai_usage) | ai | 10 | 0 |
 | [`analytics_share`](compose.md#analytics_share) | compose | 16 | 0 |
-| [`app_user`](identity.md#app_user) | identity | 39 | 159 |
+| [`app_user`](identity.md#app_user) | identity | 39 | 160 |
 | [`approval`](approvals.md#approval) | approvals | 38 | 4 |
 | [`approval_autonomy_policy`](approvals.md#approval_autonomy_policy) | approvals | 12 | 0 |
 | [`approval_preference`](approvals.md#approval_preference) | approvals | 3 | 0 |
@@ -392,6 +393,10 @@ erDiagram
 | [`partner`](contacts.md#partner) | contacts | 29 | 0 |
 | [`partner_stage`](contacts.md#partner_stage) | contacts | 13 | 1 |
 | [`passport`](identity.md#passport) | identity | 14 | 9 |
+| [`personal_channel_connection`](personalchannels.md#personal_channel_connection) | personalchannels | 7 | 3 |
+| [`personal_channel_message`](personalchannels.md#personal_channel_message) | personalchannels | 6 | 0 |
+| [`personal_channel_reply`](personalchannels.md#personal_channel_reply) | personalchannels | 17 | 0 |
+| [`personal_channel_upload`](personalchannels.md#personal_channel_upload) | personalchannels | 8 | 0 |
 | [`pipeline`](deals.md#pipeline) | deals | 8 | 7 |
 | [`preference_token`](consent.md#preference_token) | consent | 9 | 0 |
 | [`privacy_notice_case`](consent.md#privacy_notice_case) | consent | 23 | 0 |

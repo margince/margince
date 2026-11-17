@@ -45,10 +45,47 @@ export function providerNameKey(provider: Provider): MessageKey {
   return labelFor(PROVIDER_NAME, provider);
 }
 
+// A member's own chats land under the core's personal channels connector, which
+// is no capture connection a member connects.
+const PERSONAL_CHANNELS = "personal_channels";
+
 // An id this build cannot name comes back as sent: a newer server's provider is
 // still one the reader can quote.
 export function providerName(id: string, t: (key: MessageKey) => string) {
+  if (id === PERSONAL_CHANNELS) {
+    return t("personalChannels.title");
+  }
   return isCaptureProvider(id) ? t(labelFor(PROVIDER_NAME, id)) : id;
+}
+
+/**
+ * The chat app a personal-channels message came through, read from the
+ * message's source id (`<connection>:<network>:<chat-app id>`). Empty for any
+ * other row.
+ */
+export function personalChannelNetwork(
+  provider: string | null | undefined,
+  sourceId: string | null | undefined,
+): string {
+  if (provider !== PERSONAL_CHANNELS) {
+    return "";
+  }
+  return sourceId?.split(":")[1] ?? "";
+}
+
+const NETWORK_NAMES: Readonly<Record<string, string>> = {
+  whatsapp: "WhatsApp",
+  zalo: "Zalo",
+  telegram: "Telegram",
+  messenger: "Messenger",
+  signal: "Signal",
+};
+
+/** A chat app's own spelling, or the id with a capital for one not listed. */
+export function networkName(network: string): string {
+  return (
+    NETWORK_NAMES[network] ?? network.charAt(0).toUpperCase() + network.slice(1)
+  );
 }
 
 /** The two vendors whose mail and calendar are separate connections of one account. */

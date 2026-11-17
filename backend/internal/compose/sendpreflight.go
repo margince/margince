@@ -23,10 +23,12 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/personalchannelwire"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/testmailbox"
 	"github.com/margince/margince/backend/internal/modules/comms"
+	"github.com/margince/margince/backend/internal/modules/personalchannels"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -78,6 +80,9 @@ type mailboxAuthority struct {
 	// api-side gmail connector — and keying the refusal on the role's registry
 	// would refuse every Gmail send there.
 	mailAppConfigured func(ctx context.Context, provider string) (bool, error)
+	// personalChannelOn answers whether a member's own chats may carry a reply.
+	// It is nil where no member sends, which refuses the provider.
+	personalChannelOn func(ctx context.Context, user ids.UUID) (bool, error)
 }
 
 var _ activities.SendAuthority = mailboxAuthority{}
@@ -117,9 +122,13 @@ func envOrStoredApp(ctx context.Context, env bool, stored appResolver) (bool, er
 // never a second construction. Both installation sites go through here so the
 // registry and the deployment fact cannot be paired up two different ways.
 func installSendPreflight(s *Server, pool *pgxpool.Pool) {
+	db := InstallationDB(pool)
 	WithSendAuthority(mailboxAuthority{
 		grants:            s.connectorHandlers.registry,
 		mailAppConfigured: s.mailAppConfigured,
+		personalChannelOn: func(ctx context.Context, user ids.UUID) (bool, error) {
+			return personalchannelwire.SendCapable(ctx, db, user)
+		},
 	})(s, pool)
 }
 
@@ -169,6 +178,12 @@ func (m mailboxAuthority) SendCapable(ctx context.Context, provider string) (boo
 	// have an admin bind a bot that has nothing to do with this transport.
 	if transport, supplied := composedUnitTransport(provider); supplied {
 		return unitSendCapable(ctx, transport, ids.From[ids.UserKind](actor.UserID))
+	}
+	if provider == personalchannels.Provider {
+		if m.personalChannelOn == nil {
+			return false, nil
+		}
+		return m.personalChannelOn(ctx, actor.UserID)
 	}
 	scope, capability := comms.SendScopeFor(provider)
 	switch capability {

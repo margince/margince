@@ -33,8 +33,6 @@ func (r *unitReader) readDeclaredField(name string, kv *ast.KeyValueExpr, file *
 		m.Panels, err = r.readPanels(kv.Value, file)
 	case "Instrumentation":
 		m.Instrumentation, err = r.readInstrumentation(kv.Value, file)
-	case "Inbound":
-		m.Inbound, err = r.readInbound(kv.Value, file)
 	case "SystemReads":
 		m.SystemReads, err = r.readSystemReads(kv.Value, file)
 	case "OAuthApps":

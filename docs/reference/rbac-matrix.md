@@ -104,6 +104,7 @@ changes none.
 | `offer` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
 | `offer_template` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
 | `partner` | CRUD | CRUD | CRUD | -R-- | -R-- | CRUD |
+| `personal_channel` | CRU- | CRU- | CRU- | CRU- | ---- | ---- |
 | `pipeline` | CRUD | -R-- | -R-- | -R-- | -R-- | CRUD |
 | `privacy_request` | -RU- | ---- | ---- | ---- | ---- | ---- |
 | `product` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |

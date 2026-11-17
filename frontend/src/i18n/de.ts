@@ -6,6 +6,8 @@ import type { MessageKey } from "./en";
 // en.ts and written to docs/reference/ui-copy-style-de.md.
 export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.import_identity_links": "Importierte E-Mail verknüpfen",
+  "systemJob.personal_channel_sweep":
+    "Dateien und Antworten persönlicher Kanäle bereinigen",
   "systemJob.transcript_audience":
     "Terminnotizen erhalten die Lesenden des Termins",
   "systemJob.meeting_profile":
@@ -2508,6 +2510,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agentJob.transcript_proposer": "Transkript-Analyse",
   "agentJob.voice_builder": "Schreibstil-Analyse",
   "trust.connectorTag": "Über {connector}",
+  "trust.connectorNetworkTag": "Über {network} · {connector}",
   "trust.stagedProposal": "Vorgeschlagener Wert",
   "trust.evidenceFrom": "Beleg aus {source}",
   "trust.evidenceLine_one": "Zeile {lines}",
@@ -9270,6 +9273,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "passport.scope.write": "Datensätze ändern",
   "passport.scope.send": "Nachrichten senden",
   "passport.scope.enrich": "KI nutzen und Daten kaufen",
+  "passport.scope.personal_channels": "Persönliche Kanäle",
   "workArea.name.business": "Vertriebsarbeit",
   "workArea.name.compliance": "Compliance und Datenschutz",
   "workArea.name.capture": "E-Mail- und Kalendererfassung",
@@ -9968,6 +9972,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.passportNeverUsed": "Nie",
   "settings.passportNeverUsedCaption": "Nie genutzt",
   "settings.passportNoExpiry": "Kein Ablauf",
+  "settings.passportNeverExpires": "Läuft nie ab",
+  "settings.passportNeverExpiresHint":
+    "Er gilt, bis er widerrufen oder das Konto deaktiviert wird. Sicher aufbewahren.",
   "settings.passportLastUsedOn": "Zuletzt genutzt am {date}",
   "settings.passportExpiresOn": "Läuft am {date} ab",
   "settings.revokeNamed": "{name} widerrufen",
@@ -10604,6 +10611,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.initiative_enrolment_sweep":
     "Mitgliedschaftsdaten der Initiativen",
   "jobs.kind.intro_expiry": "Ablauf von Vorstellungen",
+  "jobs.kind.personal_channel_sweep": "Bereinigung persönlicher Kanäle",
   "jobs.kind.knowledge_ingest": "Indexierung von Dokumenten",
   "jobs.kind.list_evaluate": "Prüfung der Live-Listen",
   "jobs.kind.notification_email": "Benachrichtigungs-E-Mail",
@@ -11978,6 +11986,37 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Erweiterungen, die diese Installation mit gemeinsamen Zugangsdaten betreibt. Einstellungen hier gelten für alle Nutzenden.",
 
   "connectors.title": "Mail und Kalender",
+  "personalChannels.title": "Persönliche Kanäle",
+  "personalChannels.apiTitle": "API für persönliche Kanäle",
+  "personalChannels.apiIntro":
+    "Chats und Dateien übermitteln und Antworten abholen, aus Chat Bridge oder eigenem Code. Dazu einen Pass mit Persönliche Kanäle erstellen und der Anleitung folgen. Der Skill-Download enthält dieselbe Anleitung.",
+  "personalChannels.readGuide": "Anleitung lesen",
+  "personalChannels.mintForBridge": "Neuer Pass für Chat Bridge",
+  "personalChannels.turnOn": "Einschalten",
+  "personalChannels.turnOff": "Ausschalten",
+  "personalChannels.loading": "Persönliche Kanäle werden geladen…",
+  "personalChannels.intro":
+    "Die eigenen WhatsApp-, Zalo- oder anderen Chats in Margince bringen. Gesendet wird nur, was ein Mitglied freigibt; jede Nachricht landet in der Chronik des Kontakts, und Antworten sind aus Margince möglich.",
+  "personalChannels.ownClient": "Einen eigenen Client bauen, etwa Chat Bridge?",
+  "personalChannels.developers": "Siehe Für Entwickler unter KI-Assistenten.",
+  "personalChannels.assistant": "Über den KI-Assistenten",
+  "personalChannels.connected": "Verbunden",
+  "personalChannels.notConnected": "Nicht verbunden",
+  "personalChannels.assistantFacts":
+    "Claude, ChatGPT, Gemini, Copilot oder ein anderer MCP-Client übermittelt Chats und Dateien im Auftrag des Mitglieds.",
+  "personalChannels.setUp": "Einrichten",
+  "personalChannels.step1":
+    "Unter Einstellungen → KI-Assistenten „KI-Tool verbinden“ öffnen.",
+  "personalChannels.step2":
+    "Bei „Zugriff erlauben“ Persönliche Kanäle anhaken.",
+  "personalChannels.step3":
+    "Den Assistenten bitten: „Übermittle diesen Chat mit An an Margince.“",
+  "personalChannels.replies": "Antworten",
+  "personalChannels.waiting_one": "{count} wartend",
+  "personalChannels.waiting_other": "{count} wartend",
+  "personalChannels.oldest": "Älteste geschrieben am {date}",
+  "personalChannels.lastSeen": "Client zuletzt gesehen am {date}",
+  "personalChannels.neverSeen": "Noch hat kein Client Antworten abgeholt",
   // Die dauerhafte Nacht-Vollmacht der Nutzerin — eine Frage, gestellt beim
   // Postfach-Verbinden im Onboarding und noch einmal in den Einstellungen.
   "overnightGrant.title": "Vorbereitung über Nacht",
@@ -15156,6 +15195,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "roles.object.capture_settings": "Capture-Regeln",
   "roles.object.capture_trace": "Aktivität geteilter Kanäle",
   "roles.object.channel_connection": "Chat-Bots",
+  "roles.object.personal_channel": "Persönliche Kanäle",
   "roles.object.integrations": "Datenanbieter",
   "roles.object.webhook_subscription": "Webhooks",
   "roles.object.import_run": "Datenimporte",
@@ -18289,6 +18329,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "consent.scopeNote.send":
     "Sendet Nachrichten in deinem Namen, ohne vorher zu fragen",
   "consent.scopeNote.enrich": "Führt KI-Arbeit aus und kauft Kontaktdaten",
+  "consent.scopeNote.personal_channels":
+    "Übermittelt deine Chats und Dateien und holt deine Antworten ab",
   "consent.scopesLegend": "Was das Tool tun darf",
   "consent.ceiling":
     "Nie mehr als deine eigenen Berechtigungen. Du kannst die Verbindung jederzeit in den Einstellungen unter KI-Assistenten trennen.",

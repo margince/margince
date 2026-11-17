@@ -5,8 +5,8 @@
 What happens to a message **after** a connector pulled it from an outside provider, and before it
 shows up in the CRM.
 
-The path is the same for every source: Gmail, IMAP, Microsoft Graph, Telegram, or an extension unit
-like `openchannel`. How a connector works with its provider is that connector's own business, and
+The path is the same for every source: Gmail, IMAP, Microsoft Graph, Telegram, a member's personal
+channels, or an extension unit. How a connector works with its provider is that connector's own business, and
 [capture-connectors.md](capture-connectors.md) covers it.
 
 A record has one of two **shapes**, and the shape decides which steps run:
@@ -596,7 +596,7 @@ has a right to.
 | AI task names and routing | `internal/modules/ai/tasks_gen.go` (generated), `internal/compose/brain.go` |
 | What starts the company check | `backend/internal/compose/capturedomaintriage.go` |
 | Job schedules and time limits | `backend/api/jobs.yaml` |
-| A connector to learn from | `extensions/openchannel/` |
+| A channel source that lands through the capture sink | `backend/internal/compose/personalchannelwire/lander.go` |
 
 In a classified mailbox, captured image files also require a thread verdict. A file name cannot tell whether an image
 holds private details. The text reader cannot read images, so an image it cannot judge stays

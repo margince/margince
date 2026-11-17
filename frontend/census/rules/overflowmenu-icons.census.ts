@@ -22,6 +22,7 @@
 import ts from "typescript";
 import { parseSource } from "../../scripts/lib/source-tree";
 import type { CensusFile, CensusRule } from "../tree";
+import { extensionShipsScreens } from "../tree";
 
 // The menu this gate is about, named once. overflowmenu-icons.test.ts checks
 // it against the design system, so a rename fails instead of emptying the
@@ -155,7 +156,8 @@ export const rule: CensusRule = {
   // a detector that matches no menu both pass a clean tree.
   floors: (corpus) => [
     ...(corpus.length > 100 ? [] : ["fewer than 100 .tsx files were read"]),
-    ...(corpus.some((file) => file.area === "extensions")
+    ...(!extensionShipsScreens ||
+    corpus.some((file) => file.area === "extensions")
       ? []
       : ["the census reached no extension frontend layer"]),
     ...(corpus.filter((file) => file.text.includes(`<${MENU}`)).length > 5

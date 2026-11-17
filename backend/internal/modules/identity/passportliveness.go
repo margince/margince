@@ -89,7 +89,7 @@ func agentAuthQuery(predicate string) string {
 // TestBothAgentAuthenticationPathsExecuteTheOneLivenessQuery.
 var agentLivenessWhere = `
 		  AND p.revoked_at IS NULL
-		  AND now() < p.expires_at
+		  AND ` + workforce.PassportUnexpiredSQL("p", "now()") + `
 		  AND ` + LiveMemberSQL("u") + `
 		  AND u.must_change_password = false` + agentLivenessPredicate
 

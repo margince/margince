@@ -1,0 +1,291 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+//go:build integration
+
+package personalchannelwire_test
+
+import (
+	"bytes"
+	"context"
+	"errors"
+	"testing"
+	"time"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/compose/personalchannelwire"
+	"github.com/margince/margince/backend/internal/modules/comms"
+	"github.com/margince/margince/backend/internal/modules/personalchannels"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
+)
+
+var channelRepPerms = principal.Permissions{
+	RoleKeys: []string{"rep"},
+	RowScope: principal.RowScopeOwn,
+	Objects: map[string]principal.ObjectGrant{
+		"personal_channel": {Create: true, Read: true, Update: true},
+		"activity":         {Create: true, Read: true, Update: true},
+		"contact":          {Create: true, Read: true, Update: true},
+	},
+}
+
+type channelEnv struct {
+	*integration.Env
+	store    *personalchannels.Store
+	passport ids.UUID
+	member   context.Context
+	now      time.Time
+}
+
+func setupPersonalChannels(t *testing.T) channelEnv {
+	t.Helper()
+	e := integration.Setup(t)
+	// A landing runs under the member's live grants, so Rep1 holds the seeded rep role.
+	e.WsExec(t, `INSERT INTO role_assignment (role_id, user_id) SELECT r.id, $1 FROM role r WHERE r.key = 'rep'
+		ON CONFLICT DO NOTHING`, e.Rep1)
+	db := compose.InstallationDB(e.Pool)
+	sink := compose.NewCaptureSink(e.Pool, compose.CaptureConfig{Blob: blobstore.NewMemory()})
+	passport := e.SeedPassportFor(t, integration.OwnerConn(t), "Chat Bridge", e.Rep1)
+	ce := channelEnv{
+		Env:      e,
+		store:    personalchannelwire.NewStore(e.Pool, db, sink),
+		passport: passport,
+		member:   e.AgentOnPassport(t, e.Rep1, nil, channelRepPerms, ids.From[ids.PassportKind](passport)),
+		now:      clocktest.Now(t),
+	}
+	ce.store = ce.store.WithClock(func() time.Time { return ce.now })
+	if _, err := ce.store.SetEnabled(e.As(e.Rep1, nil, channelRepPerms), true); err != nil {
+		t.Fatalf("turning personal channels on: %v", err)
+	}
+	return ce
+}
+
+func (e channelEnv) push(t *testing.T, msgs ...personalchannels.PushMessage) []personalchannels.PushResult {
+	t.Helper()
+	out, err := e.store.Push(e.member, msgs, time.Minute)
+	if err != nil {
+		t.Fatalf("pushing: %v", err)
+	}
+	return out
+}
+
+func (e channelEnv) connection(t *testing.T) ids.UUID {
+	t.Helper()
+	c, err := e.store.Connection(e.member)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return c.ID
+}
+
+func (e channelEnv) count(t *testing.T, sql string, args ...any) int {
+	t.Helper()
+	var n int
+	if err := integration.OwnerConn(t).QueryRow(context.Background(), sql, args...).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	return n
+}
+
+func whatsapp(id, account string) personalchannels.PushMessage {
+	return personalchannels.PushMessage{
+		MessageID: id, Network: "whatsapp", Body: "Here is the signed quote",
+		OccurredAt: time.Date(2026, 11, 16, 9, 0, 0, 0, time.UTC),
+		From:       personalchannels.Party{Account: account, Name: "An Tran"},
+		To:         personalchannels.Party{Account: "me", Name: "Rep"},
+	}
+}
+
+func TestAPushedMessageLandsWithItsFileAndSaysWhoSentItIn(t *testing.T) {
+	e := setupPersonalChannels(t)
+	up, err := e.store.StageUpload(e.member, "quote.pdf", bytes.NewReader([]byte("%PDF-1.4 quote")))
+	if err != nil {
+		t.Fatalf("staging: %v", err)
+	}
+	m := whatsapp("wamid.1", "8490@s.whatsapp.net")
+	m.UploadIDs = []ids.UUID{up.ID}
+	res := e.push(t, m)
+	if res[0].Status != personalchannels.StatusLanded || res[0].ActivityID == nil {
+		t.Fatalf("result = %+v, want landed with an activity", res[0])
+	}
+	activity := *res[0].ActivityID
+	if n := e.count(t, `SELECT count(*) FROM activity WHERE id = $1 AND kind = 'message' AND channel_provider = 'personal_channels'`, activity); n != 1 {
+		t.Fatal("the message did not land as a personal_channels message")
+	}
+	if n := e.count(t, `SELECT count(*) FROM attachment WHERE entity_type = 'activity' AND entity_id = $1`, activity); n != 1 {
+		t.Fatalf("the file did not land on the activity: %d attachments", n)
+	}
+	if n := e.count(t, `SELECT count(*) FROM personal_channel_message WHERE activity_id = $1 AND network = 'whatsapp' AND origin_kind = 'passport' AND origin_id = $2`, activity, e.passport); n != 1 {
+		t.Fatal("the landing does not name the passport that sent it in")
+	}
+	if n := e.count(t, `SELECT count(*) FROM personal_channel_upload WHERE id = $1`, up.ID); n != 0 {
+		t.Fatal("the staged file outlived the message that carried it")
+	}
+	if n := e.count(t, `SELECT count(*) FROM activity WHERE id = $1 AND captured_by = $2`, activity, personalchannelwire.ConnectorID+":"+e.Rep1.String()); n != 1 {
+		t.Fatal("the message was not captured by the minted connector")
+	}
+}
+
+func TestAResentMessageIsADuplicate(t *testing.T) {
+	e := setupPersonalChannels(t)
+	first := e.push(t, whatsapp("wamid.2", "8491@s.whatsapp.net"))
+	again := e.push(t, whatsapp("wamid.2", "8491@s.whatsapp.net"))
+	if again[0].Status != personalchannels.StatusDuplicate || *again[0].ActivityID != *first[0].ActivityID {
+		t.Fatalf("resend = %+v, want duplicate of %v", again[0], *first[0].ActivityID)
+	}
+}
+
+func TestOneAccountOnTwoNetworksIsTwoIdentities(t *testing.T) {
+	e := setupPersonalChannels(t)
+	zalo := whatsapp("z.1", "8492")
+	zalo.Network = "zalo"
+	res := e.push(t, whatsapp("w.1", "8492"), zalo)
+	for _, r := range res {
+		if r.Status != personalchannels.StatusLanded {
+			t.Fatalf("result = %+v", r)
+		}
+	}
+	if n := e.count(t, `SELECT count(*) FROM contact_channel_identity WHERE provider = 'personal_channels' AND (channel_user_id LIKE 'whatsapp/8492/%' OR channel_user_id LIKE 'zalo/8492/%')`); n != 2 {
+		t.Fatalf("bindings = %d, want one per network", n)
+	}
+}
+
+func TestARefusedMessageDoesNotRefuseTheBatch(t *testing.T) {
+	e := setupPersonalChannels(t)
+	bad := whatsapp("bad.1", "has:colon")
+	res := e.push(t, bad, whatsapp("ok.1", "8493"))
+	if res[0].Status != personalchannels.StatusRefused || res[1].Status != personalchannels.StatusLanded {
+		t.Fatalf("results = %+v", res)
+	}
+}
+
+func TestAPushRunsOutOfTimeAndDefersTheRest(t *testing.T) {
+	e := setupPersonalChannels(t)
+	res, err := e.store.Push(e.member, []personalchannels.PushMessage{whatsapp("late.1", "8494")}, -time.Second)
+	if err != nil || res[0].Status != personalchannels.StatusDeferred {
+		t.Fatalf("results = %+v, %v; want deferred", res, err)
+	}
+}
+
+func TestOnlyTheMemberWhoseChannelBroughtTheChatInMayReply(t *testing.T) {
+	e := setupPersonalChannels(t)
+	landed := e.push(t, whatsapp("wamid.r1", "8495"))
+	activity := ids.From[ids.ActivityKind](*landed[0].ActivityID)
+	msg := connector.ChannelMessage{
+		ActivityID: activity, Body: "Yes, the 2nd works", IdempotencyKey: "delivery-1",
+		Recipient: connector.ChannelIdentity{Provider: personalchannels.Provider, ChannelUserID: "whatsapp/8495/" + e.connection(t).String()},
+	}
+	db := compose.InstallationDB(e.Pool)
+	other := personalchannelwire.ReplySender{DB: db, Member: e.Rep2}
+	if _, err := other.SendMessage(e.Admin(), connector.Auth{}, msg); !errors.Is(err, personalchannelwire.ErrNotTheirChannel) {
+		t.Fatalf("a colleague's reply = %v, want ErrNotTheirChannel", err)
+	}
+	owner := personalchannelwire.ReplySender{DB: db, Member: e.Rep1}
+	if _, err := owner.SendMessage(e.Admin(), connector.Auth{}, msg); err != nil {
+		t.Fatalf("the member's own reply: %v", err)
+	}
+	if n := e.count(t, `SELECT count(*) FROM personal_channel_reply WHERE delivery_key = 'delivery-1' AND network = 'whatsapp' AND recipient_account = '8495'`); n != 1 {
+		t.Fatal("the member's reply was not queued for their client")
+	}
+}
+
+func TestAReplyToAnAccountAnotherMembersChatAppMetIsNotQueued(t *testing.T) {
+	e := setupPersonalChannels(t)
+	landed := e.push(t, whatsapp("wamid.r2", "8496"))
+	msg := connector.ChannelMessage{
+		ActivityID: ids.From[ids.ActivityKind](*landed[0].ActivityID), Body: "Yes", IdempotencyKey: "delivery-2",
+		Recipient: connector.ChannelIdentity{Provider: personalchannels.Provider, ChannelUserID: "whatsapp/8496/" + ids.NewV7().String()},
+	}
+	owner := personalchannelwire.ReplySender{DB: compose.InstallationDB(e.Pool), Member: e.Rep1}
+	if _, err := owner.SendMessage(e.Admin(), connector.Auth{}, msg); !errors.Is(err, connector.ErrRecipientUnreachable) {
+		t.Fatalf("a reply to another connection's account = %v, want ErrRecipientUnreachable", err)
+	}
+	if n := e.count(t, `SELECT count(*) FROM personal_channel_reply WHERE delivery_key = 'delivery-2'`); n != 0 {
+		t.Fatal("a reply to an account the member's own client never pushed was queued")
+	}
+}
+
+func TestOnlyTheIdentitiesTheMembersOwnChatAppMetAreReachable(t *testing.T) {
+	e := setupPersonalChannels(t)
+	own := connector.ChannelIdentity{ChannelUserID: "whatsapp/8497/" + e.connection(t).String()}
+	foreign := connector.ChannelIdentity{ChannelUserID: "whatsapp/8497/" + ids.NewV7().String()}
+	tx, err := integration.OwnerConn(t).Begin(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := tx.Rollback(context.Background()); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			t.Error(err)
+		}
+	})
+	got, err := personalchannelwire.OwnIdentities(context.Background(), tx, e.Rep1, []connector.ChannelIdentity{own, foreign})
+	if err != nil || len(got) != 1 || got[0] != own {
+		t.Fatalf("own identities = %v, %v; want only %v", got, err, own)
+	}
+	if got, _ := personalchannelwire.OwnIdentities(context.Background(), tx, e.Rep2, []connector.ChannelIdentity{own}); len(got) != 0 {
+		t.Fatalf("a colleague reaches %v through the member's chat app", got)
+	}
+}
+
+func TestAGroupMessageNamingOtherParticipantsLands(t *testing.T) {
+	e := setupPersonalChannels(t)
+	msg := whatsapp("wamid.grp", "8498")
+	msg.GroupID = "grp-1"
+	msg.Participants = []personalchannels.Party{{Account: "8499", Name: "Chi Pham"}}
+	res := e.push(t, msg)
+	if res[0].Status != personalchannels.StatusLanded {
+		t.Fatalf("a group message with a further participant = %+v, want landed", res[0])
+	}
+}
+
+func TestAContactBroughtInThroughAMembersChatAppIsTheirs(t *testing.T) {
+	e := setupPersonalChannels(t)
+	e.push(t, whatsapp("wamid.own", "8500"))
+	if n := e.count(t, `SELECT count(*) FROM contact c JOIN contact_channel_identity i ON i.contact_id = c.id
+		WHERE i.provider = 'personal_channels' AND i.channel_user_id LIKE 'whatsapp/8500/%' AND c.owner_id = $1`, e.Rep1); n != 1 {
+		t.Fatalf("contacts owned by the member for that chat = %d, want 1", n)
+	}
+}
+
+func TestAReplyThatCannotGoToTheMembersChatAppIsRefusedWithItsReason(t *testing.T) {
+	e := setupPersonalChannels(t)
+	landed := e.push(t, whatsapp("wamid.refuse", "8501"))
+	activity := ids.From[ids.ActivityKind](*landed[0].ActivityID)
+	sender := personalchannelwire.ReplySender{DB: compose.InstallationDB(e.Pool), Member: e.Rep1}
+	identity := "whatsapp/8501/" + e.connection(t).String()
+	reply := func(recipient string, files ...connector.OutboundFile) error {
+		_, err := sender.SendMessage(e.Admin(), connector.Auth{}, connector.ChannelMessage{
+			ActivityID: activity, Body: "Yes", IdempotencyKey: "refuse-" + recipient,
+			Recipient: connector.ChannelIdentity{Provider: personalchannels.Provider, ChannelUserID: recipient}, Files: files,
+		})
+		return err
+	}
+	if err := reply(identity, connector.OutboundFile{}); !errors.Is(err, connector.ErrFilesNotCarried) {
+		t.Fatalf("a reply with a file = %v, want ErrFilesNotCarried", err)
+	}
+	if err := reply("8501"); !errors.Is(err, comms.ErrCannotSend) {
+		t.Fatalf("a recipient naming no chat app = %v, want ErrCannotSend", err)
+	}
+	if _, err := sender.SendMessage(e.Admin(), connector.Auth{}, connector.ChannelMessage{
+		ActivityID: ids.From[ids.ActivityKind](ids.NewV7()), Body: "Yes", IdempotencyKey: "refuse-nothread",
+		Recipient: connector.ChannelIdentity{Provider: personalchannels.Provider, ChannelUserID: identity},
+	}); err == nil {
+		t.Fatal("a reply to an activity that exists nowhere was queued")
+	}
+	if _, err := e.store.SetEnabled(e.As(e.Rep1, nil, channelRepPerms), false); err != nil {
+		t.Fatal(err)
+	}
+	if err := reply(identity); !errors.Is(err, connector.ErrRecipientUnreachable) {
+		t.Fatalf("a reply while the member's chats are off = %v, want ErrRecipientUnreachable", err)
+	}
+	if on, err := personalchannelwire.SendCapable(context.Background(), compose.InstallationDB(e.Pool), e.Rep1); err != nil || on {
+		t.Fatalf("send capable while off = %v, %v; want false", on, err)
+	}
+}

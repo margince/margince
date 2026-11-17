@@ -86,10 +86,6 @@ var verifiesItsOwnCaller = gatekit.Waive(map[string]string{
 // keyed "file.go:function". The walk cannot read their path. Each is declared by
 // where it is, with what stands in for the session or what gates it.
 var dynamicRegistrations = gatekit.Waive(map[string]string{
-	"extinbound.go:MountInboundEndpoints": "one signed POST edge for each endpoint a unit declares, at " +
-		"/webhooks/ext/<unit>/<slug>. The core admits the request (workspace, body cap, freshness, rate) and " +
-		"the unit proves the sender by its signature; TestEveryInboundEndpointChecksItsSignature " +
-		"holds every unit to that call",
 	"extroutes.go:MountExtensionRoutes": "not below the gate: it registers onto an inner mux that " +
 		"extensionEdge wraps around the generated router INSIDE the session chain (routes.go), so an " +
 		"extension operation is an authenticated, workspace-scoped call like any other /v1 route. The " +

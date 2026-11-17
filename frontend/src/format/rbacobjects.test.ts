@@ -42,9 +42,7 @@ describe("coreObjectName", () => {
 
 describe("objectLabel", () => {
   it("names an object by its key less the unit's prefix, in sentence case", () => {
-    expect(objectLabel("openchannel", "ext_openchannel_endpoint")).toBe(
-      "Endpoint",
-    );
+    expect(objectLabel("crm-relay", "ext_crm_relay_endpoint")).toBe("Endpoint");
     expect(objectLabel("notes", "ext_notes_signing_key")).toBe("Signing key");
     expect(objectLabel("notes", "ext_other_thing")).toBe("Other thing");
     expect(objectLabel("notes", "ext_notes_")).toBe("Notes");

@@ -60,6 +60,7 @@
     "acceptOffer": "business",
     "acceptPartnerLead": "business",
     "acceptTagSuggestion": "business",
+    "ackPersonalChannelReplies": "capture",
     "acknowledgeApprovalFailure": "agent_governance",
     "acknowledgeCompanyView": "business",
     "acknowledgeContactView": "business",
@@ -415,6 +416,7 @@
     "getOwnershipRequest": "business",
     "getPartner": "business",
     "getPendingMarginceChanges": "business",
+    "getPersonalChannelConnection": "capture",
     "getPipeline": "workspace_settings",
     "getProduct": "workspace_settings",
     "getProject": "business",
@@ -689,6 +691,8 @@
     "publishCapturedContact": "business",
     "publishReportingFramework": "business",
     "publishReportingReportDraft": "business",
+    "pullPersonalChannelReplies": "capture",
+    "pushPersonalChannelMessages": "capture",
     "putAnchorCompany": "admin_settings",
     "putOnboardingState": "own_account",
     "putProductTranslation": "workspace_settings",
@@ -910,6 +914,7 @@
     "uploadAttachment": "business",
     "uploadCorpusDocument": "business",
     "uploadLegalEntityLogo": "admin_settings",
+    "uploadPersonalChannelFile": "capture",
     "upsertPartner": "business",
     "useDealEstimate": "business",
     "validateImportRun": "business",
@@ -931,6 +936,7 @@
     "acceptPartnerLead": "leads",
     "acceptPublicMeetingProposal": "booking_pages",
     "acceptTagSuggestion": "tags",
+    "ackPersonalChannelReplies": "connectors",
     "acknowledgeApprovalFailure": "agent_limits",
     "acknowledgeCompanyView": "companies",
     "acknowledgeContactView": "contacts",
@@ -1376,6 +1382,7 @@
     "getOwnershipRequest": "sharing",
     "getPartner": "companies",
     "getPendingMarginceChanges": "deals",
+    "getPersonalChannelConnection": "connectors",
     "getPipeline": "pipelines",
     "getPreferenceCenter": "public_links",
     "getProduct": "catalog",
@@ -1718,7 +1725,9 @@
     "publishReportingFramework": "reports",
     "publishReportingReportDraft": "reports",
     "publishSalesGoalPlan": "reports",
+    "pullPersonalChannelReplies": "connectors",
     "purgeCaptureExclusion": "capture_rules",
+    "pushPersonalChannelMessages": "connectors",
     "putAnchorCompany": "company_profile",
     "putOnboardingState": "own_profile",
     "putProductTranslation": "catalog",
@@ -1984,6 +1993,7 @@
     "updateOfferLineItem": "offers",
     "updateOfferTemplate": "catalog",
     "updatePartnerStage": "pipelines",
+    "updatePersonalChannelConnection": "connectors",
     "updatePipeline": "pipelines",
     "updatePreferences": "public_links",
     "updateProduct": "catalog",
@@ -2017,6 +2027,7 @@
     "uploadImportSource": "imports",
     "uploadLegalEntityLogo": "company_profile",
     "uploadMyAvatar": "own_profile",
+    "uploadPersonalChannelFile": "connectors",
     "upsertPartner": "companies",
     "useDealEstimate": "deals",
     "validateImportRun": "imports",
@@ -2046,6 +2057,9 @@
     ],
     "accept_tag_suggestion": [
       "tags"
+    ],
+    "ack_personal_channel_replies": [
+      "connectors"
     ],
     "acknowledge_approval_failure": [
       "agent_limits"
@@ -3409,6 +3423,12 @@
     "publish_reporting_report_draft": [
       "reports"
     ],
+    "pull_personal_channel_replies": [
+      "connectors"
+    ],
+    "push_personal_channel_messages": [
+      "connectors"
+    ],
     "put_anchor_company": [
       "company_profile"
     ],
@@ -3501,6 +3521,9 @@
     ],
     "read_onboarding_state": [
       "own_profile"
+    ],
+    "read_personal_channel": [
+      "connectors"
     ],
     "read_project_360": [
       "projects"
@@ -4117,6 +4140,9 @@
     "upload_legal_entity_logo": [
       "company_profile"
     ],
+    "upload_personal_channel_file": [
+      "connectors"
+    ],
     "upsert_partner": [
       "companies"
     ],
@@ -4172,6 +4198,9 @@
     ],
     "accept_tag_suggestion": [
       "business"
+    ],
+    "ack_personal_channel_replies": [
+      "capture"
     ],
     "acknowledge_approval_failure": [
       "agent_governance"
@@ -5511,6 +5540,12 @@
     "publish_reporting_report_draft": [
       "business"
     ],
+    "pull_personal_channel_replies": [
+      "capture"
+    ],
+    "push_personal_channel_messages": [
+      "capture"
+    ],
     "put_anchor_company": [
       "admin_settings"
     ],
@@ -5603,6 +5638,9 @@
     ],
     "read_onboarding_state": [
       "own_account"
+    ],
+    "read_personal_channel": [
+      "capture"
     ],
     "read_project_360": [
       "business"
@@ -6183,6 +6221,9 @@
     ],
     "upload_legal_entity_logo": [
       "admin_settings"
+    ],
+    "upload_personal_channel_file": [
+      "capture"
     ],
     "upsert_partner": [
       "business"

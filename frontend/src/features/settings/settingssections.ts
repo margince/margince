@@ -68,6 +68,7 @@ export const SETTINGS_SECTIONS = {
     "autonomy.title",
     "approvalPreferences.title",
     "settings.passportUseAi",
+    "personalChannels.apiTitle",
     "settings.tierRead",
     "settings.tierSend",
     "settings.tierWait",
@@ -92,7 +93,11 @@ export const SETTINGS_SECTIONS = {
     "delivery.combineLabel",
   ],
   connections: {
-    mail: ["settings.part.connections.mail", "connectors.title"],
+    mail: [
+      "settings.part.connections.mail",
+      "connectors.title",
+      "personalChannels.title",
+    ],
     addresses: [
       "settings.part.connections.addresses",
       "ownerIdentities.title",

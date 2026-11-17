@@ -117,6 +117,17 @@ var changeCaptureCopy = toolCopy{
 		"preview_import and commit_import to start an import, and change_tags to tag a record.",
 }
 
+var personalChannelsCopy = toolCopy{
+	Purpose: "Send the user's own chats in, from WhatsApp, Zalo or any other chat they read to you or that " +
+		"another tool gives you: upload_file stages one file, push_messages lands messages on the contact's " +
+		"timeline and names their network, pull_replies picks up the replies the user wrote in Margince, and " +
+		"ack_replies says whether each was sent on the chat.",
+	Limits: "Send only what the user chose to send. Each message shows that you sent it in. A file sent " +
+		"through this tool fits in one request, so a large file goes through the user's own client. Nothing " +
+		"works while the user's personal channels are off.",
+	Instead: "Use read_workspace topic personal_channel to read whether it is on and how many replies wait.",
+}
+
 var runResearchCopy = toolCopy{
 	Purpose: "Run AI work for the user: ask about a company, refresh a company's brief, dossier, growth " +
 		"fit or scan or a contact's brief, research a contact, make today's morning brief, ask a knowledge " +

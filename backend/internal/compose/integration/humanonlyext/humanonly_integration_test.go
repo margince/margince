@@ -6,25 +6,15 @@
 package humanonlyext
 
 // x-agent-access: human-only, end to end over a real composed app and real
-// Postgres: the mechanism openchannel's 7 operations now use to stay
-// REST/UI-reachable but never MCP/agent-reachable. DESIGN.md's "Data flow"
-// table is the exact set of cases this proves:
+// Postgres: a human-only unit operation stays REST/UI-reachable and is never
+// MCP/agent-reachable.
 //
 //   - Human, REST                            -> 200
 //   - Agent, REST                            -> 403 permission_denied
 //   - Agent, MCP tools/list                  -> tool absent
 //
-// Against a SYNTHETIC human-only extension (built with extension.Extension/
-// extension.Verb, the same construction the compose package's own white-box
-// fixtures use — extensiontools_test.go's unitVerb, extjobs_integration_test.go)
-// rather than the real openchannel unit: the arch-lint DAG forbids compose
-// (which this suite's own package lives under, internal/compose/integration/…)
-// from importing the generated "composition" module — that import is reserved
-// for cmd/api and cmd/worker, the two real boot entry points. A synthetic
-// verb carrying the identical shape (HumanOnly, an RBAC object, a mutating
-// method) proves the exact same mechanism openchannel's real contract fragment
-// declares; extverbs_test.go and verb_test.go already prove the parsing and
-// validation side of openchannel's actual YAML.
+// It uses a synthetic unit built with extension.Extension, because compose may
+// not import the generated composition module; only cmd/ does.
 //
 // OWN PACKAGE, deliberately, not a file under internal/compose/integration
 // alongside the several hundred other suites there. compose.RegisterExtensions
@@ -51,9 +41,8 @@ import (
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
-// humanOnlyVerb is the synthetic operation under test: a mutating,
-// human-only extension operation shaped exactly like openchannel_open —
-// HumanOnly, an RBAC object, no Tier/RequestedScope.
+// humanOnlyVerb is the synthetic operation under test: a mutating method,
+// HumanOnly, an RBAC object, and no Tier or RequestedScope.
 var humanOnlyVerb = extension.Verb{
 	Unit:        "demoext",
 	Contract:    "crm.yaml",
@@ -62,7 +51,7 @@ var humanOnlyVerb = extension.Verb{
 	Method:      http.MethodPut,
 	Tool:        "demoext_open",
 	Title:       "Open a demo endpoint",
-	Description: "A synthetic human-only operation, standing in for openchannel_open's shape.",
+	Description: "A synthetic human-only operation, standing in for any unit operation of that shape.",
 	Version:     "1.0.0",
 	HumanOnly:   true,
 	RbacObject:  "ext_demoext_endpoint",

@@ -19,8 +19,8 @@ import { ExtensionIngestHealthCard } from "./extingesthealth";
 vi.mock("@composition/extensions", () => ({
   extensions: [
     {
-      name: "openchannel",
-      title: "extOpenchannel.title",
+      name: "crm-relay",
+      title: "extCrmRelay.title",
       secretScope: "workspace",
       panels: [],
       verbs: [],
@@ -28,7 +28,7 @@ vi.mock("@composition/extensions", () => ({
   ],
 }));
 vi.mock("@composition/copy", () => ({
-  extensionCopy: { en: { "extOpenchannel.title": "Open channel" } },
+  extensionCopy: { en: { "extCrmRelay.title": "Relay" } },
 }));
 
 // Every request the card could make, recorded: the ABSENCE of one is what the
@@ -69,7 +69,7 @@ const HEALTH = {
   window_days: 7,
   units: [
     {
-      unit: "openchannel",
+      unit: "crm-relay",
       refused: 48,
       last_refused_at: "2026-09-17T04:00:00Z",
       refusals: [
@@ -102,14 +102,14 @@ it("names the unit and which check refused, so an operator knows what to fix", a
 
   render(<ExtensionIngestHealthCard />);
 
-  expect(await screen.findByText("Open channel")).toBeInTheDocument();
-  expect(screen.getByText("openchannel").tagName).toBe("CODE");
+  expect(await screen.findByText("Relay")).toBeInTheDocument();
+  expect(screen.getByText("crm-relay").tagName).toBe("CODE");
   // The class in the reader's words rather than the wire's token: the point of
   // the card is to say which mapping to look at.
   expect(await screen.findByText(/45 on participants/)).toBeInTheDocument();
   expect(await screen.findByText(/3 on record key/)).toBeInTheDocument();
   expect(await screen.findByText(/48 records refused/)).toBeInTheDocument();
-  const unit = await tableRowCells("Refused connector records", "openchannel");
+  const unit = await tableRowCells("Refused connector records", "crm-relay");
   expect(unit.Refused).toHaveTextContent("48");
   expect(unit.Reasons).toHaveTextContent("45 on participants");
   const unnamed = await tableRowCells(

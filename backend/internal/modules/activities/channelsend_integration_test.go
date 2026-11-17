@@ -199,6 +199,9 @@ func TestTheDatabaseRefusesAKindAndTransportThatDisagree(t *testing.T) {
 func TestSendMessageRefusesWhenTheConversationReachesTwoContacts(t *testing.T) {
 	e := setupSend(t)
 	anchor := e.seedChannelAnchor(t)
+	if _, err := e.owner.Exec(context.Background(), `UPDATE activity SET thread_key = 'telegram:8100:group' WHERE id = $1`, anchor); err != nil {
+		t.Fatalf("moving the anchor to a thread that names neither account: %v", err)
+	}
 	first := e.linkContact(t, anchor, "First Buyer")
 	second := e.linkContact(t, anchor, "Second Buyer")
 	stager := &recordingChannelStager{}

@@ -58,12 +58,11 @@ func TestOnlyATickAndADeliveryAnswerASystemRead(t *testing.T) {
 	composeReader(t, extension.SystemReadDirectory)
 	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
 	for name, mint := range map[string]func(context.Context, string, string, string, extensionRuntimeBinding) *callRuntime{
-		"a job tick":         jobRuntimeFor,
-		"a bus delivery":     deliveryRuntimeFor,
-		"a finance read":     financeRuntimeFor,
-		"a channel send":     sendRuntimeFor,
-		"an attended call":   runtimeFor,
-		"an inbound request": inboundRuntimeFor,
+		"a job tick":       jobRuntimeFor,
+		"a bus delivery":   deliveryRuntimeFor,
+		"a finance read":   financeRuntimeFor,
+		"a channel send":   sendRuntimeFor,
+		"an attended call": runtimeFor,
 	} {
 		rt := mint(ctx, "dealmirror", "1.0.0", "probe", extensionRuntimeBinding{pool: &pgxpool.Pool{}})
 		_, err := rt.Directory().Emails(context.Background(), nil)

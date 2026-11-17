@@ -21,7 +21,12 @@ import { join } from "node:path";
 import ts from "typescript";
 import { selectorList } from "../../scripts/lib/css-rules";
 import { parseSource } from "../../scripts/lib/source-tree";
-import { type CensusFile, type CensusRule, srcDir } from "../tree";
+import {
+  type CensusFile,
+  type CensusRule,
+  extensionShipsScreens,
+  srcDir,
+} from "../tree";
 
 // The role this gate demands. The floors check tokens.css still defines it.
 export const ROLE = "--gapActions";
@@ -269,7 +274,8 @@ export const rule: CensusRule = {
       .join("\n");
     return [
       ...(corpus.length > 100 ? [] : ["fewer than 100 surfaces were read"]),
-      ...(corpus.some((file) => file.area === "extensions")
+      ...(!extensionShipsScreens ||
+      corpus.some((file) => file.area === "extensions")
         ? []
         : ["the census covered frontend/src but no extension frontend layer"]),
       ...(rows.length > 20

@@ -76,9 +76,11 @@ export const rule: CensusRule = {
     tree.files.filter(
       (file) => file.area === "extensions" && MODULE_FILE.test(file.path),
     ),
-  // A census that judged nothing certifies nothing. Only a layer with a
-  // package.json holds source, so each such layer must have had a file read.
+  // A tree where no unit ships a screen has nothing to judge. Once one does,
+  // each layer with a package.json must have had a file read.
+  mayBeEmpty: true,
   floors: (corpus) => {
+    if (corpus.length === 0) return [];
     const packageLayers = extensionPackageLayers(extensionsDir);
     const { files } = layerFindings(corpus, extensionLayers(extensionsDir));
     return [

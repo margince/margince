@@ -781,8 +781,8 @@ export interface paths {
         /**
          * What the OAuth consent screen renders for one pending authorization.
          * @description Session-authenticated. Resolves the requesting client from the database and lists the
-         *     fixed five-scope vocabulary (read, draft, write, send, enrich) the consent screen offers,
-         *     every one of them ticked by default. What the client asked for excludes none of them: the
+         *     fixed scope vocabulary (read, draft, write, send, enrich, personal_channels) the consent screen offers;
+         *     the first five are ticked by default and personal_channels only when the human ticks it. What the client asked for excludes none of them: the
          *     human's ticks — not the client's request — become the connection's authority. Human-only —
          *     an agent must never read or drive a consent screen.
          */
@@ -11189,6 +11189,132 @@ export interface paths {
          *     anything it has ever sent, and every message it received would be skipped silently.
          */
         patch: operations["replaceChannelToken"];
+        trace?: never;
+    };
+    "/personal-channels/chats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send your own chat messages in, each onto its contact's timeline.
+         * @description Always the CALLER's own. Each message lands at once and answers what became of it, in
+         *     the order sent: `landed` with its activity, `duplicate` when its message_id already
+         *     landed, `skipped` when capture did not keep it (an erased contact, for one), `refused`
+         *     with a reason the client can act on, or `deferred` when the request ran out of time
+         *     (send those again, under a new Idempotency-Key). One message's refusal does not refuse
+         *     the rest.
+         *
+         *     A party carries an `account` and a `name` and never an address. `network` names the
+         *     chat it came from (`whatsapp`, `zalo`, …; absent means `generic`). `direction` is
+         *     `outbound` for a message the member sent from their phone; one a client already acked
+         *     as a sent reply answers `duplicate`. A message names at most 20 staged files, 50 MB
+         *     together. Refused while the caller's personal channels are off.
+         */
+        post: operations["pushPersonalChannelMessages"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/personal-channels/replies/pull": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pick up the replies you wrote in Margince, to send on your chat app.
+         * @description Always the CALLER's own, oldest first. Each pulled reply is held for 5 minutes; one not
+         *     acked by then is offered again with `attempt` one higher. A reply nobody acks within 7
+         *     days expires and shows as not delivered. The answer also carries the connection's state.
+         *     Refused while the caller's personal channels are off.
+         */
+        post: operations["pullPersonalChannelReplies"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/personal-channels/replies/ack": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Say whether each reply you pulled went out on your chat app.
+         * @description Always the CALLER's own. `failed` shows the reply as not delivered on the timeline; it is
+         *     not retried, so the member sends it again. A delivery id that is not the caller's answers
+         *     `unknown_delivery`, the same as one that never existed.
+         */
+        post: operations["ackPersonalChannelReplies"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/personal-channels/uploads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stage one file for a chat message you send in next.
+         * @description Always the CALLER's own. The answer's `upload_id` goes in the next message's `files`. A
+         *     staged file no message names within 24 hours is deleted. The type is read from the bytes.
+         *     A file may be at most 25 MiB; through an AI assistant, at most what one MCP request
+         *     carries inline. Refused while the caller's personal channels are off.
+         */
+        post: operations["uploadPersonalChannelFile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/personal-channels/connection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Your personal channels connection and the replies waiting on it.
+         * @description Always the CALLER's own. While it is off, Margince takes no chat in from any of the
+         *     caller's clients and hands no reply out. The counts describe replies the caller wrote in
+         *     Margince that their client has not yet picked up.
+         */
+        get: operations["getPersonalChannelConnection"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Turn your personal channels on or off.
+         * @description Always the CALLER's own. Turning it off stops every client from sending chats in or
+         *     pulling replies; replies already waiting stay queued and still expire after 7 days.
+         */
+        patch: operations["updatePersonalChannelConnection"];
         trace?: never;
     };
     "/channel-links/{record_type}/{id}": {
@@ -32268,6 +32394,121 @@ export interface components {
          * @enum {string}
          */
         ChannelVerbosity: "everything" | "important" | "milestones" | "silent";
+        PersonalChannelParty: {
+            /** @description The party's id on the chat, as the chat gives it. No ':'. */
+            account: string;
+            name?: string;
+        };
+        PersonalChannelMessage: {
+            /** @description The chat's own id for the message; a resend with the same id lands nothing new. */
+            message_id: string;
+            /**
+             * Format: uuid
+             * @description For an outbound message the client sent as a pulled reply: that reply's delivery id, so it is not landed a second time.
+             */
+            delivery_id?: string;
+            /** @description The group the message was sent in. No ':'. */
+            group_id?: string;
+            /** @description The chat it came from: lower-case letters, digits and _. Absent means generic. */
+            network?: string;
+            /** @enum {string} */
+            direction?: "inbound" | "outbound";
+            subject?: string;
+            body?: string;
+            /** Format: date-time */
+            occurred_at?: string;
+            from: components["schemas"]["PersonalChannelParty"];
+            to?: components["schemas"]["PersonalChannelParty"];
+            participants?: components["schemas"]["PersonalChannelParty"][];
+            files?: {
+                /** Format: uuid */
+                upload_id: string;
+            }[];
+        };
+        PushPersonalChannelMessagesRequest: {
+            messages: components["schemas"]["PersonalChannelMessage"][];
+        };
+        PushPersonalChannelMessagesResponse: {
+            results: components["schemas"]["PersonalChannelPushResult"][];
+        };
+        PersonalChannelPushResult: {
+            message_id: string;
+            /** @enum {string} */
+            status: "landed" | "duplicate" | "skipped" | "refused" | "deferred";
+            /** Format: uuid */
+            activity_id?: string | null;
+            reason?: string | null;
+        };
+        PullPersonalChannelRepliesRequest: {
+            max: number;
+        };
+        PersonalChannelReply: {
+            /** Format: uuid */
+            delivery_id: string;
+            network: string;
+            recipient: components["schemas"]["PersonalChannelParty"];
+            group_id?: string | null;
+            /** @description The chat message this answers. */
+            reply_to?: string | null;
+            body: string;
+            attempt: number;
+        };
+        PullPersonalChannelRepliesResponse: {
+            replies: components["schemas"]["PersonalChannelReply"][];
+            connection: components["schemas"]["PersonalChannelConnection"];
+        };
+        AckPersonalChannelRepliesRequest: {
+            acks: {
+                /** Format: uuid */
+                delivery_id: string;
+                /** @description The attempt the pull handed out. An ack for an earlier attempt is superseded: the reply was offered again since. */
+                attempt?: number;
+                /** @enum {string} */
+                outcome: "sent" | "failed";
+                provider_message_id?: string;
+                reason?: string;
+            }[];
+        };
+        AckPersonalChannelRepliesResponse: {
+            results: components["schemas"]["PersonalChannelAckResult"][];
+        };
+        PersonalChannelAckResult: {
+            /** Format: uuid */
+            delivery_id: string;
+            /** @enum {string} */
+            result: "recorded" | "unknown_delivery" | "already_settled" | "superseded";
+        };
+        /** @description One staged file, named by its upload_id in the next message's files. */
+        PersonalChannelUpload: {
+            /** Format: uuid */
+            upload_id: string;
+            filename: string;
+            /** @description The type read from the bytes. */
+            content_type: string;
+            size: number;
+            /** @description Hex SHA-256 of the bytes. */
+            sha256: string;
+        };
+        /** @description A member's personal channels connection. */
+        PersonalChannelConnection: {
+            /** @description Whether chats may come in and replies be pulled. */
+            enabled: boolean;
+            /** @description Replies written in Margince that the client has not acked. */
+            replies_waiting: number;
+            /**
+             * Format: date-time
+             * @description When the oldest of those was written; it expires 7 days later.
+             */
+            oldest_reply_waiting_at?: string | null;
+            /**
+             * Format: date-time
+             * @description When a client last picked replies up.
+             */
+            last_pull_at?: string | null;
+        };
+        UpdatePersonalChannelConnectionRequest: {
+            enabled: boolean;
+        };
         ChannelLinkState: {
             /**
              * @description `off`: no chat bot is connected. `none`: no channel yet. `linked`: posting and reading. `paused`: the channel is gone or the bot lost access.
@@ -50323,7 +50564,7 @@ export interface components {
          *     The SERVER does not derive from it. `identity/internal/policy.coreObjects` is maintained separately (oapi-codegen emits nothing for a top-level standalone string enum, so there are no generated Go constants to derive from), and a typo there is an ordinary runtime value, not a compile error. What keeps the two honest is a merge-blocking parity test, `backend/gates/rbacvocabulary_test.go`, which holds this enum equal to that list. Editing this enum alone changes what clients can express, never what the server enforces — change both, and the gate will say so if you do not.
          * @enum {string}
          */
-        RbacObject: "contact" | "company" | "deal" | "lead" | "activity" | "pipeline" | "list" | "tag" | "relationship" | "partner" | "automation" | "voice_profile" | "product" | "offer" | "signal" | "saved_view" | "custom_field" | "computed_field" | "offer_template" | "embedding_reindex" | "webhook_subscription" | "fx_rate" | "ai_model_rate" | "capture_settings" | "project" | "channel_connection" | "import_run" | "installation_settings" | "finance" | "integrations" | "retention_policy" | "capture_trace" | "license" | "contract" | "ai_routing" | "ai_budget" | "commission" | "deal_room" | "knowledge_corpus" | "knowledge_document" | "introduction" | "weekly_plan" | "forecast" | "data_coverage" | "user_admin" | "role_admin" | "team_admin" | "privacy_request" | "audit_log" | "job_health" | "data_task" | "extension_access" | "system_reset" | "ai_diagnostics" | "consent_config" | "communication_exception" | "authentication_policy" | "oauth_application" | "agent_client" | "seat_usage" | "team_oversight" | "team_lead" | "report_definition" | "sales_target" | "reporting_framework" | "report_schedule" | "report_edition" | "reporting_credit" | "legal_review" | "legal_entity" | "sales_initiative" | "tax_rate";
+        RbacObject: "contact" | "company" | "deal" | "lead" | "activity" | "pipeline" | "list" | "tag" | "relationship" | "partner" | "automation" | "voice_profile" | "product" | "offer" | "signal" | "saved_view" | "custom_field" | "computed_field" | "offer_template" | "embedding_reindex" | "webhook_subscription" | "fx_rate" | "ai_model_rate" | "capture_settings" | "project" | "channel_connection" | "import_run" | "installation_settings" | "finance" | "integrations" | "retention_policy" | "capture_trace" | "license" | "contract" | "ai_routing" | "ai_budget" | "commission" | "deal_room" | "knowledge_corpus" | "knowledge_document" | "introduction" | "weekly_plan" | "forecast" | "data_coverage" | "user_admin" | "role_admin" | "team_admin" | "privacy_request" | "audit_log" | "job_health" | "data_task" | "extension_access" | "system_reset" | "ai_diagnostics" | "consent_config" | "communication_exception" | "authentication_policy" | "oauth_application" | "agent_client" | "seat_usage" | "team_oversight" | "team_lead" | "report_definition" | "sales_target" | "reporting_framework" | "report_schedule" | "report_edition" | "reporting_credit" | "legal_review" | "legal_entity" | "sales_initiative" | "tax_rate" | "personal_channel";
         /**
          * @description The four object-level verbs a grant carries (data-model §2.4). These are RBAC actions, not HTTP methods: the seat ceiling is clamped on the method independently, and the two diverge in both directions — a read-seat GET that the object grants, and a mutating route whose RBAC action is `read`.
          * @enum {string}
@@ -52010,7 +52251,7 @@ export interface components {
              * @description The passport scope this operation consumes — the cap the granting human set, which the tier cannot substitute for: a tier says whether a human confirms the act, a scope says whether the act was ever delegable. Every `x-mcp-tool` declares one; unlike `tier` and `record_type`, absent is NOT a meaningful state, so generation fails on a missing value rather than emitting a zero. It is what an operation with no registered MCP tool is admitted under, and for one that has a tool the generator holds the two equal — so a verb cannot mean `enrich` on MCP and `write` on REST.
              * @enum {string}
              */
-            scope?: "read" | "draft" | "write" | "send" | "enrich";
+            scope?: "read" | "draft" | "write" | "send" | "enrich" | "personal_channels";
             /**
              * @description registry — the operation's handler runs the tool through the tool registry, the entry the MCP door uses, which admits the call itself: scope, seat, tier, approval, retry key and volume budget. The REST admission gate passes such an operation through untouched, because admitting it there as well would charge an agent twice and stage a confirm-first call twice. route — the reverse: the MCP verb runs this operation's own handler in process, so both doors are one engine. Such a verb is an action of the router named in `router`, called by `action`. Absent means the operation's own handler runs and the gate admits it.
              * @enum {string}
@@ -57283,9 +57524,11 @@ export interface components {
             /** @description Which agent this binds, e.g. "Claude Desktop". */
             label?: string | null;
             /** @description Verb classes the passport may exercise; effective authority is always ∩ the granting human's RBAC. */
-            scopes: ("read" | "draft" | "write" | "send" | "enrich")[];
+            scopes: ("read" | "draft" | "write" | "send" | "enrich" | "personal_channels")[];
             /** @description Lifetime in hours (default 720 = 30 days, max 90 days). Revocable at any time. */
             ttl_hours?: number | null;
+            /** @description The passport never expires; it works until it is revoked or its human is turned off. Not together with ttl_hours. */
+            never_expires?: boolean;
             /** @description Where the passport may act. Absent means all areas. */
             areas?: components["schemas"]["PassportAreas"];
         };
@@ -57300,8 +57543,11 @@ export interface components {
              * @description The human whose RBAC bounds every call this passport makes.
              */
             on_behalf_of: string;
-            /** Format: date-time */
-            expires_at: string;
+            /**
+             * Format: date-time
+             * @description When the passport stops working; null for one that never expires.
+             */
+            expires_at: string | null;
         };
         /** @description A request to hear from us that the contact's acquisition records. */
         ContactAcquisitionRequest: {
@@ -57482,7 +57728,7 @@ export interface components {
             client_name: string;
             /** @description The client asked to stay connected without asking again (offline_access). */
             offline: boolean;
-            scopes: ("read" | "draft" | "write" | "send" | "enrich")[];
+            scopes: ("read" | "draft" | "write" | "send" | "enrich" | "personal_channels")[];
             /**
              * @description The work areas the human's role reaches, which the screen offers to choose from. The
              *     screen posts the choice back as `areas`: `all`, or the chosen areas separated by spaces.
@@ -81537,6 +81783,219 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    pushPersonalChannelMessages: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PushPersonalChannelMessagesRequest"];
+            };
+        };
+        responses: {
+            /** @description One result per message, in the order sent. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PushPersonalChannelMessagesResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    pullPersonalChannelReplies: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PullPersonalChannelRepliesRequest"];
+            };
+        };
+        responses: {
+            /** @description The replies handed out, and the connection's state. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PullPersonalChannelRepliesResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    ackPersonalChannelReplies: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AckPersonalChannelRepliesRequest"];
+            };
+        };
+        responses: {
+            /** @description One result per ack, in the order sent. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AckPersonalChannelRepliesResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    uploadPersonalChannelFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description The file as the chat had it.
+                     */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The staged file. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonalChannelUpload"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getPersonalChannelConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's connection. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonalChannelConnection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    updatePersonalChannelConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdatePersonalChannelConnectionRequest"];
+            };
+        };
+        responses: {
+            /** @description The caller's connection after the change. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonalChannelConnection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getChannelLink: {

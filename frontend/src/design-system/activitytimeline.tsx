@@ -4,6 +4,7 @@ import { displayedBody, displayedSubject } from "../lib/systemdisplay";
 
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
+import { personalChannelNetwork } from "../format/connectorprovider";
 import { emailSummaryText } from "../format/emailtext";
 import type { Locale, useT } from "../i18n";
 import { callOutcomeLabel } from "../lib/calloutcome";
@@ -17,6 +18,7 @@ import {
   namesOf,
   withWhom,
 } from "./participants";
+import type { Provenance } from "./provenance";
 import {
   provenanceOf,
   withAgentOrigin,
@@ -203,12 +205,18 @@ export function activityTimeline(
       provenance: withControllerSend(
         withCreator(
           withAgentOrigin(
-            provenanceOf(
-              activity.captured_by,
-              viewerUserId,
-              activity.author,
-              activity.source,
-              activity.imported_from,
+            withNetwork(
+              provenanceOf(
+                activity.captured_by,
+                viewerUserId,
+                activity.author,
+                activity.source,
+                activity.imported_from,
+              ),
+              personalChannelNetwork(
+                activity.channel_provider,
+                activity.source_id,
+              ),
             ),
             activity.recorded_by_agent,
           ),
@@ -221,6 +229,13 @@ export function activityTimeline(
       actions: renderActions?.(activity),
     };
   });
+}
+
+// A message through a member's own chat app names that app on its tag.
+function withNetwork(provenance: Provenance, network: string): Provenance {
+  return network && provenance.kind === "connector"
+    ? { ...provenance, network }
+    : provenance;
 }
 
 // Offered on the row rather than by each caller, so a transcript is readable

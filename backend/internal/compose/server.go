@@ -102,6 +102,9 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 		opt(&srv, pool)
 	}
 	srv.applySendPath(pool)
+	// After the options, because WithBlobstore decides whether a pushed file
+	// has anywhere to land.
+	srv.wirePersonalChannels(pool)
 	srv.publishCoreFeatures()
 	srv.publishListsAvailability(pool)
 	srv.authHandlers = srv.WithAnalyticsStartup(srv.analyticsStartup)

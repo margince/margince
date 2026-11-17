@@ -60,6 +60,7 @@ import { LegacyLossReasonsCard, LossReasonsCard } from "./lossreasons";
 import { NotificationSettingsCard } from "./notification-settings";
 import { OAuthAppsCard } from "./oauth-apps-card";
 import { PartnerStagesCard } from "./partnerstages";
+import { PersonalChannelsCard } from "./personal-channels";
 import { FxRatesCard } from "./rates";
 import { RolesSettings } from "./roles-settings";
 import { AiAccessTab } from "./settings.aiaccess";
@@ -299,7 +300,12 @@ function connectionsTab(tab: string): ReactNode {
     case "activity":
       return <CaptureActivityTab />;
     default:
-      return <ConnectorsCard />;
+      return (
+        <>
+          <ConnectorsCard />
+          <PersonalChannelsCard />
+        </>
+      );
   }
 }
 

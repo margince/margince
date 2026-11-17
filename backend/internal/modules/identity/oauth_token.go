@@ -134,7 +134,7 @@ func writeTokenResponse(w http.ResponseWriter, issued IssuedPassport, refresh st
 	response := map[string]any{
 		"access_token":  issued.Token,
 		"token_type":    "Bearer",
-		"expires_in":    int(time.Until(issued.ExpiresAt).Seconds()),
+		"expires_in":    int(time.Until(*issued.ExpiresAt).Seconds()),
 		oauthParamScope: strings.Join(issued.Scopes, " "),
 	}
 	// A refresh token is answered only when the grant allows one: a client

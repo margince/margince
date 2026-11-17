@@ -24,10 +24,17 @@ import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { throwProblem } from "../../lib/problem";
 import { resetToSignedOut } from "../../lib/session";
-import { MintedPassport } from "./settings.passportuse";
+import { examplePathFor, MintedPassport } from "./settings.passportuse";
 
-const PASSPORT_SCOPES = ["read", "draft", "write", "send", "enrich"] as const;
-type PassportScope = (typeof PASSPORT_SCOPES)[number];
+const PASSPORT_SCOPES = [
+  "read",
+  "draft",
+  "write",
+  "send",
+  "enrich",
+  "personal_channels",
+] as const;
+export type PassportScope = (typeof PASSPORT_SCOPES)[number];
 
 // Annotated, so an added scope is a missing-key compile error rather than a
 // checkbox labelled with its wire token.
@@ -53,20 +60,28 @@ export function MintDialog({
   apiBaseUrl,
   reachable,
   onMinted,
+  preset,
 }: Readonly<{
   open: boolean;
   onClose: () => void;
   apiBaseUrl: string | undefined;
   reachable: readonly WorkArea[];
   onMinted: () => unknown;
+  /** What the form starts from, for a passport opened for one purpose. */
+  preset?: Readonly<{ label: string; scopes: readonly PassportScope[] }>;
 }>) {
   const t = useT();
   const queryClient = useQueryClient();
-  const [label, setLabel] = useState("");
+  const [label, setLabel] = useState(preset?.label ?? "");
   const [scopes, setScopes] = useState<Set<PassportScope>>(
-    new Set(["read", "draft"]),
+    new Set(preset?.scopes ?? ["read", "draft"]),
   );
-  const [areas, setAreas] = useState<PassportAreas>(ALL_AREAS);
+  const [chosenAreas, setAreas] = useState<PassportAreas>(ALL_AREAS);
+  // Chats are the member's own, not records in a work area, so a passport that
+  // holds only Personal channels has no area to choose.
+  const channelsOnly = scopes.size === 1 && scopes.has("personal_channels");
+  const areas = channelsOnly ? ALL_AREAS : chosenAreas;
+  const [neverExpires, setNeverExpires] = useState(false);
   const tokenRegion = useRef<HTMLDivElement | null>(null);
   const titleId = useId();
   const formId = useId();
@@ -77,12 +92,14 @@ export function MintDialog({
       label: string;
       scopes: PassportScope[];
       areas: PassportAreas;
+      neverExpires: boolean;
     }) => {
       const { data, error, response } = await api.POST("/passports", {
         body: {
           label: request.label.trim() || null,
           scopes: request.scopes,
           areas: request.areas,
+          ...(request.neverExpires ? { never_expires: true } : {}),
         },
       });
       // An expired session must not read as a mint that did nothing. Drop every
@@ -118,6 +135,7 @@ export function MintDialog({
     setLabel("");
     setScopes(new Set(["read", "draft"]));
     setAreas(ALL_AREAS);
+    setNeverExpires(false);
     mint.reset();
   };
   // Refused mid-flight, as `mint.reset()` does not cancel the POST. Once the
@@ -146,7 +164,11 @@ export function MintDialog({
           {mint.isSuccess && <p>{t("settings.passportCreated")}</p>}
         </div>
         {mint.isSuccess && (
-          <MintedPassport token={mint.data.token} apiBaseUrl={apiBaseUrl} />
+          <MintedPassport
+            token={mint.data.token}
+            apiBaseUrl={apiBaseUrl}
+            examplePath={examplePathFor([...scopes])}
+          />
         )}
       </div>
       {!mint.isSuccess && (
@@ -156,7 +178,7 @@ export function MintDialog({
           onSubmit={(event) => {
             event.preventDefault();
             if (scopes.size > 0 && areasComplete(areas) && !mint.isPending) {
-              mint.mutate({ label, scopes: [...scopes], areas });
+              mint.mutate({ label, scopes: [...scopes], areas, neverExpires });
             }
           }}
         >
@@ -194,10 +216,25 @@ export function MintDialog({
               />
             ))}
           </fieldset>
-          <WorkAreasChoice
-            reachable={reachable}
-            value={areas}
-            onChange={setAreas}
+          {!channelsOnly && (
+            <WorkAreasChoice
+              reachable={reachable}
+              value={areas}
+              onChange={setAreas}
+            />
+          )}
+          <Checkbox
+            checked={neverExpires}
+            onChange={(event) => setNeverExpires(event.target.checked)}
+            label={
+              <>
+                {t("settings.passportNeverExpires")}
+                <span className="t-caption">
+                  {" "}
+                  {t("settings.passportNeverExpiresHint")}
+                </span>
+              </>
+            }
           />
           <WriteRefused titleKey="settings.mintFailed" error={mint.error} />
         </form>

@@ -238,7 +238,6 @@ const SHAPES = [
   "src/features/deals/deal360/dealactions.tsx",
   "src/design-system/trust.tsx",
   "src/design-system/anchoredpopup.ts",
-  "../extensions/openchannel/frontend/screen.tsx",
 ];
 
 export const rule: CensusRule = {

@@ -1,0 +1,15 @@
+{
+  "tool": "personal_channels",
+  "action": "pull_replies",
+  "verb": "pull_personal_channel_replies",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "rep"
+  ],
+  "refused_for": [
+    "ops",
+    "read_only"
+  ]
+}

@@ -14,6 +14,7 @@ import { type Rule, rulesOfText } from "../scripts/lib/css-rules";
 import {
   appCompilerOptions,
   extensionFilesMatching,
+  extensionPackageLayers,
   filesMatching,
   MODULE_FILE,
   parseSource,
@@ -25,6 +26,12 @@ export const repoRoot = join(frontendRoot, "..");
 export const srcDir = join(frontendRoot, "src");
 export const scriptsDir = join(frontendRoot, "scripts");
 export const extensionsDir = join(repoRoot, "extensions");
+
+/** Whether any unit ships screen source. With none, a floor that demands an
+ * extension file asks for what the tree does not hold. It is derived from the
+ * layers, so a walk that misses a unit's files still fails its floor. */
+export const extensionShipsScreens =
+  extensionPackageLayers(extensionsDir).length > 0;
 export const e2eDir = join(frontendRoot, "e2e");
 export const storybookDir = join(frontendRoot, ".storybook");
 
@@ -75,6 +82,9 @@ export type CensusTree = Readonly<{
 type RuleBase = Readonly<{
   name: string;
   corpus(tree: CensusTree): readonly CensusFile[];
+  /** True for a rule over code a tree may not hold, such as a unit's own
+   * screens. An empty corpus is then an answer, not a blind census. */
+  mayBeEmpty?: boolean;
   /** The floors this rule states beyond a non-empty corpus, each as the
    * sentence to print when it does not hold. */
   floors?(corpus: readonly CensusFile[], tree: CensusTree): readonly string[];

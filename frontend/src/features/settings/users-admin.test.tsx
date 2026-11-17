@@ -260,10 +260,10 @@ describe("UsersAdminCard", () => {
     const SERVICE = {
       id: "u-feed",
       email: "service-feed@members.invalid",
-      display_name: "Openchannel feed",
+      display_name: "CrmRelay feed",
       status: "active" as const,
       is_agent: true,
-      service_extension: "openchannel",
+      service_extension: "crm-relay",
       roles: ["service_ingest"],
       allowed_actions: ["deactivate" as const],
     };
@@ -278,13 +278,13 @@ describe("UsersAdminCard", () => {
       vi.stubGlobal("fetch", backend([]));
       render(<UsersAdminCard />);
       await waitFor(() =>
-        expect(screen.getByText("Openchannel feed")).toBeTruthy(),
+        expect(screen.getByText("CrmRelay feed")).toBeTruthy(),
       );
 
-      const row = rowFor("Openchannel feed");
+      const row = rowFor("CrmRelay feed");
       expect(within(row).getByText("Service member")).toBeTruthy();
       expect(within(row).queryByText("Agent")).toBeNull();
-      expect(within(row).getByText("Feed of openchannel")).toBeTruthy();
+      expect(within(row).getByText("Feed of crm-relay")).toBeTruthy();
       expect(within(row).queryByText(/members\.invalid/)).toBeNull();
       expect(within(row).getByText(/fixed role/i)).toBeTruthy();
     });
@@ -295,11 +295,11 @@ describe("UsersAdminCard", () => {
       vi.stubGlobal("fetch", backend(calls));
       render(<UsersAdminCard />);
       await waitFor(() =>
-        expect(screen.getByText("Openchannel feed")).toBeTruthy(),
+        expect(screen.getByText("CrmRelay feed")).toBeTruthy(),
       );
 
       await user.click(
-        (await rowMenu(user, "Openchannel feed")).getByText("Deactivate"),
+        (await rowMenu(user, "CrmRelay feed")).getByText("Deactivate"),
       );
       const dialog = await screen.findByRole("dialog");
       expect(within(dialog).getByText(/stops that feed/i)).toBeTruthy();

@@ -156,7 +156,7 @@ func (s *Sink) decideCounterparty(ctx context.Context, tx pgx.Tx, rec connector.
 	// enter the ladder below: every tier of it reads a mail address or a mail
 	// domain, and its deferral ledger is keyed on the address itself.
 	if counterpartyShapeOf(cp) == shapeChannel {
-		return s.decideChannelCounterparty(ctx), nil
+		return s.decideChannelCounterparty(ctx, tx, cp.ChannelIdentity.Provider)
 	}
 	// T0 internal own-domain: colleagues, not customers. Whom the ladder is
 	// ABOUT is settled before anything else, because the disposition ledger and

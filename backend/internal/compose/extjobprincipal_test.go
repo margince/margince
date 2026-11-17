@@ -29,9 +29,9 @@ import (
 // rather than borrowed from a composed unit that could stop declaring a cadence.
 func tickDeclaration() extension.JobDeclaration {
 	return extension.JobDeclaration{
-		Unit:           extension.Name("openchannel"),
+		Unit:           extension.Name("crm-relay"),
 		Job:            "drain",
-		RequestedScope: extension.Scope("openchannel:drain"),
+		RequestedScope: extension.Scope("crm-relay:drain"),
 	}
 }
 

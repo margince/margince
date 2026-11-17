@@ -54,9 +54,8 @@ type EnsureChannelCounterpartyInput struct {
 	DisplayName string // the provider's own name for the sender — untrusted text
 	// CorroboratingEmail is the sender's address, where the provider knew one
 	// and its source declared the email merge key. It NAMES nobody: Identity
-	// does that, and the ladder below prefers it. What this buys is the human
-	// already captured from mail being recognised as the same human, instead of
-	// becoming a second record nobody notices.
+	// does that. What it buys is the human already captured from mail being
+	// recognised as the same human, not a second record nobody notices.
 	//
 	// Empty for every transport that holds no address, which is every core
 	// channel connector.
@@ -65,6 +64,7 @@ type EnsureChannelCounterpartyInput struct {
 	ActivityID ids.ActivityID // the captured activity to link
 	Source     string         // provenance channel, e.g. "telegram:<bot>:<chat>:<msg>"
 	CapturedBy string         // "connector:<provider>"
+	OwnerID    ids.UUID       // owns a contact this creates; zero leaves it ownerless
 }
 
 // EnsureChannelCounterpartyResult reports what the ensure did. It carries no
@@ -298,9 +298,8 @@ func (s *Store) resolveChannelContact(ctx context.Context, tx pgx.Tx, in EnsureC
 // It reports the contact it offered as well as the winner, because the caller
 // tells a won race from a lost one by comparing the two.
 func (s *Store) offerChannelContact(ctx context.Context, tx pgx.Tx, in EnsureChannelCounterpartyInput, name string, match ContactResolution) (offered, winner ids.ContactID, recorded bool, err error) {
-	// owner_id is left NULL and visibility is 'workspace' (design D2): the
-	// bot serves the workspace, and auth's owner predicate already treats an
-	// ownerless row as workspace-shared at every row-scope tier.
+	// A workspace bot's contact has no owner (design D2); a member's chat app
+	// names one. Visibility is 'workspace' either way.
 	//
 	// quarantined_at is left NULL, and not because impersonation does not
 	// happen here: both tells quarantineSuspect reads — a punycode domain, a
@@ -308,6 +307,7 @@ func (s *Store) offerChannelContact(ctx context.Context, tx pgx.Tx, in EnsureCha
 	// are statements about a mail domain this record does not have.
 	id, err := createContact(ctx, tx, s, match, ContactSpec{
 		FullName: name,
+		OwnerID:  in.owner(),
 		// A channel message arrived from them: the same act as an inbound
 		// mail, over a different transport.
 		//

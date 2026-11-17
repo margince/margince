@@ -15,6 +15,7 @@ import type { MessageKey } from "./en";
 //     string in this catalog and must stay that way.
 export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.import_identity_links": "Liên kết email đã nhập",
+  "systemJob.personal_channel_sweep": "Dọn tệp và câu trả lời của kênh cá nhân",
   "systemJob.transcript_audience": "Cập nhật quyền xem ghi chú theo cuộc họp",
   "systemJob.meeting_profile": "Gỡ giá trị công ty từ cuộc họp đã bị giới hạn",
   "systemJob.optout_receipt": "Báo biên nhận hủy đăng ký bị lỡ",
@@ -2439,6 +2440,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agentJob.transcript_proposer": "Trình đọc bản ghi cuộc họp",
   "agentJob.voice_builder": "Phân tích văn phong",
   "trust.connectorTag": "Qua {connector}",
+  "trust.connectorNetworkTag": "Qua {network} · {connector}",
   "trust.stagedProposal": "Giá trị đề xuất",
   "trust.evidenceFrom": "Bằng chứng từ {source}",
   "trust.evidenceLine_one": "dòng {lines}",
@@ -9030,6 +9032,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "passport.scope.write": "Sửa hồ sơ",
   "passport.scope.send": "Gửi tin nhắn",
   "passport.scope.enrich": "Dùng AI và mua dữ liệu",
+  "passport.scope.personal_channels": "Kênh cá nhân",
   "workArea.name.business": "Công việc bán hàng",
   "workArea.name.compliance": "Tuân thủ và quyền riêng tư",
   "workArea.name.capture": "Thu thập email và lịch",
@@ -9699,6 +9702,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.passportNeverUsed": "Chưa dùng",
   "settings.passportNeverUsedCaption": "Chưa dùng lần nào",
   "settings.passportNoExpiry": "Không hết hạn",
+  "settings.passportNeverExpires": "Không bao giờ hết hạn",
+  "settings.passportNeverExpiresHint":
+    "Có hiệu lực cho đến khi bạn thu hồi hoặc tài khoản của bạn bị tắt. Hãy cất giữ an toàn.",
   "settings.passportLastUsedOn": "Dùng lần cuối {date}",
   "settings.passportExpiresOn": "Hết hạn {date}",
   "settings.revokeNamed": "Thu hồi {name}",
@@ -10313,6 +10319,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.meeting_profile_retract_sweep": "Trường công ty từ cuộc họp",
   "jobs.kind.initiative_enrolment_sweep": "Ngày tham gia sáng kiến",
   "jobs.kind.intro_expiry": "Hết hạn lời giới thiệu",
+  "jobs.kind.personal_channel_sweep": "Dọn dẹp kênh cá nhân",
   "jobs.kind.knowledge_ingest": "Lập chỉ mục tài liệu",
   "jobs.kind.list_evaluate": "Kiểm tra danh sách tự cập nhật",
   "jobs.kind.notification_email": "Thư thông báo",
@@ -11665,6 +11672,34 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Tiện ích bổ sung mà bản cài đặt này chạy bằng một thông tin xác thực dùng chung. Cài đặt ở đây áp dụng cho mọi người dùng.",
 
   "connectors.title": "Thư và lịch",
+  "personalChannels.title": "Kênh cá nhân",
+  "personalChannels.apiTitle": "API kênh cá nhân",
+  "personalChannels.apiIntro":
+    "Gửi đoạn chat và tệp vào, và lấy câu trả lời, từ Chat Bridge hoặc mã của bạn. Tạo passport có chọn Kênh cá nhân, rồi làm theo hướng dẫn. Gói kỹ năng tải về cũng có hướng dẫn này.",
+  "personalChannels.readGuide": "Đọc hướng dẫn",
+  "personalChannels.mintForBridge": "Passport mới cho Chat Bridge",
+  "personalChannels.turnOn": "Bật",
+  "personalChannels.turnOff": "Tắt",
+  "personalChannels.loading": "Đang tải kênh cá nhân…",
+  "personalChannels.intro":
+    "Đưa đoạn chat WhatsApp, Zalo hoặc các ứng dụng khác của bạn vào Margince. Bạn chọn những gì được gửi; mỗi tin nhắn hiện trên dòng thời gian của liên hệ, và bạn có thể trả lời từ Margince.",
+  "personalChannels.ownClient": "Bạn đang xây ứng dụng riêng, như Chat Bridge?",
+  "personalChannels.developers": "Xem Dành cho nhà phát triển trong Trợ lý AI.",
+  "personalChannels.assistant": "Qua trợ lý AI của bạn",
+  "personalChannels.connected": "Đã kết nối",
+  "personalChannels.notConnected": "Chưa kết nối",
+  "personalChannels.assistantFacts":
+    "Claude, ChatGPT, Gemini, Copilot hoặc bất kỳ ứng dụng MCP nào gửi đoạn chat và tệp giúp bạn.",
+  "personalChannels.setUp": "Thiết lập",
+  "personalChannels.step1": "Mở Kết nối công cụ AI trong Cài đặt → Trợ lý AI.",
+  "personalChannels.step2": "Ở bước Cho phép truy cập, chọn Kênh cá nhân.",
+  "personalChannels.step3": "Nhờ trợ lý: “Gửi đoạn chat với An vào Margince.”",
+  "personalChannels.replies": "Câu trả lời",
+  "personalChannels.waiting_one": "{count} đang chờ",
+  "personalChannels.waiting_other": "{count} đang chờ",
+  "personalChannels.oldest": "Câu cũ nhất viết ngày {date}",
+  "personalChannels.lastSeen": "Ứng dụng xuất hiện lần cuối {date}",
+  "personalChannels.neverSeen": "Chưa có ứng dụng nào lấy câu trả lời",
   // Quyền thường trực cho công việc ban đêm — một câu hỏi, được hỏi khi kết
   // nối hộp thư trong onboarding và một lần nữa trong phần cài đặt.
   "overnightGrant.title": "Chuẩn bị qua đêm",
@@ -14752,6 +14787,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "roles.object.capture_settings": "Quy tắc thu thập",
   "roles.object.capture_trace": "Hoạt động kênh dùng chung",
   "roles.object.channel_connection": "Bot nhắn tin",
+  "roles.object.personal_channel": "Kênh cá nhân",
   "roles.object.integrations": "Nhà cung cấp dữ liệu",
   "roles.object.webhook_subscription": "Webhook",
   "roles.object.import_run": "Nhập dữ liệu",
@@ -17819,6 +17855,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "consent.scopeNote.send":
     "Gửi tin nhắn với danh nghĩa của bạn, không hỏi trước",
   "consent.scopeNote.enrich": "Chạy việc AI và mua dữ liệu liên hệ",
+  "consent.scopeNote.personal_channels":
+    "Gửi đoạn chat và tệp của bạn vào, và lấy câu trả lời của bạn",
   "consent.scopesLegend": "Được làm những gì",
   "consent.ceiling":
     "Không bao giờ vượt quá quyền của chính bạn. Có thể ngắt kết nối bất cứ lúc nào trong Cài đặt, mục Trợ lý AI.",

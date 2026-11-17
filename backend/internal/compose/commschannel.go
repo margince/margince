@@ -21,11 +21,14 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/personalchannelwire"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/personalchannels"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -63,6 +66,9 @@ func (r commsResolver) ResolveChannel(ctx context.Context, userID ids.UserID, pr
 	if transport, supplied := composedUnitTransport(provider); supplied {
 		return r.resolveUnitChannel(ctx, userID, transport)
 	}
+	if provider == personalchannels.Provider {
+		return personalchannelwire.ReplySender{DB: r.personal, Member: userID.UUID}, connector.Auth{}, nil
+	}
 	sender, auth, err := r.channels.ChannelSenderFor(ctx, provider)
 	switch {
 	case errors.Is(err, capture.ErrNoConnection):
@@ -91,7 +97,15 @@ var _ activities.ChannelReachability = channelReachability{}
 // untyped on the activities side by design; the type belongs at the boundary
 // where the id is finally read as a contact.
 func (channelReachability) ReachableChannelIdentities(ctx context.Context, tx pgx.Tx, contactID ids.UUID, provider string) ([]connector.ChannelIdentity, error) {
-	return contacts.ReachableChannelIdentities(ctx, tx, ids.From[ids.ContactKind](contactID), provider)
+	reachable, err := contacts.ReachableChannelIdentities(ctx, tx, ids.From[ids.ContactKind](contactID), provider)
+	if err != nil || provider != personalchannels.Provider {
+		return reachable, err
+	}
+	actor, ok := principal.Actor(ctx)
+	if !ok {
+		return nil, nil
+	}
+	return personalchannelwire.OwnIdentities(ctx, tx, actor.UserID, reachable)
 }
 
 // recipientDirectory is the mail twin of the edge above: an account-started

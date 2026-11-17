@@ -28,6 +28,15 @@
       ]
     }
   ],
+  "entries": [
+    {
+      "slot": "record_header.deal",
+      "label": "extCrmHello.title",
+      "icon": "plug",
+      "target": "",
+      "object": "ext_crm_hello_ping"
+    }
+  ],
   "settings": [
     {
       "key": "greeting",

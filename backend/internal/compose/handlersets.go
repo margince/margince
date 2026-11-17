@@ -51,6 +51,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/initiatives"
 	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/notices"
+	"github.com/margince/margince/backend/internal/modules/personalchannels"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/modules/recordlinks"
@@ -68,6 +69,7 @@ type (
 	authHandlers            = identity.Handlers
 	channelHandlers         = capture.ChannelHandlers
 	chatLinkHandlers        = chatlinks.Handlers
+	personalChannelHandlers = personalchannels.Handlers
 	chatEventHandlers       = chatlinks.EventHandlers
 	traceHandlers           = capture.TraceHandlers
 	pipelineTraceHandlers   = pipelinetrace.Handlers

@@ -228,12 +228,9 @@ func TestSecretsRotationDestroysThePreviousMaterial(t *testing.T) {
 // secret for a userID nobody holds is a caller bug (a stale id, a typo), and
 // the caller is the one authenticated party in the room — it should see
 // exactly what went wrong. GetUser is different: its published contract is
-// "the secret, or ErrSecretNotFound" and nothing finer, because the one
-// caller that resolves an arbitrary, attacker-influenced ref to a userID at
-// runtime is the anonymous inbound edge (extensions/openchannel), which must
-// answer identically whether that endpoint's owner was never minted a
-// secret or has since been removed — anything else turns "does this ref's
-// owner still exist" into an oracle. The ledger keeps the finer reason
+// "the secret, or ErrSecretNotFound" and nothing finer. A caller resolving an
+// untrusted ref then answers alike for a secret never minted and one whose owner
+// was removed. Anything finer is an oracle for "does this owner exist". The ledger keeps the finer reason
 // (outcome "unknown_user" vs. "missing"); only the RETURNED error is unified.
 func TestSecretsUserScopeRefusesAnUnknownUser(t *testing.T) {
 	e := setup(t)

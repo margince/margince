@@ -17,11 +17,12 @@ import (
 )
 
 func passportRowForTest() PassportRow {
+	expires := time.Date(2026, 8, 1, 8, 0, 0, 0, time.UTC)
 	return PassportRow{
 		ID:        ids.New[ids.PassportKind](),
 		Scopes:    []string{"read"},
 		CreatedAt: time.Date(2026, 7, 1, 8, 0, 0, 0, time.UTC),
-		ExpiresAt: time.Date(2026, 8, 1, 8, 0, 0, 0, time.UTC),
+		ExpiresAt: &expires,
 	}
 }
 

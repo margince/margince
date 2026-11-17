@@ -9,7 +9,12 @@
 
 import { relative } from "node:path";
 import ts from "typescript";
-import { type CensusFile, type CensusRule, repoRoot } from "../tree";
+import {
+  type CensusFile,
+  type CensusRule,
+  extensionShipsScreens,
+  repoRoot,
+} from "../tree";
 
 export const OWNER = "frontend/src/lib/storage.ts";
 
@@ -56,7 +61,8 @@ export const rule: CensusRule = {
     const owner = corpus.find((file) => fromRepo(file) === OWNER);
     return [
       ...(corpus.length > 500 ? [] : ["500 modules or fewer were read"]),
-      ...(corpus.some((file) => file.area === "extensions")
+      ...(!extensionShipsScreens ||
+      corpus.some((file) => file.area === "extensions")
         ? []
         : ["the census covered frontend/src but no extension frontend layer"]),
       ...(owner?.source && storageReachesIn(owner.source).length > 0

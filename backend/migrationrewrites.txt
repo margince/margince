@@ -146,6 +146,16 @@
 1794701221_the_capture_label_check_is_validated.down.sql | * | the down migration is a single SELECT 1; validation changes no row
 1794701222_signature_read_state_checks_its_text.up.sql | * | installs two text-limit triggers on contact_signature_enrich_state; the guards apply to later writes and change no existing row
 1794766200_a_company_field_can_cite_a_meeting.down.sql | company_profile_field | the down migration deletes only the rows whose source is meeting, which this migration introduced; one row per company and field, written only from workspace-wide meeting transcripts
+1794880673_a_passport_may_never_expire.down.sql | passport | runs only on a rollback and touches only passports minted to never expire, which a member makes by hand one at a time, so the set is small
+1794880674_personal_channels_is_a_per_member_core_transport.up.sql | channel_provider | writes the one personal_channels row of a table that holds one row per transport
+1794880674_personal_channels_is_a_per_member_core_transport.down.sql | channel_provider | runs only on a rollback and deletes the one personal_channels row
+1794880675_a_member_may_bring_their_own_chats_in.up.sql | *, role | the trigger statements change no row; updates only the fixed set of system roles, at most six rows per workspace; the three tables it creates are empty
+1794880675_a_member_may_bring_their_own_chats_in.down.sql | role | runs only on a rollback and updates only the fixed set of system roles
+1794880676_a_personal_channel_message_names_who_sent_it_in.up.sql | * | the trigger statements change no row; the migration creates one empty table
+1794880677_openchannel_is_retired.up.sql | channel_provider, extension_ingest_position, extension_ingest_refusal, extension_secret, role | touches only the retired openchannel unit's rows: its few secrets, ingest positions and refusals, the fixed system roles, and one channel_provider row
+1794880677_openchannel_is_retired.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1794880679_openchannel_leaves_no_queued_jobs.up.sql | * | deletes only queued river_job rows of the retired openchannel unit, a handful at most: its drain ran on a cadence and each run replaced the last
+1794880679_openchannel_leaves_no_queued_jobs.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1794834284_a_bulk_mail_write_clears_settled_stamps_once.up.sql | * | the procedural bodies are trigger functions that clear the stamps on the threads one statement wrote; the migration only replaces triggers and functions and changes no existing row
 1794839607_the_senders_ask_checks_its_length.up.sql | * | runs unwrapped and replaces the two text guards on activity in place; the guards act on later writes only, and it changes no existing row
 1794839607_the_senders_ask_checks_its_length.down.sql | * | runs only on a rollback; replaces the same guards without the new column, and changes no existing row

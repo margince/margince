@@ -17,6 +17,8 @@ import (
 	"text/template"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/margince/margince/backend/internal/modules/knowledge/handbook"
 )
 
 // Folder is the one folder the ZIP holds, named for the skill.
@@ -97,6 +99,26 @@ func (b *Builder) forBase(apiBase string) (built, error) {
 	return entry, nil
 }
 
+// PersonalChannelsGuide is the developer guide to the Personal channels API the
+// bundle ships. Its text is the handbook page, so the two cannot differ.
+const PersonalChannelsGuide = "PERSONAL-CHANNELS.md"
+
+// personalChannelsGuidePage is the handbook page the guide is copied from.
+const personalChannelsGuidePage = "personal-channels-api.md"
+
+func personalChannelsGuide() ([]byte, error) {
+	pages, err := handbook.Pages()
+	if err != nil {
+		return nil, fmt.Errorf("agentbundle: reading the handbook: %w", err)
+	}
+	for _, page := range pages {
+		if page.Filename == personalChannelsGuidePage {
+			return page.Content, nil
+		}
+	}
+	return nil, fmt.Errorf("agentbundle: the handbook has no %s; run make handbook-embed", personalChannelsGuidePage)
+}
+
 // guideData is what README.md.tmpl and SKILL.md.tmpl may name.
 type guideData struct {
 	BaseURL string
@@ -104,11 +126,16 @@ type guideData struct {
 }
 
 func build(data guideData, spec []byte) ([]byte, error) {
+	guide, err := personalChannelsGuide()
+	if err != nil {
+		return nil, err
+	}
 	files := []struct {
 		name string
 		body []byte
 	}{
 		{"README.md", nil}, {"SKILL.md", nil}, {"INDEX.md", index}, {"openapi.yaml", spec},
+		{PersonalChannelsGuide, guide},
 	}
 	for i, file := range files[:2] {
 		var rendered bytes.Buffer

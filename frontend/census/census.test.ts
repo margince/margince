@@ -89,7 +89,9 @@ describe("census", () => {
   for (const rule of ordered) {
     it(rule.name, async () => {
       const corpus = rule.corpus(tree);
-      expect(corpus.length, `${rule.name} read no file`).toBeGreaterThan(0);
+      if (!rule.mayBeEmpty) {
+        expect(corpus.length, `${rule.name} read no file`).toBeGreaterThan(0);
+      }
       expect(rule.floors?.(corpus, tree) ?? []).toEqual([]);
       const found = await (pending.get(rule) ??
         ruleFindings(rule, corpus, tree));

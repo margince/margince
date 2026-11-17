@@ -60,6 +60,21 @@ func contractEnums(t *testing.T, raw []byte) []contractEnum {
 	return found
 }
 
+// independentPermissionMeaning admits the agent scope that is named for the
+// transport it opens: a permission a passport holds, not a provider vocabulary.
+func independentPermissionMeaning(path, provider string) bool {
+	if provider != "personal_channels" {
+		return false
+	}
+	switch path {
+	case "components/schemas/AgentAdmissionPolicy/properties/scope",
+		"components/schemas/IssuePassportRequest/properties/scopes/items",
+		"components/schemas/ConsentRequest/properties/scopes/items":
+		return true
+	}
+	return false
+}
+
 func independentLinkedInMeaning(path, provider string) bool {
 	if provider != "linkedin" {
 		return false

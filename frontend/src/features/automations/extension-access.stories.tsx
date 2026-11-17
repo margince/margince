@@ -38,17 +38,17 @@ const ROLES = [
   { key: "rep", name: "Rep", is_system: true, version: 3 },
 ];
 
-const OPENCHANNEL = {
-  name: "openchannel",
+const RELAY = {
+  name: "crm-relay",
   version: "1.0.0",
   description:
     "An anonymous, signed endpoint an outside party can post to, with its own records.",
   rbac_objects: [
-    "ext_openchannel_endpoint",
-    "ext_openchannel_inbound",
-    "ext_openchannel_outbound",
+    "ext_crm_relay_endpoint",
+    "ext_crm_relay_inbound",
+    "ext_crm_relay_outbound",
   ],
-  routes: [{ path: "/ext/openchannel/endpoint", method: "GET" }],
+  routes: [{ path: "/ext/crm-relay/endpoint", method: "GET" }],
   jobs: ["drain"],
 };
 
@@ -170,7 +170,7 @@ export const UnitsWithGrantsPhone: Story = {
 // Three objects nobody reads yet: one warning for the unit, naming all three,
 // and the one custom role marked among the built-in ones.
 export const ThreeObjectsOneCustomRole: Story = {
-  render: story([OPENCHANNEL], ["admin"], {}, "full", MIXED_ROLES),
+  render: story([RELAY], ["admin"], {}, "full", MIXED_ROLES),
 };
 
 // Every verb column in view on a phone: the grid fits its card, so no grant
@@ -178,7 +178,7 @@ export const ThreeObjectsOneCustomRole: Story = {
 export const ThreeObjectsOneCustomRolePhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
-  render: story([OPENCHANNEL], ["admin"], {}, "full", MIXED_ROLES),
+  render: story([RELAY], ["admin"], {}, "full", MIXED_ROLES),
   play: async ({ canvasElement }) => {
     const matrix = await within(canvasElement).findByRole("table");
     const scroller = matrix.closest<HTMLElement>(".table-scroll");

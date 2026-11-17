@@ -7,7 +7,7 @@
 # working one: a check that flagged EVERY run stale, or none, passes any test
 # that only looks at the case it was written for. Both directions are asserted
 # here, and the case that separates them is deliberately awkward —
-# `extensions/openchannel` reports as `../extensions/openchannel/...`, a path
+# `extensions/finance-demo` reports as `../extensions/finance-demo/...`, a path
 # that leads with `..` and is entirely
 # inside the repo. A guard that looked for `../` instead of resolving the path
 # would pass every other case in this file and quarantine the whole module.
@@ -33,7 +33,7 @@ chmod +x "$stub_dir/golangci-lint"
 
 # expect <name> <want-exit> <want-stale: yes|no> <stub-exit> <stub-output>
 #
-# Every case runs from extensions/openchannel with the config in backend/, the awkward
+# Every case runs from extensions/finance-demo with the config in backend/, the awkward
 # geometry the real gate uses: the module is a sibling of the config's
 # directory, so its own files report with a leading `../`.
 expect() {
@@ -41,7 +41,7 @@ expect() {
 	local out status stale=no
 
 	set +e
-	out="$(cd "$root/extensions/openchannel" &&
+	out="$(cd "$root/extensions/finance-demo" &&
 		GOLANGCI_LINT="$stub_dir/golangci-lint" STUB_EXIT="$stub_exit" STUB_OUT="$stub_out" \
 			"$root/scripts/run-golangci.sh" run --config "$root/backend/.golangci.yml" ./... 2>&1)"
 	status=$?
@@ -68,7 +68,7 @@ expect "clean run passes" 0 no 0 '0 issues.
 # The module's OWN findings, at the path golangci really reports them from:
 # relative to the config's directory, so up out of backend/ and back down. This
 # is the case a naive `starts with ../` test gets wrong.
-expect "a finding in this checkout is a finding" 1 no 1 '../extensions/openchannel/client.go:100:2: use of `fmt.Println` forbidden because "use slog, not fmt.Print*" (forbidigo)
+expect "a finding in this checkout is a finding" 1 no 1 '../extensions/finance-demo/client.go:100:2: use of `fmt.Println` forbidden because "use slog, not fmt.Print*" (forbidigo)
 1 issues:
 * forbidigo: 1
 '
@@ -80,7 +80,7 @@ expect "a finding under the config directory is a finding" 1 no 1 'tools/gen-job
 # The reported case: a worktree that was removed minutes earlier, whose paths
 # climb one level further than any real one can.
 expect "a finding from a sibling worktree is quarantined" 40 yes 1 '../../margince-next-erase/backend/tools/gen-jobs/main.go:71:2: use of `fmt.Printf` forbidden because "use slog, not fmt.Print*" (forbidigo)
-../../margince-next-erase/extensions/openchannel/client.go:100:2: use of `fmt.Println` forbidden because "use slog, not fmt.Print*" (forbidigo)
+../../margince-next-erase/extensions/finance-demo/client.go:100:2: use of `fmt.Println` forbidden because "use slog, not fmt.Print*" (forbidigo)
 2 issues:
 * forbidigo: 2
 '
@@ -103,8 +103,8 @@ expect "an absolute path outside the checkout is quarantined" 40 yes 1 '/somewhe
 # Mixed: the poisoned entry does not excuse the gate from reporting, and the
 # stale verdict wins because the run could not apply this checkout's waivers to
 # either finding.
-expect "one foreign path taints the run" 40 yes 1 '../extensions/openchannel/client.go:100:2: use of `fmt.Println` forbidden because "use slog, not fmt.Print*" (forbidigo)
-../../margince-next-erase/extensions/openchannel/client.go:81:18: G304: Potential file inclusion via variable (gosec)
+expect "one foreign path taints the run" 40 yes 1 '../extensions/finance-demo/client.go:100:2: use of `fmt.Println` forbidden because "use slog, not fmt.Print*" (forbidigo)
+../../margince-next-erase/extensions/finance-demo/client.go:81:18: G304: Potential file inclusion via variable (gosec)
 '
 
 # `--color always` survives a pipe and a caller may pass it. The escape codes
@@ -112,10 +112,10 @@ expect "one foreign path taints the run" 40 yes 1 '../extensions/openchannel/cli
 # and then EVERY path resolves to somewhere that is not this checkout.
 esc=$'\033'
 expect "a coloured finding in this checkout is a finding" 1 no 1 \
-	"${esc}[1m../extensions/openchannel/client.go:100:2:${esc}[0m use of \`fmt.Println\` forbidden ${esc}[90m(forbidigo)${esc}[0m
+	"${esc}[1m../extensions/finance-demo/client.go:100:2:${esc}[0m use of \`fmt.Println\` forbidden ${esc}[90m(forbidigo)${esc}[0m
 "
 expect "a coloured foreign path is still quarantined" 40 yes 1 \
-	"${esc}[1m../../margince-next-erase/extensions/openchannel/client.go:100:2:${esc}[0m use of \`fmt.Println\` forbidden ${esc}[90m(forbidigo)${esc}[0m
+	"${esc}[1m../../margince-next-erase/extensions/finance-demo/client.go:100:2:${esc}[0m use of \`fmt.Println\` forbidden ${esc}[90m(forbidigo)${esc}[0m
 "
 
 # A poisoned entry for a large package names far more files than a reader needs
@@ -126,7 +126,7 @@ for i in 1 2 3 4 5 6 7 8 9 10 11 12; do
 	many="$many../../margince-next-erase/backend/tools/gen-$i/main.go:1:1: use of \`fmt.Printf\` forbidden (forbidigo)
 "
 done
-capped_out="$(cd "$root/extensions/openchannel" &&
+capped_out="$(cd "$root/extensions/finance-demo" &&
 	GOLANGCI_LINT="$stub_dir/golangci-lint" STUB_EXIT=1 STUB_OUT="$many" \
 		"$root/scripts/run-golangci.sh" run --config "$root/backend/.golangci.yml" ./... 2>&1 || true)"
 for needle in "reported 12 file(s)" "and 2 more"; do
@@ -141,11 +141,11 @@ done
 
 # The quarantine keeps the evidence: a reader who does not believe the verdict
 # has to be able to see the paths it read it from.
-stale_out="$(cd "$root/extensions/openchannel" &&
+stale_out="$(cd "$root/extensions/finance-demo" &&
 	GOLANGCI_LINT="$stub_dir/golangci-lint" STUB_EXIT=1 \
-		STUB_OUT='../../margince-next-erase/extensions/openchannel/client.go:100:2: use of `fmt.Println` forbidden (forbidigo)
+		STUB_OUT='../../margince-next-erase/extensions/finance-demo/client.go:100:2: use of `fmt.Println` forbidden (forbidigo)
 ' "$root/scripts/run-golangci.sh" run --config "$root/backend/.golangci.yml" ./... 2>&1 || true)"
-for needle in "margince-next-erase/extensions/openchannel/client.go" "cache clean" "go env GOPATH"; do
+for needle in "margince-next-erase/extensions/finance-demo/client.go" "cache clean" "go env GOPATH"; do
 	case "$stale_out" in
 	*"$needle"*) echo "ok: the diagnosis carries '$needle'" ;;
 	*)

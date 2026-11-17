@@ -16,6 +16,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/margince/margince/backend/internal/modules/personalchannels"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -57,8 +58,9 @@ type channelProviderFacts struct {
 // Core transport display spellings belong to the binary. Unit-owned channel
 // labels come from their declarations, so extensions keep their own names.
 var coreProviderLabels = map[string]string{
-	"whatsapp": "WhatsApp",
-	"linkedin": "LinkedIn",
+	"whatsapp":                "WhatsApp",
+	"linkedin":                "LinkedIn",
+	personalchannels.Provider: "Personal channels",
 }
 
 // providerLabel is what a human reads where the raw id would otherwise appear.

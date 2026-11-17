@@ -1,0 +1,15 @@
+{
+  "tool": "personal_channels",
+  "action": "push_messages",
+  "verb": "push_personal_channel_messages",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "rep"
+  ],
+  "refused_for": [
+    "ops",
+    "read_only"
+  ]
+}

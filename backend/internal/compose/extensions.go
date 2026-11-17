@@ -231,7 +231,6 @@ func validateExtensionSet(exts []extension.Extension) error {
 	claimedProviders := make(map[string]extension.Name)
 	// Which mounted anonymous path each unit has asked for — a fact about the
 	// composed SET, accumulated across the loop for claimedProviders' reason.
-	inboundMounts := make(map[string]extension.Name)
 	financeProviders := make(map[string]extension.Name)
 	oauthApps := make(map[string]extension.Name)
 	for _, e := range exts {
@@ -272,13 +271,7 @@ func validateExtensionSet(exts []extension.Extension) error {
 		if err := preflightFinanceSources(e, financeProviders); err != nil {
 			return err
 		}
-		if err := preflightInbound(e); err != nil {
-			return err
-		}
 		if err := preflightInstrumentation(e); err != nil {
-			return err
-		}
-		if err := reserveInboundMounts(e, inboundMounts); err != nil {
 			return err
 		}
 		if err := preflightSurfaces(e); err != nil {

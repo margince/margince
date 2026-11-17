@@ -130,12 +130,12 @@ Everything below is the detail behind the two tables above: which tools each job
 
 | | |
 |---|---:|
-| Tools the assistant is offered | 48 |
+| Tools the assistant is offered | 49 |
 | … some case requires | 37 |
 | … some case requires as one of a set | 3 |
-| … **no case requires** | 8 |
+| … **no case requires** | 9 |
 | … of those, permitted somewhere but never required | 3 |
-| Prompt tokens spent on tools no case requires | 6461 |
+| Prompt tokens spent on tools no case requires | 6869 |
 | Use cases | 73 |
 | Acceptance criteria the cases declare, each with a statement | 120 |
 
@@ -158,7 +158,7 @@ A tool being "untried" means something different on each, so the numbers above a
 | | Surface A: MCP | Surface B: scheduled agents |
 |---|---|---|
 | Who drives it | a user, watching | a job on a timer, unattended |
-| Menu | 48 tools, the whole catalog | 5 to 7 tools, declared per agent |
+| Menu | 49 tools, the whole catalog | 5 to 7 tools, declared per agent |
 | A wrong reach | the user corrects it | nobody is there |
 | Graded by | the use-case lane on this page | [ai-certification.md](ai-certification.md) |
 
@@ -556,8 +556,8 @@ Every run of every case requiring this tool passed, for the model named.
 |---|---:|---:|---|
 | `read_details` | 1.00 | 4 | `case112_my_plan_and_the_dossier`, `case88_send_it_anyway` |
 | `change_settings` | 1.00 | 6 | `case106_turn_that_rule_off`, `case116_the_rate_and_the_logo`, `case91_add_a_review_stage` |
-| `read_reports` | 1.00 | 2 | `case49_who_can_introduce_us` |
 | `read_workspace` | 1.00 | 4 | `case111_how_is_the_workspace_doing`, `case33_two_cards_for_one_company` |
+| `read_reports` | 1.00 | 2 | `case49_who_can_introduce_us` |
 | `change_state` | 1.00 | 10 | `case40_sort_the_queue`, `case41_close_the_project`, `case45_move_the_deal_on`, `case47_tidy_the_fair_list`, `case85_the_pilot_slipped` |
 | `find_records` | 1.00 | 6 | `case5_before_the_meeting`, `case63_is_she_already_here`, `case6_ask_the_company` |
 | `change_capture` | 1.00 | 4 | `case82_keep_that_newsletter_out`, `case97_import_this_card` |
@@ -598,8 +598,8 @@ Every run of every case requiring this tool passed, for the model named.
 | `read_details` | 1.00 | 4 | `case112_my_plan_and_the_dossier`, `case88_send_it_anyway` |
 | `change_settings` | 1.00 | 6 | `case106_turn_that_rule_off`, `case116_the_rate_and_the_logo`, `case91_add_a_review_stage` |
 | `change_activities` | 1.00 | 12 | `case42_can_i_answer_on_whatsapp`, `case46_get_us_in_a_room`, `case48_that_whole_thread_is_filed_wrong`, `case59_file_it_on_the_meeting_and_the_contract`, `case74_read_the_file_back`, `case9_filed_in_the_wrong_place` |
-| `read_reports` | 1.00 | 2 | `case49_who_can_introduce_us` |
 | `read_workspace` | 1.00 | 4 | `case111_how_is_the_workspace_doing`, `case33_two_cards_for_one_company` |
+| `read_reports` | 1.00 | 2 | `case49_who_can_introduce_us` |
 | `change_state` | 1.00 | 10 | `case40_sort_the_queue`, `case41_close_the_project`, `case45_move_the_deal_on`, `case47_tidy_the_fair_list`, `case85_the_pilot_slipped` |
 | `change_capture` | 1.00 | 4 | `case82_keep_that_newsletter_out`, `case97_import_this_card` |
 | `change_attention` | 1.00 | 6 | `case104_mark_it_seen`, `case70_clear_my_notices`, `case99_they_raised_money` |
@@ -637,8 +637,8 @@ Every run of every case requiring this tool passed, for the model named.
 |---|---:|---:|---|
 | `read_details` | 1.00 | 4 | `case112_my_plan_and_the_dossier`, `case88_send_it_anyway` |
 | `change_settings` | 1.00 | 6 | `case106_turn_that_rule_off`, `case116_the_rate_and_the_logo`, `case91_add_a_review_stage` |
-| `read_reports` | 1.00 | 2 | `case49_who_can_introduce_us` |
 | `read_workspace` | 1.00 | 4 | `case111_how_is_the_workspace_doing`, `case33_two_cards_for_one_company` |
+| `read_reports` | 1.00 | 2 | `case49_who_can_introduce_us` |
 | `send_outbound` | 1.00 | 2 | `case44_chase_what_is_slipping` |
 | `change_reports` | 1.00 | 2 | `case113_after_the_sales_review` |
 | `change_compliance` | 1.00 | 8 | `case77_record_her_yes`, `case78_she_asked_us_to_stop`, `case79_put_it_on_hold`, `case81_she_wants_her_data` |
@@ -736,16 +736,17 @@ A tool this lane has not tried may still be graded. The `Graded by` column names
 corpus tests the tool anyway. That lane asks which tool a goal should reach for, and which plausible neighbour it must
 avoid, which this lane cannot express at all: it sees that a name appeared, never whether it was the right first reach.
 
-So of the 8 tools no use case requires, **2 are graded elsewhere** and 6 are untried by any lane.
+So of the 9 tools no use case requires, **2 are graded elsewhere** and 7 are untried by any lane.
 
 A tool in the `Permitted in` column is worse than one with nothing: a case is allowed to use it and no case checks that it can.
 
 | Tool | Tokens | Graded by | Permitted in | Attached to |
 |---|---:|---|---|---|
 | `read_view` | 1889 | - | `case102_shorter_in_my_voice`, `case106_turn_that_rule_off`, `case118_is_the_crane_job_at_risk`, `case76_she_said_yes_at_the_fair`, `case77_record_her_yes`, `case91_add_a_review_stage`, `case94_a_field_for_the_region` | - |
-| `run_research` | 1344 | - | `case108_ask_sofia_for_an_intro` | - |
+| `run_research` | 1331 | - | `case108_ask_sofia_for_an_intro` | - |
 | `change_record_parts` | 1017 | - | - | - |
-| `change_relationships` | 816 | - | - | - |
+| `change_relationships` | 803 | - | - | - |
+| `personal_channels` | 434 | - | - | - |
 | `decide_approvals` | 429 | - | - | - |
 | `annotate_brief` | 417 | `agent_loop` | - | `morning_brief` |
 | `enrich` | 395 | `enrich` | - | - |

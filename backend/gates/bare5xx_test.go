@@ -54,9 +54,6 @@ var bareFiveHundreds = gatekit.Waive(map[bareWriter]string{
 		"on purpose — a problem document would be a body no probe parses",
 	"internal/compose/webhook.go": "the provider webhook surface at /webhooks/, whose reader is the sending provider and " +
 		"whose 500 is a RETRY instruction rather than a message to a human. Providers redeliver on 5xx and parse no body",
-	"internal/compose/extinbound.go": "the extension inbound surface at /webhooks/ext/, the same contract as the webhook " +
-		"door beside it: the caller is a provider that redelivers on 5xx, and the unit behind the path is not part of the " +
-		"generated /v1 router",
 })
 
 var (

@@ -159,6 +159,13 @@ function ConsentFrame({
 const PRESETS = ["readDraft", "full", "custom"] as const;
 type Preset = (typeof PRESETS)[number];
 const READ_AND_DRAFT: readonly Scope[] = ["read", "draft"];
+// Ticked only by the human, never by default or by "Full assistant": it lets the
+// assistant put chats on the timeline as the human's own.
+const OPT_IN: readonly Scope[] = ["personal_channels"];
+
+function everyDefault(offered: readonly Scope[]): Scope[] {
+  return offered.filter((scope) => !OPT_IN.includes(scope));
+}
 
 function presetOf(
   granted: ReadonlySet<Scope>,
@@ -167,7 +174,7 @@ function presetOf(
   const readDraft = offered.filter((scope) => READ_AND_DRAFT.includes(scope));
   const exactly = (set: readonly Scope[]) =>
     set.length === granted.size && set.every((scope) => granted.has(scope));
-  if (exactly(offered)) return "full";
+  if (exactly(everyDefault(offered))) return "full";
   if (exactly(readDraft)) return "readDraft";
   return "custom";
 }
@@ -179,7 +186,7 @@ function presetScopes(
 ): ReadonlySet<Scope> {
   switch (preset) {
     case "full":
-      return new Set(offered);
+      return new Set(everyDefault(offered));
     case "readDraft":
       return new Set(offered.filter((scope) => READ_AND_DRAFT.includes(scope)));
     case "custom":
@@ -204,7 +211,7 @@ function ConsentSelector({
   // connecting an assistant is asking for, and the first thing they try would
   // fail in a way that reads as the product being broken.
   const [granted, setGranted] = useState<ReadonlySet<Scope>>(
-    () => new Set(data.scopes),
+    () => new Set(everyDefault(data.scopes)),
   );
   const scopeList = data.scopes.filter((scope) => granted.has(scope)).join(" ");
   // Every grant starts at all areas; the section hides itself when the role

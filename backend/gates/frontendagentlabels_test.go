@@ -187,6 +187,7 @@ func builtOnlyForTests(file *ast.File) bool {
 
 const (
 	extensionUnitsDir = "../extensions"
+	stagedFixturesDir = "../fixtures/extensions"
 	provenanceSource  = "../frontend/src/design-system/provenance.tsx"
 )
 
@@ -198,10 +199,13 @@ var tsExtensionJobPrefix = regexp.MustCompile(`const EXTENSION_JOB_PREFIX = "([^
 // Go code declares. Each must carry the prefix the frontend names it by.
 func TestEveryExtensionAgentIsNamedFromItsKind(t *testing.T) {
 	t.Parallel()
-	kinds := extensionDispatcherKinds(t, extensionUnitsDir)
-	declared := extensionDeclaredJobs(t, extensionUnitsDir)
+	kinds, declared := map[string]string{}, map[string]string{}
+	for _, root := range []string{extensionUnitsDir, stagedFixturesDir} {
+		maps.Copy(kinds, extensionDispatcherKinds(t, root))
+		maps.Copy(declared, extensionDeclaredJobs(t, root))
+	}
 	if len(declared) == 0 {
-		t.Fatalf("read no extension.Job declaration under %s — a census that reads nothing agrees with everything", extensionUnitsDir)
+		t.Fatalf("read no extension.Job declaration under %s or %s — a census that reads nothing agrees with everything", extensionUnitsDir, stagedFixturesDir)
 	}
 	for _, kind := range sortedKeys(declared) {
 		if _, ok := kinds[kind]; !ok {

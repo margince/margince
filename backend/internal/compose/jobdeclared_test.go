@@ -514,6 +514,7 @@ var argsForKind = map[string]river.JobArgs{
 	ApprovalNoticeReconcileArgs{}.Kind(): ApprovalNoticeReconcileArgs{},
 	ApprovalExpiryArgs{}.Kind():          ApprovalExpiryArgs{},
 	IntroExpiryArgs{}.Kind():             IntroExpiryArgs{},
+	PersonalChannelSweepArgs{}.Kind():    PersonalChannelSweepArgs{},
 	ApprovalAutoApplyArgs{}.Kind():       ApprovalAutoApplyArgs{},
 	PastActivityClockRefoldArgs{}.Kind(): PastActivityClockRefoldArgs{},
 	PrivacyRetentionArgs{}.Kind():        PrivacyRetentionArgs{},

@@ -54,9 +54,9 @@ func unzipFrom(t *testing.T, builder *Builder) map[string]string {
 	return files
 }
 
-func TestTheBundleIsOneFolderOfFourFilesNamingTheBase(t *testing.T) {
+func TestTheBundleIsOneFolderOfFiveFilesNamingTheBase(t *testing.T) {
 	files := unzip(t)
-	want := []string{"margince/README.md", "margince/SKILL.md", "margince/INDEX.md", "margince/openapi.yaml"}
+	want := []string{"margince/README.md", "margince/SKILL.md", "margince/INDEX.md", "margince/openapi.yaml", "margince/PERSONAL-CHANNELS.md"}
 	if len(files) != len(want) {
 		t.Errorf("the bundle holds %d files, want %d: %v", len(files), len(want), files)
 	}
@@ -396,5 +396,21 @@ func TestTheReadmeSendsTheReaderToAPassportWhenTheConnectorIsOff(t *testing.T) {
 	}
 	if !strings.Contains(readme, "## Scripts and your own code") {
 		t.Error("README drops the passport section")
+	}
+}
+
+// The guide a chat client's author reads ships with the skill, word for word the
+// handbook page, and the skill points at it.
+func TestTheBundleShipsThePersonalChannelsGuide(t *testing.T) {
+	files := unzip(t)
+	guide := files["margince/"+PersonalChannelsGuide]
+	if !strings.Contains(guide, "/v1/personal-channels/chats") || !strings.Contains(guide, "replies/ack") {
+		t.Fatalf("the bundled guide does not describe the personal channels calls:\n%.300s", guide)
+	}
+	if !strings.Contains(files["margince/SKILL.md"], PersonalChannelsGuide) {
+		t.Error("SKILL.md does not point at the personal channels guide")
+	}
+	if !strings.Contains(files["margince/openapi.yaml"], "/personal-channels/chats") {
+		t.Error("the bundled contract does not list the personal channels push")
 	}
 }

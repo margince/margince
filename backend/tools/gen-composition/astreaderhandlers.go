@@ -6,11 +6,8 @@ package main
 // How a unit may SPELL a handler type, and how the readers decide a Handle
 // field is nil at the declaration.
 //
-// Split from astreader.go because it answers one question the three handler
-// kinds share: Tool, Job and Inbound each have a Handle field, each accepts the
-// bare `nil`, a conversion through the published type, and a conversion through
-// a package-local alias of it — and each used to carry its own copy of that
-// recursion, differing only in a type name.
+// Tool and Job each have a Handle field. Each accepts the bare `nil`, a
+// conversion through the published type, and one through a package-local alias.
 
 import (
 	"go/ast"
@@ -20,22 +17,20 @@ import (
 
 // handlerAliasTypeNames are the published extension handler function types a
 // unit's Handle field can be typed as: extension.ToolHandler,
-// extension.JobHandler, extension.InboundHandler. collectHandlerAliases scans
+// extension.JobHandler. collectHandlerAliases scans
 // the unit's package for a local alias of any of these.
 var handlerAliasTypeNames = map[string]bool{
-	"ToolHandler":    true,
-	"JobHandler":     true,
-	"InboundHandler": true,
+	"ToolHandler": true,
+	"JobHandler":  true,
 }
 
 // collectHandlerAliases finds every package-level type ALIAS
 // (`type X = extension.Y`, never a defined type `type X extension.Y`) of one
 // of handlerAliasTypeNames, keyed by the aliased type's own name.
 //
-// A unit that writes `type Handler = extension.InboundHandler` and then
-// `Handle: Handler(nil)` performs the identical conversion the published-type
-// spelling does — Handler and extension.InboundHandler are ONE type, an
-// alias declares no new one. Resolving only extension.InboundHandler(nil) and
+// A unit that writes `type Handler = extension.JobHandler` and then
+// `Handle: Handler(nil)` performs the conversion the published-type spelling
+// does. Handler and extension.JobHandler are one type; an alias declares no new one. Resolving only extension.JobHandler(nil) and
 // not this would read `Handler(nil)` as an ordinary one-argument call to
 // unit-authored code, i.e. as a REAL handler: generation would succeed on a
 // declaration boot's own Validate refuses as nil.
@@ -135,10 +130,8 @@ func yieldFileAliases(f *ast.File, yield func(*ast.File, *ast.TypeSpec) bool) bo
 
 // isStaticallyNilHandler reports whether expr is nil at the declaration, for
 // a Handle field published as extension type name (one of ToolHandler,
-// JobHandler, InboundHandler). The one check every handler field shares,
-// parameterized only by which published type its conversion must name —
-// Tool's, Job's and Inbound's own nil checks used to be three copies of this
-// differing solely in that string.
+// JobHandler). Every handler field shares this check; only the published type
+// its conversion must name differs.
 //
 // Three spellings reach here as the same nil function value: the bare `nil`;
 // a conversion through the published type itself

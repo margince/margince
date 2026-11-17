@@ -10,8 +10,8 @@ require (
 	github.com/margince/margince/composition v0.0.0
 	github.com/margince/margince/extensions/de v0.0.0
 	github.com/margince/margince/extensions/finance-demo v0.0.0 // margince:development-only
-	github.com/margince/margince/extensions/openchannel v0.0.0
 	github.com/margince/margince/extensions/vn v0.0.0
+	example.margince.dev/ext/crm-relay v0.0.0 // margince:development-only
 )
 
 replace (
@@ -19,6 +19,6 @@ replace (
 	github.com/margince/margince/composition => ../composition
 	github.com/margince/margince/extensions/de => ../extensions/de
 	github.com/margince/margince/extensions/finance-demo => ../extensions/finance-demo
-	github.com/margince/margince/extensions/openchannel => ../extensions/openchannel
 	github.com/margince/margince/extensions/vn => ../extensions/vn
+	example.margince.dev/ext/crm-relay => ../fixtures/extensions/crm-relay
 )

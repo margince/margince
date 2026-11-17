@@ -344,3 +344,48 @@ describe("PassportCard: minting with areas", () => {
     ).toBeNull();
   });
 });
+
+describe("PassportCard: a passport that never expires", () => {
+  async function openMint(user: ReturnType<typeof userEvent.setup>) {
+    renderAgents();
+    await user.click(
+      await screen.findByRole("button", { name: "New passport" }),
+    );
+    return screen.findByRole("dialog");
+  }
+
+  it("sends no lifetime choice unless Never expires is ticked", async () => {
+    const { sent } = backend([]);
+    const user = userEvent.setup();
+    const dialog = await openMint(user);
+    expect(
+      within(dialog).getByRole("checkbox", { name: /Never expires/ }),
+    ).not.toBeChecked();
+    await user.click(
+      within(dialog).getByRole("button", { name: "Mint passport" }),
+    );
+    await within(dialog).findByText("mgp_live_0f3a91c4");
+    expect(sent[0]?.body).not.toHaveProperty("never_expires");
+  });
+
+  it("sends never_expires when it is ticked", async () => {
+    const { sent } = backend([]);
+    const user = userEvent.setup();
+    const dialog = await openMint(user);
+    await user.click(
+      within(dialog).getByRole("checkbox", { name: /Never expires/ }),
+    );
+    await user.click(
+      within(dialog).getByRole("button", { name: "Mint passport" }),
+    );
+    await within(dialog).findByText("mgp_live_0f3a91c4");
+    expect(sent[0]?.body).toMatchObject({ never_expires: true });
+  });
+
+  it("lists a passport with no expiry as No expiry", async () => {
+    backend([EVERYWHERE]);
+    renderAgents();
+    await screen.findByText("Scout");
+    expect(passportsTable()).toHaveTextContent("No expiry");
+  });
+});

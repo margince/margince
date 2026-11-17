@@ -1,0 +1,63 @@
+{
+  "schema": 1,
+  "name": "crm-relay",
+  "version": "0.1.0",
+  "risk_tiers": [
+    {
+      "id": "job/tick",
+      "unit": "crm-relay",
+      "kind": "extension_job",
+      "contract": "jobs.yaml",
+      "operation": "extension.job.tick",
+      "operation_id": "ext_crm_relay_tick",
+      "route": "",
+      "method": "",
+      "scopes": [
+        "read"
+      ],
+      "tier": "auto_execute",
+      "fragment_hash": "sha256:f518682890643736e8989e372164d11099f18cf2af787493bfabc9241dfcd9be",
+      "digest": "sha256:6497ee969e08a11ba83fea95dc2a17e8adc3e1ea7a8735353b5485bd5bb3165c"
+    },
+    {
+      "id": "tool/crm_relay_post_message",
+      "unit": "crm-relay",
+      "kind": "agent_tool",
+      "contract": "crm.yaml",
+      "operation": "agent.tool.invoke",
+      "operation_id": "crmRelayPostMessage",
+      "route": "/ext/crm-relay/messages",
+      "method": "POST",
+      "scopes": [
+        "write"
+      ],
+      "tier": "auto_execute",
+      "fragment_hash": "sha256:1e416942881d9f01ab25f15c7861ee79a9e14a2d4c3fbe9dcc82879cdd7ad9cc",
+      "digest": "sha256:a373fff50b220988517d00af72acf3ca8c5d99672471875ab12969d957449eaf"
+    }
+  ],
+  "secrets": [
+    {
+      "key": "token",
+      "scope": "user"
+    }
+  ],
+  "ingress": [
+    {
+      "system": "crm-relay",
+      "lands": [
+        "activity"
+      ],
+      "merges": [
+        "email"
+      ]
+    }
+  ],
+  "channels": [
+    {
+      "provider": "crm_relay",
+      "credential_model": "per_member",
+      "supplies_transport": true
+    }
+  ]
+}

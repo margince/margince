@@ -120,6 +120,7 @@ func versionedTables(t *testing.T) map[string]bool {
 // an entry without one is a finding, and one matching no function is
 // stale and fails.
 var unguardedByIDUpdates = gatekit.Waive(map[string]string{
+	"internal/modules/personalchannels:Pull":                "stamps last_pull_at, a fact about the latest pull where the last writer is right; it changes no field another writer decides",
 	"internal/modules/chatlinks:SetCard":                    "the card columns are sync state the chat_link version trigger leaves out, and the one writer is the link's flush, which River runs once per link at a time",
 	"internal/modules/capture:storeDeferredOriginalTx":      "names the original of an activity this same transaction inserted; no other writer can hold the row yet",
 	"internal/modules/activities:copyMeetingReadersTx":      "copies a meeting's audience onto its transcript, a derived value nobody edits by hand; every caller holds the transcript's row lock, and a new transcript is not yet visible to any other writer",

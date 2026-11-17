@@ -436,9 +436,10 @@ A request past the limit logs what it asked for alongside the wait it was set to
 never hides the error. A deferred tick logs at `WARN` with the cause and the wait. River records no
 attempt error for a snooze, so that line and the unit's own row are the whole record.
 
-The one unit that defers today is `extensions/openchannel`. Its `pollRetryDelay` is its **dispatcher's
-own cadence** (60 seconds), and the match is by design. A deferred child waits in `scheduled`, one of
-the states the fan-out's uniqueness window covers. While it waits, the dispatcher's next insert for that
+No shipped unit defers. The test fixture `fixtures/extensions/crm-relay` does, when it finds no note to
+relay. Its `pollRetryDelay` is its **dispatcher's own cadence** (60 seconds), and the match is by design.
+
+A deferred child waits in `scheduled`, one of the states the fan-out's uniqueness window covers. While it waits, the dispatcher's next insert for that
 workspace merges into it. So the deferred tick *takes the place of* the tick it would have run beside.
 The wait runs from the *failure*, not from the schedule.
 
@@ -453,9 +454,8 @@ later unit needs one: River keeps a snooze count in the job's own data. The job'
 not that count (a snooze *takes one off* the attempt count, so a snooze never uses up retries).
 
 Only a failure that **needs nobody** may defer itself. Every other class still fails and becomes failed
-work, because each has an owner who must act. For `openchannel` that covers a member who lost their
-right to act and an ingress the composition does not admit. It also covers a tick whose requests
-failed for different reasons. A tick that ran out of its own time limit fails too. Deferring it would
+work, because each has an owner who must act. For a unit that lands records, that covers a member who
+lost their right to act and an ingress the composition does not admit. A tick that ran out of its own time limit fails too. Deferring it would
 hide a drain that can never finish inside its window.
 
 **Never show `river_job.errors` raw to a human.** `jobs.Failure.StoredReason` carries the column

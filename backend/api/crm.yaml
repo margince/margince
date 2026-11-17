@@ -1348,8 +1348,8 @@ paths:
       summary: What the OAuth consent screen renders for one pending authorization.
       description: |
         Session-authenticated. Resolves the requesting client from the database and lists the
-        fixed five-scope vocabulary (read, draft, write, send, enrich) the consent screen offers,
-        every one of them ticked by default. What the client asked for excludes none of them: the
+        fixed scope vocabulary (read, draft, write, send, enrich, personal_channels) the consent screen offers;
+        the first five are ticked by default and personal_channels only when the human ticks it. What the client asked for excludes none of them: the
         human's ticks — not the client's request — become the connection's authority. Human-only —
         an agent must never read or drive a consent screen.
       parameters:
@@ -17343,6 +17343,177 @@ paths:
   # keeps a card in the channel and posts what happens on the record; what the
   # channel decides comes back as summarised notes. Linking needs the right to
   # edit the record, and reading needs the right to see it.
+  /personal-channels/chats:
+    post:
+      tags: [Connectors]
+      operationId: pushPersonalChannelMessages
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      x-mcp-tool: { verb: push_personal_channel_messages, router: personal_channels, action: push_messages, tier: auto_execute, scope: personal_channels, served_by: route }
+      summary: Send your own chat messages in, each onto its contact's timeline.
+      description: |
+        Always the CALLER's own. Each message lands at once and answers what became of it, in
+        the order sent: `landed` with its activity, `duplicate` when its message_id already
+        landed, `skipped` when capture did not keep it (an erased contact, for one), `refused`
+        with a reason the client can act on, or `deferred` when the request ran out of time
+        (send those again, under a new Idempotency-Key). One message's refusal does not refuse
+        the rest.
+
+        A party carries an `account` and a `name` and never an address. `network` names the
+        chat it came from (`whatsapp`, `zalo`, …; absent means `generic`). `direction` is
+        `outbound` for a message the member sent from their phone; one a client already acked
+        as a sent reply answers `duplicate`. A message names at most 20 staged files, 50 MB
+        together. Refused while the caller's personal channels are off.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PushPersonalChannelMessagesRequest' }
+      responses:
+        '200':
+          description: One result per message, in the order sent.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PushPersonalChannelMessagesResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /personal-channels/replies/pull:
+    post:
+      tags: [Connectors]
+      operationId: pullPersonalChannelReplies
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      x-mcp-tool: { verb: pull_personal_channel_replies, router: personal_channels, action: pull_replies, tier: auto_execute, scope: personal_channels, served_by: route }
+      summary: Pick up the replies you wrote in Margince, to send on your chat app.
+      description: |
+        Always the CALLER's own, oldest first. Each pulled reply is held for 5 minutes; one not
+        acked by then is offered again with `attempt` one higher. A reply nobody acks within 7
+        days expires and shows as not delivered. The answer also carries the connection's state.
+        Refused while the caller's personal channels are off.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PullPersonalChannelRepliesRequest' }
+      responses:
+        '200':
+          description: The replies handed out, and the connection's state.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PullPersonalChannelRepliesResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /personal-channels/replies/ack:
+    post:
+      tags: [Connectors]
+      operationId: ackPersonalChannelReplies
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      x-mcp-tool: { verb: ack_personal_channel_replies, router: personal_channels, action: ack_replies, tier: auto_execute, scope: personal_channels, served_by: route }
+      summary: Say whether each reply you pulled went out on your chat app.
+      description: |
+        Always the CALLER's own. `failed` shows the reply as not delivered on the timeline; it is
+        not retried, so the member sends it again. A delivery id that is not the caller's answers
+        `unknown_delivery`, the same as one that never existed.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AckPersonalChannelRepliesRequest' }
+      responses:
+        '200':
+          description: One result per ack, in the order sent.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AckPersonalChannelRepliesResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /personal-channels/uploads:
+    post:
+      tags: [Connectors]
+      operationId: uploadPersonalChannelFile
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      x-mcp-tool: { verb: upload_personal_channel_file, router: personal_channels, action: upload_file, tier: auto_execute, scope: personal_channels, served_by: route }
+      summary: Stage one file for a chat message you send in next.
+      description: |
+        Always the CALLER's own. The answer's `upload_id` goes in the next message's `files`. A
+        staged file no message names within 24 hours is deleted. The type is read from the bytes.
+        A file may be at most 25 MiB; through an AI assistant, at most what one MCP request
+        carries inline. Refused while the caller's personal channels are off.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary, description: "The file as the chat had it." }
+      responses:
+        '201':
+          description: The staged file.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PersonalChannelUpload' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /personal-channels/connection:
+    get:
+      tags: [Connectors]
+      operationId: getPersonalChannelConnection
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      x-mcp-tool: { verb: read_personal_channel, router: read_workspace, action: personal_channel, tier: auto_execute, scope: read, served_by: route }
+      summary: Your personal channels connection and the replies waiting on it.
+      description: |
+        Always the CALLER's own. While it is off, Margince takes no chat in from any of the
+        caller's clients and hands no reply out. The counts describe replies the caller wrote in
+        Margince that their client has not yet picked up.
+      responses:
+        '200':
+          description: The caller's connection.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PersonalChannelConnection' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    patch:
+      tags: [Connectors]
+      operationId: updatePersonalChannelConnection
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security   # a member decides whether their own chats may come in
+      summary: Turn your personal channels on or off.
+      description: |
+        Always the CALLER's own. Turning it off stops every client from sending chats in or
+        pulling replies; replies already waiting stay queued and still expire after 7 days.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdatePersonalChannelConnectionRequest' }
+      responses:
+        '200':
+          description: The caller's connection after the change.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PersonalChannelConnection' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /channel-links/{record_type}/{id}:
     parameters:
       - name: record_type
@@ -46100,6 +46271,162 @@ components:
       enum: [everything, important, milestones, silent]
       x-extensible-enum: true
       description: How much Margince posts into a linked channel.
+    PersonalChannelParty:
+      type: object
+      additionalProperties: false
+      required: [account]
+      properties:
+        account: { type: string, minLength: 1, maxLength: 200, description: "The party's id on the chat, as the chat gives it. No ':'." }
+        name: { type: string, maxLength: 200 }
+
+    PersonalChannelMessage:
+      type: object
+      additionalProperties: false
+      required: [message_id, from]
+      properties:
+        message_id: { type: string, minLength: 1, maxLength: 200, description: The chat's own id for the message; a resend with the same id lands nothing new. }
+        delivery_id: { type: string, format: uuid, description: "For an outbound message the client sent as a pulled reply: that reply's delivery id, so it is not landed a second time." }
+        group_id: { type: string, maxLength: 200, description: "The group the message was sent in. No ':'." }
+        network: { type: string, maxLength: 32, description: "The chat it came from: lower-case letters, digits and _. Absent means generic." }
+        direction: { type: string, enum: [inbound, outbound] }
+        subject: { type: string, maxLength: 500 }
+        body: { type: string, maxLength: 32768 }
+        occurred_at: { type: string, format: date-time }
+        from: { $ref: '#/components/schemas/PersonalChannelParty' }
+        to: { $ref: '#/components/schemas/PersonalChannelParty' }
+        participants:
+          type: array
+          maxItems: 50
+          items: { $ref: '#/components/schemas/PersonalChannelParty' }
+        files:
+          type: array
+          maxItems: 20
+          items:
+            type: object
+            additionalProperties: false
+            required: [upload_id]
+            properties:
+              upload_id: { type: string, format: uuid }
+
+    PushPersonalChannelMessagesRequest:
+      type: object
+      additionalProperties: false
+      required: [messages]
+      properties:
+        messages:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items: { $ref: '#/components/schemas/PersonalChannelMessage' }
+
+    PushPersonalChannelMessagesResponse:
+      type: object
+      required: [results]
+      properties:
+        results:
+          type: array
+          items: { $ref: '#/components/schemas/PersonalChannelPushResult' }
+
+    PersonalChannelPushResult:
+      type: object
+      required: [message_id, status]
+      properties:
+        message_id: { type: string }
+        status: { type: string, enum: [landed, duplicate, skipped, refused, deferred], x-extensible-enum: true }
+        activity_id: { type: [string, 'null'], format: uuid }
+        reason: { type: [string, 'null'] }
+
+    PullPersonalChannelRepliesRequest:
+      type: object
+      additionalProperties: false
+      required: [max]
+      properties:
+        max: { type: integer, minimum: 1, maximum: 50 }
+
+    PersonalChannelReply:
+      type: object
+      required: [delivery_id, network, recipient, body, attempt]
+      properties:
+        delivery_id: { type: string, format: uuid }
+        network: { type: string }
+        recipient: { $ref: '#/components/schemas/PersonalChannelParty' }
+        group_id: { type: [string, 'null'] }
+        reply_to: { type: [string, 'null'], description: The chat message this answers. }
+        body: { type: string }
+        attempt: { type: integer, minimum: 1 }
+
+    PullPersonalChannelRepliesResponse:
+      type: object
+      required: [replies, connection]
+      properties:
+        replies:
+          type: array
+          items: { $ref: '#/components/schemas/PersonalChannelReply' }
+        connection: { $ref: '#/components/schemas/PersonalChannelConnection' }
+
+    AckPersonalChannelRepliesRequest:
+      type: object
+      additionalProperties: false
+      required: [acks]
+      properties:
+        acks:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items:
+            type: object
+            additionalProperties: false
+            required: [delivery_id, outcome]
+            properties:
+              delivery_id: { type: string, format: uuid }
+              attempt: { type: integer, minimum: 1, description: "The attempt the pull handed out. An ack for an earlier attempt is superseded: the reply was offered again since." }
+              outcome: { type: string, enum: [sent, failed] }
+              provider_message_id: { type: string, maxLength: 500 }
+              reason: { type: string, maxLength: 500 }
+
+    AckPersonalChannelRepliesResponse:
+      type: object
+      required: [results]
+      properties:
+        results:
+          type: array
+          items: { $ref: '#/components/schemas/PersonalChannelAckResult' }
+
+    PersonalChannelAckResult:
+      type: object
+      required: [delivery_id, result]
+      properties:
+        delivery_id: { type: string, format: uuid }
+        result: { type: string, enum: [recorded, unknown_delivery, already_settled, superseded], x-extensible-enum: true }
+
+    PersonalChannelUpload:
+      type: object
+      description: One staged file, named by its upload_id in the next message's files.
+      required: [upload_id, filename, content_type, size, sha256]
+      properties:
+        upload_id: { type: string, format: uuid }
+        filename: { type: string }
+        content_type: { type: string, description: The type read from the bytes. }
+        size: { type: integer, minimum: 1 }
+        sha256: { type: string, description: Hex SHA-256 of the bytes. }
+
+    PersonalChannelConnection:
+      type: object
+      description: A member's personal channels connection.
+      required: [enabled, replies_waiting]
+      properties:
+        enabled: { type: boolean, description: Whether chats may come in and replies be pulled. }
+        replies_waiting: { type: integer, minimum: 0, description: Replies written in Margince that the client has not acked. }
+        oldest_reply_waiting_at: { type: [string, 'null'], format: date-time, description: When the oldest of those was written; it expires 7 days later. }
+        last_pull_at: { type: [string, 'null'], format: date-time, description: When a client last picked replies up. }
+
+    UpdatePersonalChannelConnectionRequest:
+      type: object
+      additionalProperties: false
+      required: [enabled]
+      properties:
+        enabled: { type: boolean }
+
     ChannelLinkState:
       type: object
       additionalProperties: false
@@ -69276,7 +69603,7 @@ components:
          knowledge_corpus, knowledge_document, introduction, weekly_plan, forecast, data_coverage,
          user_admin, role_admin, team_admin, privacy_request, audit_log, job_health, data_task,
          extension_access, system_reset, ai_diagnostics, consent_config, communication_exception,
-         authentication_policy, oauth_application, agent_client, seat_usage, team_oversight, team_lead, report_definition, sales_target, reporting_framework, report_schedule, report_edition, reporting_credit, legal_review, legal_entity, sales_initiative, tax_rate]
+         authentication_policy, oauth_application, agent_client, seat_usage, team_oversight, team_lead, report_definition, sales_target, reporting_framework, report_schedule, report_edition, reporting_credit, legal_review, legal_entity, sales_initiative, tax_rate, personal_channel]
 
     RbacAction:
       type: string
@@ -71785,7 +72112,7 @@ components:
           description: The autonomy tier, identical on REST and MCP (ADR-0055).
         scope:
           type: string
-          enum: [read, draft, write, send, enrich]
+          enum: [read, draft, write, send, enrich, personal_channels]
           description: >-
             The passport scope this operation consumes — the cap the granting human
             set, which the tier cannot substitute for: a tier says whether a human
@@ -77629,13 +77956,16 @@ components:
           type: array
           minItems: 1
           uniqueItems: true
-          items: { type: string, enum: [read, draft, write, send, enrich] }
+          items: { type: string, enum: [read, draft, write, send, enrich, personal_channels] }
           description: Verb classes the passport may exercise; effective authority is always ∩ the granting human's RBAC.
         ttl_hours:
           type: [integer, 'null']
           minimum: 1
           maximum: 2160
           description: Lifetime in hours (default 720 = 30 days, max 90 days). Revocable at any time.
+        never_expires:
+          type: boolean
+          description: The passport never expires; it works until it is revoked or its human is turned off. Not together with ttl_hours.
         areas:
           allOf: [ { $ref: '#/components/schemas/PassportAreas' } ]
           description: Where the passport may act. Absent means all areas.
@@ -77650,7 +77980,7 @@ components:
           type: array
           items: { type: string }
         on_behalf_of: { type: string, format: uuid, description: The human whose RBAC bounds every call this passport makes. }
-        expires_at:   { type: string, format: date-time }
+        expires_at:   { type: [string, 'null'], format: date-time, description: When the passport stops working; null for one that never expires. }
 
     ContactAcquisitionRequest:
       type: object
@@ -77842,7 +78172,7 @@ components:
           description: The client asked to stay connected without asking again (offline_access).
         scopes:
           type: array
-          items: { type: string, enum: [read, draft, write, send, enrich], x-extensible-enum: true }
+          items: { type: string, enum: [read, draft, write, send, enrich, personal_channels], x-extensible-enum: true }
         areas:
           type: array
           items: { $ref: '#/components/schemas/WorkArea' }

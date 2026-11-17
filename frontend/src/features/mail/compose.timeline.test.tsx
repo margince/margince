@@ -475,8 +475,8 @@ describe("TimelineActions", () => {
           ...activity202,
           id: "a8",
           kind: "message",
-          captured_by: "connector:ext:openchannel:1",
-          thread_key: "openchannel:abc",
+          captured_by: "connector:ext:crm-relay:1",
+          thread_key: "crm-relay:abc",
           audience_reason: "posture",
         }}
         entityType="deal"
@@ -507,8 +507,8 @@ describe("TimelineActions", () => {
           ...activity202,
           id: "a10",
           kind: "message",
-          captured_by: "connector:ext:openchannel:1",
-          thread_key: "openchannel:abc",
+          captured_by: "connector:ext:crm-relay:1",
+          thread_key: "crm-relay:abc",
           audience_reason: null,
         }}
         entityType="deal"

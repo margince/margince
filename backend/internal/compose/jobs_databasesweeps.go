@@ -89,6 +89,9 @@ func addDatabaseOnlySweepJobs(
 	addDeclaredWorker[ApprovalExpiryArgs](reg, &approvalExpiryWorker{
 		pool: pool, identity: identity.NewService(pool), log: log,
 	})
+	addDeclaredWorker[PersonalChannelSweepArgs](reg, &personalChannelSweepWorker{
+		pool: pool, identity: identity.NewService(pool), log: log,
+	})
 	addDeclaredWorker[IntroExpiryArgs](reg, &introExpiryWorker{
 		pool: pool, identity: identity.NewService(pool), log: log,
 	})

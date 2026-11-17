@@ -17,7 +17,6 @@ import (
 	"fmt"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -67,7 +66,7 @@ const (
 // cannot see in the metadata is a scope it will never ask for.
 var passportScopeVocabulary = []principal.Scope{
 	principal.ScopeRead, principal.ScopeDraft, principal.ScopeWrite,
-	principal.ScopeSend, principal.ScopeEnrich,
+	principal.ScopeSend, principal.ScopeEnrich, principal.ScopePersonalChannels,
 }
 
 // validScopes is the admission form of that vocabulary: the mint and the
@@ -87,7 +86,9 @@ type IssuePassportInput struct {
 	Label  *string
 	Scopes []string
 	TTL    *time.Duration
-	Areas  principal.WorkAreas
+	// NeverExpires asks for no expiry at all; only a hand-minted passport may.
+	NeverExpires bool
+	Areas        principal.WorkAreas
 	// App is set only by AuthenticateAppCaller, never from a request body.
 	App *AppCaller
 }
@@ -97,7 +98,7 @@ type IssuedPassport struct {
 	ID        ids.PassportID
 	Token     string
 	Scopes    []string
-	ExpiresAt time.Time
+	ExpiresAt *time.Time
 }
 
 // InvalidPassportFieldError maps to 422 naming Field: a request value the
@@ -109,19 +110,6 @@ func (e *InvalidPassportFieldError) Error() string { return e.Field + ": " + e.M
 // maxPassportLabelRunes is the label bound crm.yaml declares as maxLength,
 // which counts characters rather than bytes.
 const maxPassportLabelRunes = 120
-
-// admitCallerChosenFields refuses what IssuePassportRequest forbids on the
-// wire. An OAuth-minted passport derives its label from the client id and is
-// not caller-chosen, so only the local doors run this.
-func admitCallerChosenFields(in IssuePassportInput) error {
-	if in.Label != nil && utf8.RuneCountInString(*in.Label) > maxPassportLabelRunes {
-		return &InvalidPassportFieldError{Field: "label", Code: "label_too_long", Message: fmt.Sprintf("must be at most %d characters", maxPassportLabelRunes)}
-	}
-	if in.TTL != nil && (*in.TTL <= 0 || *in.TTL > maxPassportTTL) {
-		return &InvalidPassportFieldError{Field: "ttl_hours", Code: "ttl_out_of_range", Message: fmt.Sprintf("must be 1 to %d hours", int(maxPassportTTL/time.Hour))}
-	}
-	return nil
-}
 
 // IssuePassport mints a passport for the authenticated human in id — the
 // A1/local path, where the passport answers to no OAuth grant.
@@ -199,12 +187,14 @@ func mintPassport(ctx context.Context, tx pgx.Tx, id Identity, in IssuePassportI
 			return IssuedPassport{}, err
 		}
 	}
-	ttl := defaultPassportTTL
-	if in.TTL != nil {
-		ttl = *in.TTL
-		if ttl <= 0 || ttl > maxPassportTTL {
-			return IssuedPassport{}, fmt.Errorf("passport lifetime %s is outside 0 to %s", ttl, maxPassportTTL)
-		}
+	lifetime, err := lifetimeOf(in, grantID != nil)
+	if err != nil {
+		return IssuedPassport{}, err
+	}
+	var interval *string
+	if lifetime > 0 {
+		spelled := lifetime.String()
+		interval = &spelled
 	}
 
 	// Every issuance path, the OAuth exchange included, refuses a member on an
@@ -227,7 +217,7 @@ func mintPassport(ctx context.Context, tx pgx.Tx, id Identity, in IssuePassportI
 		`INSERT INTO passport (on_behalf_of, granted_by, label, scopes, token_hash, expires_at, oauth_grant_id, work_areas, app_issuer, app_subject)
 		 VALUES ($1, $1, $2, $3, $4, now() + $5::interval, $6, $7, $8, $9)
 		 RETURNING id, expires_at`,
-		id.UserID, in.Label, in.Scopes, hashToken(token), ttl.String(), grantID, areasColumn(in.Areas), appIssuer, appSubject).
+		id.UserID, in.Label, in.Scopes, hashToken(token), interval, grantID, areasColumn(in.Areas), appIssuer, appSubject).
 		Scan(&out.ID, &out.ExpiresAt); err != nil {
 		return IssuedPassport{}, err
 	}

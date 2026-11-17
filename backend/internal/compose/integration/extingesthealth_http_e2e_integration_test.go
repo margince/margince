@@ -58,16 +58,16 @@ func TestExtensionIngestHealthFoldsPerUnitAndForgetsWhatIsOutsideTheWindow(t *te
 
 	// One unit failing two checks, on two days, so the fold has something to
 	// add up and an order to get right.
-	seedRefusal(t, e, "openchannel", "participants", 0, 40)
-	seedRefusal(t, e, "openchannel", "participants", 2, 5)
-	seedRefusal(t, e, "openchannel", "key", 1, 3)
+	seedRefusal(t, e, "crm-relay", "participants", 0, 40)
+	seedRefusal(t, e, "crm-relay", "participants", 2, 5)
+	seedRefusal(t, e, "crm-relay", "key", 1, 3)
 	// A second unit, so a fold that only ever extended the last entry would
 	// report one unit's refusals under the other's name.
 	seedRefusal(t, e, "relaydemo", "activity", 1, 9)
 	// Older than the window. A count that never ages out keeps naming a
 	// mapping somebody fixed a month ago, which is how an operational page
 	// stops being read.
-	seedRefusal(t, e, "openchannel", "size", 30, 900)
+	seedRefusal(t, e, "crm-relay", "size", 30, 900)
 
 	var report extensionIngestHealthDTO
 	if status := e.Call(t, "GET", "/v1/admin/extension-ingest-health", nil, nil, &report); status != http.StatusOK {
@@ -77,22 +77,22 @@ func TestExtensionIngestHealthFoldsPerUnitAndForgetsWhatIsOutsideTheWindow(t *te
 	if len(report.Units) != 2 {
 		t.Fatalf("got %d units, want the two with anything refused in the window: %+v", len(report.Units), report.Units)
 	}
-	openchannel := report.Units[0]
-	if openchannel.Unit != "openchannel" {
-		t.Fatalf("first unit = %q, want openchannel", openchannel.Unit)
+	relay := report.Units[0]
+	if relay.Unit != "crm-relay" {
+		t.Fatalf("first unit = %q, want crm-relay", relay.Unit)
 	}
-	if openchannel.Refused != 48 {
-		t.Errorf("openchannel refused = %d, want 48 (45 participants + 3 key) — a total that included "+
-			"the 30-day-old row would read 948", openchannel.Refused)
+	if relay.Refused != 48 {
+		t.Errorf("crm-relay refused = %d, want 48 (45 participants + 3 key) — a total that included "+
+			"the 30-day-old row would read 948", relay.Refused)
 	}
-	if len(openchannel.Refusals) != 2 {
-		t.Fatalf("openchannel classes = %+v, want participants and key only — `size` is outside the window", openchannel.Refusals)
+	if len(relay.Refusals) != 2 {
+		t.Fatalf("crm-relay classes = %+v, want participants and key only — `size` is outside the window", relay.Refusals)
 	}
-	if openchannel.Refusals[0].Refusal != "participants" || openchannel.Refusals[0].Refused != 45 {
-		t.Errorf("classes are not largest-first with their own totals: %+v", openchannel.Refusals)
+	if relay.Refusals[0].Refusal != "participants" || relay.Refusals[0].Refused != 45 {
+		t.Errorf("classes are not largest-first with their own totals: %+v", relay.Refusals)
 	}
-	if openchannel.LastRefusedAt == nil {
-		t.Error("openchannel reports no last_refused_at, so a reader cannot tell a live problem from a settled one")
+	if relay.LastRefusedAt == nil {
+		t.Error("crm-relay reports no last_refused_at, so a reader cannot tell a live problem from a settled one")
 	}
 	if report.WindowDays <= 0 {
 		t.Errorf("window_days = %d — a reader cannot interpret the counts without it", report.WindowDays)
@@ -116,7 +116,7 @@ func TestAnInstallationWithNothingRefusedReportsNoUnitsRatherThanNoAnswer(t *tes
 func TestAnAdminsAgentReadsExtensionIngestHealth(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	seedRefusal(t, e, "openchannel", "key", 0, 1)
+	seedRefusal(t, e, "crm-relay", "key", 0, 1)
 
 	// An admin's agent reads what the admin reads, on the admin's own grant.
 	var minted struct {

@@ -1177,6 +1177,24 @@ kinds:
       every row this pass did not reach is still due then. A backing-off row
       would only suppress that tick.
 
+  personal_channel_sweep:
+    role: worker
+    go_type: PersonalChannelSweepArgs
+    queue: default
+    timeout: 2m
+    max_attempts: 1
+    opts_owner: args
+    cadence: 1h
+    reason: >-
+      A file staged for a chat message holds a member's personal data until the
+      message that names it lands. One that no message named within a day is
+      deleted here, and a reply no client picked up within seven days expires
+      here, so neither lives on with nobody to send it to.
+
+      An hour: both windows are a day or more, and a tick that finds nothing is
+      one indexed delete. One attempt: the retry is the next tick, and every row
+      this pass did not reach is still due then.
+
   intro_expiry:
     role: worker
     go_type: IntroExpiryArgs

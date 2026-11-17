@@ -39,6 +39,9 @@ const maxDescriptionRunes = 3000
 // This is the ONE door every tool comes through, core and extension alike, so
 // none of it is a list of tools someone has to keep current.
 func (r *Registry) Register(t mcp.Tool) {
+	// Asked before the router is wrapped: every action of a contract router runs
+	// its REST route.
+	_, contractRouted := t.(contractRouter)
 	rt, isRouter := t.(router)
 	if isRouter {
 		rt = r.withRouteActions(rt)
@@ -141,7 +144,8 @@ func (r *Registry) Register(t mcp.Tool) {
 	// that could come to differ. See unitOwned for what the answer buys.
 	owned := unitOwned(t)
 	r.unitOwned[spec.Name] = owned
-	_, served := t.(routeVerbTool)
+	_, verb := t.(routeVerbTool)
+	served := verb || contractRouted
 	r.routeServed[spec.Name] = served
 	spec.Areas = workarea.OfVerb(spec.Name)
 	r.specs[spec.Name] = copySchemas(withRetryKey(envelopedSpec(spec), owned || served))

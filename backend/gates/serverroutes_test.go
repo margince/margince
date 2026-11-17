@@ -24,7 +24,6 @@ import (
 var (
 	apiMount       = regexp.MustCompile(`mux\.Handle(?:Func)?\("(?:[A-Z]+ )?(/[^"]*)"`)
 	securityTxt    = regexp.MustCompile(`securityTxtPath = "(/[^"]+)"`)
-	inboundPrefix  = regexp.MustCompile(`inboundPrefix = "(/[^"]+)"`)
 	uploadMax      = regexp.MustCompile(`Max: config\.Some\((\d+)\)`)
 	frontBodyLimit = regexp.MustCompile(`(?m)^    client_max_body_size (\d+)m;$`)
 	nginxLocation  = regexp.MustCompile(`(?m)^    location (\^~|~|=)? ?(\S+) \{\n((?:        .*\n)*?)    \}`)
@@ -84,10 +83,7 @@ func apiMounts(t *testing.T) []string {
 		}
 	}
 	mounts = append(mounts,
-		declaredPath(t, securityTxt, "securitytxt.go"),
-		// Extension inbound edges mount at run time under this prefix, one per
-		// declared endpoint, so a path below it stands for all of them.
-		declaredPath(t, inboundPrefix, "extinbound.go")+"unit/endpoint")
+		declaredPath(t, securityTxt, "securitytxt.go"))
 	if !slices.Contains(mounts, "/v1/") || len(mounts) < 10 {
 		t.Fatalf("read %d mounts from routes.go (%v); the pattern no longer sees how routes.go mounts", len(mounts), mounts)
 	}

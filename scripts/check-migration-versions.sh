@@ -303,6 +303,15 @@ reset_admitted() {
   return 0
 }
 
+# retired_by_core NS — an extension namespace the tree no longer has, whose
+# ledger table a core migration drops. That drop is what makes the removal safe:
+# no installation keeps an applied version of a file nobody ships.
+retired_by_core() {
+  local unit="${1#extension/}"
+  [[ "$1" = extension/* ]] && [[ -z "$(migrations_in_tree "$1")" ]] &&
+    grep -qsE "^DROP TABLE IF EXISTS schema_migrations_ext_${unit}\\b" backend/migrations/core/*.up.sql
+}
+
 # fail MESSAGE — report a finding, and fail unless this namespace is an admitted
 # baseline reset.
 fail() {
@@ -415,6 +424,10 @@ for ns in $all_namespaces; do
 
   if [[ -z "$base_rows" ]]; then
     continue # a namespace this branch introduces has nothing to sort after
+  fi
+  if retired_by_core "$ns"; then
+    echo "note: $ns is retired — a core migration drops its ledger"
+    continue
   fi
   base_max="$(echo "$base_rows" | cut -d' ' -f1 | tail -n1)"
 

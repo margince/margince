@@ -18,7 +18,13 @@ import {
   subjectOf,
 } from "../../scripts/lib/css-rules";
 import { STAT_CARD_TONES } from "../../src/design-system/statcard";
-import { type CensusFile, type CensusRule, sheetRules, srcDir } from "../tree";
+import {
+  type CensusFile,
+  type CensusRule,
+  extensionShipsScreens,
+  sheetRules,
+  srcDir,
+} from "../tree";
 
 /** The line of every `openLabel` attribute in one module. */
 export function openLabels(source: ts.SourceFile): number[] {
@@ -109,7 +115,8 @@ export const rule: CensusRule = {
     const modules = corpus.filter(isApp);
     return [
       ...(modules.length > 400 ? [] : ["fewer than 400 app modules were read"]),
-      ...(modules.some((file) => file.area === "extensions")
+      ...(!extensionShipsScreens ||
+      modules.some((file) => file.area === "extensions")
         ? []
         : ["the census reached no extension frontend layer"]),
       ...(sheetRules(corpus.filter(isSheet)).length > 0

@@ -45,10 +45,8 @@ func TestTheRosterCrossesWholeAndInOrder(t *testing.T) {
 }
 
 // THE ASSERTION THIS WHOLE FILE EXISTS FOR. A unit's roster is a remote
-// system's text — openchannel's edge is a signed URL anybody holding the secret
-// may post to — so the core must keep the mail rule over it: capture may resolve
-// a party to a contact it already holds, and may never bind a colleague's seat
-// from one.
+// system's text, so the mail rule holds over it. Capture may resolve a party to
+// a contact it already holds, and may never bind a colleague's seat from one.
 //
 // Left un-attested is how that is spelled. If this ever passes true, a sender
 // can name our own CEO as present on their message and manufacture the

@@ -79,6 +79,11 @@
     "notification_digest_run.notification_digest_run_user_id_fkey": "FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE",
     "notification_preference.notification_preference_user_id_fkey": "FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE"
   },
+  "personalchannels": {
+    "personal_channel_connection.personal_channel_connection_user_id_fkey": "FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE RESTRICT",
+    "personal_channel_message.personal_channel_message_activity_id_fkey": "FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE",
+    "personal_channel_reply.personal_channel_reply_activity_id_fkey": "FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE"
+  },
   "privacy": {},
   "recordlinks": {},
   "reporting": {

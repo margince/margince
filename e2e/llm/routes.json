@@ -428,6 +428,15 @@
         "list": "list_record_documents"
       }
     },
+    "personal_channels": {
+      "field": "action",
+      "actions": {
+        "ack_replies": "ack_personal_channel_replies",
+        "pull_replies": "pull_personal_channel_replies",
+        "push_messages": "push_personal_channel_messages",
+        "upload_file": "upload_personal_channel_file"
+      }
+    },
     "read_analytics": {
       "field": "step",
       "actions": {
@@ -715,6 +724,7 @@
         "onboarding_company_proposal": "read_onboarding_company_proposal",
         "onboarding_state": "read_onboarding_state",
         "owner_identities": "list_capture_owner_identities",
+        "personal_channel": "read_personal_channel",
         "pipelines": "list_pipelines",
         "provider_connections": "list_provider_connections",
         "provider_locations": "list_provider_locations",

@@ -18,7 +18,12 @@
 import { join } from "node:path";
 import ts from "typescript";
 import { parseSource } from "../../scripts/lib/source-tree";
-import { type CensusFile, type CensusRule, srcDir } from "../tree";
+import {
+  type CensusFile,
+  type CensusRule,
+  extensionShipsScreens,
+  srcDir,
+} from "../tree";
 
 export const COMPONENT = join(srcDir, "design-system", "heading.tsx");
 export const NODE_BUILDER = join(srcDir, "mcp-apps", "bridge.ts");
@@ -97,7 +102,8 @@ export const rule: CensusRule = {
     ...(corpus.length >= CORPUS_FLOOR
       ? []
       : [`fewer than ${CORPUS_FLOOR} modules were read`]),
-    ...(corpus.some((file) => file.area === "extensions")
+    ...(!extensionShipsScreens ||
+    corpus.some((file) => file.area === "extensions")
       ? []
       : ["the census reached no extension frontend layer"]),
   ],

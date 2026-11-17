@@ -117,7 +117,7 @@ func TestNoContractEnumSpellsARegisteredTransport(t *testing.T) {
 			continue
 		}
 		for _, provider := range providers {
-			if trimmed[provider] && !independentLinkedInMeaning(item.Path, provider) {
+			if trimmed[provider] && !independentLinkedInMeaning(item.Path, provider) && !independentPermissionMeaning(item.Path, provider) {
 				t.Errorf("contract enum %s %v spells the registered transport %q; a provider vocabulary is a deployment fact and cannot live in an installation-independent enum — use ProviderRef",
 					item.Path, members, provider)
 			}
