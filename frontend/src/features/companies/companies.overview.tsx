@@ -13,7 +13,7 @@ export function CompanyOverviewStack(props: CompanyOverviewProps) {
   return (
     <div className="co-overview-stack">
       {archived_at ? (
-        // The server refuses an archived account's readings, so the tab every
+        // The server refuses an archived account's readings. So the tab every
         // link lands on says why it is bare and, after a merge, where to go.
         <Callout kind="standing" title={t("co.archived.overview")}>
           {merged_into_id && (

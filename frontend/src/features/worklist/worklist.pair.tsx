@@ -90,20 +90,13 @@ const FAILURE_MESSAGES = {
 /**
  * The pair, and the verbs that answer it.
  *
- * Drawn only where the server sent the payload. A row that arrives without it
- * is one whose reader may not see both sides, and the lane already withheld
- * every verb for exactly that reason — so there is nothing here to draw and
- * no decision to offer.
+ * A row without the payload is one whose reader may not see both sides. The
+ * lane withheld its verbs for that reason, so nothing is drawn here.
  *
- * Each verb is drawn only where the server OFFERED that verb, and they are
- * asked for separately. Deciding a pair either way archives or rewrites
- * records, so both belong to whoever could change both — the owner, or a
- * workspace-wide seat — and the merge needs one thing more, which is a pair
- * the merge would actually take. A reader without the authority still sees the
- * pair, because knowing a duplicate is waiting is not the same as being able
- * to settle it, and is told who can. Rendering the buttons for everybody is
- * what produced a control that refused every press a rep made on a colleague's
- * records, then advised trying again.
+ * Each verb is drawn only where the server offered it. Deciding a pair archives
+ * or rewrites records, so it belongs to whoever could change both: the owner or
+ * a workspace-wide seat. The merge also needs a pair it would take. A reader
+ * without that authority still sees the pair, and is told who can settle it.
  */
 export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
   const t = useT();
@@ -134,7 +127,7 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
     keptId === pair.left.id
       ? { kept: named(pair.left), archived: named(pair.right) }
       : { kept: named(pair.right), archived: named(pair.left) };
-  // A refused decision leaves the row exactly as an unpressed one looks.
+  // A refused decision leaves the row as an unpressed one looks.
   // Without this the reader believes the pair is settled and it is not.
   const refused = (error: unknown) => {
     const failure = pairDecisionFailure(error);
@@ -291,8 +284,8 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
   );
 }
 
-// ONE CANDIDATE, on the catalog's recessed card: `Card inset` rather than
-// `PanelPlate`, which holds context and never a control. A list ITEM, so the
+// One candidate, on the catalog's recessed card: `Card inset` rather than
+// `PanelPlate`, which holds context and never a control. A list item, so the
 // two stay one list of two.
 function PairSideCard({
   side,

@@ -27,8 +27,8 @@ import "../design-system/querystates.css";
 
 export type MergeSide = Readonly<{ name: string; detail?: string }>;
 
-// Each side by its name and its detail line, so the question asked before a
-// merge and the answer after it tell two records that share a name apart.
+// Each side reads as its name and its detail line. So the question before a
+// merge, and the answer after it, tell apart two records that share a name.
 function mergeSideLabel(t: ReturnType<typeof useT>, side: MergeSide): string {
   return side.detail
     ? t("merge.recordDetail", { name: side.name, detail: side.detail })

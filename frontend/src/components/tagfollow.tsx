@@ -168,7 +168,7 @@ function useCompanyRoster(companyID: string, enabled: boolean) {
   });
 }
 
-// One row answers whether to offer at all; the full roster is read only when
+// One row answers whether to offer at all. The full roster is read only when
 // the reader presses, so a dismissed offer never pays for it.
 function useCompanyHasContacts(companyID: string, enabled: boolean) {
   const readerScope = useHealthScope();

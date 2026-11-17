@@ -94,7 +94,7 @@ const ROLE_VOCABULARY: Partial<Record<Relationship["kind"], RoleVocabulary>> = {
   billing_contact: BILLING_ROLES,
 };
 
-// The sentence that confirms a pick, one per kind: each kind's word takes its
+// The sentence that confirms a pick, one per kind. Each kind's word takes its
 // own article and case, so one template with the kind spliced in cannot read.
 const ADD_SENTENCE: Record<CreatableRelationshipKind, MessageKey> = {
   employment: "rel.addConfirm.employment",
