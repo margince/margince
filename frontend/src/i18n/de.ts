@@ -22343,6 +22343,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.handles.more_other": "+{count} weitere",
   "contact.handles.fewer": "Weniger anzeigen",
   "record.details.hideEmpty": "Leere Felder ausblenden",
+  "record.details.editSection": "{section} bearbeiten",
   "record.verb.email": "E-Mail",
   "record.verb.call": "Anruf",
   "record.verb.meet": "Termin",

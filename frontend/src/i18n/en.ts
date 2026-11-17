@@ -22056,6 +22056,7 @@ export const en = {
   "contact.handles.more_other": "+{count} more",
   "contact.handles.fewer": "Show fewer",
   "record.details.hideEmpty": "Hide empty fields",
+  "record.details.editSection": "Edit {section}",
   "record.verb.email": "Email",
   "record.verb.call": "Call",
   "record.verb.meet": "Meet",

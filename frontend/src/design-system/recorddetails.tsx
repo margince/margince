@@ -28,9 +28,11 @@ export type DetailRow = Readonly<{
 /** A named group: its rows, then anything that is not a row (chips). */
 export type DetailSection = Readonly<{
   key: string;
-  label: ReactNode;
+  label: string;
   /** What the group shows, behind a "?" beside its label. */
   help?: string;
+  /** Leave it out for a reader who may not edit: the section then draws no Edit link. */
+  edit?: Readonly<{ onEdit: () => void }>;
   rows?: readonly DetailRow[];
   children?: ReactNode;
 }>;
@@ -92,6 +94,7 @@ function DetailGroup({
   section,
   showEmpty,
 }: Readonly<{ section: DetailSection; showEmpty: boolean }>) {
+  const t = useT();
   const labelId = useId();
   const rows = (section.rows ?? []).filter((row) => showEmpty || !row.empty);
   if (rows.length === 0 && !section.children) {
@@ -109,6 +112,18 @@ function DetailGroup({
           {section.label}
         </Heading>
         {section.help && <SectionHelp help={section.help} />}
+        {section.edit && (
+          <Button
+            variant="link"
+            className="recorddetails-edit"
+            aria-label={t("record.details.editSection", {
+              section: section.label,
+            })}
+            onClick={section.edit.onEdit}
+          >
+            {t("record.edit")}
+          </Button>
+        )}
       </div>
       {rows.length > 0 && <FactList flat facts={rows} />}
       {section.children}

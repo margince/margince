@@ -1,4 +1,4 @@
-/* RecordDetails: each group is a pane one step up the ladder, a grey label over
+/* RecordDetails: each group is a pane one step up the ladder, a bold label over
    a flat `FactList`. The footnote shares the shape; "Show more" stays bare. */
 
 .recorddetails {
@@ -28,8 +28,23 @@
 /* Scoped under the line so it outranks the heading's own size rule. */
 .recorddetails-labelline > .recorddetails-label.heading {
   font: var(--fontBodySmall);
-  font-weight: var(--fontWeightMedium);
-  color: var(--textSecondary);
+  font-weight: var(--fontWeightBold);
+}
+.recorddetails-labelline > .btn.recorddetails-edit {
+  margin-inline-start: auto;
+  padding-block: 0;
+  font: var(--fontBodySmall);
+}
+/* A thumb gets a 44px target from a layer that draws nothing, so the line keeps its height. */
+@media (pointer: coarse) {
+  .recorddetails-edit {
+    position: relative;
+  }
+  .recorddetails-edit::before {
+    content: "";
+    position: absolute;
+    inset: calc((100% - max(44px, 100%)) / 2);
+  }
 }
 .recorddetails-foot > .btn.recorddetails-toggle {
   padding-inline: 0;

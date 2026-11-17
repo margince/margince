@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, fn, userEvent, within } from "storybook/test";
 import { Badge } from "./atoms";
 import { RecordDetails } from "./recorddetails";
 
@@ -71,6 +71,66 @@ export const Company: Story = {
     ],
     footnote:
       "View only. Ask Lena Fischer to share it, or an administrator for edit rights.",
+  },
+};
+
+const editAbout = fn();
+
+/** A reader who may change the record: About and Ownership end their label
+ *  line in an Edit link named for the section; Lists has none. */
+export const Editable: Story = {
+  args: {
+    sections: [
+      {
+        key: "about",
+        label: "About",
+        help: "What the company is and where it sits.",
+        edit: { onEdit: editAbout },
+        rows: [
+          { key: "domain", term: "Domain", value: "brandt.example" },
+          { key: "industry", term: "Industry", value: "Automotive" },
+        ],
+      },
+      {
+        key: "ownership",
+        label: "Ownership",
+        edit: { onEdit: fn() },
+        rows: [{ key: "owner", term: "Owner", value: "Lena Fischer" }],
+      },
+      {
+        key: "lists",
+        label: "Lists",
+        children: <Badge>Key accounts</Badge>,
+      },
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const link = await canvas.findByRole("button", { name: "Edit About" });
+    await expect(link).toHaveTextContent("Edit");
+    await expect(
+      canvas.getByRole("button", { name: "Edit Ownership" }),
+    ).toBeVisible();
+    await expect(
+      canvas.queryByRole("button", { name: "Edit Lists" }),
+    ).toBeNull();
+    await userEvent.click(link);
+    await expect(editAbout).toHaveBeenCalledTimes(1);
+  },
+};
+
+/** On a phone the Edit link still closes its label line, after the "?". */
+export const EditablePhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  args: Editable.args,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const link = await canvas.findByRole("button", { name: "Edit About" });
+    const line = link.parentElement?.getBoundingClientRect();
+    await expect(Math.round(link.getBoundingClientRect().right)).toBe(
+      Math.round(line?.right ?? 0),
+    );
   },
 };
 
