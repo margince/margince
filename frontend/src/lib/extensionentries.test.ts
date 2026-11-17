@@ -4,6 +4,7 @@ import {
   entryRecordFromParams,
   extensionRecordHref,
 } from "./extensionentries";
+import { parseParams } from "./urlstate";
 
 describe("the record an entry hands a unit screen", () => {
   it("reads back what the entry wrote", () => {
@@ -39,8 +40,7 @@ describe("the address of a unit's own record", () => {
 
   it("reads back as the same record on the unit's screen", () => {
     const query = extensionRecordHref("ext:rooms:room", "r-1", "room-page");
-    const params = new URLSearchParams(query.slice(query.indexOf("?")));
-    expect(entryRecordFromParams(params)).toEqual({
+    expect(entryRecordFromParams(parseParams(query))).toEqual({
       type: "ext:rooms:room",
       id: "r-1",
     });
