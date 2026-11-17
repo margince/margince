@@ -25,7 +25,12 @@ port="${PROD_PORT:-8090}"
 project() {
 	mkdir -p "$state"
 	if [[ ! -s "$state/project-id" ]]; then
-		openssl rand -hex 8 >"$state/project-id"
+		# ln fails when the name exists, so of two runs at once the first ID wins.
+		local draft
+		draft="$(mktemp "$state/project-id.XXXXXX")"
+		openssl rand -hex 8 >"$draft"
+		ln "$draft" "$state/project-id" 2>/dev/null || true
+		rm -f "$draft"
 	fi
 	printf 'margince-prod-%s' "$(cat "$state/project-id")"
 }
@@ -103,7 +108,9 @@ stop() {
 	fi
 	if [[ "${1:-}" == "--drop" ]]; then
 		compose down --volumes --remove-orphans
-		rm -rf "$state"
+		# A settings folder shared through a symlink is deleted where it lives.
+		rm -rf "$(cd "$state" && pwd -P)"
+		rm -f "$state"
 		echo "prod: stopped, and its data and settings are deleted."
 		return
 	fi
