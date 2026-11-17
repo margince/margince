@@ -2,11 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, screen, userEvent, within } from "storybook/test";
+import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import { CompanyRail } from "./companyrail";
@@ -95,11 +96,7 @@ function Details({
   canUpdate?: boolean;
 }>) {
   installFetchStub({
-    "GET /me": () =>
-      jsonResponse({
-        user: { id: "u-1", display_name: "Mira Voss" },
-        authorization: { objects: { company: { update: canUpdate } } },
-      }),
+    "GET /me": meRoute({ company: canUpdate ? ["read", "update"] : ["read"] }),
     "GET /users": () =>
       jsonResponse({
         data: [{ id: "u-1", display_name: "Mira Voss" }],
@@ -149,9 +146,8 @@ export const OwnerFlow: Story = {
         name: "Edit Ownership",
       }),
     );
-    await expect(
-      await screen.findByRole("dialog", { name: "Owner" }),
-    ).toBeVisible();
+    const dialog = await screen.findByRole("dialog", { name: "Owner" });
+    await waitFor(() => expect(dialog).toBeVisible());
   },
 };
 
@@ -165,7 +161,9 @@ export const VatFlow: Story = {
       }),
     );
     const dialog = await screen.findByRole("dialog", { name: "VAT ID" });
-    await expect(within(dialog).getByDisplayValue("DE811907980")).toBeVisible();
+    await waitFor(() =>
+      expect(within(dialog).getByDisplayValue("DE811907980")).toBeVisible(),
+    );
   },
 };
 

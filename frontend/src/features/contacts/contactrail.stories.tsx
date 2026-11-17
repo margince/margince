@@ -461,7 +461,7 @@ export const SectionEdits: Story = {
       "Edit About",
       "Edit Address",
       "Edit Ownership",
-      "Edit Consent & channels",
+      "Edit Consent and channels",
     ]) {
       await expect(await canvas.findByRole("button", { name })).toBeVisible();
     }

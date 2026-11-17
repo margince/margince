@@ -8,6 +8,7 @@ import { recordNamesRoutes } from "../../testing/recordnames.testkit";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import { CompanyProfileDetails } from "./companyprofiledetails";
@@ -62,11 +63,7 @@ const company: Company = {
 function stubRoutes() {
   installFetchStub({
     ...recordNamesRoutes({ company: { [PARENT]: "Brandt Holding AG" } }),
-    "GET /me": () =>
-      jsonResponse({
-        user: { id: "u-1", display_name: "Mira Voss" },
-        authorization: { objects: { company: { update: true } } },
-      }),
+    "GET /me": meRoute({ company: ["read", "update"] }),
     "GET /users": () =>
       jsonResponse({
         data: [{ id: "u-1", display_name: "Mira Voss" }],

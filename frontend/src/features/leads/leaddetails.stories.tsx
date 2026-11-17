@@ -78,6 +78,7 @@ function page(
       "GET /users/names": () =>
         jsonResponse({ data: [{ id: "u-2", display_name: "Dana Fischer" }] }),
       "GET /lead-signal-catalog": () => jsonResponse(SIGNAL_CATALOG),
+      "GET /leads/l-1/consent/stops": () => jsonResponse({ stops: [] }),
       "GET /leads/l-1": () => jsonResponse(lead),
       "GET /companies/c-7": () =>
         jsonResponse({
@@ -191,7 +192,9 @@ export const AboutEdit: Story = {
     await expect(about.getByRole("textbox", { name: "Title" })).toHaveValue(
       "Head of fleet",
     );
-    await expect(about.getByRole("group", { name: "Company" })).toBeVisible();
+    await waitFor(() =>
+      expect(about.getByRole("group", { name: "Company" })).toBeVisible(),
+    );
   },
 };
 
@@ -210,9 +213,10 @@ export const ProjectFlow: Story = {
     await user.click(await screen.findByRole("button", { name: "Edit About" }));
     const about = within(await screen.findByRole("dialog", { name: "About" }));
     await user.click(about.getByRole("button", { name: "Change Project" }));
-    await expect(
-      await screen.findByRole("dialog", { name: "Attach project" }),
-    ).toBeVisible();
+    const search = await screen.findByRole("dialog", {
+      name: "Attach project",
+    });
+    await waitFor(() => expect(search).toBeVisible());
   },
 };
 

@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { Locale } from "../../i18n";
 import { listsMe } from "../../testing/lists.fixtures";
 import { meFixture } from "../../testing/mefixture";
@@ -204,9 +204,9 @@ export const EditValue: Story = {
     const value = within(
       await within(document.body).findByRole("dialog", { name: "Value" }),
     );
-    await expect(
-      value.getByRole("spinbutton", { name: "Value" }),
-    ).toBeVisible();
+    await waitFor(() =>
+      expect(value.getByRole("spinbutton", { name: "Value" })).toBeVisible(),
+    );
     await expect(
       value.queryByRole("spinbutton", { name: "Probability" }),
     ).toBeNull();
