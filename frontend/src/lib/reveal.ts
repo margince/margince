@@ -89,8 +89,11 @@ export function holdScrollTop(pane: HTMLElement, top: number): () => void {
     pane.scrollTop >= pane.scrollHeight - pane.clientHeight - 1;
   const gliding = () => pane.scrollTop < start && pane.scrollTop > top;
   const gestures = ["wheel", "touchstart", "keydown"] as const;
+  // Not `clamped()`: by the time the body has grown, the pane is off its foot.
   const growth = new MutationObserver(() => {
-    if (clamped()) pane.scrollTo?.({ top, behavior: "auto" });
+    if (Math.abs(pane.scrollTop - top) >= 1) {
+      pane.scrollTo?.({ top, behavior: "auto" });
+    }
   });
   const moved = () => {
     if (Math.abs(pane.scrollTop - top) >= 1 && !clamped() && !gliding()) {

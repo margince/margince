@@ -336,6 +336,11 @@ function inPane(stripTop: number, offset = 1000) {
     pane.scrollTop = Math.min(top, clampAt);
   });
   pane.scrollTo = scrollTo;
+  // The scroll range a real pane reports: its bottom is where it clamps.
+  vi.spyOn(pane, "clientHeight", "get").mockReturnValue(844);
+  vi.spyOn(pane, "scrollHeight", "get").mockImplementation(
+    () => Math.min(clampAt, 10_000) + 844,
+  );
   vi.spyOn(pane, "getBoundingClientRect").mockReturnValue(
     new DOMRect(0, 0, 390, 844),
   );
