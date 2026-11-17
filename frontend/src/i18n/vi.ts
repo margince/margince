@@ -4830,6 +4830,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "filter.label": "Bộ lọc",
   "chronology.all": "Tất cả",
   "chronology.conversations": "Chuỗi thư",
+  "chronology.filteredEmpty": "Không có hoạt động nào khớp với các bộ lọc này.",
   "chronology.conversationsEmpty": "Chưa có chuỗi thư nào.",
   "chronology.changesEmpty":
     "Chưa có trường nào thay đổi kể từ khi tạo hồ sơ này.",

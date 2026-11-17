@@ -4956,6 +4956,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filter.label": "Filter",
   "chronology.all": "Alles",
   "chronology.conversations": "Threads",
+  "chronology.filteredEmpty": "Keine Aktivität passt zu diesen Filtern.",
   "chronology.conversationsEmpty": "Noch keine Threads.",
   "chronology.changesEmpty":
     "Seit dem Erstellen dieses Datensatzes wurde kein Feld geändert.",

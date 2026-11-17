@@ -154,6 +154,7 @@ function useProjectChronology(
       {
         // A narrowed read is the list's own and has its own wait; the
         // unfiltered one is the 360's section, already on screen.
+        filtered: hasTimelineFilters(filters),
         loading: timeline.isPending,
         failed: timeline.isError,
         assembled: hasTimelineFilters(filters)

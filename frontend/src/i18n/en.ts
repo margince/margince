@@ -4901,6 +4901,7 @@ export const en = {
   "filter.label": "Filter",
   "chronology.all": "All",
   "chronology.conversations": "Threads",
+  "chronology.filteredEmpty": "No activity matches these filters.",
   "chronology.conversationsEmpty": "No threads yet.",
   "chronology.changesEmpty":
     "No field has changed since this record was created.",
