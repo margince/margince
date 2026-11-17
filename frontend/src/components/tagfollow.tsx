@@ -105,9 +105,11 @@ export function ContactsTagOffer({
   const [choosing, setChoosing] = useState(false);
   const [request, setRequest] = useState<BulkChangeRequest | null>(null);
   // Tagging a contact writes to the contact. A reader without contact.update
-  // would only meet the bulk change's refusal, so the offer is not made.
+  // would only meet the bulk change's refusal, so the offer is not made. Nor
+  // is it made until the roster shows someone works there to tag.
   const mayTagContacts = useCanWrite("contact", "update");
-  if (!mayTagContacts) {
+  const roster = useCompanyRoster(companyID, mayTagContacts);
+  if (!mayTagContacts || !roster.data?.contacts.length) {
     return null;
   }
   return (
