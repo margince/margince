@@ -7,7 +7,6 @@ import {
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { fieldRefusalSentence } from "../../components/create.refusals";
 import { EntityRef } from "../../components/entityref";
 import {
   Checkbox,
@@ -21,26 +20,25 @@ import { MoneyInput } from "../../design-system/moneyinput";
 import { Select } from "../../design-system/select";
 import { formatMoney } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
 import {
   invalidateClosedLead,
   leadPromotePreviewKey,
 } from "../../lib/leadkeys";
 import { defaultPipelineOf, usePipelines } from "../../lib/pipelines.queries";
-import {
-  problemFieldErrorsOf,
-  problemMessageOf,
-  unwrap,
-} from "../../lib/problem";
+import { unwrap } from "../../lib/problem";
 import { useInstallationSettings } from "../../lib/uploadlimit";
 import { useViewerZone } from "../../lib/viewerzone";
 import { useLeadCompanyNameReading } from "./leadcompany";
 import { leadIdentityName } from "./leadname";
 import {
+  amountState,
+  dealBlock,
   ExistingQualificationDeal,
+  openStagesOf,
   type QualificationDealChoice,
   qualificationConfirmState,
   qualificationDealState,
+  qualifyRefusals,
 } from "./leads.qualifydeal";
 import { reasonSentence, triggerFor } from "./leads.qualifyreason";
 import "./leads.css";
@@ -48,7 +46,6 @@ import "./leads.css";
 type Lead = components["schemas"]["Lead"];
 type PromoteLeadRequest = components["schemas"]["PromoteLeadRequest"];
 type PromoteLeadResponse = components["schemas"]["PromoteLeadResponse"];
-type Pipeline = components["schemas"]["Pipeline"];
 
 // The qualify dialog: "this lead is now a contact, and maybe an opportunity".
 // Three blocks — what happens to the contact (read from the server's own
@@ -108,54 +105,6 @@ export function usePromotePreview(
 // triggerFor reads the wire trigger off the lead's captured evidence; a lead
 // with none is qualified by the human's own judgement.
 export { triggerFor } from "./leads.qualifyreason";
-
-// dealBlock is the wire's deal request from the dialog's fields. The money
-// pair holds from birth: an amount only travels with the currency, and no
-// amount travels as no money at all.
-function dealBlock(input: {
-  pipelineId: string | undefined;
-  stageId: string | undefined;
-  name: string;
-  amountMinor: number | null;
-  currency: string | undefined;
-}): NonNullable<PromoteLeadRequest["deal"]> {
-  const priced = input.amountMinor !== null && input.currency;
-  return {
-    pipeline_id: input.pipelineId ?? null,
-    stage_id: input.stageId ?? null,
-    name: input.name.trim() || null,
-    amount_minor: priced ? input.amountMinor : null,
-    currency: priced ? (input.currency ?? null) : null,
-  };
-}
-
-// amountState is what the amount does to the confirm. A negative one is
-// refused. One with no currency to carry it waits, because the server would
-// drop it on the way.
-function amountState(amountMinor: number | null, currency: string | undefined) {
-  return {
-    amountInvalid: amountMinor !== null && amountMinor < 0,
-    amountWaitsForCurrency: amountMinor !== null && !currency,
-  };
-}
-
-// qualifyRefusals splits a failed promotion: a refusal of the amount stands
-// under the field, and the foot of the dialog keeps everything else.
-function qualifyRefusals(error: unknown, t: (key: MessageKey) => string) {
-  const faults = problemFieldErrorsOf(error);
-  const amount = faults.find((fault) => fault.field === "amount_minor");
-  return {
-    amount: amount && fieldRefusalSentence(amount, t),
-    foot:
-      amount && faults.length === 1 ? undefined : problemMessageOf(error, t),
-  };
-}
-
-function openStagesOf(pipeline: Pipeline | undefined) {
-  return [...(pipeline?.stages ?? [])]
-    .filter((stage) => stage.semantic === "open")
-    .sort((a, b) => a.position - b.position);
-}
 
 type QualifyDialogProps = Readonly<{
   lead: Lead;

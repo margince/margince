@@ -15,7 +15,7 @@ import {
   useFrozenEdge,
 } from "./listtable.layout";
 import { orderedColumns, useColumnOrder } from "./listtable.order";
-import { fitsOnePage, usePaging } from "./listtable.paging";
+import { fitsOnePage, holdsCount, usePaging } from "./listtable.paging";
 import {
   applyView,
   clearAll,
@@ -60,15 +60,6 @@ export type { ListColumn, ListSelection } from "./listcolumn";
 export { CellStrip } from "./listgrid";
 
 const EMPTY_FILTERS: Readonly<Record<string, string>> = {};
-
-// A narrowed list with no rows may get its count back with the next answer.
-function holdsCount(
-  pending: boolean,
-  narrowed: boolean,
-  rows: number,
-): boolean {
-  return pending || (narrowed && rows === 0);
-}
 
 export function ListTable<Row>({
   title,

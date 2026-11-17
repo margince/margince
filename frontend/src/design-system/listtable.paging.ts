@@ -16,6 +16,15 @@ import { stable } from "../format/collate";
  */
 export const PAGE_SIZES = [25, 50, 100] as const;
 
+// A narrowed list with no rows may get its count back with the next answer.
+export function holdsCount(
+  pending: boolean,
+  narrowed: boolean,
+  rows: number,
+): boolean {
+  return pending || (narrowed && rows === 0);
+}
+
 export function fitsOnePage(
   rows: readonly unknown[],
   total: number | undefined,
