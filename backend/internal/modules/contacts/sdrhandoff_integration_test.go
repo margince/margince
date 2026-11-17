@@ -272,17 +272,14 @@ func (e *promoteConsentEnv) eventReason(t *testing.T, id ids.UUID, status string
 // (backend/migrations/sdrhandoffreasons_integration_test.go) reads the
 // catalogue the migration left, against the transitions the column's own CHECK
 // admits.
-// The label carries the test's own name because sdr_handoff_reason is a
-// PRESERVED reference table: the migration seeds the system catalogue and the
-// reset leaves it standing, so a fixed label here would collide with the row the
-// previous test left behind. Its own reason also keeps a test that deactivates
-// one from reaching into another's.
+// Reference rows survive resets, so each invocation needs its own label even
+// when go test repeats the same test name.
 func (e *promoteConsentEnv) someHandoffReason(t *testing.T, appliesTo string) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(), `
 		INSERT INTO sdr_handoff_reason (id, label, applies_to) VALUES ($1, $2, $3)`,
-		id, t.Name()+" "+appliesTo+" reason", appliesTo); err != nil {
+		id, t.Name()+" "+id.String()+" "+appliesTo+" reason", appliesTo); err != nil {
 		t.Fatalf("seeding a %s reason: %v", appliesTo, err)
 	}
 	return id
