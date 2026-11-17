@@ -383,7 +383,12 @@ function RecordMarkChip({
   href,
 }: Readonly<{ id: string; label: string; href: string }>) {
   return (
-    <Chip dense appHref={href} lead={<Avatar name={label} identity={id} />}>
+    <Chip
+      dense
+      wrap
+      appHref={href}
+      lead={<Avatar name={label} identity={id} />}
+    >
       {label}
     </Chip>
   );

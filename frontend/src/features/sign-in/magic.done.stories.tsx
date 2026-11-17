@@ -102,8 +102,8 @@ const NIGHT: MagicReceipt = {
 };
 
 // The done lane as Home embeds it under the Done for you band.
-function smallChanges() {
-  stubWithSession({ "GET /magic": () => jsonResponse(NIGHT) }, {});
+function smallChanges(receipt: MagicReceipt = NIGHT) {
+  stubWithSession({ "GET /magic": () => jsonResponse(receipt) }, {});
   return (
     <StoryProviders>
       <section className="brief-section brief-done">
@@ -163,4 +163,32 @@ export const AlonePhone: Story = {
   render: Alone.render,
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
+};
+
+// A job's own record names carry no spaces, so the folded line must break one.
+const UNBROKEN_NAME =
+  "ZZ QC home feed-overnight_at_risk_sweep_for_every_owner:2026-11-14T02:45";
+
+const UNBROKEN: MagicReceipt = {
+  ...NIGHT,
+  done: [small(0, "magic.action.create_activity", UNBROKEN_NAME, { count: 5 })],
+  totals: { ...NIGHT.totals, done: 1 },
+};
+
+/** A folded line's unbroken name wraps inside its row; its opener stays on it. */
+export const UnbrokenNamePhone: Story = {
+  render: () => smallChanges(UNBROKEN),
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByText("5 small changes"));
+    const name = await canvas.findByText(`${UNBROKEN_NAME} and 4 more`);
+    const row = name.closest<HTMLElement>(".brief-done-controls");
+    if (!row) throw new Error("the folded name is not on a change's row");
+    await expect(name.getBoundingClientRect().right).toBeLessThanOrEqual(
+      row.getBoundingClientRect().right,
+    );
+    await expect(within(row).getByText("View 5 changes")).toBeVisible();
+  },
 };
