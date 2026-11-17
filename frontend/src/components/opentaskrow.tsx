@@ -7,7 +7,9 @@ import { Badge } from "../design-system/atoms";
 import { OverviewRow } from "../design-system/overviewcard";
 import { formatNumber } from "../format/format";
 import { formatDayMonth, formatDueCompact } from "../format/format.dates";
+import { daysPast } from "../format/lateness";
 import { useLocale, usePlural, useT } from "../i18n";
+import { displayedSubject } from "../lib/systemdisplay";
 import { type DatedTask, taskStanding } from "../lib/taskstanding";
 import { useViewerZone } from "../lib/viewerzone";
 import { TaskCompleteCheck, type useTaskUpdate } from "./taskactions";
@@ -33,6 +35,27 @@ export type OpenTask = DatedTask &
     // worse than none, so a task they may not change draws no tick.
     writable: boolean;
   }>;
+
+// A task from an activity list as a row reads it. Late by the same measure as
+// the "+N tasks" peek beside a record's Next bar.
+export function openTaskOf(
+  task: components["schemas"]["Activity"],
+  asOf: string,
+  untitled: string,
+): OpenTask {
+  return {
+    id: task.id,
+    subject: displayedSubject(task) ?? untitled,
+    due_at: task.due_at,
+    due_has_time: task.due_has_time,
+    overdue: task.due_at
+      ? daysPast(Date.parse(task.due_at), Date.parse(asOf)).late
+      : false,
+    assignee_id: task.assignee_id,
+    version: task.version,
+    writable: task.writable === true,
+  };
+}
 
 export function OpenTaskRow({
   task,
