@@ -26,9 +26,12 @@ import (
 	"github.com/margince/margince/backend/migrations"
 )
 
+// pgTimestamp is how psql and pg_dump print a timestamptz.
+const pgTimestamp = "2006-01-02 15:04:05.999999-07"
+
 type options struct {
 	pre, data, post, roles string
-	since                  time.Time
+	since, until           time.Time
 	version, name, through string
 	release, outDir        string
 }
@@ -46,13 +49,14 @@ func main() {
 
 func parseFlags(args []string) (options, error) {
 	var o options
-	var since string
+	var since, until string
 	flags := flag.NewFlagSet("gen-baseline", flag.ContinueOnError)
 	flags.StringVar(&o.pre, "pre", "", "pg_dump --schema-only --section=pre-data")
 	flags.StringVar(&o.data, "data", "", "pg_dump --data-only --column-inserts --rows-per-insert=1")
 	flags.StringVar(&o.post, "post", "", "pg_dump --schema-only --section=post-data")
 	flags.StringVar(&o.roles, "roles", "", "the migration that makes the cluster-level roles, which no dump carries")
-	flags.StringVar(&since, "since", "", "the first applied_at of the build; a later timestamp in a reference row becomes now()")
+	flags.StringVar(&since, "since", "", "the first applied_at of the build")
+	flags.StringVar(&until, "until", "", "the last applied_at of the build; a reference-row timestamp between the two becomes now()")
 	flags.StringVar(&o.through, "through", "", "the last core version the baseline replaces")
 	flags.StringVar(&o.version, "version", "", "the baseline's own version")
 	flags.StringVar(&o.name, "name", "", "the baseline's name")
@@ -61,13 +65,16 @@ func parseFlags(args []string) (options, error) {
 	if err := flags.Parse(args); err != nil {
 		return o, err
 	}
-	for _, required := range []string{o.pre, o.data, o.post, o.roles, since, o.through, o.version, o.name, o.release, o.outDir} {
+	for _, required := range []string{o.pre, o.data, o.post, o.roles, since, until, o.through, o.version, o.name, o.release, o.outDir} {
 		if required == "" {
 			return o, errors.New("every flag is required")
 		}
 	}
 	var err error
-	o.since, err = time.Parse("2006-01-02 15:04:05.999999-07", since)
+	if o.since, err = time.Parse(pgTimestamp, since); err != nil {
+		return o, err
+	}
+	o.until, err = time.Parse(pgTimestamp, until)
 	return o, err
 }
 
@@ -98,7 +105,7 @@ func run(o options) error {
 		return err
 	}
 	pre, post, _ = strings.Cut(restated, sectionBreak)
-	rows, err := referenceRows(sections["data"], o.since)
+	rows, err := referenceRows(sections["data"], o.since, o.until)
 	if err != nil {
 		return err
 	}
@@ -265,10 +272,11 @@ var (
 )
 
 // referenceRows keeps the INSERTs and turns what the build's run generated
-// back into what generates it: a uuid into uuidv7(), a build-time timestamp
-// into now(). A uuid that occurs twice links two rows. Regenerating it would
-// break the link, so it stops the generator instead.
-func referenceRows(dump string, since time.Time) (string, error) {
+// back into what generates it. A version-7 uuid becomes uuidv7(), and a
+// timestamp inside the build's window becomes now(). Any other uuid stops the
+// generator: it is a constant a migration chose, or a link between two rows.
+// A timestamp outside the window is a date a migration chose, and stays.
+func referenceRows(dump string, since, until time.Time) (string, error) {
 	var rows []string
 	seen := map[string]bool{}
 	for line := range strings.SplitSeq(dump, "\n") {
@@ -279,15 +287,15 @@ func referenceRows(dump string, since time.Time) (string, error) {
 			continue
 		}
 		for _, id := range uuidLiteral.FindAllString(line, -1) {
-			if seen[id] {
-				return "", fmt.Errorf("uuid %s occurs twice in the reference rows; a row links to another by uuid", id)
+			if seen[id] || id[15] != '7' {
+				return "", fmt.Errorf("uuid %s is not one uuidv7() generated for a single row; keep it by hand or change the migration", id)
 			}
 			seen[id] = true
 		}
 		line = uuidLiteral.ReplaceAllString(line, "public.uuidv7()")
 		line = timestampLiteral.ReplaceAllStringFunc(line, func(literal string) string {
-			at, err := time.Parse("2006-01-02 15:04:05.999999-07", strings.Trim(literal, "'"))
-			if err != nil || at.Before(since) {
+			at, err := time.Parse(pgTimestamp, strings.Trim(literal, "'"))
+			if err != nil || at.Before(since) || at.After(until) {
 				return literal
 			}
 			return "now()"

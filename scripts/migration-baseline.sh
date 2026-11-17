@@ -27,8 +27,10 @@ OWNER="${MARGINCE_PG_OWNER:-margince_owner}"
 # The host's way into the same server, for the migrator.
 DSN_BASE="${MARGINCE_PG_DSN_BASE:-postgres://margince_owner:dev@localhost:15432}"
 BASELINE_DIR=backend/migrations/baseline/core
-TOOLS_BIN="$(mktemp -d)"
-trap 'rm -rf "$TOOLS_BIN"' EXIT
+# Every scratch file lives under one directory, removed however the run ends.
+SCRATCH="$(mktemp -d)"
+trap 'rm -rf "$SCRATCH"' EXIT
+TOOLS_BIN="$SCRATCH/bin"
 
 # Tracking tables are compared on their own (dump_ledger): the baseline route
 # records one row the history does not.
@@ -55,7 +57,14 @@ recreate_db() {
 
 drop_db() { psql_owner -d postgres -c "DROP DATABASE IF EXISTS $1" >/dev/null; }
 
+# A data-only dump warns about every table in a foreign-key cycle. Those
+# warnings are expected here; anything else pg_dump says is kept.
+quiet_cycle_warnings() {
+  grep -vE '^pg_dump: (warning: there are circular foreign-key constraints|detail: |hint: )' >&2 || true
+}
+
 build_tools() {
+  mkdir -p "$TOOLS_BIN"
   (cd backend/tools && go build -o "$TOOLS_BIN" ./migrate-route ./gen-baseline) ||
     die "building backend/tools/migrate-route and gen-baseline failed"
 }
@@ -88,10 +97,10 @@ dump_schema() {
 # two rows, so masking uuids hides no link.
 dump_data() {
   docker exec "$CONTAINER" pg_dump -U "$OWNER" -d "$1" \
-      --data-only --column-inserts "${EXCLUDE[@]}" 2>/dev/null |
+      --data-only --column-inserts "${EXCLUDE[@]}" 2> >(quiet_cycle_warnings) |
     strip_preamble |
     sed -E "s/'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'/'<uuid>'/g;
-            s/'[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]+)?\+[0-9]{2}'/'<timestamp>'/g" |
+            s/'[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]+)?[+-][0-9]{2}'/'<timestamp>'/g" |
     LC_ALL=C sort | cat -s
 }
 
@@ -137,24 +146,29 @@ cmd_generate() {
   [[ ${#roles[@]} -eq 1 && -f "${roles[0]}" ]] || die "want exactly one migration that makes the ext_runtime role"
   build_tools
 
-  local db=margince_baseline_generate work; work="$(mktemp -d)"
+  local db=margince_baseline_generate work="$SCRATCH/generate"
+  mkdir -p "$work/out"
   echo "migration-baseline: building core's history through $through"
   recreate_db "$db"
   migrate "$db" -route history -through "$through"
-  local since; since="$(psql_owner -d "$db" -At -c "SELECT min(applied_at) FROM schema_migrations_core")"
+  local since until
+  since="$(psql_owner -d "$db" -At -c "SELECT min(applied_at) FROM schema_migrations_core")"
+  until="$(psql_owner -d "$db" -At -c "SELECT max(applied_at) FROM schema_migrations_core")"
   for section in pre-data post-data; do
     docker exec "$CONTAINER" pg_dump -U "$OWNER" -d "$db" --schema-only --no-owner \
       --section="$section" "${EXCLUDE[@]}" > "$work/$section.sql"
   done
   docker exec "$CONTAINER" pg_dump -U "$OWNER" -d "$db" --data-only --column-inserts \
-    --rows-per-insert=1 "${EXCLUDE[@]}" > "$work/data.sql" 2>/dev/null
+    --rows-per-insert=1 "${EXCLUDE[@]}" > "$work/data.sql" 2> >(quiet_cycle_warnings)
   drop_db "$db"
 
-  rm -f "$BASELINE_DIR"/*.up.sql
+  # Written aside and moved in only on success, so a refusal leaves the
+  # committed baseline in place.
   "$TOOLS_BIN/gen-baseline" -pre "$work/pre-data.sql" -data "$work/data.sql" -post "$work/post-data.sql" \
-    -roles "${roles[0]}" -since "$since" -through "$through" -version "$version" -name "$name" \
-    -release "$release" -out "$BASELINE_DIR"
-  rm -rf "$work"
+    -roles "${roles[0]}" -since "$since" -until "$until" -through "$through" -version "$version" \
+    -name "$name" -release "$release" -out "$work/out" || die "gen-baseline refused; the baseline is unchanged"
+  rm -f "$BASELINE_DIR"/*.up.sql
+  mv "$work/out"/* "$BASELINE_DIR"/
   echo "migration-baseline: wrote $BASELINE_DIR/${version}_${name}.up.sql and replaces.txt; run verify next"
 }
 
@@ -162,7 +176,7 @@ cmd_verify() {
   require_container
   build_tools
   local version; version="$(baseline_file)"; version="${version%%_*}"
-  local history baseline; history="$(mktemp)"; baseline="$(mktemp)"
+  local history="$SCRATCH/history.txt" baseline="$SCRATCH/baseline.txt"
 
   echo "migration-baseline: building every core and custom migration by the history route"
   recreate_db margince_baseline_history
