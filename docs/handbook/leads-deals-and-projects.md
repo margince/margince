@@ -45,7 +45,7 @@ On the leads board, the **Qualified** and **Disqualified** columns follow the bo
 
 ### How do I qualify a lead or convert it into a deal?
 To qualify a lead in Margince, open the lead and choose **Qualify**. The dialog offers deal choices.
-1. Check the **Contact** preview: "Qualifying creates a new contact." or "Qualifying merges into the existing contact". A lead linked to a company you can open gives that contact a job link there. If that company has no industry, it gets the **Industry** typed on the lead.
+1. Check the **Contact** preview: "Qualifying creates a new contact." or "Qualifying merges into the existing contact". A lead linked to a company you can open gives that contact a job link there. If that company has no industry, it gets the **Industry** typed on the lead. A company the qualifying creates gets that **Industry** too, and a new contact gets the lead's **LinkedIn URL**.
 2. Pick **Add to an existing deal** to join an open deal at the employer. Pick **Open a new deal** for a new one. A new deal asks for **Pipeline**, **Stage**, **Deal name** and, if you like, **Amount**.
 3. Read **Why** and add an **Evidence note (optional)**.
 4. Choose **Qualify**, **Qualify and add to deal**, or **Qualify and open deal**.
