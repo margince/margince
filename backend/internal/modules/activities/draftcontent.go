@@ -17,6 +17,7 @@ type DraftContentFinding struct {
 	Detail      string
 	Words       []string
 	Language    string
+	Country     string
 }
 
 // DraftContentChecker answers what an advertising draft does not meet among

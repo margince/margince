@@ -142,6 +142,10 @@ func previewResponse(preview SendPreview) crmcontracts.SendAuthorizationPreview 
 			missing := true
 			entry.LawfulBasisMissing = &missing
 		}
+		if !d.ConsentPurpose.IsZero() {
+			purpose := openapi_types.UUID(d.ConsentPurpose)
+			entry.ConsentPurposeId = &purpose
+		}
 		if preview.NewContacts[correspondence.Fold(d.Recipient.Email)] {
 			newContact := true
 			entry.NewContact = &newContact
@@ -194,6 +198,10 @@ func wireContentFindings(findings []DraftContentFinding) *[]crmcontracts.DraftCo
 		if f.Language != "" {
 			language := f.Language
 			wire.Language = &language
+		}
+		if f.Country != "" {
+			country := f.Country
+			wire.Country = &country
 		}
 		out = append(out, wire)
 	}

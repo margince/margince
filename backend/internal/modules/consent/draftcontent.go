@@ -34,6 +34,10 @@ const (
 	// DraftLanguageFirst is a draft that does not open in the language a pack
 	// asks advertising to lead with.
 	DraftLanguageFirst = "advertising_language_first"
+	// DraftForeignAdvertiser is advertising sent for an entity established
+	// outside the recipient's country. That country's pack asks such an
+	// advertiser to go through a local advertising business.
+	DraftForeignAdvertiser = "foreign_advertiser"
 )
 
 // DraftFinding is one advertising content rule a draft does not meet.
@@ -44,6 +48,8 @@ type DraftFinding struct {
 	Words []string
 	// Language is the language asked for, for DraftLanguageFirst.
 	Language string
+	// Country is the recipient's country, for DraftForeignAdvertiser.
+	Country string
 }
 
 // CheckAdvertisingDraft answers what an advertising draft to recipients does
@@ -67,12 +73,22 @@ func (s *Store) CheckAdvertisingDraft(ctx context.Context, recipients []string, 
 				codes = append(codes, country.Code)
 			}
 		}
+		sender, err := s.senderCountryTx(ctx, tx)
+		if err != nil {
+			return err
+		}
 		for _, code := range codes {
 			rules, _, found := applicableRules(code)
 			if !found {
 				continue
 			}
-			for _, f := range draftFindings(rules.DisclosureLanguage, rules.ClaimsNeedProof, subject, body) {
+			packFindings := draftFindings(contentRules{
+				language: rules.DisclosureLanguage, claims: rules.ClaimsNeedProof,
+			}, subject, body)
+			if rules.ForeignAdvertiserNeedsLocalAgency && sender != code {
+				packFindings = append(packFindings, foreignAdvertiser(code))
+			}
+			for _, f := range packFindings {
 				if !slices.ContainsFunc(findings, func(have DraftFinding) bool { return have.Detail == f.Detail }) {
 					findings = append(findings, f)
 				}
@@ -83,11 +99,41 @@ func (s *Store) CheckAdvertisingDraft(ctx context.Context, recipients []string, 
 	return findings, err
 }
 
+// senderCountryTx is the country of the legal entity the caller sends for,
+// the one the data-protection selector reads.
+func (s *Store) senderCountryTx(ctx context.Context, tx pgx.Tx) (jurisdiction.Code, error) {
+	entity, err := sendingEntityOf(ctx, tx)
+	if err != nil {
+		return "", err
+	}
+	code, err := s.dataProtectionCountryTx(ctx, tx, entity)
+	return jurisdiction.Code(strings.ToLower(string(code))), err
+}
+
+// foreignAdvertiser is the notice for advertising into country from a sending
+// entity established elsewhere. The customer answers for it.
+func foreignAdvertiser(country jurisdiction.Code) DraftFinding {
+	return DraftFinding{
+		Requirement: DraftForeignAdvertiser,
+		Detail: fmt.Sprintf("the sending entity is not established in %q; an advertiser from elsewhere that does "+
+			"not operate there must advertise through a local advertising service business, and you answer for it",
+			string(country)),
+		Country: string(country),
+	}
+}
+
+// contentRules are the fields of one pack's rules a draft is checked against.
+type contentRules struct {
+	language string
+	claims   []string
+}
+
 // draftFindings checks one draft against one pack's content rules.
-func draftFindings(language string, claims []string, subject, body string) []DraftFinding {
+func draftFindings(rules contentRules, subject, body string) []DraftFinding {
 	var out []DraftFinding
+	language := rules.language
 	text := norm.NFC.String(subject + "\n" + body)
-	if found := claimsIn(text, claims); len(found) > 0 && !statesProof(text) {
+	if found := claimsIn(text, rules.claims); len(found) > 0 && !statesProof(text) {
 		out = append(out, DraftFinding{
 			Requirement: DraftClaimWithoutProof,
 			Detail: fmt.Sprintf("the draft claims %q; state the proving document's name, number and date beside it",
@@ -107,10 +153,14 @@ func draftFindings(language string, claims []string, subject, body string) []Dra
 }
 
 // claimsIn answers each claim word text uses as a whole word, ignoring case.
-// Longer claims are matched first and blanked out wherever they stand, so
-// "tốt nhất" is not also reported as "nhất".
+// A sign-off line ("Best,\nAn") ranks nothing and is skipped. Longer claims
+// are matched first and blanked out wherever they stand, so "tốt nhất" is not
+// also reported as "nhất".
 func claimsIn(text string, claims []string) []string {
-	lowered := strings.ToLower(text)
+	lines := slices.DeleteFunc(strings.Split(text, "\n"), func(line string) bool {
+		return salutation.IsClosing(strings.TrimSpace(line))
+	})
+	lowered := strings.ToLower(strings.Join(lines, "\n"))
 	ordered := slices.Clone(claims)
 	slices.SortStableFunc(ordered, func(a, b string) int { return len(b) - len(a) })
 	var found []string

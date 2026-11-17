@@ -35,6 +35,25 @@ it("names the claim that needs a proof and the language the mail must open in", 
   ).toBeInTheDocument();
 });
 
+it("tells a sender from abroad to advertise through a local business", () => {
+  render(
+    <LocaleProvider initial="en">
+      <DraftContentNotice
+        findings={[
+          {
+            requirement: "foreign_advertiser",
+            detail: "the sending entity is not established in vn",
+            country: "vn",
+          },
+        ]}
+      />
+    </LocaleProvider>,
+  );
+  expect(
+    screen.getByText(/Your company is not set up in Vietnam\./),
+  ).toBeInTheDocument();
+});
+
 it("says nothing when the draft meets every rule", () => {
   const { container } = render(
     <LocaleProvider initial="en">

@@ -316,20 +316,17 @@ type Copy struct {
 	ConfirmMarketingAsk string
 	ConfirmMarketingYes string
 	ConfirmMarketingNo  string
-	// ConfirmSubscriptionAsk is the OTHER question, and the two are not
-	// interchangeable. A record-confirmation link asks the generic marketing
-	// question above; a dedicated subscription link names the purpose it was
-	// minted for — "confirm that you want to receive {purpose}" — which is a
-	// narrower and more specific proposition.
-	//
-	// Binding either door to the other's sentence would record somebody
-	// agreeing to something they were not asked, which is the defect the whole
-	// published-question change exists to end.
-	//
-	// {purpose}, {controller}, {frequency} and {privacy_page} are filled when
-	// a confirm page serves the question, so the grant records the full text.
-	ConfirmSubscriptionAsk     string
-	ConfirmSubscriptionConfirm string
+	// ConfirmSubscriptionAsk is the OTHER question: a dedicated subscription
+	// link names the purpose it was minted for. Binding either door to the
+	// other's sentence would record somebody agreeing to something they were
+	// not asked. A confirm page fills {purpose}, {controller}, {frequency} and
+	// {privacy_page}. The Unscheduled one, for a purpose that is not
+	// advertising, names no frequency and no unsubscribe link, and
+	// ConfirmConsentConfirm confirms it.
+	ConfirmSubscriptionAsk            string
+	ConfirmSubscriptionAskUnscheduled string
+	ConfirmSubscriptionConfirm        string
+	ConfirmConsentConfirm             string
 	// The words a purpose's frequency is named by inside that sentence.
 	FrequencyWeekly    string
 	FrequencyMonthly   string

@@ -10,6 +10,8 @@ import (
 
 var vietnameseClaims = []string{"nhất", "duy nhất", "tốt nhất", "số một"}
 
+var vietnamese = contentRules{language: "vi", claims: vietnameseClaims}
+
 const vietnameseOffer = "Kính gửi quý khách,\n\nChúng tôi xin giới thiệu dịch vụ của chúng tôi cho doanh nghiệp của quý khách."
 
 func findingOf(findings []DraftFinding, requirement string) (DraftFinding, bool) {
@@ -23,7 +25,7 @@ func findingOf(findings []DraftFinding, requirement string) (DraftFinding, bool)
 
 func TestADraftClaimingTheBestWithoutAProofIsFlagged(t *testing.T) {
 	body := vietnameseOffer + "\n\nĐây là dịch vụ tốt nhất cho quý khách."
-	f, ok := findingOf(draftFindings("vi", vietnameseClaims, "[QC] Ưu đãi", body), DraftClaimWithoutProof)
+	f, ok := findingOf(draftFindings(vietnamese, "[QC] Ưu đãi", body), DraftClaimWithoutProof)
 	if !ok {
 		t.Fatal("a draft claiming \"tốt nhất\" with no proof reference was not flagged")
 	}
@@ -35,12 +37,12 @@ func TestADraftClaimingTheBestWithoutAProofIsFlagged(t *testing.T) {
 func TestAClaimBesideAStatedProofIsNotFlagged(t *testing.T) {
 	body := vietnameseOffer + "\n\nĐây là dịch vụ tốt nhất cho quý khách.\n" +
 		"Theo Giấy chứng nhận số 123/2026/GCN-ABC ngày 01/02/2026."
-	if _, ok := findingOf(draftFindings("vi", vietnameseClaims, "", body), DraftClaimWithoutProof); ok {
+	if _, ok := findingOf(draftFindings(vietnamese, "", body), DraftClaimWithoutProof); ok {
 		t.Error("a claim with its document, number and date beside it was flagged")
 	}
 	// A date alone names no document.
 	dateOnly := vietnameseOffer + "\n\nTốt nhất từ 01/02/2026."
-	if _, ok := findingOf(draftFindings("vi", vietnameseClaims, "", dateOnly), DraftClaimWithoutProof); !ok {
+	if _, ok := findingOf(draftFindings(vietnamese, "", dateOnly), DraftClaimWithoutProof); !ok {
 		t.Error("a bare date was taken for a proof reference")
 	}
 }
@@ -57,14 +59,14 @@ func TestAClaimMatchesWholeWordsOnly(t *testing.T) {
 
 func TestADraftThatOpensInAnotherLanguageIsFlagged(t *testing.T) {
 	english := "Dear customer,\n\nWe would like to introduce our new service to your company and its team.\n\n" + vietnameseOffer
-	if _, ok := findingOf(draftFindings("vi", nil, "", english), DraftLanguageFirst); !ok {
+	if _, ok := findingOf(draftFindings(contentRules{language: "vi"}, "", english), DraftLanguageFirst); !ok {
 		t.Error("a draft opening in English was not flagged for a pack asking for Vietnamese first")
 	}
 	vietnameseFirst := vietnameseOffer + "\n\nDear customer, we would like to introduce our new service to your company."
-	if _, ok := findingOf(draftFindings("vi", nil, "", vietnameseFirst), DraftLanguageFirst); ok {
+	if _, ok := findingOf(draftFindings(contentRules{language: "vi"}, "", vietnameseFirst), DraftLanguageFirst); ok {
 		t.Error("a draft opening in Vietnamese was flagged")
 	}
-	if len(draftFindings("", nil, "", english)) != 0 {
+	if len(draftFindings(contentRules{}, "", english)) != 0 {
 		t.Error("a pack with no content rules flagged a draft")
 	}
 }
@@ -84,5 +86,27 @@ func TestALongerClaimUsedTwiceHidesItsShorterPart(t *testing.T) {
 	got := claimsIn("Tốt nhất cho bạn. Giá tốt nhất.", vietnameseClaims)
 	if !slices.Equal(got, []string{"tốt nhất"}) {
 		t.Errorf("claims %v, want only \"tốt nhất\"", got)
+	}
+}
+
+// A claim in English counts as well as one in Vietnamese. A sign-off line
+// that holds "best" ranks nothing, while "best" inside a sentence still does.
+func TestAnEnglishClaimInAVietnameseDraftIsFlagged(t *testing.T) {
+	rules := contentRules{language: "vi", claims: []string{"best", "hàng đầu"}}
+	body := vietnameseOffer + "\n\nChúng tôi là nhà cung cấp hàng đầu, the best in Vietnam."
+	f, ok := findingOf(draftFindings(rules, "[QC] Ưu đãi", body), DraftClaimWithoutProof)
+	if !ok || !slices.Equal(f.Words, []string{"hàng đầu", "best"}) {
+		t.Errorf("finding %+v, want both \"hàng đầu\" and \"best\" flagged", f)
+	}
+	for _, closing := range []string{"Best regards,\nAn", "Best,\nAn", "All the best,\nAn"} {
+		signed := vietnameseOffer + "\n\n" + closing
+		if _, ok := findingOf(draftFindings(rules, "[QC] Ưu đãi", signed), DraftClaimWithoutProof); ok {
+			t.Errorf("the closing %q was flagged as a claim", closing)
+		}
+	}
+	brands := vietnameseOffer + "\n\nWe carry all the best brands."
+	if f, ok := findingOf(draftFindings(rules, "[QC] Ưu đãi", brands), DraftClaimWithoutProof); !ok ||
+		!slices.Equal(f.Words, []string{"best"}) {
+		t.Errorf("finding %+v, want \"best\" in \"all the best brands\" flagged", f)
 	}
 }
