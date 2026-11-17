@@ -104,14 +104,14 @@ func TestAWritePastItsThresholdIsReleasedByTheHumanWhoLentThePassport(t *testing
 	bearer, passport := apptest.PassportWithID(t, e, "writing agent", "read", "write")
 	spendCounter(t, e, meter, passport, agentvolume.Writes, 12)
 
-	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Refused"}, bearer, nil); status != http.StatusTooManyRequests {
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Refused"}, bearer, nil); status != http.StatusTooManyRequests {
 		t.Fatalf("a write past its threshold → %d, want 429", status)
 	}
 
 	// The REST door refuses without staging, because it has no tool to name. The
 	// question is put through the MCP door, which the ladder is written for.
 	callTool(t, e, bearer, "create_record", AnyMap{
-		"record_type": "contact", "fields": AnyMap{"source": "manual", "full_name": "Metered"},
+		"record_type": "contact", "fields": AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Metered"},
 	})
 
 	id, staged, summary := pendingStepUp(t, e)
@@ -128,7 +128,7 @@ func TestAWritePastItsThresholdIsReleasedByTheHumanWhoLentThePassport(t *testing
 		t.Fatalf("approving the step-up → %d", status)
 	}
 
-	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Admitted"}, bearer, nil); status != http.StatusCreated {
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Admitted"}, bearer, nil); status != http.StatusCreated {
 		t.Errorf("the agent is still refused after its human approved the step-up → %d; "+
 			"the window the gate reads and the window the approval widened are not the same window", status)
 	}
@@ -143,7 +143,7 @@ func TestOneReleaseIsOneMoreAllowanceAndNotAStandingPermission(t *testing.T) {
 	bearer, passport := apptest.PassportWithID(t, e, "writing agent", "read", "write")
 	spendCounter(t, e, meter, passport, agentvolume.Writes, 12)
 	callTool(t, e, bearer, "create_record", AnyMap{
-		"record_type": "contact", "fields": AnyMap{"source": "manual", "full_name": "Metered"},
+		"record_type": "contact", "fields": AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Metered"},
 	})
 	id, _, _ := pendingStepUp(t, e)
 	if status := e.Call(t, "POST", "/v1/approvals/"+id.String()+"/approve", nil, nil, nil); status != http.StatusOK {
@@ -153,7 +153,7 @@ func TestOneReleaseIsOneMoreAllowanceAndNotAStandingPermission(t *testing.T) {
 	// The released allowance is spent too.
 	spendCounter(t, e, meter, passport, agentvolume.Writes, 10)
 
-	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Refused again"}, bearer, nil); status != http.StatusTooManyRequests {
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Refused again"}, bearer, nil); status != http.StatusTooManyRequests {
 		t.Errorf("a second crossing after one release → %d, want 429: approving once granted a standing permission", status)
 	}
 }
@@ -170,7 +170,7 @@ func TestASpentCallCeilingAsksNobodyAnything(t *testing.T) {
 		t.Fatalf("a read past the call ceiling → %d, want 429", status)
 	}
 	callTool(t, e, bearer, "create_record", AnyMap{
-		"record_type": "contact", "fields": AnyMap{"source": "manual", "full_name": "Suspended"},
+		"record_type": "contact", "fields": AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Suspended"},
 	})
 
 	var staged int

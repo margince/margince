@@ -193,10 +193,18 @@ Also called: keys, shortcut list, keyboard, key for a page.
 
 ### Where is the handbook, and how do I ask it a question?
 To ask the Margince handbook a question, type it into **Search or ask Margince** in the top bar and press Enter. You can also open it with ⌘K (Ctrl+K).
-1. A question such as "How do I change my time zone?" gets the row **Ask Margince: "…"** at the top. Enter asks it.
+1. A question such as "How do I change my time zone?" gets the row **Ask the handbook: "…"** at the top. Enter asks it.
 2. The answer shows above the records that match. It names the set it came from, and its numbers open the handbook page at the quoted line.
 3. When the answer is a settings page you may open, **Open Settings → …** takes you there.
 The handbook is in English, so questions in English work best.
+Questions about CRM data, such as "How many deals did I win this month?", offer **Ask CRM data**.
+
+The answer uses the same figures as Analytics and the same records the reader can open. It names
+its source and period. Use **Open in Analytics** to check a figure, or open a record in the answer.
+
+When the data cannot answer the question, the handbook is asked. A question neither can answer
+still offers Analytics.
+
 Also called: help, FAQ, knowledge base, ask Margince.
 
 When the handbook does not cover a question, Margince asks your company's default document set next and says so. When neither covers it, you get **Not covered by this set** instead of a guess. To ask one set of your choice, choose **Ask your documents** under the search field. Pick a **Document set**, type in **Your question** and choose **Ask**.

@@ -18,6 +18,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/toolroles"
 )
@@ -222,7 +223,7 @@ func holdPathDependentTools(t *testing.T, client *apptest.MCPClient, offered map
 		}
 	}
 	contact := client.Call(t, "create_record", map[string]any{
-		"record_type": "contact", "fields": map[string]any{"full_name": "Path Bound", "source": "manual"},
+		"record_type": "contact", "fields": map[string]any{"full_name": "Path Bound", "source": "manual", "linkedin_url": "https://www.linkedin.com/in/" + ids.NewV7().String()},
 	})
 	if contact.IsError {
 		t.Errorf("creating a contact was refused: %.300s", contact.Text)

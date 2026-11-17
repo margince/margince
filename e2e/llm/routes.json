@@ -431,6 +431,7 @@
     "read_analytics": {
       "field": "step",
       "actions": {
+        "ask": "ask_search_data",
         "compose": "compose_analytics_report",
         "query": "run_analytics_query"
       }

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -29,6 +30,14 @@ func (w *windowRecorder) TasksAfter(_ context.Context, window TaskWindow, _ stri
 }
 
 func (w *windowRecorder) TasksOnDeals(context.Context, TaskWindow, []ids.UUID) ([]Task, error) {
+	return nil, nil
+}
+
+func (w *windowRecorder) FollowUpPromises(context.Context, []ids.UUID) ([]activities.FollowUpPromise, error) {
+	return nil, nil
+}
+
+func (w *windowRecorder) TasksIn(context.Context, TaskWindow, []ids.UUID) ([]Task, error) {
 	return nil, nil
 }
 

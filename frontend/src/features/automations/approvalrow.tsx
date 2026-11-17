@@ -5,6 +5,7 @@ import {
 } from "@tanstack/react-query";
 import { type ReactNode, useCallback, useState } from "react";
 import { api } from "../../api/client";
+import { useLawfulBasisGate } from "../../components/lawfulbasiswarning";
 import { SendPermission } from "../../components/sendpermission";
 import { Button, Card } from "../../design-system/atoms";
 import {
@@ -183,6 +184,10 @@ export function ApprovalRow({
     enabled: !decided && staged !== undefined,
   });
 
+  // An agent-drafted mail to a recipient with no lawful basis on record waits
+  // for the approver to confirm the warning, as the composer does.
+  const lawfulBasis = useLawfulBasisGate(permission.preview);
+
   // Where an approved change can be put back, and where it cannot.
   //
   // The undo is the RECORD's, not the approval's: an effect that changes a
@@ -295,12 +300,14 @@ export function ApprovalRow({
 
   const approveEdited = () => {
     if (!approvalAcceptable(approval)) return;
-    held.announce();
-    decide.mutate({
-      verdict: "approve",
-      editedPayload: { ...change, ...draft },
+    lawfulBasis.gate(() => {
+      held.announce();
+      decide.mutate({
+        verdict: "approve",
+        editedPayload: { ...change, ...draft },
+      });
+      setEditing(false);
     });
-    setEditing(false);
   };
 
   const reRead = () => {
@@ -393,13 +400,14 @@ export function ApprovalRow({
       }
       onAccept={
         approvalAcceptable(approval)
-          ? () => {
-              held.announce();
-              decide.mutate({
-                verdict: "approve",
-                editedPayload: linkedIn?.edited,
-              });
-            }
+          ? () =>
+              lawfulBasis.gate(() => {
+                held.announce();
+                decide.mutate({
+                  verdict: "approve",
+                  editedPayload: linkedIn?.edited,
+                });
+              })
           : undefined
       }
       // Offered only where the kind has something a reader may change. Disabled
@@ -443,6 +451,7 @@ export function ApprovalRow({
         open={detailOpen}
         onClose={() => setDetailOpen(false)}
       />
+      {lawfulBasis.dialog}
     </DecisionCard>
   );
 }

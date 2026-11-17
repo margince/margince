@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/compose/searchplan"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -227,5 +228,12 @@ func TestTheVocabularyOffersNoFieldThatCanOnlyBeWithheld(t *testing.T) {
 				t.Errorf("%s.%s names the row's own id", name, field)
 			}
 		}
+	}
+}
+
+func TestSearchRefusesSavedQueries(t *testing.T) {
+	server := Server{}
+	if _, err := server.executeSearchData(context.Background(), searchplan.Plan{Engine: "analytics", Arguments: `{"entity":"open-deals-per-company","measures":[{"fn":"count"}],"save":true}`}); err == nil {
+		t.Fatal("a search query was allowed to save")
 	}
 }

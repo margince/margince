@@ -4,8 +4,12 @@
 package mailcopy
 
 import (
+	"fmt"
 	"strings"
 	"time"
+
+	"golang.org/x/text/language"
+	"golang.org/x/text/language/display"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
@@ -24,11 +28,29 @@ func (c Copy) Date(at time.Time) string {
 
 // Instant retains the actual deadline and its timezone.
 func (c Copy) Instant(at time.Time) string {
-	clock := at.Format("15:04")
-	if c.Language == German {
-		clock += " Uhr"
+	return c.Date(at) + ", " + c.clock(at) + " (" + zoneOffset(at) + ")"
+}
+
+// CountryInstant is Instant read on a clock in country, named for the reader as
+// that country's time: "28/11/2026, 15:21 (giờ Việt Nam, UTC+07:00)". A code
+// no language can name prints the plain Instant.
+func (c Copy) CountryInstant(at time.Time, country string) string {
+	region, err := language.ParseRegion(strings.ToUpper(country))
+	if err != nil {
+		return c.Instant(at)
 	}
-	return c.Date(at) + ", " + clock + " (" + zoneOffset(at) + ")"
+	name := display.Regions(language.Make(string(c.Language))).Name(region)
+	if name == "" {
+		return c.Instant(at)
+	}
+	return c.Date(at) + ", " + c.clock(at) + " (" + fmt.Sprintf(c.ZoneOfCountry, name) + ", " + zoneOffset(at) + ")"
+}
+
+func (c Copy) clock(at time.Time) string {
+	if c.Language == German {
+		return at.Format("15:04") + " Uhr"
+	}
+	return at.Format("15:04")
 }
 
 // Money groups the canonical minor-unit conversion without floating-point rounding.

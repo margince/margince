@@ -8,6 +8,7 @@ import type { MessageKey } from "../../i18n/en";
 import { asksWhy } from "../../lib/compose-context";
 import { remedyCategoryOf } from "../../lib/sendstatus";
 import type { Activity } from "./compose";
+import { DraftContentNotice } from "./compose.notices";
 import { ComposeOutcome, ComposeWhy, MailSendNotices } from "./compose.parts";
 import { RecordConversationFact } from "./composecontextfact";
 import { ComposeDeal, type DealChoiceState } from "./composedeal";
@@ -163,6 +164,9 @@ export function ComposeBlockers({
         bodyKey={bodyKey}
         sendUnavailable={fields.sendUnavailable}
         send={send}
+      />
+      <DraftContentNotice
+        findings={send.permission.preview?.content_findings}
       />
     </div>
   );

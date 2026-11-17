@@ -35,7 +35,7 @@ func testConsentCarryPreview(t *testing.T, operation string) {
 			ctx := e.As(e.AdminUser, nil, perms)
 			consents := consent.NewStore(e.DB())
 			store := e.Contacts.WithStopCarrier(consents).WithSatelliteCarriers(consents, nil)
-			purpose, err := consents.CreatePurpose(ctx, "transactional", "Business correspondence", false)
+			purpose, err := consents.CreatePurpose(ctx, "transactional", "Business correspondence", false, "")
 			if err != nil {
 				t.Fatal(err)
 			}

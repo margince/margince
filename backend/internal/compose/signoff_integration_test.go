@@ -179,7 +179,7 @@ func seedTransactionalReply(t *testing.T, e *integration.Env) (anchorID ids.UUID
 	contact := e.SeedContact(t, "Anna Buyer", &e.Rep1)
 	addContactEmail(t, e, contact, recipient)
 	consentStore := consent.NewStore(InstallationDB(e.Pool))
-	purpose, err := consentStore.CreatePurpose(admin, "transactional", "transactional", false)
+	purpose, err := consentStore.CreatePurpose(admin, "transactional", "transactional", false, "")
 	if err != nil {
 		t.Fatalf("create purpose: %v", err)
 	}

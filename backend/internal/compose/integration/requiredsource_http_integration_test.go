@@ -27,7 +27,7 @@ func TestACreateWithoutASourceIsRefusedNamingSourceOverHTTP(t *testing.T) {
 		body       AnyMap
 	}{
 		{"company", "/v1/companies", AnyMap{"display_name": "Northwind"}},
-		{"contact", "/v1/contacts", AnyMap{"full_name": "Ada Lovelace"}},
+		{"contact", "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Ada Lovelace"}},
 		{"project", "/v1/projects", AnyMap{"name": "Rollout project", "company_id": company}},
 		{"deal", "/v1/deals", AnyMap{"name": "Rollout", "pipeline_id": stages.PipelineID, "stage_id": stages.Open}},
 	}

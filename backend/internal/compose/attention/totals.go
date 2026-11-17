@@ -22,6 +22,17 @@ func (s *Service) exactSources(day crmcontracts.Attention, scope string, conside
 	for key := range s.backlog.whole {
 		exact[key] = 0
 	}
+	// A later task its follow-up pulled into today is counted where it is drawn.
+	today := totalKey{sourceTask, crmcontracts.WorklistCountCategory(categoryOfSource(sourceTask))}
+	later := totalKey{sourceTask, crmcontracts.WorklistCountCategory(categoryUpcoming)}
+	for _, row := range considered {
+		if _, counted := s.backlog.exact[later]; counted && row.pulledForward {
+			exact[later]--
+		}
+		if _, counted := s.backlog.exact[today]; counted && row.pulledForward {
+			exact[today]++
+		}
+	}
 	for _, row := range considered {
 		key := totalKey{row.item.Source, crmcontracts.WorklistCountCategory(row.item.Category)}
 		if s.backlog.whole[key] {

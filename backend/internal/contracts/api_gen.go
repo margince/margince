@@ -2338,6 +2338,33 @@ func (e ApprovalPreviewImportRowOutcome) Valid() bool {
 	}
 }
 
+// Defines values for ArchiveKeptReason.
+const (
+	ArchiveKeptReasonKeptByLaw    ArchiveKeptReason = "kept_by_law"
+	ArchiveKeptReasonLegalHold    ArchiveKeptReason = "legal_hold"
+	ArchiveKeptReasonNotArchived  ArchiveKeptReason = "not_archived"
+	ArchiveKeptReasonNotFound     ArchiveKeptReason = "not_found"
+	ArchiveKeptReasonOptOutRecord ArchiveKeptReason = "opt_out_record"
+)
+
+// Valid indicates whether the value is a known member of the ArchiveKeptReason enum.
+func (e ArchiveKeptReason) Valid() bool {
+	switch e {
+	case ArchiveKeptReasonKeptByLaw:
+		return true
+	case ArchiveKeptReasonLegalHold:
+		return true
+	case ArchiveKeptReasonNotArchived:
+		return true
+	case ArchiveKeptReasonNotFound:
+		return true
+	case ArchiveKeptReasonOptOutRecord:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AssemblyServedFrom.
 const (
 	AssemblyServedFromCache     AssemblyServedFrom = "cache"
@@ -7792,6 +7819,27 @@ func (e ConsentPurposeClass) Valid() bool {
 	}
 }
 
+// Defines values for ConsentPurposeFrequency.
+const (
+	ConsentPurposeFrequencyMonthly   ConsentPurposeFrequency = "monthly"
+	ConsentPurposeFrequencyQuarterly ConsentPurposeFrequency = "quarterly"
+	ConsentPurposeFrequencyWeekly    ConsentPurposeFrequency = "weekly"
+)
+
+// Valid indicates whether the value is a known member of the ConsentPurposeFrequency enum.
+func (e ConsentPurposeFrequency) Valid() bool {
+	switch e {
+	case ConsentPurposeFrequencyMonthly:
+		return true
+	case ConsentPurposeFrequencyQuarterly:
+		return true
+	case ConsentPurposeFrequencyWeekly:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ConsentQualifyingEventKind.
 const (
 	ConsentQualifyingEventKindActiveDeal         ConsentQualifyingEventKind = "active_deal"
@@ -8659,6 +8707,27 @@ func (e ContactGraphRouteType) Valid() bool {
 	}
 }
 
+// Defines values for ContactMeans.
+const (
+	ContactMeansEmail ContactMeans = "email"
+	ContactMeansPhone ContactMeans = "phone"
+	ContactMeansWeb   ContactMeans = "web"
+)
+
+// Valid indicates whether the value is a known member of the ContactMeans enum.
+func (e ContactMeans) Valid() bool {
+	switch e {
+	case ContactMeansEmail:
+		return true
+	case ContactMeansPhone:
+		return true
+	case ContactMeansWeb:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ContactMomentConfidence.
 const (
 	ContactMomentConfidenceHigh         ContactMomentConfidence = "high"
@@ -9256,6 +9325,33 @@ func (e ContactResearchRunState) Valid() bool {
 	case ContactResearchRunStateNotConnected:
 		return true
 	case ContactResearchRunStateReady:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ContactStatedSource.
+const (
+	ContactStatedSourceBusinessCard ContactStatedSource = "business_card"
+	ContactStatedSourceMetInPerson  ContactStatedSource = "met_in_person"
+	ContactStatedSourceOther        ContactStatedSource = "other"
+	ContactStatedSourceReferral     ContactStatedSource = "referral"
+	ContactStatedSourceWebsite      ContactStatedSource = "website"
+)
+
+// Valid indicates whether the value is a known member of the ContactStatedSource enum.
+func (e ContactStatedSource) Valid() bool {
+	switch e {
+	case ContactStatedSourceBusinessCard:
+		return true
+	case ContactStatedSourceMetInPerson:
+		return true
+	case ContactStatedSourceOther:
+		return true
+	case ContactStatedSourceReferral:
+		return true
+	case ContactStatedSourceWebsite:
 		return true
 	default:
 		return false
@@ -12229,6 +12325,27 @@ func (e DomainQuestionSuggestionBasis) Valid() bool {
 	}
 }
 
+// Defines values for DraftContentFindingRequirement.
+const (
+	DraftContentFindingRequirementAdvertisingLanguageFirst DraftContentFindingRequirement = "advertising_language_first"
+	DraftContentFindingRequirementClaimWithoutProof        DraftContentFindingRequirement = "claim_without_proof"
+	DraftContentFindingRequirementForeignAdvertiser        DraftContentFindingRequirement = "foreign_advertiser"
+)
+
+// Valid indicates whether the value is a known member of the DraftContentFindingRequirement enum.
+func (e DraftContentFindingRequirement) Valid() bool {
+	switch e {
+	case DraftContentFindingRequirementAdvertisingLanguageFirst:
+		return true
+	case DraftContentFindingRequirementClaimWithoutProof:
+		return true
+	case DraftContentFindingRequirementForeignAdvertiser:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DraftSteeringLanguage.
 const (
 	DraftSteeringLanguageDe DraftSteeringLanguage = "de"
@@ -14610,14 +14727,15 @@ func (e ImportPresetLinkType) Valid() bool {
 
 // Defines values for ImportProblemKind.
 const (
-	ImportProblemKindBrokenLink   ImportProblemKind = "broken_link"
-	ImportProblemKindDroppedLink  ImportProblemKind = "dropped_link"
-	ImportProblemKindDuplicate    ImportProblemKind = "duplicate"
-	ImportProblemKindInvalidValue ImportProblemKind = "invalid_value"
-	ImportProblemKindNewTag       ImportProblemKind = "new_tag"
-	ImportProblemKindPermission   ImportProblemKind = "permission"
-	ImportProblemKindUnknownOwner ImportProblemKind = "unknown_owner"
-	ImportProblemKindUnusableRow  ImportProblemKind = "unusable_row"
+	ImportProblemKindBrokenLink         ImportProblemKind = "broken_link"
+	ImportProblemKindDroppedLink        ImportProblemKind = "dropped_link"
+	ImportProblemKindDuplicate          ImportProblemKind = "duplicate"
+	ImportProblemKindIncompleteIdentity ImportProblemKind = "incomplete_identity"
+	ImportProblemKindInvalidValue       ImportProblemKind = "invalid_value"
+	ImportProblemKindNewTag             ImportProblemKind = "new_tag"
+	ImportProblemKindPermission         ImportProblemKind = "permission"
+	ImportProblemKindUnknownOwner       ImportProblemKind = "unknown_owner"
+	ImportProblemKindUnusableRow        ImportProblemKind = "unusable_row"
 )
 
 // Valid indicates whether the value is a known member of the ImportProblemKind enum.
@@ -14628,6 +14746,8 @@ func (e ImportProblemKind) Valid() bool {
 	case ImportProblemKindDroppedLink:
 		return true
 	case ImportProblemKindDuplicate:
+		return true
+	case ImportProblemKindIncompleteIdentity:
 		return true
 	case ImportProblemKindInvalidValue:
 		return true
@@ -14671,6 +14791,7 @@ const (
 	ImportReasonCodeCompanyDuplicateSkipped      ImportReasonCode = "company_duplicate_skipped"
 	ImportReasonCodeCompanyLinkOnMeeting         ImportReasonCode = "company_link_on_meeting"
 	ImportReasonCodeCompanyNameEmpty             ImportReasonCode = "company_name_empty"
+	ImportReasonCodeContactChannelMissing        ImportReasonCode = "contact_channel_missing"
 	ImportReasonCodeContactDuplicateFound        ImportReasonCode = "contact_duplicate_found"
 	ImportReasonCodeContactDuplicateSkipped      ImportReasonCode = "contact_duplicate_skipped"
 	ImportReasonCodeContactEmailHeld             ImportReasonCode = "contact_email_held"
@@ -14823,6 +14944,8 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeCompanyLinkOnMeeting:
 		return true
 	case ImportReasonCodeCompanyNameEmpty:
+		return true
+	case ImportReasonCodeContactChannelMissing:
 		return true
 	case ImportReasonCodeContactDuplicateFound:
 		return true
@@ -19097,6 +19220,7 @@ const (
 	PrivacyInformationPagePurposeBasesExistingCustomerException      PrivacyInformationPagePurposeBases = "existing_customer_exception"
 	PrivacyInformationPagePurposeBasesLegalObligation                PrivacyInformationPagePurposeBases = "legal_obligation"
 	PrivacyInformationPagePurposeBasesLegitimateInterests            PrivacyInformationPagePurposeBases = "legitimate_interests"
+	PrivacyInformationPagePurposeBasesNone                           PrivacyInformationPagePurposeBases = "none"
 	PrivacyInformationPagePurposeBasesPrecontractRequest             PrivacyInformationPagePurposeBases = "precontract_request"
 	PrivacyInformationPagePurposeBasesSubjectInitiatedCorrespondence PrivacyInformationPagePurposeBases = "subject_initiated_correspondence"
 	PrivacyInformationPagePurposeBasesVitalOrSecurityInterest        PrivacyInformationPagePurposeBases = "vital_or_security_interest"
@@ -19115,6 +19239,8 @@ func (e PrivacyInformationPagePurposeBases) Valid() bool {
 	case PrivacyInformationPagePurposeBasesLegalObligation:
 		return true
 	case PrivacyInformationPagePurposeBasesLegitimateInterests:
+		return true
+	case PrivacyInformationPagePurposeBasesNone:
 		return true
 	case PrivacyInformationPagePurposeBasesPrecontractRequest:
 		return true
@@ -22843,6 +22969,24 @@ func (e SdrUpcomingMeetingStartsPrecision) Valid() bool {
 	case SdrUpcomingMeetingStartsPrecisionDay:
 		return true
 	case SdrUpcomingMeetingStartsPrecisionInstant:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SearchDataAnswerOutcome.
+const (
+	SearchDataAnswerOutcomeAnswered    SearchDataAnswerOutcome = "answered"
+	SearchDataAnswerOutcomeUnsupported SearchDataAnswerOutcome = "unsupported"
+)
+
+// Valid indicates whether the value is a known member of the SearchDataAnswerOutcome enum.
+func (e SearchDataAnswerOutcome) Valid() bool {
+	switch e {
+	case SearchDataAnswerOutcomeAnswered:
+		return true
+	case SearchDataAnswerOutcomeUnsupported:
 		return true
 	default:
 		return false
@@ -35820,6 +35964,70 @@ type ApproveRequest struct {
 	Reason *string `json:"reason,omitempty"`
 }
 
+// ArchiveDeletionRequest defines model for ArchiveDeletionRequest.
+type ArchiveDeletionRequest struct {
+	// ActivityIds The archived activity to delete, at most 100 per request.
+	ActivityIds []openapi_types.UUID `json:"activity_ids" unique:"items"`
+}
+
+// ArchiveDeletionResult defines model for ArchiveDeletionResult.
+type ArchiveDeletionResult struct {
+	// Deleted The activity whose content was erased.
+	Deleted []openapi_types.UUID `json:"deleted"`
+
+	// Failed The activity whose deletion failed and is left as it was. The other records in the request still ran, so a retry names only these.
+	Failed []openapi_types.UUID `json:"failed"`
+
+	// Kept The activity left as it was, each with the reason.
+	Kept []ArchiveKeptActivity `json:"kept"`
+}
+
+// ArchiveKeptActivity defines model for ArchiveKeptActivity.
+type ArchiveKeptActivity struct {
+	ActivityId openapi_types.UUID `json:"activity_id"`
+
+	// Reason Why an archived activity is kept. `legal_hold`: a hold on a record it is linked to.
+	// `opt_out_record`: it is the receipt of a refusal, inside the period the law keeps it.
+	// `kept_by_law`: business correspondence inside its statutory retention period.
+	// `not_archived`: it is not in the archive, or was already deleted. `not_found`: no such activity.
+	Reason ArchiveKeptReason `json:"reason"`
+}
+
+// ArchiveKeptReason Why an archived activity is kept. `legal_hold`: a hold on a record it is linked to.
+// `opt_out_record`: it is the receipt of a refusal, inside the period the law keeps it.
+// `kept_by_law`: business correspondence inside its statutory retention period.
+// `not_archived`: it is not in the archive, or was already deleted. `not_found`: no such activity.
+type ArchiveKeptReason string
+
+// ArchivedActivity One archived activity, as the controller reviews it. `kept` says why a deletion would keep
+// it; absent means a deletion would erase it.
+type ArchivedActivity struct {
+	ActivityId openapi_types.UUID      `json:"activity_id"`
+	ArchivedAt time.Time               `json:"archived_at"`
+	Companies  []ArchivedActivityParty `json:"companies"`
+	Contacts   []ArchivedActivityParty `json:"contacts"`
+
+	// Kept Why an archived activity is kept. `legal_hold`: a hold on a record it is linked to.
+	// `opt_out_record`: it is the receipt of a refusal, inside the period the law keeps it.
+	// `kept_by_law`: business correspondence inside its statutory retention period.
+	// `not_archived`: it is not in the archive, or was already deleted. `not_found`: no such activity.
+	Kept       *ArchiveKeptReason `json:"kept,omitempty"`
+	Kind       string             `json:"kind"`
+	OccurredAt time.Time          `json:"occurred_at"`
+
+	// OccurredPrecision How much of an activity's time is known. `instant` is a real moment. `day` is a date with no time of day: the stored instant is noon UTC of that date, so its date is the UTC date, whatever the installation's zone. A meeting of this precision never holds its host's calendar slot.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
+
+	// Subject The subject line. Absent when the activity has none, or when the reader may not read its content.
+	Subject *string `json:"subject,omitempty"`
+}
+
+// ArchivedActivityParty defines model for ArchivedActivityParty.
+type ArchivedActivityParty struct {
+	Id   openapi_types.UUID `json:"id"`
+	Name string             `json:"name"`
+}
+
 // AssemblyServedFrom How this request got its answer. `cache` is the reader's stored assembly, still
 // matching the record, read in well under a second. `generated` is an assembly
 // written for this request, which is where the model's seconds go. A refresh the AI
@@ -43422,7 +43630,10 @@ type ConsentPurpose struct {
 	// Class What kind of message the purpose is for. Only a `marketing` purpose can be named on a collection-notice declaration.
 	Class     *ConsentPurposeClass `json:"class,omitempty"`
 	CreatedAt time.Time            `json:"created_at"`
-	Id        openapi_types.UUID   `json:"id"`
+
+	// Frequency How often the purpose's mail goes out, roughly. The subscription question states it.
+	Frequency *ConsentPurposeFrequency `json:"frequency,omitempty"`
+	Id        openapi_types.UUID       `json:"id"`
 
 	// Key Stable machine key (e.g. transactional, marketing_email, profiling). Referenced by send_email.consent_purpose.
 	Key   string `json:"key"`
@@ -43434,6 +43645,9 @@ type ConsentPurpose struct {
 
 // ConsentPurposeClass What kind of message the purpose is for. Only a `marketing` purpose can be named on a collection-notice declaration.
 type ConsentPurposeClass string
+
+// ConsentPurposeFrequency How often the purpose's mail goes out, roughly. The subscription question states it.
+type ConsentPurposeFrequency string
 
 // ConsentQualifyingEvent A recorded exchange that may support a scoped message. The send check also
 // uses its sending company, request or deal context, current stops and source
@@ -44499,6 +44713,9 @@ type ContactListResponse struct {
 	Page PageInfo  `json:"page"`
 }
 
+// ContactMeans A way of reaching someone that a stated particular must name.
+type ContactMeans string
+
 // ContactMoment One reason this contact is worth attention now, with the evidence behind it.
 //
 // Every moment in this version is DETERMINISTIC: derived from captured activity by a
@@ -45025,6 +45242,9 @@ type ContactResearchSource struct {
 	Url   string  `json:"url"`
 }
 
+// ContactStatedSource Where a contact created by hand came from, as the user who created it stated.
+type ContactStatedSource string
+
 // ContactStop One live stop on a contact, and whether the caller may take it back.
 type ContactStop struct {
 	// Address The address a stop is held on. Null for a stop on the contact.
@@ -45306,6 +45526,16 @@ type ControllerParticulars struct {
 	// as met.
 	AdvertiserContact *string `json:"advertiser_contact,omitempty"`
 
+	// ArchivePurpose Why captured correspondence is kept in the archive after its retention window, as the
+	// words that finish the privacy page's sentence about the archive. Empty prints the page's
+	// default purpose in the reader's language.
+	ArchivePurpose *string `json:"archive_purpose,omitempty"`
+
+	// DisclosureLanguages The languages the jurisdiction packs in force ask the objection route and the advertiser
+	// contact to be stated in. The packs in force are those of the installation's country and
+	// of each legal entity's country.
+	DisclosureLanguages *[]string `json:"disclosure_languages,omitempty"`
+
 	// LegalName Who is writing, as the law would name them. Art. 13(1)(a) GDPR's identity of the controller, and the advertiser under Decree 91/2020.
 	LegalName *string `json:"legal_name,omitempty"`
 
@@ -45318,10 +45548,37 @@ type ControllerParticulars struct {
 	// usually the honest answer; an installation whose recipients answer by phone says so here.
 	ObjectionRoute *string `json:"objection_route,omitempty"`
 
+	// ObjectionRouteMeans What every stated objection route must name under the packs in force. Saving a route that
+	// lacks one answers 422 with the field and the missing part.
+	ObjectionRouteMeans *[]ContactMeans `json:"objection_route_means,omitempty"`
+
 	// PostalAddress Where they are, as a block of lines — including a register court and number where a business letter needs one.
 	PostalAddress *string `json:"postal_address,omitempty"`
 
 	// PrivacyContact How to reach whoever answers about the data. Art. 13(1)(b), which asks for the data protection officer where one exists.
+	PrivacyContact *string `json:"privacy_contact,omitempty"`
+
+	// PrivacyPage Where the installation publishes its own privacy information. A subscription question points its reader there, and falls back to `privacy_contact` while this is empty.
+	PrivacyPage *string `json:"privacy_page,omitempty"`
+
+	// Translations The same particulars in other languages, one entry per language. A mail or page in one of
+	// them prints the translated text where it is stated and the text above where it is not.
+	// Where a jurisdiction pack in force names a disclosure language, an advertising mail to a
+	// recipient under that pack is refused until its objection route and advertiser contact are
+	// stated in that language.
+	Translations *[]ControllerParticularsTranslation `json:"translations,omitempty"`
+}
+
+// ControllerParticularsTranslation The controller particulars in one more language. An empty field prints the default text.
+type ControllerParticularsTranslation struct {
+	AdvertiserContact *string `json:"advertiser_contact,omitempty"`
+	ArchivePurpose    *string `json:"archive_purpose,omitempty"`
+
+	// Language The language, as a base language the installation can send mail in.
+	Language       string  `json:"language"`
+	LegalName      *string `json:"legal_name,omitempty"`
+	ObjectionRoute *string `json:"objection_route,omitempty"`
+	PostalAddress  *string `json:"postal_address,omitempty"`
 	PrivacyContact *string `json:"privacy_contact,omitempty"`
 }
 
@@ -45729,9 +45986,11 @@ type CreateCompanyRequestSizeBand string
 
 // CreateConsentPurposeRequest defines model for CreateConsentPurposeRequest.
 type CreateConsentPurposeRequest struct {
-	Key                 string `json:"key"`
-	Label               string `json:"label"`
-	RequiresDoubleOptIn *bool  `json:"requires_double_opt_in,omitempty"`
+	// Frequency Absent means monthly.
+	Frequency           *ConsentPurposeFrequency `json:"frequency,omitempty"`
+	Key                 string                   `json:"key"`
+	Label               string                   `json:"label"`
+	RequiresDoubleOptIn *bool                    `json:"requires_double_opt_in,omitempty"`
 }
 
 // CreateContactEnrichmentRunRequest defines model for CreateContactEnrichmentRunRequest.
@@ -45749,8 +46008,14 @@ type CreateContactEnrichmentRunRequest struct {
 	Provider Provider `json:"provider"`
 }
 
-// CreateContactRequest Contact creation also resolves available employer evidence atomically. A business work email requires company:create for shared domain resolution, including when triage is pending. An explicit employer additionally requires the company and relationship authority used by linking. A refusal rolls back the contact instead of silently omitting employment.
+// CreateContactRequest Requires at least one nonblank email, phone or LinkedIn URL (including social.linkedin). Name-only requests return 422 contact_channel_required. CSV import retains and warns about name-only rows. Contact creation also resolves available employer evidence atomically. A business work email requires company:create for shared domain resolution, including when triage is pending. An explicit employer additionally requires the company and relationship authority used by linking. A refusal rolls back the contact instead of silently omitting employment.
 type CreateContactRequest struct {
+	// AcquisitionNote Their own words about the source, printed on the contact's privacy page beside it.
+	AcquisitionNote *string `json:"acquisition_note,omitempty"`
+
+	// AcquisitionSource Where the contact came from, as the user creating it states. The contact's privacy page prints it. `other` needs `acquisition_note`.
+	AcquisitionSource *ContactStatedSource `json:"acquisition_source,omitempty"`
+
 	// Address Structured postal address.
 	Address *Address `json:"address,omitempty"`
 
@@ -49055,6 +49320,39 @@ type DomainQuestionSuggestion struct {
 // - `redirect_target`: the site redirects to a domain this company already owns.
 // - `contact_employer`: a sender already has this company as their current employer.
 type DomainQuestionSuggestionBasis string
+
+// DraftContentFinding defines model for DraftContentFinding.
+type DraftContentFinding struct {
+	// Country The recipient's country, lower-case ISO 3166-1 alpha-2, for `foreign_advertiser`.
+	Country *string `json:"country,omitempty"`
+
+	// Detail What was found, for the composer to read.
+	Detail string `json:"detail"`
+
+	// Language The language the draft must lead with, for `advertising_language_first`.
+	Language *string `json:"language,omitempty"`
+
+	// Requirement `claim_without_proof`: the draft makes a claim the pack allows only beside a stated
+	// proof (the document's name, number and date), and states none.
+	// `advertising_language_first`: the draft does not open in the pack's disclosure
+	// language, which advertising leads with.
+	// `foreign_advertiser`: the sending legal entity is not established in the recipient's
+	// country, whose pack asks an advertiser from elsewhere to advertise there through a
+	// local advertising service business. The customer answers for it.
+	Requirement DraftContentFindingRequirement `json:"requirement"`
+
+	// Words The claim words found, for `claim_without_proof`.
+	Words *[]string `json:"words,omitempty"`
+}
+
+// DraftContentFindingRequirement `claim_without_proof`: the draft makes a claim the pack allows only beside a stated
+// proof (the document's name, number and date), and states none.
+// `advertising_language_first`: the draft does not open in the pack's disclosure
+// language, which advertising leads with.
+// `foreign_advertiser`: the sending legal entity is not established in the recipient's
+// country, whose pack asks an advertiser from elsewhere to advertise there through a
+// local advertising service business. The customer answers for it.
+type DraftContentFindingRequirement string
 
 // DraftSteering What every draft-email route takes to steer a draft: the caller's ask and, for a rewrite, the words on the composer's screen. Each route extends it with the fields its own record needs.
 type DraftSteering struct {
@@ -53955,6 +54253,20 @@ type LatestInboundList struct {
 
 	// LastExchange The newest call, meeting, email or message on the record. Absent when there is none.
 	LastExchange *LastExchange `json:"last_exchange,omitempty"`
+}
+
+// LawfulBasisConfirmation defines model for LawfulBasisConfirmation.
+type LawfulBasisConfirmation struct {
+	// Confirmed The records whose warning was confirmed by the signed-in user. Each confirmation waits
+	// 15 minutes for its send and is spent by the first send to that record.
+	Confirmed []CommunicationEvidenceSubject `json:"confirmed"`
+}
+
+// LawfulBasisConfirmationRequest defines model for LawfulBasisConfirmationRequest.
+type LawfulBasisConfirmationRequest struct {
+	// Subjects The records the preview marked `lawful_basis_missing`, as its `evidence_subject` names
+	// them. A pinned lead is named as the lead, never as a contact sharing its address.
+	Subjects []CommunicationEvidenceSubject `json:"subjects"`
 }
 
 // Lead A thin, segregated prospect. Mirrors the `lead` table.
@@ -58872,6 +59184,8 @@ type PreferenceCenterRefusedReason string
 // PreviewAccountSendRequest PreviewSendRequest plus the `links` an anchor would otherwise have supplied — the
 // records this new conversation would belong to.
 type PreviewAccountSendRequest struct {
+	// Body The draft's plain text, checked only for `content_findings`.
+	Body                 *string               `json:"body,omitempty"`
 	CommunicationContext *CommunicationContext `json:"communication_context,omitempty"`
 
 	// ConsentPurpose The deprecated purpose key, when the composer still has one. It authorizes
@@ -58885,15 +59199,22 @@ type PreviewAccountSendRequest struct {
 	// Links The records the message would be filed under. They are read through the caller's
 	// own row scope before the engine sees them, so naming a record the caller cannot
 	// open is refused here rather than answered about.
-	Links            []ActivityLinkInput   `json:"links"`
-	MarketingPurpose *string               `json:"marketing_purpose,omitempty"`
-	To               []openapi_types.Email `json:"to"`
+	Links            []ActivityLinkInput `json:"links"`
+	MarketingPurpose *string             `json:"marketing_purpose,omitempty"`
+
+	// Subject The draft's subject, checked only for `content_findings`.
+	Subject *string               `json:"subject,omitempty"`
+	To      []openapi_types.Email `json:"to"`
 }
 
-// PreviewSendRequest What a composer is about to write, in the shape the engine judges. It carries no
-// `body` and no `subject`: neither reaches a consent decision, and sending an unwritten
-// draft to the server to be told whether it may exist would be the wrong way round.
+// PreviewSendRequest What a composer is about to write, in the shape the engine judges. A `subject` and
+// `body` never reach a consent decision. When given, they are checked against the
+// advertising content rules of each recipient's jurisdiction pack and answered as
+// `content_findings`.
 type PreviewSendRequest struct {
+	// Body The draft's plain text, checked only for `content_findings`.
+	Body *string `json:"body,omitempty"`
+
 	// CommunicationContext What the sender says this message is. Checked against the record, never believed:
 	// a claim the record does not bear out comes back as `review` naming what is
 	// missing, rather than a quiet downgrade to something weaker that happens to be
@@ -58912,6 +59233,9 @@ type PreviewSendRequest struct {
 
 	// MarketingPurpose Which marketing purpose, when the context is `marketing`.
 	MarketingPurpose *string `json:"marketing_purpose,omitempty"`
+
+	// Subject The draft's subject, checked only for `content_findings`.
+	Subject *string `json:"subject,omitempty"`
 
 	// To The addressees. Cc and Bcc join this list at send, and both are asked about
 	// exactly as a To is — a blind copy is blind to the RECIPIENTS and never to the
@@ -58951,6 +59275,9 @@ type PrincipalAttributionActorType string
 // PrivacyInformationController Who is responsible for the data, from the installation's own controller particulars, by the
 // rule the mail's disclosure lines use. A part the installation has not stated is absent.
 type PrivacyInformationController struct {
+	// ArchivePurpose Why archived correspondence is kept, in the language of the link. Absent when not stated, and the page then prints its default purpose.
+	ArchivePurpose *string `json:"archive_purpose,omitempty"`
+
 	// Identity The legal name and postal address, as lines. Absent unless both are stated.
 	Identity *string `json:"identity,omitempty"`
 
@@ -58962,6 +59289,9 @@ type PrivacyInformationController struct {
 
 	// PrivacyContact How to reach whoever answers questions about the data.
 	PrivacyContact *string `json:"privacy_contact,omitempty"`
+
+	// PrivacyPage Where the installation publishes its own privacy information. Absent when not stated.
+	PrivacyPage *string `json:"privacy_page,omitempty"`
 }
 
 // PrivacyInformationPage The answer for a privacy-notice link: what the installation holds about this contact, where
@@ -59000,13 +59330,19 @@ type PrivacyInformationPage struct {
 	Language *MailLanguage `json:"language,omitempty"`
 
 	// PurposeBases The basis on record for each entry in `purposes`, at the same index: `consent` for a
-	// purpose the reader agreed to, else the kind of a live communication basis.
+	// purpose the reader agreed to, else the kind of a live communication basis. `none` says
+	// no basis is recorded, for a reader whose country has no legitimate-interest basis and
+	// whose record holds neither their consent nor an agreement with them.
 	PurposeBases []PrivacyInformationPagePurposeBases `json:"purpose_bases"`
 
 	// PurposeKeys The key of each entry in `purposes`, at the same index. A page names a purpose the
 	// product seeds in its reader's language by its key, and shows the published name of any
 	// other.
 	PurposeKeys *[]string `json:"purpose_keys,omitempty"`
+
+	// PurposeSince When the reader gave the consent each entry in `purposes` rests on, at the same index.
+	// Null for an entry whose basis is not consent.
+	PurposeSince *[]*time.Time `json:"purpose_since,omitempty"`
 
 	// Purposes What the installation uses this contact's data for, by published name.
 	Purposes *[]string `json:"purposes,omitempty"`
@@ -59022,6 +59358,12 @@ type PrivacyInformationPage struct {
 	// Rights The rights the contact holds over this data, as codes a page renders in its own
 	// language. Art. 14(2)(c)-(e) requires naming them.
 	Rights []PrivacyInformationPageRights `json:"rights"`
+
+	// StatedSource Where the contact came from, as the user who created it by hand stated. Absent when nothing was given.
+	StatedSource *ContactStatedSource `json:"stated_source,omitempty"`
+
+	// StatedSourceNote Their own words beside `stated_source`. Absent when none were given.
+	StatedSourceNote *string `json:"stated_source_note,omitempty"`
 }
 
 // PrivacyInformationPageDataCategories defines model for PrivacyInformationPage.DataCategories.
@@ -60645,6 +60987,10 @@ type RecordCommunicationContextRequestKind string
 // A purpose-built projection and never the Contact360 read model, which carries this workspace's
 // working notes — owner, lifecycle, scores — rather than the subject's own data.
 type RecordConfirmationPage struct {
+	// AsksNews False when the recipient's country bars asking about news in a details check. The page
+	// then shows no news question, and a submit carrying a marketing answer is a 422.
+	AsksNews *bool `json:"asks_news,omitempty"`
+
 	// Company The current employer, read through the live employment relationship. Not correctable here.
 	Company string `json:"company"`
 
@@ -64564,6 +64910,28 @@ type SdrWaitingHandoffPage struct {
 	Rows       []SdrWaitingHandoff `json:"rows"`
 }
 
+// SearchDataAnswer defines model for SearchDataAnswer.
+type SearchDataAnswer struct {
+	Analytics *AnalyticsAnswer `json:"analytics,omitempty"`
+
+	// AnalyticsQuery One question, in the vocabulary the schema returned.
+	AnalyticsQuery *AnalyticsQuery `json:"analytics_query,omitempty"`
+
+	// Count For reporting, show the metric's eligible record count rather than its value.
+	Count      *bool                   `json:"count,omitempty"`
+	Evaluation *ReportingEvaluation    `json:"evaluation,omitempty"`
+	Outcome    SearchDataAnswerOutcome `json:"outcome"`
+
+	// Records What `query_workspace` answers: the rows the plan matched, the plan as run, and how complete the answer is.
+	Records *WorkspaceQueryResult `json:"records,omitempty"`
+
+	// Source The typed selection or query requested, including its period and filters; evaluation.context names the resolved reporting period.
+	Source *string `json:"source,omitempty"`
+}
+
+// SearchDataAnswerOutcome defines model for SearchDataAnswer.Outcome.
+type SearchDataAnswerOutcome string
+
 // SearchHitEmployer A company a contact currently works at, by any current employment — the same reading as the company's own roster, not only the contact's primary employer.
 type SearchHitEmployer struct {
 	CompanyId   openapi_types.UUID `json:"company_id"`
@@ -64693,8 +65061,13 @@ type SendAuthorizationPreview struct {
 	// Allowed Whether the whole message would go. A CONJUNCTION: one refused recipient refuses
 	// the message, because a rep who wrote to four contacts and reached three without
 	// being told which has been lied to about what happened.
-	Allowed    bool                                `json:"allowed"`
-	Recipients []SendAuthorizationPreviewRecipient `json:"recipients"`
+	Allowed bool `json:"allowed"`
+
+	// ContentFindings What the draft's `subject` and `body` do not meet among the advertising content rules
+	// of the recipients' jurisdiction packs. Advisory: a finding never refuses the send.
+	// Empty when no subject or body was given, or when the message is not advertising.
+	ContentFindings *[]DraftContentFinding              `json:"content_findings,omitempty"`
+	Recipients      []SendAuthorizationPreviewRecipient `json:"recipients"`
 }
 
 // SendAuthorizationPreviewRecipient One recipient's answer. It describes the MESSAGE, never the contact's file.
@@ -64717,6 +65090,14 @@ type SendAuthorizationPreviewRecipient struct {
 	// category, such as `unknown_purpose`, answers false.
 	CanBeOverruled *bool `json:"can_be_overruled,omitempty"`
 
+	// ConsentPurposeId For a recipient marked `lawful_basis_missing`: the purpose a consent request would ask
+	// about for this use: the oldest live purpose whose class covers it, that the contact has
+	// not withdrawn, and that this door may ask about (a marketing one only if double opt-in). `POST /contacts/{id}/consent/double-opt-in` with it mails
+	// the request. The recipient's pack says for which purpose classes the contact's own request
+	// must be on record first. Absent when no such purpose exists, or when the recipient is a
+	// lead.
+	ConsentPurposeId *openapi_types.UUID `json:"consent_purpose_id,omitempty"`
+
 	// DecidedBy Whose decision this answer is, which is what says whether anybody may overrule
 	// it. `machine` is the engine reading an incomplete record and a rep who knows
 	// better may say so. `subject` is the contact's own act — an objection or a
@@ -64732,6 +65113,12 @@ type SendAuthorizationPreviewRecipient struct {
 	// can read it. Absent for newly filed addresses and records unavailable to the
 	// caller. Recording an exchange still requires permission to update that record.
 	EvidenceSubject *CommunicationEvidenceSubject `json:"evidence_subject,omitempty"`
+
+	// LawfulBasisMissing The recipient's country has no legitimate-interest basis, and the record holds neither
+	// their consent nor an agreement with them. A privacy notice they were sent is neither.
+	// Not a refusal: a surface shows a warning and records the sender's confirmation through
+	// `POST /lawful-basis-confirmations` before the send. Absent or false otherwise.
+	LawfulBasisMissing *bool `json:"lawful_basis_missing,omitempty"`
 
 	// Mode How much authority the engine's answer carries for this category on this
 	// installation. Under `observe` a `deny` here still sends, and a composer that
@@ -66465,8 +66852,11 @@ type StatedAmount struct {
 type SubscriptionConfirmationPage struct {
 	// Controller Who is responsible for the data, from the installation's own controller particulars, by the
 	// rule the mail's disclosure lines use. A part the installation has not stated is absent.
-	Controller *PrivacyInformationController    `json:"controller,omitempty"`
-	Kind       SubscriptionConfirmationPageKind `json:"kind"`
+	Controller *PrivacyInformationController `json:"controller,omitempty"`
+
+	// Frequency How often the purpose's mail goes out, roughly. The subscription question states it.
+	Frequency *ConsentPurposeFrequency         `json:"frequency,omitempty"`
+	Kind      SubscriptionConfirmationPageKind `json:"kind"`
 
 	// Language The language the link's mail was written in, which the page asks in too. Absent when the link records no language.
 	Language *MailLanguage `json:"language,omitempty"`
@@ -69338,7 +69728,7 @@ type VCardImportResult struct {
 	// contact the caller may not write; `reason` says which.
 	Outcome VCardImportResultOutcome `json:"outcome"`
 
-	// Reason Why a card was skipped, in words a reader can act on.
+	// Reason Why a card was skipped, or a warning about an imported contact without a channel.
 	Reason *string `json:"reason,omitempty"`
 }
 
@@ -79901,6 +80291,55 @@ type ExplainReportParamsHandleVersion string
 // ExplainReportParamsScopeKind defines parameters for ExplainReport.
 type ExplainReportParamsScopeKind string
 
+// ListArchivedActivitiesParams defines parameters for ListArchivedActivities.
+type ListArchivedActivitiesParams struct {
+	// Before Only activity that occurred before this instant.
+	Before *time.Time `form:"before,omitempty" json:"before,omitempty"`
+
+	// ContactId Only activity linked to this contact.
+	ContactId *openapi_types.UUID `form:"contact_id,omitempty" json:"contact_id,omitempty"`
+
+	// CompanyId Only activity linked to this company.
+	CompanyId *openapi_types.UUID `form:"company_id,omitempty" json:"company_id,omitempty"`
+
+	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+	// effective `sort` of the originating request (field + direction) plus the last row's keyset
+	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// together with a `sort` that differs from the one the cursor was minted under returns
+	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+	// remaining pages see, so re-issue the query without the cursor when changing filters.
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
+}
+
+// DeleteArchivedActivitiesParams defines parameters for DeleteArchivedActivities.
+type DeleteArchivedActivitiesParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
 // ListLegalHoldsParams defines parameters for ListLegalHolds.
 type ListLegalHoldsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
@@ -80187,6 +80626,11 @@ type SearchParams struct {
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
+}
+
+// AskSearchDataJSONBody defines parameters for AskSearchData.
+type AskSearchDataJSONBody struct {
+	Question string `json:"question"`
 }
 
 // ListSignalsParams defines parameters for ListSignals.
@@ -82086,6 +82530,9 @@ type AskCorpusJSONRequestBody AskCorpusJSONBody
 // UploadCorpusDocumentMultipartRequestBody defines body for UploadCorpusDocument for multipart/form-data ContentType.
 type UploadCorpusDocumentMultipartRequestBody UploadCorpusDocumentMultipartBody
 
+// ConfirmSendWithoutLawfulBasisJSONRequestBody defines body for ConfirmSendWithoutLawfulBasis for application/json ContentType.
+type ConfirmSendWithoutLawfulBasisJSONRequestBody = LawfulBasisConfirmationRequest
+
 // CreateLeadDisqualifyReasonJSONRequestBody defines body for CreateLeadDisqualifyReason for application/json ContentType.
 type CreateLeadDisqualifyReasonJSONRequestBody = CreateLeadDisqualifyReasonRequest
 
@@ -82440,6 +82887,9 @@ type CreateRetentionPolicyJSONRequestBody = CreateRetentionPolicyRequest
 // UpdateRetentionPolicyJSONRequestBody defines body for UpdateRetentionPolicy for application/json ContentType.
 type UpdateRetentionPolicyJSONRequestBody = UpdateRetentionPolicyRequest
 
+// DeleteArchivedActivitiesJSONRequestBody defines body for DeleteArchivedActivities for application/json ContentType.
+type DeleteArchivedActivitiesJSONRequestBody = ArchiveDeletionRequest
+
 // LiftLegalHoldJSONRequestBody defines body for LiftLegalHold for application/json ContentType.
 type LiftLegalHoldJSONRequestBody = RetentionOverrideRequest
 
@@ -82487,6 +82937,9 @@ type CreateMeetingProposalJSONRequestBody = MeetingProposalRequest
 
 // ReassignHandoffJSONRequestBody defines body for ReassignHandoff for application/json ContentType.
 type ReassignHandoffJSONRequestBody = HandoffAssigneeInput
+
+// AskSearchDataJSONRequestBody defines body for AskSearchData for application/json ContentType.
+type AskSearchDataJSONRequestBody AskSearchDataJSONBody
 
 // ConnectSharedMailboxJSONRequestBody defines body for ConnectSharedMailbox for application/json ContentType.
 type ConnectSharedMailboxJSONRequestBody = ConnectSharedMailboxRequest
@@ -86769,6 +87222,22 @@ func (a *CreateContactRequest) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
+	if raw, found := object["acquisition_note"]; found {
+		err = json.Unmarshal(raw, &a.AcquisitionNote)
+		if err != nil {
+			return fmt.Errorf("error reading 'acquisition_note': %w", err)
+		}
+		delete(object, "acquisition_note")
+	}
+
+	if raw, found := object["acquisition_source"]; found {
+		err = json.Unmarshal(raw, &a.AcquisitionSource)
+		if err != nil {
+			return fmt.Errorf("error reading 'acquisition_source': %w", err)
+		}
+		delete(object, "acquisition_source")
+	}
+
 	if raw, found := object["address"]; found {
 		err = json.Unmarshal(raw, &a.Address)
 		if err != nil {
@@ -86939,6 +87408,20 @@ func (a *CreateContactRequest) UnmarshalJSON(b []byte) error {
 func (a CreateContactRequest) MarshalJSON() ([]byte, error) {
 	var err error
 	object := make(map[string]json.RawMessage)
+
+	if a.AcquisitionNote != nil {
+		object["acquisition_note"], err = json.Marshal(a.AcquisitionNote)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'acquisition_note': %w", err)
+		}
+	}
+
+	if a.AcquisitionSource != nil {
+		object["acquisition_source"], err = json.Marshal(a.AcquisitionSource)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'acquisition_source': %w", err)
+		}
+	}
 
 	if a.Address != nil {
 		object["address"], err = json.Marshal(a.Address)
@@ -97938,6 +98421,9 @@ type ServerInterface interface {
 	// Download a document's own bytes.
 	// (GET /knowledge/documents/{id})
 	DownloadCorpusDocument(w http.ResponseWriter, r *http.Request, id Id)
+	// Record that a user read the no-lawful-basis warning and chose to send anyway.
+	// (POST /lawful-basis-confirmations)
+	ConfirmSendWithoutLawfulBasis(w http.ResponseWriter, r *http.Request)
 	// List disqualification reasons, active and inactive, in display order.
 	// (GET /lead-disqualify-reasons)
 	ListLeadDisqualifyReasons(w http.ResponseWriter, r *http.Request)
@@ -98772,6 +99258,12 @@ type ServerInterface interface {
 	// Edit a retention policy (admin/ops).
 	// (PATCH /retention-policies/{id})
 	UpdateRetentionPolicy(w http.ResponseWriter, r *http.Request, id Id)
+	// List archived activity, oldest first, for the controller to review against the archive's purpose.
+	// (GET /retention/archive)
+	ListArchivedActivities(w http.ResponseWriter, r *http.Request, params ListArchivedActivitiesParams)
+	// Delete archived activity that no longer serves the archive's purpose. Audited; held records are kept.
+	// (POST /retention/archive/delete)
+	DeleteArchivedActivities(w http.ResponseWriter, r *http.Request, params DeleteArchivedActivitiesParams)
 	// List the records a legal hold is preserving.
 	// (GET /retention/legal-holds)
 	ListLegalHolds(w http.ResponseWriter, r *http.Request, params ListLegalHoldsParams)
@@ -98874,6 +99366,9 @@ type ServerInterface interface {
 	// Cross-object search (contacts, companies, deals, activities, leads).
 	// (GET /search)
 	Search(w http.ResponseWriter, r *http.Request, params SearchParams)
+	// Answer a question through the caller's reporting and record readers.
+	// (POST /search/data-answer)
+	AskSearchData(w http.ResponseWriter, r *http.Request)
 	// The installation's shared mailboxes, disconnected ones included.
 	// (GET /shared-mailboxes)
 	ListSharedMailboxes(w http.ResponseWriter, r *http.Request)
@@ -103197,6 +103692,12 @@ func (_ Unimplemented) DownloadCorpusDocument(w http.ResponseWriter, r *http.Req
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Record that a user read the no-lawful-basis warning and chose to send anyway.
+// (POST /lawful-basis-confirmations)
+func (_ Unimplemented) ConfirmSendWithoutLawfulBasis(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // List disqualification reasons, active and inactive, in display order.
 // (GET /lead-disqualify-reasons)
 func (_ Unimplemented) ListLeadDisqualifyReasons(w http.ResponseWriter, r *http.Request) {
@@ -104865,6 +105366,18 @@ func (_ Unimplemented) UpdateRetentionPolicy(w http.ResponseWriter, r *http.Requ
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// List archived activity, oldest first, for the controller to review against the archive's purpose.
+// (GET /retention/archive)
+func (_ Unimplemented) ListArchivedActivities(w http.ResponseWriter, r *http.Request, params ListArchivedActivitiesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Delete archived activity that no longer serves the archive's purpose. Audited; held records are kept.
+// (POST /retention/archive/delete)
+func (_ Unimplemented) DeleteArchivedActivities(w http.ResponseWriter, r *http.Request, params DeleteArchivedActivitiesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // List the records a legal hold is preserving.
 // (GET /retention/legal-holds)
 func (_ Unimplemented) ListLegalHolds(w http.ResponseWriter, r *http.Request, params ListLegalHoldsParams) {
@@ -105066,6 +105579,12 @@ func (_ Unimplemented) ReassignHandoff(w http.ResponseWriter, r *http.Request, i
 // Cross-object search (contacts, companies, deals, activities, leads).
 // (GET /search)
 func (_ Unimplemented) Search(w http.ResponseWriter, r *http.Request, params SearchParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Answer a question through the caller's reporting and record readers.
+// (POST /search/data-answer)
+func (_ Unimplemented) AskSearchData(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -134660,6 +135179,26 @@ func (siw *ServerInterfaceWrapper) DownloadCorpusDocument(w http.ResponseWriter,
 	handler.ServeHTTP(w, r)
 }
 
+// ConfirmSendWithoutLawfulBasis operation middleware
+func (siw *ServerInterfaceWrapper) ConfirmSendWithoutLawfulBasis(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ConfirmSendWithoutLawfulBasis(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListLeadDisqualifyReasons operation middleware
 func (siw *ServerInterfaceWrapper) ListLeadDisqualifyReasons(w http.ResponseWriter, r *http.Request) {
 
@@ -146786,6 +147325,144 @@ func (siw *ServerInterfaceWrapper) UpdateRetentionPolicy(w http.ResponseWriter, 
 	handler.ServeHTTP(w, r)
 }
 
+// ListArchivedActivities operation middleware
+func (siw *ServerInterfaceWrapper) ListArchivedActivities(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListArchivedActivitiesParams
+
+	// ------------- Optional query parameter "before" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "before", r.URL.Query(), &params.Before, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "before"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "before", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "contact_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "contact_id", r.URL.Query(), &params.ContactId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "contact_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "contact_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "company_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "company_id", r.URL.Query(), &params.CompanyId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "company_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "company_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListArchivedActivities(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteArchivedActivities operation middleware
+func (siw *ServerInterfaceWrapper) DeleteArchivedActivities(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DeleteArchivedActivitiesParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteArchivedActivities(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListLegalHolds operation middleware
 func (siw *ServerInterfaceWrapper) ListLegalHolds(w http.ResponseWriter, r *http.Request) {
 
@@ -148265,6 +148942,28 @@ func (siw *ServerInterfaceWrapper) Search(w http.ResponseWriter, r *http.Request
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.Search(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AskSearchData operation middleware
+func (siw *ServerInterfaceWrapper) AskSearchData(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AskSearchData(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -156425,6 +157124,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/knowledge/documents/{id}", wrapper.DownloadCorpusDocument)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/lawful-basis-confirmations", wrapper.ConfirmSendWithoutLawfulBasis)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/lead-disqualify-reasons", wrapper.ListLeadDisqualifyReasons)
 	})
 	r.Group(func(r chi.Router) {
@@ -157259,6 +157961,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Patch(options.BaseURL+"/retention-policies/{id}", wrapper.UpdateRetentionPolicy)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/retention/archive", wrapper.ListArchivedActivities)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/retention/archive/delete", wrapper.DeleteArchivedActivities)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/retention/legal-holds", wrapper.ListLegalHolds)
 	})
 	r.Group(func(r chi.Router) {
@@ -157359,6 +158067,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/search", wrapper.Search)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/search/data-answer", wrapper.AskSearchData)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/shared-mailboxes", wrapper.ListSharedMailboxes)

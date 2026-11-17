@@ -50,9 +50,12 @@ var disclosableToTheSubject = map[string]bool{
 	// not say which subscription it meant would be asking them to agree to
 	// something unnamed.
 	"label": true,
-	"title": true,
-	"email": true,
-	"phone": true,
+	// How often that subscription's mail goes out, which the question the
+	// subject is asked states as part of what they agree to.
+	"frequency": true,
+	"title":     true,
+	"email":     true,
+	"phone":     true,
 	// The employer, and the columns the employment read needs to find it.
 	"display_name": true,
 	"company_id":   true,

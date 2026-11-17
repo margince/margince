@@ -20,6 +20,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -116,6 +117,7 @@ func TestQuickCaptureAttachesAnExistingEmployer(t *testing.T) {
 	wrongName := "Existng Employer"
 	out, err := e.store.QuickCapture(ctx, QuickCaptureInput{
 		FullName:    "Sam Second",
+		Email:       new("sam-second@example.test"),
 		CompanyID:   &companyID,
 		CompanyName: &wrongName,
 	})
@@ -140,6 +142,7 @@ func TestQuickCaptureWithoutAnEmployerIsStillAContact(t *testing.T) {
 	blank := "   "
 	out, err := e.store.QuickCapture(ctx, QuickCaptureInput{
 		FullName: "Lone Contact",
+		Email:    new("lone-contact@example.test"),
 		// Whitespace is a box the reader left alone, not a company called "".
 		CompanyName: &blank,
 	})
@@ -177,6 +180,7 @@ func TestQuickCaptureLeavesNoContactWhenTheEmployerIsRefused(t *testing.T) {
 	companyName := "Refused Employer GmbH"
 	if _, err := e.store.QuickCapture(ctx, QuickCaptureInput{
 		FullName:    "Rolled Back",
+		Email:       new("rolled-back@example.test"),
 		CompanyName: &companyName,
 	}); err == nil {
 		t.Fatal("quick capture succeeded without the company grant")
@@ -245,4 +249,16 @@ func statedProfileURL(social *map[string]any) string {
 		return ""
 	}
 	return value
+}
+
+func TestQuickCaptureRequiresAReachableContact(t *testing.T) {
+	e := setupDedupe(t)
+	_, err := e.store.QuickCapture(e.as(), QuickCaptureInput{FullName: "Name Only"})
+	if err == nil {
+		t.Fatal("a name-only manual contact was created")
+	}
+	var detailed *httperr.DetailedError
+	if !errors.As(err, &detailed) || len(detailed.Fields) != 1 || detailed.Fields[0].Code != "contact_channel_required" {
+		t.Fatalf("expected the channel validation error, got %v", err)
+	}
 }

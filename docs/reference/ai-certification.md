@@ -37,7 +37,7 @@ setup instead, go to [Can I use this preset?](#can-i-use-this-preset).
 | Gemini | `gemini-3.1-flash-lite`, `gemini-3.8-flash` | 🟡 Mostly | Ready for 43 of the 60 features we tested; 16 more work if someone looks over the result; 1 not reliable yet. |
 | GPT | `gpt-6-luna`, `gpt-6-sol`, `gpt-oss-120b` | 🟡 Mostly | Ready for 37 of the 54 features we tested; 11 more work if someone looks over the result; 6 not reliable yet. |
 | Mistral | `ministral-14b-2512`, `ministral-8b-2512`, `mistral-medium-3-5` | 🟡 Mostly | Ready for 23 of the 50 features we tested; 17 more work if someone looks over the result; 10 not reliable yet. |
-| Gemma | `gemma-4-26b-a4b-it` | ⚪ Not enough tested yet | Tested on only 6 of the 60 features. Ask before relying on it. |
+| Gemma | `gemma-4-26b-a4b-it` | ⚪ Not enough tested yet | Tested on only 6 of the 61 features. Ask before relying on it. |
 
 A family rated **Yes** is ready for every feature we tested. One rated **Mostly** has at least 80 in every 100 tested features ready or working with a check, and one rated **Not yet** has fewer. We say **Not enough tested yet** when we tested it on under half of the features. A family is judged on its best model for each feature, and only on the models a preset uses, each on the features that preset sends to it.
 
@@ -920,7 +920,7 @@ well the others do.
 | Quality opinions per try | 1; a 2nd when it is within 10 points of a bar or under the lowest, a 3rd when the two are more than 5 apart; the middle one counts |
 | How sure every bound is | one-sided 90% (z = 1.2816 for a pass rate, Student's t for an average score, whose spread is taken as at least 5 points) |
 | Quality bar 70 / 50 / 40: 161 test cases | ✅ Ready needs scores averaging at least 70, allowing for doubt, no case whose best-case average is under 70, and no single try under 40; ⚠️ Usable with care needs at least 50, and no case whose best-case average is under 40 |
-| Quality bar 80 / 60 / 50: 29 test cases | ✅ Ready needs scores averaging at least 80, allowing for doubt, no case whose best-case average is under 80, and no single try under 50; ⚠️ Usable with care needs at least 60, and no case whose best-case average is under 50 |
+| Quality bar 80 / 60 / 50: 36 test cases | ✅ Ready needs scores averaging at least 80, allowing for doubt, no case whose best-case average is under 80, and no single try under 50; ⚠️ Usable with care needs at least 60, and no case whose best-case average is under 50 |
 | Quality bar 75 / 55 / 45: 2 test cases | ✅ Ready needs scores averaging at least 75, allowing for doubt, no case whose best-case average is under 75, and no single try under 45; ⚠️ Usable with care needs at least 55, and no case whose best-case average is under 45 |
 
 All of these live in [`backend/internal/compose/aicert/thresholds.go`](../../backend/internal/compose/aicert/thresholds.go) (quality bars: in each test case's file); change them there and regenerate this page.
@@ -1203,7 +1203,7 @@ under [Certification by provider and model](#certification-by-provider-and-model
 
 ### Gemma
 
-⚪ Not enough tested yet: Tested on only 6 of the 60 features. Ask before relying on it.
+⚪ Not enough tested yet: Tested on only 6 of the 61 features. Ask before relying on it.
 
 6 of these results were measured on an older version of the product and are re-check pending.
 
@@ -1234,12 +1234,12 @@ under [Certification by provider and model](#certification-by-provider-and-model
 
 | | |
 |---|---:|
-| Shipped invocation sites | 60 |
+| Shipped invocation sites | 61 |
 | … best state `current` | 44 |
 | … best state `partial` | 0 |
 | … best state `stale` | 16 |
-| … `absent` on every binding | 0 |
-| Scenarios in the corpus | 329 |
+| … `absent` on every binding | 1 |
+| Scenarios in the corpus | 336 |
 | Committed records | 400 |
 | Bindings measured | 18 |
 
@@ -1303,7 +1303,7 @@ today. It says nothing about how well the model did; that is the band.
 <details>
 <summary>Every site, and the best model tested on it</summary>
 
-### Index of sites (60)
+### Index of sites (61)
 
 Which model to run each site on, and what that choice rests on.
 
@@ -1337,6 +1337,7 @@ Which model to run each site on, and what that choice rests on.
 | [`enrich/signature`](#enrichsignature) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 4 | 9 |
 | [`growth_fit/growth_fit`](#growth_fitgrowth_fit) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `certified` | 1.00 | `current` | 2 | 13 |
 | [`nl_search/filter_propose`](#nl_searchfilter_propose) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 9 | 13 |
+| [`nl_search/search_data_plan`](#nl_searchsearch_data_plan) | - | - | - | `absent` | 7 | 0 |
 | [`offer_draft/draft`](#offer_draftdraft) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 5 | 13 |
 | [`owed_verdict/owed`](#owed_verdictowed) | - | - | - | `stale` | 9 | 9 |
 | [`propose_roles/committee`](#propose_rolescommittee) | `gemini · gemini-3.5-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 13 |
@@ -2895,6 +2896,29 @@ Records (13):
 | `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 6/9 | `certified` | 33 | 33 | 1.00 | 2190ms | 3292ms | 33 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 9/9 | `certified` | 27 | 27 | 1.00 | 1030ms | 2086ms | 27 | 0 | 0 | 0 |
 | `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `current` | 9/9 | `certified` | 27 | 27 | 1.00 | 11386ms | 19151ms | 27 | 0 | 0 | 0 |
+
+</details>
+
+<details>
+<summary><code>nl_search/search_data_plan</code>: 7 scenario(s), 0 record(s), best state absent</summary>
+
+##### `nl_search/search_data_plan`
+
+Scope a run of it can claim: `full_invocation`.
+
+Scenarios (7):
+
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `search_data_counts_open_deals` | `accepted` | judge | [search_data_counts_open_deals_01.yaml](../../backend/internal/compose/aicert/corpus/nl_search/search_data_counts_open_deals_01.yaml) |
+| `search_data_counts_won_deals_in_a_period` | `accepted` | judge | [search_data_counts_won_deals_in_a_period_01.yaml](../../backend/internal/compose/aicert/corpus/nl_search/search_data_counts_won_deals_in_a_period_01.yaml) |
+| `search_data_eur_threshold` | `accepted` | judge | [search_data_eur_threshold_01.yaml](../../backend/internal/compose/aicert/corpus/nl_search/search_data_eur_threshold_01.yaml) |
+| `search_data_falls_back_for_a_handbook_question` | `accepted` | judge | [search_data_falls_back_for_a_handbook_question_01.yaml](../../backend/internal/compose/aicert/corpus/nl_search/search_data_falls_back_for_a_handbook_question_01.yaml) |
+| `search_data_german_threshold` | `accepted` | judge | [search_data_german_threshold_01.yaml](../../backend/internal/compose/aicert/corpus/nl_search/search_data_german_threshold_01.yaml) |
+| `search_data_jpy_threshold` | `accepted` | judge | [search_data_jpy_threshold_01.yaml](../../backend/internal/compose/aicert/corpus/nl_search/search_data_jpy_threshold_01.yaml) |
+| `search_data_vietnamese_threshold` | `accepted` | judge | [search_data_vietnamese_threshold_01.yaml](../../backend/internal/compose/aicert/corpus/nl_search/search_data_vietnamese_threshold_01.yaml) |
+
+No record: this site has never been certified on any binding.
 
 </details>
 

@@ -7302,6 +7302,35 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/lawful-basis-confirmations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record that a user read the no-lawful-basis warning and chose to send anyway.
+         * @description A send preview marks a recipient `lawful_basis_missing` when their country's pack has no
+         *     legitimate-interest basis and the record holds no basis that pack accepts for the use. This
+         *     records, in the audit log, that the signed-in user read the warning and chose to send, and
+         *     leaves one confirmation per record. Staging spends it on the first send by this user, or by
+         *     an agent acting for them, to that record within 15 minutes. A send with none is refused as
+         *     `lawful_basis_unconfirmed`, which a recorded human decision may still direct.
+         *
+         *     It needs the authority to send (`activity` at `create`) and read access to each record. A
+         *     record the warning does not apply to is left out of `confirmed`. A retry while a
+         *     confirmation is open records nothing new.
+         */
+        post: operations["confirmSendWithoutLawfulBasis"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/emails:sign-off": {
         parameters: {
             query?: never;
@@ -10236,6 +10265,26 @@ export interface paths {
         get: operations["exportReportingEdition"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/search/data-answer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Answer a question through the caller's reporting and record readers.
+         * @description Read-only. A model proposes a typed plan from the caller's vocabulary; the existing engines enforce permissions and masks. Unsupported questions fall back to the handbook. Nothing is saved.
+         */
+        post: operations["askSearchData"];
         delete?: never;
         options?: never;
         head?: never;
@@ -18421,6 +18470,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/retention/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List archived activity, oldest first, for the controller to review against the archive's purpose. */
+        get: operations["listArchivedActivities"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/retention/archive/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Delete archived activity that no longer serves the archive's purpose. Audited; held records are kept. */
+        post: operations["deleteArchivedActivities"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/retention/legal-holds": {
         parameters: {
             query?: never;
@@ -18930,9 +19013,11 @@ export interface paths {
         /**
          * Mail the subject a single-use link that confirms one marketing purpose.
          * @description Mints the double-opt-in link for `purpose_id` and stages it to the contact's own live
-         *     primary address. The purpose must be live and must itself require double
-         *     opt-in; anything else is a 422, because a mailed link asking about a purpose that needs no
-         *     confirmation asks a question the answer does not fit. The plaintext is never returned: this endpoint once handed it to the
+         *     primary address. The purpose must be live. A purpose of a marketing class must itself
+         *     require double opt-in, else this is a 422, because a mailed link asking about a
+         *     subscription that needs no confirmation asks a question the answer does not fit. A purpose
+         *     of another class may be asked about either way: it is how a contact with no lawful basis on
+         *     record is asked for consent to correspondence. The plaintext is never returned: this endpoint once handed it to the
          *     authenticated operator, who could paste it straight back into `recordConsent` — a round
          *     trip in which the subject's mailbox never participated, recorded as though it had. A double
          *     opt-in is evidence only because the data subject completed it from their own mailbox, so
@@ -32456,12 +32541,12 @@ export interface components {
          * @description What kind of problem a report issue names, so a screen can group them. One closed list, the same one the server reports from.
          * @enum {string}
          */
-        ImportProblemKind: "broken_link" | "dropped_link" | "invalid_value" | "unknown_owner" | "new_tag" | "duplicate" | "permission" | "unusable_row";
+        ImportProblemKind: "broken_link" | "dropped_link" | "invalid_value" | "unknown_owner" | "new_tag" | "duplicate" | "permission" | "unusable_row" | "incomplete_identity";
         /**
          * @description Why a row was skipped or warned about, so a screen can say it in the reader's language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.
          * @enum {string}
          */
-        ImportReasonCode: "activity_empty" | "activity_held" | "address_erased" | "address_not_split" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "amount_negative" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_future" | "close_date_past" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_holds_lead" | "contact_not_found" | "contact_not_found_dropped" | "contact_unnamed" | "currency_not_a_code" | "currency_unset" | "deal_already_closed" | "deal_company_has_contracts" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "email_names_no_contact" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "employer_refused" | "employer_will_create" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_not_taken_place" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "note_repeated" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_too_long" | "value_unreadable";
+        ImportReasonCode: "activity_empty" | "activity_held" | "address_erased" | "address_not_split" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "amount_negative" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_future" | "close_date_past" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_holds_lead" | "contact_not_found" | "contact_not_found_dropped" | "contact_channel_missing" | "contact_unnamed" | "currency_not_a_code" | "currency_unset" | "deal_already_closed" | "deal_company_has_contracts" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "email_names_no_contact" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "employer_refused" | "employer_will_create" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_not_taken_place" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "note_repeated" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_too_long" | "value_unreadable";
         /**
          * @description Exactly one of two shapes: `object` and `mapping` (and optionally
          *     `source_key`) for one CSV, or `parts` for a ZIP, each part with its own
@@ -33924,7 +34009,7 @@ export interface components {
             /** @description The same `getCompanyLogo` path `Company.logo_url` carries for this account. The key is ABSENT when the company wears no logo; a client draws the company's monogram then. */
             logo_url?: string;
         };
-        /** @description Contact creation also resolves available employer evidence atomically. A business work email requires company:create for shared domain resolution, including when triage is pending. An explicit employer additionally requires the company and relationship authority used by linking. A refusal rolls back the contact instead of silently omitting employment. */
+        /** @description Requires at least one nonblank email, phone or LinkedIn URL (including social.linkedin). Name-only requests return 422 contact_channel_required. CSV import retains and warns about name-only rows. Contact creation also resolves available employer evidence atomically. A business work email requires company:create for shared domain resolution, including when triage is pending. An explicit employer additionally requires the company and relationship authority used by linking. A refusal rolls back the contact instead of silently omitting employment. */
         CreateContactRequest: {
             full_name: string;
             /**
@@ -33974,9 +34059,18 @@ export interface components {
             company_id?: string | null;
             /** @description The employer name to resolve or create. Not with `company_id`; blank leaves resolution to the work email domain. */
             company_name?: string | null;
+            /** @description Where the contact came from, as the user creating it states. The contact's privacy page prints it. `other` needs `acquisition_note`. */
+            acquisition_source?: components["schemas"]["ContactStatedSource"];
+            /** @description Their own words about the source, printed on the contact's privacy page beside it. */
+            acquisition_note?: string | null;
         } & {
             [key: string]: unknown;
         };
+        /**
+         * @description Where a contact created by hand came from, as the user who created it stated.
+         * @enum {string}
+         */
+        ContactStatedSource: "met_in_person" | "business_card" | "referral" | "website" | "other";
         /**
          * @description One contact as a reader of their public profile can state them. Deliberately
          *     flatter than CreateContactRequest: one email and one phone rather than the
@@ -34110,7 +34204,7 @@ export interface components {
              * @description The contact created or updated, or — for `needs_review` — the candidate the card resembles.
              */
             contact_id?: string | null;
-            /** @description Why a card was skipped, in words a reader can act on. */
+            /** @description Why a card was skipped, or a warning about an imported contact without a channel. */
             reason?: string | null;
             /**
              * Format: uuid
@@ -38066,6 +38160,18 @@ export interface components {
             cell?: unknown[];
             /** @description How many citations, counterexamples and abstentions to return, each. */
             limit?: number;
+        };
+        SearchDataAnswer: {
+            /** @enum {string} */
+            outcome: "answered" | "unsupported";
+            /** @description The typed selection or query requested, including its period and filters; evaluation.context names the resolved reporting period. */
+            source?: string;
+            /** @description For reporting, show the metric's eligible record count rather than its value. */
+            count?: boolean;
+            evaluation?: components["schemas"]["ReportingEvaluation"];
+            records?: components["schemas"]["WorkspaceQueryResult"];
+            analytics?: components["schemas"]["AnalyticsAnswer"];
+            analytics_query?: components["schemas"]["AnalyticsQuery"];
         };
         /** @description What `query_workspace` takes. */
         WorkspaceQueryRequest: {
@@ -44347,9 +44453,10 @@ export interface components {
          */
         CommunicationContext: "reply_to_inbound" | "requested_followup" | "precontract_quote" | "active_deal_followup" | "customer_service" | "account_notice" | "contract_notice" | "invoice_or_payment" | "marketing";
         /**
-         * @description What a composer is about to write, in the shape the engine judges. It carries no
-         *     `body` and no `subject`: neither reaches a consent decision, and sending an unwritten
-         *     draft to the server to be told whether it may exist would be the wrong way round.
+         * @description What a composer is about to write, in the shape the engine judges. A `subject` and
+         *     `body` never reach a consent decision. When given, they are checked against the
+         *     advertising content rules of each recipient's jurisdiction pack and answered as
+         *     `content_findings`.
          */
         PreviewSendRequest: {
             /**
@@ -44377,6 +44484,10 @@ export interface components {
             consent_purpose?: string;
             /** @description Records the caller names in support of this message. Checked, never trusted. */
             evidence?: components["schemas"]["CommunicationEvidence"];
+            /** @description The draft's subject, checked only for `content_findings`. */
+            subject?: string;
+            /** @description The draft's plain text, checked only for `content_findings`. */
+            body?: string;
         };
         /**
          * @description PreviewSendRequest plus the `links` an anchor would otherwise have supplied — the
@@ -44401,6 +44512,24 @@ export interface components {
              */
             consent_purpose?: string;
             evidence?: components["schemas"]["CommunicationEvidence"];
+            /** @description The draft's subject, checked only for `content_findings`. */
+            subject?: string;
+            /** @description The draft's plain text, checked only for `content_findings`. */
+            body?: string;
+        };
+        LawfulBasisConfirmationRequest: {
+            /**
+             * @description The records the preview marked `lawful_basis_missing`, as its `evidence_subject` names
+             *     them. A pinned lead is named as the lead, never as a contact sharing its address.
+             */
+            subjects: components["schemas"]["CommunicationEvidenceSubject"][];
+        };
+        LawfulBasisConfirmation: {
+            /**
+             * @description The records whose warning was confirmed by the signed-in user. Each confirmation waits
+             *     15 minutes for its send and is spent by the first send to that record.
+             */
+            confirmed: components["schemas"]["CommunicationEvidenceSubject"][];
         };
         /**
          * @description What the engine would decide, per recipient, for a message nobody has sent.
@@ -44417,6 +44546,33 @@ export interface components {
              */
             allowed: boolean;
             recipients: components["schemas"]["SendAuthorizationPreviewRecipient"][];
+            /**
+             * @description What the draft's `subject` and `body` do not meet among the advertising content rules
+             *     of the recipients' jurisdiction packs. Advisory: a finding never refuses the send.
+             *     Empty when no subject or body was given, or when the message is not advertising.
+             */
+            content_findings?: components["schemas"]["DraftContentFinding"][];
+        };
+        DraftContentFinding: {
+            /**
+             * @description `claim_without_proof`: the draft makes a claim the pack allows only beside a stated
+             *     proof (the document's name, number and date), and states none.
+             *     `advertising_language_first`: the draft does not open in the pack's disclosure
+             *     language, which advertising leads with.
+             *     `foreign_advertiser`: the sending legal entity is not established in the recipient's
+             *     country, whose pack asks an advertiser from elsewhere to advertise there through a
+             *     local advertising service business. The customer answers for it.
+             * @enum {string}
+             */
+            requirement: "claim_without_proof" | "advertising_language_first" | "foreign_advertiser";
+            /** @description What was found, for the composer to read. */
+            detail: string;
+            /** @description The claim words found, for `claim_without_proof`. */
+            words?: string[];
+            /** @description The language the draft must lead with, for `advertising_language_first`. */
+            language?: string;
+            /** @description The recipient's country, lower-case ISO 3166-1 alpha-2, for `foreign_advertiser`. */
+            country?: string;
         };
         /** @description An existing recipient record the caller can read. */
         CommunicationEvidenceSubject: {
@@ -44429,6 +44585,23 @@ export interface components {
         SendAuthorizationPreviewRecipient: {
             /** Format: email */
             address: string;
+            /**
+             * @description The recipient's country has no legitimate-interest basis, and the record holds neither
+             *     their consent nor an agreement with them. A privacy notice they were sent is neither.
+             *     Not a refusal: a surface shows a warning and records the sender's confirmation through
+             *     `POST /lawful-basis-confirmations` before the send. Absent or false otherwise.
+             */
+            lawful_basis_missing?: boolean;
+            /**
+             * Format: uuid
+             * @description For a recipient marked `lawful_basis_missing`: the purpose a consent request would ask
+             *     about for this use: the oldest live purpose whose class covers it, that the contact has
+             *     not withdrawn, and that this door may ask about (a marketing one only if double opt-in). `POST /contacts/{id}/consent/double-opt-in` with it mails
+             *     the request. The recipient's pack says for which purpose classes the contact's own request
+             *     must be on record first. Absent when no such purpose exists, or when the recipient is a
+             *     lead.
+             */
+            consent_purpose_id?: string;
             /**
              * @description The existing contact or lead this recipient resolves to, only when the caller
              *     can read it. Absent for newly filed addresses and records unavailable to the
@@ -53653,14 +53826,22 @@ export interface components {
              * @enum {string}
              */
             class?: "business_correspondence" | "transactional" | "marketing" | "phone_outreach";
+            frequency?: components["schemas"]["ConsentPurposeFrequency"];
             /** Format: date-time */
             created_at: string;
         };
+        /**
+         * @description How often the purpose's mail goes out, roughly. The subscription question states it.
+         * @enum {string}
+         */
+        ConsentPurposeFrequency: "weekly" | "monthly" | "quarterly";
         CreateConsentPurposeRequest: {
             key: string;
             label: string;
             /** @default false */
             requires_double_opt_in: boolean;
+            /** @description Absent means monthly. */
+            frequency?: components["schemas"]["ConsentPurposeFrequency"];
         };
         ExistingCustomerNotice: {
             /** Format: uuid */
@@ -53832,6 +54013,55 @@ export interface components {
             record_id: string;
             /** @description The record's own name, so a controller can recognise it without a second read. */
             label: string;
+        };
+        /**
+         * @description One archived activity, as the controller reviews it. `kept` says why a deletion would keep
+         *     it; absent means a deletion would erase it.
+         */
+        ArchivedActivity: {
+            /** Format: uuid */
+            activity_id: string;
+            kind: string;
+            /** @description The subject line. Absent when the activity has none, or when the reader may not read its content. */
+            subject?: string;
+            /** Format: date-time */
+            occurred_at: string;
+            occurred_precision: components["schemas"]["OccurredPrecision"];
+            /** Format: date-time */
+            archived_at: string;
+            contacts: components["schemas"]["ArchivedActivityParty"][];
+            companies: components["schemas"]["ArchivedActivityParty"][];
+            kept?: components["schemas"]["ArchiveKeptReason"];
+        };
+        ArchivedActivityParty: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
+        /**
+         * @description Why an archived activity is kept. `legal_hold`: a hold on a record it is linked to.
+         *     `opt_out_record`: it is the receipt of a refusal, inside the period the law keeps it.
+         *     `kept_by_law`: business correspondence inside its statutory retention period.
+         *     `not_archived`: it is not in the archive, or was already deleted. `not_found`: no such activity.
+         * @enum {string}
+         */
+        ArchiveKeptReason: "legal_hold" | "opt_out_record" | "kept_by_law" | "not_archived" | "not_found";
+        ArchiveDeletionRequest: {
+            /** @description The archived activity to delete, at most 100 per request. */
+            activity_ids: string[];
+        };
+        ArchiveDeletionResult: {
+            /** @description The activity whose content was erased. */
+            deleted: string[];
+            /** @description The activity left as it was, each with the reason. */
+            kept: components["schemas"]["ArchiveKeptActivity"][];
+            /** @description The activity whose deletion failed and is left as it was. The other records in the request still ran, so a retry names only these. */
+            failed: string[];
+        };
+        ArchiveKeptActivity: {
+            /** Format: uuid */
+            activity_id: string;
+            reason: components["schemas"]["ArchiveKeptReason"];
         };
         RestrictedRecord: {
             /** Format: uuid */
@@ -54527,6 +54757,14 @@ export interface components {
             postal_address?: string;
             /** @description How to reach whoever answers about the data. Art. 13(1)(b), which asks for the data protection officer where one exists. */
             privacy_contact?: string;
+            /** @description Where the installation publishes its own privacy information. A subscription question points its reader there, and falls back to `privacy_contact` while this is empty. */
+            privacy_page?: string;
+            /**
+             * @description Why captured correspondence is kept in the archive after its retention window, as the
+             *     words that finish the privacy page's sentence about the archive. Empty prints the page's
+             *     default purpose in the reader's language.
+             */
+            archive_purpose?: string;
             /**
              * @description How to say stop, free and without a barrier. §7(3) UWG requires it on every advertising
              *     message rather than only the first. The one-click unsubscribe this product mints is
@@ -54540,7 +54778,42 @@ export interface components {
              *     as met.
              */
             advertiser_contact?: string;
+            /**
+             * @description The same particulars in other languages, one entry per language. A mail or page in one of
+             *     them prints the translated text where it is stated and the text above where it is not.
+             *     Where a jurisdiction pack in force names a disclosure language, an advertising mail to a
+             *     recipient under that pack is refused until its objection route and advertiser contact are
+             *     stated in that language.
+             */
+            translations?: components["schemas"]["ControllerParticularsTranslation"][];
+            /**
+             * @description The languages the jurisdiction packs in force ask the objection route and the advertiser
+             *     contact to be stated in. The packs in force are those of the installation's country and
+             *     of each legal entity's country.
+             */
+            readonly disclosure_languages?: string[];
+            /**
+             * @description What every stated objection route must name under the packs in force. Saving a route that
+             *     lacks one answers 422 with the field and the missing part.
+             */
+            readonly objection_route_means?: components["schemas"]["ContactMeans"][];
         };
+        /** @description The controller particulars in one more language. An empty field prints the default text. */
+        ControllerParticularsTranslation: {
+            /** @description The language, as a base language the installation can send mail in. */
+            language: string;
+            legal_name?: string;
+            postal_address?: string;
+            privacy_contact?: string;
+            objection_route?: string;
+            advertiser_contact?: string;
+            archive_purpose?: string;
+        };
+        /**
+         * @description A way of reaching someone that a stated particular must name.
+         * @enum {string}
+         */
+        ContactMeans: "web" | "email" | "phone";
         /**
          * @description Where a disclosure duty stands.
          *
@@ -55164,9 +55437,11 @@ export interface components {
             controller?: components["schemas"]["PrivacyInformationController"];
             /**
              * @description The basis on record for each entry in `purposes`, at the same index: `consent` for a
-             *     purpose the reader agreed to, else the kind of a live communication basis.
+             *     purpose the reader agreed to, else the kind of a live communication basis. `none` says
+             *     no basis is recorded, for a reader whose country has no legitimate-interest basis and
+             *     whose record holds neither their consent nor an agreement with them.
              */
-            purpose_bases: ("consent" | "contract" | "precontract_request" | "subject_initiated_correspondence" | "legitimate_interests" | "legal_obligation" | "vital_or_security_interest" | "existing_customer_exception" | "vn_subject_agreement")[];
+            purpose_bases: ("consent" | "contract" | "precontract_request" | "subject_initiated_correspondence" | "legitimate_interests" | "legal_obligation" | "vital_or_security_interest" | "existing_customer_exception" | "vn_subject_agreement" | "none")[];
             /**
              * @description The kinds of data held about the reader, read from the subject-access export's own
              *     sections. Codes only: the page names each kind and never shows a value.
@@ -55191,6 +55466,10 @@ export interface components {
              * @description When the acquisition happened, absent where the door could not say.
              */
             acquired_at?: string | null;
+            /** @description Where the contact came from, as the user who created it by hand stated. Absent when nothing was given. */
+            stated_source?: components["schemas"]["ContactStatedSource"];
+            /** @description Their own words beside `stated_source`. Absent when none were given. */
+            stated_source_note?: string;
             /** @description What the installation uses this contact's data for, by published name. */
             purposes?: string[];
             /**
@@ -55199,6 +55478,11 @@ export interface components {
              *     other.
              */
             purpose_keys?: string[];
+            /**
+             * @description When the reader gave the consent each entry in `purposes` rests on, at the same index.
+             *     Null for an entry whose basis is not consent.
+             */
+            purpose_since?: (string | null)[];
             /**
              * @description The rights the contact holds over this data, as codes a page renders in its own
              *     language. Art. 14(2)(c)-(e) requires naming them.
@@ -55220,6 +55504,10 @@ export interface components {
             privacy_contact?: string;
             /** @description How to object, where the installation states a way of its own. */
             objection_route?: string;
+            /** @description Where the installation publishes its own privacy information. Absent when not stated. */
+            privacy_page?: string;
+            /** @description Why archived correspondence is kept, in the language of the link. Absent when not stated, and the page then prints its default purpose. */
+            archive_purpose?: string;
         };
         /** @description One retention rule that acts on the reader's data. */
         PrivacyInformationRetention: {
@@ -55251,6 +55539,7 @@ export interface components {
             purpose_key: string;
             /** @description Its published name, for the page to show. */
             purpose_label: string;
+            frequency?: components["schemas"]["ConsentPurposeFrequency"];
             /**
              * @description Their answer today, so somebody who already said yes is not asked as though they had not.
              * @enum {string}
@@ -55289,6 +55578,11 @@ export interface components {
             language?: components["schemas"]["MailLanguage"];
             controller?: components["schemas"]["PrivacyInformationController"];
             question?: components["schemas"]["ConfirmQuestion"];
+            /**
+             * @description False when the recipient's country bars asking about news in a details check. The page
+             *     then shows no news question, and a submit carrying a marketing answer is a 422.
+             */
+            asks_news?: boolean;
         };
         /**
          * @description The question this link pinned, in the link's language and resolved with its purpose. The
@@ -73575,6 +73869,34 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    confirmSendWithoutLawfulBasis: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LawfulBasisConfirmationRequest"];
+            };
+        };
+        responses: {
+            /** @description The addresses whose warning this user confirmed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LawfulBasisConfirmation"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     previewEmailSignOff: {
         parameters: {
             query?: never;
@@ -79415,6 +79737,35 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    askSearchData: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    question: string;
+                };
+            };
+        };
+        responses: {
+            /** @description An answer with its executed source, or no supported data plan. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchDataAnswer"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -90705,6 +91056,102 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    listArchivedActivities: {
+        parameters: {
+            query?: {
+                /** @description Only activity that occurred before this instant. */
+                before?: string;
+                /** @description Only activity linked to this contact. */
+                contact_id?: string;
+                /** @description Only activity linked to this company. */
+                company_id?: string;
+                /**
+                 * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+                 *     effective `sort` of the originating request (field + direction) plus the last row's keyset
+                 *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     together with a `sort` that differs from the one the cursor was minted under returns
+                 *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+                 *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+                 *     remaining pages see, so re-issue the query without the cursor when changing filters.
+                 */
+                cursor?: components["parameters"]["Cursor"];
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of archived activity, oldest first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ArchivedActivity"][];
+                        page: components["schemas"]["PageInfo"];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    deleteArchivedActivities: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ArchiveDeletionRequest"];
+            };
+        };
+        responses: {
+            /** @description What was deleted, what was kept and why, and what failed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArchiveDeletionResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     listLegalHolds: {
         parameters: {
             query?: {
@@ -91420,7 +91867,9 @@ export interface operations {
             409: components["responses"]["ControllerMailRefused"];
             /**
              * @description The request named no purpose, named one no `consent_purpose` row holds, or the contact
-             *     carries no live email address — so there is no mailbox a link could reach.
+             *     carries no live email address — so there is no mailbox a link could reach. Also when
+             *     the contact's country asks that a consent mail for the purpose's class answer their own
+             *     request, and no such request is on record.
              */
             422: {
                 headers: {

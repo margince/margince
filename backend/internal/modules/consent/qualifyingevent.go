@@ -444,5 +444,5 @@ func (e *InvalidQualifyingEventError) Error() string { return e.Field + ": " + e
 // FieldFault carries the verdict to every surface, as this module's other
 // refusals do.
 func (e *InvalidQualifyingEventError) FieldFault() (field, code, message string) {
-	return e.Field, "invalid", e.Reason
+	return e.Field, codeInvalid, e.Reason
 }

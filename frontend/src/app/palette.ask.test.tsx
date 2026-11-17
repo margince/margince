@@ -193,7 +193,7 @@ describe("asking the handbook from the search box", () => {
     renderPalette();
     await user.type(screen.getByRole("searchbox"), QUESTION);
     await screen.findByRole("button", {
-      name: /^Ask Margince: “How do I change my time zone\?”/,
+      name: /^Ask the handbook: “How do I change my time zone\?”/,
     });
     await user.keyboard("{Enter}");
     const panel = await answerPanel();
@@ -221,7 +221,7 @@ describe("asking the handbook from the search box", () => {
     renderPalette();
     await user.type(screen.getByRole("searchbox"), QUESTION);
     await screen.findByRole("button", {
-      name: /^Ask Margince: “How do I change my time zone\?”/,
+      name: /^Ask the handbook: “How do I change my time zone\?”/,
     });
     await user.keyboard("{Enter}");
     arrive();
@@ -288,7 +288,7 @@ describe("asking the handbook from the search box", () => {
     });
     renderPalette();
     await user.type(screen.getByRole("searchbox"), QUESTION);
-    await screen.findByRole("button", { name: /^Ask Margince:/ });
+    await screen.findByRole("button", { name: /^Ask the handbook:/ });
     await user.keyboard("{Enter}");
     arrive();
     expect(await screen.findByText("No document sets")).toBeVisible();
@@ -432,7 +432,9 @@ describe("asking the handbook from the search box", () => {
     await screen.findByRole("button", {
       name: /^See all results for “How do I change my time zone\?”/,
     });
-    expect(screen.queryByRole("button", { name: /^Ask Margince:/ })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /^Ask the handbook:/ }),
+    ).toBeNull();
   });
 
   it("still goes to the results on Enter for a name", async () => {
@@ -459,4 +461,19 @@ describe("asking the handbook from the search box", () => {
     );
     expect(await within(panel).findByText("Your own settings")).toBeVisible();
   });
+});
+
+it("offers Analytics for a data question the handbook does not cover", async () => {
+  backend({
+    sets: [HANDBOOK],
+    replies: { [HANDBOOK_ID]: notCovered(HANDBOOK, "Not covered by this set") },
+  });
+  renderPalette();
+  const clock = steppedClock();
+  await clock.type(screen.getByRole("searchbox"), "How many deals did I win?");
+  await clock.keyboard("{Enter}");
+  expect(
+    await screen.findByRole("button", { name: "Open in Analytics" }),
+  ).toBeVisible();
+  expect(screen.queryByText(/Ask an administrator or a colleague/)).toBeNull();
 });
