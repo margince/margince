@@ -59,6 +59,7 @@ import { DealReferralLine } from "./dealpartner";
 import { DealProjectLine } from "./dealproject";
 import type { Deal, Offer, Stage } from "./deals";
 import { useAdvanceDeal } from "./deals.board";
+import { stagesInOrder } from "./deals.columns";
 import { DealDetailsDrawer } from "./deals.details";
 import { DealOverviewPane } from "./deals.overview";
 import { useDealStatusCard } from "./dealstatus";
@@ -175,9 +176,8 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   const dealQuery = useDeal(id);
   const pipelineQuery = usePipeline(dealQuery.data?.pipeline_id);
   // Every write affordance on this page answers one question, asked once. An
-  // archived deal takes no changes, and one this caller cannot write takes
-  // none from them. Asking only the first half would offer a rep Edit on a
-  // colleague's deal, then refuse the save with a 403.
+  // archived deal takes no changes, and its verbs stay, refused. One this
+  // caller cannot write takes none from them, so its verbs are left out.
   const readOnlyReason = useRecordWriteRefusal("deal", dealQuery.data, {
     archived: t("deal.archivedReadOnly"),
     notYours: t("deal.notYoursToChange"),
@@ -253,9 +253,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
     <div className="wrap">
       <QueryGate query={dealQuery} pendingLabel={t("nav.deals")}>
         {(deal) => {
-          const stages = [...(pipelineQuery.data?.stages ?? [])].sort(
-            (a, b) => a.position - b.position,
-          );
+          const stages = stagesInOrder(pipelineQuery.data?.stages ?? []);
           const openStages = stages.filter(
             (stage) => stage.semantic === "open",
           );
@@ -384,7 +382,11 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                 </DealLatestInbound>
               )}
               {shownTab === "room" && (
-                <DealRoomTab dealId={deal.id} dealName={deal.name} />
+                <DealRoomTab
+                  dealId={deal.id}
+                  dealName={deal.name}
+                  dealWritable={!readOnly}
+                />
               )}
               {shownTab === "files" && (
                 <DealFiles deal={deal} onOpenEmail={setOpenEmail} />

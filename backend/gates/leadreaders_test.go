@@ -57,6 +57,7 @@ var leadGate = objectGate{
 // than in the gated set: removing the lead condition could only WIDEN the
 // result the caller already sees.
 var predicateLeadReads = gatekit.Waive(map[string]string{
+	"internal/platform/auth/sharedwith.go:ActivityWorksOnClause":              "the done-for-you filter (compose/magic): whether a machine change on an activity is the reader's own work, asked through the owner and grants of the records it is linked to. No column of the record is selected, and the clause only narrows a read the activity audience gate already admitted",
 	"internal/modules/activities/legacysystemtext.go:RestoreTaskSystemTextTx": "System-only descriptor repair asks whether the linked lead has no name or address. Only that boolean selects a catalog phrase; no lead column is returned.",
 
 	"internal/modules/privacy/notementionlocks.go:lockNoteMentions":          "the contact-delete-authorized eraser locks records linked to candidate notes so their legal-hold flags cannot change during erasure. IDs are consumed inside the transaction and no record content is disclosed",

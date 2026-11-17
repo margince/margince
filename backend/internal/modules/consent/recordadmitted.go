@@ -109,7 +109,7 @@ func (s *Store) recordAdmittedTx(
 	}
 
 	capturedAt := s.now().UTC()
-	proofID, err := upsertConsentWithProof(ctx, tx, in, sub, doiConfirmedAt, capturedAt, actor.ID)
+	proofID, err := s.proveDecisionTx(ctx, tx, in, sub, purpose.class, doiConfirmedAt, capturedAt, actor.ID)
 	if err != nil {
 		return State{}, err
 	}
@@ -162,6 +162,19 @@ func (s *Store) answerWithdrawalTx(ctx context.Context, tx pgx.Tx, sub subject, 
 	}
 	who := ruleSubject{Kind: sub.entityType, ID: sub.id.String()}
 	return s.openRequestTaskTx(ctx, tx, who, RequestTaskWithdrawal, key, at)
+}
+
+// proveDecisionTx writes the state and its proof row, with the retention floor
+// a withdrawal of advertising carries from the moment it is written.
+func (s *Store) proveDecisionTx(
+	ctx context.Context, tx pgx.Tx, in RecordInput, sub subject, purposeClass string,
+	doiConfirmedAt *time.Time, capturedAt time.Time, actorID string,
+) (ids.UUID, error) {
+	keptUntil, err := s.withdrawalFloorTx(ctx, tx, sub, ConsentState(in.NewState), purposeClass, capturedAt)
+	if err != nil {
+		return ids.Nil, err
+	}
+	return upsertConsentWithProof(ctx, tx, in, sub, doiConfirmedAt, capturedAt, keptUntil, actorID)
 }
 
 // rowProbeFor answers which row probe a recorded state must clear.

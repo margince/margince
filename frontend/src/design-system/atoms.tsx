@@ -1,11 +1,13 @@
 import { type LucideIcon, Sparkles } from "lucide-react";
-import type {
-  CSSProperties,
-  ElementType,
-  FormEventHandler,
-  ReactNode,
+import {
+  type CSSProperties,
+  type ElementType,
+  type FormEventHandler,
+  type ReactNode,
+  useRef,
 } from "react";
 import { Heading, type HeadingElement, type HeadingSize } from "./heading";
+import { useWrapped } from "./segmentedcontrol.wrap";
 import { useWaited } from "./waited";
 import "./badge.css";
 import "./atoms.css";
@@ -447,11 +449,15 @@ export function SegmentedControl<Option extends string>({
   // so a second press cannot overtake the first.
   busy?: Option;
 }>) {
+  const strip = useRef<HTMLFieldSetElement>(null);
+  const wrapped = useWrapped(strip);
   return (
     <fieldset
+      ref={strip}
       className="segmented"
       aria-label={label}
       disabled={busy !== undefined}
+      data-wrapped={wrapped || undefined}
     >
       {options.map((option) => {
         const count = counts?.[option];

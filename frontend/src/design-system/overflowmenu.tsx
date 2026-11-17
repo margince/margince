@@ -1,8 +1,11 @@
 import { MoreHorizontal } from "lucide-react";
 import {
+  createContext,
   type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
   type RefObject,
+  useCallback,
+  useContext,
   useEffect,
   useId,
   useRef,
@@ -81,6 +84,14 @@ function walkItems(event: ReactKeyboardEvent<HTMLDivElement>) {
   items[items.indexOf(here) + step]?.focus();
 }
 
+const CloseMenu = createContext<() => void>(() => undefined);
+
+/** For a pick made in a panel an item opened (a `ListPopover`'s): closes the menu
+ *  and focuses its trigger, as choosing an item does. Outside a menu, nothing. */
+export function useCloseOverflowMenu(): () => void {
+  return useContext(CloseMenu);
+}
+
 // OverflowMenu folds the verbs a record offers but a reader rarely wants
 // (merge, archive, share) behind one control. The header then carries identity
 // and the frequent actions. It avoids a row of buttons of equal weight, where
@@ -143,6 +154,10 @@ export function OverflowMenu({
   const at = useAnchoredToTrigger(open, trigger, panel, align, within);
   const { layer, joinLayer, join } = useDialogLayer(wrap, keepMounted);
   const [reasons, setReasons] = useState<readonly string[]>([]);
+  const close = useCallback(() => {
+    setOpen(false);
+    trigger.current?.focus();
+  }, []);
 
   // Read while open, and again when an item's refusal changes under it. A
   // grant that answers after the press turns a row grey with the panel up.
@@ -196,8 +211,7 @@ export function OverflowMenu({
       ) {
         return;
       }
-      setOpen(false);
-      trigger.current?.focus();
+      close();
     };
     const onPointer = (event: MouseEvent) => {
       if (!(event.target instanceof Node)) {
@@ -224,7 +238,7 @@ export function OverflowMenu({
       globalThis.removeEventListener("keydown", onKey);
       globalThis.removeEventListener("mousedown", onPointer);
     };
-  }, [open, layer]);
+  }, [open, layer, close]);
 
   const openFromKeys = (event: ReactKeyboardEvent<HTMLButtonElement>) => {
     if (event.key === "ArrowDown" && !open && !pending) {
@@ -316,8 +330,7 @@ export function OverflowMenu({
             // the item opened mounts, so that dialog hands focus back to it.
             const item = event.target.closest("button, a");
             if (item && !isSetting(item)) {
-              setOpen(false);
-              trigger.current?.focus();
+              close();
             }
           }}
         >
@@ -326,7 +339,9 @@ export function OverflowMenu({
               {reason}
             </p>
           ))}
-          {(keepMounted || everOpened) && layer !== null && children}
+          <CloseMenu.Provider value={close}>
+            {(keepMounted || everOpened) && layer !== null && children}
+          </CloseMenu.Provider>
         </div>,
         layer ?? document.body,
       )}

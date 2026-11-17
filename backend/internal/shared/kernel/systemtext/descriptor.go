@@ -342,6 +342,12 @@ func mergeCatalogs(banks ...map[string]Definition) map[string]Definition {
 	return out
 }
 
+// Has reports whether the catalog defines code, for a writer that derives one.
+func Has(code string) bool {
+	_, ok := definitionOf(code)
+	return ok
+}
+
 func definitionOf(code string) (Definition, bool) {
 	definition, ok := catalog[code]
 	return definition, ok

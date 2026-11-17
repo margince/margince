@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ComponentProps, useId, useState } from "react";
+import { useIsFetching } from "@tanstack/react-query";
+import { type ComponentProps, useEffect, useId, useRef, useState } from "react";
 import { LogActivityAction } from "../../components/logactivity.action";
 import { AppLink } from "../../design-system/applink";
 import { Modal } from "../../design-system/atoms";
@@ -11,11 +12,14 @@ import {
   type BoardDeal,
   PipelineBoard,
 } from "../../design-system/pipelineboard";
+import { useOwnToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { routeHash } from "../../lib/router";
 import { useWriteTo } from "../../lib/writeto";
+import { DealCardMenu } from "./dealcardmenu";
 import { dealMailAside } from "./dealmailaside";
+import type { Deal, Stage } from "./deals";
 import { DealStatusCardPanel } from "./dealstatus";
 
 // The pipeline board as the deals screen draws it: the design-system board
@@ -29,9 +33,21 @@ import { DealStatusCardPanel } from "./dealstatus";
 type DealPipelineBoardProps = Omit<
   ComponentProps<typeof PipelineBoard>,
   "mailAside" | "cardActions"
->;
+> & {
+  /** What each card's "…" menu acts on; absent, the cards draw no menu. */
+  menu?: Readonly<{
+    deals: readonly Deal[];
+    /** In position order. */
+    stages: readonly Stage[];
+    /** Answers whether the move was saved. */
+    onAdvance: (dealId: string, stageId: string) => Promise<boolean>;
+  }>;
+};
 
-export function DealPipelineBoard(props: Readonly<DealPipelineBoardProps>) {
+export function DealPipelineBoard({
+  menu,
+  ...props
+}: Readonly<DealPipelineBoardProps>) {
   // Null when the reader has no mailbox the product can send from: the card
   // then offers no mail verb rather than one that opens onto a refusal.
   const writeTo = useWriteTo();
@@ -41,7 +57,7 @@ export function DealPipelineBoard(props: Readonly<DealPipelineBoardProps>) {
   const canFileTask = useCanWrite("activity", "create");
   const [summary, setSummary] = useState<SummaryState | null>(null);
   const [taskFor, setTaskFor] = useState<string | null>(null);
-  const cardActions = (deal: BoardDeal): DealCardActions => ({
+  const cardVerbs = (deal: BoardDeal): DealCardActions => ({
     onSummary: () => setSummary({ deal, open: true }),
     // An archived deal takes no new mail and no new work, which the deal page
     // says by refusing both verbs; a card has no room for the sentence, so it
@@ -53,6 +69,31 @@ export function DealPipelineBoard(props: Readonly<DealPipelineBoardProps>) {
     onAddTask:
       canFileTask && !deal.archived ? () => setTaskFor(deal.id) : undefined,
   });
+  const followMove = useFocusFollowsMove();
+  const copyRefusal = useOwnToast();
+  const records = new Map(menu?.deals.map((deal) => [deal.id, deal]));
+  const cardActions = (deal: BoardDeal): DealCardActions => {
+    const verbs = cardVerbs(deal);
+    const record = records.get(deal.id);
+    return {
+      ...verbs,
+      menu: menu && record && (
+        <DealCardMenu
+          deal={record}
+          stages={menu.stages}
+          verbs={verbs}
+          copyRefusal={copyRefusal}
+          onAdvance={(dealId, stageId) => {
+            void menu.onAdvance(dealId, stageId).then((landed) => {
+              if (landed) {
+                followMove({ dealId, to: stageId });
+              }
+            });
+          }}
+        />
+      ),
+    };
+  };
   return (
     <>
       <PipelineBoard
@@ -76,6 +117,43 @@ export function DealPipelineBoard(props: Readonly<DealPipelineBoardProps>) {
       )}
     </>
   );
+}
+
+type SavedMove = Readonly<{ dealId: string; to: string }>;
+
+// A saved move redraws the card in its new column, which drops the focus its
+// old menu trigger held. Focus follows it there, unless the reader moved on.
+function useFocusFollowsMove() {
+  const moving = useRef<SavedMove | null>(null);
+  // Waits while the board's deal reads run. A card they leave undrawn, by a
+  // filter or past a loaded page, is not followed later.
+  const reading = useIsFetching({ queryKey: ["deals"] }) > 0;
+  useEffect(() => {
+    const move = moving.current;
+    if (move === null) {
+      return;
+    }
+    const cards = [
+      ...document.querySelectorAll<HTMLElement>("[data-deal]"),
+    ].filter((each) => each.dataset.deal === move.dealId);
+    const landed = cards.find(
+      (each) =>
+        each.closest<HTMLElement>("[data-stage]")?.dataset.stage === move.to,
+    );
+    const held = cards.some(
+      (each) => each !== landed && each.contains(document.activeElement),
+    );
+    if (held || (landed === undefined && reading)) {
+      return;
+    }
+    moving.current = null;
+    if (landed && document.activeElement === document.body) {
+      landed.querySelector<HTMLElement>(".deal-open")?.focus();
+    }
+  });
+  return (move: SavedMove) => {
+    moving.current = move;
+  };
 }
 
 // The deal stays in state after the drawer closes, so the closing drawer still

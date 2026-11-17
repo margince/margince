@@ -153,5 +153,5 @@ func ApplyReviewedOwedVerdictTx(ctx context.Context, tx pgx.Tx, expected OwedRev
 	if !current.EvidenceComplete {
 		return false, apperrors.ErrConflict
 	}
-	return setOwedVerdictTx(ctx, tx, current.Candidate.ID, verdict, ruleset, time.Time{}, map[string]any{"reviewed_classification": true, "repair_reason": reason, "repair_rule": ruleset, "repair_run": runID})
+	return setOwedVerdictTx(ctx, tx, current.Candidate.ID, verdict, ruleset, time.Time{}, map[string]any{"reviewed_classification": true, "repair_reason": reason, "repair_rule": ruleset, "repair_run": runID}, "")
 }

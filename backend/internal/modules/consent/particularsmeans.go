@@ -199,7 +199,7 @@ func (s *Store) particularsAsked(ctx context.Context) ([]string, []messagingrule
 	if err != nil {
 		return nil, nil, err
 	}
-	var languages []string
+	languages := []string{}
 	var means []messagingrules.ContactMeans
 	for _, rules := range inForce {
 		if language := rules.DisclosureLanguage; language != "" && !slices.Contains(languages, language) {

@@ -41,14 +41,17 @@ const QUOTED_SOURCE = "conversation_claim";
 export function WorklistWhy({
   item,
   answer = false,
+  groundsShown = false,
 }: Readonly<{
   item: WorklistItem;
   // Draws the row's own verbs, for a drawer that covers the row it opened from.
   answer?: boolean;
+  // The surface already reads the row's reason out, so it is not said twice.
+  groundsShown?: boolean;
 }>) {
   const t = useT();
   const clock = useHappenedClock();
-  const { lines: happened, told } = happenedLines(item, t, clock);
+  const { lines: happened, told } = happenedLines(item, t, clock, groundsShown);
   const reasons = whyReasons(
     item,
     told && Boolean(item.due_at) && DATED_SOURCES.has(item.source),

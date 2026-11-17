@@ -5,6 +5,7 @@ import type { components } from "../../../api/schema";
 import { en } from "../../../i18n/en";
 import { jsonResponse, render, stubApi } from "../../../testing/brief.testkit";
 import { meFixture } from "../../../testing/mefixture";
+import { automaticStageReceipt } from "../../../testing/worklist.receiptreview.fixtures";
 import { DealMarginceChangesCard } from "./dealmarginchanges";
 
 type Check = components["schemas"]["DealMarginceCheck"];
@@ -36,7 +37,7 @@ it("tells the owner why Margince changed nothing and which sources it read", asy
       { source: "notes", state: "read" },
     ],
   });
-  render(<DealMarginceChangesCard dealId={DEAL} />);
+  render(<DealMarginceChangesCard dealId={DEAL} canWrite />);
   expect(
     await screen.findByText(
       /Margince checked this deal on .* and changed nothing/,
@@ -57,7 +58,7 @@ it("gives a colleague when the check ran and no reason", async () => {
     outcomes: [],
     sources: [],
   });
-  render(<DealMarginceChangesCard dealId={DEAL} />);
+  render(<DealMarginceChangesCard dealId={DEAL} canWrite />);
   expect(
     await screen.findByText(
       "Only the deal’s owner sees why · Next check when something new arrives",
@@ -89,7 +90,7 @@ it("opens a change's Details with the date of the message Margince read", async 
         ],
       }),
   });
-  render(<DealMarginceChangesCard dealId={DEAL} />);
+  render(<DealMarginceChangesCard dealId={DEAL} canWrite />);
   expect(await screen.findByText(en["receipt.detail.summary"])).toBeTruthy();
   const term = screen.getByText(en["receipt.detail.sourceAt"], {
     selector: "dt",
@@ -98,4 +99,28 @@ it("opens a change's Details with the date of the message Margince read", async 
   expect(
     screen.getByText(en["receipt.detail.reasonKind.inference"]),
   ).toBeTruthy();
+});
+
+// The Undo writes the deal. The object grant cannot see a colleague's deal
+// shared read-only, so the page's own answer for the row decides.
+function changeRoutes() {
+  return stubApi({
+    "GET /me": () =>
+      jsonResponse(meFixture({ allow: { deal: ["read", "update"] } })),
+    [`GET /deals/${DEAL}/margince-changes`]: () =>
+      jsonResponse({ changes: [automaticStageReceipt] }),
+  });
+}
+
+it("offers Undo on a deal the reader may change", async () => {
+  changeRoutes();
+  render(<DealMarginceChangesCard dealId={DEAL} canWrite />);
+  expect(await screen.findByRole("button", { name: "Undo" })).toBeTruthy();
+});
+
+it("offers no Undo on a deal the reader may not change", async () => {
+  changeRoutes();
+  render(<DealMarginceChangesCard dealId={DEAL} canWrite={false} />);
+  expect(await screen.findByText(/Moved PIM Rollout/)).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
 });

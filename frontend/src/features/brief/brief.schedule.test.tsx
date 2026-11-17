@@ -311,6 +311,22 @@ describe("the schedule panel", () => {
     },
   );
 
+  // Today's meeting known to Margince shows under the sentence that says where
+  // the panel's meetings come from when no calendar is connected.
+  it("heads a no-calendar day's meetings with where they come from", () => {
+    const day = {
+      ...readingsDay({}, [{ ...meetingRow("m1", true), title: "Site visit" }]),
+      calendar: "not_connected" as const,
+    };
+    draw(<SchedulePanel day={day} state="ready" />);
+
+    const panel = screen.getByRole("region");
+    const rows = panel.querySelectorAll(".panel-row");
+    expect(rows[0].textContent).toContain(en["brief.schedule.notConnected"]);
+    expect(rows[1].textContent).toContain("Site visit");
+    expect(panel.querySelectorAll(".rail-schedule-row")).toHaveLength(1);
+  });
+
   // A meeting booked by hand is a fact the CRM holds whatever the calendar
   // says, so it follows the sentence instead of hiding behind it.
   it("names a hand-booked next meeting under a calendar that cannot count", () => {

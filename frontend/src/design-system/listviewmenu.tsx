@@ -71,13 +71,14 @@ export function ListViewMenu({
   const body = useRef<HTMLDivElement>(null);
   const anchor = useRef<HTMLSpanElement>(null);
   useCloseOnFocusOut(open, anchor, body, () => onOpenChange(false));
-  // A closed panel reopens on its rows, never on the step it was left at.
-  if (!open && stepKey !== null) {
+  const row = rows.find((candidate) => candidate.key === stepKey);
+  // A closed panel reopens on its rows. A step whose row left the panel (the
+  // window crossed the fold) goes with it.
+  if (stepKey !== null && (!open || row === undefined)) {
     setStepKey(null);
   }
   const arrive = useStepFocus(body, stepKey, "data-view-row", open);
 
-  const row = rows.find((candidate) => candidate.key === stepKey);
   const back = () => setStepKey(null);
   const enter = (key: string) => {
     arrive(key);
@@ -230,9 +231,13 @@ export function useStepFocus(
     }
     cameFrom.current = null;
     if (shown) {
-      [...(scope?.querySelectorAll<HTMLElement>(`[${rowAttribute}]`) ?? [])]
-        .find((row) => row.getAttribute(rowAttribute) === key)
-        ?.focus();
+      const rows = [
+        ...(scope?.querySelectorAll<HTMLElement>(`[${rowAttribute}]`) ?? []),
+      ];
+      // A row that left with its step hands focus to the first row, never to the page.
+      (
+        rows.find((row) => row.getAttribute(rowAttribute) === key) ?? rows[0]
+      )?.focus();
     }
   }, [root, step, rowAttribute, shown]);
   return (key) => {

@@ -1,8 +1,11 @@
+import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { ifMatch, requireVersion } from "../../api/version";
 import { toMajorUnits, toMinorUnits } from "../../format/minorunits";
 import { commercialMotion, dealPriority } from "../../lib/dealcommercialvalues";
 import { partnerAttribution } from "../../lib/dealcreate";
 import { currencyBeside } from "../../lib/dealcurrency";
+import { unwrap } from "../../lib/problem";
 import type { Deal } from "./deals";
 
 type UpdateDealRequest = components["schemas"]["UpdateDealRequest"];
@@ -245,4 +248,17 @@ function withoutMasked(
     }
   }
   return out as UpdateDealRequest;
+}
+
+// Pinned to the version the reader saw, so an archive never lands on a deal
+// somebody changed since.
+export async function archiveDeal(deal: Pick<Deal, "id" | "version">) {
+  return unwrap(
+    await api.DELETE("/deals/{id}", {
+      params: {
+        path: { id: deal.id },
+        ...ifMatch(requireVersion(deal.version)),
+      },
+    }),
+  );
 }

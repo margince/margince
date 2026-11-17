@@ -184,8 +184,8 @@ func carryConsent(ctx context.Context, tx pgx.Tx, kind consentCarryKind, fromID,
 // in the same statement — a state change without proof would break the
 // Art. 7(1) demonstrability invariant.
 //
-// The flipped row takes the addresses the withdrawal was bound to, because the
-// retiring record's subject withdrew, not the survivor's.
+// The flipped row takes the withdrawal's addresses and its proof row the
+// retention floor, because the retiring record's subject withdrew.
 func flipCarriedWithdrawals(ctx context.Context, tx pgx.Tx, spec consentCarrySpec,
 	fromID, toID ids.UUID, by string, now time.Time,
 ) error {
@@ -200,8 +200,10 @@ func flipCarriedWithdrawals(ctx context.Context, tx pgx.Tx, spec consentCarrySpe
 		  RETURNING b.purpose_id
 		)
 		INSERT INTO consent_event (%[2]s, purpose_id, new_state, source,
-		                           policy_text, policy_version, captured_at, captured_by)
-		SELECT @target, purpose_id, 'withdrawn', @origin, @wording, @version, @now, @actor
+		                           policy_text, policy_version, captured_at, captured_by, kept_until)
+		SELECT @target, purpose_id, 'withdrawn', @origin, @wording, @version, @now, @actor,
+		       (SELECT max(w.kept_until) FROM consent_event w
+		         WHERE w.%[1]s = @source AND w.purpose_id = flipped.purpose_id AND w.new_state = 'withdrawn')
 		FROM flipped`, spec.from, spec.to),
 		pgx.NamedArgs{mergeSourceKey: fromID, mergeTargetKey: toID, "now": now, "actor": by, "origin": spec.source, "wording": spec.policyText, "version": carriedWordingVersion})
 	if err != nil {

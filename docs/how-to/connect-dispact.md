@@ -37,10 +37,18 @@ The `@Margince` agent in Dispact calls this installation's MCP tools. It needs t
 (`mcp.connector_enabled`) and `--public-base-url` set, and it needs the bot connected as above.
 
 1. An admin reads the manifest: `GET /v1/integrations/dispact/manifest`. It needs the right to connect a
-   chat bot, and it answers `503` when the installation has no public base URL.
-2. The admin installs the app in Dispact from that manifest. The manifest gives the slug `margince`,
-   `mcp.endpoint` (`<public_base_url>/mcp`), the scopes, and the `events` block that points at
-   `<public_base_url>/v1/channel-events/dispact`.
+   chat bot, and it answers `503` when the installation has no public base URL. The simplest way is to
+   open that address in the browser where the admin is signed in to Margince, and save the page.
+2. The admin installs the app in Dispact with **Install App → Upload JSON file**, or pastes the
+   manifest into the app's manifest editor. **From URL** does not work: Dispact fetches the address
+   from its own server, with no Margince session, and gets `401`. The route keeps the sign-in because
+   the manifest names the installing admin's email as its publisher. The manifest gives the slug
+   `margince`, `mcp.endpoint` (`<public_base_url>/mcp`), the scopes, `icon_url`
+   (`<public_base_url>/icon.svg`), and the `events` block that points at
+   `<public_base_url>/v1/channel-events/dispact`. The web tier lets another origin load that icon and
+   no other file (`frontend/nginx.conf`). Dispact checks the events URL at install, and that check
+   fails with `401` until the bot is connected with its events secret saved; see
+   [Turn on push](#turn-on-push).
 3. Dispact reads the tool list once, with the installing admin's token, and shows that list to every
    user. The admin needs no Margince seat for this. An app is served no resources and no prompts, so
    those two lists answer empty, and no tool names a view. The list is fixed, as agreed with Dispact: `Tools` in
