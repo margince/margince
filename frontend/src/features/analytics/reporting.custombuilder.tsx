@@ -60,6 +60,10 @@ export function holdCustomReport(
   held = { reader, draft };
 }
 
+export function forgetCustomReport(): void {
+  held = undefined;
+}
+
 export function heldCustomReport(
   reader: string | undefined,
 ): CustomReportDraft | undefined {

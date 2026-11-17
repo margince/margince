@@ -13,7 +13,6 @@ import { useT } from "../../i18n";
 import { fileListKeys } from "../../lib/attachmentkeys";
 import { unwrap } from "../../lib/problem";
 import { invalidateRecord } from "../../lib/recordwritekeys";
-import { navigate } from "../../lib/router";
 
 // The contact header's merge and archive commands.
 
@@ -136,7 +135,7 @@ export function ContactRecordActions({
         }}
         invalidate="contacts"
         recordKey="contact"
-        onArchived={() => navigate({ screen: "contacts" })}
+        onArchived={(from) => from.closeOnto({ screen: "contacts" })}
       />
     </>
   );

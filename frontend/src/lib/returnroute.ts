@@ -75,8 +75,7 @@ function asKept(value: unknown): Kept | null {
 }
 
 /** Remember the route the reader is on, before the page leaves for a provider. */
-export function keepReturnRoute(): void {
-  const hash = globalThis.location?.hash ?? "";
+export function keepReturnRoute(hash = globalThis.location?.hash ?? ""): void {
   if (isOwnRoute(hash)) {
     const kept: Kept = { route: hash, keptAt: Date.now() };
     writeStored(STORAGE_KEYS.signInReturnRoute, JSON.stringify(kept));

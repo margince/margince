@@ -11,7 +11,7 @@ import {
   useSetAgentGrant,
 } from "../../../lib/overnight-grant";
 import { problemMessageOf } from "../../../lib/problem";
-import { navigateReplacing } from "../../../lib/router";
+import { useAddressWriters } from "../../../lib/urlstate";
 import { useSaveLinkedInAccount } from "../../../lib/use-linkedin-account";
 import { EMPTY_DRAFT } from "../onboarding";
 import {
@@ -82,6 +82,7 @@ export function ConnectAct({
   returningProvider,
 }: ConnectActProps) {
   const t = useT();
+  const { navigateReplacing } = useAddressWriters();
   // The account whose ask is open. On the page load a proven redirect lands on,
   // it is the account that trip was for. A refused consent can then be asked
   // again from where the reader left.

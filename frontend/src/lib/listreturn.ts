@@ -1,12 +1,11 @@
-import { stepsBackOutOf } from "./historydepth";
+import { stepBackOutOf } from "./historydepth";
+import { parseHash, type Route, routeHash, type Screen } from "./router";
 import {
-  navigateReplacing,
-  parseHash,
-  type Route,
-  routeHash,
-  type Screen,
-} from "./router";
-import { GLOBAL_DIALS, hashWithParams, parseParams } from "./urlstate";
+  type AddressWriters,
+  GLOBAL_DIALS,
+  hashWithParams,
+  parseParams,
+} from "./urlstate";
 
 // The address each list screen last stood at in this page load, filter
 // included. Memory, not storage: after a reload the parent is the plain list.
@@ -48,29 +47,27 @@ export function listAddress(screen: Screen): string {
 }
 
 /**
- * Leave a record for the screen before it.
- *
- * The installed app has no browser Back, so this is the only way out. The
- * record's own tabs are views of one page, so they are stepped over. With an
- * earlier screen of ours in history, history is the truest answer, because it
- * also brings back the list's filter and scroll offset. A record with none of
- * ours behind it goes to its list instead of out of the app.
+ * Leave a record for the screen before it, which history restores with its
+ * filter and scroll; with none of ours behind, the record's list.
  */
 export function leaveRecord(record: Route): void {
-  const steps = stepsBackOutOf((hash) => {
-    const route = parseHash(hash);
-    return route.screen === record.screen && route.id === record.id;
-  });
-  if (steps > 0) {
-    globalThis.history.go(-steps);
-    return;
-  }
-  globalThis.location.hash = listAddress(record.screen);
+  stepBackOutOf(
+    (hash) => {
+      const route = parseHash(hash);
+      return route.screen === record.screen && route.id === record.id;
+    },
+    () => {
+      globalThis.location.hash = listAddress(record.screen);
+    },
+  );
 }
 
 /** Close a list's create form onto the list, replacing the form's address so
  *  Back from the list does not open the form again. */
-export function leaveCreateForm(screen: Screen): void {
+export function leaveCreateForm(
+  screen: Screen,
+  { navigateReplacing }: AddressWriters,
+): void {
   const here = parseHash(globalThis.location.hash);
   if (here.screen !== screen || here.id === undefined) {
     return;
