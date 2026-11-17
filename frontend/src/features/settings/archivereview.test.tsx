@@ -14,7 +14,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
-import { meFixture } from "../../testing/mefixture";
+import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { ArchiveReviewCard } from "./archivereview";
 
 const FREE = "00000000-0000-4000-8000-0000000000a1";
@@ -64,7 +64,7 @@ afterEach(() => {
 });
 
 function show(
-  allow: Record<string, string[]>,
+  allow: GrantSpec,
   page: unknown = PAGE,
   onDelete: DeleteReply = deleteFree,
 ) {
