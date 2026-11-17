@@ -45,7 +45,7 @@ func seedKielRecords(t *testing.T, e *SearchEnv) kielRecords {
 	return r
 }
 
-func standingsByID(t *testing.T, e *SearchEnv, ctx context.Context) map[ids.UUID]search.Hit {
+func standingsByID(ctx context.Context, t *testing.T, e *SearchEnv) map[ids.UUID]search.Hit {
 	t.Helper()
 	perType := 5
 	page, err := e.Store.Search(ctx, search.Input{Query: "kiel", PerType: &perType})
@@ -62,7 +62,7 @@ func standingsByID(t *testing.T, e *SearchEnv, ctx context.Context) map[ids.UUID
 func TestARecordHitSaysWhereItStands(t *testing.T) {
 	e := SetupSearch(t)
 	r := seedKielRecords(t, e)
-	hits := standingsByID(t, e, searchSeat(e, nil, principal.RowScopeAll, standingGrants()))
+	hits := standingsByID(searchSeat(e, nil, principal.RowScopeAll, standingGrants()), t, e)
 
 	deal := hits[r.deal].Standing
 	if deal == nil || deal.State == nil || *deal.State != "open" || deal.Stage == nil || *deal.Stage != "Negotiation" {
@@ -104,7 +104,7 @@ func TestADealStandingHonoursTheAmountMask(t *testing.T) {
 		{Object: "deal", Field: "amount_minor", Condition: principal.MaskAlways},
 		{Object: "deal", Field: "currency", Condition: principal.MaskAlways},
 	}
-	hits := standingsByID(t, e, principal.WithActor(seat, actor))
+	hits := standingsByID(principal.WithActor(seat, actor), t, e)
 
 	deal := hits[r.deal].Standing
 	if deal == nil {

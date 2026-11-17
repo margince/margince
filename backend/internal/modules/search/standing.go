@@ -29,12 +29,18 @@ type standingColumns struct {
 // order their parts appear in the statement. A deal adds its stage and its
 // masked money in dealStanding.
 var standingReads = []standingColumns{
-	{hitType: entityContact, jobTitle: "t.title", lastActivity: "t.last_activity_at"},
-	{hitType: entityCompany, lastActivity: "t.last_activity_at"},
-	{hitType: entityDeal, state: "t.status", dueOn: "t.expected_close_date", lastActivity: "t.last_activity_at"},
+	{hitType: entityContact, jobTitle: "t.title", lastActivity: lastActivityColumn},
+	{hitType: entityCompany, lastActivity: lastActivityColumn},
+	{hitType: entityDeal, state: "t.status", dueOn: "t.expected_close_date", lastActivity: lastActivityColumn},
 	{hitType: entityLead, state: "t.status"},
 	{hitType: entityProject, state: "t.phase", dueOn: "t.target_end_date"},
 }
+
+// The column every record that tracks touch keeps its latest activity in.
+const lastActivityColumn = "t.last_activity_at"
+
+// A text column a type does not have, typed so every leg of the union agrees.
+const nullText = "NULL::text"
 
 // Wire names of the deal fields a mask can withhold here.
 const (
@@ -89,7 +95,7 @@ func standingPart(ctx context.Context, read standingColumns, recordIDs []ids.UUI
 	if scope == "" {
 		scope = sqlTrue
 	}
-	stage, amount, currency, masks, join := "NULL::text", "NULL::bigint", "NULL::text", "NULL::text[]", ""
+	stage, amount, currency, masks, join := nullText, "NULL::bigint", nullText, "NULL::text[]", ""
 	if read.hitType == entityDeal {
 		if stage, amount, currency, masks, err = dealStanding(ctx, arg); err != nil {
 			return "", err
