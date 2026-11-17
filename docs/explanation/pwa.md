@@ -140,13 +140,13 @@ answers one of:
 | `manual-macos` | Safari 26 or later on a Mac, where File › Add to Dock is a step by hand |
 | `unavailable` | nothing this page can offer, including an app's own browser on iOS |
 
-An iOS app that opens a link in its own webview (Facebook, Instagram, LinkedIn, Gmail) leaves `Safari/`
-out of its agent, and its share sheet cannot add to the home screen. So that agent reads as
-`unavailable`, and no row or hint offers steps that cannot work there.
+Some iOS apps open a link in their own browser, as LinkedIn and Gmail do. That browser leaves
+`Safari/` out of its agent, and its share sheet cannot add to the home screen. So that agent reads
+as `unavailable`, and no row or notice offers steps that cannot work there.
 
 Add to Dock needs macOS 14. Safari reports every macOS as 10.15.7, so the agent cannot name the
-system; Safari 26 ships for macOS 14 and later only, and its `Version/` major stands in. An older
-Safari on a Mac reads as `unavailable`.
+system. Safari 26 ships for macOS 14 and later only, so the first number after `Version/` stands in.
+An older Safari on a Mac reads as `unavailable`.
 
 ## Network state
 
@@ -192,37 +192,37 @@ built from `useInstallState()` alone:
 
 When the button is removed and takes focus with it, focus moves to the text or to the "Installed"
 that takes its place. Focus in any other place stays where it is. The row keeps its Install button
-whenever the browser offers one, whatever the Home hint's schedule says.
+as long as the browser offers one, whatever the schedule of the notice on Home says.
 
-## The install hint on Home
+## The install notice on Home
 
-`listenForInstall()` cancels the browser's own install offer, which turns off Chrome's mini-infobar
-on Android. So `frontend/src/app/installhint.tsx` offers the install on Home instead, as a
+`listenForInstall()` cancels the browser's own install offer, which turns off the small install bar
+that Chrome shows on Android. So `frontend/src/app/installhint.tsx` offers the install on Home instead, as a
 `discovery` `Callout` in the shell's banner slot. It never takes focus as it appears, and a
 standing notice is not read out at rest.
 
-- **Who:** a device whose pointer matches `(pointer: coarse)`, a phone or tablet, in state
+- **Who:** a device whose pointer matches `(pointer: coarse)`, such as a phone, in state
   `available` or `manual-ios`. A desktop keeps the browser's address-bar icon and the Settings row.
-- **Where:** only on Home, and only when no other shell banner has something to say. The hint asks
+- **Where:** only on Home, and only when no other shell banner has something to say. The notice asks
   the same hooks the banners draw from (`useConnectivity`, `useCaptureConcerns`, `useEconomyBand`,
   `useReindexNeeded`, `useLicenseNotice`). A banner the reader put away for the session or the day
-  still keeps the hint back.
+  still keeps the notice back.
 - **What:** `available` shows Install, which calls `prompt()` inside the click. `manual-ios` shows
-  the Share step with the Share glyph.
+  the Share step with the Share icon.
 
 `frontend/src/lib/installhint.ts` holds the schedule in one JSON record under
-`STORAGE_KEYS.installHint` (`margince.installHint`, `device` lifetime, so a new sign-in keeps it):
+`STORAGE_KEYS.installHint` (`margince.installHint`). It is kept per `device`, so a new sign-in keeps it:
 
-- The shell records the first calendar day this device runs it, in the reader's zone. The hint
+- The shell records the first calendar day this device runs it, in the reader's zone. The notice
   never shows on that day.
 - From the next day it shows, or at once after the reader completes a task with the tick on Home.
-- "Not now", or a dismissal of the browser's install window opened from the hint, hides it for 30
+- "Not now", or a dismissal of the browser's install window opened from the notice, hides it for 30
   days (`INSTALL_HINT_SNOOZE_MS`).
 - The second dismissal hides it on this device for good.
-- Once the app is installed, the record says so and the hint never shows again.
+- Once the app is installed, the record says so and the notice never shows again.
 
-A stored value in another shape reads as never seen. When the hint goes, focus inside it moves to
-the page's scroller, never to `<body>`.
+A stored value in another shape reads as never seen. When the notice goes, focus inside it moves to
+the page content, never to `<body>`.
 
 ## Turning the worker off when it goes wrong
 

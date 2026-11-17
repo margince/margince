@@ -252,11 +252,11 @@ A meeting invitation shows **Accept**, **Maybe** and **Decline** in place of **R
 - A later email that moves or calls off the meeting shows the meeting and what changed, such as **Was 13 Nov, 13:00–14:00** or **Added Ben Ito**. Its tag says what happened, such as **Meeting changed** or **Canceled**. An update with nothing to answer you mark done. Without the earlier invitation in your mailbox, Margince shows the meeting as it stands now.
 Also called: meeting invite, accept an invite, decline a meeting, rescheduled meeting, canceled meeting.
 
-### Why does Home offer to install Margince?
-On a phone or tablet, Home can show **Install Margince as an app** at the top of the page. It never shows on the first day you use Margince on that device. It shows from the next day, or as soon as you complete a task on Home, and waits while another notice stands at the top.
-- **Install** opens your browser's own install window. Once Margince is installed, it opens from its own icon and the notice does not come back.
-- On an iPhone or iPad the notice says to tap **Share**, then **Add to Home Screen**. In another app's own browser, such as a link opened in a social app, it does not show, because that browser cannot add Margince to the home screen.
-- **Not now**, or closing the browser's install window, hides the notice for 30 days. After the second time, it does not show again on that device. The **Margince app** row in [your own settings](your-own-settings.md#account) stays either way.
+### Why does Home offer Margince as an app?
+On a phone, or another device you use by touch, Home can show **Install Margince as an app** at the top of the page. It never shows on the first day you use Margince on that device. It shows from the next day, or once you complete a task on Home. While another notice stands at the top of the page, it waits.
+- **Install** opens your browser's own window to add Margince to the device. Once Margince is added, it opens as its own app and the notice does not come back.
+- On an iPhone the notice has no **Install**. It says to press **Share**, then **Add to Home Screen**. In another app's own browser the notice does not show, because that browser cannot add Margince.
+- **Not now**, or closing the browser's window, hides the notice for 30 days. After the second time, it does not show again on that device. The **Margince app** row in [your own settings](your-own-settings.md#account) stays either way.
 
 ## The Worklist
 
