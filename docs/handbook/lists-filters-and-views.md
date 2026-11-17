@@ -149,7 +149,7 @@ To choose columns or row size in a Margince list, press **View** → **Columns**
 1. Under **Columns**, untick a column to hide it. The name column always stays. On **Filters and views**, every field of the record type is here. Only the first six start ticked.
 2. Press **View**, then **Compact**, to turn smaller rows On or Off.
 3. Drag the side of a column heading to make it wider or narrower. To move a column, drag the handle beside its name under **Columns**. With the keyboard, press ↑ or ↓ on the handle.
-Your browser keeps how wide each column is and the order of the columns for next time. Hidden columns and **Compact** are not saved in a view.
+Your browser keeps how wide each column is, their order and which are hidden, for next time. Hidden columns and **Compact** are not saved in a view.
 Also called: add column, remove column, reorder columns, change table layout.
 
 ### How do I show more rows per page?

@@ -18,8 +18,8 @@ import { openViewStep } from "../testing/listview.testkit";
 import { type ListColumn, ListTable } from "./listtable";
 import { orderedColumns } from "./listtable.order";
 
-// Column order in the Columns step: a grip moves a column, the grid follows,
-// and the order holds between visits under the table's name.
+// The Columns step: a grip moves a column and a tick hides one, the grid
+// follows, and both hold between visits under the table's name.
 
 afterEach(() => {
   cleanup();
@@ -86,6 +86,28 @@ describe("column order", () => {
 
     render(grid("order-test"));
     expect(headers()).toEqual(["Name", "Stage", "City"]);
+  });
+
+  it("keeps a column the reader hid hidden after a remount under the same table name", async () => {
+    const user = userEvent.setup();
+    const first = render(grid("hidden-test"));
+    const step = within(await openViewStep(user, "Columns"));
+    await user.click(step.getByRole("checkbox", { name: "City" }));
+    first.unmount();
+
+    render(grid("hidden-test"));
+    expect(headers()).toEqual(["Name", "Stage"]);
+  });
+
+  it("shows every column again on a table with no name", async () => {
+    const user = userEvent.setup();
+    const first = render(grid());
+    const step = within(await openViewStep(user, "Columns"));
+    await user.click(step.getByRole("checkbox", { name: "City" }));
+    first.unmount();
+
+    render(grid());
+    expect(headers()).toEqual(["Name", "City", "Stage"]);
   });
 
   it("ignores a stored key whose column is gone, and never moves the fixed column", () => {
