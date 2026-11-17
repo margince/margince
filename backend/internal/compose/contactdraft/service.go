@@ -215,10 +215,10 @@ func (s *Service) Draft(
 // two answers to one question — including which of them stamps the AI
 // provenance notice, which is the half a reader would notice missing.
 //
-// lang is the DRAFT's language, from the envelope its caller resolved. Passed
-// rather than read here because the two callers resolve their own, and a wire
-// mapper that went looking for one would be a second resolver. intent is the
-// drafting instruction, which may name the message's reason (draftreason).
+// lang is the DRAFT's language, from the envelope its caller resolved. The two
+// callers resolve their own, so a wire mapper that looked for one would be a
+// second resolver. intent is the drafting instruction, which may name the
+// message's reason (draftreason).
 func Wire(draft Draft, by crmcontracts.WrittenBy, voiceDegraded bool, lang, intent string) crmcontracts.CompanyEmailDraft {
 	aiWritten := by == crmcontracts.WrittenByModel
 	out := crmcontracts.CompanyEmailDraft{
