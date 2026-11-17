@@ -22,7 +22,10 @@ import { Select } from "../../design-system/select";
 import { formatMoney } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { leadPromotePreviewKey, leadWriteKeys } from "../../lib/leadkeys";
+import {
+  invalidateClosedLead,
+  leadPromotePreviewKey,
+} from "../../lib/leadkeys";
 import { defaultPipelineOf, usePipelines } from "../../lib/pipelines.queries";
 import {
   problemFieldErrorsOf,
@@ -272,12 +275,9 @@ function QualificationForm({
       );
     },
     onSuccess: (result) => {
-      // leadWriteKeys carries the history key: the promotion WROTE the audit
-      // row the page reads its outcome from, and so does every other lead
-      // mutation.
-      for (const key of leadWriteKeys(lead.id)) {
-        queryClient.invalidateQueries({ queryKey: key });
-      }
+      // The history key is among them: the promotion WROTE the audit row the
+      // page reads its outcome from.
+      invalidateClosedLead(queryClient, lead.id);
       if (result.deal_id) {
         queryClient.invalidateQueries({ queryKey: ["deals"] });
       }

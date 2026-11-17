@@ -237,7 +237,12 @@ export function LeadActions({
           recordId={lead.id}
           disabledReasonId={refusedReasonId}
         />
-        <AddToShortlistAction entityType="lead" entityId={lead.id} />
+        {/* The server keeps no list membership for a closed lead. */}
+        <AddToShortlistAction
+          entityType="lead"
+          entityId={lead.id}
+          reasonId={archived}
+        />
         {/* Last: it is the one verb here a reader cannot walk back from
                 the header, so it does not sit where a pointer sliding down
                 the list reaches it on the way to something routine. It asks

@@ -3,6 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { pickOption } from "../../design-system/select-testing";
 import { en } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { LeadScreen } from "./leads";
@@ -15,6 +16,18 @@ import {
   stubFetch,
   stubFetchWithMe,
 } from "./leads.testkit";
+
+const DISQUALIFY_REASON = {
+  id: "r-2",
+  label: "Bad timing",
+  sort_order: 20,
+  active: true,
+  system: true,
+  lead_count: 0,
+  version: 1,
+  created_at: "2026-01-01T00:00:00Z",
+  updated_at: "2026-01-01T00:00:00Z",
+};
 
 // What the server answers for a disqualified lead: archived, so never
 // writable, whatever the reader's grants.
@@ -511,6 +524,78 @@ describe("LeadScreen — an archived lead does not ask for what the server refus
     expect(urls.filter((url) => /\/(score|lists|tags)/.test(url))).toEqual([]);
     // No section reads as failed: a refused read was never asked.
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  // The page still holds the live lead in the beat after a closure, so the
+  // writes' own refresh must not ask for the reads the closed lead refuses.
+  it("closing the lead asks for neither the score breakdown nor the lists again", async () => {
+    const user = userEvent.setup();
+    let closed = false;
+    const me = meFixture({
+      allow: { ...LEAD_GRANTS, list: ["read", "update"] },
+      settingsAvailability: { lists: true },
+    });
+    const { urls } = stubFetch(async (url, method) => {
+      if (url.endsWith("/v1/me")) {
+        return jsonResponse({
+          user: { id: "u-9", display_name: "Me" },
+          roles: ["rep"],
+          teams: [],
+          ...me,
+        });
+      }
+      if (method === "DELETE") {
+        closed = true;
+        return jsonResponse(disqualifiedLead);
+      }
+      if (url.endsWith("/v1/lead-disqualify-reasons")) {
+        return jsonResponse({ data: [DISQUALIFY_REASON] });
+      }
+      if (url.includes("/score") || url.includes("/lists")) {
+        return closed
+          ? jsonResponse(
+              { status: 404, code: "not_found", title: "Not found" },
+              404,
+            )
+          : jsonResponse(
+              url.includes("/score")
+                ? { score: 72, explained: false }
+                : { data: [] },
+            );
+      }
+      return jsonResponse(closed ? disqualifiedLead : lead);
+    });
+    render(<LeadScreen id="l-1" />);
+
+    await openLeadActions(user);
+    // Offered on the live lead, so the refusal below is the closure's.
+    const shortlist = { name: en["lists.addToShortlist"] as string };
+    for (const add of screen.getAllByRole("button", shortlist)) {
+      expect(add).toBeEnabled();
+    }
+    await user.click(screen.getByTestId("lead-disqualify"));
+    await pickOption(user, screen.getByLabelText("Reason *"), "Bad timing");
+    const asked = urls.length;
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Disqualify",
+      }),
+    );
+
+    await waitFor(() =>
+      expect(screen.getAllByText("Disqualified").length).toBeGreaterThan(0),
+    );
+    expect(
+      urls.slice(asked).filter((url) => /\/(score|lists)/.test(url)),
+    ).toEqual([]);
+    // A closed lead keeps its figure and draws no breakdown it cannot read.
+    expect(screen.queryByText(en["lead.dims.notRead"] as string)).toBeNull();
+    await openLeadActions(user);
+    const offered = screen.getAllByRole("button", shortlist);
+    expect(offered.length).toBeGreaterThan(0);
+    for (const add of offered) {
+      expect(add).toBeDisabled();
+    }
   });
 
   it("reads all three for a live lead", async () => {
