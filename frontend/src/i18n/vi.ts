@@ -12233,7 +12233,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.domainReview.anotherLabel": "Công ty khác",
   "worklist.domainReview.newLabel": "Công ty mới",
   "worklist.domainReview.siteLabel": "Trang web của họ",
-  "worklist.domainReview.vendorLabel": "Nhà cung cấp thư hoặc lưu trữ",
+  "worklist.domainReview.vendorLabel": "Nhà cung cấp email hoặc hosting",
   "worklist.domainReview.laterLabel": "Để sau",
   "worklist.domainReview.mailboxesLabel": "Hộp thư của bạn",
   "worklist.domainQuestion.confirmEffectNone":
