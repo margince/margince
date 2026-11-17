@@ -14,15 +14,19 @@ import (
 
 // A session on the template blocks every copy. The copy waits it out instead
 // of failing the test that happened to ask while a lane migrated the template.
-//
-//testdb:serial holds a session on the template, which every parallel test copies
+// The template here is a copy of the test's own, so no other test waits on it.
 func TestACopyWaitsForASessionOnTheTemplateToEnd(t *testing.T) {
-	ownerDSN := os.Getenv(ownerDSNEnv)
-	onTemplate, err := withDatabase(ownerDSN, os.Getenv(TemplateEnv))
+	t.Parallel()
+	template, err := copyTemplate(t.Context(), os.Getenv(TemplateEnv))
 	if err != nil {
 		t.Fatal(err)
 	}
-	session := connect(t, onTemplate)
+	t.Cleanup(func() {
+		if err := release(context.Background(), "", template); err != nil {
+			t.Error(err)
+		}
+	})
+	session := connect(t, template.OwnerDSN)
 	released := make(chan struct{})
 	go func() {
 		defer close(released)
@@ -31,7 +35,7 @@ func TestACopyWaitsForASessionOnTheTemplateToEnd(t *testing.T) {
 			t.Errorf("closing the session on the template: %v", err)
 		}
 	}()
-	db, err := copyTemplate(t.Context())
+	db, err := copyTemplate(t.Context(), template.Name)
 	<-released
 	if err != nil {
 		t.Fatalf("a copy refused while a session held the template: %v", err)
@@ -43,17 +47,15 @@ func TestACopyWaitsForASessionOnTheTemplateToEnd(t *testing.T) {
 
 // The bench targets keep their corpus: in place, New answers the lane's own
 // database, migrated, and does not drop it when the test ends.
-//
-//testdb:serial sets InPlaceEnv, which every New and For in the process reads
 func TestInPlaceAnswersTheLanesDatabaseAndKeepsIt(t *testing.T) {
-	t.Setenv(InPlaceEnv, "1")
+	t.Parallel()
 	lane, err := databaseName(os.Getenv(ownerDSNEnv))
 	if err != nil {
 		t.Fatal(err)
 	}
 	var name string
 	t.Run("bench", func(t *testing.T) {
-		db := New(t)
+		db := newDatabase(t, true)
 		name = db.Name
 		if isCopy(db.Name) {
 			t.Errorf("in place, New made a copy %s", db.Name)

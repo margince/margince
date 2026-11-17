@@ -87,6 +87,13 @@ var (
 // Otherwise it is a fresh copy, as a second fixture in one test expects.
 func New(t testing.TB) Database {
 	t.Helper()
+	return newDatabase(t, inPlaceRequested())
+}
+
+// newDatabase is New with the mode passed in, so a test can drive the in-place
+// mode without setting the environment every other test reads.
+func newDatabase(t testing.TB, inPlace bool) Database {
+	t.Helper()
 	forMu.Lock()
 	defer forMu.Unlock()
 	databasesMu.Lock()
@@ -94,7 +101,7 @@ func New(t testing.TB) Database {
 	ok = ok && !seeded[db.Name]
 	databasesMu.Unlock()
 	if !ok {
-		db = create(t)
+		db = create(t, inPlace)
 	}
 	databasesMu.Lock()
 	seeded[db.Name] = true
@@ -111,18 +118,20 @@ func For(t testing.TB) Database {
 	if db, ok := lookup(t.Name()); ok {
 		return db
 	}
-	return create(t)
+	return create(t, inPlaceRequested())
 }
+
+func inPlaceRequested() bool { return os.Getenv(InPlaceEnv) == "1" }
 
 // create copies the template for t and drops the copy when t ends, after
 // every pool opened on it is closed.
-func create(t testing.TB) Database {
+func create(t testing.TB, inPlace bool) Database {
 	t.Helper()
 	sweepreach.InstallForTestDatabase()
-	if os.Getenv(InPlaceEnv) == "1" {
-		return inPlace(t)
+	if inPlace {
+		return laneDatabase(t)
 	}
-	db, err := copyTemplate(t.Context())
+	db, err := copyTemplate(t.Context(), os.Getenv(TemplateEnv))
 	if err != nil {
 		t.Fatalf("testdb: %v", err)
 	}
@@ -137,9 +146,9 @@ func create(t testing.TB) Database {
 	return db
 }
 
-// inPlace answers the lane's database itself, brought to head, and keeps it
-// after the test.
-func inPlace(t testing.TB) Database {
+// laneDatabase answers the lane's database itself, brought to head, and keeps
+// it after the test.
+func laneDatabase(t testing.TB) Database {
 	t.Helper()
 	db := Database{OwnerDSN: os.Getenv(ownerDSNEnv), AppDSN: os.Getenv(appDSNEnv)}
 	name, err := databaseName(db.OwnerDSN)
@@ -183,9 +192,8 @@ func isCopy(name string) bool {
 	return live[name]
 }
 
-// copyTemplate makes the next copy of the template and proves it ready.
-func copyTemplate(ctx context.Context) (Database, error) {
-	template := os.Getenv(TemplateEnv)
+// copyTemplate makes the next copy of template and proves it ready.
+func copyTemplate(ctx context.Context, template string) (Database, error) {
 	ownerDSN, appDSN := os.Getenv(ownerDSNEnv), os.Getenv(appDSNEnv)
 	if template == "" || ownerDSN == "" || appDSN == "" {
 		return Database{}, fmt.Errorf("%s, %s and %s must all be set; run the test through `make test-it` (integration tests fail loudly, they never skip)", TemplateEnv, ownerDSNEnv, appDSNEnv)
