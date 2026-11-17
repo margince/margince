@@ -4,7 +4,7 @@ import { formatDate } from "../format/format";
 import type { Locale } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { DEAL_COVERAGE_KEY } from "../lib/activitykeys";
-import { stillHeld } from "../lib/employmentcurrency";
+import { careerDate, stillHeld } from "../lib/employmentcurrency";
 import type { EntityKind } from "../lib/entity";
 import { labelFor } from "../lib/labelfor";
 import { unwrap } from "../lib/problem";
@@ -147,19 +147,6 @@ export function kindLabelFor(
   return labelFor(KIND_LABELS, rel.kind);
 }
 
-// An edge's date in the reader's date style, at the precision it was recorded:
-// a month-only start stays a month rather than gaining a first of the month.
-function edgeDay(
-  value: string,
-  precision: "day" | "month" | undefined,
-  locale: Locale,
-  zone: string,
-): string {
-  return precision === "month"
-    ? value.slice(0, 7)
-    : formatDate(value.slice(0, 10), locale, zone);
-}
-
 export function dateRange(
   rel: Relationship,
   t: (key: MessageKey) => string,
@@ -171,11 +158,13 @@ export function dateRange(
   const unknown =
     rel.kind === "employment" && rel.employment_status === "unknown";
   const held = rel.kind !== "employment" || stillHeld(rel);
+  // A table column, so the numeric, sortable date form.
+  const day = (value: string) => formatDate(value, locale, zone);
   const start = rel.started_at
-    ? edgeDay(rel.started_at, rel.started_precision, locale, zone)
+    ? careerDate(rel.started_at, rel.started_precision, day)
     : "";
   const end = rel.ended_at
-    ? edgeDay(rel.ended_at, rel.ended_precision, locale, zone)
+    ? careerDate(rel.ended_at, rel.ended_precision, day)
     : unknown
       ? ""
       : t(held ? "rel.current" : "rel.former");
