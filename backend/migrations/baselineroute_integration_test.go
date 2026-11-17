@@ -6,9 +6,9 @@
 package migrations_test
 
 // The three ledgers core's baseline meets: an empty one, one that applied
-// every version the baseline replaces, and one that applied only some.
-// scripts/migration-baseline.sh verify proves the schemas match; these prove
-// what the migrator does to each ledger.
+// every version the baseline replaces, and one that applied only some. The
+// verify script proves the schemas match. These prove what the migrator does
+// to each ledger.
 
 import (
 	"context"
@@ -75,9 +75,9 @@ func laterThanBaseline(core dbmigrate.Namespace) int {
 	})
 }
 
-// An empty database takes the baseline, and records every version it replaces
-// under the name and digest of that version's own file, so datatask
-// requirements and the repairs that read applied_at find their rows.
+// An empty database takes the baseline. It records each version the baseline
+// replaces under that version's own name and digest, so datatask requirements
+// and the repairs that read applied_at find their rows.
 func TestAnEmptyDatabaseTakesTheBaselineAndRecordsWhatItReplaces(t *testing.T) {
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)

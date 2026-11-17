@@ -3,11 +3,10 @@
 
 package dbmigrate
 
-// A baseline is one file that builds the schema a run of older versions built,
-// so a new installation applies it instead of replaying them. It never replaces
-// their ledger rows: datatask requirements and the activity repairs read old
-// versions and their applied_at, so a baseline install records every replaced
-// version as well.
+// A baseline is one file that builds the schema a run of older versions built.
+// A new installation applies it instead of replaying them. It still records
+// their ledger rows, because datatask requirements and the activity repairs
+// read old versions and their applied_at.
 
 import (
 	"bufio"
@@ -28,8 +27,8 @@ type Baseline struct {
 
 // Replaced is one version a baseline stands for, with the name and digest a
 // baseline install records for it. They are the old file's own name and Digest,
-// so assertLedgerMatches and assertContentMatches hold on either route, and
-// they are declared rather than read off the file so the file can go later.
+// so the ledger checks hold on either route. They are declared, not read off
+// the file, so the file can go later.
 type Replaced struct {
 	Version string
 	Name    string
@@ -62,10 +61,10 @@ func ParseBaselineManifest(text string) (release string, replaces []Replaced, er
 	return release, replaces, nil
 }
 
-// CheckBaseline refuses a namespace whose baseline does not account for its
-// files exactly: a file below the baseline that it does not list would never
-// run on a new installation, and a listed file whose name or content moved
-// would be recorded as something it is not.
+// CheckBaseline refuses a namespace whose baseline disagrees with its files. A
+// file below the baseline that it does not list would never run on a new
+// installation. A listed file whose name or content moved would be recorded as
+// something it is not.
 func (ns Namespace) CheckBaseline() error {
 	b := ns.Baseline
 	if b == nil {
@@ -98,15 +97,12 @@ func (ns Namespace) CheckBaseline() error {
 	return nil
 }
 
-// settleBaseline puts the baseline in the ledger. An empty ledger gets the
-// baseline applied, with a row for it and for every version it replaces, in one
-// transaction. A ledger holding every replaced version gets the baseline's row
-// alone, and nothing runs. A ledger holding only some is refused: the baseline
-// would run over a partial schema, and the replaced files are kept only until
-// every supported installation is past the baseline.
-//
-// A recorded baseline settles nothing more. A replaced version missing beside
-// it was reverted by Down, and the loop after this applies that file again.
+// settleBaseline puts the baseline in the ledger. An empty ledger gets it
+// applied, with its row and a row per replaced version, in one transaction. A
+// ledger holding every replaced version gets the baseline's row alone. A ledger
+// holding only some is refused, because the baseline would run over a partial
+// schema. A recorded baseline settles nothing: a replaced version missing
+// beside it was reverted by Down, and Up applies that file again.
 func settleBaseline(ctx context.Context, conn *pgx.Conn, ns Namespace, table string, done map[string]LedgerRow) (installed bool, err error) {
 	b := ns.Baseline
 	if _, ok := done[b.Migration.Version]; ok {

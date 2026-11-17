@@ -2,10 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // Command migrate-route migrates the database MARGINCE_OWNER_DSN names along
-// one route, so scripts/migration-baseline.sh can compare what the routes build.
-// `-route baseline` is what `migrate up` does; `-route history` replays every
-// core version instead; `-through V` stops the history at core version V and
-// leaves custom out, which is the schema a baseline for V must build.
+// one route. scripts/migration-baseline.sh compares what the routes build.
+// `-route baseline` is what `migrate up` does. `-route history` replays every
+// core version instead. `-through V` stops the history at core version V and
+// leaves custom out: the schema a baseline for V must build.
 package main
 
 import (

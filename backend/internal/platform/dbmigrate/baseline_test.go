@@ -66,8 +66,8 @@ func TestCheckBaselineAcceptsAManifestThatMatchesItsFiles(t *testing.T) {
 	}
 }
 
-// A replaced file may go once every installation is past the baseline, so a
-// manifest entry with no file beside it is the expected later shape.
+// A replaced file may go once every installation is past the baseline. A
+// manifest entry with no file beside it is that later shape.
 func TestCheckBaselineAcceptsAReplacedVersionWhoseFileIsGone(t *testing.T) {
 	ns := baselineNamespace()
 	ns.Migrations = ns.Migrations[2:]

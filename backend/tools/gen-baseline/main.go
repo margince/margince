@@ -2,13 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // Command gen-baseline writes core's baseline from three pg_dump sections of a
-// database the history built: the up file, and replaces.txt naming the
-// versions it stands for. scripts/migration-baseline.sh generate runs it, and
-// verify proves the result builds what the history builds.
+// database the history built. It writes the up file, and replaces.txt naming
+// the versions it stands for. scripts/migration-baseline.sh generate runs it.
 //
-// A dump is not yet a migration. It names the owner role, it grants to roles a
-// throwaway database lacks, it cannot create a role at all, and its reference
-// rows carry the uuids and clocks of the run that built it. Each rewrite below
+// A dump is not yet a migration. It names the owner role and grants to roles a
+// throwaway database lacks. It cannot create a role at all. Its reference rows
+// carry the uuids and clocks of the run that built it. Each rewrite below
 // answers one of those.
 package main
 
@@ -175,8 +174,8 @@ var (
 )
 
 // schemaSection drops what pg_dump writes about the dump rather than the
-// schema, and returns the privilege statements apart, because they name roles
-// that need not exist. A `--` line is dropped only as part of pg_dump's own
+// schema. It returns the privilege statements apart, because they name roles
+// that need not exist. A `--` line goes only as part of pg_dump's own
 // three-line object header, so a comment inside a function body survives.
 func schemaSection(dump string) (string, []string) {
 	lines := strings.Split(dump, "\n")
@@ -211,11 +210,11 @@ func schemaSection(dump string) (string, []string) {
 }
 
 // restatements are expressions whose stored tree pg_dump cannot print back.
-// Postgres keeps a BETWEEN, or a row compared with IS DISTINCT FROM, as an AND
-// or OR nested inside another, while the text pg_dump prints is parsed into a
-// flat one, so the dump would build a different, if equivalent, expression.
-// Each is put back in the words of the migration that wrote it. A restatement
-// whose dump text is not found stops the generator, so none goes stale.
+// Postgres keeps a `BETWEEN`, or a row compared with `IS DISTINCT FROM`, as one
+// boolean node nested in another. The text pg_dump prints parses into a flat
+// node, which builds an equivalent but different expression. Each is put back
+// in the words of the migration that wrote it. A restatement whose dump text is
+// not found stops the generator, so none goes stale.
 var restatements = []struct{ dumped, source string }{
 	{ // 1790648439_a_working_week_has_a_day_in_it
 		dumped: `CHECK (((work_days IS NULL) OR (((cardinality(work_days) >= 1) AND (cardinality(work_days) <= 7)) AND (work_days <@ ARRAY[(1)::smallint, (2)::smallint, (3)::smallint, (4)::smallint, (5)::smallint, (6)::smallint, (7)::smallint]))))`,
@@ -266,9 +265,9 @@ var (
 )
 
 // referenceRows keeps the INSERTs and turns what the build's run generated
-// back into what generates it: a uuid into uuidv7(), and a timestamp the build
-// wrote into now(). A uuid that occurs twice links two rows, and regenerating
-// it would break the link, so it stops the generator instead.
+// back into what generates it: a uuid into uuidv7(), a build-time timestamp
+// into now(). A uuid that occurs twice links two rows. Regenerating it would
+// break the link, so it stops the generator instead.
 func referenceRows(dump string, since time.Time) (string, error) {
 	var rows []string
 	seen := map[string]bool{}
