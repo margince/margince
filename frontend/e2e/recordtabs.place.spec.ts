@@ -5,6 +5,7 @@ import { mockApi } from "./seed";
 // reader's offset across a change of tab.
 
 const ACCOUNT = "/#/companies/o-brandt";
+const ABOVE = 66;
 
 // A finger on the tab where it stands. Not locator.click(): its own scroll into
 // view moves the pane before the press, which is the offset under test.
@@ -69,6 +70,28 @@ async function placeStrip(pane: Locator, below: number): Promise<number> {
   }, below);
 }
 
+// What the next tab draws, once the press has read the strip. It adds `above`
+// px over the strip and a body long enough for any offset under test.
+function onNextPress(page: Page, { above }: Readonly<{ above: number }>) {
+  return page.evaluate((height) => {
+    const block = (px: number) => {
+      const element = document.createElement("div");
+      element.style.blockSize = `${px}px`;
+      element.style.flex = "none";
+      return element;
+    };
+    document.addEventListener(
+      "click",
+      () => {
+        const pane = document.querySelector(".main > .scroll");
+        pane?.prepend(block(height));
+        pane?.append(block(4000));
+      },
+      { once: true },
+    );
+  }, above);
+}
+
 test.describe("a tab switch on a phone", () => {
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
@@ -85,15 +108,27 @@ test.describe("a tab switch on a phone", () => {
     const offset = await placeStrip(pane, 120);
     expect(offset, "the record is too short to scroll").toBeGreaterThan(0);
 
+    const below = Math.round(await stripBelowVisibleTop(pane));
+
+    // The next tab draws a line above the strip, as a record's newest message
+    // does off its overview.
+    await onNextPress(page, { above: ABOVE });
     await pressInPlace(page, contacts);
     await expect(page).toHaveURL(/#\/companies\/o-brandt\/contacts$/);
     await expect(contacts).toHaveAttribute("aria-pressed", "true");
 
+    // Within a pixel: an offset is fractional on this display.
     await expect
-      .poll(() => pane.evaluate((element) => Math.round(element.scrollTop)), {
-        message: "the pane did not hold the reader's offset across the switch",
-      })
-      .toBe(offset);
+      .poll(
+        async () =>
+          Math.abs(
+            (await pane.evaluate((element) => element.scrollTop)) -
+              (offset + ABOVE),
+          ),
+        { message: "the pane did not keep the strip where the reader left it" },
+      )
+      .toBeLessThanOrEqual(1);
+    expect(await stripBelowVisibleTop(pane)).toBeCloseTo(below, 0);
   });
 
   test("raises the pane just enough to show a strip left above the screen", async ({
@@ -105,6 +140,7 @@ test.describe("a tab switch on a phone", () => {
     expect(await stripBelowVisibleTop(pane)).toBeLessThan(-250);
 
     // A keyboard reader can press a tab the screen no longer shows.
+    await onNextPress(page, { above: 0 });
     await contacts.evaluate((tab) => tab.focus({ preventScroll: true }));
     await page.keyboard.press("Enter");
     await expect(contacts).toHaveAttribute("aria-pressed", "true");

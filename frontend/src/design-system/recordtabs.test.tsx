@@ -304,6 +304,8 @@ function inPane(stripTop: number, { keepPlace = true, offset = 1000 } = {}) {
   let bottom = 10_000;
   let top = offset;
   let arrival: number | null = null;
+  let stripAt = stripTop + offset;
+  let grownAbove = 0;
   const writes: number[] = [];
   let pane: HTMLElement | null = null;
   function Live() {
@@ -315,6 +317,7 @@ function inPane(stripTop: number, { keepPlace = true, offset = 1000 } = {}) {
           value={value}
           onChange={(next) => {
             setValue(next);
+            stripAt += grownAbove;
             if (arrival !== null) {
               bottom = arrival;
               top = Math.min(top, bottom);
@@ -360,8 +363,8 @@ function inPane(stripTop: number, { keepPlace = true, offset = 1000 } = {}) {
   vi.spyOn(pane, "getBoundingClientRect").mockReturnValue(
     new DOMRect(0, 0, 390, 844),
   );
-  vi.spyOn(row, "getBoundingClientRect").mockReturnValue(
-    new DOMRect(0, stripTop, 390, 44),
+  vi.spyOn(row, "getBoundingClientRect").mockImplementation(
+    () => new DOMRect(0, stripAt - top, 390, 44),
   );
   const scrolled = pane;
   return {
@@ -369,6 +372,11 @@ function inPane(stripTop: number, { keepPlace = true, offset = 1000 } = {}) {
     writes,
     scrollTo,
     unmount: view.unmount,
+    stripTop: () => row.getBoundingClientRect().top,
+    // The next tab draws more above the strip: a line under the record's name.
+    growAbove: (height: number) => {
+      grownAbove = height;
+    },
     // The next body arrives short, and the browser pulls the offset up to it.
     arriveShort: (height: number) => {
       arrival = height;
@@ -396,6 +404,14 @@ describe("RecordTabs keeps a record reader's place across a press", () => {
 
     await at.grow();
     expect(at.pane.scrollTop).toBe(1000);
+  });
+
+  it("keeps the strip where it stood when the next tab draws more above it", () => {
+    const at = inPane(120);
+    at.growAbove(66);
+    press("Contacts");
+    expect(at.pane.scrollTop).toBe(1066);
+    expect(at.stripTop()).toBe(120);
   });
 
   it("lets go once the offset has landed", async () => {

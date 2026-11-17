@@ -66,22 +66,35 @@ export function scrollPageToTop(): void {
 }
 
 /**
- * Where the page pane should stand after a press on `strip`. That is where it
- * is, or higher by just enough to show the strip under the top bar.
+ * How far below the top bar `strip` stands in its page pane, and that pane.
+ * A strip above the screen counts as standing right under the bar.
  */
-export function placeAfterTabChange(
+export function stripPlace(
   strip: HTMLElement,
-): { pane: HTMLElement; top: number } | null {
+): { pane: HTMLElement; below: number } | null {
   const pane = strip.closest<HTMLElement>(".scroll");
   if (!pane) return null;
+  const below = strip.getBoundingClientRect().top - visibleTop(pane);
+  return { pane, below: Math.max(0, below) };
+}
+
+/** The pane offset that stands `strip` `below` px under the top bar. */
+export function offsetShowingStrip(
+  pane: HTMLElement,
+  strip: HTMLElement,
+  below: number,
+): number {
+  const shift = strip.getBoundingClientRect().top - visibleTop(pane) - below;
+  return Math.max(0, pane.scrollTop + shift);
+}
+
+function visibleTop(pane: HTMLElement): number {
   // The pane runs up behind the top bar by the bar's height (app/shell.css).
   const underBar = Math.max(
     0,
     -Number.parseFloat(getComputedStyle(pane).marginTop) || 0,
   );
-  const visibleTop = pane.getBoundingClientRect().top + underBar;
-  const above = visibleTop - strip.getBoundingClientRect().top;
-  return { pane, top: pane.scrollTop - Math.max(0, above) };
+  return pane.getBoundingClientRect().top + underBar;
 }
 
 // Motion follows the reader's own setting: a reduced-motion preference makes

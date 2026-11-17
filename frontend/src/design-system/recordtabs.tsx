@@ -19,7 +19,7 @@
 import { ChevronDown } from "lucide-react";
 import { type ReactNode, useEffect, useRef } from "react";
 import { useT } from "../i18n";
-import { placeAfterTabChange } from "../lib/reveal";
+import { offsetShowingStrip, stripPlace } from "../lib/reveal";
 import { seekScrollTop } from "../lib/scrollmemory";
 import { Button, OptionCount } from "./atoms";
 import { OverflowMenu } from "./overflowmenu";
@@ -121,19 +121,22 @@ export function RecordTabs<Option extends string>({
   const rowRef = useRef<HTMLDivElement>(null);
   const pressed = useRef<{
     option: Option;
-    place: { pane: HTMLElement; top: number };
+    place: { pane: HTMLElement; below: number };
   } | null>(null);
-  // After the commit, not at the press: the new body is what can be too short.
+  // After the commit, not at the press. The new tab can change what stands
+  // above the strip, and its body can be too short for the offset.
   useEffect(() => {
     const press = pressed.current;
     pressed.current = null;
-    if (press?.option !== value) return;
-    return seekScrollTop(press.place.pane, press.place.top);
+    const strip = rowRef.current;
+    if (press?.option !== value || !strip) return;
+    const { pane, below } = press.place;
+    return seekScrollTop(pane, offsetShowingStrip(pane, strip, below));
   }, [value]);
   const choose = (option: Option) => {
     const place =
       keepPlace && option !== value && rowRef.current
-        ? placeAfterTabChange(rowRef.current)
+        ? stripPlace(rowRef.current)
         : null;
     pressed.current = place && { option, place };
     onChange?.(option);
