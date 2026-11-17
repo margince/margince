@@ -52064,6 +52064,13 @@ components:
           type: string
           maxLength: 500
           description: 'Where the installation publishes its own privacy information. A subscription question points its reader there, and falls back to `privacy_contact` while this is empty.'
+        archive_purpose:
+          type: string
+          maxLength: 500
+          description: |-
+            Why captured correspondence is kept in the archive after its retention window, as the
+            words that finish the privacy page's sentence about the archive. Empty prints the page's
+            default purpose in the reader's language.
         objection_route:
           type: string
           maxLength: 500
@@ -52117,6 +52124,7 @@ components:
         privacy_contact: {type: string, maxLength: 500}
         objection_route: {type: string, maxLength: 500}
         advertiser_contact: {type: string, maxLength: 500}
+        archive_purpose: {type: string, maxLength: 500}
     ContactMeans:
       type: string
       description: A way of reaching someone that a stated particular must name.

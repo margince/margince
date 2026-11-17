@@ -198,6 +198,13 @@ var (
 		collateralReason:   "controller release: the record's content was erased",
 		cause:              causeControllerRelease,
 	}
+	// aControllerReviewedArchive is a controller deleting archived records
+	// whose purpose has ended. Nothing reaches it on a schedule.
+	aControllerReviewedArchive = erasureAct{
+		approvalWithdrawal: ReleasedSourceWithdrawal,
+		collateralReason:   "archive review: the controller deleted the record's content",
+		cause:              causeArchiveReview,
+	}
 	// aNoiseVerdictHid is the capture sweep destroying mail a noise verdict hid
 	// and nobody brought back within the undo window.
 	aNoiseVerdictHid = erasureAct{

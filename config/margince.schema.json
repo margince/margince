@@ -795,6 +795,9 @@
             "PrivacyPage": {
               "type": "string"
             },
+            "ArchivePurpose": {
+              "type": "string"
+            },
             "Translations": {
               "type": "array",
               "items": {
@@ -817,6 +820,9 @@
                     "type": "string"
                   },
                   "AdvertiserContact": {
+                    "type": "string"
+                  },
+                  "ArchivePurpose": {
                     "type": "string"
                   }
                 }

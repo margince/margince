@@ -46,6 +46,10 @@ type ControllerParticulars struct {
 	// PrivacyPage is where the installation's own privacy information is
 	// published, the link a subscription question points a reader to.
 	PrivacyPage string `yaml:"PrivacyPage"` //nolint:tagliatelle // the saved row spells each field by its Go name
+	// ArchivePurpose is why captured correspondence is kept in the archive
+	// after its retention window. The privacy page names it; empty prints the
+	// page's default purpose.
+	ArchivePurpose string `yaml:"ArchivePurpose"` //nolint:tagliatelle // the saved row spells each field by its Go name
 	// Translations state the same particulars in other languages. A mail in
 	// one of them prints its version where one is stated.
 	Translations []ParticularsTranslation `yaml:"Translations"` //nolint:tagliatelle // the saved row spells each field by its Go name
@@ -61,13 +65,14 @@ type ParticularsTranslation struct {
 	PrivacyContact    string `yaml:"PrivacyContact"`    //nolint:tagliatelle // the saved row spells each field by its Go name
 	ObjectionRoute    string `yaml:"ObjectionRoute"`    //nolint:tagliatelle // the saved row spells each field by its Go name
 	AdvertiserContact string `yaml:"AdvertiserContact"` //nolint:tagliatelle // the saved row spells each field by its Go name
+	ArchivePurpose    string `yaml:"ArchivePurpose"`    //nolint:tagliatelle // the saved row spells each field by its Go name
 }
 
 // asParticulars is the translation's fields alone, with no default text under them.
 func (t ParticularsTranslation) asParticulars() ControllerParticulars {
 	return ControllerParticulars{
 		LegalName: t.LegalName, PostalAddress: t.PostalAddress, PrivacyContact: t.PrivacyContact,
-		ObjectionRoute: t.ObjectionRoute, AdvertiserContact: t.AdvertiserContact,
+		ObjectionRoute: t.ObjectionRoute, AdvertiserContact: t.AdvertiserContact, ArchivePurpose: t.ArchivePurpose,
 	}
 }
 
@@ -98,6 +103,7 @@ func (p ControllerParticulars) In(language string) ControllerParticulars {
 		{&out.PrivacyContact, t.PrivacyContact},
 		{&out.ObjectionRoute, t.ObjectionRoute},
 		{&out.AdvertiserContact, t.AdvertiserContact},
+		{&out.ArchivePurpose, t.ArchivePurpose},
 	} {
 		if strings.TrimSpace(f.from) != "" {
 			*f.into = f.from
@@ -120,7 +126,8 @@ const particularsFieldCap = 500
 func (p ControllerParticulars) IsZero() bool {
 	return p.LegalName == "" && p.PostalAddress == "" &&
 		p.PrivacyContact == "" && p.ObjectionRoute == "" &&
-		p.AdvertiserContact == "" && p.PrivacyPage == "" && len(p.Translations) == 0
+		p.AdvertiserContact == "" && p.PrivacyPage == "" && p.ArchivePurpose == "" &&
+		len(p.Translations) == 0
 }
 
 // ControllerIdentity is the installation's own particulars. MachineryApplied: a
@@ -187,6 +194,8 @@ func particularFields(p ControllerParticulars, language string) []particularFiel
 		{name("advertiser_contact"), p.AdvertiserContact, messagingrules.AdvertiserContact},
 		// No disclosure kind: the page is linked, never printed as a particular.
 		{name("privacy_page"), p.PrivacyPage, ""},
+		// No disclosure kind: only the privacy page prints it.
+		{name("archive_purpose"), p.ArchivePurpose, ""},
 	}
 }
 

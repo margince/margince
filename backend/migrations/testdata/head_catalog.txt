@@ -1949,7 +1949,7 @@ BEGIN
 END;
 
 public.audit_log_pkey CREATE UNIQUE INDEX audit_log_pkey ON public.audit_log USING btree (id)
-public.audit_privacy_reason_codes() secdef=false cfg=- acl=- SELECT ARRAY['retention','test','dsr_request','restriction_expired','the website lead could not be sent its privacy notice','subject_data_removed','legal hold ended: the postponed content erasure was completed','retention: the record''s content was erased','controller release: the record''s content was erased','noise disposition: the content of the message was erased']::text[]
+public.audit_privacy_reason_codes() secdef=false cfg=- acl=- SELECT ARRAY['retention','test','dsr_request','restriction_expired','the website lead could not be sent its privacy notice','subject_data_removed','legal hold ended: the postponed content erasure was completed','retention: the record''s content was erased','controller release: the record''s content was erased','noise disposition: the content of the message was erased','archive review: the controller deleted the record''s content']::text[]
 public.audit_redacted_evidence(certificate boolean, payload jsonb, verb text) secdef=false cfg=- acl=- DECLARE
   kept jsonb := '{"redacted":true}'::jsonb;
   field text;

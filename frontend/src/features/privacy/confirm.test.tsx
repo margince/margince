@@ -386,8 +386,9 @@ describe("a privacy notice discloses who answers, why, what, to whom and for how
     expect(
       screen.getByText(
         "Emails, meetings and calls with you: kept for 3 years from when they were recorded, " +
-          "then moved to an archive with restricted access. They are deleted only when you ask " +
-          "or when your record is deleted.",
+          "then moved to an archive with restricted access to answer legal claims and keep " +
+          "business records. They are deleted when they are no longer needed for this purpose, " +
+          "when you ask, or when your record is deleted.",
       ),
     ).toBeInTheDocument();
     expect(
