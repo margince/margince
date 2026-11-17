@@ -1707,7 +1707,7 @@
   "record.moreActions": "More actions",
   "share.access.read": "Read",
   "share.access.write": "Write",
-  "merge.confirm": "Merge {source} into {target}? This archives {source}.",
+  "merge.confirm": "Merge {source} into {target}? The record you keep takes over the history, tasks, tags and links of the other, and fills its empty fields from it. The other is archived. A merge cannot be undone.",
   "merge.recordDetail": "{name} ({detail})",
   "merge.done": "{source} was merged into {target}.",
   "merge.submit": "Merge",

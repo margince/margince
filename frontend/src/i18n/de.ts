@@ -3266,7 +3266,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "merge.searchPlaceholder": "Suchen…",
   "merge.pickTarget": "Datensatz auswählen, der bleibt",
   "merge.confirm":
-    "{source} mit {target} zusammenführen? {source} wird dabei archiviert.",
+    "{source} mit {target} zusammenführen? Der Datensatz, der bleibt, übernimmt Verlauf, Aufgaben, Tags und Verknüpfungen des anderen und füllt seine leeren Felder daraus. Der andere wird archiviert. Das Zusammenführen lässt sich nicht rückgängig machen.",
   "merge.recordDetail": "{name} ({detail})",
   "merge.done": "{source} wurde in {target} zusammengeführt.",
   "merge.targetReadOnly":

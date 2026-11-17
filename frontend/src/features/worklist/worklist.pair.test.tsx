@@ -168,7 +168,7 @@ describe("deciding a duplicate pair on the row", () => {
     const dialog = await screen.findByRole("dialog");
     expect(
       within(dialog).getByText(
-        "Merge Acme GmbH (acme.de) into ACME Gmbh (acme.de)? This archives Acme GmbH (acme.de).",
+        "Merge Acme GmbH (acme.de) into ACME Gmbh (acme.de)? The record you keep takes over the history, tasks, tags and links of the other, and fills its empty fields from it. The other is archived. A merge cannot be undone.",
       ),
     ).toBeTruthy();
     await confirmMerge(user);

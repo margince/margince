@@ -3172,7 +3172,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "merge.searchPlaceholder": "Tìm kiếm…",
   "merge.pickTarget": "Chọn hồ sơ giữ lại",
   "merge.confirm":
-    "Gộp {source} vào {target}? Thao tác này sẽ chuyển {source} vào kho lưu trữ.",
+    "Gộp {source} vào {target}? Hồ sơ được giữ lại sẽ nhận lịch sử, việc cần làm, thẻ và liên kết của hồ sơ kia, đồng thời điền các trường còn trống từ đó. Hồ sơ kia sẽ được chuyển vào kho lưu trữ. Không thể hoàn tác việc gộp.",
   "merge.recordDetail": "{name} ({detail})",
   "merge.done": "Đã gộp {source} vào {target}.",
   "merge.targetReadOnly":

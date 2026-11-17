@@ -3170,7 +3170,8 @@ export const en = {
   "merge.company": "Merge company",
   "merge.searchPlaceholder": "Search…",
   "merge.pickTarget": "Select record to keep",
-  "merge.confirm": "Merge {source} into {target}? This archives {source}.",
+  "merge.confirm":
+    "Merge {source} into {target}? The record you keep takes over the history, tasks, tags and links of the other, and fills its empty fields from it. The other is archived. A merge cannot be undone.",
   // A record's name with its detail line, so two look-alike names stay apart.
   "merge.recordDetail": "{name} ({detail})",
   "merge.done": "{source} was merged into {target}.",
