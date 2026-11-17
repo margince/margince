@@ -38,9 +38,8 @@ var consentOnlyCountry struct {
 func placeUnderConsentOnly(t *testing.T, e *resolveEnv) {
 	t.Helper()
 	consentOnlyCountry.once.Do(func() {
-		consentOnlyCountry.code = testJurisdiction(t)
-		messagingrules.Register(messagingrules.Rules{
-			Jurisdiction: consentOnlyCountry.code, Version: 1, ConsentOnly: true,
+		consentOnlyCountry.code = testMessagingRules(t, messagingrules.Rules{
+			Version: 1, ConsentOnly: true,
 			DataProtectionFollowsRecipient: true, DisclosureLanguage: string(mailcopy.Vietnamese),
 			NoLegitimateInterests: true, ConsentConfirmationNeedsRequest: true,
 			ConsentRequestFirstFor: messaging.AdvertisingPurposeClasses(),
@@ -61,9 +60,8 @@ var everyClassCountry struct {
 func TestNoConsentRequestIsOfferedThatTheMintWouldRefuse(t *testing.T) {
 	e := setupResolve(t)
 	everyClassCountry.once.Do(func() {
-		everyClassCountry.code = testJurisdiction(t)
-		messagingrules.Register(messagingrules.Rules{
-			Jurisdiction: everyClassCountry.code, Version: 1, ConsentOnly: true,
+		everyClassCountry.code = testMessagingRules(t, messagingrules.Rules{
+			Version: 1, ConsentOnly: true,
 			NoLegitimateInterests: true, ConsentConfirmationNeedsRequest: true,
 		})
 	})
