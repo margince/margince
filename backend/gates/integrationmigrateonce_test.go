@@ -6,11 +6,10 @@
 package gates
 
 // No file the integration lane compiles migrates the schema itself. A test
-// takes a copy of the migrated template (testdb.New); one that instead runs its
-// own DROP SCHEMA + dbmigrate.Up costs orders of magnitude more than the copy. The obligation is module-wide,
-// so the walk is: a gate that judges one subtree also claims, silently, that
-// the subtree is where the obligated code lives, and that second claim is the
-// one nothing checks.
+// takes a copy of the migrated template (testdb.New). Its own DROP SCHEMA and
+// dbmigrate.Up would cost orders of magnitude more than the copy. The walk
+// covers the whole module. A gate that judges one subtree claims that the
+// subtree holds the obligated code, and nothing checks that claim.
 //
 // Every file the lane COMPILES is judged, not only the _test.go ones: a shared
 // fixture that moves into a build-tagged non-test file so sibling packages can

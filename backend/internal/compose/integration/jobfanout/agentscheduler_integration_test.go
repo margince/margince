@@ -63,8 +63,7 @@ func failRunnerJobWrites(t *testing.T, owner *pgx.Conn) {
 		t.Fatalf("creating the fault-injection function: %v", err)
 	}
 	// Every write, not one tenant's: the table carries no workspace to key a
-	// WHEN clause on (ADR-0091 §8 phase D), and the pass under test is the
-	// installation's only one. The test's own database bounds its blast radius.
+	// `WHEN` clause on. The test's own database bounds its blast radius.
 	if _, err := owner.Exec(ctx, `
 		CREATE TRIGGER runner_job_write_fault_trigger
 		BEFORE INSERT OR UPDATE ON runner_job

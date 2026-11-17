@@ -711,12 +711,6 @@ func TestAnUndatedNextStepCarriesNoDeadline(t *testing.T) {
 
 // A deadline on a day that is not 24 hours long still means that day.
 //
-// The instant was built by adding a day and taking a second back, which is
-// wrong exactly twice a year: on Europe/Berlin's spring-forward day the local
-// day is 23 hours, so the arithmetic landed at 00:59 the NEXT morning and a
-// task due the 29th was due the 30th. The autumn day is 25 hours and it landed
-// an hour early.
-//
 // Both boundaries, because they fail in opposite directions and a fix for one
 // can leave the other.
 func TestADeadlineOnADaylightSavingBoundaryStaysOnItsOwnDay(t *testing.T) {
@@ -882,10 +876,6 @@ func attributedReply(t *testing.T, owner, promiser string, confidence float64) s
 
 // A FIRST NAME is not a colleague. It is consistent with one, and with anybody
 // else who shares it, and a writer cannot tell which from the string.
-//
-// The near-miss is the dangerous shape: a substring search finds exactly one
-// row, so a resolver that took its first candidate would hand the work out
-// confidently and wrongly. Only an exact name or email resolves.
 func TestAFirstNameAloneDoesNotResolveToAColleague(t *testing.T) {
 	t.Parallel()
 	e := setupTranscript(t)
@@ -955,14 +945,6 @@ func (b erasingBrain) Complete(context.Context, model.Request) (model.Response, 
 
 // The reading comes back to a transcript that no longer exists, and stages
 // nothing.
-//
-// Before the interlock it staged its proposals anyway — each quoting up to 500
-// characters of a body the erasure had just nulled and certified destroyed —
-// and only then discovered its own record was gone. Nothing revisits those
-// rows: the erasure set archived_at so the retention selector can never pick
-// the activity up, the body is NULL so the transcript selector cannot either,
-// and a subject-only activity is redacted by no other contact's erasure. The
-// quotations stayed in the approvals inbox permanently.
 //
 // It is not an error the job should retry, either: asking the same question of
 // a transcript that is gone gets the same answer.

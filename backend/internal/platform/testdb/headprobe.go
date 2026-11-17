@@ -221,11 +221,9 @@ func probedTables(ctx context.Context, owner *pgx.Conn) ([]probedTable, error) {
 // rowRuleRefusal names the relations whose rows a row-level rule can hide from
 // this probe, and is a refusal rather than a note.
 //
-// EXISTS over a table with row-level security enabled answers about the ROLE
-// running the query: a role that bypasses RLS is shown every row, one that does
-// not is shown only what the policies admit, and under FORCE not even the owner
-// is exempt. The same template then reads empty to one lane and populated to
-// the next. A relation the probe cannot ask about the table itself is one it
+// EXISTS over a table with row-level security answers about the role running
+// the query, not about the table. Under FORCE not even the owner is exempt.
+// The same template then reads empty to one lane and populated to the next. A relation the probe cannot ask about the table itself is one it
 // declines to vouch for.
 func rowRuleRefusal(tables []probedTable) string {
 	var filtered []string

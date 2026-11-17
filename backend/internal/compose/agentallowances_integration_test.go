@@ -43,9 +43,6 @@ func patchAllowances(ctx context.Context, t *testing.T, h installationSettingsHa
 	return rec.Code, out.AgentAllowances
 }
 
-const defaultAgentAllowances = `{"agent_writes_per_window":200,` +
-	`"agent_egress_per_window":20,"agent_calls_per_window":1000,"agent_window_hours":24}`
-
 // allowanceHandlers builds the surface on a store whose clock reads now().
 func allowanceHandlers(e *integration.Env, now func() time.Time) installationSettingsHandlers {
 	store := identity.NewInstallationSettings(e.DB(), NewSettingsStore(e.Pool), StoredConfig(e.Pool)).WithClock(now)

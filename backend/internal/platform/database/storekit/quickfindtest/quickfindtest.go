@@ -94,6 +94,7 @@ func AssertIndexed(t *testing.T, table, nameExpr, index string, id storekit.Iden
 // planConn connects to the test database at head, closed when the test ends.
 func planConn(ctx context.Context, t *testing.T) *pgx.Conn {
 	t.Helper()
+	//nolint:contextcheck // the test's database lives as long as t, not as long as ctx
 	conn, err := pgx.Connect(ctx, testdb.For(t).OwnerDSN)
 	if err != nil {
 		t.Fatalf("connecting to the test database: %v", err)

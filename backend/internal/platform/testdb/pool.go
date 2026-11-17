@@ -20,10 +20,10 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 )
 
-// This file hands out pools sized to the lane's connection budget. How many
-// connections the server has is the lane's arithmetic, declared in
-// scripts/lib-testdb.sh and checked against docker-compose.dev.yml; this file's
-// part is the ceiling it is handed (see PoolMaxConnsEnv).
+// This file hands out pools sized to the lane's connection budget. The budget
+// is declared in scripts/lib-testdb.sh and checked against
+// docker-compose.dev.yml. This file applies the ceiling it is handed
+// (PoolMaxConnsEnv).
 
 // ErrSchemaNotReady is returned when a pool is asked for before EnsureSchema has
 // migrated the database.
@@ -116,8 +116,8 @@ func poolParams() (map[string]string, error) {
 // callers must not close it.
 //
 // A pooled connection caches its statements, as a cmd/api connection does. A
-// test's database is at head before any pool opens on it, and a rebuilt one is
-// refused here until EnsureSchema has run, so no connection predates a schema
+// test's database is at head before any pool opens on it. A rebuilt one is
+// refused here until EnsureSchema has run. So no connection predates a schema
 // change. A suite that drops the schema while this pool is live gets XX000
 // "cache lookup failed for type N", so it opens an OwnPool instead.
 func Pool(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
@@ -183,12 +183,11 @@ func closePoolsOn(name string) {
 // lane's own arithmetic read green. The budget was a measured high-water mark
 // rather than a ceiling, and this is what makes it the second thing.
 //
-// It is NOT memoized, which is the whole reason a caller asks for it: two calls
-// answer two pools, and closing one does not affect the other. The caller closes
-// it — nothing here will.
+// It is not memoized, which is why a caller asks for it: two calls answer two
+// pools, and closing one leaves the other open. The caller closes it.
 //
-// It does not carry Pool's ErrSchemaNotReady check: an owned pool lives only as
-// long as its test, so it cannot be open across a rebuild it did not cause.
+// It does not carry Pool's ErrSchemaNotReady check. An owned pool lives only as
+// long as its test, so no rebuild happens while it is open.
 func OwnPool(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
 	return OwnPoolWith(ctx, dsn, nil)
 }

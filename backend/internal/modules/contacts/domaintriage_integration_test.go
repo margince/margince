@@ -22,9 +22,6 @@ import (
 
 // openTriage puts a domain in the state the ensure ladder leaves it: the contact
 // exists, the company question is open, and no company row was invented.
-//
-// Only the FIRST sender on a domain reports TriagePending — the question is
-// opened once and one crawl answers it, however many colleagues write in.
 func (e *dedupeEnv) openTriage(ctx context.Context, t *testing.T, email, display, domain string) EnsureCounterpartyResult {
 	t.Helper()
 	res, err := e.store.EnsureCounterparty(ctx, e.ensureInput(ctx, t, email, display, domain))
@@ -677,11 +674,8 @@ func TestTheBlockedDomainListShowsWhatDecidedEachRefusal(t *testing.T) {
 	}
 }
 
-// Re-opening a domain stamps the human who is ANSWERABLE for it, and stamps
-// nobody when there is nobody. owner_id has a foreign key to app_user, so a
-// forged zero would fail the constraint rather than record "unknown" — and a
-// domain with no owner is one triage may not mint rows for, which is the state
-// a machine suppression leaves behind.
+// Re-opening a domain stamps the human answerable for it, and nobody when there
+// is nobody. owner_id has a foreign key to app_user, so a forged zero would fail.
 func TestUnblockingStampsTheHumanAnswerableForTheDomain(t *testing.T) {
 	t.Parallel()
 	e := setupDedupe(t)
@@ -879,11 +873,8 @@ func TestReopeningAnswersWithAStandingTheContractPublishes(t *testing.T) {
 	}
 }
 
-// A SETTLED domain is not an open question, however little it says about its
-// admission. settleDisposition never writes that column, so a domain answered
-// personal, provider or no_site carries NULL there exactly as an unjudged one
-// does — and re-asking about it would spend an attempt on a question that has
-// an answer, while the underlying guard silently matched no row at all.
+// A settled domain is not an open question, though settleDisposition leaves its
+// admission NULL. Re-asking would spend an attempt on a question with an answer.
 func TestReopeningRefusesADomainAlreadySettled(t *testing.T) {
 	t.Parallel()
 	e := setupDedupe(t)
@@ -960,9 +951,6 @@ func TestReopeningStampsTheHumanAnswerableForTheDomain(t *testing.T) {
 
 // A dossier already bound to another company refuses a second bind, rather
 // than leaving the caller holding a read that describes somebody else.
-//
-// The bind guards on `company_id IS NULL`, and the decline was silent: the
-// caller was told it owned a dossier that names a different company.
 func TestADossierBoundElsewhereRefusesASecondBind(t *testing.T) {
 	t.Parallel()
 	e := setupDedupe(t)

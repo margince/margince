@@ -27,6 +27,7 @@ package integration
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"slices"
 	"testing"
 	"time"
@@ -80,9 +81,8 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		`{"record_type":"company","fields":{"display_name":"Conformance GmbH"}}`)
 	lead := createThroughTheToolSurface(ctx, t, registry,
 		`{"record_type":"lead","fields":{"email":"lead@conformance.example"}}`)
-	deal := createThroughTheToolSurface(ctx, t, registry,
-		`{"record_type":"deal","fields":{"name":"Conformance renewal","pipeline_id":"`+
-			pipeline.String()+`","stage_id":"`+open.String()+`"}}`)
+	deal := createThroughTheToolSurface(ctx, t, registry, fmt.Sprintf(
+		`{"record_type":"deal","fields":{"name":"Conformance renewal","pipeline_id":%q,"stage_id":%q}}`, pipeline, open))
 	activity := createThroughTheToolSurface(ctx, t, registry,
 		`{"record_type":"activity","fields":{"kind":"note","body":"to be relinked"}}`)
 	// The vocabulary half: coined here so update_tag below has a word to rename.

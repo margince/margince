@@ -123,8 +123,8 @@ func TestReleaseGuardIsInertOnAnUnbootstrappedInstallation(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	// A copy of the migrated template with no fixture seeded: the genuine
-	// pre-bootstrap state, workspace included.
+	// A copy of the migrated template with no fixture seeded is the
+	// pre-bootstrap state, with no workspace.
 	pool, err := testdb.Pool(ctx, testdb.New(t).AppDSN)
 	if err != nil {
 		t.Fatal(err)
