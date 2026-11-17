@@ -9,7 +9,6 @@ import { useCanWrite } from "../../lib/capability";
 import { useCompanyZone } from "../../lib/companyzone";
 import { usePipelines } from "../../lib/pipelines.queries";
 import { problemCodeOf } from "../../lib/problem";
-import { navigate } from "../../lib/router";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import {
   customInterval,
@@ -300,9 +299,9 @@ function OverviewBody({
                 <SaveReportingDialog
                   selection={evaluation.selection}
                   onClose={() => setSaving(false)}
-                  onSaved={(report) => {
+                  onSaved={(report, from) => {
                     setSaving(false);
-                    navigate({
+                    from.navigate({
                       screen: "analytics",
                       id: "reports",
                       id2: report.id,

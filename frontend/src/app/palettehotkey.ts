@@ -4,6 +4,7 @@
 import { useCallback, useState } from "react";
 import { liveDialogs } from "../design-system/dialogfocus";
 import { screenEnabled, useDisabledCoreFeatures } from "../lib/corefeatures";
+import { useClosesWithPage } from "../lib/pageleave";
 import { navigateReplacing, type Route } from "../lib/router";
 import { useShortcutHandler } from "../lib/shortcuts";
 import { currentParams } from "../lib/urlstate";
@@ -60,5 +61,6 @@ export function useCommandPalette(route: Route) {
   }, []);
   const hide = useCallback(() => setOpen(false), []);
   usePaletteShortcuts(open === true, show, hide, route);
+  useClosesWithPage({ open: open === true, close: hide });
   return { open, mode, show, hide };
 }

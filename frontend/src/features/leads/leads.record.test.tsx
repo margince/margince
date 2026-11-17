@@ -7,6 +7,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
 import { translate } from "../../i18n";
 import { leadKey } from "../../lib/leadkeys";
+import { ACTION_PARAM, QUALIFY_ACTION } from "../../lib/leads.address";
+import { replaceDial } from "../../lib/urlstate";
 import {
   changeChoice,
   openChoiceDialog,
@@ -810,6 +812,26 @@ describe("LeadScreen — arriving to qualify", () => {
     stubFetch(async () => jsonResponse(lead));
     window.location.hash = "#/leads/l-1?action=qualify";
     render(<LeadScreen id="l-1" />);
+    expect(
+      await screen.findByRole("dialog", { name: /^Qualify / }),
+    ).toBeTruthy();
+  });
+
+  it("takes the ask out of the address when the reader closes it", async () => {
+    stubFetch(async () => jsonResponse(lead));
+    window.location.hash = "#/leads/l-1?action=qualify";
+    render(<LeadScreen id="l-1" />);
+    await screen.findByText("Evidence note (optional)");
+    const dialog = screen.getByRole("dialog", { name: /^Qualify / });
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "Close" }),
+    );
+    expect(window.location.hash).toBe("#/leads/l-1");
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog", { name: /^Qualify / })).toBeNull(),
+    );
+    // An entry that still carries the ask, reached by Back or Forward.
+    act(() => replaceDial(ACTION_PARAM, QUALIFY_ACTION));
     expect(
       await screen.findByRole("dialog", { name: /^Qualify / }),
     ).toBeTruthy();
