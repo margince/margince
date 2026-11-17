@@ -68,3 +68,20 @@ export function WaitingEmailLine({
     />
   );
 }
+
+/**
+ * The email a promise was read out of, drawn under the promise as the reason
+ * it waits. Null on every other row, and where nothing can open the message.
+ */
+export function PromiseEmailLine({
+  item,
+  onOpen,
+}: Readonly<{
+  item: WorklistItem;
+  onOpen: ((activityId: string) => void) | undefined;
+}>) {
+  if (item.source !== "task" || !onOpen) {
+    return null;
+  }
+  return <WaitingEmailLine item={item} onOpen={onOpen} />;
+}

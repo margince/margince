@@ -125,6 +125,9 @@ type ranked struct {
 	// reminded says the row is a task of the reader's whose reminder came due.
 	// It sorts at the pin level for the same reason, and means what it meant.
 	reminded bool
+	// pulledForward says a later task stands in today's work because its
+	// follow-up reminder is due now. Its window's count still holds it.
+	pulledForward bool
 	// uncrowdable exempts the row from crowding: the reader's own meeting,
 	// within meetingHorizon, that they have not confirmed they are ready for.
 	uncrowdable bool

@@ -223,16 +223,16 @@ by who made it.
 - A promise in private mail stays with the owner of that mail. Its task is visible to its holder alone.
 - In an email, only the words the sender wrote count, not text quoted from earlier mail.
 - The task has a due date only when the conversation named a day. If not, it waits in today's list with **No due date**.
-- Marking the task **Done** marks the promise kept, and the other way round. Opening the task again
-  leaves the promise kept.
-- A task you archived, a proposal you refused and a customer promise you dismissed do not come back
-  when Margince reads the conversation again.
+- Marking the task **Done** marks the promise kept, and the other way round. Opening the task again leaves the promise kept.
+- A task you archived, a proposal you refused and a customer promise you dismissed do not come back when Margince reads the conversation again.
 
 When Margince reads old mail, it checks newer messages before it creates work. Work already done and offers to help create no new task. Neither does work that depends on something which has not happened yet. A request alone does not mean someone agreed to do it. **Commitment review** on the source shows why no task was made. Words such as "next week" set no due day; "this week" sets the last day the promiser works that week.
 
 A future deadline can keep an old promise current. If later context has not been read, Margince does not create the task. Check the quoted words and any later replies before adding a follow-up from the linked record. A task linked to the contact follows the automatic rule above, with **Undo**.
 
 A later reply on the promise's thread may keep a promise that rule did not close, such as a colleague's reply. Margince then asks **This may be done**, naming the day the email went out. Home, the Worklist, the contact page and the company page ask the same question. While they ask, the task is not shown as overdue. Choose **Done** or **Not yet**. **Not yet** shows the task as before on every page, until someone writes on the thread again.
+
+When nobody answered the email a promise came from, Home and the Worklist show one item. The promise names it, and the email shows under it with **Draft follow-up** and **Done**. **Done** finishes the task and ends the reminder for that email. Another email to the same contact or company stays its own item. The item stays in today's list while the email waits for an answer, even when the task is due later. Snoozing the task moves only its due date.
 
 Also called: action items, follow-ups from a meeting, commitments in an email.
 
