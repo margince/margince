@@ -207,7 +207,9 @@ function DomainReviewRow({ row }: Readonly<{ row: DomainQuestion }>) {
         {suggestion && (
           <SettingRow
             label={suggestion.name}
-            description={`${suggestionBasis(t, suggestion)} ${confirmEffect(
+            description={`${t("worklist.domainQuestion.suggested", {
+              name: suggestion.name,
+            })} ${suggestionBasis(t, suggestion)} ${confirmEffect(
               { t, plural, locale },
               row.domain,
               suggestion.name,

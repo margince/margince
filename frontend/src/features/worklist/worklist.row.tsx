@@ -367,16 +367,7 @@ export function WorklistRow({
             equals={answer.equals}
             onReview={onReview}
             context={context}
-            menu={
-              answer.menu ? (
-                <>
-                  {menu}
-                  {answer.menu}
-                </>
-              ) : (
-                menu
-              )
-            }
+            menu={joinedMenu(menu, answer.menu)}
             framed={framed}
             titled={titleLinks(emailOpener, href, source.open)}
           />
@@ -389,6 +380,17 @@ export function WorklistRow({
         {source.drawer}
       </PutDownByThumb>
     </PanelRow>
+  );
+}
+
+// The surface's menu lines first, then the lane's rarer answers.
+function joinedMenu(surface: ReactNode, lane: ReactNode): ReactNode {
+  if (!lane) return surface;
+  return (
+    <>
+      {surface}
+      {lane}
+    </>
   );
 }
 

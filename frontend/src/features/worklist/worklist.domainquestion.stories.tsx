@@ -11,7 +11,10 @@ import {
   jsonResponse,
   StoryProviders,
 } from "../../testing/story-utils";
-import { DomainQuestionAnswer } from "./worklist.domainquestion";
+import {
+  DomainQuestionAnswer,
+  DomainQuestionMenu,
+} from "./worklist.domainquestion";
 import type { WorklistItem } from "./worklist.queries";
 // The row's own line. `.worklist-row-acts` carries the trailing alignment and
 // the interval between the two answers; without it they draw as a bare inline
@@ -109,6 +112,10 @@ function line(item: WorklistItem, stub: () => void) {
               <p className="t-caption">{item.detail}</p>
               <div className="worklist-row-acts">
                 <DomainQuestionAnswer item={item} />
+              </div>
+              <p className="t-caption">In the row menu:</p>
+              <div className="worklist-row-acts">
+                <DomainQuestionMenu item={item} />
               </div>
             </PanelBody>
           </Panel>
@@ -252,12 +259,7 @@ export const ARedirectWithASuggestedCompany: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
-      await canvas.findByRole("button", { name: "Confirm company" }),
-    ).toBeVisible();
-    await expect(
-      canvas.getByText(
-        /Confirming links alias.example to Example Company and gives 2 contacts/,
-      ),
+      await canvas.findByRole("button", { name: "Confirm Example Company" }),
     ).toBeVisible();
     await expect(
       canvas.queryByRole("button", { name: "Create company" }),
