@@ -6,7 +6,9 @@ package inquiries
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -42,7 +44,11 @@ func TestWebFormFencesOverOnePoolShareOneSessionBudget(t *testing.T) {
 }
 
 func TestAFenceWaitsOutABusyLeaseBeforeItRefuses(t *testing.T) {
-	noPause := func(context.Context) error { return nil }
+	var priors []int
+	noPause := func(_ context.Context, prior int) error {
+		priors = append(priors, prior)
+		return nil
+	}
 	busyThen := func(busy int, tries *int) func(*bool) error {
 		return func(ran *bool) error {
 			*tries++
@@ -57,6 +63,9 @@ func TestAFenceWaitsOutABusyLeaseBeforeItRefuses(t *testing.T) {
 	tries := 0
 	if err := awaitLease(t.Context(), 5, noPause, busyThen(2, &tries)); err != nil || tries != 3 {
 		t.Errorf("a lease freed on the third try: err=%v after %d tries, want the work run", err, tries)
+	}
+	if !slices.Equal(priors, []int{0, 1}) {
+		t.Errorf("the waits were told %v busy tries before them, want [0 1] so each wait grows", priors)
 	}
 	tries = 0
 	if err := awaitLease(t.Context(), 3, noPause, busyThen(10, &tries)); !errors.Is(err, webforms.ErrHandlingBusy) || tries != 3 {
@@ -76,8 +85,22 @@ func TestAFenceWaitsOutABusyLeaseBeforeItRefuses(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
 	tries = 0
-	pause := func(ctx context.Context) error { return ctx.Err() }
+	pause := func(ctx context.Context, _ int) error { return ctx.Err() }
 	if err := awaitLease(ctx, 5, pause, busyThen(10, &tries)); !errors.Is(err, context.Canceled) || tries != 1 {
 		t.Errorf("a caller that gave up: err=%v after %d tries, want its own cancellation", err, tries)
+	}
+}
+
+func TestAFenceTriesABusyLeaseFarLessOftenThanEveryPollWithinItsPatience(t *testing.T) {
+	var waited time.Duration
+	attempts := busyAttempts()
+	for prior := range attempts - 1 {
+		waited += min(busyFirstWait<<prior, busyMaxWait)
+	}
+	if waited > busyPatience || waited+busyMaxWait <= busyPatience {
+		t.Errorf("%d tries wait %v in all, want the last wait to end within %v of the patience %v", attempts, waited, busyMaxWait, busyPatience)
+	}
+	if attempts > 20 {
+		t.Errorf("a busy lease is tried %d times in %v, want at most 20 lock queries per waiting caller", attempts, busyPatience)
 	}
 }
