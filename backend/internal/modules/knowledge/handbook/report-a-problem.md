@@ -11,6 +11,10 @@ You do not need a GitHub account, and nothing you write is posted as it stands.
 To report a problem in Margince, open the account menu, choose **Help and feedback**, then **Report a problem**. It opens the public form for problems, with your release filled in. **Request a feature** opens the form for a feature you miss. Without a GitHub account, mail **bugs@gradion.com** instead.
 Also called: send a problem, error report, feature request, contact support, help menu.
 
+### Which version of Margince do I have?
+To see which version of Margince you are on, open the account menu, choose **Help and feedback**, then **About Margince**. The copy button copies the version and commit in one line, to paste into your report. **About Margince** is also a page in Settings, in the **System** group.
+Also called: version, build, commit, release number.
+
 ### How do I ask for a new feature?
 To ask for a new feature in Margince, open the account menu, choose **Help and feedback**, then **Request a feature**. It opens the public form for a feature you miss.
 Also called: feature request, suggest a feature, missing feature.
