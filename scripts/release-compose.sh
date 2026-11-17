@@ -17,7 +17,7 @@
 #
 # WHAT IT READS: its arguments and the files above. No git, no network.
 #
-# --local writes the same folder unpacked, naming the images `make production`
+# --local writes the same folder unpacked, naming the images `make prod`
 # built from a checkout (margince-local/<role>:<tag>) instead of a release's digests.
 #
 # Usage: bash scripts/release-compose.sh v1.0.0 dist/release/images.txt dist/release

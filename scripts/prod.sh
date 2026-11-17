@@ -2,15 +2,15 @@
 # Run this checkout the way a customer runs a release: production mode, through
 # the Docker Compose folder a release ships, with the images built from here.
 #
-#   scripts/production.sh up            build the images, then start the stack
-#   scripts/production.sh stop [--drop] stop it; --drop also deletes its data
+#   scripts/prod.sh up            build the images, then start the stack
+#   scripts/prod.sh stop [--drop] stop it; --drop also deletes its data
 #
 # It is not `make dev`. Production mode holds every check a real install holds
 # and starts the 14-day trial when no license token is set. The stack keeps its
 # data and settings under .tmp/production/ between runs. .env there is written
 # once, with new secrets; put MARGINCE_LICENSE in it to end the trial.
 #
-# PRODUCTION_PORT picks the port on this machine (8090 by default, apart from the
+# PROD_PORT picks the port on this machine (8090 by default, apart from the
 # dev stack's 8080). The stack listens on 127.0.0.1 only and serves plain HTTP,
 # so it is for this machine alone.
 set -euo pipefail
@@ -19,7 +19,7 @@ root="$(cd "$(dirname "$0")/.." && pwd)"
 state="$root/.tmp/production"
 stack="$state/stack"
 project="margince-production"
-port="${PRODUCTION_PORT:-8090}"
+port="${PROD_PORT:-8090}"
 
 compose() {
 	docker compose --project-directory "$stack" --project-name "$project" "$@"
@@ -48,7 +48,7 @@ up() {
 	local tag
 	tag="local-$(git -C "$root" rev-parse --short HEAD)"
 	mkdir -p "$state"
-	echo "production: building the api, web and worker images ($tag)"
+	echo "prod: building the api, web and worker images ($tag)"
 	(cd "$root" && REPO=margince-local VERSION="$tag" \
 		MARGINCE_BUILD_REVISION="$(git rev-parse HEAD)" \
 		docker buildx bake api web worker --load)
@@ -63,7 +63,7 @@ up() {
 		fi
 		sleep 2
 	done
-	echo "production: the stack did not answer on http://localhost:$port/readyz." >&2
+	echo "prod: the stack did not answer on http://localhost:$port/readyz." >&2
 	compose logs --no-color --tail 60 api worker front >&2
 	exit 1
 }
@@ -71,32 +71,32 @@ up() {
 report() {
 	local password
 	password="$(grep -E '^MARGINCE_ADMIN_PASSWORD=' "$state/.env" | cut -d= -f2-)"
-	echo "production: Margince runs on http://localhost:$port in production mode."
+	echo "prod: Margince runs on http://localhost:$port in production mode."
 	echo "  Sign in as admin@demo.test with the password $password (on the first start only)."
 	echo "  With no MARGINCE_LICENSE in $state/.env it runs the 14-day trial."
-	echo "  Stop it with \`make production-stop\`; DROP=1 also deletes its data."
+	echo "  Stop it with \`make prod-stop\`; DROP=1 also deletes its data."
 }
 
 stop() {
 	if [[ ! -f "$stack/compose.yaml" ]]; then
-		echo "production: no stack under $stack, so nothing to stop."
+		echo "prod: no stack under $stack, so nothing to stop."
 		return
 	fi
 	if [[ "${1:-}" == "--drop" ]]; then
 		compose down --volumes --remove-orphans
 		rm -rf "$state"
-		echo "production: stopped, and its data and settings are deleted."
+		echo "prod: stopped, and its data and settings are deleted."
 		return
 	fi
 	compose down --remove-orphans
-	echo "production: stopped. Its data stays for the next \`make production\`."
+	echo "prod: stopped. Its data stays for the next \`make prod\`."
 }
 
 case "${1:-}" in
 up) up ;;
 stop) stop "${2:-}" ;;
 *)
-	echo "usage: scripts/production.sh up | stop [--drop]" >&2
+	echo "usage: scripts/prod.sh up | stop [--drop]" >&2
 	exit 2
 	;;
 esac

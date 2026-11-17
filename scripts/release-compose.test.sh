@@ -88,7 +88,7 @@ if pack; then
 	fail "an image with no digest was packed, and a moved tag would change what the stack runs"
 fi
 
-# --- the unpacked folder `make production` runs -------------------------------
+# --- the unpacked folder `make prod` runs -------------------------------
 local_dir="$work/local/stack"
 mkdir -p "$local_dir"
 echo stale >"$local_dir/leftover"

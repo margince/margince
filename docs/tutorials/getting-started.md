@@ -5,7 +5,7 @@ This tutorial takes you from a new clone to a running Margince
 install with its company set up. It uses only the Makefile targets of the repository.
 
 This install runs in `dev` mode, which is for working on the code. It has no 14-day limit and
-skips checks a real install must pass. To try Margince or run it for a team, run `make production`
+skips checks a real install must pass. To try Margince or run it for a team, run `make prod`
 or follow [run-with-docker-compose.md](../how-to/run-with-docker-compose.md) instead.
 
 ## Before you start

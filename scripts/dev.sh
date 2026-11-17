@@ -1559,7 +1559,7 @@ up)
     echo "  logs     make dev-logs${slug:+ DEV_SLUG=$slug}  — coloured per process (ROLE=/LEVEL=/ALL=1 to filter)"
     echo "           ${log}"
     echo "  stop     make dev-stop${slug:+ DEV_SLUG=$slug}"
-    echo "  mode     dev: no trial, fewer checks, for working on the code. As a customer runs it: make production"
+    echo "  mode     dev: no trial, fewer checks, for working on the code. As a customer runs it: make prod"
   else
     echo "FAIL: $label FE did not become ready in time — see ${log}" >&2
     # The api, vite and the worker all come down through the EXIT trap.
