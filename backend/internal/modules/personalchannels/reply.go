@@ -45,9 +45,13 @@ const (
 	AckRecorded        = "recorded"
 	AckUnknownDelivery = "unknown_delivery"
 	AckAlreadySettled  = "already_settled"
+	AckSuperseded      = "superseded"
 )
 
-const replyEntity = "personal_channel_reply"
+const (
+	replyEntity   = "personal_channel_reply"
+	messageEntity = "personal_channel_message"
+)
 
 // auditState is the audited field a reply's state changes in.
 const auditState = "state"
@@ -91,7 +95,9 @@ type PullAnswer struct {
 
 // Ack is a client's word on one reply it pulled.
 type Ack struct {
-	DeliveryID        ids.UUID
+	DeliveryID ids.UUID
+	// Attempt is the attempt the pull handed out; zero means the client did not say.
+	Attempt           int
 	Outcome           string
 	ProviderMessageID string
 	Reason            string
@@ -126,13 +132,19 @@ var ErrReplyClosed = errors.New("personal channels: this reply was already settl
 // already queued keeps it. A retry whose reply failed or expired meanwhile is
 // refused, because the delivery the caller is about to mark sent never arrived.
 func QueueReply(ctx context.Context, tx pgx.Tx, in ReplyInput) error {
-	tag, err := tx.Exec(ctx, `
+	var queued ids.UUID
+	err := tx.QueryRow(ctx, `
 		INSERT INTO personal_channel_reply (connection_id, activity_id, delivery_key, network, thread_id,
 			recipient_account, reply_to, body)
 		VALUES ($1, $2, $3, $4, $5, $6, nullif($7, ''), $8)
-		ON CONFLICT (delivery_key) DO NOTHING`,
-		in.Connection, in.ActivityID, in.DeliveryKey, in.Network, in.GroupID, in.Account, in.ReplyTo, in.Body)
-	if err != nil || tag.RowsAffected() == 1 {
+		ON CONFLICT (delivery_key) DO NOTHING
+		RETURNING id`,
+		in.Connection, in.ActivityID, in.DeliveryKey, in.Network, in.GroupID, in.Account, in.ReplyTo, in.Body).Scan(&queued)
+	if err == nil {
+		_, err = storekit.Audit(ctx, tx, "create", replyEntity, queued, nil, map[string]any{auditState: stateWaiting, "network": in.Network})
+		return err
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
 		return err
 	}
 	var state string
@@ -162,6 +174,12 @@ func (s *Store) Pull(ctx context.Context, limit int) (PullAnswer, error) {
 		now := s.now()
 		if out.Replies, err = leaseReplies(ctx, tx, conn.ID, now, limit); err != nil {
 			return err
+		}
+		for _, r := range out.Replies {
+			if _, err := storekit.Audit(ctx, tx, "update", replyEntity, r.DeliveryID,
+				map[string]any{auditState: stateWaiting}, map[string]any{auditState: statePulled, "attempt": r.Attempt}); err != nil {
+				return err
+			}
 		}
 		if _, err := tx.Exec(ctx, `UPDATE personal_channel_connection SET last_pull_at = $2 WHERE id = $1`, conn.ID, now); err != nil {
 			return err
@@ -246,8 +264,9 @@ func (s *Store) ackOne(ctx context.Context, tx pgx.Tx, connection ids.UUID, a Ac
 	res := AckResult{DeliveryID: a.DeliveryID}
 	var activity ids.UUID
 	var state string
-	err := tx.QueryRow(ctx, `SELECT activity_id, state FROM personal_channel_reply WHERE id = $1 AND connection_id = $2 FOR UPDATE`,
-		a.DeliveryID, connection).Scan(&activity, &state)
+	var attempt int
+	err := tx.QueryRow(ctx, `SELECT activity_id, state, attempt FROM personal_channel_reply WHERE id = $1 AND connection_id = $2 FOR UPDATE`,
+		a.DeliveryID, connection).Scan(&activity, &state, &attempt)
 	switch {
 	case errors.Is(err, pgx.ErrNoRows):
 		res.Result = AckUnknownDelivery
@@ -256,6 +275,9 @@ func (s *Store) ackOne(ctx context.Context, tx pgx.Tx, connection ids.UUID, a Ac
 		return res, err
 	case state != statePulled && state != stateWaiting:
 		res.Result = AckAlreadySettled
+		return res, nil
+	case a.Attempt != 0 && a.Attempt != attempt:
+		res.Result = AckSuperseded
 		return res, nil
 	}
 	if _, err := tx.Exec(ctx, `
@@ -339,4 +361,33 @@ func firstNonEmpty(a, b string) string {
 		return a
 	}
 	return b
+}
+
+// settleSentByEcho settles the reply a pushed outbound message names as sent by
+// that message, and answers the reply's activity. A reply of another connection,
+// or none, answers nil.
+func settleSentByEcho(ctx context.Context, tx pgx.Tx, connection ids.UUID, m PushMessage, now time.Time) (*ids.UUID, error) {
+	var activity ids.UUID
+	var state string
+	err := tx.QueryRow(ctx, `SELECT activity_id, state FROM personal_channel_reply WHERE id = $1 AND connection_id = $2 FOR UPDATE`,
+		m.DeliveryID, connection).Scan(&activity, &state)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	if state != statePulled && state != stateWaiting {
+		return &activity, nil
+	}
+	if _, err := tx.Exec(ctx, `
+		UPDATE personal_channel_reply
+		   SET state = 'sent', provider_message_id = $2, body = NULL, recipient_account = NULL,
+		       leased_until = NULL, settled_at = $3, updated_at = $3
+		 WHERE id = $1`, m.DeliveryID, m.MessageID, now); err != nil {
+		return nil, err
+	}
+	_, err = storekit.Audit(ctx, tx, "update", replyEntity, m.DeliveryID,
+		map[string]any{auditState: state}, map[string]any{auditState: OutcomeSent})
+	return &activity, err
 }

@@ -30517,6 +30517,7 @@ components:
       required: [message_id, from]
       properties:
         message_id: {type: string, minLength: 1, maxLength: 200, description: The chat's own id for the message; a resend with the same id lands nothing new.}
+        delivery_id: {type: string, format: uuid, description: "For an outbound message the client sent as a pulled reply: that reply's delivery id, so it is not landed a second time."}
         group_id: {type: string, maxLength: 200, description: "The group the message was sent in. No ':'."}
         network: {type: string, maxLength: 32, description: "The chat it came from: lower-case letters, digits and _. Absent means generic."}
         direction: {type: string, enum: [inbound, outbound]}
@@ -30603,6 +30604,7 @@ components:
             required: [delivery_id, outcome]
             properties:
               delivery_id: {type: string, format: uuid}
+              attempt: {type: integer, minimum: 1, description: "The attempt the pull handed out. An ack for an earlier attempt is superseded: the reply was offered again since."}
               outcome: {type: string, enum: [sent, failed]}
               provider_message_id: {type: string, maxLength: 500}
               reason: {type: string, maxLength: 500}
@@ -30618,7 +30620,7 @@ components:
       required: [delivery_id, result]
       properties:
         delivery_id: {type: string, format: uuid}
-        result: {type: string, enum: [recorded, unknown_delivery, already_settled]}
+        result: {type: string, enum: [recorded, unknown_delivery, already_settled, superseded]}
     PersonalChannelUpload:
       type: object
       description: One staged file, named by its upload_id in the next message's files.

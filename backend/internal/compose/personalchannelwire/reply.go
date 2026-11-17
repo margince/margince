@@ -109,6 +109,27 @@ func SendCapable(ctx context.Context, db *database.DB, member ids.UUID) (bool, e
 	return on, err
 }
 
+// OwnIdentities keeps the identities the member's own chat app met. A colleague's
+// thread then reaches nobody for this member, so a reply is refused when it is
+// written, not parked after.
+func OwnIdentities(ctx context.Context, tx pgx.Tx, member ids.UUID, identities []connector.ChannelIdentity) ([]connector.ChannelIdentity, error) {
+	var connection ids.UUID
+	err := tx.QueryRow(ctx, `SELECT id FROM personal_channel_connection WHERE user_id = $1`, member).Scan(&connection)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	var own []connector.ChannelIdentity
+	for _, identity := range identities {
+		if personalchannels.IdentityConnection(identity.ChannelUserID) == connection.String() {
+			own = append(own, identity)
+		}
+	}
+	return own, nil
+}
+
 // Settler marks a reply not delivered on its comms delivery.
 type Settler struct{}
 

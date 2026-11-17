@@ -32316,6 +32316,11 @@ export interface components {
         PersonalChannelMessage: {
             /** @description The chat's own id for the message; a resend with the same id lands nothing new. */
             message_id: string;
+            /**
+             * Format: uuid
+             * @description For an outbound message the client sent as a pulled reply: that reply's delivery id, so it is not landed a second time.
+             */
+            delivery_id?: string;
             /** @description The group the message was sent in. No ':'. */
             group_id?: string;
             /** @description The chat it came from: lower-case letters, digits and _. Absent means generic. */
@@ -32370,6 +32375,8 @@ export interface components {
             acks: {
                 /** Format: uuid */
                 delivery_id: string;
+                /** @description The attempt the pull handed out. An ack for an earlier attempt is superseded: the reply was offered again since. */
+                attempt?: number;
                 /** @enum {string} */
                 outcome: "sent" | "failed";
                 provider_message_id?: string;
@@ -32383,7 +32390,7 @@ export interface components {
             /** Format: uuid */
             delivery_id: string;
             /** @enum {string} */
-            result: "recorded" | "unknown_delivery" | "already_settled";
+            result: "recorded" | "unknown_delivery" | "already_settled" | "superseded";
         };
         /** @description One staged file, named by its upload_id in the next message's files. */
         PersonalChannelUpload: {

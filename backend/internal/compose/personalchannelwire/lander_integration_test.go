@@ -208,3 +208,21 @@ func TestAReplyToAnAccountAnotherMembersChatAppMetIsNotQueued(t *testing.T) {
 		t.Fatal("a reply to an account the member's own client never pushed was queued")
 	}
 }
+
+func TestOnlyTheIdentitiesTheMembersOwnChatAppMetAreReachable(t *testing.T) {
+	e := setupPersonalChannels(t)
+	own := connector.ChannelIdentity{ChannelUserID: "whatsapp/8497/" + e.connection(t).String()}
+	foreign := connector.ChannelIdentity{ChannelUserID: "whatsapp/8497/" + ids.NewV7().String()}
+	tx, err := integration.OwnerConn(t).Begin(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback(context.Background()) //nolint:errcheck // read-only probe
+	got, err := personalchannelwire.OwnIdentities(context.Background(), tx, e.Rep1, []connector.ChannelIdentity{own, foreign})
+	if err != nil || len(got) != 1 || got[0] != own {
+		t.Fatalf("own identities = %v, %v; want only %v", got, err, own)
+	}
+	if got, _ := personalchannelwire.OwnIdentities(context.Background(), tx, e.Rep2, []connector.ChannelIdentity{own}); len(got) != 0 {
+		t.Fatalf("a colleague reaches %v through the member's chat app", got)
+	}
+}

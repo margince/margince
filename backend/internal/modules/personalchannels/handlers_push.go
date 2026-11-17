@@ -42,6 +42,9 @@ func pushMessageOf(m crmcontracts.PersonalChannelMessage) PushMessage {
 		Network: deref(m.Network), Subject: deref(m.Subject), Body: deref(m.Body),
 		From: partyOf(m.From),
 	}
+	if m.DeliveryId != nil {
+		out.DeliveryID = ids.UUID(*m.DeliveryId)
+	}
 	if m.Direction != nil {
 		out.Direction = string(*m.Direction)
 	}
@@ -66,6 +69,13 @@ func pushMessageOf(m crmcontracts.PersonalChannelMessage) PushMessage {
 
 func partyOf(p crmcontracts.PersonalChannelParty) Party {
 	return Party{Account: p.Account, Name: deref(p.Name)}
+}
+
+func derefInt(n *int) int {
+	if n == nil {
+		return 0
+	}
+	return *n
 }
 
 func deref(s *string) string {

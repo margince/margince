@@ -18896,6 +18896,7 @@ func (e PassportAreasMode) Valid() bool {
 const (
 	PersonalChannelAckResultResultAlreadySettled  PersonalChannelAckResultResult = "already_settled"
 	PersonalChannelAckResultResultRecorded        PersonalChannelAckResultResult = "recorded"
+	PersonalChannelAckResultResultSuperseded      PersonalChannelAckResultResult = "superseded"
 	PersonalChannelAckResultResultUnknownDelivery PersonalChannelAckResultResult = "unknown_delivery"
 )
 
@@ -18905,6 +18906,8 @@ func (e PersonalChannelAckResultResult) Valid() bool {
 	case PersonalChannelAckResultResultAlreadySettled:
 		return true
 	case PersonalChannelAckResultResultRecorded:
+		return true
+	case PersonalChannelAckResultResultSuperseded:
 		return true
 	case PersonalChannelAckResultResultUnknownDelivery:
 		return true
@@ -32527,6 +32530,8 @@ type AccountDraftReasonKind string
 // AckPersonalChannelRepliesRequest defines model for AckPersonalChannelRepliesRequest.
 type AckPersonalChannelRepliesRequest struct {
 	Acks []struct {
+		// Attempt The attempt the pull handed out. An ack for an earlier attempt is superseded: the reply was offered again since.
+		Attempt           *int                                        `json:"attempt,omitempty" minimum:"1"`
 		DeliveryId        openapi_types.UUID                          `json:"delivery_id"`
 		Outcome           AckPersonalChannelRepliesRequestAcksOutcome `json:"outcome"`
 		ProviderMessageId *string                                     `json:"provider_message_id,omitempty"`
@@ -58801,9 +58806,12 @@ type PersonalChannelConnection struct {
 
 // PersonalChannelMessage defines model for PersonalChannelMessage.
 type PersonalChannelMessage struct {
-	Body      *string                          `json:"body,omitempty"`
-	Direction *PersonalChannelMessageDirection `json:"direction,omitempty"`
-	Files     *[]struct {
+	Body *string `json:"body,omitempty"`
+
+	// DeliveryId For an outbound message the client sent as a pulled reply: that reply's delivery id, so it is not landed a second time.
+	DeliveryId *openapi_types.UUID              `json:"delivery_id,omitempty"`
+	Direction  *PersonalChannelMessageDirection `json:"direction,omitempty"`
+	Files      *[]struct {
 		UploadId openapi_types.UUID `json:"upload_id"`
 	} `json:"files,omitempty"`
 	From PersonalChannelParty `json:"from"`

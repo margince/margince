@@ -37,6 +37,8 @@ type Party struct {
 // PushMessage is one chat message a member's client sends in.
 type PushMessage struct {
 	MessageID, GroupID string
+	// DeliveryID names the pulled reply an outbound message is the client sending.
+	DeliveryID         ids.UUID
 	Network, Direction string
 	Subject, Body      string
 	OccurredAt         time.Time

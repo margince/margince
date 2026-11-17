@@ -208,3 +208,38 @@ func TestARetriedSendOfAReplyTheClientFailedIsRefusedNotCountedSent(t *testing.T
 		t.Fatalf("queueing again under a failed reply's key = %v, want ErrReplyClosed", err)
 	}
 }
+
+func TestAnAckForAnEarlierAttemptIsSupersededAndSettlesNothing(t *testing.T) {
+	e := setupChannels(t)
+	settled := e.settling()
+	e.on(t, e.rep)
+	failed := e.queued(t, e.rep, "d-stale")
+	first, err := e.store.Pull(e.as(e.rep, repGrant), 10)
+	if err != nil || len(first.Replies) != 1 {
+		t.Fatalf("pull = %+v, %v", first, err)
+	}
+	e.now = e.now.Add(replyLease + time.Second)
+	if _, err := e.store.Pull(e.as(e.rep, repGrant), 10); err != nil {
+		t.Fatal(err)
+	}
+	res, err := e.store.Ack(e.as(e.rep, repGrant), []Ack{{DeliveryID: first.Replies[0].DeliveryID, Attempt: 1, Outcome: OutcomeFailed, Reason: "late"}})
+	if err != nil || res[0].Result != AckSuperseded {
+		t.Fatalf("stale ack = %+v, %v; want superseded", res, err)
+	}
+	if _, ok := settled.settled[failed]; ok {
+		t.Fatal("a superseded ack marked the reply not delivered")
+	}
+}
+
+func TestQueueingAndLeasingAReplyAreAudited(t *testing.T) {
+	e := setupChannels(t)
+	e.settling()
+	e.on(t, e.rep)
+	e.queued(t, e.rep, "d-audit")
+	if _, err := e.store.Pull(e.as(e.rep, repGrant), 10); err != nil {
+		t.Fatal(err)
+	}
+	if n := e.count(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'personal_channel_reply'`); n != 2 {
+		t.Fatalf("audit rows for the reply = %d, want one for queueing and one for the lease", n)
+	}
+}

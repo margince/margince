@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -122,7 +123,7 @@ func (s *Store) pushOne(ctx context.Context, connection, user ids.UUID, m PushMe
 		return refused(ctx, res, err), nil
 	}
 	if n.Direction == DirectionOutbound {
-		if sent, ok, err := s.sentAsReply(ctx, connection, n.Network, m.MessageID); err != nil || ok {
+		if sent, ok, err := s.sentAsReply(ctx, connection, n.Network, m); err != nil || ok {
 			res.Status, res.ActivityID = StatusDuplicate, sent
 			return res, err
 		}
@@ -169,13 +170,25 @@ func (s *Store) claimUploads(ctx context.Context, user ids.UUID, uploads []ids.U
 
 // sentAsReply finds the reply a client acked as sent under this chat-app id. The
 // same message pushed back as outbound is that reply, not a second activity.
-func (s *Store) sentAsReply(ctx context.Context, connection ids.UUID, network, messageID string) (*ids.UUID, bool, error) {
+//
+// A message that names its delivery is that reply, even before the ack. It
+// settles the reply as sent. The ack that follows then finds it settled.
+func (s *Store) sentAsReply(ctx context.Context, connection ids.UUID, network string, m PushMessage) (*ids.UUID, bool, error) {
 	var activity ids.UUID
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if m.DeliveryID != (ids.UUID{}) {
+			found, err := settleSentByEcho(ctx, tx, connection, m, s.now())
+			if err != nil || found != nil {
+				if found != nil {
+					activity = *found
+				}
+				return err
+			}
+		}
 		return tx.QueryRow(ctx, `
 			SELECT activity_id FROM personal_channel_reply
 			 WHERE connection_id = $1 AND network = $2 AND provider_message_id = $3 AND state = 'sent'
-			 LIMIT 1`, connection, network, messageID).Scan(&activity)
+			 LIMIT 1`, connection, network, m.MessageID).Scan(&activity)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, false, nil
@@ -190,10 +203,15 @@ func (s *Store) sentAsReply(ctx context.Context, connection ids.UUID, network, m
 func (s *Store) recordLanding(ctx context.Context, connection ids.UUID, n NormalizedMessage, activity ids.UUID) error {
 	kind, id := origin(ctx)
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx, `
+		tag, err := tx.Exec(ctx, `
 			INSERT INTO personal_channel_message (activity_id, connection_id, network, origin_kind, origin_id)
 			VALUES ($1, $2, $3, $4, $5) ON CONFLICT (activity_id) DO NOTHING`,
 			activity, connection, n.Network, kind, id)
+		if err != nil || tag.RowsAffected() == 0 {
+			return err
+		}
+		_, err = storekit.Audit(ctx, tx, "create", messageEntity, activity, nil,
+			map[string]any{"network": n.Network, "origin_kind": kind})
 		return err
 	})
 }
