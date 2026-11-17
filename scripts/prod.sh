@@ -20,12 +20,14 @@ state="$root/.tmp/production"
 stack="$state/stack"
 port="${PROD_PORT:-8090}"
 
-# project is one Compose project per settings folder, named from its real path,
-# so a folder shared by a symlink shares its stack and no other folder does.
-# git -C "$root" keeps the hash in this checkout's object format.
+# project is one Compose project per settings folder. Its ID is drawn once and
+# kept in the folder, so a folder shared by a symlink shares its stack.
 project() {
 	mkdir -p "$state"
-	printf 'margince-prod-%s' "$(cd "$state" && pwd -P | git -C "$root" hash-object --stdin | cut -c1-16)"
+	if [[ ! -s "$state/project-id" ]]; then
+		openssl rand -hex 8 >"$state/project-id"
+	fi
+	printf 'margince-prod-%s' "$(cat "$state/project-id")"
 }
 
 # compose runs with MARGINCE_ENV empty, because a value exported in the
