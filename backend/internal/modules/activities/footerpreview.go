@@ -5,10 +5,10 @@ package activities
 
 import (
 	"context"
-	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 // MailFooterPreview describes owed disclosures without minting recipient tokens.

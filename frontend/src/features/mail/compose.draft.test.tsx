@@ -29,6 +29,7 @@ import {
   stubRoutes,
   WHY_ASK,
   WHY_LABEL,
+  waitForSendReady,
 } from "./compose.testkit";
 
 afterEach(() => {
@@ -110,14 +111,6 @@ function draftsOnCue() {
       pending[call]?.(jsonResponse(drafted));
     },
   };
-}
-
-async function waitForSendReady() {
-  await waitFor(() =>
-    expect(
-      screen.getByRole("button", { name: "Send" }).hasAttribute("disabled"),
-    ).toBe(false),
-  );
 }
 
 function renderComposer(onClose = vi.fn()) {
@@ -893,9 +886,7 @@ describe("ComposeModal send refusals", () => {
     ).toBeTruthy();
     expect(screen.queryByText(/objection_route/)).toBeNull();
     expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
-    expect(
-      screen.queryByRole("button", { name: /send with a reason/i }),
-    ).toBeNull();
+    expect(screen.queryByRole("button", { name: /with a reason/i })).toBeNull();
     expect(onClose).not.toHaveBeenCalled();
     expect(screen.getByLabelText("Subject")).toHaveValue("Hi there");
   });

@@ -4,8 +4,9 @@
 package consent
 
 import (
-	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 func TestFooterAcknowledgementRevisionChangesWithEveryDisplayedDetail(t *testing.T) {

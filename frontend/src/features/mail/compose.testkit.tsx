@@ -7,7 +7,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { vi } from "vitest";
+import { expect, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { writeMessage } from "../../design-system/richtext-testing";
 import { pickOption } from "../../design-system/select-testing";
@@ -270,4 +270,12 @@ export function rewrittenBody(body: string, language = "en") {
     language,
     ai_disclosure: "Drafted with AI assistance. Review before sending.",
   });
+}
+
+export async function waitForSendReady() {
+  await waitFor(() =>
+    expect(
+      screen.getByRole("button", { name: "Send" }).hasAttribute("disabled"),
+    ).toBe(false),
+  );
 }

@@ -11,6 +11,7 @@ import {
   render,
   stubRoutes,
   WHY_LABEL,
+  waitForSendReady,
 } from "./compose.testkit";
 
 // The project a reply files under, and the key it carries in the subject.
@@ -294,6 +295,7 @@ describe("the project a reply files under", () => {
     await user.type(screen.getByLabelText("To"), "kunde@netcare.test");
     await user.tab();
     await pickWhy(WHY_LABEL.requestedFollowup);
+    await waitForSendReady();
     await user.click(screen.getByRole("button", { name: /^Send$/ }));
     await waitFor(() =>
       expect(

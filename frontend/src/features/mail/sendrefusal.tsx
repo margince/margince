@@ -2,7 +2,7 @@
 
 import { AppLink } from "../../design-system/applink";
 import { useT } from "../../i18n";
-import type { Refusal } from "./composesend";
+import type { Refusal } from "./composerefusal";
 import { DirectSendAction } from "./directsendaction";
 import type { SendReview } from "./sendreview";
 
