@@ -3,7 +3,7 @@ import { entryDepth, noteHistoryEntry } from "./historydepth";
 import { publishRecordAddress, restoreRecordAddress } from "./recordaddress";
 import { ScreenAddress } from "./screenaddress";
 import { addressedAPathWeDoNotServe } from "./servedpath";
-import { hashWithParams, type UrlParams } from "./urlstate";
+import { hashWithParams, type UrlParams, useAddressWriters } from "./urlstate";
 // The screen union binds navigation and dispatch to the same route names.
 export const SCREENS = [
   "home",
@@ -419,14 +419,15 @@ export function useRoute(): Route {
     unserved: addressedAPathWeDoNotServe(),
     hash: globalThis.location.hash,
   }));
+  const writers = useAddressWriters();
   useEffect(() => {
-    if (hash === live && /^#\/?brief(?:[/?]|$)/.test(hash)) {
-      navigateReplacing(
+    if (/^#\/?brief(?:[/?]|$)/.test(hash)) {
+      writers.navigateReplacing(
         parseHash(hash),
         new Map(new URLSearchParams(hash.split("?")[1])),
       );
     }
-  }, [hash, live]);
+  }, [hash, writers]);
   useEffect(() => {
     if (!arrival.unserved) {
       return;

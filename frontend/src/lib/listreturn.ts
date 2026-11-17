@@ -1,12 +1,11 @@
 import { stepBackOutOf } from "./historydepth";
+import { parseHash, type Route, routeHash, type Screen } from "./router";
 import {
-  navigateReplacing,
-  parseHash,
-  type Route,
-  routeHash,
-  type Screen,
-} from "./router";
-import { GLOBAL_DIALS, hashWithParams, parseParams } from "./urlstate";
+  type AddressWriters,
+  GLOBAL_DIALS,
+  hashWithParams,
+  parseParams,
+} from "./urlstate";
 
 // The address each list screen last stood at in this page load, filter
 // included. Memory, not storage: after a reload the parent is the plain list.
@@ -65,7 +64,10 @@ export function leaveRecord(record: Route): void {
 
 /** Close a list's create form onto the list, replacing the form's address so
  *  Back from the list does not open the form again. */
-export function leaveCreateForm(screen: Screen): void {
+export function leaveCreateForm(
+  screen: Screen,
+  { navigateReplacing }: AddressWriters,
+): void {
   const here = parseHash(globalThis.location.hash);
   if (here.screen !== screen || here.id === undefined) {
     return;

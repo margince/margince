@@ -14,6 +14,7 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { forgetListAddresses, rememberListAddress } from "../lib/listreturn";
+import { ScreenAddress } from "../lib/screenaddress";
 import { setSingleKeyShortcutsOn } from "../lib/shortcuts";
 import { CreateAction, type CreateField } from "./create";
 
@@ -33,19 +34,22 @@ function mount(
   props: Readonly<{
     listCreate?: { open: boolean };
     create?: () => Promise<{ id: string }>;
+    drawnFor?: string;
   }>,
 ) {
   return render(
     <QueryClientProvider client={new QueryClient()}>
       <LocaleProvider initial="en">
-        <CreateAction
-          label="New contact"
-          fields={fields}
-          create={props.create ?? (async () => ({ id: "c1" }))}
-          invalidate="contacts"
-          screen="contacts"
-          listCreate={props.listCreate}
-        />
+        <ScreenAddress.Provider value={props.drawnFor ?? null}>
+          <CreateAction
+            label="New contact"
+            fields={fields}
+            create={props.create ?? (async () => ({ id: "c1" }))}
+            invalidate="contacts"
+            screen="contacts"
+            listCreate={props.listCreate}
+          />
+        </ScreenAddress.Provider>
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -85,6 +89,28 @@ describe("a list's create at its own address", () => {
     fireEvent.click(screen.getByRole("button", { name: "Create" }));
     await waitFor(() => expect(window.location.hash).toBe("#/contacts/c1"));
     expect(replace.mock.calls.map((call) => call[2])).toContain("#/contacts");
+  });
+
+  it("leaves the record a reader moved on to before it saved", async () => {
+    window.location.hash = "#/contacts/new";
+    let finish: (created: { id: string }) => void = () => undefined;
+    const created = new Promise<{ id: string }>((resolve) => {
+      finish = resolve;
+    });
+    mount({
+      listCreate: { open: true },
+      create: () => created,
+      drawnFor: "#/contacts/new",
+    });
+    fireEvent.change(await screen.findByRole("textbox", { name: /Name/ }), {
+      target: { value: "Ada" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Create" }));
+    window.history.replaceState(null, "", "#/contacts/c9");
+    await act(async () => finish({ id: "c1" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(window.location.hash).toBe("#/contacts/c9");
   });
 
   it("stays closed on the plain list", () => {

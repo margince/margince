@@ -19,6 +19,7 @@ import {
 } from "../lib/problem";
 import { navigate, type Route, type Screen } from "../lib/router";
 import { useShortcutAria } from "../lib/shortcuts";
+import { useAddressWriters } from "../lib/urlstate";
 import { catalogOfScreen, useSettledOpen } from "./create.dialog";
 import "./create.css";
 import "../design-system/querystates.css";
@@ -195,6 +196,7 @@ export function CreateAction<Created extends { id: string }>({
   // Counts this session's saves, which empties the form between them. Not a
   // boolean: two saves in a row must read as two distinct clears.
   const [saved, setSaved] = useState(0);
+  const writers = useAddressWriters();
   const { key: idempotencyKey, renew } = useIdempotencyKey();
   const mutation = useCreateRecord({
     create,
@@ -215,7 +217,7 @@ export function CreateAction<Created extends { id: string }>({
   function close() {
     setCreating(false);
     if (listCreate) {
-      leaveCreateForm(screen);
+      leaveCreateForm(screen, writers);
     }
   }
   const existing =
