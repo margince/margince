@@ -565,8 +565,9 @@ extension_retired() {
 extension_retired_with_drop() {
   local dir="$1"
   extension_retired "$dir" || return
-  printf 'DROP TABLE IF EXISTS schema_migrations_ext_notes;\n' > "$dir/backend/migrations/core/0004_notes_retired.up.sql"
-  printf -- '-- probe\n' > "$dir/backend/migrations/core/0004_notes_retired.down.sql"
+  local v=1700000009_notes_retired
+  printf 'DROP TABLE IF EXISTS schema_migrations_ext_notes;\n' > "$dir/backend/migrations/core/$v.up.sql"
+  printf -- '-- probe\n' > "$dir/backend/migrations/core/$v.down.sql"
 }
 
 expect "a declared reset with a survivor is refused" \

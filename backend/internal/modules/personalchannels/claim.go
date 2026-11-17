@@ -16,6 +16,9 @@ import (
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
+// restoreBudget bounds putting staged files back after the request is gone.
+const restoreBudget = 30 * time.Second
+
 // maxFilesPerMessage is the most staged files one message may name.
 const maxFilesPerMessage = 20
 
@@ -122,7 +125,9 @@ func restoreUploads(ctx context.Context, db *database.DB, claimed []claimedUploa
 	if len(claimed) == 0 {
 		return nil
 	}
-	return db.Tx(context.WithoutCancel(ctx), func(tx pgx.Tx) error {
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), restoreBudget)
+	defer cancel()
+	return db.Tx(ctx, func(tx pgx.Tx) error {
 		for _, c := range claimed {
 			if _, err := tx.Exec(ctx, `
 				INSERT INTO personal_channel_upload (id, connection_id, filename, content_type, byte_size, sha256, content, created_at)

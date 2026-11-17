@@ -429,13 +429,13 @@ fe-test:
 # nothing to collect, and vitest exits non-zero on an empty collection.
 EXT_SCREEN_TESTS := $(shell find extensions -path '*/frontend/*' -not -path '*/node_modules/*' \( -name '*.test.ts' -o -name '*.test.tsx' \) 2>/dev/null)
 fe-test-ext: composition
+	$(FE_SHUFFLE_NOTE)
 ifeq ($(strip $(EXT_SCREEN_TESTS)),)
 	@echo "fe-test-ext: no unit ships a screen test, so there is nothing to run"
 	@# An empty report, not a missing one: the coverage upload and the scan that
 	@# reads it expect the file, and a tier with no screens has no records.
 	$(if $(FE_COVERAGE),@mkdir -p frontend/coverage-ext && : > frontend/coverage-ext/lcov.info)
 else
-	$(FE_SHUFFLE_NOTE)
 	@[ -f build/composition/frontend/extlocales.gen.ts ] || { echo "fe-test-ext: build/composition/frontend/extlocales.gen.ts is missing after 'make composition' — a unit screen's suite would resolve the empty-tree copy registry and fail on every string" >&2; exit 1; }
 	@# The ROOT install first, and the order is load-bearing: the composed
 	@# workspace links react, react-dom, @tanstack/react-query and @types/react

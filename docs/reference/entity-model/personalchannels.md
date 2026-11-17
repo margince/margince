@@ -109,6 +109,7 @@ The 4 tables owned by `personalchannels`, as the migrations build them. [Back to
 **Indexes**
 
 - `personal_channel_reply_activity_idx`: `btree (activity_id)`
+- `personal_channel_reply_connection_idx`: `btree (connection_id)`
 - `personal_channel_reply_delivery_key`: `unique, btree (delivery_key)`
 - `personal_channel_reply_open_idx`: `btree (connection_id, created_at) WHERE (state = ANY (ARRAY['waiting', 'pulled']))`
 - `personal_channel_reply_pkey`: `unique, btree (id)`

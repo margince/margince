@@ -200,6 +200,9 @@ var erasureCascadeFiles = []string{
 	// above. Same transaction, its own file for the same both-engines reason.
 	"internal/modules/privacy/erasure_stageevidence.go",
 	"internal/modules/privacy/deliveries.go",
+	// The member reply queue the same scrubs close, in its own file because the
+	// table is the personal-channels module's.
+	"internal/modules/privacy/erasure_personalchannel.go",
 	// The subject's RESTRICTION record and the deal-room seats their address
 	// holds. Both are executed by EraseContact's own transaction and both write
 	// subject tables — activity and deal_room_participant — which were

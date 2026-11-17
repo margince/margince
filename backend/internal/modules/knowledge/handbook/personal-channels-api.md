@@ -57,7 +57,7 @@ A client confirms with `POST /v1/personal-channels/replies/ack`:
 ]}
 ```
 
-Name the `attempt` the pull gave. An answer for an earlier attempt is `superseded` and changes nothing, because the reply was offered again since. Each answer is `recorded`, `unknown_delivery`, `already_settled` or `superseded`. A `failed` reply shows as **Did not arrive** on the timeline and is not tried again; the member sends it again. A reply nobody confirms within 7 days is marked **Did not arrive** too. A confirmation still counts while personal channels are off.
+Name the `attempt` that came with the reply. An answer for an earlier attempt is `superseded` and changes nothing, because the reply was offered again since. Each answer is `recorded`, `unknown_delivery`, `already_settled` or `superseded`. A `failed` reply shows as **Did not arrive** on the timeline and is not tried again; the member sends it again. A reply nobody confirms within 7 days is marked **Did not arrive** too. A confirmation still counts while personal channels are off.
 
 ### What do the error answers mean?
 - `409` with "personal channels are off": the member must turn them on in **Settings → Connections**.
