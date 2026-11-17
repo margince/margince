@@ -22,7 +22,9 @@ func WithDSNParam(dsn, name, value string) string {
 		}
 		return dsn + sep + param
 	}
-	return dsn + " " + param
+	// In front, because pgconn reads an empty last value or a trailing backslash
+	// as swallowing whatever follows it.
+	return param + " " + dsn
 }
 
 // pgconn leaves pool settings in RuntimeParams, before pgxpool consumes them.

@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgconn"
+
 	"github.com/margince/margince/backend/internal/platform/database"
 )
 
@@ -26,18 +28,51 @@ func TestADSNParameterIsNamedInTheSpellingTheDSNUses(t *testing.T) {
 		{"a URL with no query string opens one", "postgres://h/db", "postgres://h/db?statement_timeout=5000"},
 		{"a URL that already has one appends", "postgres://h/db?sslmode=disable", "postgres://h/db?sslmode=disable&statement_timeout=5000"},
 		{"the postgresql scheme is the same form", "postgresql://h/db", "postgresql://h/db?statement_timeout=5000"},
-		{"a keyword/value DSN separates with a space", "host=h dbname=db", "host=h dbname=db statement_timeout=5000"},
+		{"a keyword/value DSN gets it in front", "host=h dbname=db", "statement_timeout=5000 host=h dbname=db"},
 		{"a DSN that already names it keeps its own", "host=h statement_timeout=1", "host=h statement_timeout=1"},
-		{"a value is not a parameter name", "host=h password='statement_timeout'", "host=h password='statement_timeout' statement_timeout=5000"},
-		{"a quoted value may contain an assignment", "host=h password=' statement_timeout=1'", "host=h password=' statement_timeout=1' statement_timeout=5000"},
+		{"a value is not a parameter name", "host=h password='statement_timeout'", "statement_timeout=5000 host=h password='statement_timeout'"},
+		{"a quoted value may contain an assignment", "host=h password=' statement_timeout=1'", "statement_timeout=5000 host=h password=' statement_timeout=1'"},
 		{"an encoded URL key still wins", "postgres://h/db?statement%5Ftimeout=1", "postgres://h/db?statement%5Ftimeout=1"},
 		{"a malformed DSN is left for the pool to reject", "postgres://%/db", "postgres://%/db"},
-		{"a longer name that starts with it is another parameter", "host=h statement_timeout_x=1", "host=h statement_timeout_x=1 statement_timeout=5000"},
+		{"a longer name that starts with it is another parameter", "host=h statement_timeout_x=1", "statement_timeout=5000 host=h statement_timeout_x=1"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			if got := database.WithDSNParam(tc.dsn, "statement_timeout", "5000"); got != tc.want {
 				t.Errorf("WithDSNParam(%q) = %q, want %q", tc.dsn, got, tc.want)
+			}
+		})
+	}
+}
+
+// TestAnAddedParameterLeavesEveryOtherValueAsItWas parses the result. A
+// keyword/value DSN ending in an empty value or a backslash takes in what
+// follows it, and the string still parses.
+func TestAnAddedParameterLeavesEveryOtherValueAsItWas(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name, dsn, password string
+	}{
+		{"an empty last value", "host=h user=app password=", ""},
+		{"an empty last value with a trailing space", "host=h user=app password= ", ""},
+		{"a quoted empty last value", "host=h user=app password=''", ""},
+		{"a quoted value with spaces", "host=h password='a b=c'", "a b=c"},
+		{"a trailing backslash", `host=h password=secret\`, "secret"},
+		{"trailing whitespace", "host=h password=secret \t", "secret"},
+		{"a URL with an empty password", "postgres://app:@h/db", ""},
+		{"a URL with a query string", "postgres://app:secret@h/db?sslmode=disable", "secret"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			cfg, err := pgconn.ParseConfig(database.WithDSNParam(tc.dsn, "pool_max_conn_lifetime", "10m0s"))
+			if err != nil {
+				t.Fatalf("the DSN no longer parses: %v", err)
+			}
+			if cfg.Password != tc.password {
+				t.Errorf("password became %q, want %q", cfg.Password, tc.password)
+			}
+			if got := cfg.RuntimeParams["pool_max_conn_lifetime"]; got != "10m0s" {
+				t.Errorf("pool_max_conn_lifetime = %q, want 10m0s", got)
 			}
 		})
 	}
