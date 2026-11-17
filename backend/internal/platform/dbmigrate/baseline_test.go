@@ -16,7 +16,7 @@ func TestParseBaselineManifestReadsTheReleaseAndEachVersion(t *testing.T) {
 	if release != "v1.2.3" {
 		t.Errorf("release = %q, want v1.2.3", release)
 	}
-	want := []Replaced{{"0001", "first", "aa"}, {"0002", "second", "bb"}}
+	want := []LedgerEntry{{"0001", "first", "aa"}, {"0002", "second", "bb"}}
 	if len(replaces) != len(want) || replaces[0] != want[0] || replaces[1] != want[1] {
 		t.Errorf("replaces = %+v, want %+v", replaces, want)
 	}
@@ -49,7 +49,7 @@ func baselineNamespace() Namespace {
 		Baseline: &Baseline{
 			Migration: Migration{Version: "0003", Name: "baseline", UpSQL: "CREATE TABLE a (); CREATE TABLE b ();"},
 			Release:   "v1",
-			Replaces: []Replaced{
+			Replaces: []LedgerEntry{
 				{Version: first.Version, Name: first.Name, Digest: Digest(first)},
 				{Version: second.Version, Name: second.Name, Digest: Digest(second)},
 			},
@@ -128,5 +128,25 @@ func TestCheckBaselineRefusesAManifestThatDisagreesWithItsFiles(t *testing.T) {
 				t.Fatalf("err = %v, want one containing %q", err, tc.expects)
 			}
 		})
+	}
+}
+
+// The ledger at head holds each shipped migration and the baseline. Once a
+// replaced file is gone, its row still comes from the manifest.
+func TestLedgerAtHeadKeepsAReplacedVersionWhoseFileIsGone(t *testing.T) {
+	ns := baselineNamespace()
+	versions := func(entries []LedgerEntry) string {
+		var v []string
+		for _, e := range entries {
+			v = append(v, e.Version)
+		}
+		return strings.Join(v, " ")
+	}
+	if got := versions(ns.LedgerAtHead()); got != "0001 0002 0004 0003" {
+		t.Errorf("with every file: %s", got)
+	}
+	ns.Migrations = ns.Migrations[2:]
+	if got := versions(ns.LedgerAtHead()); got != "0004 0003 0001 0002" {
+		t.Errorf("with the replaced files gone: %s", got)
 	}
 }

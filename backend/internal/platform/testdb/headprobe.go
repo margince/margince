@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"slices"
 	"strconv"
 	"strings"
 
@@ -198,14 +197,19 @@ func namespaceAtHead(ns dbmigrate.Namespace, recorded map[string]dbmigrate.Ledge
 	if err != nil {
 		return err.Error()
 	}
-	// The baseline is recorded beside the versions it replaces, so a template
-	// the migrator built has its row too.
-	expected := ns.Migrations
-	if ns.Baseline != nil {
-		expected = append(slices.Clone(ns.Migrations), ns.Baseline.Migration)
+	// A shipped migration is judged by the equivalences the migrator admits; a
+	// replaced version whose file is gone, by the digest the baseline declares.
+	shipped := make(map[string]dbmigrate.Migration, len(ns.Migrations))
+	for _, m := range ns.Migrations {
+		shipped[m.Version] = m
 	}
+	if ns.Baseline != nil {
+		shipped[ns.Baseline.Migration.Version] = ns.Baseline.Migration
+	}
+	expected := ns.LedgerAtHead()
 	for _, m := range expected {
 		row, ok := recorded[m.Version]
+		file, hasFile := shipped[m.Version]
 		switch {
 		case !ok:
 			return fmt.Sprintf("%s %s_%s is embedded but not recorded — this database is behind this binary", ns.Name, m.Version, m.Name)
@@ -221,7 +225,7 @@ func namespaceAtHead(ns dbmigrate.Namespace, recorded map[string]dbmigrate.Ledge
 			// that reason.
 			return fmt.Sprintf("%s %s_%s recorded no content digest, so what it applied cannot be compared with what this binary embeds; this template predates content digests and rows are never back-filled", ns.Name, m.Version, m.Name)
 		// The migrator and reuse check must accept the same admitted content.
-		case !dbmigrate.ContentAdmitted(ns.Name, m, *row.Digest):
+		case hasFile && !dbmigrate.ContentAdmitted(ns.Name, file, *row.Digest), !hasFile && *row.Digest != m.Digest:
 			return fmt.Sprintf("%s %s_%s was applied from different content than this binary embeds — the migration was edited after this database was migrated", ns.Name, m.Version, m.Name)
 		}
 	}

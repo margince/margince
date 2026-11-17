@@ -70,7 +70,10 @@ func Core() (dbmigrate.Namespace, error) {
 	if ns.Baseline, err = baseline("core"); err != nil {
 		return dbmigrate.Namespace{}, err
 	}
-	return ns, ns.CheckBaseline()
+	if err := ns.CheckBaseline(); err != nil {
+		return dbmigrate.Namespace{}, err
+	}
+	return ns, nil
 }
 
 // CoreHistory returns the upstream-owned namespace without its baseline, so

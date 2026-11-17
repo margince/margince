@@ -28,12 +28,9 @@ import (
 // every arm below starts from and then breaks in exactly one way.
 func atHead(t *testing.T, ns dbmigrate.Namespace) map[string]dbmigrate.LedgerRow {
 	t.Helper()
-	recorded := make(map[string]dbmigrate.LedgerRow, len(ns.Migrations))
-	for _, m := range ns.Migrations {
-		recorded[m.Version] = dbmigrate.LedgerRow{Name: m.Name, Digest: new(dbmigrate.Digest(m))}
-	}
-	if b := ns.Baseline; b != nil {
-		recorded[b.Migration.Version] = dbmigrate.LedgerRow{Name: b.Migration.Name, Digest: new(dbmigrate.Digest(b.Migration))}
+	recorded := map[string]dbmigrate.LedgerRow{}
+	for _, entry := range ns.LedgerAtHead() {
+		recorded[entry.Version] = dbmigrate.LedgerRow{Name: entry.Name, Digest: new(entry.Digest)}
 	}
 	return recorded
 }

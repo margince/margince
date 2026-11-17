@@ -70,9 +70,13 @@ func coreLedger(t *testing.T, conn *pgx.Conn) map[string]dbmigrate.LedgerRow {
 // laterThanBaseline counts the core migrations a baseline install still
 // applies one by one.
 func laterThanBaseline(core dbmigrate.Namespace) int {
-	return len(core.Migrations) - slices.IndexFunc(core.Migrations, func(m dbmigrate.Migration) bool {
+	first := slices.IndexFunc(core.Migrations, func(m dbmigrate.Migration) bool {
 		return m.Version > core.Baseline.Migration.Version
 	})
+	if first < 0 {
+		return 0
+	}
+	return len(core.Migrations) - first
 }
 
 // An empty database takes the baseline. Each version it replaces is recorded
@@ -144,7 +148,7 @@ func TestADatabasePartWayThroughTheHistoryIsRefused(t *testing.T) {
 	core := coreWithBaseline(t)
 	replaced := core.Baseline.Replaces
 	if _, err := dbmigrate.Up(context.Background(), conn, historyThrough(t, replaced[len(replaced)-2].Version)); err != nil {
-		t.Fatalf("building a database one release behind: %v", err)
+		t.Fatalf("building a database one version short of the release: %v", err)
 	}
 	before := coreLedger(t, conn)
 
@@ -186,4 +190,75 @@ func TestDownPastTheBaselineRevertsTheReplacedFilesAndUpReappliesThem(t *testing
 	if err != nil || applied != steps {
 		t.Fatalf("up applied %d (err %v), want the %d reverted migrations", applied, err, steps)
 	}
+}
+
+// CI's hold on the claim scripts/migration-baseline.sh verify proves byte for
+// byte: both routes build the same catalog and the same reference rows.
+func TestTheBaselineRouteBuildsWhatTheHistoryBuilds(t *testing.T) {
+	ownerDSN, _ := dsns(t)
+	conn := connect(t, ownerDSN)
+	custom, err := migrations.Custom()
+	if err != nil {
+		t.Fatalf("loading custom: %v", err)
+	}
+	history, err := migrations.CoreHistory()
+	if err != nil {
+		t.Fatalf("loading core history: %v", err)
+	}
+	built := map[string]string{}
+	for route, core := range map[string]dbmigrate.Namespace{"history": history, "baseline": coreWithBaseline(t)} {
+		resetSchema(t, conn)
+		if _, err := dbmigrate.Up(context.Background(), conn, core, custom); err != nil {
+			t.Fatalf("migrating by the %s route: %v", route, err)
+		}
+		built[route] = catalogProjection(t, conn) + referenceRowProjection(t, conn)
+	}
+	if added, removed := lineDiff(built["history"], built["baseline"]); len(added)+len(removed) > 0 {
+		t.Fatalf("the baseline route differs from the history.\nonly the baseline route builds:\n  %s\nonly the history builds:\n  %s",
+			strings.Join(added, "\n  "), strings.Join(removed, "\n  "))
+	}
+}
+
+// referenceRowProjection is every row the migrations wrote, one line each and
+// sorted, without its uuid and timestamptz columns: a run generates those.
+func referenceRowProjection(t *testing.T, conn *pgx.Conn) string {
+	t.Helper()
+	ctx := context.Background()
+	rows, err := conn.Query(ctx, `
+		SELECT format('%I.%I', c.table_schema, c.table_name),
+		       coalesce(array_agg(c.column_name::text) FILTER (WHERE c.data_type IN ('uuid', 'timestamp with time zone')), '{}')
+		  FROM information_schema.columns c
+		  JOIN information_schema.tables t USING (table_schema, table_name)
+		 WHERE c.table_schema IN ('public', 'ext') AND t.table_type = 'BASE TABLE'
+		   AND c.table_name NOT LIKE 'schema\_migrations\_%'
+		 GROUP BY 1`)
+	if err != nil {
+		t.Fatalf("listing tables: %v", err)
+	}
+	generated := map[string][]string{}
+	for rows.Next() {
+		var table string
+		var columns []string
+		if err := rows.Scan(&table, &columns); err != nil {
+			t.Fatalf("listing tables: %v", err)
+		}
+		generated[table] = columns
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatalf("listing tables: %v", err)
+	}
+	var lines []string
+	for table, columns := range generated {
+		var values []string
+		// The table is a catalog name quoted by format('%I'), never request input.
+		if err := conn.QueryRow(ctx, `SELECT coalesce(array_agg((to_jsonb(r) - $1::text[])::text), '{}') FROM `+table+` r`,
+			columns).Scan(&values); err != nil {
+			t.Fatalf("reading %s: %v", table, err)
+		}
+		for _, v := range values {
+			lines = append(lines, "row "+table+" "+v)
+		}
+	}
+	slices.Sort(lines)
+	return strings.Join(lines, "\n") + "\n"
 }

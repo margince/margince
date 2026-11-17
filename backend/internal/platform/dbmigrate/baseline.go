@@ -22,14 +22,14 @@ import (
 type Baseline struct {
 	Migration Migration
 	Release   string
-	Replaces  []Replaced
+	Replaces  []LedgerEntry
 }
 
-// Replaced is one version a baseline stands for, with the name and digest a
-// baseline install records for it. They are the old file's own name and Digest,
-// so the ledger checks hold on either route. They are declared, not read off
-// the file, so the file can go later.
-type Replaced struct {
+// LedgerEntry is one ledger row as an install writes it. For a version a
+// baseline replaces, it is the old file's own name and Digest, so the ledger
+// checks hold on either route. Those are declared, not read off the file, so
+// the file can go later.
+type LedgerEntry struct {
 	Version string
 	Name    string
 	Digest  string
@@ -37,7 +37,7 @@ type Replaced struct {
 
 // ParseBaselineManifest reads a `release <name>` line and then one
 // `version name digest` line per replaced version; # starts a comment.
-func ParseBaselineManifest(text string) (release string, replaces []Replaced, err error) {
+func ParseBaselineManifest(text string) (release string, replaces []LedgerEntry, err error) {
 	lines := bufio.NewScanner(strings.NewReader(text))
 	for n := 1; lines.Scan(); n++ {
 		fields := strings.Fields(lines.Text())
@@ -47,7 +47,7 @@ func ParseBaselineManifest(text string) (release string, replaces []Replaced, er
 		case len(fields) == 2 && fields[0] == "release" && release == "":
 			release = fields[1]
 		case len(fields) == 3:
-			replaces = append(replaces, Replaced{Version: fields[0], Name: fields[1], Digest: fields[2]})
+			replaces = append(replaces, LedgerEntry{Version: fields[0], Name: fields[1], Digest: fields[2]})
 		default:
 			return "", nil, fmt.Errorf("baseline manifest line %d: want `release <name>` once, then `version name digest`", n)
 		}
@@ -73,7 +73,7 @@ func (ns Namespace) CheckBaseline() error {
 	if b.Migration.Unwrapped() {
 		return fmt.Errorf("pgmigrate: %s baseline %s: it records the versions it replaces in its own transaction, so it cannot ask to run unwrapped", ns.Name, b.Migration.Version)
 	}
-	listed := make(map[string]Replaced, len(b.Replaces))
+	listed := make(map[string]LedgerEntry, len(b.Replaces))
 	for _, r := range b.Replaces {
 		if r.Version >= b.Migration.Version {
 			return fmt.Errorf("pgmigrate: %s baseline %s lists %s, which does not sort below it", ns.Name, b.Migration.Version, r.Version)
@@ -119,7 +119,7 @@ func settleBaseline(ctx context.Context, conn *pgx.Conn, ns Namespace, table str
 		}
 	}
 	install := len(done) == 0
-	rows := []Replaced{{Version: b.Migration.Version, Name: b.Migration.Name, Digest: Digest(b.Migration)}}
+	rows := []LedgerEntry{{Version: b.Migration.Version, Name: b.Migration.Name, Digest: Digest(b.Migration)}}
 	switch {
 	case install:
 		rows = append(rows, b.Replaces...)
@@ -130,14 +130,12 @@ func settleBaseline(ctx context.Context, conn *pgx.Conn, ns Namespace, table str
 			ns.Name, present, len(b.Replaces), b.Migration.Version, b.Migration.Name, b.Release)
 	}
 
-	err = inTx(ctx, conn, func(tx pgx.Tx) error {
-		if install {
-			if _, err := tx.Exec(ctx, b.Migration.UpSQL); err != nil {
-				return err
-			}
-		}
-		return recordLedgerRows(ctx, tx, table, rows)
-	})
+	record, args := recordLedgerRows(table, rows)
+	if install {
+		err = apply(ctx, conn, b.Migration, b.Migration.UpSQL, record, args)
+	} else {
+		_, err = conn.Exec(ctx, record, args...)
+	}
 	if err != nil {
 		return false, fmt.Errorf("pgmigrate: %s baseline %s_%s: %w", ns.Name, b.Migration.Version, b.Migration.Name, err)
 	}
@@ -148,15 +146,36 @@ func settleBaseline(ctx context.Context, conn *pgx.Conn, ns Namespace, table str
 	return install, nil
 }
 
-func recordLedgerRows(ctx context.Context, tx pgx.Tx, table string, rows []Replaced) error {
+// recordLedgerRows is one INSERT for every row, with its arguments.
+func recordLedgerRows(table string, rows []LedgerEntry) (string, []any) {
 	versions := make([]string, len(rows))
 	names := make([]string, len(rows))
 	digests := make([]string, len(rows))
 	for i, r := range rows {
 		versions[i], names[i], digests[i] = r.Version, r.Name, r.Digest
 	}
-	_, err := tx.Exec(ctx, fmt.Sprintf(
+	return fmt.Sprintf(
 		`INSERT INTO %s (version, name, content_digest) SELECT * FROM unnest($1::text[], $2::text[], $3::text[])`,
-		pgx.Identifier{table}.Sanitize()), versions, names, digests)
-	return err
+		pgx.Identifier{table}.Sanitize()), []any{versions, names, digests}
+}
+
+// LedgerAtHead is every row the ledger holds once Up has run: one per
+// migration, the baseline's, and one per replaced version whose file is gone.
+// The test-database probe reads it, so it expects what settleBaseline writes.
+func (ns Namespace) LedgerAtHead() []LedgerEntry {
+	entries := make([]LedgerEntry, 0, len(ns.Migrations)+1)
+	shipped := make(map[string]bool, len(ns.Migrations))
+	for _, m := range ns.Migrations {
+		shipped[m.Version] = true
+		entries = append(entries, LedgerEntry{Version: m.Version, Name: m.Name, Digest: Digest(m)})
+	}
+	if b := ns.Baseline; b != nil {
+		entries = append(entries, LedgerEntry{Version: b.Migration.Version, Name: b.Migration.Name, Digest: Digest(b.Migration)})
+		for _, r := range b.Replaces {
+			if !shipped[r.Version] {
+				entries = append(entries, r)
+			}
+		}
+	}
+	return entries
 }
