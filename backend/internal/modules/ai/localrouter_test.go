@@ -269,3 +269,34 @@ func TestNewLocalRouterServesAHarnessProviderWithTheCallersClient(t *testing.T) 
 		t.Errorf("calls = %+v, want one traced under harness_cli", store.calls)
 	}
 }
+
+// A trace is read to audit a grade, so it must hold all the model read and
+// said. The row caps that bound ai_call_payload would cut a long answer
+// before the part a judge scored.
+func TestNewLocalRouterPayloadCaptureKeepsTheWholeText(t *testing.T) {
+	answer := strings.Repeat("b", maxCapturedPayloadRunes+5000)
+	fake := NewFakeClient().Script(answer)
+	store := &memCallStore{}
+	r, err := NewLocalRouter(localFakeConfig(), WithCallStore(store), WithoutResultCache(), WithFakeClient(fake), WithPayloadCapture())
+	if err != nil {
+		t.Fatal(err)
+	}
+	long := strings.Repeat("a", maxCapturedRequestRunes+5000)
+	req := model.Request{Subjects: model.AboutNoContact("test prompt"), System: long, Messages: []model.Message{{Role: "user", Content: long}}}
+	if _, _, err := r.Complete(wsContext(t), TaskSummarize, req); err != nil {
+		t.Fatal(err)
+	}
+	if len(store.calls) != 1 || store.calls[0].Payload == nil {
+		t.Fatalf("want one call with a captured payload, got %+v", store.calls)
+	}
+	p := store.calls[0].Payload
+	if strings.Contains(string(p.Request)+string(p.Response), captureTruncationMarker) {
+		t.Fatal("the trace capture was cut")
+	}
+	if got := longestRun(string(p.Request), 'a'); got != len(long) {
+		t.Fatalf("a request field kept %d of %d runes", got, len(long))
+	}
+	if got := longestRun(string(p.Response), 'b'); got != len(answer) {
+		t.Fatalf("response kept %d of %d runes", got, len(answer))
+	}
+}
