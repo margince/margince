@@ -30,8 +30,8 @@ type Owned struct {
 }
 
 // Set is one composition's declared tables, ordered by table name. The
-// composition builds it at boot and hands it to every merge and erasure door,
-// so two compositions in one process never read each other's tables. The zero
+// composition builds it at boot and hands it to every merge and erasure door.
+// So two compositions in one process never read each other's tables. The zero
 // Set declares no table.
 type Set struct {
 	tables []Owned
