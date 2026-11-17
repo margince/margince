@@ -15,9 +15,9 @@ package contacts
 // unreproducibly is the worst kind, because the product's own defence against
 // the report is indistinguishable from the bug.
 //
-// So the date is bound by the caller, from ONE clock: the store's. Each company
-// read samples it once and pins the day on its context, because the sort
-// expression that reads it is a free function with no store in hand.
+// So the caller binds the date from one clock, the store's. Each company read
+// samples it once and pins the day on its context. The sort expression that
+// reads it is a free function with no store in hand.
 
 import (
 	"context"
@@ -26,8 +26,8 @@ import (
 
 type rollupAsOfKey struct{}
 
-// withRollupAsOf pins the day this store's clock reads now for everything
-// built from ctx, so the count, the total and the sort agree on one FX day.
+// withRollupAsOf pins today, by this store's clock, for everything built from
+// ctx. The count, the total and the sort then agree on one FX day.
 func (s *Store) withRollupAsOf(ctx context.Context) context.Context {
 	return context.WithValue(ctx, rollupAsOfKey{}, rollupDay(s.clock()))
 }

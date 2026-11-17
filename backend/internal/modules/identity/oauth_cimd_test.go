@@ -114,7 +114,7 @@ func TestARedirectInADocumentIsHeldToTheSameRuleAsARegisteredOne(t *testing.T) {
 	}
 }
 
-// reachableCIMDClient is the production client with ONLY its transport
+// reachableCIMDClient is the production client with only its transport
 // replaced.
 //
 // The dialer is what has to go and the only thing that may: netguard refuses a

@@ -96,11 +96,10 @@ func leadTakesFirstResponseSQL(alias, at string) string {
 // columns, with the same arithmetic leadSLAFields applies in Go: the list
 // and the row must agree about which leads are overdue.
 //
-// The instant is the application clock, bound as a parameter, never the
-// database's now(): the row's sla_state is derived against slaNow, and
-// a filter reading a different clock — the container's, seconds adrift, or
-// the other side of a boundary crossed mid-request — would return an at_risk
-// row whose own payload says breached.
+// The instant is slaNow, bound as a parameter, never the database's now(). The
+// row's sla_state is derived against slaNow. A filter on another clock (the
+// container's, seconds adrift) would return an at_risk row whose own payload
+// says breached.
 //
 // With the target switched off no lead is in any SLA state, so the filter
 // matches nothing rather than pretending a default target.

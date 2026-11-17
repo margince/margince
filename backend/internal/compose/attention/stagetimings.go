@@ -239,8 +239,8 @@ func StageCosts() map[StageKey]StageCost {
 	return snapshotStageCosts(stageTimings.costs)
 }
 
-// StageCostLog is the stage costs of the reads run under one context only,
-// kept beside the process totals so a caller can read its own reads' share.
+// StageCostLog holds the stage costs of the reads run under one context. It
+// sits beside the process totals, so a caller reads only its own share.
 type StageCostLog struct {
 	mu    sync.Mutex
 	costs map[StageKey]*stageCost

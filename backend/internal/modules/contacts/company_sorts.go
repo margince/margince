@@ -57,9 +57,8 @@ func orderByContactCount(ctx context.Context, arg func(any) int) (string, error)
 //
 // Held by: TestEveryOpenDealCountComesFromTheRollup (backend/internal/modules/contacts/opendealcount_test.go)
 //
-// The as-of date is rollupAsOf(ctx), which the page's own count already uses and
-// which truncates to the day: the sort and the figure beside it cannot land on
-// two different instants.
+// The as-of date is rollupAsOf(ctx), which the page's own count also uses. It
+// truncates to the day, so the sort and the figure beside it share one date.
 //
 // A role without computed_field:read is shown NO count (STATE-4) and orders by
 // nothing — same rule as the contacts column above, for the same reason.
