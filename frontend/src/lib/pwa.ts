@@ -64,8 +64,7 @@ function addsToHomeScreen(): boolean {
   return /Safari\//.test(navigator.userAgent);
 }
 
-// Add to Dock needs macOS 14, and Safari reports every macOS as 10.15.7;
-// Safari 26 ships for macOS 14 and later only, so its version stands in.
+// Add to Dock needs macOS 14, which Safari 26 requires; Safari reports every macOS as 10.15.7.
 const DOCK_SAFARI_MAJOR = 26;
 
 function macSafari(): boolean {
