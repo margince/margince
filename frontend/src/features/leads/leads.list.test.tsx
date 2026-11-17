@@ -213,6 +213,10 @@ describe("LeadsScreen — search/sort/pagination + status filter (P-14)", () => 
     // The row that refused is named, with the outcome the server reported.
     expect(await screen.findByText(/1 not applied/)).toBeTruthy();
     expect(screen.getByText(/Otto Fischer: /)).toBeTruthy();
+    // The row that moved is counted, whatever the view shows of it.
+    expect(
+      await screen.findByText(/^1 lead assigned to Lena F\./),
+    ).toBeTruthy();
   });
 
   it("says so when the whole bulk assign is refused, not just when rows are", async () => {

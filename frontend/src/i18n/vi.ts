@@ -5691,6 +5691,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.bulkDisqualifyTitle_other": "Loại {count} lead?",
   "lead.bulkDisqualifyBody":
     "Đóng với lý do “{reason}”. Mỗi lead vẫn giữ nguyên hồ sơ, và không thể mở lại tất cả trong một bước.",
+  "lead.bulkAssignedDone_one": "Đã giao {count} lead cho {owner}.",
+  "lead.bulkAssignedDone_other": "Đã giao {count} lead cho {owner}.",
+  "lead.bulkDisqualifiedDone_one": "Đã loại {count} lead.",
+  "lead.bulkDisqualifiedDone_other": "Đã loại {count} lead.",
   "lead.bulkFailed": "Không thể áp dụng cho {count} lead:",
   "lead.bulkFailedRow": "không thể lưu",
   "lead.bulkOutcomeConflict": "người khác đã thay đổi trong lúc đó",

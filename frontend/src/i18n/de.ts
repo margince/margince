@@ -5843,6 +5843,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.bulkDisqualifyTitle_other": "{count} Leads disqualifizieren?",
   "lead.bulkDisqualifyBody":
     "Geschlossen mit dem Grund „{reason}“. Jeder Lead behält seinen Datensatz, und die Leads lassen sich nicht in einem Schritt wieder öffnen.",
+  "lead.bulkAssignedDone_one": "{count} Lead an {owner} zugewiesen.",
+  "lead.bulkAssignedDone_other": "{count} Leads an {owner} zugewiesen.",
+  "lead.bulkDisqualifiedDone_one": "{count} Lead disqualifiziert.",
+  "lead.bulkDisqualifiedDone_other": "{count} Leads disqualifiziert.",
   "lead.bulkFailed": "{count} nicht übernommen:",
   "lead.bulkFailedRow": "nicht gespeichert",
   "lead.bulkOutcomeConflict": "inzwischen von jemand anderem geändert",

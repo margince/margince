@@ -5777,6 +5777,10 @@ export const en = {
   "lead.bulkDisqualifyTitle_other": "Disqualify {count} leads?",
   "lead.bulkDisqualifyBody":
     "Closed with the reason “{reason}”. Each lead keeps its record, and they cannot be reopened in one step.",
+  "lead.bulkAssignedDone_one": "{count} lead assigned to {owner}.",
+  "lead.bulkAssignedDone_other": "{count} leads assigned to {owner}.",
+  "lead.bulkDisqualifiedDone_one": "{count} lead disqualified.",
+  "lead.bulkDisqualifiedDone_other": "{count} leads disqualified.",
   "lead.bulkFailed": "{count} not applied:",
   "lead.bulkFailedRow": "not saved",
   "lead.bulkOutcomeConflict": "changed by someone else in the meantime",

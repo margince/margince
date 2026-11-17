@@ -45,7 +45,7 @@ import {
   SaveViewAction,
   useSavedViewTabs,
 } from "../lists/savedviews";
-import { LeadBulkBar } from "./leadbulk";
+import { LeadBulkBar, useBulkDoneMessage } from "./leadbulk";
 import { useLeadSettings } from "./leadhandling";
 import { leadIdentityName } from "./leadname";
 import { LEAD_STATUS_FILTER_OPTIONS, LeadBoard } from "./leadpresentation";
@@ -195,10 +195,10 @@ function LeadsWorkbench({
   const [noteDismissed, setNoteDismissed] = useState(
     () => readStored(STORAGE_KEYS.segregationNoteDismissed) === "1",
   );
-  // What the last bulk write did to a row the current view then stopped
-  // showing — a successful assign out of "Mine" must never look like nothing
-  // happened (or like a failure).
+  // What the last bulk write did, said every time. The moved rows leave the
+  // selection, and an assign out of "Mine" leaves the view as well.
   const assignedAway = useOwnToast({ leavesWithCaller: true });
+  const bulkDone = useBulkDoneMessage();
   const showingMine = state.query.filters.owner_id === viewerId;
   const chosen = useRowSelection({
     rows: state.rows,
@@ -347,11 +347,11 @@ function LeadsWorkbench({
                 // must not stand beside this one's rows.
                 assignedAway.withdraw();
                 const moved = outcomes.filter((o) => !o.error);
+                if (moved.length === 0) return;
                 if (
                   action.kind === "assign" &&
                   showingMine &&
-                  action.ownerId !== viewerId &&
-                  moved.length > 0
+                  action.ownerId !== viewerId
                 ) {
                   // The verb goes through `action`: the region draws it as one
                   // control on one ground, not a `Button` hand-placed on the
@@ -373,6 +373,8 @@ function LeadsWorkbench({
                       },
                     },
                   );
+                } else {
+                  assignedAway.show(bulkDone(moved.length, action));
                 }
               }}
             />

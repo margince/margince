@@ -106,7 +106,7 @@ To disqualify a lead in Margince, open the lead, choose **More actions**, then *
 1. In **Disqualify {name}?**, pick a **Reason** (required; without one it says "Choose a reason first.").
 2. You may add a **Note (optional)**.
 3. Choose **Disqualify**.
-To disqualify several at once, tick them on the **Leads** list and choose **Disqualify** in the bulk bar.
+To disqualify several at once, tick them on the **Leads** list, pick a reason in the bulk bar and choose **Disqualify**. A message then says how many leads were disqualified, and the bar names any lead that was not.
 Leads have no archive action; disqualifying is how you close one.
 Also called: reject a lead, close a lead, archive a lead.
 
@@ -132,7 +132,7 @@ Also called: update a lead, rename a lead, correct a prospect.
 To change or set the owner of a lead in Margince, open the lead. Press **Change owner** beside the **Owner** value under **Ownership** in its **Details** panel. Search under **Search colleagues** and pick a colleague. The pick saves at once, with no **Save** button, and confirms "Assigned to {name}".
 Pick yourself on a lead with no owner to claim it, or anyone else to hand it over. The current owner is marked; picking them changes nothing.
 
-For many leads, tick them on the **Leads** table and use **Choose owner** → **Assign**.
+For many leads, tick them on the **Leads** table and use **Choose owner** → **Assign**. A message says how many leads went to the new owner.
 The new owner must be "an active colleague you may assign work to".
 Also called: assign a lead, reassign a prospect, take a lead, claim a lead.
 
