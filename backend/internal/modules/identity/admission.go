@@ -45,7 +45,7 @@ func (h Handlers) serveAsAgent(ctx context.Context, w http.ResponseWriter, r *ht
 		httperr.Write(w, r, err)
 		return
 	}
-	if err := h.refuseAfterTrial(ctx, r); err != nil {
+	if err := h.refuseWhenLocked(ctx, r); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
@@ -83,7 +83,7 @@ func (h Handlers) serveAsHuman(ctx context.Context, w http.ResponseWriter, r *ht
 	}
 
 	// After the seat ceiling, so a read seat keeps its own answer.
-	if err := h.refuseAfterTrial(ctx, r); err != nil {
+	if err := h.refuseWhenLocked(ctx, r); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}

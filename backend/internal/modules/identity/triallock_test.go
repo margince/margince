@@ -13,14 +13,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
-func endedTrial(ended bool, err error) Handlers {
-	return Handlers{}.WithTrialLock(func(context.Context) (bool, error) { return ended, err })
+func lockedBy(err error) Handlers {
+	return Handlers{}.WithInstallationLock(func(context.Context) error { return err })
 }
 
-// Once the trial has ended every change is refused. The few left open let a
-// seat sign in, end the lock, or answer for the data it holds.
-func TestAnEndedTrialRefusesEveryChangeButTheOnesThatEndOrSurviveIt(t *testing.T) {
-	h := endedTrial(true, nil)
+// A locked installation refuses every change with the lock's own reason. The
+// few left open let a seat sign in, end the lock, or answer for the data it holds.
+func TestALockedInstallationRefusesEveryChangeButTheOnesThatEndOrSurviveIt(t *testing.T) {
 	cases := []struct {
 		method, path string
 		refused      bool
@@ -36,44 +35,52 @@ func TestAnEndedTrialRefusesEveryChangeButTheOnesThatEndOrSurviveIt(t *testing.T
 		{http.MethodPost, "/v1/exports", false},
 		{http.MethodPatch, "/v1/data-subject-requests/0190a000-0000-7000-8000-000000000001", false},
 	}
-	for _, c := range cases {
-		err := h.refuseAfterTrial(context.Background(), httptest.NewRequest(c.method, c.path, nil))
-		if refused := errors.Is(err, apperrors.ErrTrialEnded); refused != c.refused {
-			t.Errorf("%s %s: refused = %v (err %v), want %v", c.method, c.path, refused, err, c.refused)
+	for _, reason := range []error{apperrors.ErrTrialEnded, apperrors.ErrLicenseLapsed} {
+		h := lockedBy(reason)
+		for _, c := range cases {
+			err := h.refuseWhenLocked(context.Background(), httptest.NewRequest(c.method, c.path, nil))
+			if refused := errors.Is(err, reason); refused != c.refused {
+				t.Errorf("%v: %s %s: refused = %v (err %v), want %v", reason, c.method, c.path, refused, err, c.refused)
+			}
 		}
 	}
 }
 
-func TestATrialStillRunningRefusesNothing(t *testing.T) {
-	for name, h := range map[string]Handlers{"no lock wired": {}, "trial running": endedTrial(false, nil)} {
-		if err := h.refuseAfterTrial(context.Background(), httptest.NewRequest(http.MethodPost, "/v1/contacts", nil)); err != nil {
-			t.Errorf("%s: refuseAfterTrial = %v, want nil", name, err)
+func TestAnUnlockedInstallationRefusesNothing(t *testing.T) {
+	for name, h := range map[string]Handlers{"no lock wired": {}, "not locked": lockedBy(nil)} {
+		if err := h.refuseWhenLocked(context.Background(), httptest.NewRequest(http.MethodPost, "/v1/contacts", nil)); err != nil {
+			t.Errorf("%s: refuseWhenLocked = %v, want nil", name, err)
 		}
 	}
 }
 
-// A trial that cannot be read is a server fault, not a pass. The mutation is
+// A lock that cannot be read is a server fault, not a pass. The mutation is
 // refused with the read's own error, never admitted on a guess.
-func TestATrialThatCannotBeReadRefusesTheChangeWithThatError(t *testing.T) {
+func TestALockThatCannotBeReadRefusesTheChangeWithThatError(t *testing.T) {
 	broken := errors.New("database unreachable")
-	err := endedTrial(false, broken).refuseAfterTrial(context.Background(), httptest.NewRequest(http.MethodPost, "/v1/contacts", nil))
+	err := lockedBy(broken).refuseWhenLocked(context.Background(), httptest.NewRequest(http.MethodPost, "/v1/contacts", nil))
 	if !errors.Is(err, broken) {
-		t.Errorf("refuseAfterTrial = %v, want %v", err, broken)
+		t.Errorf("refuseWhenLocked = %v, want %v", err, broken)
 	}
 }
 
-// /me tells every seat about the lock, and says nothing while there is none.
-func TestMeReportsTheEndedTrialOnlyOnceItHasEnded(t *testing.T) {
-	if got := endedTrial(true, nil).trialEndedForMe(context.Background()); got == nil || !*got {
-		t.Errorf("trialEndedForMe after the trial = %v, want true", got)
+// /me tells every seat which lock holds, and says nothing while there is none.
+func TestMeReportsTheLockByItsReason(t *testing.T) {
+	trial, lapsed := lockedBy(apperrors.ErrTrialEnded).lockForMe(context.Background())
+	if trial == nil || !*trial || lapsed != nil {
+		t.Errorf("ended trial: lockForMe = (%v, %v), want (true, absent)", trial, lapsed)
+	}
+	trial, lapsed = lockedBy(apperrors.ErrLicenseLapsed).lockForMe(context.Background())
+	if lapsed == nil || !*lapsed || trial != nil {
+		t.Errorf("lapsed license: lockForMe = (%v, %v), want (absent, true)", trial, lapsed)
 	}
 	for name, h := range map[string]Handlers{
 		"no lock wired":   {},
-		"trial running":   endedTrial(false, nil),
-		"unreadable lock": endedTrial(true, errors.New("database unreachable")),
+		"not locked":      lockedBy(nil),
+		"unreadable lock": lockedBy(errors.New("database unreachable")),
 	} {
-		if got := h.trialEndedForMe(context.Background()); got != nil {
-			t.Errorf("%s: trialEndedForMe = %v, want absent", name, *got)
+		if trial, lapsed := h.lockForMe(context.Background()); trial != nil || lapsed != nil {
+			t.Errorf("%s: lockForMe = (%v, %v), want both absent", name, trial, lapsed)
 		}
 	}
 }
