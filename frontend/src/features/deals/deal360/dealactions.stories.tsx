@@ -53,6 +53,8 @@ const deal = (over: Partial<Deal> = {}): Deal =>
     stalled: false,
     source: "manual",
     version: 1,
+    writable: true,
+    archivable: true,
     created_at: "2026-01-01T00:00:00Z",
     updated_at: "2026-01-01T00:00:00Z",
     ...over,
@@ -120,9 +122,40 @@ export const LoggingRefused: Story = {
 };
 
 /**
- * Archived. The page's own sentence refuses every verb at once, and Reopen is
- * DRAWN (refused) rather than absent, because a reader who archived a closed
- * deal came here asking whether it can come back.
+ * A closed deal this reader may not write: permission, not state, withholds
+ * Reopen and the write verbs, so they are absent rather than refused.
+ */
+export const ReadOnlyDeal: Story = {
+  render: () => actions({ status: "lost", writable: false }),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: "More actions",
+      }),
+    );
+    const addTask = await screen.findByRole("button", { name: "Add task" });
+    // Until /me answers every deal reads as unwritable, so absence proves
+    // nothing before the seat that holds deal:update has loaded.
+    await waitFor(() => expect(addTask).toBeEnabled());
+    for (const name of [
+      "Reopen",
+      "Archive deal",
+      "Edit details",
+      "Share",
+      "Correct close day",
+    ]) {
+      await expect(
+        screen.queryByRole("button", { name }),
+      ).not.toBeInTheDocument();
+    }
+  },
+};
+
+/**
+ * Archived. The page's one sentence refuses the logging verbs, Share, Correct
+ * close day, Reopen and Archive; Edit details stays enabled, opening a
+ * read-only drawer. Reopen is DRAWN (refused) rather than absent, because a
+ * reader who archived a closed deal came here asking whether it can come back.
  */
 export const Archived: Story = {
   render: () =>
@@ -131,6 +164,16 @@ export const Archived: Story = {
       { deal: ["read", "update"], activity: ["create"] },
       "deal-archived",
     ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: "More actions",
+      }),
+    );
+    const reopen = await screen.findByRole("button", { name: "Reopen" });
+    await waitFor(() => expect(reopen).toBeDisabled());
+    await expect(reopen).toHaveAttribute("aria-describedby", "deal-archived");
+  },
 };
 
 /**
@@ -155,7 +198,7 @@ export const OverflowOnAClosedDeal: Story = {
     ).toBeVisible();
     await expect(
       await screen.findByRole("button", { name: "Archive deal" }),
-    ).toBeVisible();
+    ).toBeEnabled();
   },
 };
 
