@@ -76,6 +76,7 @@ function mintBackend(
     expired?: boolean;
     bundle?: "serves" | "refuses";
     listHangs?: boolean;
+    areas?: boolean;
   } = {},
 ): ReturnType<typeof vi.fn> {
   return vi.fn(async (input: RequestInfo | URL) => {
@@ -148,6 +149,7 @@ function mintBackend(
     return jsonResponse({
       data: [],
       api_base_url: API_BASE,
+      ...(opts.areas ? { reachable_areas: ["business", "capture"] } : {}),
       page: { next_cursor: null, has_more: false },
     });
   });
@@ -189,6 +191,19 @@ describe("PassportCard — minting", () => {
     expect(
       within(group).getByRole("checkbox", { name: "Personal channels" }),
     ).not.toBeChecked();
+  });
+
+  it("offers no work areas to a passport that holds only Personal channels", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", mintBackend({ areas: true }));
+    const dialog = await openMintDialog(user);
+    expect(within(dialog).getByText("Where it may work")).toBeInTheDocument();
+    await user.click(within(dialog).getByLabelText("Read records"));
+    await user.click(within(dialog).getByLabelText("Draft messages"));
+    await user.click(within(dialog).getByLabelText("Personal channels"));
+    expect(within(dialog).queryByText("Where it may work")).toBeNull();
+    await user.click(within(dialog).getByLabelText("Read records"));
+    expect(within(dialog).getByText("Where it may work")).toBeInTheDocument();
   });
 
   it("refuses a passport with no scope, and says why", async () => {

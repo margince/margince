@@ -19,7 +19,6 @@ import {
   OverflowMenu,
 } from "../../design-system/atoms";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
-import { Heading } from "../../design-system/heading";
 import {
   Panel,
   PanelBody,
@@ -28,6 +27,7 @@ import {
 } from "../../design-system/panel";
 import { ScopeChips, scopeChipLabel } from "../../design-system/passportselect";
 import { QueryStates } from "../../design-system/querystates";
+import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { formatDate, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useEndedRows } from "../../lib/ended-rows";
@@ -72,18 +72,27 @@ const PERSONAL_CHANNELS_GUIDE =
 function PersonalChannelsApi({ onMint }: Readonly<{ onMint: () => void }>) {
   const t = useT();
   return (
-    <section className="form-stack" aria-labelledby="personal-channels-api">
-      <Heading size="small" id="personal-channels-api">
-        {t("personalChannels.apiTitle")}
-      </Heading>
-      <p>{t("personalChannels.apiIntro")}</p>
-      <span>
-        <a href={PERSONAL_CHANNELS_GUIDE} target="_blank" rel="noreferrer">
-          {t("personalChannels.readGuide")}
-        </a>{" "}
-        <Button onClick={onMint}>{t("personalChannels.mintForBridge")}</Button>
-      </span>
-    </section>
+    <SettingList>
+      <SettingRow
+        label={t("personalChannels.apiTitle")}
+        description={t("personalChannels.apiIntro")}
+        control={
+          <>
+            <Button
+              variant="link"
+              onClick={() =>
+                window.open(PERSONAL_CHANNELS_GUIDE, "_blank", "noreferrer")
+              }
+            >
+              {t("personalChannels.readGuide")}
+            </Button>
+            <Button onClick={onMint}>
+              {t("personalChannels.mintForBridge")}
+            </Button>
+          </>
+        }
+      />
+    </SettingList>
   );
 }
 

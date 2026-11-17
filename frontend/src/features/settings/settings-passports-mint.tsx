@@ -76,7 +76,11 @@ export function MintDialog({
   const [scopes, setScopes] = useState<Set<PassportScope>>(
     new Set(preset?.scopes ?? ["read", "draft"]),
   );
-  const [areas, setAreas] = useState<PassportAreas>(ALL_AREAS);
+  const [chosenAreas, setAreas] = useState<PassportAreas>(ALL_AREAS);
+  // Chats are the member's own, not records in a work area, so a passport that
+  // holds only Personal channels has no area to choose.
+  const channelsOnly = scopes.size === 1 && scopes.has("personal_channels");
+  const areas = channelsOnly ? ALL_AREAS : chosenAreas;
   const [neverExpires, setNeverExpires] = useState(false);
   const tokenRegion = useRef<HTMLDivElement | null>(null);
   const titleId = useId();
@@ -212,11 +216,13 @@ export function MintDialog({
               />
             ))}
           </fieldset>
-          <WorkAreasChoice
-            reachable={reachable}
-            value={areas}
-            onChange={setAreas}
-          />
+          {!channelsOnly && (
+            <WorkAreasChoice
+              reachable={reachable}
+              value={areas}
+              onChange={setAreas}
+            />
+          )}
           <Checkbox
             checked={neverExpires}
             onChange={(event) => setNeverExpires(event.target.checked)}

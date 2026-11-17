@@ -226,3 +226,14 @@ func TestOnlyTheIdentitiesTheMembersOwnChatAppMetAreReachable(t *testing.T) {
 		t.Fatalf("a colleague reaches %v through the member's chat app", got)
 	}
 }
+
+func TestAGroupMessageNamingOtherParticipantsLands(t *testing.T) {
+	e := setupPersonalChannels(t)
+	msg := whatsapp("wamid.grp", "8498")
+	msg.GroupID = "grp-1"
+	msg.Participants = []personalchannels.Party{{Account: "8499", Name: "Chi Pham"}}
+	res := e.push(t, msg)
+	if res[0].Status != personalchannels.StatusLanded {
+		t.Fatalf("a group message with a further participant = %+v, want landed", res[0])
+	}
+}
