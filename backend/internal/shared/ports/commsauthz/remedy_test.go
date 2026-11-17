@@ -25,22 +25,16 @@ func TestEveryReasonDeclaresItsRemedy(t *testing.T) {
 	}
 }
 
-// TestNobodySendsPastASubjectsStop holds that a subject's own stop lists no
-// remedy at all: no answer, no fact, and no exception, an admin's included.
-func TestNobodySendsPastASubjectsStop(t *testing.T) {
+func TestSubjectStopsOfferOnlyAOneMessageException(t *testing.T) {
 	t.Parallel()
-	stops := 0
 	for _, reason := range reasonConstants(t) {
 		if LevelForReason(reason) != LevelSubject {
 			continue
 		}
-		stops++
-		if got := RemediesFor(reason); len(got) != 0 {
-			t.Errorf("%q is the subject's own stop and lists %v; nobody may send past it", reason, got)
+		got := RemediesFor(reason)
+		if len(got) != 1 || got[0] != RemedyException {
+			t.Errorf("%q remedies = %v, want one-message exception", reason, got)
 		}
-	}
-	if stops != 5 {
-		t.Errorf("found %d subject-level stops, want the five: objection, withdrawal, restriction, request to stop, opt-out after a request", stops)
 	}
 }
 
@@ -71,20 +65,13 @@ func TestRemediesForReturnsACopyAndNothingForAnUnknownReason(t *testing.T) {
 	}
 }
 
-// A set that holds a subject's own stop is answered by no exception, even
-// beside a refusal the exception does answer.
-func TestAnExceptionAnswersNoSetThatHoldsASubjectsStop(t *testing.T) {
+func TestAnExceptionAnswersCombinedPolicyWarnings(t *testing.T) {
 	t.Parallel()
 	missing := Decision{Verdict: VerdictDeny, ReasonCode: ReasonNoMarketingConsent}
-	for _, stop := range []string{
-		ReasonObjection, ReasonConsentWithdrawn, ReasonRestricted, ReasonSubjectRequest, ReasonOptedOutAfterRequest,
-	} {
+	for _, stop := range []string{ReasonObjection, ReasonConsentWithdrawn, ReasonRestricted, ReasonSubjectRequest, ReasonOptedOutAfterRequest} {
 		set := DecisionSet{Decisions: []Decision{missing, {Verdict: VerdictDeny, ReasonCode: stop}}}
-		if set.ExceptionMayAnswer(true) {
-			t.Errorf("an admin's exception answers a set holding %q", stop)
-		}
-		if (Decision{Verdict: VerdictDeny, ReasonCode: stop}).OverrulableForOneMessage() {
-			t.Errorf("%q is offered for one message", stop)
+		if !set.ExceptionMayAnswer(false) {
+			t.Errorf("a rep cannot answer combined warning %q", stop)
 		}
 	}
 }
@@ -105,14 +92,12 @@ func TestNoStaffExceptionAnswersAHardBounce(t *testing.T) {
 	}
 }
 
-// A rep may send one message past every policy refusal but a subject's own
-// stop. A dead address and an unresolved recipient are no policy answers, so
-// they stop the message whoever decided.
-func TestARepMaySendPastEveryPolicyRefusalButAStopOrADeadAddress(t *testing.T) {
+// Transport faults remain outside the human policy decision.
+func TestARepMaySendPastEveryPolicyRefusal(t *testing.T) {
 	t.Parallel()
 	for _, reason := range RefusalCodes() {
 		refused := Decision{Verdict: VerdictDeny, ReasonCode: reason}
-		mayPass := reason != ReasonHardBounce && reason != ReasonNoSubject && LevelForReason(reason) != LevelSubject
+		mayPass := reason != ReasonHardBounce && reason != ReasonNoSubject
 		if got := (DecisionSet{Decisions: []Decision{refused}}).ExceptionMayAnswer(false); got != mayPass {
 			t.Errorf("a rep's exception over %q = %v, want %v", reason, got, mayPass)
 		}

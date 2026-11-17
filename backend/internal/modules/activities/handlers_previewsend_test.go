@@ -10,10 +10,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// The composer offers a recorded reason where the preview says a refusal can be
-// overruled. So the preview offers it for every policy refusal but the
-// subject's own stop, a dead address and a recipient that resolves to nobody.
-func TestThePreviewOffersAReasonForEveryPolicyRefusalButAStop(t *testing.T) {
+func TestThePreviewOffersAReasonForEveryPolicyRefusal(t *testing.T) {
 	t.Parallel()
 	for _, code := range commsauthz.RefusalCodes() {
 		decision := commsauthz.Decision{
@@ -26,8 +23,7 @@ func TestThePreviewOffersAReasonForEveryPolicyRefusalButAStop(t *testing.T) {
 		if got == nil {
 			t.Fatalf("%s: can_be_overruled is absent", code)
 		}
-		want := code != commsauthz.ReasonHardBounce && code != commsauthz.ReasonNoSubject &&
-			commsauthz.LevelForReason(code) != commsauthz.LevelSubject
+		want := code != commsauthz.ReasonHardBounce && code != commsauthz.ReasonNoSubject
 		if *got != want {
 			t.Errorf("%s: can_be_overruled = %v, want %v", code, *got, want)
 		}

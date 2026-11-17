@@ -114,6 +114,17 @@ func previewResponse(preview SendPreview) crmcontracts.SendAuthorizationPreview 
 			Verdict:    crmcontracts.SendAuthorizationPreviewRecipientVerdict(d.Verdict),
 			ReasonCode: d.ReasonCode,
 		}
+		if len(d.Evidence.FooterFindings) > 0 {
+			findings := make([]crmcontracts.FooterFinding, 0, len(d.Evidence.FooterFindings))
+			for _, finding := range d.Evidence.FooterFindings {
+				wireFinding := crmcontracts.FooterFinding(finding)
+				if wireFinding.MissingMeans == nil {
+					wireFinding.MissingMeans = []string{}
+				}
+				findings = append(findings, wireFinding)
+			}
+			entry.FooterFindings = &findings
+		}
 		if preview.readableSubjects[previewSubject{kind: d.SubjectKind, id: d.SubjectID}] {
 			entry.EvidenceSubject = &crmcontracts.CommunicationEvidenceSubject{
 				EntityId:   openapi_types.UUID(d.SubjectID),

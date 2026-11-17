@@ -756,6 +756,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.preview.contextOptout": "Bestätigung der Abmeldung",
   "approval.preview.unsubscribeFooter":
     "Beim Versand wird ein empfängerbezogener Abmeldelink ergänzt, wenn ein entsprechender Präferenzdatensatz besteht. Der private Link wird erst bei der Ausführung erstellt, nicht bei der Prüfung.",
+  "approval.preview.footerWarning": "Hinweis zur E-Mail-Fußzeile",
   "approval.preview.disclosureText": "Beim Versand ergänzte Pflichtangabe",
   "approval.preview.demoteArchive":
     "Stellt den Lead als Engagiert wieder her und entfernt seine Qualifizierungsverknüpfungen. Archiviert den Kontakt, seine E-Mail-Adressen, Telefonnummern, Kanalidentitäten und Beziehungen; entfernt seine Tags und Listenzugehörigkeiten. Aktivitäten bleiben unverändert zugeordnet.",
@@ -8055,6 +8056,24 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "sendPermission.missingContext": "Für diese Nachricht fehlt eine Angabe",
   "sendPermission.missingPermission": "Für diese Nachricht fehlt die Erlaubnis",
   "sendPermission.reason.chooseDeal": "Wähle den Deal für dieses Follow-up.",
+  "sendPermission.reason.footerIncomplete":
+    "Lies die Hinweise zur Fußzeile. Du kannst diese E-Mail mit einer dokumentierten Begründung senden.",
+  "sendPermission.footer.language": "{detail} auf {language}",
+  "sendPermission.footer.means": "{detail} mit {methods}",
+  "sendPermission.footer.email": "einer E-Mail-Adresse",
+  "sendPermission.footer.phone": "einer Telefonnummer",
+  "sendPermission.footer.web": "einer Website oder einem Social-Media-Link",
+  "sendPermission.footer.privacy": "Datenschutz-Kontaktangaben",
+  "sendPermission.footer.advertiser":
+    "Kontaktangaben des werbenden Unternehmens",
+  "sendPermission.footer.identity": "Name und Anschrift des Unternehmens",
+  "sendPermission.footer.unknown": "ein Teil der Unternehmensangaben",
+  "sendPermission.footer.title": "E-Mail-Fußzeile prüfen",
+  "sendPermission.footer.preview": "Unternehmensangaben in dieser E-Mail",
+  "sendPermission.footer.omits": "In dieser Nachricht fehlt: {items}.",
+  "sendPermission.footer.objection": "Abmeldehinweise",
+  "sendPermission.footer.privateLink": "ein persönlicher Abmeldelink",
+  "sendPermission.footer.publicLink": "ein funktionierender Abmeldelink",
   "sendPermission.reason.lawfulBasisUnconfirmed":
     "Für diesen Kontakt ist keine Rechtsgrundlage erfasst, und die Warnung wurde vor dem Senden nicht bestätigt.",
   "sendPermission.appliesTo": "Das betrifft {address}.",
@@ -8065,6 +8084,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.sendWithReason": "Mit Begründung senden…",
   "compose.scheduleWithReason": "Mit Begründung planen…",
   "compose.holdForCheck": "Senden wartet auf die Versandprüfung.",
+  "compose.legacyFooter":
+    "Diese Version von Margince kann E-Mails mit fehlenden Angaben zum Unternehmen noch nicht mit einer Begründung senden. Dein Entwurf bleibt erhalten. Frag einen Admin nach einem Update von Margince. Versuche es danach erneut.",
   "compose.holdRefused":
     "Senden ist gesperrt. Behebe, was die Prüfung oben nennt, oder entferne diese Empfangsadresse.",
   "compose.holdWithReason":
@@ -8103,17 +8124,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "sendPermission.unanswered":
     "Die Versandprüfung konnte nicht abgeschlossen werden. Beim Senden wird die Prüfung erneut ausgeführt.",
   "sendPermission.reason.objected":
-    "Die empfangende Person hat dem Marketing widersprochen, daher geht kein Marketing an sie. Eine Antwort oder eine Nachricht, um die sie gebeten hat, kann weiterhin gesendet werden.",
+    "Der Kontakt hat Werbung widersprochen. Der Versand dieser E-Mail hebt seinen Widerspruch nicht auf.",
   "sendPermission.reason.withdrawn":
-    "Die empfangende Person hat ihre Einwilligung für diese Art von Nachricht widerrufen, daher kann sie nicht an sie gesendet werden.",
+    "Der Kontakt hat seine Einwilligung für diese Art von Nachricht widerrufen. Der Versand dieser E-Mail stellt sie nicht wieder her.",
   "sendPermission.reason.restricted":
-    "Für die Daten der empfangenden Person gilt eine Einschränkung der Verarbeitung. Nur Sicherheits-, Datenschutz- und Abmeldehinweise können noch an sie gesendet werden.",
+    "Die Verarbeitung der Daten dieses Kontakts ist eingeschränkt. Der Versand dieser E-Mail hebt die Einschränkung nicht auf.",
   "sendPermission.reason.askedUsToStop":
-    "Die empfangende Person hat darum gebeten, nicht kontaktiert zu werden. Nur Sicherheits-, Datenschutz- und Abmeldehinweise können noch an sie gesendet werden.",
+    "Der Kontakt möchte nicht mehr kontaktiert werden. Der Versand dieser E-Mail ändert seinen Wunsch nicht.",
   "sendPermission.reason.bounced":
     "Diese Adresse nimmt keine E-Mails an. Korrigiere die Adresse. Eine Ausnahme ist hier nicht möglich.",
   "sendPermission.reason.optedOutAfterRequest":
-    "Die empfangende Person hat sich nach ihrer Anfrage vom Marketing abgemeldet. Kläre mit ihr, ob sie das Angebot noch möchte, und erfasse dann ihre neue Anfrage.",
+    "Der Kontakt hat nach der Angebotsanfrage Werbung abgelehnt. Der Versand dieser E-Mail ändert seine Entscheidung nicht.",
   "sendPermission.reason.permissionRequired":
     "Für diese Marketingnachricht ist nach den geltenden Regeln keine Erlaubnis belegt. Erfasse die Einwilligung oder die erforderlichen Nachweise.",
   "sendPermission.reason.consentRequired":
@@ -8196,8 +8217,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Darüber wurde bereits entschieden. Öffne die Prüfung, um das Ergebnis zu sehen.",
   "directSend.couldNotOpen":
     "Die Prüfung konnte nicht geöffnet werden. Bitte versuche es erneut.",
-  "directSend.title": "Auf eigene Verantwortung senden",
-  "directSend.confirm": "Ausnahme erfassen und senden",
+  "directSend.title": "Mit Begründung senden",
+  "directSend.confirm": "E-Mail senden",
+  "directSend.changed":
+    "Die E-Mail-Prüfung hat sich geändert. Lies die aktualisierten Hinweise und bestätige erneut. Deine Begründung bleibt erhalten.",
   "directSend.failed":
     "Die Nachricht konnte nicht gesendet werden. Deine Entscheidung ist möglicherweise schon erfasst. Öffne die Prüfung, bevor du erneut entscheidest.",
   "directSend.noWarningServed":
@@ -8228,8 +8251,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Eine Nachricht mit Abmeldelink geht immer nur an eine Adresse, da der Link der Einwilligungsnachweis genau dieser Adresse ist. Sende die Nachricht einzeln an jede Adresse, ohne Cc.",
   "compose.newContact":
     "{address} steht noch in keinem Datensatz. Beim Senden wird die Adresse als dein Kontakt angelegt.",
-  "compose.multiRecipientWarning":
-    "Ein Versand an mehr als eine Adresse wird abgelehnt, da dieser Zweck einen Abmeldelink hinzufügt. Sende die Nachricht einzeln an jede Adresse, ohne Cc.",
   "compose.relinkTitle": "Diese Aktivität neu verknüpfen",
   "compose.relinkTarget":
     "Kontakte, Unternehmen, Deals, Leads oder Projekte suchen",

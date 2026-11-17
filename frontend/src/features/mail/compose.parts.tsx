@@ -35,32 +35,11 @@ import { SignOffPreview } from "./composesignoff";
 import type { VoiceDraft } from "./composevoicedraft";
 import { SendRefusal } from "./sendrefusal";
 
-// sharedUnsubscribeAhead predicts the sharedUnsubscribe refusal (refusalOf).
-// A marketing send's unsubscribe link is one addressee's consent record, so a
-// second addressee is refused. The server rule stays the authority, keyed on
-// the marketing category, which a reply never carries.
-export function sharedUnsubscribeAhead(
-  to: string[],
-  cc: string[],
-  context: CommunicationContext | undefined,
-): boolean {
-  if (context !== "marketing") {
-    return false;
-  }
-  const addressees = new Set(
-    [...to, ...cc].map((address) => address.trim().toLowerCase()),
-  );
-  return addressees.size > 1;
-}
-
 // The mail-only send-time notice: a shared-unsubscribe-token risk. A channel
 // reply has no addressee list to warn about, so this renders nothing there.
 // The empty-recipient line belongs to the To field, not the foot of the drawer,
 // because that is closer to the thing to fix.
 export function MailSendNotices({
-  to,
-  cc,
-  context,
   newContacts = [],
 }: Readonly<{
   to: string[];
@@ -72,9 +51,6 @@ export function MailSendNotices({
   const t = useT();
   return (
     <>
-      {sharedUnsubscribeAhead(to, cc, context) && (
-        <ErrorLine standing>{t("compose.multiRecipientWarning")}</ErrorLine>
-      )}
       {newContacts.map((address) => (
         <Callout
           key={address}
@@ -207,7 +183,8 @@ export function ComposeFoot({
   // The address sentence has its own place under the button; the hold line
   // speaks only when no address is in the way.
   const { hold } = send;
-  const holdLine = !addressRefused && hold.line ? hold.line : undefined;
+  const holdLine =
+    !addressRefused && hold.blocks && hold.line ? hold.line : undefined;
   const heldBy = holdLine && hold.blocks ? holdId : undefined;
   return (
     <div className="compose-foot">

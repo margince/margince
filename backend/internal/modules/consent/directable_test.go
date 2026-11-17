@@ -15,11 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// A rep, like an admin, may direct one message past every policy refusal but
-// the subject's own stop. A stop, a dead address, an unresolved recipient and a
-// missing check are never directable, nor is anything for a seat without the
-// grant.
-func TestARepMayDirectASendPastEveryPolicyRefusalButAStop(t *testing.T) {
+func TestARepMayDirectASendPastEveryPolicyRefusal(t *testing.T) {
 	seat := func(role string, grant bool) context.Context {
 		return principal.WithActor(context.Background(), principal.Principal{
 			Type: principal.PrincipalHuman, ID: "human:reviewer",
@@ -33,8 +29,7 @@ func TestARepMayDirectASendPastEveryPolicyRefusalButAStop(t *testing.T) {
 		t.Run(role, func(t *testing.T) {
 			ctx := seat(role, true)
 			for _, reason := range commsauthz.RefusalCodes() {
-				want := reason != commsauthz.ReasonHardBounce && reason != commsauthz.ReasonNoSubject &&
-					commsauthz.LevelForReason(reason) != commsauthz.LevelSubject
+				want := reason != commsauthz.ReasonHardBounce && reason != commsauthz.ReasonNoSubject
 				if got := directableBy(ctx, []RefusedRecipient{{ReasonCode: reason}}); got != want {
 					t.Errorf("directable past %s = %v, want %v", reason, got, want)
 				}
@@ -42,8 +37,8 @@ func TestARepMayDirectASendPastEveryPolicyRefusalButAStop(t *testing.T) {
 			stopBeside := []RefusedRecipient{
 				{ReasonCode: commsauthz.ReasonMarketingConsentRequired}, {ReasonCode: commsauthz.ReasonObjection},
 			}
-			if directableBy(ctx, stopBeside) {
-				t.Error("a stop beside a passable refusal is directable")
+			if !directableBy(ctx, stopBeside) {
+				t.Error("combined policy warnings must remain directable")
 			}
 			if directableBy(ctx, nil) {
 				t.Error("a missing check offers a send instruction")

@@ -18,6 +18,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -337,13 +339,7 @@ func TestAnErasureCanTombstoneTheWordsAndNothingElse(t *testing.T) {
 	}
 }
 
-// A rep holding the grant, like an admin, directs one message past every
-// policy refusal but a contact's own stop. Nobody directs past a stop, an admin
-// included, and not beside a refusal a decision could pass either.
-//
-// Mutation: give the stops RemedyException in commsauthz.remedies and the stop
-// cases below are allowed.
-func TestASenderDirectsPastAPolicyRefusalButNobodyPastAContactsStop(t *testing.T) {
+func TestASenderDirectsPastEveryPolicyRefusalWithoutChangingItsRecord(t *testing.T) {
 	e := setupChannelConsent(t)
 	ctx := context.Background()
 	input := DirectInput{
@@ -355,14 +351,25 @@ func TestASenderDirectsPastAPolicyRefusalButNobodyPastAContactsStop(t *testing.T
 
 	for _, stop := range []string{"marketing_objection", "consent_withdrawn", "processing_restricted", "subject_request", "opted_out_after_request"} {
 		for _, reasons := range [][]string{{stop}, {"marketing_consent_required", stop}} {
-			in := input
-			in.ShownReasons = reasons
-			review := seedOpenReviewFor(ctx, t, e, reasons[0], reasons[1:]...)
-			if _, err := e.store.DirectSend(senderCtx(e.ws, e.user), review, in); !errors.Is(err, apperrors.ErrPermissionDenied) {
-				t.Errorf("a rep directing past %v: err = %v, want permission denied", reasons, err)
-			}
-			if _, err := e.store.DirectSend(directorCtx(e.ws, e.user), review, in); !errors.Is(err, apperrors.ErrPermissionDenied) {
-				t.Errorf("an admin directing past %v: err = %v, want permission denied", reasons, err)
+			for _, actor := range []context.Context{senderCtx(e.ws, e.user), directorCtx(e.ws, e.user)} {
+				reviewID := seedOpenReviewFor(ctx, t, e, reasons[0], reasons[1:]...)
+				review, err := e.store.ReviewForReader(actor, reviewID)
+				if err != nil {
+					t.Fatal(err)
+				}
+				in := input
+				in.ShownReasons = reasons
+				in.AssessmentRevision = review.AssessmentRevision()
+				if _, err := e.store.DirectSend(actor, reviewID, in); err != nil {
+					t.Errorf("directing past %v: %v", reasons, err)
+				}
+				var unchanged bool
+				if err := e.owner.QueryRow(ctx, `SELECT reason_code=@reason AND jsonb_array_length(refusals)=@count FROM communication_review WHERE id=@review`, pgx.StrictNamedArgs{"reason": reasons[0], "count": len(reasons), "review": reviewID}).Scan(&unchanged); err != nil {
+					t.Fatal(err)
+				}
+				if !unchanged {
+					t.Fatal("recording a decision rewrote its refusal")
+				}
 			}
 		}
 	}

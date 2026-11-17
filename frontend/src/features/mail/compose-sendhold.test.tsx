@@ -312,14 +312,15 @@ describe("a refusal a reason may lift", () => {
     );
     openComposer();
     await fillSendableForm();
-    await screen.findByText(WITH_REASON);
+    await screen.findByRole("button", { name: "Send with a reason…" });
+    expect(screen.queryByText(WITH_REASON)).toBeNull();
     const press = sendButton("Send with a reason…");
     expect(press).toBeEnabled();
 
     await userEvent.click(press);
     expect(
       await screen.findByRole("button", {
-        name: "Record the exception and send",
+        name: "Send email",
       }),
     ).toBeInTheDocument();
     expect(posted(sent)).toHaveLength(1);
@@ -327,13 +328,11 @@ describe("a refusal a reason may lift", () => {
     // Closed without sending, the next press reopens it and asks nothing new.
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
     await waitFor(() =>
-      expect(
-        screen.queryByRole("button", { name: "Record the exception and send" }),
-      ).toBeNull(),
+      expect(screen.queryByRole("button", { name: "Send email" })).toBeNull(),
     );
     await userEvent.click(sendButton("Send with a reason…"));
     await screen.findByRole("button", {
-      name: "Record the exception and send",
+      name: "Send email",
     });
     expect(posted(sent)).toHaveLength(1);
   });

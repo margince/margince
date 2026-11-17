@@ -3,6 +3,7 @@ import {
   type RenderResult,
   render as rtlRender,
   screen,
+  waitFor,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
@@ -163,6 +164,20 @@ export function stubRoutes(
       sent.push({ key, body, headers, query: url.searchParams });
       const override = overrides[key];
       if (override) return override();
+      if (
+        key === "PUT /mail-drafts" &&
+        typeof body === "object" &&
+        body !== null
+      ) {
+        return jsonResponse({
+          ...body,
+          id: "draft-test",
+          version: 1,
+          agent_drafted: false,
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
+        });
+      }
       if (key === "GET /me") {
         return jsonResponse(
           meFixture({ allow: { activity: ["read", "create", "update"] } }),
@@ -225,6 +240,10 @@ export async function fillSendableForm() {
   await userEvent.type(screen.getByLabelText("Subject"), "Hi there");
   writeMessage("Body", "Body content");
   await pickWhy(WHY_LABEL.requestedFollowup);
+  await waitFor(() => {
+    if (screen.queryByText("Checking whether this message can be sent…"))
+      throw new Error("recipient check is pending");
+  });
 }
 
 // The threads the composer offers sit in a menu behind the bar above the

@@ -25,12 +25,10 @@ const (
 // empty. A reason added without one fails TestEveryReasonDeclaresItsRemedy
 // instead of becoming a silent dead end.
 //
-// A contact's own stop lists nothing, so nobody sends past it, an admin
-// included. Every other policy refusal takes the one-message exception: a rep
-// may send past it with a recorded reason, and the refusal stays on the record.
-// No decision makes a dead address accept mail. A recipient that resolves to
-// nobody, or to two contacts, was never checked for stops.
+// Policy findings remain on record after a human directs one message.
+// Transport failures and an unknown recipient still need a real repair.
 var remedies = map[string][]Remedy{
+	ReasonFooterIncomplete:               {RemedyException},
 	ReasonNoEvidence:                     {RemedyAnswer, RemedyFact, RemedyException},
 	ReasonDealNotRequested:               {RemedyAnswer, RemedyFact, RemedyException},
 	ReasonLegacyTransactionalUnevidenced: {RemedyAnswer, RemedyFact, RemedyException},
@@ -44,13 +42,11 @@ var remedies = map[string][]Remedy{
 	ReasonFrequencyCapReached:         {RemedyException},
 	ReasonUnconfirmedDOI:              {RemedyException},
 
-	// The subject's own stop. A stop recorded by mistake is corrected on the
-	// record, which lifts the refusal.
-	ReasonObjection:            {},
-	ReasonRestricted:           {},
-	ReasonSubjectRequest:       {},
-	ReasonConsentWithdrawn:     {},
-	ReasonOptedOutAfterRequest: {},
+	ReasonObjection:            {RemedyException},
+	ReasonRestricted:           {RemedyException},
+	ReasonSubjectRequest:       {RemedyException},
+	ReasonConsentWithdrawn:     {RemedyException},
+	ReasonOptedOutAfterRequest: {RemedyException},
 
 	ReasonHardBounce: {},
 	ReasonNoSubject:  {},
@@ -71,11 +67,8 @@ func HasRemedy(reason string, remedy Remedy) bool {
 	return slices.Contains(remedies[reason], remedy)
 }
 
-// ExceptionMayAnswer reports whether a recorded one-message exception may stand
-// over every refusal in this set. A stop or a dead address found after it was
-// given still stops the message. A stop recorded under a reason the review
-// already named is the consent module's question (instructionStillAnswers). givenByAdmin is the exception's
-// own record of who gave it, never the authority of whoever is sending now.
+// ExceptionMayAnswer checks whether a recorded one-message decision may answer every finding.
+// Current facts and message scope are rechecked by consent before the decision is spent.
 func (s DecisionSet) ExceptionMayAnswer(givenByAdmin bool) bool {
 	if len(s.Decisions) == 0 {
 		return false

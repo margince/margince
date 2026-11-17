@@ -44069,11 +44069,9 @@ export interface components {
              *     they were addressed — and they are absent from the headers the recipients
              *     see, which is the whole of what "blind" means.
              *
-             *     A message with a tokenized unsubscribe link may still have only ONE
-             *     addressee in total: that token is a bearer credential over one contact's
-             *     consent record, so a bcc'd copy of a marketing send is refused 422
-             *     `shared_unsubscribe_token` rather than handing a stranger somebody else's
-             *     preference link.
+             *     Private unsubscribe links are omitted for multiple recipients, preserving
+             *     To, Cc and Bcc visibility. The sender must confirm that omission with
+             *     a recorded one-message reason before delivery.
              */
             bcc?: string[];
             /**
@@ -44605,8 +44603,18 @@ export interface components {
             /** Format: uuid */
             entity_id: string;
         };
+        FooterFinding: {
+            /** @description Missing disclosure kind or unavailable private link. Unknown kinds remain visible as an unspecified footer omission. */
+            kind: string;
+            /** @description Required language, or empty when no language is missing. */
+            language: string;
+            /** @description Missing contact methods, such as email, phone or web. */
+            missing_means: string[];
+        };
         /** @description One recipient's answer. It describes the MESSAGE, never the contact's file. */
         SendAuthorizationPreviewRecipient: {
+            /** @description Server-derived missing footer disclosures or unavailable private links shown before the sender confirms this message. Contains no credentials. */
+            footer_findings?: components["schemas"]["FooterFinding"][];
             /** Format: email */
             address: string;
             /**
@@ -44766,11 +44774,9 @@ export interface components {
              *     they were addressed — and they are absent from the headers the recipients
              *     see, which is the whole of what "blind" means.
              *
-             *     A message with a tokenized unsubscribe link may still have only ONE
-             *     addressee in total: that token is a bearer credential over one contact's
-             *     consent record, so a bcc'd copy of a marketing send is refused 422
-             *     `shared_unsubscribe_token` rather than handing a stranger somebody else's
-             *     preference link.
+             *     Private unsubscribe links are omitted for multiple recipients, preserving
+             *     To, Cc and Bcc visibility. The sender must confirm that omission with
+             *     a recorded one-message reason before delivery.
              */
             bcc?: string[];
             /**
@@ -54513,6 +54519,10 @@ export interface components {
          *     the rep is actually asking — and it is why an erasure clears this list.
          */
         RefusedRecipient: {
+            /** @description Configured disclosure text included in this message. Contains no recipient credentials. */
+            footer_preview?: string[];
+            /** @description Server-derived missing footer disclosures or unavailable private links shown before the sender confirms this message. Contains no credentials. */
+            footer_findings?: components["schemas"]["FooterFinding"][];
             address: string;
             /** @enum {string} */
             subject_kind?: "contact" | "lead";
@@ -54531,6 +54541,8 @@ export interface components {
          *     what the consent rows say today.
          */
         CommunicationReview: {
+            /** @description Revision of the displayed refusal and footer details, echoed when confirming. */
+            assessment_revision?: string;
             /** Format: uuid */
             id: string;
             /**
@@ -54644,6 +54656,8 @@ export interface components {
              *     without one would record a decision nobody made.
              */
             acknowledged: boolean;
+            /** @description The review revision the sender read. Required when footer findings apply. */
+            assessment_revision?: string;
             /**
              * @description The refusal reason codes the director was shown, from the review's `refusals`. When the
              *     review's refusals changed since then, the decision is refused with `instruction_stale`

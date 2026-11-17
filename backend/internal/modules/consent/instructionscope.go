@@ -35,7 +35,7 @@ func instructionScopeStillFits(ctx context.Context, tx pgx.Tx, recorded []Refuse
 			}
 		}
 		if !found {
-			return &InstructionStaleError{Why: "the recipient, sending company or purpose has changed; check this message again"}
+			return &InstructionStaleError{Why: "the recipients, company, recipient preferences, contact reason or email footer changed; read the updated details and confirm again"}
 		}
 	}
 	return nil
@@ -47,7 +47,7 @@ func sameRecipient(before, now RefusedRecipient) bool {
 }
 
 func sameInstructionScope(before, now RefusedRecipient) bool {
-	return before.claim() == now.claim() && sameOptionalID(before.SendingEntity, now.SendingEntity) &&
+	return (before.PolicyRevision == "" || before.PolicyRevision == now.PolicyRevision) && (before.FooterDigest == now.FooterDigest || before.FooterDigest == "" && len(before.FooterFindings) == 0) && commsauthz.SameFooterFindings(before.FooterFindings, now.FooterFindings) && before.claim() == now.claim() && sameOptionalID(before.SendingEntity, now.SendingEntity) &&
 		sameOptionalID(before.PurposeID, now.PurposeID) && sameOptionalID(before.DealID, now.DealID)
 }
 
@@ -65,7 +65,7 @@ func sameOptionalID(a, b *ids.UUID) bool {
 func everyRefusalWasShown(shown []RefusedRecipient, current commsauthz.DecisionSet) bool {
 	for _, now := range refusedRecipientsOf(current) {
 		if !slices.ContainsFunc(shown, func(before RefusedRecipient) bool {
-			return sameRecipient(before, now) && before.ReasonCode == now.ReasonCode
+			return sameRecipient(before, now) && before.ReasonCode == now.ReasonCode && (before.PolicyRevision == "" || before.PolicyRevision == now.PolicyRevision) && (before.FooterDigest == now.FooterDigest || before.FooterDigest == "" && len(before.FooterFindings) == 0) && commsauthz.SameFooterFindings(before.FooterFindings, now.FooterFindings)
 		}) {
 			return false
 		}
@@ -73,14 +73,15 @@ func everyRefusalWasShown(shown []RefusedRecipient, current commsauthz.DecisionS
 	return true
 }
 
-// instructionStillAnswers reports whether a decision may stand over the
-// refusals now. Its review must have shown each of them. No stop or withdrawal
-// may be recorded for a refused subject since the decision. A new stop can hide
-// behind a reason the review already named.
+// Older decisions lack a fact revision, so their timestamp still guards against
+// a later stop hidden behind the same warning code.
 func instructionStillAnswers(ctx context.Context, tx pgx.Tx, shown []RefusedRecipient, directedAt time.Time, current commsauthz.DecisionSet) (bool, error) {
 	refused := refusedRecipientsOf(current)
 	if !everyRefusalWasShown(shown, current) {
 		return false, nil
+	}
+	if len(shown) > 0 && !slices.ContainsFunc(shown, func(r RefusedRecipient) bool { return r.PolicyRevision == "" }) {
+		return true, nil
 	}
 	var contacts, leads []string
 	addresses := make([]string, 0, len(refused))

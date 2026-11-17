@@ -5,15 +5,16 @@ package activities
 
 import (
 	"context"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // MailFooterPreview describes owed disclosures without minting recipient tokens.
 type MailFooterPreview struct {
 	Disclosures       []DisclosureLine
+	Findings          []commsauthz.FooterFinding
 	OffersUnsubscribe bool
 }
 
@@ -29,20 +30,10 @@ func (s *Store) PreviewMailFooter(ctx context.Context, origin SendOrigin, links 
 		return MailFooterPreview{}, err
 	}
 	lang := s.footerLanguage(ctx, in.Body, in.Subject)
-	owed, err := s.requiredDisclosures(ctx, string(surface.disclosureCategory()), in.Recipients, in.SendingEntity, string(lang))
+	owed, err := s.disclosuresFor(ctx, string(surface.disclosureCategory()), in.Recipients, in.SendingEntity, string(lang))
 	if err != nil {
 		return MailFooterPreview{}, err
 	}
-	return MailFooterPreview{Disclosures: owed, OffersUnsubscribe: surface.carries()}, nil
-}
-
-func (s *Store) requiredDisclosures(ctx context.Context, category string, recipients []string, entity ids.UUID, language string) ([]DisclosureLine, error) {
-	owed, err := s.disclosuresFor(ctx, category, recipients, entity, language)
-	if err != nil {
-		return nil, err
-	}
-	if kinds := unmeetable(owed); len(kinds) > 0 {
-		return nil, &UndisclosableError{Kinds: kinds}
-	}
-	return owed, nil
+	findings := s.footerFindings(owed, in.Recipients, surface.privateLinks())
+	return MailFooterPreview{Disclosures: owed, Findings: findings, OffersUnsubscribe: surface.privateLinks() && distinctAddresses(in.Recipients) == 1 && s.publicOriginUsable() == nil}, nil
 }

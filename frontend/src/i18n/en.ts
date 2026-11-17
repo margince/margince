@@ -720,6 +720,7 @@ export const en = {
   "approval.preview.contextOptout": "Opt-out confirmation",
   "approval.preview.unsubscribeFooter":
     "Sending adds a recipient-specific unsubscribe link when the recipient has an applicable preference record. The private link is created at execution, not during review.",
+  "approval.preview.footerWarning": "Email footer warning",
   "approval.preview.disclosureText": "Disclosure appended when sent",
   "approval.preview.demoteArchive":
     "Restores the lead as Engaged and removes its qualification links. Archives the contact, its email addresses, phone numbers, channel identities and relationships; removes its tags and list memberships. Activities stay where they are.",
@@ -8057,6 +8058,23 @@ export const en = {
   "sendPermission.missingContext": "This message needs one more detail",
   "sendPermission.missingPermission": "Permission needed for this message",
   "sendPermission.reason.chooseDeal": "Choose the deal for this follow-up.",
+  "sendPermission.reason.footerIncomplete":
+    "Read the footer details below. You can send this email with a recorded reason.",
+  "sendPermission.footer.language": "{detail} in {language}",
+  "sendPermission.footer.means": "{detail} with {methods}",
+  "sendPermission.footer.email": "an email address",
+  "sendPermission.footer.phone": "a phone number",
+  "sendPermission.footer.web": "a website or social link",
+  "sendPermission.footer.privacy": "privacy contact information",
+  "sendPermission.footer.advertiser": "advertiser contact information",
+  "sendPermission.footer.identity": "the company name and address",
+  "sendPermission.footer.unknown": "some company footer text",
+  "sendPermission.footer.title": "Email footer needs attention",
+  "sendPermission.footer.preview": "Company details included in this email",
+  "sendPermission.footer.omits": "This message will omit: {items}.",
+  "sendPermission.footer.objection": "opt-out instructions",
+  "sendPermission.footer.privateLink": "a private opt-out link",
+  "sendPermission.footer.publicLink": "a working opt-out link",
   "sendPermission.reason.lawfulBasisUnconfirmed":
     "No lawful basis is recorded for this contact, and the warning was not confirmed before sending.",
   "sendPermission.appliesTo": "This applies to {address}.",
@@ -8067,6 +8085,8 @@ export const en = {
   "compose.sendWithReason": "Send with a reason…",
   "compose.scheduleWithReason": "Schedule with a reason…",
   "compose.holdForCheck": "Send waits for the send check.",
+  "compose.legacyFooter":
+    "This server cannot send with a reason when company email details are missing. Your draft is kept. Ask an administrator to update Margince, then try again.",
   "compose.holdRefused":
     "Send is off. Fix what the check above names, or remove that recipient.",
   "compose.holdWithReason":
@@ -8101,17 +8121,17 @@ export const en = {
   "sendPermission.unanswered":
     "The send check did not complete. Sending runs the check again.",
   "sendPermission.reason.objected":
-    "The recipient objected to marketing, so no marketing goes to them. A reply or a message they asked for can still go.",
+    "The recipient objected to marketing. Sending this email does not lift their objection.",
   "sendPermission.reason.withdrawn":
-    "The recipient withdrew consent for this kind of message, so it cannot go to them.",
+    "The recipient withdrew consent for this kind of message. Sending this email does not restore consent.",
   "sendPermission.reason.restricted":
-    "The recipient’s data is under a processing restriction. Only security, privacy and opt-out notices can still go to them.",
+    "The recipient’s data is under a processing restriction. Sending this email does not lift the restriction.",
   "sendPermission.reason.askedUsToStop":
-    "The recipient asked not to be contacted. Only security, privacy and opt-out notices can still go to them.",
+    "The recipient asked not to be contacted. Sending this email does not change their request.",
   "sendPermission.reason.bounced":
     "This address does not accept mail. Correct the address; an override does not apply.",
   "sendPermission.reason.optedOutAfterRequest":
-    "The recipient opted out of marketing after asking for this quote. Confirm with them that they still want it, then record their new request.",
+    "The recipient opted out of marketing after requesting this quote. Sending this email does not change their choice.",
   "sendPermission.reason.permissionRequired":
     "This marketing message has no recorded permission under the applicable rules. Record consent or the required evidence.",
   "sendPermission.reason.consentRequired":
@@ -8196,8 +8216,10 @@ export const en = {
   "directSend.alreadySettled":
     "This has already been decided. Open the review for the outcome.",
   "directSend.couldNotOpen": "The review could not be opened. Retry.",
-  "directSend.title": "Send on your own authority",
-  "directSend.confirm": "Record the exception and send",
+  "directSend.title": "Send with a reason",
+  "directSend.confirm": "Send email",
+  "directSend.changed":
+    "The email checks changed. Read the updated details and confirm again. Your reason is kept.",
   "directSend.failed":
     "The message was not sent. Your decision may already be recorded; open the review before deciding again.",
   "directSend.noWarningServed":
@@ -8227,8 +8249,6 @@ export const en = {
     "A message with an unsubscribe link goes to one recipient at a time, because the link is that recipient’s consent record. Send it once per recipient, with no Cc.",
   "compose.newContact":
     "{address} is on no record yet. Sending adds it as your contact.",
-  "compose.multiRecipientWarning":
-    "This purpose adds an unsubscribe link, so a send to more than one recipient is refused. Send it once per recipient, with no Cc.",
   "compose.relinkTitle": "Relink this activity",
   "compose.relinkTarget":
     "Search contacts, companies, deals, leads or projects",

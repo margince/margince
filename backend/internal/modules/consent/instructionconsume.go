@@ -263,6 +263,9 @@ func (g *Gate) AuthorizeDirectedExecutionTx(
 		return ids.UUID{}, err
 	}
 	if err := instructionScopeStillFits(ctx, tx, inst.Refusals, set); err != nil {
+		if _, stale := errors.AsType[*InstructionStaleError](err); stale {
+			return ids.UUID{}, nil
+		}
 		return ids.UUID{}, err
 	}
 	if err := consumeInstructionTx(ctx, tx, inst, deliveryID, wording); err != nil {

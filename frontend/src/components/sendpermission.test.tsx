@@ -201,7 +201,7 @@ describe("what a rep is shown", () => {
     );
     expect(screen.getByText(/objected to marketing/i)).toBeInTheDocument();
     expect(
-      screen.getByText(/a reply or a message they asked for can still go/i),
+      screen.getByText(/sending this email does not lift their objection/i),
     ).toBeInTheDocument();
     expect(screen.queryByText(/administrator/i)).not.toBeInTheDocument();
   });
@@ -622,7 +622,7 @@ describe("one status for the message", () => {
     [
       { reason_code: "marketing_objection" },
       "Message cannot be sent",
-      "The recipient objected to marketing, so no marketing goes to them. A reply or a message they asked for can still go.",
+      "The recipient objected to marketing. Sending this email does not lift their objection.",
     ],
     [
       { reason_code: "hard_bounce" },

@@ -9,7 +9,7 @@
 // nothing. The button opens the modal and the modal waits a moment, which is
 // the honest order: the human has already decided to look.
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
 import { Button } from "../../design-system/atoms";
@@ -53,6 +53,7 @@ export function DirectSendAction({
   onOpenChange?: (open: boolean) => void;
 }>) {
   const t = useT();
+  const queryClient = useQueryClient();
   const [ownOpen, setOwnOpen] = useState(false);
   const open = shownOpen ?? ownOpen;
   const setOpen = onOpenChange ?? setOwnOpen;
@@ -68,6 +69,7 @@ export function DirectSendAction({
     // human who has decided to overrule the engine should be told promptly
     // that the review would not open rather than watched to wait.
     retry: false,
+    staleTime: Number.POSITIVE_INFINITY,
   });
 
   if (!review.actions.includes("direct_send")) {
@@ -118,11 +120,17 @@ export function DirectSendAction({
       )}
       {open && opened.data && !settled && (
         <DirectSendModal
-          key={`${opened.data.id}:${opened.data.wording_correction?.version ?? "new"}`}
+          key={`${review.reviewId}:${opened.data.wording_correction?.version ?? "new"}`}
           open
           onClose={() => setOpen(false)}
           review={opened.data}
           onSent={onSent}
+          onReviewRefreshed={(updated) =>
+            queryClient.setQueryData(
+              ["communication-review", review.reviewId],
+              updated,
+            )
+          }
         />
       )}
     </>

@@ -40335,6 +40335,9 @@ type CommunicationEvidenceSubjectEntityType string
 // given — a reader asking why a message was refused on Tuesday needs Tuesday's answer, not
 // what the consent rows say today.
 type CommunicationReview struct {
+	// AssessmentRevision Revision of the displayed refusal and footer details, echoed when confirming.
+	AssessmentRevision *string `json:"assessment_revision,omitempty"`
+
 	// DeliveryIntentId The held message this review can resume. A refused send freezes the message into a held
 	// `scheduled_send` — subject, body, recipients, attachments and the claimed purpose — so
 	// resolving the review fires what the rep wrote rather than something retyped from memory.
@@ -49057,6 +49060,9 @@ type DirectCommunicationSendRequest struct {
 	// without one would record a decision nobody made.
 	Acknowledged bool `json:"acknowledged"`
 
+	// AssessmentRevision The review revision the sender read. Required when footer findings apply.
+	AssessmentRevision *string `json:"assessment_revision,omitempty"`
+
 	// Explanation What this colleague says the reason is, in their own words. Required and must say something:
 	// a blank explanation is an acknowledgement nobody can be held to.
 	Explanation string `json:"explanation"`
@@ -50871,6 +50877,18 @@ type FollowUpSettings struct {
 	// Locks The settings in this response that a boot source sets, each with its source. A client
 	// shows each as read-only. Empty when nothing is locked. A write ignores it.
 	Locks *SettingLocks `json:"locks,omitempty"`
+}
+
+// FooterFinding defines model for FooterFinding.
+type FooterFinding struct {
+	// Kind Missing disclosure kind or unavailable private link. Unknown kinds remain visible as an unspecified footer omission.
+	Kind string `json:"kind"`
+
+	// Language Required language, or empty when no language is missing.
+	Language string `json:"language"`
+
+	// MissingMeans Missing contact methods, such as email, phone or web.
+	MissingMeans []string `json:"missing_means"`
 }
 
 // ForecastAssurance What the most recent nightly input check found, and how much of the pipeline it was able to reach.
@@ -61397,8 +61415,14 @@ type RefreshAcceptedStatus string
 // reason code without one says a message was refused and not who for, which is the question
 // the rep is actually asking — and it is why an erasure clears this list.
 type RefusedRecipient struct {
-	Address           string                       `json:"address"`
-	Category          *string                      `json:"category,omitempty"`
+	Address  string  `json:"address"`
+	Category *string `json:"category,omitempty"`
+
+	// FooterFindings Server-derived missing footer disclosures or unavailable private links shown before the sender confirms this message. Contains no credentials.
+	FooterFindings *[]FooterFinding `json:"footer_findings,omitempty"`
+
+	// FooterPreview Configured disclosure text included in this message. Contains no recipient credentials.
+	FooterPreview     *[]string                    `json:"footer_preview,omitempty"`
 	ReasonCode        string                       `json:"reason_code"`
 	RequestedCategory *string                      `json:"requested_category,omitempty"`
 	SendingEntityId   *openapi_types.UUID          `json:"sending_entity_id,omitempty"`
@@ -65135,6 +65159,9 @@ type SendAuthorizationPreviewRecipient struct {
 	// caller. Recording an exchange still requires permission to update that record.
 	EvidenceSubject *CommunicationEvidenceSubject `json:"evidence_subject,omitempty"`
 
+	// FooterFindings Server-derived missing footer disclosures or unavailable private links shown before the sender confirms this message. Contains no credentials.
+	FooterFindings *[]FooterFinding `json:"footer_findings,omitempty"`
+
 	// LawfulBasisMissing The recipient's country has no legitimate-interest basis, and the record holds neither
 	// their consent nor an agreement with them. A privacy notice they were sent is neither.
 	// Not a refusal: a surface shows a warning and records the sender's confirmation through
@@ -65238,11 +65265,9 @@ type SendCompanyEmailRequest struct {
 	// they were addressed — and they are absent from the headers the recipients
 	// see, which is the whole of what "blind" means.
 	//
-	// A message with a tokenized unsubscribe link may still have only ONE
-	// addressee in total: that token is a bearer credential over one contact's
-	// consent record, so a bcc'd copy of a marketing send is refused 422
-	// `shared_unsubscribe_token` rather than handing a stranger somebody else's
-	// preference link.
+	// Private unsubscribe links are omitted for multiple recipients, preserving
+	// To, Cc and Bcc visibility. The sender must confirm that omission with
+	// a recorded one-message reason before delivery.
 	Bcc *[]openapi_types.Email `json:"bcc,omitempty"`
 
 	// Body The (possibly edited) final body that is sent. Blank or only white space is refused with 422 `required`.
@@ -65426,11 +65451,9 @@ type SendEmailRequest struct {
 	// they were addressed — and they are absent from the headers the recipients
 	// see, which is the whole of what "blind" means.
 	//
-	// A message with a tokenized unsubscribe link may still have only ONE
-	// addressee in total: that token is a bearer credential over one contact's
-	// consent record, so a bcc'd copy of a marketing send is refused 422
-	// `shared_unsubscribe_token` rather than handing a stranger somebody else's
-	// preference link.
+	// Private unsubscribe links are omitted for multiple recipients, preserving
+	// To, Cc and Bcc visibility. The sender must confirm that omission with
+	// a recorded one-message reason before delivery.
 	Bcc *[]openapi_types.Email `json:"bcc,omitempty"`
 
 	// Body The (possibly edited) final body that is sent. Blank or only white space is refused with 422 `required`.

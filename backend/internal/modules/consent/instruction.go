@@ -96,8 +96,9 @@ const InstructionValidity = 24 * time.Hour
 
 // DirectInput is what the contact directing the send says.
 type DirectInput struct {
-	ReasonCode  string
-	Explanation string
+	AssessmentRevision string
+	ReasonCode         string
+	Explanation        string
 	// WarningVersion is the compliance text they were shown. Recorded because a
 	// record naming no version cannot say what they were told, and the text
 	// changes.
@@ -156,6 +157,9 @@ func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInpu
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		review, err := claimReviewForDirectionTx(ctx, tx, reviewID)
 		if err != nil {
+			return err
+		}
+		if err := (Review{Refusals: review.Refusals}).checkAcknowledgement(in.AssessmentRevision); err != nil {
 			return err
 		}
 		if err := mayDirect(ctx, in.ShownReasons, review.Refusals); err != nil {

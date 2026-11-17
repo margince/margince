@@ -60955,11 +60955,9 @@ components:
             they were addressed — and they are absent from the headers the recipients
             see, which is the whole of what "blind" means.
 
-            A message with a tokenized unsubscribe link may still have only ONE
-            addressee in total: that token is a bearer credential over one contact's
-            consent record, so a bcc'd copy of a marketing send is refused 422
-            `shared_unsubscribe_token` rather than handing a stranger somebody else's
-            preference link.
+            Private unsubscribe links are omitted for multiple recipients, preserving
+            To, Cc and Bcc visibility. The sender must confirm that omission with
+            a recorded one-message reason before delivery.
         draft_ref:
           type: [string, 'null']
           description: |
@@ -61597,11 +61595,23 @@ components:
           x-extensible-enum: true
         entity_id: { type: string, format: uuid }
 
+    FooterFinding:
+      type: object
+      required: [kind, language, missing_means]
+      properties:
+        kind: { type: string, description: 'Missing disclosure kind or unavailable private link. Unknown kinds remain visible as an unspecified footer omission.' }
+        language: { type: string, description: 'Required language, or empty when no language is missing.' }
+        missing_means: { type: array, items: { type: string }, description: 'Missing contact methods, such as email, phone or web.' }
+
     SendAuthorizationPreviewRecipient:
       type: object
       required: [address, verdict, reason_code]
       description: One recipient's answer. It describes the MESSAGE, never the contact's file.
       properties:
+        footer_findings:
+          type: array
+          items: { $ref: '#/components/schemas/FooterFinding' }
+          description: Server-derived missing footer disclosures or unavailable private links shown before the sender confirms this message. Contains no credentials.
         address: { type: string, format: email }
         lawful_basis_missing:
           type: boolean
@@ -61773,11 +61783,9 @@ components:
             they were addressed — and they are absent from the headers the recipients
             see, which is the whole of what "blind" means.
 
-            A message with a tokenized unsubscribe link may still have only ONE
-            addressee in total: that token is a bearer credential over one contact's
-            consent record, so a bcc'd copy of a marketing send is refused 422
-            `shared_unsubscribe_token` rather than handing a stranger somebody else's
-            preference link.
+            Private unsubscribe links are omitted for multiple recipients, preserving
+            To, Cc and Bcc visibility. The sender must confirm that omission with
+            a recorded one-message reason before delivery.
         draft_ref:
           type: [string, 'null']
           description: |
@@ -74778,6 +74786,14 @@ components:
         the rep is actually asking — and it is why an erasure clears this list.
       required: [address, reason_code]
       properties:
+        footer_preview:
+          type: array
+          items: { type: string }
+          description: Configured disclosure text included in this message. Contains no recipient credentials.
+        footer_findings:
+          type: array
+          items: { $ref: '#/components/schemas/FooterFinding' }
+          description: Server-derived missing footer disclosures or unavailable private links shown before the sender confirms this message. Contains no credentials.
         address: { type: string }
         subject_kind: { type: string, enum: [contact, lead], x-extensible-enum: true }
         subject_id: { type: string, format: uuid }
@@ -74795,6 +74811,9 @@ components:
         what the consent rows say today.
       required: [id, state, kind, reason_code, refusals]
       properties:
+        assessment_revision:
+          type: string
+          description: Revision of the displayed refusal and footer details, echoed when confirming.
         id: { type: string, format: uuid }
         state:
           type: string
@@ -74925,6 +74944,9 @@ components:
           description: |
             The tick. Refused when false — the acknowledgement is the act, and an instruction written
             without one would record a decision nobody made.
+        assessment_revision:
+          type: string
+          description: The review revision the sender read. Required when footer findings apply.
         shown_reasons:
           type: array
           maxItems: 100

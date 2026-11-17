@@ -5,6 +5,7 @@ import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { CommunicationStatus } from "../design-system/communicationstatus";
 import { Row } from "../design-system/stack";
+import { footerFindingsText } from "../format/footerfindings";
 import { formatNumber } from "../format/format";
 import {
   type RefusalKind,
@@ -152,6 +153,7 @@ const TITLE: Record<RefusalKind, MessageKey> = {
   missingContext: "sendPermission.missingContext",
   missingEvidence: "sendPermission.unproven",
   missingPermission: "sendPermission.missingPermission",
+  missingFooter: "sendPermission.footer.title",
   restricted: "sendPermission.refused",
 };
 
@@ -226,6 +228,7 @@ function PermissionNotice({
   onRecheck,
 }: SendPermissionProps) {
   const t = useT();
+  const { locale } = useLocale();
   const status = sendStatus({ preview, asking, unanswered, refusal });
   if (status.kind === "unavailable") {
     return <UncheckedNotice onRecheck={onRecheck} />;
@@ -261,6 +264,19 @@ function PermissionNotice({
       title={t(look.title)}
       actions={control ?? refusal?.remedies}
     >
+      {status.refused.some((item) => item.footerFindings?.length) ? (
+        <p>
+          {footerFindingsText(
+            [
+              ...new Set(
+                status.refused.flatMap((item) => item.footerFindings ?? []),
+              ),
+            ],
+            t,
+            locale,
+          )}
+        </p>
+      ) : null}
       <RefusalDetail
         status={status}
         named={namesRecipients}

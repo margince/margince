@@ -410,6 +410,12 @@ describe("whether a refusal is about the message on screen", () => {
     expect(refusalIsCurrent(sent, now, answerAtSend)).toBe(false);
   });
 
+  it("retains the reason form through a background preview refresh", () => {
+    expect(
+      refusalIsCurrent(sent, sent, allowedPreview(["a@x.com"]), true),
+    ).toBe(true);
+  });
+
   it("is not, once the check answers anew", () => {
     expect(refusalIsCurrent(sent, sent, allowedPreview(["a@x.com"]))).toBe(
       false,
