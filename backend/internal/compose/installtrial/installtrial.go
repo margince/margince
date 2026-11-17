@@ -56,7 +56,16 @@ func (t *Trial) Contract(ctx context.Context) (*crmcontracts.LicenseTrial, error
 // on none. That is a configured license (valid or refused), a development or
 // test installation, or one with no workspace yet.
 func (t *Trial) Current(ctx context.Context) (licensecheck.Trial, bool, error) {
-	if t == nil || t.env.IsNonProduction() || t.posture().State != licensecheck.StateAbsent {
+	if t == nil {
+		return licensecheck.Trial{}, false, nil
+	}
+	return t.currentUnder(ctx, t.posture())
+}
+
+// currentUnder is Current judged against one posture snapshot, so a caller that
+// already read the posture decides on the same one.
+func (t *Trial) currentUnder(ctx context.Context, posture licensecheck.Posture) (licensecheck.Trial, bool, error) {
+	if t.env.IsNonProduction() || posture.State != licensecheck.StateAbsent {
 		return licensecheck.Trial{}, false, nil
 	}
 	start, ok, err := t.start(ctx)
@@ -83,14 +92,15 @@ func (t *Trial) Lock(ctx context.Context) error {
 	if t == nil {
 		return nil
 	}
-	if Lapsed(t.posture()) {
+	posture := t.posture()
+	if Lapsed(posture) {
 		return apperrors.ErrLicenseLapsed
 	}
-	ended, err := t.Ended(ctx)
+	trial, ok, err := t.currentUnder(ctx, posture)
 	if err != nil {
 		return err
 	}
-	if ended {
+	if ok && trial.Ended(t.now()) {
 		return apperrors.ErrTrialEnded
 	}
 	return nil

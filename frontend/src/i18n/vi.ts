@@ -14162,7 +14162,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Mọi thứ vẫn hoạt động và không bị giới hạn. Cấu hình token giấy phép cho bản cài đặt này để tính số tài khoản theo mức được cấp.",
   "license.refused.title": "Giấy phép của bản cài đặt này bị từ chối",
   "license.refused.body":
-    "Token giấy phép cấu hình cho bản cài đặt này đã được xuất trình và bị từ chối, nên Margince bị khóa cho đến khi token được thay. Kiểm tra token và đồng hồ của bản cài đặt.",
+    "Token giấy phép cấu hình cho bản cài đặt này đã được xuất trình và bị từ chối, nên Margince bị khóa cho đến khi một lần kiểm tra chấp nhận token. Kiểm tra token và đồng hồ của bản cài đặt, rồi kiểm tra lại.",
   "license.seats.capacityOnly":
     "Vai trò hiện tại không có quyền xem số tài khoản được cấp phép.",
   "license.seats.title": "Tài khoản",
@@ -15201,13 +15201,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "trial.locked.member":
     "Quản trị viên của bạn có thể nhận giấy phép từ đội ngũ Margince. Bạn cũng có thể tự viết cho họ.",
   "common.trialEnded":
-    "Thời gian dùng thử của bản cài đặt này đã kết thúc, nên thay đổi này phải chờ có giấy phép. Dữ liệu của bạn vẫn được giữ nguyên.",
+    "Thời gian dùng thử của bản cài đặt này đã kết thúc, nên thay đổi này chưa được lưu. Hãy thực hiện lại khi đã có giấy phép. Dữ liệu của bạn vẫn được giữ nguyên.",
   "license.locked.pageTitle": "Giấy phép không hợp lệ",
   "license.locked.title": "Giấy phép Margince của bạn không còn hiệu lực",
   "license.locked.body":
     "Giấy phép đã hết hạn hoặc bị từ chối, nên Margince đang bị khóa và tác vụ nền đang tạm dừng cho đến khi có giấy phép hợp lệ. Dữ liệu của bạn vẫn được giữ nguyên, không có gì bị xóa.",
   "common.licenseLapsed":
-    "Giấy phép của bản cài đặt này đã hết hạn hoặc bị từ chối, nên thay đổi này phải chờ có giấy phép hợp lệ. Dữ liệu của bạn vẫn được giữ nguyên.",
+    "Giấy phép của bản cài đặt này đã hết hạn hoặc bị từ chối, nên thay đổi này chưa được lưu. Hãy thực hiện lại khi đã có giấy phép hợp lệ. Dữ liệu của bạn vẫn được giữ nguyên.",
   "licensebanner.link": "Mở {tab}",
   "licensebanner.grace.title": "Giấy phép đã hết hạn",
   "licensebanner.grace.body":

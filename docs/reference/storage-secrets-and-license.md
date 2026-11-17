@@ -281,8 +281,9 @@ set but cannot be read, or is empty, is also a boot error. So a wrong path does 
 to run with no license. Margince reads a `token_file` with the same size limit as a `${file:…}`
 reference, and drops the spaces and empty lines around the token.
 
-A license that ends while the process runs locks it at the next check. The api checks again
-daily, or at once on **Check now**, and the worker every 5 minutes while it is locked. From that
+A license that ends while the process runs locks it at the next check. The api and the worker
+each check again daily. The api also checks at once on **Check now**, and the worker every 5
+minutes while it is locked. From that
 check on, the installation is locked as above. The data stays, and reads still answer.
 
 Each daily check reads the token file again: the file a `token: ${file:…}` reference names, or the

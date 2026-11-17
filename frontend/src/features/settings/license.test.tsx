@@ -281,7 +281,7 @@ describe("LicenseCard", () => {
     expect(screen.queryByText("This installation has no license")).toBeNull();
     expect(screen.queryByRole("alert")).toBeNull();
     expect(
-      screen.getByText(/Margince is locked until it is replaced/),
+      screen.getByText(/Margince is locked until a check accepts it/),
     ).toBeTruthy();
   });
 
@@ -300,7 +300,7 @@ describe("LicenseCard", () => {
 
     expect(
       await waitFor(() =>
-        screen.getByText(/Margince is locked until it is replaced/),
+        screen.getByText(/Margince is locked until a check accepts it/),
       ),
     ).toBeTruthy();
     expect(screen.queryByText(/uncapped/)).toBeNull();

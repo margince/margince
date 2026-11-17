@@ -14551,7 +14551,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Alles funktioniert weiter, und nichts ist begrenzt. Konfiguriere ein Lizenz-Token für diese Installation, damit die Plätze mit dem Lizenzumfang abgeglichen werden.",
   "license.refused.title": "Die Lizenz dieser Installation wurde abgelehnt",
   "license.refused.body":
-    "Das für diese Installation konfigurierte Lizenz-Token wurde vorgelegt und abgelehnt. Margince ist gesperrt, bis es ersetzt wird. Prüfe das Token und die Uhr der Installation.",
+    "Das für diese Installation konfigurierte Lizenz-Token wurde vorgelegt und abgelehnt. Margince ist gesperrt, bis eine Prüfung das Token annimmt. Prüfe das Token und die Uhr der Installation und prüfe danach erneut.",
   "license.seats.capacityOnly":
     "Deine Rolle darf den Lizenzumfang nicht sehen.",
   "license.seats.title": "Plätze",
@@ -15609,13 +15609,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "trial.locked.member":
     "Deine Admins können eine Lizenz vom Margince-Team bekommen. Du kannst dem Team auch selbst schreiben.",
   "common.trialEnded":
-    "Die Testphase dieser Installation ist beendet, deshalb wartet diese Änderung auf eine Lizenz. Deine Daten bleiben, wie sie sind.",
+    "Die Testphase dieser Installation ist beendet, deshalb wurde diese Änderung nicht gespeichert. Nimm sie erneut vor, sobald eine Lizenz da ist. Deine Daten bleiben, wie sie sind.",
   "license.locked.pageTitle": "Lizenz nicht gültig",
   "license.locked.title": "Deine Margince-Lizenz ist nicht mehr gültig",
   "license.locked.body":
     "Die Lizenz ist abgelaufen oder wurde abgelehnt. Margince ist gesperrt, und die Arbeit im Hintergrund ruht, bis eine gültige Lizenz da ist. Deine Daten bleiben, wie sie sind, und nichts wird gelöscht.",
   "common.licenseLapsed":
-    "Die Lizenz dieser Installation ist abgelaufen oder wurde abgelehnt, deshalb wartet diese Änderung auf eine gültige Lizenz. Deine Daten bleiben, wie sie sind.",
+    "Die Lizenz dieser Installation ist abgelaufen oder wurde abgelehnt, deshalb wurde diese Änderung nicht gespeichert. Nimm sie erneut vor, sobald eine gültige Lizenz da ist. Deine Daten bleiben, wie sie sind.",
   "licensebanner.link": "{tab} öffnen",
   "licensebanner.grace.title": "Lizenz abgelaufen",
   "licensebanner.grace.body":

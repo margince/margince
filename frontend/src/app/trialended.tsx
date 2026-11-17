@@ -4,7 +4,10 @@
 import { useId, useState } from "react";
 import { AuthCardTitle, AuthExperience } from "../components/auth-core";
 import { usePageTitle, Wordmark } from "../components/auth-identity";
-import { TrialContactDialog } from "../components/trialcontact";
+import {
+  type LockReason,
+  TrialContactDialog,
+} from "../components/trialcontact";
 import { Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
@@ -29,9 +32,7 @@ import "./trialended.css";
  * Margince team. An admin is also told where the license goes, and one who may
  * change the installation can check it again.
  */
-export function TrialEndedScreen({
-  reason,
-}: Readonly<{ reason: "trial" | "license" }>) {
+export function TrialEndedScreen({ reason }: Readonly<{ reason: LockReason }>) {
   const t = useT();
   const copy = reason === "license" ? LICENSE_COPY : TRIAL_COPY;
   usePageTitle(t(copy.pageTitle));
@@ -66,6 +67,7 @@ export function TrialEndedScreen({
         <TrialContactDialog
           standing={standing}
           seatsUsed={entitlement.data?.seats_used}
+          lockReason={reason}
           onClose={() => setWriting(false)}
         />
       )}

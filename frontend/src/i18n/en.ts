@@ -14489,7 +14489,7 @@ export const en = {
     "Everything keeps working and nothing is capped. Configure a license token for this installation to count seats against a grant.",
   "license.refused.title": "This installation’s license was refused",
   "license.refused.body":
-    "The license token configured for this installation was presented and rejected, so Margince is locked until it is replaced. Check the token and the installation’s clock.",
+    "The license token configured for this installation was presented and rejected, so Margince is locked until a check accepts it. Check the token and the installation’s clock, then check again.",
   "license.seats.capacityOnly": "Your role cannot see the license entitlement.",
   "license.seats.title": "Seats",
   "license.seats.inUse": "Full seats in use",
@@ -15517,13 +15517,13 @@ export const en = {
   "trial.locked.member":
     "Your admin can get a license from the Margince team. You can also write to them yourself.",
   "common.trialEnded":
-    "This installation’s trial has ended, so this change waits for a license. Your data stays as it is.",
+    "This installation’s trial has ended, so this change was not saved. Make it again once there is a license. Your data stays as it is.",
   "license.locked.pageTitle": "License not valid",
   "license.locked.title": "Your Margince license is no longer valid",
   "license.locked.body":
     "The license has expired or was refused, so Margince is locked and background work is paused until it has a valid license. Your data stays as it is, and nothing is deleted.",
   "common.licenseLapsed":
-    "This installation’s license has expired or was refused, so this change waits for a valid license. Your data stays as it is.",
+    "This installation’s license has expired or was refused, so this change was not saved. Make it again once there is a valid license. Your data stays as it is.",
   "licensebanner.link": "Open {tab}",
   "licensebanner.grace.title": "License expired",
   "licensebanner.grace.body":

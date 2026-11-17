@@ -66,14 +66,19 @@ it("holds a seat of an installation whose trial ended to the one screen that say
 });
 
 it("holds a seat of an installation whose license lapsed to the lock, which says it is the license", async () => {
+  const user = userEvent.setup();
   mount(lockScreen(null, null, { license_lapsed: true }));
 
   expect(await screen.findByText(en["license.locked.title"])).toBeTruthy();
   expect(screen.getByText(en["license.locked.body"])).toBeTruthy();
   expect(screen.queryByText(en["trial.locked.title"])).toBeNull();
-  expect(
+
+  await user.click(
     screen.getByRole("button", { name: en["trial.contact.title"] }),
-  ).toBeTruthy();
+  );
+  const dialog = await screen.findByRole("dialog");
+  expect(within(dialog).getByText(en["license.locked.title"])).toBeTruthy();
+  expect(within(dialog).queryByText(en["trial.notice.endedTitle"])).toBeNull();
 });
 
 it("leaves an installation still on its trial, and a refused session, to the rest of the app", () => {
