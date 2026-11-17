@@ -8,13 +8,14 @@ export const SERVICE_WORKER_URL = "/sw.js";
 
 export type InstallOutcome = "accepted" | "dismissed";
 
-/** iOS sends no install offer, so `manual-ios` means Add to Home Screen by hand;
- *  `installed` and `dismissed` count what the reader decided on this visit. */
+/** Safari makes no install offer, so `manual-*` installs by hand; `installed`
+ *  and `dismissed` count what the reader decided on this visit. */
 export type InstallState =
   | Readonly<{ kind: "installed" }>
   | Readonly<{ kind: "available"; prompt: () => Promise<InstallOutcome> }>
   | Readonly<{ kind: "dismissed" }>
   | Readonly<{ kind: "manual-ios" }>
+  | Readonly<{ kind: "manual-macos" }>
   | Readonly<{ kind: "unavailable" }>;
 
 /** Chromium's install offer; no standard names it yet. */
@@ -57,6 +58,28 @@ function appleTouchDevice(): boolean {
   );
 }
 
+// An app's own webview leaves `Safari/` out of its agent and has no Share sheet
+// that adds to the home screen; Chrome, Edge and Firefox on iOS keep it.
+function addsToHomeScreen(): boolean {
+  return /Safari\//.test(navigator.userAgent);
+}
+
+// Add to Dock needs macOS 14, and Safari reports every macOS as 10.15.7;
+// Safari 26 ships for macOS 14 and later only, so its version stands in.
+const DOCK_SAFARI_MAJOR = 26;
+
+function macSafari(): boolean {
+  const agent = navigator.userAgent;
+  const major = Number(/Version\/(\d+)/.exec(agent)?.[1] ?? 0);
+  return (
+    /Macintosh/.test(agent) &&
+    navigator.maxTouchPoints <= 1 &&
+    /Safari\//.test(agent) &&
+    major >= DOCK_SAFARI_MAJOR &&
+    !/Chrome|Chromium|Edg|OPR|Firefox/.test(agent)
+  );
+}
+
 function offer(event: BeforeInstallPromptEvent): InstallState {
   return {
     kind: "available",
@@ -94,7 +117,10 @@ function currentState(): InstallState {
   if (dismissed) {
     return { kind: "dismissed" };
   }
-  return { kind: appleTouchDevice() ? "manual-ios" : "unavailable" };
+  if (appleTouchDevice()) {
+    return { kind: addsToHomeScreen() ? "manual-ios" : "unavailable" };
+  }
+  return { kind: macSafari() ? "manual-macos" : "unavailable" };
 }
 
 function refresh(): void {

@@ -92,7 +92,7 @@ export function useTaskDone(id: string, version: number | undefined) {
     }) > 0;
   return {
     pending: writing,
-    complete: () => (writing ? Promise.resolve() : complete(id, version)),
+    complete: () => (writing ? Promise.resolve(false) : complete(id, version)),
   };
 }
 

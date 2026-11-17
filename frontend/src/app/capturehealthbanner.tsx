@@ -15,13 +15,29 @@ import { briefKey, magicKey, worklistKey } from "../lib/workkeys";
 
 type Connection = components["schemas"]["CaptureConnection"];
 
+/** The connections with a concern the banner states, most pressing first. */
+export function useCaptureConcerns(): Connection[] {
+  const query = useConnectors({ refreshHealth: true });
+  if (query.isError) return [];
+  const concerns = (query.data?.data ?? []).filter(
+    (row) => row.concern && Object.hasOwn(CAPTURE_CONCERNS, row.concern),
+  );
+  const order = Object.keys(CAPTURE_CONCERNS);
+  concerns.sort(
+    (a, b) =>
+      order.indexOf(a.concern ?? "") - order.indexOf(b.concern ?? "") ||
+      (a.id === b.id ? 0 : a.id < b.id ? -1 : 1),
+  );
+  return concerns;
+}
+
 export function CaptureHealthBanner() {
   const readerZone = useViewerZone();
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
   const client = useQueryClient();
-  const query = useConnectors({ refreshHealth: true });
+  const concerns = useCaptureConcerns();
   const dismiss = useMutation({
     mutationFn: async (connection: Connection) => {
       if (!connection.concern_since)
@@ -44,17 +60,8 @@ export function CaptureHealthBanner() {
       ]);
     },
   });
-  const concerns = (query.data?.data ?? []).filter(
-    (row) => row.concern && Object.hasOwn(CAPTURE_CONCERNS, row.concern),
-  );
-  const order = Object.keys(CAPTURE_CONCERNS);
-  concerns.sort(
-    (a, b) =>
-      order.indexOf(a.concern ?? "") - order.indexOf(b.concern ?? "") ||
-      (a.id === b.id ? 0 : a.id < b.id ? -1 : 1),
-  );
   const row = concerns[0];
-  if (query.isError || !row?.concern) return null;
+  if (!row?.concern) return null;
   const label = row.account_label || providerName(row.provider, t);
   const since = row.concern_since
     ? formatDateTime(row.concern_since, locale, readerZone)

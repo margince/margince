@@ -66,6 +66,14 @@ function InstallRow({
           control={null}
         />
       );
+    case "manual-macos":
+      return (
+        <SettingRow
+          label={label}
+          description={t("settings.installAppManualMac")}
+          control={null}
+        />
+      );
     case "installed":
       return (
         <SettingRow
@@ -81,16 +89,24 @@ function InstallRow({
   }
 }
 
-function InstallButton({
+/** Install, with the browser's answer for a caller that keeps its own schedule. */
+export function InstallButton({
   prompt,
-}: Readonly<{ prompt: () => Promise<InstallOutcome> }>) {
+  onAnswered,
+}: Readonly<{
+  prompt: () => Promise<InstallOutcome>;
+  onAnswered?: (outcome: InstallOutcome) => void;
+}>) {
   const t = useT();
   const [asking, setAsking] = useState(false);
   // Called inside the click: the browser opens its dialog only for a user gesture.
   const ask = () => {
     setAsking(true);
     prompt().then(
-      () => setAsking(false),
+      (outcome) => {
+        setAsking(false);
+        onAnswered?.(outcome);
+      },
       (reason: unknown) => {
         setAsking(false);
         logUnexpectedError(reason);

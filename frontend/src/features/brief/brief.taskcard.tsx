@@ -43,6 +43,7 @@ import {
 import type { MessageKey } from "../../i18n/en";
 import { changeBadge, changeSentence } from "../../lib/calendarchange";
 import { useCompanyZone } from "../../lib/companyzone";
+import { noteHomeTaskDone } from "../../lib/installhint";
 import { useMe } from "../../lib/session";
 import type { TaskType } from "../../lib/tasktype";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -150,12 +151,11 @@ export function TaskTick({
 
 function TaskDone({ item }: Readonly<{ item: WorklistItem }>) {
   const done = useTaskDone(item.id, item.version);
+  const complete = async () => {
+    if (await done.complete()) noteHomeTaskDone();
+  };
   return (
-    <Tick
-      item={item}
-      pending={done.pending}
-      onDone={() => void done.complete()}
-    />
+    <Tick item={item} pending={done.pending} onDone={() => void complete()} />
   );
 }
 

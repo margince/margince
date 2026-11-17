@@ -30,39 +30,47 @@ export function widthMedia(maxWidth: number): string {
   return `(max-width: ${maxWidth}px)`;
 }
 
-function widthQuery(maxWidth: number): MediaQueryList | undefined {
-  return globalThis.matchMedia?.(widthMedia(maxWidth));
-}
+export const COARSE_POINTER = "(pointer: coarse)";
 
 /**
- * Whether the viewport is at or under `maxWidth`.
+ * Whether `media` matches.
  *
  * Subscribed rather than measured once: a window is resized and a phone is
  * rotated while the app is open, and chrome that read the width at mount would
  * keep the other width's arrangement for the rest of the session.
  *
  * `matchMedia` is absent in some embedded contexts, and a missing media query is
- * a DEFAULT rather than an error — the answer is then "not narrow", which is
- * the arrangement that works at any width.
+ * a DEFAULT rather than an error — the answer is then "no", which for a width
+ * is the arrangement that works at any width.
  */
-export function useViewportUnder(maxWidth: number): boolean {
-  const [under, setUnder] = useState(
-    () => widthQuery(maxWidth)?.matches ?? false,
+export function useMediaMatch(media: string): boolean {
+  const [matches, setMatches] = useState(
+    () => globalThis.matchMedia?.(media).matches ?? false,
   );
   useEffect(() => {
-    const query = widthQuery(maxWidth);
+    const query = globalThis.matchMedia?.(media);
     if (!query) {
       return;
     }
     // Read again on subscribe: the first render can happen before the window
     // has settled at the size it ends up at, and the listener below only ever
     // reports a CHANGE from whatever the query matched then.
-    setUnder(query.matches);
-    const listen = () => setUnder(query.matches);
+    setMatches(query.matches);
+    const listen = () => setMatches(query.matches);
     query.addEventListener("change", listen);
     return () => query.removeEventListener("change", listen);
-  }, [maxWidth]);
-  return under;
+  }, [media]);
+  return matches;
+}
+
+/** Whether the viewport is at or under `maxWidth`. */
+export function useViewportUnder(maxWidth: number): boolean {
+  return useMediaMatch(widthMedia(maxWidth));
+}
+
+/** Whether the reader points with a finger, so the device is a phone or tablet. */
+export function useCoarsePointer(): boolean {
+  return useMediaMatch(COARSE_POINTER);
 }
 
 /** Whether the viewport is at phone width, where the sidebar is a bottom bar. */

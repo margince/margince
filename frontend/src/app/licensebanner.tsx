@@ -9,6 +9,7 @@ import { calendarDay } from "../format/calendarday";
 import { useNow } from "../format/now";
 import { useT } from "../i18n";
 import {
+  type TrialStanding,
   useLicenseEntitlement,
   useLicensePosture,
   useTrialStanding,
@@ -35,17 +36,20 @@ const COPY = {
 // last one.
 export function LicenseBanner() {
   const t = useT();
-  const posture = useLicensePosture();
-  const trial = useTrialStanding();
-  const entitlement = useLicenseEntitlement(trial !== undefined);
+  const notice = useLicenseNotice();
+  const entitlement = useLicenseEntitlement(notice?.kind === "trial");
   const zone = useViewerZone();
   const today = calendarDay(new Date(useNow(60_000)), zone);
   const [hiddenOn, setHiddenOn] = useState(() =>
     readStored(STORAGE_KEYS.trialNoticeHiddenOn),
   );
-  if (trial) {
+  if (notice === null) {
+    return null;
+  }
+  if (notice.kind === "trial") {
+    const { trial } = notice;
     const lastDay = trial.ended || trial.daysLeft <= 1;
-    if (!trial.closing || (!lastDay && hiddenOn === today)) {
+    if (!lastDay && hiddenOn === today) {
       return null;
     }
     const hide = () => {
@@ -62,10 +66,7 @@ export function LicenseBanner() {
       </div>
     );
   }
-  if (posture !== "refused" && posture !== "grace") {
-    return null;
-  }
-  const copy = COPY[posture];
+  const copy = COPY[notice.kind];
   return (
     // `warning` rather than `danger`, and no dismiss: escalating would make the
     // chrome a sales surface, and the repair behind it stays until it is made.
@@ -84,4 +85,20 @@ export function LicenseBanner() {
       </Callout>
     </div>
   );
+}
+
+type LicenseNotice =
+  | Readonly<{ kind: "trial"; trial: TrialStanding }>
+  | Readonly<{ kind: keyof typeof COPY }>;
+
+/** What the license asks the chrome to say, before a reader hides it for the day. */
+export function useLicenseNotice(): LicenseNotice | null {
+  const posture = useLicensePosture();
+  const trial = useTrialStanding();
+  if (trial) {
+    return trial.closing ? { kind: "trial", trial } : null;
+  }
+  return posture === "refused" || posture === "grace"
+    ? { kind: posture }
+    : null;
 }

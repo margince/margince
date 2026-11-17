@@ -7,8 +7,23 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { InstallOutcome, InstallState } from "./pwa";
 
 const DESKTOP = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/131.0";
-const IPHONE = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Safari";
+const IPHONE =
+  "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Version/18.0 Mobile/15E148 Safari/604.1";
 const IPAD = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15";
+const IPHONE_CHROME =
+  "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) CriOS/131.0 Mobile/15E148 Safari/604.1";
+const IPHONE_WEBVIEW =
+  "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Mobile/15E148 Instagram 350.0";
+const IPAD_WEBVIEW =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Mobile/15E148 [FBAN/FBIOS]";
+const MAC_SAFARI =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Version/26.0 Safari/605.1.15";
+const MAC_SAFARI_18 =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Version/18.6 Safari/605.1.15";
+const MAC_CHROME =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/131.0 Safari/537.36";
+const MAC_FIREFOX =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:132.0) Firefox/132.0";
 
 const shadowed: string[] = [];
 const listening: (() => void)[] = [];
@@ -197,6 +212,25 @@ describe("the install state", () => {
     expect((await page(IPHONE, 5)).state().kind).toBe("manual-ios");
     expect((await page(IPAD, 5)).state().kind).toBe("manual-ios");
     expect((await page(IPAD, 0)).state().kind).toBe("unavailable");
+  });
+
+  it("is added by hand from Chrome on an iPhone, which shares through Safari", async () => {
+    displayMode(false);
+    expect((await page(IPHONE_CHROME, 5)).state().kind).toBe("manual-ios");
+  });
+
+  it("offers nothing inside an app's own browser, which cannot add to the home screen", async () => {
+    displayMode(false);
+    expect((await page(IPHONE_WEBVIEW, 5)).state().kind).toBe("unavailable");
+    expect((await page(IPAD_WEBVIEW, 5)).state().kind).toBe("unavailable");
+  });
+
+  it("is added to the Dock by hand in Safari 26 on a Mac, and in no older Safari or other Mac browser", async () => {
+    displayMode(false);
+    expect((await page(MAC_SAFARI, 0)).state().kind).toBe("manual-macos");
+    expect((await page(MAC_SAFARI_18, 0)).state().kind).toBe("unavailable");
+    expect((await page(MAC_CHROME, 0)).state().kind).toBe("unavailable");
+    expect((await page(MAC_FIREFOX, 0)).state().kind).toBe("unavailable");
   });
 });
 

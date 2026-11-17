@@ -541,6 +541,76 @@ test("help and feedback and the keyboard shortcuts meet AA", async ({
   await expect(accountTrigger(page)).toBeFocused();
 });
 
+// Headless Chromium never offers to install, so the test makes the offer the
+// way the browser does; the stored schedule puts the reader on a later day.
+for (const colorScheme of ["light", "dark"] as const) {
+  test.describe(`the install hint on Home at 390px in ${colorScheme}`, () => {
+    test.use({
+      viewport: { width: 390, height: 844 },
+      hasTouch: true,
+      isMobile: true,
+      colorScheme,
+    });
+
+    test("meets AA, sits in the tab order, and Not now hands focus to the page", async ({
+      page,
+    }) => {
+      await page.addInitScript(() => {
+        const earlier = new Date(Date.now() - 2 * 86_400_000);
+        window.localStorage.setItem(
+          "margince.installHint",
+          JSON.stringify({ firstDay: earlier.toISOString().slice(0, 10) }),
+        );
+      });
+      await page.goto("/#/home");
+      await expectShellRendered(page);
+      await page.evaluate(() => {
+        const offer = Object.assign(
+          new Event("beforeinstallprompt", { cancelable: true }),
+          {
+            platforms: ["web"],
+            userChoice: Promise.resolve({
+              outcome: "dismissed",
+              platform: "web",
+            }),
+            prompt: async () => undefined,
+          },
+        );
+        window.dispatchEvent(offer);
+      });
+      const hint = page.locator(".appbanner", {
+        hasText: de["installHint.title"],
+      });
+      await expect(hint).toBeVisible();
+      await settleAnimations(page);
+      await expectNoAaViolations(
+        page,
+        `home — install hint (390px, ${colorScheme})`,
+      );
+      expect(await pageOverflow(page)).toEqual([]);
+
+      const install = hint.getByRole("button", {
+        name: de["settings.installAppAction"],
+      });
+      const notNow = hint.getByRole("button", {
+        name: de["installHint.notNow"],
+      });
+      await install.focus();
+      await page.keyboard.press("Tab");
+      await expect(notNow).toBeFocused();
+      await page.keyboard.press("Enter");
+      await expect(hint).toHaveCount(0);
+      expect(
+        await page.evaluate(
+          () =>
+            document.activeElement !== null &&
+            document.activeElement !== document.body,
+        ),
+      ).toBe(true);
+    });
+  });
+}
+
 // A page whose heading has drawn, with focus out of every field, so a key
 // press reaches the app's shortcuts.
 async function openForKeys(page: Page, hash: string) {
