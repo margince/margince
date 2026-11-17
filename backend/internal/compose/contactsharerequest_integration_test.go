@@ -32,6 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/companytypes"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -60,7 +61,7 @@ func createAsRep2(t *testing.T, e *integration.Env) (int, map[string]any) {
 	req := httptest.NewRequest(http.MethodPost, "/v1/contacts", strings.NewReader(body)).WithContext(rep2(e))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
-	newContactsHandlers(e.Pool).CreateContact(rec, req, crmcontracts.CreateContactParams{})
+	newContactsHandlers(e.Pool, companytypes.Registry{}).CreateContact(rec, req, crmcontracts.CreateContactParams{})
 	var problem map[string]any
 	if err := json.Unmarshal(rec.Body.Bytes(), &problem); err != nil {
 		t.Fatalf("reading the answer %q: %v", rec.Body.String(), err)
@@ -215,7 +216,7 @@ func TestEveryCreateDoorAsksTheColleagueWhoHoldsTheAddress(t *testing.T) {
 				strings.NewReader(`{"full_name":"Pat Example","email":"`+heldAddress+`"}`)).WithContext(rep2(e))
 			req.Header.Set("Content-Type", "application/json")
 			rec := httptest.NewRecorder()
-			newContactsHandlers(e.Pool).QuickCaptureContact(rec, req, crmcontracts.QuickCaptureContactParams{})
+			newContactsHandlers(e.Pool, companytypes.Registry{}).QuickCaptureContact(rec, req, crmcontracts.QuickCaptureContactParams{})
 			if rec.Code != http.StatusConflict || !strings.Contains(rec.Body.String(), "contact_held_by_colleague") {
 				t.Errorf("quick capture answered %d %s, want 409 contact_held_by_colleague", rec.Code, rec.Body.String())
 			}
@@ -248,7 +249,7 @@ func TestEveryCreateDoorAsksTheColleagueWhoHoldsTheAddress(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/v1/contacts/vcard-import", &body).WithContext(rep2(e))
 			req.Header.Set("Content-Type", form.FormDataContentType())
 			rec := httptest.NewRecorder()
-			newContactsHandlers(e.Pool).ImportVCards(rec, req)
+			newContactsHandlers(e.Pool, companytypes.Registry{}).ImportVCards(rec, req)
 			if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "a colleague already has this contact") {
 				t.Errorf("the vCard import answered %d %s, want the card skipped as held", rec.Code, rec.Body.String())
 			}

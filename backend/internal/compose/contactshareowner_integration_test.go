@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/companytypes"
 )
 
 // reassignAsRep1 hands the held contact to another seat through the update
@@ -33,7 +34,7 @@ func reassignAsRep1(t *testing.T, e *integration.Env, held ids.ContactID, to ids
 		WithContext(e.As(e.Rep1, []ids.UUID{e.Team1}, acrossTeams))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
-	newContactsHandlers(e.Pool).UpdateContact(rec, req, crmcontracts.Id(held.UUID), crmcontracts.UpdateContactParams{})
+	newContactsHandlers(e.Pool, companytypes.Registry{}).UpdateContact(rec, req, crmcontracts.Id(held.UUID), crmcontracts.UpdateContactParams{})
 	if rec.Code != http.StatusOK {
 		t.Fatalf("reassigning the contact answered %d: %s", rec.Code, rec.Body.String())
 	}

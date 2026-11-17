@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/extprivacy"
 	"github.com/margince/margince/backend/internal/platform/freemail"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/companytypes"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -116,6 +117,9 @@ type Store struct {
 	// renameInstallation keeps the installation's name on the anchor's display
 	// name (anchorname.go); nil refuses an anchor rename.
 	renameInstallation InstallationRenamer
+	// companyTypes is the extension company types the composition declares; the
+	// zero value declares none (company_relationship_types.go).
+	companyTypes companytypes.Registry
 }
 
 // ConsumerMailReader builds the workspace's consumer-mail matcher on a

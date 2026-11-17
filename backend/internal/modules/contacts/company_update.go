@@ -166,7 +166,7 @@ func (s *Store) updateCompanyInTx(
 		return crmcontracts.Company{}, err
 	}
 
-	by, err := stageCompanyReplaceSets(ctx, tx, id, current, in, p)
+	by, err := s.stageCompanyReplaceSets(ctx, tx, id, current, in, p)
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}
@@ -342,7 +342,7 @@ func stampEditedDescriptionAuthor(ctx context.Context, tx pgx.Tx, id ids.Company
 // the audit row records the transition — the same shape as UpdateContact/social.
 // It answers with the captured-by principal those reconciles stamp, empty when
 // the edit touches neither set.
-func stageCompanyReplaceSets(ctx context.Context, tx pgx.Tx, id ids.CompanyID,
+func (s *Store) stageCompanyReplaceSets(ctx context.Context, tx pgx.Tx, id ids.CompanyID,
 	current crmcontracts.Company, in UpdateCompanyInput, p *storekit.Patch,
 ) (string, error) {
 	if in.RelationshipTypes == nil && in.ExtensionRelationshipTypes == nil && in.Domains == nil {
@@ -364,7 +364,7 @@ func stageCompanyReplaceSets(ctx context.Context, tx pgx.Tx, id ids.CompanyID,
 		if err != nil {
 			return "", err
 		}
-		deduped, err := dedupeExtensionRelationshipTypes(*in.ExtensionRelationshipTypes, live)
+		deduped, err := dedupeExtensionRelationshipTypes(s.companyTypes, *in.ExtensionRelationshipTypes, live)
 		if err != nil {
 			return "", err
 		}

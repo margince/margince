@@ -17,6 +17,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/extensionprivacy"
 	"github.com/margince/margince/backend/internal/platform/extprivacy"
+	"github.com/margince/margince/backend/internal/shared/ports/companytypes"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -74,6 +75,14 @@ func ExtensionData() extprivacy.Registry {
 	extensionData.mu.RLock()
 	defer extensionData.mu.RUnlock()
 	return extensionprivacy.Registry(extensionData.units)
+}
+
+// installedCompanyTypes is the company types the installed units declare, for
+// the record provider, which is built where no composition is in reach.
+func installedCompanyTypes() companytypes.Registry {
+	extensionData.mu.RLock()
+	defer extensionData.mu.RUnlock()
+	return companytypes.Of(extensionData.units)
 }
 
 // VerifyExtensionPrivacy checks the units' declarations at boot (extensionprivacy.Verify).

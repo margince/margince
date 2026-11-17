@@ -42,6 +42,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/companytypes"
 )
 
 // newContactsHandlers builds the contact/company/lead transport with the
@@ -59,8 +60,8 @@ import (
 // qualify dialog's "also open a deal" rides the deals store through the
 // contacts→deals edge (leadDealOpener) — both injected here for the same
 // ADR-0054 reason as the stager.
-func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
-	return withContactMergeCarriers(InstallationDB(pool), contacts.NewHandlers(InstallationDB(pool))).
+func newContactsHandlers(pool *pgxpool.Pool, companyTypes companytypes.Registry) contactsHandlers {
+	return withContactMergeCarriers(InstallationDB(pool), contacts.NewHandlers(InstallationDB(pool)).WithCompanyTypes(companyTypes)).
 		WithPrivacyReviewer(identity.NewServiceFor(InstallationDB(pool))).
 		WithRetainedSignaturePreview(func(source string) (string, error) {
 			markup, _, err := activities.SignatureMarkup(source)

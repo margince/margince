@@ -203,7 +203,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, exts *Extensions, authH aut
 		httpMetrics:      httpserver.NewHTTPMetrics(),
 		uploadLimits:     limits,
 		authHandlers:     authH,
-		contactsHandlers: newContactsHandlers(pool).WithUploadLimit(limits.LinkedInImport),
+		contactsHandlers: newContactsHandlers(pool, exts.CompanyTypes()).WithUploadLimit(limits.LinkedInImport),
 		dealsHandlers:    dealsH,
 		projectsHandlers: projects.HandlersOver(ProjectsStore(pool)),
 		contractsHandlers: contracts.NewHandlers(InstallationDB(pool), ContractFreezeRate(pool), ContractTimezone()).

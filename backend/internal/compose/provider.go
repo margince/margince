@@ -56,7 +56,7 @@ func NewProviderFor(db *database.DB) *Provider {
 	return &Provider{
 		// The fieldcatalog seam mirrors the HTTP wiring (server.go): the
 		// MCP surface's record verbs carry cf_* values too.
-		contacts: withContactMergeCarriers(db, contacts.NewProvider(db)).
+		contacts: withContactMergeCarriers(db, contacts.NewProvider(db).WithCompanyTypes(installedCompanyTypes())).
 			WithDealOpener(leadDealOpener{deals: deals.NewStore(db, DealsInstallation())}).
 			WithFieldCatalog(customfields.NewService(pool, nil)).
 			WithShareRequests(contactShareRequests(pool)).

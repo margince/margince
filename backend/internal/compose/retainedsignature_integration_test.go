@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/signature"
+	"github.com/margince/margince/backend/internal/shared/ports/companytypes"
 )
 
 func retainedSignatureFixture(t *testing.T) (*integration.Env, *contacts.Store, ids.UUID) {
@@ -128,7 +129,7 @@ func TestTheControllerReviewRouteNamesTheRetainedSignature(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	server := crmcontracts.Handler(Server{contactsHandlers: newContactsHandlers(e.Pool)})
+	server := crmcontracts.Handler(Server{contactsHandlers: newContactsHandlers(e.Pool, companytypes.Registry{})})
 	path := "/privacy/retained-signatures/" + id.String()
 	read := httptest.NewRecorder()
 	server.ServeHTTP(read, httptest.NewRequest(http.MethodGet, path, nil).WithContext(e.Admin()))
@@ -172,7 +173,7 @@ func TestTheRetainedSignaturePreviewUsesTheMailSanitizer(t *testing.T) {
 	deactivateSignatureOwner(t, e)
 	read := httptest.NewRecorder()
 	images := newSignaturePreviewImages(newFakeAssets(t), previewClock(t))
-	server := crmcontracts.Handler(Server{contactsHandlers: newContactsHandlers(e.Pool).WithSignatureImages(images)})
+	server := crmcontracts.Handler(Server{contactsHandlers: newContactsHandlers(e.Pool, companytypes.Registry{}).WithSignatureImages(images)})
 	server.ServeHTTP(read, httptest.NewRequest(http.MethodGet, "/privacy/retained-signatures/"+id.String(), nil).WithContext(e.Admin()))
 	var retained crmcontracts.RetainedEmailSignature
 	if err := json.Unmarshal(read.Body.Bytes(), &retained); err != nil {

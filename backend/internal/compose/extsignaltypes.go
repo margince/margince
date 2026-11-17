@@ -80,7 +80,7 @@ func preflightExtensionKinds(exts []extension.Extension) error {
 
 // registerExtensionKinds fills the registries the preflight just passed.
 func registerExtensionKinds(exts []extension.Extension) {
-	for _, register := range []func([]extension.Extension){registerCompanyTypes, registerRecordKinds, registerReports, registerSignalTypes} {
+	for _, register := range []func([]extension.Extension){registerRecordKinds, registerReports, registerSignalTypes} {
 		register(exts)
 	}
 }

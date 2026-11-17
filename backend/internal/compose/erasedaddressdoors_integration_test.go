@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/companytypes"
 )
 
 const (
@@ -58,7 +59,7 @@ func createContactOverHTTP(e *integration.Env, address string) (int, string) {
 	req := httptest.NewRequest(http.MethodPost, "/v1/contacts", strings.NewReader(body)).WithContext(e.Admin())
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
-	newContactsHandlers(e.Pool).CreateContact(rec, req, crmcontracts.CreateContactParams{})
+	newContactsHandlers(e.Pool, companytypes.Registry{}).CreateContact(rec, req, crmcontracts.CreateContactParams{})
 	return rec.Code, rec.Body.String()
 }
 

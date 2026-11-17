@@ -11,10 +11,12 @@ package gates
 // built without it skips every extension table, and nothing at the call site
 // says so. This fails on a production build site that does not carry it.
 //
-// Four shapes are judged:
+// Five shapes are judged:
 //   - an eraser, retention service or privacy handlers built outside the
 //     privacy module needs `.WithExtensions(` on its chain;
 //   - a contacts chain that carries a grant carrier (the merge wiring) needs it too;
+//   - a contacts handler set or provider needs `.WithCompanyTypes(`, or it
+//     refuses every extension company type a caller sends it;
 //   - a `privacy.UntoldLead` literal needs an `Extensions` field;
 //   - the plain `AssembleSAR` serves no extension table, so it must not appear.
 
@@ -61,7 +63,7 @@ func TestEveryProductionEraserCarriesTheExtensionRegistry(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, m := range missing {
-		t.Errorf("%s:%d %s\n\tHand it the extension registry (compose.ExtensionData()), or its extension tables are skipped without a sign.",
+		t.Errorf("%s:%d %s\n\tHand it the composition's extension registry, or what the units declare is skipped without a sign.",
 			m.path, m.line, m.what)
 	}
 	if len(sites) < 7 {
@@ -109,6 +111,8 @@ func judgeRegistryWiring(rel string, file *ast.File) (sites, missing []wiringSit
 				judge("privacy."+name+" is built without .WithExtensions(...)", methods["WithExtensions"])
 			case !inContacts && methods["WithGrantCarrier"]:
 				judge("a merge-capable contacts chain (it carries a grant carrier) has no .WithExtensions(...)", methods["WithExtensions"])
+			case !inContacts && qualifier == "contacts" && (name == "NewHandlers" || name == "NewProvider"):
+				judge("contacts."+name+" is built without .WithCompanyTypes(...)", methods["WithCompanyTypes"])
 			case !inPrivacy && qualifier == "privacy" && name == "AssembleSAR":
 				judge("privacy.AssembleSAR serves no extension table; call AssembleSARWithExtensions", false)
 			}

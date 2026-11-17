@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // Package companytypes is the core-internal registry of the company types
-// extensions declare. Compose fills it from the composed set at boot. The
+// extensions declare. Compose builds one from each composition's units. The
 // contacts module asks it whether an `ext:<unit>:<type>` value exists, so it
 // never imports a unit or compose.
 package companytypes
@@ -10,7 +10,6 @@ package companytypes
 import (
 	"sort"
 	"strings"
-	"sync"
 
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -25,21 +24,25 @@ type Declared struct {
 	Label string
 }
 
-var (
-	mu     sync.RWMutex
-	byName = map[string]Declared{}
-)
+// Registry is the company types one composition's units declare. The zero
+// value declares none, so a reader that was not handed one refuses every
+// extension type instead of accepting it.
+type Registry struct {
+	byValue map[string]Declared
+}
 
-// Register records one unit's types. Two units cannot collide, because the unit
+// Of records every unit's types. Two units cannot collide, because the unit
 // name is part of the value. A unit declaring a type twice is refused at boot,
 // before this runs.
-func Register(unit extension.Name, types []extension.CompanyType) {
-	mu.Lock()
-	defer mu.Unlock()
-	for _, t := range types {
-		value := extension.CompanyTypeValue(unit, t.Type)
-		byName[value] = Declared{Value: value, Unit: unit, Label: t.Label}
+func Of(units []extension.Extension) Registry {
+	byValue := map[string]Declared{}
+	for _, u := range units {
+		for _, t := range u.CompanyTypes {
+			value := extension.CompanyTypeValue(u.Name, t.Type)
+			byValue[value] = Declared{Value: value, Unit: u.Name, Label: t.Label}
+		}
 	}
+	return Registry{byValue: byValue}
 }
 
 // IsExtensionValue reports whether a stored type is an extension's rather than
@@ -49,28 +52,17 @@ func IsExtensionValue(value string) bool {
 }
 
 // Lookup answers the declaration of a value, and false for one no unit declared.
-func Lookup(value string) (Declared, bool) {
-	mu.RLock()
-	defer mu.RUnlock()
-	d, ok := byName[value]
+func (r Registry) Lookup(value string) (Declared, bool) {
+	d, ok := r.byValue[value]
 	return d, ok
 }
 
 // All lists every registered type, ordered by value.
-func All() []Declared {
-	mu.RLock()
-	defer mu.RUnlock()
-	out := make([]Declared, 0, len(byName))
-	for _, d := range byName {
+func (r Registry) All() []Declared {
+	out := make([]Declared, 0, len(r.byValue))
+	for _, d := range r.byValue {
 		out = append(out, d)
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Value < out[j].Value })
 	return out
-}
-
-// Reset empties the registry for a test that composes its own set.
-func Reset() {
-	mu.Lock()
-	defer mu.Unlock()
-	byName = map[string]Declared{}
 }
