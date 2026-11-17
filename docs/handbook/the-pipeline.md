@@ -134,16 +134,21 @@ use **Move to stage**. Margince saves the move at once and says so
 
 The card menu is the way to move a deal with the keyboard or a touch screen. It
 offers **Move to** the next stage and **Move to stage**, which lets you search
-for any stage of the pipeline. **Change close date** opens a one-field dialog with the deal's expected close date. **Change owner** opens a searchable list of colleagues, and the pick saves at once. **Mark won** and **Mark lost** show only when the
+for any stage of the pipeline. **Mark won** and **Mark lost** show only when the
 pipeline has one stage of that type, and the deal is not on it. They ask the same
 confirmation a drop asks.
 
+After the moves come **Change close date** and **Change owner**. **Change close
+date** opens a one-field dialog with the deal's expected close date, and only an
+open deal offers it. **Change owner** opens a searchable list of colleagues, and
+the pick saves at once. Any deal that is not archived offers it.
+
 On a won or lost deal the move items are grey: "This deal is closed. Reopen it
-on its page to move it." Someone who may not change the deal sees neither the
-move items, **Change close date**, **Change owner** nor **Archive deal**. The menu also holds **Deal summary**,
-**Write email**, **Add task**, **Copy link**, **Add to Shortlist** and
-**Archive deal**. On an archived deal it holds only **Deal summary** and
-**Copy link**.
+on its page to move it." Someone who may not change the deal sees none of the
+move items, **Change close date**, **Change owner** or **Archive deal**. The menu
+also holds **Deal summary**, **Write email**, **Add task**, **Copy link**,
+**Add to Shortlist** and **Archive deal**. On an archived deal it holds only
+**Deal summary** and **Copy link**.
 
 If two colleagues move the same deal at once, the second is refused, so it does
 not write over the first. A deal can only move to a stage in its own pipeline,
