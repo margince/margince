@@ -476,9 +476,8 @@ func previewMarketing(ctx context.Context, t *testing.T, gate *consent.Gate, add
 // that gets copied — it has to go on PROTECTING THE SEND. This drives a real
 // engine decision before and after the merge, through the same Preview path a
 // real send would reach, rather than only reading communication_override back.
-//
-//testdb:serial registers into a process-wide unit registry
 func TestAMergeCarriesTheRetiringContactsOverride(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	admin := e.Admin()
 	consentStore := consent.NewStore(e.DB())
@@ -634,9 +633,8 @@ func TestAnUnwiredMergeRefusesOnlyWhenAnOverrideWouldBeLost(t *testing.T) {
 // The stop direction survives the same shape because it fails safe: a stale lift
 // leaves the survivor still suppressed. A stale revoke fails OPEN, which is why
 // this is asserted on the send itself rather than on a row count.
-//
-//testdb:serial registers into a process-wide unit registry
 func TestRevokingAPreMergeOverrideHandleStopsTheSendOnTheSurvivor(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	admin := e.Admin()
 	consentStore := consent.NewStore(e.DB())

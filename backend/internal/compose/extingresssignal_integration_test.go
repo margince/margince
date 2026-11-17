@@ -45,8 +45,8 @@ func signalRecord(key, subjectType, subjectID string) extension.Record {
 	}}
 }
 
-//testdb:serial registers into a process-wide unit registry
 func TestASignalLandsOnTheMembersAuthorityWithItsAuditRowAndEvent(t *testing.T) {
+	t.Parallel()
 	e := setupSignalIngress(t)
 	company := e.mustIngest(t, companyRecord("acct-1", extension.CompanyFields{DisplayName: "Acme"}))
 
@@ -68,8 +68,8 @@ func TestASignalLandsOnTheMembersAuthorityWithItsAuditRowAndEvent(t *testing.T) 
 	}
 }
 
-//testdb:serial registers into a process-wide unit registry
 func TestARepeatedSignalIsAlreadyRaisedAndLandsNoSecondRow(t *testing.T) {
+	t.Parallel()
 	e := setupSignalIngress(t)
 	company := e.mustIngest(t, companyRecord("acct-1", extension.CompanyFields{DisplayName: "Acme"}))
 	first := e.mustIngest(t, signalRecord("event-1", "company", company.Ref.ID))
@@ -83,8 +83,8 @@ func TestARepeatedSignalIsAlreadyRaisedAndLandsNoSecondRow(t *testing.T) {
 	}
 }
 
-//testdb:serial registers into a process-wide unit registry
 func TestADemotedMemberLandsNoSignalFromTheNextCallOn(t *testing.T) {
+	t.Parallel()
 	e := setupSignalIngress(t)
 	company := e.mustIngest(t, companyRecord("acct-1", extension.CompanyFields{DisplayName: "Acme"}))
 	revokeRoles(t, e.extRuntimeEnv, e.member)
@@ -98,8 +98,8 @@ func TestADemotedMemberLandsNoSignalFromTheNextCallOn(t *testing.T) {
 	}
 }
 
-//testdb:serial registers into a process-wide unit registry
 func TestASignalAboutARecordTheMemberCannotSeeOrTheUnitDoesNotLandIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupSignalIngress(t)
 	company := e.mustIngest(t, companyRecord("acct-1", extension.CompanyFields{DisplayName: "Acme"}))
 	unknown := signalRecord("event-2", "company", ids.NewV7().String())
@@ -127,8 +127,8 @@ func TestASignalAboutARecordTheMemberCannotSeeOrTheUnitDoesNotLandIsRefused(t *t
 	}
 }
 
-//testdb:serial registers into a process-wide unit registry
 func TestAnAttendedCallCannotLandASignal(t *testing.T) {
+	t.Parallel()
 	e := setupSignalIngress(t)
 	company := e.mustIngest(t, companyRecord("acct-1", extension.CompanyFields{DisplayName: "Acme"}))
 	rt, ctx := e.runtime(ingressUnit)

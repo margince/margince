@@ -43,9 +43,8 @@ func (l *confirmLaneEnv) sweepAt(t *testing.T, at time.Time) int {
 
 // The sweep raises nothing while nobody can be told, then raises the receipt
 // once an operator is back, and only once.
-//
-//testdb:serial registers into a process-wide unit registry
 func TestAMissedReceiptWhoseAlarmFailedIsRaisedByTheNextSweep(t *testing.T) {
+	t.Parallel()
 	l, owedAt, restore := failedReceiptAlarm(t)
 	at := owedAt.Add(time.Hour)
 	if n := l.sweepAt(t, at); n != 0 {
@@ -60,8 +59,8 @@ func TestAMissedReceiptWhoseAlarmFailedIsRaisedByTheNextSweep(t *testing.T) {
 	}
 }
 
-//testdb:serial registers into a process-wide unit registry
 func TestAnOwedReceiptIsRaisedForThirtyDaysOnly(t *testing.T) {
+	t.Parallel()
 	l, owedAt, restore := failedReceiptAlarm(t)
 	restore()
 	if n := l.sweepAt(t, owedAt.Add(31*24*time.Hour)); n != 0 {
@@ -72,8 +71,8 @@ func TestAnOwedReceiptIsRaisedForThirtyDaysOnly(t *testing.T) {
 	}
 }
 
-//testdb:serial registers into a process-wide unit registry
 func TestAnOwedReceiptAboutAnErasedSubjectIsNotRaised(t *testing.T) {
+	t.Parallel()
 	l, owedAt, restore := failedReceiptAlarm(t)
 	if err := ComposedEraser(l.e.Pool, nil).EraseContact(l.e.Admin(), l.contact, "Art. 17 request"); err != nil {
 		t.Fatalf("erasing the subject: %v", err)
