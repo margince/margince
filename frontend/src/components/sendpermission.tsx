@@ -95,8 +95,8 @@ export function decidingRecipient(
   const deciding = decidingRefusal(refusals);
   const recipient = deciding && refusing[refusals.indexOf(deciding)];
   if (!recipient) return { state: "allowed" };
-  // `can_be_overruled` and not `decided_by`: a recipient's own stop is theirs,
-  // yet one message may pass it with a reason. Absent is not a yes.
+  // `can_be_overruled` and not `decided_by`: a frequency cap is the engine's
+  // own reading, yet one message may pass it with a reason. Absent is not a yes.
   return {
     state: recipient.can_be_overruled ? "unproven" : "refused",
     recipient,
@@ -134,8 +134,8 @@ export function sendStatus({
 }
 
 /**
- * A stop a recorded reason can pass reads as a warning; only one nothing lifts
- * reads as a danger, under "Message cannot be sent".
+ * A refusal a recorded reason can pass reads as a warning. One nothing lifts,
+ * such as the recipient's own stop, reads as a danger, under "Message cannot be sent".
  */
 function calloutLook(kind: RefusalKind, overrulable: boolean) {
   const hardStop = kind === "restricted" && !overrulable;

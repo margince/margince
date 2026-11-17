@@ -195,13 +195,13 @@ describe("what a rep is shown", () => {
           reason_code: "marketing_objection",
           decided_by: "subject",
           would_refuse: true,
-          can_be_overruled: true,
+          can_be_overruled: false,
         }),
       ),
     );
     expect(screen.getByText(/objected to marketing/i)).toBeInTheDocument();
     expect(
-      screen.getByText(/a reply or a message they asked for is not marketing/i),
+      screen.getByText(/a reply or a message they asked for can still go/i),
     ).toBeInTheDocument();
     expect(screen.queryByText(/administrator/i)).not.toBeInTheDocument();
   });
@@ -615,9 +615,14 @@ describe("one status for the message", () => {
       "Marketing needs the recipient’s consent, and none is on record.",
     ],
     [
-      { reason_code: "marketing_objection", can_be_overruled: true },
+      { reason_code: "frequency_cap_reached", can_be_overruled: true },
       "Sending needs your reason",
-      "The recipient objected to marketing. A reply or a message they asked for is not marketing.",
+      "The recipient has reached the marketing message limit for now. This clears automatically.",
+    ],
+    [
+      { reason_code: "marketing_objection" },
+      "Message cannot be sent",
+      "The recipient objected to marketing, so no marketing goes to them. A reply or a message they asked for can still go.",
     ],
     [
       { reason_code: "hard_bounce" },

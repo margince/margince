@@ -199,14 +199,17 @@ Every role that sends mail holds the grant: `rep`, `manager`, `management` and `
 alone does not say which refusals a seat may send past. Each refusal reason declares what can
 resolve it in `commsauthz.RemediesFor`.
 
-- Every policy refusal lists the plain exception, so any holder of the grant can send one message
-  past it with a recorded reason. That includes a contact's own stop (an objection, a withdrawal, a
-  limit on processing, a request to stop), a missing marketing basis, `marketing_consent_required`
-  and `frequency_cap_reached`. The stop, the consent rows and the engine's verdict stay as they were.
+- A contact's own stop lists nothing, so nobody sends past it, an admin included. That covers an
+  objection, a withdrawal, a limit on processing and a request to stop. It also covers a quote that
+  rests on a request alone when the contact opted out of marketing after that request
+  (`opted_out_after_request`). A request recorded after the opt-out carries the quote again.
+- Every other policy refusal lists the plain exception, so any holder of the grant can send one
+  message past it with a recorded reason. That includes a missing marketing basis,
+  `marketing_consent_required`, `frequency_cap_reached` and an opt-in not yet confirmed. The consent
+  rows and the engine's verdict stay as they were.
 - A hard bounce and a recipient that resolves to no single contact list nothing. No decision makes
   a dead address accept mail, and an unresolved recipient was never checked for its stops.
-- A decision past a contact's own stop needs the reasons the user deciding was shown (`shown_reasons`).
-  An agent cannot take it, and neither can a scheduled run take any decision.
+- A decision sends the reasons its user was shown (`shown_reasons`); a changed review is stale.
 
 `Review.DirectableBy` is the check both `DirectSend` and a refusal's actions ask.
 Staging and the transmit check ask `DecisionSet.ExceptionMayAnswer` and

@@ -33,6 +33,9 @@ func TestARefusalOffersOnlyWhatThisCallerCanDo(t *testing.T) {
 		refused(commsauthz.ReasonNoEvidence), refused(commsauthz.ReasonHardBounce),
 	}}
 	objected := consent.Review{IntentID: held.IntentID, Refusals: []consent.RefusedRecipient{refused(commsauthz.ReasonObjection)}}
+	objectedBeside := consent.Review{IntentID: held.IntentID, Refusals: []consent.RefusedRecipient{
+		refused(commsauthz.ReasonMarketingConsentRequired), refused(commsauthz.ReasonObjection),
+	}}
 	holdsTheGrant := func(roleKeys ...string) principal.Principal {
 		return principal.Principal{
 			Type: principal.PrincipalHuman,
@@ -83,13 +86,18 @@ func TestARefusalOffersOnlyWhatThisCallerCanDo(t *testing.T) {
 			review: held, want: []string{"direct_send"},
 		},
 		{
-			// A grant holder may send one message past a contact's own stop.
+			// No grant reaches a contact's own stop, an admin's included.
 			name: "a rep holding the grant, refused for an objection", actor: holdsTheGrant("rep"),
-			review: objected, want: []string{"direct_send"},
+			review: objected,
 		},
 		{
 			name: "an admin, refused for an objection", actor: holdsTheGrant("admin"),
-			review: objected, want: []string{"direct_send"},
+			review: objected,
+		},
+		{
+			// The stop wins over a refusal the grant could pass.
+			name: "an admin, refused for an objection beside a passable refusal", actor: holdsTheGrant("admin"),
+			review: objectedBeside,
 		},
 		{
 			// A bounce is a fact about the address, whoever holds the grant.

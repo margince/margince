@@ -194,12 +194,12 @@ When Margince will not send an email to a contact, the warning bar above **Send*
 - **This message needs one more detail**: for "Choose the deal for this follow-up.", pick it in **Deal this follow-up is about**. You can also write from the deal's page. When the record already shows another reason, the bar offers **Use "…" instead**. It switches the reason and checks again; it does not send.
 - **Permission needed for this message**: the required permission is not on record. Record the recipient's consent or the facts that support an allowed customer route, or send this one message with a recorded exception.
 - **No recorded reason to contact this recipient**: Margince first uses a request or meeting it already holds. Where a fact is missing, press **Record what happened**. Say what was agreed and when. This records the exchange for that recipient and sending company, and for a deal when one is picked. It does not send the email, record marketing consent or make a standing exception. Margince checks again; any stop that remains still blocks the message.
-- **Send with a recorded exception**: if you hold the exception right, you can send one message past any refusal. Reps hold it by default. Two refusals are left out: an address that does not take mail, and one on several records or none. This queues only this message. Press **Send with a reason…**, or this button in the bar after a refused send. Pick why the message may go, say why in your own words and confirm that you take responsibility; your name and reason stay on record.
+- **Send with a recorded exception**: if you hold the exception right, you can send one message past a refusal. Reps hold it by default. Nobody sends past the recipient's own stop, an address that does not take mail, or one on several records or none. This queues only this message. Press **Send with a reason…**, or this button in the bar after a refused send. Pick why the message may go, say why in your own words and confirm that you take responsibility; your name and reason stay on record.
 
-  The exception covers this one message, and grants no consent for later mail. When the recipient objected or asked you to stop, that stays on the contact, and the next message is refused again. An agent running on a schedule cannot record an exception for you. The composer closes once the email is queued. A retry checks current support and stops, without asking again for facts that still hold.
+  The exception covers this one message, and grants no consent for later mail. The next message is refused again. An agent running on a schedule cannot record an exception for you. The composer closes once the email is queued. A retry checks current support and stops, without asking again for facts that still hold.
 
   If that approved send fails, open its review and choose **Correct spelling or punctuation**. You must own the message, have approved it yourself and still hold permission to edit and approve mail. Confirm that its meaning and facts stay the same, then choose **Save correction**. The original approval stays on record; the message stays held until you retry. A change in meaning, recipients, sender, purpose or attachments needs a new message and approval. Later stops still block it.
-- **Message cannot be sent**: the address does not take mail, or is on several records or none. No exception is offered, and **Send** stays off until you correct the address or remove that recipient.
+- **Message cannot be sent**: the recipient objected, took back consent, limited the use of their data or asked you to stop. Or the address does not take mail, or is on several records or none. No exception is offered, and **Send** stays off until you remove that recipient or correct the address.
 - A mailbox connected only to read mail: press **Reconnect your mailbox** and allow sending.
 
 The lead stays a lead when you record an exchange. When you make it a contact later, that exchange keeps its original addresses and sending company.
@@ -213,7 +213,7 @@ A marketing send without consent is refused:
 > **Permission needed for this message**
 > Marketing needs the recipient's consent, and none is on record.
 
-After the recipient objected, marketing goes out only as one message sent with a recorded reason.
+Nobody can send marketing after the recipient objected, an administrator included.
 Correct an address that does not take mail. If several records share one address,
 merge them so Margince can tell who the recipient is.
 
