@@ -21,6 +21,7 @@ import (
 // The contract bounds a report name in characters. An accented name that fits
 // is accepted, and one a character too long is refused.
 func TestAReportNameLimitCountsCharactersNotBytes(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	create := func(name string) error {
 		_, err := f.service.CreateReport(f.human, crmcontracts.ReportingReportInput{
@@ -41,6 +42,7 @@ func TestAReportNameLimitCountsCharactersNotBytes(t *testing.T) {
 
 // A target's revision reason is bounded in characters, like the contract says.
 func TestATargetReasonLimitCountsCharactersNotBytes(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	at := time.Date(2026, 9, 29, 12, 0, 0, 0, time.UTC)
 	service := newReportingService(e.Pool, func() time.Time { return at })

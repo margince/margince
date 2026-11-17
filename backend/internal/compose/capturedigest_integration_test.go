@@ -46,6 +46,7 @@ func (b *backfillWireEnv) readDigest(t *testing.T, day *time.Time) (int, crmcont
 }
 
 func TestMorningDigestBuildAndRead(t *testing.T) {
+	t.Parallel()
 	b := setupBackfillWire(t)
 	today := time.Date(2026, 7, 14, 5, 0, 0, 0, time.UTC)
 
@@ -98,6 +99,7 @@ func TestMorningDigestBuildAndRead(t *testing.T) {
 // The store is queried with the day's ISO text, which has no year 0.
 // A day outside the accepted range is a malformed parameter, not a storage fault.
 func TestMorningDigestRefusesADayOutsideTheAcceptedRange(t *testing.T) {
+	t.Parallel()
 	b := setupBackfillWire(t)
 	for _, day := range []string{"0000-01-01", "0000-12-31", "0001-01-01", "9999-12-31"} {
 		asked, err := time.Parse(time.DateOnly, day)

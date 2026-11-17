@@ -45,6 +45,7 @@ func qualifiedQuarter(e *forecastEnv) []qualifiedDeal {
 }
 
 func TestASnapshotFrozenUnderTheQualifiedForecastLandsOnItsEligibleDeals(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	deals := qualifiedQuarter(e)
 	e.seedQualifiedQuarter(t, deals)

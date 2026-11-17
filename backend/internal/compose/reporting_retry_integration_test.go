@@ -33,6 +33,7 @@ func (a cancelledPublicationAuthority) PublicationHuman(ctx context.Context, tx 
 }
 
 func TestReportingRetriesBackOffExhaustAndKeepTheOriginalIntent(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	report, err := f.service.CreateReport(f.human, crmcontracts.ReportingReportInput{Name: "Retry proof", Audience: "workspace", Selection: f.selection()})
 	if err != nil {
@@ -106,6 +107,7 @@ func (a leaseExpiringAuthority) PublicationHuman(ctx context.Context, tx pgx.Tx,
 }
 
 func TestReportingLostLeaseRetriesWithoutSuspendingTheOwner(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	report, err := f.service.CreateReport(f.human, crmcontracts.ReportingReportInput{Name: "Lease proof", Audience: "private", Selection: f.selection()})
 	if err != nil {
@@ -131,6 +133,7 @@ func TestReportingLostLeaseRetriesWithoutSuspendingTheOwner(t *testing.T) {
 }
 
 func TestReportingCrashedRunStopsAfterThreeExpiredClaims(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	report, err := f.service.CreateReport(f.human, crmcontracts.ReportingReportInput{Name: "Crash proof", Audience: "private", Selection: f.selection()})
 	if err != nil {

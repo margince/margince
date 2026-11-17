@@ -54,6 +54,7 @@ func advisoryAnswer(ctx context.Context, t *testing.T, e *integration.Env,
 // on its own terms — so a test that erased through the product would pass on that
 // cascade whether the boundary was asked or not.
 func TestThePageRefusesALinkBehindAnEndsErasureBoundaryByName(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Selma Subject", nil)
 	company := e.SeedCompany(t, "Employer GmbH", nil)
@@ -80,6 +81,7 @@ func TestThePageRefusesALinkBehindAnEndsErasureBoundaryByName(t *testing.T) {
 // so a page that asked the update grant for every entry drew an enabled button
 // over a 403 for the commonest seat in the product.
 func TestThePageRefusesACreateEntryToASeatThatMayNotRemoveALink(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	// Owned by the rep, whose seeded row scope is their own records: a contact
 	// they cannot write would be refused for a reason this case is not about.

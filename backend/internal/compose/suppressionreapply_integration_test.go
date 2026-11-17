@@ -31,6 +31,7 @@ const resurrectedAddress = "geloescht@betroffene.example"
 // put them back, and the record now looks exactly like one that was never
 // erased. The list is the standing instruction, so the pass takes them again.
 func TestASubjectBroughtBackAfterErasureIsErasedAgain(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	eraser := eraserWithGraph(InstallationDB(e.Pool))
 
@@ -56,6 +57,7 @@ func TestASubjectBroughtBackAfterErasureIsErasedAgain(t *testing.T) {
 // than a no-op: a pass that erased something here would be destroying data
 // nobody asked it to.
 func TestReapplyingSuppressionsTakesNothingFromAHealthyInstallation(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	untouched := seedContactWithEmail(t, e, "Die Kundin", "kundin@partner.example")
 
@@ -75,6 +77,7 @@ func TestReapplyingSuppressionsTakesNothingFromAHealthyInstallation(t *testing.T
 // finding. The list is installation-wide and outlives the rows it was written
 // about, so most entries match nothing for good.
 func TestASuppressionWithNoLiveSubjectIsNotAFinding(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedSuppressedEmail(t, "niemand@nirgends.example")
 
@@ -102,6 +105,7 @@ func TestASuppressionWithNoLiveSubjectIsNotAFinding(t *testing.T) {
 // part is not this test, and that is exactly why the rule lives in one place
 // rather than being reimplemented wherever it is convenient.
 func TestTheMatchFollowsTheErasersOwnNormalization(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	// The suppression was written from one spelling...
 	seedSuppressedEmail(t, "  Geloescht@Betroffene.example  ")
@@ -160,6 +164,7 @@ func liveEmails(t *testing.T, e *integration.Env, contact ids.UUID) int {
 // being handed that reading either, so the gate is asked before the walk
 // begins rather than per subject at the end of it.
 func TestReapplyingSuppressionsRefusesACallerWhoMayNotErase(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedSuppressedEmail(t, resurrectedAddress)
 	resurrected := seedContactWithEmail(t, e, "Die Betroffene", resurrectedAddress)
@@ -179,6 +184,7 @@ func TestReapplyingSuppressionsRefusesACallerWhoMayNotErase(t *testing.T) {
 // become the reason the whole installation keeps data it was told to erase:
 // the pass takes everyone it may and reports the one it could not.
 func TestAHeldSubjectDoesNotStopTheOthersBeingTakenAgain(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedSuppressedEmail(t, resurrectedAddress)
 	seedSuppressedEmail(t, "zweite@betroffene.example")
@@ -218,6 +224,7 @@ func placeLegalHold(t *testing.T, contact ids.UUID) {
 // were erased went away with them. The database's own list is empty and knows
 // nothing. The exported journal is what answers.
 func TestAJournalledSuppressionSurvivesTheListRollingBack(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := blobstore.NewMemory()
 	eraser := eraserWithGraph(InstallationDB(e.Pool)).WithBlobstore(store)
@@ -252,6 +259,7 @@ func TestAJournalledSuppressionSurvivesTheListRollingBack(t *testing.T) {
 // the address would reconstitute exactly what the erasure destroyed, and put
 // it somewhere the erasure does not reach.
 func TestTheExportedListNeverCarriesTheIdentifierItself(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := blobstore.NewMemory()
 	eraser := eraserWithGraph(InstallationDB(e.Pool)).WithBlobstore(store)
@@ -283,6 +291,7 @@ func TestTheExportedListNeverCarriesTheIdentifierItself(t *testing.T) {
 // Running it twice is not two lists. The export is a sync, so it can be run
 // before every backup without anybody working out what changed.
 func TestExportingTheListTwiceIsIdempotent(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := blobstore.NewMemory()
 	eraser := eraserWithGraph(InstallationDB(e.Pool)).WithBlobstore(store)
@@ -305,6 +314,7 @@ func TestExportingTheListTwiceIsIdempotent(t *testing.T) {
 // export that did not happen: the value of this is that somebody can rely on
 // it having run before a backup.
 func TestExportingWithoutAnObjectStoreSaysSo(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	if _, err := eraserWithGraph(InstallationDB(e.Pool)).ExportSuppressions(e.Admin()); err == nil {
 		t.Fatal("an export with nowhere to write reported success")
@@ -340,6 +350,7 @@ func (f failingBlobs) Health(context.Context) error                      { retur
 // do it silently, leaving a resurrected subject standing and the pass
 // reporting a clean run.
 func TestAnUnreachableJournalIsNotAnAnswerThatNobodyWasErased(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	outage := errors.New("the object store is unreachable")
 	eraser := eraserWithGraph(InstallationDB(e.Pool)).WithBlobstore(failingBlobs{err: outage})
@@ -362,6 +373,7 @@ func TestAnUnreachableJournalIsNotAnAnswerThatNobodyWasErased(t *testing.T) {
 // leave somebody relying on a list that is not there, which is worse than
 // having no export at all — they would stop checking.
 func TestAnExportThatCannotWriteSaysSo(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedSuppressedEmail(t, resurrectedAddress)
 	eraser := eraserWithGraph(InstallationDB(e.Pool)).
@@ -375,6 +387,7 @@ func TestAnExportThatCannotWriteSaysSo(t *testing.T) {
 // A subject with two suppressed addresses is one subject. Erasing them twice
 // would write a second tombstone for a record the first one already ended.
 func TestASubjectWithTwoSuppressedAddressesIsTakenOnce(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := blobstore.NewMemory()
 	eraser := eraserWithGraph(InstallationDB(e.Pool)).WithBlobstore(store)
@@ -421,6 +434,7 @@ func addEmail(t *testing.T, contact ids.UUID, email string) {
 // entries a restore would need were never written. A restore to a point before
 // an erasure then brought the subject back with nothing left to refuse them.
 func TestTheSuppressionJournalJobWritesWhatARestoreWouldLose(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := &countingBlobstore{Store: blobstore.NewMemory()}
 	seedSuppressedEmail(t, "erased@journal.example")

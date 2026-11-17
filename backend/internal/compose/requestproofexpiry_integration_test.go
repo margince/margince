@@ -42,6 +42,7 @@ func (e proofEnv) expire(t *testing.T, now time.Time) {
 }
 
 func TestTheJanuaryRunDeletesProofsThreeYearsAfterTheirYearAndKeepsTheRest(t *testing.T) {
+	t.Parallel()
 	e := setupProofs(t)
 	due := e.closeAccess(t, "due@proof.test")
 	younger := e.closeAccess(t, "younger@proof.test")
@@ -78,6 +79,7 @@ func TestTheJanuaryRunDeletesProofsThreeYearsAfterTheirYearAndKeepsTheRest(t *te
 }
 
 func TestAnExpiredProofTakesTheRequestersReferenceFromTheRequestAndItsAuditImage(t *testing.T) {
+	t.Parallel()
 	e := setupProofs(t)
 	const reference = "expiring.requester@proof.test"
 	request := e.closeAccess(t, reference)

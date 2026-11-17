@@ -20,6 +20,7 @@ import (
 )
 
 func TestReviewedLegacyCorrectionsCrossTheRealPreviewProtocol(t *testing.T) {
+	t.Parallel()
 	f := seedLegacyRepair(t, false)
 	operator := repairOperator(t, f.e)
 	handler := dataTaskHandlers{pool: f.e.Pool, clock: func() time.Time { return f.now }}

@@ -116,6 +116,7 @@ func hasAReader(t *testing.T, e *integration.Env, activity ids.UUID) bool {
 // repair runs. Proof of the seat's own mailbox, and a reader someone chose, still
 // admit.
 func TestAGuessedParticipantGrantsNothing(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	conn := integration.OwnerConn(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
@@ -175,6 +176,7 @@ func legacyPair(t *testing.T, e *integration.Env, conn *pgx.Conn, sourceID, stam
 // The readers that ask whether a seat was on a message agree with the content
 // gate: a participant nothing proves is not presence.
 func TestAGuessedParticipantIsNoEvidenceOfPresence(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	conn := integration.OwnerConn(t)
 	contact := e.SeedContact(t, "Pat Counterparty", &e.Rep1)
@@ -244,6 +246,7 @@ func TestAGuessedParticipantIsNoEvidenceOfPresence(t *testing.T) {
 // mail stamped with a seat. A colleague's unrelated work on the message is no
 // proof, and stays on record.
 func TestTheGuessedMailboxRepairRemovesOnlyUnprovenOwners(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	conn := integration.OwnerConn(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
@@ -330,6 +333,7 @@ func TestTheGuessedMailboxRepairRemovesOnlyUnprovenOwners(t *testing.T) {
 }
 
 func TestTheGuessedMailboxRepairRollsBackWithItsProgress(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	conn := integration.OwnerConn(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")

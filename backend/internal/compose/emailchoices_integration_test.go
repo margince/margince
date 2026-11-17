@@ -20,6 +20,7 @@ import (
 )
 
 func TestEmailScopePreservesAnExplicitOptOutAcrossPartialUpdates(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	service := identity.NewService(e.Pool)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
@@ -41,6 +42,7 @@ func TestEmailScopePreservesAnExplicitOptOutAcrossPartialUpdates(t *testing.T) {
 }
 
 func TestARepCannotSubscribeToTeamMailWithoutTeamReviewAuthority(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	service := identity.NewService(e.Pool)
 	scope := "team"
@@ -52,6 +54,7 @@ func TestARepCannotSubscribeToTeamMailWithoutTeamReviewAuthority(t *testing.T) {
 }
 
 func TestRoutineWindowReusesPersonalWorkingDaysAndTimezone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	service := identity.NewService(e.Pool)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
@@ -78,6 +81,7 @@ func TestRoutineWindowReusesPersonalWorkingDaysAndTimezone(t *testing.T) {
 }
 
 func TestPersonalTimeCanStartBeforeTheReportingMorning(t *testing.T) {
+	t.Parallel()
 	relay := &countingMailer{}
 	b := setupBriefJob(t).withMailer(relay)
 	ctx := b.As(b.Rep1, []ids.UUID{b.Team1}, integration.AdminPerms)
@@ -101,6 +105,7 @@ func TestPersonalTimeCanStartBeforeTheReportingMorning(t *testing.T) {
 }
 
 func TestPersonalWindowAcrossReportingMidnightKeepsOneAttempt(t *testing.T) {
+	t.Parallel()
 	relay := &countingMailer{}
 	b := setupBriefJob(t).withMailer(relay)
 	ctx := b.As(b.Rep1, []ids.UUID{b.Team1}, integration.AdminPerms)
@@ -128,6 +133,7 @@ func TestPersonalWindowAcrossReportingMidnightKeepsOneAttempt(t *testing.T) {
 }
 
 func TestCombinedWorkersClaimOneEditionAndKeepPersonalOptOut(t *testing.T) {
+	t.Parallel()
 	e := setupWeeklyMail(t)
 	yes, none := true, "none"
 	if _, err := e.worker.users.SaveMyDelivery(e.repCtx, identity.Delivery{CombineRoutine: &yes, MorningBrief: &none}); err != nil {
@@ -156,6 +162,7 @@ func TestCombinedWorkersClaimOneEditionAndKeepPersonalOptOut(t *testing.T) {
 }
 
 func TestLostTeamChoiceStillDeliversPersonalFacts(t *testing.T) {
+	t.Parallel()
 	e := setupWeeklyMail(t)
 	scope := "combined"
 	if _, err := e.worker.users.SaveMyDelivery(e.repCtx, identity.Delivery{Scope: &scope, TeamID: &e.Team1}); err != nil {
@@ -180,6 +187,7 @@ func TestLostTeamChoiceStillDeliversPersonalFacts(t *testing.T) {
 }
 
 func TestPersonalTeamPatchDoesNotRevealAnUnknownTeam(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	service := identity.NewService(e.Pool)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms)
@@ -191,6 +199,7 @@ func TestPersonalTeamPatchDoesNotRevealAnUnknownTeam(t *testing.T) {
 }
 
 func TestAWeeklyChoiceOnANonWorkingDayUsesTheNextWorkingDay(t *testing.T) {
+	t.Parallel()
 	hours := identity.DefaultWorkingHours("UTC")
 	if got := weeklyMailDay(hours, 6); got != 1 {
 		t.Fatalf("Saturday resolves to %d", got)
@@ -208,6 +217,7 @@ func TestAWeeklyChoiceOnANonWorkingDayUsesTheNextWorkingDay(t *testing.T) {
 }
 
 func TestAWindowAtTwentyThreeSpansMidnightAndExpires(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	users := identity.NewService(e.Pool)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
@@ -236,6 +246,7 @@ func TestAWindowAtTwentyThreeSpansMidnightAndExpires(t *testing.T) {
 }
 
 func TestCombinedRelayFailureIsRecordedOnEveryClaim(t *testing.T) {
+	t.Parallel()
 	e := setupWeeklyMail(t)
 	e.relay.fail = errors.New("relay refused")
 	yes := true

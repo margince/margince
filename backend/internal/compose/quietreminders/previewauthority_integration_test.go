@@ -22,6 +22,7 @@ import (
 )
 
 func TestQuietPreviewIntersectsTheCallerAndCurrentAuthorizer(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.GrantRole(t, e.AdminUser, "admin")
 	e.GrantRole(t, e.Rep1, "admin")

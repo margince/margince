@@ -26,6 +26,7 @@ import (
 )
 
 func TestARepReadsTheInstallationsNameAndMarksAndNothingElse(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	blob := blobstore.NewMemory()
 	handlers := companyHandlers{store: e.Contacts, blob: blob}
@@ -82,6 +83,7 @@ func TestARepReadsTheInstallationsNameAndMarksAndNothingElse(t *testing.T) {
 // A seat that may not read companies cannot load a mark, so it is handed the
 // name alone and draws the monogram rather than an image the server refuses.
 func TestASeatThatCannotLoadTheMarkGetsTheNameAlone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	handlers := companyHandlers{store: e.Contacts, blob: blobstore.NewMemory()}
 	company := theCompanyExists(t, e)

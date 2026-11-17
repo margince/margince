@@ -23,6 +23,7 @@ import (
 )
 
 func TestAnalyticsKeepsARedatedMeetingInItsHeldWeek(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	ctx := reportingActor(e)
 	heldWeek := time.Date(2026, 9, 14, 0, 0, 0, 0, time.UTC)

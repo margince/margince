@@ -27,6 +27,7 @@ import (
 )
 
 func TestGoogleEmptyOccupancyReachesTheComposedBookingPolicy(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.GrantRole(t, e.AdminUser, "admin")
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

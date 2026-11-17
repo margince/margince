@@ -19,7 +19,6 @@ package compose
 import (
 	"context"
 	"errors"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -218,6 +217,8 @@ func mailDomainOf(email string) string {
 // The whole path, and the write shape at the end of it: a unit hands over one
 // provider record and the installation gains an activity, its raw evidence, a
 // ledger row and an outbox event — none of which the unit wrote or could write.
+//
+//testdb:serial binds the process-wide extension runtime
 func TestAUnitsRecordLandsAsAnActivityWithEvidenceAndTheWriteShape(t *testing.T) {
 	e := setupIngress(t)
 	rt := e.ingestingRuntime()
@@ -318,23 +319,6 @@ func registerProbeTransport(t *testing.T, e *ingressEnv) {
 	if err := reconcileChannelProviders(context.Background(), e.Pool, []string{capture.ProviderTelegram}); err != nil {
 		t.Fatalf("registering the unit's transport: %v", err)
 	}
-	t.Cleanup(func() {
-		// In dependency order, and the order itself is the finding: the registry
-		// row is a foreign-key parent of every message filed on it AND of every
-		// identity bound on it, which is what stops a live transport being
-		// deregistered out from under the conversations that reference it. That
-		// is also why the boot reconcile never deletes.
-		owner := integration.OwnerConn(t)
-		for _, statement := range []string{
-			`DELETE FROM activity WHERE channel_provider = $1`,
-			`DELETE FROM contact_channel_identity WHERE provider = $1`,
-			`DELETE FROM channel_provider WHERE provider = $1`,
-		} {
-			if _, err := owner.Exec(context.Background(), statement, ingressProbeProvider); err != nil {
-				t.Errorf("cleaning up after the probe transport (%s): %v", statement, err)
-			}
-		}
-	})
 }
 
 // A unit's captured chat message lands as a MESSAGE on the unit's own transport,
@@ -347,6 +331,8 @@ func registerProbeTransport(t *testing.T, e *ingressEnv) {
 // nothing can reply on. And the identity binding is what the reply path resolves
 // its recipient FROM: without it the message is repliable in principle and
 // answers "nobody on this conversation can be reached" in practice.
+//
+//testdb:serial binds the process-wide extension runtime
 func TestAUnitsChannelMessageLandsAsARepliableConversation(t *testing.T) {
 	e := setupIngress(t)
 	registerProbeTransport(t, e)
@@ -392,6 +378,8 @@ func TestAUnitsChannelMessageLandsAsARepliableConversation(t *testing.T) {
 // on it would transmit a message from the workspace's own bot to whoever the
 // unit linked, the unit choosing the target and the human supplying the
 // authority.
+//
+//testdb:serial binds the process-wide extension runtime
 func TestAUnitCannotFileAMessageOnACoreConnectorsTransport(t *testing.T) {
 	e := setupIngress(t)
 	rt := e.ingestingRuntime()
@@ -413,6 +401,8 @@ func TestAUnitCannotFileAMessageOnACoreConnectorsTransport(t *testing.T) {
 
 // A replay is a no-op, which is the property the whole cursor rule rests on: a
 // unit may re-ingest anything it is not sure about, and does.
+//
+//testdb:serial binds the process-wide extension runtime
 func TestASecondIngestOfTheSameRecordLandsNothingNew(t *testing.T) {
 	e := setupIngress(t)
 	rt := e.ingestingRuntime()
@@ -441,6 +431,8 @@ func TestASecondIngestOfTheSameRecordLandsNothingNew(t *testing.T) {
 // The counterparty ladder, as it actually decides — which is NOT "a contact
 // appears". A first-time corporate address is captured and DEFERRED to the
 // pending inbox, and that is the common case for a chat connector.
+//
+//testdb:serial binds the process-wide extension runtime
 func TestAFirstTimeCorporateSenderDefersItsCounterparty(t *testing.T) {
 	e := setupIngress(t)
 	rt := e.ingestingRuntime()
@@ -462,6 +454,8 @@ func TestAFirstTimeCorporateSenderDefersItsCounterparty(t *testing.T) {
 // The other arm of the same ladder: a freemail sender ALSO defers, and differs
 // in leaving no company question behind. Both arms are asserted because a suite that pinned only
 // one would describe the pipeline as doing whichever it happened to check.
+//
+//testdb:serial binds the process-wide extension runtime
 func TestAFreemailSenderDefersTheContactAndNamesNoCompany(t *testing.T) {
 	e := setupIngress(t)
 	rt := e.ingestingRuntime()
@@ -508,6 +502,8 @@ func TestAFreemailSenderDefersTheContactAndNamesNoCompany(t *testing.T) {
 // at all: on a fresh install nothing is internal, which is a real arm of the
 // same gate and the reason this test seeds a verified domain rather than
 // assuming one.
+//
+//testdb:serial binds the process-wide extension runtime
 func TestAWhollyInternalMessageIsSkippedAsASuccess(t *testing.T) {
 	e := setupIngress(t)
 	registerOwnDomain(t, e.extRuntimeEnv, "authz.test")
@@ -550,6 +546,8 @@ func registerOwnDomain(t *testing.T, e *extRuntimeEnv, domain string) {
 // anything the current manifest describes — extension_secret keeps the mapping
 // row after a declaration changes, and what an operator can read has to be what
 // the core acts on.
+//
+//testdb:serial binds the process-wide extension runtime
 func TestACredentialUnderAnUndeclaredKeyIsNotConsent(t *testing.T) {
 	e := setupIngress(t)
 	ctx := e.callCtx(e.WS)
@@ -572,6 +570,8 @@ func TestACredentialUnderAnUndeclaredKeyIsNotConsent(t *testing.T) {
 
 // The consent check, against the real store: a member who has deposited nothing
 // with this unit cannot be acted for, whatever the unit passes.
+//
+//testdb:serial binds the process-wide extension runtime
 func TestAMemberWhoDepositedNothingCannotBeActedFor(t *testing.T) {
 	e := setupIngress(t)
 	grantCapture(t, e.extRuntimeEnv, e.Rep2)
@@ -591,6 +591,8 @@ func TestAMemberWhoDepositedNothingCannotBeActedFor(t *testing.T) {
 // The authority is LIVE, and this is the assertion that says so: the same unit,
 // the same member, the same record — refused after the member's grants are
 // taken away, with no restart and nothing re-bound.
+//
+//testdb:serial binds the process-wide extension runtime
 func TestADemotedMemberLandsNothingFromTheNextCallOn(t *testing.T) {
 	e := setupIngress(t)
 	rt := e.ingestingRuntime()
@@ -630,6 +632,8 @@ func TestADemotedMemberLandsNothingFromTheNextCallOn(t *testing.T) {
 // unit under that id, which is equally true of a member of another workspace,
 // an archived one, and an id belonging to nobody at all. A not-found would be
 // the DISCLOSING answer, because only a lookup can tell those three apart.
+//
+//testdb:serial binds the process-wide extension runtime
 func TestAMemberOfAnotherWorkspaceCannotBeActedFor(t *testing.T) {
 	e := setupIngress(t)
 	rt := e.ingestingRuntime()
@@ -650,6 +654,8 @@ func TestAMemberOfAnotherWorkspaceCannotBeActedFor(t *testing.T) {
 // The nesting refusal, on a POOL OF ONE — which is the configuration where the
 // defect it guards is not a failure but a hang: the ingest would wait for the
 // only connection, which the unit's own transaction is holding.
+//
+//testdb:serial binds the process-wide extension runtime
 func TestAnIngestInsideAUnitsTransactionIsRefusedOnAPoolOfOne(t *testing.T) {
 	e := setupIngress(t)
 	single := singleConnectionPool(t)
@@ -678,11 +684,7 @@ func TestAnIngestInsideAUnitsTransactionIsRefusedOnAPoolOfOne(t *testing.T) {
 // process that stops.
 func singleConnectionPool(t *testing.T) *pgxpool.Pool {
 	t.Helper()
-	dsn := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if dsn == "" {
-		t.Fatal("MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
-	cfg, err := pgxpool.ParseConfig(dsn)
+	cfg, err := pgxpool.ParseConfig(testdb.For(t).AppDSN)
 	if err != nil {
 		t.Fatalf("parsing the app DSN: %v", err)
 	}
@@ -730,6 +732,8 @@ var _ = principal.PrincipalConnector
 // unrepresentable presented as a quiet feed. Two ingests rather than one,
 // because the row is a COUNT and a writer that overwrote instead of
 // accumulating would report a broken connector as having dropped one record.
+//
+//testdb:serial binds the process-wide extension runtime
 func TestARefusedRecordIsCountedAgainstTheUnitThatSentIt(t *testing.T) {
 	e := setupIngress(t)
 	rt := e.ingestingRuntime()
@@ -785,6 +789,8 @@ func TestARefusedRecordIsCountedAgainstTheUnitThatSentIt(t *testing.T) {
 // participant's account id, a provider name — so a table holding it would give
 // the extension tier a retention and erasure question about third-party content
 // that the tier was deliberately built without.
+//
+//testdb:serial binds the process-wide extension runtime
 func TestTheBreadcrumbKeepsNoPartOfTheRefusedRecord(t *testing.T) {
 	e := setupIngress(t)
 	rt := e.ingestingRuntime()

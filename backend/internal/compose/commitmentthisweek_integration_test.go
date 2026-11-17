@@ -27,6 +27,7 @@ import (
 // thanks. Eleven days later the promise is the rep's task, due that Friday,
 // and overdue on the contact.
 func TestAPromiseForThisWeekIsDueThatFridayAndAnAcknowledgementDoesNotKeepIt(t *testing.T) {
+	t.Parallel()
 	for name, week := range map[string]struct {
 		workdays []int
 		away     bool
@@ -147,6 +148,7 @@ func recordZoneOf(t *testing.T, e *integration.Env) *time.Location {
 // A promise renewed "this week" in a later message is dated in the renewal's
 // week. The renewal is the message that states it.
 func TestARenewedPromiseForThisWeekIsDatedInTheRenewalsWeek(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	original := time.Date(2026, 10, 5, 10, 0, 0, 0, time.UTC)
 	renewedAt := original.AddDate(0, 0, 7)

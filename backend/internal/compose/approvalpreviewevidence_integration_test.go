@@ -27,6 +27,7 @@ import (
 )
 
 func TestLifecyclePreviewResolvesItsActualSourceForTheReader(t *testing.T) {
+	t.Parallel()
 	now := clocktest.Now(t)
 	sourceAt := now.Add(-time.Minute)
 	e := integration.Setup(t)
@@ -104,6 +105,7 @@ func TestLifecyclePreviewResolvesItsActualSourceForTheReader(t *testing.T) {
 }
 
 func TestOwnerPreviewRechecksTheQuotedActivityBeforeApproval(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	company := e.SeedCompany(t, "Harbor", &e.AdminUser)

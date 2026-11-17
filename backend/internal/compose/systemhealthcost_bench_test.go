@@ -25,6 +25,7 @@ import (
 )
 
 func TestSystemHealthReadCosts(t *testing.T) {
+	t.Parallel()
 	for _, count := range []int{100, 10_000} {
 		t.Run(fmt.Sprint(count), func(t *testing.T) {
 			e := integration.Setup(t)

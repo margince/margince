@@ -23,6 +23,7 @@ import (
 )
 
 func TestProjectCurrencyDerivationKeepsTheSamePricesAndCoverage(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	date := time.Date(2020, 1, 1, 12, 0, 0, 0, time.UTC)
@@ -101,6 +102,7 @@ func valuationJSON(t *testing.T, row map[string]any, key string) string {
 }
 
 func TestProjectMoneyDistinguishesAnEmptyPopulationFromUnpricedAmounts(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	if err := e.Deals.SeedDefaults(ctx); err != nil {

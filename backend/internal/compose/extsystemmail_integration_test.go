@@ -42,6 +42,7 @@ func (s *systemReadEnv) dealMail(t *testing.T, q extension.MailQuery) extension.
 	return got
 }
 
+//testdb:serial publishes the process-wide composed extension set
 func TestTheMailReadHoldsOnlyWhatTheWholeTeamMaySee(t *testing.T) {
 	s := setupSystemRead(t)
 	composeReader(t, extension.SystemReadActivities)
@@ -67,6 +68,7 @@ func TestTheMailReadHoldsOnlyWhatTheWholeTeamMaySee(t *testing.T) {
 	}
 }
 
+//testdb:serial publishes the process-wide composed extension set
 func TestADealWithMoreMailThanAPageIsReadOverSeveralPages(t *testing.T) {
 	s := setupSystemRead(t)
 	composeReader(t, extension.SystemReadActivities)
@@ -97,6 +99,7 @@ func TestADealWithMoreMailThanAPageIsReadOverSeveralPages(t *testing.T) {
 	}
 }
 
+//testdb:serial publishes the process-wide composed extension set
 func TestTheMailReadIsAnsweredUnderTheNamedMembersOwnAccessToTheDeal(t *testing.T) {
 	s := setupSystemRead(t)
 	composeReader(t, extension.SystemReadActivities)
@@ -112,6 +115,7 @@ func TestTheMailReadIsAnsweredUnderTheNamedMembersOwnAccessToTheDeal(t *testing.
 	}
 }
 
+//testdb:serial publishes the process-wide composed extension set
 func TestEverySystemReadLeavesOneTraceRow(t *testing.T) {
 	s := setupSystemRead(t)
 	composeReader(t, extension.SystemReadActivities)

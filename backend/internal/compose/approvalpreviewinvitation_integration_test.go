@@ -20,6 +20,7 @@ import (
 )
 
 func TestInvitationApprovalShowsDeliveryAndHostDefaults(t *testing.T) {
+	t.Parallel()
 	for _, rest := range []bool{false, true} {
 		t.Run(fmt.Sprintf("rest=%t", rest), func(t *testing.T) {
 			e := integration.Setup(t)
@@ -70,6 +71,7 @@ func TestInvitationApprovalShowsDeliveryAndHostDefaults(t *testing.T) {
 }
 
 func TestInvitationApprovalUsesTheAgentsHostAndShowsEveryAttendee(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.GrantRole(t, e.Rep1, "admin")
 	passport := e.SeedPassport(t, integration.OwnerConn(t), "invitation preview")

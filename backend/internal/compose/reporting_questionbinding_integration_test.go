@@ -179,6 +179,7 @@ func decodeAnswer(t *testing.T, body string) crmcontracts.ReportingQuestionAnswe
 // A saved question's filter survives into the report. The card counts the
 // deals at the one company it names, not every deal the reader may see.
 func TestABoundQuestionAsksItsFilteredPopulationForAnAuthorizedReader(t *testing.T) {
+	t.Parallel()
 	b := seedBoundBook(t)
 	report := b.report(b.rep3(), t, b.save(b.rep3(), t, dealsAt(b.open)), workspaceScope)
 
@@ -203,6 +204,7 @@ func TestABoundQuestionAsksItsFilteredPopulationForAnAuthorizedReader(t *testing
 // value. A reader who may not open the filtered company is answered
 // restricted: no rows, no labels, no total, no id in an error.
 func TestAReaderDeniedAFilteredRecordLearnsNothingOfIt(t *testing.T) {
+	t.Parallel()
 	b := seedBoundBook(t)
 	run := b.save(b.rep3(), t, dealsAt(b.hidden))
 	report := b.report(b.rep3(), t, run, workspaceScope)
@@ -249,6 +251,7 @@ func TestAReaderDeniedAFilteredRecordLearnsNothingOfIt(t *testing.T) {
 // A question for one member inside a report for a team cannot hold. The floor
 // and its complementary withholding apply to a bound card as to any question.
 func TestABoundQuestionThatCannotHoldIsRefusedWithItsReason(t *testing.T) {
+	t.Parallel()
 	b := seedBoundBook(t)
 	mine := dealsAt(b.open)
 	mine.ScopeKind, mine.ScopeID = ScopeKindOwner, b.e.AdminUser.String()
@@ -269,6 +272,7 @@ func TestABoundQuestionThatCannotHoldIsRefusedWithItsReason(t *testing.T) {
 // A card carries its binding into the next draft by its reference, and a
 // reference the report never held is refused rather than asked.
 func TestACardKeepsItsBindingByReferenceAndRefusesAForeignOne(t *testing.T) {
+	t.Parallel()
 	b := seedBoundBook(t)
 	report := b.report(b.rep3(), t, b.save(b.rep3(), t, dealsAt(b.open)), workspaceScope)
 	selection := report.Selection
@@ -302,6 +306,7 @@ func TestACardKeepsItsBindingByReferenceAndRefusesAForeignOne(t *testing.T) {
 // A card placed before bindings asks its shape alone, over the report's scope,
 // as it did when it was published.
 func TestAnUnboundCardKeepsAskingItsShape(t *testing.T) {
+	t.Parallel()
 	b := seedBoundBook(t)
 	card := crmcontracts.ReportingCard{
 		Id: "bound", Kind: "question", Width: crmcontracts.ReportingCardWidthFull,

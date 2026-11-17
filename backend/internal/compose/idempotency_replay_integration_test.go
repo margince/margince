@@ -47,6 +47,7 @@ func keyedTemplateCall(ctx context.Context, r chi.Router, key string) *httptest.
 }
 
 func TestIdempotencyReplayRepeatsTheRecordedContentType(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin() // ONE principal: the claim is scoped per (workspace, principal, key, path)
 
@@ -78,6 +79,7 @@ func TestIdempotencyReplayRepeatsTheRecordedContentType(t *testing.T) {
 }
 
 func TestIdempotencyFailedAttemptRetryIsAFreshExecution(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 
@@ -128,6 +130,7 @@ func keyedContactCall(ctx context.Context, r chi.Router, contact ids.UUID, key s
 // read path's 404 — not the bytes. The same key still replays while they
 // CAN see it, so the gate refuses on visibility rather than on retrying.
 func TestReplayRefusesOnceTheCallerHasLostSightOfTheRecord(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	rep1 := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.RepPerms)
 	contact := e.SeedContact(t, "Visible then not", &e.Rep1)

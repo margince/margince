@@ -119,6 +119,7 @@ func sameFacts(t *testing.T, a, b []map[string]any) bool {
 }
 
 func TestTechnicalUndoPutsBackTheReplacedFactsOnceWithTheirSource(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := technicalUndoCompany(t, e, "Lookup Undo GmbH")
 	applyUndoLookup(t, e, company, undoObservation("mail_provider", "old", "Old mail"), undoObservation("hosting_provider", "host", "Old host"))
@@ -154,6 +155,7 @@ func TestTechnicalUndoPutsBackTheReplacedFactsOnceWithTheirSource(t *testing.T) 
 }
 
 func TestTwoUndosOfOneLookupPutItBackOnce(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := technicalUndoCompany(t, e, "Concurrent Undo GmbH")
 	applyUndoLookup(t, e, company, undoObservation("mail_provider", "old", "Old mail"))
@@ -190,6 +192,7 @@ func TestTwoUndosOfOneLookupPutItBackOnce(t *testing.T) {
 // Every later write to the company or its facts refuses the Undo, and the
 // refusal leaves the rows as they were.
 func TestTechnicalUndoRefusesAfterALaterCompanyOrFactWrite(t *testing.T) {
+	t.Parallel()
 	cases := map[string]func(t *testing.T, e *integration.Env, company ids.CompanyID){
 		"an unrelated company edit": func(t *testing.T, e *integration.Env, company ids.CompanyID) {
 			if _, err := e.Contacts.UpdateCompany(e.Admin(), company, contacts.UpdateCompanyInput{Description: new("A later note")}); err != nil {
@@ -243,6 +246,7 @@ func TestTechnicalUndoRefusesAfterALaterCompanyOrFactWrite(t *testing.T) {
 // A refresh that observed what the company already held writes its audit row
 // and nothing else. It has no event and no snapshot to offer back.
 func TestASameValueRefreshIsAnObservationAndNotAChange(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := technicalUndoCompany(t, e, "Refresh GmbH")
 	applyUndoLookup(t, e, company, undoObservation("mail_provider", "mail", "Mail"))
@@ -268,6 +272,7 @@ func TestASameValueRefreshIsAnObservationAndNotAChange(t *testing.T) {
 }
 
 func TestTechnicalUndoRefusesAnArchivedOrMergedCompany(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	archived := technicalUndoCompany(t, e, "Archived Lookup GmbH")
 	receipt := applyUndoLookup(t, e, archived, undoObservation("mail_provider", "mail", "Mail"))
@@ -301,6 +306,7 @@ func TestTechnicalUndoRefusesAnArchivedOrMergedCompany(t *testing.T) {
 // The answer is the refusal every other hidden record gets, and nothing is
 // written.
 func TestTechnicalUndoOfAHiddenCompanyIsNotFound(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := technicalUndoCompany(t, e, "Hidden Lookup GmbH")
 	applyUndoLookup(t, e, company, undoObservation("mail_provider", "old", "Old mail"))
@@ -326,6 +332,7 @@ func TestTechnicalUndoOfAHiddenCompanyIsNotFound(t *testing.T) {
 // A lookup recorded before receipts kept the replaced rows says so. Nothing
 // is invented for it.
 func TestALegacyLookupReceiptSaysItHasNoSnapshot(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := technicalUndoCompany(t, e, "Legacy Lookup GmbH")
 	var answer Undoability
@@ -351,6 +358,7 @@ func TestALegacyLookupReceiptSaysItHasNoSnapshot(t *testing.T) {
 // the guard cannot lean on that time. Facts are held by their own counter, so
 // the added-and-removed case above needs no clock either.
 func TestTechnicalUndoRefusesALaterWriteThatBeganBeforeTheLookup(t *testing.T) {
+	t.Parallel()
 	cases := map[string]func(ctx context.Context, e *integration.Env, company ids.CompanyID) error{
 		"a company edit": func(ctx context.Context, e *integration.Env, company ids.CompanyID) error {
 			_, err := e.Contacts.UpdateCompany(ctx, company, contacts.UpdateCompanyInput{Description: new("Began early")})
@@ -405,6 +413,7 @@ func TestTechnicalUndoRefusesALaterWriteThatBeganBeforeTheLookup(t *testing.T) {
 // before it can no longer be put back. The survivor's counter moved. The
 // retired company is archived with no counter left.
 func TestAMergeRefusesTheUndoOfALookupOnEitherCompany(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	survivor := technicalUndoCompany(t, e, "Merge Survivor GmbH")
 	retired := technicalUndoCompany(t, e, "Merge Retired GmbH")

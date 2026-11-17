@@ -79,6 +79,7 @@ func (f *authorshipFixture) wantBuyers(name string, meeting ids.UUID, want int) 
 }
 
 func TestAMeetingWithNoConfirmedOwnDomainCountsNoColleagueAsTheBuyer(t *testing.T) {
+	t.Parallel()
 	f := newAuthorshipFixture(t)
 	if domains, err := f.own.Colleagues(f.Admin()); err != nil || !domains.Empty() {
 		t.Fatalf("the workspace starts with confirmed own domains %v (err %v); this test needs none", domains.Domains(), err)
@@ -90,6 +91,7 @@ func TestAMeetingWithNoConfirmedOwnDomainCountsNoColleagueAsTheBuyer(t *testing.
 }
 
 func TestAMeetingOnACandidateOwnDomainCountsNoColleagueAsTheBuyer(t *testing.T) {
+	t.Parallel()
 	f := newAuthorshipFixture(t)
 	f.WsExec(t, `INSERT INTO workspace_email_domain (domain, source, verified) VALUES ('ourco.test', 'admin', true)`)
 	f.WsExec(t, `INSERT INTO workspace_email_domain (domain) VALUES ('labs.test')`)
@@ -135,6 +137,7 @@ func (f *authorshipFixture) met(evidence ids.UUID) string {
 // judges the meeting again. A claim the meeting still makes, a refuted one and
 // a model's reading are left as they are.
 func TestAStoredMeetingClaimTheMeetingNoLongerMakesIsWithdrawn(t *testing.T) {
+	t.Parallel()
 	f := newAuthorshipFixture(t)
 	f.heldCriterion()
 	stale := f.heldClaim(f.heldMeeting("rep@ourco.test", "colleague@ourco.test"), deals.ExtractedByDeterministic)
@@ -168,6 +171,7 @@ func TestAStoredMeetingClaimTheMeetingNoLongerMakesIsWithdrawn(t *testing.T) {
 // The pass sets a machine claim to what the meeting proves now, both ways. A
 // domain added and removed again, or a status corrected, brings it back.
 func TestAWithdrawnMeetingClaimComesBackWhenTheMeetingProvesItAgain(t *testing.T) {
+	t.Parallel()
 	f := newAuthorshipFixture(t)
 	f.heldCriterion()
 	byDomain := f.heldClaim(f.heldMeeting("rep@ourco.test", "ines@buyer-corp.test"), deals.ExtractedByDeterministic)

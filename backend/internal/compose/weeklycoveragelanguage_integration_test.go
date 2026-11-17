@@ -13,6 +13,7 @@ import (
 )
 
 func TestWeeklyMetricCoverageUsesAndKeepsTheWriteLanguage(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct{ language, prefix string }{{"en", "No "}, {"de", "Im betrachteten Bereich"}, {"vi", "Chưa ghi nhận"}} {
 		t.Run(tc.language, func(t *testing.T) {
 			e := integration.Setup(t)

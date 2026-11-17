@@ -15,6 +15,7 @@ import (
 
 const probeSource = extension.SourceName(ingressProbeSystem)
 
+//testdb:serial binds the process-wide extension runtime
 func TestABatchSavesItsPositionAfterEveryRecordIsAnswered(t *testing.T) {
 	e := setupIngress(t)
 	ctx := context.Background()
@@ -41,6 +42,7 @@ func TestABatchSavesItsPositionAfterEveryRecordIsAnswered(t *testing.T) {
 	}
 }
 
+//testdb:serial binds the process-wide extension runtime
 func TestAFailedBatchKeepsThePreviousPosition(t *testing.T) {
 	e := setupIngress(t)
 	ctx := context.Background()
@@ -67,6 +69,7 @@ func TestAFailedBatchKeepsThePreviousPosition(t *testing.T) {
 	}
 }
 
+//testdb:serial binds the process-wide extension runtime
 func TestABatchOrPositionReadIsRefusedWhenMalformedUndeclaredAttendedOrExpired(t *testing.T) {
 	e := setupIngress(t)
 	ctx := context.Background()

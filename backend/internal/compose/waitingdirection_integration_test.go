@@ -20,6 +20,7 @@ import (
 )
 
 func TestWaitingDirectionUsesExistingRelationshipAndRelevanceFacts(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name, label     string
 		relationships   []string

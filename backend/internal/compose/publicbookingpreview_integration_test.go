@@ -57,6 +57,7 @@ func expectNoMarginceOrHost(t *testing.T, body string) {
 }
 
 func TestBookingPreviewNamesTheHostAndCompanyWithTheirLogoAndNoMargince(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	blob := blobstore.NewMemory()
 	theCompanyExists(t, e)
@@ -118,6 +119,7 @@ func TestBookingPreviewNamesTheHostAndCompanyWithTheirLogoAndNoMargince(t *testi
 }
 
 func TestBookingPreviewWithoutALogoOrAnOriginIsATextCardWithNoURLs(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	theCompanyExists(t, e)
 	slug := hostWithBookingPage(t, e, true)
@@ -136,6 +138,7 @@ func TestBookingPreviewWithoutALogoOrAnOriginIsATextCardWithNoURLs(t *testing.T)
 }
 
 func TestPausedBookingPreviewNamesNobody(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	theCompanyExists(t, e)
 	slug := hostWithBookingPage(t, e, false)
@@ -157,6 +160,7 @@ func TestPausedBookingPreviewNamesNobody(t *testing.T) {
 }
 
 func TestRevokedAndMissingBookingPreviewsAre404WithNoHost(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	theCompanyExists(t, e)
 	old := hostWithBookingPage(t, e, true)
@@ -193,6 +197,7 @@ func TestRevokedAndMissingBookingPreviewsAre404WithNoHost(t *testing.T) {
 }
 
 func TestABookingPageOfAHostWhoseAccountIsNotLiveIsGoneEverywhere(t *testing.T) {
+	t.Parallel()
 	for name, retire := range map[string]string{
 		"suspended":   `UPDATE app_user SET status = 'suspended' WHERE id = $1`,
 		"deactivated": `UPDATE app_user SET status = 'deactivated' WHERE id = $1`,

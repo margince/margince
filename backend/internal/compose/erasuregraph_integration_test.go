@@ -45,6 +45,7 @@ func countRows(t *testing.T, e *integration.Env, query string, args ...any) int 
 }
 
 func TestErasureRemovesTheSubjectFromTheRelationshipGraph(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := time.Now().UTC()
 	const subjectEmail = "erase.me@counterparty.test"

@@ -14,6 +14,7 @@ import (
 )
 
 func TestReportingScheduleAndFreezeRefusalsNameTheirField(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	report, err := f.service.CreateReport(f.human, crmcontracts.ReportingReportInput{Name: "Refusals", Audience: "private", Selection: f.selection()})
 	if err != nil {
@@ -45,6 +46,7 @@ func TestReportingScheduleAndFreezeRefusalsNameTheirField(t *testing.T) {
 }
 
 func TestReportingTargetRevisionNamesTheFieldItChanged(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	cases := []struct {
 		name   string

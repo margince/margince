@@ -19,6 +19,7 @@ import (
 )
 
 func TestScrapedCompanyAddressesAreFoundByThePublishedLocationFilters(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	addresses := []struct{ name, address string }{

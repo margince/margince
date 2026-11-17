@@ -66,6 +66,7 @@ func exportRecipientMail(t *testing.T, name, subject, text, markup string) {
 }
 
 func TestTeamMorningRanksAcrossEveryRosterMember(t *testing.T) {
+	t.Parallel()
 	b := setupBriefJob(t).withMailer(&countingMailer{})
 	labelRecipientTeam(t, b.Env)
 	ctx := b.Admin()
@@ -133,6 +134,7 @@ func seedRecipientOutcomes(t *testing.T, e *mailEnv, week time.Time) {
 }
 
 func TestProductionRoutineRecipientPreviews(t *testing.T) {
+	t.Parallel()
 	for _, language := range []string{"en", "de", "vi"} {
 		for _, edition := range []string{"personal", "team", "combined", "weekly-morning"} {
 			t.Run(language+"/"+edition, func(t *testing.T) {
@@ -198,6 +200,7 @@ func TestProductionRoutineRecipientPreviews(t *testing.T) {
 }
 
 func TestProductionAccountRoomAndPrivacyPreviews(t *testing.T) {
+	t.Parallel()
 	expiry := previewWeek(t).AddDate(0, 0, 25).Add(12*time.Hour + 37*time.Minute)
 	for _, language := range []string{"en", "de", "vi"} {
 		words := mailcopy.For(language)
@@ -226,6 +229,7 @@ func TestProductionAccountRoomAndPrivacyPreviews(t *testing.T) {
 }
 
 func TestAnEmptyWeekDoesNotSubmitOrSpendAnEmail(t *testing.T) {
+	t.Parallel()
 	e := setupWeeklyMail(t)
 	now := reviewHour(previewWeek(t))
 	e.worker.now = func() time.Time { return now }
@@ -244,6 +248,7 @@ func TestAnEmptyWeekDoesNotSubmitOrSpendAnEmail(t *testing.T) {
 }
 
 func TestProductionNoticeRecipientPreviews(t *testing.T) {
+	t.Parallel()
 	for _, language := range []string{"en", "de", "vi"} {
 		t.Run(language, func(t *testing.T) {
 			e := setupNoticeMail(t)
@@ -272,6 +277,7 @@ func TestProductionNoticeRecipientPreviews(t *testing.T) {
 }
 
 func TestProductionHelpAndPartialWeekPreviews(t *testing.T) {
+	t.Parallel()
 	e := setupWeeklyMail(t)
 	// A week already closed: the meeting row's created_at is the database's now(),
 	// after the week, so its occurred_at alone sets the partial boundary.
@@ -322,6 +328,7 @@ func TestProductionHelpAndPartialWeekPreviews(t *testing.T) {
 }
 
 func TestProductionMorningRecipientPreviews(t *testing.T) {
+	t.Parallel()
 	for _, language := range []string{"en", "de", "vi"} {
 		for _, scope := range []string{identity.RoutinePersonal, identity.RoutineTeam, identity.RoutineCombined} {
 			t.Run(language+"/"+scope, func(t *testing.T) {
@@ -356,6 +363,7 @@ func TestProductionMorningRecipientPreviews(t *testing.T) {
 }
 
 func TestATeamWeeklyWithoutAnOriginKeepsEveryContentBlock(t *testing.T) {
+	t.Parallel()
 	e := setupWeeklyMail(t)
 	week := previewWeek(t)
 	now := reviewHour(week)
@@ -395,6 +403,7 @@ func TestATeamWeeklyWithoutAnOriginKeepsEveryContentBlock(t *testing.T) {
 }
 
 func TestProductionControllerStagingPreviews(t *testing.T) {
+	t.Parallel()
 	for _, language := range []string{"en", "de", "vi"} {
 		lane := setupConfirmLane(t)
 		lane.store.WithMailLanguage(consent.MailLanguageFunc(identity.LanguageOf))
@@ -443,6 +452,7 @@ func TestProductionControllerStagingPreviews(t *testing.T) {
 }
 
 func TestDigestDecisionsUseCurrentStateAndTheirOwnDestination(t *testing.T) {
+	t.Parallel()
 	e := setupNoticeMail(t)
 	notice := e.pendingNotice(t)
 	ctx := e.e.Admin()

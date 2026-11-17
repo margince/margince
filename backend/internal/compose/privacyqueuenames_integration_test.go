@@ -58,6 +58,7 @@ func listOverHTTP[T any](ctx context.Context, t *testing.T, serve func(http.Resp
 }
 
 func TestTheNoticeQueueNamesOnlyContactsItsReaderMayOpen(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	due := time.Now().Add(72 * time.Hour)
 	own := homeNotice(t, e, e.Rep1, false, due)
@@ -97,6 +98,7 @@ func TestTheNoticeQueueNamesOnlyContactsItsReaderMayOpen(t *testing.T) {
 }
 
 func TestAnArchivedMembersAcquisitionNamesNobody(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	duty := homeNotice(t, e, e.Rep3, false, time.Now().Add(72*time.Hour))
 	args := []any{e.Rep3}
@@ -122,6 +124,7 @@ func TestAnArchivedMembersAcquisitionNamesNobody(t *testing.T) {
 }
 
 func TestTheNoticeAgendaCarriesTheAcquisitionToTheWorklist(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	duty := homeNotice(t, e, e.AdminUser, false, homeReadTime.Add(-time.Hour))
 
@@ -143,6 +146,7 @@ func TestTheNoticeAgendaCarriesTheAcquisitionToTheWorklist(t *testing.T) {
 }
 
 func TestTheSubjectQueueNamesOnlyRecordsItsReaderMayOpen(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contactAs := func(owner ids.UUID, name string) string {
 		t.Helper()
@@ -197,6 +201,7 @@ func TestTheSubjectQueueNamesOnlyRecordsItsReaderMayOpen(t *testing.T) {
 }
 
 func TestAnOfficerWithoutTheContactGrantSeesNoNames(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	homeNotice(t, e, e.Rep1, false, time.Now().Add(72*time.Hour))
 	officer := e.As(e.Rep1, nil, principal.Permissions{

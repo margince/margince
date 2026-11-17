@@ -17,6 +17,7 @@ import (
 )
 
 func TestPromotionConsentPreviewMatchesTheRecordedOutcome(t *testing.T) {
+	t.Parallel()
 	for _, operation := range []string{"promotion", "merge"} {
 		t.Run(operation, func(t *testing.T) { testConsentCarryPreview(t, operation) })
 	}

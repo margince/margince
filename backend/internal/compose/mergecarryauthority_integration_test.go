@@ -55,6 +55,7 @@ func (c *carryEnv) carryConsentAs(ctx context.Context, from, to commsauthz.StopS
 // A caller who may create contacts but not change them cannot move one
 // contact's links onto another through the consent carrier.
 func TestTheConsentCarrierRefusesACallerWhoCannotMergeContacts(t *testing.T) {
+	t.Parallel()
 	c := setupCarry(t)
 	retired := c.contactAt(t, "Grant Retired", "grant@carry.test")
 	survivor := c.contactAt(t, "Grant Survivor", "grant-survivor@carry.test")
@@ -78,6 +79,7 @@ func TestTheConsentCarrierRefusesACallerWhoCannotMergeContacts(t *testing.T) {
 // between two contacts another team owns — through either carrier. Everyone
 // reads every contact here, so the refusal is write authority, not a 404.
 func TestTheCarriersRefuseContactsOutsideTheCallersRowScope(t *testing.T) {
+	t.Parallel()
 	c := setupCarry(t)
 	retired := c.contactOwnedBy(t, c.e.Rep1, "Scope Retired", "scope@carry.test")
 	survivor := c.contactOwnedBy(t, c.e.Rep1, "Scope Survivor", "scope-survivor@carry.test")
@@ -97,6 +99,7 @@ func TestTheCarriersRefuseContactsOutsideTheCallersRowScope(t *testing.T) {
 // With no employer evidence, promotion needs lead:update and contact:create.
 // Consent carry does not require contact:update on the newly created contact.
 func TestARepWhoMayPromoteButNotEditContactsStillCarriesTheLeadsLinks(t *testing.T) {
+	t.Parallel()
 	c := setupCarry(t)
 	owner := ids.From[ids.UserKind](c.e.Rep1)
 	name, address := "Pia Promote", "pia@gmail.com"
@@ -148,6 +151,7 @@ func (c *carryEnv) assertCarried(t *testing.T, retired, survivor ids.ContactID) 
 
 // The HTTP handlers the server mounts carry both kinds of row.
 func TestTheServersContactHandlersAreWiredToCarry(t *testing.T) {
+	t.Parallel()
 	c := setupCarry(t)
 	retired := c.contactAt(t, "HTTP Retired", "http@carry.test")
 	survivor := c.contactAt(t, "HTTP Survivor", "http-survivor@carry.test")
@@ -166,6 +170,7 @@ func TestTheServersContactHandlersAreWiredToCarry(t *testing.T) {
 
 // The MCP provider merges records too, and carries the same way.
 func TestTheProviderIsWiredToCarry(t *testing.T) {
+	t.Parallel()
 	c := setupCarry(t)
 	retired := c.contactAt(t, "MCP Retired", "mcp@carry.test")
 	survivor := c.contactAt(t, "MCP Survivor", "mcp-survivor@carry.test")

@@ -25,6 +25,7 @@ import (
 )
 
 func TestDurableHistoryWorkRecoversWithoutRetainingItsRiverJobs(t *testing.T) {
+	t.Parallel()
 	b := setupBackfillWire(t)
 	run := strandedBackfill(t, b)
 	source := storekit.WithBatch(b.env.Admin(), run)
@@ -107,6 +108,7 @@ func TestDurableHistoryWorkRecoversWithoutRetainingItsRiverJobs(t *testing.T) {
 }
 
 func TestTerminalReleaseAndPendingReadsStayBoundedAndSkipBusyContacts(t *testing.T) {
+	t.Parallel()
 	b := setupBackfillWire(t)
 	run := strandedBackfill(t, b)
 	source := storekit.WithBatch(b.env.Admin(), run)

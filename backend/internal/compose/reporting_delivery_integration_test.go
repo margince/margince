@@ -49,6 +49,7 @@ func reportingWorkerIdentity(t *testing.T, e *forecastEnv) {
 }
 
 func TestReportingWorkerFreezesReconciledChartsAndUsesCurrentAuthority(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	reportingWorkerIdentity(t, e)
 	closed, writer, writerCtx := reportingWrittenClose(t, e)

@@ -37,6 +37,7 @@ func readsActivities() principal.Permissions {
 }
 
 func TestTheWorklistOffersAMailMoveOnlyToASeatThatMayWrite(t *testing.T) {
+	t.Parallel()
 	quiet := seedQuietRelationship(t)
 	e := quiet.e
 	team := []ids.UUID{e.Team1}
@@ -64,6 +65,7 @@ func TestTheWorklistOffersAMailMoveOnlyToASeatThatMayWrite(t *testing.T) {
 }
 
 func TestTheCompanyPageOffersADraftReplyOnlyToASeatThatMayWrite(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := time.Date(2026, 9, 18, 12, 0, 0, 0, time.UTC)
 	company := e.SeedCompany(t, "Example Company", &e.Rep1)
@@ -111,6 +113,7 @@ func TestTheCompanyPageOffersADraftReplyOnlyToASeatThatMayWrite(t *testing.T) {
 // The card is filed once per deal for every reader. Each read carries its own
 // reader's answer, whichever reader filled the cache.
 func TestTheDealCardOffersItsTaskOnlyToASeatThatMayWrite(t *testing.T) {
+	t.Parallel()
 	e := setupVerdicts(t)
 	at := time.Date(2026, 10, 12, 9, 0, 0, 0, time.UTC)
 	cards := newDealStatusService(e.Pool, func() time.Time { return at })

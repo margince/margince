@@ -21,6 +21,7 @@ import (
 // gets the opaque 500, not an empty download named like an archive. A closed
 // pool fails the read without reaching any database.
 func TestAnExportThatFailsBeforeItsFirstByteAnswersFiveHundred(t *testing.T) {
+	t.Parallel()
 	pool, err := testdb.OwnPool(context.Background(), "postgres://export@127.0.0.1:1/none")
 	if err != nil {
 		t.Fatalf("building the pool: %v", err)

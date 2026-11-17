@@ -168,6 +168,7 @@ func pendingApprovalsAbout(t *testing.T, e *integration.Env, activityID ids.UUID
 // The rung the founder decision rests on: the key in the subject files the
 // message, and it is the only thing that has to be true.
 func TestAProjectKeyInTheSubjectFilesTheMessage(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	a := seedLadderAccount(t, e)
 	projectID, key := a.project(t, "Ladder Rollout")
@@ -182,6 +183,7 @@ func TestAProjectKeyInTheSubjectFilesTheMessage(t *testing.T) {
 // A reply carries the key its thread was opened with, so the same rung files
 // it — no thread lookup required.
 func TestAReplyKeepingTheKeyIsFiledByTheKey(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	a := seedLadderAccount(t, e)
 	projectID, key := a.project(t, "Ladder Rollout")
@@ -196,6 +198,7 @@ func TestAReplyKeepingTheKeyIsFiledByTheKey(t *testing.T) {
 // The stickiness rung: a sender who trims the key off their reply is still
 // answering a conversation somebody filed, and the sibling settles it.
 func TestAReplyThatDroppedTheKeyInheritsItsThreadsProject(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	a := seedLadderAccount(t, e)
 	projectID, key := a.project(t, "Ladder Rollout")
@@ -219,6 +222,7 @@ func TestAReplyThatDroppedTheKeyInheritsItsThreadsProject(t *testing.T) {
 // nothing is what changed, and a card raised here would be the retired rung
 // back from the dead.
 func TestAMessageNamingNoProjectIsFiledNowhereAndAsksNobody(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	a := seedLadderAccount(t, e)
 	// One live project on the account, and the message names it nowhere. This
@@ -242,6 +246,7 @@ func TestAMessageNamingNoProjectIsFiledNowhereAndAsksNobody(t *testing.T) {
 // nothing reliably, so the message is filed nowhere rather than under whichever
 // key the tokenizer happened to read first.
 func TestASubjectNamingTwoProjectsFilesTheMessageUnderNeither(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	a := seedLadderAccount(t, e)
 	_, first := a.project(t, "Ladder Rollout")

@@ -117,6 +117,7 @@ func (e *mailEnv) seedReview(t *testing.T, week time.Time) ids.UUID {
 }
 
 func TestTheWeeklyMailIsAttemptedOnce(t *testing.T) {
+	t.Parallel()
 	e := setupWeeklyMail(t)
 	week := time.Date(2026, 6, 29, 0, 0, 0, 0, time.UTC)
 	reviewID := e.seedReview(t, week)
@@ -143,6 +144,7 @@ func TestTheWeeklyMailIsAttemptedOnce(t *testing.T) {
 // the failure vanishing — the cause is written onto the row so a missing
 // weekly is answerable.
 func TestARefusedMailSpendsTheAttemptAndRecordsWhy(t *testing.T) {
+	t.Parallel()
 	e := setupWeeklyMail(t)
 	e.relay.fail = errors.New("relay refused the recipient")
 	week := time.Date(2026, 6, 29, 0, 0, 0, 0, time.UTC)
@@ -174,6 +176,7 @@ func TestARefusedMailSpendsTheAttemptAndRecordsWhy(t *testing.T) {
 // One rep's claim must not reach another's week. The id alone is not
 // authority: a review belongs to the rep whose week it was.
 func TestOneRepCannotBurnAnothersAttempt(t *testing.T) {
+	t.Parallel()
 	e := setupWeeklyMail(t)
 	week := time.Date(2026, 6, 29, 0, 0, 0, 0, time.UTC)
 	reviewID := e.seedReview(t, week)
@@ -194,6 +197,7 @@ func TestOneRepCannotBurnAnothersAttempt(t *testing.T) {
 // An installation with no relay mails nothing and spends no attempt — so
 // configuring mail later still reaches that week.
 func TestNoRelayLeavesTheAttemptUnspent(t *testing.T) {
+	t.Parallel()
 	e := setupWeeklyMail(t)
 	week := time.Date(2026, 6, 29, 0, 0, 0, 0, time.UTC)
 	reviewID := e.seedReview(t, week)
@@ -226,6 +230,7 @@ func TestNoRelayLeavesTheAttemptUnspent(t *testing.T) {
 // recipient read on archived_at alone would go on mailing a departed colleague
 // every Monday. An inactive seat cannot spend its mail attempt.
 func TestADeactivatedSeatLeavesItsWeekUnclaimed(t *testing.T) {
+	t.Parallel()
 	e := setupWeeklyMail(t)
 	week := time.Date(2026, 6, 29, 0, 0, 0, 0, time.UTC)
 	reviewID := e.seedReview(t, week)
@@ -263,6 +268,7 @@ func TestADeactivatedSeatLeavesItsWeekUnclaimed(t *testing.T) {
 // false the instant the send moves inside the measuring loop, and it is a
 // question only a database can answer.
 func TestEveryRepIsMeasuredBeforeTheFirstRelayIsDialled(t *testing.T) {
+	t.Parallel()
 	e := setupWeeklyMail(t)
 	for _, rep := range []ids.UUID{e.Rep1, e.Rep2, e.Rep3} {
 		e.GrantRole(t, rep, "rep")
@@ -319,6 +325,7 @@ func countWeeklyReviews(t *testing.T) int {
 }
 
 func TestAWeeklyPreferenceReadFailureDefersWithoutSpendingTheAttempt(t *testing.T) {
+	t.Parallel()
 	e := setupWeeklyMail(t)
 	reviewID := e.seedReview(t, time.Date(2026, 6, 29, 0, 0, 0, 0, time.UTC))
 	broken, err := testdb.OwnPoolFromConfig(t.Context(), e.Pool.Config())
@@ -341,6 +348,7 @@ func TestAWeeklyPreferenceReadFailureDefersWithoutSpendingTheAttempt(t *testing.
 }
 
 func TestWeeklyOptOutKeepsAnUnspentAttemptForAnExplicitOptIn(t *testing.T) {
+	t.Parallel()
 	e := setupWeeklyMail(t)
 	reviewID := e.seedReview(t, time.Date(2026, 6, 29, 0, 0, 0, 0, time.UTC))
 	none, email := "none", "email"

@@ -38,6 +38,7 @@ func briefItemState(t *testing.T, owner *pgx.Conn, itemID ids.UUID) string {
 }
 
 func TestTheCutoffReadDatesTheWindowWithoutOpeningTheBrief(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 	owner := integration.OwnerConn(t)
 
@@ -85,6 +86,7 @@ func TestTheCutoffReadDatesTheWindowWithoutOpeningTheBrief(t *testing.T) {
 }
 
 func TestTheCutoffReadFindsNoRunOnADayWithoutOne(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 	if _, err := b.engine.SnapshotRun(b.repCtx, briefClock); err != nil {
 		t.Fatal(err)

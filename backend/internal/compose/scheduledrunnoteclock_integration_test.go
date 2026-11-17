@@ -46,6 +46,7 @@ func (f taskClockFixture) noteThroughTheTools(ctx context.Context, t *testing.T,
 }
 
 func TestANoteAScheduledRunWritesLeavesEveryClockQuiet(t *testing.T) {
+	t.Parallel()
 	f := newTaskClockFixture(t)
 	assistant := f.e.AgentFor(t, f.e.AdminUser, nil, integration.AdminPerms)
 	run := principal.WithAgentRunID(assistant, ids.NewV7())
@@ -57,6 +58,7 @@ func TestANoteAScheduledRunWritesLeavesEveryClockQuiet(t *testing.T) {
 }
 
 func TestANoteAUserWritesThroughTheirAssistantMovesEveryClock(t *testing.T) {
+	t.Parallel()
 	f := newTaskClockFixture(t)
 	assistant := f.e.AgentFor(t, f.e.AdminUser, nil, integration.AdminPerms)
 	at := f.now.Add(-time.Minute)

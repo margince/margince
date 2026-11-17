@@ -26,6 +26,7 @@ import (
 )
 
 func TestAnAmountRestoreIsRefusedWhenTheCurrencyMovedUnderIt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	pipeline, open, _ := integration.DealFixture(t, e)

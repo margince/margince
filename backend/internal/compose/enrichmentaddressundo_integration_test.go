@@ -91,6 +91,7 @@ func refusalOf(t *testing.T, err error) Reason {
 }
 
 func TestAnEnrichedAddressIsUndoneWithTheProfileFieldBehindIt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	id := e.SeedCompany(t, "Undo Address GmbH", nil)
@@ -123,6 +124,7 @@ func TestAnEnrichedAddressIsUndoneWithTheProfileFieldBehindIt(t *testing.T) {
 // The second read replaced the registered_address row the first one left; its
 // undo puts that earlier row back rather than removing the field.
 func TestUndoingAnEnrichmentPutsBackTheProfileFieldItReplaced(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	id := e.SeedCompany(t, "Twice Read GmbH", nil)
@@ -145,6 +147,7 @@ func TestUndoingAnEnrichmentPutsBackTheProfileFieldItReplaced(t *testing.T) {
 }
 
 func TestAnEnrichedAddressSomebodyChangedSinceIsNotUndone(t *testing.T) {
+	t.Parallel()
 	cases := map[string]func(t *testing.T, e *integration.Env, id ids.UUID){
 		"the address columns": func(t *testing.T, e *integration.Env, id ids.UUID) {
 			city := "Elsewhere"
@@ -183,6 +186,7 @@ func TestAnEnrichedAddressSomebodyChangedSinceIsNotUndone(t *testing.T) {
 }
 
 func TestAReaderIsNotOfferedTheUndoOfAnEnrichedAddress(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id := e.SeedCompany(t, "Read Only GmbH", nil)
 	auditID := enrichAddress(t, e, id, enrichedAddress)
@@ -198,6 +202,7 @@ func TestAReaderIsNotOfferedTheUndoOfAnEnrichedAddress(t *testing.T) {
 // An enrichment over a filled address writes no address column. Its entry
 // carries no address and no receipt for the row it refreshed.
 func TestAnEnrichmentOverAFilledAddressRecordsNoAddressToUndo(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id := e.SeedCompany(t, "Already Filled GmbH", nil)
 	enrichAddress(t, e, id, enrichedAddress)
@@ -220,6 +225,7 @@ func TestAnEnrichmentOverAFilledAddressRecordsNoAddressToUndo(t *testing.T) {
 // Undoing the Undo brings back what the enrichment wrote: the address and the
 // registered_address row both.
 func TestUndoingTheUndoOfAnEnrichedAddressBringsBothBack(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	id := e.SeedCompany(t, "Undo Twice GmbH", nil)
@@ -249,6 +255,7 @@ func TestUndoingTheUndoOfAnEnrichedAddressBringsBothBack(t *testing.T) {
 // Each Undo leaves the profile row as the earlier entry left it. The next step
 // is not refused for a row that only holds a new version.
 func TestEnrichedAddressesWalkBackInOrder(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	id := e.SeedCompany(t, "Walk Back GmbH", nil)

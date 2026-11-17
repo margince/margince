@@ -108,6 +108,7 @@ func quietLaneWithBound(t *testing.T, e *integration.Env, now time.Time, reader 
 }
 
 func TestTheQuietSuggestionGoesToTheContactOwnerNotToWhoWroteOrWasCopied(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Paula Quiet", &e.Rep1)
 	seedQuietExchange(t, e, e.Rep2, e.Rep3, contact, 60)
@@ -124,6 +125,7 @@ func TestTheQuietSuggestionGoesToTheContactOwnerNotToWhoWroteOrWasCopied(t *test
 }
 
 func TestAQuietContactWithADepartedOwnerIsNobodysPersonalWork(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Left Behind", &e.Rep1)
 	seedQuietExchange(t, e, e.Rep2, ids.UUID{}, contact, 60)
@@ -142,6 +144,7 @@ func TestAQuietContactWithADepartedOwnerIsNobodysPersonalWork(t *testing.T) {
 }
 
 func TestAQuietRelationshipPastOneHundredEightyDaysLeavesTheWorklist(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	recent := e.SeedContact(t, "Still Warm", &e.Rep1)
 	old := e.SeedContact(t, "Imported Years Ago", &e.Rep1)
@@ -155,6 +158,7 @@ func TestAQuietRelationshipPastOneHundredEightyDaysLeavesTheWorklist(t *testing.
 }
 
 func TestAPermanentStopOutlastsNinetyDaysAndResumes(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Over For Good", &e.Rep1)
 	seedQuietExchange(t, e, e.Rep1, ids.UUID{}, contact, 60)
@@ -183,6 +187,7 @@ func TestAPermanentStopOutlastsNinetyDaysAndResumes(t *testing.T) {
 }
 
 func TestDismissAllSetsEveryListedContactAsideOrNone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	first := e.SeedContact(t, "First Quiet", &e.Rep1)
 	second := e.SeedContact(t, "Second Quiet", &e.Rep1)
@@ -234,6 +239,7 @@ func seedRejectedCandidates(t *testing.T, e *integration.Env, owner ids.UUID, co
 }
 
 func TestAValidQuietContactBehindAFullPageOfRejectedCandidatesIsReached(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedRejectedCandidates(t, e, e.Rep1, 40)
 	valid := e.SeedContact(t, "Truly quiet", &e.Rep1)
@@ -249,6 +255,7 @@ func TestAValidQuietContactBehindAFullPageOfRejectedCandidatesIsReached(t *testi
 }
 
 func TestAQuietScanThatSpendsItsBudgetSaysSoWithNoSurvivors(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedRejectedCandidates(t, e, e.Rep1, decayCandidateCap*decayCandidatePages)
 	rows, more := quietLaneWithBound(t, e, quietLaneNow, e.Rep1, attention.TasksMine, ids.UUID{})
@@ -260,6 +267,7 @@ func TestAQuietScanThatSpendsItsBudgetSaysSoWithNoSurvivors(t *testing.T) {
 // A stop is one reader's choice: it reads back as stopped for them, as
 // following for a colleague, and as following again once resumed.
 func TestAStopReadsBackPerReaderAndClearsOnResume(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := ids.From[ids.ContactKind](e.SeedContact(t, "Per Reader", &e.Rep1))
 	store := contacts.NewStore(e.DB()).SetClock(func() time.Time { return quietLaneNow })
@@ -283,6 +291,7 @@ func TestAStopReadsBackPerReaderAndClearsOnResume(t *testing.T) {
 }
 
 func TestAStopStaysWithItsReaderWhenTheContactChangesOwner(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Handed Over", &e.Rep1)
 	seedQuietExchange(t, e, e.Rep1, ids.UUID{}, contact, 60)
@@ -324,6 +333,7 @@ func TestAStopStaysWithItsReaderWhenTheContactChangesOwner(t *testing.T) {
 // The decided rule: a relationship silent for longer than 180 days leaves the
 // Worklist. A silence of 180 days is still a suggestion; 181 is not.
 func TestTheQuietCeilingKeepsDayOneHundredEightyAndDropsTheDayAfter(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	atCeiling := e.SeedContact(t, "Silent 180 Days", &e.Rep1)
 	past := e.SeedContact(t, "Silent 181 Days", &e.Rep1)
@@ -340,6 +350,7 @@ func TestTheQuietCeilingKeepsDayOneHundredEightyAndDropsTheDayAfter(t *testing.T
 // contact having been heard from, or a relationship silent for months reads
 // as fresh because somebody scheduled something.
 func TestAFutureMeetingIsNotATouch(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Booked But Silent", &e.Rep1)
 	seedQuietExchange(t, e, e.Rep1, ids.UUID{}, contact, 60)
@@ -378,6 +389,7 @@ func TestAFutureMeetingIsNotATouch(t *testing.T) {
 // on the 181st calendar day before a 09:00 read is under 181 x 24 hours ago.
 // It is still a silence longer than 180 days.
 func TestTheQuietCeilingCountsCalendarDaysNotHours(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Silent 181 Calendar Days", &e.Rep1)
 	seedQuietExchange(t, e, e.Rep1, ids.UUID{}, contact, 181)
@@ -400,6 +412,7 @@ func TestTheQuietCeilingCountsCalendarDaysNotHours(t *testing.T) {
 // 19 July 2025 read at 23:30 EST on 15 January 2026 is 180 calendar days, but
 // more than 181 x 24 hours. The relationship is still a suggestion.
 func TestDayOneHundredEightyHoldsAcrossADaylightSavingChange(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.WsExec(t, `UPDATE setting SET value = '"America/New_York"'::jsonb WHERE key = 'installation.timezone'`)
 	zone, err := time.LoadLocation("America/New_York")

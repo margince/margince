@@ -24,6 +24,7 @@ import (
 )
 
 func TestNewerUnchangedAdmissionPreventsAnOlderResultFromReplacingIt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	source := logReplyMessage(ctx, t, e, "pricing", "Pricing", "I will send pricing.", 0)
@@ -59,6 +60,7 @@ func TestNewerUnchangedAdmissionPreventsAnOlderResultFromReplacingIt(t *testing.
 }
 
 func TestAdmissionHistoryObeysSourcePrivacyAndSubjectErasure(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	contact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Pat Buyer"})
@@ -152,6 +154,7 @@ func sourceWithAdmission(ctx context.Context, t *testing.T, e *integration.Env, 
 }
 
 func TestStoredCommitmentWithoutAReadSetReportsUnassessedContext(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := time.Date(2026, 10, 18, 12, 0, 0, 0, time.UTC)
 	first, later := now.Add(-2*time.Hour), now.Add(-time.Hour)

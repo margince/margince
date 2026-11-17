@@ -38,6 +38,7 @@ func restsOnOurMessage(moment crmcontracts.ContactMoment) bool {
 // turns into on day seven. It is the reader's own: a colleague still sees the
 // card. Our next message brings it back, with a Done naming the new message.
 func TestDoneOnTheWaitingCardHoldsUntilTheNextMessage(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const address = "kim@kunde.example"
 	contact := seedLinkedContact(t, e, address)
@@ -75,6 +76,7 @@ func TestDoneOnTheWaitingCardHoldsUntilTheNextMessage(t *testing.T) {
 // The Worklist's Done on the awaiting-reply row is the same state, so it hides
 // the contact card too.
 func TestAWorklistDoneHidesTheContactsWaitingCard(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const address = "lee@kunde.example"
 	contact := seedLinkedContact(t, e, address)
@@ -97,6 +99,7 @@ func TestAWorklistDoneHidesTheContactsWaitingCard(t *testing.T) {
 // A colleague's message on the reader's page is theirs to judge. The card
 // still shows it, with no Done, and the writer refuses one.
 func TestNoDoneOnAColleaguesWaitingMessage(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const address = "sam@kunde.example"
 	contact := seedLinkedContact(t, e, address)

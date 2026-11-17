@@ -41,6 +41,7 @@ func (f *relationshipFixture) runNewsletterTask(t *testing.T) {
 }
 
 func TestANewsletterMovesNoClockAndTheDataTaskTakesOneBack(t *testing.T) {
+	t.Parallel()
 	f := newRelationshipFixture(t)
 	f.humanExchange(t)
 	before := workspaceValue[*time.Time](t, f.e, `SELECT last_activity_at FROM contact WHERE id = $1`, f.contact)
@@ -70,6 +71,7 @@ func (f *relationshipFixture) ghosted(t *testing.T, activity ids.UUID) int {
 }
 
 func TestTheDataTaskArchivesOnlyAGhostedThreadOurNewsletterRaised(t *testing.T) {
+	t.Parallel()
 	for left, body := range [][]string{newsletterBody("News from us."), nil} {
 		f := newRelationshipFixture(t)
 		f.e.WsExec(t, `UPDATE company SET lifecycle = 'opportunity' WHERE id = $1`, f.company)

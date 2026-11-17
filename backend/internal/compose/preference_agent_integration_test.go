@@ -29,6 +29,7 @@ import (
 )
 
 func TestPreferenceCenterOptOutBlocksAgentSend(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	consentStore := consent.NewStore(InstallationDB(e.Pool))
 	// Built through the composition root, not by hand: a marketing send is

@@ -22,6 +22,7 @@ import (
 )
 
 func TestALeadFromAWebsiteFormNamesTheForm(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	perms := integration.AdminWithSignals
 	perms.Objects = maps.Clone(perms.Objects)

@@ -56,6 +56,7 @@ func runSignalDayCountTask(ctx context.Context, t *testing.T, e *integration.Env
 }
 
 func TestTheSignalDayCountTaskRewordsOnlyTheScansOldSummaries(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	company := e.SeedCompany(t, "Day Count Co", nil)
@@ -164,6 +165,7 @@ func signalDayCountEstimate(ctx context.Context, t *testing.T, e *integration.En
 }
 
 func TestTheSignalDayCountTaskRollsBackWithItsProgress(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	company := e.SeedCompany(t, "Rollback Count Co", nil)

@@ -113,6 +113,7 @@ func dealBlockAt(t *testing.T, e *weekEnv) *DealBlock {
 // Reading the count as 1 is the whole claim. With the reconstruction reverted
 // this reads 0: the deal is won TODAY, and today is what the old query asked.
 func TestADealClosedAfterTheWeekEndedStillCountsAsOpenThatWeek(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	id, wonStage := openDealFor(t, e, "Weber Rahmenvertrag")
 
@@ -144,6 +145,7 @@ func TestADealClosedAfterTheWeekEndedStillCountsAsOpenThatWeek(t *testing.T) {
 // live at the cutoff, and this is what proves the verb path works — the image
 // path cannot answer this case at all.
 func TestADealArchivedAfterTheWeekEndedStillCountsInIt(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	id, _ := openDealFor(t, e, "Kessler Wartung")
 
@@ -169,6 +171,7 @@ func TestADealArchivedAfterTheWeekEndedStillCountsInIt(t *testing.T) {
 // It is asserted through the block's absence rather than through Open == 0,
 // because a rep whose only deal postdates the week has nothing to judge at all.
 func TestADealCreatedAfterTheWeekEndedIsNotCountedInIt(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	// Seeded WITHOUT the back-dating every other case here applies: this deal is
 	// born at wall-clock now, which is after the reviewed week closed. That is
@@ -204,6 +207,7 @@ func TestADealCreatedAfterTheWeekEndedIsNotCountedInIt(t *testing.T) {
 // destroyed. So the boundary excludes the deal from every population count and
 // tallies it separately, which is what tells a reader the counts are a floor.
 func TestADealBehindAnErasureIsReportedRatherThanCountedAtTodaysValues(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	owner := integration.OwnerConn(t)
 	ctx := context.Background()
@@ -255,6 +259,7 @@ func TestADealBehindAnErasureIsReportedRatherThanCountedAtTodaysValues(t *testin
 // for everything else undoes the first edit and keeps the second — a row that
 // existed at no instant, mixing last week's status with this week's close date.
 func TestEachColumnIsRewoundByItsOwnOldestChange(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	id, wonStage := openDealFor(t, e, "Hartmann Ausbau")
 
@@ -300,6 +305,7 @@ func TestEachColumnIsRewoundByItsOwnOldestChange(t *testing.T) {
 // counterpart — so reading 'restore' as one would drop a never-archived deal
 // out of the week because somebody undid a name correction on it.
 func TestUndoingAnEditDoesNotReadAsUnarchivingTheDeal(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	id, _ := openDealFor(t, e, "Brandt Servicevertrag")
 
@@ -330,6 +336,7 @@ func TestUndoingAnEditDoesNotReadAsUnarchivingTheDeal(t *testing.T) {
 // verb alone would report the deal open through a week it spent archived, and
 // the current archived_at cannot correct that because it holds the LATER stamp.
 func TestADealArchivedBeforeAndAgainAfterTheWeekIsNotReportedOpen(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	owner := integration.OwnerConn(t)
 	ctx := context.Background()

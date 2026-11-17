@@ -19,6 +19,7 @@ import (
 // An agent answers the question its user was asked, and the row says an agent
 // answered it, whichever way it went.
 func TestAnAgentAnsweringADomainQuestionNamesItself(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		verb string
 		want int

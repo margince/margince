@@ -215,6 +215,7 @@ func composedSendServer(t *testing.T, e *voiceSendEnv, stager DeliveryMachinery)
 }
 
 func TestBothSendTransportsCarryTheDraftOutcomeRecorder(t *testing.T) {
+	t.Parallel()
 	e := setupVoiceSend(t)
 
 	t.Run("the store the tool surface sends through", func(t *testing.T) {
@@ -315,6 +316,7 @@ func awaitLockHolder(t *testing.T, locked <-chan int32) int32 {
 }
 
 func TestConcurrentSendsSharingADraftReferenceLeaveOneOutcomeAndBothTransmit(t *testing.T) {
+	t.Parallel()
 	e := setupVoiceSend(t)
 	draft := e.openDraft(t)
 

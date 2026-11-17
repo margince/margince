@@ -73,6 +73,7 @@ func modesByFinding(list assurance.InputCheckList) map[string]crmcontracts.Input
 // A finding opens for answering only for a reader who may answer it, so a
 // read-only reviewer is never offered an answer the server refuses.
 func TestEachFindingSaysWhetherItsReaderMayAnswerIt(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	amount := int64(4_800_000)
 	mine := e.seedOpenDeal(t, "Harbourline depot retrofit", 20, &e.Rep1, &amount)
@@ -98,6 +99,7 @@ func TestEachFindingSaysWhetherItsReaderMayAnswerIt(t *testing.T) {
 // Groups count the whole list the caller may see: a deal with two findings is
 // one deal, and its money is counted once per group.
 func TestGroupsCountFindingsAndDistinctDealsOverTheWholeList(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	harbour, marlow := int64(4_800_000), int64(2_900_000)
 	first := e.seedOpenDeal(t, "Harbourline depot retrofit", 20, &e.Rep1, &harbour)
@@ -131,6 +133,7 @@ func TestGroupsCountFindingsAndDistinctDealsOverTheWholeList(t *testing.T) {
 // and only then recency. A bigger, older finding ranks above a smaller one
 // seen last night.
 func TestMergedFindingsRankByMoneyBeforeRecency(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	big, small := int64(9_000_000), int64(1_000_000)
 	older := e.seedOpenDeal(t, "Harbourline depot retrofit", 20, &e.Rep1, &big)

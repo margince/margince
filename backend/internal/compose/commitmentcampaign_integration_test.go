@@ -20,6 +20,7 @@ import (
 )
 
 func TestOneVerifiedPromiseKeepsEveryRecipientsClaim(t *testing.T) {
+	t.Parallel()
 	for _, scenario := range []struct {
 		name           string
 		confidence     float64

@@ -26,6 +26,7 @@ import (
 // days later, is fourteen days and three hours by the clock. The summary counts
 // the calendar days of the installation.
 func TestAGhostedSignalCountsCalendarDaysInTheInstallationZone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.WsExec(t, `UPDATE setting SET value = '"Asia/Ho_Chi_Minh"'::jsonb WHERE key = 'installation.timezone'`)
 	zone, err := time.LoadLocation("Asia/Ho_Chi_Minh")
@@ -63,6 +64,7 @@ func TestAGhostedSignalCountsCalendarDaysInTheInstallationZone(t *testing.T) {
 // A day mail counts from its date. In Auckland its stored noon UTC is already
 // the next local day, so counting the stored instant would say 14.
 func TestAGhostedSignalCountsADayMailFromItsDate(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.WsExec(t, `UPDATE setting SET value = '"Pacific/Auckland"'::jsonb WHERE key = 'installation.timezone'`)
 	zone, err := time.LoadLocation("Pacific/Auckland")
@@ -109,6 +111,7 @@ func TestAGhostedSignalCountsADayMailFromItsDate(t *testing.T) {
 // is 44 days and three hours quiet by the clock. Both count 45; the signal
 // records it on its audit row and says the rule's threshold.
 func TestTheDigestAndTheSignalCountAQuietProjectInTheSameCalendarDays(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.WsExec(t, `UPDATE setting SET value = '"Asia/Ho_Chi_Minh"'::jsonb WHERE key = 'installation.timezone'`)
 	zone, err := time.LoadLocation("Asia/Ho_Chi_Minh")
@@ -189,6 +192,7 @@ func signalDaysSilent(t *testing.T, subject ids.UUID, kind string) int {
 // A later scan finds the same silence. It raises no second signal, and the
 // summary it stored still holds, because it names the threshold, not an age.
 func TestALaterScanKeepsOneGhostedSignalWhoseSummaryStillHolds(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	wrote := time.Date(2026, 9, 1, 10, 0, 0, 0, time.UTC)
 	company := e.SeedCompany(t, "Later Ghost Co", nil)

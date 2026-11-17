@@ -36,6 +36,7 @@ const (
 )
 
 func TestABareYesAcceptsTheOfferTheServerRecorded(t *testing.T) {
+	t.Parallel()
 	env := integration.Setup(t)
 	read := onboardingDraft(t, env)
 	human := env.As(env.Rep1, nil, integration.AdminPerms)

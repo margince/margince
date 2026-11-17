@@ -70,6 +70,7 @@ func heldPage(t *testing.T, e *integration.Env, user ids.UUID, query capture.Hel
 // A long list arrives a page at a time, each thread once, pending first and
 // then newest. The counts count the whole list on every page.
 func TestTheHeldListPagesEachThreadOnceInOrder(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	day := time.Date(2026, 9, 1, 9, 0, 0, 0, time.UTC)
 	seedHeldThread(t, e, e.Rep1, "held-old", "held", 1, day, false)
@@ -110,6 +111,7 @@ func TestTheHeldListPagesEachThreadOnceInOrder(t *testing.T) {
 
 // Searches and counts include only threads with readable messages.
 func TestASearchOmitsThreadsWhoseMessagesAreGone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	day := time.Date(2026, 9, 1, 9, 0, 0, 0, time.UTC)
 	seedHeldThread(t, e, e.Rep1, "erased-with-lena", "held", 1, day, true, "lena@prospect.test")
@@ -134,6 +136,7 @@ func TestASearchOmitsThreadsWhoseMessagesAreGone(t *testing.T) {
 
 // A search reaches a party on a readable message by address and by name.
 func TestASearchMatchesTheParticipantsOfAReadableMessage(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Lena Prospect", &e.Rep1)
 	message := seedHeldThread(t, e, e.Rep1, "with-lena", "held", 1, time.Date(2026, 9, 1, 9, 0, 0, 0, time.UTC), false)
@@ -152,6 +155,7 @@ func TestASearchMatchesTheParticipantsOfAReadableMessage(t *testing.T) {
 // A message the reader may not read keeps its parties from every filter, or a
 // match would confirm who is on it.
 func TestAFilterCannotTestThePartiesOfAWithheldMessage(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Hidden Party", &e.Rep1)
 	e.WsExec(t, `INSERT INTO contact_email (contact_id, email, is_primary, source, captured_by)
@@ -178,6 +182,7 @@ func TestAFilterCannotTestThePartiesOfAWithheldMessage(t *testing.T) {
 // archived message keeps its parties from a search, and a readable one matches
 // through its participants alone.
 func TestTheLedgerAnswersOnlyForAnErasedMessage(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	day := time.Date(2026, 9, 1, 9, 0, 0, 0, time.UTC)
 	archived := seedHeldThread(t, e, e.Rep1, "archived", "held", 1, day, false, "archived@party.test")
@@ -194,6 +199,7 @@ func TestTheLedgerAnswersOnlyForAnErasedMessage(t *testing.T) {
 // Erasing a contact takes their address out of the ledger through the real
 // writer, so a search no longer finds it. Another party on the row stays.
 func TestAnErasedAddressIsNoLongerSearchable(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedHeldThread(t, e, e.Rep1, "erased", "held", 1, time.Date(2026, 9, 1, 9, 0, 0, 0, time.UTC), true, "Lena@Prospect.test", "sam@northwind.test")
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -211,6 +217,7 @@ func TestAnErasedAddressIsNoLongerSearchable(t *testing.T) {
 
 // Two threads at one instant page apart on the row id, each once.
 func TestThreadsAtOneInstantPageEachOnce(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	at := time.Date(2026, 9, 1, 9, 0, 0, 0, time.UTC)
 	seedHeldThread(t, e, e.Rep1, "first", "held", 1, at, false)
@@ -228,6 +235,7 @@ func TestThreadsAtOneInstantPageEachOnce(t *testing.T) {
 
 // A cursor the list did not mint is refused, even one that names a row.
 func TestTheHeldListRefusesACursorItDidNotMint(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	incomplete, err := storekit.EncodeOpaque(map[string]ids.UUID{"id": ids.NewV7()})
 	if err != nil {
@@ -243,6 +251,7 @@ func TestTheHeldListRefusesACursorItDidNotMint(t *testing.T) {
 
 // An over-long search is a 422 naming the field, as the contract declares.
 func TestAnOverlongSearchIsRefusedByField(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	handlers := captureSenderHandlers{db: InstallationDB(e.Pool)}
 	w := httptest.NewRecorder()
@@ -258,6 +267,7 @@ func TestAnOverlongSearchIsRefusedByField(t *testing.T) {
 // hold saw. A contact the reader may not read, or one that is archived, is a 404.
 // Asked through the route, so the query parameter has to reach the store.
 func TestTheContactFilterKeepsTheThreadsWithThatContact(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	day := time.Date(2026, 9, 1, 9, 0, 0, 0, time.UTC)
 	lena := e.SeedContact(t, "Lena Prospect", &e.Rep1)
@@ -317,6 +327,7 @@ func heldByContact(ctx context.Context, t *testing.T, e *integration.Env, contac
 }
 
 func TestHeldSearchUsesAnotherReadableMessageAfterTheOpeningIsErased(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	key := "surviving-thread"
 	seedHeldThread(t, e, e.Rep1, key, "held", 1, time.Date(2026, 9, 1, 9, 0, 0, 0, time.UTC), true)

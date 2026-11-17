@@ -45,6 +45,7 @@ func (c *erasingCalendar) Cancel(_ context.Context, _ ids.UserID, _, _, event st
 }
 
 func TestErasureDuringProviderDeliveryCancelsTheLateReceiptAndSuppressesItsEcho(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	contact := e.SeedContact(t, "Booking guest", nil)

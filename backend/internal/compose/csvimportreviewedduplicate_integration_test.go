@@ -22,6 +22,7 @@ import (
 )
 
 func TestAReviewedLeadRowNamingAHeldEmailIsSkippedAndTheNextRowLands(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.GrantRole(t, e.AdminUser, "admin")
 	h, _ := leadSourceHandlers(t, e)

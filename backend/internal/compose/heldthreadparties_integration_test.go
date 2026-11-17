@@ -51,6 +51,7 @@ func seedParty(t *testing.T, e *integration.Env, activityID ids.UUID, user, cont
 }
 
 func TestAHeldThreadNamesWhoOutsideTheWorkspaceItIsWith(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	message := seedHeldMessage(t, e, e.Rep1, e.Rep1, "thread-parties", "workspace")
 	colleague := e.WsScalar(t, `SELECT lower(email) FROM app_user WHERE id = $1`, e.Rep2)
@@ -93,6 +94,7 @@ func TestAHeldThreadNamesWhoOutsideTheWorkspaceItIsWith(t *testing.T) {
 }
 
 func TestAHeldThreadNamesNobodyOnAMessageItsReaderMayNotRead(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	message := seedHeldMessage(t, e, e.Rep1, e.Rep2, "thread-withheld", "participants")
 	seedParty(t, e, message, nil, nil, "anwalt@kanzlei.example", "from")
@@ -106,6 +108,7 @@ func TestAHeldThreadNamesNobodyOnAMessageItsReaderMayNotRead(t *testing.T) {
 // colleague's alias stays listed: leaving it out would say it is theirs. An
 // archived contact is not named at all.
 func TestAHeldThreadLeavesOutTheReadersOwnAliasAndArchivedContacts(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	message := seedHeldMessage(t, e, e.Rep1, e.Rep1, "thread-alias", "workspace")
 	identities := capture.NewOwnerIdentityStore(InstallationDB(e.Pool))

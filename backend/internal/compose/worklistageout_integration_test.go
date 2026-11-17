@@ -25,6 +25,7 @@ import (
 // the team board's overdue figure, unless a pin the reader holds in effect keeps
 // it. The task stays open on its contact.
 func TestATaskMoreThanAMonthOverdueLeavesTheWorklistUnlessPinned(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := time.Now().UTC()
 	contact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Mara Lindqvist"})
@@ -134,6 +135,7 @@ func sorted(values ...string) []string {
 }
 
 func TestAHumanReopenedOldTaskStaysOnTheWorklist(t *testing.T) {
+	t.Parallel()
 	for _, imported := range []bool{false, true} {
 		t.Run(map[bool]string{false: "human reopen", true: "import reopen"}[imported], func(t *testing.T) {
 			e := integration.Setup(t)

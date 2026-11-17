@@ -55,6 +55,7 @@ func recipientClaim(t *testing.T, k keptCommitment, owner ids.UUID) ids.UUID {
 }
 
 func TestOneRecipientCannotCompleteAnotherRecipientsWork(t *testing.T) {
+	t.Parallel()
 	for _, hidden := range []bool{false, true} {
 		name := "visible recipient"
 		if hidden {
@@ -118,6 +119,7 @@ func TestOneRecipientCannotCompleteAnotherRecipientsWork(t *testing.T) {
 }
 
 func TestCompletedTaskCannotAcquireAnOpenRecipient(t *testing.T) {
+	t.Parallel()
 	k := seedKeptCommitment(t)
 	k.setDone(t, true)
 	recipient := k.SeedContact(t, "Later Recipient", &k.Rep2)
@@ -142,6 +144,7 @@ func TestCompletedTaskCannotAcquireAnOpenRecipient(t *testing.T) {
 }
 
 func TestPartialRecipientSettlementKeepsTheSharedProposal(t *testing.T) {
+	t.Parallel()
 	e := setupCompletionTranscript(t, transcriptBody)
 	linkInes(t, e)
 	reading := e.readAt(t, cannedBrain{reply: attributedReply(t, "Priya Raman", "seat:"+e.Rep2.String(), 0.75)}, func() time.Time { return completionReadTime })
@@ -187,6 +190,7 @@ func recipientOwner(k keptCommitment, owner ids.UUID) context.Context {
 }
 
 func TestUnlinkedRecipientPreventsAutomaticTaskCompletion(t *testing.T) {
+	t.Parallel()
 	k := seedKeptCommitment(t)
 	recipient := k.SeedContact(t, "Recipient awaiting review", &k.Rep2)
 	quote := k.wsString(t, `SELECT source_quote FROM conversation_claim WHERE id=$1`, k.claim)
@@ -225,6 +229,7 @@ func TestUnlinkedRecipientPreventsAutomaticTaskCompletion(t *testing.T) {
 // hands the task on, and a re-read finds another recipient. The request put to
 // the former assignee is withdrawn, and only the new one is asked.
 func TestARequestAboutAReassignedTaskLeavesTheFormerAssignee(t *testing.T) {
+	t.Parallel()
 	e, readFor, handTo := setupRecipientTaskTranscript(t)
 	pendingFor := func(seat ids.UUID) int {
 		t.Helper()
@@ -253,6 +258,7 @@ func TestARequestAboutAReassignedTaskLeavesTheFormerAssignee(t *testing.T) {
 // Nobody else is asked in their place: not the promiser, the stager or the
 // record's owner.
 func TestARequestAboutATaskAnArchivedColleagueHoldsAsksNobody(t *testing.T) {
+	t.Parallel()
 	e, readFor, handTo := setupRecipientTaskTranscript(t)
 	readFor(1)
 	handTo(e.Rep3)

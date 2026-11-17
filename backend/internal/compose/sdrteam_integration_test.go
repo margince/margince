@@ -130,6 +130,7 @@ func (f *sdrTeamFixture) holdMeeting(t *testing.T) {
 // One prospect is sent back, resubmitted and accepted; another is rejected;
 // the second SDR's waits. Both SDRs held one meeting together.
 func TestSdrTeamReviewSeparatesOutcomesFromRoundsAndCountsSharedWorkOnce(t *testing.T) {
+	t.Parallel()
 	f := newSdrTeamFixture(t)
 	e := f.e
 	returned := f.submitAs(t, e.Rep1, "Returned then accepted")
@@ -183,6 +184,7 @@ func TestSdrTeamReviewSeparatesOutcomesFromRoundsAndCountsSharedWorkOnce(t *test
 }
 
 func TestSdrTeamReviewWithIndividualPerformanceOffKeepsTeamTotalsOnly(t *testing.T) {
+	t.Parallel()
 	f := newSdrTeamFixture(t)
 	e := f.e
 	f.submitAs(t, e.Rep1, "First SDR's")
@@ -214,6 +216,7 @@ func TestSdrTeamReviewWithIndividualPerformanceOffKeepsTeamTotalsOnly(t *testing
 }
 
 func TestSdrTeamReviewCountsAnUnattributedEventForNoMember(t *testing.T) {
+	t.Parallel()
 	f := newSdrTeamFixture(t)
 	e := f.e
 	legacy := f.submitAs(t, e.Rep1, "Recorded before attribution")
@@ -238,6 +241,7 @@ func TestSdrTeamReviewCountsAnUnattributedEventForNoMember(t *testing.T) {
 // Two SDRs hand on the same company and both handoffs are accepted onto one
 // deal. The deal is one accepted opportunity, credited to the first.
 func TestSdrTeamReviewCreditsADealAcceptedTwiceOnce(t *testing.T) {
+	t.Parallel()
 	f := newSdrTeamFixture(t)
 	e := f.e
 	first := f.submitAs(t, e.Rep1, "First to hand it on")
@@ -267,6 +271,7 @@ func TestSdrTeamReviewCreditsADealAcceptedTwiceOnce(t *testing.T) {
 // the third is decided only this week, so last week's rounds still waiting
 // are that one colleague's alone.
 func TestSdrTeamReviewJudgesEachRoundFigureByItsOwnSeats(t *testing.T) {
+	t.Parallel()
 	f := newSdrTeamFixture(t)
 	e := f.e
 	third := e.seedID(t, `INSERT INTO app_user (id, email, display_name) VALUES ($1, 'third@forecast.test', 'Third SDR')`)
@@ -298,6 +303,7 @@ func TestSdrTeamReviewJudgesEachRoundFigureByItsOwnSeats(t *testing.T) {
 // Handoffs from before the period: one SDR's is waiting on a decision, the
 // other's was sent back to them. Each count is one colleague's.
 func TestSdrTeamReviewJudgesWaitingAndReturnedApart(t *testing.T) {
+	t.Parallel()
 	f := newSdrTeamFixture(t)
 	e := f.e
 	f.at = f.at.AddDate(0, 0, -14)
@@ -316,6 +322,7 @@ func TestSdrTeamReviewJudgesWaitingAndReturnedApart(t *testing.T) {
 // has two seats behind it. Only one SDR's is in the shared queue, and only
 // one SDR's recipient can no longer act.
 func TestSdrTeamReviewJudgesUnassignedAndBlockedApart(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name   string
 		second func(f *sdrTeamFixture) *ids.UUID
@@ -344,6 +351,7 @@ func TestSdrTeamReviewJudgesUnassignedAndBlockedApart(t *testing.T) {
 // No history of team membership is kept. A member who left the team takes
 // their past handoffs with them, and the answer says it follows today's team.
 func TestSdrTeamReviewFollowsTodaysTeamForAMemberWhoLeft(t *testing.T) {
+	t.Parallel()
 	f := newSdrTeamFixture(t)
 	e := f.e
 	f.submitAs(t, e.Rep1, "Handed on before leaving")
@@ -368,6 +376,8 @@ func TestSdrTeamReviewFollowsTodaysTeamForAMemberWhoLeft(t *testing.T) {
 
 // The member rows are read for a page of members in name order, however many
 // the team has, and the answer says when more exist.
+//
+//testdb:serial changes a process-wide page size
 func TestSdrTeamReviewReadsOnlyAPageOfMembers(t *testing.T) {
 	f := newSdrTeamFixture(t)
 	e := f.e
@@ -387,6 +397,7 @@ func TestSdrTeamReviewReadsOnlyAPageOfMembers(t *testing.T) {
 // My teams is the seat's own default, as reportingRequested reads it for the
 // evaluator. The review resolves it as it resolves no scope at all.
 func TestSdrTeamReviewReadsMyTeamsAsTheDefault(t *testing.T) {
+	t.Parallel()
 	f := newSdrTeamFixture(t)
 	mine := f.review(f.as(f.manager), t, crmcontracts.GetSdrTeamReviewParamsScopeKindManagedTeams, nil)
 	var fallback crmcontracts.SdrTeamReview
@@ -404,6 +415,7 @@ func TestSdrTeamReviewReadsMyTeamsAsTheDefault(t *testing.T) {
 // A seat that may not read activities learns no meeting count: not the
 // team's, and not one member's.
 func TestSdrTeamReviewGivesNoMeetingsToASeatThatMayNotReadActivities(t *testing.T) {
+	t.Parallel()
 	f := newSdrTeamFixture(t)
 	f.submitAs(t, f.e.Rep1, "Handed on")
 	f.at = f.at.Add(time.Hour)
@@ -427,6 +439,7 @@ func TestSdrTeamReviewGivesNoMeetingsToASeatThatMayNotReadActivities(t *testing.
 // is the second SDR's own figure. While individual performance is off, the
 // team review's floor refuses it.
 func TestSdrSummaryWithIndividualPerformanceOffRefusesATotalOneColleagueMakesUp(t *testing.T) {
+	t.Parallel()
 	f := newSdrTeamFixture(t)
 	e := f.e
 	f.submitAs(t, f.second, "Second SDR's")

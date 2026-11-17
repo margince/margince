@@ -22,6 +22,7 @@ import (
 )
 
 func TestDealCreationApprovalMatchesTheWriter(t *testing.T) {
+	t.Parallel()
 	for _, rest := range []bool{false, true} {
 		t.Run(fmt.Sprintf("rest=%t", rest), func(t *testing.T) {
 			e := integration.Setup(t)

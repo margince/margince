@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+//testdb:serial binds the process-wide extension runtime
 func TestUnitSettingValuesAreAdminOnlyAuditedAndKeepEachUnitsOwn(t *testing.T) {
 	e := setupCRMIngress(t)
 	store := NewSettingsStore(e.Pool)

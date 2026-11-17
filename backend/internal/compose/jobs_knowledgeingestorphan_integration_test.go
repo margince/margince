@@ -120,6 +120,7 @@ func (o *orphanIngest) state(t *testing.T) (status string, chunks int) {
 }
 
 func TestAHandbookPageLeftRunningByAKilledWorkerIsReadAgainAtTheNextBoot(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	worker := newKnowledgeIngestWorker(e.Pool, blobstore.NewMemory(), &gatedEmbedder{}, slog.Default())
 	ctx := context.Background()
@@ -185,6 +186,7 @@ func TestAHandbookPageLeftRunningByAKilledWorkerIsReadAgainAtTheNextBoot(t *test
 }
 
 func TestAJobForADocumentAlreadyReadEndsWithoutReadingItAgain(t *testing.T) {
+	t.Parallel()
 	embedder := &gatedEmbedder{}
 	o := newOrphanIngest(t, embedder)
 	if err := o.work(t); err != nil {
@@ -203,6 +205,7 @@ func TestAJobForADocumentAlreadyReadEndsWithoutReadingItAgain(t *testing.T) {
 }
 
 func TestAnIngestWhoseHoldingConnectionDiedDoesNotBlockTheNext(t *testing.T) {
+	t.Parallel()
 	o := newOrphanIngest(t, &gatedEmbedder{})
 	ctx := context.Background()
 	release, held, err := holdIngest(ctx, o.e.Pool, o.doc, slog.Default())
@@ -239,6 +242,7 @@ func TestAnIngestWhoseHoldingConnectionDiedDoesNotBlockTheNext(t *testing.T) {
 }
 
 func TestTwoRunsOfOneDocumentEmbedItsPassagesOnce(t *testing.T) {
+	t.Parallel()
 	embedder := &gatedEmbedder{entered: make(chan struct{}), release: make(chan struct{})}
 	o := newOrphanIngest(t, embedder)
 
@@ -276,6 +280,7 @@ func TestTwoRunsOfOneDocumentEmbedItsPassagesOnce(t *testing.T) {
 // A run that cannot take a connection for its lock reports a fault, and leaves
 // the document as it was for the retry.
 func TestAnIngestThatCannotTakeItsLockFailsAndLeavesTheDocument(t *testing.T) {
+	t.Parallel()
 	o := newOrphanIngest(t, &gatedEmbedder{})
 	cancelled, cancel := context.WithCancel(context.Background())
 	cancel()

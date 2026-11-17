@@ -42,6 +42,7 @@ func middayAfterInstallationMidnight(t *testing.T, e *integration.Env, loc *time
 }
 
 func TestADayCallCountsInTheThirtyDaysItsDateFallsIn(t *testing.T) {
+	t.Parallel()
 	for _, zone := range []string{"Pacific/Auckland", "Pacific/Kiritimati"} {
 		t.Run(zone, func(t *testing.T) {
 			e := integration.Setup(t)

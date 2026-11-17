@@ -18,6 +18,7 @@ import (
 )
 
 func TestCurrentUnansweredBacklogDoesNotBecomeAnArrivalCohort(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	selection := f.selection()
 	selection.PipelineId = nil
@@ -47,6 +48,7 @@ func TestCurrentUnansweredBacklogDoesNotBecomeAnArrivalCohort(t *testing.T) {
 }
 
 func TestMissingAmountActionOpensOnlyTheQuarterSubset(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	closeAt := f.at.AddDate(0, 0, 1)
 	owner := ids.From[ids.UserKind](f.env.Rep1)
@@ -109,6 +111,7 @@ func TestMissingAmountActionOpensOnlyTheQuarterSubset(t *testing.T) {
 }
 
 func TestOpenPipelineKeepsDealsWhoseExpectedCloseIsOutsideTheReportPeriod(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	selection := f.selection()
 	selection.CloseWindow = "all_open"
@@ -127,6 +130,7 @@ func TestOpenPipelineKeepsDealsWhoseExpectedCloseIsOutsideTheReportPeriod(t *tes
 }
 
 func TestAssessmentUpcomingWorkUsesCurrentClockAndHonorsIndividualPrivacy(t *testing.T) {
+	t.Parallel()
 	f := newSdrFixture(t, crmcontracts.ReportingFrameworkInputTemplateSales)
 	f.logMeeting(t, "Future prospect meeting", f.at.Add(24*time.Hour), "booked")
 	service := newSalesAssessments(nil, newSalesDecisions(InstallationDB(f.e.Pool)), InstallationDB(f.e.Pool))
@@ -157,6 +161,7 @@ func TestAssessmentUpcomingWorkUsesCurrentClockAndHonorsIndividualPrivacy(t *tes
 }
 
 func TestForecastEvidenceDatesKeepPrivateTotalsAndRemediesConsistent(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	asOf := f.at
 	f.at = asOf.AddDate(0, 0, -28)

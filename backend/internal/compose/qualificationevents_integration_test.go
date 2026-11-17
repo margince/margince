@@ -21,6 +21,7 @@ import (
 )
 
 func TestQualificationCreditCountsFirstEventForItsOwnerRatherThanArrivalMonth(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	ctx := reportingActor(e)
 	actor, _ := principal.Actor(ctx)

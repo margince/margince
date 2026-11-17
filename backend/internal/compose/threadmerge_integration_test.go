@@ -124,6 +124,7 @@ func threadKeyOfMessage(t *testing.T, e *integration.Env, messageID string) stri
 // added later with such a column and left out would keep the retired key, and
 // its rows would silently stop belonging to their conversation.
 func TestEveryThreadKeyedTableIsMerged(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	var tables []string
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -154,6 +155,7 @@ func TestEveryThreadKeyedTableIsMerged(t *testing.T) {
 // the way a backfill walks a mailbox, still lands as one thread — under the
 // opener's key.
 func TestAShortenedReferencesChainArrivingOutOfOrderIsOneThread(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := e.Rep1
 	addr := seatAddress(t, e, owner)
@@ -179,6 +181,7 @@ func TestAShortenedReferencesChainArrivingOutOfOrderIsOneThread(t *testing.T) {
 // The header is the sender's text; an outsider quoting somebody else's
 // Message-ID must not move that seat's conversation.
 func TestAReferenceToAMessageTheSeatDoesNotHoldMergesNothing(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	// Rep2's conversation, rooted on a message Rep1 never received.
 	captureThreadMail(t, e, e.Rep2, threadMail(seatAddress(t, e, e.Rep2), "private@counterparty.example",
@@ -203,6 +206,7 @@ func TestAReferenceToAMessageTheSeatDoesNotHoldMergesNothing(t *testing.T) {
 // it. The new mail stays under the root its header gave it, as it did before
 // thread joining.
 func TestAHeaderNamingAForeignRootBesideAnOwnedMessageMergesNothing(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	// Rep2's conversation, rooted on its own opener.
 	captureThreadMail(t, e, e.Rep2, threadMail(seatAddress(t, e, e.Rep2), "victim-root@counterparty.example",
@@ -229,6 +233,7 @@ func TestAHeaderNamingAForeignRootBesideAnOwnedMessageMergesNothing(t *testing.T
 // end up as one thread: the import's key meets the mailbox's through the reply
 // the mailbox holds.
 func TestAMailboxTakingOverAnImportJoinsItsThread(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := e.Rep1
 	addr := seatAddress(t, e, owner)
@@ -301,6 +306,7 @@ func TestAMailboxTakingOverAnImportJoinsItsThread(t *testing.T) {
 // A seat's verdict on the merged thread is never more open than either half:
 // a hold on one half survives an opening answer on the other.
 func TestAMergedThreadKeepsTheHoldEitherHalfCarried(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seat := e.Rep1
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {

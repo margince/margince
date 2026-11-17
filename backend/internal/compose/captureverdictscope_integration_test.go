@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -38,11 +39,12 @@ import (
 // is prospecting. The record is still made — the owner did correspond with a
 // real address — and it widens on its own terms if the address ever answers.
 func TestAnAddressWeWroteToThatNeverAnsweredStaysTheOwners(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const email = "desk@citygarden.example"
 	activity := seedOutboundMail(t, e, email, "Access card")
 	id := seedPendingDisposition(t, e, email, "citygarden.example", activity)
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): capture.KindContact}}
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{id.String(): capture.KindContact}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
@@ -69,6 +71,7 @@ func TestAnAddressWeWroteToThatNeverAnsweredStaysTheOwners(t *testing.T) {
 // place: a reply is what turns an intention into a relationship, and a rep
 // whose prospect answers should not have to publish the contact by hand.
 func TestAnAddressThatAnsweredUsIsTheWorkspacesContact(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const email = "buyer@prospect.example"
 	// We wrote first, and they replied — both messages on one thread, which is
@@ -76,7 +79,7 @@ func TestAnAddressThatAnsweredUsIsTheWorkspacesContact(t *testing.T) {
 	activity := seedThreadedMail(t, e, email, "Our proposal", "outbound", "thr-answered")
 	seedThreadedMail(t, e, email, "Re: Our proposal", "inbound", "thr-answered")
 	id := seedPendingDisposition(t, e, email, "prospect.example", activity)
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): capture.KindContact}}
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{id.String(): capture.KindContact}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
@@ -124,12 +127,13 @@ func seedThreadedMail(t *testing.T, e *integration.Env, counterparty, subject, d
 // the hold exists to keep quiet: the mail stays shut while a row on a surface
 // everybody reads names the contact it was shut about.
 func TestASenderOnAHeldThreadIsNotAnnouncedToTheWorkspace(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const email = "partner@confidential.example"
 	activity := seedThreadedMail(t, e, email, "The matter", "inbound", "thr-held")
 	seedThreadHold(t, e, "thr-held", "held")
 	id := seedPendingDisposition(t, e, email, "confidential.example", activity)
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): capture.KindContact}}
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{id.String(): capture.KindContact}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
@@ -151,12 +155,13 @@ func TestASenderOnAHeldThreadIsNotAnnouncedToTheWorkspace(t *testing.T) {
 // The same sender on an ordinary CLEARED thread is the workspace's, which is
 // what keeps the test above from passing over a narrowing that never widens.
 func TestASenderOnAClearedThreadIsTheWorkspacesContact(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const email = "partner@ordinary.example"
 	activity := seedThreadedMail(t, e, email, "The matter", "inbound", "thr-cleared")
 	seedThreadHold(t, e, "thr-cleared", "cleared")
 	id := seedPendingDisposition(t, e, email, "ordinary.example", activity)
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): capture.KindContact}}
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{id.String(): capture.KindContact}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
@@ -192,6 +197,7 @@ func seedThreadHold(t *testing.T, e *integration.Env, threadKey, status string) 
 // because a restriction can land on a message whose thread carries no verdict
 // row at all.
 func TestARestrictedMessageDoesNotAnnounceItsCounterparty(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const email = "counsel@restricted.example"
 	activity := seedThreadedMail(t, e, email, "The matter", "inbound", "thr-restricted")
@@ -218,7 +224,7 @@ func TestARestrictedMessageDoesNotAnnounceItsCounterparty(t *testing.T) {
 		t.Fatalf("placing the message under a hold: %v", err)
 	}
 	id := seedPendingDisposition(t, e, email, "restricted.example", activity)
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): capture.KindContact}}
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{id.String(): capture.KindContact}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
@@ -242,6 +248,7 @@ func TestARestrictedMessageDoesNotAnnounceItsCounterparty(t *testing.T) {
 // counterparty of a confidential conversation while the mail itself stayed
 // shut.
 func TestAMessageHeldWithoutAThreadVerdictStillWithholdsItsCounterparty(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const email = "counsel@marked.example"
 	activity := seedThreadedMail(t, e, email, "[Confidential] The matter", "inbound", "thr-marked")
@@ -260,7 +267,7 @@ func TestAMessageHeldWithoutAThreadVerdictStillWithholdsItsCounterparty(t *testi
 		t.Fatalf("holding the message: %v", err)
 	}
 	id := seedPendingDisposition(t, e, email, "marked.example", activity)
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): capture.KindContact}}
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{id.String(): capture.KindContact}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
@@ -283,11 +290,12 @@ func TestAMessageHeldWithoutAThreadVerdictStillWithholdsItsCounterparty(t *testi
 // already judged a contact. Both matched a contact deliberately kept private, so
 // the next pass republished what this one withheld.
 func TestAWithheldContactIsMarkedOnTheLedgerTheOtherReadersConsult(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const email = "desk@withheld.example"
 	activity := seedThreadedMail(t, e, email, "Access card", "outbound", "thr-withheld")
 	id := seedPendingDisposition(t, e, email, "withheld.example", activity)
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): capture.KindContact}}
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{id.String(): capture.KindContact}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
@@ -313,11 +321,12 @@ func TestAWithheldContactIsMarkedOnTheLedgerTheOtherReadersConsult(t *testing.T)
 // The ordinary published contact does NOT carry the mark, so the flag means
 // something rather than being set on everything.
 func TestAPublishedContactIsNotMarkedWithheld(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const email = "buyer@published.example"
 	activity := seedThreadedMail(t, e, email, "Your proposal", "inbound", "thr-published")
 	id := seedPendingDisposition(t, e, email, "published.example", activity)
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): capture.KindContact}}
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{id.String(): capture.KindContact}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
@@ -340,6 +349,7 @@ func TestAPublishedContactIsNotMarkedWithheld(t *testing.T) {
 // outreach. The provider's attestation is the difference, and without it the
 // direction is reported as unknown rather than guessed.
 func TestAnUnattestedOutboundRowMakesNoClaimAboutWhoWrote(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const email = "stranger@forged.example"
 	// Outbound by the header, with no provider attestation behind it.
@@ -378,6 +388,7 @@ func TestAnUnattestedOutboundRowMakesNoClaimAboutWhoWrote(t *testing.T) {
 // The same row WITH the attestation does report outbound, so the check above
 // is not passing because the direction never travels at all.
 func TestAnAttestedOutboundRowReportsItsDirection(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const email = "prospect@attested.example"
 	activity := seedThreadedMail(t, e, email, "Our proposal", "outbound", "thr-attested")
@@ -413,6 +424,7 @@ func TestAnAttestedOutboundRowReportsItsDirection(t *testing.T) {
 // ordinary contact the verdict was about to publish. The audience alone cannot
 // tell the two apart; the reason can.
 func TestAMessageWaitingForItsOwnVerdictIsNotAHold(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const email = "buyer@waiting.example"
 	activity := seedThreadedMail(t, e, email, "Your proposal", "inbound", "thr-waiting")
@@ -426,7 +438,7 @@ func TestAMessageWaitingForItsOwnVerdictIsNotAHold(t *testing.T) {
 		t.Fatalf("holding the message pending its verdict: %v", err)
 	}
 	id := seedPendingDisposition(t, e, email, "waiting.example", activity)
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): capture.KindContact}}
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{id.String(): capture.KindContact}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {

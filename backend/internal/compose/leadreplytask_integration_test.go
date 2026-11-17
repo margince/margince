@@ -43,6 +43,7 @@ func (l *leadMailEnv) qualifyAsks(t *testing.T, lead ids.LeadID, owner ids.UUID)
 }
 
 func TestAReplyFromALeadAsksItsOwnerToQualifyThemOnce(t *testing.T) {
+	t.Parallel()
 	l := setupLeadMail(t)
 	const address = "lena@prospect.example"
 	lead := l.ownedLead(t, address, l.e.Rep2)
@@ -100,6 +101,7 @@ func TestAReplyFromALeadAsksItsOwnerToQualifyThemOnce(t *testing.T) {
 // One meeting held with two leads asks each lead's owner to qualify their own
 // lead, so neither lead loses its ask to the other.
 func TestAMeetingHeldWithTwoLeadsAsksAboutEach(t *testing.T) {
+	t.Parallel()
 	l := setupLeadMail(t)
 	first := l.ownedLead(t, "lena@prospect.example", l.e.Rep2)
 	second := l.ownedLead(t, "mira@prospect.example", l.e.Rep2)
@@ -121,6 +123,7 @@ func TestAMeetingHeldWithTwoLeadsAsksAboutEach(t *testing.T) {
 // An older qualify task, keyed on the arrival alone, still counts for its lead.
 // Holding the meeting files no second task for that lead, and one for the other.
 func TestAnOlderQualifyTaskStillCountsForItsLeadAndArrival(t *testing.T) {
+	t.Parallel()
 	l := setupLeadMail(t)
 	first, second := l.ownedLead(t, "lena@prospect.example", l.e.Rep2), l.ownedLead(t, "mira@prospect.example", l.e.Rep2)
 	at, held, writer := l.at.Add(-time.Hour), meetingoutcome.Held, newLeadWorkTasks(InstallationDB(l.e.Pool), slog.Default())

@@ -22,6 +22,7 @@ import (
 )
 
 func TestTwoCorrectionReconcilersShareOneRiverJob(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
 	contexts := make([]context.Context, 2)
@@ -90,6 +91,7 @@ func TestTwoCorrectionReconcilersShareOneRiverJob(t *testing.T) {
 }
 
 func TestMissingInstallationKeepsAnErrorContext(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.WsExec(t, `DELETE FROM workspace`)
 	ctx, engine, err := dataTaskJobEngine(t.Context(), e.Pool)
@@ -102,6 +104,7 @@ func TestMissingInstallationKeepsAnErrorContext(t *testing.T) {
 }
 
 func TestOwnerCorrectionCommandsEstimateAndEnqueueWithoutExecuting(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
 	ctx, engine, err := dataTaskJobEngine(t.Context(), e.Pool)
@@ -145,6 +148,7 @@ func TestOwnerCorrectionCommandsEstimateAndEnqueueWithoutExecuting(t *testing.T)
 }
 
 func TestCorrectionWorkerCommitsFailureCapAndNoticeFromJobContext(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx, engine, err := dataTaskJobEngine(t.Context(), e.Pool)
 	if err != nil {
@@ -169,6 +173,7 @@ func TestCorrectionWorkerCommitsFailureCapAndNoticeFromJobContext(t *testing.T) 
 }
 
 func TestReconciliationQueuesCompletedCorrectionsAtANewerCodeVersion(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
 	ctx, engine, err := dataTaskJobEngine(t.Context(), e.Pool)

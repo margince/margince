@@ -64,6 +64,7 @@ func seedGraphContact(t *testing.T, e *integration.Env, name string) ids.UUID {
 }
 
 func TestTheBackfillWorkerRecoversHistoryAndThenStops(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := seedGraphContact(t, e, "Legacy Contact")
 	legacyInteraction(t, e, contact, "human:"+e.Rep1.String())
@@ -106,6 +107,7 @@ func TestTheBackfillWorkerRecoversHistoryAndThenStops(t *testing.T) {
 }
 
 func TestTheReconcileWorkerRebuildsTheProjection(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := seedGraphContact(t, e, "Reconciled Contact")
 	activityID := legacyInteraction(t, e, contact, "human:"+e.Rep1.String())

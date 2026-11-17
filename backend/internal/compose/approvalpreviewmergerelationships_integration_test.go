@@ -19,6 +19,7 @@ import (
 )
 
 func TestContactMergePreviewMatchesRelationshipRetirementAndPrimaryChanges(t *testing.T) {
+	t.Parallel()
 	for _, occupied := range []bool{false, true} {
 		t.Run(fmt.Sprintf("primary=%t", occupied), func(t *testing.T) {
 			e := integration.Setup(t)
@@ -112,6 +113,7 @@ func TestContactMergePreviewMatchesRelationshipRetirementAndPrimaryChanges(t *te
 }
 
 func TestCompanyMergePreviewMatchesBothRelationshipEndpoints(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	perms := integration.AdminPerms
 	perms.Objects = maps.Clone(perms.Objects)

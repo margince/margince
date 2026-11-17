@@ -13,6 +13,7 @@ import (
 // The previous morning is the last claim before now that no failure followed.
 // It sets where every morning's changes block starts.
 func TestLastMailedBeforeSkipsAFailedClaimAndOneNotYetMade(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 	first, second := briefClock, briefClock.AddDate(0, 0, 1)
 	claim := func(at time.Time) BriefRun {

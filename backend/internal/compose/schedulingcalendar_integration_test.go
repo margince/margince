@@ -18,6 +18,7 @@ import (
 
 // A host with no connection reads as a refused one at every door of the seam.
 func TestSchedulingCalendarWithoutAConnectionReadsAsRefused(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	calendar := newSchedulingCalendar(e.Pool, capture.NewRegistry(e.DB(), nil, nil, nil))
 	host := ids.From[ids.UserKind](e.AdminUser)

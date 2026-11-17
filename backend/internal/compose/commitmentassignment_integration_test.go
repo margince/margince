@@ -18,6 +18,7 @@ import (
 )
 
 func TestCommitmentReadsMatchTheTaskWritersAssigneeRule(t *testing.T) {
+	t.Parallel()
 	for _, state := range []string{"active", "invited", "deactivated", "archived", "agent"} {
 		t.Run(state, func(t *testing.T) {
 			e := setupTranscript(t)

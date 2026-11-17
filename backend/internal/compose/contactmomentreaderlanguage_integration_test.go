@@ -23,6 +23,7 @@ import (
 // The headline is the reader's language, not the installation's, and the
 // language never reaches the fingerprint a dismissal is keyed on.
 func TestAContactMomentIsWrittenInTheReadersLanguage(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := seedLinkedContact(t, e, "sprache@kunde.example")
 	logTaskFor(t, e, contact, "Send the signed contract", new(clocktest.Now(t).Add(24*time.Hour)))

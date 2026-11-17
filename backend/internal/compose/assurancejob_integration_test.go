@@ -117,6 +117,7 @@ func (e *assuranceJobEnv) sweep(t *testing.T) error {
 // raises every exception it can see at once and mints a task per faulted deal,
 // and a queue that arrives on the calendar's schedule is one nobody chose.
 func TestTheNightlySweepSkipsAWorkspaceNobodyHasStarted(t *testing.T) {
+	t.Parallel()
 	e := setupAssuranceJob(t)
 
 	if err := e.sweep(t); err != nil {
@@ -136,6 +137,7 @@ func TestTheNightlySweepSkipsAWorkspaceNobodyHasStarted(t *testing.T) {
 // and nothing asserts. An installation already being checked must never enter
 // that branch.
 func TestTheNightlySweepChecksAWorkspaceSomebodyStarted(t *testing.T) {
+	t.Parallel()
 	e := setupAssuranceJob(t)
 
 	if err := e.run(t); err != nil {
@@ -163,6 +165,7 @@ func TestTheNightlySweepChecksAWorkspaceSomebodyStarted(t *testing.T) {
 
 // A pass somebody asked for names them on the run; the nightly one names nobody.
 func TestTheRequestedPassRecordsWhoAskedAndTheSweepDoesNot(t *testing.T) {
+	t.Parallel()
 	e := setupAssuranceJob(t)
 
 	if err := e.run(t); err != nil {
@@ -213,6 +216,7 @@ func (e *assuranceJobEnv) latestRun(t *testing.T) (assurance.Run, error) {
 // whole ticket is about — asserted here so the case below is a change rather
 // than a coincidence.
 func TestTheForecastReviewHasNothingToReadUntilTheCheckHasRun(t *testing.T) {
+	t.Parallel()
 	e := setupAssuranceJob(t)
 
 	if _, err := e.latestRun(t); !errors.Is(err, apperrors.ErrNotFound) {
@@ -223,6 +227,7 @@ func TestTheForecastReviewHasNothingToReadUntilTheCheckHasRun(t *testing.T) {
 }
 
 func TestTheNightlyCheckLeavesARunTheForecastReviewCanRead(t *testing.T) {
+	t.Parallel()
 	e := setupAssuranceJob(t)
 
 	if err := e.run(t); err != nil {
@@ -254,6 +259,7 @@ func TestTheNightlyCheckLeavesARunTheForecastReviewCanRead(t *testing.T) {
 // each pass is a fresh answer and the reader takes the newest — so the second
 // run must succeed and must be the one the tab then reads.
 func TestASecondCheckSupersedesTheFirstRatherThanFailing(t *testing.T) {
+	t.Parallel()
 	e := setupAssuranceJob(t)
 
 	if err := e.run(t); err != nil {

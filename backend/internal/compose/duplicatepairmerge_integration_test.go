@@ -48,6 +48,7 @@ func (c *caseEnv) mergedBy(t *testing.T, rep ids.UUID, records ...ids.UUID) int 
 // Each owner of a filed pair may give their own record away into the other's.
 // Neither may archive the colleague's record into their own.
 func TestEachOwnerOfAFiledPairMergesTheirRecordIntoTheColleagues(t *testing.T) {
+	t.Parallel()
 	c := setupCases(t)
 	for _, merger := range []ids.UUID{c.e.Rep1, c.e.Rep2} {
 		pair := c.seedCase(t, c.e.Rep1, c.e.Rep2)
@@ -84,6 +85,7 @@ func TestEachOwnerOfAFiledPairMergesTheirRecordIntoTheColleagues(t *testing.T) {
 // A rep who makes their own contact look like a colleague's gets a filed pair.
 // Through it they may only give their own contact away.
 func TestAManufacturedCollisionCannotArchiveTheColleaguesRecord(t *testing.T) {
+	t.Parallel()
 	c := setupCases(t)
 	rep := c.rep(c.e.Rep1)
 	newContact := func(ctx context.Context, owner ids.UUID) ids.UUID {
@@ -111,6 +113,7 @@ func TestAManufacturedCollisionCannotArchiveTheColleaguesRecord(t *testing.T) {
 // A pair re-homed onto a survivor by an earlier merge is open between two
 // records nobody compared. It still only lets a rep give their own away.
 func TestARehomedPairCannotArchiveTheColleaguesRecord(t *testing.T) {
+	t.Parallel()
 	c := setupCases(t)
 	newContact := func(name string, owner ids.UUID, phones ...string) ids.UUID {
 		user := ids.From[ids.UserKind](owner)
@@ -145,6 +148,7 @@ func isMergeDirection(err error) bool {
 }
 
 func TestTheOwnerOfEitherHalfMergesThroughTheQueueAndTheCase(t *testing.T) {
+	t.Parallel()
 	c := setupCases(t)
 	queued := c.seedCase(t, c.e.Rep1, c.e.Rep2)
 	listed, _, err := c.store.ListDedupeCandidates(c.rep(c.e.Rep2), contacts.DedupeQueueInput{
@@ -180,6 +184,7 @@ func TestTheOwnerOfEitherHalfMergesThroughTheQueueAndTheCase(t *testing.T) {
 }
 
 func TestAMergeOutsideAFiledPairStillNeedsBothRecords(t *testing.T) {
+	t.Parallel()
 	c := setupCases(t)
 	rep := c.rep(c.e.Rep1)
 
@@ -239,6 +244,7 @@ func (c *caseEnv) previewer(user ids.UUID) context.Context {
 }
 
 func TestTheOwnerOfEitherHalfMergesAFiledCompanyPair(t *testing.T) {
+	t.Parallel()
 	c := setupCases(t)
 	perms := caseRepPerms
 	perms.Objects = map[string]principal.ObjectGrant{"company": {Create: true, Read: true, Update: true}}

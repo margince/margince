@@ -52,6 +52,7 @@ func ownDealsRep(e *integration.Env) context.Context {
 // A custom field adds no row scope of its own and takes none away. Grouped by
 // territory, a rep counts the same deals as grouped by a built-in field.
 func TestACustomGroupingCoversTheSamePopulationAsABuiltInOne(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	fixture := territoryDeals(t, e)
 	optIn(t, e, fixture.catalog, fixture.field)
@@ -75,6 +76,7 @@ func TestACustomGroupingCoversTheSamePopulationAsABuiltInOne(t *testing.T) {
 // The records behind a territory's count are the ones the count was taken
 // over, no more and no fewer.
 func TestTheRecordsBehindACustomGroupAreTheOnesItCounts(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	fixture := territoryDeals(t, e)
 	optIn(t, e, fixture.catalog, fixture.field)
@@ -112,6 +114,7 @@ func totalCount(t *testing.T, answer AnalyticsAnswer) int {
 // A filter on a custom field that leaves out fewer deals than the floor is
 // refused. Set beside the unfiltered answer, it would describe those deals.
 func TestACustomFieldFilterThatSeparatesOutTooFewDealsIsRefused(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	fixture := territoryDeals(t, e)
 	optIn(t, e, fixture.catalog, fixture.field)
@@ -138,6 +141,7 @@ func TestACustomFieldFilterThatSeparatesOutTooFewDealsIsRefused(t *testing.T) {
 // tools/list keeps offering the schema to a role without it. Naming the field
 // outright still asks it recorded, and refuses.
 func TestAnOptionalAnalyticsGrantNarrowsTheSchemaWithoutHidingTheTool(t *testing.T) {
+	t.Parallel()
 	specs := map[string]reportSpec{"projects-by-phase": projectsByPhaseSpec()}
 	ctx, recorded := auth.RecordChecksForTest(seatWith("project", "deal"))
 
@@ -176,6 +180,7 @@ func TestAnOptionalAnalyticsGrantNarrowsTheSchemaWithoutHidingTheTool(t *testing
 // One any-of check is recorded, so a role that reads no population at all is
 // still not offered it.
 func TestAnUnreadablePopulationNarrowsTheSchemaWithoutHidingTheTool(t *testing.T) {
+	t.Parallel()
 	ctx, recorded := auth.RecordChecksForTest(seatWith("deal"))
 	schema := AnalyticsSchemaFor(ctx)
 	if len(schema.Entities) == 0 {

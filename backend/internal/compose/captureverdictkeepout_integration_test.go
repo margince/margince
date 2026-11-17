@@ -39,6 +39,7 @@ func sweepingEngine(e *integration.Env) *CounterpartyVerdictEngine {
 }
 
 func TestAKeepOutReachesMailTheLedgerNeverJudged(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	// No seedPendingDisposition: this sender has no ledger row at all, which is
 	// the whole case. An ordinary message, not a bulk one — a human's decision
@@ -77,6 +78,7 @@ func TestAKeepOutReachesMailTheLedgerNeverJudged(t *testing.T) {
 // colleague's record, and it is the SAME rule the machine arm is held to — so
 // the case that would make this dangerous is the one that must still be refused.
 func TestAKeepOutStillCannotReachMailTheWorkspaceCorrespondsWith(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	activityID := seedCapturedMail(t, e, "cfo@bigcorp.example", "re: our contract renewal")
 	seedOutboundMail(t, e, "cfo@bigcorp.example", "our proposal")
@@ -97,6 +99,7 @@ func TestAKeepOutStillCannotReachMailTheWorkspaceCorrespondsWith(t *testing.T) {
 // A `business` decision is not a keep_out, and must move no mail. Without this
 // the two cases above would pass on a corpus that read every override.
 func TestABusinessDecisionMovesNoMail(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	activityID := seedCapturedMail(t, e, "dana.olsen@partner.example", "quarterly note")
 	seedSenderOverride(t, e, e.Rep1, "dana.olsen@partner.example", capture.OverrideBusiness)

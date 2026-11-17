@@ -27,6 +27,7 @@ import (
 )
 
 func TestNoticeReconciliationKeepsPendingAndRetractsWithdrawnApprovals(t *testing.T) {
+	t.Parallel()
 	a := newApprovalNotifyEnv(t)
 	a.grantRole(t, a.e.AdminUser)
 	id, staged := a.stageCorrection(t)
@@ -78,6 +79,7 @@ func assertReconciledHomeNotices(t *testing.T, a approvalNotifyEnv, want int) {
 }
 
 func TestNoticeReconciliationResumesPastAPageOfPendingDecisions(t *testing.T) {
+	t.Parallel()
 	a := newApprovalNotifyEnv(t)
 	integration.ApplyRiverSchema(t)
 	ctx := principal.SystemActing(a.e.Admin(), approvalNoticeRetractActor)
@@ -175,6 +177,7 @@ func runNoticeReconcileJob(t *testing.T, a approvalNotifyEnv, row *rivertype.Job
 }
 
 func TestNotificationDeliveryWaitsForWithdrawalBeforeCopyingItsSummary(t *testing.T) {
+	t.Parallel()
 	a := newApprovalNotifyEnv(t)
 	a.grantRole(t, a.e.AdminUser)
 	id, staged := a.stageCorrection(t)
@@ -208,6 +211,7 @@ func TestNotificationDeliveryWaitsForWithdrawalBeforeCopyingItsSummary(t *testin
 }
 
 func TestReconciliationPreservesPrivatePendingNoticesWithoutInventingADecider(t *testing.T) {
+	t.Parallel()
 	a := newApprovalNotifyEnv(t)
 	_, staged := a.stage(a.proposerCtx(a.e.Rep1), t, approvals.StageInput{
 		Kind: approvals.KindVolumeRelease, ProposedChange: json.RawMessage(`{"passport_label":"Research"}`),
@@ -236,6 +240,7 @@ func TestReconciliationPreservesPrivatePendingNoticesWithoutInventingADecider(t 
 // else it was announced to. That is the shape a question staged for a fallback
 // colleague left behind: the notice went to one member, the payload names another.
 func TestNoticeReconciliationRetractsASenderQuestionAnnouncedToAnotherMember(t *testing.T) {
+	t.Parallel()
 	a := newApprovalNotifyEnv(t)
 	key := "senderdecider-" + a.e.Rep1.String()
 	a.e.WsExec(t, `INSERT INTO role (key, name, permissions) VALUES ($1, 'Sender decider', $2::jsonb)`, key,
@@ -271,6 +276,7 @@ func TestNoticeReconciliationRetractsASenderQuestionAnnouncedToAnotherMember(t *
 // A pending approval announced to everybody who could decide it, as it was
 // before each request named one decider, keeps only its decider's copy.
 func TestNoticeReconciliationTakesBackAPendingApprovalsCopyFromAMemberItIsNotFor(t *testing.T) {
+	t.Parallel()
 	a := newApprovalNotifyEnv(t)
 	a.grantRole(t, a.e.AdminUser)
 	id, staged := a.stageCorrection(t)

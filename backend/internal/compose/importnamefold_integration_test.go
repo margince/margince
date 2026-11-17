@@ -30,6 +30,7 @@ import (
 )
 
 func TestTheImportNameFoldAgreesInBothLanguages(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	names := []struct{ what, name string }{
 		{"a plain name", "Terralogic"},

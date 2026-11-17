@@ -185,6 +185,7 @@ func (f *reportingBusinessFixture) selection() crmcontracts.ReportingSelection {
 }
 
 func TestReportingBusinessFixtureReconcilesEveryChartWithItsEvidence(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	selection := f.selection()
 	result, err := f.service.Evaluate(f.human, selection)
@@ -245,6 +246,7 @@ func TestReportingBusinessFixtureReconcilesEveryChartWithItsEvidence(t *testing.
 }
 
 func TestReportingPresetsAnswerEveryMetricTheyAskOnAPopulatedFixture(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	actor, ok := principal.Actor(f.human)
 	if !ok {

@@ -88,6 +88,7 @@ func runThroughEngine(ctx context.Context, t *testing.T, e *integration.Env, ste
 }
 
 func TestEveryReviewerIsToldOnceAndTheBatchCommits(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	grantAdmin(t, e, e.AdminUser, e.Rep1)
 	unproven, audit := emptiedApproval(t, e, "company", e.SeedCompany(t, "Unproven target", nil))
@@ -108,6 +109,7 @@ func TestEveryReviewerIsToldOnceAndTheBatchCommits(t *testing.T) {
 }
 
 func TestALinkProvedAfterTheCorrectionStepIsCorrectedByTheReviewStep(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	grantAdmin(t, e, e.AdminUser)
 	subject := e.SeedContact(t, "Erased Subject", nil)
@@ -129,6 +131,7 @@ func TestALinkProvedAfterTheCorrectionStepIsCorrectedByTheReviewStep(t *testing.
 }
 
 func TestNoReviewerRefusesTheBatchAndWritesNothing(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.WsExec(t, `DELETE FROM role_assignment ra USING role r WHERE ra.role_id=r.id AND r.key IN ('admin','ops')`)
 	unproven, _ := emptiedApproval(t, e, "company", e.SeedCompany(t, "Unproven target", nil))

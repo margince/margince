@@ -24,6 +24,7 @@ import (
 )
 
 func TestAQueuedOwnerAnnouncementRechecksTheRecipientsRole(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	manager := memberManagerFor(t, e.Env)
 	deal, id := e.stagedFollowUp(t, "A queued request")
@@ -45,6 +46,7 @@ func TestAQueuedOwnerAnnouncementRechecksTheRecipientsRole(t *testing.T) {
 }
 
 func TestARolledBackOwnerChangeQueuesNoAnnouncement(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	memberManagerFor(t, e.Env)
 	deal, id := e.stagedFollowUp(t, "An owner change rolled back")
@@ -79,6 +81,7 @@ func TestARolledBackOwnerChangeQueuesNoAnnouncement(t *testing.T) {
 }
 
 func TestARunningAnnouncementDoesNotAbsorbALaterReturnToTheSameOwner(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	memberManagerFor(t, e.Env)
 	deal, id := e.stagedFollowUp(t, "Return while an announcement completes")
@@ -130,6 +133,7 @@ func TestARunningAnnouncementDoesNotAbsorbALaterReturnToTheSameOwner(t *testing.
 }
 
 func TestAnOwnerAnnouncementChecksExpiryAfterWaitingForTheRequest(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	memberManagerFor(t, e.Env)
 	deal, id := e.stagedFollowUp(t, "Expires during the announcement wait")
@@ -164,6 +168,7 @@ func TestAnOwnerAnnouncementChecksExpiryAfterWaitingForTheRequest(t *testing.T) 
 }
 
 func TestACommittedOwnerChangeQueuesTheAnnouncementInTheDealTransaction(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	memberManagerFor(t, e.Env)
 	deal, id := e.stagedFollowUp(t, "A committed owner change")
@@ -188,6 +193,7 @@ func TestACommittedOwnerChangeQueuesTheAnnouncementInTheDealTransaction(t *testi
 }
 
 func TestAnOwnerAnnouncementHoldsAuthorityWhileWaitingForTheRequest(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	manager := memberManagerFor(t, e.Env)
 	deal, id := e.stagedFollowUp(t, "Authority remains held while announcing")
@@ -220,6 +226,7 @@ func TestAnOwnerAnnouncementHoldsAuthorityWhileWaitingForTheRequest(t *testing.T
 }
 
 func TestASendReservationYieldsToTheDealWriterWithoutHoldingItsDecision(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	memberManagerFor(t, e.Env)
 	deal, id := e.stagedFollowUp(t, "A writer has priority over a send")

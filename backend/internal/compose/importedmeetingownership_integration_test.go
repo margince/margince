@@ -36,6 +36,7 @@ func seedImporterDefaultMeeting(t *testing.T, e *integration.Env, at time.Time) 
 }
 
 func TestImporterDefaultsDoNotAssignMeetingsOrHistoricalCredit(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ahead := seedImporterDefaultMeeting(t, e, laneDay.Add(time.Hour))
 	past := seedImporterDefaultMeeting(t, e, laneDay.Add(-time.Hour))
@@ -101,6 +102,7 @@ func TestImporterDefaultsDoNotAssignMeetingsOrHistoricalCredit(t *testing.T) {
 }
 
 func TestExplicitAndSourceAttributedImportedHostsRemainKnown(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	importer := e.As(e.Rep1, nil, integration.AdminPerms)
 	host := ids.From[ids.UserKind](e.Rep1)
@@ -135,6 +137,7 @@ func TestExplicitAndSourceAttributedImportedHostsRemainKnown(t *testing.T) {
 }
 
 func TestSnapshotsAndNonCreationEvidenceDoNotDeclareAMeetingHost(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	for _, action := range []string{"restore", "update"} {
 		id := seedImporterDefaultMeeting(t, e, laneDay.Add(time.Hour))

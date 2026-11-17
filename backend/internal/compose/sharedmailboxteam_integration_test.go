@@ -46,6 +46,7 @@ func agentOfAdmin(e *integration.Env) context.Context {
 }
 
 func TestAnAgentCannotInviteAMemberOntoATeamThatReadsASharedMailbox(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	service := readerTeamService(t, e)
 	company := contacts.NewStore(e.DB()).WithInstallationRenamer(installationRenamer(e.Pool))
@@ -62,6 +63,7 @@ func TestAnAgentCannotInviteAMemberOntoATeamThatReadsASharedMailbox(t *testing.T
 }
 
 func TestFoldingAMailCopyCarriesTheSharedMailboxsImportRow(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	kept, duplicate := ids.NewV7(), ids.NewV7()
 	for _, id := range []ids.UUID{kept, duplicate} {

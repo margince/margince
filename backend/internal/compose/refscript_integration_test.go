@@ -15,7 +15,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"regexp"
 	"strings"
 
@@ -59,8 +58,8 @@ var recordUUID = regexp.MustCompile(`[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f
 
 // refOfRecord is the ref req names record id by, or "" when req does not show
 // the record.
-func refOfRecord(ctx context.Context, req model.Request, by shownBy, id string) (string, error) {
-	text, err := shownText(ctx, by.query, id)
+func refOfRecord(ctx context.Context, ownerDSN string, req model.Request, by shownBy, id string) (string, error) {
+	text, err := shownText(ctx, ownerDSN, by.query, id)
 	if err != nil {
 		return "", err
 	}
@@ -74,10 +73,10 @@ func refOfRecord(ctx context.Context, req model.Request, by shownBy, id string) 
 }
 
 // recordsByRef maps each ref req shows to the candidate record it names.
-func recordsByRef(ctx context.Context, req model.Request, by shownBy, candidates []string) (map[string]string, error) {
+func recordsByRef(ctx context.Context, ownerDSN string, req model.Request, by shownBy, candidates []string) (map[string]string, error) {
 	out := map[string]string{}
 	for _, id := range candidates {
-		ref, err := refOfRecord(ctx, req, by, id)
+		ref, err := refOfRecord(ctx, ownerDSN, req, by, id)
 		if err != nil {
 			return nil, err
 		}
@@ -119,10 +118,10 @@ func refHolding(req model.Request, key, text string) string {
 	return ""
 }
 
-// shownText reads one record's shown text over the owner connection. The
-// suites run one at a time on a reset database, so the row is this test's.
-func shownText(ctx context.Context, query, id string) (text string, err error) {
-	conn, err := pgx.Connect(ctx, os.Getenv("MARGINCE_TEST_DSN"))
+// shownText reads one record's shown text over an owner connection to the
+// test's own database, so the row is this test's.
+func shownText(ctx context.Context, ownerDSN, query, id string) (text string, err error) {
+	conn, err := pgx.Connect(ctx, ownerDSN)
 	if err != nil {
 		return "", fmt.Errorf("connecting to read what a record shows: %w", err)
 	}
@@ -138,8 +137,9 @@ func shownText(ctx context.Context, query, id string) (text string, err error) {
 // the ref the request shows that record by. An id the request does not show
 // is left as written, and the site's parser refuses it as it would a model's.
 type inRefs struct {
-	inner completer
-	shown []shownBy
+	inner    completer
+	shown    []shownBy
+	ownerDSN string
 }
 
 func (r inRefs) Complete(ctx context.Context, req model.Request) (model.Response, error) {
@@ -150,7 +150,7 @@ func (r inRefs) Complete(ctx context.Context, req model.Request) (model.Response
 	var failed error
 	resp.Text = recordUUID.ReplaceAllStringFunc(resp.Text, func(id string) string {
 		for _, by := range r.shown {
-			ref, err := refOfRecord(ctx, req, by, id)
+			ref, err := refOfRecord(ctx, r.ownerDSN, req, by, id)
 			if err != nil {
 				failed = err
 			}

@@ -313,6 +313,7 @@ func (e *reconcileEnv) dealVersion(t *testing.T, dealID ids.UUID) int64 {
 // --- filing: a real touch with no next step becomes the owner's task ---
 
 func TestFollowUpReconcileFilesTheTaskOnTheOwnersList(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Touched, no next step", e.pipeline, e.open, &e.Rep1)
 	call := e.seedInteraction(t, deal, "call", "Discovery call", 1)
@@ -353,6 +354,7 @@ func TestFollowUpReconcileFilesTheTaskOnTheOwnersList(t *testing.T) {
 // --- suppression: an existing next step, no real touch, and dedupe ---
 
 func TestFollowUpReconcileSuppressesWhenNoDiscrepancy(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 
 	// A recent call but an OPEN task already queued: the rep has a next
@@ -387,6 +389,7 @@ func TestFollowUpReconcileSuppressesWhenNoDiscrepancy(t *testing.T) {
 // meeting ALONE would prove nothing — it falls outside the lookback's lower
 // bound too, so the sweep would stay silent even with the bug present.
 func TestAMeetingBookedForTomorrowIsNotEvidenceOfAMissedNextStep(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Meeting booked ahead", e.pipeline, e.open, &e.Rep1)
 	e.seedInteraction(t, deal, "call", "Discovery call", 3)
@@ -410,6 +413,7 @@ func TestAMeetingBookedForTomorrowIsNotEvidenceOfAMissedNextStep(t *testing.T) {
 // An imported meeting nobody here hosts or attends is history, not a plan: it
 // does not stand in for the account's next step.
 func TestAnImportedMeetingNobodyTakesPartInIsNotANextStep(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Call then an imported meeting", e.pipeline, e.open, &e.Rep1)
 	e.seedInteraction(t, deal, "call", "Discovery call", 3)
@@ -428,6 +432,7 @@ func TestAnImportedMeetingNobodyTakesPartInIsNotANextStep(t *testing.T) {
 // meeting answers it, because the rep already has the thing the proposal would
 // ask them to arrange.
 func TestABookedMeetingCountsAsThePlannedNextStep(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Call then a booked meeting", e.pipeline, e.open, &e.Rep1)
 	e.seedInteraction(t, deal, "call", "Discovery call", 3)
@@ -458,6 +463,7 @@ func TestABookedMeetingCountsAsThePlannedNextStep(t *testing.T) {
 // A meeting that will never happen is not a next step. Cancelled and no-show
 // both mean the calendar is empty again, so the deal is back to owing one.
 func TestACancelledFutureMeetingIsNotANextStep(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Meeting called off", e.pipeline, e.open, &e.Rep1)
 	e.seedInteraction(t, deal, "call", "Discovery call", 3)
@@ -490,6 +496,7 @@ func TestACancelledFutureMeetingIsNotANextStep(t *testing.T) {
 // A meeting still in progress is not yet evidence either: it started, but "over"
 // means ended, so the conversation cannot have left anything behind yet.
 func TestAMeetingStillRunningIsNotYetEvidence(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Meeting under way", e.pipeline, e.open, &e.Rep1)
 	e.seedInteraction(t, deal, "call", "Earlier call", 3)
@@ -513,6 +520,7 @@ func TestAMeetingStillRunningIsNotYetEvidence(t *testing.T) {
 // that status means the meeting happened, so a deal whose only forward-dated
 // meeting carries it still owes a next step.
 func TestAFutureMeetingAlreadyMarkedHeldIsNotAPlan(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Settled ahead of time", e.pipeline, e.open, &e.Rep1)
 	e.seedInteraction(t, deal, "call", "Discovery call", 3)
@@ -529,6 +537,7 @@ func TestAFutureMeetingAlreadyMarkedHeldIsNotAPlan(t *testing.T) {
 
 // The task lands on the deal owner's list, driven through the REAL reconciler.
 func TestTheFollowUpTaskIsAssignedToTheDealOwner(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Owned by a rep", e.pipeline, e.open, &e.Rep1)
 	e.seedInteraction(t, deal, "call", "Discovery call", 3)
@@ -550,6 +559,7 @@ func TestTheFollowUpTaskIsAssignedToTheDealOwner(t *testing.T) {
 
 // A deal nobody owns gets no follow-up: nobody is there to do it.
 func TestAnUnownedDealGetsNoFollowUpTask(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Nobody owns this", e.pipeline, e.open, nil)
 	// CreateDeal falls back to the ACTING principal when handed no owner
@@ -576,6 +586,7 @@ func TestAnUnownedDealGetsNoFollowUpTask(t *testing.T) {
 // disagreeing: the at-risk lane reporting "no next step" about a deal the
 // overnight sweep had just called planned.
 func TestTheSlippingLaneReadsABookedMeetingAsANextStep(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	booked := e.SeedDeal(t, "Has a meeting booked", e.pipeline, e.open, &e.Rep1)
 	e.seedMeeting(t, booked, "Next Thursday", -72, 3600, "booked")
@@ -604,6 +615,7 @@ func TestTheSlippingLaneReadsABookedMeetingAsANextStep(t *testing.T) {
 }
 
 func TestFollowUpReconcileDoesNotStackAcrossPasses(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Reconciled twice", e.pipeline, e.open, &e.Rep1)
 	e.seedInteraction(t, deal, "call", "Call", 1)
@@ -621,6 +633,7 @@ func TestFollowUpReconcileDoesNotStackAcrossPasses(t *testing.T) {
 // --- a proposal staged before tasks were filed directly ---
 
 func TestFollowUpConfirmCreatesTheTaskExactlyOnce(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Confirm me", e.pipeline, e.open, &e.Rep1)
 	call := e.seedInteraction(t, deal, "call", "Discovery", 1)
@@ -666,6 +679,7 @@ func TestFollowUpConfirmCreatesTheTaskExactlyOnce(t *testing.T) {
 // edit: the decision commits first, so the refusal arrives as an approved
 // proposal whose task was never created.
 func TestADealEditDoesNotCancelAWaitingFollowUp(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Edited while the question waited", e.pipeline, e.open, &e.Rep1)
 	call := e.seedInteraction(t, deal, "call", "Discovery", 1)
@@ -695,6 +709,7 @@ func TestADealEditDoesNotCancelAWaitingFollowUp(t *testing.T) {
 }
 
 func TestFollowUpRejectWritesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Reject me", e.pipeline, e.open, &e.Rep1)
 	call := e.seedInteraction(t, deal, "call", "Sync", 1)
@@ -720,6 +735,7 @@ func TestFollowUpRejectWritesNothing(t *testing.T) {
 // A rep's answer to a proposal staged before tasks were filed directly still
 // stands: the next pass over the same interaction writes no task.
 func TestALegacyFollowUpTheRepAnsweredIsNotFiledAgain(t *testing.T) {
+	t.Parallel()
 	for name, approve := range map[string]bool{"declined": false, "approved and done": true} {
 		t.Run(name, func(t *testing.T) {
 			e := setupReconcile(t)
@@ -752,6 +768,7 @@ func TestALegacyFollowUpTheRepAnsweredIsNotFiledAgain(t *testing.T) {
 // simply did not happen and nothing says so. A due date is the reachable case:
 // the card lets a human edit the payload, and the effect parses that date.
 func TestAnEditTheEffectCannotUseRefusesTheDecision(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Edited badly", e.pipeline, e.open, &e.Rep1)
 	call := e.seedInteraction(t, deal, "call", "Sync", 1)
@@ -796,6 +813,7 @@ func TestAnEditTheEffectCannotUseRefusesTheDecision(t *testing.T) {
 // would pass that test just as well, and would have quietly broken the one
 // thing the card exists for — a rep changing the date before saying yes.
 func TestAValidEditIsApprovedAndTheEffectUsesIt(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Edited well", e.pipeline, e.open, &e.Rep1)
 	call := e.seedInteraction(t, deal, "call", "Sync", 1)
@@ -824,6 +842,7 @@ func TestAValidEditIsApprovedAndTheEffectUsesIt(t *testing.T) {
 // A task the rep cleared is not written again: the next night's pass over
 // the same interaction gets the first task back instead.
 func TestAFollowUpTheRepClearedIsNotWrittenAgain(t *testing.T) {
+	t.Parallel()
 	for _, clear := range []string{"is_done = true, done_at = now()", "archived_at = now()"} {
 		t.Run(clear, func(t *testing.T) {
 			e := setupReconcile(t)
@@ -852,6 +871,7 @@ func TestAFollowUpTheRepClearedIsNotWrittenAgain(t *testing.T) {
 // A cleared task covers the conversation it answered, not the deal forever. A
 // later conversation that ends with no next step gets its own task.
 func TestANewConversationGetsANewFollowUpAfterTheLastWasDone(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Moved on", e.pipeline, e.open, &e.Rep1)
 	e.seedInteraction(t, deal, "call", "Discovery", 40)
@@ -875,6 +895,7 @@ func TestANewConversationGetsANewFollowUpAfterTheLastWasDone(t *testing.T) {
 // --- row scope: a proposal never leaks a deal the decider cannot see ---
 
 func TestFollowUpProposalRespectsRowScope(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Rep1's deal", e.pipeline, e.open, &e.Rep1)
 	call := e.seedInteraction(t, deal, "call", "Private call", 1)
@@ -904,6 +925,7 @@ func TestFollowUpProposalRespectsRowScope(t *testing.T) {
 // only call left a voicemail gets no proposal, and once a reached call lands,
 // the proposal is grounded on that one.
 func TestFollowUpReconcileGroundsOnlyOnACallThatReachedSomebody(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Rang, nobody there", e.pipeline, e.open, &e.Rep1)
 	voicemail := e.seedInteraction(t, deal, "call", "Rang the buyer", 2)

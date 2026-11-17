@@ -30,6 +30,7 @@ type incomingOriginal struct {
 }
 
 func TestErasureSeesTheDeliveryWhoseSubjectLockItWaitedFor(t *testing.T) {
+	t.Parallel()
 	for _, size := range []int{1, originalstore.InlineLimit} {
 		t.Run(map[bool]string{true: "external", false: "inline"}[size == originalstore.InlineLimit], func(t *testing.T) {
 			e := integration.Setup(t)

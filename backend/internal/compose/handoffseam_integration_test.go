@@ -86,6 +86,7 @@ func logProjectTask(ctx context.Context, t *testing.T, store *activities.Store, 
 }
 
 func TestTheHandoffShowsTheProjectAsItsPageDoes(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	scene := seedHandoffScene(t, e, 2)
 	admin := e.Admin()
@@ -127,6 +128,7 @@ func TestTheHandoffShowsTheProjectAsItsPageDoes(t *testing.T) {
 }
 
 func TestTheHandoffCutsEachListWhereThePageDoes(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	scene := seedHandoffScene(t, e, project360.SectionLimit+2)
 	facts, err := handoffReader(e.Pool)(e.Admin(), scene.project.UUID)
@@ -142,6 +144,7 @@ func TestTheHandoffCutsEachListWhereThePageDoes(t *testing.T) {
 // A caller who may read the project and not its contacts gets the seat without
 // a name, as the page gives it. The role is what a handover is judged on.
 func TestAHandoffWithoutTheContactGrantNamesNoSeatAndStillAnswers(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	scene := seedHandoffScene(t, e, 1)
 	reader := e.As(e.Rep1, nil, principal.Permissions{
@@ -165,6 +168,7 @@ func TestAHandoffWithoutTheContactGrantNamesNoSeatAndStillAnswers(t *testing.T) 
 
 // A section the caller holds no grant for is named, not returned empty.
 func TestAHandoffWithoutTheDealGrantNamesTheOmittedList(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	scene := seedHandoffScene(t, e, 1)
 	reader := e.As(e.Rep1, nil, principal.Permissions{

@@ -18,6 +18,7 @@ import (
 )
 
 func TestCompanySuggestionUsesBaseLanguageWithoutChangingEvidence(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := time.Date(2026, 9, 18, 12, 0, 0, 0, time.UTC)
 	company := e.SeedCompany(t, "Example Company", &e.Rep1)

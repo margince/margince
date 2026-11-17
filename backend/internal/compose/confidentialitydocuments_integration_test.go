@@ -52,6 +52,7 @@ func (b *salaryReadingBrain) Complete(_ context.Context, req model.Request) (mod
 }
 
 func TestAnInvoiceMailCarryingASalarySheetStaysWithItsParticipants(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	sheet, err := os.ReadFile("../platform/doctext/testdata/salaries.xlsx")
 	if err != nil {
@@ -95,6 +96,7 @@ func TestAnInvoiceMailCarryingASalarySheetStaysWithItsParticipants(t *testing.T)
 }
 
 func TestAnInvoiceMailWithoutTheSheetIsStillOpened(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	blob := blobstore.NewMemory()
 	mail := seedHeldThreadMail(t, e, "thread-invoice", "billing@vendor.example", "Invoice 1042")
@@ -115,6 +117,7 @@ func TestAnInvoiceMailWithoutTheSheetIsStillOpened(t *testing.T) {
 }
 
 func TestASalarySheetUnderANeutralNameIsStillRead(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	sheet, err := os.ReadFile("../platform/doctext/testdata/salaries.xlsx")
 	if err != nil {
@@ -135,6 +138,7 @@ func TestASalarySheetUnderANeutralNameIsStillRead(t *testing.T) {
 }
 
 func TestAThreadWithDocumentsPastTheCapDoesNotOpen(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	blob := blobstore.NewMemory()
 	mail := seedHeldThreadMail(t, e, "thread-many-files", "billing@vendor.example", "Reports")
@@ -236,6 +240,7 @@ Education
 }
 
 func TestAStaffInvoiceAndCostPlusSheetStayPrivateWhateverTheModelSays(t *testing.T) {
+	t.Parallel()
 	costPlus, err := os.ReadFile("../platform/doctext/testdata/costplus.xlsx")
 	if err != nil {
 		t.Fatalf("reading the cost-plus fixture: %v", err)
@@ -277,6 +282,7 @@ func TestAStaffInvoiceAndCostPlusSheetStayPrivateWhateverTheModelSays(t *testing
 // A scan under a plain name is still asked of the model, which keeps its kind
 // on the thread. A confident "ordinary" does not open it: nobody read the file.
 func TestAScanUnderAPlainNameIsAskedButNeverOpened(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	blob := blobstore.NewMemory()
 	mail := seedHeldThreadMail(t, e, "thread-scanned-map", "office@gradion.example", "Directions to the venue")
@@ -297,6 +303,7 @@ func TestAScanUnderAPlainNameIsAskedButNeverOpened(t *testing.T) {
 }
 
 func TestAnEarlierReplyCarryingASalarySheetIsNotOpenedWithItsThread(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	sheet, err := os.ReadFile("../platform/doctext/testdata/salaries.xlsx")
 	if err != nil {
@@ -337,6 +344,7 @@ func TestAnEarlierReplyCarryingASalarySheetIsNotOpenedWithItsThread(t *testing.T
 }
 
 func TestAnUnreadableImageCannotBeOpenedByAConfidentAnswer(t *testing.T) {
+	t.Parallel()
 	var picture bytes.Buffer
 	if err := png.Encode(&picture, image.NewRGBA(image.Rect(0, 0, 2, 2))); err != nil {
 		t.Fatal(err)

@@ -56,6 +56,7 @@ func (b *backfillWireEnv) fileOnProject(t *testing.T, kind string, project ids.P
 }
 
 func TestMorningDigestCarriesTheProjectsSection(t *testing.T) {
+	t.Parallel()
 	b := setupBackfillWire(t)
 	e := b.env
 	admin := e.Admin()
@@ -154,6 +155,7 @@ func (projectReadingAuthority) EffectiveRBAC(context.Context, ids.UUID, ids.UUID
 // connected user whose authority carries no project.read gets no section at
 // all, and the same build with the grant carries it.
 func TestMorningDigestOmitsTheProjectsSectionWithoutTheProjectGrant(t *testing.T) {
+	t.Parallel()
 	b := setupBackfillWire(t)
 	e := b.env
 	company := e.SeedCompany(t, "Digest Client", nil)

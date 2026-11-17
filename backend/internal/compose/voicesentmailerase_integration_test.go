@@ -77,6 +77,7 @@ func (l learnedMail) assertSampleErased(t *testing.T) {
 }
 
 func TestPurgingASentMailEmptiesTheVoiceSampleReadFromIt(t *testing.T) {
+	t.Parallel()
 	l := voiceLearnedFromMail(t)
 	retention := NewRetentionServiceFor(InstallationDB(l.env.e.Pool), nil, slog.Default())
 	if _, err := retention.PurgeActivities(l.env.e.Admin(), []ids.UUID{l.mail}, privacy.PurgeOwnerRule); err != nil {
@@ -86,6 +87,7 @@ func TestPurgingASentMailEmptiesTheVoiceSampleReadFromIt(t *testing.T) {
 }
 
 func TestErasingTheRecipientEmptiesTheVoiceSampleOfTheirMail(t *testing.T) {
+	t.Parallel()
 	l := voiceLearnedFromMail(t)
 	if err := ComposedEraser(l.env.e.Pool, nil, nil).EraseContact(l.env.e.Admin(), l.contact, "Subject requested erasure"); err != nil {
 		t.Fatalf("erasing the contact: %v", err)
@@ -105,6 +107,7 @@ func (l learnedMail) scrubbedSample(t *testing.T, sourceID ids.UUID) bool {
 // sample whose label survived its removal. The erasure audits only what it
 // emptied, so the removed sample gains no second record.
 func TestAnErasureScrubsASampleTheOwnerRemovedFirst(t *testing.T) {
+	t.Parallel()
 	l := voiceLearnedFromMail(t)
 	sourceID, err := ids.Parse(l.env.e.WsScalar(t,
 		`SELECT id FROM voice_corpus_source WHERE source_ref = $1`, "sent-mail:"+l.mail.String()))
@@ -167,6 +170,7 @@ func sampleEmptied(t *testing.T, o *owedEnv, sample ids.UUID) bool {
 // it was written to. Their erasure empties it, by full name or by whole
 // address. A sample greeting another Anna, or naming a longer address, stays.
 func TestErasingAContactEmptiesEverySampleThatNamesThem(t *testing.T) {
+	t.Parallel()
 	const (
 		byName      = "Hallo ANNA  BERG, danke für das Gespräch."
 		byAddress   = "Bitte an anna@customer.example weiterleiten."
@@ -201,6 +205,7 @@ func TestErasingAContactEmptiesEverySampleThatNamesThem(t *testing.T) {
 
 // A one-word name fits too many contacts, so only an address finds a sample.
 func TestASingleWordNameEmptiesNoSampleByName(t *testing.T) {
+	t.Parallel()
 	const greeting = "Viele Grüße an Madonna und danke für das Gespräch."
 	env, samples := pastedSamples(t, greeting)
 	o := &owedEnv{e: env.e, owner: env.e.Rep1, now: clocktest.Now(t)}

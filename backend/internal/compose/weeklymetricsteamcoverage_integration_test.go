@@ -20,6 +20,7 @@ import (
 // A team's figures sum its members' weeks, so one member's earlier record
 // measures the team's week even where another member holds none.
 func TestATeamFigureIsMeasuredFromAnyMembersFirstRecord(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	held := time.Date(2026, 5, 12, 10, 0, 0, 0, time.UTC)
 	logHeldMeeting(t, e, e.Rep2, held)
@@ -44,6 +45,7 @@ func TestATeamFigureIsMeasuredFromAnyMembersFirstRecord(t *testing.T) {
 // One member week that settled no plan leaves the summed commitments figure
 // unmeasured, so the team states nothing about it.
 func TestATeamStatesNoCommitmentsWhenAMemberWeekSettledNoPlan(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	planned := newWeeklyEngine(e.Pool)
 	unplanned := weekly.NewEngine(e.Pool, newTeammatesSeam(e.Pool)).WithNumeric(weeklyNumericEvaluator{})

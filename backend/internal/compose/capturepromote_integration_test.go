@@ -31,6 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -191,6 +192,7 @@ func runVerdict(t *testing.T, e *integration.Env, brain *scriptedVerdictBrain) {
 }
 
 func TestACorrespondedSenderIsJudgedAndBecomesTheWorkspacesContact(t *testing.T) {
+	t.Parallel()
 	// The defect this suite exists for. A sender the workspace writes to is
 	// created on sight by the T1 rung, and before this the ladder asked no
 	// question about them — so nothing ever promoted the row and the contact
@@ -218,7 +220,7 @@ func TestACorrespondedSenderIsJudgedAndBecomesTheWorkspacesContact(t *testing.T)
 			"so nothing will ever promote the row and the contact stays the mailbox owner's forever")
 	}
 
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindContact}}
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{dispositionID.String(): capture.KindContact}}
 	runVerdict(t, e, brain)
 
 	if visibility, _ = contactVisibility(t, e, sender); visibility != "workspace" {
@@ -228,6 +230,7 @@ func TestACorrespondedSenderIsJudgedAndBecomesTheWorkspacesContact(t *testing.T)
 }
 
 func TestAnAdvisorVerdictLeavesACorrespondedContactTheOwnersOwn(t *testing.T) {
+	t.Parallel()
 	// The other half, and the reason the fix routes through the verdict rather
 	// than simply creating workspace-scoped rows. A founder's lawyer is
 	// corresponded with exactly like a customer; publishing them announces that
@@ -242,7 +245,7 @@ func TestAnAdvisorVerdictLeavesACorrespondedContactTheOwnersOwn(t *testing.T) {
 	if !queued {
 		t.Fatal("no verdict was opened for a corresponded sender")
 	}
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindAdvisor}}
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{dispositionID.String(): capture.KindAdvisor}}
 	runVerdict(t, e, brain)
 
 	if visibility, _ := contactVisibility(t, e, sender); visibility != "owner" {
@@ -252,6 +255,7 @@ func TestAnAdvisorVerdictLeavesACorrespondedContactTheOwnersOwn(t *testing.T) {
 }
 
 func TestASettledSenderIsNotAskedAgain(t *testing.T) {
+	t.Parallel()
 	// The guard on the enqueue. Without it every later message from a judged
 	// sender re-opens the question: a paid model call to re-derive a decision
 	// that stands, and — for an advisor — a fresh chance to overturn an answer
@@ -266,7 +270,7 @@ func TestASettledSenderIsNotAskedAgain(t *testing.T) {
 	if !queued {
 		t.Fatal("no verdict was opened for a corresponded sender")
 	}
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindContact}}
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{dispositionID.String(): capture.KindContact}}
 	runVerdict(t, e, brain)
 
 	// They write again, long after the answer.
@@ -279,6 +283,7 @@ func TestASettledSenderIsNotAskedAgain(t *testing.T) {
 }
 
 func TestADomainTheWorkspaceCorrespondsWithIsNeverRefusedACompany(t *testing.T) {
+	t.Parallel()
 	// The blast radius of asking about corresponded senders at all. A supplier's
 	// marketing mail is genuinely a newsletter, and the noise arm suppresses the
 	// sender's whole DOMAIN — so without the correspondence guard, one blast
@@ -294,7 +299,7 @@ func TestADomainTheWorkspaceCorrespondsWithIsNeverRefusedACompany(t *testing.T) 
 	if !queued {
 		t.Fatal("no verdict was opened for a corresponded sender")
 	}
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindNewsletter}}
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{dispositionID.String(): capture.KindNewsletter}}
 	runVerdict(t, e, brain)
 
 	// The refusal is the `admission` column, not `status`: status tracks the
@@ -308,6 +313,7 @@ func TestADomainTheWorkspaceCorrespondsWithIsNeverRefusedACompany(t *testing.T) 
 }
 
 func TestAFullQueueDoesNotStrandAContactAsTheOwnersForever(t *testing.T) {
+	t.Parallel()
 	// The ceiling must delay the question, never cancel it. Once the contact
 	// exists, the ladder reads their address as already-known on every later
 	// message — so a create whose question the cap refused has no second chance
@@ -333,7 +339,7 @@ func TestAFullQueueDoesNotStrandAContactAsTheOwnersForever(t *testing.T) {
 	}
 
 	// The queue drains: the fillers are answered and their slots come back.
-	runVerdict(t, e, &scriptedVerdictBrain{})
+	runVerdict(t, e, &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN})
 
 	// They write again, and the question that was refused must now be asked.
 	captureInboundThroughRealSink(t, e, e.Rep1, "capped-in-2", sender, "capped-t1")
@@ -344,7 +350,7 @@ func TestAFullQueueDoesNotStrandAContactAsTheOwnersForever(t *testing.T) {
 			"stays the mailbox owner's for good")
 	}
 
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindContact}}
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{dispositionID.String(): capture.KindContact}}
 	runVerdict(t, e, brain)
 	if visibility, _ := contactVisibility(t, e, sender); visibility != "workspace" {
 		t.Errorf("after the delayed verdict the contact is %q, want workspace", visibility)
@@ -352,6 +358,7 @@ func TestAFullQueueDoesNotStrandAContactAsTheOwnersForever(t *testing.T) {
 }
 
 func TestASingleDecliningReplyDoesNotSpareASpammersDomain(t *testing.T) {
+	t.Parallel()
 	// The correspondence test the domain guard uses has to be the ladder's own,
 	// not a simpler "did we ever send here". A founder who answers unsolicited
 	// mail with "not interested" produces exactly one attested outbound, and
@@ -367,7 +374,7 @@ func TestASingleDecliningReplyDoesNotSpareASpammersDomain(t *testing.T) {
 	if !queued {
 		t.Fatal("no verdict was opened for this sender")
 	}
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindSpam}}
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{dispositionID.String(): capture.KindSpam}}
 	runVerdict(t, e, brain)
 
 	if admission := domainAdmission(t, e, "spam.example"); admission != contacts.DomainSuppressed {
@@ -421,6 +428,7 @@ func domainAdmission(t *testing.T, e *integration.Env, domain string) string {
 // once the claim requires a readable message, and before that, claimed and
 // judged on a blank prompt.
 func TestAReopenedThreadKeepsSomethingToAskAbout(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const first = "kunde@partner.example"
 	const stranger = "anwalt@kanzlei.example"
@@ -482,6 +490,7 @@ func TestAReopenedThreadKeepsSomethingToAskAbout(t *testing.T) {
 // that question maps to a workspace audience, which is exactly the publication
 // the posture exists to refuse.
 func TestAHeldMailboxIsNotAskedToPublishItsMail(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const first = "kunde@partner.example"
 	const stranger = "anwalt@kanzlei.example"
@@ -559,6 +568,7 @@ func seedClassifiedGmail(t *testing.T, e *integration.Env, user ids.UUID) {
 // Driven through the real cap: the refusal has to be the one production
 // produces, not a state the test invented.
 func TestAContactTheCeilingRefusedIsAskedAboutByTheSweep(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const sender = "quiet@partner.example"
 
@@ -589,7 +599,7 @@ func TestAContactTheCeilingRefusedIsAskedAboutByTheSweep(t *testing.T) {
 
 	// The sender never writes again. The queue drains, and the sweep is what
 	// notices the contact nobody was ever asked about.
-	runVerdict(t, e, &scriptedVerdictBrain{})
+	runVerdict(t, e, &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN})
 
 	worker := NewLinkReconcileWorkspaceWorkerForTest(e.Pool)
 	if err := worker.reconcileLinksForWorkspace(context.Background(), e.WS); err != nil {
@@ -603,7 +613,7 @@ func TestAContactTheCeilingRefusedIsAskedAboutByTheSweep(t *testing.T) {
 	}
 
 	// And the answer reaches the record: the whole point of asking.
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindContact}}
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{dispositionID.String(): capture.KindContact}}
 	runVerdict(t, e, brain)
 	if got, _ := contactVisibility(t, e, sender); got != "workspace" {
 		t.Errorf("after the delayed verdict the contact is %q, want workspace", got)
@@ -616,6 +626,7 @@ func TestAContactTheCeilingRefusedIsAskedAboutByTheSweep(t *testing.T) {
 // question would put a decided sender back in front of a model, and an advisor
 // whose record is deliberately the owner's would be judged again every night.
 func TestTheSweepDoesNotReaskASettledSender(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const advisor = "berater@kanzlei.example"
 
@@ -625,7 +636,7 @@ func TestTheSweepDoesNotReaskASettledSender(t *testing.T) {
 	if !queued {
 		t.Fatal("no question was opened for a corresponded sender")
 	}
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindAdvisor}}
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{dispositionID.String(): capture.KindAdvisor}}
 	runVerdict(t, e, brain)
 	if got, _ := contactVisibility(t, e, advisor); got != "owner" {
 		t.Fatalf("an advisor's record is %q, want owner", got)
@@ -664,6 +675,7 @@ func countDispositions(t *testing.T, e *integration.Env, email string) int {
 // model whose `contact` answer publishes it to the workspace — a transition
 // nothing reverses.
 func TestTheSweepLeavesAContactAHumanKeptPrivate(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const sender = "privat@kunde.example"
 
@@ -684,7 +696,7 @@ func TestTheSweepLeavesAContactAHumanKeptPrivate(t *testing.T) {
 	contactID := contactIDFor(t, e, sender)
 	seedHumanEdit(t, e, contactID)
 
-	runVerdict(t, e, &scriptedVerdictBrain{})
+	runVerdict(t, e, &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN})
 	worker := NewLinkReconcileWorkspaceWorkerForTest(e.Pool)
 	if err := worker.reconcileLinksForWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("the sweep failed: %v", err)
@@ -720,6 +732,7 @@ func contactIDFor(t *testing.T, e *integration.Env, email string) ids.ContactID 
 // it is not answered at all — and until this, the visibility flip was a bare
 // UPDATE while every other write on the record audited and emitted.
 func TestPublishingACapturedContactLeavesATrace(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const sender = "trace@partner.example"
 
@@ -735,7 +748,7 @@ func TestPublishingACapturedContactLeavesATrace(t *testing.T) {
 	if !queued {
 		t.Fatal("no question was opened for a corresponded sender")
 	}
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindContact}}
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{dispositionID.String(): capture.KindContact}}
 	runVerdict(t, e, brain)
 	if got, _ := contactVisibility(t, e, sender); got != "workspace" {
 		t.Fatalf("after a contact verdict the contact is %q, want workspace", got)
@@ -791,6 +804,7 @@ func countOutboxFor(t *testing.T, e *integration.Env, id ids.ContactID) int {
 // is `advisor` and the owner disagrees, or they simply know who this is. Until
 // this, the only route out of `owner` was a verdict, so those contacts had none.
 func TestAnOwnerPublishesTheirOwnCapturedContact(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const sender = "eigen@partner.example"
 
@@ -822,6 +836,7 @@ func TestAnOwnerPublishesTheirOwnCapturedContact(t *testing.T) {
 // address rather than on the owner would have published a colleague's contact
 // to anybody who could reach this door.
 func TestOnlyTheOwnerPublishesACapturedContact(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const sender = "fremd@partner.example"
 
@@ -869,6 +884,7 @@ func seatCtx(e *integration.Env, user ids.UUID) context.Context {
 //
 // It discloses nothing: a caller is only ever sent a row they may already read.
 func TestARecordSaysWhoItIsFor(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const sender = "sicht@partner.example"
 

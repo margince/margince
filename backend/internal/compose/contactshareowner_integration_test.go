@@ -47,6 +47,7 @@ func pendingRequestsFor(t *testing.T, e *integration.Env, held ids.ContactID, ow
 }
 
 func TestARequestIsPutToTheOwnerTheContactHasWhenItIsFiled(t *testing.T) {
+	t.Parallel()
 	e, held := heldByRep1(t)
 	reassignAsRep1(t, e, held, e.Rep3)
 
@@ -62,6 +63,7 @@ func TestARequestIsPutToTheOwnerTheContactHasWhenItIsFiled(t *testing.T) {
 }
 
 func TestReassigningAContactWithdrawsTheRequestPutToItsPreviousOwner(t *testing.T) {
+	t.Parallel()
 	e, held := heldByRep1(t)
 	createAsRep2(t, e)
 
@@ -78,6 +80,7 @@ func TestReassigningAContactWithdrawsTheRequestPutToItsPreviousOwner(t *testing.
 }
 
 func TestAnOwnerWhoLeftIsNotAsked(t *testing.T) {
+	t.Parallel()
 	e, held := heldByRep1(t)
 	deactivate(t, e, e.Rep1)
 
@@ -90,6 +93,7 @@ func TestAnOwnerWhoLeftIsNotAsked(t *testing.T) {
 }
 
 func TestAHandoverWithdrawsTheRequestsPutToTheMemberWhoLeft(t *testing.T) {
+	t.Parallel()
 	e, held := heldByRep1(t)
 	createAsRep2(t, e)
 	deactivate(t, e, e.Rep1)
@@ -109,6 +113,7 @@ func TestAHandoverWithdrawsTheRequestsPutToTheMemberWhoLeft(t *testing.T) {
 // A contact nobody owns is the workspace's to read, so the address is a plain
 // duplicate the caller can open, and nobody is asked.
 func TestAContactNobodyOwnsAnswersAsAnOrdinaryDuplicate(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	if _, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{
 		FullName: "Unowned", Source: "manual",

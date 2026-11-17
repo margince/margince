@@ -16,6 +16,7 @@ import (
 )
 
 func TestTheRecordAndBatchChooseTheReadableRequestBeforeTheirLimit(t *testing.T) {
+	t.Parallel()
 	for _, mode := range []string{"current", "review", "reminder"} {
 		t.Run(mode, func(t *testing.T) {
 			review := mode == "review"

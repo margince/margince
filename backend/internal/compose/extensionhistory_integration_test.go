@@ -32,7 +32,6 @@ func registerHistoryVisits(t *testing.T) {
 	for _, stmt := range []string{
 		`CREATE SCHEMA IF NOT EXISTS ext`,
 		`GRANT USAGE ON SCHEMA ext TO margince_app`,
-		`DROP TABLE IF EXISTS ext.` + historyDemoTable,
 		`CREATE TABLE ext.` + historyDemoTable + ` (id uuid PRIMARY KEY DEFAULT uuidv7(), archived_at timestamptz, code text NOT NULL UNIQUE, site text, visited_at timestamptz, contact_id uuid)`,
 		`GRANT SELECT, INSERT, UPDATE, DELETE ON ext.` + historyDemoTable + ` TO margince_app`,
 	} {
@@ -51,9 +50,6 @@ func registerHistoryVisits(t *testing.T) {
 	}})
 	t.Cleanup(func() {
 		recordkinds.Reset()
-		if _, err := owner.Exec(context.Background(), `DROP TABLE IF EXISTS ext.`+historyDemoTable); err != nil {
-			t.Errorf("dropping the visit table: %v", err)
-		}
 	})
 }
 
@@ -73,6 +69,7 @@ func readExtensionHistory(ctx context.Context, t *testing.T, e *integration.Env,
 	return rec.Code, body.Data
 }
 
+//testdb:serial registers into a process-wide unit registry
 func TestAContactsHistoryCarriesExtensionRowsAndSignalsNewestFirst(t *testing.T) {
 	e := integration.Setup(t)
 	registerHistoryVisits(t)

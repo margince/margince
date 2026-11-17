@@ -61,6 +61,7 @@ func declareServiceMemberFor(t *testing.T, unit string) ids.UUID {
 	return member
 }
 
+//testdb:serial binds the process-wide extension runtime
 func TestAFeedRunsAsItsServiceMemberAndOffboardingAColleagueDoesNotStopIt(t *testing.T) {
 	e := setupIngress(t)
 	member := declareServiceMemberFor(t, ingressUnit)
@@ -94,6 +95,7 @@ func TestAFeedRunsAsItsServiceMemberAndOffboardingAColleagueDoesNotStopIt(t *tes
 	}
 }
 
+//testdb:serial binds the process-wide extension runtime
 func TestAServiceMemberDeclaredForAnotherUnitCannotBeActedFor(t *testing.T) {
 	e := setupIngress(t)
 	member := declareServiceMemberFor(t, "some-other-unit")
@@ -108,6 +110,7 @@ func TestAServiceMemberDeclaredForAnotherUnitCannotBeActedFor(t *testing.T) {
 	}
 }
 
+//testdb:serial binds the process-wide extension runtime
 func TestAServiceMemberWithNoSecretOnDepositCannotBeActedFor(t *testing.T) {
 	e := setupIngress(t)
 	member := declareServiceMemberFor(t, ingressUnit)
@@ -119,6 +122,7 @@ func TestAServiceMemberWithNoSecretOnDepositCannotBeActedFor(t *testing.T) {
 	}
 }
 
+//testdb:serial binds the process-wide extension runtime
 func TestAnArchivedServiceMemberLandsNothing(t *testing.T) {
 	e := setupIngress(t)
 	member := declareServiceMemberFor(t, ingressUnit)
@@ -140,6 +144,8 @@ func TestAnArchivedServiceMemberLandsNothing(t *testing.T) {
 
 // The secret is filed through the unit's own port, so the service member holds
 // it as a colleague would.
+//
+//testdb:serial binds the process-wide extension runtime
 func TestTheFeedsSecretIsReadBackFromTheServiceMember(t *testing.T) {
 	e := setupIngress(t)
 	member := declareServiceMemberFor(t, ingressUnit)

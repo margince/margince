@@ -39,6 +39,7 @@ func todaySubjectsAtLimit(t *testing.T, e *integration.Env, now time.Time, limit
 }
 
 func TestCanceledMeetingsBeyondThePageDoNotHideTheNextBookedOne(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := laneDay
 	bookMeeting(t, e, "Next booked", now.Add(time.Hour), "booked")
@@ -56,6 +57,7 @@ func TestCanceledMeetingsBeyondThePageDoNotHideTheNextBookedOne(t *testing.T) {
 }
 
 func TestABusyDayAtThePageLimitKeepsTheSoonestMeetings(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := laneDay
 	for hour := 7; hour <= 15; hour++ {
@@ -73,6 +75,7 @@ func TestABusyDayAtThePageLimitKeepsTheSoonestMeetings(t *testing.T) {
 }
 
 func TestADayExactlyAtThePageLimitLeavesNothingOut(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := laneDay
 	for hour := 7; hour <= 9; hour++ {
@@ -85,6 +88,7 @@ func TestADayExactlyAtThePageLimitLeavesNothingOut(t *testing.T) {
 }
 
 func TestTheOutcomeLaneReadsTheOldestDebtAtAnyDepth(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := laneDay.Add(14 * time.Hour)
 	for back := 1; back <= 20; back++ {

@@ -17,6 +17,7 @@ import (
 )
 
 func TestAQualifiedDealBecomesAnExistingChoiceForTheNextLeadAtItsCompany(t *testing.T) {
+	t.Parallel()
 	f := qualificationWithExistingDeal(t)
 	first, err := f.contacts.QualifyLead(f.e.Admin(), f.lead, contacts.PromoteLeadInput{Trigger: "human_qualify", Deal: &contacts.QualifyDealInput{Name: "New requirements"}})
 	if err != nil {
@@ -62,6 +63,7 @@ func TestAQualifiedDealBecomesAnExistingChoiceForTheNextLeadAtItsCompany(t *test
 }
 
 func TestUndoingACreatedContactPreservesAnArchivedExistingDeal(t *testing.T) {
+	t.Parallel()
 	f := qualificationWithExistingDeal(t)
 	dealID := ids.UUID(f.deal.Id)
 	out, err := f.contacts.QualifyLead(f.e.Admin(), f.lead, contacts.PromoteLeadInput{Trigger: "human_qualify", ExistingDealID: &dealID})
@@ -86,6 +88,7 @@ func TestUndoingACreatedContactPreservesAnArchivedExistingDeal(t *testing.T) {
 }
 
 func TestQualificationCandidateGrantGapsDoNotBreakTheContactPreview(t *testing.T) {
+	t.Parallel()
 	f := qualificationWithExistingDeal(t)
 	lead, _, err := f.contacts.CreateLead(f.e.Admin(), contacts.CreateLeadInput{FullName: new("Unlinked buyer"), Email: new("unlinked@renewal-buyer.test"), Source: "manual"})
 	if err != nil {
@@ -104,6 +107,7 @@ func TestQualificationCandidateGrantGapsDoNotBreakTheContactPreview(t *testing.T
 }
 
 func TestQualificationLetsTheEventFilerAttachEarlierLeadMailToTheChosenDeal(t *testing.T) {
+	t.Parallel()
 	f := qualificationWithExistingDeal(t)
 	f.e.GrantRole(t, f.e.AdminUser, "admin")
 	now := time.Date(2026, 10, 5, 12, 0, 0, 0, time.UTC)

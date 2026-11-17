@@ -105,6 +105,7 @@ func dealNames(rows []crmcontracts.AccountCoverageRow) []string {
 // Each account lands in the one view its facts put it in, the counts name
 // every view, and the thresholds printed are the defaults.
 func TestTheAccountCoverageViewsJudgeEachAccountOnce(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	now := clocktest.Now(t).UTC().Truncate(time.Second)
 	seedCoverageAccounts(t, e, now)
@@ -154,6 +155,7 @@ func TestTheAccountCoverageViewsJudgeEachAccountOnce(t *testing.T) {
 // Without the activity grant nothing is judged: every verdict reads who
 // wrote, so the answer says so rather than counting zero.
 func TestTheAccountCoverageReadWithoutActivityJudgesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	now := clocktest.Now(t).UTC().Truncate(time.Second)
 	seedCoverageAccounts(t, e, now)
@@ -173,6 +175,7 @@ func TestTheAccountCoverageReadWithoutActivityJudgesNothing(t *testing.T) {
 // A published threshold moves the verdict: with two engaged seats allowed,
 // the two-threaded deal is single-threaded too.
 func TestThePublishedThresholdsMoveTheAccountCoverageVerdict(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	now := clocktest.Now(t).UTC().Truncate(time.Second)
 	seedCoverageAccounts(t, e, now)

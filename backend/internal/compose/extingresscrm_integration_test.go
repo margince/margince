@@ -108,6 +108,7 @@ func (e *crmEnv) companyColumns(t *testing.T, id string) (industry, description,
 	return
 }
 
+//testdb:serial publishes the process-wide composed extension set
 func TestAnUndeclaredKindIsRefusedAtTheCall(t *testing.T) {
 	e := setupIngress(t)
 	composeCapturingUnit(t, ingressUnit, nil, extension.IngressSource{
@@ -123,6 +124,7 @@ func TestAnUndeclaredKindIsRefusedAtTheCall(t *testing.T) {
 	}
 }
 
+//testdb:serial binds the process-wide extension runtime
 func TestACompanyIsCreatedThenFilledByItsOutsideIdAndKeepsWhatAUserTyped(t *testing.T) {
 	e := setupCRMIngress(t)
 	first := e.mustIngest(t, companyRecord("acct-1", extension.CompanyFields{DisplayName: "Acme"}))
@@ -155,6 +157,7 @@ func TestACompanyIsCreatedThenFilledByItsOutsideIdAndKeepsWhatAUserTyped(t *test
 	}
 }
 
+//testdb:serial binds the process-wide extension runtime
 func TestAHandMadeCompanyIsAdoptedByDomainAndKeepsWhatAUserTyped(t *testing.T) {
 	e := setupCRMIngress(t)
 	made, err := e.Contacts.CreateCompany(e.Admin(), contacts.CreateCompanyInput{
@@ -179,6 +182,7 @@ func TestAHandMadeCompanyIsAdoptedByDomainAndKeepsWhatAUserTyped(t *testing.T) {
 	}
 }
 
+//testdb:serial binds the process-wide extension runtime
 func TestAClashWithARecordTheMemberCannotSeeIsTheFixedConflict(t *testing.T) {
 	e := setupCRMIngress(t)
 	held, err := e.Contacts.CreateCompany(e.Admin(), contacts.CreateCompanyInput{
@@ -204,6 +208,7 @@ func TestAClashWithARecordTheMemberCannotSeeIsTheFixedConflict(t *testing.T) {
 	}
 }
 
+//testdb:serial binds the process-wide extension runtime
 func TestAClashWithAVisibleRecordUpdatesIt(t *testing.T) {
 	e := setupCRMIngress(t)
 	held, err := e.Contacts.CreateCompany(e.Admin(), contacts.CreateCompanyInput{
@@ -218,6 +223,7 @@ func TestAClashWithAVisibleRecordUpdatesIt(t *testing.T) {
 	}
 }
 
+//testdb:serial binds the process-wide extension runtime
 func TestADealIsCreatedAndMovedThroughWonAndLostByItsOutsideId(t *testing.T) {
 	e := setupCRMIngress(t)
 	made := e.mustIngest(t, e.dealRecord("opp-1", nil))
@@ -249,6 +255,7 @@ func TestADealIsCreatedAndMovedThroughWonAndLostByItsOutsideId(t *testing.T) {
 	}
 }
 
+//testdb:serial binds the process-wide extension runtime
 func TestEveryCreateAdoptAndMoveIsCheckedAgainstTheMembersRights(t *testing.T) {
 	e := setupCRMIngress(t)
 	dealed := func(member ids.UUID, role, policy string) {
@@ -285,6 +292,7 @@ func TestEveryCreateAdoptAndMoveIsCheckedAgainstTheMembersRights(t *testing.T) {
 	}
 }
 
+//testdb:serial binds the process-wide extension runtime
 func TestAnActivityIsRelinkedOntoACompanyByItsKey(t *testing.T) {
 	e := setupCRMIngress(t)
 	activity := aProviderRecord("msg-1", "outside@example.test")
@@ -301,6 +309,7 @@ func TestAnActivityIsRelinkedOntoACompanyByItsKey(t *testing.T) {
 	}
 }
 
+//testdb:serial binds the process-wide extension runtime
 func TestReplayedAndRacingRecordsLeaveOneRowAndOneAuditEntryPerChange(t *testing.T) {
 	e := setupCRMIngress(t)
 	rec := companyRecord("acct-race", extension.CompanyFields{DisplayName: "Acme", Industry: "software"})
@@ -333,6 +342,8 @@ func TestReplayedAndRacingRecordsLeaveOneRowAndOneAuditEntryPerChange(t *testing
 
 // A win a unit reports is a stage move like any other. The deal's audit trail
 // must name it, so the deal shows who moved it to won.
+//
+//testdb:serial binds the process-wide extension runtime
 func TestAStageMoveALandedRecordMakesIsInTheDealsAuditTrail(t *testing.T) {
 	e := setupCRMIngress(t)
 	made := e.mustIngest(t, e.dealRecord("opp-audit", nil))
@@ -348,6 +359,8 @@ func TestAStageMoveALandedRecordMakesIsInTheDealsAuditTrail(t *testing.T) {
 // A stage move a unit mirrors in was made in another CRM, so its history row
 // says synced and names no import run. A user's later move on the same deal is
 // recorded as made here.
+//
+//testdb:serial binds the process-wide extension runtime
 func TestAStageMoveALandedRecordMakesIsSynced(t *testing.T) {
 	e := setupCRMIngress(t)
 	made := e.mustIngest(t, e.dealRecord("opp-synced", nil))

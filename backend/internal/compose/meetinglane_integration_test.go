@@ -73,6 +73,7 @@ func meetingSubjects(t *testing.T, e *integration.Env, now time.Time) []string {
 // Only the meetings still ahead today, soonest first. A meeting already begun
 // cannot be prepared for; one tomorrow is not today's page.
 func TestTheMeetingLaneCarriesOnlyWhatIsStillAheadToday(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := todayAt(9 * time.Hour)
 	bookMeeting(t, e, "Started an hour ago", now.Add(-1*time.Hour), "")
@@ -92,6 +93,7 @@ func TestTheMeetingLaneCarriesOnlyWhatIsStillAheadToday(t *testing.T) {
 // A meeting that has been held, cancelled or no-showed is past preparing. The
 // lane must not ask for work that cannot be done.
 func TestAFinishedOrCancelledMeetingLeavesTheLane(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := todayAt(9*time.Hour).AddDate(0, 0, -1)
 	bookMeeting(t, e, "Still booked", now.Add(2*time.Hour), "booked")
@@ -109,6 +111,7 @@ func TestAFinishedOrCancelledMeetingLeavesTheLane(t *testing.T) {
 // that way, so dropping them would empty this lane on exactly the installations
 // whose calendars are connected — the failure nobody would report as a bug.
 func TestAMeetingWithNoStatusIsStillWorthPreparingFor(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := todayAt(9 * time.Hour)
 	bookMeeting(t, e, "From the calendar", now.Add(2*time.Hour), "")
@@ -125,6 +128,7 @@ func TestAMeetingWithNoStatusIsStillWorthPreparingFor(t *testing.T) {
 // the sooner meetings off the scan and the lane drew a free afternoon over a
 // booked one. The window is the database's now, so the bound is the day.
 func TestABusyCalendarStillShowsTheSoonestMeetings(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := todayAt(6 * time.Hour)
 	// Far more later-today meetings than the lane carries, booked out of order
@@ -152,6 +156,7 @@ func TestABusyCalendarStillShowsTheSoonestMeetings(t *testing.T) {
 // safe here — occurred_at DESC puts a future meeting above every past one — and
 // this pins that rather than leaving it as a property nobody checked.
 func TestAPileOfPastMeetingsDoesNotPushTodaysOffTheLane(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := todayAt(9 * time.Hour)
 	// Comfortably more than the lane's scan (12 * taskScanFactor).

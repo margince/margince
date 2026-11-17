@@ -23,6 +23,7 @@ import (
 // seat's calendar binds the event to today, is folded once. A second run finds
 // nothing left to do.
 func TestTheMeetingPairsTaskFoldsAStoredPairOnce(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	held := importMeeting(t, e, "human:"+e.Rep1.String())
@@ -54,6 +55,7 @@ func TestTheMeetingPairsTaskFoldsAStoredPairOnce(t *testing.T) {
 // A stored original whose own row holds the event's key binds to itself, so
 // the task leaves it for the seat's next sync.
 func TestTheMeetingPairsTaskSkipsAnOldStartOriginal(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	copyID := seedCalendarCopy(t, e, e.Rep2, rep2Address)
@@ -90,6 +92,7 @@ func liveMeeting(t *testing.T, e *integration.Env, id ids.UUID) bool {
 // whose seat, or whose other importer, holds another verdict than on the
 // survivor is not folded: the stricter verdict would vanish with it.
 func TestAMeetingCopyWithAnotherVerdictIsNotFolded(t *testing.T) {
+	t.Parallel()
 	for name, oppose := range map[string]func(e *integration.Env, held, copyID ids.UUID){
 		"the folding seat": func(e *integration.Env, held, copyID ids.UUID) {
 			e.WsExec(t, `UPDATE capture_import SET verdict_status = 'held' WHERE activity_id = $1`, copyID)
@@ -119,6 +122,7 @@ func TestAMeetingCopyWithAnotherVerdictIsNotFolded(t *testing.T) {
 // A human's outcome written on the copy while the fold waits for its lock
 // keeps the copy. Eligibility is judged only once both rows are locked.
 func TestAHumanOutcomeCommittedWhileTheFoldWaitsBlocksIt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	_, copyID := foldedPair(t, e)
@@ -179,6 +183,7 @@ func waitForALockWait(t *testing.T, e *integration.Env) {
 // A folded copy's archive is not undone from history: its identities and
 // guests now belong to the meeting that stayed.
 func TestAFoldedMeetingCopyIsNotRestoredFromHistory(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	_, copyID := foldedPair(t, e)
@@ -199,6 +204,7 @@ func TestAFoldedMeetingCopyIsNotRestoredFromHistory(t *testing.T) {
 // After a fold both seats stay busy for the meeting's hour, and the survivor
 // lists the guest only the copy named.
 func TestAFoldedMeetingKeepsBothSeatsBusyAndEveryGuest(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	held, copyID := foldedPair(t, e)

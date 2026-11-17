@@ -43,6 +43,7 @@ func archivedRow(t *testing.T, e *integration.Env, table string, id ids.UUID) bo
 // A bulk archive by an owner without delete takes their own contacts and
 // companies and skips a teammate's.
 func TestABulkArchiveTakesTheOwnersContactsAndCompanies(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	rep := ownerRep(e, e.Rep1)
 	for _, tc := range []struct {
@@ -78,6 +79,7 @@ func TestABulkArchiveTakesTheOwnersContactsAndCompanies(t *testing.T) {
 
 // The agent's archive goes through the same rule.
 func TestTheAgentArchivesTheOwnersContactAndNotATeammates(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	rep := ownerRep(e, e.Rep1)
 	provider := contacts.NewProvider(e.DB())
@@ -97,6 +99,7 @@ func TestTheAgentArchivesTheOwnersContactAndNotATeammates(t *testing.T) {
 // An owner without delete cannot archive a company another owner's live deal
 // still names: it would vanish from that deal. A manager can, as before.
 func TestACompanyAnotherOwnersDealNamesIsAManagersToArchive(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	rep := ownerRep(e, e.Rep1)
 	company := e.SeedCompany(t, "Shared GmbH", &e.Rep1)
@@ -123,6 +126,7 @@ func TestACompanyAnotherOwnersDealNamesIsAManagersToArchive(t *testing.T) {
 // An owner change that commits while the owner's archive waits on the row is
 // read by that archive. It runs on the authority the row holds when written.
 func TestAnArchiveWaitingOnAnOwnerChangeReadsTheNewOwner(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	rep := ownerRep(e, e.Rep1)
 	company := e.SeedCompany(t, "Handed GmbH", &e.Rep1)
@@ -159,6 +163,7 @@ func TestAnArchiveWaitingOnAnOwnerChangeReadsTheNewOwner(t *testing.T) {
 // An owner may decide their own agent's staged archive, by the same rule the
 // archive asks; a teammate's staged archive is not theirs to decide.
 func TestTheOwnerDecidesTheStagedArchiveOfTheirOwnContact(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	rep := ownerRep(e, e.Rep1)
 	svc := NewApprovalsService(e.DB())

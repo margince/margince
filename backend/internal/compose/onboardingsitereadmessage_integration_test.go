@@ -24,6 +24,7 @@ import (
 )
 
 func TestCompanySiteReadMessageUsesTheStoredDossierAndReturnsRuntime(t *testing.T) {
+	t.Parallel()
 	env := integration.Setup(t)
 	read := onboardingDraft(t, env)
 	usedAt := time.Date(2026, 7, 22, 8, 0, 0, 0, time.UTC)
@@ -94,6 +95,7 @@ func companyReadMessageRequest(ctx context.Context, t *testing.T, readID, messag
 // not a server fault: the 503 the client has copy for, the same answer the
 // onboarding assistant gives for the same outcome.
 func TestACompanySiteReadMessageTheModelWithheldIsTheAssistantBeingUnavailable(t *testing.T) {
+	t.Parallel()
 	env := integration.Setup(t)
 	read := onboardingDraft(t, env)
 	human := env.As(env.Rep1, nil, integration.AdminPerms)

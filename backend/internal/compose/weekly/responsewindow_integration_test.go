@@ -17,6 +17,7 @@ import (
 )
 
 func TestAResponseAfterTheWeekClosedDoesNotImproveThatWeek(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	owner := ids.From[ids.UserKind](e.Rep1)
 	name := "Arrival cohort"
@@ -60,6 +61,7 @@ func TestAResponseAfterTheWeekClosedDoesNotImproveThatWeek(t *testing.T) {
 }
 
 func TestImportedHistoryDoesNotCountAsThisWeeksMissedIntake(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	owner := ids.From[ids.UserKind](e.Rep1)
 	name, sourceSystem, sourceID := "Historical prospect", "mirror:hubspot", "leads:400"

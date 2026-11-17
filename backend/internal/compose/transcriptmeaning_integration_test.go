@@ -15,6 +15,7 @@ import (
 )
 
 func TestTranscriptReadingDistinguishesNonActionsFromInvalidMeaning(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name, body string
 		meaning    *commitmentMeaning

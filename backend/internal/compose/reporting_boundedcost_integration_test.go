@@ -30,6 +30,7 @@ type ownerCostReading struct {
 }
 
 func TestReportingEvaluationCostDoesNotGrowWithTheTeamsOwners(t *testing.T) {
+	t.Parallel()
 	small := reportingTeamOwnerCost(t, 2)
 	large := reportingTeamOwnerCost(t, 12)
 	for reader, few := range small {
@@ -148,6 +149,7 @@ func sumOf(values map[string]float64) float64 {
 // It compares two and five metrics, each with a target. The metric readers
 // grow with the metrics; the target work must not.
 func TestReportingTargetCostDoesNotGrowWithTheMetricsHeldAgainstTargets(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	at := time.Date(2026, 9, 29, 12, 0, 0, 0, time.UTC)
 	service := newReportingService(e.Pool, func() time.Time { return at })
@@ -172,6 +174,7 @@ func TestReportingTargetCostDoesNotGrowWithTheMetricsHeldAgainstTargets(t *testi
 // TestReportingBatchedTargetsKeepEveryExclusion holds each figure against only
 // the target of its own metric, scope, pipeline and interval.
 func TestReportingBatchedTargetsKeepEveryExclusion(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	at := time.Date(2026, 9, 29, 12, 0, 0, 0, time.UTC)
 	service := newReportingService(e.Pool, func() time.Time { return at })

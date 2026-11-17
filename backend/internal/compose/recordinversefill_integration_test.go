@@ -81,6 +81,7 @@ func whatTheFillLeft(t *testing.T, e *integration.Env, contact ids.UUID) (title 
 // A signature that filled a title, a phone, a company name and a LinkedIn
 // profile is undone by clearing all four.
 func TestUndoingASignatureFillClearsEveryFieldItFilled(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact, fill := seedSignatureFill(t, e)
 	if title, evidence, phones, linkedin := whatTheFillLeft(t, e, contact); title == nil || evidence < 4 || phones != 1 || linkedin != 1 {
@@ -107,6 +108,7 @@ func TestUndoingASignatureFillClearsEveryFieldItFilled(t *testing.T) {
 // A title a colleague typed after the fill is theirs; the undo refuses rather
 // than clearing it.
 func TestAFillAColleagueChangedSinceIsNotUndone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact, fill := seedSignatureFill(t, e)
 	typed := "Geschäftsführerin"
@@ -144,6 +146,7 @@ func judgeOnTheReceipt(seat context.Context, t *testing.T, e *integration.Env, e
 // seat that may change contacts and not deals is offered a contact undo, and a
 // seat with the opposite grants is refused it.
 func TestTheReceiptJudgesAnUndoWithTheRecordTypesOwnGrant(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Petra Machine", nil)
 	title := "Buyer"
@@ -173,6 +176,7 @@ func TestTheReceiptJudgesAnUndoWithTheRecordTypesOwnGrant(t *testing.T) {
 // An import's creates and the mail reader's archives each fold into ONE line
 // per job, kind of record and day, and the line opens to an undo per record.
 func TestTheReceiptFoldsCreatesAndArchivesAndOffersAnUndoPerRecord(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	since := time.Now().Add(-time.Hour)
 	for _, name := range []string{"Ida Import", "Jan Import", "Kai Import"} {
@@ -244,6 +248,7 @@ func fillEntryOf(t *testing.T, e *integration.Env, contact ids.UUID, source stri
 // A later signature that only repeats a number already on the record did not
 // add it; undoing that signature must not take the number away.
 func TestUndoingASignatureThatOnlyConfirmedANumberLeavesTheNumber(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact, _ := seedSignatureFill(t, e)
 	later := ids.NewV7()
@@ -280,6 +285,7 @@ func TestUndoingASignatureThatOnlyConfirmedANumberLeavesTheNumber(t *testing.T) 
 // A site read fills an empty title straight onto the column, with no title
 // evidence row of its own. Undo clears that title too.
 func TestUndoingASiteReadClearsTheTitleItFilled(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Sara Site", nil)
 	company := e.SeedCompany(t, "Acme Site GmbH", nil)
@@ -304,6 +310,7 @@ func TestUndoingASiteReadClearsTheTitleItFilled(t *testing.T) {
 // A colleague who worked on the contact a promotion created keeps that work:
 // the demotion would archive the contact.
 func TestAPromotionWhoseContactAColleagueChangedIsNotUndone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	name, email := "Lena Lead", "lena@prospect.test"
 	lead, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{Source: "import", FullName: &name, Email: &email})
@@ -332,6 +339,7 @@ func TestAPromotionWhoseContactAColleagueChangedIsNotUndone(t *testing.T) {
 // A colleague who linked an imported contact to their employer wrote the link,
 // not the contact; archiving the contact would retire that link with it.
 func TestACreateWhoseLinkAColleagueAddedIsNotUndone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	created, err := e.Contacts.CreateContact(machineCtx(e), contacts.CreateContactInput{FullName: "Imported Ida", Source: "import"})
 	if err != nil {
@@ -349,6 +357,7 @@ func TestACreateWhoseLinkAColleagueAddedIsNotUndone(t *testing.T) {
 // A number a colleague reclassified after the signature added it is theirs now;
 // the undo refuses rather than archiving it.
 func TestASignatureNumberAColleagueChangedIsNotUndone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact, fill := seedSignatureFill(t, e)
 	if _, err := e.Contacts.UpdateContact(e.Admin(), ids.From[ids.ContactKind](contact), contacts.UpdateContactInput{
@@ -368,6 +377,7 @@ func TestASignatureNumberAColleagueChangedIsNotUndone(t *testing.T) {
 // A signature that states the title a colleague already typed confirms it and
 // fills nothing, so undoing the signature leaves the title.
 func TestUndoingASignatureLeavesATitleItOnlyConfirmed(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := seedEnrichContact(t, e, "bob@acme.example", "Best,\nBob Contact\nCTO\nAcme GmbH")
 	typed := "CTO"
@@ -405,6 +415,7 @@ func TestUndoingASignatureLeavesATitleItOnlyConfirmed(t *testing.T) {
 // from the one the fill claimed. A save that repeats the filled handle changes
 // nothing, writes no trail, and leaves the fill undoable.
 func TestASignatureLinkedinAColleagueChangedSinceIsNotUndone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact, fill := seedSignatureFill(t, e)
 	if _, err := e.Contacts.UpdateContact(e.Admin(), ids.From[ids.ContactKind](contact), contacts.UpdateContactInput{
@@ -422,6 +433,7 @@ func TestASignatureLinkedinAColleagueChangedSinceIsNotUndone(t *testing.T) {
 }
 
 func TestASignatureLinkedinAColleagueSavedUnchangedIsStillUndone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact, fill := seedSignatureFill(t, e)
 	if _, err := e.Contacts.UpdateContact(e.Admin(), ids.From[ids.ContactKind](contact), contacts.UpdateContactInput{
@@ -441,6 +453,7 @@ func TestASignatureLinkedinAColleagueSavedUnchangedIsStillUndone(t *testing.T) {
 // A title a colleague saved again, unchanged, after a site read filled it is a
 // save that changed nothing. It writes no trail, so the fill stays undoable.
 func TestASiteReadTitleAColleagueSavedAgainUnchangedIsStillUndone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Sara Site", nil)
 	company := e.SeedCompany(t, "Acme Site GmbH", nil)
@@ -469,6 +482,7 @@ func TestASiteReadTitleAColleagueSavedAgainUnchangedIsStillUndone(t *testing.T) 
 // even where it only repeated one. Its undo leaves a title the trail shows was
 // already set, and clears what it did fill.
 func TestUndoingALegacySignatureLeavesATitleTheRecordAlreadyHad(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := seedEnrichContact(t, e, "bob@acme.example", "Best,\nBob Contact\nCTO\nAcme GmbH")
 	typed := "CTO"

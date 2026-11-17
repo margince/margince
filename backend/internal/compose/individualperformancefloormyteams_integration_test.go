@@ -46,6 +46,7 @@ func reportingSeat(t *testing.T, e *forecastEnv, user ids.UUID, scope principal.
 }
 
 func TestIndividualPerformanceOffJudgesAMyTeamsEditionOnTheRosterItKept(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	members := e.addMembers(t, e.Team1, "anna@floor.test", "ben@floor.test", "chris@floor.test")
 	e.seedWinIn(t, members[0], "EUR")

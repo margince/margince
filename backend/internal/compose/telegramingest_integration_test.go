@@ -97,6 +97,7 @@ const telegramIngestKickedJSON = `{
 // that instead inherited (or defaulted) would either fail outright under
 // RLS or, worse, silently land the activity in the wrong tenant.
 func TestIngestWorkerReestablishesWorkspaceContextFromArgs(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	connID, rawID := telegramIngestFixture(t, e)
 	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
@@ -146,6 +147,7 @@ func (uniqueViolationSink) Upsert(context.Context, connector.NormalizedRecord) (
 // hits the winner — classifying it as poison (swallowing it, logging and
 // returning nil) would silently drop a customer's message.
 func TestIngestWorkerTreatsAUniqueViolationAsRetryable(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	connID, rawID := telegramIngestFixture(t, e)
 	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
@@ -176,6 +178,7 @@ func TestIngestWorkerTreatsAUniqueViolationAsRetryable(t *testing.T) {
 // worker path a message does, yet it must never produce an activity, and it
 // must land as the reachability change it actually is.
 func TestIngestWorkerAppliesMembershipWithoutCapturingAnActivity(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	connID, _ := telegramIngestFixture(t, e)
 	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
@@ -241,6 +244,7 @@ const telegramIngestGroupJSON = `{
 // to their PRIVATE chat — answering somewhere other than where it was read, or
 // refused outright by a user who never started the bot.
 func TestIngestWorkerCapturesNothingFromAGroupChat(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	connID, _ := telegramIngestFixture(t, e)
 	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))

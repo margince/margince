@@ -65,6 +65,7 @@ func (p *singleRecordHistory) BackfillPage(ctx context.Context, _ connector.Auth
 }
 
 func TestACommittedCreationIsCreditedAfterItsImportIsCancelled(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	record := partiesMailRecord(t, e, partyMailProof{outbound: true, sentByOwner: true}, "", "", "Please send the product requirements.")
 	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))

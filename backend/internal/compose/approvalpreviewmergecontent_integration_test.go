@@ -24,6 +24,7 @@ import (
 )
 
 func TestMergePreviewMatchesFilesAndDrafts(t *testing.T) {
+	t.Parallel()
 	for _, kind := range []string{"contact", "company"} {
 		for _, collision := range []bool{false, true} {
 			t.Run(fmt.Sprintf("%s/collision=%t", kind, collision), func(t *testing.T) {
@@ -107,6 +108,7 @@ func TestMergePreviewMatchesFilesAndDrafts(t *testing.T) {
 }
 
 func TestMergePreviewWithholdsAnotherAuthorsDraft(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	source, target := mergeContentPair(t, e, "contact")
 	owner := e.As(e.Rep1, nil, integration.AdminPerms)
@@ -125,6 +127,7 @@ func TestMergePreviewWithholdsAnotherAuthorsDraft(t *testing.T) {
 }
 
 func TestMergePreviewRefusesLostDraftGroundingWithoutDiscarding(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	source, target := mergeContentPair(t, e, "contact")
 	colleague := e.As(e.Rep1, nil, integration.AdminPerms)

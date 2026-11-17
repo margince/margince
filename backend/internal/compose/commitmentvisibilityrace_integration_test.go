@@ -21,6 +21,7 @@ import (
 )
 
 func TestAConversationNarrowedAfterLoadingNeverReachesTheModel(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := time.Date(2026, 10, 18, 12, 0, 0, 0, time.UTC)
 	body := "I will send confidential pricing tomorrow."

@@ -133,18 +133,21 @@ func (f taskClockFixture) assertAll(t *testing.T, want time.Time, why string) {
 }
 
 func TestATaskAMemberLogsLeavesLastActivityAlone(t *testing.T) {
+	t.Parallel()
 	f := newTaskClockFixture(t)
 	f.logOnAll(t, "task", f.now.Add(-time.Minute))
 	f.assertAll(t, f.mailed, "a member's task is intent, not contact")
 }
 
 func TestATaskAnAgentFilesLeavesLastActivityAlone(t *testing.T) {
+	t.Parallel()
 	f := newTaskClockFixture(t)
 	f.fileAgentTask(t)
 	f.assertAll(t, f.mailed, "the commitment scan's task is intent, not contact")
 }
 
 func TestANoteACallAndAMeetingStillMoveLastActivity(t *testing.T) {
+	t.Parallel()
 	for i, kind := range []string{"note", "call", "meeting"} {
 		t.Run(kind, func(t *testing.T) {
 			f := newTaskClockFixture(t)
@@ -184,6 +187,7 @@ func (f taskClockFixture) runTaskClockTask(ctx context.Context, t *testing.T, ta
 }
 
 func TestTheDataTaskTakesATaskOutOfAStoredClockOnce(t *testing.T) {
+	t.Parallel()
 	f := newTaskClockFixture(t)
 	tasked := f.now.Add(-time.Minute)
 	f.logOnAll(t, "task", tasked)
@@ -226,6 +230,7 @@ func TestTheDataTaskTakesATaskOutOfAStoredClockOnce(t *testing.T) {
 // A task and a mail in one second leave a clock the current rule also gives,
 // so the task does not select it.
 func TestTheDataTaskLeavesAClockATaskSharesWithAMail(t *testing.T) {
+	t.Parallel()
 	f := newTaskClockFixture(t)
 	f.logOnAll(t, "task", f.mailed)
 	f.assertNoTaskClocks(t, "the stored value is the mail's")
@@ -247,6 +252,7 @@ func (f taskClockFixture) assertNoTaskClocks(t *testing.T, why string) {
 }
 
 func TestTheDataTaskRollsItsClocksBackWithItsProgress(t *testing.T) {
+	t.Parallel()
 	f := newTaskClockFixture(t)
 	tasked := f.now.Add(-time.Minute)
 	f.logOnAll(t, "task", tasked)

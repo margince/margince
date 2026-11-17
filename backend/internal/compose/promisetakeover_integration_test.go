@@ -66,6 +66,7 @@ func (f takeOverFixture) takeOverAudits(t *testing.T) int {
 }
 
 func TestAColleagueTakesOverAPromiseNobodyWasAskedToKeep(t *testing.T) {
+	t.Parallel()
 	f := setupTakeOver(t)
 	out, err := f.h.TakeOver(f.priya, f.claim)
 	if err != nil {
@@ -112,6 +113,7 @@ func TestAColleagueTakesOverAPromiseNobodyWasAskedToKeep(t *testing.T) {
 }
 
 func TestAPromiseTakenOverTwiceIsStillOneTask(t *testing.T) {
+	t.Parallel()
 	f := setupTakeOver(t)
 	first, err := f.h.TakeOver(f.priya, f.claim)
 	if err != nil {
@@ -146,6 +148,7 @@ func TestAPromiseTakenOverTwiceIsStillOneTask(t *testing.T) {
 }
 
 func TestAPromiseWhoseSourceTheReaderCannotReadIsNotTheirsToTake(t *testing.T) {
+	t.Parallel()
 	f := setupTakeOver(t)
 	if _, err := f.e.Activities.SetAudience(f.e.Admin(), ids.From[ids.ActivityKind](f.source), activities.SetAudienceInput{
 		Audience: "selected", Members: []activities.AudienceMember{{SubjectType: "user", SubjectID: f.e.Rep1}},
@@ -164,6 +167,7 @@ func TestAPromiseWhoseSourceTheReaderCannotReadIsNotTheirsToTake(t *testing.T) {
 }
 
 func TestAnAgentTakesOverAPromiseForItsUser(t *testing.T) {
+	t.Parallel()
 	f := setupTakeOver(t)
 	agent := f.e.AgentFor(t, f.e.Rep2, []ids.UUID{f.e.Team1}, integration.AdminPerms)
 	if _, err := f.h.TakeOver(agent, f.claim); err != nil {
@@ -176,6 +180,7 @@ func TestAnAgentTakesOverAPromiseForItsUser(t *testing.T) {
 
 // Passportless work acts for nobody, so no promise is its to take.
 func TestPassportlessWorkCannotTakeOverAPromise(t *testing.T) {
+	t.Parallel()
 	f := setupTakeOver(t)
 	actor, ok := principal.Actor(f.priya)
 	if !ok {
@@ -191,6 +196,7 @@ func TestPassportlessWorkCannotTakeOverAPromise(t *testing.T) {
 }
 
 func TestAPromiseFromNarrowedMailBecomesATaskOnlyItsTakerReads(t *testing.T) {
+	t.Parallel()
 	f := setupTakeOver(t)
 	if _, err := f.e.Activities.SetAudience(f.e.Admin(), ids.From[ids.ActivityKind](f.source), activities.SetAudienceInput{
 		Audience: "selected", Members: []activities.AudienceMember{
@@ -237,6 +243,7 @@ func TestAPromiseFromNarrowedMailBecomesATaskOnlyItsTakerReads(t *testing.T) {
 // the claim writer. This drives the dispatcher instead, because only that path
 // records the admission whose currency the takeover reads.
 func TestAPromiseTheScanCouldNotPlaceIsStillTakenOver(t *testing.T) {
+	t.Parallel()
 	f := setupTakeOver(t)
 	const span = "Draft the renewal quote before the board meeting"
 	subject := "Renewal"
@@ -280,6 +287,7 @@ func TestAPromiseTheScanCouldNotPlaceIsStillTakenOver(t *testing.T) {
 
 // The task records whose hands took the promise: a colleague's or their agent's.
 func TestATakenOverPromiseIsATaskOfWhoeverTookIt(t *testing.T) {
+	t.Parallel()
 	for name, tc := range map[string]struct {
 		as   func(takeOverFixture) context.Context
 		want string
@@ -303,6 +311,7 @@ func TestATakenOverPromiseIsATaskOfWhoeverTookIt(t *testing.T) {
 // A promise an agent records for its user is current work, as the user's own is.
 // One a product pass stamped under its own name still waits for its admission.
 func TestAPromiseAnAgentRecordedIsOpenOnItsContact(t *testing.T) {
+	t.Parallel()
 	f := setupTakeOver(t)
 	body := "I will send the price list on Monday"
 	message, _, err := f.e.Activities.LogActivity(f.e.Admin(), activities.LogActivityInput{

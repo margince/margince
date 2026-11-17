@@ -19,6 +19,7 @@ import (
 // identity setting in the configuration registry declared to survive a reset
 // keeps its row, and every other one goes back to its default.
 func TestADataResetKeepsTheIdentitySettingsOfTheRegistry(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	identityKeys := map[string]bool{}
 	for _, s := range identity.Settings() {

@@ -20,6 +20,7 @@ import (
 // its history. Accepting makes it current; turning it down withdraws it from
 // both (#8718).
 func TestALateProposalsCustomerClaimIsHistoryUntilAccepted(t *testing.T) {
+	t.Parallel()
 	for _, accept := range []bool{true, false} {
 		name := map[bool]string{true: "accepted", false: "refused"}[accept]
 		t.Run(name, func(t *testing.T) {
@@ -79,6 +80,7 @@ func customerClaims(t *testing.T, e *transcriptEnv, customer ids.ContactID) (his
 // A recent promise the reading was unsure of is owed to the customer while it
 // waits on its promiser. Turning the proposal down withdraws it there too.
 func TestARefusedProposalWithdrawsTheCustomersClaim(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	// The customer is not the promiser's to change, which must not stop them
 	// turning their own promise down.

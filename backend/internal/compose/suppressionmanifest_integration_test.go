@@ -20,6 +20,7 @@ import (
 // which is older and shorter. The manifest must not move back with it, or the
 // replay would claim to cover erasures the list no longer holds.
 func TestAnExportFromARestoredListNeverMovesTheManifestBack(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	eraser := eraserWithGraph(InstallationDB(e.Pool)).WithBlobstore(blobstore.NewMemory())
 	older := time.Date(2026, 1, 5, 9, 0, 0, 0, time.UTC)

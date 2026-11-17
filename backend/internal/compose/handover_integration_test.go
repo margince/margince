@@ -78,6 +78,7 @@ func assigneeOf(t *testing.T, e *integration.Env, task ids.UUID) ids.UUID {
 // colleague named, each through its own owner-change write. Another rep's deal
 // stays where it is. Nothing the admin can see is left behind.
 func TestAHandoverMovesEverythingADepartedColleagueOwned(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	leads := seedBulkLeads(t, e, e.Rep1, 2)
 	contactRows := seedBulkContacts(t, e, e.Rep1, 2)
@@ -165,6 +166,7 @@ func TestAHandoverMovesEverythingADepartedColleagueOwned(t *testing.T) {
 // A capture-private contact and company of a departed rep move with the
 // handover and stay owner-private, now to the colleague who took them over.
 func TestAHandoverMovesPrivateRecordsAndKeepsThemPrivate(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	private := ids.UUID(seedBulkContacts(t, e, e.Rep1, 1)[0].Id)
 	e.MakeCapturePrivate(t, "contact", private, e.Rep1)
@@ -203,6 +205,7 @@ func TestAHandoverMovesPrivateRecordsAndKeepsThemPrivate(t *testing.T) {
 // A colleague who still works here keeps their private records: only the work
 // of somebody who left is handed over that far.
 func TestAHandoverLeavesAnActiveMembersPrivateRecordsAlone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	private := ids.UUID(seedBulkContacts(t, e, e.Rep1, 1)[0].Id)
 	e.MakeCapturePrivate(t, "contact", private, e.Rep1)
@@ -224,6 +227,7 @@ func TestAHandoverLeavesAnActiveMembersPrivateRecordsAlone(t *testing.T) {
 // receiver of their own work. A caller without member administration hands on
 // nobody's work.
 func TestAHandoverRefusesWhatASingleReassignmentWouldRefuse(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	pipeline, open, _ := integration.DealFixture(t, e)
 	deal := e.SeedDeal(t, "BAER renewal", pipeline, open, &e.Rep1)
@@ -250,6 +254,7 @@ func TestAHandoverRefusesWhatASingleReassignmentWouldRefuse(t *testing.T) {
 // A delegated member administrator may hand on a rep's work and may not touch
 // an admin's: the ceiling every member verb carries holds here too.
 func TestAHandoverKeepsTheCeilingOverAnAdmin(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.GrantRole(t, e.Rep3, "admin")
 	delegated := e.As(e.Rep2, nil, principal.Permissions{
@@ -273,6 +278,7 @@ func TestAHandoverKeepsTheCeilingOverAnAdmin(t *testing.T) {
 // A delivery reads what its owner may see, so a delegated administrator hands a
 // rep's records to an admin but not the rep's webhook.
 func TestAWebhookStaysWithTheMemberWhenTheCallerDoesNotOutrankTheReceiver(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.GrantRole(t, e.Rep3, "admin")
 	hook := seedWebhook(t, e, e.Rep1, false)
@@ -300,6 +306,7 @@ func TestAWebhookStaysWithTheMemberWhenTheCallerDoesNotOutrankTheReceiver(t *tes
 // The private handover asks the receiver question itself. A caller that reaches
 // it without the seam still cannot hand records to a seat that may not own them.
 func TestThePrivateHandoverRefusesAReceiverWhoCannotOwn(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	private := ids.UUID(seedBulkContacts(t, e, e.Rep1, 1)[0].Id)
 	e.MakeCapturePrivate(t, "contact", private, e.Rep1)

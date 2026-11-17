@@ -20,6 +20,7 @@ var (
 )
 
 func TestTheWeekChartsOnlyTheRepsOwnWorkPerDay(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	owner := integration.OwnerConn(t)
 	seed := func(kind, direction string, at time.Time, stamp string) {

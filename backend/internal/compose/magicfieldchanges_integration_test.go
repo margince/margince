@@ -63,6 +63,7 @@ func requireImageKey(t *testing.T, e *integration.Env, audit ids.UUID, key strin
 }
 
 func TestAReceiptAmountCarriesTheCurrencyTheDealHeld(t *testing.T) {
+	t.Parallel()
 	v := setupDealVerdict(t)
 	v.run(t)
 	amountAudit := correctionAudit(t, v.Env, v.deal, deals.VerdictAmountCorrection)
@@ -90,6 +91,7 @@ func TestAReceiptAmountCarriesTheCurrencyTheDealHeld(t *testing.T) {
 }
 
 func TestAProbabilityReceiptHidesWhoSetIt(t *testing.T) {
+	t.Parallel()
 	v := setupDealVerdict(t)
 	v.run(t)
 	audit := correctionAudit(t, v.Env, v.deal, deals.VerdictProbabilityCorrection)
@@ -106,6 +108,7 @@ func TestAProbabilityReceiptHidesWhoSetIt(t *testing.T) {
 }
 
 func TestAnOwnerChangeNamesBothMembers(t *testing.T) {
+	t.Parallel()
 	v := setupDealVerdict(t)
 	next := ids.From[ids.UserKind](v.Rep2)
 	if _, err := v.Deals.UpdateDeal(v.Admin(), ids.From[ids.DealKind](v.deal), deals.UpdateDealInput{OwnerID: &next}); err != nil {
@@ -127,6 +130,7 @@ func TestAnOwnerChangeNamesBothMembers(t *testing.T) {
 }
 
 func TestASilentCloseNamesTheStagesItMovedBetween(t *testing.T) {
+	t.Parallel()
 	c := setupCloseLost(t)
 	from := c.WsScalar(t, `SELECT s.name FROM deal d JOIN stage s ON s.id = d.stage_id WHERE d.id = $1`, c.silent)
 	if got := c.run(t); got != 1 {

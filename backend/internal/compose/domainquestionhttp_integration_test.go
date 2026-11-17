@@ -18,6 +18,7 @@ import (
 )
 
 func TestDomainQuestionHTTPKeepsTheReadersBoundary(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
 	const domain = "private-question.test"

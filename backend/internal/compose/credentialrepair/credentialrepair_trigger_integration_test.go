@@ -30,6 +30,7 @@ import (
 // A bug that turned it on elsewhere must still not be able to rewrite what an
 // audit row says happened.
 func TestTheAuditExceptionRefusesAChangeToWhatTheRowSaysHappened(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	_, auditRow := seedAMailWithACredentialInItsAuditImage(t, e)
 
@@ -103,6 +104,7 @@ func ownerStatementUnderTheRepairSetting(t *testing.T, statement string, auditRo
 // A DELETE is refused with the repair's setting on, by the trigger itself. The
 // owner holds every grant, so no privilege stands in front of it.
 func TestTheAuditExceptionNeverAdmitsADelete(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	_, auditRow := seedAMailWithACredentialInItsAuditImage(t, e)
 
@@ -116,6 +118,7 @@ func TestTheAuditExceptionNeverAdmitsADelete(t *testing.T) {
 // the certificate and a record type the rules reach. The image must keep its
 // shape, with every changed string holding the marker. Each refusal misses one.
 func TestTheAuditExceptionRefusesAnImageThatIsNotMasked(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	_, auditRow := seedAMailWithACredentialInItsAuditImage(t, e)
 	shaped := ids.NewV7()
@@ -269,6 +272,7 @@ func TestTheAuditExceptionRefusesAnImageThatIsNotMasked(t *testing.T) {
 // only the rules know keeps its credential in the trail. A type only the
 // trigger knows admits rewrites of a trail the rules never mask.
 func TestTheTriggerAdmitsExactlyTheRecordTypesTheRulesMask(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	definition := e.WsScalar(t, `SELECT pg_get_functiondef('audit_log_immutable'::regproc)`)
 	list := regexp.MustCompile(`OLD\.entity_type IN \(([^)]*)\)`).FindStringSubmatch(definition)

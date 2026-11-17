@@ -22,6 +22,7 @@ import (
 // was archived. So two arrived, one has a recorded response, two breached, and
 // one has no response. The archived lead is in none of these figures.
 func TestTheWeeksLeadsAreOneCohortAndItsSizeIsFrozen(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	owner := ids.From[ids.UserKind](e.Rep1)
 	var arrivedAt time.Time
@@ -91,6 +92,7 @@ func TestTheWeeksLeadsAreOneCohortAndItsSizeIsFrozen(t *testing.T) {
 // A week frozen before the cohort was recorded reads it as unknown. Zero would
 // tell a reader no lead went unanswered that week.
 func TestAScorecardFrozenWithoutItsCohortReadsItAsUnknown(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	seedLeadFor(t, e, "Cohort freeze", e.Rep1)
 	written, _, err := e.engine.AssembleFor(e.repCtx, nextWeek())
@@ -130,6 +132,7 @@ func TestAScorecardFrozenWithoutItsCohortReadsItAsUnknown(t *testing.T) {
 // routed, answered and breached tallies. The team snapshot used to require
 // answered + breached <= routed, and refused to freeze such a week.
 func TestATeamWeekHoldingALateAnswerFreezes(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	owner := ids.From[ids.UserKind](e.Rep1)
 	name := "Answered late, team week"

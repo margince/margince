@@ -98,6 +98,7 @@ func saysReminderDue(item *crmcontracts.WorklistItem) bool {
 }
 
 func TestADueReminderLeadsOnlyItsAssigneesWorklist(t *testing.T) {
+	t.Parallel()
 	r := setupReminders(t)
 	e := r.e
 	nextWeek := r.now.AddDate(0, 0, 7)
@@ -133,6 +134,7 @@ func TestADueReminderLeadsOnlyItsAssigneesWorklist(t *testing.T) {
 }
 
 func TestATaskGivesNoReminderWhenNobodyIsDue(t *testing.T) {
+	t.Parallel()
 	r := setupReminders(t)
 	e := r.e
 	past := new(r.now.Add(-time.Minute))
@@ -164,6 +166,7 @@ func TestATaskGivesNoReminderWhenNobodyIsDue(t *testing.T) {
 }
 
 func TestADueReminderKeepsAnOldTaskOnTheWorklist(t *testing.T) {
+	t.Parallel()
 	r := setupReminders(t)
 	old := r.task(t, "Missed last month", r.now.AddDate(0, 0, -40), new(r.now.Add(-time.Minute)), &r.e.Rep1)
 	if at, row := rowFor(r.worklist(r.rep1, t, "mine", ids.Nil), old); at != 0 || !saysReminderDue(row) {
@@ -174,6 +177,7 @@ func TestADueReminderKeepsAnOldTaskOnTheWorklist(t *testing.T) {
 // The lane's count is the rows it lists: the day's tasks plus the reminders
 // ahead of them, each task once.
 func TestTheTaskCountCountsEachDueReminderOnce(t *testing.T) {
+	t.Parallel()
 	r := setupReminders(t)
 	e := r.e
 	past := new(r.now.Add(-time.Minute))
@@ -202,6 +206,7 @@ func TestTheTaskCountCountsEachDueReminderOnce(t *testing.T) {
 // More reminders than the day's cap all reach the Worklist, and the lane says
 // it holds them all.
 func TestEveryDueReminderReachesTheWorklist(t *testing.T) {
+	t.Parallel()
 	r := setupReminders(t)
 	want := map[string]bool{}
 	for range 13 {
@@ -231,6 +236,7 @@ func TestEveryDueReminderReachesTheWorklist(t *testing.T) {
 
 // The reminder read follows the store's cursor past its largest page.
 func TestTheReminderReadFollowsItsCursor(t *testing.T) {
+	t.Parallel()
 	r := setupReminders(t)
 	for range reminderPage + 1 {
 		r.task(t, "Reminded", r.now.AddDate(0, 0, 7), new(r.now.Add(-time.Minute)), &r.e.Rep1)
@@ -249,6 +255,7 @@ func TestTheReminderReadFollowsItsCursor(t *testing.T) {
 }
 
 func TestMovingTheDueDateEndsAPassedReminderInTheSameWrite(t *testing.T) {
+	t.Parallel()
 	r := setupReminders(t)
 	e := r.e
 	nextWeek := r.now.AddDate(0, 0, 7)
@@ -286,6 +293,7 @@ func TestMovingTheDueDateEndsAPassedReminderInTheSameWrite(t *testing.T) {
 // The filter follows the row at the next read. The cases are a reminder moved
 // into the past, a task written with one, and a task handed to a colleague.
 func TestTheReminderFilterFollowsEditsAndReassignment(t *testing.T) {
+	t.Parallel()
 	r := setupReminders(t)
 	e := r.e
 	store := e.Activities.WithClock(func() time.Time { return r.now })
@@ -322,6 +330,7 @@ func TestTheReminderFilterFollowsEditsAndReassignment(t *testing.T) {
 }
 
 func TestATaskTheReaderMayNotReadIsNotOnTheirWorklist(t *testing.T) {
+	t.Parallel()
 	r := setupReminders(t)
 	e := r.e
 	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)

@@ -16,6 +16,7 @@ import (
 )
 
 func TestAnOutboundReportKeepsTheCustomersPromiseOnTheCustomer(t *testing.T) {
+	t.Parallel()
 	e, reply := seedMailedPromise(t, "active")
 	var payload extractPayload
 	if err := json.Unmarshal([]byte(reply), &payload); err != nil {
@@ -43,6 +44,7 @@ func TestAnOutboundReportKeepsTheCustomersPromiseOnTheCustomer(t *testing.T) {
 }
 
 func TestAnUnresolvedPromiserDoesNotBecomeTheSender(t *testing.T) {
+	t.Parallel()
 	e, reply := seedMailedPromise(t, "active")
 	reply = mailedReplyWithoutPromiser(t, reply)
 	if err := runSignalPass(t, e, reply); err != nil {
@@ -57,6 +59,7 @@ func TestAnUnresolvedPromiserDoesNotBecomeTheSender(t *testing.T) {
 }
 
 func TestAMeetingReportKeepsTheCustomersPromiseOnTheCustomer(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	customer := e.SeedContact(t, "Ines Huber", &e.Rep1)
 	body, source := "Mira: Ines Huber agreed to send the payment by Friday.", "transcript"
@@ -90,6 +93,7 @@ func TestAMeetingReportKeepsTheCustomersPromiseOnTheCustomer(t *testing.T) {
 }
 
 func TestAnIncomingReportCannotAssignWorkToTheNamedColleague(t *testing.T) {
+	t.Parallel()
 	e, reply := seedMailedPromise(t, "active")
 	var payload extractPayload
 	if err := json.Unmarshal([]byte(reply), &payload); err != nil {
@@ -115,6 +119,7 @@ func TestAnIncomingReportCannotAssignWorkToTheNamedColleague(t *testing.T) {
 }
 
 func TestAMeetingReportCannotAssignWorkToTheNamedColleague(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	e.WsExec(t, `UPDATE app_user SET display_name='Priya Raman' WHERE id=$1`, e.Rep2)
 	body := "Mira: Priya Raman agreed to send the pricing by Friday."

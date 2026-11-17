@@ -85,6 +85,7 @@ func storedOriginal(ctx context.Context, t *testing.T, db *database.DB, sourceID
 }
 
 func TestAPersonalSendersFilesAreKeptNowhere(t *testing.T) {
+	t.Parallel()
 	ctx, db, tag := captureWorkspace(t)
 	blob := blobstore.NewMemory()
 	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blob))
@@ -125,6 +126,7 @@ func TestAPersonalSendersFilesAreKeptNowhere(t *testing.T) {
 // A `business` override readmits the sender, so their files are stored as any
 // other correspondent's are.
 func TestABusinessOverrideKeepsAPersonalSendersFiles(t *testing.T) {
+	t.Parallel()
 	ctx, db, tag := captureWorkspace(t)
 	blob := blobstore.NewMemory()
 	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blob))
@@ -159,6 +161,7 @@ func TestABusinessOverrideKeepsAPersonalSendersFiles(t *testing.T) {
 // A personal verdict on an address a correspondence contact holds is the
 // forgery noiseMailScope already refuses: the contact's mail keeps its files.
 func TestACorrespondenceContactsFilesSurviveAPersonalVerdict(t *testing.T) {
+	t.Parallel()
 	ctx, db, tag := captureWorkspace(t)
 	blob := blobstore.NewMemory()
 	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blob))
@@ -200,6 +203,7 @@ func TestACorrespondenceContactsFilesSurviveAPersonalVerdict(t *testing.T) {
 // A personal verdict a forged notes mail earned keeps no authority over the
 // notes Gmail authenticated as Google's: their files are stored.
 func TestAuthenticatedGoogleNotesKeepTheirFilesUnderAPersonalVerdict(t *testing.T) {
+	t.Parallel()
 	for name, byOwner := range map[string]bool{"judged by the model": false, "chosen by the seat": true} {
 		t.Run(name, func(t *testing.T) { notesFilesUnderPersonalVerdict(t, byOwner) })
 	}
@@ -248,6 +252,7 @@ func notesFilesUnderPersonalVerdict(t *testing.T, byOwner bool) {
 // A file the parser's bounds refused is in no part to splice out, so a
 // personal sender's original keeps only its headers.
 func TestAPersonalSendersRefusedFileLeavesNoBytesInTheOriginal(t *testing.T) {
+	t.Parallel()
 	ctx, db, tag := captureWorkspace(t)
 	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blobstore.NewMemory()))
 

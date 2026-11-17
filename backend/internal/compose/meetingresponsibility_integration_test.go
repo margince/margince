@@ -75,6 +75,7 @@ func myMeetingsToday(t *testing.T, e *integration.Env, reader ids.UUID) []string
 }
 
 func TestOnlyTakingPartMakesAMeetingYours(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	bookHostedMeeting(t, e, "Quarterly review", laneDay.Add(2*time.Hour), e.Rep1, map[ids.UUID]string{
 		e.Rep2: "importer",
@@ -96,6 +97,7 @@ func TestOnlyTakingPartMakesAMeetingYours(t *testing.T) {
 }
 
 func TestTheCompanyAndContactPagesNameTheSameRoom(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	clock := func() time.Time { return laneDay }
 	company := e.SeedCompany(t, "Halden Werke", nil)
@@ -170,6 +172,7 @@ func meetingRowsOf(t *testing.T, e *integration.Env, reader ids.UUID, now time.T
 // meeting to prepare. Past with no outcome, it is one question about its
 // outcome. Saved as held, it is a follow-up.
 func TestAMeetingIsHeldOnlyOnceItsOutcomeSaysSo(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := laneDay.Add(3 * time.Hour)
 	ownerID := ids.From[ids.UserKind](e.Rep1)
@@ -243,6 +246,7 @@ func captureCalendarEvent(t *testing.T, e *integration.Env, calendarOf ids.UUID,
 // provider lists as organizer or attendee takes part; the seat whose
 // connector only imported it does not.
 func TestACalendarCopyIsNotTheImportersMeetingButItsAttendeesAre(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	organizer := seatEmail(t, e.Rep2)
 	guest := meetingmap.Actor{Email: "buyer@customer.test"}
@@ -270,6 +274,7 @@ func TestACalendarCopyIsNotTheImportersMeetingButItsAttendeesAre(t *testing.T) {
 // It is nobody's work until the replay of its stored original restores the
 // owner's provider role.
 func TestALegacyCalendarRowIsNobodysUntilItsOriginalIsReplayed(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedCalendarConnection(t, e)
 	starts := laneDay.Add(36 * time.Hour)
@@ -298,6 +303,7 @@ func TestALegacyCalendarRowIsNobodysUntilItsOriginalIsReplayed(t *testing.T) {
 // login address. A declared alias and a delivered-to sighting do not, and the
 // set matches what capture.SeatProvedAddressTx accepts for the same seats.
 func TestOnlyAProvenIdentityBindsASeatToACalendarEvent(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	declared, delivered, proved := "deals-desk@ourco.test", "rep3-forward@ourco.test", "rep3-calendar@ourco.test"
 	if _, err := capture.NewOwnerIdentityStore(e.DB()).Add(e.As(e.Rep2, nil, integration.AdminPerms), "address", declared); err != nil {
@@ -356,6 +362,7 @@ func TestOnlyAProvenIdentityBindsASeatToACalendarEvent(t *testing.T) {
 // A colleague can attend by their own address and also be on file as a contact
 // with that email. The room names them once, as the colleague.
 func TestAColleagueOnFileAsAContactIsNamedOnceInTheRoom(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	clock := func() time.Time { return laneDay }
 	guest := e.SeedContact(t, "Greta Guest", nil)

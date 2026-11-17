@@ -75,6 +75,7 @@ func fieldsSentButNotHeld(t *testing.T, e *integration.Env, entityType string, i
 }
 
 func TestARestoreLandsEveryFieldItSends(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 
@@ -131,6 +132,7 @@ func TestARestoreLandsEveryFieldItSends(t *testing.T) {
 // caller who can tell a refusal from a 404 can tell a hidden record from an
 // absent one, which is the whole of what the rule hides.
 func TestARestoreOfARecordOutsideTheCallersScopeIsNotFound(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 

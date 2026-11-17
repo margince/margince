@@ -16,6 +16,7 @@ import (
 // Naming metrics without charts asks for those metrics' numbers alone; the
 // default charts belong to the default metrics and are not carried over.
 func TestEvaluatingNamedMetricsWithoutChartsReturnsThemWithNoCharts(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	handler := reportingHTTPRouter(f)
 
@@ -30,6 +31,7 @@ func TestEvaluatingNamedMetricsWithoutChartsReturnsThemWithNoCharts(t *testing.T
 // The agent tool and the HTTP route evaluate one selection to one answer, so a
 // selection without charts keys and serialises the same through both.
 func TestReportingToolAndHTTPAgreeOnASelectionWithoutCharts(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	handler := reportingHTTPRouter(f)
 	overHTTP := reportingResponse[crmcontracts.ReportingEvaluation](t,

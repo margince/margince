@@ -22,6 +22,7 @@ import (
 // it out keeps it, a blank one clears it, and one past the note limit is
 // refused by name.
 func TestASavedReportKeepsItsPurpose(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	purpose := "  Weekly pipeline review for the board.  "
 	input := crmcontracts.ReportingReportInput{
@@ -72,6 +73,7 @@ func TestASavedReportKeepsItsPurpose(t *testing.T) {
 // A form sends a stored description back with every edit of the report. An
 // earlier long one is admitted unchanged; a changed one is held to the limit.
 func TestAReportEditKeepsItsUnchangedEarlierLongDescription(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	input := crmcontracts.ReportingReportInput{Name: "Earlier purpose", Audience: "private", Selection: f.selection()}
 	created, err := f.service.CreateReport(f.human, input)

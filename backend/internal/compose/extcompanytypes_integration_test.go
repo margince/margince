@@ -83,6 +83,7 @@ func (e coreEnv) liveTypes(t *testing.T, company ids.UUID) []string {
 	return out
 }
 
+//testdb:serial publishes the process-wide composed extension set
 func TestAUnitSetsItsDeclaredCompanyTypesUnderItsOwnName(t *testing.T) {
 	e := setupCore(t)
 	composeTypeUnits(t)
@@ -104,6 +105,7 @@ func TestAUnitSetsItsDeclaredCompanyTypesUnderItsOwnName(t *testing.T) {
 	}
 }
 
+//testdb:serial publishes the process-wide composed extension set
 func TestAUnitReplacesOnlyItsOwnValuesAndKeepsAnotherUnits(t *testing.T) {
 	e := setupCore(t)
 	composeTypeUnits(t)
@@ -128,6 +130,7 @@ func TestAUnitReplacesOnlyItsOwnValuesAndKeepsAnotherUnits(t *testing.T) {
 	}
 }
 
+//testdb:serial publishes the process-wide composed extension set
 func TestAUnitCannotSetATypeItDidNotDeclare(t *testing.T) {
 	e := setupCore(t)
 	composeTypeUnits(t)
@@ -143,6 +146,7 @@ func TestAUnitCannotSetATypeItDidNotDeclare(t *testing.T) {
 	}
 }
 
+//testdb:serial publishes the process-wide composed extension set
 func TestSettingTypesOnACompanyThatIsNotThereIsNotFound(t *testing.T) {
 	e := setupCore(t)
 	composeTypeUnits(t)

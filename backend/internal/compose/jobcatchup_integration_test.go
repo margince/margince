@@ -19,6 +19,7 @@ import (
 // The worker reads each kind's newest attempt, and a kind that ran an hour ago
 // is not run again at start (#11026).
 func TestReadLastRunsFeedsTheCatchUp(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := context.Background()
 	now := clocktest.Now(t)

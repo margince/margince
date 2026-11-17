@@ -33,6 +33,7 @@ import (
 // extension registers a provider that is not also a kind, which is far too late
 // to learn it.
 func TestChannelProviderDoesNotReferenceActivityKind(t *testing.T) {
+	t.Parallel()
 	integration.Setup(t) // triggers EnsureSchema — the migrations this test asserts on
 	owner := integration.OwnerConn(t)
 
@@ -69,6 +70,7 @@ func TestChannelProviderDoesNotReferenceActivityKind(t *testing.T) {
 // and without the reference it is a free-text field that agrees with the
 // registry only for as long as every writer happens to.
 func TestActivityChannelProviderReferencesTheRegistry(t *testing.T) {
+	t.Parallel()
 	integration.Setup(t)
 	owner := integration.OwnerConn(t)
 
@@ -99,6 +101,7 @@ func TestActivityChannelProviderReferencesTheRegistry(t *testing.T) {
 // would fail for the wrong reason and this test would report a passing FK it
 // never actually reached.
 func TestActivityChannelProviderFKRefusesAnUnregisteredProvider(t *testing.T) {
+	t.Parallel()
 	_, err := integration.OwnerConn(t).Exec(context.Background(), `
 		INSERT INTO activity (kind, channel_provider, source, captured_by)
 		VALUES ('message', 'no_such_transport', 'manual', 'test')`)

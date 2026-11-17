@@ -48,6 +48,7 @@ func agentOnConnection(e *integration.Env, human, connection ids.UUID) context.C
 }
 
 func TestAnAgentsBatchStaysItsOwnAcrossARefreshAndItsHumansToo(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	engine := bulkEngineFor(e)
 	connection := ids.NewV7()
@@ -79,6 +80,7 @@ func TestAnAgentsBatchStaysItsOwnAcrossARefreshAndItsHumansToo(t *testing.T) {
 }
 
 func TestABatchNoLongerNamesARecordItsReaderLostSightOf(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	engine := bulkEngineFor(e)
 	rep1 := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.RepPerms)
@@ -127,6 +129,7 @@ func TestABatchNoLongerNamesARecordItsReaderLostSightOf(t *testing.T) {
 }
 
 func TestUndoingAnArchiveBringsBackALinkBetweenTwoRecordsOfTheBatch(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	engine := bulkEngineFor(e)
 	items := seedBulkContacts(t, e, e.Rep1, 2)
@@ -161,6 +164,7 @@ func TestUndoingAnArchiveBringsBackALinkBetweenTwoRecordsOfTheBatch(t *testing.T
 // A retried undo under its Idempotency-Key replays the first answer only while
 // the caller may still see every record that answer names.
 func TestAReplayedUndoIsRefusedOnceItNamesARecordOutOfSight(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	engine := bulkEngineFor(e)
 	rep1 := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.RepPerms)

@@ -22,6 +22,7 @@ import (
 // line. The run id travels in audit_log.batch_id, as datatask.Execute writes
 // it, so this proves the read carries the column the grouping needs.
 func TestEachCorrectionRunIsOneMaintenanceLineOnTheReceipt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := clocktest.Now(t)
 	since := now.Add(-time.Hour)

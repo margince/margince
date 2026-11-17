@@ -73,6 +73,7 @@ func storedAddressRefused(t *testing.T, e *integration.Env, address string) bool
 	return erased != nil
 }
 
+//testdb:serial binds the process-wide configuration (config.Bind)
 func TestAnAddressErasedBeforeTheKeyStaysRefusedThroughTheRekey(t *testing.T) {
 	e := integration.Setup(t)
 	useRootKey(t, "")
@@ -134,6 +135,7 @@ func TestAnAddressErasedBeforeTheKeyStaysRefusedThroughTheRekey(t *testing.T) {
 	}
 }
 
+//testdb:serial binds the process-wide configuration (config.Bind)
 func TestAPreferenceLinkMailedBeforeTheKeyKeepsOpeningAfterItIsHashed(t *testing.T) {
 	e := integration.Setup(t)
 	useRootKey(t, "")
@@ -192,6 +194,7 @@ func TestAPreferenceLinkMailedBeforeTheKeyKeepsOpeningAfterItIsHashed(t *testing
 	}
 }
 
+//testdb:serial binds the process-wide configuration (config.Bind)
 func TestAKeyedExportRemovesTheUnkeyedJournalAndStillCatchesARestore(t *testing.T) {
 	e := integration.Setup(t)
 	store := blobstore.NewMemory()
@@ -222,6 +225,7 @@ func TestAKeyedExportRemovesTheUnkeyedJournalAndStillCatchesARestore(t *testing.
 	}
 }
 
+//testdb:serial binds the process-wide configuration (config.Bind)
 func TestAKeyedAnonymizedContactAloneRefusesAnotherRootKey(t *testing.T) {
 	e := integration.Setup(t)
 	useRootKey(t, "")
@@ -247,6 +251,7 @@ func TestAKeyedAnonymizedContactAloneRefusesAnotherRootKey(t *testing.T) {
 	}
 }
 
+//testdb:serial binds the process-wide configuration (config.Bind)
 func TestTheRekeyQueuesTheJournalExportThatRemovesUnkeyedNames(t *testing.T) {
 	e := integration.Setup(t)
 	store := blobstore.NewMemory()

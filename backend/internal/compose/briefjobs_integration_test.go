@@ -103,6 +103,7 @@ func (b *briefJobEnv) runsFor(t *testing.T, user ids.UUID, day time.Time) int {
 }
 
 func TestOvernightPassAssemblesEachRepsMorningExactlyOnce(t *testing.T) {
+	t.Parallel()
 	b := setupBriefJob(t)
 	morning := time.Date(2026, 6, 4, 7, 0, 0, 0, time.UTC)
 	b.now = morning
@@ -139,6 +140,7 @@ func TestOvernightPassAssemblesEachRepsMorningExactlyOnce(t *testing.T) {
 }
 
 func TestOvernightPassWaitsForTheLocalMorning(t *testing.T) {
+	t.Parallel()
 	b := setupBriefJob(t)
 	// Before the briefing hour in the installation's own zone. Assembling here
 	// would date the run to a morning that has not started, and the rep would
@@ -164,6 +166,7 @@ func TestOvernightPassWaitsForTheLocalMorning(t *testing.T) {
 }
 
 func TestOvernightPassLeavesReadSeatsAndAgentsWithoutAMorning(t *testing.T) {
+	t.Parallel()
 	b := setupBriefJob(t)
 	morning := time.Date(2026, 6, 4, 7, 0, 0, 0, time.UTC)
 	b.now = morning
@@ -195,6 +198,7 @@ func TestOvernightPassLeavesReadSeatsAndAgentsWithoutAMorning(t *testing.T) {
 }
 
 func TestASeatWithoutADealGrantCostsOnlyItsOwnBrief(t *testing.T) {
+	t.Parallel()
 	b := setupBriefJob(t)
 	morning := time.Date(2026, 6, 4, 7, 0, 0, 0, time.UTC)
 	b.now = morning

@@ -80,6 +80,7 @@ func saveQuestions(asker context.Context, t *testing.T, e *forecastEnv, q analyt
 // A reader lists only the questions they saved, each once, across pages that
 // break between two saved at the same instant.
 func TestASavedQuestionIsListedForItsAskerOnly(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	mine := e.ownLensRepCtx(e.Rep1)
 	theirs := e.ownLensRepCtx(e.Rep3)
@@ -109,6 +110,7 @@ func TestASavedQuestionIsListedForItsAskerOnly(t *testing.T) {
 // The list gives a saved question's shape and says it was filtered. It never
 // gives the filter's value, which can name a record its asker no longer reads.
 func TestASavedQuestionsFilterValueIsNotListed(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	mine := e.ownLensRepCtx(e.Rep1)
 	filtered := openDeals

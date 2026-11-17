@@ -33,6 +33,7 @@ func transferRefusalCode(err error) string {
 // Every record that is not a colleague's to give answers with the refusal that
 // says why, and files nothing.
 func TestOnlyAColleagueWhoCannotChangeARecordMayAskForIt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	transfers := newOwnershipTransfers(e.Pool)
 	owned := e.SeedCompany(t, "Rep1 GmbH", &e.Rep1)
@@ -106,6 +107,7 @@ func TestOnlyAColleagueWhoCannotChangeARecordMayAskForIt(t *testing.T) {
 // owner's agent may decline it but not accept it. The colleague who asked
 // reads and withdraws only their own request.
 func TestOnlyTheOwnerAnswersAndOnlyTheAskerWithdraws(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	grantHandoverRole(t, e, e.Rep3)
 	company := e.SeedCompany(t, "Private Card AG", &e.Rep1)
@@ -151,6 +153,7 @@ func TestOnlyTheOwnerAnswersAndOnlyTheAskerWithdraws(t *testing.T) {
 
 // The route answers 201 for a new request and 200 for the one already open.
 func TestTheRequestRouteTellsANewRequestFromAnOpenOne(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := e.SeedCompany(t, "Route AG", &e.Rep1)
 	h := ownershipRequestHandlers{transfers: newOwnershipTransfers(e.Pool)}
@@ -181,6 +184,7 @@ func TestTheRequestRouteTellsANewRequestFromAnOpenOne(t *testing.T) {
 // A user's agent asks for a record as its user does, and the request names its
 // passport. Automatic work has no user behind it, so it may not ask.
 func TestAUsersAgentAsksForARecordAndAutomaticWorkMayNot(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	transfers := newOwnershipTransfers(e.Pool)
 	owned := e.SeedCompany(t, "Rep1 GmbH", &e.Rep1)

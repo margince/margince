@@ -69,6 +69,7 @@ func offerHandover(t *testing.T, e *integration.Env, recordType string, id, to i
 // The colleague accepts. The company, its open deal and the owner's open task
 // on it move to them, each with its own audit row.
 func TestAnAcceptedOfferMovesTheRecordAndTheOwnersOpenWorkToTheColleague(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	grantHandoverRole(t, e, e.Rep1, e.Rep3)
 	company := e.SeedCompany(t, "Offered AG", &e.Rep1)
@@ -116,6 +117,7 @@ func TestAnAcceptedOfferMovesTheRecordAndTheOwnersOpenWorkToTheColleague(t *test
 // Declined and run out: the record stays with its owner, who is told each
 // time.
 func TestADeclinedOrExpiredOfferLeavesTheRecordAndTellsTheOwner(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	grantHandoverRole(t, e, e.Rep1, e.Rep3)
 	contact := e.SeedContact(t, "Kept Contact", &e.Rep1)
@@ -153,6 +155,7 @@ func TestADeclinedOrExpiredOfferLeavesTheRecordAndTellsTheOwner(t *testing.T) {
 // Only the owner offers, and only to an active colleague on a seat that can
 // write and a role that may change the record. Every refusal files nothing.
 func TestOnlyTheOwnerOffersARecordToAColleagueWhoCanHoldIt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	grantHandoverRole(t, e, e.Rep1, e.Rep2, e.Rep3)
 	company := e.SeedCompany(t, "Guarded AG", &e.Rep1)
@@ -200,6 +203,7 @@ func TestOnlyTheOwnerOffersARecordToAColleagueWhoCanHoldIt(t *testing.T) {
 // An offer blocks a second offer and a request. A second press for the same
 // colleague joins the open offer.
 func TestOneHandoverOfARecordIsOpenAtATime(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	grantHandoverRole(t, e, e.Rep1, e.Rep2, e.Rep3)
 	company := e.SeedCompany(t, "Busy AG", &e.Rep1)
@@ -242,6 +246,7 @@ func TestOneHandoverOfARecordIsOpenAtATime(t *testing.T) {
 // an all-scope manager sees or decides it, and the colleague's agent may
 // decline it but not accept it.
 func TestOnlyTheColleagueOfferedTheRecordDecidesIt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	grantHandoverRole(t, e, e.Rep1, e.Rep3)
 	company := e.SeedCompany(t, "Addressed AG", &e.Rep1)
@@ -277,6 +282,7 @@ func TestOnlyTheColleagueOfferedTheRecordDecidesIt(t *testing.T) {
 // receiver whose role lost the grant likewise. A receiver moved to a read seat
 // no longer sees the card, and the owner withdraws it.
 func TestAnOfferEitherPartyCanNoLongerHonourStaysPending(t *testing.T) {
+	t.Parallel()
 	for name, c := range map[string]struct {
 		lapse    func(t *testing.T, e *integration.Env)
 		wantCode string
@@ -332,6 +338,7 @@ func TestAnOfferEitherPartyCanNoLongerHonourStaysPending(t *testing.T) {
 // The picker names the colleagues an offer would accept and no one else, and
 // only the owner reads it.
 func TestTheOfferPickerNamesOnlyColleaguesWhoCanTakeTheRecord(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	grantHandoverRole(t, e, e.Rep1, e.Rep3)
 	company := e.SeedCompany(t, "Picked AG", &e.Rep1)
@@ -373,6 +380,7 @@ func TestTheOfferPickerNamesOnlyColleaguesWhoCanTakeTheRecord(t *testing.T) {
 
 // The route answers 201 for a new offer and 200 for the one already open.
 func TestTheOfferRouteTellsANewOfferFromAnOpenOne(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	grantHandoverRole(t, e, e.Rep1, e.Rep3)
 	company := e.SeedCompany(t, "Route Offer AG", &e.Rep1)
@@ -407,6 +415,7 @@ func TestTheOfferRouteTellsANewOfferFromAnOpenOne(t *testing.T) {
 }
 
 func TestReassignmentWithdrawsAnOfferWithoutLosingItsNotice(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	grantHandoverRole(t, e, e.Rep1, e.Rep3)
 	company := e.SeedCompany(t, "Example Company", &e.Rep1)

@@ -41,6 +41,7 @@ func claimExists(t *testing.T, e *integration.Env, key string) bool {
 }
 
 func TestIdempotencyRetentionPurgesSnapshotsPastTheReplayWindow(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 
 	seedSettledClaim(t, e, "expired-claim", "30 hours")

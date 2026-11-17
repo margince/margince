@@ -41,6 +41,7 @@ import (
 // directly now, so the guard has to live where the write does — and the human's
 // row is seeded BEFORE the read for the same reason.
 func TestDeepReadOfferingsDedupeOnValueKeyAndTheApplyRespectsHumanPrecedence(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := insertCompany(t, e, e.Rep1, "acme.example", "")
 
@@ -109,6 +110,7 @@ func TestDeepReadOfferingsDedupeOnValueKeyAndTheApplyRespectsHumanPrecedence(t *
 }
 
 func TestAcceptedEmployeeRangeFactFillsSizeBandWhenUnambiguous(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := contacts.NewStore(e.DB())
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
@@ -221,6 +223,7 @@ func TestAcceptedEmployeeRangeFactFillsSizeBandWhenUnambiguous(t *testing.T) {
 // headcount fills both empty columns. Each is stamped as the agent's work, so
 // the record page shows it as AI-derived and a colleague can revert it.
 func TestDeepReadFillsTheCompanysOwnIndustryAndSizeFromItsHomePage(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := insertCompany(t, e, e.Rep1, "acme.example", "")
 	site := &fakeSite{pages: map[string]fakeSitePage{
@@ -279,6 +282,7 @@ func TestDeepReadFillsTheCompanysOwnIndustryAndSizeFromItsHomePage(t *testing.T)
 // The read fills the industry only where it is empty. A value a colleague set
 // stays, and the read's finding is kept as evidence beside it.
 func TestDeepReadNeverOverwritesAnIndustryAColleagueSet(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := insertCompany(t, e, e.Rep1, "acme.example", "Logistics")
 	if err := contacts.NewStore(e.DB()).ApplyDeepRead(e.As(e.Rep1, nil, integration.AdminPerms), contacts.DeepReadProposal{
@@ -314,6 +318,7 @@ func TestDeepReadNeverOverwritesAnIndustryAColleagueSet(t *testing.T) {
 // read is not run here: it would land its own findings and there would be
 // nothing left for a rejection to be observed against.
 func TestDeepReadRejectionLandsNothing(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := insertCompany(t, e, e.Rep1, "acme.example", "")
 	_, svc := newDeepReadTestWorker(e, acmeServicesSite(), servicesDeepBrain())
@@ -392,6 +397,7 @@ func servicesOfferings() []contacts.DeepReadFact {
 }
 
 func TestSiteProfileStoresARecognizedIndustryAsItsCode(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company, err := e.Contacts.CreateCompany(e.Admin(), contacts.CreateCompanyInput{DisplayName: "Restaurant Profile", Source: "manual"})
 	if err != nil {

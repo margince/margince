@@ -126,6 +126,7 @@ func storeOldRuleLanguage(t *testing.T, e *integration.Env, activity ids.UUID, l
 // A language the rep chose, or else a subject they wrote, is what the model is
 // told over an English thread. A choice is the one thing in the request that changes.
 func TestAChosenLanguageIsTheOneTheModelIsTold(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	e := o.e
 	replyLangContact(t, e, "Dietmar Kunde", "dietmar@kunde.test")
@@ -155,6 +156,7 @@ func withoutFence(req model.Request) string {
 }
 
 func TestTheAddresseesGermanReplyStoredAsEnglishIsDraftedInGerman(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	e := o.e
 	replyLangContact(t, e, "Dietmar Kunde", "dietmar@kunde.test")
@@ -167,6 +169,7 @@ func TestTheAddresseesGermanReplyStoredAsEnglishIsDraftedInGerman(t *testing.T) 
 }
 
 func TestTheStoredLanguageHoldsWhenTheAddresseeWroteNothing(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	e := o.e
 	replyLangContact(t, e, "Dietmar Kunde", "dietmar@kunde.test")
@@ -198,6 +201,7 @@ func longReplyThread(t *testing.T, o *owedEnv, oldestOwner ids.UUID, oldestSeat 
 }
 
 func TestTheAddresseesMailOlderThanTheThreadPageStillDecidesTheLanguage(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	e := o.e
 	_, anchor := longReplyThread(t, o, o.owner, o.seat)
@@ -207,6 +211,7 @@ func TestTheAddresseesMailOlderThanTheThreadPageStillDecidesTheLanguage(t *testi
 }
 
 func TestTheAddresseesMailTheDrafterMayNotReadDoesNotDecideTheLanguage(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	e := o.e
 	o.e.WsExec(t, `INSERT INTO capture_connection (user_id, provider, status, credential_ref, account_label)
@@ -221,6 +226,7 @@ func TestTheAddresseesMailTheDrafterMayNotReadDoesNotDecideTheLanguage(t *testin
 }
 
 func TestAnOutboundReplyFollowsTheContactItIsDeliveredToNotTheGreetedSender(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	e := o.e
 	replyLangContact(t, e, "Dietmar Kunde", "dietmar@kunde.test")
@@ -242,6 +248,7 @@ func TestAnOutboundReplyFollowsTheContactItIsDeliveredToNotTheGreetedSender(t *t
 }
 
 func TestASharedMailboxsOwnTextOutranksAStoredLabelWhileTheGreetingStaysNameless(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	e := o.e
 	replyLangContact(t, e, "Steireif Anna", "anna@steireif.test")
@@ -257,6 +264,7 @@ func TestASharedMailboxsOwnTextOutranksAStoredLabelWhileTheGreetingStaysNameless
 }
 
 func TestAnAddresseeMessageDatedAfterTheDraftingInstantDoesNotDecideTheLanguage(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	e := o.e
 	replyLangContact(t, e, "Dietmar Kunde", "dietmar@kunde.test")

@@ -26,6 +26,7 @@ import (
 )
 
 func TestPrivateProspectOwnerCanRepairAHandoffWithoutMemberAdministration(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	memberManagerFor(t, e)
 	ctx := e.Admin()

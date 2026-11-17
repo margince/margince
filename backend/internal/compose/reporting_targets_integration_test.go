@@ -24,6 +24,7 @@ import (
 )
 
 func TestReportingTeamTargetRemainsIndependentOfOwnerAllocations(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	at := time.Date(2026, 9, 29, 12, 0, 0, 0, time.UTC)
 	service := newReportingService(e.Pool, func() time.Time { return at })
@@ -71,6 +72,7 @@ func TestReportingTeamTargetRemainsIndependentOfOwnerAllocations(t *testing.T) {
 }
 
 func TestReportingRetiredTargetStopsLiveAttainmentAndKeepsRevisionHistory(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	target := f.target
 	input := target.Definition
@@ -145,6 +147,7 @@ func TestReportingRetiredTargetStopsLiveAttainmentAndKeepsRevisionHistory(t *tes
 }
 
 func TestReportingPausedSchedulesRemainDiscoverableWithoutExposingSetupToReaders(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	report, err := f.service.CreateReport(f.human, crmcontracts.ReportingReportInput{Name: "Scheduled review", Audience: "private", Selection: f.selection()})
 	if err != nil {
@@ -187,6 +190,7 @@ func TestReportingPausedSchedulesRemainDiscoverableWithoutExposingSetupToReaders
 }
 
 func TestReportingTargetFiltersApplyBeforePagination(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	input := f.target.Definition
 	input.Scope = crmcontracts.ReportingScope{Kind: "owner", Id: ptrUUID(f.env.Rep1)}
@@ -263,6 +267,7 @@ func TestReportingTargetFiltersApplyBeforePagination(t *testing.T) {
 // colleagues' targets, so the rep gets none, while a seat that reads every owner
 // target does.
 func TestReportingRepReadsOwnTeamAndCompanyTargets(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	at := time.Date(2026, 9, 29, 12, 0, 0, 0, time.UTC)
 	service := newReportingService(e.Pool, func() time.Time { return at })
@@ -340,6 +345,7 @@ func TestReportingRepReadsOwnTeamAndCompanyTargets(t *testing.T) {
 // The attainment chart of a team sums its members' owner targets. A rep in the
 // team cannot read their colleagues' targets, so the chart gives them no sum.
 func TestReportingNarrowSeatGetsNoChartAllocation(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	at := time.Date(2026, 9, 29, 12, 0, 0, 0, time.UTC)
 	service := newReportingService(e.Pool, func() time.Time { return at })
@@ -385,6 +391,7 @@ func reportingTeammate(t *testing.T, e *forecastEnv) ids.UUID {
 // targets beyond the lead's teams and stays without one, and another team is
 // beyond their reach.
 func TestReportingTeamLeadRevisesLedTeamTarget(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	at := time.Date(2026, 9, 29, 12, 0, 0, 0, time.UTC)
 	service := newReportingService(e.Pool, func() time.Time { return at })

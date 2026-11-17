@@ -60,6 +60,7 @@ func ownerKey(row map[string]any) string {
 }
 
 func TestAGroupingByOwnerCountsOnlyTheOwnersARepMayMeasure(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	seedWinsByThreeOwners(t, e)
 
@@ -86,6 +87,7 @@ func TestAGroupingByOwnerCountsOnlyTheOwnersARepMayMeasure(t *testing.T) {
 }
 
 func TestAGroupingByOwnerCountsATeamManagersTeammates(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	seedWinsByThreeOwners(t, e)
 
@@ -98,6 +100,7 @@ func TestAGroupingByOwnerCountsATeamManagersTeammates(t *testing.T) {
 }
 
 func TestAGroupingByOwnerIsWholeForAnAllScopeSeat(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	seedWinsByThreeOwners(t, e)
 
@@ -113,6 +116,7 @@ func TestAGroupingByOwnerIsWholeForAnAllScopeSeat(t *testing.T) {
 // A drill-through handle is a URL the caller can edit, so a row handle naming
 // a colleague is the filter refusal again, not a way around it.
 func TestARowHandleNamingAColleagueIsRefusedForARep(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	seedWinsByThreeOwners(t, e)
 
@@ -139,6 +143,7 @@ func TestARowHandleNamingAColleagueIsRefusedForARep(t *testing.T) {
 // The typed grammar compares an owner with ne, lt and the rest, so it cannot
 // judge one value. Any mention of the owner narrows instead.
 func TestATypedQueryByOwnerCountsOnlyTheOwnersARepMayMeasure(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	amount := int64(100_000)
 	// Above the privacy floor on both sides, so the floor withholds nothing
@@ -176,6 +181,7 @@ func TestATypedQueryByOwnerCountsOnlyTheOwnersARepMayMeasure(t *testing.T) {
 // their owners and amounts. That is what the ordinary deal read already serves
 // the same caller, and a field mask that read applies is applied here too.
 func TestADrillThroughShowsWhatTheOrdinaryReadShowsAndNoMore(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	seedClosedWin(t, e, "Rep3 win", e.Rep3, 300000)
 	store := deals.NewStore(InstallationDB(e.Pool), DealsInstallation())
@@ -227,6 +233,7 @@ func (e *forecastEnv) typedReader(user ids.UUID) context.Context {
 // A field among a typed question's MEASURES or FILTERS does not make it a
 // listing. Only the grouping can, so the owner breakdown stays narrowed.
 func TestATypedOwnerBreakdownStaysNarrowedWhateverElseItNames(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	company := e.seedID(t, `INSERT INTO company (id, display_name, source, captured_by)
 		VALUES ($1, 'Delivery Co', 'manual', 'human:x')`)
@@ -266,6 +273,7 @@ func TestATypedOwnerBreakdownStaysNarrowedWhateverElseItNames(t *testing.T) {
 // A typed filter naming an owner is judged the way run_report judges one:
 // a colleague is a 403 whatever the comparison, not an empty answer.
 func TestATypedFilterNamingAColleagueIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	for range 7 {
 		seedClosedWin(t, e, "Mine", e.Rep1, 1000)
@@ -301,6 +309,7 @@ func TestATypedFilterNamingAColleagueIsRefused(t *testing.T) {
 // A scope the caller names is their question, on an install-wide report too:
 // authorized, applied, and refused when it is outside their lens.
 func TestATypedQuestionsNamedScopeIsAppliedToAnInstallWideReport(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	for range 7 {
 		seedClosedWin(t, e, "Mine", e.Rep1, 1000)
@@ -331,6 +340,7 @@ func TestATypedQuestionsNamedScopeIsAppliedToAnInstallWideReport(t *testing.T) {
 // The explanation of a narrowed typed cell reads the same narrowed rows and
 // says so.
 func TestATypedExplanationCarriesItsAnswersNarrowing(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	for range 7 {
 		seedClosedWin(t, e, "Mine", e.Rep1, 1000)

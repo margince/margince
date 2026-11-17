@@ -28,6 +28,7 @@ var (
 )
 
 func TestAWeekBeforeTheRepsFirstRecordIsNotRecordedRatherThanZero(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	writer := reportingActor(e)
 	// Both written now, which is after the reviewed week closed.
@@ -57,6 +58,7 @@ func TestAWeekBeforeTheRepsFirstRecordIsNotRecordedRatherThanZero(t *testing.T) 
 }
 
 func TestASeatThatReadsLeadsIsToldItsLeadsWereNotRecorded(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 
 	review := assembleCoverageWeekAs(leadReadingActor(t, e), t, e)
@@ -82,6 +84,7 @@ func leadReadingActor(t *testing.T, e *forecastEnv) context.Context {
 }
 
 func TestAFigureCountsFromItsFirstRecordAndAnImportCanMeasureAWholeWeek(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	writer := reportingActor(e)
 	// An imported deal, closed in the source system before the reviewed week.

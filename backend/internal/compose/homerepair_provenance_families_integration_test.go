@@ -22,6 +22,7 @@ import (
 )
 
 func TestEveryRepairableTaskFamilyIsFoundAndReconciledThroughItsOwner(t *testing.T) {
+	t.Parallel()
 	fixtures := map[string]func(*testing.T) legacyRepairFixture{
 		provenance.LeadRepliedSource:    func(t *testing.T) legacyRepairFixture { return seedLegacyRepair(t, false) },
 		provenance.LeadForContactSource: seedLegacyContactArrivalRepair,

@@ -30,6 +30,7 @@ func (k *countedFileStage) Stage(ctx context.Context, files []capture.CapturedFi
 }
 
 func TestAnAbortedThreadJoinReusesItsStagedAttachment(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	const rootA, rootB, reply, recipient = "file-root-a@myco.example", "file-root-b@myco.example", "file-retry@myco.example", "buyer@customer.example"
 	o.weWrite(t, owedMail{to: recipient, subject: "Agreement", messageID: rootA, body: "First message.", at: o.now.Add(-3 * time.Hour)})

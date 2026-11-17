@@ -99,6 +99,7 @@ func (e *scoutEnv) reopenReceiptsShowTheReasonToTheOwnerOnly(t *testing.T, deal 
 // closes it as lost again with its note, code and close day. Evidence that
 // arrived before that Undo reopens nothing; evidence after it does.
 func TestMarginceReopensALostDealAndUndoClosesItAgain(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	e.GrantRole(t, e.AdminUser, "admin")
 	acme := e.SeedCompany(t, "Acme GmbH", &e.AdminUser)
@@ -169,6 +170,7 @@ func TestMarginceReopensALostDealAndUndoClosesItAgain(t *testing.T) {
 // Evidence that reached Margince before the deal was lost reopens nothing and
 // retires its suggestion. The company gets no second deal beside the lost one.
 func TestEvidenceThatArrivedBeforeTheLossReopensNothing(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	e.GrantRole(t, e.AdminUser, "admin")
 	acme := e.SeedCompany(t, "Acme GmbH", &e.AdminUser)
@@ -194,6 +196,7 @@ func TestEvidenceThatArrivedBeforeTheLossReopensNothing(t *testing.T) {
 // An owner who left, or who switched deal_revive off, keeps the lost deal
 // closed and the suggestion open for a human.
 func TestADepartedOwnerOrASwitchOffKeepsTheLostDealClosed(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	e.GrantRole(t, e.AdminUser, "admin")
 	departed := e.SeedCompany(t, "Initech", &e.AdminUser)
@@ -222,6 +225,7 @@ func TestADepartedOwnerOrASwitchOffKeepsTheLostDealClosed(t *testing.T) {
 
 // Undo of a reopen is refused once a colleague moved the deal since.
 func TestUndoOfAReopenTheTeamMovedSinceIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	e.GrantRole(t, e.AdminUser, "admin")
 	acme := e.SeedCompany(t, "Acme GmbH", &e.AdminUser)

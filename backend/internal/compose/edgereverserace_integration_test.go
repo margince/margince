@@ -64,6 +64,7 @@ func reversalsOf(t *testing.T, e *integration.Env, auditID ids.UUID) int {
 // a serialised path from an unserialised one. Replaying a field image twice
 // succeeds twice unless something pins the version it was decided on.
 func TestAnEdgeReverseOvertakenInsideItsDecisionWindowRefuses(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 

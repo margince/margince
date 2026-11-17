@@ -118,6 +118,7 @@ func createContactAt(t *testing.T, e *integration.Env, name string, address *crm
 }
 
 func TestAStoredCountryThatDoesNotFitItsPostalCodeAndCityIsFlagged(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	austrian := createCompanyAt(t, e, "Wrong Country GmbH", berlinAddress("AT"))
 	german := createCompanyAt(t, e, "Right Country GmbH", berlinAddress("DE"))
@@ -159,6 +160,7 @@ func TestAStoredCountryThatDoesNotFitItsPostalCodeAndCityIsFlagged(t *testing.T)
 }
 
 func TestEditingPostalCodeCityOrCountryClearsTheCountryCheck(t *testing.T) {
+	t.Parallel()
 	edits := map[string]func(*crmcontracts.Address){
 		"postal code": func(a *crmcontracts.Address) { a.PostalCode = new("80331") },
 		"city":        func(a *crmcontracts.Address) { a.City = new("München") },
@@ -195,6 +197,7 @@ func TestEditingPostalCodeCityOrCountryClearsTheCountryCheck(t *testing.T) {
 }
 
 func TestEditingTheStreetKeepsTheCountryCheck(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id := createCompanyAt(t, e, "Same Town GmbH", berlinAddress("AT"))
 	stampCountryCheck(t, e, contacts.CountryCheckedCompany, id.UUID)
@@ -242,6 +245,7 @@ func (f countriesFunc) Countries(ctx context.Context, query string) ([]string, e
 }
 
 func TestACountryCheckLosesToAnEditMadeWhileItAsked(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id := createCompanyAt(t, e, "Racing GmbH", berlinAddress("AT"))
 	editWhileAsking := countriesFunc(func(context.Context, string) ([]string, error) {
@@ -261,6 +265,7 @@ func TestACountryCheckLosesToAnEditMadeWhileItAsked(t *testing.T) {
 }
 
 func TestOnePassAsksTheProviderAtMostItsBudget(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	cities := []string{"Hamburg", "Köln", "Bremen", "Dresden", "Leipzig", "Kiel"}
 	for _, city := range cities {
@@ -285,6 +290,7 @@ func TestOnePassAsksTheProviderAtMostItsBudget(t *testing.T) {
 }
 
 func TestAPostalCodeNamingTwoCountriesFlagsOnlyACountryItNamesNeither(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	border := func(country string) *crmcontracts.Address {
 		return &crmcontracts.Address{PostalCode: new("87567"), City: new("Riezlern"), Country: new(country)}
@@ -333,6 +339,7 @@ func readRecordStamp(t *testing.T, e *integration.Env, table string, id ids.UUID
 }
 
 func TestACountryCheckWriteLeavesTheRecordVersionAlone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := createCompanyAt(t, e, "Open Form GmbH", berlinAddress("AT"))
 	member := createContactAt(t, e, "Open Form Contact", berlinAddress("AT"))
@@ -368,6 +375,7 @@ func TestACountryCheckWriteLeavesTheRecordVersionAlone(t *testing.T) {
 }
 
 func TestACountryCheckOlderThanTheRefreshAgeIsAskedAgain(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	createCompanyAt(t, e, "Old Evidence GmbH", berlinAddress("DE"))
 	var asked int

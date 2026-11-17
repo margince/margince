@@ -40,6 +40,7 @@ func readOnlyPool(t *testing.T, pool *pgxpool.Pool) *pgxpool.Pool {
 }
 
 func TestTheBriefingLaneReadsAnExpiredSnoozeInAReadOnlyTransaction(t *testing.T) {
+	t.Parallel()
 	b := setupBriefingLane(t)
 	seedBriefingLaneDeals(t, b)
 	run, err := b.engine.SnapshotRun(b.repCtx, b.now)

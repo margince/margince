@@ -18,6 +18,7 @@ import (
 )
 
 func TestTriageForwardedAliasesRemainSeparateOpenQuestions(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
 	const destination = "https://destination.test/"
@@ -76,6 +77,7 @@ func TestTriageForwardedAliasesRemainSeparateOpenQuestions(t *testing.T) {
 }
 
 func TestTriageSameDomainRedirectStillClassifiesTheRequestedIdentity(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	args := openTriageQuestion(t, e, triageTestDomain, "contact@"+triageTestDomain, "Personal Owner")
 	site := &fakeSite{pages: map[string]fakeSitePage{seedURL: {text: readable("Personal Owner private homepage."), finalURL: "https://www." + triageTestDomain + "/"}}}
@@ -92,6 +94,7 @@ func TestTriageSameDomainRedirectStillClassifiesTheRequestedIdentity(t *testing.
 }
 
 func TestTriageRedirectFailureRemainsAnUncertainQuestion(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	args := openTriageQuestion(t, e, triageTestDomain, "sender@"+triageTestDomain, "Sender")
 	site := &fakeSite{pageErrors: map[string][]error{seedURL: {errors.New("redirect loop")}}}

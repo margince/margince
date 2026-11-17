@@ -24,6 +24,7 @@ import (
 )
 
 func TestAHoldingAnswerRetractsPreviouslyOpenedSiblings(t *testing.T) {
+	t.Parallel()
 	for _, old := range []string{capture.VerdictCleared, capture.VerdictSharedByOwner} {
 		t.Run(old, func(t *testing.T) {
 			e := integration.Setup(t)
@@ -47,6 +48,7 @@ func TestAHoldingAnswerRetractsPreviouslyOpenedSiblings(t *testing.T) {
 }
 
 func TestHistoricalHoldRepairDrainsForEveryClosingVerdict(t *testing.T) {
+	t.Parallel()
 	for _, status := range []string{capture.VerdictHeld, capture.VerdictUnsure, capture.VerdictHeldByOwner} {
 		t.Run(status, func(t *testing.T) {
 			e := integration.Setup(t)
@@ -72,6 +74,7 @@ func TestHistoricalHoldRepairDrainsForEveryClosingVerdict(t *testing.T) {
 }
 
 func TestASiblingHoldRollsBackWithItsAudienceChange(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	mail := seedHeldThreadMail(t, e, "rolled-back-hold", "customer@example.test", "Earlier exchange")
 	e.WsExec(t, `UPDATE capture_import SET verdict_status='cleared' WHERE activity_id=@id`, pgx.StrictNamedArgs{"id": mail})
@@ -96,6 +99,7 @@ func TestASiblingHoldRollsBackWithItsAudienceChange(t *testing.T) {
 }
 
 func TestASettledHoldProtectsHistoryBeforeTheBoundedSweepFinishes(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	var last ids.UUID
 	for range 502 {
@@ -135,6 +139,7 @@ func TestASettledHoldProtectsHistoryBeforeTheBoundedSweepFinishes(t *testing.T) 
 }
 
 func TestAClassifiersHoldDoesNotReplaceAnExistingOwnerHold(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	mail := seedHeldThreadMail(t, e, "owner-held-history", "customer@example.test", "Earlier exchange")
 	e.WsExec(t, `UPDATE capture_import SET verdict_status='held_by_owner',verdict_reason='owner' WHERE activity_id=@id`, pgx.StrictNamedArgs{"id": mail})

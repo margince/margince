@@ -14,6 +14,7 @@ import (
 )
 
 func TestReportingEvidenceAndExportSurviveALanguageChange(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	selection := f.selection()
 	selection.PipelineId = nil

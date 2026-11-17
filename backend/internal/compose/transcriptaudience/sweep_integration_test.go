@@ -19,6 +19,7 @@ import (
 // Guests added to many meetings reach every transcript in one sweep, even when
 // more transcripts drifted than one transaction takes.
 func TestOneSweepReachesEveryDriftedTranscript(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	booked := string(crmcontracts.ActivityMeetingStatusBooked)
 	transcripts := transcriptaudience.SweepBatch + 1

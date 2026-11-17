@@ -23,15 +23,17 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestAnAdvisorVerdictMakesTheRecordAndKeepsItTheOwnersAlone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	activityID := seedCapturedMail(t, e, "k.bauer@kanzlei.example", "Entwurf Gesellschaftervereinbarung")
 	dispositionID := seedPendingDisposition(t, e, "k.bauer@kanzlei.example", "kanzlei.example", activityID)
 
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindAdvisor}}
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{dispositionID.String(): capture.KindAdvisor}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
@@ -60,11 +62,12 @@ func TestAnAdvisorVerdictMakesTheRecordAndKeepsItTheOwnersAlone(t *testing.T) {
 }
 
 func TestAPersonalVerdictMakesNoRecordAtAll(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	activityID := seedCapturedMail(t, e, "s.renner@webmail.example", "Fotos vom Wochenende")
 	dispositionID := seedPendingDisposition(t, e, "s.renner@webmail.example", "webmail.example", activityID)
 
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindPersonal}}
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{dispositionID.String(): capture.KindPersonal}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)

@@ -20,6 +20,7 @@ import (
 )
 
 func TestPlanAgendaUsesStoredDatesAndCompletion(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	store := weeklyPlanStore(e.Pool)
@@ -68,6 +69,7 @@ func TestPlanAgendaUsesStoredDatesAndCompletion(t *testing.T) {
 }
 
 func TestNamedTeamRosterDoesNotIncludeAnotherTeam(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.AdminUser, nil, integration.AdminPerms)
 	seam := newTeammatesSeam(e.Pool)
@@ -91,6 +93,7 @@ func TestNamedTeamRosterDoesNotIncludeAnotherTeam(t *testing.T) {
 }
 
 func TestNamedTeamRosterRequiresTheCallersLiveTeamScope(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seam := newTeammatesSeam(e.Pool)
 	team := integration.RepPerms
@@ -109,6 +112,7 @@ func TestNamedTeamRosterRequiresTheCallersLiveTeamScope(t *testing.T) {
 }
 
 func TestPlanAgendaUsesTheInstallationCalendarAcrossDST(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	zone := "America/New_York"
@@ -135,6 +139,7 @@ func TestPlanAgendaUsesTheInstallationCalendarAcrossDST(t *testing.T) {
 }
 
 func TestATeamWorklistCarriesATeammatesDueCommitmentUnderTheirName(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := time.Date(2026, 6, 10, 12, 0, 0, 0, time.UTC)
 	teammate := e.As(e.Rep2, []ids.UUID{e.Team1}, integration.AdminPerms)

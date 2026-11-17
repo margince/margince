@@ -17,6 +17,7 @@ import (
 )
 
 func TestASecondRunningPassIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	ctx = principal.SystemActing(ctx, closeDateSweepActor)
@@ -37,6 +38,7 @@ func TestASecondRunningPassIsRefused(t *testing.T) {
 // A row another transaction holds is both. `SKIP LOCKED` steps over it, and the
 // unique index does not.
 func TestTheSweepStandsDownWhenAnotherWorkerOwnsThePass(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	e.seedSweepDeal(t, "Overdue and open", e.early, nil, new(-9), 3)
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)

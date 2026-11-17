@@ -67,6 +67,7 @@ func (w attendeeWorld) queued(t *testing.T, invitee ids.UUID, attendees ...strin
 // An invited colleague is a colleague to schedule with before they redeem the
 // invitation.
 func TestAnInvitedColleagueResolvesAsAColleague(t *testing.T) {
+	t.Parallel()
 	w := newAttendeeWorld(t)
 	const address = "invited@colleague.example"
 	_, seat, _ := invitedColleague(t, w.e, address)
@@ -82,6 +83,7 @@ func TestAnInvitedColleagueResolvesAsAColleague(t *testing.T) {
 // A visible lead resolves as a lead and carries no name: its participant row is
 // an address row, read without the lead's scope.
 func TestALeadAttendeeCarriesNoName(t *testing.T) {
+	t.Parallel()
 	w := newAttendeeWorld(t)
 	address := "lead@buyer.test"
 	if _, _, err := w.e.Contacts.CreateLead(w.e.Admin(), contacts.CreateLeadInput{Email: &address, FullName: new("Lena Lead"), Source: "manual"}); err != nil {
@@ -97,6 +99,7 @@ func TestALeadAttendeeCarriesNoName(t *testing.T) {
 }
 
 func TestABookingAttendeeResolvesContactFirstUnderTheHostsScope(t *testing.T) {
+	t.Parallel()
 	w := newAttendeeWorld(t)
 	visible := w.contact(t, w.e.Rep1, "visible@buyer.test", "")
 	hidden := w.contact(t, w.e.Rep3, "hidden@buyer.test", "")
@@ -131,6 +134,7 @@ func TestABookingAttendeeResolvesContactFirstUnderTheHostsScope(t *testing.T) {
 // colleague and an address no record holds are invited without it. A contact
 // who withdrew consent still stops the whole invitation.
 func TestOnlyColleaguesAndUnknownAddressesSkipTheConsentGate(t *testing.T) {
+	t.Parallel()
 	w := newAttendeeWorld(t)
 	invitee := w.contact(t, w.e.Rep1, "invitee@buyer.test", "granted")
 	w.contact(t, w.e.Rep1, "withdrawn@buyer.test", "withdrawn")
@@ -165,6 +169,7 @@ func TestOnlyColleaguesAndUnknownAddressesSkipTheConsentGate(t *testing.T) {
 // longer has the address. Re-resolved alone it would read as host-named and go out
 // unchecked. The gate instead refuses an address it ties to no subject.
 func TestAQueuedContactThatLosesItsAddressIsNotSentUnchecked(t *testing.T) {
+	t.Parallel()
 	for name, lose := range map[string]string{
 		"address removed":  `UPDATE contact_email SET archived_at = now() WHERE contact_id = $1`,
 		"contact archived": `UPDATE contact SET archived_at = now() WHERE id = $1`,
@@ -197,6 +202,7 @@ func TestAQueuedContactThatLosesItsAddressIsNotSentUnchecked(t *testing.T) {
 // archived and promoted ones too, however the address is cased. An address no
 // record holds goes out unless a stop is recorded on it.
 func TestEveryGuestARecordHoldsIsAskedOfTheGate(t *testing.T) {
+	t.Parallel()
 	refused := func(t *testing.T, w attendeeWorld, invitee ids.UUID, guest string) {
 		t.Helper()
 		gated, err := w.calendar.consentAddresses(w.e.Admin(), w.host, w.queued(t, invitee, "invitee@buyer.test", guest))

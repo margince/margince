@@ -131,6 +131,7 @@ func runOwedWorker(t *testing.T, e *integration.Env, brain completer) {
 // — or, had the error been swallowed anywhere along the way, wrote nothing and
 // looked healthy.
 func TestTheWorkerJudgesWhatIsWaiting(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	activity := seedWaitingMail(t, e, "Monatsreporting Juli")
 
@@ -153,6 +154,7 @@ func TestTheWorkerJudgesWhatIsWaiting(t *testing.T) {
 // a short reply never reaches the model. A mail that is only a quote takes no
 // verdict, because someone else's old question is not owed by us.
 func TestTheOwedVerdictReadsOnlyTheSendersOwnWords(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	quoted := "On Mon, 10 Nov 2026 at 09:00, Anna Berg <anna@example.test> wrote:\n> Could you send the signed contract by Friday?" +
 		strings.Repeat("\n> More of the old thread.", 200)
@@ -190,6 +192,7 @@ func TestTheOwedVerdictReadsOnlyTheSendersOwnWords(t *testing.T) {
 // no verdict at all — and the pass must still finish rather than reading the
 // same rows forever.
 func TestAnAnswerBelowTheFloorLeavesTheMessageUnjudged(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	activity := seedWaitingMail(t, e, "Ambiguous note")
 
@@ -215,6 +218,7 @@ func TestAnAnswerBelowTheFloorLeavesTheMessageUnjudged(t *testing.T) {
 // The stub answers the FIRST message of each batch confidently and every other
 // below the floor, which is that mixture exactly.
 func TestABacklogTheModelWillNotCommitToStillEndsThePass(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	for i := range owedBatchSize + 4 {
 		seedWaitingMail(t, e, fmt.Sprintf("Thread %d", i))
@@ -270,6 +274,7 @@ func (b *owedStubbornBrain) Complete(_ context.Context, req model.Request) (mode
 // did not request — an accident of another check, not an assertion about the
 // boundary.
 func TestEveryJudgedMessageIsFencedInItsOwnSpan(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	for _, subject := range []string{
 		"please confirm the price",

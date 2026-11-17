@@ -24,6 +24,7 @@ import (
 )
 
 func TestCommercialPreviewReadsThePinnedRecordAndRefusesStaleBeforeValues(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	actor, ok := principal.Actor(e.Admin())
 	if !ok {
@@ -91,6 +92,7 @@ func TestCommercialPreviewReadsThePinnedRecordAndRefusesStaleBeforeValues(t *tes
 }
 
 func TestCommercialPreviewDoesNotCallWithheldMoneyEmpty(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	pipeline, open, _ := integration.DealFixture(t, e)
 	id := e.SeedDeal(t, "Harbor renewal", pipeline, open, &e.Rep3)
@@ -142,6 +144,7 @@ func TestCommercialPreviewDoesNotCallWithheldMoneyEmpty(t *testing.T) {
 }
 
 func TestDealProgressPreviewNamesBothStagesAndTheSeparateNote(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	pipeline, open, won := integration.DealFixture(t, e)
 	deal := e.SeedDeal(t, "Harbor renewal", pipeline, open, &e.Rep1)
@@ -201,6 +204,7 @@ func TestDealProgressPreviewNamesBothStagesAndTheSeparateNote(t *testing.T) {
 }
 
 func TestAutomationOwnerStagingUsesTheSharedPreviewReader(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seats := identity.NewServiceFor(e.DB())
 	if _, err := seats.SaveMyDisplayName(e.Admin(), "Ada"); err != nil {
@@ -234,6 +238,7 @@ func TestAutomationOwnerStagingUsesTheSharedPreviewReader(t *testing.T) {
 }
 
 func TestOpenStagePreviewDoesNotRequireUnrelatedMaskedMoney(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	pipeline, open, won := integration.DealFixture(t, e)
 	stages, err := e.Deals.DefaultPipeline(e.Admin())

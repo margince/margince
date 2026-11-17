@@ -68,6 +68,7 @@ func shownName(t *testing.T, e *integration.Env, id ids.ContactID) string {
 }
 
 func TestTheRepairShowsTheLearnedNameInPlaceOfCapturesInitials(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id := captureCounterparty(t, e, "Bw", "bw@welter.test")
 	learnSplitName(t, e, id, "Björn")
@@ -82,6 +83,7 @@ func TestTheRepairShowsTheLearnedNameInPlaceOfCapturesInitials(t *testing.T) {
 // An agent chose both names below. The first carries a nickname beside the
 // pair; the second shares nothing with the pair, so only its origin keeps it.
 func TestTheRepairKeepsADisplayNameAnAgentChose(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	agent := e.AgentFor(t, e.AdminUser, nil, integration.AdminPerms)
 	first, last := "Robert", "Fischer"
@@ -118,6 +120,7 @@ func TestTheRepairKeepsADisplayNameAnAgentChose(t *testing.T) {
 // A vCard ingest runs as the mailbox's connector, as capture does, and still
 // copies a name somebody curated in their address book.
 func TestTheRepairKeepsADisplayNameAVCardImportChose(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.ConnectorOwnerCtx(e.AdminUser, "gmail")
 	results, err := e.Contacts.ImportVCardsFromMessage(ctx, []contacts.VCardEntry{{
@@ -141,6 +144,7 @@ func TestTheRepairKeepsADisplayNameAVCardImportChose(t *testing.T) {
 // more. Today's parser strips an affiliation before it stores the name, so the
 // display is planted the way an older capture kept it.
 func TestTheRepairKeepsACapturedNameThatSaysMoreThanThePair(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id := captureCounterparty(t, e, "Björn Welter", "bjoern@gradion.test")
 	e.WsExec(t, `UPDATE contact SET full_name = 'Welter, Björn (Gradion)' WHERE id = $1`, id)
@@ -153,6 +157,7 @@ func TestTheRepairKeepsACapturedNameThatSaysMoreThanThePair(t *testing.T) {
 }
 
 func TestTheRepairKeepsADisplayNameAHumanEdited(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id := captureCounterparty(t, e, "Bw", "bw@welter.test")
 	typed := "BW"
@@ -171,6 +176,7 @@ func TestTheRepairKeepsADisplayNameAHumanEdited(t *testing.T) {
 // An agent that renames a captured contact chose that name, although the row
 // still carries capture's captured_by.
 func TestTheRepairKeepsADisplayNameAnAgentEdited(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id := captureCounterparty(t, e, "Bw", "bw@welter.test")
 	chosen := "Bobby (VIP)"
@@ -190,6 +196,7 @@ func TestTheRepairKeepsADisplayNameAnAgentEdited(t *testing.T) {
 // A restore writes full_name under its own audit verb, and is as much a choice
 // as an update.
 func TestTheRepairKeepsADisplayNameAHumanRestored(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id := captureCounterparty(t, e, "Bw", "bw@welter.test")
 	restored := "Bee Dub"
@@ -212,6 +219,7 @@ func TestTheRepairKeepsADisplayNameAHumanRestored(t *testing.T) {
 // more. The row is planted the way a capture stored it before the parser
 // stripped affiliations and filled the split columns.
 func TestTheFillKeepsACapturedNameThatSaysMoreThanThePair(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id := captureCounterparty(t, e, "Robert Fischer", "bob@acme.test")
 	e.WsExec(t, `UPDATE contact SET full_name = 'Robert Fischer (Acme board)', first_name = NULL, last_name = NULL
@@ -230,6 +238,7 @@ func TestTheFillKeepsACapturedNameThatSaysMoreThanThePair(t *testing.T) {
 // A blank half is no name. The repair neither reads it as contained in the
 // display nor writes a one-part name in its place.
 func TestTheRepairLeavesAContactWithABlankHalfAlone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id := captureCounterparty(t, e, "Bw", "bw@welter.test")
 	learnSplitName(t, e, id, " ")
@@ -242,6 +251,7 @@ func TestTheRepairLeavesAContactWithABlankHalfAlone(t *testing.T) {
 }
 
 func TestTheRepairKeepsAShortNameThatTheAddressSpells(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id := captureCounterparty(t, e, "", "anna@initials.test")
 

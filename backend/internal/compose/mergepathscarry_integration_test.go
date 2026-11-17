@@ -64,6 +64,7 @@ func (c *carryEnv) subjectsHolding(t *testing.T, column string, id ids.UUID) (li
 }
 
 func TestALeadMergeCarriesTheLeadsLinksAndBases(t *testing.T) {
+	t.Parallel()
 	c := setupCarry(t)
 	retired := c.lead(t, "Lena Merge", "lena@leadcarry.test", "Merge GmbH")
 	survivor := c.lead(t, "Lena Survivor", "lena-survivor@leadcarry.test", "Merge GmbH")
@@ -85,6 +86,7 @@ func TestALeadMergeCarriesTheLeadsLinksAndBases(t *testing.T) {
 // Promotion moves the lead arm to the contact arm in one write, so the
 // one-subject CHECK on both tables holds throughout.
 func TestAPromotionCarriesTheLeadsLinksAndBasesOntoTheContact(t *testing.T) {
+	t.Parallel()
 	c := setupCarry(t)
 	lead := c.lead(t, "Paul Promote", "paul@leadcarry.test", "Promote AG")
 	token := c.leadHoldsLinkAndBasis(t, lead, "paul@leadcarry.test")
@@ -112,6 +114,7 @@ func TestAPromotionCarriesTheLeadsLinksAndBasesOntoTheContact(t *testing.T) {
 // The review queue's merge disposition runs the lead merge inside its own
 // transaction, so it carries the same rows.
 func TestTheDedupeDispositionCarriesTheLosersLinks(t *testing.T) {
+	t.Parallel()
 	c := setupCarry(t)
 	winner := c.lead(t, "Mira Holt", "", "Holt & Co")
 	loser := c.lead(t, "Mira Holtt", "mira@leadcarry.test", "Holt & Co")
@@ -132,6 +135,7 @@ func TestTheDedupeDispositionCarriesTheLosersLinks(t *testing.T) {
 }
 
 func TestAnUnwiredLeadMergeRefusesWhenALinkWouldBeStranded(t *testing.T) {
+	t.Parallel()
 	c := setupCarry(t)
 	unwired := contacts.NewStore(c.e.DB()).WithStopCarrier(c.consent)
 	retired := c.lead(t, "Uwe Unwired", "uwe@leadcarry.test", "Unwired KG")
@@ -155,6 +159,7 @@ func TestAnUnwiredLeadMergeRefusesWhenALinkWouldBeStranded(t *testing.T) {
 // its own production method and asks the lock manager where the path parks:
 // on the advisory lock, holding nothing on the lead table.
 func TestEveryLeadMergePathTakesTheStopLockBeforeTheLeadRow(t *testing.T) {
+	t.Parallel()
 	for _, path := range []struct {
 		name string
 		run  func(c *carryEnv, source, other ids.LeadID) error

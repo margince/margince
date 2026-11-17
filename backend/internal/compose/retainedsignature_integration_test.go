@@ -44,6 +44,7 @@ func retainedSignatureFixture(t *testing.T) (*integration.Env, *contacts.Store, 
 }
 
 func TestARetainedSignatureNeedsAHumanControllerAndAnInactiveOwner(t *testing.T) {
+	t.Parallel()
 	e, store, id := retainedSignatureFixture(t)
 	if _, err := store.GetRetainedSignature(e.Admin(), id); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("active owner's signature: %v", err)
@@ -77,6 +78,7 @@ func TestARetainedSignatureNeedsAHumanControllerAndAnInactiveOwner(t *testing.T)
 }
 
 func TestAControllerSavesTheExactRetainedSignatureAgainstItsVersion(t *testing.T) {
+	t.Parallel()
 	e, store, id := retainedSignatureFixture(t)
 	if _, err := store.SaveMyEmailSignature(e.Admin(), contacts.SaveSignatureInput{Body: "Controller's own text"}); err != nil {
 		t.Fatal(err)
@@ -119,6 +121,7 @@ func TestAControllerSavesTheExactRetainedSignatureAgainstItsVersion(t *testing.T
 }
 
 func TestTheControllerReviewRouteNamesTheRetainedSignature(t *testing.T) {
+	t.Parallel()
 	e, store, id := retainedSignatureFixture(t)
 	deactivateSignatureOwner(t, e)
 	shown, err := store.GetRetainedSignature(e.Admin(), id)
@@ -160,6 +163,7 @@ func TestTheControllerReviewRouteNamesTheRetainedSignature(t *testing.T) {
 }
 
 func TestTheRetainedSignaturePreviewUsesTheMailSanitizer(t *testing.T) {
+	t.Parallel()
 	e, _, id := retainedSignatureFixture(t)
 	markup := `<p>Retained words</p><img src="http://tracker.test/pixel"><img src="https://cdn.example/logo.png" alt="Company A"><script>window.alert(1)</script>`
 	if _, err := contacts.NewStore(InstallationDB(e.Pool)).SaveMyEmailSignature(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms), contacts.SaveSignatureInput{Body: "Original personal text", HTML: &markup}); err != nil {
@@ -186,6 +190,7 @@ func TestTheRetainedSignaturePreviewUsesTheMailSanitizer(t *testing.T) {
 }
 
 func TestARetainedSignatureReviewTakesHTMLUpToTheSharedCap(t *testing.T) {
+	t.Parallel()
 	e, store, id := retainedSignatureFixture(t)
 	deactivateSignatureOwner(t, e)
 	shown, err := store.GetRetainedSignature(e.Admin(), id)
@@ -205,6 +210,7 @@ func TestARetainedSignatureReviewTakesHTMLUpToTheSharedCap(t *testing.T) {
 }
 
 func TestAReadSeatCannotReceiveOrOpenARetainedSignatureReview(t *testing.T) {
+	t.Parallel()
 	e, store, id := retainedSignatureFixture(t)
 	deactivateSignatureOwner(t, e)
 	e.WsExec(t, `UPDATE app_user SET seat_type='read' WHERE id=$1`, e.AdminUser)
@@ -226,6 +232,7 @@ func TestAReadSeatCannotReceiveOrOpenARetainedSignatureReview(t *testing.T) {
 }
 
 func TestARetainedSignatureSaveOrdersTheMembersReturnAfterItsReview(t *testing.T) {
+	t.Parallel()
 	e, store, id := retainedSignatureFixture(t)
 	ctx := e.Admin()
 	deactivateSignatureOwner(t, e)
@@ -285,6 +292,7 @@ func TestARetainedSignatureSaveOrdersTheMembersReturnAfterItsReview(t *testing.T
 }
 
 func TestAControllerCanReviewSignaturesNoActiveHumanOwns(t *testing.T) {
+	t.Parallel()
 	for _, state := range []string{"invited", "archived", "agent"} {
 		t.Run(state, func(t *testing.T) {
 			e, store, id := retainedSignatureFixture(t)
@@ -386,6 +394,7 @@ func revokeSignatureController(t *testing.T, e *integration.Env) {
 }
 
 func TestInvitationActivationWaitsForTheRetainedSignatureReview(t *testing.T) {
+	t.Parallel()
 	e, store, id := retainedSignatureFixture(t)
 	deactivateSignatureOwner(t, e)
 	members, token := signatureOwnerInvitation(t, e)

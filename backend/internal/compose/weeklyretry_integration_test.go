@@ -33,6 +33,7 @@ import (
 // make every one of those permanent — the next tick finds the row and looks
 // away, and nothing ever writes that week a sentence.
 func TestAnUnnarratedWeekIsStillDueForNarration(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	ctx := context.Background()
@@ -84,6 +85,7 @@ func repsDue(t *testing.T, e *integration.Env, week time.Time) []ids.UUID {
 }
 
 func TestAnInstallationWithoutOptionalLanesOnlyMeasuresOnce(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	w := teamSnapshotWorker(e)
 	seedManagerRoles(t, e, e.Rep1, e.Rep2, e.Rep3)

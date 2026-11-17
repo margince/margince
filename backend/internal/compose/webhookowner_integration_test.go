@@ -32,6 +32,7 @@ func adminWithWebhooks(e *integration.Env) context.Context {
 // subscription says so, and it can be given to a colleague: the change is
 // audited and the signing secret stays.
 func TestAWebhookWhoseOwnerLeftSaysSoAndCanBeHandedOn(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := webhookStoreOver(e.DB(), nil)
 	admin := adminWithWebhooks(e)
@@ -88,6 +89,7 @@ func TestAWebhookWhoseOwnerLeftSaysSoAndCanBeHandedOn(t *testing.T) {
 // make an administrator the owner to receive what only the administrator
 // sees. The owner stays as it was.
 func TestAWebhookCannotBeMadeToRunAsSomeoneTheCallerMayNotActFor(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := webhookStoreOver(e.DB(), nil)
 	hook := seedWebhook(t, e, e.Rep2, false)

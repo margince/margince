@@ -30,6 +30,7 @@ func proposePassAsTheJob(t *testing.T, e *integration.Env) int {
 // A background finding on a record nobody owns asks nobody: no request, and so
 // no notice to the colleagues who could have decided it.
 func TestAContractEndedOnACompanyNobodyOwnsAsksNobody(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := seedAccountAtStage(t, e, "customer")
 	e.WsExec(t, `UPDATE company SET owner_id = NULL WHERE id = $1`, company)
@@ -45,6 +46,7 @@ func TestAContractEndedOnACompanyNobodyOwnsAsksNobody(t *testing.T) {
 
 // The same finding on an owned company is for its owner and nobody else.
 func TestAContractEndedIsForTheCompanysOwner(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := seedAccountAtStage(t, e, "customer")
 	seedOpenContractEnded(t, e, company)

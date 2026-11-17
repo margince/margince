@@ -104,6 +104,7 @@ func decodeUser(t *testing.T, rec *httptest.ResponseRecorder) crmcontracts.User 
 }
 
 func TestAColleagueStreamsTheUploadedPictureUnderItsRevision(t *testing.T) {
+	t.Parallel()
 	f := newAvatarFixture(t)
 	rec := f.upload(f.me, t, encodedPicture(t, pngOf, halvesImage(80, 40)))
 	if rec.Code != http.StatusOK {
@@ -137,6 +138,7 @@ func TestAColleagueStreamsTheUploadedPictureUnderItsRevision(t *testing.T) {
 }
 
 func TestAReplacedOrDeletedPictureLeavesNoBytesBehind(t *testing.T) {
+	t.Parallel()
 	f := newAvatarFixture(t)
 	f.upload(f.me, t, encodedPicture(t, pngOf, halvesImage(40, 40)))
 	first := *f.storedKey(t, f.e.Rep1)
@@ -161,6 +163,7 @@ func TestAReplacedOrDeletedPictureLeavesNoBytesBehind(t *testing.T) {
 }
 
 func TestTheUploadRefusesWhatIsNotTheSeatsOwnPicture(t *testing.T) {
+	t.Parallel()
 	f := newAvatarFixture(t)
 	gifBytes := encodedPicture(t, gifOf, halvesImage(20, 20))
 	if rec := f.upload(f.me, t, gifBytes); rec.Code != http.StatusUnsupportedMediaType {
@@ -178,6 +181,7 @@ func TestTheUploadRefusesWhatIsNotTheSeatsOwnPicture(t *testing.T) {
 }
 
 func TestTheStreamHidesWhichSeatsExist(t *testing.T) {
+	t.Parallel()
 	f := newAvatarFixture(t)
 	f.upload(f.me, t, encodedPicture(t, pngOf, halvesImage(20, 20)))
 	for name, seat := range map[string]ids.UUID{"no picture": f.e.Rep2, "unknown seat": ids.NewV7()} {
@@ -188,6 +192,7 @@ func TestTheStreamHidesWhichSeatsExist(t *testing.T) {
 }
 
 func TestTheSignInFillStoresTheGooglePictureUntilTheMemberDeletesIt(t *testing.T) {
+	t.Parallel()
 	f := newAvatarFixture(t)
 	rep := ids.From[ids.UserKind](f.e.Rep1)
 	pictures := f.h.pictures
@@ -227,6 +232,7 @@ func TestTheSignInFillStoresTheGooglePictureUntilTheMemberDeletesIt(t *testing.T
 }
 
 func TestAnUploadedPictureKeepsTheGooglePictureUnfetched(t *testing.T) {
+	t.Parallel()
 	f := newAvatarFixture(t)
 	f.upload(f.me, t, encodedPicture(t, pngOf, halvesImage(20, 20)))
 	if err := f.h.pictures.FillFromPictureURL(context.Background(), ids.From[ids.UserKind](f.e.Rep1), googlePicture); err != nil {
@@ -240,6 +246,7 @@ func TestAnUploadedPictureKeepsTheGooglePictureUnfetched(t *testing.T) {
 // A picture that comes back after another one gets a key of its own. The release of its
 // earlier key then never deletes what the row names now.
 func TestAGooglePictureThatComesBackNeverLosesItsBytes(t *testing.T) {
+	t.Parallel()
 	f := newAvatarFixture(t)
 	rep := ids.From[ids.UserKind](f.e.Rep1)
 	first, second := encodedPicture(t, pngOf, halvesImage(60, 60)), encodedPicture(t, pngOf, halvesImage(30, 30))

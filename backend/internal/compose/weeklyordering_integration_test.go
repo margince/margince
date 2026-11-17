@@ -38,6 +38,7 @@ func (p *weeklyMeasurementProbe) Complete(context.Context, model.Request) (model
 }
 
 func TestWeeklyMeasurementsFinishBeforeAnyModelCall(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedManagerRoles(t, e, e.Rep1, e.Rep2, e.Rep3)
 	seedMeasuredNarrativeSources(t, e)
@@ -61,6 +62,7 @@ func TestWeeklyMeasurementsFinishBeforeAnyModelCall(t *testing.T) {
 }
 
 func TestTeamReviewsKeepTheClosedPeriodAtAnyDeliveryHour(t *testing.T) {
+	t.Parallel()
 	for _, test := range []struct {
 		name string
 		at   time.Time
@@ -90,6 +92,7 @@ func TestTeamReviewsKeepTheClosedPeriodAtAnyDeliveryHour(t *testing.T) {
 }
 
 func TestScheduledMeasurementIncludesTheRealPlanOutcome(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedManagerRoles(t, e, e.Rep1, e.Rep2, e.Rep3)
 	e.WsExec(t, `UPDATE role SET permissions=jsonb_set(permissions,'{objects,forecast}','{"read":true,"create":true}'::jsonb) WHERE key='manager'`)
@@ -119,6 +122,7 @@ func TestScheduledMeasurementIncludesTheRealPlanOutcome(t *testing.T) {
 }
 
 func TestReadOnlyPlanAuthorityStillReceivesRecordedWork(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedManagerRoles(t, e, e.Rep1, e.Rep2, e.Rep3)
 	e.WsExec(t, `UPDATE role SET permissions=jsonb_set(permissions,'{objects,weekly_plan}','{"read":true,"update":false}'::jsonb) WHERE key='manager'`)

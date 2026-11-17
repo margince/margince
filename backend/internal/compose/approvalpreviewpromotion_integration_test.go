@@ -23,6 +23,7 @@ import (
 )
 
 func TestPromotionApprovalNamesTheContactAndOptionalDeal(t *testing.T) {
+	t.Parallel()
 	for _, rest := range []bool{false, true} {
 		t.Run(fmt.Sprintf("rest=%t", rest), func(t *testing.T) {
 			e := integration.Setup(t)
@@ -93,6 +94,7 @@ func TestPromotionApprovalNamesTheContactAndOptionalDeal(t *testing.T) {
 // The preview names the industry a promotion writes to the linked company. It
 // names none where the company already holds one, as the promotion writes none.
 func TestPromotionApprovalNamesTheIndustryItCarriesToTheCompany(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name string
 		held *string
@@ -167,6 +169,7 @@ func TestPromotionApprovalNamesTheIndustryItCarriesToTheCompany(t *testing.T) {
 // An agent's staged promotion cites no activity. The preview shows the
 // engagement the promotion will rest on, and is not ready when the lead has none.
 func TestPromotionApprovalPreviewShowsTheEvidenceThePromotionWillRecord(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name, trigger string
 		wantReady     bool
@@ -219,6 +222,7 @@ func TestPromotionApprovalPreviewShowsTheEvidenceThePromotionWillRecord(t *testi
 // Evidence the reviewer may discover but not read still makes a ready preview.
 // It is named by its date, and its subject stays withheld.
 func TestPromotionApprovalPreviewNamesWithheldEvidenceWithoutItsSubject(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	perms := integration.AdminPerms
 	perms.Objects = maps.Clone(perms.Objects)

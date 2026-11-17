@@ -14,7 +14,6 @@ package compose
 import (
 	"context"
 	"log/slog"
-	"os"
 	"sync"
 	"testing"
 	"time"
@@ -51,7 +50,7 @@ func shiftedPool(t *testing.T, shift time.Duration) *pgxpool.Pool {
 		$$;`); err != nil {
 		t.Fatalf("installing the shifted clock: %v", err)
 	}
-	cfg, err := database.PoolConfig(os.Getenv("MARGINCE_TEST_APP_DSN"))
+	cfg, err := database.PoolConfig(testdb.For(t).AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -138,6 +137,7 @@ func (f accountFixture) assertClocks(t *testing.T, want time.Time, why string) {
 }
 
 func TestAFutureMeetingIsNotTheLastActivity(t *testing.T) {
+	t.Parallel()
 	f := newAccountFixture(t)
 	mailed, meetsAt := f.now.AddDate(0, 0, -3), f.now.AddDate(0, 0, 7)
 	f.log(t, "email", mailed)
@@ -152,6 +152,7 @@ func TestAFutureMeetingIsNotTheLastActivity(t *testing.T) {
 }
 
 func TestAFutureDatedNoteCallOrEmailIsNotTheLastActivity(t *testing.T) {
+	t.Parallel()
 	for _, kind := range []string{"note", "call", "email"} {
 		t.Run(kind, func(t *testing.T) {
 			f := newAccountFixture(t)
@@ -166,6 +167,7 @@ func TestAFutureDatedNoteCallOrEmailIsNotTheLastActivity(t *testing.T) {
 // The worker did not run for days around the meeting's start. The mark is
 // where the last run left it, so the first run after the outage still reaches it.
 func TestAMeetingThatStartedDuringAnOutageStillMovesTheClock(t *testing.T) {
+	t.Parallel()
 	f := newAccountFixture(t)
 	mailed, meetsAt := f.now.AddDate(0, 0, -3), f.now.AddDate(0, 0, 1)
 	f.log(t, "email", mailed)
@@ -202,6 +204,7 @@ func shiftTo(t *testing.T, date time.Time, hour int, zone *time.Location) time.D
 // Kiritimati that start is fourteen hours before the noon UTC it is stored at,
 // so the morning refold moves the clock, not the walk.
 func TestADayCallDatedTodayMovesTheClockOnAMorningRefold(t *testing.T) {
+	t.Parallel()
 	f := newAccountFixture(t)
 	f.e.WsExec(t, `UPDATE setting SET value = '"Pacific/Kiritimati"'::jsonb WHERE key = 'installation.timezone'`)
 	kiritimati, err := time.LoadLocation("Pacific/Kiritimati")
@@ -224,6 +227,7 @@ func TestADayCallDatedTodayMovesTheClockOnAMorningRefold(t *testing.T) {
 // A day meeting takes place when its date ends. West of UTC that is after the
 // noon the walk passes, so the refold after the date ends moves the clock.
 func TestADayMeetingMovesTheClockOnceItsDateEnds(t *testing.T) {
+	t.Parallel()
 	f := newAccountFixture(t)
 	f.e.WsExec(t, `UPDATE setting SET value = '"America/Los_Angeles"'::jsonb WHERE key = 'installation.timezone'`)
 	losAngeles, err := time.LoadLocation("America/Los_Angeles")
@@ -245,6 +249,7 @@ func TestADayMeetingMovesTheClockOnceItsDateEnds(t *testing.T) {
 // East of UTC+12 a day meeting's date ends before its stored noon. The refold
 // after the date ends moves the clock, before the walk reaches the noon.
 func TestADayMeetingEastOfUTCPlus12MovesTheClockBeforeItsStoredNoon(t *testing.T) {
+	t.Parallel()
 	f := newAccountFixture(t)
 	f.e.WsExec(t, `UPDATE setting SET value = '"Pacific/Kiritimati"'::jsonb WHERE key = 'installation.timezone'`)
 	kiritimati, err := time.LoadLocation("Pacific/Kiritimati")
@@ -270,6 +275,7 @@ func TestADayMeetingEastOfUTCPlus12MovesTheClockBeforeItsStoredNoon(t *testing.T
 // The day entries come a batch at a time, each after the last one's key. A date
 // holding more entries than a batch is read whole.
 func TestDayEntriesAreReadABatchAtATime(t *testing.T) {
+	t.Parallel()
 	f := newAccountFixture(t)
 	kiritimati, err := time.LoadLocation("Pacific/Kiritimati")
 	if err != nil {
@@ -325,6 +331,7 @@ func readClockRow(t *testing.T, e *integration.Env, table string, id ids.UUID) c
 }
 
 func TestASecondRefoldWritesNothing(t *testing.T) {
+	t.Parallel()
 	f := newAccountFixture(t)
 	f.log(t, "email", f.now.AddDate(0, 0, -3))
 	meetsAt := f.now.AddDate(0, 0, 2)
@@ -351,6 +358,7 @@ func TestASecondRefoldWritesNothing(t *testing.T) {
 // Two refolds that reach the same records, and a write filed under them, run
 // at once. Each locks its whole set first, in the order every writer shares.
 func TestOverlappingRefoldsAndAWriteDoNotDeadlock(t *testing.T) {
+	t.Parallel()
 	f := newAccountFixture(t)
 	second := employedAt(t, f.e, f.company, "Quinn Past")
 	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), f.e.WS), pastActivityClockActor)
@@ -386,6 +394,7 @@ func TestOverlappingRefoldsAndAWriteDoNotDeadlock(t *testing.T) {
 }
 
 func TestTheDataTaskMovesBackAClockTheOldRuleLeftInTheFuture(t *testing.T) {
+	t.Parallel()
 	f := newAccountFixture(t)
 	mailed := f.now.AddDate(0, 0, -3)
 	f.log(t, "email", mailed)

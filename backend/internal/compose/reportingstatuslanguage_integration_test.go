@@ -20,6 +20,7 @@ import (
 )
 
 func TestReportingFailureKeepsItsWrittenLanguageAndRetryIntent(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct{ language, explanation string }{
 		{"en", "Report generation failed. Retry the run."},
 		{"de", "Die Berichtserstellung ist fehlgeschlagen. Starte den Lauf erneut."},
@@ -62,6 +63,7 @@ func TestReportingFailureKeepsItsWrittenLanguageAndRetryIntent(t *testing.T) {
 }
 
 func TestUnconfiguredReportingFrameworkUsesRecordLanguage(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct{ language, reason string }{
 		{"en", "Not configured"}, {"de", "Nicht eingerichtet"}, {"vi", "Chưa thiết lập"},
 	} {
@@ -82,6 +84,7 @@ func TestUnconfiguredReportingFrameworkUsesRecordLanguage(t *testing.T) {
 }
 
 func TestReportingCatchUpKeepsItsWrittenLanguage(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct{ language, prefix string }{
 		{"en", "Skipped 2 overdue periods"}, {"de", "2 überfällige Zeiträume"}, {"vi", "Đã bỏ qua 2 kỳ quá hạn"},
 	} {

@@ -19,6 +19,7 @@ import (
 )
 
 func TestCapturedMailDoesNotRefoldUnrelatedCorrespondents(t *testing.T) {
+	t.Parallel()
 	for _, batched := range []bool{false, true} {
 		t.Run(fmt.Sprintf("batched=%t", batched), func(t *testing.T) {
 			v := edgeEnv{integration.Setup(t)}

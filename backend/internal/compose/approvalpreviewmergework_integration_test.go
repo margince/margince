@@ -20,6 +20,7 @@ import (
 )
 
 func TestMergePreviewCarriesClaimsAndProspectHandoffs(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	source, target := mergeContentPair(t, e, "contact")

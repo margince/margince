@@ -17,6 +17,7 @@ import (
 // A contact and a lead address written before the folded column existed get
 // the same folded domain the writers store today.
 func TestTheFoldTaskFoldsContactAndLeadAddressesWrittenBeforeTheColumn(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{
 		FullName: "Anna Brandt", Source: "manual",

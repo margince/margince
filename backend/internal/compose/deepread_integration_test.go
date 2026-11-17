@@ -140,6 +140,7 @@ func deepReadApprovals(t *testing.T, e *integration.Env) int {
 }
 
 func TestDeepReadCrawlsExtractsAppliesWhatItEvidencedAndFinishesDone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := insertCompany(t, e, e.Rep1, "acme.example", "")
 	worker, _ := newDeepReadTestWorker(e, acmeDeepSite(), acmeDeepBrain())
@@ -249,6 +250,7 @@ func TestDeepReadCrawlsExtractsAppliesWhatItEvidencedAndFinishesDone(t *testing.
 // staged before reads began applying directly; the read is not run, because it
 // would apply its findings and stage nothing for this to be about.
 func TestDeepReadApplyFailureLeavesTheApprovedProposalUnconsumed(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := insertCompany(t, e, e.Rep1, "acme.example", "")
 	_, svc := newDeepReadTestWorker(e, acmeDeepSite(), acmeDeepBrain())
@@ -282,6 +284,7 @@ func TestDeepReadApplyFailureLeavesTheApprovedProposalUnconsumed(t *testing.T) {
 }
 
 func TestDeepReadWithNothingEvidencedIsAnHonestEmptyDoneWithNoProposal(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := insertCompany(t, e, e.Rep1, "acme.example", "")
 	// The profile reply cites an id outside the index and the page calls
@@ -312,6 +315,7 @@ func TestDeepReadWithNothingEvidencedIsAnHonestEmptyDoneWithNoProposal(t *testin
 }
 
 func TestDeepReadCrawlFailureFinishesFailedAndARetryNoOps(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := insertCompany(t, e, e.Rep1, "acme.example", "")
 	// The seed page itself is unreachable: a failed crawl, not a partial one.
@@ -347,6 +351,7 @@ func TestDeepReadCrawlFailureFinishesFailedAndARetryNoOps(t *testing.T) {
 }
 
 func TestDeepReadOnABrainlessWorkerFailsTheReadActionably(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := insertCompany(t, e, e.Rep1, "acme.example", "")
 	worker, _ := newDeepReadTestWorker(e, acmeDeepSite(), nil)
@@ -366,6 +371,7 @@ func TestDeepReadOnABrainlessWorkerFailsTheReadActionably(t *testing.T) {
 }
 
 func TestDeepReadBudgetDeferralSnoozesTheDurableJob(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := insertCompany(t, e, e.Rep1, "acme.example", "")
 	now := time.Date(2026, time.July, 19, 10, 0, 0, 0, time.UTC)
@@ -390,6 +396,7 @@ func TestDeepReadBudgetDeferralSnoozesTheDurableJob(t *testing.T) {
 }
 
 func TestDeepReadProviderOutageSnoozesUntilTheProbe(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := insertCompany(t, e, e.Rep1, "acme.example", "")
 	now := time.Date(2026, time.July, 19, 10, 0, 0, 0, time.UTC)
@@ -417,6 +424,7 @@ func TestDeepReadProviderOutageSnoozesUntilTheProbe(t *testing.T) {
 }
 
 func TestDeepReadModelFailureMidwayKeepsWhatWasReadAsPartial(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := insertCompany(t, e, e.Rep1, "acme.example", "")
 	// The impressum page's call dies; the home page's call and the
@@ -501,6 +509,7 @@ func runServicesDeepRead(t *testing.T, e *integration.Env, company ids.UUID) (co
 }
 
 func TestDeepReadStartQueuesOnceAndAReClickJoinsWithoutASecondInsert(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := insertCompany(t, e, e.Rep1, "acme.example", "")
 	inserter := &fakeInserter{}
@@ -601,6 +610,7 @@ func riverJobPriority(t *testing.T, e *integration.Env, readID ids.UUID) int {
 // be left waiting behind that sweep's own housekeeping priority just because
 // it joined instead of starting.
 func TestDeepReadJoiningAHousekeepingReadPromotesItsPriority(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := insertCompany(t, e, e.Rep1, "promote.example", "")
 	readID := seedHousekeepingSiteDeepRead(t, e, company, "https://promote.example")
@@ -633,6 +643,7 @@ func TestDeepReadJoiningAHousekeepingReadPromotesItsPriority(t *testing.T) {
 // than fail silently. An already-cancelled context is the deterministic way
 // to force pool.Exec to fail without needing a broken database.
 func TestDeepReadPromoteQueuedPriorityLogsWhenTheUpdateFails(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	var logs bytes.Buffer
 	log := slog.New(slog.NewTextHandler(&logs, nil))
@@ -648,6 +659,7 @@ func TestDeepReadPromoteQueuedPriorityLogsWhenTheUpdateFails(t *testing.T) {
 }
 
 func TestDeepReadStartWithoutADomainOrOverrideIs422(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := insertCompany(t, e, e.Rep1, "", "")
 	inserter := &fakeInserter{}
@@ -666,6 +678,7 @@ func TestDeepReadStartWithoutADomainOrOverrideIs422(t *testing.T) {
 }
 
 func TestDeepReadStartRollsBackTheDossierWhenTheEnqueueFails(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := insertCompany(t, e, e.Rep1, "acme.example", "")
 	inserter := &fakeInserter{err: context.DeadlineExceeded}
@@ -694,6 +707,7 @@ func TestDeepReadStartRollsBackTheDossierWhenTheEnqueueFails(t *testing.T) {
 // in-flight slot. terminalCtx (WithoutCancel + a fresh deadline) is what makes
 // that hold; this pins it against a refactor that re-threads the dead ctx.
 func TestDeepReadFinishSurvivesACancelledWorkContext(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := insertCompany(t, e, e.Rep1, "acme.example", "")
 	worker, _ := newDeepReadTestWorker(e, acmeDeepSite(), ai.NewFakeClient())
@@ -730,6 +744,7 @@ func TestDeepReadFinishSurvivesACancelledWorkContext(t *testing.T) {
 // The assertion that matters is pageCalls: cancelling after the crawl would
 // record the same status and save nothing.
 func TestDeepReadCancelsAnAutoEnrichJobWhenTheSettingWentOff(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := insertCompany(t, e, e.Rep1, "acme.example", "")
 	site := acmeDeepSite()
@@ -769,6 +784,7 @@ func TestDeepReadCancelsAnAutoEnrichJobWhenTheSettingWentOff(t *testing.T) {
 // which no later gate catches, because provenance is written once and never
 // re-derived.
 func TestDeepReadAttributesItsWritesToTheRequesterTheRowNames(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := insertCompany(t, e, e.Rep1, "acme.example", "")
 	worker, _ := newDeepReadTestWorker(e, acmeDeepSite(), acmeDeepBrain())
@@ -800,6 +816,7 @@ func TestDeepReadAttributesItsWritesToTheRequesterTheRowNames(t *testing.T) {
 // The page limit is a setting read when a read starts, so an admin's change
 // bounds the next read with no restart: the two-page site is cut to one.
 func TestDeepReadHonoursThePageLimitAnAdminSetBeforeItStarted(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := insertCompany(t, e, e.Rep1, "acme.example", "")
 	site := acmeDeepSite()

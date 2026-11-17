@@ -38,6 +38,7 @@ func (s *systemReadEnv) setAside(t *testing.T, user ids.UUID, contact ids.UUID) 
 	return got
 }
 
+//testdb:serial publishes the process-wide composed extension set
 func TestASetAsideChoiceIsReadAsTheUsersOwnAndRunsOut(t *testing.T) {
 	s := setupSystemRead(t)
 	composeReader(t, extension.SystemReadSetAside)
@@ -74,6 +75,7 @@ func TestASetAsideChoiceIsReadAsTheUsersOwnAndRunsOut(t *testing.T) {
 	}
 }
 
+//testdb:serial publishes the process-wide composed extension set
 func TestASetAsideReadIsRefusedForAMemberWhoDidNotConnectTheUnit(t *testing.T) {
 	s := setupSystemRead(t)
 	composeReader(t, extension.SystemReadSetAside)
@@ -87,6 +89,7 @@ func TestASetAsideReadIsRefusedForAMemberWhoDidNotConnectTheUnit(t *testing.T) {
 	}
 }
 
+//testdb:serial publishes the process-wide composed extension set
 func TestASetAsideReadIsRefusedForAMemberWhoHasLeft(t *testing.T) {
 	s := setupSystemRead(t)
 	composeReader(t, extension.SystemReadSetAside)

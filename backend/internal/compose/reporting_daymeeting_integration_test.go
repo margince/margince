@@ -92,6 +92,7 @@ func (m meetingWeeks) weeks(t *testing.T, week string) (map[string]float64, []cr
 // stored noon is Monday there, which put it in the next week. The evidence row
 // keeps the stored date and says it is only a date.
 func TestADayMeetingCountsInTheWeekOfItsDate(t *testing.T) {
+	t.Parallel()
 	m := setupMeetingWeeks(t)
 	sunday := occurredday.Anchor(time.Date(2026, 10, 11, 0, 0, 0, 0, time.UTC))
 	m.held(t, sunday, activities.PrecisionDay)
@@ -113,6 +114,7 @@ func TestADayMeetingCountsInTheWeekOfItsDate(t *testing.T) {
 // made a day entry. The history keeps the instant, which is Monday in
 // Auckland and Sunday by its UTC date.
 func TestAHeldInstantKeepsItsWeekWhenTheMeetingBecomesADay(t *testing.T) {
+	t.Parallel()
 	m := setupMeetingWeeks(t)
 	mondayInAuckland := time.Date(2026, 10, 11, 11, 30, 0, 0, time.UTC)
 	meeting := m.held(t, mondayInAuckland, activities.PrecisionInstant)

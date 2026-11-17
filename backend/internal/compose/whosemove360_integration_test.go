@@ -85,6 +85,7 @@ func (o *owedEnv) whoseMove(t *testing.T, company ids.CompanyID) (string, bool, 
 }
 
 func TestCompany360ReadsWhoseMoveByTheBadgesRules(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	colleague := seatAddress(t, o.e, o.e.Rep2)
 	o.shareMailbox(t, o.e.Rep2)
@@ -142,6 +143,7 @@ func TestCompany360ReadsWhoseMoveByTheBadgesRules(t *testing.T) {
 // informing us still reads by its direction: the reader learns nothing of the
 // verdict.
 func TestCompany360DoesNotReadTheMoveOfAMailTheReaderMayNotRead(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.e.GrantRole(t, o.e.Rep2, "rep")
 	colleague := seatAddress(t, o.e, o.e.Rep2)

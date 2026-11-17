@@ -101,6 +101,7 @@ func sourceKept(t *testing.T, blob blobstore.Store, key string) bool {
 }
 
 func TestAnIdleDraftIsCancelledAndItsSourceReaped(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	blob := blobstore.NewMemory()
 	idle, fresh := storedDraft(t, e, blob), storedDraft(t, e, blob)

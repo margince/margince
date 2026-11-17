@@ -92,6 +92,7 @@ func historicalImportedLead(t *testing.T, l *leadMailEnv, address string) ids.Le
 }
 
 func TestTheLeadFilingTaskFilesEarlierMailOnceAndReplaysSafely(t *testing.T) {
+	t.Parallel()
 	l := setupLeadMail(t)
 	ctx := principal.SystemActing(l.e.Admin(), "system:datatask-test")
 	// Captured while no lead held the address, so capture filed it nowhere.

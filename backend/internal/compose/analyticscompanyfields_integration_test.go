@@ -94,6 +94,7 @@ func askDeals(ctx context.Context, t *testing.T, e *integration.Env, q analytics
 // counted. A deal with no company, or one whose company holds no tier, groups
 // as empty.
 func TestACompanyFieldGroupsDealsThroughTheirCompany(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	book := seedTierBook(t, e)
 	grouped := askDeals(e.Admin(), t, e, analyticsquery.Query{
@@ -117,6 +118,7 @@ func TestACompanyFieldGroupsDealsThroughTheirCompany(t *testing.T) {
 // The schema says which record a field is on and how many deals hold a value,
 // counted under the same company scope a grouping applies.
 func TestTheSchemaSaysHowManyDealsHoldACompanyField(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	book := seedTierBook(t, e)
 	ctx := e.Admin()

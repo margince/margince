@@ -174,6 +174,7 @@ func (o ownershipEnv) answer(t *testing.T, meeting, seat ids.UUID) string {
 }
 
 func TestATombstoneNamingOnlyAMailboxEventIDRetiresOnlyThatSeatsCopy(t *testing.T) {
+	t.Parallel()
 	for _, provider := range []string{sourceGCal, sourceGraphCal} {
 		t.Run(provider, func(t *testing.T) {
 			o := setupOwnership(t, provider)
@@ -218,6 +219,7 @@ func TestATombstoneNamingOnlyAMailboxEventIDRetiresOnlyThatSeatsCopy(t *testing.
 }
 
 func TestATombstoneFromTheOrganizersOwnMailboxCancelsTheMeeting(t *testing.T) {
+	t.Parallel()
 	for _, provider := range []string{sourceGCal, sourceGraphCal} {
 		t.Run(provider, func(t *testing.T) {
 			o := setupOwnership(t, provider)
@@ -239,6 +241,7 @@ func TestATombstoneFromTheOrganizersOwnMailboxCancelsTheMeeting(t *testing.T) {
 // Event ids are unique only within one mailbox. An id a colleague's mailbox
 // delivered names nothing in this seat's calendar, even on a meeting both hold.
 func TestATombstoneWithAnotherMailboxsEventIDReachesNothing(t *testing.T) {
+	t.Parallel()
 	for _, provider := range []string{sourceGCal, sourceGraphCal} {
 		t.Run(provider, func(t *testing.T) {
 			o := setupOwnership(t, provider)
@@ -267,6 +270,7 @@ func TestATombstoneWithAnotherMailboxsEventIDReachesNothing(t *testing.T) {
 // A one-off meeting moved after a seat first synced it is still found by that
 // seat's own event id.
 func TestATombstoneFindsAMeetingMovedAfterItsFirstSync(t *testing.T) {
+	t.Parallel()
 	for _, provider := range []string{sourceGCal, sourceGraphCal} {
 		t.Run(provider, func(t *testing.T) {
 			o := setupOwnership(t, provider)
@@ -294,6 +298,7 @@ func TestATombstoneFindsAMeetingMovedAfterItsFirstSync(t *testing.T) {
 }
 
 func TestTheOrganizersCompleteRosterRetiresAColleagueItRemoved(t *testing.T) {
+	t.Parallel()
 	for _, provider := range []string{sourceGCal, sourceGraphCal} {
 		t.Run(provider, func(t *testing.T) {
 			o := setupOwnership(t, provider)
@@ -324,6 +329,7 @@ func TestTheOrganizersCompleteRosterRetiresAColleagueItRemoved(t *testing.T) {
 }
 
 func TestADisconnectedCalendarsAnswerFollowsTheOrganizersRosterUntilItReconnects(t *testing.T) {
+	t.Parallel()
 	for _, provider := range []string{sourceGCal, sourceGraphCal} {
 		t.Run(provider, func(t *testing.T) {
 			o := setupOwnership(t, provider)
@@ -396,6 +402,7 @@ func reconnect(t *testing.T, e *integration.Env, registry *capture.Registry, sea
 // A seat that left its own calendar copy drops the rows another calendar took
 // over while it was disconnected.
 func TestAReconnectedSeatsRemovalRetiresTheRowAnotherCalendarTookOver(t *testing.T) {
+	t.Parallel()
 	for _, provider := range []string{sourceGCal, sourceGraphCal} {
 		t.Run(provider, func(t *testing.T) {
 			o := setupOwnership(t, provider)

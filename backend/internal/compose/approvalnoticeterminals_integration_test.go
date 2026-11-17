@@ -19,6 +19,7 @@ import (
 )
 
 func TestNoticeReconciliationRetractsDecidedExpiredAndSupersededProposals(t *testing.T) {
+	t.Parallel()
 	for _, terminal := range []string{"decided", "expired", "superseded"} {
 		t.Run(terminal, func(t *testing.T) {
 			a := newApprovalNotifyEnv(t)
@@ -73,6 +74,7 @@ func stageRevisedNoticeCorrection(t *testing.T, a approvalNotifyEnv) {
 }
 
 func TestNoticeReconciliationDoesNotRestoreErasedProposalEvidence(t *testing.T) {
+	t.Parallel()
 	a := newApprovalNotifyEnv(t)
 	a.grantRole(t, a.e.AdminUser)
 	a.e.WsExec(t, `UPDATE role SET permissions = jsonb_set(permissions, '{objects,activity}', '{"read":true}'::jsonb) WHERE key = @key`, pgx.StrictNamedArgs{"key": "notifydecider-" + a.e.AdminUser.String()})
@@ -119,6 +121,7 @@ func TestNoticeReconciliationDoesNotRestoreErasedProposalEvidence(t *testing.T) 
 }
 
 func TestRepeatedSubjectErasureRecordsEachNoticeOnce(t *testing.T) {
+	t.Parallel()
 	a := newApprovalNotifyEnv(t)
 	a.grantRole(t, a.e.AdminUser)
 	a.e.WsExec(t, `UPDATE role SET permissions = jsonb_set(permissions, '{objects,contact}', '{"read":true,"update":true}'::jsonb) WHERE key = @key`, pgx.StrictNamedArgs{"key": "notifydecider-" + a.e.AdminUser.String()})

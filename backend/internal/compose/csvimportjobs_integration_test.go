@@ -46,6 +46,7 @@ func commitWorkerFor(e *integration.Env, h importHandlers) *importCommitWorker {
 }
 
 func TestACommitSliceLandsTheApprovedRunAndCompletesIt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	h, args := approvedLeadRun(t, e)
 	worker := commitWorkerFor(e, h)
@@ -68,6 +69,7 @@ func TestACommitSliceLandsTheApprovedRunAndCompletesIt(t *testing.T) {
 }
 
 func TestASliceWhoseRunIsLockedSnoozesWithoutClaimingIt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	h, args := approvedLeadRun(t, e)
 	runs := migration.NewRunStore(e.DB())
@@ -96,6 +98,7 @@ func TestASliceWhoseRunIsLockedSnoozesWithoutClaimingIt(t *testing.T) {
 }
 
 func TestAnUndoSliceReversesTheCommittedRun(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	h, args := approvedLeadRun(t, e)
 	if err := commitWorkerFor(e, h).Work(context.Background(), &river.Job[ImportCommitArgs]{Args: args}); err != nil {
@@ -122,6 +125,7 @@ func TestAnUndoSliceReversesTheCommittedRun(t *testing.T) {
 }
 
 func TestAPanicFailsTheRunWithItsCause(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	h, args := approvedLeadRun(t, e)
 	slicer := commitWorkerFor(e, h).slicer

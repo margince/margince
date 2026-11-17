@@ -34,6 +34,7 @@ import (
 //   - a marketing withdrawal with no stop at all;
 //   - a lead whose own address is gone but whose stop names one.
 func TestEveryRetentionRunKeepsEveryActiveStop(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := consent.NewStore(InstallationDB(e.Pool))
 	gate := consent.NewGate(store)

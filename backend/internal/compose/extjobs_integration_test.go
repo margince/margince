@@ -197,6 +197,8 @@ func awaitRows(t *testing.T, pool *pgxpool.Pool, kind string, want int) int {
 // and therefore global, so the fan-out is over ALL live workspaces — there is
 // no per-tenant switch for the tick to consult, and a fan-out that reached only
 // some of them would be enablement by accident.
+//
+//testdb:serial publishes the process-wide composed extension set
 func TestDispatcherEnqueuesOneChildPerWorkspace(t *testing.T) {
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
@@ -233,6 +235,8 @@ func TestDispatcherEnqueuesOneChildPerWorkspace(t *testing.T) {
 // This test asserted the opposite until the tick stopped needing a seat. Its
 // subject did not disappear; its answer inverted, which is why it is rewritten
 // rather than deleted.
+//
+//testdb:serial publishes the process-wide composed extension set
 func TestAnInstallationWithNoAgentSeatStillTicks(t *testing.T) {
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
@@ -298,6 +302,8 @@ func TestAnInstallationWithNoAgentSeatStillTicks(t *testing.T) {
 // second is the consequence (three tenants get three rows) — the property alone
 // would still pass if the seam stopped calling this builder, and the
 // consequence alone would not say which of the two builders produced it.
+//
+//testdb:serial publishes the process-wide composed extension set
 func TestChildrenUseByArgsUniqueness(t *testing.T) {
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
@@ -328,6 +334,8 @@ func TestChildrenUseByArgsUniqueness(t *testing.T) {
 // a global scope. It matters more for a job than for a served tool: a tool call
 // arrives on a request whose tenant authentication already resolved, and a tick
 // has no caller at all, so if the runner did not pin it nothing would.
+//
+//testdb:serial publishes the process-wide composed extension set
 func TestHandlerSeesAPinnedWorkspace(t *testing.T) {
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
@@ -374,6 +382,8 @@ func TestHandlerSeesAPinnedWorkspace(t *testing.T) {
 // third-party Go and may panic. What must survive is the runner — the blast
 // radius of a bad tick is ONE attempt of ONE workspace's row, and every other
 // kind on the same process keeps being worked.
+//
+//testdb:serial publishes the process-wide composed extension set
 func TestPanickingTickFailsOneAttemptNotTheWorker(t *testing.T) {
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
@@ -441,6 +451,8 @@ func TestPanickingTickFailsOneAttemptNotTheWorker(t *testing.T) {
 // approval; the job seam refuses a fortiori — there is no request to hold open
 // and no one whose decision would be recorded, so the refusal does not wait on
 // a staging seam that may one day be wired.
+//
+//testdb:serial publishes the process-wide composed extension set
 func TestConfirmFirstJobIsRefusedAtBoot(t *testing.T) {
 	decl := testJobDecl()
 	decl.Tier = extension.TierConfirmationRequired
@@ -464,6 +476,8 @@ func TestConfirmFirstJobIsRefusedAtBoot(t *testing.T) {
 // leaving the workspace requires the confirm-first tier this surface cannot
 // stage; a JOB cannot hold that tier at all (see above), so the only thing left
 // to grant is outbound authority with no human anywhere in the loop.
+//
+//testdb:serial publishes the process-wide composed extension set
 func TestEgressScopedJobIsRefusedAtBoot(t *testing.T) {
 	for _, scope := range []extension.Scope{extension.ScopeSend, extension.ScopeEnrich} {
 		t.Run(string(scope), func(t *testing.T) {
@@ -494,6 +508,8 @@ func TestEgressScopedJobIsRefusedAtBoot(t *testing.T) {
 // attempt cap is a 25-rung ladder on attempt⁴ backoff in place of the
 // dispatcher's own tick, and an unset uniqueness window lets every tick stack a
 // second pass on a tenant whose first one is still running.
+//
+//testdb:serial publishes the process-wide composed extension set
 func TestOverlappingTicksAreBounded(t *testing.T) {
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)

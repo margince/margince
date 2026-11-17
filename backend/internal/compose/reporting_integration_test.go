@@ -54,6 +54,7 @@ func reportingWrittenClose(t *testing.T, e *forecastEnv) (crmcontracts.Deal, *de
 }
 
 func TestReportingBookingsFollowCurrentOwnerAfterTransfer(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	closed, store, writer := reportingWrittenClose(t, e)
 	if closed.ClosedAt == nil {
@@ -105,6 +106,7 @@ func TestReportingBookingsFollowCurrentOwnerAfterTransfer(t *testing.T) {
 }
 
 func TestReportingSavedLayoutRetainsEverySelectedBlock(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	ctx := reportingActor(e)
 	at := time.Date(2026, 9, 29, 12, 0, 0, 0, time.UTC)

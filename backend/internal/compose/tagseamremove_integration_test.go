@@ -26,6 +26,7 @@ import (
 )
 
 func TestRemovalResolvesARetiredNameAndApplyingStillDoesNot(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	retired := seedTag(t, e, "Retired Conference", true)
 	live := seedTag(t, e, "Live Conference", false)

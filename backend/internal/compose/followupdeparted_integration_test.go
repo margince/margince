@@ -11,6 +11,7 @@ package compose
 import "testing"
 
 func TestADealWhoseOwnerHasLeftGetsNoFollowUp(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name, kind, update string
 	}{

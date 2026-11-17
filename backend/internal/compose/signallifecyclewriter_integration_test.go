@@ -18,6 +18,7 @@ import (
 )
 
 func TestExtractedLifecycleSignalStoresSourceProofWithoutCopyingTheQuote(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	company := e.SeedCompany(t, "Maple Studio", nil)
 	subject, body, direction := "Contract notice", "We are ending all services with your company.", "inbound"

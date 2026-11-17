@@ -20,6 +20,8 @@ import (
 )
 
 // A core connector not already seeded is inserted, with transport='core'.
+//
+//testdb:serial sets the process-wide sendable channel providers
 func TestReconcileChannelProvidersInsertsAnUnseenProvider(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := context.Background()
@@ -29,15 +31,6 @@ func TestReconcileChannelProvidersInsertsAnUnseenProvider(t *testing.T) {
 	// set, and a later test in this process must not see it.
 	defer activities.SetChannelProviders([]string{capture.ProviderTelegram})
 	defer comms.SetChannelProviders([]string{capture.ProviderTelegram})
-	// Deleting the channel_provider row keeps the shared test database tidy for
-	// the tests that follow. The activity_kind row is deliberately NOT cleaned
-	// up: nothing should have written one, and the assertion below is what says
-	// so — a defensive delete here would tidy away the evidence of a regression.
-	t.Cleanup(func() {
-		if _, err := owner.Exec(context.Background(), `DELETE FROM channel_provider WHERE provider = 'fake_core_channel'`); err != nil {
-			t.Errorf("cleaning up channel_provider: %v", err)
-		}
-	})
 
 	// telegram is already seeded by the core migration; assert the reconcile is
 	// a no-op for it and inserts a genuinely new one — standing in for "core
@@ -86,6 +79,8 @@ func TestReconcileChannelProvidersInsertsAnUnseenProvider(t *testing.T) {
 // grammar lives on the column itself — the channel_provider_provider_grammar
 // constraint — so this is also the proof that boot keeps no second, disagreeing
 // spelling of the rule.
+//
+//testdb:serial sets the process-wide sendable channel providers
 func TestReconcileChannelProvidersRefusesAProviderNameTheGrammarRejects(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := context.Background()
@@ -114,6 +109,8 @@ func TestReconcileChannelProvidersRefusesAProviderNameTheGrammarRejects(t *testi
 
 // A provider whose supplier is gone on a LATER boot is kept, never deleted —
 // activity and contact_channel_identity rows may still reference it.
+//
+//testdb:serial sets the process-wide sendable channel providers
 func TestReconcileChannelProvidersNeverDeletesARetiredRow(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := context.Background()
@@ -146,6 +143,8 @@ func TestReconcileChannelProvidersNeverDeletesARetiredRow(t *testing.T) {
 // branches on to resolve a per-member credential instead of the workspace's bot,
 // and credential_model='per_member' is what an operator reads to know that
 // connecting is each member's own act rather than an admin's one-time binding.
+//
+//testdb:serial sets the process-wide sendable channel providers
 func TestReconcileChannelProvidersRegistersAUnitsDeclaredTransport(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := context.Background()
@@ -154,11 +153,6 @@ func TestReconcileChannelProvidersRegistersAUnitsDeclaredTransport(t *testing.T)
 	defer comms.SetChannelProviders([]string{capture.ProviderTelegram})
 	declaresTransport(t, "mine", extension.Channel{
 		Provider: "mine_chat", CredentialModel: extension.CredentialPerMember, Send: (&capturedSend{}).send, Live: answersLive(true, nil),
-	})
-	t.Cleanup(func() {
-		if _, err := owner.Exec(context.Background(), `DELETE FROM channel_provider WHERE provider = 'mine_chat'`); err != nil {
-			t.Errorf("cleaning up channel_provider: %v", err)
-		}
 	})
 
 	if err := reconcileChannelProviders(ctx, e.Pool, []string{capture.ProviderTelegram}); err != nil {
@@ -209,6 +203,8 @@ func TestReconcileChannelProvidersRegistersAUnitsDeclaredTransport(t *testing.T)
 // admin as their "owner", and nothing downstream can tell — the row has exactly
 // one reader, so every audience invariant reads green while the whole company
 // has lost its own inbox.
+//
+//testdb:serial sets the process-wide sendable channel providers
 func TestReconcileChannelProvidersHonoursAUnitsDeclaredWorkspaceBotCredential(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := context.Background()
@@ -218,11 +214,6 @@ func TestReconcileChannelProvidersHonoursAUnitsDeclaredWorkspaceBotCredential(t 
 	declaresTransport(t, "official", extension.Channel{
 		Provider: "official_account", CredentialModel: extension.CredentialWorkspaceBot,
 		Send: (&capturedSend{}).send, Live: answersLive(true, nil),
-	})
-	t.Cleanup(func() {
-		if _, err := owner.Exec(context.Background(), `DELETE FROM channel_provider WHERE provider = 'official_account'`); err != nil {
-			t.Errorf("cleaning up channel_provider: %v", err)
-		}
 	})
 
 	if err := reconcileChannelProviders(ctx, e.Pool, []string{capture.ProviderTelegram}); err != nil {
@@ -247,6 +238,8 @@ func TestReconcileChannelProvidersHonoursAUnitsDeclaredWorkspaceBotCredential(t 
 // A capture-only unit registers its provider and is NOT sendable. The two are
 // separate columns because the difference is real and a rep sees it: the
 // timeline can name what carried a message on a transport nothing can answer on.
+//
+//testdb:serial sets the process-wide sendable channel providers
 func TestReconcileChannelProvidersRegistersACaptureOnlyUnitTransportAsUnsendable(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := context.Background()
@@ -254,11 +247,6 @@ func TestReconcileChannelProvidersRegistersACaptureOnlyUnitTransportAsUnsendable
 	defer activities.SetChannelProviders([]string{capture.ProviderTelegram})
 	defer comms.SetChannelProviders([]string{capture.ProviderTelegram})
 	declaresTransport(t, "mine", extension.Channel{Provider: "mine_chat", CredentialModel: extension.CredentialPerMember})
-	t.Cleanup(func() {
-		if _, err := owner.Exec(context.Background(), `DELETE FROM channel_provider WHERE provider = 'mine_chat'`); err != nil {
-			t.Errorf("cleaning up channel_provider: %v", err)
-		}
-	})
 
 	if err := reconcileChannelProviders(ctx, e.Pool, []string{capture.ProviderTelegram}); err != nil {
 		t.Fatalf("reconcileChannelProviders: %v", err)
@@ -287,6 +275,8 @@ func TestReconcileChannelProvidersRegistersACaptureOnlyUnitTransportAsUnsendable
 // the capture registry is built, which can happen after extension registration,
 // so the preflight would answer from an empty set and pass the collision it
 // exists to catch.
+//
+//testdb:serial sets the process-wide sendable channel providers
 func TestReconcileChannelProvidersRefusesAUnitThatShadowsACoreConnector(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := context.Background()
@@ -327,6 +317,8 @@ func TestReconcileChannelProvidersRefusesAUnitThatShadowsACoreConnector(t *testi
 // upsert re-pointed the core row at the unit, and every previously-unrepliable
 // WhatsApp conversation in the installation became one the unit transmits — on
 // its own credential, with nothing on any screen different.
+//
+//testdb:serial sets the process-wide sendable channel providers
 func TestReconcileChannelProvidersRefusesAUnitThatSeizesARegisteredCoreTransport(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := context.Background()
@@ -375,6 +367,8 @@ func TestReconcileChannelProvidersRefusesAUnitThatSeizesARegisteredCoreTransport
 // compile-time default — so every telegram assertion here is already true
 // before the act, and would pass against a boot step that did nothing at all.
 // A unit's row can only have been written by this call.
+//
+//testdb:serial sets the process-wide sendable channel providers
 func TestTheBootStepRegistersAComposedUnitTransportWithNoCaptureRegistry(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := context.Background()
@@ -383,12 +377,6 @@ func TestTheBootStepRegistersAComposedUnitTransportWithNoCaptureRegistry(t *test
 	defer comms.SetChannelProviders([]string{capture.ProviderTelegram})
 	declaresTransport(t, "boot", extension.Channel{
 		Provider: "boot_chat", CredentialModel: extension.CredentialPerMember, Send: (&capturedSend{}).send, Live: answersLive(true, nil),
-	})
-	t.Cleanup(func() {
-		if _, err := owner.Exec(context.Background(),
-			`DELETE FROM channel_provider WHERE provider = 'boot_chat'`); err != nil {
-			t.Errorf("cleaning up channel_provider: %v", err)
-		}
 	})
 	emptyTheSendableSets(t)
 
@@ -430,6 +418,8 @@ func TestTheBootStepRegistersAComposedUnitTransportWithNoCaptureRegistry(t *test
 // boot step runs BEFORE the installation is bootstrapped, when no company
 // exists. A workspace-bound transaction cannot resolve which workspace to bind,
 // which halts every fresh install rather than some corner of one.
+//
+//testdb:serial sets the process-wide sendable channel providers
 func TestTheBootStepReconcilesBeforeTheInstallationIsBootstrapped(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := context.Background()
@@ -438,12 +428,6 @@ func TestTheBootStepReconcilesBeforeTheInstallationIsBootstrapped(t *testing.T) 
 	defer comms.SetChannelProviders([]string{capture.ProviderTelegram})
 	declaresTransport(t, "prebootstrap", extension.Channel{
 		Provider: "prebootstrap_chat", CredentialModel: extension.CredentialPerMember, Send: (&capturedSend{}).send, Live: answersLive(true, nil),
-	})
-	t.Cleanup(func() {
-		if _, err := owner.Exec(context.Background(),
-			`DELETE FROM channel_provider WHERE provider = 'prebootstrap_chat'`); err != nil {
-			t.Errorf("cleaning up channel_provider: %v", err)
-		}
 	})
 	emptyTheSendableSets(t)
 
@@ -469,6 +453,8 @@ func TestTheBootStepReconcilesBeforeTheInstallationIsBootstrapped(t *testing.T) 
 // suite above; what matters here is that RecordComposition surfaces it rather
 // than swallowing it, and that an operator reading one line knows whether the
 // inventory or the transports were what went wrong.
+//
+//testdb:serial sets the process-wide sendable channel providers
 func TestRecordingTheCompositionFailsTheBootWhenAUnitShadowsACoreTransport(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := context.Background()

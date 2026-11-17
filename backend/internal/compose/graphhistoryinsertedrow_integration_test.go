@@ -48,6 +48,7 @@ func (o *graphFoldObserver) TraceQueryStart(ctx context.Context, conn *pgx.Conn,
 func (*graphFoldObserver) TraceQueryEnd(context.Context, *pgx.Conn, pgx.TraceQueryEndData) {}
 
 func TestAConcurrentFirstGraphFoldCannotHideANewerHistoricalArrival(t *testing.T) {
+	t.Parallel()
 	for _, test := range []struct {
 		name, table string
 		parties     int

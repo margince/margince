@@ -191,6 +191,7 @@ func releaseService(t *testing.T, e *integration.Env) *approvals.Service {
 }
 
 func TestReleasingAHeldDraftSendsItAndCompletesTheParkedRun(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := releaseService(t, e)
 	f := seedHeldDraft(t, e, svc)
@@ -229,6 +230,7 @@ func TestReleasingAHeldDraftSendsItAndCompletesTheParkedRun(t *testing.T) {
 // message. This is the assertion the design was most likely to get wrong: an
 // email is irreversible, and "approved twice" is an ordinary double-click.
 func TestAHeldDraftCannotBeReleasedTwice(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := releaseService(t, e)
 	f := seedHeldDraft(t, e, svc)
@@ -265,6 +267,7 @@ func TestAHeldDraftCannotBeReleasedTwice(t *testing.T) {
 // a human experiences: nothing sent, nothing consumed, the approval still
 // PENDING — then the cause is fixed, the same row is approved, and it goes.
 func TestAReleaseThatRefusesLeavesTheDraftPendingAndReleasableLater(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := releaseService(t, e)
 	f := seedHeldDraft(t, e, svc)
@@ -310,6 +313,7 @@ func TestAReleaseThatRefusesLeavesTheDraftPendingAndReleasableLater(t *testing.T
 // registering, or bound a different service instance, every other test here
 // would stay green.
 func TestApplySendPathRegistersTheHeldDraftRelease(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
 	inserter, err := jobs.NewInserter(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)))
@@ -358,6 +362,7 @@ func TestApplySendPathRegistersTheHeldDraftRelease(t *testing.T) {
 // decision commits — an approved row nothing can decide again, a run parked
 // forever, and a message a human said yes to that will never exist.
 func TestAPreflightRefusalLeavesTheDraftPending(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := releaseService(t, e)
 	f := seedHeldDraft(t, e, svc)
@@ -398,6 +403,7 @@ func TestAPreflightRefusalLeavesTheDraftPending(t *testing.T) {
 // counterparty, into a message addressed to somebody else. The inbox never
 // offered the field; this is what makes that true of the API too.
 func TestAnEditedHeldDraftCannotBeReAimedAtAnotherRecipient(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := releaseService(t, e)
 	f := seedHeldDraft(t, e, svc)
@@ -446,6 +452,7 @@ func TestAnEditedHeldDraftCannotBeReAimedAtAnotherRecipient(t *testing.T) {
 // Mutation: return nil instead of errPreviewComplete from Preview's
 // transaction, so it commits, and the qualifying-event count goes up.
 func TestThePreflightRecordsNothing(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := releaseService(t, e)
 	f := seedHeldDraft(t, e, svc)
@@ -500,6 +507,7 @@ func TestThePreflightRecordsNothing(t *testing.T) {
 // the transaction answers anyway. So this case cannot be written without
 // taking the mailbox away.
 func TestApprovingARejectedDraftSaysItIsDecided(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := releaseServiceWithoutASendableMailbox(t, e)
 	f := seedHeldDraft(t, e, svc)

@@ -43,6 +43,7 @@ func (a *heldPublicationAuthority) PublicationHuman(ctx context.Context, tx pgx.
 }
 
 func TestReportingExpiredWorkerCannotReplaceTheSuccessfulRetry(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	report, err := f.service.CreateReport(f.human, crmcontracts.ReportingReportInput{Name: "Fenced publication", Audience: "workspace", Selection: f.selection()})
 	if err != nil {

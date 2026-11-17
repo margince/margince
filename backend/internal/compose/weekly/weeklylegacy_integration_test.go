@@ -17,6 +17,7 @@ import (
 )
 
 func TestAWeekFrozenUnderTheQualifiedForecastIsReadBackWhole(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	e.engine = e.engine.WithForecast(oneHorizon(ids.NewV7(), ids.NewV7()))
 	written, _, err := e.engine.AssembleFor(e.repCtx, weekClock)
@@ -70,6 +71,7 @@ func TestAWeekFrozenUnderTheQualifiedForecastIsReadBackWhole(t *testing.T) {
 }
 
 func TestATeamWeekFrozenUnderTheQualifiedForecastKeepsItsMeasure(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	e.engine = e.engine.WithForecast(oneHorizon(ids.NewV7(), ids.NewV7()))
 	members := []TeamMember{{UserID: e.Rep1, DisplayName: "Rep One"}}

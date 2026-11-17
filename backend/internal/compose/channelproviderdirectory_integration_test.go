@@ -24,6 +24,7 @@ import (
 )
 
 func TestTheDirectoryAndTheRegistryDescribeTheSameTransports(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	ctx := context.Background()
@@ -101,6 +102,7 @@ func TestTheDirectoryAndTheRegistryDescribeTheSameTransports(t *testing.T) {
 // wrong — which is exactly why the exception exists, and exactly why it is the
 // pair most likely to drift.
 func TestTheSeededLabelMatchesTheOneBootWrites(t *testing.T) {
+	t.Parallel()
 	integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	ctx := context.Background()
@@ -154,6 +156,8 @@ func TestTheSeededLabelMatchesTheOneBootWrites(t *testing.T) {
 //
 // It is asserted by clearing the snapshot and loading it again from the table,
 // which is exactly what a role that never constructed a registry does.
+//
+//testdb:serial sets the process-wide sendable channel providers
 func TestTheDirectoryLoadsFromTheRegistryAndNotFromTheCaptureBoot(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := context.Background()
@@ -191,20 +195,16 @@ func TestTheDirectoryLoadsFromTheRegistryAndNotFromTheCaptureBoot(t *testing.T) 
 // transport's messages are the company's correspondence or one contact's, and a
 // per-member account published as a workspace bot invites exactly the wrong
 // answer to that question.
+//
+//testdb:serial sets the process-wide sendable channel providers
 func TestTheDirectoryPublishesAUnitsOwnCredentialModel(t *testing.T) {
 	e := integration.Setup(t)
-	owner := integration.OwnerConn(t)
 	ctx := context.Background()
 	defer activities.SetChannelProviders([]string{capture.ProviderTelegram})
 	defer comms.SetChannelProviders([]string{capture.ProviderTelegram})
 	declaresTransport(t, "mine", extension.Channel{
 		Provider: "mine_chat", CredentialModel: extension.CredentialPerMember,
 		Send: (&capturedSend{}).send, Live: answersLive(true, nil),
-	})
-	t.Cleanup(func() {
-		if _, err := owner.Exec(context.Background(), `DELETE FROM channel_provider WHERE provider = 'mine_chat'`); err != nil {
-			t.Errorf("cleaning up channel_provider: %v", err)
-		}
 	})
 	if err := reconcileChannelProviders(ctx, e.Pool, []string{capture.ProviderTelegram}); err != nil {
 		t.Fatalf("reconcileChannelProviders: %v", err)

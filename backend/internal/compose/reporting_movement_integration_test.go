@@ -19,6 +19,7 @@ import (
 )
 
 func TestReportingMovementUsesTheDailyTeamPipelineProducer(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	at := time.Date(2026, 9, 8, 12, 0, 0, 0, time.UTC)
 	now := func() time.Time { return at }

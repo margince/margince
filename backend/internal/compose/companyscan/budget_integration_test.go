@@ -18,6 +18,7 @@ import (
 )
 
 func TestBudgetRecoveryPreservesTheAccountScanRequest(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	company := e.SeedCompany(t, "Recovery account", &e.Rep1)

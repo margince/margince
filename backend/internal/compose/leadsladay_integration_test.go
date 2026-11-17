@@ -72,6 +72,7 @@ func leadSLAStamps(t *testing.T, owner *pgx.Conn, lead ids.UUID) (answered, brea
 // A date cannot prove an answer within hours, so a note dated the deadline's own
 // date leaves the lead breached. Its stored noon, before the deadline, decides nothing.
 func TestADayTouchAnswersADeadlineOnlyOnceItsDateHasEnded(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	measureFirstResponse(t, e)
@@ -95,6 +96,7 @@ func TestADayTouchAnswersADeadlineOnlyOnceItsDateHasEnded(t *testing.T) {
 // Once a day touch's date ends, the scan stamps the first response at that end,
 // with the target off and on a lead already breached.
 func TestTheSLAScanStampsADayTouchOnceItsDateEnds(t *testing.T) {
+	t.Parallel()
 	date := time.Date(2026, 3, 9, 0, 0, 0, 0, time.UTC)
 	dateEnd := date.AddDate(0, 0, 1)
 	for name, measured := range map[string]bool{"the target off": false, "a breached lead": true} {
@@ -130,6 +132,7 @@ func TestTheSLAScanStampsADayTouchOnceItsDateEnds(t *testing.T) {
 // A lead typed in by hand has no enquiry, yet the subscriber stamps its first
 // answer. So the scan stamps a day call on it once the call's date ends.
 func TestTheSLAScanStampsADayCallOnALeadWithNoEnquiry(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	date := time.Date(2026, 3, 9, 0, 0, 0, 0, time.UTC)

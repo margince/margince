@@ -41,6 +41,7 @@ func eventKept(t *testing.T, e *integration.Env, event ids.UUID) bool {
 }
 
 func TestPublishedEventsLeaveTheOutboxAfterTheirWindowUnlessSomethingStillNeedsThem(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	ordinary := agedEvent(t, owner, keyedRecipient(t, e, "Old News", "old@window.test"), 31, true)
@@ -124,6 +125,7 @@ func bodyKept(t *testing.T, e *integration.Env, delivery ids.UUID) bool {
 }
 
 func TestEndedWebhookBodiesAreClearedAfterTheirWindowAndWorkStillToSendKeepsItsBody(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	sub := seedSubscription(t, e, owner)
@@ -161,6 +163,7 @@ func TestEndedWebhookBodiesAreClearedAfterTheirWindowAndWorkStillToSendKeepsItsB
 }
 
 func TestErasingASubjectClearsItsWebhookBodiesAndCancelsWhatIsStillToSend(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	sub := seedSubscription(t, e, owner)
@@ -181,6 +184,7 @@ func TestErasingASubjectClearsItsWebhookBodiesAndCancelsWhatIsStillToSend(t *tes
 }
 
 func TestCopiesAboutAHeldCompanyOrProjectOutliveTheirWindow(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	company, err := e.Contacts.CreateCompany(e.Admin(), contacts.CreateCompanyInput{DisplayName: "Held Company", Source: "manual"})

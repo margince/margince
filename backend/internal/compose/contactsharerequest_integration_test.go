@@ -130,6 +130,7 @@ func decideAsRep1(t *testing.T, e *integration.Env, request ids.ApprovalID, appr
 }
 
 func TestACreateOfAColleaguesCapturedContactAsksThemOnce(t *testing.T) {
+	t.Parallel()
 	e, held := heldByRep1(t)
 
 	status, problem := createAsRep2(t, e)
@@ -155,6 +156,7 @@ func TestACreateOfAColleaguesCapturedContactAsksThemOnce(t *testing.T) {
 }
 
 func TestADeclinedShareRequestIsNotFiledAgain(t *testing.T) {
+	t.Parallel()
 	e, held := heldByRep1(t)
 	createAsRep2(t, e)
 	decideAsRep1(t, e, openShareRequest(t, e, held), false)
@@ -168,6 +170,7 @@ func TestADeclinedShareRequestIsNotFiledAgain(t *testing.T) {
 }
 
 func TestAnAcceptedShareRequestLetsTheColleagueEditTheContact(t *testing.T) {
+	t.Parallel()
 	e, held := heldByRep1(t)
 	createAsRep2(t, e)
 
@@ -189,6 +192,7 @@ func TestAnAcceptedShareRequestLetsTheColleagueEditTheContact(t *testing.T) {
 // The request was filed while Rep2 held a full seat; by the time Rep1 accepts,
 // the seat may only read.
 func TestAShareAcceptedForAReadSeatGrantsRead(t *testing.T) {
+	t.Parallel()
 	e, held := heldByRep1(t)
 	createAsRep2(t, e)
 	e.WsExec(t, `UPDATE app_user SET seat_type = 'read' WHERE id = $1`, e.Rep2)
@@ -204,6 +208,7 @@ func TestAShareAcceptedForAReadSeatGrantsRead(t *testing.T) {
 // Every other door that creates a contact gives the same refusal and asks the
 // same way.
 func TestEveryCreateDoorAsksTheColleagueWhoHoldsTheAddress(t *testing.T) {
+	t.Parallel()
 	doors := map[string]func(t *testing.T, e *integration.Env) error{
 		"quick capture": func(t *testing.T, e *integration.Env) error {
 			req := httptest.NewRequest(http.MethodPost, "/v1/contacts/quick-capture",
@@ -300,6 +305,7 @@ func TestEveryCreateDoorAsksTheColleagueWhoHoldsTheAddress(t *testing.T) {
 
 // A connector creating for its mailbox is automatic work, and asks nobody.
 func TestAutomaticWorkFilesNoShareRequest(t *testing.T) {
+	t.Parallel()
 	e, held := heldByRep1(t)
 	store := contacts.NewStore(e.DB()).WithShareRequests(contactShareRequests(e.Pool))
 

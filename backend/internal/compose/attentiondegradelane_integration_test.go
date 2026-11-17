@@ -61,6 +61,7 @@ func (s shortLaneBudget) Degradable(ctx context.Context, _ time.Duration, fn fun
 }
 
 func TestAStuckWaitingLaneIsNamedUnavailableAndTheRestOfTheDayStillLoads(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedLeadTask(t, e)
 
@@ -121,6 +122,7 @@ func (s stuckSuggestions) OpenSuggestions(
 }
 
 func TestAStuckSuggestionReadIsNamedUnavailableAndTheRestOfTheDayStillLoads(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedLeadTask(t, e)
 

@@ -69,6 +69,8 @@ func auditedRow(t *testing.T, e *extRuntimeEnv, entityID ids.UUID) (auditID ids.
 // TestAUnitsOwnWriteLandsAsARowALedgerRowAndAnEvent: the write shape, for a
 // table the core has never heard of. The unit describes its own change; the
 // core supplies the actor, the workspace, the attribution and the trace.
+//
+//testdb:serial binds the process-wide extension runtime
 func TestAUnitsOwnWriteLandsAsARowALedgerRowAndAnEvent(t *testing.T) {
 	e := setupExtRuntime(t)
 	unitsqltest.ScratchTable(t, probeTable)
@@ -199,6 +201,8 @@ func assertSameJSON(t *testing.T, what string, got json.RawMessage, want string)
 // the CALLER's transaction, so a handler that changes its mind afterwards
 // leaves no history of a write that never happened. The rows are counted with
 // the transaction already rolled back, which is the state a later reader meets.
+//
+//testdb:serial binds the process-wide extension runtime
 func TestAFailedUnitWriteTakesItsLedgerRowAndItsEventWithIt(t *testing.T) {
 	e := setupExtRuntime(t)
 	rt, ctx := e.runtime("alpha")
@@ -245,6 +249,8 @@ func TestAFailedUnitWriteTakesItsLedgerRowAndItsEventWithIt(t *testing.T) {
 // unattended Runtime that shuts the core port — so a test that supplied those
 // itself would be asserting its own arithmetic and would stay green through
 // exactly the regression that matters.
+//
+//testdb:serial binds the process-wide extension runtime
 func TestADeliveryThroughTheRealHandlerRecordsAndRefuses(t *testing.T) {
 	e := setupExtRuntime(t)
 	rowID, correlation, cause := ids.NewV7(), ids.NewV7(), ids.NewV7()
@@ -332,6 +338,8 @@ func TestADeliveryThroughTheRealHandlerRecordsAndRefuses(t *testing.T) {
 // It runs in the database lane because the panic has to happen where the real
 // one would: inside a handler that the real Handler actually reached, past the
 // tenant read a fake pool cannot answer.
+//
+//testdb:serial binds the process-wide extension runtime
 func TestAPanickingHandlerFailsTheDeliveryRatherThanTheWorker(t *testing.T) {
 	e := setupExtRuntime(t)
 	var ran bool

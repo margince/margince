@@ -28,6 +28,7 @@ import (
 )
 
 func TestBookingBrandUsesTheCurrentAnchorAndServesItsLogoWithoutLogin(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	blob := blobstore.NewMemory()
 	theCompanyExists(t, e)
@@ -90,6 +91,7 @@ func TestBookingBrandUsesTheCurrentAnchorAndServesItsLogoWithoutLogin(t *testing
 }
 
 func TestBookingBrandWithoutAnAnchorDoesNotReuseObsoleteOverrides(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	name, url := "Former company", "https://old.example/logo.png"
 	profile, err := e.Activities.SaveSchedulingProfile(e.Admin(), crmcontracts.SchedulingProfile{
@@ -109,6 +111,7 @@ func TestBookingBrandWithoutAnAnchorDoesNotReuseObsoleteOverrides(t *testing.T) 
 }
 
 func TestBookingBrandTrimsLegacyLogosWithoutAuthorizingPublicWrites(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	blob := blobstore.NewMemory()
 	theCompanyExists(t, e)
@@ -146,6 +149,7 @@ func TestBookingBrandTrimsLegacyLogosWithoutAuthorizingPublicWrites(t *testing.T
 }
 
 func TestBookingBrandFollowsTheAnchorOnPersonalProposals(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	theCompanyExists(t, e)
 	blob := blobstore.NewMemory()
@@ -181,6 +185,7 @@ func (b *unavailableBookingBrand) PublicBookingBrand(context.Context, ids.UserID
 }
 
 func TestBookingBrandFailureDoesNotFailCommittedSettingsOrAvailability(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	brand := &unavailableBookingBrand{}
 	now := time.Date(2026, 10, 5, 6, 0, 0, 0, time.UTC)
@@ -206,6 +211,7 @@ func TestBookingBrandFailureDoesNotFailCommittedSettingsOrAvailability(t *testin
 // booking page, and an entity's logo is served without login. An entity with no
 // logo shows its name and borrows no other entity's.
 func TestBookingBrandFollowsTheLegalEntityTheHostWorksFor(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	blob := blobstore.NewMemory()
 	handlers := companyHandlers{store: e.Contacts, blob: blob}

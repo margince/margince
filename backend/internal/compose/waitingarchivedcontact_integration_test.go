@@ -92,6 +92,7 @@ func (o *owedEnv) waitingRow(t *testing.T, message ids.UUID) (activities.Waiting
 // The message waits, and every reader drops it once the contact is archived.
 // Every reader has it again once the contact is restored.
 func TestArchivingTheContactTakesTheirMessageOffEveryWaitingReader(t *testing.T) {
+	t.Parallel()
 	for _, judged := range []bool{false, true} {
 		name := "pending classification"
 		if judged {
@@ -125,6 +126,7 @@ func TestArchivingTheContactTakesTheirMessageOffEveryWaitingReader(t *testing.T)
 // One live contact keeps the message, and the row then names the live one, so
 // its reply opens a record somebody can open.
 func TestAMessageStaysWhileOneContactItIsFiledUnderIsLive(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	pat := o.contact(t, "Pat Buyer", "pat@customer.example")
 	robin := o.contact(t, "Robin Buyer", "robin@customer.example")
@@ -158,6 +160,7 @@ func (o *owedEnv) ccMail(t *testing.T, from, cc, subject string) ids.UUID {
 // copied contact is live but private to a colleague. To this reader the
 // message is filed only under its archived sender, so it leaves the lane.
 func TestAContactTheReaderCannotSeeDoesNotKeepTheMessage(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	pat := o.contact(t, "Pat Buyer", "pat@customer.example")
 	robin := o.contact(t, "Robin Buyer", "robin@customer.example")
@@ -179,6 +182,7 @@ func TestAContactTheReaderCannotSeeDoesNotKeepTheMessage(t *testing.T) {
 // the contacts on it. Archiving the sender moves the row to the live contact
 // and leaves it with that recipient, never with the sender's owner.
 func TestTheArchivedContactsOwnerDoesNotOweTheReply(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	rep2 := ids.From[ids.UserKind](o.e.Rep2)
 	created, err := o.e.Contacts.CreateContact(o.e.Admin(), contacts.CreateContactInput{

@@ -123,6 +123,7 @@ func repairClaims(t *testing.T, e *integration.Env, id ids.UUID) int {
 }
 
 func TestMailTheSeatWroteFromAFormerAddressIsReadAgainAsTheirs(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedRepairSeat(t, e)
 	id := seedReceivedMail(t, e, "former-sent@previous-employer.example")
@@ -148,6 +149,7 @@ func TestMailTheSeatWroteFromAFormerAddressIsReadAgainAsTheirs(t *testing.T) {
 // A replay changes nothing. The marker keeps the row from being offered again,
 // and judging the claimed row once more finds nothing left to turn round.
 func TestTheOwnSentMailRepairReplaysWithoutASecondClaim(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedRepairSeat(t, e)
 	id := seedReceivedMail(t, e, "replayed@previous-employer.example")
@@ -176,6 +178,7 @@ func TestTheOwnSentMailRepairReplaysWithoutASecondClaim(t *testing.T) {
 }
 
 func TestTheOwnSentMailRepairLeavesMailItCannotClaim(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name, to, verdict        string
 		received, buyerWasErased bool
@@ -213,6 +216,7 @@ func TestTheOwnSentMailRepairLeavesMailItCannotClaim(t *testing.T) {
 // Mail the pass never offers: its sender is not an address the seat alone has
 // proven, or it arrived after the pass's cutoff.
 func TestTheOwnSentMailRepairDoesNotOfferMailOutsideItsReach(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name  string
 		setUp func(t *testing.T, e *integration.Env)
@@ -264,6 +268,7 @@ func TestTheOwnSentMailRepairDoesNotOfferMailOutsideItsReach(t *testing.T) {
 // Standing gained later brings the mail into reach: connecting the mailbox for
 // the former address proves it.
 func TestMailFromAnAddressTheSeatProvesLaterIsClaimed(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	connectMailbox(t, e, e.AdminUser, "gmail", repairSeatMailbox)
 	id := seedReceivedMail(t, e, "proved-later@previous-employer.example")
@@ -285,6 +290,7 @@ func TestMailFromAnAddressTheSeatProvesLaterIsClaimed(t *testing.T) {
 // A row captured before provenance named the seat carries a bare
 // `connector:gmail` and no link to its original; it is offered all the same.
 func TestTheOwnSentMailRepairReachesARowFromBeforeProvenanceNamedTheSeat(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedRepairSeat(t, e)
 	id := seedReceivedMail(t, e, "legacy@previous-employer.example")

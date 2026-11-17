@@ -21,6 +21,7 @@ import (
 )
 
 func TestRelinkApprovalNamesTheExactActivitiesAndRemovedLinks(t *testing.T) {
+	t.Parallel()
 	for _, batch := range []bool{false, true} {
 		for _, rest := range []bool{false, true} {
 			t.Run(fmt.Sprintf("batch=%t/rest=%t", batch, rest), func(t *testing.T) {

@@ -161,6 +161,7 @@ func (e *transcriptEnv) taskCount(t *testing.T) int {
 }
 
 func TestATranscriptReadingStagesACitedProposalAndWritesNothingYet(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	before := e.taskCount(t)
 
@@ -229,6 +230,7 @@ func storedEvidence(t *testing.T, raw json.RawMessage) []struct {
 }
 
 func TestConfirmingATranscriptProposalCreatesTheTaskExactlyOnce(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	read := e.read(t, cannedBrain{reply: groundedReply(t, 3, 0.9, e.Rep1)})
 	approvalID := ids.From[ids.ApprovalKind](read.ProposalIDs[0])
@@ -279,6 +281,7 @@ func TestConfirmingATranscriptProposalCreatesTheTaskExactlyOnce(t *testing.T) {
 
 // A task the rep types names no meeting, and must not borrow one.
 func TestATaskNobodyReadOutOfAMeetingNamesNone(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	subject := "Typed by a contact"
 	if _, _, err := e.Activities.LogActivity(e.ctx, activities.LogActivityInput{
@@ -294,6 +297,7 @@ func TestATaskNobodyReadOutOfAMeetingNamesNone(t *testing.T) {
 }
 
 func TestRejectingATranscriptProposalCreatesNothing(t *testing.T) {
+	t.Parallel()
 	rejectReason := "not a commitment"
 	e := setupTranscript(t)
 	read := e.read(t, cannedBrain{reply: groundedReply(t, 3, 0.9, e.Rep1)})
@@ -308,6 +312,7 @@ func TestRejectingATranscriptProposalCreatesNothing(t *testing.T) {
 }
 
 func TestATranscriptStatingNothingProducesNoProposalAndSaysSo(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 
 	read := e.read(t, cannedBrain{reply: `{"proposals":[]}`})
@@ -329,6 +334,7 @@ func TestATranscriptStatingNothingProducesNoProposalAndSaysSo(t *testing.T) {
 // Lines cited across a gap are not one passage of the transcript. The reading
 // still finishes, quoting the words the transcript does hold.
 func TestAReadingThatCitesLinesAcrossAGapStillStagesItsProposal(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	raw, err := json.Marshal(map[string]any{"proposals": []map[string]any{{
 		"summary": "Send the revised pricing", "owner": "Priya", "promiser_ref": "seat:" + e.Rep1.String(),
@@ -355,6 +361,7 @@ func TestAReadingThatCitesLinesAcrossAGapStillStagesItsProposal(t *testing.T) {
 }
 
 func TestAReadingThatCitesALineThatDoesNotExistStagesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 
 	// Line 99 of a four-line transcript: the citation cannot be checked, so
@@ -375,6 +382,7 @@ func TestAReadingThatCitesALineThatDoesNotExistStagesNothing(t *testing.T) {
 // "I will try" read in the tentative band is put to its promiser, marked
 // tentative, and never written as a task by itself.
 func TestATentativePromiseWaitsForItsPromiserAndIsMarked(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	reply := strings.Replace(groundedReply(t, 3, 0.5, e.Rep1), `"state":"open"`, `"state":"optional"`, 1)
 	read := e.read(t, cannedBrain{reply: reply})
@@ -387,6 +395,7 @@ func TestATentativePromiseWaitsForItsPromiserAndIsMarked(t *testing.T) {
 }
 
 func TestAnUnsureReadingIsDroppedRatherThanPutInFrontOfAHuman(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 
 	read := e.read(t, cannedBrain{reply: groundedReply(t, 3, 0.29, e.Rep1)})
@@ -401,6 +410,7 @@ func TestAnUnsureReadingIsDroppedRatherThanPutInFrontOfAHuman(t *testing.T) {
 }
 
 func TestPressingReadTwiceJoinsTheReadingAlreadyInFlight(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 
 	first, joinedFirst, err := e.Activities.StartTranscriptReadQueued(e.ctx, e.activity, "human:"+e.Rep1.String(), nil)
@@ -421,6 +431,7 @@ func TestPressingReadTwiceJoinsTheReadingAlreadyInFlight(t *testing.T) {
 }
 
 func TestAnActivityThatCarriesNoTranscriptCannotBeRead(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	subject := "An ordinary note"
 	body := "No transcript here."
@@ -463,6 +474,7 @@ func (e *transcriptEnv) age(t *testing.T, readID ids.UUID, by time.Duration) {
 }
 
 func TestAReadingAbandonedByADeadWorkerIsClaimableAgain(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	started, _, err := e.Activities.StartTranscriptReadQueued(e.ctx, e.activity, "human:"+e.Rep1.String(), nil)
 	if err != nil {
@@ -485,6 +497,7 @@ func TestAReadingAbandonedByADeadWorkerIsClaimableAgain(t *testing.T) {
 }
 
 func TestAskingAgainReArmsAReadingNobodyIsWorking(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	started, _, err := e.Activities.StartTranscriptReadQueued(e.ctx, e.activity, "human:"+e.Rep1.String(), nil)
 	if err != nil {
@@ -519,6 +532,7 @@ func TestAskingAgainReArmsAReadingNobodyIsWorking(t *testing.T) {
 }
 
 func TestAReadingInFlightIsJoinedRatherThanReArmed(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	started, _, err := e.Activities.StartTranscriptReadQueued(e.ctx, e.activity, "human:"+e.Rep1.String(), nil)
 	if err != nil {
@@ -546,6 +560,7 @@ func TestAReadingInFlightIsJoinedRatherThanReArmed(t *testing.T) {
 }
 
 func TestATranscriptTooLongForOneReadingIsRefusedAtTheDoor(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	long := strings.Repeat("Dana: we discussed the rollout at some length.\n", activities.MaxReadableTranscriptLines+50)
 	subject := "A very long meeting"
@@ -573,6 +588,7 @@ func TestATranscriptTooLongForOneReadingIsRefusedAtTheDoor(t *testing.T) {
 }
 
 func TestTheLatestReadingIsFindableAfterTheTabThatStartedItIsGone(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	if _, err := e.Activities.LatestTranscriptRead(e.ctx, e.activity); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("a transcript nobody has read must answer not-found — the honest difference between never tried and tried and got nothing; got %v", err)
@@ -589,6 +605,7 @@ func TestTheLatestReadingIsFindableAfterTheTabThatStartedItIsGone(t *testing.T) 
 }
 
 func TestAFinishedReadingMustSayWhatItProducedOrWhyItDidNot(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	started, _, err := e.Activities.StartTranscriptReadQueued(e.ctx, e.activity, "human:"+e.Rep1.String(), nil)
 	if err != nil {
@@ -611,6 +628,7 @@ func TestAFinishedReadingMustSayWhatItProducedOrWhyItDidNot(t *testing.T) {
 }
 
 func TestARepWhoMayNotAddToTheTimelineCannotStartAReading(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	readOnly := transcriptPerms
 	readOnly.Objects = map[string]principal.ObjectGrant{
@@ -645,6 +663,7 @@ func datedReply(t *testing.T, line int, due string, promiser ids.UUID) string {
 // A deadline stated in the meeting becomes the task's own date. It is the end
 // of the named day in the installation's zone, so it is not overdue that day.
 func TestAStatedDeadlineBecomesTheTasksDueDate(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	// Pinned, not read back: a broken conversion and a broken read would agree.
 	e.WsExec(t, `UPDATE setting SET value = '"Europe/Berlin"'::jsonb
@@ -675,6 +694,7 @@ func TestAStatedDeadlineBecomesTheTasksDueDate(t *testing.T) {
 
 // A next step nobody dated carries no date, rather than today's.
 func TestAnUndatedNextStepCarriesNoDeadline(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	read := e.read(t, cannedBrain{reply: datedReply(t, 3, "", e.Rep1)})
 	approvalID := ids.From[ids.ApprovalKind](read.ProposalIDs[0])
@@ -700,6 +720,7 @@ func TestAnUndatedNextStepCarriesNoDeadline(t *testing.T) {
 // Both boundaries, because they fail in opposite directions and a fix for one
 // can leave the other.
 func TestADeadlineOnADaylightSavingBoundaryStaysOnItsOwnDay(t *testing.T) {
+	t.Parallel()
 	for _, c := range []struct {
 		name, day string
 	}{
@@ -740,6 +761,7 @@ func TestADeadlineOnADaylightSavingBoundaryStaysOnItsOwnDay(t *testing.T) {
 // the task said whose promise it was and belonged to nobody. Now it is theirs,
 // and it says the reader wrote it rather than a human.
 func TestAConfidentPromiseByANamedColleagueIsTheirTaskWithoutAsking(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	// One seat with a name a transcript could state. The harness gives all
 	// three humans the display name "Rep", which is the ambiguous case below.
@@ -760,6 +782,7 @@ func TestAConfidentPromiseByANamedColleagueIsTheirTaskWithoutAsking(t *testing.T
 // A promise read unsurely is proposed to the colleague who made it, and
 // accepting it gives it to them.
 func TestAnUnsurePromiseIsProposedToTheColleagueWhoMadeIt(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	e.WsExec(t, `UPDATE app_user SET display_name = 'Priya Raman' WHERE id = $1`, e.Rep2)
 
@@ -785,6 +808,7 @@ func TestAnUnsurePromiseIsProposedToTheColleagueWhoMadeIt(t *testing.T) {
 // and the finding stays on the meeting. Given to the wrong colleague, the
 // promise is not done, and the right one never learns it was theirs.
 func TestAnAmbiguousOwnerAsksNobody(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	// The harness's three humans all display as "Rep".
 	read := e.read(t, cannedBrain{reply: ownedReply(t, "Rep", 0.9)})
@@ -794,6 +818,7 @@ func TestAnAmbiguousOwnerAsksNobody(t *testing.T) {
 // A customer's promise is filed on them and is never a task. The member who
 // logged the meeting is asked once to chase it, the day after its day.
 func TestACustomersPromiseIsWatchedAndItsLoggerAskedToFollowItUp(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	contact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Frédéric de Gombert"})
 	if err != nil {
@@ -862,6 +887,7 @@ func attributedReply(t *testing.T, owner, promiser string, confidence float64) s
 // row, so a resolver that took its first candidate would hand the work out
 // confidently and wrongly. Only an exact name or email resolves.
 func TestAFirstNameAloneDoesNotResolveToAColleague(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	e.WsExec(t, `UPDATE app_user SET display_name = 'Priya Raman' WHERE id = $1`, e.Rep2)
 
@@ -888,6 +914,7 @@ func (e *transcriptEnv) assertNobodyAsked(t *testing.T, read activities.Transcri
 // erasure had deleted, and the job read that as a fault to retry — against a
 // reading that will never come back, on a transcript that no longer exists.
 func TestAReadingThatProposesNothingOverAnErasedTranscriptIsNotARetry(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 
 	started, _, err := e.Activities.StartTranscriptReadQueued(e.ctx, e.activity, "human:"+e.Rep1.String(), nil)
@@ -940,6 +967,7 @@ func (b erasingBrain) Complete(context.Context, model.Request) (model.Response, 
 // It is not an error the job should retry, either: asking the same question of
 // a transcript that is gone gets the same answer.
 func TestAReadingWhoseTranscriptWasErasedMidCallStagesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	before := e.WsCount(t, `SELECT count(*) FROM approval`)
 

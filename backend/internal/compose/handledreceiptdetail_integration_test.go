@@ -115,6 +115,7 @@ func changeOf(receipt crmcontracts.Receipt, field string) (crmcontracts.MagicFie
 // The sweep's correction and two cards that applied on their own, one staged by
 // a member and one by an agent. Each receipt names who did it and what moved.
 func TestAReceiptNamesWhoDidItAndWhatItMoved(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	swept := e.seedSweepDeal(t, "Swept overnight", e.early, nil, new(-12), 3)
@@ -196,6 +197,7 @@ func TestAReceiptNamesWhoDidItAndWhatItMoved(t *testing.T) {
 // A verdict change names the message it read and when that came, apart from
 // when Margince acted. Home and the deal agree, and call the reason an inference.
 func TestAVerdictReceiptNamesTheMessageItReadAndWhenItCame(t *testing.T) {
+	t.Parallel()
 	v := setupDealVerdict(t)
 	v.run(t)
 	reader := v.As(v.Rep1, []ids.UUID{v.Team1}, integration.AdminPerms)
@@ -229,6 +231,7 @@ func TestAVerdictReceiptNamesTheMessageItReadAndWhenItCame(t *testing.T) {
 // A source the reader may no longer open is left off the next read. An earlier
 // read that could open it grants nothing.
 func TestASourceTheReaderMayNotOpenIsWithheld(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	deal := e.seedSweepDeal(t, "Moved by a card", e.late, new(95), new(30), 1)
@@ -261,6 +264,7 @@ func TestASourceTheReaderMayNotOpenIsWithheld(t *testing.T) {
 // A truncated first page continues on the second, which carries every receipt
 // the first left out and none that landed after it was read.
 func TestATruncatedPageContinuesWhereItStopped(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	now := clocktest.Now(t)
@@ -381,6 +385,7 @@ func verdictReceiptSources(t *testing.T, v *dealVerdictEnv) []crmcontracts.Recei
 // A meeting moved after Margince acted on it leaves the receipt dated as the
 // evidence was then. That is the meeting's first start, an instant.
 func TestAReceiptKeepsTheDateOfTheMeetingItActedOn(t *testing.T) {
+	t.Parallel()
 	v, _ := verdictOnAMeeting(t)
 	for _, receipt := range verdictReceiptSources(t, v) {
 		at, precision := receipt.SourceOccurredAt, receipt.SourceOccurredPrecision
@@ -396,6 +401,7 @@ func TestAReceiptKeepsTheDateOfTheMeetingItActedOn(t *testing.T) {
 // live date. The UPDATE strips the record the real writer wrote, which
 // audit_log refuses unless its guard trigger is off for that one statement.
 func TestAnOlderReceiptReadsTheMeetingsLiveDate(t *testing.T) {
+	t.Parallel()
 	v, moved := verdictOnAMeeting(t)
 	owner, ctx := integration.OwnerConn(t), context.Background()
 	if err := pgx.BeginFunc(ctx, owner, func(tx pgx.Tx) error {

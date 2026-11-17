@@ -51,6 +51,7 @@ const acmePage = fixturePage(`Acme GmbH — Onboard your team in minutes, not we
 	`Registered in Berlin, HRB 12345.`)
 
 func TestColdStartStagesOnlyEvidencedFields(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	fake := ai.NewFakeClient().Script(`{"fields":[
 		{"field":"value_proposition","value":"Fast onboarding","evidence_snippet":"Onboard your team in minutes, not weeks","confidence":0.9},
@@ -115,6 +116,7 @@ func TestColdStartStagesOnlyEvidencedFields(t *testing.T) {
 // the paste does not contain is dropped, and the result stages 🟡 exactly
 // like a url read-back.
 func TestColdStartTextInputGroundsFieldsInThePaste(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	pasted := "Acme GmbH helps RevOps teams onboard in minutes. Built for scaling B2B SaaS companies."
 	fake := ai.NewFakeClient().Script(`{"fields":[
@@ -154,6 +156,7 @@ func TestColdStartTextInputGroundsFieldsInThePaste(t *testing.T) {
 // statement does not support is ABSENT (the no-guess gate). No fetch, no
 // source_url, and it stages 🟡 like every other kind.
 func TestColdStartSelfDescriptionGroundsOnlyWhatTheStatementSupports(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	statement := "We sell fractional CFO services to seed-stage German startups."
 	fake := ai.NewFakeClient().Script(`{"fields":[
@@ -202,6 +205,7 @@ func TestColdStartSelfDescriptionGroundsOnlyWhatTheStatementSupports(t *testing.
 // no-guess gate, and — the whole difference from Propose — it stages NOTHING.
 // The unsaved form is the staged state; PUT /company is the human's write.
 func TestColdStartPreviewReturnsEvidencedFieldsAndStagesNothing(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	fake := ai.NewFakeClient().Script(`{"fields":[
 		{"field":"value_proposition","value":"Fast onboarding","evidence_snippet":"Onboard your team in minutes, not weeks","confidence":0.9},
@@ -252,6 +256,7 @@ func TestColdStartPreviewReturnsEvidencedFieldsAndStagesNothing(t *testing.T) {
 // nothing is refused, never padded with a plausible guess for the form to
 // pre-fill.
 func TestColdStartPreviewRefusesWhatItCannotQuote(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	fake := ai.NewFakeClient().Script(
 		`{"fields":[{"field":"icp","value":"guessed","evidence_snippet":"nowhere on the page","confidence":0.9}]}`)
@@ -264,6 +269,7 @@ func TestColdStartPreviewRefusesWhatItCannotQuote(t *testing.T) {
 }
 
 func TestColdStartRefusesWhenNothingSurvivesTheGate(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	fake := ai.NewFakeClient().Script(
 		`{"fields":[{"field":"icp","value":"guessed","evidence_snippet":"nowhere on the page","confidence":0.9}]}`,
@@ -299,6 +305,7 @@ func TestColdStartRefusesWhenNothingSurvivesTheGate(t *testing.T) {
 // columns filled, evidence rows landed, human-set values untouched,
 // exactly once even if the decision path re-fires.
 func TestColdStartAcceptWritesProfileOntoCompany(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	extraction := `{"fields":[
 		{"field":"legal_name","value":"Acme GmbH","evidence_snippet":"Acme GmbH","confidence":0.95},

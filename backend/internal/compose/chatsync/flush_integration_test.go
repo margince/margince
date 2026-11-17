@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http/httptest"
-	"os"
 	"slices"
 	"strings"
 	"testing"
@@ -66,12 +65,9 @@ type flushEnv struct {
 
 func setupFlush(t *testing.T) *flushEnv {
 	t.Helper()
-	ownerDSN, appDSN := os.Getenv("MARGINCE_TEST_DSN"), os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	testDB := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, testDB.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -80,12 +76,6 @@ func setupFlush(t *testing.T) *flushEnv {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
-	if err := testdb.Reset(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 	e := &flushEnv{owner: owner, ws: ids.NewV7(), rep: ids.NewV7(), deal: ids.NewV7(), shared: ids.NewV7(), private: ids.NewV7()}
 	e.exec(t, `INSERT INTO workspace (id) VALUES ($1)`, e.ws)
 	e.exec(t, `INSERT INTO app_user (id, email, display_name) VALUES ($1, 'rep@chat.test', 'Rita Rep')`, e.rep)
@@ -104,7 +94,7 @@ func setupFlush(t *testing.T) *flushEnv {
 	e.link = ids.NewV7()
 	e.exec(t, `INSERT INTO chat_link (id, connection_id, provider, channel_slug, channel_name, deal_id, verbosity, linked_by)
 		VALUES ($1, $2, 'dispact', 'acme', 'Acme', $3, 'important', $4)`, e.link, connection, e.deal, e.rep)
-	if e.pool, err = testdb.Pool(ctx, appDSN); err != nil {
+	if e.pool, err = testdb.Pool(ctx, testDB.AppDSN); err != nil {
 		t.Fatal(err)
 	}
 	testdb.AssertPoolsQuiesced(t)
@@ -143,6 +133,7 @@ func (e *flushEnv) flush(t *testing.T) {
 }
 
 func TestAFlushPostsTheCardAndOnePostWithOnlyWhatTheWorkspaceMayRead(t *testing.T) {
+	t.Parallel()
 	e := setupFlush(t)
 	e.handle(t, "activity.captured", "activity", e.shared, `{"kind":"note"}`)
 	e.handle(t, "activity.captured", "activity", e.private, `{"kind":"note"}`)
@@ -172,6 +163,7 @@ func TestAFlushPostsTheCardAndOnePostWithOnlyWhatTheWorkspaceMayRead(t *testing.
 }
 
 func TestANoteNarrowedAfterPostingIsRewrittenOutOfItsPost(t *testing.T) {
+	t.Parallel()
 	e := setupFlush(t)
 	e.handle(t, "activity.captured", "activity", e.shared, `{"kind":"note"}`)
 	e.handle(t, "deal.stage_changed", "deal", e.deal, `{"to_stage_name":"Proposal"}`)
@@ -194,6 +186,7 @@ func TestANoteNarrowedAfterPostingIsRewrittenOutOfItsPost(t *testing.T) {
 }
 
 func TestAnArchivedNoteIsRewrittenOutOfItsPost(t *testing.T) {
+	t.Parallel()
 	e := setupFlush(t)
 	e.handle(t, "activity.captured", "activity", e.shared, `{"kind":"note"}`)
 	e.handle(t, "deal.stage_changed", "deal", e.deal, `{"to_stage_name":"Proposal"}`)
@@ -211,6 +204,7 @@ func TestAnArchivedNoteIsRewrittenOutOfItsPost(t *testing.T) {
 // A contact's erasure restricts their correspondence, and the event rides the
 // contact stream naming each activity. A note posted before is rewritten out.
 func TestANoteOfARestrictedContactIsRewrittenOutOfItsPost(t *testing.T) {
+	t.Parallel()
 	e := setupFlush(t)
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Clara Contact', 'manual', 'system')`, contact)
@@ -238,6 +232,7 @@ func TestANoteOfARestrictedContactIsRewrittenOutOfItsPost(t *testing.T) {
 }
 
 func TestALinkOfAReplacedBotPausesInsteadOfPostingOnTheNewOne(t *testing.T) {
+	t.Parallel()
 	e := setupFlush(t)
 	e.exec(t, `UPDATE channel_connection SET status = 'disconnected', archived_at = now()`)
 	e.exec(t, `INSERT INTO channel_connection (provider, channel_id, channel_label, address, credential_ref, status, connected_by)

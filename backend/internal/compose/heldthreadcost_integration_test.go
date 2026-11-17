@@ -25,6 +25,7 @@ import (
 //
 // This pins the statement count, not the payload, which does grow.
 func TestTheHeldThreadReadCostsTheSameAsTheQueueGrows(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 
 	seedHeldQueue(t, e, e.Rep1, "small", 2)

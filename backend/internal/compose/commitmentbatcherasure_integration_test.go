@@ -21,6 +21,7 @@ import (
 )
 
 func TestErasingOneConversationWithdrawsItsTasksAndPendingPromises(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	subject := e.SeedContact(t, "Evidence author", &e.Rep1)
 	buyer := ids.From[ids.ContactKind](e.SeedContact(t, "Account buyer", &e.Rep1))

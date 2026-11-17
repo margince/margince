@@ -46,6 +46,7 @@ func (c *caseEnv) caseHolds(ctx context.Context, t *testing.T, from, member ids.
 }
 
 func TestAnOwnerOfOneEndDismissesAColleaguesPairOnlyUnderThePolicy(t *testing.T) {
+	t.Parallel()
 	c := setupCases(t)
 	members := c.seedCase(t, c.e.Rep1, c.e.Rep2, c.e.Rep3)
 	rep, stranger := c.rep(c.e.Rep1), c.rep(c.e.Rep3)
@@ -93,6 +94,7 @@ func TestAnOwnerOfOneEndDismissesAColleaguesPairOnlyUnderThePolicy(t *testing.T)
 }
 
 func TestAReadSeatOwnerMayNotDismissAColleaguesPair(t *testing.T) {
+	t.Parallel()
 	c := setupCases(t)
 	members := c.seedCase(t, c.e.Rep1, c.e.Rep2)
 	if _, err := integration.OwnerConn(t).Exec(context.Background(),

@@ -16,6 +16,7 @@ import (
 )
 
 func TestReportingCompanyUsesCurrentOwnersForLegacyAndDepartedBookings(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	// NULL attribution is the pre-upgrade history shape; the closes themselves use the real writer.
 	if _, err := f.env.owner.Exec(context.Background(), "UPDATE deal_stage_history SET owner_id_at_change=NULL WHERE owner_id_at_change=$1", f.env.Rep1); err != nil {
@@ -52,6 +53,7 @@ func TestReportingCompanyUsesCurrentOwnersForLegacyAndDepartedBookings(t *testin
 }
 
 func TestReportingNarrowEditionStripsRosterAndTargetsWithoutHiddenFacts(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	f.at = time.Date(2026, 12, 3, 12, 0, 0, 0, time.UTC)
 	selection := f.selection()
@@ -98,6 +100,7 @@ func TestReportingNarrowEditionStripsRosterAndTargetsWithoutHiddenFacts(t *testi
 }
 
 func TestReportingLatestRevisionFreezeReplayKeepsItsOriginalRevision(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	input := crmcontracts.ReportingReportInput{Name: "Original", Audience: "private", Selection: f.selection()}
 	report, err := f.service.CreateReport(f.human, input)

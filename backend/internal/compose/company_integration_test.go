@@ -28,6 +28,7 @@ import (
 )
 
 func TestCompanyIsUnsetUntilAHumanSavesIt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := contacts.NewStore(e.DB()).WithInstallationRenamer(installationRenamer(e.Pool))
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
@@ -138,6 +139,7 @@ func TestCompanyIsUnsetUntilAHumanSavesIt(t *testing.T) {
 // old one — and a swallowed collision means the human changed their website,
 // saw a 200, and kept the old site.
 func TestCompanyWebsiteCanBeChangedAfterTheFirstSave(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := contacts.NewStore(e.DB()).WithInstallationRenamer(installationRenamer(e.Pool))
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
@@ -198,6 +200,7 @@ func TestCompanyWebsiteCanBeChangedAfterTheFirstSave(t *testing.T) {
 }
 
 func TestCompanySavedByAHumanSurvivesALaterReadBack(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := contacts.NewStore(e.DB()).WithInstallationRenamer(installationRenamer(e.Pool))
 	human := e.As(e.Rep1, nil, integration.AdminPerms)
@@ -257,6 +260,7 @@ func TestCompanySavedByAHumanSurvivesALaterReadBack(t *testing.T) {
 }
 
 func TestFormResaveDoesNotClobberAHeaderDescriptionEdit(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := contacts.NewStore(e.DB()).WithInstallationRenamer(installationRenamer(e.Pool))
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
@@ -305,6 +309,7 @@ func TestFormResaveDoesNotClobberAHeaderDescriptionEdit(t *testing.T) {
 }
 
 func TestAcceptedOfferSummaryRefreshesOnlyTheProfile(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := contacts.NewStore(e.DB()).WithInstallationRenamer(installationRenamer(e.Pool))
 	base := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7())
@@ -366,6 +371,7 @@ func TestAcceptedOfferSummaryRefreshesOnlyTheProfile(t *testing.T) {
 
 // The profile preserves the complete multibyte summary at the document limit.
 func TestAnOfferSummaryAtTheDocumentLimitStaysInTheProfile(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := contacts.NewStore(e.DB()).WithInstallationRenamer(installationRenamer(e.Pool))
 	base := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7())
@@ -413,6 +419,7 @@ func TestAnOfferSummaryAtTheDocumentLimitStaysInTheProfile(t *testing.T) {
 }
 
 func TestColdStartCreateWithoutLegalNameUsesDerivedDomainName(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := contacts.NewStore(e.DB()).WithInstallationRenamer(installationRenamer(e.Pool))
 	base := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7())
@@ -449,6 +456,7 @@ func TestColdStartCreateWithoutLegalNameUsesDerivedDomainName(t *testing.T) {
 }
 
 func TestCompanyContextIsScopedProvenanceBearingAndChangesWithTheProfile(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := contacts.NewStore(e.DB()).WithInstallationRenamer(installationRenamer(e.Pool))
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
@@ -528,6 +536,7 @@ func TestCompanyContextIsScopedProvenanceBearingAndChangesWithTheProfile(t *test
 // answered the whole profile with an error, which takes down the onboarding
 // gate and the shell's brand block for a company that is perfectly fine.
 func TestTheCompanyReadSurvivesAFactNobodyScored(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
 	store := contacts.NewStore(e.DB()).WithInstallationRenamer(installationRenamer(e.Pool))

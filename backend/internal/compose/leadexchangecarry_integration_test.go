@@ -57,6 +57,7 @@ func setupRecordedLeadExchange(t *testing.T) recordedLeadExchange {
 }
 
 func TestALeadExchangeKeepsItsEvidenceThroughPromotionAndContactMerge(t *testing.T) {
+	t.Parallel()
 	f := setupRecordedLeadExchange(t)
 	e, ctx, records, leadID, event := f.e, f.ctx, f.records, f.leadID, f.event
 	const address = leadExchangeAddress
@@ -105,6 +106,7 @@ func TestALeadExchangeKeepsItsEvidenceThroughPromotionAndContactMerge(t *testing
 }
 
 func TestLeadExchangeProofIsExportedAndRemovedWithItsContactTwin(t *testing.T) {
+	t.Parallel()
 	for _, historicalAddress := range []bool{false, true} {
 		t.Run(fmt.Sprint("historical address ", historicalAddress), func(t *testing.T) {
 			checkLeadExchangeExportAndErasure(t, historicalAddress)

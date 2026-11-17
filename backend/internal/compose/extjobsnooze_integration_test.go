@@ -57,6 +57,8 @@ const postponedTickDelay = 10 * time.Minute
 // nowhere to go but `discarded`. That is the whole assumption the change rests
 // on — during a real outage every attempt is the last one — and it is the one an
 // implementation could get wrong while every unit test stayed green.
+//
+//testdb:serial publishes the process-wide composed extension set
 func TestAPostponedTickIsRescheduledOnItsLastAttempt(t *testing.T) {
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
@@ -103,6 +105,8 @@ func TestAPostponedTickIsRescheduledOnItsLastAttempt(t *testing.T) {
 // cadence under a uniqueness window over the active states; a postponed row must
 // be inside that window, or an hour's outage leaves thirty live rows for one
 // workspace instead of one.
+//
+//testdb:serial publishes the process-wide composed extension set
 func TestAPostponedTickSuppressesTheNextDispatch(t *testing.T) {
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)

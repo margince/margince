@@ -41,6 +41,7 @@ func (o *owedEnv) moveFor(reader context.Context, t *testing.T, message ids.UUID
 }
 
 func TestOnlyTheSeatThatSentAMailSeesItWaiting(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.now = clocktest.Now(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
@@ -139,6 +140,7 @@ func calendarShapedMail(from, to, subject, inReplyTo string, at time.Time, parts
 const requestCalendar = "BEGIN:VCALENDAR\r\nMETHOD:REQUEST\r\nBEGIN:VEVENT\r\nEND:VEVENT\r\nEND:VCALENDAR"
 
 func TestTheBadgeAndTheFollowUpLaneAgreeOnCalendarShapedMail(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.now = clocktest.Now(t)
 	o.customerContact(t, "Pat Buyer", "pat@customer.example")

@@ -17,6 +17,7 @@ import (
 )
 
 func TestStaleVoiceCompletionKeepsTheBuildLanguage(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct{ language, phrase string }{
 		{"en", "the corpus changed"}, {"de", "Die Textsammlung hat sich"}, {"vi", "Tập văn bản đã thay đổi"},
 	} {

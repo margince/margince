@@ -130,6 +130,7 @@ func evidenceEnvelope(eventType, entityType string, entity ids.UUID, payload any
 
 // A contract turning active is a signature, and no model is asked about it.
 func TestAContractTurningActiveRecordsDocumentSignedWithoutAModel(t *testing.T) {
+	t.Parallel()
 	e := newEvidenceTriggerEnv(t)
 	contractID := e.seedContract(t)
 
@@ -147,6 +148,7 @@ func TestAContractTurningActiveRecordsDocumentSignedWithoutAModel(t *testing.T) 
 // Only the transition INTO active. A contract expiring does not un-sign the
 // document it was, and a draft one was never signed at all.
 func TestOnlyTheMoveIntoActiveIsASignature(t *testing.T) {
+	t.Parallel()
 	e := newEvidenceTriggerEnv(t)
 	contractID := e.seedContract(t)
 
@@ -165,6 +167,7 @@ func TestOnlyTheMoveIntoActiveIsASignature(t *testing.T) {
 // An activity reaching no deal settles nothing: there is no deal whose stage
 // could be asking for it.
 func TestAnUnlinkedActivityWritesNoEvidence(t *testing.T) {
+	t.Parallel()
 	e := newEvidenceTriggerEnv(t, "acme-sales.example")
 	activityID := e.seedMeeting(t, meetingSeed{occurredAt: time.Now().Add(-time.Hour), status: "held"})
 
@@ -180,6 +183,7 @@ func TestAnUnlinkedActivityWritesNoEvidence(t *testing.T) {
 
 // A meeting only we attended is a meeting we held with ourselves.
 func TestAMeetingWithNobodyFromTheirSideSettlesNothing(t *testing.T) {
+	t.Parallel()
 	e := newEvidenceTriggerEnv(t, "acme-sales.example")
 	activityID := e.seedMeeting(t, meetingSeed{linked: true, occurredAt: time.Now().Add(-time.Hour), status: "held"})
 	e.onlyOurSeatsAttend(t, activityID)
@@ -197,6 +201,7 @@ func TestAMeetingWithNobodyFromTheirSideSettlesNothing(t *testing.T) {
 // A meeting in the future has not been held. Capture records scheduled ones
 // too, and one settles event_held only once it happened.
 func TestAScheduledMeetingHasNotBeenHeldYet(t *testing.T) {
+	t.Parallel()
 	e := newEvidenceTriggerEnv(t, "acme-sales.example")
 	activityID := e.seedMeeting(t, meetingSeed{linked: true, occurredAt: time.Now().Add(48 * time.Hour), status: "booked"})
 
@@ -214,6 +219,7 @@ func TestAScheduledMeetingHasNotBeenHeldYet(t *testing.T) {
 // the buyer on it DOES settle event_held — even though capture stamped our own
 // seat as its sender, which is what an authorship rule tripped over.
 func TestAPastMeetingTheBuyerAttendedRecordsEventHeld(t *testing.T) {
+	t.Parallel()
 	e := newEvidenceTriggerEnv(t, "acme-sales.example")
 	activityID := e.seedMeeting(t, meetingSeed{linked: true, occurredAt: time.Now().Add(-time.Hour), status: "held"})
 
@@ -231,6 +237,7 @@ func TestAPastMeetingTheBuyerAttendedRecordsEventHeld(t *testing.T) {
 // A held meeting with a transcript settles event_held, and the row cites the
 // lines a human can open and read.
 func TestAHeldMeetingWithATranscriptRecordsEventHeldAndCitesIt(t *testing.T) {
+	t.Parallel()
 	e := newEvidenceTriggerEnv(t, "acme-sales.example")
 	activityID := e.seedMeeting(t, meetingSeed{
 		linked: true, occurredAt: time.Now().Add(-time.Hour), status: "held",
@@ -253,6 +260,7 @@ func TestAHeldMeetingWithATranscriptRecordsEventHeldAndCitesIt(t *testing.T) {
 // A transcript is not attendance on its own. A meeting nobody reported as held
 // is awaiting its outcome, and the transcript may be of another conversation.
 func TestATranscriptWithNoRecordedOutcomeSettlesNothing(t *testing.T) {
+	t.Parallel()
 	e := newEvidenceTriggerEnv(t, "acme-sales.example")
 	activityID := e.seedMeeting(t, meetingSeed{
 		linked: true, occurredAt: clocktest.Now(t).Add(-time.Hour),
@@ -273,6 +281,7 @@ func TestATranscriptWithNoRecordedOutcomeSettlesNothing(t *testing.T) {
 // signal. A transcript attached to a canceled meeting is a recording of
 // something else.
 func TestACanceledMeetingSettlesNothingEvenWithATranscript(t *testing.T) {
+	t.Parallel()
 	e := newEvidenceTriggerEnv(t, "acme-sales.example")
 	activityID := e.seedMeeting(t, meetingSeed{
 		linked: true, occurredAt: time.Now().Add(-time.Hour), status: "canceled",
@@ -294,6 +303,7 @@ func TestACanceledMeetingSettlesNothingEvenWithATranscript(t *testing.T) {
 // took and silently dropped every record in the outage window, permanently —
 // skipping answers nil, the subscriber acks, and nothing replays it.
 func TestAnEventDeliveredLateIsStillWritten(t *testing.T) {
+	t.Parallel()
 	e := newEvidenceTriggerEnv(t)
 	contractID := e.seedContract(t)
 
@@ -318,6 +328,7 @@ func TestAnEventDeliveredLateIsStillWritten(t *testing.T) {
 // Without this lane the feature is nearly inert: the meeting is skipped at
 // capture and never looked at again.
 func TestMarkingAMeetingHeldAfterwardsSettlesEventHeld(t *testing.T) {
+	t.Parallel()
 	e := newEvidenceTriggerEnv(t, "acme-sales.example")
 	activityID := e.seedMeeting(t, meetingSeed{
 		linked: true, occurredAt: time.Now().Add(-time.Hour),
@@ -352,6 +363,7 @@ func TestMarkingAMeetingHeldAfterwardsSettlesEventHeld(t *testing.T) {
 // of whether the meeting happened exactly where it was, and re-judging on each
 // would rewrite the ledger for a fact that did not change.
 func TestAnUnrelatedActivityEditDoesNotWriteEvidence(t *testing.T) {
+	t.Parallel()
 	e := newEvidenceTriggerEnv(t, "acme-sales.example")
 	activityID := e.seedMeeting(t, meetingSeed{
 		linked: true, occurredAt: time.Now().Add(-time.Hour), status: "held",
@@ -373,6 +385,7 @@ func TestAnUnrelatedActivityEditDoesNotWriteEvidence(t *testing.T) {
 // NULL user_id, so counting "not a seat" as the buyer would let a meeting only
 // our own contacts attended settle a criterion about the buyer turning up.
 func TestAnInternalMeetingWithAContactLinkedColleagueSettlesNothing(t *testing.T) {
+	t.Parallel()
 	e := newEvidenceTriggerEnv(t, "acme-sales.example")
 	activityID := e.seedMeeting(t, meetingSeed{
 		linked: true, occurredAt: time.Now().Add(-time.Hour), status: "held",
@@ -393,6 +406,7 @@ func TestAnInternalMeetingWithAContactLinkedColleagueSettlesNothing(t *testing.T
 // An attendee on one of OUR OWN domains is our own contact, whatever the
 // participant row does or does not carry as a seat.
 func TestAnAttendeeOnOurOwnDomainIsNotTheBuyer(t *testing.T) {
+	t.Parallel()
 	e := newEvidenceTriggerEnv(t, "acme-sales.example")
 	activityID := e.seedMeeting(t, meetingSeed{
 		linked: true, occurredAt: time.Now().Add(-time.Hour), status: "held",
@@ -414,6 +428,7 @@ func TestAnAttendeeOnOurOwnDomainIsNotTheBuyer(t *testing.T) {
 // window must read the meeting's own time or that import lands as if the
 // meeting had just happened.
 func TestAnOldMeetingImportedTodaySettlesNothing(t *testing.T) {
+	t.Parallel()
 	e := newEvidenceTriggerEnv(t, "acme-sales.example")
 	activityID := e.seedMeeting(t, meetingSeed{
 		linked: true, occurredAt: time.Now().Add(-180 * 24 * time.Hour), status: "held",
@@ -440,6 +455,7 @@ func TestAnOldMeetingImportedTodaySettlesNothing(t *testing.T) {
 // capture path wrote, and a criterion about a meeting having happened must
 // rest on the second.
 func TestAnEmailIsNotAMeeting(t *testing.T) {
+	t.Parallel()
 	e := newEvidenceTriggerEnv(t, "acme-sales.example")
 	activityID := e.seedMeeting(t, meetingSeed{
 		linked: true, occurredAt: time.Now().Add(-time.Hour), kind: "message",
@@ -458,6 +474,7 @@ func TestAnEmailIsNotAMeeting(t *testing.T) {
 // The bus is at-least-once, so the same event arrives more than once. A second
 // row would double-count one fact for every reader that counts met criteria.
 func TestARedeliveredEventWritesOneRow(t *testing.T) {
+	t.Parallel()
 	e := newEvidenceTriggerEnv(t)
 	contractID := e.seedContract(t)
 	env := evidenceEnvelope("contract.status_changed", "contract", contractID,
@@ -477,6 +494,7 @@ func TestARedeliveredEventWritesOneRow(t *testing.T) {
 // every contract this installation ever signed. Writing evidence from those
 // would date today's row against whatever stage the deal sits on NOW.
 func TestAReplayedBacklogEventWritesNothing(t *testing.T) {
+	t.Parallel()
 	e := newEvidenceTriggerEnv(t)
 	contractID := e.seedContract(t)
 	env := evidenceEnvelope("contract.status_changed", "contract", contractID,
@@ -493,6 +511,7 @@ func TestAReplayedBacklogEventWritesNothing(t *testing.T) {
 
 // An event this consumer does not care about keeps the group flowing.
 func TestAnUnrelatedEventIsIgnored(t *testing.T) {
+	t.Parallel()
 	e := newEvidenceTriggerEnv(t)
 	env := evidenceEnvelope("contact.updated", "contact", ids.NewV7(), map[string]any{})
 	if err := e.trigger.HandleEvent(context.Background(), env); err != nil {
@@ -719,6 +738,7 @@ func (r *recordingEnqueuer) EnqueueTx(
 // stated the problem in their own words" is settled in an ordinary email, and
 // the deterministic writers have nothing to say about one.
 func TestTheReadingIsQueuedForEveryActivityOnADeal(t *testing.T) {
+	t.Parallel()
 	e := newEvidenceTriggerEnv(t, "acme-sales.example")
 	queue := &recordingEnqueuer{}
 	e.trigger.read = queue
@@ -763,6 +783,7 @@ func TestTheReadingIsQueuedForEveryActivityOnADeal(t *testing.T) {
 // An activity reaching no deal has no criteria to be read against, so nothing
 // is queued — a reading of it would ask about a stage that does not exist.
 func TestNoReadingIsQueuedForAnUnlinkedActivity(t *testing.T) {
+	t.Parallel()
 	e := newEvidenceTriggerEnv(t, "acme-sales.example")
 	queue := &recordingEnqueuer{}
 	e.trigger.read = queue
@@ -783,6 +804,7 @@ func TestNoReadingIsQueuedForAnUnlinkedActivity(t *testing.T) {
 // kind no worker claims, so queueing one there would turn every activity into
 // a discarded row.
 func TestWithNoReadingLaneTheDeterministicEvidenceStillLands(t *testing.T) {
+	t.Parallel()
 	e := newEvidenceTriggerEnv(t, "acme-sales.example")
 	// The env's own trigger already carries a nil enqueuer, which is the
 	// composition under test.

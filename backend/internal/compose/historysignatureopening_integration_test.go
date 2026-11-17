@@ -45,6 +45,7 @@ func latestSignatureOpening(t *testing.T, b *backfillWireEnv, id ids.UUID) event
 }
 
 func TestAutomaticOpeningKeepsItsHistoryOriginAndAnOwnerCanRequestALiveRead(t *testing.T) {
+	t.Parallel()
 	b := setupBackfillWire(t)
 	if _, err := capture.NewSettings(NewSettingsStore(b.env.Pool), StoredConfig(b.env.Pool)).Update(b.env.Admin(), capture.SettingsPatch{MailSharing: new(true)}); err != nil {
 		t.Fatal(err)

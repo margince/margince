@@ -23,6 +23,7 @@ import (
 )
 
 func TestStaleCommercialPreviewRefusesEveryDecisionEntryPoint(t *testing.T) {
+	t.Parallel()
 	for _, door := range []string{"single", "edited", "policy", "bundle"} {
 		t.Run(door, func(t *testing.T) {
 			e := integration.Setup(t)
@@ -73,6 +74,7 @@ func TestStaleCommercialPreviewRefusesEveryDecisionEntryPoint(t *testing.T) {
 }
 
 func TestRestagingRefreshesStalePendingContextWithoutForgettingDeclines(t *testing.T) {
+	t.Parallel()
 	for _, door := range []string{"agent", "join", "unless_declined"} {
 		t.Run(door, func(t *testing.T) {
 			e := integration.Setup(t)
@@ -131,6 +133,7 @@ func TestRestagingRefreshesStalePendingContextWithoutForgettingDeclines(t *testi
 }
 
 func TestBundlePreflightReleasesItsConnectionAndPropagatesInfrastructureFailure(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	company := e.SeedCompany(t, "Harbor", &e.AdminUser)
@@ -171,6 +174,7 @@ func TestBundlePreflightReleasesItsConnectionAndPropagatesInfrastructureFailure(
 }
 
 func TestCommittedDeclinesSurvivePreviewReadFailure(t *testing.T) {
+	t.Parallel()
 	for _, bundled := range []bool{false, true} {
 		t.Run(fmt.Sprint(bundled), func(t *testing.T) {
 			e := integration.Setup(t)

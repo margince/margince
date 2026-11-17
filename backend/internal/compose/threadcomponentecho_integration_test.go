@@ -57,6 +57,7 @@ func (b *threadSQLBarrier) TraceQueryEnd(ctx context.Context, conn *pgx.Conn, q 
 }
 
 func TestReceiptReconciliationWaitsForAnUncommittedCapturedEcho(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	const staged, stamped, recipient = "staged-race@myco.example", "stamped-race@provider.example", "buyer@customer.example"
 	actor := o.e.As(o.owner, []ids.UUID{o.e.Team1}, integration.AdminPerms)

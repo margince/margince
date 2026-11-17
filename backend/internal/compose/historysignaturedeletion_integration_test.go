@@ -18,6 +18,7 @@ import (
 )
 
 func TestDeletingAMeetingDoesNotReopenUnrelatedSignatures(t *testing.T) {
+	t.Parallel()
 	h := setupHistory(t)
 	mail := h.writes(t, 0, signed("Director"))
 	h.brain.answers[mail] = statesTitle("Director")

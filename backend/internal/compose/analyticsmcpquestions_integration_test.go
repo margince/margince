@@ -134,6 +134,7 @@ func canonicalCases() map[string]func(t *testing.T) {
 }
 
 func TestEveryCanonicalQuestionHasExecutableProof(t *testing.T) {
+	t.Parallel()
 	cases := canonicalCases()
 	seen := map[string]bool{}
 	for _, q := range loadCanonicalQuestions(t) {
@@ -172,6 +173,7 @@ func TestEveryCanonicalQuestionHasExecutableProof(t *testing.T) {
 }
 
 func TestCanonicalAnalyticsQuestions(t *testing.T) {
+	t.Parallel()
 	// In the corpus's own order, so a failing run reads the way the canonical
 	// file does and two invocations report in one order.
 	cases := canonicalCases()

@@ -128,6 +128,7 @@ func cohortRows(t *testing.T, result crmcontracts.ReportingEvaluation) map[strin
 // its next move. A deal still in the stage is unresolved and stays out of the
 // rate; a move recorded without the stage order is counted apart.
 func TestStageCohortReconcilesRegressionRepeatReopenSkipAndUnresolvedEntries(t *testing.T) {
+	t.Parallel()
 	f := newStageCohortFixture(t)
 	s0, s1, s2 := f.stage(0), f.stage(1), f.stage(2)
 	rep1, rep3 := f.env.Rep1, f.env.Rep3
@@ -193,6 +194,7 @@ func TestStageCohortReconcilesRegressionRepeatReopenSkipAndUnresolvedEntries(t *
 // Reordering stages today leaves an old move's direction as it was recorded.
 // The deal that moved from the first stage to the second still advanced.
 func TestStageCohortKeepsAMovesDirectionAfterTheStagesAreReordered(t *testing.T) {
+	t.Parallel()
 	f := newStageCohortFixture(t)
 	s0, s1, s2 := f.stage(0), f.stage(1), f.stage(2)
 	start := f.at
@@ -217,6 +219,7 @@ func TestStageCohortKeepsAMovesDirectionAfterTheStagesAreReordered(t *testing.T)
 // An entry is credited to the owner the move recorded. Reassigning the deal
 // afterwards moves no entry to the new owner.
 func TestStageCohortCreditsTheOwnerAtEntryAfterAReassignment(t *testing.T) {
+	t.Parallel()
 	f := newStageCohortFixture(t)
 	s0, s1 := f.stage(0), f.stage(1)
 	start := f.at
@@ -241,6 +244,7 @@ func TestStageCohortCreditsTheOwnerAtEntryAfterAReassignment(t *testing.T) {
 // furthest outcome by the cutoff. Each is credited to the owner it arrived
 // with, through a reassignment and an erasure of the contact it became.
 func TestLeadCohortFollowsArrivalsToTheirOutcomeForTheOwnerTheyArrivedWith(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	start := clocktest.Now(t).Add(-time.Minute)
 	ctx := reportingActor(e)

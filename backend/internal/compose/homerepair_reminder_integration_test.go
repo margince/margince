@@ -27,6 +27,7 @@ import (
 // reminder stay. (The write itself also clears remind_at with due_at, so a
 // later widening of what counts as untouched cannot orphan one.)
 func TestARepairNeverLeavesAReminderOnAClearedDeadline(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := time.Date(2026, 10, 12, 12, 0, 0, 0, time.UTC)
 	owner := ids.From[ids.UserKind](e.Rep2)

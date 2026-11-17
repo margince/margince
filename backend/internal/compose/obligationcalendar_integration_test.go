@@ -16,6 +16,7 @@ import (
 )
 
 func TestCalendarCompletionUsesTheOccurrenceRatherThanTheSeriesOrTitle(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	sink := identifiedCalendarSink(e)
 	ctx := calendarOwnerCtx(e, e.AdminUser)

@@ -49,6 +49,7 @@ func (r reminderEnv) auditRowsOf(t *testing.T, task ids.ActivityID) int {
 }
 
 func TestAColleagueTakesAnUnheldTaskOnARecordTheyMayChange(t *testing.T) {
+	t.Parallel()
 	r := setupReminders(t)
 	e := r.e
 	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
@@ -85,6 +86,7 @@ func TestAColleagueTakesAnUnheldTaskOnARecordTheyMayChange(t *testing.T) {
 }
 
 func TestAReaderWhoMayNotChangeTheRecordIsNotOfferedTakeAndIsRefused(t *testing.T) {
+	t.Parallel()
 	r := setupReminders(t)
 	e := r.e
 	otherTeam := e.As(e.Rep3, []ids.UUID{e.Team2}, reminderRepPerms)

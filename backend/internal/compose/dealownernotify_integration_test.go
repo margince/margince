@@ -71,6 +71,7 @@ func (e *reconcileEnv) requestedEvents(t *testing.T) int {
 // they chose. The previous owner's line is taken back. It writes no
 // second approval.requested, so a webhook subscriber sees the request once.
 func TestARequestHandedToANewOwnerTellsThem(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	e.GrantRole(t, e.Rep2, "rep")
 	deal, id := e.stagedFollowUp(t, "Handed over and told")
@@ -96,6 +97,7 @@ func TestARequestHandedToANewOwnerTellsThem(t *testing.T) {
 
 // A new owner who reads notices only in the product gets the line and no email.
 func TestANewOwnerWhoChoseInAppGetsNoEmail(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	e.GrantRole(t, e.Rep2, "rep")
 	deal, id := e.stagedFollowUp(t, "Handed to an in-app reader")
@@ -116,6 +118,7 @@ func TestANewOwnerWhoChoseInAppGetsNoEmail(t *testing.T) {
 // A deal left with no owner withdraws its request. Nobody is told, and the
 // previous owner's line about it is taken back.
 func TestARequestOnADealLeftWithNoOwnerTellsNobody(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	deal, id := e.stagedFollowUp(t, "Left unowned")
 	e.tellPreviousOwner(t, e.Rep1, id)
@@ -136,6 +139,7 @@ func TestARequestOnADealLeftWithNoOwnerTellsNobody(t *testing.T) {
 // staging announcement would not tell them. The previous owner's line still
 // goes, since the request is no longer theirs.
 func TestANewOwnerWhoMayNotDecideIsNotTold(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	deal, id := e.stagedFollowUp(t, "Handed to a member with no role")
 	e.tellPreviousOwner(t, e.Rep1, id)
@@ -158,6 +162,7 @@ func TestANewOwnerWhoMayNotDecideIsNotTold(t *testing.T) {
 // Their earlier line was taken back on the first hand-over. It is opened
 // unread, and they are not emailed a second time about the same request.
 func TestARequestHandedBackToAFormerOwnerTellsThemAgain(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	e.GrantRole(t, e.Rep1, "rep")
 	e.GrantRole(t, e.Rep2, "rep")
@@ -223,6 +228,7 @@ func (e *reconcileEnv) workOwnerNotices(t *testing.T) {
 }
 
 func TestAnObsoleteOwnerAnnouncementCannotReplaceTheCurrentOwnersNotice(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	e.GrantRole(t, e.Rep1, "rep")
 	e.GrantRole(t, e.Rep2, "rep")

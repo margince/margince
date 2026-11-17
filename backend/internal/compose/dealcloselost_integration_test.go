@@ -93,6 +93,7 @@ func (c *closeLostEnv) undo(t *testing.T, deal ids.UUID) {
 }
 
 func TestMarginceClosesADealTheCustomerStoppedAnswering(t *testing.T) {
+	t.Parallel()
 	c := setupCloseLost(t)
 	stageBefore := c.WsScalar(t, `SELECT stage_id::text FROM deal WHERE id = $1`, c.silent)
 
@@ -145,6 +146,7 @@ func TestMarginceClosesADealTheCustomerStoppedAnswering(t *testing.T) {
 }
 
 func TestAnUndoWithoutANoteIsClosedAgainAtTheNextCheck(t *testing.T) {
+	t.Parallel()
 	c := setupCloseLost(t)
 	c.run(t)
 	c.undo(t, c.silent)
@@ -158,6 +160,7 @@ func TestAnUndoWithoutANoteIsClosedAgainAtTheNextCheck(t *testing.T) {
 }
 
 func TestANoteAfterTheUndoKeepsTheDealOpen(t *testing.T) {
+	t.Parallel()
 	c := setupCloseLost(t)
 	c.run(t)
 	c.undo(t, c.silent)
@@ -178,6 +181,7 @@ func TestANoteAfterTheUndoKeepsTheDealOpen(t *testing.T) {
 }
 
 func TestTheOwnersSwitchStopsTheClose(t *testing.T) {
+	t.Parallel()
 	c := setupCloseLost(t)
 	if _, err := approvals.NewService(InstallationDB(c.Pool)).SetAutoApply(c.owner(t), deals.DealCloseLostKind, false); err != nil {
 		t.Fatal(err)
@@ -192,6 +196,7 @@ func TestTheOwnersSwitchStopsTheClose(t *testing.T) {
 // owner who leaves, loses the deal grant or turns the switch off in between
 // keeps the deal open.
 func TestAnOwnerWhoLeavesBeforeTheSilentCloseWritesKeepsTheDeal(t *testing.T) {
+	t.Parallel()
 	for name, change := range map[string]func(c *closeLostEnv, t *testing.T){
 		"nothing changes": func(*closeLostEnv, *testing.T) {},
 		"suspended": func(c *closeLostEnv, t *testing.T) {
@@ -239,6 +244,7 @@ func TestAnOwnerWhoLeavesBeforeTheSilentCloseWritesKeepsTheDeal(t *testing.T) {
 }
 
 func TestADealOnLegalHoldIsNotClosed(t *testing.T) {
+	t.Parallel()
 	c := setupCloseLost(t)
 	c.WsExec(t, `UPDATE deal SET legal_hold = true WHERE id = $1`, c.silent)
 
@@ -248,6 +254,7 @@ func TestADealOnLegalHoldIsNotClosed(t *testing.T) {
 }
 
 func TestARecentReplyOnlyItsParticipantsSeeKeepsTheDealOpen(t *testing.T) {
+	t.Parallel()
 	c := setupCloseLost(t)
 	recent := c.now.AddDate(0, 0, -10)
 	c.customerWrites(t, c.silent, recent)
@@ -271,6 +278,7 @@ func (c *closeLostEnv) refuses(t *testing.T, deal ids.UUID, at time.Time) ids.UU
 }
 
 func TestARefusalClosesTheDealAtOnce(t *testing.T) {
+	t.Parallel()
 	c := setupCloseLost(t)
 	c.refuses(t, c.supported, c.now.AddDate(0, 0, -2))
 
@@ -327,6 +335,7 @@ func (c *closeLostEnv) refusesAndAsks(t *testing.T, seat ids.UUID) ids.UUID {
 }
 
 func TestARefusalThatIsStillOwedAReplyIsNotClosed(t *testing.T) {
+	t.Parallel()
 	c := setupCloseLost(t)
 	c.refusesAndAsks(t, c.Rep1)
 
@@ -337,6 +346,7 @@ func TestARefusalThatIsStillOwedAReplyIsNotClosed(t *testing.T) {
 }
 
 func TestARefusalOwedAReplyOnlyItsParticipantsMaySeeIsNotClosed(t *testing.T) {
+	t.Parallel()
 	c := setupCloseLost(t)
 	c.refuses(t, c.supported, c.now.AddDate(0, 0, -2))
 	request := c.asksUs(t, c.supported, c.Rep2, c.now.AddDate(0, 0, -1), false)
@@ -365,6 +375,7 @@ func TestARefusalOwedAReplyOnlyItsParticipantsMaySeeIsNotClosed(t *testing.T) {
 }
 
 func TestARefusalCloseNamesTheMailItRead(t *testing.T) {
+	t.Parallel()
 	c := setupCloseLost(t)
 	refusal := c.refuses(t, c.supported, c.now.AddDate(0, 0, -2))
 
@@ -394,6 +405,7 @@ func TestARefusalCloseNamesTheMailItRead(t *testing.T) {
 }
 
 func TestASilentDealStillOwedAReplyIsNotClosed(t *testing.T) {
+	t.Parallel()
 	c := setupCloseLost(t)
 	c.asksUs(t, c.silent, c.Rep1, c.now.AddDate(0, 0, -3), false)
 
@@ -403,6 +415,7 @@ func TestASilentDealStillOwedAReplyIsNotClosed(t *testing.T) {
 }
 
 func TestARefusalWithAWaitAheadIsNotClosed(t *testing.T) {
+	t.Parallel()
 	c := setupCloseLost(t)
 	c.refuses(t, c.supported, c.now.AddDate(0, 0, -2))
 	until := c.now.AddDate(0, 1, 0)
@@ -417,6 +430,7 @@ func TestARefusalWithAWaitAheadIsNotClosed(t *testing.T) {
 }
 
 func TestARefusalWithAnAcceptedMeetingAheadIsNotClosed(t *testing.T) {
+	t.Parallel()
 	c := setupCloseLost(t)
 	c.refuses(t, c.supported, c.now.AddDate(0, 0, -2))
 	subject, at := "Contract walk-through", c.now.AddDate(0, 0, 10)
@@ -443,6 +457,7 @@ func TestARefusalWithAnAcceptedMeetingAheadIsNotClosed(t *testing.T) {
 }
 
 func TestACloseDecidedOnPrivateMailNamesOnlyTheThreshold(t *testing.T) {
+	t.Parallel()
 	c := setupCloseLost(t)
 	private := c.now.AddDate(0, 0, -121)
 	c.customerWrites(t, c.silent, private)
@@ -466,6 +481,7 @@ func TestACloseDecidedOnPrivateMailNamesOnlyTheThreshold(t *testing.T) {
 }
 
 func TestAPrivateThreadThroughABrokenMailboxKeepsTheDealOpen(t *testing.T) {
+	t.Parallel()
 	c := setupCloseLost(t)
 	owner := integration.OwnerConn(t)
 	integration.SeedIDRow(t, owner, `
@@ -484,6 +500,7 @@ func TestAPrivateThreadThroughABrokenMailboxKeepsTheDealOpen(t *testing.T) {
 }
 
 func TestAnUndoAfterSomebodyMovedTheDealIsRefused(t *testing.T) {
+	t.Parallel()
 	c := setupCloseLost(t)
 	before := c.WsScalar(t, `SELECT stage_id::text FROM deal WHERE id = $1`, c.silent)
 	c.run(t)
@@ -514,6 +531,7 @@ func TestAnUndoAfterSomebodyMovedTheDealIsRefused(t *testing.T) {
 // A close older than the Home window still reaches Home as a change Margince
 // made. It never reads as a decided approval, whose line offers no Undo.
 func TestHomeShowsAnOlderCloseAsAChangeWithItsWayBack(t *testing.T) {
+	t.Parallel()
 	c := setupCloseLost(t)
 	c.run(t)
 	audit := c.WsScalar(t, `SELECT audit_log_id::text FROM deal_correction WHERE deal_id = $1`, c.silent)
@@ -553,6 +571,7 @@ func (b fixedBrief) CutoffFor(context.Context) (time.Time, bool, error) { return
 // close waits behind it, reads the deal again and keeps it open. A writer that
 // then locks the deal, as the last-activity trigger does, is not deadlocked.
 func TestAWriterHeldWhileTheCloseRunsKeepsTheDealOpen(t *testing.T) {
+	t.Parallel()
 	var moved ids.UUID
 	for name, tc := range map[string]struct {
 		hold     func(c *closeLostEnv, t *testing.T, writer pgx.Tx)

@@ -59,6 +59,7 @@ func liveObjections(t *testing.T, e *integration.Env, contactID ids.UUID) int {
 }
 
 func TestAMergeCarriesTheRetiringContactsObjection(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	admin := e.Admin()
 	consentStore := consent.NewStore(e.DB())
@@ -112,6 +113,7 @@ func TestAMergeCarriesTheRetiringContactsObjection(t *testing.T) {
 // THE AUTHORITY TRAVELS, or the merge is a laundering path: merge the record,
 // then lift the stop as an ordinary admin row.
 func TestACarriedObjectionKeepsTheSubjectsAuthority(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	admin := e.Admin()
 	consentStore := consent.NewStore(e.DB())
@@ -146,6 +148,7 @@ func TestACarriedObjectionKeepsTheSubjectsAuthority(t *testing.T) {
 // Two live rows of one kind would mean the second lift silently re-enables
 // mail the first was still refusing.
 func TestACarryDoesNotDuplicateAStopTheSurvivorAlreadyHolds(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	admin := e.Admin()
 	consentStore := consent.NewStore(e.DB())
@@ -179,6 +182,7 @@ func TestACarryDoesNotDuplicateAStopTheSurvivorAlreadyHolds(t *testing.T) {
 // builds a contacts store for a purpose with nothing to do with consent, and
 // protect nobody.
 func TestAnUnwiredMergeRefusesOnlyWhenAStopWouldBeLost(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	admin := e.Admin()
 	consentStore := consent.NewStore(e.DB())
@@ -229,6 +233,7 @@ func TestAnUnwiredMergeRefusesOnlyWhenAStopWouldBeLost(t *testing.T) {
 // Found by review, not by the tests above, because all of them started from a
 // survivor with nothing recorded.
 func TestAStrongerStopCarriesOverAWeakerOneTheSurvivorHolds(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	admin := e.Admin()
 	consentStore := consent.NewStore(e.DB())
@@ -304,6 +309,7 @@ func TestAStrongerStopCarriesOverAWeakerOneTheSurvivorHolds(t *testing.T) {
 // deliberately allows repeated requests to stack up, so a source holding two
 // is an ordinary state, not a corrupt one.
 func TestASubjectHoldingTwoStopsOfOneKindCarriesOne(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	admin := e.Admin()
 	consentStore := consent.NewStore(e.DB())
@@ -362,6 +368,7 @@ func TestASubjectHoldingTwoStopsOfOneKindCarriesOne(t *testing.T) {
 // lands. With the lock, one of the two waits for the other and the stop is
 // carried either by the merge or by being already present when it looks.
 func TestAStopRecordedDuringAMergeStillReachesTheSurvivor(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	admin := e.Admin()
 	consentStore := consent.NewStore(e.DB())
@@ -469,6 +476,8 @@ func previewMarketing(ctx context.Context, t *testing.T, gate *consent.Gate, add
 // that gets copied — it has to go on PROTECTING THE SEND. This drives a real
 // engine decision before and after the merge, through the same Preview path a
 // real send would reach, rather than only reading communication_override back.
+//
+//testdb:serial registers into a process-wide unit registry
 func TestAMergeCarriesTheRetiringContactsOverride(t *testing.T) {
 	e := integration.Setup(t)
 	admin := e.Admin()
@@ -554,6 +563,7 @@ func TestAMergeCarriesTheRetiringContactsOverride(t *testing.T) {
 // Mirrors TestACarryDoesNotDuplicateAStopTheSurvivorAlreadyHolds, which is the
 // same shape one tier down.
 func TestACarryDoesNotDuplicateAnEquallyStrongOverrideTheSurvivorHolds(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	admin := e.Admin()
 	consentStore := consent.NewStore(e.DB())
@@ -583,6 +593,7 @@ func TestACarryDoesNotDuplicateAnEquallyStrongOverrideTheSurvivorHolds(t *testin
 // AN UNWIRED MERGE REFUSES ONLY WHEN AN OVERRIDE WOULD BE LOST, the override
 // carry's own version of TestAnUnwiredMergeRefusesOnlyWhenAStopWouldBeLost.
 func TestAnUnwiredMergeRefusesOnlyWhenAnOverrideWouldBeLost(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	admin := e.Admin()
 	// Deliberately NOT .WithStopCarrier(...).
@@ -623,6 +634,8 @@ func TestAnUnwiredMergeRefusesOnlyWhenAnOverrideWouldBeLost(t *testing.T) {
 // The stop direction survives the same shape because it fails safe: a stale lift
 // leaves the survivor still suppressed. A stale revoke fails OPEN, which is why
 // this is asserted on the send itself rather than on a row count.
+//
+//testdb:serial registers into a process-wide unit registry
 func TestRevokingAPreMergeOverrideHandleStopsTheSendOnTheSurvivor(t *testing.T) {
 	e := integration.Setup(t)
 	admin := e.Admin()

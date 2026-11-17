@@ -21,6 +21,7 @@ import (
 )
 
 func TestReviewedImportReplaysItsOwnAtomicUpdateButRefusesAnInterveningEdit(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	handler, initial := approvedLeadRun(t, e)
 	if err := commitWorkerFor(e, handler).Work(context.Background(), &river.Job[ImportCommitArgs]{Args: initial}); err != nil {

@@ -25,6 +25,7 @@ import (
 )
 
 func TestTheUndoOfAContactMomentSetAsideShowsItAgain(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := seedLinkedContact(t, e, "nichtjetzt@kunde.example")
 	contactID := ids.From[ids.ContactKind](contact)
@@ -84,6 +85,7 @@ func TestTheUndoOfAContactMomentSetAsideShowsItAgain(t *testing.T) {
 // An Undo names the evidence it undoes. The toast from an earlier dismissal
 // must not clear a newer one made after the evidence changed.
 func TestAnOldUndoLeavesANewerSetAsideStanding(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := seedLinkedContact(t, e, "zweimal@kunde.example")
 	contactID := ids.From[ids.ContactKind](contact)
@@ -112,6 +114,7 @@ func TestAnOldUndoLeavesANewerSetAsideStanding(t *testing.T) {
 // An agent reads the contact card as its user left it, and what it sets aside
 // its user finds set aside.
 func TestAnAgentSharesItsUsersSetAsideOnTheContactCard(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := seedLinkedContact(t, e, "agentcard@kunde.example")
 	contactID := ids.From[ids.ContactKind](contact)

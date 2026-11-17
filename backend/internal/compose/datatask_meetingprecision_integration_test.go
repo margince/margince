@@ -80,6 +80,7 @@ func forgetMeetingPrecision(t *testing.T, conn *pgx.Conn, meetings ...ids.Activi
 // Upgraded before the repair ran: the repair itself records the restored
 // start as an instant, on a live meeting and on one archived since.
 func TestTheNoonRepairRecordsTheRestoredStartAsAnInstant(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	e.WsExec(t, `UPDATE setting SET value = to_jsonb($1::text) WHERE key = 'installation.timezone'`, noonZone)
@@ -110,6 +111,7 @@ func TestTheNoonRepairRecordsTheRestoredStartAsAnInstant(t *testing.T) {
 // every other old row unknown. Run twice it changes nothing, and a later edit
 // records its own precision.
 func TestThePrecisionTaskProvesOnlyStartsTheNoonRepairRestored(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	e.WsExec(t, `UPDATE setting SET value = to_jsonb($1::text) WHERE key = 'installation.timezone'`, noonZone)
@@ -165,6 +167,7 @@ func TestThePrecisionTaskProvesOnlyStartsTheNoonRepairRestored(t *testing.T) {
 // restored instant, writes a row that holds that same start. The repair never
 // wrote it, so it stays unknown while the restored hold is proved.
 func TestThePrecisionTaskLeavesALaterDayEditOnTheRestoredInstantUnknown(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	e.WsExec(t, `UPDATE setting SET value = to_jsonb($1::text) WHERE key = 'installation.timezone'`, noonZone)

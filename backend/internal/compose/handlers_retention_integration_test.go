@@ -46,6 +46,7 @@ func retentionHumanCtx(e *integration.Env, grant principal.ObjectGrant) context.
 // branches on: 200 list, 201 create, 409 duplicate scope, 422 unauthorable
 // scope, 200 patch, 204 delete, 404 after.
 func TestRetentionPolicyHandlersSpeakTheContract(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	integration.SeedRetentionPolicies(t, e)
 	h := privacy.NewHandlers(e.DB(), StoredConfig(e.Pool))
@@ -169,6 +170,7 @@ func createRetentionPolicy(ctx context.Context, t *testing.T, h privacy.Handlers
 // the object is admin/ops-only on every verb, READ included, so a manager or rep
 // gets 403 rather than a readable ladder.
 func TestRetentionPolicyHandlersRefuseARoleWithoutTheGrant(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	integration.SeedRetentionPolicies(t, e)
 	h := privacy.NewHandlers(e.DB(), StoredConfig(e.Pool))
@@ -195,6 +197,7 @@ func TestRetentionPolicyHandlersRefuseARoleWithoutTheGrant(t *testing.T) {
 // TestRetentionSettingsHandlersToggleThePostureAndReportIt covers GCS-WIRE-5,
 // including the sparse-patch case a client retry produces.
 func TestRetentionSettingsHandlersToggleThePostureAndReportIt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	integration.SeedRetentionPolicies(t, e)
 	h := privacy.NewHandlers(e.DB(), StoredConfig(e.Pool))
@@ -282,6 +285,7 @@ func readRetentionPosture(ctx context.Context, t *testing.T, h privacy.Handlers)
 // handler read the raw body for explicit nulls. Without that, an admin clearing
 // a lawful basis was told the save worked while the old basis stood.
 func TestARetentionPolicyPatchTellsANullFromAnOmission(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	h := privacy.NewHandlers(e.DB(), StoredConfig(e.Pool))
 	admin := retentionHumanCtx(e, principal.ObjectGrant{Create: true, Read: true, Update: true, Delete: true})

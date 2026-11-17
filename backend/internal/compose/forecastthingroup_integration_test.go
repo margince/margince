@@ -20,6 +20,7 @@ import (
 )
 
 func TestAThinProbabilityGroupWithholdsTheCompanyForecast(t *testing.T) {
+	t.Parallel()
 	f := newStageCohortFixture(t)
 	typed := f.stage(0)
 	others := f.env.addMembers(t, f.env.Team1, "two@forecast.test", "three@forecast.test", "four@forecast.test", "five@forecast.test")

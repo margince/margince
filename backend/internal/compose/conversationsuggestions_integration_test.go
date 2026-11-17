@@ -25,6 +25,7 @@ import (
 )
 
 func TestConversationSuggestionsUseTheRealContactAndLeadRoutes(t *testing.T) {
+	t.Parallel()
 	for _, kind := range []datasource.EntityType{datasource.EntityContact, datasource.EntityLead} {
 		t.Run(string(kind), func(t *testing.T) {
 			e := integration.Setup(t)

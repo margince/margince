@@ -91,6 +91,7 @@ const ccMessage = "From: bob@target.example\r\n" +
 // records that verdict rather than skipping, or it would re-select the same
 // row on every run and the loop would never finish.
 func TestReplayRecordsNoOwnerWhenTheMailboxIsUnknown(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	activity := seedReplayableMail(t, e, "msg-no-owner", ccMessage)
 
@@ -114,6 +115,7 @@ func TestReplayRecordsNoOwnerWhenTheMailboxIsUnknown(t *testing.T) {
 // connection is not read as its owner. The pass records no owner and parses
 // nothing.
 func TestReplayRecordsNoOwnerForABareStampDespiteOneConnection(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	bare := seedReplayableMailStamped(t, "connector:gmail", "msg-bare", ccMessage)
 	if _, err := integration.OwnerConn(t).Exec(context.Background(), `INSERT INTO capture_connection
@@ -137,6 +139,7 @@ func TestReplayRecordsNoOwnerForABareStampDespiteOneConnection(t *testing.T) {
 // The pass is idempotent by construction: a settled activity is never selected
 // again, so a second run finds nothing to do.
 func TestReplaySettlesEachActivityExactlyOnce(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedReplayableMail(t, e, "msg-once", ccMessage)
 	ctx := replayCtx(e)
@@ -161,6 +164,7 @@ func TestReplaySettlesEachActivityExactlyOnce(t *testing.T) {
 // the batch on one years-old original would stop the pass reaching every
 // message after it.
 func TestReplayRecordsUnreadableRatherThanFailingTheBatch(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	bad := seedReplayableMail(t, e, "msg-unreadable", "not an RFC822 message at all")
@@ -209,6 +213,7 @@ func TestReplayRecordsUnreadableRatherThanFailingTheBatch(t *testing.T) {
 // The batch limit bounds one transaction. A pass that ignored it would hold a
 // write transaction over an entire mailbox's history.
 func TestReplayHonorsItsBatchLimit(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	for _, id := range []string{"msg-a", "msg-b", "msg-c"} {
 		seedReplayableMail(t, e, id, ccMessage)
@@ -225,6 +230,7 @@ func TestReplayHonorsItsBatchLimit(t *testing.T) {
 // A non-positive limit is a caller error, and answering it with "nothing to do"
 // would make a broken loop look like a finished one.
 func TestReplayRefusesANonPositiveLimit(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	if _, err := replayParticipantsBatch(replayCtx(e), e.Pool, 0, slog.Default()); err == nil {
 		t.Error("a zero batch limit was accepted; a caller looping on it would spin forever")
@@ -239,6 +245,7 @@ func TestReplayRefusesANonPositiveLimit(t *testing.T) {
 // parties were withheld reads as a message between two contacts and is never
 // offered again.
 func TestReplayRecordsCappedRatherThanFoundNone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 

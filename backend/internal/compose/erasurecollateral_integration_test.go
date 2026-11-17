@@ -34,6 +34,7 @@ import (
 )
 
 func TestAnErasureTombstonesTheAttachmentsItPurged(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const subjectEmail = "collateral.subject@counterparty.test"
 
@@ -90,6 +91,7 @@ func TestAnErasureTombstonesTheAttachmentsItPurged(t *testing.T) {
 // asks no object store about it — on an installation with no store, an erasure
 // that counted the empty key as an object to purge would refuse outright.
 func TestAnErasureDeletesAWithheldFileWithoutAnObjectStore(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Withheld Subject", &e.Rep1)
 	subject, direction, at := "Private", "inbound", time.Now()

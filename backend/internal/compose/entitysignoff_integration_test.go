@@ -25,6 +25,7 @@ import (
 )
 
 func TestAnEntitySenderSignsWithTheEntityThroughTheRealSend(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	anchorID, recipient := seedTransactionalReply(t, e)
 	admin := e.Admin()

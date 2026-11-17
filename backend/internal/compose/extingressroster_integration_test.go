@@ -87,6 +87,8 @@ func anAttendee(account, email, name string) extension.Participant {
 // The path end to end. Before this the roster had nowhere to go: the published
 // record carried no participants field at all, so a captured group chat named
 // its sender and the member and nobody else in the room.
+//
+//testdb:serial binds the process-wide extension runtime
 func TestAUnitsGroupRosterLandsAsParticipants(t *testing.T) {
 	e := setupIngress(t)
 	registerProbeTransport(t, e)
@@ -153,6 +155,8 @@ func TestAUnitsGroupRosterLandsAsParticipants(t *testing.T) {
 // The resolution an account CAN do, taken in the sink's own transaction against
 // the binding the installation already holds. This is what puts a group chat on
 // the right contact's timeline and into "who on our team knows this contact".
+//
+//testdb:serial sets the process-wide sendable channel providers
 func TestARosterAccountResolvesToTheContactItIsBoundTo(t *testing.T) {
 	e := setupIngress(t)
 	registerProbeTransport(t, e)
@@ -181,6 +185,8 @@ func TestARosterAccountResolvesToTheContactItIsBoundTo(t *testing.T) {
 // stampCaptureParticipants, role from/to) and nothing more. The ordinary
 // two-party message is the overwhelming majority of what a chat unit sends,
 // and it must not have gained an EXTRA row.
+//
+//testdb:serial sets the process-wide sendable channel providers
 func TestATwoPartyMessageStillNamesNoRoster(t *testing.T) {
 	e := setupIngress(t)
 	registerProbeTransport(t, e)

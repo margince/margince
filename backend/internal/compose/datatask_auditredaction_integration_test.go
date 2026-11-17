@@ -41,6 +41,7 @@ func legacyAuditErasure(t *testing.T, e *integration.Env) (ids.ContactID, ids.UU
 }
 
 func TestHistoricalAuditTaskRemovesEarlierPayloadsAndPreservesLaterWork(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact, certificate := legacyAuditErasure(t, e)
 	if _, err := e.Contacts.UpdateContact(e.Admin(), contact, contacts.UpdateContactInput{FullName: new("Later Authorized Name")}); err != nil {
@@ -80,6 +81,7 @@ func TestHistoricalAuditTaskRemovesEarlierPayloadsAndPreservesLaterWork(t *testi
 }
 
 func TestHistoricalAuditTaskRollsBackAndRejectsMalformedCursors(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact, _ := legacyAuditErasure(t, e)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
@@ -116,6 +118,7 @@ func TestHistoricalAuditTaskRollsBackAndRejectsMalformedCursors(t *testing.T) {
 }
 
 func TestHistoricalAuditTaskKeepsCurrentLegalHolds(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact, _ := legacyAuditErasure(t, e)
 	e.WsExec(t, `UPDATE contact SET legal_hold=true WHERE id=$1`, contact)

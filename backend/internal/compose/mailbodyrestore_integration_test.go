@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -46,6 +47,7 @@ func (o *owedEnv) stored(t *testing.T, message ids.UUID) storedMail {
 }
 
 func TestALegacyBodyIsRestoredFromItsOriginal(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.now = clocktest.Now(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
@@ -175,6 +177,7 @@ func plantedOriginal(seat string) []byte {
 // The restoration writer itself refuses a row that changed since it was read,
 // and a held row. A refusal writes no body, no audit row and no event.
 func TestTheRestoreWriterRefusesAStaleOrHeldRow(t *testing.T) {
+	t.Parallel()
 	ask := "Could you send the signed NDA by Friday?"
 	for _, tc := range []struct {
 		name     string
@@ -269,6 +272,7 @@ func placeStatutoryHold(t *testing.T, message ids.UUID) {
 // version it read, an in-flight pass labels the row from text it no longer
 // holds, and the row leaves the backlog again.
 func TestAVerdictFromTheReplacedBodyIsRefused(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.now = clocktest.Now(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
@@ -314,6 +318,7 @@ func TestAVerdictFromTheReplacedBodyIsRefused(t *testing.T) {
 }
 
 func TestARestoredBodyGoesBackToTheClassifyBacklog(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.now = clocktest.Now(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
@@ -369,6 +374,7 @@ func TestARestoredBodyGoesBackToTheClassifyBacklog(t *testing.T) {
 // is. Left in place, it would keep the restored body out of the classify backlog
 // the cleared label returns it to.
 func TestARestoredBodyIsOfferedAgainAfterADecline(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.now = clocktest.Now(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
@@ -432,6 +438,7 @@ func (o *owedEnv) captureLabelStamp(t *testing.T, message ids.UUID) *time.Time {
 // label is. Only an empty verdict is written, so a restore that left it would let a refusal
 // read from a partial body close the deal. A verdict a human gave stays.
 func TestARestoredBodyIsJudgedAgainForItsReply(t *testing.T) {
+	t.Parallel()
 	for _, human := range []bool{false, true} {
 		t.Run(fmt.Sprintf("set by a human: %v", human), func(t *testing.T) {
 			o := setupOwed(t)
@@ -470,7 +477,7 @@ func TestARestoredBodyIsJudgedAgainForItsReply(t *testing.T) {
 			}
 			// The classify pass reads only mail from a sender the workspace decided on.
 			pending := o.e.WsScalar(t, `SELECT id::text FROM capture_pending_counterparty WHERE email = 'pat@customer.example'`)
-			verdicts := NewCounterpartyVerdictEngine(o.e.Pool, &scriptedVerdictBrain{verdicts: map[string]string{pending: capture.KindContact}},
+			verdicts := NewCounterpartyVerdictEngine(o.e.Pool, &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{pending: capture.KindContact}},
 				CaptureConfig{}, slog.New(slog.DiscardHandler))
 			if err := verdicts.RunWorkspace(principal.WithWorkspaceID(context.Background(), o.e.WS), 0); err != nil {
 				t.Fatalf("deciding the sender: %v", err)

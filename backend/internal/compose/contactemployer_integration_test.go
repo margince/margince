@@ -16,6 +16,7 @@ import (
 )
 
 func TestMCPContactCreationResolvesAndReusesEmployer(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	registry := composedRegistry(e)
 	for _, payload := range []string{
@@ -38,6 +39,7 @@ func TestMCPContactCreationResolvesAndReusesEmployer(t *testing.T) {
 }
 
 func TestContactCreationApprovalShowsEmployerEvidenceAndEffects(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.GrantRole(t, e.Rep1, "rep")
 	payload := map[string]any{"record_type": "contact", "fields": map[string]any{"full_name": "Dana Buyer", "company_name": "Orion Research"}}
@@ -66,6 +68,7 @@ func TestContactCreationApprovalShowsEmployerEvidenceAndEffects(t *testing.T) {
 }
 
 func TestContactCreationApprovalBlocksAmbiguousEmployer(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.GrantRole(t, e.Rep1, "rep")
 	for range 2 {

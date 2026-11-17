@@ -15,6 +15,7 @@ import (
 // The reporting pilot uses PERF-7's 300ms server assembly ceiling.
 // This explicit benchmark measures 10,000 deals; it is not a merge-lane timing assertion.
 func TestReportingEvaluationPilotBudget(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	f.at = time.Date(2026, 9, 29, 12, 0, 0, 0, time.UTC)
 	for i := range 9965 {

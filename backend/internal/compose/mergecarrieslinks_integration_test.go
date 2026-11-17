@@ -214,6 +214,7 @@ func (c *carryEnv) count(t *testing.T, sql string, args ...any) int {
 
 // An old unsubscribe link, pressed after the merge, stops mail to the survivor.
 func TestAMergedContactsUnsubscribeLinkWithdrawsTheSurvivor(t *testing.T) {
+	t.Parallel()
 	c := setupCarry(t)
 	retired := c.contactAt(t, "Unsub Retired", "unsub@carry.test")
 	survivor := c.contactAt(t, "Unsub Survivor", "unsub-survivor@carry.test")
@@ -231,6 +232,7 @@ func TestAMergedContactsUnsubscribeLinkWithdrawsTheSurvivor(t *testing.T) {
 // A preference link whose address row moved with the merge opens the
 // survivor's centre at that same row.
 func TestAMergedContactsPreferenceLinkOpensTheSurvivorsCentre(t *testing.T) {
+	t.Parallel()
 	c := setupCarry(t)
 	retired := c.contactAt(t, "Pref Retired", "pref@carry.test")
 	survivor := c.contactAt(t, "Pref Survivor", "pref-survivor@carry.test")
@@ -264,6 +266,7 @@ func TestAMergedContactsPreferenceLinkOpensTheSurvivorsCentre(t *testing.T) {
 // marked merged_into_survivor and opens the same page the survivor's own link
 // opens, and its withdrawal half still acts on the survivor.
 func TestALinkToAnAddressLeftBehindOpensTheSurvivorsPageForThatAddress(t *testing.T) {
+	t.Parallel()
 	c := setupCarry(t)
 	retired := c.contactAt(t, "Archived Retired", "moved@carry.test")
 	retiredToken := c.preferenceLink(t, "moved@carry.test")
@@ -317,6 +320,7 @@ func TestALinkToAnAddressLeftBehindOpensTheSurvivorsPageForThatAddress(t *testin
 // A confirm link answers only for a live subject, so one left on the retired
 // record was dead. Carried, the answer lands on the survivor.
 func TestAMergedContactsConfirmLinkAnswersOnTheSurvivor(t *testing.T) {
+	t.Parallel()
 	c := setupCarry(t)
 	integration.ApplyRiverSchema(t)
 	lane := confirmLaneStore(t, c.e)
@@ -352,6 +356,7 @@ func TestAMergedContactsConfirmLinkAnswersOnTheSurvivor(t *testing.T) {
 // halves recorded for the same booking stays once. The lawful-basis carry is
 // held through a real send in integration/mergecarriesbasis_integration_test.go.
 func TestAMergeCarriesQualifyingEventsWithoutDoublingOne(t *testing.T) {
+	t.Parallel()
 	c := setupCarry(t)
 	retired := c.contactAt(t, "Basis Retired", "basis@carry.test")
 	survivor := c.contactAt(t, "Basis Survivor", "basis-survivor@carry.test")
@@ -459,6 +464,7 @@ func TestAMergeCarriesQualifyingEventsWithoutDoublingOne(t *testing.T) {
 // finds it. No writer mints these any more; this is the shape the retired one
 // wrote.
 func TestAMergeCarriesDoubleOptInHistory(t *testing.T) {
+	t.Parallel()
 	c := setupCarry(t)
 	retired := c.contactAt(t, "DOI Retired", "doi@carry.test")
 	survivor := c.contactAt(t, "DOI Survivor", "doi-survivor@carry.test")
@@ -488,6 +494,7 @@ func TestAMergeCarriesDoubleOptInHistory(t *testing.T) {
 
 // The carry is audited on the survivor, naming what moved and where from.
 func TestTheCarryIsAuditedOnTheSurvivor(t *testing.T) {
+	t.Parallel()
 	c := setupCarry(t)
 	retired := c.contactAt(t, "Audit Retired", "audit@carry.test")
 	survivor := c.contactAt(t, "Audit Survivor", "audit-survivor@carry.test")
@@ -512,6 +519,7 @@ func TestTheCarryIsAuditedOnTheSurvivor(t *testing.T) {
 
 // AN UNWIRED SEAM REFUSES A MERGE THAT WOULD STRAND A LINK, and only that one.
 func TestAnUnwiredMergeRefusesOnlyWhenALinkWouldBeStranded(t *testing.T) {
+	t.Parallel()
 	c := setupCarry(t)
 	unwired := contacts.NewStore(c.e.DB()).WithStopCarrier(c.consent)
 
@@ -542,6 +550,7 @@ func TestAnUnwiredMergeRefusesOnlyWhenALinkWouldBeStranded(t *testing.T) {
 // index counts; the retired half's link is marked and still opens the
 // survivor's own page.
 func TestALegacyAddresslessLinkCollidesOnTheNullSlot(t *testing.T) {
+	t.Parallel()
 	c := setupCarry(t)
 	retired := c.contactAt(t, "Legacy Retired", "legacy@carry.test")
 	survivor := c.contactAt(t, "Legacy Survivor", "legacy-survivor@carry.test")
@@ -583,6 +592,7 @@ func TestALegacyAddresslessLinkCollidesOnTheNullSlot(t *testing.T) {
 // What a merge carried onto the survivor is the survivor's, so erasing them
 // erases it too.
 func TestErasingTheSurvivorErasesWhatTheMergeCarried(t *testing.T) {
+	t.Parallel()
 	c := setupCarry(t)
 	retired := c.contactAt(t, "Erase Retired", "erase@carry.test")
 	survivor := c.contactAt(t, "Erase Survivor", "erase-survivor@carry.test")

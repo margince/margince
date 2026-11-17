@@ -135,6 +135,7 @@ func (m *meeting) field(t *testing.T, company ids.UUID, field string) (crmcontra
 }
 
 func TestAMeetingFillsHowItsCompanySellsAndCitesTheTranscript(t *testing.T) {
+	t.Parallel()
 	m := newMeeting(t, "workspace")
 	company := m.e.SeedCompany(t, "Brandt IT", &m.e.Rep1)
 	m.read(t, saidBy{m.employee(t, company, "Dana Brandt"), "sales_motion", distributors})
@@ -152,6 +153,7 @@ func TestAMeetingFillsHowItsCompanySellsAndCitesTheTranscript(t *testing.T) {
 }
 
 func TestEachSpeakersValueLandsOnTheirOwnCompany(t *testing.T) {
+	t.Parallel()
 	m := newMeeting(t, "workspace")
 	brandt, nordkraft := m.e.SeedCompany(t, "Brandt IT", &m.e.Rep1), m.e.SeedCompany(t, "Nordkraft", &m.e.Rep1)
 	dana := m.employee(t, brandt, "Dana Brandt")
@@ -166,6 +168,7 @@ func TestEachSpeakersValueLandsOnTheirOwnCompany(t *testing.T) {
 }
 
 func TestAMeetingNeverWritesOntoOurOwnCompanyOrOverAUser(t *testing.T) {
+	t.Parallel()
 	m := newMeeting(t, "workspace")
 	company := m.e.SeedCompany(t, "Brandt IT", &m.e.Rep1)
 	dana := m.employee(t, company, "Dana Brandt")
@@ -187,6 +190,7 @@ func TestAMeetingNeverWritesOntoOurOwnCompanyOrOverAUser(t *testing.T) {
 }
 
 func TestAMeetingKeptToItsParticipantsFillsNoField(t *testing.T) {
+	t.Parallel()
 	m := newMeeting(t, "participants")
 	company := m.e.SeedCompany(t, "Brandt IT", &m.e.Rep1)
 	m.read(t, saidBy{m.employee(t, company, "Dana Brandt"), "sales_motion", distributors})
@@ -196,6 +200,7 @@ func TestAMeetingKeptToItsParticipantsFillsNoField(t *testing.T) {
 }
 
 func TestAMeetingValueGoesWhenTheMeetingNoLongerStatesItOrIsDeleted(t *testing.T) {
+	t.Parallel()
 	m := newMeeting(t, "workspace")
 	company := m.e.SeedCompany(t, "Brandt IT", &m.e.Rep1)
 	dana := m.employee(t, company, "Dana Brandt")
@@ -213,6 +218,7 @@ func TestAMeetingValueGoesWhenTheMeetingNoLongerStatesItOrIsDeleted(t *testing.T
 }
 
 func TestAUsersCorrectionStopsCitingTheMeeting(t *testing.T) {
+	t.Parallel()
 	m := newMeeting(t, "workspace")
 	company := m.e.SeedCompany(t, "Brandt IT", &m.e.Rep1)
 	m.read(t, saidBy{m.employee(t, company, "Dana Brandt"), "icp", "Banks"})
@@ -228,6 +234,7 @@ func TestAUsersCorrectionStopsCitingTheMeeting(t *testing.T) {
 }
 
 func TestTwoSpeakersOfOneCompanyAgreeOnTheSurerValue(t *testing.T) {
+	t.Parallel()
 	m := newMeeting(t, "workspace")
 	company := m.e.SeedCompany(t, "Brandt IT", &m.e.Rep1)
 	dana, erik := m.employee(t, company, "Dana Brandt"), m.employee(t, company, "Erik Brandt")
@@ -252,6 +259,7 @@ func companyEditor(m *meeting) context.Context {
 }
 
 func TestAReaderWhoMayNotChangeACompanyLeavesItsMeetingFields(t *testing.T) {
+	t.Parallel()
 	m := newMeeting(t, "workspace")
 	company := m.e.SeedCompany(t, "Brandt IT", &m.e.Rep1)
 	m.read(t, saidBy{m.employee(t, company, "Dana Brandt"), "sales_motion", distributors})
@@ -263,6 +271,7 @@ func TestAReaderWhoMayNotChangeACompanyLeavesItsMeetingFields(t *testing.T) {
 }
 
 func TestACompanyTheReaderMayNotWriteLeavesTheOthersAudited(t *testing.T) {
+	t.Parallel()
 	m := newMeeting(t, "workspace")
 	ours, theirs := m.e.SeedCompany(t, "Brandt IT", &m.e.Rep3), m.e.SeedCompany(t, "Nordkraft", &m.e.Rep1)
 	m.read(t, saidBy{m.employee(t, ours, "Dana Brandt"), "icp", "Banks"})
@@ -285,6 +294,7 @@ func TestACompanyTheReaderMayNotWriteLeavesTheOthersAudited(t *testing.T) {
 }
 
 func TestAMeetingValueGoesOnceItsTranscriptIsNarrowedOrRedacted(t *testing.T) {
+	t.Parallel()
 	for _, change := range []string{
 		`UPDATE activity SET audience = 'participants' WHERE id = $1`,
 		`UPDATE activity SET redacted_fields = ARRAY['body'] WHERE id = $1`,
@@ -307,6 +317,7 @@ func TestAMeetingValueGoesOnceItsTranscriptIsNarrowedOrRedacted(t *testing.T) {
 // One sweep removes every value a narrowed transcript filled, even past what
 // one transaction takes.
 func TestOneSweepRemovesMoreMeetingValuesThanOneBatch(t *testing.T) {
+	t.Parallel()
 	m := newMeeting(t, "workspace")
 	entries := make([]saidBy, meetingprofile.SweepBatch+1)
 	for i := range entries {
@@ -333,6 +344,7 @@ func TestOneSweepRemovesMoreMeetingValuesThanOneBatch(t *testing.T) {
 // The sweep reaches every company in the workspace, so an administrator who
 // may edit companies is still refused it.
 func TestOnlyTheSystemRunsTheMeetingProfileSweep(t *testing.T) {
+	t.Parallel()
 	m := newMeeting(t, "workspace")
 	err := database.WithWorkspaceTx(m.e.Admin(), m.e.Pool, func(tx pgx.Tx) error {
 		_, err := contacts.RetractStaleMeetingProfilesTx(m.e.Admin(), tx, 10)
@@ -346,6 +358,7 @@ func TestOnlyTheSystemRunsTheMeetingProfileSweep(t *testing.T) {
 // A value stands while someone from its company is on the meeting. Taking the
 // speaker off the transcript, or the speaker leaving the company, removes it.
 func TestAMeetingValueGoesOnceNobodyFromItsCompanyIsOnTheMeeting(t *testing.T) {
+	t.Parallel()
 	for name, change := range map[string]string{
 		"speaker taken off": `DELETE FROM activity_participant WHERE activity_id = $1 AND contact_id = $2`,
 		"speaker left":      `UPDATE relationship SET archived_at = now() WHERE contact_id = $2 AND kind = 'employment' AND $1::uuid IS NOT NULL`,

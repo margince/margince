@@ -17,6 +17,7 @@ import (
 )
 
 func TestTheOwnerDialsNarrowTheSuggestionsToTheCompanyOwner(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	companies := seedSuggestions(t, e, 2, &e.Rep1, &e.Rep3)
 	mine := companies[0]
@@ -44,6 +45,7 @@ func TestTheOwnerDialsNarrowTheSuggestionsToTheCompanyOwner(t *testing.T) {
 // through the Worklist's binding to it. A scope never counts a suggestion its
 // page could not show.
 func TestOwnerScopeNarrowsTheSuggestionCountWithTheList(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	companies := seedSuggestions(t, e, 3, &e.Rep1, &e.Rep3)
 	mine, theirs, nobodys := companies[0], companies[1], companies[2]

@@ -43,6 +43,7 @@ func stagedControllerMail(t *testing.T, l *confirmLaneEnv) (activityID ids.UUID,
 }
 
 func TestTheTimelineShowsAConfirmRequestWasSentByTheRelayAndFromWhichAddress(t *testing.T) {
+	t.Parallel()
 	l := setupConfirmLane(t)
 	if _, err := l.store.IssueConfirmToken(l.ctx, ids.From[ids.ContactKind](l.contact), ""); err != nil {
 		t.Fatalf("IssueConfirmToken: %v", err)
@@ -76,6 +77,7 @@ func TestTheTimelineShowsAConfirmRequestWasSentByTheRelayAndFromWhichAddress(t *
 }
 
 func TestAConfirmRequestInAPickedLanguageIsWrittenAndAskedInIt(t *testing.T) {
+	t.Parallel()
 	l := setupConfirmLane(t)
 	if _, err := l.store.IssueConfirmToken(l.ctx, ids.From[ids.ContactKind](l.contact), "de"); err != nil {
 		t.Fatalf("IssueConfirmToken: %v", err)
@@ -115,6 +117,7 @@ func TestAConfirmRequestInAPickedLanguageIsWrittenAndAskedInIt(t *testing.T) {
 }
 
 func TestAPreviewShowsTheMailTheSendStagesAndSendsNothing(t *testing.T) {
+	t.Parallel()
 	l := setupConfirmLane(t)
 	contact := ids.From[ids.ContactKind](l.contact)
 
@@ -170,6 +173,7 @@ func assertSameMailButTheExpiry(t *testing.T, previewed, staged string, words ma
 }
 
 func TestAPreviewAndASendRefuseALanguageTheMailIsNotWrittenIn(t *testing.T) {
+	t.Parallel()
 	l := setupConfirmLane(t)
 	contact := ids.From[ids.ContactKind](l.contact)
 	var refusal *consent.ValidationError
@@ -186,6 +190,7 @@ func TestAPreviewAndASendRefuseALanguageTheMailIsNotWrittenIn(t *testing.T) {
 }
 
 func TestAPreviewRefusesAContactWithNoLiveAddressAsTheSendDoes(t *testing.T) {
+	t.Parallel()
 	l := setupConfirmLane(t)
 	if _, err := l.e.Pool.Exec(context.Background(), `UPDATE contact_email SET archived_at = now() WHERE contact_id = $1`, l.contact); err != nil {
 		t.Fatal(err)
@@ -200,6 +205,7 @@ func TestAPreviewRefusesAContactWithNoLiveAddressAsTheSendDoes(t *testing.T) {
 }
 
 func TestTheNetworkReceiptOfARelaySendCarriesTheSameMark(t *testing.T) {
+	t.Parallel()
 	l := setupConfirmLane(t)
 	if _, err := l.store.IssueConfirmToken(l.ctx, ids.From[ids.ContactKind](l.contact), ""); err != nil {
 		t.Fatalf("IssueConfirmToken: %v", err)
@@ -250,6 +256,7 @@ func TestTheNetworkReceiptOfARelaySendCarriesTheSameMark(t *testing.T) {
 }
 
 func TestTheTimelineNamesTheFromTheRelayActuallySentWith(t *testing.T) {
+	t.Parallel()
 	l := setupConfirmLane(t)
 	if _, err := l.store.IssueConfirmToken(l.ctx, ids.From[ids.ContactKind](l.contact), ""); err != nil {
 		t.Fatalf("IssueConfirmToken: %v", err)
@@ -290,6 +297,7 @@ func TestTheTimelineNamesTheFromTheRelayActuallySentWith(t *testing.T) {
 }
 
 func TestTheSingleMailViewMarksARelaySendAsTheTimelineDoes(t *testing.T) {
+	t.Parallel()
 	l := setupConfirmLane(t)
 	if _, err := l.store.IssueConfirmToken(l.ctx, ids.From[ids.ContactKind](l.contact), ""); err != nil {
 		t.Fatalf("IssueConfirmToken: %v", err)
@@ -307,6 +315,7 @@ func TestTheSingleMailViewMarksARelaySendAsTheTimelineDoes(t *testing.T) {
 }
 
 func TestTheTimelineCopyOfARelaySendSaysWhereTheLinkWentInTheMailsLanguage(t *testing.T) {
+	t.Parallel()
 	l := setupConfirmLane(t)
 	if _, err := l.store.IssueConfirmToken(l.ctx, ids.From[ids.ContactKind](l.contact), "de"); err != nil {
 		t.Fatalf("IssueConfirmToken: %v", err)
@@ -329,6 +338,7 @@ func TestTheTimelineCopyOfARelaySendSaysWhereTheLinkWentInTheMailsLanguage(t *te
 }
 
 func TestAPreviewRefusesWhatTheConsentEngineRefusesTheSend(t *testing.T) {
+	t.Parallel()
 	l := setupConfirmLane(t)
 	contact := ids.From[ids.ContactKind](l.contact)
 	if err := l.store.Suppress(l.ctx, consent.SuppressInput{ContactID: contact, Kind: "subject_request"}); err != nil {
@@ -347,6 +357,7 @@ func TestAPreviewRefusesWhatTheConsentEngineRefusesTheSend(t *testing.T) {
 }
 
 func TestAPreviewHidesAContactOutsideTheCallersScopeBeforeSayingItCannotSend(t *testing.T) {
+	t.Parallel()
 	l := setupConfirmLane(t)
 	theirs := l.e.SeedContact(t, "Their Contact", &l.e.Rep3)
 	l.e.MakeCapturePrivate(t, "contact", theirs, l.e.Rep3)

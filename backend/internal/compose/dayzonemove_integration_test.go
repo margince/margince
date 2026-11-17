@@ -31,6 +31,7 @@ import (
 // nothing: not the stored instant, a brief's date, today's lane or a quiet count.
 // The lane is read late in the evening east of UTC, early in the morning west.
 func TestADayEntryKeepsItsDateWhenTheInstallationZoneMoves(t *testing.T) {
+	t.Parallel()
 	anchor := time.Date(2026, 3, 10, 12, 0, 0, 0, time.UTC)
 	for _, move := range []struct{ from, to string }{
 		{"UTC", "Pacific/Auckland"},

@@ -91,6 +91,7 @@ func waitingItemsOf(t *testing.T, user ids.UUID, day time.Time) int {
 }
 
 func TestTheMorningBriefIsMailedOncePerRepPerDay(t *testing.T) {
+	t.Parallel()
 	relay := &countingMailer{}
 	b := setupBriefJob(t).withMailer(relay)
 	morning := time.Date(2026, 6, 4, 9, 0, 0, 0, time.UTC)
@@ -128,6 +129,7 @@ func TestTheMorningBriefIsMailedOncePerRepPerDay(t *testing.T) {
 }
 
 func TestARepWhoAskedForNoMorningMailGetsNoneAndKeepsTheirAttempt(t *testing.T) {
+	t.Parallel()
 	relay := &countingMailer{}
 	b := setupBriefJob(t).withMailer(relay)
 	morning := time.Date(2026, 6, 4, 9, 0, 0, 0, time.UTC)
@@ -156,6 +158,7 @@ func TestARepWhoAskedForNoMorningMailGetsNoneAndKeepsTheirAttempt(t *testing.T) 
 }
 
 func TestAQuietMorningIsNotMailedUnlessTheRepAskedToHear(t *testing.T) {
+	t.Parallel()
 	relay := &countingMailer{}
 	b := setupBriefJob(t).withMailer(relay)
 	morning := time.Date(2026, 6, 4, 9, 0, 0, 0, time.UTC)
@@ -188,6 +191,7 @@ func TestAQuietMorningIsNotMailedUnlessTheRepAskedToHear(t *testing.T) {
 }
 
 func TestARefusedRelaySpendsTheAttemptAndSaysWhy(t *testing.T) {
+	t.Parallel()
 	relay := &countingMailer{fail: errRelayRefused}
 	b := setupBriefJob(t).withMailer(relay)
 	morning := time.Date(2026, 6, 4, 9, 0, 0, 0, time.UTC)
@@ -222,6 +226,7 @@ func TestARefusedRelaySpendsTheAttemptAndSaysWhy(t *testing.T) {
 }
 
 func TestADepartedSeatIsNotAFailedRead(t *testing.T) {
+	t.Parallel()
 	relay := &countingMailer{}
 	b := setupBriefJob(t).withMailer(relay)
 	pipeline, open, _ := integration.DealFixture(t, b.Env)
@@ -295,6 +300,7 @@ func setDeliveryHour(t *testing.T, user ids.UUID, hour int) {
 // the rep for good the moment their run was written. What must be true is that
 // the message is still sent LATER, and only the pair says so.
 func TestARepsChosenHourHoldsTheMorningBackAndThenSendsIt(t *testing.T) {
+	t.Parallel()
 	relay := &countingMailer{}
 	b := setupBriefJob(t).withMailer(relay)
 	setDeliveryHour(t, b.Rep1, 9)
@@ -354,6 +360,7 @@ func TestARepsChosenHourHoldsTheMorningBackAndThenSendsIt(t *testing.T) {
 // what every rep had before the setting was honoured. Without this the case
 // above would be satisfied by a lane that held EVERY message back.
 func TestARepWithNoChosenHourIsMailedByTheAssemblingPass(t *testing.T) {
+	t.Parallel()
 	relay := &countingMailer{}
 	b := setupBriefJob(t).withMailer(relay)
 
@@ -382,6 +389,7 @@ func TestARepWithNoChosenHourIsMailedByTheAssemblingPass(t *testing.T) {
 // run held back until nine is a run still waiting when the seat goes, which is
 // exactly the window this guard covers.
 func TestADepartedSeatDoesNotCostTheOthersTheirMorning(t *testing.T) {
+	t.Parallel()
 	relay := &countingMailer{}
 	b := setupBriefJob(t).withMailer(relay)
 	// Work for BOTH, each on their own plate. The queue ranks the deals a rep is

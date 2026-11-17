@@ -24,6 +24,7 @@ import (
 // id. So the endpoint never says whether a hidden record exists or is
 // restricted. A record the caller reads goes on to the model check.
 func TestPolishAnswersAnUnreadableRecordAsAnUnknownOne(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	colleagues := e.SeedContact(t, "Private to a colleague", &e.Rep2)
 	e.WsExec(t, `UPDATE contact SET visibility = 'owner' WHERE id = $1`, colleagues)
@@ -86,6 +87,7 @@ func (l restrictionCheckedLane) Complete(ctx context.Context, req model.Request)
 // A note polished on a restricted lead is refused before a model reads it. No
 // consent door writes a lead's stop yet, so the row is written as the table holds it.
 func TestARewriteOnALeadHonoursItsRestriction(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	lead := func(name, address string) ids.UUID {
 		t.Helper()

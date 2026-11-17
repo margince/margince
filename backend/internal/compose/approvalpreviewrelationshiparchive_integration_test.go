@@ -22,6 +22,7 @@ import (
 )
 
 func TestRelationshipArchiveApprovalDescribesTheActualEmployerSuccession(t *testing.T) {
+	t.Parallel()
 	for _, remaining := range []int{0, 1, 2} {
 		for _, rest := range []bool{false, true} {
 			t.Run(fmt.Sprintf("remaining=%d/rest=%t", remaining, rest), func(t *testing.T) {

@@ -28,6 +28,7 @@ func moveDecider(t *testing.T, approvalID ids.ApprovalID, to ids.UUID) {
 }
 
 func TestANoticeQueuedForSomebodyNoLongerAskedIsNotMailed(t *testing.T) {
+	t.Parallel()
 	e := setupNoticeMail(t)
 	e.grantRole(t, e.e.AdminUser)
 	e.grantRole(t, e.e.Rep2)
@@ -50,6 +51,7 @@ func TestANoticeQueuedForSomebodyNoLongerAskedIsNotMailed(t *testing.T) {
 // notice is still current, and the digest leaves out any that is not. So the
 // check itself is the one place a stale recipient is stopped for both.
 func TestTheSendTimeCheckKeepsOnlyTheDecidersNotice(t *testing.T) {
+	t.Parallel()
 	a := newApprovalNotifyEnv(t)
 	a.grantRole(t, a.e.AdminUser)
 	a.grantRole(t, a.e.Rep2)

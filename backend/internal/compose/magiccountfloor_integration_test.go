@@ -35,6 +35,7 @@ const readCapRows = 5001
 // number flat understates how far a machine went, which is the direction a
 // reader of this page cannot afford to be misled in.
 func TestALineFromAReadThatFilledItsCapSaysTheCountIsAFloor(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	since := time.Now().Add(-time.Hour)
 	contact := e.SeedContact(t, "Anna Keller", &e.Rep1)

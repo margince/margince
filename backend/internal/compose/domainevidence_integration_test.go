@@ -14,6 +14,7 @@ import (
 )
 
 func TestDomainTriageStoresBaseLanguageAroundUnchangedEvidence(t *testing.T) {
+	t.Parallel()
 	for _, lang := range textlang.Shipped {
 		t.Run(string(lang), func(t *testing.T) {
 			e := integration.Setup(t)

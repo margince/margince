@@ -101,6 +101,7 @@ func encoded[T crmcontracts.Company360 | crmcontracts.Contact360 | reportFigureS
 }
 
 func TestOpenSuggestionsChangeNoReportedFigure(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	acme := e.SeedCompany(t, "Acme GmbH", nil)
 	dana := e.employee(t, "Dana Buyer", acme)

@@ -62,6 +62,7 @@ func importMeeting(t *testing.T, e *integration.Env, capturedBy string) ids.UUID
 var importedIdentity = connector.CrossDoorIdentity{Series: importedSeries, Occurrence: meetingStart}
 
 func TestACancellationClosesTheMeetingItWasMatchedOnto(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	imported := importMeeting(t, e, "human:"+e.AdminUser.String())
 
@@ -80,6 +81,7 @@ func TestACancellationClosesTheMeetingItWasMatchedOnto(t *testing.T) {
 // Another seat's meeting is not this calendar's to close: the resolver refuses
 // it exactly as it refused to match the event onto it.
 func TestACancellationLeavesAnotherSeatsMeeting(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	theirs := importMeeting(t, e, "human:"+ids.NewV7().String())
 
@@ -96,6 +98,7 @@ func TestACancellationLeavesAnotherSeatsMeeting(t *testing.T) {
 // A row captured under the calendar's own key still answers first: the
 // identity is only asked when the key names nothing.
 func TestTheNaturalKeyStillAnswersFirst(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	captured := captureMeeting(t, e, e.AdminUser)
 	imported := importMeeting(t, e, "human:"+e.AdminUser.String())
@@ -116,6 +119,7 @@ func TestTheNaturalKeyStillAnswersFirst(t *testing.T) {
 // A mail or chat connector has no calendar event to cancel. Stating its own key
 // and an identity must not let it close meetings by UID.
 func TestANonCalendarConnectorCannotCancelByIdentity(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	imported := importMeeting(t, e, "human:"+e.AdminUser.String())
 	mailKey := connector.NaturalKey{SourceSystem: "gmail", SourceID: "msg-1"}
@@ -133,6 +137,7 @@ func TestANonCalendarConnectorCannotCancelByIdentity(t *testing.T) {
 // A row under the calendar's own key that was archived is still this event's
 // meeting. Its being retired is not a reason to go and cancel another row.
 func TestAnArchivedRowUnderTheKeyStopsTheFallback(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	captured := captureMeeting(t, e, e.AdminUser)
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {

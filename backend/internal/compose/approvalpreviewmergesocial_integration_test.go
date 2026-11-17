@@ -14,6 +14,7 @@ import (
 )
 
 func TestContactMergePreviewNamesDiscardedAndMovingSocialHandles(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.AdminUser, nil, integration.AdminPerms)
 	source, err := e.Contacts.CreateContact(ctx, contacts.CreateContactInput{

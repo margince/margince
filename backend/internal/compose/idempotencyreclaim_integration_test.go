@@ -45,6 +45,7 @@ func reclaimVerdict(t *testing.T, e *integration.Env, principalID, key, digest s
 }
 
 func TestALostReclaimReportsWhatTheRivalActuallyLeft(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	principalID := "human:" + ids.NewV7().String()
 
@@ -94,6 +95,7 @@ func TestALostReclaimReportsWhatTheRivalActuallyLeft(t *testing.T) {
 // costs least if it is wrong, because it tells the caller to retry rather than
 // inventing a result.
 func TestAClaimThatVanishesTwiceStopsRatherThanLooping(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	if got := reclaimVerdict(t, e, "human:"+ids.NewV7().String(), ids.NewV7().String(), "digest"); got != claimInProgress {
 		t.Errorf("a claim with no row at all reports %v, want claimInProgress", got)
@@ -116,6 +118,7 @@ func TestAClaimThatVanishesTwiceStopsRatherThanLooping(t *testing.T) {
 // rather than a lock. attempt_id is stamped fresh on the claim and on the
 // re-claim, so a settlement names the attempt that made it or names nothing.
 func TestASettlementFromAnExpiredAttemptWritesNothing(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	actor, _ := principal.Actor(ctx)

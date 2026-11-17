@@ -84,6 +84,7 @@ func fieldAction(t *testing.T, result contacts.VCardResult, field string) contac
 }
 
 func TestACorrectedTitleIsKeptAndTheCardsWebsiteStillLands(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	contactID := seedCorrectedTitle(ctx, t, e, "cora@fresh.example", "Engineer")
@@ -108,6 +109,7 @@ func TestACorrectedTitleIsKeptAndTheCardsWebsiteStillLands(t *testing.T) {
 }
 
 func TestACorrectionOfAValueSinceReplacedNoLongerStopsACard(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	contactID := seedCorrectedTitle(ctx, t, e, "cora@stale.example", "Engineer")

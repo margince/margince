@@ -14,6 +14,7 @@ import (
 // An edition is stored for every reader, so its captions take the installation's
 // language. The owner's own live read takes the owner's language.
 func TestAnEditionIsWrittenInTheBaseLanguageWhileTheOwnersLiveReadIsInTheirs(t *testing.T) {
+	t.Parallel()
 	q := newQuestionEditions(t)
 	owner, _ := principal.Actor(q.human)
 	owner.Locale = "de"

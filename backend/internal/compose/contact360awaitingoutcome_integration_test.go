@@ -18,6 +18,7 @@ import (
 // The contact page's timeline stamps awaiting_outcome as the activity list does,
 // judged at the page's own clock.
 func TestTheContactTimelineStampsWhichMeetingsAwaitAnOutcome(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := clocktest.Now(t)
 	contact := e.SeedContact(t, "Dana Buyer", nil)

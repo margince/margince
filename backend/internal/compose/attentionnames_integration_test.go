@@ -27,6 +27,7 @@ func namesOver(e *integration.Env) attentionNames {
 }
 
 func TestALabelIsExactlyAsVisibleAsItsRecord(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	names := namesOver(e)
 
@@ -56,6 +57,7 @@ func TestALabelIsExactlyAsVisibleAsItsRecord(t *testing.T) {
 // showing an empty string where a record should be says less than one
 // showing nothing, and the single-record form answered ok=false for it.
 func TestARecordWithNoNameIsAbsentRatherThanBlank(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	names := namesOver(e)
 	nameless := e.SeedContact(t, "", nil)
@@ -73,6 +75,7 @@ func TestARecordWithNoNameIsAbsentRatherThanBlank(t *testing.T) {
 // An id nobody has ever minted is absent, not an error: the producer's claim
 // that a reference exists is not this resolver's to fail the page over.
 func TestAnIdThatNamesNothingIsAbsentNotAnError(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	names := namesOver(e)
 	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.RepPerms)
@@ -87,6 +90,7 @@ func TestAnIdThatNamesNothingIsAbsentNotAnError(t *testing.T) {
 }
 
 func TestAnUnknownSubjectTypeAnswersAbsentNotAGuess(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	names := namesOver(e)
 	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.RepPerms)
@@ -99,6 +103,7 @@ func TestAnUnknownSubjectTypeAnswersAbsentNotAGuess(t *testing.T) {
 // The context matters: the same record, asked for without a principal,
 // must refuse into absence rather than leak through the resolver.
 func TestTheResolverHoldsNoAuthorityOfItsOwn(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	names := namesOver(e)
 	contact := e.SeedContact(t, "Dana Weiss", nil)
@@ -116,6 +121,7 @@ func TestTheResolverHoldsNoAuthorityOfItsOwn(t *testing.T) {
 // read that filtered on the audience instead of selecting THROUGH it would
 // have answered the row's subject to everyone who could discover it.
 func TestALimitedMessagesSubjectIsWithheldFromTheBatchToo(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	names := namesOver(e)
 	owner := integration.OwnerConn(t)
@@ -155,6 +161,7 @@ func TestALimitedMessagesSubjectIsWithheldFromTheBatchToo(t *testing.T) {
 // Agreement is the invariant that actually matters anyway: whatever GetDeal
 // decides, the batch must decide the same.
 func TestEveryShapesLabelsAgreeWithTheirOwnSingleRead(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	names := namesOver(e)
 	owner := integration.OwnerConn(t)
@@ -281,6 +288,7 @@ func TestEveryShapesLabelsAgreeWithTheirOwnSingleRead(t *testing.T) {
 // calls for types it met, but the store must be safe to call with an empty
 // set regardless — an `id = ANY('{}')` would be a query run to learn nothing.
 func TestATypeWithNothingToNameAsksNothing(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	names := namesOver(e)
 	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
@@ -301,6 +309,7 @@ func TestATypeWithNothingToNameAsksNothing(t *testing.T) {
 // fail because one of its producers named a record this reader has no grant
 // for — which is the same promise as a record they cannot see.
 func TestAnObjectGrantTheReaderLacksCostsOnlyItsLabels(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	names := namesOver(e)
 	contact := e.SeedContact(t, "Dana Weiss", nil)

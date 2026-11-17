@@ -43,6 +43,7 @@ func (v *viabilityEnv) receiptOf(t *testing.T, deal ids.UUID) (outcome, reasons 
 }
 
 func TestARefusalRequiresAReviewAndAnUnjudgedReplyCounts(t *testing.T) {
+	t.Parallel()
 	v := setupViability(t)
 	refusal := v.customerMails(t, v.supported, v.now.AddDate(0, 0, -2))
 	if applied, err := activities.NewStore(v.DB()).SetReplyVerdict(v.Admin(), refusal,
@@ -67,6 +68,7 @@ func TestARefusalRequiresAReviewAndAnUnjudgedReplyCounts(t *testing.T) {
 }
 
 func TestADealWithNoNextStepIsUnsupported(t *testing.T) {
+	t.Parallel()
 	v := setupViability(t)
 	step, err := ids.Parse(v.WsScalar(t, `SELECT a.id::text FROM activity a
 		JOIN activity_link l ON l.activity_id = a.id
@@ -87,6 +89,7 @@ func TestADealWithNoNextStepIsUnsupported(t *testing.T) {
 }
 
 func TestARefusalNotEveryMemberMayReadMovesNothing(t *testing.T) {
+	t.Parallel()
 	v := setupViability(t)
 	refusal := v.customerMails(t, v.supported, v.now.AddDate(0, 0, -2))
 	if applied, err := activities.NewStore(v.DB()).SetReplyVerdict(v.Admin(), refusal,
@@ -105,6 +108,7 @@ func TestARefusalNotEveryMemberMayReadMovesNothing(t *testing.T) {
 }
 
 func TestAVerdictThatLandsAfterTheCheckMakesTheReceiptStale(t *testing.T) {
+	t.Parallel()
 	v := setupViability(t)
 	reply := v.customerMails(t, v.supported, v.now.AddDate(0, 0, -2))
 	v.check(t)

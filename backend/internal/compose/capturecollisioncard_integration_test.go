@@ -74,6 +74,7 @@ func (e *mergeEnv) stagedChange(t *testing.T, leadID ids.UUID) map[string]any {
 // checked the conflicting field alone — and the empty one is the half that
 // tells the reader the accept will do something.
 func TestACaptureCollisionCardCarriesWhatTheLeadAlreadyHolds(t *testing.T) {
+	t.Parallel()
 	e := setupMerge(t)
 	incumbent := e.capturedLeadWithFields(t, "apollo", "a-1", capture.LeadFields{
 		FullName: "Jonas Petersen",
@@ -114,6 +115,7 @@ func TestACaptureCollisionCardCarriesWhatTheLeadAlreadyHolds(t *testing.T) {
 // read would otherwise be handed the incumbent's name, company and title, and
 // the row probe beside it answers only WHICH leads, never WHETHER.
 func TestACaptureCollisionRefusesAConnectorWithNoLeadRead(t *testing.T) {
+	t.Parallel()
 	e := setupMerge(t)
 	e.capturedLeadWithFields(t, "apollo", "a-1", capture.LeadFields{
 		FullName: "Jonas Petersen", Email: "jonas@nordwind.test",

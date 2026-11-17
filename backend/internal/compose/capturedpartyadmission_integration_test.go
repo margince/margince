@@ -46,6 +46,7 @@ func capturePartiesMailUsing(t *testing.T, e *integration.Env, sink *capture.Sin
 }
 
 func TestCapturedPartiesRecoveryAdvancesPastAnEarlierActivity(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	activityOnly := newCaptureSink(e.Pool, CaptureConfig{}).WithEnsurer(nil, nil)
 	first := capturePartiesMailUsing(t, e, activityOnly, partyMailProof{outbound: true, sentByOwner: true}, "Bob Buyer <bob@buyer.test>", "", "Could we discuss the product requirements?")
@@ -79,6 +80,7 @@ func TestCapturedPartiesRecoveryAdvancesPastAnEarlierActivity(t *testing.T) {
 }
 
 func TestCapturedPartiesAdmitsEveryTrustedToAndCcOnlyOnce(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ref := capturePartiesMail(t, e, partyMailProof{outbound: true, sentByOwner: true}, "Bob Buyer <BOB@buyer.test>", "Hidden Buyer <hidden@buyer.test>", "Could we discuss the product requirements?")
 	for _, address := range []string{"alice@buyer.test", "bob@buyer.test"} {
@@ -98,6 +100,7 @@ func TestCapturedPartiesAdmitsEveryTrustedToAndCcOnlyOnce(t *testing.T) {
 }
 
 func TestCapturedPartiesLeavesUntrustedAndDecliningMailAsEvidence(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name               string
 		outbound, attested bool
@@ -121,6 +124,7 @@ func TestCapturedPartiesLeavesUntrustedAndDecliningMailAsEvidence(t *testing.T) 
 }
 
 func TestCapturedPartiesKeepsLiveLeadsInTheLeadPool(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	email := "bob@buyer.test"
 	lead, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{Email: &email, FullName: new("Bob Buyer"), Source: "manual"})
@@ -137,6 +141,7 @@ func TestCapturedPartiesKeepsLiveLeadsInTheLeadPool(t *testing.T) {
 }
 
 func TestCapturedPartiesStopsCreatingContactsWhenTheirActivityHasNoRoom(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	var copied []string
 	for index := range 30 {
@@ -157,6 +162,7 @@ func TestCapturedPartiesStopsCreatingContactsWhenTheirActivityHasNoRoom(t *testi
 }
 
 func TestCapturedPartiesRecoveryRechecksTheCapturingSeatsCurrentAuthority(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.GrantRole(t, e.AdminUser, "admin")
 	service := identity.NewServiceFor(e.DB())
@@ -226,6 +232,7 @@ func partiesMailRecord(t *testing.T, e *integration.Env, proof partyMailProof, c
 }
 
 func TestCapturedPartiesRetiresEarlierAuthorityWhenTheFolderIsExcluded(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	sink := newCaptureSink(e.Pool, CaptureConfig{})
 	rec := partiesMailRecord(t, e, partyMailProof{outbound: true, sentByOwner: true}, "Bob Buyer <bob@buyer.test>", "", "Could we discuss the product requirements?")
@@ -255,6 +262,7 @@ func TestCapturedPartiesRetiresEarlierAuthorityWhenTheFolderIsExcluded(t *testin
 }
 
 func TestCapturedPartiesHonorsAnExclusionOnTheCapturingAddress(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	sink := newCaptureSink(e.Pool, CaptureConfig{})
 	capturePartiesMailUsing(t, e, sink.WithEnsurer(nil, nil), partyMailProof{outbound: true, sentByOwner: true}, "Bob Buyer <bob@buyer.test>", "", "Could we discuss the product requirements?")
@@ -270,6 +278,7 @@ func TestCapturedPartiesHonorsAnExclusionOnTheCapturingAddress(t *testing.T) {
 }
 
 func TestCapturedPartiesCannotUseAnArchivedSendAsAdmissionProof(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	sink := newCaptureSink(e.Pool, CaptureConfig{})
 	ref := capturePartiesMailUsing(t, e, sink.WithEnsurer(nil, nil), partyMailProof{outbound: true, sentByOwner: true}, "Bob Buyer <bob@buyer.test>", "", "Could we discuss the product requirements?")
@@ -320,6 +329,7 @@ func activatePartySeat(t *testing.T, e *integration.Env, user ids.UUID) {
 // Two proven sends to one address admit it whatever each says. One proven send
 // decides by its own words, however many unproven sends sit beside it.
 func TestCapturedPartiesCountsOnlyProvenSendsToTheAddress(t *testing.T) {
+	t.Parallel()
 	const declining, engaging = "We are not interested. Please remove us.", "Could we discuss the product requirements?"
 	proven, unproven := partyMailProof{outbound: true, sentByOwner: true}, partyMailProof{outbound: true}
 	type send struct {

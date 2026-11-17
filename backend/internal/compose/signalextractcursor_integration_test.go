@@ -80,6 +80,7 @@ func requireCursorAtThreadStart(t *testing.T, thread settledThread, oldest time.
 }
 
 func TestAFirstReadThatReachesAllItMayReadCoversTheThread(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	key, beta := olderCorrespondenceThread(t, o)
 	oldest, oldestID, newest := threadEnds(t, o, key)
@@ -97,6 +98,7 @@ func TestAFirstReadThatReachesAllItMayReadCoversTheThread(t *testing.T) {
 }
 
 func TestAReadWithNothingOlderLeftToReadStopsWalkingBack(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	key, _ := olderCorrespondenceThread(t, o)
 	oldest, oldestID, newest := threadEnds(t, o, key)

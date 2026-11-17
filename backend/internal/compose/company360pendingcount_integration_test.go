@@ -22,6 +22,7 @@ import (
 // decide. That is the number the approvals inbox narrowed to the account
 // answers. The list of them stays a capped page.
 func TestTheAccountPageCountsEveryPendingProposalPastTheScanCap(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := e.SeedCompany(t, "Harbor", nil)
 	elsewhere := e.SeedCompany(t, "Elsewhere", nil)

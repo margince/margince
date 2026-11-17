@@ -25,6 +25,7 @@ import (
 )
 
 func TestLeadReplyAdviceFollowsTheSourceRatherThanTheImport(t *testing.T) {
+	t.Parallel()
 	l := setupLeadMail(t)
 	lead := l.ownedLead(t, "lena@prospect.example", l.e.Rep2)
 	now := l.at.Add(5 * time.Minute)
@@ -85,6 +86,7 @@ func assertCurrentLeadAdvice(t *testing.T, l *leadMailEnv, lead ids.LeadID, now 
 }
 
 func TestLeadReplyAdviceRejectsFutureMailAndSharesLegacyAdmission(t *testing.T) {
+	t.Parallel()
 	l := setupLeadMail(t)
 	lead := l.ownedLead(t, "lena@prospect.example", l.e.Rep2)
 	now := l.at.Add(5 * time.Minute)
@@ -112,6 +114,7 @@ func TestLeadReplyAdviceRejectsFutureMailAndSharesLegacyAdmission(t *testing.T) 
 }
 
 func TestLeadQualificationKeepsBookingsDistinctFromMail(t *testing.T) {
+	t.Parallel()
 	l := setupLeadMail(t)
 	now := l.at.Add(5 * time.Minute)
 	writer := newLeadWorkTasks(InstallationDB(l.e.Pool), slog.Default())
@@ -156,6 +159,7 @@ func TestLeadQualificationKeepsBookingsDistinctFromMail(t *testing.T) {
 }
 
 func TestLegacyNotificationDatesAreNotDeadlinesAndHumanDatesSurvive(t *testing.T) {
+	t.Parallel()
 	l := setupLeadMail(t)
 	lead := l.ownedLead(t, "lena@prospect.example", l.e.Rep2)
 	now := l.at.Add(5 * time.Minute)
@@ -191,6 +195,7 @@ func TestLegacyNotificationDatesAreNotDeadlinesAndHumanDatesSurvive(t *testing.T
 }
 
 func TestUndatedContactArrivalStillReachesItsOwnersWorklist(t *testing.T) {
+	t.Parallel()
 	l := setupLeadForContact(t)
 	reader := l.e.As(l.e.Rep1, nil, integration.AdminPerms)
 	_, _, err := l.store.CreateLead(reader, contacts.CreateLeadInput{FullName: new("Contact submission"), Email: &l.address, Source: "web_form"})
@@ -215,6 +220,7 @@ func TestUndatedContactArrivalStillReachesItsOwnersWorklist(t *testing.T) {
 }
 
 func TestAdoptedLegacyLeadAdviceSurvivesItsSourceArchive(t *testing.T) {
+	t.Parallel()
 	l := setupLeadMail(t)
 	lead := l.ownedLead(t, "lena@prospect.example", l.e.Rep2)
 	now := l.at.Add(5 * time.Minute)
@@ -266,6 +272,7 @@ func TestAdoptedLegacyLeadAdviceSurvivesItsSourceArchive(t *testing.T) {
 }
 
 func TestLeadAdviceFollowsItsSourceAudienceOnEveryRead(t *testing.T) {
+	t.Parallel()
 	l := setupLeadMail(t)
 	l.at = l.at.Add(-2 * time.Hour)
 	lead := l.ownedLead(t, "lena@prospect.example", l.e.Rep2)

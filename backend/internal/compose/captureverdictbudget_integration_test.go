@@ -24,6 +24,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -36,6 +37,7 @@ import (
 func borderlineBacklog(t *testing.T, e *integration.Env, senders int) *scriptedVerdictBrain {
 	t.Helper()
 	brain := &scriptedVerdictBrain{
+		ownerDSN:   testdb.For(t).OwnerDSN,
 		verdicts:   map[string]string{},
 		confidence: map[string]float64{},
 	}
@@ -59,6 +61,7 @@ func borderlineBacklog(t *testing.T, e *integration.Env, senders int) *scriptedV
 // costs at most one call per sender plus its re-ask budget. Unbounded, this
 // backlog would cost two calls each and run the pass past a wall sized for one.
 func TestAnEntirelyBorderlinePassStaysInsideItsCallBudget(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const senders = 12
 	brain := borderlineBacklog(t, e, senders)
@@ -91,6 +94,7 @@ func TestAnEntirelyBorderlinePassStaysInsideItsCallBudget(t *testing.T) {
 // never asked twice. Not accepted either: an answer this unconfident is exactly
 // what the floor exists to refuse.
 func TestASenderTheBudgetCouldNotPayForIsLeftForAHuman(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const senders = 12
 	brain := borderlineBacklog(t, e, senders)
@@ -132,6 +136,7 @@ func (b *unreadableVerdictBrain) Complete(context.Context, model.Request) (model
 // only answered senders would let a failing model run the pass over every
 // sender that is due. A claim of eight would also run past a cap of three.
 func TestAFailingModelStillSpendsTheVerdictPassCap(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const passCap = 3
 	for range 12 {

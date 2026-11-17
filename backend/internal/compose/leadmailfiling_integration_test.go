@@ -136,6 +136,7 @@ func (l *leadMailEnv) filedUnderLead(t *testing.T, activity ids.UUID, lead ids.L
 }
 
 func TestCapturedMailAndMeetingsAreFiledUnderTheLeadOnThem(t *testing.T) {
+	t.Parallel()
 	l := setupLeadMail(t)
 	lead := l.lead(t, "lena@prospect.example")
 
@@ -167,6 +168,7 @@ func TestCapturedMailAndMeetingsAreFiledUnderTheLeadOnThem(t *testing.T) {
 }
 
 func TestARetiredLeadIsNoFilingTarget(t *testing.T) {
+	t.Parallel()
 	l := setupLeadMail(t)
 	promoted := l.lead(t, "pat@prospect.example")
 	if _, _, err := l.e.Contacts.PromoteLead(l.e.Admin(), promoted, contacts.PromoteLeadInput{Trigger: "human_qualify"}); err != nil {
@@ -187,6 +189,7 @@ func TestARetiredLeadIsNoFilingTarget(t *testing.T) {
 // The ceiling is spent in one order for contacts and leads together: contacts
 // first, so a lead is the record the cut drops.
 func TestTheLinkCeilingFilesContactsBeforeLeads(t *testing.T) {
+	t.Parallel()
 	l := setupLeadMail(t)
 	lead := l.lead(t, "lena@prospect.example")
 	copied := make([]string, 0, maxMailParticipantLinks)
@@ -216,6 +219,7 @@ func TestTheLinkCeilingFilesContactsBeforeLeads(t *testing.T) {
 const maxMailParticipantLinks = 22
 
 func TestAHeldMailFiledUnderALeadStaysUnreadableThroughTheLead(t *testing.T) {
+	t.Parallel()
 	l := setupLeadMail(t)
 	lead := l.lead(t, "lena@prospect.example")
 	held := l.mail(t, owedMail{from: "lena@prospect.example", to: l.seat, subject: "[Vertraulich] Terms", body: "Our walk-away price."}, true)
@@ -262,6 +266,7 @@ func (l *leadMailEnv) audienceOf(t *testing.T, activity ids.UUID) (audience, rea
 // A promoter outside a held mail's audience still previews the promotion: the
 // held mail is counted as moving and never named.
 func TestThePromotionPreviewCountsAnActivityTheReaderMayNotRead(t *testing.T) {
+	t.Parallel()
 	l := setupLeadMail(t)
 	lead := l.lead(t, "lena@prospect.example")
 	held := l.mail(t, owedMail{from: "lena@prospect.example", to: l.seat, subject: "[Vertraulich] Terms"}, true)

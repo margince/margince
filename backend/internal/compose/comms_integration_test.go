@@ -111,6 +111,7 @@ func realDeliveryStager(t *testing.T, e *integration.Env) DeliveryMachinery {
 
 const pricingReplySubject = "Re: Pricing question"
 
+//testdb:serial shares the type-checking importer, which is not safe for concurrent use
 func TestCommsAdapterSharesTheGovernedPaths(t *testing.T) {
 	e := integration.Setup(t)
 	// The REAL delivery machinery, because this suite asserts that an
@@ -204,6 +205,7 @@ func assertModelAndFallbackDrafts(ctx context.Context, t *testing.T, adapter com
 }
 
 func TestIntentToolsReturnTheAssembledPicture(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	target := e.SeedContact(t, "Briefing Target", &e.Rep1)
 	retriever := search.NewRetriever(search.NewStore(e.DB()), nil)

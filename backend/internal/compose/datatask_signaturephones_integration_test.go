@@ -34,6 +34,7 @@ func orphanSignatureNumber(t *testing.T, e *integration.Env, address string) ids
 }
 
 func TestTheSignaturePhoneTaskRestoresOnlyASupportedPredecessor(t *testing.T) {
+	t.Parallel()
 	for _, originalSource := range []string{"capture_enrich", "manual"} {
 		t.Run(originalSource, func(t *testing.T) {
 			e := integration.Setup(t)
@@ -64,6 +65,7 @@ func TestTheSignaturePhoneTaskRestoresOnlyASupportedPredecessor(t *testing.T) {
 }
 
 func TestTheSignaturePhoneTaskRetractsOrphansAndKeepsSupportedAndHumanNumbers(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	orphan := orphanSignatureNumber(t, e, "orphan@phone.example")
@@ -112,6 +114,7 @@ func TestTheSignaturePhoneTaskRetractsOrphansAndKeepsSupportedAndHumanNumbers(t 
 }
 
 func TestTheSignaturePhoneTaskRollsBackWithItsProgressAndRejectsBadCursors(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	orphan := orphanSignatureNumber(t, e, "rollback@phone.example")

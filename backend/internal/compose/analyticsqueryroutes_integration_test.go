@@ -62,6 +62,7 @@ func assertRefusal(t *testing.T, rec *httptest.ResponseRecorder, want crmcontrac
 }
 
 func TestAnInvalidQuestionIsRefusedWithItsKind(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	rec := httptest.NewRecorder()
 	e.analyticsRoutes().RunAnalyticsQuery(rec, analyticsRequest(e.reportReaderCtx(), http.MethodPost,
@@ -71,6 +72,7 @@ func TestAnInvalidQuestionIsRefusedWithItsKind(t *testing.T) {
 }
 
 func TestAnUnknownPopulationIsRefusedAsUnsupported(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	rec := httptest.NewRecorder()
 	e.analyticsRoutes().RunAnalyticsQuery(rec, analyticsRequest(e.reportReaderCtx(), http.MethodPost,
@@ -79,6 +81,7 @@ func TestAnUnknownPopulationIsRefusedAsUnsupported(t *testing.T) {
 }
 
 func TestAFilterHidingTooFewRecordsIsRefusedAsPrivacy(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	amount := int64(100_000)
 	for range 6 {
@@ -97,6 +100,7 @@ func TestAFilterHidingTooFewRecordsIsRefusedAsPrivacy(t *testing.T) {
 // A saved run echoes the scope it was asked with, so a client re-asking it from
 // the echo asks the same question rather than the reader's default.
 func TestASavedRunEchoesTheScopeItWasAskedWith(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	amount := int64(100_000)
 	for range 6 {
@@ -163,6 +167,7 @@ func explainBody(t *testing.T, rec *httptest.ResponseRecorder) crmcontracts.Anal
 // lead is counted by leads-by-status and has no name the seam will give, so it
 // keeps its id and carries no label.
 func TestAnExplanationNamesTheRecordsTheReaderCanName(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	named := map[string]string{}
 	for i := range 5 {
@@ -204,6 +209,7 @@ func TestAnExplanationNamesTheRecordsTheReaderCanName(t *testing.T) {
 
 // A withheld cell opens to nothing, and says so with an empty list, not null.
 func TestAWithheldCellExplainsToAnEmptyListOverTheWire(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	amount := int64(100_000)
 	for range 6 {
@@ -226,6 +232,7 @@ func TestAWithheldCellExplainsToAnEmptyListOverTheWire(t *testing.T) {
 
 // A saved run's cell is named through the same seam as a question's.
 func TestACitedCellNamesItsRecords(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	amount := int64(100_000)
 	for range 6 {
@@ -288,6 +295,7 @@ func (e *forecastEnv) seedCompanyDeals(t *testing.T, name string, deals int) ids
 // An answer grouped by company names each served company, and names nothing a
 // withheld row stood for: that row carries no id to name.
 func TestAnAnswerNamesTheCompaniesItGroupsBy(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	names := map[string]string{}
 	for _, c := range []struct {
@@ -330,6 +338,7 @@ func TestAnAnswerNamesTheCompaniesItGroupsBy(t *testing.T) {
 // A saved run grouped by company is refused to a reader who may not read
 // companies. So is its cell, because the group keys are company ids.
 func TestANarrowerReaderOfARunIsNotHandedTheCompanyNames(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	company := e.seedCompanyDeals(t, "Contoso", 6).String()
 	routes := e.analyticsRoutes()

@@ -23,6 +23,7 @@ import (
 )
 
 func TestMergeRechecksBothApprovedRecordsInsideTheNativeWrite(t *testing.T) {
+	t.Parallel()
 	for _, kind := range []datasource.EntityType{datasource.EntityContact, datasource.EntityCompany} {
 		for _, changed := range []string{"neither", "source", "survivor"} {
 			t.Run(string(kind)+"/"+changed, func(t *testing.T) {

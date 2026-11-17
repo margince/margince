@@ -133,6 +133,7 @@ func assertFallbackLanding(t *testing.T, who string, landing *crmcontracts.Forec
 }
 
 func TestALiveShareStatesTheLandingTheForecastStatesForItsReader(t *testing.T) {
+	t.Parallel()
 	e := calledQuarter(t)
 	company, teamLens := e.shareReaders()
 	token := e.issueWorkspaceShare(t, shareKindLive, nil)
@@ -156,6 +157,7 @@ func TestALiveShareStatesTheLandingTheForecastStatesForItsReader(t *testing.T) {
 }
 
 func TestASnapshotShareStatesTheLandingItFroze(t *testing.T) {
+	t.Parallel()
 	e := calledQuarter(t)
 	company, teamLens := e.shareReaders()
 	token := e.issueWorkspaceShare(t, shareKindSnapshot, new(e.freezeMeasured(t)))
@@ -164,6 +166,7 @@ func TestASnapshotShareStatesTheLandingItFroze(t *testing.T) {
 }
 
 func TestASnapshotFrozenBeforeTheLandingWasKeptHasNone(t *testing.T) {
+	t.Parallel()
 	e := calledQuarter(t)
 	company, _ := e.shareReaders()
 	token := e.issueWorkspaceShare(t, shareKindSnapshot, new(e.freezeWorkspace(t)))

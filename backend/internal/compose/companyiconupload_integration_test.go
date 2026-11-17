@@ -44,6 +44,7 @@ func uploadIcon(t *testing.T, e *integration.Env, handlers companyHandlers, imag
 }
 
 func TestTheSquareBadgeIsStoredWithoutDisturbingTheWideMark(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	blob := blobstore.NewMemory()
 	handlers := companyHandlers{store: e.Contacts, blob: blob}
@@ -127,6 +128,7 @@ func streamedMark(ctx context.Context, t *testing.T, serve func(*httptest.Respon
 }
 
 func TestRemovingTheBadgeLeavesTheWideMarkStanding(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	blob := blobstore.NewMemory()
 	handlers := companyHandlers{store: e.Contacts, blob: blob}

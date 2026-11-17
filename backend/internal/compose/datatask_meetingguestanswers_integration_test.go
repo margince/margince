@@ -43,6 +43,7 @@ func runGuestAnswersTask(t *testing.T, e *integration.Env) {
 // A calendar's rows written before answers were kept take each answer from the
 // stored event, once. A row another door wrote is not touched.
 func TestTheAnswerTaskFillsAnswersFromTheStoredEvent(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	conn := integration.OwnerConn(t)
 	grantContactScope(t, e, e.Rep1, "all")

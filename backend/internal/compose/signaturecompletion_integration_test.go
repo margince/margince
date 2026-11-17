@@ -14,10 +14,12 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func TestSignatureEvidenceSettlesOnlyItsMatchingRequest(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.now = time.Date(2026, 10, 18, 12, 0, 0, 0, time.UTC)
 	o.e.GrantRole(t, o.owner, "rep")
@@ -74,7 +76,7 @@ func TestSignatureEvidenceSettlesOnlyItsMatchingRequest(t *testing.T) {
 		t.Fatal(err)
 	}
 	brain := ai.NewFakeClient().Script(string(reply))
-	settler := NewRequestSettler(o.e.Pool, inRefs{inner: brain, shown: []shownBy{requestShown}}, func() time.Time { return o.now }, slog.Default())
+	settler := NewRequestSettler(o.e.Pool, inRefs{inner: brain, ownerDSN: testdb.For(t).OwnerDSN, shown: []shownBy{requestShown}}, func() time.Time { return o.now }, slog.Default())
 	for range 2 {
 		if err := settler.RunWorkspace(o.judge(), 2); err != nil {
 			t.Fatal(err)

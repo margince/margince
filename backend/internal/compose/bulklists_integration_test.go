@@ -30,6 +30,7 @@ func membershipEvents(t *testing.T, e *integration.Env, list ids.UUID, action, r
 }
 
 func TestArchivingAMemberRecordsItsRemovalAndTheUndoItsReturn(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seeded := seedSurroundedContacts(t, e, 3)
 	list := seeded[0].list
@@ -64,6 +65,7 @@ func addToShortlist(items []crmcontracts.BulkItem, list ids.ListID, note string)
 }
 
 func TestABulkChangeAddsASelectionToAShortlistAndItsUndoTakesItOff(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	lists := collections.NewStore(e.DB())
 	list, err := lists.CreateList(e.Admin(), collections.CreateListInput{Name: "Launch references", EntityType: "contact"})
@@ -111,6 +113,7 @@ func TestABulkChangeAddsASelectionToAShortlistAndItsUndoTakesItOff(t *testing.T)
 }
 
 func TestABulkListVerbIsRefusedBeforeAnyRowIsTried(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	lists := collections.NewStore(e.DB())
 	list, err := lists.CreateList(e.As(e.Rep1, []ids.UUID{e.Team1}, bulkListPerms()), collections.CreateListInput{

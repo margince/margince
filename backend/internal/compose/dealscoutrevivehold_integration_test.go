@@ -24,6 +24,7 @@ import (
 // arrives. One Margince closed may be reopened at once, and the colleague's
 // close may be reopened once it is older.
 func TestADealAColleagueClosedRecentlyStaysClosed(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	e.GrantRole(t, e.AdminUser, "admin")
 	acme := e.SeedCompany(t, "Acme GmbH", &e.AdminUser)
@@ -54,6 +55,7 @@ func TestADealAColleagueClosedRecentlyStaysClosed(t *testing.T) {
 // Undo of a reopened deal the team worked on since asks first. It asks again
 // when more work arrives after the warning, and closes it once confirmed.
 func TestUndoOfAReopenTheTeamWorkedOnNeedsConfirming(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	e.GrantRole(t, e.AdminUser, "admin")
 	acme := e.SeedCompany(t, "Acme GmbH", &e.AdminUser)
@@ -96,6 +98,7 @@ func TestUndoOfAReopenTheTeamWorkedOnNeedsConfirming(t *testing.T) {
 // Evidence that changes while the reopen waits for its lock reopens nothing:
 // the times are read after the evidence is held.
 func TestEvidenceChangedWhileTheReopenWaitsReopensNothing(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	e.GrantRole(t, e.AdminUser, "admin")
 	acme := e.SeedCompany(t, "Acme GmbH", &e.AdminUser)

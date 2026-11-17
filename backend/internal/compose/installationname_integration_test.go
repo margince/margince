@@ -22,6 +22,7 @@ import (
 // Onboarding from a website read ends in this confirmation rather than in
 // PUT /company, and the name the human confirms there is the installation's.
 func TestConfirmingTheOnboardingReadRenamesTheInstallation(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ready := onboardingDraft(t, e)
 	store := contacts.NewStore(e.DB()).WithInstallationRenamer(installationRenamer(e.Pool))
@@ -52,6 +53,7 @@ func TestConfirmingTheOnboardingReadRenamesTheInstallation(t *testing.T) {
 // The company's name is the installation's. When a boot source sets it, the
 // company profile may save that name and no other.
 func TestABootSetNameRefusesAnotherCompanyName(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	locked := bootConfigForTest(t, config.RoleAPI, "MARGINCE_INSTALLATION_NAME=Locked Co").
 		WithDatabase(NewSettingsStore(e.Pool))

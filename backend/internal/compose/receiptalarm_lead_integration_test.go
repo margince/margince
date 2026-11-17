@@ -95,6 +95,7 @@ func (l *confirmLaneEnv) leadReceiptDue(t *testing.T, lead ids.UUID) time.Time {
 	return due
 }
 
+//testdb:serial registers into a process-wide unit registry
 func TestALeadsPressGetsTheReceiptItsRulesOwe(t *testing.T) {
 	l := receiptLane(t, receiptOwed)
 	lead := l.refusingLead(t, new(leadReceiptAddress))
@@ -106,6 +107,7 @@ func TestALeadsPressGetsTheReceiptItsRulesOwe(t *testing.T) {
 	}
 }
 
+//testdb:serial registers into a process-wide unit registry
 func TestALeadWithNoAddressRaisesTheNoAddressNotice(t *testing.T) {
 	l := receiptLane(t, receiptOwed)
 	lead := l.refusingLead(t, nil)
@@ -120,6 +122,7 @@ func TestALeadWithNoAddressRaisesTheNoAddressNotice(t *testing.T) {
 	}
 }
 
+//testdb:serial registers into a process-wide unit registry
 func TestAnOverdueLeadReceiptIsRaisedOnTheLeadAndSettledWhenSent(t *testing.T) {
 	l := receiptLane(t, receiptOwed)
 	lead := l.refusingLead(t, new(leadReceiptAddress))
@@ -145,6 +148,8 @@ func TestAnOverdueLeadReceiptIsRaisedOnTheLeadAndSettledWhenSent(t *testing.T) {
 
 // A lead erased with its contact before the deadline keeps no receipt to send
 // and raises no notice.
+//
+//testdb:serial registers into a process-wide unit registry
 func TestALeadErasedBeforeItsReceiptIsSentGetsNeitherReceiptNorNotice(t *testing.T) {
 	l := receiptLane(t, receiptOwed)
 	lead := l.refusingLead(t, new(leadReceiptAddress))
@@ -170,6 +175,8 @@ func TestALeadErasedBeforeItsReceiptIsSentGetsNeitherReceiptNorNotice(t *testing
 
 // A link refusal is answered at the address it was made from. The lead may
 // have changed its address since the link was minted.
+//
+//testdb:serial registers into a process-wide unit registry
 func TestALinkRefusalIsAnsweredAtTheAddressItWasMadeFrom(t *testing.T) {
 	l := receiptLane(t, receiptOwed)
 	lead := l.refusingLead(t, new(leadReceiptAddress))
@@ -229,6 +236,8 @@ func (l *confirmLaneEnv) transmitLeadReceipt(t *testing.T) commsauthz.TransmitTi
 
 // A lead's receipt to an address a contact also holds is decided on the lead.
 // That holds at staging and at transmit, whatever the contact's record says.
+//
+//testdb:serial registers into a process-wide unit registry
 func TestALeadReceiptToASharedAddressIsDecidedOnTheLead(t *testing.T) {
 	for name, contactObjected := range map[string]bool{
 		"the contact never objected": false,
@@ -262,6 +271,8 @@ func TestALeadReceiptToASharedAddressIsDecidedOnTheLead(t *testing.T) {
 
 // Retention anonymizing a lead parks its waiting receipt and takes back the
 // notice that the receipt is overdue.
+//
+//testdb:serial registers into a process-wide unit registry
 func TestRetentionAnonymizingALeadParksItsReceiptAndRetractsItsNotice(t *testing.T) {
 	l := receiptLane(t, receiptOwed)
 	lead := l.refusingLead(t, new(leadReceiptAddress))
@@ -297,6 +308,8 @@ func TestRetentionAnonymizingALeadParksItsReceiptAndRetractsItsNotice(t *testing
 
 // A mail filed under a lead may only go to an address the lead holds. The pin
 // narrows who a message is about and never reaches somebody new.
+//
+//testdb:serial registers into a process-wide unit registry
 func TestAMailFiledUnderALeadIsRefusedToAnAddressTheLeadDoesNotHold(t *testing.T) {
 	l := receiptLane(t, receiptOwed)
 	lead := l.refusingLead(t, new(leadReceiptAddress))
@@ -326,6 +339,7 @@ func TestAMailFiledUnderALeadIsRefusedToAnAddressTheLeadDoesNotHold(t *testing.T
 	}
 }
 
+//testdb:serial registers into a process-wide unit registry
 func TestAQueuedLeadReceiptFollowsItsPromotedSubject(t *testing.T) {
 	l := receiptLane(t, receiptOwed)
 	lead := l.refusingLead(t, new(leadReceiptAddress))
@@ -349,6 +363,7 @@ func TestAQueuedLeadReceiptFollowsItsPromotedSubject(t *testing.T) {
 	}
 }
 
+//testdb:serial registers into a process-wide unit registry
 func TestAQueuedLeadReceiptFollowsItsMergedSubject(t *testing.T) {
 	l := receiptLane(t, receiptOwed)
 	lead := l.refusingLead(t, new(leadReceiptAddress))
@@ -367,6 +382,7 @@ func TestAQueuedLeadReceiptFollowsItsMergedSubject(t *testing.T) {
 	}
 }
 
+//testdb:serial registers into a process-wide unit registry
 func TestLeadAnonymizationPreservesTheAlreadySentCorrespondence(t *testing.T) {
 	l := receiptLane(t, receiptOwed)
 	lead := l.refusingLead(t, new(leadReceiptAddress))
@@ -393,6 +409,7 @@ func TestLeadAnonymizationPreservesTheAlreadySentCorrespondence(t *testing.T) {
 	}
 }
 
+//testdb:serial registers into a process-wide unit registry
 func TestALegacySharedMailboxKeepsThePinnedLeadsCountry(t *testing.T) {
 	l := receiptLane(t, receiptOwed)
 	lead := l.refusingLead(t, new(leadReceiptAddress))
@@ -413,6 +430,7 @@ func TestALegacySharedMailboxKeepsThePinnedLeadsCountry(t *testing.T) {
 	}
 }
 
+//testdb:serial registers into a process-wide unit registry
 func TestAReceiptStagedAfterPromotionKeepsItsLeadPin(t *testing.T) {
 	l := receiptLane(t, receiptOwed)
 	lead := l.refusingLead(t, new(leadReceiptAddress))

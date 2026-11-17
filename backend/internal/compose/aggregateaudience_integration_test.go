@@ -39,6 +39,7 @@ import (
 // A test that calls its own duplicate helper instead of the real
 // strengthInputs query can go green over a leak the query itself still has.
 func TestAHeldMessageIsNotCountedInRelationshipStrength(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := seedLinkedContact(t, e, "anwalt@kanzlei.example")
 	contactID := ids.From[ids.ContactKind](contact)
@@ -88,6 +89,7 @@ func TestAHeldMessageIsNotCountedInRelationshipStrength(t *testing.T) {
 // read behind GET /contacts/{id}/360. The dates count the messages the caller
 // can open, so a held message outside the caller's audience must not move them.
 func TestAHeldMessageDoesNotMoveLastTouch(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := seedLinkedContact(t, e, "spaet@kanzlei.example")
 	contactID := ids.From[ids.ContactKind](contact)
@@ -144,6 +146,7 @@ func containsActivityID(list []ids.ActivityID, want ids.UUID) bool {
 }
 
 func TestAHeldSenderIsNotStagedForReview(t *testing.T) {
+	t.Parallel()
 	// The review queue is a shared surface. Staging a held sender puts their
 	// address and display name in front of colleagues who cannot read the
 	// message it came from, and asks them to decide about a correspondent they
@@ -258,6 +261,7 @@ func retireUnsure(t *testing.T, e *integration.Env, id ids.UUID) {
 // somebody else's entirely — and the relationship brief repeats the claim in
 // words, which is where a reader meets it.
 func TestLastInboundNamesTheSenderNotEveryoneOnTheThread(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	recipient := seedLinkedContact(t, e, "recipient@example.test")
 	sender := seedLinkedContact(t, e, "sender@example.test")

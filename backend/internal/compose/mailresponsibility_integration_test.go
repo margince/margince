@@ -26,6 +26,7 @@ import (
 )
 
 func TestPersonalWaitingRequiresTheAddressedSeatNotTheRecordOwner(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	at := time.Date(2026, 10, 21, 8, 0, 0, 0, time.UTC)
 	addresses := map[ids.UUID]string{}
@@ -149,6 +150,7 @@ func TestPersonalWaitingRequiresTheAddressedSeatNotTheRecordOwner(t *testing.T) 
 }
 
 func TestCapturedMailboxRoleSurvivesSecondaryToWithoutInventingCcOrBccDuty(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	at := time.Date(2026, 10, 21, 8, 0, 0, 0, time.UTC)
 	var address string

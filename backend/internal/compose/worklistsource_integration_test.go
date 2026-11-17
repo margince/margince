@@ -22,6 +22,7 @@ import (
 )
 
 func TestWorklistCommitmentKeepsItsContactAndReadableSource(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := time.Date(2026, 9, 15, 8, 0, 0, 0, time.UTC)
 	due := now.Add(time.Hour)
@@ -77,6 +78,7 @@ func TestWorklistCommitmentKeepsItsContactAndReadableSource(t *testing.T) {
 }
 
 func TestStandaloneAndCombinedFollowUpsInheritSourceFiling(t *testing.T) {
+	t.Parallel()
 	for _, combined := range []bool{false, true} {
 		t.Run(map[bool]string{false: "standalone", true: "combined"}[combined], func(t *testing.T) {
 			e := integration.Setup(t)
@@ -115,6 +117,7 @@ func TestStandaloneAndCombinedFollowUpsInheritSourceFiling(t *testing.T) {
 }
 
 func TestWorklistApprovalKeepsAnArchivedSourceReachable(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := time.Date(2026, 9, 15, 8, 0, 0, 0, time.UTC)
 	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)

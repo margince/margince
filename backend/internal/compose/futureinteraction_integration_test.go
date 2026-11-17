@@ -26,6 +26,7 @@ import (
 )
 
 func TestAMeetingAheadIsNoGraphEdgesLastInteraction(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := time.Now().UTC().Truncate(time.Second)
 	dana := contactWithEmail(t, e, "Dana Ahead", "dana@ahead.example")
@@ -59,6 +60,7 @@ func TestAMeetingAheadIsNoGraphEdgesLastInteraction(t *testing.T) {
 }
 
 func TestTheContactPageReadsLastTouchByItsOwnClock(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := seedLinkedContact(t, e, "uhr@kanzlei.example")
 	pageNow := time.Now().Add(-72 * time.Hour).Truncate(time.Microsecond)

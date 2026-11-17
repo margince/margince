@@ -282,6 +282,7 @@ func (d *digestEnv) seatAddress(t *testing.T) string {
 // that is easy to get backwards: it must leave the attempt UNSPENT, or the tick
 // at five would find the day already taken and nothing would ever be sent.
 func TestOneLocalMorningProducesExactlyOneDigest(t *testing.T) {
+	t.Parallel()
 	d := setupDigest(t)
 	d.raise(t, "A proposal you own was accepted", datasource.EntityRef{})
 	d.raise(t, "A renewal you own is due next week", datasource.EntityRef{})
@@ -338,6 +339,7 @@ func TestOneLocalMorningProducesExactlyOneDigest(t *testing.T) {
 // settings screen offered them would never exist. It waits for the next
 // morning, where the rest of the day's notices join it.
 func TestANoticeRaisedAfterTheMorningWaitsForTheNextOne(t *testing.T) {
+	t.Parallel()
 	d := setupDigest(t)
 	d.raise(t, "A proposal you own was accepted", datasource.EntityRef{})
 	d.recordedAt(t, "digest_suite:A proposal you own was accepted", digestAfternoon)
@@ -382,6 +384,7 @@ func TestANoticeRaisedAfterTheMorningWaitsForTheNextOne(t *testing.T) {
 // The flip happens between the two writes and the tick, through the contacts
 // store's own update, so the notice row is exactly what the product left there.
 func TestTheDigestNeverNamesARecordItsReaderMayNoLongerOpen(t *testing.T) {
+	t.Parallel()
 	d := setupDigest(t)
 	const stillMine = "Aurelia Vance"
 	const handedOver = "Thorne Baxter"
@@ -429,6 +432,7 @@ func TestTheDigestNeverNamesARecordItsReaderMayNoLongerOpen(t *testing.T) {
 // window asks for unread rows, so settling one before the tick takes it out of
 // the morning entirely — including out of the count.
 func TestANoticeReadOnScreenIsNotInThatMorningsDigest(t *testing.T) {
+	t.Parallel()
 	d := setupDigest(t)
 	answered := d.raise(t, "A proposal you own was accepted", datasource.EntityRef{})
 	d.raise(t, "A renewal you own is due next week", datasource.EntityRef{})
@@ -460,6 +464,7 @@ func TestANoticeReadOnScreenIsNotInThatMorningsDigest(t *testing.T) {
 // case a sweep written against the notice table rather than the routing choice
 // would get wrong, because the row is there either way.
 func TestOnlyTheClassesTheReaderBatchedAreInTheDigest(t *testing.T) {
+	t.Parallel()
 	d := setupDigest(t)
 	d.route(t, "lead_sla", notices.DeliveryOff)
 	d.route(t, "capture", notices.DeliveryInApp)
@@ -497,6 +502,7 @@ func TestOnlyTheClassesTheReaderBatchedAreInTheDigest(t *testing.T) {
 // vanishing — the cause is written onto the claimed row, so a missing digest is
 // answerable.
 func TestARefusedDigestSpendsTheMorningAndRecordsWhy(t *testing.T) {
+	t.Parallel()
 	d := setupDigest(t)
 	d.relay.fail = errors.New("relay refused the recipient")
 	d.raise(t, "A proposal you own was accepted", datasource.EntityRef{})
@@ -520,6 +526,7 @@ func TestARefusedDigestSpendsTheMorningAndRecordsWhy(t *testing.T) {
 // The claim is the day's one attempt, and spending it on somebody who asked for
 // nothing would be spending it where it can never be used.
 func TestASeatWithNothingBatchedIsNeverClaimed(t *testing.T) {
+	t.Parallel()
 	d := setupDigest(t)
 	d.route(t, "automation", notices.DeliveryInApp)
 	d.raise(t, "A proposal you own was accepted", datasource.EntityRef{})
@@ -543,6 +550,7 @@ func TestASeatWithNothingBatchedIsNeverClaimed(t *testing.T) {
 // can never receive it would spend it where it can never be used, so a seat
 // reinstated the same morning still gets their digest.
 func TestOnlyAColleagueWithAMorningIsSentADigest(t *testing.T) {
+	t.Parallel()
 	for _, seat := range []struct{ name, mutation string }{
 		{"a deactivated colleague", `UPDATE app_user SET status = 'deactivated' WHERE id = $1`},
 		{"an archived colleague", `UPDATE app_user SET archived_at = now() WHERE id = $1`},
@@ -572,6 +580,7 @@ func TestOnlyAColleagueWithAMorningIsSentADigest(t *testing.T) {
 // notice's subject is written by producers that accept a newline — the store
 // bounds its length and nothing strips its structure.
 func TestTheDigestCarriesNoLineANoticeForged(t *testing.T) {
+	t.Parallel()
 	d := setupDigest(t)
 	d.raise(t, "Quota reached\nFrom: finance@margince.test", datasource.EntityRef{})
 
@@ -596,6 +605,7 @@ func TestTheDigestCarriesNoLineANoticeForged(t *testing.T) {
 }
 
 func TestDigestIncludesWorkBeforeTheRecipientsMorning(t *testing.T) {
+	t.Parallel()
 	d := setupDigest(t)
 	subject := "The quote was approved before your working day"
 	d.raise(t, subject, datasource.EntityRef{})

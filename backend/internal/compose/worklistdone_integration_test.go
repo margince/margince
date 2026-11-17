@@ -30,6 +30,7 @@ import (
 )
 
 func TestADealAtRiskMarkedDoneLeavesTheReadersDayOnly(t *testing.T) {
+	t.Parallel()
 	e := setupVerdicts(t)
 	at := clocktest.Now(t)
 	svc := newAttentionService(e.Pool, approvals.NewService(e.DB()), func() time.Time { return at })

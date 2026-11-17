@@ -45,6 +45,7 @@ func countContactsWithEmail(ctx context.Context, t *testing.T, e *integration.En
 }
 
 func TestPhotoCardsBecomeApprovalsAndCreateNothingUntilApproved(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	entries := photoCards()
@@ -115,6 +116,7 @@ func stagePhotoCard(ctx context.Context, t *testing.T, e *integration.Env, entry
 }
 
 func TestPhotoCardsShowTheNameTheApprovalWrites(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	row := stagePhotoCard(ctx, t, e, contacts.VCardEntry{
@@ -142,6 +144,7 @@ func TestPhotoCardsShowTheNameTheApprovalWrites(t *testing.T) {
 // A card is proposed while its address is free. A colleague then files that
 // address, and the approval must not create a second contact on top of it.
 func TestPhotoCardsApprovedAfterTheAddressWasTakenCreateNothing(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	row := stagePhotoCard(ctx, t, e, photoCards()[0])

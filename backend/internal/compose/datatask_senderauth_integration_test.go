@@ -18,6 +18,7 @@ import (
 )
 
 func TestDirectSenderCorrectionRestoresOnlyProviderProofFromStoredOriginals(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	now := clocktest.Now(t)

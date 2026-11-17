@@ -50,6 +50,7 @@ func noticeCaseState(t *testing.T, e *integration.Env, caseID ids.UUID) string {
 // A withdrawn contact is no longer processed as business data, so the duty it
 // owed must not stay on the worklist with a deadline.
 func TestAPersonalVerdictEndsTheNoticeDutyOfTheContactItWithdraws(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const aunt = "aunt@family.test"
 	activityID := seedHeldThreadMail(t, e, "thread-family", aunt, "Geburtstag")
@@ -66,6 +67,7 @@ func TestAPersonalVerdictEndsTheNoticeDutyOfTheContactItWithdraws(t *testing.T) 
 
 // A contact the verdict keeps keeps its duty too.
 func TestAPersonalVerdictLeavesTheDutyOfAContactItKeeps(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const both = "cousin@family.test"
 	businessActivity := seedHeldThreadMail(t, e, "thread-business", both, "Angebot")
