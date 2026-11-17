@@ -1,4 +1,10 @@
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import {
+  type ReactNode,
+  useEffect,
+  useEffectEvent,
+  useRef,
+  useState,
+} from "react";
 import { Button } from "../design-system/atoms";
 import {
   type ListChip,
@@ -284,9 +290,16 @@ export function ListTable<Row>({
     }
   }, [query.q]);
 
-  // A word still settling when the reader leaves must not land on where they
-  // went. That covers another entry (Back, Forward, a link) and a page replaced
-  // in place (a redirect). A dial this list turns keeps both.
+  // A word still settling when the reader leaves must not land where they went:
+  // another entry (Back, Forward, a link) or a page replaced in place. A dial
+  // this list turns keeps both. The box takes the word of the address it was
+  // drawn for, which a list held by the leave question still shows.
+  const dropPendingWord = useEffectEvent(() => {
+    const own = ownDials(params, state.paramScope).get("q") ?? "";
+    committed.current = own;
+    typed.current = own;
+    setLocalSearch(own);
+  });
   useEffect(() => {
     let entry = { hash: globalThis.location.hash, depth: entryDepth() };
     return watchAddress(() => {
@@ -294,15 +307,11 @@ export function ListTable<Row>({
         entryDepth() !== entry.depth ||
         !samePage(globalThis.location.hash, entry.hash);
       entry = { hash: globalThis.location.hash, depth: entryDepth() };
-      if (!left) {
-        return;
+      if (left) {
+        dropPendingWord();
       }
-      const live = ownDials(currentParams(), state.paramScope).get("q") ?? "";
-      committed.current = live;
-      typed.current = live;
-      setLocalSearch(live);
     });
-  }, [state.paramScope]);
+  }, []);
 
   useEffect(() => {
     // Only a word the box has not committed is pending. Any other timer would

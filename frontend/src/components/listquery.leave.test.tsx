@@ -13,6 +13,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { navigateReplacing } from "../lib/router";
+import { ScreenAddress } from "../lib/screenaddress";
 import { currentParams, replaceDial } from "../lib/urlstate";
 import {
   type ListPage,
@@ -47,14 +48,16 @@ function SearchableList() {
   );
 }
 
-function renderList() {
+function renderList(drawnFor?: string) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <SearchableList />
+        <ScreenAddress.Provider value={drawnFor ?? null}>
+          <SearchableList />
+        </ScreenAddress.Provider>
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -177,5 +180,20 @@ describe("a search box the reader is leaving", () => {
     });
 
     expect(globalThis.location.hash).toBe("#/companies?q=acme&sort=name");
+  });
+
+  it("falls back to its own entry's word while the leave question holds it", async () => {
+    globalThis.history.replaceState(null, "", "#/contacts?q=acme");
+    vi.useFakeTimers();
+    renderList("#/contacts?q=acme");
+    const box = screen.getByPlaceholderText("Search");
+    fireEvent.change(box, { target: { value: "acme gmbh" } });
+
+    backLandsOn("#/companies?q=brandt");
+    await act(async () => {
+      globalThis.dispatchEvent(new PopStateEvent("popstate"));
+    });
+
+    expect(screen.getByDisplayValue("acme")).toBe(box);
   });
 });
