@@ -706,21 +706,39 @@ describe("LeadScreen — owner display + assign to me (P-11)", () => {
     expect(owner).toHaveAccessibleDescription(reason);
   });
 
-  it("hides Assign to me when the lead is already owned by the current user", async () => {
-    const { urls } = stubFetchWithMe(
-      async () => jsonResponse({ ...lead, owner_id: "u-9" }),
-      "u-9",
-    );
+  it("writes nothing when the viewer picks themselves on a lead they own", async () => {
+    const writes: string[] = [];
+    stubFetchWithMe(async (url, method) => {
+      if (method !== "GET") {
+        writes.push(`${method} ${new URL(url).pathname}`);
+      }
+      if (url.includes("/users")) {
+        return jsonResponse({
+          data: [{ id: "u-9", display_name: "Me" }],
+          page: { next_cursor: null, has_more: false },
+        });
+      }
+      return jsonResponse({ ...lead, owner_id: "u-9" });
+    }, "u-9");
     render(<LeadScreen id="l-1" />);
+    const user = userEvent.setup();
 
-    // LeadScreen subscribes to the /me probe up front, so a lead the viewer
-    // owns settles to the "You" owner line once /me resolves. Waiting on that,
-    // not the transient raw owner id, makes the self-assign assertion reliable.
     await waitFor(() => expect(screen.getByText("You")).toBeTruthy());
-    await waitFor(() =>
-      expect(urls.some((url) => url.endsWith("/v1/me"))).toBe(true),
+    await user.click(
+      await screen.findByRole("button", { name: "Change owner" }),
     );
-    expect(screen.queryByRole("button", { name: "Assign to me" })).toBeNull();
+    const own = await screen.findByRole("option", { name: "Me" });
+    expect(own).toHaveAttribute("aria-selected", "true");
+    await user.click(own);
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(
+      writes.filter(
+        (write) =>
+          write.endsWith("/records/lead/l-1/claim") ||
+          write === "PATCH /v1/leads/l-1",
+      ),
+    ).toEqual([]);
   });
 });
 

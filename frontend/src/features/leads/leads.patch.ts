@@ -7,6 +7,13 @@ import { useClaimRecord } from "../../lib/claimrecord";
 import { throwProblem, unwrap } from "../../lib/problem";
 import type { Lead, UpdateLeadRequest } from "./leads";
 
+/** The lead as the reader saw it when the writing control opened. */
+type LeadAsOpened = Readonly<{
+  version?: number;
+  owner_id?: unknown;
+  archived_at?: unknown;
+}>;
+
 /**
  * One write's variables: what to change, and the record it is changing.
  *
@@ -16,13 +23,6 @@ import type { Lead, UpdateLeadRequest } from "./leads";
  * reads the render it closes over, which after React Query's passive re-arm is
  * not always the one on screen.
  */
-/** The lead as the reader saw it when the writing control opened. */
-type LeadAsOpened = Readonly<{
-  version?: number;
-  owner_id?: unknown;
-  archived_at?: unknown;
-}>;
-
 type LeadWrite = {
   body: UpdateLeadRequest;
   version: number;
