@@ -210,6 +210,7 @@ func (h Handlers) SetControllerParticulars(w http.ResponseWriter, r *http.Reques
 		ObjectionRoute:    valueOr(req.ObjectionRoute),
 		AdvertiserContact: valueOr(req.AdvertiserContact),
 		PrivacyPage:       valueOr(req.PrivacyPage),
+		ArchivePurpose:    valueOr(req.ArchivePurpose),
 		Translations:      particularsTranslationsFrom(req.Translations),
 	}
 	// THE READ GATE FIRST, before anything is written. The response echoes the
@@ -269,6 +270,7 @@ func wireParticulars(p ControllerParticulars) crmcontracts.ControllerParticulars
 		ObjectionRoute:    &p.ObjectionRoute,
 		AdvertiserContact: &p.AdvertiserContact,
 		PrivacyPage:       &p.PrivacyPage,
+		ArchivePurpose:    &p.ArchivePurpose,
 		Translations:      wireTranslations(p.Translations),
 	}
 }
@@ -287,6 +289,7 @@ func particularsTranslationsFrom(wire *[]crmcontracts.ControllerParticularsTrans
 			PrivacyContact:    valueOr(t.PrivacyContact),
 			ObjectionRoute:    valueOr(t.ObjectionRoute),
 			AdvertiserContact: valueOr(t.AdvertiserContact),
+			ArchivePurpose:    valueOr(t.ArchivePurpose),
 		})
 	}
 	return out
@@ -304,6 +307,7 @@ func wireTranslations(translations []ParticularsTranslation) *[]crmcontracts.Con
 			PrivacyContact:    &t.PrivacyContact,
 			ObjectionRoute:    &t.ObjectionRoute,
 			AdvertiserContact: &t.AdvertiserContact,
+			ArchivePurpose:    &t.ArchivePurpose,
 		})
 	}
 	return &out

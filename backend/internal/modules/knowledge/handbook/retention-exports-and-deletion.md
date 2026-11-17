@@ -167,7 +167,7 @@ A new company starts with these retention rules already in place. You can edit a
 | Stored message originals | 90 days | Erase |
 | Daily record of material deals at risk | 90 days | Erase |
 
-Margince does not destroy a record just because it is old. Each starting rule archives, which keeps the record so you can restore it. Or it erases only a second copy, or data made from your records. Those are the stored message originals, the AI call payloads and the daily deal-risk record.
+Margince does not destroy a record just because it is old. Each starting rule archives, which keeps the record so you can restore it. Why the archive keeps captured activity, and how an admin deletes what no longer serves that purpose, is in [The archive and its purpose](the-archive.md). Or it erases only a second copy, or data made from your records. Those are the stored message originals, the AI call payloads and the daily deal-risk record.
 
 **Won deals**, **Saved report editions**, **Call transcripts** and **Contacts with no consent and no deal** can also have a rule, but start with none. So can **Records kept by extensions**. Margince does not say when your company should stop keeping a won deal; that is your choice. A rule that erases call transcripts or anonymizes contacts destroys data for good, so only an admin who wants one adds it. To destroy one contact's data, an admin fulfills an erasure request (see "How do I delete a contact permanently?").
 

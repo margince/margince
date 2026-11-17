@@ -45,9 +45,7 @@ var retentionSelectors = map[string]string{
 		WHERE a.archived_at IS NULL
 		  AND a.occurred_at < now() - make_interval(days => $1) -- occurred_at raw: a retention age in days
 		  AND a.created_at < now() - make_interval(days => $1)
-		  ` + correspondenceFloorPredicate(3, 4) + `
-		  AND NOT ` + retentionscope.HeldThroughAnyLink("a.id") + `
-		  AND NOT ` + receiptKept("a.id") + `
+		  ` + unkeptActivitySQL(3, 4) + `
 		LIMIT $2`,
 	"activity/transcript": `SELECT a.id FROM activity a
 		WHERE a.source_system = '` + meetingoutcome.TranscriptSourceSystem + `' AND a.body IS NOT NULL

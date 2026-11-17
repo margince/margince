@@ -126,5 +126,5 @@ func retentionReaching(ctx context.Context, tx pgx.Tx, country CountryReader, sc
 // what the correspondence floor shields, read off the selector itself.
 func floorShields(scope RetentionScope) bool {
 	selector, known := retentionSelectors[scope.selectorKey()]
-	return known && strings.Contains(selector, correspondenceFloorPredicate(3, 4))
+	return known && strings.Contains(selector, excluding(handelsbriefShielded(3, 4)))
 }
