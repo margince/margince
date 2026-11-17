@@ -242,7 +242,7 @@ type CompanySummary struct {
 	Archived     bool
 }
 
-// CompanyQuery pages the companies of the installation by id.
+// CompanyPageQuery pages the companies of the installation by id.
 type CompanyPageQuery struct {
 	ReadPage
 	// IncludeArchived adds the companies that were archived.
