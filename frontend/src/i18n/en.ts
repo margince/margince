@@ -5694,6 +5694,9 @@ export const en = {
   "tags.catalogTruncated":
     "A tag may be missing. Search by name before requesting a new one.",
   "tags.noMatchYouCanCreate": "No tag with that name.",
+  "tags.noneYouCanCreate": "No tags yet. Type a name to create one.",
+  "tags.noneAskForOne":
+    "No tags yet. An administrator or operations user can add one.",
   "tags.createNamed": "Create tag {name}",
   "tags.shortlistInstead": "Add to a Shortlist instead",
   "tags.manage": "Manage tags",
@@ -6787,7 +6790,7 @@ export const en = {
   "bulk.taskDue": "Due date",
   "bulk.taskAssignee": "Assignee",
   "bulk.taskNext": "Preview",
-  "bulk.titleCreateTask": "Create a task for each selected record in {unit}?",
+  "bulk.titleCreateTask": "Create a task for each of the selected {unit}?",
   "bulk.confirmCreateTask": "Create tasks",
   "bulk.stateNewTask": "New task",
   "bulk.stateNoTask": "No new task",

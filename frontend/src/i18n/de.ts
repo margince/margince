@@ -5760,6 +5760,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tags.catalogTruncated":
     "Möglicherweise fehlt ein Tag. Suche nach dem Namen, bevor du ein neues anfragst.",
   "tags.noMatchYouCanCreate": "Kein Tag mit diesem Namen.",
+  "tags.noneYouCanCreate":
+    "Noch keine Tags. Gib einen Namen ein, um eines zu erstellen.",
+  "tags.noneAskForOne":
+    "Noch keine Tags. Admins und Operations können eines erstellen.",
   "tags.createNamed": "Tag {name} erstellen",
   "tags.shortlistInstead": "Stattdessen zu einer Shortlist hinzufügen",
   "tags.manage": "Tags verwalten",
@@ -6831,7 +6835,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "bulk.taskAssignee": "Zuständig",
   "bulk.taskNext": "Vorschau",
   "bulk.titleCreateTask":
-    "Für jeden ausgewählten Datensatz in {unit} eine Aufgabe erstellen?",
+    "Für alle ausgewählten {unit} je eine Aufgabe erstellen?",
   "bulk.confirmCreateTask": "Aufgaben erstellen",
   "bulk.stateNewTask": "Neue Aufgabe",
   "bulk.stateNoTask": "Keine neue Aufgabe",

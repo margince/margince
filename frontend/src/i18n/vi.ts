@@ -5608,6 +5608,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "tags.catalogTruncated":
     "Có thể thiếu một thẻ. Tìm theo tên trước khi yêu cầu thẻ mới.",
   "tags.noMatchYouCanCreate": "Không có thẻ nào tên như vậy.",
+  "tags.noneYouCanCreate": "Chưa có thẻ nào. Nhập tên để tạo thẻ.",
+  "tags.noneAskForOne":
+    "Chưa có thẻ nào. Quản trị viên hoặc thành viên Vận hành có thể thêm thẻ.",
   "tags.createNamed": "Tạo thẻ {name}",
   "tags.shortlistInstead": "Thay vào đó, thêm vào danh sách chọn tay",
   "tags.manage": "Quản lý thẻ",
@@ -6658,8 +6661,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "bulk.taskDue": "Hạn hoàn thành",
   "bulk.taskAssignee": "Giao cho",
   "bulk.taskNext": "Xem trước",
-  "bulk.titleCreateTask":
-    "Tạo một việc cần làm cho mỗi hồ sơ đã chọn trong {unit}?",
+  "bulk.titleCreateTask": "Tạo một việc cần làm cho mỗi {unit} đã chọn?",
   "bulk.confirmCreateTask": "Tạo việc",
   "bulk.stateNewTask": "Việc cần làm mới",
   "bulk.stateNoTask": "Không có việc cần làm mới",

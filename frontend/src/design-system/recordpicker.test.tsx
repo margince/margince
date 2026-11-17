@@ -58,6 +58,24 @@ describe("RecordPicker", () => {
     expect(screen.queryByRole("button", { name: "Anna Weber" })).toBeNull();
   });
 
+  it("says nothing about an empty default answer until a term is typed", async () => {
+    const searchTargets = vi.fn().mockResolvedValue([]);
+    rtlRender(
+      <RecordPicker
+        label="Search…"
+        searchOnFocus
+        searchTargets={searchTargets}
+        onPick={vi.fn()}
+      />,
+    );
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("searchbox"));
+    await waitFor(() => expect(searchTargets).toHaveBeenCalledWith(""));
+    expect(screen.queryByText("No match")).toBeNull();
+    await user.type(screen.getByRole("searchbox"), "acme");
+    expect(await screen.findByText("No match")).toBeTruthy();
+  });
+
   it("ignores a late default answer after the reader types a search", async () => {
     let resolveDefault: ((rows: RecordPickerCandidate[]) => void) | undefined;
     const defaults = new Promise<RecordPickerCandidate[]>((resolve) => {

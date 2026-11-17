@@ -2556,7 +2556,7 @@
   "bulk.confirmRemoveTag": "Gỡ thẻ",
   "bulk.stateTagged": "Đã gắn thẻ",
   "bulk.stateNotTagged": "Chưa gắn thẻ",
-  "bulk.titleCreateTask": "Tạo một việc cần làm cho mỗi hồ sơ đã chọn trong {unit}?",
+  "bulk.titleCreateTask": "Tạo một việc cần làm cho mỗi {unit} đã chọn?",
   "bulk.confirmCreateTask": "Tạo việc",
   "bulk.stateNewTask": "Việc cần làm mới",
   "bulk.stateNoTask": "Không có việc cần làm mới",

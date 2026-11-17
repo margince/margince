@@ -79,6 +79,8 @@ type ListPopoverProps = Readonly<{
   error?: ReactNode;
   /** What an empty list says, where "No match" is not the whole answer. */
   empty?: ReactNode;
+  /** What a list with no options says before a term is typed, for `options`. */
+  none?: ReactNode;
   /**
    * What the reader can do instead when a typed term matches nothing, given
    * that term and `done`. Drawn under the list, outside the live status, so
@@ -211,6 +213,7 @@ function ListSearch({
     list,
     found,
     empty: rows.length === 0,
+    typed: term.trim() !== "",
   });
   return (
     <div className="listpopover">
@@ -324,11 +327,13 @@ function statusOf({
   list,
   found,
   empty,
+  typed,
 }: Readonly<{
   t: ReturnType<typeof useT>;
-  list: Pick<ListPopoverProps, "options" | "search" | "empty">;
+  list: Pick<ListPopoverProps, "options" | "search" | "empty" | "none">;
   found: CandidateSearch<ListPopoverOption>;
   empty: boolean;
+  typed: boolean;
 }>): ReactNode {
   const noMatch = list.empty ?? t("picker.noMatch");
   if (list.search) {
@@ -340,5 +345,8 @@ function statusOf({
   if (list.options === undefined) {
     return t("common.loading");
   }
-  return empty ? noMatch : null;
+  if (!empty) {
+    return null;
+  }
+  return typed ? noMatch : (list.none ?? noMatch);
 }

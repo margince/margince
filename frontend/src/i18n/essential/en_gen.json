@@ -2556,7 +2556,7 @@
   "bulk.confirmRemoveTag": "Remove tag",
   "bulk.stateTagged": "Tagged",
   "bulk.stateNotTagged": "Not tagged",
-  "bulk.titleCreateTask": "Create a task for each selected record in {unit}?",
+  "bulk.titleCreateTask": "Create a task for each of the selected {unit}?",
   "bulk.confirmCreateTask": "Create tasks",
   "bulk.stateNewTask": "New task",
   "bulk.stateNoTask": "No new task",

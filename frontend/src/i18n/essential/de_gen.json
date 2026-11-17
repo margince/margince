@@ -2556,7 +2556,7 @@
   "bulk.confirmRemoveTag": "Tag entfernen",
   "bulk.stateTagged": "Getaggt",
   "bulk.stateNotTagged": "Nicht getaggt",
-  "bulk.titleCreateTask": "Für jeden ausgewählten Datensatz in {unit} eine Aufgabe erstellen?",
+  "bulk.titleCreateTask": "Für alle ausgewählten {unit} je eine Aufgabe erstellen?",
   "bulk.confirmCreateTask": "Aufgaben erstellen",
   "bulk.stateNewTask": "Neue Aufgabe",
   "bulk.stateNoTask": "Keine neue Aufgabe",
