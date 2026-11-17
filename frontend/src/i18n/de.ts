@@ -3413,7 +3413,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "rel.addConfirm.partnerOf": "Partner-Verknüpfung zu {target} hinzufügen.",
   "rel.addConfirm.referredBy": "Empfehlungsverknüpfung zu {target} hinzufügen.",
   "rel.addConfirm.coSellWith": "Co-Selling-Verknüpfung zu {target} hinzufügen.",
-  "rel.addConfirm.worksWith": "Zusammenarbeitsverknüpfung zu {target} hinzufügen.",
+  "rel.addConfirm.worksWith":
+    "Zusammenarbeitsverknüpfung zu {target} hinzufügen.",
   "rel.addConfirm.billingContact":
     "Rechnungskontakt-Verknüpfung zu {target} hinzufügen.",
   "rel.edit": "Beziehung bearbeiten",
