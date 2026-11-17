@@ -107,6 +107,14 @@ func DescribeForClient(spec mcp.ToolSpec) string {
 	switch spec.Tier {
 	case mcp.TierAutoExecute:
 		if spec.RequiredScope == principal.ScopeRead {
+			// A read tool runs at once and says nothing more. The exception is a
+			// tool that asks for the user's yes first. That sentence is surfaced
+			// even under read scope, so a read of sensitive diagnostics is not
+			// called unasked. It names what the read surfaces, not a change a read
+			// never makes.
+			if ask := askUserReading(spec); ask != "" {
+				return fmt.Sprintf("%s (Runs immediately%s.)", spec.Description, ask)
+			}
 			return spec.Description
 		}
 		return fmt.Sprintf("%s (Runs immediately%s; %s.)", spec.Description, askUserFirst(spec), scope)
@@ -124,7 +132,19 @@ func DescribeForClient(spec mcp.ToolSpec) string {
 // askUserFirst is for an MCP client's model only, never the loop agent, which has no one to ask.
 // The server cannot check the yes, and a call a human approves already has it.
 func askUserFirst(spec mcp.ToolSpec) string {
-	const ask = "; the user's yes is needed for %s, so tell them what the call will change and " +
+	return askUserAbout(spec, "what the call will change")
+}
+
+// askUserReading is askUserFirst for a read. A read changes nothing, so the
+// client is told what the call surfaces, not a change it never makes.
+func askUserReading(spec mcp.ToolSpec) string {
+	return askUserAbout(spec, "what the call will surface")
+}
+
+// askUserAbout renders the ask-first sentence. consequence is what the client
+// describes to the user before the yes: a write's change, a read's disclosure.
+func askUserAbout(spec mcp.ToolSpec, consequence string) string {
+	ask := "; the user's yes is needed for %s, so tell them " + consequence + " and " +
 		"get it before calling, unless they asked for this call themselves"
 	if len(spec.Actions) == 0 {
 		if !spec.AskUserFirst || spec.Tier == mcp.TierConfirmationRequired {
