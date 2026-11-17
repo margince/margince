@@ -12,8 +12,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/testdb"
 )
 
-//testdb:serial binds the process-wide configuration (config.Bind)
 func TestBootAppliesTheConfiguredReadAllowance(t *testing.T) {
+	t.Parallel()
 	cfg, _, err := loadAPIConfig(nil, []string{"MARGINCE_ENV=dev", "MARGINCE_DSN=" + testdb.For(t).AppDSN, "MARGINCE_DATABASE_READ_CONCURRENCY=1"})
 	if err != nil {
 		t.Fatal(err)

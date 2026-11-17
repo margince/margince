@@ -27,6 +27,7 @@ import (
 //testdb:serial binds the process-wide configuration (config.Bind)
 func TestDataTasksExecuteRunsInProcessAndQueuesNothing(t *testing.T) {
 	dsn := migratedDatabase(t, "_dtexec")
+	t.Cleanup(func() { compose.UseConfig(nil) })
 	savedOp, savedExec := dataTaskOperation, dataTaskExecutor
 	t.Cleanup(func() { dataTaskOperation, dataTaskExecutor = savedOp, savedExec })
 	dataTaskOperation = func(context.Context, *pgxpool.Pool, string) ([]datatask.Progress, error) {

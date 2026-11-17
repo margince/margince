@@ -113,12 +113,13 @@ func workerTestPool(t *testing.T) *pgxpool.Pool {
 	return pool
 }
 
-// bootSettings are the worker's own settings, as a bare dev environment loads
+// bootSettings are the worker's own settings, as a bare dev environment boots
 // them. The boot then reads every setting it asks for from its real registry.
 // The DSN is only required here; the test hands the boot its own pool.
 func bootSettings(t *testing.T) *config.Config {
 	t.Helper()
-	_, loaded, err := loadWorkerConfig(nil, []string{"MARGINCE_ENV=dev", "MARGINCE_DSN=postgres://boot-test"})
+	t.Cleanup(func() { compose.UseConfig(nil) })
+	_, loaded, err := bootWorkerConfig(nil, []string{"MARGINCE_ENV=dev", "MARGINCE_DSN=postgres://boot-test"})
 	if err != nil {
 		t.Fatalf("loading the worker's settings: %v", err)
 	}

@@ -141,8 +141,8 @@ func tableExists(t *testing.T, dsn, table string) bool {
 	return exists
 }
 
-//testdb:serial binds the process-wide configuration (config.Bind)
 func TestRecreateDBCopiesTheTemplateAndStartsOverOnAnExistingDatabase(t *testing.T) {
+	t.Parallel()
 	maint, base, withDB := testDSNs(t)
 	tpl, clone := base+"_verbs_tpl", base+"_verbs_clone"
 	// Separate cleanups: a Fatalf in one (mustMigrate) must not skip the
@@ -165,8 +165,8 @@ func TestRecreateDBCopiesTheTemplateAndStartsOverOnAnExistingDatabase(t *testing
 	}
 }
 
-//testdb:serial binds the process-wide configuration (config.Bind)
 func TestDropDBSucceedsWhenTheDatabaseIsAbsent(t *testing.T) {
+	t.Parallel()
 	maint, base, _ := testDSNs(t)
 	name := base + "_verbs_never_created"
 	// drop_clone runs on every teardown path, including after a failed
@@ -177,8 +177,8 @@ func TestDropDBSucceedsWhenTheDatabaseIsAbsent(t *testing.T) {
 	}
 }
 
-//testdb:serial binds the process-wide configuration (config.Bind)
 func TestDropDBTerminatesLingeringSessions(t *testing.T) {
+	t.Parallel()
 	// Teardown runs right after a test process exits, when its backends may
 	// not have gone yet — and drop_clone now propagates failures, so a drop
 	// that could lose that race would fail the lane flakily. WITH (FORCE)
@@ -209,8 +209,8 @@ func TestDropDBTerminatesLingeringSessions(t *testing.T) {
 	}
 }
 
-//testdb:serial binds the process-wide configuration (config.Bind)
 func TestDropDBDropsTheTestCopiesNamedAfterIt(t *testing.T) {
+	t.Parallel()
 	maint, base, _ := testDSNs(t)
 	name := base + "_verbs_package"
 	leaked, unrelated := name+"_4242_7", name+"_keep"
@@ -230,8 +230,8 @@ func TestDropDBDropsTheTestCopiesNamedAfterIt(t *testing.T) {
 	}
 }
 
-//testdb:serial binds the process-wide configuration (config.Bind)
 func TestDBExistsPrintsTheLiteralAnswerTheLaneParses(t *testing.T) {
+	t.Parallel()
 	// ensure_template string-compares this stdout — it is a wire contract
 	// between the binary and scripts/lib-testdb.sh, not cosmetics.
 	maint, base, _ := testDSNs(t)
@@ -247,8 +247,8 @@ func TestDBExistsPrintsTheLiteralAnswerTheLaneParses(t *testing.T) {
 	}
 }
 
-//testdb:serial binds the process-wide configuration (config.Bind)
 func TestDBVerbsQuoteNamesThatNeedIt(t *testing.T) {
+	t.Parallel()
 	maint, base, _ := testDSNs(t)
 	// Uppercase folds and the embedded quote breaks if the name is spliced
 	// unquoted; the exact string must round-trip create → probe → drop.
@@ -265,8 +265,8 @@ func TestDBVerbsQuoteNamesThatNeedIt(t *testing.T) {
 	}
 }
 
-//testdb:serial binds the process-wide configuration (config.Bind)
 func TestDBVerbsRejectNamesTheServerWouldTruncate(t *testing.T) {
+	t.Parallel()
 	// Postgres truncates identifiers over 63 bytes to their prefix, so an
 	// unchecked long --name would drop/create the database that owns that
 	// prefix — a database the caller never named. The verbs must refuse
@@ -303,8 +303,8 @@ func TestDBVerbsRejectNamesTheServerWouldTruncate(t *testing.T) {
 	}
 }
 
-//testdb:serial binds the process-wide configuration (config.Bind)
 func TestRecreateDBRefusesATemplateNamingTheDatabaseItself(t *testing.T) {
+	t.Parallel()
 	// recreate-db drops before it creates, so --template equal to --name
 	// would destroy the template and then copy from nothing. The refusal
 	// must come before the drop: the existing database survives.
@@ -323,8 +323,8 @@ func TestRecreateDBRefusesATemplateNamingTheDatabaseItself(t *testing.T) {
 	}
 }
 
-//testdb:serial binds the process-wide configuration (config.Bind)
 func TestDBVerbsRequireAName(t *testing.T) {
+	t.Parallel()
 	maint, _, _ := testDSNs(t)
 	for _, verb := range []string{"recreate-db", "drop-db", "db-exists"} {
 		if _, err := migrateCmd(t, verb, "--dsn", maint); err == nil || !strings.Contains(err.Error(), "--name") {
@@ -353,9 +353,8 @@ func TestDBVerbsRequireAName(t *testing.T) {
 // import that feeds nothing a compile error. Neither is a substitute for the
 // other: this test proves the namespaces are applied, the arch test proves
 // they are the composed set's.
-//
-//testdb:serial binds the process-wide configuration (config.Bind)
 func TestUpAppliesAnExtensionNamespaceAndTheRiverIndex(t *testing.T) {
+	t.Parallel()
 	maint, base, withDB := testDSNs(t)
 	name := base + "_up_ext"
 	t.Cleanup(func() { mustMigrate(t, "drop-db", "--dsn", maint, "--name", name) })
@@ -427,9 +426,8 @@ func TestUpAppliesAnExtensionNamespaceAndTheRiverIndex(t *testing.T) {
 // companies with `archived_at IS NULL`, and a probe that merely counted rows
 // would call an archived-only installation provisioned and withhold the
 // credential that could still bootstrap it.
-//
-//testdb:serial binds the process-wide configuration (config.Bind)
 func TestWorkspaceExistsAnswersTheEntrypointsQuestion(t *testing.T) {
+	t.Parallel()
 	dsn := migratedDatabase(t, "_company_probe")
 
 	if out := mustMigrate(t, "workspace-exists", "--dsn", dsn); out != "false\n" {

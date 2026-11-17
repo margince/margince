@@ -16,7 +16,7 @@ import (
 // the process's one binding, which every other load here also writes.
 func TestTheAPILoadLocksAStoredSettingItsEnvironmentSets(t *testing.T) {
 	t.Cleanup(func() { compose.UseConfig(nil) })
-	_, loaded, err := loadAPIConfig([]string{"--dsn", testDSN}, []string{"MARGINCE_INSTALLATION_SEND_RATE_LIMIT=7"})
+	_, loaded, err := bootAPIConfig([]string{"--dsn", testDSN}, []string{"MARGINCE_INSTALLATION_SEND_RATE_LIMIT=7"})
 	if err != nil {
 		t.Fatal(err)
 	}
