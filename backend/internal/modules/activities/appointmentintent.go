@@ -7,9 +7,8 @@ import (
 	"regexp"
 	"strings"
 
-	"golang.org/x/text/unicode/norm"
-
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/evidencefold"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
@@ -37,7 +36,7 @@ var appointmentChange = regexp.MustCompile(`(?i)` + strings.Join([]string{
 // evidence when the anchor is that meeting. Nothing otherwise, because silence
 // leaves the reason to the thread or to the sender.
 func draftedReason(intent string, anchor ids.UUID, kind crmcontracts.ActivityKind) (commsauthz.Category, commsauthz.Evidence) {
-	if !appointmentChange.MatchString(norm.NFC.String(intent)) {
+	if !appointmentChange.MatchString(evidencefold.Normalize(intent)) {
 		return "", commsauthz.Evidence{}
 	}
 	if kind == crmcontracts.ActivityKindMeeting {

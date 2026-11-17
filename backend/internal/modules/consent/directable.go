@@ -67,7 +67,7 @@ func undirectable(refusal RefusedRecipient) bool {
 
 // refusalsAsShown holds a decision to the refusals its director read. A resend
 // can rewrite the review's refusals while it waits, so a list that no longer
-// matches is stale. A subject's own stop is passed only by a person who named
+// matches is stale. A subject's own stop is passed only by a user who named
 // what they were shown: never on a list left out, and never by an agent.
 func refusalsAsShown(ctx context.Context, shown []string, refusals []RefusedRecipient) error {
 	if shown != nil {
@@ -84,7 +84,7 @@ func refusalsAsShown(ctx context.Context, shown []string, refusals []RefusedReci
 	}
 	for _, r := range refusals {
 		if commsauthz.LevelForReason(r.ReasonCode) == commsauthz.LevelSubject {
-			return fmt.Errorf("a person who read the refusals decides past the recipient's own stop: %w",
+			return fmt.Errorf("a user who read the refusals decides past the recipient's own stop: %w",
 				apperrors.ErrPermissionDenied)
 		}
 	}

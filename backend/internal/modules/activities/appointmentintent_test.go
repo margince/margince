@@ -6,8 +6,6 @@ package activities
 import (
 	"testing"
 
-	"golang.org/x/text/unicode/norm"
-
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -21,7 +19,7 @@ func TestAnInstructionToMoveAnAppointmentNamesARequestedFollowup(t *testing.T) {
 		"einen neuen Termin vorschlagen", "dời lịch hẹn sang thứ Năm", "đổi giờ họp", "hoãn cuộc họp",
 		"moving our meeting to Friday", "can we move it to Friday?", "push the meeting back",
 		"bring the meeting forward", "Terminverschiebung anfragen", "Neuer Termin am Freitag",
-		"Das Gespräch auf nächste Woche verschieben", norm.NFD.String("dời lịch hẹn"),
+		"Das Gespräch auf nächste Woche verschieben", "do\u031b\u0300i li\u0323ch he\u0323n",
 	}
 	for _, intent := range moves {
 		if got, _ := draftedReason(intent, ids.NewV7(), crmcontracts.ActivityKindEmail); got != commsauthz.CategoryRequestedFollowup {
