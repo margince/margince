@@ -127,9 +127,9 @@ function seeAllCommand(searched: string, t: Translator): Command | null {
 
 function builtinRows(
   kind: CoreSearchHitType | null,
-  matched: Command[],
+  matched: readonly Command[],
   setting: Command | null,
-): Command[] {
+): readonly Command[] {
   if (kind) return [];
   return setting ? [...matched, setting] : matched;
 }
