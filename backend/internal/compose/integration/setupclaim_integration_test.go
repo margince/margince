@@ -273,35 +273,22 @@ func TestAMalformedClaimBodyIsRefusedWithoutTouchingTheToken(t *testing.T) {
 // TestAnUnprovisionedBootMintsAndAnnouncesTheToken covers the boot half: an
 // empty database with no configured bootstrap_admin must not fail to start, and
 // must leave the operator a credential they can actually find.
-//
-//testdb:serial sets the environment or working directory, which Go refuses in a parallel test
 func TestAnUnprovisionedBootMintsAndAnnouncesTheToken(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	ctx := context.Background()
 	if _, err := e.Owner.Exec(ctx, `UPDATE workspace SET archived_at = now() WHERE archived_at IS NULL`); err != nil {
 		t.Fatal(err)
 	}
-	// The token file is written relative to the process working directory, so
-	// the test owns one for the duration.
+	// The token file is written relative to the boot's working directory, so
+	// the test hands it one of its own.
 	dir := t.TempDir()
-	wd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Chdir(dir); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() {
-		if err := os.Chdir(wd); err != nil {
-			t.Errorf("restoring the working directory: %v", err)
-		}
-	})
 
 	var logged strings.Builder
 	log := slog.New(slog.NewTextHandler(&logged, nil))
 	// No BootstrapAdmin: this is the claim path.
 	cfg := deployconfig.Bootstrap{Version: 1}
-	if err := compose.EnsureInstallation(ctx, e.Pool, log, cfg); err != nil {
+	if err := compose.EnsureInstallationIn(ctx, dir, e.Pool, log, cfg); err != nil {
 		t.Fatalf("an unprovisioned boot with no bootstrap_admin failed: %v — it must mint a token and serve, not refuse to start", err)
 	}
 
@@ -345,7 +332,7 @@ func TestAnUnprovisionedBootMintsAndAnnouncesTheToken(t *testing.T) {
 
 	// A second boot must not replace it: the operator may already have read and
 	// handed on the first.
-	if err := compose.EnsureInstallation(ctx, e.Pool, log, cfg); err != nil {
+	if err := compose.EnsureInstallationIn(ctx, dir, e.Pool, log, cfg); err != nil {
 		t.Fatalf("a second unprovisioned boot failed: %v", err)
 	}
 	again, err := os.ReadFile(filepath.Join(dir, "config", "margince-setup-token"))
@@ -365,16 +352,14 @@ func TestAnUnprovisionedBootMintsAndAnnouncesTheToken(t *testing.T) {
 // The logged value is proven to BE the credential by claiming with it, not by
 // matching the attribute key. A test that greps for "setup_token" passes against
 // a line that logs a truncated value, a placeholder, or the hash.
-//
-//testdb:serial sets the environment or working directory, which Go refuses in a parallel test
 func TestTheSetupTokenReachesTheLogOnlyWhenTheFileCouldNotBeWritten(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	ctx := context.Background()
 	if _, err := e.Owner.Exec(ctx, `UPDATE workspace SET archived_at = now() WHERE archived_at IS NULL`); err != nil {
 		t.Fatal(err)
 	}
 	dir := t.TempDir()
-	t.Chdir(dir)
 	// Get to the path first, which is what makes the write fail: the writer
 	// opens O_EXCL and refuses any existing final component.
 	if err := os.MkdirAll(filepath.Join(dir, "config"), 0o700); err != nil {
@@ -386,7 +371,7 @@ func TestTheSetupTokenReachesTheLogOnlyWhenTheFileCouldNotBeWritten(t *testing.T
 
 	var logged strings.Builder
 	log := slog.New(slog.NewJSONHandler(&logged, nil))
-	if err := compose.EnsureInstallation(ctx, e.Pool, log, deployconfig.Bootstrap{Version: 1}); err != nil {
+	if err := compose.EnsureInstallationIn(ctx, dir, e.Pool, log, deployconfig.Bootstrap{Version: 1}); err != nil {
 		t.Fatalf("a boot whose token file could not be written must still serve, so the operator can claim: %v", err)
 	}
 

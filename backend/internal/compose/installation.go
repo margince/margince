@@ -45,6 +45,12 @@ import (
 // Restarts are idempotent — bootstrap values never reconcile into an
 // existing workspace.
 func EnsureInstallation(ctx context.Context, pool *pgxpool.Pool, log *slog.Logger, cfg deployconfig.Bootstrap) error {
+	return EnsureInstallationIn(ctx, "", pool, log, cfg)
+}
+
+// EnsureInstallationIn is EnsureInstallation leaving the setup token under
+// workDir; empty is the process working directory.
+func EnsureInstallationIn(ctx context.Context, workDir string, pool *pgxpool.Pool, log *slog.Logger, cfg deployconfig.Bootstrap) error {
 	var create func() (identity.InstallationBootstrap, error)
 	if b := cfg.BootstrapAdmin; b != nil {
 		if cfg.Workspace.Name == "" {
@@ -85,7 +91,7 @@ func EnsureInstallation(ctx context.Context, pool *pgxpool.Pool, log *slog.Logge
 		// it is the claim path (ADR-0105). Boot mints the token the first human
 		// presents and CONTINUES — the api has to serve for the claim to be
 		// possible at all, and every tenant route answers 503 until it happens.
-		return announceSetupToken(ctx, svc, log)
+		return announceSetupToken(ctx, svc, log, filepath.Join(workDir, setupTokenFile))
 	}
 	if err != nil {
 		return err
@@ -151,16 +157,16 @@ const setupTokenFile = "config/margince-setup-token" // #nosec G101 -- a path, n
 // An already-outstanding token is reported, never replaced: a boot that minted
 // a fresh one would silently invalidate the token an operator had already read
 // and handed on.
-func announceSetupToken(ctx context.Context, svc *identity.Service, log *slog.Logger) error {
+func announceSetupToken(ctx context.Context, svc *identity.Service, log *slog.Logger, tokenFile string) error {
 	raw, err := svc.MintSetupToken(ctx)
 	if errors.Is(err, identity.ErrSetupTokenExists) {
-		announceOutstandingToken(log)
+		announceOutstandingToken(log, tokenFile)
 		return nil
 	}
 	if err != nil {
 		return fmt.Errorf("compose: minting the setup token for an unprovisioned installation: %w", err)
 	}
-	path, writeErr := writeSetupTokenFile(raw)
+	path, writeErr := writeSetupTokenFile(raw, tokenFile)
 	// The credential reaches the log only when the file could not hold it. The
 	// two channels are not interchangeable: the 0600 file has one reader and a
 	// lifetime, while the log is read by everyone the log store admits and keeps
@@ -197,10 +203,10 @@ func announceSetupToken(ctx context.Context, svc *identity.Service, log *slog.Lo
 // Either way the token itself is not reprinted: it is not in reach here, and the
 // replacement command is the honest end of the trail once both channels are
 // gone.
-func announceOutstandingToken(log *slog.Logger) {
-	abs, pathErr := filepath.Abs(setupTokenFile)
+func announceOutstandingToken(log *slog.Logger, tokenFile string) {
+	abs, pathErr := filepath.Abs(tokenFile)
 	if pathErr != nil {
-		abs = setupTokenFile
+		abs = tokenFile
 	}
 	if _, statErr := os.Stat(abs); statErr != nil {
 		log.Warn("installation is unprovisioned and a setup token is already outstanding, but no readable token file is here — an earlier boot announced it in its own log instead, or the file has since gone. Issue a replacement with `margince-migrate setup-token`",
@@ -233,10 +239,10 @@ func announceOutstandingToken(log *slog.Logger) {
 // directory itself still redirects the whole path. What is defended is the one
 // step an attacker who can write the working tree before first boot actually
 // takes.
-func writeSetupTokenFile(raw string) (path string, err error) {
-	abs, err := filepath.Abs(setupTokenFile)
+func writeSetupTokenFile(raw, tokenFile string) (path string, err error) {
+	abs, err := filepath.Abs(tokenFile)
 	if err != nil {
-		return setupTokenFile, err
+		return tokenFile, err
 	}
 	if err := ownTokenDirectory(filepath.Dir(abs)); err != nil {
 		return abs, err
@@ -266,7 +272,7 @@ func writeSetupTokenFile(raw string) (path string, err error) {
 // walk from a directory handle. The case defended here is the one #1579
 // verified empirically.
 func ownTokenDirectory(dir string) error {
-	// #nosec G703 -- dir is filepath.Dir of filepath.Abs(setupTokenFile), a compile-time constant; no request or configuration value reaches this path
+	// #nosec G703 -- dir is filepath.Dir of the token path the boot builds from setupTokenFile; no request or configuration value reaches this path
 	info, err := os.Lstat(dir)
 	switch {
 	case os.IsNotExist(err):

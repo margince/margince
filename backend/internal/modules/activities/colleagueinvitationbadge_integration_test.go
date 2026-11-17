@@ -7,6 +7,7 @@ package activities
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -15,17 +16,28 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// colleagueDomainBound binds a domain of our own for the badge's reads and
-// returns it, unbinding at cleanup. The domain is unique to the test, so a
-// parallel test's mail never comes from it.
-func colleagueDomainBound(t *testing.T) string {
-	t.Helper()
-	domain := "colleagues-" + ids.NewV7().String() + ".test"
-	UseColleagueDomains(func(context.Context, pgx.Tx) ([]string, error) { return []string{domain}, nil })
-	t.Cleanup(func() { UseColleagueDomains(nil) })
-	return domain
+// bindWorkspaceColleagueDomains binds, once for the process, a reader that
+// answers each workspace a domain of its own. Every test's workspace is its
+// own, so no test's mail comes from another test's domain.
+var bindWorkspaceColleagueDomains = sync.OnceFunc(func() {
+	UseColleagueDomains(func(ctx context.Context, _ pgx.Tx) ([]string, error) {
+		ws, ok := principal.WorkspaceID(ctx)
+		if !ok {
+			return nil, nil
+		}
+		return []string{workspaceColleagueDomain(ws)}, nil
+	})
+})
+
+func workspaceColleagueDomain(ws ids.UUID) string { return "colleagues-" + ws.String() + ".test" }
+
+// colleagueDomainBound answers the domain the badge's reads take as e's own.
+func colleagueDomainBound(e *loadEnv) string {
+	bindWorkspaceColleagueDomains()
+	return workspaceColleagueDomain(e.ws)
 }
 
 // mailFrom seeds an inbound mail the classifier judged asks_us, sent from
@@ -68,11 +80,10 @@ func badgeAndWorklist(t *testing.T, e *loadEnv, id ids.UUID, domain string) (crm
 
 // A colleague's invitation without the seat stamp is owed nothing on the History
 // badge, as on the Worklist. Both test the sender against our own domains.
-//
-//testdb:serial binds the process-wide colleague-domain reader (UseColleagueDomains)
 func TestTheBadgeAndTheWorklistAgreeAColleaguesUnstampedInvitationIsNotOwed(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
-	domain := colleagueDomainBound(t)
+	domain := colleagueDomainBound(e)
 	invitation := mailFrom(t, e, "colleague@"+domain, true)
 	move, onWorklist := badgeAndWorklist(t, e, invitation, domain)
 	if move != crmcontracts.EmailSummaryMoveNone || onWorklist {
@@ -109,11 +120,10 @@ func openOnRequestReads(t *testing.T, e *loadEnv, id ids.UUID, sender, domain st
 
 // The colleague test reads the sender, so a customer's invitation stays owed on
 // both surfaces.
-//
-//testdb:serial binds the process-wide colleague-domain reader (UseColleagueDomains)
 func TestAnOutsideInvitationStaysOwedOnTheBadgeAndTheWorklist(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
-	domain := colleagueDomainBound(t)
+	domain := colleagueDomainBound(e)
 	invitation := mailFrom(t, e, "buyer@customer.test", true)
 	move, onWorklist := badgeAndWorklist(t, e, invitation, domain)
 	if move != crmcontracts.EmailSummaryMoveNeedsReply || !onWorklist {
@@ -126,11 +136,10 @@ func TestAnOutsideInvitationStaysOwedOnTheBadgeAndTheWorklist(t *testing.T) {
 
 // The invitation rule is about invitations. A colleague's plain mail keeps the
 // badge it had: the badge applies no sender test to it.
-//
-//testdb:serial binds the process-wide colleague-domain reader (UseColleagueDomains)
 func TestAColleaguesPlainMailKeepsItsBadge(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
-	domain := colleagueDomainBound(t)
+	domain := colleagueDomainBound(e)
 	plain := mailFrom(t, e, "colleague@"+domain, false)
 	move, onWorklist := badgeAndWorklist(t, e, plain, domain)
 	if move != crmcontracts.EmailSummaryMoveNeedsReply {

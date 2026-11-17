@@ -38,7 +38,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
-	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -494,11 +493,8 @@ type Server struct {
 	// views is the router read_view runs through, shared by every Server copy.
 	views *viewDoor
 	coreFeatureSettings
-
+	composedConfig
 	// securityTxt is the rendered web.security_txt (WithSecurityTxt); empty
 	// leaves /.well-known/security.txt unmounted.
 	securityTxt string
-
-	// config is the configuration of the program this composition serves.
-	config *config.Config
 }
