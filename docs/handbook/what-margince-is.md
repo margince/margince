@@ -130,7 +130,8 @@ Also called: last message, most recent note, last update, last contact.
 
 ### How do I search for something?
 To search Margince, click the search field **Search or ask Margince** in the top bar, or press ⌘K (Ctrl+K), and start typing.
-1. Type a name, company, deal or any other word. Matches appear as you type, a few of each kind, under headings such as **Companies**, **Contacts** and **Emails**.
+1. Type a name, company, deal or any other word. Matches appear as you type, a few of each kind, under headings such as **Companies**, **Contacts** and **Emails**. A deal shows its amount, close date and stage, a lead or project its status, and a contact when you were last in touch.
+   To see more of one kind, choose it in the **Show only** strip under the box. Each kind there shows how many matches it found.
 2. Choose a result to open it, or choose **See all results for “…”** to open the full **Search results** page.
 3. On that page, **Show all** beside a kind, or **Show only**, lists every match of that kind.
 
@@ -139,6 +140,8 @@ With the search box empty, **Recent** lists up to eight searches you ran and rec
 With an empty box, Enter opens the newest recent item once the list has been checked.
 
 For a typed search, Enter opens the row you moved to with the arrow keys. If you have not moved, Enter opens a screen or action that matches what you typed. If there is none, it opens a record whose whole name you typed, and if there is none, the **Search results** page. So Enter on part of a name shows the results instead of opening the first one.
+
+At the end of the list, **Ask your documents** puts your words to your documents instead.
 
 If nothing matches, the palette says **No matches.** If record search fails, it says **Search failed**, and the screen commands still work.
 Also called: find, look up, global search.
