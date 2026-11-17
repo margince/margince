@@ -88,7 +88,7 @@ func TestAnUnlicensedInstallationLocksWhenItsTrialEnds(t *testing.T) {
 		!during.Trial.EndsAt.Equal(now.Add(licensecheck.TrialLength)) {
 		t.Fatalf("entitlement trial = %+v, want a running 14-day trial from the workspace's creation %v", during.Trial, now)
 	}
-	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "On The Trial"}, nil, nil); status != http.StatusCreated {
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "On The Trial"}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("create a contact on the trial → %d, want 201", status)
 	}
 
@@ -96,7 +96,7 @@ func TestAnUnlicensedInstallationLocksWhenItsTrialEnds(t *testing.T) {
 	var refusal struct {
 		Code string `json:"code"`
 	}
-	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "After The Trial"}, nil, &refusal); status != http.StatusForbidden || refusal.Code != "trial_ended" {
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "After The Trial"}, nil, &refusal); status != http.StatusForbidden || refusal.Code != "trial_ended" {
 		t.Fatalf("create a contact after the trial → %d %q, want 403 trial_ended", status, refusal.Code)
 	}
 	var me struct {

@@ -1944,7 +1944,7 @@ BEGIN
 END;
 
 public.audit_log_pkey CREATE UNIQUE INDEX audit_log_pkey ON public.audit_log USING btree (id)
-public.audit_privacy_reason_codes() secdef=false cfg=- acl=- SELECT ARRAY['retention','test','dsr_request','restriction_expired','the website lead could not be sent its privacy notice','subject_data_removed','legal hold ended: the postponed content erasure was completed','retention: the record''s content was erased','controller release: the record''s content was erased','noise disposition: the content of the message was erased']::text[]
+public.audit_privacy_reason_codes() secdef=false cfg=- acl=- SELECT ARRAY['retention','test','dsr_request','restriction_expired','the website lead could not be sent its privacy notice','subject_data_removed','legal hold ended: the postponed content erasure was completed','retention: the record''s content was erased','controller release: the record''s content was erased','noise disposition: the content of the message was erased','archive review: the controller deleted the record''s content']::text[]
 public.audit_redacted_evidence(certificate boolean, payload jsonb, verb text) secdef=false cfg=- acl=- DECLARE
   kept jsonb := '{"redacted":true}'::jsonb;
   field text;
@@ -3888,6 +3888,7 @@ public.company_vat_check.version bigint NOT NULL gen=- def=1
 public.company_vat_check_one_per_company CREATE UNIQUE INDEX company_vat_check_one_per_company ON public.company_vat_check USING btree (company_id)
 public.company_vat_check_pkey CREATE UNIQUE INDEX company_vat_check_pkey ON public.company_vat_check USING btree (id)
 public.confirm_token acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.confirm_token.asks_news boolean NOT NULL gen=- def=true
 public.confirm_token.confirm_token_contact_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
 public.confirm_token.confirm_token_expires_after_creation CHECK ((expires_at > issued_at))
 public.confirm_token.confirm_token_hash_key UNIQUE (token_hash)
@@ -3898,6 +3899,7 @@ public.confirm_token.confirm_token_one_subject CHECK (((contact_id IS NULL) <> (
 public.confirm_token.confirm_token_pkey PRIMARY KEY (id)
 public.confirm_token.confirm_token_purpose_id_fkey FOREIGN KEY (purpose_id) REFERENCES consent_purpose(id) ON DELETE RESTRICT
 public.confirm_token.confirm_token_purpose_is_consents CHECK (((kind = 'consent_confirmation'::text) = (purpose_id IS NOT NULL)))
+public.confirm_token.confirm_token_subject_request_id_fkey FOREIGN KEY (subject_request_id) REFERENCES consent_qualifying_event(id) ON DELETE SET NULL
 public.confirm_token.consumed_at timestamp with time zone gen=- def=-
 public.confirm_token.contact_id uuid gen=- def=-
 public.confirm_token.delivered_to text NOT NULL gen=- def=-
@@ -3913,12 +3915,14 @@ public.confirm_token.purpose_id uuid gen=- def=-
 public.confirm_token.question_key text gen=- def=-
 public.confirm_token.question_locale text gen=- def=-
 public.confirm_token.question_version integer gen=- def=-
+public.confirm_token.subject_request_id uuid gen=- def=-
 public.confirm_token.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.confirm_token FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000, "token_hash": 20000, "delivered_to": 20000, "question_key": 20000, "question_locale": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"delivered_to":20000,"kind":20000,"question_key":20000,"question_locale":20000,"token_hash":20000}')
 public.confirm_token.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.confirm_token FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "token_hash": 20000, "delivered_to": 20000, "question_key": 20000, "question_locale": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"delivered_to":20000,"kind":20000,"question_key":20000,"question_locale":20000,"token_hash":20000}')
 public.confirm_token.token_hash text NOT NULL gen=- def=-
 public.confirm_token_hash_key CREATE UNIQUE INDEX confirm_token_hash_key ON public.confirm_token USING btree (token_hash)
 public.confirm_token_live_by_kind CREATE INDEX confirm_token_live_by_kind ON public.confirm_token USING btree (contact_id, kind, purpose_id) WHERE (consumed_at IS NULL)
 public.confirm_token_pkey CREATE UNIQUE INDEX confirm_token_pkey ON public.confirm_token USING btree (id)
+public.confirm_token_subject_request_id_idx CREATE INDEX confirm_token_subject_request_id_idx ON public.confirm_token USING btree (subject_request_id)
 public.connector_connection_pkey CREATE UNIQUE INDEX connector_connection_pkey ON public.capture_connection USING btree (id)
 public.consent_doi_token acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.consent_doi_token.consent_doi_token_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
@@ -3949,6 +3953,7 @@ public.consent_event.consent_event_new_state_check CHECK ((new_state = ANY (ARRA
 public.consent_event.consent_event_pkey PRIMARY KEY (id)
 public.consent_event.consent_event_purpose_id_fkey FOREIGN KEY (purpose_id) REFERENCES consent_purpose(id) ON DELETE RESTRICT
 public.consent_event.consent_event_subject CHECK (((contact_id IS NULL) <> (lead_id IS NULL)))
+public.consent_event.consent_event_subject_request_id_fkey FOREIGN KEY (subject_request_id) REFERENCES consent_qualifying_event(id) ON DELETE SET NULL
 public.consent_event.consent_event_wording_pairs CHECK (((policy_text IS NULL) = (policy_version IS NULL)))
 public.consent_event.consent_text_version_id uuid gen=- def=-
 public.consent_event.contact_id uuid gen=- def=-
@@ -3963,22 +3968,26 @@ public.consent_event.policy_text text gen=- def=-
 public.consent_event.policy_version text gen=- def=-
 public.consent_event.purpose_id uuid NOT NULL gen=- def=-
 public.consent_event.source text NOT NULL gen=- def=-
+public.consent_event.subject_request_id uuid gen=- def=-
 public.consent_event.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.consent_event FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"source": 20000, "new_state": 20000, "confirm_ip": 20000, "captured_by": 20000, "lawful_basis": 20000, "policy_version": 20000, "issuance_trigger": 20000, "confirm_user_agent": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"confirm_ip":20000,"confirm_user_agent":20000,"issuance_trigger":20000,"lawful_basis":20000,"new_state":20000,"policy_version":20000,"source":20000}')
 public.consent_event.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.consent_event FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "new_state": 20000, "confirm_ip": 20000, "captured_by": 20000, "lawful_basis": 20000, "policy_version": 20000, "issuance_trigger": 20000, "confirm_user_agent": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"confirm_ip":20000,"confirm_user_agent":20000,"issuance_trigger":20000,"lawful_basis":20000,"new_state":20000,"policy_version":20000,"source":20000}')
 public.consent_event_pkey CREATE UNIQUE INDEX consent_event_pkey ON public.consent_event USING btree (id)
+public.consent_event_subject_request_id_idx CREATE INDEX consent_event_subject_request_id_idx ON public.consent_event USING btree (subject_request_id)
 public.consent_purpose acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.consent_purpose.archived_at timestamp with time zone gen=- def=-
 public.consent_purpose.class text NOT NULL gen=- def='marketing'::text
 public.consent_purpose.consent_purpose_class_check CHECK ((class = ANY (ARRAY['business_correspondence'::text, 'transactional'::text, 'marketing'::text, 'phone_outreach'::text])))
+public.consent_purpose.consent_purpose_frequency_check CHECK ((frequency = ANY (ARRAY['weekly'::text, 'monthly'::text, 'quarterly'::text])))
 public.consent_purpose.consent_purpose_key_unique UNIQUE (key)
 public.consent_purpose.consent_purpose_pkey PRIMARY KEY (id)
 public.consent_purpose.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.consent_purpose.frequency text NOT NULL gen=- def='monthly'::text
 public.consent_purpose.id uuid NOT NULL gen=- def=uuidv7()
 public.consent_purpose.key text NOT NULL gen=- def=-
 public.consent_purpose.label text NOT NULL gen=- def=-
 public.consent_purpose.requires_double_opt_in boolean NOT NULL gen=- def=false
-public.consent_purpose.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.consent_purpose FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"key": 20000, "class": 20000, "label": 120}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"class":20000,"key":20000,"label":120}')
-public.consent_purpose.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.consent_purpose FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "class": 20000, "label": 120}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"class":20000,"key":20000,"label":120}')
+public.consent_purpose.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.consent_purpose FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"key": 20000, "class": 20000, "label": 120, "frequency": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"class":20000,"frequency":20000,"key":20000,"label":120}')
+public.consent_purpose.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.consent_purpose FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "class": 20000, "label": 120, "frequency": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"class":20000,"frequency":20000,"key":20000,"label":120}')
 public.consent_purpose_key_unique CREATE UNIQUE INDEX consent_purpose_key_unique ON public.consent_purpose USING btree (key)
 public.consent_purpose_pkey CREATE UNIQUE INDEX consent_purpose_pkey ON public.consent_purpose USING btree (id)
 public.consent_qualifying_event acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
@@ -4135,6 +4144,7 @@ public.contact_acquisition_evidence.contact_acquisition_evidence_kind CHECK ((ki
 public.contact_acquisition_evidence.contact_acquisition_evidence_legal_entity_id_fkey FOREIGN KEY (legal_entity_id) REFERENCES legal_entity(id) ON DELETE RESTRICT
 public.contact_acquisition_evidence.contact_acquisition_evidence_pkey PRIMARY KEY (id)
 public.contact_acquisition_evidence.contact_acquisition_evidence_source_shape CHECK (((source_entity_type IS NULL) = (source_entity_id IS NULL)))
+public.contact_acquisition_evidence.contact_acquisition_evidence_stated_source_check CHECK ((stated_source = ANY (ARRAY['met_in_person'::text, 'business_card'::text, 'referral'::text, 'website'::text, 'other'::text])))
 public.contact_acquisition_evidence.contact_id uuid NOT NULL gen=- def=-
 public.contact_acquisition_evidence.id uuid NOT NULL gen=- def=uuidv7()
 public.contact_acquisition_evidence.kind text NOT NULL gen=- def=-
@@ -4147,8 +4157,9 @@ public.contact_acquisition_evidence.request_retracted_at timestamp with time zon
 public.contact_acquisition_evidence.request_retracted_by text gen=- def=-
 public.contact_acquisition_evidence.source_entity_id uuid gen=- def=-
 public.contact_acquisition_evidence.source_entity_type text gen=- def=-
-public.contact_acquisition_evidence.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.contact_acquisition_evidence FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000, "note": 2000, "captured_by": 20000, "purpose_claimed": 20000, "source_entity_type": 20000, "request_retracted_by": 20000, "recorded_for_addresses": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"kind":20000,"note":2000,"purpose_claimed":20000,"recorded_for_addresses":20000,"request_retracted_by":20000,"source_entity_type":20000}')
-public.contact_acquisition_evidence.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.contact_acquisition_evidence FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "note": 2000, "captured_by": 20000, "purpose_claimed": 20000, "source_entity_type": 20000, "request_retracted_by": 20000, "recorded_for_addresses": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"kind":20000,"note":2000,"purpose_claimed":20000,"recorded_for_addresses":20000,"request_retracted_by":20000,"source_entity_type":20000}')
+public.contact_acquisition_evidence.stated_source text gen=- def=-
+public.contact_acquisition_evidence.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.contact_acquisition_evidence FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000, "note": 2000, "captured_by": 20000, "stated_source": 20000, "purpose_claimed": 20000, "source_entity_type": 20000, "request_retracted_by": 20000, "recorded_for_addresses": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"kind":20000,"note":2000,"purpose_claimed":20000,"recorded_for_addresses":20000,"request_retracted_by":20000,"source_entity_type":20000,"stated_source":20000}')
+public.contact_acquisition_evidence.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.contact_acquisition_evidence FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "note": 2000, "captured_by": 20000, "stated_source": 20000, "purpose_claimed": 20000, "source_entity_type": 20000, "request_retracted_by": 20000, "recorded_for_addresses": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"kind":20000,"note":2000,"purpose_claimed":20000,"recorded_for_addresses":20000,"request_retracted_by":20000,"source_entity_type":20000,"stated_source":20000}')
 public.contact_acquisition_evidence_by_contact CREATE INDEX contact_acquisition_evidence_by_contact ON public.contact_acquisition_evidence USING btree (contact_id, captured_at DESC)
 public.contact_acquisition_evidence_pkey CREATE UNIQUE INDEX contact_acquisition_evidence_pkey ON public.contact_acquisition_evidence USING btree (id)
 public.contact_address_country acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
@@ -6924,6 +6935,29 @@ public.last_activity_reach(contact_ids uuid[], deal_ids uuid[], company_ids uuid
          WHERE r.contact_id = ANY (contact_ids) AND r.kind = 'employment'
            AND r.ended_at IS NULL AND r.archived_at IS NULL
 
+public.lawful_basis_confirmation acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.lawful_basis_confirmation.confirmed_at timestamp with time zone NOT NULL gen=- def=now()
+public.lawful_basis_confirmation.confirmed_by uuid NOT NULL gen=- def=-
+public.lawful_basis_confirmation.contact_id uuid gen=- def=-
+public.lawful_basis_confirmation.delivery_id uuid gen=- def=-
+public.lawful_basis_confirmation.expires_at timestamp with time zone NOT NULL gen=- def=-
+public.lawful_basis_confirmation.id uuid NOT NULL gen=- def=uuidv7()
+public.lawful_basis_confirmation.lawful_basis_confirmation_confirmed_by_fkey FOREIGN KEY (confirmed_by) REFERENCES app_user(id) ON DELETE CASCADE
+public.lawful_basis_confirmation.lawful_basis_confirmation_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
+public.lawful_basis_confirmation.lawful_basis_confirmation_delivery_id_fkey FOREIGN KEY (delivery_id) REFERENCES comms_outbound(id) ON DELETE SET NULL
+public.lawful_basis_confirmation.lawful_basis_confirmation_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES lead(id) ON DELETE CASCADE
+public.lawful_basis_confirmation.lawful_basis_confirmation_one_subject CHECK (((contact_id IS NULL) <> (lead_id IS NULL)))
+public.lawful_basis_confirmation.lawful_basis_confirmation_pkey PRIMARY KEY (id)
+public.lawful_basis_confirmation.lawful_basis_confirmation_window CHECK ((expires_at > confirmed_at))
+public.lawful_basis_confirmation.lead_id uuid gen=- def=-
+public.lawful_basis_confirmation.spent_at timestamp with time zone gen=- def=-
+public.lawful_basis_confirmation_confirmed_by_cascade_idx CREATE INDEX lawful_basis_confirmation_confirmed_by_cascade_idx ON public.lawful_basis_confirmation USING btree (confirmed_by)
+public.lawful_basis_confirmation_contact_id_cascade_idx CREATE INDEX lawful_basis_confirmation_contact_id_cascade_idx ON public.lawful_basis_confirmation USING btree (contact_id)
+public.lawful_basis_confirmation_delivery CREATE INDEX lawful_basis_confirmation_delivery ON public.lawful_basis_confirmation USING btree (delivery_id) WHERE (delivery_id IS NOT NULL)
+public.lawful_basis_confirmation_lead_id_cascade_idx CREATE INDEX lawful_basis_confirmation_lead_id_cascade_idx ON public.lawful_basis_confirmation USING btree (lead_id)
+public.lawful_basis_confirmation_open_contact CREATE INDEX lawful_basis_confirmation_open_contact ON public.lawful_basis_confirmation USING btree (contact_id, confirmed_by) WHERE ((contact_id IS NOT NULL) AND (spent_at IS NULL))
+public.lawful_basis_confirmation_open_lead CREATE INDEX lawful_basis_confirmation_open_lead ON public.lawful_basis_confirmation USING btree (lead_id, confirmed_by) WHERE ((lead_id IS NOT NULL) AND (spent_at IS NULL))
+public.lawful_basis_confirmation_pkey CREATE UNIQUE INDEX lawful_basis_confirmation_pkey ON public.lawful_basis_confirmation USING btree (id)
 public.lead acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.lead.archived_at timestamp with time zone gen=- def=-
 public.lead.arrival_owner_id uuid gen=- def=-

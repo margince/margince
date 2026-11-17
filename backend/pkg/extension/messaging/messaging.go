@@ -125,6 +125,28 @@ type Rules struct {
 	// uncapped by this jurisdiction.
 	FrequencyCap *FrequencyCap
 
+	// Advertising content and layout: where the refusal sits, and which
+	// claims need a stated proof. The language advertising leads with is
+	// DisclosureLanguage.
+
+	// RefusalSectionLast says an advertising message ends with its refusal
+	// section. It states the right to refuse all advertising from the
+	// advertiser, then the objection route and the opt-out links. The
+	// advertiser's contact block stands directly before it.
+	RefusalSectionLast bool
+
+	// ClaimsNeedProof are the words of a claim an advertising draft may make
+	// only beside a stated proof: the proving document's name, number and
+	// date. A draft that uses one without a proof is flagged before it is
+	// sent; nothing is refused.
+	ClaimsNeedProof []string
+
+	// ForeignAdvertiserNeedsLocalAgency says an advertiser not established in
+	// this jurisdiction must advertise here through a local advertising
+	// service business. An advertising draft to a recipient here, from a
+	// sending entity established elsewhere, gets a notice; nothing is refused.
+	ForeignAdvertiserNeedsLocalAgency bool
+
 	// OptOutAcknowledgement records whether an opt-out is owed a confirming
 	// message. False means none is owed, which is the default.
 	//
@@ -142,6 +164,37 @@ type Rules struct {
 	// OptOutRecordsKeep is how long a refusal and its receipt are kept from the
 	// refusal, out of every retention policy's reach. Zero sets no floor.
 	OptOutRecordsKeep time.Duration
+
+	// DataProtectionFollowsRecipient says this jurisdiction's data-protection
+	// law reaches a recipient here whatever country the controller is in. The
+	// disclosures, the privacy page and the request deadlines then follow the
+	// recipient's pack instead of the sender's. False keeps the sender's.
+	DataProtectionFollowsRecipient bool
+
+	// NoLegitimateInterests says the law has no legitimate-interest basis: each
+	// use rests on the recipient's consent or on a case the law names. The
+	// engine then never records legitimate interests for a recipient here.
+	NoLegitimateInterests bool
+
+	// DisclosureLanguage is the language the recipient's disclosures and
+	// privacy pages are written in, as a lower-case ISO 639-1 code. It applies
+	// only with DataProtectionFollowsRecipient. Empty keeps the installation's.
+	// Advertising to a recipient here leads with it, and its objection route
+	// and advertiser contact must be stated in it before such a send.
+	DisclosureLanguage string
+
+	// RecordConfirmationWithoutNews says the mail that asks a recipient to
+	// check their details must not also ask whether they want news. The link
+	// then pins no question, its page shows none and its submit takes none.
+	RecordConfirmationWithoutNews bool
+
+	// ConsentConfirmationNeedsRequest says a mail asking for consent may be
+	// sent only when the recipient's own request to subscribe is on record. A
+	// mail asking for consent nobody requested is itself unsolicited.
+	ConsentConfirmationNeedsRequest bool
+
+	// ConsentRequestFirstFor are the purpose classes the rule above covers; empty covers all.
+	ConsentRequestFirstFor []PurposeClass
 }
 
 // ExceptionKind names a route to lawful advertising without consent. Closed:
@@ -244,10 +297,46 @@ type Disclosure struct {
 	// MarketingOnly limits the obligation to advertising. False means every
 	// first message carries it.
 	MarketingOnly bool
+
+	// Means are the ways of reaching someone the stated text must name. Text
+	// that lacks one does not meet the obligation. Empty asks for none.
+	Means []ContactMeans
 }
 
-// Validate checks the kind.
-func (d Disclosure) Validate() error { return d.Kind.Validate() }
+// Validate checks the kind and each means.
+func (d Disclosure) Validate() error {
+	if err := d.Kind.Validate(); err != nil {
+		return err
+	}
+	for _, m := range d.Means {
+		if err := m.Validate(); err != nil {
+			return fmt.Errorf("disclosure %q: %w", string(d.Kind), err)
+		}
+	}
+	return nil
+}
+
+// ContactMeans names one way of reaching someone that a disclosed text must
+// name. Closed, because the engine has to recognise each one in the text.
+type ContactMeans string
+
+const (
+	// MeansWeb is a web page or a social-network link.
+	MeansWeb ContactMeans = "web"
+	// MeansEmail is an email address.
+	MeansEmail ContactMeans = "email"
+	// MeansPhone is a phone number.
+	MeansPhone ContactMeans = "phone"
+)
+
+// Validate enforces membership in the closed set.
+func (m ContactMeans) Validate() error {
+	switch m {
+	case MeansWeb, MeansEmail, MeansPhone:
+		return nil
+	}
+	return fmt.Errorf("contact means %q is not one the engine recognises", string(m))
+}
 
 // FrequencyCap bounds how many advertising messages one address may receive in
 // a rolling window.
@@ -365,6 +454,40 @@ func (r Rules) Validate() error {
 		if err := r.FrequencyCap.Validate(); err != nil {
 			return fmt.Errorf("messaging rules for %q: %w", string(r.Jurisdiction), err)
 		}
+	}
+	if err := r.validateClaims(); err != nil {
+		return fmt.Errorf("messaging rules for %q: %w", string(r.Jurisdiction), err)
+	}
+	if err := r.validateRequestFirstFor(); err != nil {
+		return fmt.Errorf("messaging rules for %q: %w", string(r.Jurisdiction), err)
+	}
+	return r.validateDisclosureLanguage()
+}
+
+// validateClaims refuses a claim word that matches nothing or everything.
+func (r Rules) validateClaims() error {
+	for _, word := range r.ClaimsNeedProof {
+		if strings.TrimSpace(word) == "" || strings.TrimSpace(word) != word {
+			return fmt.Errorf("claim word %q is empty or padded, so it would flag every draft or none", word)
+		}
+	}
+	return nil
+}
+
+// validateDisclosureLanguage refuses a language that is not two lower-case
+// letters, or one stated where the recipient's pack does not apply.
+func (r Rules) validateDisclosureLanguage() error {
+	language := r.DisclosureLanguage
+	if language == "" {
+		return nil
+	}
+	if !r.DataProtectionFollowsRecipient {
+		return fmt.Errorf("messaging rules for %q name a disclosure language and do not follow the recipient, so nothing would use it",
+			string(r.Jurisdiction))
+	}
+	if len(language) != 2 || strings.Trim(language, "abcdefghijklmnopqrstuvwxyz") != "" {
+		return fmt.Errorf("messaging rules for %q name disclosure language %q; use a lower-case ISO 639-1 code",
+			string(r.Jurisdiction), language)
 	}
 	return nil
 }

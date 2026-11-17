@@ -35,6 +35,25 @@ it("dates a waiting message by when it arrived", () => {
   );
 });
 
+it("dates a promise carrying its email by the promise's due day", () => {
+  const now = new Date("2026-09-13T09:00:00Z");
+  const promise: WorklistItem = {
+    ...taskRow("task-1", "Send Sonya the revised pricing"),
+    due_at: "2026-09-15T10:00:00Z",
+    email_summary: waitingEmailRow().email_summary,
+  };
+  expect(cardWhen(promise, english, "UTC", "UTC", now)).toBe(
+    cardWhen(
+      { ...promise, email_summary: undefined },
+      english,
+      "UTC",
+      "UTC",
+      now,
+    ),
+  );
+  expect(cardWhen(promise, english, "UTC", "UTC", now)).not.toMatch(/^3 Sept/);
+});
+
 it("names a reply after the sender, not another contact on the message", () => {
   const waiting = waitingEmailRow();
   const mail = waiting.email_summary;

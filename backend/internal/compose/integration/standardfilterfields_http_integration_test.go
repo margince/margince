@@ -211,8 +211,8 @@ type clauseWire struct {
 
 func TestAQuietForFortyFiveDaysListHoldsTheQuietContactAndSaysWhy(t *testing.T) {
 	e, _ := listsApp(t, true)
-	quiet := createdID(t, e, "/v1/contacts", AnyMap{"full_name": "Quiet Contact", "source": "manual"})
-	busy := createdID(t, e, "/v1/contacts", AnyMap{"full_name": "Busy Contact", "source": "manual"})
+	quiet := createdID(t, e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Quiet Contact", "source": "manual"})
+	busy := createdID(t, e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Busy Contact", "source": "manual"})
 	touch(t, e, "contact", quiet, 60)
 	touch(t, e, "contact", busy, 2)
 
@@ -290,9 +290,9 @@ func TestADayRunsFromOneMidnightToTheNext(t *testing.T) {
 		t.Fatalf("session time zone %q: %v", zone, err)
 	}
 	midnight := time.Date(2026, 3, 10, 0, 0, 0, 0, loc)
-	onTheStroke := createdID(t, e, "/v1/contacts", AnyMap{"full_name": "Stroke Of Midnight", "source": "manual"})
-	justBefore := createdID(t, e, "/v1/contacts", AnyMap{"full_name": "Second Before", "source": "manual"})
-	lastSecond := createdID(t, e, "/v1/contacts", AnyMap{"full_name": "Last Second Of Day", "source": "manual"})
+	onTheStroke := createdID(t, e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Stroke Of Midnight", "source": "manual"})
+	justBefore := createdID(t, e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Second Before", "source": "manual"})
+	lastSecond := createdID(t, e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Last Second Of Day", "source": "manual"})
 	touchAt(t, e, onTheStroke, midnight)
 	touchAt(t, e, justBefore, midnight.Add(-time.Second))
 	touchAt(t, e, lastSecond, midnight.Add(24*time.Hour-time.Second))

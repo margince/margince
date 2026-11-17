@@ -2291,6 +2291,7 @@ export const en = {
   "systemJob.brief_overnight": "Overnight summary",
   "systemJob.captured_deal_refile": "Captured conversation filing",
   "systemJob.capture": "Mail capture",
+  "systemJob.privacy_request_task": "Data request tasks",
   "systemJob.capture_auto_enrich": "Company enrichment from mail",
   "systemJob.capture_classify": "Mail sorting",
   "systemJob.capture_credential_backfill": "Mail connection update",
@@ -2894,7 +2895,26 @@ export const en = {
   "palette.searching": "Searching records…",
   "palette.searchFailedTitle": "Search failed",
   "palette.searchFailed": "The commands above still work.",
-  "palette.askRow": "Ask Margince: “{query}”",
+  "palette.askDataRow": "Ask CRM data: “{query}”",
+  "palette.openAnalytics": "Open in Analytics",
+  "palette.dataUnsupportedOnly":
+    "This question could not be answered from CRM data.",
+  "palette.dataUnsupported":
+    "This question could not be answered from CRM data. Here is what the handbook covers.",
+  "palette.dataSource": "Source: {source}",
+  "palette.dataPlan": "Query used",
+  "create.contactChannelRequired":
+    "Add at least one email, phone or LinkedIn URL.",
+  "import.reason.contact_channel_missing":
+    "Contact has no email, phone or LinkedIn URL; add one to reach them.",
+  "palette.recordsCoverage": "Coverage: {coverage}. Up to {limit} records.",
+  "palette.noDataRecords": "No records match this question.",
+  "palette.dataUnavailable": "CRM data could not be read",
+  "palette.coverageExact": "Exact matches",
+  "palette.coveragePartial": "Limited matches",
+  "palette.crmRecords": "CRM records",
+  "palette.recordName": "Record",
+  "palette.askRow": "Ask the handbook: “{query}”",
   "palette.asking": "Asking Margince…",
   "palette.answerAria": "Answer from Margince",
   "palette.answerFrom": "From {name}",
@@ -7294,6 +7314,15 @@ export const en = {
   "create.firstName": "First name",
   "create.lastName": "Last name",
   "create.contactTitle": "Title",
+  "create.acquisitionSource": "Where this contact came from",
+  "create.acquisitionSourceHint":
+    "The contact sees this on their privacy page.",
+  "create.acquisitionNote": "Source details",
+  "create.source.metInPerson": "Met face to face",
+  "create.source.businessCard": "Business card",
+  "create.source.referral": "Referral",
+  "create.source.website": "Website",
+  "create.source.other": "Other",
   "create.email": "Email",
   "create.phone": "Phone",
   "create.linkedin": "LinkedIn",
@@ -8024,6 +8053,8 @@ export const en = {
   "sendPermission.missingContext": "This message needs one more detail",
   "sendPermission.missingPermission": "Permission needed for this message",
   "sendPermission.reason.chooseDeal": "Choose the deal for this follow-up.",
+  "sendPermission.reason.lawfulBasisUnconfirmed":
+    "No lawful basis is recorded for this contact, and the warning was not confirmed before sending.",
   "sendPermission.appliesTo": "This applies to {address}.",
   "sendPermission.recipientLine": "{address}: {reason}",
   "sendPermission.unansweredHeld":
@@ -8043,6 +8074,26 @@ export const en = {
   "sendPermission.ready": "Recipients checked",
   "sendPermission.markName": "Communication status for this message",
   "sendPermission.checking": "Checking whether this message can be sent…",
+  "lawfulBasis.title": "No valid basis recorded",
+  "lawfulBasis.body":
+    "No valid basis under Vietnamese law is recorded for this contact: neither their consent nor a case where the law allows processing without it. Sending is at your own risk.",
+  "lawfulBasis.confirm": "Send anyway",
+  "lawfulBasis.askConsent": "Ask for consent",
+  "lawfulBasis.askFailed": "The consent request was not sent. Try again.",
+  "lawfulBasis.asked":
+    "Consent request sent to {address}. Your message was not sent.",
+  "lawfulBasis.askPartial":
+    "Consent request sent to {asked}. It was not sent to {failed}. Try again to ask only them.",
+  "lawfulBasis.failed": "Your confirmation was not recorded. Try again.",
+  "privacynotice.purposeLine": "{purpose}: {basis}",
+  "privacynotice.basisOn.consent": "your consent of {date}",
+  "privacynotice.basisOn.agreement":
+    "to carry out the agreement between you and {controller}",
+  "privacynotice.basisOn.us": "us",
+  "privacynotice.basis.none": "No basis is recorded for this use.",
+  "privacynotice.basisOn.none": "no basis recorded",
+  "confirm.done.bodyNamed":
+    "Your answer is recorded. Staff at {controller} will handle your request and give you the reason if they need more time. This link is now used up.",
   "sendPermission.unanswered":
     "The send check did not complete. Sending runs the check again.",
   "sendPermission.reason.objected":
@@ -8227,6 +8278,8 @@ export const en = {
     "Created because this lead wrote in or booked a meeting. A reply converts nobody: qualify the lead when they are ready.",
   "tasks.origin.assurance":
     "Created by the nightly forecast check: inputs on this deal need attention. The deal page lists them.",
+  "tasks.origin.privacy_request":
+    "Created when the contact asked to correct, erase or stop the use of their data. Their country’s law sets the dates on this task.",
   "tasks.origin.analytics_decision":
     "Recorded from a sales review: a decision with an owner and a review date. Record the outcome under Decisions from the last review.",
   "tasks.origin.overnight_reconcile":
@@ -10419,6 +10472,7 @@ export const en = {
   "import.problem.new_tag": "New tag",
   "import.problem.duplicate": "Duplicate",
   "import.problem.permission": "No permission",
+  "import.problem.incomplete_identity": "Missing contact channel",
   "import.problem.unusable_row": "Unusable row",
   "settings.dangerZone": "Danger zone",
   "settings.resetDataDesc":
@@ -10868,6 +10922,10 @@ export const en = {
   "privacy.purposeKey": "Key",
   "privacy.purposeLabel": "Label",
   "privacy.purposeDoi": "Requires double opt-in",
+  "privacy.purposeFrequency": "How often",
+  "privacy.purposeFrequency.weekly": "About once a week",
+  "privacy.purposeFrequency.monthly": "About once a month",
+  "privacy.purposeFrequency.quarterly": "About once a quarter",
   "privacy.purposeCreate": "Create purpose",
   "privacy.purposeAppendOnly":
     "A purpose cannot be renamed or removed once created; the catalog is append-only. Choose the key carefully.",
@@ -11076,7 +11134,13 @@ export const en = {
   "privacynotice.source.purchasedOrImported":
     "Your details came from a list that was bought or imported.",
   "privacynotice.source.unknown": "We cannot say how your details reached us.",
-  "privacynotice.purposes.title": "What we use it for",
+  "privacynotice.source.stated.metInPerson": "We met you face to face.",
+  "privacynotice.source.stated.businessCard": "You gave us your business card.",
+  "privacynotice.source.stated.referral": "Someone recommended you to us.",
+  "privacynotice.source.stated.website": "We found your details on a website.",
+  "privacynotice.source.stated.other": "Another source, described below.",
+  "privacynotice.source.statedNote": "In our words: {note}",
+  "privacynotice.purposes.title": "What we use it for, and on what basis",
   "privacynotice.rights.title": "Your rights over this",
   "privacynotice.rights.how":
     "To use any of these, reply to the message that brought you here, or contact us through the address on our website.",
@@ -11129,6 +11193,10 @@ export const en = {
   "privacynotice.retention.keptByLaw":
     "By law, mail about an order or a contract is kept for at least {period}, even where this says sooner.",
   "privacynotice.recipients.title": "Who sees it",
+  "privacynotice.transfers.title":
+    "AI services, transfers and automated decisions",
+  "privacynotice.transfers.body":
+    "We use AI services to sort, summarize and draft text about our correspondence with you. Which provider receives that text, and where it processes it, is set by us: it can be a model we run ourselves, or a provider such as Anthropic, OpenAI, Google (Gemini, Vertex AI), Mistral or OpenRouter. Where we choose an EU location or OpenRouter’s EU service, processing stays in the EU; otherwise it can take place outside the EU, including in the United States, under the provider’s contract with us. No decision that has legal effects for you, or affects you similarly, is made by automated means alone: the AI suggests, and whether we may write to you is decided by fixed rules about your consent and your requests.",
   "privacynotice.recipient.colleagues": "Staff who work with our CRM.",
   "privacynotice.recipient.serviceProviders":
     "Companies that run our CRM and deliver its email for us. A contract binds them to use your data only as we instruct.",
@@ -11138,11 +11206,13 @@ export const en = {
   "privacynotice.retention.afterDays_other": "{count} days",
   "privacynotice.retention.title": "How long we keep it",
   "privacynotice.retention.archive":
-    "{scope}: taken out of daily use after {days}.",
+    "{scope}: kept for {days} from when they were recorded, then moved to an archive with restricted access to {purpose}. They are deleted when they are no longer needed for this purpose, when you ask, or when your record is deleted.",
+  "privacynotice.retention.archivePurpose":
+    "answer legal claims and keep business records",
   "privacynotice.retention.anonymize": "{scope}: made anonymous after {days}.",
   "privacynotice.retention.erase": "{scope}: deleted after {days}.",
   "privacynotice.retention.rest":
-    "We keep everything else while we use it for the purposes above. If you ask us to delete it, we delete what the law lets us delete.",
+    "We keep everything else while we use it for the purposes under “What we use it for, and on what basis”. If you ask us to delete it, we delete what the law lets us delete.",
   "privacynotice.retention.scope.activity":
     "Emails, meetings and calls with you",
   "privacynotice.retention.scope.activityTranscript":
@@ -11279,6 +11349,49 @@ export const en = {
   "privacy.legalHold":
     "This contact is inside a statutory retention window, so erasure does not take precedence here (Art. 17(3)(b)). The block applies to every role, including administrators, with no override. The attempt was audited.",
 
+  "archivePurpose.title": "Archive purpose",
+  "archivePurpose.intro":
+    "After its retention period, captured mail, meetings and calls move to an archive with restricted access. The privacy page says why the archive keeps them, and you delete what no longer serves that purpose.",
+  "archivePurpose.label": "Purpose of the archive",
+  "archivePurpose.translationLabel": "Purpose of the archive in {language}",
+  "archivePurpose.hint":
+    "Finishes the sentence “moved to an archive with restricted access to …”. Empty, the page says “{purpose}”.",
+  "archiveReview.title": "Archive review",
+  "archiveReview.intro":
+    "Archived mail, meetings and calls, oldest first. Delete what no longer serves the archive’s purpose. Margince deletes nothing here by itself.",
+  "archiveReview.filters": "Archive filters",
+  "archiveReview.before": "Occurred before",
+  "archiveReview.contact": "Contact",
+  "archiveReview.company": "Company",
+  "archiveReview.record": "Record",
+  "archiveReview.with": "With",
+  "archiveReview.withNobody": "No contact or company",
+  "archiveReview.status": "Deletion",
+  "archiveReview.deletable": "Can be deleted",
+  "archiveReview.kept.legalHold": "Kept: legal hold",
+  "archiveReview.kept.optOutRecord": "Kept: opt-out record",
+  "archiveReview.kept.byLaw": "Kept by law",
+  "archiveReview.kept.notArchived": "No longer in the archive",
+  "archiveReview.kept.notFound": "Not found",
+  "archiveReview.empty": "Nothing archived matches these filters.",
+  "archiveReview.deleteShown_one": "Delete {count} shown record",
+  "archiveReview.deleteShown_other": "Delete {count} shown records",
+  "archiveReview.confirmTitle": "Delete archived records?",
+  "archiveReview.confirmBody_one":
+    "The content of {count} archived record is erased for good. Who it was with and when stays. Records under a legal hold, opt-out records and records kept by law stay as they are.",
+  "archiveReview.confirmBody_other":
+    "The content of {count} archived records is erased for good. Who they were with and when stays. Records under a legal hold, opt-out records and records kept by law stay as they are.",
+  "archiveReview.confirm": "Delete",
+  "archiveReview.doneTitle": "Deletion finished",
+  "archiveReview.partialTitle": "Done before the deletion stopped",
+  "archiveReview.deleted_one": "{count} record deleted.",
+  "archiveReview.deleted_other": "{count} records deleted.",
+  "archiveReview.keptCount_one": "{reason}: {count} record",
+  "archiveReview.keptCount_other": "{reason}: {count} records",
+  "archiveReview.failed_one":
+    "{count} record could not be deleted and stays as it was.",
+  "archiveReview.failed_other":
+    "{count} records could not be deleted and stay as they were.",
   "restricted.title": "Restricted records",
   "restricted.sub":
     "Records a statutory retention obligation holds after an erasure: which record, why and until when. The correspondence itself is hidden so that it is not read.",
@@ -13450,9 +13563,13 @@ export const en = {
     "This choice is optional. You can correct your details without subscribing.",
   "confirm.marketing.title": "Receive occasional news?",
   "confirm.marketing.ask":
-    "News from time to time, roughly once a month. Your choice is respected.",
+    "{controller} will use your name and email address to send you news about its products and services by email, roughly once a month. You can withdraw your consent at any time with the unsubscribe link in each email.",
   "confirm.marketing.yes": "Subscribe to news",
   "confirm.marketing.no": "Do not send news",
+  "confirm.controllerFallback": "the sender",
+  "confirm.frequency.weekly": "once a week",
+  "confirm.frequency.monthly": "once a month",
+  "confirm.frequency.quarterly": "once a quarter",
   "confirm.provenance.title": "Sources of your details",
   "confirm.provenance.empty": "No source is recorded for these details.",
   "confirm.provenance.line": "{field}: from {source}, recorded {date}",
@@ -13461,7 +13578,8 @@ export const en = {
     "Removal requested. Confirm below to send the request.",
   "confirm.submit": "Confirm",
   "confirm.subscription.title": "Confirm your subscription",
-  "confirm.subscription.ask": "Confirm that you want to receive {purpose}.",
+  "confirm.subscription.ask":
+    "Confirm that you agree that {controller} may use your name and email address to send you {purpose} by email, roughly {frequency}. You can withdraw your consent at any time with the unsubscribe link in each email. Information about your rights: {privacy_page}.",
   "confirm.subscription.confirm": "Confirm subscription",
   "confirm.subscription.alreadyTitle": "You are subscribed",
   "confirm.subscription.alreadyBody":
@@ -13473,7 +13591,7 @@ export const en = {
   "confirm.receipt.rectify": "Correction requested",
   "confirm.receipt.erasure": "Removal requested",
   "confirm.done.body":
-    "Your answer is recorded. Any changes go to a person here to apply, and this link is now used up.",
+    "Your answer is recorded. Staff here will handle your request and give you the reason if they need more time. This link is now used up.",
   "confirm.invalidLink":
     "This link is no longer valid. It may have been used or may have expired. If you still need something, reply to the email that brought you here.",
   "confirm.questionChanged":
@@ -22753,6 +22871,27 @@ export const en = {
   "goals.withdrawTitle": "Withdraw the goals of {name} for {year}?",
   "goals.withdrawBody":
     "All twelve months stop counting as goals. The history keeps them.",
+  "particulars.title": "Company details in mail",
+  "particulars.intro":
+    "Mail you send ends with the details the law asks for. Each field holds up to 500 characters.",
+  "particulars.legalName": "Legal name",
+  "particulars.postalAddress": "Postal address",
+  "particulars.privacyContact": "Data protection contact",
+  "particulars.objectionRoute": "How to refuse advertising",
+  "particulars.advertiserContact": "Advertiser contact",
+  "particulars.objectionMeans":
+    "Name a web page or social network link, an email address and a phone number. A reply word such as STOP can be added.",
+  "particulars.translationTitle": "In {language}",
+  "particulars.translationIntro":
+    "Mail and pages in {language} show this text where you fill it in. Advertising that must be in {language} is sent only once the refusal and the advertiser contact are filled in here.",
+  "particulars.objectionExample": "Example: {example}",
+  "compose.contentFinding.title": "Advertising rules for this mail",
+  "compose.contentFinding.claim":
+    "“{words}” is a claim you may make only with a proof. Add the name, number and date of the proving document to the mail.",
+  "compose.contentFinding.language":
+    "Write this mail in {language} first. Text in another language goes below it, no larger than the {language} text.",
+  "compose.contentFinding.foreignAdvertiser":
+    "Your company is not set up in {country}. A foreign company that does not operate in {country} must advertise there through an advertising business from {country}. Your company is responsible for this.",
 } as const;
 
 export type MessageKey = keyof typeof en;

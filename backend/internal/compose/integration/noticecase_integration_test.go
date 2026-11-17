@@ -105,7 +105,8 @@ func TestAContactCarriedOverFromAnotherCRMOwesNothing(t *testing.T) {
 		ID string `json:"id"`
 	}
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
-		"full_name": "Carried Over", "source": "import", "source_system": "mirror:hubspot",
+		"linkedin_url": apptest.ContactProfile(),
+		"full_name":    "Carried Over", "source": "import", "source_system": "mirror:hubspot",
 	}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("create an imported contact → %d", status)
 	}
@@ -168,7 +169,8 @@ func contactAcquiredAs(t *testing.T, e *apptest.AppEnv, name, kind string) strin
 		ID string `json:"id"`
 	}
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
-		"full_name": name, "source": "manual",
+		"linkedin_url": apptest.ContactProfile(),
+		"full_name":    name, "source": "manual",
 	}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("create contact → %d", status)
 	}

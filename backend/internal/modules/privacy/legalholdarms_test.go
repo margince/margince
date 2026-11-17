@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/retentionscope"
 )
 
 // The committed schema catalog, the same file the migration lane regenerates.
@@ -165,6 +166,23 @@ func TestMarkerCleanupChecksAndLocksEveryTableCarryingLegalHold(t *testing.T) {
 	for table := range locked {
 		if !held[table] && table != "data_subject_request" {
 			t.Errorf("marker cleanup locks %s without a legal_hold column", table)
+		}
+	}
+}
+
+// The archive deletion share-locks every record whose hold could keep the
+// activity, so a hold placed while it runs is seen. A held table the lock
+// missed would let a concurrent hold commit unseen.
+func TestTheArchiveDeletionLocksEveryTableAHoldReachesThrough(t *testing.T) {
+	held := tablesCarryingLegalHoldReachableFromActivityLink(t)
+	if len(held) < 4 {
+		t.Fatalf("short legal-hold census: %v", held)
+	}
+	lock := retentionscope.LockHeldLinks("$1")
+	for _, table := range held {
+		if !strings.Contains(lock, "FROM "+table+" WHERE id IN (SELECT "+table+"_id FROM activity_link") ||
+			!strings.Contains(lock, "locked_"+table+")") {
+			t.Errorf("the archive deletion does not share-lock the held %s it reads:\n%s", table, lock)
 		}
 	}
 }

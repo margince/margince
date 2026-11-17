@@ -22,7 +22,7 @@ func TestUnknownAcquisitionIsReviewedBeforeItCanBecomeANoticeDuty(t *testing.T) 
 	var contact struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": "Source Review Example", "source": "manual"}, nil, &contact); status != http.StatusCreated {
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Source Review Example", "source": "manual"}, nil, &contact); status != http.StatusCreated {
 		t.Fatal(status)
 	}
 	apptest.DriveNoticeCase(t, e, contact.ID)
@@ -74,7 +74,7 @@ func TestAnAgentAssessesASourceAndTheTrailNamesIt(t *testing.T) {
 	var contact struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": "Agent Source Example", "source": "manual"}, nil, &contact); status != http.StatusCreated {
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Agent Source Example", "source": "manual"}, nil, &contact); status != http.StatusCreated {
 		t.Fatal(status)
 	}
 	apptest.DriveNoticeCase(t, e, contact.ID)
@@ -108,7 +108,7 @@ func TestDirectSourceAssessmentEndsReviewWithoutInventingADisclosure(t *testing.
 	var contact struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": "Direct Source Example", "source": "manual"}, nil, &contact); status != http.StatusCreated {
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Direct Source Example", "source": "manual"}, nil, &contact); status != http.StatusCreated {
 		t.Fatal(status)
 	}
 	apptest.DriveNoticeCase(t, e, contact.ID)

@@ -109,7 +109,7 @@ func openRightsCaseTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 	if !ok {
 		return "", nil
 	}
-	due, rule, err := deadlines(ctx, tx, kind, receivedAt)
+	due, rule, err := deadlines(ctx, tx, ruleSubject{Kind: entityContact, ID: contactID.String()}, kind, receivedAt)
 	if err != nil {
 		return "", err
 	}

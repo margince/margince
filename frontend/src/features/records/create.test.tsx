@@ -336,6 +336,10 @@ describe("contact create flow", () => {
     render(<ContactsScreen />);
     await userEvent.click(screen.getByText(en["create.contact"]));
     await userEvent.type(await screen.findByLabelText("Full name *"), "x");
+    await userEvent.type(
+      screen.getByLabelText("LinkedIn"),
+      "https://www.linkedin.com/in/dana-buyer",
+    );
     await userEvent.click(screen.getByRole("button", { name: "Create" }));
     await waitFor(() =>
       expect(screen.getByText("full_name must not be blank")).toBeTruthy(),

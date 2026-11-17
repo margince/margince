@@ -117,6 +117,7 @@ var emailRenderers = map[string]bool{
 // surfaces whose only act is to suppress their own title in favour of the row.
 var emailPassthroughs = gatekit.Waive(map[string]string{
 	"features/booking/booking-context.ts":          "reads the inbound counterparty id to choose a booking email reason; it renders no message content",
+	"lib/worklistemailrow.ts":                      "asks whether a worklist row carries an email summary, to decide whether the message names the row; it draws no part of the message",
 	"design-system/activitytimeline.tsx":           "maps an Activity onto a TimelineEntry, email_summary included, for timeline.tsx to draw; it builds the entry and renders nothing",
 	"design-system/timelineentry.tsx":              "declares the TimelineEntry shape, its emailSummary field included, and small row parts that read no message; timeline.tsx and timelinethread.tsx draw the message",
 	"features/mail/compose.reply.tsx":              "reads an email summary's calendar_invitation to offer an RSVP in place of the reply button; it draws no part of the message",
@@ -127,7 +128,6 @@ var emailPassthroughs = gatekit.Waive(map[string]string{
 	"lib/openemail.ts":                             "the drawer controller: it reads emailSummary only to decide an entry HAS a message to open, and holds no part of one",
 	"features/records/recordchronology.tsx":        "wires onOpenEmail onto the entries it hands to the timeline; the rendering is timeline.tsx's",
 	"components/citations.chips.tsx":               "emailOf hands a citation's email summary on to citations.list.tsx, which draws it through EmailReference; this file builds chips and renders no message",
-	"features/worklist/worklist.row.tsx":           "same branch as the focus card, for the list row",
 	"features/worklist/worklist.pane.tsx":          "reads the message's activity id to choose which thread the details read; worklist.pane.conversation.tsx draws that thread through ThreadState",
 	"features/contacts/contactmemory.rows.ts":      "maps a memory row onto the card's row model, the email summary included, for contactmemory.tsx to draw through EmailEntry; its subject and preview fill only the filter text and the fallback row",
 	"features/brief/brief.focus.tsx":               "draws no part of the message beyond its audience status, one more fact about whose row it is, the same access reading emailaccesseditor.tsx takes. The card's heading is brief.taskcard.tsx's name for the row, and the message itself is handed to WorklistRow, which draws it through EmailEntry",

@@ -124,7 +124,7 @@ func toolRoleSeeders(t *testing.T, e *apptest.AppEnv, owner string, pool *record
 	// A call takes the record and never its company, which is a kind of its own.
 	parentCompany := sync.OnceValue(func() string { return create["company"]() })
 	create["contact"] = func() string {
-		return post("/v1/contacts", owned(integration.AnyMap{"full_name": "Role Sweep", "source": "manual"}))
+		return post("/v1/contacts", owned(integration.AnyMap{"full_name": "Role Sweep", "source": "manual", "linkedin_url": "https://www.linkedin.com/in/" + ids.NewV7().String()}))
 	}
 	create["deal"] = func() string {
 		return post("/v1/deals", owned(integration.AnyMap{

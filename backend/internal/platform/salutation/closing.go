@@ -39,9 +39,9 @@ func longestClosing() int {
 // nameWordsMax is the longest name a sign-off line may carry after its closing.
 const nameWordsMax = 2
 
-// isClosing reports a line that is a sign-off, with at most a name after it.
+// IsClosing reports a line that is a sign-off, with at most a name after it.
 // The name is capitalised words, so "Thanks, could you send it" is an ask.
-func isClosing(line string) bool {
+func IsClosing(line string) bool {
 	words := lineWords(line)
 	for n := min(len(words), closingWordsMax); n > 0; n-- {
 		if closings[FoldName(strings.Join(words[:n], " "))] {
@@ -121,7 +121,7 @@ func withoutSignOff(lines []string) string {
 		switch {
 		case line == "":
 			continue
-		case isClosing(line):
+		case IsClosing(line):
 			return strings.TrimSpace(strings.Join(lines[:i], "\n"))
 		case signature < signatureLinesMax && signatureLine(line):
 			signature++
