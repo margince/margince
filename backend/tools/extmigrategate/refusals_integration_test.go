@@ -33,6 +33,7 @@ type refusal struct {
 
 func dropNote(ns string) string { return scaffoldDown(ns) }
 
+//testdb:serial shares the one throwaway database and role that TestMain makes for the gate
 func TestGateRefusesEveryShapeOutsideTheAllowlist(t *testing.T) {
 	for _, c := range refusalCases() {
 		t.Run(c.tag, func(t *testing.T) {
@@ -272,6 +273,8 @@ func relationRefusals() []refusal {
 
 // The gate is also a command, and a command's arguments are part of its
 // contract: a missing one must say which, not fail somewhere inside pgx.
+//
+//testdb:serial shares the one throwaway database and role that TestMain makes for the gate
 func TestGateRefusesIncompleteInvocations(t *testing.T) {
 	ctx := context.Background()
 	dir := migrationDir(t, scaffoldUp("ext_x"), scaffoldDown("ext_x"))
@@ -299,6 +302,8 @@ func TestGateRefusesIncompleteInvocations(t *testing.T) {
 // An empty migrations directory is a unit that declared the layer and then
 // shipped nothing in it — which reads, everywhere else in the build, as a unit
 // with migrations.
+//
+//testdb:serial shares the one throwaway database and role that TestMain makes for the gate
 func TestGateRefusesAnEmptyMigrationsDirectory(t *testing.T) {
 	empty := filepath.Join(t.TempDir(), "migrations")
 	if err := os.Mkdir(empty, 0o750); err != nil {
@@ -311,6 +316,8 @@ func TestGateRefusesAnEmptyMigrationsDirectory(t *testing.T) {
 // The gate refuses to share its role with a concurrent run rather than
 // adopting or dropping it: the role is cluster-scoped and named from the unit,
 // so dropping one in use would corrupt the OTHER run.
+//
+//testdb:serial shares the one throwaway database and role that TestMain makes for the gate
 func TestGateRefusesWhileAnotherRunHoldsTheRole(t *testing.T) {
 	unit := unitName(t, "busy")
 	ns := namespaceOf(t, unit)
@@ -348,6 +355,8 @@ func TestGateRefusesWhileAnotherRunHoldsTheRole(t *testing.T) {
 // issued produced what it asked for. These two provoke that check by changing
 // what the cluster grants to PUBLIC underneath it — which is exactly how a
 // real cluster would drift into making this gate vacuous.
+//
+//testdb:serial shares the one throwaway database and role that TestMain makes for the gate
 func TestGateRefusesARoleTheClusterHasWidened(t *testing.T) {
 	owner := admin(t)
 	ctx := context.Background()
@@ -432,6 +441,8 @@ func TestGateRefusesARoleTheClusterHasWidened(t *testing.T) {
 // The table is created bare — no primary key, no foreign key — because the
 // legacy conversion refuses a table carrying indexes or constraints, and a
 // fixture that failed for THAT reason would prove nothing about _RETURN.
+//
+//testdb:serial shares the one throwaway database and role that TestMain makes for the gate
 func TestGateRefusesAManualReturnRule(t *testing.T) {
 	unit := unitName(t, "retrule")
 	ns := namespaceOf(t, unit)

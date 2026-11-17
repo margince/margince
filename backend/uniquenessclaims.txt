@@ -148,7 +148,6 @@ internal/compose/heldrelease_integration_test.go#const draftRecipient
 internal/compose/idempotency.go#const replayWindow
 internal/compose/installation.go#func seedRoutingBinding
 internal/compose/integration/agentaccess/oauth_integration_test.go#method oauthEnv.postToken
-internal/compose/integration/apptest/appdsn.go#func AppDSN
 internal/compose/integration/auditlog_integration_test.go#func TestAuditLogWithholdsALimitedActivitysImageFromOutsideItsAudience
 internal/compose/integration/channels/telegram_fixture_integration_test.go#method fakeTelegramAPI.sentMessages
 internal/compose/integration/channels/telegram_fixture_integration_test.go#type fakeTelegramAPI.held
@@ -520,7 +519,6 @@ internal/platform/settings/entry.go#const CodeInvalidValue
 internal/platform/settings/store.go#type Store
 internal/platform/testdb/dropschema.go#const unreferencedTables
 internal/platform/testdb/redis.go#func RedisDB
-internal/platform/testdb/reset.go#const resetTables
 internal/platform/testdb/river.go#func EnsureRiverSchema
 internal/shared/buildinfo/buildinfo.go#var ReleaseVersion
 internal/shared/gatekit/scope.go#method Scope.normalizedRoots
