@@ -438,7 +438,7 @@ function LeadsWorkbench({
           },
           { label: "lead.viewNew", sort: "", filters: { status: "new" } },
           {
-            label: "lead.viewNeedsFollowUp",
+            label: "lead.viewContacted",
             sort: "",
             filters: { status: "contacted" },
           },

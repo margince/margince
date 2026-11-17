@@ -3,7 +3,13 @@
 
 package contacts
 
-import "github.com/margince/margince/backend/internal/shared/kernel/values"
+import (
+	"fmt"
+	"slices"
+	"strings"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
+)
 
 // LeadStatus is the lead lifecycle vocabulary — the Go spelling of the
 // lead_status CHECK, kept in sync by the enumsync fitness gate. Domain
@@ -30,6 +36,22 @@ const (
 // a literal, module by module, because a fragment cannot cross the module
 // boundary — TestLadderClimbsFromActivityAndNeverDescends holds the ladder.
 var openLeadStatuses = []LeadStatus{LeadStatusNew, LeadStatusContacted, LeadStatusEngaged}
+
+// leadStatusOrder is every status in the order a lead moves through them: the
+// open ladder, then the terminal pair.
+var leadStatusOrder = append(slices.Clone(openLeadStatuses), LeadStatusPromoted, LeadStatusDisqualified)
+
+// leadStatusRungSQL is a lead's index in leadStatusOrder. Each status is a Go
+// constant, never a request value, so it is formatted in.
+var leadStatusRungSQL = func() string {
+	var b strings.Builder
+	b.WriteString("(CASE lead.status")
+	for i, status := range leadStatusOrder {
+		fmt.Fprintf(&b, " WHEN '%s' THEN %d", status, i)
+	}
+	b.WriteString(" END)")
+	return b.String()
+}()
 
 // OpenLeadStatuses answers the statuses a lead may be written with, in ladder
 // order: the ones a file or an edit may place by hand.

@@ -5887,7 +5887,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.viewNew": "Mới",
   "lead.viewNewUnassigned": "Mới và chưa giao",
   "lead.viewUnassigned": "Chưa giao",
-  "lead.viewNeedsFollowUp": "Cần liên hệ lại",
+  "lead.viewContacted": "Đã liên hệ",
   "lead.viewEngaged": "Đang trao đổi",
   "lead.ladder": "Trạng thái lead",
   "lead.ladder.automatic": "{label} · đặt tự động",

@@ -6043,7 +6043,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.viewNew": "Neu",
   "lead.viewNewUnassigned": "Neu und nicht zugewiesen",
   "lead.viewUnassigned": "Nicht zugewiesen",
-  "lead.viewNeedsFollowUp": "Follow-up nötig",
+  "lead.viewContacted": "Kontaktiert",
   "lead.viewEngaged": "Im Gespräch",
   "lead.ladder": "Lead-Status",
   "lead.ladder.automatic": "{label} · automatisch",

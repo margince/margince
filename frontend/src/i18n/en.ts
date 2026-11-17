@@ -5971,7 +5971,7 @@ export const en = {
   "lead.viewNew": "New",
   "lead.viewNewUnassigned": "New and unassigned",
   "lead.viewUnassigned": "Unassigned",
-  "lead.viewNeedsFollowUp": "Needs follow-up",
+  "lead.viewContacted": "Contacted",
   "lead.viewEngaged": "Engaged",
   "lead.ladder": "Lead status",
   "lead.ladder.automatic": "{label} · set automatically",
