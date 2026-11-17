@@ -13,7 +13,7 @@ import {
   reportingStoryReport,
 } from "../src/testing/reporting.fixtures";
 import { anna, brandt, E2E_ADMIN_GRANTS } from "./mockapi/fixtures";
-import { contact360 } from "./mockapi/records";
+import { company360, contact360 } from "./mockapi/records";
 import { page as listPage } from "./mockapi/server";
 import { mockApi, servePrincipal } from "./seed";
 
@@ -80,10 +80,21 @@ test("the Overview's dials stay on the Overview when the reader leaves it", asyn
 
   await page.goForward();
   await expect(page).toHaveURL(/#\/contacts(\?|$)/);
+  // The list drawn means the Overview is gone; a held one wrote a frame later.
+  await expect(
+    page.getByRole("main").getByRole("link", { name: /Anna Weber/ }),
+  ).not.toHaveCount(0);
+  await expect
+    .poll(() =>
+      ["overview", "period", "scope"].some((dial) =>
+        dialsOf(page.url()).has(dial),
+      ),
+    )
+    .toBe(false);
   await unturned();
 });
 
-// A regression guard: lists page in memory, so main passes this too.
+// A regression guard: lists keep their page in memory, so this holds anyway.
 test("Back from another list returns to the page of the list the reader left", async ({
   page,
 }) => {
@@ -161,7 +172,8 @@ test("Stay after a link puts the whole address back, and the declined page still
   await expect(page).toHaveURL(address);
   await expect(field).toHaveValue("7200");
 
-  // History cannot drop the entry ahead, so the declined page stays one Forward away.
+  // History cannot drop the entry ahead, so the declined page stays one
+  // Forward away.
   await page.goForward();
   await expect(page).toHaveURL(/#\/settings\/account$/);
   await answerStay(page);
@@ -170,6 +182,40 @@ test("Stay after a link puts the whole address back, and the declined page still
   await expect(field).toHaveValue("7200");
 
   // The draft is still unsaved, so leaving by Back asks too.
+  await page.goBack();
+  await expect(page).toHaveURL(/#\/home$/);
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: de["saveBar.discard"], exact: true })
+    .click();
+  await expect(field).toBeHidden();
+});
+
+test("Stay pressed twice while its way back is under way takes one step", async ({
+  page,
+}) => {
+  const field = await openRetentionForm(page);
+  const address = page.url();
+  await field.fill("7200");
+  await field.press("Tab");
+  await page
+    .getByRole("navigation", { name: de["shell.railAria"] })
+    .locator('a[href="/#/settings/account"]')
+    .click();
+  const entries = await page.evaluate(() => history.length);
+
+  const stay = page
+    .getByRole("dialog")
+    .getByRole("button", { name: de["unsaved.stay"], exact: true });
+  const box = await stay.boundingBox();
+  if (box === null) throw new Error("the Stay button is not drawn");
+  await page.mouse.dblclick(box.x + box.width / 2, box.y + box.height / 2);
+
+  await expect(page.getByRole("dialog")).toBeHidden();
+  await expect(page).toHaveURL(address);
+  expect(await page.evaluate(() => history.length)).toBe(entries);
+  await expect(field).toHaveValue("7200");
+
   await page.goBack();
   await expect(page).toHaveURL(/#\/home$/);
   await page
@@ -449,38 +495,38 @@ test("a Qualify dialog the reader closed stays closed on Back", async ({
   await expect(qualify).toBeHidden();
 });
 
-test("Back after archiving a contact does not reopen its page", async ({
-  page,
-}) => {
+// A principal who may archive, with the delete grant the shared admin lacks.
+async function serveArchiver(page: Page, object: "contact" | "company") {
   const admin = meFixture({
-    allow: { ...E2E_ADMIN_GRANTS, contact: ["read", "update", "delete"] },
+    allow: { ...E2E_ADMIN_GRANTS, [object]: ["read", "update", "delete"] },
   });
   await servePrincipal(page, {
     ...admin,
     user: { ...admin.user, id: "u1", locale: "de" },
   });
-  const archivable = { ...anna, archivable: true };
-  await page.route("**/v1/contacts/p-anna/360", (route) =>
-    route.fulfill({ json: { ...contact360, contact: archivable } }),
+}
+
+// The record's own read and its 360, archivable, and a DELETE that archives.
+async function serveArchivable(
+  page: Page,
+  record: string,
+  readable: object,
+  overview: object,
+) {
+  await page.route(`**/v1/${record}/360`, (route) =>
+    route.fulfill({ json: overview }),
   );
-  await page.route("**/v1/contacts/p-anna", (route) =>
+  await page.route(`**/v1/${record}`, (route) =>
     route.fulfill({
       json:
         route.request().method() === "DELETE"
-          ? { ...anna, archived_at: "2026-11-16T09:00:00Z" }
-          : archivable,
+          ? { ...readable, archived_at: "2026-11-16T09:00:00Z" }
+          : readable,
     }),
   );
-  await page.goto("/#/home");
-  await expect(page.getByRole("main")).toBeVisible();
-  await rail(page, de["nav.contacts"]).click();
-  await page
-    .getByRole("main")
-    .getByRole("link", { name: /Anna Weber/ })
-    .first()
-    .click();
-  await expect(page).toHaveURL(/#\/contacts\/p-anna$/);
+}
 
+async function archiveFromHeader(page: Page) {
   await page
     .getByRole("main")
     .getByRole("button", { name: de["record.moreActions"] })
@@ -491,11 +537,72 @@ test("Back after archiving a contact does not reopen its page", async ({
     .getByRole("dialog")
     .getByRole("button", { name: de["record.archive"], exact: true })
     .click();
+}
 
-  await expect(page).toHaveURL(/#\/contacts(\?[^/]*)?$/);
+test("archiving a contact goes back to the filtered list it came from", async ({
+  page,
+}) => {
+  await serveArchiver(page, "contact");
+  const archivable = { ...anna, archivable: true };
+  await serveArchivable(page, "contacts/p-anna", archivable, {
+    ...contact360,
+    contact: archivable,
+  });
+  await page.goto("/#/home");
+  await expect(page.getByRole("main")).toBeVisible();
+  await page.goto("/#/contacts?owner=me");
+  const row = page.getByRole("main").getByRole("link", { name: /Anna Weber/ });
+  await expect(row).not.toHaveCount(0);
+  const list = page.url();
+  expect(dialsOf(list).get("owner")).toBe("me");
+  await row.first().click();
+  await expect(page).toHaveURL(/#\/contacts\/p-anna$/);
+  const record = page.url();
+
+  await archiveFromHeader(page);
+
+  await expect(page).toHaveURL(list);
   await page.goBack();
-  await expect(page).not.toHaveURL(/p-anna/);
-  await expect(page).toHaveURL(/#\/(contacts(\?[^/]*)?|home)$/);
+  await expect(page).toHaveURL(/#\/home$/);
+  await page.goForward();
+  await expect(page).toHaveURL(list);
+  // The archived record stays one Forward away; history cannot drop it.
+  await page.goForward();
+  await expect(page).toHaveURL(record);
+});
+
+test("archiving an account from one of its tabs goes back past the tabs to the list", async ({
+  page,
+}) => {
+  await serveArchiver(page, "company");
+  const archivable = { ...brandt, archivable: true };
+  await serveArchivable(page, "companies/o-brandt", archivable, {
+    ...company360,
+    company: archivable,
+  });
+  await page.goto("/#/home");
+  await expect(page.getByRole("main")).toBeVisible();
+  await rail(page, de["nav.companies"]).click();
+  const row = page.getByRole("main").getByRole("link", { name: /Brandt/ });
+  await expect(row).not.toHaveCount(0);
+  const list = page.url();
+  await row.first().click();
+  await expect(page).toHaveURL(/#\/companies\/o-brandt$/);
+  await page
+    .getByRole("main")
+    .getByRole("button", { name: de["tab.timeline"], exact: true })
+    .click();
+  await expect(page).toHaveURL(/#\/companies\/o-brandt\/timeline$/);
+
+  await archiveFromHeader(page);
+
+  await expect(page).toHaveURL(list);
+  await page.goBack();
+  await expect(page).toHaveURL(/#\/home$/);
+  await page.goForward();
+  await expect(page).toHaveURL(list);
+  await page.goForward();
+  await expect(page).toHaveURL(/#\/companies\/o-brandt$/);
 });
 
 // Holds the deal create until the test lets it answer, so the reader can act
@@ -704,4 +811,54 @@ test("Back from a saved custom report returns to Reports, not its preview", asyn
     page.getByRole("button", { name: de["reporting.newCustomReport"] }),
   ).toBeVisible();
   expect(posts).toHaveLength(1);
+});
+
+// Holds every request to `url` until the returned function is called, then
+// answers with `json`, or passes it on when there is none.
+async function holdRoute(page: Page, url: string, json?: object) {
+  let release = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route(url, async (route) => {
+    await held;
+    await (json === undefined ? route.fallback() : route.fulfill({ json }));
+  });
+  return release;
+}
+
+test("an archived account's late redirect stays off the page the reader moved to", async ({
+  page,
+}) => {
+  const gone = {
+    ...brandt,
+    id: "o-gone",
+    display_name: "Stillgelegt GmbH",
+    archived_at: "2026-11-01T09:00:00Z",
+  };
+  const releaseRead = await holdRoute(page, "**/v1/companies/o-gone", gone);
+  await page.route("**/v1/companies/o-gone/360", (route) =>
+    route.fulfill({ json: { ...company360, company: gone } }),
+  );
+  await page.goto("/#/home");
+  await expect(page.getByRole("main")).toBeVisible();
+  const asked = page.waitForRequest("**/v1/companies/o-gone");
+  // An archived account refuses its deals tab, so this address redirects.
+  await page.goto("/#/companies/o-gone/deals");
+  await asked;
+
+  // Home's code ships in the first load, so Back to it holds nothing. A screen
+  // loaded on demand keeps the account drawn past the move while it arrives.
+  const releaseCode = await holdRoute(page, "**/assets/**");
+  await rail(page, de["nav.salesGoals"]).click();
+  await expect(page).toHaveURL(/#\/goals$/);
+
+  releaseRead();
+  const held = page.getByRole("main").getByText(gone.display_name);
+  await expect(held.first()).toBeVisible();
+  await expect(page).toHaveURL(/#\/goals$/);
+  releaseCode();
+
+  await expect(held).toHaveCount(0);
+  await expect(page).toHaveURL(/#\/goals$/);
 });
