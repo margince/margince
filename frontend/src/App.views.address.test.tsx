@@ -4,23 +4,17 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ScreenView } from "./App.views";
 import { LocaleProvider } from "./i18n";
-import { traverseTo } from "./lib/historydepth";
-import { useHash, useRoute } from "./lib/router";
+import { navigateReplacing, useHash, useRoute } from "./lib/router";
 import { settingsRouteTarget } from "./lib/settingsrouting";
 import { useUnsavedGuard } from "./lib/unsavedclaims";
 import { type UrlParams, useUrlParams } from "./lib/urlstate";
 import { meFixture } from "./testing/mefixture";
-
-vi.mock("./lib/historydepth", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("./lib/historydepth")>()),
-  traverseTo: vi.fn(() => false),
-}));
 
 // Each routed screen shows the address it reads, carries a draft, and exposes
 // its dial writer so a test can write late.
@@ -99,11 +93,11 @@ async function holdDraftOn(at: string, name: string, leaveFor: string) {
 
 beforeEach(() => {
   writers.clear();
-  vi.mocked(traverseTo).mockReset().mockReturnValue(false);
 });
 
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
   window.history.replaceState(null, "", "#/");
 });
 
@@ -152,33 +146,51 @@ describe("a screen held on screen past a move", () => {
 });
 
 describe("Stay on a held draft", () => {
+  const HELD = "#/contacts/c1/notes/more?page=3";
+
   it("goes back through history to the entry the draft was on", async () => {
-    vi.mocked(traverseTo).mockReturnValue(true);
-    const user = await holdDraftOn(
-      "#/contacts/c1/notes/more?page=3",
-      "contact",
-      "#/companies",
-    );
+    const go = vi.spyOn(window.history, "go");
+    const user = await holdDraftOn(HELD, "contact", "#/companies");
     const length = window.history.length;
 
     await user.click(screen.getByRole("button", { name: "Cancel" }));
 
-    expect(traverseTo).toHaveBeenCalledWith(0);
+    expect(go.mock.calls).toEqual([[-1]]);
+    await waitFor(() => expect(window.location.hash).toBe(HELD));
     expect(window.history.length).toBe(length);
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
-  it("puts the whole held address back in place when history cannot move", async () => {
-    const user = await holdDraftOn(
-      "#/contacts/c1/notes/more?page=3",
-      "contact",
-      "#/companies",
-    );
+  it("waits for a traversal under way and overwrites no entry", async () => {
+    const go = vi.spyOn(window.history, "go").mockImplementation(() => {});
+    const user = await holdDraftOn(HELD, "contact", "#/companies");
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(go.mock.calls).toEqual([[-1]]);
+    expect(window.location.hash).toBe("#/companies");
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    act(() => window.history.back());
+    await waitFor(() => expect(window.location.hash).toBe(HELD));
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("puts the whole held address back on an entry history cannot leave", async () => {
+    const go = vi.spyOn(window.history, "go");
+    const user = userEvent.setup();
+    renderRouted(HELD);
+    const page = await screen.findByRole("region", { name: "contact" });
+    await user.type(page.querySelector("input") ?? document.body, "Unsaved");
+    act(() => navigateReplacing({ screen: "companies" }));
+    await screen.findByRole("dialog");
     const length = window.history.length;
 
     await user.click(screen.getByRole("button", { name: "Cancel" }));
 
-    expect(window.location.hash).toBe("#/contacts/c1/notes/more?page=3");
+    expect(go).not.toHaveBeenCalled();
+    expect(window.location.hash).toBe(HELD);
     expect(window.history.length).toBe(length);
     expect(screen.queryByRole("dialog")).toBeNull();
   });

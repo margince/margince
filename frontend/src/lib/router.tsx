@@ -230,11 +230,8 @@ function takeFromHash(): boolean {
     return false;
   }
   held.set(screen, carried);
-  // replaceState, not a hash assignment: that adds an entry and leaves the
-  // credential behind it, one Back press away. It fires no hashchange, so the
-  // subscription scrubs the credential before React reads the address.
-  // The document's own query is kept (Storybook's `?id=<story>` lives there).
-  // The entry's state goes along: it holds the depth and scroll stamps.
+  // Not a hash assignment, which pushes and leaves the credential a Back away.
+  // Query and state stay: Storybook's `?id=`, the entry's depth and scroll.
   const { pathname, search } = globalThis.location;
   globalThis.history.replaceState(
     globalThis.history.state,

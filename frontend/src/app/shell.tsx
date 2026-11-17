@@ -13,7 +13,7 @@ import { SETTINGS_SCREEN } from "../features/settings/settingsnav";
 import { useT } from "../i18n";
 import { EXTENSION_SCREEN, findExtension } from "../lib/extensions";
 import { useFirstScreenSettled } from "../lib/journeymarks";
-import { useHash, useRoute } from "../lib/router";
+import { useLiveHash, useRoute } from "../lib/router";
 import { ShownAddressSink } from "../lib/screenaddress";
 import { useScrollMemory } from "../lib/scrollmemory";
 import { useShortcutDispatcher, useShortcutHandler } from "../lib/shortcuts";
@@ -148,7 +148,7 @@ export function Shell({
   // past a move is still the one in the column. The whole address, so Back
   // between two entries that differ only in dials restores each.
   const [shown, setShown] = useState<string | null>(null);
-  const live = useHash();
+  const live = useLiveHash();
   const address = shown ?? live;
   // A new page opens at its top; a page the reader is returning to opens where
   // they left it. Both live in lib/scrollmemory.ts. The second needs an identity

@@ -12,7 +12,8 @@ import {
   useInstallationDescribed,
 } from "../../../lib/installationcompany";
 import { throwProblem } from "../../../lib/problem";
-import { navigateReplacing, useRoute } from "../../../lib/router";
+import { useRoute } from "../../../lib/router";
+import { useAddressWriters } from "../../../lib/urlstate";
 import { EMPTY_DRAFT, pickBuiltVersion } from "../onboarding";
 import { BuildScene } from "../onboarding-build-scene";
 import { loadWizardState } from "../onboarding-progress";
@@ -188,6 +189,7 @@ function useRestore(
   routeConnect: boolean,
 ) {
   const { locale } = useLocale();
+  const { navigateReplacing } = useAddressWriters();
   const { company: existing, described } = useInstallationDescribed(true);
   const mayDescribe = useHoldsAdminRole();
   // The restore's own snapshot, not the live entry the shell gates on: a
@@ -291,6 +293,7 @@ function useRestore(
     routeConnect,
     locale,
     dispatch,
+    navigateReplacing,
   ]);
 
   return {
@@ -382,6 +385,7 @@ function CurrentAct({
   voice: UseQueryResult<VoiceRestoreProbe>;
   persistedRead: UseQueryResult<CompanySiteRead | null>;
 }>) {
+  const { navigateReplacing } = useAddressWriters();
   switch (state.act) {
     case "company":
       return (

@@ -118,11 +118,8 @@ export function useBeforeUnload(dirty: boolean): void {
 }
 
 /**
- * Holds `children` steady while an unsaved edit is on screen and the address changes underneath it.
- * Discarding shows the new address; keeping sends the reader back, where their work can still be saved.
- * `samePlace` names a change that is not leaving, such as a dial turned in place.
- * `onKeep` puts the address back, because only the caller knows what an address is.
- * It gets the depth stamp of the entry the held address was live on.
+ * Holds `children` on their address while a draft is unsaved, and asks before
+ * leaving. Stay hands `onKeep` the depth stamp of the entry that address was on.
  */
 export function UnsavedGuard<Address extends string>({
   address,
@@ -139,8 +136,6 @@ export function UnsavedGuard<Address extends string>({
   // The address whose content is on screen. It follows `address` freely until a
   // draft is at stake, and then stops until the question is answered.
   const [shown, setShown] = useState(() => ({ address, depth: entryDepth() }));
-  // The address Stay was answered on, while the way back is still under way.
-  const [kept, setKept] = useState<Address | null>(null);
 
   const dirty = registry.dirty;
   useBeforeUnload(dirty);
@@ -155,11 +150,8 @@ export function UnsavedGuard<Address extends string>({
   ) {
     setShown({ address, depth: entryDepth() });
   }
-  if (kept !== null && address !== kept) {
-    setKept(null);
-  }
 
-  const asking = address !== shown.address && dirty && address !== kept;
+  const asking = address !== shown.address && dirty;
 
   return (
     <UnsavedContext.Provider value={registry}>
@@ -167,10 +159,7 @@ export function UnsavedGuard<Address extends string>({
       <LeaveQuestion
         open={asking}
         savers={registry.savers}
-        onStay={() => {
-          setKept(address);
-          onKeep(shown.address, shown.depth);
-        }}
+        onStay={() => onKeep(shown.address, shown.depth)}
         onLeave={() => setShown({ address, depth: entryDepth() })}
       />
     </UnsavedContext.Provider>

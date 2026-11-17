@@ -16,7 +16,7 @@ import { ACTION_PARAM, QUALIFY_ACTION } from "../../lib/leads.address";
 import { useOpenEmail } from "../../lib/openemail";
 import { unwrap } from "../../lib/problem";
 import { scrollPageToTop } from "../../lib/reveal";
-import { replaceDial, useUrlParams } from "../../lib/urlstate";
+import { useAddressWriters, useUrlParams } from "../../lib/urlstate";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
 import { leadBand } from "./leadband";
 import { LeadDetails, useFieldSave } from "./leaddetails";
@@ -127,15 +127,16 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
   // A link from a surface that met this lead while creating a contact opens
   // the Qualify dialog, so the reader converts in one step.
   const [params] = useUrlParams();
-  const [pressed, setDialog] = useState<"qualify" | "disqualify" | null>(null);
+  const [pressed, setPressed] = useState<"qualify" | "disqualify" | null>(null);
   const addressed =
     params.get(ACTION_PARAM) === QUALIFY_ACTION && !lead.archived_at
       ? "qualify"
       : null;
   const dialog = pressed ?? addressed;
+  const { replaceDial } = useAddressWriters();
   // The address goes with it, or Back would reopen what the reader closed.
   const closeDialog = () => {
-    setDialog(null);
+    setPressed(null);
     replaceDial(ACTION_PARAM, undefined);
   };
   // What the last qualify did, said once: the contact and, when one was
@@ -200,8 +201,8 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
           writer={writer}
           terminalReasonId={terminalReasonId}
           refusedReasonId={writer.readOnly ? terminalReasonId : undefined}
-          onQualify={() => setDialog("qualify")}
-          onDisqualify={() => setDialog("disqualify")}
+          onQualify={() => setPressed("qualify")}
+          onDisqualify={() => setPressed("disqualify")}
           onLogged={refreshAfterTouch}
           emailOpen={composing}
           onEmailOpenChange={setComposing}
@@ -249,8 +250,8 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
             thread={threadQuery}
             asOf={asOf}
             onOpenEmail={setOpenEmail}
-            onQualify={() => setDialog("qualify")}
-            onDisqualify={() => setDialog("disqualify")}
+            onQualify={() => setPressed("qualify")}
+            onDisqualify={() => setPressed("disqualify")}
           />
         </LeadLatestInbound>
       )}
@@ -258,7 +259,7 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
         <LeadDealsTab
           lead={lead}
           writer={writer}
-          onQualify={() => setDialog("qualify")}
+          onQualify={() => setPressed("qualify")}
           reasonId={writer.readOnly ? terminalReasonId : undefined}
         />
       )}

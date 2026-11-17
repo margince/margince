@@ -6,7 +6,7 @@ import { IMPORT_RUN_SUBPAGE, settingsHref } from "../../lib/settingsrouting";
 import {
   currentParams,
   hashWithParams,
-  replaceParams,
+  useAddressWriters,
   useUrlParams,
 } from "../../lib/urlstate";
 
@@ -28,6 +28,7 @@ export function useAddressedRun(): [
 ] {
   const [params] = useUrlParams();
   const id = params.get(RUN_PARAM) || null;
+  const { replaceParams } = useAddressWriters();
   const address = (next: string | null) => {
     const dials = new Map(currentParams());
     if (next) {

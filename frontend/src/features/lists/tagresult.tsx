@@ -16,7 +16,8 @@ import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { useHealthScope } from "../../lib/healthscope";
 import { unwrap } from "../../lib/problem";
-import { navigate, navigateReplacing } from "../../lib/router";
+import { navigate } from "../../lib/router";
+import { useAddressWriters } from "../../lib/urlstate";
 import "./tagresult.css";
 
 /**
@@ -38,6 +39,7 @@ const PREVIEW_ROWS = 5;
 export function TagResultScreen({ tagID }: Readonly<{ tagID?: string }>) {
   const t = useT();
   const { locale } = useLocale();
+  const { navigateReplacing } = useAddressWriters();
   const tag = useQuery({
     queryKey: ["tag", tagID],
     queryFn: tagID
@@ -57,7 +59,7 @@ export function TagResultScreen({ tagID }: Readonly<{ tagID?: string }>) {
     if (!tagID) {
       navigateReplacing({ screen: "settings", id: "tags" });
     }
-  }, [tagID]);
+  }, [tagID, navigateReplacing]);
   if (!tagID || tag.isPending) {
     return null;
   }

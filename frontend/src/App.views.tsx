@@ -53,7 +53,7 @@ import { isContactTab } from "./lib/contacttab";
 import { screenEnabled, useDisabledCoreFeatures } from "./lib/corefeatures";
 import { bootsOnEssentialCopy } from "./lib/essentialscreens";
 import { EXTENSION_SCREEN } from "./lib/extensions";
-import { traverseTo } from "./lib/historydepth";
+import { traversalInFlight, traverseTo } from "./lib/historydepth";
 import { routeIdentity } from "./lib/routeidentity";
 import {
   navigateReplacing,
@@ -179,10 +179,10 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
     "not-found": () => <ScreenNotice messageKey="shell.unknownPage" />,
   };
 
-// Stay returns to the held entry through history, so the entries before and
-// after it are kept. With no entry to go to, the bar is put back in place.
+// Through history, so the entries around the held one are kept. Never a replace
+// while a traversal is under way: that would rename the entry it lands on.
 function returnTo(address: string, depth: number | undefined): void {
-  if (depth !== undefined && traverseTo(depth)) {
+  if (traversalInFlight() || (depth !== undefined && traverseTo(depth))) {
     return;
   }
   navigateReplacing(parseHash(address), parseParams(address));
@@ -227,7 +227,7 @@ function askedAddress(route: Route, live: string): string {
 function useShownAddress(asked: string): string | null {
   const page = routeHash(parseHash(asked));
   const shownPage = useDeferredValue<string | null>(page, null);
-  // The shown page's address as of its last render as the live one.
+  // What the shown page goes on reading once the bar has moved past it.
   const [left, setLeft] = useState(asked);
   if (shownPage === page && left !== asked) {
     setLeft(asked);

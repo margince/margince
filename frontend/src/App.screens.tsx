@@ -11,7 +11,7 @@ import {
 import { useLocale, useT } from "./i18n";
 import type { MessageKey } from "./i18n/en";
 import { composedScreens, findExtension, unitTitle } from "./lib/extensions";
-import { navigateReplacing } from "./lib/router";
+import { useAddressWriters } from "./lib/urlstate";
 
 // Every route chunk, registered as it is declared. A screen is split so the
 // login screen does not carry the app. It is warmed once a session exists, so a
@@ -348,13 +348,10 @@ export function ShareRoute({
   );
 }
 
-// One form for both places that answer #/reset-password: `App`, ahead of the
-// session gate, and the routed table, which has an entry for every `Screen`.
-// A stale or bare link has no token, so it renders as an ordinary login.
-// LoginForm restores the requested route only for a non-empty hash, and this
-// hash is never empty, so sign-in needs the navigate here. It replaces, so Back
-// does not reopen the spent reset link.
+// Drawn by `App` ahead of the session gate and by the routed table. Sign-in
+// replaces onto home, or the reader stays on a spent link Back would reopen.
 export function ResetRoute() {
+  const { navigateReplacing } = useAddressWriters();
   return <AuthScreen onAuthed={() => navigateReplacing({ screen: "home" })} />;
 }
 

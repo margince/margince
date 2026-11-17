@@ -1,5 +1,11 @@
 import { useContext, useMemo } from "react";
-import { announceAddressChanged, samePage, useHash } from "./router";
+import {
+  announceAddressChanged,
+  navigateReplacing,
+  type Route,
+  samePage,
+  useHash,
+} from "./router";
 import { ScreenAddress } from "./screenaddress";
 
 /**
@@ -150,14 +156,7 @@ export function replaceDial(key: string, value: string | undefined): void {
   replaceParams(next);
 }
 
-/**
- * The dials the address carries, and the one way to change them.
- *
- * Under a routed screen the setter writes only while the bar is on that page.
- * A screen held past a move, or a save settling after the reader left, would
- * otherwise write into the entry they arrived on. It is stable while the page
- * is, so an effect keyed on it does not re-run for a dial.
- */
+/** The dials the address carries, and the one way to change them. */
 export function useUrlParams(): [UrlParams, (next: UrlParams) => void] {
   const hash = useHash();
   // Keyed on the whole address rather than on its query, because that is what
@@ -165,21 +164,45 @@ export function useUrlParams(): [UrlParams, (next: UrlParams) => void] {
   // long as the reader stays put. A query object rebuilt every render would
   // re-key every react-query read that names it.
   const params = useMemo(() => parseParams(hash), [hash]);
+  return [params, useAddressWriters().replaceParams];
+}
+
+export type AddressWriters = Readonly<{
+  replaceParams: (next: UrlParams) => void;
+  replaceDial: (key: string, value: string | undefined) => void;
+  navigateReplacing: (route: Route, dials?: UrlParams) => void;
+}>;
+
+const UNBOUND: AddressWriters = {
+  replaceParams,
+  replaceDial,
+  navigateReplacing,
+};
+
+/**
+ * Writers for a write that lands after its render (an effect, a settled
+ * request). Under a routed screen each drops it once the bar leaves the page.
+ */
+export function useAddressWriters(): AddressWriters {
   const drawnFor = useContext(ScreenAddress);
   const page =
     drawnFor === null ? null : hashWithParams(drawnFor, NO_URL_PARAMS);
-  const write = useMemo(
-    () =>
-      page === null
-        ? replaceParams
-        : (next: UrlParams) => {
-            if (samePage(globalThis.location.hash, page)) {
-              replaceParams(next);
-            }
-          },
-    [page],
-  );
-  return [params, write];
+  return useMemo(() => (page === null ? UNBOUND : writersOn(page)), [page]);
+}
+
+function writersOn(page: string): AddressWriters {
+  const onPage = () => samePage(globalThis.location.hash, page);
+  return {
+    replaceParams: (next) => {
+      if (onPage()) replaceParams(next);
+    },
+    replaceDial: (key, value) => {
+      if (onPage()) replaceDial(key, value);
+    },
+    navigateReplacing: (route, dials) => {
+      if (onPage()) navigateReplacing(route, dials);
+    },
+  };
 }
 
 // The two dials the Ask dialog rides on, and these are their only writers. They

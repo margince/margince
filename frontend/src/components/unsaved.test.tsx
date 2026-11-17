@@ -446,7 +446,7 @@ function Addressed({
   const [address, setAddress] = useState("#/form?tab=a");
   return (
     <LocaleProvider>
-      {["#/form?tab=b", "#/elsewhere", "#/third"].map((to) => (
+      {["#/form?tab=a", "#/form?tab=b", "#/elsewhere"].map((to) => (
         <button key={to} type="button" onClick={() => setAddress(to)}>
           {`go ${to}`}
         </button>
@@ -495,17 +495,18 @@ describe("UnsavedGuard holding a history entry", () => {
     expect(dialog()).toBeNull();
   });
 
-  it("stops asking once Stay is answered, and asks again for the next move", async () => {
+  it("keeps asking until Stay has brought the address back", async () => {
     const user = userEvent.setup();
     render(<Addressed onKeep={vi.fn()} />);
     await user.type(screen.getByRole("textbox", { name: /Signature/ }), "J");
     fireEvent.click(screen.getByRole("button", { name: "go #/elsewhere" }));
     await user.click(screen.getByRole("button", { name: "Cancel" }));
 
+    expect(dialog()).not.toBeNull();
+    fireEvent.click(
+      screen.getByRole("button", { name: "go #/form?tab=a", hidden: true }),
+    );
     expect(dialog()).toBeNull();
     expect(screen.getByText("Showing #/form?tab=a")).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: "go #/third" }));
-    expect(dialog()).not.toBeNull();
   });
 });
