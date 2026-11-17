@@ -8,6 +8,7 @@ import {
   render as rtlRender,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
@@ -465,6 +466,46 @@ describe("WebFormsCard", () => {
     );
     expect(backend.sent[0]?.body).not.toHaveProperty("allowed_origins");
     expect(screen.getByText(/destroys the only copy/)).toBeTruthy();
+  });
+
+  it("asks before Escape closes a minted secret nobody copied", async () => {
+    const created = {
+      ...contactForm,
+      sender: "server",
+      allowed_origins: [],
+      signing_secret: "mwf_minted",
+    };
+    const backend = backendFor(OPERATOR, [], {
+      "POST /v1/web-forms": () => jsonResponse(created, 201),
+    });
+    vi.stubGlobal("fetch", backend.fetch);
+    const user = userEvent.setup();
+    render(<WebFormsCard />);
+    await user.click(await screen.findByTestId("new-web-form"));
+    await user.type(screen.getByLabelText(/^Name/), "Demo request");
+    await user.click(screen.getByRole("radio", { name: /Website server/ }));
+    await user.click(screen.getByTestId("save-web-form"));
+    await screen.findByTestId("web-form-secret");
+
+    await user.keyboard("{Escape}");
+    const question = await screen.findByRole("dialog", {
+      name: en["unsaved.title"],
+    });
+    expect(question.textContent).toContain(en["webForms.setup.leaveWarning"]);
+    await user.click(
+      within(question).getByRole("button", { name: en["create.cancel"] }),
+    );
+    expect(screen.getByTestId("web-form-secret").textContent).toBe(
+      "mwf_minted",
+    );
+
+    await user.keyboard("{Escape}");
+    await user.click(
+      await screen.findByRole("button", { name: en["unsaved.discard"] }),
+    );
+    await waitFor(() =>
+      expect(screen.queryByTestId("web-form-secret")).toBeNull(),
+    );
   });
 
   it("sets a Tally form up with no secret to bring, and says where each value goes", async () => {
