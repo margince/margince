@@ -54,7 +54,7 @@ export function useEmployerChange(
         {adding.modal}
         {employer && (
           <ChangeEmployerModal
-            key={changing.seq}
+            key={`change-${changing.seq}`}
             open={changing.open}
             onClose={() => setChanging((prior) => ({ ...prior, open: false }))}
             contactId={contactId}

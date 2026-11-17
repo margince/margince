@@ -264,6 +264,20 @@ describe("the About column's employer", () => {
     ).toHaveProperty("checked", true);
   });
 
+  it("draws the employer's dialogs without a duplicate key", async () => {
+    const logged = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    mount(viewWith([brandt]));
+    await screen.findByRole("button", { name: "Edit About" });
+    expect(
+      logged.mock.calls.filter(([message]) =>
+        String(message).includes("same key"),
+      ),
+    ).toEqual([]);
+    logged.mockRestore();
+  });
+
   it("stays read-only for a reader who cannot change the contact", async () => {
     mount(viewWith([brandt], false));
     await screen.findByText("Brandt Automotive GmbH");
