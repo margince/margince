@@ -28,6 +28,11 @@ func TestADSNParameterIsNamedInTheSpellingTheDSNUses(t *testing.T) {
 		{"the postgresql scheme is the same form", "postgresql://h/db", "postgresql://h/db?statement_timeout=5000"},
 		{"a keyword/value DSN separates with a space", "host=h dbname=db", "host=h dbname=db statement_timeout=5000"},
 		{"a DSN that already names it keeps its own", "host=h statement_timeout=1", "host=h statement_timeout=1"},
+		{"a value is not a parameter name", "host=h password='statement_timeout'", "host=h password='statement_timeout' statement_timeout=5000"},
+		{"a quoted value may contain an assignment", "host=h password=' statement_timeout=1'", "host=h password=' statement_timeout=1' statement_timeout=5000"},
+		{"an encoded URL key still wins", "postgres://h/db?statement%5Ftimeout=1", "postgres://h/db?statement%5Ftimeout=1"},
+		{"a malformed DSN is left for the pool to reject", "postgres://%/db", "postgres://%/db"},
+		{"a longer name that starts with it is another parameter", "host=h statement_timeout_x=1", "host=h statement_timeout_x=1 statement_timeout=5000"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
@@ -133,16 +138,62 @@ func TestAPoolRetiresItsConnectionsWithinMinutes(t *testing.T) {
 		lifetime, jitter time.Duration
 	}{
 		{"a bare DSN gets both defaults", "postgres://h/db", 10 * time.Minute, 2 * time.Minute},
-		{"a DSN lifetime wins", "postgres://h/db?pool_max_conn_lifetime=1h", time.Hour, 2 * time.Minute},
+		{"a DSN lifetime wins and its jitter is a fifth of it", "postgres://h/db?pool_max_conn_lifetime=1h", time.Hour, 12 * time.Minute},
 		{"a DSN jitter keeps the default lifetime", "postgres://h/db?pool_max_conn_lifetime_jitter=30s", 10 * time.Minute, 30 * time.Second},
+		{"a keyword/value DSN names both", "host=h pool_max_conn_lifetime_jitter=1m pool_max_conn_lifetime=20m", 20 * time.Minute, time.Minute},
 	} {
 		cfg, err := database.PoolConfig(tc.dsn)
 		if err != nil {
 			t.Fatalf("%s: PoolConfig: %v", tc.name, err)
 		}
+		if cfg.ConnConfig.RuntimeParams["jit"] != "off" {
+			t.Fatal("a pool setting suppressed the JIT ceiling")
+		}
 		if cfg.MaxConnLifetime != tc.lifetime || cfg.MaxConnLifetimeJitter != tc.jitter {
 			t.Errorf("%s: lifetime %v jitter %v, want %v and %v",
 				tc.name, cfg.MaxConnLifetime, cfg.MaxConnLifetimeJitter, tc.lifetime, tc.jitter)
+		}
+	}
+}
+
+func TestPoolLimitsIgnoreParameterNamesInValues(t *testing.T) {
+	for _, dsn := range []string{
+		"postgres://app:pool_max_conns@h/db",
+		"host=h dbname=pool_min_conns password=pool_max_conn_idle_time",
+	} {
+		cfg, err := database.PoolConfig(dsn)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if cfg.MaxConns != 16 || cfg.MinConns != 2 || cfg.MaxConnIdleTime != database.DefaultConnIdleTime {
+			t.Fatalf("a value suppressed pool defaults: max=%d min=%d idle=%s", cfg.MaxConns, cfg.MinConns, cfg.MaxConnIdleTime)
+		}
+	}
+	cfg, err := database.PoolConfig("postgres://h/db?pool%5Fmax_conns=4")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.MaxConns != 4 {
+		t.Fatalf("encoded pool key overridden: got %d", cfg.MaxConns)
+	}
+	if _, err := database.PoolConfig(database.WithDSNParam("postgres://%/db", "pool_max_conns", "4")); err == nil {
+		t.Fatal("a malformed DSN lost its parse error")
+	}
+}
+
+func TestExplicitRuntimeParametersKeepTheirCaseInsensitiveNames(t *testing.T) {
+	for _, dsn := range []string{"host=h JIT=on STATEMENT_TIMEOUT=0", "postgres://h/db?JIT=on&STATEMENT_TIMEOUT=0"} {
+		cfg, err := database.PoolConfig(dsn)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for name, want := range map[string]string{"JIT": "on", "STATEMENT_TIMEOUT": "0"} {
+			if cfg.ConnConfig.RuntimeParams[name] != want {
+				t.Fatalf("explicit %s was changed", name)
+			}
+			if _, duplicate := cfg.ConnConfig.RuntimeParams[strings.ToLower(name)]; duplicate {
+				t.Fatalf("default duplicates explicit %s", name)
+			}
 		}
 	}
 }
