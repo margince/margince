@@ -17,8 +17,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
-//testdb:serial flushes and reads the package's one Redis database
 func TestAStatusPublishedByOneProcessIsLoadedByAnotherAndExpires(t *testing.T) {
+	t.Parallel()
 	rdb := redistest.Client(t)
 	writer, reader := New(rdb), New(rdb)
 	since := time.Date(2026, 10, 5, 9, 0, 0, 0, time.UTC)
@@ -83,8 +83,8 @@ func (failIndexRead) ProcessHook(next redis.ProcessHook) redis.ProcessHook {
 	}
 }
 
-//testdb:serial flushes and reads the package's one Redis database
 func TestIndexCleanupFailureDoesNotUndoRecordedStatus(t *testing.T) {
+	t.Parallel()
 	rdb := redistest.Client(t)
 	rdb.AddHook(failIndexRead{})
 	store := New(rdb)

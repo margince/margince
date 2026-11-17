@@ -44,9 +44,8 @@ type limitRefusal struct {
 
 // An Admin value saved through the settings binds the admin's real passport,
 // and its tool calls and REST requests fill one count against it.
-//
-//testdb:serial flushes and reads the package's one Redis database
 func TestARoleLimitBindsOneCountAcrossMCPAndRest(t *testing.T) {
+	t.Parallel()
 	d := roleBoundDoors(t, "role-limit-doors")
 	if status := d.E.Call(t, "PATCH", "/v1/installation/settings", AnyMap{
 		"agent_role_allowances": []AnyMap{{"role_key": "admin", "agent_calls_per_window": 60}},

@@ -79,9 +79,8 @@ func TestTheAdminPresetYieldsToAnInstallationValueSomebodyChose(t *testing.T) {
 
 // A role's own values bind its users' agents through the meter's real source.
 // An agent holding two roles gets the higher of the two for each count.
-//
-//testdb:serial flushes and reads the package's one Redis database
 func TestARoleValueAnAdminSavedBindsThatRolesAgents(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	h := allowanceHandlers(e, wallClock(t))
 	at := clocktest.Now(t)

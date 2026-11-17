@@ -10,38 +10,20 @@ package ratelimit
 
 import (
 	"context"
-	"os"
 	"testing"
 	"time"
 
 	"github.com/redis/go-redis/v9"
 
+	"github.com/margince/margince/backend/internal/platform/redistest"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 )
 
-// sharedTestRedis is a per-test Redis db (never db 0, which a running
-// `make dev` owns), flushed clean so a count assertion never inherits another
-// test's keys.
+// sharedTestRedis is a Redis database of this test's own, flushed clean so a
+// count assertion never inherits another test's keys.
 func sharedTestRedis(t *testing.T) (context.Context, *redis.Client) {
 	t.Helper()
-	addr := os.Getenv("MARGINCE_TEST_REDIS")
-	if addr == "" {
-		t.Fatal("MARGINCE_TEST_REDIS not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
-	ctx := t.Context()
-	rdb := redis.NewClient(&redis.Options{Addr: addr, DB: testdb.RedisDB(t)})
-	t.Cleanup(func() {
-		if err := rdb.Close(); err != nil {
-			t.Errorf("closing the test redis client: %v", err)
-		}
-	})
-	if err := rdb.Ping(ctx).Err(); err != nil {
-		t.Fatalf("redis at %s unreachable — run `make db-up`: %v", addr, err)
-	}
-	if err := rdb.FlushDB(ctx).Err(); err != nil {
-		t.Fatalf("flushing test redis db: %v", err)
-	}
-	return ctx, rdb
+	return t.Context(), redistest.Client(t)
 }
 
 // replicas builds what two processes holding the same ceiling look like: two
@@ -51,11 +33,7 @@ func sharedTestRedis(t *testing.T) (context.Context, *redis.Client) {
 func replicas(t *testing.T, name string, kind Kind, limit int, span time.Duration) (*Limiter, *Limiter) {
 	t.Helper()
 	_, rdb := sharedTestRedis(t)
-	addr := os.Getenv("MARGINCE_TEST_REDIS")
-	if addr == "" {
-		t.Fatal("MARGINCE_TEST_REDIS not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
-	second := redis.NewClient(&redis.Options{Addr: addr, DB: testdb.RedisDB(t)})
+	second := redis.NewClient(&redis.Options{Addr: testdb.RedisAddr(t), DB: testdb.RedisDB(t)})
 	t.Cleanup(func() {
 		if err := second.Close(); err != nil {
 			t.Errorf("closing the second replica's redis client: %v", err)
@@ -70,9 +48,8 @@ func replicas(t *testing.T, name string, kind Kind, limit int, span time.Duratio
 // admitted six. This is also what fails if somebody later puts a local map
 // back in front of the shared store as a cache — the two replicas would each
 // admit three again, and every single-process test would still pass.
-//
-//testdb:serial flushes and reads the package's one Redis database
 func TestTwoReplicasSharingOneRedisEnforceOneCeiling(t *testing.T) {
+	t.Parallel()
 	a, b := replicas(t, "test/one-ceiling", FailClosed, 3, time.Minute)
 
 	for i, l := range []*Limiter{a, b, a} {
@@ -92,9 +69,8 @@ func TestTwoReplicasSharingOneRedisEnforceOneCeiling(t *testing.T) {
 // shared store or comms.MailboxRatePolicy silently stops pacing: it asks
 // Blocked before every send, so a Blocked that spent a slot would exhaust the
 // mailbox's window by asking about it.
-//
-//testdb:serial flushes and reads the package's one Redis database
 func TestBlockedPeeksAcrossReplicasWithoutSpendingASlot(t *testing.T) {
+	t.Parallel()
 	a, b := replicas(t, "test/peek-across", FailOpen, 2, time.Minute)
 
 	for i := range 5 {
@@ -116,9 +92,8 @@ func TestBlockedPeeksAcrossReplicasWithoutSpendingASlot(t *testing.T) {
 // counted key must carry an expiry. Without one a key that hit its limit would
 // hold that count for the life of the server: a caller limited once would be
 // limited forever, on every replica, with no way back but a manual delete.
-//
-//testdb:serial flushes and reads the package's one Redis database
 func TestASharedWindowExpires(t *testing.T) {
+	t.Parallel()
 	ctx, rdb := sharedTestRedis(t)
 	l := Shared(rdb).New("test/expiry", FailClosed, 1, 90*time.Second)
 
@@ -139,9 +114,8 @@ func TestASharedWindowExpires(t *testing.T) {
 // with a shared store the counters it has to reach are on a server the wipe
 // does not otherwise touch. Scoped to the limiter doing the resetting, because
 // clearing every ceiling in the store would clear ones no operator asked about.
-//
-//testdb:serial flushes and reads the package's one Redis database
 func TestResetClearsTheSharedBucketsItOwnsAndNoOthers(t *testing.T) {
+	t.Parallel()
 	ctx, rdb := sharedTestRedis(t)
 	reg := Shared(rdb)
 	spent := reg.New("test/reset-mine", FailClosed, 1, time.Minute)

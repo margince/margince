@@ -16,9 +16,8 @@ import (
 
 // A held relay ships nothing. A committed row waits in the outbox, where no
 // stream cap can trim it, and goes out once the hold lifts.
-//
-//testdb:serial flushes and reads the package's one Redis database
 func TestAPausedRelayLeavesTheOutboxUntilItResumes(t *testing.T) {
+	t.Parallel()
 	e := setup(t)
 	env := e.stage(t, "contact.created", ids.NewV7())
 

@@ -54,9 +54,8 @@ func bootedGate() *bootGate {
 // holds. The pool section of /metrics is asserted alongside, because a pool
 // wired into one surface and not the other would mean the two disagree about
 // the same process.
-//
-//testdb:serial flushes and reads the package's one Redis database
 func TestTheWorkerReadinessProbeAnswersFromItsRealDependencies(t *testing.T) {
+	t.Parallel()
 	base := startProbeListener(t, workerTestPool(t), redistest.Client(t), bootedGate())
 
 	status, body := get(t, base+"/readyz")
@@ -86,9 +85,8 @@ func TestTheWorkerReadinessProbeAnswersFromItsRealDependencies(t *testing.T) {
 // way. Each arm breaks exactly ONE dependency and asserts the 503 names that
 // one: an arm that passed because a different check failed would prove nothing
 // about the check it is named for.
-//
-//testdb:serial flushes and reads the package's one Redis database
 func TestEachDeclaredReadinessCheckCanActuallyFail(t *testing.T) {
+	t.Parallel()
 	t.Run("boot", func(t *testing.T) {
 		// A gate never marked complete is the state during boot. The listener
 		// comes up before the lanes and the runner on purpose, so this is the

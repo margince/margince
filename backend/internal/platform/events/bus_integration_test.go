@@ -25,6 +25,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
+	"github.com/margince/margince/backend/internal/platform/redistest"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -39,10 +40,6 @@ type busEnv struct {
 func setup(t *testing.T) *busEnv {
 	t.Helper()
 	db := testdb.New(t)
-	redisAddr := os.Getenv("MARGINCE_TEST_REDIS")
-	if redisAddr == "" {
-		t.Fatal("MARGINCE_TEST_REDIS not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
 	ctx := t.Context()
 
 	owner, err := pgx.Connect(ctx, db.OwnerDSN)
@@ -69,20 +66,7 @@ func setup(t *testing.T) *busEnv {
 	}
 	t.Cleanup(pool.Close)
 
-	rdb := redis.NewClient(&redis.Options{Addr: redisAddr, DB: testdb.RedisDB(t)})
-	if err := rdb.Ping(ctx).Err(); err != nil {
-		t.Fatalf("redis at %s unreachable — run `make db-up`: %v", redisAddr, err)
-	}
-	if err := rdb.FlushDB(ctx).Err(); err != nil {
-		t.Fatalf("flushing test redis db: %v", err)
-	}
-	t.Cleanup(func() {
-		if err := rdb.Close(); err != nil {
-			t.Errorf("closing redis client: %v", err)
-		}
-	})
-
-	return &busEnv{pool: pool, rdb: rdb, ws: ws}
+	return &busEnv{pool: pool, rdb: redistest.Client(t), ws: ws}
 }
 
 func testLogger() *slog.Logger {
@@ -142,8 +126,8 @@ func (e *busEnv) streamEventIDs(t *testing.T, stream string) []string {
 	return eventIDs
 }
 
-//testdb:serial flushes and reads the package's one Redis database
 func TestRelayShipsACommittedRowExactlyOnceInSteadyState(t *testing.T) {
+	t.Parallel()
 	e := setup(t)
 	env := e.stage(t, "contact.created", ids.NewV7())
 
@@ -175,8 +159,8 @@ func TestRelayShipsACommittedRowExactlyOnceInSteadyState(t *testing.T) {
 	}
 }
 
-//testdb:serial flushes and reads the package's one Redis database
 func TestRelayCrashBeforeStampRepublishes_atLeastOnce(t *testing.T) {
+	t.Parallel()
 	e := setup(t)
 	env := e.stage(t, "deal.created", ids.NewV7())
 
@@ -223,8 +207,8 @@ func TestRelayCrashBeforeStampRepublishes_atLeastOnce(t *testing.T) {
 	}
 }
 
-//testdb:serial flushes and reads the package's one Redis database
 func TestRelayPreservesCommitOrderPerEntity(t *testing.T) {
+	t.Parallel()
 	e := setup(t)
 	entity := ids.NewV7()
 	first := e.stage(t, "contact.created", entity)
@@ -280,8 +264,8 @@ func consumeUntil(t *testing.T, s *Subscriber, deadline time.Duration, done func
 	}
 }
 
-//testdb:serial flushes and reads the package's one Redis database
 func TestSubscriberDeliversEveryEntryAndAcksIt(t *testing.T) {
+	t.Parallel()
 	e := setup(t)
 	e.stage(t, "contact.created", ids.NewV7())
 	// A second entry on the same stream. This used to be another tenant's, and
@@ -326,8 +310,8 @@ func TestSubscriberDeliversEveryEntryAndAcksIt(t *testing.T) {
 	}
 }
 
-//testdb:serial flushes and reads the package's one Redis database
 func TestSubscriberReclaimRedeliversAfterHandlerCrash(t *testing.T) {
+	t.Parallel()
 	e := setup(t)
 	env := e.stage(t, "lead.created", ids.NewV7())
 	if _, err := e.relay(t).relayBatch(t.Context()); err != nil {
@@ -361,8 +345,8 @@ func TestSubscriberReclaimRedeliversAfterHandlerCrash(t *testing.T) {
 	}
 }
 
-//testdb:serial flushes and reads the package's one Redis database
 func TestSubscriberEnsuresEverySpecGroup(t *testing.T) {
+	t.Parallel()
 	e := setup(t)
 	noop := func(context.Context, kevents.Envelope) error { return nil }
 	for _, group := range kevents.Groups() {
@@ -395,9 +379,8 @@ func TestSubscriberEnsuresEverySpecGroup(t *testing.T) {
 // event. This test pins both halves — no mark while the effect has not
 // succeeded (so a crash there re-runs, never drops), and a mark once it
 // has (so the third delivery is absorbed).
-//
-//testdb:serial flushes and reads the package's one Redis database
 func TestDedupeMarksOnlyAfterTheEffectSucceeded(t *testing.T) {
+	t.Parallel()
 	e := setup(t)
 	env := e.stage(t, "contact.created", ids.NewV7())
 	markKey := dedupeKey("cg:context-graph", env)

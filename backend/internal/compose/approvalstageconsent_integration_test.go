@@ -81,8 +81,8 @@ func TestAgentSendStagingRefusesConsentAndRollsBackTypedRecipients(t *testing.T)
 	}
 }
 
-//testdb:serial flushes and reads the package's one Redis database
 func TestComposedApprovalServiceStillReleasesAStepUp(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	passport := e.SeedPassport(t, integration.OwnerConn(t), "step up")
 	live, err := identity.NewService(e.Pool).AuthenticateAgentByID(sightContext(e), ids.From[ids.PassportKind](passport))

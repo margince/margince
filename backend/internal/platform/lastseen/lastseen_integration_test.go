@@ -13,8 +13,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/redistest"
 )
 
-//testdb:serial flushes and reads the package's one Redis database
 func TestTheLatestMarkIsWhatLastAnswers(t *testing.T) {
+	t.Parallel()
 	store := New(redistest.Client(t))
 	ctx := t.Context()
 	if got, err := store.Last(ctx, "conn"); err != nil || !got.IsZero() {
@@ -31,8 +31,8 @@ func TestTheLatestMarkIsWhatLastAnswers(t *testing.T) {
 	}
 }
 
-//testdb:serial flushes and reads the package's one Redis database
 func TestAMarkEndsWithItsTimeToLive(t *testing.T) {
+	t.Parallel()
 	store := New(redistest.Client(t))
 	ctx := t.Context()
 	if err := store.Mark(ctx, "conn", clocktest.Now(t), time.Second); err != nil {

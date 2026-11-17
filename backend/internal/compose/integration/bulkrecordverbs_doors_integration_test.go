@@ -44,8 +44,8 @@ func taskContacts(items []bulkItemDTO) AnyMap {
 	}
 }
 
-//testdb:serial flushes and reads the package's one Redis database
 func TestBothDoorsTagASelectionAndTheUndoTakesOffOnlyWhatTheyAdded(t *testing.T) {
+	t.Parallel()
 	e, doors := bulkUndoApp(t, "bulk-tag")
 	tag := seedDoorTag(t, e)
 	for _, door := range doors {
@@ -73,8 +73,8 @@ func TestBothDoorsTagASelectionAndTheUndoTakesOffOnlyWhatTheyAdded(t *testing.T)
 	}
 }
 
-//testdb:serial flushes and reads the package's one Redis database
 func TestBothDoorsNeedATokenToTagOrFileTasksUnderMoreThanTen(t *testing.T) {
+	t.Parallel()
 	e, _, doors := bulkDoorsApp(t, "bulk-tag-token", agentvolume.Limits{})
 	tag := seedDoorTag(t, e)
 	for _, door := range doors {
@@ -98,8 +98,8 @@ func TestBothDoorsNeedATokenToTagOrFileTasksUnderMoreThanTen(t *testing.T) {
 	}
 }
 
-//testdb:serial flushes and reads the package's one Redis database
 func TestBothDoorsFileATaskUnderEachRecordAndTheUndoArchivesThem(t *testing.T) {
+	t.Parallel()
 	e, doors := bulkUndoApp(t, "bulk-task")
 	for _, door := range doors {
 		items := seedBulkContacts(t, e, 3)
@@ -125,8 +125,8 @@ func TestBothDoorsFileATaskUnderEachRecordAndTheUndoArchivesThem(t *testing.T) {
 	}
 }
 
-//testdb:serial flushes and reads the package's one Redis database
 func TestBothDoorsReassignLeadsAndRefuseToArchiveThem(t *testing.T) {
+	t.Parallel()
 	e, _, doors := bulkDoorsApp(t, "bulk-leads", agentvolume.Limits{})
 	colleague := seedColleague(t, e)
 	for _, door := range doors {

@@ -25,8 +25,8 @@ func writesCharged(t *testing.T, e *apptest.AppEnv, meter *agentvolume.Meter, ag
 	return meter.Read(asPassport(t, e, agent.id), agentvolume.Writes).Observed
 }
 
-//testdb:serial flushes and reads the package's one Redis database
 func TestABulkChangeChargesEveryRecordItChangedAgainstTheAgentsWrites(t *testing.T) {
+	t.Parallel()
 	e, meter, _ := bulkDoorsApp(t, "bulk-charge", agentvolume.Limits{Writes: 60})
 	colleague := seedColleague(t, e)
 	agent := mintPassport(t, e)
@@ -60,8 +60,8 @@ func TestABulkChangeChargesEveryRecordItChangedAgainstTheAgentsWrites(t *testing
 	}
 }
 
-//testdb:serial flushes and reads the package's one Redis database
 func TestABulkChangeTheWriteBudgetCannotPayForIsRefusedAndAsksNobody(t *testing.T) {
+	t.Parallel()
 	e, meter, _ := bulkDoorsApp(t, "bulk-refuse", agentvolume.Limits{Writes: 30})
 	colleague := seedColleague(t, e)
 	agent := mintPassport(t, e)
