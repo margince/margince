@@ -89,9 +89,15 @@ func (e *Eraser) EraseContact(ctx context.Context, contactID ids.UUID, reason st
 // A replay of "dsr:<id>" runs the cascade again, which is idempotent and
 // erases what was written since. It certifies once: the first tombstone stays
 // the only one, and its account is the answer.
+func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, reason string) (erasureaccount.Account, error) {
+	return e.runContactErasure(ctx, contactID, reason, nil)
+}
+
+// runContactErasure runs the cascade. keep, when set, can refuse it before
+// anything is destroyed.
 //
 //nolint:gocognit,cyclop // the rename added no branch: this body is what it was under the old noun.
-func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, reason string) (erased erasureaccount.Account, err error) {
+func (e *Eraser) runContactErasure(ctx context.Context, contactID ids.UUID, reason string, keep erasureKeep) (erased erasureaccount.Account, err error) {
 	ctx = originalstore.Bind(corefeatures.RetainedDataContext(ctx), e.db, e.blob)
 	if err := auth.Require(ctx, "contact", principal.ActionDelete); err != nil {
 		return erasureaccount.Account{}, err
@@ -99,7 +105,7 @@ func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, re
 	subject := ids.From[ids.ContactKind](contactID)
 	err = e.withPreparedOriginalErasure(ctx, subject, func(raw pgx.Tx, prepared originalMatches) error {
 		tx := newTallyTx(raw)
-		floor, err := e.erasableUnderFloor(ctx, tx, subject)
+		floor, err := e.admitErasure(ctx, tx, subject, keep)
 		if err != nil {
 			return err
 		}

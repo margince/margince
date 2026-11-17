@@ -18568,6 +18568,14 @@ paths:
                   description: |-
                     What the contact was told, in their words. Stored because a suppression somebody
                     later asks to lift is only reviewable if the record says why it was made.
+                received_at:
+                  type: string
+                  format: date-time
+                  description: |-
+                    When the refusal reached you: the arrival time of the mail that said so, or the
+                    time of the call. Never the time you record it. Left out, it is the time of
+                    recording. A Vietnamese opt-out receipt prints it (Decree 91/2020/ND-CP Art. 20),
+                    so a later time than now is refused.
       responses:
         '204': {description: Recorded.}
         '401': {$ref: '#/components/responses/Unauthorized'}
@@ -18708,6 +18716,31 @@ paths:
                   description: Why the stop is being taken back. Required.
       responses:
         '204': {description: Lifted.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /contacts/{id}/consent/optout-records:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Compliance]
+      operationId: exportContactOptOutRecords
+      security: [{bearerAuth: []}]
+      summary: Export this contact's registrations, refusals and opt-out receipts for an inspection.
+      description: |-
+        The records Decree 91/2020/ND-CP Art. 11 asks a sender of advertising email to keep for at
+        least one year and to show an inspector: every consent the contact gave or withdrew, every
+        stop recorded on them with the time the refusal arrived and the time sending stopped, and
+        every opt-out receipt sent or queued to them. Retention keeps a refusal and its receipt
+        until the floor the contact's rules set ends, a year under Decree 91. After that a
+        retention policy may act on them as on any other record.
+      responses:
+        '200':
+          description: The records, newest first in each list.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/OptOutRecords'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
@@ -43735,15 +43768,32 @@ components:
             For an observed change, the list version whose filter it was seen under.
         reason: {type: [string, 'null'], enum: [chosen, bulk, record_archived, record_restored, evaluated, filter_changed, automation, null], description: '`filter_changed` marks the first check after the filter changed; `automation` a record an automation rule added.'}
         occurred_at: {type: string, format: date-time}
-        actor: {type: string}
-        actor_name: {type: [string, 'null']}
+        actor:
+          type: string
+          description: >-
+            The principal behind the change (`human:<uuid>`, `agent:<id>`, `connector:<name>` or `system:<job>`), so a machine write is named as the machine it was.
+        actor_name: {type: [string, 'null'], description: 'Display name of a human actor; null for any other.'}
         entity_type: {type: [string, 'null']}
         entity_id: {type: [string, 'null'], format: uuid}
+        entity_name:
+          type: [string, 'null']
+          description: >-
+            What the record that joined or left is called now. Null on a revision and for a record type with no name. A change about a record the reader cannot see is not in the history.
         note: {type: [string, 'null']}
         version: {type: [integer, 'null'], format: int64}
         name: {type: [string, 'null']}
         definition: {type: [object, 'null'], additionalProperties: true}
         sharing: {type: [string, 'null']}
+        changes:
+          type: [array, 'null']
+          items: {type: string, enum: [name, purpose, filter, sharing, steward]}
+          description: >-
+            What a revision changed against the version before it; empty when it changed none of these. Null on a membership change and when no earlier version is kept, which on version 1 means the list was made.
+        previous_name: {type: [string, 'null'], description: The name before a revision.}
+        previous_definition:
+          type: [object, 'null']
+          additionalProperties: true
+          description: The filter before a revision, so a reader sees it beside `definition`.
     RecordListsResponse:
       type: object
       required: [data, truncated]
@@ -48748,7 +48798,7 @@ components:
         assessment: {type: string, enum: [attention, checked, incomplete]}
         sources:
           type: array
-          maxItems: 8
+          maxItems: 9
           items: {$ref: '#/components/schemas/HealthSource'}
         findings:
           type: array
@@ -53583,6 +53633,48 @@ components:
           type: [string, 'null']
           format: date-time
           description: When the earliest of them happened. Null when nobody recorded the time.
+    OptOutRecords:
+      type: object
+      description: One contact's registrations, refusals and opt-out receipts, as kept for an inspection.
+      required: [contact_id, generated_at, consent_events, stops, receipts]
+      properties:
+        contact_id: {type: string, format: uuid}
+        generated_at: {type: string, format: date-time}
+        consent_events:
+          type: array
+          description: Every consent the contact gave or withdrew. A withdrawal arrived and stopped sending at `occurred_at`.
+          items: {$ref: '#/components/schemas/ConsentEvent'}
+        stops:
+          type: array
+          description: Every stop recorded on the contact, lifted ones included.
+          items: {$ref: '#/components/schemas/OptOutRecordStop'}
+        receipts:
+          type: array
+          description: Every opt-out receipt filed under the contact.
+          items: {$ref: '#/components/schemas/OptOutReceiptRecord'}
+    OptOutRecordStop:
+      type: object
+      required: [id, kind, received_at, stopped_at]
+      properties:
+        id: {type: string, format: uuid}
+        kind:
+          type: string
+          description: '`subject_request`, `marketing_objection`, `processing_restriction` or `hard_bounce`.'
+        purpose_key: {type: [string, 'null'], description: The one purpose a narrow stop binds.}
+        received_at: {type: string, format: date-time, description: When the refusal reached the controller.}
+        stopped_at: {type: string, format: date-time, description: When sending stopped.}
+        revoked_at: {type: [string, 'null'], format: date-time, description: When the stop was lifted. Null while it stands.}
+    OptOutReceiptRecord:
+      type: object
+      required: [message_id, status, template_version, queued_at]
+      properties:
+        message_id: {type: string, description: 'The receipt''s Message-ID. One refusal has one.'}
+        status: {type: string, description: 'The delivery''s state, such as `queued`, `sent` or `parked`.'}
+        template_version: {type: integer, description: The version of the receipt wording it carries.}
+        queued_at: {type: string, format: date-time}
+        sent_at: {type: [string, 'null'], format: date-time}
+        subject: {type: [string, 'null'], description: Null once an erasure removed it.}
+        body: {type: [string, 'null'], description: The plain-text body. Null once an erasure removed it.}
     ContactStop:
       type: object
       description: One live stop on a contact, and whether the caller may take it back.
@@ -54795,6 +54887,17 @@ components:
         contact_id: {type: string, format: uuid}
         display_name: {type: string}
         status: {type: string, enum: [open, done, dismissed]}
+    WorkGrounds:
+      type: object
+      additionalProperties: false
+      required: [text]
+      description: >-
+        Why a piece of work exists, written when the work was made: who did or said what, about which record, and when. A sender's words in it are quoted exactly.
+      properties:
+        text:
+          type: string
+          maxLength: 600
+          description: The reason, in the reader's language where Margince wrote it, else in its author's.
     AttentionPair:
       type: object
       description: |-
@@ -55871,6 +55974,10 @@ components:
           description: |-
             One supporting line, in PROSE — a bounce reason, a park reason, the mailbox that
             stopped, what an AI task was about.
+        why:
+          allOf: [{$ref: '#/components/schemas/WorkGrounds'}]
+          description: >-
+            Why this work exists, as whoever made it said it. A reader acts on this sentence instead of on the row's date. Absent when its maker gave none, never filled with a stock sentence.
         because:
           type: array
           items: {$ref: '#/components/schemas/WorklistReason'}

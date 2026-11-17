@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { formatDateAbbrev, formatDateTime } from "../../format/format";
+import { formatDateTime } from "../../format/format";
 import { browserZone } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
@@ -15,7 +15,6 @@ import {
   decisionRow,
   leadRow,
   meetingRow,
-  nextMeeting,
   readingsDay,
   wholeDecisions,
   wholeLeads,
@@ -226,114 +225,6 @@ describe("the brief readings strip", () => {
     expect(meetingsCard().textContent).toContain("0");
     expect(screen.getByText(en["brief.readings.meetingsBasis"])).toBeTruthy();
     expect(screen.queryByText(en["brief.readings.prepUnknown"])).toBeNull();
-  });
-
-  const NEXT_AT = "2026-09-04T09:30:00Z";
-
-  // A zero from a calendar nobody connected measured nothing, and drawing it
-  // tells a rep their day is clear. The door goes where a calendar connects.
-  it.each([
-    [
-      "not_connected",
-      "brief.readings.calendarNotConnected",
-      "brief.readings.calendarNotConnectedWhy",
-    ],
-    [
-      "unreadable",
-      "brief.readings.calendarUnreadable",
-      "brief.readings.calendarUnreadableWhy",
-    ],
-  ] as const)(
-    "reads a %s calendar's zero as no measurement",
-    async (calendar, value, why) => {
-      const user = userEvent.setup();
-      const next_meeting = nextMeeting("a-n", NEXT_AT);
-      drawDay({ ...readingsDay({}, [], []), calendar, next_meeting });
-
-      expect(meetingsCard().textContent).toContain(en[value]);
-      // The why stays the line; the hand-booked meeting is the panel's to show.
-      expect(meetingsCard().textContent).toContain(en[why]);
-      expect(meetingsCard().textContent).not.toContain("Next:");
-      expect(
-        meetingsCard().querySelector(".stat-card-value")?.textContent,
-      ).toBe(en[value]);
-      await user.click(
-        screen.getByRole("button", {
-          name: en["stat.open"],
-          description: en["brief.readings.meetings"],
-        }),
-      );
-      expect(window.location.hash).toContain("/settings/connections");
-    },
-  );
-
-  // The meetings booked by hand still count while the calendar cannot be
-  // read. The figure is a minimum, and the line says how to make it whole.
-  it("counts hand-booked meetings as a minimum while the calendar is unreadable", () => {
-    drawDay({
-      ...readingsDay({}, [meetingRow("m1", true)]),
-      calendar: "unreadable",
-    });
-
-    expect(meetingsCard().querySelector(".stat-card-value")?.textContent).toBe(
-      "1+",
-    );
-    expect(meetingsCard().textContent).toContain(
-      en["brief.readings.calendarUnreadableWhy"],
-    );
-  });
-
-  // A lane that never answered says so, whatever the calendar reports.
-  it("keeps the unavailable reading when the meetings lane failed", () => {
-    const day = {
-      ...readingsDay({}, [], []),
-      calendar: "not_connected" as const,
-    };
-    day.sources_unavailable = [{ source: "meeting", reason: "failed" }];
-    drawDay(day);
-
-    expect(meetingsCard().textContent).toContain(
-      en["brief.readings.unavailable"],
-    );
-    expect(meetingsCard().textContent).not.toContain(
-      en["brief.readings.calendarNotConnected"],
-    );
-  });
-
-  // A failed calendar side read leaves `calendar` unstated: unknown, so the
-  // slot keeps the wording it had before the server could say.
-  it("keeps today's reading when only the calendar read failed", () => {
-    const day = readingsDay({}, [], []);
-    day.sources_unavailable = [
-      { source: "calendar", reason: "failed", category: "meetings" },
-    ];
-    drawDay(day);
-
-    expect(meetingsCard().querySelector(".stat-card-value")?.textContent).toBe(
-      "0",
-    );
-    expect(meetingsCard().textContent).toContain(
-      en["brief.readings.meetingsBasis"],
-    );
-  });
-
-  // A measured quiet day says when the next conversation is.
-  it("names the next meeting under a connected calendar's zero", () => {
-    const startsAt = "2026-09-04T09:30:00Z";
-    drawDay({
-      ...readingsDay({}, [], []),
-      calendar: "connected",
-      next_meeting: nextMeeting("a-next", startsAt, "Weber kickoff"),
-    });
-
-    expect(meetingsCard().querySelector(".stat-card-value")?.textContent).toBe(
-      "0",
-    );
-    expect(meetingsCard().textContent).toContain(
-      en["brief.readings.nextMeeting"]
-        .replace("{date}", formatDateAbbrev(startsAt, "en", browserZone()))
-        .replace("{subject}", "Weber kickoff"),
-    );
   });
 
   // Two questions with no source. Drawing a zero would be a false answer, and

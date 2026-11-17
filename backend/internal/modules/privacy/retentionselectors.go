@@ -3,7 +3,10 @@
 
 package privacy
 
-import "github.com/margince/margince/backend/internal/shared/kernel/retentionscope"
+import (
+	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
+	"github.com/margince/margince/backend/internal/shared/kernel/retentionscope"
+)
 
 // The selector table: which records each (object_type, category) policy scope
 // governs. Split out of retention.go because it is also the AUTHORABLE
@@ -36,16 +39,18 @@ var retentionSelectors = map[string]string{
 		WHERE status IN ('new','contacted','engaged') AND (archived_at IS NULL OR $3 = 'anonymize') AND NOT legal_hold
 		  AND full_name IS DISTINCT FROM 'Anonymized Lead'
 		  AND created_at < now() - make_interval(days => $1)
-		  AND entered_at < now() - make_interval(days => $1) LIMIT $2`,
+		  AND entered_at < now() - make_interval(days => $1)
+		  AND NOT ` + optOutRecordsKept("lead_id", "lead.id") + ` LIMIT $2`,
 	"activity/": `SELECT a.id FROM activity a
 		WHERE a.archived_at IS NULL
 		  AND a.occurred_at < now() - make_interval(days => $1) -- occurred_at raw: a retention age in days
 		  AND a.created_at < now() - make_interval(days => $1)
 		  ` + correspondenceFloorPredicate(3, 4) + `
 		  AND NOT ` + retentionscope.HeldThroughAnyLink("a.id") + `
+		  AND NOT ` + receiptKept("a.id") + `
 		LIMIT $2`,
 	"activity/transcript": `SELECT a.id FROM activity a
-		WHERE a.source_system = 'transcript' AND a.body IS NOT NULL
+		WHERE a.source_system = '` + meetingoutcome.TranscriptSourceSystem + `' AND a.body IS NOT NULL
 		  AND a.occurred_at < now() - make_interval(days => $1) -- occurred_at raw: a retention age in days
 		  AND a.created_at < now() - make_interval(days => $1)
 		  ` + correspondenceFloorPredicate(3, 4) + `
@@ -59,6 +64,7 @@ var retentionSelectors = map[string]string{
 		  AND NOT EXISTS (SELECT 1 FROM contact_consent pc WHERE pc.contact_id = p.id AND pc.state = 'granted')
 		  AND NOT EXISTS (SELECT 1 FROM relationship r
 		        WHERE r.kind = 'deal_stakeholder' AND r.contact_id = p.id AND r.archived_at IS NULL)
+		  AND NOT ` + optOutRecordsKept("contact_id", "p.id") + `
 		LIMIT $2`,
 	"deal/lost": `SELECT id FROM deal
 		WHERE status = 'lost' AND archived_at IS NULL AND NOT legal_hold

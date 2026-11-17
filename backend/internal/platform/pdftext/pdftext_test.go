@@ -194,23 +194,31 @@ const attackDeadline = 5 * time.Second
 
 // readWithin fails the test if a reading does not come back in time, rather
 // than hanging the suite until the whole package times out.
-func readWithin(t *testing.T, raw []byte) error {
+func readWithin(t *testing.T, raw []byte) (string, error) {
 	t.Helper()
+	// Compile the pooled engine before timing hostile input; shuffled order
+	// can make any case the first reading.
+	if _, err := reader.Read(t.Context(), fixture(t, "chrome-order-confirmation.pdf"), generous); err != nil {
+		t.Fatalf("starting the engine on a valid document: %v", err)
+	}
 	ctx, cancel := context.WithTimeout(t.Context(), attackDeadline)
 	defer cancel()
 
-	type outcome struct{ err error }
+	type outcome struct {
+		text string
+		err  error
+	}
 	done := make(chan outcome, 1)
 	go func() {
-		_, err := reader.Read(ctx, raw, generous)
-		done <- outcome{err}
+		text, err := reader.Read(ctx, raw, generous)
+		done <- outcome{text, err}
 	}()
 	select {
 	case got := <-done:
-		return got.err
+		return got.text, got.err
 	case <-time.After(attackDeadline):
 		t.Fatalf("the reading did not come back within %v — a document is holding the engine", attackDeadline)
-		return nil
+		return "", nil
 	}
 }
 
@@ -222,7 +230,7 @@ func readWithin(t *testing.T, raw []byte) error {
 func TestAnXrefClaimingMoreObjectsThanTheFileCouldHoldIsRefused(t *testing.T) {
 	raw := fixture(t, "xref-claims-millions-of-objects.pdf")
 
-	if err := readWithin(t, raw); !errors.Is(err, pdftext.ErrUnreadable) {
+	if _, err := readWithin(t, raw); !errors.Is(err, pdftext.ErrUnreadable) {
 		t.Fatalf("a file whose xref outruns its own length must be refused, got %v", err)
 	}
 }
@@ -233,7 +241,7 @@ func TestAnXrefClaimingMoreObjectsThanTheFileCouldHoldIsRefused(t *testing.T) {
 func TestAPageTreeThatListsItselfIsRefusedRatherThanFollowed(t *testing.T) {
 	raw := fixture(t, "page-tree-lists-itself.pdf")
 
-	if err := readWithin(t, raw); err == nil {
+	if _, err := readWithin(t, raw); err == nil {
 		t.Fatal("a page tree that is its own child must not read as a document")
 	}
 }
@@ -245,7 +253,7 @@ func TestAPageTreeThatListsItselfIsRefusedRatherThanFollowed(t *testing.T) {
 func TestADocumentThatCrashedThePreviousParserIsMerelyAnswered(t *testing.T) {
 	raw := fixture(t, "crashed-the-previous-parser.pdf")
 
-	err := readWithin(t, raw)
+	_, err := readWithin(t, raw)
 	if !errors.Is(err, pdftext.ErrUnreadable) && !errors.Is(err, pdftext.ErrNoTextLayer) {
 		t.Fatalf("a document that used to crash the parser must come back as a sentinel, got %v", err)
 	}
@@ -432,10 +440,7 @@ func pdfClaimingPages(t *testing.T, claimed int, line string) []byte {
 func TestALyingPageCountIsReadAsTheDocumentActuallyIs(t *testing.T) {
 	lying := pdfClaimingPages(t, 99999999, "Contract value: EUR 148,500.00")
 
-	ctx, cancel := context.WithTimeout(t.Context(), attackDeadline)
-	defer cancel()
-
-	text, err := reader.Read(ctx, lying, generous)
+	text, err := readWithin(t, lying)
 	if err != nil {
 		t.Fatalf("a lying page count must not change the answer, got %v", err)
 	}

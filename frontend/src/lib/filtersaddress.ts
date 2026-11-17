@@ -123,7 +123,7 @@ type KindDirectory = readonly { name: string; display_name: string }[];
 
 /** Every word a filter page says about the record type it is built on. */
 export type TabWords = Readonly<{
-  /** The tab's name on the segmented control and the library's pills. */
+  /** The name in the filter page's picker and the library's pills. */
   tab: string;
   /** The plural noun the results table counts and names its empty state by. */
   unit: string;

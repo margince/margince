@@ -42,16 +42,23 @@ const save = () => screen.getByRole("button", { name: "Create" });
 const form = () => document.querySelector("form") as HTMLFormElement;
 
 describe("a second press while the first save is not yet drawn pending", () => {
+  // Fake timers hold the task the latch waits for. So the second click lands
+  // one commit later and never one task later, whatever case ran before.
   it("sends one request for two clicks a commit apart", async () => {
-    const onSubmit = vi.fn();
-    render(modal(false, onSubmit));
-    typeName();
-    fireEvent.click(save());
-    await act(async () => {
-      await Promise.resolve();
-    });
-    fireEvent.click(save());
-    expect(onSubmit).toHaveBeenCalledTimes(1);
+    vi.useFakeTimers();
+    try {
+      const onSubmit = vi.fn();
+      render(modal(false, onSubmit));
+      typeName();
+      fireEvent.click(save());
+      await act(async () => {
+        await Promise.resolve();
+      });
+      fireEvent.click(save());
+      expect(onSubmit).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("sends one request for Enter pressed twice", () => {

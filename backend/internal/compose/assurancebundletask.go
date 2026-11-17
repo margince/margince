@@ -20,6 +20,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -28,21 +29,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
-
-// bundleTaskSubject is what a rep reads on their list.
-//
-// The count and nothing else, because the findings themselves render on the
-// deal — three surfaces already show them, and a body listing them here would
-// go stale the moment one of them cleared. The deal is named by the task's LINK
-// rather than in this string: the list renders the record beside the subject, so
-// putting the name in both spells it twice, and the copy in the text is the one
-// nothing keeps current.
-func bundleTaskSubject(findings int) *systemtext.Component {
-	if findings == 1 {
-		return systemtext.Sentence("assurance.inputs_one")
-	}
-	return systemtext.Sentence("assurance.inputs_many", systemtext.Count(int64(findings)))
-}
 
 // bundleTaskLanguage is the assignee's own language, else the installation's,
 // so the task reads in the words of whoever it lands with.
@@ -130,8 +116,7 @@ func mintBundleTask(
 		in.AssigneeID = &assignee
 	}
 
-	findings := len(subject.findings)
-	task, err := writeBundleTask(ctx, deps, in, findings)
+	task, err := writeBundleTask(ctx, deps, in, subject.findings)
 	if err == nil {
 		return task, nil
 	}
@@ -150,7 +135,7 @@ func mintBundleTask(
 		return ids.UUID{}, fmt.Errorf("compose: minting the task: %w", err)
 	}
 	in.AssigneeID = nil
-	task, err = writeBundleTask(ctx, deps, in, findings)
+	task, err = writeBundleTask(ctx, deps, in, subject.findings)
 	if err != nil {
 		return ids.UUID{}, fmt.Errorf("compose: minting the task unassigned: %w", err)
 	}
@@ -180,7 +165,7 @@ func unassignableSeat(err error) bool {
 // writeBundleTask mints the activity in the bundling store's transaction,
 // worded for the seat it is assigned to.
 func writeBundleTask(
-	ctx context.Context, deps bundleDeps, in activities.LogActivityInput, findings int,
+	ctx context.Context, deps bundleDeps, in activities.LogActivityInput, findings []assurance.Exception,
 ) (ids.UUID, error) {
 	var task ids.UUID
 	err := deps.bundles.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
@@ -188,13 +173,16 @@ func writeBundleTask(
 		if err != nil {
 			return err
 		}
-		subject := bundleTaskSubject(findings)
+		subject := assurance.TaskSubject(len(findings))
 		line, err := subject.Render(lang)
 		if err != nil {
 			return err
 		}
 		in.Subject = &line
 		in.SystemText = &systemtext.Message{Version: 1, Subject: subject}
+		if err := in.SayWhy(assurance.TaskReason(findings), lang); err != nil {
+			return err
+		}
 		created, _, err := deps.activities.LogActivityTx(ctx, tx, in)
 		if err != nil {
 			return err

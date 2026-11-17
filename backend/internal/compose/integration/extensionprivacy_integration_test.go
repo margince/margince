@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/pkg/extension"
 	"github.com/margince/margince/backend/pkg/extension/jurisdiction"
 	"github.com/margince/margince/backend/pkg/extension/privacy"
+	"github.com/margince/margince/backend/pkg/extension/reach"
 )
 
 // probeUnit creates `ext_probe_note` as a unit's migration would and returns
@@ -403,6 +404,43 @@ func TestBootLetsOnlyACascadeReferenceASweptTable(t *testing.T) {
 			}
 			if !refused && err != nil {
 				t.Errorf("boot refused a cascading reference: %v", err)
+			}
+		})
+	}
+}
+
+// A table a merge moves rows of needs a row id: the merge audits each moved row
+// by it. That holds even for a table privacy admits without one.
+func TestBootRefusesAReachedTableWithoutARowID(t *testing.T) {
+	for name, table := range map[string]string{
+		"no id column":  `CREATE TABLE ext.ext_probe_marker (company_id uuid PRIMARY KEY)`,
+		"id not uuid":   `CREATE TABLE ext.ext_probe_marker (id bigint PRIMARY KEY, company_id uuid)`,
+		"id not unique": `CREATE TABLE ext.ext_probe_marker (id uuid NOT NULL, company_id uuid)`,
+		"id nullable":   `CREATE TABLE ext.ext_probe_marker (id uuid UNIQUE, company_id uuid)`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			env := Setup(t)
+			unit := probeUnit(t, "1.0.0", "body")
+			t.Cleanup(func() {
+				if _, err := OwnerConn(t).Exec(context.Background(), `DROP TABLE IF EXISTS ext.ext_probe_marker`); err != nil {
+					t.Errorf("removing the marker table: %v", err)
+				}
+			})
+			probeExec(t, table, `GRANT SELECT, INSERT, UPDATE, DELETE ON ext.ext_probe_marker TO margince_app`)
+			unit.Privacy = append(unit.Privacy, privacy.Table{
+				Name:      "ext_probe_marker",
+				Links:     []privacy.Link{{Column: "company_id", Record: privacy.Company}},
+				Retention: jurisdiction.CommercialCorrespondence,
+			})
+			if err := compose.VerifyExtensionPrivacy(t.Context(), env.Pool, []extension.Extension{unit}); err != nil {
+				t.Fatalf("the marker table was refused before any reach was declared: %v", err)
+			}
+			unit.Reach = append(unit.Reach, reach.Table{
+				Name: "ext_probe_marker", Links: []reach.Link{{Column: "company_id", Record: reach.Company}},
+			})
+			err := compose.VerifyExtensionPrivacy(t.Context(), env.Pool, []extension.Extension{unit})
+			if err == nil || !strings.Contains(err.Error(), "ext_probe_marker.id") {
+				t.Errorf("boot answered %v; want a refusal naming ext_probe_marker.id", err)
 			}
 		})
 	}

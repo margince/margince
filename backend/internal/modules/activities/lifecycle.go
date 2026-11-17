@@ -41,6 +41,7 @@ const evidenceReasonKey = "reason"
 func updateActivityInTx(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, in UpdateActivityInput,
 ) (crmcontracts.Activity, error) {
+	in.spellClearedBody()
 	current, held, err := admitActivityPatch(ctx, tx, id, &in)
 	if err == nil {
 		err = checkCustomValues(string(current.Kind), in.customColumns, in.CustomFields)
@@ -412,7 +413,7 @@ func applyActivityPatch(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Up
 	query := fmt.Sprintf(`
 		UPDATE activity SET
 		  subject = coalesce($%[2]d, subject),
-		  body = coalesce($%[3]d, body),
+		  body = CASE WHEN $%[3]d::text IS NULL THEN body ELSE nullif($%[3]d::text, '') END,
 		  occurred_at = coalesce($%[4]d, occurred_at),
 		  due_at = CASE WHEN $%[11]d THEN NULL ELSE coalesce($%[5]d, due_at) END,
 		  remind_at = CASE WHEN $%[12]d THEN NULL ELSE coalesce($%[6]d, remind_at) END,

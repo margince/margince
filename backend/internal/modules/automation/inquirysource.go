@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
@@ -122,3 +123,27 @@ func InquiryTarget(activity crmcontracts.Activity) (datasource.EntityRef, error)
 	}
 	return target, nil
 }
+
+// inquiryAsk is who sent the form and the start of their message, in their
+// own words. Either is empty when the form carried no message.
+func inquiryAsk(note crmcontracts.Activity) (sender, ask string) {
+	encoded, err := json.Marshal(note.Raw)
+	if err != nil {
+		return "", ""
+	}
+	var sent crmcontracts.WebFormSubmission
+	if json.Unmarshal(encoded, &sent) != nil || sent.Message == nil {
+		return "", ""
+	}
+	ask = mailcopy.Snippet(*sent.Message, inquiryAskLimit)
+	if ask == "" {
+		return "", ""
+	}
+	if sent.FullName != nil && strings.TrimSpace(*sent.FullName) != "" {
+		return strings.TrimSpace(*sent.FullName), ask
+	}
+	return sent.Email, ask
+}
+
+// inquiryAskLimit keeps the quoted message to a card line, like a mail's ask.
+const inquiryAskLimit = 299

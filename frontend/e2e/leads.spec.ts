@@ -21,10 +21,8 @@ test("AC-leads-list: a row names its owner and opens the lead's own page", async
   // The owner column answers "whose lead is this" — the same column the
   // contacts and company lists carry, never "typed by a person".
   await expect(row).toContainText("Lena Fischer");
-  // The link's accessible name also carries the company, while the row's
-  // selection checkbox carries the same contact's name. Role plus a
-  // start-anchored name selects the route without coupling to the company.
-  await row.getByRole("link", { name: /^Jonas Petersen/ }).click();
+  // The link's name leads with the monogram the chip prints (WCAG 2.5.3).
+  await row.getByRole("link", { name: /^JP\s*Jonas Petersen/ }).click();
   await expect(page).toHaveURL(/#\/leads\/l-1$/);
   await expect(
     page.getByRole("heading", { level: 1, name: "Jonas Petersen" }),

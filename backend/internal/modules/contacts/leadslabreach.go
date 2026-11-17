@@ -29,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/leadsource"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // SLABreach is one lead whose first-response deadline passed unanswered on
@@ -236,6 +237,9 @@ func markBreach(ctx context.Context, tx pgx.Tx, b SLABreach, now time.Time) erro
 		return fmt.Errorf("audit sla breach: %w", err)
 	}
 	payload := crmcontracts.PublicEventLeadSlaBreached{Deadline: b.Deadline}
+	if b.Name != "" {
+		payload.LeadName = &b.Name
+	}
 	ownerAnswers, err := b.ownerAnswers(ctx, tx)
 	if err != nil {
 		return err
@@ -270,4 +274,14 @@ func markBreach(ctx context.Context, tx pgx.Tx, b SLABreach, now time.Time) erro
 		return fmt.Errorf("emit lead.sla_breached: %w", err)
 	}
 	return nil
+}
+
+// BreachReason names the lead and the deadline it missed. A breach without the
+// lead's name gives none, and the notice keeps its general body.
+func BreachReason(breach crmcontracts.PublicEventLeadSlaBreached) *systemtext.Component {
+	if breach.LeadName == nil || *breach.LeadName == "" {
+		return nil
+	}
+	return systemtext.Sentence("notice.lead_sla_why",
+		systemtext.Text(*breach.LeadName), systemtext.Date(breach.Deadline.UTC().Format(time.DateOnly)))
 }

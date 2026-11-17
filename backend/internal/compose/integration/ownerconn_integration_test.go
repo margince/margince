@@ -71,35 +71,22 @@ func TestAClosedSharedOwnerConnectionIsReplaced(t *testing.T) {
 	backendPID(t, replaced)
 }
 
-// A second goroutine on a connection already running a query is refused at
-// once, never left waiting behind it.
-func TestTwoGoroutinesOnTheSharedOwnerConnectionFailLoudly(t *testing.T) {
+// A second query on a connection still running one is refused at once, never
+// left waiting behind it. One goroutine holds the open rows: two goroutines on
+// one pgx.Conn are a data race inside pgx, which -race reports.
+func TestASecondQueryOnTheBusySharedOwnerConnectionFailsLoudly(t *testing.T) {
 	shared := OwnerConn(t)
-	pid := backendPID(t, shared)
-	sleeping := make(chan error, 1)
-	go func() {
-		_, err := shared.Exec(context.Background(), `SELECT pg_sleep(1)`)
-		sleeping <- err
-	}()
-	// Watched from a connection of its own, so the shared one has one user.
-	watcher := FreshOwnerConn(t)
-	waiting, stop := context.WithTimeout(context.Background(), 5*time.Second)
-	defer stop()
-	for running := false; !running; {
-		if err := watcher.QueryRow(waiting, `SELECT EXISTS (SELECT 1 FROM pg_stat_activity
-			WHERE pid = $1 AND state = 'active' AND query LIKE '%pg_sleep%')`, pid).Scan(&running); err != nil {
-			t.Fatalf("the sleeping query never started: %v", err)
-		}
+	rows, err := shared.Query(context.Background(), `SELECT pg_sleep(1)`)
+	if err != nil {
+		t.Fatalf("starting the long query: %v", err)
 	}
+	defer rows.Close()
 	// Under a second, so a connection that queued the second query behind the
 	// first answers with the deadline instead of conn busy.
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	if _, err := shared.Exec(ctx, `SELECT 1`); err == nil || !strings.Contains(err.Error(), "conn busy") {
-		t.Errorf("a second goroutine on the connection answered %v, want conn busy", err)
-	}
-	if err := <-sleeping; err != nil {
-		t.Errorf("the first query: %v", err)
+		t.Errorf("a second query on the connection answered %v, want conn busy", err)
 	}
 }
 
@@ -127,28 +114,14 @@ func TestGoroutinesAskingAtOnceShareOneOwnerConnection(t *testing.T) {
 // A connection running a query is not handed out on: the caller gets its own.
 func TestTheSharedOwnerConnectionIsNotHandedOutWhileItRunsAQuery(t *testing.T) {
 	shared := OwnerConn(t)
-	pid := backendPID(t, shared)
-	sleeping := make(chan error, 1)
-	go func() {
-		_, err := shared.Exec(context.Background(), `SELECT pg_sleep(1)`)
-		sleeping <- err
-	}()
-	watcher := FreshOwnerConn(t)
-	waiting, stop := context.WithTimeout(context.Background(), 5*time.Second)
-	defer stop()
-	for running := false; !running; {
-		if err := watcher.QueryRow(waiting, `SELECT EXISTS (SELECT 1 FROM pg_stat_activity
-			WHERE pid = $1 AND state = 'active' AND query LIKE '%pg_sleep%')`, pid).Scan(&running); err != nil {
-			t.Fatalf("the sleeping query never started: %v", err)
-		}
+	rows, err := shared.Query(context.Background(), `SELECT pg_sleep(1)`)
+	if err != nil {
+		t.Fatalf("starting the long query: %v", err)
 	}
+	defer rows.Close()
 	other := OwnerConn(t)
 	if other == shared {
-		t.Error("the connection running a query was handed out again")
-	} else {
-		backendPID(t, other)
+		t.Fatal("the connection running a query was handed out again")
 	}
-	if err := <-sleeping; err != nil {
-		t.Errorf("the first query: %v", err)
-	}
+	backendPID(t, other)
 }
