@@ -2986,6 +2986,7 @@ export const en = {
   "deal.card.moveTo": "Move to {stage}",
   "deal.card.markWon": "Mark won",
   "deal.card.markLost": "Mark lost",
+  "deal.card.changeCloseDate": "Change close date",
   "deal.card.closedReopen":
     "This deal is closed. Reopen it on its page to move it.",
   "deal.card.copyLink": "Copy link",
@@ -3377,6 +3378,9 @@ export const en = {
   "roster.failedUsers": "Colleagues did not load.",
   "roster.failedTeams": "Teams did not load.",
   "owner.rosterFailed": "Colleagues did not load. Reload the page to pick one.",
+  "ownerPick.change": "Change owner",
+  "ownerPick.search": "Search colleagues",
+  "ownerPick.done": "Assigned to {name}",
   "ref.notInRoster": "Currently assigned (no longer in the user list)",
 
   // A record search that ANSWERED and found nothing. Distinct from a search
@@ -5949,8 +5953,6 @@ export const en = {
   "lead.terminalDisqualified": "Disqualified. This lead is read-only.",
   "lead.marker": "Lead",
   "lead.assignToMe": "Assign to me",
-  "lead.assignChoose": "Choose a colleague",
-  "lead.assignNobodyElse": "No other user to assign this lead to.",
   "lead.saveOverride": "Save override",
   "lead.overrideScoreValue": "Score",
   "lead.trigger.inboundReply": "Inbound reply",
@@ -19632,9 +19634,6 @@ export const en = {
   "project.owner": "Owner",
   "project.ownerMe": "Me",
   "project.assignOwner": "Assign to a colleague",
-  "project.assignOwnerTitle": "Assign to a colleague",
-  "project.assignOwnerSearch": "Search colleagues",
-  "project.assignOwnerDone": "Assigned to {name}",
   "project.description": "Description",
   "project.targetEnd": "Target end date",
   "project.new": "New project",

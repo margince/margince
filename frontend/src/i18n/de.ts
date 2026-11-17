@@ -3076,6 +3076,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.card.moveTo": "Nach {stage} verschieben",
   "deal.card.markWon": "Als gewonnen markieren",
   "deal.card.markLost": "Als verloren markieren",
+  "deal.card.changeCloseDate": "Abschlussdatum ändern",
   "deal.card.closedReopen":
     "Dieser Deal ist abgeschlossen. Öffne ihn auf seiner Seite wieder, um ihn zu verschieben.",
   "deal.card.copyLink": "Link kopieren",
@@ -3457,6 +3458,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "roster.failedTeams": "Die Teams konnten nicht geladen werden.",
   "owner.rosterFailed":
     "Die Teammitglieder konnten nicht geladen werden. Lade die Seite neu, um eines zu wählen.",
+  "ownerPick.change": "Verantwortung ändern",
+  "ownerPick.search": "Teammitglieder suchen",
+  "ownerPick.done": "{name} zugewiesen",
   "ref.notInRoster":
     "Aktuell zugewiesen (nicht mehr in der Liste der Nutzenden)",
   "picker.noMatch": "Kein Treffer",
@@ -6020,9 +6024,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Disqualifiziert. Dieser Lead ist schreibgeschützt.",
   "lead.marker": "Lead",
   "lead.assignToMe": "Mir zuweisen",
-  "lead.assignChoose": "Teammitglied wählen",
-  "lead.assignNobodyElse":
-    "Kein weiteres Teammitglied, dem dieser Lead zugewiesen werden kann.",
   "lead.saveOverride": "Überschreibung speichern",
   "lead.overrideScoreValue": "Score",
   "lead.trigger.inboundReply": "Eingehende Antwort",
@@ -19804,9 +19805,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "project.owner": "Verantwortlich",
   "project.ownerMe": "Selbst",
   "project.assignOwner": "Einem Teammitglied zuweisen",
-  "project.assignOwnerTitle": "Einem Teammitglied zuweisen",
-  "project.assignOwnerSearch": "Teammitglieder suchen",
-  "project.assignOwnerDone": "{name} zugewiesen",
   "project.description": "Beschreibung",
   "project.targetEnd": "Geplantes Enddatum",
   "project.new": "Neues Projekt",

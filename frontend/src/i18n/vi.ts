@@ -2985,6 +2985,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.card.moveTo": "Chuyển sang {stage}",
   "deal.card.markWon": "Đánh dấu thắng",
   "deal.card.markLost": "Đánh dấu thua",
+  "deal.card.changeCloseDate": "Đổi ngày chốt",
   "deal.card.closedReopen":
     "Deal này đã đóng. Mở lại deal trên trang của deal để chuyển giai đoạn.",
   "deal.card.copyLink": "Sao chép liên kết",
@@ -3359,6 +3360,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "roster.failedTeams": "Không thể tải danh sách nhóm.",
   "owner.rosterFailed":
     "Không thể tải danh sách thành viên. Hãy tải lại trang để chọn một người.",
+  "ownerPick.change": "Đổi người chịu trách nhiệm",
+  "ownerPick.search": "Tìm đồng nghiệp",
+  "ownerPick.done": "Đã giao cho {name}",
   "ref.notInRoster":
     "Hiện đang được giao (không còn trong danh sách thành viên)",
   "picker.noMatch": "Không có kết quả phù hợp",
@@ -5864,8 +5868,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.terminalDisqualified": "Đã loại. Lead này ở chế độ chỉ xem.",
   "lead.marker": "Lead",
   "lead.assignToMe": "Giao cho tôi",
-  "lead.assignChoose": "Chọn một đồng nghiệp",
-  "lead.assignNobodyElse": "Không có thành viên nào khác để giao lead này.",
   "lead.saveOverride": "Lưu ghi đè",
   "lead.overrideScoreValue": "Điểm",
   "lead.trigger.inboundReply": "Thư trả lời đến",
@@ -19307,9 +19309,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "project.owner": "Người chịu trách nhiệm",
   "project.ownerMe": "Tôi",
   "project.assignOwner": "Giao cho một đồng nghiệp",
-  "project.assignOwnerTitle": "Giao cho một đồng nghiệp",
-  "project.assignOwnerSearch": "Tìm đồng nghiệp",
-  "project.assignOwnerDone": "Đã giao cho {name}",
   "project.description": "Mô tả",
   "project.targetEnd": "Ngày kết thúc dự kiến",
   "project.new": "Dự án mới",
