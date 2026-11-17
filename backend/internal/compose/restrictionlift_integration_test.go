@@ -100,7 +100,7 @@ func liftNoticeOf(t *testing.T, l *confirmLaneEnv, stop ids.UUID, offered bool) 
 
 func dispatchNotice(t *testing.T, l *confirmLaneEnv, delivery ids.UUID, relay mailer.Mailer) comms.Outcome {
 	t.Helper()
-	dispatcher := newSendDispatcher(l.e.Pool, nil, sendPace{limit: 10, window: time.Minute, maxAge: time.Hour}, nil, nil, nil).
+	dispatcher := newSendDispatcher(l.e.Pool, nil, nil, sendPace{limit: 10, window: time.Minute, maxAge: time.Hour}, nil, nil, nil).
 		WithControllerRelay(ControllerRelayFor(relay), l.vault)
 	outcome, _, err := dispatcher.DispatchWithWait(sendWorkerScope(l.ctx), delivery)
 	if err != nil && outcome != comms.OutcomeRetry {

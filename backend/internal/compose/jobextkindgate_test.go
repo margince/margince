@@ -45,14 +45,13 @@ func gateProbeDecl() extension.JobDeclaration {
 	}
 }
 
-// composeProbeJob registers one served extension job into this process's
-// composed set and restores the empty set afterwards. The set is process-wide (a
-// boot binding), so a test that left it behind would compose a phantom job into
-// every later test in this package — including the census tests, which would
-// then measure a fleet nobody deployed.
-func composeProbeJob(t *testing.T, d extension.JobDeclaration) {
+// composeProbeJob registers one served extension job and restores the empty
+// job table afterwards. The table is process-wide. A test that left it behind
+// would compose a phantom job into every later test in this package. The census
+// tests would then measure a fleet nobody deployed.
+func composeProbeJob(t *testing.T, d extension.JobDeclaration) *Extensions {
 	t.Helper()
-	err := RegisterExtensions(
+	composed, err := RegisterExtensions(
 		[]extension.Extension{{
 			Name:        extension.Name(d.Unit),
 			Version:     "0.1.0",
@@ -66,13 +65,11 @@ func composeProbeJob(t *testing.T, d extension.JobDeclaration) {
 		t.Fatalf("RegisterExtensions: %v", err)
 	}
 	t.Cleanup(func() {
-		setComposedJobs(nil)
-		setComposedTools(nil)
-		setComposedVerbs(nil)
 		if err := jobs.RegisterComposed(nil); err != nil {
 			t.Errorf("restoring the composed job table: %v", err)
 		}
 	})
+	return composed
 }
 
 // TestTheJobsGateFamilyAdmitsARegisteredExtensionKind is the whole family at
@@ -83,7 +80,7 @@ func composeProbeJob(t *testing.T, d extension.JobDeclaration) {
 // than only that it found something.
 func TestTheJobsGateFamilyAdmitsARegisteredExtensionKind(t *testing.T) {
 	d := gateProbeDecl()
-	composeProbeJob(t, d)
+	composed := composeProbeJob(t, d)
 
 	// Precondition, not decoration: if the declaration table did not gain the
 	// kinds, every arm below would agree about nothing and the census would pass
@@ -94,7 +91,7 @@ func TestTheJobsGateFamilyAdmitsARegisteredExtensionKind(t *testing.T) {
 		}
 	}
 
-	census, err := NewJobCensus()
+	census, err := newJobCensus(composed)
 	if err != nil {
 		t.Fatalf("NewJobCensus: %v", err)
 	}
@@ -117,9 +114,10 @@ func TestTheJobsGateFamilyAdmitsARegisteredExtensionKind(t *testing.T) {
 // and send the reader to api/jobs.yaml, which does not name them and never will.
 func TestTheRegistrySPairingCheckAdmitsAComposedKind(t *testing.T) {
 	d := gateProbeDecl()
-	composeProbeJob(t, d)
+	cfg := censusJobConfig()
+	cfg.Extensions = composeProbeJob(t, d)
 
-	reg, _ := wireJobs(nil, discardLogger(), censusJobConfig())
+	reg, _ := wireJobs(nil, discardLogger(), cfg)
 	if err := reg.everyKindIsRegisteredWithItsDeclaredType(); err != nil {
 		t.Fatalf("the boot-time pairing check refuses a composed kind: %v", err)
 	}

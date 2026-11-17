@@ -29,7 +29,7 @@ func TestAReconcileClosesADeadRunAndQueuesTheNextOne(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctx := rivertest.WorkContext(t.Context(), client)
-	seedCtx, engine, err := dataTaskJobEngine(ctx, e.Pool)
+	seedCtx, engine, err := dataTaskJobEngine(ctx, e.Pool, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

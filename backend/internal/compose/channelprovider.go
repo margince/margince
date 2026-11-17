@@ -35,12 +35,13 @@ import (
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // ReconcileChannelProviders writes this binary's channel vocabulary into the
 // registry: the core connectors it compiled in, plus every channel its composed
-// units declare. It runs after RegisterExtensions, because the unit half reads
-// ComposedExtensions().
+// units declare. It runs after RegisterExtensions, because the unit half is the
+// set RegisterExtensions validated.
 //
 // It is a boot step in its own right, and it cannot ride the construction of
 // the capture registry. That construction is gated on a configured keyvault
@@ -55,8 +56,8 @@ import (
 // It returns its error rather than halting: a unit colliding with a core
 // transport is a refusal an operator has to act on, and the caller that owns
 // the process's exit is where that decision belongs.
-func ReconcileChannelProviders(ctx context.Context, pool *pgxpool.Pool) error {
-	return reconcileChannelProviders(ctx, pool, CoreChannelProviders())
+func ReconcileChannelProviders(ctx context.Context, pool *pgxpool.Pool, exts []extension.Extension) error {
+	return reconcileChannelProviders(ctx, pool, CoreChannelProviders(), exts)
 }
 
 // CoreChannelProviders is every transport this binary compiled a CORE connector
@@ -122,7 +123,7 @@ func sendableCarriage(sendable []string, core map[string]connector.Carriage) map
 // its row — activity and contact_channel_identity rows still reference it, the
 // FK would refuse the delete anyway, and ErrConnectorNotConfigured already
 // parks a send against it rather than needing the row gone.
-func reconcileChannelProviders(ctx context.Context, pool *pgxpool.Pool, providers []string) error {
+func reconcileChannelProviders(ctx context.Context, pool *pgxpool.Pool, providers []string, exts []extension.Extension) error {
 	var units []channelProviderFacts
 	if err := database.WithInfraTx(ctx, pool, func(tx pgx.Tx) error {
 		reserved, err := reservedCoreProviders(ctx, tx, providers)
@@ -134,7 +135,7 @@ func reconcileChannelProviders(ctx context.Context, pool *pgxpool.Pool, provider
 		// admitted against a registry that changed underneath the check. A
 		// refused set writes nothing at all — the boot dies with the collision
 		// uninstalled rather than half-installed.
-		if units, err = unitChannelFacts(reserved); err != nil {
+		if units, err = unitChannelFacts(exts, reserved); err != nil {
 			return err
 		}
 		// sendableCarriage over the ARGUMENT, not the freshly-enumerated registry:

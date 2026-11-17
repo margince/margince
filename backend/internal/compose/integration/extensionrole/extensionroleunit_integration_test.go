@@ -124,7 +124,7 @@ func seedUnitState(t *testing.T, e *apptest.AppEnv) map[string]map[string]any {
 // which reads the source's customers and linked ledgers into the mirror.
 func workFinanceSyncs(t *testing.T, e *apptest.AppEnv) {
 	t.Helper()
-	worker, err := compose.FinanceSyncWorkerForTest(e.Pool)
+	worker, err := compose.FinanceSyncWorkerForTest(e.Pool, registered)
 	if err != nil {
 		t.Fatalf("building the finance sync worker: %v", err)
 	}

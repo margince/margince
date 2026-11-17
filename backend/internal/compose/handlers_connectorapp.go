@@ -66,6 +66,8 @@ type connectorAppHandlers struct {
 	// unitCallbackAPIBase and unitCallbackPublicBase build a unit app's
 	// callback URL from the bases the consent flow itself builds it from.
 	unitCallbackAPIBase, unitCallbackPublicBase string
+	// extensions is the composition whose units may declare an OAuth app.
+	extensions *Extensions
 }
 
 // composeEnvApp records the app THIS process was composed with for one vendor.
@@ -121,7 +123,7 @@ func (h connectorAppHandlers) ListOauthApps(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	providers := capture.AppProviders()
-	for _, app := range composedOAuthApps() {
+	for _, app := range h.extensions.oauthApps() {
 		providers = append(providers, capture.AppProvider(app.Provider))
 	}
 	list := crmcontracts.ConnectorAppList{Data: make([]crmcontracts.ConnectorApp, 0, len(providers))}
@@ -143,7 +145,7 @@ func (h connectorAppHandlers) view(ctx context.Context, p capture.AppProvider) (
 	if err != nil {
 		return crmcontracts.ConnectorApp{}, err
 	}
-	unit, app, isUnitApp := composedOAuthApp(string(p))
+	unit, app, isUnitApp := h.extensions.oauthApp(string(p))
 	composed := h.composed[p]
 	if isUnitApp {
 		composed = connectorAppComposition{}
@@ -226,7 +228,7 @@ func (h connectorAppHandlers) ready(
 	if !h.authorize(w, r, action) {
 		return "", false
 	}
-	p, err := knownAppProvider(provider)
+	p, err := h.knownAppProvider(provider)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return "", false
@@ -243,8 +245,8 @@ func (h connectorAppHandlers) admit(w http.ResponseWriter, r *http.Request, acti
 }
 
 // knownAppProvider reads a core vendor or a composed unit's app off the wire.
-func knownAppProvider(provider string) (capture.AppProvider, error) {
-	if _, _, ok := composedOAuthApp(provider); ok {
+func (h connectorAppHandlers) knownAppProvider(provider string) (capture.AppProvider, error) {
+	if _, _, ok := h.extensions.oauthApp(provider); ok {
 		return capture.AppProvider(provider), nil
 	}
 	return capture.ParseAppProvider(provider)

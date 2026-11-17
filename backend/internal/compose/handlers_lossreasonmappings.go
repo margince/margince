@@ -53,7 +53,7 @@ func (h dataTaskHandlers) ApplyLegacyLossReasons(w http.ResponseWriter, r *http.
 // activateLossMappings starts the run a plan describes. A plan that changes
 // no deal starts nothing.
 func (h dataTaskHandlers) activateLossMappings(ctx context.Context, seen []deals.ReviewedLossMapping) (lossMappingPlan, error) {
-	engine, err := newDataTaskEngine(h.pool, buildinfo.ReleaseVersion, h.now)
+	engine, err := newDataTaskEngine(h.pool, h.extensions, buildinfo.ReleaseVersion, h.now)
 	if err != nil {
 		return lossMappingPlan{}, err
 	}

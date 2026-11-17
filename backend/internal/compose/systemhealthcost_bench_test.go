@@ -54,7 +54,7 @@ func TestSystemHealthReadCosts(t *testing.T) {
 			}); err != nil {
 				t.Fatal(err)
 			}
-			server := newServer(e.Pool, quietTestLogger(), authHandlers{}, dealsHandlers{})
+			server := newServer(e.Pool, quietTestLogger(), nil, authHandlers{}, dealsHandlers{})
 			reads := []struct {
 				name string
 				call func(http.ResponseWriter, *http.Request)

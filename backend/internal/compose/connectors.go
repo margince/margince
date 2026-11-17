@@ -55,6 +55,8 @@ const codeUnauthorized = "unauthorized"
 
 type connectorHandlers struct {
 	registry *capture.Registry
+	// extensions is the composition whose units may declare an OAuth app.
+	extensions *Extensions
 	// publicOrigin reports the address this installation puts in outgoing
 	// links. Nil when none is configured, and then the field is absent
 	// rather than reported as broken.

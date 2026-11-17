@@ -332,9 +332,9 @@ func startRunnerLane(ctx context.Context, cfg workerConfig, pool *pgxpool.Pool, 
 	// Both pass the SAME two values, so the calls are idempotent whichever
 	// order the boot reaches them in: one pool, and the boot's one vault,
 	// which is already nil on a deployment that configured none.
-	compose.BindExtensionRuntime(pool, vault)
+	cfg.extensions.BindRuntime(pool, vault)
 	runnerSvc := compose.NewRunnerService(pool, modelPath.AgentLoop, modelPath.DraftReply, grounding, logger, send,
-		compose.WithRunnerLists(cfg.listsEnabled), compose.WithRunnerDisabledCoreFeatures(config.Val(cfg.settings, ps.CoreFeaturesDisabled)), compose.WithRunnerBlobstore(lanes.blob))
+		compose.WithRunnerExtensions(cfg.extensions), compose.WithRunnerLists(cfg.listsEnabled), compose.WithRunnerDisabledCoreFeatures(config.Val(cfg.settings, ps.CoreFeaturesDisabled)), compose.WithRunnerBlobstore(lanes.blob))
 	_, _ = fmt.Fprintln(stdout, "worker resuming approved Surface-B runs (cg:overnight-agent)")
 	lanes.runner = runnerSvc
 	lanes.background.Go(func() { runResumeSubscriber(ctx, rdb, runnerSvc, logger) })

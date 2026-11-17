@@ -52,7 +52,7 @@ func unprovisionedServerWithOwner(t *testing.T) (*httptest.Server, string, *pgx.
 	if err != nil {
 		t.Fatalf("minting the setup token: %v", err)
 	}
-	srv := httptest.NewServer(compose.New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil))))
+	srv := httptest.NewServer(compose.New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), nil))
 	t.Cleanup(srv.Close)
 	return srv, token, e.Owner
 }
@@ -383,7 +383,7 @@ func TestTheSetupTokenReachesTheLogOnlyWhenTheFileCouldNotBeWritten(t *testing.T
 		t.Error("the log discloses the token without the write failure that forced it, so a reader cannot tell a fallback from a leak")
 	}
 
-	srv := httptest.NewServer(compose.New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil))))
+	srv := httptest.NewServer(compose.New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), nil))
 	t.Cleanup(srv.Close)
 	if status := claimStatus(t, srv, claimBody(announced)); status != http.StatusCreated {
 		t.Errorf("claiming with the token the log announced returned %d, want 201 — the fallback logged something that is not the credential", status)

@@ -37,10 +37,9 @@ func TestEveryToolRunsOnARouteThatDeclaresIt(t *testing.T) {
 	if len(specs) == 0 {
 		t.Fatal("the registry has no tools — this sweep checked nothing")
 	}
-	extensionTools := composedToolNames()
 	sort.Slice(specs, func(i, j int) bool { return specs[i].Name < specs[j].Name })
 	for _, spec := range specs {
-		if extensionTools[spec.Name] || spec.ProtocolOnly {
+		if spec.ProtocolOnly {
 			continue
 		}
 		// A router runs as its targets, each held to its own route in this sweep.
@@ -105,10 +104,9 @@ func TestEveryToolOnARouteOfItsOwnShapeHasABothDoorsTest(t *testing.T) {
 		}
 	}
 
-	extensionTools := composedToolNames()
 	ownShape := 0
 	for _, spec := range NewRegistry(nil, SendPath{}).Specs() {
-		if extensionTools[spec.Name] || !keepsItsOwnShape(spec.OpenAPIOp, byID) {
+		if !keepsItsOwnShape(spec.OpenAPIOp, byID) {
 			continue
 		}
 		ownShape++

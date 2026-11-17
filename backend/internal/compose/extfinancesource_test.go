@@ -47,9 +47,8 @@ func (r *recordingSource) declare(provider string) extension.FinanceSource {
 }
 
 // composeBooks composes one unit, "books", supplying the given sources.
-func composeBooks(t *testing.T, sources ...extension.FinanceSource) {
-	t.Helper()
-	composeUnit(t, extension.Extension{Name: "books", Version: "1.0.0", Description: "Reads the books.", FinanceSources: sources})
+func composeBooks(sources ...extension.FinanceSource) composedFinanceSources {
+	return composedFinanceSources{composed: composeUnit(extension.Extension{Name: "books", Version: "1.0.0", Description: "Reads the books.", FinanceSources: sources})}
 }
 
 func TestThePreflightHoldsFinanceSourcesToTheComposedSet(t *testing.T) {
@@ -89,9 +88,9 @@ func TestComposedSourcesOfferEveryUnitsProviderWithItsDescriptionAndDocuments(t 
 	bare.InvoiceDocument = nil
 	named := source.declare("zeta_books")
 	named.DisplayName = "Zeta Books"
-	composeBooks(t, named, bare)
+	books := composeBooks(named, bare)
 
-	offered := composedFinanceSources{}.Providers()
+	offered := books.Providers()
 	if len(offered) != 2 || offered[0].Provider != "alpha_books" || offered[1].Provider != "zeta_books" ||
 		offered[0].Documents || !offered[1].Documents || offered[0].Description != "Reads the books." {
 		t.Fatalf("offered %+v, want both providers sorted with the unit's description, and documents on zeta_books alone", offered)
@@ -100,12 +99,12 @@ func TestComposedSourcesOfferEveryUnitsProviderWithItsDescriptionAndDocuments(t 
 		t.Errorf("display names %q and %q, want none for alpha_books and the declared one for zeta_books",
 			offered[0].DisplayName, offered[1].DisplayName)
 	}
-	if alpha, ok := (composedFinanceSources{}).Open("alpha_books", accounting.Connection{}); !ok {
+	if alpha, ok := books.Open("alpha_books", accounting.Connection{}); !ok {
 		t.Fatal("alpha_books was not opened")
 	} else if _, err := alpha.InvoiceDocument(context.Background(), "INV-7"); !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
 		t.Errorf("a source without documents answered %v, want ErrUnsupportedBySoR", err)
 	}
-	if _, ok := (composedFinanceSources{}).Open("not_composed", accounting.Connection{}); ok {
+	if _, ok := books.Open("not_composed", accounting.Connection{}); ok {
 		t.Error("a provider no unit supplies was opened")
 	}
 }
@@ -114,10 +113,10 @@ func TestComposedSourcesOfferEveryUnitsProviderWithItsDescriptionAndDocuments(t 
 // Runtime it is handed dies with the call.
 func TestAnOpenedSourceReadsWithTheConnectionAndAShortLivedRuntime(t *testing.T) {
 	source := &recordingSource{}
-	composeBooks(t, source.declare("books"))
+	books := composeBooks(source.declare("books"))
 	conn := accounting.Connection{ID: "conn-1", ConnectedAt: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
-	provider, ok := composedFinanceSources{}.Open("books", conn)
+	provider, ok := books.Open("books", conn)
 	if !ok {
 		t.Fatal("a composed provider was not opened")
 	}
@@ -143,8 +142,8 @@ func TestAnOpenedSourceReadsWithTheConnectionAndAShortLivedRuntime(t *testing.T)
 func TestASourceFailureNamesTheUnitAndKeepsItsCause(t *testing.T) {
 	cause := errors.New("vendor said no")
 	source := &recordingSource{fail: cause}
-	composeBooks(t, source.declare("books"))
-	provider, _ := composedFinanceSources{}.Open("books", accounting.Connection{})
+	books := composeBooks(source.declare("books"))
+	provider, _ := books.Open("books", accounting.Connection{})
 
 	_, customersErr := provider.Customers(context.Background())
 	_, invoicesErr := provider.InvoicesFor(context.Background(), "C-1")
@@ -158,8 +157,8 @@ func TestASourceFailureNamesTheUnitAndKeepsItsCause(t *testing.T) {
 
 func TestAnOpenedSourceAnswersItsCheckAndDirectory(t *testing.T) {
 	source := &recordingSource{}
-	composeBooks(t, source.declare("books"))
-	provider, _ := composedFinanceSources{}.Open("books", accounting.Connection{ID: "conn-2"})
+	books := composeBooks(source.declare("books"))
+	provider, _ := books.Open("books", accounting.Connection{ID: "conn-2"})
 
 	if err := provider.Check(context.Background()); err != nil {
 		t.Errorf("Check() = %v, want a readable source", err)

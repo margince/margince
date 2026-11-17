@@ -44,7 +44,7 @@ func TestADeclaredVocabularyIsRegisteredForTheChildKindOnly(t *testing.T) {
 	// t.Fatalf that never runs would leave every later test in this binary reading
 	// an installation it did not compose.
 	restoreVanillaComposedTables(t)
-	if err := RegisterExtensions(composableAll([]extension.Extension{unit}), nil, []extension.JobDeclaration{decl}); err != nil {
+	if _, err := RegisterExtensions(composableAll([]extension.Extension{unit}), nil, []extension.JobDeclaration{decl}); err != nil {
 		t.Fatalf("RegisterExtensions: %v", err)
 	}
 
@@ -156,7 +156,7 @@ func TestRegisterExtensionsRefusesAMalformedFailureClassAndNamesTheUnit(t *testi
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			err := RegisterExtensions(composableAll([]extension.Extension{{
+			_, err := RegisterExtensions(composableAll([]extension.Extension{{
 				Name: "bad-vocab", Version: "0.0.1",
 				FailureClasses: []extension.FailureClass{tc.class},
 			}}), nil, nil)
@@ -200,22 +200,9 @@ func TestAUnitThatDeclaresNoVocabularyRegistersNoKind(t *testing.T) {
 // refusal driver that only a real extension could supply.
 //
 // Every registration REPLACES rather than merges, so an empty set is the reset.
-//
-// The five compose-side setters are cleared as well as the two jobs tables,
-// because RegisterExtensions writes them all on the way through and a helper that
-// cleared only the tables its own test reads would leave the unit named by
-// servedExtensionJobs() and ComposedExtensions() for the rest of the binary.
-// extjobs_integration_test.go asserts the first is empty and
-// handlers_extensions_test.go reads the second; both would then be passing on the
-// accident that "e" and "h" sort before "j".
 func restoreVanillaComposedTables(t *testing.T) {
 	t.Helper()
 	t.Cleanup(func() {
-		setComposedJobs(nil)
-		setComposedSubscriptions(nil)
-		setComposedTools(nil)
-		setComposedVerbs(nil)
-		setComposedExtensions(nil)
 		if err := jobs.RegisterComposed(nil); err != nil {
 			t.Errorf("clearing the composed kind table: %v", err)
 		}

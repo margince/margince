@@ -202,11 +202,11 @@ func TestTheDirectoryPublishesAUnitsOwnCredentialModel(t *testing.T) {
 	ctx := context.Background()
 	defer activities.SetChannelProviders([]string{capture.ProviderTelegram})
 	defer comms.SetChannelProviders([]string{capture.ProviderTelegram})
-	declaresTransport(t, "mine", extension.Channel{
+	composed := declaresTransport("mine", extension.Channel{
 		Provider: "mine_chat", CredentialModel: extension.CredentialPerMember,
 		Send: (&capturedSend{}).send, Live: answersLive(true, nil),
 	})
-	if err := reconcileChannelProviders(ctx, e.Pool, []string{capture.ProviderTelegram}); err != nil {
+	if err := reconcileChannelProviders(ctx, e.Pool, []string{capture.ProviderTelegram}, composed.Units()); err != nil {
 		t.Fatalf("reconcileChannelProviders: %v", err)
 	}
 	if err := LoadChannelProviderDirectory(ctx, e.Pool); err != nil {

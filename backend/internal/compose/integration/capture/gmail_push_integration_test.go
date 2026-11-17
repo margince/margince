@@ -88,7 +88,7 @@ func TestGmailPushWebhookRoutesToTheConnection(t *testing.T) {
 		t.Fatal(err)
 	}
 	const token = "push-secret"
-	handler := compose.New(e.Pool, quiet, compose.WithGmailPush(inserter, compose.GmailPushConfig{Token: token}))
+	handler := compose.New(e.Pool, quiet, nil, compose.WithGmailPush(inserter, compose.GmailPushConfig{Token: token}))
 	srv := httptest.NewServer(handler)
 	defer srv.Close()
 

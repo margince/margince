@@ -26,14 +26,14 @@ import (
 func setupVouchingIngress(t *testing.T) *ingressEnv {
 	t.Helper()
 	e := setupExtRuntime(t)
-	composeCapturingUnit(t, ingressUnit,
+	e.compose(composeCapturingUnit(ingressUnit,
 		[]extension.Channel{{Provider: ingressProbeProvider, CredentialModel: extension.CredentialPerMember}},
 		extension.IngressSource{
 			System: ingressProbeSystem,
 			Lands:  []extension.RecordKind{extension.KindActivity},
 			Merges: []extension.MergeKey{extension.MergeKeyEmail},
-		})
-	bindCaptureForTest(t, e)
+		}))
+	e.composed.BindCapture(e.Pool, CaptureConfig{})
 	grantCapture(t, e, e.Rep1)
 	depositCredential(t, e, e.Rep1)
 	return &ingressEnv{extRuntimeEnv: e, member: e.Rep1}

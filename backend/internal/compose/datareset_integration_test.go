@@ -73,7 +73,7 @@ func TestSweepWorkspaceDataClearsDomainKeepsIdentity(t *testing.T) {
 	}
 
 	e.SeedCompany(t, "Acme", nil)
-	engine, err := newDataTaskEngine(e.Pool, "test", func() time.Time { return clocktest.Now(t) })
+	engine, err := newDataTaskEngine(e.Pool, nil, "test", func() time.Time { return clocktest.Now(t) })
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,7 +100,7 @@ func TestSweepWorkspaceDataClearsDomainKeepsIdentity(t *testing.T) {
 	}
 
 	expectedSteps := 0
-	for _, task := range dataTaskCatalog(e.Pool, func() time.Time { return clocktest.Now(t) }) {
+	for _, task := range dataTaskCatalog(e.Pool, nil, func() time.Time { return clocktest.Now(t) }) {
 		expectedSteps += len(task.Steps)
 	}
 	if expectedSteps == 0 {

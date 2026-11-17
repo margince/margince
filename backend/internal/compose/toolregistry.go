@@ -38,6 +38,6 @@ func (s *Server) buildToolRegistry(pool *pgxpool.Pool) {
 		// The SERVER's brief service, not a second one built from the pool: the
 		// model lane is bound to that instance, so a fresh service here would
 		// serve agents the deterministic floor while the contact page got prose.
-		meetingBriefReader(s.meetingBriefSvc), s.log, registryFeatures{coreFeatures: s.coreFeatures, lists: s.listsEnabled, firstDrafts: &s.firstDrafts, served: s},
+		meetingBriefReader(s.meetingBriefSvc), s.log, registryFeatures{coreFeatures: s.coreFeatures, lists: s.listsEnabled, firstDrafts: &s.firstDrafts, served: s, extensions: s.extensions},
 		opts...)
 }

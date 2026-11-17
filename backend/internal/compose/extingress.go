@@ -91,10 +91,10 @@ func (r *callRuntime) Ingest(ctx context.Context, on extension.UserID, rec exten
 	if rec.Kind() != extension.KindActivity {
 		return r.ingestOtherKind(ctx, on, rec, declared)
 	}
-	if err := refuseUndeclaredTransport(r.unit, rec.Activity.Kind, rec.Activity.ChannelProvider); err != nil {
+	if err := refuseUndeclaredTransport(r.deps.composed, r.unit, rec.Activity.Kind, rec.Activity.ChannelProvider); err != nil {
 		return extension.Result{}, err
 	}
-	if err := refuseUnitIdentity(r.unit, rec.Counterparty.ChannelIdentity.Provider); err != nil {
+	if err := refuseUnitIdentity(r.deps.composed, r.unit, rec.Counterparty.ChannelIdentity.Provider); err != nil {
 		return extension.Result{}, err
 	}
 	// Whether this ROLE can accept a record at all is answered before the
@@ -208,7 +208,7 @@ func (r *callRuntime) ingressAuthority(ctx context.Context, on extension.UserID)
 	if !ok {
 		return nil, errExtensionRuntimeUnwired
 	}
-	consented, err := extensionMemberConsented(ctx, r.deps.pool, r.unit, member)
+	consented, err := extensionMemberConsented(ctx, r.deps, r.unit, member)
 	if err != nil {
 		return nil, r.ingressRefusal(ctx, err)
 	}
@@ -300,7 +300,7 @@ func (r *callRuntime) normalized(rec extension.Record, declared extension.Ingres
 // naming a transport is a record claiming to have travelled somewhere it did
 // not. The send path reads the provider column and not the kind since
 // ADR-0107/A158, so such a row would be repliable — a note that answers back.
-func refuseUndeclaredTransport(unit, kind, provider string) error {
+func refuseUndeclaredTransport(composed *Extensions, unit, kind, provider string) error {
 	if kind != activities.KindMessage {
 		if provider == "" {
 			return nil
@@ -312,7 +312,7 @@ func refuseUndeclaredTransport(unit, kind, provider string) error {
 		return fmt.Errorf("%w: a %q activity names no transport — a message that does not say what carried it cannot be replied to on anything",
 			extension.ErrInvalid, activities.KindMessage)
 	}
-	for _, declared := range composedChannelsFor(unit) {
+	for _, declared := range composed.channelsFor(unit) {
 		if declared.Provider == provider {
 			return nil
 		}
@@ -334,11 +334,11 @@ func refuseUndeclaredTransport(unit, kind, provider string) error {
 //
 // An empty provider is a record that identifies its counterparty by address, and
 // binds nothing.
-func refuseUnitIdentity(unit, provider string) error {
+func refuseUnitIdentity(composed *Extensions, unit, provider string) error {
 	if provider == "" {
 		return nil
 	}
-	for _, declared := range composedChannelsFor(unit) {
+	for _, declared := range composed.channelsFor(unit) {
 		if declared.Provider == provider {
 			return nil
 		}
@@ -389,7 +389,7 @@ func extSourceSystem(unit, system string) string {
 // on that list — so a typo is a refusal at the call rather than a second
 // provenance namespace nobody knows exists.
 func (r *callRuntime) declaredIngress(system string) (extension.IngressSource, error) {
-	for _, declared := range composedIngressFor(r.unit) {
+	for _, declared := range r.deps.composed.ingressFor(r.unit) {
 		if declared.System == system {
 			return declared, nil
 		}

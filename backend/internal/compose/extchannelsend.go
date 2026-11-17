@@ -37,15 +37,13 @@ type unitTransport struct {
 	channel extension.Channel
 }
 
-// composedUnitTransport finds the unit that supplies a provider in THIS boot's
-// composition.
+// unitTransport finds the unit that supplies a provider in this composition.
 //
-// It reads the composed declarations for composedIngressFor's reason — the set
-// the boot reconciliation validated is the only honest answer — and the boot has
+// It reads the composed declarations for ingressFor's reason. The boot has
 // already refused a provider claimed twice (preflightChannels) or shared with a
-// core connector (unitChannelFacts), so the first match here is the only match.
-func composedUnitTransport(provider string) (unitTransport, bool) {
-	for _, ext := range ComposedExtensions() {
+// core connector (unitChannelFacts). So the first match here is the only one.
+func (x *Extensions) unitTransport(provider string) (unitTransport, bool) {
+	for _, ext := range x.Units() {
 		for _, ch := range ext.Channels {
 			if ch.Provider == provider {
 				return unitTransport{unit: ext.Name, version: string(ext.Version), channel: ch}, true
@@ -161,11 +159,11 @@ func unitSendRefusal(err error) error {
 // the mail arm's own rule one branch below: a pre-flight that cannot ask must
 // not answer, because asserting a capability nobody read is how a rep learns at
 // transmission what they should have been told at the composer.
-func unitSendCapable(ctx context.Context, transport unitTransport, member ids.UserID) (bool, error) {
+func unitSendCapable(ctx context.Context, composed *Extensions, transport unitTransport, member ids.UserID) (bool, error) {
 	if !transport.channel.SuppliesTransport() {
 		return false, nil
 	}
-	return unitConnectionLive(ctx, transport, extension.UserID(member.String()), boundExtensionRuntime())
+	return unitConnectionLive(ctx, transport, extension.UserID(member.String()), composed.binding())
 }
 
 // resolveUnitChannel binds a unit's transport to the member whose credential
@@ -188,7 +186,7 @@ func (r commsResolver) resolveUnitChannel(ctx context.Context, userID ids.UserID
 		return nil, nil, fmt.Errorf("%w: extension %q supplies %q for capture only",
 			comms.ErrCannotSend, transport.unit, transport.channel.Provider)
 	}
-	deps := boundExtensionRuntime()
+	deps := r.composed.binding()
 	member := extension.UserID(userID.String())
 	live, err := unitConnectionLive(ctx, transport, member, deps)
 	if err != nil {

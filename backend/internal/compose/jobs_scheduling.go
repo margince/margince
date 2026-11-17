@@ -58,7 +58,7 @@ func addMeetingDeliveryJob(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerCo
 		return nil
 	}
 	reminders := newScheduledSendWorker(pool, cfg.SendDelivery, cfg.SendBlob, cfg.SendOrigin, cfg.DisabledCoreFeatures...)
-	reminders.store = reminders.store.WithSendAuthority(workerMailAuthority(cfg.SendRegistry))
+	reminders.store = reminders.store.WithSendAuthority(workerMailAuthority(cfg.SendRegistry, cfg.Extensions))
 	addDeclaredWorker[MeetingDeliveryArgs](reg, &meetingDeliveryWorker{pool: pool, registry: cfg.GmailRegistry, vault: cfg.ControllerVault, origin: cfg.SendOrigin, reminders: reminders})
 	return periodicFor(cfg, MeetingDeliveryArgs{})
 }

@@ -23,9 +23,8 @@ import (
 // A unit offers the installation's custom deal fields with the deal. A value
 // that differs is written and a repeat changes nothing. A field a user last
 // edited stays as the user left it and is named in Withheld.
-//
-//testdb:serial binds the process-wide extension runtime
 func TestALandedDealSetsCustomFieldsAndKeepsOneAUserEdited(t *testing.T) {
+	t.Parallel()
 	e := setupCRMIngress(t)
 	catalog := customfields.NewService(e.Pool, integration.SchemaPool(t))
 	column := func(label string, kind string) string {
@@ -80,9 +79,8 @@ func TestALandedDealSetsCustomFieldsAndKeepsOneAUserEdited(t *testing.T) {
 
 // A deal lands under the company it names, and a later record naming another
 // company leaves the deal where it was.
-//
-//testdb:serial binds the process-wide extension runtime
 func TestALandedDealBelongsToTheCompanyItNames(t *testing.T) {
+	t.Parallel()
 	e := setupCRMIngress(t)
 	first := e.mustIngest(t, companyRecord("acct-1", extension.CompanyFields{DisplayName: "Acme"}))
 	other := e.mustIngest(t, companyRecord("acct-2", extension.CompanyFields{DisplayName: "Beta"}))

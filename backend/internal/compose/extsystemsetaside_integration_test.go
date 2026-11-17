@@ -38,10 +38,10 @@ func (s *systemReadEnv) setAside(t *testing.T, user ids.UUID, contact ids.UUID) 
 	return got
 }
 
-//testdb:serial publishes the process-wide composed extension set
 func TestASetAsideChoiceIsReadAsTheUsersOwnAndRunsOut(t *testing.T) {
+	t.Parallel()
 	s := setupSystemRead(t)
-	composeReader(t, extension.SystemReadSetAside)
+	s.declare(extension.SystemReadSetAside)
 	contact := ids.NewV7()
 	s.WsExec(t, `INSERT INTO contact (id, full_name, source, captured_by, visibility) VALUES ($1, 'Lapsed', 'manual', 'system', 'workspace')`, contact)
 	until := clocktest.Now(t).UTC().Add(30 * 24 * time.Hour).Truncate(time.Microsecond)
@@ -75,10 +75,10 @@ func TestASetAsideChoiceIsReadAsTheUsersOwnAndRunsOut(t *testing.T) {
 	}
 }
 
-//testdb:serial publishes the process-wide composed extension set
 func TestASetAsideReadIsRefusedForAMemberWhoDidNotConnectTheUnit(t *testing.T) {
+	t.Parallel()
 	s := setupSystemRead(t)
-	composeReader(t, extension.SystemReadSetAside)
+	s.declare(extension.SystemReadSetAside)
 	var err error
 	s.onDelivery(t, func(ctx context.Context, rt extension.Runtime) error {
 		_, err = rt.SetAside().Contact(ctx, extension.UserID(s.Rep1.String()), ids.NewV7().String())
@@ -89,10 +89,10 @@ func TestASetAsideReadIsRefusedForAMemberWhoDidNotConnectTheUnit(t *testing.T) {
 	}
 }
 
-//testdb:serial publishes the process-wide composed extension set
 func TestASetAsideReadIsRefusedForAMemberWhoHasLeft(t *testing.T) {
+	t.Parallel()
 	s := setupSystemRead(t)
-	composeReader(t, extension.SystemReadSetAside)
+	s.declare(extension.SystemReadSetAside)
 	s.connect(t, s.Rep3)
 	s.WsExec(t, `UPDATE app_user SET status = 'deactivated' WHERE id = $1`, s.Rep3)
 	var err error

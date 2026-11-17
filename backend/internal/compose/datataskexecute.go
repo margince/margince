@@ -37,7 +37,7 @@ type DataTaskRun struct {
 // event lane, so nothing reaches a mailbox, a model or an enrichment vendor.
 // Events the corrections write wait in the outbox for the next worker.
 func DataTaskExecute(ctx context.Context, pool *pgxpool.Pool, maxBatches int) (DataTaskRun, error) {
-	ctx, engine, err := dataTaskJobEngine(ctx, pool)
+	ctx, engine, err := dataTaskJobEngine(ctx, pool, nil)
 	if err != nil {
 		return DataTaskRun{}, err
 	}
@@ -48,7 +48,7 @@ func DataTaskExecute(ctx context.Context, pool *pgxpool.Pool, maxBatches int) (D
 	if err != nil {
 		return DataTaskRun{}, err
 	}
-	return recountDataTasks(ctx, pool, dataTaskCatalog(pool, time.Now), progress)
+	return recountDataTasks(ctx, pool, dataTaskCatalog(pool, nil, time.Now), progress)
 }
 
 // recountDataTasks asks each finished step marked EmptyWhenDone what its own

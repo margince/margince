@@ -49,7 +49,7 @@ func TestAUnitVerbWithAnUnreadableOutputSchemaIsRefusedAtBoot(t *testing.T) {
 		Tier:        extension.TierAutoExecute, RequestedScope: extension.ScopeRead,
 		OutputSchema: json.RawMessage(`{"type":"object","properties":{"note":{"type":["string","null"]}}}`),
 	}
-	if err := compose.RegisterExtensions(nil, []extension.Verb{verb}, nil); err == nil || !strings.Contains(err.Error(), "not readable") {
+	if _, err := compose.RegisterExtensions(nil, []extension.Verb{verb}, nil); err == nil || !strings.Contains(err.Error(), "not readable") {
 		t.Fatalf("the unreadable output schema was admitted: %v", err)
 	}
 }

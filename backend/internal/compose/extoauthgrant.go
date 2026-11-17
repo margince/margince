@@ -60,7 +60,7 @@ type extOAuthGrants struct {
 // The consent callback and the Runtime both use it.
 func newExtOAuthGrants(unit string, deps extensionRuntimeBinding) extOAuthGrants {
 	store := capture.NewConnectorAppStore(NewSettingsStore(deps.pool), deps.vault, slog.Default()).
-		WithUnitApps(composedUnitApp)
+		WithUnitApps(deps.composed.unitApp)
 	return extOAuthGrants{
 		secrets: extsecrets.CoreHeld(unit, deps.pool, deps.vault),
 		credentials: func(ctx context.Context, provider string) (capture.ConnectorApp, bool, error) {
@@ -187,7 +187,7 @@ func (g extOAuthGrants) accessToken(ctx context.Context, app extension.OAuthApp)
 // The declaration is checked first, so another unit's app reads as none
 // whatever this role has wired.
 func (r *callRuntime) OAuthAccessToken(ctx context.Context, provider extension.OAuthProvider) (string, error) {
-	app, ok := declaredOAuthApp(r.unit, string(provider))
+	app, ok := r.deps.composed.declaredOAuthApp(r.unit, string(provider))
 	if !ok {
 		return "", fmt.Errorf("%w: %q", extension.ErrNoSuchOAuthApp, provider)
 	}
@@ -200,7 +200,7 @@ func (r *callRuntime) OAuthAccessToken(ctx context.Context, provider extension.O
 
 // OAuthDisconnect forgets this workspace's grant for one of this unit's apps.
 func (r *callRuntime) OAuthDisconnect(ctx context.Context, provider extension.OAuthProvider) error {
-	if _, ok := declaredOAuthApp(r.unit, string(provider)); !ok {
+	if _, ok := r.deps.composed.declaredOAuthApp(r.unit, string(provider)); !ok {
 		return fmt.Errorf("%w: %q", extension.ErrNoSuchOAuthApp, provider)
 	}
 	ctx, err := r.scoped(ctx)

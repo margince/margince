@@ -416,7 +416,7 @@ func TestTheDataResetReachesTheObjectStoreInEitherOptionOrder(t *testing.T) {
 		t.Run(order.name, func(t *testing.T) {
 			// A fully assembled Server: WithBlobstore rewires handler sets that
 			// must already exist, which is the composition every role boots.
-			s := newServer(nil, quietTestLogger(), authHandlers{}, dealsHandlers{})
+			s := newServer(nil, quietTestLogger(), nil, authHandlers{}, dealsHandlers{})
 			for _, opt := range order.opts {
 				opt(&s, nil)
 			}

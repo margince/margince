@@ -30,6 +30,8 @@ type dataTaskHandlers struct {
 	// lossDealPage is the most deals one loss-mapping run changes; zero is
 	// maxReviewedLossDeals.
 	lossDealPage int
+	// extensions is the composition whose unit tools a data task may name.
+	extensions *Extensions
 }
 
 func (h dataTaskHandlers) now() time.Time {
@@ -52,7 +54,7 @@ func (h dataTaskHandlers) ListDataTasks(w http.ResponseWriter, r *http.Request) 
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), adminadmit.ReadTimeout)
 	defer cancel()
-	engine, err := newDataTaskEngine(h.pool, buildinfo.ReleaseVersion, h.now)
+	engine, err := newDataTaskEngine(h.pool, h.extensions, buildinfo.ReleaseVersion, h.now)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -77,7 +79,7 @@ func (h dataTaskHandlers) ControlDataTask(w http.ResponseWriter, r *http.Request
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), adminadmit.ReadTimeout)
 	defer cancel()
-	engine, err := newDataTaskEngine(h.pool, buildinfo.ReleaseVersion, h.now)
+	engine, err := newDataTaskEngine(h.pool, h.extensions, buildinfo.ReleaseVersion, h.now)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

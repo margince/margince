@@ -99,7 +99,7 @@ func signingKeyReadVerb(tool string) extension.Verb {
 func registryForComposedVerb(t *testing.T, verb extension.Verb, seat objectSeat) (*agents.Registry, *bool) {
 	t.Helper()
 	ran := false
-	tools, err := buildExtensionTools([]extension.Extension{{
+	tools, err := buildExtensionTools(nil, []extension.Extension{{
 		Name: verb.Unit, Version: "1.0.0",
 		Tools: []extension.Tool{{
 			Name: verb.Tool,

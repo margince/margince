@@ -61,6 +61,9 @@ type coreEnv struct {
 	// user is the human the invocation acts as: a core write resolves its
 	// actor from the context, and captured_by is stamped from it.
 	user ids.UUID
+	// composed is the composition the unit was declared in. Nil declares
+	// nothing.
+	composed *Extensions
 }
 
 func setupCore(t *testing.T) coreEnv {
@@ -136,7 +139,7 @@ func (e coreEnv) runtime(t *testing.T) (*callRuntime, context.Context, context.C
 	t.Helper()
 	ctx, cancel := context.WithTimeout(e.invocation(), coreBudget)
 	return runtimeFor(ctx, coreUnit, coreVersion, coreVia,
-		extensionRuntimeBinding{pool: e.pool}), ctx, cancel
+		extensionRuntimeBinding{pool: e.pool, composed: e.composed}), ctx, cancel
 }
 
 // aNote is the request a unit files: a `note`, which names no transport, so the

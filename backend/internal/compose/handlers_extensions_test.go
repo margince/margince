@@ -145,15 +145,14 @@ func TestExtensionInventoryOfAVanillaInstallationIsEmptyNotNull(t *testing.T) {
 }
 
 // The accessor and the boot must agree. RegisterExtensions records the declared
-// set, and the inventory reads it back: without this, ComposedExtensions could
-// silently answer the previous boot's set (or none) and the handler would report
-// an installation that is not the one serving.
+// set in the composition it answers, and the inventory reads it back. Without
+// this, the handler could report an installation that is not the one serving.
 func TestRegisterExtensionsRecordsTheSetTheInventoryReadsBack(t *testing.T) {
-	t.Cleanup(func() { setComposedExtensions(nil) })
-	if err := RegisterExtensions(composableAll([]extension.Extension{{Name: "inv-unit", Version: "9.9.9"}}), nil, nil); err != nil {
+	composed, err := RegisterExtensions(composableAll([]extension.Extension{{Name: "inv-unit", Version: "9.9.9"}}), nil, nil)
+	if err != nil {
 		t.Fatalf("RegisterExtensions: %v", err)
 	}
-	got := ComposedExtensions()
+	got := composed.Units()
 	if len(got) != 1 || got[0].Name != "inv-unit" || got[0].Version != "9.9.9" {
 		t.Fatalf("ComposedExtensions() = %v, want the set RegisterExtensions was handed", got)
 	}

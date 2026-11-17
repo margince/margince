@@ -205,7 +205,7 @@ func (e *voiceSendEnv) draftedSend(ref string) activities.SendEmailInput {
 // deployment gets rather than a store built by hand for the test.
 func composedSendServer(t *testing.T, e *voiceSendEnv, stager DeliveryMachinery) Server {
 	t.Helper()
-	srv := newServer(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)),
+	srv := newServer(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), nil,
 		identity.NewHandlers(identity.NewService(e.Pool)), deals.NewHandlers(e.DB(), DealsInstallation()))
 	for _, opt := range []Option{WithPublicBaseURL(voiceSendBaseURL), WithDelivery(stager)} {
 		opt(&srv, e.Pool)

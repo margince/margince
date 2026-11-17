@@ -42,10 +42,10 @@ func (s *systemReadEnv) dealMail(t *testing.T, q extension.MailQuery) extension.
 	return got
 }
 
-//testdb:serial publishes the process-wide composed extension set
 func TestTheMailReadHoldsOnlyWhatTheWholeTeamMaySee(t *testing.T) {
+	t.Parallel()
 	s := setupSystemRead(t)
-	composeReader(t, extension.SystemReadActivities)
+	s.declare(extension.SystemReadActivities)
 	now := clocktest.Now(t).UTC().Truncate(time.Microsecond)
 	sent := s.mail(t, "outbound", "workspace", false, now.Add(-3*time.Hour))
 	s.mail(t, "inbound", "participants", false, now.Add(-2*time.Hour))
@@ -68,10 +68,10 @@ func TestTheMailReadHoldsOnlyWhatTheWholeTeamMaySee(t *testing.T) {
 	}
 }
 
-//testdb:serial publishes the process-wide composed extension set
 func TestADealWithMoreMailThanAPageIsReadOverSeveralPages(t *testing.T) {
+	t.Parallel()
 	s := setupSystemRead(t)
-	composeReader(t, extension.SystemReadActivities)
+	s.declare(extension.SystemReadActivities)
 	now := clocktest.Now(t).UTC().Truncate(time.Microsecond)
 	want := map[string]bool{}
 	for i := range 5 {
@@ -99,10 +99,10 @@ func TestADealWithMoreMailThanAPageIsReadOverSeveralPages(t *testing.T) {
 	}
 }
 
-//testdb:serial publishes the process-wide composed extension set
 func TestTheMailReadIsAnsweredUnderTheNamedMembersOwnAccessToTheDeal(t *testing.T) {
+	t.Parallel()
 	s := setupSystemRead(t)
-	composeReader(t, extension.SystemReadActivities)
+	s.declare(extension.SystemReadActivities)
 	s.mail(t, "outbound", "workspace", false, clocktest.Now(t).UTC().Add(-time.Hour))
 	s.WsExec(t, `UPDATE role SET permissions = '{"objects":{"company":{"read":true}},"row_scope":"all"}' WHERE id IN (SELECT role_id FROM role_assignment WHERE user_id = $1)`, s.Rep3)
 	var err error
@@ -115,10 +115,10 @@ func TestTheMailReadIsAnsweredUnderTheNamedMembersOwnAccessToTheDeal(t *testing.
 	}
 }
 
-//testdb:serial publishes the process-wide composed extension set
 func TestEverySystemReadLeavesOneTraceRow(t *testing.T) {
+	t.Parallel()
 	s := setupSystemRead(t)
-	composeReader(t, extension.SystemReadActivities)
+	s.declare(extension.SystemReadActivities)
 	s.dealMail(t, extension.MailQuery{})
 	var rows int
 	s.read(t, func(ctx context.Context, tx pgx.Tx) error {

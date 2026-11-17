@@ -50,10 +50,10 @@ func preflightOAuthApps(e extension.Extension, claimed map[string]extension.Name
 	return nil
 }
 
-// composedOAuthApp answers the unit declaring an OAuth app for provider, and
+// oauthApp answers the unit declaring an OAuth app for provider, and
 // the app. It reads the set the boot validated, so a provider is unique.
-func composedOAuthApp(provider string) (extension.Extension, extension.OAuthApp, bool) {
-	for _, e := range ComposedExtensions() {
+func (x *Extensions) oauthApp(provider string) (extension.Extension, extension.OAuthApp, bool) {
+	for _, e := range x.Units() {
 		for _, app := range e.OAuthApps {
 			if app.Provider == provider {
 				return e, app, true
@@ -63,27 +63,27 @@ func composedOAuthApp(provider string) (extension.Extension, extension.OAuthApp,
 	return extension.Extension{}, extension.OAuthApp{}, false
 }
 
-// composedOAuthApps lists the OAuth apps the composed units declare, ordered
+// oauthApps lists the OAuth apps the composed units declare, ordered
 // by provider.
-func composedOAuthApps() []extension.OAuthApp {
+func (x *Extensions) oauthApps() []extension.OAuthApp {
 	var apps []extension.OAuthApp
-	for _, e := range ComposedExtensions() {
+	for _, e := range x.Units() {
 		apps = append(apps, e.OAuthApps...)
 	}
 	slices.SortFunc(apps, func(a, b extension.OAuthApp) int { return strings.Compare(a.Provider, b.Provider) })
 	return apps
 }
 
-// composedUnitApp is the lookup the app store serves unit apps through.
-func composedUnitApp(provider string) (capture.UnitApp, bool) {
-	e, app, ok := composedOAuthApp(provider)
+// unitApp is the lookup the app store serves unit apps through.
+func (x *Extensions) unitApp(provider string) (capture.UnitApp, bool) {
+	e, app, ok := x.oauthApp(provider)
 	return capture.UnitApp{Unit: string(e.Name), Title: app.Title}, ok
 }
 
 // declaredOAuthApp answers one unit's own app for provider. Another unit's app
 // is not found, so a unit cannot reach a neighbour's grant.
-func declaredOAuthApp(unit, provider string) (extension.OAuthApp, bool) {
-	e, app, ok := composedOAuthApp(provider)
+func (x *Extensions) declaredOAuthApp(unit, provider string) (extension.OAuthApp, bool) {
+	e, app, ok := x.oauthApp(provider)
 	if !ok || string(e.Name) != unit {
 		return extension.OAuthApp{}, false
 	}

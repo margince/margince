@@ -237,6 +237,8 @@ var _ mailboxSenders = (*capture.Registry)(nil)
 type commsResolver struct {
 	registry mailboxSenders
 	channels channelSenders
+	// composed is the composition whose units may supply a transport.
+	composed *Extensions
 }
 
 var _ comms.ConnectionResolver = commsResolver{}
@@ -321,9 +323,9 @@ func (s commsSeats) ActiveSeat(ctx context.Context, userID ids.UserID) (bool, st
 // store, the mailbox resolver over the capture registry, the consent gate, and
 // the policy chain. Every one of those edges crosses a module boundary, which
 // is why the assembly lives here and not in comms.
-func newSendWorker(pool *pgxpool.Pool, registry *capture.Registry, blob blobstore.Store, relay comms.ControllerRelay, vault keyvault.Vault) *commsSendWorker {
+func newSendWorker(pool *pgxpool.Pool, composed *Extensions, registry *capture.Registry, blob blobstore.Store, relay comms.ControllerRelay, vault keyvault.Vault) *commsSendWorker {
 	return &commsSendWorker{dispatcher: newPacedDispatcher(pool, func(pace sendPace) deliveryDispatcher {
-		return newSendDispatcher(pool, registry, pace, blob, relay, vault)
+		return newSendDispatcher(pool, composed, registry, pace, blob, relay, vault)
 	})}
 }
 
@@ -338,14 +340,14 @@ func NewMailDeliveryStore(pool *pgxpool.Pool, admitParties func(context.Context,
 }
 
 // newSendDispatcher builds the dispatcher for one pace.
-func newSendDispatcher(pool *pgxpool.Pool, registry *capture.Registry, pace sendPace, blob blobstore.Store, relay comms.ControllerRelay, vault keyvault.Vault) *comms.Dispatcher {
+func newSendDispatcher(pool *pgxpool.Pool, composed *Extensions, registry *capture.Registry, pace sendPace, blob blobstore.Store, relay comms.ControllerRelay, vault keyvault.Vault) *comms.Dispatcher {
 	var admitParties func(context.Context, ids.ActivityID) error
 	if registry != nil {
 		admitParties = registry.AdmitActivityParties
 	}
 	return controllerLaneOn(comms.NewDispatcher(
 		NewMailDeliveryStore(pool, admitParties),
-		commsResolver{registry: registry, channels: registry},
+		commsResolver{registry: registry, channels: registry, composed: composed},
 		NewSendSeatAuthority(pool),
 		NewSendAttachmentAuthority(pool, blob),
 		consentGateFor(pool),

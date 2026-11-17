@@ -47,7 +47,7 @@ func (r *callRuntime) SyncNow(ctx context.Context, job extension.JobName) error 
 	if err != nil {
 		return err
 	}
-	decl, found := declaredJobFor(r.unit, string(job))
+	decl, found := r.deps.composed.declaredJob(r.unit, string(job))
 	if !found {
 		// The unit's OWN set, so a name that belongs to another unit reads the
 		// same as one that belongs to nobody: this unit declares no such job.
@@ -75,14 +75,14 @@ func (r *callRuntime) SyncNow(ctx context.Context, job extension.JobName) error 
 	return inserter.Enqueue(ctx, extJobWorkspaceArgs{JobKind: child, Workspace: ws}, opts)
 }
 
-// declaredJobFor answers the declaration of one unit's job, and whether the
+// declaredJob answers the declaration of one unit's job, and whether the
 // unit declares it at all.
 //
 // Read from the composed set rather than from anything the caller supplies,
 // which is what makes "its own job" a property of construction: the set is what
 // this boot registered, and the unit is the one the Runtime was minted for.
-func declaredJobFor(unit, job string) (extension.JobDeclaration, bool) {
-	for _, served := range servedExtensionJobs() {
+func (x *Extensions) declaredJob(unit, job string) (extension.JobDeclaration, bool) {
+	for _, served := range x.servedJobs() {
 		if string(served.decl.Unit) == unit && served.decl.Job == job {
 			return served.decl, true
 		}

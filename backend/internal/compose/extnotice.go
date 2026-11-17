@@ -127,7 +127,7 @@ func (d extensionNoticeDoor) actingMemberCanOpen(ctx context.Context, in extensi
 	if err != nil {
 		return err
 	}
-	consented, err := memberConnectedTx(ctx, d.core.tx, d.core.unit, member)
+	consented, err := memberConnectedTx(ctx, d.core.tx, d.core.deps.composed, d.core.unit, member)
 	if err != nil {
 		return portRefusal(err)
 	}

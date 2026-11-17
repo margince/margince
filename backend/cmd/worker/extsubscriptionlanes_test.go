@@ -27,8 +27,7 @@ func noopHandler(context.Context, extension.Runtime, extension.Delivery) error {
 // logged and skipped, so a unit-sized fault stays unit-sized, where a return or
 // a fatal would take every other unit's deliveries down with it.
 func TestOneUnresolvableListenerDoesNotCostTheOthersTheirLane(t *testing.T) {
-	t.Cleanup(func() { compose.SetComposedSubscriptionsForTest(nil) })
-	compose.SetComposedSubscriptionsForTest([]compose.ComposedSubscription{
+	composed := compose.ExtensionsWithSubscriptionsForTest([]compose.ComposedSubscription{
 		{
 			Unit: "alpha", Version: "1.0.0",
 			Sub: extension.Subscription{Name: "unroutable", Events: []string{"invoice.created"}, Handle: noopHandler},
@@ -43,7 +42,7 @@ func TestOneUnresolvableListenerDoesNotCostTheOthersTheirLane(t *testing.T) {
 	var logged bytes.Buffer
 	logger := slog.New(slog.NewTextHandler(&logged, nil))
 
-	lanes := extensionSubscriptionLanes(nil, logger, &announced)
+	lanes := extensionSubscriptionLanes(composed, nil, logger, &announced)
 
 	if len(lanes) != 1 {
 		t.Fatalf("resolved %d lanes, want only the routable one", len(lanes))
@@ -69,10 +68,8 @@ func TestOneUnresolvableListenerDoesNotCostTheOthersTheirLane(t *testing.T) {
 
 // With nothing composed there is nothing to run, and nothing said about it.
 func TestNoSubscriptionsStartNoLanes(t *testing.T) {
-	t.Cleanup(func() { compose.SetComposedSubscriptionsForTest(nil) })
-	compose.SetComposedSubscriptionsForTest(nil)
 	var announced bytes.Buffer
-	if lanes := extensionSubscriptionLanes(nil, slog.New(slog.DiscardHandler), &announced); len(lanes) != 0 {
+	if lanes := extensionSubscriptionLanes(nil, nil, slog.New(slog.DiscardHandler), &announced); len(lanes) != 0 {
 		t.Fatalf("resolved %d lanes with nothing composed", len(lanes))
 	}
 	if announced.Len() != 0 {

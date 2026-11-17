@@ -23,8 +23,8 @@ const instrumentFlushWindow = 2 * time.Second
 // installs what they return. A role calls it once, after RegisterExtensions
 // and before InstallProcessLogger. The logger it is handed sits on the base
 // handler, so a unit's own diagnostics never pass through a unit's wrapper.
-func StartInstrumentation(ctx context.Context, role string, boot *slog.Logger) {
-	startUnits(ctx, ComposedExtensions(), role, boot)
+func StartInstrumentation(ctx context.Context, exts *Extensions, role string, boot *slog.Logger) {
+	startUnits(ctx, exts.Units(), role, boot)
 }
 
 // FlushInstrumentation gives every unit's Shutdown hook a bounded window to

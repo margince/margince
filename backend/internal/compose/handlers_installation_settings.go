@@ -34,6 +34,8 @@ type installationSettingsHandlers struct {
 	// pool reads the jurisdiction page in one transaction
 	// (handlers_installation_jurisdiction.go).
 	pool *pgxpool.Pool
+	// extensions names the unit that ships each compiled-in pack.
+	extensions *Extensions
 	// configuredProviders carries the external sign-in providers this DEPLOYMENT
 	// mounted, injected by the option that wires them. Empty is the honest
 	// answer for a deployment that composed none, and the screen then offers

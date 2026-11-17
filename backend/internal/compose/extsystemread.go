@@ -83,21 +83,11 @@ func (r *callRuntime) gatedRead(ctx context.Context, read extension.SystemRead, 
 	if !admitted {
 		return nil, extension.ErrAttendedRead
 	}
-	if !slices.Contains(declaredSystemReads(r.unit), read) {
+	declared, _ := r.deps.composed.unit(r.unit)
+	if !slices.Contains(declared.SystemReads, read) {
 		return nil, fmt.Errorf("%w: add extension.SystemRead %q to it", extension.ErrUndeclaredRead, read)
 	}
 	return ctx, nil
-}
-
-// declaredSystemReads are the reads the named unit declares in this boot's
-// composition, the set its manifest publishes.
-func declaredSystemReads(unit string) []extension.SystemRead {
-	for _, ext := range ComposedExtensions() {
-		if string(ext.Name) == unit {
-			return ext.SystemReads
-		}
-	}
-	return nil
 }
 
 // systemReadTraced is the action a system read leaves in system_log.

@@ -55,7 +55,7 @@ func TestAReleasedRuntimeRefusesEverySystemRead(t *testing.T) {
 // A finance read and a channel send hand their result to the user who asked.
 // So only a job tick and a bus delivery answer a system read.
 func TestOnlyATickAndADeliveryAnswerASystemRead(t *testing.T) {
-	composeReader(t, extension.SystemReadDirectory)
+	composed := composeReader(extension.SystemReadDirectory)
 	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
 	for name, mint := range map[string]func(context.Context, string, string, string, extensionRuntimeBinding) *callRuntime{
 		"a job tick":         jobRuntimeFor,
@@ -65,7 +65,7 @@ func TestOnlyATickAndADeliveryAnswerASystemRead(t *testing.T) {
 		"an attended call":   runtimeFor,
 		"an inbound request": inboundRuntimeFor,
 	} {
-		rt := mint(ctx, "dealmirror", "1.0.0", "probe", extensionRuntimeBinding{pool: &pgxpool.Pool{}})
+		rt := mint(ctx, "dealmirror", "1.0.0", "probe", extensionRuntimeBinding{pool: &pgxpool.Pool{}, composed: composed})
 		_, err := rt.Directory().Emails(context.Background(), nil)
 		rt.release()
 		answers := name == "a job tick" || name == "a bus delivery"
@@ -82,7 +82,7 @@ func TestOnlyATickAndADeliveryAnswerASystemRead(t *testing.T) {
 // refuses every other question. The gate is passed when the record type, not
 // the caller, is what refuses: a company is no record CanRead answers for.
 func TestAnAttendedCanReadAnswersOnlyItsHumanCallerAboutThemselves(t *testing.T) {
-	composeReader(t, extension.SystemReadAuthority)
+	composed := composeReader(extension.SystemReadAuthority)
 	self, other := ids.NewV7(), ids.NewV7()
 	human := principal.Principal{Type: principal.PrincipalHuman, UserID: self}
 	agent := principal.Principal{Type: principal.PrincipalAgent, ID: "agent:probe", OnBehalfOf: self}
@@ -100,7 +100,7 @@ func TestAnAttendedCanReadAnswersOnlyItsHumanCallerAboutThemselves(t *testing.T)
 		"the same id in upper case":    {human, self, extension.ErrInvalid},
 	} {
 		ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), ids.NewV7()), c.actor)
-		rt := runtimeFor(ctx, "dealmirror", "1.0.0", "tool/probe", extensionRuntimeBinding{pool: &pgxpool.Pool{}})
+		rt := runtimeFor(ctx, "dealmirror", "1.0.0", "tool/probe", extensionRuntimeBinding{pool: &pgxpool.Pool{}, composed: composed})
 		about := c.about.String()
 		if name == "the same id in upper case" {
 			about = strings.ToUpper(about)
@@ -112,7 +112,7 @@ func TestAnAttendedCanReadAnswersOnlyItsHumanCallerAboutThemselves(t *testing.T)
 		}
 	}
 	ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), ids.NewV7()), human)
-	rt := runtimeFor(ctx, "dealmirror", "1.0.0", "tool/probe", extensionRuntimeBinding{pool: &pgxpool.Pool{}})
+	rt := runtimeFor(ctx, "dealmirror", "1.0.0", "tool/probe", extensionRuntimeBinding{pool: &pgxpool.Pool{}, composed: composed})
 	defer rt.release()
 	// A deal, so the refusal is the user id's and not the record type's.
 	deal := extension.EntityRef{Type: "deal", ID: ids.NewV7().String()}
@@ -123,21 +123,19 @@ func TestAnAttendedCanReadAnswersOnlyItsHumanCallerAboutThemselves(t *testing.T)
 }
 
 // composeReader composes the dealmirror unit declaring reads for this test.
-func composeReader(t *testing.T, reads ...extension.SystemRead) {
-	t.Helper()
-	setComposedExtensions([]extension.Extension{{
+func composeReader(reads ...extension.SystemRead) *Extensions {
+	return composeUnit(extension.Extension{
 		Name: "dealmirror", Version: "1.0.0", SystemReads: reads,
 		Secrets: []extension.SecretsRequest{{Key: "token", Scope: extension.SecretScopeUser}},
-	}})
-	t.Cleanup(func() { setComposedExtensions(nil) })
+	})
 }
 
 // A unit reads only what its declaration lists, so the manifest an operator
 // reads is the whole of what it can read.
 func TestASystemReadTheUnitDidNotDeclareIsRefused(t *testing.T) {
-	composeReader(t, extension.SystemReadDirectory)
+	composed := composeReader(extension.SystemReadDirectory)
 	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
-	rt := deliveryRuntimeFor(ctx, "dealmirror", "1.0.0", "subscription/mirror", extensionRuntimeBinding{pool: &pgxpool.Pool{}})
+	rt := deliveryRuntimeFor(ctx, "dealmirror", "1.0.0", "subscription/mirror", extensionRuntimeBinding{pool: &pgxpool.Pool{}, composed: composed})
 	defer rt.release()
 	deal := extension.EntityRef{Type: "deal", ID: "01a15cc1-9f33-7665-9e65-403f04f85f6b"}
 	refusals := map[string]error{}

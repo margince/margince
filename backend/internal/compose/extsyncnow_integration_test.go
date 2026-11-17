@@ -32,7 +32,7 @@ import (
 // there rather than answering.
 const syncNowUnit, syncNowJob = "notes", "heartbeat"
 
-//testdb:serial publishes the process-wide composed extension set
+//testdb:serial registers into a process-wide unit registry
 func TestSyncNowQueuesTheUnitsOwnTickForTheCallersWorkspace(t *testing.T) {
 	db := testdb.New(t)
 	ctx := context.Background()
@@ -56,9 +56,6 @@ func TestSyncNowQueuesTheUnitsOwnTickForTheCallersWorkspace(t *testing.T) {
 	}
 	decl := extension.JobDeclaration{Unit: syncNowUnit, Job: syncNowJob}
 	set := []composedJob{{decl: decl}}
-	before := servedExtensionJobs()
-	setComposedJobs(set)
-	t.Cleanup(func() { setComposedJobs(before) })
 	// The DECLARATION table as well as the served set: attendedChildOpts reads
 	// the child kind's queue and attempt cap out of it, so a test that
 	// registered only the served half would be asking about a kind the job
@@ -67,7 +64,7 @@ func TestSyncNowQueuesTheUnitsOwnTickForTheCallersWorkspace(t *testing.T) {
 		t.Fatalf("registering the composed job specs: %v", err)
 	}
 	t.Cleanup(func() {
-		if err := jobs.RegisterComposed(composedJobSpecs(before)); err != nil {
+		if err := jobs.RegisterComposed(nil); err != nil {
 			t.Errorf("restoring the composed job specs: %v", err)
 		}
 	})
@@ -76,7 +73,7 @@ func TestSyncNowQueuesTheUnitsOwnTickForTheCallersWorkspace(t *testing.T) {
 		unit:    syncNowUnit,
 		live:    true,
 		callCtx: principal.WithWorkspaceID(ctx, ws),
-		deps:    extensionRuntimeBinding{pool: pool},
+		deps:    extensionRuntimeBinding{pool: pool, composed: &Extensions{jobs: set}},
 	}
 
 	if err := rt.SyncNow(ctx, syncNowJob); err != nil {

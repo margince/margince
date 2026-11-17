@@ -86,6 +86,7 @@ func humanOnlyHandle(context.Context, extension.Runtime, json.RawMessage) (json.
 // against a half-registered surface.
 var (
 	registerDemoExtOnce sync.Once
+	registeredDemoExt   *compose.Extensions
 	registerDemoExtErr  error
 )
 
@@ -97,7 +98,7 @@ var (
 func bootWithDemoExt(t *testing.T, opts ...compose.Option) *apptest.AppEnv {
 	t.Helper()
 	registerDemoExtOnce.Do(func() {
-		registerDemoExtErr = compose.RegisterExtensions([]extension.Extension{{
+		registeredDemoExt, registerDemoExtErr = compose.RegisterExtensions([]extension.Extension{{
 			Name:        "demoext",
 			Version:     "1.0.0",
 			Description: "A synthetic unit, composed only for this suite's own test binary.",
@@ -107,13 +108,12 @@ func bootWithDemoExt(t *testing.T, opts ...compose.Option) *apptest.AppEnv {
 	if registerDemoExtErr != nil {
 		t.Fatalf("registering the synthetic extension set: %v", registerDemoExtErr)
 	}
-	e := apptest.SetupAppWithOptions(t, opts...)
-	// The per-call Runtime a served extension tool's Handle receives
-	// (pool + vault) — cmd/api and cmd/worker both bind it at boot
-	// (keyvault.go, boot.go); apptest's harness has no equivalent call, so a
-	// suite whose subject IS a served extension capability has to bind it
-	// itself or every call answers "no pool for the extension runtime".
-	compose.BindExtensionRuntime(e.Pool, e.Vault)
+	// The test's own fork of the shared registration, so binding its pool
+	// reaches no sibling. cmd/api and cmd/worker bind their composition at
+	// boot. The harness has no such call, so this suite binds its own.
+	composed := registeredDemoExt.ForkForTest()
+	e := apptest.SetupAppComposing(t, composed, opts...)
+	composed.BindRuntime(e.Pool, e.Vault)
 	return e
 }
 

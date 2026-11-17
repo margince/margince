@@ -80,7 +80,7 @@ func gatedVerb(tool string, action extension.RbacAction) extension.Verb {
 func gatedRegistry(t *testing.T, action extension.RbacAction, grant principal.ObjectGrant) (*agents.Registry, *bool) {
 	t.Helper()
 	ran := false
-	tools, err := buildExtensionTools([]extension.Extension{{
+	tools, err := buildExtensionTools(nil, []extension.Extension{{
 		Name: "demo", Version: "1.0.0",
 		Tools: []extension.Tool{{
 			Name: "list_notes",
@@ -189,7 +189,7 @@ func TestTheDeclaredRbacObjectIsEnforcedOnTheRestPath(t *testing.T) {
 // implementation — require the object always — would refuse every unit tool in
 // the tree.
 func TestAToolDeclaringNoObjectIsUnaffected(t *testing.T) {
-	tools, err := buildExtensionTools([]extension.Extension{{
+	tools, err := buildExtensionTools(nil, []extension.Extension{{
 		Name: "demo", Version: "1.0.0",
 		Tools: []extension.Tool{{
 			Name: "give_quote",
