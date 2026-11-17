@@ -20,8 +20,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+//testdb:serial swaps the package-level rollupClock, which its parallel siblings read
 func TestCompanyPipelineFieldsShareOneRollupRead(t *testing.T) {
-	t.Parallel()
 	e := setupDedupe(t)
 	frozen := time.Date(2026, 6, 2, 12, 0, 0, 0, time.UTC)
 	original := rollupClock

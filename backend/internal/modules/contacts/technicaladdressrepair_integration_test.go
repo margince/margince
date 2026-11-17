@@ -43,8 +43,9 @@ func contactIsArchived(ctx context.Context, t *testing.T, e *dedupeEnv, id ids.U
 
 // A contact edited between the page read and the write is read again and
 // archived, not passed over: the cursor moves past it either way.
+//
+//testdb:serial swaps the package-level beforeTechnicalWrite, which its parallel siblings read
 func TestATechnicalContactEditedMidPageIsStillArchived(t *testing.T) {
-	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	logger := legacyMachineContact(ctx, t, e, "4711@bcc.hubspot.com")

@@ -53,8 +53,8 @@ func messageCode(err error) string {
 	return fieldCode(err)
 }
 
+//testdb:serial swaps the package-level leadSLAClock, which its parallel siblings read
 func TestAcceptingAPartnersFirstLeadActivatesIt(t *testing.T) {
-	t.Parallel()
 	pinLeadAuditClock(t)
 	e := setupDedupe(t)
 	ctx := asStageAdmin(e, stageAdminGrants())
