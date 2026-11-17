@@ -123,7 +123,7 @@ func (s *Service) UpdateTeam(ctx context.Context, actor Identity, id ids.UUID, i
 			}
 		}
 		if in.Archived != nil && *in.Archived != (before.ArchivedAt != nil) {
-			if err := refuseAgentTeamReach(ctx, tx, id); err != nil {
+			if err := refuseAgentTeamReach(ctx, tx, s.rbac, id); err != nil {
 				return err
 			}
 			change, set := "restored", `archived_at = NULL`
@@ -177,7 +177,7 @@ func (s *Service) setTeamMemberTx(ctx context.Context, tx pgx.Tx, actor Identity
 	if err := lockAuthorization(ctx, tx); err != nil {
 		return err
 	}
-	if err := refuseAgentMemberReach(ctx, tx, ids.From[ids.UserKind](userID)); err != nil {
+	if err := refuseAgentMemberReach(ctx, tx, s.rbac, ids.From[ids.UserKind](userID)); err != nil {
 		return err
 	}
 	// Lock the team so an archive cannot leave membership on a hidden team.

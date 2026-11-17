@@ -54,9 +54,9 @@ func TestTheSeatsThatAnswerAnAssuranceFindingHoldTheGrantItSpends(t *testing.T) 
 // the marshalled document, parsed and merged.
 func seededGrant(t *testing.T, role string) principal.ObjectGrant {
 	t.Helper()
-	doc, err := policy.Parse(policy.MustDefaultJSON(role))
+	doc, err := policy.Parse(policy.MustDefaultJSON(role), policy.Vocabulary{})
 	if err != nil {
 		t.Fatalf("parsing the seeded %s document: %v", role, err)
 	}
-	return policy.Merge(map[string]policy.Document{role: doc}).Objects["forecast"]
+	return policy.Merge(map[string]policy.Document{role: doc}, policy.Vocabulary{}).Objects["forecast"]
 }

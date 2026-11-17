@@ -13,7 +13,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -40,7 +39,7 @@ type meetingDeliveryWorker struct {
 }
 
 func (w *meetingDeliveryWorker) Work(ctx context.Context, _ *river.Job[MeetingDeliveryArgs]) error {
-	pass, err := installationJobCtx(ctx, identity.NewService(w.pool))
+	pass, err := installationJobCtx(ctx, IdentityService(w.pool))
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}

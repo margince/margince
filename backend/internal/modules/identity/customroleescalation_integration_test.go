@@ -229,11 +229,10 @@ func TestTheAssignableRolesAreExactlyTheRolesAnInviteAccepts(t *testing.T) {
 // The account an invite or a role change produces is held against everything
 // the delegate holds, read off the stored role: a record grant, an extension
 // grant this build no longer composes, and a field the delegate cannot read.
-//
-//testdb:serial registers into the process-wide RBAC object registry
 func TestADelegateProducesNoAccountWiderThanTheirOwn(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "assign-whole")
-	registerExtObject(t)
+	e.registerExtObject(t)
 	delegateRole := e.customRole(t, "Member admin", "rep", map[string]storedGrant{
 		objectUserAdmin: fullGrant, "deal": {},
 	})
@@ -243,7 +242,7 @@ func TestADelegateProducesNoAccountWiderThanTheirOwn(t *testing.T) {
 	e.maskRole(t, masked)
 	withDeals := e.customRole(t, "Rep with deals", "rep", map[string]storedGrant{"deal": {Read: true}})
 	withExt := e.customRole(t, "Rep with notes", "rep", map[string]storedGrant{"deal": {}, extObject: {Read: true}})
-	ResetRbacObjectsForTest()
+	e.svc.WithRbacObjects(RbacObjects{})
 	// Each role below differs from the admitted one on ONE axis, so each carries
 	// the delegate's mask unless the mask is the axis it tests.
 	e.maskRole(t, withDeals)

@@ -226,7 +226,7 @@ func (s *Service) GetUser(ctx context.Context, actor Identity, userID ids.UserID
 	var u userRow
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		u, err = readMemberTx(ctx, tx, actor, userID)
+		u, err = readMemberTx(ctx, tx, s.rbac, actor, userID)
 		return err
 	})
 	return u, err
@@ -275,7 +275,7 @@ func (s *Service) ListUsers(ctx context.Context, in ListUsersInput) (RosterPage,
 	}
 	var actions map[ids.UUID][]memberAction
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		grants, err := loadGrantsFor(ctx, tx, rowIDs(rows))
+		grants, err := loadGrantsFor(ctx, tx, s.rbac, rowIDs(rows))
 		if err != nil {
 			return err
 		}

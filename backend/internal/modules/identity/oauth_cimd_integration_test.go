@@ -59,7 +59,7 @@ func setupCIMD(t *testing.T, slug string) *cimdEnv {
 	var wsID ids.WorkspaceID
 	err := database.WithInfraTx(context.Background(), pool, func(tx pgx.Tx) error {
 		var err error
-		wsID, err = createInstallation(context.Background(), tx, nil, InstallationBootstrap{
+		wsID, err = createInstallation(context.Background(), tx, RbacObjects{}, nil, InstallationBootstrap{
 			CompanyName:   slug,
 			AdminEmail:    "admin@" + slug + ".test",
 			AdminName:     "Admin",

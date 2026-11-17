@@ -261,7 +261,7 @@ func (w *controllerPayloadSweepWorker) retire(ctx context.Context, id ids.UUID) 
 func addControllerPayloadSweepJob(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log *slog.Logger) []*river.PeriodicJob {
 	db := InstallationDB(pool)
 	worker := newControllerPayloadSweepWorker(
-		identity.NewService(pool),
+		IdentityService(pool),
 		comms.NewStore(db, time.Now, activities.NewStore(db)),
 		controllerPayloads{v: cfg.ControllerVault},
 		activities.NewStore(db).WithMeetingVault(cfg.ControllerVault),

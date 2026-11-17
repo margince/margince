@@ -26,7 +26,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/modules/customfields"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/webforms"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
@@ -124,7 +123,7 @@ func publicForms(forms webforms.Handlers) func(http.Handler) http.Handler {
 type inquiryWork = inquiries.Work
 
 func newInquiryRouting(db *database.DB) inquiries.Routing {
-	return inquiries.NewRouting(db, newWebFormFence(db), NewProviderFor(db))
+	return inquiries.NewRouting(db, newWebFormFence(db), NewProviderFor(db), identityServiceFor(db))
 }
 
 func newInquiryAssignment(db *database.DB) inquiries.Assignment {
@@ -132,7 +131,7 @@ func newInquiryAssignment(db *database.DB) inquiries.Assignment {
 }
 
 func newInquirySettings(db *database.DB, forms *webforms.Store) inquiries.Settings {
-	ex := automation.Executors{Provider: NewProviderFor(db), Authority: identity.NewService(db.Pool())}
+	ex := automation.Executors{Provider: NewProviderFor(db), Authority: IdentityService(db.Pool())}
 	return inquiries.NewSettings(db, forms, newInquiryRouting(db), ex, func() *automation.WorkflowEngine { return NewWorkflowEngine(db) })
 }
 

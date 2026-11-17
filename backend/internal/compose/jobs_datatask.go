@@ -13,7 +13,6 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/datatask"
@@ -213,7 +212,7 @@ func reconcileDataTaskProgress(ctx context.Context, engine *datatask.Engine) ([]
 }
 
 func dataTaskJobEngine(ctx context.Context, pool *pgxpool.Pool, composed *Extensions) (context.Context, *datatask.Engine, error) {
-	bound, err := installationJobCtx(ctx, identity.NewService(pool))
+	bound, err := installationJobCtx(ctx, IdentityService(pool))
 	if err != nil {
 		return ctx, nil, err
 	}

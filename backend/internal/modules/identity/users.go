@@ -97,7 +97,7 @@ func (s *Service) ReactivateUser(ctx context.Context, actor Identity, userID ids
 		}
 		// Restoring an admin somebody removed is the mirror of removing one, so
 		// it carries the same ceiling.
-		if err := refuseUnlessCallerOutranksTarget(ctx, tx, actor, userID, reachDenial); err != nil {
+		if err := refuseUnlessCallerOutranksTarget(ctx, tx, s.rbac, actor, userID, reachDenial); err != nil {
 			return err
 		}
 		if err := refuseWhileHoldingArchivedRole(ctx, tx, userID); err != nil {
@@ -242,7 +242,7 @@ func (s *Service) DeactivateUser(ctx context.Context, actor Identity, in Deactiv
 		// A delegated holder must not lock out an administrator. The last-admin
 		// invariant below is a different question — it stops the LAST one going
 		// whoever asks — and neither substitutes for the other.
-		if err := refuseUnlessCallerOutranksTarget(ctx, tx, actor, in.UserID, reachDenial); err != nil {
+		if err := refuseUnlessCallerOutranksTarget(ctx, tx, s.rbac, actor, in.UserID, reachDenial); err != nil {
 			return err
 		}
 		var status string

@@ -15,7 +15,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 )
 
@@ -32,7 +31,7 @@ func (s *Server) buildToolRegistry(pool *pgxpool.Pool) {
 		opts = append(opts, agents.WithInstallationLock(s.trial.Lock))
 	}
 	s.toolRegistry = registryWithGate(InstallationDB(pool),
-		auth.NewGate(identity.NewService(pool), auth.WithVolumeMeter(s.volumeMeter)),
+		auth.NewGate(IdentityService(pool), auth.WithVolumeMeter(s.volumeMeter)),
 		s.replyDrafter, s.send, companyEnricher{srv: s},
 		s.retrievalEmbedder, s.transcriptOnLanding, importsFor(s),
 		// The SERVER's brief service, not a second one built from the pool: the

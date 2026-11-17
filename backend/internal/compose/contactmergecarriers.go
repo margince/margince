@@ -11,7 +11,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/initiatives"
 	"github.com/margince/margince/backend/internal/modules/integrations"
 	"github.com/margince/margince/backend/internal/modules/introductions"
@@ -50,7 +49,7 @@ func withContactMergeCarriers[T contactMergeDoor[T]](db *database.DB, door T) T 
 	return door.
 		WithStopCarrier(consent.NewStore(db)).
 		WithSatelliteCarriers(consent.NewStore(db), introductions.NewStore(db, time.Now)).
-		WithGrantCarrier(identity.NewServiceFor(db)).
+		WithGrantCarrier(identityServiceFor(db)).
 		WithParticipantRosterReader(activities.EnsureParticipantRosterVisibleTx).
 		WithProviderRunReader(integrations.ReadRunForContactTx).
 		WithMergeSignalReader(signals.PreviewSignalCarry(signalSummaryWords)).

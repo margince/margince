@@ -15,11 +15,11 @@ import (
 )
 
 // DataTaskOperatorsTx uses current stored grants, so a revoked operator receives no correction notice.
-func DataTaskOperatorsTx(ctx context.Context, tx pgx.Tx) ([]ids.UserID, error) {
+func DataTaskOperatorsTx(ctx context.Context, tx pgx.Tx, rbac RbacObjects) ([]ids.UserID, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return nil, err
 	}
-	users, grants, err := liveOperatorGrantsTx(ctx, tx, anyOperatorSeat)
+	users, grants, err := liveOperatorGrantsTx(ctx, tx, rbac, anyOperatorSeat)
 	if err != nil {
 		return nil, err
 	}
@@ -34,7 +34,7 @@ func DataTaskOperatorsTx(ctx context.Context, tx pgx.Tx) ([]ids.UserID, error) {
 
 const anyOperatorSeat principal.SeatType = ""
 
-func liveOperatorGrantsTx(ctx context.Context, tx pgx.Tx, seat principal.SeatType) ([]ids.UUID, map[ids.UUID]seatGrants, error) {
+func liveOperatorGrantsTx(ctx context.Context, tx pgx.Tx, rbac RbacObjects, seat principal.SeatType) ([]ids.UUID, map[ids.UUID]seatGrants, error) {
 	rows, err := tx.Query(ctx, `SELECT DISTINCT u.id FROM app_user u
  JOIN role_assignment ra ON ra.user_id = u.id JOIN role r ON r.id = ra.role_id
  WHERE r.key IN ('admin', 'ops') AND `+workforce.LiveHumanSQL("u")+`
@@ -46,7 +46,7 @@ func liveOperatorGrantsTx(ctx context.Context, tx pgx.Tx, seat principal.SeatTyp
 	if err != nil {
 		return nil, nil, err
 	}
-	grants, err := loadGrantsFor(ctx, tx, users)
+	grants, err := loadGrantsFor(ctx, tx, rbac, users)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -54,11 +54,11 @@ func liveOperatorGrantsTx(ctx context.Context, tx pgx.Tx, seat principal.SeatTyp
 }
 
 // PrivacyReviewOperatorsTx selects live human controllers with current read access.
-func PrivacyReviewOperatorsTx(ctx context.Context, tx pgx.Tx, object string) ([]ids.UserID, error) {
+func PrivacyReviewOperatorsTx(ctx context.Context, tx pgx.Tx, rbac RbacObjects, object string) ([]ids.UserID, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return nil, err
 	}
-	users, grants, err := liveOperatorGrantsTx(ctx, tx, principal.SeatFull)
+	users, grants, err := liveOperatorGrantsTx(ctx, tx, rbac, principal.SeatFull)
 	if err != nil {
 		return nil, err
 	}

@@ -35,7 +35,7 @@ const UnprovenSubjectScope = "unproven"
 
 // FlagTx tells the reviewers of each source. It returns how many sources got a
 // new notice; the scope and source make the dedupe key, so a replay counts none.
-func FlagTx(ctx context.Context, tx pgx.Tx, store *notices.Store, scope string, sources []privacy.ErasureReviewSource) (int, error) {
+func FlagTx(ctx context.Context, tx pgx.Tx, rbac identity.RbacObjects, store *notices.Store, scope string, sources []privacy.ErasureReviewSource) (int, error) {
 	system := principal.SystemActing(ctx, "system:privacy_review")
 	if correlation, ok := principal.CorrelationID(ctx); ok {
 		system = principal.WithCorrelationID(system, correlation)
@@ -43,7 +43,7 @@ func FlagTx(ctx context.Context, tx pgx.Tx, store *notices.Store, scope string, 
 	flagged := 0
 	for _, source := range sources {
 		told := false
-		target, recipients, err := reviewersFor(system, tx, source)
+		target, recipients, err := reviewersFor(system, tx, rbac, source)
 		if err != nil {
 			return flagged, err
 		}
@@ -72,7 +72,7 @@ func FlagTx(ctx context.Context, tx pgx.Tx, store *notices.Store, scope string, 
 	return flagged, nil
 }
 
-func reviewersFor(ctx context.Context, tx pgx.Tx, source privacy.ErasureReviewSource) (notices.Target, []ids.UserID, error) {
+func reviewersFor(ctx context.Context, tx pgx.Tx, rbac identity.RbacObjects, source privacy.ErasureReviewSource) (notices.Target, []ids.UserID, error) {
 	target := notices.Target{Type: source.Kind, ID: source.ID}
 	if source.Kind == reviewEmailSignature && source.Owner != nil {
 		live, err := identity.LiveReviewRecipientTx(ctx, tx, *source.Owner)
@@ -93,7 +93,7 @@ func reviewersFor(ctx context.Context, tx pgx.Tx, source privacy.ErasureReviewSo
 	case privacy.ApprovalHistoryReview:
 		object = "audit_log"
 	}
-	recipients, err := identity.PrivacyReviewOperatorsTx(ctx, tx, object)
+	recipients, err := identity.PrivacyReviewOperatorsTx(ctx, tx, rbac, object)
 	if err != nil {
 		return target, nil, err
 	}

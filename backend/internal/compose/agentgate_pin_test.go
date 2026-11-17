@@ -220,7 +220,7 @@ func stagedRowDecidable(pol agentPolicy, hasTargetID bool) (bool, string) {
 		return false, "approvals.targetVisible has no rule for the shape it stages, so the row is " +
 			"invisible in the inbox and undecidable at the decision"
 	}
-	if !identity.RBACObjectGrantable(recordType) {
+	if !(identity.RbacObjects{}).Grantable(recordType) {
 		return false, "stages against a type outside the RBAC object vocabulary a role document may name, so " +
 			"the target-read floor every visibility arm rides is satisfied by no principal that can exist"
 	}
@@ -229,7 +229,7 @@ func stagedRowDecidable(pol agentPolicy, hasTargetID bool) (bool, string) {
 		return false, "derives no decision grants (" + err.Error() + ")"
 	}
 	for _, object := range objects {
-		if !identity.RBACObjectGrantable(object) {
+		if !(identity.RbacObjects{}).Grantable(object) {
 			return false, "requires the decision grant " + object + ", which is outside the RBAC object " +
 				"vocabulary a role document may name, so no principal that can exist may decide it"
 		}
@@ -331,7 +331,7 @@ func TestTheInboxAndTheFanOutClassifyEveryTargetTypeAlike(t *testing.T) {
 				known, recordType, missing, missing)
 			continue
 		}
-		if inbox && !identity.RBACObjectGrantable(recordType) {
+		if inbox && !(identity.RbacObjects{}).Grantable(recordType) {
 			t.Errorf("both surfaces classify target type %q, which is outside the RBAC object vocabulary a role "+
 				"document may name — each gates a classified target on read of its type, so no principal that "+
 				"can exist may be shown or told about one", recordType)

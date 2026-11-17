@@ -26,7 +26,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/companyscan"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -83,7 +82,7 @@ func (r *callRuntime) gatedRead(ctx context.Context, read extension.SystemRead, 
 	if !admitted {
 		return nil, extension.ErrAttendedRead
 	}
-	declared, _ := r.deps.composed.unit(r.unit)
+	declared := r.deps.composed.unit(r.unit)
 	if !slices.Contains(declared.SystemReads, read) {
 		return nil, fmt.Errorf("%w: add extension.SystemRead %q to it", extension.ErrUndeclaredRead, read)
 	}
@@ -399,7 +398,7 @@ func workerSeat(ctx context.Context, pool *pgxpool.Pool, colleague ids.UUID) (co
 	if !bound {
 		correlation = ids.NewV7()
 	}
-	ownCtx, err := companyscan.WorkerContext(ctx, identity.NewService(pool), ids.From[ids.UserKind](colleague), correlation)
+	ownCtx, err := companyscan.WorkerContext(ctx, IdentityService(pool), ids.From[ids.UserKind](colleague), correlation)
 	if errors.Is(err, apperrors.ErrNotFound) {
 		return nil, principal.Principal{}, false, nil
 	}

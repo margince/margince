@@ -27,7 +27,7 @@ const ReviewerMissing = "privacy_reviewer_missing"
 // UnlinkedApprovalReviewStep asks the privacy reviewers to check each approval
 // history no erasure is proved for. Each audit row that raised a review counts as a change.
 // With no reviewer the step still finishes and names each history as action needed.
-func UnlinkedApprovalReviewStep(store *notices.Store) datatask.Step {
+func UnlinkedApprovalReviewStep(store *notices.Store, rbac identity.RbacObjects) datatask.Step {
 	step := auditStep(func(ctx context.Context, tx pgx.Tx, after, until ids.UUID, limit int) (privacy.HistoricalAuditPage, *datatask.ActionNeeded, error) {
 		page, err := privacy.UnlinkedApprovalHistoryPageTx(ctx, tx, after, until, limit, identity.CountryForDecision)
 		if err != nil {
@@ -35,7 +35,7 @@ func UnlinkedApprovalReviewStep(store *notices.Store) datatask.Step {
 		}
 		action := &datatask.ActionNeeded{Reason: ReviewerMissing}
 		for _, source := range page.Review {
-			flagged, err := FlagTx(ctx, tx, store, UnprovenSubjectScope, []privacy.ErasureReviewSource{source})
+			flagged, err := FlagTx(ctx, tx, rbac, store, UnprovenSubjectScope, []privacy.ErasureReviewSource{source})
 			if _, unavailable := errors.AsType[*UnavailableError](err); unavailable {
 				action.Records = append(action.Records, datatask.RecordRef{Type: source.Kind, ID: source.ID})
 				continue

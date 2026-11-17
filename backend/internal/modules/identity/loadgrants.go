@@ -24,8 +24,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-func loadGrants(ctx context.Context, tx pgx.Tx, userID ids.UserID) (roles []string, teams []ids.TeamID, perms principal.Permissions, err error) {
-	all, err := loadGrantsFor(ctx, tx, []ids.UUID{userID.UUID})
+func loadGrants(ctx context.Context, tx pgx.Tx, rbac RbacObjects, userID ids.UserID) (roles []string, teams []ids.TeamID, perms principal.Permissions, err error) {
+	all, err := loadGrantsFor(ctx, tx, rbac, []ids.UUID{userID.UUID})
 	if err != nil {
 		return nil, nil, principal.Permissions{}, err
 	}
@@ -43,14 +43,14 @@ type seatGrants struct {
 // loadGrantsFor resolves several seats in one batch of set-based reads.
 // loadGrants is this with one seat, so a seat resolves the same way whichever
 // door asks. A seat with no role assignment gets the zero grants.
-func loadGrantsFor(ctx context.Context, tx pgx.Tx, users []ids.UUID) (map[ids.UUID]seatGrants, error) {
-	read, err := loadSeatReads(ctx, tx, users)
+func loadGrantsFor(ctx context.Context, tx pgx.Tx, rbac RbacObjects, users []ids.UUID) (map[ids.UUID]seatGrants, error) {
+	read, err := loadSeatReads(ctx, tx, rbac, users)
 	if err != nil {
 		return nil, err
 	}
 	out := make(map[ids.UUID]seatGrants, len(users))
 	for _, user := range users {
-		g := seatGrants{roles: read.roles[user], teams: read.teams[user], perms: policy.Merge(read.docs[user])}
+		g := seatGrants{roles: read.roles[user], teams: read.teams[user], perms: policy.Merge(read.docs[user], rbac.vocabulary)}
 		g.perms.FieldMasks = read.masks[user]
 		out[user] = g
 	}
@@ -67,7 +67,7 @@ type seatReads struct {
 
 // loadSeatReads sends the role and team reads in one exchange: neither needs
 // the other's answer, so a seat's grants cost one round trip, not two.
-func loadSeatReads(ctx context.Context, tx pgx.Tx, users []ids.UUID) (read seatReads, err error) {
+func loadSeatReads(ctx context.Context, tx pgx.Tx, rbac RbacObjects, users []ids.UUID) (read seatReads, err error) {
 	var batch pgx.Batch
 	batch.Queue(roleDocumentsSQL, users)
 	batch.Queue(liveTeamsSQL, users)
@@ -77,7 +77,7 @@ func loadSeatReads(ctx context.Context, tx pgx.Tx, users []ids.UUID) (read seatR
 	if err != nil {
 		return seatReads{}, err
 	}
-	if read.docs, read.roles, read.masks, err = scanRoleDocuments(roleRows); err != nil {
+	if read.docs, read.roles, read.masks, err = scanRoleDocuments(roleRows, rbac); err != nil {
 		return seatReads{}, err
 	}
 	teamRows, err := results.Query()
@@ -106,16 +106,16 @@ const roleDocumentsSQL = `SELECT ra.user_id, r.key, r.permissions,
   FROM role_assignment ra JOIN role r ON r.id = ra.role_id
   WHERE ra.user_id = ANY($1) AND r.archived_at IS NULL`
 
-func loadRoleDocuments(ctx context.Context, tx pgx.Tx, users []ids.UUID) (map[ids.UUID]map[string]policy.Document, map[ids.UUID][]string, error) {
+func loadRoleDocuments(ctx context.Context, tx pgx.Tx, rbac RbacObjects, users []ids.UUID) (map[ids.UUID][]string, error) {
 	rows, err := tx.Query(ctx, roleDocumentsSQL, users)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	docs, roles, _, err := scanRoleDocuments(rows)
-	return docs, roles, err
+	_, roles, _, err := scanRoleDocuments(rows, rbac)
+	return roles, err
 }
 
-func scanRoleDocuments(rows pgx.Rows) (map[ids.UUID]map[string]policy.Document, map[ids.UUID][]string, map[ids.UUID][]principal.FieldMask, error) {
+func scanRoleDocuments(rows pgx.Rows, rbac RbacObjects) (map[ids.UUID]map[string]policy.Document, map[ids.UUID][]string, map[ids.UUID][]principal.FieldMask, error) {
 	defer rows.Close()
 	docs := map[ids.UUID]map[string]policy.Document{}
 	roles := map[ids.UUID][]string{}
@@ -127,7 +127,7 @@ func scanRoleDocuments(rows pgx.Rows) (map[ids.UUID]map[string]policy.Document, 
 		if err := rows.Scan(&user, &key, &raw, &rawMasks); err != nil {
 			return nil, nil, nil, err
 		}
-		doc, err := policy.Parse(raw)
+		doc, err := policy.Parse(raw, rbac.vocabulary)
 		if err != nil {
 			// A role carrying an UNREADABLE policy document is a data defect
 			// the login must surface, not silently downgrade to no access.
@@ -220,8 +220,8 @@ func rawTeamIDs(teams []ids.TeamID) []ids.UUID {
 //
 // A seat with no role assignment allows nothing, which is the honest answer for
 // a user who holds none.
-func SeatAllows(ctx context.Context, tx pgx.Tx, seat ids.UserID, object string, action principal.Action) (bool, error) {
-	_, _, perms, err := loadGrants(ctx, tx, seat)
+func SeatAllows(ctx context.Context, tx pgx.Tx, rbac RbacObjects, seat ids.UserID, object string, action principal.Action) (bool, error) {
+	_, _, perms, err := loadGrants(ctx, tx, rbac, seat)
 	if err != nil {
 		return false, err
 	}

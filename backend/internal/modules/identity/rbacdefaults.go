@@ -16,12 +16,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"slices"
-	"sync"
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/modules/identity/internal/policy"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -97,39 +94,7 @@ func ValidateRbacDefaults(defaults ...RbacDefault) error {
 	return nil
 }
 
-// registeredDefaults holds the defaults this process registered. Two writers
-// read it: the seed of a new installation and the boot fill of an old one.
-var registeredDefaults struct {
-	mu   sync.RWMutex
-	list []RbacDefault
-}
-
-// RegisterRbacDefaults records the defaults the composed set declares. The boot
-// calls it once after RegisterRbacObjects, and it applies all or none. Each
-// object must already be registered, because a role document drops a grant on
-// an object it cannot name.
-func RegisterRbacDefaults(defaults ...RbacDefault) error {
-	if err := ValidateRbacDefaults(defaults...); err != nil {
-		return err
-	}
-	for _, d := range defaults {
-		if !policy.IsRegisteredObject(string(d.Object)) {
-			return fmt.Errorf("identity: default grant names %q, which no unit registered", d.Object)
-		}
-	}
-	registeredDefaults.mu.Lock()
-	defer registeredDefaults.mu.Unlock()
-	registeredDefaults.list = slices.Clone(defaults)
-	return nil
-}
-
-func registeredRbacDefaults() []RbacDefault {
-	registeredDefaults.mu.RLock()
-	defer registeredDefaults.mu.RUnlock()
-	return slices.Clone(registeredDefaults.list)
-}
-
-// FillRbacDefaults writes each registered default into the system role that has
+// FillRbacDefaults writes each default the service's vocabulary carries into the system role that has
 // no entry for the object. Each write gets one audit row, and the count of
 // writes is returned. A second boot finds every entry present and writes
 // nothing. The caller binds the workspace and a system actor.
@@ -142,7 +107,7 @@ func (s *Service) FillRbacDefaults(ctx context.Context) (int, error) {
 	if p, ok := principal.Actor(ctx); !ok || p.Type != principal.PrincipalSystem {
 		return 0, apperrors.ErrPermissionDenied
 	}
-	defaults := registeredRbacDefaults()
+	defaults := s.rbac.defaults
 	if len(defaults) == 0 {
 		return 0, nil
 	}
@@ -226,12 +191,12 @@ func fillRoleObjectDefault(ctx context.Context, tx pgx.Tx, d RbacDefault) (roleI
 	return roleID, true, nil
 }
 
-// fillRegisteredDefaults gives a freshly seeded role set the registered
+// fillRegisteredDefaults gives a freshly seeded role set the composition's
 // defaults, so a new installation starts with them. It writes no audit row,
 // because the seed creates the role documents unaudited and these entries are
 // part of that creation.
-func fillRegisteredDefaults(ctx context.Context, tx pgx.Tx) error {
-	for _, d := range registeredRbacDefaults() {
+func fillRegisteredDefaults(ctx context.Context, tx pgx.Tx, rbac RbacObjects) error {
+	for _, d := range rbac.defaults {
 		if _, _, err := fillRoleObjectDefault(ctx, tx, d); err != nil {
 			return err
 		}

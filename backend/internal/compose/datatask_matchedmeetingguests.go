@@ -11,7 +11,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/meetingrosters"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/platform/originalstore"
@@ -26,7 +25,7 @@ import (
 // meetingrosters.GraphGuestsDataTask does the same for Microsoft events.
 func matchedMeetingGuestsDataTask(pool *pgxpool.Pool) datatask.Task {
 	inWorkspace := installationContext(pool)
-	authority := identity.NewService(pool)
+	authority := IdentityService(pool)
 	return datatask.Task{
 		ID: "core/1792998483_matched_meeting_guests", Version: 1,
 		Title: systemtext.Literal("datatask.title.core.1792998483_matched_meeting_guests"), Requires: []string{"core/1792998482"},

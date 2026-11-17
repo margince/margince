@@ -115,7 +115,7 @@ func memberWorkReceiverTx(ctx context.Context, tx pgx.Tx, target *ids.UUID) (pri
 	if target == nil {
 		return principal.Principal{}, false, nil
 	}
-	members, err := identity.MemberPrincipalsTx(ctx, tx, []ids.UUID{*target})
+	members, err := identity.MemberPrincipalsTx(ctx, tx, installedRbacObjects(), []ids.UUID{*target})
 	if err != nil {
 		return principal.Principal{}, false, err
 	}

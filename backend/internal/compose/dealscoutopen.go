@@ -47,7 +47,7 @@ func newScoutDealOpener(pool *pgxpool.Pool, log *slog.Logger, now func() time.Ti
 		now:        now,
 		pool:       pool,
 		deals:      deals.NewStore(InstallationDB(pool), DealsInstallation()).WithSuggestionEffects(dealSuggestionEffects{}),
-		users:      identity.NewService(pool),
+		users:      IdentityService(pool),
 		activities: activities.NewStore(InstallationDB(pool)),
 		log:        log,
 	}

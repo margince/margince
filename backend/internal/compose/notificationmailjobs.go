@@ -226,7 +226,7 @@ func (w *notificationMailWorker) deliver(ctx context.Context, attempt notices.Em
 		return nil
 	}
 
-	seatCtx, live, scopeErr := seatContext(ctx, identity.NewService(w.pool), noticeWorkspace(ctx), attempt.Recipient.UUID)
+	seatCtx, live, scopeErr := seatContext(ctx, IdentityService(w.pool), noticeWorkspace(ctx), attempt.Recipient.UUID)
 	if scopeErr != nil {
 		w.recordMailFailure(ctx, attempt.Notice.ID, "recipient authority could not be read")
 		return nil

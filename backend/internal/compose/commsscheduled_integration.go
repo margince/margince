@@ -22,7 +22,6 @@ import (
 	"github.com/riverqueue/river/rivertype"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -121,7 +120,7 @@ func DriveScheduledSendRecoveryForTest(ctx context.Context, pool *pgxpool.Pool, 
 		return err
 	}
 	worker := newScheduledSendRecoveryWorker(
-		identity.NewService(pool), sendStore(pool, origin.sendPath()), NewScheduleTimer(inserter), slog.New(slog.DiscardHandler))
+		IdentityService(pool), sendStore(pool, origin.sendPath()), NewScheduleTimer(inserter), slog.New(slog.DiscardHandler))
 	return worker.Work(ctx, &river.Job[ScheduledSendRecoveryArgs]{
 		JobRow: &rivertype.JobRow{Attempt: 1, MaxAttempts: 1},
 	})

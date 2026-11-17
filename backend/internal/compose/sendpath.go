@@ -302,7 +302,7 @@ func sendStore(pool *pgxpool.Pool, send SendPath) *activities.Store {
 		WithBaseLanguage(activities.BaseLanguageFunc(func(ctx context.Context) string {
 			return identity.BaseLanguageForPrompt(ctx, pool)
 		})).
-		WithSenderName(identity.NewServiceFor(InstallationDB(pool))).
+		WithSenderName(identityServiceFor(InstallationDB(pool))).
 		WithHeldNotifier(send.HeldNotifier).
 		// Wired unconditionally, so a deployment cannot forget it and leave a
 		// settled message's review open.

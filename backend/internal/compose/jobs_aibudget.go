@@ -69,7 +69,7 @@ func (w *aiBudgetResumeWorker) resumeWorkspace(ctx context.Context, workspace id
 	if err != nil {
 		return err
 	}
-	users := identity.NewService(w.pool)
+	users := IdentityService(w.pool)
 	contactStore := contacts.NewStore(db)
 	siteErr := contactStore.ResumeBudgetReads(ctx, func(ctx context.Context, tx pgx.Tx, read contacts.BudgetRead) (bool, error) {
 		if err := resumeSiteReadAuthority(ctx, tx, users, read); err != nil {

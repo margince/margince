@@ -66,11 +66,11 @@ func (s *Service) roleCapturesMail(key string, raw []byte) (*bool, error) {
 	if s.mailCapture == nil {
 		return nil, nil
 	}
-	doc, err := policy.Parse(raw)
+	doc, err := policy.Parse(raw, s.rbac.vocabulary)
 	if err != nil {
 		return nil, err
 	}
-	captures := !s.mailCapture.Refuses(policy.Merge(map[string]policy.Document{key: doc}), principal.SeatFull)
+	captures := !s.mailCapture.Refuses(policy.Merge(map[string]policy.Document{key: doc}, s.rbac.vocabulary), principal.SeatFull)
 	return &captures, nil
 }
 

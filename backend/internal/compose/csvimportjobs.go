@@ -19,7 +19,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/corefeatures"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -175,7 +174,7 @@ type importSlicer struct {
 }
 
 func newImportSlicer(pool *pgxpool.Pool, log *slog.Logger) importSlicer {
-	return importSlicer{pool: pool, actors: storedActor{authority: identity.NewService(pool)}, log: log, now: time.Now}
+	return importSlicer{pool: pool, actors: storedActor{authority: IdentityService(pool)}, log: log, now: time.Now}
 }
 
 // slice runs one slice of the attempt args names. A panic fails the attempt

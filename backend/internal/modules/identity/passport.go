@@ -297,7 +297,7 @@ func (s *Service) revokePassportTx(
 	if err != nil {
 		return err
 	}
-	if err := mayManagePassport(ctx, tx, id, onBehalfOf); err != nil {
+	if err := mayManagePassport(ctx, tx, s.rbac, id, onBehalfOf); err != nil {
 		return err
 	}
 	if revokedAt != nil && grantID == nil {
@@ -433,7 +433,7 @@ func (s *Service) authenticateAgentWhere(ctx context.Context, tx pgx.Tx, predica
 	}
 	a.Areas = areasFromColumn(areas)
 	var loadErr error
-	a.Roles, a.Teams, a.Permissions, loadErr = loadGrants(ctx, tx, a.OnBehalfOf)
+	a.Roles, a.Teams, a.Permissions, loadErr = loadGrants(ctx, tx, s.rbac, a.OnBehalfOf)
 	if loadErr != nil {
 		return AgentIdentity{}, loadErr
 	}

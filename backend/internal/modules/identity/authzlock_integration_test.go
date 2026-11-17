@@ -234,7 +234,7 @@ func TestAnAgentHandoverWaitingOnTheMemberSeesThePromotion(t *testing.T) {
 	done := make(chan error, 1)
 	go func() {
 		agent := e.agentOf(e.admin)
-		done <- e.svc.db.Tx(agent, func(tx pgx.Tx) error { return AdmitMemberHandover(agent, tx, target.UserID) })
+		done <- e.svc.db.Tx(agent, func(tx pgx.Tx) error { return AdmitMemberHandover(agent, tx, RbacObjects{}, target.UserID) })
 	}()
 	waitForABlockedBackend(t, held, `locktype <> 'advisory'`)
 	if err := held.Commit(context.Background()); err != nil {
@@ -349,7 +349,7 @@ func TestAnAgentsTeamCheckDoesNotGrowWithTheTeam(t *testing.T) {
 		}
 	}()
 	counted := &countingTx{Tx: tx}
-	if err := refuseAgentTeamReach(e.agentOf(e.admin), counted, team.ID); err != nil {
+	if err := refuseAgentTeamReach(e.agentOf(e.admin), counted, RbacObjects{}, team.ID); err != nil {
 		t.Fatal(err)
 	}
 	if counted.queries != 2 {
@@ -360,7 +360,7 @@ func TestAnAgentsTeamCheckDoesNotGrowWithTheTeam(t *testing.T) {
 		t.Fatal(err)
 	}
 	var limit *httperr.DetailedError
-	if err := refuseAgentTeamReach(e.agentOf(e.admin), tx, team.ID); !errors.As(err, &limit) {
+	if err := refuseAgentTeamReach(e.agentOf(e.admin), tx, RbacObjects{}, team.ID); !errors.As(err, &limit) {
 		t.Errorf("a team holding an administrator: %v, want the agent limit", err)
 	}
 }

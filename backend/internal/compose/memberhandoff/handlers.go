@@ -19,10 +19,16 @@ import (
 )
 
 // Handlers applies prospect scope to the assignment transport.
-type Handlers struct{ db *database.DB }
+type Handlers struct {
+	db   *database.DB
+	rbac identity.RbacObjects
+}
 
-// NewHandlers keeps receiver resolution on the workspace-bound transaction.
-func NewHandlers(db *database.DB) Handlers { return Handlers{db: db} }
+// NewHandlers keeps receiver resolution on the workspace-bound transaction,
+// judging the receiver under the composition's RBAC vocabulary.
+func NewHandlers(db *database.DB, rbac identity.RbacObjects) Handlers {
+	return Handlers{db: db, rbac: rbac}
+}
 
 // GetHandoffAssignee reads current versions, so a report snapshot cannot overwrite newer assignments.
 func (h Handlers) GetHandoffAssignee(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
@@ -76,7 +82,7 @@ func (h Handlers) ReassignHandoff(w http.ResponseWriter, r *http.Request, id crm
 		if err := contacts.EnsureHandoffRecipientTx(r.Context(), tx, receiverID); err != nil {
 			return err
 		}
-		members, err := identity.MemberPrincipalsTx(r.Context(), tx, []ids.UUID{receiverID})
+		members, err := identity.MemberPrincipalsTx(r.Context(), tx, h.rbac, []ids.UUID{receiverID})
 		if err != nil {
 			return err
 		}

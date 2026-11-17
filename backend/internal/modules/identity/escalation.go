@@ -91,7 +91,7 @@ func admit(ctx context.Context, actor Identity, object string, action principal.
 // A user with no assignment is not an error: an agent seat holds no role, and
 // neither does a member whose last role was removed. Both are targets a caller
 // may act on, because an empty authority is contained by every authority.
-func lockTargetGrants(ctx context.Context, tx pgx.Tx, userID ids.UserID) (seatGrants, error) {
+func lockTargetGrants(ctx context.Context, tx pgx.Tx, rbac RbacObjects, userID ids.UserID) (seatGrants, error) {
 	var exists bool
 	switch err := tx.QueryRow(ctx,
 		`SELECT true FROM app_user WHERE id = $1 AND archived_at IS NULL AND removed_at IS NULL FOR UPDATE`,
@@ -101,7 +101,7 @@ func lockTargetGrants(ctx context.Context, tx pgx.Tx, userID ids.UserID) (seatGr
 	case err != nil:
 		return seatGrants{}, err
 	}
-	all, err := loadGrantsFor(ctx, tx, []ids.UUID{userID.UUID})
+	all, err := loadGrantsFor(ctx, tx, rbac, []ids.UUID{userID.UUID})
 	if err != nil {
 		return seatGrants{}, err
 	}
@@ -135,8 +135,8 @@ const (
 // already disclosed by the roster this caller may read, so hiding it here would
 // buy nothing and would tell an operator their own action failed for the wrong
 // reason.
-func refuseUnlessCallerOutranksTarget(ctx context.Context, tx pgx.Tx, actor Identity, targetID ids.UserID, reach targetReach) error {
-	if err := refuseAgentMemberReach(ctx, tx, targetID); err != nil {
+func refuseUnlessCallerOutranksTarget(ctx context.Context, tx pgx.Tx, rbac RbacObjects, actor Identity, targetID ids.UserID, reach targetReach) error {
+	if err := refuseAgentMemberReach(ctx, tx, rbac, targetID); err != nil {
 		return err
 	}
 	if actor.hasRole(roleAdmin) {
@@ -154,7 +154,7 @@ func refuseUnlessCallerOutranksTarget(ctx context.Context, tx pgx.Tx, actor Iden
 	case service:
 		return apperrors.ErrPermissionDenied
 	}
-	target, err := lockTargetGrants(ctx, tx, targetID)
+	target, err := lockTargetGrants(ctx, tx, rbac, targetID)
 	if err != nil {
 		return err
 	}
@@ -393,7 +393,7 @@ var administrationObjects = policy.AdministrationObjects()
 // otherwise), and the ceiling every member verb carries. The member's row stays
 // locked until that transaction ends, so a role change cannot land in between.
 // The caller comes off the principal, whose role keys and grants the ceiling reads.
-func AdmitMemberHandover(ctx context.Context, tx pgx.Tx, member ids.UserID) error {
+func AdmitMemberHandover(ctx context.Context, tx pgx.Tx, rbac RbacObjects, member ids.UserID) error {
 	if err := auth.Require(ctx, objectUserAdmin, principal.ActionUpdate); err != nil {
 		return err
 	}
@@ -401,11 +401,11 @@ func AdmitMemberHandover(ctx context.Context, tx pgx.Tx, member ids.UserID) erro
 	if !ok {
 		return apperrors.ErrPermissionDenied
 	}
-	target, err := lockTargetGrants(ctx, tx, member)
+	target, err := lockTargetGrants(ctx, tx, rbac, member)
 	if err != nil {
 		return err
 	}
-	if err := refuseAgentMemberReach(ctx, tx, member); err != nil {
+	if err := refuseAgentMemberReach(ctx, tx, rbac, member); err != nil {
 		return err
 	}
 	return callerOutranks(Identity{Roles: p.Permissions.RoleKeys, Permissions: p.Permissions}, target, reachDenial)

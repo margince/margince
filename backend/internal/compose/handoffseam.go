@@ -38,7 +38,7 @@ var handoffSections = []crmcontracts.Project360Section{
 // with no name, not a failed handoff.
 func handoffReader(pool *pgxpool.Pool) agents.HandoffReader {
 	page := newProject360Service(pool)
-	seats := identity.NewService(pool)
+	seats := IdentityService(pool)
 	return func(ctx context.Context, projectID ids.UUID) (agents.HandoffFacts, error) {
 		res, err := page.Read(ctx, ids.From[ids.ProjectKind](projectID), project360.Reading{
 			Only: handoffSections,

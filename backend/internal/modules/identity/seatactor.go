@@ -20,8 +20,8 @@ import (
 //
 // It does not check that the member is live: the caller selects from the live
 // set already. The seat is read with the grants so a read seat stays one.
-func SeatActor(ctx context.Context, tx pgx.Tx, user ids.UUID) (principal.Principal, error) {
-	_, teams, perms, err := loadGrants(ctx, tx, ids.From[ids.UserKind](user))
+func SeatActor(ctx context.Context, tx pgx.Tx, rbac RbacObjects, user ids.UUID) (principal.Principal, error) {
+	_, teams, perms, err := loadGrants(ctx, tx, rbac, ids.From[ids.UserKind](user))
 	if err != nil {
 		return principal.Principal{}, err
 	}

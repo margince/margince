@@ -66,7 +66,7 @@ func newDealVerdictPass(pool *pgxpool.Pool, brain completer, log *slog.Logger) d
 		pool: pool, brain: brain, log: log,
 		deals: deals.NewStore(InstallationDB(pool), DealsInstallation()).
 			WithOwnDomains(ownDomainReader{store: capture.NewOwnDomainStore(InstallationDB(pool))}),
-		users:     identity.NewService(pool),
+		users:     IdentityService(pool),
 		notes:     activities.NewStore(InstallationDB(pool)),
 		assurance: assurance.NewStore(InstallationDB(pool)),
 		now:       func() time.Time { return time.Now().UTC() },

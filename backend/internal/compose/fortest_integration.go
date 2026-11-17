@@ -27,12 +27,12 @@ import (
 // ActAsImportRunForTest binds the principal an import attempt runs as, through
 // the rebuild the import job calls, on a context already bound to the workspace.
 func ActAsImportRunForTest(ctx context.Context, pool *pgxpool.Pool, run migration.Run) (context.Context, error) {
-	return storedActor{authority: identity.NewService(pool)}.actAsRun(ctx, run)
+	return storedActor{authority: IdentityService(pool)}.actAsRun(ctx, run)
 }
 
 // CaptureRegistryWithoutConnectorsForTest is the production registry with no connector.
 func CaptureRegistryWithoutConnectorsForTest(pool *pgxpool.Pool, vault keyvault.Vault) *capture.Registry {
-	return capture.NewRegistry(InstallationDB(pool), newCaptureSink(pool, CaptureConfig{}), identity.NewService(pool), vault)
+	return capture.NewRegistry(InstallationDB(pool), newCaptureSink(pool, CaptureConfig{}), IdentityService(pool), vault)
 }
 
 // SharedMailboxRouterForTest is the /v1 router over the connector and timeline
@@ -47,7 +47,7 @@ func SharedMailboxRouterForTest(pool *pgxpool.Pool, registry *capture.Registry, 
 
 // TeamServiceForTest is identity with capture's team seam, as the API wires it.
 func TeamServiceForTest(pool *pgxpool.Pool) *identity.Service {
-	return identity.NewService(pool).WithMailCapture(mailCaptureSeam{})
+	return IdentityService(pool).WithMailCapture(mailCaptureSeam{})
 }
 
 // WithConsentClockForTest pins the consent store's clock; the store is shared, so option order does not matter.

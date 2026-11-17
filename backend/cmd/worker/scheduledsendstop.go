@@ -18,7 +18,6 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/margince/margince/backend/internal/compose"
-	"github.com/margince/margince/backend/internal/modules/identity"
 )
 
 // startScheduledSendStop subscribes the stop's hold on queued marketing.
@@ -31,7 +30,7 @@ func startScheduledSendStop(
 	logger *slog.Logger,
 	stdout io.Writer,
 ) {
-	stop := compose.NewScheduledSendStop(pool, identity.NewService(pool), logger)
+	stop := compose.NewScheduledSendStop(pool, compose.IdentityService(pool), logger)
 	_, _ = fmt.Fprintln(stdout, "worker holding queued marketing when a contact stops it (cg:scheduled-send-stop)")
 	background.Go(func() {
 		runSubscriber(ctx, rdb, "cg:scheduled-send-stop", stop.HandleEvent, logger, 0)

@@ -36,7 +36,7 @@ import (
 // instead, the merge would be a second reading of the role documents, and the
 // two would answer differently the first time a role changed shape.
 func IssuerStillHolds(
-	ctx context.Context, tx pgx.Tx, userID ids.UserID, object string, action principal.Action,
+	ctx context.Context, tx pgx.Tx, rbac RbacObjects, userID ids.UserID, object string, action principal.Action,
 ) (bool, error) {
 	var live bool
 	if err := tx.QueryRow(ctx,
@@ -47,7 +47,7 @@ func IssuerStillHolds(
 	if !live {
 		return false, nil
 	}
-	_, _, perms, err := loadGrants(ctx, tx, userID)
+	_, _, perms, err := loadGrants(ctx, tx, rbac, userID)
 	if err != nil {
 		return false, err
 	}

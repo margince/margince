@@ -18,6 +18,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 )
@@ -86,7 +87,7 @@ func rotateSetupToken(ctx context.Context, dsn string, stdout io.Writer) error {
 	}
 	defer pool.Close()
 
-	raw, err := identity.NewService(pool).RotateSetupToken(ctx)
+	raw, err := compose.IdentityService(pool).RotateSetupToken(ctx)
 	if errors.Is(err, identity.ErrAlreadyProvisioned) {
 		return errors.New("migrate setup-token: this installation already has a company — there is nothing left to claim; use `migrate reset-password` to recover an account")
 	}

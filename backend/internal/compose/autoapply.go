@@ -393,6 +393,6 @@ func SweepAutoApply(ctx context.Context, pool *pgxpool.Pool) (int, error) {
 	return autoApplier{
 		pool:  pool,
 		svc:   NewApprovalsServiceWithEffects(pool),
-		users: identity.NewService(pool),
+		users: IdentityService(pool),
 	}.Sweep(ctx)
 }

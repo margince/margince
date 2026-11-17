@@ -71,7 +71,7 @@ func (ChatPullArgs) InsertOpts() river.InsertOpts {
 }
 
 func chatLinks(pool *pgxpool.Pool, vault func() keyvault.Vault, in chatsync.TxInserter, delay time.Duration, private bool) (*chatlinks.Store, chatsync.LiveChats) {
-	return chatsync.Wire(InstallationDB(pool), vault, chatsync.Enqueuer{
+	return chatsync.Wire(InstallationDB(pool), installedRbacObjects(), vault, chatsync.Enqueuer{
 		Inserter: in, Delay: delay, MaxAttempts: oneOffJobMaxAttempts, States: activeSweepStates,
 		Job:  func(ws, link ids.UUID) river.JobArgs { return ChatLinkFlushArgs{Workspace: ws, LinkID: link} },
 		Pull: func(ws, bot ids.UUID) river.JobArgs { return ChatPullArgs{Workspace: ws, ConnectionID: bot} },

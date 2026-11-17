@@ -49,7 +49,7 @@ var _ consent.MissedReceipts = receiptAlarm{}
 // transaction.
 func (a receiptAlarm) RaiseMissedReceiptTx(ctx context.Context, tx pgx.Tx, missed consent.MissedReceipt) error {
 	system := principal.SystemActing(ctx, receiptAlarmActor)
-	recipients, err := identity.PrivacyReviewOperatorsTx(system, tx, receiptAlarmObject)
+	recipients, err := identity.PrivacyReviewOperatorsTx(system, tx, installedRbacObjects(), receiptAlarmObject)
 	if err != nil {
 		return err
 	}

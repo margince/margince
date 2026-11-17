@@ -90,7 +90,7 @@ half of the same backfill pair.
 
 ```go
 for object := range doc.Objects {
-    if IsGrantableObject(object) {
+    if vocabulary.IsGrantable(object) {
         continue
     }
     delete(doc.Objects, object)

@@ -163,7 +163,7 @@ func (s *Service) SetRoleObjectGrant(ctx context.Context, actor Identity, roleKe
 	if err != nil {
 		return roleRow{}, err
 	}
-	if !policy.IsGrantableObject(object) {
+	if !s.rbac.Grantable(object) {
 		return roleRow{}, errUnknownObject
 	}
 	if err := refuseWriteWithoutRead(object, grant); err != nil {

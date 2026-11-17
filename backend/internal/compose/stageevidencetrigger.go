@@ -128,7 +128,7 @@ func NewStageEvidenceTrigger(
 ) *StageEvidenceTrigger {
 	return &StageEvidenceTrigger{
 		pool: pool, deals: store, own: own, read: read,
-		workspace: identity.NewService(pool).InstallationWorkspace,
+		workspace: IdentityService(pool).InstallationWorkspace,
 		proposals: proposalstage.New(InstallationDB(pool), NewApprovalsService(InstallationDB(pool))),
 		log:       log, now: time.Now,
 	}

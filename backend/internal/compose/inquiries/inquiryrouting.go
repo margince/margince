@@ -40,11 +40,13 @@ type Routing struct {
 	db       *database.DB
 	fence    webforms.HandlingFence
 	provider datasource.SystemOfRecordProvider
+	members  *identity.Service
 }
 
-// NewRouting reads records through provider and holds each form under fence.
-func NewRouting(db *database.DB, fence webforms.HandlingFence, provider datasource.SystemOfRecordProvider) Routing {
-	return Routing{db: db, fence: fence, provider: provider}
+// NewRouting reads records through provider, resolves a member's grants through
+// members, and holds each form under fence.
+func NewRouting(db *database.DB, fence webforms.HandlingFence, provider datasource.SystemOfRecordProvider, members *identity.Service) Routing {
+	return Routing{db: db, fence: fence, provider: provider, members: members}
 }
 
 var _ automation.InquiryRouting = Routing{}
@@ -242,7 +244,7 @@ func (r Routing) human(ctx context.Context, id ids.UUID) (context.Context, error
 	if err != nil {
 		return nil, err
 	}
-	member, err := authz.MemberPrincipal(ctx, identity.NewService(r.db.Pool()), workspace.UUID, id)
+	member, err := authz.MemberPrincipal(ctx, r.members, workspace.UUID, id)
 	if err != nil {
 		return nil, err
 	}

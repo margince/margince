@@ -56,7 +56,7 @@ func (s *Service) RemoveMemberMFA(ctx context.Context, actor Identity, target id
 		if err := lockAuthorization(ctx, tx); err != nil {
 			return err
 		}
-		if err := refuseUnlessCallerOutranksTarget(ctx, tx, actor, target, reachTakeover); err != nil {
+		if err := refuseUnlessCallerOutranksTarget(ctx, tx, s.rbac, actor, target, reachTakeover); err != nil {
 			return err
 		}
 		if err := ensureUserExists(ctx, tx, target); err != nil {
