@@ -186,10 +186,10 @@ and checksum. `migrate up` reads the core ledger before it applies anything:
 
 Migrations after the baseline apply one by one in all three cases. The replaced files stay in
 `backend/migrations/core/`, so an installation that applied them upgrades as it always did. `migrate down`
-reverts them one by one and never reverts the baseline. After a full `down`, `up` replays the
+rolls them back one by one and never rolls back the baseline. After a full `down`, `up` replays the
 history, because the baseline's row stays.
 
-`migrations.Core()` is the namespace with the baseline. `migrations.CoreHistory()` leaves it out, for a
+`migrations.Core()` is core with the baseline. `migrations.CoreHistory()` leaves it out, for a
 test that migrates to a version part-way through the history.
 
 Loading core fails when a file below the baseline is missing from `replaces.txt`, or when a listed file's
@@ -203,7 +203,7 @@ make db-up
 scripts/migration-baseline.sh verify
 ```
 
-`verify` builds one database by the full history and one by the baseline, both with the real migrator.
+`verify` builds one database by the full history and one by the baseline, both with the code `migrate up` runs.
 It then compares their schemas, reference rows and ledgers, and prints `OK` only when they match byte
 for byte. Run it on a change to the baseline, to `replaces.txt` or to the baseline code in
 `backend/internal/platform/dbmigrate/baseline.go`.
@@ -216,18 +216,22 @@ RELEASE=<tag> THROUGH=<last version in the tag> VERSION=<new version> NAME=<name
 scripts/migration-baseline.sh verify
 ```
 
-`VERSION` sorts above `THROUGH` and below the first migration after it. The script builds core's history
-through `THROUGH` and writes the baseline from that database's `pg_dump`
-(`backend/tools/gen-baseline`). The tool rewrites what a dump cannot carry. It grants to `margince_app`
-only where that role exists, and copies the migration that makes the `ext_runtime` role. A reference
-row's generated key becomes `uuidv7()` and its build time `now()`. Each expression that `pg_dump` prints
-in a form that builds a different tree goes back to the words its migration used. Without arguments,
-`generate` writes the current baseline again.
+`VERSION` sorts above `THROUGH` and below the first migration after it. Without arguments, `generate`
+writes the current baseline again.
+
+The script builds core's history through `THROUGH` and writes the baseline from that database's
+`pg_dump` output (`backend/tools/gen-baseline`). The tool changes what `pg_dump` output cannot carry:
+
+- It grants to `margince_app` only where that role exists.
+- It copies the migration that makes the `ext_runtime` role.
+- A reference row's generated key becomes `uuidv7()`, and its build time `now()`.
+- A check that `pg_dump` prints in a form that builds a different tree goes back to the words its
+  migration used.
 
 ### When the replaced files may go
 
-Delete the replaced files only after every supported installation runs the release with the baseline
-or a later one, so that every ledger records the baseline. That is a change of its own. Keep
+Delete the replaced files only after every supported installation runs the release with the baseline,
+or a later one. Then every ledger records the baseline. That is a change of its own. Keep
 `replaces.txt`: a new installation still records the replaced versions from it. Then the
 `renumbered.txt` lines and the `equivalentContent` entries for those versions can go too.
 

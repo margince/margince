@@ -65,10 +65,8 @@ func parseFlags(args []string) (options, error) {
 	if err := flags.Parse(args); err != nil {
 		return o, err
 	}
-	for _, required := range []string{o.pre, o.data, o.post, o.roles, since, until, o.through, o.version, o.name, o.release, o.outDir} {
-		if required == "" {
-			return o, errors.New("every flag is required")
-		}
+	if slices.Contains([]string{o.pre, o.data, o.post, o.roles, since, until, o.through, o.version, o.name, o.release, o.outDir}, "") {
+		return o, errors.New("every flag is required")
 	}
 	var err error
 	if o.since, err = time.Parse(pgTimestamp, since); err != nil {
