@@ -14,12 +14,9 @@ import { labelFor } from "../../lib/labelfor";
 import { useLatestSiteRead } from "./companydeepread";
 import { AddFactForm, useCompanyFacts } from "./companyfactspanel";
 import { emptyReason } from "./companyprofiletab";
-import {
-  useCompanyEditGate,
-  useIndustryOptions,
-  useRowBuilders,
-} from "./companyrail";
+import { useCompanyEditGate, useRowBuilders } from "./companyrail";
 import { SidecarFieldValue } from "./companyraildetails";
+import { useIndustryOptions } from "./companyrailedit";
 import { useCompanyProfileFields } from "./evidenceverdict";
 
 type Company = components["schemas"]["Company"];

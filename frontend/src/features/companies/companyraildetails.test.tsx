@@ -2,7 +2,14 @@
 import "@testing-library/jest-dom/vitest";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
@@ -11,9 +18,9 @@ import { type OpenSource, OpenSourceProvider } from "../../lib/opensource";
 import { meFixture } from "../../testing/mefixture";
 import { CompanyRail } from "./companyrail";
 
-// The company's register facts in its details. One is the VAT number the
-// design draws in Registration (an "Add…" invitation while empty). The other
-// is the postal address, edited as one six-part form. The registered address
+// The company's register facts in its details. One is the VAT number, which
+// Registration's Edit opens on its own write. The other is the postal address,
+// six parts in About's form. The registered address
 // is a Profile tab field (companyprofiledetails.test.tsx), never a row of this
 // column.
 
@@ -163,10 +170,8 @@ function renderGrid(company: Company, openSource: OpenSource = vi.fn()) {
   return client;
 }
 
-// Settles the grid on the grant read: until /me lands every row is read-only,
-// which is a different rendering of the same record and not the one under test.
-// The industry row is the anchor because it sits outside the disclosure and
-// carries a value in every fixture here.
+// Settles the grid on the grant read and the sidecar read. Until both land,
+// Registration offers no Edit: a different rendering of the record.
 async function renderSettledGrid(
   company: Company,
   profileFields: readonly ProfileField[] = [],
@@ -174,7 +179,7 @@ async function renderSettledGrid(
 ) {
   const calls = stub(profileFields, answers);
   renderGrid(company);
-  await screen.findByRole("button", { name: /^Change Industry/ });
+  await screen.findByRole("button", { name: "Edit Registration" });
   return calls;
 }
 
@@ -185,15 +190,27 @@ const vatBox = () => screen.getByRole("textbox", { name: "VAT ID" });
 // state one it had missed — and most sites print no imprint at all, so the
 // field a contact most often knows was the field they could never record.
 describe("the legal identity a contact can state", () => {
-  it("invites a VAT number and draws no registry address row, folded or not", async () => {
+  it("folds an unstated VAT number and draws no registry address row, folded or not", async () => {
     const user = userEvent.setup();
     await renderSettledGrid(COMPANY);
 
-    expect(screen.getByText("VAT ID")).toBeVisible();
-    expect(screen.getByText("Add…")).toBeVisible();
-
+    expect(screen.queryByText("VAT ID")).toBeNull();
     await user.click(screen.getByRole("button", { name: /Show \d+ empty/ }));
+    expect(screen.getByText("VAT ID")).toBeVisible();
     expect(screen.queryByText("Registered address")).toBeNull();
+  });
+
+  it("opens the VAT number's own editor from Registration's Edit", async () => {
+    const user = userEvent.setup();
+    await renderSettledGrid(COMPANY);
+    await user.click(screen.getByRole("button", { name: "Edit Registration" }));
+    expect(await screen.findByRole("dialog", { name: "VAT ID" })).toBeVisible();
+    expect(vatBox()).toHaveFocus();
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(
+      screen.getByRole("button", { name: "Edit Registration" }),
+    ).toHaveFocus();
   });
 
   // The defect the whole move is about: this verdict used to live on another
@@ -283,17 +300,19 @@ describe("the legal identity a contact can state", () => {
       }),
     );
     renderGrid(COMPANY);
-    await screen.findByRole("button", { name: /^Change Industry/ });
+    await screen.findByRole("button", { name: "Edit About" });
 
-    // The industry row edits (it reads the company, which HAS answered);
-    // the sidecar rows do not, because their own read has not.
-    expect(screen.queryByRole("button", { name: /^Change VAT ID/ })).toBeNull();
+    // About edits (it reads the company, which HAS answered); the VAT number
+    // does not, because its own read has not.
+    expect(
+      screen.queryByRole("button", { name: "Edit Registration" }),
+    ).toBeNull();
 
     releaseFields?.(
       json({ data: [profileField("register_vat", "DE811907980")] }),
     );
     expect(
-      await screen.findByRole("button", { name: /^Change VAT ID/ }),
+      await screen.findByRole("button", { name: "Edit Registration" }),
     ).toBeTruthy();
   });
 
@@ -304,7 +323,6 @@ describe("the legal identity a contact can state", () => {
     ]);
 
     expect(await screen.findByText("DE811907980")).toBeVisible();
-    expect(screen.queryByText("Add…")).toBeNull();
     // The registered address is on the Profile tab, so the column stays the
     // design's three groups however much the crawl found.
     expect(screen.queryByText("Kaiserdamm 1, 14057 Berlin")).toBeNull();
@@ -336,7 +354,7 @@ describe("the legal identity a contact can state", () => {
     const user = userEvent.setup();
     const calls = await renderSettledGrid(COMPANY);
 
-    await user.click(screen.getByRole("button", { name: /^Change VAT ID/ }));
+    await user.click(screen.getByRole("button", { name: "Edit Registration" }));
     await user.type(vatBox(), "DE811907980");
     await user.keyboard("{Enter}");
 
@@ -365,7 +383,7 @@ describe("the legal identity a contact can state", () => {
     ]);
     await screen.findByText("DE111111111");
 
-    await user.click(screen.getByRole("button", { name: /^Change VAT ID/ }));
+    await user.click(screen.getByRole("button", { name: "Edit Registration" }));
     await user.clear(vatBox());
     await user.type(vatBox(), "DE811907980");
     await user.keyboard("{Enter}");
@@ -386,7 +404,7 @@ describe("the legal identity a contact can state", () => {
     const calls = stub(served);
     const client = renderGrid(COMPANY);
     await user.click(
-      await screen.findByRole("button", { name: /^Change VAT ID/ }),
+      await screen.findByRole("button", { name: "Edit Registration" }),
     );
 
     served[0] = { ...served[0], version: 5 };
@@ -430,7 +448,7 @@ describe("the legal identity a contact can state", () => {
     );
     await screen.findByText("DE811907980");
 
-    await user.click(screen.getByRole("button", { name: /^Change VAT ID/ }));
+    await user.click(screen.getByRole("button", { name: "Edit Registration" }));
     await user.clear(vatBox());
     await user.keyboard("{Enter}");
 
@@ -453,7 +471,9 @@ describe("the legal identity a contact can state", () => {
       const reads = () => calls.filter((one) => one.pathname === "/v1/me");
       const before = reads().length;
 
-      await user.click(screen.getByRole("button", { name: /^Change VAT ID/ }));
+      await user.click(
+        screen.getByRole("button", { name: "Edit Registration" }),
+      );
       await user.type(vatBox(), "DE1");
       await user.keyboard("{Enter}");
       await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
@@ -467,17 +487,18 @@ describe("the grouped postal address", () => {
   it("keeps the six parts behind one editor even when the address is empty", async () => {
     const user = userEvent.setup();
     await renderSettledGrid(COMPANY);
-    await user.click(screen.getByRole("button", { name: /Show \d+ empty/ }));
-    await user.click(screen.getByRole("button", { name: /^Change Address/ }));
+    await user.click(screen.getByRole("button", { name: "Edit About" }));
+    const about = await screen.findByRole("dialog", { name: "About" });
     for (const label of PART_LABELS)
-      expect(screen.getByLabelText(new RegExp(label))).toBeVisible();
+      expect(within(about).getByLabelText(new RegExp(label))).toBeVisible();
   });
   it("opens with all existing address parts", async () => {
     const user = userEvent.setup();
     await renderSettledGrid(COMPANY_WITH_CITY);
-    await user.click(screen.getByRole("button", { name: /^Change Address/ }));
-    expect(screen.getByDisplayValue("Berlin")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Edit About" }));
+    const about = await screen.findByRole("dialog", { name: "About" });
+    expect(within(about).getByDisplayValue("Berlin")).toBeVisible();
     for (const label of PART_LABELS)
-      expect(screen.getByLabelText(new RegExp(label))).toBeVisible();
+      expect(within(about).getByLabelText(new RegExp(label))).toBeVisible();
   });
 });

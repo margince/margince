@@ -1,5 +1,10 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { type RenderResult, render as rtlRender } from "@testing-library/react";
+import {
+  type RenderResult,
+  render as rtlRender,
+  screen,
+} from "@testing-library/react";
+import type { UserEvent } from "@testing-library/user-event";
 import type { ComponentProps, ReactNode } from "react";
 import { vi } from "vitest";
 import type { components } from "../../api/schema";
@@ -163,4 +168,15 @@ export function stub(
       return jsonResponse({ data: [], page: emptyPage });
     }),
   );
+}
+
+/** Opens a details section's dialog from its Edit link, as a reader does. */
+export async function openSection(
+  user: Pick<UserEvent, "click">,
+  section: string,
+): Promise<HTMLElement> {
+  await user.click(
+    await screen.findByRole("button", { name: `Edit ${section}` }),
+  );
+  return screen.findByRole("dialog", { name: section });
 }

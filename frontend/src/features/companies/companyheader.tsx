@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useId } from "react";
+import { type ReactNode, useId } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
@@ -18,7 +18,11 @@ import {
 } from "../../components/entityref";
 import { MergeAction } from "../../components/merge";
 import { Button, OverflowMenu } from "../../design-system/atoms";
-import { InlineChoice } from "../../design-system/inlinechoice";
+import {
+  FieldEditDialog,
+  useFieldEditor,
+} from "../../design-system/fieldeditdialog";
+import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 import { fileListKeys } from "../../lib/attachmentkeys";
 import {
@@ -55,11 +59,8 @@ type UpdateCompanyRequest = components["schemas"]["UpdateCompanyRequest"];
 // value being changed, so all three are refetched rather than left showing the
 // old one until something else happens to invalidate them.
 //
-// Exported so the rail's own Details grid (companyrail.tsx) wires its inline
-// edits to the SAME PATCH shape and the SAME three-key invalidation rather
-// than keeping a second copy: one inline company edit and another that
-// silently invalidates a different set of caches is the drift this file
-// already exists to prevent within its own component.
+// Exported for the lifecycle control beside the name (companylifecycle.tsx),
+// so it and the owner flow share one PATCH and one invalidation.
 // Through useMutation rather than a bare async call, so the write is a
 // MUTATION as far as the query client is concerned. The policy that refreshes a
 // record's open history after any successful write hangs off the mutation
@@ -103,10 +104,9 @@ type CompanyFieldPress = Readonly<{
 // companyReadOnlyReason says why this record cannot be edited, when there is
 // something worth saying.
 //
-// Exported for the same reason as useCompanyFieldPatch above: the rail's
-// Details grid gates its own edit affordances on `writable`, and the reason an
-// archived account is read-only is a fact about the RECORD, not about which
-// component happens to be drawing it.
+// Exported for the details' section Edits, which gate on it too. Why an
+// archived account is read-only is a fact about the record, not about which
+// component draws it.
 export function useCompanyReadOnlyReason(company: Company): string | undefined {
   const t = useT();
   // The per-ROW question only. The object grant and the seat ceiling are the
@@ -129,51 +129,70 @@ export function useCompanyReadOnlyReason(company: Company): string | undefined {
   return undefined;
 }
 
-// Exported for the same reason as useCompanyFieldPatch/useCompanyReadOnlyReason
-// above: the rail's Details grid edits the SAME field through the SAME
-// roster read, the SAME not-in-roster fallback and the SAME
-// unowned-only-while-unowned rule, rather than a second picker that could
-// silently diverge from any of the three. `hideLabel` lets the rail's own
-// FieldRow label column say "Owner" once instead of this control saying it
-// again — the header call site omits it and keeps its current prose.
-export function CompanyOwnerControl({
-  company,
-  hideLabel,
-}: Readonly<{ company: Company; hideLabel?: boolean }>) {
+/**
+ * The account's owner as a flow of its own: how the row reads, the dialog that
+ * changes it, and `open` when this reader may. On an unowned account the
+ * dialog is the claim door. The same roster names the owner in both places.
+ */
+export function useCompanyOwnerFlow(company: Company): Readonly<{
+  reading: ReactNode;
+  open?: () => void;
+  element: ReactNode;
+}> {
   const t = useT();
-  // Two different questions, deliberately.
-  //
-  // Changing the owner of an OWNED account is a write to that row, so it takes
-  // the row's own answer. Claiming an UNOWNED one cannot: `writable` is false
-  // precisely because nobody owns it yet, and gating the claim on it would
-  // close the only door out of that state. The claim is its own authority and
-  // the server holds it — this is the grant plus the seat, which is what the
-  // claim endpoint itself requires.
+  // Claiming an UNOWNED account cannot take the row's own answer: `writable`
+  // is false because nobody owns it yet. The claim is the grant plus the seat.
   const canClaim = useCanWrite("company", "update");
   const canWriteRow = useCanWriteRecord("company", company);
   const canUpdate = canWriteRow || (!company.owner_id && canClaim);
   const readOnlyReason = useCompanyReadOnlyReason(company);
-  const patch = useCompanyFieldPatch(company);
-  const claim = useMutation({
-    mutationKey: ["company-claim", company.id],
-    mutationFn: useClaimRecord("company", company.id),
-  });
+  const canEdit = canUpdate && !readOnlyReason;
+  const { open, editing } = useFieldEditor(canEdit);
+  const { owners, options, hint } = useOwnerOptions(company, canWriteRow);
+  const save = useOwnerSave(company, options);
+  return {
+    reading: company.owner_id
+      ? owners.find((user) => user.value === company.owner_id)?.label
+      : t("field.unset"),
+    open: canEdit ? () => editing(true) : undefined,
+    element: (
+      <FieldEditDialog
+        open={open}
+        label={t("co.pulse.owner")}
+        value={company.owner_id ?? ""}
+        hint={hint}
+        onClose={() => editing(false)}
+        onSave={save}
+      >
+        {({ control, draft, setDraft, saving }) => (
+          <Select
+            {...control}
+            value={draft}
+            options={options}
+            disabled={saving}
+            aria-busy={saving || undefined}
+            onChange={setDraft}
+          />
+        )}
+      </FieldEditDialog>
+    ),
+  };
+}
+
+function useOwnerOptions(company: Company, canWriteRow: boolean) {
+  const t = useT();
   const viewerId = useViewerId();
-  const leaveIfOutOfReach = useLeaveIfOutOfReach("company");
   const { options: owners, roster } = useRecordOwnerOptions();
-  const rosterHint = useRosterHint(roster, useRosterPartial("user", true));
+  const hint = useRosterHint(roster, useRosterPartial("user", true));
   const ownerName = useMemberName(company.owner_id);
   // The current owner may not be offerable (invited, deactivated, or past the
-  // walk), and a select whose value is no option renders blank. Named by id
-  // regardless: `rosterOwnerName` says the true sentence for the rest.
+  // walk), and a select whose value is no option renders blank.
   if (
     company.owner_id &&
     !owners.some((user) => user.value === company.owner_id)
   ) {
     owners.unshift({
       value: company.owner_id,
-      // `company.owner_id` is truthy in this branch, so `unowned` is never
-      // read; passed anyway so the call reads the same as every other one.
       label: rosterOwnerName(
         company.owner_id,
         ownerName,
@@ -182,67 +201,49 @@ export function CompanyOwnerControl({
       ),
     });
   }
-  // "Unowned" is offered only while the account IS unowned. `owner_id` cannot
-  // carry "unassign" on the wire — a null is indistinguishable from an omitted
-  // field — so offering it on an owned account would take the answer and drop
-  // it. Present as the truthful current state, absent as an edit we cannot make.
-  // A reader here only through the claim door may name nobody but themselves:
-  // the server refuses a bounded seat's patch on a row nobody owns.
+  // "Unowned" is offered only while the account is unowned. A null `owner_id`
+  // reads as an omitted field on the wire, so it cannot unassign. A reader here
+  // only through the claim door may name nobody but themselves.
   const nameable = canWriteRow
     ? owners
     : owners.filter((user) => user.value === viewerId);
   const options = company.owner_id
     ? owners
     : [{ value: "", label: t("co.pulse.unowned") }, ...nameable];
-  return (
-    <InlineChoice
-      label={t("co.pulse.owner")}
-      // The caller names the field: the header's meta line prints "Owner"
-      // immediately before this control, and the grid has its own label
-      // column. `label` still drives the accessible name either way.
-      hideLabel={hideLabel}
-      value={company.owner_id ?? ""}
-      options={options}
-      canEdit={canUpdate && !readOnlyReason}
-      readOnlyReason={readOnlyReason}
-      hint={rosterHint}
-      // The closed control reads off the SAME labels the open one offers, so
-      // the header cannot name the owner one way and the editor another. That
-      // is also what keeps the uuid out: reading the owner through the generic
-      // record reference painted the raw id for the first moments of every page
-      // load, and a uuid is not a weaker name — it is a non-answer spelled so
-      // that no reader can use it.
-      render={(value) => {
-        if (!value) {
-          return t("co.pulse.unowned");
-        }
-        // Every value this control can hold is one of the options above: the
-        // current owner is unshifted in when the walk misses them, and any
-        // other value is a seat the picker itself offered.
-        return owners.find((user) => user.value === value)?.label;
-      }}
-      // Taking an unowned account goes through the claim, the door open to
-      // every seat; naming a colleague is a patch, offered only to a reader
-      // who can write the row (`nameable`).
-      onSave={async (next) => {
-        if (!company.owner_id && next === viewerId) {
-          return claim.mutateAsync(company.version);
-        }
-        const from = fromHere();
-        await patch({ owner_id: next });
-        // As on a contact: a private account handed on can leave the reader.
-        if (mayLeaveReach(company.visibility, next, viewerId)) {
-          await leaveIfOutOfReach(
-            company.id,
-            t("recordAccess.company.handedOver", {
-              owner: options.find((user) => user.value === next)?.label ?? "",
-            }),
-            from,
-          );
-        }
-      }}
-    />
-  );
+  return { owners, options, hint };
+}
+
+// Taking an unowned account is the claim; naming a colleague is a patch, and a
+// private account handed on can leave the reader.
+function useOwnerSave(
+  company: Company,
+  options: readonly { value: string; label: string }[],
+) {
+  const t = useT();
+  const viewerId = useViewerId();
+  const patch = useCompanyFieldPatch(company);
+  const claim = useMutation({
+    mutationKey: ["company-claim", company.id],
+    mutationFn: useClaimRecord("company", company.id),
+  });
+  const leaveIfOutOfReach = useLeaveIfOutOfReach("company");
+  return async (next: string) => {
+    if (!company.owner_id && next === viewerId) {
+      await claim.mutateAsync(company.version);
+      return;
+    }
+    const from = fromHere();
+    await patch({ owner_id: next });
+    if (mayLeaveReach(company.visibility, next, viewerId)) {
+      await leaveIfOutOfReach(
+        company.id,
+        t("recordAccess.company.handedOver", {
+          owner: options.find((user) => user.value === next)?.label ?? "",
+        }),
+        from,
+      );
+    }
+  };
 }
 
 // useCompanyVerbRefusal answers why the record's own verbs — edit, merge,
@@ -254,11 +255,11 @@ export function CompanyOwnerControl({
 // answer: the verb stays visible and says why, because a missing button reads
 // as a build without the feature.
 //
-// An UNOWNED record is refused like any other the server marks unwritable:
-// the write gate treats an ownerless row as nobody's to change, so Edit on it
-// could only fail. The way IN stays open regardless — the owner control keeps
-// its claim door on its own predicate (CompanyOwnerControl), and that is the
-// verb an unowned account offers.
+// An unowned record is refused like any other the server marks unwritable.
+// The write gate treats an ownerless row as nobody's to change, so Edit on it
+// could only fail. The way in stays open regardless: the owner flow keeps its
+// claim door on its own predicate (useCompanyOwnerFlow). That is the verb an
+// unowned account offers.
 export function useCompanyVerbRefusal(company: Company): string | undefined {
   const t = useT();
   return useRecordWriteRefusal("company", company, {

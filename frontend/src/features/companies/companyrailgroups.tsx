@@ -2,41 +2,66 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQuery } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import type { RailEdit } from "../../components/railfield";
+import { useSectionEdit } from "../../components/sectionedit";
 import { Popover } from "../../design-system/popover";
 import { provenanceLabel } from "../../design-system/provenance";
 import { provenanceOf, withCreator } from "../../design-system/provenanceof";
-import type { DetailRow } from "../../design-system/recorddetails";
+import type {
+  DetailRow,
+  DetailSection,
+} from "../../design-system/recorddetails";
 import { formatDateAbbrev, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useMemberName } from "../../lib/membernames";
 import { unwrap } from "../../lib/problem";
 import { useViewerId } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
-import { CompanyOwnerControl } from "./companyheader";
+import { useCompanyOwnerFlow } from "./companyheader";
 import type { Edit } from "./companyrail";
-import { SidecarFieldValue } from "./companyraildetails";
+import { SidecarMarks, useSidecarFieldFlow } from "./companyraildetails";
 import { useCompanyProfileFields } from "./evidenceverdict";
 
 type Company = components["schemas"]["Company"];
 
-/** Who holds the account and who may read it. */
-export function useOwnershipRows(company: Company): DetailRow[] {
+type DetailsSection = Readonly<{ section: DetailSection; element: ReactNode }>;
+
+/** Who holds the account and who may read it. The owner is the one change here. */
+export function useOwnershipSection(
+  company: Company,
+  edit: RailEdit,
+): DetailsSection {
   const t = useT();
-  return [
-    {
-      key: "owner",
-      term: t("co.pulse.owner"),
-      // The control, not a reading: on an unowned account it is the claim door.
-      value: <CompanyOwnerControl company={company} hideLabel />,
+  const label = t("record.details.ownership");
+  const term = t("co.pulse.owner");
+  const owner = useCompanyOwnerFlow(company);
+  const ownership = useSectionEdit(edit, {
+    label,
+    keys: ["owner"],
+    flows: owner.open && {
+      owner: { label: term, reading: owner.reading, open: owner.open },
     },
+  });
+  const rows: DetailRow[] = [
+    { key: "owner", term, value: owner.reading },
     {
       key: "visible",
       term: t("record.details.visibleTo"),
       value: <VisibleTo company={company} />,
     },
   ];
+  return {
+    section: { key: "ownership", label, rows, edit: ownership.edit },
+    element: (
+      <>
+        {ownership.element}
+        {owner.element}
+      </>
+    ),
+  };
 }
 
 // The audience the head's Shared pill switches, as the row's one word. Not
@@ -108,28 +133,53 @@ async function fetchShareCount(
   return { count: data.data.length, more: data.page.has_more };
 }
 
-/** The register's facts about the account and how its own row was written. */
-export function useRegistrationRows(company: Company, edit: Edit): DetailRow[] {
+/**
+ * The register's facts about the account and how its own row was written. The
+ * VAT number is the one change here, on its own profile-field write.
+ */
+export function useRegistrationSection(
+  company: Company,
+  edit: RailEdit,
+  gate: Edit,
+): DetailsSection {
   const t = useT();
   const { locale } = useLocale();
   const zone = useViewerZone();
+  const label = t("record.registration");
+  const term = t("co.aside.vatId");
   const profile = useCompanyProfileFields(company.id);
-  return [
+  const vat = useSidecarFieldFlow({
+    companyId: company.id,
+    anchor: company.is_anchor === true,
+    fields: profile.data ?? [],
+    fieldsLoaded: profile.isSuccess,
+    field: "register_vat",
+    label: term,
+    canEdit: gate.canEdit,
+  });
+  const stated = vat.current?.value;
+  const registration = useSectionEdit(edit, {
+    label,
+    keys: ["vat"],
+    flows: vat.open && {
+      vat: { label: term, reading: stated, open: vat.open },
+    },
+  });
+  const rows: DetailRow[] = [
     {
       key: "vat",
-      term: t("co.aside.vatId"),
+      term,
+      empty: !stated,
       value: (
-        <SidecarFieldValue
-          companyId={company.id}
-          anchor={company.is_anchor === true}
-          fields={profile.data ?? []}
-          fieldsLoaded={profile.isSuccess}
-          field="register_vat"
-          label={t("co.aside.vatId")}
-          placeholderKey="co.aside.add"
-          canEdit={edit.canEdit}
-          readOnlyReason={edit.reason}
-        />
+        <>
+          {stated}
+          <SidecarMarks
+            companyId={company.id}
+            field="register_vat"
+            current={vat.current}
+            canAsk={gate.canEdit}
+          />
+        </>
       ),
     },
     {
@@ -143,6 +193,15 @@ export function useRegistrationRows(company: Company, edit: Edit): DetailRow[] {
       value: formatDateAbbrev(company.created_at, locale, zone),
     },
   ];
+  return {
+    section: { key: "registration", label, rows, edit: registration.edit },
+    element: (
+      <>
+        {registration.element}
+        {vat.element}
+      </>
+    ),
+  };
 }
 
 // The kind of source as plain words, the way the design reads the row; which
