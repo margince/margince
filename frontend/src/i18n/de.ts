@@ -17302,6 +17302,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Diese Adresse lässt sich nicht mehr zurückholen. Füge die Adresse stattdessen neu hinzu.",
   "ownerIdentities.restoreMovedOn":
     "Diese Adresse wurde seitdem erneut entfernt. Mache stattdessen das neuere Entfernen rückgängig.",
+  "ownerIdentities.restoreOnFile":
+    "Dieser Wert ist jetzt vorhanden. Füge ihn erneut hinzu, um ihn zu bestätigen.",
   "ownerIdentities.restoreDeclaredAgain":
     "Diese Adresse steht schon wieder in deiner Liste.",
   "ownerIdentities.addDescriptionEmpty":
@@ -17310,6 +17312,20 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Gib eine einzelne E-Mail-Adresse ein, zum Beispiel name@beispiel.example.",
   "captureValue.refusedDomain":
     "Gib nur die Domain ein, etwa beispiel.example, ohne Adresse, Schema oder Pfad.",
+  "captureValue.ownDomain": "{value} ist deine eigene Domain.",
+  "captureValue.alreadyShipped":
+    "{value} steht schon auf der mitgelieferten Liste.",
+  "captureValue.consumerMail":
+    "Eine Domain für private Mail wie gmail.com kann hier nicht verwendet werden.",
+  "captureValue.askTitle": "Schon vorhanden",
+  "captureValue.askConsumerList":
+    "{value} ist die Domain von {company}. Mail von dort legt dann kein Unternehmen mehr an. Trotzdem hinzufügen?",
+  "captureValue.askCompanyDomain":
+    "{value} ist die Domain von {company}. Mail damit wird dann nicht mehr erfasst. Trotzdem hinzufügen?",
+  "captureValue.askContactAddress":
+    "{value} ist die Adresse eines Kontakts. Mail damit wird dann nicht mehr erfasst. Trotzdem hinzufügen?",
+  "captureValue.aCompany": "einem Unternehmen im System",
+  "captureValue.addAnyway": "Trotzdem hinzufügen",
   "captureExclusions.scope.user": "Deine Postfächer",
   "captureExclusions.scope.workspace": "Gesamtes Unternehmen",
   "captureExclusions.kind.address": "Adresse",

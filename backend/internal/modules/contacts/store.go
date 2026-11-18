@@ -214,6 +214,12 @@ func (p *Provider) WithSenderStamp(stamp SenderStamp) *Provider {
 	return p
 }
 
+// WithConsumerMail wires the consumer-mail reader on the store behind the agent provider.
+func (p *Provider) WithConsumerMail(read ConsumerMailReader) *Provider {
+	p.store.WithConsumerMail(read)
+	return p
+}
+
 // WithSenderStamp wires the rule on the store behind the handlers.
 func (h Handlers) WithSenderStamp(stamp SenderStamp) Handlers {
 	h.store.WithSenderStamp(stamp)

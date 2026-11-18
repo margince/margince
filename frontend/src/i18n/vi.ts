@@ -16858,6 +16858,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Không thể khôi phục địa chỉ này nữa. Thêm lại địa chỉ nếu cần.",
   "ownerIdentities.restoreMovedOn":
     "Không thể khôi phục vì địa chỉ này đã được gỡ thêm một lần nữa. Hoàn tác lần gỡ mới hơn.",
+  "ownerIdentities.restoreOnFile":
+    "Giá trị này hiện đã có trong hệ thống. Hãy thêm lại để xác nhận.",
   "ownerIdentities.restoreDeclaredAgain":
     "Địa chỉ này đã có lại trong danh sách.",
   "ownerIdentities.addDescriptionEmpty":
@@ -16865,6 +16867,19 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "captureValue.refusedAddress": "Nhập một địa chỉ email, ví dụ ten@vidu.com.",
   "captureValue.refusedDomain":
     "Nhập tên miền, ví dụ vidu.com, không kèm địa chỉ, giao thức hay đường dẫn.",
+  "captureValue.ownDomain": "{value} là tên miền của chính bạn.",
+  "captureValue.alreadyShipped": "{value} đã có trong danh sách có sẵn.",
+  "captureValue.consumerMail":
+    "Tên miền thư cá nhân như gmail.com không dùng được ở đây.",
+  "captureValue.askTitle": "Đã có trong hệ thống",
+  "captureValue.askConsumerList":
+    "{value} là tên miền của {company}. Thư từ đó sẽ không còn tạo công ty. Vẫn thêm?",
+  "captureValue.askCompanyDomain":
+    "{value} là tên miền của {company}. Thư dùng nó sẽ không còn được ghi lại. Vẫn thêm?",
+  "captureValue.askContactAddress":
+    "{value} là địa chỉ của một liên hệ. Thư dùng nó sẽ không còn được ghi lại. Vẫn thêm?",
+  "captureValue.aCompany": "một công ty trong hệ thống",
+  "captureValue.addAnyway": "Vẫn thêm",
   "captureExclusions.scope.user": "Hộp thư của bạn",
   "captureExclusions.scope.workspace": "Cả công ty",
   "captureExclusions.kind.address": "Địa chỉ",

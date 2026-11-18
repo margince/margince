@@ -4236,6 +4236,7 @@
   "elapsed.days": "vor {days} T",
   "aiRouting.lane.embeddings": "Suche und Abruf über Datensätze hinweg",
   "aiTasks.whatItDoes": "{task}: was die Aufgabe tut",
+  "captureValue.consumerMail": "Eine Domain für private Mail wie gmail.com kann hier nicht verwendet werden.",
   "inquiry.notSpecified": "Nicht angegeben",
   "inquiry.reason.legacyHandling": "Die bisherige Lead-Bearbeitung ist für diese Anfrage zuständig. Prüfe das Ergebnis, bevor du eine weitere Aufgabe erstellst.",
   "inquiry.reason.owner": "Bleibt bei der zuständigen Person",

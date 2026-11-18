@@ -26,9 +26,12 @@ import (
 // later save naming a new site must demote the old one first: inserting a
 // second primary would collide, and a swallowed collision would mean the human
 // edited their website, got a 200, and kept the old one.
-func setCompanyDomain(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, website, by string) error {
+func (s *Store) setCompanyDomain(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, website, by string) error {
 	host, err := companyHost(website)
 	if err != nil {
+		return err
+	}
+	if err := s.refuseConsumerCompanyDomains(ctx, tx, companyID, []CompanyDomainInput{{Domain: host}}); err != nil {
 		return err
 	}
 	// Changing the company's domain is an admin act, even though editing the

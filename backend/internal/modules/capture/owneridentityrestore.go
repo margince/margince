@@ -91,7 +91,8 @@ func purgeExpiredWithdrawalsTx(ctx context.Context, tx pgx.Tx) error {
 }
 
 // RestoreRemoval puts back the identity the caller withdrew, as it was, and
-// does what declaring it does.
+// does what declaring it does. The value is judged again, and a restore never
+// confirms: a value that is on file now is declared again to be asked about.
 func (s *OwnerIdentityStore) RestoreRemoval(ctx context.Context, id ids.UUID) (OwnerIdentity, error) {
 	actor, err := seatItself(ctx)
 	if err != nil {
@@ -107,6 +108,9 @@ func (s *OwnerIdentityStore) RestoreRemoval(ctx context.Context, id ids.UUID) (O
 			return err
 		}
 		if err := refuseMovedOnTx(ctx, tx, withdrawn); err != nil {
+			return err
+		}
+		if err := checkIdentityClaim(ctx, tx, withdrawn.Kind, withdrawn.Value, false); err != nil {
 			return err
 		}
 		out, err = reinstateTx(ctx, tx, withdrawn)
