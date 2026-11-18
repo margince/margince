@@ -10,63 +10,13 @@ package finance
 // rewritten row must name a link.
 
 import (
-	"context"
-	"os"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
-
-// beforeTheLinkCheck runs plant as the owner with the customer link checks
-// lifted, then restores each from its own catalog definition. That leaves the
-// rows as an upgraded database holds rows mirrored before the checks.
-func (e *financeEnv) beforeTheLinkCheck(t *testing.T, plant func(tx pgx.Tx) error) {
-	t.Helper()
-	owner, err := pgx.Connect(e.ctx, os.Getenv("MARGINCE_TEST_DSN"))
-	if err != nil {
-		t.Fatalf("owner connection: %v", err)
-	}
-	defer func() {
-		if err := owner.Close(context.Background()); err != nil {
-			t.Errorf("closing the owner connection: %v", err)
-		}
-	}()
-	err = pgx.BeginFunc(e.ctx, owner, func(tx pgx.Tx) error {
-		rows, err := tx.Query(e.ctx, `SELECT conrelid::regclass::text, conname, pg_get_constraintdef(oid) FROM pg_constraint
-			 WHERE conrelid IN ('finance_invoice'::regclass, 'finance_payment'::regclass)
-			   AND conname LIKE '%\_names\_its\_customer\_link'`)
-		if err != nil {
-			return err
-		}
-		checks, err := pgx.CollectRows(rows, pgx.RowToStructByPos[struct{ Table, Name, Definition string }])
-		if err != nil {
-			return err
-		}
-		for _, check := range checks {
-			if _, err := tx.Exec(e.ctx, `ALTER TABLE `+check.Table+` DROP CONSTRAINT `+check.Name); err != nil {
-				return err
-			}
-		}
-		if err := plant(tx); err != nil {
-			return err
-		}
-		// A deferred key check queued by plant blocks the ALTER below.
-		if _, err := tx.Exec(e.ctx, `SET CONSTRAINTS ALL IMMEDIATE`); err != nil {
-			return err
-		}
-		for _, check := range checks {
-			if _, err := tx.Exec(e.ctx, `ALTER TABLE `+check.Table+` ADD CONSTRAINT `+check.Name+` `+check.Definition); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		t.Fatalf("planting rows mirrored before the link checks: %v", err)
-	}
-}
 
 // unlinkTheFixtureRows clears the link on every row of the fixture connection.
 func (e *financeEnv) unlinkTheFixtureRows(tx pgx.Tx) error {
@@ -99,7 +49,7 @@ func TestTheDatabaseRefusesANewOrRewrittenRowThatNamesNoCustomerLink(t *testing.
 		t.Errorf("a new invoice naming no link was refused by %q, want the link check", got)
 	}
 
-	e.beforeTheLinkCheck(t, e.unlinkTheFixtureRows)
+	testdb.WithCustomerLinkChecksLifted(t, e.unlinkTheFixtureRows)
 	if got := e.ownerRefused(t, `UPDATE finance_invoice SET number = number WHERE connection_id = $1`, e.connection); got != "finance_invoice_names_its_customer_link" {
 		t.Errorf("a rewrite of an old invoice naming no link was refused by %q, want the link check", got)
 	}

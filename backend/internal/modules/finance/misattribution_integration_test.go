@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -205,7 +206,7 @@ func TestASyncNamesTheLinkOnARowMirroredBeforeRowsNamedOne(t *testing.T) {
 	if _, err := e.store.SyncConnection(e.ctx, e.provider()); err != nil {
 		t.Fatal(err)
 	}
-	e.beforeTheLinkCheck(t, e.unlinkTheFixtureRows)
+	testdb.WithCustomerLinkChecksLifted(t, e.unlinkTheFixtureRows)
 	if _, err := e.store.SyncConnection(e.ctx, e.provider()); err != nil {
 		t.Fatal(err)
 	}
@@ -227,7 +228,7 @@ func TestTheBackfillNamesTheArchivedLinkAndLeavesAnUnmappedRow(t *testing.T) {
 	e.ownerExec(t, `UPDATE finance_customer_link SET archived_at = now() WHERE id = $1`, link)
 	unmapped := ids.NewV7()
 	other := e.otherCompany(t)
-	e.beforeTheLinkCheck(t, func(tx pgx.Tx) error {
+	testdb.WithCustomerLinkChecksLifted(t, func(tx pgx.Tx) error {
 		if err := e.unlinkTheFixtureRows(tx); err != nil {
 			return err
 		}
