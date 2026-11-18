@@ -275,9 +275,9 @@ export function rewrittenBody(body: string, language = "en") {
   });
 }
 
-// The check asks about the subject and body only once typing has paused, so a
-// press straight after typing meets the answer for the text before it, and
-// the answer for the new text lands after the press. Waiting out that pause
+// The check asks about the subject and body only once typing has paused. A
+// press straight after typing meets the answer for the text before it. The
+// answer for the new text lands after the press. Waiting out that pause
 // inside act lets the newer check start, and the wait then ends on its answer.
 export async function settleSendCheck() {
   await act(

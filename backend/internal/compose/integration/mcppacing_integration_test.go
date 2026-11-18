@@ -20,8 +20,8 @@ import (
 // The edge counts in fixed one-minute windows on the real clock, so a run may
 // cross one boundary. Two windows of calls then always reach a User's refusal,
 // and the first refusal can never come before the ceiling. Each call is a
-// ping: pacing counts every authenticated call alike, and a ping costs the edge
-// and the passport lookup only, so the calls fit in two windows on a slow host.
+// ping. Pacing counts every authenticated call alike. A ping costs only the edge
+// and the passport lookup, so the calls fit in two windows on a slow host.
 func TestAnAdminsAgentIsUnpacedAndAUsersIsPacedOnMCP(t *testing.T) {
 	d := roleBoundDoors(t, "mcp-pacing")
 	d.E.DescribeCompany(t)
