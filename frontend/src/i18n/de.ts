@@ -7034,6 +7034,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "offer.unit": "Einheit",
   "offer.unitFromProduct": "Wie im Produkt",
   "offer.quantity": "Menge",
+  "offer.unitPriceRequired":
+    "Gib einen Einzelpreis ein oder wähle ein Produkt.",
   "offer.unitPrice": "Einzelpreis",
   "offer.discountPct": "Rabatt %",
   "offer.taxRate": "Steuer %",

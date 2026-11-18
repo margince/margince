@@ -6855,6 +6855,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "offer.unit": "Đơn vị",
   "offer.unitFromProduct": "Theo sản phẩm",
   "offer.quantity": "Số lượng",
+  "offer.unitPriceRequired": "Nhập đơn giá hoặc chọn một sản phẩm.",
   "offer.unitPrice": "Đơn giá",
   "offer.discountPct": "Chiết khấu %",
   "offer.taxRate": "Thuế %",

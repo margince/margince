@@ -137,6 +137,7 @@ describe("the Add line form", () => {
     await user.type(screen.getByRole("spinbutton", { name: "Periods" }), "2");
     await user.type(screen.getByTestId("new-line-description"), "Support");
     await user.type(screen.getByTestId("new-line-quantity"), "1");
+    await user.type(screen.getByTestId("new-line-unit-price"), "90");
     await user.click(screen.getByTestId("add-line"));
 
     await waitFor(() => expect(calls).toHaveLength(1));
@@ -150,6 +151,52 @@ describe("the Add line form", () => {
       screen.queryByRole("combobox", { name: "Billing period" }),
     ).toBeNull();
     expect(screen.queryByRole("spinbutton", { name: "Periods" })).toBeNull();
+  });
+});
+
+describe("the Add line form's unit price", () => {
+  it("starts empty and asks for a price before it sends a line with no product", async () => {
+    const calls = serve(draft([line1]), () => ({
+      status: 201,
+      body: draft([line1]),
+    }));
+    const user = userEvent.setup();
+    renderOffer();
+    await screen.findByText("ANG-2026-0007");
+
+    const price = screen.getByTestId<HTMLInputElement>("new-line-unit-price");
+    expect(price.value).toBe("");
+    await user.type(screen.getByTestId("new-line-description"), "Free line");
+    await user.type(screen.getByTestId("new-line-quantity"), "1");
+    await user.click(screen.getByTestId("add-line"));
+    expect(
+      await screen.findByText("Enter a unit price or pick a product."),
+    ).toBeTruthy();
+    expect(calls).toHaveLength(0);
+
+    await user.type(price, "0");
+    await user.click(screen.getByTestId("add-line"));
+    await waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0].body).toMatchObject({ unit_price_minor: 0 });
+  });
+
+  it("sends nothing while the price box holds an amount it cannot use", async () => {
+    const calls = serve(draft([line1]), () => ({
+      status: 201,
+      body: draft([line1]),
+    }));
+    const user = userEvent.setup();
+    renderOffer();
+    await screen.findByText("ANG-2026-0007");
+
+    await user.type(screen.getByTestId("new-line-description"), "Hours");
+    await user.type(screen.getByTestId("new-line-quantity"), "1");
+    await user.type(screen.getByTestId("new-line-unit-price"), "9.999");
+    await user.click(screen.getByTestId("add-line"));
+    expect(
+      await screen.findByText("This amount has more decimals than EUR allows."),
+    ).toBeTruthy();
+    expect(calls).toHaveLength(0);
   });
 });
 

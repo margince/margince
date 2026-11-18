@@ -6991,6 +6991,7 @@ export const en = {
   "offer.unit": "Unit",
   "offer.unitFromProduct": "From the product",
   "offer.quantity": "Quantity",
+  "offer.unitPriceRequired": "Enter a unit price or pick a product.",
   "offer.unitPrice": "Unit price",
   "offer.discountPct": "Discount %",
   "offer.taxRate": "Tax %",

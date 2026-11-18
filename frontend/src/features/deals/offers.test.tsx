@@ -354,6 +354,7 @@ describe("OfferLineEditor (OP-7/OP-13)", () => {
     await screen.findByText("ANG-2026-0007");
     await user.type(screen.getByTestId("new-line-description"), "Seats");
     await user.type(screen.getByTestId("new-line-quantity"), "3");
+    await user.type(screen.getByTestId("new-line-unit-price"), "40");
     await pickOption(user, screen.getByTestId("new-line-unit"), "Other");
 
     await user.click(screen.getByTestId("add-line"));
@@ -385,6 +386,7 @@ describe("OfferLineEditor (OP-7/OP-13)", () => {
     await screen.findByText("ANG-2026-0007");
     await user.type(screen.getByTestId("new-line-description"), "Schulung");
     await user.type(screen.getByTestId("new-line-quantity"), "1,5");
+    await user.type(screen.getByTestId("new-line-unit-price"), "40");
     await user.type(screen.getByTestId("new-line-discount"), "12,5");
     await user.type(screen.getByTestId("new-line-tax"), "1.500");
     await user.click(screen.getByTestId("add-line"));

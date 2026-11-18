@@ -60,6 +60,8 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
   const [billing, setBilling] = useState<LineBilling>(EMPTY_LINE_BILLING);
   const [priceTouched, setPriceTouched] = useState(false);
   const [priceRefused, setPriceRefused] = useState(false);
+  // Remounts the price box after an add, so a free line's "0.00" goes too.
+  const [added, setAdded] = useState(0);
   // Set by an Add that found "Other" with no unit typed; any unit change clears it.
   const [unitRefused, setUnitRefused] = useState(false);
   const [product, setProduct] = useState<RecordPickerCandidate | null>(null);
@@ -70,6 +72,20 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
   const edit = (field: string, change: Partial<NewLineState>) => {
     setNewLine((prev) => ({ ...prev, ...change }));
     faults.edited(field);
+  };
+
+  // Whether the Add line form cannot be sent yet. Each refusal shows under its
+  // own field, and a refused price box already says why.
+  const refusesAdd = () => {
+    if (isUnnamedOtherUnit(newLine.unit)) {
+      setUnitRefused(true);
+      return true;
+    }
+    const found = new Map(figureFaults(newLine, locale, t));
+    if (!priceRefused && !priceTouched && !product) {
+      found.set("unit_price_minor", t("offer.unitPriceRequired"));
+    }
+    return faults.show(found) || priceRefused;
   };
 
   const applyOffer = (updated: Offer) => {
@@ -90,6 +106,7 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
       setNewLine(EMPTY_NEW_LINE);
       setBilling(EMPTY_LINE_BILLING);
       setPriceTouched(false);
+      setAdded((count) => count + 1);
       setProduct(null);
     },
   });
@@ -226,10 +243,12 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
             {(control) => (
               <MoneyInput
                 {...control}
+                key={added}
                 data-testid="new-line-unit-price"
                 currency={offer.currency}
                 onRefusedChange={setPriceRefused}
                 valueMinor={newLine.unit_price_minor}
+                blankWhenZero={!priceTouched}
                 onChangeMinor={(minor) => {
                   setPriceTouched(true);
                   edit("unit_price_minor", { unit_price_minor: minor });
@@ -255,7 +274,10 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
               label={t("offer.pickProduct")}
               searchTargets={searchProducts}
               selected={product}
-              onPick={setProduct}
+              onPick={(picked) => {
+                faults.edited("unit_price_minor");
+                setProduct(picked);
+              }}
             />
             {product && (
               <p className="t-caption">
@@ -269,15 +291,7 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
             disabled={addMutation.isPending}
             className="offers-add-line"
             onClick={() => {
-              if (isUnnamedOtherUnit(newLine.unit)) {
-                setUnitRefused(true);
-                return;
-              }
-              // Each refused figure already names why under its field.
-              if (
-                priceRefused ||
-                faults.show(figureFaults(newLine, locale, t))
-              ) {
+              if (refusesAdd()) {
                 return;
               }
               addMutation.mutate(

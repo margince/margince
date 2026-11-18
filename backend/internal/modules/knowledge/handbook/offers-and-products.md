@@ -50,6 +50,8 @@ To add a line to an offer in Margince, open the draft offer and fill the **Add l
 3. For a line that repeats, set **Billing** to **Recurring**, a **Billing period**, and **Periods** agreed.
 4. Click **Add line**. To take a line out again, choose **Remove line** on its row.
 
+A line needs a **Unit price** or a picked product; a picked product with no price typed takes its rate card price. Type an amount with a comma or a dot before the decimals, and no thousands separators. An amount the field cannot use stays in the field with the reason under it.
+
 Each added line keeps its **Billing**, **Billing period** and **Periods** in its row, and you can change them there while the offer is a draft. A line made **Recurring** saves once it has a **Billing period**. A change the offer refuses goes back to the saved value, and the reason shows in that line's row.
 You can add or remove lines only while the offer is a draft. After that, and on an offer made from the deal's products, **Line items** lists the lines without controls.
 Also called: line item, position, add an item to a quote.
