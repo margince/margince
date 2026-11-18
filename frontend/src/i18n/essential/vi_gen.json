@@ -1692,6 +1692,7 @@
   "record.timeline": "Lịch sử",
   "record.fieldRequired": "Trường này bắt buộc.",
   "record.amountTooPrecise": "Số tiền này có nhiều chữ số thập phân hơn mức {currency} cho phép.",
+  "record.amountTooLarge": "Số tiền này quá lớn để lưu.",
   "record.finishFieldEdit": "Lưu hoặc hủy chỉnh sửa hiện tại trước khi đóng chi tiết.",
   "record.save": "Lưu",
   "record.archived": "Trong kho lưu trữ",
