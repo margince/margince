@@ -8017,9 +8017,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.country.useRecord": "Land aus dem Datensatz verwenden",
   "compose.country.row": "Land: {detail}",
   "compose.country.fromSender":
-    "{country}, für diese Nachricht vom Absender gesetzt",
+    "{country}, gesetzt von der Person, die diese Nachricht sendet",
   "compose.country.clearedBySender":
-    "keines, für diese Nachricht vom Absender entfernt",
+    "keines, entfernt von der Person, die diese Nachricht sendet",
   "compose.colleagueUnnamed": "einem Teammitglied",
   "compose.threadGoneTitle": "Thread kann nicht beantwortet werden",
   "compose.colleagueMailboxTitle":
