@@ -11,6 +11,8 @@ import (
 	"os/exec"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"time"
 
 	"github.com/tetratelabs/wazero/sys"
@@ -51,6 +53,10 @@ func inChild(t *testing.T) bool {
 	t.Helper()
 	if os.Getenv(childEnv) == t.Name() {
 		return true
+	}
+	// The child is this test binary; it reads only the module the build embeds.
+	if err := gatekit.DeclareInputs(os.Getenv, "module"); err != nil {
+		t.Fatal(err)
 	}
 	ctx, cancel := context.WithTimeout(t.Context(), hangLimit)
 	defer cancel()
