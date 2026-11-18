@@ -147,7 +147,9 @@ async function servesTheApp(path: string, proxied: string | ProxyOptions) {
   const navigation = new IncomingMessage(new Socket());
   navigation.url = path;
   navigation.headers = { "sec-fetch-dest": "document" };
-  return typeof (await proxied.bypass(navigation, undefined, proxied)) === "string";
+  return (
+    typeof (await proxied.bypass(navigation, undefined, proxied)) === "string"
+  );
 }
 
 /** The dev server's proxy keys, less those whose bypass hands a browser navigation
