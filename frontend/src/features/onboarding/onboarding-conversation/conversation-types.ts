@@ -43,7 +43,6 @@ export type ConversationPhase =
   | "vo.speaker"
   | "vo.building"
   | "vo.result"
-  | "vo.skipped"
   | "in.ask"
   | "tm.ask"
   // The connect act carries BOTH mail and LinkedIn on one surface: mail is
@@ -91,9 +90,8 @@ export type ConversationQuestion = {
   i18nKey: MessageKey;
   params?: Record<string, string>;
   options: QuestionOption[];
-  /** The subordinate local-dismiss action's label (humans outrank the
-   * reader: a question is never an unanswerable gate). Absent on a question
-   * whose dismissal would leave nothing true to record. */
+  /** The local dismissal's label, so no question is an unanswerable gate.
+   *  Absent where a dismissal would leave nothing true to record. */
   dismissLabelKey?: MessageKey;
 };
 
@@ -137,7 +135,7 @@ export type ConversationState = {
   act: ConversationAct;
   phase: ConversationPhase;
   memberPath: boolean;
-  /** False for a member whose role may not create a voice profile: the voice
+  /** False for a member whose role may not create a voice profile. The voice
    * act and its rail stop are left out, since every sample would be refused. */
   voiceStep: boolean;
   pendingQuestion: ConversationQuestion | null;
@@ -189,7 +187,7 @@ export type BuildTerminalStatus = "succeeded" | "failed" | "deferred";
  */
 export type ResumePoint = Extract<
   ConversationPhase,
-  "bs.ask" | "in.ask" | "tm.ask" | "vo.collecting" | "vo.skipped" | "cn.consent"
+  "bs.ask" | "in.ask" | "tm.ask" | "vo.collecting" | "cn.consent"
 >;
 
 export type ConversationEvent =

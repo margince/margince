@@ -12,6 +12,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../../api/schema";
 import { LocaleProvider } from "../../../i18n";
+import { en } from "../../../i18n/en";
 import { type GrantSpec, meFixture } from "../../../testing/mefixture";
 import { OnboardingScreen } from "../onboarding";
 
@@ -588,19 +589,19 @@ describe("restore into the conversational shell", () => {
     ).toBeTruthy();
   });
 
-  // Leaving the voice act lands directly on the merged connect screen — mail
+  // Skipping the voice act lands directly on the merged connect screen — mail
   // and LinkedIn together, no separate network-ask act to pass through — and
-  // checkpoints step "connect" immediately: arriving here already shows
-  // everything, so there is nothing a reload could strand behind it.
-  it("continuing out of the voice act lands on the merged connect screen and checkpoints it on arrival", async () => {
+  // checkpoints step "connect" with the skip in one write: arriving here
+  // already shows everything, so there is nothing a reload could strand.
+  it("skipping the voice act lands on the merged connect screen and checkpoints it on arrival", async () => {
     const calls = stubApi({
-      state: stateRow({ step: "voice", voice_skipped: true }),
+      state: stateRow({ step: "voice" }),
       company: savedProfile,
     });
     render(<OnboardingScreen />);
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "Continue" }),
+      await screen.findByRole("button", { name: en["ob.conv.voice.skipped"] }),
     );
 
     expect(
@@ -616,18 +617,18 @@ describe("restore into the conversational shell", () => {
     const body = (await requestsTo(calls, "/onboarding/state", "PUT")[0]
       .clone()
       .json()) as Record<string, unknown>;
-    expect(body.step).toBe("connect");
+    expect(body).toMatchObject({ step: "connect", voice_skipped: true });
   });
 
   it("skipping LinkedIn on the merged screen records no further checkpoint — the arrival already did", async () => {
     const calls = stubApi({
-      state: stateRow({ step: "voice", voice_skipped: true }),
+      state: stateRow({ step: "voice" }),
       company: savedProfile,
     });
     render(<OnboardingScreen />);
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "Continue" }),
+      await screen.findByRole("button", { name: en["ob.conv.voice.skipped"] }),
     );
     await waitFor(() => {
       expect(requestsTo(calls, "/onboarding/state", "PUT").length).toBe(1);

@@ -13331,7 +13331,6 @@ export const en = {
   "ob.conv.voice.speakerOptionDetail": "words: {words} · turns: {turns}",
   "ob.conv.voice.speakerFoot": "Your choice applies to this file only.",
   "ob.conv.voice.speakerContinue": "Use this speaker",
-  "ob.conv.voice.continueSkippedStatus": "Skipped. Add it later in Settings.",
   "ob.conv.voice.continueFailedStatus":
     "Your material is kept. Retry now, or continue and finish this later.",
   "ob.conv.voice.continueDeferredStatus":

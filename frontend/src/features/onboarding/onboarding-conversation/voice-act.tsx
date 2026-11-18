@@ -220,10 +220,9 @@ function boardHeading(
   };
 }
 
-// The fallback branch's own Continue: `vo.skipped` has nothing left to
-// finish, a failed build offers the retry the machine still permits, a
-// deferred one has already said so honestly in its rail outcome and only
-// waits for the human to move on. Every case shares the one action.
+// The fallback branch's own Continue: a failed build offers the retry the
+// machine still permits, a deferred one has already said so honestly in its
+// rail outcome and only waits for the human to move on.
 function continueBarFor(
   state: ConversationState,
   build: ReturnType<typeof useVoiceBuild>,
@@ -235,9 +234,6 @@ function continueBarFor(
   onRetry?: () => void;
 }> | null {
   const onContinue = () => dispatch({ type: "VOICE_DONE" });
-  if (state.phase === "vo.skipped") {
-    return { reason: "skipped", onContinue };
-  }
   if (state.phase === "vo.result" && state.lastBuildStatus === "failed") {
     return {
       reason: "failed",
@@ -338,8 +334,8 @@ function VoiceSurface({
       />
     );
   }
-  // Everything a scene does not own — a failed or deferred build, the skip
-  // — keeps the corpus dossier, now carrying its own pinned Continue. The
+  // Everything a scene does not own — a failed or deferred build — keeps
+  // the corpus dossier, now carrying its own pinned Continue. The
   // build scene above has already claimed every building phase, so no
   // tracker runs here.
   return (

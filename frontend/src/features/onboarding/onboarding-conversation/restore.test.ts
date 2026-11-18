@@ -189,7 +189,7 @@ describe("restorePlan", () => {
     expect(plan).toMatchObject({
       memberPath: true,
       voiceStep: true,
-      resumeTarget: "vo.skipped",
+      resumeTarget: "cn.consent",
     });
     if (plan.kind !== "start") {
       throw new Error("expected a start plan");
@@ -274,7 +274,7 @@ describe("restorePlan", () => {
         routeConnect: false,
         locale: "en",
       }),
-    ).toMatchObject({ resumeTarget: "vo.skipped" });
+    ).toMatchObject({ resumeTarget: "cn.consent" });
     expect(
       restorePlan({
         state: stateRow({ step: "team", voice_skipped: true }),

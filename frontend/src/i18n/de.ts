@@ -13407,8 +13407,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "ob.conv.voice.speakerOptionDetail": "Wörter: {words} · Beiträge: {turns}",
   "ob.conv.voice.speakerFoot": "Deine Wahl gilt nur für diese Datei.",
   "ob.conv.voice.speakerContinue": "Diese Person verwenden",
-  "ob.conv.voice.continueSkippedStatus":
-    "Übersprungen. Später in den Einstellungen hinzufügen.",
   "ob.conv.voice.continueFailedStatus":
     "Dein Material bleibt erhalten. Bitte versuche es jetzt erneut oder mache weiter und schließe den Aufbau später ab.",
   "ob.conv.voice.continueDeferredStatus":

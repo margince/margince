@@ -164,9 +164,9 @@ function resumeTarget(state: OnboardingState): ResumePoint {
     return "tm.ask";
   }
   // step "voice": the act is still open, and lands straight on the collect
-  // scene. A skip recorded early is honored; otherwise collection reopens
-  // (or starts) with whatever corpus the server already holds.
-  return state.voice_skipped ? "vo.skipped" : "vo.collecting";
+  // scene with whatever corpus the server already holds. A skip recorded at
+  // this step was the way into connect, so that is where it lands.
+  return state.voice_skipped ? "cn.consent" : "vo.collecting";
 }
 
 function recapEntries(

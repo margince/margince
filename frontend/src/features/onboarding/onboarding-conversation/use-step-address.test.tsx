@@ -11,18 +11,18 @@ import {
 import { run } from "./test-fixtures";
 import { useStepAddress } from "./use-step-address";
 
-// The real reducer and the real router under the hook: what is proven is that
-// the address and the act on screen agree, whichever of the two moved.
+// The real reducer and the real router under the hook. What is proven: the
+// address and the act on screen agree, whichever of the two moved.
 
-const onVoiceSkipped = run([
+const onVoice = run([
   { type: "START", memberPath: true, companyConfirmed: true },
-  { type: "RESUME", target: "vo.skipped" },
+  { type: "RESUME", target: "vo.collecting" },
 ]);
 
 let send: (event: ConversationEvent) => void = () => {};
 
 function Harness() {
-  const [state, dispatch] = useReducer(conversationReducer, onVoiceSkipped);
+  const [state, dispatch] = useReducer(conversationReducer, onVoice);
   const route = useRoute();
   useStepAddress(state, dispatch, route.id);
   send = dispatch;
@@ -45,7 +45,7 @@ describe("each step at its own address", () => {
       expect(globalThis.location.hash).toBe("#/onboarding/voice"),
     );
     const entries = globalThis.history.length;
-    act(() => send({ type: "VOICE_DONE" }));
+    act(() => send({ type: "VOICE_SKIPPED" }));
     await waitFor(() =>
       expect(globalThis.location.hash).toBe("#/onboarding/connect"),
     );
@@ -56,7 +56,7 @@ describe("each step at its own address", () => {
 
   it("takes the browser's move back to the voice address as a step back", async () => {
     render(<Harness />);
-    act(() => send({ type: "VOICE_DONE" }));
+    act(() => send({ type: "VOICE_SKIPPED" }));
     await waitFor(() =>
       expect(globalThis.location.hash).toBe("#/onboarding/connect"),
     );
@@ -70,7 +70,7 @@ describe("each step at its own address", () => {
 
   it("follows the Back button's own step back", async () => {
     render(<Harness />);
-    act(() => send({ type: "VOICE_DONE" }));
+    act(() => send({ type: "VOICE_SKIPPED" }));
     act(() => send({ type: "CONNECT_BACK" }));
     await waitFor(() =>
       expect(globalThis.location.hash).toBe("#/onboarding/voice"),

@@ -13055,8 +13055,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "ob.conv.voice.speakerOptionDetail": "số từ: {words} · lượt nói: {turns}",
   "ob.conv.voice.speakerFoot": "Lựa chọn này chỉ áp dụng cho tệp này.",
   "ob.conv.voice.speakerContinue": "Dùng người nói này",
-  "ob.conv.voice.continueSkippedStatus":
-    "Đã bỏ qua. Bổ sung sau trong Cài đặt.",
   "ob.conv.voice.continueFailedStatus":
     "Nội dung đã thêm vẫn được giữ. Thử lại ngay, hoặc tiếp tục và hoàn tất phần này sau.",
   "ob.conv.voice.continueDeferredStatus":

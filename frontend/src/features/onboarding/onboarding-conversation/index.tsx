@@ -131,9 +131,8 @@ const actCheckpoints: ReadonlyMap<
   ["bs.ask>in.ask", { step: "invite" }],
   ["in.ask>vo.collecting", { step: "voice", voiceSkipped: false }],
   ["in.ask>tm.ask", { step: "team", voiceSkipped: true, connectSkipped: true }],
-  ["vo.collecting>vo.skipped", { step: "voice", voiceSkipped: true }],
+  ["vo.collecting>cn.consent", { step: "connect", voiceSkipped: true }],
   ["vo.result>cn.consent", { step: "connect" }],
-  ["vo.skipped>cn.consent", { step: "connect" }],
   ["cn.consent>vo.collecting", { step: "voice", voiceSkipped: false }],
   ["cn.consent>vo.result", { step: "voice", voiceSkipped: false }],
 ]);

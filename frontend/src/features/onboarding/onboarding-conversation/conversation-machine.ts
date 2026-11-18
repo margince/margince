@@ -89,7 +89,6 @@ const resumeActs: Record<ResumePoint, ConversationAct> = {
   "in.ask": "invite",
   "tm.ask": "team",
   "vo.collecting": "voice",
-  "vo.skipped": "voice",
   "cn.consent": "connect",
 };
 
@@ -368,10 +367,11 @@ function applyEvent(
           tone: "success",
         },
       ]);
+    // One press leaves the step; connect's Back is the way to train it after all.
     case "VOICE_SKIPPED":
       return withEntries(
         state,
-        { phase: "vo.skipped", pendingQuestion: null },
+        { act: "connect", phase: "cn.consent", pendingQuestion: null },
         [
           {
             kind: "user",

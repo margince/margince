@@ -35,10 +35,9 @@ const stageLabelKeys = {
 
 // Which outcome the reader is leaving the voice act from: picks the pinned
 // bar's status line, and only "failed" ever offers a retry beside Continue.
-export type VoiceContinueReason = "skipped" | "failed" | "deferred";
+export type VoiceContinueReason = "failed" | "deferred";
 
 const continueStatusKeys: Record<VoiceContinueReason, MessageKey> = {
-  skipped: "ob.conv.voice.continueSkippedStatus",
   failed: "ob.conv.voice.continueFailedStatus",
   deferred: "ob.conv.voice.continueDeferredStatus",
 };

@@ -10,6 +10,7 @@ import {
   initialConversationState,
 } from "./conversation-machine";
 import { run } from "./test-fixtures";
+import { VoiceAct } from "./voice-act";
 import {
   BUILD_IDS,
   BUILD_TEST_MS,
@@ -171,7 +172,8 @@ describe("the conversational voice act", () => {
         initial={{
           ...initialConversationState,
           act: "voice",
-          phase: "vo.skipped",
+          phase: "vo.result",
+          lastBuildStatus: "deferred",
         }}
       />,
     );
@@ -614,23 +616,16 @@ describe("the voice act's surface/rail split", () => {
     expect(screen.getAllByRole("radio").length).toBeGreaterThan(0);
   });
 
-  it("renders a skipped voice act's Continue action on the surface's own pinned bar", () => {
+  it("leaves the step in one press of Skip, with no second screen to pass", async () => {
     stubApi({});
-    render(
-      <VoiceHarness
-        initial={{
-          ...initialConversationState,
-          act: "voice",
-          phase: "vo.skipped",
-        }}
-      />,
+    const dispatch = vi.fn();
+    render(<VoiceAct state={collectingState()} dispatch={dispatch} />);
+
+    await userEvent.click(
+      screen.getByRole("button", { name: en["ob.conv.voice.skipped"] }),
     );
 
-    const bar = document.querySelector(".ob-stage-acts");
-    expect(bar).not.toBeNull();
-    expect(
-      within(bar as HTMLElement).getByRole("button", { name: "Continue" }),
-    ).toBeTruthy();
+    expect(dispatch.mock.calls).toEqual([[{ type: "VOICE_SKIPPED" }]]);
   });
 
   it("renders the succeeded result as structured sections, each from the same parsed data", async () => {

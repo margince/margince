@@ -250,7 +250,7 @@ describe("conversationReducer happy path", () => {
     expect(conversationReducer(failed, { type: "VOICE_REVISE" })).toBe(failed);
   });
 
-  it("lets the voice act be skipped and still reach connect", () => {
+  it("skips the voice act in one press, straight to connect", () => {
     const state = run([
       { type: "START", memberPath: false },
       { type: "READ_STARTED", readId: "r1" },
@@ -260,7 +260,6 @@ describe("conversationReducer happy path", () => {
       { type: "BASIS_DONE" },
       { type: "INVITE_ACCEPTED" },
       { type: "VOICE_SKIPPED" },
-      { type: "VOICE_DONE" },
     ]);
     expect(state).toMatchObject({ act: "connect", phase: "cn.consent" });
     expect(
@@ -314,7 +313,6 @@ describe("restore normalization out of co.confirmed", () => {
     const targets = [
       { target: "bs.ask", act: "basis" },
       { target: "vo.collecting", act: "voice" },
-      { target: "vo.skipped", act: "voice" },
       { target: "in.ask", act: "invite" },
       { target: "tm.ask", act: "team" },
       { target: "cn.consent", act: "connect" },
@@ -329,7 +327,6 @@ describe("restore normalization out of co.confirmed", () => {
   it("fast-forwards a member to their own stable points, and never into a creator act", () => {
     const own = [
       { target: "vo.collecting", act: "voice" },
-      { target: "vo.skipped", act: "voice" },
       { target: "cn.consent", act: "connect" },
     ] as const;
     for (const { target, act } of own) {
@@ -397,7 +394,7 @@ describe("restore seeding through START", () => {
 
 describe("a member who may not train a voice", () => {
   it("starts at connect, wherever the restore pointed", () => {
-    for (const target of [undefined, "vo.collecting", "vo.skipped"] as const) {
+    for (const target of [undefined, "vo.collecting", "cn.consent"] as const) {
       const state = run([
         {
           type: "START",
@@ -417,7 +414,7 @@ describe("a member who may not train a voice", () => {
 });
 
 describe("back from connect", () => {
-  const member = (target: "vo.collecting" | "vo.skipped") =>
+  const member = (target: "vo.collecting") =>
     run([
       { type: "START", memberPath: true, companyConfirmed: true },
       { type: "RESUME", target },
@@ -425,8 +422,8 @@ describe("back from connect", () => {
 
   it("returns a skipped voice to collecting, so it can be trained after all", () => {
     const state = run(
-      [{ type: "VOICE_DONE" }, { type: "CONNECT_BACK" }],
-      member("vo.skipped"),
+      [{ type: "VOICE_SKIPPED" }, { type: "CONNECT_BACK" }],
+      member("vo.collecting"),
     );
     expect(state).toMatchObject({ act: "voice", phase: "vo.collecting" });
   });
@@ -514,10 +511,7 @@ describe("member path", () => {
       expect(conversationReducer(state, event)).toBe(state);
     }
     // The voice act is theirs, with every event in it.
-    const skipped = run(
-      [{ type: "VOICE_SKIPPED" }, { type: "VOICE_DONE" }],
-      state,
-    );
+    const skipped = run([{ type: "VOICE_SKIPPED" }], state);
     expect(skipped).toMatchObject({ act: "connect", phase: "cn.consent" });
   });
 });
