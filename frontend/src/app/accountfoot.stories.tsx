@@ -13,8 +13,7 @@ import { SignOutRow } from "./accountfoot";
 
 /**
  * Sign out, refused: the server's words in an alert under the row. The row is
- * enabled again. `AccountRelease` is drawn where it ships, at the foot of
- * "Shell/Account help and feedback".
+ * enabled again.
  */
 const meta: Meta<typeof SignOutRow> = {
   title: "Shell/Account sign-out",

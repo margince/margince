@@ -101,6 +101,8 @@ describe("the scope each page declares", () => {
     "system-health": "installation",
     configuration: "installation",
     reset: "installation",
+    // A read of the build, whoever the reader is.
+    about: "installation",
 
     // One workspace's state.
     members: "workspace",
@@ -272,6 +274,7 @@ describe("what each page lets a reader change", () => {
     extensions: "all(full-seat, any(any(role_admin:update)))",
     configuration: "all(full-seat, any(any(installation_settings:update)))",
     reset: "all(full-seat, system_reset:delete, flag:data_reset_available)",
+    about: "same-as-requires",
   };
 
   it("declares the expression this census names, for every page", () => {
@@ -380,6 +383,7 @@ describe("who may open what", () => {
       "voice",
       "agents",
       "connections",
+      "about",
     ]);
   });
 
