@@ -27,7 +27,7 @@ export function OfferHeaderFields({ offer }: Readonly<{ offer: Offer }>) {
   const { locale } = useLocale();
   const zone = useViewerZone();
   const entities = useLegalEntities(offer.legal_entity_id != null).data;
-  const templates = useOfferTemplates().data;
+  const templates = useOfferTemplates(offer.template_id != null).data;
   const issuer = entities?.find(
     (entity) => entity.id === offer.legal_entity_id,
   );

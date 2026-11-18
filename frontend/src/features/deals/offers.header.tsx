@@ -48,11 +48,11 @@ async function searchCompanyCandidates(
   }));
 }
 
-export function useOfferTemplates() {
+export function useOfferTemplates(enabled = true) {
   const readerScope = useHealthScope();
   return useQuery({
     queryKey: ["offer-templates-all", readerScope ?? ""],
-    enabled: readerScope !== undefined,
+    enabled: enabled && readerScope !== undefined,
     queryFn: async () => {
       const data = unwrap(
         await api.GET("/offer-templates", {

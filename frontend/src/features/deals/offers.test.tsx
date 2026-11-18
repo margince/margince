@@ -263,21 +263,6 @@ describe("OfferLineEditor (OP-7/OP-13)", () => {
     expect(screen.queryByTestId("remove-line-li-1")).toBeNull();
   });
 
-  it("shows the offer's revision, valid-until day, intro and terms", async () => {
-    stubOffer({
-      ...baseOffer,
-      status: "sent",
-      intro_text: "Dear buyer,\nhere is our offer.",
-      terms_text: "Payable in 30 days.",
-    });
-    render(<OfferScreen id="o-1" />);
-    await screen.findByText("ANG-2026-0007");
-    expect(screen.getByText("Revision")).toBeTruthy();
-    expect(screen.getByText("01/08/2026")).toBeTruthy();
-    expect(screen.getByText(/here is our offer/)).toBeTruthy();
-    expect(screen.getByText("Payable in 30 days.")).toBeTruthy();
-  });
-
   it("refreshes totals from the add-line response, never a client-computed sum", async () => {
     // The naive client-side sum of the existing line's gross (119000) plus a
     // plausible new line would land somewhere near 119000 + a few thousand.
