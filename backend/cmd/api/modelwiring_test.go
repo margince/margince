@@ -21,6 +21,7 @@ import (
 	"go/token"
 	"io"
 	"log/slog"
+	"maps"
 	"strings"
 	"testing"
 
@@ -442,9 +443,7 @@ func TestTheRewriteEndpointRidesTheRewriteLane(t *testing.T) {
 	}
 }
 
-// Settings, AI models, saves a binding the watcher adopts within a minute. The
-// profile reads and the routing version the cached briefs fingerprint against
-// must follow it there, not wait for the api to restart.
+// Settings, AI models, saves a binding the routing watcher adopts within a minute.
 func TestABoundPathFollowsARebindWithoutARestart(t *testing.T) {
 	const bound = `profile: eu_hosted
 tiers:
@@ -470,9 +469,45 @@ embeddings: {provider: fake}
 	if modelPath.RoutingVersion() == bootVersion {
 		t.Error("the routing version the briefs fingerprint against kept its boot value")
 	}
-	for _, m := range profile().ConfiguredModels {
-		if strings.HasPrefix(m.Model, "first-") {
-			t.Errorf("profile still names the boot model %s on %s", m.Model, m.Tier)
-		}
+	assertProfileModels(t, profile(), map[string]string{"local_small": "second-small", "premium": "second-large"})
+}
+
+// A boot that fell back to the fake starts the same watcher, so an admin who
+// then binds a servable model sees it named.
+func TestAFakeBootProfileFollowsTheBindingTheWatcherAdopts(t *testing.T) {
+	modelPath, state, profile, err := modelPathFor(context.Background(), ai.RoutingConfig{}, modelPathSpec{fakeBrain: true}, nil, discardLogger())
+	if err != nil || state != compose.AIStateFake {
+		t.Fatalf("modelPathFor = state %q err %v, want the fake path", state, err)
+	}
+	if got := profile().State; got != "development" {
+		t.Fatalf("fake boot profile state = %q, want development", got)
+	}
+	bound, err := ai.ParseRouting([]byte(`profile: eu_hosted
+tiers:
+  premium: {provider: ollama, model: bound-large}
+embeddings: {provider: fake}
+`))
+	if err != nil {
+		t.Fatalf("ParseRouting: %v", err)
+	}
+	if err := modelPath.Router().Rebind(bound); err != nil {
+		t.Fatalf("Rebind: %v", err)
+	}
+	if got := profile().State; got != "configured" {
+		t.Errorf("profile state after the watcher adopted a binding = %q, want configured", got)
+	}
+	assertProfileModels(t, profile(), map[string]string{"premium": "bound-large"})
+}
+
+// assertProfileModels holds the profile to these tier models and no others, so an
+// empty list or a stale one beside the new one fails.
+func assertProfileModels(t *testing.T, profile ai.PublicProfile, want map[string]string) {
+	t.Helper()
+	got := map[string]string{}
+	for _, m := range profile.ConfiguredModels {
+		got[string(m.Tier)] = m.Model
+	}
+	if !maps.Equal(got, want) {
+		t.Errorf("profile models = %v, want %v", got, want)
 	}
 }

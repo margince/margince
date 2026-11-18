@@ -55,11 +55,8 @@ func WithAccountDraft(brain completer) Option {
 // prepared "Ask Margince" questions — and the routing version that
 // identifies the binding in every cached brief's fingerprint.
 //
-// Without it both serve their deterministic floor rather than failing: a
-// role that runs no model still answers the endpoints, and generated_by
-// tells the reader which of the two they have. routingVersion rides the
-// fingerprint so re-pointing this lane rewrites cached briefs instead of
-// leaving text attributed to a model that no longer writes it.
+// Without it both serve their deterministic floor. A role that runs no model
+// still answers the endpoints, and generated_by says which one it served.
 func WithCompanyBrief(brain completer, routingVersion func() string) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		s.companyBriefSvc = companybrief.NewService(pool, s.company360Svc, s.contactsStore, brain, routingVersion, time.Now).
@@ -100,10 +97,8 @@ func WithCompanyDossier(brain completer, routingVersion func() string) Option {
 // recorded values. So an unwired deployment serves "here is what I would need
 // to know", labelled deterministic, and never a band nobody stands behind.
 //
-// The dossier service is rebound alongside it rather than rebuilt, because the
-// two share one handler set: replacing that set while remembering only one
-// service would leave the other endpoint answering from a service the Server no
-// longer holds.
+// The dossier service is rebound alongside it, as the two share one handler
+// set. A set holding only one would serve the other from a stale service.
 func WithGrowthFit(brain completer, routingVersion func() string) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		s.companyGrowthFitSvc = companydossier.NewGrowthFitService(

@@ -64,7 +64,10 @@ func newSalesAssessments(reports *reporting.Service, decisions salesDecisions, d
 }
 
 func (s *salesAssessments) withLane(lane completer, routingVersion func() string) *salesAssessments {
-	s.lane, s.routingVersion = lane, routingVersion
+	s.lane = lane
+	if routingVersion != nil {
+		s.routingVersion = routingVersion
+	}
 	return s
 }
 

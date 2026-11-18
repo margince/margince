@@ -153,10 +153,8 @@ func modelPathFor(ctx context.Context, cfg ai.RoutingConfig, spec modelPathSpec,
 				"error", err)
 			continue
 		}
-		profile := fixedProfile(ai.NewPublicProfile(candidate.state, candidate.cfg))
-		if router := modelPath.Router(); candidate.state == compose.AIStateConfigured && router != nil {
-			profile = router.ConfiguredProfile
-		}
+		boot := ai.NewPublicProfile(candidate.state, candidate.cfg)
+		profile := liveProfile(modelPath.Router(), boot, candidate.state == compose.AIStateConfigured)
 		return &modelPath, candidate.state, profile, nil
 	}
 	return nil, compose.AIStateUnconfigured,
@@ -164,9 +162,24 @@ func modelPathFor(ctx context.Context, cfg ai.RoutingConfig, spec modelPathSpec,
 }
 
 // fixedProfile answers one profile for the life of the process, for a path
-// that serves no stored binding a rebind could move.
+// with no router a rebind could move.
 func fixedProfile(profile ai.PublicProfile) func() ai.PublicProfile {
 	return func() ai.PublicProfile { return profile }
+}
+
+// liveProfile reads the binding the router serves now. A fake boot keeps its
+// development profile until the routing watcher adopts a stored binding.
+func liveProfile(router *ai.Router, boot ai.PublicProfile, configured bool) func() ai.PublicProfile {
+	if router == nil {
+		return fixedProfile(boot)
+	}
+	bootVersion := router.RoutingVersion()
+	return func() ai.PublicProfile {
+		if !configured && router.RoutingVersion() == bootVersion {
+			return boot
+		}
+		return router.ConfiguredProfile()
+	}
 }
 
 // coldStartOptions wires the cold-start read-back's model surface over
