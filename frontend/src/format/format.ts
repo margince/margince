@@ -115,6 +115,21 @@ export function formatMoneyOrAbsent(
   );
 }
 
+const SCALES = {
+  thousand: 1_000,
+  million: 1_000_000,
+  billion: 1_000_000_000,
+} as const;
+// The scales Intl's compact notation does not abbreviate the way the locale
+// reads them: German has no short form for thousands ("12.345,6 $"), and
+// Vietnamese business usage is not CLDR's.
+const HAND_SCALED_UNITS: Partial<
+  Record<Locale, Partial<Record<keyof typeof SCALES, string>>>
+> = {
+  vi: { thousand: "K", million: " triệu", billion: " tỷ" },
+  de: { thousand: "\u00a0Tsd." },
+};
+
 /**
  * A money figure for a KPI SLOT: €428k rather than €428,000.00.
  *
@@ -142,18 +157,17 @@ export function formatMoneyCompact(
   if (!abbreviated && !Number.isInteger(major)) {
     return formatMoney(amountMinor, currency, locale);
   }
-  const vietnameseCompact = locale === "vi" && abbreviated;
-  const scale =
-    Math.abs(major) >= 1_000_000_000
-      ? 1_000_000_000
-      : Math.abs(major) >= 1_000_000
-        ? 1_000_000
-        : 1_000;
-  const unit = scale === 1_000 ? "K" : scale === 1_000_000 ? " triệu" : " tỷ";
+  const magnitude =
+    Math.abs(major) >= SCALES.billion
+      ? "billion"
+      : Math.abs(major) >= SCALES.million
+        ? "million"
+        : "thousand";
+  const unit = abbreviated ? HAND_SCALED_UNITS[locale]?.[magnitude] : undefined;
   const formatter = new Intl.NumberFormat(INTL_LOCALE[locale], {
     style: "currency",
     currency,
-    notation: abbreviated && !vietnameseCompact ? "compact" : "standard",
+    notation: abbreviated && unit === undefined ? "compact" : "standard",
     // Spelled out: the currency style starts the minimum at the currency's own
     // digits, so a maximum of 1 alone always prints one digit ("€420.0k").
     minimumFractionDigits: 0,
@@ -166,8 +180,8 @@ export function formatMoneyCompact(
     // not reach; truncating drops digits but never adds any.
     roundingMode: "trunc",
   });
-  if (!vietnameseCompact) return formatter.format(major);
-  const parts = formatter.formatToParts(major / scale);
+  if (unit === undefined) return formatter.format(major);
+  const parts = formatter.formatToParts(major / SCALES[magnitude]);
   const lastDigit = parts.reduce(
     (last, part, index) =>
       part.type === "integer" || part.type === "fraction" ? index : last,
