@@ -349,10 +349,25 @@ func wire(ctx context.Context, a row, now time.Time) crmcontracts.Approval {
 	out.Evidence = wireEvidence(a.Evidence)
 	out.EffectFailedAt = a.EffectFailedAt
 	out.EffectFailure = a.EffectFailure
+	if unredeemedPastWindow(a, now) {
+		// The sweep will record this same outcome. Until it does, the row must
+		// not read as done.
+		lapsedAt := a.DecidedAt.Add(redemptionTTL)
+		sentence := lapsedRedemptionSentence
+		out.EffectFailedAt, out.EffectFailure = &lapsedAt, &sentence
+	}
 	if awaitsAgent(a, now) {
 		out.AwaitingAgent = new(true)
 	}
 	return out
+}
+
+// unredeemedPastWindow is an approved agent staging whose redemption window
+// closed with the agent never coming back and no sweep has marked yet.
+func unredeemedPastWindow(a row, now time.Time) bool {
+	return a.Status == approvalStatusApproved && agentRedeems(a) &&
+		a.ConsumedAt == nil && a.EffectRanAt == nil && a.EffectFailedAt == nil &&
+		redemptionLapsed(a, now)
 }
 
 // awaitsAgent is an approved proposal the staging agent has not redeemed. The
