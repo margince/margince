@@ -217,7 +217,9 @@ func readComposeFile() ([]byte, error) {
 // that wait has more tests using Redis at once than it has databases.
 func takeLease(t testing.TB, ledger *redis.Client, addr, token string, highest int) int {
 	t.Helper()
-	deadline := time.Now().Add(leaseWait)
+	deadline := time.After(leaseWait)
+	poll := time.NewTicker(leasePoll)
+	defer poll.Stop()
 	for {
 		db, err := acquireLease.Run(t.Context(), ledger, nil,
 			token, highest, leaseTTL.Milliseconds(), leasePrefix).Int()
@@ -228,12 +230,13 @@ func takeLease(t testing.TB, ledger *redis.Client, addr, token string, highest i
 		if db > 0 {
 			return db
 		}
-		if time.Now().After(deadline) {
+		select {
+		case <-deadline:
 			closeClient(t, ledger)
 			t.Fatalf("every one of the %d databases on the test redis at %s stayed leased for %s: more tests use Redis at once than it serves; list the holders with `redis-cli -p <port> --scan --pattern '%s*'`",
 				highest, addr, leaseWait, leasePrefix)
+		case <-poll.C:
 		}
-		time.Sleep(leasePoll)
 	}
 }
 

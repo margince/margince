@@ -141,9 +141,8 @@ func (x *Extensions) BindRuntime(pool *pgxpool.Pool, vault keyvault.Vault) {
 // role that runs unattended extension work calls it once at boot with the
 // deployment capture config its own connectors run on.
 //
-// It takes the config and assembles the sink here. newCaptureSink is the one
-// spelling that attaches the file keeper, merge stager and counterparty ensurer. A role that never calls it leaves ingress refusing with
-// errIngressUnwired.
+// It takes the config and assembles the sink here through newCaptureSink. A
+// role that never calls it leaves ingress refusing with errIngressUnwired.
 func (x *Extensions) BindCapture(pool *pgxpool.Pool, cfg CaptureConfig) {
 	x.mu.Lock()
 	defer x.mu.Unlock()

@@ -216,7 +216,7 @@ func TestRetainOnlyPostureSuppressesDestructionButNotArchival(t *testing.T) {
 
 	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(os.Stderr, nil)))
 	SettleIntoInstall(t, e)
-	if err := svc.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
+	if err := svc.EvaluateInstallation(RetentionPassCtx(context.Background(), e.WS)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -261,7 +261,7 @@ func TestRetainOnlyPostureSuppressesDestructionButNotArchival(t *testing.T) {
 		t.Fatal(err)
 	}
 	SettleIntoInstall(t, e)
-	if err := svc.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
+	if err := svc.EvaluateInstallation(RetentionPassCtx(context.Background(), e.WS)); err != nil {
 		t.Fatal(err)
 	}
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -448,7 +448,7 @@ func TestRetainOnlyPostureDoesNotDestroyContentThroughTheEmbedCascade(t *testing
 
 	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(os.Stderr, nil)))
 	SettleIntoInstall(t, e)
-	if err := svc.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
+	if err := svc.EvaluateInstallation(RetentionPassCtx(context.Background(), e.WS)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -477,7 +477,7 @@ func TestRetainOnlyPostureDoesNotDestroyContentThroughTheEmbedCascade(t *testing
 		t.Fatal(err)
 	}
 	SettleIntoInstall(t, e)
-	if err := svc.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
+	if err := svc.EvaluateInstallation(RetentionPassCtx(context.Background(), e.WS)); err != nil {
 		t.Fatal(err)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM ai_call WHERE id = $1`, withContent); n != 0 {
@@ -532,7 +532,7 @@ func TestAPolicyWithNoExecutorCannotBeAuthoredAndCannotStopThePass(t *testing.T)
 
 	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(os.Stderr, nil)))
 	SettleIntoInstall(t, e)
-	if err := svc.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
+	if err := svc.EvaluateInstallation(RetentionPassCtx(context.Background(), e.WS)); err != nil {
 		t.Fatalf("a policy with no executor aborted the whole pass: %v", err)
 	}
 
@@ -588,7 +588,7 @@ func TestRetentionAnonymizesAnUnattachedContactAndArchivesAnAgedNote(t *testing.
 
 	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(os.Stderr, nil)))
 	SettleIntoInstall(t, e)
-	if err := svc.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
+	if err := svc.EvaluateInstallation(RetentionPassCtx(context.Background(), e.WS)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -666,7 +666,7 @@ func TestTheClockReachesEveryLinkedInGhostAnErasureWould(t *testing.T) {
 
 	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(os.Stderr, nil)))
 	SettleIntoInstall(t, e)
-	if err := svc.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
+	if err := svc.EvaluateInstallation(RetentionPassCtx(context.Background(), e.WS)); err != nil {
 		t.Fatal(err)
 	}
 

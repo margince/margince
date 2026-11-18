@@ -319,7 +319,7 @@ func TestRetentionKeepsAYearsRefusalsAndReleasesOlderOnes(t *testing.T) {
 		VALUES ('contact', 'no_consent_no_deal', 1, 'anonymize'), ('activity', NULL, 1, 'erase')`)
 
 	svc := compose.NewRetentionServiceFor(l.e.DB(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
-	if err := svc.EvaluateInstallation(RetentionPassCtx(l.e.WS)); err != nil {
+	if err := svc.EvaluateInstallation(RetentionPassCtx(context.Background(), l.e.WS)); err != nil {
 		t.Fatalf("running retention: %v", err)
 	}
 

@@ -107,7 +107,7 @@ func TestRetentionReportsAPassThatCouldNotWrite(t *testing.T) {
 
 	// A healthy pass first: without it the assertion below could not tell a
 	// held fault from a pass that never had anything to act on.
-	if err := svc.EvaluateInstallation(integration.RetentionPassCtx(e.WS)); err != nil {
+	if err := svc.EvaluateInstallation(integration.RetentionPassCtx(context.Background(), e.WS)); err != nil {
 		t.Fatalf("the pass before any fault was injected: %v", err)
 	}
 	if got := leadName(t, owner, firstLead); got != "Anonymized Lead" {
@@ -119,7 +119,7 @@ func TestRetentionReportsAPassThatCouldNotWrite(t *testing.T) {
 	// the trigger, which refuses inserts as well as updates.
 	secondLead := seedOverageLead(t, owner, e.WS)
 	failLeadWrites(t, owner)
-	err := svc.EvaluateInstallation(integration.RetentionPassCtx(e.WS))
+	err := svc.EvaluateInstallation(integration.RetentionPassCtx(context.Background(), e.WS))
 	if got := leadName(t, owner, secondLead); got != "Over-age Lead" {
 		t.Fatalf("the fault injection did not hold: the lead is %q, so the pass never failed", got)
 	}

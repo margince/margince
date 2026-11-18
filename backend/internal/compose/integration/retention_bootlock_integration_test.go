@@ -42,7 +42,7 @@ func TestABootSetRetainOnlyPostureSuppressesDestruction(t *testing.T) {
 
 	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(os.Stderr, nil)))
 	SettleIntoInstall(t, e)
-	if err := svc.EvaluateInstallation(compose.ConfigContext(RetentionPassCtx(e.WS), boot)); err != nil {
+	if err := svc.EvaluateInstallation(RetentionPassCtx(compose.ConfigContext(t.Context(), boot), e.WS)); err != nil {
 		t.Fatal(err)
 	}
 	var leadName string

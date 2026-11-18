@@ -443,7 +443,7 @@ func TestTheVerdictsAgeOutAndGoWithTheirDeal(t *testing.T) {
 		WHERE local_day = (SELECT min(local_day) FROM deal_risk_day)`)
 
 	svc := NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
-	if err := svc.EvaluateInstallation(integration.RetentionPassCtx(e.WS)); err != nil {
+	if err := svc.EvaluateInstallation(integration.RetentionPassCtx(context.Background(), e.WS)); err != nil {
 		t.Fatalf("running the retention sweep: %v", err)
 	}
 	// Asked of the row that should SURVIVE, because a count alone reads the

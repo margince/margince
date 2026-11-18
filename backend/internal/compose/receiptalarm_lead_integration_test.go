@@ -288,7 +288,7 @@ func TestRetentionAnonymizingALeadParksItsReceiptAndRetractsItsNotice(t *testing
 
 	svc := NewRetentionServiceFor(l.e.DB(), nil, slog.Default())
 	integration.SettleIntoInstall(t, l.e)
-	if err := svc.EvaluateInstallation(integration.RetentionPassCtx(l.e.WS)); err != nil {
+	if err := svc.EvaluateInstallation(integration.RetentionPassCtx(context.Background(), l.e.WS)); err != nil {
 		t.Fatalf("EvaluateInstallation: %v", err)
 	}
 	if n := l.e.WsCount(t, `SELECT count(*) FROM lead WHERE id = $1 AND full_name = 'Anonymized Lead'`, lead); n != 1 {
@@ -394,7 +394,7 @@ func TestLeadAnonymizationPreservesTheAlreadySentCorrespondence(t *testing.T) {
 	l.e.WsExec(t, `UPDATE lead SET created_at=now()-interval '400 days',entered_at=now()-interval '400 days' WHERE id=@lead`, pgx.StrictNamedArgs{"lead": lead})
 	svc := NewRetentionServiceFor(l.e.DB(), nil, slog.Default())
 	integration.SettleIntoInstall(t, l.e)
-	if err := svc.EvaluateInstallation(integration.RetentionPassCtx(l.e.WS)); err != nil {
+	if err := svc.EvaluateInstallation(integration.RetentionPassCtx(context.Background(), l.e.WS)); err != nil {
 		t.Fatal(err)
 	}
 	if n := l.e.WsCount(t, `SELECT count(*) FROM lead WHERE id=@lead AND full_name='Anonymized Lead' AND email IS NULL`, pgx.StrictNamedArgs{"lead": lead}); n != 1 {

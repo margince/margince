@@ -279,7 +279,7 @@ func TestExpiredRestrictionCompletesTheSuspendedErasureUnderRetainOnly(t *testin
 	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
 
 	// A window still open is left exactly as it is by the pass.
-	if err := svc.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
+	if err := svc.EvaluateInstallation(RetentionPassCtx(context.Background(), e.WS)); err != nil {
 		t.Fatal(err)
 	}
 	if !restrictedRowHolds(t, e, f.email) {
@@ -297,7 +297,7 @@ func TestExpiredRestrictionCompletesTheSuspendedErasureUnderRetainOnly(t *testin
 			t.Fatalf("closing the window: %v", err)
 		}
 	}
-	if err := svc.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
+	if err := svc.EvaluateInstallation(RetentionPassCtx(context.Background(), e.WS)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -786,7 +786,7 @@ func TestAFloorExpiringDestroysTheProviderOriginalToo(t *testing.T) {
 		}
 	}
 	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
-	if err := svc.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
+	if err := svc.EvaluateInstallation(RetentionPassCtx(context.Background(), e.WS)); err != nil {
 		t.Fatal(err)
 	}
 
