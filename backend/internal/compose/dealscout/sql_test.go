@@ -16,7 +16,7 @@ import (
 // and the cap is applied to companies that already qualify.
 func TestTheScoutReadsOnlyTheCompaniesItChose(t *testing.T) {
 	const companyCap = 7
-	query, args := EvidenceSQL(time.Now().Add(-time.Hour), time.Now(), companyCap)
+	query, args := EvidenceSQL(time.Now().Add(-time.Hour), time.Now(), companyCap, true)
 	chosen := strings.Index(query, "chosen AS (")
 	cited := strings.Index(query, "cited AS (")
 	final := strings.LastIndex(query, "FROM cited")

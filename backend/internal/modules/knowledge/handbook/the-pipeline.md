@@ -343,7 +343,7 @@ A customer may ask for an offer at a company with no open deal. Margince then op
 
 Margince fills a new deal from the request. The amount is the budget the email states, and the close date is the day the customer decides. **What this deal is** says what the customer asked for. Margince marks each of these until someone edits it. A budget with no currency is read in the base currency and marked **Currency assumed, check it**.
 
-Private email counts too. Email private only because of a mailbox setting counts in full while **Check private mail for requests** is on. The deal then shows what the customer asked for. Email someone protected still opens the deal, but the deal shows nothing from it.
+Private email counts too. Email private only because of a mailbox setting counts in full while **Share quotation requests from private mail** is on. The deal then shows what the customer asked for. Email someone protected still opens the deal, but the deal shows nothing from it.
 
 Both show on **Home** with **Undo**. Undo of a reopen closes the deal as lost again, with its earlier reason. See [Deals the customer supports](deals-the-customer-supports.md#when-a-lost-deals-customer-comes-back). Also called: revive a lost deal, automatic new deal.
 

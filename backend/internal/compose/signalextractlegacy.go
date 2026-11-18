@@ -215,7 +215,7 @@ func legacyThread(ctx context.Context, tx pgx.Tx, legacy legacyCommitment) (sett
 		return settledThread{}, fmt.Errorf("signal extract: reading a commitment signal's message: %w", err)
 	}
 	reader, err := threadReaderNow(ctx, tx, *key)
-	if err != nil || !reader.offered || !reader.shared {
+	if err != nil || !reader.offered || !reader.everyMessageOpen {
 		return settledThread{}, err
 	}
 	thread.CompanyID, thread.PrivateTo, thread.Key = reader.company, reader.privateTo, *key
@@ -228,11 +228,12 @@ func legacyThread(ctx context.Context, tx pgx.Tx, legacy legacyCommitment) (sett
 }
 
 // threadReader is what the rule says about one conversation at this moment.
-// offered is false when the rule would not read it at all. shared is false
-// when some message is private by a routine setting.
+// offered is false when the rule would not read it at all. everyMessageOpen is
+// false when some message is private by a routine setting.
 type threadReader struct {
 	company, privateTo ids.UUID
-	offered, shared    bool
+	offered            bool
+	everyMessageOpen   bool
 }
 
 // threadReaderNow is the account a conversation reaches and the one member it
@@ -240,13 +241,13 @@ type threadReader struct {
 // dispatch asks it inside the transaction that files. A conversation can be
 // made private, or reach another account, while the model reads it.
 func threadReaderNow(ctx context.Context, tx pgx.Tx, key string) (threadReader, error) {
-	private, err := activities.ModelReadsPrivateMailTx(ctx, tx)
+	private, err := activities.SharesPrivateRequestsTx(ctx, tx)
 	if err != nil {
 		return threadReader{}, err
 	}
 	var reader threadReader
 	var privateTo *ids.UUID
-	err = tx.QueryRow(ctx, threadReaderQuery(private), key).Scan(&reader.company, &privateTo, &reader.shared)
+	err = tx.QueryRow(ctx, threadReaderQuery(private), key).Scan(&reader.company, &privateTo, &reader.everyMessageOpen)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return threadReader{}, nil
 	}

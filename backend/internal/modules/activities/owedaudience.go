@@ -5,21 +5,11 @@ package activities
 
 import (
 	"context"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/shared/kernel/threadverdict"
 )
-
-// routinePrivateReasons are the holds that narrow mail by setting rather than
-// by anybody's judgement of it. Every other reason protects the mail, and an
-// unknown one counts as protecting it.
-var routinePrivateReasons = []string{
-	ReasonPosture, ReasonWorkspaceFloor, ReasonPendingVerdict,
-	ReasonSharedMailbox, ReasonNoRecord, ReasonNoCounterparty,
-}
 
 // judgeableAudienceSQL is whether text of activity alias may go to a model.
 // Workspace mail may. With includePrivate, mail private for a routine reason
@@ -29,18 +19,9 @@ var routinePrivateReasons = []string{
 func judgeableAudienceSQL(alias string, includePrivate bool) string {
 	audience := auth.WorkspaceAudienceSQL(alias)
 	if includePrivate {
-		audience = `(` + audience + ` OR ` + routinePrivateSQL(alias) + `)`
+		audience = `(` + audience + ` OR ` + privateForSQL(alias, reasonsWhere(func(r privateReason) bool { return r.read })) + `)`
 	}
 	return `(` + audience + ` AND ` + alias + `.restricted_at IS NULL)`
-}
-
-// routinePrivateSQL is whether activity alias is private only by a routine
-// setting and its thread's verdict has landed without a hold. A missing reason
-// reads as false, never null, so a negated test still refuses the row.
-func routinePrivateSQL(alias string) string {
-	return `(` + alias + `.audience = '` + audienceParticipants + `'
-   AND coalesce(` + alias + `.audience_reason, '') IN ('` + strings.Join(routinePrivateReasons, "', '") + `')
-   AND ` + threadverdict.SettledUnheldSQL(alias) + `)`
 }
 
 // withheldColumns renders the waiting queue's model-free fallback columns for
@@ -80,17 +61,4 @@ func JudgeableAudienceTx(ctx context.Context, tx pgx.Tx, alias string) (string, 
 		return "", err
 	}
 	return judgeableAudienceSQL(alias, private), nil
-}
-
-// JudgeableAudience is judgeableAudienceSQL for a reader outside the module
-// that composes it into fixed SQL, with the setting read by
-// ModelReadsPrivateMailTx in the same transaction.
-func JudgeableAudience(alias string, includePrivate bool) string {
-	return judgeableAudienceSQL(alias, includePrivate)
-}
-
-// ModelReadsPrivateMailTx reads whether mail private for a routine reason may
-// go to a model in this installation.
-func ModelReadsPrivateMailTx(ctx context.Context, tx pgx.Tx) (bool, error) {
-	return privateMailRequests(ctx, tx)
 }

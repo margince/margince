@@ -28,7 +28,7 @@ import (
 func (e *scoutEnv) openScouted(t *testing.T) int {
 	t.Helper()
 	e.pass(t)
-	opened, err := newScoutDealOpener(e.Pool, slog.New(slog.DiscardHandler)).OpenWorkspace(e.system())
+	opened, err := newScoutDealOpener(e.Pool, slog.New(slog.DiscardHandler), func() time.Time { return e.now }).OpenWorkspace(e.system())
 	if err != nil {
 		t.Fatalf("opening the suggested deals: %v", err)
 	}
@@ -239,7 +239,7 @@ func TestEvidenceNoLongerWorkspaceReadableOpensNoDeal(t *testing.T) {
 	if holds() {
 		t.Error("evidence citing mail only its participants may read still holds")
 	}
-	opened, err := newScoutDealOpener(e.Pool, slog.New(slog.DiscardHandler)).OpenWorkspace(e.system())
+	opened, err := newScoutDealOpener(e.Pool, slog.New(slog.DiscardHandler), func() time.Time { return e.now }).OpenWorkspace(e.system())
 	if err != nil || opened != 0 {
 		t.Fatalf("opened %d deals (%v) on mail only its participants may read, want none", opened, err)
 	}
@@ -370,7 +370,7 @@ func TestASuggestionRaisedBeforeAnArchiveOpensNothing(t *testing.T) {
 	}
 	e.archive(e.Admin(), t, lost, e.daysAgo(3))
 
-	opened, err := newScoutDealOpener(e.Pool, slog.New(slog.DiscardHandler)).OpenWorkspace(e.system())
+	opened, err := newScoutDealOpener(e.Pool, slog.New(slog.DiscardHandler), func() time.Time { return e.now }).OpenWorkspace(e.system())
 	if err != nil || opened != 0 {
 		t.Fatalf("opened %d deals (%v) from a suggestion older than the archive, want none", opened, err)
 	}

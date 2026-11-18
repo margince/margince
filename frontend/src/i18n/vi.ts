@@ -21863,7 +21863,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "privateMailRequests.title": "Yêu cầu trong email riêng tư",
   "privateMailRequests.switch": "Kiểm tra yêu cầu trong email riêng tư",
   "privateMailRequests.hint":
-    "AI đọc email riêng tư để tìm yêu cầu mà khách hàng gửi tới bạn. Email được đánh dấu bảo mật hoặc được giữ lại có chủ ý thì không bao giờ được đọc.",
+    "AI đọc email riêng tư để tìm yêu cầu khách hàng gửi tới bạn và yêu cầu báo giá. Cài đặt này chỉ quyết định AI đọc gì. Email được đánh dấu bảo mật hoặc được giữ lại có chủ ý thì không bao giờ được đọc.",
+  "privateMailRequests.share": "Chia sẻ yêu cầu báo giá từ email riêng tư",
+  "privateMailRequests.shareHint":
+    "Yêu cầu báo giá trong email riêng tư sẽ mở một giao dịch. Khi bật, mọi người trong workspace thấy khách hàng đã yêu cầu gì trên giao dịch đó. Email được đánh dấu bảo mật hoặc được giữ lại có chủ ý thì không bao giờ được chia sẻ.",
   "privateMailRequests.readOnly": "Quản trị viên thay đổi cài đặt này.",
   "privateMailRequests.notSaved": "Chưa lưu được cài đặt.",
   "stage.criteria.kindLegalReviewed": "Pháp lý đã duyệt",

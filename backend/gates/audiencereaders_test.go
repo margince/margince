@@ -78,7 +78,7 @@ var audienceScopeMarkers = []string{
 	"visibleParentClause",
 	// The owed-reply and settlement passes' audience test (activities/owedaudience.go):
 	// WorkspaceAudienceSQL, or participants mail private for a routine reason.
-	"judgeableAudienceSQL", "JudgeableAudienceTx", "JudgeableAudience",
+	"judgeableAudienceSQL", "JudgeableAudienceTx", "ShareableAudience", "ShareableAudienceTx",
 }
 
 // audienceLiteralMarkers are the inline spellings that COMPARE the column, not

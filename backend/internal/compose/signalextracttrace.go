@@ -50,7 +50,7 @@ func (r *ThreadReadings) ReadThread(
 	now := r.clock()
 	var out pipelinetrace.ThreadReading
 	err = r.db.Tx(ctx, func(tx pgx.Tx) error {
-		private, err := activities.ModelReadsPrivateMailTx(ctx, tx)
+		private, err := activities.SharesPrivateRequestsTx(ctx, tx)
 		if err != nil {
 			return err
 		}

@@ -21,8 +21,8 @@ import (
 // routine setting gives up only an explicit request, and that request is
 // shared. The deal it opens shows what the customer asked for. Every other
 // finding stays with that mail.
-func keptFromThread(events []extractedEvent, shared bool) []extractedEvent {
-	if shared {
+func keptFromThread(events []extractedEvent, everyMessageOpen bool) []extractedEvent {
+	if everyMessageOpen {
 		return events
 	}
 	return slices.DeleteFunc(slices.Clone(events), func(event extractedEvent) bool {
@@ -30,22 +30,15 @@ func keptFromThread(events []extractedEvent, shared bool) []extractedEvent {
 	})
 }
 
-// requestFacts are a new opportunity's request facts as the cited message
-// states them. A budget its sender did not write in it, or a decision day
-// that is no date, is dropped rather than filed.
+// requestFacts are a new opportunity's request facts as its cited message
+// states them (dealscout.RequestFacts).
 func requestFacts(event extractedEvent, thread settledThread, cited ids.UUID) map[string]any {
-	if event.Kind != extractKindOpportunity || event.RequestKind == "" {
+	if event.Kind != extractKindOpportunity {
 		return nil
 	}
-	facts := map[string]any{dealscout.RequestKindKey: event.RequestKind}
-	if event.DecisionDate != "" && validProposedDueDate(event.DecisionDate) {
-		facts[dealscout.DecisionDateKey] = event.DecisionDate
-	}
-	message, found := citedMessage(thread, cited)
-	if span, ok := evidenceSpan(textlang.CurrentMessage(message.Body), event.BudgetQuote); found && ok {
-		facts[dealscout.BudgetQuoteKey] = span
-	}
-	return facts
+	message, _ := citedMessage(thread, cited)
+	return dealscout.RequestFacts(event.RequestKind, event.BudgetQuote, event.DecisionDate,
+		textlang.CurrentMessage(message.Body))
 }
 
 // recordEventSignal files one event as a signal on the account.

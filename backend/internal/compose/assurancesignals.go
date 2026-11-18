@@ -64,5 +64,5 @@ func assuranceSignalSubjectsQuery(now time.Time, arg func(any) int) string {
   WHERE cite->>'source_type' = 'activity' AND NOT EXISTS (SELECT 1 FROM activity ca
    WHERE ca.id = `+storekit.CitedActivityID("cite")+` AND `+dealscout.WorkspaceEvidence("ca")+`))
  AND `+dealscout.UnlinkedCommercialMatter("s")+`
- ORDER BY s.id`, arg(now.Add(-dealScoutWindow)), arg(now), dealscout.BuyerSignal("s"))
+ ORDER BY s.id`, arg(now.Add(-dealScoutWindow)), arg(now), dealscout.BuyerSignal("s", false))
 }

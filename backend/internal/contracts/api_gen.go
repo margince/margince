@@ -47499,7 +47499,7 @@ type Deal struct {
 	// AcquisitionSource The business channel this opportunity came from, as an administered key from `/acquisition-sources` (referral, inbound, partner, event...). Deliberately NOT the technical `source` field beside it: `source` records how the RECORD reached Margince (a connector, an import, a crawl), while this records how the OPPORTUNITY reached the business. A deal typed in by hand can be a referral; an imported one can be outbound. Null means unclassified, which is different from the explicit `other` key.
 	AcquisitionSource *string `json:"acquisition_source,omitempty"`
 
-	// AiWrittenFields The fields of this deal that a model wrote and nobody has edited since, such as `description` or `amount_minor`. `currency` is named when the amount's words named no currency and the base currency was assumed. A client marks each as written by Margince. Any edit of a field removes it from the list. Absent or empty means none.
+	// AiWrittenFields The fields of this deal that a model wrote and nobody has edited since, such as `description` or `amount_minor`. `currency` is named when the amount's words named no currency and the base currency was assumed. A client marks each as written by Margince. Any edit of a field removes it from the list. A field withheld from the reader (`masked_fields`) is never named. Filled only by `GET /deals/{id}`; every other read leaves it absent. Absent or empty means none.
 	AiWrittenFields *[]string `json:"ai_written_fields,omitempty"`
 	AmountMinor     *int64    `json:"amount_minor,omitempty"`
 
@@ -47667,7 +47667,7 @@ type DealAdvanced struct {
 	// AcquisitionSource The business channel this opportunity came from, as an administered key from `/acquisition-sources` (referral, inbound, partner, event...). Deliberately NOT the technical `source` field beside it: `source` records how the RECORD reached Margince (a connector, an import, a crawl), while this records how the OPPORTUNITY reached the business. A deal typed in by hand can be a referral; an imported one can be outbound. Null means unclassified, which is different from the explicit `other` key.
 	AcquisitionSource *string `json:"acquisition_source,omitempty"`
 
-	// AiWrittenFields The fields of this deal that a model wrote and nobody has edited since, such as `description` or `amount_minor`. `currency` is named when the amount's words named no currency and the base currency was assumed. A client marks each as written by Margince. Any edit of a field removes it from the list. Absent or empty means none.
+	// AiWrittenFields The fields of this deal that a model wrote and nobody has edited since, such as `description` or `amount_minor`. `currency` is named when the amount's words named no currency and the base currency was assumed. A client marks each as written by Margince. Any edit of a field removes it from the list. A field withheld from the reader (`masked_fields`) is never named. Filled only by `GET /deals/{id}`; every other read leaves it absent. Absent or empty means none.
 	AiWrittenFields *[]string `json:"ai_written_fields,omitempty"`
 	AmountMinor     *int64    `json:"amount_minor,omitempty"`
 
@@ -51033,13 +51033,22 @@ type FollowUpSettings struct {
 	// shows each as read-only. Empty when nothing is locked. A write ignores it.
 	Locks *SettingLocks `json:"locks,omitempty"`
 
-	// PrivateMailRequests Whether the AI checks private mail for a request its reader owes an answer to
-	// (`activities.private_mail_requests`, on by default). Only mail private by a
-	// routine setting is checked; mail held as confidential, by a counterparty or
-	// members-only hold, or by hand never is. A GET always carries it; a PATCH that
-	// leaves it out leaves the setting unchanged. Only a human may change it, because
-	// it decides which mail reaches a model.
+	// PrivateMailRequests Whether the AI reads private mail for requests (`activities.private_mail_requests`,
+	// on by default): a request its reader owes an answer to, and a request for a
+	// quotation. Only mail private by a mailbox setting is read; mail held as
+	// confidential, by a counterparty or members-only hold, or by hand never is. It
+	// says what a model reads, not what is shared. A GET always carries it; a PATCH
+	// that leaves it out leaves the setting unchanged. Only a human may change it,
+	// because it decides which mail reaches a model.
 	PrivateMailRequests *bool `json:"private_mail_requests,omitempty"`
+
+	// SharePrivateQuoteRequests Whether a request for a quotation found in private mail is shared with the whole
+	// workspace (`activities.share_private_quote_requests`, on by default). When on, what
+	// the customer asked for becomes visible on the deal it opens. It needs
+	// `private_mail_requests` on as well. Only mail private by a mailbox setting is
+	// shared; mail held for any other reason never is. A GET always carries it; a PATCH
+	// that leaves it out leaves it unchanged. Only a human may change it.
+	SharePrivateQuoteRequests *bool `json:"share_private_quote_requests,omitempty"`
 }
 
 // FooterFinding defines model for FooterFinding.

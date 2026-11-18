@@ -39,10 +39,12 @@ type scoutDealOpener struct {
 	users      *identity.Service
 	activities *activities.Store
 	log        *slog.Logger
+	now        func() time.Time
 }
 
-func newScoutDealOpener(pool *pgxpool.Pool, log *slog.Logger) scoutDealOpener {
+func newScoutDealOpener(pool *pgxpool.Pool, log *slog.Logger, now func() time.Time) scoutDealOpener {
 	return scoutDealOpener{
+		now:        now,
 		pool:       pool,
 		deals:      deals.NewStore(InstallationDB(pool), DealsInstallation()).WithSuggestionEffects(dealSuggestionEffects{}),
 		users:      identity.NewService(pool),
@@ -53,8 +55,8 @@ func newScoutDealOpener(pool *pgxpool.Pool, log *slog.Logger) scoutDealOpener {
 
 // OpenScoutedDeals opens or reopens a deal for every suggestion it may in the
 // workspace bound in ctx. The deal scout job runs it after each pass.
-func OpenScoutedDeals(ctx context.Context, pool *pgxpool.Pool, log *slog.Logger) (int, error) {
-	return newScoutDealOpener(pool, log).OpenWorkspace(ctx)
+func OpenScoutedDeals(ctx context.Context, pool *pgxpool.Pool, log *slog.Logger, now func() time.Time) (int, error) {
+	return newScoutDealOpener(pool, log, now).OpenWorkspace(ctx)
 }
 
 // openableSuggestion is one suggestion, the owner of its company, and the
@@ -147,16 +149,15 @@ func (o scoutDealOpener) openOne(ctx context.Context, s openableSuggestion) (ids
 		return ids.Nil, err
 	}
 	basis := scoutBasis(suggestion, false)
-	withheld := false
 	return o.deals.OpenSuggestedDeal(ownerCtx, deals.OpenSuggestedDealInput{
 		SuggestionID: s.id, Owner: s.owner, Basis: basis,
-		EvidenceHolds: dealscout.EvidenceHolds, Prefill: dealscout.Prefill(&withheld, installationToday),
+		EvidenceHolds: dealscout.EvidenceHolds, Prefill: dealscout.Prefill(o.now(), installationToday),
 		SwitchOn: func(ctx context.Context, tx pgx.Tx) (bool, error) {
 			mode, err := approvals.AutoApplyModeTx(ctx, tx, s.owner, deals.DealOpenKind)
 			return mode == approvals.ModeAuto, err
 		},
-		Record: func(ctx context.Context, tx pgx.Tx, deal, _ ids.UUID) error {
-			return o.recordOnTimeline(ctx, tx, deal, suggestion.CompanyName, scoutBasis(suggestion, withheld))
+		Record: func(ctx context.Context, tx pgx.Tx, deal, _ ids.UUID, fill deals.DealPrefill) error {
+			return o.recordOnTimeline(ctx, tx, deal, suggestion.CompanyName, scoutBasis(suggestion, fill.Withheld))
 		},
 		AsOwner: ownersAgentTx(o.users, s.owner, marginceActorID),
 	})

@@ -185,7 +185,7 @@ func (x *SignalExtractor) emailCommitment(
 	}
 	// A promise in routine-private mail stays with that mail: only an
 	// explicit request is ever kept from it.
-	if !reader.offered || !reader.shared {
+	if !reader.offered || !reader.everyMessageOpen {
 		return Commitment{}, false, apperrors.ErrNotFound
 	}
 	thread.CompanyID, thread.PrivateTo = reader.company, reader.privateTo

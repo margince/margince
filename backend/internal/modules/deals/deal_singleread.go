@@ -14,6 +14,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -150,4 +151,19 @@ func attachModelWritten(ctx context.Context, tx pgx.Tx, id ids.DealID, d *crmcon
 		d.AiWrittenFields = &fields
 	}
 	return nil
+}
+
+// withholdModelWritten drops the fields the reader's mask withholds, so the
+// list never names a value the reader may not see.
+func withholdModelWritten(d *crmcontracts.Deal) {
+	if d.AiWrittenFields == nil || d.MaskedFields == nil {
+		return
+	}
+	shown := slices.DeleteFunc(slices.Clone(*d.AiWrittenFields), func(field string) bool {
+		return slices.Contains(*d.MaskedFields, field)
+	})
+	d.AiWrittenFields = nil
+	if len(shown) > 0 {
+		d.AiWrittenFields = &shown
+	}
 }

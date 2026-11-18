@@ -83,7 +83,7 @@ func TestTheScoutReachesACitedActivityByItsPrimaryKey(t *testing.T) {
 	if _, err := owner.Exec(context.Background(), `ANALYZE activity`); err != nil {
 		t.Fatalf("analyzing activities: %v", err)
 	}
-	query, args := dealscout.EvidenceSQL(now.Add(-dealScoutWindow), now, dealScoutCompanyCap)
+	query, args := dealscout.EvidenceSQL(now.Add(-dealScoutWindow), now, dealScoutCompanyCap, true)
 
 	var raw []byte
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {

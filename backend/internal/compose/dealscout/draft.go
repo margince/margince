@@ -11,7 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/compose/dealverdict"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -27,32 +27,26 @@ const (
 	scoutConfidenceCeiling  = 0.95
 )
 
-// Draft turns one chosen company's cited evidence, newest first, into
-// the draft deals records. The read decided which evidence counts. This names
-// the lead kind and weighs the kinds present. The amount is the newest
-// document's stated amount with its currency. Without one, the newest explicit
-// request gives the budget, read in base when it names no currency. That
-// request also gives the decision day.
+// Draft turns one chosen company's cited evidence, newest first, into the
+// draft deals records. The read decided which evidence counts. This names the
+// lead kind and weighs the kinds present. DealTerms decides the amount and the
+// close date from the newest document's amount and the newest request.
 func Draft(company []Item, base string, today time.Time) deals.SuggestionDraft {
 	draft := deals.SuggestionDraft{CompanyID: company[0].company}
 	present := map[string]bool{}
+	var documentMinor *int64
+	var documentCurrency *string
+	requests := make([]*Request, 0, len(company))
 	for _, it := range company {
 		present[it.evidence.Kind] = true
 		draft.Evidence = append(draft.Evidence, it.evidence)
-		if draft.AmountMinor == nil && it.amountMinor != nil && it.currency != nil {
-			draft.AmountMinor, draft.Currency = it.amountMinor, it.currency
+		if documentMinor == nil && it.amountMinor != nil && it.currency != nil {
+			documentMinor, documentCurrency = it.amountMinor, it.currency
 		}
+		requests = append(requests, it.request)
 	}
-	for _, it := range company {
-		if draft.CloseDate == nil && it.decisionDate != nil {
-			draft.CloseDate = RequestCloseDate(*it.decisionDate, today)
-		}
-		if draft.AmountMinor == nil && it.budgetQuote != nil {
-			if minor, currency, _, ok := dealverdict.QuotedBudget(*it.budgetQuote, base); ok {
-				draft.AmountMinor, draft.Currency = &minor, &currency
-			}
-		}
-	}
+	terms := DealTerms(documentMinor, documentCurrency, NewestRequest(requests), base, today)
+	draft.AmountMinor, draft.Currency, draft.CloseDate = terms.AmountMinor, terms.Currency, terms.CloseDate
 	var weights []float64
 	for _, kind := range []struct {
 		evidence, hint string
@@ -84,24 +78,14 @@ func scoutConfidence(weights []float64) float64 {
 	return min(best+float64(len(weights)-1)*scoutConfidenceCorrob, scoutConfidenceCeiling)
 }
 
-// RequestCloseDate is a request's decision day as a deal close date. It is nil
-// when the day is no date or before today, since an open deal takes no past date.
-func RequestCloseDate(day string, today time.Time) *time.Time {
-	at, err := time.Parse(time.DateOnly, day)
-	if err != nil || at.Before(today) {
-		return nil
-	}
-	return &at
-}
-
 // Item is one cited piece of evidence about one chosen company.
 type Item struct {
 	company     ids.UUID
 	evidence    deals.SuggestionEvidence
 	amountMinor *int64
 	currency    *string
-	// decisionDate and budgetQuote are an explicit request's facts.
-	decisionDate, budgetQuote *string
+	// request is set when the evidence is an explicit request.
+	request *Request
 }
 
 // ReadEvidence answers the evidence each suggestion will cite, for at most
@@ -109,7 +93,11 @@ type Item struct {
 // the evidence that counts, the companies it qualifies and those the cap keeps.
 // For the kept companies' documents it also reads what their readings stated.
 func ReadEvidence(ctx context.Context, tx pgx.Tx, since, now time.Time, companyCap int) ([]Item, error) {
-	query, args := EvidenceSQL(since, now, companyCap)
+	share, err := activities.SharesPrivateRequestsTx(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
+	query, args := EvidenceSQL(since, now, companyCap, share)
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("deal scout: reading the evidence: %w", err)
@@ -125,9 +113,14 @@ func scanItem(row pgx.CollectableRow) (Item, error) {
 	var it Item
 	var ref ids.UUID
 	var amount, currency *string
+	var asked bool
+	var request Request
 	if err := row.Scan(&it.company, &it.evidence.Kind, &ref, &it.evidence.OccurredAt, &amount, &currency,
-		&it.decisionDate, &it.budgetQuote); err != nil {
+		&asked, &request.DecisionDate, &request.BudgetQuote, &request.Shareable); err != nil {
 		return Item{}, err
+	}
+	if asked {
+		it.request = &request
 	}
 	switch it.evidence.Kind {
 	case deals.EvidenceMeeting:

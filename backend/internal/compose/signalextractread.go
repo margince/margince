@@ -250,7 +250,7 @@ func (t settledThread) firstReadHere(m threadMessage) bool {
 // whose conversation this is, not which of its messages the model may read.
 func dueThreads(ctx context.Context, tx pgx.Tx, now time.Time, limit int) ([]settledThread, error) {
 	settled := now.Add(-extractSettleHours * time.Hour)
-	private, err := activities.ModelReadsPrivateMailTx(ctx, tx)
+	private, err := activities.SharesPrivateRequestsTx(ctx, tx)
 	if err != nil {
 		return nil, err
 	}

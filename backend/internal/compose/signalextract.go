@@ -309,7 +309,7 @@ func (x *SignalExtractor) commitReading(
 		}
 		read = true
 		thread.CompanyID, thread.PrivateTo = reader.company, reader.privateTo
-		for _, event := range keptFromThread(events, reader.shared) {
+		for _, event := range keptFromThread(events, reader.everyMessageOpen) {
 			if event.Confidence < extractConfidenceFloor {
 				continue
 			}
@@ -339,14 +339,14 @@ func (x *SignalExtractor) commitReading(
 }
 
 // threadMessagesStillOpen reports whether every message this reading showed
-// may still go to a model (activities.JudgeableAudienceTx). A message placed
+// may still go to a model and be shared (activities.ShareableAudienceTx). A message placed
 // under restriction while the model read the thread must not feed a signal.
 func threadMessagesStillOpen(ctx context.Context, tx pgx.Tx, thread settledThread) (bool, error) {
 	shown := make([]string, 0, len(thread.Messages))
 	for _, message := range thread.Messages {
 		shown = append(shown, message.ID.String())
 	}
-	judgeable, err := activities.JudgeableAudienceTx(ctx, tx, "activity")
+	judgeable, err := activities.ShareableAudienceTx(ctx, tx, "activity")
 	if err != nil {
 		return false, err
 	}

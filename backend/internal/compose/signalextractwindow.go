@@ -113,7 +113,7 @@ func threadWindow(
 	if err != nil || anchor == nil {
 		return nil, err
 	}
-	judgeable, err := activities.JudgeableAudienceTx(ctx, tx, "activity")
+	judgeable, err := activities.ShareableAudienceTx(ctx, tx, "activity")
 	if err != nil {
 		return nil, err
 	}
@@ -183,7 +183,7 @@ func threadWindow(
 // correspondence's company domain. It is through when set, else the
 // thread's newest proven message, else its newest. Nil when none is readable.
 func windowAnchor(ctx context.Context, tx pgx.Tx, key string, through *ids.UUID) (*ids.UUID, string, error) {
-	judgeable, err := activities.JudgeableAudienceTx(ctx, tx, "activity")
+	judgeable, err := activities.ShareableAudienceTx(ctx, tx, "activity")
 	if err != nil {
 		return nil, "", err
 	}

@@ -53,8 +53,9 @@ type OpenSuggestedDealInput struct {
 	// Prefill answers what the evidence states for the deal, read at write
 	// time under the opening's locks. The zero value opens a bare deal.
 	Prefill func(ctx context.Context, tx pgx.Tx, evidence []SuggestionEvidence) (DealPrefill, error)
-	// Record writes the entry on the deal's timeline, in the same transaction.
-	Record func(ctx context.Context, tx pgx.Tx, deal, correction ids.UUID) error
+	// Record writes the entry on the deal's timeline, in the same transaction,
+	// knowing what the prefill carried.
+	Record func(ctx context.Context, tx pgx.Tx, deal, correction ids.UUID, fill DealPrefill) error
 	// AsOwner binds the owner's agent as of the opening's transaction, so a
 	// role change or suspension that committed before it stops the opening.
 	AsOwner OwnerAuthorityTx
@@ -121,7 +122,7 @@ func (s *Store) OpenSuggestedDeal(ctx context.Context, in OpenSuggestedDealInput
 			return err
 		}
 		opened = dealID
-		return in.Record(ctx, tx, dealID, correction)
+		return in.Record(ctx, tx, dealID, correction, fill)
 	})
 	return opened, err
 }
@@ -136,6 +137,9 @@ type DealPrefill struct {
 	// ModelWritten names the deal columns a model wrote, each with its
 	// confidence. A rep sees them marked until a human edits them.
 	ModelWritten []storekit.FieldStamp
+	// Withheld says some cited evidence may not reach the deal, so the
+	// timeline names the evidence by kind alone.
+	Withheld bool
 }
 
 // stampModelWritten records the agent opening the deal as the author of each

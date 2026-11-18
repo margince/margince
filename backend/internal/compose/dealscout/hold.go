@@ -57,8 +57,7 @@ func lockCitedItem(ctx context.Context, tx pgx.Tx, item deals.SuggestionEvidence
 		          FROM jsonb_array_elements(s.evidence) cite WHERE cite->>'source_type' = 'activity'),
 		       request.asked
 		  FROM signal s
-		  CROSS JOIN LATERAL (SELECT EXISTS (SELECT 1 FROM jsonb_array_elements(s.evidence) request_cite
-		         WHERE s.kind = 'new_opportunity' AND ` + ExplicitRequestCite("request_cite") + `) AS asked) request
+		  CROSS JOIN LATERAL (SELECT s.kind = 'new_opportunity' AND ` + BuyerSignal("s", true) + ` AS asked) request
 		 WHERE s.id = $1 AND s.status = 'open' AND s.archived_at IS NULL
 		   AND (s.visibility = 'workspace' OR (request.asked AND s.visibility = 'owner'))
 		   FOR SHARE OF s`
@@ -153,103 +152,102 @@ func quoteBackedAmount(value, currency string, quote *string) (*int64, *string) 
 	return &minor, &currency
 }
 
-// scoutRequest is the newest explicit request among a deal's evidence, read
-// under the opening's locks. shareable is false when its mail is protected.
-type scoutRequest struct {
-	summary                   string
-	decisionDate, budgetQuote *string
-	shareable, found          bool
-	now                       time.Time
+// citedSignal is one cited signal as the opening rereads it: its summary,
+// and its request facts when it is an explicit request.
+type citedSignal struct {
+	summary string
+	request *Request
 }
 
-// readScoutRequest reads the newest explicit request the evidence cites.
-func readScoutRequest(ctx context.Context, tx pgx.Tx, evidence []deals.SuggestionEvidence) (scoutRequest, error) {
-	private, err := activities.ModelReadsPrivateMailTx(ctx, tx)
+// readCitedSignals rereads every cited signal, newest first, and reports
+// whether any of them may not reach the deal. One such signal withholds every
+// title from the deal's timeline.
+func readCitedSignals(ctx context.Context, tx pgx.Tx, evidence []deals.SuggestionEvidence) ([]citedSignal, bool, error) {
+	share, err := activities.SharesPrivateRequestsTx(ctx, tx)
 	if err != nil {
-		return scoutRequest{}, err
+		return nil, false, err
 	}
+	var out []citedSignal
+	withheld := false
 	for _, item := range evidence {
 		if item.SignalID == nil {
 			continue
 		}
-		var request scoutRequest
+		var cited citedSignal
+		var asked bool
+		var request Request
 		err := tx.QueryRow(ctx, `
-			SELECT s.summary, cite->'fields'->>'`+DecisionDateKey+`', cite->'fields'->>'`+BudgetQuoteKey+`',
-			       s.visibility = 'workspace' AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements(s.evidence) source_cite
-			         WHERE source_cite->>'source_type' = 'activity' AND NOT EXISTS (SELECT 1 FROM activity ca
-			           WHERE ca.id = `+storekit.CitedActivityID("source_cite")+` AND `+ShareableRequestSource("ca", private)+`)),
-			       now()
-			  FROM signal s, jsonb_array_elements(s.evidence) cite
-			 WHERE s.id = $1 AND s.kind = 'new_opportunity' AND `+ExplicitRequestCite("cite")+`
-			 LIMIT 1`, *item.SignalID).Scan(&request.summary, &request.decisionDate, &request.budgetQuote,
-			&request.shareable, &request.now)
+			SELECT s.summary, facts.cite IS NOT NULL, facts.cite->'fields'->>'`+DecisionDateKey+`',
+			       facts.cite->'fields'->>'`+BudgetQuoteKey+`', `+RequestShareableSQL("s", share)+`
+			  FROM signal s
+			  LEFT JOIN LATERAL (SELECT request_cite AS cite FROM jsonb_array_elements(s.evidence) request_cite
+			         WHERE s.kind = 'new_opportunity' AND `+ExplicitRequestCite("request_cite")+` LIMIT 1) facts ON true
+			 WHERE s.id = $1`, *item.SignalID).Scan(&cited.summary, &asked, &request.DecisionDate,
+			&request.BudgetQuote, &request.Shareable)
 		if errors.Is(err, pgx.ErrNoRows) {
 			continue
 		}
 		if err != nil {
-			return scoutRequest{}, fmt.Errorf("compose: rereading the request a deal opens on: %w", err)
+			return nil, false, fmt.Errorf("compose: rereading the signals a deal opens on: %w", err)
 		}
-		request.found = true
-		return request, nil
+		withheld = withheld || !request.Shareable
+		if asked {
+			cited.request = &request
+		}
+		out = append(out, cited)
 	}
-	return scoutRequest{}, nil
+	return out, withheld, nil
 }
 
-// Prefill is what an opened deal carries. A document gives its stated
-// amount. A shareable request gives its summary as the description and its
-// decision day. With no document amount it also gives its budget. Each value
-// from a request is marked as model-written. withheld reports a request whose
-// mail someone protected.
-func Prefill(withheld *bool, today TodayFunc) func(context.Context, pgx.Tx, []deals.SuggestionEvidence) (deals.DealPrefill, error) {
+// Prefill is what an opened deal carries, under the opening's locks. DealTerms
+// decides its amount and close date. A shareable request gives its summary as
+// the description. Each value a model read is marked as model-written.
+// Withheld says some cited signal's mail may not reach the deal.
+func Prefill(now time.Time, today TodayFunc) func(context.Context, pgx.Tx, []deals.SuggestionEvidence) (deals.DealPrefill, error) {
 	return func(ctx context.Context, tx pgx.Tx, evidence []deals.SuggestionEvidence) (deals.DealPrefill, error) {
-		*withheld = false
-		amount, currency, err := scoutStatedAmount(ctx, tx, evidence)
+		documentMinor, documentCurrency, err := scoutStatedAmount(ctx, tx, evidence)
 		if err != nil {
 			return deals.DealPrefill{}, err
 		}
-		fill := deals.DealPrefill{AmountMinor: amount, Currency: currency}
-		request, err := readScoutRequest(ctx, tx, evidence)
-		if err != nil || !request.found {
-			return fill, err
+		signals, withheld, err := readCitedSignals(ctx, tx, evidence)
+		if err != nil {
+			return deals.DealPrefill{}, err
 		}
-		if !request.shareable {
-			*withheld = true
-			return fill, nil
+		base, err := identity.BaseCurrencyAppliedTx(ctx, tx)
+		if err != nil {
+			return deals.DealPrefill{}, err
 		}
-		fill.Description = &request.summary
-		fill.ModelWritten = append(fill.ModelWritten, storekit.FieldStamp{Field: dealDescriptionField})
-		if request.decisionDate != nil {
-			day, err := today(ctx, tx, request.now)
-			if err != nil {
-				return fill, err
+		day, err := today(ctx, tx, now)
+		if err != nil {
+			return deals.DealPrefill{}, err
+		}
+		requests := make([]*Request, len(signals))
+		for i, signal := range signals {
+			requests[i] = signal.request
+		}
+		request := NewestRequest(requests)
+		terms := DealTerms(documentMinor, documentCurrency, request, base, day)
+		fill := deals.DealPrefill{
+			AmountMinor: terms.AmountMinor, Currency: terms.Currency, CloseDate: terms.CloseDate, Withheld: withheld,
+		}
+		for i := range signals {
+			if request == nil || signals[i].request != request {
+				continue
 			}
-			fill.CloseDate = RequestCloseDate(*request.decisionDate, day)
+			if request.Shareable {
+				fill.Description = &signals[i].summary
+				fill.ModelWritten = append(fill.ModelWritten, storekit.FieldStamp{Field: dealDescriptionField})
+			}
+			break
 		}
-		if fill.AmountMinor != nil || request.budgetQuote == nil {
-			return fill, nil
+		if terms.BudgetRead {
+			fill.ModelWritten = append(fill.ModelWritten, storekit.FieldStamp{Field: dealAmountField})
 		}
-		return withRequestBudget(ctx, tx, fill, *request.budgetQuote)
-	}
-}
-
-// withRequestBudget sets the amount a request's budget words state. Words
-// naming no currency are read in the base currency. The currency is then marked
-// as model-written too, so the rep sees it is a guess.
-func withRequestBudget(ctx context.Context, tx pgx.Tx, fill deals.DealPrefill, quote string) (deals.DealPrefill, error) {
-	base, err := identity.BaseCurrencyAppliedTx(ctx, tx)
-	if err != nil {
-		return fill, err
-	}
-	minor, currency, assumed, ok := dealverdict.QuotedBudget(quote, base)
-	if !ok {
+		if terms.CurrencyAssumed {
+			fill.ModelWritten = append(fill.ModelWritten, storekit.FieldStamp{Field: dealCurrencyField})
+		}
 		return fill, nil
 	}
-	fill.AmountMinor, fill.Currency = &minor, &currency
-	fill.ModelWritten = append(fill.ModelWritten, storekit.FieldStamp{Field: dealAmountField})
-	if assumed {
-		fill.ModelWritten = append(fill.ModelWritten, storekit.FieldStamp{Field: dealCurrencyField})
-	}
-	return fill, nil
 }
 
 // TodayFunc is the installation's calendar day at an instant.

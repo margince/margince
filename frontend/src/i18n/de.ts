@@ -22454,7 +22454,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privateMailRequests.title": "Anfragen in privaten E-Mails",
   "privateMailRequests.switch": "Private E-Mails auf Anfragen prüfen",
   "privateMailRequests.hint":
-    "Die KI liest private E-Mails, um zu finden, worum ein Kunde euch bittet. Als vertraulich markierte oder bewusst zurückgehaltene E-Mails liest sie nie.",
+    "Die KI liest private E-Mails, um zu finden, worum ein Kunde euch bittet, und Anfragen für ein Angebot. Das bestimmt nur, was die KI liest. Als vertraulich markierte oder bewusst zurückgehaltene E-Mails liest sie nie.",
+  "privateMailRequests.share": "Angebotsanfragen aus privaten E-Mails teilen",
+  "privateMailRequests.shareHint":
+    "Eine Angebotsanfrage in einer privaten E-Mail eröffnet einen Deal. Ist das an, sieht der ganze Workspace auf dem Deal, worum der Kunde gebeten hat. Als vertraulich markierte oder bewusst zurückgehaltene E-Mails teilst du so nie.",
   "privateMailRequests.readOnly": "Diese Einstellung ändert ein Admin.",
   "privateMailRequests.notSaved": "Einstellung wurde nicht gespeichert.",
   "stage.criteria.kindLegalReviewed": "Rechtlich freigegeben",

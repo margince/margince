@@ -6,12 +6,21 @@ package dealscout
 import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 )
 
 // BuyerSignal is whether a new_opportunity signal names a verified buyer
-// working at its company, on mail the scout may cite.
-func BuyerSignal(signal string) string {
+// working at its company. Without request the buyer's mail must be workspace
+// evidence. With request the cite must be an explicit request, and the buyer
+// must have sent it from an authenticated address. A contact on Cc, or a
+// sender nobody authenticated, never opens a deal alone.
+func BuyerSignal(signal string, request bool) string {
+	source := WorkspaceEvidence("buyer_source")
+	if request {
+		source = ExplicitRequestCite("buyer_cite") + ` AND buyer_party.role = 'from' AND ` +
+			correspondence.AuthenticatedInboundSQL("buyer_source") + ` AND ` + RequestSource("buyer_source")
+	}
 	return `EXISTS (SELECT 1 FROM jsonb_array_elements(` + signal + `.evidence) buyer_cite
  JOIN activity buyer_source ON buyer_source.id = ` + storekit.CitedActivityID("buyer_cite") + `
  JOIN activity_participant buyer_party ON buyer_party.activity_id = buyer_source.id
@@ -27,8 +36,7 @@ func BuyerSignal(signal string) string {
    WHERE other_job.contact_id = buyer_party.contact_id
     AND other_job.company_id <> buyer_job.company_id
     AND ` + BuyerEmployment("other_job", "buyer_source") + `)
-  AND (` + WorkspaceEvidence("buyer_source") + `
-   OR (` + ExplicitRequestCite("buyer_cite") + ` AND ` + RequestSource("buyer_source") + `)))`
+  AND ` + source + `)`
 }
 
 // BuyerEmployment is a current employment edge in place at the activity.
@@ -58,7 +66,7 @@ func VerifiedSuggestionBuyer(suggestion, company, since, asOf string) string {
  JOIN signal buyer_signal ON buyer_signal.id = buyer_ev.signal_id
  WHERE buyer_ev.suggestion_id = ` + suggestion + ` AND buyer_signal.kind = 'new_opportunity'
  AND buyer_signal.status = 'open' AND buyer_signal.archived_at IS NULL
- AND buyer_signal.resolved_company_id = ` + company + ` AND ` + BuyerSignal("buyer_signal") + `
+ AND buyer_signal.resolved_company_id = ` + company + ` AND (` + BuyerSignal("buyer_signal", false) + ` OR ` + BuyerSignal("buyer_signal", true) + `)
  AND ` + UnlinkedCommercialMatter("buyer_signal") + `
  AND ` + storekit.CitedActivityTime("buyer_signal.evidence") + ` > ` + since + `
  AND ` + storekit.CitedActivityTime("buyer_signal.evidence") + ` <= ` + asOf + `)`

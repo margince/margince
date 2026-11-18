@@ -99,7 +99,7 @@ func (w *dealScoutWorker) Work(ctx context.Context, _ *river.Job[DealScoutArgs])
 // cadence is api/jobs.yaml's.
 func addDealScoutJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log *slog.Logger) []*river.PeriodicJob {
 	addDeclaredWorker[DealScoutArgs](reg, &dealScoutWorker{scoutWorker{
-		then: func(ctx context.Context) (int, error) { return OpenScoutedDeals(ctx, pool, log) },
+		then: func(ctx context.Context) (int, error) { return OpenScoutedDeals(ctx, pool, log, time.Now) },
 		pool: pool, now: time.Now, log: log, logLine: "deal scout pass",
 		run: func(ctx context.Context, tx pgx.Tx, now time.Time) (scoutTally, error) {
 			pass, err := RunDealScout(ctx, tx, now)

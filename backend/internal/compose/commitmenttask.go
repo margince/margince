@@ -299,7 +299,7 @@ func sourcePrivateToNow(ctx context.Context, tx pgx.Tx, source ids.UUID, staged 
 		return nil, err
 	}
 	owner := reader.privateTo
-	if !reader.offered || !reader.shared {
+	if !reader.offered || !reader.everyMessageOpen {
 		return nil, fmt.Errorf("compose: the conversation this commitment was read from changed since, "+
 			"and who may read it is no longer known — review conversation access before retrying: %w",
 			apperrors.ErrConflict)

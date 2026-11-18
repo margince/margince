@@ -29,13 +29,13 @@ import (
 // must not aggregate the installation to find it.
 //
 // private is the installation's switch for mail private by a routine setting
-// (activities.ModelReadsPrivateMailTx), read in the caller's transaction.
+// (activities.SharesPrivateRequestsTx), read in the caller's transaction.
 func conversationCTE(scope string, private bool) string {
 	return conversationHead + `
 			       NOT EXISTS (SELECT 1 FROM activity t
 			                    WHERE t.thread_key = a.thread_key AND t.kind = 'email'
 			                      AND t.archived_at IS NULL
-			                      AND (` + activities.JudgeableAudience("t", private) + `) IS NOT TRUE) AS every_message_judgeable` +
+			                      AND (` + activities.ShareableAudience("t", private) + `) IS NOT TRUE) AS every_message_judgeable` +
 		conversationBody + scope + conversationTail
 }
 
@@ -208,7 +208,7 @@ const (
 	// audience is a partial account presented as a whole one.
 	// A thread whose limited messages are private only by a routine setting
 	// passes while the installation lets a model read such mail. Only an
-	// explicit request is kept from it (keptFromRoutinePrivate).
+	// explicit request is kept from it (keptFromThread).
 	threadIsFullyOpen = `(c.every_message_open OR c.every_message_judgeable)`
 
 	// Every message on the thread read in full, so the window is the whole
