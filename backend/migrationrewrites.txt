@@ -159,3 +159,6 @@
 1795014300_a_member_connects_more_than_one_mailbox.down.sql | capture_exclusion | runs only on a rollback; removes duplicate container rules a member picked by hand, a handful per member
 1795014225_the_draft_reason_is_bounded.up.sql | * | replaces the two text guards on mail_draft; the guards act on later writes only, and it changes no existing row
 1795014225_the_draft_reason_is_bounded.down.sql | * | restores the two earlier text guards on mail_draft; it changes no existing row
+1795011001_the_ruleset_digest_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795011002_the_ruleset_digest_checks_its_length.up.sql | * | replaces the two text guards on communication_decision; the guards act on later writes only, and it changes no existing row
+1795011002_the_ruleset_digest_checks_its_length.down.sql | * | restores the two earlier text guards on communication_decision; it changes no existing row

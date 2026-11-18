@@ -5,6 +5,7 @@ package messagingrules
 
 import (
 	"slices"
+	"strings"
 	"testing"
 	"time"
 )
@@ -127,6 +128,21 @@ func TestAFoldedSetClaimsNoSingleJurisdiction(t *testing.T) {
 	}
 }
 
+// A fold carries no one pack's review, citations or digest. Each describes the
+// source of a single pack. A citation shown under the fold would name one
+// country's law for a send two countries govern.
+func TestAFoldCarriesNoSinglePacksProvenance(t *testing.T) {
+	reviewed := Provenance{ReviewedAt: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC), Reviewer: "a"}
+	a := Rules{Jurisdiction: "aa", Version: 3, Provenance: reviewed,
+		Citations: []Citation{{Code: "frequency_cap_reached", Instrument: "Decree 1/2020"}},
+		Digest:    strings.Repeat("a", 64)}
+	b := Rules{Jurisdiction: "bb", Version: 7}
+	got := stricter(a, b)
+	if got.Provenance != (Provenance{}) || got.Citations != nil || got.Digest != "" {
+		t.Errorf("the fold kept one pack's provenance: %+v %+v %q", got.Provenance, got.Citations, got.Digest)
+	}
+}
+
 // A jurisdiction the binary was not compiled with contributes nothing, and
 // Strictest reports that it found nothing rather than returning an empty set
 // that reads as "no obligations".
@@ -155,7 +171,9 @@ func TestTheRegistryHandsOutCopies(t *testing.T) {
 		Jurisdiction: "qa", Version: 1,
 		MarketingExceptions: []MarketingException{{Kind: ExistingCustomer, RequiresSimilarity: true}},
 		FrequencyCap:        &FrequencyCap{Messages: 3, Window: 24 * time.Hour},
-		Instruments:         []Instrument{{Name: "Decree 1/2020"}},
+		Instruments:         []Instrument{{Name: "Decree 1/2020", SourceURL: "https://example.org/decree"}},
+		Provenance:          Provenance{ReviewedAt: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC), Reviewer: "a"},
+		Citations:           []Citation{{Code: "frequency_cap_reached", Instrument: "Decree 1/2020", Provision: "Art. 1"}},
 	})
 
 	got, ok := For("qa")
@@ -165,6 +183,7 @@ func TestTheRegistryHandsOutCopies(t *testing.T) {
 	got.MarketingExceptions[0].RequiresSimilarity = false
 	got.FrequencyCap.Messages = 1000
 	got.Instruments[0].Name = "something else entirely"
+	got.Citations[0].Provision = "Art. 99"
 
 	again, _ := For("qa")
 	if !again.MarketingExceptions[0].RequiresSimilarity {
@@ -177,6 +196,9 @@ func TestTheRegistryHandsOutCopies(t *testing.T) {
 	// leave every later decision recorded under a law the pack never stated.
 	if again.Instruments[0].Name != "Decree 1/2020" {
 		t.Errorf("a caller rewrote the registered citation to %q", again.Instruments[0].Name)
+	}
+	if again.Citations[0].Provision != "Art. 1" {
+		t.Errorf("a caller rewrote the registered provision to %q", again.Citations[0].Provision)
 	}
 }
 
