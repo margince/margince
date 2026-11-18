@@ -62,8 +62,8 @@ func (s *Store) WithReviewLookup(lookup ReviewLookup) *Store {
 type HeldResolution string
 
 const (
-	// HeldResolvedByRep: the rep rescheduled or cancelled it.
+	// HeldResolvedByRep means the rep rescheduled or cancelled it.
 	HeldResolvedByRep HeldResolution = "rep_moved"
-	// HeldResolvedBySending: it was sent after its review was confirmed.
+	// HeldResolvedBySending means it was sent after its review was confirmed.
 	HeldResolvedBySending HeldResolution = "sent_after_confirmation"
 )
