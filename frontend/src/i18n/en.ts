@@ -22176,6 +22176,15 @@ export const en = {
     "The buyer wrote {count} day ago and is waiting for a reply.",
   "deal.verdict.yourMoveDays_other":
     "The buyer wrote {count} days ago and is waiting for a reply.",
+  "deal.verdict.youReplied": "You replied",
+  "deal.verdict.teamReplied": "Your team replied",
+  "deal.verdict.youRepliedOn":
+    "You replied on {date}. The request is still open.",
+  "deal.verdict.teamRepliedOn":
+    "Your team replied on {date}. The request is still open.",
+  "deal.verdict.youRepliedAsked": "You replied on {date}. Still asked: {ask}",
+  "deal.verdict.teamRepliedAsked":
+    "Your team replied on {date}. Still asked: {ask}",
   "deal.verdict.goneQuiet": "Gone quiet",
   "deal.verdict.goneQuietSince":
     "Nothing has happened since {date}, so the deal counts as stalled.",
@@ -22934,7 +22943,7 @@ export const en = {
   "goals.propose.noModel":
     "Proposing months needs an AI model that is set up. You can still enter the months by hand.",
   "goals.propose.noHistory":
-    "{name} has no sales won in {year} or the year before to read a pattern from. Enter the months by hand.",
+    "{name} has no finished month with sales won in {year} or the year before, so there is no pattern to read. Enter the months by hand.",
   "goals.proposedByAi": "Proposed by Margince",
   "goals.monthsSum": "The months add up to {total}.",
   "goals.monthsMissing_one": "{count} month is not set.",

@@ -48650,9 +48650,15 @@ type DealStatusCard struct {
 	// Next The one move to make, with the verb to perform it.
 	Next *DealStatusCardMove `json:"next,omitempty"`
 
+	// OurReply The current request on this deal that we replied to, while our reply is the newest
+	// message on its thread. The card then says we replied instead of saying the buyer
+	// waits, and offers to mark the reminder done.
+	OurReply *RequestReply `json:"our_reply,omitempty"`
+
 	// ReplyTo A confirmed current inbound request on this deal, admitted by the
-	// request owner's responsibility, settlement and currency rules.
-	// Absent for historical or unconfirmed review. Its absence makes no
+	// request owner's responsibility, settlement and currency rules, that
+	// is still owed our reply. Absent for historical or unconfirmed
+	// review, and while `our_reply` is present. Its absence makes no
 	// claim about whether an unrecorded reply exists.
 	ReplyTo *openapi_types.UUID `json:"reply_to,omitempty"`
 
@@ -49968,6 +49974,11 @@ type EmailSummary struct {
 
 	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
 	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
+
+	// OurReply Present on an open request with an unfinished reminder when our reply on its thread
+	// is newer than it and is still the newest message there. The request stays open: a
+	// reply settles nothing by itself. Absent when the source is withheld.
+	OurReply *RequestReply `json:"our_reply,omitempty"`
 
 	// Preview One line of the sender's own text, signature and quoted history already removed.
 	// Null when withheld, and when the message has no text of its own.
@@ -63175,6 +63186,36 @@ type RequestDeadline struct {
 type RequestLegalReviewRequest struct {
 	Note             *string             `json:"note,omitempty"`
 	PreviousReviewId *openapi_types.UUID `json:"previous_review_id,omitempty"`
+}
+
+// RequestReply We replied after a request, and our reply is still the newest message on its thread.
+// One rule decides it, so the deal card, its risk line and its next move agree on whose
+// move it is. The request itself stays open until its reminder is done or a settlement
+// verdict records it settled.
+type RequestReply struct {
+	// ByReader The reader sent the reply. False when a colleague did.
+	ByReader bool `json:"by_reader"`
+
+	// ReminderId The request's unfinished reminder, when this reader may change it. Marking it done settles the request. `reminder_version` comes with it, for that write.
+	ReminderId *openapi_types.UUID `json:"reminder_id,omitempty"`
+
+	// ReminderVersion Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
+	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
+	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
+	// (ErrVersionSkew) so the client re-reads before retrying.
+	ReminderVersion *RowVersion `json:"reminder_version,omitempty" minimum:"1"`
+
+	// RepliedAt When our newest reply on the thread happened.
+	RepliedAt time.Time `json:"replied_at"`
+
+	// RepliedPrecision How much of an activity's time is known. `instant` is a real moment. `day` is a date with no time of day: the stored instant is noon UTC of that date, so its date is the UTC date, whatever the installation's zone. A meeting of this precision never holds its host's calendar slot.
+	RepliedPrecision OccurredPrecision `json:"replied_precision"`
+
+	// RequestActivityId The request we replied to.
+	RequestActivityId openapi_types.UUID `json:"request_activity_id"`
+
+	// StillAsked What the settlement pass found still asked, quoted from the request. Absent when no still_owed verdict quoted one.
+	StillAsked *string `json:"still_asked,omitempty"`
 }
 
 // RescheduleSendRequest A new moment for a message already scheduled. TIME ONLY — the content is what the
