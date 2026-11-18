@@ -44517,10 +44517,17 @@ export interface components {
             consent_purpose?: string;
             /** @description Records the caller names in support of this message. Checked, never trusted. */
             evidence?: components["schemas"]["CommunicationEvidence"];
-            /** @description The draft's subject, checked only for `content_findings`. */
+            /** @description The draft's subject, read for an offer as the send reads it and checked for `content_findings`. */
             subject?: string;
-            /** @description The draft's plain text, checked only for `content_findings`. */
+            /** @description The draft's plain text, read for an offer as the send reads it and checked for `content_findings`. */
             body?: string;
+            /** @description The draft's markup beside the plain text. Its visible text is read for an offer as the send reads it. */
+            html_body?: string;
+            /**
+             * @description The files the message will carry, by the ids `/attachments` gave them. Their names are
+             *     read for an offer as the send reads them. A file the send would refuse is refused here.
+             */
+            attachment_ids?: string[];
         };
         /**
          * @description PreviewSendRequest plus the `links` an anchor would otherwise have supplied — the
@@ -44545,10 +44552,17 @@ export interface components {
              */
             consent_purpose?: string;
             evidence?: components["schemas"]["CommunicationEvidence"];
-            /** @description The draft's subject, checked only for `content_findings`. */
+            /** @description The draft's subject, read for an offer as the send reads it and checked for `content_findings`. */
             subject?: string;
-            /** @description The draft's plain text, checked only for `content_findings`. */
+            /** @description The draft's plain text, read for an offer as the send reads it and checked for `content_findings`. */
             body?: string;
+            /** @description The draft's markup beside the plain text. Its visible text is read for an offer as the send reads it. */
+            html_body?: string;
+            /**
+             * @description The files the message will carry, by the ids `/attachments` gave them. Their names are
+             *     read for an offer as the send reads them. A file the send would refuse is refused here.
+             */
+            attachment_ids?: string[];
         };
         LawfulBasisConfirmationRequest: {
             /**

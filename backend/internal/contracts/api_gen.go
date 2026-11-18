@@ -59246,7 +59246,11 @@ type PreferenceCenterRefusedReason string
 // PreviewAccountSendRequest PreviewSendRequest plus the `links` an anchor would otherwise have supplied — the
 // records this new conversation would belong to.
 type PreviewAccountSendRequest struct {
-	// Body The draft's plain text, checked only for `content_findings`.
+	// AttachmentIds The files the message will carry, by the ids `/attachments` gave them. Their names are
+	// read for an offer as the send reads them. A file the send would refuse is refused here.
+	AttachmentIds *[]openapi_types.UUID `json:"attachment_ids,omitempty"`
+
+	// Body The draft's plain text, read for an offer as the send reads it and checked for `content_findings`.
 	Body                 *string               `json:"body,omitempty"`
 	CommunicationContext *CommunicationContext `json:"communication_context,omitempty"`
 
@@ -59258,13 +59262,16 @@ type PreviewAccountSendRequest struct {
 	ConsentPurpose *string                `json:"consent_purpose,omitempty"`
 	Evidence       *CommunicationEvidence `json:"evidence,omitempty"`
 
+	// HtmlBody The draft's markup beside the plain text. Its visible text is read for an offer as the send reads it.
+	HtmlBody *string `json:"html_body,omitempty"`
+
 	// Links The records the message would be filed under. They are read through the caller's
 	// own row scope before the engine sees them, so naming a record the caller cannot
 	// open is refused here rather than answered about.
 	Links            []ActivityLinkInput `json:"links"`
 	MarketingPurpose *string             `json:"marketing_purpose,omitempty"`
 
-	// Subject The draft's subject, checked only for `content_findings`.
+	// Subject The draft's subject, read for an offer as the send reads it and checked for `content_findings`.
 	Subject *string               `json:"subject,omitempty"`
 	To      []openapi_types.Email `json:"to"`
 }
@@ -59275,7 +59282,11 @@ type PreviewAccountSendRequest struct {
 // advertising content rules of each recipient's jurisdiction pack and answered as
 // `content_findings`.
 type PreviewSendRequest struct {
-	// Body The draft's plain text, checked only for `content_findings`.
+	// AttachmentIds The files the message will carry, by the ids `/attachments` gave them. Their names are
+	// read for an offer as the send reads them. A file the send would refuse is refused here.
+	AttachmentIds *[]openapi_types.UUID `json:"attachment_ids,omitempty"`
+
+	// Body The draft's plain text, read for an offer as the send reads it and checked for `content_findings`.
 	Body *string `json:"body,omitempty"`
 
 	// CommunicationContext What the sender says this message is. Checked against the record, never believed:
@@ -59294,10 +59305,13 @@ type PreviewSendRequest struct {
 	// Evidence Records the caller names in support of this message. Checked, never trusted.
 	Evidence *CommunicationEvidence `json:"evidence,omitempty"`
 
+	// HtmlBody The draft's markup beside the plain text. Its visible text is read for an offer as the send reads it.
+	HtmlBody *string `json:"html_body,omitempty"`
+
 	// MarketingPurpose Which marketing purpose, when the context is `marketing`.
 	MarketingPurpose *string `json:"marketing_purpose,omitempty"`
 
-	// Subject The draft's subject, checked only for `content_findings`.
+	// Subject The draft's subject, read for an offer as the send reads it and checked for `content_findings`.
 	Subject *string `json:"subject,omitempty"`
 
 	// To The addressees. Cc and Bcc join this list at send, and both are asked about

@@ -61452,11 +61452,21 @@ components:
         subject:
           type: string
           maxLength: 998
-          description: The draft's subject, checked only for `content_findings`.
+          description: The draft's subject, read for an offer as the send reads it and checked for `content_findings`.
         body:
           type: string
           maxLength: 200000
-          description: The draft's plain text, checked only for `content_findings`.
+          description: The draft's plain text, read for an offer as the send reads it and checked for `content_findings`.
+        html_body:
+          type: string
+          description: The draft's markup beside the plain text. Its visible text is read for an offer as the send reads it.
+        attachment_ids:
+          type: array
+          maxItems: 10
+          items: { type: string, format: uuid }
+          description: |
+            The files the message will carry, by the ids `/attachments` gave them. Their names are
+            read for an offer as the send reads them. A file the send would refuse is refused here.
 
     PreviewAccountSendRequest:
       type: object
@@ -61495,11 +61505,21 @@ components:
         subject:
           type: string
           maxLength: 998
-          description: The draft's subject, checked only for `content_findings`.
+          description: The draft's subject, read for an offer as the send reads it and checked for `content_findings`.
         body:
           type: string
           maxLength: 200000
-          description: The draft's plain text, checked only for `content_findings`.
+          description: The draft's plain text, read for an offer as the send reads it and checked for `content_findings`.
+        html_body:
+          type: string
+          description: The draft's markup beside the plain text. Its visible text is read for an offer as the send reads it.
+        attachment_ids:
+          type: array
+          maxItems: 10
+          items: { type: string, format: uuid }
+          description: |
+            The files the message will carry, by the ids `/attachments` gave them. Their names are
+            read for an offer as the send reads them. A file the send would refuse is refused here.
 
     LawfulBasisConfirmationRequest:
       type: object

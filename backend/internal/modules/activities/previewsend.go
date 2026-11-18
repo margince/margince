@@ -22,7 +22,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
-	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // errNoPreviewAuthority is the composition defect of a preview surface built
@@ -68,10 +67,14 @@ type SendPreview struct {
 // an offer, so the preview answers what the send will. They are also checked
 // against the advertising content rules.
 type PreviewSendInput struct {
-	Subject    string
-	Body       string
-	Recipients []string
-	Context    commsauthz.Category
+	Subject  string
+	Body     string
+	HTMLBody string
+	// AttachmentIDs are the files the message will carry. Their names are read
+	// for an offer as the send reads them.
+	AttachmentIDs []ids.UUID
+	Recipients    []string
+	Context       commsauthz.Category
 	// LegacyPurposeKey is carried for one reason: the SEND still consults it
 	// where the record supports no category on its own, so a preview that
 	// could not pass it would answer a different question than the send it
@@ -115,18 +118,12 @@ func (s *Store) PreviewSend(ctx context.Context, origin SendOrigin, in PreviewSe
 	if err != nil {
 		return SendPreview{}, err
 	}
-	req := commsauthz.Request{
-		Recipients:       connector.EmailRecipients(in.Recipients),
-		Context:          in.Context,
-		LegacyPurposeKey: in.LegacyPurposeKey,
-		MarketingPurpose: in.MarketingPurpose,
-		OperatorReason:   in.OperatorReason,
-		Evidence:         in.evidenceWithAnchor(origin),
-		AnchorActivityID: origin.anchor.UUID,
-		Links:            linkedRecordIDs(links),
-		AuthoredSubject:  in.Subject,
-		AuthoredBody:     in.Body,
+	files, err := s.PreviewSendAttachments(ctx, in.AttachmentIDs)
+	if err != nil {
+		return SendPreview{}, err
 	}
+	// The question the send asks, from the send's own builder.
+	req := outboundMessage{in: in.asSend(), links: links, files: files}.authorization(origin)
 	var preview SendPreview
 	if origin.isReply() || s.recipientFiler == nil {
 		preview.Decisions, err = previewer.Preview(ctx, req)
@@ -174,13 +171,11 @@ func (s *Store) previewFilingNewAddresses(ctx context.Context, recipients []stri
 	return out, err
 }
 
-// evidenceWithAnchor fills the anchor in the way outboundMessage.evidence does
-// for a real send, so a preview and the send it previews offer the engine the
-// same evidence rather than differing by one field nobody set.
-func (in PreviewSendInput) evidenceWithAnchor(origin SendOrigin) commsauthz.Evidence {
-	e := in.Evidence
-	if e.ActivityID == (ids.UUID{}) {
-		e.ActivityID = origin.anchor.UUID
+// asSend is the preview as the message the send would be asked about.
+func (in PreviewSendInput) asSend() SendEmailInput {
+	return SendEmailInput{
+		Recipients: in.Recipients, Subject: in.Subject, Body: in.Body, HTMLBody: in.HTMLBody,
+		AttachmentIDs: in.AttachmentIDs, ConsentPurpose: in.LegacyPurposeKey, Context: in.Context,
+		MarketingPurpose: in.MarketingPurpose, OperatorReason: in.OperatorReason, Evidence: in.Evidence,
 	}
-	return e
 }
