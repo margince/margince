@@ -170,10 +170,13 @@ func (s *Store) ResendInvitation(ctx context.Context, roomID ids.DealRoomID, par
 		if err != nil {
 			return err
 		}
-		// The seller handing over a link answers the buyer's ask for one.
-		if _, err := tx.Exec(ctx,
-			`UPDATE deal_room_participant SET link_requested_at = NULL WHERE id = $1`, participantID); err != nil {
-			return fmt.Errorf("answer deal room link request: %w", err)
+		// The seller handing over a link answers the buyer's ask for one. With no
+		// ask on the row there is nothing to answer, and no write.
+		if current.LinkRequestedAt != nil {
+			if _, err := tx.Exec(ctx,
+				`UPDATE deal_room_participant SET link_requested_at = NULL WHERE id = $1`, participantID); err != nil {
+				return fmt.Errorf("answer deal room link request: %w", err)
+			}
 		}
 		auditID, err := storekit.Audit(ctx, tx, "invite", participantObject, participantID.UUID,
 			nil, map[string]any{fieldRoomID: roomID.UUID, "resent": true, "link_requested_at": nil})

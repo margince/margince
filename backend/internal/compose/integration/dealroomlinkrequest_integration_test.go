@@ -9,6 +9,7 @@ package integration
 // roster then stops asking the seller for a link they already issued.
 
 import (
+	"context"
 	"net/http"
 	"testing"
 
@@ -37,6 +38,36 @@ func TestASellersNewLinkAnswersTheBuyersRequest(t *testing.T) {
 	if got := linkRequestedAt(t, e, room); got != nil {
 		t.Errorf("after the seller issued a new link the roster still shows the ask (%v)", *got)
 	}
+}
+
+// With no ask on the row, a resend has nothing to answer and leaves the row's
+// version as it was.
+func TestAResendWithNoAskLeavesTheBuyersRowUnwritten(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	room := openRoomWithABuyer(t, e)
+	participant := participantOf(t, e, room)
+
+	before := participantRowVersion(t, e, participant)
+	if status := e.Call(t, "POST",
+		"/v1/deal-rooms/"+room.roomID+"/participants/"+participant+"/resend",
+		AnyMap{}, nil, nil); status != http.StatusCreated {
+		t.Fatalf("resend = %d, want 201", status)
+	}
+	if after := participantRowVersion(t, e, participant); after != before {
+		t.Errorf("a resend with no ask rewrote the participant row (xmin %s -> %s)", before, after)
+	}
+}
+
+// participantRowVersion is the row's xmin, which changes only when the row is rewritten.
+func participantRowVersion(t *testing.T, e *apptest.AppEnv, participant string) string {
+	t.Helper()
+	var version string
+	if err := e.Pool.QueryRow(context.Background(),
+		`SELECT xmin::text FROM deal_room_participant WHERE id = $1`, participant).Scan(&version); err != nil {
+		t.Fatalf("read participant row version: %v", err)
+	}
+	return version
 }
 
 func linkRequestedAt(t *testing.T, e *apptest.AppEnv, room buyerRoom) *string {
