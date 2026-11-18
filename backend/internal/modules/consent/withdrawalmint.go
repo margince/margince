@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 // WithdrawalTokenForEmail mints (or reuses) the withdrawal credential this
@@ -51,18 +52,22 @@ func (s *Store) WithdrawalTokenForEmail(
 			return err
 		}
 		if purposeKey != "" {
+			// Matched the way authorization matches a key, live purposes only: a
+			// press on an archived purpose stops nothing, so it must not be named.
 			var purposeID ids.UUID
+			var storedKey string
 			switch scanErr := tx.QueryRow(ctx,
-				`SELECT id FROM consent_purpose WHERE key = $1`, purposeKey).Scan(&purposeID); {
+				`SELECT id, key FROM consent_purpose WHERE lower(btrim(key)) = $1 AND archived_at IS NULL`,
+				commsauthz.NormalizedPurposeKey(purposeKey)).Scan(&purposeID, &storedKey); {
 			case errors.Is(scanErr, pgx.ErrNoRows):
-				// A key no purpose carries: the all-marketing scope is the
+				// A key no live purpose carries: the all-marketing scope is the
 				// honest fallback, and it is the wider of the two, so the link
 				// never stops less than the recipient expects.
 			case scanErr != nil:
 				return fmt.Errorf("consent: resolving the purpose for the unsubscribe link: %w", scanErr)
 			default:
 				in.Scope, in.PurposeID = WithdrawalScopeNamedPurpose, purposeID
-				effectivePurpose = purposeKey
+				effectivePurpose = storedKey
 			}
 		}
 		var mintErr error

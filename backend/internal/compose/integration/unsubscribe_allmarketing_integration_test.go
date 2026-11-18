@@ -187,6 +187,48 @@ func TestAnUnknownPurposeKeyStopsAllMarketing(t *testing.T) {
 	}
 }
 
+// A key typed with a capital or a stray space names the same purpose it
+// authorized under, so its links stay scoped to that purpose.
+func TestADifferentlySpelledPurposeKeepsItsNamedScope(t *testing.T) {
+	c := setupConsent(t)
+	c.useReviewableMarketingProfile(t)
+	c.grantMarketingByConfirmLink(t)
+	grantPurpose(t, c, createNewsletterPurpose(t, c))
+
+	d := deliverMarketing(t, c, "subject@consent.test", " Marketing_Email ", false)
+	if !strings.HasSuffix(d.header, "?purpose=marketing_email") {
+		t.Fatalf("List-Unsubscribe = %q, want it scoped to marketing_email", d.header)
+	}
+	if n := pressOneClick(t, c, d.header); n != 1 {
+		t.Fatalf("the press reported %d stopped purpose(s), want 1", n)
+	}
+	if s, _ := purposeStateOf(t, readPreferenceView(t, c, manageTokenFromLink(t, d.manage)), "newsletter"); s != "granted" {
+		t.Errorf("newsletter is %q after a press on a marketing_email link, want granted", s)
+	}
+}
+
+// An archived purpose stops nothing when pressed, so its links name no purpose
+// and the press stops all marketing.
+func TestAnArchivedPurposeKeyStopsAllMarketing(t *testing.T) {
+	c := setupConsent(t)
+	c.useReviewableMarketingProfile(t)
+	c.grantMarketingByConfirmLink(t)
+	createNewsletterPurpose(t, c)
+	if _, err := c.Owner.Exec(context.Background(),
+		`UPDATE consent_purpose SET archived_at = now() WHERE key = 'newsletter'`); err != nil {
+		t.Fatalf("archiving the purpose: %v", err)
+	}
+
+	d := deliverMarketing(t, c, "subject@consent.test", "newsletter", true)
+	assertNamesNoPurpose(t, d)
+	if n := pressOneClick(t, c, d.header); n != 1 {
+		t.Fatalf("the press reported %d stopped purpose(s), want 1", n)
+	}
+	if s, _ := purposeStateOf(t, readPreferenceView(t, c, manageTokenFromLink(t, d.manage)), "marketing_email"); s != "withdrawn" {
+		t.Fatalf("marketing_email is %q after the press, want withdrawn", s)
+	}
+}
+
 // A named credential stops its own purpose, whether the press names it or not,
 // and refuses a press naming another one.
 func TestANamedLinkCannotBeWidened(t *testing.T) {
