@@ -122,35 +122,40 @@ Two kinds of release live here, and they carry different versions:
 
 | | `release-tag.yml` | `release.yml` |
 |---|---|---|
-| Trigger | a `v*` tag | started by hand from `main` |
-| Version | `v1.0.0` (semver) | `1.0.0`, typed when the run starts |
+| Trigger | a `v*` tag | the same `v*` tag with no added part, or started by hand from `main` |
+| Version | `v1.0.0` (semver) | `1.0.0`: the tag without its `v`, or typed for a run by hand |
 | Publishes to | the GitHub release page | the dist service at `dist.test.margince.com` |
 | Carries | the notes, the images on `ghcr.io`, a server bundle for each Linux platform, SBOMs, a signed `SHA256SUMS` | the patch of changes, SBOMs, a changelog, role images, an archive of the programs for each Linux platform |
 
-A tag does not start `release.yml`. The dist service accepts no `v` prefix, so the two lanes use different
-names.
+One tag cuts both releases. The dist service accepts no `v` prefix, so the tag `v1.0.0` makes the dist
+release `1.0.0`. Never push a tag `1.0.0` next to `v1.0.0`: the release CLI refuses that pair. A tag
+with an added part, such as `v1.0.0-rc.1`, makes no dist release.
 
-### Start a dist release
+### Start a dist release by hand
 
-Start `release.yml` from `main` and type the version:
+If the run of a tag failed before its draft, start `release.yml` from `main` and type the version:
 
 ```sh
 gh workflow run release.yml --ref main -f version=1.0.0
 ```
 
 The version is three numbers, `x.y.z`, with no prefix, no ending and no part that starts with `0`.
-Before the lane drafts, [`scripts/release-dispatch-version.sh`](../../scripts/release-dispatch-version.sh)
-refuses any other form and any branch other than `main` (`make test-release-dispatch-version`).
+Before the lane drafts, [`scripts/release-dist-version.sh`](../../scripts/release-dist-version.sh)
+reads the tag through `scripts/release-tag-version.sh`, or checks the typed version and the branch
+(`make test-release-dist-version`).
 
 The dist service has one line of releases. A new version must be above every published release,
 withdrawn ones too. The release CLI refuses a lower version before the draft.
 
 ### What the archive of a platform holds
 
-For `linux-amd64` and `linux-arm64` the lane writes a folder with `margince-api`, `margince-worker`,
-`margince-migrate`, `LICENSE` and `licenses/THIRD-PARTY-NOTICES.txt`. The files come from the same
-`bundle` bake as the server bundle of `release-tag.yml`. The programs hold code of other projects,
-and their licenses require the notices to go with each copy.
+For `linux-amd64` and `linux-arm64` the archive holds the server bundle of that platform, without its
+top folder. The lane packs it with [`scripts/release-bundle.sh`](../../scripts/release-bundle.sh) from
+the same `bundle` bake as `release-tag.yml`, so every path matches the bundle. The programs are in
+`bin/`, and `VERSION` names the dist version.
+
+Before the upload, the lane runs `bin/margince-<role> --version` for the `linux-arm64` tree. Each program
+must print `margince-<role> <version> (revision <commit>)`, with the version of the dist release.
 
 `build-archive` of the release CLI turns each folder into an archive and three SBOM files.
 `add-artifacts` uploads both platforms, with the role images, in one call. The dist service refuses a

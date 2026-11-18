@@ -1,15 +1,17 @@
 name: Release
 
-# Draft, fill and publish a dist release, started by hand from main with the
-# version as input. The dist service holds server releases: role images, an
+# Draft, fill and publish a dist release. A plain tag vX.Y.Z starts it and
+# names the dist release X.Y.Z, the tag without its v. A run by hand from main
+# is the fallback. The dist service holds server releases: role images, an
 # incremental patch, program archives and SBOMs. GitHub hosts none of that.
 #
-# A release is a decision somebody makes, so nothing starts this lane on its
-# own. A run on every push spent shared runner time on releases nobody asked for.
+# A release is a decision somebody makes, so no branch push starts this lane.
+# A run on every push spent shared runner time on releases nobody asked for.
 #
-# The GitHub release is not here. It belongs to release-tag.yml, which runs on
-# a v* tag. Only that lane creates a GitHub release, so a release page cannot
-# appear twice for one build.
+# One tag cuts both releases. The GitHub release is not here: it belongs to
+# release-tag.yml, which runs on the same tag. Only that lane creates a GitHub
+# release, so a release page cannot appear twice for one build. A pre-release
+# tag drafts nothing here, because the dist service has no pre-release.
 #
 # The flow: check the version, then draft the release with the patch, the
 # three source SBOMs and the changelog. Then bake the role images and the
@@ -28,6 +30,8 @@ name: Release
 # The changelog lists every non-merge commit subject since that revision,
 # through scripts/release_changelog.py, so it describes what the patch carries.
 on:
+  push:
+    tags: ['v*']
   workflow_dispatch:
     inputs:
       version:
@@ -66,6 +70,7 @@ env:
 jobs:
   draft:
     name: Draft release
+    if: github.ref_type != 'tag' || !contains(github.ref_name, '-')
     # The upload can wait up to about 68 minutes for the dist service.
     timeout-minutes: 90
     # Superseded by a newer run on the same ref: the tip is the commit worth
@@ -88,12 +93,12 @@ jobs:
           # Full history so the patch base's revision resolves; the shallow
           # default carries only the release commit.
           fetch-depth: 0
-      # Somebody typed the version, so it is checked before any work starts.
-      - name: Check the version and the branch
+      # The tag or the typed version is checked before any work starts.
+      - name: Read the dist version
         id: version
         env:
           DISPATCH_VERSION: ${{ inputs.version }}
-        run: bash scripts/release-dispatch-version.sh "$DISPATCH_VERSION" "$GITHUB_REF" >> "$GITHUB_OUTPUT"
+        run: bash scripts/release-dist-version.sh "$GITHUB_REF" "$DISPATCH_VERSION" >> "$GITHUB_OUTPUT"
       - name: Log in to ghcr.io
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -298,17 +303,16 @@ jobs:
             digest="$(jq -er --arg role "$role" '.[$role]."containerimage.digest"' bake-metadata.json)"
             images+=(--image "$role=$REPO/$role@$digest")
           done
-          # The same bundle bake as release-tag.yml, on this builder, so the
-          # programs come from the stages the images just built.
+          # The same bundle bake and packing as release-tag.yml, on this
+          # builder, so the programs come from the stages the images just built.
+          # An archive is the bundle tree without its top folder.
           docker buildx bake bundle
+          bash scripts/release-bundle.sh "$VERSION" "$MARGINCE_BUILD_REVISION" dist/bundle dist/release
           archives=()
           for platform in linux-amd64 linux-arm64; do
-            from="dist/bundle/${platform/-/_}"
             tree="dist/archive-tree/$platform"
-            install -D -m 0755 -t "$tree" \
-              "$from/bin/margince-api" "$from/bin/margince-worker" "$from/bin/margince-migrate"
-            install -D -m 0644 -t "$tree" "$from/LICENSE"
-            install -D -m 0644 -t "$tree/licenses" "$from/licenses/THIRD-PARTY-NOTICES.txt"
+            mkdir -p "$tree"
+            tar -xzf "dist/release/margince-$VERSION-$platform.tar.gz" -C "$tree" --strip-components=1
             docker run --rm \
               --user "$(id -u):$(id -g)" \
               -v "$PWD":/work \
@@ -320,6 +324,16 @@ jobs:
               --archive-sbom "$platform:cyclonedx-json=$base.cdx.json"
               --archive-sbom "$platform:spdx22-json=$base.spdx22.json"
               --archive-sbom "$platform:spdx30-json=$base.spdx30.json")
+          done
+          # The runner is arm64, so its tree can run. Each program must name
+          # the release the dist service carries.
+          for role in api worker migrate; do
+            want="margince-$role $VERSION (revision $MARGINCE_BUILD_REVISION)"
+            got="$("dist/archive-tree/linux-arm64/bin/margince-$role" --version)"
+            if [[ "$got" != "$want" ]]; then
+              echo "release: margince-$role --version printed '$got', want '$want'." >&2
+              exit 1
+            fi
           done
           docker run --rm \
             --user "$(id -u):$(id -g)" \

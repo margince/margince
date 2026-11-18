@@ -19,7 +19,7 @@ workflow is outside the gate:
 | `pace.yml` | every push to `main` | No (runs after the merge) |
 | `scheduled.yml` | daily and weekly on `main` | No |
 | `sbom.yml` | manual dispatch only | No |
-| `release.yml` | manual dispatch from `main` only | No |
+| `release.yml` | `v*` tag push (no pre-release), manual dispatch from `main` | No |
 | `release-tag.yml` | `v*` tag push | No (runs on a tag, after every merge) |
 
 `ci.yml` and `cla.yml` run on `merge_group` too, because the queue asks for each required check again.
@@ -319,9 +319,10 @@ It cuts a release in the dist service of the constellation deployment at `test.m
 release is a server deployment, which GitHub does not host. The GitHub release belongs to
 `release-tag.yml`, which owns the `github-release` job.
 
-Only a manual dispatch from `main` starts it, with a required `version` input such as `1.0.0`.
-`scripts/release-dispatch-version.sh` refuses a version that is not plain `x.y.z`, and any other ref
-(`make test-release-dispatch-version`). There is no push trigger. So the role images have no other
+A `v*` tag without a pre-release part starts it, and the dist version is the tag without its `v`. A
+manual dispatch from `main` is the fallback, with a required `version` input such as `1.0.0`.
+`scripts/release-dist-version.sh` reads either one and refuses anything else (`make test-release-dist-version`).
+There is no branch push trigger. So the role images have no other
 build ([#1965](https://github.com/margince/margince/issues/1965)).
 
 What a run does:
@@ -345,7 +346,7 @@ What a run does:
      after a quiet night starts with an empty cache.
 3. The images are pushed by digest, with no tag, to `registry.test.margince.com/margince/<role>`, logged in
    as the registry publisher (`MARGINCE_AUTH_PUBLISHER_TOKEN`). The same builder bakes `bundle`. For each
-   Linux platform, `build-archive` packs the three programs, `LICENSE` and the notices with three SBOMs. One `add-artifacts --release <version>` call adds images and archives.
+   Linux platform, `build-archive` packs the bundle tree of `scripts/release-bundle.sh` with three SBOMs. One `add-artifacts --release <version>` call adds images and archives.
 4. The release is published with `publish-release --release <version>`. The dist uploads log in with the dist
    publisher token (the `MARGINCE_DIST_PUBLISHER_TOKEN` secret).
 
