@@ -12,8 +12,8 @@ import (
 
 func TestTheAgentClientListReadsBackItsOwnNextCursor(t *testing.T) {
 	listed := []listedClient{
-		{AgentClient: AgentClient{ID: ids.NewV7(), CreatedAt: time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)}, tier: 1},
-		{AgentClient: AgentClient{ID: ids.NewV7(), CreatedAt: time.Date(2026, 9, 2, 0, 0, 0, 0, time.UTC)}, tier: 1},
+		{ID: ids.NewV7(), CreatedAt: time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC), tier: 1},
+		{ID: ids.NewV7(), CreatedAt: time.Date(2026, 9, 2, 0, 0, 0, 0, time.UTC), tier: 1},
 	}
 	_, page, err := agentClientPage(listed, 1)
 	if err != nil || page.NextCursor == "" {
