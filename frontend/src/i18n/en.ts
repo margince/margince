@@ -3043,7 +3043,7 @@ export const en = {
   "record.companyRoutingKey": "Company routing key",
   "record.companyRoutingKeyWhy": "What the company routing key is",
   "record.companyRoutingKeyHelp":
-    "The company’s web domain, such as example.com, or a short name for it. Lead routing rules can match it, and a domain a company in Margince holds suggests that company.",
+    "The company’s web domain, such as example.com. Routing rules can match it, and Margince suggests the company that holds that domain.",
   "record.finishFieldEdit":
     "Save or cancel the current edit before closing details.",
   "record.save": "Save",

@@ -3132,7 +3132,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "record.companyRoutingKey": "Zuordnungsschlüssel des Unternehmens",
   "record.companyRoutingKeyWhy": "Wofür der Zuordnungsschlüssel ist",
   "record.companyRoutingKeyHelp":
-    "Die Webdomain des Unternehmens, etwa example.com, oder ein kurzer Name dafür. Regeln zur Lead-Zuweisung können darauf prüfen, und eine Domain, die ein Unternehmen in Margince hat, schlägt dieses Unternehmen vor.",
+    "Die Webdomain des Unternehmens, etwa example.com. Zuweisungsregeln können darauf prüfen, und Margince schlägt das Unternehmen vor, das diese Domain hat.",
   "record.finishFieldEdit":
     "Speichere oder verwirf die aktuelle Änderung, bevor du die Details schließt.",
   "record.save": "Speichern",
