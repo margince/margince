@@ -92,20 +92,14 @@ test.describe("the record tab strip", () => {
   // in both states.
   //
   // Every record here can fail it: the breakout lives in `@container work`,
-  // which `mainClasses` opens for the screens GRIDDED_RECORD_SCREENS names —
+  // which `mainClasses` opens for the screens RECORD_VIEW_SCREENS names —
   // the same set `./records` is censused against by
   // `src/app/recordcensus.test.ts` — so every record swept here
   // has a container to size itself from and something to overhang with. A
   // record left out of the sweep is a record nobody notices is not being
   // measured.
   //
-  // 2200px is in the list because the reading column is CAPPED there
-  // (--pageColumn) while the work column keeps growing, so the `@container work`
-  // the breakout measures itself against is hundreds of pixels wider than the
-  // column the strip actually sits in. A breakout sized from the container then
-  // overhangs by half the slack, which depends on nothing but the two widths.
-  // Below the cap the two are the same width, the same error is at most a
-  // scrollbar wide, and a runner with overlay scrollbars cannot see it at all.
+  // Two widths, so a breakout whose error grows with the window shows at one.
   for (const record of RECORDS) {
     for (const width of [1440, 2200]) {
       test(`keeps the width of the column it sits in on a ${record.name} at ${width}px`, async ({

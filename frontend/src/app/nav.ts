@@ -199,28 +199,11 @@ export const MOBILE_PRIMARY: ReadonlySet<Screen> = new Set([
   "deals",
 ]);
 
-// Every RecordView RECORD page keeps ONE reading column, so a reader who walks
-// from a company to a deal to the lead behind it meets the same measure on
-// each. That is the invariant this set states: a screen whose record page is
-// drawn as a RecordView belongs here, and one missing from it is the one page
-// in the walk that jumps.
-//
-// A detail page that lays out its OWN surface takes its measure from
-// `GRIDDED_SCREENS` below instead: `#/offers/<id>` draws SectionHeader and Card
-// itself, with no RecordView, no tab strip and no details pane, so this set has
-// no record column to keep on it. Settings is absent for the same kind of
-// reason — always capped, and a whole section rather than a record.
-//
-// A record reads DOWN rather than across: a rail of facts beside prose, where a
-// measured line length is the point and a fact a monitor away from its label is
-// worse, not wider. A list, a board or a report is scanned ACROSS, and the cap
-// only ever pushed columns off the right edge of a wide display — which is why
-// the key is the id and not the screen alone.
-//
-// Keyed on the screen, applied only when the route carries a RECORD id:
-// `#/companies` is the list and belongs to the other family, `#/companies/<id>`
-// is the record.
-export const GRIDDED_RECORD_SCREENS: ReadonlySet<Screen> = new Set([
+// The screens whose record page is drawn as a RecordView, keyed on the screen
+// and applied only when the route carries a RECORD id: `#/companies` is the
+// list, `#/companies/<id>` the record. The shell names that record's scroller
+// as a container, so the record's tab strip can span it.
+export const RECORD_VIEW_SCREENS: ReadonlySet<Screen> = new Set([
   "companies",
   "contacts",
   "leads",
@@ -275,33 +258,6 @@ export function recordKindOf(route: Route): EntityKind | undefined {
     ? undefined
     : SCREEN_ENTITY[route.screen];
 }
-
-// Screens that keep the same reading column on every address they answer,
-// whatever segments follow, because none of them is drawn as a RecordView.
-// Every one of them reads DOWN. Brief is a briefing in sentences beside a rail
-// of context, with decision cards carrying drafted prose somebody has to read
-// before they can decide. Today is a queue worked top to bottom. Filters is a
-// list of saved views. An opened list reads down from its facts to its members
-// and history, and its library and Edit filter page keep this column too.
-// Analytics is a column of report sections. A share view is one record handed
-// to a reader, prose beside facts. An offer is a detail page drawing its own
-// surface. Uncapped, each of them ran a line of text the full width of a wide
-// display with the words hugging the left edge, which is the failure the cap
-// exists to prevent.
-//
-// The rest of the app is scanned ACROSS — a list, a board, a table — and the
-// cap only ever pushed columns off the right edge there.
-export const GRIDDED_SCREENS: ReadonlySet<Screen> = new Set([
-  "home",
-  "worklist",
-  "filters",
-  "lists",
-  "analytics",
-  "progress",
-  "goals",
-  "share",
-  "offers",
-]);
 
 // Documented rail-less exceptions (AC-shell layout exception): onboarding,
 // the public booking page, the extension client surfaces, and the OAuth

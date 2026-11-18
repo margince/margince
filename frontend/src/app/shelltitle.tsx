@@ -20,25 +20,6 @@ import {
   sectionHead,
 } from "./pagemeta";
 import { SectionSwitcher } from "./sectionswitcher";
-import { TopBar } from "./topbar";
-
-/**
- * The chrome on a settings route, naming the tab the reader opened.
- *
- * Both halves read the same section the rail does. The hook derives it from
- * the capability cache the rail already warmed. So the trail, the heading and
- * the sidebar cannot disagree about which tab is current.
- */
-export function SettingsTopBar({
-  route,
-  onOpenSearch,
-}: Readonly<{
-  route: Route;
-  onOpenSearch: () => void;
-}>) {
-  const section = useSettingsSection(route);
-  return <TopBar route={route} section={section} onOpenSearch={onOpenSearch} />;
-}
 
 export function SettingsPageTitle(
   props: Readonly<{ route: Route; actionSlot: SlotRef }>,

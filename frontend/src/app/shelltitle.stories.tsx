@@ -16,7 +16,8 @@ import {
   usePaletteSeam,
 } from "./shell.storykit";
 import { SettingsRail } from "./shellrail";
-import { SettingsPageTitle, SettingsTopBar } from "./shelltitle";
+import { SettingsPageTitle } from "./shelltitle";
+import { TopBar } from "./topbar";
 import "../features/settings/settings.css";
 
 const ACCOUNT: Route = { screen: "settings", id: "account" };
@@ -35,7 +36,7 @@ function SettingsChrome({
         onToggle={() => setCollapsed((current) => !current)}
       />
       <main className="main">
-        <SettingsTopBar route={ACCOUNT} onOpenSearch={openSearch} />
+        <TopBar route={ACCOUNT} onOpenSearch={openSearch} />
         <div className="scroll">
           <SettingsPageTitle route={ACCOUNT} actionSlot={() => undefined} />
           <div className="wrap">
@@ -63,15 +64,15 @@ function SettingsStory({
   );
 }
 
-const meta: Meta<typeof SettingsTopBar> = {
+const meta: Meta<typeof SettingsPageTitle> = {
   title: "Shell/Settings chrome",
-  component: SettingsTopBar,
+  component: SettingsPageTitle,
   parameters: { layout: "fullscreen" },
 };
 export default meta;
-type Story = StoryObj<typeof SettingsTopBar>;
+type Story = StoryObj<typeof SettingsPageTitle>;
 
-/** The settings level open, with the trail naming the tab. */
+/** The settings level open, with the page named in the card. */
 export const Expanded: Story = {
   render: () => <SettingsStory startCollapsed={false} />,
 };

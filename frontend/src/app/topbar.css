@@ -1,19 +1,14 @@
 /* ===== the top bar =====
- * The session's own strip: the trail, the search, and the contact. It is the
+ * The session's own strip: the search, and the contact. It is the
  * application's one bar and every screen has it (DESIGN.md §6); nothing that
  * belongs to a record sits in it.
  *
  * It never scrolls: it is the first row of the content column's flex box and
  * the scroller is its sibling, which is cheaper than `position: sticky` and
  * cannot be defeated by a screen that establishes its own scroll container. */
-/* The search is centred on the content column while the trail fits its half;
-   a longer trail grows into the room the end controls leave, up to its cap. */
 .topbar {
   --topbarSearchW: min(420px, 34vw);
-  display: grid;
-  grid-template-columns: minmax(min-content, 1fr) auto minmax(0, 1fr);
-  /* The query container `.topbar-lead` measures its cap against. */
-  container-type: inline-size;
+  display: flex;
   align-items: center;
   gap: var(--space-3);
   /* The gap between the bar's glyphs, which a thumb's targets split (below). */
@@ -35,15 +30,6 @@
   align-items: center;
   gap: var(--space-2);
   min-width: 0;
-  /* The row less the search, its two gaps, and the bell and account control:
-     a trail longer than this ellipses rather than pushing them off the bar. */
-  max-width: calc(
-    100cqw -
-    var(--topbarSearchW) -
-    var(--space-2) -
-    2 *
-    (var(--space-3) + var(--controlHeight))
-  );
 }
 .topbar-trail {
   display: flex;
@@ -51,12 +37,10 @@
   justify-content: flex-end;
   gap: var(--topbarGlyphGap);
   min-width: 0;
+  margin-inline-start: auto;
 }
 
-/* ===== search =====
- * Centred on the content column, which is what the bar spans. It glides with the
- * column when the sidebar collapses — `--railW` animates as a registered length
- * (shell.css), so the grid beside it moves rather than snapping. */
+/* ===== search ===== */
 .topbar-searchslot {
   width: var(--topbarSearchW);
 }
@@ -73,7 +57,8 @@
   gap: var(--space-2);
   width: 100%;
   min-block-size: var(--inputHeight);
-  padding-inline: var(--inputPaddingX);
+  /* The page's gutter, so the glyph starts where the content in the card does. */
+  padding-inline: var(--pageGutter);
   font: inherit;
   /* One more pane on the glass, with the pane's own edge: a field drawn in the
      page's ground sat in the strip as a hole. */
@@ -139,19 +124,15 @@
   color: var(--textPrimary);
 }
 
-/* Below this width a centred field and the trail beside it are competing for
-   the same pixels, and the trail is the half that cannot be recovered from a
-   keyboard shortcut. The search keeps its place in the row and drops to its
-   glyph — never off the bar, because on touch there is no ⌘K to fall back on. */
+/* Below this width the search drops to its glyph, never off the bar: on touch
+   there is no ⌘K to fall back on. */
 @media (max-width: 1100px) {
   .topbar {
-    display: flex;
     /* One gap for the whole strip, so the row reads as one rhythm. */
     gap: var(--topbarGlyphGap);
   }
   .topbar-lead {
     flex: 1;
-    max-width: none;
   }
   .topbar-searchslot {
     width: auto;
@@ -214,15 +195,6 @@
   }
 }
 
-/* Below 1024px a long trail has no room beside the end controls, so the bar
-   draws the current page alone. */
-@media (width < 1024px) {
-  .topbar .crumbs > ol > li:not(:last-child),
-  .topbar .crumbs > ol > li:last-child > .crumbs-sep {
-    display: none;
-  }
-}
-
 /* At phone width the page scrolls under the strip (app/shell.css). */
 @media (max-width: 700px) {
   .topbar {
@@ -232,8 +204,8 @@
   }
 }
 
-/* The company's mark in the trail's place at phone width (topbar.tsx). The
-   lead grows, so the controls after it stay at the end of the bar. */
+/* The company's mark at phone width (topbar.tsx). The lead grows, so the
+   controls after it stay at the end of the bar. */
 .topbar-home {
   display: grid;
   place-items: center;

@@ -11,7 +11,7 @@ import {
 import { ladderText, lists, TYPE } from "../../scripts/lib/surface-sheets";
 
 // Joining or leaving the ladder is a decision, so it moves these numbers too.
-const LADDER_SIZE = { surfaces: 80, overlays: 19 };
+const LADDER_SIZE = { surfaces: 79, overlays: 19 };
 
 describe("the ladder's lists", () => {
   it("are one list each, copied into every depth", () => {

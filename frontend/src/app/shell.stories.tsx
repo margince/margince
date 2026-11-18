@@ -112,14 +112,9 @@ export const Default: Story = {
 };
 
 /**
- * A named page on the capped reading column: the heading starts and ends
- * exactly where the card under it does.
- *
- * The head used to run the full width of the window while the column was
- * capped, so on a wide display the page's name began a hand's width to the left
- * of its own content. One measure now caps both (shell.css, --pageMeasure), and
- * this frame is where a change to either is visible: put a ruler on the left
- * edge of the title and the left edge of the card.
+ * A named page: the heading starts and ends exactly where the card under it
+ * does, both on the page gutter. Put a ruler on the left edge of the title and
+ * the left edge of the card.
  */
 export const PageHeadOnItsColumn: Story = {
   name: "a named page — head on the column",

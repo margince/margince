@@ -11,9 +11,9 @@ import type { Screen } from "../src/lib/router";
  * over five.
  *
  * `screen` is what makes this list a census rather than a habit. It is held
- * against `GRIDDED_RECORD_SCREENS` — the shell's own answer to which screens
+ * against `RECORD_VIEW_SCREENS` — the shell's own answer to which screens
  * have a record page — by `src/app/recordcensus.test.ts`, which fails when a
- * screen the shell caps has no route here. That check is a vitest test rather
+ * screen the shell treats as a record has no route here. That check is a vitest test rather
  * than a test in these specs because `app/nav.ts` reaches `app/custom.ts` and
  * its `import.meta.glob`, which only Vite compiles: importing the set here
  * takes down Playwright's transform before a single spec is collected.

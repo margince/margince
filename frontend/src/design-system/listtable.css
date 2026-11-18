@@ -22,6 +22,23 @@
   overflow: hidden;
 }
 
+/* Above phone width a list page IS the content card: the surface fills it edge
+   to edge and the card's edge is its only edge. */
+@media (width > 700px) {
+  .scroll:has(> .wrap > .lt) {
+    --scrollPadTop: 0px;
+    scrollbar-gutter: auto;
+  }
+  .scroll > .wrap:has(> .lt) {
+    padding: 0;
+  }
+  .scroll > .wrap > .lt {
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+}
+
 /* ---- header: views, count, primary action ---- */
 
 /* The row wraps, and what gives way first is the count (`.lt-count`): the tabs

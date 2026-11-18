@@ -156,11 +156,11 @@
 @media (width > 700px) {
   /* On the root, so the strip's panels, portalled to the body, read it too. */
   :root:has(.app:not(.railless)) {
-    --cardEdge: 1px;
-    --barInsetEnd: calc(var(--space-2) + var(--cardEdge) + var(--pageGutter));
+    --barInsetEnd: calc(var(--pageGutter) / 2);
   }
-  .app:not(.railless) {
-    background: var(--chrome);
+  /* The sidebar and the bar stand on the page ground; the content is the card. */
+  .app:not(.railless) :is(.rail, .topbar) {
+    background-color: transparent;
   }
   .app:not(.railless) .main {
     padding-bottom: var(--space-2);
@@ -169,26 +169,12 @@
     margin-inline-end: var(--space-2);
   }
   .app:not(.railless) .scroll {
-    background: var(--bgPage);
-    border: var(--cardEdge) solid var(--groundEdge);
+    background: var(--pageCard);
+    border: 1px solid var(--groundEdge);
     border-radius: var(--r-lg);
   }
   .app:not(.railless) .topbar {
-    padding-inline: calc(var(--cardEdge) + var(--pageGutter)) var(--barInsetEnd);
-  }
-  /* The trail starts on the line the page's column starts on in the card. */
-  .app:not(.railless) .topbar-lead {
-    margin-inline-start: max(
-      0px,
-      (
-        100cqw +
-        2 *
-        var(--pageGutter) -
-        var(--scrollerGutter, 0px) -
-        var(--pageMeasure, calc(100cqw + 2 * var(--pageGutter)))
-      ) /
-      2
-    );
+    padding-inline: 0 var(--barInsetEnd);
   }
   /* An advisory strip is chrome, above the card. */
   .app:not(.railless) .appbanner {
@@ -400,6 +386,9 @@
   background-color: var(--ground);
   /* Each row's glyph centred in a square the row's height: the 56px axis. */
   --railGlyph: 18px;
+  /* A neutral tint over whatever ground the rail stands on, apart from the
+     current row's green. */
+  --railHover: color-mix(in srgb, var(--textPrimary) 7%, transparent);
   --railRowInset: calc((var(--controlHeight) - var(--railGlyph)) / 2);
   /* Words fade in over the second half of an expand. */
   --railFade: calc(var(--dur-move) / 2);
@@ -473,7 +462,7 @@
   transition: background var(--dur-state) var(--ease-in-out);
 }
 .rail .railhead:hover {
-  background: color-mix(in srgb, var(--textPrimary) 4%, var(--ground));
+  background: var(--railHover);
 }
 /* Only an installation's head has the second line. A head without it stays one
    row, so the name centres on the mark instead of sitting in an empty half. */
@@ -656,10 +645,8 @@
   background: transparent;
   text-decoration: none;
 }
-/* Not --groundHover: on the rail it is a --hoverShade tint close to the current
-   row's ground. */
 .rail .navitem:hover {
-  background: color-mix(in srgb, var(--textPrimary) 4%, var(--ground));
+  background: var(--railHover);
   color: var(--accentText);
 }
 /* Declared after hover, so a pointer on the current row keeps this. A tint
@@ -825,27 +812,6 @@
      the air around it read as rail nobody uses. */
   margin: var(--space-1) calc(-1 * var(--space-3)) 0;
   padding: 0 var(--space-2);
-}
-/* ===== the agent's pane =====
- * A pane between the destinations and the toggle. Collapsed, it is a well
- * round the orb, 2px off the rail's edges. */
-.rail .railagent {
-  margin-inline: 0;
-  padding-block: var(--space-1);
-  border-radius: var(--r-lg);
-  box-shadow: inset 0 0 0 1px var(--groundEdge);
-  transition:
-    margin var(--dur-move) var(--ease-out),
-    padding var(--dur-move) var(--ease-out);
-}
-.rail.collapsed .railagent {
-  margin-inline: calc(var(--space-1) / 2 - var(--space-3));
-  padding-inline: 0;
-}
-@media (prefers-reduced-motion: reduce) {
-  .rail .railagent {
-    transition: none;
-  }
 }
 .rail .railfoot {
   flex: none;

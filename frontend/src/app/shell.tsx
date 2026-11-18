@@ -49,7 +49,7 @@ import "./shell.css";
 // which stands INSIDE the scroller and scrolls with the page because it belongs
 // to the document, and the agent, which floats at the column's foot.
 import { type RailProps, SettingsRail, WorkspaceRail } from "./shellrail";
-import { PageTitle, SettingsPageTitle, SettingsTopBar } from "./shelltitle";
+import { PageTitle, SettingsPageTitle } from "./shelltitle";
 
 export { SettingsRail, WorkspaceRail } from "./shellrail";
 export { PageTitle } from "./shelltitle";
@@ -92,11 +92,10 @@ function SkipToContent({
   );
 }
 
-// The work column's own classes. `main-gridded` is the capped reading column and
-// there is one measure for every page that keeps it (--pageColumn);
-// `main-record` adds nothing to that width and never appears without it — it
-// names the column's SCROLLER as a container, so the record's tab strip
-// measures the width content can use (shell.css, `container-name: work`).
+// The work column's own classes. `main-gridded` is the capped reading column;
+// `main-record` adds no width and names the column's SCROLLER as a container,
+// so the record's tab strip measures the width content can use (shell.css,
+// `container-name: work`).
 const RAIL_FOLDS_MAX_WIDTH = 1024;
 
 // A stored choice wins; with none a tablet starts folded, and nothing is stored.
@@ -110,11 +109,10 @@ function startsCollapsed(): boolean {
   return under(RAIL_FOLDS_MAX_WIDTH) && !under(PHONE_MAX_WIDTH);
 }
 
-function mainClasses(gridded: boolean, griddedRecord: boolean): string {
-  if (!gridded) {
-    return "main";
-  }
-  return griddedRecord ? "main main-gridded main-record" : "main main-gridded";
+function mainClasses(gridded: boolean, record: boolean): string {
+  return ["main", gridded && "main-gridded", record && "main-record"]
+    .filter(Boolean)
+    .join(" ");
 }
 
 export function Shell({
@@ -140,7 +138,7 @@ export function Shell({
   const onUnitPage =
     route.screen === EXTENSION_SCREEN && findExtension(route.id) !== null;
   const leveled = route.screen === SETTINGS_SCREEN || onUnitPage;
-  const { gridded, griddedRecord } = useReadingColumn(route);
+  const { gridded, record } = useReadingColumn(route);
   const [collapsed, setCollapsed] = useState(startsCollapsed);
   // What the sidebar's walk between levels remembers — where a walk OUT of a
   // level returns to, and whether the level that arrives was asked for and takes
@@ -239,12 +237,8 @@ export function Shell({
               <WorkspaceRail {...railProps} />
             )}
           </NavWalkProvider>
-          <main className={mainClasses(gridded, griddedRecord)}>
-            {leveled ? (
-              <SettingsTopBar route={route} onOpenSearch={onOpenSearch} />
-            ) : (
-              <TopBar route={route} onOpenSearch={onOpenSearch} />
-            )}
+          <main className={mainClasses(gridded, record)}>
+            <TopBar route={route} onOpenSearch={onOpenSearch} />
             {/* Mounted from the start: it holds the outage watcher, and a
                 known offline state shows in the first paint. */}
             <ConnectivityBanner />
