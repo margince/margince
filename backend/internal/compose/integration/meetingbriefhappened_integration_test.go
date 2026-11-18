@@ -113,6 +113,21 @@ func TestABriefTakesNoDayMeetingDatedTodayAsWhenWeLastSpoke(t *testing.T) {
 	}
 }
 
+// An internal note is no conversation.
+// The brief lists it in no arc and still calls the room a first contact.
+func TestABriefCountsNoInternalNoteAsAConversation(t *testing.T) {
+	now := time.Date(2026, 8, 4, 13, 0, 0, 0, time.UTC)
+	room := newBriefRoom(t, "UTC", now, now.Add(48*time.Hour))
+	note := room.log(t, "note", now.Add(-time.Hour), activities.PrecisionInstant)
+	lastSpoke, arc := room.read(t)
+	if !strings.HasPrefix(lastSpoke, neverSpoke) {
+		t.Errorf("last spoke = %q, but the only record is a note", lastSpoke)
+	}
+	if strings.Contains(arc, note.String()) {
+		t.Errorf("the arc cites the note: %s", arc)
+	}
+}
+
 // A call logged for today's date has happened from the start of that date. In
 // Kiritimati its stored noon is a day ahead, and both reads count it already.
 func TestABriefCountsADayCallDatedTodayBeforeItsStoredNoon(t *testing.T) {

@@ -37,6 +37,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -116,7 +117,7 @@ var historyColumns = `
 	LIMIT %[4]d`
 
 var historyCandidates = `a.archived_at IS NULL
-	  AND a.kind <> 'task'
+	  AND a.kind IN ` + relstrength.InteractionKindSQLGroup() + `
 	  AND a.id <> $%[1]d
 	  AND %[2]s
 	  AND %[3]s
