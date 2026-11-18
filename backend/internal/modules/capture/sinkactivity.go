@@ -14,6 +14,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -25,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -456,7 +458,7 @@ func capturedActivityInsert(ctx context.Context, rec connector.NormalizedRecord,
 		fields.occurredPrecision(),
 		nullableID(fields.InvitationFromSeat),
 		nullableString(fields.AgendaFingerprint),
-		nullableID(fields.AssigneeID), nullableTime(fields.DueAt),
+		nullableID(fields.AssigneeID), nullableTime(sensibleDue(fields.DueAt)),
 		nullableString(fields.CalendarUID),
 		fields.CalendarEvent,
 		fields.forwardedFrom != nil,
@@ -464,4 +466,13 @@ func capturedActivityInsert(ctx context.Context, rec connector.NormalizedRecord,
 	query := `INSERT INTO activity(kind,channel_provider,subject,body,occurred_at,direction,source_system,source_id,source,captured_by,thread_key,counterparty_email,counterparty_outbound_attested,bulk_mail_attested,audience,audience_reason,has_calendar_part,host_user_id,language,raw_capture_id,duration_seconds,sent_by_colleague,calendar_method,foreign_link,sender_was_stranger,inbound_sender_authenticated,body_completeness,sender_is_machine,occurred_precision,invitation_sender,agenda_fingerprint,assignee_id,due_at,calendar_uid,calendar_event,forwarded_to_self)
  VALUES (` + storekit.Placeholders(args) + `) ON CONFLICT(source_system,source_id) WHERE source_system IS NOT NULL AND source_id IS NOT NULL DO NOTHING RETURNING id`
 	return query, args
+}
+
+// sensibleDue drops a due date outside the window every task writer shares, so
+// a mis-read year files an undated task instead of one on no list.
+func sensibleDue(due time.Time) time.Time {
+	if !due.IsZero() && !values.DueInWindow(due, time.Now()) {
+		return time.Time{}
+	}
+	return due
 }

@@ -133,9 +133,9 @@ export function todayIn(zone: string): string {
 }
 
 // The days a task's due date may fall on: one day inside the server's window
-// of a year back and ten years ahead. A day the box accepts is then never one
+// of ten years back and ten ahead. A day the box accepts is then never one
 // the server refuses at that day's clock time.
-export const DUE_YEARS_BACK = 1;
+export const DUE_YEARS_BACK = 10;
 export const DUE_YEARS_AHEAD = 10;
 
 export function dueDayBounds(zone: string): { min: ISODate; max: ISODate } {

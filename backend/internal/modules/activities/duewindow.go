@@ -8,13 +8,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-)
-
-// A task's due date lives between these years around now. A task far outside
-// the window sits on no list, so a year typo would lose it without a word.
-const (
-	dueYearsBack  = 1
-	dueYearsAhead = 10
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // DueOutOfRangeError refuses a due date outside the window, naming due_at on
@@ -22,7 +16,7 @@ const (
 type DueOutOfRangeError struct{}
 
 func (e *DueOutOfRangeError) Error() string {
-	return fmt.Sprintf("due_at is more than %d year back or %d years ahead", dueYearsBack, dueYearsAhead)
+	return fmt.Sprintf("due_at is more than %d years back or %d years ahead", values.DueYearsBack, values.DueYearsAhead)
 }
 
 // FieldFault names due_at as the field to correct.
@@ -35,7 +29,7 @@ func checkDueWindow(due *time.Time, now time.Time) error {
 	if due == nil {
 		return nil
 	}
-	if due.Before(now.AddDate(-dueYearsBack, 0, 0)) || due.After(now.AddDate(dueYearsAhead, 0, 0)) {
+	if !values.DueInWindow(*due, now) {
 		return &DueOutOfRangeError{}
 	}
 	return nil

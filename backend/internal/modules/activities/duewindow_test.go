@@ -18,13 +18,13 @@ func TestADueDateOutsideTheWindowIsRefusedOnDueAt(t *testing.T) {
 		due     time.Time
 		refused bool
 	}{
-		"year 1900":            {time.Date(1900, 1, 1, 9, 30, 0, 0, time.UTC), true},
-		"year 9999":            {time.Date(9999, 1, 1, 0, 0, 0, 0, time.UTC), true},
-		"just over a year ago": {now.AddDate(-1, 0, -1), true},
-		"just past ten years":  {now.AddDate(10, 0, 1), true},
-		"yesterday":            {now.AddDate(0, 0, -1), false},
-		"next month":           {now.AddDate(0, 1, 0), false},
-		"nine years ahead":     {now.AddDate(9, 0, 0), false},
+		"year 1900":               {time.Date(1900, 1, 1, 9, 30, 0, 0, time.UTC), true},
+		"year 9999":               {time.Date(9999, 1, 1, 0, 0, 0, 0, time.UTC), true},
+		"just over ten years ago": {now.AddDate(-10, 0, -1), true},
+		"just past ten years":     {now.AddDate(10, 0, 1), true},
+		"two years ago":           {now.AddDate(-2, 0, 0), false},
+		"next month":              {now.AddDate(0, 1, 0), false},
+		"nine years ahead":        {now.AddDate(9, 0, 0), false},
 	}
 	for name, c := range cases {
 		t.Run(name, func(t *testing.T) {

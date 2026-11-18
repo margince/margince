@@ -71,11 +71,11 @@ describe("dueDayBounds", () => {
     vi.useRealTimers();
   });
 
-  it("keeps a task's due day inside one year back and ten years ahead", () => {
+  it("keeps a task's due day inside ten years back and ten ahead", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-07-05T10:00:00Z"));
     expect(dueDayBounds("UTC")).toEqual({
-      min: "2025-07-06",
+      min: "2016-07-06",
       max: "2036-07-04",
     });
   });
@@ -84,7 +84,7 @@ describe("dueDayBounds", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2028-02-29T10:00:00Z"));
     const { min, max } = dueDayBounds("UTC");
-    expect(min).toBe("2027-03-02");
+    expect(min).toBe("2018-03-02");
     expect(max).toBe("2038-02-28");
   });
 });
