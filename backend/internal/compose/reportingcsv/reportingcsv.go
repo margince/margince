@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Package reportingcsv holds what the reporting CSV export writes that does not
-// depend on the evaluation: figure labels, amounts in major units and the file name.
+// Package reportingcsv holds the evaluation-free parts of the reporting CSV
+// export: figure labels, amounts in major units and the file name.
 package reportingcsv
 
 import (
