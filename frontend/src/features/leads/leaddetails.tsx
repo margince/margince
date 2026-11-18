@@ -180,8 +180,16 @@ function reachRows(
           reachRow(
             t("record.reach.label"),
             <ReachCard>
-              {hasEmail && <ReachLine kind="email">{values.email}</ReachLine>}
-              {hasPhone && <ReachLine kind="phone">{values.phone}</ReachLine>}
+              {hasEmail && (
+                <ReachLine kind="email" text={lead.email ?? ""}>
+                  {values.email}
+                </ReachLine>
+              )}
+              {hasPhone && (
+                <ReachLine kind="phone" text={lead.phone ?? ""}>
+                  {values.phone}
+                </ReachLine>
+              )}
             </ReachCard>,
           ),
         ]

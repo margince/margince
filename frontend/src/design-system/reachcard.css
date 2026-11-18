@@ -24,8 +24,7 @@
   block-size: var(--controlIcon);
   color: var(--textSecondary);
 }
-/* Only the handle gives way: a long address breaks at its "@" (EmailFace)
-   and its kind stays whole at the edge. */
+/* Only the handle gives way, and its kind stays whole at the edge. */
 .reachline-handle {
   display: inline-flex;
   align-items: center;
@@ -39,4 +38,20 @@
 }
 .reachline > :last-child:not(.reachline-kind, .reachline-handle) {
   flex: none;
+}
+/* A card line stays one line: a long address ends in "…", and the tip
+   shows it whole. */
+.reachline-handle > :not(.copy-action) {
+  flex: 0 1 auto;
+}
+.reachline .contactlink-email {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.reachline .contactlink-email-local,
+.reachline .contactlink-email-domain {
+  white-space: nowrap;
+  overflow-wrap: normal;
 }

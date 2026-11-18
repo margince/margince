@@ -69,6 +69,7 @@ function EmailHandles({
         <ReachLine
           key={row.id}
           kind="email"
+          text={row.email}
           caption={t(labelFor(EMAIL_TYPE_LABEL, row.email_type ?? "work"))}
           mark={
             <BoughtMark
@@ -103,6 +104,7 @@ function PhoneHandles({
         <ReachLine
           key={row.id}
           kind="phone"
+          text={row.phone}
           caption={t(labelFor(PHONE_TYPE_LABEL, row.phone_type ?? "work"))}
           mark={
             <BoughtMark

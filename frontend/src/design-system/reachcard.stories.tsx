@@ -13,7 +13,7 @@ import { ContactLink, CopyEmail, EmailFace } from "./contactlink";
 import { ReachCard, ReachLine } from "./reachcard";
 
 // How to reach a record, as the card that opens its About. One line per
-// address or number, its kind at the edge; a long address breaks at "@".
+// address or number, its kind at the edge; a long address ends in "…".
 const meta: Meta<typeof ReachCard> = {
   title: "Components/Text and data display/Reach card",
   component: ReachCard,
@@ -58,33 +58,37 @@ function Address({ value }: Readonly<{ value: string }>) {
 export const OneOfEach: Story = {
   render: () => (
     <ReachCard>
-      <ReachLine kind="email" caption="Work">
+      <ReachLine kind="email" text="dana@brandt.example" caption="Work">
         <Address value="dana@brandt.example" />
       </ReachLine>
-      <ReachLine kind="phone" caption="Mobile">
+      <ReachLine kind="phone" text="+493012345678" caption="Mobile">
         <ContactLink kind="phone" value="+493012345678" record={dana} />
       </ReachLine>
     </ReachCard>
   ),
 };
 
-/** Several, one too long for the card: it breaks at its "@", its kind stays. */
+/** Several, one too long for the card: it ends in "…", its kind stays. */
 export const Several: Story = {
   render: () => (
     <ReachCard>
-      <ReachLine kind="email" caption="Work">
+      <ReachLine kind="email" text="dana@brandt.example" caption="Work">
         <Address value="dana@brandt.example" />
       </ReachLine>
-      <ReachLine kind="email" caption="Work">
+      <ReachLine
+        kind="email"
+        text="dana.buyer@brandt-automotive-group.example"
+        caption="Work"
+      >
         <Address value="dana.buyer@brandt-automotive-group.example" />
       </ReachLine>
-      <ReachLine kind="email" caption="Personal">
+      <ReachLine kind="email" text="dana.b@posteo.example" caption="Personal">
         <Address value="dana.b@posteo.example" />
       </ReachLine>
-      <ReachLine kind="phone" caption="Work">
+      <ReachLine kind="phone" text="+493012345678" caption="Work">
         <ContactLink kind="phone" value="+493012345678" record={dana} />
       </ReachLine>
-      <ReachLine kind="phone" caption="Mobile">
+      <ReachLine kind="phone" text="+4917612345678" caption="Mobile">
         <ContactLink kind="phone" value="+4917612345678" record={dana} />
       </ReachLine>
     </ReachCard>
@@ -95,7 +99,7 @@ export const Several: Story = {
 export const PhoneOnly: Story = {
   render: () => (
     <ReachCard>
-      <ReachLine kind="phone">
+      <ReachLine kind="phone" text="+4917612345678">
         <ContactLink kind="phone" value="+4917612345678" record={dana} />
       </ReachLine>
     </ReachCard>

@@ -4,6 +4,7 @@
 import { Mail, Phone } from "lucide-react";
 import type { ReactNode } from "react";
 import type { DetailRow } from "./recorddetails";
+import { useTruncationTooltipAround } from "./tooltip";
 import "./reachcard.css";
 
 /**
@@ -17,24 +18,31 @@ export function ReachCard({ children }: Readonly<{ children: ReactNode }>) {
 /**
  * One address or number. `kind` picks the glyph, `children` is the handle
  * itself (its link, copy and chat), `caption` its kind ("Work") and `mark` a
- * mark that follows the caption.
+ * mark that follows the caption. A handle too long for the line ends in "…",
+ * and `text` shows it whole in a tip.
  */
 export function ReachLine({
   kind,
+  text,
   children,
   caption,
   mark,
 }: Readonly<{
   kind: "email" | "phone";
+  text: string;
   children: ReactNode;
   caption?: ReactNode;
   mark?: ReactNode;
 }>) {
   const Glyph = kind === "email" ? Mail : Phone;
+  const tip = useTruncationTooltipAround<HTMLSpanElement>(text);
   return (
     <span className="reachline">
       <Glyph aria-hidden="true" className="reachline-glyph" />
-      <span className="reachline-handle">{children}</span>
+      <span className="reachline-handle" ref={tip.ref} {...tip.trigger}>
+        {children}
+        {tip.tip}
+      </span>
       {caption && <span className="reachline-kind t-caption">{caption}</span>}
       {mark}
     </span>
