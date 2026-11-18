@@ -23773,7 +23773,8 @@ export interface paths {
          *     (a hidden or cross-tenant entity answers 404, never leaks existence).
          *     The file must be an accepted kind (PDF, Office, OpenDocument, RTF, text, CSV,
          *     Markdown, HTML, PNG, JPEG, GIF, WebP, HEIC, HEIF, TIFF, zip, .eml or .msg); any other type
-         *     answers 422 `unsupported_file_type`.
+         *     answers 422 `unsupported_file_type`. So does a file whose content does not match its
+         *     name or declared type, such as a program renamed to `.pdf`.
          *
          *     An agent may file one no larger than the `attach_document` tool takes: what one MCP
          *     request carries inline, or the operator's attachment limit when that is smaller. A
@@ -26086,7 +26087,7 @@ export interface paths {
         put?: never;
         /**
          * Add a document to this corpus.
-         * @description Accepts only files whose bytes are their own text — text/plain, text/markdown, text/csv, application/json. Anything else is refused naming what is accepted; there is no parser in this product, and a PDF arriving as an empty corpus is worse than a PDF refused. Ingest is asynchronous: the document lands `queued` and its progress is read back from this path's GET. The set that ships with Margince takes no uploads: only Margince files pages in it.
+         * @description Accepts only files whose bytes are their own text — text/plain, text/markdown, text/csv, application/json. Anything else is refused naming what is accepted; there is no parser in this product, and a PDF arriving as an empty corpus is worse than a PDF refused. A file whose content is not text, such as a program renamed to `.md`, is refused the same way. Ingest is asynchronous: the document lands `queued` and its progress is read back from this path's GET. The set that ships with Margince takes no uploads: only Margince files pages in it.
          */
         post: operations["uploadCorpusDocument"];
         delete?: never;
@@ -30735,6 +30736,8 @@ export interface components {
              * @description The reader-team member who gets the follow-up work of mail whose sender no reader owns, and owns the contacts that mail creates. Null when none is named: mail whose sender no reader owns then creates no work and no contact.
              */
             backup_owner_id?: string | null;
+            /** @description A period no sync read: a first sync failed for longer than its held point, or the mailbox held more mail than one round can read. Importing the mailbox's history over it clears it. Absent when there is none. */
+            unread_period?: components["schemas"]["CaptureUnreadPeriod"];
         };
         SharedMailboxList: {
             items: components["schemas"]["SharedMailbox"][];
@@ -44371,11 +44374,11 @@ export interface components {
             updated_at: string;
         };
         /**
-         * @description What the composer opened against: `activity` for a reply to that message, or the
-         *     record a new conversation starts from.
+         * @description What the composer opened against: `activity` for a reply to that message, `forward`
+         *     for that message sent on to someone new, or the record a new conversation starts from.
          * @enum {string}
          */
-        MailDraftAnchorType: "activity" | "contact" | "company" | "deal" | "lead" | "project";
+        MailDraftAnchorType: "activity" | "forward" | "contact" | "company" | "deal" | "lead" | "project";
         /** @description One record the draft was written from. A saved agent draft keeps these so the composer files the sent mail where the draft was grounded, rather than rebuilding links from whichever page it was opened on. */
         MailDraftGround: {
             anchor_type: components["schemas"]["MailDraftAnchorType"];
@@ -50677,7 +50680,7 @@ export interface components {
              */
             error_class?: string;
         };
-        /** @description The span between where a held first-sync anchor pointed and where the sync had to start instead. Both ends or neither: a start with no end is a period nobody can ask for again. */
+        /** @description The span between where a first sync was to read from and where it had to start instead. Both ends or neither: a start with no end is a period nobody can ask for again. */
         CaptureUnreadPeriod: {
             /**
              * Format: date-time
@@ -50717,7 +50720,7 @@ export interface components {
             /** @description Threads whose confidentiality question is still open, so their messages stay held. */
             threads_awaiting_verdict: number;
             /**
-             * @description A period no sync read, when a first sync failed for longer than the point it had held. Absent when there is none, which is the ordinary case.
+             * @description A period no sync read: a first sync failed for longer than the point it had held, or the mailbox held more mail than one round can read. A finished history import over it clears it. Absent when there is none, which is the ordinary case.
              *     It is reported because the alternative is a mailbox that looks synced and is missing a week. The backfill reaches this period, so the owner can ask for it back, and the dates are what they point it at.
              */
             unread_period?: components["schemas"]["CaptureUnreadPeriod"] | null;

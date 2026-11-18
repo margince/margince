@@ -24123,7 +24123,8 @@ paths:
         (a hidden or cross-tenant entity answers 404, never leaks existence).
         The file must be an accepted kind (PDF, Office, OpenDocument, RTF, text, CSV,
         Markdown, HTML, PNG, JPEG, GIF, WebP, HEIC, HEIF, TIFF, zip, .eml or .msg); any other type
-        answers 422 `unsupported_file_type`.
+        answers 422 `unsupported_file_type`. So does a file whose content does not match its
+        name or declared type, such as a program renamed to `.pdf`.
 
         Needs the passport permission Change records.
 
@@ -26246,7 +26247,7 @@ paths:
       security: [{bearerAuth: []}]
       summary: Add a document to this corpus.
       description: |-
-        Accepts only files whose bytes are their own text — text/plain, text/markdown, text/csv, application/json. Anything else is refused naming what is accepted; there is no parser in this product, and a PDF arriving as an empty corpus is worse than a PDF refused. Ingest is asynchronous: the document lands `queued` and its progress is read back from this path's GET. The set that ships with Margince takes no uploads: only Margince files pages in it.
+        Accepts only files whose bytes are their own text — text/plain, text/markdown, text/csv, application/json. Anything else is refused naming what is accepted; there is no parser in this product, and a PDF arriving as an empty corpus is worse than a PDF refused. A file whose content is not text, such as a program renamed to `.md`, is refused the same way. Ingest is asynchronous: the document lands `queued` and its progress is read back from this path's GET. The set that ships with Margince takes no uploads: only Margince files pages in it.
 
         Needs the passport permission Change records.
 
@@ -41762,10 +41763,10 @@ components:
         updated_at: {type: string, format: date-time}
     MailDraftAnchorType:
       type: string
-      enum: [activity, contact, company, deal, lead, project]
+      enum: [activity, forward, contact, company, deal, lead, project]
       description: |-
-        What the composer opened against: `activity` for a reply to that message, or the
-        record a new conversation starts from.
+        What the composer opened against: `activity` for a reply to that message, `forward`
+        for that message sent on to someone new, or the record a new conversation starts from.
     MailDraftGround:
       description: >-
         One record the draft was written from. A saved agent draft keeps these so the composer files the sent mail where the draft was grounded, rather than rebuilding links from whichever page it was opened on.
@@ -48568,7 +48569,7 @@ components:
       additionalProperties: false
       required: [from, to]
       description: >-
-        The span between where a held first-sync anchor pointed and where the sync had to start instead. Both ends or neither: a start with no end is a period nobody can ask for again.
+        The span between where a first sync was to read from and where it had to start instead. Both ends or neither: a start with no end is a period nobody can ask for again.
       properties:
         from: {type: string, format: date-time, description: The first moment nobody read.}
         to: {type: string, format: date-time, description: The moment reading resumed.}
@@ -48605,7 +48606,7 @@ components:
           allOf: [{$ref: '#/components/schemas/CaptureUnreadPeriod'}]
           nullable: true
           description: >-
-            A period no sync read, when a first sync failed for longer than the point it had held. Absent when there is none, which is the ordinary case.
+            A period no sync read: a first sync failed for longer than the point it had held, or the mailbox held more mail than one round can read. A finished history import over it clears it. Absent when there is none, which is the ordinary case.
         oldest_thread_age_seconds: {type: [integer, 'null']}
     CaptureClassifierHealth:
       type: object

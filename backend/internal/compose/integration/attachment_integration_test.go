@@ -39,7 +39,7 @@ func TestAttachmentHandlersHTTPRoundTrip(t *testing.T) {
 	contact := e.SeedContact(t, "HTTP Attach", &e.Rep1)
 
 	// Upload → 201 + Location + the stored metadata.
-	body, ctype := apptest.MultipartAttachment(t, "contact", contact.String(), "report.pdf", []byte("PDF-BYTES"))
+	body, ctype := apptest.MultipartAttachment(t, "contact", contact.String(), "report.pdf", []byte("%PDF-1.4 BYTES"))
 	req := httptest.NewRequest(http.MethodPost, "/v1/attachments", body).WithContext(ctx)
 	req.Header.Set("Content-Type", ctype)
 	rec := httptest.NewRecorder()
@@ -72,7 +72,7 @@ func TestAttachmentHandlersHTTPRoundTrip(t *testing.T) {
 	if dlRec.Code != http.StatusOK {
 		t.Fatalf("download: status %d", dlRec.Code)
 	}
-	if got := dlRec.Body.String(); got != "PDF-BYTES" {
+	if got := dlRec.Body.String(); got != "%PDF-1.4 BYTES" {
 		t.Errorf("downloaded bytes = %q", got)
 	}
 	if cd := dlRec.Header().Get("Content-Disposition"); !strings.Contains(cd, `filename="report.pdf"`) {
@@ -291,7 +291,7 @@ func TestOpenAttachmentHidesAnInvisibleParent(t *testing.T) {
 	owner := e.As(e.Rep1, []ids.UUID{e.Team1}, AdminPerms)
 
 	uploaded, err := store.UploadAttachment(owner, activities.AttachmentInput{
-		EntityType: "contact", EntityID: contact, Filename: "secret.pdf", Content: bytes.NewReader([]byte("secret bytes")),
+		EntityType: "contact", EntityID: contact, Filename: "secret.pdf", Content: bytes.NewReader([]byte("%PDF-1.4 secret")),
 	})
 	if err != nil {
 		t.Fatalf("seeding the attachment through the real writer: %v", err)
@@ -330,7 +330,7 @@ func TestErasureQueuesAttachmentObjectsForDeletion(t *testing.T) {
 	contact := e.SeedContact(t, "To Be Erased", &e.Rep1)
 
 	att, err := store.UploadAttachment(ctx, activities.AttachmentInput{
-		EntityType: "contact", EntityID: contact, Filename: "secret.pdf", Content: bytes.NewReader([]byte("pii bytes")),
+		EntityType: "contact", EntityID: contact, Filename: "secret.pdf", Content: bytes.NewReader([]byte("%PDF-1.4 pii")),
 	})
 	if err != nil {
 		t.Fatalf("UploadAttachment: %v", err)
@@ -360,7 +360,7 @@ func TestErasureWithoutStoreRollsBackRatherThanHalfErasing(t *testing.T) {
 	ctx := e.Admin()
 	contact := e.SeedContact(t, "Config Mismatch", &e.Rep1)
 	att, err := store.UploadAttachment(ctx, activities.AttachmentInput{
-		EntityType: "contact", EntityID: contact, Filename: "f.pdf", Content: bytes.NewReader([]byte("bytes")),
+		EntityType: "contact", EntityID: contact, Filename: "f.pdf", Content: bytes.NewReader([]byte("%PDF-1.4 bytes")),
 	})
 	if err != nil {
 		t.Fatalf("UploadAttachment: %v", err)
@@ -463,7 +463,7 @@ func TestAnEmptyFileIsRefusedOnUpload(t *testing.T) {
 
 	// One byte is enough to be a file, so the rule is about content and not
 	// about a threshold somebody has to guess.
-	okBody, okType := apptest.MultipartAttachment(t, "contact", contact.String(), "scan.pdf", []byte{0x25})
+	okBody, okType := apptest.MultipartAttachment(t, "contact", contact.String(), "scan.txt", []byte{0x25})
 	okReq := httptest.NewRequest(http.MethodPost, "/v1/attachments", okBody).WithContext(ctx)
 	okReq.Header.Set("Content-Type", okType)
 	okRec := httptest.NewRecorder()
@@ -481,7 +481,7 @@ func TestAReaderIsRefusedAChangeToAFileItCanSee(t *testing.T) {
 	store, _ := attachmentStore(e)
 	contact := e.SeedContact(t, "Readable Contact", &e.Rep1)
 	uploaded, err := store.UploadAttachment(e.Admin(), activities.AttachmentInput{
-		EntityType: "contact", EntityID: contact, Filename: "deck.pdf", Content: bytes.NewReader([]byte("deck")),
+		EntityType: "contact", EntityID: contact, Filename: "deck.pdf", Content: bytes.NewReader([]byte("%PDF-1.4 deck")),
 	})
 	if err != nil {
 		t.Fatalf("seeding the attachment through the real writer: %v", err)

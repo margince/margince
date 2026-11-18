@@ -17233,6 +17233,7 @@ const (
 	MailDraftAnchorTypeCompany  MailDraftAnchorType = "company"
 	MailDraftAnchorTypeContact  MailDraftAnchorType = "contact"
 	MailDraftAnchorTypeDeal     MailDraftAnchorType = "deal"
+	MailDraftAnchorTypeForward  MailDraftAnchorType = "forward"
 	MailDraftAnchorTypeLead     MailDraftAnchorType = "lead"
 	MailDraftAnchorTypeProject  MailDraftAnchorType = "project"
 )
@@ -17247,6 +17248,8 @@ func (e MailDraftAnchorType) Valid() bool {
 	case MailDraftAnchorTypeContact:
 		return true
 	case MailDraftAnchorTypeDeal:
+		return true
+	case MailDraftAnchorTypeForward:
 		return true
 	case MailDraftAnchorTypeLead:
 		return true
@@ -39356,7 +39359,7 @@ type CaptureMailboxHealth struct {
 	// ThreadsAwaitingVerdict Threads whose confidentiality question is still open, so their messages stay held.
 	ThreadsAwaitingVerdict int `json:"threads_awaiting_verdict"`
 
-	// UnreadPeriod A period no sync read, when a first sync failed for longer than the point it had held. Absent when there is none, which is the ordinary case.
+	// UnreadPeriod A period no sync read: a first sync failed for longer than the point it had held, or the mailbox held more mail than one round can read. A finished history import over it clears it. Absent when there is none, which is the ordinary case.
 	// It is reported because the alternative is a mailbox that looks synced and is missing a week. The backfill reaches this period, so the owner can ask for it back, and the dates are what they point it at.
 	UnreadPeriod *CaptureUnreadPeriod `json:"unread_period,omitempty"`
 
@@ -39740,7 +39743,7 @@ type CaptureTraceResolution struct {
 // CaptureTraceResolutionStatus defines model for CaptureTraceResolution.Status.
 type CaptureTraceResolutionStatus string
 
-// CaptureUnreadPeriod The span between where a held first-sync anchor pointed and where the sync had to start instead. Both ends or neither: a start with no end is a period nobody can ask for again.
+// CaptureUnreadPeriod The span between where a first sync was to read from and where it had to start instead. Both ends or neither: a start with no end is a period nobody can ask for again.
 type CaptureUnreadPeriod struct {
 	// From The first moment nobody read.
 	From time.Time `json:"from"`
@@ -56331,8 +56334,8 @@ type MailDraft struct {
 	AgentDrafted bool               `json:"agent_drafted"`
 	AnchorId     openapi_types.UUID `json:"anchor_id"`
 
-	// AnchorType What the composer opened against: `activity` for a reply to that message, or the
-	// record a new conversation starts from.
+	// AnchorType What the composer opened against: `activity` for a reply to that message, `forward`
+	// for that message sent on to someone new, or the record a new conversation starts from.
 	AnchorType MailDraftAnchorType `json:"anchor_type"`
 
 	// Attachments The chosen files the author can still attach, in the order chosen, so the composer
@@ -56375,8 +56378,8 @@ type MailDraft struct {
 	Version     int64     `json:"version"`
 }
 
-// MailDraftAnchorType What the composer opened against: `activity` for a reply to that message, or the
-// record a new conversation starts from.
+// MailDraftAnchorType What the composer opened against: `activity` for a reply to that message, `forward`
+// for that message sent on to someone new, or the record a new conversation starts from.
 type MailDraftAnchorType string
 
 // MailDraftEditorState The author's drafting purpose and presentation state, restored with the words. These client-supplied values grant no send permission and do not attest model execution.
@@ -56405,8 +56408,8 @@ type MailDraftEditorStateLanguage string
 type MailDraftGround struct {
 	AnchorId openapi_types.UUID `json:"anchor_id"`
 
-	// AnchorType What the composer opened against: `activity` for a reply to that message, or the
-	// record a new conversation starts from.
+	// AnchorType What the composer opened against: `activity` for a reply to that message, `forward`
+	// for that message sent on to someone new, or the record a new conversation starts from.
 	AnchorType MailDraftAnchorType `json:"anchor_type"`
 }
 
@@ -56415,8 +56418,8 @@ type MailDraftGround struct {
 type MailDraftInput struct {
 	AnchorId openapi_types.UUID `json:"anchor_id"`
 
-	// AnchorType What the composer opened against: `activity` for a reply to that message, or the
-	// record a new conversation starts from.
+	// AnchorType What the composer opened against: `activity` for a reply to that message, `forward`
+	// for that message sent on to someone new, or the record a new conversation starts from.
 	AnchorType MailDraftAnchorType `json:"anchor_type"`
 
 	// AttachmentIds The files the rep chose, by the ids `/attachments` gave them. A save replaces the
@@ -66170,6 +66173,9 @@ type SharedMailbox struct {
 	// ReaderTeamId The team that reads every message this mailbox captured.
 	ReaderTeamId openapi_types.UUID  `json:"reader_team_id"`
 	Status       SharedMailboxStatus `json:"status"`
+
+	// UnreadPeriod A period no sync read: a first sync failed for longer than its held point, or the mailbox held more mail than one round can read. Importing the mailbox's history over it clears it. Absent when there is none.
+	UnreadPeriod *CaptureUnreadPeriod `json:"unread_period,omitempty"`
 }
 
 // SharedMailboxMailVisibility `held` keeps its mail to the reader team and the message's own participants; `shared` opens it to the workspace.

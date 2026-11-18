@@ -125,40 +125,16 @@ func NewCaptureEnricher(pool *pgxpool.Pool, brain completer, log *slog.Logger) *
 }
 
 // RunWorkspace enriches up to enrichPassLimit candidates in the workspace
-// already bound in ctx. A budget stop ends the pass cleanly; per-contact model
-// trouble is logged and the contact is retried next cycle (their watermark did
-// not move).
+// bound in ctx. A failed model call leaves that contact for the next cycle.
 //
-// It reports whether the pass filled its limit AND moved at least one contact,
-// which is the caller's signal that more contacts are due right now. Two things
-// make that worth acting on rather than leaving to the nightly pass. A mailbox
-// sync lands hundreds of messages at once, so the 101st contact would wait
-// until tonight for details a rep is about to read. And the trigger's own
-// uniqueness means mail arriving mid-pass dedupes against a pass that has
-// already listed its candidates — so without a continuation that message waits
-// for the nightly run too, whatever the queue depth.
-//
-// Both halves are load-bearing; see the return statement for why progress
-// alone bounds the chain.
-//
-// A full set is not proof that anyone is left: the last pass may have finished
-// exactly at the limit. The continuation costs one job that lists no candidates
-// and stops, which is the cheap side of the trade.
+// filled reports a full set with at least one contact moved, so a continuation
+// is due. A mailbox sync lands hundreds of messages at once, and mail arriving
+// mid-pass dedupes against this pass on the queue.
 func (e *CaptureEnricher) RunWorkspace(ctx context.Context) (filled bool, err error) {
-	// ONE PASS AT A TIME, or two of them pay for the same page.
-	//
-	// The candidate list is a plain read, so two passes select the same contacts,
-	// make the same model calls and each spend for them. Three doors can put a
-	// pass in flight — the nightly tick, the arrival trigger and a pass's own
-	// continuation — and the first two dedupe against each other on the queue's
-	// uniqueness window while the third deliberately cannot: it is enqueued from
-	// inside a RUNNING job with the same args, so a window that suppressed it
-	// would end the chain the continuation exists to keep.
-	//
-	// So the mutual exclusion is here, where the spending is. Taken and released
-	// rather than waited on: a pass that finds another running has nothing to
-	// add — the holder is reading the same candidates now — and its successor
-	// will be queued by whoever is holding it.
+	// One pass at a time, or two passes pay for the same model calls. The
+	// nightly tick and the trigger dedupe on the queue, but a continuation is
+	// enqueued from inside a running job and cannot. A pass that finds the lock
+	// held stands down: the holder reads the same candidates and queues the next.
 	held, release, err := e.holdThePass(ctx)
 	if err != nil {
 		return false, err
@@ -219,22 +195,10 @@ func (e *CaptureEnricher) RunWorkspace(ctx context.Context) (filled bool, err er
 			advanced++
 		}
 	}
-	// A continuation needs BOTH a full set and somebody moved off it.
-	//
-	// The full set alone would chain forever. A failed candidate writes no
-	// watermark on purpose — the comment above says why — so it stays the
-	// newest mail and fills the next pass too. Queueing on the count alone,
-	// a hundred candidates whose model call keeps failing would re-select
-	// themselves, enqueue another job, and do it again: an unbroken chain of
-	// jobs that each succeed, spend the model budget, and starve every older
-	// contact behind them. River's attempt cap cannot stop it, because no job
-	// in the chain ever fails.
-	//
-	// A rejected read leaves the watermark too, so it is no progress either.
-	// Requiring progress bounds the chain by the work actually done. A pass
-	// that moved nobody is the end of it, and the nightly cycle owns the
-	// candidates it could not read — which is where they lived before this
-	// continuation existed.
+	// A continuation needs a full set and progress. A failed or rejected read
+	// keeps its watermark, so a full set alone would re-select the same contacts.
+	// That chain of jobs would each succeed, spend the budget and starve older
+	// contacts, and River's attempt cap would never fire.
 	return advanced > 0 && len(candidates) == e.limit, nil
 }
 
@@ -301,7 +265,8 @@ func (e *CaptureEnricher) readSignature(ctx context.Context, cand contacts.Signa
 	mail := cand
 	mail.ActivityID, mail.Body = source, body
 	lines := signatureBlockFor(mail)
-	if !signatureNamesContact(lines, mail) {
+	signer := signatureSigner(lines, mail)
+	if signer == salutation.SignedByNobody {
 		// Their message, somebody else's signature at the foot of it: grounded
 		// text with the wrong owner, so nothing is read from it.
 		e.log.DebugContext(ctx, "signature enrich: the block does not identify this contact, so nothing is read from it",
@@ -316,7 +281,7 @@ func (e *CaptureEnricher) readSignature(ctx context.Context, cand contacts.Signa
 	if err != nil {
 		return contacts.SignatureRead{}, false, err
 	}
-	fields, skip, err := e.acceptedSignatureFields(ctx, mail, resp.Text, lines, options)
+	fields, skip, err := e.acceptedSignatureFields(ctx, mail, resp.Text, lines, signer, options)
 	if err != nil || len(fields) == 0 {
 		return contacts.SignatureRead{Skip: skip}, false, err
 	}
@@ -338,7 +303,7 @@ func (e *CaptureEnricher) readSignature(ctx context.Context, cand contacts.Signa
 // acceptedSignatureFields gates one reply: verbatim-snippet-or-drop against the
 // exact lines the model was shown, then the confidence floor. With no field
 // accepted it names the gate that refused them, or none when the reply was empty.
-func (e *CaptureEnricher) acceptedSignatureFields(ctx context.Context, mail contacts.SignatureCandidate, reply, lines string, options signatureReadOptions) ([]contacts.SignatureField, contacts.SignatureSkipReason, error) {
+func (e *CaptureEnricher) acceptedSignatureFields(ctx context.Context, mail contacts.SignatureCandidate, reply, lines string, signer salutation.Signer, options signatureReadOptions) ([]contacts.SignatureField, contacts.SignatureSkipReason, error) {
 	gated, dropped := gateEvidence(reply, lines, "activity:"+mail.ActivityID.String(),
 		func(name string) bool { return enrichFieldNames[name] }, signatureRepeatedFields)
 	if unparseableReply(dropped) {
@@ -346,6 +311,11 @@ func (e *CaptureEnricher) acceptedSignatureFields(ctx context.Context, mail cont
 		// that the signature states nothing — so the read goes unrecorded and
 		// this contact is asked again next pass.
 		return nil, "", fmt.Errorf("compose: unparseable signature reply for contact %s", mail.ContactID)
+	}
+	if !signatureNameIsTheirs(reply, mail, signer) {
+		e.log.DebugContext(ctx, "signature enrich: the block is not shown to be theirs, so nothing is read from it",
+			"contact", mail.ContactID.String(), "reason", dropSignatureNotThisContact)
+		return nil, contacts.SignatureSkipNameGate, nil
 	}
 	if len(dropped) > 0 {
 		e.log.DebugContext(ctx, "signature enrich: fields dropped by the evidence gate",
@@ -410,6 +380,6 @@ func (e *CaptureEnricher) holdThePass(ctx context.Context) (bool, func(), error)
 	return held, release, err
 }
 
-func signatureNamesContact(block string, cand contacts.SignatureCandidate) bool {
-	return salutation.NamesSigner(block, cand.FullName, cand.Email)
+func signatureSigner(block string, cand contacts.SignatureCandidate) salutation.Signer {
+	return salutation.SignerOf(block, cand.FullName, cand.Email)
 }

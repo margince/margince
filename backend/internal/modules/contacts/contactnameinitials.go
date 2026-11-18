@@ -6,6 +6,8 @@ package contacts
 import (
 	"strings"
 	"unicode"
+
+	"github.com/margince/margince/backend/internal/platform/namematch"
 )
 
 // addressGuessName is the display capture derived from an address alone: its
@@ -41,7 +43,7 @@ const initialsMaxLetters = 2
 
 // maxInitialsDisplayLen bounds the displays the repair reads: three tokens of
 // initials plus the separators between them.
-const maxInitialsDisplayLen = maxNameTokens*initialsMaxLetters + maxNameTokens - 1
+const maxInitialsDisplayLen = namematch.MaxNameTokens*initialsMaxLetters + namematch.MaxNameTokens - 1
 
 // initialsDisplayReplacement answers the local part that should replace a
 // stored full name. It does so only when capture derived that name from the

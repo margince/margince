@@ -39,7 +39,7 @@ func TestGetAttachmentExtractionOfAnUnreadDocumentIs404(t *testing.T) {
 	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling).WithBlobstore(blobstore.NewMemory())
 	ctx := e.Admin()
 	contact := e.SeedContact(t, "Extraction NoOp", &e.Rep1)
-	att := uploadTestAttachment(ctx, t, h, contact, "report.pdf", []byte("PDF-BYTES"))
+	att := uploadTestAttachment(ctx, t, h, contact, "report.pdf", []byte("%PDF-1.4 BYTES"))
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/v1/attachments/"+att.Id.String()+"/extraction", nil).WithContext(ctx)
@@ -59,7 +59,7 @@ func TestGetAttachmentExtractionPartitionsAStoredReading(t *testing.T) {
 	ctx := e.Admin()
 	pipeline, open, _ := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Fixture Deal", pipeline, open, &e.Rep1)
-	att := uploadDealAttachment(ctx, t, base, deal, "quote.pdf", []byte("quote bytes"))
+	att := uploadDealAttachment(ctx, t, base, deal, "quote.pdf", []byte("%PDF-1.4 quote bytes"))
 
 	seedExtractionReading(ctx, t, e, ids.UUID(att.Id), []extraction.ExtractedField{
 		{Field: "amount_minor", Value: "150000", SourceQuote: "Total: $1,500.00", PageOrSection: "p.1", Confidence: "high"},
@@ -120,7 +120,7 @@ func TestStartExtractionReadTwiceJoinsTheOneInFlight(t *testing.T) {
 	ctx := e.Admin()
 	pipeline, open, _ := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Idempotent Reading", pipeline, open, &e.Rep1)
-	att := uploadDealAttachment(ctx, t, h, deal, "quote.pdf", []byte("quote bytes"))
+	att := uploadDealAttachment(ctx, t, h, deal, "quote.pdf", []byte("%PDF-1.4 quote bytes"))
 	store := activities.NewStore(e.DB())
 
 	first, joined, err := store.StartExtractionReadQueued(ctx, ids.UUID(att.Id), "rep", nil)
@@ -147,7 +147,7 @@ func TestGetAttachmentExtractionHidesAnInvisibleParent(t *testing.T) {
 	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling).WithBlobstore(blobstore.NewMemory())
 	adminCtx := e.Admin()
 	contact := e.SeedContact(t, "Rep1's Extraction Target", &e.Rep1)
-	att := uploadTestAttachment(adminCtx, t, h, contact, "secret.pdf", []byte("secret"))
+	att := uploadTestAttachment(adminCtx, t, h, contact, "secret.pdf", []byte("%PDF-1.4 secret"))
 
 	repCtx := e.As(e.Rep3, []ids.UUID{e.Team2}, ownContactPerms())
 	rec := httptest.NewRecorder()
@@ -175,7 +175,7 @@ func TestRequestAttachmentAccessAuditsANoteAndReturnsRequested(t *testing.T) {
 	ctx := e.Admin()
 	pipeline, open, _ := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Access Request Deal", pipeline, open, &e.Rep1)
-	att := uploadDealAttachment(ctx, t, h, deal, "contract.pdf", []byte("contract bytes"))
+	att := uploadDealAttachment(ctx, t, h, deal, "contract.pdf", []byte("%PDF-1.4 contract bytes"))
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/v1/attachments/"+att.Id.String()+"/request-access", nil).WithContext(ctx)
@@ -213,7 +213,7 @@ func TestRequestAttachmentAccessHidesAnInvisibleParent(t *testing.T) {
 	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling).WithBlobstore(blobstore.NewMemory())
 	adminCtx := e.Admin()
 	contact := e.SeedContact(t, "Rep1's Access Target", &e.Rep1)
-	att := uploadTestAttachment(adminCtx, t, h, contact, "hidden.pdf", []byte("hidden"))
+	att := uploadTestAttachment(adminCtx, t, h, contact, "hidden.pdf", []byte("%PDF-1.4 hidden"))
 	e.MakeCapturePrivate(t, "contact", contact, e.Rep1)
 
 	repCtx := e.As(e.Rep3, []ids.UUID{e.Team2}, ownContactPerms())

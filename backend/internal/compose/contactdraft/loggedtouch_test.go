@@ -92,17 +92,18 @@ func TestANotesTextIsBounded(t *testing.T) {
 	}
 }
 
-// A contact known only from a note is not a stranger, so the draft is not
-// told to write a first touch.
-func TestANoteOnlyContactIsNotAFirstTouch(t *testing.T) {
+// A contact known only from an internal note has had no exchange, so the draft
+// is a first touch. A past meeting is an exchange.
+func TestANoteOnlyContactIsAFirstTouch(t *testing.T) {
 	view := viewWith(logged(crmcontracts.ActivityKindNote, draftedAt.Add(-10*24*time.Hour), fairNote))
-
-	state := ConversationState(view, draftedAt, time.UTC)
-	if state.Band == convstate.BandNone {
-		t.Fatal("a contact with a logged note was drafted as a first touch")
+	if state := ConversationState(view, draftedAt, time.UTC); state.Band != convstate.BandNone {
+		t.Fatalf("band = %v after a note and no exchange, want %v", state.Band, convstate.BandNone)
 	}
-	if state.SilenceDays != 10 {
-		t.Errorf("silence = %d days, want the 10 since the note", state.SilenceDays)
+
+	view = viewWith(logged(crmcontracts.ActivityKindMeeting, draftedAt.Add(-10*24*time.Hour), fairNote))
+	state := ConversationState(view, draftedAt, time.UTC)
+	if state.Band == convstate.BandNone || state.SilenceDays != 10 {
+		t.Errorf("state = %+v, want ten days since the meeting", state)
 	}
 }
 

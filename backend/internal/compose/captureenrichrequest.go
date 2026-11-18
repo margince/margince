@@ -84,7 +84,7 @@ func signatureBlockFor(cand contacts.SignatureCandidate) string {
 		if first == "" {
 			first = block
 		}
-		if signatureNamesContact(block, cand) {
+		if signatureSigner(block, cand) != salutation.SignedByNobody {
 			return block
 		}
 	}

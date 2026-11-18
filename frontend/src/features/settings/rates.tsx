@@ -23,6 +23,7 @@ import {
 } from "../../design-system/querystates";
 import { todayIn } from "../../format/calendarday";
 import { forReader } from "../../format/collate";
+import { typedDecimalText, typedNumberFault } from "../../format/decimalinput";
 import { formatDate, formatUsdPerMTok } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { providerName } from "../../lib/ai-provider-names";
@@ -193,6 +194,7 @@ export function FxRatesCard() {
 
 function FxRateModal({ onClose }: Readonly<{ onClose: () => void }>) {
   const t = useT();
+  const { locale } = useLocale();
   const qc = useQueryClient();
   const labelId = useId();
   const formId = useId();
@@ -205,12 +207,12 @@ function FxRateModal({ onClose }: Readonly<{ onClose: () => void }>) {
   const [error, setError] = useState<string | null>(null);
 
   const save = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (rateText: string) => {
       unwrap(
         await api.POST("/fx-rates", {
           body: {
             from_currency: from.trim().toUpperCase(),
-            rate: rate.trim(),
+            rate: rateText,
             effective_date: effectiveDate,
           },
         }),
@@ -222,13 +224,19 @@ function FxRateModal({ onClose }: Readonly<{ onClose: () => void }>) {
     },
     onError: (err: Error) => setError(problemMessageOf(err, t)),
   });
-  const ready = from.trim() !== "" && rate.trim() !== "";
+  const rateText = typedDecimalText(rate, locale);
+  const ready = from.trim() !== "" && rateText !== undefined;
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!ready || save.isPending || refuseUnreadableField(event.currentTarget))
+    if (
+      rateText === undefined ||
+      !ready ||
+      save.isPending ||
+      refuseUnreadableField(event.currentTarget)
+    )
       return;
     setError(null);
-    save.mutate();
+    save.mutate(rateText);
   }
 
   return (
@@ -247,7 +255,10 @@ function FxRateModal({ onClose }: Readonly<{ onClose: () => void }>) {
             />
           )}
         </Field>
-        <Field label={t("settings.rates.rateToBase")}>
+        <Field
+          label={t("settings.rates.rateToBase")}
+          error={typedNumberFault(rate, locale, t)}
+        >
           {(control) => (
             <TextInput
               {...control}

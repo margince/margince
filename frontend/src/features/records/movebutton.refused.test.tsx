@@ -11,6 +11,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { sessionOptions } from "../../lib/session";
 import { meFixture } from "../../testing/mefixture";
 import { MoveButton, type PerformableMove } from "./movebutton";
 
@@ -25,7 +26,7 @@ const [DEAL, MEETING, CONTACT] = [
   "01a05500-0000-7000-8000-0000000000d1",
 ];
 
-function mount(move: PerformableMove) {
+function mount(move: PerformableMove, client = new QueryClient()) {
   const writes: string[] = [];
   vi.stubGlobal(
     "fetch",
@@ -40,7 +41,7 @@ function mount(move: PerformableMove) {
     }),
   );
   render(
-    <QueryClientProvider client={new QueryClient()}>
+    <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
         <MoveButton dealId={DEAL} move={move} />
       </LocaleProvider>
@@ -80,4 +81,28 @@ it("draws a refused follow-up with the server's reason", async () => {
   });
   expect(button).toBeDisabled();
   expect(button).toHaveAccessibleDescription(reason);
+});
+
+// The server marks every move it serves, so a move it did not refuse is
+// offered. The client keeps no second answer that could hide it.
+it("offers a task move the server did not refuse", async () => {
+  // The session is answered before the first render, so a client-side grant
+  // check would already refuse here.
+  const client = new QueryClient();
+  client.setQueryData(
+    sessionOptions.queryKey,
+    meFixture({ allow: { activity: ["read"] } }),
+  );
+  mount(
+    {
+      action: "create_task",
+      arguments: { subject: "Send the revised quote" },
+    },
+    client,
+  );
+  const button = await screen.findByRole("button", {
+    name: "Create follow-up",
+  });
+  expect(button).toBeEnabled();
+  expect(button).not.toHaveAccessibleDescription();
 });
