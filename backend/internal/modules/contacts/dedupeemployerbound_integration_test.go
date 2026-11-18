@@ -8,9 +8,12 @@ package contacts
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // planNode is the part of an EXPLAIN node the test reads. Actual Rows is per
@@ -68,5 +71,39 @@ func TestTheCandidateReadSkipsColleaguesWhoseNamesDoNotMatch(t *testing.T) {
 	if rows > dedupeCandidateRows {
 		t.Fatalf("the candidate read took %.0f rows from contact and relationship for %d unrelated colleagues, want at most %d",
 			rows, staff, dedupeCandidateRows)
+	}
+}
+
+// A colleague with the candidate's family name is a candidate even when the
+// trigram arm cannot see the pair. The shared employer is the evidence that
+// makes it worth scoring.
+//
+// Mutation: switch off the same_family arm of contactCandidateQuery.
+func TestAColleagueWithTheSameFamilyNameIsACandidateThroughTheEmployer(t *testing.T) {
+	e := setupDedupe(t)
+	employer := mustEmployer(t, e, "Shared Works")
+	colleague := mustContact(t, e, "Bartholomew Smith")
+	employ(t, e, colleague, employer)
+	var found []ids.ContactID
+	err := e.store.tx(e.as(), func(tx pgx.Tx) error {
+		args := contactCandidateArgs(ContactCandidate{FullName: "Zed Smith", CurrentPrimaryCompanyID: &employer})
+		rows, err := tx.Query(e.as(), contactCandidateQuery, args)
+		if err != nil {
+			return err
+		}
+		found, err = pgx.CollectRows(rows, func(row pgx.CollectableRow) (ids.ContactID, error) {
+			var id ids.ContactID
+			var name string
+			var company, domain *string
+			var addresses []string
+			return id, row.Scan(&id, &name, &company, &domain, &addresses)
+		})
+		return err
+	})
+	if err != nil {
+		t.Fatalf("reading the candidates: %v", err)
+	}
+	if !slices.Contains(found, colleague) {
+		t.Fatalf("candidates %v do not include the colleague with the same family name", found)
 	}
 }
