@@ -647,4 +647,29 @@ describe("ProductsAdmin", () => {
     await waitFor(() => expect(patched).toHaveLength(1));
     expect(patched[0]).toMatchObject({ default_tax_rate: 0 });
   });
+
+  it("offers no write on an archived product, which every write would refuse", async () => {
+    vi.stubGlobal(
+      "fetch",
+      productsStub({
+        allow: PRODUCT_MANAGER,
+        rows: [
+          { ...product, archived_at: "2026-06-02T08:00:00Z" },
+          { ...product, id: "p-2", name: "Support Plan" },
+        ],
+      }),
+    );
+    render(<ProductsAdmin />);
+    const archived = within(
+      await screen.findByRole("row", { name: /Consulting Day/ }),
+    );
+    expect(archived.getByText("Archived")).toBeTruthy();
+    expect(rowMenu()).toBeNull();
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Actions for Support Plan" }),
+    );
+    expect(
+      await screen.findByRole("button", { name: "Archive product" }),
+    ).toBeTruthy();
+  });
 });

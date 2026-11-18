@@ -247,54 +247,57 @@ export function ProductsAdmin() {
     key: "actions",
     header: t("table.actions"),
     verbs: "menu",
-    cell: (p: Product) => (
-      <span className="cell-actions">
-        <OverflowMenu label={t("table.rowActions", { name: p.name })}>
-          {canUpdate && (
-            <EditAction
-              labelled
-              label={t("product.edit")}
-              savedMessage={(saved) =>
-                t("record.saveDone", { name: saved.name })
-              }
-              invalidate="products"
-              recordKey="product"
-              record={editableProduct(p, locale)}
-              update={updateProduct(p)}
-              fields={fields}
-              conflict={skuTaken}
-            />
-          )}
-          {canUpdate && (
-            <Button onClick={() => setTranslating(p)}>
-              {t("product.translations")}
-            </Button>
-          )}
-          {canArchive && (
-            <ArchiveAction
-              requires={{ object: "product", action: "delete" }}
-              label={t("product.archive")}
-              confirmText={t("product.archiveConfirm")}
-              archivedMessage={t("record.archiveDone", { name: p.name })}
-              invalidate="products"
-              recordKey="product"
-              onArchived={() => list.refetch()}
-              archive={async () => {
-                const data = unwrap(
-                  await api.DELETE("/products/{id}", {
-                    params: {
-                      path: { id: p.id },
-                      ...ifMatch(requireVersion(p.version)),
-                    },
-                  }),
-                );
-                return data ?? p;
-              }}
-            />
-          )}
-        </OverflowMenu>
-      </span>
-    ),
+    // Every write here refuses an archived product, and nothing restores one,
+    // so its row offers no menu at all.
+    cell: (p: Product) =>
+      p.archived_at ? null : (
+        <span className="cell-actions">
+          <OverflowMenu label={t("table.rowActions", { name: p.name })}>
+            {canUpdate && (
+              <EditAction
+                labelled
+                label={t("product.edit")}
+                savedMessage={(saved) =>
+                  t("record.saveDone", { name: saved.name })
+                }
+                invalidate="products"
+                recordKey="product"
+                record={editableProduct(p, locale)}
+                update={updateProduct(p)}
+                fields={fields}
+                conflict={skuTaken}
+              />
+            )}
+            {canUpdate && (
+              <Button onClick={() => setTranslating(p)}>
+                {t("product.translations")}
+              </Button>
+            )}
+            {canArchive && (
+              <ArchiveAction
+                requires={{ object: "product", action: "delete" }}
+                label={t("product.archive")}
+                confirmText={t("product.archiveConfirm")}
+                archivedMessage={t("record.archiveDone", { name: p.name })}
+                invalidate="products"
+                recordKey="product"
+                onArchived={() => list.refetch()}
+                archive={async () => {
+                  const data = unwrap(
+                    await api.DELETE("/products/{id}", {
+                      params: {
+                        path: { id: p.id },
+                        ...ifMatch(requireVersion(p.version)),
+                      },
+                    }),
+                  );
+                  return data ?? p;
+                }}
+              />
+            )}
+          </OverflowMenu>
+        </span>
+      ),
   };
 
   return (

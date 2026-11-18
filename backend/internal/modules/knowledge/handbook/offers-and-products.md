@@ -168,7 +168,7 @@ To add a product to the rate card in Margince, open **Settings → Products and 
 1. Open the account menu at the top right and choose **Settings**, then **Products and offers**.
 2. Click **New product**.
 3. Fill **Name**, **Unit price** and **Currency** (all required). If you like, also fill **SKU**, **Description**, **Unit**, **Default tax rate %**, **Billing** and **Billing period**.
-To change a price, use **Edit product** in its row's **…** menu; **Archive product** there stops using one. Without the right role the list reads "Read-only. Your role cannot change products."
+To change a price, use **Edit product** in its row's **…** menu; **Archive product** there stops using one. An archived product has no **…** menu: it cannot be changed, and it cannot be brought back. Without the right role the list reads "Read-only. Your role cannot change products."
 Also called: price list, price book, catalogue, SKU.
 
 **Unit** is a list: **Piece**, **Hour**, **Day**, **Month** or **Flat fee**. It is **Piece** if you change nothing. Each one shows in the reader's language. The same list sets the unit of an offer line.
