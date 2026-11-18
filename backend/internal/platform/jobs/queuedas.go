@@ -15,7 +15,12 @@ func QueuedAs[T river.JobArgs](opts *river.InsertOpts) *river.InsertOpts {
 
 // QueuedAsArgs applies the same queue and ownership policy to fan-out args.
 func QueuedAsArgs(args river.JobArgs, opts *river.InsertOpts) *river.InsertOpts {
-	return SessionInsertOpts(args, QueuedAsKind(args.Kind(), opts))
+	return Composed{}.QueuedAsArgs(args, opts)
+}
+
+// QueuedAsArgs is the package QueuedAsArgs over this composition's table.
+func (c Composed) QueuedAsArgs(args river.JobArgs, opts *river.InsertOpts) *river.InsertOpts {
+	return SessionInsertOpts(args, c.QueuedAsKind(args.Kind(), opts))
 }
 
 // QueuedAsKind is QueuedAs for a caller that knows the kind only as a string —
@@ -24,7 +29,13 @@ func QueuedAsArgs(args river.JobArgs, opts *river.InsertOpts) *river.InsertOpts 
 // that can use it does; this one exists so the dynamic cases still go through
 // the same single writer of a queue.
 func QueuedAsKind(kind string, opts *river.InsertOpts) *river.InsertOpts {
-	spec, declared := SpecFor(kind)
+	return Composed{}.QueuedAsKind(kind, opts)
+}
+
+// QueuedAsKind is the package QueuedAsKind over this composition's table, for
+// a composed kind.
+func (c Composed) QueuedAsKind(kind string, opts *river.InsertOpts) *river.InsertOpts {
+	spec, declared := c.SpecFor(kind)
 	if !declared {
 		panic("jobs: enqueuing " + kind + ", which api/jobs.yaml does not declare")
 	}

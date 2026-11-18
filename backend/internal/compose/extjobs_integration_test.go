@@ -49,8 +49,7 @@ func testJobDecl() extension.JobDeclaration {
 }
 
 // composeJob registers one served extension job and answers the composition
-// that serves it. The job table it joins is process-wide, so the test restores
-// the empty table afterwards.
+// that serves it, whose own job table declares the job's kinds.
 //
 // classes are the unit's declared failure vocabulary, and they go through the
 // real RegisterExtensions rather than being poked into the job table: only a
@@ -75,11 +74,6 @@ func composeJob(t *testing.T, decl extension.JobDeclaration, handle extension.Jo
 	if err != nil {
 		t.Fatalf("RegisterExtensions: %v", err)
 	}
-	t.Cleanup(func() {
-		if err := jobs.RegisterComposed(nil); err != nil {
-			t.Errorf("restoring the composed job table: %v", err)
-		}
-	})
 	return composed
 }
 
@@ -311,7 +305,7 @@ func TestChildrenUseByArgsUniqueness(t *testing.T) {
 	decl := testJobDecl()
 	composed := composeJob(t, decl, func(context.Context, extension.Runtime) error { return nil })
 
-	opts := workspaceSweepOpts(decl.ChildKind())
+	opts := workspaceSweepOpts(composed.declaredJobs(), decl.ChildKind())
 	if !opts.UniqueOpts.ByArgs {
 		t.Fatal("the child's insert options do not deduplicate ByArgs — every workspace's child would share one unique key and the fan-out would collapse to a single row")
 	}
@@ -516,10 +510,10 @@ func TestOverlappingTicksAreBounded(t *testing.T) {
 	integration.ApplyRiverSchema(t)
 	seedWorkspaces(t, e, 0)
 	decl := testJobDecl()
-	composeJob(t, decl, func(context.Context, extension.Runtime) error { return nil })
+	table := composeJob(t, decl, func(context.Context, extension.Runtime) error { return nil }).declaredJobs()
 
 	// The declared attempt cap reaches the row, not River's ladder.
-	spec, ok := jobs.SpecFor(decl.ChildKind())
+	spec, ok := table.SpecFor(decl.ChildKind())
 	if !ok {
 		t.Fatal("the composed child kind is not declared — the seam registered a kind SpecFor cannot answer for")
 	}
@@ -549,7 +543,7 @@ func TestOverlappingTicksAreBounded(t *testing.T) {
 	// is the same window plus ByArgs.
 	child := extJobWorkspaceArgs{JobKind: decl.ChildKind(), Workspace: e.WS}
 	for range 2 {
-		if err := inserter.Enqueue(ctx, child, workspaceSweepOpts(decl.ChildKind())); err != nil {
+		if err := inserter.Enqueue(ctx, child, workspaceSweepOpts(table, decl.ChildKind())); err != nil {
 			t.Fatalf("enqueueing the child: %v", err)
 		}
 	}
@@ -559,7 +553,7 @@ func TestOverlappingTicksAreBounded(t *testing.T) {
 	// A DIFFERENT workspace is not suppressed — the window bounds overlap, it
 	// does not bound the fan-out.
 	other := extJobWorkspaceArgs{JobKind: decl.ChildKind(), Workspace: ids.NewV7()}
-	if err := inserter.Enqueue(ctx, other, workspaceSweepOpts(decl.ChildKind())); err != nil {
+	if err := inserter.Enqueue(ctx, other, workspaceSweepOpts(table, decl.ChildKind())); err != nil {
 		t.Fatalf("enqueueing a second workspace's child: %v", err)
 	}
 	if got := countJobRows(t, e.Pool, decl.ChildKind()); got != 2 {

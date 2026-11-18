@@ -256,8 +256,7 @@ func TestAComposedClassCannotImpersonateACoreClass(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Cleanup(resetComposedFailureClasses)
-			err := RegisterComposedFailureClasses(map[string][]extension.FailureClass{
+			_, err := NewComposed(nil, map[string][]extension.FailureClass{
 				unitKind: {tc.class},
 			})
 			if err == nil {
@@ -274,16 +273,12 @@ func TestAComposedClassCannotImpersonateACoreClass(t *testing.T) {
 // refuseCoreCollision defends. The check is only correct because of this order,
 // and the order is only safe because of the check, so both are held by a test.
 func TestVettedFailurePrefersTheCoreVocabulary(t *testing.T) {
-	t.Cleanup(resetComposedFailureClasses)
 	core := vocabulary[0]
 	// Registered under a kind of its own so registration accepts it; the point is
 	// the READ, which must still answer with the core class.
-	if err := RegisterComposedFailureClasses(map[string][]extension.FailureClass{
-		unitKind: {{Class: "provider_unavailable", Sentence: "the provider could not be reached", Remedy: "check the network"}},
-	}); err != nil {
-		t.Fatalf("registering a well-formed composed vocabulary: %v", err)
-	}
-	got, ok := VettedFailure(unitKind, core.sentence)
+	table := registerForTest(t,
+		extension.FailureClass{Class: "provider_unavailable", Sentence: "the provider could not be reached", Remedy: "check the network"})
+	got, ok := table.VettedFailure(unitKind, core.sentence)
 	if !ok {
 		t.Fatalf("a core sentence stored on an extension kind did not vet")
 	}
@@ -300,13 +295,10 @@ func TestVettedFailurePrefersTheCoreVocabulary(t *testing.T) {
 // report NOTHING rather than a nearest match, so the caller substitutes its own
 // fixed text.
 func TestVettedFailureRefusesWhatItCannotClassify(t *testing.T) {
-	t.Cleanup(resetComposedFailureClasses)
 	declared := extension.FailureClass{
 		Class: "provider_unavailable", Sentence: "the provider could not be reached", Remedy: "check the network",
 	}
-	if err := RegisterComposedFailureClasses(map[string][]extension.FailureClass{unitKind: {declared}}); err != nil {
-		t.Fatalf("registering a well-formed composed vocabulary: %v", err)
-	}
+	table := registerForTest(t, declared)
 	for _, tc := range []struct{ name, kind, stored string }{
 		{"an empty column", unitKind, ""},
 		{"a raw cause that embeds a vetted sentence", unitKind, "poll: " + declared.Sentence + " at 10.0.0.1"},
@@ -314,7 +306,7 @@ func TestVettedFailureRefusesWhatItCannotClassify(t *testing.T) {
 		{"a sentence nothing declares", unitKind, "something else went wrong"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			if got, ok := VettedFailure(tc.kind, tc.stored); ok {
+			if got, ok := table.VettedFailure(tc.kind, tc.stored); ok {
 				t.Fatalf("vetted %s as class %q — an unclassifiable failure must report none", tc.name, got.Class)
 			}
 		})
@@ -325,15 +317,14 @@ func TestVettedFailureRefusesWhatItCannotClassify(t *testing.T) {
 // River stores is the class's sentence, never the cause's own text, and the cause
 // stays reachable underneath.
 func TestAClassifiedFailurePersistsItsDeclaredSentence(t *testing.T) {
-	t.Cleanup(resetComposedFailureClasses)
 	declared := extension.FailureClass{
 		Class:    "provider_unavailable",
 		Sentence: "the provider could not be reached from this installation",
 		Remedy:   "check the installation's network reach to the provider",
 	}
-	registerForTest(t, declared)
+	table := registerForTest(t, declared)
 	cause := errors.New("dial tcp: lookup openapi.example: no such host")
-	stored := FaultForKind(t.Context(), unitKind, extension.Failure(declared, cause))
+	stored := FaultForKind(t.Context(), table, unitKind, extension.Failure(declared, cause))
 	if stored.Error() != declared.Sentence {
 		t.Fatalf("persisted %q, want the declared sentence %q", stored.Error(), declared.Sentence)
 	}
@@ -356,8 +347,7 @@ func TestAClassifiedFailurePersistsItsDeclaredSentence(t *testing.T) {
 // text it carried never reaches river_job.errors: a column with no workspace, no
 // RLS, and every workspace's admin reading it.
 func TestAnUnregisteredClassNeverPublishesItsSentence(t *testing.T) {
-	t.Cleanup(resetComposedFailureClasses)
-	registerForTest(t, extension.FailureClass{
+	table := registerForTest(t, extension.FailureClass{
 		Class:    "provider_unavailable",
 		Sentence: "the provider could not be reached from this installation",
 		Remedy:   "check the installation's network reach to the provider",
@@ -375,7 +365,7 @@ func TestAnUnregisteredClassNeverPublishesItsSentence(t *testing.T) {
 		{"no kind at all, as FaultContext has none", ""},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			stored := FaultForKind(t.Context(), tc.kind, extension.Failure(adHoc, errors.New("upstream said no")))
+			stored := FaultForKind(t.Context(), table, tc.kind, extension.Failure(adHoc, errors.New("upstream said no")))
 			if stored.Error() != unrecognised {
 				t.Fatalf("persisted %q, want the unclassified substitute — an unverified class must not publish its sentence", stored.Error())
 			}
@@ -390,15 +380,14 @@ func TestAnUnregisteredClassNeverPublishesItsSentence(t *testing.T) {
 // FaultForKind documents: the unit looked at the whole operation, so its class is
 // the more useful of two true statements — and the sentinel underneath survives.
 func TestAUnitsClassWinsOverACoreSentinelItWrapped(t *testing.T) {
-	t.Cleanup(resetComposedFailureClasses)
 	declared := extension.FailureClass{
 		Class:    "connection_unusable",
 		Sentence: "the connection this poll runs on is unusable",
 		Remedy:   "re-authorize the connection",
 	}
-	registerForTest(t, declared)
+	table := registerForTest(t, declared)
 	core := vocabulary[0]
-	stored := FaultForKind(t.Context(), unitKind, extension.Failure(declared, core.sentinel))
+	stored := FaultForKind(t.Context(), table, unitKind, extension.Failure(declared, core.sentinel))
 	if stored.Error() != declared.Sentence {
 		t.Fatalf("persisted %q, want the unit's own sentence %q", stored.Error(), declared.Sentence)
 	}
@@ -411,40 +400,30 @@ func TestAUnitsClassWinsOverACoreSentinelItWrapped(t *testing.T) {
 // must not cost the failure a classification it would have had anyway. A unit that
 // forgot to declare a class loses ITS OWN detail and nothing else.
 func TestAnUnregisteredClassStillGetsItsWrappedSentinelsSentence(t *testing.T) {
-	t.Cleanup(resetComposedFailureClasses)
 	core := vocabulary[0]
 	undeclared := extension.FailureClass{
 		Class:    "never_declared",
 		Sentence: "something the boot never validated",
 		Remedy:   "nothing",
 	}
-	stored := FaultForKind(t.Context(), unitKind, extension.Failure(undeclared, core.sentinel))
+	stored := FaultForKind(t.Context(), Composed{}, unitKind, extension.Failure(undeclared, core.sentinel))
 	if stored.Error() != core.sentence {
 		t.Fatalf("persisted %q, want the wrapped sentinel's own sentence %q", stored.Error(), core.sentence)
 	}
 }
 
-// registerForTest settles unitKind's composed vocabulary, failing the test rather
-// than the assertion below it when the registration itself is refused.
+// registerForTest builds a table declaring classes for unitKind, failing the
+// test rather than the assertion below it when the table itself is refused.
 //
 // It takes no kind: every case that registers uses unitKind, and a parameter that
 // never varies reads as a choice the caller has when it has none.
-func registerForTest(t *testing.T, classes ...extension.FailureClass) {
+func registerForTest(t *testing.T, classes ...extension.FailureClass) Composed {
 	t.Helper()
-	if err := RegisterComposedFailureClasses(map[string][]extension.FailureClass{unitKind: classes}); err != nil {
+	table, err := NewComposed(nil, map[string][]extension.FailureClass{unitKind: classes})
+	if err != nil {
 		t.Fatalf("registering a well-formed composed vocabulary: %v", err)
 	}
-}
-
-// resetComposedFailureClasses clears the process table between cases.
-//
-// The table is boot state, so a test that registered one has to put it back or
-// the next test in this package reads a vocabulary its own case never declared.
-func resetComposedFailureClasses() {
-	composedClasses.mu.Lock()
-	defer composedClasses.mu.Unlock()
-	composedClasses.byKind = nil
-	composedClasses.declared = nil
+	return table
 }
 
 // TestAClassifiedFailureStillSendsItsCauseToTheLog holds the half of the seam's
@@ -456,13 +435,12 @@ func resetComposedFailureClasses() {
 // failure that returned without logging would have traded a vague screen for a
 // silent log: better reading, same operator, one step further from the answer.
 func TestAClassifiedFailureStillSendsItsCauseToTheLog(t *testing.T) {
-	t.Cleanup(resetComposedFailureClasses)
 	declared := extension.FailureClass{
 		Class:    "provider_unavailable",
 		Sentence: "the provider could not be reached from this installation",
 		Remedy:   "check the network",
 	}
-	registerForTest(t, declared)
+	table := registerForTest(t, declared)
 
 	var logged bytes.Buffer
 	restore := slog.Default()
@@ -470,7 +448,7 @@ func TestAClassifiedFailureStillSendsItsCauseToTheLog(t *testing.T) {
 	t.Cleanup(func() { slog.SetDefault(restore) })
 
 	cause := errors.New("dial tcp: lookup provider.example: no such host")
-	stored := FaultForKind(t.Context(), unitKind, extension.Failure(declared, cause))
+	stored := FaultForKind(t.Context(), table, unitKind, extension.Failure(declared, cause))
 
 	if stored.Error() != declared.Sentence {
 		t.Fatalf("persisted %q, want the declared sentence %q", stored.Error(), declared.Sentence)
@@ -506,8 +484,7 @@ func TestAnInvisibleRuneCannotSmuggleASubstituteSentencePastTheCollisionCheck(t 
 		{"a tab inserted", "the provider was\tunreachable"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Cleanup(resetComposedFailureClasses)
-			err := RegisterComposedFailureClasses(map[string][]extension.FailureClass{
+			_, err := NewComposed(nil, map[string][]extension.FailureClass{
 				unitKind: {{Class: "provider_hiccup", Sentence: tc.sentence, Remedy: "check the provider"}},
 			})
 			if err == nil {

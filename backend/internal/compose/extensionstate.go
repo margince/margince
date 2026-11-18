@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/ports/companytypes"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -33,7 +34,9 @@ type Extensions struct {
 	tools []mcp.Tool
 	subs  []ComposedSubscription
 	jobs  []composedJob
-	rbac  identity.RbacObjects
+	// jobTable declares the served jobs' kinds and failure vocabulary.
+	jobTable jobs.Composed
+	rbac     identity.RbacObjects
 	// reportSet is the units' counts and breakdowns, ordered by name.
 	reportSet []registeredReport
 
@@ -86,6 +89,14 @@ func (x *Extensions) CompanyTypes() companytypes.Registry {
 		return companytypes.Registry{}
 	}
 	return companytypes.Of(x.units)
+}
+
+// declaredJobs is the job declaration table: core kinds plus the composition's.
+func (x *Extensions) declaredJobs() jobs.Composed {
+	if x == nil {
+		return jobs.Composed{}
+	}
+	return x.jobTable
 }
 
 func (x *Extensions) servedJobs() []composedJob {
@@ -173,6 +184,7 @@ func (s *Server) bindExtensions() {
 	s.installationSettingsHandlers.extensions = s.extensions
 	s.dataTaskHandlers.extensions = s.extensions
 	s.analyticsQueryHandlers.extensions = s.extensions
+	s.jobHealthHandlers.jobTable = s.extensions.declaredJobs()
 }
 
 // ExtensionsWithSubscriptionsForTest is a composition holding only listeners.
@@ -190,7 +202,7 @@ func ExtensionsWithSubscriptionsForTest(subs []ComposedSubscription) *Extensions
 // binding of its own. Parallel tests that share one registration each bind
 // their own pool to a fork.
 func (x *Extensions) ForkForTest() *Extensions {
-	fork := &Extensions{units: x.units, verbs: x.verbs, jobs: x.jobs, rbac: x.rbac, reportSet: x.reportSet}
+	fork := &Extensions{units: x.units, verbs: x.verbs, jobs: x.jobs, jobTable: x.jobTable, rbac: x.rbac, reportSet: x.reportSet}
 	for _, tool := range x.tools {
 		if adapted, ok := tool.(extensionTool); ok {
 			adapted.composed = fork

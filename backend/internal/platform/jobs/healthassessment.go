@@ -15,9 +15,11 @@ type HealthAssessment struct {
 }
 
 // AssessHealth uses declared cadence and actual retry state instead of an assumed timeout.
-func AssessHealth(k KindHealth) HealthAssessment {
+// The composition's table answers, because a composed dispatcher declares a
+// cadence too.
+func (c Composed) AssessHealth(k KindHealth) HealthAssessment {
 	out := HealthAssessment{Condition: "unknown", Code: "queue_checked", Urgency: 2}
-	if spec, ok := SpecFor(k.Kind); ok && spec.Cadence.Fixed > 0 {
+	if spec, ok := c.SpecFor(k.Kind); ok && spec.Cadence.Fixed > 0 {
 		// Missing a full declared tick while still runnable warrants investigation.
 		out.Expectation = spec.Cadence.Fixed
 	}

@@ -58,14 +58,14 @@ type failureKey struct {
 // into a number a reviewer sees. Nothing here is keyed by workspace: a class is
 // a fact about the failure, not about whose work it was, and the tenant split is
 // already published by the gauges above.
-func writeJobFailureGauge(w io.Writer, failures []jobs.FailureCount) error {
+func writeJobFailureGauge(w io.Writer, table jobs.Composed, failures []jobs.FailureCount) error {
 	if err := writeFamilyHeader(w, "margince_job_failures",
 		"Jobs in a failed state (retryable or discarded) per kind and failure class. Cancelled work is counted apart by margince_job_cancelled: a deliberate stop is not an outage. The class is the same vocabulary the failure list shows, and "+unclassifiedFailureClass+" is a failure whose recorded text nothing recognises -- which is what an outage nobody has enumerated looks like."); err != nil {
 		return err
 	}
 	series := map[failureKey]int64{}
 	for _, f := range failures {
-		series[failureKey{kind: f.Kind, class: failureClassOf(f)}] += f.Count
+		series[failureKey{kind: f.Kind, class: failureClassOf(table, f)}] += f.Count
 	}
 	keys := sortedKeysOf(series, func(a, b failureKey) int {
 		return cmp.Or(cmp.Compare(a.kind, b.kind), cmp.Compare(a.class, b.class))
@@ -85,8 +85,8 @@ func writeJobFailureGauge(w io.Writer, failures []jobs.FailureCount) error {
 // the reserved class, and that is a deliberate flattening: the difference
 // matters to somebody reading one failure and not to an alert counting them,
 // which is asking whether anything is failing in a shape nobody named.
-func failureClassOf(f jobs.FailureCount) string {
-	if detail, ok := jobs.VettedFailure(f.Kind, f.Stored); ok {
+func failureClassOf(table jobs.Composed, f jobs.FailureCount) string {
+	if detail, ok := table.VettedFailure(f.Kind, f.Stored); ok {
 		return detail.Class
 	}
 	return unclassifiedFailureClass
@@ -99,10 +99,10 @@ func failureClassOf(f jobs.FailureCount) string {
 // It is deliberately an over-count — one kind's rows can only carry the core
 // vocabulary and its own unit's, never another unit's — so a fleet that stayed
 // under it proves the bound rather than merely agreeing with it.
-func failureSeriesBound(kinds int) int {
+func failureSeriesBound(table jobs.Composed, kinds int) int {
 	classes := len(jobs.CoreFailureClasses()) + 1
-	for _, kind := range jobs.ComposedFailureKinds() {
-		classes += len(jobs.ComposedFailureClasses(kind))
+	for _, kind := range table.FailureKinds() {
+		classes += len(table.FailureClasses(kind))
 	}
 	return kinds * classes
 }

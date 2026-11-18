@@ -359,14 +359,13 @@ func NewJobRunner(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*j
 	reg, periodic := wireJobs(pool, log, cfg)
 
 	// An undeclared kind would otherwise inherit River's scheduling defaults.
-	if err := jobs.MustBeTotal(reg.kinds); err != nil {
+	if err := reg.jobTable.MustBeTotal(reg.kinds); err != nil {
 		return nil, err
 	}
 	// A kind name alone cannot catch an args type that impersonates another declaration.
 	if err := reg.everyKindIsRegisteredWithItsDeclaredType(); err != nil {
 		return nil, err
 	}
-
 	return jobs.New(pool, jobs.Config{
 		Queues:          jobQueues(),
 		Workers:         reg.workers,
@@ -383,6 +382,7 @@ func NewJobRunner(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*j
 // nothing to do with a database.
 func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRegistry, []*river.PeriodicJob) {
 	reg := newJobRegistry()
+	reg.jobTable = cfg.Extensions.declaredJobs()
 	reg.withContext = func(ctx context.Context) context.Context {
 		return originalstore.Bind(ctx, InstallationDB(pool), cfg.Blobstore)
 	}

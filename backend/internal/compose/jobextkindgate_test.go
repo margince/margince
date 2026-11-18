@@ -45,10 +45,7 @@ func gateProbeDecl() extension.JobDeclaration {
 	}
 }
 
-// composeProbeJob registers one served extension job and restores the empty
-// job table afterwards. The table is process-wide. A test that left it behind
-// would compose a phantom job into every later test in this package. The census
-// tests would then measure a fleet nobody deployed.
+// composeProbeJob composes one served extension job.
 func composeProbeJob(t *testing.T, d extension.JobDeclaration) *Extensions {
 	t.Helper()
 	composed, err := RegisterExtensions(
@@ -64,11 +61,6 @@ func composeProbeJob(t *testing.T, d extension.JobDeclaration) *Extensions {
 	if err != nil {
 		t.Fatalf("RegisterExtensions: %v", err)
 	}
-	t.Cleanup(func() {
-		if err := jobs.RegisterComposed(nil); err != nil {
-			t.Errorf("restoring the composed job table: %v", err)
-		}
-	})
 	return composed
 }
 
@@ -86,7 +78,7 @@ func TestTheJobsGateFamilyAdmitsARegisteredExtensionKind(t *testing.T) {
 	// kinds, every arm below would agree about nothing and the census would pass
 	// for the wrong reason.
 	for _, kind := range []string{d.DispatcherKind(), d.ChildKind()} {
-		if _, declared := jobs.SpecFor(kind); !declared {
+		if _, declared := composed.declaredJobs().SpecFor(kind); !declared {
 			t.Fatalf("%s is not in the declaration table after RegisterExtensions — the composed set never registered", kind)
 		}
 	}
@@ -121,11 +113,11 @@ func TestTheRegistrySPairingCheckAdmitsAComposedKind(t *testing.T) {
 	if err := reg.everyKindIsRegisteredWithItsDeclaredType(); err != nil {
 		t.Fatalf("the boot-time pairing check refuses a composed kind: %v", err)
 	}
-	if findings := misfiledKinds(reg.wired); len(findings) != 0 {
+	if findings := misfiledKinds(reg.jobTable, reg.wired); len(findings) != 0 {
 		t.Errorf("misfiledKinds reports %v over a composed set", findings)
 	}
-	if err := jobs.MustBeTotal(reg.kinds); err != nil {
-		t.Errorf("MustBeTotal refuses a boot whose composed kinds were declared through RegisterComposed: %v", err)
+	if err := reg.jobTable.MustBeTotal(reg.kinds); err != nil {
+		t.Errorf("MustBeTotal refuses a boot whose composed kinds the composition declared: %v", err)
 	}
 }
 
@@ -168,9 +160,9 @@ func TestAComposedDispatcherPublishesTheQueueItsRowsActuallyLandOn(t *testing.T)
 	if _, built := jobs.DeclaredQueues()[d.Queue]; !built {
 		t.Fatalf("%s is not a queue this installation builds — pick another non-default pool", d.Queue)
 	}
-	composeProbeJob(t, d)
+	table := composeProbeJob(t, d).declaredJobs()
 
-	dispatcher, ok := jobs.SpecFor(d.DispatcherKind())
+	dispatcher, ok := table.SpecFor(d.DispatcherKind())
 	if !ok {
 		t.Fatalf("%s is not declared", d.DispatcherKind())
 	}
@@ -189,7 +181,7 @@ func TestAComposedDispatcherPublishesTheQueueItsRowsActuallyLandOn(t *testing.T)
 		t.Errorf("the tick inserts on queue %q while the declaration publishes %q", opts.Queue, dispatcher.Queue)
 	}
 
-	child, ok := jobs.SpecFor(d.ChildKind())
+	child, ok := table.SpecFor(d.ChildKind())
 	if !ok {
 		t.Fatalf("%s is not declared", d.ChildKind())
 	}

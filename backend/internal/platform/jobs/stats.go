@@ -206,16 +206,14 @@ func subWorkspaceFanOutsOf(units map[string]FanOutUnit) (kinds, argsKeys []strin
 	return kinds, argsKeys
 }
 
-// standaloneFleetKinds answers the kinds statsBySweep must read PER KIND
-// rather than per workspace_id: a Fleet kind (jobs.FleetWide) that fans out
-// to nothing is ADR-0103's collapsed pass — it owns no tenant by
-// declaration, so no row of it ever carries a workspace_id, and its own
-// tagged row is the whole pass rather than a dispatcher's row a child kind
-// elsewhere makes visible. A Fleet kind that DOES fan out (FanOutTo set) is
-// the opposite case: its own row is excluded exactly as before, because the
-// children it enqueues are the real per-workspace signal.
+// standaloneFleetKinds answers the kinds statsBySweep must read per kind
+// rather than per workspace_id. A Fleet kind that fans out to nothing is a
+// collapsed pass: it owns no tenant, so its own tagged row is the whole pass.
+// A Fleet kind that does fan out is excluded, because its children are the
+// per-workspace signal. A composed kind is never Fleet, so the core table is
+// the whole answer.
 func standaloneFleetKinds() []string {
-	return standaloneFleetKindsOf(allSpecs())
+	return standaloneFleetKindsOf(Composed{}.allSpecs())
 }
 
 // standaloneFleetKindsOf is the selection itself, over a table a test can
