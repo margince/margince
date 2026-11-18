@@ -5,8 +5,7 @@ import { mockApi } from "./seed";
  * Two pieces of chrome that share a corner do not hide each other.
  *
  * The notification count is pinned near the bell, and the month's spend stands
- * beside the agent's orb in the rail's foot. Each placement must hold for the
- * widest realistic figure.
+ * beside the agent's orb. Each must hold for the widest realistic figure.
  * Whether one box covers another is a fact about layout that jsdom cannot see.
  */
 

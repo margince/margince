@@ -554,8 +554,7 @@ describe("AgentRail", () => {
     );
     expect(paths.some((path) => path.endsWith("/ai/usage/summary"))).toBe(true);
     expect(paths.some((path) => path.endsWith("/ai/usage"))).toBe(false);
-    // In the words' own block, so it folds with the line and centres with it
-    // beside the orb on a short window.
+    // Inside the words' block, so it folds and centres with the line.
     expect(container.querySelector(".arwords > .arspend")).not.toBeNull();
   });
 
@@ -659,21 +658,5 @@ describe("AgentRail", () => {
       if (documentedDefaults.has(state)) continue;
       expect(css).toContain(`data-core-state="${state}"`);
     }
-  });
-
-  // The foot reads how open the rail is off `--railW` against the two widths
-  // the shell gives the column, so the two files have to name the same pair.
-  it("mirrors the rail's two widths from the shell", () => {
-    const sheet = (name: string) =>
-      readFileSync(join(dirname(fileURLToPath(import.meta.url)), name), "utf8");
-    const shell = sheet("shell.css");
-    const foot = sheet("agentrail.css");
-    const width = (css: string, pattern: RegExp) => css.match(pattern)?.[1];
-    const shut = width(shell, /\n\.app \{[^}]*?--railW: (\d+px);/);
-    const open = width(shell, /\n\.app\.railexpanded \{\s*--railW: (\d+px);/);
-    expect(shut).toBeDefined();
-    expect(open).toBeDefined();
-    expect(width(foot, /--arRailShut: (\d+px);/)).toBe(shut);
-    expect(width(foot, /--arRailOpen: (\d+px);/)).toBe(open);
   });
 });

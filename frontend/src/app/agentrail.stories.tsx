@@ -125,8 +125,7 @@ function callRow(task: string, minutesAgo: number, index: number) {
 // renders.
 type RailState = "expanded" | "collapsed" | "leveled";
 
-// The column's width as the shell sets it on `.app`: the foot sizes its orb
-// from `--railW`, and a story has no `.app` around it.
+// The shell sets `--railW` on `.app`, which a story does not render.
 type RailWidth = CSSProperties & Readonly<{ "--railW": string }>;
 
 function Rail({
@@ -134,7 +133,7 @@ function Rail({
   children,
 }: Readonly<{ state: RailState; children: ReactNode }>) {
   const width: RailWidth = {
-    "--railW": state === "collapsed" ? "56px" : "256px",
+    "--railW": state === "collapsed" ? "var(--railWShut)" : "var(--railWOpen)",
   };
   return (
     <nav className={`rail ${state}`} style={width}>

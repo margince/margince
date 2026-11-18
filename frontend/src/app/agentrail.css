@@ -25,15 +25,14 @@
   flex: none;
   margin-top: var(--space-1);
 }
-/* How open the rail is, 0 to 1, read off the column's animated width. The two
-   widths mirror app/shell.css, and agentrail.test.tsx holds the pair. */
+/* How open the rail is, 0 to 1, read off the column's animated width. */
 .arblock,
 .arorb {
-  --arRailShut: 56px;
-  --arRailOpen: 256px;
+  /* The collapsed ball: its glow (1.39x, fading out by 74%) stays inside 56px. */
+  --arShutBall: 52px;
   --arOpen: clamp(0, tan(atan2(var(--arTravel), var(--arSpan))), 1);
-  --arTravel: calc(var(--railW) - var(--arRailShut));
-  --arSpan: calc(var(--arRailOpen) - var(--arRailShut));
+  --arTravel: calc(var(--railW) - var(--railWShut));
+  --arSpan: calc(var(--railWOpen) - var(--railWShut));
 }
 
 /* The state's leading colour, declared on the block so the row AND the panel
@@ -87,10 +86,7 @@
      read as the caption belonging to something else. */
   gap: 0;
   width: 100%;
-  /* Tight. The ball is the biggest thing in the chrome and it needs room to be
-     read, not room around the room: with no card to hold, air above and below it
-     is just rail nobody uses. The collapsed rail's 8px above and below arrives
-     on the column's curve. */
+  /* Tight around the ball; the collapsed rail's 8px above and below grows in. */
   padding: calc((1 - var(--arOpen)) * var(--space-2)) 0
     calc((2 - var(--arOpen)) * var(--space-1));
   border: 0;
@@ -173,12 +169,14 @@
      that spelled its own length would be drawing the reduction larger than the
      ball it reduces on any window where the ladder had already fired. */
   --arBall: min(172px, 18vh);
-  /* What the open rail draws; the collapsed rail draws 56px with a 48px glass
-     and more halo, and every width between draws the share `--arOpen` gives. */
   --arFull: var(--arBall);
   --arFullHalo: 0.08;
-  --coreSize: calc(56px + var(--arOpen) * (var(--arFull) - 56px));
-  --coreGlass: calc(var(--coreSize) - 8px + 2px * var(--arOpen));
+  --coreSize: calc(
+    var(--arShutBall) +
+    var(--arOpen) *
+    (var(--arFull) - var(--arShutBall))
+  );
+  --coreGlass: calc(var(--coreSize) - 4px - 2px * var(--arOpen));
   /* The viewport cap is for a hero standing in a content column; the rail's own
      width and height are the only caps this one needs. */
   --coreCap: 100%;
@@ -196,10 +194,9 @@
   flex-direction: column;
   align-items: center;
   gap: 1px; /* ds:ignore two lines of one reading, not spaced content */
-  /* The open rail's width at every width, so the words never re-wrap while the
-     column moves: the rail clips them as it clips its labels. */
+  /* The open rail's width: the column clips the words, never re-wraps them. */
   align-self: stretch;
-  margin-inline: calc((var(--railW) - var(--arRailOpen)) / 2);
+  margin-inline: calc((var(--railW) - var(--railWOpen)) / 2);
   min-width: 0;
   /* Folds on the column's curve; 8em clears the line and the figure. */
   max-height: calc(var(--arOpen) * 8em);
@@ -232,9 +229,7 @@
   grid-area: 1 / 1;
   max-width: 100%;
   color: var(--textPrimary);
-  /* Two lines, always, under the tall orb, or a long name moves the figure
-     under it. The text sits at the TOP: centred, a one-line reading would stand
-     half a line away from the ball it names. */
+  /* Two lines, always, so a long name never moves the figure under it. */
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -270,8 +265,7 @@
    so nothing takes the code face: a figure lines up through `tabular-nums` on
    the body face, and a button label or a word takes the body face alone. */
 
-/* The month's spend under the line: the figure and the scope it was spent in,
-   on one baseline. The TYPE is the row's own (`.t-caption .t-num`). */
+/* The figure and the scope it was spent in, on one baseline. */
 .arspend {
   display: flex;
   align-items: baseline;
@@ -309,18 +303,7 @@
   text-overflow: ellipsis;
 }
 
-/* ===== A short window =====
- *
- * The destinations have a fixed cost (about 530px of rows and headings on a full
- * workspace), so on a short window the agent card is what has to give, and it
- * gives in stages rather than by scrolling. A rail that scrolls hides the agent,
- * which is the one thing in the chrome that has to be found without looking.
- *
- * First the card turns on its side: the ball beside its line instead of over
- * it, which is worth about 150px and still reads as the same object. 885px is
- * the shortest window the column fits on with the fold control under it. Last
- * the words go and the orb reports alone, as it does on the collapsed rail.
- */
+/* Below 885px the tall foot would push the destinations into a scroll. */
 @media (max-height: 885px) {
   .arhit {
     flex-direction: row;
@@ -329,26 +312,25 @@
     padding: var(--space-1) var(--space-2);
     text-align: left;
   }
-  /* Leading on the left at the open width, and in the middle of the 56px column:
-     two insets of 8px close on the column's curve. */
+  /* From two insets in on the open rail to the middle of the collapsed one. */
   .artoggle {
-    translate: calc((var(--arOpen) - 1) * 2 * var(--space-2)) 0;
+    --arInset: calc((var(--railWShut) - var(--arShutBall)) / 2);
+    translate: calc((1 - var(--arOpen)) * (var(--arInset) - 2 * var(--space-2)))
+      0;
   }
   .arorb {
     --arBall: 56px;
   }
-  /* The line and the figure under it are one block, centred against the orb,
-     at the width the open rail gives it. */
+  /* The line and the figure, one block centred on the orb, at the open width. */
   .arwords {
     flex: 1 0 0;
     align-self: auto;
     align-items: flex-start;
     gap: 0;
-    margin-inline: 0 calc(var(--railW) - var(--arRailOpen));
+    margin-inline: 0 calc(var(--railW) - var(--railWOpen));
     padding: 0;
   }
-  /* Beside the orb the room is as tall as the sentence, so one line or two
-     centres on the orb, and both layers centre in the cell they share. */
+  /* As tall as the sentence, so one line or two centres on the orb. */
   .arline,
   .argone {
     align-self: center;
@@ -358,26 +340,8 @@
     justify-content: flex-start;
   }
 }
-@media (max-height: 620px) {
-  /* The reading goes and the figure goes with it — they are the same words. */
-  .arwords {
-    display: none;
-  }
-  .arhit {
-    justify-content: center;
-  }
-  .artoggle {
-    translate: none;
-  }
-}
 
-/* ===== The collapsed rail =====
- *
- * At 56px the orb IS the report, and it keeps as much of that width as the rail
- * will give it. The words, the figure and the CTA go, on the rail's own clock
- * for words (app/shell.css); the count stays, because a number waiting for a
- * contact is the one thing that still has to get through at this width. The
- * button keeps its accessible name, so nothing is lost to a screen reader. */
+/* ===== The collapsed rail: the orb alone, the rest fading on the rail's clock */
 .arwords,
 .artrial {
   transition: var(--railWords);
