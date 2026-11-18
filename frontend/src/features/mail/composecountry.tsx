@@ -18,9 +18,8 @@ import {
   useRecordCountry,
 } from "./composecountries";
 
-const SOURCE_KEY: Record<
-  NonNullable<RecipientCountryReading["source"]>,
-  MessageKey
+const SOURCE_KEY: Partial<
+  Record<NonNullable<RecipientCountryReading["source"]>, MessageKey>
 > = {
   contact_address: "compose.country.fromContact",
   employer_address: "compose.country.fromEmployer",
@@ -62,7 +61,9 @@ export function RecipientCountryControl({
       label={
         <>
           <Globe size={12} aria-hidden="true" />
-          {shown && <span aria-hidden="true">{shown.toUpperCase()}</span>}
+          {shown && (
+            <span aria-hidden="true">{jurisdictionName(shown, locale)}</span>
+          )}
           <span className="sr-only">
             {t("compose.country.open", { address })}
           </span>
@@ -70,9 +71,7 @@ export function RecipientCountryControl({
       }
     >
       <div className="compose-country-panel">
-        <p role="status">
-          {sourceLine(t, stated, reading, settled, locale)}
-        </p>
+        <p role="status">{sourceLine(t, stated, reading, settled, locale)}</p>
         <Field label={t("compose.country.label")}>
           {(control) => (
             <Select
@@ -94,10 +93,7 @@ export function RecipientCountryControl({
             </Button>
           )}
           {stated && (
-            <Button
-              variant="ghost"
-              onClick={() => countries.forget(address)}
-            >
+            <Button variant="ghost" onClick={() => countries.forget(address)}>
               {t("compose.country.useRecord")}
             </Button>
           )}
@@ -118,16 +114,18 @@ function sourceLine(
     return stated.country === null
       ? t("compose.country.cleared")
       : t("compose.country.yours", {
-          country: jurisdictionName(stated.country.toUpperCase(), locale),
+          country: jurisdictionName(stated.country, locale),
         });
   }
   if (!settled) {
     return t("compose.country.reading");
   }
-  if (!reading?.country || !reading.source) {
+  if (!reading?.country) {
     return t("compose.country.unknown");
   }
-  return t(SOURCE_KEY[reading.source], {
-    country: jurisdictionName(reading.country.toUpperCase(), locale),
-  });
+  const country = jurisdictionName(reading.country, locale);
+  // A source a newer server names that this build does not know still says
+  // the country.
+  const key = reading.source ? SOURCE_KEY[reading.source] : undefined;
+  return key ? t(key, { country }) : country;
 }

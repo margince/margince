@@ -119,7 +119,9 @@ describe("a recipient's country on the chip", () => {
       await screen.findByText("Austria, your setting for this message"),
     ).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Clear country" }));
-    expect(await screen.findByText("No country for this message.")).toBeTruthy();
+    expect(
+      await screen.findByText("No country for this message."),
+    ).toBeTruthy();
     await pressSend(user);
     await waitFor(() =>
       expect(sentEmail(sent)?.recipient_countries).toEqual([
@@ -181,7 +183,9 @@ describe("a recipient's country in the saved draft", () => {
     await openWith(sent);
     await screen.findByText("Saved draft restored");
     await user.click(await countryOf("a@x.com"));
-    expect(await screen.findByText("No country for this message.")).toBeTruthy();
+    expect(
+      await screen.findByText("No country for this message."),
+    ).toBeTruthy();
     await user.keyboard("{Escape}");
     await user.type(screen.getByLabelText("Subject"), " again");
     await waitFor(() => {

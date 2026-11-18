@@ -54,9 +54,7 @@ export function sameCountries(
 
 /** The countries the sender stated on the message being written. */
 export function useRecipientCountries(seed?: readonly RecipientCountry[]) {
-  const [stated, setStated] = useState<readonly RecipientCountry[]>(
-    seed ?? [],
-  );
+  const [stated, setStated] = useState<readonly RecipientCountry[]>(seed ?? []);
   const without = (list: readonly RecipientCountry[], address: string) =>
     list.filter((entry) => entry.address !== canonical(address));
   return {

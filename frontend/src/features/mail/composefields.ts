@@ -7,9 +7,12 @@ import type { ProjectScope } from "../../design-system/projectpicker";
 import { paragraphsFrom } from "../../design-system/richtext";
 import type { Locale } from "../../i18n/locale";
 import type { CommunicationContext } from "../../lib/compose-context";
-import { type RecipientCountry, useRecipientCountries } from "./composecountries";
 import { useViewerZone } from "../../lib/viewerzone";
 import { useFromMailbox } from "./compose.from";
+import {
+  type RecipientCountry,
+  useRecipientCountries,
+} from "./composecountries";
 import type { DraftProvenance, DraftUnavailable } from "./composedraftcall";
 import {
   type DraftMarks,
