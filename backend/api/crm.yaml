@@ -10816,16 +10816,7 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
-        '409':
-          description: |
-            Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
-            When the refusal opened a review, `details` carries `review_id`, the
-            `available_actions` this caller may take, and `refusals`: each refused address
-            the caller named, with the engine's `reason_code`, resolved `category` and the
-            `requested_category` the caller claimed.
-          content:
-            application/problem+json:
-              schema: { $ref: '#/components/schemas/Problem' }
+        '409': { $ref: '#/components/responses/SendRefused' }
         '422': { $ref: '#/components/responses/SendValidationError' }
 
   /emails:
@@ -10900,16 +10891,7 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
-        '409':
-          description: |
-            Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
-            When the refusal opened a review, `details` carries `review_id`, the
-            `available_actions` this caller may take, and `refusals`: each refused address
-            the caller named, with the engine's `reason_code`, resolved `category` and the
-            `requested_category` the caller claimed.
-          content:
-            application/problem+json:
-              schema: { $ref: '#/components/schemas/Problem' }
+        '409': { $ref: '#/components/responses/SendRefused' }
         '422': { $ref: '#/components/responses/SendValidationError' }
 
   /scheduled-sends:
@@ -11179,16 +11161,7 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '409':
-          description: |
-            Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
-            When the refusal opened a review, `details` carries `review_id`, the
-            `available_actions` this caller may take, and `refusals`: each refused address
-            the caller named, with the engine's `reason_code`, resolved `category` and the
-            `requested_category` the caller claimed.
-          content:
-            application/problem+json:
-              schema: { $ref: '#/components/schemas/Problem' }
+        '409': { $ref: '#/components/responses/SendRefused' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /public/record-previews/{record_type}/{id}:
@@ -26182,9 +26155,11 @@ paths:
         instruction rather than under the engine's permission. A subject asking later why they
         received it is shown the refusal AND the decision, never a grant nobody made.
 
-        A SUBJECT'S OWN STOP IS NEVER PASSED. A review that holds an objection, a withdrawal, a
-        restriction or a request to stop is refused with 403, admin included, even beside a refusal
-        a decision could pass.
+        WHAT A DECISION CAN PASS is each refusal's declared remedy. A holder of the exception grant
+        may send one message past a policy refusal and past the subject's own objection, withdrawal,
+        restriction or request to stop; the stop stays on record and binds the next message. A hard
+        bounce and a recipient the engine cannot name declare no remedy: a review holding one is
+        refused with 403, admin included, because the address needs a real repair.
 
         THE DECISION IS THE USER'S, taken in their own session. The row names them as the one who
         took it on. An agent or a connector is refused: it may read the review and send its user
@@ -39228,6 +39203,18 @@ components:
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }
+    SendRefused:
+      description: |
+        Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
+        When the refusal opened a review, `details` carries `review_id`, the
+        `available_actions` this caller may take, and `refusals`: each refused address
+        the caller named, with the engine's `reason_code`, resolved `category` and the
+        `requested_category` the caller claimed. `details.review` is the review exactly as
+        `GET /communication-reviews/{id}` serves it to this caller, so a client needs no second
+        request; it is absent when the caller may not read the review.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/SendRefusal' }
     ControllerMailRefused:
       description: |
         The installation cannot send its own mail (`conflict`), or the consent engine refuses this
@@ -61325,6 +61312,13 @@ components:
         scheduled_tz:
           type: [string, 'null']
           description: The IANA zone name `scheduled_at` was picked in. Required with `scheduled_at`.
+        override_explanation:
+          type: string
+          maxLength: 1000
+          description: |
+            The reason the rep typed for sending this message past a refusal, kept so a reopened
+            composer still holds it. It grants nothing: the send still needs its own decision. Omit
+            it for none.
 
     MailDraft:
       type: object
@@ -61385,6 +61379,10 @@ components:
         scheduled_tz:
           type: string
           description: The IANA zone `scheduled_at` was picked in. Present exactly when it is.
+        override_explanation:
+          type: string
+          maxLength: 1000
+          description: The reason the author typed for sending past a refusal. Absent when none was.
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
 
@@ -61425,7 +61423,8 @@ components:
       required: [to]
       description: |
         What a composer is about to write, in the shape the engine judges. A `subject` and
-        `body` never reach a consent decision. When given, they are checked against the
+        `body` are read as the send reads them: words that make an offer (a discount, a quote,
+        a price) are judged as marketing even inside a reply. They are also checked against the
         advertising content rules of each recipient's jurisdiction pack and answered as
         `content_findings`.
       properties:
@@ -61461,11 +61460,21 @@ components:
         subject:
           type: string
           maxLength: 998
-          description: The draft's subject, checked only for `content_findings`.
+          description: The draft's subject, read for an offer as the send reads it and checked for `content_findings`.
         body:
           type: string
           maxLength: 200000
-          description: The draft's plain text, checked only for `content_findings`.
+          description: The draft's plain text, read for an offer as the send reads it and checked for `content_findings`.
+        html_body:
+          type: string
+          description: The draft's markup beside the plain text. Its visible text is read for an offer as the send reads it.
+        attachment_ids:
+          type: array
+          maxItems: 10
+          items: { type: string, format: uuid }
+          description: |
+            The files the message will carry, by the ids `/attachments` gave them. Their names are
+            read for an offer as the send reads them. A file the send would refuse is refused here.
 
     PreviewAccountSendRequest:
       type: object
@@ -61504,11 +61513,21 @@ components:
         subject:
           type: string
           maxLength: 998
-          description: The draft's subject, checked only for `content_findings`.
+          description: The draft's subject, read for an offer as the send reads it and checked for `content_findings`.
         body:
           type: string
           maxLength: 200000
-          description: The draft's plain text, checked only for `content_findings`.
+          description: The draft's plain text, read for an offer as the send reads it and checked for `content_findings`.
+        html_body:
+          type: string
+          description: The draft's markup beside the plain text. Its visible text is read for an offer as the send reads it.
+        attachment_ids:
+          type: array
+          maxItems: 10
+          items: { type: string, format: uuid }
+          description: |
+            The files the message will carry, by the ids `/attachments` gave them. Their names are
+            read for an offer as the send reads them. A file the send would refuse is refused here.
 
     LawfulBasisConfirmationRequest:
       type: object
@@ -67380,6 +67399,12 @@ components:
         reader_rendering_available:
           type: boolean
           description: Whether this human caller may use the configured activity reader-rendering lane. Absent or false keeps generated text original until an explicit request.
+        inline_send_review:
+          type: boolean
+          description: |
+            The `activities.inline_send_review` setting: whether the email composer is decided at
+            Send, with a refusal shown inline from the embedded review. Absent or false keeps the
+            check while writing and the confirmation dialog.
         analytics_startup: { $ref: '#/components/schemas/AnalyticsStartup' }
         user: { $ref: '#/components/schemas/User' }
         workspace_name:
@@ -68885,6 +68910,46 @@ components:
       additionalProperties:
         type: object
         additionalProperties: { type: string }
+    SendRefusal:
+      description: >-
+        A problem body whose `details` describe a refused send and the review it opened.
+
+        The envelope is `Problem`'s, restated rather than composed with `allOf` so the
+        breaking-change check can read it; a gate holds the two property sets equal.
+      type: object
+      required: [status, code]
+      properties:
+        type: { type: string, format: uri, default: about:blank }
+        title: { type: string }
+        status: { type: integer }
+        code: { type: string }
+        detail: { type: string }
+        instance: { type: string, format: uri }
+        details: { $ref: '#/components/schemas/SendRefusalDetails' }
+    SendRefusalDetails:
+      type: object
+      additionalProperties: true
+      description: Present when the refusal opened a review.
+      properties:
+        review_id: { type: string, format: uuid }
+        available_actions:
+          type: array
+          description: What this caller may do about the refusal, such as `direct_send`.
+          items: { type: string }
+        refusals:
+          type: array
+          description: Each refused address the caller named.
+          items: { $ref: '#/components/schemas/SendRefusalRecipient' }
+        review: { $ref: '#/components/schemas/CommunicationReview' }
+    SendRefusalRecipient:
+      type: object
+      required: [address, reason_code, can_be_overruled]
+      properties:
+        address: { type: string }
+        reason_code: { type: string }
+        can_be_overruled: { type: boolean, description: Whether a recorded reason may send this one message anyway. }
+        category: { type: string, description: The category the engine resolved. }
+        requested_category: { type: string, description: The category the sender claimed. }
     AnalyticsRefusal:
       description: >-
         A problem body whose `details` spell out an analytics refusal, present whenever the
@@ -74903,6 +74968,14 @@ components:
             acknowledgement will name. Served rather than composed by the client: an instruction's
             claim is that a named human read particular words, and a client free to write its own
             would have the record assert an acknowledgement of text nobody published.
+        warnings:
+          type: array
+          items: { $ref: '#/components/schemas/OverrideWarning' }
+          description: |
+            Every warning this review is served with to this reader; a decision may name any of their
+            versions and no other. `warning` is always among them. The sender of a held message is
+            also served the composer's short warning (`inline-v1`), which a decision from any other
+            reader is refused for naming.
 
     OverrideWarning:
       type: object
@@ -75004,8 +75077,7 @@ components:
           description: |
             The refusal reason codes the director was shown, from the review's `refusals`. When the
             review's refusals changed since then, the decision is refused with `instruction_stale`
-            and the director opens the review again. A refusal the subject made themselves (an
-            objection, a withdrawal, a restriction or a request to stop) is never passed.
+            and the director opens the review again.
 
     ConfirmSubmission:
       type: object

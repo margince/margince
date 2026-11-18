@@ -13,10 +13,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
-// withSendingEntity names the entity a message about to be staged or previewed
-// goes out for: the one the caller named, else the sender's. Transmit never
-// calls it; it reads the entity staging stored.
-func withSendingEntity(ctx context.Context, tx pgx.Tx, req commsauthz.Request) (commsauthz.Request, error) {
+// withSendFacts completes a message about to be staged or previewed. It names
+// the entity it goes out for, the caller's or else the sender's, and reads
+// whether its authored words make an offer. Transmit reads both from staging.
+func withSendFacts(ctx context.Context, tx pgx.Tx, req commsauthz.Request) (commsauthz.Request, error) {
+	req = withAuthoredOffer(req)
 	if !req.SendingEntity.IsZero() {
 		return req, nil
 	}

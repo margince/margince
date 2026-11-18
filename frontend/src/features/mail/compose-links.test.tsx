@@ -19,8 +19,8 @@ import {
   isPreviewDoor,
   previewedAddresses,
 } from "../../testing/sendpermission.testkit";
-import { ComposeModal } from "./compose";
 import { pressSend } from "./compose.testkit";
+import { ComposeWindow } from "./composewindow";
 
 // What a sent message files under.
 //
@@ -196,7 +196,7 @@ describe("what a sent message files under", () => {
       "POST /emails": () => jsonResponse(SENT_ACTIVITY, 202),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         contactId="per-1"
@@ -228,7 +228,7 @@ describe("what a sent message files under", () => {
       "GET /projects/proj-1": () => jsonResponse(ERP_PROJECT),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         contactId="per-1"
@@ -273,7 +273,7 @@ describe("what a sent message files under", () => {
       "GET /projects/proj-1": () => jsonResponse(ERP_PROJECT),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         contactId="per-1"
@@ -315,7 +315,7 @@ describe("what a sent message files under", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         intent="Discuss the cutover"
         entityType="company"
         entityId="company-1"
@@ -370,7 +370,7 @@ describe("what a sent message files under", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         contactId="per-1"
@@ -401,7 +401,7 @@ describe("what a sent message files under", () => {
       "POST /emails": () => jsonResponse(SENT_ACTIVITY, 202),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         contactId="per-1"
@@ -429,7 +429,7 @@ describe("what a sent message files under", () => {
       "POST /emails": () => jsonResponse(SENT_ACTIVITY, 202),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         open
@@ -462,7 +462,7 @@ describe("what a sent message files under", () => {
       "POST /emails": () => jsonResponse(SENT_ACTIVITY, 202),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         open
@@ -493,7 +493,7 @@ describe("what a sent message files under", () => {
       "POST /emails": () => jsonResponse(SENT_ACTIVITY, 202),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         open
@@ -521,7 +521,7 @@ describe("what a sent message files under", () => {
       "POST /emails": () => jsonResponse(SENT_ACTIVITY, 202),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         open
@@ -574,7 +574,7 @@ describe("what a sent message files under", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="shared-id"
         contactId="per-1"
@@ -607,7 +607,7 @@ describe("what a sent message files under", () => {
         jsonResponse(SENT_ACTIVITY, 202),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="per-1"
@@ -650,7 +650,7 @@ describe("what a channel reply says it will be filed under", () => {
 
   function renderChannelReply() {
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="per-1"
@@ -718,7 +718,7 @@ describe("what a channel reply says it will be filed under", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="company"
         entityId="company-1"
@@ -774,7 +774,7 @@ it.each(["proj-2", ""])(
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         open

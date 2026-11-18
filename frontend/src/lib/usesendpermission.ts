@@ -56,11 +56,16 @@ export function useSendPermission(args: {
    */
   evidence?: components["schemas"]["CommunicationEvidence"];
   /**
-   * The text written so far, checked against the advertising content rules of
-   * the recipients' packs. Settled by the caller, so typing does not ask once
-   * per key.
+   * The message written so far, read for an offer as the send reads it and
+   * checked against the advertising content rules of the recipients' packs.
+   * Settled by the caller, so typing does not ask once per key.
    */
-  draft?: Readonly<{ subject: string; body: string }>;
+  draft?: Readonly<{
+    subject?: string;
+    body?: string;
+    htmlBody?: string;
+    attachmentIds?: readonly string[];
+  }>;
   /** Off while the rep is still choosing a recipient — nothing to ask about yet. */
   enabled?: boolean;
 }): {
@@ -112,6 +117,10 @@ export function useSendPermission(args: {
         evidence: args.evidence,
         subject: args.draft?.subject,
         body: args.draft?.body,
+        html_body: args.draft?.htmlBody || undefined,
+        attachment_ids: args.draft?.attachmentIds?.length
+          ? [...args.draft.attachmentIds]
+          : undefined,
       };
       const answered = args.anchorActivityId
         ? await api.POST("/activities/{id}/send-email:preview", {

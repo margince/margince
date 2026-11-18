@@ -69,7 +69,8 @@ func TestOnlyTheRecipientsThatStoppedTheSendAreNamed(t *testing.T) {
 		got = append(got, fmt.Sprintf("%s overrulable=%t", r.Address, r.CanBeOverruled))
 	}
 	// Overrulability is the preview's own answer, so both surfaces pick alike.
-	want := []string{"enforced@example.test overrulable=true", "objected@example.test overrulable=true", "unproven@example.test overrulable=true"}
+	// The subject's own objection ranks first.
+	want := []string{"objected@example.test overrulable=true", "enforced@example.test overrulable=true", "unproven@example.test overrulable=true"}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("blocking refusals = %v, want %v; a deny under observe did not stop the send", got, want)
 	}
