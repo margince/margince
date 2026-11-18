@@ -265,7 +265,8 @@ func (e *CaptureEnricher) readSignature(ctx context.Context, cand contacts.Signa
 	mail := cand
 	mail.ActivityID, mail.Body = source, body
 	lines := signatureBlockFor(mail)
-	if !signatureNamesContact(lines, mail) {
+	signer := signatureSigner(lines, mail)
+	if signer == salutation.SignedByNobody {
 		// Their message, somebody else's signature at the foot of it: grounded
 		// text with the wrong owner, so nothing is read from it.
 		e.log.DebugContext(ctx, "signature enrich: the block does not identify this contact, so nothing is read from it",
@@ -280,7 +281,7 @@ func (e *CaptureEnricher) readSignature(ctx context.Context, cand contacts.Signa
 	if err != nil {
 		return contacts.SignatureRead{}, false, err
 	}
-	fields, skip, err := e.acceptedSignatureFields(ctx, mail, resp.Text, lines, options)
+	fields, skip, err := e.acceptedSignatureFields(ctx, mail, resp.Text, lines, signer, options)
 	if err != nil || len(fields) == 0 {
 		return contacts.SignatureRead{Skip: skip}, false, err
 	}
@@ -302,7 +303,7 @@ func (e *CaptureEnricher) readSignature(ctx context.Context, cand contacts.Signa
 // acceptedSignatureFields gates one reply: verbatim-snippet-or-drop against the
 // exact lines the model was shown, then the confidence floor. With no field
 // accepted it names the gate that refused them, or none when the reply was empty.
-func (e *CaptureEnricher) acceptedSignatureFields(ctx context.Context, mail contacts.SignatureCandidate, reply, lines string, options signatureReadOptions) ([]contacts.SignatureField, contacts.SignatureSkipReason, error) {
+func (e *CaptureEnricher) acceptedSignatureFields(ctx context.Context, mail contacts.SignatureCandidate, reply, lines string, signer salutation.Signer, options signatureReadOptions) ([]contacts.SignatureField, contacts.SignatureSkipReason, error) {
 	gated, dropped := gateEvidence(reply, lines, "activity:"+mail.ActivityID.String(),
 		func(name string) bool { return enrichFieldNames[name] }, signatureRepeatedFields)
 	if unparseableReply(dropped) {
@@ -311,10 +312,8 @@ func (e *CaptureEnricher) acceptedSignatureFields(ctx context.Context, mail cont
 		// this contact is asked again next pass.
 		return nil, "", fmt.Errorf("compose: unparseable signature reply for contact %s", mail.ContactID)
 	}
-	if signatureNamesSomebodyElse(reply, mail) {
-		// The model read another participant's name, so the title and numbers
-		// beside it are that person's too.
-		e.log.DebugContext(ctx, "signature enrich: the block signs somebody else, so nothing is read from it",
+	if !signatureNameIsTheirs(reply, mail, signer) {
+		e.log.DebugContext(ctx, "signature enrich: the block is not shown to be theirs, so nothing is read from it",
 			"contact", mail.ContactID.String(), "reason", dropSignatureNotThisContact)
 		return nil, contacts.SignatureSkipNameGate, nil
 	}
@@ -381,6 +380,6 @@ func (e *CaptureEnricher) holdThePass(ctx context.Context) (bool, func(), error)
 	return held, release, err
 }
 
-func signatureNamesContact(block string, cand contacts.SignatureCandidate) bool {
-	return salutation.NamesSigner(block, cand.FullName, cand.Email)
+func signatureSigner(block string, cand contacts.SignatureCandidate) salutation.Signer {
+	return salutation.SignerOf(block, cand.FullName, cand.Email)
 }

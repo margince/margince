@@ -52,7 +52,7 @@ func retractOutsideSignatureWindowBatch(ctx context.Context, tx pgx.Tx, in datat
 	memberNumbers := map[ids.ContactID]map[string]bool{}
 	for _, field := range page {
 		scanned = append(scanned, field.ID)
-		if field.NameEvidence != "" && !salutation.NameIsContacts(field.NameEvidence, field.HeaderName, field.Email) {
+		if field.NameGiven != "" && !salutation.NameIsContacts(field.NameGiven, field.NameFamily, field.HeaderName, field.Email) {
 			foreign = append(foreign, field.ID)
 			continue
 		}

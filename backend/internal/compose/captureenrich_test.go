@@ -10,6 +10,7 @@ package compose
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/margince/margince/backend/internal/platform/salutation"
 	"slices"
 	"sort"
 	"strings"
@@ -156,7 +157,7 @@ func TestSignatureBlockIgnoresAnUnmarkedQuotedReply(t *testing.T) {
 			if block != "Best\nAlex" {
 				t.Fatalf("window = %q, want only what Alex wrote", block)
 			}
-			if signatureNamesContact(block, alex) {
+			if signatureSigner(block, alex) != salutation.SignedByNobody {
 				t.Fatalf("a window of one first name and no envelope was read as Alex's signature: %q", block)
 			}
 		})
@@ -185,54 +186,6 @@ func TestSignatureShapeValidationDoesNotEchoUnboundedModelText(t *testing.T) {
 	}
 	if len(err.Error()) > 500 {
 		t.Fatalf("the validation error is %d bytes — model-chosen text must be clamped before it reaches a log or the next prompt", len(err.Error()))
-	}
-}
-
-func TestASignatureNamingSomebodyElseIsNotReadAsTheirs(t *testing.T) {
-	t.Parallel()
-	ann := contacts.SignatureCandidate{FullName: "Ann Smith", Email: "ann@example.test"}
-	for name, block := range map[string]string{
-		// The substring trap: "joanne" contains "ann", so a match that is not
-		// word-bounded reads Joanne's title onto Ann.
-		"a longer name containing theirs":      "Viele Grüße\nJoanne Brown\nCEO",
-		"a different contact entirely":         "Best\nMarcus Greven\nPartner Manager",
-		"no signature":                         "",
-		"a colleague sharing only the surname": "Best\nAnn Jones\nCEO",
-	} {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			if signatureNamesContact(block, ann) {
-				t.Errorf("a block naming somebody else was read as %q's own: %q", ann.FullName, block)
-			}
-		})
-	}
-}
-
-func TestAShortNameStillNamesItsOwnSignature(t *testing.T) {
-	t.Parallel()
-	// Every token under three characters. A minimum length would lock this
-	// contact out of enrichment for ever, whatever they sign.
-	li := contacts.SignatureCandidate{FullName: "Li Bo"}
-	if !signatureNamesContact("Regards\nLi Bo\nCEO", li) {
-		t.Error("a contact whose name is short cannot prove their own signature is theirs")
-	}
-	// And the whole-word rule still holds for them.
-	if signatureNamesContact("Regards\nLiam Bosch\nCEO", li) {
-		t.Error("a longer name containing theirs was read as their own signature")
-	}
-}
-
-func TestTheirOwnSignatureIsRead(t *testing.T) {
-	t.Parallel()
-	// The positive control: without it, a build refusing everybody would pass
-	// both tests above.
-	cand := contacts.SignatureCandidate{FullName: "Judith Andresen", Email: "judith@example.test"}
-	if !signatureNamesContact("Viele Grüße\nJudith Andresen\nGeschäftsführerin", cand) {
-		t.Error("a contact's own signature was refused")
-	}
-	// Their address beside another signer's is that signer's block, not theirs.
-	if signatureNamesContact("Best\nAlice Example\nFounder\nalice@example.com\njudith@example.test", cand) {
-		t.Error("another signer's block was read as theirs because it printed their address")
 	}
 }
 

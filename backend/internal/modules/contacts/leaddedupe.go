@@ -13,6 +13,7 @@ package contacts
 import (
 	"context"
 	"fmt"
+	"github.com/margince/margince/backend/internal/platform/personname"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -157,7 +158,7 @@ func leadConfidence(name, company, domain string, row leadCandidateRow) float64 
 		employer = 0.8
 	}
 	other := deref(row.fullName)
-	if !namesCorroborate(name, other) {
+	if !personname.Corroborate(name, other) {
 		employer = 0
 	}
 	return dedupeNameWeight*nameSimilarity(name, other) + dedupeCompanyDomainWeight*employer

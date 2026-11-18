@@ -3,7 +3,10 @@
 
 package contacts
 
-import "testing"
+import (
+	"github.com/margince/margince/backend/internal/platform/personname"
+	"testing"
+)
 
 // marketCompany is one real-shaped name from a prefix-form market, and the
 // brand that identifies the company inside it.
@@ -214,7 +217,7 @@ func TestAForeignLegalFormIsNotEvidenceOfIdentity(t *testing.T) {
 // letters: two different insurers folded to nearly the same string.
 func TestThaiNamesKeepTheirVowels(t *testing.T) {
 	for _, name := range []string{"เมืองไทยประกันชีวิต", "กรุงไทย", "ลาวพัฒนา"} {
-		if got := normalizeName(name); got != name {
+		if got := personname.Fold(name); got != name {
 			t.Errorf("%q folds to %q — Thai vowels are letters, not accents",
 				name, got)
 		}
@@ -227,7 +230,7 @@ func TestThaiNamesKeepTheirVowels(t *testing.T) {
 		{"Οδυσσεύς", "οδυσσευσ"},
 		{"Василёк", "василек"},
 	} {
-		if got := normalizeName(k.in); got != k.want {
+		if got := personname.Fold(k.in); got != k.want {
 			t.Errorf("%q folds to %q, want %q — the accent strip must still run "+
 				"on the alphabets it was built for", k.in, got, k.want)
 		}

@@ -22,6 +22,7 @@ package contacts
 // rather than merging.
 
 import (
+	"github.com/margince/margince/backend/internal/platform/personname"
 	"strings"
 
 	"golang.org/x/text/unicode/norm"
@@ -126,7 +127,7 @@ func normalizeCJKName(s string) string {
 	// Unicode folding is what makes Greek final sigma and ß behave, and a second
 	// spelling of "lowercase" here would make this path disagree with every
 	// other one about the same Latin name.
-	return normalizeName(strings.Join(strings.Fields(out.String()), " "))
+	return personname.Fold(strings.Join(strings.Fields(out.String()), " "))
 }
 
 // isVariationSelector reports the two ranges that pick a glyph shape.

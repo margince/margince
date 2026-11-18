@@ -16,7 +16,10 @@ package contacts
 // This gate never touches `nameSimilarity`, which is pinned by PO-PARAM-JW-1 and
 // shared with contact and lead dedupe, where the character metric is right.
 
-import "strings"
+import (
+	"github.com/margince/margince/backend/internal/platform/personname"
+	"strings"
+)
 
 // companyNameStopwords are the words a company name shares with its whole market:
 // present in many names, evidence of identity in none. They are REMOVED from a
@@ -189,7 +192,7 @@ func sameCompanyToken(a, b string) bool {
 	if max(lenA, lenB)-min(lenA, lenB) > companyFuzzyTokenLengthSlack {
 		return false
 	}
-	return jaroWinkler(a, b) >= companyFuzzyTokenSimilarity
+	return personname.JaroWinkler(a, b) >= companyFuzzyTokenSimilarity
 }
 
 // squashedCompanyName is the name with its word separators removed, so that where a

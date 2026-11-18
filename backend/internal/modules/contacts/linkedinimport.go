@@ -23,6 +23,7 @@ import (
 	"encoding/csv"
 	"errors"
 	"fmt"
+	"github.com/margince/margince/backend/internal/platform/personname"
 	"io"
 	"strings"
 	"time"
@@ -266,10 +267,10 @@ func linkedInRowFrom(record []string, index map[string]int) (linkedInRow, bool) 
 	}
 	row := linkedInRow{
 		fullName:   name,
-		normalized: normalizeName(name),
+		normalized: personname.Fold(name),
 		position:   at(csvPosition),
 		company:    at(csvCompany),
-		// NormalizeCompanyName, not normalizeName: it strips the legal suffix,
+		// NormalizeCompanyName, not personname.Fold: it strips the legal suffix,
 		// so a connection at "Acme GmbH" matches the account stored as "Acme".
 		// Through the LinkedIn cleaner first, because the field is a free-text
 		// headline on LinkedIn and not a company name.

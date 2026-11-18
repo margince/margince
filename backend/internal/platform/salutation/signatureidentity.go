@@ -5,43 +5,55 @@ package salutation
 
 import (
 	"regexp"
+	"slices"
 	"strings"
 	"unicode"
 
+	"github.com/margince/margince/backend/internal/platform/personname"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 )
 
-// NamesSigner reports whether a signature block is the contact's own. It
-// matches whole words, so a short name cannot match inside somebody else's.
-// The address alone qualifies a block only when the block prints no other
-// address: a second address belongs to the person who signed it. Words inside
-// an address name nobody, so "bob@" does not sign Alice's block as Bob.
-func NamesSigner(block, fullName, email string) bool {
-	folded := strings.ToLower(block)
-	if namesAll(wordsOf(printedAddress.ReplaceAllString(folded, " ")), fullName) {
-		return true
+// Signer says how a signature block names the contact.
+type Signer int
+
+const (
+	// SignedByNobody is a block that names somebody else or nobody.
+	SignedByNobody Signer = iota
+	// SignedByAddress is a block that prints the contact's address and not
+	// their name. Whose signature it is rests on the name read off it.
+	SignedByAddress
+	// SignedByName is a block that prints the contact's name.
+	SignedByName
+)
+
+// SignerOf reports how a block names the contact. Whole words match, so a short
+// name cannot match inside somebody else's. Words inside an address name
+// nobody. A block that prints another address besides theirs is another
+// signer's. A line naming someone as "Name <address>" is a quote or header
+// line, and signs nothing.
+func SignerOf(block, fullName, email string) Signer {
+	folded := quotedSender.ReplaceAllString(personname.Fold(block), "")
+	unaddressed := printedAddress.ReplaceAllString(folded, " ")
+	if namesAll(wordsOf(unaddressed), personname.Fold(fullName)) || lineNames(unaddressed, fullName) {
+		return SignedByName
 	}
 	email = correspondence.Fold(email)
-	return email != "" && strings.Contains(folded, email) && !holdsOtherAddress(folded, email)
+	if email != "" && strings.Contains(folded, email) && !holdsOtherAddress(folded, email) {
+		return SignedByAddress
+	}
+	return SignedByNobody
 }
 
-// NameIsContacts reports whether a name read off a signature is this contact's.
-// It must carry their name or the name their address spells, as NamesSigner
-// matches it. A name that does neither is another participant's.
-func NameIsContacts(read, fullName, email string) bool {
-	words := wordsOf(strings.ToLower(read))
-	if namesAll(words, fullName) {
-		return true
+// lineNames reports a block line of two to four words that spells the display
+// name another way. "John Smith" spells "J. Smith".
+func lineNames(block, fullName string) bool {
+	header := headerWords(fullName)
+	if len(header) < 2 || strings.Contains(fullName, "@") {
+		return false
 	}
-	local, _, _ := strings.Cut(correspondence.Fold(email), "@")
-	parts := strings.FieldsFunc(correspondence.LocalPartBase(local), notWordRune)
-	if namesAll(words, strings.Join(parts, " ")) {
-		return true
-	}
-	// "mgreven@" names Marcus Greven. A short word inside a longer local part
-	// is noise: "ann" sits inside "joanne".
-	for word := range words {
-		if len(parts) == 1 && len([]rune(word)) >= 4 && strings.Contains(parts[0], word) {
+	display := readName{given: header[:len(header)-1], family: header[len(header)-1:]}
+	for line := range strings.Lines(block) {
+		if words := readWords(line); len(words) >= 2 && len(words) <= 4 && display.namedBy(words, false) {
 			return true
 		}
 	}
@@ -52,7 +64,7 @@ func NameIsContacts(read, fullName, email string) bool {
 // by relatives and colleagues, and the name gate writes from what matched.
 func namesAll(words map[string]bool, fullName string) bool {
 	var tokens, matched int
-	for token := range strings.FieldsSeq(strings.ToLower(fullName)) {
+	for token := range strings.FieldsSeq(fullName) {
 		token = strings.Trim(token, ".,;:()<>\"'")
 		if token == "" {
 			continue
@@ -67,15 +79,15 @@ func namesAll(words map[string]bool, fullName string) bool {
 
 func wordsOf(folded string) map[string]bool {
 	words := make(map[string]bool)
-	for _, word := range strings.FieldsFunc(folded, notWordRune) {
+	for _, word := range strings.FieldsFunc(folded, func(r rune) bool {
+		return !unicode.IsLetter(r) && !unicode.IsNumber(r)
+	}) {
 		words[word] = true
 	}
 	return words
 }
 
-func notWordRune(r rune) bool {
-	return !unicode.IsLetter(r) && !unicode.IsNumber(r)
-}
+var quotedSender = regexp.MustCompile(`(?m)^.*<[^<>\s]+@[^<>\s]+>.*$`)
 
 var printedAddress = regexp.MustCompile(`[\p{L}\p{N}._%+-]+@[\p{L}\p{N}-]+(?:\.[\p{L}\p{N}-]+)+`)
 
@@ -86,4 +98,103 @@ func holdsOtherAddress(folded, email string) bool {
 		}
 	}
 	return false
+}
+
+// NameIsContacts reports whether the given and family name read off a
+// signature name this contact. Their display name or their address must spell
+// the same person, as personname compares names.
+func NameIsContacts(given, family, fullName, email string) bool {
+	read := readName{given: readWords(given), family: readWords(family)}
+	if len(read.given) == 0 || len(read.family) == 0 {
+		return false
+	}
+	if !strings.Contains(fullName, "@") && read.namedBy(headerWords(fullName), false) {
+		return true
+	}
+	local, _, _ := strings.Cut(correspondence.Fold(email), "@")
+	tokens, ok := personname.LocalPartTokens(correspondence.LocalPartBase(local))
+	if !ok {
+		return false
+	}
+	for i := range tokens {
+		tokens[i] = nameKey(tokens[i])
+	}
+	return read.namedBy(tokens, true)
+}
+
+// readName is a read name as folded words.
+type readName struct{ given, family []string }
+
+// namedBy reports whether words spell this name. Two or more words need the
+// family name and a given name. One word must be a given name, because a lone
+// family name is shared by relatives and colleagues. An address may also run
+// the name together ("jdoe", "johndoe").
+func (r readName) namedBy(words []string, address bool) bool {
+	family := r.family[len(r.family)-1]
+	if len(words) == 1 {
+		word := words[0]
+		if slices.ContainsFunc(r.given, func(g string) bool { return sameGivenName(word, g) }) {
+			return true
+		}
+		return address && slices.Contains(runTogether(r.given[0], strings.Join(r.family, "")), word)
+	}
+	for at, word := range words {
+		if !personname.FamiliesAgree(word, family) {
+			continue
+		}
+		for other, candidate := range words {
+			if other != at && slices.ContainsFunc(r.given, func(g string) bool {
+				return personname.GivenNamesAgree(candidate, g) || nicknameOf(candidate, g)
+			}) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// sameGivenName is the strict test for a lone word: the name, a shortened form
+// of it ("Alex" for "Alexander") or a known nickname.
+func sameGivenName(word, given string) bool {
+	return strings.HasPrefix(given, word) || strings.HasPrefix(word, given) || nicknameOf(word, given)
+}
+
+// runTogether lists the ways an address writes a whole name as one word.
+func runTogether(given, family string) []string {
+	initial := string([]rune(given)[:1])
+	return []string{family, given + family, initial + family, family + given, family + initial}
+}
+
+// nameKey folds a name word as personname compares names, with umlauts written
+// out, so "Müller", "Muller" and "mueller" meet.
+func nameKey(word string) string {
+	return personname.Fold(personname.Digraphs(word))
+}
+
+func readWords(name string) []string {
+	return strings.Fields(strings.NewReplacer(".", " ", ",", " ").Replace(nameKey(name)))
+}
+
+// headerWords is the display name as folded words, honorifics dropped.
+func headerWords(fullName string) []string {
+	given, family := personname.SplitName(personname.Digraphs(fullName))
+	if family == "" {
+		return nil
+	}
+	return append(strings.Fields(given), family)
+}
+
+// nicknames maps a common short form to the given names it stands for, where
+// the two share no prefix. A shared prefix ("Alex", "Kate") needs no entry.
+var nicknames = map[string][]string{
+	"bob": {"robert"}, "bobby": {"robert"}, "rob": {"robert"}, "bill": {"william"}, "billy": {"william"},
+	"will": {"william"}, "dick": {"richard"}, "rick": {"richard"}, "jim": {"james"}, "jimmy": {"james"},
+	"jack": {"john"}, "ted": {"edward", "theodore"}, "ned": {"edward"}, "peggy": {"margaret"},
+	"meg": {"margaret"}, "liz": {"elizabeth"}, "beth": {"elizabeth"}, "betty": {"elizabeth"},
+	"sasha": {"alexander", "alexandra"}, "hank": {"henry"}, "sally": {"sarah"}, "molly": {"mary"},
+	"polly": {"mary"}, "chuck": {"charles"}, "tony": {"anthony"},
+}
+
+func nicknameOf(a, b string) bool {
+	return slices.Contains(nicknames[a], b) || slices.Contains(nicknames[b], a)
 }

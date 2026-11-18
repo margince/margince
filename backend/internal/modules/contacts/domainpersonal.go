@@ -16,6 +16,7 @@ package contacts
 
 import (
 	"context"
+	"github.com/margince/margince/backend/internal/platform/personname"
 	"strings"
 	"unicode"
 
@@ -56,7 +57,7 @@ const domainPersonalSimilarity = 0.94
 // With nobody known it answers no: there is then no name to compare, and
 // refusing a company on no evidence at all would be a guess.
 func DomainLooksPersonal(label string, contacts []DomainContact) bool {
-	label = normalizeName(strings.Join(strings.FieldsFunc(label, isNameSeparator), ""))
+	label = personname.Fold(strings.Join(strings.FieldsFunc(label, isNameSeparator), ""))
 	if label == "" || len(contacts) == 0 {
 		return false
 	}
@@ -78,7 +79,7 @@ func contactExplainsLabel(label string, p DomainContact) bool {
 		if candidate == "" {
 			continue
 		}
-		if candidate == label || jaroWinkler(candidate, label) >= domainPersonalSimilarity {
+		if candidate == label || personname.JaroWinkler(candidate, label) >= domainPersonalSimilarity {
 			return true
 		}
 	}
@@ -107,7 +108,7 @@ func contactLabelCandidates(p DomainContact) []string {
 	// from a middle name ("annakatharinaweber") is still that contact's own.
 	out := []string{last, strings.Join(parts, ""), last + strings.Join(parts[:len(parts)-1], ""), first + last}
 	for _, raw := range p.EmailLocals {
-		local := normalizeName(strings.Join(strings.FieldsFunc(raw, isNameSeparator), ""))
+		local := personname.Fold(strings.Join(strings.FieldsFunc(raw, isNameSeparator), ""))
 		if local == "" {
 			continue
 		}
@@ -124,7 +125,7 @@ func contactLabelCandidates(p DomainContact) []string {
 // this the company reads as the surname, and a domain named after the COMPANY
 // would then look like it was named after the contact.
 func nameWithoutAffiliation(name string) string {
-	normalized := normalizeName(name)
+	normalized := personname.Fold(name)
 	for _, sep := range []string{" - ", " – ", " — ", " | ", " • ", " · ", " @ ", "(", ",", "/"} {
 		if head, _, found := strings.Cut(normalized, sep); found {
 			normalized = strings.TrimSpace(head)
@@ -157,14 +158,14 @@ func siteNameIsOffTheSendersDomain(ctx context.Context, tx pgx.Tx, in ResolveDom
 // label: "Kestner Consulting" spells kestnerconsulting, and "Marsh Advisory"
 // spells rowanmarsh through its word "marsh".
 func statedNameSpellsLabel(stated, label string) bool {
-	label = normalizeName(strings.Join(strings.FieldsFunc(label, isNameSeparator), ""))
-	words := strings.FieldsFunc(normalizeName(stated), func(r rune) bool { return !unicode.IsLetter(r) && !unicode.IsDigit(r) })
+	label = personname.Fold(strings.Join(strings.FieldsFunc(label, isNameSeparator), ""))
+	words := strings.FieldsFunc(personname.Fold(stated), func(r rune) bool { return !unicode.IsLetter(r) && !unicode.IsDigit(r) })
 	if label == "" || strings.Contains(strings.Join(words, ""), label) {
 		return true
 	}
 	for _, word := range words {
 		// Four runes keeps a legal suffix ("AG", "Ltd") from matching by itself.
-		if (len([]rune(word)) >= 4 && strings.Contains(label, word)) || jaroWinkler(word, label) >= domainPersonalSimilarity {
+		if (len([]rune(word)) >= 4 && strings.Contains(label, word)) || personname.JaroWinkler(word, label) >= domainPersonalSimilarity {
 			return true
 		}
 	}

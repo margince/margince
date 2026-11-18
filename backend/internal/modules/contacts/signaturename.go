@@ -9,6 +9,7 @@ package contacts
 // those parts into the two columns. No caller decides by word position.
 
 import (
+	"github.com/margince/margince/backend/internal/platform/personname"
 	"strings"
 	"unicode"
 
@@ -62,7 +63,7 @@ func MapSignatureName(p SignatureNameParts) (SignatureName, bool) {
 		words = append(words, strings.Fields(part)...)
 	}
 	for _, word := range words {
-		if !isWordLike(word) {
+		if !personname.IsWordLike(word) {
 			return SignatureName{}, false
 		}
 	}
