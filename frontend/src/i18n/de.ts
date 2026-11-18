@@ -23245,7 +23245,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "goals.propose.noModel":
     "Ein Monatsvorschlag braucht ein eingerichtetes KI-Modell. Du kannst die Monate weiterhin von Hand eingeben.",
   "goals.propose.noHistory":
-    "{name} hat in {year} und im Jahr davor keinen gewonnenen Umsatz, aus dem sich ein Muster lesen lässt. Gib die Monate von Hand ein.",
+    "{name} hat in {year} und im Jahr davor keinen abgeschlossenen Monat mit gewonnenem Umsatz, daher lässt sich kein Muster lesen. Gib die Monate von Hand ein.",
   "goals.proposedByAi": "Von Margince vorgeschlagen",
   "goals.monthsSum": "Die Monate ergeben zusammen {total}.",
   "goals.monthsMissing_one": "{count} Monat ist nicht gesetzt.",

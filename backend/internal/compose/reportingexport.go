@@ -36,7 +36,7 @@ func (s reportingExportHandlers) ExportReportingEvaluation(w http.ResponseWriter
 		return
 	}
 	raw, err := reportingCSV(evaluation)
-	writeReportingCSV(w, r, raw, err)
+	writeReportingCSV(w, r, reportingCSVFilename(evaluation.Context), raw, err)
 }
 
 func (s reportingExportHandlers) ExportReportingEdition(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
@@ -46,7 +46,7 @@ func (s reportingExportHandlers) ExportReportingEdition(w http.ResponseWriter, r
 		return
 	}
 	raw, err := editionCSV(edition)
-	writeReportingCSV(w, r, raw, err)
+	writeReportingCSV(w, r, reportingCSVFilename(edition.Evaluation.Context), raw, err)
 }
 
 func reportingCSV(evaluation crmcontracts.ReportingEvaluation) ([]byte, error) {
@@ -64,21 +64,24 @@ func reportingCSVRows(evaluation crmcontracts.ReportingEvaluation) [][]string {
 	appendRow := func(metric, block, label string, value, target, comparison, upper *float64, unit, context string, coverage csvCoverage) {
 		// A count or a duration has no currency; naming one would read as money.
 		currency := ""
+		number := reportingCSVNumber
 		if unit == reportingMoney || unit == evaluation.Context.Currency {
-			unit, currency = reportingMinorUnits, evaluation.Context.Currency
+			unit, currency = reportingMoney, evaluation.Context.Currency
+			number = func(minor *float64) string { return reportingCSVMajor(minor, currency) }
 		}
-		rows = append(rows, []string{metric, block, formulacell.Guard(label), reportingCSVNumber(value), reportingCSVNumber(target), reportingCSVNumber(comparison), reportingCSVNumber(upper), unit, currency, context, coverage.status, strconv.FormatBool(coverage.withheld), coverage.reason, evaluation.Context.EvaluatedAt.Format(time.RFC3339Nano)})
+		rows = append(rows, []string{metric, block, formulacell.Guard(label), number(value), number(target), number(comparison), number(upper), unit, currency, context, coverage.status, strconv.FormatBool(coverage.withheld), coverage.reason, evaluation.Context.EvaluatedAt.Format(time.RFC3339Nano)})
 	}
+	say := reporting.ExplanationCopy(evaluation.Context)
 	for _, metric := range evaluation.Metrics {
 		covered := csvCoverageOf(metric.Coverage)
 		appendRow(string(metric.Id), "headline", reportingMetricName(evaluation.Context, metric.Id), metric.Value, metric.Target, nil, nil, metric.Unit, metric.Evidence.ContextId, covered)
 		if comparison := metric.TargetComparison; comparison != nil {
 			for _, figure := range targetComparisonCSV(*comparison, metric.Unit) {
-				appendRow(string(metric.Id), reportingTargetComparisonBlock, figure.label, figure.value, nil, nil, nil, figure.unit, figure.context, covered.as(figure.status))
+				appendRow(string(metric.Id), reportingTargetComparisonBlock, say.Say(reportingCSVFigureLabels[figure.label]), figure.value, nil, nil, nil, figure.unit, figure.context, covered.as(figure.status))
 			}
 		}
 		for _, figure := range forecastBasisCSV(metric) {
-			appendRow(string(metric.Id), reportingForecastBasisBlock, figure.label, figure.value, nil, nil, nil, metric.Unit, figure.context, covered)
+			appendRow(string(metric.Id), reportingForecastBasisBlock, say.Say(reportingCSVFigureLabels[figure.label]), figure.value, nil, nil, nil, metric.Unit, figure.context, covered)
 		}
 	}
 	for _, chart := range evaluation.Charts {
@@ -87,10 +90,10 @@ func reportingCSVRows(evaluation crmcontracts.ReportingEvaluation) [][]string {
 			appendRow(string(chart.Metric), string(chart.Kind), point.Label, point.Value, point.Target, point.Comparison, point.Upper, chart.Unit, chart.ContextId, covered.as(string(point.Status)))
 		}
 		if chart.Opening != nil {
-			appendRow(string(chart.Metric), string(chart.Kind), "opening", chart.Opening, nil, nil, nil, chart.Unit, chart.ContextId, covered)
+			appendRow(string(chart.Metric), string(chart.Kind), say.Say(reportingCSVFigureLabels["opening"]), chart.Opening, nil, nil, nil, chart.Unit, chart.ContextId, covered)
 		}
 		if chart.Closing != nil {
-			appendRow(string(chart.Metric), string(chart.Kind), "closing", chart.Closing, nil, nil, nil, chart.Unit, chart.ContextId, covered)
+			appendRow(string(chart.Metric), string(chart.Kind), say.Say(reportingCSVFigureLabels["closing"]), chart.Closing, nil, nil, nil, chart.Unit, chart.ContextId, covered)
 		}
 	}
 	return rows
@@ -134,12 +137,12 @@ func reportingCSVNumber(value *float64) string {
 	return strconv.FormatFloat(*value, 'f', -1, 64)
 }
 
-func writeReportingCSV(w http.ResponseWriter, r *http.Request, raw []byte, err error) {
+func writeReportingCSV(w http.ResponseWriter, r *http.Request, filename string, raw []byte, err error) {
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
-	(httperr.Download{ContentType: reportingCSVContentType, Filename: "reporting.csv", Size: int64(len(raw))}).WriteHeaders(w)
+	(httperr.Download{ContentType: reportingCSVContentType, Filename: filename, Size: int64(len(raw))}).WriteHeaders(w)
 	w.Header().Set("Cache-Control", "no-store")
 	if _, err := w.Write(raw); err != nil { // #nosec G705 -- a CSV attachment, never rendered as a page
 		slog.WarnContext(r.Context(), "reporting export connection closed", "error", err)

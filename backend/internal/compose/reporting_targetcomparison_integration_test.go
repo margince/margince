@@ -141,7 +141,7 @@ func TestTheQuarterReviewSampleIsFortyThousandShortAtThreePointSixCoverage(t *te
 	if err != nil || len(evidence.Rows) != 1 || *evidence.Rows[0].Value != 136_000_000 {
 		t.Fatalf("open pipeline evidence %+v %v, want the one 1.36m total the coverage divides", evidence, err)
 	}
-	if rows := comparisonCSV(t, evaluation); rows["gap"] != "4000000" || rows["coverage"] == "" || rows["status"] != "compared" {
+	if rows := comparisonCSV(t, evaluation); rows["gap"] != "40000.00" || rows["coverage"] == "" || rows["status"] != "compared" {
 		t.Fatalf("export rows %v, want the same gap, coverage and status", rows)
 	}
 }
@@ -190,8 +190,14 @@ func comparisonCSV(t *testing.T, evaluation crmcontracts.ReportingEvaluation) ma
 		if record[1] != reportingTargetComparisonBlock {
 			continue
 		}
-		out[record[2]] = record[3]
-		if record[2] == "status" {
+		id := record[2]
+		for key, phrase := range reportingCSVFigureLabels {
+			if phrase.En == record[2] {
+				id = key
+			}
+		}
+		out[id] = record[3]
+		if id == "status" {
 			out["status"] = record[10]
 		}
 	}

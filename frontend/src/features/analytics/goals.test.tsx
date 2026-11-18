@@ -374,7 +374,7 @@ describe("GoalProposalStep", () => {
     await user.click(screen.getByRole("button", { name: "Propose months" }));
     expect(
       await screen.findByText(
-        /^Alex Brandt has no sales won in 2026 or the year before/,
+        /^Alex Brandt has no finished month with sales won in 2026 or the year before/,
       ),
     ).toBeTruthy();
     unmount();

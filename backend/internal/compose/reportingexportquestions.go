@@ -82,6 +82,9 @@ func keptAnswerRows(question crmcontracts.ReportingCardQuestion, answer crmcontr
 			}
 			unit, currency, coverage := money.of(measure, row)
 			value := csvAnswerNumber(row[column])
+			if minor, isNumber := row[column].(float64); isNumber && unit == reportingMoney {
+				value = reportingCSVMajor(&minor, currency)
+			}
 			if coverage != "ok" {
 				value = ""
 			}
@@ -109,12 +112,12 @@ func (m answerMoney) of(measure analyticsquery.Measure, row map[string]any) (uni
 		if own == "" {
 			return "", "", "mixed_currency"
 		}
-		return reportingMinorUnits, own, "ok"
+		return reportingMoney, own, "ok"
 	}
 	if m.base == "" {
 		return "", "", "no_base_currency"
 	}
-	return reportingMinorUnits, m.base, "ok"
+	return reportingMoney, m.base, "ok"
 }
 
 // groupLabel names a row by its group keys, a company or project by the name
