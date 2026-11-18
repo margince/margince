@@ -52,7 +52,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 ## communication_decision
 
-31 columns · primary key `(id)` · referenced by 0 foreign keys
+32 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -61,6 +61,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 | `attempt` | `integer`, default `0` | yes |  |
 | `basis` | `text` |  | One of `contract`, `precontract_request`, `subject_initiated_correspondence`, `legitimate_interests`, `legal_obligation`, `vital_or_security_interest` and 3 more. |
 | `content_fingerprint` | `bytea` |  |  |
+| `country_source` | `text` |  |  |
 | `data_protection_country` | `text` |  |  |
 | `decided_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `decision_set_id` | `uuid` | yes |  |
@@ -120,8 +121,8 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"mode": 20000, "actor": 20000, "basis": 20000, "phase": 20000, "verdict": 20000, "purpose_key": 20000, "reason_code": 2000, "suppression": 20000, "subject_kind": 20000, "ruleset_codes": 20000, "legacy_verdict": 20000, "ruleset_digest": 20000, "recipient_address": 20000, "resolved_category": 20000, "requested_category": 20000, "execution_authority": 20000, "data_protection_country": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"actor":20000,"basis":20000,"data_protection_country":20000,"execution_authority":20000,"legacy_verdict":20000,"mode":20000,"phase":20000,"purpose_key":20000,"reason_code":2000,"recipient_address":20000,"requested_category":20000,"resolved_category":20000,"ruleset_codes":20000,"ruleset_digest":20000,"subject_kind":20000,"suppression":20000,"verdict":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"mode": 20000, "actor": 20000, "basis": 20000, "phase": 20000, "verdict": 20000, "purpose_key": 20000, "reason_code": 2000, "suppression": 20000, "subject_kind": 20000, "ruleset_codes": 20000, "legacy_verdict": 20000, "ruleset_digest": 20000, "recipient_address": 20000, "resolved_category": 20000, "requested_category": 20000, "execution_authority": 20000, "data_protection_country": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"actor":20000,"basis":20000,"data_protection_country":20000,"execution_authority":20000,"legacy_verdict":20000,"mode":20000,"phase":20000,"purpose_key":20000,"reason_code":2000,"recipient_address":20000,"requested_category":20000,"resolved_category":20000,"ruleset_codes":20000,"ruleset_digest":20000,"subject_kind":20000,"suppression":20000,"verdict":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"mode": 20000, "actor": 20000, "basis": 20000, "phase": 20000, "verdict": 20000, "purpose_key": 20000, "reason_code": 2000, "suppression": 20000, "subject_kind": 20000, "ruleset_codes": 20000, "country_source": 20000, "legacy_verdict": 20000, "ruleset_digest": 20000, "recipient_address": 20000, "resolved_category": 20000, "requested_category": 20000, "execution_authority": 20000, "data_protection_country": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"actor":20000,"basis":20000,"country_source":20000,"data_protection_country":20000,"execution_authority":20000,"legacy_verdict":20000,"mode":20000,"phase":20000,"purpose_key":20000,"reason_code":2000,"recipient_address":20000,"requested_category":20000,"resolved_category":20000,"ruleset_codes":20000,"ruleset_digest":20000,"subject_kind":20000,"suppression":20000,"verdict":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"mode": 20000, "actor": 20000, "basis": 20000, "phase": 20000, "verdict": 20000, "purpose_key": 20000, "reason_code": 2000, "suppression": 20000, "subject_kind": 20000, "ruleset_codes": 20000, "country_source": 20000, "legacy_verdict": 20000, "ruleset_digest": 20000, "recipient_address": 20000, "resolved_category": 20000, "requested_category": 20000, "execution_authority": 20000, "data_protection_country": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"actor":20000,"basis":20000,"country_source":20000,"data_protection_country":20000,"execution_authority":20000,"legacy_verdict":20000,"mode":20000,"phase":20000,"purpose_key":20000,"reason_code":2000,"recipient_address":20000,"requested_category":20000,"resolved_category":20000,"ruleset_codes":20000,"ruleset_digest":20000,"subject_kind":20000,"suppression":20000,"verdict":20000}')`
 
 ## communication_instruction
 

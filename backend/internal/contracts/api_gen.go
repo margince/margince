@@ -20086,6 +20086,27 @@ func (e ReceiptActorType) Valid() bool {
 	}
 }
 
+// Defines values for RecipientCountryReadingSource.
+const (
+	RecipientCountryReadingSourceContactAddress     RecipientCountryReadingSource = "contact_address"
+	RecipientCountryReadingSourceEmployerAddress    RecipientCountryReadingSource = "employer_address"
+	RecipientCountryReadingSourceLeadCompanyAddress RecipientCountryReadingSource = "lead_company_address"
+)
+
+// Valid indicates whether the value is a known member of the RecipientCountryReadingSource enum.
+func (e RecipientCountryReadingSource) Valid() bool {
+	switch e {
+	case RecipientCountryReadingSourceContactAddress:
+		return true
+	case RecipientCountryReadingSourceEmployerAddress:
+		return true
+	case RecipientCountryReadingSourceLeadCompanyAddress:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RecordAccessVisibility.
 const (
 	RecordAccessVisibilityOwner     RecordAccessVisibility = "owner"
@@ -20500,6 +20521,33 @@ const (
 func (e RefreshAcceptedStatus) Valid() bool {
 	switch e {
 	case RefreshAcceptedStatusEnqueued:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RefusedRecipientCountrySource.
+const (
+	RefusedRecipientCountrySourceContactAddress     RefusedRecipientCountrySource = "contact_address"
+	RefusedRecipientCountrySourceEmployerAddress    RefusedRecipientCountrySource = "employer_address"
+	RefusedRecipientCountrySourceLeadCompanyAddress RefusedRecipientCountrySource = "lead_company_address"
+	RefusedRecipientCountrySourceSenderCleared      RefusedRecipientCountrySource = "sender_cleared"
+	RefusedRecipientCountrySourceSenderOverride     RefusedRecipientCountrySource = "sender_override"
+)
+
+// Valid indicates whether the value is a known member of the RefusedRecipientCountrySource enum.
+func (e RefusedRecipientCountrySource) Valid() bool {
+	switch e {
+	case RefusedRecipientCountrySourceContactAddress:
+		return true
+	case RefusedRecipientCountrySourceEmployerAddress:
+		return true
+	case RefusedRecipientCountrySourceLeadCompanyAddress:
+		return true
+	case RefusedRecipientCountrySourceSenderCleared:
+		return true
+	case RefusedRecipientCountrySourceSenderOverride:
 		return true
 	default:
 		return false
@@ -56628,6 +56676,10 @@ type MailDraft struct {
 	// OverrideExplanation The reason the author typed for sending past a refusal. Absent when none was.
 	OverrideExplanation *string `json:"override_explanation,omitempty"`
 
+	// RecipientCountries The countries the author stated for recipients, with `country: null` for one they cleared.
+	// Absent when none was stated.
+	RecipientCountries *[]RecipientCountry `json:"recipient_countries,omitempty"`
+
 	// ScheduledAt The moment the author picked to send at, as saved. It may have passed since; the
 	// draft schedules nothing. Absent when none was picked.
 	ScheduledAt *time.Time `json:"scheduled_at,omitempty"`
@@ -56713,6 +56765,12 @@ type MailDraftInput struct {
 	// composer still holds it. It grants nothing: the send still needs its own decision. Omit
 	// it for none.
 	OverrideExplanation *string `json:"override_explanation,omitempty"`
+
+	// RecipientCountries The countries the rep stated for recipients of this message, kept so a reopened composer
+	// still holds them. `country: null` is a country the rep cleared, which is not the same as no
+	// entry. An entry whose address is not on `to`, `cc` or `bcc` is not kept. Each address may
+	// appear once; a second entry is refused with 422 `invalid`.
+	RecipientCountries *[]RecipientCountry `json:"recipient_countries,omitempty"`
 
 	// ScheduledAt The moment the rep picked to send at, checked as the send checks it: with
 	// `scheduled_tz`, at most 90 days ahead. Saving schedules nothing. Omit both for none.
@@ -59539,6 +59597,12 @@ type PreviewAccountSendRequest struct {
 	Links            []ActivityLinkInput `json:"links"`
 	MarketingPurpose *string             `json:"marketing_purpose,omitempty"`
 
+	// RecipientCountries The countries the sender states for this message's recipients, read as the send reads them:
+	// `country: null` clears a recipient's country, and a recipient with no entry keeps the record's.
+	// An agent's or an integration's preview carrying this field is refused with 422 `invalid`.
+	// Each address may appear once; a second entry is refused with 422 `invalid`.
+	RecipientCountries *[]RecipientCountry `json:"recipient_countries,omitempty"`
+
 	// Subject The draft's subject, read for an offer as the send reads it and checked for `content_findings`.
 	Subject *string               `json:"subject,omitempty"`
 	To      []openapi_types.Email `json:"to"`
@@ -59578,6 +59642,12 @@ type PreviewSendRequest struct {
 
 	// MarketingPurpose Which marketing purpose, when the context is `marketing`.
 	MarketingPurpose *string `json:"marketing_purpose,omitempty"`
+
+	// RecipientCountries The countries the sender states for this message's recipients, read as the send reads them:
+	// `country: null` clears a recipient's country, and a recipient with no entry keeps the record's.
+	// An agent's or an integration's preview carrying this field is refused with 422 `invalid`.
+	// Each address may appear once; a second entry is refused with 422 `invalid`.
+	RecipientCountries *[]RecipientCountry `json:"recipient_countries,omitempty"`
 
 	// Subject The draft's subject, read for an offer as the send reads it and checked for `content_findings`.
 	Subject *string `json:"subject,omitempty"`
@@ -61125,6 +61195,47 @@ type ReceiptActor struct {
 // ReceiptActorType defines model for ReceiptActor.Type.
 type ReceiptActorType string
 
+// RecipientCountries defines model for RecipientCountries.
+type RecipientCountries struct {
+	Recipients []RecipientCountryReading `json:"recipients"`
+}
+
+// RecipientCountriesRequest defines model for RecipientCountriesRequest.
+type RecipientCountriesRequest struct {
+	// Addresses The addresses on the message, as they are on `to`, `cc` or `bcc`.
+	Addresses []string `json:"addresses"`
+}
+
+// RecipientCountry A country a sender states for one recipient of one message. It is never written to the
+// contact.
+type RecipientCountry struct {
+	// Address The recipient's address, as it is on `to`, `cc` or `bcc`.
+	Address string `json:"address"`
+
+	// Country An ISO 3166-1 alpha-2 code, or null for a country the sender cleared. A cleared
+	// recipient is judged under the baseline even when the record states a country.
+	Country *string `json:"country"`
+}
+
+// RecipientCountryReading defines model for RecipientCountryReading.
+type RecipientCountryReading struct {
+	// Address The address as it was asked.
+	Address string `json:"address"`
+
+	// Country The ISO 3166-1 alpha-2 code in lower case, or null when the record states none.
+	Country *string `json:"country"`
+
+	// Source The record the country was read from: the contact's own address, the address of
+	// their current primary employer, or the company a lead is filed under. Null with a
+	// null `country`.
+	Source *RecipientCountryReadingSource `json:"source"`
+}
+
+// RecipientCountryReadingSource The record the country was read from: the contact's own address, the address of
+// their current primary employer, or the company a lead is filed under. Null with a
+// null `country`.
+type RecipientCountryReadingSource string
+
 // RecommendationReceipt The rule and current facts behind a suggested action. The server checks these facts again when accepting the suggestion; the receipt grants no authority. Replaying the same accepted observation returns its original task.
 type RecommendationReceipt struct {
 	BasisFingerprint string `json:"basis_fingerprint"`
@@ -61722,6 +61833,16 @@ type RefusedRecipient struct {
 	Address  string  `json:"address"`
 	Category *string `json:"category,omitempty"`
 
+	// Country The ISO 3166-1 alpha-2 code, in lower case, of the recipient's country whose sales-mail
+	// rules judged this refusal. Absent when none applied: no country on record, or one the
+	// sender cleared.
+	Country *string `json:"country,omitempty"`
+
+	// CountrySource Where `country` came from: the contact's address, their employer's, the lead's company,
+	// or the sender, who stated it (`sender_override`) or cleared it (`sender_cleared`) for this
+	// message. Absent when no record or sender gave a country.
+	CountrySource *RefusedRecipientCountrySource `json:"country_source,omitempty"`
+
 	// FooterFindings Server-derived missing footer disclosures or unavailable private links shown before the sender confirms this message. Contains no credentials.
 	FooterFindings *[]FooterFinding `json:"footer_findings,omitempty"`
 
@@ -61734,6 +61855,11 @@ type RefusedRecipient struct {
 	SubjectId         *openapi_types.UUID          `json:"subject_id,omitempty"`
 	SubjectKind       *RefusedRecipientSubjectKind `json:"subject_kind,omitempty"`
 }
+
+// RefusedRecipientCountrySource Where `country` came from: the contact's address, their employer's, the lead's company,
+// or the sender, who stated it (`sender_override`) or cleared it (`sender_cleared`) for this
+// message. Absent when no record or sender gave a country.
+type RefusedRecipientCountrySource string
 
 // RefusedRecipientSubjectKind defines model for RefusedRecipient.SubjectKind.
 type RefusedRecipientSubjectKind string
@@ -64908,6 +65034,10 @@ type ScheduledSend struct {
 	// sender reads this row.
 	OperatorReason *string `json:"operator_reason,omitempty"`
 
+	// RecipientCountries The countries the sender stated for recipients, frozen with the message. Absent when none
+	// was stated.
+	RecipientCountries *[]RecipientCountry `json:"recipient_countries,omitempty"`
+
 	// ReviewActions What this caller may do about the review in `review_id`, in the words a refusal's
 	// `available_actions` uses. Absent or empty when they may only read it.
 	// `direct_send` sends the held message now on a recorded reason.
@@ -65754,6 +65884,16 @@ type SendCompanyEmailRequest struct {
 	// an allow.
 	OperatorReason *string `json:"operator_reason,omitempty"`
 
+	// RecipientCountries The country the sender states for a recipient of this message, which the marketing rules
+	// then follow in place of the one the record states. An entry with `country: null` clears it,
+	// and that recipient is judged under the baseline. A recipient with no entry keeps the country
+	// the record states. An entry whose address is not on `to`, `cc` or `bcc` is ignored. Nothing
+	// is written to the contact. Only the user writing the message may state one: an agent's or an
+	// integration's request carrying this field is refused with 422 `invalid`. Each address may
+	// appear once, compared without case or surrounding space; a second entry is refused with 422
+	// `invalid`.
+	RecipientCountries *[]RecipientCountry `json:"recipient_countries,omitempty"`
+
 	// ScheduledAt Legacy instant-based schedule. When `scheduled_intent` is present, its
 	// local time and current timezone rules govern the send; this field is a
 	// compatibility cache. Without it, the supplied instant remains authoritative.
@@ -65944,6 +66084,16 @@ type SendEmailRequest struct {
 	// reader can see what the sender believed, not so the engine can be talked into
 	// an allow.
 	OperatorReason *string `json:"operator_reason,omitempty"`
+
+	// RecipientCountries The country the sender states for a recipient of this message, which the marketing rules
+	// then follow in place of the one the record states. An entry with `country: null` clears it,
+	// and that recipient is judged under the baseline. A recipient with no entry keeps the country
+	// the record states. An entry whose address is not on `to`, `cc` or `bcc` is ignored. Nothing
+	// is written to the contact. Only the user writing the message may state one: an agent's or an
+	// integration's request carrying this field is refused with 422 `invalid`. Each address may
+	// appear once, compared without case or surrounding space; a second entry is refused with 422
+	// `invalid`.
+	RecipientCountries *[]RecipientCountry `json:"recipient_countries,omitempty"`
 
 	// ScheduledAt Legacy instant-based schedule. When `scheduled_intent` is present, its
 	// local time and current timezone rules govern the send; this field is a
@@ -83102,6 +83252,9 @@ type SaveEmailSignatureTemplateJSONRequestBody = EmailSignatureTemplate
 // SendCompanyEmailJSONRequestBody defines body for SendCompanyEmail for application/json ContentType.
 type SendCompanyEmailJSONRequestBody = SendCompanyEmailRequest
 
+// ResolveRecipientCountriesJSONRequestBody defines body for ResolveRecipientCountries for application/json ContentType.
+type ResolveRecipientCountriesJSONRequestBody = RecipientCountriesRequest
+
 // PreviewAccountSendAuthorizationJSONRequestBody defines body for PreviewAccountSendAuthorization for application/json ContentType.
 type PreviewAccountSendAuthorizationJSONRequestBody = PreviewAccountSendRequest
 
@@ -98902,6 +99055,9 @@ type ServerInterface interface {
 	// Start a new email conversation from a record — runs directly, consent-gated.
 	// (POST /emails)
 	SendCompanyEmail(w http.ResponseWriter, r *http.Request, params SendCompanyEmailParams)
+	// The country the record states for each address, and where it was read.
+	// (POST /emails/recipient-countries)
+	ResolveRecipientCountries(w http.ResponseWriter, r *http.Request)
 	// Would a new message with no thread behind it be allowed, and on what ground.
 	// (POST /emails:preview)
 	PreviewAccountSendAuthorization(w http.ResponseWriter, r *http.Request)
@@ -103858,6 +104014,12 @@ func (_ Unimplemented) SaveEmailSignatureTemplate(w http.ResponseWriter, r *http
 // Start a new email conversation from a record — runs directly, consent-gated.
 // (POST /emails)
 func (_ Unimplemented) SendCompanyEmail(w http.ResponseWriter, r *http.Request, params SendCompanyEmailParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The country the record states for each address, and where it was read.
+// (POST /emails/recipient-countries)
+func (_ Unimplemented) ResolveRecipientCountries(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -132822,6 +132984,26 @@ func (siw *ServerInterfaceWrapper) SendCompanyEmail(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// ResolveRecipientCountries operation middleware
+func (siw *ServerInterfaceWrapper) ResolveRecipientCountries(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ResolveRecipientCountries(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // PreviewAccountSendAuthorization operation middleware
 func (siw *ServerInterfaceWrapper) PreviewAccountSendAuthorization(w http.ResponseWriter, r *http.Request) {
 
@@ -157934,6 +158116,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/emails", wrapper.SendCompanyEmail)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/emails/recipient-countries", wrapper.ResolveRecipientCountries)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/emails:preview", wrapper.PreviewAccountSendAuthorization)

@@ -16,6 +16,7 @@ import { problemMessageOf, throwProblem } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import { useSendPermission } from "../../lib/usesendpermission";
 import type { ChosenFile } from "./composeattachments";
+import { countriesOnMessage } from "./composecountries";
 import type { ComposeFields } from "./composefields";
 import { composedLinks, type SendGrounding } from "./composelinks";
 import { refusalOf } from "./composerefusal";
