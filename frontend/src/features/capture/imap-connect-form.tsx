@@ -56,6 +56,7 @@ const SERVER_SENTENCES: Readonly<Record<string, MessageKey>> = {
   imap_unreachable: "connectors.imapUnreachable",
   smtp_login_rejected: "connectors.smtpLoginRejected",
   smtp_unreachable: "connectors.smtpUnreachable",
+  smtp_address_invalid: "connectors.smtpAddressInvalid",
 };
 
 function imapErrorMessage(

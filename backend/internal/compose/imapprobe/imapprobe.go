@@ -85,6 +85,12 @@ func smtpSettings(in *crmcontracts.ImapSmtpSettings) *imap.SMTPSettings {
 // without leaking the provider's raw error.
 func writeConnectError(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
+	case errors.Is(err, imap.ErrSendAddressInvalid):
+		httperr.Write(w, r, &httperr.DetailedError{
+			Status: http.StatusUnprocessableEntity,
+			Code:   "smtp_address_invalid",
+			Detail: "To send from this mailbox, its login must be an email address.",
+		})
 	case errors.Is(err, imap.ErrSendLoginRejected):
 		httperr.Write(w, r, &httperr.DetailedError{
 			Status: http.StatusUnprocessableEntity,

@@ -30851,7 +30851,7 @@ export interface components {
             max_messages: number;
             smtp?: components["schemas"]["ImapSmtpSettings"];
         };
-        /** @description Turns sending on for this mailbox. Mail goes out through this SMTP server, logged in with the IMAP username and secret, and a copy is filed in the Sent folder. The connect checks the SMTP login before it stores anything: a refused login answers `422` `smtp_login_rejected`, a server it cannot reach `502` `smtp_unreachable`. Absent keeps the connection read-only. */
+        /** @description Turns sending on for this mailbox. Mail goes out through this SMTP server, logged in with the IMAP username and secret, and a copy is filed in the Sent folder. The connect checks the SMTP login before it stores anything: a refused login answers `422` `smtp_login_rejected`, a server it cannot reach `502` `smtp_unreachable`, and a username that is not an email address `422` `smtp_address_invalid`. Absent keeps the connection read-only. A shared mailbox only captures, and refuses it with `422` `shared_mailbox_cannot_send`. */
         ImapSmtpSettings: {
             /** @description The SMTP server. Absent or empty uses the IMAP host. */
             host?: string;

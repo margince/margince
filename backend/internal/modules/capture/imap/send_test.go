@@ -39,21 +39,19 @@ type sendRig struct {
 }
 
 // newSendRig serves a mailbox with a Sent folder and an SMTP server that
-// demands the mailbox's own login over implicit TLS.
+// demands the mailbox's own login over implicit TLS. The in-memory server
+// stores no special-use, so the rig's folder is found by name.
 func newSendRig(t *testing.T) sendRig {
+	t.Helper()
+	return newSendRigWith(t, "INBOX", "Sent")
+}
+
+func newSendRigWith(t *testing.T, folders ...string) sendRig {
 	t.Helper()
 	mem := imapmemserver.New()
 	user := imapmemserver.NewUser(memUser, memPass)
-	for _, box := range []struct {
-		name string
-		opts *imapv2.CreateOptions
-	}{
-		{"INBOX", nil},
-		// The in-memory server stores no special-use, so this rig finds the
-		// folder by name; pickSentFolder's own test covers \Sent.
-		{"Sent", nil},
-	} {
-		if err := user.Create(box.name, box.opts); err != nil {
+	for _, folder := range folders {
+		if err := user.Create(folder, nil); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -271,7 +269,7 @@ func TestSMTPDefaultsFollowTheSecurity(t *testing.T) {
 		{SMTPSettings{Security: SMTPSecurityStartTLS}, 587, SMTPSecurityStartTLS},
 		{SMTPSettings{Host: "smtp.other.example", Port: 2525, Security: SMTPSecurityStartTLS}, 2525, SMTPSecurityStartTLS},
 	} {
-		got, err := normalizeSMTP(tc.in, "imap.ws.example")
+		got, err := normalizeSMTP(tc.in, "imap.ws.example", memUser)
 		if err != nil {
 			t.Fatalf("normalizeSMTP(%+v): %v", tc.in, err)
 		}
@@ -283,7 +281,7 @@ func TestSMTPDefaultsFollowTheSecurity(t *testing.T) {
 			t.Errorf("normalizeSMTP(%+v) = %+v, want %s:%d %s", tc.in, got, wantHost, tc.wantPort, tc.wantSec)
 		}
 	}
-	if _, err := normalizeSMTP(SMTPSettings{Security: "ssl3"}, "imap.ws.example"); err == nil {
+	if _, err := normalizeSMTP(SMTPSettings{Security: "ssl3"}, "imap.ws.example", memUser); err == nil {
 		t.Error("an unknown security setting was accepted")
 	}
 }
@@ -298,11 +296,55 @@ func TestTheSentCopyGoesToTheFolderTheServerMarksSent(t *testing.T) {
 	if got := pickSentFolder(marked); got != "Gesendete Elemente" {
 		t.Errorf("pickSentFolder = %q, want the \\Sent folder", got)
 	}
-	named := []*imapv2.ListData{{Mailbox: "INBOX"}, {Mailbox: "INBOX.sent", Delim: '.'}}
-	if got := pickSentFolder(named); got != "INBOX.sent" {
-		t.Errorf("pickSentFolder = %q, want the folder named Sent", got)
+	for _, name := range []string{"INBOX.sent", "Sent Items", "Sent Messages", "Sent Mail", "Gesendet", "Gesendete Elemente", "Đã gửi"} {
+		named := []*imapv2.ListData{{Mailbox: "INBOX"}, {Mailbox: name, Delim: '.'}}
+		if got := pickSentFolder(named); got != name {
+			t.Errorf("pickSentFolder = %q, want %q", got, name)
+		}
 	}
 	if got := pickSentFolder([]*imapv2.ListData{{Mailbox: "INBOX"}, {Mailbox: "Sentiments"}}); got != "" {
 		t.Errorf("pickSentFolder = %q, want none", got)
+	}
+}
+
+// A retry whose Sent lookup cannot answer parks rather than mailing again. The
+// account has no Sent folder, so the first send's copy could not be filed.
+func TestARetryThatCannotLookInSentDoesNotTransmitAgain(t *testing.T) {
+	rig := newSendRigWith(t, "INBOX")
+	msg := outboundMessage()
+	if _, err := rig.conn.SendEmail(context.Background(), sealCreds(t, rig.creds), msg); err != nil {
+		t.Fatalf("first send: %v", err)
+	}
+	sent := len(rig.relay.Recipients())
+
+	msg.Attempt = 1
+	_, err := rig.conn.SendEmail(context.Background(), sealCreds(t, rig.creds), msg)
+	if !errors.Is(err, connector.ErrSendOutcomeUnknown) {
+		t.Fatalf("retry = %v, want ErrSendOutcomeUnknown", err)
+	}
+	if got := len(rig.relay.Recipients()); got != sent {
+		t.Errorf("the retry reached SMTP again (%d recipients, was %d)", got, sent)
+	}
+}
+
+// The Sent copy is filed after the message left. So the connector declares no
+// lookup a retry can rely on, and the dispatcher marks each send in flight.
+func TestTheConnectorDeclaresNoReliablePriorSendLookup(t *testing.T) {
+	if connector.DetectsPriorSend(NewStanding()) {
+		t.Error("the IMAP sender claims a prior-send lookup it cannot always answer")
+	}
+}
+
+// Sending names the login as the sender, so a login that is not one bare
+// address is refused with its own error. Reading only stays allowed.
+func TestSendingNeedsTheLoginToBeAnEmailAddress(t *testing.T) {
+	for _, login := range []string{"ada", "Ada <ada@ws.example>", "ada@ws.example, eve@ws.example"} {
+		_, err := normalizeCredentials(Credentials{Host: "imap.ws.example", Email: login, Password: memPass, SMTP: &SMTPSettings{}})
+		if !errors.Is(err, ErrSendAddressInvalid) {
+			t.Errorf("login %q with sending on = %v, want ErrSendAddressInvalid", login, err)
+		}
+		if _, err := normalizeCredentials(Credentials{Host: "imap.ws.example", Email: login, Password: memPass}); err != nil {
+			t.Errorf("login %q read-only = %v, want accepted", login, err)
+		}
 	}
 }

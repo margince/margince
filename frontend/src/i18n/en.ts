@@ -12359,7 +12359,7 @@ export const en = {
     "The mail server could not be reached. Check the host and port.",
   "connectors.imapSend": "Send from this mailbox",
   "connectors.imapSendHint":
-    "Mail you send from Margince goes out through this mailbox, and a copy lands in its Sent folder.",
+    "Mail you send from Margince goes out through this mailbox with the same app password. A copy lands in its Sent folder.",
   "connectors.imapSmtpHost": "SMTP server",
   "connectors.imapSmtpSecurity": "Security",
   "connectors.imapSmtpTls": "SSL/TLS",
@@ -12367,6 +12367,8 @@ export const en = {
   "connectors.imapSmtpPort": "SMTP port",
   "connectors.smtpLoginRejected":
     "The SMTP server rejected this login. Check the server, the security and the app password.",
+  "connectors.smtpAddressInvalid":
+    "To send from this mailbox, its email address must be a plain address, such as name@example.com.",
   "connectors.smtpUnreachable":
     "The SMTP server could not be reached. Check the server and port.",
 

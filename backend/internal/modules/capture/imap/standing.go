@@ -100,7 +100,7 @@ func normalizeCredentials(creds Credentials) (Credentials, error) {
 		creds.MaxMessages = maxMessagesCap
 	}
 	if creds.SMTP != nil {
-		smtp, err := normalizeSMTP(*creds.SMTP, creds.Host)
+		smtp, err := normalizeSMTP(*creds.SMTP, creds.Host, creds.Email)
 		if err != nil {
 			return Credentials{}, err
 		}

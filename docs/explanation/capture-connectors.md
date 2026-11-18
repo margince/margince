@@ -351,8 +351,8 @@ passed. `imap.GrantedScopes` then reports `urn:margince:imap:send`, the scope th
 
 A send goes through `mailer.Submission`, the exchange the installation relay uses: TLS required, the same
 guarded dial. It carries the Message-ID comms chose, with Bcc in the envelope only. The copy filed in the
-`\Sent` folder (else one named `Sent`) is captured back onto the sent row by that Message-ID. A refusal at
-the message's final line parks as an unknown outcome.
+`\Sent` folder (else a common Sent name) is captured back onto the sent row by that Message-ID. That copy
+may be missing, so `DetectsPriorSend` is false: a retry whose outcome is unknown parks instead of sending again.
 
 **To run:** the vault key, plus the host, port, user name and app password.
 

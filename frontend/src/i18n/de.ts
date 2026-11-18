@@ -12406,7 +12406,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der Mailserver war nicht erreichbar. Prüfe Server und Port.",
   "connectors.imapSend": "Von diesem Postfach senden",
   "connectors.imapSendHint":
-    "Mails, die du aus Margince sendest, gehen über dieses Postfach raus. Eine Kopie landet im Ordner „Gesendet“.",
+    "Mails, die du aus Margince sendest, gehen mit demselben App-Passwort über dieses Postfach raus. Eine Kopie landet im Ordner „Gesendet“.",
   "connectors.imapSmtpHost": "Postausgangsserver (SMTP)",
   "connectors.imapSmtpSecurity": "Verschlüsselung",
   "connectors.imapSmtpTls": "SSL/TLS",
@@ -12414,6 +12414,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectors.imapSmtpPort": "SMTP-Port",
   "connectors.smtpLoginRejected":
     "Der Postausgangsserver hat die Anmeldung abgelehnt. Prüfe Server, Verschlüsselung und App-Passwort.",
+  "connectors.smtpAddressInvalid":
+    "Um von diesem Postfach zu senden, muss die E-Mail-Adresse eine einfache Adresse sein, etwa name@example.com.",
   "connectors.smtpUnreachable":
     "Der Postausgangsserver war nicht erreichbar. Prüfe Server und Port.",
 

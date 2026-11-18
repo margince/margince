@@ -395,3 +395,39 @@ func TestADispatcherConfiguredWithOneRungStillTransmitsOnce(t *testing.T) {
 		t.Errorf("outcome=%v calls=%d, want OutcomeSent/1 — the first attempt must reach the provider", got, sender.calls)
 	}
 }
+
+// noLookupSender is a mail sender that declares no prior-send lookup, as the
+// IMAP connector does.
+type noLookupSender struct{ fakeSender }
+
+func (*noLookupSender) DetectsPriorSend() bool { return false }
+
+// A mail sender without a lookup is marked in flight before the call. A retry
+// after an attempt whose outcome was never learned parks unsent.
+func TestAMailSenderWithoutAPriorSendLookupSendsAtMostOnce(t *testing.T) {
+	sender := &noLookupSender{}
+	store := &fakeStore{delivery: liveDelivery()}
+	d := newTestDispatcher(store, fakeResolver{sender: sender, granted: []string{sendScope}}, &stubConsent{})
+
+	if got, _ := dispatch(context.Background(), d, store.delivery.ID); got != OutcomeSent || store.marked != 1 {
+		t.Fatalf("outcome=%v marked=%d, want sent with the marker set first", got, store.marked)
+	}
+
+	store = &fakeStore{delivery: liveDelivery()}
+	at := testNow
+	store.delivery.InFlightAt = &at
+	d = newTestDispatcher(store, fakeResolver{sender: sender, granted: []string{sendScope}}, &stubConsent{})
+	got, _ := dispatch(context.Background(), d, store.delivery.ID)
+	if got != OutcomeParked || sender.calls != 1 {
+		t.Errorf("outcome=%v calls=%d, want parked with no second transmission", got, sender.calls)
+	}
+}
+
+// Gmail and Graph declare nothing and keep their retry lookup: no marker.
+func TestAMailSenderWithALookupRidesTheRetryLadder(t *testing.T) {
+	store := &fakeStore{delivery: liveDelivery()}
+	d := newTestDispatcher(store, fakeResolver{sender: &fakeSender{}, granted: []string{sendScope}}, &stubConsent{})
+	if got, _ := dispatch(context.Background(), d, store.delivery.ID); got != OutcomeSent || store.marked != 0 {
+		t.Errorf("outcome=%v marked=%d, want sent without a marker", got, store.marked)
+	}
+}

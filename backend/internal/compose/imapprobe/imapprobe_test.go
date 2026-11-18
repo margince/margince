@@ -64,8 +64,9 @@ func TestAnSMTPRefusalAnswersItsOwnCode(t *testing.T) {
 		status int
 		code   string
 	}{
-		"rejected login":     {imap.ErrSendLoginRejected, http.StatusUnprocessableEntity, "smtp_login_rejected"},
-		"unreachable server": {imap.ErrSendUnreachable, http.StatusBadGateway, "smtp_unreachable"},
+		"rejected login":       {imap.ErrSendLoginRejected, http.StatusUnprocessableEntity, "smtp_login_rejected"},
+		"unreachable server":   {imap.ErrSendUnreachable, http.StatusBadGateway, "smtp_unreachable"},
+		"login not an address": {imap.ErrSendAddressInvalid, http.StatusUnprocessableEntity, "smtp_address_invalid"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			w := probeWith(t, credentials(), func(context.Context, connector.AuthRequest) (connector.Auth, error) {

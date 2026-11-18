@@ -12088,7 +12088,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Không thể kết nối tới máy chủ thư. Kiểm tra máy chủ và cổng.",
   "connectors.imapSend": "Gửi từ hộp thư này",
   "connectors.imapSendHint":
-    "Thư bạn gửi từ Margince sẽ đi qua hộp thư này, và một bản sao nằm trong thư mục Đã gửi.",
+    "Thư bạn gửi từ Margince sẽ đi qua hộp thư này bằng cùng mật khẩu ứng dụng. Một bản sao nằm trong thư mục Đã gửi.",
   "connectors.imapSmtpHost": "Máy chủ thư đi (SMTP)",
   "connectors.imapSmtpSecurity": "Bảo mật",
   "connectors.imapSmtpTls": "SSL/TLS",
@@ -12096,6 +12096,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "connectors.imapSmtpPort": "Cổng SMTP",
   "connectors.smtpLoginRejected":
     "Máy chủ thư đi đã từ chối đăng nhập này. Kiểm tra máy chủ, bảo mật và mật khẩu ứng dụng.",
+  "connectors.smtpAddressInvalid":
+    "Để gửi từ hộp thư này, địa chỉ email phải là một địa chỉ đơn giản, ví dụ name@example.com.",
   "connectors.smtpUnreachable":
     "Không thể kết nối tới máy chủ thư đi. Kiểm tra máy chủ và cổng.",
 

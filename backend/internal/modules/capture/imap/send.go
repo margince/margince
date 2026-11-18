@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"net/mail"
 	"slices"
 	"strings"
 
@@ -54,6 +55,10 @@ const (
 // is the connector's own refusal behind it.
 var ErrSendingOff = fmt.Errorf("imap: sending is not turned on for this mailbox: %w", connector.ErrAuthRejected)
 
+// ErrSendAddressInvalid marks a login that is not an email address, which a
+// mailbox that sends needs as its sender.
+var ErrSendAddressInvalid = fmt.Errorf("imap: sending needs the login to be an email address: %w", connector.ErrAuthRejected)
+
 // ErrSendLoginRejected marks an SMTP server that refused the mailbox's login.
 var ErrSendLoginRejected = fmt.Errorf("imap: the outgoing mail server rejected these credentials: %w", connector.ErrAuthRejected)
 
@@ -61,7 +66,11 @@ var ErrSendLoginRejected = fmt.Errorf("imap: the outgoing mail server rejected t
 // or asked, and took nothing.
 var ErrSendUnreachable = fmt.Errorf("imap: could not reach the outgoing mail server: %w", connector.ErrUnreachable)
 
+// errNoSentFolder marks an account with no folder the Sent copy can go in.
+var errNoSentFolder = errors.New("imap: the mailbox has no Sent folder")
+
 var (
+	_ connector.PriorSendLookup    = (*Connector)(nil)
 	_ connector.EmailSender        = (*Connector)(nil)
 	_ connector.EmailHandoffSender = (*Connector)(nil)
 	_ connector.AttachmentCarrier  = (*Connector)(nil)
@@ -78,7 +87,12 @@ type SMTPSettings struct {
 
 // normalizeSMTP applies the defaults: the IMAP host, implicit TLS, and the
 // port that goes with the security.
-func normalizeSMTP(smtp SMTPSettings, imapHost string) (SMTPSettings, error) {
+func normalizeSMTP(smtp SMTPSettings, imapHost, login string) (SMTPSettings, error) {
+	// The login becomes the envelope sender and the From header, so it has to
+	// be one bare address.
+	if parsed, err := mail.ParseAddress(login); err != nil || parsed.Address != login {
+		return SMTPSettings{}, ErrSendAddressInvalid
+	}
 	smtp.Host = strings.TrimSpace(smtp.Host)
 	if smtp.Host == "" {
 		smtp.Host = imapHost
@@ -157,6 +171,11 @@ func (c *Connector) GrantedScopes(auth connector.Auth) ([]string, error) {
 	return []string{SendScope}, nil
 }
 
+// DetectsPriorSend answers false. The Sent copy is filed after the message
+// left, and may be missing. So the dispatcher marks each send in flight, and
+// parks one whose outcome it never learned.
+func (c *Connector) DetectsPriorSend() bool { return false }
+
 // Carriage declares what this connector transmits. The files ride in the
 // multipart/mixed message mailwire.Build renders, and the bound is mail's own
 // inbound one read in the other direction.
@@ -197,9 +216,11 @@ func (c *Connector) SendEmailWithHandoff(ctx context.Context, auth connector.Aut
 		return connector.SendReceipt{}, ErrSendingOff
 	}
 	if msg.Attempt > 0 {
+		// A lookup that cannot answer parks the delivery: resending on a
+		// missing answer is how a recipient gets the message twice.
 		filed, err := c.filedInSent(ctx, creds, msg.MessageID)
 		if err != nil {
-			return connector.SendReceipt{}, err
+			return connector.SendReceipt{}, errors.Join(connector.ErrSendOutcomeUnknown, err)
 		}
 		if filed {
 			return connector.SendReceipt{}, nil
@@ -248,8 +269,11 @@ func (c *Connector) filedInSent(ctx context.Context, creds Credentials, messageI
 	//craft:ignore swallowed-errors best-effort close of the lookup session — the search below answered the question
 	defer func() { _ = client.Close() }()
 	sent, err := sentFolder(client)
-	if err != nil || sent == "" {
+	if err != nil {
 		return false, err
+	}
+	if sent == "" {
+		return false, errNoSentFolder
 	}
 	return holdsMessage(client, sent, messageID)
 }
@@ -275,7 +299,7 @@ func (c *Connector) appendSent(ctx context.Context, creds Credentials, messageID
 		return err
 	}
 	if sent == "" {
-		return errors.New("imap: the mailbox has no Sent folder")
+		return errNoSentFolder
 	}
 	filed, err := holdsMessage(client, sent, messageID)
 	if err != nil || filed {
@@ -312,11 +336,18 @@ func pickSentFolder(entries []*imapv2.ListData) string {
 		}
 	}
 	for _, entry := range entries {
-		if strings.EqualFold(lastSegment(entry.Mailbox, entry.Delim), "Sent") {
+		if slices.Contains(sentFolderNames, strings.ToLower(lastSegment(entry.Mailbox, entry.Delim))) {
 			return entry.Mailbox
 		}
 	}
 	return ""
+}
+
+// sentFolderNames are the names common servers and clients give the Sent
+// folder, in lower case, for a server that marks none with \Sent.
+var sentFolderNames = []string{
+	"sent", "sent items", "sent messages", "sent mail", "gesendet", "gesendete elemente",
+	"gesendete objekte", "đã gửi", "envoyés", "éléments envoyés", "enviados", "inviata",
 }
 
 func lastSegment(mailbox string, delim rune) string {

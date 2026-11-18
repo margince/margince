@@ -52156,14 +52156,14 @@ type ImapCredentials struct {
 	// Secret Password or app-specific password. Sealed to the vault; never returned.
 	Secret *string `json:"secret,omitempty"`
 
-	// Smtp Turns sending on for this mailbox. Mail goes out through this SMTP server, logged in with the IMAP username and secret, and a copy is filed in the Sent folder. The connect checks the SMTP login before it stores anything: a refused login answers `422` `smtp_login_rejected`, a server it cannot reach `502` `smtp_unreachable`. Absent keeps the connection read-only.
+	// Smtp Turns sending on for this mailbox. Mail goes out through this SMTP server, logged in with the IMAP username and secret, and a copy is filed in the Sent folder. The connect checks the SMTP login before it stores anything: a refused login answers `422` `smtp_login_rejected`, a server it cannot reach `502` `smtp_unreachable`, and a username that is not an email address `422` `smtp_address_invalid`. Absent keeps the connection read-only. A shared mailbox only captures, and refuses it with `422` `shared_mailbox_cannot_send`.
 	Smtp *ImapSmtpSettings `json:"smtp,omitempty"`
 
 	// Username The mailbox login — an email address on most servers.
 	Username string `json:"username"`
 }
 
-// ImapSmtpSettings Turns sending on for this mailbox. Mail goes out through this SMTP server, logged in with the IMAP username and secret, and a copy is filed in the Sent folder. The connect checks the SMTP login before it stores anything: a refused login answers `422` `smtp_login_rejected`, a server it cannot reach `502` `smtp_unreachable`. Absent keeps the connection read-only.
+// ImapSmtpSettings Turns sending on for this mailbox. Mail goes out through this SMTP server, logged in with the IMAP username and secret, and a copy is filed in the Sent folder. The connect checks the SMTP login before it stores anything: a refused login answers `422` `smtp_login_rejected`, a server it cannot reach `502` `smtp_unreachable`, and a username that is not an email address `422` `smtp_address_invalid`. Absent keeps the connection read-only. A shared mailbox only captures, and refuses it with `422` `shared_mailbox_cannot_send`.
 type ImapSmtpSettings struct {
 	// Host The SMTP server. Absent or empty uses the IMAP host.
 	Host *string `json:"host,omitempty"`

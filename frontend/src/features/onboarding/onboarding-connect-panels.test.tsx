@@ -55,6 +55,17 @@ afterEach(() => {
 });
 
 describe("ImapConnectPanel", () => {
+  // The step tells the reader what the app password is used for and that
+  // disconnecting deletes it, before they type it.
+  it("says how the app password is kept before it is typed", () => {
+    render(<ImapConnectPanel onDone={vi.fn()} onDismiss={() => {}} />);
+    expect(
+      screen.getByText(en["connectors.imapSecretHint"]),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Port")).toHaveValue(993);
+    expect(screen.getByLabelText("Messages per sync")).toHaveValue(50);
+  });
+
   it("connects IMAP through the typed client, not a raw fetch to a bespoke path", async () => {
     const calls: { url: string; body: unknown }[] = [];
     installFetchStub({

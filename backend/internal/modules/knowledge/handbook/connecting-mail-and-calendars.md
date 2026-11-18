@@ -57,6 +57,7 @@ When the **Connect IMAP mailbox** form refuses, the message under it says what w
 - "The mail server could not be reached. Check the host and port.": the server name or port is wrong, or the server is down.
 - "The SMTP server rejected this login. Check the server, the security and the app password.": sending is ticked, and the SMTP server refused the login.
 - "The SMTP server could not be reached. Check the server and port.": sending is ticked, and its name, port or security is wrong.
+- "To send from this mailbox, its email address must be a plain address, such as name@example.com.": the login is not an email address.
 A mail server inside your own network is always unreachable, because Margince never connects to a private address.
 Also called: IMAP login failed, credentials rejected, mail server unreachable, SMTP login failed.
 
