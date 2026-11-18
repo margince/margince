@@ -52,7 +52,7 @@ func sameInstructionScope(before, now RefusedRecipient) bool {
 }
 
 // sameWarningShown reports whether a refusal still reads as it did when a human
-// was shown it: the recipient's stops, the footer omissions and the law cited.
+// saw it. It compares the stops, the footer omissions and the law cited.
 // AssessmentRevision hashes the same facts. A snapshot from before a fact was
 // stored has it empty and matches any current value.
 func sameWarningShown(before, now RefusedRecipient) bool {

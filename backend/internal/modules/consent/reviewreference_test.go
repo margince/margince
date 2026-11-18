@@ -95,8 +95,8 @@ func TestABlockingRefusalCarriesTheSendersOwnClaim(t *testing.T) {
 	}
 }
 
-// The flat refusal list of a 409 names the law cited for each refusal that has
-// one, and leaves the key out for one that has none.
+// The flat refusal list of a 409 names the law a refusal cites. A refusal that
+// cites none has no such key.
 func TestARefusalNamesTheLawItCites(t *testing.T) {
 	law := commsauthz.Provision{Instrument: "UWG", Provision: "§ 7(2)", SourceURL: "https://example.org/uwg"}
 	refusal := &SendRefusedError{ReviewID: ids.NewV7(), Refusals: []RefusedRecipient{

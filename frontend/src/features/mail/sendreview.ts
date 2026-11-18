@@ -185,8 +185,8 @@ function parseFooterFindings(
   });
 }
 
-// citedIn reads an entry's `provision`, kept only whole: a law with no link or
-// no part to name is dropped, and the row keeps its factual text.
+// citedIn reads an entry's `provision` only when it is whole. A law with no
+// link or no part to name is dropped, and the row keeps its factual text.
 function citedIn(entry: object): {
   provision?: components["schemas"]["CitedProvision"];
 } {
