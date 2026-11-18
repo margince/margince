@@ -18,12 +18,14 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
+type vcardCase struct {
+	name string
+	card string
+	want VCardEntry
+}
+
 func TestParseVCardsReadsTheCardsExportersWrite(t *testing.T) {
-	cases := []struct {
-		name string
-		card string
-		want VCardEntry
-	}{
+	cases := []vcardCase{
 		{
 			name: "a plain 3.0 card",
 			card: "BEGIN:VCARD\nVERSION:3.0\nFN:Dana Buyer\nORG:Acme GmbH\nTITLE:VP Finance\n" +
@@ -104,45 +106,6 @@ func TestParseVCardsReadsTheCardsExportersWrite(t *testing.T) {
 			},
 		},
 		{
-			name: "a Latin-1 card is read in its charset",
-			card: "BEGIN:VCARD\nVERSION:2.1\nFN;CHARSET=ISO-8859-1;ENCODING=QUOTED-PRINTABLE:J=FCrgen M=FCller\n" +
-				"ADR;CHARSET=ISO-8859-1;ENCODING=QUOTED-PRINTABLE:;;Stra=DFe 1;M=FCnchen;;80331;Deutschland\nEND:VCARD\n",
-			want: VCardEntry{
-				FullName: "Jürgen Müller", Address: "Straße 1, München, 80331, Deutschland",
-				PostalAddress: crmcontracts.Address{Line1: new("Straße 1"), City: new("München"), PostalCode: new("80331"), Country: new("DE")},
-			},
-		},
-		{
-			name: "a value that is not UTF-8 and names no charset is read as Windows-1252",
-			card: "BEGIN:VCARD\nFN:Bj\xf6rn Example\nORG:M\xfcller & S\xf6hne\nTITLE;ENCODING=QUOTED-PRINTABLE:Gesch=E4ftsf=FChrer\nEND:VCARD\n",
-			want: VCardEntry{FullName: "Björn Example", Company: "Müller & Söhne", Title: "Geschäftsführer"},
-		},
-		{
-			name: "Latin-1 text with an accent before a space is read as Western text",
-			card: "BEGIN:VCARD\nFN:Jos\xe9 da Silva\nEND:VCARD\n",
-			want: VCardEntry{FullName: "José da Silva"},
-		},
-		{
-			name: "Shift-JIS with no charset is unreadable rather than mojibake",
-			card: "BEGIN:VCARD\nFN:Plain Contact\nORG:\x93\x63\x92\x86\x82\xb1\x82\xf1\nEND:VCARD\n",
-			want: VCardEntry{FullName: "Plain Contact", Unreadable: []string{"ORG"}},
-		},
-		{
-			name: "GB2312 with no charset is unreadable rather than mojibake",
-			card: "BEGIN:VCARD\nFN:Plain Contact\nTITLE:\xd6\xd0\xb9\xfa\nEND:VCARD\n",
-			want: VCardEntry{FullName: "Plain Contact", Unreadable: []string{"TITLE"}},
-		},
-		{
-			name: "a quoted-printable soft line break joins the next line",
-			card: "BEGIN:VCARD\r\nFN;CHARSET=ISO-8859-1;ENCODING=QUOTED-PRINTABLE:Jos=E9=\r\n da Silva\r\nEND:VCARD\r\n",
-			want: VCardEntry{FullName: "José da Silva"},
-		},
-		{
-			name: "a value in a charset this reader does not know is reported unreadable",
-			card: "BEGIN:VCARD\nFN:Plain Contact\nTITLE;CHARSET=SHIFT_JIS:\x83\x65\nEND:VCARD\n",
-			want: VCardEntry{FullName: "Plain Contact", Unreadable: []string{"TITLE"}},
-		},
-		{
 			name: "the preferred address wins, then the work address, then the first",
 			card: "BEGIN:VCARD\nFN:Many Addresses\nADR;TYPE=HOME:;;Home Road 1;Hometown;;11111;\n" +
 				"ADR;TYPE=WORK:;;Work Road 2;Worktown;;22222;\nADR;TYPE=HOME,PREF:;;Pref Road 3;Preftown;;33333;\n" +
@@ -193,6 +156,57 @@ func TestParseVCardsReadsTheCardsExportersWrite(t *testing.T) {
 		},
 	}
 
+	runVCardCases(t, cases)
+}
+
+// Legacy exporters write Latin-1 or Windows-1252 and wrap quoted-printable.
+func TestParseVCardsReadsLegacyCharsetsAndRefusesWhatItCannotRead(t *testing.T) {
+	cases := []vcardCase{
+		{
+			name: "a Latin-1 card is read in its charset",
+			card: "BEGIN:VCARD\nVERSION:2.1\nFN;CHARSET=ISO-8859-1;ENCODING=QUOTED-PRINTABLE:J=FCrgen M=FCller\n" +
+				"ADR;CHARSET=ISO-8859-1;ENCODING=QUOTED-PRINTABLE:;;Stra=DFe 1;M=FCnchen;;80331;Deutschland\nEND:VCARD\n",
+			want: VCardEntry{
+				FullName: "Jürgen Müller", Address: "Straße 1, München, 80331, Deutschland",
+				PostalAddress: crmcontracts.Address{Line1: new("Straße 1"), City: new("München"), PostalCode: new("80331"), Country: new("DE")},
+			},
+		},
+		{
+			name: "a value that is not UTF-8 and names no charset is read as Windows-1252",
+			card: "BEGIN:VCARD\nFN:Bj\xf6rn Example\nORG:M\xfcller & S\xf6hne\nTITLE;ENCODING=QUOTED-PRINTABLE:Gesch=E4ftsf=FChrer\nEND:VCARD\n",
+			want: VCardEntry{FullName: "Björn Example", Company: "Müller & Söhne", Title: "Geschäftsführer"},
+		},
+		{
+			name: "Latin-1 text with an accent before a space is read as Western text",
+			card: "BEGIN:VCARD\nFN:Jos\xe9 da Silva\nEND:VCARD\n",
+			want: VCardEntry{FullName: "José da Silva"},
+		},
+		{
+			name: "Shift-JIS with no charset is unreadable rather than mojibake",
+			card: "BEGIN:VCARD\nFN:Plain Contact\nORG:\x93\x63\x92\x86\x82\xb1\x82\xf1\nEND:VCARD\n",
+			want: VCardEntry{FullName: "Plain Contact", Unreadable: []string{"ORG"}},
+		},
+		{
+			name: "GB2312 with no charset is unreadable rather than mojibake",
+			card: "BEGIN:VCARD\nFN:Plain Contact\nTITLE:\xd6\xd0\xb9\xfa\nEND:VCARD\n",
+			want: VCardEntry{FullName: "Plain Contact", Unreadable: []string{"TITLE"}},
+		},
+		{
+			name: "a quoted-printable soft line break joins the next line",
+			card: "BEGIN:VCARD\r\nFN;CHARSET=ISO-8859-1;ENCODING=QUOTED-PRINTABLE:Jos=E9=\r\n da Silva\r\nEND:VCARD\r\n",
+			want: VCardEntry{FullName: "José da Silva"},
+		},
+		{
+			name: "a value in a charset this reader does not know is reported unreadable",
+			card: "BEGIN:VCARD\nFN:Plain Contact\nTITLE;CHARSET=SHIFT_JIS:\x83\x65\nEND:VCARD\n",
+			want: VCardEntry{FullName: "Plain Contact", Unreadable: []string{"TITLE"}},
+		},
+	}
+	runVCardCases(t, cases)
+}
+
+func runVCardCases(t *testing.T, cases []vcardCase) {
+	t.Helper()
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			got, err := ParseVCards(strings.NewReader(tc.card))

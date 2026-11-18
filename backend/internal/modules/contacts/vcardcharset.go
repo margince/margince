@@ -74,9 +74,8 @@ func looksShiftJIS(value string) bool {
 			kana++
 		}
 	}
-	// A single kanji after one accented letter reads as Latin text as often as
-	// Japanese, so it counts only with a kana, a second kanji, or a lead byte
-	// that Western text hardly uses.
+	// A single kanji after one accented letter is as often Latin text. It
+	// counts only beside a kana, a second kanji, or a rare Western lead byte.
 	return kana > 0 || han > 1 || (han > 0 && hasC1Byte(value))
 }
 

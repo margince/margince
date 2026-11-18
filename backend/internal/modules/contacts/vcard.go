@@ -18,7 +18,6 @@ package contacts
 // than a contact assembled out of the fields that happened to parse.
 
 import (
-	"bufio"
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
@@ -195,83 +194,6 @@ func (c *countingReader) Read(p []byte) (int, error) {
 	n, err := c.r.Read(p)
 	c.n += n
 	return n, err
-}
-
-// unfoldVCardLines joins continuation lines, which is the first thing any vCard
-// reader must do: a long value is split across lines and the continuations are
-// marked by a leading space or tab, so a parser reading raw lines sees half an
-// address and a fragment.
-func unfoldVCardLines(r io.Reader) ([]string, error) {
-	scanner := bufio.NewScanner(r)
-	// A line may be as long as the file may be. An embedded photo on one unfolded
-	// line imports as it does folded. A file past the bound is refused below in
-	// the product's words, not the scanner's.
-	scanner.Buffer(make([]byte, 0, 64*1024), vcardMaxBytes+2)
-	var lines []string
-	// The line under construction is built in ONE builder rather than by
-	// re-appending to the slice's last element: `lines[n-1] += x` copies the
-	// whole accumulated line every time, which turns a file of many short
-	// continuations into quadratic work.
-	var folding strings.Builder
-	var open bool
-	var tail byte
-	flush := func() {
-		if open {
-			lines = append(lines, folding.String())
-			folding.Reset()
-			open = false
-		}
-	}
-	read := 0
-	for scanner.Scan() {
-		read += len(scanner.Bytes()) + 1
-		if read > vcardMaxBytes {
-			// The LimitReader above would otherwise hand back a prefix and this
-			// would parse it as though it were the file, silently importing
-			// part of an address book.
-			return nil, fmt.Errorf("the vCard file exceeds %d bytes", vcardMaxBytes)
-		}
-		if len(lines) > vcardMaxLines {
-			return nil, fmt.Errorf("the vCard file has more than %d lines", vcardMaxLines)
-		}
-		line := strings.TrimRight(scanner.Text(), "\r")
-		if line == "" {
-			continue
-		}
-		if open && tail == '=' && quotedPrintableLine(folding.String()) {
-			// A soft line break: the "=" ends the physical line and the value
-			// goes on in the next one, with no leading space.
-			joined := folding.String()
-			folding.Reset()
-			folding.WriteString(joined[:len(joined)-1])
-			folding.WriteString(line)
-			tail = line[len(line)-1]
-			continue
-		}
-		if (line[0] == ' ' || line[0] == '\t') && open {
-			folding.WriteString(line[1:])
-			if len(line) > 1 {
-				tail = line[len(line)-1]
-			}
-			continue
-		}
-		flush()
-		folding.WriteString(line)
-		tail = line[len(line)-1]
-		open = true
-	}
-	flush()
-	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("reading the vCard file: %w", err)
-	}
-	return lines, nil
-}
-
-// quotedPrintableLine says whether an unfolded line's parameters declare
-// quoted-printable, the only encoding whose trailing "=" is a soft line break.
-func quotedPrintableLine(line string) bool {
-	colon := indexUnquoted(line, ':')
-	return colon > 0 && strings.Contains(strings.ToUpper(line[:colon]), "QUOTED-PRINTABLE")
 }
 
 // splitVCardLine breaks one unfolded line into its property name, its

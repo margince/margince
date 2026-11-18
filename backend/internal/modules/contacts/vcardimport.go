@@ -362,8 +362,8 @@ func contactFromVCard(entry VCardEntry) CreateContactInput {
 // the details arrived by mail or on paper.
 //
 // The card's own date is its REV when it states a usable one. Otherwise it is
-// the moment a human chose to import it, which makes the card the newest
-// statement on the record: somebody is holding it and typing it in.
+// the moment a human chose to import it. That makes the card the newest
+// statement on the record, because somebody is holding it and typing it in.
 func (s *Store) fillFromVCard(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, entry VCardEntry) (cardStatement, error) {
 	card, err := readyObservedCard(ctx, tx, entry)
 	if err != nil {
