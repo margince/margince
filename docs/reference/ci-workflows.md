@@ -19,7 +19,7 @@ workflow is outside the gate:
 | `pace.yml` | every push to `main` | No (runs after the merge) |
 | `scheduled.yml` | daily and weekly on `main` | No |
 | `sbom.yml` | manual dispatch only | No |
-| `release.yml` | `v*` tag push (no pre-release), manual dispatch | No |
+| `release.yml` | `v*` tag push (drafts only for a plain `vX.Y.Z`), manual dispatch naming a tag | No |
 | `release-tag.yml` | `v*` tag push | No (runs on a tag, after every merge) |
 
 `ci.yml` and `cla.yml` run on `merge_group` too, because the queue asks for each required check again.
@@ -315,20 +315,20 @@ nobody can get. So a newer run takes over only before signing starts, while `sbo
 
 ## `release.yml`
 
-Manual dispatch only. It cuts a margince-constellation release with the version `1970.<build>`, in
-the dist service of the constellation deployment at `test.margince.com`. The year is pinned to 1970
-while this is a PoC, so these releases sort below any real dated release. The build is the
-workflow run number. A constellation release is a server deployment, which GitHub does not host.
-The GitHub release belongs to `release-tag.yml`, which owns the
-`github-release` job.
+It cuts a release in a dist service: `dist.test.margince.com` on a tag push, or the `target` input of a manual
+dispatch, `test` or `production` (`dist.margince.com`). A dist release is a server deployment, which GitHub does not host. The GitHub release belongs to
+`release-tag.yml`, which owns the `github-release` job.
 
-A release is a decision someone makes; there is no push trigger. So the role images have no other
-build ([#1965](https://github.com/margince/margince/issues/1965)).
+Any `v*` tag push starts it, but only a plain `vX.Y.Z` tag drafts a release. `scripts/release-dist-version.sh`
+refuses a pre-release part, build metadata or a leading zero (`make test-release-dist-version`). The dist version
+is the tag without its `v`. A manual dispatch with a required `tag` input, such as `v1.0.0`, is the fallback.
+Either way the run builds the commit the tag names, and refuses a tag not on `main` (`make test-release-tag-on-main`).
+No branch push starts it, so the role images have no other build ([#1965](https://github.com/margince/margince/issues/1965)).
 
 What a run does:
 
 1. The CLI asks the dist service for the patch base (`resolve-patch-base --release`): the newest published
-   release on its line. It cuts the patch from the git commit of that release, and uploads it with `draft-release --release <version> --patch-base <version>`. The first release has no base: its patch is
+   release. It cuts the patch from the git commit of that release, and uploads it with `draft-release --release <version> --patch-base <version>`. The first release has no base: its patch is
    the whole tree, sent with `--first-release`. With the patch go the three SBOM files for the source tree, generated again at the release commit (`make sbom`).
    The dist service checks that the SBOM files cover every file the patch makes. So the committed `sboms/` files, which may be behind, are never uploaded.
 
@@ -344,11 +344,12 @@ What a run does:
      over the Corepack folder would hide it.
    - The 10 GB Actions cache of the repository drops entries older than some hours. So a release
      after a quiet night starts with an empty cache.
-3. The images are pushed to the constellation registry (`registry.test.margince.com/margince/<role>`).
-   They log in as the registry publisher through the `MARGINCE_AUTH_PUBLISHER_TOKEN` secret. They
-   are added to the draft with `add-artifacts --release <version>`, as references pinned by digest.
-4. The release is published with `publish-release --release <version>`. The dist uploads log in with the dist
-   publisher token (the `MARGINCE_DIST_PUBLISHER_TOKEN` secret).
+3. The images are pushed by digest, with no tag, to the target's registry. That is `registry.test.margince.com` or
+   `registry.margince.com`, with the target's registry publisher token. The same builder bakes `bundle`. For each
+   Linux platform, `build-archive` packs the bundle tree of `scripts/release-bundle.sh` with three SBOMs. One `add-artifacts --release <version>` call adds images and archives.
+4. The release is published with `publish-release --release <version>`. The dist uploads use the target's dist
+   publisher token. Each job runs in the target's environment, `dist-test` or `dist-production`, and only
+   `dist-production` holds the production tokens.
 
 Where the patch starts, and why: [cut-a-release.md](../how-to/cut-a-release.md#where-the-patch-of-changes-starts).
 
@@ -375,10 +376,9 @@ default; a tag with an ending, such as `v1.0.0-rc.1`, becomes a `pre-release`. A
 read is refused in seconds, before anything is published.
 
 More checks share that first job. The tag points at a commit on `main`. `LICENSE` carries the
-release's Change Date and version, checked by
-[`scripts/release-license-stamped.sh`](../../scripts/release-license-stamped.sh)
-(`make test-release-license-stamped`). No open issue carries `release: blocker`. And
-the commit carries no failing `verdict` from `merge-attest`.
+release's Change Date and version ([`scripts/release-license-stamped.sh`](../../scripts/release-license-stamped.sh)).
+`VERSION` names the tag's version without its `v` ([`scripts/release-version-file.sh`](../../scripts/release-version-file.sh)).
+No open issue carries `release: blocker`. And the commit carries no failing `verdict` from `merge-attest`.
 
 The `draft` job then checks that a plain tag has a draft release with notes. It holds
 `contents: write` only to read: GitHub shows a draft to no token that cannot write.

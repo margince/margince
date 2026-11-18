@@ -79,7 +79,7 @@ func setupOffering(t *testing.T) *offeringEnv {
 		t.Fatalf("describe the main offering: %v", err)
 	}
 	lane := &offeringLane{provider: newCompanyContextProvider(store)}
-	service := companydossier.NewGrowthFitService(e.Pool, store, offeringConfirmed(store), lane, "routing-1", func() time.Time { return clocktest.Now(t) })
+	service := companydossier.NewGrowthFitService(e.Pool, store, offeringConfirmed(store), lane, func() string { return "routing-1" }, func() time.Time { return clocktest.Now(t) })
 	return &offeringEnv{Env: e, ctx: ctx, lane: lane, service: service}
 }
 

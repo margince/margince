@@ -360,12 +360,12 @@ func TestReembedRunMarkerIsHeldUntilTheRunEnds(t *testing.T) {
 		t.Fatalf("marker = %q/%q while the run is in flight, want reembedding/%q — a second reindex could start over one still running", status, got, populated)
 	}
 
-	if err := e.Store.ReleaseReembedding(ctx, run.Run); err != nil {
+	if err := e.Store.ReleaseReembedding(ctx, run.Run, nil); err != nil {
 		t.Fatalf("releasing the run: %v", err)
 	}
 	// Idempotent: a retried job reporting twice must not disturb the marker,
 	// which after the collapse is the only at-least-once hazard left here.
-	if err := e.Store.ReleaseReembedding(ctx, run.Run); err != nil {
+	if err := e.Store.ReleaseReembedding(ctx, run.Run, nil); err != nil {
 		t.Fatalf("re-releasing the run: %v", err)
 	}
 	_, status, _, err = e.Store.PopulatedIdentity(ctx)

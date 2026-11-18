@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer names Emsland Ventilbau as one of four companies now made prospects, but it never says any company had a previously set value of target or that it was replaced by prospect, so the criterion is not met.",
+  "model": "claude-haiku-5-5",
+  "criterion": "Criterion 2. The answer names Emsland Ventilbau as the company that somebody had already set to something else, says that earlier value was target, and says it was replaced by prospect. Answer no if the answer names a different company, says none of them had a value somebody set, gives a different earlier value, or does not say the earlier value was replaced. Judge only the company and its earlier value: whether the move to prospect has happened or still waits for approval is Criterion 1's question, so an answer that says target is to be replaced by prospect once approved answers yes here.",
+  "answer": "All four companies needed your sign-off, so Margince held each lifecycle change for approval. As agreed, I approved all four: Kieler Pumpenwerk, Rhön Hydraulik, Altmark Fördertechnik and Emsland Ventilbau are now prospects."
+}

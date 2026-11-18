@@ -55,6 +55,13 @@ part needs no draft, and its page holds only the generated half.
 
 ## Prepare the release commit
 
+Set `VERSION` at the repository root to the version, without the tag's `v`: one line, such as `1.3.0`
+for `v1.3.0`. `release-tag.yml` refuses a tag that `VERSION` does not name.
+
+Leave `REVISION` alone. It holds `$Format:%H$`, and `git archive` writes the commit there, so a
+GitHub source download names its own commit. A build reads it through `scripts/build-revision.sh`
+when it has no `.git`.
+
 Update the `Parameters` block of `LICENSE` and nothing else in the file:
 
 1. Set **Change Date** to the date the release goes public plus 2 years, as `YYYY-MM-DD`.
@@ -77,7 +84,8 @@ git push origin v1.0.0
 `release-tag.yml` then checks the tag, the draft and the blockers, and refuses a commit that
 `merge-attest` judged bad. Then it builds the release and signs it, and only then publishes the page:
 
-1. It pushes the three images to `ghcr.io/margince`, tagged with the version.
+1. It pushes the three images to `ghcr.io/margince`, tagged with the version without its `v`, such as
+   `1.0.0`. The programs report that version too, as `VERSION` does.
 2. It packs one server bundle for each Linux platform, with
    [`scripts/release-bundle.sh`](../../scripts/release-bundle.sh). Each bundle and the api and worker images carry
    `THIRD-PARTY-NOTICES.txt`, the license texts of the Go modules the programs link. It is written by
@@ -115,27 +123,63 @@ Two kinds of release live here, and they carry different versions:
 
 | | `release-tag.yml` | `release.yml` |
 |---|---|---|
-| Trigger | a `v*` tag | the same `v*` tag, or started by hand to test the lane |
-| Version | `v1.0.0` (semver) | `YYYY.edition.bugfix`, from the tag; a run by hand is `1970.<run>` |
-| Publishes to | the GitHub release page | the dist service at `dist.test.margince.com` |
-| Carries | the notes, the images on `ghcr.io`, a server bundle for each Linux platform, SBOMs, a signed `SHA256SUMS` | the patch of changes, SBOMs, a changelog, role images |
+| Trigger | a `v*` tag | the same plain `vX.Y.Z` tag, or started by hand with that tag |
+| Version | `v1.0.0` (semver) | `1.0.0`: the tag without its `v` |
+| Publishes to | the GitHub release page | `dist.test.margince.com` on a tag, or by hand with the default `target=test`; `dist.margince.com` only by hand with `target=production` |
+| Carries | the notes, the images on `ghcr.io`, a server bundle for each Linux platform, SBOMs, a signed `SHA256SUMS` | the patch of changes, SBOMs, a changelog, role images, an archive of the programs for each Linux platform |
 
-The version form of the dist service does not accept a `v` prefix, so the two lanes use different names.
-`scripts/release-dist-version.sh` derives one from the other by a fixed rule, so the dist version can be
-worked out again from the tag:
-
-- `YYYY` is the year, in UTC, that `vX.Y.0` was tagged.
-- The edition is the place of `vX.Y.0` in that year's `.0` tags, in version order, counting from 1.
-- The last part is the patch, `Z`.
-
-A patch keeps the year and edition of its `vX.Y.0`, so `v1.1.3` comes after `v1.1.0` in any year. A tag
+One tag cuts both releases. The dist service accepts no `v` prefix, so the tag `v1.0.0` makes the dist
+release `1.0.0`. Never push a tag `1.0.0` next to `v1.0.0`: the release CLI refuses that pair. A tag
 with an added part, such as `v1.0.0-rc.1`, makes no dist release.
+
+### Start a dist release by hand
+
+A tag publishes to the test service only. Once the test release works, publish the same tag to production:
+
+```sh
+gh workflow run release.yml --ref main -f tag=v1.0.0 -f target=production
+```
+
+If the run of a tag failed before its draft, start it again with `-f target=test`. Each target has its own
+publisher tokens. Test uses the repository secrets `MARGINCE_DIST_PUBLISHER_TOKEN` and
+`MARGINCE_AUTH_PUBLISHER_TOKEN`. Production uses `MARGINCE_PRODUCTION_DIST_PUBLISHER_TOKEN` and
+`MARGINCE_PRODUCTION_AUTH_PUBLISHER_TOKEN`, set only in the `dist-production` environment, so no test run gets
+them. A run whose tokens are missing stops before it drafts, and never uses the tokens of the other target.
+
+The run builds the commit the tag names, never the tip of `main`, so the dist release describes the
+same source as the GitHub release. `--ref main` only picks the copy of the workflow that runs.
+
+Before the lane drafts, it refuses a tag that is not on `main`, as the GitHub release does. The check is
+[`scripts/release-tag-on-main.sh`](../../scripts/release-tag-on-main.sh) (`make test-release-tag-on-main`).
+Then [`scripts/release-dist-version.sh`](../../scripts/release-dist-version.sh) reads the version from the tag
+(`make test-release-dist-version`). The tag is `v` and three numbers,
+with no ending. A number may be `0`, but no number has a leading zero, such as `01`.
+
+The dist service has one line of releases. A new version must be above every published release,
+withdrawn ones too. The release CLI refuses a lower version before the draft.
+
+### What the archive of a platform holds
+
+For `linux-amd64` and `linux-arm64` the archive holds the server bundle of that platform, without its
+top folder. The lane packs it with [`scripts/release-bundle.sh`](../../scripts/release-bundle.sh) from
+the same `bundle` bake as `release-tag.yml`, so every path matches the bundle. The programs are in
+`bin/`, and `VERSION` names the dist version.
+
+Before the upload, the lane runs `bin/margince-<role> --version` for the `linux-arm64` tree. Each program
+must print `margince-<role> <version> (revision <commit>)`, with the version of the dist release.
+
+`build-archive` of the release CLI turns each folder into an archive and three SBOM files.
+`add-artifacts` uploads both platforms, with the role images, in one call. The dist service refuses a
+platform that comes in parts.
+
+The role images are pushed with no version tag. The release names each image by its hash, as
+`<role>=<repository>@sha256:<hash>`.
 
 ### Where the patch of changes starts
 
-The patch of `release.yml` starts at the patch base. The patch base is the newest published release on
-the release's line, as the dist service records it. The line is `main` or one `lts/YYYY` branch. A withdrawn
-release was published, so it can be the base: an installation that runs it still gets the next patch.
+The patch of `release.yml` starts at the patch base. The patch base is the newest published release,
+as the dist service records it. A withdrawn release was published, so it can be the base: an installation that
+runs it still gets the next patch.
 
 The release CLI reads the base from the dist service with `resolve-patch-base --release`, given the version of
 the new release. It names the version and the git revision of one release. The lane cuts the patch from that
@@ -143,10 +187,11 @@ revision, and `draft-release` names that version as `--patch-base`. So the patch
 record and cannot disagree. The publisher uses `--release <version>` for
 `draft-release`, `add-artifacts` and `publish-release`.
 
-A lane that was cancelled or failed published nothing. So the next patch starts at the newest published release
-on the line, and it also carries the files of the lane that was skipped.
+A lane that was cancelled or failed published nothing. So the next patch starts at the newest published
+release. It carries the changes of the skipped release that are still in the next one. A file that the skipped
+release added and a later commit removed is in neither tree, so no patch carries it.
 
-If no release was ever published on `main`, the release is the first one. Its patch is the whole tree, and
+If no release was ever published, the release is the first one. Its patch is the whole tree, and
 `draft-release` marks it with `--first-release`.
 
 `scripts/release-patch-base.sh` reads the record of the release CLI. It accepts a base or the first-release mark,

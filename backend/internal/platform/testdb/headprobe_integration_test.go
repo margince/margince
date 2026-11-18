@@ -28,9 +28,9 @@ import (
 // every arm below starts from and then breaks in exactly one way.
 func atHead(t *testing.T, ns dbmigrate.Namespace) map[string]dbmigrate.LedgerRow {
 	t.Helper()
-	recorded := make(map[string]dbmigrate.LedgerRow, len(ns.Migrations))
-	for _, m := range ns.Migrations {
-		recorded[m.Version] = dbmigrate.LedgerRow{Name: m.Name, Digest: new(dbmigrate.Digest(m))}
+	recorded := map[string]dbmigrate.LedgerRow{}
+	for _, entry := range ns.LedgerAtHead() {
+		recorded[entry.Version] = dbmigrate.LedgerRow{Name: entry.Name, Digest: new(entry.Digest)}
 	}
 	return recorded
 }
@@ -85,13 +85,12 @@ func TestADeclaredRenumberIsJudgedAsTheMigratorLeavesIt(t *testing.T) {
 	}
 }
 
-// TestEveryWayALedgerCanLieIsRefused walks the five shapes a tracking table can
-// take that all LOOK migrated. Each is a real failure mode: a template built
-// before the newest migration landed; one whose migration was renumbered under
-// it; one migrated by a binary that recorded no digest; one whose migration was
-// edited after it was applied; and a clone taken from a template another branch
-// built, which is at head for that branch and carries objects this one never
-// created.
+// TestEveryWayALedgerCanLieIsRefused walks the shapes a tracking table can
+// take that all look migrated. Each is a real failure mode. A template was
+// built before the newest migration landed, or by the history, without the
+// baseline's row. A migration was renumbered or edited under it, or a binary
+// recorded no digest. A clone came from another branch's template, at head for
+// that branch and holding objects this one never created.
 func TestEveryWayALedgerCanLieIsRefused(t *testing.T) {
 	ns := coreNamespace(t)
 	newest := ns.Migrations[len(ns.Migrations)-1]
@@ -104,6 +103,11 @@ func TestEveryWayALedgerCanLieIsRefused(t *testing.T) {
 		{
 			name:    "a migration this binary embeds was never applied",
 			corrupt: func(l map[string]dbmigrate.LedgerRow) { delete(l, newest.Version) },
+			expects: "behind this binary",
+		},
+		{
+			name:    "the history built it, so the baseline is not recorded",
+			corrupt: func(l map[string]dbmigrate.LedgerRow) { delete(l, ns.Baseline.Migration.Version) },
 			expects: "behind this binary",
 		},
 		{

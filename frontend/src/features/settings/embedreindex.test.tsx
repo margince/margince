@@ -429,3 +429,30 @@ it("says the index is withheld rather than unbound when both hold", async () => 
     false,
   );
 });
+
+// The last reindex can have run with one model while search uses another,
+// with no record pending. The badge then needs its cause beside it, and the
+// count says nothing worth reading.
+it("names both models when the last reindex ran with another one, and drops a zero count", async () => {
+  mount(REINDEX_OPERATOR, {
+    "GET /embeddings/reindex/status": () =>
+      json({ ...STATUS_NEEDED, entities_pending: 0 }),
+  });
+  expect(await screen.findByText("Reindex needed")).toBeTruthy();
+  expect(
+    screen.getByText(
+      "The last reindex ran with anthropic/voyage-2@1024. Search now uses anthropic/voyage-3@1024.",
+    ),
+  ).toBeTruthy();
+  expect(screen.queryByText("0 records pending")).toBeNull();
+});
+
+it("names no model when the index matches the configured one", async () => {
+  mount(REINDEX_OPERATOR, {
+    "GET /embeddings/reindex/status": () => json(STATUS_IDLE),
+  });
+  expect(await screen.findByText("Index status")).toBeTruthy();
+  await waitFor(() =>
+    expect(screen.queryByText(/The last reindex ran with/)).toBeNull(),
+  );
+});
