@@ -1,4 +1,4 @@
-import { ArrowLeft, PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
+import { ArrowLeft, Search } from "lucide-react";
 import { type RefObject, Suspense, useEffect, useId, useRef } from "react";
 import { AppLink } from "../design-system/applink";
 import { Kbd } from "../design-system/atoms";
@@ -10,12 +10,7 @@ import { useLocale, useT } from "../i18n";
 import { lazy } from "../i18n/lazy";
 import { EXTENSION_SCREEN, findExtension } from "../lib/extensions";
 import { useFirstScreenSettled } from "../lib/journeymarks";
-import {
-  ariaKeyShortcuts,
-  binding,
-  shortcutCaps,
-  shortcutTip,
-} from "../lib/keymap";
+import { ariaKeyShortcuts, binding, shortcutCaps } from "../lib/keymap";
 import {
   leaveRecord,
   listAddress,
@@ -50,9 +45,9 @@ const SetupReminder = lazy(
 // the page under it — where you are (the trail), how you reach anything (the
 // search), what is waiting for you (the bell), and who you are signed in as.
 //
-// It stands on the sidebar's own ground with a rule under it, so the chrome
-// reads as one L-shaped frame around the content rather than as two panels that
-// happen to touch. The page's own name is NOT here: it belongs to the document,
+// It stands on the sidebar's own ground, so the chrome reads as one L-shaped
+// frame around the content card rather than as two panels that happen to
+// touch. The page's own name is NOT here: it belongs to the document,
 // scrolls with it, and stands in the content column above the content it names.
 //
 // Three tracks, the outer two equal, so the search sits at the middle of the
@@ -204,14 +199,10 @@ function TopBarHome() {
 export function TopBar({
   route,
   section,
-  collapsed,
-  onToggle,
   onOpenSearch,
 }: Readonly<{
   route: Route;
   section?: NavSection;
-  collapsed: boolean;
-  onToggle?: () => void;
   onOpenSearch: () => void;
 }>) {
   const t = useT();
@@ -219,7 +210,6 @@ export function TopBar({
   // Every list the bar stands over is noted, so a record opened from it can
   // lead back to it with the same filter.
   useEffect(() => rememberListAddress(hash), [hash]);
-  const toggleLabel = collapsed ? t("shell.expand") : t("shell.collapse");
   const searchRef = useRef<HTMLButtonElement>(null);
   // The page heading under the bar already names the page, and the account
   // menu carries the setup reminder at this width.
@@ -228,29 +218,6 @@ export function TopBar({
   return (
     <header className="topbar">
       <div className="topbar-lead">
-        {onToggle && (
-          <button
-            type="button"
-            className="topbar-toggle"
-            aria-label={toggleLabel}
-            // The shortcut belongs in the tooltip, not in the accessible name:
-            // a speech-input user says the words they can read, and "Collapse
-            // sidebar ⌘B" is not one of them.
-            title={shortcutTip(
-              toggleLabel,
-              binding("sidebar").keys,
-              t("shell.shortcuts.then"),
-            )}
-            aria-expanded={!collapsed}
-            onClick={onToggle}
-          >
-            {collapsed ? (
-              <PanelLeftOpen size={17} aria-hidden />
-            ) : (
-              <PanelLeftClose size={17} aria-hidden />
-            )}
-          </button>
-        )}
         {/* The installed app has no browser Back, so a record page carries
             its own way out. */}
         {belowList(route) && (

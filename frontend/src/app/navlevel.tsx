@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import {
   createContext,
   Fragment,
@@ -10,6 +10,8 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
+  useRef,
   useState,
 } from "react";
 import { AppLink } from "../design-system/applink";
@@ -18,6 +20,7 @@ import { useHoverIntent } from "../design-system/hoverintent";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { useDisabledCoreFeatures } from "../lib/corefeatures";
+import { ariaKeyShortcuts, binding, shortcutTip } from "../lib/keymap";
 import { useReadsTeamProgress } from "../lib/progressreader";
 import { navigate, type Route, routeHash } from "../lib/router";
 import {
@@ -52,6 +55,26 @@ function navTipKey(level: NavTrailLevel, id: string): string {
 }
 
 const BACK_TIP_KEY = "rail-level-back";
+const TOGGLE_TIP_KEY = "rail-toggle";
+
+/**
+ * A row's tooltip, at the row's right edge. Fixed to the viewport and placed
+ * from the row's box, because the panel scrolls and would clip it.
+ */
+function NavTip({ children }: Readonly<{ children: ReactNode }>) {
+  const tip = useRef<HTMLSpanElement>(null);
+  useLayoutEffect(() => {
+    const row = tip.current?.parentElement?.getBoundingClientRect();
+    if (!tip.current || !row) return;
+    tip.current.style.left = `${row.right}px`;
+    tip.current.style.top = `${row.top + row.height / 2}px`;
+  });
+  return (
+    <span className="navtip" role="tooltip" ref={tip}>
+      {children}
+    </span>
+  );
+}
 
 /** A level's destination rows. Back is a `.navitem` too, and stands outside them. */
 export const DESTINATION_ROW = ".navlevel .navwrap .navitem";
@@ -237,11 +260,27 @@ function NavLevelRow({
   const active = level.activeId === entry.id;
   const key = navTipKey(level, entry.id);
   const tip = useRowTip(state, { key, level, id: entry.id, label });
+  // A label keeps one line, so one too long for the open rail is cut and its
+  // tip carries all of it. Measured when raised: a cut renders nothing.
+  const labelBox = useRef<HTMLSpanElement>(null);
+  const [cut, setCut] = useState(false);
+  const raise = (by: "pointer" | "focus") => {
+    const box = labelBox.current;
+    const clipped =
+      !state.collapsed && box !== null && box.scrollWidth > box.clientWidth;
+    setCut(clipped);
+    if (clipped) {
+      state.onTip(key, by);
+    } else {
+      tip.raise(by);
+    }
+  };
+  const tipText = cut && !state.collapsed ? label : tip.text;
   const handlers = useRowIntent({
     level,
     entry,
     active,
-    raiseTip: tip.raise,
+    raiseTip: raise,
     closeTip: () => state.onTip(null),
     select: () => onSelect(entry),
   });
@@ -256,7 +295,9 @@ function NavLevelRow({
       <entry.icon aria-hidden />
       {/* The label stays mounted and fades, so the transition is continuous
           rather than a pop. aria-label carries the accessible name either way. */}
-      <span className="navlabel">{label}</span>
+      <span className="navlabel" ref={labelBox}>
+        {label}
+      </span>
       {count !== undefined && count > 0 && (
         // The wrapper only places the figure: trailing in a row, pinned to
         // the glyph's corner when the rail is collapsed or a phone bar.
@@ -271,11 +312,7 @@ function NavLevelRow({
           row and never tears it away mid-read (WCAG 1.4.13, hoverable). A
           sibling could not manage that without making the wrapper itself
           interactive. */}
-      {tip.text !== null && state.tip === key && (
-        <span className="navtip" role="tooltip">
-          {tip.text}
-        </span>
-      )}
+      {tipText !== null && state.tip === key && <NavTip>{tipText}</NavTip>}
     </AppLink>
   );
 }
@@ -325,9 +362,7 @@ function NavLevelGroupView({
       role={labelId ? "group" : undefined}
       aria-labelledby={labelId}
     >
-      {/* Collapsed the label hides its text and draws a hairline inside the same
-          space — it keeps its box in both states, and swapping it for a shorter
-          <hr> re-spaced every group and drifted the icons. The group is still
+      {/* Collapsed the label folds away and is hidden. The group is still
           NAMED there: a hidden element referenced by `aria-labelledby` is read
           for the name, which is the whole reason the name is wired this way
           rather than taken from the content. */}
@@ -408,11 +443,54 @@ function NavLevelBack({
         {above === undefined ? t("shell.navBackApp") : t("shell.navBack")}
       </span>
       {state.collapsed && state.tip === BACK_TIP_KEY && (
-        <span className="navtip" role="tooltip">
-          {label}
-        </span>
+        <NavTip>{label}</NavTip>
       )}
     </button>
+  );
+}
+
+/**
+ * The sidebar's own width control, at the foot of the panel it folds.
+ *
+ * The visible word is the expanded state's alone: folded, the row is a glyph
+ * whose name and tip say what a press does next.
+ */
+export function NavRailToggle({
+  state,
+  onToggle,
+}: Readonly<{ state: TipState; onToggle: () => void }>) {
+  const t = useT();
+  const label = state.collapsed ? t("shell.expand") : t("shell.collapse");
+  const keys = binding("sidebar").keys;
+  const hover = useHoverIntent(
+    () => state.onTip(TOGGLE_TIP_KEY, "pointer"),
+    () => state.onTip(null),
+  );
+  return (
+    <div className="navwrap railfoot">
+      <button
+        type="button"
+        className="navitem navtoggle t-body"
+        aria-label={label}
+        aria-expanded={!state.collapsed}
+        aria-keyshortcuts={ariaKeyShortcuts(keys)}
+        onClick={onToggle}
+        onPointerEnter={hover.onPointerEnter}
+        onPointerLeave={hover.onPointerLeave}
+        onFocus={() => state.onTip(TOGGLE_TIP_KEY, "focus")}
+        onBlur={() => state.onTip(null)}
+      >
+        {state.collapsed ? (
+          <PanelLeftOpen aria-hidden />
+        ) : (
+          <PanelLeftClose aria-hidden />
+        )}
+        <span className="navlabel">{t("shell.collapse")}</span>
+        {state.collapsed && state.tip === TOGGLE_TIP_KEY && (
+          <NavTip>{shortcutTip(label, keys, t("shell.shortcuts.then"))}</NavTip>
+        )}
+      </button>
+    </div>
   );
 }
 

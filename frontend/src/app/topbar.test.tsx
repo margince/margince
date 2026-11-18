@@ -76,10 +76,6 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-// The collapse control is minted only when the bar is handed a toggle, so a case
-// that needs it on screen supplies one that records nothing.
-const ignoreToggle = () => undefined;
-
 // The trail landmark. Named, because a page carries more than one navigation
 // landmark — the sidebar is the other — and two unnamed ones are
 // indistinguishable in a screen reader's landmark list.
@@ -102,8 +98,6 @@ function renderTopBar(
   route: Route,
   extra: Readonly<{
     section?: NavSection;
-    collapsed?: boolean;
-    onToggle?: () => void;
     onOpenSearch?: () => void;
   }> = {},
 ) {
@@ -111,8 +105,6 @@ function renderTopBar(
     <TopBar
       route={route}
       section={extra.section}
-      collapsed={extra.collapsed ?? false}
-      onToggle={extra.onToggle}
       onOpenSearch={extra.onOpenSearch ?? ignoreSearch}
     />,
   );
@@ -124,10 +116,7 @@ describe("Top bar search (AC-shell-7)", () => {
   it("opens the palette and never takes the query itself", async () => {
     const user = userEvent.setup();
     const onOpenSearch = vi.fn();
-    const { container } = renderTopBar(
-      { screen: "home" },
-      { onOpenSearch, onToggle: ignoreToggle },
-    );
+    const { container } = renderTopBar({ screen: "home" }, { onOpenSearch });
 
     await user.click(
       screen.getByRole("button", { name: "Search or ask Margince" }),
@@ -139,10 +128,7 @@ describe("Top bar search (AC-shell-7)", () => {
   });
 
   it("is a button rather than the field it is styled as", () => {
-    const { container } = renderTopBar(
-      { screen: "home" },
-      { onToggle: ignoreToggle },
-    );
+    const { container } = renderTopBar({ screen: "home" });
     expect(container.querySelector(".topbar-search")?.tagName).toBe("BUTTON");
   });
 
@@ -151,10 +137,7 @@ describe("Top bar search (AC-shell-7)", () => {
   // be made to spell out ⌘K. `name` is an exact match on the computed name, so
   // a kbd that leaked into it fails this.
   it("is named for what it does, with the shortcut kept out of that name", () => {
-    const { container } = renderTopBar(
-      { screen: "home" },
-      { onToggle: ignoreToggle },
-    );
+    const { container } = renderTopBar({ screen: "home" });
     expect(
       screen.getByRole("button", { name: "Search or ask Margince" }),
     ).toBeTruthy();
@@ -179,7 +162,7 @@ describe("Top bar search (AC-shell-7)", () => {
   // The name is the printed words alone, so a speech-input reader's "click
   // Search or ask Margince" matches it; a screen reader hears the chord apart.
   it("takes its name from its printed words and announces the chord apart", () => {
-    renderTopBar({ screen: "home" }, { onToggle: ignoreToggle });
+    renderTopBar({ screen: "home" });
     const search = screen.getByRole("button", {
       name: "Search or ask Margince",
     });
@@ -198,11 +181,7 @@ describe("Top bar at phone width", () => {
     client.setQueryData(["me"], repSeeing(TWO_MARKS));
     renderWith(
       client,
-      <TopBar
-        route={{ screen: "deals" }}
-        collapsed={false}
-        onOpenSearch={ignoreSearch}
-      />,
+      <TopBar route={{ screen: "deals" }} onOpenSearch={ignoreSearch} />,
     );
     expect(screen.queryByRole("navigation", { name: "Breadcrumb" })).toBeNull();
     // The name starts with what the chip prints (WCAG 2.5.3): the initials until
@@ -280,50 +259,12 @@ describe("Top bar at phone width", () => {
   });
 });
 
-// The sidebar's own control, moved out of the sidebar: a panel that can collapse
-// to 56px cannot hold the affordance that brings it back at a width where its
-// labels are gone.
-describe("Top bar sidebar toggle", () => {
-  it("reports the sidebar expanded and calls the handler on click", async () => {
-    const user = userEvent.setup();
-    const onToggle = vi.fn();
-    renderTopBar({ screen: "home" }, { onToggle });
-
-    const toggle = screen.getByRole("button", { name: "Collapse sidebar" });
-    expect(toggle.getAttribute("aria-expanded")).toBe("true");
-    await user.click(toggle);
-    expect(onToggle).toHaveBeenCalledTimes(1);
-  });
-
-  // The other half, and the one a hard-coded attribute breaks silently: the
-  // control names the state it will MOVE to while `aria-expanded` reports the
-  // state the sidebar is IN. Either alone passes against a control that never
-  // changes.
-  it("reports the sidebar collapsed and names the state it will move to", () => {
-    renderTopBar(
-      { screen: "home" },
-      { collapsed: true, onToggle: ignoreToggle },
-    );
-    const toggle = screen.getByRole("button", { name: "Expand sidebar" });
-    expect(toggle.getAttribute("aria-expanded")).toBe("false");
-  });
-
-  // A bar with no sidebar behind it mints no control for one. The toggle is
-  // conditioned on the handler because the handler is the only evidence the bar
-  // has that a sidebar exists at all.
-  it("mints no control when it is handed no toggle", () => {
-    const { container } = renderTopBar({ screen: "home" });
-    expect(container.querySelector(".topbar-toggle")).toBeNull();
-    expect(screen.queryByRole("button", { name: /sidebar$/ })).toBeNull();
-  });
-});
-
 // Where the reader is, ending in the page itself. The last stop is the page and
 // is never a link — a link to the page you are already on is a control that does
 // nothing — and it is the ONE element in the bar that claims the current page.
 describe("Top bar trail", () => {
   it("names the page once on a list route, with nothing to lead back to", () => {
-    renderTopBar({ screen: "deals" }, { onToggle: ignoreToggle });
+    renderTopBar({ screen: "deals" });
     expect(stopTexts()).toEqual(["Deals"]);
     // A one-stop trail is the page and nothing else: no link, and no separator
     // leading a stop that is not there.
@@ -338,8 +279,6 @@ describe("Top bar trail", () => {
       client,
       <TopBar
         route={{ screen: "contacts", id: "p-anna" }}
-        collapsed={false}
-        onToggle={ignoreToggle}
         onOpenSearch={ignoreSearch}
       />,
     );
@@ -364,17 +303,14 @@ describe("Top bar trail", () => {
       "fetch",
       vi.fn(async () => new Response(null, { status: 404 })),
     );
-    renderTopBar(
-      { screen: "contacts", id: "p-anna" },
-      { onToggle: ignoreToggle },
-    );
+    renderTopBar({ screen: "contacts", id: "p-anna" });
     expect(stopTexts()).toEqual(["Contacts", "p-anna"]);
   });
 
   it("leads a section entry back to the section it belongs to", () => {
     renderTopBar(
       { screen: "settings", id: "account" },
-      { section: fixtureSection("account"), onToggle: ignoreToggle },
+      { section: fixtureSection("account") },
     );
     expect(stopTexts()).toEqual(["Settings", "Account"]);
     expect(
@@ -391,10 +327,7 @@ describe("Top bar trail", () => {
   // with no section resolved there is no entry to name either, so the trail is
   // the screen alone.
   it("keeps a screen's own id segment out of the trail", () => {
-    renderTopBar(
-      { screen: "settings", id: "deep" },
-      { onToggle: ignoreToggle },
-    );
+    renderTopBar({ screen: "settings", id: "deep" });
     expect(stopTexts()).toEqual(["Settings"]);
     expect(trail().textContent).not.toContain("deep");
   });
@@ -403,7 +336,7 @@ describe("Top bar trail", () => {
   // Settings is what its trail leads back to. The unit is named as the settings
   // pages name it: its title, else its key read as words.
   it("leads a composed unit back to Settings", () => {
-    renderTopBar({ screen: "ext", id: "notes" }, { onToggle: ignoreToggle });
+    renderTopBar({ screen: "ext", id: "notes" });
     expect(stopTexts()).toEqual(["Settings", "Notes"]);
     expect(
       within(trail())
@@ -416,7 +349,7 @@ describe("Top bar trail", () => {
   // to put whatever the reader typed on screen, which reads as a page by that
   // name existing.
   it("names an unknown route rather than echoing the hash", () => {
-    renderTopBar(parseHash("#/nope"), { onToggle: ignoreToggle });
+    renderTopBar(parseHash("#/nope"));
     expect(stopTexts()).toEqual(["Not found"]);
     expect(trail().textContent).not.toContain("nope");
   });
@@ -425,7 +358,7 @@ describe("Top bar trail", () => {
   // compose is genuinely an unknown page, and the trail says so rather than
   // printing the segment the reader typed.
   it("names an uncomposed unit route as the unknown page it is", () => {
-    renderTopBar({ screen: "ext", id: "ghost" }, { onToggle: ignoreToggle });
+    renderTopBar({ screen: "ext", id: "ghost" });
     expect(stopTexts()).toEqual(["Not found"]);
     expect(trail().textContent).not.toContain("ghost");
   });
@@ -453,12 +386,7 @@ describe("Top bar trail below Filters and views", () => {
     renderWith(
       mounted.client,
       <>
-        <TopBar
-          route={route}
-          collapsed={false}
-          onToggle={ignoreToggle}
-          onOpenSearch={ignoreSearch}
-        />
+        <TopBar route={route} onOpenSearch={ignoreSearch} />
         {route.screen === "lists" ? (
           <FiltersScreen list={route.id} />
         ) : (

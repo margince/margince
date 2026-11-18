@@ -18,6 +18,7 @@ import { ShownAddressSink } from "../lib/screenaddress";
 import { useScrollMemory } from "../lib/scrollmemory";
 import { useShortcutDispatcher, useShortcutHandler } from "../lib/shortcuts";
 import { readStored, STORAGE_KEYS, writeStored } from "../lib/storage";
+import { PHONE_MAX_WIDTH, widthMedia } from "../lib/viewport";
 import { AgentEdge } from "./agent-edge";
 import { CaptureChip } from "./capture-chip";
 import { CaptureHealthBanner } from "./capturehealthbanner";
@@ -62,8 +63,8 @@ export { PageTitle } from "./shelltitle";
 export type ShellCounts = NavCounts;
 
 // WCAG 2.4.1, Bypass Blocks. Every page in the product puts the same block ahead
-// of its content — up to twelve navigation rows and the agent in the sidebar,
-// then the strip's collapse control, trail, search, system-of-record
+// of its content — up to twelve navigation rows, the agent and the collapse
+// control in the sidebar, then the strip's trail, search, system-of-record
 // chip, approvals bell and account menu — and without this a keyboard reader
 // walked all of it again on every page they opened.
 //
@@ -99,6 +100,21 @@ function SkipToContent({
 // `main-record` adds nothing to that width and never appears without it — it
 // names the column's SCROLLER as a container, so the record's tab strip
 // measures the width content can use (shell.css, `container-name: work`).
+// Up to a tablet's width a 256px sidebar takes a quarter of the window or more.
+const RAIL_FOLDS_MAX_WIDTH = 1024;
+
+// A choice this browser stored wins in both directions; with none, a tablet
+// starts on the 56px rail. Nothing is written, so the default stays a default.
+function startsCollapsed(): boolean {
+  const stored = readStored(STORAGE_KEYS.sidebarCollapsed);
+  if (stored !== null) {
+    return stored === "1";
+  }
+  const under = (width: number) =>
+    globalThis.matchMedia?.(widthMedia(width)).matches ?? false;
+  return under(RAIL_FOLDS_MAX_WIDTH) && !under(PHONE_MAX_WIDTH);
+}
+
 function mainClasses(gridded: boolean, griddedRecord: boolean): string {
   if (!gridded) {
     return "main";
@@ -130,9 +146,7 @@ export function Shell({
     route.screen === EXTENSION_SCREEN && findExtension(route.id) !== null;
   const leveled = route.screen === SETTINGS_SCREEN || onUnitPage;
   const { gridded, griddedRecord } = useReadingColumn(route);
-  const [collapsed, setCollapsed] = useState(
-    () => readStored(STORAGE_KEYS.sidebarCollapsed) === "1",
-  );
+  const [collapsed, setCollapsed] = useState(startsCollapsed);
   // What the sidebar's walk between levels remembers — where a walk OUT of a
   // level returns to, and whether the level that arrives was asked for and takes
   // focus. The shell holds it because the shell outlives every rail: the rail on
@@ -206,6 +220,7 @@ export function Shell({
     route,
     counts,
     collapsed,
+    onToggle: toggle,
   };
 
   return (
@@ -231,19 +246,9 @@ export function Shell({
           </NavWalkProvider>
           <main className={mainClasses(gridded, griddedRecord)}>
             {leveled ? (
-              <SettingsTopBar
-                route={route}
-                collapsed={collapsed}
-                onToggle={toggle}
-                onOpenSearch={onOpenSearch}
-              />
+              <SettingsTopBar route={route} onOpenSearch={onOpenSearch} />
             ) : (
-              <TopBar
-                route={route}
-                collapsed={collapsed}
-                onToggle={toggle}
-                onOpenSearch={onOpenSearch}
-              />
+              <TopBar route={route} onOpenSearch={onOpenSearch} />
             )}
             {/* Mounted from the start: it holds the outage watcher, and a
                 known offline state shows in the first paint. */}

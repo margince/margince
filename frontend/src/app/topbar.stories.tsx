@@ -36,14 +36,15 @@ import { TopBar } from "./topbar";
  * use. What it would get wrong is the thing worth looking at.
  *
  * The strip's height is one token, `--topbarH`, and the sidebar's head is
- * measured against it so the first destination's row begins on the line this
- * bar's rule ends on. That alignment is a claim about TWO components, so it can
- * only be read with the panel beside the strip — which is the other reason these
- * frames render the whole L rather than the bar alone.
+ * exactly that band, so the brand chip and the bar's controls share one centre
+ * line and the two read as one chrome over the content card. That alignment is
+ * a claim about TWO components, so it can only be read with the panel beside
+ * the strip — which is the other reason these frames render the whole L rather
+ * than the bar alone.
  *
- * The sidebar control is live in every frame, so either state can be moved to
- * the other. What that shows is the search MOVING: it is centred on the column,
- * the column's left edge travels 188px, and the field travels half of that. A
+ * The sidebar control at the panel's foot is live in every frame, so either
+ * state can be moved to the other. What that shows is the search MOVING: it is centred on the column,
+ * the column's left edge travels 200px, and the field travels half of that. A
  * field that stayed put under the toggle would be centred on the window, which
  * is the arrangement this bar was changed away from.
  *
@@ -208,15 +209,10 @@ function BarFrame({
         section={section}
         counts={counts}
         collapsed={collapsed}
+        onToggle={() => setCollapsed((current) => !current)}
       />
       <main className="main">
-        <TopBar
-          route={route}
-          section={section}
-          collapsed={collapsed}
-          onToggle={() => setCollapsed((current) => !current)}
-          onOpenSearch={openSearch}
-        />
+        <TopBar route={route} section={section} onOpenSearch={openSearch} />
         <div className="scroll">
           <PageTitle route={route} section={section} />
           <div className="wrap">
@@ -276,7 +272,7 @@ export const ListRoute: Story = {
  * The same route with the sidebar at 56px.
  *
  * This is the frame the centring claim is made against: the content column's
- * left edge has moved 188px and the search has moved with it, staying at the
+ * left edge has moved 200px and the search has moved with it, staying at the
  * middle of the column it belongs to. `--railW` is a registered length, so the
  * bar's grid glides rather than snapping to the new width.
  */
@@ -508,10 +504,8 @@ export const Narrow: Story = {
  * The strip gives up CONTROLS here and no geometry: `--topbarH` and
  * `--pageGutter` are one number at every width, so the bar is the same height on
  * a phone as on a desktop and stands on the same gutter as the content column
- * under it. What goes is the collapse control — there is no panel left to
- * collapse, so it is absent rather than disabled — and the bell, because the
- * bottom bar carries Decisions at this width and the same count twice on a 390px
- * row reads as two queues. What stays is exactly what a phone reader cannot get
+ * under it. What goes is the bell, because the bottom bar carries Decisions at
+ * this width and the same count twice on a 390px row reads as two queues. What stays is exactly what a phone reader cannot get
  * any other way: where they are, how to search, and who they are.
  *
  * The panel is the other half of the frame. It is five glyphs — four

@@ -26,7 +26,7 @@ afterEach(() => {
 // The bar as the shell mounts it: it re-renders with whatever the address says.
 function RoutedTopBar() {
   const route = useRoute();
-  return <TopBar route={route} collapsed={false} onOpenSearch={ignoreSearch} />;
+  return <TopBar route={route} onOpenSearch={ignoreSearch} />;
 }
 
 // Resolves once the browser has delivered the next `hashchange`. Listened for

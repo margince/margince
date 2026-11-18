@@ -31,7 +31,12 @@ import {
   NAV,
   type NavSection,
 } from "./nav";
-import { DESTINATION_ROW, NavLevelView, useNavLevel } from "./navlevel";
+import {
+  DESTINATION_ROW,
+  NavLevelView,
+  NavRailToggle,
+  useNavLevel,
+} from "./navlevel";
 import { useNavTip } from "./navtip";
 import { usePopoverDismiss } from "./popover";
 import type { ShellCounts } from "./shell";
@@ -219,12 +224,15 @@ export type RailProps = {
   route: Route;
   counts?: ShellCounts;
   collapsed?: boolean;
+  /** Folds or widens the panel; without it the panel draws no control for it. */
+  onToggle?: () => void;
 };
 
 export function WorkspaceRail({
   route,
   counts,
   collapsed = false,
+  onToggle,
   section,
 }: Readonly<RailProps & { section?: NavSection }>) {
   const t = useT();
@@ -412,6 +420,9 @@ export function WorkspaceRail({
           <div className="railagent">
             <AgentRail />
           </div>
+        )}
+        {!phone && onToggle && (
+          <NavRailToggle state={navTip} onToggle={onToggle} />
         )}
       </nav>
     </>

@@ -562,6 +562,28 @@ test("About Margince meets AA", async ({ page }) => {
   await expect(accountTrigger(page)).toBeFocused();
 });
 
+// The sidebar's own control, at the foot of the rail, swept in both states:
+// expanded it is a labelled row, collapsed a glyph whose tip is up when swept.
+test("the sidebar toggle at the rail's foot meets AA in both states", async ({
+  page,
+}) => {
+  await page.goto("/#/home");
+  await page.waitForLoadState("networkidle");
+  const rail = page.locator("nav.rail");
+  const collapse = rail.getByRole("button", { name: de["shell.collapse"] });
+  await expect(collapse).toHaveAttribute("aria-expanded", "true");
+  await settleAnimations(page);
+  await expectNoAaViolations(page, "home — rail expanded, its toggle row");
+
+  await collapse.click();
+  const expand = rail.getByRole("button", { name: de["shell.expand"] });
+  await expect(expand).toHaveAttribute("aria-expanded", "false");
+  await expand.focus();
+  await expect(rail.getByRole("tooltip")).toBeVisible();
+  await settleAnimations(page);
+  await expectNoAaViolations(page, "home — rail collapsed, its toggle's tip");
+});
+
 // A page whose heading has drawn, with focus out of every field, so a key
 // press reaches the app's shortcuts.
 async function openForKeys(page: Page, hash: string) {

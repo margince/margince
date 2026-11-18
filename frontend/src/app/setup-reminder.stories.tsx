@@ -107,7 +107,6 @@ function reminder(world: World = {}) {
         <main className="main">
           <TopBar
             route={parseHash("#/settings")}
-            collapsed={false}
             onOpenSearch={() => undefined}
           />
         </main>

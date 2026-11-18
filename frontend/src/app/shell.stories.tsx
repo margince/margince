@@ -225,16 +225,16 @@ export const CompanyWordmark: Story = {
 /**
  * One sidebar state, in the frame it really sits in.
  *
- * The `.app` grid is what gives the sidebar its width (56px collapsed, 252px
+ * The `.app` grid is what gives the sidebar its width (56px collapsed, 256px
  * labeled) and the content column its edge, so the example renders the grid
  * rather than a hand-set width — otherwise the story would be showing geometry
- * the product does not use. The content column is present and empty on purpose:
- * the sidebar is flush to the frame's left edge, separated by its own
- * border-right and nothing else, and that reads only against something beside it.
+ * the product does not use. The content card is present and empty on purpose:
+ * its edge is the only line between the content and the chrome, and that reads
+ * only against something beside it.
  *
- * The collapse control is live, so each panel can be moved to the other state —
- * the two are one component, and a story where the control does nothing hides
- * the transition it exists for.
+ * The collapse control at the rail's foot is live, so each panel can be moved
+ * to the other state — the two are one component, and a story where the control
+ * does nothing hides the transition it exists for.
  */
 function SidebarExample({
   initiallyCollapsed,
@@ -247,14 +247,10 @@ function SidebarExample({
         route={{ screen: "deals" }}
         counts={COUNTS}
         collapsed={collapsed}
+        onToggle={() => setCollapsed((current) => !current)}
       />
       <main className="main">
-        <TopBar
-          route={{ screen: "deals" }}
-          collapsed={collapsed}
-          onToggle={() => setCollapsed((current) => !current)}
-          onOpenSearch={openSearch}
-        />
+        <TopBar route={{ screen: "deals" }} onOpenSearch={openSearch} />
         <div className="scroll" />
       </main>
       {palette}
@@ -262,20 +258,15 @@ function SidebarExample({
   );
 }
 
-// Both sidebar states, side by side. Expanded is 252px of 34px rows on a 4px
-// gutter; collapsed is the canonical 56px geometry, where a row IS its target and
-// keeps 44px, the head is the mark with the build badge under it, and the group
-// headings are not drawn at all — 56px carries a glyph and not a label, and the
-// break between two groups is what says where one ends.
+// Both sidebar states, side by side. Expanded is 256px of 32px rows; collapsed
+// is the canonical 56px geometry, where a row IS its 32px square and the group
+// headings fold away. The head is the top bar's band in both: the card with the
+// name expanded, the mark alone collapsed. The control that folds the panel is
+// the last row, under the agent.
 //
-// The head is TWO rows either way: the brand block, then what the installation
-// runs on and which build of it this is. Expanded that line reads "Powered by
-// Margince" with the version badge beside it; at 56px the attribution goes and
-// the badge stays, shortened to one glyph.
-//
-// Neither panel holds the search or the account block. Both live in
-// the strip above (app/topbar.tsx), which is why these frames render that strip
-// rather than the sidebar alone.
+// Neither panel holds the search or the account block. Both live in the strip
+// above (app/topbar.tsx), which is why these frames render that strip rather
+// than the sidebar alone.
 export const SidebarStates: Story = {
   name: "sidebar — expanded and collapsed",
   render: () => {
@@ -400,10 +391,9 @@ function stubEntitlement(entitlement: LicenseEntitlement) {
  * exists. What each would show is said where the behaviour is, in
  * lib/license-posture.ts.
  *
- * `.rail.collapsed` sets `overflow: visible` so its tooltips can escape the 56px
- * box, so the collapsed panel neither scrolls nor clips: in a window shorter
- * than its 44px rows add up to, its foot sits below the viewport. The expanded
- * panel scrolls; read the collapsed foot in a window tall enough to hold it.
+ * Both panels scroll, so on a short window the foot is reached by scrolling
+ * the panel; the collapsed panel's tooltips are fixed to the window and are
+ * not clipped by it.
  */
 export const RailFoot: Story = {
   name: "the foot — collapsed and expanded",
@@ -422,6 +412,31 @@ export const RailFoot: Story = {
           </div>
         </SeedInstallation>
       </StoryProviders>
+    );
+  },
+};
+
+/**
+ * The control that folds the panel, at its foot in both states: the open
+ * panel's row reads "Collapse sidebar"; the folded one is the glyph alone,
+ * named "Expand sidebar", and its tip carries the name and the keys.
+ */
+export const RailToggle: Story = {
+  name: "the toggle row — expanded and collapsed",
+  render: RailFoot.render,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const expand = await canvas.findByRole("button", {
+      name: "Expand sidebar",
+    });
+    expect(
+      canvas.getByRole("button", { name: "Collapse sidebar" }),
+    ).toHaveTextContent("Collapse sidebar");
+    expand.focus();
+    await waitFor(() =>
+      expect(canvas.getByRole("tooltip").textContent).toMatch(
+        /^Expand sidebar · (⌘|Ctrl) B$/,
+      ),
     );
   },
 };
@@ -521,9 +536,9 @@ const SETTINGS_SECTION: NavSection = {
 // where the story put it. Each depth below is therefore a story of its own,
 // which is also how a reviewer sees them side by side.
 //
-// A level takes the brand's words for its rows and nothing else. The search and
-// the collapse control belong to the top bar above, so the story renders that bar
-// too — a panel shown without it would be a picture of half the chrome.
+// A level takes the brand's words for its rows and nothing else. The search
+// belongs to the top bar above, so the story renders that bar too — a panel
+// shown without it would be a picture of half the chrome.
 function LevelExample({
   initiallyCollapsed,
   tab = "general",
@@ -538,13 +553,12 @@ function LevelExample({
         section={{ ...SETTINGS_SECTION, activeId: tab }}
         counts={COUNTS}
         collapsed={collapsed}
+        onToggle={() => setCollapsed((current) => !current)}
       />
       <main className="main">
         <TopBar
           route={{ screen: "settings", id: tab, id2: sub }}
           section={{ ...SETTINGS_SECTION, activeId: tab }}
-          collapsed={collapsed}
-          onToggle={() => setCollapsed((current) => !current)}
           onOpenSearch={openSearch}
         />
         <div className="scroll" />
@@ -580,10 +594,12 @@ export const SectionLevel: Story = {
   ),
 };
 
-// German: the privacy entry is wider than the rail, so its row wraps and grows
-// while the rows around it keep their height.
+// German: the privacy entry is wider than the rail, so its label is cut on one
+// line and the row keeps the height of the rows around it; its tip carries the
+// whole label. One line, because a label that wrapped would re-wrap on every
+// frame of the collapse.
 export const SectionLevelGerman: Story = {
-  name: "second level — a German entry that wraps",
+  name: "second level — a German entry cut to one line",
   render: () => (
     <LevelStory locale="de">
       <LevelExample initiallyCollapsed={false} tab="account" />
@@ -600,13 +616,20 @@ export const SectionLevelGerman: Story = {
       const short = rows.find((row) =>
         row.textContent?.includes("Nutzerkonto"),
       );
-      const label = long?.querySelector(".navlabel");
-      if (!long || !short || !(label instanceof HTMLElement)) {
+      if (!long || !short) {
         throw new Error("the settings level has no privacy or account row");
       }
-      expect(label.scrollWidth).toBeLessThanOrEqual(label.clientWidth);
-      expect(long.offsetHeight).toBeGreaterThan(short.offsetHeight);
+      expect(long.offsetHeight).toBe(short.offsetHeight);
     });
+    const privacy = within(canvasElement).getByRole("link", {
+      name: "Datenschutz und Aufbewahrung",
+    });
+    privacy.focus();
+    await waitFor(() =>
+      expect(within(canvasElement).getByRole("tooltip").textContent).toBe(
+        "Datenschutz und Aufbewahrung",
+      ),
+    );
   },
 };
 
@@ -654,7 +677,6 @@ function PhoneSectionExample() {
         <TopBar
           route={route}
           section={SETTINGS_SECTION}
-          collapsed={false}
           onOpenSearch={openSearch}
         />
         <div className="scroll">
@@ -736,7 +758,7 @@ function PhoneMenuExample() {
     <div className="app railexpanded">
       <WorkspaceRail route={route} counts={COUNTS} />
       <main className="main">
-        <TopBar route={route} collapsed={false} onOpenSearch={openSearch} />
+        <TopBar route={route} onOpenSearch={openSearch} />
         <div className="scroll">
           <PageTitle route={route} />
           <div className="wrap">
@@ -811,7 +833,7 @@ function PhoneBarExample() {
     <div className="app railexpanded">
       <WorkspaceRail route={route} counts={COUNTS} />
       <main className="main">
-        <TopBar route={route} collapsed={false} onOpenSearch={openSearch} />
+        <TopBar route={route} onOpenSearch={openSearch} />
         <div className="scroll">
           <PageTitle route={route} />
           <div className="wrap">

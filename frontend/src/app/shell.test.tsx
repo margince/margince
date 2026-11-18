@@ -63,6 +63,19 @@ vi.mock("@composition/extensions", () => ({
 // shell MOUNTS them in the places it promises, and feeds them the counts it
 // already has.
 
+/** A window this wide, for every `max-width` query the app asks. */
+function stubViewportWidth(width: number) {
+  vi.stubGlobal("matchMedia", (query: string) => {
+    const cap = /max-width:\s*(\d+)px/.exec(query)?.[1];
+    return {
+      matches: cap !== undefined && width <= Number(cap),
+      media: query,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    };
+  });
+}
+
 afterEach(() => {
   cleanup();
   window.location.hash = "";
@@ -788,6 +801,38 @@ describe("Shell", () => {
     ).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Expand sidebar" })).toBeNull();
   });
+
+  // Up to a tablet's width a sidebar this browser never set starts folded; a
+  // choice it stored wins both ways, and the default writes nothing back.
+  it.each([
+    ["a tablet", 1024, null, "Expand sidebar"],
+    ["a laptop", 1280, null, "Collapse sidebar"],
+    ["a phone", 390, null, "Collapse sidebar"],
+    ["a tablet that chose it open", 1024, "0", "Collapse sidebar"],
+    ["a laptop that chose it folded", 1280, "1", "Expand sidebar"],
+  ])(
+    "starts the sidebar on %s as its toggle names",
+    (_case, width, stored, toggleName) => {
+      stubViewportWidth(width);
+      if (stored !== null) {
+        window.localStorage.setItem("margince.sidebarCollapsed", stored);
+      }
+      window.location.hash = "#/contacts";
+      const { container } = render(
+        <Shell onOpenSearch={ignoreSearch}>{null}</Shell>,
+      );
+      const app = container.querySelector(".app");
+      expect(app?.classList.contains("railexpanded")).toBe(
+        toggleName === "Collapse sidebar",
+      );
+      if (width > 700) {
+        expect(screen.getByRole("button", { name: toggleName })).toBeTruthy();
+      }
+      expect(window.localStorage.getItem("margince.sidebarCollapsed")).toBe(
+        stored,
+      );
+    },
+  );
 
   // The agent lives in the CHROME, at the foot of the rail, on a screen the rail
   // reaches from its top level. Once, and inside the nav rather than the content

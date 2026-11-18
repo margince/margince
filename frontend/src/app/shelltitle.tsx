@@ -31,25 +31,13 @@ import { TopBar } from "./topbar";
  */
 export function SettingsTopBar({
   route,
-  collapsed,
-  onToggle,
   onOpenSearch,
 }: Readonly<{
   route: Route;
-  collapsed: boolean;
-  onToggle: () => void;
   onOpenSearch: () => void;
 }>) {
   const section = useSettingsSection(route);
-  return (
-    <TopBar
-      route={route}
-      section={section}
-      collapsed={collapsed}
-      onToggle={onToggle}
-      onOpenSearch={onOpenSearch}
-    />
-  );
+  return <TopBar route={route} section={section} onOpenSearch={onOpenSearch} />;
 }
 
 export function SettingsPageTitle(
