@@ -94,13 +94,12 @@ func (s *Store) KeptByAcceptedGuest(ctx context.Context, meetingID ids.UUID) ([]
 }
 
 // SettleKeptByEvidence marks one open promise done on the evidence of an
-// activity. Only the system settles this way: a human or their agent settles
+// activity. Only the system settles this way. A human or their agent settles
 // through SettleConversationClaim.
 //
-// `seat` is the context of the internal seat that made the evidence. Its write
-// access to the claim's current contact is checked under the claim's row lock,
-// in the transaction that moves the status, so access removed since the event
-// stops the settlement.
+// `seat` is the internal seat that made the evidence. Its write access to the
+// claim's contact is checked under the claim's row lock, in the transaction
+// that moves the status. Access removed since the event stops the settlement.
 func (s *Store) SettleKeptByEvidence(ctx, seat context.Context, claimID, evidence ids.UUID) error {
 	if actor, ok := principal.Actor(ctx); !ok || actor.Type != principal.PrincipalSystem {
 		return apperrors.ErrPermissionDenied
