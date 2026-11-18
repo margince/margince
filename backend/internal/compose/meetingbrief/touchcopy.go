@@ -18,6 +18,8 @@ var touchWords = struct {
 	MetToday       langcopy.Phrase
 	MetYesterday   langcopy.Phrase
 	MetDays        langcopy.Phrase
+	EarlierAt      langcopy.Phrase
+	LooksKept      langcopy.Phrase
 }{
 	None:           langcopy.Phrase{En: "Nothing has been captured with anyone in this room before.", De: "Bisher wurde kein Austausch mit den Teilnehmenden erfasst.", Vi: "Chưa ghi nhận trao đổi nào với những người tham gia cuộc họp này."},
 	Today:          langcopy.Phrase{En: "Last touch was today.", De: "Der letzte Kontakt war heute.", Vi: "Lần liên hệ gần nhất là hôm nay."},
@@ -30,5 +32,7 @@ var touchWords = struct {
 	Meeting:        langcopy.Phrase{En: "A meeting", De: "Eine Besprechung", Vi: "Một cuộc họp"},
 	MetToday:       langcopy.Phrase{En: "You met earlier today: %s.", De: "Ihr habt euch heute bereits getroffen: %s.", Vi: "Các bạn đã gặp nhau trước đó trong hôm nay: %s."},
 	MetYesterday:   langcopy.Phrase{En: "You met yesterday: %s.", De: "Ihr habt euch gestern getroffen: %s.", Vi: "Các bạn đã gặp nhau hôm qua: %s."},
+	LooksKept:      langcopy.Phrase{En: "Looks kept, not open: %s. %s accepted the meeting on %s.", De: "Sieht erledigt aus, nicht offen: %s. %s hat das Meeting am %s angenommen.", Vi: "Có vẻ đã làm xong, không còn mở: %s. %s đã chấp nhận cuộc họp ngày %s."},
+	EarlierAt:      langcopy.Phrase{En: "Earlier at %s, with %s: %s (%s).", De: "Früher bei %s, mit %s: %s (%s).", Vi: "Trước đây tại %s, với %s: %s (%s)."},
 	MetDays:        langcopy.Phrase{En: "You met %d days ago: %s.", De: "Ihr habt euch vor %d Tagen getroffen: %s.", Vi: "Các bạn đã gặp nhau cách đây %d ngày: %s."},
 }

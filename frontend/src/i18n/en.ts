@@ -4541,6 +4541,8 @@ export const en = {
   "commitment.takeOver": "I’ll take this",
   "commitment.takenOver": "{name} took this on {date}",
   "commitment.takenOverUnnamed": "Taken on {date}",
+  "commitment.looksKept": "Looks kept: {name} accepted the {date} meeting.",
+  "commitment.markKept": "Mark kept",
   "commitment.quote": "“{quote}”",
   "co.brief.by.model": "Written by Margince",
   "co.brief.by.deterministic": "Compiled from CRM records",

@@ -143,7 +143,17 @@ var historyCandidates = `a.archived_at IS NULL
 func (s *Service) readHistory(
 	ctx context.Context, tx pgx.Tx, room meeting, project *ids.ProjectID, now time.Time,
 ) ([]HistoryIn, error) {
-	if len(room.Room) == 0 {
+	return s.readHistoryOf(ctx, tx, room, project, now, room.Room, historyCap)
+}
+
+// readHistoryOf is readHistory for any set of contacts: the room's own, or the
+// colleagues at its company. One reader keeps the row scope, the audience arm,
+// the mailbox-copy grouping and the exchange predicate in one place.
+func (s *Service) readHistoryOf(
+	ctx context.Context, tx pgx.Tx, room meeting, project *ids.ProjectID, now time.Time,
+	contactIDs []ids.UUID, limit int,
+) ([]HistoryIn, error) {
+	if len(contactIDs) == 0 {
 		return nil, nil
 	}
 	var args []any
@@ -179,7 +189,7 @@ func (s *Service) readHistory(
 		reach = room.Opens
 	}
 	floor := fmt.Sprintf("$%d", arg(reach.AddDate(0, -historyMonths, 0)))
-	attendeePos := arg(room.Room)
+	attendeePos := arg(contactIDs)
 	within := projectWithinPredicate("a", "hw", project, arg)
 	otherDeal, err := scopeFor(ctx, "deal", "fd", arg)
 	if err != nil {
@@ -193,7 +203,7 @@ func (s *Service) readHistory(
 	// behind a meeting every reader may open, so no readable mail hides behind one.
 	candidates += " AND " + activities.InvitationFoldSQL(candidates, auth.WorkspaceAudienceSQL("a")+" AND a.restricted_at IS NULL")
 	from := connector.MailCopyGroupFrom(ctx, "activity", "a", candidates, readable, arg)
-	rows, err := tx.Query(ctx, fmt.Sprintf(historyColumns, dealPos, otherDeal, from, historyCap), args...)
+	rows, err := tx.Query(ctx, fmt.Sprintf(historyColumns, dealPos, otherDeal, from, limit), args...)
 	if err != nil {
 		return nil, fmt.Errorf("read the account history: %w", err)
 	}

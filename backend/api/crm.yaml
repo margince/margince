@@ -52022,6 +52022,20 @@ components:
       enum: [commitment_ours, commitment_theirs, open_question, decision, priority, objection, success_criterion, decision_process]
       x-extensible-enum: true
 
+    ConversationClaimLooksKept:
+      type: object
+      description: >-
+        A read-only hint that this open promise to invite someone looks kept: a guest of
+        that name at the same company accepted a later meeting this reader may open.
+        Nothing is settled. The reader decides, through the settle verb.
+      required: [meeting_id, guest_name, meeting_at, meeting_precision]
+      properties:
+        meeting_id: { type: string, format: uuid }
+        guest_name: { type: string }
+        meeting_at: { type: string, format: date-time }
+        meeting_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          description: How to read `meeting_at`. `day` means only its date is known.
     ConversationClaim:
       type: object
       description: |
@@ -52066,6 +52080,7 @@ components:
           type: [string, 'null']
           format: date-time
           description: When a human typed over the machine. Set means the claim is theirs, not the extractor's.
+        looks_kept: { $ref: '#/components/schemas/ConversationClaimLooksKept' }
         task_activity_id:
           type: [string, 'null']
           format: uuid
