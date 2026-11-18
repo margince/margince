@@ -28,6 +28,8 @@ type SavedState = {
   voiceSkipped: boolean;
   connectSkipped: boolean;
   draft: OnboardingState["company_draft"] | null;
+  /** The server's row once the journey is complete, which no write changes. */
+  finished: OnboardingState | null;
 };
 
 export type WizardPersistInput = Readonly<{
@@ -51,6 +53,7 @@ const FRESH_STATE: SavedState = {
   voiceSkipped: false,
   connectSkipped: false,
   draft: null,
+  finished: null,
 };
 
 function fromServerState(data: OnboardingState): SavedState {
@@ -65,6 +68,7 @@ function fromServerState(data: OnboardingState): SavedState {
     voiceSkipped: Boolean(data.voice_skipped),
     connectSkipped: Boolean(data.connect_skipped),
     draft: data.company_draft ?? null,
+    finished: data.step === "complete" ? data : null,
   };
 }
 
@@ -132,12 +136,24 @@ export function useWizardStatePersist() {
       queue.current = queue.current.then(async () => {
         try {
           saved.current ??= await loadSavedState();
-          const written = await writeMerged(saved.current, input);
+          // Another tab may have finished the journey, which the server then
+          // refuses to write over: the stored row is the answer instead.
+          const written =
+            saved.current.finished ??
+            (await writeMerged(saved.current, input).catch(async (err) => {
+              const fresh = await loadSavedState();
+              if (fresh.finished === null) {
+                throw err;
+              }
+              return fresh.finished;
+            }));
           saved.current = fromServerState(written);
           // The app shell gates on this same entry: a completion it never
           // learned of would send the finished journey straight back here.
           client.setQueryData(onboardingProgressOptions.queryKey, written);
-          return true;
+          // A finish that finds the journey complete has nothing left to say,
+          // so it hands off; any other step did not land.
+          return written.step !== "complete" || input.step === "complete";
         } catch {
           // Best-effort by design: the act must never stall on state
           // persistence. The caller learns via the false result (the proposal
