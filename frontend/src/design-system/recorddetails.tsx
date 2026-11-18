@@ -15,7 +15,8 @@ import "./recorddetails.css";
  * One label/value pair. `empty` folds the row behind "Show N empty fields"
  * until the reader opens them; the caller still passes the plain words for
  * it ("Add…", "Not set"). `block` puts the term over the value, for a value
- * that is a card rather than a line.
+ * that is a card rather than a line, and `termHidden` keeps the term for a
+ * screen reader alone, for a card whose lines name themselves.
  */
 export type DetailRow = Readonly<{
   key: string;
@@ -23,6 +24,7 @@ export type DetailRow = Readonly<{
   value: ReactNode;
   empty?: boolean;
   block?: boolean;
+  termHidden?: boolean;
 }>;
 
 /** A named group: its rows, then anything that is not a row (chips). */

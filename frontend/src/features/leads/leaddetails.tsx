@@ -19,6 +19,7 @@ import {
 } from "../../design-system/contactlink";
 import { InlineChoice } from "../../design-system/inlinechoice";
 import { InlineText } from "../../design-system/inlinetext";
+import { ReachCard, ReachLine, reachRow } from "../../design-system/reachcard";
 import {
   type DetailRow,
   type DetailSection,
@@ -158,6 +159,38 @@ function useLinkedCompanyRow(lead: Lead): DetailRow | null {
 // The read-only row never opens its editor, so nothing reaches this.
 async function refusedSave(): Promise<void> {}
 
+// The address and number share one card, as on a contact; one that is not
+// set folds as its own empty row, so "Show empty fields" still offers it.
+function reachRows(
+  lead: Lead,
+  t: ReturnType<typeof useT>,
+  values: Readonly<{ email: ReactNode; phone: ReactNode }>,
+): DetailRow[] {
+  const hasEmail = !isBlank(lead.email);
+  const hasPhone = !isBlank(lead.phone);
+  const empty = (key: "email" | "phone", value: ReactNode): DetailRow => ({
+    key,
+    term: t(key === "email" ? "create.email" : "create.phone"),
+    empty: true,
+    value,
+  });
+  return [
+    ...(hasEmail || hasPhone
+      ? [
+          reachRow(
+            t("record.reach.label"),
+            <ReachCard>
+              {hasEmail && <ReachLine kind="email">{values.email}</ReachLine>}
+              {hasPhone && <ReachLine kind="phone">{values.phone}</ReachLine>}
+            </ReachCard>,
+          ),
+        ]
+      : []),
+    ...(hasEmail ? [] : [empty("email", values.email)]),
+    ...(hasPhone ? [] : [empty("phone", values.phone)]),
+  ];
+}
+
 /** The About rows in the order the design reads them, blanks folded. */
 function useAboutRows(
   lead: Lead,
@@ -245,11 +278,8 @@ function useAboutRows(
             ),
           },
         ]),
-    {
-      key: "email",
-      term: t("create.email"),
-      empty: isBlank(lead.email),
-      value: (
+    ...reachRows(lead, t, {
+      email: (
         <EmailValue
           lead={lead}
           canEdit={canEdit}
@@ -257,8 +287,8 @@ function useAboutRows(
           onSave={save("email")}
         />
       ),
-    },
-    text("phone", "create.phone"),
+      phone: text("phone", "create.phone").value,
+    }),
     {
       key: "origin",
       term: t("lead.origin"),

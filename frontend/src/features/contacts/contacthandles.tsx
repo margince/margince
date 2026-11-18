@@ -9,6 +9,7 @@ import {
   CopyEmail,
   EmailFace,
 } from "../../design-system/contactlink";
+import { ReachCard, ReachLine } from "../../design-system/reachcard";
 import {
   EMAIL_TYPE_LABEL,
   PHONE_TYPE_LABEL,
@@ -39,8 +40,20 @@ function liveHandles<T extends Email | Phone>(
   return [...live.filter(isLead), ...live.filter((row) => !isLead(row))];
 }
 
-/** Every live address of the contact, a line each with its kind. */
-export function EmailHandles({
+/** Every live address and number of the contact, as one card. */
+export function ContactReach({
+  contact,
+  bought,
+}: Readonly<{ contact: Contact; bought: Bought }>) {
+  return (
+    <ReachCard>
+      <EmailHandles contact={contact} bought={bought} />
+      <PhoneHandles contact={contact} bought={bought} />
+    </ReachCard>
+  );
+}
+
+function EmailHandles({
   contact,
   bought,
 }: Readonly<{ contact: Contact; bought: Bought }>) {
@@ -53,28 +66,30 @@ export function EmailHandles({
   return (
     <HandleStack
       lines={rows.map((row) => (
-        <span key={row.id} className="fieldgrid-handle">
+        <ReachLine
+          key={row.id}
+          kind="email"
+          caption={t(labelFor(EMAIL_TYPE_LABEL, row.email_type ?? "work"))}
+          mark={
+            <BoughtMark
+              bought={bought.get(`email:${row.id}`)}
+              subject={row.email}
+            />
+          }
+        >
           <span className="contactlink-copyable">
             <ContactLink kind="email" value={row.email} record={record}>
               <EmailFace address={row.email} />
             </ContactLink>
             <CopyEmail address={row.email} />
           </span>
-          <span className="t-caption">
-            {t(labelFor(EMAIL_TYPE_LABEL, row.email_type ?? "work"))}
-          </span>
-          <BoughtMark
-            bought={bought.get(`email:${row.id}`)}
-            subject={row.email}
-          />
-        </span>
+        </ReachLine>
       ))}
     />
   );
 }
 
-/** Every live number of the contact, a line each with its kind. */
-export function PhoneHandles({
+function PhoneHandles({
   contact,
   bought,
 }: Readonly<{ contact: Contact; bought: Bought }>) {
@@ -85,16 +100,19 @@ export function PhoneHandles({
   return (
     <HandleStack
       lines={rows.map((row) => (
-        <span key={row.id} className="fieldgrid-handle">
+        <ReachLine
+          key={row.id}
+          kind="phone"
+          caption={t(labelFor(PHONE_TYPE_LABEL, row.phone_type ?? "work"))}
+          mark={
+            <BoughtMark
+              bought={bought.get(`phone:${row.id}`)}
+              subject={row.phone}
+            />
+          }
+        >
           <ContactLink kind="phone" value={row.phone} record={record} />
-          <span className="t-caption">
-            {t(labelFor(PHONE_TYPE_LABEL, row.phone_type ?? "work"))}
-          </span>
-          <BoughtMark
-            bought={bought.get(`phone:${row.id}`)}
-            subject={row.phone}
-          />
-        </span>
+        </ReachLine>
       ))}
     />
   );
@@ -106,6 +124,7 @@ function HandleStack({ lines }: Readonly<{ lines: readonly ReactNode[] }>) {
   const { locale } = useLocale();
   const [open, setOpen] = useState(false);
   const folds = lines.length > FOLD_AFTER;
+  if (lines.length === 0) return null;
   const shown = folds && !open ? lines.slice(0, SHOWN_FOLDED) : lines;
   return (
     <span className="contacthandles">

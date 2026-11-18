@@ -1,0 +1,42 @@
+/* The card draws the employer card's edge and corner, so the two cards that
+   open a record's About read as one pair. */
+.reachcard {
+  display: flex;
+  flex-direction: column;
+  inline-size: 100%;
+  min-inline-size: 0;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--groundEdge);
+  border-radius: var(--r-md);
+}
+/* A line is a control's height, so a line with a chat button and one
+   without stand the same distance apart. */
+.reachline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: var(--space-8);
+  min-inline-size: 0;
+}
+.reachline-glyph {
+  flex: none;
+  inline-size: var(--controlIcon);
+  block-size: var(--controlIcon);
+  color: var(--textSecondary);
+}
+/* Only the handle gives way: a long address breaks at its "@" (EmailFace)
+   and its kind stays whole at the edge. */
+.reachline-handle {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 1 auto;
+  min-inline-size: 0;
+}
+.reachline-kind {
+  flex: none;
+  margin-inline-start: auto;
+  white-space: nowrap;
+}
+.reachline > :last-child:not(.reachline-kind, .reachline-handle) {
+  flex: none;
+}

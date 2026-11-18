@@ -21791,6 +21791,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.handles.more_one": "+{count} mục khác",
   "contact.handles.more_other": "+{count} mục khác",
   "contact.handles.fewer": "Thu gọn",
+  "record.reach.label": "Email và điện thoại",
   "record.details.hideEmpty": "Ẩn trường trống",
   "record.verb.email": "Thư",
   "record.verb.call": "Gọi",

@@ -381,9 +381,9 @@ export const BoughtPhone: Story = {
     const canvas = within(canvasElement);
     await canvas.findByRole("button", { name: "Open a chat" });
     const number = canvas.getByRole("link", { name: "+493012345678" });
-    const handle = number.closest(".fieldgrid-handle");
+    const handle = number.closest(".reachline");
     const mark = handle?.querySelector(":scope > .evmark");
-    const chats = handle?.querySelector(":scope > .callaction-chats");
+    const chats = handle?.querySelector(".callaction-chats");
     if (!mark || !chats) {
       throw new Error("the phone row lost its bought mark or its chat glyph");
     }
