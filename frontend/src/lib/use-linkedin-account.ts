@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { unwrap } from "./problem";
@@ -24,6 +24,17 @@ type LinkedInAccount = components["schemas"]["LinkedInAccount"];
  * that made a saved profile invisible until a reload.
  */
 export const LINKEDIN_ACCOUNT_KEY = ["linkedin-account"] as const;
+
+/** The caller's own LinkedIn account, as the onboarding row and the settings
+ * card both show it back. */
+export function useLinkedInAccount() {
+  return useQuery({
+    queryKey: LINKEDIN_ACCOUNT_KEY,
+    queryFn: async (): Promise<LinkedInAccount> => {
+      return unwrap(await api.GET("/me/linkedin-account", {}));
+    },
+  });
+}
 
 /**
  * useSaveLinkedInAccount writes the caller's own LinkedIn profile.

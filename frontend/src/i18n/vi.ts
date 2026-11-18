@@ -17106,6 +17106,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Không bắt buộc. Tất cả có thể đổi sau trong Cài đặt.",
   "ob.conv.connect.linkedinRow": "Hồ sơ LinkedIn của bạn",
   "ob.conv.connect.linkedinAdd": "Thêm hồ sơ",
+  "ob.conv.connect.linkedinChange": "Thay đổi",
   "setup.reminder.trigger": "Hoàn tất thiết lập",
   "setup.reminder.count": "{done}/{total}",
   "setup.reminder.title": "Hoàn tất thiết lập",

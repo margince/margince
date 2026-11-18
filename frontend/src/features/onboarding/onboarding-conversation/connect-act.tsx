@@ -131,12 +131,17 @@ export function ConnectAct({
   // false, and the store keeps whatever authorization already exists. Unlike
   // mail, resolving LinkedIn never touches `finish` — it is a card on the same
   // screen, not a gate on it.
-  const saveLinkedin = (profileUrl: string) => {
+  const saveLinkedin = (profileUrl: string, onSaved: () => void) => {
     linkedin.mutate(
       { profileUrl, connected: false },
       {
-        onSuccess: () =>
-          dispatch({ type: "LINKEDIN_SAVED", profile: profileUrl }),
+        onSuccess: () => {
+          // A change to a profile saved on this step is no second answer.
+          if (state.linkedinStatus === "pending") {
+            dispatch({ type: "LINKEDIN_SAVED", profile: profileUrl });
+          }
+          onSaved();
+        },
       },
     );
   };
@@ -187,9 +192,9 @@ export function ConnectAct({
     // and leaving an opt-out as unanswered is what makes the product ask the
     // declining rep again every night.
     //
-    // A rep who SKIPS the connect records nothing, and was never shown the
-    // switch: the agent reads their mail to build the brief, so an answer about
-    // a mailbox that was never connected is an answer about nothing.
+    // A rep who skips the connect records nothing and was never shown the
+    // switch. The agent reads their mail to build the brief, and an answer
+    // about a mailbox that was never connected is an answer about nothing.
     //
     // Its failure does not fail the step, but it is not swallowed either: the
     // rep is told, and the question is askable again in Settings. Blocking
@@ -263,9 +268,8 @@ export function ConnectAct({
         linkedinError={
           linkedin.isError ? problemMessageOf(linkedin.error, t) : null
         }
-        // A redirect already returned: what it could not do, shown inline whether or
-        // not this tab can vouch for the trip. A stale link still reports what the
-        // roster says.
+        // A returned redirect shows what it could not do, whether or not this
+        // tab can vouch for the trip. A stale link still reports the roster.
         returnPanel={
           outcome !== undefined && !resultSettled ? (
             <OAuthReturnPanel

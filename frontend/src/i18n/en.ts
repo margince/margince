@@ -17420,6 +17420,7 @@ export const en = {
     "Optional. All of these can be changed later in Settings.",
   "ob.conv.connect.linkedinRow": "Your LinkedIn profile",
   "ob.conv.connect.linkedinAdd": "Add profile",
+  "ob.conv.connect.linkedinChange": "Change",
   "setup.reminder.trigger": "Finish setup",
   "setup.reminder.count": "{done} of {total}",
   "setup.reminder.title": "Finish setting up",

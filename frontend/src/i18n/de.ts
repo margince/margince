@@ -17576,6 +17576,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Optional. All das kannst du später in den Einstellungen ändern.",
   "ob.conv.connect.linkedinRow": "Dein LinkedIn-Profil",
   "ob.conv.connect.linkedinAdd": "Profil hinzufügen",
+  "ob.conv.connect.linkedinChange": "Ändern",
   "setup.reminder.trigger": "Einrichtung abschließen",
   "setup.reminder.count": "{done} von {total}",
   "setup.reminder.title": "Einrichtung abschließen",

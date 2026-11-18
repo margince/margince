@@ -495,6 +495,76 @@ describe("the LinkedIn row", () => {
     expect(screen.queryByRole("button", { name: "Add profile" })).toBeNull();
   });
 
+  // The stored profile is the server's, not this tab's: a reload shows it, and
+  // the member can still correct it on the step.
+  it("shows a profile saved before a reload and opens Change on it", async () => {
+    stub({
+      "GET /connectors": roster(),
+      "GET /me/linkedin-account": () =>
+        jsonResponse({
+          profile_url: "https://www.linkedin.com/in/qa-onboarding",
+          connected: false,
+          connections: 0,
+        }),
+      "PUT /me/linkedin-account": saveRoute(() =>
+        jsonResponse({
+          profile_url: "https://www.linkedin.com/in/qa-fixed",
+          connected: false,
+          connections: 0,
+        }),
+      ),
+    });
+    const { dispatch } = renderConnectAct();
+    expect(
+      await screen.findByText("linkedin.com/in/qa-onboarding"),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Add profile" })).toBeNull();
+
+    await userEvent.click(screen.getByRole("button", { name: "Change" }));
+    const field = screen.getByLabelText("Your LinkedIn profile URL");
+    expect(field).toHaveValue("https://www.linkedin.com/in/qa-onboarding");
+    expect(
+      screen.queryByRole("button", { name: "Skip LinkedIn for now" }),
+    ).toBeNull();
+    await userEvent.clear(field);
+    await userEvent.type(field, "https://www.linkedin.com/in/qa-fixed");
+    await userEvent.click(screen.getByRole("button", { name: "Save profile" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(saves).toEqual([
+      { profile_url: "https://www.linkedin.com/in/qa-fixed", connected: false },
+    ]);
+    expect(screen.getByText("linkedin.com/in/qa-fixed")).toBeInTheDocument();
+    expect(dispatch).toHaveBeenCalledWith({
+      type: "LINKEDIN_SAVED",
+      profile: "https://www.linkedin.com/in/qa-fixed",
+    });
+  });
+
+  it("changes a profile saved on this step without answering twice", async () => {
+    const account = (profile_url: string) => () =>
+      jsonResponse({ profile_url, connected: false, connections: 0 });
+    stub({
+      "GET /connectors": roster(),
+      "GET /me/linkedin-account": account("https://www.linkedin.com/in/lars"),
+      "PUT /me/linkedin-account": saveRoute(
+        account("https://www.linkedin.com/in/lars-j"),
+      ),
+    });
+    const { dispatch } = renderConnectAct("saved");
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Change" }),
+    );
+    const field = screen.getByLabelText("Your LinkedIn profile URL");
+    await userEvent.clear(field);
+    await userEvent.type(field, "https://www.linkedin.com/in/lars-j");
+    await userEvent.click(screen.getByRole("button", { name: "Save profile" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(saves).toHaveLength(1);
+    expect(dispatch).not.toHaveBeenCalled();
+  });
+
   it("keeps the dialog open and shows the failure when the save fails", async () => {
     stub({
       "GET /connectors": roster(),
@@ -554,9 +624,8 @@ describe("the LinkedIn row", () => {
   });
 });
 
-// The overnight question rides with this step: preselected, and written when
-// the step COMPLETES rather than when the switch flips. The brief is built
-// from the mailbox, so it is asked only once one is connected.
+// The overnight question is preselected, written when the step COMPLETES, and
+// asked only once a mailbox is connected, since the brief is built from it.
 describe("the overnight question", () => {
   const mailbox = () => roster(row("gmail", { backfill: { state: "done" } }));
 
