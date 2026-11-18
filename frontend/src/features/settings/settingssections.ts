@@ -279,7 +279,12 @@ export const SETTINGS_SECTIONS = {
   models: {
     providers: ["settings.part.models.providers", "aiProviderKeys.title"],
     tiers: ["settings.part.models.tiers", "aiRouting.title"],
-    tasks: ["settings.part.models.tasks", "aiTasks.title"],
+    tasks: [
+      "settings.part.models.tasks",
+      "aiTasks.title",
+      "privateMailRequests.title",
+      "privateMailRequests.switch",
+    ],
     prices: [
       "settings.part.models.prices",
       "aiPriceSync.title",

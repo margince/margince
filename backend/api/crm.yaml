@@ -13188,7 +13188,8 @@ paths:
       description: |
         The workspace's follow-up window: a message a seat sent to a customer that is still
         the last word after this many days comes back on the sender's worklist as a
-        follow-up. Read by every role; changed by admin/ops. Governed by the
+        follow-up. It also carries whether the AI checks private mail for requests owed an
+        answer. Read by every role; changed by admin/ops. Governed by the
         `installation_settings` RBAC object.
       responses:
         '200':
@@ -13203,7 +13204,7 @@ paths:
       operationId: updateFollowUpSettings
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: update_follow_up_settings, router: change_settings, action: update_follow_up_settings, tier: auto_execute, scope: write, served_by: route }
-      summary: Change the follow-up window (admin/ops).
+      summary: Change the follow-up window or the private-mail request check (admin/ops).
       requestBody:
         required: true
         content:
@@ -63060,6 +63061,16 @@ components:
           minimum: 1
           maximum: 30
           description: Days a sent message may stay unanswered before its sender is reminded to follow up.
+        private_mail_requests:
+          type: boolean
+          x-human-only: true
+          description: |
+            Whether the AI checks private mail for a request its reader owes an answer to
+            (`activities.private_mail_requests`, on by default). Only mail private by a
+            routine setting is checked; mail held as confidential, by a counterparty or
+            members-only hold, or by hand never is. A GET always carries it; a PATCH that
+            leaves it out leaves the setting unchanged. Only a human may change it, because
+            it decides which mail reaches a model.
 
     LeadSettings:
       type: object
@@ -81743,7 +81754,7 @@ components:
         by two rules therefore appears in NEITHER figure: relaxing either one alone still
         leaves the other hiding it. Summing these to estimate the hidden total
         under-reports it.
-      required: [as_of, shown, set_aside, not_sales, past_horizon, unlinked, colleagues, informs_us, truncated, clear]
+      required: [as_of, shown, set_aside, not_sales, past_horizon, unlinked, colleagues, informs_us, private_unchecked, truncated, clear]
       properties:
         as_of: { type: string, format: date-time, description: 'The instant every figure below was read at.' }
         shown:
@@ -81830,6 +81841,15 @@ components:
             that reason: one model call's opinion about a customer's mail ends the
             obligation, so a wrong verdict has to show up somewhere a lead can see it. A
             request a human accepted is never hidden by it, whatever the verdict.
+        private_unchecked:
+          type: integer
+          minimum: 0
+          description: |
+            Threads `shown` counts whose mail no model will check for a request: mail held
+            on purpose (marked confidential, a counterparty or members-only hold, or by
+            hand), or any private mail while `activities.private_mail_requests` is off. Not
+            hidden, so `clear` ignores it. The queue ranks such mail as a request only when
+            the reader wrote on its conversation first.
         truncated:
           type: boolean
           description: |

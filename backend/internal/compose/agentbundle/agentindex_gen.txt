@@ -381,7 +381,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `PATCH /scheduling/invitations/{id}` | changeMeetingInvitation | Reschedule, cancel or retry an invitation through its original calendar event. | Send messages | at once |
 | `GET /availability` | getAvailability | Free/busy availability for one or more hosts in a window (the `check_availability` MCP verb). | Read records | at once |
 | `GET /activities/follow-up-settings` | getFollowUpSettings | How long a sent message may go unanswered before the worklist reminds its sender. | Read records | at once |
-| `PATCH /activities/follow-up-settings` | updateFollowUpSettings | Change the follow-up window (admin/ops). | Change records | at once |
+| `PATCH /activities/follow-up-settings` | updateFollowUpSettings | Change the follow-up window or the private-mail request check (admin/ops). | Change records | at once |
 | `GET /commitments` | listOpenCommitments | The promises still open, overdue first. | Read records | at once |
 | `POST /activities/threads/{thread_key}/audience` | setThreadAudience | Share a thread with the team, or keep it private. | Change records | at once |
 | `GET /activity-review-templates` | listActivityReviewTemplates | The question sets an outcome review can ask. | Read records | at once |

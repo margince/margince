@@ -20489,6 +20489,10 @@ export const en = {
   "worklist.hidden.setAside.detail":
     "Snoozed or marked not yours. Snoozed items return automatically.",
   "worklist.hidden.shown": "The Worklist shows {count}.",
+  "worklist.hidden.privateUnchecked_one":
+    "{count} private email not checked by AI",
+  "worklist.hidden.privateUnchecked_other":
+    "{count} private emails not checked by AI",
   "worklist.hidden.rows.loading": "Loading the held-back messages…",
   "worklist.hidden.rows.outOfReach":
     "None could be read at this size. Some may still be held back.",
@@ -22036,6 +22040,12 @@ export const en = {
     "Deal owners can ask legal to review a deal, and a stage can require legal’s approval. Off hides both and keeps every review already recorded.",
   "legalReview.settingsReadOnly": "An admin changes this setting.",
   "legalReview.notSaved": "Setting was not saved.",
+  "privateMailRequests.title": "Requests in private mail",
+  "privateMailRequests.switch": "Check private mail for requests",
+  "privateMailRequests.hint":
+    "The AI reads private mail to find what a customer asks of its reader. Mail marked confidential or held on purpose is never read.",
+  "privateMailRequests.readOnly": "An admin changes this setting.",
+  "privateMailRequests.notSaved": "Setting was not saved.",
   "stage.criteria.kindLegalReviewed": "Legal approved",
   "legalReview.docUnavailable":
     "You cannot open this file. Ask the colleague who requested the review.",

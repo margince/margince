@@ -20748,6 +20748,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.hidden.setAside.detail":
     "Zurückgestellt oder als nicht zuständig markiert. Zurückgestellte Einträge kommen automatisch zurück.",
   "worklist.hidden.shown": "Angezeigt in der Worklist: {count}.",
+  "worklist.hidden.privateUnchecked_one":
+    "{count} private E-Mail nicht von der KI geprüft",
+  "worklist.hidden.privateUnchecked_other":
+    "{count} private E-Mails nicht von der KI geprüft",
   "worklist.hidden.rows.loading": "Zurückgehaltene Nachrichten werden geladen…",
   "worklist.hidden.rows.outOfReach":
     "Bei dieser Menge konnte keine Nachricht gelesen werden. Einige Nachrichten werden möglicherweise trotzdem zurückgehalten.",
@@ -22322,6 +22326,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Verantwortliche Teammitglieder können einen Deal von der Rechtsabteilung prüfen lassen, und eine Phase kann deren Freigabe verlangen. Ist die Rechtsprüfung deaktiviert, ist beides ausgeblendet, und alle erfassten Prüfungen bleiben erhalten.",
   "legalReview.settingsReadOnly": "Diese Einstellung ändert ein Admin.",
   "legalReview.notSaved": "Einstellung wurde nicht gespeichert.",
+  "privateMailRequests.title": "Anfragen in privaten E-Mails",
+  "privateMailRequests.switch": "Private E-Mails auf Anfragen prüfen",
+  "privateMailRequests.hint":
+    "Die KI liest private E-Mails, um zu finden, worum ein Kunde euch bittet. Als vertraulich markierte oder bewusst zurückgehaltene E-Mails liest sie nie.",
+  "privateMailRequests.readOnly": "Diese Einstellung ändert ein Admin.",
+  "privateMailRequests.notSaved": "Einstellung wurde nicht gespeichert.",
   "stage.criteria.kindLegalReviewed": "Rechtlich freigegeben",
   "legalReview.docUnavailable":
     "Du kannst diese Datei nicht öffnen. Wende dich an das Teammitglied, das die Prüfung angefragt hat.",

@@ -1,10 +1,11 @@
-import type { ReactNode } from "react";
+import { type ReactNode, Suspense } from "react";
 import { rosterOwnerNaming } from "../../components/entityref";
 import { Badge, Button } from "../../design-system/atoms";
 import { PageZones } from "../../design-system/pagezones";
 import { Panel } from "../../design-system/panel";
 import { ScrollSentinel } from "../../design-system/scrollsentinel";
 import { useT } from "../../i18n";
+import { lazy } from "../../i18n/lazy";
 import { useMemberNames } from "../../lib/membernames";
 import type { WorklistView } from "../../lib/worklistviews";
 import {
@@ -18,7 +19,6 @@ import { clearSentence } from "./worklist.clear";
 import { TeamExceptionsPanel } from "./worklist.exceptions";
 import { HandledForYouPanel } from "./worklist.handled";
 import { WorklistHeader } from "./worklist.header";
-import { HiddenBacklogPanel } from "./worklist.hidden";
 import { LinkSuggestionsPanel } from "./worklist.linksuggestions";
 import { CoachControl } from "./worklist.manager";
 import { hasPane, WorklistPane } from "./worklist.pane";
@@ -44,6 +44,12 @@ import { TeamMarginceChangesPanel } from "./worklist.teamchanges";
 import { DayUnread, dayPartlyRead } from "./worklist.unread";
 import { UpcomingSection } from "./worklist.upcoming";
 import { WalkNotice } from "./worklist.walknotice";
+
+// A lead's guardrail below the day, loaded only for a reader who opens "all",
+// so Home's first load does not carry it.
+const HiddenBacklogPanel = lazy(async () => ({
+  default: (await import("./worklist.hidden")).HiddenBacklogPanel,
+}));
 
 export function WorklistBody({
   embedded = false,
@@ -373,7 +379,9 @@ function ScopePanels({
       {wide && <TeamMarginceChangesPanel enabled={leads} />}
       {wide && <TeamBoard onOwner={onOwnerDay} onUnassigned={onUnassigned} />}
       {scope === "all" && (
-        <HiddenBacklogPanel enabled={leads} onOpenEmail={onOpenEmail} />
+        <Suspense fallback={null}>
+          <HiddenBacklogPanel enabled={leads} onOpenEmail={onOpenEmail} />
+        </Suspense>
       )}
     </>
   );

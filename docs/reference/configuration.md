@@ -268,6 +268,7 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 |---|---|---|---|---|---|---|
 | `activities.follow_up_after_days` | `MARGINCE_ACTIVITIES_FOLLOW_UP_AFTER_DAYS` | — | `int`, `1` to `30`, stored | `2` | api, worker | Days a sent message may go without a reply before its sender is asked to follow up. |
 | `activities.inline_send_review` | `MARGINCE_ACTIVITIES_INLINE_SEND_REVIEW` | — | `bool`, stored | `false` | api, worker | Decide a composed email at Send and show a refusal inline, instead of checking while it is written. |
+| `activities.private_mail_requests` | `MARGINCE_ACTIVITIES_PRIVATE_MAIL_REQUESTS` | — | `bool`, stored | `true` | api, worker | Let the AI check whether private mail asks its reader for something. Only mail private because of a setting is checked; mail held for any other reason never is. |
 
 ### `ai`
 

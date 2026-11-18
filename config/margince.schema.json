@@ -190,6 +190,14 @@
             "null"
           ],
           "default": false
+        },
+        "private_mail_requests": {
+          "description": "Let the AI check whether private mail asks its reader for something. Only mail private because of a setting is checked; mail held for any other reason never is.",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": true
         }
       }
     },
