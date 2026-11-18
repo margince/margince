@@ -74,49 +74,56 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// heldMessage is the held row a refusal binds to. reused says the seat already
+// held this message, so the press that refused it was a repeat of an earlier Send.
+type heldMessage struct {
+	id     ids.UUID
+	reused bool
+}
+
 // holdForReview freezes a refused message into a held scheduled_send and
-// answers the row's id, so the review recorded next can bind to it.
+// answers the row, so the review recorded next can bind to it.
 //
 // A zero id means nothing was held, and every caller treats that as "record the
 // review without an intent" rather than as an error — see the file comment.
-func (s *Store) holdForReview(ctx context.Context, origin SendOrigin, in SendEmailInput) ids.UUID {
-	id, err := s.holdForReviewTx(ctx, origin, in)
+func (s *Store) holdForReview(ctx context.Context, origin SendOrigin, in SendEmailInput) heldMessage {
+	held, err := s.holdForReviewTx(ctx, origin, in)
 	if err != nil {
 		// Swallowed on purpose, and this is the only place it happens. The
 		// caller is on its way to answering a refusal the rep must see; a hold
 		// that failed is an operator's problem, and raising it here would
 		// replace the answer they need with one they cannot act on.
-		return ids.UUID{}
+		return heldMessage{}
 	}
-	return id
+	return held
 }
 
 // holdForReviewTx is the write, split out so a test can see why a hold failed
 // rather than only that it did.
-func (s *Store) holdForReviewTx(ctx context.Context, origin SendOrigin, in SendEmailInput) (ids.UUID, error) {
+func (s *Store) holdForReviewTx(ctx context.Context, origin SendOrigin, in SendEmailInput) (heldMessage, error) {
 	actor, err := storekit.Actor(ctx)
 	if err != nil {
-		return ids.UUID{}, err
+		return heldMessage{}, err
 	}
 	if actor.UserID.IsZero() {
 		// The same rule scheduling applies: a frozen message names the seat it
 		// would fire under, and a row that names nobody could never be resumed
 		// by anybody.
-		return ids.UUID{}, errNoSchedulingUser
+		return heldMessage{}, errNoSchedulingUser
 	}
 	frozen := freezePayload(in)
 	frozen.PendingDraftID = idText(in.MailDraftID)
 	payload, err := json.Marshal(frozen)
 	if err != nil {
-		return ids.UUID{}, fmt.Errorf("held send: freezing the refused message: %w", err)
+		return heldMessage{}, fmt.Errorf("held send: freezing the refused message: %w", err)
 	}
 	originLinks, err := marshalOriginLinks(origin)
 	if err != nil {
-		return ids.UUID{}, err
+		return heldMessage{}, err
 	}
 	alsoLinks, err := marshalAlsoLinks(origin)
 	if err != nil {
-		return ids.UUID{}, err
+		return heldMessage{}, err
 	}
 	prov := provenanceOf(actor)
 	held := heldIdentity{
@@ -131,7 +138,7 @@ func (s *Store) holdForReviewTx(ctx context.Context, origin SendOrigin, in SendE
 		alsoLinks:       alsoLinks,
 		payload:         payload,
 	}
-	id := ids.NewV7()
+	result := heldMessage{id: ids.NewV7()}
 	now := s.now().UTC()
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		// LOCKED AGAINST A CONCURRENT ERASURE, FIRST.
@@ -180,13 +187,13 @@ func (s *Store) holdForReviewTx(ctx context.Context, origin SendOrigin, in SendE
 		if err != nil {
 			return err
 		}
-		id = written
+		result = written
 		return nil
 	})
 	if err != nil {
-		return ids.UUID{}, err
+		return heldMessage{}, err
 	}
-	return id, nil
+	return result, nil
 }
 
 // holdOrReuseTx writes the held row, or answers the id of the one this seat is
@@ -208,13 +215,13 @@ func (s *Store) holdForReviewTx(ctx context.Context, origin SendOrigin, in SendE
 func holdOrReuseTx(
 	ctx context.Context, tx pgx.Tx, held heldIdentity,
 	prov agentProvenance, now time.Time, subject string,
-) (ids.UUID, error) {
+) (heldMessage, error) {
 	existing, err := heldTwinOf(ctx, tx, held)
 	if err != nil {
-		return ids.UUID{}, err
+		return heldMessage{}, err
 	}
 	if !existing.IsZero() {
-		return existing, nil
+		return heldMessage{id: existing, reused: true}, nil
 	}
 	// ON CONFLICT because the read above and this write are not atomic: two
 	// refusals of one message can both find nothing and both arrive here. The
@@ -249,12 +256,12 @@ func holdOrReuseTx(
 		// the answer they pressed send for.
 		existing, err := heldTwinOf(ctx, tx, held)
 		if err != nil {
-			return ids.UUID{}, err
+			return heldMessage{}, err
 		}
-		return existing, nil
+		return heldMessage{id: existing, reused: !existing.IsZero()}, nil
 	}
 	if err != nil {
-		return ids.UUID{}, fmt.Errorf("held send: recording the refused message: %w", err)
+		return heldMessage{}, fmt.Errorf("held send: recording the refused message: %w", err)
 	}
 	// Audited as 'hold' rather than 'schedule': the two write the same columns
 	// and mean opposite things, and an auditor reading 'schedule' on a message
@@ -263,9 +270,9 @@ func holdOrReuseTx(
 		"held_reason": held.reason,
 		fieldSubject:  subject,
 	}); err != nil {
-		return ids.UUID{}, err
+		return heldMessage{}, err
 	}
-	return id, nil
+	return heldMessage{id: id}, nil
 }
 
 // holdRefusedSend holds a message the CONSENT ENGINE refused, and nothing else.
@@ -279,9 +286,9 @@ func holdOrReuseTx(
 // A consent refusal is different in kind: the message is fine, the engine
 // decided it may not go to these recipients, and somebody has to decide what
 // happens next. That is the one case with something to resume.
-func (s *Store) holdRefusedSend(ctx context.Context, origin SendOrigin, in SendEmailInput, cause error) ids.UUID {
+func (s *Store) holdRefusedSend(ctx context.Context, origin SendOrigin, in SendEmailInput, cause error) heldMessage {
 	if !errors.Is(cause, apperrors.ErrConsentNotGranted) {
-		return ids.UUID{}
+		return heldMessage{}
 	}
 	return s.holdForReview(ctx, origin, in)
 }

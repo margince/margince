@@ -29,6 +29,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/mailprobe"
+	"github.com/margince/margince/backend/internal/compose/sendmetrics"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -194,7 +195,8 @@ func (s *Server) applySendPath(pool *pgxpool.Pool) {
 		// forgot to wire this would compose replies to its own staff.
 		WithColleagues(ColleagueDomainsFor(pool)).
 		WithSendAuthority(send.SendAuthority).
-		WithDraftOutcome(send.DraftOutcome)
+		WithDraftOutcome(send.DraftOutcome).
+		WithSendObserver(sendmetrics.Observer(activities.InlineSendReviewFor(StoredConfig(pool))))
 	decisions := s.approvalsHandlers
 	s.approvalsHandlers = decisions.WithLateEffects(func(svc *approvals.Service) {
 		registerLateApprovalEffects(svc, pool, send)

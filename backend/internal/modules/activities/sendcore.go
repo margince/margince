@@ -51,7 +51,12 @@ func (s *Store) SendEmail(ctx context.Context, origin SendOrigin, in SendEmailIn
 		// The hold runs first because the review binds to it. Both writes
 		// happen after the unwind, and in this order: a review naming an intent
 		// that does not exist yet would violate its own foreign key.
-		return crmcontracts.Activity{}, recordRefusal(ctx, stager, err, s.holdRefusedSend(ctx, origin, in, err))
+		held := s.holdRefusedSend(ctx, origin, in, err)
+		refusal := recordRefusal(ctx, stager, err, held.id)
+		if held.reused {
+			refusal = &repeatedSendError{refusal: refusal}
+		}
+		return crmcontracts.Activity{}, refusal
 	}
 	return sent, nil
 }
