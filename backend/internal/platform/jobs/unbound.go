@@ -13,7 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
-// requestedModelWork names the gates of kinds a person queued. While no model
+// requestedModelWork names the gates of kinds a user queued. While no model
 // is bound they still run and fail with their reason. A request that completes
 // without doing anything reads as work that was done.
 var requestedModelWork = map[string]bool{
