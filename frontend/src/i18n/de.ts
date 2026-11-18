@@ -4572,6 +4572,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Nur, wenn jemand die Unterschrift bestätigt. Nie aus dem Abschlussdatum des Deals übernommen.",
   "contracts.form.save": "Vertrag erfassen",
   "contracts.form.errNoName": "Gib einen Vertragstitel ein.",
+  "contracts.form.errNegativeAmount":
+    "Wert und jährlich wiederkehrender Umsatz können nicht negativ sein.",
   "contracts.form.errTermOrder":
     "Eine Laufzeit kann nicht vor ihrem Beginn enden.",
   "contracts.add": "Vertrag hinzuf\u00fcgen",

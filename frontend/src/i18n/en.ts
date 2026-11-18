@@ -4517,6 +4517,8 @@ export const en = {
     "Only when someone confirms the signature. Never taken from the deal’s close date.",
   "contracts.form.save": "Record contract",
   "contracts.form.errNoName": "Enter a contract title.",
+  "contracts.form.errNegativeAmount":
+    "Value and annual recurring revenue cannot be negative.",
   "contracts.form.errTermOrder": "A term cannot end before it starts.",
   "contracts.add": "Add contract",
   "contracts.renew.title": "Renew contract",

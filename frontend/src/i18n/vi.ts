@@ -4443,6 +4443,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chỉ khi có xác nhận chữ ký. Không bao giờ lấy từ ngày chốt của deal.",
   "contracts.form.save": "Ghi nh\u1eadn h\u1ee3p \u0111\u1ed3ng",
   "contracts.form.errNoName": "Nhập tiêu đề hợp đồng.",
+  "contracts.form.errNegativeAmount":
+    "Giá trị và doanh thu định kỳ hằng năm không được âm.",
   "contracts.form.errTermOrder":
     "Kỳ hạn không thể kết thúc trước ngày bắt đầu.",
   "contracts.add": "Th\u00eam h\u1ee3p \u0111\u1ed3ng",
