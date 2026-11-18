@@ -5,7 +5,7 @@
 
 package integration
 
-// A scheduled message the engine refuses when it comes due holds AND opens the
+// A scheduled message the engine refuses when it comes due holds and opens the
 // review the refusal owes, so the rep has something to confirm. Only an engine
 // refusal opens one; a missed window or a technical fault holds alone.
 
@@ -59,8 +59,8 @@ func heldByAnObjectionAtFire(t *testing.T) (*preflightEnv, ids.UUID) {
 	return p, id
 }
 
-// confirmReview directs the held message the way the review modal does: it
-// reads the review first and sends back the revision and reasons it was shown.
+// confirmReview directs the held message the way the review modal does. It
+// reads the review first and sends back the revision and reasons it showed.
 func (p *preflightEnv) confirmReview(t *testing.T, review string) int {
 	t.Helper()
 	var served struct {
@@ -80,8 +80,8 @@ func (p *preflightEnv) confirmReview(t *testing.T, review string) int {
 	}, nil, nil)
 }
 
-// THE MAIN PATH. Held with one review and nothing sent; the review is offered
-// on the held row; confirming it sends the message exactly once.
+// The main path. Held with one review and nothing sent; the review is offered
+// on the held row; confirming it sends the message once.
 //
 // Mutation: drop the recordReviewForHoldTx call from the fire's deferred hold
 // (scheduledsendfire.go) and this fails on the review count.

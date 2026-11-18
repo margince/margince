@@ -222,9 +222,8 @@ func (s commsStager) RecordPendingReview(ctx context.Context, err error, intentI
 }
 
 // RecordReviewForHoldTx opens the same review RecordPendingReview does, on the
-// transaction that holds a scheduled row. Unlike it, a failure to record is
-// returned: the hold rolls back with it and the fire retries, so a held row is
-// never left without the review its refusal owes.
+// transaction that holds a scheduled row. A failure to record is returned here.
+// The hold rolls back with it and the fire retries, so no held row lacks its review.
 func (s commsStager) RecordReviewForHoldTx(ctx context.Context, tx pgx.Tx, refusal error, intentID ids.UUID) error {
 	var pending *pendingReviewError
 	if !errors.As(refusal, &pending) || s.authority == nil {

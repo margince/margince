@@ -308,11 +308,9 @@ func (s *Store) RescheduleInTx(ctx context.Context, tx pgx.Tx, id ids.UUID, sche
 		if err := s.resolveHeld(ctx, tx, id); err != nil {
 			return err
 		}
-		// THE REVIEW STAYS LIVE. The decision is still outstanding and the
-		// message is still going out. A decision recorded on it before the new
-		// moment is spent by the fire, a fire the engine allows closes it, and a
-		// fire refused again upserts it on the live-intent index rather than
-		// opening a rival (scheduledsendfire.go).
+		// The review stays live, because the decision is still outstanding.
+		// At the new moment the fire spends a decision recorded on it, or closes
+		// it when the engine allows, or refreshes it when refused again.
 		return timer.ScheduleTx(ctx, tx, id, keptAt)
 	}
 }

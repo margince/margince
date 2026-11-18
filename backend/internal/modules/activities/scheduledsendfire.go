@@ -147,10 +147,10 @@ func (s *Store) FireScheduledSend(ctx context.Context, id ids.UUID, grace time.D
 		if deferred != "" {
 			// The send was refused about the world, and the rollback undid the
 			// activity it had already written. Hold now, in a fresh
-			// transaction, under the version this attempt claimed: a rep who
-			// rescheduled since has made a newer decision and the hold declines
-			// on their behalf. The review rides the same transaction, so it
-			// exists exactly when this version was held.
+			// transaction, under the version this attempt claimed. A rep who
+			// rescheduled since has made a newer decision, and the hold declines.
+			// The review rides the same transaction, so it exists only when
+			// this version was held.
 			if holdErr := s.holdObserved(ctx, id, deferred, observed, func(tx pgx.Tx) error {
 				return recordReviewForHoldTx(ctx, tx, stager, err, id)
 			}); holdErr != nil {

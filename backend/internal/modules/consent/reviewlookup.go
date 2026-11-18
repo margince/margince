@@ -23,8 +23,8 @@ import (
 const fieldReviewID = "review_id"
 
 // LiveReviewsForIntents answers which review, if any, stands over each of these
-// held messages, with its refusals so compose can say what the caller may do
-// about it. Compose binds it to activities.ReviewLookup.
+// held messages. Its refusals ride along so compose can say what the caller may
+// do about it.
 //
 // The grant is activity:read, the check the scheduled-send list makes before it
 // has any ids to ask about. The review's own grant would refuse the rep whose

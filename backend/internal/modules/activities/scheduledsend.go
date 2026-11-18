@@ -174,13 +174,9 @@ type ScheduledSend struct {
 	ScheduledBy     ids.UUID
 	ActivityID      ids.UUID
 	HeldReason      string
-	// ReviewID is the review standing over this message's refusal, when one
-	// does. Zero on every message nobody refused — and on a held row whose
-	// review has since been answered, which is a row a rep can only cancel or
-	// reschedule now.
-	ReviewID ids.UUID
-	// ReviewActions is what the caller may do about that review; empty when
-	// they may only read it.
+	// ReviewID is the live review over this message's refusal, or zero, and
+	// ReviewActions what the caller may do about it.
+	ReviewID      ids.UUID
 	ReviewActions []string
 	// Links are the records an account-started message files itself under,
 	// frozen at composition. Empty on a reply, whose records come from its

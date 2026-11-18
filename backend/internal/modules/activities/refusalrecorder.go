@@ -40,16 +40,13 @@ type RefusalRecorder interface {
 	RecordPendingReview(ctx context.Context, err error, intentID ids.UUID) error
 }
 
-// HoldRefusalRecorder opens the review a refusal owes INSIDE the transaction
+// HoldRefusalRecorder opens the review a refusal owes inside the transaction
 // that holds an existing scheduled row.
 //
-// The scheduled fire needs this moment, not RefusalRecorder's. Its hold and its
-// review name one row version, and a review written after the hold committed
-// is lost to a crash in between: the retry finds the row held and never opens
-// it. Neither danger RefusalRecorder avoids applies here, because the hold
-// transaction is not the one that refused and the review rides its connection.
-//
-// A refusal that carries no review answers nil, and the hold stands alone.
+// The fire's hold and review name one row version. A review written after the
+// hold committed is lost to a crash in between, and the retry finds the row
+// held. The hold transaction did not refuse, so RecordPendingReview's reason
+// to wait does not apply. A refusal that carries no review answers nil.
 type HoldRefusalRecorder interface {
 	RecordReviewForHoldTx(ctx context.Context, tx pgx.Tx, refusal error, intentID ids.UUID) error
 }

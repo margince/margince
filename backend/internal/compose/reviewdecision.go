@@ -68,8 +68,8 @@ type reviewLookup struct {
 }
 
 // LiveReviewsForIntents implements activities.ReviewLookup. The actions come
-// from actionsForRefusal, the rule a refusal's own answer uses, so a held row
-// offers exactly the move the refusal offered when the send was pressed.
+// from actionsForRefusal, the rule a refusal's own answer uses. So a held row
+// offers the move the refusal offered when the send was pressed.
 func (l reviewLookup) LiveReviewsForIntents(
 	ctx context.Context, intents []ids.UUID,
 ) (map[ids.UUID]activities.ReviewLink, error) {
