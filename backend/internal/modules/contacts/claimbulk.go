@@ -87,7 +87,7 @@ func (s *Store) SetClaimDoneTx(ctx context.Context, tx pgx.Tx, id ids.UUID, done
 	if !done {
 		from, to = to, from
 	}
-	if err := moveClaimStatus(ctx, tx, id, from, to); err != nil {
+	if err := moveClaimStatus(ctx, tx, id, from, to, nil); err != nil {
 		return 0, err
 	}
 	var version int64

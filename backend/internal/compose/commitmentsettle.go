@@ -70,9 +70,17 @@ func (t *CommitmentSettleTrigger) HandleEvent(ctx context.Context, env events.En
 		Type: principal.PrincipalSystem, ID: commitmentSettleActor,
 	}), env.Trace.CorrelationID)
 	switch env.Type {
+	case eventActivityCaptured:
+		return t.settleKeptByMeeting(ctx, env.Entity.ID)
 	case eventActivityUpdated:
 		var payload crmcontracts.PublicEventActivityUpdated
-		if !readSettlePayload(ctx, t.log, env, &payload) || payload.ChangedFields.IsDone == nil || !*payload.ChangedFields.IsDone {
+		if !readSettlePayload(ctx, t.log, env, &payload) {
+			return nil
+		}
+		if err := t.settleKeptByMeeting(ctx, env.Entity.ID); err != nil {
+			return err
+		}
+		if payload.ChangedFields.IsDone == nil || !*payload.ChangedFields.IsDone {
 			return nil
 		}
 		return t.settleClaimsOf(ctx, env.Actor, env.Entity.ID)
@@ -82,6 +90,30 @@ func (t *CommitmentSettleTrigger) HandleEvent(ctx context.Context, env events.En
 			return nil
 		}
 		return t.applyClaimSettlement(ctx, env.Actor, ids.UUID(payload.ClaimId), env.Trace.AuditLogID)
+	}
+	return nil
+}
+
+// settleKeptByMeeting closes the promises an accepted guest of this meeting
+// kept. The system writes it, so the audit row says it was automatic and names
+// the meeting, and the contact's owner can undo it.
+func (t *CommitmentSettleTrigger) settleKeptByMeeting(ctx context.Context, activityID ids.UUID) error {
+	asSystem, ok, err := t.actingAs(ctx, events.Actor{Type: string(principal.PrincipalSystem)})
+	if err != nil || !ok {
+		return err
+	}
+	kept, err := t.claims.KeptByAcceptedGuest(asSystem, activityID)
+	if err != nil {
+		return err
+	}
+	for _, claim := range kept {
+		if err := t.claims.SettleKeptByEvidence(asSystem, claim, activityID); err != nil {
+			if refused(err) {
+				t.log.WarnContext(ctx, "kept promise settlement refused", "claim", claim, "err", err)
+				continue
+			}
+			return err
+		}
 	}
 	return nil
 }

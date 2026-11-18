@@ -60,63 +60,12 @@ func EmailSummariesByIDBatch(
 	// answer to that question. Returning nil would make each call site decide
 	// again whether a nil map is safe to index.
 	none := map[ids.UUID]crmcontracts.EmailSummary{}
-	if len(activityIDs) == 0 {
+	admitted, err := readAdmittedByID(ctx, tx, activityIDs, asOf, "a.kind = 'email'")
+	if err != nil {
+		return nil, err
+	}
+	if admitted == nil {
 		return none, nil
-	}
-	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
-		// A seat with no activity.read reads no email rows, and a page of
-		// other records still renders. Same silent narrowing search itself
-		// gives a denied branch.
-		return none, nil
-	}
-	args := []any{}
-	arg := func(v any) int { args = append(args, v); return len(args) }
-
-	scope, err := auth.ActivityContentClause(ctx, "a", arg)
-	if err != nil {
-		return nil, err
-	}
-	if scope == "" {
-		scope = sqlTrue
-	}
-	where := []string{
-		fmt.Sprintf("a.id = ANY($%d)", arg(activityIDs)),
-		"a.kind = 'email'",
-		activityLive,
-		scope,
-	}
-	// The content gate holds the audience arm, so every row it admits has its
-	// content available. A second copy would only cost planning.
-	from, contentArm := ActivityContentFrom("activity a", sqlTrue)
-
-	columns, err := activityColumns(ctx, contentArm, arg)
-	if err != nil {
-		return nil, err
-	}
-	sql := "SELECT " + columns + " FROM " + from + " WHERE " +
-		strings.Join(where, " AND ")
-	rows, err := tx.Query(ctx, sql, args...)
-	if err != nil {
-		return nil, fmt.Errorf("activities: reading email summaries for a page: %w", err)
-	}
-	defer rows.Close()
-
-	admitted := make([]crmcontracts.Activity, 0, len(activityIDs))
-	for rows.Next() {
-		var scan activityScan
-		if err := rows.Scan(activityScanTargets(&scan)...); err != nil {
-			return nil, fmt.Errorf("activities: scanning an email summary: %w", err)
-		}
-		admitted = append(admitted, scan.record(ctx))
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("activities: reading email summaries for a page: %w", err)
-	}
-	// Collected first: the count runs a second statement on this transaction,
-	// which needs the cursor above already closed.
-	rows.Close()
-	if err := WithEmailRowFacts(ctx, tx, admitted, asOf); err != nil {
-		return nil, err
 	}
 
 	out := make(map[ids.UUID]crmcontracts.EmailSummary, len(activityIDs))
@@ -132,4 +81,90 @@ func EmailSummariesByIDBatch(
 		}
 	}
 	return out, nil
+}
+
+// VoicesByIDBatch answers who wrote each of these activities, for THIS caller.
+// A row the caller may not read, that is gone, or that records no author is
+// absent: who wrote a row is part of its content. Brief inputs read it so a
+// quoted line is credited to its writer and not to the page's contact.
+func VoicesByIDBatch(
+	ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, asOf time.Time,
+) (map[ids.UUID]*crmcontracts.ActivityVoice, error) {
+	out := map[ids.UUID]*crmcontracts.ActivityVoice{}
+	admitted, err := readAdmittedByID(ctx, tx, activityIDs, asOf, sqlTrue)
+	if err != nil {
+		return nil, err
+	}
+	for _, activity := range admitted {
+		if activity.Voice != nil && activity.Voice.Author != nil {
+			out[ids.UUID(activity.Id)] = activity.Voice
+		}
+	}
+	return out, nil
+}
+
+// readAdmittedByID reads the rows of these ids that the caller may read in
+// full, with their mail facts and voices filled. It returns nil when there is
+// nothing to read or the seat has no activity.read: a batch enriching a page
+// must not fail the page over a row the reader was never entitled to.
+func readAdmittedByID(
+	ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, asOf time.Time, kindClause string,
+) ([]crmcontracts.Activity, error) {
+	if len(activityIDs) == 0 {
+		return nil, nil
+	}
+	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
+		// Same silent narrowing search itself gives a denied branch.
+		return nil, nil
+	}
+	args := []any{}
+	arg := func(v any) int { args = append(args, v); return len(args) }
+
+	scope, err := auth.ActivityContentClause(ctx, "a", arg)
+	if err != nil {
+		return nil, err
+	}
+	if scope == "" {
+		scope = sqlTrue
+	}
+	where := []string{
+		fmt.Sprintf("a.id = ANY($%d)", arg(activityIDs)),
+		kindClause,
+		activityLive,
+		scope,
+	}
+	// The content gate holds the audience arm, so every row it admits has its
+	// content available. A second copy would only cost planning.
+	from, contentArm := ActivityContentFrom("activity a", sqlTrue)
+
+	columns, err := activityColumns(ctx, contentArm, arg)
+	if err != nil {
+		return nil, err
+	}
+	sql := "SELECT " + columns + " FROM " + from + " WHERE " +
+		strings.Join(where, " AND ")
+	rows, err := tx.Query(ctx, sql, args...)
+	if err != nil {
+		return nil, fmt.Errorf("activities: reading rows by id for a page: %w", err)
+	}
+	defer rows.Close()
+
+	admitted := make([]crmcontracts.Activity, 0, len(activityIDs))
+	for rows.Next() {
+		var scan activityScan
+		if err := rows.Scan(activityScanTargets(&scan)...); err != nil {
+			return nil, fmt.Errorf("activities: scanning a row by id: %w", err)
+		}
+		admitted = append(admitted, scan.record(ctx))
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("activities: reading rows by id for a page: %w", err)
+	}
+	// Collected first: the facts run further statements on this transaction,
+	// which needs the cursor above already closed.
+	rows.Close()
+	if err := WithEmailRowFacts(ctx, tx, admitted, asOf); err != nil {
+		return nil, err
+	}
+	return admitted, nil
 }

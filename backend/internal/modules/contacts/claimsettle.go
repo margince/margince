@@ -15,6 +15,7 @@ package contacts
 import (
 	"context"
 	"fmt"
+	"maps"
 	"net/http"
 
 	"github.com/jackc/pgx/v5"
@@ -63,14 +64,19 @@ func (s *Store) SettleConversationClaim(ctx context.Context, claimID ids.UUID, o
 		return err
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
-		return moveClaimStatus(ctx, tx, claimID, claimStatusOpen, outcome)
+		return moveClaimStatus(ctx, tx, claimID, claimStatusOpen, outcome, nil)
 	})
 }
 
 // moveClaimStatus moves one claim from status `from` to `to` under the gates a
 // settlement holds. A claim already at `to` is left alone; one at any other
 // status is a conflict rather than an overwrite.
-func moveClaimStatus(ctx context.Context, tx pgx.Tx, claimID ids.UUID, from, to string) error {
+//
+// `evidence` is extra audit detail for the new state: who settled it and why,
+// when it was not a person's say-so.
+//
+//craft:ignore naked-any the audit evidence seam is jsonb; its members are each writer's own shape
+func moveClaimStatus(ctx context.Context, tx pgx.Tx, claimID ids.UUID, from, to string, evidence map[string]any) error {
 	// LOCKED before the status is read. Without FOR UPDATE two concurrent
 	// settles both read `open`, both pass the transition check, and the
 	// second overwrites the first — 204 to both callers, and the loser's
@@ -116,9 +122,10 @@ func moveClaimStatus(ctx context.Context, tx pgx.Tx, claimID ids.UUID, from, to 
 		claimID, to); err != nil {
 		return fmt.Errorf("settle the claim: %w", err)
 	}
+	after := map[string]any{"claim_status": to, claimIDKey: claimID.String()}
+	maps.Copy(after, evidence)
 	auditID, err := storekit.Audit(ctx, tx, "update", "contact", contactID,
-		map[string]any{"claim_status": current, claimIDKey: claimID.String()},
-		map[string]any{"claim_status": to, claimIDKey: claimID.String()})
+		map[string]any{"claim_status": current, claimIDKey: claimID.String()}, after)
 	if err != nil {
 		return fmt.Errorf("audit the settlement: %w", err)
 	}
@@ -171,7 +178,7 @@ func WithdrawClaimsTx(ctx context.Context, tx pgx.Tx, claimIDs []ids.UUID) error
 		return fmt.Errorf("read the claims to withdraw: %w", err)
 	}
 	for _, claim := range open {
-		if err := moveClaimStatus(ctx, tx, claim, claimStatusOpen, string(crmcontracts.SettleClaimRequestOutcomeDismissed)); err != nil {
+		if err := moveClaimStatus(ctx, tx, claim, claimStatusOpen, string(crmcontracts.SettleClaimRequestOutcomeDismissed), nil); err != nil {
 			return err
 		}
 	}

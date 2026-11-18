@@ -231,7 +231,7 @@ func omissions(in Input) *[]crmcontracts.MeetingBriefOmission {
 	// from what is left, so without this line a thin arc reads as a thin
 	// relationship — which is exactly the wrong thing to walk into a room
 	// believing.
-	if withheld := withheldCount(in.History); withheld > 0 {
+	if withheld := withheldCount(in.History) + in.CompanyWithheld; withheld > 0 {
 		out = append(out, crmcontracts.MeetingBriefOmission{
 			Source: "activity_history",
 			Reason: words.withheldHistory(withheld),
@@ -294,6 +294,8 @@ func (s *Service) assembleInput(ctx context.Context, activityID ids.UUID, reques
 	var roomHidden bool
 	var history []HistoryIn
 	var excerpts []ExcerptIn
+	var companyTopics []CompanyTopicIn
+	var companyWithheld int
 	var seats []ids.UUID
 	var zone *time.Location
 	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
@@ -336,6 +338,10 @@ func (s *Service) assembleInput(ctx context.Context, activityID ids.UUID, reques
 		if err != nil {
 			return err
 		}
+		companyTopics, companyWithheld, err = s.companyHistory(ctx, tx, loaded, scope, s.now().UTC(), history)
+		if err != nil {
+			return err
+		}
 		seats, err = s.readSeats(ctx, tx, activityID)
 		if err != nil {
 			return err
@@ -355,6 +361,7 @@ func (s *Service) assembleInput(ctx context.Context, activityID ids.UUID, reques
 	in := s.foldRoom(room, perAttendee, earlier, lastSpoke, moves, roomHidden, history, excerpts, seats)
 	in.Language = language
 	in.Zone = zone
+	in.CompanyHistory, in.CompanyWithheld = companyTopics, companyWithheld
 	var viewScope *crmcontracts.ProjectScope
 	// With nobody in the room this caller may see, there is no 360 to read.
 	// The header still stands.

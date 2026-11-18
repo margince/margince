@@ -28,6 +28,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/dealrole"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // The citable record types. A brief may only point at things the reader can
@@ -453,11 +454,19 @@ func (said briefCopy) talkingPointLine(claim ClaimIn) string {
 // companyContextSection recalls earlier meetings with this room; no history
 // means no background section.
 func companyContextSection(in Input) []Sentence {
-	out := make([]Sentence, 0, len(in.PriorMeetings))
+	out := make([]Sentence, 0, len(in.PriorMeetings)+len(in.CompanyHistory))
 	for _, prior := range in.PriorMeetings {
 		out = append(out, Sentence{
 			Text:     briefCopyFor(in.Language).priorMeetingLine(prior, in.Now, in.Zone),
 			Evidence: []Evidence{{EntityType: citeActivity, EntityID: prior.ID}},
+		})
+	}
+	said := briefCopyFor(in.Language)
+	for _, topic := range in.CompanyHistory {
+		out = append(out, Sentence{
+			Text: fmt.Sprintf(said.Say(touchWords.EarlierAt), in.Company, topic.Contact, topic.Subject,
+				occurredday.When(occurredday.Moment{At: topic.At.At, DateOnly: topic.At.DateOnly})),
+			Evidence: []Evidence{{EntityType: citeActivity, EntityID: topic.ID}},
 		})
 	}
 	return out

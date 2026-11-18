@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/contactbrief"
 	"github.com/margince/margince/backend/internal/compose/contactcontext"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -78,6 +79,13 @@ type Input struct {
 	// bounded and audience-gated. Also out of the sections prompt: the plan is
 	// what reads them.
 	Excerpts []ExcerptIn `json:"-"`
+	// CompanyHistory is what other contacts at the room's company already
+	// exchanged with us in the last year, newest topics first per contact. It
+	// holds only rows this reader may open.
+	CompanyHistory []CompanyTopicIn
+	// CompanyWithheld counts company conversations the reader may know of and
+	// not open, for the history omission.
+	CompanyWithheld int `json:"-"`
 	// Seats are the COLLEAGUES in this room, as against the attendees, who are
 	// the counterparty. The coaching projection reads them to ask whether this
 	// reader is a lead looking at somebody else's meeting. Out of the prompt:
@@ -208,6 +216,10 @@ type ActIn struct {
 	// inbound mail to the counterpart.
 	WroteOurSide bool `json:"-"`
 	SideKnown    bool `json:"-"`
+	// Speaker says who wrote this row (contactbrief.SpeakerFor), because the
+	// direction names the transport and not the author. Absent when the record
+	// names no author.
+	Speaker *contactbrief.Speaker `json:"speaker,omitempty"`
 }
 
 // FromMeeting folds the gated meeting read into the brief's input.
@@ -264,7 +276,7 @@ func FromMeeting(room meeting, perAttendee map[ids.UUID][]crmcontracts.Conversat
 func foldClaims(contactName string, found []crmcontracts.ConversationClaim) []ClaimIn {
 	out := make([]ClaimIn, 0, len(found))
 	for _, claim := range found {
-		if claim.Status == crmcontracts.ConversationClaimStatusDismissed {
+		if claim.Status == crmcontracts.ConversationClaimStatusDismissed || notCurrentPromise(claim) {
 			continue
 		}
 		folded := ClaimIn{
@@ -284,6 +296,16 @@ func foldClaims(contactName string, found []crmcontracts.ConversationClaim) []Cl
 		out = append(out, folded)
 	}
 	return out
+}
+
+// notCurrentPromise is an open promise the claims read marks as not current
+// (needs_review folds in the commitment admission). The commitments card, the
+// worklist and the project rollup list only current promises, so a prep that
+// planned on this one would name work they no longer show.
+func notCurrentPromise(claim crmcontracts.ConversationClaim) bool {
+	promise := claim.Kind == crmcontracts.ConversationClaimKindCommitmentOurs ||
+		claim.Kind == crmcontracts.ConversationClaimKindCommitmentTheirs
+	return promise && claim.Status == crmcontracts.ConversationClaimStatusOpen && claim.NeedsReview
 }
 
 // WithCounterpart folds in what the lead attendee's own page already knows:
@@ -332,6 +354,7 @@ func WithCounterpart(in *Input, view crmcontracts.Contact360) {
 			folded.Direction = string(*activity.Direction)
 		}
 		folded.WroteOurSide, folded.SideKnown = activities.WroteItOurSide(activity)
+		folded.Speaker = contactbrief.SpeakerFor(activity.Voice)
 		in.Recent = append(in.Recent, folded)
 	}
 }
