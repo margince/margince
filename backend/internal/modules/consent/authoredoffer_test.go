@@ -83,26 +83,27 @@ func TestMarkupPastTheRenderCapIsJudgedAsAnOffer(t *testing.T) {
 	}
 }
 
-// A subject carried over from the message answered is the contact's words. A
-// subject the rep changed is theirs again.
-func TestACarriedOverSubjectIsNotAnAuthoredOffer(t *testing.T) {
+// A subject carried over from the message answered is left for the
+// recipient to settle. A subject the rep changed is read as written.
+func TestACarriedOverSubjectIsLeftForTheRecipientToSettle(t *testing.T) {
 	const anchor = "Termin und Angebot"
 	for _, c := range []struct {
-		subject string
-		want    bool
+		subject       string
+		offer, quoted bool
 	}{
-		{"Re: Termin und Angebot", false},
-		{"AW: re:  termin und angebot", false},
-		{"WG: Termin und Angebot", false},
-		{"Re: Termin und Angebot mit 20 % Rabatt", true},
-		{"Unser Angebot", true},
+		{"Re: Termin und Angebot", false, true},
+		{"AW: re:  termin und angebot", false, true},
+		{"WG: Termin und Angebot", false, true},
+		{"Re: Termin und Angebot mit 20 % Rabatt", true, false},
+		{"Unser Angebot", true, false},
 	} {
 		req := commsauthz.Request{AuthoredSubject: c.subject, AuthoredBody: "Können wir den Termin verschieben?"}
-		if got := withAuthoredOffer(req, anchor).Evidence.AuthoredOffer; got != c.want {
-			t.Errorf("%q answering %q: offer = %v, want %v", c.subject, anchor, got, c.want)
+		got := withAuthoredOffer(req, anchor).Evidence
+		if got.AuthoredOffer != c.offer || got.QuotedSubjectOffer != c.quoted {
+			t.Errorf("%q answering %q: offer %v, quoted %v; want %v, %v", c.subject, anchor, got.AuthoredOffer, got.QuotedSubjectOffer, c.offer, c.quoted)
 		}
 	}
-	if !withAuthoredOffer(commsauthz.Request{AuthoredSubject: "Re: Termin und Angebot"}, "").Evidence.AuthoredOffer {
-		t.Error("a subject naming an offer with no message answered did not read as an offer")
+	if got := withAuthoredOffer(commsauthz.Request{AuthoredSubject: "Re: Termin und Angebot"}, "").Evidence; !got.AuthoredOffer || got.QuotedSubjectOffer {
+		t.Errorf("a subject naming an offer with no message answered reads %+v, want an authored offer", got)
 	}
 }

@@ -101,6 +101,11 @@ type Evidence struct {
 	// sets it at staging from the Authored* request fields; transmit reads
 	// the staged value, because the delivery keeps no authored text.
 	AuthoredOffer bool
+	// QuotedSubjectOffer says only the subject reads as an offer, and it
+	// carries the anchor's subject over. Staging settles it per recipient:
+	// the subject is quoted for the one who wrote the anchor, authored for
+	// everyone else. Never stored.
+	QuotedSubjectOffer bool
 	// RecipientCountries are the countries the sender stated for this
 	// message's recipients. On a decision it holds that recipient's entry
 	// alone, which is what staging stores and transmit reads back.

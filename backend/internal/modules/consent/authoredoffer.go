@@ -4,15 +4,20 @@
 package consent
 
 import (
+	"context"
+	"errors"
 	"regexp"
 	"slices"
 	"strings"
 
+	"github.com/jackc/pgx/v5"
 	"golang.org/x/text/unicode/norm"
 
 	"github.com/margince/margince/backend/internal/platform/htmltext"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/mailsubject"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // offerWords are words that make an offer, matched as whole words. The list
@@ -51,12 +56,8 @@ func authoredOffer(subject, body string, fileNames []string) bool {
 
 // withAuthoredOffer reads the authored words into the evidence. The engine
 // reads them itself, so no caller can vouch that a message makes no offer. A
-// subject that only carries the anchor's over is quoted, not written.
+// subject that carries the anchor's over is left to quotedSubjectFor.
 func withAuthoredOffer(req commsauthz.Request, anchorSubject string) commsauthz.Request {
-	subject := req.AuthoredSubject
-	if anchorSubject != "" && mailsubject.Topic(subject) == mailsubject.Topic(anchorSubject) {
-		subject = ""
-	}
 	body := req.AuthoredBody
 	if req.AuthoredHTML != "" {
 		visible, cut := htmltext.Render(req.AuthoredHTML)
@@ -68,6 +69,36 @@ func withAuthoredOffer(req commsauthz.Request, anchorSubject string) commsauthz.
 		}
 		body += "\n" + visible
 	}
-	req.Evidence.AuthoredOffer = authoredOffer(subject, body, req.AuthoredFileNames)
+	if anchorSubject == "" || mailsubject.Topic(req.AuthoredSubject) != mailsubject.Topic(anchorSubject) {
+		req.Evidence.AuthoredOffer = authoredOffer(req.AuthoredSubject, body, req.AuthoredFileNames)
+		return req
+	}
+	req.Evidence.AuthoredOffer = authoredOffer("", body, req.AuthoredFileNames)
+	req.Evidence.QuotedSubjectOffer = !req.Evidence.AuthoredOffer && authoredOffer(req.AuthoredSubject, "", nil)
 	return req
+}
+
+// quotedSubjectFor settles a carried-over subject for one recipient. It is
+// their own words only when they wrote the anchor; for anyone else it is an
+// offer the rep sends them.
+func quotedSubjectFor(ctx context.Context, tx pgx.Tx, r connector.Recipient, req commsauthz.Request) (commsauthz.Request, error) {
+	if !req.Evidence.QuotedSubjectOffer {
+		return req, nil
+	}
+	contactID, found, err := resolveContact(ctx, tx, r)
+	if err != nil && !errors.Is(err, apperrors.ErrConsentNotGranted) {
+		return commsauthz.Request{}, err
+	}
+	address, channelProvider, channelUserID := recipientSubjectAddress(r)
+	subject := subjectRef{Address: address, ChannelProvider: channelProvider, ChannelUserID: channelUserID, SendingEntity: req.SendingEntity}
+	if found {
+		subject.Kind, subject.ID = entityContact, contactID
+	}
+	wrote, err := subjectWroteTheAnchor(ctx, tx, req.AnchorActivityID, subject)
+	if err != nil {
+		return commsauthz.Request{}, err
+	}
+	req.Evidence.AuthoredOffer = !wrote
+	req.Evidence.QuotedSubjectOffer = false
+	return req, nil
 }

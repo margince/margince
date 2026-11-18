@@ -83,11 +83,24 @@ func recipientSubjectAddress(r connector.Recipient) (address, channelProvider, c
 // correspondence, and treating it as such would let anyone create a lawful
 // basis for writing to a third party by putting them in Cc.
 func repliesToTheSubject(ctx context.Context, tx pgx.Tx, anchor ids.UUID, subject subjectRef) (bool, error) {
+	return subjectWroteInto(ctx, tx, anchor, subject, false)
+}
+
+// subjectWroteTheAnchor is repliesToTheSubject asked of the anchor message
+// alone: whether the subject wrote the very mail a reply answers.
+func subjectWroteTheAnchor(ctx context.Context, tx pgx.Tx, anchor ids.UUID, subject subjectRef) (bool, error) {
+	if anchor.IsZero() {
+		return false, nil
+	}
+	return subjectWroteInto(ctx, tx, anchor, subject, true)
+}
+
+func subjectWroteInto(ctx context.Context, tx pgx.Tx, anchor ids.UUID, subject subjectRef, anchorOnly bool) (bool, error) {
 	entity, err := evidenceEntity(ctx, tx, subject.SendingEntity)
 	if err != nil {
 		return false, err
 	}
-	args := []any{subject.Kind, subject.ID, subject.Address, subject.ChannelProvider, subject.ChannelUserID, anchor, entity}
+	args := []any{subject.Kind, subject.ID, subject.Address, subject.ChannelProvider, subject.ChannelUserID, anchor, anchorOnly, entity}
 	entityArg := storekit.SQLf("$%d", len(args))
 	visible, err := activityEvidenceSQL(ctx, entityArg, &args)
 	if err != nil {
@@ -107,6 +120,7 @@ func repliesToTheSubject(ctx context.Context, tx pgx.Tx, anchor ids.UUID, subjec
 			  JOIN activity_participant p ON p.activity_id = a.id
 			 WHERE a.direction = 'inbound'
 			   AND a.archived_at IS NULL
+			   AND (NOT $7 OR a.id = $6)
 			   -- Authorship, from the shared spelling: the subject WROTE into
 			   -- this thread, and a recipient who was merely copied has
 			   -- initiated nothing.
