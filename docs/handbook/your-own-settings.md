@@ -48,7 +48,9 @@ In **Appointments**, edit the booking link to offer more choices for meeting min
 
 ## Account
 
-The Account page in Settings has five panels. **Profile** holds who you are: your picture, your display and greeting names, and your email signature. **Sign-in** holds your password, two-step sign-in and **Sign out**. **Signed-in devices** lists every browser or phone signed in as you. **Language and time zone** holds which language the product uses with you (English, Deutsch or Tiếng Việt), and your time zone. **This browser** holds what applies in this browser only: **Appearance** and **Single-key shortcuts**. **Appearance** is also in the account menu, where it is called **Theme**, and both change the same setting.
+The Account page in Settings has five panels. **Profile** holds who you are: your picture, your display and greeting names, and your email signature. **Sign-in** holds your password, two-step sign-in and **Sign out**. **Signed-in devices** lists every browser or phone signed in as you.
+
+Two more panels follow. **Language and time zone** holds which language the product uses with you (English, Deutsch or Tiếng Việt), and your time zone. **This browser** holds what applies in this browser only: **Appearance** and **Single-key shortcuts**. **Appearance** is also in the account menu, where it is called **Theme**, and both change the same setting.
 
 Where your browser can add Margince to this device as an app, **This browser** also has a **Margince app** row. It offers **Install**, says how to add the app, or says **Installed**.
 
@@ -63,9 +65,9 @@ Margince says **Password changed** and signs you out on all your other computers
 
 ### How do I sign out a device I lost or share?
 <!-- opens: settings/account -->
-To sign out another device in Margince, open Settings → **Account** and find the **Signed-in devices** panel. Each line names the browser and system, when it signed in and when it was last active. Choose **Sign out** on the line you do not recognise.
+To sign out another device in Margince, open Settings → **Account** and find the **Signed-in devices** panel. Each line names the browser and system, when it signed in and when it was last active. Choose **Sign out** on the line you do not know.
 
-**Sign out all others** ends every session except the one you are using. This device is marked **This device** and has no button; use **Sign out** in the **Sign-in** panel to end it. Also called: log out other devices, remote sign out, stolen laptop.
+**Sign out all others** ends every session except the one you are using. This device is marked **This device** and has no button; use **Sign out** in the **Sign-in** panel to end it. Also called: log out other devices, lost phone, shared computer.
 
 ### How do I turn on two-step sign-in?
 <!-- opens: settings/account -->
