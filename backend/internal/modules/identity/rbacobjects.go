@@ -3,7 +3,12 @@
 
 package identity
 
-import "github.com/margince/margince/backend/internal/modules/identity/internal/policy"
+import (
+	"fmt"
+	"slices"
+
+	"github.com/margince/margince/backend/internal/modules/identity/internal/policy"
+)
 
 // RbacObject is an RBAC object name an extension contributes to the
 // vocabulary. It is an ALIAS, not a wrapper: identity owns the vocabulary but
@@ -13,25 +18,53 @@ import "github.com/margince/margince/backend/internal/modules/identity/internal/
 // stored role document may grant.
 type RbacObject = policy.Object
 
-// RegisterRbacObjects extends the RBAC object vocabulary with the objects a
-// composed extension set declares. Called once at boot, before any surface
-// serves; see policy/composable.go for why the vocabulary has to be composable
-// at all and what "boot-only" is guarding.
+// RbacObjects is the RBAC object vocabulary one composition extends core's
+// with, and the starting grants its units declare on the system roles. See
+// policy/composable.go for why the vocabulary has to be composable at all.
 //
-// It lives on identity because identity OWNS the vocabulary — internal/policy
-// is unreachable from the composition root, and identity is already the only
-// module that can answer "could any principal hold a grant on this object"
-// (RBACObjectGrantable).
-func RegisterRbacObjects(objects ...RbacObject) error {
-	return policy.Register(objects...)
+// The zero value registers nothing: a reader handed none drops every grant on
+// an extension object, which denies rather than widens.
+type RbacObjects struct {
+	vocabulary policy.Vocabulary
+	defaults   []RbacDefault
 }
 
-// ResetRbacObjectsForTest clears the registered vocabulary. Test-only seam,
-// exported because the composition root's tests register objects through
-// RegisterRbacObjects and must not leak them into the next test.
-func ResetRbacObjectsForTest() {
-	policy.ResetRegisteredForTest()
-	registeredDefaults.mu.Lock()
-	defer registeredDefaults.mu.Unlock()
-	registeredDefaults.list = nil
+// NewRbacObjects builds a composition's vocabulary. It validates everything
+// before it builds anything. Each default must name one of the objects, because
+// a role document drops a grant on an object it cannot name.
+//
+// It lives on identity because identity OWNS the vocabulary: internal/policy is
+// unreachable from the composition root.
+func NewRbacObjects(objects []RbacObject, defaults []RbacDefault) (RbacObjects, error) {
+	vocabulary, err := policy.NewVocabulary(objects...)
+	if err != nil {
+		return RbacObjects{}, err
+	}
+	if err := ValidateRbacDefaults(defaults...); err != nil {
+		return RbacObjects{}, err
+	}
+	for _, d := range defaults {
+		if !vocabulary.IsRegistered(string(d.Object)) {
+			return RbacObjects{}, fmt.Errorf("identity: default grant names %q, which no unit registered", d.Object)
+		}
+	}
+	return RbacObjects{vocabulary: vocabulary, defaults: slices.Clone(defaults)}, nil
+}
+
+// Grantable reports whether an object name is one a role document may grant at
+// all: a core object or one this vocabulary registers.
+//
+// The gates that derive an authority requirement somewhere else ask it. It
+// proves the requirement is satisfiable before they certify what depends on it.
+// No principal that can exist holds an object outside this set. A requirement
+// naming one is a permanent refusal, not a strict rule.
+func (r RbacObjects) Grantable(object string) bool {
+	return r.vocabulary.IsGrantable(object)
+}
+
+// WithRbacObjects hands the service the composition's vocabulary. Every grant it
+// resolves, edits or seeds reads it.
+func (s *Service) WithRbacObjects(rbac RbacObjects) *Service {
+	s.rbac = rbac
+	return s
 }

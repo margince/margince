@@ -19,6 +19,7 @@ import (
 )
 
 func TestAuditErasureKeepsTypedBusinessHistoryWithoutPersonalValues(t *testing.T) {
+	t.Parallel()
 	for _, fixture := range []struct {
 		kind        string
 		image, kept map[string]any
@@ -62,6 +63,7 @@ func TestAuditErasureKeepsTypedBusinessHistoryWithoutPersonalValues(t *testing.T
 }
 
 func TestRedactedBusinessStatesFollowTheirTableChecks(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	tx := subjectColumnsTx(ctx, t)
 	for _, source := range []struct{ kind, field, check string }{

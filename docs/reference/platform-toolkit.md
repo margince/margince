@@ -148,10 +148,12 @@ and time. What to pull out of a page, and what to look for, stays with the calle
 - **Use it when:** you fetch a URL a tenant gave. Never write your own `http.Client` for one.
 
 ### `platform/testdb`: the test database setup
-Checks or builds the schema once and resets only the data for the integration lanes (`EnsureSchema`, `Reset`).
-A declared lane clone must match the binary’s migration ledger and hold no test rows. It refuses to start before any schema drop if these checks fail. For a ledger that differs, run `make test-db-up` in that worktree, then run the lane again. Other errors name the template or migration fix.
-The `integrationmigrateonce_test.go` gate makes tests use it.
-- **Use it when:** you write the setup of a test that runs on a real Postgres.
+`New` gives a test its own copy of the migrated template (`MARGINCE_TEST_TEMPLATE`), and `For` gives a helper the copy of its test. The copy is dropped when the test ends, so the test does not need to remove its rows, and it can call `t.Parallel()`.
+The first copy in a process must match the binary's migration ledger and hold no rows. For a ledger that differs, run `make test-db-up` in that worktree, then run the lane again.
+
+The gate `integrationtestdb_test.go` holds two rules. No other code reads the lane's DSNs. Every integration test is parallel, or says `//testdb:serial <reason>`. The gate `integrationmigrateonce_test.go` holds that no suite migrates inline.
+`RedisDB` gives a test a Redis database of its own on `redis-test` until the test ends, and `RedisAddr` names that server. Use `platform/redistest` for a client on it.
+- **Use it when:** you write the setup of a test that runs on a real Postgres or Redis.
 
 ---
 

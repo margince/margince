@@ -78,6 +78,7 @@ func reviewerCtx(e *channelConsentEnv) context.Context {
 
 // TestAProposalWaitsInTheQueueUntilSomebodyDecides is the gap this closes.
 func TestAProposalWaitsInTheQueueUntilSomebodyDecides(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	proposeCorrection(t, e, ConfirmFieldFullName, "Corrected Name")
 
@@ -105,6 +106,7 @@ func TestAProposalWaitsInTheQueueUntilSomebodyDecides(t *testing.T) {
 // A writer of its own would be a second way to change a contact, answerable to
 // none of the gates the first one is.
 func TestAnAcceptedCorrectionReachesTheRecordThroughTheOrdinaryPath(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	applier := &recordingApplier{}
 	e.store = e.store.WithCorrectionApplier(applier)
@@ -135,6 +137,7 @@ func TestAnAcceptedCorrectionReachesTheRecordThroughTheOrdinaryPath(t *testing.T
 // The proposal stays on the record: the subject asked, and an export showing
 // the request without its answer would be telling half of it.
 func TestARejectedCorrectionChangesNothingAndSaysWhy(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	applier := &recordingApplier{}
 	e.store = e.store.WithCorrectionApplier(applier)
@@ -164,6 +167,7 @@ func TestARejectedCorrectionChangesNothingAndSaysWhy(t *testing.T) {
 // A stale screen pressed twice is not two decisions, and the first reviewer's
 // name is the one that belongs on the row.
 func TestASecondReviewerDoesNotOverwriteTheFirstsDecision(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	applier := &recordingApplier{}
 	e.store = e.store.WithCorrectionApplier(applier)
@@ -198,6 +202,7 @@ func TestASecondReviewerDoesNotOverwriteTheFirstsDecision(t *testing.T) {
 // the subject would be told their correction was taken and the record would
 // still disagree.
 func TestAnUnwritableFieldIsRefusedRatherThanSilentlyAccepted(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	applier := &recordingApplier{refuse: ErrUnsupportedField}
 	e.store = e.store.WithCorrectionApplier(applier)
@@ -224,6 +229,7 @@ func TestAnUnwritableFieldIsRefusedRatherThanSilentlyAccepted(t *testing.T) {
 // TestAReviewerWhoCannotEditTheContactDecidesNothing. Deciding what a proposal
 // does to a record is a write to that record, even a decline.
 func TestAReviewerWhoCannotEditTheContactDecidesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	id := proposeCorrection(t, e, ConfirmFieldFullName, "Corrected Name")
 
@@ -245,6 +251,7 @@ func TestAReviewerWhoCannotEditTheContactDecidesNothing(t *testing.T) {
 // proposing the same value on the same day are indistinguishable, while
 // accepting either changes a different record.
 func TestTheQueueCarriesBothHalvesOfTheComparison(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	if _, err := e.owner.Exec(context.Background(),
 		`UPDATE contact SET full_name = 'Anna Schmitt' WHERE id = $1`, e.contact); err != nil {
@@ -280,6 +287,7 @@ func TestTheQueueCarriesBothHalvesOfTheComparison(t *testing.T) {
 // reviewer has least chance of hearing about another way. No error, no count,
 // nothing to press.
 func TestEveryProposalIsReachableAcrossThePagesOfTheQueue(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	const sent = 5
 	filed := map[ids.UUID]bool{}
@@ -334,6 +342,7 @@ func TestEveryProposalIsReachableAcrossThePagesOfTheQueue(t *testing.T) {
 // id alone skips every row whose instant is later and whose id happens to be
 // smaller. The order is by both, so the cursor is by both.
 func TestAWalkCrossesProposalsThatArrivedInTheSameInstant(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	for i := range 3 {
 		proposeCorrection(t, e, ConfirmFieldFullName, fmt.Sprintf("Together %d", i))
@@ -380,6 +389,7 @@ func TestAWalkCrossesProposalsThatArrivedInTheSameInstant(t *testing.T) {
 // would, on the first resolved row, compare as "before" every unresolved one
 // and hand the reviewer the queue they have just worked.
 func TestTheWalkCrossesFromTheQueueIntoWhatIsAlreadyDecided(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	decided := proposeCorrection(t, e, ConfirmFieldFullName, "Already answered")
 	if _, err := e.store.ResolveSubmission(reviewerCtx(e), decided,
@@ -418,6 +428,7 @@ func TestTheWalkCrossesFromTheQueueIntoWhatIsAlreadyDecided(t *testing.T) {
 // must not guess at — and the shared envelope proves only that a token is one
 // of ours, not that it names a position here.
 func TestACursorFromSomewhereElseIsRefusedRatherThanAnswered(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	proposeCorrection(t, e, ConfirmFieldFullName, "Waiting")
 
@@ -446,6 +457,7 @@ func TestACursorFromSomewhereElseIsRefusedRatherThanAnswered(t *testing.T) {
 // continuation in it — the envelope is assembled in the handler, and a client
 // walks what the wire says rather than what the store returned.
 func TestTheSubmissionQueuesWireCarriesItsPage(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	for i := range 3 {
 		proposeCorrection(t, e, ConfirmFieldFullName, fmt.Sprintf("Wire %d", i))

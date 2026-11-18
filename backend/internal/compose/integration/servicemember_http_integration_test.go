@@ -38,6 +38,7 @@ func declareServiceMember(t *testing.T, e *apptest.AppEnv, extension string) use
 }
 
 func TestAServiceMemberHasNoLoginIsOffTheMeterAndHoldsOnlyTheLandingRole(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	e.DescribeCompany(t)
@@ -77,6 +78,7 @@ func TestAServiceMemberHasNoLoginIsOffTheMeterAndHoldsOnlyTheLandingRole(t *test
 }
 
 func TestOnlyAnInstallationAdminSessionCanDeclareOrArchiveAServiceMember(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	e.DescribeCompany(t)
@@ -99,6 +101,7 @@ func TestOnlyAnInstallationAdminSessionCanDeclareOrArchiveAServiceMember(t *test
 }
 
 func TestAServiceMemberIsArchivedAndNeverDeleted(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	e.DescribeCompany(t)
@@ -133,6 +136,7 @@ func TestAServiceMemberIsArchivedAndNeverDeleted(t *testing.T) {
 // A colleague is not a service member. The archive route must not retire a
 // colleague, or it would become a way to remove one.
 func TestArchiveServiceMemberRefusesAnOrdinaryMember(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	e.DescribeCompany(t)
@@ -148,6 +152,7 @@ func TestArchiveServiceMemberRefusesAnOrdinaryMember(t *testing.T) {
 }
 
 func TestAUnitThatLandsRecordsGetsItsServiceMemberAtBootOnce(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	e.DescribeCompany(t)

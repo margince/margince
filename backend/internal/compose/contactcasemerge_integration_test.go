@@ -44,6 +44,7 @@ func writtenState(t *testing.T, e *integration.Env) string {
 }
 
 func TestAPreviewWritesNothingAndAnswersWhatTheMergeDoes(t *testing.T) {
+	t.Parallel()
 	c := setupCases(t)
 	members := c.seedCase(t, c.e.Rep1, c.e.Rep2, c.e.Rep3)
 	c.setPolicy(t, true)
@@ -73,6 +74,7 @@ func TestAPreviewWritesNothingAndAnswersWhatTheMergeDoes(t *testing.T) {
 }
 
 func TestAStaleRevisionWritesNothing(t *testing.T) {
+	t.Parallel()
 	c := setupCases(t)
 	members := c.seedCase(t, c.e.Rep1, c.e.Rep1, c.e.Rep1)
 	rep := c.rep(c.e.Rep1)
@@ -92,6 +94,7 @@ func TestAStaleRevisionWritesNothing(t *testing.T) {
 }
 
 func TestOfTwoRacingCaseMergesExactlyOneCommits(t *testing.T) {
+	t.Parallel()
 	c := setupCases(t)
 	members := c.seedCase(t, c.e.Rep1, c.e.Rep1, c.e.Rep1)
 	admin := c.e.Admin()
@@ -153,6 +156,7 @@ func waitForWaiters(t *testing.T, owner *pgx.Conn, n int) {
 }
 
 func TestAMergeThatFailsHalfwayLeavesNothing(t *testing.T) {
+	t.Parallel()
 	c := setupCases(t)
 	members := c.seedCase(t, c.e.Rep1, c.e.Rep2, c.e.Rep3)
 	slices.SortFunc(members, compareUUIDs)
@@ -183,6 +187,7 @@ func TestAMergeThatFailsHalfwayLeavesNothing(t *testing.T) {
 func compareUUIDs(a, b ids.UUID) int { return slices.Compare(a[:], b[:]) }
 
 func TestEveryMergePathKeepsTheFormerOwnersAccess(t *testing.T) {
+	t.Parallel()
 	c := setupCases(t)
 	admin := c.e.Admin()
 
@@ -206,6 +211,7 @@ func TestEveryMergePathKeepsTheFormerOwnersAccess(t *testing.T) {
 }
 
 func TestACarriedOwnerKeepsTheTermOfAGrantTheyHold(t *testing.T) {
+	t.Parallel()
 	c := setupCases(t)
 	admin := c.e.Admin()
 	grants := identity.NewServiceFor(c.e.DB())
@@ -252,6 +258,7 @@ func grantRowState(t *testing.T, e *integration.Env, record, user ids.UUID) gran
 }
 
 func TestAMergedSurvivorIsSharedWithItsFormerOwnerOnly(t *testing.T) {
+	t.Parallel()
 	c := setupCases(t)
 	members := c.seedCase(t, c.e.Rep1, c.e.Rep2, c.e.Rep3)
 	c.setPolicy(t, true)
@@ -280,14 +287,15 @@ func TestAMergedSurvivorIsSharedWithItsFormerOwnerOnly(t *testing.T) {
 }
 
 func TestASeatOrAShareChangedAfterThePreviewMakesTheRevisionStale(t *testing.T) {
-	changes := map[string]func(c *caseEnv, members []ids.UUID){
-		"an owner's seat moves to read": func(c *caseEnv, _ []ids.UUID) {
+	t.Parallel()
+	changes := map[string]func(t *testing.T, c *caseEnv, members []ids.UUID){
+		"an owner's seat moves to read": func(t *testing.T, c *caseEnv, _ []ids.UUID) {
 			if _, err := integration.OwnerConn(t).Exec(context.Background(),
 				`UPDATE app_user SET seat_type = 'read' WHERE id = $1`, c.e.Rep3); err != nil {
 				t.Fatal(err)
 			}
 		},
-		"a member is shared": func(c *caseEnv, members []ids.UUID) {
+		"a member is shared": func(t *testing.T, c *caseEnv, members []ids.UUID) {
 			if _, err := identity.NewServiceFor(c.e.DB()).CreateRecordGrant(c.e.Admin(), identity.CreateGrantInput{
 				RecordType: "contact", RecordID: members[0], SubjectType: "user", SubjectID: c.e.Rep2, Access: "read",
 			}); err != nil {
@@ -305,7 +313,7 @@ func TestASeatOrAShareChangedAfterThePreviewMakesTheRevisionStale(t *testing.T) 
 			if _, err := c.store.PreviewContactCaseMerge(rep, members[0], chosen); err != nil {
 				t.Fatalf("previewing: %v", err)
 			}
-			change(c, members)
+			change(t, c, members)
 			before := writtenState(t, c.e)
 			if _, err := c.store.MergeContactCase(rep, members[0], chosen); caseCode(err) != "case_changed" {
 				t.Fatalf("a merge after %s = %v, want case_changed", name, err)

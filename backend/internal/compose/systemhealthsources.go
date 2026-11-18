@@ -38,18 +38,18 @@ func (s Server) jobsSummary(ctx context.Context) (crmcontracts.HealthSource, []c
 	source.ObservedAt = &now
 	source.Condition, source.Code = healthUnknown, "queue_checked"
 	source.Availability = healthUnobserved
-	return summarizeJobKinds(source, rows)
+	return summarizeJobKinds(source, s.jobTable, rows)
 }
 
-func summarizeJobKinds(source crmcontracts.HealthSource, rows []jobs.KindHealth) (crmcontracts.HealthSource, []crmcontracts.HealthFinding, error) {
+func summarizeJobKinds(source crmcontracts.HealthSource, table jobs.Composed, rows []jobs.KindHealth) (crmcontracts.HealthSource, []crmcontracts.HealthFinding, error) {
 	groups := map[jobHealthGroupKey]*jobHealthSummaryGroup{}
 	for _, row := range rows {
-		assessments := []jobs.HealthAssessment{jobs.AssessHealth(row)}
+		assessments := []jobs.HealthAssessment{table.AssessHealth(row)}
 		if assessments[0].Code != "queue_retrying" {
 			retrying := row
 			retrying.Discarded = 0
 			retrying.OldestWaitingAgeSeconds = nil
-			if assessment := jobs.AssessHealth(retrying); assessment.Code == "queue_retrying" {
+			if assessment := table.AssessHealth(retrying); assessment.Code == "queue_retrying" {
 				assessments = append(assessments, assessment)
 			}
 		}

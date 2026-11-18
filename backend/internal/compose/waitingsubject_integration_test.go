@@ -43,6 +43,7 @@ func addressedRequest(t *testing.T, e *integration.Env, recipient ids.UUID, at t
 }
 
 func TestSelectedWaitingUsesTheSelectedSeatsDisposition(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := time.Date(2026, 10, 21, 9, 0, 0, 0, time.UTC)
 	source := addressedRequest(t, e, e.Rep1, now.Add(-time.Hour), 1)
@@ -83,6 +84,7 @@ func TestSelectedWaitingUsesTheSelectedSeatsDisposition(t *testing.T) {
 }
 
 func TestHiddenWaitingDoesNotCountAnotherSeatsMailAsPersonalWork(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := time.Date(2026, 10, 21, 9, 0, 0, 0, time.UTC)
 	addressedRequest(t, e, e.AdminUser, now.Add(-time.Hour), 1)
@@ -98,6 +100,7 @@ func TestHiddenWaitingDoesNotCountAnotherSeatsMailAsPersonalWork(t *testing.T) {
 }
 
 func TestWaitingContinuationKeepsMessagesSharingTheBoundaryInstant(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := time.Date(2026, 10, 21, 9, 0, 0, 0, time.UTC)
 	for i := range activities.WaitingScanCap + 1 {

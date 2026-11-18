@@ -28,6 +28,7 @@ import (
 )
 
 func TestTheDatabaseMinorUnitTableMatchesTheGoOne(t *testing.T) {
+	t.Parallel()
 	// Setup migrates the schema this reads; the rows are installation-wide
 	// reference data, so nothing else about the fixture matters here.
 	Setup(t)

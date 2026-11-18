@@ -24,6 +24,7 @@ var quoteReaderPerms = principal.Permissions{
 }
 
 func TestAQuotedNameIsSomebodyTheOwnerCanSee(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.SeedContact(t, "Sam Weber", &e.Rep2)
 	private := e.SeedContact(t, "Dana Ortiz", &e.Rep3)

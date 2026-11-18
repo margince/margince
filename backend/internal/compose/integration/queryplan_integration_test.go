@@ -219,6 +219,7 @@ func (q *queryEnv) seedFixture(t *testing.T) queryFixture {
 }
 
 func TestQueryPlanAnswersExactPredicatesCompletely(t *testing.T) {
+	t.Parallel()
 	q := setupQuery(t)
 	f := q.seedFixture(t)
 	result := q.run(q.admin(), t, `{
@@ -254,6 +255,7 @@ func TestQueryPlanAnswersExactPredicatesCompletely(t *testing.T) {
 // (platform/auth tableclass.go), so capture privacy is the one narrowing left
 // and two principals asking about anything else get the same answer by design.
 func TestQueryPlanAnswersTwoPrincipalsFromOneCorpusWithoutLeaking(t *testing.T) {
+	t.Parallel()
 	q := setupQuery(t)
 	// Rep1's unpromoted capture: theirs alone until a human promotes it, and
 	// capture privacy does not yield to row_scope=all — so the two principals
@@ -296,6 +298,7 @@ func TestQueryPlanAnswersTwoPrincipalsFromOneCorpusWithoutLeaking(t *testing.T) 
 // caller cannot see must not admit rows through it — otherwise the answer's
 // membership discloses a record the row scope hides.
 func TestQueryPlanTraversalCarriesTheHopsOwnRowScope(t *testing.T) {
+	t.Parallel()
 	q := setupQuery(t)
 	f := q.seedFixture(t)
 	const plan = `{"version": "v1", "target": "deal",
@@ -326,6 +329,7 @@ func TestQueryPlanTraversalCarriesTheHopsOwnRowScope(t *testing.T) {
 // The hop comes back as the record that admitted the row — a traversal that is
 // legible as a reason rather than as an invisible filter.
 func TestQueryPlanTraversalReturnsTheRecordThatAdmittedTheRow(t *testing.T) {
+	t.Parallel()
 	q := setupQuery(t)
 	f := q.seedFixture(t)
 	result := q.run(q.admin(), t, `{
@@ -352,6 +356,7 @@ func TestQueryPlanTraversalReturnsTheRecordThatAdmittedTheRow(t *testing.T) {
 // resolve to the HOP's table, or the statement is ambiguous — and an ambiguity
 // this shape is invisible until two tables happen to share a column name.
 func TestQueryPlanTraversalBetweenTablesThatShareAColumnName(t *testing.T) {
+	t.Parallel()
 	q := setupQuery(t)
 	f := q.seedFixture(t)
 	result := q.run(q.admin(), t, `{
@@ -368,6 +373,7 @@ func TestQueryPlanTraversalBetweenTablesThatShareAColumnName(t *testing.T) {
 // The inverse edge is derived from the referring record's column, and executes
 // in the other direction.
 func TestQueryPlanTraversalFollowsAnInverseEdge(t *testing.T) {
+	t.Parallel()
 	q := setupQuery(t)
 	f := q.seedFixture(t)
 	result := q.run(q.admin(), t, `{
@@ -383,6 +389,7 @@ func TestQueryPlanTraversalFollowsAnInverseEdge(t *testing.T) {
 // rest. Calling that complete would be the silent narrowing the whole feature
 // exists to prevent.
 func TestQueryPlanTruncationIsDegradationRatherThanPagination(t *testing.T) {
+	t.Parallel()
 	q := setupQuery(t)
 	q.seedFixture(t)
 	result := q.run(q.admin(), t, `{
@@ -401,6 +408,7 @@ func TestQueryPlanTruncationIsDegradationRatherThanPagination(t *testing.T) {
 
 // An answer that fits says so, and carries no truncation note.
 func TestQueryPlanAnAnswerThatFitsIsNotReportedAsTruncated(t *testing.T) {
+	t.Parallel()
 	q := setupQuery(t)
 	q.seedFixture(t)
 	result := q.run(q.admin(), t, `{
@@ -420,6 +428,7 @@ func TestQueryPlanAnAnswerThatFitsIsNotReportedAsTruncated(t *testing.T) {
 // geocode where contacts live and there is nothing to measure from. A company's
 // radius runs — see the test below.
 func TestQueryPlanAnUnanswerablePredicateReturnsItsNoteNotRows(t *testing.T) {
+	t.Parallel()
 	q := setupQuery(t)
 	q.seedFixture(t)
 	result := q.run(q.admin(), t, `{
@@ -449,6 +458,7 @@ func TestQueryPlanAnUnanswerablePredicateReturnsItsNoteNotRows(t *testing.T) {
 // rows must not carry this note — so the pair fails if the check is dropped and
 // fails if it fires on everything.
 func TestQueryPlanARadiusOverAnUnplacedWorkspaceSaysSoRatherThanAnsweringEmpty(t *testing.T) {
+	t.Parallel()
 	q := setupQuery(t)
 	q.seedFixture(t)
 	q.seedUnlocatedCompany(t, "Radius Ohne Koordinaten GmbH")
@@ -486,6 +496,7 @@ func TestQueryPlanARadiusOverAnUnplacedWorkspaceSaysSoRatherThanAnsweringEmpty(t
 // so their empty radius is unexplained unless the probe is scoped as the answer
 // is.
 func TestQueryPlanARadiusNoteFollowsWhatTheCallerCanRead(t *testing.T) {
+	t.Parallel()
 	q := setupQuery(t)
 	q.seedFixture(t)
 	// The only geocoded company in the workspace is an unpromoted capture of
@@ -529,6 +540,7 @@ func TestQueryPlanARadiusNoteFollowsWhatTheCallerCanRead(t *testing.T) {
 // bounding box, the point-status filter and the distance projection are all
 // strings until a database evaluates them.
 func TestQueryPlanARadiusAnswersNearestFirstWithDistances(t *testing.T) {
+	t.Parallel()
 	q := setupQuery(t)
 	q.seedFixture(t)
 
@@ -584,6 +596,7 @@ func TestQueryPlanARadiusAnswersNearestFirstWithDistances(t *testing.T) {
 // only 'ok'. Without either half, this company would answer from where it used
 // to be — and the answer would look exactly like a correct one.
 func TestQueryPlanACompanyThatMovedIsNotAnsweredFromItsOldAddress(t *testing.T) {
+	t.Parallel()
 	q := setupQuery(t)
 	q.seedFixture(t)
 	moved := q.seedLocatedCompany(t, "Radius Umgezogen GmbH", 48.7758, 9.1829)
@@ -622,6 +635,7 @@ func containsID(rows []search.QueryRow, want ids.UUID) bool {
 // A similarity clause with no embedding lane bound ranks lexically. The
 // degradation is reported, and the answer never labels itself complete.
 func TestQueryPlanARankedAnswerNeverLabelsItselfComplete(t *testing.T) {
+	t.Parallel()
 	q := setupQuery(t)
 	f := q.seedFixture(t)
 	result := q.run(q.admin(), t, `{
@@ -645,6 +659,7 @@ func TestQueryPlanARankedAnswerNeverLabelsItselfComplete(t *testing.T) {
 // names a company, a project and a deal, and a page of two would answer
 // no deals at all for a corpus that has one.
 func TestQueryPlanRanksWithinTheRecordTypeItWasAsked(t *testing.T) {
+	t.Parallel()
 	q := setupQuery(t)
 	f := q.seedFixture(t)
 	// "Rollout" names the project and the deal; the companies rank on
@@ -665,6 +680,7 @@ func TestQueryPlanRanksWithinTheRecordTypeItWasAsked(t *testing.T) {
 // the membership test would answer the unfiltered question instead — every
 // deal in the workspace, under a sentence promising a ranked few.
 func TestQueryPlanARankingThatMatchesNothingAnswersNoRows(t *testing.T) {
+	t.Parallel()
 	q := setupQuery(t)
 	q.seedFixture(t)
 	result := q.run(q.admin(), t, `{
@@ -676,6 +692,7 @@ func TestQueryPlanARankingThatMatchesNothingAnswersNoRows(t *testing.T) {
 
 // The archived and discovery narrowing every read carries, carried here too.
 func TestQueryPlanNeverReturnsArchivedRecordsOrTheOwnCompany(t *testing.T) {
+	t.Parallel()
 	q := setupQuery(t)
 	f := q.seedFixture(t)
 	anchor := q.SeedID(t, `INSERT INTO company (id, display_name, is_anchor, source, captured_by)
@@ -703,6 +720,7 @@ func TestQueryPlanNeverReturnsArchivedRecordsOrTheOwnCompany(t *testing.T) {
 // execution what it advertised at discovery, and only the live catalog can say
 // which fields those are.
 func TestEveryPublishedFieldCompilesToAStoragePath(t *testing.T) {
+	t.Parallel()
 	q := setupQuery(t)
 	q.seedFixture(t)
 	ctx := q.admin()
@@ -752,6 +770,7 @@ func TestEveryPublishedFieldCompilesToAStoragePath(t *testing.T) {
 // a column no table holds. That failure is a database error rather than a
 // refusal, which is the one thing a validated plan must never produce.
 func TestEveryPublishedRelationExecutes(t *testing.T) {
+	t.Parallel()
 	q := setupQuery(t)
 	q.seedFixture(t)
 	ctx := q.admin()
@@ -800,6 +819,7 @@ func probeOperand(kind search.FieldKind) string {
 // The published document is a read of the caller's own surface, so it narrows
 // with them — and what it narrows to is still answerable.
 func TestThePublishedVocabularyNarrowsWithTheCaller(t *testing.T) {
+	t.Parallel()
 	q := setupQuery(t)
 	q.seedFixture(t)
 	admin, err := q.resolver.Resolve(q.admin())
@@ -857,6 +877,7 @@ func hasNote(result search.QueryResult, code string) bool {
 // companies for the same center and radius, and neither may read a stale or
 // failed row.
 func TestQueryPlanAndFilterEngineAnswerTheSameCompaniesForOneRadius(t *testing.T) {
+	t.Parallel()
 	q := setupQuery(t)
 	q.seedFixture(t)
 	near := q.seedLocatedCompany(t, "Shared Zentrum GmbH", 48.7758, 9.1829)
@@ -932,6 +953,7 @@ func TestQueryPlanAndFilterEngineAnswerTheSameCompaniesForOneRadius(t *testing.T
 // contact's own row scope still decides what comes back, so a second rep's
 // private contact holding the same profile does not.
 func TestQueryPlanFindsAContactByItsLinkedInProfile(t *testing.T) {
+	t.Parallel()
 	q := setupQuery(t)
 	const stored = "https://www.linkedin.com/in/query-profile"
 	withLink := func(owner ids.UUID, name, visibility string) ids.UUID {

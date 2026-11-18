@@ -158,6 +158,7 @@ func (f colleagueMailFixture) audienceWrites(t *testing.T, id ids.UUID) (audits,
 }
 
 func TestTheMembersOnlyTaskHoldsColleaguesMailOnceAndLeavesHumanDecisions(t *testing.T) {
+	t.Parallel()
 	f := newColleagueMailFixture(t)
 	outsideBefore, _ := f.audience(t, f.outside)
 	type writes struct{ audits, events int }
@@ -220,6 +221,7 @@ func TestTheMembersOnlyTaskHoldsColleaguesMailOnceAndLeavesHumanDecisions(t *tes
 }
 
 func TestTheMembersOnlyTaskRollsBackWithItsBatch(t *testing.T) {
+	t.Parallel()
 	f := newColleagueMailFixture(t)
 	ctx := principal.SystemActing(f.e.Admin(), "system:datatask-test")
 	step := membersOnlyMailDataTask().Steps[0]

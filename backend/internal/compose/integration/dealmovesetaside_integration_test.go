@@ -27,6 +27,7 @@ import (
 )
 
 func TestSettingTheDealMoveAsideHidesItForThatReaderUntilTheUndo(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipelineID, stage, _ := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Turbinenbau Renewal", pipelineID, stage, &e.Rep1)
@@ -105,6 +106,7 @@ func TestSettingTheDealMoveAsideHidesItForThatReaderUntilTheUndo(t *testing.T) {
 // An agent reads the card as its user left it, and what it sets aside its user
 // finds set aside.
 func TestAnAgentSharesItsUsersSetAsideOnTheDealCard(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipelineID, stage, _ := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Turbinenbau Agent", pipelineID, stage, &e.Rep1)

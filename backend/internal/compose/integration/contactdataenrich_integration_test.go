@@ -198,6 +198,7 @@ func (c *providerConsumerEnv) runsForContact(t *testing.T) int {
 
 // A human creating a contact, with the toggle on: the event buys the data.
 func TestContactCreatedQueuesAnEnrichmentRun(t *testing.T) {
+	t.Parallel()
 	c := setupProviderConsumer(t, true)
 
 	if err := c.consumer.HandleEvent(context.Background(), humanCreated(c.contactID)); err != nil {
@@ -230,6 +231,7 @@ func TestContactCreatedQueuesAnEnrichmentRun(t *testing.T) {
 // Auto-enrich switched off: the refusal is the configuration working, so the
 // consumer reports success and buys nothing.
 func TestContactCreatedWithAutoEnrichOffBuysNothingAndDoesNotError(t *testing.T) {
+	t.Parallel()
 	c := setupProviderConsumer(t, false)
 
 	if err := c.consumer.HandleEvent(context.Background(), humanCreated(c.contactID)); err != nil {
@@ -245,6 +247,7 @@ func TestContactCreatedWithAutoEnrichOffBuysNothingAndDoesNotError(t *testing.T)
 // event what the policy denies it at the door: the seat cap is what the
 // agent's human could do through the same gate, and an event has no gate.
 func TestAnAgentCreatedContactBuysNothing(t *testing.T) {
+	t.Parallel()
 	c := setupProviderConsumer(t, true)
 
 	if err := c.consumer.HandleEvent(context.Background(),
@@ -263,6 +266,7 @@ func TestAnAgentCreatedContactBuysNothing(t *testing.T) {
 // nobody: the setting could be wired to a constant false and every assertion in
 // this file would still be green.
 func TestACapturedContactIsLookedUpOnceThePostureIsOn(t *testing.T) {
+	t.Parallel()
 	c := setupProviderConsumer(t, true)
 
 	if err := c.consumer.HandleEvent(context.Background(),
@@ -289,6 +293,7 @@ func TestACapturedContactIsLookedUpOnceThePostureIsOn(t *testing.T) {
 // itself and the remaining question is the installation's posture. Turning that
 // off is what stops a connected mailbox looking up every sender in its history.
 func TestAConnectorCreatedContactIsGovernedByTheInstallationsPosture(t *testing.T) {
+	t.Parallel()
 	c := setupProviderConsumer(t, false)
 
 	if err := c.consumer.HandleEvent(context.Background(),
@@ -302,6 +307,7 @@ func TestAConnectorCreatedContactIsGovernedByTheInstallationsPosture(t *testing.
 
 // Only contact.created buys. An edit must not re-purchase.
 func TestOnlyContactCreatedTriggersAPurchase(t *testing.T) {
+	t.Parallel()
 	c := setupProviderConsumer(t, true)
 	env := humanCreated(c.contactID)
 	env.Type = "contact.updated"

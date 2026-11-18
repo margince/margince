@@ -37,6 +37,7 @@ func onlyMember(ctx context.Context, t *testing.T, store *collections.Store, lis
 }
 
 func TestALiveListMembersValuesAreHiddenWhereItsWhyHidesThem(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
 	input, deal, company := dealWithHiddenCompany(t, e)
@@ -75,6 +76,7 @@ func TestALiveListMembersValuesAreHiddenWhereItsWhyHidesThem(t *testing.T) {
 }
 
 func TestAMembersReadByRecordAnswersOnlyMembers(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
 	theirs := e.SeedContact(t, "Owned By Rep One", &e.Rep1)
@@ -100,6 +102,7 @@ func TestAMembersReadByRecordAnswersOnlyMembers(t *testing.T) {
 }
 
 func TestAShortlistMemberNamesWhoChoseItAndWhy(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
 	contact := e.SeedContact(t, "Chosen Contact", &e.Rep1)
@@ -130,6 +133,7 @@ func listFinderPerms() principal.Permissions {
 }
 
 func TestARecordNamesOnlyTheListsItsReaderMayFind(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
 	contact := e.SeedContact(t, "Listed Contact", &e.Rep3)
@@ -164,6 +168,7 @@ func TestARecordNamesOnlyTheListsItsReaderMayFind(t *testing.T) {
 }
 
 func TestARecordItsReaderCannotSeeNamesNoLists(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
 	contact := e.SeedContact(t, "Captured Privately", &e.Rep1)
@@ -175,6 +180,7 @@ func TestARecordItsReaderCannotSeeNamesNoLists(t *testing.T) {
 }
 
 func TestARecordThatDoesNotExistNamesNoLists(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
 	for _, entityType := range []string{"contact", "company", "deal", "lead"} {
@@ -185,6 +191,7 @@ func TestARecordThatDoesNotExistNamesNoLists(t *testing.T) {
 }
 
 func TestEveryLiveListIsJudgedHoweverManyAWorkspaceHas(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
 	contact := e.SeedContact(t, "Listed Contact", &e.Rep3)
@@ -210,6 +217,7 @@ func TestEveryLiveListIsJudgedHoweverManyAWorkspaceHas(t *testing.T) {
 }
 
 func TestARecordOnMoreListsThanOneAnswerCarriesSaysSo(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
 	contact := e.SeedContact(t, "Much Chosen", &e.Rep3)

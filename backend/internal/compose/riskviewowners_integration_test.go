@@ -20,6 +20,7 @@ import (
 )
 
 func TestRiskViewsNarrowToTheNamedOwnerBeforeTheirScanCaps(t *testing.T) {
+	t.Parallel()
 	f := newSweepFixture(t, 90)
 	var pipeline ids.PipelineID
 	var stage ids.StageID
@@ -50,6 +51,7 @@ func TestRiskViewsNarrowToTheNamedOwnerBeforeTheirScanCaps(t *testing.T) {
 }
 
 func TestRiskViewsCannotWidenAScheduledMembersBook(t *testing.T) {
+	t.Parallel()
 	f := newSweepFixture(t, 90)
 	ctx := f.run(t, f.e.Rep1)
 	other := f.e.Rep2
@@ -75,6 +77,7 @@ func TestRiskViewsCannotWidenAScheduledMembersBook(t *testing.T) {
 }
 
 func TestRiskViewsKeepTheDealReadGrant(t *testing.T) {
+	t.Parallel()
 	f := newSweepFixture(t, 90)
 	ctx := f.e.As(f.e.Rep1, nil, principal.Permissions{RowScope: principal.RowScopeOwn})
 	owner := f.e.Rep2

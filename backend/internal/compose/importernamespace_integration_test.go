@@ -115,6 +115,7 @@ func namespacedLead() crmcontracts.CreateLeadRequest {
 }
 
 func TestADeclaredImporterLandsRowsInsideItsNamespace(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	importer := e.As(e.AdminUser, nil, importerPerms())
 
@@ -153,6 +154,7 @@ func TestADeclaredImporterLandsRowsInsideItsNamespace(t *testing.T) {
 // whole Permissions, so this caller holds import_run:create and must still be
 // refused.
 func TestAnAgentCarryingTheImportGrantIsStillRefused(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	agent := e.AgentFor(t, e.AdminUser, nil, importerPerms())
 
@@ -167,6 +169,7 @@ func TestAnAgentCarryingTheImportGrantIsStillRefused(t *testing.T) {
 // The grant is what opens the door, so a human without it is an ordinary
 // client. Without this case the door could be admitting every human.
 func TestAHumanWithoutTheImportGrantIsRefused(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ordinary := e.As(e.AdminUser, nil, integration.AdminPerms)
 
@@ -182,6 +185,7 @@ func TestAHumanWithoutTheImportGrantIsRefused(t *testing.T) {
 // the admission deliberately: an import that could claim it would collide with
 // captured mail on the identity capture dedupes by.
 func TestTheImporterDoorDoesNotOpenTheMailIdentity(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	importer := e.As(e.AdminUser, nil, importerPerms())
 

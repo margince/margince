@@ -41,6 +41,7 @@ func (w *refusingWriters) Ensure(ctx context.Context, object string, row Row) (E
 }
 
 func TestALeasedSliceWritesNoRunItDoesNotLease(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	leased, other := approvedRun(ctx, t, s), approvedRun(ctx, t, s)
@@ -58,6 +59,7 @@ func TestALeasedSliceWritesNoRunItDoesNotLease(t *testing.T) {
 }
 
 func TestALeasedSliceWhoseWorkerStopsCountsTheRowsItLanded(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	l := approvedRun(ctx, t, s)
@@ -80,6 +82,7 @@ func TestALeasedSliceWhoseWorkerStopsCountsTheRowsItLanded(t *testing.T) {
 }
 
 func TestARowThatFailsFailsTheLeasedRunWithWhatLandedBeforeIt(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	l := approvedRun(ctx, t, s)
@@ -105,6 +108,7 @@ func TestARowThatFailsFailsTheLeasedRunWithWhatLandedBeforeIt(t *testing.T) {
 // A run the walk stopped carries the sentence for its cause, and never the
 // error's own text, which can hold SQL.
 func TestARunTheWalkStoppedCarriesTheSentenceForItsCause(t *testing.T) {
+	t.Parallel()
 	for name, tc := range map[string]struct {
 		refusal error
 		want    string
@@ -136,6 +140,7 @@ func TestARunTheWalkStoppedCarriesTheSentenceForItsCause(t *testing.T) {
 // A run of seven moves then ends in at most seven slices. Only the first slice
 // counts the source; later ones read the totals its flush recorded.
 func TestASliceWhoseSetupOutlastsItsBudgetStillLandsARow(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	l := approvedRun(ctx, t, s)
@@ -167,6 +172,7 @@ func TestASliceWhoseSetupOutlastsItsBudgetStillLandsARow(t *testing.T) {
 // A run approved again after it failed is walked once more, and its report
 // counts that walk, as it counts the first.
 func TestEachAttemptOfARunCountsAsAWalk(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	whole := approvedRun(ctx, t, s)
@@ -205,6 +211,7 @@ func createdOf(run Run) int {
 }
 
 func TestALeaseDoesNotOverwriteARunRowItCannotRead(t *testing.T) {
+	t.Parallel()
 	for column, write := range map[string]func(context.Context, *RunStore, Lease) error{
 		"report": func(ctx context.Context, s *RunStore, l Lease) error {
 			return s.Flush(ctx, l, Flush{Checkpoint: 2, Leg: Report{Imported: 2}})

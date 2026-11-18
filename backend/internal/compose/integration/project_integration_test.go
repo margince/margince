@@ -70,6 +70,7 @@ func mintedKey(ctx context.Context, t *testing.T, e *Env, id ids.ProjectID) stri
 // complete: the creation row is what makes "how did it get here"
 // answerable from the very first read.
 func TestProjectIsBornWithItsHistoryRow(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "BAER Pharma", nil)
 	p := seedProject(e.Admin(), t, e, "ERP replacement", company, nil)
@@ -92,6 +93,7 @@ func TestProjectIsBornWithItsHistoryRow(t *testing.T) {
 // race to resolve rather than a refusal to report. Two projects whose names
 // give the same stem get different keys: the bare letters, then a number.
 func TestProjectKeysAreMintedUniquePerStem(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "BAER Pharma", nil)
 
@@ -132,6 +134,7 @@ func TestProjectKeysAreMintedUniquePerStem(t *testing.T) {
 // transaction, and announces itself as a phase change rather than a
 // generic update.
 func TestAdvanceProjectPhaseWritesHistoryAndTheFirstClassEvent(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "BAER Pharma", nil)
 	p := seedProject(e.Admin(), t, e, "ERP replacement", company, nil)
@@ -165,6 +168,7 @@ func TestAdvanceProjectPhaseWritesHistoryAndTheFirstClassEvent(t *testing.T) {
 // Closing is a claim that the work ended; an unexplained claim is not
 // answerable later, so it is refused.
 func TestClosingAProjectRequiresAReason(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "BAER Pharma", nil)
 	p := seedProject(e.Admin(), t, e, "ERP replacement", company, nil)
@@ -197,6 +201,7 @@ func TestClosingAProjectRequiresAReason(t *testing.T) {
 // rule spans two rows, so it lives in a constraint trigger — and it must
 // surface as a named 422, never as an opaque server fault.
 func TestADealCannotPointAtAnotherCompanysProject(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	companyA := e.SeedCompany(t, "BAER Pharma", nil)
@@ -225,6 +230,7 @@ func TestADealCannotPointAtAnotherCompanysProject(t *testing.T) {
 // conversations and the deals survive, and so does the phase history that
 // explains where the work got to.
 func TestArchivingAProjectKeepsWhatItGrouped(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	company := e.SeedCompany(t, "BAER Pharma", nil)
@@ -271,6 +277,7 @@ func TestArchivingAProjectKeepsWhatItGrouped(t *testing.T) {
 // still narrows is a link onto a capture-private record, which
 // TestAMeetingNeverDisclosesTheRecordBehindALinkTheCallerCannotSee covers.
 func TestAnActivityLinkedOnlyToAProjectIsReachedThroughIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "BAER Pharma", nil)
 	// Real seeded users: owner_id is a composite FK to app_user, so a
@@ -326,6 +333,7 @@ func TestAnActivityLinkedOnlyToAProjectIsReachedThroughIt(t *testing.T) {
 // widening the first must not move the second: a consultant seeing the work
 // is not a consultant who may rewrite it.
 func TestARepReadsAProjectTheyDoNotOwnButCannotWriteIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "BAER Pharma", nil)
 	owner := e.Rep1
@@ -394,6 +402,7 @@ func TestARepReadsAProjectTheyDoNotOwnButCannotWriteIt(t *testing.T) {
 // A119 Amendment 1.A: a project is born in `initiative`, before any deal
 // exists, and the object carrying interest at that stage is the lead.
 func TestALeadCanBelongToAProject(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "BAER Pharma", nil)
 	p := seedProject(e.Admin(), t, e, "ERP replacement", company, nil)
@@ -428,6 +437,7 @@ func TestALeadCanBelongToAProject(t *testing.T) {
 // query goes out short of placeholders — which fails as an opaque driver
 // error, not as a wrong result.
 func TestListProjectsAppliesFiltersRegisteredAfterThePrelude(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	wanted := e.SeedCompany(t, "BAER Pharma", nil)
 	other := e.SeedCompany(t, "Kessler GmbH", nil)
@@ -492,6 +502,7 @@ func TestListProjectsAppliesFiltersRegisteredAfterThePrelude(t *testing.T) {
 // link invisible to a colleague — a deal is readable by every seat with the
 // grant, so it can no longer stand in for a hidden link.
 func TestRelinkReplacesOnlyTheLinksTheCallerCanSee(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	theirs := e.SeedCompany(t, "Their private account", &e.Rep1)
 	mine := e.SeedCompany(t, "My account", &e.Rep3)
@@ -571,6 +582,7 @@ func TestRelinkReplacesOnlyTheLinksTheCallerCanSee(t *testing.T) {
 // TestEveryTableThatCanHoldAnOwnerRowIsOwnerPrivate guards the second half.
 // This case is the witness that the oracle is gone.
 func TestMovingAnActivityBetweenProjectsReplacesTheLinkItCannotSee(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Oracle GmbH", nil)
 	theirs := seedProject(e.Admin(), t, e, "Their delivery", company, &e.Rep1)
@@ -633,6 +645,7 @@ func TestMovingAnActivityBetweenProjectsReplacesTheLinkItCannotSee(t *testing.T)
 // three, so an activity could be linked to a lead or a project and then be
 // unfindable by the very link that had just been written.
 func TestTheTimelineFilterKnowsEveryLinkTargetTheWriteAccepts(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Vocabulary GmbH", nil)
 	project := seedProject(e.Admin(), t, e, "Findable work", company, nil)
@@ -674,6 +687,7 @@ func TestTheTimelineFilterKnowsEveryLinkTargetTheWriteAccepts(t *testing.T) {
 // free number once they are not. "Free" follows the uniqueness index: it is
 // case-insensitive and counts live rows only.
 func TestTheMintedNumberIsTheLowestFreeOneForItsStem(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Stemmed GmbH", nil)
 
@@ -712,6 +726,7 @@ func TestTheMintedNumberIsTheLowestFreeOneForItsStem(t *testing.T) {
 // unowned row as nobody's to change, so an ownerless project could never be
 // attached to a deal by the very rep who had just created it.
 func TestAProjectCreatedWithoutAnOwnerBelongsToItsCreator(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	company := e.SeedCompany(t, "BAER Pharma", &e.Rep1)
@@ -751,6 +766,7 @@ func TestAProjectCreatedWithoutAnOwnerBelongsToItsCreator(t *testing.T) {
 // The owner named at create is an assignment, so it takes any colleague a
 // reassignment may name, whatever the creator's own row scope.
 func TestAProjectMayBeCreatedForAColleagueTheCreatorMayAssignTo(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := companyIDOf(e.SeedCompany(t, "BAER Pharma", &e.Rep1))
 	projectSeat := func(user ids.UUID, scope principal.RowScope) context.Context {
@@ -812,6 +828,7 @@ func TestAProjectMayBeCreatedForAColleagueTheCreatorMayAssignTo(t *testing.T) {
 // A reason of spaces is no reason: closing refuses it the way it refuses none,
 // and nothing is written to the project or its history.
 func TestClosingAProjectWithABlankReasonIsRefused(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "BAER Pharma", nil)
 	p := seedProject(e.Admin(), t, e, "ERP replacement", company, nil)
@@ -829,6 +846,7 @@ func TestClosingAProjectWithABlankReasonIsRefused(t *testing.T) {
 
 // The handler turns a null key into a clear.
 func TestAProjectPatchSentOwnerNullReleasesTheProject(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	company := createdID(t, e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Release Account"})

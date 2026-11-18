@@ -17,6 +17,7 @@ import (
 )
 
 func TestHistoricalAutomaticTasksSupplyNeitherDealNextStepsNorHealthEvidence(t *testing.T) {
+	t.Parallel()
 	for _, adopted := range []bool{false, true} {
 		t.Run(map[bool]string{false: "automatic", true: "human adoption"}[adopted], func(t *testing.T) {
 			e := integration.Setup(t)
@@ -64,6 +65,7 @@ func TestHistoricalAutomaticTasksSupplyNeitherDealNextStepsNorHealthEvidence(t *
 }
 
 func TestTeamPromiseCountsRequireCurrentAssignedCommitmentsDueNow(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := time.Date(2026, 10, 21, 12, 0, 0, 0, time.UTC)
 	old := now.AddDate(-2, 0, 0)

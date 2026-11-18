@@ -16,6 +16,7 @@ import (
 // A last word of only punctuation lexes to nothing. It adds no prefix and
 // never fails the request; the words before it still search.
 func TestSearchIgnoresALastWordMadeOfPunctuation(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	created, err := e.Contacts.CreateContact(admin, contacts.CreateContactInput{FullName: "Acme Rivera", Source: "manual"})

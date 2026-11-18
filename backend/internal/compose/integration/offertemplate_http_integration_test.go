@@ -32,6 +32,7 @@ type offerTemplateProblem struct {
 }
 
 func TestOfferTemplatesHTTP(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 

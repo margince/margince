@@ -52,6 +52,7 @@ func stageProposal(ctx context.Context, t *testing.T, svc *approvals.Service, ki
 }
 
 func TestFxRateProposalApprovalAppliesRow(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	svc := rateSvc(e)
@@ -67,6 +68,7 @@ func TestFxRateProposalApprovalAppliesRow(t *testing.T) {
 }
 
 func TestRateProposalRejectWritesNothing(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	svc := rateSvc(e)
@@ -82,6 +84,7 @@ func TestRateProposalRejectWritesNothing(t *testing.T) {
 }
 
 func TestFxRateProposalEditBeforeApprove(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	svc := rateSvc(e)
@@ -105,6 +108,7 @@ func TestFxRateProposalEditBeforeApprove(t *testing.T) {
 // value — the effect must refuse with version skew, leave the approval
 // approved-unconsumed, and write nothing.
 func TestFxRateProposalApplyRefusesWhenPriorMoved(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	svc := rateSvc(e)
@@ -137,6 +141,7 @@ func TestFxRateProposalApplyRefusesWhenPriorMoved(t *testing.T) {
 // also the shape of any pre-existing pending payload without the field)
 // must refuse once a rate exists: the world it diffed against is gone.
 func TestFxRateProposalApplyRefusesWhenPriorAppeared(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	svc := rateSvc(e)
@@ -154,6 +159,7 @@ func TestFxRateProposalApplyRefusesWhenPriorAppeared(t *testing.T) {
 // The precondition is scale-blind: "1.0" diffed against a stored
 // numeric(20,10) ("1.0000000000") still matches, and the apply proceeds.
 func TestFxRateProposalApplyMatchingPriorApplies(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	svc := rateSvc(e)
@@ -176,6 +182,7 @@ func TestFxRateProposalApplyMatchingPriorApplies(t *testing.T) {
 // sampled, so the append-forward guard fires) — never overwrite the new
 // day's already-scheduled row.
 func TestFxRateProposalApplyRefusesAcrossMidnight(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	seed := deals.NewStore(e.DB(), DealsInstallation())

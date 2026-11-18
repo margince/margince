@@ -52,6 +52,7 @@ func countWhere(t *testing.T, e *introEnv, query string, args ...any) int {
 // Either colleague can record it, and each recording is one introduced row
 // with no ask fields, one audit row and one recorded event.
 func TestEitherColleagueRecordsAnIntroductionInTheWriteShape(t *testing.T) {
+	t.Parallel()
 	e := setupIntro(t)
 	byIntroducer := e.recorded(t)
 
@@ -100,6 +101,7 @@ func TestEitherColleagueRecordsAnIntroductionInTheWriteShape(t *testing.T) {
 }
 
 func TestOnlyTheTwoColleaguesMayRecordAndNothingElseIsWritten(t *testing.T) {
+	t.Parallel()
 	e := setupIntro(t)
 	agent := principal.WithActor(e.asUser(e.introducer), principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:x", UserID: e.introducer,
@@ -143,6 +145,7 @@ func TestOnlyTheTwoColleaguesMayRecordAndNothingElseIsWritten(t *testing.T) {
 }
 
 func TestARecordingNamesRealLiveColleaguesAndARealDay(t *testing.T) {
+	t.Parallel()
 	e := setupIntro(t)
 	if _, err := e.owner.Exec(context.Background(),
 		`UPDATE app_user SET status = 'deactivated' WHERE id = $1`, e.stranger); err != nil {
@@ -176,6 +179,7 @@ func TestARecordingNamesRealLiveColleaguesAndARealDay(t *testing.T) {
 }
 
 func TestARecordingNeedsAReadableLiveContactAndRefusesADuplicate(t *testing.T) {
+	t.Parallel()
 	e := setupIntro(t)
 	missing := e.recording()
 	missing.ContactID = ids.NewV7()
@@ -201,6 +205,7 @@ func TestARecordingNeedsAReadableLiveContactAndRefusesADuplicate(t *testing.T) {
 // Two colleagues vouched for a recorded introduction, so a third colleague can
 // read it. An ask between the same two stays private.
 func TestAnyReaderOfTheContactSeesARecordedIntroductionButNotAnAsk(t *testing.T) {
+	t.Parallel()
 	e := setupIntro(t)
 	recorded := e.recorded(t)
 	ask, err := e.store.Create(e.asUser(e.requester), e.ask())
@@ -227,6 +232,7 @@ func TestAnyReaderOfTheContactSeesARecordedIntroductionButNotAnAsk(t *testing.T)
 // `introduced` from birth. The expiry sweep, the reply consumer and the
 // lifecycle each act on that status.
 func TestNoLifecycleWriterMovesARecordedIntroduction(t *testing.T) {
+	t.Parallel()
 	e := setupIntro(t)
 	id := e.recorded(t)
 	versionBefore := countWhere(t, e, `SELECT version FROM intro_request WHERE id = $1`, id)
@@ -266,6 +272,7 @@ func TestNoLifecycleWriterMovesARecordedIntroduction(t *testing.T) {
 // The table refuses a recorded row that is not a clean introduced fact, so a
 // writer that forgets the module's rules still cannot store one.
 func TestTheTableRefusesAMalformedRecordedRow(t *testing.T) {
+	t.Parallel()
 	e := setupIntro(t)
 	if _, err := e.owner.Exec(context.Background(), `
 		INSERT INTO intro_request (contact_id, requester_user_id, introducer_user_id,

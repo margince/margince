@@ -14,7 +14,7 @@ import (
 func TestRegisterExtensionsRegistersDeclaredLinkTypes(t *testing.T) {
 	recordkinds.Reset()
 	t.Cleanup(recordkinds.Reset)
-	err := RegisterExtensions(composableAll([]extension.Extension{{
+	_, err := RegisterExtensions(composableAll([]extension.Extension{{
 		Name: "links-ok", Version: "0.0.1",
 		LinkTypes: []extension.LinkType{{Type: "follow_up_of", Label: "Follow-up", From: []string{"deal"}, To: []string{"deal"}}},
 	}}), nil, nil)
@@ -39,7 +39,7 @@ func TestABadLinkTypeDeclarationAbortsTheBoot(t *testing.T) {
 		{"declared twice", []extension.LinkType{{Type: "follow", Label: "a"}, {Type: "follow", Label: "b"}}, "twice"},
 	} {
 		recordkinds.Reset()
-		err := RegisterExtensions(composableAll([]extension.Extension{{
+		_, err := RegisterExtensions(composableAll([]extension.Extension{{
 			Name: "links-bad", Version: "0.0.1", LinkTypes: c.types,
 		}}), nil, nil)
 		if err == nil || !strings.Contains(err.Error(), c.want) {

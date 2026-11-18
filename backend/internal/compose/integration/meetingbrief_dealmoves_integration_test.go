@@ -31,6 +31,7 @@ import (
 // the wording is the unit tests' business, and the thing only a database can
 // check is that every column named exists.
 func TestTheDealMoveReadsRunAgainstTheRealSchema(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	dealID := e.SeedWonDealLinkedTo(t)
 	ctx := principal.WithWorkspaceID(e.As(e.AdminUser, nil, roomErasureAdmin), e.WS)
@@ -57,6 +58,7 @@ func TestTheDealMoveReadsRunAgainstTheRealSchema(t *testing.T) {
 // A reader without the deal_room grant is TOLD the room was left out, rather
 // than being handed a brief that reads like a deal with a silent buyer.
 func TestAReaderWithoutTheRoomGrantIsToldTheRoomWasLeftOut(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	dealID := e.SeedWonDealLinkedTo(t)
 	noRooms := roomErasureAdmin
@@ -86,6 +88,7 @@ func TestAReaderWithoutTheRoomGrantIsToldTheRoomWasLeftOut(t *testing.T) {
 // was added, the section handed out the stage and the price of a deal the
 // reader could not open.
 func TestAReaderWithoutDealAccessIsToldNothingAboutTheDeal(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	dealID := e.SeedWonDealLinkedTo(t)
 	noDeals := roomErasureAdmin

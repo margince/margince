@@ -67,6 +67,9 @@ type jobRegistry struct {
 	// the only join between a declared fault posture and the receiver the
 	// fault gate reads off the source.
 	wired map[string]wiredWorker
+	// jobTable is the declaration every registered kind is held to: core kinds
+	// plus the composition's.
+	jobTable jobs.Composed
 }
 
 // wiredWorker is one registration as the census reads it back.
@@ -96,10 +99,10 @@ func newJobRegistry() *jobRegistry {
 // precisely so it can be asked here. Findings rather than one error because a
 // swap misfiles two kinds at once, and naming one of them would send the
 // reader round the loop twice.
-func misfiledKinds(wired map[string]wiredWorker) []string {
+func misfiledKinds(table jobs.Composed, wired map[string]wiredWorker) []string {
 	var findings []string
 	for _, kind := range slices.Sorted(maps.Keys(wired)) {
-		spec, declared := jobs.SpecFor(kind)
+		spec, declared := table.SpecFor(kind)
 		if !declared {
 			// An undeclared kind has no GoType to be paired with, and is
 			// MustBeTotal's finding (and the census totality arm's) already.
@@ -119,7 +122,7 @@ func misfiledKinds(wired map[string]wiredWorker) []string {
 // started anyway would work rows under a wall clock and an attempt cap chosen
 // for a different job.
 func (r *jobRegistry) everyKindIsRegisteredWithItsDeclaredType() error {
-	findings := misfiledKinds(r.wired)
+	findings := misfiledKinds(r.jobTable, r.wired)
 	if len(findings) == 0 {
 		return nil
 	}
@@ -151,7 +154,7 @@ func addGovernedWorker[T river.JobArgs](reg *jobRegistry, w jobs.WorkOnly[T]) {
 	// at the end of assembly, which is a better report than the first one hit,
 	// and the boot it then refuses is what keeps the zero Spec's timeout —
 	// River's one-minute default — away from a running job.
-	spec, _ := jobs.SpecFor(kind)
+	spec, _ := reg.jobTable.SpecFor(kind)
 	//nolint:forbidigo // the ONE sanctioned registration: every kind reaches River through this line, already wrapped in jobs.Govern and already recorded for MustBeTotal
-	river.AddWorker(reg.workers, jobs.Govern[T](jobs.SnoozeWhilePaused[T](sessionBudgetWorker[T]{work: w, slots: reg.sessionSlots, withContext: reg.withContext}, reg.paused), spec))
+	river.AddWorker(reg.workers, jobs.Govern[T](jobs.SnoozeWhilePaused[T](sessionBudgetWorker[T]{work: w, jobTable: reg.jobTable, slots: reg.sessionSlots, withContext: reg.withContext}, reg.paused), spec))
 }

@@ -28,6 +28,7 @@ func (e *revocationEnv) lastUsed(t *testing.T, passport ids.PassportID) *time.Ti
 }
 
 func TestAuthenticatingStampsThePassportOnceAMinute(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "passport-last-used-debounce")
 	issued, err := e.svc.IssuePassport(e.wsCtx(e.member), e.member, IssuePassportInput{Scopes: []string{"read"}})
 	if err != nil {
@@ -65,6 +66,7 @@ func TestAuthenticatingStampsThePassportOnceAMinute(t *testing.T) {
 }
 
 func TestTheSchedulerResolvingAPassportDoesNotCountAsUse(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "passport-last-used-scheduler")
 	issued, err := e.svc.IssuePassport(e.wsCtx(e.member), e.member, IssuePassportInput{Scopes: []string{"read"}})
 	if err != nil {
@@ -81,6 +83,7 @@ func TestTheSchedulerResolvingAPassportDoesNotCountAsUse(t *testing.T) {
 }
 
 func TestAConnectionShowsTheNewestUseAcrossItsRotatedPassports(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "passport-last-used-connection")
 	fixture := e.connectOAuthFor(t, e.member)
 	old := e.rotateIssuing(t, &fixture)

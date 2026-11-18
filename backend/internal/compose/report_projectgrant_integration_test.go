@@ -41,6 +41,7 @@ func (e *forecastEnv) explainStatus(ctx context.Context, report, handleURL strin
 }
 
 func TestActivityDrillThroughTakesTheProjectGrant(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	company := e.seedID(t, `INSERT INTO company (id, display_name, source, captured_by)
 		VALUES ($1, 'Drill Co', 'manual', 'human:x')`)
@@ -90,6 +91,7 @@ func TestActivityDrillThroughTakesTheProjectGrant(t *testing.T) {
 // fails when the fix is removed, and it says why it is written against the call
 // site instead.
 func TestFilteringByAGrantedFieldTakesItsGrant(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	company := e.seedID(t, `INSERT INTO company (id, display_name, source, captured_by)
 		VALUES ($1, 'Filter Co', 'manual', 'human:x')`)

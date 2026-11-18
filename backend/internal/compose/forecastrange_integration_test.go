@@ -33,6 +33,7 @@ import (
 // One deal worth 1,000,000 at the typed 20% wins in two of ten outcomes. So
 // the low end is nothing and the high end is the whole deal.
 func TestTheHTTPDoorAndTheToolStateOneRange(t *testing.T) {
+	t.Parallel()
 	f := newStageCohortFixture(t)
 	today := clocktest.Now(t)
 	f.openDeal(t, f.stage(0), today)
@@ -52,6 +53,7 @@ func TestTheHTTPDoorAndTheToolStateOneRange(t *testing.T) {
 // One deal worth 1,000,000 at the typed 20%, under the weighted measure, lands
 // at 200,000. The tool states the landing the HTTP door states.
 func TestTheHTTPDoorAndTheToolStateOneLanding(t *testing.T) {
+	t.Parallel()
 	f := newStageCohortFixture(t)
 	today := clocktest.Now(t)
 	f.openDeal(t, f.stage(0), today)
@@ -75,6 +77,7 @@ func TestTheHTTPDoorAndTheToolStateOneLanding(t *testing.T) {
 // GET /forecast states them. Its context names the whole quarter apart from
 // the cutoff its actuals run through.
 func TestTheReportingLandingStatesTheBasisAndRangeTheForecastStates(t *testing.T) {
+	t.Parallel()
 	f := newStageCohortFixture(t)
 	today := clocktest.Now(t)
 	f.openDeal(t, f.stage(0), today)
@@ -109,6 +112,7 @@ func TestTheReportingLandingStatesTheBasisAndRangeTheForecastStates(t *testing.T
 // outcomes, so the low end is 0 and the high end is 250,000. Their chances
 // carry evidence, so the range is simulated in whole batches.
 func TestASnapshotFreezesItsRange(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	id := e.freezeTwoTeams(t, 100_000, 250_000)
 
@@ -191,6 +195,7 @@ func (e *forecastEnv) sharedRangeOf(reader context.Context, t *testing.T, token 
 // A team-scoped reader sees only their own 100,000 deal. At 20% it is lost in
 // eight of ten outcomes, so their high end is 100,000, not the stored 250,000.
 func TestARestrictedShareDrawsItsRangeOverTheRowsItsReaderSees(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	e.seedDealClosingWithin(t, "Mine", &e.Rep1, 100_000)
 	e.seedDealClosingWithin(t, "Theirs", &e.Rep3, 250_000)
@@ -209,6 +214,7 @@ func TestARestrictedShareDrawsItsRangeOverTheRowsItsReaderSees(t *testing.T) {
 // The totals still count colleagues' deals, and so does the range beside them,
 // so it is the range the reader saw with the switch on.
 func TestIndividualPerformanceOffKeepsTheSharedRangeOverTheRowsTheTotalsCount(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	members := e.addMembers(t, e.Team2, "two@forecast.test", "three@forecast.test")
 	e.seedDealClosingWithin(t, "Mine", &e.Rep1, 100_000)
@@ -232,6 +238,7 @@ func TestIndividualPerformanceOffKeepsTheSharedRangeOverTheRowsTheTotalsCount(t 
 // With individual performance off the export holds the reader's own deal while
 // the headline sums the team's. The view and every CSV row say so.
 func TestASharedSnapshotSaysWhenItsExportHoldsOnlyTheReadersOwnDeals(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	members := e.addMembers(t, e.Team2, "two@forecast.test", "three@forecast.test")
 	e.seedDealClosingWithin(t, "Mine", &e.Rep1, 100_000)
@@ -268,6 +275,7 @@ func TestASharedSnapshotSaysWhenItsExportHoldsOnlyTheReadersOwnDeals(t *testing.
 // A reader who owns none of the frozen deals gets one summary row, so the file
 // still says the headline counts deals withheld from them.
 func TestASharedSnapshotWithEveryRowWithheldExportsOneSummaryRow(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	members := e.addMembers(t, e.Team2, "two@forecast.test", "three@forecast.test")
 	for _, owner := range append([]ids.UUID{e.Rep3}, members...) {

@@ -136,6 +136,7 @@ func (f *internalHistoryFixture) complete(t *testing.T, run capture.BackfillRun)
 }
 
 func TestInternalHistoryNeedsAdministratorScopeAndSeparateOwnerConsent(t *testing.T) {
+	t.Parallel()
 	f := newInternalHistoryFixture(t)
 	normal, err := f.registry.StartBackfill(f.owner, "gmail", f.user, 3, connector.BackfillEstimate{}, historyEnqueue)
 	if err != nil {
@@ -180,6 +181,7 @@ func TestInternalHistoryNeedsAdministratorScopeAndSeparateOwnerConsent(t *testin
 }
 
 func TestInternalHistoryRejectsStalePreviewAndRevokedSourceDuringImport(t *testing.T) {
+	t.Parallel()
 	f := newInternalHistoryFixture(t)
 	preview, err := f.registry.EstimateBackfill(f.owner, "gmail", f.user, 3)
 	if err != nil || preview.InternalMail == nil {

@@ -73,6 +73,7 @@ func assertLinkedLeadUnchanged(ctx context.Context, t *testing.T, e *privacyEnv,
 }
 
 func TestLinkedLeadConversionCarriesCompanyOrLeavesTheLeadIntact(t *testing.T) {
+	t.Parallel()
 	for _, existing := range []bool{false, true} {
 		for _, condition := range []string{"allowed", "relationship permission", "contact update permission", "company read permission", "hidden company", "archived company"} {
 			t.Run(fmt.Sprintf("existing=%t/%s", existing, condition), func(t *testing.T) {
@@ -126,6 +127,7 @@ func TestLinkedLeadConversionCarriesCompanyOrLeavesTheLeadIntact(t *testing.T) {
 }
 
 func TestPromotionPreviewsAndDigestRefuseAnUnavailableLinkedCompany(t *testing.T) {
+	t.Parallel()
 	for _, archived := range []bool{false, true} {
 		t.Run(fmt.Sprintf("archived=%t", archived), func(t *testing.T) {
 			e, owner, lead, company := linkedPromotion(t, false)
@@ -162,6 +164,7 @@ func TestPromotionPreviewsAndDigestRefuseAnUnavailableLinkedCompany(t *testing.T
 }
 
 func TestContactCreationCannotDropTheCompanyOfALeadItConverts(t *testing.T) {
+	t.Parallel()
 	e, owner, lead, company := linkedPromotion(t, false)
 	if _, err := e.store.UpdateCompany(owner, company, UpdateCompanyInput{Visibility: new("owner")}); err != nil {
 		t.Fatal(err)
@@ -179,6 +182,7 @@ func TestContactCreationCannotDropTheCompanyOfALeadItConverts(t *testing.T) {
 }
 
 func TestPromotionContextReadDoesNotTakeACompanyLock(t *testing.T) {
+	t.Parallel()
 	e, owner, lead, company := linkedPromotion(t, false)
 	holder, _ := beginOn(t)
 	if _, err := holder.Exec(owner, `SELECT id FROM company WHERE id = @id FOR UPDATE`, pgx.StrictNamedArgs{"id": company}); err != nil {

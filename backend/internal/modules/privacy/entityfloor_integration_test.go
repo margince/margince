@@ -8,7 +8,6 @@ package privacy
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -30,11 +29,8 @@ type entityFloorFixture struct {
 
 func newEntityFloorFixture(ctx context.Context, t *testing.T, defaultCountry, furtherCountry jurisdiction.Code) entityFloorFixture {
 	t.Helper()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	if ownerDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	db := testdb.New(t)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -43,9 +39,6 @@ func newEntityFloorFixture(ctx context.Context, t *testing.T, defaultCountry, fu
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 	tx, err := owner.Begin(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -108,6 +101,7 @@ func (f entityFloorFixture) kept(ctx context.Context, t *testing.T, activity ids
 // The default entity keeps no floor and the further entity a six-year one. A
 // message is kept when it belongs to the further entity's colleague.
 func TestAMessageIsKeptUnderTheFloorOfItsUsersEntity(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	f := newEntityFloorFixture(ctx, t, "zv", "zu")
 
@@ -156,6 +150,7 @@ func TestAMessageIsKeptUnderTheFloorOfItsUsersEntity(t *testing.T) {
 // The default entity keeps six years and the further entity none. A message
 // never keeps less than the default floor, so the colleague's mail stays.
 func TestAFurtherEntityWithoutAFloorKeepsTheDefaultFloor(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	f := newEntityFloorFixture(ctx, t, "zu", "zv")
 
@@ -174,6 +169,7 @@ func TestAFurtherEntityWithoutAFloorKeepsTheDefaultFloor(t *testing.T) {
 // A message several users received keeps the longest floor among their
 // entities.
 func TestTheLongestFloorAmongAMessagesUsersWins(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	f := newEntityFloorFixture(ctx, t, "zv", "zu")
 	noFloor := f.member(ctx, t, "zv")
@@ -198,6 +194,7 @@ func TestTheLongestFloorAmongAMessagesUsersWins(t *testing.T) {
 // The owners of the records a message is filed under count only when the
 // message names no users of its own.
 func TestARecordOwnerCountsOnlyForAMessageThatNamesNobody(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	f := newEntityFloorFixture(ctx, t, "zv", "zu")
 	inDefault := f.member(ctx, t, "")
@@ -232,6 +229,7 @@ func init() { jurisdiction.Register(tenYearPack{}) }
 // A report about some messages names the floor of their users' entities, not
 // the longest floor any entity of the installation keeps.
 func TestAReportNamesTheFloorOfItsOwnMessages(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	f := newEntityFloorFixture(ctx, t, "zv", "zu")
 	f.member(ctx, t, "zw")

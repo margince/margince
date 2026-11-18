@@ -17,6 +17,7 @@ import (
 )
 
 func TestSuggestionRepairDetectsChangedMeetingAndDocumentDates(t *testing.T) {
+	t.Parallel()
 	for _, kind := range []string{deals.EvidenceMeeting, deals.EvidenceAttachment} {
 		t.Run(kind, func(t *testing.T) {
 			e := setupScout(t)

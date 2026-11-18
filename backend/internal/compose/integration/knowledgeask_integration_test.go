@@ -112,6 +112,7 @@ func wantOutcome(t *testing.T, got knowledge.Readiness, want crmcontracts.Knowle
 // A corpus mid-ingest retrieves nothing. Answering "your documents do not cover
 // this" would be an affirmative false claim about documents that do.
 func TestACorpusWithADocumentStillIngestingIsNotReady(t *testing.T) {
+	t.Parallel()
 	ae := newAskEnv(t)
 	// A second document uploaded and left queued, which is exactly the state
 	// between the upload's 202 and the worker picking it up.
@@ -125,6 +126,7 @@ func TestACorpusWithADocumentStillIngestingIsNotReady(t *testing.T) {
 }
 
 func TestACorpusWithNoDocumentsAtAllIsNotReady(t *testing.T) {
+	t.Parallel()
 	ie := newIngestEnv(t)
 	state, passages, err := ie.store.Retrieve(ie.ctx, ie.corpus, "anything", newSteeredEmbedder())
 	if err != nil {
@@ -139,6 +141,7 @@ func TestACorpusWithNoDocumentsAtAllIsNotReady(t *testing.T) {
 // A failed document leaves the denominator, or one bad file makes the whole
 // corpus unanswerable forever. Its own row already says it failed and why.
 func TestAFailedDocumentDoesNotHoldTheCorpusNotReady(t *testing.T) {
+	t.Parallel()
 	ae := newAskEnv(t)
 	bad := ae.upload(t, "broken.md", "text/markdown", prose(1))
 	if err := ae.store.FailIngest(ae.ctx, bad, "the stored file could not be read"); err != nil {
@@ -157,6 +160,7 @@ func TestAFailedDocumentDoesNotHoldTheCorpusNotReady(t *testing.T) {
 // never not_covered. The corpus IS holding the prose; nothing about the
 // question is wrong.
 func TestVectorsUnderASupersededIdentityReadAsNotReady(t *testing.T) {
+	t.Parallel()
 	ae := newAskEnv(t)
 	ae.embedder.identity = "fake/other@4"
 
@@ -168,6 +172,7 @@ func TestVectorsUnderASupersededIdentityReadAsNotReady(t *testing.T) {
 }
 
 func TestNoEmbedLaneBoundIsRetrievalUnavailable(t *testing.T) {
+	t.Parallel()
 	ae := newAskEnv(t)
 	ae.embedder.identity = ""
 	// Counted from here, not from zero: the fixture embedded the document to
@@ -190,6 +195,7 @@ func TestNoEmbedLaneBoundIsRetrievalUnavailable(t *testing.T) {
 // under the floor must never reach one: a claim citing it would pass the quote
 // check and re-open exactly the hole the floor exists to close.
 func TestAQuestionBelowTheFloorIsNotCoveredWithoutAModelCall(t *testing.T) {
+	t.Parallel()
 	ae := newAskEnv(t)
 	// Orthogonal to the stored passage: cosine 0, far below the binding's measured floor.
 	ae.embedder.vectors["what is the capital of France"] = []float32{0, 1, 0, 0}
@@ -208,6 +214,7 @@ func TestAQuestionBelowTheFloorIsNotCoveredWithoutAModelCall(t *testing.T) {
 }
 
 func TestAQuestionJustAboveTheFloorRetrievesPassages(t *testing.T) {
+	t.Parallel()
 	ae := newAskEnv(t)
 	// cos = 0.8 / (1 * sqrt(0.8² + 0.6²)) = 0.8, comfortably over the binding's
 	// measured floor and chosen rather than hoped for.
@@ -236,6 +243,7 @@ func TestAQuestionJustAboveTheFloorRetrievesPassages(t *testing.T) {
 // The override is the workspace's number and is taken as given: below the
 // binding's measured floor it lets through what the binding would refuse.
 func TestACorpusOverrideBelowTheBindingFloorLetsThroughWhatTheBindingRefuses(t *testing.T) {
+	t.Parallel()
 	ae := newAskEnv(t)
 	// cos 0.6: under gemini's measured 0.65.
 	ae.embedder.vectors["how is a message filed"] = []float32{0.6, 0.8, 0, 0}
@@ -255,6 +263,7 @@ func TestACorpusOverrideBelowTheBindingFloorLetsThroughWhatTheBindingRefuses(t *
 
 // A binding whose bands overlap has no floor, so nothing is refused on cosine.
 func TestABindingWithNoSeparatingFloorRefusesNothingOnCosine(t *testing.T) {
+	t.Parallel()
 	ae := newAskEnv(t)
 	ae.embedder.identity = "openai_compatible/mistralai/mistral-embed-2312@4"
 	if _, err := ae.store.EmbedDocument(ae.ctx, ae.doc, ae.embedder); err != nil {
@@ -266,6 +275,7 @@ func TestABindingWithNoSeparatingFloorRefusesNothingOnCosine(t *testing.T) {
 }
 
 func TestRaisingTheFloorTurnsTheSameQuestionIntoARefusal(t *testing.T) {
+	t.Parallel()
 	ae := newAskEnv(t)
 	ae.embedder.vectors["how is a message filed"] = []float32{0.8, 0.6, 0, 0}
 	state, _ := ae.ask(t, "how is a message filed")
@@ -285,6 +295,7 @@ func TestRaisingTheFloorTurnsTheSameQuestionIntoARefusal(t *testing.T) {
 // An archived document's passages are never retrieved. They would otherwise be
 // cited by name out of a file the screen no longer lists.
 func TestAnArchivedDocumentsChunksAreNeverRetrieved(t *testing.T) {
+	t.Parallel()
 	ae := newAskEnv(t)
 	ae.embedder.vectors["how is a message filed"] = []float32{1, 0, 0, 0}
 	if _, passages := ae.ask(t, "how is a message filed"); len(passages) == 0 {
@@ -306,6 +317,7 @@ func TestAnArchivedDocumentsChunksAreNeverRetrieved(t *testing.T) {
 // the reader to go and finish uploading something; there is nothing for them to
 // do but wait.
 func TestACorpusBeingReindexedIsNotReady(t *testing.T) {
+	t.Parallel()
 	ae := newAskEnv(t)
 	ae.env.WsExec(t, `UPDATE knowledge_corpus SET reindexing = true WHERE id = $1`, ae.corpus)
 
@@ -319,6 +331,7 @@ func TestACorpusBeingReindexedIsNotReady(t *testing.T) {
 // An empty question is not_covered, and costs nothing: there is no vector to
 // rank and nothing honest to say except that the corpus does not cover it.
 func TestAnEmptyQuestionIsNotCoveredWithoutEmbeddingAnything(t *testing.T) {
+	t.Parallel()
 	ae := newAskEnv(t)
 	callsBefore := ae.embedder.calls
 
@@ -336,6 +349,7 @@ func TestAnEmptyQuestionIsNotCoveredWithoutEmbeddingAnything(t *testing.T) {
 // than a crash: every cosine against zero is NaN and `ORDER BY sim DESC` sorts
 // NaN FIRST, so ranking it would put arbitrary passages at the top.
 func TestAZeroQuestionVectorIsNotCoveredRatherThanRanked(t *testing.T) {
+	t.Parallel()
 	ae := newAskEnv(t)
 	ae.embedder.vectors["???"] = []float32{0, 0, 0, 0}
 
@@ -350,6 +364,7 @@ func TestAZeroQuestionVectorIsNotCoveredRatherThanRanked(t *testing.T) {
 // refusal quotes them back — a reader at their least patient moment needs to be
 // told WHAT was searched.
 func TestEveryOutcomeNamesWhatWasSearched(t *testing.T) {
+	t.Parallel()
 	ae := newAskEnv(t)
 	ae.embedder.vectors["orthogonal"] = []float32{0, 1, 0, 0}
 	ae.embedder.vectors["close"] = []float32{1, 0, 0, 0}
@@ -371,6 +386,7 @@ func TestEveryOutcomeNamesWhatWasSearched(t *testing.T) {
 // A rep may ask. Read is the ask, and every role that reads records holds it —
 // otherwise the help bot is an admin tool.
 func TestARepMayAskACorpus(t *testing.T) {
+	t.Parallel()
 	ae := newAskEnv(t)
 	ae.embedder.vectors["how is a message filed"] = []float32{1, 0, 0, 0}
 	rep := ae.env.As(ae.env.Rep1, nil, corpusRepPerms)

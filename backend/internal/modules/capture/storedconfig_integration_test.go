@@ -45,13 +45,13 @@ func captureAdmin(ctx context.Context, ws ids.WorkspaceID) context.Context {
 }
 
 // A sync interval the environment sets paces the sync, which reads it through
-// the process binding, and the settings store refuses any other value. Not
-// parallel: the binding is the process's own.
+// the program's configuration, and the settings store refuses any other value.
 func TestABootSetSyncIntervalPacesTheSyncAndRefusesAChange(t *testing.T) {
+	t.Parallel()
 	ctx, reg, _, ws := newCaptureRegistryFixture(t)
 	_, pool := setupCaptureDB(t)
 	store, cfg := captureSettingsStore(t, pool, "MARGINCE_CAPTURE_MAIL_SYNC_INTERVAL_SECONDS=1800")
-	configtest.Bind(t, cfg)
+	ctx = config.WithBound(ctx, cfg)
 
 	other := 600
 	if _, err := store.Update(captureAdmin(ctx, ws), capture.SettingsPatch{MailSyncIntervalSeconds: &other}); !errors.Is(err, apperrors.ErrConflict) {
@@ -74,14 +74,15 @@ func TestABootSetSyncIntervalPacesTheSyncAndRefusesAChange(t *testing.T) {
 
 // A pass cap the environment sets is the cap the pass reads, and the settings
 // store refuses a different one. With no boot source the pass reads what an
-// admin saved. Not parallel: the binding is the process's own.
+// admin saved.
 func TestTheConfidentialityPassReadsTheBootSetCapBeforeASavedOne(t *testing.T) {
+	t.Parallel()
 	ctx, _, _, ws := newCaptureRegistryFixture(t)
 	_, pool := setupCaptureDB(t)
 	threads := capture.NewThreadVerdictStore(database.BindTo(pool, ws))
 
 	store, cfg := captureSettingsStore(t, pool)
-	configtest.Bind(t, cfg)
+	ctx = config.WithBound(ctx, cfg)
 	saved := 90
 	if _, err := store.Update(captureAdmin(ctx, ws), capture.SettingsPatch{ConfidentialityPassCap: &saved}); err != nil {
 		t.Fatalf("saving the cap: %v", err)
@@ -91,7 +92,7 @@ func TestTheConfidentialityPassReadsTheBootSetCapBeforeASavedOne(t *testing.T) {
 	}
 
 	bootStore, bootCfg := captureSettingsStore(t, pool, "MARGINCE_CAPTURE_CONFIDENTIALITY_PASS_CAP=7")
-	configtest.Bind(t, bootCfg)
+	ctx = config.WithBound(ctx, bootCfg)
 	if got, err := threads.PassCap(ctx); err != nil || got != 7 {
 		t.Fatalf("the pass reads %d (err %v), want the 7 the environment sets", got, err)
 	}

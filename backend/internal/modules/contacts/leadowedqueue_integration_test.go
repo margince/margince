@@ -27,6 +27,7 @@ import (
 )
 
 func TestTheOwedDialKeepsAnsweredLeadsOutOfTheBoundedPage(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 
 	// Answered leads first, so an unfiltered read of one row returns one of

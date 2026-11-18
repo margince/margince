@@ -114,6 +114,7 @@ func (o *owedEnv) asCapturedBeforeTheColumn(t *testing.T, message ids.UUID, age 
 }
 
 func TestACapturedDeclineIsOwedNothing(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
 	decline := o.captureRaw(t, declineMail(o.seat, o.now.Add(-time.Hour)))
@@ -126,6 +127,7 @@ func TestACapturedDeclineIsOwedNothing(t *testing.T) {
 }
 
 func TestTheBackfillReadsTheMethodOfALegacyDecline(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
 	decline := o.captureRaw(t, declineMail(o.seat, o.now.Add(-time.Hour)))
@@ -234,6 +236,7 @@ func (o *owedEnv) slimmedOriginalOf(t *testing.T, blob blobstore.Store, message 
 }
 
 func TestTheBackfillRestoresASlimmedOriginalToReadItsMethod(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
 	blob := blobstore.NewMemory()
@@ -255,6 +258,7 @@ func TestTheBackfillRestoresASlimmedOriginalToReadItsMethod(t *testing.T) {
 // Whether a decline is owed changes later, so every legacy row is read, owed
 // or not, archived or not. A row under a hold is neither read nor marked.
 func TestTheBackfillReadsEveryLegacyDeclineButAHeldOne(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
 	answered := o.captureRaw(t, declineMail(o.seat, o.now.Add(-4*time.Hour)))
@@ -317,6 +321,7 @@ func (o *owedEnv) messageIDOf(t *testing.T, message ids.UUID) string {
 // The stanza naming a moved part sits in mail a sender wrote. A sender who
 // copies another message's stanza must not get that message's object read.
 func TestTheBackfillReadsOnlyTheMessagesOwnStoredParts(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
 	blob := blobstore.NewMemory()

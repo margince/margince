@@ -21,15 +21,15 @@ import (
 )
 
 // The retain-only posture the environment sets is the one the nightly pass
-// and the policy list apply, with no row saying so. Not parallel: the binding
-// is the process's own.
+// and the policy list apply, with no row saying so.
 func TestABootSetRetainOnlyPostureSuppressesDestruction(t *testing.T) {
-	apptest.BindEnv(t, []string{"MARGINCE_PRIVACY_RETAIN_ONLY=true"})
+	t.Parallel()
+	boot := apptest.LoadEnv(t, []string{"MARGINCE_PRIVACY_RETAIN_ONLY=true"})
 	e := Setup(t)
 	SeedRetentionPolicies(t, e)
 	staleLead, _, _, _ := seedOverAgeRecords(t, e)
 
-	policies, err := privacy.NewPolicyStore(e.DB()).List(retentionAdminCtx(e.WS, principal.ObjectGrant{Read: true}))
+	policies, err := privacy.NewPolicyStore(e.DB()).List(compose.ConfigContext(retentionAdminCtx(e.WS, principal.ObjectGrant{Read: true}), boot))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,7 +42,7 @@ func TestABootSetRetainOnlyPostureSuppressesDestruction(t *testing.T) {
 
 	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(os.Stderr, nil)))
 	SettleIntoInstall(t, e)
-	if err := svc.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
+	if err := svc.EvaluateInstallation(RetentionPassCtx(compose.ConfigContext(t.Context(), boot), e.WS)); err != nil {
 		t.Fatal(err)
 	}
 	var leadName string

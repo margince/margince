@@ -93,6 +93,7 @@ func dealsByColumn(ctx context.Context, e *integration.Env, column string) (Anal
 // A field an administrator has not opted in is not a dimension. Grouping by it
 // is refused by name, the same refusal any unknown field gets.
 func TestACustomFieldIsNotADimensionUntilAnAdminOptsItIn(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	_, field := territoryField(t, e)
 
@@ -105,6 +106,7 @@ func TestACustomFieldIsNotADimensionUntilAnAdminOptsItIn(t *testing.T) {
 // Once opted in, the field groups the deals it holds, and the schema names it
 // with the label and choices an administrator gave it.
 func TestAReportableDealFieldGroupsTheDealsThatHoldIt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	catalog, field := territoryField(t, e)
 	optIn(t, e, catalog, field)
@@ -154,6 +156,7 @@ func TestAReportableDealFieldGroupsTheDealsThatHoldIt(t *testing.T) {
 // Reports group deals by their own fields and their company's. A contact field
 // cannot be opted in, since the switch would claim an effect it does not have.
 func TestOnlyADealOrCompanyFieldCanBeOptedIntoReporting(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	catalog := customfields.NewService(e.Pool, integration.SchemaPool(t))
 	admin := e.As(e.Rep1, nil, integration.CustomFieldAdminPerms)
@@ -173,6 +176,7 @@ func TestOnlyADealOrCompanyFieldCanBeOptedIntoReporting(t *testing.T) {
 
 // A retired field leaves reports, and its row stops saying it is in them.
 func TestRetiringAReportableFieldTakesItOutOfReports(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	catalog, field := territoryField(t, e)
 	optIn(t, e, catalog, field)
@@ -191,6 +195,7 @@ func TestRetiringAReportableFieldTakesItOutOfReports(t *testing.T) {
 // Only a picklist or a yes/no field may be reportable: a free-text value is a
 // group per record, and the refusal names the field.
 func TestAFreeTextFieldCannotBeOptedIntoReporting(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	catalog := customfields.NewService(e.Pool, integration.SchemaPool(t))
 	admin := e.As(e.Rep1, nil, integration.CustomFieldAdminPerms)
@@ -212,6 +217,7 @@ func TestAFreeTextFieldCannotBeOptedIntoReporting(t *testing.T) {
 // doors share analyticsVocabularyText today; this holds the sharing, so a
 // second rendering cannot arrive under either door without failing here.
 func TestTheAnalyticsResourceAndTheToolReaderServeOneDocument(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	contents, err := analyticsSchemaResource{db: e.DB()}.ReadResource(ctx, AnalyticsSchemaURI)

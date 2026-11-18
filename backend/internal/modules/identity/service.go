@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"net/http"
 	"sync/atomic"
 	"time"
 	"unicode/utf8"
@@ -50,6 +51,9 @@ type Service struct {
 	// without sleeping. Session/passport expiries stay on the database's
 	// now() — they are enforced inside SQL predicates, not Go logic.
 	now func() time.Time
+	// cimdClient fetches client metadata documents. Production shares the one
+	// guarded client of oauth_cimd.go; a test points it at its own server.
+	cimdClient *http.Client
 	// installation caches the singleton workspace id after the first
 	// successful resolution (installation.go) — the id is immutable for
 	// the process lifetime, so no request pays the lookup twice.
@@ -105,10 +109,13 @@ type Service struct {
 	// pictureFill stores a sign-in's provider picture as the seat's own. Nil
 	// leaves every seat's picture as it is. See providerpicture.go.
 	pictureFill ProviderPictureFill
+	// rbac is the extension RBAC vocabulary of the composition this service
+	// serves (rbacobjects.go).
+	rbac RbacObjects
 }
 
 func NewService(pool *pgxpool.Pool) *Service {
-	svc := &Service{now: time.Now}
+	svc := &Service{now: time.Now, cimdClient: processCIMDClient}
 	svc.db = database.Bind(pool, svc.InstallationWorkspace)
 	return svc
 }
@@ -120,7 +127,7 @@ func NewService(pool *pgxpool.Pool) *Service {
 // identity is the module that refuses when a second one exists — so it names the
 // one it means instead (ADR-0091 §9 step 3).
 func NewServiceFor(db *database.DB) *Service {
-	return &Service{db: db, now: time.Now}
+	return &Service{db: db, now: time.Now, cimdClient: processCIMDClient}
 }
 
 // Identity is the authenticated principal's resolved state — what /me
@@ -281,18 +288,17 @@ func SeedSystemRoles(ctx context.Context, tx pgx.Tx) (adminRoleID ids.UUID, err 
 			adminRoleID = roleID
 		}
 	}
-	// A new installation gets the composed units' starting grants with its roles.
-	if err := fillRegisteredDefaults(ctx, tx); err != nil {
-		return ids.Nil, err
-	}
 	return adminRoleID, nil
 }
 
-// seedSystemRolesForBootstrap is the provisioning half: the role set, plus the
-// admin role on the workspace's first user.
-func seedSystemRolesForBootstrap(ctx context.Context, tx pgx.Tx, adminUserID ids.UserID) error {
+// seedSystemRolesForBootstrap is the provisioning half: the role set with the
+// composed units' starting grants, plus the admin role on the workspace's first user.
+func seedSystemRolesForBootstrap(ctx context.Context, tx pgx.Tx, rbac RbacObjects, adminUserID ids.UserID) error {
 	adminRoleID, err := SeedSystemRoles(ctx, tx)
 	if err != nil {
+		return err
+	}
+	if err := fillRegisteredDefaults(ctx, tx, rbac); err != nil {
 		return err
 	}
 	_, err = tx.Exec(ctx,
@@ -378,7 +384,7 @@ func (s *Service) Authenticate(ctx context.Context, rawToken string) (Identity, 
 		if err != nil {
 			return err
 		}
-		if name, ok := config.BootVal(config.Bound(), Name); ok {
+		if name, ok := config.BootVal(ctx, config.Bound(ctx), Name); ok {
 			id.WorkspaceName = name
 		}
 		id.UserID = userID
@@ -398,7 +404,7 @@ func (s *Service) Authenticate(ctx context.Context, rawToken string) (Identity, 
 		}
 
 		var loadErr error
-		id.Roles, id.Teams, id.Permissions, loadErr = loadGrants(ctx, tx, userID)
+		id.Roles, id.Teams, id.Permissions, loadErr = loadGrants(ctx, tx, s.rbac, userID)
 		if loadErr != nil {
 			return loadErr
 		}

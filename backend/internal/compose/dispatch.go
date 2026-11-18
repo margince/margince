@@ -88,12 +88,12 @@ const (
 // later; and because retryable is one of activeSweepStates, a backing-off job
 // suppresses the tick's own re-enqueue of that workspace until it discards.
 // api/jobs.yaml carries each kind's number and the reason for it.
-func workspaceSweepOpts(childKind string) *river.InsertOpts {
-	spec := fanOutChildSpec(childKind)
+func workspaceSweepOpts(table jobs.Composed, childKind string) *river.InsertOpts {
+	spec := fanOutChildSpec(table, childKind)
 	if spec.OptsOwner != jobs.OptsFanOut {
 		panic("compose: " + childKind + " declares an opts_owner other than fan_out, so its queue and attempt cap are not this helper's to set")
 	}
-	return markedAsFleetPass(jobs.QueuedAsKind(childKind, &river.InsertOpts{
+	return markedAsFleetPass(table.QueuedAsKind(childKind, &river.InsertOpts{
 		MaxAttempts: spec.MaxAttempts,
 		UniqueOpts:  river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},
 	}))
@@ -121,7 +121,7 @@ func workspaceSweepOpts(childKind string) *river.InsertOpts {
 // a single known workspace: it fires once per event, so nothing here bounds a
 // fan-out that could otherwise repeat per tick.
 func oneOffChildOpts(childKind string) *river.InsertOpts {
-	spec := fanOutChildSpec(childKind)
+	spec := fanOutChildSpec(jobs.Composed{}, childKind)
 	if spec.OptsOwner != jobs.OptsFanOut {
 		panic("compose: " + childKind + " declares an opts_owner other than fan_out, so its queue and attempt cap are not this helper's to set")
 	}
@@ -160,23 +160,11 @@ func oneOffPassOpts(kind string) *river.InsertOpts {
 	return jobs.QueuedAsKind(kind, &river.InsertOpts{MaxAttempts: periodicPassMaxAttempts})
 }
 
-// fanOutChildren is every kind some dispatcher DECLARES it fans out to —
-// fans_out_to, read as the registry it is, over BOTH halves of the declaration
-// table (jobs.Declared covers the compiled core kinds and this installation's
-// composed extension kinds).
-//
-// Recomputed per call rather than memoised. It used to be a sync.OnceValue,
-// which was correct while the table was compiled and therefore fixed at link
-// time; it is not correct now that an installation's composed kinds are
-// declared at BOOT. A memoised answer is whatever the table held at the first
-// insert of the process, so a fan-out that happened to run before
-// jobs.RegisterComposed would cache the core set and then PANIC on every
-// extension child forever after — a boot-ordering bug that would look like a
-// bad kind. The cost it buys back is one map build over a few dozen specs per
-// dispatched insert, which is beside a database round trip.
-func fanOutChildren() map[string]struct{} {
+// fanOutChildren is every kind some dispatcher declares in fans_out_to. It
+// reads both halves of the table: the core kinds and the composition's own.
+func fanOutChildren(table jobs.Composed) map[string]struct{} {
 	children := map[string]struct{}{}
-	for _, spec := range jobs.Declared() {
+	for _, spec := range table.Declared() {
 		if spec.FanOutTo != "" {
 			children[spec.FanOutTo] = struct{}{}
 		}
@@ -189,12 +177,12 @@ func fanOutChildren() map[string]struct{} {
 // errors a boot-time tick surfaces immediately, not conditions a running
 // deployment can reach: what a kind is, and who fans out to it, are fixed at
 // compile time by the contract the generated table is built from.
-func fanOutChildSpec(childKind string) jobs.Spec {
-	spec, ok := jobs.SpecFor(childKind)
+func fanOutChildSpec(table jobs.Composed, childKind string) jobs.Spec {
+	spec, ok := table.SpecFor(childKind)
 	if !ok {
 		panic("compose: fanning out to " + childKind + ", which api/jobs.yaml does not declare")
 	}
-	if _, ok := fanOutChildren()[childKind]; !ok {
+	if _, ok := fanOutChildren(table)[childKind]; !ok {
 		panic("compose: fanning out to " + childKind + ", which no declared kind names in fans_out_to — declare the dispatcher's fan-out in api/jobs.yaml")
 	}
 	return spec
@@ -303,14 +291,14 @@ func clientInsertMany(ctx context.Context) insertManyFunc {
 // backlog and a caught-up one costs a probe. A dispatcher whose children are
 // expensive enough to care (overlay, the AI-backed captures) carries its own
 // pacing in the row it works from, not in this helper.
-func dispatchWith(ctx context.Context, workspaces []ids.UUID, insert insertManyFunc, opts *river.InsertOpts, argsFor func(ids.UUID) river.JobArgs) error {
+func dispatchWith(ctx context.Context, table jobs.Composed, workspaces []ids.UUID, insert insertManyFunc, opts *river.InsertOpts, argsFor func(ids.UUID) river.JobArgs) error {
 	if len(workspaces) == 0 {
 		return nil
 	}
 	params := make([]river.InsertManyParams, 0, len(workspaces))
 	for _, ws := range workspaces {
 		args := argsFor(ws)
-		params = append(params, river.InsertManyParams{Args: args, InsertOpts: jobs.QueuedAsArgs(args, markedAsFleetPass(opts))})
+		params = append(params, river.InsertManyParams{Args: args, InsertOpts: table.QueuedAsArgs(args, markedAsFleetPass(opts))})
 	}
 	if err := insert(ctx, params); err != nil {
 		return fmt.Errorf("compose: dispatching %d workspace jobs: %w", len(params), err)
@@ -362,7 +350,7 @@ func dispatchOne(ctx context.Context, pool *pgxpool.Pool, args river.JobArgs, ca
 // postures directly, without a River client or a database: the postures are
 // the whole content of the decision, and the insert below them is one line.
 func fanOutChildOpts(childKind string, callerOpts *river.InsertOpts) *river.InsertOpts {
-	spec := fanOutChildSpec(childKind)
+	spec := fanOutChildSpec(jobs.Composed{}, childKind)
 	if spec.OptsOwner != jobs.OptsCaller && callerOpts != nil {
 		panic("compose: insert options passed for " + childKind + ", whose opts_owner is not caller — they would be dropped, not merged")
 	}
@@ -371,7 +359,7 @@ func fanOutChildOpts(childKind string, callerOpts *river.InsertOpts) *river.Inse
 	}
 	switch spec.OptsOwner {
 	case jobs.OptsFanOut:
-		return workspaceSweepOpts(childKind)
+		return workspaceSweepOpts(jobs.Composed{}, childKind)
 	case jobs.OptsArgs:
 		return markedAsFleetPass(nil)
 	case jobs.OptsCaller:

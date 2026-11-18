@@ -22,6 +22,7 @@ import (
 )
 
 func TestAnImportCannotAdoptAnObjectDuringOrAfterItsReap(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	blob := newReapBlobstore()
 	key := "ws/import/" + ids.NewV7().String()
@@ -65,6 +66,7 @@ func TestAnImportCannotAdoptAnObjectDuringOrAfterItsReap(t *testing.T) {
 }
 
 func TestAnAdopterHoldingTheIntentMakesTheSweepLeaveItsBytes(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	blob := newReapBlobstore()
 	key := "reap/locked/" + ids.NewV7().String()
@@ -105,6 +107,7 @@ func TestAnAdopterHoldingTheIntentMakesTheSweepLeaveItsBytes(t *testing.T) {
 }
 
 func TestAnImportCannotAdoptWhileAClaimedDeleteNeedsARetry(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	blob := newReapBlobstore()
 	key := "reap/retry-import/" + ids.NewV7().String()

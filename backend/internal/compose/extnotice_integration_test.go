@@ -82,6 +82,7 @@ func (w noticeWorld) noticesFor(t *testing.T, user ids.UUID) (subjects []string,
 }
 
 func TestARoleNoticeReachesOnlyLiveMembersWhoCanOpenTheRecord(t *testing.T) {
+	t.Parallel()
 	w := setupNotices(t)
 	sent, err := w.send(t, extension.NoticeRequest{
 		Role: "deal-watcher", Record: extension.RecordRef{Type: "deal", ID: w.mineDeal.String()}, Subject: "Look at this deal",
@@ -106,6 +107,7 @@ func TestARoleNoticeReachesOnlyLiveMembersWhoCanOpenTheRecord(t *testing.T) {
 }
 
 func TestANoticeKeyMakesARetryASecondNoOp(t *testing.T) {
+	t.Parallel()
 	w := setupNotices(t)
 	in := extension.NoticeRequest{
 		Member: w.reader.String(), Key: "stage-moved-1",
@@ -123,6 +125,7 @@ func TestANoticeKeyMakesARetryASecondNoOp(t *testing.T) {
 }
 
 func TestANoticeAboutARecordTheCallerCannotSeeIsNotFound(t *testing.T) {
+	t.Parallel()
 	w := setupNotices(t)
 	err := w.readAs(t, w.user, readerPerms(principal.RowScopeOwn, "company"), func(ctx context.Context, core extension.Core) error {
 		_, err := core.Notices().Send(ctx, extension.NoticeRequest{

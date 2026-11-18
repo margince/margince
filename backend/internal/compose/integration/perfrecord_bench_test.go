@@ -74,6 +74,7 @@ const (
 )
 
 func TestRecordOpenAndSaveBudgets(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	seedRecordBenchVolume(t, e)

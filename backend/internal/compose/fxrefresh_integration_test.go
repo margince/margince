@@ -80,6 +80,7 @@ func fxReply(pairs ...string) string {
 }
 
 func TestFxRefreshStagesChangedRates(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	adminCtx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 
@@ -124,6 +125,7 @@ func seedFx(ctx context.Context, t *testing.T, store *deals.Store, cur, rate str
 // future-scheduled row must neither trigger a proposal when today's rate
 // already matches the source, nor mask a real change to today's rate.
 func TestFxRefreshDiffsAgainstEffectiveTodayNotSheetHead(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	adminCtx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	store := deals.NewStore(e.DB(), DealsInstallation())
@@ -157,6 +159,7 @@ func TestFxRefreshDiffsAgainstEffectiveTodayNotSheetHead(t *testing.T) {
 // proposal for that currency instead of stacking a competitor whose late
 // approval would restore the stale rate.
 func TestFxRefreshSupersedesStalePendingProposal(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	adminCtx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	store := deals.NewStore(e.DB(), DealsInstallation())
@@ -183,6 +186,7 @@ func TestFxRefreshSupersedesStalePendingProposal(t *testing.T) {
 }
 
 func TestFxRefreshBootstrapsEmptySheet(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 
 	// Base EUR, empty sheet. The page offers USD/GBP/CHF (and JPY, outside the
@@ -212,6 +216,7 @@ func TestFxRefreshBootstrapsEmptySheet(t *testing.T) {
 }
 
 func TestFxRefreshSkipsCandidatesTheSourceOmits(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 
 	// USX is ISO 4217-shaped (so it clears the config gate) but the page never
@@ -229,6 +234,7 @@ func TestFxRefreshSkipsCandidatesTheSourceOmits(t *testing.T) {
 }
 
 func TestFxRefreshEmptySheetNoBootstrapSetIsNoOp(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 
 	// A page that would answer if extracted — proving the no-op is the empty
@@ -245,6 +251,7 @@ func TestFxRefreshEmptySheetNoBootstrapSetIsNoOp(t *testing.T) {
 }
 
 func TestFxRefreshDropsLowConfidenceAndCrossPairs(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	adminCtx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	seedFx(adminCtx, t, deals.NewStore(e.DB(), DealsInstallation()), "USD", "0.92", time.Now().UTC())

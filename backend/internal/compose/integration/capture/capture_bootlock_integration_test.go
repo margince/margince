@@ -9,6 +9,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	capturemod "github.com/margince/margince/backend/internal/modules/capture"
@@ -17,10 +18,10 @@ import (
 )
 
 // The mailbox gate and the sink read the two mail postures inside their own
-// writes. A boot value wins there over a row that says the opposite. Not
-// parallel: the binding is the process's own.
+// writes. A boot value wins there over a row that says the opposite.
 func TestBootSetMailPosturesWinInsideTheMailboxGateAndTheSink(t *testing.T) {
-	apptest.BindEnv(t, []string{
+	t.Parallel()
+	boot := apptest.LoadEnv(t, []string{
 		"MARGINCE_CAPTURE_SHARED_POSTURE_ALLOWED=true",
 		"MARGINCE_CAPTURE_MAIL_SHARING=false",
 	})
@@ -34,7 +35,7 @@ func TestBootSetMailPosturesWinInsideTheMailboxGateAndTheSink(t *testing.T) {
 	contactID := e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Inbox Sender', 'manual', 'human:x')`)
 	registry := newTestCaptureRegistry(e, newTestKeyvault(t, e))
 	registry.Register(&mailFake{linkTo: contactID})
-	grantCtx := humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead})
+	grantCtx := compose.ConfigContext(humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead}), boot)
 	connID, err := registry.Connect(grantCtx, "graph", connector.Auth("token"))
 	if err != nil {
 		t.Fatal(err)

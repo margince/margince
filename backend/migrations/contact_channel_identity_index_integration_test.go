@@ -24,6 +24,7 @@ import (
 // read path and the cascade — so this asserts the shape both need rather than
 // the existence of a second one.
 func TestContactChannelIdentityCascadeIndexIsUnconditional(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)

@@ -60,7 +60,7 @@ func newMarginceChangeHandlers(pool *pgxpool.Pool) marginceChangeHandlers {
 		pool:      pool,
 		deals:     deals.NewStore(InstallationDB(pool), DealsInstallation()),
 		teammates: newTeammatesSeam(pool),
-		seatNames: identity.NewService(pool),
+		seatNames: IdentityService(pool),
 		now:       now,
 		// A deal's changes cite no staged approval, so no approvals service.
 		details: attentionReceiptDetails{magic: newMagicService(pool, nil, now), names: names},

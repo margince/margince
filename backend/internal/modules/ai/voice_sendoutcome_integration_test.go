@@ -15,7 +15,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"math"
-	"os"
 	"testing"
 	"time"
 
@@ -52,13 +51,9 @@ func (e *sendOutcomeEnv) storeIn(ws ids.UUID) *VoiceStore {
 
 func setupSendOutcomeStore(t *testing.T) *sendOutcomeEnv {
 	t.Helper()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -67,22 +62,13 @@ func setupSendOutcomeStore(t *testing.T) *sendOutcomeEnv {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	// To head before anything else touches this database: testdb.Pool refuses
-	// until EnsureSchema has run, and EnsureSchema still REBUILDS whenever it
-	// cannot prove the database is a fresh lane clone — so a seed written
-	// before it would be dropped rather than reset.
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 
-	pool, err := testdb.Pool(ctx, appDSN)
+	pool, err := testdb.Pool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Registered where the pool is handed out, before the test adds any cleanup
 	// of its own, so it runs last and sees a package that has genuinely stopped.
-	// The pool outlives the test now, so a goroutine still holding a connection
-	// would go on writing into the database the NEXT test just reset.
 	testdb.AssertPoolsQuiesced(t)
 
 	return &sendOutcomeEnv{owner: owner, pool: pool}
@@ -340,6 +326,7 @@ func (e *sendOutcomeEnv) emittedOutcome(t *testing.T, profile ids.UUID) string {
 // because this row carries no contact linkage, so Art. 17 erasure can never
 // reach it and only the 180-day sweep would.
 func TestRecordSendOutcomeAcceptsAnUneditedSend(t *testing.T) {
+	t.Parallel()
 	env := setupSendOutcomeStore(t)
 	f := env.seedDraft(t, draftOptions{})
 
@@ -387,6 +374,7 @@ func TestRecordSendOutcomeAcceptsAnUneditedSend(t *testing.T) {
 // is edited_sent with the pinned similarity, and the sent body is still
 // discarded after classification.
 func TestRecordSendOutcomeRecordsAnEditedSend(t *testing.T) {
+	t.Parallel()
 	env := setupSendOutcomeStore(t)
 	f := env.seedDraft(t, draftOptions{})
 
@@ -419,6 +407,7 @@ func TestRecordSendOutcomeRecordsAnEditedSend(t *testing.T) {
 // an error: absence is a value here, and the send must not fail over a
 // learning concern.
 func TestRecordSendOutcomeTreatsAnUnknownDraftReferenceAsNothingToRecord(t *testing.T) {
+	t.Parallel()
 	env := setupSendOutcomeStore(t)
 	f := env.seedDraft(t, draftOptions{})
 
@@ -441,6 +430,7 @@ func TestRecordSendOutcomeTreatsAnUnknownDraftReferenceAsNothingToRecord(t *test
 // only ever seeded the pair would stay green with either one deleted, and a
 // GDPR gate that no test can fail is a gate nobody is holding.
 func TestRecordSendOutcomeRefusesAnErasedOrArchivedSignal(t *testing.T) {
+	t.Parallel()
 	env := setupSendOutcomeStore(t)
 
 	t.Run("content erased by retention or Art. 17", func(t *testing.T) {
@@ -484,6 +474,7 @@ func TestRecordSendOutcomeRefusesAnErasedOrArchivedSignal(t *testing.T) {
 // Failing the send here would itself be an existence oracle: absent → sent,
 // foreign → error is a distinguishable probe for another human's drafts.
 func TestRecordSendOutcomeRefusesAForeignOwnersSignalLikeAnAbsentOne(t *testing.T) {
+	t.Parallel()
 	env := setupSendOutcomeStore(t)
 	f := env.seedDraft(t, draftOptions{foreignOwner: true})
 
@@ -500,6 +491,7 @@ func TestRecordSendOutcomeRefusesAForeignOwnersSignalLikeAnAbsentOne(t *testing.
 // wait is observable — it separates "absent" from "someone else's" exactly as
 // loudly as an error would.
 func TestRecordSendOutcomeNeverLocksAForeignOwnersSignal(t *testing.T) {
+	t.Parallel()
 	env := setupSendOutcomeStore(t)
 	f := env.seedDraft(t, draftOptions{foreignOwner: true})
 	env.holdSignalLock(t, f.signal)
@@ -520,7 +512,7 @@ func TestRecordSendOutcomeNeverLocksAForeignOwnersSignal(t *testing.T) {
 func (e *sendOutcomeEnv) holdSignalLock(t *testing.T, signal ids.UUID) {
 	t.Helper()
 	ctx := context.Background()
-	conn, err := pgx.Connect(ctx, os.Getenv("MARGINCE_TEST_DSN"))
+	conn, err := pgx.Connect(ctx, testdb.For(t).OwnerDSN)
 	if err != nil {
 		t.Fatalf("opening the lock holder's connection: %v", err)
 	}
@@ -567,6 +559,7 @@ func (e *sendOutcomeEnv) recordUnderLockTimeout(ctx context.Context, t *testing.
 // The outcome is the OWNER's judgment (ADR-0066 §4): an agent's edit is
 // not the owner's authored text, so a non-human principal records nothing.
 func TestRecordSendOutcomeRefusesANonHumanPrincipal(t *testing.T) {
+	t.Parallel()
 	env := setupSendOutcomeStore(t)
 	f := env.seedDraft(t, draftOptions{agentActor: true})
 
@@ -579,6 +572,7 @@ func TestRecordSendOutcomeRefusesANonHumanPrincipal(t *testing.T) {
 // The object grant still gates the write, but a missing grant never fails
 // the human's send — it simply records no learning signal.
 func TestRecordSendOutcomeRefusesAnActorWithoutTheVoiceProfileGrant(t *testing.T) {
+	t.Parallel()
 	env := setupSendOutcomeStore(t)
 	f := env.seedDraft(t, draftOptions{withoutVoiceUpdate: true})
 
@@ -592,6 +586,7 @@ func TestRecordSendOutcomeRefusesAnActorWithoutTheVoiceProfileGrant(t *testing.T
 // reference — they are two emails — and the first transaction to take the
 // row's lock owns the outcome; a redelivery never rewrites it.
 func TestRecordSendOutcomeLeavesADecidedSignalAlone(t *testing.T) {
+	t.Parallel()
 	env := setupSendOutcomeStore(t)
 
 	t.Run("a redelivered send after the outcome was recorded", func(t *testing.T) {
@@ -624,6 +619,7 @@ func TestRecordSendOutcomeLeavesADecidedSignalAlone(t *testing.T) {
 // only gate, so another tenant's signal must read as absent even when the
 // draft reference is known.
 func TestRecordSendOutcomeCannotReachAnotherWorkspacesSignal(t *testing.T) {
+	t.Parallel()
 	env := setupSendOutcomeStore(t)
 	victim := env.seedDraft(t, draftOptions{})
 	attacker := env.seedDraft(t, draftOptions{})

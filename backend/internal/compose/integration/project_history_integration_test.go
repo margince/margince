@@ -20,6 +20,7 @@ import (
 )
 
 func TestProjectHistoryListsThePhaseTransitionAndWhoMadeIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "BAER Pharma", nil)
 	p := seedProject(e.Admin(), t, e, "ERP replacement", company, &e.Rep1)

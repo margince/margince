@@ -29,6 +29,7 @@ import (
 )
 
 func TestAnAdminPurgesAWorkspaceRuleAcrossEverySeat(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	mine := seedPurgeableMail(t, e, "spam@junk.example", "an uns", e.Rep1)
 	theirs := seedPurgeableMail(t, e, "spam@junk.example", "an die Kollegin", e.Rep2)
@@ -49,6 +50,7 @@ func TestAnAdminPurgesAWorkspaceRuleAcrossEverySeat(t *testing.T) {
 }
 
 func TestAnOpsSeatThatCanWriteTheRuleIsRefusedThePurge(t *testing.T) {
+	t.Parallel()
 	// The gate that is easy to get wrong. Creating a workspace exclusion takes
 	// capture_settings.update, which admin AND ops both hold, so inferring the
 	// authority from "could they have written this rule" hands workspace-wide
@@ -68,6 +70,7 @@ func TestAnOpsSeatThatCanWriteTheRuleIsRefusedThePurge(t *testing.T) {
 }
 
 func TestARepIsRefusedAWorkspacePurge(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedPurgeableMail(t, e, "spam@junk.example", "an uns", e.Rep1)
 	rule := seedWorkspaceExclusion(t, e, "junk.example")
@@ -79,6 +82,7 @@ func TestARepIsRefusedAWorkspacePurge(t *testing.T) {
 }
 
 func TestAWorkspacePurgeReachesMailTheRuleCaughtThroughCc(t *testing.T) {
+	t.Parallel()
 	// Ingress keeps a message out if ANY address on it matches — sender,
 	// recipients, copies. A purge that read only counterparty_email would miss
 	// the history the rule caught through Cc and report mail as gone while it
@@ -100,6 +104,7 @@ func TestAWorkspacePurgeReachesMailTheRuleCaughtThroughCc(t *testing.T) {
 }
 
 func TestAWorkspacePurgeLeavesActivityNobodyCaptured(t *testing.T) {
+	t.Parallel()
 	// A capture exclusion governs what capture stores. A meeting somebody logged
 	// by hand was never captured and no rule ever kept it out, so destroying it
 	// takes away work a contact did.
@@ -117,6 +122,7 @@ func TestAWorkspacePurgeLeavesActivityNobodyCaptured(t *testing.T) {
 }
 
 func TestAWorkspacePurgeReportsRestrictedMailRatherThanDestroyingIt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	held := seedPurgeableMail(t, e, "spam@junk.example", "unter Aufbewahrung", e.Rep1)
 	restrict(t, e, held)
@@ -134,6 +140,7 @@ func TestAWorkspacePurgeReportsRestrictedMailRatherThanDestroyingIt(t *testing.T
 }
 
 func TestAWorkspacePurgePreviewChangesNothing(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	mail := seedPurgeableMail(t, e, "spam@junk.example", "an uns", e.Rep1)
 	rule := seedWorkspaceExclusion(t, e, "junk.example")
@@ -148,6 +155,7 @@ func TestAWorkspacePurgePreviewChangesNothing(t *testing.T) {
 }
 
 func TestAnAdminStillPurgesTheirOwnSeatRuleAsASeat(t *testing.T) {
+	t.Parallel()
 	// The admin arm must not swallow the seat arm: an admin's own rule is still
 	// their own, so it destroys what THEY imported and releases the rest.
 	e := integration.Setup(t)
@@ -171,6 +179,7 @@ func TestAnAdminStillPurgesTheirOwnSeatRuleAsASeat(t *testing.T) {
 }
 
 func TestAWorkspaceAddressRuleMatchesThatAddressAlone(t *testing.T) {
+	t.Parallel()
 	// An address rule is exact where a domain rule covers subdomains. Both reach
 	// the participant arm, so this also pins that the Cc match is not domain-only.
 	e := integration.Setup(t)
@@ -193,6 +202,7 @@ func TestAWorkspaceAddressRuleMatchesThatAddressAlone(t *testing.T) {
 }
 
 func TestAWorkspacePurgeLeavesNoClaimOnTheMailItDestroyed(t *testing.T) {
+	t.Parallel()
 	// What a colleague is left holding. The workspace arm releases nothing,
 	// because the workspace is not one seat reaching into another's mailbox —
 	// but "released nothing" must not mean every seat keeps an import row and a
@@ -231,6 +241,7 @@ func participantRows(t *testing.T, e *integration.Env, activityID ids.UUID) int 
 }
 
 func TestAColleagueOnTheCcLineIsNotTheCounterpartyARuleIsAbout(t *testing.T) {
+	t.Parallel()
 	// The blast radius an ops seat can arm. Writing a workspace rule takes
 	// capture_settings.update, which ops holds; only pressing purge takes admin.
 	// So the rule's REACH is chosen by whoever wrote it, and if a colleague's own
@@ -268,6 +279,7 @@ func addColleagueParticipant(t *testing.T, e *integration.Env, activityID ids.UU
 }
 
 func TestAWorkspaceRuleIsNotAnExistenceOracleForANonAdmin(t *testing.T) {
+	t.Parallel()
 	// One answer for three questions: a rule that does not exist, one that is
 	// somebody else's, and one this caller may not act on. Two different answers
 	// let a rep probe ids and read which workspace rules exist — what the
@@ -388,6 +400,7 @@ func seedHandLoggedMail(t *testing.T, e *integration.Env, from, subject string) 
 // Request): an EXISTS over the whole table would freeze every purge on every
 // address the installation ever had a case about.
 func TestAWorkspacePurgeReportsMailAnOpenRequestIsAboutRatherThanDestroyingIt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	evidence := seedRequestAgainstLawyer(t, e, "open", "")
 
@@ -414,6 +427,7 @@ func TestAWorkspacePurgeReportsMailAnOpenRequestIsAboutRatherThanDestroyingIt(t 
 // the message where the subject was one of several recipients, and reports it
 // destroyed with nothing kept.
 func TestAWorkspacePurgeKeepsMailWhereTheSubjectWasOnlyCopied(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const copied = "anwalt@kanzlei.example"
 	// The counterparty is somebody the request says nothing about; the subject is on

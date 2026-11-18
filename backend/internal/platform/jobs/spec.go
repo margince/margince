@@ -83,9 +83,9 @@ func (u FanOutUnit) ArgsKey() string {
 // child with different units is refused at generation, so the answer cannot
 // depend on iteration order — and iterating deterministically is what keeps
 // that true of this function rather than only of the file it reads.
-func FanOutUnits() map[string]FanOutUnit {
+func (c Composed) FanOutUnits() map[string]FanOutUnit {
 	units := map[string]FanOutUnit{}
-	table := allSpecs()
+	table := c.allSpecs()
 	for _, kind := range slices.Sorted(maps.Keys(table)) {
 		if spec := table[kind]; spec.FanOutTo != "" {
 			units[spec.FanOutTo] = spec.FanOutUnit
@@ -269,14 +269,10 @@ func (s Spec) clone() Spec {
 // SpecFor returns the declaration for one kind. The bool is the whole point:
 // a caller that ignored it would get a zero Spec, whose zero timeout is
 // River's one-minute default under another name.
-func SpecFor(kind string) (Spec, bool) {
+func (c Composed) SpecFor(kind string) (Spec, bool) {
 	s, ok := specs[kind]
 	if !ok {
-		// The composed table second, and only on a miss: the core kinds are the
-		// hot path (every fan-out insert asks) and the composed one is empty on
-		// a vanilla process, so a lookup that consulted both unconditionally
-		// would take a lock on every insert to answer nothing.
-		if s, ok = composedSpecFor(kind); !ok {
+		if s, ok = c.specs[kind]; !ok {
 			return Spec{}, false
 		}
 	}
@@ -285,9 +281,9 @@ func SpecFor(kind string) (Spec, bool) {
 
 // Declared iterates every declared kind in kind order, so a caller building a
 // report or a metric family walks the same sequence on every process.
-func Declared() iter.Seq2[string, Spec] {
+func (c Composed) Declared() iter.Seq2[string, Spec] {
 	return func(yield func(string, Spec) bool) {
-		table := allSpecs()
+		table := c.allSpecs()
 		for _, kind := range slices.Sorted(maps.Keys(table)) {
 			if !yield(kind, table[kind].clone()) {
 				return
@@ -295,6 +291,16 @@ func Declared() iter.Seq2[string, Spec] {
 		}
 	}
 }
+
+// SpecFor is Composed.SpecFor over the core table alone, for a caller that
+// asks about a core kind.
+func SpecFor(kind string) (Spec, bool) { return Composed{}.SpecFor(kind) }
+
+// Declared is Composed.Declared over the core table alone.
+func Declared() iter.Seq2[string, Spec] { return Composed{}.Declared() }
+
+// FanOutUnits is Composed.FanOutUnits over the core table alone.
+func FanOutUnits() map[string]FanOutUnit { return Composed{}.FanOutUnits() }
 
 // DeclaredQueues is every declared queue and the number of workers the
 // contract states for it, copied so a reader cannot edit the table underneath
@@ -312,10 +318,10 @@ func DeclaredQueues() map[string]int {
 // MustBeTotal reports the kinds a caller intends to work that the contract
 // does not declare. A missing spec would otherwise fall through to River's
 // 1-minute default, which is the failure this contract exists to remove.
-func MustBeTotal(kinds []string) error {
+func (c Composed) MustBeTotal(kinds []string) error {
 	var missing []string
 	for _, k := range kinds {
-		if _, ok := SpecFor(k); !ok {
+		if _, ok := c.SpecFor(k); !ok {
 			missing = append(missing, k)
 		}
 	}
@@ -326,3 +332,6 @@ func MustBeTotal(kinds []string) error {
 	return fmt.Errorf("jobs: %d kind(s) not declared in api/jobs.yaml: %s — add them there and run `make gen`",
 		len(missing), strings.Join(missing, ", "))
 }
+
+// MustBeTotal is Composed.MustBeTotal over the core table alone.
+func MustBeTotal(kinds []string) error { return Composed{}.MustBeTotal(kinds) }

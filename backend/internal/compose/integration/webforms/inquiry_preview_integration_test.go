@@ -22,6 +22,7 @@ import (
 )
 
 func TestInquiryPreviewWritesNothingAndAgreesWithLiveHandling(t *testing.T) {
+	t.Parallel()
 	e := setupFormsApp(t)
 	form := createForm(t, e, integration.AnyMap{"name": "Inquiries", "sender": "browser", "allowed_origins": []string{siteOrigin}})
 	policy := setupInquiryPolicy(t, e, form, "one_colleague")
@@ -89,6 +90,7 @@ func TestInquiryPreviewWritesNothingAndAgreesWithLiveHandling(t *testing.T) {
 }
 
 func TestDisqualifyingAnOwnedLeadSkipsItsPendingInquiryWithoutRecreatingWork(t *testing.T) {
+	t.Parallel()
 	e := setupFormsApp(t)
 	form := createForm(t, e, integration.AnyMap{"name": "Inquiries", "sender": "browser", "allowed_origins": []string{siteOrigin}})
 	policy := setupInquiryPolicy(t, e, form, "one_colleague")

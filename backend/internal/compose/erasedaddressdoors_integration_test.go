@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/companytypes"
 )
 
 const (
@@ -58,11 +59,12 @@ func createContactOverHTTP(e *integration.Env, address string) (int, string) {
 	req := httptest.NewRequest(http.MethodPost, "/v1/contacts", strings.NewReader(body)).WithContext(e.Admin())
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
-	newContactsHandlers(e.Pool).CreateContact(rec, req, crmcontracts.CreateContactParams{})
+	newContactsHandlers(e.Pool, companytypes.Registry{}).CreateContact(rec, req, crmcontracts.CreateContactParams{})
 	return rec.Code, rec.Body.String()
 }
 
 func TestTheManualCreateRefusesAnErasedAddressWithAStableCode(t *testing.T) {
+	t.Parallel()
 	e := erasedSubject(t)
 	status, body := createContactOverHTTP(e, erasedAddress)
 	if status != http.StatusUnprocessableEntity || !strings.Contains(body, `"`+storekit.ErasedIdentifierCode+`"`) {
@@ -77,6 +79,7 @@ func TestTheManualCreateRefusesAnErasedAddressWithAStableCode(t *testing.T) {
 }
 
 func TestAHandMadeLeadRefusesAnErasedAddress(t *testing.T) {
+	t.Parallel()
 	e := erasedSubject(t)
 	name := "Wieder Da"
 	for address, wantRefused := range map[string]bool{erasedAddress: true, cleanAddress: false} {
@@ -89,6 +92,7 @@ func TestAHandMadeLeadRefusesAnErasedAddress(t *testing.T) {
 }
 
 func TestAnUpdateCannotGiveALeadAnErasedAddress(t *testing.T) {
+	t.Parallel()
 	e := erasedSubject(t)
 	name, address := "Wieder Da", cleanAddress
 	lead, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{FullName: &name, Email: &address})
@@ -103,6 +107,7 @@ func TestAnUpdateCannotGiveALeadAnErasedAddress(t *testing.T) {
 }
 
 func TestACSVImportSkipsAnErasedAddressAndLandsTheRest(t *testing.T) {
+	t.Parallel()
 	for _, object := range []string{migration.ObjectContact, migration.ObjectLead} {
 		t.Run(object, func(t *testing.T) {
 			e := erasedSubject(t)
@@ -148,6 +153,7 @@ func importingAdmin(e *integration.Env) context.Context {
 }
 
 func TestAVCardImportSkipsAnErasedAddressAndLandsTheRest(t *testing.T) {
+	t.Parallel()
 	e := erasedSubject(t)
 	results, err := e.Contacts.ImportVCards(e.Admin(), []contacts.VCardEntry{
 		{FullName: "Wieder Da", Emails: []contacts.VCardChannel{{Value: erasedAddress, Kind: "work"}}},
@@ -165,6 +171,7 @@ func TestAVCardImportSkipsAnErasedAddressAndLandsTheRest(t *testing.T) {
 }
 
 func TestAContactUpdateCannotAddAnErasedAddress(t *testing.T) {
+	t.Parallel()
 	e := erasedSubject(t)
 	contact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{
 		FullName: "Wieder Da",
@@ -188,6 +195,7 @@ func TestAContactUpdateCannotAddAnErasedAddress(t *testing.T) {
 // The erased address second in the list: a check that reads only the first
 // address would let it through.
 func TestACreateRefusesAnErasedAddressThatIsNotTheFirst(t *testing.T) {
+	t.Parallel()
 	e := erasedSubject(t)
 	_, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{
 		FullName: "Wieder Da",

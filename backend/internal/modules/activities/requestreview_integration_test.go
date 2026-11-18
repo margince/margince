@@ -19,6 +19,7 @@ import (
 )
 
 func TestAnotherReaderSeesCoverageWithoutReadingAPrivateReminder(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	id := seedEmailRequest(t, e, "Please send slots", "meeting", OwedVerdictAsksUs)
 	store := storeKnowing(e)
@@ -78,6 +79,7 @@ func TestAnotherReaderSeesCoverageWithoutReadingAPrivateReminder(t *testing.T) {
 }
 
 func TestConflictingNoiseLabelStaysReviewableWithoutAutomaticAssignment(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	id := seedEmailRequest(t, e, "Please confirm the schedule", "other", OwedVerdictAsksUs)
 	store := storeKnowing(e)
@@ -105,6 +107,7 @@ func TestConflictingNoiseLabelStaysReviewableWithoutAutomaticAssignment(t *testi
 }
 
 func TestUnthreadedUnclassifiedMailNeedsRequestEvidence(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	store := storeKnowing(e)
 	subject, direction := "A message", "inbound"
@@ -135,6 +138,7 @@ func TestUnthreadedUnclassifiedMailNeedsRequestEvidence(t *testing.T) {
 }
 
 func TestAcceptanceKeepsTheClassifierVerdictAndHonorsTheTaskText(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	store := storeKnowing(e)
 	actor, ok := principal.Actor(e.as())
@@ -178,6 +182,7 @@ func TestAcceptanceKeepsTheClassifierVerdictAndHonorsTheTaskText(t *testing.T) {
 }
 
 func TestDifferentRequestsInOneConversationNeedSeparateResolution(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	store := storeKnowing(e)
 	actor, ok := principal.Actor(e.as())
@@ -234,6 +239,7 @@ func TestDifferentRequestsInOneConversationNeedSeparateResolution(t *testing.T) 
 }
 
 func TestPrivateReplyStillAnswersAnUnclassifiedThread(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	store := storeKnowing(e)
 	actor, ok := principal.Actor(e.as())
@@ -278,6 +284,7 @@ func TestPrivateReplyStillAnswersAnUnclassifiedThread(t *testing.T) {
 }
 
 func TestAcceptingAReadableColleagueReminderDoesNotClaimSuccess(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	source := seedEmailRequest(t, e, "Send the report", "commitment", OwedVerdictAsksUs)
 	store := storeKnowing(e)

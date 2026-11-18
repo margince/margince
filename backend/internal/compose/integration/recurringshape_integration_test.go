@@ -40,6 +40,7 @@ type shapeCase struct {
 }
 
 func TestTheProductBillingShapeAdmitsOnlyThreeClassifications(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 
 	const base = "name, unit_price_minor, currency, source, captured_by"
@@ -87,6 +88,7 @@ func TestTheProductBillingShapeAdmitsOnlyThreeClassifications(t *testing.T) {
 }
 
 func TestTheOfferLineBillingShapeAdmitsOnlyThreeClassifications(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Recurring shape probe", pipeline, open, &e.Rep1)
@@ -180,6 +182,7 @@ func assertShape(t *testing.T, err error, constraint string) {
 // does nothing, and a product once classified could never go back to saying
 // nothing about whether its price repeats.
 func TestAProductCanGoBackToSayingNothingAboutRepeating(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	// The catalogue is administered under its own object grant, which the
 	// harness's default admin does not carry.

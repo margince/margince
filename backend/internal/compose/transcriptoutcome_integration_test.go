@@ -55,6 +55,7 @@ func speaking(ctx context.Context, locale string) context.Context {
 // A task the reading gave a colleague is "for NAME" to the one who logged the
 // meeting, and "for you" to the colleague. The stored outcome names the seat.
 func TestTheReportSaysWhoATranscriptTaskWentTo(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	e.WsExec(t, `UPDATE app_user SET display_name = 'Priya Raman' WHERE id = $1`, e.Rep2)
 	read := e.read(t, cannedBrain{reply: attributedReply(t, "Priya Raman", "seat:"+e.Rep2.String(), 0.9)})
@@ -75,6 +76,7 @@ func TestTheReportSaysWhoATranscriptTaskWentTo(t *testing.T) {
 // decide for the colleague. A German reader gets German on an English
 // installation.
 func TestTheReportSaysWhoATranscriptProposalWaitsOn(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	e.WsExec(t, `UPDATE app_user SET display_name = 'Priya Raman' WHERE id = $1`, e.Rep2)
 	read := e.read(t, cannedBrain{reply: attributedReply(t, "Priya Raman", "seat:"+e.Rep2.String(), 0.75)})
@@ -109,6 +111,7 @@ func TestTheReportSaysWhoATranscriptProposalWaitsOn(t *testing.T) {
 // A reading finished before the outcome was kept as facts still answers the
 // sentence it stored, and phrases nothing for the reader.
 func TestAReadingFromBeforeFactsKeepsItsOwnSentence(t *testing.T) {
+	t.Parallel()
 	e := setupTranscript(t)
 	read := e.read(t, cannedBrain{reply: `{"proposals":[]}`})
 	e.WsExec(t, `UPDATE transcript_read SET outcome = NULL, status_detail = 'an old sentence' WHERE id = $1`, read.ID)

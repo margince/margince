@@ -23,6 +23,7 @@ import (
 )
 
 func TestAProposalWhoseOnlyTimeHasArrivedIsRefusedByName(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	profile := defaultSchedulingProfile()
 	profile.Provider = "gcal"

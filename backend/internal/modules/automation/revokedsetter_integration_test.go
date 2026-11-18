@@ -118,6 +118,7 @@ func (r *setterRig) ruleState(t *testing.T, rule Automation) (enabled bool, reas
 // A rule an agent set up stops with the passport it was set up on. It does not
 // fire first, the owner is told, and the audit row says why.
 func TestARuleStopsWithoutFiringOnceItsSettersPassportIsRevoked(t *testing.T) {
+	t.Parallel()
 	r := newSetterRig(t)
 	rule := r.ruleBy(r.agent(), t)
 	if _, _, setter := r.ruleState(t, rule); setter == nil || *setter != r.passport.String() {
@@ -149,6 +150,7 @@ func TestARuleStopsWithoutFiringOnceItsSettersPassportIsRevoked(t *testing.T) {
 
 // A user enabling the rule makes it theirs, so it runs whatever becomes of the passport.
 func TestARuleTheUserReEnabledKeepsFiring(t *testing.T) {
+	t.Parallel()
 	r := newSetterRig(t)
 	rule := r.ruleBy(r.agent(), t)
 	r.revoke(t)
@@ -170,6 +172,7 @@ func TestARuleTheUserReEnabledKeepsFiring(t *testing.T) {
 
 // A user editing a running rule takes it over too, even when the edit changes nothing else.
 func TestAUserEditingAnAgentsRuleTakesItOver(t *testing.T) {
+	t.Parallel()
 	r := newSetterRig(t)
 	rule := r.ruleBy(r.agent(), t)
 	on := true
@@ -185,6 +188,7 @@ func TestAUserEditingAnAgentsRuleTakesItOver(t *testing.T) {
 
 // A rule a user made themselves names no passport, so no revocation reaches it.
 func TestAUsersOwnRuleIgnoresARevokedPassport(t *testing.T) {
+	t.Parallel()
 	r := newSetterRig(t)
 	rule := r.ruleBy(r.user(), t)
 	if _, _, setter := r.ruleState(t, rule); setter != nil {
@@ -199,6 +203,7 @@ func TestAUsersOwnRuleIgnoresARevokedPassport(t *testing.T) {
 
 // A seeded rule belongs to the product. An agent enabling one leaves no setter on it.
 func TestAnAgentEnablingASeededRuleLeavesNoSetter(t *testing.T) {
+	t.Parallel()
 	r := newSetterRig(t)
 	current := r.seededRule(t, routeLeadName)
 	r.enable(r.agent(), t, current)
@@ -210,6 +215,7 @@ func TestAnAgentEnablingASeededRuleLeavesNoSetter(t *testing.T) {
 // A write that loses the race with a revocation is refused, on a passport the
 // request was admitted under moments before.
 func TestARevokedPassportSetsUpNoRule(t *testing.T) {
+	t.Parallel()
 	r := newSetterRig(t)
 	r.revoke(t)
 	_, err := r.store.Create(r.agent(), CreateAutomationInput{Key: assignLeadOwnerName, Name: "Too late", Params: map[string]any{}})
@@ -220,6 +226,7 @@ func TestARevokedPassportSetsUpNoRule(t *testing.T) {
 
 // A failed firing of a stopped rule is not retried past the revocation.
 func TestARevokedSettersRuleIsNotRetried(t *testing.T) {
+	t.Parallel()
 	r := newSetterRig(t)
 	failing := NewWorkflowEngine(database.BindTo(r.fx.pool, ids.From[ids.WorkspaceKind](r.fx.ws)), fullyPermittedOwner()).WithRulePauses(r.notices, nil)
 	failing.RegisterWorkflow(scriptedWorkflow{name: assignLeadOwnerName, redrivable: true, apply: func(workflow.Event) (workflow.RunResult, error) {
@@ -243,6 +250,7 @@ func TestARevokedSettersRuleIsNotRetried(t *testing.T) {
 
 // A rule an agent creates from a seeded key is the agent's, so revoking stops it.
 func TestAnAgentsRuleFromASeededKeyNamesItsPassport(t *testing.T) {
+	t.Parallel()
 	r := newSetterRig(t)
 	rule, err := r.store.Create(r.agent(), CreateAutomationInput{Key: routeLeadName, Name: "Mine too", Params: map[string]any{}})
 	if err != nil {
@@ -277,6 +285,7 @@ func (r *setterRig) seededRule(t *testing.T, key string) Automation {
 // An agent does not change who owns a rule. So it never takes a seeded rule as its
 // own user's, and the seeded limits keep holding.
 func TestAnAgentDoesNotTakeASeededRuleAsItsOwn(t *testing.T) {
+	t.Parallel()
 	r := newSetterRig(t)
 	rule := r.seededRule(t, stageChangeNotifyName)
 	me := ids.From[ids.UserKind](r.fx.rep1)
@@ -292,6 +301,7 @@ func TestAnAgentDoesNotTakeASeededRuleAsItsOwn(t *testing.T) {
 // The agent's enable is what turns a draft starter on, and the starter spends a model
 // call each time it fires. Revoking the agent's passport stops that spend.
 func TestAnAgentEnablingADraftStarterIsItsSetter(t *testing.T) {
+	t.Parallel()
 	r := newSetterRig(t)
 	rule := r.seededRule(t, "post_meeting_recap")
 	ctx := r.agent()
@@ -306,6 +316,7 @@ func TestAnAgentEnablingADraftStarterIsItsSetter(t *testing.T) {
 // An edit that names a running rule's status claims nothing: the rule stays the
 // user's unless the agent is what turned it on.
 func TestAnAgentEditingAUsersRunningRuleDoesNotBecomeItsSetter(t *testing.T) {
+	t.Parallel()
 	r := newSetterRig(t)
 	rule := r.ruleBy(r.user(), t)
 	on, renamed := true, "Renamed by the agent"
@@ -324,6 +335,7 @@ func TestAnAgentEditingAUsersRunningRuleDoesNotBecomeItsSetter(t *testing.T) {
 
 // An agent turning a rule back on, after someone paused it, stands behind it.
 func TestAnAgentResumingAPausedRuleBecomesItsSetter(t *testing.T) {
+	t.Parallel()
 	r := newSetterRig(t)
 	rule := r.ruleBy(r.user(), t)
 	off := false
@@ -340,6 +352,7 @@ func TestAnAgentResumingAPausedRuleBecomesItsSetter(t *testing.T) {
 // A list rule's check may move no records, so no firing would ever reach the stop.
 // The rule still stops on the check itself.
 func TestAListRuleStopsOnARevokedSetterWhenItsCheckMovedNothing(t *testing.T) {
+	t.Parallel()
 	r := newSetterRig(t)
 	r.engine.RegisterWorkflow(listRule{name: listNotifyName, action: ActionTypeNotify, ex: Executors{Lists: scriptedLists{}}})
 	rule := r.fx.listRule(t, r.fx.rep1, ids.NewV7())
@@ -369,6 +382,7 @@ func TestAListRuleStopsOnARevokedSetterWhenItsCheckMovedNothing(t *testing.T) {
 // pause waits on the user's uncommitted row, then finds a newer version and leaves
 // it, and the user's rule fires.
 func TestARuleTakenOverWhileItIsBeingPausedFires(t *testing.T) {
+	t.Parallel()
 	r := newSetterRig(t)
 	rule := r.ruleBy(r.agent(), t)
 	r.revoke(t)
@@ -420,6 +434,7 @@ func TestARuleTakenOverWhileItIsBeingPausedFires(t *testing.T) {
 // A passport with no grant runs out at its own expiry. The rule pauses at its next
 // firing without running, the audit row says why, and the owner is told.
 func TestARuleStopsWithoutFiringOnceItsSettersPassportExpires(t *testing.T) {
+	t.Parallel()
 	r := newSetterRig(t)
 	rule := r.ruleBy(r.agent(), t)
 	r.fire(t)
@@ -442,6 +457,7 @@ func TestARuleStopsWithoutFiringOnceItsSettersPassportExpires(t *testing.T) {
 
 // A revocation's audit row keeps saying so, whatever the clock reads.
 func TestARevokedSettersPauseAuditsItAsRevoked(t *testing.T) {
+	t.Parallel()
 	r := newSetterRig(t)
 	rule := r.ruleBy(r.agent(), t)
 	r.revoke(t)

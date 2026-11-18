@@ -43,6 +43,7 @@ func anchorProtected(err error) bool {
 // side is the anchor, advice that sends the caller the other way round is
 // refused one line later by the opposite guard.
 func TestEachAnchorRefusalNamesItsFieldAndAWorkingMove(t *testing.T) {
+	t.Parallel()
 	env := newAnchorEnv(t)
 	other := env.newCompany(t)
 
@@ -98,6 +99,7 @@ func TestEachAnchorRefusalNamesItsFieldAndAWorkingMove(t *testing.T) {
 // "this is the anchor": an absent row belongs to the caller's own not-found
 // path, and an unreadable one must stop the operation rather than permit it.
 func TestTheGuardPassesOnAnAbsentRowAndRefusesOnAnUnreadableOne(t *testing.T) {
+	t.Parallel()
 	env := newAnchorEnv(t)
 	missing := ids.From[ids.CompanyKind](ids.NewV7())
 
@@ -142,6 +144,7 @@ func TestTheGuardPassesOnAnAbsentRowAndRefusesOnAnUnreadableOne(t *testing.T) {
 }
 
 func TestTheAnchorCannotBeArchived(t *testing.T) {
+	t.Parallel()
 	env := newAnchorEnv(t)
 
 	_, err := env.store.ArchiveCompany(env.ctx, env.anchorID, nil)
@@ -152,6 +155,7 @@ func TestTheAnchorCannotBeArchived(t *testing.T) {
 }
 
 func TestTheAnchorCannotBeMergedAway(t *testing.T) {
+	t.Parallel()
 	env := newAnchorEnv(t)
 	other := env.newCompany(t)
 
@@ -167,6 +171,7 @@ func TestTheAnchorCannotBeMergedAway(t *testing.T) {
 // fire — the damage is a customer's contacts, deals and history relinked onto the
 // installation's own company with no way to tell them apart afterwards.
 func TestNothingCanBeMergedIntoTheAnchor(t *testing.T) {
+	t.Parallel()
 	env := newAnchorEnv(t)
 	other := env.newCompany(t)
 
@@ -181,6 +186,7 @@ func TestNothingCanBeMergedIntoTheAnchor(t *testing.T) {
 // a future maintenance job, a direct store path — cannot reopen the hole. The
 // service check exists to give a human a sentence; this is the guarantee.
 func TestTheSchemaRefusesToRetireTheAnchor(t *testing.T) {
+	t.Parallel()
 	env := newAnchorEnv(t)
 
 	err := database.WithWorkspaceTx(env.ctx, env.pool, func(tx pgx.Tx) error {
@@ -197,6 +203,7 @@ func TestTheSchemaRefusesToRetireTheAnchor(t *testing.T) {
 // The anchor is excluded from the list that answers "which companies are we
 // selling to", and present when a caller asks for it (PO-AC-43).
 func TestTheAnchorIsAbsentFromTheCompanyListUntilAskedFor(t *testing.T) {
+	t.Parallel()
 	env := newAnchorEnv(t)
 	env.newCompany(t)
 
@@ -304,6 +311,7 @@ func (e *anchorEnv) assertCompanyStillReadable(t *testing.T) {
 // proves the trigger exists, fires on the column, and names the constraint the
 // error classifier reads.
 func TestTheSchemaRefusesAMergeIntoTheAnchor(t *testing.T) {
+	t.Parallel()
 	env := newAnchorEnv(t)
 	other := env.newCompany(t)
 
@@ -329,6 +337,7 @@ func TestTheSchemaRefusesAMergeIntoTheAnchor(t *testing.T) {
 // only reads the row's final state — so the demotion arm of the trigger is what
 // stands between a direct writer and an installation left with no anchor at all.
 func TestTheSchemaRefusesDemotingTheAnchor(t *testing.T) {
+	t.Parallel()
 	env := newAnchorEnv(t)
 
 	err := database.WithWorkspaceTx(env.ctx, env.pool, func(tx pgx.Tx) error {

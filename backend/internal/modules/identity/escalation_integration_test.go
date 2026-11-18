@@ -34,6 +34,7 @@ import (
 // set-password token, so a delegated user_admin.create holder could mint
 // themselves an admin and walk in with the token in the response body.
 func TestADelegatedMemberAdministratorCannotReachAnAdmin(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "escalation")
 
 	// The delegation this PR ships: user_admin in full, and nothing else that
@@ -134,6 +135,7 @@ func escalationCtx(id Identity) context.Context {
 // administrator may not stop it, re-role it or archive it. Only an installation
 // admin may.
 func TestADelegatedMemberAdministratorCannotReachAServiceMember(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "svcescalation")
 	delegated := Identity{
 		UserID: ids.New[ids.UserKind](), WorkspaceID: e.admin.WorkspaceID,

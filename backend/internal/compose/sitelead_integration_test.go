@@ -109,6 +109,7 @@ func stageSiteLeadFrom(
 }
 
 func TestATeamPageReadProposesNoOneWhileTheNoticePathIsMissing(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := insertCompany(t, e, e.Rep1, "acme.example", "")
 	done, _ := runTeamDeepRead(t, e, company)
@@ -129,6 +130,7 @@ func TestATeamPageReadProposesNoOneWhileTheNoticePathIsMissing(t *testing.T) {
 }
 
 func TestASiteLeadStagedBeforeTheLaneShutStaysPendingWhenAccepted(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := insertCompany(t, e, e.Rep1, "acme.example", "")
 	id := stageSiteLeadAsBefore(t, e, company, ids.NewV7())
@@ -160,6 +162,7 @@ func TestASiteLeadStagedBeforeTheLaneShutStaysPendingWhenAccepted(t *testing.T) 
 // refused before anything is decided and stays pending, where it can still be
 // declined. Left approved, it could never be redeemed once its window passed.
 func TestABundleApprovalLeavesASiteLeadPendingWhileTheLaneIsShut(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := insertCompany(t, e, e.Rep1, "acme.example", "")
 	bundleID := ids.NewV7()

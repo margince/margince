@@ -45,6 +45,7 @@ func legacyRequestAuditCopies(t *testing.T, e *integration.Env) ids.UUID {
 }
 
 func TestLinkedAuditTaskCorrectsBothPhasesAndReplaysSafely(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	request := legacyRequestAuditCopies(t, e)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
@@ -73,6 +74,7 @@ func TestLinkedAuditTaskCorrectsBothPhasesAndReplaysSafely(t *testing.T) {
 }
 
 func TestLinkedAuditTaskRollsBackPayloadsAndStopsBeforeIdentityRemoval(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	request := legacyRequestAuditCopies(t, e)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
@@ -122,6 +124,7 @@ func legacyWeeklyCopies(t *testing.T, e *integration.Env, workingText string) id
 }
 
 func TestMarkedWeeklyTaskClearsOldCopiesKeepsLaterWorkAndReplays(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	cleared := legacyWeeklyCopies(t, e, "")
 	changed := legacyWeeklyCopies(t, e, "New authorized work")
@@ -154,6 +157,7 @@ func TestMarkedWeeklyTaskClearsOldCopiesKeepsLaterWorkAndReplays(t *testing.T) {
 }
 
 func TestMarkedWeeklyTaskKeepsCopiesWhileAnySubjectIsHeld(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	commitment := legacyWeeklyCopies(t, e, "")
 	contact := e.SeedContact(t, "Held Contact", nil)
@@ -166,6 +170,7 @@ func TestMarkedWeeklyTaskKeepsCopiesWhileAnySubjectIsHeld(t *testing.T) {
 }
 
 func TestMarkedWeeklyCorrectionRollsBackWithItsProgress(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	record := legacyWeeklyCopies(t, e, "")
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
@@ -199,6 +204,7 @@ func TestMarkedWeeklyCorrectionRollsBackWithItsProgress(t *testing.T) {
 }
 
 func TestRetiredRequestMarkerCleanupKeepsDisputesAndLaterAnswers(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	cleared, disputed, later := legacyRequestAuditCopies(t, e), legacyRequestAuditCopies(t, e), legacyRequestAuditCopies(t, e)
 	e.WsExec(t, `UPDATE data_subject_request SET dispute_open=true WHERE id=$1`, disputed)

@@ -28,7 +28,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
@@ -84,7 +83,9 @@ var graphScopes = []string{"offline_access", "User.Read", "Mail.Read", graph.Sen
 // workspace's own, edited in the settings surface and read per transaction, so
 // a correction takes effect on the next message instead of the next restart.
 type CaptureConfig struct {
-	bookingVault       keyvault.Vault
+	bookingVault keyvault.Vault
+	// queues is the composition's store queues; a role that binds none has nil.
+	queues             *storeQueues
 	TransactionalExtra []string // capture.transactional_extra (CAP-PARAM-6 infra eSLDs)
 	TransactionalNever []string // capture.transactional_never (CAP-PARAM-6 allowlist)
 	// TracePayloads is capture.trace_payloads, already resolved against its
@@ -186,7 +187,7 @@ var RatesModelPricing = config.Define(config.Spec[map[string]string]{
 func NewCaptureRegistry(pool *pgxpool.Pool, vault keyvault.Vault, cfg CaptureConfig) *capture.Registry {
 	cfg.bookingVault = vault
 	db := InstallationDB(pool)
-	r := capture.NewRegistry(db, newCaptureSink(pool, cfg), identity.NewService(pool), vault).
+	r := capture.NewRegistry(db, newCaptureSink(pool, cfg), IdentityService(pool), vault).
 		// How far back this installation lets a mailbox import reach. Zero
 		// leaves the product's own ceiling, which is what an enumerate-only
 		// construction and every deployment that has not set one get.
@@ -257,7 +258,7 @@ func NewCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 // which captures through the Sink directly without needing a registry.
 func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 	ensurer := contactsEnsurer{
-		store:  newCounterpartyStoreAt(pool, cfg.clock()),
+		store:  newCounterpartyStoreAt(pool, cfg.clock(), cfg.queues),
 		pool:   pool,
 		triage: newDomainTriageTrigger(pool, cfg.logger(), cfg.SkipReservedDomainProposals),
 		log:    cfg.logger(),
@@ -278,7 +279,7 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		purgeRemoved = purger.PurgeRemovedAdmitted
 	}
 	return capture.NewSink(InstallationDB(pool)).
-		WithPartyAuthority(identity.NewServiceFor(InstallationDB(pool))).
+		WithPartyAuthority(identityServiceFor(InstallationDB(pool))).
 		// A seat's own sent echo re-keys the send it copies when the send's
 		// read-back failed, through the module that owns the deliveries.
 		WithSentEchoAdoption(comms.NewStore(InstallationDB(pool), time.Now, activities.NewStore(InstallationDB(pool))).AdoptEchoIdentityTx).

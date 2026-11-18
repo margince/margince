@@ -71,6 +71,7 @@ func relinkInTx(w dealWorld, tx pgx.Tx, mail ids.ActivityID, deal ids.UUID, repl
 // chose the sibling. The sibling keeps the deal it was filed on,
 // with no second deal and no audit row from the answer.
 func TestAnAnswerKeepsASiblingFiledWhileItWaited(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -151,6 +152,7 @@ func waitForActivityRowLock(t *testing.T, e *integration.SearchEnv) {
 // company's deals make her authenticated reply ambiguous, though a third
 // company's deal sorts between them.
 func TestTheThreadRungReadsOneWholeConversation(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -188,6 +190,7 @@ func TestTheThreadRungReadsOneWholeConversation(t *testing.T) {
 // A bulk filing that names mail of two questioned conversations answers both,
 // and a repeated id is one row.
 func TestABulkFilingAnswersEveryConversationItNames(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -222,6 +225,7 @@ func TestABulkFilingAnswersEveryConversationItNames(t *testing.T) {
 // its lock. Filed back to the same deal is still a colleague's choice: the
 // repair keeps it, and moves nothing.
 func TestTheRepairKeepsAColleaguesFilingMadeWhileItWaited(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -269,6 +273,7 @@ func TestTheRepairKeepsAColleaguesFilingMadeWhileItWaited(t *testing.T) {
 // reports the refusal. The rule's old link comes off and nothing is written in its place.
 // The change is announced with the relink event its consumers read.
 func TestTheRepairReportsARefusedTargetAndAnnouncesItsChange(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -328,6 +333,7 @@ func TestTheRepairReportsARefusedTargetAndAnnouncesItsChange(t *testing.T) {
 
 // What the repair cannot resolve stays visible to the operator after it ran.
 func TestTheOperatorPreviewStillShowsWhatTheRepairLeft(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -348,6 +354,7 @@ func TestTheOperatorPreviewStillShowsWhatTheRepairLeft(t *testing.T) {
 // filed mail is no clue for the other, and the company's two deals leave it
 // on none.
 func TestMailWithAnEmptyThreadKeyFollowsNoConversation(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -376,6 +383,7 @@ func TestMailWithAnEmptyThreadKeyFollowsNoConversation(t *testing.T) {
 // The operator preview reads a bounded page: a limit outside 1..1000 is
 // refused, and the repair's own preview refuses one below 1.
 func TestTheOperatorPreviewRefusesALimitOutOfBounds(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -437,6 +445,7 @@ func repairRelinkEnvelope(t *testing.T, e *integration.SearchEnv, mail, deal ids
 // replayed past the backlog window queues nothing, and neither does the
 // event for a mail whose own time is past it.
 func TestTheRepairsLinkIsReadByTheStageEvidenceTrigger(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -523,6 +532,7 @@ func waitForLockWaiters(t *testing.T, e *integration.SearchEnv, holder uint32, n
 // the activity row lock the relink takes. In either order the database grants,
 // the mail ends on the one deal the colleague chose.
 func TestARelinkAndTheDealRuleRacingLeaveOneDeal(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)

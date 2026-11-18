@@ -88,6 +88,7 @@ func guestName(t *testing.T, activity ids.UUID) (string, bool) {
 // The recovery reads the invitation it names by id and fills the guest's name
 // in, and a meeting it has settled is not offered again.
 func TestNameRecoveryFillsTheNameFromTheStoredInvitation(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	meeting := seedNamelessMeeting(t, e, "evt-names")
 
@@ -113,6 +114,7 @@ func TestNameRecoveryFillsTheNameFromTheStoredInvitation(t *testing.T) {
 // A meeting whose original has gone by its turn settles nothing: its rows keep
 // their NULL, and it is not counted as progress.
 func TestNameRecoveryPassesOverAnOriginalThatIsGone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	meeting := seedNamelessMeeting(t, e, "evt-gone")
 
@@ -138,6 +140,7 @@ func TestNameRecoveryPassesOverAnOriginalThatIsGone(t *testing.T) {
 // An original the parser cannot read still settles the meeting, with nobody
 // named, so the rows are not re-offered on every tick.
 func TestNamedPartiesOfAnswersNobodyForAnUnreadableOriginal(t *testing.T) {
+	t.Parallel()
 	for name, tc := range map[string]struct {
 		source  string
 		payload []byte

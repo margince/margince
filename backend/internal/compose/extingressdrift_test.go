@@ -366,16 +366,16 @@ func fieldsOf(t reflect.Type) map[string]bool {
 // both doors actually call it — which is the half that regresses, since a door
 // can be added or rewritten without anyone noticing the gate went missing.
 func TestAUnitMayNameOnlyItsOwnTransportThroughEitherDoor(t *testing.T) {
-	declaresTransport(t, "mine", extension.Channel{Provider: "mine_chat", CredentialModel: extension.CredentialPerMember})
+	composed := declaresTransport("mine", extension.Channel{Provider: "mine_chat", CredentialModel: extension.CredentialPerMember})
 
-	if err := refuseUndeclaredTransport("mine", activities.KindMessage, "mine_chat"); err != nil {
+	if err := refuseUndeclaredTransport(composed, "mine", activities.KindMessage, "mine_chat"); err != nil {
 		t.Errorf("a unit filing a message on the transport it declared was refused (%v); the declaration is what the permission is bounded by, so this is the case that must pass", err)
 	}
 
 	// The transport it did NOT declare — a core connector's — is the row that
 	// would become a send anchor for a conversation the unit does not own.
 	for _, provider := range []string{"telegram", "someone_elses"} {
-		if err := refuseUndeclaredTransport("mine", activities.KindMessage, provider); err == nil {
+		if err := refuseUndeclaredTransport(composed, "mine", activities.KindMessage, provider); err == nil {
 			t.Errorf("a unit filing a message on %q was permitted; it declares only mine_chat", provider)
 		} else if !errors.Is(err, extension.ErrInvalid) {
 			t.Errorf("the refusal is %v, want extension.ErrInvalid so the unit reads it as a bad record rather than a core fault", err)
@@ -384,7 +384,7 @@ func TestAUnitMayNameOnlyItsOwnTransportThroughEitherDoor(t *testing.T) {
 
 	// A message that names nothing is refused too: it would be a conversation
 	// with no transport, which nothing can reply on.
-	if err := refuseUndeclaredTransport("mine", activities.KindMessage, ""); err == nil {
+	if err := refuseUndeclaredTransport(composed, "mine", activities.KindMessage, ""); err == nil {
 		t.Error("a message naming no transport was permitted; it lands as a conversation no reply can leave on")
 	}
 
@@ -392,10 +392,10 @@ func TestAUnitMayNameOnlyItsOwnTransportThroughEitherDoor(t *testing.T) {
 	// a message may name no transport at all, or it would be repliable — a note
 	// that answers back.
 	for _, kind := range []string{"note", "email", "call", "meeting", "task"} {
-		if err := refuseUndeclaredTransport("mine", kind, ""); err != nil {
+		if err := refuseUndeclaredTransport(composed, "mine", kind, ""); err != nil {
 			t.Errorf("a unit filing %q was refused (%v); only a message is bounded here", kind, err)
 		}
-		if err := refuseUndeclaredTransport("mine", kind, "mine_chat"); err == nil {
+		if err := refuseUndeclaredTransport(composed, "mine", kind, "mine_chat"); err == nil {
 			t.Errorf("a %q naming a transport was permitted; the send path reads the provider column and would answer on it", kind)
 		}
 	}
@@ -423,16 +423,16 @@ func TestAUnitMayNameOnlyItsOwnTransportThroughEitherDoor(t *testing.T) {
 // account under a core connector's provider could attach an account it controls
 // to somebody else's contact record and inherit the replies meant for them.
 func TestAUnitMayBindAnAccountOnlyOnItsOwnTransport(t *testing.T) {
-	declaresTransport(t, "mine", extension.Channel{Provider: "mine_chat", CredentialModel: extension.CredentialPerMember})
+	composed := declaresTransport("mine", extension.Channel{Provider: "mine_chat", CredentialModel: extension.CredentialPerMember})
 
-	if err := refuseUnitIdentity("mine", "mine_chat"); err != nil {
+	if err := refuseUnitIdentity(composed, "mine", "mine_chat"); err != nil {
 		t.Errorf("binding an account on the unit's own transport was refused (%v)", err)
 	}
 	// A record identified by address binds nothing, and must still land.
-	if err := refuseUnitIdentity("mine", ""); err != nil {
+	if err := refuseUnitIdentity(composed, "mine", ""); err != nil {
 		t.Errorf("a record with no channel identity was refused (%v); it identifies its counterparty by address", err)
 	}
-	if err := refuseUnitIdentity("mine", "telegram"); err == nil {
+	if err := refuseUnitIdentity(composed, "mine", "telegram"); err == nil {
 		t.Error("a unit bound an account under telegram; the next reply on that contact's conversation would go to the unit's account")
 	} else if !errors.Is(err, extension.ErrInvalid) {
 		t.Errorf("the refusal is %v, want extension.ErrInvalid", err)

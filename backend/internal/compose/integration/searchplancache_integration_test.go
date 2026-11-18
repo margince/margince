@@ -7,7 +7,6 @@ package integration
 
 import (
 	"context"
-	"os"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -27,6 +26,7 @@ import (
 // own pool config on ONE connection (OwnPoolFromConfig keeps its exec mode):
 // any ranking statement cmd/api would cache, this connection caches too.
 func TestARepeatedSearchIsNeverGenericallyPlanned(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := context.Background()
 	admin := e.Admin()
@@ -36,7 +36,7 @@ func TestARepeatedSearchIsNeverGenericallyPlanned(t *testing.T) {
 		t.Fatalf("seeding the contact: %v", err)
 	}
 
-	cfg, err := database.PoolConfig(os.Getenv("MARGINCE_TEST_APP_DSN"))
+	cfg, err := database.PoolConfig(testdb.For(t).AppDSN)
 	if err != nil {
 		t.Fatalf("configuring the product pool: %v", err)
 	}

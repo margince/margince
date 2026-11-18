@@ -40,6 +40,7 @@ func (b existingLengthBooker) FillBookerGaps(context.Context, ids.UUID, ids.User
 }
 
 func TestOfferedLengthsReachAvailabilityAndTheActualReservation(t *testing.T) {
+	t.Parallel()
 	for _, test := range []struct {
 		name            string
 		requested, want int

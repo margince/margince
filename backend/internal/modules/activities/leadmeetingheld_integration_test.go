@@ -33,6 +33,7 @@ func (h *heldAsks) FileLeadMeetingHeldTx(_ context.Context, _ pgx.Tx, lead ids.L
 // Marking a meeting with a lead held asks to qualify the lead in the same
 // write. Booking it asks nothing more.
 func TestMarkingAMeetingHeldAsksItsLeadToBeQualified(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	lead := ids.NewV7()
 	e.exec(t, `INSERT INTO lead (id, full_name, status, source, captured_by, owner_id)
@@ -90,6 +91,7 @@ func TestMarkingAMeetingHeldAsksItsLeadToBeQualified(t *testing.T) {
 // The repair keeps the newest open qualify task on a lead and archives the
 // older ones nobody worked.
 func TestTheRepairKeepsOneOpenQualifyTaskPerLead(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	lead := ids.NewV7()
 	e.exec(t, `INSERT INTO lead (id, full_name, status, source, captured_by, owner_id)

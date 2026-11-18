@@ -145,7 +145,7 @@ func (s *Service) resolveCIMDClient(ctx context.Context, clientID string) error 
 	if fresh {
 		return nil
 	}
-	doc, ttl, err := fetchCIMD(ctx, clientID)
+	doc, ttl, err := fetchCIMD(ctx, s.cimdClient, clientID)
 	if err != nil {
 		// The operator's half. The caller is answered `invalid_client` and
 		// nothing else — a detailed refusal would make this server a network
@@ -232,8 +232,8 @@ func (s *Service) upsertCIMDClient(ctx context.Context, doc cimdDocument, ttl ti
 	})
 }
 
-// cimdClient is the HTTP client every metadata fetch rides — ONE of them, for
-// the process, which is the same discipline platform/webread and
+// processCIMDClient is the HTTP client every metadata fetch rides. There is
+// one for the process, the same discipline platform/webread and
 // modules/webhooks keep.
 //
 // Per-fetch was wrong in a way that does not look wrong: the Transport becomes
@@ -250,7 +250,7 @@ func (s *Service) upsertCIMDClient(ctx context.Context, doc cimdDocument, ttl ti
 // REDIRECTS ARE NOT FOLLOWED: a followed redirect is a second URL the caller
 // chose, which the client_id equality check below no longer covers, and which
 // would walk straight past the first guard on the next hop.
-var cimdClient = func() *http.Client {
+var processCIMDClient = func() *http.Client {
 	dialer := &net.Dialer{Timeout: cimdFetchTimeout, Control: netguard.RefusePrivate}
 	return &http.Client{
 		Timeout: cimdFetchTimeout,
@@ -267,9 +267,9 @@ var cimdClient = func() *http.Client {
 	}
 }()
 
-// fetchCIMD reads and validates the document at clientID, and answers how long
-// it may be believed.
-func fetchCIMD(ctx context.Context, clientID string) (cimdDocument, time.Duration, error) {
+// fetchCIMD reads and validates the document at clientID through client, and
+// answers how long it may be believed.
+func fetchCIMD(ctx context.Context, client *http.Client, clientID string) (cimdDocument, time.Duration, error) {
 	//nolint:gosec // G704: dereferencing a caller-named URL IS what a metadata document is; the egress is guarded beneath — the dialer's netguard.RefusePrivate control on the resolved address, no redirect following, a 64 KiB body ceiling and a 5s timeout — not at request construction
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, clientID, nil)
 	if err != nil {
@@ -280,7 +280,7 @@ func fetchCIMD(ctx context.Context, clientID string) (cimdDocument, time.Duratio
 	// request whose operator has no other way to learn who is asking.
 	req.Header.Set("User-Agent", outbound.ClientMetadataHeader)
 	//nolint:gosec // G704: see the guards named on the request above
-	resp, err := cimdClient.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return cimdDocument{}, 0, fmt.Errorf("identity: fetching the client's metadata document: %w", err)
 	}

@@ -13,6 +13,7 @@ import (
 )
 
 func TestCompanyReadPreviewMatchesAppliedFieldsAndPreservesHumanClaims(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{DisplayName: "Preview Glass", Source: "manual"})
@@ -80,6 +81,7 @@ func TestCompanyReadPreviewMatchesAppliedFieldsAndPreservesHumanClaims(t *testin
 }
 
 func TestColdStartPreviewMatchesCreationAndSubsequentFill(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	input := ApplyColdStartProfileInput{

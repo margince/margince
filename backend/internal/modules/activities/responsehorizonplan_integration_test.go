@@ -112,6 +112,7 @@ var (
 )
 
 func TestTheHorizonMeasurementRunsEachAnswerCheckOnceAndFromTheAddressIndex(t *testing.T) {
+	t.Parallel()
 	for name, shape := range map[string]mailboxShape{
 		"busy outbound":   busyMailbox,
 		"sparse outbound": sparseMailbox,

@@ -50,6 +50,7 @@ func seedLead(t *testing.T, e *channelConsentEnv, name, address string) ids.Lead
 // for separately. A merge that keeps only one of them is exactly the defect
 // this package exists to close, just narrower than the kind-only case.
 func TestACarryKeepsANarrowAndABroadStopOfOneKindBothOnTheSurvivor(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	from := seedLead(t, e, "Two Stops", "two-stops@example.test")
 	to := seedLead(t, e, "Two Stops Survivor", "two-stops-survivor@example.test")
@@ -136,6 +137,7 @@ func TestACarryKeepsANarrowAndABroadStopOfOneKindBothOnTheSurvivor(t *testing.T)
 // transaction. The stop records when its lock was held, not when the
 // transaction began. So a send that waited ahead of it never reads as after it.
 func TestALeadsPressIsStampedWhenItsLockIsHeld(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	lead := seedLead(t, e, "Late Press", "late-press@example.test")
 	var began, stopped time.Time
@@ -161,6 +163,7 @@ func TestALeadsPressIsStampedWhenItsLockIsHeld(t *testing.T) {
 // refusal carries a retention floor into one holding the same refusal with none.
 // The survivor's own stop is kept, and it takes the retiring stop's floor.
 func TestACarryTheSurvivorAlreadyMatchesKeepsTheRetiringFloor(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	from := seedLead(t, e, "Kept Refusal", "kept-refusal@example.test")
 	to := seedLead(t, e, "Kept Refusal Survivor", "kept-refusal-survivor@example.test")

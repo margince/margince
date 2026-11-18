@@ -625,7 +625,8 @@ The eight shapes, what each is for, and how each one silently passes:
 | `guardedversion_test.go` | H2 | A nil version is the request's answer, never the call site's. |
 | `harnesstransport_test.go` | H2 | A harness transport stays in the harness: only the cert lane hands the router a client of its own, and only an allowlisted directory shells out. |
 | `individualperformancefloor_test.go` | H2 | The small-group floor of "Show individual performance" is compared in one function, belowFloor, and nowhere else. |
-| `integrationmigrateonce_test.go` | H2 | Every file the integration lane compiles migrates the schema once per test process and resets between tests, rather than migrating on every setup. |
+| `integrationmigrateonce_test.go` | H2 | No file the integration lane compiles migrates the schema itself. |
+| `integrationtestdb_test.go` | H2 | Every integration test reaches Postgres through a database of its own (testdb.New and testdb.For), and runs in parallel with its siblings. |
 | `jobargscontent_test.go` | H2 | Job args carry references, never content. |
 | `jobfleetscan_test.go` | H2 | The fleet enumeration lives at ratified sites only. |
 | `jobqueuesupplied_test.go` | H2 | A job's queue is supplied from api/jobs.yaml, never written at the insert. |
@@ -651,6 +652,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `onecurrencyconversion_test.go` | H2 | Converting money to the base currency has one implementation. |
 | `onedomainfold_test.go` | H2 | One domain fold. |
 | `owndomainpredicate_test.go` | H2 | Every own-domain decision compares one folded form of a domain. |
+| `parallelglobalwrite_test.go` | H2 | A test that calls t.Parallel never assigns a package-level variable, its own package's or an imported one. |
 | `phasehistoryattribution_test.go` | H2 | A history table that links its audit row names who acted through that row. |
 | `pipefailgrepq_test.go` | H2 | A shell gate does not decide its verdict through a pipe that can break. |
 | `promptexcerpt_test.go` | H2 | A prompt built from a crawled page is bounded by this product, not by the site. |

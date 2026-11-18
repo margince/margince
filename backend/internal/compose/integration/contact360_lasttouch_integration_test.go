@@ -18,6 +18,7 @@ import (
 // pair, and the attention lanes read them to decide who has gone quiet. A
 // meeting nobody attended is not a message in either direction.
 func TestACalledOffMeetingDoesNotMoveAContactsDirectionClocks(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
@@ -60,6 +61,7 @@ func TestACalledOffMeetingDoesNotMoveAContactsDirectionClocks(t *testing.T) {
 // last_inbound_at, leaves it out of last_live_inbound_at, and so raises no
 // re-engaged suggestion.
 func TestImportedInboundCountsAsEngagementButNotAsAReply(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)

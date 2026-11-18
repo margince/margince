@@ -75,6 +75,7 @@ func setupReembedFleet(t *testing.T) *reembedFleetEnv {
 // refused by a run that ended. Both are asserted here. The archived-workspace
 // case goes with the enumeration — there is no per-tenant enqueue left to skip.
 func TestEmbedReindexRebuildsTheCorpusInOnePassAndHandsTheMarkerBack(t *testing.T) {
+	t.Parallel()
 	re := setupReembedFleet(t)
 	// A second live workspace and an archived one still exist, deliberately:
 	// the pass must not grow work with them, which a fan-out did by
@@ -130,6 +131,7 @@ func TestEmbedReindexRebuildsTheCorpusInOnePassAndHandsTheMarkerBack(t *testing.
 // forever. `force` on its own must NOT steal, or the escape hatch becomes the
 // normal path and two runs fan out over each other.
 func TestEmbedReindexForceTakesTheMarkerBackFromAWedgedRun(t *testing.T) {
+	t.Parallel()
 	router := apptest.EmbedReindexRouter(t, "reindex-wedged-v1")
 	e := setupEmbedReindex(t, router)
 
@@ -168,6 +170,7 @@ func TestEmbedReindexForceTakesTheMarkerBackFromAWedgedRun(t *testing.T) {
 // pass to would retry itself to exhaustion still holding it — refusing every
 // later confirm with no job left anywhere to explain why.
 func TestEmbedReindexWithNoLiveWorkspaceHandsTheMarkerBack(t *testing.T) {
+	t.Parallel()
 	re := setupReembedFleet(t)
 	if _, err := re.Owner.Exec(context.Background(),
 		`UPDATE workspace SET archived_at = now() WHERE id = $1`, re.WS); err != nil {

@@ -77,7 +77,7 @@ var ForecastForwardMeasure = config.DefineStored(config.Spec[string]{
 // how this setting is read belongs with the entry that declares it, so a
 // wiring site injecting it does not restate the default or the key.
 func ForecastForwardMeasureOf(ctx context.Context, tx pgx.Tx) (string, error) {
-	return config.StoredValTx(ctx, tx, config.Bound(), ForecastForwardMeasure)
+	return config.StoredValTx(ctx, tx, config.Bound(ctx), ForecastForwardMeasure)
 }
 
 // FiscalYearStartMonthOf resolves the month the installation's business year
@@ -89,5 +89,5 @@ func ForecastForwardMeasureOf(ctx context.Context, tx pgx.Tx) (string, error) {
 // an absent row is not a broken installation, it is an older one that agrees
 // with the default.
 func FiscalYearStartMonthOf(ctx context.Context, tx pgx.Tx) (int, error) {
-	return config.StoredValTx(ctx, tx, config.Bound(), FiscalYearStartMonth)
+	return config.StoredValTx(ctx, tx, config.Bound(ctx), FiscalYearStartMonth)
 }

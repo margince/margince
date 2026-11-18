@@ -16,6 +16,7 @@ import (
 // A run an agent froze for its user publishes as the user's own does, because the
 // sweep answers to the user the run names.
 func TestTheSweepPublishesTheEditionAnAgentFroze(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	report, err := f.service.CreateReport(f.human, crmcontracts.ReportingReportInput{Name: "Agent's edition", Audience: "workspace", Selection: f.selection()})
 	if err != nil {

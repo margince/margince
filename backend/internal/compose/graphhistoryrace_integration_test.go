@@ -63,6 +63,7 @@ func (rows *graphFoldBarrierRows) Close() {
 }
 
 func TestALateHistoricalEventRemainsPendingAfterAConcurrentGraphDrain(t *testing.T) {
+	t.Parallel()
 	for _, test := range []struct {
 		name, fold string
 		parties    int

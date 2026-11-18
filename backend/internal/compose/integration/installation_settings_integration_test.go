@@ -70,6 +70,7 @@ func installationAuditCount(t *testing.T, e *SearchEnv) int {
 }
 
 func TestInstallationSettingsReadWriteAndGate(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 
@@ -139,6 +140,7 @@ func TestInstallationSettingsReadWriteAndGate(t *testing.T) {
 }
 
 func TestInstallationSettingsRefuseValuesTheOwningModuleRejects(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 	admin := e.installationSettingsCtx(principal.ObjectGrant{Read: true, Update: true})
@@ -204,6 +206,7 @@ func TestInstallationSettingsRefuseValuesTheOwningModuleRejects(t *testing.T) {
 // field on the patch, so it is the one that proves the encoding is per-type
 // rather than accidentally string-shaped.
 func TestInstallationSettingsRoundTripTheFiscalYearStart(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 	admin := e.installationSettingsCtx(principal.ObjectGrant{Read: true, Update: true})
@@ -259,6 +262,7 @@ func TestInstallationSettingsRoundTripTheFiscalYearStart(t *testing.T) {
 // UpdateInstallation, not by calling the validator directly, so the wiring
 // from patch to entry is part of what passes.
 func TestOidcGroupRoleMapRoundTripAndValidation(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 	// Writing the map is granting roles, so it takes authentication_policy/update
@@ -343,6 +347,7 @@ func TestOidcGroupRoleMapRoundTripAndValidation(t *testing.T) {
 // a test that creates a deal carrying a frozen conversion rate can tell a
 // working guard from an absent one.
 func TestBaseCurrencyFreezesOnceADealHasConvertedAgainstIt(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 	admin := e.installationSettingsCtx(principal.ObjectGrant{Read: true, Update: true})
@@ -434,6 +439,7 @@ func TestBaseCurrencyFreezesOnceADealHasConvertedAgainstIt(t *testing.T) {
 // sent offers and closed nothing could still change its base and restate every
 // one of them — the freeze looked correct and was half-blind.
 func TestBaseCurrencyFreezesOnASentOfferWithNoClosedDeal(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 	admin := e.installationSettingsCtx(principal.ObjectGrant{Read: true, Update: true})
@@ -485,6 +491,7 @@ func TestBaseCurrencyFreezesOnASentOfferWithNoClosedDeal(t *testing.T) {
 // the sheet would go on being served beside a base it does not convert to.
 // Unlike a frozen rate this is repairable, and the reason has to say so.
 func TestBaseCurrencyWillNotMoveOutFromUnderAPricedRateSheet(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 	admin := e.installationSettingsCtx(principal.ObjectGrant{Read: true, Update: true})
@@ -534,6 +541,7 @@ func TestBaseCurrencyWillNotMoveOutFromUnderAPricedRateSheet(t *testing.T) {
 // Every table that carries a frozen rate adds to the one count the reader is
 // shown. The number names all that changing the base would re-mean.
 func TestTheFrozenRateCountSumsEveryKindOfRecord(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 	admin := e.installationSettingsCtx(principal.ObjectGrant{Read: true, Update: true})
@@ -590,6 +598,7 @@ func withoutBreakdown(lock currencylock.Lock) currencylock.Lock {
 // A sheet with no stored base still locks the currency. The facts leave the
 // base unnamed, not the default the read falls back to.
 func TestARateSheetWithNoStoredBaseLocksWithoutNamingOne(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 	admin := e.installationSettingsCtx(principal.ObjectGrant{Read: true, Update: true})

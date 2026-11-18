@@ -114,6 +114,7 @@ func requireRefusal(t *testing.T, what string, err error) {
 }
 
 func TestAnUpdateRacingAReassignmentIsRefusedForTheFormerOwner(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	deal, _, _ := seedOwnedDeal(t, e)
 	name := "Renamed by the former owner"
@@ -134,6 +135,7 @@ func TestAnUpdateRacingAReassignmentIsRefusedForTheFormerOwner(t *testing.T) {
 }
 
 func TestAnAdvanceRacingAReassignmentIsRefusedForTheFormerOwner(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	deal, from, to := seedOwnedDeal(t, e)
 
@@ -153,6 +155,7 @@ func TestAnAdvanceRacingAReassignmentIsRefusedForTheFormerOwner(t *testing.T) {
 }
 
 func TestAnArchiveRacingAReassignmentIsRefusedForTheFormerOwner(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	deal, _, _ := seedOwnedDeal(t, e)
 
@@ -186,6 +189,7 @@ var noLinksRestore = storekit.RestoreWith{
 }
 
 func TestARestoreRacingAReassignmentIsRefusedForTheFormerOwner(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	deal, _, _ := seedOwnedDeal(t, e)
 	if _, err := e.store.ArchiveDeal(e.asFormerOwner(), deal, nil); err != nil {
@@ -232,6 +236,7 @@ func seedCorrection(t *testing.T, e *configEnv, deal ids.DealID) ids.UUID {
 }
 
 func TestACorrectionRevertRacingAReassignmentIsRefusedForTheFormerOwner(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	deal, _, _ := seedOwnedDeal(t, e)
 	correction := seedCorrection(t, e, deal)

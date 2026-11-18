@@ -165,7 +165,7 @@ func (s *Service) ReleaseAppBinding(ctx context.Context, id Identity, passportID
 		if err != nil {
 			return err
 		}
-		if err := mayManagePassport(ctx, tx, id, onBehalfOf); err != nil {
+		if err := mayManagePassport(ctx, tx, s.rbac, id, onBehalfOf); err != nil {
 			return err
 		}
 		if issuer == nil {

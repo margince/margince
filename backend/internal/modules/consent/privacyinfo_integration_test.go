@@ -35,6 +35,7 @@ import (
 // puts a commercial question inside a legal obligation, which is the
 // arrangement a supervisory authority reads as consent obtained under pressure.
 func TestThePrivacyNoticeAsksForNoSubscription(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 	stager, vault := &recordingStager{}, &recordingVault{}
@@ -115,6 +116,7 @@ func indexFold(haystack, needle string) int {
 // before this template nothing carried it. So the contacts most likely to have
 // asked us to stop were owed a disclosure the product could not deliver.
 func TestTheNoticeReachesAContactWhoAskedUsToStop(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 
 	if !survivesARestriction(commsauthz.CategoryPrivacyNotice) {
@@ -139,6 +141,7 @@ func TestTheNoticeReachesAContactWhoAskedUsToStop(t *testing.T) {
 // allowed_routes that no writer honours, which is the defect the discharge path
 // was built to end.
 func TestTheNoticeDischargesTheDuty(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	owed := seedNoticeCase(t, e, "purchased_or_imported",
 		[]string{noticeRoutePrivacyNotice})
@@ -164,6 +167,7 @@ func TestTheNoticeDischargesTheDuty(t *testing.T) {
 // TestAnArt14DutyNamesTheNoticeRoute. The duty has to OFFER the route, or a
 // case whose contact has asked us to stop still cannot be discharged.
 func TestAnArt14DutyNamesTheNoticeRoute(t *testing.T) {
+	t.Parallel()
 	duty, owed := DutyFor("purchased_or_imported")
 	if !owed {
 		t.Fatal("a bought contact owes no duty; the fixture this test reads is gone")
@@ -188,6 +192,7 @@ func TestAnArt14DutyNamesTheNoticeRoute(t *testing.T) {
 // not disclose: the contact's name, employer, address, phone and provenance
 // trail — all of which the record page carries.
 func TestTheNoticePageShowsTheSourceAndTheRightsAndNoFile(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	acquired := time.Now().Add(-90 * 24 * time.Hour).UTC().Truncate(time.Microsecond)
 	if _, err := e.owner.Exec(context.Background(), `
@@ -244,6 +249,7 @@ func assertPurposeKeysMatchTheirLabels(t *testing.T, e *channelConsentEnv, info 
 // TestAnUndatedAcquisitionStillDisclosesItsSource. A contact created before the
 // doors recorded a time has no occurred_at, and the disclosure is still owed.
 func TestAnUndatedAcquisitionStillDisclosesItsSource(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	if _, err := e.owner.Exec(context.Background(), `
 		INSERT INTO contact_acquisition_evidence (contact_id, kind, captured_by)
@@ -269,6 +275,7 @@ func TestAnUndatedAcquisitionStillDisclosesItsSource(t *testing.T) {
 // the doors that write evidence has none, and "we do not know how you came to
 // be here" is itself the honest disclosure.
 func TestAContactWithNoAcquisitionRowSaysSoRatherThanNothing(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 
 	info, err := e.store.PrivacyInformationFor(e.ctx, ConfirmRef{
@@ -288,6 +295,7 @@ func TestAContactWithNoAcquisitionRowSaysSoRatherThanNothing(t *testing.T) {
 // than trusted: a reference of another kind reaching this assembler would serve
 // the Art. 14 page to somebody whose mail described something else.
 func TestTheDisclosureIsAssembledOnlyForANoticeLink(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 
 	if _, err := e.store.PrivacyInformationFor(e.ctx, ConfirmRef{
@@ -310,6 +318,7 @@ func TestTheDisclosureIsAssembledOnlyForANoticeLink(t *testing.T) {
 // accepted a marketing answer it would become the re-engagement surface their
 // stop exists to prevent, reached by a message they cannot refuse.
 func TestTheNoticeLinkTakesNoAnswer(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name string
 		in   ConfirmSubmission
@@ -351,6 +360,7 @@ func errorsAs(err error, target **ValidationError) bool {
 // this installation sent resolved to "no evidence" and was refused, so the
 // feature would have shipped unable to send a single message.
 func TestTheNoticeIsEvidencedByItsOwnLink(t *testing.T) {
+	t.Parallel()
 	kind, ok := confirmKindFor(commsauthz.CategoryPrivacyNotice)
 	if !ok {
 		t.Fatal("the privacy-notice category has no confirm kind: the engine then finds no " +
@@ -375,6 +385,7 @@ func TestTheNoticeIsEvidencedByItsOwnLink(t *testing.T) {
 // dispatch reverted — it proved the mapping and skipped the switch that was the
 // actual defect. Mutation testing is what showed it.
 func TestTheEngineSupportsANoticeOnItsOwnLink(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 	e.store = e.store.WithConfirmationLane(
@@ -410,6 +421,7 @@ func TestTheEngineSupportsANoticeOnItsOwnLink(t *testing.T) {
 // most likely to have asked us to stop were owed a disclosure the product could
 // not deliver.
 func TestAStoppedContactStillGetsTheirNotice(t *testing.T) {
+	t.Parallel()
 	if !suppressionBinds("subject_request", commsauthz.CategoryRecordConfirmation, nil, nil) {
 		t.Fatal("a subject request no longer stops the record confirmation, which would " +
 			"make this template unnecessary — check whether that is intended")

@@ -35,6 +35,7 @@ const (
 )
 
 func TestASenderPurgeKeepsAContactTheOwnerTypedIn(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	connectRep1Mailbox(t, e)
 	const typedName = "Dr. Kanzlei Hand"
@@ -80,6 +81,7 @@ func TestASenderPurgeKeepsAContactTheOwnerTypedIn(t *testing.T) {
 // An API caller created the contact. Its history holds no human row, so only
 // the record's origin tells it apart from one capture made.
 func TestASenderPurgeKeepsAContactAnAgentCreated(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	connectRep1Mailbox(t, e)
 	owner := ids.From[ids.UserKind](e.Rep1)
@@ -106,6 +108,7 @@ func TestASenderPurgeKeepsAContactAnAgentCreated(t *testing.T) {
 // Capture made the contact, then a human worked on it. The stamp still names
 // the connector, so only the record's later history can tell.
 func TestASenderPurgeKeepsACapturedContactSomebodyWorkedOn(t *testing.T) {
+	t.Parallel()
 	cases := map[string]func(t *testing.T, e *integration.Env, minted ids.UUID){
 		"an edit by an agent": func(t *testing.T, e *integration.Env, minted ids.UUID) {
 			title := "Kanzleileitung"
@@ -165,6 +168,7 @@ func TestASenderPurgeKeepsACapturedContactSomebodyWorkedOn(t *testing.T) {
 // A human worked on a record that names the contact rather than on the contact
 // row itself. The contact's own history shows nothing, so the link rows must.
 func TestASenderPurgeKeepsACapturedContactARelatedRecordNames(t *testing.T) {
+	t.Parallel()
 	cases := map[string]func(t *testing.T, e *integration.Env, minted ids.UUID){
 		"a tag": func(t *testing.T, e *integration.Env, minted ids.UUID) {
 			tags := collections.NewStore(e.DB())
@@ -228,6 +232,7 @@ func TestASenderPurgeKeepsACapturedContactARelatedRecordNames(t *testing.T) {
 // reached it. The scrub asks again and keeps the contact, and the receipt
 // counts nothing.
 func TestASenderPurgeRechecksAContactBeforeAnonymisingIt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	connectRep1Mailbox(t, e)
 	minted := mintThroughCapture(t, e, "recheck")
@@ -264,6 +269,7 @@ func TestASenderPurgeRechecksAContactBeforeAnonymisingIt(t *testing.T) {
 // The purge keeps a message under a hold, so it keeps the sender's contact too.
 // The retained message still needs to say who wrote it.
 func TestASenderPurgeKeepsTheContactOfMailItMustRetain(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	connectRep1Mailbox(t, e)
 	minted := mintThroughCapture(t, e, "retained")
@@ -297,6 +303,7 @@ func capturedMailFrom(t *testing.T, e *integration.Env, address string) ids.UUID
 // The verdict pass creates the contact capture withheld while the sender was
 // unjudged. That contact is capture's as much as one the sink made.
 func TestASenderPurgeAnonymisesAContactTheVerdictCreated(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	connectRep1Mailbox(t, e)
 	mail := seedPurgeableMail(t, e, mintedAddress, "Termin", e.Rep1)
@@ -324,6 +331,7 @@ func TestASenderPurgeAnonymisesAContactTheVerdictCreated(t *testing.T) {
 // Both seats connect Gmail, so the contact's stamp fits either. The contact is
 // still only the seat's whose mailbox made it.
 func TestASenderPurgeLeavesAContactAnotherSeatsMailboxCreated(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	connectRep1Mailbox(t, e)
 	seedMailboxConnection(t, e, e.Rep2, "gmail", "b@authz.test")

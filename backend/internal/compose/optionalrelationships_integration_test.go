@@ -27,6 +27,7 @@ import (
 )
 
 func TestRealWorklistKeepsRecordedSilenceOptionalAndHonorsTheReadersChoice(t *testing.T) {
+	t.Parallel()
 	quiet := seedQuietRelationship(t)
 	e, reader, read, contact := quiet.e, quiet.reader, quiet.read, quiet.contact
 	initial := read(reader)

@@ -40,6 +40,7 @@ func offeringOf(t *testing.T, e *promoteConsentEnv, selector OfferingSelector) C
 }
 
 func TestAnEntityOfferingIsReadAsItsOwnConfirmedContext(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	admin := actingAs(e, "admin", entityAdmin)
 	if _, err := e.store.WithInstallationRenamer(ignoreInstallationName).SaveCompany(admin, SaveCompanyInput{
@@ -71,6 +72,7 @@ func TestAnEntityOfferingIsReadAsItsOwnConfirmedContext(t *testing.T) {
 }
 
 func TestAnEntityWithoutAnIdealCustomerIsNotConfirmed(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	wien := describedEntity(t, e, LegalEntityOffering{OfferSummary: new("Solar carports")})
 	if offeringOf(t, e, OfferingSelector{EntityID: wien.ID}).Confirmed {
@@ -79,6 +81,7 @@ func TestAnEntityWithoutAnIdealCustomerIsNotConfirmed(t *testing.T) {
 }
 
 func TestADefaultArchivedOrUnknownEntityIsNotAnOtherOffering(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	admin := actingAs(e, "admin", entityAdmin)
 	wien := describedEntity(t, e, LegalEntityOffering{})
@@ -95,6 +98,7 @@ func TestADefaultArchivedOrUnknownEntityIsNotAnOtherOffering(t *testing.T) {
 }
 
 func TestTheDefaultEntityRefusesOfferingTextBecauseTheCompanyFormOwnsIt(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	_, err := e.store.UpdateLegalEntity(actingAs(e, "admin", entityAdmin), defaultEntity(t, e),
 		LegalEntityInput{Offering: LegalEntityOffering{OfferSummary: new("Heat pumps")}}, nil)
@@ -104,6 +108,7 @@ func TestTheDefaultEntityRefusesOfferingTextBecauseTheCompanyFormOwnsIt(t *testi
 }
 
 func TestChoosingAnOfferingIsAnAuditedEventedCompanyWrite(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	admin := actingAs(e, "admin", entityAdmin)
 	wien := describedEntity(t, e, LegalEntityOffering{})
@@ -136,6 +141,7 @@ func TestChoosingAnOfferingIsAnAuditedEventedCompanyWrite(t *testing.T) {
 }
 
 func TestAnUnknownOrArchivedEntityCannotBeChosen(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	admin := actingAs(e, "admin", entityAdmin)
 	archived := describedEntity(t, e, LegalEntityOffering{})
@@ -156,6 +162,7 @@ func TestAnUnknownOrArchivedEntityCannotBeChosen(t *testing.T) {
 }
 
 func TestAnotherSeatWithoutCompanyWriteCannotChooseAnOffering(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	company, err := e.store.CreateCompany(actingAs(e, "admin", entityAdmin), CreateCompanyInput{DisplayName: "Autohaus", Source: "manual"})
 	if err != nil {

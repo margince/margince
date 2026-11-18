@@ -53,6 +53,7 @@ func seedUnreachableContact(t *testing.T, e *integration.SearchEnv, email string
 // The meeting still captures — a name is not worth losing a message over — and
 // the contact keeps the name it had.
 func TestAnInvitationCannotNameAContactTheSeatCannotSee(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	hidden := seedUnreachableContact(t, e, "buyer@acme.com")
 

@@ -14,6 +14,7 @@ import (
 )
 
 func TestTheDraftStarterUpgradePausesOnlyUnownedDrafts(t *testing.T) {
+	t.Parallel()
 	dsn, _ := dsns(t)
 	conn := connect(t, dsn)
 	headSchema(t, conn)

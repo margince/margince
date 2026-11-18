@@ -16,6 +16,7 @@ import (
 )
 
 func TestAcceptingARequestRecoversAnUntouchedWronglyAssignedReminder(t *testing.T) {
+	t.Parallel()
 	for _, state := range []string{"untouched", "human held", "pinned", "system retired", "owner archived", "system updated", "human withdrawn", "other reader pin", "expired pin", "second recipient"} {
 		t.Run(state, func(t *testing.T) {
 			e := setupLoad(t)

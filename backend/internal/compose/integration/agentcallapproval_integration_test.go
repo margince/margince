@@ -35,6 +35,7 @@ import (
 )
 
 func TestOneRefusedAgentCallCollectsExactlyOneApprovalHoweverOftenItIsRetried(t *testing.T) {
+	t.Parallel()
 	// Driven through `enrich` rather than a send: what this proves is the
 	// APPROVAL mechanism — one row per refused call, single-use redemption —
 	// and that needs a verb that still stages. A passport no longer needs a
@@ -160,6 +161,7 @@ func (c *channelSendEnv) assertApprovalCountOf(t *testing.T, kind string, want i
 // so every one of them would now fail the redemption's own skew check — pointing
 // a retry at any of them would strand the call permanently.
 func TestAnApprovedCallWhoseTargetMovedIsStagedAfreshRatherThanHandedBackDead(t *testing.T) {
+	t.Parallel()
 	c := setupChannelSend(t)
 	invoke := c.enrichInvoker(t, c.mintPassport(t, []string{"read", "enrich"}))
 	company := c.enrichTarget(t)
@@ -200,6 +202,7 @@ func TestAnApprovedCallWhoseTargetMovedIsStagedAfreshRatherThanHandedBackDead(t 
 // approvals.TestAnAgentCallIsOnlyOfferedApprovalsItsOwnCredentialHolds, where the
 // principal can be built without one.
 func TestAnApprovalStagedByOnePassportIsNeverOfferedToAnother(t *testing.T) {
+	t.Parallel()
 	c := setupChannelSend(t)
 	company := c.enrichTarget(t)
 	args := enrichArgs(company)
@@ -227,6 +230,7 @@ func TestAnApprovalStagedByOnePassportIsNeverOfferedToAnother(t *testing.T) {
 // both doors or about neither — and the recurring reviewer catch here is a fix
 // that landed on the case under review and missed the sibling copy.
 func TestTheRESTDoorAlsoCollectsExactlyOneApprovalPerIdenticalCall(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 

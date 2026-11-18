@@ -16,6 +16,7 @@ import (
 )
 
 func TestEveryDealKeepsItsNextFollowUpBeyondTheFeedScanCap(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	pipeline, stage, _ := integration.DealFixture(t, e)
 	deal := e.SeedDeal(t, "Demo expansion", pipeline, stage, &e.Rep1)

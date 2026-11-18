@@ -30,6 +30,7 @@ import (
 )
 
 func TestAdoptingADomainDecidesTheRecordIsLiveUnderTheLock(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 

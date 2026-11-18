@@ -18,8 +18,14 @@ import (
 // renderJobMetrics answers the exposition text for one snapshot.
 func renderJobMetrics(t *testing.T, snap jobs.Snapshot) string {
 	t.Helper()
+	return renderJobMetricsOver(t, jobs.Composed{}, snap)
+}
+
+// renderJobMetricsOver is renderJobMetrics over a composition's job table.
+func renderJobMetricsOver(t *testing.T, table jobs.Composed, snap jobs.Snapshot) string {
+	t.Helper()
 	var buf bytes.Buffer
-	if err := writeJobMetrics(&buf, snap); err != nil {
+	if err := writeJobMetrics(&buf, table, snap); err != nil {
 		t.Fatalf("writeJobMetrics: %v", err)
 	}
 	return buf.String()
@@ -399,29 +405,24 @@ func TestTheTwoUnrecognisedFamiliesSplitOneSnapshot(t *testing.T) {
 	}
 }
 
-// TestAComposedExtensionKindIsNotUnrecognised — the family reports what this
-// build does not compose, so a kind the process DID declare through
-// jobs.RegisterComposed must be absent from it and present in the catalogue,
-// exactly as a core kind is.
+// TestAComposedExtensionKindIsNotUnrecognised: the family reports what this
+// build does not compose. A kind the composition declares must be absent from
+// it and present in the catalogue, as a core kind is.
 func TestAComposedExtensionKindIsNotUnrecognised(t *testing.T) {
 	const kind = "ext_composed_unit_refresh_ws"
-	if err := jobs.RegisterComposed([]jobs.Spec{{
+	table, err := jobs.NewComposed([]jobs.Spec{{
 		Kind:      kind,
 		GoType:    "extJobWorkspaceArgs",
 		Role:      jobs.Worker,
 		Queue:     "default",
 		Timeout:   jobs.TimeoutPolicy{Fixed: 5 * time.Minute},
 		OptsOwner: jobs.OptsFanOut,
-	}}); err != nil {
-		t.Fatalf("RegisterComposed: %v", err)
+	}}, nil)
+	if err != nil {
+		t.Fatalf("NewComposed: %v", err)
 	}
-	t.Cleanup(func() {
-		if err := jobs.RegisterComposed(nil); err != nil {
-			t.Errorf("restoring the composed table: %v", err)
-		}
-	})
 
-	out := renderJobMetrics(t, jobs.Snapshot{Rows: []jobs.StateRow{
+	out := renderJobMetricsOver(t, table, jobs.Snapshot{Rows: []jobs.StateRow{
 		{Queue: "default", Kind: kind, State: "available", Count: 1},
 	}})
 

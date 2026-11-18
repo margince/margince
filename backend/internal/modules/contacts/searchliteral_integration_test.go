@@ -13,6 +13,7 @@ import (
 
 // A search for `%` or `_` finds names holding that character, never every row.
 func TestSearchTreatsPercentAndUnderscoreAsTypedText(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	percent := e.seedContact(t, "100% Real", "pct@literal.example")
 	fan := e.seedContact(t, "100X Fan", "fan@literal.example")

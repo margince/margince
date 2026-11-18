@@ -21,7 +21,6 @@ package activities
 import (
 	"context"
 	"errors"
-	"os"
 	"strings"
 	"testing"
 
@@ -57,14 +56,9 @@ type promiseEnv struct {
 
 func setupPromises(t *testing.T) *promiseEnv {
 	t.Helper()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` " +
-			"(integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -73,20 +67,12 @@ func setupPromises(t *testing.T) *promiseEnv {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	// To head before anything else touches this database: testdb.Pool refuses
-	// until EnsureSchema has run, and EnsureSchema still REBUILDS whenever it
-	// cannot prove the database is a fresh lane clone — so a seed written
-	// before it would be dropped rather than reset.
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 	// A plan that walks the seeded mail can outrun the package's whole budget,
 	// and then go test kills the package with no test named. Capped, it fails
 	// as the test that ran it.
 	if err := testdb.CapStatements(ctx, owner); err != nil {
 		t.Fatal(err)
 	}
-	emptyDatabase(t)
 
 	e := &promiseEnv{owner: owner, ws: ids.NewV7(), rep: ids.NewV7(), other: ids.NewV7()}
 	if _, err := owner.Exec(ctx,
@@ -99,20 +85,19 @@ func setupPromises(t *testing.T) *promiseEnv {
 			t.Fatal(err)
 		}
 	}
-	pool, err := testdb.Pool(ctx, appDSN)
+	pool, err := testdb.Pool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Registered where the pool is handed out, before the test adds any cleanup
 	// of its own, so it runs last and sees a package that has genuinely stopped.
-	// The pool outlives the test now, so a goroutine still holding a connection
-	// would go on writing into the database the NEXT test just reset.
 	testdb.AssertPoolsQuiesced(t)
 	e.pool = pool
 	return e
 }
 
 func TestARunawayStatementFailsAsTheTestThatSentIt(t *testing.T) {
+	t.Parallel()
 	e := setupPromises(t)
 	if capped, setting, err := testdb.StatementsCapped(context.Background(), e.owner); err != nil || !capped {
 		t.Fatalf("the owner connection's statement_timeout is %q (%v), want %v", setting, err, testdb.OwnerStatementCeiling)
@@ -187,6 +172,7 @@ func (e *promiseEnv) seedSplitTask(t *testing.T) (taskID, hiddenContactID ids.UU
 // what ELSE it is about is a second question, and the answer to it is bounded
 // by the caller's scope on each linked record — not by the task's.
 func TestAPromiseNamesOnlyTheRecordsItsReaderMaySee(t *testing.T) {
+	t.Parallel()
 	e := setupPromises(t)
 	taskID, hiddenContactID := e.seedSplitTask(t)
 
@@ -232,6 +218,7 @@ func TestAPromiseNamesOnlyTheRecordsItsReaderMaySee(t *testing.T) {
 // read it is answered not-found, the same as for an id that names nothing —
 // otherwise the reply "here are its promises" is itself the disclosure.
 func TestNarrowingToAnUnreadableRecordAnswersNotFound(t *testing.T) {
+	t.Parallel()
 	e := setupPromises(t)
 	hiddenCompanyID, taskID := ids.NewV7(), ids.NewV7()
 	// Another rep's unpromoted capture: capture privacy holds it to its own
@@ -262,6 +249,7 @@ func TestNarrowingToAnUnreadableRecordAnswersNotFound(t *testing.T) {
 // from asking which promises a company it may not open holds. The narrowing is
 // refused as an object denial, and the same question with the grant answers.
 func TestNarrowingToARecordTypeTheRoleMayNotReadIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupPromises(t)
 	companyID, taskID := ids.NewV7(), ids.NewV7()
 	e.exec(t, `INSERT INTO company (id, display_name, owner_id, source, captured_by)

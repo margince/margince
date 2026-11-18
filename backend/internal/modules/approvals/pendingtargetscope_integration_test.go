@@ -47,6 +47,7 @@ func sharedSeat(ws, user ids.UUID) context.Context {
 }
 
 func TestAReadOnlyShareIsNotEnoughToSeeAPendingDecision(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	ctx := context.Background()
 

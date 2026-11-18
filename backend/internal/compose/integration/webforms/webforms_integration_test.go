@@ -154,6 +154,7 @@ func notesOnLeadWithEmail(t *testing.T, e *apptest.AppEnv, email string) []strin
 }
 
 func TestABrowserFormLandsALeadWithItsMessageOnTheTimeline(t *testing.T) {
+	t.Parallel()
 	e := setupFormsApp(t)
 	form := createForm(t, e, integration.AnyMap{
 		"name": "Contact", "sender": "browser", "allowed_origins": []string{siteOrigin + "/contact"},
@@ -184,6 +185,7 @@ func TestABrowserFormLandsALeadWithItsMessageOnTheTimeline(t *testing.T) {
 }
 
 func TestAFormNoteAnswersTheSubmissionFieldByField(t *testing.T) {
+	t.Parallel()
 	e := setupFormsApp(t)
 	form := createForm(t, e, integration.AnyMap{
 		"name": "Contact", "sender": "browser", "allowed_origins": []string{siteOrigin},
@@ -237,6 +239,7 @@ func deref(s *string) string {
 }
 
 func TestASecondSubmissionFromAKnownEmailAddsToItsLead(t *testing.T) {
+	t.Parallel()
 	e := setupFormsApp(t)
 	form := createForm(t, e, integration.AnyMap{"name": "Contact", "sender": "browser", "allowed_origins": []string{siteOrigin}})
 	for i, message := range []string{"First question", "Second question"} {
@@ -254,6 +257,7 @@ func TestASecondSubmissionFromAKnownEmailAddsToItsLead(t *testing.T) {
 }
 
 func TestAnErasedAddressGetsTheReceiptAnyOtherPostGets(t *testing.T) {
+	t.Parallel()
 	e := setupFormsApp(t)
 	form := createForm(t, e, integration.AnyMap{"name": "Contact", "sender": "browser", "allowed_origins": []string{siteOrigin}})
 	const erased, clean = "geloescht@visitor.example", "neu@visitor.example"
@@ -286,7 +290,7 @@ func TestAnErasedAddressGetsTheReceiptAnyOtherPostGets(t *testing.T) {
 	var kept int
 	if err := e.Owner.QueryRow(context.Background(),
 		`SELECT count(*) FROM erasure_suppression WHERE kind = 'email' AND value_hash = $1`,
-		storekit.SuppressionHash(erased)).Scan(&kept); err != nil {
+		storekit.SuppressionHash(t.Context(), erased)).Scan(&kept); err != nil {
 		t.Fatal(err)
 	}
 	if kept != 1 {
@@ -313,6 +317,7 @@ func eraseContact(t *testing.T, e *apptest.AppEnv, contactID string) {
 }
 
 func TestACustomFieldNameFillsTheLeadAndAValueThatDoesNotFitStaysOnTheNote(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithOptions(t, compose.WithKeyvault(keyvault.NewMemory()), compose.WithSchemaPool(integration.SchemaPool(t)))
 	e.BootstrapWorkspace(t)
 	budget := apptest.CreateCustomField(t, e, integration.AnyMap{"object": "lead", "label": "Budget", "type": "number", "source": "manual"})
@@ -340,6 +345,7 @@ func TestACustomFieldNameFillsTheLeadAndAValueThatDoesNotFitStaysOnTheNote(t *te
 }
 
 func TestABrowserFormRefusesWhatItShouldNotLand(t *testing.T) {
+	t.Parallel()
 	e := setupFormsApp(t)
 	form := createForm(t, e, integration.AnyMap{
 		"name": "Contact", "sender": "browser", "allowed_origins": []string{siteOrigin},
@@ -374,6 +380,7 @@ func TestABrowserFormRefusesWhatItShouldNotLand(t *testing.T) {
 
 // A form a site builder makes sends no render time, and its posts still land.
 func TestABrowserPostWithoutARenderTimeLandsAsALead(t *testing.T) {
+	t.Parallel()
 	e := setupFormsApp(t)
 	form := createForm(t, e, integration.AnyMap{"name": "Contact", "sender": "browser", "allowed_origins": []string{siteOrigin}})
 	if answer := browserPost(t, e, form.FormKey, url.Values{"email": {"builder@visitor.example"}, "_mrg_ts": nil}, siteOrigin); answer.Status != http.StatusAccepted {
@@ -385,6 +392,7 @@ func TestABrowserPostWithoutARenderTimeLandsAsALead(t *testing.T) {
 }
 
 func TestAPlainHTMLPostIsSentToTheFormsRedirect(t *testing.T) {
+	t.Parallel()
 	e := setupFormsApp(t)
 	form := createForm(t, e, integration.AnyMap{
 		"name": "Contact", "sender": "browser", "allowed_origins": []string{siteOrigin},
@@ -399,6 +407,7 @@ func TestAPlainHTMLPostIsSentToTheFormsRedirect(t *testing.T) {
 }
 
 func TestTheCORSPreflightAnswersOnlyTheFormsWebsite(t *testing.T) {
+	t.Parallel()
 	e := setupFormsApp(t)
 	form := createForm(t, e, integration.AnyMap{"name": "Contact", "sender": "browser", "allowed_origins": []string{siteOrigin}})
 	own := postForm(t, e, "OPTIONS", form.FormKey, "", nil, map[string]string{"Origin": siteOrigin, "Access-Control-Request-Method": "POST"})
@@ -428,6 +437,7 @@ func serverHeaders(secret, key string, body []byte, nonce string) map[string]str
 }
 
 func TestAServerFormTakesOnlySignedPostsAndLandsAReplayOnce(t *testing.T) {
+	t.Parallel()
 	e := setupFormsApp(t)
 	form := createForm(t, e, integration.AnyMap{"name": "Website backend", "sender": "server"})
 	if form.SigningSecret == nil || !strings.HasPrefix(*form.SigningSecret, "mwf_") {
@@ -466,6 +476,7 @@ func TestAServerFormTakesOnlySignedPostsAndLandsAReplayOnce(t *testing.T) {
 }
 
 func TestATypeformWebhookLandsWithItsOwnSignature(t *testing.T) {
+	t.Parallel()
 	e := setupFormsApp(t)
 	form := createForm(t, e, integration.AnyMap{"name": "Typeform", "sender": "typeform", "sender_secret": "tf-secret-of-some-length"})
 	body := []byte(`{"event_id":"01TF","form_response":{"definition":{"fields":[{"id":"f1","title":"Name"}]},
@@ -482,6 +493,7 @@ func TestATypeformWebhookLandsWithItsOwnSignature(t *testing.T) {
 }
 
 func TestAPausedFormIsGoneAndAnArchivedOneIsAbsent(t *testing.T) {
+	t.Parallel()
 	e := setupFormsApp(t)
 	form := createForm(t, e, integration.AnyMap{"name": "Contact", "sender": "browser", "allowed_origins": []string{siteOrigin}})
 	fields := url.Values{"email": {"late@visitor.example"}}
@@ -504,6 +516,7 @@ func TestAPausedFormIsGoneAndAnArchivedOneIsAbsent(t *testing.T) {
 }
 
 func TestAFormNeverAnswersItsSecretOnARead(t *testing.T) {
+	t.Parallel()
 	e := setupFormsApp(t)
 	form := createForm(t, e, integration.AnyMap{"name": "Backend", "sender": "server"})
 	var raw map[string]any
@@ -537,6 +550,7 @@ func leadOwnerOf(t *testing.T, e *apptest.AppEnv, email string) *string {
 }
 
 func TestALeadFromAFormGoesToTheFormsOwner(t *testing.T) {
+	t.Parallel()
 	e := setupFormsApp(t)
 	owner := adminID(t, e)
 	form := createForm(t, e, integration.AnyMap{
@@ -552,6 +566,7 @@ func TestALeadFromAFormGoesToTheFormsOwner(t *testing.T) {
 }
 
 func TestALeadFromAFormWhoseOwnerLeftLandsUnassigned(t *testing.T) {
+	t.Parallel()
 	e := setupFormsApp(t)
 	owner := adminID(t, e)
 	form := createForm(t, e, integration.AnyMap{
@@ -572,6 +587,7 @@ func TestALeadFromAFormWhoseOwnerLeftLandsUnassigned(t *testing.T) {
 // A form outlives what it names. A product retired and an owner gone since it
 // was saved still leave the visitor's lead, with neither on it.
 func TestALeadFromAFormWhoseProductAndOwnerWentStillLands(t *testing.T) {
+	t.Parallel()
 	e := setupFormsApp(t)
 	owner := adminID(t, e)
 	var product string
@@ -621,6 +637,7 @@ func readFormLastPost(t *testing.T, e *apptest.AppEnv, id string) formLastPost {
 // A form's row says whether its pasted code works. A dropped post is no sign
 // of that, and a landed one leaves the version an admin's edit holds alone.
 func TestAFormKnowsWhenItLastLandedAPost(t *testing.T) {
+	t.Parallel()
 	e := setupFormsApp(t)
 	form := createForm(t, e, integration.AnyMap{"name": "Contact", "sender": "browser", "allowed_origins": []string{siteOrigin}})
 	if got := readFormLastPost(t, e, form.ID); got.LastPostAt != nil {

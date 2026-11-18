@@ -22,6 +22,7 @@ import (
 // An undo archives the companies a run created. A live deal or a contact's
 // employment that still names one must not be left pointing at it.
 func TestUndoKeepsACompanyWhileALiveRecordStillNamesIt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	pipeline, stage, _ := integration.DealFixture(t, e)
 	company := e.SeedCompany(t, "Referenced GmbH", nil)

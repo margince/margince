@@ -3,10 +3,9 @@
 
 package compose
 
-// The boot-time reconcile for the derived channel vocabulary: the ONE place
-// channel_provider is written, and the ONE place
-// activities.SetChannelProviders and comms.SetChannelProviders are called — so
-// the DB registry and both packages' in-memory snapshots cannot be set two
+// The boot-time reconcile for the derived channel vocabulary: the one place
+// channel_provider is written, and the one place the composition's sendable set
+// is recorded. So the DB registry and the in-memory set cannot be set two
 // different ways.
 //
 // It does NOT write activity_kind. A provider names a transport; an activity
@@ -24,23 +23,19 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"maps"
 	"slices"
-	"sync"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // ReconcileChannelProviders writes this binary's channel vocabulary into the
 // registry: the core connectors it compiled in, plus every channel its composed
-// units declare. It runs after RegisterExtensions, because the unit half reads
-// ComposedExtensions().
+// units declare. It runs after RegisterExtensions, because the unit half is the
+// set RegisterExtensions validated.
 //
 // It is a boot step in its own right, and it cannot ride the construction of
 // the capture registry. That construction is gated on a configured keyvault
@@ -55,8 +50,8 @@ import (
 // It returns its error rather than halting: a unit colliding with a core
 // transport is a refusal an operator has to act on, and the caller that owns
 // the process's exit is where that decision belongs.
-func ReconcileChannelProviders(ctx context.Context, pool *pgxpool.Pool) error {
-	return reconcileChannelProviders(ctx, pool, CoreChannelProviders())
+func ReconcileChannelProviders(ctx context.Context, pool *pgxpool.Pool, composed *Extensions) error {
+	return reconcileComposedProviders(ctx, pool, CoreChannelProviders(), composed)
 }
 
 // CoreChannelProviders is every transport this binary compiled a CORE connector
@@ -97,11 +92,10 @@ func sendableCarriage(sendable []string, core map[string]connector.Carriage) map
 	return out
 }
 
-// reconcileChannelProviders upserts a channel_provider row for every transport
-// this binary composed — the core connectors passed in, plus every channel the
-// composed UNITS declare — carrying the display facts the discovery endpoint
-// publishes, then sets both packages' in-memory snapshots to the subset a reply
-// can actually leave on.
+// reconcileComposedProviders upserts a channel_provider row for every transport
+// this binary composed: the core connectors passed in and every channel a
+// composed unit declares. Each row carries the display facts the discovery
+// endpoint publishes. It then records the subset a reply can leave on.
 //
 // It is also where a unit shadowing a core connector is refused, because this is
 // the first point at which both sets exist (unitChannelFacts).
@@ -122,7 +116,7 @@ func sendableCarriage(sendable []string, core map[string]connector.Carriage) map
 // its row — activity and contact_channel_identity rows still reference it, the
 // FK would refuse the delete anyway, and ErrConnectorNotConfigured already
 // parks a send against it rather than needing the row gone.
-func reconcileChannelProviders(ctx context.Context, pool *pgxpool.Pool, providers []string) error {
+func reconcileComposedProviders(ctx context.Context, pool *pgxpool.Pool, providers []string, composed *Extensions) error {
 	var units []channelProviderFacts
 	if err := database.WithInfraTx(ctx, pool, func(tx pgx.Tx) error {
 		reserved, err := reservedCoreProviders(ctx, tx, providers)
@@ -134,7 +128,7 @@ func reconcileChannelProviders(ctx context.Context, pool *pgxpool.Pool, provider
 		// admitted against a registry that changed underneath the check. A
 		// refused set writes nothing at all — the boot dies with the collision
 		// uninstalled rather than half-installed.
-		if units, err = unitChannelFacts(reserved); err != nil {
+		if units, err = unitChannelFacts(composed.Units(), reserved); err != nil {
 			return err
 		}
 		// sendableCarriage over the ARGUMENT, not the freshly-enumerated registry:
@@ -166,8 +160,7 @@ func reconcileChannelProviders(ctx context.Context, pool *pgxpool.Pool, provider
 			sendable = append(sendable, unit.provider)
 		}
 	}
-	activities.SetChannelProviders(sendable)
-	comms.SetChannelProviders(sendable)
+	composed.setSendable(sendable)
 	return nil
 }
 
@@ -238,42 +231,6 @@ func upsertChannelProvider(ctx context.Context, tx pgx.Tx, facts channelProvider
 	return nil
 }
 
-// composedChannelProviders holds this boot's registered transports, written by
-// the reconcile above and read by the discovery endpoint. Same shape and same
-// reason as composedExtensions: the mutex guards the read/write ORDERING, since
-// the HTTP surface is assembled after the registry is constructed — and this
-// package's registry construction can legitimately run more than once, so the
-// last write in a boot sequence is authoritative.
-//
-// The endpoint reads THIS rather than querying channel_provider, which is what
-// the plan calls serving from the boot snapshot: the table has no workspace_id
-// to scope by, and answering an HTTP request from an unscoped pool read is a
-// door this package does not need to open for a value fixed at boot.
-var composedChannelProviders struct {
-	mu sync.RWMutex
-	// registered is every transport in the registry — what a message MAY name —
-	// carrying the row's OWN display facts rather than only its id.
-	//
-	// It used to be names alone, and the shaping then re-derived the rest from
-	// "this is a core connector", which published credential_model=workspace_bot
-	// for every unit transport however the unit had declared itself. The column
-	// exists to say whose credential a transport spends; an endpoint that
-	// answers it from a constant is telling an operator a member's own account
-	// is one the whole installation shares.
-	registered []channelProviderFacts
-	// sending maps the subset this binary composed a sender for — what a reply
-	// CAN leave on — to what that sender can carry alongside the message. Held
-	// separately from registered because the two differ (whatsapp is registered
-	// and unsendable) and collapsing them is the conflation this decision
-	// removed.
-	//
-	// A map rather than a name list plus a carriage lookup: presence answers
-	// "can a reply leave on it", the value answers "carrying what", and one
-	// collection cannot hold a provider that is in one half and missing from the
-	// other.
-	sending map[string]connector.Carriage
-}
-
 // LoadChannelProviderDirectory fills the directory snapshot from the registry
 // table, and it runs for EVERY role that serves /v1 rather than as a side
 // effect of constructing the capture registry.
@@ -305,7 +262,7 @@ var composedChannelProviders struct {
 // pre-flight — not by hiding the transport's existence. Disclosure and
 // capability are separate axes, which is the same separation this whole arc is
 // about.
-func LoadChannelProviderDirectory(ctx context.Context, pool *pgxpool.Pool) error {
+func LoadChannelProviderDirectory(ctx context.Context, pool *pgxpool.Pool, composed *Extensions) error {
 	var registered []channelProviderFacts
 	err := database.WithInfraTx(ctx, pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx,
@@ -328,23 +285,8 @@ func LoadChannelProviderDirectory(ctx context.Context, pool *pgxpool.Pool) error
 	if err != nil {
 		return err
 	}
-	setComposedChannelProviders(registered, sendableCarriage(activities.SendableChannelProviders(), CoreChannelCarriage()))
+	composed.setDirectory(registered, sendableCarriage(composed.sendableProviders(), CoreChannelCarriage()))
 	return nil
-}
-
-func setComposedChannelProviders(registered []channelProviderFacts, sending map[string]connector.Carriage) {
-	composedChannelProviders.mu.Lock()
-	defer composedChannelProviders.mu.Unlock()
-	composedChannelProviders.registered = slices.Clone(registered)
-	composedChannelProviders.sending = maps.Clone(sending)
-}
-
-// ComposedChannelProviders returns this boot's registered transports and, for
-// the subset that can carry an outbound message, what each one can carry.
-func ComposedChannelProviders() (registered []channelProviderFacts, sending map[string]connector.Carriage) {
-	composedChannelProviders.mu.RLock()
-	defer composedChannelProviders.mu.RUnlock()
-	return slices.Clone(composedChannelProviders.registered), maps.Clone(composedChannelProviders.sending)
 }
 
 // loadChannelProviderDirectoryOrLog fills the directory snapshot at server
@@ -363,11 +305,11 @@ func ComposedChannelProviders() (registered []channelProviderFacts, sending map[
 // because the two arrive independently — a test that supplies a pool and no
 // logger would otherwise panic on the reporting path rather than the reading
 // one, which is a confusing way to learn about a wiring gap.
-func loadChannelProviderDirectoryOrLog(pool *pgxpool.Pool, log *slog.Logger) {
+func loadChannelProviderDirectoryOrLog(pool *pgxpool.Pool, composed *Extensions, log *slog.Logger) {
 	if pool == nil || log == nil {
 		return
 	}
-	if err := LoadChannelProviderDirectory(context.Background(), pool); err != nil {
+	if err := LoadChannelProviderDirectory(context.Background(), pool, composed); err != nil {
 		log.Error("compose: loading the transport directory", "err", err)
 	}
 }

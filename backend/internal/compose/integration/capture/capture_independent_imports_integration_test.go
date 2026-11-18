@@ -77,22 +77,27 @@ func (p *independentImportPage) BackfillPage(ctx context.Context, auth connector
 }
 
 func TestTwoAdmittedImportsOnIndependentThreadsDoNotWaitForEachOther(t *testing.T) {
+	t.Parallel()
 	independentImports(t, concurrentImportCase{})
 }
 
 func TestTwoAdmittedImportsCanMergeIndependentComponentsConcurrently(t *testing.T) {
+	t.Parallel()
 	independentImports(t, concurrentImportCase{merge: true})
 }
 
 func TestOverlappingHistoryImportsReReadTheirCanonicalComponents(t *testing.T) {
+	t.Parallel()
 	independentImports(t, concurrentImportCase{merge: true, overlap: true})
 }
 
 func TestConcurrentImportsFindAParentAfterItsUncommittedReply(t *testing.T) {
+	t.Parallel()
 	independentImports(t, concurrentImportCase{forward: true, overlap: true})
 }
 
 func TestAFullReferenceHeaderDoesNotTakeTheInstallationBarrier(t *testing.T) {
+	t.Parallel()
 	independentImports(t, concurrentImportCase{manyReferences: true})
 }
 

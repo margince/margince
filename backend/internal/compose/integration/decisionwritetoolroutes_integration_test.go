@@ -58,6 +58,7 @@ func (d *twoDoors) dispositionOf(t *testing.T, candidate string) (string, bool) 
 // A flagged pair dismissed as not the same, and reopened again, is left alike
 // over either door.
 func TestDecideDuplicateLeavesTheSameOnEitherDoor(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "dedupe-write-doors", "read", "write")
 	viaREST := filedPair(t, d, "Anna Rest", "+4930900001101")
 	viaTool := filedPair(t, d, "Anna Tool", "+4930900001102")
@@ -115,6 +116,7 @@ func (d *twoDoors) stagedApprovalOn(t *testing.T, tag string) string {
 // A site read is the call staged here, as it still waits for a human on a
 // colleague's passport.
 func TestDecideApprovalLeavesTheSameOnEitherDoor(t *testing.T) {
+	t.Parallel()
 	proposer := newTwoDoors(t, "decide-write-doors", "read", "write", "enrich")
 	decider := proposer.lend(t, "decider", "read", "write")
 	stage := func(name string) string {
@@ -160,6 +162,7 @@ type sharedPreviewReport struct {
 // A lead file previewed and then committed is the same run over either door: the
 // same report, and the same leads landed.
 func TestImportPreviewAndCommitLeaveTheSameOnEitherDoor(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoorsWith(t, "import-write-doors", nil, "read", "write")
 	mapping := map[string]string{"Email": "email", "Full Name": "full_name"}
 	csv := func(prefix string) string {

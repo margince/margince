@@ -37,6 +37,7 @@ func (s dunningSource) InvoicesFor(ctx context.Context, customer string) (Source
 // At the epoch INV-036 is twelve days past due and INV-039 is not due yet. The
 // warning reads only overdue invoices, so INV-039's higher count must not show.
 func TestTheWarningCarriesTheHighestReminderOnAnOverdueInvoice(t *testing.T) {
+	t.Parallel()
 	e := setupFinance(t)
 	if _, err := e.store.SyncConnection(e.ctx, e.provider()); err != nil {
 		t.Fatalf("sync: %v", err)
@@ -70,6 +71,7 @@ func TestTheWarningCarriesTheHighestReminderOnAnOverdueInvoice(t *testing.T) {
 }
 
 func TestADunningLevelOutsideTheRangeIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupFinance(t)
 	_, err := e.store.SyncConnection(e.ctx, dunningSource{levels: map[string]int{"INV-036": maxDunningLevel + 1}})
 	if err == nil {
@@ -80,6 +82,7 @@ func TestADunningLevelOutsideTheRangeIsRefused(t *testing.T) {
 // The warning rides the finance card's own read rule: no finance read, no
 // figure, and a refusal rather than an empty card.
 func TestAReaderWithoutFinanceReadGetsNoWarning(t *testing.T) {
+	t.Parallel()
 	e := setupFinance(t)
 	if _, err := e.store.SyncConnection(e.ctx, e.provider()); err != nil {
 		t.Fatalf("sync: %v", err)
@@ -104,6 +107,7 @@ func TestAReaderWithoutFinanceReadGetsNoWarning(t *testing.T) {
 // INV-020 is disputed and long past due. It stays in the open balance and out
 // of every overdue figure, its reminders included; INV-036 is the one overdue.
 func TestADisputedInvoiceIsOwedButNotOverdue(t *testing.T) {
+	t.Parallel()
 	e := setupFinance(t)
 	stated := dunningSource{levels: map[string]int{"INV-020": 7, "INV-036": 1}}
 	if _, err := e.store.SyncConnection(e.ctx, stated); err != nil {

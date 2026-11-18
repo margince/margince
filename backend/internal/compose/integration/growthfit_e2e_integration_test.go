@@ -46,6 +46,7 @@ type growthFitResponse struct {
 }
 
 func TestGrowthFitAbstainsAndNamesWhatToGather(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	companyID := createBareCompany(t, e)
@@ -117,6 +118,7 @@ func TestGrowthFitAbstainsAndNamesWhatToGather(t *testing.T) {
 // than an optimisation: a growth fit can rest on records scoped to one reader.
 // The row must therefore be keyed to the human who asked for it.
 func TestTheGrowthFitCacheRowIsKeyedToTheReaderWhoAskedForIt(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	companyID := createBareCompany(t, e)
@@ -196,6 +198,7 @@ func cachedGrowthFitReaders(t *testing.T, e *apptest.AppEnv, companyID string) [
 // The PATCH changes the fingerprint, so the next read re-assesses. A read with
 // no write between serves the cache.
 func TestAnIndustryTheCompanyShowsIsNotListedAsMissing(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	companyID := createBareCompany(t, e)

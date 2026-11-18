@@ -97,6 +97,7 @@ func inIDOrder(list ...ids.UUID) []ids.UUID {
 }
 
 func TestDealSuggestionsReachTheirCompanyOwnersWorklist(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	alexs := e.SeedCompany(t, "Northwind Traders", &e.Rep1)
 	sams := e.SeedCompany(t, "Contoso Logistics", &e.Rep3)
@@ -128,6 +129,7 @@ func TestDealSuggestionsReachTheirCompanyOwnersWorklist(t *testing.T) {
 }
 
 func TestAnOwnershipChangeReroutesTheSuggestionWithoutAWrite(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	moving := e.SeedCompany(t, "Northwind Traders", &e.Rep1)
 	e.raiseFor(t, moving)
@@ -150,6 +152,7 @@ func TestAnOwnershipChangeReroutesTheSuggestionWithoutAWrite(t *testing.T) {
 }
 
 func TestAnOwnerWhoCannotSeeTheEvidenceIsNotShownTheSuggestion(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	sams := e.SeedCompany(t, "Contoso Logistics", &e.Rep3)
 	request, buyer := e.buyingEmail(t, sams, e.daysAgo(1))
@@ -178,6 +181,7 @@ func TestAnOwnerWhoCannotSeeTheEvidenceIsNotShownTheSuggestion(t *testing.T) {
 // and counts their own suggestion. Both read every row, so the cut is the
 // owner's and not the row scope's.
 func TestTheAttentionFeedShowsEachOwnerOnlyTheirOwnSuggestion(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	alexs := e.SeedCompany(t, "Northwind Traders", &e.Rep1)
 	sams := e.SeedCompany(t, "Contoso Logistics", &e.Rep3)

@@ -36,6 +36,7 @@ import (
 // sheet is deliberately out of scope: ai_model_rate is where prices
 // legitimately live, and its per-MTok columns are rates, not stored spend.
 func TestAiTelemetryTablesStoreNoMoney(t *testing.T) {
+	t.Parallel()
 	e := setupRateStore(t)
 
 	rows, err := e.owner.Query(context.Background(), `

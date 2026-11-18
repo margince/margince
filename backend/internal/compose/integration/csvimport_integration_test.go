@@ -153,6 +153,7 @@ const prospectCSV = "Email,Full Name,Title\n" +
 // TestCSVImportOfKnownContactsCreatesContacts below asserts. What must never happen
 // is one object quietly writing the other's table.
 func TestCSVImportDryRunWritesNothingAndCommitsLeads(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	contactsBefore := importedContactCount(t, e)
 
@@ -219,6 +220,7 @@ func TestCSVImportDryRunWritesNothingAndCommitsLeads(t *testing.T) {
 // snapshot never has to answer — and the one a customer hits the moment they
 // fix a typo and upload again.
 func TestCSVImportReRunConvergesAndAnEditedFileUpdates(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 
 	profile, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
@@ -276,6 +278,7 @@ func TestCSVImportReRunConvergesAndAnEditedFileUpdates(t *testing.T) {
 // still lands the rows that ARE identifiable. Half a file imported under a
 // success message is the failure this reports its way out of.
 func TestCSVImportDisclosesUnidentifiableRows(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 
 	ragged := "Email,Full Name\n" +
@@ -308,6 +311,7 @@ func TestCSVImportDisclosesUnidentifiableRows(t *testing.T) {
 // IEM-WIRE-5: approval is valid ONLY from awaiting_approval. Approving twice
 // means the second approver is acting on a state nobody judged.
 func TestCSVImportApprovalIsValidOnlyOnce(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 
 	profile, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
@@ -323,6 +327,7 @@ func TestCSVImportApprovalIsValidOnlyOnce(t *testing.T) {
 // A run this installation does not have answers not-found — the same answer a
 // run it may not read gets, which is what keeps existence undisclosed.
 func TestCSVImportUnknownRunIsNotFound(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 
 	const absent = "00000000-0000-7000-8000-000000000000"
@@ -337,6 +342,7 @@ func TestCSVImportUnknownRunIsNotFound(t *testing.T) {
 // A mapping that names a field the object does not have is refused at the door,
 // not at row 40,000 of a commit.
 func TestCSVImportRefusesAnImpossibleMapping(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 
 	profile, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
@@ -355,6 +361,7 @@ func TestCSVImportRefusesAnImpossibleMapping(t *testing.T) {
 // tenant boundary — so this refusal is the only thing between a caller and
 // somebody else's uploaded estate.
 func TestCSVImportRefusesAForeignSourceReference(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 
 	profile, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
@@ -378,6 +385,7 @@ func TestCSVImportRefusesAForeignSourceReference(t *testing.T) {
 // already imported must predict nothing new — not "will update everything",
 // which is what classifying by existence alone would report.
 func TestCSVImportPredictsUnchangedRatherThanUpdatingEverything(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 
 	first, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
@@ -403,6 +411,7 @@ func TestCSVImportPredictsUnchangedRatherThanUpdatingEverything(t *testing.T) {
 // `validating` it would be an orphan nothing could ever move, and `failed`
 // means a commit stopped.
 func TestCSVImportRecordsAValidationThatCouldNotFinish(t *testing.T) {
+	t.Parallel()
 	e, store := setupImportAppWithStore(t)
 
 	// Readable header, unreadable rows: the mapping check passes and the walk
@@ -476,6 +485,7 @@ func importRuns(t *testing.T, e *apptest.AppEnv) []importjobtest.Run {
 // that drops it leaves the governance question "who imported this" unanswerable
 // from the API the operator actually reads.
 func TestCSVImportRunNamesWhoOpenedIt(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 
 	profile, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
@@ -516,6 +526,7 @@ func companyList(t *testing.T, e *apptest.AppEnv) companyListDTO {
 // path is easy to forget: legal_name and description reach the stored record
 // on the FIRST import, not only when a second upload happens to patch them.
 func TestCSVImportLandsCompaniesWithEveryMappedField(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 
 	const file = "Company,Legal Name,Industry,Description\n" +
@@ -590,6 +601,7 @@ func TestCSVImportLandsCompaniesWithEveryMappedField(t *testing.T) {
 // The upload refuses what it cannot profile, and says which part of the request
 // was wrong rather than failing somewhere later with a run already created.
 func TestCSVImportUploadRefusesWhatItCannotUse(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 
 	if _, status := importjobtest.UploadCSV(t, e, "note", prospectCSV); status != http.StatusUnprocessableEntity {
@@ -608,6 +620,7 @@ func TestCSVImportUploadRefusesWhatItCannotUse(t *testing.T) {
 // 2026-08-23 after a run through a chat host; this test is what settles each
 // against the running stack rather than against a reading of the code.
 func TestCSVImportMeetsAnExistingCompanyAndABadSizeBand(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 
 	// The company arrives the way real ones do — created directly, NOT by a
@@ -716,6 +729,7 @@ func TestCSVImportMeetsAnExistingCompanyAndABadSizeBand(t *testing.T) {
 // the company under this importer's own identity, the second carrying only a
 // City.
 func TestCSVImportOfOneAddressColumnKeepsTheRestOfTheAddress(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 
 	// Land the company through the import, with a full address.
@@ -771,6 +785,7 @@ func TestCSVImportOfOneAddressColumnKeepsTheRestOfTheAddress(t *testing.T) {
 // A preview that says "create" while the approved run skips is the defect this
 // whole change set exists to remove, in a new place.
 func TestCSVImportSkipDuplicatesPreviewsWhatItWillDo(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 
 	if status := e.Call(t, http.MethodPost, "/v1/companies",
@@ -825,6 +840,7 @@ func TestCSVImportSkipDuplicatesPreviewsWhatItWillDo(t *testing.T) {
 
 // An unknown policy is refused rather than silently treated as create.
 func TestCSVImportRefusesAnUnknownDuplicatePolicy(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	profile, _ := importjobtest.UploadCSV(t, e, "company", "Company\nInitech\n")
 	// Decoded into nothing: a refusal answers a problem document, not a run.
@@ -850,6 +866,7 @@ func TestCSVImportRefusesAnUnknownDuplicatePolicy(t *testing.T) {
 // not disturb them: a duplicate that lands is counted in Created and nowhere
 // else, and `duplicates` sits outside the sum by design.
 func TestCSVImportCountsTheDuplicatesTheCommitMetNotTheOnesThePreviewPredicted(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 
 	const file = "Company,Industry\nZephyr Freight,logistics\n"
@@ -914,6 +931,7 @@ func duplicatesSaid(report importReportDTO) string {
 }
 
 func TestRecentImportsListsTheRunsNewestFirstAcrossPages(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	first, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
 	oldest, _ := importjobtest.CreateRunWithMapping(t, e, "lead", first.SourceRef, first.SuggestedMapping)

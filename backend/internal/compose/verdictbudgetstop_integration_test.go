@@ -63,6 +63,7 @@ func (b *brokeBrain) Complete(context.Context, model.Request) (model.Response, e
 // it found them. The engine stops on sender one, defers it with its attempt
 // refunded, and releases the remaining seven the same way.
 func TestABudgetStopLeavesTheSendersItNeverAskedAboutUnspent(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const senders = 8
 
@@ -105,6 +106,7 @@ func TestABudgetStopLeavesTheSendersItNeverAskedAboutUnspent(t *testing.T) {
 // batch genuinely has a tail: with eight or fewer the release would run over an
 // empty slice and the case would pass without exercising anything.
 func TestABudgetStopLeavesTheThreadsItNeverAskedAboutUnspent(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const threads = confidentialityClaimSize
 
@@ -178,6 +180,7 @@ func attemptsAndClaim(t *testing.T, e *integration.Env, table string, id ids.UUI
 // and it reaches every arm the refund path has, which no reachable database
 // state does.
 func TestAPassWhoseContextDiesMidBatchSaysSo(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const senders = 4
 	for range senders {
@@ -205,6 +208,7 @@ func TestAPassWhoseContextDiesMidBatchSaysSo(t *testing.T) {
 // two arms through it, and a rule held on one of them is a rule the other can
 // lose quietly — every change to this shape so far has had to be made twice.
 func TestAThreadPassWhoseContextDiesMidBatchSaysSo(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	for range confidentialityClaimSize {
 		key := "thread-cut-" + ids.NewV7().String()

@@ -36,6 +36,7 @@ func refusedBy(err error) string {
 }
 
 func TestAConsentRecordNamesOneSubject(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	lead := seedLead(t, e, "Two Subjects", "two-subjects@example.test")
 	for _, refused := range []struct {
@@ -86,6 +87,7 @@ func TestAConsentRecordNamesOneSubject(t *testing.T) {
 // rather than the column. A rule that refused everything would read as green
 // in the test above on its own.
 func TestAConsentRecordStillAdmitsOneSubject(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	lead := seedLead(t, e, "One Subject", "one-subject@example.test")
 	for _, admitted := range []struct {

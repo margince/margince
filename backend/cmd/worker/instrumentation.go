@@ -21,6 +21,6 @@ func startInstrumentation(ctx context.Context, cfg workerConfig, stdout io.Write
 	if err != nil {
 		return err
 	}
-	compose.StartInstrumentation(ctx, "worker", slog.New(bootHandler))
+	compose.StartInstrumentation(ctx, cfg.extensions, "worker", slog.New(bootHandler))
 	return nil
 }

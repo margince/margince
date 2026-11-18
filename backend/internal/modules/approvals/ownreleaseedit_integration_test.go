@@ -21,6 +21,7 @@ import (
 )
 
 func TestACredentialDoesNotEditTheProposalItReleasesItself(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	e.svc.WithUndoableRelease(func(_ context.Context, _ Queryer, call StagedCall) bool {
 		return call.Kind == "company_name_promotion"
@@ -53,6 +54,7 @@ func TestACredentialDoesNotEditTheProposalItReleasesItself(t *testing.T) {
 }
 
 func TestACredentialDoesNotEditAProposalAHumanStaged(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	e.svc.WithUndoableRelease(func(_ context.Context, _ Queryer, call StagedCall) bool {
 		return call.Kind == "company_name_promotion"

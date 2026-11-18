@@ -64,6 +64,7 @@ func getLogo(ctx context.Context, t *testing.T, handlers contacts.Handlers, comp
 }
 
 func TestAMarkStoredTrimmedIsServedWithoutADecode(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	blob := newCountingBlobstore()
 	handlers := contacts.NewHandlers(e.DB()).WithBlobstore(blob)
@@ -94,6 +95,7 @@ func TestAMarkStoredTrimmedIsServedWithoutADecode(t *testing.T) {
 }
 
 func TestALegacyMarkIsDecodedOncePerProcess(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	blob := blobstore.NewMemory()
 	handlers := contacts.NewHandlers(e.DB()).WithBlobstore(blob)

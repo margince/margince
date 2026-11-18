@@ -120,7 +120,7 @@ func installationSignInApp(pool *pgxpool.Pool, stored appResolver) appResolver {
 	if pool == nil || stored == nil {
 		return nil
 	}
-	svc := identity.NewService(pool)
+	svc := IdentityService(pool)
 	return func(ctx context.Context) (capture.ConnectorApp, bool, error) {
 		ws, err := svc.InstallationWorkspace(ctx)
 		if err != nil {
@@ -227,7 +227,7 @@ func registerSignInProvider(s *Server, pool *pgxpool.Pool, p signInProvider, rou
 		loginStateSignerAdapter{s: newLoginStateSigner([]byte(stateKey))},
 		routes,
 	)
-	s.authHandlers = s.WithOIDCProvidersEnabledFn(enabledOidcProviders(pool, identity.NewService(pool), configured))
+	s.authHandlers = s.WithOIDCProvidersEnabledFn(enabledOidcProviders(pool, IdentityService(pool), configured))
 	// A method value copies the handlers as they stand, so it is rebound on
 	// every registration for the same reason the enabled function is.
 	s.signInScreen = s.SignInScreenProviders

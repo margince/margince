@@ -24,7 +24,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -230,12 +229,12 @@ func NewFollowUpReconciler(pool *pgxpool.Pool, log *slog.Logger) *deals.FollowUp
 	// No system-of-record seam: this adapter is built for DraftEmail alone and
 	// its empty SendPath reaches no send, so the guard that would need one is
 	// unreachable from here. It refuses rather than passes if that ever changes.
-	drafter := newCommsAdapter(pool, nil, SendPath{})
+	drafter := newCommsAdapter(pool, nil, nil, SendPath{})
 	stager := followUpStager{
 		svc:   NewApprovalsService(db),
 		tasks: activities.NewStore(db),
 		draft: drafter,
-		owner: dealOwnerAuthority{db: db, users: identity.NewServiceFor(db)},
+		owner: dealOwnerAuthority{db: db, users: identityServiceFor(db)},
 		pool:  pool,
 	}
 	return deals.NewFollowUpReconciler(db, stager, log).WithBaseLanguage(installationLanguage(pool))

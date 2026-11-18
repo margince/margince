@@ -22,6 +22,7 @@ import (
 )
 
 func TestHistoryImportReportsItsDatabaseWork(t *testing.T) {
+	t.Parallel()
 	count := historyMeasurementSize(t, "MARGINCE_IMPORT_BENCH_MESSAGES", 16, 100000)
 	parties := historyMeasurementSize(t, "MARGINCE_IMPORT_BENCH_CONTACTS", count, count)
 	e := integration.SetupSearch(t)
@@ -97,6 +98,7 @@ const (
 )
 
 func TestHistoryImportStaysWithinItsRoundTripBudget(t *testing.T) {
+	t.Parallel()
 	const count, parties = 200, 20
 	e := integration.SetupSearch(t)
 	seedCaptureRole(t, e)

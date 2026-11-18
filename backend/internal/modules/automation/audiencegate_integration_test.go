@@ -74,6 +74,7 @@ func (fx *autoFixture) seedActivity(t *testing.T, audience string) ids.UUID {
 }
 
 func TestAFiringOnAMessageTheOwnerCannotReadIsBlocked(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	applyCalls := 0
 	handler := scriptedWorkflow{
@@ -117,6 +118,7 @@ func TestAFiringOnAMessageTheOwnerCannotReadIsBlocked(t *testing.T) {
 }
 
 func TestAFiringOnAMessageTheOwnerCanReadProceeds(t *testing.T) {
+	t.Parallel()
 	// The admit case. Without it a gate that blocked every firing would pass
 	// every other test in this file.
 	fx := setupAutomationDB(t)
@@ -152,6 +154,7 @@ func TestAFiringOnAMessageTheOwnerCanReadProceeds(t *testing.T) {
 }
 
 func TestAFiringWhoseOwnerCannotReadMessagesAtAllIsBlocked(t *testing.T) {
+	t.Parallel()
 	// The object half, which the row half cannot answer.
 	// EnsureActivityContentVisibleLive tests row and audience scope; it never
 	// asks whether this principal may read activities at all. The two come
@@ -199,6 +202,7 @@ func TestAFiringWhoseOwnerCannotReadMessagesAtAllIsBlocked(t *testing.T) {
 }
 
 func TestAFiringOnAnArchivedMessageIsBlocked(t *testing.T) {
+	t.Parallel()
 	// What "Live" buys. EnsureActivityContentVisible admits an archived row;
 	// the Live variant does not. A firing acts NOW, on a record a contact can no
 	// longer open, so the strict variant is the right one — and swapping it for
@@ -230,6 +234,7 @@ func TestAFiringOnAnArchivedMessageIsBlocked(t *testing.T) {
 }
 
 func TestAFiringOnAMessageTheOwnerCapturedProceeds(t *testing.T) {
+	t.Parallel()
 	// The second admit case, and the one that proves the check reads the real
 	// audience arm rather than testing `audience = 'workspace'`. The message is
 	// limited to its participants, but this owner's own mailbox delivered it —
@@ -264,6 +269,7 @@ func TestAFiringOnAMessageTheOwnerCapturedProceeds(t *testing.T) {
 }
 
 func TestAFiringOnANonActivitySubjectIsUnaffected(t *testing.T) {
+	t.Parallel()
 	// The gate is deliberately narrow: audience is an activity's property, and
 	// every other subject's visibility follows row scope, which the object gate
 	// already resolves. A deal-subject firing must not pay for a check that
@@ -302,6 +308,7 @@ func TestAFiringOnANonActivitySubjectIsUnaffected(t *testing.T) {
 // participants, with zero blocked runs — because the gate that would have
 // blocked them never ran.
 func TestAnOwnerlessFiringOnHeldMailIsBlocked(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	applyCalls := 0
 	handler := scriptedWorkflow{
@@ -331,6 +338,7 @@ func TestAnOwnerlessFiringOnHeldMailIsBlocked(t *testing.T) {
 // this the fix above would be satisfied by disabling the starter automations
 // outright, which is not what it is for.
 func TestAnOwnerlessFiringOnWorkspaceMailProceeds(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	applyCalls := 0
 	handler := scriptedWorkflow{
@@ -360,6 +368,7 @@ func TestAnOwnerlessFiringOnWorkspaceMailProceeds(t *testing.T) {
 // participants" would pass every test above and admit the narrowest audience
 // the product has.
 func TestAnOwnerlessFiringOnSelectedMailIsBlocked(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	applyCalls := 0
 	handler := scriptedWorkflow{
@@ -384,6 +393,7 @@ func TestAnOwnerlessFiringOnSelectedMailIsBlocked(t *testing.T) {
 }
 
 func TestTheAudienceGateDoesNotInheritTheEnginesSystemPrincipal(t *testing.T) {
+	t.Parallel()
 	// The failure this gate is one line away from. The engine binds
 	// PrincipalSystem for attribution, and auth.ActivityAudienceArm answers TRUE
 	// for a system principal — so a check that used the caller's context would
@@ -429,6 +439,7 @@ func TestTheAudienceGateDoesNotInheritTheEnginesSystemPrincipal(t *testing.T) {
 // lands and this gate runs when the engine reaches it, and erasure destroys
 // rows on its own schedule in between.
 func TestAnOwnerlessFiringOnAMessageThatIsGoneIsBlocked(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	applyCalls := 0
 	handler := scriptedWorkflow{

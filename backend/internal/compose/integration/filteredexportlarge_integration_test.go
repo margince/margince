@@ -17,6 +17,7 @@ import (
 // An export is the surface a slice larger than the list bound is read through,
 // so a filter matching one row more than that bound must hand out every row.
 func TestFilteredExportHandsOutEveryMatchPastTheListBound(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	total := storekit.PredicateRowLimit + 1
 	if _, err := e.Owner.Exec(t.Context(), `INSERT INTO company (id, display_name, owner_id, industry, visibility, source, captured_by)
@@ -50,6 +51,7 @@ func TestFilteredExportHandsOutEveryMatchPastTheListBound(t *testing.T) {
 // A slice past the export ceiling is refused with the reason, never handed out
 // short.
 func TestFilteredExportRefusesASliceLargerThanItCanHold(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	total := storekit.ExportRowLimit + 1
 	if _, err := e.Owner.Exec(t.Context(), `INSERT INTO company (id, display_name, owner_id, industry, visibility, source, captured_by)

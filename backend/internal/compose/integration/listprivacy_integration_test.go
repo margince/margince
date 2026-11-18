@@ -19,6 +19,7 @@ import (
 )
 
 func TestASubjectsShortlistsReachTheirAccessExportAndTheirErasure(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
 	subject := e.SeedContact(t, "Erasable Subject", &e.Rep1)
@@ -56,6 +57,7 @@ func TestASubjectsShortlistsReachTheirAccessExportAndTheirErasure(t *testing.T) 
 }
 
 func TestARemovedMembershipsNoteReachesTheAccessExport(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
 	subject := e.SeedContact(t, "Removed Subject", &e.Rep1)

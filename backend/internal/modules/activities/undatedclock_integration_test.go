@@ -48,6 +48,7 @@ func logUndated(t *testing.T, e *sendEnv, store *Store, in LogActivityInput) ids
 // judged at the reader's clock. Behind the database's, a meeting stamped with
 // now() alone was refused as not yet held.
 func TestAnUndatedMeetingHasTakenPlaceForAReaderWhoseClockIsBehind(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	behind := databaseClockPlus(t, e, -time.Hour)
 	meeting := logUndated(t, e, meetingStore(e).WithClock(behind), LogActivityInput{
@@ -68,6 +69,7 @@ func TestAnUndatedMeetingHasTakenPlaceForAReaderWhoseClockIsBehind(t *testing.T)
 
 // An undated inbound message is on the waiting list the moment it is logged.
 func TestAnUndatedInboundMessageWaitsForAReplyAtOnceWhenTheStoreClockIsBehind(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	customer := seedCustomer(t, e)
 	store := meetingStore(e).WithClock(databaseClockPlus(t, e, -time.Hour)).WithOwnDomains(fixedDomains(nil))
@@ -92,6 +94,7 @@ func TestAnUndatedInboundMessageWaitsForAReplyAtOnceWhenTheStoreClockIsBehind(t 
 // The last-activity clock counts only occurred_at <= now(). Stamped with a
 // store clock ahead of the database's, an undated activity would not count.
 func TestAnUndatedActivityIsTheLastActivityAtOnceWhenTheStoreClockIsAhead(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	customer := seedCustomer(t, e)
 	note := logUndated(t, e, meetingStore(e).WithClock(databaseClockPlus(t, e, time.Hour)), LogActivityInput{

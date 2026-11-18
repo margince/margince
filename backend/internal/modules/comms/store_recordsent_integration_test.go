@@ -91,6 +91,7 @@ func (e *storeEnv) reconcileFaults(t *testing.T) int {
 // everything downstream — the echo collapse, the reply join, the threading
 // headers — reads that column as a searchable identity.
 func TestRecordSentRefusesAnIdentityNoMessageCouldCarry(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	id := e.stage(t, e.baseInput(e.activity, stagedIdentity))
 	reconciler := &recordingReconciler{}
@@ -128,6 +129,7 @@ func TestRecordSentRefusesAnIdentityNoMessageCouldCarry(t *testing.T) {
 // send re-roots onto what the world will reply to, a reply keeps the
 // conversation root it joined.
 func TestRecordSentReKeysTheDeliveryWhenTheIdentityMoved(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name          string
 		threadKey     string
@@ -189,6 +191,7 @@ func TestRecordSentReKeysTheDeliveryWhenTheIdentityMoved(t *testing.T) {
 // that reports none reports nothing: both leave the staged key alone and must
 // not cost a seam call, a write, or a breadcrumb.
 func TestRecordSentLeavesTheIdentityAloneWhenTheProviderHonouredIt(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name    string
 		stamped string

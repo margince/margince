@@ -20,6 +20,7 @@ import (
 // change_access leaves what the REST share leaves. Each of two equal records
 // gets one grant to the same team, with the same access.
 func TestARouteBackedActionAnswersAsItsRoute(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "route-backed-doors", "read", "write")
 	team := createdRecord(t, d.e, "/v1/teams", AnyMap{"name": "Doors"})
 	first := createdRecord(t, d.e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Door One"})
@@ -47,6 +48,7 @@ func TestARouteBackedActionAnswersAsItsRoute(t *testing.T) {
 // An operator read answers an agent what it answers its user, and writes stay
 // with the user. Which model runs is read here and never changed.
 func TestAnOperatorsAgentReadsWhatTheOperatorReads(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "operator-reads", "read", "write", "send", "enrich")
 	for topic, path := range map[string]string{
 		"ai_routing": "/v1/ai/routing", "retention_settings": "/v1/retention/settings",
@@ -76,6 +78,7 @@ func TestAnOperatorsAgentReadsWhatTheOperatorReads(t *testing.T) {
 // AI work an agent starts spends the enrich scope, so a passport lent only read
 // and write cannot start it, on any role.
 func TestRunResearchNeedsTheEnrichScope(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "run-research-scope", "read", "write")
 	company := createdRecord(t, d.e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Scope Works"})
 	got := d.mcp.Call(t, "run_research", map[string]any{"action": "refresh_dossier", "id": company})
@@ -90,6 +93,7 @@ func TestRunResearchNeedsTheEnrichScope(t *testing.T) {
 // refused too, for a relation the placeholder lacks. An agent refused where its
 // human is admitted meets a human check still on the path.
 func TestNoRouteBackedActionStillRefusesAnActingAgent(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "route-backed-sweep", "read", "write", "send", "enrich")
 	verbs := compose.RouteVerbs()
 	if len(verbs) == 0 {
@@ -153,6 +157,7 @@ func placeholderFor(param string) string {
 
 // A router's list of actions is long, so asking for one answers only that one.
 func TestAskingAboutOneActionAnswersOnlyIt(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "describe-one-action", "read", "write")
 	whole := d.tool(t, "read_workspace", map[string]any{"topic": "actions", "router": "change_settings"})
 	one := d.tool(t, "read_workspace", map[string]any{"topic": "actions", "router": "change_settings", "action": "create_stage"})

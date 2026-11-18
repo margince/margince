@@ -70,6 +70,7 @@ func sentToColleague(env captureEnv, t *testing.T, to, cc, msgID string) ids.UUI
 }
 
 func TestMailBetweenColleaguesIsHeldFromTheWorkspace(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	colleagueMail := sentToColleague(env, t, colleagueLogin, "", "members-1@myco.example")
@@ -102,6 +103,7 @@ func TestMailBetweenColleaguesIsHeldFromTheWorkspace(t *testing.T) {
 // did, one seat claiming an outsider's address would hold every colleague's
 // mail with that outsider.
 func TestAnUnprovedClaimMakesNoMember(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	declareIdentity(t, e, e.Rep3, capturemod.IdentityKindAddress, colleaguePrivate)
@@ -120,6 +122,7 @@ func TestAnUnprovedClaimMakesNoMember(t *testing.T) {
 }
 
 func TestAProvedMailboxAddressCountsAsAMember(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	seedCaptureRoleFor(t, e, e.Rep3)
@@ -147,6 +150,7 @@ func archiveSeat(t *testing.T, e *integration.SearchEnv, seat ids.UUID) {
 }
 
 func TestOneOutsidePartyKeepsTheMailAsBefore(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	withOutsider := sentToColleague(env, t, colleagueLogin, "ext@example.org", "members-ext@myco.example")
@@ -165,6 +169,7 @@ func TestOneOutsidePartyKeepsTheMailAsBefore(t *testing.T) {
 // rather than the wait: the recompute keeps only the former once the verdict
 // clears again.
 func TestAColleaguesReplyOnAReopenedThreadStaysHeldOnceItClears(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	env.sync(t, customerMail("members-open@acme.example"))
@@ -186,6 +191,7 @@ func TestAColleaguesReplyOnAReopenedThreadStaysHeldOnceItClears(t *testing.T) {
 }
 
 func TestAnOwnDomainAndADepartedSeatCountAsMembersAndAnArchivedSeatDoesNot(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	sharedBox := sentToColleague(env, t, colleagueLogin, "sales@myco.example", "members-ownbox@myco.example")

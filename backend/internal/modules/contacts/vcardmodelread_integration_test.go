@@ -27,6 +27,7 @@ func photoCard(name string, emails ...string) VCardEntry {
 }
 
 func TestAModelReadCardNobodyMatchesIsProposedAndCreatesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	entries := []VCardEntry{photoCard("Petra Photo", "petra@photo-works.example")}
@@ -50,6 +51,7 @@ func TestAModelReadCardNobodyMatchesIsProposedAndCreatesNothing(t *testing.T) {
 }
 
 func TestAModelReadCardWithAKnownAddressIsSkippedAndLeavesTheContactAlone(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	title := "Chief Financial Officer"
@@ -77,6 +79,7 @@ func TestAModelReadCardWithAKnownAddressIsSkippedAndLeavesTheContactAlone(t *tes
 }
 
 func TestAModelReadCardThatResemblesSomebodyIsLeftForAHumanWithTheCandidate(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	incumbent, err := e.store.CreateContact(ctx, CreateContactInput{
@@ -103,6 +106,7 @@ func TestAModelReadCardThatResemblesSomebodyIsLeftForAHumanWithTheCandidate(t *t
 }
 
 func TestProposeCardsFromPhotoRefusesACardNoModelRead(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	typed := photoCard("Tina Typed")
 	typed.ModelRead = false
@@ -112,6 +116,7 @@ func TestProposeCardsFromPhotoRefusesACardNoModelRead(t *testing.T) {
 }
 
 func TestAPhotoYieldingMoreThanTheCapIsRefusedWhole(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	entries := make([]VCardEntry, CardPhotoMaxCards+1)
 	for i := range entries {

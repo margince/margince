@@ -20,6 +20,7 @@ import (
 // router keeps serving the previous binding. So the status read has to name
 // the lane that cannot run, and the variable to set.
 func TestTheStatusNamesTheLaneWhoseVendorHoldsNoKey(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.AdminUser, nil, principal.Permissions{
 		Objects: map[string]principal.ObjectGrant{
@@ -78,6 +79,7 @@ embeddings: {provider: fake, model: fake-embed}
 // A key pasted on the screen is sealed in the vault. The router serves with
 // it, so the status must not say its vendor holds none.
 func TestTheStatusDoesNotNameALaneWhoseVendorKeyIsSealed(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.AdminUser, nil, principal.Permissions{
 		Objects: map[string]principal.ObjectGrant{

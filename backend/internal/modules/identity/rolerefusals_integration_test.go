@@ -22,6 +22,7 @@ import (
 // A seat holding no role_admin is refused every lifecycle verb before any row
 // is read.
 func TestTheRoleLifecycleRefusesASeatWithoutTheRoleEditor(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "role-noadmin")
 	key := e.customRole(t, "Seasonal", "rep", nil)
 	rep := e.seat(t, "plain", "rep")
@@ -43,6 +44,7 @@ func TestTheRoleLifecycleRefusesASeatWithoutTheRoleEditor(t *testing.T) {
 // A name must be 1 to 120 characters after trimming, and a row scope one of
 // the three the policy reads.
 func TestTheRoleLifecycleRejectsANameOrScopeItCannotStore(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "role-input")
 	ctx := e.wsCtx(e.admin)
 	key := e.customRole(t, "Seasonal", "rep", nil)
@@ -70,6 +72,7 @@ func TestTheRoleLifecycleRejectsANameOrScopeItCannotStore(t *testing.T) {
 // A key nobody defines, and a role that is archived, are not roles the editor
 // can change.
 func TestTheRoleLifecycleAnswersUnknownForARoleItCannotEdit(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "role-unknown")
 	ctx := e.wsCtx(e.admin)
 	archived := e.customRole(t, "Retired", "rep", nil)
@@ -97,6 +100,7 @@ func TestTheRoleLifecycleAnswersUnknownForARoleItCannotEdit(t *testing.T) {
 
 // Changing nothing writes nothing, and restoring a live role is a no-op.
 func TestARoleEditThatChangesNothingWritesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "role-noop")
 	ctx := e.wsCtx(e.admin)
 	key := e.customRole(t, "Seasonal", "rep", nil)
@@ -116,6 +120,7 @@ func TestARoleEditThatChangesNothingWritesNothing(t *testing.T) {
 
 // A restore refuses a name a live role took while this one was archived.
 func TestARestoreRefusesANameTakenMeanwhile(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "role-restore-name")
 	ctx := e.wsCtx(e.admin)
 	first := e.customRole(t, "Seasonal", "rep", nil)
@@ -132,6 +137,7 @@ func TestARestoreRefusesANameTakenMeanwhile(t *testing.T) {
 // at 40 characters of slug, mid-word if need be, so the key fits the
 // contract's 64.
 func TestAKeyIsDerivedFromAnyName(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "role-keys")
 	ctx := e.wsCtx(e.admin)
 	for name, want := range map[string]string{
@@ -152,6 +158,7 @@ func TestAKeyIsDerivedFromAnyName(t *testing.T) {
 // A member administrator acting on a member who is not there, or on an admin
 // they may not reactivate, is refused before anything changes.
 func TestADelegateActingOnAnUnreachableTargetIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "delegate-target")
 	delegate := e.seat(t, "delegate", e.customRole(t, "Member admin", "rep", map[string]storedGrant{objectUserAdmin: fullGrant}))
 	ctx := e.wsCtx(delegate)

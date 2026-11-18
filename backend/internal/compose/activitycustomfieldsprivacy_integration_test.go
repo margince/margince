@@ -53,6 +53,7 @@ func storedVisitNote(t *testing.T, e *integration.Env, activityID ids.UUID, colu
 }
 
 func TestSubjectAccessHandsBackAnActivitysCustomFieldValues(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact, activityID, column := visitNote(t, e)
 
@@ -72,6 +73,7 @@ func TestSubjectAccessHandsBackAnActivitysCustomFieldValues(t *testing.T) {
 }
 
 func TestErasureEmptiesAnActivitysCustomFieldValues(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact, activityID, column := visitNote(t, e)
 	if got := storedVisitNote(t, e, activityID, column); got != "asked about the night shift" {
@@ -90,6 +92,7 @@ func TestErasureEmptiesAnActivitysCustomFieldValues(t *testing.T) {
 // values with the text. The held row is seeded directly, as no writer produces
 // a restriction the compiled-in floor would not.
 func TestReleasingAHeldActivityEmptiesItsCustomFieldValues(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	_, _, column := visitNote(t, e)
 	held := ids.NewV7()

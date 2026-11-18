@@ -34,6 +34,7 @@ import (
 // after the backfill completes is provably the one the completion enqueued
 // (not the boot pass) — and it can't have been deduped, the first already ran.
 func TestBackfillCompletionBuildsTheDigest(t *testing.T) {
+	t.Parallel()
 	b := setupBackfillWire(t)
 	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
 
@@ -132,8 +133,8 @@ func TestBackfillCompletionBuildsTheDigest(t *testing.T) {
 }
 
 // countJobsOfKind answers how many river_job rows of a kind exist right now.
-// Every suite resets the database before it runs, so the count is this test's
-// own inserts and nothing else.
+// The database is the test's own, so the count is this test's inserts and
+// nothing else.
 func countJobsOfKind(ctx context.Context, t *testing.T, pool *pgxpool.Pool, kind string) int {
 	t.Helper()
 	var n int
@@ -144,6 +145,7 @@ func countJobsOfKind(ctx context.Context, t *testing.T, pool *pgxpool.Pool, kind
 }
 
 func TestCaptureOvernightJobsRegisterAndRun(t *testing.T) {
+	t.Parallel()
 	b := setupBackfillWire(t)
 	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
 

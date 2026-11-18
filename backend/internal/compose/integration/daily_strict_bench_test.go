@@ -166,6 +166,7 @@ func strictCohortResults() []DailyResult {
 }
 
 func TestEveryStrictCohortUnderBudgetPasses(t *testing.T) {
+	t.Parallel()
 	for _, v := range JudgeStrictHome(strictCohortResults()) {
 		if !v.Pass {
 			t.Errorf("%s %s failed with %q; a measured row at half its budget passes", v.Name, v.Seat, v.Failure)
@@ -174,6 +175,7 @@ func TestEveryStrictCohortUnderBudgetPasses(t *testing.T) {
 }
 
 func TestAKnownIssueDoesNotPassTheStrictLane(t *testing.T) {
+	t.Parallel()
 	results := strictCohortResults()
 	results[0].Verdict, results[0].Issue, results[0].P95 = DailyOverKnown, 4912, 2900*time.Millisecond
 	got := JudgeStrictHome(results)[0]
@@ -183,6 +185,7 @@ func TestAKnownIssueDoesNotPassTheStrictLane(t *testing.T) {
 }
 
 func TestASecondMeasurementCannotEraseAStrictBreach(t *testing.T) {
+	t.Parallel()
 	results := strictCohortResults()
 	results[0].P95, results[0].FirstP95 = 400*time.Millisecond, 900*time.Millisecond
 	got := JudgeStrictHome(results)[0]
@@ -192,6 +195,7 @@ func TestASecondMeasurementCannotEraseAStrictBreach(t *testing.T) {
 }
 
 func TestAMissingOrEmptyCohortFailsTheStrictLane(t *testing.T) {
+	t.Parallel()
 	results := strictCohortResults()
 	results = slices.DeleteFunc(results, func(r DailyResult) bool { return r.Row == "home_brief" })
 	results[0].Verdict, results[0].Samples = DailyNoData, 0
@@ -203,6 +207,7 @@ func TestAMissingOrEmptyCohortFailsTheStrictLane(t *testing.T) {
 }
 
 func TestAFastPartialAnswerFailsTheStrictLane(t *testing.T) {
+	t.Parallel()
 	for name, mutate := range map[string]func(*DailyResult){
 		"incomplete": func(r *DailyResult) { r.Incomplete = 3 },
 		"5xx":        func(r *DailyResult) { r.Status5xx = 1 },
@@ -217,6 +222,7 @@ func TestAFastPartialAnswerFailsTheStrictLane(t *testing.T) {
 }
 
 func TestUnavailableSourcesReadsTheWorklistsOwnField(t *testing.T) {
+	t.Parallel()
 	for body, want := range map[string]int{
 		`{"items":[],"sources_unavailable":["approval","task"]}`: 2,
 		`{"items":[],"sources_unavailable":[]}`:                  0,
@@ -230,6 +236,7 @@ func TestUnavailableSourcesReadsTheWorklistsOwnField(t *testing.T) {
 }
 
 func TestAnAnswerWithoutItsDataFailsOnlyWhereTheCorpusHoldsData(t *testing.T) {
+	t.Parallel()
 	results := strictCohortResults()
 	for i := range results {
 		results[i].Lacking = 1
@@ -242,6 +249,7 @@ func TestAnAnswerWithoutItsDataFailsOnlyWhereTheCorpusHoldsData(t *testing.T) {
 }
 
 func TestHoldsDataReadsTheNamedFieldNotTheEnvelope(t *testing.T) {
+	t.Parallel()
 	emptyQueue := `{"as_of":"2026-10-29T00:00:00Z","queue":[],"summary":{"considered":0},"scope_options":["mine","team"],"sources_unavailable":[]}`
 	for _, c := range []struct {
 		body, field string

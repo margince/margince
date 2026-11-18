@@ -61,6 +61,7 @@ func seedNearMatch(ctx context.Context, t *testing.T, e *integration.Env, card c
 }
 
 func TestAVCardNearMatchBecomesOneDurableProposal(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	candidate := seedNearMatch(ctx, t, e, reviewedCard())
@@ -140,6 +141,7 @@ func companyLessReviewedCard() contacts.VCardEntry {
 }
 
 func TestACardNamingNoCompanyCanStillBeStaged(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	candidate := seedNearMatch(ctx, t, e, companyLessReviewedCard())
@@ -214,6 +216,7 @@ func vacuousReviewedCard() contacts.VCardEntry {
 // this kind's staged_by field also happens to disambiguate but which no
 // self-only kind's join is scoped by on its own.
 func TestAVacuousCardDoesNotSupersedeAnotherSubjectsPendingReview(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	adminCtx := e.Admin()
 	repCtx := e.As(e.Rep1, nil, integration.AdminPerms)
@@ -258,6 +261,7 @@ func TestAVacuousCardDoesNotSupersedeAnotherSubjectsPendingReview(t *testing.T) 
 // itself, which is exactly what the engine's separate diff-hash JOIN step
 // would otherwise ignore.
 func TestATwoMembersCardsWithNoCandidateDoNotJoinIntoOneReview(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	adminCtx := e.Admin()
 	repCtx := e.As(e.Rep1, nil, integration.AdminPerms)
@@ -304,6 +308,7 @@ func coworkerNamedCard() contacts.VCardEntry {
 // need only observe (or guess) to reproduce another member's card byte for
 // byte, if company alone still discriminated the identity.
 func TestATwoFieldCardDoesNotSupersedeAnotherSubjectsPendingReview(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	adminCtx := e.Admin()
 	repCtx := e.As(e.Rep1, nil, integration.AdminPerms)
@@ -341,6 +346,7 @@ func TestATwoFieldCardDoesNotSupersedeAnotherSubjectsPendingReview(t *testing.T)
 }
 
 func TestADeclinedVCardReviewIsNotReAsked(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	candidate := seedNearMatch(ctx, t, e, reviewedCard())
@@ -379,6 +385,7 @@ func TestADeclinedVCardReviewIsNotReAsked(t *testing.T) {
 // re-decidable. Without it the approval would commit and create a contact
 // with no name.
 func TestAnEditThatDropsTheCardIsRefusedWhileStillPending(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	candidate := seedNearMatch(ctx, t, e, reviewedCard())
@@ -416,6 +423,7 @@ func TestAnEditThatDropsTheCardIsRefusedWhileStillPending(t *testing.T) {
 }
 
 func TestAcceptingAVCardReviewForSomebodyWhoBecameALeadCreatesNothing(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	candidate := seedNearMatch(ctx, t, e, reviewedCard())

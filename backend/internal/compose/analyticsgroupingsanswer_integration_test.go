@@ -42,6 +42,7 @@ func seedDistinctProjects(t *testing.T, e *integration.Env, n int) {
 }
 
 func TestEveryGroupingTheVocabularyOffersCanAnswer(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	floor := int(analyticsquery.DefaultFloor)
 	seedDistinctProjects(t, e, 3*floor)

@@ -23,6 +23,7 @@ import (
 // so a held account scan runs again: the resume pass answers without error and
 // the scan's clock and its job both move up.
 func TestRaisingTheAllowanceWakesAHeldAccountScan(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	grantBudgetRequester(t, e, e.Rep1)
 	company := e.SeedCompany(t, "Held account", &e.Rep1)

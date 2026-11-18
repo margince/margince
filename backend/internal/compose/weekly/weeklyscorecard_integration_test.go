@@ -59,6 +59,7 @@ func nextWeek() time.Time { return time.Now().UTC().AddDate(0, 0, 7) }
 // boolean exists for: absent means the funnel was not this rep's work, and a
 // row of zeros would read as failure at something nobody asked of them.
 func TestARepWithNoLeadsGetsNoLeadBlockRatherThanZeros(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	review, _, err := e.engine.AssembleFor(e.repCtx, weekClock)
 	if err != nil {
@@ -75,6 +76,7 @@ func TestARepWithNoLeadsGetsNoLeadBlockRatherThanZeros(t *testing.T) {
 // A rep WITH leads gets a block, even when nothing in it moved. The other side
 // of the case above: zeros are a finding, and only absence of leads is absence.
 func TestARepWithUntouchedLeadsGetsABlockOfZerosNotAnAbsentOne(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	seedLeadFor(t, e, "Untouched", e.Rep1)
 
@@ -99,6 +101,7 @@ func TestARepWithUntouchedLeadsGetsABlockOfZerosNotAnAbsentOne(t *testing.T) {
 // ladder inside the window is counted; the lead row itself cannot say this,
 // because it carries only the status the lead ended on.
 func TestALeadThatClimbedTheLadderThisWeekIsCountedAsAdvanced(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	lead := seedLeadFor(t, e, "Climber", e.Rep1)
 	moveLead(t, e, lead, "contacted")
@@ -121,6 +124,7 @@ func TestALeadThatClimbedTheLadderThisWeekIsCountedAsAdvanced(t *testing.T) {
 // Assembled two weeks on rather than by re-dating the audit row: the log is
 // append-only, by trigger and by grant, so the window is what moves.
 func TestALeadThatMovedBeforeTheWindowIsNotThisWeeksMovement(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	lead := seedLeadFor(t, e, "Old mover", e.Rep1)
 	moveLead(t, e, lead, "contacted")
@@ -140,6 +144,7 @@ func TestALeadThatMovedBeforeTheWindowIsNotThisWeeksMovement(t *testing.T) {
 // THE SCORECARD IS FROZEN. Re-reading a written review returns the figures as
 // they were written, not a fresh count over today's rows.
 func TestTheScorecardIsFrozenWithTheReview(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	lead := seedLeadFor(t, e, "Frozen", e.Rep1)
 	moveLead(t, e, lead, "contacted")
@@ -174,6 +179,7 @@ func TestTheScorecardIsFrozenWithTheReview(t *testing.T) {
 // A REVIEW WRITTEN BEFORE THE SCORECARD EXISTED HAS NONE, and that is not an
 // error. The read path answers nil so the panel draws nothing.
 func TestAReviewWithNoScorecardRowReadsAsAbsentRatherThanFailing(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	written, _, err := e.engine.AssembleFor(e.repCtx, weekClock)
 	if err != nil {
@@ -194,6 +200,7 @@ func TestAReviewWithNoScorecardRowReadsAsAbsentRatherThanFailing(t *testing.T) {
 // second pass, so this calls the freeze directly — otherwise the test would
 // pass on the upstream arbiter and prove nothing about this one.
 func TestFreezingAScorecardTwiceLeavesTheFirstOne(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	written, _, err := e.engine.AssembleFor(e.repCtx, weekClock)
 	if err != nil {
@@ -219,6 +226,7 @@ func TestFreezingAScorecardTwiceLeavesTheFirstOne(t *testing.T) {
 // what a client receives: a block mapped to the wrong field, or not mapped at
 // all, reads to the frontend as "this feature does nothing".
 func TestTheScorecardTravelsOnTheWireWithItsBlocks(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	lead := seedLeadFor(t, e, "Wire", e.Rep1)
 	moveLead(t, e, lead, "contacted")
@@ -248,6 +256,7 @@ func TestTheScorecardTravelsOnTheWireWithItsBlocks(t *testing.T) {
 // back down it must not read as progress — the count is judged from BOTH ends
 // of the transition, mirroring contacts.LeadStatus.Advances.
 func TestALeadPushedBackDownTheLadderIsNotCountedAsAnAdvance(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	lead := seedLeadFor(t, e, "Backwards", e.Rep1)
 	moveLead(t, e, lead, "contacted")
@@ -269,6 +278,7 @@ func TestALeadPushedBackDownTheLadderIsNotCountedAsAnAdvance(t *testing.T) {
 // is read against, so counting closed deals in it understates every rate the
 // panel draws.
 func TestAWonDealLeavesTheOpenDenominator(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	pipeline, openStage, wonStage := integration.DealFixture(t, e.Env)
 	e.SeedDeal(t, "Still working", pipeline, openStage, &e.Rep1)
@@ -302,6 +312,7 @@ func TestAWonDealLeavesTheOpenDenominator(t *testing.T) {
 // whether the rep carried a funnel BY the end of the week under review; a lead
 // that did not exist then says nothing about that week.
 func TestALeadCreatedAfterTheWeekLeavesItsFunnelAbsent(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	seedLeadFor(t, e, "Arrived later", e.Rep1)
 

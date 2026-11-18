@@ -20,6 +20,7 @@ import (
 )
 
 func TestLiveMeetingsUseTheirOwnDealEvidenceAndNeverRaiseTheMailQuestion(t *testing.T) {
+	t.Parallel()
 	f := newDealRefileFixture(t, 0)
 	e := f.o.e
 	integration.ApplyRiverSchema(t)

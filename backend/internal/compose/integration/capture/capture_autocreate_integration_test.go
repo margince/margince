@@ -30,6 +30,7 @@ import (
 // The ADR-0063 auto-create path: a captured thread yields exactly one contact,
 // one company and one employment, and a replay adds nothing.
 func TestCaptureAutoCreatesTheCounterpartyBehindAThread(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync, syncSent := env.e, env.sync, env.syncSent
 	t.Run("a thread becomes one contact, one company, one employment", func(t *testing.T) {
@@ -146,6 +147,7 @@ func TestCaptureAutoCreatesTheCounterpartyBehindAThread(t *testing.T) {
 }
 
 func TestCaptureRecordsProvenanceWithoutTheMessageBody(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	// Both halves read what a capture WROTE, so this test captures its own
@@ -198,6 +200,7 @@ func TestCaptureRecordsProvenanceWithoutTheMessageBody(t *testing.T) {
 // The refusals: an address the workspace owns, one an erasure killed, and a
 // connector acting for nobody. Each keeps the activity and creates no contact.
 func TestCaptureRefusesToDeriveARecord(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	t.Run("a wholly internal message stores nothing at all", func(t *testing.T) {
@@ -251,7 +254,7 @@ func TestCaptureRefusesToDeriveARecord(t *testing.T) {
 		err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			_, err := tx.Exec(context.Background(), `
 				INSERT INTO erasure_suppression (kind, value_hash)
-				VALUES ('email', $1)`, storekit.SuppressionHash("dave@dead.example"))
+				VALUES ('email', $1)`, storekit.SuppressionHash(t.Context(), "dave@dead.example"))
 			return err
 		})
 		if err != nil {

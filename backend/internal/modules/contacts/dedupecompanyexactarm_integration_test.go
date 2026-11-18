@@ -38,6 +38,7 @@ var goEqualCompanyNames = []struct {
 }
 
 func TestTheCompanyNameKeyArmAdmitsEveryGoEqualPair(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	for _, tc := range goEqualCompanyNames {
@@ -71,6 +72,7 @@ func TestTheCompanyNameKeyArmAdmitsEveryGoEqualPair(t *testing.T) {
 // worth SCORING against each other; calling them the same name would offer a
 // reviewer a merge of two legal entities.
 func TestTheExactArmDoesNotFoldAwayALegalForm(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	var admitted bool

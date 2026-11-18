@@ -58,6 +58,7 @@ func own(t *testing.T, e *Env, deal, user ids.UUID) {
 }
 
 func TestARoomRefusesADeactivatedColleagueTheCallerNamed(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.As(e.AdminUser, nil, roomStewardAdmin)
 	dealID := e.SeedWonDealLinkedTo(t)
@@ -91,6 +92,7 @@ func TestARoomRefusesADeactivatedColleagueTheCallerNamed(t *testing.T) {
 // mistake in this request, so the room opens with no steward rather than being
 // refused over a staffing change.
 func TestARoomOpensWithNoStewardWhenTheDealsOwnerHasBeenDeactivated(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.As(e.AdminUser, nil, roomStewardAdmin)
 	dealID := e.SeedWonDealLinkedTo(t)
@@ -114,6 +116,7 @@ func TestARoomOpensWithNoStewardWhenTheDealsOwnerHasBeenDeactivated(t *testing.T
 }
 
 func TestARoomEditRefusesADeactivatedColleagueTheCallerNamed(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.As(e.AdminUser, nil, roomStewardAdmin)
 	dealID := e.SeedWonDealLinkedTo(t)
@@ -138,6 +141,7 @@ func TestARoomEditRefusesADeactivatedColleagueTheCallerNamed(t *testing.T) {
 }
 
 func TestARoomEditThatRepeatsADepartedStewardStillSavesItsTitle(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.As(e.AdminUser, nil, roomStewardAdmin)
 	dealID := e.SeedWonDealLinkedTo(t)
@@ -165,6 +169,7 @@ func TestARoomEditThatRepeatsADepartedStewardStillSavesItsTitle(t *testing.T) {
 }
 
 func TestARoomRefusesAnAgentSeatAsItsSteward(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.As(e.AdminUser, nil, roomStewardAdmin)
 	dealID := e.SeedWonDealLinkedTo(t)

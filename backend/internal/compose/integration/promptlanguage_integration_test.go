@@ -45,6 +45,7 @@ import (
 // says German. Every link is real — the settings write, the workspace
 // transaction, identity.BaseLanguageOf, and promptlang.Rule.
 func TestTheBaseLanguageSetOnTheInstallationReachesThePrompt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.Admin()
 
@@ -76,6 +77,7 @@ func TestTheBaseLanguageSetOnTheInstallationReachesThePrompt(t *testing.T) {
 // opposite choice looks like the consistent one right up until an upgraded
 // installation stops generating briefs.
 func TestAnInstallationThatNeverNamedALanguageStillGetsAPrompt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.Admin()
 
@@ -100,6 +102,7 @@ func TestAnInstallationThatNeverNamedALanguageStillGetsAPrompt(t *testing.T) {
 // the rule names the right language, because that is a settings row and a
 // transaction — which is what this reads back.
 func TestTheDossierAndGrowthFitPromptsCarryTheInstallationsLanguage(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.Admin()
 

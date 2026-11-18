@@ -61,6 +61,7 @@ func (e *dedupeEnv) seedHeldLead(ctx context.Context, t *testing.T, email string
 // that contact: archived as promoted, pointing at the contact, and the contact
 // pointing back.
 func TestCreatingAContactConvertsTheLeadHoldingItsAddressOnlyWhenAsked(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	const email = "typed@held.test"
 	lead := e.seedLead(t, email)
@@ -125,6 +126,7 @@ func (e *dedupeEnv) requireLeadUntouched(ctx context.Context, t *testing.T, lead
 // Mail from somebody who is a lead files on the lead. No contact is made, and
 // the lead stays a lead although they wrote to us.
 func TestCapturedMailFromALeadFilesOnTheLead(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	const email = "wrote@held.test"
@@ -147,6 +149,7 @@ func TestCapturedMailFromALeadFilesOnTheLead(t *testing.T) {
 // The verdict path ensures without owner scope. A lead's address still makes
 // no contact there.
 func TestAWorkspaceEnsureOfALeadMakesNoContact(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	const email = "accepted@held.test"
@@ -166,6 +169,7 @@ func TestAWorkspaceEnsureOfALeadMakesNoContact(t *testing.T) {
 // Capture keeps an unjudged sender's contact to its owner. For a lead there is
 // no such contact, before the verdict or after it.
 func TestAnOwnerScopedCaptureOfALeadMakesNoContact(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	const email = "unjudged@held.test"
@@ -191,6 +195,7 @@ func TestAnOwnerScopedCaptureOfALeadMakesNoContact(t *testing.T) {
 
 // Mail we sent to a lead makes no contact, and nor does their reply.
 func TestOutboundMailToALeadMakesNoContact(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	const email = "cold@held.test"
@@ -214,6 +219,7 @@ func TestOutboundMailToALeadMakesNoContact(t *testing.T) {
 // A historical lead/contact pair stays as it is. A reply lands on the contact
 // and converts neither record.
 func TestMailToAContactBesideALeadLeavesTheLeadAlone(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	const email = "pair@held.test"

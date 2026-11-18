@@ -11,7 +11,6 @@ package finance
 
 import (
 	"errors"
-	"os"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -30,7 +29,7 @@ func (e *financeEnv) linkOf(t *testing.T) ids.UUID {
 
 func (e *financeEnv) ownerScalar(t *testing.T, query string, args ...any) ids.UUID {
 	t.Helper()
-	owner, err := pgx.Connect(e.ctx, os.Getenv("MARGINCE_TEST_DSN"))
+	owner, err := pgx.Connect(e.ctx, e.db.OwnerDSN)
 	if err != nil {
 		t.Fatalf("owner connection: %v", err)
 	}
@@ -50,7 +49,7 @@ func (e *financeEnv) ownerScalar(t *testing.T, query string, args ...any) ids.UU
 // that refused it, or "" when it committed.
 func (e *financeEnv) ownerRefused(t *testing.T, statement string, args ...any) string {
 	t.Helper()
-	owner, err := pgx.Connect(e.ctx, os.Getenv("MARGINCE_TEST_DSN"))
+	owner, err := pgx.Connect(e.ctx, e.db.OwnerDSN)
 	if err != nil {
 		t.Fatalf("owner connection: %v", err)
 	}
@@ -79,6 +78,7 @@ func (e *financeEnv) otherCompany(t *testing.T) ids.UUID {
 }
 
 func TestTheSyncWritesEveryMirroredRowThroughItsCustomerLink(t *testing.T) {
+	t.Parallel()
 	e := setupFinance(t)
 	if _, err := e.store.SyncConnection(e.ctx, e.provider()); err != nil {
 		t.Fatal(err)
@@ -95,7 +95,7 @@ func TestTheSyncWritesEveryMirroredRowThroughItsCustomerLink(t *testing.T) {
 
 func (e *financeEnv) ownerScalarCount(t *testing.T, query string, args ...any) int {
 	t.Helper()
-	owner, err := pgx.Connect(e.ctx, os.Getenv("MARGINCE_TEST_DSN"))
+	owner, err := pgx.Connect(e.ctx, e.db.OwnerDSN)
 	if err != nil {
 		t.Fatalf("owner connection: %v", err)
 	}
@@ -114,6 +114,7 @@ func (e *financeEnv) ownerScalarCount(t *testing.T, query string, args ...any) i
 // The database refuses each way a mirrored row could land on a company its
 // connection never mapped, and a credit note that is not one.
 func TestTheDatabaseRefusesAMisattributedRow(t *testing.T) {
+	t.Parallel()
 	e := setupFinance(t)
 	if _, err := e.store.SyncConnection(e.ctx, e.provider()); err != nil {
 		t.Fatal(err)
@@ -200,6 +201,7 @@ func (e *financeEnv) foreignInvoice(t *testing.T, company ids.UUID) ids.UUID {
 
 // A row mirrored before rows named their link gets its link on the next pass.
 func TestASyncNamesTheLinkOnARowMirroredBeforeRowsNamedOne(t *testing.T) {
+	t.Parallel()
 	e := setupFinance(t)
 	if _, err := e.store.SyncConnection(e.ctx, e.provider()); err != nil {
 		t.Fatal(err)
@@ -219,6 +221,7 @@ func TestASyncNamesTheLinkOnARowMirroredBeforeRowsNamedOne(t *testing.T) {
 // The backfill names the archived link on rows a sync no longer reads, and
 // leaves NULL on a row whose connection never mapped its company.
 func TestTheBackfillNamesTheArchivedLinkAndLeavesAnUnmappedRow(t *testing.T) {
+	t.Parallel()
 	e := setupFinance(t)
 	if _, err := e.store.SyncConnection(e.ctx, e.provider()); err != nil {
 		t.Fatal(err)

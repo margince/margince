@@ -43,6 +43,7 @@ type noopUpdate struct {
 // An update that changes nothing still answers its If-Match: a stale version
 // is version skew, and only the version the row holds goes through.
 func TestAnUpdateThatChangesNothingStillRefusesAStaleIfMatch(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	admin := e.Admin()
 

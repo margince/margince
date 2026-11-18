@@ -14,8 +14,6 @@ import (
 // an answered or closed lead owes nothing.
 func TestLeadSLAFieldsFollowTheClock(t *testing.T) {
 	now := time.Date(2026, 8, 18, 12, 0, 0, 0, time.UTC)
-	leadSLAClock = func() time.Time { return now }
-	t.Cleanup(func() { leadSLAClock = time.Now })
 	routed := now.Add(-DefaultFirstResponseTarget + 10*time.Minute)
 	responded := now.Add(-time.Minute)
 	closed := now
@@ -38,14 +36,14 @@ func TestLeadSLAFieldsFollowTheClock(t *testing.T) {
 			if !tc.routed.IsZero() {
 				routedAt = &tc.routed
 			}
-			deadline, got := leadSLAFields(leadSLAPolicy{enabled: true, target: DefaultFirstResponseTarget}, routedAt, tc.created, tc.firstResponse, tc.archived)
+			deadline, got := leadSLAFields(leadSLAPolicy{enabled: true, target: DefaultFirstResponseTarget, asOf: now}, routedAt, tc.created, tc.firstResponse, tc.archived)
 			if (got == nil) != (tc.want == nil) || (got != nil && *got != *tc.want) {
 				t.Fatalf("sla_state = %v, want %v", got, tc.want)
 			}
 			if tc.archived == nil && deadline == nil {
 				t.Fatal("an open lead always carries its deadline")
 			}
-			offDeadline, offState := leadSLAFields(leadSLAPolicy{target: DefaultFirstResponseTarget}, routedAt, tc.created, tc.firstResponse, tc.archived)
+			offDeadline, offState := leadSLAFields(leadSLAPolicy{target: DefaultFirstResponseTarget, asOf: now}, routedAt, tc.created, tc.firstResponse, tc.archived)
 			if offDeadline != nil || offState != nil {
 				t.Fatalf("with the target switched off a lead carries no SLA field, got deadline %v state %v", offDeadline, offState)
 			}

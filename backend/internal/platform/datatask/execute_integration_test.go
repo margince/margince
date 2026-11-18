@@ -8,7 +8,6 @@ package datatask
 import (
 	"context"
 	"errors"
-	"os"
 	"sync"
 	"testing"
 	"time"
@@ -26,27 +25,8 @@ import (
 
 func executorFixture(t *testing.T) (context.Context, *pgxpool.Pool, *Engine, *time.Time) {
 	t.Helper()
-	dsn := os.Getenv("MARGINCE_TEST_DSN")
-	if dsn == "" {
-		t.Fatal("MARGINCE_TEST_DSN is required; run make test-it")
-	}
 	ctx := principal.SystemActing(principal.WithWorkspaceID(t.Context(), ids.NewV7()), "system:datatask-test")
-	conn, err := pgx.Connect(ctx, dsn)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if err := conn.Close(context.Background()); err != nil {
-			t.Error(err)
-		}
-	}()
-	if err := testdb.EnsureSchema(ctx, conn); err != nil {
-		t.Fatal(err)
-	}
-	if err := testdb.Reset(ctx, conn); err != nil {
-		t.Fatal(err)
-	}
-	pool, err := testdb.Pool(ctx, dsn)
+	pool, err := testdb.Pool(ctx, testdb.New(t).OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -94,6 +74,7 @@ func systemActions(ctx context.Context, t *testing.T, pool *pgxpool.Pool, action
 }
 
 func TestBatchAndProgressRollBackTogether(t *testing.T) {
+	t.Parallel()
 	ctx, pool, e, now := executorFixture(t)
 	before := progressFor(ctx, t, e)
 	e.beforeCommit = func(context.Context, pgx.Tx) error { return errors.New("injected before commit") }
@@ -128,6 +109,7 @@ func TestBatchAndProgressRollBackTogether(t *testing.T) {
 }
 
 func TestFailuresHalveToFloorAndNotifyOnce(t *testing.T) {
+	t.Parallel()
 	ctx, pool, e, now := executorFixture(t)
 	e.tasks[0].Steps[0].Batch = func(context.Context, pgx.Tx, BatchIn) (BatchOut, error) {
 		return BatchOut{}, &pgconn.PgError{Code: "57014", Message: "private cause"}
@@ -164,6 +146,7 @@ func TestFailuresHalveToFloorAndNotifyOnce(t *testing.T) {
 }
 
 func TestConcurrentExecutorsAndSeedsShareOneLedger(t *testing.T) {
+	t.Parallel()
 	ctx, pool, e, _ := executorFixture(t)
 	start := make(chan struct{})
 	entered := make(chan struct{})
@@ -190,6 +173,7 @@ func TestConcurrentExecutorsAndSeedsShareOneLedger(t *testing.T) {
 }
 
 func TestCancellationDoesNotCountAsFailure(t *testing.T) {
+	t.Parallel()
 	ctx, _, e, _ := executorFixture(t)
 	cancelled, cancel := context.WithCancel(ctx)
 	cancel()
@@ -203,6 +187,7 @@ func TestCancellationDoesNotCountAsFailure(t *testing.T) {
 }
 
 func TestVersionRestartAndMissingPrerequisite(t *testing.T) {
+	t.Parallel()
 	ctx, pool, e, _ := executorFixture(t)
 	if _, err := e.Execute(ctx); err != nil {
 		t.Fatal(err)
@@ -233,6 +218,7 @@ func TestVersionRestartAndMissingPrerequisite(t *testing.T) {
 }
 
 func TestConcurrentSeedingAndUnknownRowsPreserveProgress(t *testing.T) {
+	t.Parallel()
 	ctx, pool, e, _ := executorFixture(t)
 	before := progressFor(ctx, t, e)
 	errorsFound := make(chan error, 2)
@@ -273,6 +259,7 @@ func TestConcurrentSeedingAndUnknownRowsPreserveProgress(t *testing.T) {
 }
 
 func TestStaleFailureCannotOverwriteANewerOutcome(t *testing.T) {
+	t.Parallel()
 	ctx, _, e, _ := executorFixture(t)
 	old := progressFor(ctx, t, e)
 	if _, err := e.Execute(ctx); err != nil {
@@ -291,6 +278,7 @@ func TestStaleFailureCannotOverwriteANewerOutcome(t *testing.T) {
 // Seeding records a step without counting its rows, and a count that cannot
 // finish in time leaves the step unestimated while its batches still run.
 func TestASlowEstimateLeavesTheStepUnestimatedAndRunsIt(t *testing.T) {
+	t.Parallel()
 	ctx, pool, e, _ := executorFixture(t)
 	if seeded := progressFor(ctx, t, e); seeded.EstimatedAt != nil || seeded.Estimate != nil {
 		t.Fatalf("seed counted rows: %+v", seeded)

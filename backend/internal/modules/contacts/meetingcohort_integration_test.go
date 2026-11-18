@@ -60,6 +60,7 @@ func (e *dedupeEnv) seedCapturedMeeting(
 // The case from the field: a meeting synced, the attendee became a contact
 // later, and the meeting has to arrive on their record.
 func TestTheRepairFilesAMeetingUnderAnAttendeeWhoArrivedLater(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -107,6 +108,7 @@ func TestTheRepairFilesAMeetingUnderAnAttendeeWhoArrivedLater(t *testing.T) {
 // it, so the guard has to be per-contact or the second attendee is locked out by
 // the first.
 func TestAMeetingReachesEveryAttendeeNotOnlyTheFirst(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -145,6 +147,7 @@ func TestAMeetingReachesEveryAttendeeNotOnlyTheFirst(t *testing.T) {
 // selector offers the retired id, the liveness join drops it as merged, and the
 // sweep reports a drained backlog while the meeting never reaches anyone.
 func TestAMeetingReachesTheSurvivorWhenItsAttendeeRowNamesAMergedRecord(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 

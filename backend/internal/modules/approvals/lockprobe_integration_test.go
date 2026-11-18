@@ -15,7 +15,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -37,6 +36,7 @@ import (
 // afterwards. That makes this fail on a laptop against the bug it describes,
 // instead of only on a loaded runner.
 func TestTheRowLockProbeSeesABackendThatDialsAfterItsFirstLook(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	ctx := context.Background()
 	competing := e.competingTx(t)
@@ -68,11 +68,12 @@ func TestTheRowLockProbeSeesABackendThatDialsAfterItsFirstLook(t *testing.T) {
 			"existed — this run cannot tell a working probe from a blind one")
 	}
 
+	racerDSN := testdb.For(t).OwnerDSN
 	racer := make(chan error, 1)
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		racer <- queueOnAdvisoryLockFromAFreshConnection(ctx, contested)
+		racer <- queueOnAdvisoryLockFromAFreshConnection(ctx, racerDSN, contested)
 	}()
 
 	waitForRowLockWaiter(t, e, blocker, done)
@@ -93,8 +94,8 @@ func TestTheRowLockProbeSeesABackendThatDialsAfterItsFirstLook(t *testing.T) {
 // — which is only after the holder lets go. Its own connection is the point: a
 // pooled one may pre-date the probe's first look, and then it proves nothing
 // about a racer that does not.
-func queueOnAdvisoryLockFromAFreshConnection(ctx context.Context, key int) (err error) {
-	conn, err := pgx.Connect(ctx, os.Getenv("MARGINCE_TEST_DSN"))
+func queueOnAdvisoryLockFromAFreshConnection(ctx context.Context, dsn string, key int) (err error) {
+	conn, err := pgx.Connect(ctx, dsn)
 	if err != nil {
 		return fmt.Errorf("dialling the racer's own connection: %w", err)
 	}

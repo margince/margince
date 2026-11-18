@@ -21,6 +21,7 @@ import (
 )
 
 func TestEmploymentWorkerReconcilesRetainedClaimsWithoutVendorAccess(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := contacts.NewStore(e.DB())
 	created, err := store.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Worker sample", Source: "manual"})

@@ -31,6 +31,7 @@ import (
 // Alphabetically the four phases run closed, delivering, initiative, pursuing —
 // which is the arrangement shuffled, and the case turns on the two disagreeing.
 func TestTheProjectsListSortsPhasesByHowLiveTheWorkIs(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.Admin()
 	company := e.SeedCompany(t, "Acme Systems", &e.Rep1)
@@ -49,6 +50,7 @@ func TestTheProjectsListSortsPhasesByHowLiveTheWorkIs(t *testing.T) {
 
 // A project's company orders by the customer's name.
 func TestTheProjectsListSortsByTheCompanyItDraws(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.Admin()
 
@@ -64,6 +66,7 @@ func TestTheProjectsListSortsByTheCompanyItDraws(t *testing.T) {
 // A lead's source orders by the words the column prints, not by the key stored
 // behind them.
 func TestTheLeadsListSortsBySourceLabelAndNotItsKey(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.Admin()
 
@@ -81,6 +84,7 @@ func TestTheLeadsListSortsBySourceLabelAndNotItsKey(t *testing.T) {
 // A contact's company orders by the employer the row prints, walking the same
 // edge the row walked.
 func TestTheContactsListSortsByTheEmployerItDraws(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.Admin()
 
@@ -123,6 +127,7 @@ func TestTheContactsListSortsByTheEmployerItDraws(t *testing.T) {
 // checked against. Worth saying, because a reader who deleted one of them and
 // saw this test stay green would conclude it holds nothing.
 func TestAnUnreadableEmployerOrdersTheContactsListByNothing(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms)
 
@@ -170,6 +175,7 @@ func TestAnUnreadableEmployerOrdersTheContactsListByNothing(t *testing.T) {
 // every row, so the sort must be too: a page arranged by a company nobody on
 // screen names would order the list by something the reader cannot check.
 func TestAReaderWhoSeesNoEmployerIsOrderedByNone(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 
 	zeta := e.SeedContact(t, "Zeta Contact", &e.Rep1)
@@ -208,6 +214,7 @@ func TestAReaderWhoSeesNoEmployerIsOrderedByNone(t *testing.T) {
 // the last-touch clock — both derived, both read from the expression the row is
 // printed from.
 func TestTheLeadsListSortsByTheDerivedColumnsItDraws(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.Admin()
 	seedLeadSource(t, e, "manual_key", "Manual")
@@ -271,6 +278,7 @@ func replyTo(t *testing.T, e *Env, lead ids.UUID, at time.Time) {
 // names it is refused on every other surface — and read it both ways and the
 // alphabet is recoverable from the order alone.
 func TestAReaderWithoutTheCompanyGrantIsOrderedByNoCompany(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 
 	// Named so the company order and the project order disagree: if the sort

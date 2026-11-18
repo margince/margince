@@ -19,6 +19,7 @@ import (
 // as a contact is. Each stop is written by the code that writes it in
 // production: the withdrawal link press and the hard-bounce report.
 func TestTheSendCheckReadsStopsRecordedOnALead(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name    string
 		stop    func(t *testing.T, e *leadConsentEnv)

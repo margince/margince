@@ -30,6 +30,7 @@ var keyedOnTheOuterThread = regexp.MustCompile(`^\(thread_key = \w+\.thread_key\
 // Sequential scans are off so a test-sized table cannot hide the shape. The
 // probe must still be keyed on the outer thread rather than a whole-index walk.
 func TestTheMailReaderQueueProbesEachThreadsScanRowByKey(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := clocktest.Now(t)
 	var raw []byte

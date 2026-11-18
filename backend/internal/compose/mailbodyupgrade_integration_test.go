@@ -121,7 +121,7 @@ func (o *owedEnv) runMailBodyTask(t *testing.T) datatask.Task {
 // batches so paging is exercised.
 func registeredMailBodyTask(t *testing.T, o *owedEnv) datatask.Task {
 	t.Helper()
-	for _, task := range dataTaskCatalog(o.e.Pool, func() time.Time { return o.now }) {
+	for _, task := range dataTaskCatalog(o.e.Pool, nil, func() time.Time { return o.now }) {
 		if task.ID == mailBodyCompletenessDataTask().ID {
 			for i := range task.Steps {
 				task.Steps[i].Limit = 2
@@ -134,6 +134,7 @@ func registeredMailBodyTask(t *testing.T, o *owedEnv) datatask.Task {
 }
 
 func TestMailStoredBeforeTheUpgradeIsNotTrustedUntilItsOriginalSaysSo(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.now = clocktest.Now(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
@@ -234,6 +235,7 @@ func assertMailBodyReplayChangesNothing(t *testing.T, o *owedEnv, task datatask.
 // guessed at. Nothing is left to check it against, so it is unverifiable, and a
 // second run leaves it so. Mail a member logged is their own whole text.
 func TestMailWithoutAReadableOriginalIsUnverifiable(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.now = clocktest.Now(t)
 	var captured, undecodable, logged ids.UUID
@@ -270,6 +272,7 @@ func TestMailWithoutAReadableOriginalIsUnverifiable(t *testing.T) {
 // The task writes nothing a caller other than the system may ask for, and
 // nothing over a body that changed after it was read.
 func TestTheCompletenessWriterRefusesAStaleBodyAndAMember(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.now = clocktest.Now(t)
 	message := o.weWrite(t, owedMail{to: "pat@customer.example", subject: "Pricing", body: "Text.", at: o.now.Add(-time.Hour)})
@@ -300,6 +303,7 @@ func TestTheCompletenessWriterRefusesAStaleBodyAndAMember(t *testing.T) {
 // A restricted mail refuses every update and is not offered. An unlinked mail
 // is not matched to an original by its Message-ID.
 func TestTheCompletenessTaskSkipsRestrictedAndAmbiguousMail(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.now = clocktest.Now(t)
 	restricted := o.weWrite(t, owedMail{to: "pat@customer.example", subject: "Held", body: "Text.", at: o.now.Add(-time.Hour)})

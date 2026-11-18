@@ -17,6 +17,7 @@ import (
 )
 
 func TestAgentUsageListsEachUserWithALivePassport(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "agent-usage")
 	rep := e.seat(t, "rep", "rep")
 	first, second := e.mintOwnPassport(t, e.admin, []string{"read"}), e.mintOwnPassport(t, e.admin, []string{"read"})
@@ -49,6 +50,7 @@ func TestAgentUsageListsEachUserWithALivePassport(t *testing.T) {
 }
 
 func TestAgentUsageIsRefusedWithoutTheAIUsageGrant(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "agent-usage-rep")
 	rep := e.seat(t, "rep", "rep")
 
@@ -58,6 +60,7 @@ func TestAgentUsageIsRefusedWithoutTheAIUsageGrant(t *testing.T) {
 }
 
 func TestAnAgentCannotReadAgentUsage(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "agent-usage-agent")
 	ctx := principal.WithActor(e.wsCtx(e.admin), principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:x", PassportID: ids.NewV7(),

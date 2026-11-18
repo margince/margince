@@ -108,6 +108,7 @@ func connectThenDemote(t *testing.T) *demotedFixture {
 }
 
 func TestARefusedMembersImportPreviewUnsealsNothingAndAsksNoProvider(t *testing.T) {
+	t.Parallel()
 	f := connectThenDemote(t)
 
 	_, err := f.reg.EstimateBackfill(f.ctx, "gmail", f.user, 6)
@@ -121,6 +122,7 @@ func TestARefusedMembersImportPreviewUnsealsNothingAndAsksNoProvider(t *testing.
 }
 
 func TestARefusedMembersWatchRenewalUnsealsNothingAndAsksNoProvider(t *testing.T) {
+	t.Parallel()
 	f := connectThenDemote(t)
 
 	err := f.reg.RenewWatch(principal.WithWorkspaceID(context.Background(), mustWorkspace(t, f.ctx)), f.conn, "topic")

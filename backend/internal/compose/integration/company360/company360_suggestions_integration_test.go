@@ -66,6 +66,7 @@ func seedUnansweredCall(t *testing.T, e *integration.Env, company ids.UUID) {
 // newer notes, and a rep would read the silent card as "nothing to chase here" —
 // which is the one thing this surface must never say wrongly.
 func TestSuggestionsLookPastTheSectionPageCap(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	svc := company360Service(e)
@@ -124,6 +125,7 @@ func TestSuggestionsLookPastTheSectionPageCap(t *testing.T) {
 // A reply dated after the read's clock has not arrived yet, so it cannot
 // answer the outbound email and silence the chase.
 func TestAFutureDatedReplyDoesNotAnswerTheOutboundEmail(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
@@ -156,6 +158,7 @@ func TestAFutureDatedReplyDoesNotAnswerTheOutboundEmail(t *testing.T) {
 // It needs an account that produces MORE than the card lists and at least one of
 // each kind, or the ordering never binds and the test passes on an accident.
 func TestTheMostUrgentAdviceLeadsAFullCard(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	pipelineID, stage, _ := integration.DealFixture(t, e)
@@ -208,6 +211,7 @@ const maxListedSuggestions = 3
 // the listed part would leave a dismissal in force after a deal it never saw
 // changed.
 func TestSuggestionCountsAreTheAccountsNotTheReads(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	pipelineID, stage, _ := integration.DealFixture(t, e)
@@ -263,6 +267,7 @@ func TestSuggestionCountsAreTheAccountsNotTheReads(t *testing.T) {
 // still see tasks here — so the test also pins the reachability the direct query
 // uses, by linking the only task through the DEAL rather than to the account.
 func TestNoNextStepSeesATaskThePageDoesNot(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	svc := company360Service(e)
@@ -305,6 +310,7 @@ func TestNoNextStepSeesATaskThePageDoesNot(t *testing.T) {
 // deal reader can act on, and withholding it because they cannot read activities
 // would cost them advice they are entitled to.
 func TestSuggestionsSurviveWithoutTheActivityGrant(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	pipelineID, stage, _ := integration.DealFixture(t, e)
@@ -355,6 +361,7 @@ func TestSuggestionsSurviveWithoutTheActivityGrant(t *testing.T) {
 // Everything the advice path asks for EXCEPT the deal grant, at RowScopeAll so
 // a pass cannot be the row clause doing the work.
 func TestStalledDealAdviceIsWithheldWithoutTheDealGrant(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	pipelineID, stage, _ := integration.DealFixture(t, e)
@@ -388,6 +395,7 @@ func TestStalledDealAdviceIsWithheldWithoutTheDealGrant(t *testing.T) {
 // A caller shown neither the timeline nor the pipeline has nothing to be advised
 // from, so the section is omitted and named rather than answering empty.
 func TestSuggestionsAreOmittedWhenNeitherInputReachesTheCaller(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
@@ -433,6 +441,7 @@ func TestSuggestionsAreOmittedWhenNeitherInputReachesTheCaller(t *testing.T) {
 // comes from visibility rather than from holding no company read at all,
 // which a test refusing everybody would also produce.
 func TestBothReadersOfTheDismissalLedgerGateOnTheAccount(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Someone Else's Account", &e.Rep2))

@@ -45,6 +45,9 @@ type ComposedSubscription struct {
 	Unit    extension.Name
 	Version extension.Version
 	Sub     extension.Subscription
+	// composed is the composition the listener was declared in, whose runtime
+	// binding each delivery's Runtime is built over.
+	composed *Extensions
 }
 
 // GroupName is the consumer group this listener consumes on:
@@ -149,7 +152,7 @@ func (c ComposedSubscription) handlerOver(db *database.DB, log *slog.Logger) fun
 		ctx = principal.WithCausationEvent(ctx, env.EventID)
 
 		rt := deliveryRuntimeFor(ctx, string(c.Unit), string(c.Version),
-			"subscription/"+c.Sub.Name, boundExtensionRuntime())
+			"subscription/"+c.Sub.Name, c.composed.binding())
 		defer rt.release()
 		return instrument.Work(ctx, extension.Work{Kind: extension.WorkSubscription, Name: c.Sub.Name, Unit: string(c.Unit)},
 			func(ctx context.Context) error {

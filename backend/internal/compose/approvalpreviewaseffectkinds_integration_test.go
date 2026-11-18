@@ -153,6 +153,7 @@ func (s *promotionSight) requireWaitsForWiderSight(id ids.ApprovalID, secret str
 }
 
 func TestAnAgentsRecordUpdateWaitsForAnApproverWhoCanOpenItsNewCompany(t *testing.T) {
+	t.Parallel()
 	s := newKindSight(t)
 	deal := s.deal("Harbor renewal", s.e.Rep2)
 	company := s.privateCompany("Quiet Holdings", s.e.Rep1)
@@ -166,6 +167,7 @@ func TestAnAgentsRecordUpdateWaitsForAnApproverWhoCanOpenItsNewCompany(t *testin
 // An admin approver reads the plan while the employer is open to everyone,
 // and waits once it is private to Rep1.
 func TestAnAgentsArchiveWaitsForAnApproverWhoCanOpenWhatItDetaches(t *testing.T) {
+	t.Parallel()
 	s := newKindSight(t)
 	s.e.GrantRole(t, s.e.AdminUser, "admin")
 	s.approver = storedMemberSeat(t, s.e, s.e.AdminUser)
@@ -184,6 +186,7 @@ func TestAnAgentsArchiveWaitsForAnApproverWhoCanOpenWhatItDetaches(t *testing.T)
 }
 
 func TestAnAgentsRelinkWaitsForAnApproverWhoCanOpenItsDestination(t *testing.T) {
+	t.Parallel()
 	s := newKindSight(t)
 	buyer := s.e.SeedContact(t, "Open Buyer", &s.e.Rep2)
 	destination := s.e.SeedContact(t, "Private Destination", &s.e.Rep1)
@@ -203,6 +206,7 @@ func TestAnAgentsRelinkWaitsForAnApproverWhoCanOpenItsDestination(t *testing.T) 
 }
 
 func TestAnAgentsCompanyMailWaitsForAnApproverWhoCanOpenWhereItIsFiled(t *testing.T) {
+	t.Parallel()
 	s := newMailSight(t)
 	company := s.privateCompany("Discreet Account", s.e.Rep1)
 	id := s.stageCall(s.agent, approvals.StageInput{Kind: previewSendCompanyEmail, TargetType: "activity"}, fmt.Sprintf(`{
@@ -215,6 +219,7 @@ func TestAnAgentsCompanyMailWaitsForAnApproverWhoCanOpenWhereItIsFiled(t *testin
 }
 
 func TestAnAgentsMergeWaitsForAnApproverWhoCanOpenWhatMoves(t *testing.T) {
+	t.Parallel()
 	s := newKindSight(t)
 	source := s.e.SeedContact(t, "Merge Source", &s.e.Rep2)
 	survivor := s.e.SeedContact(t, "Merge Survivor", &s.e.Rep2)
@@ -237,6 +242,7 @@ func TestAnAgentsMergeWaitsForAnApproverWhoCanOpenWhatMoves(t *testing.T) {
 // run, so it is not shown as ready. The same update proposed by its member
 // directly runs as its decider, and is.
 func TestAnUpdateIsPreviewedAsWhoeverRunsIt(t *testing.T) {
+	t.Parallel()
 	s := newPromotionSight(t, "rep", approverIsAdmin, "admin")
 	deal := s.deal("Harbor expansion", s.e.Rep1)
 	company := s.privateCompany("Admin Only Ltd", s.e.AdminUser)

@@ -31,13 +31,11 @@ func setupBookingApp(t *testing.T) *apptest.AppEnv {
 
 func setupBookingProvider(t *testing.T, extra ...compose.Option) (*apptest.AppEnv, *apptest.BookingProvider) {
 	t.Helper()
-	previous := http.DefaultTransport
-	provider := apptest.NewBookingProvider(previous)
-	http.DefaultTransport = provider
-	t.Cleanup(func() { http.DefaultTransport = previous })
+	provider := apptest.NewBookingProvider(http.DefaultTransport)
 	vault := keyvault.NewMemory()
 	opts := append([]compose.Option{compose.WithKeyvault(vault), compose.WithGmailCapture(compose.GmailConfig{
 		ClientID: "calendar-fixture", ClientSecret: "calendar-fixture", StateKey: "0123456789abcdef0123456789abcdef", PublicBaseURL: "https://mail.example.test",
+		Transport: provider,
 	}, compose.CaptureConfig{})}, extra...)
 	e := apptest.SetupAppWithOptions(t, opts...)
 	e.Vault = vault
@@ -46,10 +44,11 @@ func setupBookingProvider(t *testing.T, extra ...compose.Option) (*apptest.AppEn
 
 // startBookingWorker boots the composed job runner with Google registered behind
 // the fixture's transport, so calendar delivery runs through the real gcal adapter.
-func startBookingWorker(t *testing.T, e *apptest.AppEnv) (*jobs.Runner, <-chan *river.Event, <-chan *river.Event) {
+func startBookingWorker(t *testing.T, e *apptest.AppEnv, provider *apptest.BookingProvider) (*jobs.Runner, <-chan *river.Event, <-chan *river.Event) {
 	t.Helper()
 	db := compose.InstallationDB(e.Pool)
 	registry := capture.NewRegistry(db, capture.NewSink(db), identity.NewServiceFor(db), e.Vault)
-	registry.Register(gcal.New(gcal.NewOAuth(gcal.OAuthConfig{ClientID: "calendar-fixture", ClientSecret: "calendar-fixture"}), gcal.NewAPI(nil, "")))
+	google := &http.Client{Transport: provider}
+	registry.Register(gcal.New(gcal.NewOAuth(gcal.OAuthConfig{ClientID: "calendar-fixture", ClientSecret: "calendar-fixture", HTTPClient: google}), gcal.NewAPI(google, "")))
 	return jobtest.StartTestJobRunner(t, e.Pool, compose.JobRunnerConfig{GmailRegistry: registry, ControllerVault: e.Vault, SendOrigin: compose.SendOrigin{PublicBaseURL: "https://mail.example.test"}})
 }

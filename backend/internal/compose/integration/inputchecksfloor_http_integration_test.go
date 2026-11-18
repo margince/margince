@@ -82,6 +82,7 @@ func twoSellerTeam(t *testing.T, e *apptest.AppEnv, slug string) (me, colleague,
 // is off the team's list and the whole list are refused; the reader's own is
 // not.
 func TestIndividualPerformanceOffRefusesATwoMemberTeamsInputChecks(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	me, colleague, team := twoSellerTeam(t, e, "checks-floor")
 	stages := apptest.DiscoverSeededPipeline(t, e)

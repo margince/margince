@@ -93,6 +93,7 @@ func answerOverHTTP(t *testing.T, handlers Handlers, e *loadEnv, reader, message
 }
 
 func TestAnInvitationIsOpenOnlyToTheSeatItWasSentTo(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	message, _, _ := emailedInvitation(t, e, 24*time.Hour)
 	mine := openInvitationsFor(t, e, e.rep, message)
@@ -105,6 +106,7 @@ func TestAnInvitationIsOpenOnlyToTheSeatItWasSentTo(t *testing.T) {
 }
 
 func TestAnInvitationWhoseEventHasStartedAsksNothing(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	message, _, _ := emailedInvitation(t, e, -time.Hour)
 	if _, ok := openInvitationsFor(t, e, e.rep, message)[message]; ok {
@@ -113,6 +115,7 @@ func TestAnInvitationWhoseEventHasStartedAsksNothing(t *testing.T) {
 }
 
 func TestAnsweringAnInvitationRecordsItAndTakesItOffTheReadersList(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	message, meeting, uid := emailedInvitation(t, e, 24*time.Hour)
 	calendar := &answeringCalendar{}
@@ -148,6 +151,7 @@ func TestAnsweringAnInvitationRecordsItAndTakesItOffTheReadersList(t *testing.T)
 }
 
 func TestAColleagueCannotAnswerSomebodyElsesInvitation(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	message, _, _ := emailedInvitation(t, e, 24*time.Hour)
 	calendar := &answeringCalendar{}
@@ -165,6 +169,7 @@ func TestAColleagueCannotAnswerSomebodyElsesInvitation(t *testing.T) {
 // An invitation that asks us is answered on the calendar. The request pass
 // files no reminder task for it, and a plain request beside it still gets one.
 func TestAnInvitationThatAsksUsFilesNoReminderTask(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	invitation := seedEmailRequest(t, e, "Invitation: Kickoff", "meeting", OwedVerdictAsksUs)
 	e.exec(t, `UPDATE activity SET calendar_method = 'REQUEST', calendar_uid = 'kickoff@google.com' WHERE id = $1`, invitation)
@@ -185,6 +190,7 @@ func TestAnInvitationThatAsksUsFilesNoReminderTask(t *testing.T) {
 
 // A refused answer names what the reader can do, and records nothing.
 func TestARefusedAnswerTellsTheReaderWhyAndRecordsNothing(t *testing.T) {
+	t.Parallel()
 	cases := map[string]struct {
 		refusal  error
 		response crmcontracts.AnswerCalendarInvitationRequestResponse
@@ -227,6 +233,7 @@ func refusalCode(err error) string {
 
 // The mail drawer offers the invited reader the answers, and nobody else.
 func TestTheMailDrawerOffersAnswersOnlyToTheInvitedReader(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	message, _, _ := emailedInvitation(t, e, 24*time.Hour)
 	store := storeKnowing(e).WithClock(func() time.Time { return clocktest.Now(t) })

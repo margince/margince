@@ -25,6 +25,7 @@ import (
 )
 
 func TestNarrowingAMessagesAudienceTakesItsWordsOffTheStoredFinding(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Nordlicht", &e.Rep1))
 	message := seedInboundAsk(t, e, company.UUID, "workspace", databaseNow(t, e))

@@ -78,6 +78,7 @@ func openEvents(t *testing.T, e *apptest.AppEnv) []briefOpenEnvelope {
 // against a literal, so a fixture that ranks a different number of deals moves
 // both together and the test keeps meaning what it says.
 func TestReadingTheBriefEmitsTheOpen(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	stages := apptest.DiscoverSeededPipeline(t, e)
@@ -141,6 +142,7 @@ func TestReadingTheBriefEmitsTheOpen(t *testing.T) {
 // The gate proves the type is in the right class; this proves the ENVELOPE the
 // emit actually stages agrees with it.
 func TestTheBriefOpenNamesNoEntity(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	stages := apptest.DiscoverSeededPipeline(t, e)
@@ -171,6 +173,7 @@ func TestTheBriefOpenNamesNoEntity(t *testing.T) {
 // run as seen — which would answer "did they ever look" while losing "do they
 // come back", and the second is the one a product decision turns on.
 func TestEveryReadOfTheBriefIsItsOwnOpen(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	stages := apptest.DiscoverSeededPipeline(t, e)
@@ -194,6 +197,7 @@ func TestEveryReadOfTheBriefIsItsOwnOpen(t *testing.T) {
 // Home's suggestions and handled-work reads date their window from the brief
 // without showing it, so they are not opens.
 func TestHomesWindowReadsAreNotBriefOpens(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	stages := apptest.DiscoverSeededPipeline(t, e)
@@ -243,6 +247,7 @@ func assertSystemLogRow(t *testing.T, e *apptest.AppEnv, id string) {
 // draw the brief lane under their own scope, view and page. So the open is
 // recorded where the rep reads the brief itself.
 func TestOnlyTheBriefsOwnReadRecordsTheOpen(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	stages := apptest.DiscoverSeededPipeline(t, e)
@@ -288,6 +293,7 @@ func TestOnlyTheBriefsOwnReadRecordsTheOpen(t *testing.T) {
 // The reader has the brief before its open is written, so an open that cannot
 // be written still answers the brief. The refusal is the database's own.
 func TestABriefWhoseOpenCannotBeWrittenIsStillRead(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	stages := apptest.DiscoverSeededPipeline(t, e)

@@ -34,6 +34,7 @@ import (
 )
 
 func TestAPaidLookupIsRefusedOnAContactTheCallerCannotOpen(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 
 	// Somebody else's capture-private contact: readable by its owner alone,

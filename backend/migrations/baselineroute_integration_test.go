@@ -84,6 +84,7 @@ func laterThanBaseline(core dbmigrate.Namespace) int {
 // under its own name and digest, so the datatask requirements and the repairs
 // that read applied_at find their rows.
 func TestAnEmptyDatabaseTakesTheBaselineAndRecordsWhatItReplaces(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	resetSchema(t, conn)
@@ -117,6 +118,7 @@ func TestAnEmptyDatabaseTakesTheBaselineAndRecordsWhatItReplaces(t *testing.T) {
 // schema. The baseline is recorded and never run: run, it would fail on the
 // first table that already exists.
 func TestADatabaseAtTheReleaseRecordsTheBaselineWithoutRunningIt(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	resetSchema(t, conn)
@@ -145,6 +147,7 @@ func TestADatabaseAtTheReleaseRecordsTheBaselineWithoutRunningIt(t *testing.T) {
 // from before a renumber. A refusal that came after the renumber was written
 // would show as a moved row.
 func TestADatabasePartWayThroughTheHistoryIsRefused(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	resetSchema(t, conn)
@@ -183,6 +186,7 @@ func TestADatabasePartWayThroughTheHistoryIsRefused(t *testing.T) {
 // their own files. Up then sees the baseline recorded and applies those files
 // again, which is the same schema the baseline built.
 func TestDownPastTheBaselineRevertsTheReplacedFilesAndUpReappliesThem(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	resetSchema(t, conn)
@@ -213,6 +217,7 @@ func TestDownPastTheBaselineRevertsTheReplacedFilesAndUpReappliesThem(t *testing
 // CI's hold on the claim scripts/migration-baseline.sh verify proves byte for
 // byte: both routes build the same catalog and the same reference rows.
 func TestTheBaselineRouteBuildsWhatTheHistoryBuilds(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	custom, err := migrations.Custom()

@@ -73,7 +73,7 @@ func addAgentSchedulerJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerCo
 	if now == nil {
 		now = time.Now
 	}
-	addDeclaredWorker[AgentSchedulerArgs](reg, &agentSchedulerWorker{svc: cfg.AgentScheduler.Service, identity: identity.NewService(pool), now: now})
+	addDeclaredWorker[AgentSchedulerArgs](reg, &agentSchedulerWorker{svc: cfg.AgentScheduler.Service, identity: IdentityService(pool), now: now})
 	return periodicFor(cfg, AgentSchedulerArgs{})
 }
 

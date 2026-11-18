@@ -18,6 +18,7 @@ import (
 )
 
 func TestLeadExchangesKeepTheirAddressCompanyQuoteAndRetractionScope(t *testing.T) {
+	t.Parallel()
 	e := setupLeadConsent(t)
 	at := time.Date(2020, time.March, 2, 9, 0, 0, 0, time.UTC)
 	request, err := e.store.RecordLeadQualifyingEvent(e.ctx, e.lead, RecordQualifyingEventInput{
@@ -87,6 +88,7 @@ func TestLeadExchangesKeepTheirAddressCompanyQuoteAndRetractionScope(t *testing.
 }
 
 func TestALeadQuoteKeepsItsCheckedDealThroughStagingAndTransmit(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	actor, ok := principal.Actor(e.ctx)
 	if !ok {

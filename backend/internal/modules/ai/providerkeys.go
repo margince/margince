@@ -143,7 +143,7 @@ func KeyLookup(ctx context.Context, cfg *config.Config, log *slog.Logger) config
 // keyHeld reports whether a provider holds a key: one a boot source sets, or a
 // sealed row. Neither is opened.
 func keyHeld(ctx context.Context, cfg *config.Config, s *config.Setting[string]) (bool, error) {
-	if _, locked := cfg.Locked(s.Key()); locked {
+	if _, locked := cfg.Locked(ctx, s.Key()); locked {
 		return true, nil
 	}
 	_, stored, err := config.SealedRef(ctx, cfg, s)

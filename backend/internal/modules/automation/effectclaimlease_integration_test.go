@@ -55,6 +55,7 @@ func claimState(t *testing.T, fx *autoFixture, handler string) (rows int, applie
 // landed. A sibling firing past the lease must be able to apply it, because
 // nothing else ever will — the occurrence has already happened.
 func TestAClaimStrandedByACrashIsReclaimedAfterItsLease(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	db := database.BindTo(fx.pool, ids.From[ids.WorkspaceKind](fx.ws))
 	claims := NewEffectClaims(db)
@@ -90,6 +91,7 @@ func TestAClaimStrandedByACrashIsReclaimedAfterItsLease(t *testing.T) {
 // the direction that must not fail: reclaiming an applied claim writes the
 // record a second time, which is the corruption the claim exists to stop.
 func TestAnAppliedClaimIsNeverReclaimedHoweverOld(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	db := database.BindTo(fx.pool, ids.From[ids.WorkspaceKind](fx.ws))
 	claims := NewEffectClaims(db)
@@ -117,6 +119,7 @@ func TestAnAppliedClaimIsNeverReclaimedHoweverOld(t *testing.T) {
 // only the unapplied row, so a late confirm from a reclaimed firing cannot
 // overwrite the applied_at of the firing that actually landed the record.
 func TestConfirmingAnAlreadyAppliedClaimChangesNothing(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	db := database.BindTo(fx.pool, ids.From[ids.WorkspaceKind](fx.ws))
 	claims := NewEffectClaims(db)
@@ -143,6 +146,7 @@ func TestConfirmingAnAlreadyAppliedClaimChangesNothing(t *testing.T) {
 // the property the claim had before this change, asserted again because the
 // ON CONFLICT clause that carries the lease is the one that could lose it.
 func TestADifferentFingerprintStillTakesItsOwnClaim(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	db := database.BindTo(fx.pool, ids.From[ids.WorkspaceKind](fx.ws))
 	claims := NewEffectClaims(db)

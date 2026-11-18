@@ -72,6 +72,7 @@ func cachedTaskMovedByAWorker(t *testing.T, e *apptest.AppEnv, email, workerWrit
 }
 
 func TestDoneOnACachedTaskAWorkerCompletedSucceedsAndLeavesHome(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Home Done", "admin@homedone.test", "Admin")
 	task, read := cachedTaskMovedByAWorker(t, e, "admin@homedone.test",
@@ -90,6 +91,7 @@ func TestDoneOnACachedTaskAWorkerCompletedSucceedsAndLeavesHome(t *testing.T) {
 }
 
 func TestAStaleDoneOnARenamedTaskRefusesAndHomeThenServesTheNewVersion(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Home Skew", "admin@homeskew.test", "Admin")
 	task, read := cachedTaskMovedByAWorker(t, e, "admin@homeskew.test",

@@ -42,14 +42,6 @@ var roomFixedNow = time.Date(2026, 8, 4, 12, 0, 0, 0, time.UTC)
 
 // roomAgo and roomAhead place a fixture's timestamp against the SAME clock the
 // services under test are given.
-//
-// The database's `now()` is a different clock, and a fixture that mixes the two
-// measures the distance between them: it drifts one day further from the frozen
-// now for every real day that passes. A row seeded at `now() - 20 days` was
-// nearly 20 days old to the frozen clock the week this suite was written, and
-// exactly 6.9 days old on 2026-08-17 — one hour under the seven-day rule the
-// gone-quiet rung applies, which is the day the suite began failing with nothing
-// changed but the date.
 func roomAgo(d time.Duration) time.Time { return roomFixedNow.Add(-d) }
 
 // roomTomorrow is a day after the frozen now: comfortably inside the 72-hour
@@ -97,6 +89,7 @@ func contactRoomService(e *Env) *contact360.Service {
 // withheld, which is the disclosure existence-hiding is for. A colleague's
 // contact leaves the caller's row scope through capture privacy.
 func TestContact360RefusesAContactOutsideTheCallersRowScope(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	theirs := e.SeedContact(t, "Their Contact", &e.Rep3)
 	e.MakeCapturePrivate(t, "contact", theirs, e.Rep3)
@@ -112,6 +105,7 @@ func TestContact360RefusesAContactOutsideTheCallersRowScope(t *testing.T) {
 // forbidden are different facts, and a page that renders them the same way
 // tells the reader a relationship is cold when it is only invisible.
 func TestContact360NamesTheSectionsACallerMayNotRead(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	mine := e.SeedContact(t, "My Contact", &e.Rep1)
 
@@ -151,6 +145,7 @@ func TestContact360NamesTheSectionsACallerMayNotRead(t *testing.T) {
 // corrected one shows the human's value. The claim key is the claim's PATH, so
 // this has to survive the row being re-derived rather than re-read.
 func TestCorrectionLedgerSurvivesRederivation(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
@@ -206,19 +201,11 @@ func TestCorrectionLedgerSurvivesRederivation(t *testing.T) {
 // The other direction, which the test above passes without: a correction must
 // not outlive the value it was correcting.
 //
-// The sequence is real and every step of it is an ordinary day. A pass writes a
-// title; a human reads it, disagrees, and records their own; then something
-// writes a newer, better value to the same field — an accepted research claim,
-// a fresh enrichment, an edit through another door — and contact_profile_field's
-// updated_at moves. Without a recency check the page keeps serving the human's
-// correction, and the reader is told the current value is one the record does
-// not hold. Asked what somebody's title is, an assistant answers with a value
-// no row carries, which reads as a hallucination and is a data contradiction.
-//
 // Driven against a REAL row rather than the ruling alone, because the ruling is
 // only half the fix: it has to be handed the date the VALUE took its current
 // form, and a reader passing the wrong clock would satisfy every unit case.
 func TestACorrectionDoesNotOutliveTheValueItCorrected(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
@@ -301,6 +288,7 @@ func TestACorrectionDoesNotOutliveTheValueItCorrected(t *testing.T) {
 // The verdict names what the client RENDERED, so the comparison is an equality
 // and the clocks stop mattering.
 func TestACorrectionIsAboutTheValueTheReaderHadInFrontOfThem(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
@@ -390,6 +378,7 @@ func TestACorrectionIsAboutTheValueTheReaderHadInFrontOfThem(t *testing.T) {
 //
 // Both stamps are the server's own, so they rank. The stale one is refused.
 func TestAStaleCorrectionDoesNotOverwriteTheVerdictAboutTheValueThatStands(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
@@ -455,6 +444,7 @@ func TestAStaleCorrectionDoesNotOverwriteTheVerdictAboutTheValueThatStands(t *te
 // The write is gated on the SUBJECT's own grant. A caller who may read a
 // contact but not edit them cannot overrule what the system says about them.
 func TestCorrectionLedgerRefusesAWriteWithoutTheSubjectsUpdateGrant(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
 
@@ -474,6 +464,7 @@ func TestCorrectionLedgerRefusesAWriteWithoutTheSubjectsUpdateGrant(t *testing.T
 // A verdict about a capture-private contact is a not-found, so the endpoint
 // cannot be used to probe which record ids exist.
 func TestCorrectionLedgerRefusesASubjectOutsideRowScope(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	theirs := e.SeedContact(t, "Their Contact", &e.Rep3)
 	e.MakeCapturePrivate(t, "contact", theirs, e.Rep3)
@@ -491,6 +482,7 @@ func TestCorrectionLedgerRefusesASubjectOutsideRowScope(t *testing.T) {
 // Re-deciding replaces rather than appends: a verdict is the current answer to
 // "has a human decided this", and two answers is no answer.
 func TestCorrectionLedgerKeepsOneVerdictPerClaim(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)
@@ -544,6 +536,7 @@ func TestCorrectionLedgerKeepsOneVerdictPerClaim(t *testing.T) {
 // subject's title, employer and the verbatim sentence naming them survive an
 // erasure the controller certified complete.
 func TestErasureReachesTheEnrichmentSidecarAndTheLedger(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
@@ -582,6 +575,7 @@ func TestErasureReachesTheEnrichmentSidecarAndTheLedger(t *testing.T) {
 // not get; this proves the sections actually assemble from real rows — a page
 // that refuses correctly and renders nothing is not a working page.
 func TestContact360AssemblesEverySectionFromRealRows(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	company := e.SeedCompany(t, "ScaleCommerce", &e.Rep1)
@@ -658,6 +652,7 @@ func TestContact360AssemblesEverySectionFromRealRows(t *testing.T) {
 // away, a reply arrives, and the page stays silent about the thing that just
 // changed. Keyed on the evidence, it re-arms.
 func TestADismissalHoldsUntilTheEvidenceMoves(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
@@ -730,6 +725,7 @@ func contactChanges(ctx context.Context, t *testing.T, e *Env, contactID ids.Con
 // what it reports comes from the timeline rather than from a stored number —
 // which is the whole reason there is no table.
 func TestRelationshipChangesAreDerivedFromTheTimeline(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
@@ -765,6 +761,7 @@ func TestRelationshipChangesAreDerivedFromTheTimeline(t *testing.T) {
 // A contact nobody has ever spoken to has not gone quiet — they were never
 // loud. Saying otherwise turns every dormant record into an alert.
 func TestRelationshipChangesSayNothingAboutAContactWithNoHistory(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)
@@ -781,6 +778,7 @@ func TestRelationshipChangesSayNothingAboutAContactWithNoHistory(t *testing.T) {
 // The changes explain a score, and both are reads of the same record — so a
 // contact outside the caller's row scope is a not-found here too.
 func TestRelationshipChangesRefuseAContactOutsideRowScope(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	theirs := e.SeedContact(t, "Their Contact", &e.Rep3)
 	e.MakeCapturePrivate(t, "contact", theirs, e.Rep3)
@@ -796,6 +794,7 @@ func TestRelationshipChangesRefuseAContactOutsideRowScope(t *testing.T) {
 // would vanish at a merge nobody expected to lose it — and the row would
 // outlive the merged-away record's own archival.
 func TestMergeCarriesTheEnrichmentSidecarToTheSurvivor(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	survivor := e.SeedContact(t, "Anna Weber", &e.Rep1)
@@ -874,19 +873,11 @@ func TestMergeCarriesTheEnrichmentSidecarToTheSurvivor(t *testing.T) {
 // A captured channel message reaches the page NAMING THE TRANSPORT THAT CARRIED
 // IT, and this test exists because it did not.
 //
-// Since ADR-0107/A158 the kind says only that an interaction was a message —
-// which transport carried it is `channel_provider`, a separate column. The 360's
-// timeline read is a hand-written sibling of activities.activityColumns, and
-// when the narrowing added the column there, nothing pointed at the copy. So
-// every activity on every contact page reported a null provider: the memory card
-// rendered "message" where it should have said the transport's name, and the
-// composer could not tell a contact reachable on a unit's channel from one
-// reachable nowhere.
-//
 // The guard is a ROW-TO-PAYLOAD assertion rather than a source grep, because
 // what regressed was a SELECT list — a grep for the column name would have
 // passed on a query that selected it into a variable nobody scanned.
 func TestTheContact360TimelineNamesTheTransportThatCarriedAMessage(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	mine := e.SeedContact(t, "Luu Nguyen Thanh", &e.Rep1)
@@ -932,6 +923,7 @@ func TestTheContact360TimelineNamesTheTransportThatCarriedAMessage(t *testing.T)
 // for "version" would pass on a query that selected it into a variable
 // nobody scanned onto the wire row.
 func TestTheContact360TimelineCarriesTheVersionAWriteNeeds(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	mine := e.SeedContact(t, "Version Carrier", &e.Rep1)
@@ -960,18 +952,11 @@ func TestTheContact360TimelineCarriesTheVersionAWriteNeeds(t *testing.T) {
 
 // The THIRD instance of the same defect class, and the one a customer met.
 //
-// source_system is what says a meeting was logged as a transcript. The contact
-// timeline's hand-written SELECT did not carry it, so a transcript logged
-// against a contact reached that contact's own history as an ordinary meeting:
-// no card offering its reading, no proposal count, nothing to open. The same
-// activity showed all of it on the company and on the deal, which read through
-// activities.activityColumns — so the contact who was actually in the room was
-// the one place the reading was invisible.
-//
 // A row-to-payload assertion again, for the reason the siblings give: what
 // regressed is a SELECT list, and a grep for the column name passes on a query
 // that selects it into a variable nobody scans.
 func TestTheContact360TimelineSaysAMeetingCameFromATranscript(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	mine := e.SeedContact(t, "Transcript Speaker", &e.Rep1)

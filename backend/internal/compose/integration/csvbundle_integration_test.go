@@ -14,6 +14,7 @@ import (
 )
 
 func TestAZipUploadProfilesEveryFileAndListsWhatItIgnores(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	body := zipBytes(t, map[string]string{
 		"export/companies.csv": "\ufeffref,name,domain\nCO-1,Acme,acme.example\n",
@@ -44,6 +45,7 @@ func TestAZipUploadProfilesEveryFileAndListsWhatItIgnores(t *testing.T) {
 }
 
 func TestAZipWithAFileThatIsNotUTF8IsRefusedNamingTheFile(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	body := zipBytes(t, map[string]string{"companies.csv": "name\nM\xfcller GmbH\n"})
 	raw, status := postZipFile(t, e, "x.zip", body)
@@ -53,6 +55,7 @@ func TestAZipWithAFileThatIsNotUTF8IsRefusedNamingTheFile(t *testing.T) {
 }
 
 func TestACSVUploadWithoutATypeIsStillRefused(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	if status, errs := uploadRefusal(t, e, "", prospectCSV); status != http.StatusUnprocessableEntity || len(errs) == 0 || errs[0].Field != "object" {
 		t.Fatalf("status %d errs %+v, want 422 on object", status, errs)
@@ -60,6 +63,7 @@ func TestACSVUploadWithoutATypeIsStillRefused(t *testing.T) {
 }
 
 func TestAZipHoldingOneTypeTwiceIsRefusedAsABundle(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	body := zipBytes(t, map[string]string{"companies.csv": "name\nAcme\n", "a/company.csv": "name\nBeta\n"})
 	raw, status := postZipFile(t, e, "x.zip", body)
@@ -72,6 +76,7 @@ func TestAZipHoldingOneTypeTwiceIsRefusedAsABundle(t *testing.T) {
 // .csv. The server knows the ZIP by its content and reads each part's type from
 // its file name, as the contract states.
 func TestAZipSentWithAnObjectIsProfiledByItsFileNames(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	body := zipBytes(t, map[string]string{"companies.csv": "ref,name\nCO-1,Acme\n"})
 	raw, status := importjobtest.PostCSVFile(t, e, "lead", string(body))

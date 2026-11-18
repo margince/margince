@@ -56,6 +56,7 @@ func leadScoreOf(t *testing.T, e *integration.Env, leadID ids.UUID) (displayed i
 // A lead minted by capture opens with the score and history point that
 // CreateLead gives a hand-created lead with the same title and origin.
 func TestACapturedLeadOpensWithTheScoreAHandCreatedLeadGets(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	var origin string
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {

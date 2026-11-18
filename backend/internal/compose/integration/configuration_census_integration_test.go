@@ -224,6 +224,7 @@ func templateMatch(template, requested string) (params int, ok bool) {
 // The contract is held to writes on a response's own path and to each refusal
 // seen here. Which other handler reaches a lock is a call graph nothing lists.
 func TestEverySettingsResponseReportsItsLocks(t *testing.T) {
+	t.Parallel()
 	doc := loadContract(t)
 	surfaces := lockedSurfaces()
 	var covered []string
@@ -241,8 +242,8 @@ func TestEverySettingsResponseReportsItsLocks(t *testing.T) {
 	}
 	environ, envOf := everyStoredSettingSet(t)
 	envOf["capture.google_app"] = "MARGINCE_GMAIL_CLIENT_ID"
-	apptest.BindEnv(t, append(environ, "MARGINCE_GMAIL_CLIENT_ID="+gmailEnvClientID, "MARGINCE_GMAIL_CLIENT_SECRET="+gmailEnvSecret))
-	e, _ := apptest.SetupGoogleConnect(t, gmailEnvClientID, gmailEnvSecret)
+	boot := apptest.LoadEnv(t, append(environ, "MARGINCE_GMAIL_CLIENT_ID="+gmailEnvClientID, "MARGINCE_GMAIL_CLIENT_SECRET="+gmailEnvSecret))
+	e, _ := apptest.SetupGoogleConnect(t, gmailEnvClientID, gmailEnvSecret, compose.WithConfig(boot))
 
 	reported := map[string]bool{}
 	for _, s := range surfaces {

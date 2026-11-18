@@ -22,6 +22,7 @@ func strangerMail(msgID string) []byte {
 }
 
 func TestSharedMailThatArrivesFirstFilesUnderTheExistingContactAndMintsNoneForAStranger(t *testing.T) {
+	t.Parallel()
 	s := newSharedMailboxSuite(t)
 	e := s.e
 	box := ids.UUID(s.connect(t, e.Team1).Id)
@@ -85,6 +86,7 @@ func mailFrom(msgID, from string) []byte {
 }
 
 func TestSharedMailFilesOnlyUnderAContactSomeReaderMayRead(t *testing.T) {
+	t.Parallel()
 	s := newSharedMailboxSuite(t)
 	e := s.e
 	box := ids.UUID(s.connect(t, e.Team1).Id)

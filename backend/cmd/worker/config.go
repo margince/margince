@@ -29,6 +29,9 @@ import (
 
 // workerConfig is the parsed boot configuration of the worker process.
 type workerConfig struct {
+	// extensions is the composition's extension state, registered before
+	// anything else runs and handed to every lane that serves a unit.
+	extensions          *compose.Extensions
 	dataTasksPace       time.Duration
 	databaseConnections int
 	databaseCache       int
@@ -80,8 +83,7 @@ type workerConfig struct {
 }
 
 // loadWorkerConfig resolves the boot settings from args and environ, and
-// reports every fault of the configuration in one error. Like the api's, it
-// hands compose the result before anything composes.
+// reports every fault of the configuration in one error.
 func loadWorkerConfig(args, environ []string) (workerConfig, *config.Config, error) {
 	reg, src, posture, err := workerSources(args, environ)
 	if err != nil {
@@ -94,8 +96,17 @@ func loadWorkerConfig(args, environ []string) (workerConfig, *config.Config, err
 	if err != nil {
 		return workerConfig{}, nil, fmt.Errorf("worker: %w", err)
 	}
-	compose.UseConfig(loaded)
 	return fromRegistry(loaded, posture), loaded, nil
+}
+
+// bootWorkerConfig is loadWorkerConfig for the process that boots. Like the
+// api's, it hands compose the result before anything composes.
+func bootWorkerConfig(args, environ []string) (workerConfig, *config.Config, error) {
+	cfg, loaded, err := loadWorkerConfig(args, environ)
+	if err == nil {
+		compose.UseConfig(loaded)
+	}
+	return cfg, loaded, err
 }
 
 // workerSources are what the worker loads, for a boot and a --check-config

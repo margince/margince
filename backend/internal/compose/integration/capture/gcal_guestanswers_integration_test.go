@@ -82,6 +82,7 @@ func readMeeting(t *testing.T, e *integration.SearchEnv, meeting ids.UUID) crmco
 // A meeting past the party cap names every outside guest by address, files the
 // meeting under none of them, makes no contact and credits nobody.
 func TestACrowdedMeetingNamesItsOutsideGuestsAndCreditsNone(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	colleague := seatFor(t, e, guestColleagueA)
@@ -135,6 +136,7 @@ func TestACrowdedMeetingNamesItsOutsideGuestsAndCreditsNone(t *testing.T) {
 
 // Past connector.MaxGuestsPastCap the outside guests are counted, not stored.
 func TestACrowdBeyondTheBoundIsCountedNotStored(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	seatFor(t, e, guestColleagueA)
@@ -164,6 +166,7 @@ func TestACrowdBeyondTheBoundIsCountedNotStored(t *testing.T) {
 // Each guest's answer is stored and shown: on the guest list, and for the
 // colleagues and linked contacts beside it.
 func TestEachGuestsAnswerIsStoredAndShown(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	colleagueA, colleagueB := seatFor(t, e, guestColleagueA), seatFor(t, e, guestColleagueB)
@@ -218,6 +221,7 @@ func TestEachGuestsAnswerIsStoredAndShown(t *testing.T) {
 // A later sync changes an answer in place and audits it. A colleague who
 // declines loses the seat the roster gave them and stays named by address.
 func TestALaterSyncChangesAnAnswer(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	colleague := seatFor(t, e, guestColleagueA)

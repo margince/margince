@@ -28,6 +28,7 @@ import (
 )
 
 func TestAWeekForecastResolvesThroughTheInstallationZone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	// A zone well east of UTC, so a Monday stamped UTC and a Monday stamped
 	// locally are different instants and a route that confuses them fails.
@@ -71,6 +72,7 @@ func TestAWeekForecastResolvesThroughTheInstallationZone(t *testing.T) {
 // the forecast has to agree with them or a week's readings and a week's review
 // would be about different weeks with nothing saying so.
 func TestTheForecastWeekIsTheWeekTheReviewIsAbout(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	at := time.Date(2026, 6, 3, 9, 0, 0, 0, time.UTC)
 
@@ -102,6 +104,7 @@ func TestTheForecastWeekIsTheWeekTheReviewIsAbout(t *testing.T) {
 // answered about the week that ended Sunday the 31st — a whole week early, with
 // nothing on the page saying the window had moved.
 func TestADayNamedWestOfUTCResolvesToItsOwnWeek(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	if _, err := integration.OwnerConn(t).Exec(context.Background(),
 		`UPDATE setting SET value = '"America/Los_Angeles"'::jsonb WHERE key = 'installation.timezone'`); err != nil {
@@ -134,6 +137,7 @@ func TestADayNamedWestOfUTCResolvesToItsOwnWeek(t *testing.T) {
 // the west-of-UTC bug above, and the reason the date is anchored at the
 // transport rather than guessed at in the seam.
 func TestTheCurrentInstantResolvesToTheWeekTheReaderIsStandingIn(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	if _, err := integration.OwnerConn(t).Exec(context.Background(),
 		`UPDATE setting SET value = '"Asia/Tokyo"'::jsonb WHERE key = 'installation.timezone'`); err != nil {

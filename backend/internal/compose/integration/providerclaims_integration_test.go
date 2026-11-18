@@ -147,6 +147,7 @@ func claimAndRunState(t *testing.T, e *Env, contactID ids.UUID, runID string) (c
 // Art. 17, the delete arm: the values go, the run stays as spend and names
 // nobody.
 func TestErasureRemovesProviderClaimsAndDetachesTheRunsThatBoughtThem(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contactID := seedSubject(t, e)
 	runID := seedPurchase(t, e, contactID)
@@ -190,6 +191,7 @@ func TestErasureRemovesProviderClaimsAndDetachesTheRunsThatBoughtThem(t *testing
 // too. Keying the erasure on contact_id alone erases one row of a contact who
 // exists as two.
 func TestErasureReachesAnArchivedDuplicatesPurchasedClaims(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	live := seedSubject(t, e)
 
@@ -230,6 +232,7 @@ func TestErasureReachesAnArchivedDuplicatesPurchasedClaims(t *testing.T) {
 // row standing, so nothing cascades, and without its own statements the page
 // would show a bought email beside an "Erased Subject" name.
 func TestRetentionAnonymizeAlsoRemovesProviderClaims(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	SeedRetentionPolicies(t, e)
 	contactID := seedSubject(t, e)
@@ -248,7 +251,7 @@ func TestRetentionAnonymizeAlsoRemovesProviderClaims(t *testing.T) {
 
 	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(os.Stderr, nil)))
 	SettleIntoInstall(t, e)
-	if err := svc.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
+	if err := svc.EvaluateInstallation(RetentionPassCtx(context.Background(), e.WS)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -279,6 +282,7 @@ func TestRetentionAnonymizeAlsoRemovesProviderClaims(t *testing.T) {
 // Art. 15: a subject asking what we hold gets the bought values AND the fact
 // that we went out and bought them.
 func TestSARHandsBackTheProviderClaimsAndTheRunHistory(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contactID := seedSubject(t, e)
 	seedPurchase(t, e, contactID)
@@ -304,6 +308,7 @@ func TestSARHandsBackTheProviderClaimsAndTheRunHistory(t *testing.T) {
 // A merge brings two purchases together, and both were paid for: PI-AC-11
 // says the survivor shows what BOTH sides bought.
 func TestMergeKeepsBothSidesPurchasedClaims(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	// Two DISTINCT subjects, seeded here rather than through seedSubject:
 	// that helper writes one fixed address, and a merge needs two records
@@ -337,6 +342,7 @@ func TestMergeKeepsBothSidesPurchasedClaims(t *testing.T) {
 // the live-run unique index admits only one of — so the merge must resolve it
 // rather than let the relink fail or silently drop a purchase.
 func TestMergeKeepsBothLiveRunsWhenEitherMayHaveBeenPaid(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	survivor := seedMergeSubject(t, e, "Bea Survivor")
 	source := seedMergeSubject(t, e, "Bea Source")
@@ -382,6 +388,7 @@ func TestMergeKeepsBothLiveRunsWhenEitherMayHaveBeenPaid(t *testing.T) {
 // rather than carried over: the merged-away record has stopped being a
 // subject, and nothing was charged.
 func TestMergeCancelsTheMergedAwayRecordsUnspentRun(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	survivor := seedMergeSubject(t, e, "Cara Survivor")
 	source := seedMergeSubject(t, e, "Cara Source")

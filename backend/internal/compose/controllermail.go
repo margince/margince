@@ -236,7 +236,7 @@ func controllerLetterheadTx(ctx context.Context, tx pgx.Tx) (string, string, err
 	if err != nil {
 		return "", "", err
 	}
-	identity, err := config.StoredApplyTx(ctx, tx, loadedConfig(), consent.ControllerIdentity)
+	identity, err := config.StoredApplyTx(ctx, tx, loadedConfig(ctx), consent.ControllerIdentity)
 	if err != nil {
 		return "", "", err
 	}

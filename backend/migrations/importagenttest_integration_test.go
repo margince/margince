@@ -29,6 +29,7 @@ func moveAs(t *testing.T, conn *pgx.Conn, id, status, actorType, actorID string)
 }
 
 func TestAnAgentHoldsOneTestRunAtATime(t *testing.T) {
+	t.Parallel()
 	conn := connect(t, ownerDSNOf(t))
 	headSchema(t, conn)
 	seed := func(ref string) string {
@@ -56,6 +57,7 @@ func TestAnAgentHoldsOneTestRunAtATime(t *testing.T) {
 }
 
 func TestTheAgentTestDownMigrationDropsItsIndex(t *testing.T) {
+	t.Parallel()
 	conn := connect(t, ownerDSNOf(t))
 	headSchema(t, conn)
 	ctx := context.Background()

@@ -78,6 +78,7 @@ func archiveWroteTheShape(t *testing.T, e *Env, entity ids.UUID, eventType strin
 }
 
 func TestAMemberArchivesTheNotesTasksCallsAndMeetingsTheyLogged(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	rep := asTeam1Member(e, e.Rep1, ownArchivePerms)
 	mine := e.SeedContact(t, "Mine", &e.Rep1)
@@ -100,6 +101,7 @@ func TestAMemberArchivesTheNotesTasksCallsAndMeetingsTheyLogged(t *testing.T) {
 }
 
 func TestAMemberCannotArchiveAColleaguesHandLoggedMeeting(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	rep := asTeam1Member(e, e.Rep1, ownArchivePerms)
 	mine := e.SeedContact(t, "Mine", &e.Rep1)
@@ -118,6 +120,7 @@ func TestAMemberCannotArchiveAColleaguesHandLoggedMeeting(t *testing.T) {
 }
 
 func TestCapturedEntriesStayTheManagersToArchive(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	rep := asTeam1Member(e, e.Rep1, ownArchivePerms)
 	mine := e.SeedContact(t, "Mine", &e.Rep1)
@@ -147,6 +150,7 @@ func TestCapturedEntriesStayTheManagersToArchive(t *testing.T) {
 // A calendar copy that folds onto a hand-logged meeting brings its import
 // with it. The meeting is then the provider's record too.
 func TestAHandLoggedMeetingTheCalendarCopyFoldedOntoIsNotTheAuthorsToArchive(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	rep := asTeam1Member(e, e.Rep1, ownArchivePerms)
 	contact := e.SeedContact(t, "Fold Buyer", &e.Rep1)
@@ -194,6 +198,7 @@ func TestAHandLoggedMeetingTheCalendarCopyFoldedOntoIsNotTheAuthorsToArchive(t *
 }
 
 func TestANoteAnAgentLoggedForAMemberIsTheirsToArchive(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	elsewhere := e.SeedContact(t, "Other team's", &e.Rep3)
 	forMe := logOwnActivity(e.AgentFor(t, e.Rep1, []ids.UUID{e.Team1}, ownArchivePerms), t, e, "note", elsewhere)
@@ -209,6 +214,7 @@ func TestANoteAnAgentLoggedForAMemberIsTheirsToArchive(t *testing.T) {
 }
 
 func TestTheOwnerOfADealArchivesIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	rep := asTeam1Member(e, e.Rep1, ownArchivePerms)
@@ -235,6 +241,7 @@ func TestTheOwnerOfADealArchivesIt(t *testing.T) {
 }
 
 func TestADealTheRepNamedThemselvesOwnerOfStaysTheManagersToArchive(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	rep := asTeam1Member(e, e.Rep1, ownArchivePerms)
@@ -287,6 +294,7 @@ var deleteOnlyPerms = principal.Permissions{
 }
 
 func TestADeleteOnlyRoleReadsArchivableWhereItMayArchive(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	archiver := asTeam1Member(e, e.Rep1, deleteOnlyPerms)
@@ -344,6 +352,7 @@ func assertDealArchive(as context.Context, t *testing.T, e *Env, deal ids.DealID
 }
 
 func TestTheLatestOwnerChangeDecidesWhetherTheOwnerArchives(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	rep := asTeam1Member(e, e.Rep1, ownArchivePerms)

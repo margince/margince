@@ -110,6 +110,7 @@ func reaches(t *testing.T, e *Env, activity, company ids.UUID) bool {
 }
 
 func TestMailFromBeforeAnEdgeWasFirstObservedDoesNotReachTheEmployer(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	newco := seedEmployerOnDomain(t, e, "Newco", "newco.test")
 	newJob := seedMailFrom(t, "ann@newco.test", mailAtTheNewJob)
@@ -127,6 +128,7 @@ func TestMailFromBeforeAnEdgeWasFirstObservedDoesNotReachTheEmployer(t *testing.
 // This case fails if NULL is ever read as "unknown". Every edge was undated
 // before capture dated any, and an undated edge reaches all the contact's mail.
 func TestMailReachesTheEmployerThroughAnUndatedEdge(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	newco := seedEmployerOnDomain(t, e, "Newco", "newco.test")
 	ann := e.SeedContact(t, "Ann", &e.Rep1)
@@ -144,6 +146,7 @@ func TestMailReachesTheEmployerThroughAnUndatedEdge(t *testing.T) {
 // A start date a user supplied outranks what capture observed, in either
 // direction; this is the direction that widens.
 func TestAStartDateAUserSuppliedWinsOverTheFirstObservation(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	newco := seedEmployerOnDomain(t, e, "Newco", "newco.test")
 	newJob := seedMailFrom(t, "ann@newco.test", mailAtTheNewJob)
@@ -183,6 +186,7 @@ func companyClock(t *testing.T, e *Env, company ids.UUID) *time.Time {
 // The stored clock counts the same mail the walk does. An undated edge counts
 // all of it; a start date supplied later takes the older mail back out.
 func TestTheCompanyClockCountsOnlyMailFromWhileTheContactWorkedThere(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	newco := seedEmployerOnDomain(t, e, "Newco", "newco.test")
 	ann := e.SeedContact(t, "Ann", &e.Rep1)
@@ -208,6 +212,7 @@ func TestTheCompanyClockCountsOnlyMailFromWhileTheContactWorkedThere(t *testing.
 }
 
 func TestTheCompanyClockIgnoresMailFromBeforeTheFirstObservation(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	newco := seedEmployerOnDomain(t, e, "Newco", "newco.test")
 	newJob := seedMailFrom(t, "ann@newco.test", mailAtTheNewJob)
@@ -230,6 +235,7 @@ func TestTheCompanyClockIgnoresMailFromBeforeTheFirstObservation(t *testing.T) {
 // A start date begins at UTC midnight whatever zone the session runs in. So a
 // pooled connection with another TimeZone gives the same answer.
 func TestAStartDateBoundsTheSameInEverySessionZone(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	newco := seedEmployerOnDomain(t, e, "Newco", "newco.test")
 	ann := e.SeedContact(t, "Ann", &e.Rep1)

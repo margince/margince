@@ -78,8 +78,6 @@ type apiConfig struct {
 // loadAPIConfig resolves the boot settings from args and environ and checks the
 // ones that read two settings. Every fault this layer sees is reported in one
 // error: one fault per boot made starting the binary by hand a guessing game.
-// It hands compose the result before anything composes, so every stored
-// setting a boot source sets is locked.
 func loadAPIConfig(args, environ []string) (apiConfig, *config.Config, error) {
 	reg, src, posture, err := apiSources(args, environ)
 	if err != nil {
@@ -96,8 +94,18 @@ func loadAPIConfig(args, environ []string) (apiConfig, *config.Config, error) {
 	if err != nil {
 		return apiConfig{}, nil, bootError(err)
 	}
-	compose.UseConfig(loaded)
 	return cfg, loaded, nil
+}
+
+// bootAPIConfig is loadAPIConfig for the process that boots. It hands compose
+// the result before anything composes, so a stored setting a boot source sets
+// is locked.
+func bootAPIConfig(args, environ []string) (apiConfig, *config.Config, error) {
+	cfg, loaded, err := loadAPIConfig(args, environ)
+	if err == nil {
+		compose.UseConfig(loaded)
+	}
+	return cfg, loaded, err
 }
 
 // apiSources are what the api loads, for a boot and a --check-config alike.

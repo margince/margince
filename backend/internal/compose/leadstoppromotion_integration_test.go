@@ -22,6 +22,7 @@ import (
 // contact it becomes reads as suppressed for marketing. The control lead never
 // pressed it, so its contact's marketing answer carries no stop.
 func TestALeadsStopHoldsForTheContactItBecomes(t *testing.T) {
+	t.Parallel()
 	for _, pressed := range []bool{false, true} {
 		t.Run(map[bool]string{false: "a lead that never stopped", true: "a lead that pressed the link"}[pressed], func(t *testing.T) {
 			e := integration.Setup(t)

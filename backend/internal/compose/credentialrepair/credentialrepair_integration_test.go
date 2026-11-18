@@ -40,6 +40,7 @@ func repairTask(e *integration.Env) datatask.Task {
 // The state this repairs cannot be reached through the live writer any more,
 // which is the whole reason the repair exists.
 func TestTheRepairMasksAPasswordStoredBeforeTheRulesAndLeavesTypedTextAlone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	system := principal.WithActor(e.Admin(),
 		principal.Principal{Type: principal.PrincipalSystem, ID: "system:credential-repair"})
@@ -164,6 +165,7 @@ func seedAnAuditImageOfAnEditTo(t *testing.T, e *integration.Env, mail ids.UUID)
 // A repair nobody can run and a trail anybody can rewrite are each worse than
 // the other.
 func TestTheRepairMasksAnAuditImageOnlyUnderItsOwnSetting(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	system := principal.WithActor(e.Admin(),
 		principal.Principal{Type: principal.PrincipalSystem, ID: "system:credential-repair"})
@@ -238,6 +240,7 @@ func TestTheRepairMasksAnAuditImageOnlyUnderItsOwnSetting(t *testing.T) {
 //
 // The steps are driven here in the order the task declares them.
 func TestTheRepairErasesTheStoredOriginalOfAMailItMasked(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	system := principal.WithActor(e.Admin(),
 		principal.Principal{Type: principal.PrincipalSystem, ID: "system:credential-repair"})
@@ -315,6 +318,7 @@ func TestTheRepairErasesTheStoredOriginalOfAMailItMasked(t *testing.T) {
 // The credential is then named in the hold's own review rather than masked out
 // from under it.
 func TestTheRepairLeavesAMailUnderAStatutoryHoldAlone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	system := principal.WithActor(e.Admin(),
 		principal.Principal{Type: principal.PrincipalSystem, ID: "system:credential-repair"})
@@ -356,6 +360,7 @@ func TestTheRepairLeavesAMailUnderAStatutoryHoldAlone(t *testing.T) {
 // columns with nothing to rebuild. This asserts the acceptance rather than the
 // mechanism: a reader who changes how search is fed should see this fail.
 func TestTheRepairTakesTheMaskedPasswordOutOfSearch(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	system := principal.WithActor(e.Admin(),
 		principal.Principal{Type: principal.PrincipalSystem, ID: "system:credential-repair"})
@@ -388,17 +393,11 @@ func TestTheRepairTakesTheMaskedPasswordOutOfSearch(t *testing.T) {
 }
 
 // restoreTheStrictTrigger puts back the trigger as it stood before this task's
-// migration, read from that migration's down file. It reinstalls the
-// migration's own version when the test ends.
+// migration, read from that migration's down file.
 func restoreTheStrictTrigger(t *testing.T) {
 	t.Helper()
 	owner := integration.FreshOwnerConn(t)
 	ctx := context.Background()
-	t.Cleanup(func() {
-		if _, err := owner.Exec(ctx, theRepairsOwnMigration(t, "up")); err != nil {
-			t.Errorf("restoring the repair's own trigger: %v", err)
-		}
-	})
 	if _, err := owner.Exec(ctx, theRepairsOwnMigration(t, "down")); err != nil {
 		t.Fatalf("restoring the strict trigger: %v", err)
 	}
@@ -430,6 +429,7 @@ func theRepairsOwnMigration(t *testing.T, direction string) string {
 // once meets this state with the task still in the catalog. The step leaves the
 // trail alone and reports nothing, rather than failing the repair.
 func TestTheRepairSkipsTheAuditStepWhereTheTrailRefusesIt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	system := principal.WithActor(e.Admin(),
 		principal.Principal{Type: principal.PrincipalSystem, ID: "system:credential-repair"})
@@ -477,6 +477,7 @@ func TestTheRepairSkipsTheAuditStepWhereTheTrailRefusesIt(t *testing.T) {
 // The step that masks the row already refuses a held mail, and this is its
 // sibling query.
 func TestTheRepairLeavesTheAuditImagesOfAHeldMailAlone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	system := principal.WithActor(e.Admin(),
 		principal.Principal{Type: principal.PrincipalSystem, ID: "system:credential-repair"})
@@ -519,6 +520,7 @@ var errAcceptedOnPurpose = errors.New("accepted, rolled back on purpose")
 // The untold-lead erasure deletes notice mail and leaves the trail standing.
 // A reader that joined the record would read those images as absent.
 func TestTheRepairMasksTheTrailOfAMailThatIsGone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	system := principal.WithActor(e.Admin(),
 		principal.Principal{Type: principal.PrincipalSystem, ID: "system:credential-repair"})
@@ -549,6 +551,7 @@ func TestTheRepairMasksTheTrailOfAMailThatIsGone(t *testing.T) {
 // one is stored the same way a mail's is. The step takes its record types from
 // the rules rather than naming them again.
 func TestTheRepairMasksEveryRecordTypeTheRulesReach(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	system := principal.WithActor(e.Admin(),
 		principal.Principal{Type: principal.PrincipalSystem, ID: "system:credential-repair"})
@@ -618,6 +621,7 @@ func seedMailWithAnOriginal(t *testing.T, e *integration.Env, kind, sourceID, su
 // A sender can type the marker. A mail whose text holds it and no credential
 // was not masked by this repair, so it keeps its stored original.
 func TestAMailWhoseSenderTypedTheMarkerKeepsItsOriginal(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const body = "The export shows [masked] where a field was hidden."
 	mail, original := seedMailWithAnOriginal(t, e, "email", "typed-marker", "Export", body)
@@ -636,6 +640,7 @@ func TestAMailWhoseSenderTypedTheMarkerKeepsItsOriginal(t *testing.T) {
 // The repair reaches a channel message, a credential in the subject alone, and
 // an archived mail under no hold. It erases each one's original.
 func TestTheRepairReachesEveryMailItsRulesMask(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	message, messageOriginal := seedMailWithAnOriginal(t, e, "message", "chat-1",
 		"", "Passwort: "+seededCredential)
@@ -666,6 +671,7 @@ func TestTheRepairReachesEveryMailItsRulesMask(t *testing.T) {
 // A mail written by the send path is stored masked already. The repair finds
 // nothing in it to change, and does not mask the marker a second time.
 func TestTheRepairLeavesASentMailAsTheSendPathStoredIt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Anna Example", nil)
 	outbound := "outbound"
@@ -693,6 +699,7 @@ func TestTheRepairLeavesASentMailAsTheSendPathStoredIt(t *testing.T) {
 // row before it writes, and the hold is an UPDATE of that row. So the step
 // waits for the hold, sees it, and leaves the mail's trail and original alone.
 func TestAHoldPlacedAfterTheStepReadItsPageIsRespected(t *testing.T) {
+	t.Parallel()
 	for _, c := range []struct {
 		name string
 		step int

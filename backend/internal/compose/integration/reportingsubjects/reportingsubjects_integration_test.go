@@ -12,7 +12,6 @@ import (
 	"context"
 	"errors"
 	"maps"
-	"os"
 	"reflect"
 	"strings"
 	"sync"
@@ -94,7 +93,7 @@ func newWorld(t *testing.T) world {
 	pipeline, open, _ := integration.DealFixture(t, e)
 	deal := e.SeedDeal(t, "Linden press", pipeline, open, &e.Rep1)
 	e.WsExec(t, `UPDATE deal SET amount_minor = 250000, currency = 'EUR' WHERE id = $1`, deal)
-	cfg, err := database.PoolConfig(os.Getenv("MARGINCE_TEST_APP_DSN"))
+	cfg, err := database.PoolConfig(testdb.For(t).AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -159,6 +158,7 @@ func (w world) evaluate(t *testing.T, level pgx.TxIsoLevel, selection crmcontrac
 // savepoint and by the targets. In one snapshot it is read once. The answer,
 // evaluation key included, equals that of an evaluation that reads it each time.
 func TestANamedTeamIsReadOnceAcrossAnEvaluation(t *testing.T) {
+	t.Parallel()
 	w := newWorld(t)
 	for _, scope := range []struct {
 		kind, read string
@@ -194,6 +194,7 @@ func TestANamedTeamIsReadOnceAcrossAnEvaluation(t *testing.T) {
 // Every evaluation starts with nothing remembered. A team archived or an owner
 // deactivated after an earlier evaluation is refused, as is an unknown team.
 func TestAnEvaluationRefusesSubjectsThatLeftSinceTheLastOne(t *testing.T) {
+	t.Parallel()
 	w := newWorld(t)
 	team, owner := w.selection("team", &w.e.Team2), w.selection("owner", &w.e.Rep3)
 	for _, selection := range []crmcontracts.ReportingSelection{team, owner} {
@@ -220,6 +221,7 @@ func TestAnEvaluationRefusesSubjectsThatLeftSinceTheLastOne(t *testing.T) {
 // Each resolution still runs the reader's own rule. A membership is remembered
 // only for the team set it was asked for.
 func TestARememberedSubjectAdmitsNoOtherReader(t *testing.T) {
+	t.Parallel()
 	w := newWorld(t)
 	actor, _ := principal.Actor(w.reader)
 	team := principal.Permissions{RowScope: principal.RowScopeTeam, Objects: actor.Permissions.Objects}

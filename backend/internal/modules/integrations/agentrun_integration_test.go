@@ -37,6 +37,7 @@ func (e *runsEnv) setConnection(t *testing.T, status string, limit *int, refresh
 // An agent spends a provider's credits only under a daily limit someone set. It
 // does not spend while the connection is out of credits or being rate limited.
 func TestAnAgentsRunNeedsALimitAndAHealthyConnection(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{})
 	in := provider.QueueInput{
 		ContactID: e.mine.String(), Provider: "surfe", Trigger: provider.TriggerManual,
@@ -73,6 +74,7 @@ func TestAnAgentsRunNeedsALimitAndAHealthyConnection(t *testing.T) {
 // A user asking knows something the timestamps do not. An agent does not, so a
 // fresh answer stands and its run is skipped.
 func TestAnAgentsRunKeepsTheFreshnessCheck(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{})
 	limit, days := 10, 30
 	e.setConnection(t, "connected", &limit, &days)
@@ -103,6 +105,7 @@ func TestAnAgentsRunKeepsTheFreshnessCheck(t *testing.T) {
 // An agent names what it buys. Naming nothing takes only what costs nothing, so a
 // priced detail is never bought by leaving the argument out.
 func TestAnAgentBuysAPricedCategoryOnlyByNamingIt(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{})
 	limit := 10
 	e.setConnection(t, "connected", &limit, nil)

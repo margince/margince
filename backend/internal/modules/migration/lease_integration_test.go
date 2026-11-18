@@ -114,6 +114,7 @@ func sliceOf(ctx context.Context, t *testing.T, s *RunStore, l Lease, w Writers,
 }
 
 func TestAStaleAttemptWritesNothing(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	current := approvedRun(ctx, t, s)
@@ -144,6 +145,7 @@ func TestAStaleAttemptWritesNothing(t *testing.T) {
 }
 
 func TestASupersededAttemptCannotFailTheRun(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	first := approvedRun(ctx, t, s)
@@ -166,6 +168,7 @@ func TestASupersededAttemptCannotFailTheRun(t *testing.T) {
 }
 
 func TestASliceStopsAtItsBudgetAndResumesAtItsCursor(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	l := approvedRun(ctx, t, s)
@@ -229,6 +232,7 @@ func assertCursor(ctx context.Context, t *testing.T, db *database.DB, id RunID, 
 // A sliced commit whose process died after landing a row it never flushed
 // still reports what an uninterrupted commit of the same source reports.
 func TestASlicedRunsReportEqualsAnUninterruptedOne(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 
@@ -268,6 +272,7 @@ func TestASlicedRunsReportEqualsAnUninterruptedOne(t *testing.T) {
 }
 
 func TestUndoReversesARowTheImportItselfLinked(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	run := completeCSVRun(ctx, t, s)
@@ -309,6 +314,7 @@ func TestUndoReversesARowTheImportItselfLinked(t *testing.T) {
 }
 
 func TestTwoAttemptsNeverHoldTheRunLockTogether(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	run := completeCSVRun(ctx, t, s)

@@ -196,6 +196,7 @@ func employmentEdges(t *testing.T, e *integration.Env, email, domain string) int
 }
 
 func TestOnlyTheSoleDirectRecipientOfCurrentStaffMailDecidesAVendorQuestion(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := pinClock(t, e)
 	rep1, rep2 := e.As(e.Rep1, nil, integration.AdminPerms), e.As(e.Rep2, nil, integration.AdminPerms)
@@ -246,6 +247,7 @@ func TestOnlyTheSoleDirectRecipientOfCurrentStaffMailDecidesAVendorQuestion(t *t
 }
 
 func TestAVendorQuestionWithNoSoleOrCurrentRecipientStaysOnTheRecord(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := pinClock(t, e)
 	rep1, rep2 := e.As(e.Rep1, nil, integration.AdminPerms), e.As(e.Rep2, nil, integration.AdminPerms)
@@ -283,6 +285,7 @@ func TestAVendorQuestionWithNoSoleOrCurrentRecipientStaysOnTheRecord(t *testing.
 }
 
 func TestKeepAsVendorSettlesTheVerdictAndLaterMailAsksNothing(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := pinClock(t, e)
 	rep1 := e.As(e.Rep1, nil, integration.AdminPerms)
@@ -316,6 +319,7 @@ func TestKeepAsVendorSettlesTheVerdictAndLaterMailAsksNothing(t *testing.T) {
 }
 
 func TestOnlyTheDeciderWithTheCompanyGrantMayKeepAVendorVerdict(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	// The unreadable question's fixture mail is dated by the database clock,
 	// so it lands before the store's clock is pinned.
@@ -354,6 +358,7 @@ func TestOnlyTheDeciderWithTheCompanyGrantMayKeepAVendorVerdict(t *testing.T) {
 }
 
 func TestNewMailOnAnOpenVendorQuestionReadsNoSiteAgain(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := pinClock(t, e)
 	captureStaffMail(t, e, staffMail{sourceID: "vendor-new-1", from: hostingStaff, mailbox: e.Rep1, to: []string{seatEmail(t, e.Rep1)}, occurred: now.Add(-time.Hour)})
@@ -379,6 +384,7 @@ func TestNewMailOnAnOpenVendorQuestionReadsNoSiteAgain(t *testing.T) {
 // A colleague creates the company by hand while the vendor question is open.
 // The next staff mail settles the question onto that company.
 func TestAHandMadeCompanySettlesAnOpenVendorQuestionOnTheNextMail(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := pinClock(t, e)
 	rep1 := e.As(e.Rep1, nil, integration.AdminPerms)
@@ -406,6 +412,7 @@ func TestAHandMadeCompanySettlesAnOpenVendorQuestionOnTheNextMail(t *testing.T) 
 }
 
 func TestAnAdmittedDomainIsReadOnAndASuppressedOneAsksNobody(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	rep1 := e.As(e.Rep1, nil, integration.AdminPerms)
 	const admitted, suppressed = "admitted-host.example", "suppressed-host.example"
@@ -437,6 +444,7 @@ func TestAnAdmittedDomainIsReadOnAndASuppressedOneAsksNobody(t *testing.T) {
 // A notification address and a true mail vendor's customer raise no company
 // question, through the same production sink.
 func TestANotificationOrAConsumerMailboxRaisesNoVendorQuestion(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := pinClock(t, e)
 	to := []string{seatEmail(t, e.Rep1)}
@@ -456,6 +464,7 @@ func TestANotificationOrAConsumerMailboxRaisesNoVendorQuestion(t *testing.T) {
 }
 
 func TestStaffMailToTwoDifferentSeatsMakesNoDecider(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := pinClock(t, e)
 	const domain = "split-seats.example"
@@ -473,6 +482,7 @@ func TestStaffMailToTwoDifferentSeatsMakesNoDecider(t *testing.T) {
 }
 
 func TestTheProvenRecipientIsAskedWhenOnlyAColleaguesMailboxHoldsTheMail(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := pinClock(t, e)
 	captureStaffMail(t, e, staffMail{sourceID: "copy-only", from: hostingStaff, mailbox: e.Rep2, to: []string{seatEmail(t, e.Rep1)}, occurred: now.Add(-time.Hour)})
@@ -492,6 +502,7 @@ func TestTheProvenRecipientIsAskedWhenOnlyAColleaguesMailboxHoldsTheMail(t *test
 // The decider must be able to open the mail. A sole direct recipient always
 // can, at any row scope, until a statutory hold withholds the mail.
 func TestAMailTheDeciderMayNotOpenMakesNoQuestion(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := pinClock(t, e)
 	// Rep2's mailbox holds the mail, so capture files it under Rep2's private
@@ -542,6 +553,7 @@ func domainAudits(t *testing.T, e *integration.Env, domain string) int {
 }
 
 func TestASeatWithoutActivityReadGetsNoVendorQuestion(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := pinClock(t, e)
 	captureStaffMail(t, e, staffMail{sourceID: "no-activity-read", from: hostingStaff, mailbox: e.Rep1, to: []string{seatEmail(t, e.Rep1)}, occurred: now.Add(-time.Hour)})
@@ -580,6 +592,7 @@ func TestASeatWithoutActivityReadGetsNoVendorQuestion(t *testing.T) {
 // seat, or the reader may not open it, an older mail to one seat does not
 // take its place.
 func TestANewerUnclearMailIsNotOverruledByAnOlderOne(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := pinClock(t, e)
 	rep1, rep2 := seatEmail(t, e.Rep1), seatEmail(t, e.Rep2)

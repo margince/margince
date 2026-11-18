@@ -45,11 +45,6 @@ func declareProbeTable(t *testing.T, env *sarIdentifierEnv) extprivacy.Registry 
 			t.Fatalf("preparing %s (%s): %v", probeTable, stmt, err)
 		}
 	}
-	t.Cleanup(func() {
-		if _, err := env.owner.Exec(context.Background(), `DROP TABLE ext.`+probeTable); err != nil {
-			t.Errorf("removing %s: %v", probeTable, err)
-		}
-	})
 	return extprivacy.Declared([]extdecl.Table{{
 		Name: probeTable,
 		Links: []extdecl.Link{
@@ -79,6 +74,7 @@ func seedProbeRows(t *testing.T, env *sarIdentifierEnv) (mine, other ids.UUID) {
 }
 
 func TestSubjectExportServesDeclaredExtensionColumns(t *testing.T) {
+	t.Parallel()
 	env := setupSARIdentifiers(t)
 	registry := declareProbeTable(t, env)
 	mine, _ := seedProbeRows(t, env)
@@ -104,6 +100,7 @@ func TestSubjectExportServesDeclaredExtensionColumns(t *testing.T) {
 }
 
 func TestSubjectExportServesAnEmptyExtensionListForASubjectNoUnitNames(t *testing.T) {
+	t.Parallel()
 	env := setupSARIdentifiers(t)
 	registry := declareProbeTable(t, env)
 
@@ -121,6 +118,7 @@ func TestSubjectExportServesAnEmptyExtensionListForASubjectNoUnitNames(t *testin
 }
 
 func TestErasureClearsDeclaredExtensionColumnsAndTheCoreAuditsIt(t *testing.T) {
+	t.Parallel()
 	env := setupSARIdentifiers(t)
 	registry := declareProbeTable(t, env)
 	mine, other := seedProbeRows(t, env)
@@ -160,6 +158,7 @@ func TestErasureClearsDeclaredExtensionColumnsAndTheCoreAuditsIt(t *testing.T) {
 }
 
 func TestDeletingAnUntoldLeadClearsTheExtensionRowsLinkedToIt(t *testing.T) {
+	t.Parallel()
 	env := setupSARIdentifiers(t)
 	registry := declareProbeTable(t, env)
 	ctx := context.Background()
@@ -204,6 +203,7 @@ func TestDeletingAnUntoldLeadClearsTheExtensionRowsLinkedToIt(t *testing.T) {
 }
 
 func TestAuditImagesOfAClearedExtensionRowAreWithheld(t *testing.T) {
+	t.Parallel()
 	env := setupSARIdentifiers(t)
 	registry := declareProbeTable(t, env)
 	mine, _ := seedProbeRows(t, env)
@@ -257,11 +257,6 @@ func declareMarkerTable(t *testing.T, env *sarIdentifierEnv, registry extprivacy
 	ctx := context.Background()
 	mustExec(ctx, t, env.owner, `CREATE TABLE ext.ext_probe_marker (activity_id uuid PRIMARY KEY)`)
 	mustExec(ctx, t, env.owner, `GRANT SELECT, INSERT, UPDATE, DELETE ON ext.ext_probe_marker TO margince_app`)
-	t.Cleanup(func() {
-		if _, err := env.owner.Exec(context.Background(), `DROP TABLE ext.ext_probe_marker`); err != nil {
-			t.Errorf("removing ext_probe_marker: %v", err)
-		}
-	})
 	return extprivacy.Declared(append(registry.Tables(), extdecl.Table{
 		Name:      "ext_probe_marker",
 		Links:     []extdecl.Link{{Column: "activity_id", Record: extdecl.Activity}},
@@ -270,6 +265,7 @@ func declareMarkerTable(t *testing.T, env *sarIdentifierEnv, registry extprivacy
 }
 
 func TestSubjectExportReadsPastALinkedTableWithNoPersonalColumn(t *testing.T) {
+	t.Parallel()
 	env := setupSARIdentifiers(t)
 	registry := declareMarkerTable(t, env, declareProbeTable(t, env))
 	seedProbeRows(t, env)
@@ -286,6 +282,7 @@ func TestSubjectExportReadsPastALinkedTableWithNoPersonalColumn(t *testing.T) {
 }
 
 func TestErasureRedactsTheStoredHistoryOfAClearedExtensionRow(t *testing.T) {
+	t.Parallel()
 	env := setupSARIdentifiers(t)
 	registry := declareProbeTable(t, env)
 	mine, _ := seedProbeRows(t, env)
@@ -326,6 +323,7 @@ func TestErasureRedactsTheStoredHistoryOfAClearedExtensionRow(t *testing.T) {
 }
 
 func TestErasingAnActivityContentClearsTheExtensionRowsLinkedToIt(t *testing.T) {
+	t.Parallel()
 	env := setupSARIdentifiers(t)
 	declareProbeTable(t, env)
 	activity := seedSubjectActivity(t, env)
@@ -348,6 +346,7 @@ func TestErasingAnActivityContentClearsTheExtensionRowsLinkedToIt(t *testing.T) 
 }
 
 func TestAnonymizingALeadClearsTheExtensionRowsLinkedToIt(t *testing.T) {
+	t.Parallel()
 	env := setupSARIdentifiers(t)
 	registry := declareProbeTable(t, env)
 	lead, row := ids.NewV7(), ids.NewV7()
@@ -366,6 +365,7 @@ func TestAnonymizingALeadClearsTheExtensionRowsLinkedToIt(t *testing.T) {
 // One erasure can reach a row by two paths, as a promise's task is reached
 // through its message and through its contact. The row is certified once.
 func TestAnExtensionRowTwoClearingPathsReachIsCertifiedOnce(t *testing.T) {
+	t.Parallel()
 	env := setupSARIdentifiers(t)
 	registry := declareProbeTable(t, env)
 	lead, row := ids.NewV7(), ids.NewV7()

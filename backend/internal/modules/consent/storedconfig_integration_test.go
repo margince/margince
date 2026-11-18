@@ -8,19 +8,21 @@ package consent
 import (
 	"testing"
 
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/config/configtest"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 )
 
 // Particulars the environment sets are what a message discloses, over the
-// row an admin saved. Not parallel: the binding is the process's own.
+// row an admin saved.
 func TestBootSetParticularsAreWhatAMessageDiscloses(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	store := inJurisdiction(t, e, "zb",
 		messagingrules.Disclosure{Kind: messagingrules.ControllerIdentity})
 	stateParticulars(t, e, ControllerParticulars{LegalName: "Saved GmbH", PostalAddress: "Savedweg 2"})
-	configtest.Bind(t, configtest.MustLoadEnv(t, ConfigSettings(),
+	e.ctx = config.WithBound(e.ctx, configtest.MustLoadEnv(t, ConfigSettings(),
 		`MARGINCE_CONSENT_CONTROLLER_PARTICULARS={"LegalName":"Boot GmbH","PostalAddress":"Bootweg 1"}`))
 
 	lines := disclosures(t, e, store, commsauthz.CategoryReplyToInbound)

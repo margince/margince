@@ -21,6 +21,7 @@ import (
 )
 
 func TestQuickCaptureOfALiveLeadIsRefusedAndItsRetryConverts(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	lead, _, err := e.store.CreateLead(ctx, CreateLeadInput{FullName: new("Quinn Lead"), Email: new("quinn@lead.test"), Source: "manual"})
@@ -45,6 +46,7 @@ func TestQuickCaptureOfALiveLeadIsRefusedAndItsRetryConverts(t *testing.T) {
 }
 
 func TestQuickCaptureOfALeadsProfileNamesTheProfileField(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	if _, _, err := e.store.CreateLead(ctx, CreateLeadInput{FullName: new("Pia Profile"), LinkedInURL: new("https://linkedin.com/in/pia-profile"), Source: "manual"}); err != nil {
@@ -57,6 +59,7 @@ func TestQuickCaptureOfALeadsProfileNamesTheProfileField(t *testing.T) {
 }
 
 func TestAnEmailEditToALiveLeadsAddressIsRefusedAndItsRetryMergesTheLead(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contact, err := e.store.CreateContact(ctx, CreateContactInput{FullName: "Edda Edit", Source: "manual", Emails: []ContactEmailInput{{Email: "edda@old.test", EmailType: "work", IsPrimary: true}}})
@@ -87,6 +90,7 @@ func TestAnEmailEditToALiveLeadsAddressIsRefusedAndItsRetryMergesTheLead(t *test
 }
 
 func TestAnEditOfAContactThatAlreadySharesALeadsAddressStillSaves(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contact, err := e.store.CreateContact(ctx, CreateContactInput{FullName: "Paula Pair", Source: "manual", Emails: []ContactEmailInput{{Email: "paula@pair.test", EmailType: "work", IsPrimary: true}}})
@@ -112,6 +116,7 @@ func TestAnEditOfAContactThatAlreadySharesALeadsAddressStillSaves(t *testing.T) 
 }
 
 func TestRestoringAContactWhoseAddressALiveLeadNowHoldsIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	actor, ok := principal.Actor(e.as())
 	if !ok {
@@ -142,6 +147,7 @@ func TestRestoringAContactWhoseAddressALiveLeadNowHoldsIsRefused(t *testing.T) {
 }
 
 func TestAVCardForALiveLeadCreatesNothingAndNamesTheLead(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	lead, _, err := e.store.CreateLead(ctx, CreateLeadInput{FullName: new("Vera Card"), Email: new("vera@card.test"), Source: "manual"})
@@ -156,6 +162,7 @@ func TestAVCardForALiveLeadCreatesNothingAndNamesTheLead(t *testing.T) {
 }
 
 func TestTheContactWriterRefusesALiveLeadsKeysUnlessItConvertsThatLead(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	lead, _, err := e.store.CreateLead(ctx, CreateLeadInput{FullName: new("Wren Writer"), Email: new("wren@writer.test"), LinkedInURL: new("https://linkedin.com/in/wren-writer"), Source: "manual"})

@@ -56,6 +56,7 @@ func erasureSubject(t *testing.T, e *integration.Env) (ids.ContactID, ids.Approv
 }
 
 func TestErasureEmptiesAStagedDraftAndMakesItUnapprovable(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	subject, approvalID := erasureSubject(t, e)
 
@@ -89,6 +90,7 @@ func TestErasureEmptiesAStagedDraftAndMakesItUnapprovable(t *testing.T) {
 // subject. Emptying its payload is right; rewriting its verdict would falsify
 // the record of a decision that really happened.
 func TestErasureKeepsTheVerdictOnAnAlreadyDecidedApproval(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	subject, approvalID := erasureSubject(t, e)
 	e.WsExec(t, `UPDATE approval SET status = 'rejected', decided_at = now() WHERE id = $1`, approvalID)
@@ -110,6 +112,7 @@ func TestErasureKeepsTheVerdictOnAnAlreadyDecidedApproval(t *testing.T) {
 // A run records what its automation planned and produced, which for a drafted
 // email is the message itself.
 func TestErasureEmptiesTheAutomationRunThatComposedTheDraft(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	subject, _ := erasureSubject(t, e)
 	handler := "erasure_probe_" + ids.NewV7().String()[:8]
@@ -132,6 +135,7 @@ func TestErasureEmptiesTheAutomationRunThatComposedTheDraft(t *testing.T) {
 // The export half. A message somebody wrote to the subject and has not yet
 // agreed to send is data held about them, and Art. 15 owes them sight of it.
 func TestSubjectAccessIncludesAStagedMessageNobodyHasDecided(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	subject, _ := erasureSubject(t, e)
 
@@ -165,6 +169,7 @@ func TestSubjectAccessIncludesAStagedMessageNobodyHasDecided(t *testing.T) {
 // row is already terminal. Left alone the run waits forever — created by the
 // destruction that was supposed to leave nothing behind.
 func TestErasureBlocksTheRunWaitingOnTheApprovalItWithdraws(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	subject, approvalID := erasureSubject(t, e)
 	handler := "wf_erasure_" + ids.NewV7().String()
@@ -195,6 +200,7 @@ func TestErasureBlocksTheRunWaitingOnTheApprovalItWithdraws(t *testing.T) {
 // that was never about them, and putting their message in the wrong contact's
 // Art. 15 export.
 func TestErasureLeavesALookalikeAddressAlone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	subject := e.SeedContact(t, "Pattern Subject", nil)
 	e.WsExec(t, `
@@ -235,6 +241,7 @@ func TestErasureLeavesALookalikeAddressAlone(t *testing.T) {
 // The lookalike test above proves the wildcard case; this proves the substring
 // case, and they fail for different reasons.
 func TestErasureLeavesAnAddressThatMerelyContainsTheSubjectsAlone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	subject := e.SeedContact(t, "Suffix Subject", nil)
 	e.WsExec(t, `
@@ -267,6 +274,7 @@ func TestErasureLeavesAnAddressThatMerelyContainsTheSubjectsAlone(t *testing.T) 
 // over-tightened anchor would silently break: a scrub that destroys nothing is
 // indistinguishable from one that works, until somebody exercises Art. 17.
 func TestErasureStillReachesTheSubjectsOwnStagedMessage(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	subject, approvalID := erasureSubject(t, e)
 
@@ -285,6 +293,7 @@ func TestErasureStillReachesTheSubjectsOwnStagedMessage(t *testing.T) {
 // gets no run scrub. If that ever stops being true this fails, which is the
 // point: the limitation should be discovered here rather than by a regulator.
 func TestAnAutomationRunIsReachedByAddressAndNothingElse(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	subject := e.SeedContact(t, "No Address At All", nil)
 	handler := "wf_noaddr_" + ids.NewV7().String()
@@ -315,6 +324,7 @@ func TestAnAutomationRunIsReachedByAddressAndNothingElse(t *testing.T) {
 // so for the length of the redemption window after the certificate said the
 // subject's data was destroyed, that call could still run against them.
 func TestErasureSpendsTheTokenOnAnApprovedButUnredeemedStaging(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	subject, approvalID := erasureSubject(t, e)
 

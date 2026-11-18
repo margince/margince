@@ -72,6 +72,7 @@ type armCase struct {
 }
 
 func TestAnAudienceLimitedToOneOwnerExcludesEveryOtherReader(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	in := activities.LogActivityInput{Kind: "task", Body: new("Private follow-up"), Source: "manual"}
 	in.VisibleOnlyTo(e.Rep1)
@@ -290,6 +291,7 @@ func readsContent(ctx context.Context, t *testing.T, e *Env, id ids.UUID) bool {
 
 // TestTheOrphanRefusalAgreesWithTheAudienceGateArmForArm is the parity claim.
 func TestTheOrphanRefusalAgreesWithTheAudienceGateArmForArm(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	for _, tc := range audienceArmCases(e.Team1) {
 		t.Run(tc.name, func(t *testing.T) {

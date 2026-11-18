@@ -16,7 +16,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/gcal"
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/platform/originalstore"
@@ -31,7 +30,7 @@ import (
 // A stored Graph event names no calendar of its own, so it is not read.
 func matchedMeetingGuestsDataTask(pool *pgxpool.Pool) datatask.Task {
 	db := InstallationDB(pool)
-	authority := identity.NewService(pool)
+	authority := IdentityService(pool)
 	return datatask.Task{
 		ID: "core/1792998483_matched_meeting_guests", Version: 1,
 		Title: systemtext.Literal("datatask.title.core.1792998483_matched_meeting_guests"), Requires: []string{"core/1792998482"},

@@ -31,6 +31,7 @@ func readRunMapping(t *testing.T, e *apptest.AppEnv, id string) importRunMapping
 }
 
 func TestARunReturnsTheMappingThatWasSavedOnIt(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	profile, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
 	want := map[string]string{"Email": "email", "Full Name": "full_name"}
@@ -47,6 +48,7 @@ func TestARunReturnsTheMappingThatWasSavedOnIt(t *testing.T) {
 }
 
 func TestAnUploadedRunReturnsTheMappingItWasStagedWith(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	profile, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
 

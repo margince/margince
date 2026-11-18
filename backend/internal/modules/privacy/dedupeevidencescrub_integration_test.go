@@ -72,6 +72,7 @@ var dedupeEvidenceActs = map[string]struct {
 }
 
 func TestAnonymizingASubjectEmptiesTheirDuplicatePairEvidence(t *testing.T) {
+	t.Parallel()
 	ctx := principal.SystemActing(context.Background(), "privacy_test")
 	for name, act := range dedupeEvidenceActs {
 		t.Run(name, func(t *testing.T) {
@@ -274,6 +275,7 @@ func fileDedupePair(
 // every later statement is refused — and it is the one fault a test can stage
 // without taking the table away from every other suite on the lane.
 func TestAScrubThatCannotWriteReportsItRatherThanCommitting(t *testing.T) {
+	t.Parallel()
 	ctx := principal.SystemActing(context.Background(), "privacy_test")
 	tx := subjectColumnsTx(ctx, t)
 	subject := ids.New[ids.ContactKind]()

@@ -64,6 +64,7 @@ func askedQuestion(t *testing.T, e *resolveEnv, store *Store, purpose ids.Purpos
 // A consent request for correspondence promises no mail frequency: not in the
 // mail, not on the page, and not in the sentence the grant records.
 func TestACorrespondenceConsentStatesNoFrequency(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	seedDefaultCatalog(t, e.owner)
 	var correspondence ids.PurposeID
@@ -119,6 +120,7 @@ func promisesASubscription(text string) (string, bool) {
 
 // A consent request for advertising still states how often the mail comes.
 func TestAnAdvertisingConsentStatesItsFrequency(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	news := seedDoubleOptInPurpose(t, e, "rp_freq_news", "marketing")
 

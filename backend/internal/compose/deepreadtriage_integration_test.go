@@ -138,6 +138,7 @@ func triageState(t *testing.T, e *integration.Env, domain string) (status, readS
 }
 
 func TestTriageStopsAtTheLandingPageForAPersonalDomain(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	site := &fakeSite{pages: map[string]fakeSitePage{
 		seedURL:                {text: readable("Sebastian Kestner.") + " Eigentuemer der Domain ist Sebastian Kestner. Kontakt per E-Mail."},
@@ -175,6 +176,7 @@ func TestTriageStopsAtTheLandingPageForAPersonalDomain(t *testing.T) {
 }
 
 func TestTriageReadsOnAndCreatesTheCompanyTheSiteNames(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	triage := &triageBrainFake{verdict: `{"kind":"company","confidence":0.95,"reason":"the page sells a product"}`}
 
@@ -233,6 +235,7 @@ func TestTriageReadsOnAndCreatesTheCompanyTheSiteNames(t *testing.T) {
 }
 
 func TestTriageWithNoModelPathStillClosesTheQuestion(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 
 	// A worker role with no classification lane must not re-ask forever — every
@@ -257,6 +260,7 @@ func TestTriageWithNoModelPathStillClosesTheQuestion(t *testing.T) {
 }
 
 func TestTriageWithoutAModelRefusesADomainThatIsTheSendersName(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 
 	// Same no-model path, but the domain IS the sender's surname. The name test

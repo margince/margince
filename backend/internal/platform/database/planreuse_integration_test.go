@@ -25,6 +25,7 @@ func planCacheMode(ctx context.Context, t *testing.T, tx pgx.Tx) string {
 }
 
 func TestReusedPlansLastForTheCallAndTheSnapshotPlansAsBeforeAfterIt(t *testing.T) {
+	t.Parallel()
 	ctx, pool := laneEnv(t)
 	ctx, meter := database.WithStatementMeter(ctx)
 	onSnapshot(ctx, t, pool, func(ctx context.Context, tx pgx.Tx) {
@@ -54,6 +55,7 @@ func TestReusedPlansLastForTheCallAndTheSnapshotPlansAsBeforeAfterIt(t *testing.
 }
 
 func TestExplicitReuseOnAGenericSnapshotSendsNoModeSwitch(t *testing.T) {
+	t.Parallel()
 	ctx, pool := laneEnv(t)
 	ctx, meter := database.WithStatementMeter(ctx)
 	onSnapshot(ctx, t, pool, func(ctx context.Context, tx pgx.Tx) {
@@ -76,6 +78,7 @@ func TestExplicitReuseOnAGenericSnapshotSendsNoModeSwitch(t *testing.T) {
 }
 
 func TestCustomPlanExceptionRestoresTheWholeReadMode(t *testing.T) {
+	t.Parallel()
 	ctx, pool := laneEnv(t)
 	onSnapshot(ctx, t, pool, func(ctx context.Context, tx pgx.Tx) {
 		err := database.ReuseGenericPlans(ctx, func(ctx context.Context) error {
@@ -116,6 +119,7 @@ func TestCustomPlanExceptionRestoresTheWholeReadMode(t *testing.T) {
 }
 
 func TestDetachedReadDoesNotInheritTheOuterGenericPlanScope(t *testing.T) {
+	t.Parallel()
 	ctx, pool := laneEnv(t)
 	onSnapshot(ctx, t, pool, func(ctx context.Context, tx pgx.Tx) {
 		err := database.ReuseGenericPlans(ctx, func(ctx context.Context) error {
@@ -137,6 +141,7 @@ func TestDetachedReadDoesNotInheritTheOuterGenericPlanScope(t *testing.T) {
 
 // The restore puts back what the snapshot had, not a default.
 func TestReusedPlansRestoreTheModeTheSnapshotHad(t *testing.T) {
+	t.Parallel()
 	ctx, pool := laneEnv(t)
 	onSnapshot(ctx, t, pool, func(ctx context.Context, tx pgx.Tx) {
 		if _, err := tx.Exec(ctx, `SELECT set_config('plan_cache_mode', 'force_custom_plan', true)`); err != nil {
@@ -154,6 +159,7 @@ func TestReusedPlansRestoreTheModeTheSnapshotHad(t *testing.T) {
 // A call that fails without aborting the transaction leaves the snapshot usable,
 // so the statements after it must plan as they did before it.
 func TestAFailedCallStillRestoresHowTheSnapshotPlans(t *testing.T) {
+	t.Parallel()
 	ctx, pool := laneEnv(t)
 	refused := errors.New("refused")
 	onSnapshot(ctx, t, pool, func(ctx context.Context, tx pgx.Tx) {
@@ -167,6 +173,7 @@ func TestAFailedCallStillRestoresHowTheSnapshotPlans(t *testing.T) {
 }
 
 func TestExplicitPlanReuseRestoresTheCallerModeAfterARefusal(t *testing.T) {
+	t.Parallel()
 	ctx, pool := laneEnv(t)
 	refused := errors.New("refused")
 	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
@@ -194,6 +201,7 @@ func TestExplicitPlanReuseRestoresTheCallerModeAfterARefusal(t *testing.T) {
 // The mode is the transaction's alone. After a snapshot that ended in a failed
 // statement, every pooled connection plans as usual for the next request.
 func TestReusedPlansNeverReachTheNextRequestOnTheConnection(t *testing.T) {
+	t.Parallel()
 	ctx, pool := laneEnv(t)
 	err := database.WithWorkspaceSnapshot(ctx, pool, func(ctx context.Context) error {
 		return database.ReuseGenericPlans(ctx, func(ctx context.Context) error {

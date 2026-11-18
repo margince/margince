@@ -44,8 +44,9 @@ func wantValue(t *testing.T, what string, got crmcontracts.AgentRoleAllowanceVal
 // changes, and sends stay at the installation value. A value an operator
 // chose for the installation takes the preset's place for that count only.
 func TestTheAdminPresetYieldsToAnInstallationValueSomebodyChose(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
-	h := allowanceHandlers(t, e, wallClock(t))
+	h := allowanceHandlers(e, wallClock(t))
 
 	code, saved := patchAllowances(installationAdminCtx(e), t, h, `{}`)
 	if code != http.StatusOK {
@@ -79,8 +80,9 @@ func TestTheAdminPresetYieldsToAnInstallationValueSomebodyChose(t *testing.T) {
 // A role's own values bind its users' agents through the meter's real source.
 // An agent holding two roles gets the higher of the two for each count.
 func TestARoleValueAnAdminSavedBindsThatRolesAgents(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
-	h := allowanceHandlers(t, e, wallClock(t))
+	h := allowanceHandlers(e, wallClock(t))
 	at := clocktest.Now(t)
 	meter := agentvolume.NewWithClock(redistest.Client(t), agentvolume.Limits{}, agentvolume.DefaultWindow,
 		func() time.Time { return at }).WithPolicySource(NewAgentAllowanceSource(e.Pool))
@@ -122,8 +124,9 @@ func TestARoleValueAnAdminSavedBindsThatRolesAgents(t *testing.T) {
 // Admin sent with zeros keeps the installation value; unset, it returns to the
 // preset.
 func TestAdminSentWithZeroUsesTheInstallationValue(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
-	h := allowanceHandlers(t, e, wallClock(t))
+	h := allowanceHandlers(e, wallClock(t))
 
 	code, saved := patchAllowances(installationAdminCtx(e), t, h, `{"agent_role_allowances":[`+
 		`{"role_key":"admin","agent_calls_per_window":0,"agent_writes_per_window":0}]}`)
@@ -147,8 +150,9 @@ func TestAdminSentWithZeroUsesTheInstallationValue(t *testing.T) {
 // The preset binds changes while an operator chose calls. Saving another role
 // leaves Admin as it was: nothing is saved for a role the save does not name.
 func TestSavingAnotherRoleLeavesAPartlyAppliedPresetBinding(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
-	h := allowanceHandlers(t, e, wallClock(t))
+	h := allowanceHandlers(e, wallClock(t))
 	if code, _ := patchAllowances(installationAdminCtx(e), t, h, `{"agent_calls_per_window":5000}`); code != http.StatusOK {
 		t.Fatalf("choosing 5000 calls → %d", code)
 	}
@@ -166,8 +170,9 @@ func TestSavingAnotherRoleLeavesAPartlyAppliedPresetBinding(t *testing.T) {
 
 // A default somebody saved is a choice: Admin keeps it rather than the preset.
 func TestAnInstallationValueSavedAtTheDefaultKeepsThePresetOff(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
-	h := allowanceHandlers(t, e, wallClock(t))
+	h := allowanceHandlers(e, wallClock(t))
 	for _, body := range []string{`{"agent_calls_per_window":5000}`, `{"agent_calls_per_window":1000}`} {
 		if code, _ := patchAllowances(installationAdminCtx(e), t, h, body); code != http.StatusOK {
 			t.Fatalf("PATCH %s → %d", body, code)
@@ -180,8 +185,9 @@ func TestAnInstallationValueSavedAtTheDefaultKeepsThePresetOff(t *testing.T) {
 }
 
 func TestARoleSaveRefusesWhatWouldBindNobody(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
-	h := allowanceHandlers(t, e, wallClock(t))
+	h := allowanceHandlers(e, wallClock(t))
 	for name, body := range map[string]string{
 		"a role that is not live": `{"agent_role_allowances":[{"role_key":"custom_gone","agent_calls_per_window":100}]}`,
 		"a role given twice": `{"agent_role_allowances":[` +
@@ -199,8 +205,9 @@ func TestARoleSaveRefusesWhatWouldBindNobody(t *testing.T) {
 // A user without the installation grant cannot set a role's values. No agent
 // can either, even one whose human could: it would raise its own allowance.
 func TestOnlyAnAdministratorsOwnSessionSetsRoleValues(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
-	h := allowanceHandlers(t, e, wallClock(t))
+	h := allowanceHandlers(e, wallClock(t))
 	body := `{"agent_role_allowances":[{"role_key":"rep","agent_calls_per_window":20000}]}`
 
 	reader := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
@@ -238,8 +245,9 @@ func roledAgent(e *integration.Env, roles ...string) context.Context {
 // Back to defaults removes the stored values rather than saving the shipped
 // numbers, so a chosen installation value stops keeping Admin off its preset.
 func TestBackToDefaultsRestoresTheAdminPreset(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
-	h := allowanceHandlers(t, e, wallClock(t))
+	h := allowanceHandlers(e, wallClock(t))
 	if code, _ := patchAllowances(installationAdminCtx(e), t, h,
 		`{"agent_calls_per_window":2000,"agent_role_allowances":[{"role_key":"manager","agent_calls_per_window":3000}]}`); code != http.StatusOK {
 		t.Fatalf("choosing values → %d", code)

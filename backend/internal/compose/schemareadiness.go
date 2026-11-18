@@ -42,8 +42,8 @@ import (
 // is what is re-read on each scrape. They come from this binary's embedded
 // files and its composed set, neither of which can change while it runs, and
 // re-loading them per scrape would spend a migration parse on a health check.
-func SchemaAtHead(pool *pgxpool.Pool) func(context.Context) error {
-	namespaces, err := composedNamespaces()
+func SchemaAtHead(pool *pgxpool.Pool, exts *Extensions) func(context.Context) error {
+	namespaces, err := composedNamespaces(exts)
 	if err != nil {
 		// A binary that cannot read its own embedded migrations cannot say
 		// which schema it needs, so it cannot claim the database has it. The
@@ -69,7 +69,7 @@ func SchemaAtHead(pool *pgxpool.Pool) func(context.Context) error {
 
 // composedNamespaces gathers the migration namespaces this binary carries: the
 // two embedded ones and one per composed unit that owns tables.
-func composedNamespaces() ([]dbmigrate.Namespace, error) {
+func composedNamespaces(composed *Extensions) ([]dbmigrate.Namespace, error) {
 	core, err := migrations.Core()
 	if err != nil {
 		return nil, err
@@ -78,11 +78,9 @@ func composedNamespaces() ([]dbmigrate.Namespace, error) {
 	if err != nil {
 		return nil, err
 	}
-	// ComposedExtensions is this boot's registered set, the same snapshot the
-	// routes and jobs were mounted from — so the check asks about exactly the
-	// units that are serving, never a set read a second time from somewhere
-	// else.
-	exts, err := dbmigrate.ExtensionNamespaces(ComposedExtensions())
+	// The composition's registered set, the same snapshot the routes and jobs
+	// were mounted from, so the check asks about the units that serve.
+	exts, err := dbmigrate.ExtensionNamespaces(composed.Units())
 	if err != nil {
 		return nil, err
 	}

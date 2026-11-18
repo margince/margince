@@ -24,8 +24,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-func loadGrants(ctx context.Context, tx pgx.Tx, userID ids.UserID) (roles []string, teams []ids.TeamID, perms principal.Permissions, err error) {
-	all, err := loadGrantsFor(ctx, tx, []ids.UUID{userID.UUID})
+func loadGrants(ctx context.Context, tx pgx.Tx, rbac RbacObjects, userID ids.UserID) (roles []string, teams []ids.TeamID, perms principal.Permissions, err error) {
+	all, err := loadGrantsFor(ctx, tx, rbac, []ids.UUID{userID.UUID})
 	if err != nil {
 		return nil, nil, principal.Permissions{}, err
 	}
@@ -44,8 +44,8 @@ type seatGrants struct {
 // judging many seats at once; loadGrants is this with one seat, so a seat
 // resolves the same way whichever door asks. A seat with no role assignment
 // gets the zero grants: absent from the reads, it holds nothing.
-func loadGrantsFor(ctx context.Context, tx pgx.Tx, users []ids.UUID) (map[ids.UUID]seatGrants, error) {
-	docs, roles, err := loadRoleDocuments(ctx, tx, users)
+func loadGrantsFor(ctx context.Context, tx pgx.Tx, rbac RbacObjects, users []ids.UUID) (map[ids.UUID]seatGrants, error) {
+	docs, roles, err := loadRoleDocuments(ctx, tx, rbac, users)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +57,7 @@ func loadGrantsFor(ctx context.Context, tx pgx.Tx, users []ids.UUID) (map[ids.UU
 	masks := map[string][]principal.FieldMask{}
 	out := make(map[ids.UUID]seatGrants, len(users))
 	for _, user := range users {
-		g := seatGrants{roles: roles[user], teams: teams[user], perms: policy.Merge(docs[user])}
+		g := seatGrants{roles: roles[user], teams: teams[user], perms: policy.Merge(docs[user], rbac.vocabulary)}
 		key := strings.Join(slices.Sorted(slices.Values(g.roles)), ",")
 		m, seen := masks[key]
 		if !seen {
@@ -76,7 +76,7 @@ func loadGrantsFor(ctx context.Context, tx pgx.Tx, users []ids.UUID) (map[ids.UU
 // Archiving refuses while anybody who can sign in holds the role, so what this
 // drops is the role a deactivated member still carries, and reactivating them
 // does not bring an archived role's grants back with them.
-func loadRoleDocuments(ctx context.Context, tx pgx.Tx, users []ids.UUID) (map[ids.UUID]map[string]policy.Document, map[ids.UUID][]string, error) {
+func loadRoleDocuments(ctx context.Context, tx pgx.Tx, rbac RbacObjects, users []ids.UUID) (map[ids.UUID]map[string]policy.Document, map[ids.UUID][]string, error) {
 	rows, err := tx.Query(ctx,
 		`SELECT ra.user_id, r.key, r.permissions FROM role_assignment ra JOIN role r ON r.id = ra.role_id
 		  WHERE ra.user_id = ANY($1) AND r.archived_at IS NULL`, users)
@@ -93,7 +93,7 @@ func loadRoleDocuments(ctx context.Context, tx pgx.Tx, users []ids.UUID) (map[id
 		if err := rows.Scan(&user, &key, &raw); err != nil {
 			return nil, nil, err
 		}
-		doc, err := policy.Parse(raw)
+		doc, err := policy.Parse(raw, rbac.vocabulary)
 		if err != nil {
 			// A role carrying an UNREADABLE policy document is a data defect
 			// the login must surface, not silently downgrade to no access.
@@ -164,8 +164,8 @@ func rawTeamIDs(teams []ids.TeamID) []ids.UUID {
 //
 // A seat with no role assignment allows nothing, which is the honest answer for
 // a user who holds none.
-func SeatAllows(ctx context.Context, tx pgx.Tx, seat ids.UserID, object string, action principal.Action) (bool, error) {
-	_, _, perms, err := loadGrants(ctx, tx, seat)
+func SeatAllows(ctx context.Context, tx pgx.Tx, rbac RbacObjects, seat ids.UserID, object string, action principal.Action) (bool, error) {
+	_, _, perms, err := loadGrants(ctx, tx, rbac, seat)
 	if err != nil {
 		return false, err
 	}

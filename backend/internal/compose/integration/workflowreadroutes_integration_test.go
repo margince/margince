@@ -23,6 +23,7 @@ import (
 // list_approvals, and on GET /approvals/{id} and read_approval. A site read is
 // staged, as it still waits for a human on a colleague's passport.
 func TestApprovalRoutesAnswerAsTheirTools(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "approval-read-doors", "read", "write", "enrich")
 	company := createdID(t, d.e, "/v1/companies", AnyMap{
 		"source": "manual", "display_name": "Approval Door GmbH",
@@ -69,6 +70,7 @@ type sharedApproval struct {
 // read_import_report, and its report on GET /imports/{id}/report and the
 // tool's report member.
 func TestImportRoutesAnswerAsTheirTools(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoorsWith(t, "import-read-doors", nil, "read")
 	run, _ := importContactFile(t, d.e, "Email,Full Name,Title\nada@doors.example,Ada Doors,Engineer\n")
 
@@ -98,6 +100,7 @@ func TestImportRoutesAnswerAsTheirTools(t *testing.T) {
 // The import format reads the same on GET /imports/format and
 // describe_import_format, custom fields included.
 func TestImportFormatRouteAnswersAsItsTool(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoorsWith(t, "import-format-doors", nil, "read")
 	sameDocument(t, "import format",
 		d.rest(t, "GET", "/v1/imports/format", nil),
@@ -119,6 +122,7 @@ type listCreated struct {
 // the same on its routes and on read_lists. Its preview mode has no passport
 // route: POST /filters/preview is human-only, so only the tool can run it.
 func TestListRoutesAnswerAsReadLists(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoorsWith(t, "list-read-doors", []compose.Option{compose.WithListsEnabled(true)}, "read")
 	var list listCreated
 	if status := d.e.Call(t, "POST", "/v1/lists", AnyMap{
@@ -151,6 +155,7 @@ func TestListRoutesAnswerAsReadLists(t *testing.T) {
 
 // The morning brief reads the same on GET /brief and read_brief.
 func TestBriefRouteAnswersAsTheTool(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "brief-read-doors", "read")
 	stages := apptest.DiscoverSeededPipeline(t, d.e)
 	apptest.CreateDealClosingThisWeek(t, d.e, stages, "Closing this week")

@@ -45,6 +45,7 @@ import (
 // this test reads has round-tripped through the same jsonb column a rep's
 // screen reads from.
 func TestAReviewBindsAStopByTheSendsResolvedPurpose(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	ctx := e.ctx
 

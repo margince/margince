@@ -22,6 +22,7 @@ type relinkBatchDTO struct {
 // A whole conversation moves over HTTP: the route exists, the body decodes,
 // the answer counts, and a member that is archived is left behind.
 func TestRelinkingAThreadOverHTTP(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	company := anchorCompany(t, e, "Stark Industries")

@@ -10,16 +10,14 @@ import (
 	"time"
 )
 
-// restoreComposed empties the composed table after a test. It is process-wide
-// (a boot binding), so a test that left a kind behind would declare it into
-// every suite that ran after it.
-func restoreComposed(t *testing.T) {
+// composedOf builds a table declaring specs, failing the test when it is refused.
+func composedOf(t *testing.T, declarations ...Spec) Composed {
 	t.Helper()
-	t.Cleanup(func() {
-		if err := RegisterComposed(nil); err != nil {
-			t.Errorf("restoring the composed table: %v", err)
-		}
-	})
+	table, err := NewComposed(declarations, nil)
+	if err != nil {
+		t.Fatalf("NewComposed: %v", err)
+	}
+	return table
 }
 
 func extSpec(kind string) Spec {
@@ -39,25 +37,23 @@ func extSpec(kind string) Spec {
 // hands River, the queue a child lands on and the attempt cap all come from a
 // declaration rather than from River's defaults.
 func TestComposedKindsAnswerSpecForLikeCoreOnes(t *testing.T) {
-	restoreComposed(t)
+	t.Parallel()
 	if _, ok := SpecFor("ext_demo_refresh_ws"); ok {
-		t.Fatal("a composed kind answered SpecFor before anything registered it")
+		t.Fatal("the core table answered SpecFor for a composed kind")
 	}
-	if err := RegisterComposed([]Spec{extSpec("ext_demo_refresh_ws")}); err != nil {
-		t.Fatalf("RegisterComposed: %v", err)
-	}
-	spec, ok := SpecFor("ext_demo_refresh_ws")
+	table := composedOf(t, extSpec("ext_demo_refresh_ws"))
+	spec, ok := table.SpecFor("ext_demo_refresh_ws")
 	if !ok {
 		t.Fatal("SpecFor does not answer for a registered composed kind")
 	}
 	if spec.Timeout.Duration() != time.Minute || spec.MaxAttempts != 3 {
 		t.Fatalf("composed spec came back as %+v", spec)
 	}
-	if err := MustBeTotal([]string{"ext_demo_refresh_ws"}); err != nil {
+	if err := table.MustBeTotal([]string{"ext_demo_refresh_ws"}); err != nil {
 		t.Fatalf("MustBeTotal refused a declared composed kind: %v", err)
 	}
 	// And the compiled table is still answered — merging must not shadow core.
-	if _, ok := SpecFor("close_date_sweep"); !ok {
+	if _, ok := table.SpecFor("close_date_sweep"); !ok {
 		t.Fatal("a core kind stopped answering once a composed set was registered")
 	}
 }
@@ -66,12 +62,10 @@ func TestComposedKindsAnswerSpecForLikeCoreOnes(t *testing.T) {
 // or a metric family iterates Declared, so a composed kind has to appear there
 // — and in the one deterministic order, not wherever a map put it.
 func TestDeclaredWalksBothTablesInKindOrder(t *testing.T) {
-	restoreComposed(t)
-	if err := RegisterComposed([]Spec{extSpec("ext_demo_a_ws"), extSpec("ext_demo_b_ws")}); err != nil {
-		t.Fatalf("RegisterComposed: %v", err)
-	}
+	t.Parallel()
+	table := composedOf(t, extSpec("ext_demo_a_ws"), extSpec("ext_demo_b_ws"))
 	var kinds []string
-	for kind := range Declared() {
+	for kind := range table.Declared() {
 		kinds = append(kinds, kind)
 	}
 	if !slices.IsSorted(kinds) {
@@ -84,12 +78,12 @@ func TestDeclaredWalksBothTablesInKindOrder(t *testing.T) {
 	}
 }
 
-// TestRegisterComposedRefusesWhatWouldMakeItAShadowingSurface: the seam exists
+// TestNewComposedRefusesWhatWouldMakeItAShadowingSurface: the seam exists
 // to ADD declarations. One that could name a core kind would be a way to change
 // a core job's wall clock from a directory an installation dropped in, and one
 // that could name anything outside ext_ would not be an extension seam at all.
-func TestRegisterComposedRefusesWhatWouldMakeItAShadowingSurface(t *testing.T) {
-	restoreComposed(t)
+func TestNewComposedRefusesWhatWouldMakeItAShadowingSurface(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name  string
 		specs []Spec
@@ -100,31 +94,31 @@ func TestRegisterComposedRefusesWhatWouldMakeItAShadowingSurface(t *testing.T) {
 		{"declared twice", []Spec{extSpec("ext_demo_x"), extSpec("ext_demo_x")}, "declared twice"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			err := RegisterComposed(tc.specs)
+			table, err := NewComposed(tc.specs, nil)
 			if err == nil {
-				t.Fatalf("RegisterComposed accepted %s", tc.name)
+				t.Fatalf("NewComposed accepted %s", tc.name)
 			}
 			if !strings.Contains(err.Error(), tc.want) {
-				t.Fatalf("RegisterComposed(%s) = %v, want a message mentioning %q", tc.name, err, tc.want)
+				t.Fatalf("NewComposed(%s) = %v, want a message mentioning %q", tc.name, err, tc.want)
 			}
-			// Validate-then-apply: a refused set registers NONE of itself.
-			if got := ComposedKinds(); len(got) != 0 {
-				t.Fatalf("a refused registration left %v in the table", got)
+			// Validate-then-apply: a refused set declares none of itself.
+			if _, ok := table.SpecFor("ext_demo_x"); ok {
+				t.Fatal("a refused set still declared ext_demo_x")
 			}
 		})
 	}
 }
 
-// TestRegisterComposedRefusesACoreKindByName covers the arm the namespace check
+// TestNewComposedRefusesACoreKindByName covers the arm the namespace check
 // cannot reach: a kind that IS in the ext_ namespace and IS already compiled
 // would be a redefinition. No such core kind exists today, so the arm is
 // exercised by asking the table directly.
-func TestRegisterComposedRefusesACoreKindByName(t *testing.T) {
-	restoreComposed(t)
+func TestNewComposedRefusesACoreKindByName(t *testing.T) {
+	t.Parallel()
 	for kind := range specs {
 		if IsExtensionKind(kind) {
-			if err := RegisterComposed([]Spec{extSpec(kind)}); err == nil {
-				t.Fatalf("RegisterComposed redefined the compiled kind %s", kind)
+			if _, err := NewComposed([]Spec{extSpec(kind)}, nil); err == nil {
+				t.Fatalf("NewComposed redefined the compiled kind %s", kind)
 			}
 			return
 		}
@@ -143,15 +137,15 @@ func TestRegisterComposedRefusesACoreKindByName(t *testing.T) {
 // composed database is exactly the case the metric split exists for, and there
 // the composed table is empty.
 func TestIsExtensionKindAsksTheNAMESPACENotTheTable(t *testing.T) {
-	restoreComposed(t)
+	t.Parallel()
 	if !IsExtensionKind("ext_absent_unit_job_ws") {
 		t.Error("an ext_ kind this build does not compose was not recognised as an extension kind")
 	}
 	if IsExtensionKind("close_date_sweep") {
 		t.Error("a core kind was classified as an extension kind")
 	}
-	if got := ComposedKinds(); len(got) != 0 {
-		t.Fatalf("ComposedKinds on a vanilla table: got %v, want none", got)
+	if _, ok := SpecFor("ext_absent_unit_job_ws"); ok {
+		t.Fatal("the core table declared an ext_ kind")
 	}
 }
 
@@ -159,7 +153,7 @@ func TestIsExtensionKindAsksTheNAMESPACENotTheTable(t *testing.T) {
 // DISPATCHER, and every consumer walks that edge backwards — so a composed
 // dispatcher's edge has to be in the walk too.
 func TestComposedFanOutUnitsCarryTheirEdge(t *testing.T) {
-	restoreComposed(t)
+	t.Parallel()
 	dispatcher := Spec{
 		Kind:       "ext_demo_refresh",
 		GoType:     "extJobDispatcherArgs",
@@ -170,10 +164,8 @@ func TestComposedFanOutUnitsCarryTheirEdge(t *testing.T) {
 		FanOutUnit: FanOutWorkspace,
 		FanOutTo:   "ext_demo_refresh_ws",
 	}
-	if err := RegisterComposed([]Spec{dispatcher, extSpec("ext_demo_refresh_ws")}); err != nil {
-		t.Fatalf("RegisterComposed: %v", err)
-	}
-	if got := FanOutUnits()["ext_demo_refresh_ws"]; got != FanOutWorkspace {
+	table := composedOf(t, dispatcher, extSpec("ext_demo_refresh_ws"))
+	if got := table.FanOutUnits()["ext_demo_refresh_ws"]; got != FanOutWorkspace {
 		t.Fatalf("composed child's fan-out unit: got %v, want workspace", got)
 	}
 }

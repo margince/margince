@@ -11,6 +11,7 @@ package compose
 
 import (
 	"log/slog"
+	"net/http"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -20,7 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/gcal"
 	"github.com/margince/margince/backend/internal/modules/capture/gdocs"
 	"github.com/margince/margince/backend/internal/modules/capture/gmail"
-	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/modules/capture/googleconn"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 )
 
@@ -41,6 +42,18 @@ type GmailConfig struct {
 	// callback redirect_uri. Empty for a same-origin deployment (the callback
 	// rides PublicBaseURL); a split dev stack sets it to the api URL.
 	APIBaseURL string
+	// Transport carries every call to Google: the token exchange, the refresh
+	// and the APIs. Nil is net/http's default; a test answers Google through it.
+	Transport http.RoundTripper
+}
+
+// httpClient is the client every Google call rides, or nil for each client's
+// own bounded default when no transport was composed.
+func (c GmailConfig) httpClient() *http.Client {
+	if c.Transport == nil {
+		return nil
+	}
+	return googleconn.BoundedClientOver(c.Transport)
 }
 
 // canSync reports whether the connector can be registered + polled (token
@@ -101,6 +114,7 @@ func newGmailOAuth(c GmailConfig) gmail.OAuth {
 		ClientID:     c.ClientID,
 		ClientSecret: c.ClientSecret,
 		Scopes:       gmailScopes,
+		HTTPClient:   c.httpClient(),
 	})
 }
 
@@ -112,6 +126,7 @@ func newGcalOAuth(c GmailConfig) gcal.OAuth {
 	return gcal.NewOAuth(gcal.OAuthConfig{
 		ClientID:     c.ClientID,
 		ClientSecret: c.ClientSecret,
+		HTTPClient:   c.httpClient(),
 	})
 }
 
@@ -123,6 +138,7 @@ func newGdocsOAuth(c GmailConfig) gdocs.OAuth {
 	return gdocs.NewOAuth(gdocs.OAuthConfig{
 		ClientID:     c.ClientID,
 		ClientSecret: c.ClientSecret,
+		HTTPClient:   c.httpClient(),
 	})
 }
 
@@ -145,10 +161,11 @@ func newCaptureRegistryWithGoogle(
 ) *capture.Registry {
 	reg := NewCaptureRegistry(pool, vault, cfg)
 	if appReachable(resolve, c.canSync()) {
-		reg.Register(gmail.New(newGmailAuthorizer(resolve, c), gmail.NewAPIWithQuota(nil, "", cfg.GmailMailboxQuota, cfg.GmailProjectQuota)).
-			WithBounceSink(newBounceSink(pool)).WithSharedMailboxes(gmail.SharedAuthConfig{}))
-		reg.Register(gcal.New(newGcalAuthorizer(resolve, c), gcal.NewAPI(nil, "")))
-		reg.Register(gdocs.New(newGdocsAuthorizer(resolve, c), gdocs.NewOwner(nil, "")).WithDocs(gdocs.NewDocsAPI(nil, "")))
+		google := c.httpClient()
+		reg.Register(gmail.New(newGmailAuthorizer(resolve, c), gmail.NewAPIWithQuota(google, "", cfg.GmailMailboxQuota, cfg.GmailProjectQuota)).
+			WithBounceSink(newBounceSink(pool)).WithSharedMailboxes(gmail.SharedAuthConfig{HTTPClient: google}))
+		reg.Register(gcal.New(newGcalAuthorizer(resolve, c), gcal.NewAPI(google, "")))
+		reg.Register(gdocs.New(newGdocsAuthorizer(resolve, c), gdocs.NewOwner(google, "")).WithDocs(gdocs.NewDocsAPI(google, "")))
 	}
 	return reg
 }
@@ -276,17 +293,19 @@ func WithGmailCapture(c GmailConfig, cfg CaptureConfig) Option {
 		if c.canSync() {
 			gmailOAuth, gcalOAuth, gdocsOAuth = newGmailOAuth(c), newGcalOAuth(c), newGdocsOAuth(c)
 		}
+		cfg.queues = s.queues
 		registry := newCaptureRegistryWithGoogle(pool, s.vault, s.googleAppResolver, c, cfg)
 		s.ImportHandlers = gmailsignature.ImportHandlers{Source: registry}
 		s.connectorHandlers = connectorHandlers{
 			registry:      registry,
-			authority:     identity.NewService(pool),
+			authority:     IdentityService(pool),
 			oauth:         gmailOAuth,
-			gmailAPI:      gmail.NewAPIWithQuota(nil, "", cfg.GmailMailboxQuota, cfg.GmailProjectQuota),
+			gmailAPI:      gmail.NewAPIWithQuota(c.httpClient(), "", cfg.GmailMailboxQuota, cfg.GmailProjectQuota),
 			gcalOAuth:     gcalOAuth,
-			gcalAPI:       gcal.NewAPI(nil, ""),
+			gcalAPI:       gcal.NewAPI(c.httpClient(), ""),
 			gdocsOAuth:    gdocsOAuth,
-			gdocsOwner:    gdocs.NewOwner(nil, ""),
+			gdocsOwner:    gdocs.NewOwner(c.httpClient(), ""),
+			googleHTTP:    c.httpClient(),
 			signer:        newStateSigner([]byte(c.StateKey)),
 			publicBaseURL: c.PublicBaseURL,
 			apiBaseURL:    c.APIBaseURL,

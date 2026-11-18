@@ -50,6 +50,7 @@ func (e *relEnv) secondCompany(t *testing.T, name string) string {
 }
 
 func TestASecondCurrentEmploymentAtTheSameCompanyIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupRelationships(t)
 
 	status, first, _, _ := e.employment(t, e.companyID, AnyMap{"role": "cto"})
@@ -100,6 +101,7 @@ func TestASecondCurrentEmploymentAtTheSameCompanyIsRefused(t *testing.T) {
 // same rule read from the other direction, and the reason it is written against
 // the row rather than as a condition on the patch.
 func TestAnEndedEmploymentCannotBeMadeTheCurrentPrimaryOne(t *testing.T) {
+	t.Parallel()
 	e := setupRelationships(t)
 
 	status, edge, _, _ := e.employment(t, e.companyID, AnyMap{
@@ -124,6 +126,7 @@ func TestAnEndedEmploymentCannotBeMadeTheCurrentPrimaryOne(t *testing.T) {
 }
 
 func TestAContactsOnlyCurrentEmploymentIsTheirPrimaryOne(t *testing.T) {
+	t.Parallel()
 	e := setupRelationships(t)
 
 	// Nobody asked for primary. is_current_primary defaults to false, so before
@@ -149,6 +152,7 @@ func TestAContactsOnlyCurrentEmploymentIsTheirPrimaryOne(t *testing.T) {
 // SENDS false is a contact unticking "current employer" in the rail, and
 // deriving over it would hand back the opposite of what they chose.
 func TestAnExplicitlyUnsetPrimaryFlagIsHonouredOnTheOnlyEmployment(t *testing.T) {
+	t.Parallel()
 	e := setupRelationships(t)
 
 	status, first, primary, _ := e.employment(t, e.companyID, AnyMap{
@@ -192,6 +196,7 @@ func (e *relEnv) dbDate(t *testing.T, offsetDays int) string {
 }
 
 func TestANoticePeriodDoesNotEndSomebodysEmployment(t *testing.T) {
+	t.Parallel()
 	e := setupRelationships(t)
 	future := e.dbDate(t, 90)
 
@@ -241,6 +246,7 @@ func TestANoticePeriodDoesNotEndSomebodysEmployment(t *testing.T) {
 //
 // Only a patch of a row that ALREADY carries an end date reaches this.
 func TestMakingANoticePeriodEmploymentThePrimaryOneReplacesTheIncumbent(t *testing.T) {
+	t.Parallel()
 	e := setupRelationships(t)
 
 	status, incumbent, primary, _ := e.employment(t, e.companyID, AnyMap{"role": "cto"})
@@ -281,6 +287,7 @@ func TestMakingANoticePeriodEmploymentThePrimaryOneReplacesTheIncumbent(t *testi
 // Driven through the account's own contact count, because that is the number a
 // contact actually looks at, and through the contact-by-employer filter beside it.
 func TestAnEmploymentPastItsLastDayStopsCountingAtTheAccount(t *testing.T) {
+	t.Parallel()
 	e := setupRelationships(t)
 
 	// Written as a notice period, so the flag is legitimately TRUE on the row.
@@ -360,6 +367,7 @@ func (e *relEnv) contactsAtCompany(t *testing.T, companyID string) []string {
 // a departure — which is also what keeps the rail's "End employment" button
 // doing something the moment it is pressed.
 func TestTheBoundaryBetweenNoticeAndDepartureIsTodayItself(t *testing.T) {
+	t.Parallel()
 	for _, day := range []struct {
 		name     string
 		offset   int
@@ -387,6 +395,7 @@ func TestTheBoundaryBetweenNoticeAndDepartureIsTodayItself(t *testing.T) {
 // it would tell every reader the contact currently works somewhere they left —
 // and asking for it to be primary must not cost them the employer they have.
 func TestAnAlreadyEndedEmploymentIsNeverPromoted(t *testing.T) {
+	t.Parallel()
 	e := setupRelationships(t)
 
 	status, current, primary, _ := e.employment(t, e.companyID, AnyMap{"role": "cto"})
@@ -442,6 +451,7 @@ func (e *relEnv) isPrimary(t *testing.T, edgeID string) bool {
 // wrong comparison passes one of them and still gets the other backwards — and
 // because the contract now states both, which is what makes them one item.
 func TestEndingAnEmploymentThroughAPatchClearsThePrimaryFlag(t *testing.T) {
+	t.Parallel()
 	e := setupRelationships(t)
 
 	status, edge, primary, _ := e.employment(t, e.companyID, AnyMap{"role": "cto"})

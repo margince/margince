@@ -65,6 +65,7 @@ func providerAdminObjects() map[string]principal.ObjectGrant {
 // since. On the second, a rep corrected the title. The revert must clear the
 // first and leave the second exactly as the rep left it.
 func TestDeletingBoughtDataSparesWhatSomebodyElseWrote(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := providerStoreFor(t, e)
 
@@ -91,6 +92,7 @@ func TestDeletingBoughtDataSparesWhatSomebodyElseWrote(t *testing.T) {
 // purchase sits on a record it has been taken off — and on the next delete it
 // would point at whatever somebody has since written there.
 func TestDeletingBoughtDataForgetsWhatItFilled(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := providerStoreFor(t, e)
 
@@ -115,6 +117,7 @@ func TestDeletingBoughtDataForgetsWhatItFilled(t *testing.T) {
 // this guards is silent, because a revert that refuses an archived subject
 // rolls back and the endpoint still answers 204.
 func TestDeletingBoughtDataReachesAnArchivedContact(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := providerStoreFor(t, e)
 
@@ -256,6 +259,7 @@ func queryAsOwner(t *testing.T, e *Env, statement string, into any, args ...any)
 // run alongside the ones that did clear turns "not cleared yet" into "not
 // clearable, ever", silently, on the success path.
 func TestDeletingBoughtDataKeepsTheRunThatStillNamesASubject(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := providerStoreFor(t, e)
 

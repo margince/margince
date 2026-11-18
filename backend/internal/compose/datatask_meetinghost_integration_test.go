@@ -30,6 +30,7 @@ func seedGuestHostedMeeting(t *testing.T, e *integration.Env, capturedBy string)
 // audit row. A meeting a human logged, or one the app booked, keeps its host:
 // there the host is evidence of who held it.
 func TestTheOrganizerHostTaskRepairsAFoldedMeeting(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	synced := seedGuestHostedMeeting(t, e, "connector:gcal:"+e.Rep2.String())

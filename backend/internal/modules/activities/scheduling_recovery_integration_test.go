@@ -72,6 +72,7 @@ func (f *invitationFixture) book(t *testing.T) crmcontracts.MeetingInvitation {
 }
 
 func TestRescheduleKeepsTheOriginalReservationUntilAcknowledged(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	meeting := f.book(t)
 	start, end := monday(13), monday(14)
@@ -105,6 +106,7 @@ func TestRescheduleKeepsTheOriginalReservationUntilAcknowledged(t *testing.T) {
 // A held meeting rescheduled has not happened at its new slot. So settling the
 // move books it again, even when the receipt lands after the new slot began.
 func TestAHeldMeetingRescheduledSettlesBooked(t *testing.T) {
+	t.Parallel()
 	for name, settledAt := range map[string]time.Time{
 		"settled before the new slot":      monday(12),
 		"settled after the new slot began": monday(17),
@@ -140,6 +142,7 @@ func TestAHeldMeetingRescheduledSettlesBooked(t *testing.T) {
 // Only a Margince reschedule takes an outcome away. A provider change that
 // leaves the start where it was keeps it, on a meeting rescheduled before too.
 func TestAHeldRescheduledMeetingKeepsItsOutcomeWhenTheProviderMovesOnlyTheEnd(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	meeting := f.book(t)
 	id := ids.From[ids.ActivityKind](ids.UUID(meeting.Id))
@@ -192,6 +195,7 @@ func TestAHeldRescheduledMeetingKeepsItsOutcomeWhenTheProviderMovesOnlyTheEnd(t 
 // A reschedule start carries nanoseconds the stored start drops. Settling that
 // reschedule again, as a retry does, still finds the outcome at its own start.
 func TestSettlingASubMicrosecondRescheduleAgainKeepsItsOutcome(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	meeting := f.book(t)
 	id := ids.From[ids.ActivityKind](ids.UUID(meeting.Id))
@@ -226,6 +230,7 @@ func TestSettlingASubMicrosecondRescheduleAgainKeepsItsOutcome(t *testing.T) {
 }
 
 func TestAProposalIsConsumedInTheInvitationTransaction(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	link, err := f.store.CreateProposal(f.ctx, crmcontracts.MeetingProposalRequest{ContactId: f.request.ContactId, AttendeeEmail: f.request.AttendeeEmail, Subject: f.request.Subject, DurationMinutes: 60})
 	if err != nil {
@@ -266,6 +271,7 @@ func TestAProposalIsConsumedInTheInvitationTransaction(t *testing.T) {
 }
 
 func TestProviderEchoResolvesBeforeTheDeliveryReceipt(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	meeting, err := f.store.CreateInvitation(f.ctx, f.request)
 	if err != nil {
@@ -293,6 +299,7 @@ func TestProviderEchoResolvesBeforeTheDeliveryReceipt(t *testing.T) {
 }
 
 func TestProviderRescheduleStillBlocksItsActualTime(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	meeting := f.book(t)
 	var row invitationRow
@@ -316,6 +323,7 @@ func TestProviderRescheduleStillBlocksItsActualTime(t *testing.T) {
 }
 
 func TestContactActivityCarriesTheRealInvitationDeliveryStatus(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	meeting, err := f.store.CreateInvitation(f.ctx, f.request)
 	if err != nil {
@@ -341,6 +349,7 @@ func TestContactActivityCarriesTheRealInvitationDeliveryStatus(t *testing.T) {
 }
 
 func TestAnUncertainCancellationKeepsTheTimeReserved(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	f.calendar.fail = true
 	f.calendar.lookupErr = connector.ErrUnreachable

@@ -63,6 +63,7 @@ func leadRows(t *testing.T, e *apptest.AppEnv) []leadRowDTO {
 // human edited exactly as they left it, named in the report rather than
 // silently skipped or silently overwritten back.
 func TestCSVImportUndoReversesUntouchedAndKeepsEdited(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 
 	profile, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
@@ -140,6 +141,7 @@ func TestCSVImportUndoReversesUntouchedAndKeepsEdited(t *testing.T) {
 // Undo is reachable only once a run has actually committed — an
 // awaiting_approval run has created nothing yet, so there is nothing to undo.
 func TestCSVImportUndoRefusesBeforeTheRunCommits(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 
 	profile, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
@@ -168,6 +170,7 @@ func companyRows(t *testing.T, e *apptest.AppEnv) []leadRowDTO {
 // Reverse's other object branch: an import of companies undoes through
 // ArchiveCompany exactly as a lead import undoes through DisqualifyLead.
 func TestCSVImportUndoReversesCompanies(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	before := len(companyRows(t, e))
 
@@ -207,6 +210,7 @@ func TestCSVImportUndoReversesCompanies(t *testing.T) {
 // this lands in `kept` rather than being reversed out from under the human
 // who touched it.
 func TestCSVImportUndoKeepsARowAHumanDisqualifiedOutsideTheImport(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 
 	profile, _ := importjobtest.UploadCSV(t, e, "lead", "Email,Full Name\nada@lovelace.example,Ada Lovelace\n")

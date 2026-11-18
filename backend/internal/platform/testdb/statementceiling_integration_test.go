@@ -14,6 +14,7 @@ import (
 )
 
 func TestACappedConnectionHoldsTheCeilingAcrossItsTransactions(t *testing.T) {
+	t.Parallel()
 	dsn := os.Getenv("MARGINCE_TEST_DSN")
 	if dsn == "" {
 		t.Fatal("MARGINCE_TEST_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")

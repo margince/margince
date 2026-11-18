@@ -21,6 +21,7 @@ import (
 // The client test reads this same corpus; both sides must implement its statuses
 // and date precision instead of maintaining separate expected behaviours.
 func TestEmploymentCurrencySharedClientServerCases(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	raw, err := os.ReadFile("../../shared/kernel/employment/testdata/currency.json")
 	if err != nil {

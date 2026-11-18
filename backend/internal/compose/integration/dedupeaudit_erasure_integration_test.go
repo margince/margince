@@ -18,6 +18,7 @@ import (
 )
 
 func TestErasurePhysicallyClearsRecheckedDuplicateEvidence(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	create := func(name, address string) ids.ContactID {
 		t.Helper()

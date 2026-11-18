@@ -32,6 +32,7 @@ import (
 )
 
 func TestAnAttachCannotOutrunTheArchive(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := ids.From[ids.ContactKind](e.SeedContact(t, "Retiring Stakeholder", nil))
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Attaching Company", nil))

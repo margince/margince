@@ -17,6 +17,7 @@ import (
 // read-only grant says so before any call. A missing connection reads as
 // unavailable, not as a page that works.
 func TestABookingCalendarsBlockerComesFromItsConnection(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.GrantRole(t, e.Rep1, "rep")
 	calendar := newSchedulingCalendar(e.Pool, captureHealthRegistry(e.DB()))
@@ -42,6 +43,7 @@ func TestABookingCalendarsBlockerComesFromItsConnection(t *testing.T) {
 // Home's lane and the booking reads agree on a host who lost the grant to book.
 // Their calendar is fine, so only the authority half of the check can pause it.
 func TestHomePausesABookingPageWhoseHostMayNotBook(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.GrantRole(t, e.Rep1, "read_only")
 	e.WsExec(t, `INSERT INTO capture_connection (provider, user_id, status, provider_scopes)

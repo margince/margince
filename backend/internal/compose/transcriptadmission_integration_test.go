@@ -18,6 +18,7 @@ import (
 )
 
 func TestTranscriptAdmissionProposesLateLogsAndFutureDeadlines(t *testing.T) {
+	t.Parallel()
 	for _, future := range []bool{false, true} {
 		t.Run(map[bool]string{false: "late log", true: "future deadline"}[future], func(t *testing.T) {
 			e := setupTranscript(t)

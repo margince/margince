@@ -15,6 +15,7 @@ import (
 // naming one of the reader's addresses overrides it. The capture side is
 // proven through the real sink in compose's strangermail integration test.
 func TestBccIsTheReadersOwnImportUnlessToOrCcNamesThem(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	e.exec(t, `UPDATE app_user SET email=$2 WHERE id=$1`, e.rep, "reader-"+e.rep.String()+"@ourco.example")
 	message := e.waitingFrom(t, "View the document", "sender@example.com", e.buyer(t))
@@ -44,6 +45,7 @@ func TestBccIsTheReadersOwnImportUnlessToOrCcNamesThem(t *testing.T) {
 
 // NULL is mail captured before the facts existed, and reads as no evidence.
 func TestUnjudgedMailCarriesNoStrangerFacts(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	message := e.waitingFromToRep(t, "Question", "sender@example.com", e.buyer(t))
 	e.exec(t, `INSERT INTO capture_import (activity_id, user_id) VALUES ($1, $2)`, message, e.rep)

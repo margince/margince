@@ -34,6 +34,7 @@ func ownMessageDoneOf(ctx context.Context, t *testing.T, e *loadEnv, message ids
 // The page's answer follows the writer's. Before Done the rep may mark the
 // message. After it the message is set aside for the rep and for nobody else.
 func TestOwnMessageDoneStateFollowsTheDoneWrite(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := e.customerAt(t, "customer")
 	sent, _ := e.sentTo(t, contact, "", 2*24*time.Hour)
@@ -58,6 +59,7 @@ func TestOwnMessageDoneStateFollowsTheDoneWrite(t *testing.T) {
 // not read the message, a pass with no colleague behind it, and a colleague who
 // did not send it.
 func TestOwnMessageDoneStateRefusesWhomTheWriterRefuses(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := e.customerAt(t, "customer")
 	sent, _ := e.sentTo(t, contact, "", 2*24*time.Hour)

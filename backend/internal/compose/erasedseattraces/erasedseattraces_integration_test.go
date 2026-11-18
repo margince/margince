@@ -160,6 +160,7 @@ func systemCtx(e *integration.Env) context.Context {
 // The task deletes what an erased seat wrote, with its audit tombstones.
 // A seat that was never erased, or only carries the address, keeps its thread.
 func TestTheTaskDeletesWhatAnErasedSeatWroteAndReplaysAsANoOp(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	r := newRoom(t, e)
 	erased := r.invite(t, "erased.buyer@acme.test", true)
@@ -243,6 +244,7 @@ func TestTheTaskDeletesWhatAnErasedSeatWroteAndReplaysAsANoOp(t *testing.T) {
 // Pages of two seats cross clean seats between dirty ones, and every dirty
 // seat is purged.
 func TestTheTaskPagesPastCleanSeatsToEveryDirtyOne(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	r := newRoom(t, e)
 	var dirty []ids.UUID
@@ -273,6 +275,7 @@ func TestTheTaskPagesPastCleanSeatsToEveryDirtyOne(t *testing.T) {
 // A seat holding more rows than one batch may delete is purged over several
 // batches, each within the bound.
 func TestASeatLargerThanTheBatchBoundIsPurgedOverSeveralBatches(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	r := newRoom(t, e)
 	erased := r.invite(t, "busy.buyer@acme.test", true)
@@ -300,6 +303,7 @@ func TestASeatLargerThanTheBatchBoundIsPurgedOverSeveralBatches(t *testing.T) {
 
 // A seat whose deal is under a legal hold is left as it is.
 func TestASeatOnAHeldDealIsLeftForALaterRun(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	r := newRoom(t, e)
 	erased := r.invite(t, "held.buyer@acme.test", true)
@@ -323,6 +327,7 @@ func TestASeatOnAHeldDealIsLeftForALaterRun(t *testing.T) {
 // A batch that fails after its purge leaves every row in place, and a cursor
 // that is not one the task wrote is refused.
 func TestTheTaskRollsBackWithItsBatchAndRefusesAMalformedCursor(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	r := newRoom(t, e)
 	erased := r.invite(t, "rollback.buyer@acme.test", true)

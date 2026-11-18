@@ -116,14 +116,36 @@ func ciIntegrationJobs(t *testing.T, workflow string) int {
 	return n
 }
 
-// composeMaxConnections reads the server ceiling out of the postgres service's
+// ciTestParallel reads the LANE_TEST_PARALLEL the integration shard runs with,
+// and reports whether the workflows set one at all.
+func ciTestParallel(t *testing.T, workflow string) (int, bool) {
+	t.Helper()
+	m := regexp.MustCompile(`(?m)^\s*LANE_TEST_PARALLEL:\s*(\S+)\s*$`).FindStringSubmatch(workflow)
+	if m == nil {
+		return 0, false
+	}
+	n, err := strconv.Atoi(m[1])
+	if err != nil || n <= 0 {
+		t.Fatalf("the merge-gate workflows set LANE_TEST_PARALLEL=%q, which is not a positive count", m[1])
+	}
+	return n, true
+}
+
+// laneService is the compose service the integration lanes connect to.
+const laneService = "postgres-test"
+
+// composeMaxConnections reads the server ceiling out of the lane service's
 // own command line. Read from the `-c name=value` argument rather than from any
 // mention of the word, so the comment that explains the number cannot answer for
 // the number.
 func composeMaxConnections(t *testing.T, compose string) int {
 	t.Helper()
+	service := regexp.MustCompile(`(?ms)^  ` + laneService + `:\n(.*?)(?:^  [a-z][a-z0-9-]*:\n|^[a-z])`).FindStringSubmatch(compose)
+	if service == nil {
+		t.Fatalf("%s has no %s service, which is the server the integration lanes use", composeDevYML, laneService)
+	}
 	re := regexp.MustCompile(`(?m)^\s*-\s*max_connections=(\d+)\s*$`)
-	m := re.FindStringSubmatch(compose)
+	m := re.FindStringSubmatch(service[1])
 	if m == nil {
 		t.Fatalf("%s passes no `-c max_connections=…` to postgres, so the lane runs against the stock 100 — which is the state #1109 reported", composeDevYML)
 	}
@@ -188,6 +210,15 @@ func TestTheLaneFitsInsideTheClusterItRunsAgainst(t *testing.T) {
 	// over before any test ran.
 	if perPackage < perPool {
 		t.Fatalf("LANE_CONNS_PER_PACKAGE=%d is below LANE_POOL_MAX_CONNS=%d — a package opens more than one pool from these DSNs, so its allowance cannot be smaller than one pool's ceiling", perPackage, perPool)
+	}
+	// Each parallel test has a database of its own, so it opens the owner and
+	// app pools again.
+	parallel := laneTerm(t, script, "LANE_TEST_PARALLEL_MAX")
+	if perPackage < parallel*2*perPool {
+		t.Fatalf("LANE_CONNS_PER_PACKAGE=%d is below LANE_TEST_PARALLEL_MAX=%d tests x 2 pools x LANE_POOL_MAX_CONNS=%d", perPackage, parallel, perPool)
+	}
+	if ci, set := ciTestParallel(t, gateWorkflows(t)); set && ci > parallel {
+		t.Fatalf("the merge-gate workflows set LANE_TEST_PARALLEL=%d, over the LANE_TEST_PARALLEL_MAX=%d the budget is sized for", ci, parallel)
 	}
 
 	demand := laneConnectionDemand(t, jobs)
@@ -260,6 +291,17 @@ func TestTheLanePinsThePoolCeilingItBudgetsFor(t *testing.T) {
 	if !strings.Contains(script, `export MARGINCE_TEST_POOL_MAX_CONNS="$LANE_POOL_MAX_CONNS"`) {
 		t.Fatalf("%s no longer exports MARGINCE_TEST_POOL_MAX_CONNS from LANE_POOL_MAX_CONNS — the budget above would be sized for a ceiling the harness never hears about", laneScriptPath)
 	}
+	// Every test run the lane starts is held to the parallel tests the budget
+	// counts; go test's own default is one per CPU.
+	for _, path := range []string{"../scripts/test-integration-one.sh", "../scripts/test-integration-parallel.sh"} {
+		for line := range strings.SplitSeq(readRepoFile(t, path), "\n") {
+			code := !strings.HasPrefix(strings.TrimSpace(line), "#")
+			starts := code && (strings.Contains(line, "go test -p 1") || strings.Contains(line, "-test.paniconexit0"))
+			if starts && !strings.Contains(line, `parallel="$LANE_TEST_PARALLEL"`) && !strings.Contains(line, `-parallel "$LANE_TEST_PARALLEL"`) {
+				t.Errorf("%s starts tests without LANE_TEST_PARALLEL, so go test runs one per CPU: %s", path, strings.TrimSpace(line))
+			}
+		}
+	}
 	// The harness's end: the name the lane exports is the name testdb reads.
 	pool := readRepoFile(t, "../backend/internal/platform/testdb/pool.go")
 	if !strings.Contains(pool, `PoolMaxConnsEnv = "MARGINCE_TEST_POOL_MAX_CONNS"`) {
@@ -267,5 +309,20 @@ func TestTheLanePinsThePoolCeilingItBudgetsFor(t *testing.T) {
 	}
 	if !strings.Contains(pool, `params["pool_max_conns"]`) {
 		t.Fatal("backend/internal/platform/testdb/pool.go reads the ceiling but no longer applies it as pool_max_conns — a pool that ignores the lane's ceiling makes the budget fiction")
+	}
+}
+
+// The budget is checked against postgres-test, so the lanes must connect to it:
+// the Makefile's test port is the port that service publishes.
+func TestTheLanesUseTheServerTheBudgetIsCheckedAgainst(t *testing.T) {
+	t.Parallel()
+	compose := readRepoFile(t, composeDevYML)
+	service := regexp.MustCompile(`(?ms)^  ` + laneService + `:\n.*?^\s*-\s*"(\d+):5432"`).FindStringSubmatch(compose)
+	port := regexp.MustCompile(`(?m)^TEST_PG_PORT \?= (\d+)$`).FindStringSubmatch(readRepoFile(t, "../backend/Makefile"))
+	if service == nil || port == nil {
+		t.Fatalf("cannot read the %s host port from %s or TEST_PG_PORT from backend/Makefile", laneService, composeDevYML)
+	}
+	if service[1] != port[1] {
+		t.Fatalf("TEST_PG_PORT is %s but %s publishes %s, so the lanes run against a server the connection budget does not describe", port[1], laneService, service[1])
 	}
 }

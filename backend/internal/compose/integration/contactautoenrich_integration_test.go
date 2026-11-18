@@ -159,6 +159,7 @@ func profileFields(t *testing.T, e *Env, contactID ids.ContactID) map[string]str
 // close: the site read matched nobody at the time, and nothing would ever look
 // again.
 func TestContactAutoEnrichFillsAContactFromTheirEmployersStagedPage(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contactID, companyID := seedEmployedContact(t, e, "Anna Muster")
 	approvalID := stageSiteLead(t, e, companyID, sitePage{
@@ -205,6 +206,7 @@ func TestContactAutoEnrichFillsAContactFromTheirEmployersStagedPage(t *testing.T
 // A withdrawal the database refuses fails the pass, so the bus retries it,
 // rather than leaving a rep asked to create a lead for a contact that exists.
 func TestContactAutoEnrichFailsWhenTheProposalCannotBeWithdrawn(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contactID, companyID := seedEmployedContact(t, e, "Anna Muster")
 	approvalID := stageSiteLead(t, e, companyID, sitePage{
@@ -246,6 +248,7 @@ func TestContactAutoEnrichFailsWhenTheProposalCannotBeWithdrawn(t *testing.T) {
 // The match is narrow on purpose. A page contact who is not unmistakably this
 // contact must leave the record alone rather than be settled by a sweep.
 func TestContactAutoEnrichLeavesAContactAloneWhenThePageNamesSomebodyElse(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contactID, companyID := seedEmployedContact(t, e, "Anna Muster")
 	stageSiteLead(t, e, companyID, sitePage{
@@ -272,6 +275,7 @@ func TestContactAutoEnrichLeavesAContactAloneWhenThePageNamesSomebodyElse(t *tes
 // the assertion rests on. Without that page the test would pass on an empty
 // database and prove nothing.
 func TestContactAutoEnrichStopsAtAContactWithNoEmployer(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	_, foreignCompany := seedEmployedContact(t, e, "Somebody Else")
 	stageSiteLead(t, e, foreignCompany, sitePage{
@@ -305,6 +309,7 @@ func TestContactAutoEnrichStopsAtAContactWithNoEmployer(t *testing.T) {
 // became newly matchable, inheriting the source's emails and employer — would be
 // missed entirely.
 func TestContactAutoEnrichFollowsAMergeToTheSurvivor(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	survivor, companyID := seedEmployedContact(t, e, "Anna Muster")
 	mergedAway := ids.From[ids.ContactKind](ids.NewV7())

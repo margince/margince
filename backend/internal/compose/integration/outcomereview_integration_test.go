@@ -55,6 +55,7 @@ func closedDeal(t *testing.T, e *Env, name string) (ids.DealID, ids.UUID) {
 }
 
 func TestAReviewWritesItsNoteAndItsAnswersTogether(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	deal, occurrence := closedDeal(t, e, "Reviewed win")
 	reviews := compose.NewOutcomeReviews(e.Pool)
@@ -95,6 +96,7 @@ func TestAReviewWritesItsNoteAndItsAnswersTogether(t *testing.T) {
 
 // A retry is one review, not two.
 func TestRetryingASubmissionReturnsTheReviewAlreadyWritten(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	deal, occurrence := closedDeal(t, e, "Retried review")
 	reviews := compose.NewOutcomeReviews(e.Pool)
@@ -126,6 +128,7 @@ func TestRetryingASubmissionReturnsTheReviewAlreadyWritten(t *testing.T) {
 
 // The case the whole occurrence design exists for.
 func TestAReviewOfAClosingTheDealHasLeftIsRefused(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, won := DealFixture(t, e)
 	admin := e.Admin()
@@ -172,6 +175,7 @@ func TestAReviewOfAClosingTheDealHasLeftIsRefused(t *testing.T) {
 // An answer to a question nobody asked is refused, because the frozen questions
 // beside it could not explain it.
 func TestAnAnswerToAQuestionTheTemplateDoesNotAskIsRefused(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	deal, occurrence := closedDeal(t, e, "Bad answer key")
 	reviews := compose.NewOutcomeReviews(e.Pool)
@@ -188,6 +192,7 @@ func TestAnAnswerToAQuestionTheTemplateDoesNotAskIsRefused(t *testing.T) {
 
 // A required question left blank is refused, named so the author knows which.
 func TestARequiredQuestionMustBeAnswered(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	deal, occurrence := closedDeal(t, e, "Blank required answer")
 	reviews := compose.NewOutcomeReviews(e.Pool)
@@ -204,6 +209,7 @@ func TestARequiredQuestionMustBeAnswered(t *testing.T) {
 
 // The freezing, proved by editing the template afterwards.
 func TestEditingATemplateDoesNotChangeWhatAnOldReviewAsked(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	deal, occurrence := closedDeal(t, e, "Frozen questions")
 	reviews := compose.NewOutcomeReviews(e.Pool)
@@ -255,6 +261,7 @@ func TestEditingATemplateDoesNotChangeWhatAnOldReviewAsked(t *testing.T) {
 // The composite foreign key, exercised directly: a review cannot name a
 // closing that happened on somebody else's deal.
 func TestAReviewCannotNameAnotherDealsClosing(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	// Two deals on ONE fixture pipeline: DealFixture mints a pipeline per
 	// call, and a second one collides with the first.
@@ -306,6 +313,7 @@ func TestAReviewCannotNameAnotherDealsClosing(t *testing.T) {
 // as lost in June, or lose its closing entirely once the deal's status and the
 // stage's current meaning stop agreeing — taking the review with it.
 func TestEditingAStagesMeaningDoesNotRewriteAnOldClosing(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	deal, occurrence := closedDeal(t, e, "Stage reconfigured")
 	reviews := compose.NewOutcomeReviews(e.Pool)
@@ -374,6 +382,7 @@ func TestEditingAStagesMeaningDoesNotRewriteAnOldClosing(t *testing.T) {
 // Hiding it because the deal happens to be open again would make a reopen look
 // like an erasure.
 func TestReopeningADealKeepsTheReviewOfItsEarlierClosing(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, won := DealFixture(t, e)
 	admin := e.Admin()
@@ -425,6 +434,7 @@ func dealReaderNoNotesPerms() principal.Permissions {
 // account of any closing, signed with their name and counted as that deal's
 // review.
 func TestReadingADealIsNotAuthorityToReviewIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	deal, occurrence := closedDeal(t, e, "Read but not reviewable")
 	reviews := compose.NewOutcomeReviews(e.Pool)

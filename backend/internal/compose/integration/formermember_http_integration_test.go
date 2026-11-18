@@ -47,6 +47,7 @@ func fullSeatsInUse(t *testing.T, e *apptest.AppEnv) int {
 }
 
 func TestAFormerMemberIsASeatNobodyCanEnterAndNobodyPaysFor(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	e.DescribeCompany(t)
@@ -143,6 +144,7 @@ func TestAFormerMemberIsASeatNobodyCanEnterAndNobodyPaysFor(t *testing.T) {
 // would refuse it for the wrong reason while passing a 200-rune accented label
 // that the contract permits.
 func TestAFormerMemberSourceIsBoundedTheWayTheContractSaysItIs(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	e.DescribeCompany(t)

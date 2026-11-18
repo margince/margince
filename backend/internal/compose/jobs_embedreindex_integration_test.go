@@ -54,6 +54,7 @@ func unreachableStore(t *testing.T) *search.Store {
 // a rebuild that never happened — leaving the marker held by a run that looks
 // finished.
 func TestEmbedReindexWorkerWithNoEmbedLaneFailsInsteadOfSittingQueued(t *testing.T) {
+	t.Parallel()
 	w := &embedReindexWorker{store: unreachableStore(t), embedder: nil}
 	err := w.Work(context.Background(), &river.Job[EmbedReindexArgs]{
 		// Not the last attempt: the release is the last attempt's business, so
@@ -85,6 +86,7 @@ func TestEmbedReindexWorkerWithNoEmbedLaneFailsInsteadOfSittingQueued(t *testing
 // confirm's steal — so both failures have to reach the job row, or the operator
 // reads an outage where they should read a stuck marker.
 func TestEmbedReindexWorkerReportsAMarkerItCouldNotHandBack(t *testing.T) {
+	t.Parallel()
 	w := &embedReindexWorker{store: unreachableStore(t), embedder: fakeReindexEmbedder{}}
 	err := w.Work(context.Background(), &river.Job[EmbedReindexArgs]{
 		JobRow: &rivertype.JobRow{Attempt: 3, MaxAttempts: 3},
@@ -112,6 +114,7 @@ func TestEmbedReindexWorkerReportsAMarkerItCouldNotHandBack(t *testing.T) {
 // drift and hands the marker back without stamping its target, which no role
 // serves any more.
 func TestARunCutShortByAModelChangeKeepsThePopulatedModel(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := context.Background()
 	store := search.NewStore(InstallationDB(e.Pool))

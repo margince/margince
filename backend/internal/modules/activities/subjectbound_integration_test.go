@@ -18,6 +18,7 @@ import (
 // The one typing a subject can shorten it. So a subject past the column limit
 // is refused with the column and its limit, not cut.
 func TestATypedSubjectPastTheLimitIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	limit := textbounds.LimitOf("public.activity.subject")

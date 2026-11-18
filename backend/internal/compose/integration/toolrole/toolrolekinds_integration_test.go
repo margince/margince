@@ -221,6 +221,7 @@ func baseRow(row string) string {
 }
 
 func TestTheLeadListProbeIgnoresOtherCallsLinkedLeads(t *testing.T) {
+	t.Parallel()
 	recorded := newToolCheckRecorder()
 	d := toolRoleApp(t, "lead-list-probe", compose.WithToolChecksRecordedForTest(recorded.note))
 	calls := toolRoleCalls(compose.NewRegistry(nil, compose.SendPath{}).Specs(), routeShapes())

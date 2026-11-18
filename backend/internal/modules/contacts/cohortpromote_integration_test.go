@@ -79,6 +79,7 @@ func (e *dedupeEnv) cohortStateOf(ctx context.Context, t *testing.T, activity id
 // who the sender is, the contact is then created, and all three are on their
 // record — not just the one the ensure ran for.
 func TestTheCohortRepairFindsMailCapturedBeforeTheContactExisted(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -169,6 +170,7 @@ func TestTheCohortRepairFindsMailCapturedBeforeTheContactExisted(t *testing.T) {
 // An alias added to an existing contact is a new address, and the mail under it
 // is exactly as stranded as a new contact's would be.
 func TestTheCohortRepairReachesMailUnderAnAliasAddedLater(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -215,6 +217,7 @@ func TestTheCohortRepairReachesMailUnderAnAliasAddedLater(t *testing.T) {
 // an ADDRESS, and an inference must not overrule a link a human or a verdict
 // placed on the row.
 func TestTheCohortRepairLeavesMailThatAlreadyBelongsToSomebody(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -256,6 +259,7 @@ func TestTheCohortRepairLeavesMailThatAlreadyBelongsToSomebody(t *testing.T) {
 // activity_link walks merged_into_id: a link written to the retired id leaves the
 // message on a record nobody opens.
 func TestTheCohortRepairWritesUnderTheSurvivorOfAMerge(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -303,6 +307,7 @@ func TestTheCohortRepairWritesUnderTheSurvivorOfAMerge(t *testing.T) {
 // A hand-logged activity carries the links a human chose; an address inference
 // must not add to them.
 func TestTheCohortRepairLeavesHandLoggedActivitiesAlone(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 

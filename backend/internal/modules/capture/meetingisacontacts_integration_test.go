@@ -81,6 +81,7 @@ func linkToCompany(ctx context.Context, db *database.DB, activityID, companyID i
 
 // TestACompanyCannotBeMetOrCalled is the rule itself.
 func TestACompanyCannotBeMetOrCalled(t *testing.T) {
+	t.Parallel()
 	ctx, db := meetingWorkspace(t)
 
 	for _, kind := range []string{"meeting", "call"} {
@@ -104,6 +105,7 @@ func TestACompanyCannotBeMetOrCalled(t *testing.T) {
 // meetings and calls, which are inherently personal; a note or a task is ABOUT
 // a record, and filing one on a company is ordinary.
 func TestANoteAboutACompanyIsStillAllowed(t *testing.T) {
+	t.Parallel()
 	ctx, db := meetingWorkspace(t)
 
 	for _, kind := range []string{"note", "task", "email"} {
@@ -120,6 +122,7 @@ func TestANoteAboutACompanyIsStillAllowed(t *testing.T) {
 // note to a company is legal, so without this the same forbidden state is
 // reachable in two steps: link first, then change the kind.
 func TestARekindCannotSmuggleACompanyMeetingPast(t *testing.T) {
+	t.Parallel()
 	ctx, db := meetingWorkspace(t)
 
 	activityID, companyID := seedActivityAndCompany(ctx, t, db, "note")
@@ -143,6 +146,7 @@ func TestARekindCannotSmuggleACompanyMeetingPast(t *testing.T) {
 // means to. The ordinary case — a meeting linked to the contact who was there —
 // must still write.
 func TestAMeetingWithAContactIsUntouched(t *testing.T) {
+	t.Parallel()
 	ctx, db := meetingWorkspace(t)
 
 	activityID, _ := seedActivityAndCompany(ctx, t, db, "meeting")
@@ -182,6 +186,7 @@ func TestAMeetingWithAContactIsUntouched(t *testing.T) {
 // row lock queues behind it and the second transaction re-reads under READ
 // COMMITTED — seeing whichever half landed first, and refusing.
 func TestTwoTransactionsCannotAssembleACompanyMeetingBetweenThem(t *testing.T) {
+	t.Parallel()
 	ctx, db, owner := meetingWorkspaceWithOwner(t)
 	activityID, companyID := seedActivityAndCompany(ctx, t, db, "note")
 

@@ -17,6 +17,7 @@ import (
 )
 
 func TestMeetingRecapWaitsForBothHeldAndNotes(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := time.Date(2026, time.July, 15, 14, 0, 0, 0, time.UTC)
 	contact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{

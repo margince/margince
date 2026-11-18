@@ -16,11 +16,13 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestAReservedDomainSenderRaisesNoContactProposal(t *testing.T) {
+	t.Parallel()
 	e := setupWithOwnMailbox(t)
 	cfg := CaptureConfig{SkipReservedDomainProposals: true}
 	reserved := reviewQuestionThroughRealCapture(t, e, cfg, "qa@mail.example.com", "reserved-1")
@@ -43,6 +45,7 @@ func TestAReservedDomainSenderRaisesNoContactProposal(t *testing.T) {
 }
 
 func TestDisablingTheReservedRuleRaisesNoUncertaintyProposal(t *testing.T) {
+	t.Parallel()
 	e := setupWithOwnMailbox(t)
 	disposition := reviewQuestionThroughRealCapture(t, e, CaptureConfig{}, "buyer@acme.test", "reserved-off-1")
 
@@ -63,7 +66,7 @@ func reviewQuestionThroughRealCapture(
 	if !queued {
 		t.Fatalf("capturing mail from %s opened no question", sender)
 	}
-	brain := &scriptedVerdictBrain{confidence: map[string]float64{disposition.String(): 0.2}}
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, confidence: map[string]float64{disposition.String(): 0.2}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, cfg, slog.Default())
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	if err := engine.RunWorkspace(ctx, 0); err != nil {

@@ -54,6 +54,7 @@ func contactLinkedActivities(t *testing.T, e *apptest.AppEnv, contactID string) 
 }
 
 func TestAPresetContactLinksEveryRowAndAnInvisibleOneIsNotFound(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	e.DescribeCompany(t)
 	colleague := createdID(t, e, "/v1/users", AnyMap{"email": "colleague@act-preset.test", "display_name": "Colleague", "role": "rep"})
@@ -99,6 +100,7 @@ func TestAPresetContactLinksEveryRowAndAnInvisibleOneIsNotFound(t *testing.T) {
 }
 
 func TestAPresetIsRefusedOnARunThatLandsAnythingButActivities(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	contact := createdID(t, e, "/v1/contacts", AnyMap{
 		"source": "manual", "full_name": "Preset Pat",
@@ -119,6 +121,7 @@ func TestAPresetIsRefusedOnARunThatLandsAnythingButActivities(t *testing.T) {
 }
 
 func TestAPresetSavedOnADraftIsTheOneTheCommitFilesUnder(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	contact := createdID(t, e, "/v1/contacts", AnyMap{
 		"source": "manual", "full_name": "Draft Dana",

@@ -31,6 +31,7 @@ func setupCollections(t *testing.T) (*apptest.AppEnv, string) {
 }
 
 func TestTagsLifecycleAndApplication(t *testing.T) {
+	t.Parallel()
 	e, contactID := setupCollections(t)
 
 	var tag struct {

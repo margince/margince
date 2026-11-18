@@ -54,6 +54,7 @@ func readDealStatus(t *testing.T, e *apptest.AppEnv, id string) dealRead {
 }
 
 func TestALostDealIsNotInTheForecastsOpenPipeline(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	stages := apptest.DiscoverSeededPipeline(t, e)
@@ -111,6 +112,7 @@ func TestALostDealIsNotInTheForecastsOpenPipeline(t *testing.T) {
 }
 
 func TestADealCannotBeBornInAnotherPipelinesStage(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	stages := apptest.DiscoverSeededPipeline(t, e)
@@ -136,6 +138,7 @@ func TestADealCannotBeBornInAnotherPipelinesStage(t *testing.T) {
 }
 
 func TestADealBornInAStageThatDoesNotExistIsA422NamingTheStage(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	stages := apptest.DiscoverSeededPipeline(t, e)
@@ -150,6 +153,7 @@ func TestADealBornInAStageThatDoesNotExistIsA422NamingTheStage(t *testing.T) {
 }
 
 func TestMovingAClosedDealToItsOwnStageChangesNothing(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	stages := apptest.DiscoverSeededPipeline(t, e)
@@ -188,6 +192,7 @@ func TestMovingAClosedDealToItsOwnStageChangesNothing(t *testing.T) {
 }
 
 func TestALostDealNeedsAReasonThatSaysSomething(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	stages := apptest.DiscoverSeededPipeline(t, e)

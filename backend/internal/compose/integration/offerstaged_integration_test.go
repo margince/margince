@@ -83,6 +83,7 @@ func groundedStagedLines() []deals.StagedOfferLineInput {
 }
 
 func TestAddStagedOfferLinesInsertsEvidencedLinesExcludedFromTotals(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskPerms)
 	offerID := baseDraftOffer(ctx, t, e, "Staged-add deal")
@@ -148,6 +149,7 @@ func TestAddStagedOfferLinesInsertsEvidencedLinesExcludedFromTotals(t *testing.T
 }
 
 func TestAddStagedOfferLinesThenAcceptCountsInTotals(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskPerms)
 	offerID := baseDraftOffer(ctx, t, e, "Staged-accept deal")
@@ -187,6 +189,7 @@ func TestAddStagedOfferLinesThenAcceptCountsInTotals(t *testing.T) {
 }
 
 func TestAddStagedOfferLinesUngroundedPriceIsTheHonestZeroSentinel(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskPerms)
 	offerID := baseDraftOffer(ctx, t, e, "Ungrounded-price deal")
@@ -257,6 +260,7 @@ func TestAddStagedOfferLinesUngroundedPriceIsTheHonestZeroSentinel(t *testing.T)
 // grounded. This proves the flag now round-trips both ways: false stays
 // false, true stays true.
 func TestOfferRegenerateCopiesPriceGroundedForwardUnchanged(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskPerms)
 	offerID := baseDraftOffer(ctx, t, e, "Regen-price-grounded deal")
@@ -300,6 +304,7 @@ func TestOfferRegenerateCopiesPriceGroundedForwardUnchanged(t *testing.T) {
 }
 
 func TestAddStagedOfferLinesDeniesWithoutOfferUpdateGrant(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskPerms)
 	offerID := baseDraftOffer(admin, t, e, "Staged-deny deal")
@@ -316,6 +321,7 @@ func TestAddStagedOfferLinesDeniesWithoutOfferUpdateGrant(t *testing.T) {
 }
 
 func TestAddStagedOfferLinesRejectsANonDraftOffer(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskPerms)
 	offerID := baseDraftOffer(ctx, t, e, "Staged-nondraft deal")
@@ -328,6 +334,7 @@ func TestAddStagedOfferLinesRejectsANonDraftOffer(t *testing.T) {
 }
 
 func TestAddStagedOfferLinesAuditCarriesTheAgentProvenance(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskPerms)
 	offerID := baseDraftOffer(ctx, t, e, "Staged-provenance deal")

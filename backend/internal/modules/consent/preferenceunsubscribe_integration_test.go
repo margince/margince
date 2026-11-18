@@ -52,6 +52,7 @@ func pressUnsubscribe(t *testing.T, e *channelConsentEnv, token string, purpose 
 // and the old handler echoed the purpose back either way — so a reader
 // who pressed twice got a fresh confirmation for a no-op.
 func TestAReplayedUnsubscribeReportsNothingChanged(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	token := seedPreferenceToken(t, e)
 	key := "newsletter"
@@ -91,6 +92,7 @@ func TestAReplayedUnsubscribeReportsNothingChanged(t *testing.T) {
 // A subject who wants correspondence stopped has a route, and it is a different
 // legal act: PublicStop's Art. 21 objection, tested in publicstop_integration_test.go.
 func TestUnsubscribeAllStopsAMarketingLaneWithNoGrantedRow(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	token := seedPreferenceToken(t, e)
 
@@ -138,6 +140,7 @@ func TestUnsubscribeAllStopsAMarketingLaneWithNoGrantedRow(t *testing.T) {
 // that, as a withdrawal of a consent that was never the basis for those
 // messages.
 func TestUnsubscribeAllLeavesBusinessCorrespondenceAlone(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	token := seedPreferenceToken(t, e)
 
@@ -163,6 +166,7 @@ func TestUnsubscribeAllLeavesBusinessCorrespondenceAlone(t *testing.T) {
 // Transactional is never withdrawable, and an unsubscribe-all must not
 // try: the reader keeps the password-reset mail they will need.
 func TestUnsubscribeAllLeavesTransactionalAlone(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	token := seedPreferenceToken(t, e)
 
@@ -188,6 +192,7 @@ func TestUnsubscribeAllLeavesTransactionalAlone(t *testing.T) {
 // inside the write, and collapsing them would tell a recipient their
 // choice was declined when in truth nothing looked at it.
 func TestAnUnknownPurposeIsAFaultNotARefusal(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	token := seedPreferenceToken(t, e)
 
@@ -212,6 +217,7 @@ func TestAnUnknownPurposeIsAFaultNotARefusal(t *testing.T) {
 // state, and the purpose keys are that state. What it carries is the count, so
 // the screen can tell a real withdrawal from a replay.
 func TestALeadsNamedPurposePressIsAnsweredAsAWithdrawalAndItsReplayIsNot(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedMarketingPurpose(t, e)
 	purpose := marketingPurposeID(t, e)

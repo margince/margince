@@ -55,6 +55,7 @@ func kindRow(t *testing.T, settings []approvals.KindAutonomy, kind string) appro
 // that answered from the table would answer with nothing and the settings screen
 // would offer a rep who has never decided anything no way to start.
 func TestEveryAutomatableKindIsOfferedBeforeAnyoneHasDecidedOne(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	svc := approvals.NewService(e.DB())
 	repCtx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
@@ -87,6 +88,7 @@ func TestEveryAutomatableKindIsOfferedBeforeAnyoneHasDecidedOne(t *testing.T) {
 // The setting a rep makes is the setting the read gives back, and the counters
 // beside it are their own.
 func TestSwitchingAKindOnIsWhatTheSettingsThenReport(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	svc := approvals.NewService(e.DB())
 	repCtx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
@@ -133,6 +135,7 @@ func TestSwitchingAKindOnIsWhatTheSettingsThenReport(t *testing.T) {
 // says, rather than a colleague silently inheriting an automatic apply they
 // never agreed to.
 func TestOneRepsAutonomyIsInvisibleToAnother(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	svc := approvals.NewService(e.DB())
 	first := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
@@ -159,6 +162,7 @@ func TestOneRepsAutonomyIsInvisibleToAnother(t *testing.T) {
 // are written inside the decision transaction: a fixture that set them directly
 // would prove the read works and say nothing about whether anything fills them.
 func TestTheTrackRecordUnderASwitchCountsTheRepsOwnDecisions(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	svc := approvals.NewService(e.DB())
@@ -199,6 +203,7 @@ func TestTheTrackRecordUnderASwitchCountsTheRepsOwnDecisions(t *testing.T) {
 // A regression that made the mode read once and cache it would pass both of
 // those and fail this one.
 func TestAKindSwitchedOnIsTheKindThatThenApplies(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	svc := approvals.NewService(e.DB())
@@ -249,6 +254,7 @@ func TestAKindSwitchedOnIsTheKindThatThenApplies(t *testing.T) {
 // Older releases first recorded review history using the column's manual
 // default. No stored field distinguishes those rows from deliberate opt-outs.
 func TestStoredModesFromEarlierDecisionHistoryStayOff(t *testing.T) {
+	t.Parallel()
 	for _, kind := range approvals.SortedAutoApplyKinds() {
 		t.Run(kind, func(t *testing.T) {
 			e := Setup(t)

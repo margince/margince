@@ -15,7 +15,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/project360"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/agents"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -35,7 +34,7 @@ var handoffSections = []crmcontracts.Project360Section{
 // with no name, not a failed handoff.
 func handoffReader(pool *pgxpool.Pool) agents.HandoffReader {
 	page := newProject360Service(pool)
-	seats := identity.NewService(pool)
+	seats := IdentityService(pool)
 	return func(ctx context.Context, projectID ids.UUID) (agents.HandoffFacts, error) {
 		res, err := page.Read(ctx, ids.From[ids.ProjectKind](projectID), project360.Reading{
 			Only: handoffSections,

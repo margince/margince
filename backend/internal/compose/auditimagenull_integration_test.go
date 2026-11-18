@@ -47,6 +47,7 @@ func writeAuditImage(t *testing.T, e *integration.Env, before, after string) err
 }
 
 func TestAnAuditImageCannotBeTheJSONScalarNull(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 
 	// The absent image, which is the shape every reader's `IS NULL` is written

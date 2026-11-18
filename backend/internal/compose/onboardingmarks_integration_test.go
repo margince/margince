@@ -29,6 +29,7 @@ import (
 )
 
 func TestTheColdStartParksBothMarksAndTheConfirmationBindsEachToItsSlot(t *testing.T) {
+	t.Parallel()
 	// The installation's own company is drawn at two widths. A seed page that
 	// labels its wordmark and declares its icon gives the dossier one mark per
 	// slot, and the confirmation moves each onto the record it creates — the
@@ -97,6 +98,7 @@ func TestTheColdStartParksBothMarksAndTheConfirmationBindsEachToItsSlot(t *testi
 }
 
 func TestAColdStartWithoutALockupLeavesTheBadgeSlotEmpty(t *testing.T) {
+	t.Parallel()
 	// An icon-only site gets what every installation got before the lockup
 	// existed: the icon in the wide slot, nothing in the badge slot, and the
 	// collapsed rail falling back to the wide mark on its own.
@@ -114,6 +116,7 @@ func TestAColdStartWithoutALockupLeavesTheBadgeSlotEmpty(t *testing.T) {
 }
 
 func TestTheConfirmationKeepsTheBadgeAContactChoseAndStillLandsTheLockup(t *testing.T) {
+	t.Parallel()
 	// The slots are decided one at a time. A contact who uploaded a badge before
 	// the read ran keeps it, and its bytes; the lockup the read resolved still
 	// lands, because nobody chose a wide mark; and the badge the read parked,

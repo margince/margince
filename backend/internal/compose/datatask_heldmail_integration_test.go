@@ -143,6 +143,7 @@ SELECT e.contact_id, e.id, 'art14', $4::timestamptz + interval '1 month', $5,
 }
 
 func TestHeldMailTaskClosesOnlyProvenHistoryAndReplaysSafely(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	conn := integration.OwnerConn(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
@@ -210,6 +211,7 @@ func TestHeldMailTaskClosesOnlyProvenHistoryAndReplaysSafely(t *testing.T) {
 }
 
 func TestHeldMailDomainAndAuditRollBackWithItsProgress(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	conn := integration.OwnerConn(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
@@ -254,7 +256,7 @@ func TestHeldMailDomainAndAuditRollBackWithItsProgress(t *testing.T) {
 		t.Fatalf("partial progress: %+v", progress[1])
 	}
 	now = now.Add(time.Hour)
-	resumed, err := newDataTaskEngine(e.Pool, "test", func() time.Time { return now })
+	resumed, err := newDataTaskEngine(e.Pool, nil, "test", func() time.Time { return now })
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -416,6 +418,7 @@ func heldMailCases(ctx context.Context, t *testing.T, conn *pgx.Conn, seat strin
 }
 
 func TestHeldMailCorrectionKeepsCopiedAndColleagueSentAcquisitionsUnknown(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	conn := integration.OwnerConn(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")

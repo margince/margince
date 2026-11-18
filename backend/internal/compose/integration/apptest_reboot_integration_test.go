@@ -14,6 +14,7 @@ import (
 )
 
 func TestRebootServesTheSameDatabaseThroughAFreshPool(t *testing.T) {
+	t.Parallel()
 	before := apptest.SetupApp(t)
 	before.BootstrapWorkspace(t)
 	var contact struct {
@@ -45,6 +46,7 @@ func TestRebootServesTheSameDatabaseThroughAFreshPool(t *testing.T) {
 }
 
 func TestClosingARebootedAppStopsItAndLeavesTheOriginalServing(t *testing.T) {
+	t.Parallel()
 	before := apptest.SetupApp(t)
 	before.BootstrapWorkspace(t)
 	after := before.Reboot(t)

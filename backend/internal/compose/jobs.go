@@ -70,6 +70,7 @@ func sweepInsertOpts() *river.InsertOpts {
 // Embedder registers nothing for the drift sweep and anyway for a reindex —
 // which is why the posture is stated per kind and never per field.
 type JobRunnerConfig struct {
+	Extensions           *Extensions // the composition's units, whose jobs join the runner; nil runs none
 	DisabledCoreFeatures []string
 	DataTasksPace        time.Duration
 	// Schedules is the interval every {setting: …} cadence runs at, read from
@@ -128,7 +129,6 @@ type JobRunnerConfig struct {
 	// the transactional ones beside them go out. No worker is gated on it,
 	// because a role that can fire a link-less message should still fire it.
 	SendOrigin SendOrigin
-
 	// WebhookRetry carries the retry dispatcher's cadence and the delivery
 	// engine one workspace's pass re-attempts through (jobs_webhookretry.go).
 	WebhookRetry WebhookRetryConfig
@@ -359,14 +359,13 @@ func NewJobRunner(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*j
 	reg, periodic := wireJobs(pool, log, cfg)
 
 	// An undeclared kind would otherwise inherit River's scheduling defaults.
-	if err := jobs.MustBeTotal(reg.kinds); err != nil {
+	if err := reg.jobTable.MustBeTotal(reg.kinds); err != nil {
 		return nil, err
 	}
 	// A kind name alone cannot catch an args type that impersonates another declaration.
 	if err := reg.everyKindIsRegisteredWithItsDeclaredType(); err != nil {
 		return nil, err
 	}
-
 	return jobs.New(pool, jobs.Config{
 		Queues:          jobQueues(),
 		Workers:         reg.workers,
@@ -383,6 +382,7 @@ func NewJobRunner(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*j
 // nothing to do with a database.
 func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRegistry, []*river.PeriodicJob) {
 	reg := newJobRegistry()
+	reg.jobTable = cfg.Extensions.declaredJobs()
 	reg.withContext = func(ctx context.Context) context.Context {
 		return originalstore.Bind(ctx, InstallationDB(pool), cfg.Blobstore)
 	}
@@ -439,7 +439,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		registerChatLinkFlush(reg, pool, cfg, log),
 		// The composed extension jobs, if any. Empty on every vanilla process:
 		// the ext_ kinds and their ticks do not exist there at all.
-		addExtensionJobs(reg, pool, schedulesOf(cfg), log),
+		addExtensionJobs(reg, cfg.Extensions, pool, schedulesOf(cfg), log),
 		placedSchedules(cfg),
 	)
 

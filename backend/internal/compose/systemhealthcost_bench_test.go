@@ -25,6 +25,7 @@ import (
 )
 
 func TestSystemHealthReadCosts(t *testing.T) {
+	t.Parallel()
 	for _, count := range []int{100, 10_000} {
 		t.Run(fmt.Sprint(count), func(t *testing.T) {
 			e := integration.Setup(t)
@@ -53,7 +54,7 @@ func TestSystemHealthReadCosts(t *testing.T) {
 			}); err != nil {
 				t.Fatal(err)
 			}
-			server := newServer(e.Pool, quietTestLogger(), authHandlers{}, dealsHandlers{})
+			server := newServer(e.Pool, quietTestLogger(), nil, authHandlers{}, dealsHandlers{})
 			reads := []struct {
 				name string
 				call func(http.ResponseWriter, *http.Request)

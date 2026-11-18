@@ -18,6 +18,7 @@ import (
 )
 
 func TestLinkedHistoricalCorrectionUsesTheOriginalBoundaryAndKeepsLaterWork(t *testing.T) {
+	t.Parallel()
 	ctx := principal.SystemActing(context.Background(), "privacy_test")
 	tx := subjectColumnsTx(ctx, t)
 	subject, pair, _ := seedDedupePairs(ctx, t, tx)
@@ -56,6 +57,7 @@ func TestLinkedHistoricalCorrectionUsesTheOriginalBoundaryAndKeepsLaterWork(t *t
 }
 
 func TestLinkedHistoricalCorrectionKeepsCurrentSubjectHolds(t *testing.T) {
+	t.Parallel()
 	ctx := principal.SystemActing(context.Background(), "privacy_test")
 	tx := subjectColumnsTx(ctx, t)
 	subject, pair, _ := seedDedupePairs(ctx, t, tx)
@@ -73,6 +75,7 @@ func TestLinkedHistoricalCorrectionKeepsCurrentSubjectHolds(t *testing.T) {
 }
 
 func TestARestrictionDoesNotCertifyPhysicalAuditErasure(t *testing.T) {
+	t.Parallel()
 	ctx := principal.SystemActing(context.Background(), "privacy_test")
 	tx := subjectColumnsTx(ctx, t)
 	subject := ids.NewV7()
@@ -109,6 +112,7 @@ func assertLegacyAuditImage(ctx context.Context, t *testing.T, tx pgx.Tx, id ids
 }
 
 func TestPhysicalAuditActionsMatchTheDatabase(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	tx := subjectColumnsTx(ctx, t)
 	var stored []string

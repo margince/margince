@@ -81,6 +81,7 @@ func edgeCount(t *testing.T, e *integration.Env, contact ids.UUID) int {
 }
 
 func TestTheConsumerFoldsAnActivityEventAndIgnoresWhatIsNotItsBusiness(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := seedGraphContact(t, e, "Consumed Contact")
 	activityID := seedExchange(t, e, contact)
@@ -119,6 +120,7 @@ func TestTheConsumerFoldsAnActivityEventAndIgnoresWhatIsNotItsBusiness(t *testin
 }
 
 func TestRetentionAppliedReachesTheConsumer(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := seedGraphContact(t, e, "Retained Contact")
 	activityID := seedExchange(t, e, contact)
@@ -152,6 +154,7 @@ func TestRetentionAppliedReachesTheConsumer(t *testing.T) {
 }
 
 func TestTheAgentSeamsAnswerThroughTheSameGates(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := seedGraphContact(t, e, "Agent Contact")
 	activityID := seedExchange(t, e, contact)
@@ -189,6 +192,7 @@ func TestTheAgentSeamsAnswerThroughTheSameGates(t *testing.T) {
 }
 
 func TestCoverageNamesItsColleaguesForTheAgent(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := seedGraphContact(t, e, "Coverage Contact")
 	activityID := seedExchange(t, e, contact)
@@ -264,6 +268,7 @@ func TestCoverageNamesItsColleaguesForTheAgent(t *testing.T) {
 // any of them knowing it exists — and a writer added tomorrow is covered the
 // day it emits its first event.
 func TestAContactAddedLaterMeetsTheGhostThatWasWaiting(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
 
@@ -318,6 +323,7 @@ func TestAContactAddedLaterMeetsTheGhostThatWasWaiting(t *testing.T) {
 }
 
 func TestTheSweepNeverMatchesOutsideTheGhostOwnersRowScope(t *testing.T) {
+	t.Parallel()
 	// The background passes have no human, so they used to run as a SYSTEM
 	// principal — which is unbounded by design, so the match had no row scope
 	// at all. That turns a one-row CSV into an existence oracle: upload a
@@ -394,6 +400,7 @@ func TestTheSweepNeverMatchesOutsideTheGhostOwnersRowScope(t *testing.T) {
 // no authority — turning a one-row CSV upload into a contact-existence oracle
 // for a contact the uploader may not read.
 func TestThePerContactSweepNeverMatchesOutsideTheGhostOwnersRowScope(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := context.Background()
 
@@ -508,6 +515,7 @@ func grantContactsRole(t *testing.T, e *integration.Env, user ids.UUID, rowScope
 // An arrival the workspace cannot see yet, or one that has not happened, adds
 // no evidence, so it folds nothing. Opening it to the workspace is the update that folds it.
 func TestAnArrivalHiddenFromTheWorkspaceFoldsWhenItOpens(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := seedGraphContact(t, e, "Hidden Arrival")
 	gen := search.NewGraphEdgeGen(search.NewStore(e.DB()))

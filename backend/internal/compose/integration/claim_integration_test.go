@@ -20,6 +20,7 @@ import (
 // claims it; a row owned by a colleague is not claimable without write
 // authority. The claim is one audited write, and a lost race answers conflict.
 func TestAManualCreateIsOwnedByItsCreatorAndAnOwnerlessRecordMustBeClaimed(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	stranger := e.As(e.Rep3, []ids.UUID{e.Team2}, activityLifecyclePerms)

@@ -59,6 +59,7 @@ func serveBulk(t *testing.T, r chi.Router, req *http.Request) (int, problemDTO) 
 }
 
 func TestTheBatchRoutesAnswerTheirRefusalsOnTheWire(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	r := bulkRouter(e)
 	moved, err := bulkEngineFor(e).Execute(e.Admin(), reassignTo(e.Rep2, seedBulkContacts(t, e, e.Rep1, 1)))
@@ -93,6 +94,7 @@ func TestTheBatchRoutesAnswerTheirRefusalsOnTheWire(t *testing.T) {
 // A seat that may archive contacts but not read tags is told what came back,
 // and never which tag did not.
 func TestAnUndoNamesATagLeftBehindOnlyToAReaderOfTags(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	engine := bulkEngineFor(e)
 	archiver := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{

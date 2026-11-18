@@ -77,6 +77,7 @@ func suppressed(t *testing.T, e *integration.Env, channelUserID string) bool {
 }
 
 func TestErasurePurgesTheChannelIdentityAndSuppressesTheAccount(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	admin := e.Admin()
 	contact := e.SeedContact(t, "Tomas Telegram", nil)
@@ -144,6 +145,7 @@ func TestErasurePurgesTheChannelIdentityAndSuppressesTheAccount(t *testing.T) {
 // suppression list stays empty — suppressing here would silently bar a contact
 // the workspace is free to re-capture.
 func TestRetentionAnonymizeDropsTheChannelIdentityWithoutSuppressingIt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	integration.SeedRetentionPolicies(t, e)
 	contact := e.SeedContact(t, "Otto Overage", nil)
@@ -154,7 +156,7 @@ func TestRetentionAnonymizeDropsTheChannelIdentityWithoutSuppressingIt(t *testin
 
 	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	integration.SettleIntoInstall(t, e)
-	if err := svc.EvaluateInstallation(integration.RetentionPassCtx(e.WS)); err != nil {
+	if err := svc.EvaluateInstallation(integration.RetentionPassCtx(context.Background(), e.WS)); err != nil {
 		t.Fatalf("retention pass: %v", err)
 	}
 
@@ -168,6 +170,7 @@ func TestRetentionAnonymizeDropsTheChannelIdentityWithoutSuppressingIt(t *testin
 }
 
 func TestMergeRelinksTheChannelIdentityOntoTheSurvivor(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	source := e.SeedContact(t, "Ada Source", nil)
 	target := e.SeedContact(t, "Ada Target", nil)
@@ -190,6 +193,7 @@ func TestMergeRelinksTheChannelIdentityOntoTheSurvivor(t *testing.T) {
 }
 
 func TestArchivingAContactArchivesTheChannelIdentity(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Vera Vanished", nil)
 	seedChannelIdentity(t, e, contact, "50505", "vera")
@@ -279,6 +283,7 @@ func rawCaptureSurvives(t *testing.T, e *integration.Env, sourceID string) bool 
 // evidence gone — would be the catastrophic failure mode here, worse than the
 // under-deleting one this task fixes.
 func TestErasureOfAChannelOnlySubjectPurgesRawCaptureWithoutOverreaching(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	admin := e.Admin()
 
@@ -331,6 +336,7 @@ func TestErasureOfAChannelOnlySubjectPurgesRawCaptureWithoutOverreaching(t *test
 // history — an Art. 15 failure as real as erasure's, and just as silent,
 // because nothing about assembling an incomplete package errors or logs.
 func TestSARIncludesAChannelOnlySubjectsRawCapture(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	subject := e.SeedContact(t, "Nadia Channel-Only", nil)
 	seedChannelIdentity(t, e, subject, "40404", "nadia")
@@ -405,6 +411,7 @@ func archiveAndRebindTheAccount(t *testing.T, e *integration.Env, account, handl
 // duplicates, then erase the survivor — and it leaves the installation
 // untouched, which the assertions below insist on.
 func TestErasureRefusesWhenAnotherLiveContactHoldsTheSameChannelAccount(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	archived, live := archiveAndRebindTheAccount(t, e, "60601", "ada")
 	seedTelegramMessageRaw(t, e, "rival-account-message", 11, "60601", "written to the surviving record")
@@ -432,6 +439,7 @@ func TestErasureRefusesWhenAnotherLiveContactHoldsTheSameChannelAccount(t *testi
 // covering both satellites (erasure_rivals.go) rather than a fix applied to
 // whichever one was reported.
 func TestErasureRefusesWhenAnotherLiveContactHoldsTheSameEmail(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	archived := e.SeedContact(t, "Bruno Archived", nil)
 	seedContactEmail(t, e, archived, "bruno@rival.test")
@@ -458,6 +466,7 @@ func TestErasureRefusesWhenAnotherLiveContactHoldsTheSameEmail(t *testing.T) {
 // row that would otherwise go on holding the erased human's account id and
 // handle after the erasure certified them gone.
 func TestErasingTheLiveRecordAlsoClearsAnArchivedDuplicatesBinding(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	_, live := archiveAndRebindTheAccount(t, e, "60701", "beatrix")
 
@@ -488,6 +497,7 @@ func TestErasingTheLiveRecordAlsoClearsAnArchivedDuplicatesBinding(t *testing.T)
 // is the case where the two keys agree, which is exactly why a mail-shaped test
 // could not see this.
 func TestSARDisclosesAnOpenTelegramPayloadAndWithholdsAHeldOne(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	subject := e.SeedContact(t, "Nadia Open-Chat", nil)
 	seedChannelIdentity(t, e, subject, "40404", "nadia")
@@ -516,6 +526,7 @@ func TestSARDisclosesAnOpenTelegramPayloadAndWithholdsAHeldOne(t *testing.T) {
 // along with it, which is the disclosure the positive test was written to
 // avoid and not one it could see while the keys never matched.
 func TestSARWithholdsAnOriginalWhoseSiblingActivityIsHeld(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	subject := e.SeedContact(t, "Nadia Mixed", nil)
 	seedChannelIdentity(t, e, subject, "40404", "nadia")

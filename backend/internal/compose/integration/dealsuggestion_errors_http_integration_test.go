@@ -25,6 +25,7 @@ type suggestionPage struct {
 }
 
 func TestTheSuggestionListPagesAndFilters(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	stages := apptest.DiscoverSeededPipeline(t, e)
@@ -58,6 +59,7 @@ func TestTheSuggestionListPagesAndFilters(t *testing.T) {
 }
 
 func TestAnAcceptanceRefusesWhatItCannotDo(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	stages := apptest.DiscoverSeededPipeline(t, e)
@@ -102,6 +104,7 @@ func TestAnAcceptanceRefusesWhatItCannotDo(t *testing.T) {
 }
 
 func TestAnAcceptanceAfterADealWasOpenedByHandAnswersSuperseded(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	stages := apptest.DiscoverSeededPipeline(t, e)

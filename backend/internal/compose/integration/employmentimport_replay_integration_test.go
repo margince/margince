@@ -20,6 +20,7 @@ import (
 )
 
 func TestEmploymentImportResolvesRepeatedPurchasedEpisode(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := contacts.NewStore(e.DB())
 	subject := seedMergeSubject(t, e, "Repeated employment purchase")
@@ -56,6 +57,7 @@ func TestEmploymentImportResolvesRepeatedPurchasedEpisode(t *testing.T) {
 }
 
 func TestEmploymentImportTrustsExplicitHistoricalDomain(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := contacts.NewStore(e.DB())
 	subject := seedMergeSubject(t, e, "Explicit history domain")
@@ -71,6 +73,7 @@ func TestEmploymentImportTrustsExplicitHistoricalDomain(t *testing.T) {
 }
 
 func TestEmploymentImportOneMatchResolvesAllRolesAtEmployer(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := contacts.NewStore(e.DB())
 	subject := seedMergeSubject(t, e, "Group matching")
@@ -119,6 +122,7 @@ func TestEmploymentImportOneMatchResolvesAllRolesAtEmployer(t *testing.T) {
 }
 
 func TestEmploymentImportNewSnapshotWithdrawsOldCurrentAssertion(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := contacts.NewStore(e.DB())
 	subject := seedMergeSubject(t, e, "Changing employer")
@@ -161,6 +165,7 @@ func TestEmploymentImportNewSnapshotWithdrawsOldCurrentAssertion(t *testing.T) {
 }
 
 func TestEmploymentImportMalformedHistoryDoesNotBlockValidRole(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := contacts.NewStore(e.DB())
 	subject := seedMergeSubject(t, e, "Malformed history")
@@ -183,6 +188,7 @@ func TestEmploymentImportMalformedHistoryDoesNotBlockValidRole(t *testing.T) {
 }
 
 func TestEmploymentImportMergePreservesDifferentHistoricalRoles(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := contacts.NewStore(e.DB())
 	source := seedMergeSubject(t, e, "Earlier career")

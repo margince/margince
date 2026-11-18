@@ -25,6 +25,8 @@ import (
 
 type extensionSettingsHandlers struct {
 	store *settings.Store
+	// extensions is the composition whose units may hold settings.
+	extensions *Extensions
 }
 
 // GetExtensionSettings (GET /v1/extensions/{name}/settings). Gated on
@@ -34,7 +36,7 @@ func (h extensionSettingsHandlers) GetExtensionSettings(w http.ResponseWriter, r
 		httperr.Write(w, r, err)
 		return
 	}
-	unit, err := requireComposedUnit(name)
+	unit, err := h.requireComposedUnit(name)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -53,7 +55,7 @@ func (h extensionSettingsHandlers) UpdateExtensionSettings(w http.ResponseWriter
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	unit, err := requireComposedUnit(name)
+	unit, err := h.requireComposedUnit(name)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -143,8 +145,8 @@ func declaredView(unit extension.Extension, stored map[string]string) []crmcontr
 
 // requireComposedUnit answers 404 for a name this binary did not compose, so a
 // setting is never stored for a unit that cannot read it.
-func requireComposedUnit(name string) (extension.Extension, error) {
-	units := ComposedExtensions()
+func (h extensionSettingsHandlers) requireComposedUnit(name string) (extension.Extension, error) {
+	units := h.extensions.Units()
 	i := slices.IndexFunc(units, func(e extension.Extension) bool { return string(e.Name) == name })
 	if i < 0 {
 		return extension.Extension{}, fmt.Errorf("no extension unit with that name: %w", apperrors.ErrNotFound)

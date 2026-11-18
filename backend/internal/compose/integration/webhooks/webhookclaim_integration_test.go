@@ -71,6 +71,7 @@ func parkAndHoldARetry(t *testing.T, we *webhookEnv, rcv *holdingReceiver, now *
 }
 
 func TestTwoSweepsOverOneDueDeliverySendItOnce(t *testing.T) {
+	t.Parallel()
 	we := setupWebhooks(t)
 	rcv := newHoldingReceiver(t)
 	now := clocktest.Now(t)
@@ -89,6 +90,7 @@ func TestTwoSweepsOverOneDueDeliverySendItOnce(t *testing.T) {
 }
 
 func TestAReplayRefusesADeliveryInFlightOrAlreadyDelivered(t *testing.T) {
+	t.Parallel()
 	we := setupWebhooks(t)
 	rcv := newHoldingReceiver(t)
 	now := clocktest.Now(t)

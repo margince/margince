@@ -21,6 +21,7 @@ import (
 // A built-in question keeps its catalog key while it reads as shipped. A
 // reword hides the key, the shipped words bring it back, and a review freezes it.
 func TestAReviewQuestionNamesItsCatalogKeyWhileItReadsAsShipped(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	perms := AdminPerms
 	perms.Objects = maps.Clone(AdminPerms.Objects)

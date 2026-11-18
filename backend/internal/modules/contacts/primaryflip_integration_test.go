@@ -91,6 +91,7 @@ func wantFlagFlipRecorded(ctx context.Context, t *testing.T, e *dedupeEnv, edge 
 }
 
 func TestCreatingANewPrimaryEmploymentRecordsTheDemotedOne(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	fx := e.seedFlipFixture(ctx, t, "Ilka Sandvik", "Nordhaven AG", "Brightmoor Ltd")
@@ -103,6 +104,7 @@ func TestCreatingANewPrimaryEmploymentRecordsTheDemotedOne(t *testing.T) {
 }
 
 func TestPatchingAnEmploymentToPrimaryRecordsTheDemotedOne(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.asEdgeEditor(t)
 	fx := e.seedFlipFixture(ctx, t, "Tomas Reiter", "Quellwerk GmbH", "Salvia Partners")
@@ -119,6 +121,7 @@ func TestPatchingAnEmploymentToPrimaryRecordsTheDemotedOne(t *testing.T) {
 }
 
 func TestEndingThePrimaryEmploymentRecordsThePromotedOne(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.asEdgeEditor(t)
 	fx := e.seedFlipFixture(ctx, t, "Noor Akhtar", "Fennick Labs", "Oakridge Bank")

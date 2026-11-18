@@ -29,6 +29,7 @@ func requireUnassigned(t *testing.T, what string, err error) {
 }
 
 func TestADealStoredInAnUnassignedCurrencyStaysEditable(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, stage := ids.NewV7(), ids.NewV7()
 	e.WsExec(t, `INSERT INTO pipeline (id, name, is_default, position) VALUES ($1, 'Currency fixture', false, 93)`, pipeline)
@@ -56,6 +57,7 @@ func TestADealStoredInAnUnassignedCurrencyStaysEditable(t *testing.T) {
 }
 
 func TestADealIsNotCreatedInAnUnassignedCurrency(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, stage := ids.NewV7(), ids.NewV7()
 	e.WsExec(t, `INSERT INTO pipeline (id, name, is_default, position) VALUES ($1, 'Currency fixture', false, 93)`, pipeline)
@@ -70,6 +72,7 @@ func TestADealIsNotCreatedInAnUnassignedCurrency(t *testing.T) {
 }
 
 func TestAContractTakesOnlyAnAssignedCurrencyWhenItIsSet(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", nil)
 	zzz, value := "ZZZ", int64(1000)
@@ -93,6 +96,7 @@ func TestAContractTakesOnlyAnAssignedCurrencyWhenItIsSet(t *testing.T) {
 }
 
 func TestAContractStoredInAnUnassignedCurrencyStaysEditable(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", nil)
 	draft := draftInCurrency(t, e, company, "USD")

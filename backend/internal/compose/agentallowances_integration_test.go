@@ -42,31 +42,16 @@ func patchAllowances(ctx context.Context, t *testing.T, h installationSettingsHa
 	return rec.Code, out.AgentAllowances
 }
 
-const defaultAgentAllowances = `{"agent_writes_per_window":200,` +
-	`"agent_egress_per_window":20,"agent_calls_per_window":1000,"agent_window_hours":24}`
-
-// allowanceHandlers builds the surface on a store whose clock reads now(). It
-// puts the defaults back when the test ends, because the settings are
-// installation-wide and the database is shared.
-func allowanceHandlers(t *testing.T, e *integration.Env, now func() time.Time) installationSettingsHandlers {
-	t.Helper()
+// allowanceHandlers builds the surface on a store whose clock reads now().
+func allowanceHandlers(e *integration.Env, now func() time.Time) installationSettingsHandlers {
 	store := identity.NewInstallationSettings(e.DB(), NewSettingsStore(e.Pool), StoredConfig(e.Pool)).WithClock(now)
-	h := installationSettingsHandlers{store: store, now: now}
-	t.Cleanup(func() {
-		if code, _ := patchAllowances(installationAdminCtx(e), t, h, defaultAgentAllowances); code != http.StatusOK {
-			t.Errorf("restoring the defaults → %d", code)
-		}
-		// Rows, not values: a stored default would read as an operator's choice.
-		if _, err := e.Pool.Exec(context.Background(), `DELETE FROM setting WHERE key LIKE 'installation.agent\_%'`); err != nil {
-			t.Errorf("clearing the allowance settings: %v", err)
-		}
-	})
-	return h
+	return installationSettingsHandlers{store: store, now: now}
 }
 
 func TestAnAdminSavesTheAgentAllowances(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
-	h := allowanceHandlers(t, e, wallClock(t))
+	h := allowanceHandlers(e, wallClock(t))
 
 	code, saved := patchAllowances(installationAdminCtx(e), t, h,
 		`{"agent_writes_per_window":10,"agent_egress_per_window":3,"agent_calls_per_window":60}`)
@@ -93,9 +78,10 @@ func TestAnAdminSavesTheAgentAllowances(t *testing.T) {
 }
 
 func TestAWindowChangeWaitsForTheNextReset(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	clock := time.Date(2026, 10, 14, 10, 0, 0, 0, time.UTC)
-	h := allowanceHandlers(t, e, func() time.Time { return clock })
+	h := allowanceHandlers(e, func() time.Time { return clock })
 
 	code, saved := patchAllowances(installationAdminCtx(e), t, h, `{"agent_window_hours":12}`)
 	if code != http.StatusOK {
@@ -126,8 +112,9 @@ func TestAWindowChangeWaitsForTheNextReset(t *testing.T) {
 }
 
 func TestAnAgentAllowanceOutsideItsRangeIsRefused(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
-	h := allowanceHandlers(t, e, wallClock(t))
+	h := allowanceHandlers(e, wallClock(t))
 	for _, body := range []string{
 		`{"agent_writes_per_window":5001}`,
 		`{"agent_egress_per_window":0}`,
@@ -141,8 +128,9 @@ func TestAnAgentAllowanceOutsideItsRangeIsRefused(t *testing.T) {
 }
 
 func TestAnAgentCannotChangeItsOwnAllowance(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
-	h := allowanceHandlers(t, e, wallClock(t))
+	h := allowanceHandlers(e, wallClock(t))
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:" + ids.NewV7().String(), PassportID: ids.NewV7(),
@@ -165,7 +153,7 @@ func readAgentPolicyAsMachinery(e *integration.Env) (agentvolume.Policy, error) 
 	var policy agentvolume.Policy
 	err := NewSettingsStore(e.Pool).WriteTx(ctx, func(tx pgx.Tx) error {
 		var err error
-		policy, err = identity.AgentPolicyTx(ctx, tx, loadedConfig())
+		policy, err = identity.AgentPolicyTx(ctx, tx, loadedConfig(ctx))
 		return err
 	})
 	return policy, err
@@ -174,8 +162,9 @@ func readAgentPolicyAsMachinery(e *integration.Env) (agentvolume.Policy, error) 
 // The meter judges an agent by what an admin saved, read through the same
 // source the API composes.
 func TestAWriteAllowanceSavedByAnAdminBindsTheAgent(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
-	h := allowanceHandlers(t, e, wallClock(t))
+	h := allowanceHandlers(e, wallClock(t))
 	at := clocktest.Now(t)
 	meter := agentvolume.NewWithClock(redistest.Client(t), agentvolume.Limits{}, agentvolume.DefaultWindow,
 		func() time.Time { return at }).WithPolicySource(NewAgentAllowanceSource(e.Pool))
@@ -207,6 +196,7 @@ func TestAWriteAllowanceSavedByAnAdminBindsTheAgent(t *testing.T) {
 // A step-up on a connection's passport releases the connection's counter: the
 // passport the agent was refused on may have been renewed since.
 func TestAReleaseOfAConnectionsPassportWidensTheConnection(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	passport, grant := seedConnectionPassport(t, e)
@@ -269,6 +259,7 @@ func wallClock(t *testing.T) func() time.Time {
 // A step-up answered after its passport row is gone still decides. The
 // passport is counted as itself, as it was if it was not a connection's.
 func TestAReleaseOfAGonePassportStillDecides(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	meter := agentvolume.NewWithClock(redistest.Client(t), agentvolume.Limits{Writes: 1}, time.Hour, wallClock(t))

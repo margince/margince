@@ -25,6 +25,7 @@ type meetingOutcomeRead struct {
 // agent's, and no longer asks for its outcome. One logged with no status asks
 // on both doors: its past start alone is not attendance.
 func TestAReportedMeetingIsHeldOverBothDoors(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "meeting-held-doors", "read", "write")
 	contact := anIDIn(t, d.restStatus(t, "POST", "/v1/contacts",
 		AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Lunch Lior", "source": "manual"}, http.StatusCreated))

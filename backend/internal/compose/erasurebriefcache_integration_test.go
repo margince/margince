@@ -17,7 +17,6 @@ import (
 	"context"
 	"io"
 	"log/slog"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -30,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -49,6 +49,7 @@ const briefUpsertSQL = `
 	    payload = EXCLUDED.payload`
 
 func TestErasureDestroysTheCachedBriefEveryReaderHeld(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	subject := e.SeedContact(t, "Briefed Subject", &e.AdminUser)
 	bystander := e.SeedContact(t, "Unrelated Contact", &e.AdminUser)
@@ -70,6 +71,7 @@ func TestErasureDestroysTheCachedBriefEveryReaderHeld(t *testing.T) {
 }
 
 func TestAnonymisingAContactDestroysTheCachedBriefToo(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	subject := e.SeedContact(t, "Briefed Subject", &e.AdminUser)
 	bystander := e.SeedContact(t, "Unrelated Contact", &e.AdminUser)
@@ -128,6 +130,7 @@ func cachedBriefs(t *testing.T, e *integration.Env, subject ids.UUID) int {
 // and is not: the archived_at test alone reads the pre-erasure row under MVCC
 // and writes anyway, which is why the statement takes the row.
 func TestABriefComposedBeforeAnErasureCannotLandAfterIt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	subject := e.SeedContact(t, "Briefed Subject", &e.AdminUser)
 
@@ -206,6 +209,7 @@ func saveABriefWaitingAtMost(t *testing.T, e *integration.Env, contact ids.UUID,
 // The model lane is nil, which Write answers with its deterministic floor — so
 // this needs no stubbed model, only the page the brief is written from.
 func TestTheBriefWriterItselfDeclinesToCacheAnErasedSubject(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	subject := e.SeedContact(t, "Briefed Subject", &e.AdminUser)
 	svc := contactbrief.NewService(e.Pool, briefPageOf(subject), nil, func() string { return "test-routing" }, time.Now)
@@ -255,6 +259,7 @@ func (f assembleFunc) AssembleScoped(ctx context.Context, id ids.ContactID, _ co
 // Both acts are driven, because each propagates the failure through its own
 // step — the derived rows on one side, the judgements on the other.
 func TestAnUndestroyableCachedBriefStopsTheWholeErasure(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	refuseBriefDeletes(t)
 	subject := e.SeedContact(t, "Briefed Subject", &e.AdminUser)
@@ -285,32 +290,17 @@ func TestAnUndestroyableCachedBriefStopsTheWholeErasure(t *testing.T) {
 // let go. No other fixture writes it.
 const refusedFingerprint = "refuse-this-delete"
 
-// refuseBriefDeletes makes the DELETE of one cached brief fail, which is how a
-// statement inside somebody else's transaction can be made to fail without
-// touching the rows the test is about.
-//
-// Cleanup drops the trigger AND its function, and runs on a failing test too.
-// What cleanup cannot cover is the process dying between the CREATE and it — a
-// timeout, an interrupt, an OOM — and the serial lane's database persists, so a
-// trigger left behind would be inherited. Hence the row condition: it fires only
-// for a fingerprint this test writes, which the next Setup's data reset clears,
-// so what survives a crash fires for nothing.
+// refuseBriefDeletes makes the DELETE of one cached brief fail. That is how a
+// statement inside another transaction fails without touching the rows under
+// test. It fires only for the fingerprint the test writes.
 func refuseBriefDeletes(t *testing.T) {
 	t.Helper()
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, os.Getenv("MARGINCE_TEST_DSN"))
+	owner, err := pgx.Connect(ctx, testdb.For(t).OwnerDSN)
 	if err != nil {
 		t.Fatalf("connecting as the schema owner: %v", err)
 	}
 	t.Cleanup(func() {
-		for _, stmt := range []string{
-			`DROP TRIGGER IF EXISTS trg_refuse_brief_deletes ON contact_brief`,
-			`DROP FUNCTION IF EXISTS refuse_brief_deletes()`,
-		} {
-			if _, err := owner.Exec(context.Background(), stmt); err != nil {
-				t.Errorf("dropping the refusing trigger: %v", err)
-			}
-		}
 		if err := owner.Close(context.Background()); err != nil {
 			t.Errorf("closing the owner connection: %v", err)
 		}

@@ -100,6 +100,7 @@ func (e *revocationEnv) callsAllowed(t *testing.T, meter *agentvolume.Meter, pas
 // by its key. Once the user no longer holds it and it is archived, its saved
 // value binds nobody, and having one did not stop the archive.
 func TestACustomRolesHigherValueBindsItsHolderUntilTheRoleGoes(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "role-allowance")
 	custom := e.customRole(t, "Field research", "rep", nil)
 	if err := e.svc.ChangeUserRole(e.wsCtx(e.admin), e.admin, e.member.UserID, "rep"); err != nil {
@@ -141,6 +142,7 @@ func TestACustomRolesHigherValueBindsItsHolderUntilTheRoleGoes(t *testing.T) {
 // Admin taken away through the member screens lowers the limit on the next
 // call of a passport the member already holds. The count it spent stays.
 func TestLosingAdminLowersARealPassportsLimitAndKeepsItsCount(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "role-allowance-admin")
 	if err := e.svc.ChangeUserRole(e.wsCtx(e.admin), e.admin, e.member.UserID, adminRoleKey); err != nil {
 		t.Fatalf("making the member an Admin: %v", err)
@@ -170,6 +172,7 @@ func TestLosingAdminLowersARealPassportsLimitAndKeepsItsCount(t *testing.T) {
 // A connected app's renewed passport counts on where the last one stopped, and
 // against the limit its human's role gives.
 func TestARenewedPassportKeepsItsCountUnderARoleLimit(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "role-allowance-renewal")
 	if err := e.svc.ChangeUserRole(e.wsCtx(e.admin), e.admin, e.member.UserID, "rep"); err != nil {
 		t.Fatalf("making the member a User: %v", err)
@@ -193,6 +196,7 @@ func TestARenewedPassportKeepsItsCountUnderARoleLimit(t *testing.T) {
 // A save of other roles leaves an archived role's value alone, so restoring
 // the role brings its value back with it.
 func TestAnArchivedRolesValueOutlivesASaveAndComesBackOnRestore(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "role-allowance-restore")
 	custom := e.customRole(t, "Seasonal research", "rep", nil)
 	e.saveRoleCalls(t, custom, 4000)

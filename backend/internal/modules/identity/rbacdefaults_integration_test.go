@@ -24,13 +24,11 @@ var rolesitDefaults = []RbacDefault{
 	{Object: extObject, Role: "read_only", Actions: []string{"read"}},
 }
 
-// registerRolesitDefaults registers the object and its defaults for one test.
-func registerRolesitDefaults(t *testing.T) {
+// registerRolesitDefaults hands the env's service the object and its defaults,
+// as the boot of an installation that predates the unit does.
+func (e *revocationEnv) registerRolesitDefaults(t *testing.T) {
 	t.Helper()
-	registerExtObject(t)
-	if err := RegisterRbacDefaults(rolesitDefaults...); err != nil {
-		t.Fatalf("registering the defaults: %v", err)
-	}
+	e.svc.WithRbacObjects(extObjectRbac(t, rolesitDefaults...))
 }
 
 // bootCtx is the context the boot binds for the fill: the workspace and a
@@ -82,10 +80,11 @@ func (e *revocationEnv) defaultAuditRows(t *testing.T) int {
 }
 
 func TestTheFillGivesEachSystemRoleItsDefaultOnceAndAuditsIt(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "rbac-defaults-fill")
 	// Registered after the installation exists, so the seed did not write them.
 	// This is the boot of an installation that predates the unit.
-	registerRolesitDefaults(t)
+	e.registerRolesitDefaults(t)
 
 	filled, err := e.svc.FillRbacDefaults(e.bootCtx())
 	if err != nil {
@@ -135,8 +134,9 @@ func TestTheFillGivesEachSystemRoleItsDefaultOnceAndAuditsIt(t *testing.T) {
 }
 
 func TestAnAdminsRevocationSurvivesTheNextBoot(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "rbac-defaults-revoked")
-	registerRolesitDefaults(t)
+	e.registerRolesitDefaults(t)
 	if _, err := e.svc.FillRbacDefaults(e.bootCtx()); err != nil {
 		t.Fatalf("first fill: %v", err)
 	}
@@ -159,6 +159,7 @@ func TestAnAdminsRevocationSurvivesTheNextBoot(t *testing.T) {
 }
 
 func TestACustomRoleAndTheRestOfTheDocumentAreLeftAlone(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "rbac-defaults-custom")
 	ctx := e.wsCtx(e.admin)
 	custom, err := e.svc.CreateRole(ctx, e.admin, "rep", "Field partner")
@@ -171,7 +172,7 @@ func TestACustomRoleAndTheRestOfTheDocumentAreLeftAlone(t *testing.T) {
 		  WHERE key = 'rep'`); err != nil {
 		t.Fatalf("planting the orphaned grant: %v", err)
 	}
-	registerRolesitDefaults(t)
+	e.registerRolesitDefaults(t)
 
 	if _, err := e.svc.FillRbacDefaults(e.bootCtx()); err != nil {
 		t.Fatalf("FillRbacDefaults: %v", err)
@@ -195,9 +196,9 @@ func TestACustomRoleAndTheRestOfTheDocumentAreLeftAlone(t *testing.T) {
 }
 
 func TestAnInstallationCreatedWhileTheUnitIsComposedStartsWithItsGrants(t *testing.T) {
-	// Registered before the installation, so the seed writes the entries.
-	registerRolesitDefaults(t)
-	e := setupRevocationEnv(t, "rbac-defaults-seed")
+	t.Parallel()
+	// Composed before the installation, so the seed writes the entries.
+	e := setupRevocationEnvWith(t, "rbac-defaults-seed", extObjectRbac(t, rolesitDefaults...))
 
 	for _, d := range rolesitDefaults {
 		want, err := d.grant()
@@ -222,8 +223,8 @@ func TestAnInstallationCreatedWhileTheUnitIsComposedStartsWithItsGrants(t *testi
 // A seeded default reads back through the grant editor's own decode, so it is
 // not a second spelling of the document.
 func TestASeededDefaultIsTheEntryTheEditorReads(t *testing.T) {
-	registerRolesitDefaults(t)
-	e := setupRevocationEnv(t, "rbac-defaults-editor")
+	t.Parallel()
+	e := setupRevocationEnvWith(t, "rbac-defaults-editor", extObjectRbac(t, rolesitDefaults...))
 
 	roles, err := e.svc.ListRoles(e.wsCtx(e.admin), e.admin, false)
 	if err != nil {

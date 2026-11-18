@@ -25,6 +25,7 @@ import (
 // A rule nothing hides answers an empty list rather than failing, and it
 // travels the whole way: handler vocabulary in, module difference out.
 func TestTheHiddenRowsReadReachesTheStoreThroughTheSeam(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := time.Now()
 	svc := newAttentionService(e.Pool, approvals.NewService(e.DB()), func() time.Time { return now })
@@ -49,6 +50,7 @@ func TestTheHiddenRowsReadReachesTheStoreThroughTheSeam(t *testing.T) {
 // reached the store and was refused there would be a vocabulary the two halves
 // disagree about — which is exactly what the shared rule words exist to stop.
 func TestEveryCountedRuleIsReadableThroughTheSeam(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := time.Now()
 	svc := newAttentionService(e.Pool, approvals.NewService(e.DB()), func() time.Time { return now })
@@ -64,6 +66,7 @@ func TestEveryCountedRuleIsReadableThroughTheSeam(t *testing.T) {
 // "Nothing is behind that rule" and "there is no such rule" are different
 // answers, and the first given for the second lets a typo read as a clean queue.
 func TestAnUnknownRuleIsRefusedThroughTheSeam(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := time.Now()
 	svc := newAttentionService(e.Pool, approvals.NewService(e.DB()), func() time.Time { return now })
@@ -77,6 +80,7 @@ func TestAnUnknownRuleIsRefusedThroughTheSeam(t *testing.T) {
 // who sees only their own work is told they may not ask, rather than handed an
 // empty list they would read as a clear queue.
 func TestAnOwnScopedReaderIsRefusedTheRowsThroughTheSeam(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := time.Now()
 	svc := newAttentionService(e.Pool, approvals.NewService(e.DB()), func() time.Time { return now })

@@ -8,7 +8,6 @@ package migration
 import (
 	"context"
 	"fmt"
-	"os"
 	"regexp"
 	"sync"
 	"testing"
@@ -54,7 +53,7 @@ func (c *runWriteCounter) total() int {
 // its import_run updates.
 func countedDB(ctx context.Context, t *testing.T, writes *runWriteCounter) *database.DB {
 	t.Helper()
-	cfg, err := pgxpool.ParseConfig(os.Getenv("MARGINCE_TEST_APP_DSN"))
+	cfg, err := pgxpool.ParseConfig(testdb.For(t).AppDSN)
 	if err != nil {
 		t.Fatalf("parsing the app DSN: %v", err)
 	}
@@ -84,6 +83,7 @@ func contactSource(n int) *fakeSource {
 }
 
 func TestASliceWritesTheRunRowOncePerFlushNotPerRow(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	writes := &runWriteCounter{}
 	counted := NewRunStore(countedDB(ctx, t, writes))

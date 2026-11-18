@@ -21,20 +21,26 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// extObject is an extension-shaped object registered for the duration of one
-// test. It is the case the whole surface exists for: a name that is NOT in
-// policy.coreObjects and is grantable only because a composed unit registered
-// it at boot.
+// extObject is an extension-shaped object one test's composition registers. It
+// is the case the whole surface exists for. The name is not in
+// policy.coreObjects, and only a composed unit's registration makes it grantable.
 const extObject = "ext_rolesit_note"
 
-// registerExtObject widens the vocabulary for one test and clears it after, so
-// a registration never leaks into the next test's refusals.
-func registerExtObject(t *testing.T) {
+// extObjectRbac is the vocabulary of a composition that registers extObject,
+// with the starting grants it declares.
+func extObjectRbac(t *testing.T, defaults ...RbacDefault) RbacObjects {
 	t.Helper()
-	if err := RegisterRbacObjects(extObject); err != nil {
+	rbac, err := NewRbacObjects([]RbacObject{extObject}, defaults)
+	if err != nil {
 		t.Fatalf("registering %s: %v", extObject, err)
 	}
-	t.Cleanup(ResetRbacObjectsForTest)
+	return rbac
+}
+
+// registerExtObject widens the env's vocabulary by extObject.
+func (e *revocationEnv) registerExtObject(t *testing.T) {
+	t.Helper()
+	e.svc.WithRbacObjects(extObjectRbac(t))
 }
 
 // The headline: an extension object is grantable, the grant lands in the stored
@@ -43,8 +49,9 @@ func registerExtObject(t *testing.T) {
 // Anything less than the full chain would pass while the screen still said "you
 // do not hold access".
 func TestGrantingAnExtensionObjectReachesTheMemberEffectivePermissions(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "role-grant-ext")
-	registerExtObject(t)
+	e.registerExtObject(t)
 	ctx := e.wsCtx(e.admin)
 
 	// The member holds `rep`, so the grant has to land on the role they hold.
@@ -83,8 +90,9 @@ func TestGrantingAnExtensionObjectReachesTheMemberEffectivePermissions(t *testin
 // parse-and-rewrite would pass every assertion about the edited object and
 // silently drop the row_scope and every grant this installation cannot name.
 func TestSettingOneGrantLeavesTheRestOfTheDocumentIntact(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "role-grant-intact")
-	registerExtObject(t)
+	e.registerExtObject(t)
 	ctx := e.wsCtx(e.admin)
 
 	// A grant on an object nothing knows about, planted the way a removed unit
@@ -132,8 +140,9 @@ func TestSettingOneGrantLeavesTheRestOfTheDocumentIntact(t *testing.T) {
 // most dangerous without: the row names the actor, the role, and both images of
 // the one object that moved.
 func TestSettingAGrantWritesAnAuditRowNamingTheActorAndBothImages(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "role-grant-audit")
-	registerExtObject(t)
+	e.registerExtObject(t)
 	ctx := e.wsCtx(e.admin)
 
 	if _, err := e.svc.SetRoleObjectGrant(ctx, e.admin, "rep", extObject, storedGrant{Read: true}, nil); err != nil {
@@ -185,6 +194,7 @@ func TestSettingAGrantWritesAnAuditRowNamingTheActorAndBothImages(t *testing.T) 
 // the grant map populated. A seat without role_admin is refused before any row
 // is read.
 func TestListRolesReturnsEverySeededRoleAndRefusesANonAdmin(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "role-list")
 	ctx := e.wsCtx(e.admin)
 	custom := e.customRole(t, "Account managers", "rep", nil)
@@ -229,8 +239,9 @@ func TestListRolesReturnsEverySeededRoleAndRefusesANonAdmin(t *testing.T) {
 
 // The three refusals, each proving nothing was written.
 func TestSetRoleObjectGrantRefusesANonAdminAnUnknownRoleAndAnUnknownObject(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "role-grant-refusals")
-	registerExtObject(t)
+	e.registerExtObject(t)
 
 	// 1. A non-admin. Checked before the vocabulary, so a member cannot even
 	// probe which objects exist by watching which refusal comes back.
@@ -273,8 +284,9 @@ func TestSetRoleObjectGrantRefusesANonAdminAnUnknownRoleAndAnUnknownObject(t *te
 // document as immutable — the RBAC backfill migrations write into these very
 // rows, guarding each statement so an operator's edit survives.
 func TestASystemRoleGrantIsEditable(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "role-grant-system")
-	registerExtObject(t)
+	e.registerExtObject(t)
 	ctx := e.wsCtx(e.admin)
 
 	updated, err := e.svc.SetRoleObjectGrant(ctx, e.admin, "admin", extObject,
@@ -312,8 +324,9 @@ func TestASystemRoleGrantIsEditable(t *testing.T) {
 // the revoked verb is granted, and the revoke would vanish with nothing to say
 // it ever happened.
 func TestASecondAdminWritingFromAStaleReadIsRefusedRatherThanClobbering(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "role-grant-skew")
-	registerExtObject(t)
+	e.registerExtObject(t)
 	ctx := e.wsCtx(e.admin)
 
 	// Both admins load the screen.

@@ -45,6 +45,7 @@ type limitRefusal struct {
 // An Admin value saved through the settings binds the admin's real passport,
 // and its tool calls and REST requests fill one count against it.
 func TestARoleLimitBindsOneCountAcrossMCPAndRest(t *testing.T) {
+	t.Parallel()
 	d := roleBoundDoors(t, "role-limit-doors")
 	if status := d.E.Call(t, "PATCH", "/v1/installation/settings", AnyMap{
 		"agent_role_allowances": []AnyMap{{"role_key": "admin", "agent_calls_per_window": 60}},
@@ -73,6 +74,7 @@ func TestARoleLimitBindsOneCountAcrossMCPAndRest(t *testing.T) {
 // A meter that cannot read its counter refuses an agent's REST read as a short
 // outage. It is never a limit reached that would last until the window rolls.
 func TestAnUnreachableCounterRefusesARestReadAsAShortWait(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithOptions(t, compose.WithAgentVolume(agentvolume.New(nil, agentvolume.Limits{}, time.Hour)))
 	apptest.BootstrapWorkspaceSession(t, e, "Unreachable Counter", "unreachable-counter@fable.test", "Admin")
 	bearer, _ := apptest.PassportWithID(t, e, "reading agent", "read")

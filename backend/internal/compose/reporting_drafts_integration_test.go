@@ -67,6 +67,7 @@ func blocksOf(t *testing.T, report crmcontracts.ReportingReport, err error) []cr
 // A draft is the editors' until they publish it. A reader keeps the published
 // revision, is not told the draft exists, and cannot evaluate it by number.
 func TestADraftStaysWithItsEditorsUntilPublished(t *testing.T) {
+	t.Parallel()
 	f := reportWithReader(t)
 	id := ids.UUID(f.report.Id)
 	drafted, err := f.service.SaveReportDraft(f.human, id, f.report.Version,
@@ -113,6 +114,7 @@ func TestADraftStaysWithItsEditorsUntilPublished(t *testing.T) {
 
 // Discarding a draft removes it and changes nothing a reader sees.
 func TestDiscardingADraftLeavesThePublishedRevision(t *testing.T) {
+	t.Parallel()
 	f := reportWithReader(t)
 	id := ids.UUID(f.report.Id)
 	drafted, err := f.service.SaveReportDraft(f.human, id, f.report.Version,
@@ -139,6 +141,7 @@ func TestDiscardingADraftLeavesThePublishedRevision(t *testing.T) {
 // Restoring an earlier revision publishes a copy of it as the newest one. The
 // earlier revision stays as it was and still evaluates.
 func TestRestoringAnEarlierRevisionPublishesACopyOfIt(t *testing.T) {
+	t.Parallel()
 	f := reportWithReader(t)
 	id := ids.UUID(f.report.Id)
 	revised, err := f.service.UpdateReport(f.human, id, f.report.Version, crmcontracts.ReportingReportInput{
@@ -182,6 +185,7 @@ func TestRestoringAnEarlierRevisionPublishesACopyOfIt(t *testing.T) {
 // The revision history is the editors'. A reader who may not edit the report
 // is refused it.
 func TestOnlyAnEditorListsAReportsRevisions(t *testing.T) {
+	t.Parallel()
 	f := reportWithReader(t)
 	if _, err := f.service.ListReportRevisions(f.reader, ids.UUID(f.report.Id)); err == nil {
 		t.Error("a reader who may not edit the report listed its revisions")
@@ -191,6 +195,7 @@ func TestOnlyAnEditorListsAReportsRevisions(t *testing.T) {
 // A draft is checked again under whoever publishes it. A team manager may not
 // publish a draft scoped to a team they do not oversee, though its author could.
 func TestPublishingADraftChecksItUnderThePublisher(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	teamScope := f.selection()
 	teamScope.Scope = crmcontracts.ReportingScope{Kind: "team", Id: ptrUUID(f.env.Team1)}
@@ -235,6 +240,7 @@ func TestPublishingADraftChecksItUnderThePublisher(t *testing.T) {
 // Replacing a draft records the charts it held and the ones it now holds. The
 // audit then says what changed in a draft nobody else could see.
 func TestReplacingADraftAuditsTheChartsItHeldAndHolds(t *testing.T) {
+	t.Parallel()
 	f := reportWithReader(t)
 	id := ids.UUID(f.report.Id)
 	first, err := f.service.SaveReportDraft(f.human, id, f.report.Version,

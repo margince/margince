@@ -4,6 +4,7 @@
 package activities
 
 import (
+	"context"
 	"errors"
 	"net/http"
 
@@ -41,7 +42,7 @@ func (h Handlers) UpdateFollowUpSettings(w http.ResponseWriter, r *http.Request)
 	}
 	// The value just written, not a fresh read: an update grant without a
 	// read grant must not commit the change and then be told 403.
-	req.Locks = h.settingLocks(ConfigSettings()...)
+	req.Locks = h.settingLocks(r.Context(), ConfigSettings()...)
 	httperr.WriteJSON(w, http.StatusOK, req)
 }
 
@@ -56,20 +57,20 @@ func (h Handlers) writeFollowUpSettings(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.FollowUpSettings{
-		FollowUpAfterDays: days, Locks: h.settingLocks(ConfigSettings()...),
+		FollowUpAfterDays: days, Locks: h.settingLocks(r.Context(), ConfigSettings()...),
 	})
 }
 
 // WithLocks binds what reports the settings a boot source sets.
-func (h Handlers) WithLocks(locks func(surface []config.Any) *[]crmcontracts.SettingLock) Handlers {
+func (h Handlers) WithLocks(locks func(ctx context.Context, surface []config.Any) *[]crmcontracts.SettingLock) Handlers {
 	h.locks = locks
 	return h
 }
 
 // settingLocks are the locks among surface, the settings one response carries.
-func (h Handlers) settingLocks(surface ...config.Any) *[]crmcontracts.SettingLock {
+func (h Handlers) settingLocks(ctx context.Context, surface ...config.Any) *[]crmcontracts.SettingLock {
 	if h.locks == nil {
 		return nil
 	}
-	return h.locks(surface)
+	return h.locks(ctx, surface)
 }

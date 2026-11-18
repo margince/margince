@@ -25,6 +25,7 @@ import (
 )
 
 func TestTheInstallationProfileIsAnAdministratorsToReadAndWrite(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -54,6 +55,7 @@ func TestTheInstallationProfileIsAnAdministratorsToReadAndWrite(t *testing.T) {
 // And the customer-record routes are untouched: the change narrows one surface,
 // not the object it used to borrow.
 func TestARepStillReadsAndWritesCustomerAccounts(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	demoteToRep(t, e)
@@ -77,6 +79,7 @@ func TestARepStillReadsAndWritesCustomerAccounts(t *testing.T) {
 // that could not resolve that would be refused a page they may read — so the
 // gate change had to leave this answerable, and this is the case that says so.
 func TestARepStillReadsAGrowthFitAfterTheProfileBecameAdministered(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	if status := e.Call(t, http.MethodPut, "/v1/company",
@@ -102,6 +105,7 @@ func TestARepStillReadsAGrowthFitAfterTheProfileBecameAdministered(t *testing.T)
 // The brand block's read is the one part of the profile every seat gets: /me
 // carries the name to a rep while the profile itself stays refused.
 func TestARepsMeCarriesTheInstallationsNameButNotItsProfile(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 

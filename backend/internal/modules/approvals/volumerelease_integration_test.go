@@ -76,6 +76,7 @@ func (e *stagingEnv) stageStepUp(t *testing.T, counter agentvolume.Counter) ids.
 // proves — refused before ANYTHING is written, so the row is neither rewritten
 // nor recorded as decided.
 func TestAStepUpCannotBeEditedIntoADifferentQuestion(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	id := e.stageStepUp(t, agentvolume.Writes)
 	// The possible edit, not an impossible one: writes is releasable too, so
@@ -116,6 +117,7 @@ func TestAStepUpCannotBeEditedIntoADifferentQuestion(t *testing.T) {
 // A plain yes is still a yes. The guard above must refuse the EDIT, not the
 // kind — a step-up nobody can approve is a control with no release.
 func TestAStepUpIsStillApprovableWithoutAnEdit(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	id := e.stageStepUp(t, agentvolume.Writes)
 

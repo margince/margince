@@ -66,6 +66,7 @@ func holdThreadComponent(ctx context.Context, t *testing.T, pool *pgxpool.Pool, 
 }
 
 func TestAComponentConflictAbortsAndRetriesTheWholeTransaction(t *testing.T) {
+	t.Parallel()
 	ctx, pool := laneEnv(t)
 	release := holdThreadComponent(ctx, t, pool, []string{"overlap"})
 	attempts := 0
@@ -86,6 +87,7 @@ func TestAComponentConflictAbortsAndRetriesTheWholeTransaction(t *testing.T) {
 }
 
 func TestASwallowedComponentConflictCannotCommit(t *testing.T) {
+	t.Parallel()
 	ctx, pool := laneEnv(t)
 	holdThreadComponent(ctx, t, pool, []string{"contended"})
 	var conflict error
@@ -99,6 +101,7 @@ func TestASwallowedComponentConflictCannotCommit(t *testing.T) {
 }
 
 func TestAWideComponentKeepsItsAdvisoryLocksBounded(t *testing.T) {
+	t.Parallel()
 	ctx, pool := laneEnv(t)
 	var keys []string
 	for i := range 256 {
@@ -128,6 +131,7 @@ func TestAWideComponentKeepsItsAdvisoryLocksBounded(t *testing.T) {
 }
 
 func TestAnAmbientSnapshotLeavesComponentRetryToItsOwner(t *testing.T) {
+	t.Parallel()
 	ctx, pool := laneEnv(t)
 	attempts := 0
 	err := database.WithWorkspaceSnapshot(ctx, pool, func(ctx context.Context) error {
@@ -142,6 +146,7 @@ func TestAnAmbientSnapshotLeavesComponentRetryToItsOwner(t *testing.T) {
 }
 
 func TestRepeatedThreadWritersShareOneTransactionLockBudget(t *testing.T) {
+	t.Parallel()
 	ctx, pool := laneEnv(t)
 	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 		for i := range 256 {
@@ -164,6 +169,7 @@ func TestRepeatedThreadWritersShareOneTransactionLockBudget(t *testing.T) {
 }
 
 func TestAWideFrontierNeverQueuesAheadOfOrdinaryThreadWork(t *testing.T) {
+	t.Parallel()
 	ctx, pool := laneEnv(t)
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
@@ -184,6 +190,7 @@ func TestAWideFrontierNeverQueuesAheadOfOrdinaryThreadWork(t *testing.T) {
 }
 
 func TestThreadComponentsReuseTheLegacyPrivacyMutex(t *testing.T) {
+	t.Parallel()
 	ctx, pool := laneEnv(t)
 	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 		if err := storekit.LockWriteIdentity(ctx, tx, "capture_thread_hold", "compatible-thread"); err != nil {
@@ -201,6 +208,7 @@ func TestThreadComponentsReuseTheLegacyPrivacyMutex(t *testing.T) {
 }
 
 func TestThreadLockOwnershipDoesNotSurviveSavepointRollbackOrCommit(t *testing.T) {
+	t.Parallel()
 	ctx, pool := laneEnv(t)
 	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 		savepoint, err := tx.Begin(ctx)
@@ -258,6 +266,7 @@ func (c cancelComponentWait) TraceQueryStart(ctx context.Context, _ *pgx.Conn, q
 func (cancelComponentWait) TraceQueryEnd(context.Context, *pgx.Conn, pgx.TraceQueryEndData) {}
 
 func TestCancellationDuringComponentAcquisitionReleasesItsBarrier(t *testing.T) {
+	t.Parallel()
 	ctx, pool := laneEnv(t)
 	release := holdThreadComponent(ctx, t, pool, []string{"cancelled-component"})
 	waiting, cancel := context.WithCancel(ctx)

@@ -41,6 +41,7 @@ func contactAddressParts(t *testing.T, e *dedupeEnv, id ids.ContactID) [6]string
 }
 
 func TestASecondCardMovesTheAddressTheFirstCardWrote(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	const email = "moved.card@split.example.test"
 	first := importCard(t, e, cardWithAddress(email, "Old Street 1", "Old Town", "11111"))
@@ -54,6 +55,7 @@ func TestASecondCardMovesTheAddressTheFirstCardWrote(t *testing.T) {
 }
 
 func TestACardFillsAnEmptyAddressAndLeavesATypedOne(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	typedLine := "Typed Road 1"

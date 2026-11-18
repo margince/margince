@@ -33,6 +33,6 @@ func (s *Service) PublicationAuthority(ctx context.Context, tx pgx.Tx, user ids.
 	if err != nil {
 		return authz.RBAC{}, "", err
 	}
-	_, teams, permissions, err := loadGrants(ctx, tx, ids.From[ids.UserKind](user))
+	_, teams, permissions, err := loadGrants(ctx, tx, s.rbac, ids.From[ids.UserKind](user))
 	return authz.RBAC{Permissions: permissions, TeamIDs: rawTeamIDs(teams)}, seat, err
 }

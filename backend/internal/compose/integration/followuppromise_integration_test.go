@@ -124,6 +124,7 @@ func tasksTotal(page crmcontracts.Worklist) int {
 }
 
 func TestAnUnansweredPromiseIsOneWorklistRowUntilItsTaskIsCompleted(t *testing.T) {
+	t.Parallel()
 	u := seedUnansweredPromise(t)
 
 	page := u.worklist(t)
@@ -160,6 +161,7 @@ func TestAnUnansweredPromiseIsOneWorklistRowUntilItsTaskIsCompleted(t *testing.T
 // Setting the reminder aside is the reminder's own act: the promise stays
 // open, on its own row.
 func TestAReminderSetAsideLeavesItsPromiseOpen(t *testing.T) {
+	t.Parallel()
 	u := seedUnansweredPromise(t)
 	if err := u.e.Activities.MarkMessageHandled(u.e.Admin(), ids.From[ids.ActivityKind](u.mail)); err != nil {
 		t.Fatalf("setting the reminder aside: %v", err)
@@ -185,6 +187,7 @@ func TestAReminderSetAsideLeavesItsPromiseOpen(t *testing.T) {
 // A conversation with a colleague at the same account keeps its own row. So
 // does a task for the same contact that was not read out of the promise mail.
 func TestAnotherConversationAtTheSameAccountStaysItsOwnRow(t *testing.T) {
+	t.Parallel()
 	u := seedUnansweredPromise(t)
 	colleague := u.e.SeedThreadContact(t, "Ben Kunde", "ben@kunde.example")
 	if _, err := u.e.Contacts.CreateRelationship(u.e.Admin(), contacts.CreateRelationshipInput{
@@ -221,6 +224,7 @@ func TestAnotherConversationAtTheSameAccountStaysItsOwnRow(t *testing.T) {
 // A promise the planned lane cut is still the follow-up's one row, and the
 // lane's own count and the scrolled tail each hold it once.
 func TestAPromisePastThePlannedCapIsStillOneRow(t *testing.T) {
+	t.Parallel()
 	u := seedUnansweredPromise(t)
 	earlier := u.p.SentAt.AddDate(0, 0, 1)
 	const ahead = 15
@@ -259,6 +263,7 @@ func TestAPromisePastThePlannedCapIsStillOneRow(t *testing.T) {
 // unanswered today. Snoozed past the window, the promise is not read and the
 // reminder shows alone.
 func TestASnoozedPromiseKeepsItsFollowUpTodayUntilItLeavesTheWindow(t *testing.T) {
+	t.Parallel()
 	u := seedUnansweredPromise(t)
 	u.update(t, u.task, activities.UpdateActivityInput{DueAt: new(u.asOf.AddDate(0, 0, 2))})
 
@@ -292,6 +297,7 @@ func TestASnoozedPromiseKeepsItsFollowUpTodayUntilItLeavesTheWindow(t *testing.T
 // the scope that shows it, and my reminder stays its own row. Completing the
 // colleague's task does not end my reminder. Only my own promise stands for it.
 func TestAColleaguesTaskFromMyMailLeavesMyReminderMine(t *testing.T) {
+	t.Parallel()
 	u := seedUnansweredMail(t)
 	theirs := u.promiseFor(t, u.e.Rep1, "Send Lena the reference list", u.p.SentAt.AddDate(0, 0, 3))
 
@@ -313,6 +319,7 @@ func TestAColleaguesTaskFromMyMailLeavesMyReminderMine(t *testing.T) {
 // other is a plain row. Completing one of the two keeps the reminder on the
 // one still open.
 func TestTheEarliestOfMyPromisesCarriesTheReminderUntilAllAreDone(t *testing.T) {
+	t.Parallel()
 	u := seedUnansweredPromise(t)
 	later := u.promiseFor(t, u.e.AdminUser, "Send the signed order form", u.p.SentAt.AddDate(0, 0, 3))
 
@@ -337,6 +344,7 @@ func TestTheEarliestOfMyPromisesCarriesTheReminderUntilAllAreDone(t *testing.T) 
 // A later promise past the upcoming window's cap is still read for its
 // follow-up. It joins today's work, and the upcoming count no longer holds it.
 func TestALaterPromisePastTheUpcomingCapJoinsTodaysWork(t *testing.T) {
+	t.Parallel()
 	u := seedUnansweredPromise(t)
 	u.update(t, u.task, activities.UpdateActivityInput{DueAt: new(u.asOf.AddDate(0, 0, 5))})
 	const ahead = 8

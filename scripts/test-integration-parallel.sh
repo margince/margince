@@ -13,13 +13,9 @@
 #              resets the data between tests — see internal/platform/testdb).
 #   MinIO    — a private bucket (MARGINCE_TEST_BLOBSTORE_BUCKET=<base>-p<idx>),
 #              auto-created by the blobstore store.
-#   Redis    — the one shared instance, but each package gets its own logical
-#              db (MARGINCE_TEST_REDIS_DB, mapped 1..REDIS_DBS by slot), so no
-#              two packages ever share a stream. Db 0 is reserved for `make dev`,
-#              so a running dev stack and this lane never collide either. More
-#              than one package touches Redis, and at least two FLUSHDB between
-#              tests, so this is an isolation boundary rather than a convenience
-#              — batches wait before reusing the reserved test block.
+#   Redis    — the redis-test server, where each TEST leases a logical db of
+#              its own (testdb.RedisDB). The lease holds across processes, so
+#              the runner assigns nothing.
 # Within a process nothing changes — still -p 1, the same sequential model that is
 # green today — so no test file needs editing. A package too heavy for one
 # process's timeout runs as several parts (split_parts in scripts/lib-laneorder.sh),
@@ -74,14 +70,8 @@
 #                           scripts/lib-testdb.sh, shared with the one-package lane
 #   MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN   owner + app DSNs (Makefile defaults)
 #
-# This lane also EXPORTS one variable to each package process, per slot rather
-# than for the run: MARGINCE_TEST_CLONE_DB names the throwaway clone that slot
-# just created. It is what lets testdb.EnsureSchema skip re-migrating a database
-# this script copied from an already-migrated template — see testdb's CloneDBEnv
-# for the four things it proves before taking the copy at its word, and why the
-# variable carries the NAME rather than a flag. The serial lane deliberately
-# does not set it: it runs on the template itself, where the rebuild is what
-# keeps one package's residue out of every later clone.
+# Each package process also gets MARGINCE_TEST_TEMPLATE: every test copies that
+# template into a database of its own (testdb.New), named after the slot's clone.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -266,14 +256,6 @@ fi
 # Every integration test in this repo lives in the backend module.
 GO_DIRS=(backend)
 
-# Redis logical dbs available to the lane: every db the server serves except 0,
-# which `make dev` owns, and the block above this one, which the per-worktree
-# dev stacks take. So --databases in docker-compose.dev.yml is higher than this
-# number, not equal to it, and the gate asserts the offset rather than equality.
-# Packages in each batch own distinct databases until the whole batch exits.
-# Later batches reuse that block without entering the worktree dev allocation.
-REDIS_DBS=64
-
 LANE_PKGS="$(mktemp)" WORK="$(mktemp)"
 DISCOVERY="$(mktemp)" ASSIGNED="$(mktemp)" RAN="$(mktemp)" UNTAGGED="$(mktemp)"
 TIMING="$(mktemp)" TEST_TIMING="$(mktemp)" WALLCLOCK="$(mktemp)" FAILED_PKGS="$(mktemp)"
@@ -432,7 +414,7 @@ export REGEX_DIR
 # this machine measured.
 #
 # Ordered HERE, before slots are numbered, so each package's -run slice, clone,
-# bucket and Redis db follow it rather than being handed to whoever inherits its
+# and bucket follow it rather than being handed to whoever inherits its
 # slot number.
 MEASURED_HINT="$ROOT/.tmp/integration-lane-timing.txt"
 BASELINE_HINT="$ROOT/scripts/integration-lane-timing.txt"
@@ -472,7 +454,7 @@ fi
 # against them, drop the clone. In shard mode REGEX_DIR/<idx> holds the
 # package's -run slice filter.
 run_one() {
-  local line="$1" idx="$2" outdir="$3" slot="${4:-}"
+  local line="$1" idx="$2" outdir="$3"
   # Offsets from lane start, so the report can say when this package OCCUPIED a
   # slot as against how long its tests ran. The difference is the provisioning
   # around it, which the cost report prices at nothing.
@@ -482,10 +464,6 @@ run_one() {
   local db="margince_it_p${idx}_$$"
   local log="$outdir/$idx.log"
   local bucket; bucket="$(bucket_for "$idx")"
-  # The batch barrier lets this wrap only after the previous holder exits; a
-  # queue shard names the slot instead, which no running part shares.
-  # Database 0 and the higher worktree dev block stay outside this mapping.
-  local redis_db=$(( 1 + (${slot:-$idx} - 1) % REDIS_DBS ))
   # Coverage args (empty unless COVERDIR is set — shard mode with a manifest
   # dir). -coverpkg=./... attributes cross-package exercise; binary output goes
   # to a per-package pod the CI fan-in merges.
@@ -498,21 +476,20 @@ run_one() {
   [[ -n "$runre" ]] && run_args=(-run "$runre")
   # -vet=off: `make lint` vets tagged code with a superset of these analyzers, and
   # gates/lintbuildtagreach_test.go holds that. A slot would only repeat it.
-  local test_cmd=(go test -p 1 -vet=off -tags=integration -v -count=1 -timeout="$IT_TIMEOUT" ${IT_SHUFFLE:+"$IT_SHUFFLE"}
+  local test_cmd=(go test -p 1 -parallel "$LANE_TEST_PARALLEL" -vet=off -tags=integration -v -count=1 -timeout="$IT_TIMEOUT" ${IT_SHUFFLE:+"$IT_SHUFFLE"}
     "${cover_pre[@]+"${cover_pre[@]}"}" "${run_args[@]+"${run_args[@]}"}"
     "$rel" "${cover_post[@]+"${cover_post[@]}"}")
   [[ -z "${BIN_DIR:-}" ]] || test_cmd=(run_binary "$rel" "$COVERDIR/$idx" "${run_args[@]+"${run_args[@]}"}")
   {
-    echo "=== integration $d $rel (db=$db bucket=$bucket redis-db=$redis_db${runre:+ sliced}) ==="
+    echo "=== integration $d $rel (db=$db bucket=$bucket${runre:+ sliced}) ==="
     make_clone "$db"
     local st=0
     ( cd "$d" \
         && MARGINCE_ENV=dev \
-           MARGINCE_TEST_CLONE_DB="$db" \
+           MARGINCE_TEST_TEMPLATE="$TEMPLATE_NAME" \
            MARGINCE_TEST_DSN="$(owner_clone_dsn "$db")" \
            MARGINCE_TEST_APP_DSN="$(app_clone_dsn "$db")" \
            MARGINCE_TEST_BLOBSTORE_BUCKET="$bucket" \
-           MARGINCE_TEST_REDIS_DB="$redis_db" \
         "${test_cmd[@]}" ) || st=$?
     if ! drop_clone "$db"; then
       echo "FAIL: clone db $db was not dropped — leaked on the test cluster"
@@ -543,7 +520,7 @@ run_binary() {
   local run_flags=()
   [[ "${1:-}" != "-run" ]] || run_flags=(-test.run="$2")
   t0="${EPOCHREALTIME:-$(date +%s)}"
-  ( cd "$rel" && "$BIN_DIR/$rel/integration.test" -test.paniconexit0 -test.v=true -test.count=1 \
+  ( cd "$rel" && "$BIN_DIR/$rel/integration.test" -test.paniconexit0 -test.v=true -test.count=1 -test.parallel="$LANE_TEST_PARALLEL" \
       -test.timeout="$IT_TIMEOUT" ${IT_SHUFFLE:+"-test.${IT_SHUFFLE#-}"} "${run_flags[@]+"${run_flags[@]}"}" \
       -test.gocoverdir="$coverdir" ) || st=$?
   t1="${EPOCHREALTIME:-$(date +%s)}"
@@ -553,10 +530,6 @@ run_binary() {
   return "$st"
 }
 export -f run_one run_binary lane_elapsed lane_micros owner_clone_dsn app_clone_dsn make_clone drop_clone db_admin bucket_for
-# The workers run in re-exec'd shells, so a variable run_one reads must be
-# exported and not merely set. REDIS_DBS is the only one: unexported it expands
-# to empty, and `% ` is a division by zero rather than a wrong db.
-export REDIS_DBS
 
 # Compile this run's tests in one build before fanning out. `go build` above stops
 # short of test code. Each slot would otherwise compile its own while the first
@@ -597,12 +570,8 @@ FANOUT_T0=$(( $(date +%s) - LANE_T0 ))
 
 CLAIMS_FAILED=""
 if [[ -z "$QUEUE" ]]; then
-  run_integration_packages "$WORK" "$JOBS" "$REDIS_DBS" "$OUTDIR"
+  run_integration_packages "$WORK" "$JOBS" "$OUTDIR"
 else
-  if (( JOBS > REDIS_DBS )); then
-    echo "FAIL: a queue shard gives each of its $JOBS slots a Redis database of its own, and the lane has $REDIS_DBS"
-    exit 1
-  fi
   run_queue_packages "$WORK" "$PART_GROUPS" "$JOBS" "$OUTDIR" "$CLAIMED" || CLAIMS_FAILED=1
   # The slice is what this shard claimed. The checks below hold it to that,
   # and the fan-in holds the slices of every shard to discovery.

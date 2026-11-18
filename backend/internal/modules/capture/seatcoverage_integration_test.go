@@ -117,6 +117,7 @@ func seatGaps(ctx context.Context, t *testing.T, tx pgx.Tx, contactID ids.UUID) 
 }
 
 func TestSeatCoverage(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name       string
 		status     string
@@ -220,6 +221,7 @@ func TestSeatCoverage(t *testing.T) {
 // An unattested Cc line is the sender's text, so it is reported but never
 // bound to a user_id and never becomes an interaction edge.
 func TestSeatCoverageDoesNotBindAnUnattestedAddress(t *testing.T) {
+	t.Parallel()
 	ctx, pool := meetingTenureEnv(t)
 	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 		seat, email := seedSeat(ctx, t, tx, "invited")
@@ -246,6 +248,7 @@ func TestSeatCoverageDoesNotBindAnUnattestedAddress(t *testing.T) {
 // A seat on many of the contact's threads is one colleague, so the total
 // counts it once, the way the list names it once.
 func TestSeatCoverageCountsASeatOnSeveralThreadsOnce(t *testing.T) {
+	t.Parallel()
 	ctx, pool := meetingTenureEnv(t)
 	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 		seat, email := seedSeat(ctx, t, tx, "active")

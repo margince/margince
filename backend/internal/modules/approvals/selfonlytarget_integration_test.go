@@ -52,6 +52,7 @@ func seatFor(ws, user ids.UUID, objects ...string) context.Context {
 }
 
 func TestASelfOnlyStagingIsAbsentFromAColleaguesTargetFilteredReads(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	ctx := context.Background()
 
@@ -143,6 +144,7 @@ func TestASelfOnlyStagingIsAbsentFromAColleaguesTargetFilteredReads(t *testing.T
 // left after the probe is workspace-shared who-knows-whom, and the founder
 // decision is that anyone with access decides it.
 func TestALinkedInMatchIsReadableByAColleagueWhoCanSeeTheContact(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	ctx := context.Background()
 

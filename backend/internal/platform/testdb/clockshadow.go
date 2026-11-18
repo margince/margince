@@ -63,6 +63,11 @@ func installClockShadow(ctx context.Context, owner *pgx.Conn) error {
 	if err != nil {
 		return err
 	}
+	return installClockShadowAt(ctx, owner, skew)
+}
+
+// installClockShadowAt is installClockShadow under skew.
+func installClockShadowAt(ctx context.Context, owner *pgx.Conn, skew clockskew.Skew) error {
 	var database string
 	if err := owner.QueryRow(ctx, "SELECT current_database()").Scan(&database); err != nil {
 		return fmt.Errorf("reading the database the shadow applies to: %w", err)

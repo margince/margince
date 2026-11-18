@@ -258,6 +258,7 @@ func wantDeals(t *testing.T, e *integration.SearchEnv, sourceID string, want ...
 // and the deal's last activity moves to the mail. Each link is audited as the
 // connector's, which tells it from a human relink.
 func TestCaptureFilesMailOnTheCustomersOnlyOpenDeal(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	shareMailbox(t, env)
@@ -289,6 +290,7 @@ func TestCaptureFilesMailOnTheCustomersOnlyOpenDeal(t *testing.T) {
 // Mail only its participants may read goes on the deal's timeline, but does
 // not move the deal's clock, which counts workspace mail alone.
 func TestCaptureFilesPrivateMailWithoutMovingTheDealsClock(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -307,6 +309,7 @@ func TestCaptureFilesPrivateMailWithoutMovingTheDealsClock(t *testing.T) {
 // a deal. The colleague who wrote the first is asked once for the thread. A
 // stakeholder on only one of the deals is the positive control.
 func TestCaptureAsksOnceWhenSeveralOpenDealsFitAMail(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -337,6 +340,7 @@ func TestCaptureAsksOnceWhenSeveralOpenDealsFitAMail(t *testing.T) {
 // outside this installation with our mailbox only on Cc. The mail stays on its
 // company and contacts, and nobody is asked.
 func TestCaptureAsksNobodyWhenNoColleagueIsResponsible(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -362,6 +366,7 @@ func TestCaptureAsksNobodyWhenNoColleagueIsResponsible(t *testing.T) {
 // that deal, not on the company's other open deal. A project with no open deal
 // files nothing even though the company has one, and a project with two asks.
 func TestCaptureFilesMailOnItsProjectsDealFirst(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -393,6 +398,7 @@ func TestCaptureFilesMailOnItsProjectsDealFirst(t *testing.T) {
 // A human's relink always wins: capturing the mail again leaves it on the deal
 // the human chose.
 func TestCaptureNeverUndoesAHumanDealRelink(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -416,6 +422,7 @@ func TestCaptureNeverUndoesAHumanDealRelink(t *testing.T) {
 // Being copied with someone from a second company is conflicting evidence: the
 // mail goes on no deal and nobody is asked.
 func TestCaptureFilesNothingWhenTheMailNamesTwoCompanies(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -435,6 +442,7 @@ func TestCaptureFilesNothingWhenTheMailNamesTwoCompanies(t *testing.T) {
 // thread we sent and filed on one deal goes on that deal. The same claim from
 // another company, or from nobody we know, does not.
 func TestCaptureFollowsOurThreadOnlyForTheSameCompany(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -467,6 +475,7 @@ func TestCaptureFollowsOurThreadOnlyForTheSameCompany(t *testing.T) {
 // The colleague asked is one the mailbox confirms. A To header naming another
 // colleague's address is typed by the sender and hands that colleague nothing.
 func TestCaptureAsksNoColleagueTheSenderNamed(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	// Workspace mail, so every colleague may open it and only the evidence
@@ -496,6 +505,7 @@ func TestCaptureAsksNoColleagueTheSenderNamed(t *testing.T) {
 // Mail that reads as ours without the provider attesting it does not prove we
 // wrote it. Its deal is no clue for a reply, and it names nobody to ask.
 func TestCaptureCountsOnlyAttestedMailAsOurs(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -630,6 +640,7 @@ func (r repairer) run(t *testing.T) int {
 // human's link alone and asks nobody. The refile pass then files the mail once
 // the topic check confirms the deal.
 func TestTheDealRepairLeavesASuggestedDealToTheRefilePass(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -679,6 +690,7 @@ func TestTheDealRepairLeavesASuggestedDealToTheRefilePass(t *testing.T) {
 // sent mail stays on no deal. A reply beside our own filed mail goes on its
 // deal. Live capture and the repair agree on both.
 func TestTheDealRepairSeesOnlyWhatTheCapturingMailboxSaw(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -735,6 +747,7 @@ func openQuestions(t *testing.T, e *integration.SearchEnv) int {
 // timeline and not on the other deal's, and the question is done. A mail of
 // the conversation already filed elsewhere keeps its deal.
 func TestFilingOneMailAnswersTheDealQuestionForItsConversation(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -825,6 +838,7 @@ func TestFilingOneMailAnswersTheDealQuestionForItsConversation(t *testing.T) {
 // elsewhere moves, audited as the repair with its reason. A connector's own
 // deal ref has no such record, so it is reported and left alone.
 func TestTheDealRepairRechecksOnlyTheRulesOwnLinks(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -875,6 +889,7 @@ func TestTheDealRepairRechecksOnlyTheRulesOwnLinks(t *testing.T) {
 // clause keeps the question in the colleague's task list, and drops it once
 // the mail ages past the horizon.
 func TestTheDealQuestionIsAskedOnlyAboutCurrentMail(t *testing.T) {
+	t.Parallel()
 	horizon := time.Duration(storekit.DefaultWaitingHorizonDays) * 24 * time.Hour
 	for _, c := range []struct {
 		name  string

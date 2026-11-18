@@ -97,6 +97,7 @@ func threadOf(t *testing.T, o *owedEnv, activityID ids.UUID) string {
 }
 
 func TestAVoiceLearnsOnlyFromTheOwnersOwnSentMail(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.now = clocktest.Now(t).Add(-time.Hour)
 	colleagueSeat := seatAddress(t, o.e, o.e.Rep2)
@@ -178,6 +179,7 @@ func TestAVoiceLearnsOnlyFromTheOwnersOwnSentMail(t *testing.T) {
 // workspace mail gets the marker later, by an edit to its subject. It stays
 // out of the voice even though the workspace reads it.
 func TestASentMailMarkedConfidentialLaterStaysOut(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	v, profileID := newSentMailVoice(t, o)
 	mail := o.weWrite(t, owedMail{
@@ -201,6 +203,7 @@ func TestASentMailMarkedConfidentialLaterStaysOut(t *testing.T) {
 // A second press adds nothing, and leaves alone what the owner removed or
 // excluded since the first.
 func TestPressingAgainKeepsTheOwnersChoices(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	v, profileID := newSentMailVoice(t, o)
 	at := clocktest.Now(t).Add(-time.Hour)
@@ -252,6 +255,7 @@ func TestPressingAgainKeepsTheOwnersChoices(t *testing.T) {
 
 // Another user's profile answers not found, and the press reads no mail.
 func TestAnotherUsersProfileReadsNoMail(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	v, profileID := newSentMailVoice(t, o)
 	o.weWrite(t, owedMail{to: "pat@customer.example", subject: "Eins", at: clocktest.Now(t).Add(-time.Hour),

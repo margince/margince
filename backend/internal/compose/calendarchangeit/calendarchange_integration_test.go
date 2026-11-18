@@ -137,6 +137,7 @@ func (m mailbox) calendarChange(t *testing.T, message ids.UUID, reader ids.UUID)
 }
 
 func TestAMeetingUpdateSaysWhatChangedSinceTheInvitation(t *testing.T) {
+	t.Parallel()
 	o := setupMailbox(t)
 	now := clocktest.Now(t)
 	uid := "040000008200E00074C5B7101A82E008" + ids.NewV7().String()

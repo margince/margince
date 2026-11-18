@@ -103,7 +103,7 @@ func tellNewDecider(ctx context.Context, tx pgx.Tx, store *notices.Store, decide
 
 // deciderContextTx holds the recipient's current authority until commit.
 func deciderContextTx(ctx context.Context, tx pgx.Tx, seat ids.UUID) (context.Context, bool, error) {
-	rbac, seatType, err := identity.EffectiveAuthorityTx(ctx, tx, seat)
+	rbac, seatType, err := identity.EffectiveAuthorityTx(ctx, tx, installedRbacObjects(), seat)
 	if errors.Is(err, apperrors.ErrNotFound) {
 		return nil, false, nil
 	}

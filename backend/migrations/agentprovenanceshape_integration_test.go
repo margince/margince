@@ -58,6 +58,7 @@ func scheduleAs(t *testing.T, owner *pgx.Conn, kind string, actorID *string) err
 }
 
 func TestAnAgentScheduledSendMustNameTheAgent(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	owner := connect(t, ownerDSN)
 	headSchema(t, owner)

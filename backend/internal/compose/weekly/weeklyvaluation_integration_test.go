@@ -18,6 +18,7 @@ import (
 )
 
 func TestWeeklyClosedMoneyIsUnknownWhenAHistoricalWinCannotBePriced(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	date := time.Date(2020, 1, 1, 12, 0, 0, 0, time.UTC)

@@ -183,6 +183,7 @@ func breadcrumbReasons(ctx context.Context, t *testing.T, pool *pgxpool.Pool, so
 // note — so every colleague could open it on the global timeline and find it in
 // search.
 func TestAnAllInternalMessageLeavesNoRowInAnyTable(t *testing.T) {
+	t.Parallel()
 	ctx, db := bootstrapInternalMailWorkspace(t, "acme.com")
 	sink := capture.NewSink(db)
 
@@ -214,6 +215,7 @@ func TestAnAllInternalMessageLeavesNoRowInAnyTable(t *testing.T) {
 // the creation ladder is ABOUT is the other half, and needs a wired ensurer —
 // it is asserted in compose's capture_autocreate_integration_test.go.
 func TestAColleaguesMessageCopyingAProspectIsCapturedAndKeepsItsAuthor(t *testing.T) {
+	t.Parallel()
 	ctx, db := bootstrapInternalMailWorkspace(t, "acme.com")
 	sink := capture.NewSink(db)
 
@@ -257,6 +259,7 @@ func TestAColleaguesMessageCopyingAProspectIsCapturedAndKeepsItsAuthor(t *testin
 // between two colleagues is captured. The installation has made no claim about
 // its own mail, and this gate does not invent one on its behalf.
 func TestWithNoRegisteredDomainEvenColleagueMailIsCaptured(t *testing.T) {
+	t.Parallel()
 	ctx, db := bootstrapInternalMailWorkspace(t)
 	sink := capture.NewSink(db)
 
@@ -273,6 +276,7 @@ func TestWithNoRegisteredDomainEvenColleagueMailIsCaptured(t *testing.T) {
 // says "I could not read the parties", which is not the same claim as "there
 // were none", and the direction to fail in is toward keeping mail.
 func TestAMessageReportingNoAddressesIsCaptured(t *testing.T) {
+	t.Parallel()
 	ctx, db := bootstrapInternalMailWorkspace(t, "acme.com")
 	sink := capture.NewSink(db)
 
@@ -287,6 +291,7 @@ func TestAMessageReportingNoAddressesIsCaptured(t *testing.T) {
 // A subdomain of a registered domain is internal. The workspace registered
 // acme.com; mail among contacts at mail.acme.com is still colleague mail.
 func TestMailAmongSubdomainsOfARegisteredDomainIsInternal(t *testing.T) {
+	t.Parallel()
 	ctx, db := bootstrapInternalMailWorkspace(t, "acme.com")
 	sink := capture.NewSink(db)
 
@@ -314,6 +319,7 @@ func isSkip(err error) bool { return errors.Is(err, connector.ErrSkip) }
 // skipped message. Only the installation's own company, or an administrator,
 // can make a domain count.
 func TestAnUnverifiedOwnDomainSuppressesNothing(t *testing.T) {
+	t.Parallel()
 	ctx, db := bootstrapInternalMailWorkspace(t)
 	if err := db.Tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
@@ -341,6 +347,7 @@ func TestAnUnverifiedOwnDomainSuppressesNothing(t *testing.T) {
 // or a company that changed its domain — hiding correspondence with an address
 // nobody claims any more, with nothing in the system able to revoke it.
 func TestADomainTheCompanyNoLongerClaimsStopsSuppressingMail(t *testing.T) {
+	t.Parallel()
 	ctx, db := bootstrapInternalMailWorkspace(t, "acme.com")
 	sink := capture.NewSink(db)
 

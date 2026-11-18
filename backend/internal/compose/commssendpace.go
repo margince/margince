@@ -36,13 +36,13 @@ func readSendPace(ctx context.Context, store *settings.Store) (sendPace, error) 
 	var limit, windowSeconds, maxAgeHours int
 	err := store.WriteTx(ctx, func(tx pgx.Tx) error {
 		var err error
-		if limit, err = config.StoredApplyTx(ctx, tx, loadedConfig(), identity.SendRateLimit); err != nil {
+		if limit, err = config.StoredApplyTx(ctx, tx, loadedConfig(ctx), identity.SendRateLimit); err != nil {
 			return err
 		}
-		if windowSeconds, err = config.StoredApplyTx(ctx, tx, loadedConfig(), identity.SendRateWindowSeconds); err != nil {
+		if windowSeconds, err = config.StoredApplyTx(ctx, tx, loadedConfig(ctx), identity.SendRateWindowSeconds); err != nil {
 			return err
 		}
-		maxAgeHours, err = config.StoredApplyTx(ctx, tx, loadedConfig(), identity.SendMaxAgeHours)
+		maxAgeHours, err = config.StoredApplyTx(ctx, tx, loadedConfig(ctx), identity.SendMaxAgeHours)
 		return err
 	})
 	if err != nil {

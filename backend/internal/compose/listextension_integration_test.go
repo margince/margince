@@ -36,6 +36,7 @@ func listingPerms(kindRead bool) principal.Permissions {
 	}
 }
 
+//testdb:serial registers into a process-wide unit registry
 func TestAnExtensionKindsVocabularyIsItsDeclaredFields(t *testing.T) {
 	e := integration.Setup(t)
 	registerHistoryVisits(t)
@@ -60,6 +61,7 @@ func TestAnExtensionKindsVocabularyIsItsDeclaredFields(t *testing.T) {
 	}
 }
 
+//testdb:serial registers into a process-wide unit registry
 func TestAPreviewOfAnExtensionKindShowsItsColumnsAndOnlyLiveMatches(t *testing.T) {
 	e := integration.Setup(t)
 	registerHistoryVisits(t)
@@ -96,6 +98,7 @@ func TestAPreviewOfAnExtensionKindShowsItsColumnsAndOnlyLiveMatches(t *testing.T
 	}
 }
 
+//testdb:serial registers into a process-wide unit registry
 func TestAnExtensionListTakesItsOwnKindAndRefusesAnother(t *testing.T) {
 	e := integration.Setup(t)
 	registerHistoryVisits(t)
@@ -125,6 +128,7 @@ func TestAnExtensionListTakesItsOwnKindAndRefusesAnother(t *testing.T) {
 	}
 }
 
+//testdb:serial registers into a process-wide unit registry
 func TestALiveListOverAnExtensionKindFollowsItsFilter(t *testing.T) {
 	e := integration.Setup(t)
 	registerHistoryVisits(t)
@@ -146,6 +150,7 @@ func TestALiveListOverAnExtensionKindFollowsItsFilter(t *testing.T) {
 	}
 }
 
+//testdb:serial registers into a process-wide unit registry
 func TestASavedViewOverAnExtensionKindIsStoredAndAnUndeclaredKindRefused(t *testing.T) {
 	e := integration.Setup(t)
 	registerHistoryVisits(t)

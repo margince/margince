@@ -33,7 +33,7 @@ func seedHandoff(s sweepSeed) string {
 	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(s.t.Context(), workspace), ids.NewV7())
 	db := database.BindTo(s.e.Pool, ids.From[ids.WorkspaceKind](workspace))
 	err = db.Tx(ctx, func(tx pgx.Tx) error {
-		members, err := identity.MemberPrincipalsTx(ctx, tx, []ids.UUID{actor})
+		members, err := identity.MemberPrincipalsTx(ctx, tx, identity.RbacObjects{}, []ids.UUID{actor})
 		if err != nil {
 			return err
 		}

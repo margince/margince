@@ -17,6 +17,7 @@ import (
 // counts it, and the lead list narrows to it — on the default work queue and
 // under an explicit sort, which are two different reads of the same list.
 func TestALeadCarriesATagAndTheListNarrowsToIt(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	tagged := createQuickFindLead(t, e, "Anna Example", "Northwind Traders")
@@ -82,6 +83,7 @@ func TestALeadCarriesATagAndTheListNarrowsToIt(t *testing.T) {
 // A disqualified lead is archived, and an archived record's tag read is
 // not-found as its lists are. A record nobody holds is not-found too.
 func TestAClosedLeadsTagReadIsNotFoundAsIsAMissingOne(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	lead := createQuickFindLead(t, e, "Anna Example", "Northwind Traders")

@@ -176,7 +176,7 @@ func TestJobSummaryKeepsLiveRetriesBesideDiscardedHistory(t *testing.T) {
 		{Kind: "unregistered_kind", Discarded: 12, FutureRetries: 2, Retrying: 2, NextAttemptAt: &next, Waiting: 1, Runnable: 1, OldestWaitingAgeSeconds: &age},
 		{Kind: "unregistered_kind", FutureRetries: 2, Retrying: 2, NextAttemptAt: &next, Waiting: 1, Runnable: 1, OldestWaitingAgeSeconds: &age},
 	} {
-		_, findings, err := summarizeJobKinds(healthSource("jobs", healthReadObject), []jobs.KindHealth{row})
+		_, findings, err := summarizeJobKinds(healthSource("jobs", healthReadObject), jobs.Composed{}, []jobs.KindHealth{row})
 		if err != nil {
 			t.Fatal(err)
 		}

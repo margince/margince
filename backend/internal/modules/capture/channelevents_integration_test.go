@@ -114,6 +114,7 @@ func (f *channelFixture) lastAuditAfter(t *testing.T, id ids.UUID) map[string]an
 }
 
 func TestAnEventsSecretIsSealedShownAsSetAndAudited(t *testing.T) {
+	t.Parallel()
 	f := newChannelFixture(t, nil)
 	f.withPushProvider()
 	conn := f.connectPush(t, pushSecret)
@@ -136,6 +137,7 @@ func TestAnEventsSecretIsSealedShownAsSetAndAudited(t *testing.T) {
 }
 
 func TestABotWithNoEventsSecretAnswersSo(t *testing.T) {
+	t.Parallel()
 	f := newChannelFixture(t, nil)
 	f.withPushProvider()
 	conn := f.connectPush(t, "")
@@ -150,6 +152,7 @@ func TestABotWithNoEventsSecretAnswersSo(t *testing.T) {
 }
 
 func TestAProviderThatPushesNothingRefusesAnEventsSecret(t *testing.T) {
+	t.Parallel()
 	f := newChannelFixture(t, nil)
 	f.withPushProvider()
 	token, _ := f.api.withNewBot("refusing_bot")
@@ -167,6 +170,7 @@ func TestAProviderThatPushesNothingRefusesAnEventsSecret(t *testing.T) {
 }
 
 func TestReplacingTheTokenReplacesOrKeepsTheEventsSecret(t *testing.T) {
+	t.Parallel()
 	f := newChannelFixture(t, nil)
 	f.withPushProvider()
 	conn := f.connectPush(t, pushSecret)
@@ -195,6 +199,7 @@ func TestReplacingTheTokenReplacesOrKeepsTheEventsSecret(t *testing.T) {
 }
 
 func TestDisconnectDestroysTheEventsSecret(t *testing.T) {
+	t.Parallel()
 	f := newChannelFixture(t, nil)
 	f.withPushProvider()
 	conn := f.connectPush(t, pushSecret)

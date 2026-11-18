@@ -36,6 +36,7 @@ import (
 // way it counts toward deals-by-stage
 // (report_dealsbystage_integration_test.go).
 func TestPipelineCurrentCountsAnUnownedDealForATeamManager(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	e.seedOpenDeal(t, "Unowned", 60, nil, new(int64(10000)))
 
@@ -95,6 +96,7 @@ func seedRate(t *testing.T, e *forecastEnv, rate string, daysAgo int) {
 // A won deal is money that arrived. It is not still in the pipeline, and a
 // composition that counts it reports work the team cannot act on.
 func TestPipelineCurrentHoldsOnlyOpenDeals(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	seedPricedDeal(t, e, "Still open", 10_000, "EUR", "open")
 	seedPricedDeal(t, e, "Already won", 90_000, "EUR", "won")
@@ -114,6 +116,7 @@ func TestPipelineCurrentHoldsOnlyOpenDeals(t *testing.T) {
 // One stage trading in three currencies is ONE row, because each deal was
 // converted on its own before anything was added.
 func TestPipelineCurrentConvertsEachDealAndDrawsOneRowPerStage(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	// 0.5 EUR per unit, in force since yesterday.
 	seedRate(t, e, "0.5", 1)
@@ -136,6 +139,7 @@ func TestPipelineCurrentConvertsEachDealAndDrawsOneRowPerStage(t *testing.T) {
 // A rate that arrives after the answer's as-of date does not reach back and
 // re-price what was already read.
 func TestPipelineCurrentTakesTheLatestRateOnOrBeforeAsOf(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	seedRate(t, e, "0.5", 10)
 	seedRate(t, e, "0.9", 2)
@@ -152,6 +156,7 @@ func TestPipelineCurrentTakesTheLatestRateOnOrBeforeAsOf(t *testing.T) {
 // A deal with no rate to convert by is COUNTED and not PRICED. Zeroing it would
 // shrink the total and read as a smaller pipeline rather than a missing rate.
 func TestPipelineCurrentCountsAnUnpricedDealAndExcludesItFromTheMoney(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	seedPricedDeal(t, e, "Priced", 10_000, "EUR", "open")
 	// VND with no rate sheet entry at all.
@@ -186,6 +191,7 @@ func TestPipelineCurrentCountsAnUnpricedDealAndExcludesItFromTheMoney(t *testing
 // caller receives does not close this: the screens and the MCP door both run
 // the default.
 func TestPipelineCurrentDefaultsToReportingWhatTheMoneyCovers(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	seedPricedDeal(t, e, "Priced", 10_000, "EUR", "open")
 	seedPricedDeal(t, e, "No rate", 5_000_000, "VND", "open")
@@ -205,6 +211,7 @@ func TestPipelineCurrentDefaultsToReportingWhatTheMoneyCovers(t *testing.T) {
 // stage total once instead differs by up to a minor unit per deal, and the rows
 // a reader opens would stop adding up to the figure above them.
 func TestPipelineCurrentWeightsPerDealAndNotOnTheTotal(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	// 12341 × 60% = 7404.6 → 7405 each, so two round to 14810 while their
 	// combined raw total rounds to 14809.
@@ -227,6 +234,7 @@ func TestPipelineCurrentWeightsPerDealAndNotOnTheTotal(t *testing.T) {
 // set that reconciles to something else is worse than no detail at all: it
 // looks like proof.
 func TestPipelineCurrentDetailReconcilesToTheConvertedHeadline(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	seedRate(t, e, "0.5", 1)
 	seedPricedDeal(t, e, "Home", 10_000, "EUR", "open")
@@ -263,6 +271,7 @@ func TestPipelineCurrentDetailReconcilesToTheConvertedHeadline(t *testing.T) {
 // detail still reconciles; a rate crossing a day boundary is the case the unit
 // test beside this one pins, where the two instants can be stated exactly.
 func TestPipelineCurrentDetailCarriesTheHeadlinesInstant(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	seedRate(t, e, "0.5", 1)
 	seedPricedDeal(t, e, "Abroad", 10_000, "USD", "open")
@@ -300,6 +309,7 @@ func TestPipelineCurrentDetailCarriesTheHeadlinesInstant(t *testing.T) {
 // say it recomputed. Silence is the original defect arriving by another route:
 // figures that do not add up to the number above them, shown as though they do.
 func TestADerivationSaysWhetherItConvertedAtItsHeadlinesInstant(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	seedRate(t, e, "0.5", 1)
 	seedPricedDeal(t, e, "Abroad", 10_000, "USD", "open")

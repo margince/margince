@@ -114,6 +114,7 @@ func (e *storeEnv) channelDispatcher(channel *fakeChannelSender, mail *fakeSende
 // identity validation rejects anything without an '@', so the reply would die at
 // the seam with a reason that names an RFC822 rule the rep never invoked.
 func TestDispatcherRoutesAChannelDeliveryToMessageSender(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	activity := e.telegramActivity(t)
 	id := e.stageReplyOn(t, activity)
@@ -187,6 +188,7 @@ func TestDispatcherRoutesAChannelDeliveryToMessageSender(t *testing.T) {
 // redelivered job must refuse to transmit rather than deliver a second copy to a
 // customer with nothing able to detect it.
 func TestChannelDeliveryParksOnAnUnknownOutcome(t *testing.T) {
+	t.Parallel()
 	// One fixture, a reply of its own per case. What isolates the two is the
 	// delivery ID, not an untouched store — each case dispatches, and a
 	// dispatch writes: the status, the park reason, the in-flight marker. Both
@@ -272,6 +274,7 @@ func TestChannelDeliveryParksOnAnUnknownOutcome(t *testing.T) {
 // transient refusal would park every message permanently — the guard would have
 // turned an ordinary failure into a dead delivery.
 func TestChannelDeliveryRetriesOnADefiniteError(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	id := e.stageReply(t)
 
@@ -324,6 +327,7 @@ func TestChannelDeliveryRetriesOnADefiniteError(t *testing.T) {
 // paces roughly one message per second per chat, so guessing shorter earns a
 // harder limit on the bot the whole workspace shares.
 func TestChannelDeliveryHonoursRetryAfterOn429(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	id := e.stageReply(t)
 
@@ -383,6 +387,7 @@ var _ connector.AttachmentCarrier = (*carryingChannelSender)(nil)
 // there. The set travels under the same all-or-nothing obligation the mail seam
 // carries, which is why the count is asserted before anything about the content.
 func TestAChannelReplyHandsItsFilesToTheProvider(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	attachment := ids.NewV7()
 	id := e.stageChannel(t, StageChannelInput{
@@ -442,6 +447,7 @@ func TestAChannelReplyHandsItsFilesToTheProvider(t *testing.T) {
 // may have arrived and discouraging a resend. Nothing was transmitted here, and
 // the disposition has to say so.
 func TestAChannelReplyWhoseFilesCannotBeReadStaysRetryable(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	id := e.stageChannel(t, StageChannelInput{
 		ActivityID: e.telegramActivity(t),

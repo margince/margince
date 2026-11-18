@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/integrations"
 )
@@ -17,6 +18,7 @@ import (
 // The automatic-lookup posture the api's environment sets reads as that value
 // and refuses a change; resending it is accepted.
 func TestAutomaticLookupSetByEnvIsLockedAgainstAChange(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithEnv(t, []string{"MARGINCE_INTEGRATIONS_AUTOMATIC_LOOKUP=false"})
 	e.BootstrapWorkspace(t)
 
@@ -40,13 +42,13 @@ func TestAutomaticLookupSetByEnvIsLockedAgainstAChange(t *testing.T) {
 }
 
 // Admission reads the posture inside the write that queues a run, and a boot
-// value of off wins there over a saved row of on. Not parallel: the binding is
-// the process's own.
+// value of off wins there over a saved row of on.
 func TestABootSetLookupOffWinsOverTheSavedRowAndBuysNothing(t *testing.T) {
-	apptest.BindEnv(t, []string{"MARGINCE_INTEGRATIONS_AUTOMATIC_LOOKUP=false"})
+	t.Parallel()
+	boot := compose.ConfigContext(context.Background(), apptest.LoadEnv(t, []string{"MARGINCE_INTEGRATIONS_AUTOMATIC_LOOKUP=false"}))
 	c := setupProviderConsumer(t, true)
 
-	if err := c.consumer.HandleEvent(context.Background(), humanCreated(c.contactID)); err != nil {
+	if err := c.consumer.HandleEvent(boot, humanCreated(c.contactID)); err != nil {
 		t.Fatalf("a boot-set off surfaced as a failure: %v", err)
 	}
 	if runs := c.runsForContact(t); runs != 0 {

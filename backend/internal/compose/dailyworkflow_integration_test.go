@@ -115,6 +115,7 @@ func (o *owedEnv) taskFor(rep context.Context, t *testing.T, subject string, due
 // Each rep's own day holds their own work and nobody else's. The manager's
 // team day holds both.
 func TestEachReaderSeesTheWorkThatIsTheirs(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	readers := o.day(t)
 	first := o.taskFor(readers.rep1, t, "Send the pricing sheet", dayNow.Add(2*time.Hour))
@@ -137,6 +138,7 @@ func TestEachReaderSeesTheWorkThatIsTheirs(t *testing.T) {
 // A day passes on the clock alone. The same task moves from today to overdue,
 // and no new row appears.
 func TestADayPassingMovesTheSameTaskToOverdue(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	readers := o.day(t)
 	task := o.taskFor(readers.rep1, t, "Send the pricing sheet", dayNow.Add(2*time.Hour))
@@ -160,6 +162,7 @@ func TestADayPassingMovesTheSameTaskToOverdue(t *testing.T) {
 // team day holds the same task, not the mail as if nobody were on it.
 // Capturing the same message again changes nothing.
 func TestACapturedRequestIsTheOwnersAndSurvivesAReplay(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	readers := o.day(t)
 	o.contact(t, "Buyer", "buyer@customer.example")
@@ -243,6 +246,7 @@ func considered(page crmcontracts.Worklist) int {
 // stay that way. A count that answered from a stale read would still show the
 // finished task while the queue no longer does.
 func TestQuietDaysHoldNothingAndInventNothing(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	readers := o.day(t)
 	task := o.taskFor(readers.rep1, t, "Send the pricing sheet", dayNow.Add(2*time.Hour))
@@ -274,6 +278,7 @@ func TestQuietDaysHoldNothingAndInventNothing(t *testing.T) {
 // A reply that left something undone keeps it owed. So does a model that would
 // not commit.
 func TestOnlyAFulfilledRequestStopsBeingOwed(t *testing.T) {
+	t.Parallel()
 	for _, c := range []struct {
 		verdict   string
 		stillOwed bool
@@ -324,6 +329,7 @@ func dueGroup(row crmcontracts.WorklistItem) string {
 // after, it is overdue, and still the same row, still the rep's, and still on
 // their manager's team day.
 func TestTheWeekClosingKeepsTheWorkAndItsReaders(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	readers := o.day(t)
 	// dayNow is a Wednesday, so Friday afternoon is this week and not tomorrow.
@@ -371,6 +377,7 @@ func TestTheWeekClosingKeepsTheWorkAndItsReaders(t *testing.T) {
 // Archiving the mail a request was read from takes the task off the day. The
 // alternative is a row whose evidence a reader can no longer reach.
 func TestArchivingTheSourceTakesItsDerivedWorkAway(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	readers := o.day(t)
 	o.contact(t, "Buyer", "buyer@customer.example")
@@ -410,6 +417,7 @@ func TestArchivingTheSourceTakesItsDerivedWorkAway(t *testing.T) {
 // Capture keys on the external identity. A provider re-sending a message with
 // its body filled in must not leave the day holding one obligation twice.
 func TestCorrectedSourceContentLeavesOneRowOfWork(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	readers := o.day(t)
 	o.contact(t, "Buyer", "buyer@customer.example")
@@ -458,6 +466,7 @@ func TestCorrectedSourceContentLeavesOneRowOfWork(t *testing.T) {
 // The work a reader sees derives from that admission, so a second row here
 // would be the same promise counted twice on one day.
 func TestRenewedEvidenceKeepsTheOnePromiseItRenews(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	readers := o.day(t)
 	o.contact(t, "Buyer", "buyer@customer.example")

@@ -67,6 +67,7 @@ func qualificationWithExistingDeal(t *testing.T) existingQualification {
 }
 
 func TestQualificationLinksAnExistingDealWithoutOpeningAnother(t *testing.T) {
+	t.Parallel()
 	f := qualificationWithExistingDeal(t)
 	dealID := ids.UUID(f.deal.Id)
 	preview, err := f.contacts.PreviewLeadPromotion(f.e.Admin(), f.lead)
@@ -107,6 +108,7 @@ func TestQualificationLinksAnExistingDealWithoutOpeningAnother(t *testing.T) {
 }
 
 func TestQualificationRefusesConflictingDealChoicesBeforeWriting(t *testing.T) {
+	t.Parallel()
 	f := qualificationWithExistingDeal(t)
 	dealID := ids.UUID(f.deal.Id)
 	_, err := f.contacts.QualifyLead(f.e.Admin(), f.lead, contacts.PromoteLeadInput{Trigger: "human_qualify", ExistingDealID: &dealID, Deal: &contacts.QualifyDealInput{}})
@@ -123,6 +125,7 @@ func TestQualificationRefusesConflictingDealChoicesBeforeWriting(t *testing.T) {
 }
 
 func TestQualificationRefusesAnUnavailableDealAndRollsBack(t *testing.T) {
+	t.Parallel()
 	for _, state := range []string{"closed", "archived", "other company", "read only"} {
 		t.Run(state, func(t *testing.T) {
 			f := qualificationWithExistingDeal(t)
@@ -167,6 +170,7 @@ func TestQualificationRefusesAnUnavailableDealAndRollsBack(t *testing.T) {
 }
 
 func TestQualificationPreservesAPreexistingStakeholderAndItsProvenance(t *testing.T) {
+	t.Parallel()
 	f := qualificationWithExistingDeal(t)
 	ctx := f.e.Admin()
 	contact, err := f.contacts.CreateContact(ctx, contacts.CreateContactInput{FullName: "Existing buyer", Source: "manual", Emails: []contacts.ContactEmailInput{{Email: "known@renewal-buyer.test", EmailType: "work", IsPrimary: true}}})
@@ -217,6 +221,7 @@ func (f existingQualification) closeDeal(t *testing.T) {
 }
 
 func TestQualificationPreviewContinuesEligibleDealsAcrossPages(t *testing.T) {
+	t.Parallel()
 	f := qualificationWithExistingDeal(t)
 	for range 25 {
 		if _, err := f.deals.CreateDeal(f.e.Admin(), deals.CreateDealInput{Name: "Another renewal", CompanyID: &f.company, PipelineID: ids.From[ids.PipelineKind](ids.UUID(f.pipeline.Id)), StageID: ids.From[ids.StageKind](ids.UUID((*f.pipeline.Stages)[0].Id)), Source: "manual"}); err != nil {
@@ -239,6 +244,7 @@ func TestQualificationPreviewContinuesEligibleDealsAcrossPages(t *testing.T) {
 }
 
 func TestQualificationFiltersReadOnlySharesBeforePagingAndRechecksAtWrite(t *testing.T) {
+	t.Parallel()
 	f := qualificationWithExistingDeal(t)
 	rep := ids.From[ids.UserKind](f.e.Rep1)
 	if _, err := f.contacts.UpdateCompany(f.e.Admin(), f.company, contacts.UpdateCompanyInput{OwnerID: &rep}); err != nil {

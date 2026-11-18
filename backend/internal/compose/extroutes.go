@@ -73,18 +73,14 @@ type MountedRoute struct {
 // and one that reads a package variable.
 //
 // served names the verbs a composed unit actually registered a handler for,
-// keyed by (unit, tool) — compose's composedServedVerbs at the call site, built
-// on the same verbKey the behavior-to-contract join uses. A declared verb
-// outside it is still MOUNTED — the contract publishes the route either way,
-// and a 404 would contradict the document a client generated its call from —
-// but it answers a named 501 instead of reaching a registry that has never
-// heard of it.
+// keyed by (unit, tool). The call site passes Extensions.servedVerbs, built on
+// the same verbKey the behavior-to-contract join uses. A declared verb outside
+// it is still mounted, because the contract publishes the route either way. It
+// answers a named 501 instead of reaching a registry that never heard of it.
 //
-// The PAIR, never the bare verb: an `x-mcp-tool` value is a string a unit
-// writes into its own contract fragment, so a bare-verb key let unit B declare
-// a contract-only operation naming unit A's served verb and inherit A's
-// handler — B's published route executing A's tier, scope, RBAC object and
-// schemas. See composedServedVerbs.
+// The pair, never the bare verb: an `x-mcp-tool` value is a string a unit
+// writes into its own contract fragment. A bare-verb key let unit B declare a
+// contract-only operation naming unit A's served verb and inherit A's handler.
 //
 // Returned routes are the registration side of the parity pair. They are
 // returned rather than recorded in a package variable because a ServeMux cannot

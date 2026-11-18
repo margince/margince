@@ -16,6 +16,7 @@ import (
 // A lead's last touch says how precisely it is known, from the activity it
 // names. A day note's stored noon reads as its date, a later mail as an instant.
 func TestALeadsLastTouchCarriesThePrecisionOfItsActivity(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	date := time.Date(2026, 3, 9, 0, 0, 0, 0, time.UTC)
 	cases := map[string]struct {

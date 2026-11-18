@@ -19,6 +19,7 @@ import (
 // A purchase a human ran planted this employer, so the seat repair keeps it
 // even when the contact's address is a colleague's login.
 func TestTheSeatRepairKeepsAProviderEmployerAHumanBought(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	subject, _ := boughtSubject(t, e)
 	login := e.WsScalar(t, `SELECT email FROM app_user WHERE id = $1`, e.Rep2)

@@ -16,6 +16,7 @@ import (
 // A worklist read times each stage that costs measurable time, the optional
 // lanes included, so /metrics can say where a slow day spent its time.
 func TestAWorklistReadTimesEachOfItsStages(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	before := attention.StageTimings()

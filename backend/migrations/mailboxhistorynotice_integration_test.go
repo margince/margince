@@ -55,6 +55,7 @@ SELECT e.contact_id, e.id, 'art14', $4::timestamptz + interval '1 month', $5,
 }
 
 func TestTheMailboxHistoryUpgradeClosesOnlyDutiesFromMailOlderThanTheConnection(t *testing.T) {
+	t.Parallel()
 	dsn, _ := dsns(t)
 	conn := connect(t, dsn)
 	headSchema(t, conn)

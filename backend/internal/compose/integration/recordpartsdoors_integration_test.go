@@ -35,6 +35,7 @@ type stated struct {
 // A fact is corrected and then removed alike on the facts routes and through
 // change_record_parts, each write pinned to the version the caller read.
 func TestCompanyFactCorrectionAndRemovalAnswerAsTheirRoutes(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "fact-fix-doors", "read", "write")
 	viaREST := createdRecord(t, d.e, "/v1/companies", AnyMap{"display_name": "Fact Fix REST GmbH", "source": "manual"})
 	viaTool := createdRecord(t, d.e, "/v1/companies", AnyMap{"display_name": "Fact Fix Tool GmbH", "source": "manual"})
@@ -80,6 +81,7 @@ func TestCompanyFactCorrectionAndRemovalAnswerAsTheirRoutes(t *testing.T) {
 // A profile field a human stated is corrected and confirmed alike on the
 // profile-field routes and through change_record_parts.
 func TestCompanyProfileFieldWritesAnswerAsTheirRoutes(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "profile-doors", "read", "write")
 	viaREST := createdRecord(t, d.e, "/v1/companies", AnyMap{"display_name": "Profile REST GmbH", "source": "manual"})
 	viaTool := createdRecord(t, d.e, "/v1/companies", AnyMap{"display_name": "Profile Tool GmbH", "source": "manual"})
@@ -118,6 +120,7 @@ type projectSide struct {
 // A project's companies and stakeholders are set and taken off alike on the
 // project routes and through change_record_parts.
 func TestProjectCompaniesAndStakeholdersAnswerAsTheirRoutes(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "project-part-doors", "read", "write")
 	customer := createdRecord(t, d.e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Part Customer"})
 	partner := createdRecord(t, d.e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Part Partner"})
@@ -179,6 +182,7 @@ func TestProjectCompaniesAndStakeholdersAnswerAsTheirRoutes(t *testing.T) {
 // An offer's line is changed and then removed alike on the line-item routes and
 // through change_record_parts.
 func TestOfferLineChangeAndRemovalAnswerAsTheirRoutes(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "offer-line-doors", "read", "write")
 	deal := openDeal(t, d.e, apptest.DiscoverSeededPipeline(t, d.e), "Line renewal")
 	product := createdRecord(t, d.e, "/v1/products", AnyMap{
@@ -217,6 +221,7 @@ func TestOfferLineChangeAndRemovalAnswerAsTheirRoutes(t *testing.T) {
 // list_records narrows companies and leads to one list's members, as the
 // routes' list_id does.
 func TestListRecordsNarrowsCompaniesAndLeadsToAListsMembers(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoorsWith(t, "member-doors", []compose.Option{compose.WithListsEnabled(true)}, "read")
 	for _, c := range []struct{ kind, route, nameField string }{
 		{"company", "companies", "display_name"},
@@ -239,6 +244,7 @@ func TestListRecordsNarrowsCompaniesAndLeadsToAListsMembers(t *testing.T) {
 // list_records narrows the timeline to one record's unanswered mail, as the
 // activities route's entity pair and waiting_reply do.
 func TestListRecordsNarrowsTheTimelineToARecordsUnansweredMail(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "timeline-doors", "read")
 	contact := createdID(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Wanda Waiting", "source": "manual"})
 	waiting := createdID(t, d.e, "/v1/activities", AnyMap{
@@ -280,6 +286,7 @@ func namesCode(refusal, code string) bool {
 
 // A part write the route refuses, change_record_parts refuses too.
 func TestChangeRecordPartsRefusesWhatItsRoutesRefuse(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "part-refusal-doors", "read", "write")
 	company := createdRecord(t, d.e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Refusal Works"})
 	contact := createdRecord(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Rafa Refused"})
@@ -390,6 +397,7 @@ func TestChangeRecordPartsRefusesWhatItsRoutesRefuse(t *testing.T) {
 // Both doors refuse a list narrowed by a list that does not exist, or sorted by
 // a column the timeline lacks. Both refuse a commission nobody accrued.
 func TestRecordListsRefuseWhatTheirRoutesRefuse(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoorsWith(t, "list-refusal-doors", []compose.Option{compose.WithListsEnabled(true)}, "read")
 	nowhere := ids.NewV7().String()
 	for _, c := range []struct {

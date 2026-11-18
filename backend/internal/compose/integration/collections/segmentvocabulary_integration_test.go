@@ -95,11 +95,7 @@ func setupFixture(t *testing.T) fixture {
 }
 
 // createTextField defines an active text field on contact and answers its
-// physical column and catalog id. label must be unique across this
-// package's own tests: testdb.Reset truncates the custom_field catalog
-// between tests but never reverts the ALTER TABLE a create ran, so a
-// reused label collides with the physical column an earlier test left
-// behind in this same schema.
+// physical column and catalog id.
 func (f fixture) createTextField(t *testing.T, label string) (column string, id ids.UUID) {
 	t.Helper()
 	field, err := f.svc.Create(f.ctx, customfieldsmod.FieldSpec{
@@ -195,6 +191,7 @@ func (f fixture) filterList(t *testing.T, name, field, op string, value any) ids
 // gt narrows to values strictly above the bound, both against a real
 // numeric cf_* column.
 func TestANumberCustomFieldFiltersOnEqAndGt(t *testing.T) {
+	t.Parallel()
 	f := setupFixture(t)
 	column := f.defineField(t, customfieldsmod.FieldSpec{Label: "Deal Score", Type: customfieldsmod.TypeNumber})
 	high, low := f.seedTwoContacts(t, "Score")
@@ -211,6 +208,7 @@ func TestANumberCustomFieldFiltersOnEqAndGt(t *testing.T) {
 // validation error rather than silently truncated or reaching the query
 // as a query-execution failure.
 func TestACurrencyCustomFieldFiltersOnEqAndRefusesAFractionalOperand(t *testing.T) {
+	t.Parallel()
 	f := setupFixture(t)
 	column := f.defineField(t, customfieldsmod.FieldSpec{
 		Label: "Lifetime Value", Type: customfieldsmod.TypeCurrency, Currency: new("USD"),
@@ -234,6 +232,7 @@ func TestACurrencyCustomFieldFiltersOnEqAndRefusesAFractionalOperand(t *testing.
 // TestADateCustomFieldFiltersOnGt proves a date column orders correctly
 // through the predicate engine's own gt, not just equality.
 func TestADateCustomFieldFiltersOnGt(t *testing.T) {
+	t.Parallel()
 	f := setupFixture(t)
 	column := f.defineField(t, customfieldsmod.FieldSpec{Label: "Renewal Date", Type: customfieldsmod.TypeDate})
 	later, earlier := f.seedTwoContacts(t, "Renewal")
@@ -246,6 +245,7 @@ func TestADateCustomFieldFiltersOnGt(t *testing.T) {
 // TestABooleanCustomFieldFiltersOnEq proves a boolean column's eq narrows
 // to exactly the true-valued (or false-valued) rows.
 func TestABooleanCustomFieldFiltersOnEq(t *testing.T) {
+	t.Parallel()
 	f := setupFixture(t)
 	column := f.defineField(t, customfieldsmod.FieldSpec{Label: "Is VIP", Type: customfieldsmod.TypeBoolean})
 	vip, plain := f.seedTwoContacts(t, "VIP")
@@ -258,6 +258,7 @@ func TestABooleanCustomFieldFiltersOnEq(t *testing.T) {
 // TestAPicklistCustomFieldFiltersOnIn proves a picklist column's in
 // membership narrows to rows whose value is any of the listed options.
 func TestAPicklistCustomFieldFiltersOnIn(t *testing.T) {
+	t.Parallel()
 	f := setupFixture(t)
 	column := f.defineField(t, customfieldsmod.FieldSpec{
 		Label: "Region", Type: customfieldsmod.TypePicklist, Options: []string{"emea", "apac", "amer"},
@@ -274,6 +275,7 @@ func TestAPicklistCustomFieldFiltersOnIn(t *testing.T) {
 // narrow membership — a customer who filled in a field can build a
 // target list from it, which is the entire reason to let them add one.
 func TestADynamicListFiltersOnACustomFieldValue(t *testing.T) {
+	t.Parallel()
 	f := setupFixture(t)
 	column, _ := f.createTextField(t, "Loyalty Tier")
 
@@ -312,6 +314,7 @@ func TestADynamicListFiltersOnACustomFieldValue(t *testing.T) {
 // consult the catalogue for it would leave a customer's project field
 // definable and unfilterable at once.
 func TestAProjectCustomFieldIsFilterable(t *testing.T) {
+	t.Parallel()
 	f := setupFixture(t)
 	field, err := f.svc.Create(f.ctx, customfieldsmod.FieldSpec{
 		Object: "project", Label: "Engagement Model", Type: customfieldsmod.TypeText, Source: "manual",
@@ -365,6 +368,7 @@ func TestAProjectCustomFieldIsFilterable(t *testing.T) {
 // instead would silently WIDEN the target list — the way someone ends up
 // emailing contacts they never meant to target.
 func TestRetiringACustomFieldLeavesItsSegmentEvaluable(t *testing.T) {
+	t.Parallel()
 	f := setupFixture(t)
 	column, fieldID := f.createTextField(t, "Renewal Segment")
 
@@ -413,6 +417,7 @@ func TestRetiringACustomFieldLeavesItsSegmentEvaluable(t *testing.T) {
 // order. A second vocabulary lookup anywhere in the export path would
 // show up here as an export that disagrees with the list it exports.
 func TestFilteredExportOfASegmentMatchesItsMembership(t *testing.T) {
+	t.Parallel()
 	f := setupFixture(t)
 	column, _ := f.createTextField(t, "Export Match Flag")
 
@@ -517,6 +522,7 @@ func entityTypeCheckValues(t *testing.T, f fixture, table string) map[string]boo
 // while the server accepted, stored and returned project tags, so a client
 // switching exhaustively on that enum had no branch for a value it was handed.
 func TestEveryEnumOverTheRecordVocabularyMatchesTheCheckConstraint(t *testing.T) {
+	t.Parallel()
 	f := setupFixture(t)
 
 	var def string
@@ -695,6 +701,7 @@ func (f fixture) assertTagSegment(t *testing.T, entity, tagID string, tagged, pl
 // carry one — contact, company, deal and lead — not just the one the
 // unit lane happened to exercise.
 func TestATagFilterSelectsTaggedRecordsPerEntityType(t *testing.T) {
+	t.Parallel()
 	f := setupFixture(t)
 	tag, err := f.lists.CreateTag(f.ctx, "vip", nil, nil)
 	if err != nil {
@@ -724,6 +731,7 @@ func TestATagFilterSelectsTaggedRecordsPerEntityType(t *testing.T) {
 // hand-built adapter, no simulated error — that has nothing at all to do
 // with what the caller's filter named.
 func TestACatalogueReadFailureIsNeverMisreportedAsAFilterMistake(t *testing.T) {
+	t.Parallel()
 	f := setupFixture(t)
 	dead, cancel := context.WithCancel(f.ctx)
 	cancel()
@@ -786,6 +794,7 @@ func (f fixture) customerCompany(t *testing.T, name string, industry *string) id
 // only the real database can prove. The unit lane can check the SQL text; only
 // this can check which deals come back.
 func TestADealFilterReachesTheCustomersIndustry(t *testing.T) {
+	t.Parallel()
 	f := setupFixture(t)
 	pipeline, open, _ := integration.DealFixture(t, f.e)
 	manufacturing, services := "manufacturing", "services"
@@ -813,6 +822,7 @@ func TestADealFilterReachesTheCustomersIndustry(t *testing.T) {
 // company exist" — is the plausible wrong one, and it would silently drop
 // every deal whose company simply has no industry recorded.
 func TestAnUnknownCustomerIndustryCoversBothWaysItCanBeUnknown(t *testing.T) {
+	t.Parallel()
 	f := setupFixture(t)
 	pipeline, open, _ := integration.DealFixture(t, f.e)
 	known := "manufacturing"
@@ -854,6 +864,7 @@ func TestAnUnknownCustomerIndustryCoversBothWaysItCanBeUnknown(t *testing.T) {
 // this test that decision is a comment; with it, re-adding the base clause fails
 // here instead of quietly moving somebody's pipeline figure.
 func TestArchivingTheCustomerLeavesItsDealsInTheIndustryFilter(t *testing.T) {
+	t.Parallel()
 	f := setupFixture(t)
 	pipeline, open, _ := integration.DealFixture(t, f.e)
 	manufacturing := "manufacturing"

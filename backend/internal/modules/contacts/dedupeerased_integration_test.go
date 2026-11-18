@@ -17,6 +17,7 @@ import (
 )
 
 func TestArchivedSubjectsCannotFileOrReopenDuplicatePairs(t *testing.T) {
+	t.Parallel()
 	for _, existing := range []bool{false, true} {
 		t.Run(map[bool]string{false: "new", true: "refile"}[existing], func(t *testing.T) {
 			e := setupDedupe(t)
@@ -61,6 +62,7 @@ func TestArchivedSubjectsCannotFileOrReopenDuplicatePairs(t *testing.T) {
 }
 
 func TestUndoCannotReopenAPairWithAnArchivedSubject(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := asArchiver(e)
 	left := e.plainContact(ctx, t, "Left Contact", "left@undo-erased.test")
@@ -85,6 +87,7 @@ func TestUndoCannotReopenAPairWithAnArchivedSubject(t *testing.T) {
 }
 
 func TestFilingHoldsBothSubjectsAgainstConcurrentErasure(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	left := e.plainContact(ctx, t, "Left Contact", "left@lock-dedupe.test")

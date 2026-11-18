@@ -107,6 +107,7 @@ func (p *preflightEnv) mailboxCtx(t *testing.T) context.Context {
 // Compare the Date header instead of the arrival, and the backdated and the
 // future-dated cases flip. Drop the bulk test, and the mailing pauses.
 func TestAReplyPausesAScheduledDealFollowUp(t *testing.T) {
+	t.Parallel()
 	dealClaim := AnyMap{"communication_context": "active_deal_followup"}
 	// Each mail is written relative to the moment just after the message was
 	// scheduled, so "before" and "after" are about that moment.
@@ -174,6 +175,7 @@ func TestAReplyPausesAScheduledDealFollowUp(t *testing.T) {
 // Mutation: drop the thread_key condition from pursuitPausedByReply, and the
 // reply is paused.
 func TestAScheduledReplyListensOnItsOwnThread(t *testing.T) {
+	t.Parallel()
 	for _, sameThread := range []bool{false, true} {
 		t.Run(map[bool]string{false: "other thread", true: "same thread"}[sameThread], func(t *testing.T) {
 			checkScheduledReplyThread(t, sameThread)
@@ -218,6 +220,7 @@ func checkScheduledReplyThread(t *testing.T, sameThread bool) {
 // Mutation: drop the IsHandLoggedThread test from pursuitPausedByReply, and the
 // follow-up is sent over the reply.
 func TestAFollowUpAnsweringAHandLoggedMailIsPausedByAReply(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.activityID = logConsentInbound(t, p.AppEnv, p.contactID)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)

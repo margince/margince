@@ -99,7 +99,7 @@ func timeStage(ctx context.Context, stage string) func() {
 		}
 		h.Observe(elapsed.Seconds())
 		if metered {
-			recordStageCost(key, spent)
+			recordStageCost(ctx, key, spent)
 		}
 	}
 }
@@ -111,16 +111,26 @@ type stageSpend struct {
 	clipped bool
 }
 
-// recordStageCost adds one run; the caller holds stageTimings.mu.
-func recordStageCost(key StageKey, spent stageSpend) {
-	c, ok := stageTimings.costs[key]
+// recordStageCost adds one run to the process totals, and to the log ctx
+// carries if it carries one; the caller holds stageTimings.mu.
+func recordStageCost(ctx context.Context, key StageKey, spent stageSpend) {
+	addStageCost(stageTimings.costs, key, spent)
+	if log, ok := ctx.Value(stageCostLogKey{}).(*StageCostLog); ok {
+		log.mu.Lock()
+		defer log.mu.Unlock()
+		addStageCost(log.costs, key, spent)
+	}
+}
+
+func addStageCost(costs map[StageKey]*stageCost, key StageKey, spent stageSpend) {
+	c, ok := costs[key]
 	if !ok {
 		c = &stageCost{
 			db:       httpserver.NewHistogram(stageBounds),
 			poolWait: httpserver.NewHistogram(stageBounds),
 			app:      httpserver.NewHistogram(stageBounds),
 		}
-		stageTimings.costs[key] = c
+		costs[key] = c
 	}
 	c.statements += spent.own.Statements
 	c.exchanges += spent.own.Exchanges
@@ -200,7 +210,7 @@ func meteredStages(ctx context.Context, read string, fn func(context.Context) er
 	spent, inclusive := trail.close(outer, time.Since(start))
 	stageTimings.mu.Lock()
 	defer stageTimings.mu.Unlock()
-	recordStageCost(StageKey{Read: read, Stage: OutsideStages}, spent)
+	recordStageCost(ctx, StageKey{Read: read, Stage: OutsideStages}, spent)
 	h, seen := stageTimings.poolWait[read]
 	if !seen {
 		h = httpserver.NewHistogram(stageBounds)
@@ -226,8 +236,35 @@ func StageTimings() map[StageKey]httpserver.Histogram {
 func StageCosts() map[StageKey]StageCost {
 	stageTimings.mu.Lock()
 	defer stageTimings.mu.Unlock()
-	out := make(map[StageKey]StageCost, len(stageTimings.costs))
-	for key, c := range maps.All(stageTimings.costs) {
+	return snapshotStageCosts(stageTimings.costs)
+}
+
+// StageCostLog holds the stage costs of the reads run under one context. It
+// sits beside the process totals, so a caller reads only its own share.
+type StageCostLog struct {
+	mu    sync.Mutex
+	costs map[StageKey]*stageCost
+}
+
+type stageCostLogKey struct{}
+
+// WithStageCostLog answers ctx with a fresh log every metered read under it
+// adds to.
+func WithStageCostLog(ctx context.Context) (context.Context, *StageCostLog) {
+	log := &StageCostLog{costs: map[StageKey]*stageCost{}}
+	return context.WithValue(ctx, stageCostLogKey{}, log), log
+}
+
+// Costs answers a detached copy of what the log holds.
+func (l *StageCostLog) Costs() map[StageKey]StageCost {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return snapshotStageCosts(l.costs)
+}
+
+func snapshotStageCosts(costs map[StageKey]*stageCost) map[StageKey]StageCost {
+	out := make(map[StageKey]StageCost, len(costs))
+	for key, c := range maps.All(costs) {
 		out[key] = StageCost{
 			Statements: c.statements, Exchanges: c.exchanges, Failed: c.failed, Clipped: c.clipped,
 			DB: c.db.Snapshot(), PoolWait: c.poolWait.Snapshot(), App: c.app.Snapshot(),

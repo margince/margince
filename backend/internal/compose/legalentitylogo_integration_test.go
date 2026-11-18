@@ -88,6 +88,7 @@ func intentsFor(t *testing.T, fragment string) int {
 }
 
 func TestALegalEntityWearsAMarkOfItsOwn(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	blob := blobstore.NewMemory()
 	handlers := companyHandlers{store: e.Contacts, blob: blob}
@@ -136,6 +137,7 @@ func TestALegalEntityWearsAMarkOfItsOwn(t *testing.T) {
 // A caller the write would refuse is refused before the upload is read, so no
 // bytes are stored and no intent is recorded for them.
 func TestARefusedEntityLogoUploadStoresNothing(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	blob := &countingBlob{Store: blobstore.NewMemory()}
 	handlers := companyHandlers{store: e.Contacts, blob: blob}
@@ -164,6 +166,7 @@ func TestARefusedEntityLogoUploadStoresNothing(t *testing.T) {
 // The key a removal drops is provisional in the ledger, so a delete the object
 // store refuses leaves bytes the sweep still collects.
 func TestARemovedEntityLogoIsLeftForTheSweepWhenItsDeleteFails(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	blob := &countingBlob{Store: blobstore.NewMemory()}
 	handlers := companyHandlers{store: e.Contacts, blob: blob}

@@ -65,7 +65,7 @@ func (s *Service) Login(ctx context.Context, email, plaintext, device string) (I
 			return err
 		}
 		var loadErr error
-		id.Roles, id.Teams, id.Permissions, loadErr = loadGrants(ctx, tx, account.UserID)
+		id.Roles, id.Teams, id.Permissions, loadErr = loadGrants(ctx, tx, s.rbac, account.UserID)
 		if loadErr != nil {
 			return loadErr
 		}

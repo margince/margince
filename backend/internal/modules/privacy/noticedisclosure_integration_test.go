@@ -63,6 +63,7 @@ func seedNoticeHistory(t *testing.T, e *sarIdentifierEnv) {
 }
 
 func TestANoticeDisclosesWhatTheExportHoldsAndTheUsesOnRecord(t *testing.T) {
+	t.Parallel()
 	e := setupSARIdentifiers(t)
 	seedNoticeHistory(t, e)
 
@@ -91,6 +92,7 @@ func TestANoticeDisclosesWhatTheExportHoldsAndTheUsesOnRecord(t *testing.T) {
 }
 
 func TestARuleIsShownBareWhereNoFloorBinds(t *testing.T) {
+	t.Parallel()
 	e := setupSARIdentifiers(t)
 	seedNoticeHistory(t, e)
 
@@ -104,6 +106,7 @@ func TestARuleIsShownBareWhereNoFloorBinds(t *testing.T) {
 }
 
 func TestOnlyThePublicEdgeAssemblesANotice(t *testing.T) {
+	t.Parallel()
 	e := setupSARIdentifiers(t)
 	if _, err := AssembleNoticeDisclosure(e.ctx, e.db, countryIs("zv"), NoticeSubject{ContactID: e.contact}); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("a human seat assembled a notice disclosure: %v", err)

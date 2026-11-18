@@ -59,6 +59,7 @@ func refusedBy(t *testing.T, err error, want Reason) {
 // that erased through the product would pass on that cascade whether this
 // boundary was asked or not.
 func TestReversingALinkBehindAnEndsErasureBoundaryRefusesByName(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Selma Subject", nil)
 	company := e.SeedCompany(t, "Employer GmbH", nil)
@@ -84,6 +85,7 @@ func TestReversingALinkBehindAnEndsErasureBoundaryRefusesByName(t *testing.T) {
 // endpoint columns are searched from one slice, so neither end can be the one
 // somebody remembered.
 func TestReversingALinkBehindTheOtherEndsErasureBoundaryRefusesByName(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Ada Employed", nil)
 	company := e.SeedCompany(t, "Erased Holdings GmbH", nil)
@@ -107,6 +109,7 @@ func TestReversingALinkBehindTheOtherEndsErasureBoundaryRefusesByName(t *testing
 // not a flag: a record scrubbed and then linked again has a link nobody erased,
 // and refusing it would make every such link permanently un-reversible.
 func TestALinkWrittenAfterAnEndsErasureIsStillReversible(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Ada Employed", nil)
 	company := e.SeedCompany(t, "Employer GmbH", nil)
@@ -127,6 +130,7 @@ func TestALinkWrittenAfterAnEndsErasureIsStillReversible(t *testing.T) {
 // create case above removes the link; this one WRITES a pre-erasure value back,
 // which is the outcome the boundary exists to prevent.
 func TestReplayingALinksPreErasureImageIsRefusedByName(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Selma Subject", nil)
 	company := e.SeedCompany(t, "Employer GmbH", nil)

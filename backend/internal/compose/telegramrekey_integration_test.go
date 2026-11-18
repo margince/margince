@@ -73,6 +73,7 @@ func telegramActivityKeys(t *testing.T, e *integration.Env) (sourceID, threadKey
 // Pinned by the poll that read it, the bot that actually received the update
 // travels with it and none of that is reachable.
 func TestATokenReplacementBetweenPollAndIngestKeepsThePollingBotsKeys(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
 	vault := keyvault.NewMemory()

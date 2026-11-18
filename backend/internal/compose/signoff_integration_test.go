@@ -43,10 +43,11 @@ const signOffBody = "Hallo Anna, wie besprochen schicke ich dir das Angebot und 
 // signature and nothing else. Each time, the preview names the block the send
 // then appended.
 func TestASendSignsOffTheWayTheComposerPreviewSays(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	anchorID, recipient := seedTransactionalReply(t, e)
 	stager := &recordingStager{}
-	adapter := newCommsAdapter(e.Pool, nil, SendPath{PublicBaseURL: toolSurfaceBaseURL, Delivery: stager})
+	adapter := newCommsAdapter(e.Pool, nil, nil, SendPath{PublicBaseURL: toolSurfaceBaseURL, Delivery: stager})
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms)
 
 	send := func() string {
@@ -87,10 +88,11 @@ func TestASendSignsOffTheWayTheComposerPreviewSays(t *testing.T) {
 // their own plain-text signature. It lands as markup in the HTML part and as
 // lines in the text part. A plain send gains the HTML part that carries it.
 func TestATemplateSignsAPlainSendInMarkupAndText(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	anchorID, recipient := seedTransactionalReply(t, e)
 	stager := &recordingStager{}
-	adapter := newCommsAdapter(e.Pool, nil, SendPath{PublicBaseURL: toolSurfaceBaseURL, Delivery: stager})
+	adapter := newCommsAdapter(e.Pool, nil, nil, SendPath{PublicBaseURL: toolSurfaceBaseURL, Delivery: stager})
 	// The logo is the workspace's own company, which a seat reads like any other.
 	perms := integration.SchedulerPerms
 	perms.Objects = maps.Clone(perms.Objects)
@@ -202,10 +204,11 @@ func seedTransactionalReply(t *testing.T, e *integration.Env) (anchorID ids.UUID
 }
 
 func TestPersonalMarkupAndItsClearingReachBothAlternativesThroughTheRealSend(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	anchorID, recipient := seedTransactionalReply(t, e)
 	stager := &recordingStager{}
-	adapter := newCommsAdapter(e.Pool, nil, SendPath{PublicBaseURL: toolSurfaceBaseURL, Delivery: stager})
+	adapter := newCommsAdapter(e.Pool, nil, nil, SendPath{PublicBaseURL: toolSurfaceBaseURL, Delivery: stager})
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms)
 	signatures := contacts.NewStore(InstallationDB(e.Pool)).WithSettings(StoredConfig(e.Pool))
 	if _, err := signatures.SaveSignatureTemplate(e.Admin(), "<p>Company template</p>"); err != nil {
@@ -255,6 +258,7 @@ func TestPersonalMarkupAndItsClearingReachBothAlternativesThroughTheRealSend(t *
 }
 
 func TestPersonalMarkupOmissionClearingAndUnicodeLimitsUseTheSignatureStore(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms)
 	signatures := contacts.NewStore(InstallationDB(e.Pool))
@@ -319,6 +323,7 @@ func TestPersonalMarkupOmissionClearingAndUnicodeLimitsUseTheSignatureStore(t *t
 }
 
 func TestSignatureDraftAndSaveRefuseInvalidOptionalMarkup(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms)
 	for _, test := range []struct {
@@ -343,6 +348,7 @@ func TestSignatureDraftAndSaveRefuseInvalidOptionalMarkup(t *testing.T) {
 }
 
 func TestASignOffPreviewDrawsTheDraftsHttpsImageFromACopy(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms)
 	body := `{"body":"","draft":{"html":"<p>Anna</p><img src=\"https://cdn.example/logo.png\" alt=\"Company A\">"}}`
@@ -360,6 +366,7 @@ func TestASignOffPreviewDrawsTheDraftsHttpsImageFromACopy(t *testing.T) {
 }
 
 func TestDepartedSendersCannotChangeTheirSignature(t *testing.T) {
+	t.Parallel()
 	for _, departure := range []string{"deactivated", "archived"} {
 		t.Run(departure, func(t *testing.T) {
 			e := integration.Setup(t)

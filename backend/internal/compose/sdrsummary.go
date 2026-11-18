@@ -50,10 +50,12 @@ type sdrSummaryHandlers struct {
 	db      *database.DB
 	now     func() time.Time
 	targets sdrTeamTargets
+	// memberRows is how many member rows the team review reads and returns.
+	memberRows int
 }
 
 func newSdrSummaryHandlers(db *database.DB, now func() time.Time) sdrSummaryHandlers {
-	return sdrSummaryHandlers{db: db, now: now}
+	return sdrSummaryHandlers{db: db, now: now, memberRows: sdrTeamMemberRows}
 }
 
 // withTargets lets the team review hold members against their own targets.

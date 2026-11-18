@@ -23,6 +23,8 @@ import (
 // over HTTP, as those seats. Its subtests share state and run in order (seats,
 // seed, home_sources, first_load, latency, load), so run it whole; a broken
 // step stops the run.
+//
+//testdb:serial times reads against latency budgets, which parallel siblings would slow
 func TestDailyUseBudgets(t *testing.T) {
 	scale, err := dailyScale()
 	if err != nil {

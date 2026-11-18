@@ -106,6 +106,7 @@ func (f correspondenceFixture) worklistTouch(t *testing.T, reader context.Contex
 }
 
 func TestAReplyTheReaderCanOpenAnswersTheirFollowUpCard(t *testing.T) {
+	t.Parallel()
 	f := newCorrespondenceFixture(t)
 	f.caseyReplies(t)
 	replyAt := roomAgo(2 * 24 * time.Hour)
@@ -132,6 +133,7 @@ func TestAReplyTheReaderCanOpenAnswersTheirFollowUpCard(t *testing.T) {
 }
 
 func TestAReplyTheReaderCannotOpenChangesNothingTheySee(t *testing.T) {
+	t.Parallel()
 	f := newCorrespondenceFixture(t)
 	before := f.page(t, f.blair)
 	f.caseyReplies(t)
@@ -179,6 +181,7 @@ func TestAReplyTheReaderCannotOpenChangesNothingTheySee(t *testing.T) {
 }
 
 func TestTheFollowUpCardCitesItsOwnRowWithOneDateAnchor(t *testing.T) {
+	t.Parallel()
 	f := newCorrespondenceFixture(t)
 	// A second outbound at the very same instant, and a full timeline page of
 	// newer notes that push both mails off the first page.

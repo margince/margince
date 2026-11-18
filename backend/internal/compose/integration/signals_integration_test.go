@@ -157,6 +157,7 @@ func createRaw(t *testing.T, store *signals.Store, ctx context.Context, rawRef s
 // is readable by every seat with the grant, so capture privacy is what keeps
 // the subject — and the signal — out of the colleague's row scope.
 func TestSignalRowScopeFollowsSubjectEntity(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	store := signalStore(e)
 
@@ -194,6 +195,7 @@ func TestSignalRowScopeFollowsSubjectEntity(t *testing.T) {
 // captured privately gets an unattributable drop, not a stamped
 // resolved_company_id that would leak the private company's id/existence.
 func TestResolverDoesNotAttributeToAnInvisibleCompany(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	store := signalStore(e)
 
@@ -241,6 +243,7 @@ func TestResolverDoesNotAttributeToAnInvisibleCompany(t *testing.T) {
 // company and stays company-level — no contact link, and no contact
 // row is invented.
 func TestResolverAttributesToCompanyWithoutCreatingAContact(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	store := signalStore(e)
 	companyID := e.seedCompanyWithDomain(t, "Acme", "acme.example")
@@ -270,6 +273,7 @@ func TestResolverAttributesToCompanyWithoutCreatingAContact(t *testing.T) {
 // A contact link is set only where the match holds AND a consent grant is
 // on record; a matching contact WITHOUT consent stays company-level.
 func TestResolverContactLinkIsConsentGated(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	store := signalStore(e)
 	admin := e.adminSignals()
@@ -306,6 +310,7 @@ func TestResolverContactLinkIsConsentGated(t *testing.T) {
 // An unattributable raw_ref is dropped with the reason on record — never
 // kept as a contact-level dossier, never linked to anyone.
 func TestResolverDropsTheUnattributable(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	store := signalStore(e)
 	admin := e.adminSignals()
@@ -333,6 +338,7 @@ func TestResolverDropsTheUnattributable(t *testing.T) {
 // writing from an address on no registered domain matches it and nothing else
 // (ADR-0082/A127).
 func TestResolverNeverAttributesToTheOwnCompany(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	store := signalStore(e)
 	admin := e.adminSignals()
@@ -373,6 +379,7 @@ func TestResolverNeverAttributesToTheOwnCompany(t *testing.T) {
 // we hold a live contact is warm (routes to the warm room) and answers
 // with the contact evidence; a company with no contact is cold.
 func TestWarmthClassifiesByOwnContactGraph(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	store := signalStore(e)
 	admin := e.adminSignals()
@@ -414,6 +421,7 @@ func TestWarmthClassifiesByOwnContactGraph(t *testing.T) {
 // message carrying the AI provenance notice, and it mutates nothing (the
 // signal's version does not move).
 func TestIntroPathProposesWithoutMutating(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	store := signalStore(e)
 	admin := e.adminSignals()
@@ -462,6 +470,7 @@ func TestIntroPathProposesWithoutMutating(t *testing.T) {
 // create emits signal.detected, a resolve emits signal.resolved, each with
 // its audit row.
 func TestSignalMutationsWriteTheAuditOutboxPair(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	store := signalStore(e)
 	admin := e.adminSignals()

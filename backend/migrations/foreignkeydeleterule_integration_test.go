@@ -63,6 +63,7 @@ SELECT count(*) FROM pg_constraint c
 // What it buys meanwhile is that the number cannot grow in silence: a new key with no
 // clause is a finding, and one that gains a clause fails until its line goes.
 func TestEveryForeignKeyStatesItsDeleteRule(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)

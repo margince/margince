@@ -32,6 +32,7 @@ import (
 )
 
 func TestARefusedAuditRowNamesItsOwnTable(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	// An actor type audit_log_actor_type_check does not admit. The verb would
 	// have been the closer analogue of the original defect, but writing an

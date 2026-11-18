@@ -37,6 +37,7 @@ func mfaStatus(t *testing.T, h Handlers, e *revocationEnv) crmcontracts.MfaStatu
 }
 
 func TestMFAEndpointsEnrolConfirmAndDisable(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "mfa-http")
 	e.withVault()
 	h := NewHandlers(e.svc)
@@ -115,6 +116,7 @@ func TestMFAEndpointsEnrolConfirmAndDisable(t *testing.T) {
 // no-ops on an account with nothing enrolled — the code is demanded only where
 // a factor actually guards the account.
 func TestMFADisableNeedsNoCodeWhereNoConfirmedFactorGuards(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "mfa-http-codeless")
 	e.withVault()
 	h := NewHandlers(e.svc)

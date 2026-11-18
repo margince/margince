@@ -56,6 +56,7 @@ func livePreferenceTokens(t *testing.T, e *Env) int {
 // than a silent "no unsubscribe surface" — answering that would transmit
 // marketing mail with no working List-Unsubscribe URL.
 func TestPreferenceTokenMintRefusesAnInvisibleRecipient(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := consent.NewStore(e.DB())
 
@@ -124,6 +125,7 @@ func preferenceTokenRevoked(t *testing.T, e *Env, token string) bool {
 // is proven here is the BOUND: the resolver stops honouring a closed window,
 // and the next send rotates rather than reviving it.
 func TestPreferenceTokenExpiresAndTheNextSendRotatesIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := consent.NewStore(e.DB())
 	seedRecipient(t, e, "Bulk Recipient", "bulk@recipient.test", &e.Rep1)
@@ -169,6 +171,7 @@ func TestPreferenceTokenExpiresAndTheNextSendRotatesIt(t *testing.T) {
 // holding one permanent credential. Past the age ceiling the send rotates
 // even though the refreshed window is still open.
 func TestPreferenceTokenRotatesPastItsAgeCeiling(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := consent.NewStore(e.DB())
 	seedRecipient(t, e, "Long Subscriber", "subscriber@recipient.test", &e.Rep1)
@@ -203,6 +206,7 @@ func TestPreferenceTokenRotatesPastItsAgeCeiling(t *testing.T) {
 // ahead of it has already refused. The row-scope gate must not turn this into
 // a refusal, or the send path becomes an in-CRM/not-in-CRM oracle.
 func TestPreferenceTokenMintIsSilentForAnUnknownAddress(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := consent.NewStore(e.DB())
 

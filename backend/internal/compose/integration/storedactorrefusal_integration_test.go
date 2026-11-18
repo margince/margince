@@ -16,6 +16,7 @@ import (
 )
 
 func TestAStoredAgentActorNamingNoAgentIsNotActedAs(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	e.GrantRole(t, e.Rep1, "rep")
 	run := queuedRun(agentOf(t, e), 1)
@@ -28,6 +29,7 @@ func TestAStoredAgentActorNamingNoAgentIsNotActedAs(t *testing.T) {
 }
 
 func TestAStoredAgentActorUnderAnotherHumansPassportIsRefused(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	e.GrantRole(t, e.Rep1, "rep")
 	e.GrantRole(t, e.AdminUser, "admin")

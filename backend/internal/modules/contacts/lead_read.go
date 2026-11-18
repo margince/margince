@@ -163,7 +163,7 @@ func readLead(ctx context.Context, tx pgx.Tx, id ids.LeadID, archived storekit.A
 	if archived == storekit.LiveOnly {
 		q += liveOnlyClause
 	}
-	policy, err := loadLeadSLAPolicy(ctx, tx, config.Bound())
+	policy, err := loadLeadSLAPolicy(ctx, tx, config.Bound(ctx))
 	if err != nil {
 		return crmcontracts.Lead{}, err
 	}

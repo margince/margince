@@ -98,6 +98,7 @@ func waitingOf(rows []attention.WaitingCustomer, id ids.UUID) *attention.Waiting
 // wrong reason: a seam attaching nothing satisfies the chat claim, and one
 // attaching a row to everything satisfies the email claim.
 func TestTheWaitingSeamAttachesAnEmailRowToEmailsAlone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	asOf := time.Now()
 	contact := seedLinkedContact(t, e, "dana@acme.example")
@@ -137,6 +138,7 @@ func TestTheWaitingSeamAttachesAnEmailRowToEmailsAlone(t *testing.T) {
 }
 
 func TestAWaitingBadgeUsesTheReadTimeAcrossTheHorizon(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	asOf := clocktest.Now(t)
 	mailAt := asOf.AddDate(0, 0, 1-storekit.DefaultWaitingHorizonDays)
@@ -194,6 +196,7 @@ func TestAWaitingBadgeUsesTheReadTimeAcrossTheHorizon(t *testing.T) {
 // content gate a second time, which is the lock that holds if the lane's own
 // gate is ever loosened.
 func TestTheWaitingSeamHandsNoRowForAMessageTheReaderCannotRead(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	asOf := time.Now()
 	contact := seedLinkedContact(t, e, "dana@acme.example")
@@ -273,6 +276,7 @@ func seedMachineFlood(t *testing.T, e *integration.Env, contact ids.UUID, count 
 // store — and the customer underneath was never read at all. The seam answers
 // by asking for another page, which is what this holds.
 func TestAFloodOfMachineMailDoesNotHideAWaitingCustomer(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	asOf := time.Now()
 	contact := seedLinkedContact(t, e, "dana@acme.example")

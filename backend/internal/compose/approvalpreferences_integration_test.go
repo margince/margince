@@ -23,6 +23,7 @@ import (
 )
 
 func TestPersonalApprovalMutesAgreeAcrossHTTPToolsAndHomeCounts(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	pipeline, open, _ := integration.DealFixture(t, e)
 	svc := NewApprovalsService(e.DB())

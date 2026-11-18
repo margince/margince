@@ -22,6 +22,7 @@ import (
 )
 
 func TestMergePreviewMatchesMovedAndCombinedLinks(t *testing.T) {
+	t.Parallel()
 	for _, kind := range []string{"contact", "company"} {
 		t.Run(kind, func(t *testing.T) {
 			e := integration.Setup(t)
@@ -150,6 +151,7 @@ func checkMergedLinks(ctx context.Context, t *testing.T, e *integration.Env, kin
 }
 
 func TestMergePreviewRefusesAHiddenListWithoutPartialScope(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	perms := integration.AdminPerms
 	perms.Objects = maps.Clone(perms.Objects)

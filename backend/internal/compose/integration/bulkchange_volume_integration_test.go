@@ -26,6 +26,7 @@ func writesCharged(t *testing.T, e *apptest.AppEnv, meter *agentvolume.Meter, ag
 }
 
 func TestABulkChangeChargesEveryRecordItChangedAgainstTheAgentsWrites(t *testing.T) {
+	t.Parallel()
 	e, meter, _ := bulkDoorsApp(t, "bulk-charge", agentvolume.Limits{Writes: 60})
 	colleague := seedColleague(t, e)
 	agent := mintPassport(t, e)
@@ -60,6 +61,7 @@ func TestABulkChangeChargesEveryRecordItChangedAgainstTheAgentsWrites(t *testing
 }
 
 func TestABulkChangeTheWriteBudgetCannotPayForIsRefusedAndAsksNobody(t *testing.T) {
+	t.Parallel()
 	e, meter, _ := bulkDoorsApp(t, "bulk-refuse", agentvolume.Limits{Writes: 30})
 	colleague := seedColleague(t, e)
 	agent := mintPassport(t, e)

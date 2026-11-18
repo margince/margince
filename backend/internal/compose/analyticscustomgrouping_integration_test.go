@@ -26,6 +26,7 @@ import (
 // A deal with no territory is a group of its own, after the named ones. The
 // groups add up to every deal: none is counted twice or dropped.
 func TestGroupingByACustomFieldCountsEveryDealOnce(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	fixture := territoryDeals(t, e)
 	optIn(t, e, fixture.catalog, fixture.field)
@@ -65,6 +66,7 @@ func TestGroupingByACustomFieldCountsEveryDealOnce(t *testing.T) {
 // Once a field leaves reports, every door that asks a question gives one
 // refusal. The doors are a direct run, the analytics tool and a saved question.
 func TestEveryDoorRefusesAFieldThatLeftReportsTheSameWay(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	catalog, field := territoryField(t, e)
 	optIn(t, e, catalog, field)
@@ -129,6 +131,7 @@ func TestEveryDoorRefusesAFieldThatLeftReportsTheSameWay(t *testing.T) {
 // A field's identity is its column, so a rename keeps a saved question
 // answering, and the schema names the field by its new label.
 func TestARenamedReportableFieldKeepsASavedQuestionAnswering(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	catalog, field := territoryField(t, e)
 	optIn(t, e, catalog, field)

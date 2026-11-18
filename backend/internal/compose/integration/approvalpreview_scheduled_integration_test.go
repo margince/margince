@@ -20,6 +20,7 @@ import (
 )
 
 func TestHeldMessagePreviewShowsFrozenContentAndRefusesAnUnknownPayload(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	id := p.scheduleFor(t, clocktest.Now(t).Add(2*time.Hour))

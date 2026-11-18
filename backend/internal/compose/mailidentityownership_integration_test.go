@@ -21,6 +21,7 @@ import (
 )
 
 func TestSharedMailIdentityMustResolveBeforeItAssignsPersonalWork(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	at := time.Date(2026, 10, 21, 8, 0, 0, 0, time.UTC)
 	first := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
@@ -145,6 +146,7 @@ func TestSharedMailIdentityMustResolveBeforeItAssignsPersonalWork(t *testing.T) 
 }
 
 func TestVerifiedMailIdentityOutranksClaimsAndDeliveryDoesNotProveDuty(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name string
 		want bool
@@ -232,6 +234,7 @@ func TestVerifiedMailIdentityOutranksClaimsAndDeliveryDoesNotProveDuty(t *testin
 // Mail nobody answers for is left out before the waiting scan's cap. A queue
 // full of it cannot hide the one mail a seat does answer for.
 func TestAnOwnedWaitBehindAFullPageOfUnownedMailStillReachesTheTeamQueue(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	at := time.Date(2026, 10, 21, 8, 0, 0, 0, time.UTC)
 	first := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)

@@ -37,6 +37,7 @@ func (f fieldRefusal) names(field string) bool {
 // writer that stored one would blank every list holding its row. The bound
 // refuses it at the door, and the last instant inside the bound still lists.
 func TestADateTimeNoZoneCanRenderIsRefusedAndTheListsStayReadable(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Far Dates", "admin@fardates.test", "Admin")
 

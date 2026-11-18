@@ -16,6 +16,7 @@ import (
 )
 
 func TestWaitingSupplierEnrichmentWithholdsUnreadableRelationships(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := e.SeedCompany(t, "Example supplier", &e.Rep1)
 	roles := []string{"supplier"}

@@ -17,6 +17,7 @@ import (
 // A value the api's environment sets wins over the database and refuses a
 // change, through the same wiring cmd/api boots.
 func TestSendRateLimitSetByEnvIsLockedAgainstAChange(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithEnv(t, []string{"MARGINCE_INSTALLATION_SEND_RATE_LIMIT=7"})
 	e.BootstrapWorkspace(t)
 
@@ -57,6 +58,7 @@ func TestSendRateLimitSetByEnvIsLockedAgainstAChange(t *testing.T) {
 // A name the environment sets wins over the bootstrap's workspace.name: the
 // bootstrap seeds no row for it, and every reader answers the boot value.
 func TestABootSetNameWinsOverTheBootstrapName(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithEnv(t, []string{"MARGINCE_INSTALLATION_NAME=Env Name Co"})
 	e.BootstrapWorkspace(t)
 

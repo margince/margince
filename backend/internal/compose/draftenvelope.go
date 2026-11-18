@@ -34,7 +34,7 @@ import (
 // language and then the installation's: a contact who has never written gets
 // the language the sender reads, before the one the team configured.
 func draftEnvelope(pool *pgxpool.Pool, log *slog.Logger) *draftfloor.Resolver {
-	seats := identity.NewService(pool)
+	seats := IdentityService(pool)
 	return draftfloor.NewResolver().
 		WithSender(seats).
 		WithUserLanguage(func(ctx context.Context) string {

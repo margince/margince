@@ -28,6 +28,7 @@ import (
 )
 
 func TestEdgeWritersDoNotDeadlockWithEachOtherOrTheRebuild(t *testing.T) {
+	t.Parallel()
 	v := edgeEnv{integration.Setup(t)}
 	now := time.Now().UTC()
 	gen := search.NewGraphEdgeGen(search.NewStore(v.e.DB()))

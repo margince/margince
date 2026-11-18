@@ -46,6 +46,7 @@ func (e *revocationEnv) enrolMember(t *testing.T) string {
 }
 
 func TestAnAdminRemovesALockedOutMembersFactorAndTheirPasswordSignsThemIn(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "member-mfa-remove")
 	session := e.enrolMember(t)
 	if _, _, err := e.svc.Login(e.wsOnlyCtx(), e.member.Email, memberPassword, noDevice); !errors.Is(err, errMFARequired) {
@@ -84,6 +85,7 @@ func TestAnAdminRemovesALockedOutMembersFactorAndTheirPasswordSignsThemIn(t *tes
 // A pending enrolment guards no sign-in, so it is neither removed nor reason
 // to sign the member out.
 func TestRemovingAMembersFactorIsANoOpWhereNoneIsConfirmed(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "member-mfa-none")
 	e.withVault()
 	session := e.signIn(t, "member's laptop")
@@ -113,6 +115,7 @@ func TestRemovingAMembersFactorIsANoOpWhereNoneIsConfirmed(t *testing.T) {
 }
 
 func TestRemovingAFactorIsRefusedToANonAdminAndForOnesOwn(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "member-mfa-refused")
 	e.enrolMember(t)
 	rep := e.seat(t, "plain-rep", "rep")
@@ -140,6 +143,7 @@ func TestRemovingAFactorIsRefusedToANonAdminAndForOnesOwn(t *testing.T) {
 // The roster offers remove_mfa on the member holding a factor and nowhere else,
 // and the handler accepts the offered call.
 func TestTheRosterOffersFactorRemovalOnlyForAMemberWhoHasOne(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "member-mfa-offer")
 	e.enrolMember(t)
 	h := NewHandlers(e.svc)
@@ -165,6 +169,7 @@ func TestTheRosterOffersFactorRemovalOnlyForAMemberWhoHasOne(t *testing.T) {
 }
 
 func TestTheFactorRemovalHandlerAnswersARefusalAsTheContractSays(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "member-mfa-http")
 	e.enrolMember(t)
 	h := NewHandlers(e.svc)

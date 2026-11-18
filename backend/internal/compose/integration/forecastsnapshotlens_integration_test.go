@@ -56,6 +56,7 @@ func ownSeat(masked bool) principal.Permissions {
 }
 
 func TestForecastMovementShowsACallerOnlyWhatTheLiveForecastWould(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})

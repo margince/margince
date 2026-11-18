@@ -30,6 +30,7 @@ import (
 // their NEXT edit, which is how a healthy deal becomes un-editable over a
 // mismatch nobody made.
 func TestMergingCompaniesReAnchorsTheProjectWithItsDeals(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	source := e.SeedCompany(t, "BAER Pharma GmbH", nil)
@@ -68,6 +69,7 @@ func TestMergingCompaniesReAnchorsTheProjectWithItsDeals(t *testing.T) {
 // nothing in the data says which. The merge stops and names them rather
 // than leaving a human to find the duplicates later.
 func TestMergingTwoCompaniesThatBothCarryProjectsIsRefused(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	source := e.SeedCompany(t, "BAER Pharma GmbH", nil)
 	target := e.SeedCompany(t, "BAER Pharma", nil)
@@ -108,6 +110,7 @@ func TestMergingTwoCompaniesThatBothCarryProjectsIsRefused(t *testing.T) {
 // naming them would be withholding from a caller who can open both records
 // on the project page a moment later — precision, not silence, is the point.
 func TestTheMergeRefusalBlocksAndNamesProjectsTheCallerDoesNotOwn(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	// The merging rep owns both companies (a merge is a write, and an own-scope
 	// seat only writes what it owns), but neither project under them.
@@ -148,6 +151,7 @@ func TestTheMergeRefusalBlocksAndNamesProjectsTheCallerDoesNotOwn(t *testing.T) 
 // because for this caller they are not a secret — the point of scoping the
 // naming is precision, not silence.
 func TestTheMergeRefusalNamesTheProjectsTheCallerCanSee(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	source := e.SeedCompany(t, "Vector Ltd", &e.Rep1)
 	target := e.SeedCompany(t, "Vector Limited", &e.Rep1)
@@ -187,6 +191,7 @@ func TestTheMergeRefusalNamesTheProjectsTheCallerCanSee(t *testing.T) {
 // the object grant is a separate gate, and the counts are what tells this
 // caller the work exists without telling them what it is called.
 func TestTheMergeRefusalWithholdsProjectNamesFromACallerWithoutTheGrant(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	source := e.SeedCompany(t, "Kepler GmbH", &e.Rep1)
 	target := e.SeedCompany(t, "Kepler AG", &e.Rep1)
@@ -237,6 +242,7 @@ func TestTheMergeRefusalWithholdsProjectNamesFromACallerWithoutTheGrant(t *testi
 // together: the same two companies that make the merge refuse make the card
 // withhold, and archiving one side releases both in the same breath.
 func TestTheCardAndTheMergeAgreeOnWhoCarriesProjects(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	source := e.SeedCompany(t, "BAER Pharma GmbH", nil)
 	target := e.SeedCompany(t, "BAER Pharma", nil)

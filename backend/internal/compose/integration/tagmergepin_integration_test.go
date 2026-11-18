@@ -72,6 +72,7 @@ func (e *mergePinEnv) rename(t *testing.T, to string) {
 // The reported case: the survivor is renamed after the caller read it, and the
 // merge must refuse rather than fold into a word nobody chose.
 func TestAMergeRefusesASurvivorRenamedSinceItWasRead(t *testing.T) {
+	t.Parallel()
 	e := setupMergePin(t)
 
 	e.rename(t, "CompletelyDifferentWord")
@@ -93,6 +94,7 @@ func TestAMergeRefusesASurvivorRenamedSinceItWasRead(t *testing.T) {
 // The version a caller actually read still merges, so the pin refuses the
 // changed survivor rather than every survivor.
 func TestAMergeRunsWhenTheSurvivorIsTheOneThatWasRead(t *testing.T) {
+	t.Parallel()
 	e := setupMergePin(t)
 
 	if _, err := e.store.MergeTags(e.Admin(), e.source, e.target, e.targetVersion); err != nil {
@@ -104,6 +106,7 @@ func TestAMergeRunsWhenTheSurvivorIsTheOneThatWasRead(t *testing.T) {
 // and what the agent door still sends. It must keep working, or this change is
 // a break dressed as a fix.
 func TestAnUnpinnedMergeStillRunsAfterARename(t *testing.T) {
+	t.Parallel()
 	e := setupMergePin(t)
 
 	e.rename(t, "CompletelyDifferentWord")
@@ -126,6 +129,7 @@ func TestAnUnpinnedMergeStillRunsAfterARename(t *testing.T) {
 // writing the audit row would satisfy an error-only test and leave the
 // duplicate events that make this worth fixing.
 func TestAMergeOfAnAlreadyRetiredTagIsRefusedAndWritesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupMergePin(t)
 
 	if _, err := e.store.MergeTags(e.Admin(), e.source, e.target, e.targetVersion); err != nil {

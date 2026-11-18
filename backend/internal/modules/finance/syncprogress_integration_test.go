@@ -47,6 +47,7 @@ func (a *sourceAdmin) lastSuccessAt(t *testing.T) *time.Time {
 }
 
 func TestAPassCutShortKeepsTheLedgersItAlreadyWrote(t *testing.T) {
+	t.Parallel()
 	a := setupSourceAdmin(t)
 	a.syncDirectory(t)
 	before := a.lastSuccessAt(t)
@@ -78,6 +79,7 @@ func TestAPassCutShortKeepsTheLedgersItAlreadyWrote(t *testing.T) {
 }
 
 func TestAFailureIsRecordedAfterThePassContextRanOut(t *testing.T) {
+	t.Parallel()
 	a := setupSourceAdmin(t)
 	ended, cancel := context.WithCancel(a.ctx)
 	cancel()

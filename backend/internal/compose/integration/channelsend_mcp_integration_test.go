@@ -134,6 +134,7 @@ func (c *channelSendEnv) verbInvoker(t *testing.T, agentToken, verb string) func
 // nothing. What still bounds the call is the cap — a passport never granted
 // `send` cannot reach this at all (TestSendMessageRefusesAPassportWithoutTheSendCap).
 func TestSendMessageMCPLoopSendsOnASendScopedPassportAgainstRealPostgres(t *testing.T) {
+	t.Parallel()
 	c := setupChannelSend(t)
 	token := c.mintPassport(t, []string{"read", "send"})
 	invoke := c.sendMessageInvoker(t, token)

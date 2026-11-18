@@ -32,6 +32,7 @@ type partnerWire struct {
 }
 
 func TestPartnerLifecycleFieldsRoundTrip(t *testing.T) {
+	t.Parallel()
 	e := setupRelationships(t)
 
 	// Upsert with the full lifecycle block.
@@ -113,6 +114,7 @@ func TestPartnerLifecycleFieldsRoundTrip(t *testing.T) {
 //
 // 2.5 is the one the column cannot see. It truncates to a 2 the column accepts.
 func TestPartnerGateMetricsRefuseWhatTheColumnCannotHold(t *testing.T) {
+	t.Parallel()
 	e := setupRelationships(t)
 
 	// A programme that fits: the baseline every refusal below is measured
@@ -161,6 +163,7 @@ func TestPartnerGateMetricsRefuseWhatTheColumnCannotHold(t *testing.T) {
 // A nullable lifecycle field sent as null is cleared; one the body leaves out
 // is kept.
 func TestPartnerNullableFieldsClearOnNullAndKeepWhenOmitted(t *testing.T) {
+	t.Parallel()
 	e := setupRelationships(t)
 	path := "/v1/companies/" + e.companyID + "/partner"
 	if status := e.Call(t, "PUT", path, AnyMap{

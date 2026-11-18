@@ -22,7 +22,7 @@ func declaredErasureStatements(t *testing.T) []string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(body), "sweepreach.Erase(") {
+	if !strings.Contains(string(body), "reached.Erase(") {
 		return nil
 	}
 	var out []string

@@ -50,7 +50,7 @@ func (h installationSettingsHandlers) GetInstallationJurisdiction(w http.Respons
 	var out crmcontracts.InstallationJurisdiction
 	err := h.readJurisdiction(r.Context(), func(ctx context.Context, tx pgx.Tx, code jurisdiction.Code) error {
 		var err error
-		out, err = assembleJurisdiction(ctx, tx, code)
+		out, err = assembleJurisdiction(ctx, tx, h.extensions, code)
 		return err
 	})
 	if err != nil {
@@ -107,17 +107,17 @@ func (h installationSettingsHandlers) readJurisdiction(ctx context.Context, fn f
 }
 
 func gatedCountry(ctx context.Context, tx pgx.Tx) (jurisdiction.Code, error) {
-	code, err := config.StoredValTx(ctx, tx, loadedConfig(), identity.Country)
+	code, err := config.StoredValTx(ctx, tx, loadedConfig(ctx), identity.Country)
 	return jurisdiction.Code(code), err
 }
 
 // assembleJurisdiction reads what a selection puts in force.
-func assembleJurisdiction(ctx context.Context, tx pgx.Tx, code jurisdiction.Code) (crmcontracts.InstallationJurisdiction, error) {
+func assembleJurisdiction(ctx context.Context, tx pgx.Tx, composed *Extensions, code jurisdiction.Code) (crmcontracts.InstallationJurisdiction, error) {
 	policy, err := privacy.ResolveFloorPolicy(ctx, tx, gatedCountry)
 	if err != nil {
 		return crmcontracts.InstallationJurisdiction{}, err
 	}
-	units := jurisdictionUnits()
+	units := jurisdictionUnits(composed)
 	out := crmcontracts.InstallationJurisdiction{
 		Available: []crmcontracts.JurisdictionUnit{},
 		Floor:     floorContract(privacy.StatutoryFloorPosture(policy)),
@@ -148,12 +148,12 @@ func assembleJurisdiction(ctx context.Context, tx pgx.Tx, code jurisdiction.Code
 
 // jurisdictionUnits maps each compiled-in pack to the unit that ships it. A
 // core-registered pack has no unit and is listed under its code alone.
-func jurisdictionUnits() map[jurisdiction.Code]crmcontracts.JurisdictionUnit {
+func jurisdictionUnits(composed *Extensions) map[jurisdiction.Code]crmcontracts.JurisdictionUnit {
 	units := map[jurisdiction.Code]crmcontracts.JurisdictionUnit{}
 	for _, p := range jurisdiction.Applicable() {
 		units[p.Code()] = crmcontracts.JurisdictionUnit{Code: string(p.Code())}
 	}
-	for _, e := range ComposedExtensions() {
+	for _, e := range composed.Units() {
 		for _, p := range e.Jurisdictions {
 			units[p.Code()] = unitContract(p.Code(), e)
 		}

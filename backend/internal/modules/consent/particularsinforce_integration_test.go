@@ -47,6 +47,7 @@ func advertisingPack(t *testing.T, e *channelConsentEnv, code string) *Store {
 }
 
 func TestSavingParticularsWithNoPhoneInTheObjectionRouteIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	store := advertisingPack(t, e, "ya")
 	h := Handlers{store: store}.WithSettings(settingsStoreFor(t))
@@ -80,6 +81,7 @@ func TestSavingParticularsWithNoPhoneInTheObjectionRouteIsRefused(t *testing.T) 
 }
 
 func TestAVietnameseAdvertisingMailPrintsTheStoredVietnameseRoute(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	store := advertisingPack(t, e, "yb")
 	route := "gửi email đến privacy@example.com, gọi số +84 00 0000 0000 hoặc dùng trang https://example.com/stop"
@@ -121,6 +123,7 @@ func TestAVietnameseAdvertisingMailPrintsTheStoredVietnameseRoute(t *testing.T) 
 }
 
 func TestCheckAdvertisingDraftAsksTheRecipientsPack(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	store := advertisingPack(t, e, "yc")
 	ctx := withActivityCreate(e.ctx)
@@ -146,6 +149,7 @@ func TestCheckAdvertisingDraftAsksTheRecipientsPack(t *testing.T) {
 // an advertising send, to advertise there through a local business. One
 // established there is not.
 func TestAnAdvertiserFromElsewhereIsToldToUseALocalAgency(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	inside := advertisingPack(t, e, "yd")
 	ctx := withActivityCreate(e.ctx)

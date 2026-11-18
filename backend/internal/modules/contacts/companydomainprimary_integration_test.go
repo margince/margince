@@ -50,6 +50,7 @@ func livePrimaryOf(ctx context.Context, t *testing.T, e *dedupeEnv, companyID id
 // The reported defect, at the door it came through: one domain, no is_primary,
 // which is the whole of a valid minimal request body.
 func TestACompanyCreatedWithOneDomainAndNoPrimaryStillNamesIt(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -70,6 +71,7 @@ func TestACompanyCreatedWithOneDomainAndNoPrimaryStillNamesIt(t *testing.T) {
 // Several domains and no primary is the same defect with more rows: the sweep
 // needs exactly one, and the caller named none.
 func TestACompanyCreatedWithSeveralDomainsAndNoPrimaryNamesTheFirst(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -90,6 +92,7 @@ func TestACompanyCreatedWithSeveralDomainsAndNoPrimaryNamesTheFirst(t *testing.T
 // The election fills SILENCE and never overrules a choice. Without this the
 // two tests above would also pass against a writer that ignored the caller.
 func TestACallerWhoNamesThePrimaryKeepsIt(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -110,6 +113,7 @@ func TestACallerWhoNamesThePrimaryKeepsIt(t *testing.T) {
 // The edit path has the same hole and one extra rule: an edit that merely adds
 // a domain must not move the primary the record already had.
 func TestAnEditThatNamesNoPrimaryLeavesTheLiveOneAlone(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -135,6 +139,7 @@ func TestAnEditThatNamesNoPrimaryLeavesTheLiveOneAlone(t *testing.T) {
 // And an edit that REMOVES the live primary still leaves one, rather than a
 // record the sweep cannot see.
 func TestAnEditThatDropsTheLivePrimaryElectsAnother(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -165,6 +170,7 @@ func TestAnEditThatDropsTheLivePrimaryElectsAnother(t *testing.T) {
 // primary domain — the exact state that would mean no read was due — while the
 // row that triggered one says otherwise.
 func TestTheAuditImageNamesThePrimaryTheRowActuallyCarries(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 

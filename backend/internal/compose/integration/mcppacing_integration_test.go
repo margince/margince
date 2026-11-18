@@ -23,6 +23,7 @@ import (
 // ping. Pacing counts every authenticated call alike. A ping costs only the edge
 // and the passport lookup, so the calls fit in two windows on a slow host.
 func TestAnAdminsAgentIsUnpacedAndAUsersIsPacedOnMCP(t *testing.T) {
+	t.Parallel()
 	d := roleBoundDoors(t, "mcp-pacing")
 	d.E.DescribeCompany(t)
 	var settings struct {

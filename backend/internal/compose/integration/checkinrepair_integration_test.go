@@ -111,6 +111,7 @@ const (
 // Three reminders on one record, written as the anchor moved, collapse to the
 // newest — the one naming the date a rep would recognise.
 func TestTheRepairFoldsOneRecordsRemindersToTheNewest(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := FreshOwnerConn(t)
 	company := e.SeedCompany(t, "Over-reminded Account", nil)
@@ -135,6 +136,7 @@ func TestTheRepairFoldsOneRecordsRemindersToTheNewest(t *testing.T) {
 // The two starters ask different questions on the same record. Folding them
 // together would retire one nobody has answered.
 func TestTheRepairKeepsTheTwoStartersApart(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := FreshOwnerConn(t)
 	company := e.SeedCompany(t, "Account With Both", nil)
@@ -160,6 +162,7 @@ func TestTheRepairKeepsTheTwoStartersApart(t *testing.T) {
 // one. Archiving a child whose account is unwatched would leave the silence
 // reported by nobody, which is the starvation the collapse itself had to avoid.
 func TestTheRepairArchivesAChildOnlyWhenItsAccountHoldsOne(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := FreshOwnerConn(t)
 	pipeline, open, _ := DealFixture(t, e)
@@ -189,6 +192,7 @@ func TestTheRepairArchivesAChildOnlyWhenItsAccountHoldsOne(t *testing.T) {
 // it. The second pass must change nothing at all — not the archival, and not
 // updated_at or version on a row it already stamped.
 func TestTheRepairIsANoOpTheSecondTime(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := FreshOwnerConn(t)
 	company := e.SeedCompany(t, "Rerun Account", nil)
@@ -224,6 +228,7 @@ func TestTheRepairIsANoOpTheSecondTime(t *testing.T) {
 // looks like a reminder's. source is client-writable, so the pair with
 // captured_by is the only thing that marks the engine's own output.
 func TestTheRepairLeavesAHumansTaskAlone(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := FreshOwnerConn(t)
 	company := e.SeedCompany(t, "Hand-written Account", nil)

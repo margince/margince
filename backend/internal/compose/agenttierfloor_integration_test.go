@@ -58,6 +58,7 @@ import (
 )
 
 func TestATierFlooredForOneRecordTypeBindsTheToolDoorToo(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	human := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	native := NewProvider(e.Pool)
@@ -85,6 +86,7 @@ func TestATierFlooredForOneRecordTypeBindsTheToolDoorToo(t *testing.T) {
 // A floor binds automatic work. An agent on a colleague's passport does what
 // that colleague could do unaided, so the same create runs at once.
 func TestAFloorDoesNotHoldBackAnAgentOnAColleaguesPassport(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	human := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	registry := composedRegistryFlooring(e, "project")
@@ -103,6 +105,7 @@ func TestAFloorDoesNotHoldBackAnAgentOnAColleaguesPassport(t *testing.T) {
 // The update half of the same bypass. It is a separate call because a fix that
 // tightened creates and missed updates would otherwise leave every gate green.
 func TestATightenedUpdateAlsoHoldsBackTheToolDoor(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	human := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	native := NewProvider(e.Pool)
@@ -129,6 +132,7 @@ func TestATightenedUpdateAlsoHoldsBackTheToolDoor(t *testing.T) {
 // on the tool door while REST kept it automatic: #982 in reverse, which is what
 // this test exists to catch and what the first draft of the fix did.
 func TestAnOrdinaryCompanyPatchStillRunsUnattended(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	human := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	native := NewProvider(e.Pool)

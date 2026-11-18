@@ -22,6 +22,7 @@ import (
 // app_user on it without a liveness test of their own, so the fragment is where
 // the question belongs.
 func TestAnErasedSeatIsNotBoundToAMeeting(t *testing.T) {
+	t.Parallel()
 	ctx, pool := meetingTenureEnv(t)
 	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 		seat, email := seedSeat(ctx, t, tx, "active")
@@ -46,6 +47,7 @@ func TestAnErasedSeatIsNotBoundToAMeeting(t *testing.T) {
 // This is the arm the test above does not reach: with no proved mailbox the
 // attested disjunction is empty, so the account-address match answers alone.
 func TestAnErasedSeatWithAProvedMailboxIsNotBoundToAMeeting(t *testing.T) {
+	t.Parallel()
 	ctx, pool := meetingTenureEnv(t)
 	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 		seat, email := seedSeat(ctx, t, tx, "active")
@@ -74,6 +76,7 @@ func TestAnErasedSeatWithAProvedMailboxIsNotBoundToAMeeting(t *testing.T) {
 // A seat that merely left still attended, so it stays bound. Without this the
 // test above would pass on a fragment that bound nobody.
 func TestADepartedSeatIsStillBoundToAMeeting(t *testing.T) {
+	t.Parallel()
 	ctx, pool := meetingTenureEnv(t)
 	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 		seat, email := seedSeat(ctx, t, tx, "active")

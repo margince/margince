@@ -27,6 +27,7 @@ import (
 // Stages belong to one pipeline, so with none chosen the reading is refused
 // and no member is read.
 func TestStageCohortWithoutAPipelineIsRefusedBeforeAnyEntryIsRead(t *testing.T) {
+	t.Parallel()
 	f := newStageCohortFixture(t)
 	start := f.at
 	f.deal(t, f.env.Rep1, f.stage(0), f.stage(1))
@@ -47,6 +48,7 @@ func TestStageCohortWithoutAPipelineIsRefusedBeforeAnyEntryIsRead(t *testing.T) 
 // reads no amount or date. A mask on the amount or close date keeps every
 // member; a mask on the owner withholds them.
 func TestStageCohortKeepsADealWhoseAmountTheReaderMayNotSee(t *testing.T) {
+	t.Parallel()
 	f := newStageCohortFixture(t)
 	start := f.at
 	for range 5 {
@@ -80,6 +82,7 @@ func TestStageCohortKeepsADealWhoseAmountTheReaderMayNotSee(t *testing.T) {
 // Moves written in one instant keep the order they were written in. Each deal
 // here enters, leaves and comes back to the first stage at the same clock.
 func TestStageCohortOrdersMovesThatShareAnInstantByTheOrderTheyWereWritten(t *testing.T) {
+	t.Parallel()
 	f := newStageCohortFixture(t)
 	start := f.at
 	for range 6 {
@@ -127,6 +130,7 @@ func (f *stageCohortFixture) reverseIDOrder(t *testing.T, deal ids.UUID) {
 // With individual performance off, a stage outcome or a lead outcome that one
 // colleague besides the reader makes up withholds the whole reading.
 func TestBothCohortsAreWithheldWhenOneColleagueMakesUpAGroup(t *testing.T) {
+	t.Parallel()
 	f := newStageCohortFixture(t)
 	start := f.at
 	f.deal(t, f.env.Rep1, f.stage(0))
@@ -160,6 +164,7 @@ func TestBothCohortsAreWithheldWhenOneColleagueMakesUpAGroup(t *testing.T) {
 
 // Arrivals are bounded by the interval; a lead that arrives later is not read.
 func TestLeadCohortOfAPastIntervalReadsOnlyItsArrivals(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	ctx := reportingActor(e)
 	actor, _ := principal.Actor(ctx)
@@ -198,6 +203,7 @@ func TestLeadCohortOfAPastIntervalReadsOnlyItsArrivals(t *testing.T) {
 // A saved revision records each metric's definition version. A metric whose
 // definition changed since is withheld with the reason, not read anew.
 func TestASavedReportWithholdsACohortWhoseDefinitionChangedSinceItWasSaved(t *testing.T) {
+	t.Parallel()
 	f := newStageCohortFixture(t)
 	start := f.at
 	f.deal(t, f.env.Rep1, f.stage(0), f.stage(1))
@@ -236,6 +242,7 @@ func TestASavedReportWithholdsACohortWhoseDefinitionChangedSinceItWasSaved(t *te
 
 // Routing and capture both record the owner a lead arrived with.
 func TestRoutingAndCaptureRecordTheOwnerALeadArrivedWith(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	name := "Unrouted"
 	unowned, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{FullName: &name, Status: "new", Source: "manual"})

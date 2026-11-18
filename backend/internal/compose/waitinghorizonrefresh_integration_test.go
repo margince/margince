@@ -21,6 +21,7 @@ import (
 )
 
 func TestTheRefreshPassLeavesColleaguesMailOutOfTheSpread(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.WsExec(t, `INSERT INTO workspace_email_domain (domain, source, verified) VALUES ('colleagues.test', 'admin', true)`)
 	// Customers wait forty days for an answer, so the horizon reaches its

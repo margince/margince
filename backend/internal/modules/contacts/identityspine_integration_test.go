@@ -69,6 +69,7 @@ func (e *dedupeEnv) companyCandidatesFor(ctx context.Context, t *testing.T, comp
 // renames it to the company's real name — the first moment the duplicate is
 // visible, and the moment nothing used to look.
 func TestARenamedCompanyIsRescoredAgainstItsNeighbours(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -127,6 +128,7 @@ func TestARenamedCompanyIsRescoredAgainstItsNeighbours(t *testing.T) {
 // re-check from re-asking. It runs on every rename, and a pair a human
 // dismissed is answered for good.
 func TestARenamedCompanyDoesNotRefileAPairTheQueueAnswered(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -175,6 +177,7 @@ func TestARenamedCompanyDoesNotRefileAPairTheQueueAnswered(t *testing.T) {
 // name is identical. Before this the fuzzy tier compared display names only,
 // so the strongest signal on the row was invisible to it.
 func TestCompanyDedupeReadsTheLegalNameAxis(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	legal := "Contoso Handels GmbH"
@@ -220,6 +223,7 @@ func TestCompanyDedupeReadsTheLegalNameAxis(t *testing.T) {
 // reaches the refusal. It is still the create contract's 409 with the
 // incumbent's id, not an opaque failure because a different guard caught it.
 func TestARaceOnAClaimedAddressStillAnswersTheDuplicateContract(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	incumbent, err := e.store.CreateContact(ctx, CreateContactInput{
@@ -258,6 +262,7 @@ func TestARaceOnAClaimedAddressStillAnswersTheDuplicateContract(t *testing.T) {
 // anyone could confirm, address by chosen address, who exists in someone
 // else's book.
 func TestTheChokepointRefusalHidesARecordTheCallerCannotRead(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	owner := e.as()
 	// Owned explicitly AND capture-private: a contact is workspace-readable
@@ -307,6 +312,7 @@ func TestTheChokepointRefusalHidesARecordTheCallerCannotRead(t *testing.T) {
 // domains, and without self-exclusion it matches itself perfectly and hides
 // every real rival behind that score.
 func TestCompanyDedupeExcludesItself(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	subject, err := e.store.CreateCompany(ctx, CreateCompanyInput{
@@ -334,6 +340,7 @@ func TestCompanyDedupeExcludesItself(t *testing.T) {
 // created a contact outright, even when the workspace already had that human
 // under a near-identical name.
 func TestPromotingALeadRunsTheFullContactLadder(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.asLeadOwner()
 
@@ -386,6 +393,7 @@ func TestPromotingALeadRunsTheFullContactLadder(t *testing.T) {
 // rewrite had to preserve: an exact email hit merges into the incumbent rather
 // than creating anything.
 func TestPromotingALeadStillMergesOnAClaimedAddress(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.asLeadOwner()
 	incumbent, err := e.store.CreateContact(ctx, CreateContactInput{
@@ -414,6 +422,7 @@ func TestPromotingALeadStillMergesOnAClaimedAddress(t *testing.T) {
 // nobody called: one profile URL names one human, so the second create is
 // refused with the incumbent's id exactly as a claimed address is.
 func TestASecondLeadCannotClaimALinkedInProfile(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.asLeadOwner()
 	first, _, err := e.store.CreateLead(ctx, CreateLeadInput{
@@ -454,6 +463,7 @@ func TestASecondLeadCannotClaimALinkedInProfile(t *testing.T) {
 // would read zero either way and prove nothing. Read from within, zero means
 // the refusal genuinely preceded the INSERT.
 func TestTheChokepointRefusesToMintOverAnExactCollision(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 

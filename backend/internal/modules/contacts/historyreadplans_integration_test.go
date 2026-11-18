@@ -61,6 +61,7 @@ func (n mailboxPlanNode) boundsHistoryRows(limit int) bool {
 }
 
 func TestHistoryReadersSeekPastACompleteUnrelatedMailbox(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	connected := time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)
@@ -210,6 +211,11 @@ func (e *dedupeEnv) seedHistoryReadBackground(ctx context.Context, t *testing.T,
 			return err
 		}); err != nil {
 			t.Fatal(err)
+		}
+		// A fresh database has no statistics, and the insert triggers would plan
+		// every later batch for an empty activity table.
+		if after == 0 {
+			analyzeAsOwner(t, "activity", "activity_participant", "capture_import")
 		}
 	}
 	// One statement per batch, so no single write outlasts the statement timeout

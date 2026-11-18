@@ -23,7 +23,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -32,16 +31,15 @@ const (
 	reportDemoObject = "ext_reportdemo_visit"
 )
 
-// registerVisitReports declares a visit kind with its table and the reports
-// over it, and puts both registries back when the test ends.
-func registerVisitReports(t *testing.T) {
+// visitReports declares a visit kind with its table and the reports over it,
+// and answers the reports a composition of that unit serves.
+func visitReports(t *testing.T) []registeredReport {
 	t.Helper()
 	owner := integration.OwnerConn(t)
 	ctx := context.Background()
 	for _, stmt := range []string{
 		`CREATE SCHEMA IF NOT EXISTS ext`,
 		`GRANT USAGE ON SCHEMA ext TO margince_app`,
-		`DROP TABLE IF EXISTS ext.` + reportDemoTable,
 		`CREATE TABLE ext.` + reportDemoTable + ` (id uuid PRIMARY KEY DEFAULT uuidv7(), archived_at timestamptz, code text NOT NULL UNIQUE, site text, tier integer NOT NULL DEFAULT 2)`,
 		`GRANT SELECT, INSERT, UPDATE, DELETE ON ext.` + reportDemoTable + ` TO margince_app`,
 	} {
@@ -49,29 +47,19 @@ func registerVisitReports(t *testing.T) {
 			t.Fatalf("preparing the visit table (%s): %v", stmt, err)
 		}
 	}
-	unit := extension.Name("reportdemo")
-	kinds := []extension.RecordKindDeclaration{{
-		Kind: "visit", DisplayName: "Visit", Table: reportDemoTable,
-		Fields:     []extension.RecordKindField{{Name: "code", Label: "Code"}, {Name: "site", Label: "Site"}, {Name: "tier", Label: "Tier"}},
-		NaturalKey: []string{"code"},
-	}}
-	exts := []extension.Extension{{
-		Name: unit, RecordKinds: kinds,
+	return composedReports([]extension.Extension{{
+		Name: "reportdemo",
+		RecordKinds: []extension.RecordKindDeclaration{{
+			Kind: "visit", DisplayName: "Visit", Table: reportDemoTable,
+			Fields:     []extension.RecordKindField{{Name: "code", Label: "Code"}, {Name: "site", Label: "Site"}, {Name: "tier", Label: "Tier"}},
+			NaturalKey: []string{"code"},
+		}},
 		ReportCounts: []extension.ReportCount{{Name: "visits", Label: "Visits", Population: "visit"}},
 		ReportBreakdowns: []extension.ReportBreakdown{
 			{Name: "by_site", Label: "Visits by site", Population: "visit", By: "site"},
 			{Name: "by_tier", Label: "Visits by tier", Population: "visit", By: "tier"},
 		},
-	}}
-	recordkinds.Register(unit, kinds)
-	registerReports(exts)
-	t.Cleanup(func() {
-		recordkinds.Reset()
-		registerReports(nil)
-		if _, err := owner.Exec(context.Background(), `DROP TABLE IF EXISTS ext.`+reportDemoTable); err != nil {
-			t.Errorf("dropping the visit table: %v", err)
-		}
-	})
+	}})
 }
 
 func seedVisits(t *testing.T, site string, live, archived int) {
@@ -102,10 +90,10 @@ func visitReader(e *integration.Env, mask ...principal.FieldMask) context.Contex
 	})
 }
 
-func runRegisteredReport(ctx context.Context, t *testing.T, e *integration.Env, name string) extensionReportAnswer {
+func runRegisteredReport(ctx context.Context, t *testing.T, e *integration.Env, reports []registeredReport, name string) extensionReportAnswer {
 	t.Helper()
 	engine := newReportEngine(e.Pool)
-	for _, r := range registeredReports() {
+	for _, r := range reports {
 		if r.name != name {
 			continue
 		}
@@ -120,12 +108,13 @@ func runRegisteredReport(ctx context.Context, t *testing.T, e *integration.Env, 
 }
 
 func TestARegisteredBreakdownCountsLiveRowsOfTheKind(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
-	registerVisitReports(t)
+	reports := visitReports(t)
 	seedVisits(t, "north", 6, 3)
 	seedVisits(t, "south", 7, 0)
 
-	answer := runRegisteredReport(visitReader(e), t, e, "ext:reportdemo:by_site")
+	answer := runRegisteredReport(visitReader(e), t, e, reports, "ext:reportdemo:by_site")
 	if answer.Withheld || answer.Total == nil || *answer.Total != 13 {
 		t.Fatalf("answer = %+v, want 13 live visits and nothing withheld (archived rows are not counted)", answer)
 	}
@@ -136,32 +125,34 @@ func TestARegisteredBreakdownCountsLiveRowsOfTheKind(t *testing.T) {
 	if counts["north"] != 6 || counts["south"] != 7 {
 		t.Errorf("groups = %v, want north=6 south=7", counts)
 	}
-	count := runRegisteredReport(visitReader(e), t, e, "ext:reportdemo:visits")
+	count := runRegisteredReport(visitReader(e), t, e, reports, "ext:reportdemo:visits")
 	if count.Total == nil || *count.Total != 13 {
 		t.Errorf("count = %+v, want 13", count)
 	}
 }
 
 func TestAReaderWithoutTheKindsReadRightCannotRunItsReports(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
-	registerVisitReports(t)
+	reports := visitReports(t)
 	seedVisits(t, "north", 6, 0)
 	ctx := e.As(e.Rep1, nil, principal.Permissions{RowScope: principal.RowScopeAll})
 
-	_, _, err := newReportEngine(e.Pool).runRegistered(ctx, registeredReports()[0], analyticsquery.DefaultFloor)
+	_, _, err := newReportEngine(e.Pool).runRegistered(ctx, reports[0], analyticsquery.DefaultFloor)
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("err = %v, want permission denied", err)
 	}
 }
 
 func TestTheFloorWithholdsTheSmallestGroupsAndTheTotal(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
-	registerVisitReports(t)
+	reports := visitReports(t)
 	seedVisits(t, "tiny", 1, 0)
 	seedVisits(t, "small", 5, 0)
 	seedVisits(t, "large", 9, 0)
 
-	answer := runRegisteredReport(visitReader(e), t, e, "ext:reportdemo:by_site")
+	answer := runRegisteredReport(visitReader(e), t, e, reports, "ext:reportdemo:by_site")
 	if !answer.Withheld || answer.Total != nil {
 		t.Fatalf("withheld=%v total=%v, want the total withheld with the groups", answer.Withheld, answer.Total)
 	}
@@ -177,37 +168,40 @@ func TestTheFloorWithholdsTheSmallestGroupsAndTheTotal(t *testing.T) {
 }
 
 func TestAFieldMaskExcludesTheKindsRowsAndCountsThem(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
-	registerVisitReports(t)
+	reports := visitReports(t)
 	seedVisits(t, "north", 6, 0)
 	seedVisits(t, "south", 7, 0)
 
 	masked := visitReader(e, principal.FieldMask{Object: reportDemoObject, Field: "site", Condition: principal.MaskAlways})
-	answer := runRegisteredReport(masked, t, e, "ext:reportdemo:by_site")
+	answer := runRegisteredReport(masked, t, e, reports, "ext:reportdemo:by_site")
 	if answer.ExcludedByPermission == nil || *answer.ExcludedByPermission != 13 {
 		t.Fatalf("excluded_by_permission = %v, want 13", answer.ExcludedByPermission)
 	}
 	if answer.Total == nil || *answer.Total != 0 || len(answer.Groups) != 0 {
 		t.Errorf("answer = %+v, want the masked rows out of every group and the total", answer)
 	}
-	open := runRegisteredReport(visitReader(e), t, e, "ext:reportdemo:by_site")
+	open := runRegisteredReport(visitReader(e), t, e, reports, "ext:reportdemo:by_site")
 	if open.ExcludedByPermission != nil {
 		t.Errorf("unmasked excluded_by_permission = %v, want none", *open.ExcludedByPermission)
 	}
 }
 
 func TestABreakdownByANonTextColumnKeepsItsKeys(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
-	registerVisitReports(t)
+	reports := visitReports(t)
 	seedVisits(t, "north", 6, 0)
 
-	answer := extensionReportWire(runRegisteredReport(visitReader(e), t, e, "ext:reportdemo:by_tier"))
+	answer := extensionReportWire(runRegisteredReport(visitReader(e), t, e, reports, "ext:reportdemo:by_tier"))
 	if len(answer.Groups) != 1 || answer.Groups[0].Key == nil || *answer.Groups[0].Key != "2" {
 		t.Fatalf("groups = %+v, want one group keyed \"2\": an integer column is text on the wire", answer.Groups)
 	}
 }
 
 func TestAMultiselectCustomFieldSplitsDealsByCombinationWithoutDoubleCounting(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	catalog := customfields.NewService(e.Pool, integration.SchemaPool(t))
 	field, err := catalog.Create(e.As(e.Rep1, nil, integration.CustomFieldAdminPerms), customfields.FieldSpec{
@@ -239,15 +233,14 @@ func TestAMultiselectCustomFieldSplitsDealsByCombinationWithoutDoubleCounting(t 
 			t.Fatalf("seed deal %d: %v", i, err)
 		}
 	}
-	registerReports([]extension.Extension{{
+	reports := composedReports([]extension.Extension{{
 		Name: "reportdemo",
 		ReportBreakdowns: []extension.ReportBreakdown{
 			{Name: "by_region", Label: "Deals by region", Population: "pipeline-current", By: column},
 		},
 	}})
-	t.Cleanup(func() { registerReports(nil) })
 
-	answer := runRegisteredReport(e.Admin(), t, e, "ext:reportdemo:by_region")
+	answer := runRegisteredReport(e.Admin(), t, e, reports, "ext:reportdemo:by_region")
 	counts := map[string]int{}
 	for _, g := range answer.Groups {
 		counts[fmt.Sprint(g.Key)] = g.Count

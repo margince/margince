@@ -15,6 +15,7 @@ import (
 )
 
 func TestDraftReportSavesTheSameDraftOnEitherDoor(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "report-draft-doors", "read", "write")
 	var catalog struct {
 		Metrics []struct {

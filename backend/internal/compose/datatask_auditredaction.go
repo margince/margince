@@ -32,7 +32,7 @@ func linkedAuditRedactionDataTask(pool *pgxpool.Pool) datatask.Task {
 	steps := privacyreview.AuditSteps(privacy.RedactLinkedHistoricalAuditPageTx)
 	identities := privacyreview.AuditSteps(privacy.RedactLinkedHistoricalIdentitiesPageTx)[0]
 	identities.Name = "request_identity_images"
-	steps = append(steps, identities, privacyreview.UnlinkedApprovalReviewStep(notices.NewStore(InstallationDB(pool))))
+	steps = append(steps, identities, privacyreview.UnlinkedApprovalReviewStep(notices.NewStore(InstallationDB(pool)), installedRbacObjects()))
 	return datatask.Task{ID: "core/1794076293_linked_erased_audit_payloads", Version: 1, Title: systemtext.Literal("datatask.title.core.1794076293_linked_erased_audit_payloads"), Requires: []string{auditRedactionMigration, retainedEventsMigration, legacyErasureMigration}, Steps: steps}
 }
 

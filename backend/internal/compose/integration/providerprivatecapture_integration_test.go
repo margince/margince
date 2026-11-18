@@ -33,6 +33,7 @@ import (
 )
 
 func TestAProviderRunEnrichesAContactCapturedPrivatelyByAColleague(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	connectProvider(t, e)
 	// The store is built here rather than through providerStoreFor because the

@@ -13,6 +13,7 @@ import (
 )
 
 func TestCombinedFollowUpOverBothDoors(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "combined-follow-up-doors", "read", "write")
 	for _, door := range []string{"http", "tool"} {
 		t.Run(door, func(t *testing.T) {
@@ -44,6 +45,7 @@ func TestCombinedFollowUpOverBothDoors(t *testing.T) {
 }
 
 func TestCombinedFollowUpHTTPReplayPreservesOneTask(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "combined-follow-up-replay", "read", "write")
 	fields := map[string]any{
 		"kind": "note", "subject": "Scope review", "source": "manual",

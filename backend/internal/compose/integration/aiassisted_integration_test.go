@@ -20,6 +20,7 @@ import (
 )
 
 func TestPolishedWordsReadAIAssistedAndThePatchNeverLiftsTheMark(t *testing.T) {
+	t.Parallel()
 	s := setupStanding(t)
 	ctx := s.As(s.Rep1, []ids.UUID{s.Team1}, activityLifecyclePerms)
 	link := s.contactAt(t, "Anna Berg", "anna@buyer.test")
@@ -62,6 +63,7 @@ func TestPolishedWordsReadAIAssistedAndThePatchNeverLiftsTheMark(t *testing.T) {
 // Only a human marks words AI-assisted, and only on a record the activity is
 // logged on: Polish wording asked about that record's restriction.
 func TestOnlyAHumanMarksWordsAIAssistedOnTheRecordTheyArePolishedOn(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "ai-assisted-mark", "read", "write")
 	anna := AnyMap{"entity_type": "contact", "entity_id": createdRecord(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Anna Berg"})}
 	other := AnyMap{"entity_type": "contact", "entity_id": createdRecord(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Ben Roth"})}

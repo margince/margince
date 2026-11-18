@@ -100,6 +100,7 @@ func traceReadWorkspace(t *testing.T) (context.Context, ids.UUID, *database.DB, 
 // A member reads their own traffic and nobody else's — not a colleague's, and
 // not the workspace's shared channels either.
 func TestListMineIsOnlyTheCallersOwnRows(t *testing.T) {
+	t.Parallel()
 	ctx, ws, db, store := traceReadWorkspace(t)
 	me, colleague := ids.NewV7(), ids.NewV7()
 	seedTrace(memberContext(ctx, ws, me), t, db, me, "mine-1", 0)
@@ -124,6 +125,7 @@ func TestListMineIsOnlyTheCallersOwnRows(t *testing.T) {
 // The workspace read exists for shared bot bindings. It must not become a route
 // to a colleague's mailbox for anyone, however privileged.
 func TestListWorkspaceNeverReturnsAMembersOwnRows(t *testing.T) {
+	t.Parallel()
 	ctx, ws, db, store := traceReadWorkspace(t)
 	member, manager := ids.NewV7(), ids.NewV7()
 	seedTrace(memberContext(ctx, ws, member), t, db, member, "personal-1", 0)
@@ -144,6 +146,7 @@ func TestListWorkspaceNeverReturnsAMembersOwnRows(t *testing.T) {
 // A seat without the grant gets a refusal, not an empty page: an empty page
 // reads as "your workspace has no shared channels".
 func TestListWorkspaceRefusesASeatWithoutTheGrant(t *testing.T) {
+	t.Parallel()
 	ctx, ws, _, store := traceReadWorkspace(t)
 	_, err := store.ListWorkspace(memberContext(ctx, ws, ids.NewV7()), nil, nil)
 	if err == nil {
@@ -157,6 +160,7 @@ func TestListWorkspaceRefusesASeatWithoutTheGrant(t *testing.T) {
 // The window is 24 hours and the sweep is what enforces it durably; the read
 // must not show what the sweep has not reached yet.
 func TestTheWindowEndsAtTwentyFourHours(t *testing.T) {
+	t.Parallel()
 	ctx, ws, db, store := traceReadWorkspace(t)
 	me := ids.NewV7()
 	seedTrace(memberContext(ctx, ws, me), t, db, me, "fresh", time.Hour)

@@ -25,6 +25,7 @@ import (
 )
 
 func TestAdminReadsAnotherMembersStalledConnection(t *testing.T) {
+	t.Parallel()
 	b := setupBackfillWire(t)
 	e := b.env
 	at := time.Date(2026, 10, 20, 12, 0, 0, 0, time.UTC)
@@ -94,6 +95,7 @@ func TestAdminReadsAnotherMembersStalledConnection(t *testing.T) {
 }
 
 func TestDismissSilenceHandlerPreservesItsErrorContract(t *testing.T) {
+	t.Parallel()
 	b := setupBackfillWire(t)
 	for _, tc := range []struct {
 		name, body string
@@ -120,6 +122,7 @@ func TestDismissSilenceHandlerPreservesItsErrorContract(t *testing.T) {
 }
 
 func TestMeetingNotesHealthAgreesForTheOwnerAndTheFleet(t *testing.T) {
+	t.Parallel()
 	b := setupBackfillWire(t)
 	at := clocktest.Now(t)
 	b.registry.SetClock(func() time.Time { return at })

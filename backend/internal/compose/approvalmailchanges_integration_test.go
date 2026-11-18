@@ -22,6 +22,7 @@ import (
 // The single email for a staged field change names the deal and the proposal.
 // It shows each field's value before and after, as the decider's card does.
 func TestAFieldChangeEmailSaysWhatWouldChange(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	pipeline, open, _ := integration.DealFixture(t, e)
 	deal := e.SeedDeal(t, "Harbor renewal", pipeline, open, &e.AdminUser)

@@ -30,6 +30,7 @@ SELECT DISTINCT n.nspname FROM pg_namespace n JOIN pg_class t ON t.relnamespace 
    AND n.nspname NOT LIKE 'pg\_%' ORDER BY 1`
 
 func TestEveryExtensionForeignKeyCanFindItsChildren(t *testing.T) {
+	t.Parallel()
 	Setup(t)
 	owner := OwnerConn(t)
 	ctx := context.Background()

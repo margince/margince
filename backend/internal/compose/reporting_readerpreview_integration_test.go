@@ -36,6 +36,7 @@ func withRoleAdmin(ctx context.Context) context.Context {
 // answers what the caller reads. A caller who may not read the role matrix
 // gets no preview at all.
 func TestAReportPreviewedAsARoleReadsWhatThatRoleMay(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	report, err := f.service.CreateReport(f.human, crmcontracts.ReportingReportInput{
 		Name: "Company review", Audience: "workspace", Selection: f.selection(),

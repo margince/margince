@@ -17,7 +17,7 @@ import (
 )
 
 func TestRegisterExtensionsAppliesDeadlinesAndDocuments(t *testing.T) {
-	err := RegisterExtensions(composableAll([]extension.Extension{{
+	_, err := RegisterExtensions(composableAll([]extension.Extension{{
 		Name:          "rights-ok",
 		Version:       "0.0.1",
 		Jurisdictions: []jurisdiction.Pack{fakePack{code: "zn"}},
@@ -80,7 +80,7 @@ func TestADeclarationForAnotherUnitsJurisdictionIsRefused(t *testing.T) {
 		},
 	} {
 		t.Run(c.name, func(t *testing.T) {
-			err := RegisterExtensions(composableAll([]extension.Extension{c.unit}), nil, nil)
+			_, err := RegisterExtensions(composableAll([]extension.Extension{c.unit}), nil, nil)
 			if err == nil || !strings.Contains(err.Error(), c.want) || !strings.Contains(err.Error(), "carries no jurisdiction pack") {
 				t.Fatalf("err = %v, want the %s refused for carrying no pack of its own", err, c.want)
 			}

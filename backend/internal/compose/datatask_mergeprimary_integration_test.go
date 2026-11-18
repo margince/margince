@@ -78,6 +78,7 @@ func isPrimary(t *testing.T, e *integration.Env, edge ids.UUID) bool {
 }
 
 func TestTheMergePrimaryTaskRestoresBothMergesAndReplaysSafely(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	companyHeir := companyMergeDroppedPrimary(t, e, "Ines Varga")
 	survivor, merged := mergeTestContact(t, e, "Olek Brandt"), mergeTestContact(t, e, "Olek Brandt")
@@ -118,6 +119,7 @@ func TestTheMergePrimaryTaskRestoresBothMergesAndReplaysSafely(t *testing.T) {
 }
 
 func TestTheMergePrimaryTaskLeavesAFlagClearedByHandAfterTheMerge(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := mergeTestContact(t, e, "Pia Lemberg")
 	retired, kept := mergeTestCompany(t, e, "Lemberg Old"), mergeTestCompany(t, e, "Lemberg New")
@@ -140,6 +142,7 @@ func TestTheMergePrimaryTaskLeavesAFlagClearedByHandAfterTheMerge(t *testing.T) 
 }
 
 func TestTheMergePrimaryTaskLeavesAContactWithTwoCurrentEmployments(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := mergeTestContact(t, e, "Rune Sandvik")
 	retired, kept, other := mergeTestCompany(t, e, "Sandvik Old"), mergeTestCompany(t, e, "Sandvik New"), mergeTestCompany(t, e, "Sandvik Side")
@@ -160,6 +163,7 @@ func TestTheMergePrimaryTaskLeavesAContactWithTwoCurrentEmployments(t *testing.T
 }
 
 func TestTheMergePrimaryTaskBoundsPagingAndRollsBackWithItsProgress(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	first := companyMergeDroppedPrimary(t, e, "Saskia Ewald")
 	second := companyMergeDroppedPrimary(t, e, "Timo Rautio")
@@ -201,6 +205,7 @@ func TestTheMergePrimaryTaskBoundsPagingAndRollsBackWithItsProgress(t *testing.T
 // A primary a user archived before the merge was no merge's doing. The
 // non-primary edge the user kept stays as they left it, for either merge.
 func TestTheMergePrimaryTaskLeavesAPrimaryArchivedByHandBeforeTheMerge(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	byCompany := mergeTestContact(t, e, "Ulla Kesk")
 	retired, kept := mergeTestCompany(t, e, "Kesk Old"), mergeTestCompany(t, e, "Kesk New")

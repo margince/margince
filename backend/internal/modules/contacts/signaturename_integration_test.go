@@ -18,6 +18,7 @@ import (
 )
 
 func TestASignedNameReplacesWhatTheDisplaySplitGuessed(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	const addr = "m.greven@greven.test"
@@ -52,6 +53,7 @@ func TestASignedNameReplacesWhatTheDisplaySplitGuessed(t *testing.T) {
 }
 
 func TestASignedNameLeavesANameAColleagueTypedAlone(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	const addr = "typed@greven.test"

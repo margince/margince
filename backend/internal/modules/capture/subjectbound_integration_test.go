@@ -19,6 +19,7 @@ import (
 // A sender chooses the subject, so a capture cuts one past the column limit
 // instead of losing the whole mail to the guard.
 func TestACapturedSubjectPastTheLimitLandsCut(t *testing.T) {
+	t.Parallel()
 	owner, pool := setupCaptureDB(t)
 	ctx := context.Background()
 	ws := ids.NewV7()

@@ -49,6 +49,7 @@ func ownContactAndTagPerms() principal.Permissions {
 // Not-found, never forbidden: a refusal saying "you may not read this" would
 // confirm the record to a caller who cannot see it.
 func TestRecordTagsHidesAnOwnerPrivateCapture(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
 
@@ -66,6 +67,7 @@ func TestRecordTagsHidesAnOwnerPrivateCapture(t *testing.T) {
 // The owner of that same private capture still reads it, which is what makes
 // the refusal above about privacy rather than about the grants.
 func TestRecordTagsAnswersForThePrivateCapturesOwner(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
 
@@ -111,6 +113,7 @@ func makeCapturePrivate(t *testing.T, e *Env, contact ids.UUID, owner ids.UUID) 
 // the archived check: applying a retired word coins it again, and taking one
 // off is the cleanup retiring it left behind.
 func TestARetiredTagCanStillBeTakenOffARecord(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
 	ctx := e.As(e.Rep1, nil, curateContactAndTagPerms())

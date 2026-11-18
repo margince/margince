@@ -74,6 +74,7 @@ func importMailedCard(ctx context.Context, t *testing.T, e *dedupeEnv, source id
 // so the admit arm is what makes the refusal evidence rather than a path that
 // writes nothing at all.
 func TestACardImportsOnlyFromAMessageTheWorkspaceMayRead(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -96,6 +97,7 @@ func TestACardImportsOnlyFromAMessageTheWorkspaceMayRead(t *testing.T) {
 // error: the mailed path's job would otherwise retry into the same missing row
 // until it exhausted.
 func TestACardImportsNothingWhenItsMessageHasBeenErased(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -119,6 +121,7 @@ func TestACardImportsNothingWhenItsMessageHasBeenErased(t *testing.T) {
 // the check and the write lands the card anyway. There is no "between" here,
 // because the FOR SHARE is held from the first statement to the commit.
 func TestTheCardsLivenessCheckIsInsideItsWriteTransaction(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -185,6 +188,7 @@ func TestTheCardsLivenessCheckIsInsideItsWriteTransaction(t *testing.T) {
 // RETURNS becomes a durable proposal carrying the whole card. A narrowed message
 // reaching a review queue is the same contents in a different table.
 func TestANarrowedMessageStagesNoReviewEither(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -226,6 +230,7 @@ func TestANarrowedMessageStagesNoReviewEither(t *testing.T) {
 // message while waiting on an email the eraser holds, which is the deadlock the
 // ordering exists to avoid.
 func TestARefusedCreateLeavesNoHalfWrittenContact(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -271,6 +276,7 @@ func outcomeOf(results []VCardResult) string {
 // A mailed card for an existing lead is skipped with its reason. It creates
 // nothing and offers no conversion.
 func TestAMailedCardForALeadIsSkippedWithoutAQuestion(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	lead := e.seedHeldLead(ctx, t, "petra@briefkasten.example")

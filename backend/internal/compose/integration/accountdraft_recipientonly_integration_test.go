@@ -133,6 +133,7 @@ func seedRecipientOnlyAccount(t *testing.T, e *Env) recipientOnlyFixture {
 }
 
 func TestAnAccountDraftReadsOnlyTheRecipientsOwnConversation(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedRecipientOnlyAccount(t, e)
 	svc := companySurfaceService(e)
@@ -209,6 +210,7 @@ func TestAnAccountDraftReadsOnlyTheRecipientsOwnConversation(t *testing.T) {
 // The service sends the model the narrowed view. A recording lane sees every
 // request the draft makes, and none carries Ruben's words.
 func TestTheModelNeverSeesAColleaguesMail(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedRecipientOnlyAccount(t, e)
 	lane := &recordingDraftLane{}
@@ -244,6 +246,7 @@ var colleagueWords = []string{"9,600", "8,400", "Ruben", "hold the payment", "su
 // The contact page's drafter reads Jana's own timeline. A link files Ruben's
 // mail there too, so the draft's read keeps only what she was a party to.
 func TestAContactDraftLeavesOutAColleaguesMailLinkedToTheRecipient(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedRecipientOnlyAccount(t, e)
 	svc := contactRoomService(e)
@@ -300,6 +303,7 @@ func contactActivityIDs(page crmcontracts.Contact360) map[string]bool {
 // The narrowing runs before the cap. Six newer mails from a colleague would
 // fill the draft's six slots if it ran after, and leave Jana's six out.
 func TestTheRecipientNarrowingRunsBeforeTheCap(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	company := e.SeedCompany(t, "Harbourline Freight", &e.Rep1)

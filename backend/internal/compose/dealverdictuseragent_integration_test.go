@@ -18,6 +18,7 @@ import (
 )
 
 func TestAUsersAgentEditProtectsTheDealFromNightlyChanges(t *testing.T) {
+	t.Parallel()
 	v := setupDealVerdict(t)
 	ctx := scopedArchiveAgent(t, v.Env)
 	amount := int64(3_000_000)
@@ -40,6 +41,7 @@ func TestAUsersAgentEditProtectsTheDealFromNightlyChanges(t *testing.T) {
 }
 
 func TestTheVerdictWriteRechecksAUsersAgentEdit(t *testing.T) {
+	t.Parallel()
 	v := setupDealVerdict(t)
 	amount := int64(3_000_000)
 	if _, err := v.Deals.UpdateDeal(scopedArchiveAgent(t, v.Env), ids.From[ids.DealKind](v.deal), deals.UpdateDealInput{AmountMinor: &amount}); err != nil {
@@ -76,6 +78,7 @@ func TestTheVerdictWriteRechecksAUsersAgentEdit(t *testing.T) {
 }
 
 func TestAutomaticDealEditsDoNotBecomeUserEdits(t *testing.T) {
+	t.Parallel()
 	v := setupDealVerdict(t)
 	actor, ok := principal.Actor(v.Admin())
 	if !ok {

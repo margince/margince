@@ -21,6 +21,7 @@ import (
 )
 
 func TestRelationshipStrengthOverSeededRows(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	store := contacts.NewStore(e.DB())

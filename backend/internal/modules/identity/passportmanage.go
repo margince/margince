@@ -20,7 +20,7 @@ import (
 // Only the CROSS-USER branch is gated. Managing your own passport is
 // self-authorized: requiring a member-administration grant would take from
 // every seat the ability to cut off an agent acting as them.
-func mayManagePassport(ctx context.Context, tx pgx.Tx, id Identity, onBehalfOf ids.UserID) error {
+func mayManagePassport(ctx context.Context, tx pgx.Tx, rbac RbacObjects, id Identity, onBehalfOf ids.UserID) error {
 	if onBehalfOf == id.UserID {
 		return nil
 	}
@@ -30,7 +30,7 @@ func mayManagePassport(ctx context.Context, tx pgx.Tx, id Identity, onBehalfOf i
 	// The same ceiling IssuePasswordLink carries: a delegated holder who could
 	// cut off every agent acting for an administrator has reach over that
 	// administrator's work.
-	if err := refuseUnlessCallerOutranksTarget(ctx, tx, id, onBehalfOf, reachDenial); err != nil {
+	if err := refuseUnlessCallerOutranksTarget(ctx, tx, rbac, id, onBehalfOf, reachDenial); err != nil {
 		return apperrors.ErrNotFound
 	}
 	return nil

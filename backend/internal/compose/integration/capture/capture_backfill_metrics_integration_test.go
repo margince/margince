@@ -37,6 +37,7 @@ func pageSample(t *testing.T, result string) float64 {
 // The pager names the run's provider from the connection it read, so a page is
 // counted under it by result, and the job's own run learns the provider too.
 func TestEveryBackfillPageIsCountedUnderItsProviderByResult(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	registry, runID := startFlakyBackfill(t, e, []error{&connector.RateLimitedError{}})
 	jobCtx := capturemetrics.WithRun(principal.WithWorkspaceID(context.Background(), e.WS))

@@ -136,6 +136,7 @@ func (o *owedEnv) connectColleague(t *testing.T, seat ids.UUID) string {
 }
 
 func TestAStrangersBccRequestIsRoutineWhileAKnownSendersStaysOnTop(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.knownSender(t, "known@example.net")
 	eightDaysAgo := o.now.Add(-8 * 24 * time.Hour)
@@ -180,6 +181,7 @@ func (o *owedEnv) onWorklist(reader context.Context, t *testing.T, message ids.U
 // Bcc is a fact per seat. One seat named in To and one copied by Bcc each see
 // their own answer, whichever mailbox captured the message first.
 func TestBccIsJudgedForEachSeatWhicheverCapturesFirst(t *testing.T) {
+	t.Parallel()
 	for _, colleagueFirst := range []bool{false, true} {
 		name := map[bool]string{false: "the addressed seat first", true: "the Bcc seat first"}[colleagueFirst]
 		t.Run(name, func(t *testing.T) {
@@ -216,6 +218,7 @@ func TestBccIsJudgedForEachSeatWhicheverCapturesFirst(t *testing.T) {
 }
 
 func TestAStrangersRequestWithAForeignLinkIsRoutineWhileAPlainOneStaysOnTop(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.knownSender(t, "known@example.net")
 	twoDaysAgo := o.now.Add(-2 * 24 * time.Hour)
@@ -271,6 +274,7 @@ func (o *owedEnv) strangerFact(t *testing.T, message ids.UUID) bool {
 // A live contact is known, though the workspace never wrote to them. A contact
 // and a reply made after a mail arrived do not make that earlier mail known.
 func TestWhoCountsAsAStrangerIsJudgedAtTheMailsArrival(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.contact(t, "Pat Contact", "pat@example.com")
 	// Dated after the contact was made, which is after o.now.
@@ -307,6 +311,7 @@ func TestWhoCountsAsAStrangerIsJudgedAtTheMailsArrival(t *testing.T) {
 // A replay keeps the Bcc fact the seat's first capture judged, even when the
 // seat has since declared the address the mail was written to.
 func TestAReplayKeepsTheFirstBccJudgement(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	m := o.strangerMail("sender@example.com", "View the document", o.now.Add(-2*time.Hour))
 	m.to = "old-alias@ws.example"
@@ -330,6 +335,7 @@ func TestAReplayKeepsTheFirstBccJudgement(t *testing.T) {
 // Mail captured before these facts existed carries NULL, and NULL is no
 // evidence: such mail ranks as it did.
 func TestMailWithNoCapturedFactsRanksAsBefore(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	addressed := o.strangerMail("sender@example.com", "View the document", o.now.Add(-2*24*time.Hour))
 	addressed.to = o.seat
@@ -354,6 +360,7 @@ func TestMailWithNoCapturedFactsRanksAsBefore(t *testing.T) {
 // before the reply the seat sent ahead of it. That reply still makes the mail
 // known. A reply sent after the mail arrived does not.
 func TestAReplyCapturedAfterTheMailItPrecededMakesItsSenderKnown(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	arrived := o.now.Add(-2 * 24 * time.Hour)
 	answeredEarlier := o.capture(t, o.strangerMail("sender@example.com", "Following up", arrived))
@@ -376,6 +383,7 @@ func TestAReplyCapturedAfterTheMailItPrecededMakesItsSenderKnown(t *testing.T) {
 // A To header that will not parse may have named the seat, so capture records
 // no Bcc for it.
 func TestAnUnreadableToLeavesTheBccQuestionOpen(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	m := o.strangerMail("sender@example.com", "View the document", o.now.Add(-2*time.Hour))
 	m.to = "Reader <" + o.seat

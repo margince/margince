@@ -146,6 +146,7 @@ func importForm(t *testing.T, size int) (*bytes.Buffer, string) {
 // exists for: before it, every route rode 1 MiB, so a 2 MB document was refused
 // by the chassis with a message about a JSON body nobody sent.
 func TestAnUploadOverTheJSONBoundReachesTheHandler(t *testing.T) {
+	t.Parallel()
 	e := appWithUploads(t)
 	form, contentType := attachmentForm(t, e, fileOf(2<<20))
 
@@ -160,6 +161,7 @@ func TestAnUploadOverTheJSONBoundReachesTheHandler(t *testing.T) {
 // refusal has to name the limit THIS installation applies. A compiled-in number
 // in that sentence sends the reader off to shrink a file against the wrong bar.
 func TestAnOversizeUploadIsRefusedWithTheConfiguredNumber(t *testing.T) {
+	t.Parallel()
 	e := appWithUploads(t)
 	form, contentType := attachmentForm(t, e, fileOf(4_000_000))
 
@@ -180,6 +182,7 @@ func TestAnOversizeUploadIsRefusedWithTheConfiguredNumber(t *testing.T) {
 //
 // Held by: TestTheInstallationReadPublishesTheConfiguredCeiling (backend/internal/compose/integration/uploadceiling_integration_test.go) — this test.
 func TestTheInstallationReadPublishesTheConfiguredCeiling(t *testing.T) {
+	t.Parallel()
 	e := appWithUploads(t)
 	var settings crmcontracts.InstallationSettings
 	if code := e.Call(t, http.MethodGet, "/v1/installation/settings", nil, nil, &settings); code != http.StatusOK {
@@ -197,6 +200,7 @@ func TestTheInstallationReadPublishesTheConfiguredCeiling(t *testing.T) {
 // key with three spellings: the import cap refuses a body the attachment
 // ceiling takes.
 func TestEachUploadRouteIsBoundedSeparately(t *testing.T) {
+	t.Parallel()
 	e := appWithUploads(t)
 
 	form, contentType := attachmentForm(t, e, fileOf(betweenTheCeilings))
@@ -224,6 +228,7 @@ func TestEachUploadRouteIsBoundedSeparately(t *testing.T) {
 // did not happen would store an empty object under a checksum of the real one —
 // a row that reads perfectly and describes nothing.
 func TestAStoredUploadKeepsItsOwnSizeAndChecksum(t *testing.T) {
+	t.Parallel()
 	e := appWithUploads(t)
 	const size = 2 << 20
 	content := fileOf(size)
@@ -282,6 +287,7 @@ func TestAStoredUploadKeepsItsOwnSizeAndChecksum(t *testing.T) {
 // number the operator never set — and no gate above the transport can see the
 // two disagree.
 func TestTheLinkedInRouteRidesItsOwnConfiguredCeiling(t *testing.T) {
+	t.Parallel()
 	e := appWithUploads(t)
 
 	// Under the 1 MB LinkedIn ceiling: refused for its CONTENT (not a LinkedIn
@@ -334,6 +340,7 @@ func linkedInForm(t *testing.T, size int) (*bytes.Buffer, string) {
 // Driven through the composed server because that is where the omission would
 // happen — a handler built by hand here would be testing the test's own wiring.
 func TestAnUnwiredImportCeilingIsOurFaultNotTheCallers(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithOptions(t,
 		compose.WithBlobstore(blobstore.NewMemory()),
 		compose.WithUploadLimits(compose.UploadLimits{}))

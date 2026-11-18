@@ -77,6 +77,7 @@ func waitingIDs(rows []activities.WaitingReply) []ids.UUID {
 // answers for, row for row. A mail addressed to two members is nobody's. A
 // colleague outside the team keeps their own.
 func TestTheTeamWaitingScanIsTheWorkspaceScanKeptToTheTeamsMail(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	at := quietLaneNow.AddDate(0, 0, -1)
 	mailbox := seatMailboxes(t, e, e.Rep1, e.Rep2, e.Rep3)
@@ -126,6 +127,7 @@ func TestTheTeamWaitingScanIsTheWorkspaceScanKeptToTheTeamsMail(t *testing.T) {
 // The team page shows a member's waiting mail and quiet contact, and neither
 // of a colleague on another team.
 func TestTheTeamWorklistShowsItsMembersWaitingMailAndQuietContactsOnly(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	at := quietLaneNow.AddDate(0, 0, -1)
 	mailbox := seatMailboxes(t, e, e.Rep1, e.Rep2, e.Rep3)

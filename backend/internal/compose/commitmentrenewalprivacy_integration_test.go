@@ -39,6 +39,7 @@ type renewalPrivacyFixture struct {
 }
 
 func TestErasingEitherCitationWithdrawsTheRenewedProposal(t *testing.T) {
+	t.Parallel()
 	for _, message := range []int{0, 1} {
 		t.Run([]string{"original", "renewal"}[message], func(t *testing.T) {
 			f := setupRenewalPrivacy(t, 0.75)
@@ -58,6 +59,7 @@ func TestErasingEitherCitationWithdrawsTheRenewedProposal(t *testing.T) {
 }
 
 func TestErasingRenewalRemovesTheWorkDerivedFromItsWords(t *testing.T) {
+	t.Parallel()
 	f := setupRenewalPrivacy(t, 0.95)
 	assertNonActionRereadPreservesAdmission(t, f)
 	subject := f.e.SeedContact(t, "Renewal subject", &f.e.Rep1)
@@ -118,6 +120,7 @@ func setupRenewalPrivacy(t *testing.T, confidence float64) renewalPrivacyFixture
 }
 
 func TestNarrowingOnlyTheRenewalWithholdsDerivedContentButKeepsTheOriginalReadable(t *testing.T) {
+	t.Parallel()
 	f := setupRenewalPrivacy(t, 0.95)
 	e, contact, messages, task := f.e, f.contact, f.messages, f.work
 	reader := e.As(e.Rep2, []ids.UUID{e.Team1}, integration.AdminPerms)
@@ -157,6 +160,7 @@ func TestNarrowingOnlyTheRenewalWithholdsDerivedContentButKeepsTheOriginalReadab
 }
 
 func TestRenewedProposalRequiresBothMessagesAtReadAndDecisionTime(t *testing.T) {
+	t.Parallel()
 	f := setupRenewalPrivacy(t, 0.75)
 	e := f.e
 	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
@@ -197,6 +201,7 @@ func TestRenewedProposalRequiresBothMessagesAtReadAndDecisionTime(t *testing.T) 
 }
 
 func TestHeldDerivedWorkSurvivesErasureWithoutReleasingItsContent(t *testing.T) {
+	t.Parallel()
 	f := setupRenewalPrivacy(t, 0.95)
 	subject := f.e.SeedContact(t, "Renewal subject", &f.e.Rep1)
 	integration.LinkActivity(t, integration.OwnerConn(t), f.messages[1], "contact", subject)
@@ -264,6 +269,7 @@ func TestHeldDerivedWorkSurvivesErasureWithoutReleasingItsContent(t *testing.T) 
 }
 
 func TestSubjectExportIncludesRenewalProvenanceWithoutPrivateWords(t *testing.T) {
+	t.Parallel()
 	f := setupRenewalPrivacy(t, 0.95)
 	subject := ids.From[ids.ContactKind](f.e.SeedContact(t, "Renewal subject", &f.e.Rep1))
 	integration.LinkActivity(t, integration.OwnerConn(t), f.messages[1], "contact", subject.UUID)
@@ -297,6 +303,7 @@ func TestSubjectExportIncludesRenewalProvenanceWithoutPrivateWords(t *testing.T)
 }
 
 func TestRefusedRenewalPreservesTheClaimAndItsEvidence(t *testing.T) {
+	t.Parallel()
 	for _, state := range []string{"pending", "unread", "legacy_unread"} {
 		t.Run(state, func(t *testing.T) {
 			unread := state != "pending"
@@ -356,6 +363,7 @@ func TestRefusedRenewalPreservesTheClaimAndItsEvidence(t *testing.T) {
 }
 
 func TestArchivingEvidenceKeepsAnAdoptedCommitmentReadable(t *testing.T) {
+	t.Parallel()
 	f := setupRenewalPrivacy(t, 0.95)
 	if _, err := f.e.Activities.UpdateActivity(f.e.Admin(), ids.From[ids.ActivityKind](f.work), activities.UpdateActivityInput{Subject: new("My negotiated pricing task")}); err != nil {
 		t.Fatal(err)
@@ -372,6 +380,7 @@ func TestArchivingEvidenceKeepsAnAdoptedCommitmentReadable(t *testing.T) {
 }
 
 func TestAnonymizingAContactPreservesDerivedWorkAndItsPrivateBoundary(t *testing.T) {
+	t.Parallel()
 	for _, state := range []string{"automatic", "edited", "completed", "held"} {
 		t.Run(state, func(t *testing.T) {
 			f := setupRenewalPrivacy(t, 0.95)
@@ -466,7 +475,7 @@ func assertReleasedHoldFinishesErasure(t *testing.T, f renewalPrivacyFixture, be
 	service := privacy.NewRetentionService(f.e.DB(), blobstore.NewMemory(), slog.Default(), RawCapturePurgerFor(f.e.DB()))
 	run := func() {
 		t.Helper()
-		if err := service.EvaluateInstallation(integration.RetentionPassCtx(f.e.WS)); err != nil {
+		if err := service.EvaluateInstallation(integration.RetentionPassCtx(context.Background(), f.e.WS)); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -495,6 +504,7 @@ func assertReleasedHoldFinishesErasure(t *testing.T, f renewalPrivacyFixture, be
 }
 
 func TestErasingLegacyCommitmentsAlsoPreservesHeldEvidence(t *testing.T) {
+	t.Parallel()
 	for _, held := range []bool{false, true} {
 		t.Run(fmt.Sprintf("held_%t", held), func(t *testing.T) {
 			f := setupRenewalPrivacy(t, 0.95)
@@ -541,6 +551,7 @@ func embedHeldCommitment(t *testing.T, f renewalPrivacyFixture) bool {
 }
 
 func TestDirectTaskErasureCompletesItsSuspendedEvidenceCleanup(t *testing.T) {
+	t.Parallel()
 	f := setupRenewalPrivacy(t, 0.95)
 	subject := f.e.SeedContact(t, "Renewal subject", &f.e.Rep1)
 	integration.LinkActivity(t, integration.OwnerConn(t), f.messages[1], "contact", subject)

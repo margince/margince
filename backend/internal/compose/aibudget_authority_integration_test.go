@@ -21,6 +21,7 @@ import (
 )
 
 func TestAllowanceRecoveryLeavesIneligibleRequestersParkedWithoutFailing(t *testing.T) {
+	t.Parallel()
 	for _, reason := range []string{"grant_revoked", "deactivated", "archived_company", "outside_scope"} {
 		t.Run(reason, func(t *testing.T) {
 			e := integration.Setup(t)

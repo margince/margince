@@ -63,6 +63,7 @@ func meetingBriefServiceAt(e *Env, now time.Time) *meetingbrief.Service {
 // role grants no activity read still reaches a brief describing a meeting, its
 // attendees and their commitments — through a door every sibling read refuses.
 func TestMeetingBriefRefusesACallerWithNoActivityGrant(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
@@ -89,6 +90,7 @@ func TestMeetingBriefRefusesACallerWithNoActivityGrant(t *testing.T) {
 
 // The brief names the contacts in the room, so it is a contact read too.
 func TestMeetingBriefRefusesACallerWithNoContactGrant(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
@@ -116,6 +118,7 @@ func TestMeetingBriefRefusesACallerWithNoContactGrant(t *testing.T) {
 // linked to. A meeting linked only to another rep's capture-private contact is
 // therefore outside this caller's scope.
 func TestMeetingBriefRefusesAMeetingItCannotReach(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	theirs := e.SeedContact(t, "Their Contact", &e.Rep3)
@@ -142,6 +145,7 @@ func TestMeetingBriefRefusesAMeetingItCannotReach(t *testing.T) {
 // capture-private contact — and an unscoped sub-select would report when that
 // conversation happened, disclosing both its timing and that it exists at all.
 func TestMeetingBriefDoesNotReportALastTouchTheCallerCannotRead(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	attendee := e.SeedContact(t, "Ana Roth", &e.Rep1)
@@ -217,6 +221,7 @@ func seatInRoom(t *testing.T, owner *pgx.Conn, ws, activity, contact ids.UUID) {
 // handed an Input that already holds a project. Only a real query proves the
 // SQL puts one there.
 func TestMeetingBriefNamesTheEngagementItIsFiledUnder(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	company := e.SeedCompany(t, "Northwind", &e.Rep1)
@@ -263,6 +268,7 @@ func TestMeetingBriefNamesTheEngagementItIsFiledUnder(t *testing.T) {
 // against another. This is the number a reader trusts most, and scoping the
 // deal while leaving the attendee sub-select alone is the predicted mistake.
 func TestMeetingBriefCountsNoLastTouchFromAnotherEngagement(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	company := e.SeedCompany(t, "Northwind", &e.Rep1)
@@ -323,6 +329,7 @@ func TestMeetingBriefCountsNoLastTouchFromAnotherEngagement(t *testing.T) {
 // row clause admits everyone, so without the grant check a caller who may open
 // the meeting reads the engagement's name, key, phase and target date off it.
 func TestMeetingBriefWithholdsTheEngagementFromACallerWithNoProjectGrant(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	company := e.SeedCompany(t, "Northwind", &e.Rep1)
@@ -372,6 +379,7 @@ func TestMeetingBriefWithholdsTheEngagementFromACallerWithNoProjectGrant(t *test
 // changed its title is still the same conversation; two unrelated meetings on
 // one account are not. Only a real query proves the overlap rule.
 func TestMeetingBriefRecallsWhenThisRoomLastMet(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	ours := e.SeedContact(t, "Ana Roth", &e.Rep1)
@@ -421,6 +429,7 @@ func TestMeetingBriefRecallsWhenThisRoomLastMet(t *testing.T) {
 
 // A day entry dated today has not ended, so the room has not yet met on it.
 func TestMeetingBriefRecallsADayMeetingOnlyOnceItsDateIsOver(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	ours := e.SeedContact(t, "Ana Roth", &e.Rep1)
@@ -473,6 +482,7 @@ func TestMeetingBriefRecallsADayMeetingOnlyOnceItsDateIsOver(t *testing.T) {
 // A brief scoped to one engagement must not reach into the other for its
 // history — the same rule the rest of the page runs.
 func TestMeetingBriefRecallsNoMeetingFromAnotherEngagement(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	company := e.SeedCompany(t, "Northwind", &e.Rep1)
@@ -543,6 +553,7 @@ func TestMeetingBriefRecallsNoMeetingFromAnotherEngagement(t *testing.T) {
 // section takes the content clause — the weaker discover clause is documented
 // as covering the safe markers alone (a last-touch date, an open-task count).
 func TestMeetingBriefRecallsNoSubjectItMayNotRead(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	ours := e.SeedContact(t, "Ana Roth", &e.Rep1)
@@ -595,6 +606,7 @@ func TestMeetingBriefRecallsNoSubjectItMayNotRead(t *testing.T) {
 // other project's mail, while a promise made on mail filed under no project
 // still stands, the way every project-scoped read keeps the unfiled rows.
 func TestMeetingBriefReportsNoCommitmentFromAnotherEngagement(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	company := e.SeedCompany(t, "Northwind", &e.Rep1)
@@ -676,6 +688,7 @@ func (l *meetingSubjectLane) Complete(ctx context.Context, _ model.Request) (mod
 // calendar and the timeline name it — so the reader's rail says "preparing
 // Cutover review" rather than "this company" about a meeting.
 func TestMeetingBriefNamesTheMeetingToTheRail(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	ours := e.SeedContact(t, "Ana Roth", &e.Rep1)
@@ -704,6 +717,7 @@ func TestMeetingBriefNamesTheMeetingToTheRail(t *testing.T) {
 // A meeting brief spends AI budget on every read. An agent without the enrich
 // scope reads its plain form, and one holding the scope starts the model.
 func TestAMeetingBriefStartsAModelCallOnlyForAnAgentWithEnrich(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	ours := e.SeedContact(t, "Ana Roth", &e.Rep1)

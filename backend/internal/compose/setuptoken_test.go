@@ -32,7 +32,7 @@ func TestWriteSetupTokenFileRefusesAnExistingEntryAndLeavesItIntact(t *testing.T
 		t.Fatalf("plant the existing file: %v", err)
 	}
 
-	path, err := writeSetupTokenFile("the-real-token")
+	path, err := writeSetupTokenFile("the-real-token", setupTokenFile)
 	if err == nil {
 		t.Fatal("writing over an existing setup-token file succeeded; O_EXCL is what makes a pre-created path fail, and a caller that overwrites would hand out a token the operator never sees")
 	}
@@ -55,7 +55,7 @@ func TestWriteSetupTokenFileWritesTheTokenWhenThePathIsFree(t *testing.T) {
 	t.Chdir(t.TempDir())
 
 	const token = "one-time-claim-credential"
-	path, err := writeSetupTokenFile(token)
+	path, err := writeSetupTokenFile(token, setupTokenFile)
 	if err != nil {
 		t.Fatalf("writeSetupTokenFile on a clean tree: %v", err)
 	}
@@ -73,7 +73,7 @@ func TestWriteSetupTokenFileWritesTheTokenWhenThePathIsFree(t *testing.T) {
 
 	// A second call is the restart case, and it must refuse rather than mint
 	// over the credential the operator was already given.
-	if _, err := writeSetupTokenFile("a different token"); err == nil {
+	if _, err := writeSetupTokenFile("a different token", setupTokenFile); err == nil {
 		t.Error("a second write to the same path succeeded; the first token is the one in the operator's hands")
 	}
 }
@@ -117,7 +117,7 @@ func TestWriteSetupTokenFileRefusesASymlinkAtTheFinalComponent(t *testing.T) {
 				t.Fatalf("plant the symlink: %v", err)
 			}
 
-			if _, err := writeSetupTokenFile("the-real-token"); err == nil {
+			if _, err := writeSetupTokenFile("the-real-token", setupTokenFile); err == nil {
 				t.Fatal("the writer followed a symlink at the final component, so the setup token " +
 					"can be redirected out of the installation by anyone who gets there first")
 			}
@@ -161,7 +161,7 @@ func TestWriteSetupTokenFileRefusesASymlinkedParentDirectory(t *testing.T) {
 	}
 	t.Chdir(work)
 
-	if _, err := writeSetupTokenFile("the-real-token"); err == nil {
+	if _, err := writeSetupTokenFile("the-real-token", setupTokenFile); err == nil {
 		t.Fatal("the writer followed a symlinked parent directory, so the credential that claims " +
 			"this installation was created inside a directory somebody else owns — and the write reported success")
 	}
@@ -188,7 +188,7 @@ func TestWriteSetupTokenFileAcceptsAnOrdinaryPreExistingConfigDirectory(t *testi
 	}
 	t.Chdir(work)
 
-	path, err := writeSetupTokenFile("the-real-token")
+	path, err := writeSetupTokenFile("the-real-token", setupTokenFile)
 	if err != nil {
 		t.Fatalf("a pre-existing config directory was refused: %v — every real installation has one", err)
 	}
@@ -252,7 +252,7 @@ func TestWriteSetupTokenFileRefusesADirectoryPathItCannotOwn(t *testing.T) {
 			t.Chdir(work)
 			tc.plant(t, work)
 
-			_, err := writeSetupTokenFile("the-real-token")
+			_, err := writeSetupTokenFile("the-real-token", setupTokenFile)
 			if err == nil {
 				t.Fatal("the writer accepted a parent it could not own, so the credential went somewhere this test cannot vouch for")
 			}
@@ -276,7 +276,7 @@ func TestAnOutstandingTokenNamesNoFileWhenThereIsNone(t *testing.T) {
 	t.Chdir(t.TempDir())
 	log, lines := recordingLogger()
 
-	announceOutstandingToken(log)
+	announceOutstandingToken(log, setupTokenFile)
 
 	entry := lines.String()
 	if strings.Contains(entry, "token_file") {
@@ -305,7 +305,7 @@ func TestAnOutstandingTokenNamesTheFileWhenItIsThere(t *testing.T) {
 	}
 	log, lines := recordingLogger()
 
-	announceOutstandingToken(log)
+	announceOutstandingToken(log, setupTokenFile)
 
 	entry := lines.String()
 	if !strings.Contains(entry, "token_file") {

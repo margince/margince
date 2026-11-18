@@ -62,6 +62,7 @@ func recurringOffer(t *testing.T, e *Env, deal ids.UUID) ids.OfferID {
 // 1,000 a month for twelve months is 12,000 a year, and the deal says so after
 // the accept without anybody typing the figure.
 func TestAcceptingAClassifiedOfferStatesTheDealsRecurringRevenue(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Subscription sale", pipeline, open, &e.Rep1)
@@ -83,6 +84,7 @@ func TestAcceptingAClassifiedOfferStatesTheDealsRecurringRevenue(t *testing.T) {
 
 // The lock. While the offer states the figure, a human cannot restate it.
 func TestAnOfferDerivedRecurringFigureRefusesAManualEdit(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Locked subscription", pipeline, open, &e.Rep1)
@@ -132,6 +134,7 @@ func TestAnOfferDerivedRecurringFigureRefusesAManualEdit(t *testing.T) {
 // An unclassified offer says nothing about recurring value, so the older rule
 // still decides: a human's ARR in another currency refuses the accept.
 func TestAnUnclassifiedOfferStillRefusesToRedenominateAHumansFigure(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Historic offer", pipeline, open, &e.Rep1)
@@ -174,6 +177,7 @@ func TestAnUnclassifiedOfferStillRefusesToRedenominateAHumansFigure(t *testing.T
 // Sending an offer whose recurring line has no settled term is refused: the
 // buyer would read a price per period with nothing saying how many periods.
 func TestSendingRefusesARecurringLineWithNoSettledTerm(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Untermed subscription", pipeline, open, &e.Rep1)
@@ -213,6 +217,7 @@ func TestSendingRefusesARecurringLineWithNoSettledTerm(t *testing.T) {
 // while changing what the deal claims: 12,000 EUR read as 12,000 USD is a
 // different recurring value, and the offer the deal names still says euros.
 func TestAnOfferDerivedFigureCannotBeRedenominatedByRestatingIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Redenomination probe", pipeline, open, &e.Rep1)
@@ -250,6 +255,7 @@ func TestAnOfferDerivedFigureCannotBeRedenominatedByRestatingIt(t *testing.T) {
 // let the new revision be accepted without ever stating the deal's recurring
 // value — with nothing failing anywhere along the way.
 func TestRegeneratingAnOfferKeepsWhatItsLinesSaidAboutRepeating(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Regenerated subscription", pipeline, open, &e.Rep1)

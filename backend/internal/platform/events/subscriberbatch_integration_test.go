@@ -55,6 +55,7 @@ func (e *busEnv) pending(t *testing.T, group string) int64 {
 }
 
 func TestABacklogIsDeliveredAsFewBatchesNotOneCallPerEntry(t *testing.T) {
+	t.Parallel()
 	e := setup(t)
 	const burst = 150
 	e.stageBurst(t, burst)
@@ -92,6 +93,7 @@ func TestABacklogIsDeliveredAsFewBatchesNotOneCallPerEntry(t *testing.T) {
 }
 
 func TestAFailedBatchFallsBackToOneEntryAtATime(t *testing.T) {
+	t.Parallel()
 	e := setup(t)
 	const burst = 5
 	e.stageBurst(t, burst)
@@ -122,6 +124,7 @@ func TestAFailedBatchFallsBackToOneEntryAtATime(t *testing.T) {
 }
 
 func TestTheBatchDedupeAndThePerEventDedupeShareTheirMarks(t *testing.T) {
+	t.Parallel()
 	e := setup(t)
 	envs := e.stageBurst(t, 3)
 	const group = "cg:graph-edge"
@@ -176,6 +179,7 @@ func TestTheBatchDedupeAndThePerEventDedupeShareTheirMarks(t *testing.T) {
 // rather than leaving it to poison the reclaim pass, and the entries around it
 // still reach the handler. A read made only of such entries runs no effect.
 func TestABatchDropsUndecodableEntriesAndDeliversTheRest(t *testing.T) {
+	t.Parallel()
 	e := setup(t)
 	group := kevents.Group{Name: "cg:graph-edge", Streams: []string{batchStream}}
 	junk := func() {
@@ -220,6 +224,7 @@ func TestABatchDropsUndecodableEntriesAndDeliversTheRest(t *testing.T) {
 // that cannot be written must fail the batch, so the per-entry path re-runs
 // the effect and retries its own mark.
 func TestTheBatchDedupeFailsClosedWhenRedisDoes(t *testing.T) {
+	t.Parallel()
 	e := setup(t)
 	envs := e.stageBurst(t, 2)
 	const group = "cg:graph-edge"

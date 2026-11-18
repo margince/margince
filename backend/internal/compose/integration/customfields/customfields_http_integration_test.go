@@ -135,6 +135,7 @@ func createCustomField(t *testing.T, e *apptest.AppEnv, body integration.AnyMap)
 }
 
 func TestCustomFieldsHTTP(t *testing.T) {
+	t.Parallel()
 	e := schemaWiredEnv(t)
 
 	t.Run("all six types create 201", func(t *testing.T) {
@@ -214,6 +215,7 @@ func TestCustomFieldsHTTP(t *testing.T) {
 // keyset that continues it, and the refusal of a token minted under another
 // one.
 func TestTheCustomFieldTableIsOrderedByTheSortItIsAsked(t *testing.T) {
+	t.Parallel()
 	e := schemaWiredEnv(t)
 	for _, label := range []string{"Gamma", "Alpha", "Beta"} {
 		status, _, problem := createCustomField(t, e, integration.AnyMap{
@@ -252,6 +254,7 @@ func TestTheCustomFieldTableIsOrderedByTheSortItIsAsked(t *testing.T) {
 // sort cannot resume another — which is the property that makes offering the
 // dial safe rather than the property that makes it look offered.
 func TestASortedCustomFieldPageContinuesInItsOwnOrder(t *testing.T) {
+	t.Parallel()
 	e := schemaWiredEnv(t)
 	for _, label := range []string{"Gamma", "Alpha", "Beta"} {
 		if status, _, problem := createCustomField(t, e, integration.AnyMap{
@@ -295,6 +298,7 @@ func TestASortedCustomFieldPageContinuesInItsOwnOrder(t *testing.T) {
 // A field nobody publishes is not an axis, and saying so is the difference
 // between a refusal and a page ordered by something the caller did not ask for.
 func TestAnUnknownCustomFieldSortIsRefused(t *testing.T) {
+	t.Parallel()
 	e := schemaWiredEnv(t)
 	var problem customFieldProblem
 	status := e.Call(t, "GET", "/v1/custom-fields?object=contact&sort=column_name", nil, nil, &problem)

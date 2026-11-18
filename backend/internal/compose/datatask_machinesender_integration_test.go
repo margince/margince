@@ -114,6 +114,7 @@ func (f senderTaskFixture) edgeCount(t *testing.T) int {
 }
 
 func TestTheSenderTaskMarksOnlyASendingSystemsMailAndReplaysSafely(t *testing.T) {
+	t.Parallel()
 	f := newSenderTaskFixture(t)
 	if got := f.edgeCount(t); got != 2 {
 		t.Fatalf("before the task the edge counts %d exchanges, want the stored 2 the old rule counted", got)
@@ -144,6 +145,7 @@ func TestTheSenderTaskMarksOnlyASendingSystemsMailAndReplaysSafely(t *testing.T)
 }
 
 func TestTheSenderTaskRollsBackWithItsBatch(t *testing.T) {
+	t.Parallel()
 	f := newSenderTaskFixture(t)
 	ctx := principal.SystemActing(f.e.Admin(), "system:datatask-test")
 	step := machineSenderDataTask().Steps[0]
@@ -176,6 +178,7 @@ func TestTheSenderTaskRollsBackWithItsBatch(t *testing.T) {
 // An installation that finished version 1 keeps its ledger row. Only a higher
 // version restarts the cursor, so the notices the first run missed get stamped.
 func TestTheSenderTaskRunsAgainOverAFinishedFirstVersion(t *testing.T) {
+	t.Parallel()
 	f := newSenderTaskFixture(t)
 	ctx := principal.SystemActing(f.e.Admin(), "system:datatask-test")
 

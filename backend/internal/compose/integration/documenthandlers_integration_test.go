@@ -53,6 +53,7 @@ func decodeAttachment(t *testing.T, rec *httptest.ResponseRecorder) crmcontracts
 }
 
 func TestAttachmentMetadataTellsAnAbsentFieldFromAnExplicitNull(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
@@ -81,6 +82,7 @@ func TestAttachmentMetadataTellsAnAbsentFieldFromAnExplicitNull(t *testing.T) {
 }
 
 func TestAttachmentMetadataClearsSupersedesOnlyWhenAsked(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
@@ -107,6 +109,7 @@ func TestAttachmentMetadataClearsSupersedesOnlyWhenAsked(t *testing.T) {
 }
 
 func TestCompanyDocumentsHandlerMapsItsFilters(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
@@ -158,6 +161,7 @@ func TestCompanyDocumentsHandlerMapsItsFilters(t *testing.T) {
 // be checked below it: the rule returns a value-parse refusal, and only the wire
 // mapping turns that into a 422 a client can branch on rather than a 500.
 func TestAnUploadedFileCannotClaimItArrivedOnAChannel(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)

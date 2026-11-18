@@ -19,6 +19,7 @@ import (
 // stays the record value, so an options edit drops the names of the options
 // it removed and keeps the rest.
 func TestACustomFieldNamesItsLabelAndOptionsPerLanguage(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := customfieldsmod.NewService(e.Pool, integration.SchemaPool(t))
 	ctx := e.As(e.Rep1, nil, integration.CustomFieldAdminPerms)

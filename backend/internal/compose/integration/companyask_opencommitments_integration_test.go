@@ -62,6 +62,7 @@ func seedOpenWork(t *testing.T, e *Env, contactOwner ids.UUID) openWorkAccount {
 }
 
 func TestWhatIsOpenNamesThePromiseEvenWhenTheModelNamesOnlyTheTask(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	account := seedOpenWork(t, e, e.Rep1)
 	lane := &countingLane{reply: `{"sentences":[{"text":"You have one open task.","evidence":[{"entity_type":"activity","entity_id":"` +
@@ -98,6 +99,7 @@ func TestWhatIsOpenNamesThePromiseEvenWhenTheModelNamesOnlyTheTask(t *testing.T)
 }
 
 func TestAReaderWhoCannotSeeTheContactIsToldTheListMayBeIncomplete(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	account := seedOpenWork(t, e, e.Rep3)
 	e.MakeCapturePrivate(t, "contact", account.contact, e.Rep3)

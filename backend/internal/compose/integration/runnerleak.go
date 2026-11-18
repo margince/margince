@@ -5,8 +5,6 @@ package integration
 
 import (
 	"context"
-	"fmt"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -19,11 +17,8 @@ import (
 // nothing next to giving up early.
 const jobRunnerDrainTimeout = 30 * time.Second
 
-// Every test in a lane shares one database, and Setup resets it. So workers a
-// test failed to drain wake up under the next test's rows.
-//
-// The test that then fails is never the one that leaked them. A leak is
-// reported against its own test instead, at the next Setup.
+// liveRunners counts each test's undrained runners. A runner still live when
+// its test ends loses its database mid-job, so the test that leaked it fails.
 var liveRunners = struct {
 	sync.Mutex
 	byTest map[string]int
@@ -46,34 +41,26 @@ func StartedJobRunner(t *testing.T, runner *jobs.Runner) func() {
 }
 
 // runnerStarted counts one live runner against this test. The returned function
-// says it drained. A test that never calls it has leaked workers, and the next
-// Setup refuses to reset the database under them.
+// says it drained. The check runs after every later cleanup of the test.
 func runnerStarted(t *testing.T) func() {
 	t.Helper()
 	liveRunners.Lock()
+	first := liveRunners.byTest[t.Name()] == 0
 	liveRunners.byTest[t.Name()]++
 	liveRunners.Unlock()
+	if first {
+		t.Cleanup(func() {
+			liveRunners.Lock()
+			defer liveRunners.Unlock()
+			if count := liveRunners.byTest[t.Name()]; count > 0 {
+				t.Errorf("%d job runner(s) outlived the test that started them: drain each in the test's own cleanup", count)
+			}
+			delete(liveRunners.byTest, t.Name())
+		})
+	}
 	return func() {
 		liveRunners.Lock()
 		defer liveRunners.Unlock()
-		if liveRunners.byTest[t.Name()] <= 1 {
-			delete(liveRunners.byTest, t.Name())
-			return
-		}
 		liveRunners.byTest[t.Name()]--
 	}
-}
-
-// leakedRunners names the tests holding undrained runners.
-func leakedRunners() string {
-	liveRunners.Lock()
-	defer liveRunners.Unlock()
-	if len(liveRunners.byTest) == 0 {
-		return ""
-	}
-	var out strings.Builder
-	for name, count := range liveRunners.byTest {
-		fmt.Fprintf(&out, "\n  %s holds %d undrained job runner(s)", name, count)
-	}
-	return out.String()
 }

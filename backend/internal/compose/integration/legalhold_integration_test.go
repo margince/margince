@@ -81,6 +81,7 @@ func heldOnTheRecord(t *testing.T, e *apptest.AppEnv, collection, id string) boo
 // type the switch forgot — which looks like a refusal on exactly one type and
 // like nothing at all on the others.
 func TestEveryHoldableRecordCanBeHeldAndReleasedThroughTheProduct(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	collections := map[string]string{
@@ -121,6 +122,7 @@ func TestEveryHoldableRecordCanBeHeldAndReleasedThroughTheProduct(t *testing.T) 
 // reason has nowhere to live but the audit row, so an unstated one would leave
 // the product holding a record with no recorded grounds at all.
 func TestAHoldWithNoStatedReasonIsRefused(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	contact := createdID(t, e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Dana Meyer", "source": "manual"})
@@ -136,6 +138,7 @@ func TestAHoldWithNoStatedReasonIsRefused(t *testing.T) {
 // What the controller's review surface answers, over records held through the
 // product rather than through SQL.
 func TestTheHoldListNamesWhatIsHeldAndNothingElse(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	held := createdID(t, e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Dana Meyer", "source": "manual"})
@@ -173,6 +176,7 @@ func TestTheHoldListNamesWhatIsHeldAndNothingElse(t *testing.T) {
 // default page size, and a fixture sized to the default would be fifty holds
 // to prove one cursor works.
 func TestTheHoldListPagesWithoutRepeatingOrSkippingARecord(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	held := map[string]bool{}

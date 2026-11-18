@@ -99,6 +99,7 @@ func (p closeTasksProbe) taskIsDone(t *testing.T) bool {
 // Keep is the answer a caller gives by saying nothing: the tasks are named, and
 // left where they are.
 func TestClosingADealThroughTheToolNamesTheTasksItLeavesOpen(t *testing.T) {
+	t.Parallel()
 	p := newCloseTasksProbe(t, "Kept-tasks renewal")
 	result := p.close(t, "")
 
@@ -120,6 +121,7 @@ func TestClosingADealThroughTheToolNamesTheTasksItLeavesOpen(t *testing.T) {
 // Complete is the other answer. It goes through the write the bulk change
 // applies, so the task carries the done state the web leaves.
 func TestClosingADealThroughTheToolCompletesItsTasksWhenAsked(t *testing.T) {
+	t.Parallel()
 	p := newCloseTasksProbe(t, "Settled-tasks renewal")
 	result := p.close(t, "complete")
 

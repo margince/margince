@@ -91,6 +91,7 @@ func acquisitionRequestOn(t *testing.T, e *Env, contact ids.ContactID) *crmcontr
 // Mutation: drop "e.request_retracted_at IS NULL" from requestOnRecord and the
 // second ticket still allows the message.
 func TestAWithdrawnAcquisitionRequestStopsAQueuedFollowUp(t *testing.T) {
+	t.Parallel()
 	for _, kind := range []string{contacts.AcquiredRequestedQuoteOrMeeting, contacts.AcquiredInPersonPermission} {
 		t.Run(kind, func(t *testing.T) {
 			e := Setup(t)

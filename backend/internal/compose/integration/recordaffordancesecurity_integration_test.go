@@ -25,6 +25,7 @@ import (
 )
 
 func TestRecordAffordancesKeepArchivedUpdateAuthorityForMasks(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	now := time.Date(2026, 6, 15, 12, 0, 0, 0, time.UTC)
 	e.Deals.SetClock(func() time.Time { return now })
@@ -98,6 +99,7 @@ func TestRecordAffordancesKeepArchivedUpdateAuthorityForMasks(t *testing.T) {
 }
 
 func TestRecordAffordancesKeepSelfTransferArchiveRefusalInEcho(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	now := time.Date(2026, 6, 15, 12, 0, 0, 0, time.UTC)
 	e.Contacts.SetClock(func() time.Time { return now })
@@ -121,6 +123,7 @@ func TestRecordAffordancesKeepSelfTransferArchiveRefusalInEcho(t *testing.T) {
 }
 
 func TestRecordAffordancesReadArchiveStateAfterProjection(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	now := time.Date(2026, 6, 15, 12, 0, 0, 0, time.UTC)
 	e.Deals.SetClock(func() time.Time { return now })
@@ -176,6 +179,7 @@ func requireFreshArchiveAffordances(ctx context.Context, t *testing.T, tx pgx.Tx
 }
 
 func TestRecordAffordancesEmptyPageKeepsANonNilMaskMap(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := asTeam1Member(e, e.Rep1, recordAffordancePerms(recordWriteGrants{update: true}))
 	rows := []crmcontracts.Deal{}

@@ -16,13 +16,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func pinLeadAuditClock(t *testing.T) time.Time {
-	t.Helper()
+// pinLeadAuditClock pins the lead clock on ctx to an instant finer than a
+// microsecond, which Postgres rounds and an audit image must not keep.
+func pinLeadAuditClock(ctx context.Context) (context.Context, time.Time) {
 	at := time.Date(2026, 12, 1, 12, 0, 0, 123456789, time.UTC)
-	previous := leadSLAClock
-	leadSLAClock = func() time.Time { return at }
-	t.Cleanup(func() { leadSLAClock = previous })
-	return at
+	return withPinnedSLANow(ctx, at), at
 }
 
 func requireStoredLeadClockAudit(ctx context.Context, t *testing.T, s *Store, id ids.LeadID) {

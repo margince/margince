@@ -31,6 +31,7 @@ func (d *twoDoors) storedLead(t *testing.T, id string) json.RawMessage {
 // A lead disqualified, promoted and demoted again over either door is left
 // alike.
 func TestLeadLifecycleWritesLeaveTheSameOnEitherDoor(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "lead-write-doors", "read", "write")
 	lead := func(name, email string) string {
 		return createdID(t, d.e, "/v1/leads", AnyMap{"full_name": name, "email": email, "source": "manual"})
@@ -86,6 +87,7 @@ type sharedStage struct {
 // A deal moved between open stages and a project moved between phases are left
 // alike over either door.
 func TestAdvanceWritesLeaveTheSameOnEitherDoor(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "advance-write-doors", "read", "write")
 	stages := apptest.DiscoverSeededPipeline(t, d.e)
 	next := openStages(t, d.e)[1]
@@ -122,6 +124,7 @@ func TestAdvanceWritesLeaveTheSameOnEitherDoor(t *testing.T) {
 // An activity filed under another contact, singly or in a batch, is left alike
 // over either door.
 func TestRelinkWritesLeaveTheSameOnEitherDoor(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "relink-write-doors", "read", "write")
 	from := createdID(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Relink From", "source": "manual"})
 	to := createdID(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Relink To", "source": "manual"})

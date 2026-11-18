@@ -97,6 +97,7 @@ func (e *configEnv) asLadderAgent() context.Context {
 // An agent's reshape waits for a transition being trusted, then reads that trust.
 // Without the wait it would read the ladder as untrusted and commit beside it.
 func TestAnAgentsReshapeWaitsForATrustBeingGrantedAndIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -124,6 +125,7 @@ func TestAnAgentsReshapeWaitsForATrustBeingGrantedAndIsRefused(t *testing.T) {
 // the stages. So an agent's write waits for that lock holding neither, or the two
 // wait on each other. Each writer here is asked while it waits.
 func TestAnAgentWaitingForTheTrustLockHoldsNoLadderRow(t *testing.T) {
+	t.Parallel()
 	probability := 20
 	moved := 8
 	label := "Renamed"

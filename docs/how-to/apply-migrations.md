@@ -96,14 +96,14 @@ Follow this checklist. Fitness tests check several of these rules, so a missed o
    `1787968163_the_brief_currency_check_is_validated.up.sql` are the worked pair. The second one explains
    why it is a file of its own.
 5. **Reach the erase and SAR paths** if the table holds personal data (`piicoverage_test.go`).
-6. **Record the schema the migrations build.** Run `make db-up`, then run this from `backend/`:
+6. **Record the schema the migrations build.** Run `make db-up`, then run this from the repository root:
 
    ```sh
-   go test -tags integration ./migrations -run TestMigrationsBuildTheCommittedSchema -update-catalog
+   make test-it DIR=backend/migrations RUN=TestMigrationsBuildTheCommittedSchema IT_ARGS=-update-catalog
    ```
 
    It writes `backend/migrations/testdata/head_catalog.txt` again. Commit that file with the migration.
-   The test reads the database from `MARGINCE_TEST_DSN`, which `backend/Makefile` sets for its own targets.
+   The test runs on its own copy of the migrated template, which `make test-it` builds first.
 7. **Give each new table its owner** in `tableOwners` (`backend/gates/tableownerregistry_test.go`).
    Each entry is one line, such as `"my_table": "internal/modules/<name>",`.
 8. **Rebuild the [table list](../reference/entity-model/README.md).** It reads `head_catalog.txt` and

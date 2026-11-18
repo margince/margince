@@ -27,6 +27,7 @@ import (
 )
 
 func TestReviewedSuggestionRepairRechecksAuthorityAtExecution(t *testing.T) {
+	t.Parallel()
 	for _, change := range []string{"source_hidden", "grant_removed"} {
 		t.Run(change, func(t *testing.T) { runSuggestionRepairAuthorityChange(t, change) })
 	}

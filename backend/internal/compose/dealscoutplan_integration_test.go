@@ -68,6 +68,7 @@ func (n planNode) citedLookups() []planNode {
 // on a test-sized table: with them off, a lookup that CAN use the key does, and
 // one that cannot is left with the scan this test then refuses.
 func TestTheScoutReachesACitedActivityByItsPrimaryKey(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := time.Now().UTC()
 	// The planner prices a lookup from the table's statistics, and an empty

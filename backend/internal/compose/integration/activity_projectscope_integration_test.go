@@ -165,6 +165,7 @@ func seedTwoEngagementAccount(t *testing.T, e *Env) scopeFixture {
 }
 
 func TestTimelineScopedToOneProjectDropsTheOtherEngagement(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedTwoEngagementAccount(t, e)
 
@@ -195,6 +196,7 @@ func TestTimelineScopedToOneProjectDropsTheOtherEngagement(t *testing.T) {
 }
 
 func TestTimelineWithoutAScopeStillSeesEveryEngagement(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedTwoEngagementAccount(t, e)
 
@@ -215,6 +217,7 @@ func TestTimelineWithoutAScopeStillSeesEveryEngagement(t *testing.T) {
 // pass with this half absent — and this is the half every assembled picture
 // reads, so catch_me_up_on and prep_for_meeting hang off it.
 func TestAssembledContextScopedToOneProjectDropsTheOtherEngagement(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedTwoEngagementAccount(t, e)
 	// AssembleContext embeds nothing — only Search does — so the walk needs no
@@ -272,6 +275,7 @@ func walkIDs(ctx context.Context, t *testing.T, retriever *search.Retriever, anc
 // Anchored on the ACCOUNT: a contact anchor never walks contact neighbours (the
 // anchor is not its own neighbour), so related_contacts only exists from here.
 func TestAssembledContextScopedToOneProjectDropsContactsReachedOnlyThroughTheOtherEngagement(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedTwoEngagementAccount(t, e)
 	retriever := search.NewRetriever(search.NewStore(harnessDB(e.Pool, e.WS)), nil)
@@ -300,6 +304,7 @@ func TestAssembledContextScopedToOneProjectDropsContactsReachedOnlyThroughTheOth
 // checked the scoped number would pass against a read that lost the row for any
 // other reason, so the unscoped read of the same account has to still carry it.
 func TestAScopedAccountPageDerivesItsHealthFromOneEngagement(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedTwoEngagementAccount(t, e)
 	employAtAccount(t, e, f)
@@ -416,6 +421,7 @@ func deref(t *testing.T, got *int, what string) int {
 // is showing and never the one it is not — advice a reader cannot check against
 // anything on the page is worse than no advice.
 func TestAScopedAccountPageChasesOnlyTheEngagementItShows(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)

@@ -27,6 +27,7 @@ type agentToolListWire struct {
 }
 
 func TestListAgentToolsMirrorsTheGovernedSurface(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 

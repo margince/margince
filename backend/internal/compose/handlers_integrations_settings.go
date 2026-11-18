@@ -8,6 +8,7 @@ package compose
 // RBAC gate and the audit-only write.
 
 import (
+	"context"
 	"net/http"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -30,7 +31,7 @@ func (h integrationsSettingsHandlers) GetIntegrationsSettings(w http.ResponseWri
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, toContractIntegrationsSettings(posture))
+	httperr.WriteJSON(w, http.StatusOK, toContractIntegrationsSettings(r.Context(), posture))
 }
 
 func (h integrationsSettingsHandlers) UpdateIntegrationsSettings(w http.ResponseWriter, r *http.Request) {
@@ -53,13 +54,13 @@ func (h integrationsSettingsHandlers) UpdateIntegrationsSettings(w http.Response
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, toContractIntegrationsSettings(posture))
+	httperr.WriteJSON(w, http.StatusOK, toContractIntegrationsSettings(r.Context(), posture))
 }
 
 // toContractIntegrationsSettings maps the stored posture onto the wire shape.
-func toContractIntegrationsSettings(s integrations.Settings) crmcontracts.IntegrationsSettings {
+func toContractIntegrationsSettings(ctx context.Context, s integrations.Settings) crmcontracts.IntegrationsSettings {
 	return crmcontracts.IntegrationsSettings{
 		AutomaticLookup: s.AutomaticLookup,
-		Locks:           loadedLocks(integrations.ConfigSettings()),
+		Locks:           loadedLocks(ctx, integrations.ConfigSettings()),
 	}
 }

@@ -27,6 +27,7 @@ import (
 )
 
 func TestARefileRetriesCommittedActivitiesWhenItsQueueTransactionIsLost(t *testing.T) {
+	t.Parallel()
 	f := newDealRefileFixture(t, refileTestPage+1)
 	e := f.o.e
 	integration.ApplyRiverSchema(t)
@@ -70,6 +71,7 @@ func TestARefileRetriesCommittedActivitiesWhenItsQueueTransactionIsLost(t *testi
 }
 
 func TestAContactRelinkTriggersRefileButMachineRelinksDoNot(t *testing.T) {
+	t.Parallel()
 	f := newDealRefileFixture(t, 0)
 	e := f.o.e
 	integration.ApplyRiverSchema(t)
@@ -98,6 +100,7 @@ func TestAContactRelinkTriggersRefileButMachineRelinksDoNot(t *testing.T) {
 }
 
 func TestDealEditsWithoutACompanyChangeStillScheduleReconsideration(t *testing.T) {
+	t.Parallel()
 	f := newDealRefileFixture(t, 0)
 	integration.ApplyRiverSchema(t)
 	if _, err := f.o.e.Deals.UpdateDeal(f.o.e.Admin(), ids.From[ids.DealKind](f.deal), deals.UpdateDealInput{Name: new("Changed requirements")}); err != nil {
@@ -110,6 +113,7 @@ func TestDealEditsWithoutACompanyChangeStillScheduleReconsideration(t *testing.T
 }
 
 func TestMalformedDealTriggersAreUnactionable(t *testing.T) {
+	t.Parallel()
 	f := newDealRefileFixture(t, 0)
 	for _, event := range []string{"deal.updated", deals.EventDealStageChanged} {
 		err := f.o.e.DB().Tx(f.o.e.Admin(), func(tx pgx.Tx) error {
@@ -143,6 +147,7 @@ func (c *editedDealCandidates) OpenDealsOfCompany(ctx context.Context, tx pgx.Tx
 }
 
 func TestRefileRechecksADealEditedAfterTheCandidateRead(t *testing.T) {
+	t.Parallel()
 	f := newDealRefileFixture(t, 0)
 	e := f.o.e
 	worker := newCapturedDealRefileWorker(e.Pool, aboutEveryDeal)

@@ -23,6 +23,7 @@ import (
 )
 
 func TestConcurrentAcceptanceCreatesOneSuggestedTask(t *testing.T) {
+	t.Parallel()
 	e := setupVerdicts(t)
 	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	at := time.Date(2026, 10, 12, 9, 0, 0, 0, time.UTC)
@@ -89,6 +90,7 @@ func TestConcurrentAcceptanceCreatesOneSuggestedTask(t *testing.T) {
 }
 
 func TestSuggestedTaskRefusesAWeakBorrowedTransaction(t *testing.T) {
+	t.Parallel()
 	e := setupVerdicts(t)
 	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	at := time.Date(2026, 10, 12, 9, 0, 0, 0, time.UTC)

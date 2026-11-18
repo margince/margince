@@ -26,11 +26,10 @@ package migrations_test
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
-
-	"github.com/margince/margince/backend/internal/platform/testdb"
 )
 
 // headFingerprint is the catalog of the schema this process built at head,
@@ -45,14 +44,19 @@ import (
 // and hand the next reader a schema nothing in this package built.
 var headFingerprint string
 
-// headRebuilds counts the full drop-and-replay rebuilds headSchema has done, so
-// its own test can tell the cheap path from the expensive one. Nothing else
-// distinguishes them: both leave a database at head with no rows in it, which is
-// exactly why a helper that quietly rebuilt every time would go unnoticed and
-// give back the whole saving.
-var headRebuilds int
+// headMu guards headFingerprint for the tests that run in parallel, each on a
+// database of its own.
+var headMu sync.Mutex
 
 // headSchema hands the caller a database at head with no rows in it.
+func headSchema(t *testing.T, conn *pgx.Conn) {
+	t.Helper()
+	headSchemaRebuilt(t, conn)
+}
+
+// headSchemaRebuilt is headSchema, and it reports whether this call paid for a
+// full drop-and-replay. Only its own tests read the answer: both paths leave a
+// database at head with no rows, so nothing else can tell them apart.
 //
 // The FIRST call in the process rebuilds unconditionally — drop, then replay
 // every embedded migration — so the reference catalog is one this binary's own
@@ -64,21 +68,17 @@ var headRebuilds int
 // Later calls compare the live catalog against that reference and rebuild only
 // on a mismatch, which is what the rewinding suites in this package produce.
 // Matching costs one query instead of a full replay.
-//
-// Data is emptied by testdb.Reset either way, so a caller may write rows; it
-// gets the same clean slate a rebuild gave it.
-func headSchema(t *testing.T, conn *pgx.Conn) {
+func headSchemaRebuilt(t *testing.T, conn *pgx.Conn) bool {
 	t.Helper()
-	ctx := context.Background()
-	if headFingerprint == "" || catalogDigest(t, conn) != headFingerprint {
-		resetSchema(t, conn)
-		migrateAll(t, conn)
-		headFingerprint = catalogDigest(t, conn)
-		headRebuilds++
+	headMu.Lock()
+	defer headMu.Unlock()
+	if headFingerprint != "" && catalogDigest(t, conn) == headFingerprint {
+		return false
 	}
-	if err := testdb.Reset(ctx, conn); err != nil {
-		t.Fatalf("emptying the head schema: %v", err)
-	}
+	resetSchema(t, conn)
+	migrateAll(t, conn)
+	headFingerprint = catalogDigest(t, conn)
+	return true
 }
 
 // catalogDigest is one md5 over the schema the migrations build, at the grain the
@@ -249,16 +249,14 @@ const catalogParts = `
 // the entire saving silently, rebuilding never hands a rewound schema to a test
 // that asserts on the head catalog and blames the migration it was reading.
 func TestHeadSchemaDoesNotRebuildADatabaseAlreadyAtHead(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 
 	headSchema(t, conn)
-	settled := headRebuilds
-
-	headSchema(t, conn)
-	if headRebuilds != settled {
-		t.Fatalf("headSchema rebuilt a database already at head (%d rebuilds, want %d) — "+
-			"every caller pays a full replay for a schema it was already handed", headRebuilds, settled)
+	if headSchemaRebuilt(t, conn) {
+		t.Fatal("headSchema rebuilt a database already at head — " +
+			"every caller pays a full replay for a schema it was already handed")
 	}
 }
 
@@ -348,13 +346,13 @@ var schemaMoves = []struct {
 }
 
 func TestHeadSchemaRebuildsWhateverTheDigestClaimsToWatch(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 
 	for _, move := range schemaMoves {
 		t.Run(move.name, func(t *testing.T) {
 			headSchema(t, conn)
-			settled := headRebuilds
 
 			stmt := move.find(t, conn)
 			if stmt == "" {
@@ -365,10 +363,9 @@ func TestHeadSchemaRebuildsWhateverTheDigestClaimsToWatch(t *testing.T) {
 				t.Fatalf("moving the schema off head with %q: %v", stmt, err)
 			}
 
-			headSchema(t, conn)
-			if headRebuilds != settled+1 {
-				t.Fatalf("headSchema did not rebuild after %q (%d rebuilds, want %d) — "+
-					"the ledger still reads head, so the digest is the only thing that can see this", move.name, headRebuilds, settled+1)
+			if !headSchemaRebuilt(t, conn) {
+				t.Fatalf("headSchema did not rebuild after %q — "+
+					"the ledger still reads head, so the digest is the only thing that can see this", move.name)
 			}
 			if catalogDigest(t, conn) != headFingerprint {
 				t.Fatal("the rebuilt catalog does not match the head this process built")

@@ -15,6 +15,7 @@ import (
 // The Company sort reads for a reader who may see employers. It also reads for
 // one who may read the edge but not the company; that sort binds no argument.
 func TestTheEmployerSortReadsWithAndWithoutAVisibleEmployer(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	seedContacts(t, e, e.owner, 3)
 	withEdges := func(company bool) context.Context {

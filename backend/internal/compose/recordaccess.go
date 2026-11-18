@@ -50,7 +50,7 @@ type RecordAccessReads struct {
 func NewRecordAccessReads(pool *pgxpool.Pool) RecordAccessReads {
 	return RecordAccessReads{
 		pool:      pool,
-		directory: identity.NewService(pool),
+		directory: IdentityService(pool),
 		records:   contacts.NewStore(InstallationDB(pool)),
 	}
 }

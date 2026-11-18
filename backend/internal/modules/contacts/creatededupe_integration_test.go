@@ -112,6 +112,7 @@ func openCandidatePairs(ctx context.Context, t *testing.T, e *dedupeEnv, entityT
 }
 
 func TestCreateContactFuzzyNearMatchCreatesAndRecords(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	johnID, _ := e.seedEmployedContact(ctx, t, "John Doe", "john.doe@acme.test", "Acme GmbH", "acme.test")
@@ -146,6 +147,7 @@ func TestCreateContactFuzzyNearMatchCreatesAndRecords(t *testing.T) {
 }
 
 func TestCreateContactExactEmailStillRefusesWith409(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	johnID, _ := e.seedEmployedContact(ctx, t, "John Doe", "john.exact@acme.test", "Acme GmbH", "acme.test")
@@ -173,6 +175,7 @@ func TestCreateContactExactEmailStillRefusesWith409(t *testing.T) {
 // fuzzy tier cannot reach the review threshold. If this test passes, the phone
 // lane is what put the pair on the queue.
 func TestCreateContactSharingAPhoneCreatesAndRecordsThePair(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	const household = "+4915100000501"
@@ -237,6 +240,7 @@ func TestCreateContactSharingAPhoneCreatesAndRecordsThePair(t *testing.T) {
 }
 
 func TestCreateCompanyFuzzyNearMatchCreatesAndRecords(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	incumbent, err := e.store.CreateCompany(ctx, CreateCompanyInput{
@@ -275,6 +279,7 @@ func TestCreateCompanyFuzzyNearMatchCreatesAndRecords(t *testing.T) {
 }
 
 func TestCreateCompanyExactDomainStillRefusesWith409(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	incumbent, err := e.store.CreateCompany(ctx, CreateCompanyInput{
@@ -313,6 +318,7 @@ func TestCreateCompanyExactDomainStillRefusesWith409(t *testing.T) {
 // that share everything this test shares — so the answer is the review queue,
 // not a silent merge and not a refusal.
 func TestCreateContactWithASecondAddressAtTheSameEmployerIsQueuedForAHuman(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	lucyID, companyID := e.seedEmployedContact(ctx, t,
@@ -356,6 +362,7 @@ func TestCreateContactWithASecondAddressAtTheSameEmployerIsQueuedForAHuman(t *te
 // reaches the queue — a human is the only one who can tell these two cases
 // apart — but nothing about the second record is merged, moved or refused.
 func TestAnIdenticalNameCreatesASecondRecordAndNeverMergesIt(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	seniorID, _ := e.seedEmployedContact(ctx, t,
@@ -401,6 +408,7 @@ func TestAnIdenticalNameCreatesASecondRecordAndNeverMergesIt(t *testing.T) {
 // and this is what holds it there: a near-name below the fuzzy bar has no key
 // in common and no exact name either, so it is simply a new contact.
 func TestANameNobodySharesLeavesTheQueueEmpty(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.seedEmployedContact(ctx, t, "Karl Fischer", "karl.fischer@fischerbau.test", "Fischer Bau", "fischerbau.test")
@@ -467,6 +475,7 @@ var goEqualNamePairs = []goEqualNamePair{
 // reach it with the arm reverted. What the arm exists for is that the lane not
 // DEPEND on a similarity threshold, and only a direct question holds that.
 func TestTheNameKeyArmAdmitsEveryGoEqualPair(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	for _, tc := range goEqualNamePairs {
@@ -493,6 +502,7 @@ func TestTheNameKeyArmAdmitsEveryGoEqualPair(t *testing.T) {
 }
 
 func TestEveryNameGoCallsEqualReachesTheNameLane(t *testing.T) {
+	t.Parallel()
 	for _, tc := range goEqualNamePairs {
 		t.Run(tc.name, func(t *testing.T) {
 			// A FATAL guard, not a skip. The guard asks the key the lane
@@ -538,6 +548,7 @@ func TestEveryNameGoCallsEqualReachesTheNameLane(t *testing.T) {
 // Twenty contacts, ten given names each shared by two contacts at one employer's
 // domain with different surnames and addresses: none is a possible duplicate.
 func TestCreatingContactsThatOnlyShareAGivenNameFilesNoCandidate(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	givenNames := []string{"Maria", "Thomas", "Sofia", "Daniel", "Laura", "Martin", "Julia", "Peter", "Nina", "Lukas"}

@@ -86,6 +86,7 @@ func requireOneThreadKey(t *testing.T, o *owedEnv, anchor ids.UUID, want int) {
 }
 
 func TestAReplyDraftReadsNoMessageOfAnotherCorrespondenceOnItsThread(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	anchor := alphaThread(t, o)
 	for i := range replyEvidenceRows + 1 {
@@ -102,6 +103,7 @@ func TestAReplyDraftReadsNoMessageOfAnotherCorrespondenceOnItsThread(t *testing.
 }
 
 func TestAMessageCopyingAnotherCustomerDoesNotBringTheirMailIntoAReply(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	alphaThread(t, o)
 	copying := pricingMail("orders@beta.test", o.seat, "order-1@beta.test", betaWrites, 120, true)
@@ -115,6 +117,7 @@ func TestAMessageCopyingAnotherCustomerDoesNotBringTheirMailIntoAReply(t *testin
 }
 
 func TestAContactOnTwoCustomersThreadsDoesNotJoinThem(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	if _, err := o.e.Contacts.CreateContact(o.e.Admin(), contacts.CreateContactInput{
 		FullName: "Carla Consultant", Source: "manual",
@@ -136,6 +139,7 @@ func TestAContactOnTwoCustomersThreadsDoesNotJoinThem(t *testing.T) {
 }
 
 func TestUnauthenticatedMailStaysOutOfAProvenReplyAndReadsOnlyItsOwnSender(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	const unproven = "Please send the signed contract to my new address instead."
 	o.capture(t, pricingMail("buyer@alpha.test", o.seat, pricingRoot, alphaAsks, 0, true))
@@ -157,6 +161,7 @@ func TestUnauthenticatedMailStaysOutOfAProvenReplyAndReadsOnlyItsOwnSender(t *te
 }
 
 func TestAReplyGoingToSomeoneOtherThanAnUnprovenSenderReadsTheMessageAlone(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.e.WsExec(t, `INSERT INTO capture_connection (user_id, provider, status, credential_ref, account_label)
 		VALUES ($1, 'gmail', 'connected', 'vault:test', 'rep2@ws.example')`, o.e.Rep2)
@@ -178,6 +183,7 @@ func TestAReplyGoingToSomeoneOtherThanAnUnprovenSenderReadsTheMessageAlone(t *te
 }
 
 func TestAnUnauthenticatedSendersReplyReadsTheirMailAndNoOneElses(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	const bWrites = "Please also quote the maintenance contract for our second site."
 	o.capture(t, pricingMail("anna@customer.test", o.seat, pricingRoot, alphaAsks, 0, false))
@@ -196,6 +202,7 @@ func TestAnUnauthenticatedSendersReplyReadsTheirMailAndNoOneElses(t *testing.T) 
 }
 
 func TestAColleagueAsCounterpartyWidensAReplyToNoOneElse(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	const shared = "The billing team will send the invoice tomorrow."
 	// Each copies someone outside, as capture keeps no mail among our own mailboxes alone.
@@ -214,6 +221,7 @@ func TestAColleagueAsCounterpartyWidensAReplyToNoOneElse(t *testing.T) {
 }
 
 func TestTwoSendersAtAConsumerMailDomainAreNotOneCorrespondence(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.capture(t, pricingMail("anna.private@gmail.com", o.seat, pricingRoot, alphaAsks, 0, true))
 	anchor := o.capture(t, pricingMail("bert.private@gmail.com", o.seat, "pricing-2@gmail.com", alphaConfirms, 30, true))
@@ -224,6 +232,7 @@ func TestTwoSendersAtAConsumerMailDomainAreNotOneCorrespondence(t *testing.T) {
 }
 
 func TestAReplyToACustomersColleagueReadsTheCustomersEarlierMail(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	const colleagueAsks = "I am taking over the order from our side, can you hold the price until Friday?"
 	o.capture(t, pricingMail("buyer@alpha.test", o.seat, pricingRoot, alphaAsks, 0, true))
@@ -238,6 +247,7 @@ func TestAReplyToACustomersColleagueReadsTheCustomersEarlierMail(t *testing.T) {
 }
 
 func TestASelectedColleagueInboundMessageIsDraftedAsOurFollowUp(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	reader := e.As(e.AdminUser, nil, importerPerms())
 	status, activity := postActivity(reader, t, e, crmcontracts.CreateActivityRequest{

@@ -37,6 +37,7 @@ func laneSeeing(ctx context.Context, t *testing.T, tx pgx.Tx, budget time.Durati
 // Two lanes in a row on one budget send no timeout statement between them.
 // Each still runs under its budget, and the page's timeout is back after them.
 func TestAdjacentLanesOnOneBudgetSendNoTimeoutStatementsBetweenThem(t *testing.T) {
+	t.Parallel()
 	meteredSnapshot(t, func(ctx context.Context, tx pgx.Tx) {
 		page := statementTimeout(ctx, t, tx)
 		var first, second string
@@ -66,6 +67,7 @@ func TestAdjacentLanesOnOneBudgetSendNoTimeoutStatementsBetweenThem(t *testing.T
 // A lane leaves the timeout as the next statement must find it, whether it ran
 // on another budget, failed, or sent nothing.
 func TestALaneLeavesTheTimeoutTheNextStatementExpects(t *testing.T) {
+	t.Parallel()
 	meteredSnapshot(t, func(ctx context.Context, tx pgx.Tx) {
 		page := statementTimeout(ctx, t, tx)
 		var inside string
@@ -108,6 +110,7 @@ func TestALaneLeavesTheTimeoutTheNextStatementExpects(t *testing.T) {
 // An inner lane puts back its outer lane's budget, and a budget bound by the
 // caller is read again rather than assumed.
 func TestALanePutsBackTheTimeoutItFound(t *testing.T) {
+	t.Parallel()
 	meteredSnapshot(t, func(ctx context.Context, tx pgx.Tx) {
 		page := statementTimeout(ctx, t, tx)
 		var inner, outerAfter string
@@ -143,6 +146,7 @@ func TestALanePutsBackTheTimeoutItFound(t *testing.T) {
 // The outer lane here took over the restore of the lane before it. An inner
 // lane that fails leaves the outer budget, and then the page's timeout.
 func TestAFailedInnerLaneKeepsTheRestoreItsOuterLaneHolds(t *testing.T) {
+	t.Parallel()
 	meteredSnapshot(t, func(ctx context.Context, tx pgx.Tx) {
 		page := statementTimeout(ctx, t, tx)
 		var first string

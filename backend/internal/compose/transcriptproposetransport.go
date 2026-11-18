@@ -189,7 +189,7 @@ func WithTranscriptRead(inserter *jobs.Runner) Option {
 		engine := &transcriptReadEngine{
 			activities: activities.NewStore(InstallationDB(pool)),
 			enqueue:    inserter,
-			seats:      identity.NewService(pool),
+			seats:      IdentityService(pool),
 			pool:       pool,
 		}
 		s.transcriptReadHandlers = transcriptReadHandlers{

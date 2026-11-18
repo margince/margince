@@ -46,6 +46,7 @@ func auditRowsBy(t *testing.T, d *twoDoors, actorType, entityType string) int {
 // A saved report goes through every state an editor takes it through, and each
 // write the agent makes reads as the agent's.
 func TestAnAgentTakesAReportThroughItsLife(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "agent-report-life", "read", "write")
 	selection := AnyMap{"period": "this_month", "target_basis": "month", "close_window": "all_open", "metrics": []string{firstReportMetric(t, d)}}
 	input := func(name string) AnyMap { return AnyMap{"name": name, "audience": "private", "selection": selection} }
@@ -114,6 +115,7 @@ func TestAnAgentTakesAReportThroughItsLife(t *testing.T) {
 
 // A target and the reporting framework, corrected through the agent.
 func TestAnAgentCorrectsATargetAndTheFramework(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "agent-report-target", "read", "write")
 	start := clocktest.Now(t).Format("2006-01") + "-01"
 	input := func(value int, reason string) AnyMap {
@@ -160,6 +162,7 @@ func TestAnAgentCorrectsATargetAndTheFramework(t *testing.T) {
 
 // An initiative is changed and launched, with the user's leads picked by hand.
 func TestAnAgentChangesAndLaunchesAnInitiative(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "agent-report-initiative", "read", "write")
 	metric := firstReportMetric(t, d)
 	deadline := clocktest.Now(t).AddDate(0, 3, 0).Format(time.DateOnly)
@@ -194,6 +197,7 @@ func TestAnAgentChangesAndLaunchesAnInitiative(t *testing.T) {
 
 // A decision on a real deal and its later outcome, as the review page records them.
 func TestAnAgentRecordsADecisionAndItsOutcome(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "agent-report-decision", "read", "write")
 	company := createdRecord(t, d.e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Decision Works"})
 	stages := apptest.DiscoverSeededPipeline(t, d.e)

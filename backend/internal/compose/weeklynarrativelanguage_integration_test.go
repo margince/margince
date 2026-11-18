@@ -31,6 +31,7 @@ func (p *narrativeLanguageProbe) Complete(ctx context.Context, req model.Request
 // A personal review is read by its owner alone, so its sentence is asked for
 // in the owner's saved language. With none saved, it uses the installation's.
 func TestTheWeeklySentenceIsAskedInItsOwnersLanguage(t *testing.T) {
+	t.Parallel()
 	for _, test := range []struct {
 		name   string
 		locale any

@@ -76,7 +76,7 @@ func NewConfidentialityVerdictEngine(pool *pgxpool.Pool, brain completer, log *s
 		contacts:  contacts.NewStore(InstallationDB(pool)),
 		brain:     brain,
 		log:       log,
-		released:  newHeldContactReleaser(pool, log),
+		released:  newHeldContactReleaser(pool, log, nil),
 		documents: newThreadDocuments(pool, nil),
 	}
 }

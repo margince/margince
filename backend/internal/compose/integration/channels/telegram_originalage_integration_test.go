@@ -26,6 +26,7 @@ import (
 )
 
 func TestAChannelOriginalAgesOutOnItsOwnClock(t *testing.T) {
+	t.Parallel()
 	c := setupTelegramConnected(t)
 	u := telegramUpdate{updateID: 6101, messageID: 61, senderID: 776101, username: "aged", firstName: "Ada", text: "an old message"}
 	c.ingestOne(t, u, compose.JobRunnerConfig{})
@@ -41,6 +42,7 @@ func TestAChannelOriginalAgesOutOnItsOwnClock(t *testing.T) {
 }
 
 func TestAShieldedChannelMessageKeepsItsOriginal(t *testing.T) {
+	t.Parallel()
 	c := setupTelegramConnected(t)
 	u := telegramUpdate{updateID: 6102, messageID: 62, senderID: 776102, username: "held", firstName: "Hal", text: "the signed order"}
 	c.ingestOne(t, u, compose.JobRunnerConfig{})
@@ -89,7 +91,7 @@ func (c *telegramEnv) ageTheOriginalAndSweep(t *testing.T, u telegramUpdate, cla
 		t.Fatalf("ageing the original out: %v", err)
 	}
 	svc := compose.NewRetentionServiceFor(c.DB(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
-	if err := svc.EvaluateInstallation(integration.RetentionPassCtx(c.workspaceID(t))); err != nil {
+	if err := svc.EvaluateInstallation(integration.RetentionPassCtx(context.Background(), c.workspaceID(t))); err != nil {
 		t.Fatalf("running the retention pass: %v", err)
 	}
 }

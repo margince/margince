@@ -63,10 +63,6 @@ const (
 // back and runs again, so no contact is passed over.
 const technicalWriteAttempts = 3
 
-// beforeTechnicalWrite runs between reading a contact and writing it. Tests
-// set it to edit the contact in that window; production leaves it nil.
-var beforeTechnicalWrite func(ctx context.Context, id ids.ContactID)
-
 // RetireTechnicalAddressContactsTx corrects one page of live contacts after the
 // given id. Each write goes through the domain's own archive and address
 // writers at the version read. A contact edited meanwhile is read again and
@@ -111,8 +107,8 @@ func (s *Store) correctTechnicalContact(
 	ctx context.Context, tx pgx.Tx, contact technicalCandidate,
 ) (technicalOutcome, error) {
 	for attempt := 1; ; attempt++ {
-		if beforeTechnicalWrite != nil {
-			beforeTechnicalWrite(ctx, contact.id)
+		if s.beforeTechnicalWrite != nil {
+			s.beforeTechnicalWrite(ctx, contact.id)
 		}
 		outcome, err := s.writeTechnicalOutcome(ctx, tx, contact)
 		switch {

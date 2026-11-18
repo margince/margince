@@ -36,6 +36,7 @@ func init() {
 // weaker check would let this pass while the floor the erasure assertions depend
 // on is absent or shortened — the same false green by another route.
 func TestTheStatutoryFloorIsArmedForThisBinary(t *testing.T) {
+	t.Parallel()
 	want := integration.GoBDFloorPack{}
 	for _, pack := range jurisdiction.Applicable() {
 		if pack.Code() != want.Code() {

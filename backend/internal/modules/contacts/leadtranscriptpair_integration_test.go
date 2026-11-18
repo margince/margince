@@ -15,6 +15,7 @@ import (
 // score, not a held meeting plus a booking. The pair is seeded in the shape the
 // activities writer stores it (records_meeting_id).
 func TestAMeetingAndItsTranscriptScoreTheLeadOnce(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	lead := e.seedLead(t, "pair@evidence.test")
 	meeting := e.seedEvidence(t, &lead, heldMeeting)
@@ -38,6 +39,7 @@ func TestAMeetingAndItsTranscriptScoreTheLeadOnce(t *testing.T) {
 // A meeting with no source_system that answers a task is no transcript pair,
 // so it still proves the lead's engagement.
 func TestAMeetingAnsweringATaskWithNoSourceSystemScoresTheLead(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	lead := e.seedLead(t, "answer@evidence.test")
 	task := e.seedEvidence(t, nil, evidenceSeed{kind: "task"})

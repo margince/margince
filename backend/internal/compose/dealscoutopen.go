@@ -44,7 +44,7 @@ func newScoutDealOpener(pool *pgxpool.Pool, log *slog.Logger) scoutDealOpener {
 	return scoutDealOpener{
 		pool:       pool,
 		deals:      deals.NewStore(InstallationDB(pool), DealsInstallation()).WithSuggestionEffects(dealSuggestionEffects{}),
-		users:      identity.NewService(pool),
+		users:      IdentityService(pool),
 		activities: activities.NewStore(InstallationDB(pool)),
 		log:        log,
 	}

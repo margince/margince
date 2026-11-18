@@ -45,6 +45,7 @@ func replyQuotingSam(ownLines string) string {
 }
 
 func TestAReplyQuotingOurSignatureAddsOnlyTheSendersOwnNumber(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := seedEnrichContact(t, e, "bob@window.example", replyQuotingSam(bobOwnNumber))
 	runEnrichPass(t, e, &signatureScriptBrain{fields: phoneReply(bobOwnNumber, quotedNumber)})
@@ -55,6 +56,7 @@ func TestAReplyQuotingOurSignatureAddsOnlyTheSendersOwnNumber(t *testing.T) {
 }
 
 func TestANumberAMemberSignsWithIsNeverWrittenToAContact(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.WsExec(t, `INSERT INTO email_signature (owner_id, body, phone) VALUES ($1, $2, '')`,
 		e.AdminUser, "Sam Seller\nHead of Sales\nMobile: "+memberNumber)
@@ -71,6 +73,7 @@ func TestANumberAMemberSignsWithIsNeverWrittenToAContact(t *testing.T) {
 }
 
 func TestAMemberKeepsTheirOwnNumberOnTheirOwnContact(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	login := e.WsScalar(t, `SELECT email FROM app_user WHERE id = $1`, e.AdminUser)
 	e.WsExec(t, `INSERT INTO email_signature (owner_id, body, phone) VALUES ($1, '', $2)`, e.AdminUser, memberNumber)
@@ -83,6 +86,7 @@ func TestAMemberKeepsTheirOwnNumberOnTheirOwnContact(t *testing.T) {
 }
 
 func TestTheMisattributionSweepTakesTheNumberOffTheContact(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := seedForeignSignature(t, e)
 	activity := onlyMailOf(t, e, contact)
@@ -141,6 +145,7 @@ func seedSignatureWindowFixture(t *testing.T, e *integration.Env) signatureWindo
 }
 
 func TestTheSignatureWindowTaskTakesBackWhatTheSenderDidNotWrite(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	f := seedSignatureWindowFixture(t, e)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
@@ -201,6 +206,7 @@ func TestTheSignatureWindowTaskTakesBackWhatTheSenderDidNotWrite(t *testing.T) {
 }
 
 func TestAClaimCannotQuoteTheMailItAnswers(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := seedEnrichContact(t, e, "bob@window.example", replyQuotingSam(bobOwnNumber))
 	claim := contacts.ClaimInput{
@@ -285,6 +291,7 @@ func retractionAudits(t *testing.T, e *integration.Env) int {
 }
 
 func TestANumberOnlyInMemberMarkupIsNotLearnedFromAReply(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	markup := `<div>Sam Seller</div><a href="tel:&#43;31205550101">Call me</a><div>Mobile: &#43;31 20 555 0101</div>`
 	if _, err := contacts.NewStore(InstallationDB(e.Pool)).SaveMyEmailSignature(e.Admin(), contacts.SaveSignatureInput{Body: "", HTML: &markup}); err != nil {

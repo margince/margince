@@ -45,6 +45,7 @@ func (f *relationshipFixture) readings(t *testing.T) (contact, company direction
 // reply on a thread the contact is copied on is not the contact writing.
 // Activity filed on the account alone moves neither page's direction.
 func TestOneContactCompanyReadsItsContactsDirection(t *testing.T) {
+	t.Parallel()
 	f := newRelationshipFixture(t)
 	f.mail(t, "proposal", f.seatAddr, f.contactAddr, "", 9)
 	f.mail(t, "proposal-chase", f.seatAddr, f.contactAddr, "", 6)
@@ -87,6 +88,7 @@ func (f *relationshipFixture) logOnCompanyOnly(t *testing.T, daysAgo int) {
 // An older inbound mail that lost its sender row is still the contact's when
 // its counterparty is their address.
 func TestAMailThatLostItsSenderRowStillCountsAsTheContacts(t *testing.T) {
+	t.Parallel()
 	f := newRelationshipFixture(t)
 	older := f.mail(t, "anna-older-capture", f.contactAddr, f.seatAddr, "", 3)
 	f.e.WsExec(t, `DELETE FROM activity_participant WHERE activity_id = $1 AND role = 'from'`, older)
@@ -104,6 +106,7 @@ func TestAMailThatLostItsSenderRowStillCountsAsTheContacts(t *testing.T) {
 // An employee the reader may not see moves none of the account's clocks for
 // that reader.
 func TestAHiddenEmployeeMovesNoCompanyClockForTheReader(t *testing.T) {
+	t.Parallel()
 	f := newRelationshipFixture(t)
 	made, err := f.e.Contacts.CreateContact(f.e.Admin(), contacts.CreateContactInput{
 		FullName: "Hans Hidden", Source: "manual",

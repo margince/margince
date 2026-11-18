@@ -101,6 +101,7 @@ func (f *stageCohortFixture) forgetProvenance(t *testing.T, deal ids.DealID, sta
 // is history_partial and stays out of the rate. A move saved before provenance
 // was kept still counts.
 func TestStageConversionLeavesOutImportedMoves(t *testing.T) {
+	t.Parallel()
 	f := newStageCohortFixture(t)
 	s0, s1 := f.stage(0), f.stage(1)
 	rep1 := f.env.Rep1
@@ -138,6 +139,7 @@ func TestStageConversionLeavesOutImportedMoves(t *testing.T) {
 // A synced move starts no entry, as an imported one does. An entry whose next
 // move was synced is history_partial and stays out of the rate.
 func TestStageConversionLeavesOutSyncedMoves(t *testing.T) {
+	t.Parallel()
 	f := newStageCohortFixture(t)
 	s0, s1 := f.stage(0), f.stage(1)
 	start := f.at
@@ -165,6 +167,7 @@ func TestStageConversionLeavesOutSyncedMoves(t *testing.T) {
 // A deal whose moves all predate provenance still counts, and the reading says
 // some of its moves may have been imports.
 func TestStageConversionIsPartialWhenAnEntryPredatesProvenance(t *testing.T) {
+	t.Parallel()
 	f := newStageCohortFixture(t)
 	s0, s1 := f.stage(0), f.stage(1)
 	start := f.at
@@ -189,6 +192,7 @@ func TestStageConversionIsPartialWhenAnEntryPredatesProvenance(t *testing.T) {
 // An entry's outcome is its next move before the evaluation instant, so a
 // legacy exit after the window's end still marks the reading partial.
 func TestStageConversionIsPartialWhenALegacyExitFallsAfterTheWindow(t *testing.T) {
+	t.Parallel()
 	f := newStageCohortFixture(t)
 	s0, s1 := f.stage(0), f.stage(1)
 	start := f.at
@@ -216,6 +220,7 @@ func TestStageConversionIsPartialWhenALegacyExitFallsAfterTheWindow(t *testing.T
 // A close date an import moved is the source system's history. Only the push a
 // user made counts toward the closePushed rule.
 func TestACloseDateAnImportMovedIsNotAPush(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	pipeline, open, _ := integration.DealFixture(t, e)
 	deal := ids.From[ids.DealKind](e.SeedDeal(t, "Pushed by an import", pipeline, open, nil))

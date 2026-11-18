@@ -17,7 +17,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
@@ -28,7 +27,7 @@ import (
 // the names it cannot see are names it cannot quote.
 func voiceKnownSpeakers(pool *pgxpool.Pool) ai.KnownSpeakers {
 	store := contacts.NewStore(InstallationDB(pool))
-	seats := identity.NewService(pool)
+	seats := IdentityService(pool)
 	return func(ctx context.Context, labels []string) ([]string, error) {
 		fromContacts, err := store.ContactNamesAmong(ctx, labels)
 		if err != nil && !errors.Is(err, apperrors.ErrPermissionDenied) {

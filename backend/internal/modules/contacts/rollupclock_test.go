@@ -12,18 +12,17 @@ package contacts
 // own defence against the report is indistinguishable from the bug.
 
 import (
+	"context"
 	"testing"
 	"time"
 )
 
 func TestTheAsOfDateComesFromTheInjectedClock(t *testing.T) {
-	original := rollupClock
-	t.Cleanup(func() { rollupClock = original })
-
+	t.Parallel()
 	frozen := time.Date(2026, 6, 2, 14, 30, 0, 0, time.UTC)
-	rollupClock = func() time.Time { return frozen }
+	store := (&Store{}).SetClock(func() time.Time { return frozen })
 
-	if got := rollupAsOf(); !got.Equal(time.Date(2026, 6, 2, 0, 0, 0, 0, time.UTC)) {
+	if got := rollupAsOf(store.withRollupAsOf(context.Background())); !got.Equal(time.Date(2026, 6, 2, 0, 0, 0, 0, time.UTC)) {
 		t.Errorf("as-of = %s, want the 2nd — a date read from anywhere but the caller's clock is "+
 			"the second clock this change exists to remove", got)
 	}
@@ -33,13 +32,10 @@ func TestTheAsOfDateComesFromTheInjectedClock(t *testing.T) {
 // wall clock crosses, because the caller binds it once. What this holds is the
 // narrower half a unit test can: the date does not depend on the time of day.
 func TestTheAsOfDateDoesNotMoveWithTheTimeOfDay(t *testing.T) {
-	original := rollupClock
-	t.Cleanup(func() { rollupClock = original })
-
+	t.Parallel()
 	day := time.Date(2026, 6, 2, 0, 0, 0, 0, time.UTC)
 	for _, hour := range []int{0, 9, 23} {
-		rollupClock = func() time.Time { return day.Add(time.Duration(hour) * time.Hour) }
-		if got := rollupAsOf(); !got.Equal(day) {
+		if got := rollupDay(day.Add(time.Duration(hour) * time.Hour)); !got.Equal(day) {
 			t.Errorf("at %02d:00 the as-of date is %s, want %s — a rate selected by the hour is "+
 				"one two readers of the same page can disagree about", hour, got, day)
 		}
@@ -50,14 +46,11 @@ func TestTheAsOfDateDoesNotMoveWithTheTimeOfDay(t *testing.T) {
 // local-zone answer makes one installation convert differently depending on
 // where its process happens to run.
 func TestTheAsOfDateIsUTC(t *testing.T) {
-	original := rollupClock
-	t.Cleanup(func() { rollupClock = original })
-
+	t.Parallel()
 	// 01:00 on the 3rd in a +02:00 zone is still the 2nd in UTC.
 	east := time.FixedZone("east", 2*60*60)
-	rollupClock = func() time.Time { return time.Date(2026, 6, 3, 1, 0, 0, 0, east) }
 
-	if got := rollupAsOf(); !got.Equal(time.Date(2026, 6, 2, 0, 0, 0, 0, time.UTC)) {
+	if got := rollupDay(time.Date(2026, 6, 3, 1, 0, 0, 0, east)); !got.Equal(time.Date(2026, 6, 2, 0, 0, 0, 0, time.UTC)) {
 		t.Errorf("as-of = %s, want the 2nd in UTC — reading the server's zone makes the same "+
 			"installation convert differently depending on where it runs", got)
 	}

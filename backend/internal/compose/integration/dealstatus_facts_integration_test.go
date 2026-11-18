@@ -31,6 +31,7 @@ func (m *requestReviewModel) Complete(context.Context, model.Request) (model.Res
 }
 
 func TestFactsOnlyRefreshNeverCallsTheModelEvenWhenTheRequestChanges(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	deal := apptest.ExerciseDealToWon(t, e, apptest.DiscoverSeededPipeline(t, e))

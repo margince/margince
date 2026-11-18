@@ -51,10 +51,6 @@ func afterEveryDueHour() time.Time {
 // pass write that table — seeding INSERTs an occurrence, claiming UPDATEs it to
 // running — so a BEFORE INSERT OR UPDATE trigger covers the pass whatever the
 // clock says is due.
-//
-// It is dropped in cleanup: the integration lane resets rows between tests but
-// keeps the schema, so a surviving trigger would break every later suite that
-// schedules a run in this workspace.
 func failRunnerJobWrites(t *testing.T, owner *pgx.Conn) {
 	t.Helper()
 	ctx := context.Background()
@@ -66,31 +62,14 @@ func failRunnerJobWrites(t *testing.T, owner *pgx.Conn) {
 		END $$`); err != nil {
 		t.Fatalf("creating the fault-injection function: %v", err)
 	}
-	// Registered before the trigger is armed, not after both: a failure to arm
-	// would otherwise leave the function behind, which is the leak this cleanup
-	// exists to prevent. Cleanups run LIFO, so the trigger still drops first.
-	t.Cleanup(func() {
-		if _, err := owner.Exec(context.Background(),
-			`DROP FUNCTION runner_job_write_fault()`); err != nil {
-			t.Errorf("dropping the fault-injection function: %v", err)
-		}
-	})
 	// Every write, not one tenant's: the table carries no workspace to key a
-	// WHEN clause on (ADR-0091 §8 phase D), and the pass under test is the
-	// installation's only one. The trigger drops in cleanup, so its blast
-	// radius is this test.
+	// `WHEN` clause on. The test's own database bounds its blast radius.
 	if _, err := owner.Exec(ctx, `
 		CREATE TRIGGER runner_job_write_fault_trigger
 		BEFORE INSERT OR UPDATE ON runner_job
 		FOR EACH ROW EXECUTE FUNCTION runner_job_write_fault()`); err != nil {
 		t.Fatalf("arming the fault-injection trigger: %v", err)
 	}
-	t.Cleanup(func() {
-		if _, err := owner.Exec(context.Background(),
-			`DROP TRIGGER runner_job_write_fault_trigger ON runner_job`); err != nil {
-			t.Errorf("dropping the fault-injection trigger: %v", err)
-		}
-	})
 }
 
 // seedDueRunnerJob plants an already-due, passport-less occurrence in ws. It
@@ -155,6 +134,7 @@ func assertSpecSeededFor(t *testing.T, owner *pgx.Conn, spec runner.AgentSpec, n
 // that reported success over it leaves the briefs unseeded and unclaimed with
 // no row saying so.
 func TestAgentSchedulerReportsAPassThatCouldNotWrite(t *testing.T) {
+	t.Parallel()
 	re := setupRunner(t)
 	owner := integration.OwnerConn(t)
 
@@ -183,6 +163,7 @@ func TestAgentSchedulerReportsAPassThatCouldNotWrite(t *testing.T) {
 // other trace, since an unseeded occurrence is simply a brief that never
 // happens.
 func TestAgentSchedulerSeedsAndClaimsWhatIsDue(t *testing.T) {
+	t.Parallel()
 	re := setupRunner(t)
 	owner := integration.OwnerConn(t)
 
@@ -222,6 +203,7 @@ func TestAgentSchedulerSeedsAndClaimsWhatIsDue(t *testing.T) {
 // cadence far shorter than that setting's own default is what River is scheduling
 // on.
 func TestAgentSchedulerDispatchRepeatsOnItsConfiguredInterval(t *testing.T) {
+	t.Parallel()
 	re := setupRunner(t)
 
 	_, completed, _ := jobtest.StartTestJobRunner(t, re.pool, compose.JobRunnerConfig{
@@ -252,6 +234,7 @@ func TestAgentSchedulerDispatchRepeatsOnItsConfiguredInterval(t *testing.T) {
 // symptom was reps quietly not getting briefs. So the assertion is a count
 // across seats, not the success of the pass.
 func TestEverySeatThatGrantedGetsItsOwnNightlyOccurrence(t *testing.T) {
+	t.Parallel()
 	re := setupRunner(t)
 	owner := integration.OwnerConn(t)
 
@@ -306,6 +289,7 @@ func TestEverySeatThatGrantedGetsItsOwnNightlyOccurrence(t *testing.T) {
 // would satisfy the count above while acting for every rep as one colleague —
 // which is the exact thing the standing grant exists to prevent.
 func TestASeatIsSeededWithItsOwnCredentialAndNobodyElses(t *testing.T) {
+	t.Parallel()
 	re := setupRunner(t)
 	owner := integration.OwnerConn(t)
 
@@ -346,6 +330,7 @@ func TestASeatIsSeededWithItsOwnCredentialAndNobodyElses(t *testing.T) {
 // and the only reason it would not act is that they hold no passport — which
 // is a failure at 2am rather than a decision respected at seeding time.
 func TestARepWhoDeclinedIsNotSeeded(t *testing.T) {
+	t.Parallel()
 	re := setupRunner(t)
 	owner := integration.OwnerConn(t)
 
@@ -382,6 +367,7 @@ func TestARepWhoDeclinedIsNotSeeded(t *testing.T) {
 // TestAWorkspaceWhereNobodyGrantedSeedsNothing is the empty case, and it is a
 // PASS rather than a fault: no live grant means nobody has said yes yet.
 func TestAWorkspaceWhereNobodyGrantedSeedsNothing(t *testing.T) {
+	t.Parallel()
 	re := setupRunner(t)
 	owner := integration.OwnerConn(t)
 
@@ -404,6 +390,7 @@ func TestAWorkspaceWhereNobodyGrantedSeedsNothing(t *testing.T) {
 // segment could have broken. Uniqueness is per seat per day now, and a ref that
 // varied per pass would queue a rep the same brief every tick.
 func TestASecondPassSeedsNoSecondRunForTheSameSeat(t *testing.T) {
+	t.Parallel()
 	re := setupRunner(t)
 	owner := integration.OwnerConn(t)
 
@@ -472,6 +459,7 @@ func grantedSpec(t *testing.T) runner.AgentSpec {
 // as long as the fault lasted — and the failing seat is stable, so the fault
 // does not rotate away on its own.
 func TestOneSeatWhoseSeedingFailsDoesNotStopTheOthersRunning(t *testing.T) {
+	t.Parallel()
 	re := setupRunner(t)
 	owner := integration.OwnerConn(t)
 
@@ -526,12 +514,6 @@ func failRunnerJobInsertsFor(t *testing.T, owner *pgx.Conn, triggerRef string) {
 		CREATE TABLE IF NOT EXISTS runner_job_seat_fault_ref (trigger_ref text PRIMARY KEY)`); err != nil {
 		t.Fatalf("creating the fault-ref table: %v", err)
 	}
-	t.Cleanup(func() {
-		if _, err := owner.Exec(context.Background(),
-			`DROP TABLE IF EXISTS runner_job_seat_fault_ref CASCADE`); err != nil {
-			t.Errorf("dropping the fault-ref table: %v", err)
-		}
-	})
 	if _, err := owner.Exec(ctx,
 		`INSERT INTO runner_job_seat_fault_ref (trigger_ref) VALUES ($1)`, triggerRef); err != nil {
 		t.Fatalf("pinning the faulting trigger ref: %v", err)
@@ -547,21 +529,9 @@ func failRunnerJobInsertsFor(t *testing.T, owner *pgx.Conn, triggerRef string) {
 		END $$`); err != nil {
 		t.Fatalf("creating the seat fault-injection function: %v", err)
 	}
-	t.Cleanup(func() {
-		if _, err := owner.Exec(context.Background(),
-			`DROP FUNCTION IF EXISTS runner_job_seat_fault() CASCADE`); err != nil {
-			t.Errorf("dropping the seat fault-injection function: %v", err)
-		}
-	})
 	if _, err := owner.Exec(ctx, `
 		CREATE TRIGGER runner_job_seat_fault BEFORE INSERT ON runner_job
 		FOR EACH ROW EXECUTE FUNCTION runner_job_seat_fault()`); err != nil {
 		t.Fatalf("arming the seat fault trigger: %v", err)
 	}
-	t.Cleanup(func() {
-		if _, err := owner.Exec(context.Background(),
-			`DROP TRIGGER IF EXISTS runner_job_seat_fault ON runner_job`); err != nil {
-			t.Errorf("dropping the seat fault trigger: %v", err)
-		}
-	})
 }

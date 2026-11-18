@@ -75,6 +75,7 @@ func archiveOrder(t *testing.T, e *apptest.AppEnv, runID string, entityTypes ...
 }
 
 func TestABundleLandsEveryPartAndAReUploadUpdatesInsteadOfDuplicating(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	files := map[string]string{
 		"companies.csv": "ref,name\nCO-1,Acme Bundle GmbH\n",
@@ -99,6 +100,7 @@ func TestABundleLandsEveryPartAndAReUploadUpdatesInsteadOfDuplicating(t *testing
 }
 
 func TestTheSameRefUnderANewSourceNameIsANewRecord(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	files := map[string]string{"companies.csv": "ref,name\n1,Northwind One\n"}
 	parts := []AnyMap{{"file": "companies.csv", "object": "company", "mapping": AnyMap{"ref": "ref", "name": "display_name"}}}
@@ -114,6 +116,7 @@ func TestTheSameRefUnderANewSourceNameIsANewRecord(t *testing.T) {
 }
 
 func TestUndoReversesContactsBeforeCompanies(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	files := map[string]string{
 		"companies.csv": "ref,name\nCO-9,Undo Order GmbH\n",

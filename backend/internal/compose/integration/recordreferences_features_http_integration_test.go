@@ -20,6 +20,7 @@ import (
 )
 
 func TestRecordReferencesKeepFeatureIsolationThroughHTTPAndReadView(t *testing.T) {
+	t.Parallel()
 	var disabled []string
 	e := apptest.SetupAppWithOriginOptions(t, func(origin string) []compose.Option {
 		return []compose.Option{compose.WithMCPConnector(), compose.WithMCPResource(origin + "/mcp"), compose.WithDisabledCoreFeatures(disabled)}
@@ -49,6 +50,7 @@ func TestRecordReferencesKeepFeatureIsolationThroughHTTPAndReadView(t *testing.T
 }
 
 func TestRecordReferencesRequireEachKindsReadGrantThroughHTTPAndReadView(t *testing.T) {
+	t.Parallel()
 	for _, denied := range []string{"contact", "company", "lead", "deal", "project"} {
 		t.Run(denied, func(t *testing.T) {
 			e := apptest.SetupAppWithOriginOptions(t, func(origin string) []compose.Option {

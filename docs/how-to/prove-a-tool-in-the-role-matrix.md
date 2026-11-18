@@ -84,7 +84,7 @@ the colleague pass's subject.
    go test ./gates -run TestTheMCPParityCatalogIsPublished -update-mcp-parity
    ```
 
-   The integration lane shares the `margince_test` template, so run one lane at a time. Without
+   The integration lanes of one worktree build the same template, so run one lane at a time. Without
    `UPDATE_MCP_TOOL_ROLES=1`, `make test-roles` checks the committed files and writes nothing. It
    measures the extension verbs first, so their `measured.json` is current when the sweep reads it.
 

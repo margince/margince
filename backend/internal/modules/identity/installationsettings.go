@@ -448,7 +448,7 @@ func (s *InstallationSettingsStore) UpdateInstallation(ctx context.Context, in I
 func (s *InstallationSettingsStore) changeCountryTx(ctx context.Context, tx pgx.Tx, next *string) error {
 	// A boot-set country never changes, so its save alone decides: a no-op,
 	// or a refusal as locked whether or not the value sent is valid.
-	if _, locked := s.config.Locked(Country.Key()); next == nil || locked {
+	if _, locked := s.config.Locked(ctx, Country.Key()); next == nil || locked {
 		return nil
 	}
 	raw, err := json.Marshal(*next)

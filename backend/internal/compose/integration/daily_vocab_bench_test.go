@@ -326,6 +326,7 @@ func dailyBodySample(n int) []string {
 }
 
 func TestTheDailyVocabularyIsTheSameEveryRun(t *testing.T) {
+	t.Parallel()
 	subjects, sentences := dailyTermPools()
 	again, againSentences := dailyTermPools()
 	if !slices.Equal(dailyParagraphs("vi", 64), dailyParagraphs("vi", 64)) ||
@@ -335,6 +336,7 @@ func TestTheDailyVocabularyIsTheSameEveryRun(t *testing.T) {
 }
 
 func TestGeneratedDailyTextNeverNamesATerm(t *testing.T) {
+	t.Parallel()
 	text := append(dailyBodySample(6000), dailyPlainSubjects(dailySubjectsPool)...)
 	for _, words := range dailyFunctionWords {
 		text = append(text, strings.Join(words, " "))
@@ -349,6 +351,7 @@ func TestGeneratedDailyTextNeverNamesATerm(t *testing.T) {
 }
 
 func TestEveryTermPoolEntryNamesItsTerm(t *testing.T) {
+	t.Parallel()
 	subjects, sentences := dailyTermPools()
 	if len(subjects) != len(dailyTerms)*dailyTermPool || len(sentences) != len(subjects) {
 		t.Fatalf("pools of %d subjects and %d sentences, want %d each", len(subjects), len(sentences), len(dailyTerms)*dailyTermPool)
@@ -364,6 +367,7 @@ func TestEveryTermPoolEntryNamesItsTerm(t *testing.T) {
 // Two thousand bodies of about four paragraphs read like real mail: thousands of
 // distinct words, most of them rare, a few function words in nearly every body.
 func TestDailyBodiesSpeakAWideVocabularyMostlyOfRareWords(t *testing.T) {
+	t.Parallel()
 	paragraphs := dailyBodySample(9000)
 	inParagraphs := map[string]int{}
 	for _, p := range paragraphs {
@@ -391,6 +395,7 @@ func TestDailyBodiesSpeakAWideVocabularyMostlyOfRareWords(t *testing.T) {
 
 // A short prefix matches most mail and a longer one less, as in real text.
 func TestDailyPrefixesNarrowAsTheyLengthen(t *testing.T) {
+	t.Parallel()
 	bodies := dailyBodySample(3000)
 	share := func(prefix string) float64 {
 		matched := 0

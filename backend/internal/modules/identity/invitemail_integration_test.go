@@ -38,6 +38,7 @@ func (m stalledMail) Send(ctx context.Context, _, _, _ string) error {
 // The relay holds the send until the test releases it, so the handler can
 // return only if the send runs off the request.
 func TestInviteAnswersWhileTheRelayIsStillSending(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "invite-stalled")
 	relay := stalledMail{release: make(chan struct{})}
 	h := NewHandlers(e.svc).WithPasswordReset(relay).WithPasswordLinkBase("https://crm.example.test")
@@ -69,6 +70,7 @@ func TestInviteAnswersWhileTheRelayIsStillSending(t *testing.T) {
 // An agent sends a colleague's invitation again, and never an administrator's: the
 // link is a credential to a seat an agent does not act on.
 func TestAnAgentSendsNoNewLinkToAnInvitedAdministrator(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "invite-agent-admin")
 	h := NewHandlers(e.svc).WithPasswordLinkBase("https://crm.example.test")
 	ctx := withIdentity(e.wsCtx(e.admin), e.admin)
@@ -160,6 +162,7 @@ func offersResend(user crmcontracts.User) bool {
 }
 
 func TestARefusedInviteMailShowsOnTheRosterUntilAResendGoesOut(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "invite-refused")
 	relay := &refusingMail{}
 	refusing, refused := mailingHandlers(e, relay)
@@ -220,6 +223,7 @@ func mailState(user crmcontracts.User, want string) bool {
 }
 
 func TestAResendIsRefusedWhereNoInvitationIsWaiting(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "invite-resend-refused")
 	ctx := withIdentity(e.wsCtx(e.admin), e.admin)
 	member := crmcontracts.Id(e.member.UserID.UUID)
@@ -266,6 +270,7 @@ func inviteThrough(t *testing.T, e *revocationEnv, h Handlers, email string) crm
 // member never mailed at all. The new link is the only one left that opens
 // the account.
 func TestEveryInvitedMemberCanBeSentANewInvitation(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "invite-resend-state")
 	sent, sentDone := mailingHandlers(e, &capturedMail{})
 	sentID := inviteThrough(t, e, sent, "sent@acme.test")
@@ -323,6 +328,7 @@ func TestEveryInvitedMemberCanBeSentANewInvitation(t *testing.T) {
 // A read that fails before the send leaves the mail unsent, and the admin was
 // already told it went out. The link says so, which is what offers the resend.
 func TestAnInvitationThatNeverReachedTheRelayIsRecordedAsFailed(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "invite-unread")
 	mail := &capturedMail{}
 	h, done := mailingHandlers(e, mail)
@@ -342,6 +348,7 @@ func TestAnInvitationThatNeverReachedTheRelayIsRecordedAsFailed(t *testing.T) {
 // A relay that holds the mail past the send's budget fails it. The refusal
 // still lands on the link, although the send's own context is spent.
 func TestARelayTimeoutStillRecordsTheMailAsFailed(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "invite-timeout")
 	stalled := stalledMail{release: make(chan struct{})}
 	t.Cleanup(func() { close(stalled.release) })
@@ -360,6 +367,7 @@ func TestARelayTimeoutStillRecordsTheMailAsFailed(t *testing.T) {
 // newer one, and a member deactivated after the link was minted, get no mail;
 // the live link goes to the member's current address.
 func TestAnInvitationIsMailedOnlyWhileItsLinkAndMemberStillStand(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "invite-send-recheck")
 	unmailed := NewHandlers(e.svc).WithPasswordLinkBase("https://crm.example.test")
 	id := ids.From[ids.UserKind](ids.UUID(inviteThrough(t, e, unmailed, "recheck@acme.test")))
@@ -409,6 +417,7 @@ func TestAnInvitationIsMailedOnlyWhileItsLinkAndMemberStillStand(t *testing.T) {
 // the resend, queued behind it, then finds no invitation to send and leaves
 // no live link for an active member.
 func TestAResendQueuedBehindARedemptionMintsNothing(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "invite-resend-race")
 	unmailed := NewHandlers(e.svc).WithPasswordLinkBase("https://crm.example.test")
 	id := ids.From[ids.UserKind](ids.UUID(inviteThrough(t, e, unmailed, "racer@acme.test")))

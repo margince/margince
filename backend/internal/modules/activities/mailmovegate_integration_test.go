@@ -56,6 +56,7 @@ func (m *mailThreads) limit(t *testing.T, activity ids.UUID) {
 // A reply the reader may not read leaves the reader waiting for them. A reply
 // they may read ends the wait. A mail they may not read has no move.
 func TestAMailsMoveReadsOnlyTheThreadTheReaderMayRead(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	m := &mailThreads{e: e, store: NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws))), contact: e.buyer(t)}
 	thread := func() string { return "move-" + ids.NewV7().String() }

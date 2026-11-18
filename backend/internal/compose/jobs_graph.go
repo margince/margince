@@ -19,7 +19,6 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -40,7 +39,7 @@ func addGraphJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log
 	addDeclaredWorker[GraphEdgeReconcileArgs](reg, graphEdges)
 	links := newLinkReconcileWorker(pool, linkReconcileStore(pool), cfg.CaptureConfig, log)
 	addDeclaredWorker[LinkReconcileArgs](reg, links)
-	rematch := newLinkedInRematchWorker(pool, newContactsStore(InstallationDB(pool)), identity.NewService(pool), log)
+	rematch := newLinkedInRematchWorker(pool, newContactsStore(InstallationDB(pool)), IdentityService(pool), log)
 	addDeclaredWorker[LinkedInRematchArgs](reg, rematch)
 	addDeclaredWorker[ReplySettledStampArgs](reg, &replySettledWorker{pool: pool, store: activities.NewStore(InstallationDB(pool))})
 	return slices.Concat(

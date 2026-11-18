@@ -51,6 +51,7 @@ func humanOf(user ids.UUID) principal.Principal {
 }
 
 func TestAnAgentApprovedRunWritesRowsAsTheAgent(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	e.GrantRole(t, e.Rep1, "rep")
 	agent := agentOf(t, e)
@@ -88,6 +89,7 @@ func TestAnAgentApprovedRunWritesRowsAsTheAgent(t *testing.T) {
 }
 
 func TestARevokedPassportFailsTheRun(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	e.GrantRole(t, e.Rep1, "rep")
 	run := queuedRun(agentOf(t, e), 1)
@@ -100,6 +102,7 @@ func TestARevokedPassportFailsTheRun(t *testing.T) {
 }
 
 func TestASuspendedApproverFailsTheRunWithPermission(t *testing.T) {
+	t.Parallel()
 	for name, withdraw := range map[string]string{
 		"deactivated": `UPDATE app_user SET status = 'deactivated' WHERE id = $1`,
 		"read seat":   `UPDATE app_user SET seat_type = 'read' WHERE id = $1`,
@@ -131,6 +134,7 @@ func TestASuspendedApproverFailsTheRunWithPermission(t *testing.T) {
 }
 
 func TestEachAttemptCarriesItsOwnCorrelation(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	e.GrantRole(t, e.Rep1, "rep")
 	first, second := queuedRun(humanOf(e.Rep1), 1), queuedRun(humanOf(e.Rep1), 2)
@@ -148,6 +152,7 @@ func TestEachAttemptCarriesItsOwnCorrelation(t *testing.T) {
 }
 
 func TestAnAgentActsWithNoVerbItsPassportLacks(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	e.GrantRole(t, e.Rep1, "rep")
 	run := queuedRun(agentOf(t, e), 1)

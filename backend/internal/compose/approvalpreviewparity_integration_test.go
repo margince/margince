@@ -132,6 +132,7 @@ func requireSameOutcome(t *testing.T, s previewSurfaces) {
 }
 
 func TestEverySurfaceSaysWhatALeadPromotionWillDo(t *testing.T) {
+	t.Parallel()
 	s := newPromotionSight(t, "rep", approverIsAdmin, "admin")
 	rep1 := ids.From[ids.UserKind](s.e.Rep1)
 	lead := s.lead(contacts.CreateLeadInput{
@@ -150,6 +151,7 @@ func TestEverySurfaceSaysWhatALeadPromotionWillDo(t *testing.T) {
 }
 
 func TestEverySurfaceSaysWhatAFieldChangeWillDo(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.GrantRole(t, e.AdminUser, "admin")
 	pipeline, open, _ := integration.DealFixture(t, e)

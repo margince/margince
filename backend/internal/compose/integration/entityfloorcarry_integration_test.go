@@ -86,6 +86,7 @@ func (f entityFloorFixture) assign(t *testing.T, entity ids.LegalEntityID) {
 // The default entity keeps six years and the further one none: the
 // colleague's mail keeps the default floor after they move there.
 func TestMovingToAnEntityWithoutAFloorKeepsTheDefaultFloor(t *testing.T) {
+	t.Parallel()
 	f := newEntityFloorFixture(t, "zq", "bv")
 	held := f.colleagueMail(t)
 	f.assign(t, f.entity.ID)
@@ -98,6 +99,7 @@ func TestMovingToAnEntityWithoutAFloorKeepsTheDefaultFloor(t *testing.T) {
 // The further entity keeps six years and the default none. Its country then
 // changes to one with no floor: mail it already held keeps six years.
 func TestAnEntityCountryChangeCarriesTheOldFloor(t *testing.T) {
+	t.Parallel()
 	f := newEntityFloorFixture(t, "zk", "aq")
 	f.assign(t, f.entity.ID)
 	held := f.colleagueMail(t)
@@ -113,6 +115,7 @@ func TestAnEntityCountryChangeCarriesTheOldFloor(t *testing.T) {
 
 // Leaving the further entity for the default runs the same carry.
 func TestLeavingAnEntityCarriesItsFloor(t *testing.T) {
+	t.Parallel()
 	f := newEntityFloorFixture(t, "zk", "aq")
 	f.assign(t, f.entity.ID)
 	held := f.colleagueMail(t)

@@ -22,6 +22,7 @@ import (
 )
 
 func TestInternalMailboxCopyDoesNotReclassifyCustomerMail(t *testing.T) {
+	t.Parallel()
 	ctx, connecting, vault, ws, pool := newInternalMailRegistryFixture(t)
 	connection, err := connecting.Connect(ctx, "gmail", connector.Auth("fixture-token"))
 	if err != nil {

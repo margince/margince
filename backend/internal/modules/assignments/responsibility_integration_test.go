@@ -99,6 +99,7 @@ func (e *roleEnv) listCompany(ctx context.Context, company ids.UUID) ([]crmcontr
 // the read-back joins the role and the colleague so the card needs no second
 // lookup.
 func TestStaffingACompanyIsRecordedAsTheCaller(t *testing.T) {
+	t.Parallel()
 	e := setupRoleEnv(t)
 	ctx := e.actingAs(e.admin, companyCRUD, principal.RowScopeAll)
 	company := e.seedCompany(t, e.admin, "workspace")
@@ -141,6 +142,7 @@ func TestStaffingACompanyIsRecordedAsTheCaller(t *testing.T) {
 // a responsibility: the same staffing twice is a conflict, an ended one leaves
 // the list, and ending it again is a conflict rather than a second timestamp.
 func TestOneColleagueHoldsARoleOncePerCompany(t *testing.T) {
+	t.Parallel()
 	e := setupRoleEnv(t)
 	ctx := e.actingAs(e.admin, companyCRUD, principal.RowScopeAll)
 	company := e.seedCompany(t, e.admin, "workspace")
@@ -179,6 +181,7 @@ func TestOneColleagueHoldsARoleOncePerCompany(t *testing.T) {
 // reads, so the reader is exactly that admin: the strongest seat that must
 // still learn nothing.
 func TestAnAccountTheCallerCannotOpenHasNoTeamToShow(t *testing.T) {
+	t.Parallel()
 	e := setupRoleEnv(t)
 	owner := e.seedColleague(t, "Owner")
 	company := e.seedCompany(t, owner, "owner")
@@ -216,6 +219,7 @@ func TestAnAccountTheCallerCannotOpenHasNoTeamToShow(t *testing.T) {
 // refuse the same way: the row arm for a seat that may update companies but
 // not this one, the object arm for a seat holding no update grant at all.
 func TestSeeingAnAccountIsNotLeaveToStaffIt(t *testing.T) {
+	t.Parallel()
 	e := setupRoleEnv(t)
 	owner := e.seedColleague(t, "Owner")
 	company := e.seedCompany(t, owner, "workspace")
@@ -244,6 +248,7 @@ func TestSeeingAnAccountIsNotLeaveToStaffIt(t *testing.T) {
 // write probe: archived is frozen, and the refusal is not-found because the
 // live read paths have already stopped serving the record.
 func TestAnArchivedAccountTakesNoNewResponsibility(t *testing.T) {
+	t.Parallel()
 	e := setupRoleEnv(t)
 	ctx := e.actingAs(e.admin, companyCRUD, principal.RowScopeAll)
 	company := e.seedCompany(t, e.admin, "workspace")
@@ -260,6 +265,7 @@ func TestAnArchivedAccountTakesNoNewResponsibility(t *testing.T) {
 // API compatibility keeps invited colleagues assignable before their first
 // sign-in. Suspended colleagues cannot take on a responsibility.
 func TestAnInvitedColleagueTakesAResponsibilityAndASuspendedOneDoesNot(t *testing.T) {
+	t.Parallel()
 	e := setupRoleEnv(t)
 	ctx := e.actingAs(e.admin, companyCRUD, principal.RowScopeAll)
 	company := e.seedCompany(t, e.admin, "workspace")

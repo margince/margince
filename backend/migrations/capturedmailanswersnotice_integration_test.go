@@ -71,6 +71,7 @@ func capturedMail(ctx context.Context, t *testing.T, conn *pgx.Conn, seat, direc
 }
 
 func TestOpenDutiesTheCapturedMailAlreadyAnswersAreSettled(t *testing.T) {
+	t.Parallel()
 	dsn, _ := dsns(t)
 	conn := connect(t, dsn)
 	headSchema(t, conn)

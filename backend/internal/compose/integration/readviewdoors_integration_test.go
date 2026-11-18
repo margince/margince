@@ -15,6 +15,7 @@ import (
 // route's own handler as the caller. It is checked on a record's derived view,
 // one reference record and a list narrowed by a filter.
 func TestReadViewAnswersAsItsRoutes(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "read-view-doors", "read")
 	stages := apptest.DiscoverSeededPipeline(t, d.e)
 	company := createdRecord(t, d.e, "/v1/companies", AnyMap{"source": "manual", "display_name": "View Works"})

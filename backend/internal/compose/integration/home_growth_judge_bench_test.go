@@ -60,6 +60,7 @@ func withLaterStep(memory *growthMemory, cache *growthCache) growthOther {
 }
 
 func TestAGrowthFitRecoversTheLineThroughItsPoints(t *testing.T) {
+	t.Parallel()
 	line, err := fitGrowthLine([]float64{1, 2, 3}, []float64{2.5, 3, 3.5})
 	if err != nil || math.Abs(line.At-2) > 1e-9 || math.Abs(line.PerYear-0.5) > 1e-9 {
 		t.Fatalf("fit = %+v, %v; want 2 + 0.5/yr", line, err)
@@ -72,6 +73,7 @@ func TestAGrowthFitRecoversTheLineThroughItsPoints(t *testing.T) {
 }
 
 func TestTheModelSplitsAReadIntoWorkRoundTripsAndTheRest(t *testing.T) {
+	t.Parallel()
 	model, err := fitGrowthModel(growthTestSeries(1, 1, 1, 2).Steps, growthTestAssume.RoundTrip)
 	if err != nil {
 		t.Fatal(err)
@@ -87,12 +89,14 @@ func TestTheModelSplitsAReadIntoWorkRoundTripsAndTheRest(t *testing.T) {
 }
 
 func TestAReadThatStaysFlatPasses(t *testing.T) {
+	t.Parallel()
 	if failures := growthFailures([]growthSeries{growthTestSeries(1, 0, 1, 2)}, growthTestOther, growthTestLimits, growthTestAssume); len(failures) != 0 {
 		t.Fatalf("a flat read failed: %v", failures)
 	}
 }
 
 func TestAReadPredictedToReachTheLineWithinTheHorizonFails(t *testing.T) {
+	t.Parallel()
 	// 1.6 s at one year and 2 s more each year reach 10 s at year 6: the last
 	// year a horizon of four allows past year 2.
 	failures := growthFailures([]growthSeries{growthTestSeries(-0.7, 2, 1, 2)}, growthTestOther, growthTestLimits, growthTestAssume)
@@ -107,6 +111,7 @@ func TestAReadPredictedToReachTheLineWithinTheHorizonFails(t *testing.T) {
 }
 
 func TestAReadAlreadyOverTheLineFails(t *testing.T) {
+	t.Parallel()
 	failures := growthFailures([]growthSeries{growthTestSeries(10, 0, 1, 2)}, growthTestOther, growthTestLimits, growthTestAssume)
 	if len(failures) != 2 || !strings.Contains(failures[0], "cold p90") {
 		t.Fatalf("each step over the line must fail on its own, got %v", failures)
@@ -114,6 +119,7 @@ func TestAReadAlreadyOverTheLineFails(t *testing.T) {
 }
 
 func TestOneStepIsTooFewToPredictAndFails(t *testing.T) {
+	t.Parallel()
 	failures := growthFailures([]growthSeries{growthTestSeries(1, 0, 1)}, growthTestOther, growthTestLimits, growthTestAssume)
 	if len(failures) != 1 || !strings.Contains(failures[0], "two or more steps") {
 		t.Fatalf("one step must fail as too few to fit, got %v", failures)
@@ -121,6 +127,7 @@ func TestOneStepIsTooFewToPredictAndFails(t *testing.T) {
 }
 
 func TestAStepWithNoSamplesFailsRatherThanPasses(t *testing.T) {
+	t.Parallel()
 	s := growthTestSeries(1, 0, 1, 2)
 	s.Steps[1].Warm = nil
 	if failures := growthFailures([]growthSeries{s}, growthTestOther, growthTestLimits, growthTestAssume); len(failures) != 1 {
@@ -132,6 +139,7 @@ func TestAStepWithNoSamplesFailsRatherThanPasses(t *testing.T) {
 }
 
 func TestTheServerMemoryAndCacheBudgetsEachFail(t *testing.T) {
+	t.Parallel()
 	slow := growthTestSeries(1, 0, 1, 2)
 	slow.Steps[0].Warm[0].Server = 3 * time.Second
 	ok := growthTestMemory
@@ -165,6 +173,7 @@ func TestTheServerMemoryAndCacheBudgetsEachFail(t *testing.T) {
 }
 
 func TestTheColdP90IsTheNearestRank(t *testing.T) {
+	t.Parallel()
 	var samples []growthSample
 	for ms := 10; ms >= 1; ms-- {
 		samples = append(samples, growthSample{Elapsed: time.Duration(ms) * time.Millisecond})

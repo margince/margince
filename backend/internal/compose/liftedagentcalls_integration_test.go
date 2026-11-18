@@ -24,6 +24,7 @@ import (
 // still waits, one staged with no passport, and one a scheduled run is paused on
 // all stay.
 func TestAPendingAgentCallThatNoLongerWaitsIsWithdrawn(t *testing.T) {
+	t.Parallel()
 	a := newApprovalNotifyEnv(t)
 	passport := a.e.SeedPassport(t, integration.OwnerConn(t), "lifted call probe")
 	stage := func(kind string, onPassport bool) ids.ApprovalID {
@@ -60,7 +61,7 @@ func TestAPendingAgentCallThatNoLongerWaitsIsWithdrawn(t *testing.T) {
 func withdrawLiftedAgentCalls(t *testing.T, e *integration.Env) int {
 	t.Helper()
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
-	batch := approvals.WithdrawLiftedAgentCallsTx(liftedAgentCallKinds())
+	batch := approvals.WithdrawLiftedAgentCallsTx(liftedAgentCallKinds(nil))
 	in := datatask.BatchIn{Limit: 1, RunID: ids.NewV7()}
 	changed := 0
 	for range 100 {

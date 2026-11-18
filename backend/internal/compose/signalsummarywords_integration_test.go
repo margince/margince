@@ -32,6 +32,7 @@ import (
 )
 
 func TestATechnicalChangeReadsInEachReadersLanguage(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := e.SeedCompany(t, "Stack Co", nil)
 	startsUsingNginx(t, e, company)
@@ -52,6 +53,7 @@ func TestATechnicalChangeReadsInEachReadersLanguage(t *testing.T) {
 }
 
 func TestTheAccountStripStatesTheWorstSignalInTheReadersLanguage(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := e.SeedCompany(t, "Strip Co", nil)
 	startsUsingNginx(t, e, company)
@@ -64,6 +66,7 @@ func TestTheAccountStripStatesTheWorstSignalInTheReadersLanguage(t *testing.T) {
 // A reader who chose no language gets the stored sentence, in the
 // installation's language, even on a seat that cannot read that setting.
 func TestAReaderWhoChoseNoLanguageReadsTheInstallationsLanguage(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	integration.SetBaseLanguage(e.Admin(), t, e.Pool, "de")
 	company := e.SeedCompany(t, "Stapel GmbH", nil)
@@ -86,6 +89,7 @@ func TestAReaderWhoChoseNoLanguageReadsTheInstallationsLanguage(t *testing.T) {
 // The intro draft goes to a contact outside the company, so its language
 // follows the stored summary, never the rep's display language.
 func TestAnIntroDraftKeepsTheStoredSummaryForAReaderInAnotherLanguage(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := e.SeedCompany(t, "Route Co", nil)
 	employedAt(t, e, company, "Rae Route")
@@ -111,6 +115,7 @@ func TestAnIntroDraftKeepsTheStoredSummaryForAReaderInAnotherLanguage(t *testing
 }
 
 func TestAGhostedThreadReadsInTheReadersLanguage(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	wrote := time.Date(2026, 9, 1, 9, 0, 0, 0, time.UTC)
 	company := e.SeedCompany(t, "Silent Co", nil)
@@ -137,6 +142,7 @@ func TestAGhostedThreadReadsInTheReadersLanguage(t *testing.T) {
 }
 
 func TestAQuietProjectReadsInTheReadersLanguage(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := e.SeedCompany(t, "Quiet Co", nil)
 	owner := ids.From[ids.UserKind](e.Rep1)
@@ -168,6 +174,7 @@ func TestAQuietProjectReadsInTheReadersLanguage(t *testing.T) {
 
 // A row that kept no parts reads as it was written, whatever its kind.
 func TestASignalWithoutPartsReadsAsItWasStored(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := e.SeedCompany(t, "Filed Co", nil)
 	subject := "company"

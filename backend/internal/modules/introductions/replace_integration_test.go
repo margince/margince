@@ -16,6 +16,7 @@ import (
 )
 
 func TestReplacingAnAskRequiresAFreshDecisionAndKeepsItsHistoryPrivate(t *testing.T) {
+	t.Parallel()
 	e := setupIntro(t)
 	ctx := e.asUser(e.requester)
 	original, err := e.store.Create(ctx, e.ask())
@@ -58,6 +59,7 @@ func TestReplacingAnAskRequiresAFreshDecisionAndKeepsItsHistoryPrivate(t *testin
 }
 
 func TestReplacingAnAskRollsBackItsWithdrawalWhenTheNewRouteIsRefused(t *testing.T) {
+	t.Parallel()
 	for _, scenario := range []string{"same route", "inactive receiver", "duplicate route", "stale version", "not the requester"} {
 		t.Run(scenario, func(t *testing.T) {
 			e := setupIntro(t)

@@ -44,6 +44,7 @@ import (
 const standInReason = "They will sign then"
 
 func TestOneDealChangedThreeWaysCountsOnceAndItsUndoReportsWhatWasKept(t *testing.T) {
+	t.Parallel()
 	v := setupDealVerdict(t)
 	v.run(t)
 	h := newMarginceChangeHandlers(v.Pool)
@@ -104,6 +105,7 @@ func TestOneDealChangedThreeWaysCountsOnceAndItsUndoReportsWhatWasKept(t *testin
 // A change edited since stays on the list, never in the bundle Undo sends.
 // Every change leaves the list once the window has passed, undoable or not.
 func TestAChangeEditedSinceIsListedButNotUndoneAndEveryChangeLeavesAfterTheWindow(t *testing.T) {
+	t.Parallel()
 	v := setupDealVerdict(t)
 	v.run(t)
 	h := newMarginceChangeHandlers(v.Pool)
@@ -161,6 +163,7 @@ func (v *dealVerdictEnv) colleague() context.Context {
 }
 
 func TestAColleagueSeesWhatMarginceChangedButNotWhy(t *testing.T) {
+	t.Parallel()
 	v := setupDealVerdict(t)
 	v.run(t)
 	h := newMarginceChangeHandlers(v.Pool)
@@ -213,6 +216,7 @@ func TestAColleagueSeesWhatMarginceChangedButNotWhy(t *testing.T) {
 }
 
 func TestTheMorningEmailListsTheChangedDealAndAnUndoBeforeTheSendStopsIt(t *testing.T) {
+	t.Parallel()
 	v := setupDealVerdict(t)
 	v.run(t)
 	worker := &briefGenerateWorker{
@@ -245,6 +249,7 @@ func TestTheMorningEmailListsTheChangedDealAndAnUndoBeforeTheSendStopsIt(t *test
 }
 
 func TestAnOwnerWhoseAmountIsMaskedSeesTheChangeButNoAmount(t *testing.T) {
+	t.Parallel()
 	v := setupDealVerdict(t)
 	v.run(t)
 	masked := v.As(v.Rep1, []ids.UUID{v.Team1}, principal.Permissions{
@@ -277,6 +282,7 @@ func TestAnOwnerWhoseAmountIsMaskedSeesTheChangeButNoAmount(t *testing.T) {
 }
 
 func TestAnAgentCannotUndoMarginceChangesInBulk(t *testing.T) {
+	t.Parallel()
 	v := setupDealVerdict(t)
 	v.run(t)
 	agent := principal.WithActor(principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), v.WS), ids.NewV7()),
@@ -312,6 +318,7 @@ func (v *dealVerdictEnv) accept(t *testing.T, dealID ids.UUID, correction string
 }
 
 func TestAReviewedChangeStillUndoesOnEveryPath(t *testing.T) {
+	t.Parallel()
 	v := setupDealVerdict(t)
 	v.run(t)
 	h := newMarginceChangeHandlers(v.Pool)
@@ -377,6 +384,7 @@ func (v *dealVerdictEnv) holds(t *testing.T, basis sendBasis, now time.Time) err
 }
 
 func TestAMorningIsReadAgainWhenAnyChangeItCountsIsAcceptedOrUndone(t *testing.T) {
+	t.Parallel()
 	v := setupDealVerdict(t)
 	v.run(t)
 	first := v.deal
@@ -451,7 +459,7 @@ func (l bundleLane) Complete(ctx context.Context, req model.Request) (model.Resp
 func setupBundle(t *testing.T) *stageMoveEnv {
 	t.Helper()
 	v := setupStageMove(t)
-	v.pass = newDealVerdictPass(v.Pool, dealVerdictRefs(bundleLane{move: v.move, date: v.lane.date}), slog.New(slog.DiscardHandler))
+	v.pass = newDealVerdictPass(v.Pool, dealVerdictRefs(t, bundleLane{move: v.move, date: v.lane.date}), slog.New(slog.DiscardHandler))
 	v.pass.now = func() time.Time { return v.now.Add(time.Minute) }
 	v.run(t)
 	if n := v.WsCount(t, `SELECT count(*) FROM deal_correction WHERE deal_id = $1`, v.deal); n != 3 {
@@ -470,6 +478,7 @@ func (v *stageMoveEnv) moveOn(t *testing.T) {
 }
 
 func TestAnUndoRefusedForTheStageLeavesTheWholeDealAsItWas(t *testing.T) {
+	t.Parallel()
 	v := setupBundle(t)
 	v.moveOn(t)
 	h := newMarginceChangeHandlers(v.Pool)
@@ -504,6 +513,7 @@ func TestAnUndoRefusedForTheStageLeavesTheWholeDealAsItWas(t *testing.T) {
 }
 
 func TestAHeldDealKeepsAReviewedChangeForTheDealsReason(t *testing.T) {
+	t.Parallel()
 	v := setupBundle(t)
 	v.accept(t, v.deal, deals.VerdictProbabilityCorrection)
 	v.moveOn(t)
@@ -551,6 +561,7 @@ func (v *dealVerdictEnv) mailedMorning(t *testing.T, at time.Time) {
 }
 
 func TestLastNightStartsWhenThePreviousMorningWasSent(t *testing.T) {
+	t.Parallel()
 	const counted = "Margince changed 1 of your deals last night"
 	for _, tc := range []struct {
 		name    string
@@ -577,6 +588,7 @@ func TestLastNightStartsWhenThePreviousMorningWasSent(t *testing.T) {
 // A stage move's receipt names the stages only for a reader who may read
 // pipelines, the grant every other stage name is held to.
 func TestAStageMoveReceiptNamesNoStageToAReaderWithoutPipelineRead(t *testing.T) {
+	t.Parallel()
 	v := setupBundle(t)
 	withStages, err := v.Deals.RecentCorrectionsOwnedBy(v.owner(t), v.now.Add(-24*time.Hour), 20)
 	if err != nil {

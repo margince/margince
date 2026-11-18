@@ -64,6 +64,7 @@ func (e *dedupeEnv) leadVersion(ctx context.Context, t *testing.T, lead ids.Lead
 // treats every field alike: a fold onto empty fields only would pass against a
 // writer that overwrote everything.
 func TestAnApprovedCaptureFoldFillsWhatIsEmptyAndKeepsWhatWasTyped(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	lead := e.createLead(ctx, t, "Jonas Petersen", "jonas@nordwind.test", "")
@@ -94,6 +95,7 @@ func TestAnApprovedCaptureFoldFillsWhatIsEmptyAndKeepsWhatWasTyped(t *testing.T)
 // as a write of the same values: a version bump expires every other proposal
 // pinned to this lead, and a card that moved no data would have spent them.
 func TestACaptureFoldThatFillsNothingLeavesTheLeadAlone(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	lead := e.createLead(ctx, t, "Jonas Petersen", "jonas@nordwind.test", "Nordwind Logistik")

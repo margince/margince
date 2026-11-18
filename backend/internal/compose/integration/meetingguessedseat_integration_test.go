@@ -25,6 +25,7 @@ import (
 // backfill guessed, so nobody knows the reader was there. The same meeting with the
 // connector's create audit is real, and the movement sentence appears.
 func TestAGuessedSeatSetsNoLastSpokeBaseline(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name string
 		made bool

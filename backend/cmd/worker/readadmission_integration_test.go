@@ -8,19 +8,16 @@ package main
 import (
 	"io"
 	"log/slog"
-	"os"
 	"testing"
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 )
 
 func TestBootAppliesTheConfiguredReadAllowance(t *testing.T) {
-	dsn := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if dsn == "" {
-		t.Fatal("MARGINCE_TEST_APP_DSN is required; run through make test-it")
-	}
-	cfg, _, err := loadWorkerConfig(nil, []string{"MARGINCE_ENV=dev", "MARGINCE_DSN=" + dsn, "MARGINCE_DATABASE_READ_CONCURRENCY=1", "MARGINCE_DATABASE_CONNECTION_LIFETIME=30m", "MARGINCE_DATABASE_CONNECTION_IDLE_TIME=2m"})
+	t.Parallel()
+	cfg, _, err := loadWorkerConfig(nil, []string{"MARGINCE_ENV=dev", "MARGINCE_DSN=" + testdb.For(t).AppDSN, "MARGINCE_DATABASE_READ_CONCURRENCY=1", "MARGINCE_DATABASE_CONNECTION_LIFETIME=30m", "MARGINCE_DATABASE_CONNECTION_IDLE_TIME=2m"})
 	if err != nil {
 		t.Fatal(err)
 	}

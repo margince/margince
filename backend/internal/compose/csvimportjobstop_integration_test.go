@@ -57,6 +57,7 @@ func snoozeOf(t *testing.T, err error) time.Duration {
 }
 
 func TestAnUndoSliceOfALockedRunWaitsForTheLock(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	h, undo := committedUndo(t, e)
 	release, err := migration.NewRunStore(e.DB()).LockRunWrites(importAdmin(e), undo.RunID)
@@ -75,6 +76,7 @@ func TestAnUndoSliceOfALockedRunWaitsForTheLock(t *testing.T) {
 }
 
 func TestAnUndoSlicePastItsBudgetSnoozesAndTheNextOneFinishes(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	h, undo := committedUndo(t, e)
 	late := commitWorkerFor(e, h).slicer
@@ -103,6 +105,7 @@ func TestAnUndoSlicePastItsBudgetSnoozesAndTheNextOneFinishes(t *testing.T) {
 }
 
 func TestAnUndoWhoseApproverLostTheirSeatStaysUndoingWithTheCause(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	h, undo := committedUndo(t, e)
 	e.WsExec(t, `UPDATE app_user SET seat_type = 'read' WHERE id = $1`, e.AdminUser)
@@ -126,6 +129,7 @@ func TestAnUndoWhoseApproverLostTheirSeatStaysUndoingWithTheCause(t *testing.T) 
 
 // An attempt a newer one fenced off records nothing, so it logs no stop either.
 func TestAFencedOffAttemptLogsNoStop(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	_, args := approvedLeadRun(t, e)
 	stale := args.lease()
@@ -143,6 +147,7 @@ func TestAFencedOffAttemptLogsNoStop(t *testing.T) {
 }
 
 func TestACommitWhoseApproverLostTheGrantFailsWithThatCause(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	h, args := approvedLeadRun(t, e)
 	e.WsExec(t, `DELETE FROM role_assignment WHERE user_id = $1`, e.AdminUser)
@@ -156,6 +161,7 @@ func TestACommitWhoseApproverLostTheGrantFailsWithThatCause(t *testing.T) {
 }
 
 func TestACommitOfARunThatLostItsMappingOrItsFileFailsIt(t *testing.T) {
+	t.Parallel()
 	for name, lose := range map[string]func(*testing.T, *integration.Env, importHandlers, migration.Run){
 		"mapping": func(t *testing.T, e *integration.Env, _ importHandlers, run migration.Run) {
 			e.WsExec(t, `UPDATE import_run SET mapping = 'null'::jsonb WHERE id = $1`, run.ID)
@@ -183,6 +189,7 @@ func TestACommitOfARunThatLostItsMappingOrItsFileFailsIt(t *testing.T) {
 }
 
 func TestACommitStoppedInItsTagPhaseRunsItAgainAndCompletes(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	h, args := approvedLeadRun(t, e)
 	e.WsExec(t, `UPDATE import_run SET phase = $2, progress = '{}'::jsonb WHERE id = $1`,

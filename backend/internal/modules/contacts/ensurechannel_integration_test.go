@@ -76,6 +76,7 @@ func (e *dedupeEnv) channelEnsureInput(ctx context.Context, t *testing.T, ci con
 }
 
 func TestEnsureChannelCounterpartyCreatesAnOwnerlessContact(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.asChannelConnector()
 	ci := connector.ChannelIdentity{Provider: telegramProvider, ChannelUserID: "880101", Username: "annahandle"}
@@ -160,6 +161,7 @@ func TestEnsureChannelCounterpartyCreatesAnOwnerlessContact(t *testing.T) {
 // identity satellite, and inventing an address would be a lie the dedupe ladder
 // then treats as an exact key.
 func TestEnsureChannelCounterpartyWritesNoEmailRowWithoutOne(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.asChannelConnector()
 	ci := connector.ChannelIdentity{Provider: telegramProvider, ChannelUserID: "880201", Username: "noaddress"}
@@ -183,6 +185,7 @@ func TestEnsureChannelCounterpartyWritesNoEmailRowWithoutOne(t *testing.T) {
 // An outside address still becomes one, so the refusal above cannot be read as
 // refusing every channel counterparty.
 func TestEnsureChannelCounterpartyStillTakesAnOutsideAddress(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.asChannelConnector()
 	ci := connector.ChannelIdentity{Provider: telegramProvider, ChannelUserID: "880401", Username: "outsider"}
@@ -199,6 +202,7 @@ func TestEnsureChannelCounterpartyStillTakesAnOutsideAddress(t *testing.T) {
 }
 
 func TestEnsureChannelCounterpartyRespectsTheSuppressionLedger(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.asChannelConnector()
 	erased := connector.ChannelIdentity{Provider: telegramProvider, ChannelUserID: "880301", Username: "gone"}
@@ -209,7 +213,7 @@ func TestEnsureChannelCounterpartyRespectsTheSuppressionLedger(t *testing.T) {
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
 			INSERT INTO erasure_suppression (kind, value_hash) VALUES ('channel_identity', $1)`,
-			storekit.ChannelIdentityHash(erased.Provider, erased.ChannelUserID))
+			storekit.ChannelIdentityHash(ctx, erased.Provider, erased.ChannelUserID))
 		return err
 	}); err != nil {
 		t.Fatal(err)
@@ -282,6 +286,7 @@ func handleText(handle *string) string {
 // enclosing contact mutation covers a rename that arrives on a message from
 // someone the workspace already knows.
 func TestChannelUsernameRefreshesOnEveryInboundMessage(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.asChannelConnector()
 	ci := connector.ChannelIdentity{Provider: telegramProvider, ChannelUserID: "880401", Username: "old_handle"}
@@ -351,6 +356,7 @@ func TestChannelUsernameRefreshesOnEveryInboundMessage(t *testing.T) {
 }
 
 func TestEnsureChannelCounterpartyRefusesAProvenSeatAddress(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.asChannelConnector()
 	e.declareSeatAddress(ctx, t, e.otherRep, "colleague.attested@gmail.test", "provider")

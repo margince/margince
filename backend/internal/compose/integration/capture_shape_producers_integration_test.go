@@ -73,6 +73,7 @@ func seedAccountAsCaptureWould(t *testing.T, e *Env) ids.UUID {
 // employment. It needs no model, so this half must work on an installation
 // that bought none.
 func TestTheGhostedRuleReachesAnAccountCaptureLinkedThroughAContact(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := seedAccountAsCaptureWould(t, e)
 
@@ -93,6 +94,7 @@ func TestTheGhostedRuleReachesAnAccountCaptureLinkedThroughAContact(t *testing.T
 // the model's business and no assertion is made about it — that the
 // conversation reaches the queue at all is the invariant under test.
 func TestTheExtractorIsOfferedAConversationCaptureLinkedThroughAContact(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	seedAccountAsCaptureWould(t, e)
 
@@ -121,6 +123,7 @@ func TestTheExtractorIsOfferedAConversationCaptureLinkedThroughAContact(t *testi
 // used to be, which is the failure this whole file exists to prevent, wearing
 // a test's clothes.
 func TestTheAccountTimelineCountsMailCaptureLinkedThroughAContact(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := seedAccountAsCaptureWould(t, e)
 
@@ -148,6 +151,7 @@ func TestTheAccountTimelineCountsMailCaptureLinkedThroughAContact(t *testing.T) 
 // correspondence behind it is readable by one contact. Capture privacy does not
 // yield to row_scope=all, so the summary must not either.
 func TestAModelReadOfPrivateMailIsPrivateEvenOnASharedAccount(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Promoted Co", &e.Rep1)
 	// The account is the workspace's; the contact is not yet.
@@ -203,6 +207,7 @@ func TestAModelReadOfPrivateMailIsPrivateEvenOnASharedAccount(t *testing.T) {
 // the message rather than quoting it. The subject line would be content, and
 // content is what the owner-private half exists to hold back.
 func TestTheGhostedRuleIsSharedAndQuotesNothing(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := seedAccountAsCaptureWould(t, e)
 	e.WsExec(t, `UPDATE company SET visibility = 'workspace' WHERE id = $1`, company)
@@ -251,6 +256,7 @@ func TestTheGhostedRuleIsSharedAndQuotesNothing(t *testing.T) {
 // it: the constraint is one migration from being dropped by somebody who did
 // not read this.
 func TestAnAccountPrivateToNobodyInParticularCannotBeBuilt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Unattributable Co", &e.Rep1)
 
@@ -273,6 +279,7 @@ func TestAnAccountPrivateToNobodyInParticularCannotBeBuilt(t *testing.T) {
 // Reading the owner only off the contact left this case answering to nobody,
 // which the row then rendered as shared.
 func TestAPrivateAccountSuppliesTheReaderItsOwnMailAnswersTo(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Private Co", &e.Rep1)
 	e.WsExec(t, `UPDATE company SET visibility = 'owner', owner_id = $2,

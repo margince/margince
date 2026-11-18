@@ -79,6 +79,7 @@ func bearer(token string) map[string]string {
 }
 
 func TestABuyerEntersTheRoomReadsTheReleaseAndSpeaks(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	room := openRoomWithABuyer(t, e)
@@ -186,6 +187,7 @@ func TestABuyerEntersTheRoomReadsTheReleaseAndSpeaks(t *testing.T) {
 }
 
 func TestEveryDeadCredentialReadsAlikeAndARoomSessionHoldsNoCRMAuthority(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	room := openRoomWithABuyer(t, e)
@@ -305,6 +307,7 @@ func uploadDealFile(t *testing.T, e *apptest.AppEnv, dealID, filename string, da
 // `p.revoked_at IS NULL` turns that case into a 200 — a buyer entering a room
 // they were taken out of — and nothing else in the statement notices.
 func TestARevokedSeatCannotSpendTheInvitationItStillHolds(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	room := openRoomWithABuyer(t, e)
@@ -394,6 +397,7 @@ func revokeParticipantRowOnly(t *testing.T, e *apptest.AppEnv, participantID str
 }
 
 func TestABuyerReadsAndDownloadsOnlyWhatTheReleaseNames(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithOptions(t, compose.WithBlobstore(blobstore.NewMemory()))
 	e.BootstrapWorkspace(t)
 	room := openRoomWithABuyer(t, e)
@@ -475,6 +479,7 @@ func TestABuyerReadsAndDownloadsOnlyWhatTheReleaseNames(t *testing.T) {
 }
 
 func TestTheConversationFlowsBothWaysAndADocumentIsNeverConfirmed(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithOptions(t, compose.WithBlobstore(blobstore.NewMemory()))
 	e.BootstrapWorkspace(t)
 	room := openRoomWithABuyer(t, e)
@@ -594,6 +599,7 @@ func TestTheConversationFlowsBothWaysAndADocumentIsNeverConfirmed(t *testing.T) 
 // hands back the whole conversation, so hiding it from the list alone would be
 // a curtain rather than a gate.
 func TestAThreadClosesToTheBuyerWhenItsDocumentLeavesTheRoom(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithOptions(t, compose.WithBlobstore(blobstore.NewMemory()))
 	e.BootstrapWorkspace(t)
 	room := openRoomWithABuyer(t, e)

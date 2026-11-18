@@ -50,6 +50,7 @@ func (e *privacyEnv) addEmail(t *testing.T, id ids.ContactID, email string, posi
 // see what it points at. A batched read that took the queue's word for it would
 // hand a rep the name and address of a colleague's private contact.
 func TestABatchedMergeFaceStillObeysTheRowScope(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	mine := e.captureContact(t, "workspace")
 	theirs := e.captureContact(t, "owner")
@@ -83,6 +84,7 @@ func TestABatchedMergeFaceStillObeysTheRowScope(t *testing.T) {
 // Both reads order by (position, created_at); this seeds them out of that order
 // so a query that took whatever the database offered would pick the other one.
 func TestAMergeFaceNamesTheSameAddressTheRecordPageDoes(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	id := e.captureContact(t, "workspace")
 	e.addEmail(t, id, "second@example.test", 2)
@@ -113,6 +115,7 @@ func TestAMergeFaceNamesTheSameAddressTheRecordPageDoes(t *testing.T) {
 // the caller renders it as withheld, and it must be able to tell that from a
 // database that would not answer.
 func TestABatchedMergeFaceRefusesWithoutTheObjectGrant(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	id := e.captureContact(t, "workspace")
 
@@ -180,6 +183,7 @@ func (e *privacyEnv) seedCompany(t *testing.T) ids.UUID {
 // either end — a count answering without it is a counting oracle over edges the
 // role is refused on every other surface.
 func TestAMergeFacesContactCountCarriesBothObjectGrants(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	companyID := e.seedCompany(t)
 
@@ -223,6 +227,7 @@ func TestAMergeFacesContactCountCarriesBothObjectGrants(t *testing.T) {
 // fallback matters because a merge card with two blank sides asks somebody to
 // choose between nothing and nothing.
 func TestALeadIsNamedByWhateverItCarries(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	withEmail, companyOnly := ids.NewV7(), ids.NewV7()
 	ctx := e.as(e.owner, principal.RowScopeAll)

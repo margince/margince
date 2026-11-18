@@ -63,6 +63,7 @@ func readDrill(t *testing.T, dsn, id string) recordedDrill {
 // The operator's whole path: a drill opened and then closed leaves a row under
 // the operator's name. The database clock measured its recovery window.
 func TestADrillRecordedFromTheCommandLineLeavesMeasuredEvidence(t *testing.T) {
+	t.Parallel()
 	dsn := drillInstallation(t, "_drill_ledger")
 	restoredTo := time.Now().Add(-45 * time.Minute).UTC().Truncate(time.Second)
 
@@ -101,6 +102,7 @@ func TestADrillRecordedFromTheCommandLineLeavesMeasuredEvidence(t *testing.T) {
 // The first answer is the one that happened: a drill already closed refuses a
 // second close instead of letting it rewrite the outcome.
 func TestAClosedDrillCannotBeClosedAgainFromTheCommandLine(t *testing.T) {
+	t.Parallel()
 	dsn := drillInstallation(t, "_drill_closed")
 	out := mustMigrate(t, "drill-start", "--dsn", dsn, "--by", "ops",
 		"--restored-to", time.Now().Add(-time.Hour).UTC().Format(time.RFC3339))
@@ -118,6 +120,7 @@ func TestAClosedDrillCannotBeClosedAgainFromTheCommandLine(t *testing.T) {
 // What the operator typed is checked before anything is written. A missing
 // name, a bad time and a future restore point each leave the ledger empty.
 func TestDrillStartRefusesInputThatWouldRecordFalseEvidence(t *testing.T) {
+	t.Parallel()
 	dsn := drillInstallation(t, "_drill_refused")
 	past := time.Now().Add(-time.Hour).UTC().Format(time.RFC3339)
 	cases := map[string][]string{
@@ -158,6 +161,7 @@ func TestDrillStartRefusesInputThatWouldRecordFalseEvidence(t *testing.T) {
 // Each verb leaves its audit row in the transaction that wrote the drill. The
 // actor is the command line's system pass; the typed name is the evidence.
 func TestDrillVerbsLeaveAnAuditRowUnderTheSystemPass(t *testing.T) {
+	t.Parallel()
 	dsn := drillInstallation(t, "_drill_audit")
 	out := mustMigrate(t, "drill-start", "--dsn", dsn, "--by", "Dana Ops",
 		"--restored-to", time.Now().Add(-time.Hour).UTC().Format(time.RFC3339))

@@ -164,6 +164,7 @@ func (f *routerFixture) row(t *testing.T, task ai.Task) routerRow {
 // request made the call, settled the moment it appears — and carrying no lease,
 // because it never claimed to be running.
 func TestARouterReportedTaskReachesTheProjection(t *testing.T) {
+	t.Parallel()
 	f := newRouterFixture(t)
 	f.call(t, ai.TaskSummarize, nil)
 	f.drain(t)
@@ -202,6 +203,7 @@ func TestARouterReportedTaskReachesTheProjection(t *testing.T) {
 // `enrich` is the example because it is the shape: one correlation id per job
 // pass, a call per candidate in series, and the router owns it.
 func TestOneRequestsCallsForOneTaskAreOneOccurrence(t *testing.T) {
+	t.Parallel()
 	f := newRouterFixture(t)
 	f.call(t, ai.TaskEnrich, func(c *ai.Call) { c.ErrorSentinel = "provider_unavailable" })
 	f.drain(t)
@@ -230,6 +232,7 @@ func TestOneRequestsCallsForOneTaskAreOneOccurrence(t *testing.T) {
 // Two tasks under one request are two occurrences: they are different work, and
 // collapsing them would let one overwrite the other's outcome.
 func TestTwoTasksUnderOneRequestAreTwoOccurrences(t *testing.T) {
+	t.Parallel()
 	f := newRouterFixture(t)
 	f.call(t, ai.TaskSummarize, nil)
 	f.call(t, ai.TaskGrowthFit, func(c *ai.Call) { c.Degraded = true })
@@ -247,6 +250,7 @@ func TestTwoTasksUnderOneRequestAreTwoOccurrences(t *testing.T) {
 // otherwise write one occurrence between them, and the carrier's is the one
 // that can say queued and running.
 func TestTheRouterWritesNothingForACarrierOwnedTask(t *testing.T) {
+	t.Parallel()
 	f := newRouterFixture(t)
 	f.call(t, ai.TaskDocumentExtract, nil)
 
@@ -265,6 +269,7 @@ func TestTheRouterWritesNothingForACarrierOwnedTask(t *testing.T) {
 // provider's own message: degrade_reason is read by an ordinary rep, and vendor
 // error text carries provider detail and can echo credential material.
 func TestAFailedCallCarriesItsSentinelAndNoVendorText(t *testing.T) {
+	t.Parallel()
 	f := newRouterFixture(t)
 	f.call(t, ai.TaskEnrich, func(c *ai.Call) { c.ErrorSentinel = "budget_exceeded" })
 	f.drain(t)
@@ -282,6 +287,7 @@ func TestAFailedCallCarriesItsSentinelAndNoVendorText(t *testing.T) {
 // budget guardrail, the cost ledger and the certification record are read from,
 // and none of them may be lost because a rail row could not be written.
 func TestACallTheRouterCannotAnnounceIsStillTraced(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	// A workspace-bound context with no actor: storekit has no principal to
 	// stamp the ledger row from, so the announcement cannot be made at all.
@@ -313,6 +319,7 @@ func TestACallTheRouterCannotAnnounceIsStillTraced(t *testing.T) {
 // to fall INSIDE the caller's own set, which is a property of where the
 // predicate sits in the statement and cannot be got by filtering the result.
 func TestTheBoundFallsInsideTheKindsTheCallerAskedFor(t *testing.T) {
+	t.Parallel()
 	f := newRouterFixture(t)
 	// Twelve settled occurrences of a kind the caller does not want, more than
 	// the ten `recent` holds, and then the one it does.
@@ -382,6 +389,7 @@ func (f *routerFixture) midnightOf(t *testing.T) time.Time {
 const racingCalls = 16
 
 func TestConcurrentCallsOfOneTaskAllReachTheProjection(t *testing.T) {
+	t.Parallel()
 	f := newRouterFixture(t)
 
 	start := make(chan struct{})
@@ -463,6 +471,7 @@ func racingSentinel(i int) string {
 // between goroutines would prove nothing, since the loser usually gets the lock
 // a moment later.
 func TestACallThatCannotGetTheOccurrenceLockIsStillTraced(t *testing.T) {
+	t.Parallel()
 	f := newRouterFixture(t)
 
 	holder, err := f.env.Pool.Acquire(context.Background())

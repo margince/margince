@@ -54,6 +54,7 @@ func unresolvedNewerEmployment(t *testing.T, e *integration.Env, name string) id
 }
 
 func TestUndatedEmploymentRepairIsBoundedAtomicAndReplaySafe(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	first := unresolvedNewerEmployment(t, e, "first-role")
 	second := unresolvedNewerEmployment(t, e, "second-role")

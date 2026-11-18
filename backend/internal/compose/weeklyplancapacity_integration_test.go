@@ -33,6 +33,7 @@ var capacityClock = time.Date(2026, 6, 10, 9, 0, 0, 0, time.UTC)
 // happened, so a meeting with an outcome there is one somebody backdated, and
 // counting it would inflate a figure a rep plans against.
 func TestCapacityCountsOnlyBookedMeetingsInTheNamedWeeksLocalWindow(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 
@@ -74,6 +75,7 @@ func TestCapacityCountsOnlyBookedMeetingsInTheNamedWeeksLocalWindow(t *testing.T
 // tell the two apart — which is how the original defect survived, with the plan
 // stored against one week and priced against another.
 func TestCapacityPricesTheWeekItIsGiven(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 
@@ -114,6 +116,7 @@ func TestCapacityPricesTheWeekItIsGiven(t *testing.T) {
 // fallback to the capturer is bounded to rows carrying NO host, so a meeting
 // naming one cannot also be claimed by whoever recorded it and counted twice.
 func TestCapacityCountsAMeetingHostedByTheRepWhoeverFiledIt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	owner := integration.OwnerConn(t)
@@ -153,6 +156,7 @@ func TestCapacityCountsAMeetingHostedByTheRepWhoeverFiledIt(t *testing.T) {
 // no seat here counts for nobody, and so does a host-less row the rep filed.
 // The meeting the rep hosts counts.
 func TestCapacityCountsOnlyAMeetingTheRepTakesPartIn(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	owner := integration.OwnerConn(t)
@@ -198,6 +202,7 @@ func TestCapacityCountsOnlyAMeetingTheRepTakesPartIn(t *testing.T) {
 // they commit to. The first fixture for this line hand-wrote 'booked' and so
 // never touched the path an imported meeting takes.
 func TestCapacityCountsAMeetingNobodyRecordedAStatusFor(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 
@@ -225,6 +230,7 @@ func TestCapacityCountsAMeetingNobodyRecordedAStatusFor(t *testing.T) {
 // no status, so this is the shape an imported meeting arrives in rather than a
 // fixture convenience.
 func TestACapturedMeetingArrivesWithNoStatus(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedCalendarConnection(t, e)
 

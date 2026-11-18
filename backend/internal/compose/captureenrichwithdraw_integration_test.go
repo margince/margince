@@ -53,6 +53,7 @@ func (h *historyEnv) signatureWrites(t *testing.T) int {
 }
 
 func TestAMailboxWithdrawnDuringTheWalkStopsIt(t *testing.T) {
+	t.Parallel()
 	for _, how := range withdrawals {
 		t.Run(how, func(t *testing.T) {
 			h := setupHistory(t)
@@ -80,6 +81,7 @@ func TestAMailboxWithdrawnDuringTheWalkStopsIt(t *testing.T) {
 }
 
 func TestAMailWithdrawnWhileTheModelReadsItLandsNothing(t *testing.T) {
+	t.Parallel()
 	for _, how := range withdrawals {
 		t.Run(how, func(t *testing.T) {
 			h := setupHistory(t)
@@ -108,6 +110,7 @@ func TestAMailWithdrawnWhileTheModelReadsItLandsNothing(t *testing.T) {
 }
 
 func TestATitleAColleagueClearedIsNotRefilledFromOlderMail(t *testing.T) {
+	t.Parallel()
 	h := setupHistory(t)
 	h.entersThenClears(t, h.contact)
 	older := h.writes(t, 0, signed("Head of Procurement"))
@@ -125,6 +128,7 @@ func TestATitleAColleagueClearedIsNotRefilledFromOlderMail(t *testing.T) {
 }
 
 func TestATitleClearedWhileTheModelReadsOlderMailStaysClear(t *testing.T) {
+	t.Parallel()
 	h := setupHistory(t)
 	older := h.writes(t, 0, signed("Head of Procurement"))
 	h.writes(t, 3, unsigned)
@@ -156,6 +160,7 @@ func (h *historyEnv) entersThenClears(t *testing.T, id ids.UUID) {
 }
 
 func TestSignatureSourceStillBelongsToTheContactAfterAnEmailEdit(t *testing.T) {
+	t.Parallel()
 	for _, changed := range []bool{false, true} {
 		name := "the sender remains a contact email"
 		if changed {

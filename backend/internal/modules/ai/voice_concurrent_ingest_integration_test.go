@@ -15,7 +15,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"sync"
 	"testing"
 	"time"
@@ -50,13 +49,9 @@ type concurrentIngestEnv struct {
 
 func setupConcurrentIngest(t *testing.T) *concurrentIngestEnv {
 	t.Helper()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,10 +60,7 @@ func setupConcurrentIngest(t *testing.T) *concurrentIngestEnv {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
-	pool, err := testdb.Pool(ctx, appDSN)
+	pool, err := testdb.Pool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -135,6 +127,7 @@ func (e *concurrentIngestEnv) storeIn(ws ids.UUID) *VoiceStore {
 // in the manifest — measured over eight runs of the mutation, every one of
 // which failed here.
 func TestConcurrentIngestOfDistinctSourcesAllSucceed(t *testing.T) {
+	t.Parallel()
 	e := setupConcurrentIngest(t)
 	ctx, profile := e.seedBuiltProfile(t)
 	store := e.storeIn(workspaceOf(ctx, t))
@@ -199,6 +192,7 @@ func TestConcurrentIngestOfDistinctSourcesAllSucceed(t *testing.T) {
 // the reader is served a voice that no longer describes its sources. Guarding
 // this is what stops the deadlock fix from being "stop writing the row".
 func TestConcurrentIngestMarksTheBuiltProfileStale(t *testing.T) {
+	t.Parallel()
 	e := setupConcurrentIngest(t)
 	ctx, profile := e.seedBuiltProfile(t)
 	store := e.storeIn(workspaceOf(ctx, t))

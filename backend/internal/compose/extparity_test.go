@@ -252,8 +252,9 @@ func TestTheSweepTellsAContractOnlyVerbFromAMissingOne(t *testing.T) {
 // extension lane runs, and crm-hello is copied into it there. A declared verb
 // with no served tool must never reach Invoke.
 func TestTheLiveComposedSetHasNoUnhandledInvocation(t *testing.T) {
-	verbs := ComposedVerbs()
-	served := composedServedVerbs()
+	var vanilla *Extensions
+	verbs := vanilla.Verbs()
+	served := vanilla.servedVerbs()
 	reached := ""
 	mux := http.NewServeMux()
 	routes, err := MountExtensionRoutes(mux, verbs, served, func(_ context.Context, name string, _ json.RawMessage) (json.RawMessage, error) {
@@ -302,7 +303,8 @@ func composedFixture() []extension.Verb {
 // boot. In the vanilla tree the composed set is empty and this asserts the empty
 // case — which is the case that must also stay true.
 func TestTheLiveComposedSetMountsEveryVerbItDeclares(t *testing.T) {
-	verbs := ComposedVerbs()
+	var vanilla *Extensions
+	verbs := vanilla.Verbs()
 	_, routes := mountForTest(t, verbs, allServed(verbs))
 	if got, want := len(routes), len(verbs); got != want {
 		t.Fatalf("mounted %d routes for %d declared operations", got, want)

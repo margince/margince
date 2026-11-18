@@ -24,6 +24,7 @@ import (
 // The cross-object half. Neither module knows the other: the reach is declared
 // in auth's group closure and the ledger asks it which of its rows survive.
 func TestAMaskedSeatReadsNoCommissionEntryPricedFromTheTier(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	fx := seedAccrualFixture(t, e, "tier2_20")
 	winAndDeliver(t, e, fx)
@@ -54,6 +55,7 @@ func TestAMaskedSeatReadsNoCommissionEntryPricedFromTheTier(t *testing.T) {
 // existing shape: a row outside the caller's reach must not be told apart from
 // one that does not exist.
 func TestAMaskedSeatAsksForOneEntryAndIsToldItIsNotThere(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	fx := seedAccrualFixture(t, e, "tier2_20")
 	winAndDeliver(t, e, fx)
@@ -71,6 +73,7 @@ func TestAMaskedSeatAsksForOneEntryAndIsToldItIsNotThere(t *testing.T) {
 // it runs as the system actor, which carries no mask, and every test here is
 // built on an entry it wrote.
 func TestAnUnmaskedSeatReadsTheLedgerWhole(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	fx := seedAccrualFixture(t, e, "tier2_20")
 	winAndDeliver(t, e, fx)

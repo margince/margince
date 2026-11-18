@@ -44,6 +44,7 @@ func endsOf(t *testing.T, env captureEnv, messageID string) capturedEnds {
 }
 
 func TestMailSentFromTheSeatsFormerAddressIsTheirOutboundMail(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	declareIdentity(t, env.e, env.e.Rep1, capturemod.IdentityKindAddress, formerAddress)
 
@@ -67,6 +68,7 @@ func TestMailSentFromTheSeatsFormerAddressIsTheirOutboundMail(t *testing.T) {
 // A From line is the sender's text. Without the provider filing the message as
 // sent, a stranger writing the seat's former address stays a stranger's mail.
 func TestMailFromTheFormerAddressThatWasNotFiledAsSentStaysInbound(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	declareIdentity(t, env.e, env.e.Rep1, capturemod.IdentityKindAddress, formerAddress)
 
@@ -81,6 +83,7 @@ func TestMailFromTheFormerAddressThatWasNotFiledAsSentStaysInbound(t *testing.T)
 // Filed as sent but from an address the seat never claimed: placement is not
 // authorship, so the message keeps the direction its From gives it.
 func TestMailFiledAsSentFromAnUnclaimedAddressStaysInbound(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 
 	env.syncSent(t, map[string]bool{"former-3@previous-employer.example": true},
@@ -96,6 +99,7 @@ func TestMailFiledAsSentFromAnUnclaimedAddressStaysInbound(t *testing.T) {
 // seat's mailbox then delivers from its sent filing, is the seat's outbound mail
 // to the customer.
 func TestTheSeatsOwnAliasTurnsAColleaguesCopyRound(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	declareIdentity(t, env.e, env.e.Rep1, capturemod.IdentityKindAddress, formerAddress)
 	colleague := secondMailbox(t, env.e, env.e.Rep3)
@@ -114,6 +118,7 @@ func TestTheSeatsOwnAliasTurnsAColleaguesCopyRound(t *testing.T) {
 // An address two seats hold is nobody's to claim: whichever mailbox synced
 // first would otherwise decide whose mail it is.
 func TestAnAddressAnotherSeatAlsoHoldsDoesNotTurnACopyRound(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	declareIdentity(t, env.e, env.e.Rep1, capturemod.IdentityKindAddress, formerAddress)
 	declareIdentity(t, env.e, env.e.Rep3, capturemod.IdentityKindAddress, formerAddress)
@@ -133,6 +138,7 @@ func TestAnAddressAnotherSeatAlsoHoldsDoesNotTurnACopyRound(t *testing.T) {
 // The correction needs the provider's sent filing. A colleague's received copy
 // replayed by the seat's mailbox WITHOUT it stays as first read.
 func TestAColleaguesCopyStaysInboundWithoutTheSentFiling(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	declareIdentity(t, env.e, env.e.Rep1, capturemod.IdentityKindAddress, formerAddress)
 	colleague := secondMailbox(t, env.e, env.e.Rep3)
@@ -151,6 +157,7 @@ func TestAColleaguesCopyStaysInboundWithoutTheSentFiling(t *testing.T) {
 // their outbound mail without the attestation. The filing arriving later
 // attests it, which is what lets a reply count as an answer off its thread.
 func TestALaterSentFilingAttestsTheSeatsOwnMail(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	const msgID = "sent-unfiled-first@myco.example"
 	raw := emailCC(captureOwner, "Owner", "buyer@customer.example", "other@customer.example", msgID)
@@ -177,6 +184,7 @@ func TestALaterSentFilingAttestsTheSeatsOwnMail(t *testing.T) {
 // The fake connector reads every mailbox as the workspace owner's, so it
 // cannot deliver that shape through a second seat.
 func TestAPlantedSentCopyDoesNotAttestAColleaguesMail(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	colleague := secondMailbox(t, env.e, env.e.Rep3)
 	declareIdentity(t, env.e, env.e.Rep1, capturemod.IdentityKindAddress, secondSeatAddress)
@@ -209,6 +217,7 @@ func TestAPlantedSentCopyDoesNotAttestAColleaguesMail(t *testing.T) {
 // punycode are the same mailbox, and a second seat holding either spelling
 // keeps the alias nobody's to claim.
 func TestAnAliasAnotherSeatHoldsInAnotherSpellingDoesNotTurnACopyRound(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	const punycode = "founder@xn--bcher-kva.example"
 	declareIdentity(t, env.e, env.e.Rep1, capturemod.IdentityKindAddress, punycode)

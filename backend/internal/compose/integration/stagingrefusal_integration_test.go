@@ -85,6 +85,7 @@ func suppressContact(t *testing.T, e *apptest.AppEnv, contactID string) {
 // The mail door. A staged send to a recipient who asked us to stop is refused with the
 // whole transaction, so no delivery row survives it.
 func TestAMailSendToASuppressedRecipientStagesNothing(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	suppressContact(t, p.AppEnv, p.contactID)
@@ -104,6 +105,7 @@ func TestAMailSendToASuppressedRecipientStagesNothing(t *testing.T) {
 // variant of the mail one. A fix to the mail path does not reach it, so it is
 // asserted separately.
 func TestAChannelSendToASuppressedRecipientStagesNothing(t *testing.T) {
+	t.Parallel()
 	c := setupChannelSend(t)
 	c.GrantConsent(t, "transactional")
 	suppressContact(t, c.AppEnv, c.ContactID)
@@ -157,6 +159,7 @@ type stagedDecision struct {
 // other test in this file would still pass — a refusal that leaves no trail is
 // exactly as unanswerable later as no refusal at all.
 func TestAnAllowedSendRecordsItsStagingDecision(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.stakeADeal(t)
@@ -238,6 +241,7 @@ func (p *preflightEnv) sendClaiming(t *testing.T, context string) (status int, c
 // beside the category the engine resolved — so a claim the evidence does not
 // support is visible later rather than silently honoured or silently dropped.
 func TestAClaimedContextReachesTheDecision(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.activityID = logConsentInbound(t, p.AppEnv, p.contactID)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
@@ -262,6 +266,7 @@ func TestAClaimedContextReachesTheDecision(t *testing.T) {
 // door. A send able to claim one could dress marketing as a security warning
 // and pass a suppression that exists to stop exactly that.
 func TestASendCannotClaimAControllerCategory(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 
@@ -287,6 +292,7 @@ func TestASendCannotClaimAControllerCategory(t *testing.T) {
 // be removed with the whole unit lane and the whole integration lane green —
 // no test anywhere posted a communication_context to this route.
 func TestAChannelSendCannotClaimAControllerCategory(t *testing.T) {
+	t.Parallel()
 	c := setupChannelSend(t)
 	c.GrantConsent(t, "transactional")
 
@@ -304,6 +310,7 @@ func TestAChannelSendCannotClaimAControllerCategory(t *testing.T) {
 // And the ordinary claim still goes through on this door, so the refusal above
 // is a category check rather than the channel door rejecting the field itself.
 func TestAChannelSendMayClaimAnOrdinaryCategory(t *testing.T) {
+	t.Parallel()
 	c := setupChannelSend(t)
 	c.GrantConsent(t, "transactional")
 

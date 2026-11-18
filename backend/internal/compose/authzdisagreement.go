@@ -141,5 +141,5 @@ func (w *authzDisagreementWorker) report(
 // unconditional one is read.
 func addAuthzDisagreementWorker(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger) {
 	addDeclaredWorker[AuthzDisagreementArgs](reg, newAuthzDisagreementWorker(
-		identity.NewService(pool), consent.NewStore(InstallationDB(pool)), time.Now, log))
+		IdentityService(pool), consent.NewStore(InstallationDB(pool)), time.Now, log))
 }

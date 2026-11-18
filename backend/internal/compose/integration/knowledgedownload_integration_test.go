@@ -33,6 +33,7 @@ import (
 // of the file — and the reader is checking a citation against something other
 // than the document that was cited.
 func TestADocumentComesBackByteIdenticalToWhatWasUploaded(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	h := newKnowledgeHTTP(e)
 	ctx := e.As(e.Rep1, nil, corpusAdminPerms)
@@ -76,6 +77,7 @@ func TestADocumentComesBackByteIdenticalToWhatWasUploaded(t *testing.T) {
 // download is a READ of the document, so it carries the same gate every other
 // read does rather than being open because it streams bytes.
 func TestDownloadingWithoutTheDocumentGrantIsRefused(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	h := newKnowledgeHTTP(e)
 	admin := e.As(e.Rep1, nil, corpusAdminPerms)
@@ -118,6 +120,7 @@ func TestDownloadingWithoutTheDocumentGrantIsRefused(t *testing.T) {
 // An id that names no document is 404, and the body says nothing about whether
 // some other company holds one — existence stays hidden.
 func TestDownloadingAnUnknownDocumentIs404(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	h := newKnowledgeHTTP(e)
 	ctx := e.As(e.Rep1, nil, corpusAdminPerms)

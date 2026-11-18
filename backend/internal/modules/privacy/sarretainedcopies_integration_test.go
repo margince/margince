@@ -18,6 +18,7 @@ import (
 )
 
 func TestDuplicateEvidenceExportsOnlyTheSubjectsSide(t *testing.T) {
+	t.Parallel()
 	ctx := principal.SystemActing(context.Background(), "privacy_test")
 	tx := subjectColumnsTx(ctx, t)
 	subject, contactPair, leadPair := seedDedupePairs(ctx, t, tx)
@@ -55,6 +56,7 @@ func TestDuplicateEvidenceExportsOnlyTheSubjectsSide(t *testing.T) {
 }
 
 func TestLiveErasurePreservesDisputedRightsCases(t *testing.T) {
+	t.Parallel()
 	ctx := principal.SystemActing(context.Background(), "privacy_test")
 	tx := subjectColumnsTx(ctx, t)
 	subject, _, _ := seedDedupePairs(ctx, t, tx)
@@ -78,6 +80,7 @@ func TestLiveErasurePreservesDisputedRightsCases(t *testing.T) {
 }
 
 func TestIntroductionsExportTheSubjectsOwnRoleAndWithholdOtherTargetsNotes(t *testing.T) {
+	t.Parallel()
 	ctx := principal.SystemActing(context.Background(), "privacy_test")
 	tx := subjectColumnsTx(ctx, t)
 	subject, pair, _ := seedDedupePairs(ctx, t, tx)
@@ -137,6 +140,7 @@ func TestIntroductionsExportTheSubjectsOwnRoleAndWithholdOtherTargetsNotes(t *te
 }
 
 func TestDuplicateEvidenceKeepsWorkspaceReadableCustomerIdentity(t *testing.T) {
+	t.Parallel()
 	ctx := principal.SystemActing(context.Background(), "privacy_test")
 	tx := subjectColumnsTx(ctx, t)
 	subject, _, _ := seedDedupePairs(ctx, t, tx)
@@ -172,6 +176,7 @@ func TestDuplicateEvidenceKeepsWorkspaceReadableCustomerIdentity(t *testing.T) {
 // address was never promoted. Mutation: match only the survivor's id, or reach only
 // promoted leads, and that history is left out.
 func TestRetainedHistoryReachesMergedRecordsAndAddressMatchedLeads(t *testing.T) {
+	t.Parallel()
 	ctx := principal.SystemActing(context.Background(), "privacy_test")
 	tx := subjectColumnsTx(ctx, t)
 	subject, _, _ := seedDedupePairs(ctx, t, tx)
@@ -224,6 +229,7 @@ func TestRetainedHistoryReachesMergedRecordsAndAddressMatchedLeads(t *testing.T)
 // never promoted, holding an address left on a record merged into the subject.
 // Mutation: match leads by the survivor's own addresses only, and it is missing.
 func TestTheLeadsSectionListsALeadHoldingAMergedRecordsAddress(t *testing.T) {
+	t.Parallel()
 	ctx := principal.SystemActing(context.Background(), "privacy_test")
 	tx := subjectColumnsTx(ctx, t)
 	subject, _, _ := seedDedupePairs(ctx, t, tx)

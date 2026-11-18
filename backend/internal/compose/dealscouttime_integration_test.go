@@ -18,6 +18,7 @@ import (
 )
 
 func TestScoutUsesTheSourceDateInsteadOfDetection(t *testing.T) {
+	t.Parallel()
 	for _, age := range []int{2, 120} {
 		t.Run(time.Duration(age).String(), func(t *testing.T) {
 			e := setupScout(t)
@@ -45,6 +46,7 @@ func TestScoutUsesTheSourceDateInsteadOfDetection(t *testing.T) {
 }
 
 func TestSuggestionWriterRefusesDetectionTimeAsEvidenceTime(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	e.now = time.Date(2026, 6, 15, 12, 0, 0, 0, time.UTC)
 	company := e.SeedCompany(t, "Maple Studio", nil)
@@ -77,6 +79,7 @@ func (e *scoutEnv) dayMeeting(t *testing.T, contact ids.UUID, date time.Time) de
 // A day meeting falls past a dismissal by its date, as the scout's SQL places
 // it. One dated the dismissal's own date began before it, so it is refused.
 func TestTheWriterPlacesADayMeetingByItsDateAgainstTheFloor(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	acme := e.SeedCompany(t, "Acme GmbH", nil)
 	dana := e.employee(t, "Dana Buyer", acme)
@@ -109,6 +112,7 @@ func TestTheWriterPlacesADayMeetingByItsDateAgainstTheFloor(t *testing.T) {
 // A signal citing a day entry keeps its evidence when the installation zone
 // changes. Its recorded stamp does not move, so accepting opens a deal.
 func TestAZoneChangeLeavesASignalCitingADayStanding(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	e.now = time.Date(2026, 6, 15, 12, 0, 0, 0, time.UTC)
 	company := e.SeedCompany(t, "Maple Studio", nil)

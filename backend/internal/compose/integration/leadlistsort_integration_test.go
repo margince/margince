@@ -28,6 +28,7 @@ func listedLeadName(name *string) string {
 }
 
 func TestLeadListSortsByScoreAndPagesUnderIt(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := e.AsFullUser()
 
@@ -77,6 +78,7 @@ func TestLeadListSortsByScoreAndPagesUnderIt(t *testing.T) {
 // rows gets a shorter page rather than the whole list with the cold rows still
 // in it.
 func TestLeadListNarrowsToTheRequestedMinimumScore(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := e.AsFullUser()
 
@@ -105,6 +107,7 @@ func TestLeadListNarrowsToTheRequestedMinimumScore(t *testing.T) {
 // A sort field outside the lead vocabulary is refused rather than guessed,
 // so a client cannot order by a column the list does not publish.
 func TestLeadListRefusesAnUnknownSortField(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := e.AsFullUser()
 

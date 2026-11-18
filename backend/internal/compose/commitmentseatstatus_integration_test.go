@@ -37,6 +37,7 @@ const seatStatusPromise = "I will send the revised pricing by Friday."
 // conversation's watermark does not move. A request names a member, and one
 // who has left can be asked nothing, so nothing is staged for them.
 func TestAMailedPromiseByADeactivatedColleagueAsksNobody(t *testing.T) {
+	t.Parallel()
 	e, reply := seedMailedPromise(t, "deactivated")
 	if err := runSignalPass(t, e, reply); err != nil {
 		t.Fatalf("the pass failed on a promise by a deactivated colleague: %v", err)
@@ -52,6 +53,7 @@ func TestAMailedPromiseByADeactivatedColleagueAsksNobody(t *testing.T) {
 // An archived colleague's promise asks nobody: no task, no proposal, and so no
 // notice or email to anyone else in their place.
 func TestAMailedPromiseByAnArchivedColleagueAsksNobody(t *testing.T) {
+	t.Parallel()
 	e, reply := seedMailedPromise(t, "active")
 	e.WsExec(t, `UPDATE app_user SET archived_at = now() WHERE id = $1`, e.Rep2)
 	if err := runSignalPass(t, e, reply); err != nil {
@@ -77,6 +79,7 @@ func TestAMailedPromiseByAnArchivedColleagueAsksNobody(t *testing.T) {
 // The baseline the cases above are measured against: without it, a change that stopped
 // writing commitment tasks at all would satisfy them.
 func TestAMailedPromiseByAnActiveColleagueIsStillWrittenDirectly(t *testing.T) {
+	t.Parallel()
 	for _, status := range []string{"active", "invited"} {
 		t.Run(status, func(t *testing.T) {
 			e, reply := seedMailedPromise(t, status)
@@ -97,6 +100,7 @@ func TestAMailedPromiseByAnActiveColleagueIsStillWrittenDirectly(t *testing.T) {
 // An invited colleague's card waits the commitment horizon for them to sign in;
 // an active colleague's keeps the usual window.
 func TestAnUnsurePromiseIsProposedToItsColleagueAlone(t *testing.T) {
+	t.Parallel()
 	for status, window := range map[string]time.Duration{
 		"active":  72 * time.Hour,
 		"invited": 30 * 24 * time.Hour,
@@ -186,6 +190,7 @@ func runSignalPass(t *testing.T, e *integration.Env, reply string) error {
 //
 // What this holds is the carrying on: two signals are owed, and a pass settles both.
 func TestTheLegacyConversionSettlesEverySignalItIsOwed(t *testing.T) {
+	t.Parallel()
 	e, reply := seedMailedPromise(t, "active")
 	older := seedOwedCommitmentSignal(t, e, "thread-older", -72*time.Hour)
 	newer := seedOwedCommitmentSignal(t, e, "thread-newer", -71*time.Hour)
@@ -278,6 +283,7 @@ func seedOwedCommitmentSignal(t *testing.T, e *integration.Env, thread string, a
 // The fault still comes back, after the rest have had their turn: a failure nobody
 // sees is how one record becomes a silent ceiling.
 func TestASignalTheConversionCannotReadCostsOnlyItself(t *testing.T) {
+	t.Parallel()
 	e, _ := seedMailedPromise(t, "active")
 	older := seedOwedCommitmentSignal(t, e, "thread-older", -72*time.Hour)
 	newer := seedOwedCommitmentSignal(t, e, "thread-newer", -71*time.Hour)
@@ -392,6 +398,7 @@ func TestAProviderAlreadyBlockedLeavesThePassWithNothingToReport(t *testing.T) {
 // A promise in PRIVATE mail made by the mailbox's own owner is their task, also
 // while they are invited. They may read the mail, so they may hold the work.
 func TestAPrivatePromiseByItsInvitedOwnerIsTheirTask(t *testing.T) {
+	t.Parallel()
 	e, reply := seedMailedPromise(t, "invited")
 	// Capture-private to the seat that sent it: a contact visible to its owner alone
 	// keeps every message filed against it to that owner.
@@ -416,6 +423,7 @@ func TestAPrivatePromiseByItsInvitedOwnerIsTheirTask(t *testing.T) {
 // AgentAssigneeError rather than not-found — and a dispatcher reading only the
 // not-found answer would mint a task onto an agent seat that fails to move afterwards.
 func TestAPromiseNamingAnAgentSeatStagesNothing(t *testing.T) {
+	t.Parallel()
 	e, reply := seedMailedPromise(t, "active")
 	e.WsExec(t, `UPDATE app_user SET is_agent = true WHERE id = $1`, e.Rep2)
 
@@ -435,6 +443,7 @@ func TestAPromiseNamingAnAgentSeatStagesNothing(t *testing.T) {
 // owner: taking on a promise somebody else made is explicit, never a fallback.
 // The finding stays on its source, which only that owner may read.
 func TestAPrivatePromiseNamingNobodyAsksNobody(t *testing.T) {
+	t.Parallel()
 	e, reply := seedMailedPromise(t, "active")
 	reply = mailedReplyWithoutPromiser(t, reply)
 	// No colleague on the line: the sender participant goes, so nothing names a seat.

@@ -131,6 +131,7 @@ func runRSVPBackfill(t *testing.T, e *integration.Env) int {
 }
 
 func TestTheBackfillKeepsAMeetingTheOwnerHadDeclined(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedCalendarConnection(t, e)
 	starts := time.Now().Add(48 * time.Hour).UTC().Truncate(time.Second)
@@ -155,6 +156,7 @@ func TestTheBackfillKeepsAMeetingTheOwnerHadDeclined(t *testing.T) {
 }
 
 func TestTheBackfillLeavesAMeetingOnlyAGuestDeclined(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedCalendarConnection(t, e)
 	starts := time.Now().Add(72 * time.Hour).UTC().Truncate(time.Second)
@@ -173,6 +175,7 @@ func TestTheBackfillLeavesAMeetingOnlyAGuestDeclined(t *testing.T) {
 }
 
 func TestTheBackfillKeepsAnAnsweredMeetingWhenAnAttendeeDeclined(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedCalendarConnection(t, e)
 	starts := time.Now().Add(-48 * time.Hour).UTC().Truncate(time.Second)
@@ -201,6 +204,7 @@ func TestTheBackfillKeepsAnAnsweredMeetingWhenAnAttendeeDeclined(t *testing.T) {
 // leaves alone, so a second run offers nothing — without that a workspace full
 // of still-on meetings would be re-read on every tick forever.
 func TestTheBackfillDrainsAndDoesNotRepeatItself(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedCalendarConnection(t, e)
 	starts := time.Now().Add(24 * time.Hour).UTC().Truncate(time.Second)

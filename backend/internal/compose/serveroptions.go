@@ -247,7 +247,7 @@ func WithKeyvault(vault keyvault.Vault) Option {
 		// reporting no app and no URLs to register — and it would do so only on
 		// the option orders where keyvault happens to run last, which nothing
 		// holds.
-		s.connectorAppHandlers.store = connectorApps.WithUnitApps(composedUnitApp)
+		s.connectorAppHandlers.store = connectorApps.WithUnitApps(s.extensions.unitApp)
 		// And the connect transport resolves the STORED app per request, so an
 		// app set through Settings works without restarting the api. The worker
 		// resolves it the same way for the sync poll's token refresh, which is
@@ -270,8 +270,8 @@ func WithKeyvault(vault keyvault.Vault) Option {
 		// gmail-carrying registry when the app is configured.
 		if s.connectorHandlers.registry == nil {
 			s.connectorHandlers = connectorHandlers{
-				registry:             NewCaptureRegistry(pool, vault, s.captureConfig),
-				authority:            identity.NewService(pool),
+				registry:             NewCaptureRegistry(pool, vault, s.capturing()),
+				authority:            IdentityService(pool),
 				googleCredentials:    s.googleAppResolver,
 				microsoftCredentials: s.microsoftAppResolver,
 				publicOrigin:         s.originStatus,

@@ -44,6 +44,7 @@ import (
 // fails when one appears outside the freeze writer, which converts through
 // deals.ConvertToBase rather than spelling the arithmetic a second time.
 func TestSchema_amountMinorBaseHasOneWriter(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	owner := connect(t, ownerDSN)
 	headSchema(t, owner)
@@ -135,6 +136,7 @@ func TestSchema_amountMinorBaseHasOneWriter(t *testing.T) {
 // that quietly drops the property is caught by what the database ended up
 // with — which is the failure this test exists for.
 func TestSchema_companyOpenPipelineRollupIsSecurityInvoker(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	owner := connect(t, ownerDSN)
 	headSchema(t, owner)
@@ -607,6 +609,7 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 // table that nobody classified fails here, so the decision cannot be
 // skipped silently.
 func TestFK_rowScopedTargetsHaveVisibilityDecision(t *testing.T) {
+	t.Parallel()
 	defer rowScopedFKDecisions.AssertAllMatched(t)
 
 	ownerDSN, _ := dsns(t)
@@ -654,6 +657,7 @@ func TestFK_rowScopedTargetsHaveVisibilityDecision(t *testing.T) {
 // nothing wrote the column. A fourth language added to the Go list fails here
 // until the constraint admits it.
 func TestSchema_theLanguageCheckAdmitsEveryShippedLanguage(t *testing.T) {
+	t.Parallel()
 	owner, _ := dsns(t)
 	conn := connect(t, owner)
 	resetSchema(t, conn)

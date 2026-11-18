@@ -109,6 +109,7 @@ func moveTo(t *testing.T, e *sendEnv, id ids.ActivityID, status crmcontracts.Act
 // A booking and a holding are two events, not one status that overwrote the
 // other. This is the case the whole table exists for.
 func TestABookingAndAHoldingAreTwoEvents(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	start := time.Now().Add(-72 * time.Hour)
 	id := bookMeeting(t, e, "Northgate kickoff", start)
@@ -136,6 +137,7 @@ func TestABookingAndAHoldingAreTwoEvents(t *testing.T) {
 // The actor is the authenticated principal, never something a caller asserts —
 // the same rule the audit row's captured_by follows.
 func TestATransitionRecordsTheAuthenticatedActor(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	id := bookMeeting(t, e, "Kestrel intro", time.Now().Add(24*time.Hour))
 
@@ -153,6 +155,7 @@ func TestATransitionRecordsTheAuthenticatedActor(t *testing.T) {
 // form. Recording it would make one meeting held twice, and every show rate
 // built on the count would drift upward with every re-save.
 func TestResendingTheSameStatusIsNotATransition(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	id := bookMeeting(t, e, "Repeat save", time.Now().Add(-48*time.Hour))
 	moveTo(t, e, id, crmcontracts.ActivityMeetingStatusHeld)
@@ -168,6 +171,7 @@ func TestResendingTheSameStatusIsNotATransition(t *testing.T) {
 // A no-show later corrected to held keeps BOTH events and has one terminal
 // outcome. The correction is part of the record, not a replacement of it.
 func TestACorrectedOutcomeKeepsBothEventsAndOneTerminalStatus(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	id := bookMeeting(t, e, "They did turn up", time.Now().Add(-24*time.Hour))
 	moveTo(t, e, id, crmcontracts.ActivityMeetingStatusNoShow)
@@ -196,6 +200,7 @@ func TestACorrectedOutcomeKeepsBothEventsAndOneTerminalStatus(t *testing.T) {
 // A cancelled meeting is its own event. It must be countable separately,
 // because it belongs in neither half of a show rate.
 func TestACancellationIsItsOwnEvent(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	id := bookMeeting(t, e, "Called off", time.Now().Add(96*time.Hour))
 	moveTo(t, e, id, crmcontracts.ActivityMeetingStatusCanceled)
@@ -213,6 +218,7 @@ func TestACancellationIsItsOwnEvent(t *testing.T) {
 // Every transition carries the start the meeting was scheduled for AS OF that
 // moment, so a reschedule cannot rewrite which period an earlier event fell in.
 func TestATransitionCarriesTheScheduledStartItWasMadeAgainst(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	start := time.Now().Add(120 * time.Hour).UTC().Truncate(time.Second)
 	id := bookMeeting(t, e, "Scheduled far out", start)
@@ -232,6 +238,7 @@ func TestATransitionCarriesTheScheduledStartItWasMadeAgainst(t *testing.T) {
 // A connector replaying the same event writes no second transition. Without
 // this a resync doubles every booking count in the period.
 func TestAReplayedConnectorEventRecordsOneTransition(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := meetingCtx(e)
 	start := time.Now().Add(24 * time.Hour)
@@ -279,6 +286,7 @@ func TestAReplayedConnectorEventRecordsOneTransition(t *testing.T) {
 // that records a transition without re-logging the activity, and no test
 // notices — the capture key hides it.
 func TestTheWriterCarriesTheConnectorIdentityOntoTheTransition(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	system, external := "google_calendar", "evt-identity-001"
 	booked := string(crmcontracts.ActivityMeetingStatusBooked)
@@ -319,6 +327,7 @@ func TestTheWriterCarriesTheConnectorIdentityOntoTheTransition(t *testing.T) {
 // connector path that ever writes a transition without re-logging the activity
 // still cannot double a booking.
 func TestTheSourceKeyRefusesASecondTransitionOnItsOwn(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	id := bookMeeting(t, e, "Directly replayed", time.Now().Add(24*time.Hour))
 	const system, external = "google_calendar", "evt-direct-001"
@@ -347,6 +356,7 @@ func TestTheSourceKeyRefusesASecondTransitionOnItsOwn(t *testing.T) {
 // the cancellation would vanish with no error while the activity column moved
 // to canceled. The history and the column would then disagree, permanently.
 func TestOneCalendarEventCanRecordTwoDifferentTransitions(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	id := bookMeeting(t, e, "Booked then called off", time.Now().Add(24*time.Hour))
 	const system, external = "google_calendar", "evt-lifecycle-001"
@@ -376,6 +386,7 @@ func TestOneCalendarEventCanRecordTwoDifferentTransitions(t *testing.T) {
 // became that. A period count that treated them as history would report
 // bookings on the day of the deploy.
 func TestABackfilledRowClaimsNoBookingMoment(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	// Written the way the migration writes one: directly, marked partial. A
 	// meeting that existed before the table did has no recoverable booking
@@ -411,6 +422,7 @@ func TestABackfilledRowClaimsNoBookingMoment(t *testing.T) {
 // A door that wrote the column without the history would answer every period
 // question short, and no existing test would notice.
 func TestBothMeetingStatusDoorsRecordHistory(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 
 	// Door one: the insert, which sets a status at capture.
@@ -443,6 +455,7 @@ func TestBothMeetingStatusDoorsRecordHistory(t *testing.T) {
 // delete both reach it through the FK rather than leaving orphan history that
 // still says a contact met somebody.
 func TestHistoryDiesWithItsMeeting(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	id := bookMeeting(t, e, "To be deleted", time.Now().Add(24*time.Hour))
 	if got := historyOf(t, e, id); len(got) != 1 {
@@ -459,6 +472,7 @@ func TestHistoryDiesWithItsMeeting(t *testing.T) {
 // A transaction that fails after the transition rolls it back with everything
 // else: the history is part of the write, not a note beside it.
 func TestATransitionRollsBackWithItsWrite(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	id := bookMeeting(t, e, "Rolled back", time.Now().Add(24*time.Hour))
 	before := len(historyOf(t, e, id))

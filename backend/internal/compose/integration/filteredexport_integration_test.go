@@ -86,6 +86,7 @@ func commitDeals() storekit.Predicate {
 // narrowing left that can show the visibility half of the intersection, and
 // an unpromoted capture belongs to its own owner alone.
 func TestFilteredExportIsScopedAndFiltered(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	company := func(owner ids.UUID, name, industry, visibility string) ids.UUID {
 		return e.SeedID(t, `INSERT INTO company (id, display_name, owner_id, industry, visibility, source, captured_by)
@@ -131,6 +132,7 @@ func TestFilteredExportIsScopedAndFiltered(t *testing.T) {
 // and carry the same slice, and that the export operation writes one
 // audit_log row describing what slice was exported.
 func TestFilteredExportOpenFormatsAndAudit(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	e.seedFilteredDeals(t)
 	writer := compose.NewFilteredExportWriter(e.Pool)
@@ -190,6 +192,7 @@ func TestFilteredExportOpenFormatsAndAudit(t *testing.T) {
 // TestFilteredExportEmptyResultIsHonest: a predicate that matches nothing
 // yields a valid CSV with only the header row, not an error.
 func TestFilteredExportEmptyResultIsHonest(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	e.seedFilteredDeals(t)
 
@@ -217,6 +220,7 @@ func TestFilteredExportEmptyResultIsHonest(t *testing.T) {
 // resource's §13.5 allow-list is a PredicateError the transport maps to
 // 422 — the filter can never reach an arbitrary column.
 func TestFilteredExportRejectsOutOfVocabularyPredicate(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	e.seedFilteredDeals(t)
 
@@ -262,6 +266,7 @@ func lastSystemLog(t *testing.T, e *SearchEnv, action string) (gotAction string,
 // filtered export returns a CSV download, and an out-of-vocabulary filter
 // answers 422 — proving the transport wiring and error mapping.
 func TestFilteredExportHTTPEndToEnd(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	if status := e.Call(t, "POST", "/v1/auth/login", AnyMap{
@@ -333,6 +338,7 @@ func TestFilteredExportHTTPEndToEnd(t *testing.T) {
 // a view may carry no filter state at all, which names its own wire field and
 // answers 422.
 func TestFilteredExportFromASavedViewAndFromAList(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	if status := e.Call(t, "POST", "/v1/auth/login", AnyMap{
@@ -455,6 +461,7 @@ func exportCSV(t *testing.T, e *apptest.AppEnv, body AnyMap) [][]string {
 // The base amount and rate go with it: either one prints the masked money
 // back out.
 func TestFilteredExportWithholdsAMaskedAmount(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	f := e.seedFilteredDeals(t)
 	for id, amount := range map[ids.UUID]int64{f.matchOwn: 100000, f.matchOther: 250000} {

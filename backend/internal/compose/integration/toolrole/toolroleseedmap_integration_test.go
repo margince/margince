@@ -53,6 +53,7 @@ func takesOf(calls []toolRoleCall, counting func() *recordPool) (map[string][]st
 // Two calls of one verb would share a file, so both writers refuse them. The
 // refusal says the verb is shared, not that the sweep is stale.
 func TestAVerbTwoCallsServeIsRefused(t *testing.T) {
+	t.Parallel()
 	calls := []toolRoleCall{{row: "deals.get", tool: "deals", action: "get", verb: "get_deal"}, {row: "records.get", tool: "records", action: "get", verb: "get_deal"}}
 	if _, err := takesOf(calls, func() *recordPool { return countingPool(t) }); err == nil || !strings.Contains(err.Error(), "shared by deals.get and records.get") {
 		t.Errorf("takes of a shared verb: %v", err)
@@ -235,6 +236,7 @@ func codeList(items []string) string {
 // TestTheSeedMapIsCurrent holds seedmap.md to the seeds this package declares,
 // so the author of a route change can find the seed it breaks.
 func TestTheSeedMapIsCurrent(t *testing.T) {
+	t.Parallel()
 	entries := seedEntries(t)
 	if len(entries) == 0 {
 		t.Fatal("no seed was found in this package's source, so the map is empty")
@@ -258,6 +260,7 @@ func TestTheSeedMapIsCurrent(t *testing.T) {
 // TestEveryVerbTakesWhatTheSeedsMake holds each verb's takes to what its call
 // is handed, and every kind a call takes to a seed that makes it.
 func TestEveryVerbTakesWhatTheSeedsMake(t *testing.T) {
+	t.Parallel()
 	takes, seeded := verbTakes(t), seedEntries(t)
 	head, checks, err := toolroles.Read[toolroles.Checks](os.DirFS(toolChecksDir))
 	if err != nil {

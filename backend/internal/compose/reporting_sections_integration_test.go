@@ -125,6 +125,7 @@ func moveSectionLead(writer context.Context, t *testing.T, store *contacts.Store
 // five leads and Rep3 one. Two of Rep1's reach an outcome, and the five are
 // answered after 1, 2, 4, 8 and 30 hours.
 func TestReportingLeadSectionCountsThroughTheLeadWriters(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	writer := sectionsWriter(e)
 	dealsStore := deals.NewStore(InstallationDB(e.Pool), DealsInstallation())
@@ -203,6 +204,7 @@ func TestReportingLeadSectionCountsThroughTheLeadWriters(t *testing.T) {
 // Partner deals, the commission ledger and the partner rows are each written by
 // their own module. Each reader keeps to what its reader may see.
 func TestReportingPartnerSectionReadsThroughTheModuleWriters(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	writer := sectionsWriter(e)
 	contactsStore := contacts.NewStore(InstallationDB(e.Pool))

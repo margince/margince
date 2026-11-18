@@ -39,6 +39,7 @@ func legacyEmployerContact(t *testing.T, e *integration.Env) ids.UUID {
 }
 
 func TestContactEmployerTaskRepairsArchivedLeadEvidenceAndReplays(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id := legacyEmployerContact(t, e)
 	task := contactEmployersDataTask(e.Pool)
@@ -69,6 +70,7 @@ func TestContactEmployerTaskRepairsArchivedLeadEvidenceAndReplays(t *testing.T) 
 }
 
 func TestContactEmployerTaskRollsBackWithItsProgress(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id := legacyEmployerContact(t, e)
 	task := contactEmployersDataTask(e.Pool)
@@ -90,6 +92,7 @@ func TestContactEmployerTaskRollsBackWithItsProgress(t *testing.T) {
 }
 
 func TestContactEmployerTaskBoundsPagingAndRejectsMalformedCursor(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	for _, name := range []string{"No Evidence One", "No Evidence Two"} {
 		if _, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: name, Source: "manual"}); err != nil {
@@ -119,6 +122,7 @@ func TestContactEmployerTaskBoundsPagingAndRejectsMalformedCursor(t *testing.T) 
 }
 
 func TestContactEmployerTaskSkipsConflictingEvidenceAndKeepsScanning(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	id := legacyEmployerContact(t, e)
 	for range 2 {
@@ -146,6 +150,7 @@ func TestContactEmployerTaskSkipsConflictingEvidenceAndKeepsScanning(t *testing.
 }
 
 func TestContactEmployerTaskPreservesArchivedEmployment(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Former Employee", Source: "manual", Employer: contacts.EmployerChoice{CompanyName: new("Former Works")}})
 	if err != nil {

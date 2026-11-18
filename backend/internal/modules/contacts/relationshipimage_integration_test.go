@@ -42,6 +42,7 @@ func (e *dedupeEnv) asEdgeEditor(t *testing.T) context.Context {
 // field held. The kind moved with neither of them, so it is not presented as a
 // change nobody made.
 func TestAPatchedEdgeRecordsTheRoleAndDatesItReplaced(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.asEdgeEditor(t)
 	contactID, _ := e.seedEmployedContact(ctx, t,
@@ -87,6 +88,7 @@ func TestAPatchedEdgeRecordsTheRoleAndDatesItReplaced(t *testing.T) {
 // flag in the statement, and the images are what say the contact stopped
 // working there — nothing else on the record does.
 func TestAPatchedEdgeRecordsTheCurrentEmployerFlagItCleared(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.asEdgeEditor(t)
 	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{

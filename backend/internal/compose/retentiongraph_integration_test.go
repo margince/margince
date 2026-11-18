@@ -35,6 +35,7 @@ import (
 )
 
 func TestRetentionCorrectsTheRelationshipGraphInItsOwnTransaction(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := time.Now().UTC()
 

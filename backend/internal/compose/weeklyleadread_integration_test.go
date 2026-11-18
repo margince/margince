@@ -14,6 +14,7 @@ import (
 )
 
 func TestWithheldLeadWeeksFinishTheirOptionalJobWork(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedManagerRoles(t, e, e.Rep1, e.Rep2, e.Rep3)
 	e.WsExec(t, `UPDATE role SET permissions = permissions #- '{objects,lead}' WHERE key='manager'`)
@@ -39,6 +40,7 @@ func TestWithheldLeadWeeksFinishTheirOptionalJobWork(t *testing.T) {
 }
 
 func TestAJobFallbackPreservesNarrativeHiddenFromItsReader(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	w := teamSnapshotWorker(e)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
@@ -77,6 +79,7 @@ func TestAJobFallbackPreservesNarrativeHiddenFromItsReader(t *testing.T) {
 }
 
 func TestTeamSnapshotPrefersALeadWhoMayMeasureLeadFigures(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedManagerRoles(t, e, e.Rep1, e.Rep2, e.Rep3)
 	w := teamSnapshotWorker(e)

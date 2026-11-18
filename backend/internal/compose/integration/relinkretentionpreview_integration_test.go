@@ -16,6 +16,7 @@ import (
 )
 
 func TestRelinkPreviewExplainsPersistentProjectRetention(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.Admin()
 	company := e.SeedCompany(t, "Delivery account", nil)

@@ -25,6 +25,7 @@ func backendPID(t *testing.T, conn *pgx.Conn) int {
 }
 
 func TestATestSharesOneOwnerConnection(t *testing.T) {
+	t.Parallel()
 	first, second := OwnerConn(t), OwnerConn(t)
 	if first != second || backendPID(t, first) != backendPID(t, second) {
 		t.Fatal("two calls in one test opened two owner connections")
@@ -42,6 +43,7 @@ func TestATestSharesOneOwnerConnection(t *testing.T) {
 
 // A connection inside a transaction would pull the next caller into it.
 func TestTheSharedOwnerConnectionIsNotHandedOutInsideATransaction(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	shared := OwnerConn(t)
 	tx, err := shared.Begin(ctx)
@@ -60,6 +62,7 @@ func TestTheSharedOwnerConnectionIsNotHandedOutInsideATransaction(t *testing.T) 
 }
 
 func TestAClosedSharedOwnerConnectionIsReplaced(t *testing.T) {
+	t.Parallel()
 	shared := OwnerConn(t)
 	if err := shared.Close(context.Background()); err != nil {
 		t.Fatal(err)
@@ -75,6 +78,7 @@ func TestAClosedSharedOwnerConnectionIsReplaced(t *testing.T) {
 // left waiting behind it. One goroutine holds the open rows: two goroutines on
 // one pgx.Conn are a data race inside pgx, which -race reports.
 func TestASecondQueryOnTheBusySharedOwnerConnectionFailsLoudly(t *testing.T) {
+	t.Parallel()
 	shared := OwnerConn(t)
 	rows, err := shared.Query(context.Background(), `SELECT pg_sleep(1)`)
 	if err != nil {
@@ -92,6 +96,7 @@ func TestASecondQueryOnTheBusySharedOwnerConnectionFailsLoudly(t *testing.T) {
 
 // Goroutines asking at once still share the one connection.
 func TestGoroutinesAskingAtOnceShareOneOwnerConnection(t *testing.T) {
+	t.Parallel()
 	const askers = 8
 	got := make([]*pgx.Conn, askers)
 	var wg sync.WaitGroup
@@ -113,6 +118,7 @@ func TestGoroutinesAskingAtOnceShareOneOwnerConnection(t *testing.T) {
 
 // A connection running a query is not handed out on: the caller gets its own.
 func TestTheSharedOwnerConnectionIsNotHandedOutWhileItRunsAQuery(t *testing.T) {
+	t.Parallel()
 	shared := OwnerConn(t)
 	rows, err := shared.Query(context.Background(), `SELECT pg_sleep(1)`)
 	if err != nil {

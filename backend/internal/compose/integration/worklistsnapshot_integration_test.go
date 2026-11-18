@@ -58,6 +58,7 @@ func acquisitionsDuring(t *testing.T, e *apptest.AppEnv, call func()) int64 {
 }
 
 func TestTheWorklistFamilyAssemblesInOneTransaction(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 

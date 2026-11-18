@@ -44,6 +44,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/companytypes"
 )
 
 // newContactsHandlers builds the contact/company/lead transport with the
@@ -61,9 +62,9 @@ import (
 // qualify dialog's "also open a deal" rides the deals store through the
 // contacts→deals edge (leadDealOpener) — both injected here for the same
 // ADR-0054 reason as the stager.
-func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
-	return withContactMergeCarriers(InstallationDB(pool), contacts.NewHandlers(InstallationDB(pool))).
-		WithPrivacyReviewer(identity.NewServiceFor(InstallationDB(pool))).
+func newContactsHandlers(pool *pgxpool.Pool, companyTypes companytypes.Registry) contactsHandlers {
+	return withContactMergeCarriers(InstallationDB(pool), contacts.NewHandlers(InstallationDB(pool)).WithCompanyTypes(companyTypes)).
+		WithPrivacyReviewer(identityServiceFor(InstallationDB(pool))).
 		WithRetainedSignaturePreview(func(source string) (string, error) {
 			markup, _, err := activities.SignatureMarkup(source)
 			return markup, err
@@ -108,7 +109,7 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 		// The public booking capture seams (feedback/14): contacts is the
 		// idempotent-on-email contact path, consent records the
 		// passthrough — both injected here, never sibling imports.
-		WithPublicBooking(hostauthority.BookerContacts{Store: newContactsStore(InstallationDB(pool)), Seats: identity.NewService(pool)}, bookingConsentAdapter{
+		WithPublicBooking(hostauthority.BookerContacts{Store: newContactsStore(InstallationDB(pool)), Seats: IdentityService(pool)}, bookingConsentAdapter{
 			store: consent.NewStore(InstallationDB(pool)),
 		}).
 		// The RFC 8058 unsubscribe linker (B-E11.32): consent mints the
@@ -129,7 +130,7 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 		// including the human an agent acts on behalf of — and that resolution
 		// must be the same one the audit log records, so it is injected rather
 		// than re-derived here.
-		WithSenderName(identity.NewServiceFor(InstallationDB(pool))).
+		WithSenderName(identityServiceFor(InstallationDB(pool))).
 		// Which domains are our own, for the waiting queue's colleague rule.
 		// capture owns workspace_email_domain and the rule for which entries
 		// count as vouched-for, so the edge is injected rather than restated.
@@ -216,7 +217,7 @@ func (s *Server) wireSurfaces(pool *pgxpool.Pool, log *slog.Logger) {
 	s.wireOnboardingSurface(pool)
 	s.wireSystemOfRecordReads(pool)
 	s.wireBulkSurface(pool)
-	s.companyContactShareHandlers = companyContactShareHandlers{db: InstallationDB(pool), grants: identity.NewService(pool)}
+	s.companyContactShareHandlers = companyContactShareHandlers{db: InstallationDB(pool), grants: IdentityService(pool)}
 	s.wireHandoverSurface()
 }
 
@@ -225,7 +226,7 @@ func (s *Server) wireSurfaces(pool *pgxpool.Pool, log *slog.Logger) {
 // queue rather than two readings of it; a second engine here is how the two
 // would come to disagree.
 func (s *Server) wireStagedSurfaces(pool *pgxpool.Pool) {
-	staged := NewApprovalsServiceWithEffects(pool)
+	staged := approvalsServiceTelling(pool, &siteLeadNoticeLane{}, s.queues)
 	s.homeCache = homecache.New(pool)
 	s.attentionHandlers = newAttentionHandlers(pool, staged).WithHomeCache(s.homeCache)
 	s.magicService = newMagicService(pool, staged, time.Now)
@@ -259,7 +260,7 @@ func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {
 	s.reportingHandlers = reporting.NewHandlers(reportingService, openingSelection())
 	s.reportingExportHandlers = reportingExportHandlers{service: reportingService}
 	s.reportingReaderPreviewHandlers = reportingReaderPreviewHandlers{
-		reports: reportingService, roles: identity.NewServiceFor(InstallationDB(pool)),
+		reports: reportingService, roles: identityServiceFor(InstallationDB(pool)),
 	}
 	s.forecastHandlers = newForecastHandlers(pool, func() time.Time { return time.Now().UTC() })
 	// The floor comes from the constant rather than a setting for now: one
@@ -373,7 +374,7 @@ func (s *Server) wireOnboardingSurface(pool *pgxpool.Pool) {
 	// form's write shape is contacts's, the transport is compose's.
 	s.companyHandlers = companyHandlers{
 		store: newContactsStore(InstallationDB(pool)).WithInstallationRenamer(installationRenamer(pool)).
-			WithGeocodeEnqueue(boundGeocodeEnqueue),
+			WithGeocodeEnqueue(s.queues.geocodeEnqueue),
 		rollout: companyContextRolloutOnboarding,
 	}
 	s.siteReadHandlers = siteReadHandlers{companyContextRollout: companyContextRolloutOnboarding}
@@ -410,7 +411,7 @@ func newConsentHandlers(pool *pgxpool.Pool) consent.Handlers {
 		// send it is one the privacy operators must hear about.
 		WithMissedReceipts(receiptAlarm{db: InstallationDB(pool)}).
 		// A request under a pack with deadlines of its own becomes a dated task.
-		WithRequestTasks(requesttask.Writer{Tasks: activities.NewStore(InstallationDB(pool))}).
+		WithRequestTasks(requesttask.Writer{Tasks: activities.NewStore(InstallationDB(pool)), Rbac: installedRbacObjects()}).
 		WithSubjectAccessAssembler(newSubjectAccessAssembler(InstallationDB(pool), ExtensionData())).
 		WithInstallationName(consent.InstallationNameFunc(func(ctx context.Context) (string, error) {
 			return identity.InstallationNameForPublicPage(ctx, pool)

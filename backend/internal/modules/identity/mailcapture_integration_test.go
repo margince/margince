@@ -42,6 +42,7 @@ func (r *recordedRechecks) RecheckSeatsTx(_ context.Context, _ pgx.Tx, userIDs [
 }
 
 func TestChangingAMembersRoleRechecksTheirMailboxes(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "mail-recheck-change")
 	seam := &recordedRechecks{}
 	e.svc.WithMailCapture(seam)
@@ -55,6 +56,7 @@ func TestChangingAMembersRoleRechecksTheirMailboxes(t *testing.T) {
 }
 
 func TestEditingARolesGrantRechecksEveryHolderAndChangesWhetherItCaptures(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "mail-recheck-grant")
 	ctx := e.wsCtx(e.admin)
 	if err := e.svc.ChangeUserRole(ctx, e.admin, e.member.UserID, "rep"); err != nil {
@@ -88,6 +90,7 @@ func TestEditingARolesGrantRechecksEveryHolderAndChangesWhetherItCaptures(t *tes
 // The administration roster carries each member's live connection count, which
 // the role dialog warns with.
 func TestTheAdministrationRosterCountsEachMembersMailboxes(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "mail-roster-count")
 	e.svc.WithMailCapture(&recordedRechecks{counts: map[ids.UUID]int{e.member.UserID.UUID: 2}})
 
@@ -113,6 +116,7 @@ func TestTheAdministrationRosterCountsEachMembersMailboxes(t *testing.T) {
 // A role the identity provider's groups grant at sign-in reaches the member's
 // mailboxes like a role an admin gave.
 func TestAGroupGrantedRoleRechecksTheMembersMailboxes(t *testing.T) {
+	t.Parallel()
 	svc, _, userID, email := seedSSOEnv(t, "sso-group-recheck")
 	svc.WithGroupRoleMap(func(context.Context, pgx.Tx) (map[string]string, error) {
 		return map[string]string{"crm-users": "rep"}, nil

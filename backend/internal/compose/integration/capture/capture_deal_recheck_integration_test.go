@@ -78,6 +78,7 @@ var maxUUID = ids.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff")
 // A link the model confidently says the mail is not about comes off, audited
 // as the recheck. The answer is remembered, so a second pass asks nothing.
 func TestTheRecheckTakesBackALinkTheMailIsNotAbout(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -108,6 +109,7 @@ func TestTheRecheckTakesBackALinkTheMailIsNotAbout(t *testing.T) {
 // With no answer the link stays, and a later pass asks again. A colleague's
 // own filing is never asked about.
 func TestTheRecheckKeepsALinkWithoutAnAnswerAndLeavesColleaguesAlone(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -134,6 +136,7 @@ func TestTheRecheckKeepsALinkWithoutAnAnswerAndLeavesColleaguesAlone(t *testing.
 
 // The recheck reaches back 90 days from its pass and no further.
 func TestTheRecheckWindowIsNinetyDays(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -152,6 +155,7 @@ func TestTheRecheckWindowIsNinetyDays(t *testing.T) {
 // Only a confident "not about it" takes a link back. Doubt keeps it, and is
 // remembered, so the recheck does not ask about it again.
 func TestTheRecheckTakesALinkBackOnlyOnAConfidentNo(t *testing.T) {
+	t.Parallel()
 	for _, c := range []struct {
 		name       string
 		verdict    string

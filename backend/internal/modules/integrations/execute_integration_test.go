@@ -35,12 +35,6 @@ import (
 func sealCredential(t *testing.T, e *runsEnv) {
 	t.Helper()
 	ctx := context.Background()
-	// The run ledger is installation-global (no workspace column), so runs an
-	// earlier test left behind would fall into this test's due-sweep. Each
-	// execution test starts from an empty ledger.
-	if _, err := e.owner.Exec(ctx, `DELETE FROM provider_run`); err != nil {
-		t.Fatal(err)
-	}
 	ref, err := e.vault.Put(ctx, ids.From[ids.WorkspaceKind](e.ws), []byte("test-key"))
 	if err != nil {
 		t.Fatal(err)
@@ -81,6 +75,7 @@ func runRow(t *testing.T, e *runsEnv, runID string) (state string, nextAttempt *
 // so a death between completion and hand-off leaves the sweep something to
 // find. No claim writer is bound here, which IS that crash, permanently.
 func TestSubmitPollParksTheClaimsPendingMarkerInTheTerminalCommit(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{})
 	sealCredential(t, e)
 	run := queueFor(t, e, e.mine.String())
@@ -126,6 +121,7 @@ func TestSubmitPollParksTheClaimsPendingMarkerInTheTerminalCommit(t *testing.T) 
 // ceiling — releasing it would let the next run spend credits the customer
 // may already have been charged.
 func TestAmbiguousSubmissionParksUnknownAndHoldsTheReservation(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{})
 	sealCredential(t, e)
 	// The fake keys its scenario off the subject's last name: "Ambiguous" is
@@ -170,6 +166,7 @@ func TestAmbiguousSubmissionParksUnknownAndHoldsTheReservation(t *testing.T) {
 // The customer's own ceilings survive, because those are their policy rather
 // than the provider's reading.
 func TestDisconnectClearsTheProviderBalanceAndKeepsTheCeilings(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{ceilings: map[string]int{"email": 25}})
 	sealCredential(t, e)
 
@@ -220,6 +217,7 @@ func TestDisconnectClearsTheProviderBalanceAndKeepsTheCeilings(t *testing.T) {
 // A connection withdrawn while the run is still queued cancels it before any
 // call leaves — and the egress counter proves the negative.
 func TestDisconnectBeforeSubmitCancelsWithoutEgress(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{})
 	sealCredential(t, e)
 	run := queueFor(t, e, e.mine.String())
@@ -247,6 +245,7 @@ func TestDisconnectBeforeSubmitCancelsWithoutEgress(t *testing.T) {
 // no result, and keep the hold: the purchase may have happened, and
 // disconnecting is not un-spending.
 func TestDisconnectInFlightParksTheRunAndStoresNothing(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{})
 	sealCredential(t, e)
 	run := queueFor(t, e, e.mine.String())
@@ -286,6 +285,7 @@ func TestDisconnectInFlightParksTheRunAndStoresNothing(t *testing.T) {
 // per-successful-result provider, releasing credits the customer may already
 // have been charged and letting an identical retry buy the same answer again.
 func TestAmbiguousPollHoldsTheReservationAndParksUnknown(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{})
 	sealCredential(t, e)
 	run := queueFor(t, e, e.mine.String())
@@ -331,6 +331,7 @@ func currentEpoch(t *testing.T, e *runsEnv) int64 {
 // was withdrawn stayed due forever: marker set, counter frozen, and the UI
 // reporting a clean `completed` while the paid values never arrived.
 func TestAWithdrawnConnectionExhaustsThePendingHandoffRatherThanLoopingForever(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{})
 	sealCredential(t, e)
 	run := queueFor(t, e, e.mine.String())
@@ -381,6 +382,7 @@ func TestAWithdrawnConnectionExhaustsThePendingHandoffRatherThanLoopingForever(t
 // live-run index covers in_progress, so a stuck run would block every future
 // enrichment of that subject and hold its credits against the month.
 func TestAnUnresolvableInProgressRunExpiresRatherThanPollingForever(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{})
 	sealCredential(t, e)
 	run := queueFor(t, e, e.mine.String())
@@ -419,6 +421,7 @@ func TestAnUnresolvableInProgressRunExpiresRatherThanPollingForever(t *testing.T
 // resubmit, because a retry is how one ambiguous charge becomes two certain
 // ones. A fresh in-flight marker is left alone.
 func TestDeadInflightExpiresToUnknownAndFreshOnesStand(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{})
 	sealCredential(t, e)
 	dead := queueFor(t, e, e.mine.String())
@@ -465,6 +468,7 @@ func TestDeadInflightExpiresToUnknownAndFreshOnesStand(t *testing.T) {
 // connected, and what was it before" has nothing else: the column itself has
 // been overwritten by the time anyone looks.
 func TestARefusalAuditsTheConnectionStatusItChangedFrom(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{})
 	sealCredential(t, e)
 	// The fake keys its scenario off the subject's last name: "RateLimited" is
@@ -529,6 +533,7 @@ func TestARefusalAuditsTheConnectionStatusItChangedFrom(t *testing.T) {
 // The environment is deliberately NOT surfe, because a fixture carrying the one
 // name cannot tell a derived answer from a constant that happens to match.
 func TestARunAuditsTheProviderItIsFor(t *testing.T) {
+	t.Parallel()
 	// The credential is refused, because that is the submission outcome whose
 	// settlement writes an audit row: the connection's status changes, and the
 	// row says who observed it.
@@ -587,6 +592,7 @@ func TestARunAuditsTheProviderItIsFor(t *testing.T) {
 // charge in production is that the adapter OMITS a pool it found nothing for,
 // and only the whole path shows those two halves meeting.
 func TestAPartialAnswerChargesOnlyForWhatCameBack(t *testing.T) {
+	t.Parallel()
 	// The fake reads its case out of the subject's last name, which is how a
 	// test names one without reaching into the adapter.
 	e := setupRuns(t, runsConfig{subjectLastName: "NoMobile"})
@@ -627,6 +633,7 @@ func TestAPartialAnswerChargesOnlyForWhatCameBack(t *testing.T) {
 // vendor rejects, which the platform then reads as a provider fault and uses
 // to mark the whole connection broken.
 func TestASubjectThatLosesItsIdentifiersIsNeverSubmitted(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{})
 	sealCredential(t, e)
 	run := queueFor(t, e, e.mine.String())

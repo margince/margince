@@ -21,6 +21,7 @@ import (
 )
 
 func TestAReconcileClosesADeadRunAndQueuesTheNextOne(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
 	client, err := river.NewClient(riverpgxv5.New(e.Pool), &river.Config{Logger: slog.New(slog.DiscardHandler)})
@@ -28,7 +29,7 @@ func TestAReconcileClosesADeadRunAndQueuesTheNextOne(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctx := rivertest.WorkContext(t.Context(), client)
-	seedCtx, engine, err := dataTaskJobEngine(ctx, e.Pool)
+	seedCtx, engine, err := dataTaskJobEngine(ctx, e.Pool, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -75,6 +76,7 @@ func TestAReconcileClosesADeadRunAndQueuesTheNextOne(t *testing.T) {
 // after that. A reconcile in between finds the lock free and the row running,
 // and must leave the live run alone.
 func TestAReconcileBetweenARunsReturnAndItsSnoozeKeepsTheRun(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
 	client, err := river.NewClient(riverpgxv5.New(e.Pool), &river.Config{Logger: slog.New(slog.DiscardHandler)})
@@ -101,6 +103,7 @@ func TestAReconcileBetweenARunsReturnAndItsSnoozeKeepsTheRun(t *testing.T) {
 }
 
 func TestARunBesideALiveRunWaitsInsteadOfFinishing(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	release, held, err := holdSessionLock(t.Context(), e.Pool, dataTaskRunLock, slog.Default())
 	if err != nil || !held {

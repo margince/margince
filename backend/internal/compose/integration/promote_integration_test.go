@@ -47,6 +47,7 @@ func seedHistoricalLeadAtContactEmail(t *testing.T, e *Env, name, email string, 
 }
 
 func TestPromoteCreatesAContactCarryingProvenance(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	leadID := seedLead(t, e, "Ada Prospect", "ada@prospect.test", &e.Rep1)
 	admin := e.Admin()
@@ -132,6 +133,7 @@ func TestPromoteCreatesAContactCarryingProvenance(t *testing.T) {
 }
 
 func TestPromoteMergesIntoAnExistingContactNotADuplicate(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	existing, err := e.Contacts.CreateContact(admin, contacts.CreateContactInput{
@@ -170,6 +172,7 @@ func TestPromoteMergesIntoAnExistingContactNotADuplicate(t *testing.T) {
 }
 
 func TestPromoteDoesNotDiscloseAnOutOfScopeMergeTarget(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	if _, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{
 		FullName: "Foreign Match", OwnerID: userIDPtr(&e.Rep3), Source: "manual",
@@ -186,6 +189,7 @@ func TestPromoteDoesNotDiscloseAnOutOfScopeMergeTarget(t *testing.T) {
 }
 
 func TestPromoteRequiresBothLeadAndContactGrants(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	leadID := seedLead(t, e, "Gated", "gated@x.test", &e.Rep1)
 

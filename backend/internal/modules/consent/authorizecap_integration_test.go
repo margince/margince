@@ -20,7 +20,6 @@ package consent
 
 import (
 	"context"
-	"os"
 	"testing"
 	"time"
 
@@ -119,13 +118,9 @@ func (e *capEnv) seedMarketingSubject(t *testing.T) {
 
 func setupCap(t *testing.T) *capEnv {
 	t.Helper()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -134,12 +129,6 @@ func setupCap(t *testing.T) *capEnv {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
-	if err := testdb.Reset(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 
 	e := &capEnv{
 		ws: ids.NewV7(), user: ids.NewV7(), activity: ids.NewV7(),
@@ -159,7 +148,7 @@ func setupCap(t *testing.T) *capEnv {
 		t.Fatal(err)
 	}
 
-	pool, err := testdb.Pool(ctx, appDSN)
+	pool, err := testdb.Pool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -259,6 +248,7 @@ func (e *capEnv) received(t *testing.T, window time.Duration) int {
 // A delivered advertising message counts. Without this the three refusals below
 // would all pass against a counter that counts nothing at all.
 func TestADeliveredAdvertisingMessageCountsTowardTheCap(t *testing.T) {
+	t.Parallel()
 	e := setupCap(t)
 	e.deliveredAdvertising(t, time.Now().Add(-time.Hour))
 	if got := e.received(t, 24*time.Hour); got != 1 {
@@ -273,6 +263,7 @@ func TestADeliveredAdvertisingMessageCountsTowardTheCap(t *testing.T) {
 // delivery's own status, and this fails — which is exactly the defect it exists
 // to catch, because a parked row's decision looks perfectly ordinary.
 func TestAParkedDeliveryDoesNotConsumeTheCap(t *testing.T) {
+	t.Parallel()
 	e := setupCap(t)
 	sent := time.Now().Add(-time.Hour)
 
@@ -316,6 +307,7 @@ func TestAParkedDeliveryDoesNotConsumeTheCap(t *testing.T) {
 // Mutation: drop the pending arm from the count and this fails, which is the
 // bug that made the whole cap unenforceable under any concurrency.
 func TestAMessageInFlightAlreadyConsumesTheCap(t *testing.T) {
+	t.Parallel()
 	e := setupCap(t)
 	e.plant(t, plantSpec{
 		status: "pending", phase: "transmit", verdict: "allow",
@@ -330,6 +322,7 @@ func TestAMessageInFlightAlreadyConsumesTheCap(t *testing.T) {
 // transmit decision makes a pending row an in-flight message; the row alone is
 // a message that may still be refused.
 func TestAQueuedDeliveryWithNoTransmitDecisionDoesNotCount(t *testing.T) {
+	t.Parallel()
 	e := setupCap(t)
 	e.plant(t, plantSpec{
 		status: "pending", phase: "staging", verdict: "allow",
@@ -344,6 +337,7 @@ func TestAQueuedDeliveryWithNoTransmitDecisionDoesNotCount(t *testing.T) {
 // the same delivery, so counting without the phase filter would double every
 // sent message and halve the effective ceiling.
 func TestAStagingDecisionDoesNotCountBesideItsTransmitRow(t *testing.T) {
+	t.Parallel()
 	e := setupCap(t)
 	sent := time.Now().Add(-time.Hour)
 	e.deliveredAdvertising(t, sent)
@@ -362,6 +356,7 @@ func TestAStagingDecisionDoesNotCountBesideItsTransmitRow(t *testing.T) {
 // would silence a customer's invoices for a day because somebody sent them
 // three offers.
 func TestAnOperationalMessageDoesNotConsumeTheAdvertisingCap(t *testing.T) {
+	t.Parallel()
 	e := setupCap(t)
 	sent := time.Now().Add(-time.Hour)
 	e.plant(t, plantSpec{
@@ -377,6 +372,7 @@ func TestAnOperationalMessageDoesNotConsumeTheAdvertisingCap(t *testing.T) {
 // The window rolls. A message older than the window has stopped counting, or the
 // cap would be a permanent ban rather than a daily ceiling.
 func TestAMessageOlderThanTheWindowHasStoppedCounting(t *testing.T) {
+	t.Parallel()
 	e := setupCap(t)
 	e.deliveredAdvertising(t, time.Now().Add(-25*time.Hour))
 
@@ -392,6 +388,7 @@ func TestAMessageOlderThanTheWindowHasStoppedCounting(t *testing.T) {
 // sides, or a capped recipient could be reached again by capitalising their
 // address.
 func TestTheCapFollowsTheMailboxNotItsSpelling(t *testing.T) {
+	t.Parallel()
 	e := setupCap(t)
 	sent := time.Now().Add(-time.Hour)
 	deliveryID := ids.NewV7()
@@ -426,6 +423,7 @@ func TestTheCapFollowsTheMailboxNotItsSpelling(t *testing.T) {
 // called, which is how a working guard becomes an unwired one that every gate
 // still passes.
 func TestTheCapRefusesTheMessageAfterTheCeiling(t *testing.T) {
+	t.Parallel()
 	e := setupCap(t)
 	e.seedMarketingSubject(t)
 	// A code no pack in the tree claims, so registering it here cannot collide
@@ -501,6 +499,7 @@ func TestTheCapRefusesTheMessageAfterTheCeiling(t *testing.T) {
 // The sender's country is not the recipient's. An installation established in
 // the capped country does not cap a recipient whose record states no country.
 func TestNoCountryAndNoCeilingBothLeaveTheMessageAlone(t *testing.T) {
+	t.Parallel()
 	e := setupCap(t)
 	e.seedMarketingSubject(t)
 	for range 5 {
@@ -567,6 +566,7 @@ func TestNoCountryAndNoCeilingBothLeaveTheMessageAlone(t *testing.T) {
 // The verdict says whether the message should have gone. The ceiling is about
 // whether it arrived.
 func TestAnExceptionDirectedSendCountsTowardTheCap(t *testing.T) {
+	t.Parallel()
 	e := setupCap(t)
 	sent := time.Now().Add(-time.Hour)
 	e.plant(t, plantSpec{
@@ -584,6 +584,7 @@ func TestAnExceptionDirectedSendCountsTowardTheCap(t *testing.T) {
 // What separates the two is the delivery, not the decision — `parked` is its
 // own status and matches neither half of the count.
 func TestARefusedMessageThatWasParkedCountsForNothing(t *testing.T) {
+	t.Parallel()
 	e := setupCap(t)
 	e.plant(t, plantSpec{
 		status: "parked", phase: "transmit",

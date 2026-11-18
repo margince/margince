@@ -30,13 +30,13 @@ func TestAStoredGrantRoundTripsThroughThePolicyParserThatEnforcesIt(t *testing.T
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
 	}
-	doc, err := policy.Parse([]byte(`{"row_scope":"team","objects":{"deal":` + string(raw) + `}}`))
+	doc, err := policy.Parse([]byte(`{"row_scope":"team","objects":{"deal":`+string(raw)+`}}`), policy.Vocabulary{})
 	if err != nil {
 		t.Fatalf("policy.Parse: %v", err)
 	}
 	got := doc.Objects["deal"]
 	// Read through the merge, which is the shape the gate actually consults.
-	merged := policy.Merge(map[string]policy.Document{"rep": doc}).Objects["deal"]
+	merged := policy.Merge(map[string]policy.Document{"rep": doc}, policy.Vocabulary{}).Objects["deal"]
 	if !merged.Create || !merged.Read || merged.Update || !merged.Delete {
 		t.Fatalf("the grant the editor wrote resolved to %+v after Parse+Merge; "+
 			"want create+read+delete and no update (%+v was parsed)", merged, got)

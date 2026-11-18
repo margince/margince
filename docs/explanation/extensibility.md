@@ -269,11 +269,11 @@ Go.
 
 ### 5. The boot step: check the set, then apply
 
-Each role binary wires the composed set in one place, its `main.go`:
+Each role binary wires the composed set in one place, its `main.go`. It hands the extension state it gets
+back to the server and the job runner:
 
 ```go
-extensions := composition.Extensions()
-if err := compose.RegisterExtensions(extensions); err != nil { … }
+composed, err := compose.RegisterExtensions(composition.Extensions(), composition.Verbs(), composition.Jobs())
 ```
 
 `RegisterExtensions` runs **two separate steps**, and keeping them apart is the key rule. First it

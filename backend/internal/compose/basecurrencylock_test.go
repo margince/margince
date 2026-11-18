@@ -24,13 +24,13 @@ func TestTheLockFactsTravelExactlyWithTheirProse(t *testing.T) {
 	h := installationSettingsHandlers{now: func() time.Time { return time.Date(2026, 3, 2, 9, 0, 0, 0, time.UTC) }}
 	allowances := agentvolume.Policy{Window: agentvolume.WindowPlan{Length: 24 * time.Hour}}
 
-	open := h.toContract(identity.InstallationSettings{AgentAllowances: allowances})
+	open := h.toContract(t.Context(), identity.InstallationSettings{AgentAllowances: allowances})
 	if open.BaseCurrencyLock != nil || open.BaseCurrencyLockedReason != nil {
 		t.Errorf("a changeable currency sent lock %+v and reason %v, want neither", open.BaseCurrencyLock, open.BaseCurrencyLockedReason)
 	}
 
 	lock := currencylock.Lock{Reason: currencylock.RateSheet, Count: 3, BaseCurrency: "EUR"}
-	locked := h.toContract(identity.InstallationSettings{
+	locked := h.toContract(t.Context(), identity.InstallationSettings{
 		BaseCurrencyLocked: true, BaseCurrencyLock: lock, AgentAllowances: allowances,
 	})
 	if locked.BaseCurrencyLockedReason == nil || *locked.BaseCurrencyLockedReason != lock.Prose() {
@@ -42,7 +42,7 @@ func TestTheLockFactsTravelExactlyWithTheirProse(t *testing.T) {
 		t.Errorf("lock = %+v, want rate_sheet, 3, EUR", got)
 	}
 
-	stray := h.toContract(identity.InstallationSettings{
+	stray := h.toContract(t.Context(), identity.InstallationSettings{
 		BaseCurrencyLocked: true, BaseCurrencyLock: currencylock.Lock{Reason: "ledger_sealed", Count: 2},
 		AgentAllowances: allowances,
 	})

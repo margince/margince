@@ -65,6 +65,7 @@ func logJourneyActivity(ctx context.Context, t *testing.T, e *integration.Env, i
 }
 
 func TestAMeetingInAnHourLeadsTheRepsWorkUntilTheRepSaysReady(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	contact := e.SeedContact(t, "Ana Roth", &e.Rep1)
@@ -113,6 +114,7 @@ func TestAMeetingInAnHourLeadsTheRepsWorkUntilTheRepSaysReady(t *testing.T) {
 // A cancelled meeting asks nothing more of anyone. The rep who said I'm ready
 // loses the reminder, and the rep who had not loses the preparation.
 func TestACancelledMeetingLeavesNeitherAReminderNorAPreparation(t *testing.T) {
+	t.Parallel()
 	for _, ready := range []bool{true, false} {
 		t.Run(fmt.Sprintf("ready=%t", ready), func(t *testing.T) {
 			e := integration.Setup(t)

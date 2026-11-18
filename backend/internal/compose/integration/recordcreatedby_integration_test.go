@@ -39,6 +39,7 @@ var recordCreatorPerms = principal.Permissions{
 const creatorColleague = "Anna Weber"
 
 func TestEveryReadOfAnAgentCreatedRecordNamesTheColleagueAndTheTool(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	e.WsExec(t, `UPDATE app_user SET display_name = $2 WHERE id = $1`, e.Rep1, creatorColleague)
 	passport := seedGrantedPassport(t, e, e.Rep1, "Claude")
@@ -67,6 +68,7 @@ func TestEveryReadOfAnAgentCreatedRecordNamesTheColleagueAndTheTool(t *testing.T
 }
 
 func TestEveryReadOfAHumanCreatedRecordNamesTheHuman(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	e.WsExec(t, `UPDATE app_user SET display_name = $2 WHERE id = $1`, e.Rep1, creatorColleague)
 	human := e.As(e.Rep1, []ids.UUID{e.Team1}, recordCreatorPerms)
@@ -92,6 +94,7 @@ func TestEveryReadOfAHumanCreatedRecordNamesTheHuman(t *testing.T) {
 
 // A reader the record is closed to learns nothing of it, its creator included.
 func TestAReaderWithoutTheRecordGetsNoCreator(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	agent := e.AgentFor(t, e.Rep3, []ids.UUID{e.Team2}, recordCreatorPerms)
 	_, company, deal := createEachRecord(agent, t, e)

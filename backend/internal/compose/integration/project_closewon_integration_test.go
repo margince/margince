@@ -94,6 +94,7 @@ func phaseOf(t *testing.T, e *Env, project ids.ProjectID) string {
 // project into delivering, with the history row and the first-class event that
 // every other phase move writes — because it goes through the same path.
 func TestWinningADealStartsDeliveryOnItsProject(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedCloseWonFixture(t, e, "ERP replacement")
 
@@ -146,6 +147,7 @@ func TestWinningADealStartsDeliveryOnItsProject(t *testing.T) {
 // initiative is where a project is born, and a deal can be won off one that
 // never passed through pursuing.
 func TestWinningADealStartsDeliveryFromInitiativeToo(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedCloseWonFixture(t, e, "Validation")
 
@@ -164,6 +166,7 @@ func TestWinningADealStartsDeliveryFromInitiativeToo(t *testing.T) {
 // one would claim a restart that never happened, and every "when did delivery
 // begin" answer derived from the history would move to the later date.
 func TestWinningADealOnAnAlreadyDeliveringProjectWritesNothing(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedCloseWonFixture(t, e, "Rollout")
 
@@ -194,6 +197,7 @@ func TestWinningADealOnAnAlreadyDeliveringProjectWritesNothing(t *testing.T) {
 // Re-opening is a human decision made with that reason in hand, and this path
 // has none to offer.
 func TestWinningADealDoesNotReopenAClosedProject(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedCloseWonFixture(t, e, "Support retainer")
 
@@ -228,6 +232,7 @@ func TestWinningADealDoesNotReopenAClosedProject(t *testing.T) {
 // A deal with no project has nothing to advance. Creating one, and guessing
 // which existing project a projectless deal meant, are separate questions.
 func TestWinningAProjectlessDealTouchesNoProject(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, won := DealFixture(t, e)
 	company := e.SeedCompany(t, "BAER Pharma", nil)
@@ -260,6 +265,7 @@ func TestWinningAProjectlessDealTouchesNoProject(t *testing.T) {
 // again. The project is delivering by then, so the phase guard must absorb it:
 // a second transition would record a restart nobody performed.
 func TestReWinningADealWritesNoSecondTransition(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedCloseWonFixture(t, e, "Migration")
 
@@ -290,6 +296,7 @@ func TestReWinningADealWritesNoSecondTransition(t *testing.T) {
 // from delivering between the two wins, so a bridge that re-ran would write
 // nothing either way and pass.
 func TestReAssertingAWonStageDoesNotDriveTheProjectBack(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedCloseWonFixture(t, e, "Data platform")
 
@@ -328,6 +335,7 @@ func TestReAssertingAWonStageDoesNotDriveTheProjectBack(t *testing.T) {
 // transition, not two. Sequential wins are the case a user actually hits; the
 // concurrent shape is held by the row lock the bridge takes before it decides.
 func TestTwoDealsWinningOnOneProjectProduceOneTransition(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, won := DealFixture(t, e)
 	company := e.SeedCompany(t, "BAER Pharma", nil)
@@ -366,6 +374,7 @@ func TestTwoDealsWinningOnOneProjectProduceOneTransition(t *testing.T) {
 // would roll back the win itself over somebody else's archive — a deal that
 // cannot be closed because an unrelated grouping was tidied away.
 func TestWinningADealWhoseProjectWasArchivedStillWins(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedCloseWonFixture(t, e, "Retired programme")
 
@@ -444,6 +453,7 @@ func blockedBy(ctx context.Context, probe pgx.Tx, holderPID int) (bool, error) {
 // never clears that column, leaving a delivering project that still explains
 // why it was closed.
 func TestTheDeliveryTransitionDecidesUnderTheProjectLock(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedCloseWonFixture(t, e, "Contended programme")
 	if _, err := e.Projects.AdvanceProjectPhase(e.Admin(), f.project, projects.AdvanceProjectPhaseInput{
@@ -515,6 +525,7 @@ func TestTheDeliveryTransitionDecidesUnderTheProjectLock(t *testing.T) {
 // so always reads `project.update`. The evidence column is what makes the
 // ledger honest, and its absence is exactly the silent overclaim.
 func TestTheDeliveryTransitionRecordsWhatActuallyAuthorizedIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedCloseWonFixture(t, e, "Attribution")
 
@@ -560,6 +571,7 @@ func TestTheDeliveryTransitionRecordsWhatActuallyAuthorizedIt(t *testing.T) {
 // any project, hang your own deal off it, win the deal, and force a phase
 // transition plus a history row onto a record you cannot otherwise touch.
 func TestARepCannotAttachAProjectTheyCannotWrite(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	company := e.SeedCompany(t, "BAER Pharma", nil)
@@ -628,6 +640,7 @@ func TestARepCannotAttachAProjectTheyCannotWrite(t *testing.T) {
 // Without this, the refusal above would pass against an implementation that
 // refused everyone.
 func TestTheProjectsOwnerStillAttachesAndWins(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, won := DealFixture(t, e)
 	company := e.SeedCompany(t, "BAER Pharma", nil)

@@ -49,6 +49,7 @@ func listedTagReach(ctx context.Context, t *testing.T, store *collections.Store,
 // A contact still private to the rep who captured it is the row a colleague's
 // count must leave out. Every other contact is read by every seat.
 func TestTheTagListCountsOnlyWhatTheCallerMaySee(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
 	curator := tagCurator(e)
@@ -97,6 +98,7 @@ func TestTheTagListCountsOnlyWhatTheCallerMaySee(t *testing.T) {
 // The count reads every tagging, so a list read that does not ask for it
 // pays nothing for it.
 func TestTheTagListCountsNothingUnlessAsked(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
 	curator := tagCurator(e)
@@ -169,6 +171,7 @@ func referredDealsListed(ctx context.Context, t *testing.T, e *Env, pipeline ids
 // A deal is workspace-readable, so an own-scope seat reads a colleague's deals
 // and counts them too. The count agrees with the deal list that seat reads.
 func TestTheAcquisitionCatalogCountsTheLiveDealsTheCallerMaySee(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	pipeline, open, _ := DealFixture(t, e)

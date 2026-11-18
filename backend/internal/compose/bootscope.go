@@ -38,7 +38,7 @@ import (
 // accidentally write against an unbound workspace — database.WithWorkspaceTx
 // answers ErrNoWorkspace instead.
 func bootLedgerScope(ctx context.Context, pool *pgxpool.Pool, actor string) (context.Context, bool, error) {
-	wsID, err := identity.NewService(pool).InstallationWorkspace(ctx)
+	wsID, err := IdentityService(pool).InstallationWorkspace(ctx)
 	if errors.Is(err, identity.ErrNotBootstrapped) {
 		return ctx, false, nil
 	}

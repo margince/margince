@@ -34,6 +34,7 @@ import (
 // through the employer land in opposite orders unless the whole set is taken
 // up front.
 func TestActivitiesCrossingAnEmployerQueueRatherThanDeadlock(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	first, second := e.SeedCompany(t, "Cross One", nil), e.SeedCompany(t, "Cross Two", nil)
 	atFirst, atSecond := e.SeedContact(t, "Works At One", nil), e.SeedContact(t, "Works At Two", nil)
@@ -57,6 +58,7 @@ func TestActivitiesCrossingAnEmployerQueueRatherThanDeadlock(t *testing.T) {
 // before either reaches the trigger's FOR UPDATE, and neither upgrade can wait
 // out the other's share.
 func TestActivitiesOnOneCompanyQueueRatherThanDeadlock(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Hot Account", nil)
 
@@ -71,6 +73,7 @@ func TestActivitiesOnOneCompanyQueueRatherThanDeadlock(t *testing.T) {
 // Each writer shares the company in its endpoint probe and then needs it FOR
 // UPDATE in the relationship trigger — the same upgrade, on the other path.
 func TestEmploymentsAtOneCompanyQueueRatherThanDeadlock(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Hiring Account", nil)
 	joiners := []ids.UUID{e.SeedContact(t, "Joiner One", nil), e.SeedContact(t, "Joiner Two", nil)}

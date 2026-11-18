@@ -60,6 +60,7 @@ func holdOnlyRole(t *testing.T, e *integration.SearchEnv, user ids.UUID, key str
 // Of the shipped roles, only Read-only cannot capture; every other one holds
 // the creates capture's writers make.
 func TestTheShippedRolesThatCannotCaptureAreReadOnlyAlone(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	seedShippedRoles(t, e)
 	authority := identity.NewService(e.Pool)
@@ -102,6 +103,7 @@ func (c *countingConnector) Sync(ctx context.Context, auth connector.Auth, curso
 }
 
 func TestConnectRefusesAMemberWhoseRoleCannotCapture(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	seedShippedRoles(t, e)
 	holdOnlyRole(t, e, e.Rep1, "read_only")
@@ -137,6 +139,7 @@ func lastSuccessAt(t *testing.T, e *integration.SearchEnv, connID ids.UUID) *tim
 }
 
 func TestAMemberMovedToReadOnlyStopsWithoutAProviderCallAndResumesWhenRestored(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	seedShippedRoles(t, e)
 	holdOnlyRole(t, e, e.Rep1, "rep")

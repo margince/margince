@@ -90,7 +90,13 @@ func admit(ctx context.Context, tx pgx.Tx, member ids.UUID) error {
 	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return err
 	}
-	return identity.AdmitMemberHandover(ctx, tx, ids.From[ids.UserKind](member))
+	return admitMemberHandover(ctx, tx, ids.From[ids.UserKind](member))
+}
+
+// admitMemberHandover is identity.AdmitMemberHandover under the installed RBAC
+// vocabulary, in the shape a webhook owner admission takes.
+func admitMemberHandover(ctx context.Context, tx pgx.Tx, member ids.UserID) error {
+	return identity.AdmitMemberHandover(ctx, tx, installedRbacObjects(), member)
 }
 
 // Owned counts the live records member owns that the caller can see.
@@ -233,7 +239,7 @@ func (s handoverSeam) handOverInTx(
 	// A webhook runs under its owner and stops when they leave; it moves with
 	// the rest of their work so the integration keeps delivering. A receiver
 	// the caller could not name as owner by an edit leaves it with the member.
-	webhooksMoved, err := webhooks.TransferSubscriptionOwnershipTx(ctx, tx, ids.From[ids.UserKind](member), receiver, identity.AdmitMemberHandover)
+	webhooksMoved, err := webhooks.TransferSubscriptionOwnershipTx(ctx, tx, ids.From[ids.UserKind](member), receiver, admitMemberHandover)
 	if err != nil && !errors.Is(err, apperrors.ErrPermissionDenied) {
 		return crmcontracts.UserHandoverResult{}, err
 	}
@@ -328,7 +334,7 @@ type handoverHandlers struct {
 }
 
 func (s *Server) wireHandoverSurface() {
-	s.handoffHandlers = memberhandoff.NewHandlers(s.bulkHandlers.engine.db)
+	s.handoffHandlers = memberhandoff.NewHandlers(s.bulkHandlers.engine.db, installedRbacObjects())
 	s.authHandlers = s.WithMemberWork(memberWork{newHandoverSeam(s.bulkHandlers.engine)})
 	s.handoverHandlers = handoverHandlers{
 		seam: newHandoverSeam(s.bulkHandlers.engine),

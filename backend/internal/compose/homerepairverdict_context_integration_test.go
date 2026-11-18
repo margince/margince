@@ -21,6 +21,7 @@ import (
 )
 
 func TestReviewedClassificationBindsFullPriorContextAndWithholdsPrivateHistory(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	at := time.Date(2030, 1, 1, 12, 0, 0, 0, time.UTC)
 	ctx := e.Admin()

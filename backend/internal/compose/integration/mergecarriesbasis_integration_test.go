@@ -16,6 +16,7 @@ import (
 // the ground the mail stood on; left on the retired record, the survivor's
 // subject-access export and every later reader lose it.
 func TestTheBasisARealSendRecordedFollowsTheMerge(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	// A reply on a live deal the subject is staked on is a supported
 	// resolution, which is the arm that writes communication_basis.

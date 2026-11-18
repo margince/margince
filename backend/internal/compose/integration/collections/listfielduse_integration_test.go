@@ -20,6 +20,7 @@ import (
 )
 
 func TestAListTheAskerCannotFindIsCountedButNotNamed(t *testing.T) {
+	t.Parallel()
 	f := setupFixture(t)
 	column := f.defineField(t, customfieldsmod.FieldSpec{Label: "Renewal Band Use", Type: customfieldsmod.TypeText})
 	other := f.defineField(t, customfieldsmod.FieldSpec{Label: "Renewal Band Other", Type: customfieldsmod.TypeText})

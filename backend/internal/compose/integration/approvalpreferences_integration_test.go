@@ -14,6 +14,7 @@ import (
 )
 
 func TestPersonalApprovalPreferencesThroughAuthenticatedRoutes(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	const path = "/v1/me/approval-preferences"

@@ -47,6 +47,7 @@ import (
 // reminder task, a contact 40 days out is outside the window and gets
 // none, proving DateFieldCandidates' literal BETWEEN shape end to end.
 func TestRenewalReminderFiresWithinWindowButNotBeyondIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	svc := customfields.NewService(e.Pool, SchemaPool(t))
 	store := contacts.NewStore(e.DB()).WithFieldCatalog(svc)
@@ -108,6 +109,7 @@ func TestRenewalReminderFiresWithinWindowButNotBeyondIt(t *testing.T) {
 // resolvePreviewRecipe's pre-database refusal logic is internally
 // consistent.
 func TestRenewalReminderPreviewMatchesTheRealSeededRows(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	svc := customfields.NewService(e.Pool, SchemaPool(t))
 	contactsStore := contacts.NewStore(e.DB()).WithFieldCatalog(svc)
@@ -196,6 +198,7 @@ func TestRenewalReminderPreviewMatchesTheRealSeededRows(t *testing.T) {
 // projectOccurrence) rather than handing back the field's literal stored
 // year.
 func TestRenewalReminderRecurringAnchorReArmsEachYear(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	svc := customfields.NewService(e.Pool, SchemaPool(t))
 	store := contacts.NewStore(e.DB()).WithFieldCatalog(svc)
@@ -268,6 +271,7 @@ func TestRenewalReminderRecurringAnchorReArmsEachYear(t *testing.T) {
 // alone and still converge the healthy instance's candidate in the same
 // pass.
 func TestRenewalReminderMisconfiguredInstanceDoesNotAbortTheWorkspacePass(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	dealID := e.SeedDeal(t, "Gone Quiet Deal", pipeline, open, nil)

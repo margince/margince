@@ -19,6 +19,7 @@ import (
 )
 
 func TestCreateLeadWithoutOwnerStaysUnassigned(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 
 	created, wasCreated, err := e.store.CreateLead(e.ctx, CreateLeadInput{
@@ -47,6 +48,7 @@ func TestCreateLeadWithoutOwnerStaysUnassigned(t *testing.T) {
 // human-only and ownerless rows refuse writes, so a NULL owner would strand
 // the very lead the agent just filed.
 func TestAgentCreateLeadKeepsTheOnBehalfOwner(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	agentCtx := principal.WithActor(e.ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:sdr", UserID: e.user,

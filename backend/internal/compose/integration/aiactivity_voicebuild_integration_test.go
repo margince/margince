@@ -148,6 +148,7 @@ func (f *voiceBuildFixture) claim(t *testing.T) time.Time {
 // The line the router could never draw: a build is live and the rep's own from
 // the moment they ask for it, not from the moment it finishes.
 func TestAQueuedVoiceBuildIsProjectedAsTheContactsOwnLiveWork(t *testing.T) {
+	t.Parallel()
 	f := newVoiceBuildFixture(t)
 	f.drain(t)
 
@@ -175,6 +176,7 @@ func TestAQueuedVoiceBuildIsProjectedAsTheContactsOwnLiveWork(t *testing.T) {
 // The claim moves the same occurrence to running, carrying the window a
 // replacement worker may take it in — and the outcome settles it.
 func TestAVoiceBuildRunsAndSettlesInTheProjection(t *testing.T) {
+	t.Parallel()
 	f := newVoiceBuildFixture(t)
 	claimedAt := f.claim(t)
 	f.drain(t)
@@ -210,6 +212,7 @@ func TestAVoiceBuildRunsAndSettlesInTheProjection(t *testing.T) {
 // for one occurrence by it, and a `running` that supersedes a settled deferral
 // is indistinguishable from a stale redelivery without one.
 func TestADeferredVoiceBuildSettlesAndTheNextClaimReopensIt(t *testing.T) {
+	t.Parallel()
 	f := newVoiceBuildFixture(t)
 	claimedAt := f.claim(t)
 	f.drain(t)

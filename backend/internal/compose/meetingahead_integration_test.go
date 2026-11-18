@@ -82,6 +82,7 @@ func (f clockFixture) health(t *testing.T, deal ids.UUID, now time.Time) deals.D
 }
 
 func TestABookedMeetingAheadKeepsADealOffStalled(t *testing.T) {
+	t.Parallel()
 	f := newClockFixture(t)
 	booked := f.idleDeal(t, "Booked ahead", 70)
 	meeting := f.logOn(t, "meeting", onRecord("deal", booked), f.now.AddDate(0, 0, 7))
@@ -111,6 +112,7 @@ func TestABookedMeetingAheadKeepsADealOffStalled(t *testing.T) {
 }
 
 func TestABookedMeetingAheadGivesDealHealthFullRecency(t *testing.T) {
+	t.Parallel()
 	f := newClockFixture(t)
 	cases := []struct {
 		name    string
@@ -154,6 +156,7 @@ func TestABookedMeetingAheadGivesDealHealthFullRecency(t *testing.T) {
 // the deal neither drops recency nor reads as stalled. Each read runs on a pool
 // whose now() is the moment it asks about.
 func TestDealHealthHoldsAcrossTheMeetingsStart(t *testing.T) {
+	t.Parallel()
 	f := newClockFixture(t)
 	deal := f.idleDeal(t, "Meeting starts", 70)
 	meetsAt := f.now.AddDate(0, 0, 2)
@@ -186,6 +189,7 @@ func TestDealHealthHoldsAcrossTheMeetingsStart(t *testing.T) {
 }
 
 func TestABookedMeetingAheadKeepsTheCloseDateSweepFromDowngrading(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	id := e.seedSweepDeal(t, "Quiet but booked", e.late, new(95), new(30), 90)
 	subject, booked, at := "Next step", "booked", clocktest.Now(t).UTC().AddDate(0, 0, 5)
@@ -206,6 +210,7 @@ func TestABookedMeetingAheadKeepsTheCloseDateSweepFromDowngrading(t *testing.T) 
 // Each reader that picks a last touch itself names the past email and not the
 // future-dated one.
 func TestTheLastTouchReadersIgnoreAFutureDatedEmail(t *testing.T) {
+	t.Parallel()
 	f := newClockFixture(t)
 	past, future := f.now.AddDate(0, 0, -30), f.now.AddDate(0, 0, 5)
 

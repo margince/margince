@@ -19,6 +19,7 @@ import (
 )
 
 func TestSpentTokensAndTheirTraceSurviveExecutionOwnershipLoss(t *testing.T) {
+	t.Parallel()
 	env := setupRateStore(t)
 	ws, ctx := env.seedWorkspace(context.Background(), t)
 	lost := errors.New("execution ownership was lost")

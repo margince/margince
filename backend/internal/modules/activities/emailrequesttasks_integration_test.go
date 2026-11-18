@@ -84,6 +84,7 @@ func seedEmailRequestFiledUnder(t *testing.T, e *loadEnv, subject, label, verdic
 // A request in mail the workspace may read keeps that reach, so a manager
 // reads the task a teammate holds for it.
 func TestEmailRequestCreatesOneUndatedTaskThatReachesWhoMayReadItsMail(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	source := seedEmailRequest(t, e, "Product report", "commitment", OwedVerdictAsksUs)
 	thanks := seedEmailRequest(t, e, "Thanks for the report", "other", OwedVerdictInformsUs)
@@ -133,7 +134,6 @@ func TestEmailRequestCreatesOneUndatedTaskThatReachesWhoMayReadItsMail(t *testin
 	if moves[source].Move != crmcontracts.EmailSummaryMoveNone {
 		t.Fatal("completed request still asks for a reply")
 	}
-	// This test's own mail only: the package's other tests share the database.
 	if err := e.owner.QueryRow(e.as(), `SELECT count(*) FROM activity WHERE source_system = 'email_request' AND source_activity_id = ANY($1)`,
 		[]ids.UUID{source, thanks, draft}).Scan(&count); err != nil {
 		t.Fatal(err)
@@ -170,6 +170,7 @@ func TestEmailRequestCreatesOneUndatedTaskThatReachesWhoMayReadItsMail(t *testin
 // the reminder must not open what the mail keeps closed. The automatic pass
 // files only workspace mail, so the rep takes this one by hand.
 func TestEmailRequestFromNarrowedMailIsPersonal(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	source := seedEmailRequest(t, e, "Confidential pricing", "commitment", OwedVerdictAsksUs)
 	e.exec(t, `UPDATE activity SET audience = 'participants' WHERE id = $1`, source)
@@ -210,6 +211,7 @@ func TestEmailRequestFromNarrowedMailIsPersonal(t *testing.T) {
 // Accepting a request keeps the type the human picked; with none it reads a
 // Reply by email, the way the request came in.
 func TestAcceptingARequestKeepsTheChosenTaskType(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	source := seedEmailRequest(t, e, "Can we meet about the renewal", "commitment", OwedVerdictAsksUs)
 	meet := crmcontracts.TaskTypeMeet
@@ -232,6 +234,7 @@ func TestAcceptingARequestKeepsTheChosenTaskType(t *testing.T) {
 }
 
 func TestEmailMoveUsesTheConversationAndActionEvidence(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	first := seedEmailRequest(t, e, "Send the report", "commitment", OwedVerdictAsksUs)
 	answered := seedEmailRequest(t, e, "Competitor question", "commitment", OwedVerdictAsksUs)
@@ -268,6 +271,7 @@ func TestEmailMoveUsesTheConversationAndActionEvidence(t *testing.T) {
 }
 
 func TestArchivingAnUnfinishedEmailTaskRestoresTheRequestWithoutRecapture(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	source := seedEmailRequest(t, e, "Send the report", "commitment", OwedVerdictAsksUs)
 	store := storeKnowing(e)
@@ -301,6 +305,7 @@ func TestArchivingAnUnfinishedEmailTaskRestoresTheRequestWithoutRecapture(t *tes
 }
 
 func TestReassignedEmailReminderRequiresReadableSource(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	source := seedEmailRequest(t, e, "Send the report", "commitment", OwedVerdictAsksUs)
 	store := storeKnowing(e)
@@ -354,6 +359,7 @@ func TestReassignedEmailReminderRequiresReadableSource(t *testing.T) {
 // holds even when the reminder is filed only under a contact they cannot reach.
 // So the reminder stands in for the mail on their waiting queue.
 func TestACopiedColleagueFindsTheWorkspaceReminderInPlaceOfTheMail(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	source := seedEmailRequest(t, e, "Product sheet", "commitment", OwedVerdictAsksUs)
 	store := storeKnowing(e)

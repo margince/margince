@@ -158,6 +158,7 @@ func emailIDs(t *testing.T, e *integration.SearchEnv) []ids.UUID {
 }
 
 func TestASharedMailboxCapturesMailWithNoSeatBehindIt(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	box, syncShared := sharedMailbox(t, env, e.Team1, capturemod.PostureHeld)
@@ -194,6 +195,7 @@ func TestASharedMailboxCapturesMailWithNoSeatBehindIt(t *testing.T) {
 }
 
 func TestASeatOutsideTheReaderTeamCannotFindSharedMail(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	_, syncShared := sharedMailbox(t, env, e.Team1, capturemod.PostureHeld)
@@ -216,6 +218,7 @@ func TestASeatOutsideTheReaderTeamCannotFindSharedMail(t *testing.T) {
 }
 
 func TestASharedMailboxSetToSharedIsReadByEveryoneWhoSeesTheRecord(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	allowSharedPosture(t, e)
@@ -231,6 +234,7 @@ func TestASharedMailboxSetToSharedIsReadByEveryoneWhoSeesTheRecord(t *testing.T)
 }
 
 func TestARemovedMemberLosesSharedMailAndItsCachedHomeAnswerAtOnce(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	_, syncShared := sharedMailbox(t, env, e.Team1, capturemod.PostureHeld)
@@ -255,6 +259,7 @@ func TestARemovedMemberLosesSharedMailAndItsCachedHomeAnswerAtOnce(t *testing.T)
 }
 
 func TestAnArchivedReaderTeamReadsNothingAndStopsTheSync(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	box, syncShared := sharedMailbox(t, env, e.Team1, capturemod.PostureHeld)
@@ -282,6 +287,7 @@ func TestAnArchivedReaderTeamReadsNothingAndStopsTheSync(t *testing.T) {
 }
 
 func TestASharedMailboxIsScheduledLikeAPersonalOne(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	box, _ := sharedMailbox(t, env, env.e.Team1, capturemod.PostureHeld)
 	due, err := env.registry.DueConnections(principal.WithWorkspaceID(context.Background(), env.e.WS), sharedMailboxProvider)
@@ -294,6 +300,7 @@ func TestASharedMailboxIsScheduledLikeAPersonalOne(t *testing.T) {
 }
 
 func TestMailInAHeldPrivateMailboxAndASharedOneStaysClosedToEveryoneElse(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	allowSharedPosture(t, e)
@@ -319,6 +326,7 @@ func TestMailInAHeldPrivateMailboxAndASharedOneStaysClosedToEveryoneElse(t *test
 }
 
 func TestAForgedMessageIDInTheSharedMailboxDoesNotJoinPrivateMail(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	setPosture(t, env, e.Rep1, capturemod.PostureHeld)
@@ -339,6 +347,7 @@ func TestAForgedMessageIDInTheSharedMailboxDoesNotJoinPrivateMail(t *testing.T) 
 }
 
 func TestAPersonalSeatsVerdictDoesNotAttachToTheSharedRow(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	allowSharedPosture(t, e)
@@ -363,6 +372,7 @@ func TestAPersonalSeatsVerdictDoesNotAttachToTheSharedRow(t *testing.T) {
 }
 
 func TestAPersonalPurgeDoesNotDestroyAMessageTheSharedMailboxAlsoHolds(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	_, syncShared := sharedMailbox(t, env, e.Team2, capturemod.PostureHeld)
@@ -388,6 +398,7 @@ func TestAPersonalPurgeDoesNotDestroyAMessageTheSharedMailboxAlsoHolds(t *testin
 }
 
 func TestMovingASharedMailboxToOtherReadersDropsCachedHomeAnswers(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	box, _ := sharedMailbox(t, env, e.Team1, capturemod.PostureHeld)
@@ -406,6 +417,7 @@ func TestMovingASharedMailboxToOtherReadersDropsCachedHomeAnswers(t *testing.T) 
 }
 
 func TestAPersonalPurgeKeepsAContactWhoseMailTheSharedMailboxHolds(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	_, syncShared := sharedMailbox(t, env, e.Team2, capturemod.PostureHeld)
@@ -444,6 +456,7 @@ func TestAPersonalPurgeKeepsAContactWhoseMailTheSharedMailboxHolds(t *testing.T)
 }
 
 func TestABrokenSharedMailboxShowsInFleetHealth(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	box, _ := sharedMailbox(t, env, e.Team1, capturemod.PostureHeld)

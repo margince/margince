@@ -21,6 +21,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -31,6 +32,7 @@ import (
 // The mail STAYS VISIBLE and the domain keeps its company question: what the
 // gate claims is only that nobody answers at this address.
 func TestAnAddressNobodyAnswersNeverBecomesAContact(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	cases := []struct {
 		name    string
@@ -67,7 +69,7 @@ func TestAnAddressNobodyAnswersNeverBecomesAContact(t *testing.T) {
 			// The brain answers `contact` at 0.95 for everything — the exact
 			// stray answer that minted "Receipts" and "BERATUNG JUDITH
 			// ANDRESEN". If the gate works, it is never consulted.
-			brain := &scriptedVerdictBrain{}
+			brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN}
 			engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 			if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 				t.Fatalf("verdict pass: %v", err)
@@ -96,12 +98,13 @@ func TestAnAddressNobodyAnswersNeverBecomesAContact(t *testing.T) {
 // about the address, and a rule that swept the domain would lose the real
 // counterparty it names.
 func TestANamedHumanIsStillAContactWhereverTheyWork(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const address = "anna.mueller@irgendeinshop.example"
 	activityID := seedCapturedMail(t, e, address, "Angebot für das Q3-Projekt")
 	dispositionID := seedPendingDisposition(t, e, address, "irgendeinshop.example", activityID)
 
-	brain := &scriptedVerdictBrain{}
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
@@ -126,6 +129,7 @@ func TestANamedHumanIsStillAContactWhereverTheyWork(t *testing.T) {
 // answer in front of it, so the rare wrong answer wins by being last unless
 // something reads the others.
 func TestAStrayCreatingAnswerAgainstASettledHistoryAsksAHuman(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const address = "updates@borderline.example"
 
@@ -141,7 +145,7 @@ func TestAStrayCreatingAnswerAgainstASettledHistoryAsksAHuman(t *testing.T) {
 	activityID := seedCapturedMail(t, e, address, "quick question about your roadmap")
 	dispositionID := seedPendingDisposition(t, e, address, "borderline.example", activityID)
 
-	brain := &scriptedVerdictBrain{}
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
@@ -164,12 +168,13 @@ func TestAStrayCreatingAnswerAgainstASettledHistoryAsksAHuman(t *testing.T) {
 // A first `contact` answer, with no history behind it, still creates. The gate
 // bounds a contradiction, not the ordinary case.
 func TestAFirstCreatingAnswerStillCreates(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const address = "neu@interessent.example"
 	activityID := seedCapturedMail(t, e, address, "Anfrage")
 	dispositionID := seedPendingDisposition(t, e, address, "interessent.example", activityID)
 
-	brain := &scriptedVerdictBrain{}
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)

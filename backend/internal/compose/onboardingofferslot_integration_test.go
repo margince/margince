@@ -36,6 +36,7 @@ func displayNameOffer(read contacts.SiteRead) *contacts.SiteReadOffer {
 }
 
 func TestAnOfferMadeToOneAdministratorGrantsAnotherNothing(t *testing.T) {
+	t.Parallel()
 	env := integration.Setup(t)
 	read := onboardingDraft(t, env)
 	offeredTo := env.As(env.Rep1, nil, integration.AdminPerms)
@@ -71,6 +72,7 @@ func TestAnOfferMadeToOneAdministratorGrantsAnotherNothing(t *testing.T) {
 }
 
 func TestAMaskedFieldIsNeverOffered(t *testing.T) {
+	t.Parallel()
 	env := integration.Setup(t)
 	read := onboardingDraft(t, env)
 	// A row-scope-all reader carries no mask at all, so this one is team-scoped.
@@ -89,6 +91,7 @@ func TestAMaskedFieldIsNeverOffered(t *testing.T) {
 }
 
 func TestTwoAnswersToOneOfferAcceptItOnce(t *testing.T) {
+	t.Parallel()
 	env := integration.Setup(t)
 	read := onboardingDraft(t, env)
 	human := env.As(env.Rep1, nil, integration.AdminPerms)

@@ -24,6 +24,7 @@ import (
 const holdReason = "Anwaltsschreiben 2026-14"
 
 func TestPlacingAndLiftingALegalHoldEmitsTheRecordsUpdatedEvent(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Disputed GmbH", nil)
 	leadName := "Held Lead"

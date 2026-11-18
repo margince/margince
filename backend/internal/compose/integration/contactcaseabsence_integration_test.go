@@ -31,6 +31,7 @@ var caseAbsenceRepPerms = principal.Permissions{
 // 404 as "no duplicates". A case the reader may not see must answer that same
 // 404, byte for byte, or the answer tells them a hidden duplicate exists.
 func TestAHiddenContactCaseAnswersLikeNoCase(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	settings := configtest.StoredOver(t, e.Pool, contacts.ConfigSettings())
 	store := contacts.NewStore(e.DB()).WithSettings(settings)

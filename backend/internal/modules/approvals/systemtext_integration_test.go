@@ -17,6 +17,7 @@ import (
 )
 
 func TestStagedSystemWordsFollowTheReaderWithoutExposingTheirDescriptor(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	passport := e.seedPassport(t)
 	in := e.agentCall(e.seedCompany(t))
@@ -57,6 +58,7 @@ func TestStagedSystemWordsFollowTheReaderWithoutExposingTheirDescriptor(t *testi
 }
 
 func TestLongImmutableProposalFactsRetainTheFullPreviewAndGenericDisplay(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	passport := e.seedPassport(t)
 	in := e.agentCall(e.seedCompany(t))

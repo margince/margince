@@ -40,6 +40,7 @@ func storedInstallationName(ctx context.Context, t *testing.T, conn *pgx.Conn) s
 }
 
 func TestTheInstallationTakesTheNameItsCompanyProfileSaved(t *testing.T) {
+	t.Parallel()
 	dsn, _ := dsns(t)
 	conn := connect(t, dsn)
 	headSchema(t, conn)
@@ -69,6 +70,7 @@ func TestTheInstallationTakesTheNameItsCompanyProfileSaved(t *testing.T) {
 }
 
 func TestAnInstallationWithNoCompanyProfileKeepsItsConfiguredName(t *testing.T) {
+	t.Parallel()
 	dsn, _ := dsns(t)
 	conn := connect(t, dsn)
 	headSchema(t, conn)
@@ -103,6 +105,7 @@ func migrationAudits(ctx context.Context, t *testing.T, conn *pgx.Conn) int {
 // The migration copies only the names the Go rule accepts, so a name spelled
 // with invisible characters alone stays behind, as a blank one does.
 func TestTheMigrationCopiesOnlyANameTheSettingAccepts(t *testing.T) {
+	t.Parallel()
 	for label, name := range map[string]string{
 		"blank":              "   ",
 		"no-break spaces":    "\u00a0\u00a0",
@@ -142,6 +145,7 @@ func TestTheMigrationCopiesOnlyANameTheSettingAccepts(t *testing.T) {
 }
 
 func TestANameTheSettingAlreadyHoldsIsNotAudited(t *testing.T) {
+	t.Parallel()
 	dsn, _ := dsns(t)
 	conn := connect(t, dsn)
 	headSchema(t, conn)
@@ -163,6 +167,7 @@ func TestANameTheSettingAlreadyHoldsIsNotAudited(t *testing.T) {
 // With no stored row the setting reads as its registered default, so the
 // audit's before image is that default, as SetRawTx writes it.
 func TestAFirstStoredNameIsAuditedFromTheDefault(t *testing.T) {
+	t.Parallel()
 	dsn, _ := dsns(t)
 	conn := connect(t, dsn)
 	headSchema(t, conn)

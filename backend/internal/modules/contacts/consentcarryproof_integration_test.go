@@ -47,6 +47,7 @@ var proofRehomesExpected = map[consentCarryKind]bool{
 }
 
 func TestEachConsentCarryProvesItsProofRule(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	if len(proofRehomesExpected) != len(consentCarries) {
 		t.Fatalf("this gate expects %d carr(ies) and the package declares %d: a carry nobody asserts "+
@@ -164,6 +165,7 @@ func countProof(t *testing.T, tx pgx.Tx, column consentSubject, subject ids.UUID
 // Mutation: drop recorded_for_addresses from the flip, or the joined update
 // from dropCollidingConsent, and its case fails.
 func TestACarriedWithdrawalKeepsTheAddressesItWasBoundTo(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name     string
 		survivor string
@@ -221,6 +223,7 @@ func TestACarriedWithdrawalKeepsTheAddressesItWasBoundTo(t *testing.T) {
 // on the contact. It keeps the withdrawal's retention floor, so retention cannot
 // reach the contact sooner than the lead whose subject refused.
 func TestACarriedWithdrawalKeepsItsRetentionFloor(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	ctx := context.Background()
 	lead := e.seedConsentSubject(t, consentSubjectLead)

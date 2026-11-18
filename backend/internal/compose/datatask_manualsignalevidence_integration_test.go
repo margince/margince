@@ -42,6 +42,7 @@ func leadTrail(t *testing.T, e *integration.Env, lead ids.LeadID) (audits, event
 }
 
 func TestTheStoreRefusesAManualSignalWithoutEvidenceAndWritesNothing(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	lead := evidenceLead(t, e, "No Evidence")
 	auditsBefore, eventsBefore := leadTrail(t, e, lead)
@@ -67,6 +68,7 @@ func TestTheStoreRefusesAManualSignalWithoutEvidenceAndWritesNothing(t *testing.
 }
 
 func TestAManualSignalStoresAndAuditsTheTrimmedEvidence(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	lead := evidenceLead(t, e, "Trimmed Evidence")
 	out, err := e.Contacts.SetLeadManualSignal(e.Admin(), lead, signalWith("employees", "51-200", "  seen on the careers page \n"))
@@ -86,6 +88,7 @@ func TestAManualSignalStoresAndAuditsTheTrimmedEvidence(t *testing.T) {
 }
 
 func TestTheNoEvidenceTaskMarksOnlyStockSentencesAndReplaysSafely(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	stock := contacts.StockManualSignalReasons()
@@ -165,6 +168,7 @@ func TestTheNoEvidenceTaskMarksOnlyStockSentencesAndReplaysSafely(t *testing.T) 
 }
 
 func TestTheNoEvidenceBatchRollsBackWithItsTransaction(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	lead := evidenceLead(t, e, "Rollback Lead")

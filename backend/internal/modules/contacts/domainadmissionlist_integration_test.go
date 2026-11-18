@@ -53,6 +53,7 @@ func (e *dedupeEnv) listedDomains(ctx context.Context, t *testing.T) []string {
 // may carry it, and without this list it would be a company held out of the
 // CRM that no screen admits exists.
 func TestTheDomainListCarriesTheQuestionsNobodyOwns(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.withholdUnreadable(ctx, t, "hello@pwc.example", "pwc.example")
@@ -93,6 +94,7 @@ func TestTheDomainListCarriesTheQuestionsNobodyOwns(t *testing.T) {
 // deactivation. The list carries every open question, so a seat leaving cannot
 // take one off it.
 func TestADeactivatedOwnersQuestionReachesTheOperatorsList(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	// Owned by e.rep, which is what the capture path stamps: the disposition
@@ -132,6 +134,7 @@ func TestADeactivatedOwnersQuestionReachesTheOperatorsList(t *testing.T) {
 // that reason. Every reason now is, so an operator sees one list of what is
 // held out of the CRM. A colleague reads the same list as the owner.
 func TestAnOwnedQuestionIsAlsoOnTheOperatorsList(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.withholdUnreadable(ctx, t, "hello@mine.example", "mine.example")

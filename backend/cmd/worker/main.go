@@ -44,7 +44,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/netguard"
 	"github.com/margince/margince/backend/internal/shared/buildinfo"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
-	"github.com/margince/margince/backend/pkg/extension"
 )
 
 func main() {
@@ -140,7 +139,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	// answers "can a reply leave this installation" from the same set; the
 	// write is an idempotent upsert, so whichever role boots second changes
 	// nothing.
-	if err := compose.RecordComposition(ctx, pool, logger, boot.extensions); err != nil {
+	if err := compose.RecordComposition(ctx, pool, logger, cfg.extensions); err != nil {
 		return err
 	}
 
@@ -204,18 +203,17 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		return err
 	}
 	defer stopJobs()
-	// AFTER the job runner, because that is where this role's unconditional
-	// BindExtensionRuntime happens and a delivery needs it: a unit's handler
-	// reaches the installation through the per-call Runtime, which refuses
-	// while nothing is bound. Started earlier, a retained entry redelivered in
-	// that window would fail on the wiring and then wait out the subscriber's
-	// whole reclaim interval before anyone tried again — on a worker with no
-	// model configured, which never reaches the runner lane's own binding.
+	// After the job runner, which makes this role's unconditional runtime
+	// binding. A delivery needs it: a unit's handler reaches the installation
+	// through the per-call Runtime, which refuses while nothing is bound.
+	// Started earlier, a retained entry redelivered in that window would fail on
+	// the wiring and wait out the subscriber's whole reclaim interval. A worker
+	// with no model configured never reaches the runner lane's own binding.
 	// The context is the LANES', which is this function's own ctx with their
 	// cancel around it (startEventLanes) — carried on the value rather than
 	// re-derived here, so this lane ends when its siblings do instead of
 	// outliving them under a second shutdown.
-	startExtensionSubscriptionLanes(lanes.ctx, pool, rdb, lanes.background, logger, stdout) //nolint:contextcheck // the lanes' ctx IS derived from this one; see above.
+	startExtensionSubscriptionLanes(lanes.ctx, cfg.extensions, pool, rdb, lanes.background, logger, stdout) //nolint:contextcheck // the lanes' ctx IS derived from this one; see above.
 	// Every phase a replica needs to do work has returned; /readyz may say so.
 	started.complete()
 	// Deferred AFTER complete, so LIFO runs it FIRST: readiness goes false at
@@ -246,26 +244,19 @@ func releaseSkewRefusal(refused <-chan error) error {
 // registerComposedExtensions registers the composed extension set before
 // anything else runs; a failing registration aborts the boot (ADR-0120 EXT-P4).
 //
-// It returns the SAME snapshot it registered, because run hands that value on
-// to the boot inventory: taking a second snapshot there would let the two
-// observe different declarations, and the inventory's whole job is to record
-// what this process is actually running.
-func registerComposedExtensions() ([]extension.Extension, error) {
-	extensions := composition.Extensions()
-	if err := compose.RegisterExtensions(extensions, composition.Verbs(), composition.Jobs()); err != nil {
-		return nil, err
-	}
-	return extensions, nil
+// It returns the composition it registered, which run hands on to the boot
+// inventory. So the inventory records the declarations this process runs.
+func registerComposedExtensions() (*compose.Extensions, error) {
+	return compose.RegisterExtensions(composition.Extensions(), composition.Verbs(), composition.Jobs())
 }
 
 // workerBoot is everything decided before this process touches a network.
 // That is the parsed flags, the file's seeds, the composed extension set, and
 // the logger the phases after it report through.
 type workerBoot struct {
-	cfg        workerConfig
-	deploy     deployconfig.Bootstrap
-	extensions []extension.Extension
-	log        *slog.Logger
+	cfg    workerConfig
+	deploy deployconfig.Bootstrap
+	log    *slog.Logger
 }
 
 // configureWorker runs the phases that can fail on configuration alone. In
@@ -275,14 +266,15 @@ type workerBoot struct {
 // None opens a core connection, so a misconfigured deployment fails before a
 // pool, bus client or listener exists. A unit's Start may do its own I/O.
 func configureWorker(ctx context.Context, args []string, stdout io.Writer) (workerBoot, error) {
-	cfg, loaded, err := loadWorkerConfig(args, config.Environ())
+	cfg, loaded, err := bootWorkerConfig(args, config.Environ())
 	if err != nil {
 		return workerBoot{}, err
 	}
-	extensions, err := registerComposedExtensions()
+	composed, err := registerComposedExtensions()
 	if err != nil {
 		return workerBoot{}, err
 	}
+	cfg.extensions = composed
 	compose.BindExtensionEgress(cfg.posture)
 	bootstrap, err := loadBootstrap(cfg)
 	if err != nil {
@@ -301,7 +293,7 @@ func configureWorker(ctx context.Context, args []string, stdout io.Writer) (work
 	// See cmd/api/main.go's identical comment: AllowTestMailbox is an
 	// operations.* kill switch, not a capture.* tuning knob.
 	cfg.captureConfig.AllowTestMailbox = config.Val(cfg.settings, ps.AllowTestMailbox)
-	return workerBoot{cfg: cfg, deploy: bootstrap, extensions: extensions, log: log}, nil
+	return workerBoot{cfg: cfg, deploy: bootstrap, log: log}, nil
 }
 
 // runResumeSubscriber consumes cg:overnight-agent: approval decisions

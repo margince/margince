@@ -298,7 +298,7 @@ func sendStore(pool *pgxpool.Pool, send SendPath) *activities.Store {
 		WithBaseLanguage(activities.BaseLanguageFunc(func(ctx context.Context) string {
 			return identity.BaseLanguageForPrompt(ctx, pool)
 		})).
-		WithSenderName(identity.NewServiceFor(InstallationDB(pool))).
+		WithSenderName(identityServiceFor(InstallationDB(pool))).
 		WithHeldNotifier(send.HeldNotifier).
 		// Wired unconditionally, so a deployment cannot forget it and leave a
 		// settled message's review open.
@@ -319,9 +319,10 @@ func sendStore(pool *pgxpool.Pool, send SendPath) *activities.Store {
 // than an omission: only DraftEmail is reachable through automation.Comms, so
 // that surface has no send to configure.
 func newCommsAdapter(
-	pool *pgxpool.Pool, drafter activities.EmailDrafter, send SendPath,
+	pool *pgxpool.Pool, composed *Extensions, drafter activities.EmailDrafter, send SendPath,
 ) commsAdapter {
 	return commsAdapter{
+		composed:      composed,
 		store:         sendStore(pool, send),
 		gate:          consentGateFor(pool),
 		draft:         drafter,

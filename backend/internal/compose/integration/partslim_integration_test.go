@@ -151,6 +151,7 @@ func outcomeOf(t *testing.T, e *Env, sourceID string) string {
 // that was slimmed. The oversized original question is answered from the
 // difference.
 func TestAConsideredOriginalSaysWhatCameOut(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := context.Background()
 	blob := blobstore.NewMemory()
@@ -191,6 +192,7 @@ func TestAConsideredOriginalSaysWhatCameOut(t *testing.T) {
 }
 
 func TestTheSweepSlimsOnlyWhatItCanProve(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := context.Background()
 	blob := blobstore.NewMemory()
@@ -258,6 +260,7 @@ func TestTheSweepSlimsOnlyWhatItCanProve(t *testing.T) {
 // Without the stamp the sweep re-reads, re-fetches and re-encodes the whole
 // table every cadence forever.
 func TestTheSweepConsidersEachOriginalOnce(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := context.Background()
 	blob := blobstore.NewMemory()
@@ -302,6 +305,7 @@ func TestTheSweepConsidersEachOriginalOnce(t *testing.T) {
 // come back byte-identical AND that none was stamped, which is the difference
 // between a no-op and a silent, permanent loss of the backlog.
 func TestTheSweepRemovesNothingWithoutAnObjectStore(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := context.Background()
 	pdf := slimPDF(4)
@@ -352,6 +356,7 @@ func TestTheSweepRemovesNothingWithoutAnObjectStore(t *testing.T) {
 // that a unit test cannot exercise — the payload goes in as a JSON string and
 // comes back through #>> '{}'.
 func TestASlimmedOriginalRestoresToWhatTheProviderSent(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := context.Background()
 	blob := blobstore.NewMemory()
@@ -412,6 +417,7 @@ func TestASlimmedOriginalRestoresToWhatTheProviderSent(t *testing.T) {
 // gone it withholds that one payload while still LISTING the row, because the
 // fact that an original is held is itself owed.
 func TestTheExportRestoresASlimmedOriginal(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := context.Background()
 	blob := blobstore.NewMemory()

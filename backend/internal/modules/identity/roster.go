@@ -235,7 +235,7 @@ func (s *Service) GetUser(ctx context.Context, actor Identity, userID ids.UserID
 			return scanErr
 		}
 		rows := []userRow{row}
-		grants, err := loadGrantsFor(ctx, tx, rowIDs(rows))
+		grants, err := loadGrantsFor(ctx, tx, s.rbac, rowIDs(rows))
 		if err != nil {
 			return err
 		}
@@ -288,7 +288,7 @@ func (s *Service) ListUsers(ctx context.Context, in ListUsersInput) (RosterPage,
 	}
 	var actions map[ids.UUID][]memberAction
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		grants, err := loadGrantsFor(ctx, tx, rowIDs(rows))
+		grants, err := loadGrantsFor(ctx, tx, s.rbac, rowIDs(rows))
 		if err != nil {
 			return err
 		}

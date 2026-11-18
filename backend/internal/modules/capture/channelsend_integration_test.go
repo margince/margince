@@ -115,6 +115,7 @@ func connectChannel(t *testing.T, f *channelFixture, username string) string {
 }
 
 func TestChannelSenderForResolvesTheWorkspacesBotToken(t *testing.T) {
+	t.Parallel()
 	f := newChannelFixture(t, nil)
 	token := connectChannel(t, f, "sendbot")
 	sender := &channelSendConnector{}
@@ -157,6 +158,7 @@ func TestChannelSenderForResolvesTheWorkspacesBotToken(t *testing.T) {
 // human the message would go. Nothing in that sequence looks like a missing
 // method, which is why it is a gate and not a comment.
 func TestTheResolvedSenderDeclaresWhatTheConnectorDeclares(t *testing.T) {
+	t.Parallel()
 	f := newChannelFixture(t, nil)
 	connectChannel(t, f, "sendbot")
 	registered := &channelSendConnector{}
@@ -182,6 +184,7 @@ func TestTheResolvedSenderDeclaresWhatTheConnectorDeclares(t *testing.T) {
 // its own because the row survives — archived, status disconnected — and a resolve
 // that read it would transmit through a token the vault no longer holds.
 func TestChannelSenderForReportsNoConnectionForAnythingNotLive(t *testing.T) {
+	t.Parallel()
 	t.Run("no binding at all", func(t *testing.T) {
 		f := newChannelFixture(t, nil)
 		reg := channelSendRegistry(t, f, &channelSendConnector{})
@@ -210,6 +213,7 @@ func TestChannelSenderForReportsNoConnectionForAnythingNotLive(t *testing.T) {
 // The two other deployment facts, each of which must be NAMED rather than read
 // as an outage: a caller's response to a fact is to stop trying.
 func TestChannelSenderForNamesTheDeploymentFacts(t *testing.T) {
+	t.Parallel()
 	t.Run("a connector this role never registered", func(t *testing.T) {
 		f := newChannelFixture(t, nil)
 		connectChannel(t, f, "unregistered")
@@ -240,6 +244,7 @@ func TestChannelSenderForNamesTheDeploymentFacts(t *testing.T) {
 // rather than trusting a constraint it cannot see, and picking the planner's first
 // row would send a customer's reply through a bot they never opened a chat with.
 func TestASecondLiveBindingCannotBeCreatedForTheResolveToGuessBetween(t *testing.T) {
+	t.Parallel()
 	f := newChannelFixture(t, nil)
 	connectChannel(t, f, "firstbot")
 
@@ -278,6 +283,7 @@ func TestASecondLiveBindingCannotBeCreatedForTheResolveToGuessBetween(t *testing
 // workspace has a live bot, it is simply a different one, and the retry that
 // follows resolves it.
 func TestASendRefusesAfterItsBotWasReplaced(t *testing.T) {
+	t.Parallel()
 	f := newChannelFixture(t, nil)
 	connectChannel(t, f, "outgoingbot")
 	provider := &channelSendConnector{}

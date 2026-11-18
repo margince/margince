@@ -80,6 +80,7 @@ func requireContactHeld(t *testing.T, err error, door string) *contacts.ContactH
 }
 
 func TestALeadCreateForAContactIsRefusedAndTheOwnerTold(t *testing.T) {
+	t.Parallel()
 	l := setupLeadForContact(t)
 	rep1 := l.e.As(l.e.Rep1, nil, integration.AdminPerms)
 	in := contacts.CreateLeadInput{FullName: new("Mara H."), Email: new("Mara@Customer.example"), Source: "web_form"}
@@ -117,6 +118,7 @@ func TestALeadCreateForAContactIsRefusedAndTheOwnerTold(t *testing.T) {
 }
 
 func TestALeadEditOrReopenOntoAContactsAddressIsRefused(t *testing.T) {
+	t.Parallel()
 	l := setupLeadForContact(t)
 	admin := l.e.Admin()
 	lead, _, err := l.store.CreateLead(admin, contacts.CreateLeadInput{FullName: new("Other"), Email: new("other@prospect.example"), Source: "manual"})
@@ -155,6 +157,7 @@ func TestALeadEditOrReopenOntoAContactsAddressIsRefused(t *testing.T) {
 }
 
 func TestACSVLeadRowForAContactIsSkippedInThePreviewAndTheCommit(t *testing.T) {
+	t.Parallel()
 	l := setupLeadForContact(t)
 	ctx := importingAdmin(l.e)
 	run, err := migration.NewRunStore(l.e.DB()).CreateDraftRun(ctx, migration.CreateDraftRunInput{
@@ -188,6 +191,7 @@ func TestACSVLeadRowForAContactIsSkippedInThePreviewAndTheCommit(t *testing.T) {
 }
 
 func TestACapturedLeadForAContactLandsOnTheContact(t *testing.T) {
+	t.Parallel()
 	l := setupLeadForContact(t)
 	ctx := threadConnectorCtx(l.e, l.e.Rep1)
 	actor, _ := principal.Actor(ctx)

@@ -22,6 +22,7 @@ import (
 )
 
 func TestQuotedSpeakersLeaveTheOwnersProseHTTP(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Sam Weber"}, nil, nil); status != http.StatusCreated {

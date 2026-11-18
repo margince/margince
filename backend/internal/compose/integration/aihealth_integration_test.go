@@ -25,6 +25,7 @@ import (
 )
 
 func TestAiHealthReportsARungThatStoppedAnswering(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	seedRungCall(t, e, "local_small", "", 120, time.Now().Add(-5*time.Minute))
@@ -61,6 +62,7 @@ func TestAiHealthReportsARungThatStoppedAnswering(t *testing.T) {
 // down while its latest attempt answers, because health is the latest outcome
 // and not the ratio.
 func TestAiHealthCountsAnAttemptARetryRescuedButReadsTheLatest(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	logical := ids.NewV7()
@@ -89,6 +91,7 @@ func TestAiHealthCountsAnAttemptARetryRescuedButReadsTheLatest(t *testing.T) {
 // endpoint that fails every call would report healthy for as long as the
 // ladder works.
 func TestAiHealthCountsAFailedDecisionAttemptTheLadderAnswered(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	seedDecisionAttempt(t, e, "", time.Now().Add(-10*time.Minute), ids.NewV7(), true)
@@ -121,6 +124,7 @@ func TestAiHealthCountsAFailedDecisionAttemptTheLadderAnswered(t *testing.T) {
 // died forty minutes ago must not read as healthy on the strength of a call it
 // made this morning.
 func TestAiHealthReadsOnlyTheLastHour(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	seedRungCall(t, e, "stale_rung", "", 100, time.Now().Add(-3*time.Hour))
@@ -139,6 +143,7 @@ func TestAiHealthReadsOnlyTheLastHour(t *testing.T) {
 // Operational configuration, not anybody's own data: the same door /ai/usage
 // uses, and a seat without it is refused rather than shown an empty page.
 func TestAiHealthIsRefusedWithoutTheAutomationGrant(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	seedRungCall(t, e, "local_small", "", 100, time.Now().Add(-time.Minute))
@@ -154,6 +159,7 @@ func TestAiHealthIsRefusedWithoutTheAutomationGrant(t *testing.T) {
 // everything since. A rule reading "any success in the window" calls that
 // healthy, which is the outage reported as fine.
 func TestAiHealthReportsALaneThatDiedInsideTheWindow(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	seedRungCall(t, e, "local_small", "", 120, time.Now().Add(-55*time.Minute))
@@ -181,6 +187,7 @@ func TestAiHealthReportsALaneThatDiedInsideTheWindow(t *testing.T) {
 // write failed (callstore.go, and callstats.go counts it as served for the same
 // reason). Counting it as a failure reports a working lane as down.
 func TestAiHealthCountsAMeteringFailureAsAnAnswer(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	seedRungCall(t, e, "local_small", "metering_failed", 180, time.Now().Add(-2*time.Minute))
@@ -204,6 +211,7 @@ func TestAiHealthCountsAMeteringFailureAsAnAnswer(t *testing.T) {
 // provider is answering. Counting one as a success is how a dead lane reports
 // healthy on traffic it never sent.
 func TestAiHealthIgnoresACacheHit(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	seedCachedCall(t, e, "local_small", time.Now().Add(-2*time.Minute))
@@ -228,6 +236,7 @@ func TestAiHealthIgnoresACacheHit(t *testing.T) {
 // The median is what tells a slow lane from a dead one, so it is worth an
 // assertion of its own rather than being carried untested.
 func TestAiHealthReportsTheMedianLatency(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	for _, ms := range []int{100, 300, 200} {
@@ -252,6 +261,7 @@ func TestAiHealthReportsTheMedianLatency(t *testing.T) {
 // failure no longer counts as premium's. local_large, which the binding does
 // not name, keeps the attempt it made.
 func TestAiHealthCountsALaneAgainstTheModelItServesNow(t *testing.T) {
+	t.Parallel()
 	cfg, err := ai.ParseRouting([]byte(`profile: eu_hosted
 tiers:
   local_small: {provider: fake, model: fake-small}

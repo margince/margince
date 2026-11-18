@@ -20,6 +20,7 @@ import (
 )
 
 func TestBookingConsentPreviewPreservesRecordedDecisions(t *testing.T) {
+	t.Parallel()
 	for _, current := range []string{"", "granted", "withdrawn"} {
 		t.Run("current="+current, func(t *testing.T) {
 			e := integration.Setup(t)

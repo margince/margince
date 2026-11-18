@@ -109,11 +109,11 @@ func startJobRunner(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vaul
 	// exactly the shape that left the job lane unbound. `vault` is the boot's,
 	// already nil where none is configured, and it is the same value
 	// startRunnerLane passes — so the two bindings are idempotent.
-	compose.BindExtensionRuntime(pool, vault)
+	cfg.extensions.BindRuntime(pool, vault)
 	// The capture pipeline a unit's ingress lands through. Units ingest only from
 	// job ticks and subscription deliveries, and both run in this role. It shares
 	// cfg.captureConfig with the sweep registry, so both reach one attachment store.
-	compose.BindExtensionCapture(pool, cfg.captureConfig)
+	cfg.extensions.BindCapture(pool, cfg.captureConfig)
 
 	// A failed read starts the worker on the defaults rather than not at all:
 	// the watch below reads again every minute and moves what differs.
@@ -213,6 +213,7 @@ func newJobRunner(ctx context.Context, pool *pgxpool.Pool, logger *slog.Logger, 
 		return nil, err
 	}
 	return compose.NewJobRunner(pool, logger, compose.JobRunnerConfig{
+		Extensions:           cfg.extensions,
 		Paused:               workPause(ctx),
 		ListsEnabled:         cfg.listsEnabled,
 		DisabledCoreFeatures: config.Val(cfg.settings, ps.CoreFeaturesDisabled),

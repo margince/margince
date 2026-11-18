@@ -83,6 +83,7 @@ func dimensionEvaluation(t *testing.T, e *forecastEnv, start time.Time, narrow f
 // Sales won follows the product, the market and the value basis the
 // selection names; the commercial mix groups the same money by kind.
 func TestSalesWonFollowsTheProductMarketAndValueBasis(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	start := clocktest.Now(t).UTC().Add(-time.Hour).Truncate(time.Second)
 	f := seedDimensionDeals(t, e, start)

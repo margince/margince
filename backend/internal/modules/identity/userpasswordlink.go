@@ -116,7 +116,7 @@ func (s *Service) issueSetPasswordToken(
 		if err := lockAuthorization(ctx, tx); err != nil {
 			return err
 		}
-		if err := refuseUnlessCallerOutranksTarget(ctx, tx, actor, userID, reachTakeover); err != nil {
+		if err := refuseUnlessCallerOutranksTarget(ctx, tx, s.rbac, actor, userID, reachTakeover); err != nil {
 			return err
 		}
 		if err := refuseWhileHoldingArchivedRole(ctx, tx, userID); err != nil {

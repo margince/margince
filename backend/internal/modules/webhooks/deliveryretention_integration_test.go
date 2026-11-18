@@ -18,6 +18,7 @@ import (
 // A dead-lettered delivery whose body was cleared has nothing to send, so a
 // replay is refused before anything about the row is reset.
 func TestAReplayOfAClearedBodyIsRefusedBeforeTheRowIsReset(t *testing.T) {
+	t.Parallel()
 	e := setupContractVis(t)
 	sub, deliveries := e.seedDeliveries(t, 1)
 	cleared := deliveries[0]

@@ -80,6 +80,7 @@ func fillFromSignatureObserved(ctx context.Context, t *testing.T, e *dedupeEnv, 
 // The fill claims an unanswered field and defers to an answered one, whichever
 // pass happens to run last.
 func TestAMachineFillNeverReplacesWhatAHumanAccepted(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contactID, companyID := e.seedEmployedContact(ctx, t,
@@ -125,6 +126,7 @@ func TestAMachineFillNeverReplacesWhatAHumanAccepted(t *testing.T) {
 // The other direction, and the column the replacement used to leave behind: a
 // human's acceptance takes the whole row, score included.
 func TestAnAcceptanceReplacesAMachineFillAndItsScore(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contactID, _ := e.seedEmployedContact(ctx, t,
@@ -174,6 +176,7 @@ func TestAnAcceptanceReplacesAMachineFillAndItsScore(t *testing.T) {
 // with it, a caller that ignored the answer would count a claim that is not
 // there, put that number in the audit row, and publish it on the outbox.
 func TestARefusedWriteReportsThatItDidNotLand(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contactID, _ := e.seedEmployedContact(ctx, t,
@@ -210,6 +213,7 @@ func TestARefusedWriteReportsThatItDidNotLand(t *testing.T) {
 // lock the erasure commits immediately and the test fails on the successful
 // path, so both directions are observable.
 func TestAFillHoldsTheSubjectAgainstAConcurrentErasure(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contactID, _ := e.seedEmployedContact(ctx, t,

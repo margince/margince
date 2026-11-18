@@ -13,6 +13,7 @@ import (
 // A null on a nullable field of a relationship clears it; a field the body
 // leaves out keeps its value.
 func TestRelationshipPatchClearsOnNullAndKeepsWhenOmitted(t *testing.T) {
+	t.Parallel()
 	e := setupRelationships(t)
 	type edgeWire struct {
 		ID               string  `json:"id"`
@@ -57,6 +58,7 @@ func TestRelationshipPatchClearsOnNullAndKeepsWhenOmitted(t *testing.T) {
 
 // A billing contact's role is what the row means, so a null cannot clear it.
 func TestABillingRoleCannotBeClearedByANull(t *testing.T) {
+	t.Parallel()
 	e := setupRelationships(t)
 	status, id, _ := e.billingContact(t, AnyMap{"role": "recipient"})
 	if status != http.StatusCreated {
@@ -70,6 +72,7 @@ func TestABillingRoleCannotBeClearedByANull(t *testing.T) {
 // A null inside served_segments is a refused value, never stored as an empty
 // word beside the real ones.
 func TestPartnerServedSegmentsRefuseANullMember(t *testing.T) {
+	t.Parallel()
 	e := setupRelationships(t)
 	status := e.Call(t, "PUT", "/v1/companies/"+e.companyID+"/partner", AnyMap{
 		"partner_role": "consulting", "served_segments": []any{"fintech", nil},

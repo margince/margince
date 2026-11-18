@@ -22,6 +22,7 @@ import (
 )
 
 func TestNotificationPreferenceAnswersTheWholeSetAndLeavesAColleaguesAlone(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 
 	set, err := e.store.SaveNotificationPreference(e.asUser(e.recipient), classAutomation, DeliveryDigest)
@@ -67,6 +68,7 @@ func TestNotificationPreferenceAnswersTheWholeSetAndLeavesAColleaguesAlone(t *te
 }
 
 func TestNotificationPreferenceIsWrittenInTheWriteShapeAndOnlyWhenItMoves(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 	seat := e.asUser(e.recipient)
 	// OFF and not email: the immediate word is the approval class's alone, and
@@ -129,6 +131,7 @@ func TestNotificationPreferenceIsWrittenInTheWriteShapeAndOnlyWhenItMoves(t *tes
 // The delivery legs' own read: a system principal, inside a transaction it
 // already holds, for a seat it is delivering to.
 func TestNotificationPreferenceDeliveryForAnswersTheChoiceOrTheDefault(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 	if _, err := e.store.SaveNotificationPreference(e.asUser(e.recipient), classAutomation, DeliveryOff); err != nil {
 		t.Fatalf("saving a choice: %v", err)

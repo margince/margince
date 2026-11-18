@@ -215,6 +215,7 @@ func assertRecordHistoryHappyPath(t *testing.T, e *apptest.AppEnv, fx recordHist
 }
 
 func TestRecordHistoryHTTP(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	dbEnv := fieldHistoryHTTPEnv(t, e)

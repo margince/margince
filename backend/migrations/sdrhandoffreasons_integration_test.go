@@ -36,6 +36,7 @@ import (
 var appliesToValues = regexp.MustCompile(`'([a-z_]+)'`)
 
 func TestTheSeededHandoffReasonsCoverBothTransitions(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	owner := connect(t, ownerDSN)
 	headSchema(t, owner)

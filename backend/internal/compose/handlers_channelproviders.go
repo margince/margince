@@ -34,7 +34,10 @@ import (
 // channelProvidersHandlers serves the directory. It holds NO state for
 // extensionsHandlers' reason: every value is process-level and already recorded
 // at boot, so a field here would be a second copy that could go stale.
-type channelProvidersHandlers struct{}
+type channelProvidersHandlers struct {
+	// extensions is the composition whose units may capture on a transport.
+	extensions *Extensions
+}
 
 // ListChannelProviders (GET /v1/channel-providers). Any authenticated seat.
 //
@@ -66,11 +69,11 @@ type channelProvidersHandlers struct{}
 //
 // Authentication itself is the chassis's, applied to every /v1 route before a
 // handler runs — hence no gate call in the body, unlike ListExtensions.
-func (channelProvidersHandlers) ListChannelProviders(w http.ResponseWriter, r *http.Request) {
-	registered, sending := ComposedChannelProviders()
+func (h channelProvidersHandlers) ListChannelProviders(w http.ResponseWriter, r *http.Request) {
+	registered, sending := h.extensions.channelDirectory()
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.ChannelProviderDirectory{
 		Data:           publishedChannelProviders(registered, sending),
-		CaptureSources: publishedCaptureSources(ComposedExtensions()),
+		CaptureSources: publishedCaptureSources(h.extensions.Units()),
 	})
 }
 
@@ -181,10 +184,10 @@ func publishedChannelProviders(registered []channelProviderFacts, sending map[st
 // answer. It is named here rather than left implicit because an unnamed
 // divergence is how the two surfaces come to disagree about something that
 // matters.
-type channelProviderDirectory struct{}
+type channelProviderDirectory struct{ composed *Extensions }
 
-func (channelProviderDirectory) ChannelProviders(context.Context) ([]agents.ChannelProviderEntry, error) {
-	registered, sending := ComposedChannelProviders()
+func (d channelProviderDirectory) ChannelProviders(context.Context) ([]agents.ChannelProviderEntry, error) {
+	registered, sending := d.composed.channelDirectory()
 	published := publishedChannelProviders(registered, sending)
 	out := make([]agents.ChannelProviderEntry, 0, len(published))
 	for _, e := range published {

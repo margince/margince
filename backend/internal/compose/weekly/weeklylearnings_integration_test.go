@@ -37,6 +37,7 @@ func grounded(text string) learnings.Learning {
 // unexamined. This is the distinction the state column exists for: a rep whose
 // week nobody looked at and one whose week held no lesson must not read alike.
 func TestInsufficientEvidenceIsStampedNotSilent(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	review, _, err := e.engine.AssembleFor(e.repCtx, weekClock)
 	if err != nil {
@@ -76,6 +77,7 @@ func TestInsufficientEvidenceIsStampedNotSilent(t *testing.T) {
 // once inside a week so a worker that was down still backfills, and a learning
 // a rep read on Monday must not become a different claim on Tuesday.
 func TestLearningsAreWrittenOnceAndNeverReplaced(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	review, _, err := e.engine.AssembleFor(e.repCtx, weekClock)
 	if err != nil {
@@ -113,6 +115,7 @@ func TestLearningsAreWrittenOnceAndNeverReplaced(t *testing.T) {
 // ANOTHER REP'S WEEK CANNOT RECEIVE LEARNINGS. The review id alone must not
 // reach somebody else's week — the owner check is the row scope.
 func TestAnotherRepsWeekCannotReceiveLearnings(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	review, _, err := e.engine.AssembleFor(e.repCtx, weekClock)
 	if err != nil {
@@ -138,6 +141,7 @@ func TestAnotherRepsWeekCannotReceiveLearnings(t *testing.T) {
 // A LATER TICK LEARNS A WEEK THAT HAS NO STAMP. The backfill case: a week
 // assembled while the lane was unbound is still learnable when it comes back.
 func TestALaterTickLearnsAWeekThatHasNoStamp(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	review, _, err := e.engine.AssembleFor(e.repCtx, weekClock)
 	if err != nil {

@@ -16,6 +16,7 @@ import (
 )
 
 func TestInvoiceReferenceUsesFinanceAndCompanyAuthority(t *testing.T) {
+	t.Parallel()
 	e := setupFinance(t)
 	if _, err := e.store.SyncConnection(e.ctx, e.provider()); err != nil {
 		t.Fatal(err)

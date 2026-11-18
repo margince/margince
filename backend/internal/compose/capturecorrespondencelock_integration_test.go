@@ -40,6 +40,7 @@ import (
 // probe asks whether the key is taken, so this fails when the lock is absent
 // rather than when a machine is slow.
 func TestTheCorrespondenceGuardAndAnAttestedSendSerializeOnOneKey(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	const victim = "cfo@bigcorp.example"
@@ -97,6 +98,7 @@ func TestTheCorrespondenceGuardAndAnAttestedSendSerializeOnOneKey(t *testing.T) 
 // the punycode. Unfolded, the two took different keys and serialized on
 // nothing, which is the stale archive this pair exists to prevent.
 func TestTheCorrespondenceKeyIsOneKeyForBothSpellingsOfADomain(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	const unicodeSpelling = "cfo@b\u00fccher.example"

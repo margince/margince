@@ -143,6 +143,7 @@ func (w manufacturingDeals) sweep(t *testing.T) {
 // The sweep enrols a record that starts matching the rule, dated when the
 // sweep saw it, and dates the leaving of one that stops.
 func TestTheEnrolmentSweepDatesRecordsThatJoinAndLeave(t *testing.T) {
+	t.Parallel()
 	w := seedManufacturingDeals(t)
 	id := w.launch(t)
 	if got := w.open(t, id); len(got) != 2 || got[w.press] != "rule" || got[w.line] != "rule" {
@@ -168,6 +169,7 @@ func TestTheEnrolmentSweepDatesRecordsThatJoinAndLeave(t *testing.T) {
 }
 
 func TestADeletedDealKeepsOnlyItsDatedMembership(t *testing.T) {
+	t.Parallel()
 	w := seedManufacturingDeals(t)
 	id := w.launch(t)
 	w.e.WsExec(t, `DELETE FROM deal WHERE id = $1`, w.line)
@@ -194,6 +196,7 @@ func TestADeletedDealKeepsOnlyItsDatedMembership(t *testing.T) {
 // The sweep reads every rule match, not one bounded page. Past the bound it
 // still enrols each match, and closes the row of a record that stopped matching.
 func TestTheSweepDatesEveryMatchPastTheReadBound(t *testing.T) {
+	t.Parallel()
 	w := seedManufacturingDeals(t)
 	id := w.launch(t)
 	w.e.WsExec(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, owner_id, company_id, amount_minor, currency, status, expected_close_date, source, captured_by)
@@ -209,6 +212,7 @@ func TestTheSweepDatesEveryMatchPastTheReadBound(t *testing.T) {
 
 // A lead and a deal may share an id. When one leaves, the other's row stays open.
 func TestALeadAndADealWithOneIDLeaveApart(t *testing.T) {
+	t.Parallel()
 	w := seedManufacturingDeals(t)
 	w.e.WsExec(t, `INSERT INTO lead (id, full_name, status, source, captured_by, owner_id) VALUES ($1, 'Twin', 'engaged', 'manual', 'human:x', $2)`, w.press, w.e.Rep1)
 	ctx := w.manager()
@@ -238,6 +242,7 @@ func TestALeadAndADealWithOneIDLeaveApart(t *testing.T) {
 // The upgrade task dates an initiative launched before the dated rows
 // existed, estimated from the records' first day, and a replay writes nothing.
 func TestTheEnrolmentTaskDatesAnInitiativeLaunchedBeforeTheRows(t *testing.T) {
+	t.Parallel()
 	w := seedManufacturingDeals(t)
 	id := w.launch(t)
 	w.e.WsExec(t, `DELETE FROM sales_initiative_enrolment WHERE initiative_id = $1`, id)

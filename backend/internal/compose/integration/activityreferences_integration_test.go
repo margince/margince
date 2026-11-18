@@ -44,6 +44,7 @@ func namedFor(
 
 // A reader inside the message's audience gets the row and its words.
 func TestAReceiptCarriesItsSubjectForAReaderWhoMayReadIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
@@ -90,6 +91,7 @@ func TestAReceiptCarriesItsSubjectForAReaderWhoMayReadIt(t *testing.T) {
 // clause decides, and asking for one would spend the statement on a row that
 // can only come back absent.
 func TestANonEmailReceiptCarriesNoEmailRow(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
@@ -126,6 +128,7 @@ func TestANonEmailReceiptCarriesNoEmailRow(t *testing.T) {
 // shorten a list the count does not shorten, and printing the subject would say
 // what the audience decided they may not read.
 func TestAReceiptKeepsItsRowAndLosesItsWordsOutsideTheAudience(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	colleague := e.As(e.Rep3, []ids.UUID{e.Team2}, activityLifecyclePerms)
@@ -172,6 +175,7 @@ func TestAReceiptKeepsItsRowAndLosesItsWordsOutsideTheAudience(t *testing.T) {
 
 // A seat with no activity grant names nothing, and the score still renders.
 func TestASeatWithoutTheActivityGrantNamesNoReceipts(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)

@@ -34,6 +34,7 @@ const decisionInputMicroUSD = 100_000
 // An installed sheet gains the row the seed carries; a price an admin set and
 // an installation not yet provisioned are left as they are.
 func TestAnInstalledSheetGainsTheSeededGoogleDecisionPrice(t *testing.T) {
+	t.Parallel()
 	dsn, _ := dsns(t)
 	ctx := context.Background()
 	cases := []struct {

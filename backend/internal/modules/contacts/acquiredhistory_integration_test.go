@@ -75,6 +75,7 @@ func (e *dedupeEnv) ensuredKind(ctx context.Context, t *testing.T, in EnsureCoun
 }
 
 func TestSomebodyWeWroteToBeforeTheMailboxWasConnectedIsMailboxHistory(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.connectMailbox(ctx, t, time.Now().Add(-24*time.Hour))
@@ -88,6 +89,7 @@ func TestSomebodyWeWroteToBeforeTheMailboxWasConnectedIsMailboxHistory(t *testin
 
 // Mail sent after the connection is a new acquisition, and keeps the duty.
 func TestSomebodyWeFirstWroteToAfterConnectingStaysUnknown(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.connectMailbox(ctx, t, time.Now().Add(-48*time.Hour))
@@ -101,6 +103,7 @@ func TestSomebodyWeFirstWroteToAfterConnectingStaysUnknown(t *testing.T) {
 // A seat with no connection on record has no date to compare against, and the
 // duty stays owed rather than being excused by a missing row.
 func TestMailFromASeatWithNoConnectionExcusesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	in := e.sentBy(ctx, t, e.rep, "noconn@history.test", time.Now().AddDate(-2, 0, 0))
@@ -113,6 +116,7 @@ func TestMailFromASeatWithNoConnectionExcusesNothing(t *testing.T) {
 // A message whose From names our seat but which the provider never filed as
 // sent is a header claim: anybody can write that From line and any Date.
 func TestAnUnattestedOutboundDoesNotMakeHistory(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.connectMailbox(ctx, t, time.Now().Add(-24*time.Hour))
@@ -132,6 +136,7 @@ func TestAnUnattestedOutboundDoesNotMakeHistory(t *testing.T) {
 // The connection that counts is the SENDER's. Mail a colleague sent that only
 // reached the rep's mailbox says nothing about when the colleague connected.
 func TestMailAnotherSeatSentIsNotTheImportersHistory(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	var colleague ids.UUID
@@ -189,6 +194,7 @@ func (e *dedupeEnv) copiedOn(
 // Somebody a third party copied on mail the rep's mailbox already held before it
 // was connected was already in the company's correspondence.
 func TestSomebodyCopiedOnMailTheMailboxAlreadyHeldIsMailboxHistory(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.connectMailbox(ctx, t, time.Now().Add(-24*time.Hour))
@@ -203,6 +209,7 @@ func TestSomebodyCopiedOnMailTheMailboxAlreadyHeldIsMailboxHistory(t *testing.T)
 
 // The same message arriving after the connection is a new acquisition.
 func TestSomebodyCopiedOnMailReceivedAfterConnectingStaysUnknown(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.connectMailbox(ctx, t, time.Now().Add(-48*time.Hour))
@@ -217,6 +224,7 @@ func TestSomebodyCopiedOnMailReceivedAfterConnectingStaysUnknown(t *testing.T) {
 // A sender can write any Date header. Only the provider's arrival time counts,
 // so a backdated message that arrived after the connection excuses nothing.
 func TestABackdatedHeaderDoesNotMakeReceivedMailHistory(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.connectMailbox(ctx, t, time.Now().Add(-48*time.Hour))
@@ -230,6 +238,7 @@ func TestABackdatedHeaderDoesNotMakeReceivedMailHistory(t *testing.T) {
 
 // A list copying everybody is not correspondence the company held with them.
 func TestBulkMailTheMailboxAlreadyHeldDoesNotMakeHistory(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.connectMailbox(ctx, t, time.Now().Add(-24*time.Hour))
@@ -244,6 +253,7 @@ func TestBulkMailTheMailboxAlreadyHeldDoesNotMakeHistory(t *testing.T) {
 // Somebody the seat copied on its own mail is as much a correspondent as the
 // one it was addressed to: the company's mailbox held them both.
 func TestSomebodyWeCopiedBeforeTheMailboxWasConnectedIsMailboxHistory(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.connectMailbox(ctx, t, time.Now().Add(-24*time.Hour))

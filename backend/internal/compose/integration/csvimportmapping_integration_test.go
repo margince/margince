@@ -29,6 +29,7 @@ import (
 // at the door instead, and the refusal carries the file's own header, because a
 // caller driving this over MCP cannot open the file to read it.
 func TestCSVImportRefusesAMappingNamingAColumnTheFileLacks(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 
 	const file = "Company,Employees\nNordwind Logistik,240\n"

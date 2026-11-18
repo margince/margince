@@ -76,6 +76,7 @@ func (e *dedupeEnv) datedEnsureInput(
 // would give that duty a deadline eleven months fresher than the truth, which
 // is the direction a compliance deadline must never be wrong in.
 func TestTheAcquisitionIsDatedFromTheEarliestMessageNotTheFirstProcessed(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	const email = "outoforder@backfill.test"
@@ -125,6 +126,7 @@ func acquisitionOf(ctx context.Context, t *testing.T, s *Store, id ids.ContactID
 // from messages that arrived months ago, and every one of those acquisitions
 // happened when the message did.
 func TestACapturedContactIsAcquiredWhenTheMessageArrived(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	// Truncated because Postgres stores microseconds and Go carries
@@ -165,6 +167,7 @@ func TestACapturedContactIsAcquiredWhenTheMessageArrived(t *testing.T) {
 // into a write-dated acquisition — the exact failure this slice exists to end,
 // and one nothing else would report.
 func TestEveryCapturedActivityCarriesATimeToDateTheAcquisitionFrom(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -194,6 +197,7 @@ func TestEveryCapturedActivityCarriesATimeToDateTheAcquisitionFrom(t *testing.T)
 // is subject_initiated and owes no disclosure. Only an address we wrote to, or
 // saw on a Cc, and that never wrote, stays unknown.
 func TestAStrangerWhoWroteFirstIsSubjectInitiated(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	in := e.datedEnsureInput(ctx, t, "cold@firstmail.test", "firstmail.test", time.Now().Add(-time.Hour))
@@ -209,6 +213,7 @@ func TestAStrangerWhoWroteFirstIsSubjectInitiated(t *testing.T) {
 }
 
 func TestAnAddressWeOnlyWroteToStaysUnknown(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	in := e.datedEnsureInput(ctx, t, "prospect@coldlist.test", "coldlist.test", time.Now().Add(-time.Hour))
@@ -235,6 +240,7 @@ func TestAnAddressWeOnlyWroteToStaysUnknown(t *testing.T) {
 
 // Bulk delivery does not change who supplied the sender address.
 func TestABulkSenderSuppliesTheirOwnAddress(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	in := e.datedEnsureInput(ctx, t, "news@list.test", "list.test", time.Date(2026, 8, 1, 9, 0, 0, 0, time.UTC))
@@ -255,6 +261,7 @@ func TestABulkSenderSuppliesTheirOwnAddress(t *testing.T) {
 }
 
 func TestUnverifiedBulkDoesNotSupplyDirectSenderEvidence(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	in := e.datedEnsureInput(ctx, t, "unverified@list.test", "list.test", time.Date(2026, 8, 1, 9, 0, 0, 0, time.UTC))
@@ -275,6 +282,7 @@ func TestUnverifiedBulkDoesNotSupplyDirectSenderEvidence(t *testing.T) {
 }
 
 func TestPromotedThirdPartyLeadKeepsItsSourceAfterAuthenticatedMail(t *testing.T) {
+	t.Parallel()
 	for _, origin := range []string{"referral", "cold_outreach"} {
 		t.Run(origin, func(t *testing.T) {
 			e := setupDedupe(t)

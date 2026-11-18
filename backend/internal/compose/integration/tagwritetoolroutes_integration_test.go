@@ -76,6 +76,7 @@ func (d *twoDoors) tagsOn(t *testing.T, contact string) []string {
 // each coining writes one create row naming the agent. The tool answers a tag
 // without its text, so an edit is compared on the stored tag.
 func TestCreateAndUpdateTagLeaveTheSameOnEitherDoor(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "tag-write-doors", "read", "write")
 
 	rest := d.restStatus(t, "POST", "/v1/tags", AnyMap{"name": "Rest conference", "color": "teal", "description": "Met at the spring show"}, http.StatusCreated)
@@ -130,6 +131,7 @@ func TestCreateAndUpdateTagLeaveTheSameOnEitherDoor(t *testing.T) {
 // answers the state. So the two are compared on what each left behind. The rows
 // sit on the tag, so each door has its own.
 func TestApplyAndRemoveTagLeaveTheSameOnEitherDoor(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "tagging-write-doors", "read", "write")
 	tagREST := createdID(t, d.e, "/v1/tags", AnyMap{"name": "Key account rest", "color": "amber"})
 	tagTool := createdID(t, d.e, "/v1/tags", AnyMap{"name": "Key account tool", "color": "amber"})
@@ -176,6 +178,7 @@ func TestApplyAndRemoveTagLeaveTheSameOnEitherDoor(t *testing.T) {
 // Folding one tag into another runs at once on a colleague's passport, as the
 // colleague could in the app. Both doors leave the same rows and stage nothing.
 func TestMergeTagsOnAColleaguesPassportRunsTheSameOnEitherDoor(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "tag-merge-doors", "read", "write")
 	into := createdID(t, d.e, "/v1/tags", AnyMap{"name": "Conference 2026", "color": "sky"})
 	viaREST := createdID(t, d.e, "/v1/tags", AnyMap{"name": "Conf 26 rest", "color": "sky"})

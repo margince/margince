@@ -60,6 +60,7 @@ func asColleague(w dealWorld, kind principal.PrincipalType, objects map[string]p
 // project onto it. The colleague declines the deal: both links come off, and
 // a live capture and the repair leave the mail off that deal.
 func TestADeclinedDealStaysOffForCaptureAndTheRepair(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -109,6 +110,7 @@ func TestADeclinedDealStaysOffForCaptureAndTheRepair(t *testing.T) {
 // A decline holds for its one deal. Once a second deal fits the mail better,
 // the refile pass files it there, and the declined deal stays off.
 func TestADeclineLeavesTheMailOpenToAnotherDeal(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -131,6 +133,7 @@ func TestADeclineLeavesTheMailOpenToAnotherDeal(t *testing.T) {
 // those deals later becomes the company's only open deal, nothing files the
 // conversation on it.
 func TestNoneOfThemDeclinesEveryOfferedDealAndClosesTheQuestion(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -170,6 +173,7 @@ func TestNoneOfThemDeclinesEveryOfferedDealAndClosesTheQuestion(t *testing.T) {
 // off too, as a member's does, and the audit row names the agent. An agent
 // that cannot read projects keeps the link and says so.
 func TestADeclineAnswersByTheCallersAccess(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)

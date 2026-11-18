@@ -71,6 +71,7 @@ func askMoney(t *testing.T, d *twoDoors, query map[string]any) moneyAnswer {
 }
 
 func TestANativeMoneyAggregateAcrossCurrenciesIsRefusedOnBothDoors(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "money-currency-refused", "read")
 	seedMixedCurrencyPipeline(t, d)
 
@@ -113,6 +114,7 @@ func TestANativeMoneyAggregateAcrossCurrenciesIsRefusedOnBothDoors(t *testing.T)
 }
 
 func TestEachCurrencyIsSummedInItsOwnMinorUnits(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "money-currency-split", "read")
 	seedMixedCurrencyPipeline(t, d)
 	sum := []any{map[string]any{"fn": "sum", "field": "amount_minor", "as": "total"}}
@@ -138,6 +140,7 @@ func TestEachCurrencyIsSummedInItsOwnMinorUnits(t *testing.T) {
 }
 
 func TestTheBaseMeasureWithholdsAnIncompleteTotalAndConvertsThePricedSubset(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "money-currency-base", "read")
 	seedMixedCurrencyPipeline(t, d)
 	// 5×100000 EUR + 5×(10000 USD cents × 0.5) + 5×(1000 yen × 0.006 × 100 cents).

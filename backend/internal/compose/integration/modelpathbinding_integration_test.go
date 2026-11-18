@@ -73,6 +73,7 @@ func bufferLogger() (*slog.Logger, *bytes.Buffer) {
 }
 
 func TestNewModelPathSeedsBindingMarkerOnEmptyStore(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	cfg := boundEmbedRoutingConfig("fake-embed-a")
 	log, buf := bufferLogger()
@@ -99,6 +100,7 @@ func TestNewModelPathSeedsBindingMarkerOnEmptyStore(t *testing.T) {
 }
 
 func TestNewModelPathLogsLoudlyOnChangedBinding(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := search.NewStore(e.DB())
 	const priorIdentity = "fake/fake-embed-old@2048"
@@ -147,6 +149,7 @@ func TestNewModelPathLogsLoudlyOnChangedBinding(t *testing.T) {
 // (--ai-fake/no-embeddings), not an error, and there is no live identity
 // to seed the marker with.
 func TestNewModelPathUnboundEmbedLaneSkipsSeed(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	cfg := unboundEmbedRoutingConfig()
 	log, buf := bufferLogger()

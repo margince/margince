@@ -19,6 +19,7 @@ import (
 )
 
 func TestReportingHTTPCompleteMonthComparisonAndHistoryPagination(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	handler := reportingHTTPRouter(f)
 	october := f.createDeal(t, "October order", 10800000, f.env.stages[20], f.env.Rep1)
@@ -111,6 +112,7 @@ func reportingAssertToolHistory(t *testing.T, f *reportingBusinessFixture, repor
 }
 
 func TestReportingHTTPMutationGrantsCannotBeReplacedByReadAccess(t *testing.T) {
+	t.Parallel()
 	f := reportingBusiness(t)
 	actor, ok := principal.Actor(f.human)
 	if !ok {

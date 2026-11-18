@@ -14,6 +14,7 @@ import (
 // answer that lands before the commit was never read. So the verdict is
 // dropped, and the request stays eligible for a pass that reads it.
 func TestASettledVerdictOverStaleAnswersIsDropped(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	store := storeKnowing(e)
 	request := seedEmailRequest(t, e, "Two answers", "commitment", OwedVerdictAsksUs)

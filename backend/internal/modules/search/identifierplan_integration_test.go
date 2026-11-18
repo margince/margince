@@ -7,7 +7,6 @@ package search
 
 import (
 	"context"
-	"os"
 	"strings"
 	"testing"
 
@@ -17,8 +16,10 @@ import (
 )
 
 func TestIdentifierDiscoveryKeepsIndexedCompanyCandidates(t *testing.T) {
+	t.Parallel()
+	db := testdb.New(t)
 	ctx := context.Background()
-	conn, err := pgx.Connect(ctx, os.Getenv("MARGINCE_TEST_DSN"))
+	conn, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -27,9 +28,6 @@ func TestIdentifierDiscoveryKeepsIndexedCompanyCandidates(t *testing.T) {
 			t.Error(err)
 		}
 	})
-	if err := testdb.EnsureSchema(ctx, conn); err != nil {
-		t.Fatal(err)
-	}
 	if _, err := conn.Exec(ctx, "SET enable_seqscan = off; SET enable_indexscan = off"); err != nil {
 		t.Fatal(err)
 	}

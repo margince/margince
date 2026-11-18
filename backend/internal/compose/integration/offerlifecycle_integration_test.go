@@ -30,6 +30,7 @@ func offerValidUntil(t *testing.T, e *apptest.AppEnv, dealID, validUntil string)
 }
 
 func TestALapsedOfferCanNeitherBeSentNorAccepted(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	dealID := offerFixture(t, e)
@@ -71,6 +72,7 @@ func TestALapsedOfferCanNeitherBeSentNorAccepted(t *testing.T) {
 }
 
 func TestAnAcceptedOfferCannotBeArchivedWhileItPricesTheDeal(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	dealID := offerFixture(t, e)

@@ -255,6 +255,7 @@ func (p *preflightEnv) connectorCtx(t *testing.T) context.Context {
 // Sending an email and then capturing the provider's own copy of it must yield
 // ONE activity, and that activity must be the one the send wrote.
 func TestCapturedCopyOfASentEmailCollapsesOntoTheSameActivity(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.stakeADeal(t)
@@ -352,6 +353,7 @@ func TestCapturedCopyOfASentEmailCollapsesOntoTheSameActivity(t *testing.T) {
 // stored, so only a real message shows the two lines actually arriving
 // together.
 func TestAMarketingSendRendersBothOneClickUnsubscribeHeaders(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.grantMarketingConsent(t)
@@ -409,6 +411,7 @@ func (p *preflightEnv) grantMarketingConsent(t *testing.T) {
 // carries no session of its own — so without a transmit-time seat check an
 // off-boarded or compromised account keeps sending for the whole maximum age.
 func TestDeactivatingTheSenderParksAStagedDelivery(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.stakeADeal(t)
@@ -438,6 +441,7 @@ func TestDeactivatingTheSenderParksAStagedDelivery(t *testing.T) {
 // the reason must say so rather than reporting an account that is not in
 // fact deactivated.
 func TestASenderDowngradedToAReadSeatParksAStagedDelivery(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.stakeADeal(t)

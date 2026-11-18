@@ -14,7 +14,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
@@ -52,6 +51,7 @@ var kindIDPairsTheMergeLeaves = gatekit.Waive(map[string]string{
 // ending in _type. A closed vocabulary that excludes company drops the pair.
 // An open vocabulary keeps it, so each such pair is decided or waived.
 func TestEveryCompanyKindIDReferenceJoinsTheMerge(t *testing.T) {
+	t.Parallel()
 	defer kindIDPairsTheMergeLeaves.AssertAllMatched(t)
 
 	written := tablesTheMergeWrites(t)
@@ -60,9 +60,6 @@ func TestEveryCompanyKindIDReferenceJoinsTheMerge(t *testing.T) {
 	}
 
 	owner := OwnerConn(t)
-	if err := testdb.EnsureSchema(context.Background(), owner); err != nil {
-		t.Fatal(err)
-	}
 
 	rows, err := owner.Query(context.Background(), `
 		SELECT c.relname, a.attname

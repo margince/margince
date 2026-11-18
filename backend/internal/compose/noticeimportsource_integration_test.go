@@ -21,6 +21,7 @@ import (
 )
 
 func TestCSVSourceWithoutAnAcquisitionDateKeepsItsNoticeDuty(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	input := contactCreateFrom(map[string]string{"full_name": "Imported Source Example", "email": "source@example.test"}, nil, "csv", "csv_import")

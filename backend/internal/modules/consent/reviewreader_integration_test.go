@@ -17,6 +17,7 @@ import (
 )
 
 func TestReadingAnotherColleaguesReviewPreservesItsInitiator(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	var opened Review
 	err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
@@ -63,6 +64,7 @@ func TestReadingAnotherColleaguesReviewPreservesItsInitiator(t *testing.T) {
 // A review stored as needs_context before the answerable list narrowed reads
 // as needs_repair, so no read offers an answer RecordContext refuses.
 func TestAStoredNeedsContextReviewReadsByTheCurrentAnswerableList(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	var opened Review
 	err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
@@ -100,6 +102,7 @@ func TestAStoredNeedsContextReviewReadsByTheCurrentAnswerableList(t *testing.T) 
 }
 
 func TestAReviewNamesTheSendingCompanyItActuallyRecorded(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	company := overrideTestCompany(t, e, e.user, "Reviewed Company")
 	var opened Review

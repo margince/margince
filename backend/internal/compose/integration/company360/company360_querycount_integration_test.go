@@ -17,7 +17,6 @@ package company360
 
 import (
 	"context"
-	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -99,11 +98,7 @@ func (t *countingTracer) total() int {
 // tracedPool opens a second app-role pool that counts its statements.
 func tracedPool(t *testing.T, tracer *countingTracer) *pgxpool.Pool {
 	t.Helper()
-	dsn := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if dsn == "" {
-		t.Fatal("MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
-	cfg, err := pgxpool.ParseConfig(dsn)
+	cfg, err := pgxpool.ParseConfig(testdb.For(t).AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -121,6 +116,7 @@ func tracedPool(t *testing.T, tracer *countingTracer) *pgxpool.Pool {
 }
 
 func TestCompany360CostDoesNotGrowWithTheAccount(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 

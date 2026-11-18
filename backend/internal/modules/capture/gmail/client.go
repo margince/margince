@@ -173,6 +173,9 @@ type OAuthConfig struct {
 	Scopes       []string
 	AuthURL      string
 	TokenURL     string
+	// HTTPClient carries the token exchange and refresh; nil is oauthflow's
+	// bounded default.
+	HTTPClient *http.Client
 }
 
 // NewOAuth builds the OAuth client, applying Google's default endpoints when
@@ -195,6 +198,7 @@ func NewOAuth(cfg OAuthConfig) OAuth {
 		Scopes:       cfg.Scopes,
 		AuthURL:      cfg.AuthURL,
 		TokenURL:     cfg.TokenURL,
+		HTTPClient:   cfg.HTTPClient,
 		// Google needs offline access + a forced consent prompt to return a
 		// refresh token. No include_granted_scopes: with a second read-only
 		// connector (gcal) on the same Google app, incremental authorization

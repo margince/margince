@@ -41,6 +41,7 @@ func seatContactCapturedBy(t *testing.T, e *integration.Env, fullName, capturedB
 }
 
 func TestCapturedByKindSelectsWhoCreatedTheRecord(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
 	store := contacts.NewStore(e.DB())
@@ -95,6 +96,7 @@ func TestCapturedByKindSelectsWhoCreatedTheRecord(t *testing.T) {
 // value answered first, the endpoint would tell an unauthorized caller which
 // values it accepts, and confirm the object exists while doing it.
 func TestCapturedByKindIsRefusedOnlyAfterAuthorization(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := contacts.NewStore(e.DB())
 
@@ -119,6 +121,7 @@ func TestCapturedByKindIsRefusedOnlyAfterAuthorization(t *testing.T) {
 }
 
 func TestCapturedByKindNarrowsRowScopeAndNeverWidensIt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := contacts.NewStore(e.DB())
 
@@ -183,6 +186,7 @@ func agentCtx(e *integration.Env) context.Context {
 // Every write below goes through the real store, so the audit rows the
 // predicate reads are the ones production would leave.
 func TestAiWrittenFindsRecordsTheConnectorMadeAndTheAiFilled(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	adminCtx := e.As(e.Rep1, nil, integration.AdminPerms)
 	store := contacts.NewStore(e.DB())
@@ -237,6 +241,7 @@ func TestAiWrittenFindsRecordsTheConnectorMadeAndTheAiFilled(t *testing.T) {
 // seeds the row it then asserts on proves the query can read a table and
 // nothing about whether the system writes one.
 func TestAiWrittenCatchesAnAgentUpdatingAnOrdinaryColumn(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := contacts.NewStore(e.DB())
 	company := seatConnectorCompany(t, e, "Delta Industries", "domain")

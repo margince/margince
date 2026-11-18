@@ -34,6 +34,7 @@ var recordKindColumns = []struct{ table, column string }{
 }
 
 func TestEveryKindColumnAcceptsAnExtensionKindAndRefusesAMalformedOne(t *testing.T) {
+	t.Parallel()
 	conn := connect(t, ownerDSNOf(t))
 	headSchema(t, conn)
 	ctx := context.Background()
@@ -83,6 +84,7 @@ func kindCheckAccepts(t *testing.T, conn *pgx.Conn, def, column, value string) b
 }
 
 func TestADedupePairOfAnExtensionKindIsOrderedAndUnique(t *testing.T) {
+	t.Parallel()
 	conn := connect(t, ownerDSNOf(t))
 	headSchema(t, conn)
 	ctx := context.Background()

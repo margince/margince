@@ -50,6 +50,7 @@ func readRecordAs(ctx context.Context, t *testing.T, registry *agents.Registry, 
 }
 
 func TestReadRecordAnswersTheVATIDAndTheFactsOfACompanyPage(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Imprint Check GmbH", &e.Rep3)
 	companyID := ids.From[ids.CompanyKind](company)
@@ -87,6 +88,7 @@ func TestReadRecordAnswersTheVATIDAndTheFactsOfACompanyPage(t *testing.T) {
 }
 
 func TestReadRecordAnswersAContactsProfileFieldsAsItsPageShowsThem(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := e.SeedContact(t, "Ada Lovelace", &e.Rep1)
 	owner := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)

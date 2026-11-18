@@ -271,9 +271,8 @@ pass, one level down.
 **`defaults.run.working-directory` is not passed on** into a called workflow. Each lane states it again;
 without that, every step would run from the repository root.
 
-Check names inside a lane are reported as `<caller-job> / <lane-job>`, for example
-`integration / integration shard (3/8)`. No check inside a lane is required, so no ruleset depends on those
-names.
+Check names inside a lane read `<caller-job> / <lane-job>`, for example `integration / integration shard (3/8)`.
+No check inside a lane is required, so no ruleset depends on those names.
 
 The pipeline stays **one caller**, and does not split into `pr.yml` and `merge-queue.yml`. The `ci`
 aggregate is the single required build check. Two callers would mean two copies of it that must stay the same
@@ -295,6 +294,7 @@ the longest lane in the pipeline. Running the two slowest jobs one after the oth
 time of a PR. And `deterministic-gates` itself still catches a broken build.
 
 - The lane is **sharded** per test over 8 runners: per package, `compose/integration` sets the floor.
+- The lanes run on `postgres-test`, a Postgres in RAM without disk syncs. Each test copies the template into a database of its own (~30 ms), so tests of one package run at the same time. On `redis-test`, each test leases a Redis database of its own.
 - The `integration` fan-in puts them together again, into the single result the `ci` aggregate reads.
 
 The lane **compiles once**: a part picked per test reaches nearly every package. The `integration build`
@@ -493,7 +493,7 @@ What each job of `ci.yml` checks: [ci-jobs.md](../reference/ci-jobs.md). `determ
 - **`deterministic-gates (unit)` stages `crm-hello` last.** After the merge gate it copies the fixture
   into `extensions/`, then runs the composed build, the tests of `cmd/` and every unit's own tests. Its
   coverage profile goes to `sonarcloud`, because the shard profiles cannot reach a unit's module.
-- **`INTEGRATION_JOBS=8`**, twice the cores of a runner: the tests wait on Postgres, and 16 ran out of memory.
+- **`INTEGRATION_JOBS=8`** and **`LANE_TEST_PARALLEL=1`**: 8 packages at once, one test each. More tests at once measured slower on a 4-core runner, and 16 jobs ran out of memory. A local run keeps 3 tests at once.
 - **`integration unit coverage`** exists because the shards run only the integration packages, and
   SonarCloud would see the rest at a false 0% for new code. It skips `backend/gates`, which has no code
   of its own: the tests of the code it reaches cover nearly all of it.

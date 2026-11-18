@@ -27,6 +27,7 @@ import (
 )
 
 func TestMailCapturedAfterAClearedVerdictIsBornOpen(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	setPosture(t, env, e.Rep1, capturemod.PostureClassified)
@@ -47,6 +48,7 @@ func TestMailCapturedAfterAClearedVerdictIsBornOpen(t *testing.T) {
 // before it and still decides: a seat's counterparty hold is their decision
 // about this correspondent, and no verdict about the sender speaks for it.
 func TestAClearedSenderIsStillHeldByThisSeatsOwnHold(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	setPosture(t, env, e.Rep1, capturemod.PostureClassified)
@@ -68,6 +70,7 @@ func TestAClearedSenderIsStillHeldByThisSeatsOwnHold(t *testing.T) {
 // unanswered — an advisor's record is deliberately kept to its owner, and their
 // mail is exactly the mail a classified mailbox means to hold.
 func TestAnAdvisorVerdictDoesNotOpenTheNextMessage(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	setPosture(t, env, e.Rep1, capturemod.PostureClassified)

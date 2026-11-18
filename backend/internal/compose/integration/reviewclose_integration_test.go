@@ -72,6 +72,7 @@ func refuseAndHold(t *testing.T, c *consentEnv) (review, held string) {
 //
 // A cancelled message will never be sent, so its review must not stay live.
 func TestCancellingAMessageClosesItsReview(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	_, held := refuseAndHold(t, c)
 
@@ -106,6 +107,7 @@ func TestCancellingAMessageClosesItsReview(t *testing.T) {
 // OpenReviewTx upserts on the live-intent index and refreshes THIS row rather
 // than opening a rival.
 func TestMovingAMessageLeavesItsReviewLive(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	_, held := refuseAndHold(t, c)
 
@@ -151,6 +153,7 @@ func TestMovingAMessageLeavesItsReviewLive(t *testing.T) {
 // left live would show an erased subject's refused message as work somebody can
 // still direct.
 func TestErasingTheRecipientEndsTheReview(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	refuseAndHold(t, c)
 
@@ -207,6 +210,7 @@ func TestErasingTheRecipientEndsTheReview(t *testing.T) {
 // The message went out and its review stayed live, showing a refusal about a
 // message already in somebody's inbox.
 func TestAMessageTheEngineComesToAllowClosesItsOwnReview(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	review, _ := refuseAndHold(t, c)
 
@@ -249,6 +253,7 @@ func TestAMessageTheEngineComesToAllowClosesItsOwnReview(t *testing.T) {
 }
 
 func TestCurrentPermissionDoesNotSkipDirectionValidation(t *testing.T) {
+	t.Parallel()
 	for _, field := range []string{"acknowledged", "warning_version", "explanation"} {
 		t.Run(field, func(t *testing.T) {
 			c := setupConsent(t)

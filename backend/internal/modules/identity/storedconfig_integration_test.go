@@ -32,6 +32,7 @@ func identityConfig(t *testing.T, cfg *config.Config, pool *pgxpool.Pool) *confi
 // A setting a boot source sets is neither seeded nor reported as discarded:
 // the operator's value is the one in force.
 func TestBootstrapSeedsNoSettingABootSourceSets(t *testing.T) {
+	t.Parallel()
 	owner, pool := setupIdentityDB(t)
 	ctx := context.Background()
 	tx, err := owner.Begin(ctx)

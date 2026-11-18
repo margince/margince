@@ -16,6 +16,7 @@ import (
 )
 
 func TestCloseDateReceiptRetainsItsWrittenLanguageAndCorrection(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct{ language, phrase string }{{"en", "Nobody has been in touch on this deal"}, {"de", "Zu diesem Deal hat noch kein Austausch"}, {"vi", "Chưa có bên nào liên hệ về deal này"}} {
 		t.Run(tc.language, func(t *testing.T) {
 			env := setupCloseDate(t)

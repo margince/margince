@@ -24,7 +24,6 @@ import (
 	"context"
 	"io"
 	"log/slog"
-	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -38,6 +37,7 @@ import (
 )
 
 func TestABootFailureAfterALaneStartedStillJoinsIt(t *testing.T) {
+	t.Parallel()
 	pool := workerTestPool(t)
 	rdb := redistest.Client(t)
 
@@ -105,11 +105,7 @@ func TestABootFailureAfterALaneStartedStillJoinsIt(t *testing.T) {
 // looks exactly like one that passed.
 func workerTestPool(t *testing.T) *pgxpool.Pool {
 	t.Helper()
-	dsn := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if dsn == "" {
-		t.Fatal("MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
-	pool, err := testdb.OwnPool(t.Context(), dsn)
+	pool, err := testdb.OwnPool(t.Context(), testdb.For(t).AppDSN)
 	if err != nil {
 		t.Fatalf("opening the app pool: %v", err)
 	}
@@ -117,12 +113,13 @@ func workerTestPool(t *testing.T) *pgxpool.Pool {
 	return pool
 }
 
-// bootSettings are the worker's own settings, as a bare dev environment loads
+// bootSettings are the worker's own settings, as a bare dev environment boots
 // them. The boot then reads every setting it asks for from its real registry.
 // The DSN is only required here; the test hands the boot its own pool.
 func bootSettings(t *testing.T) *config.Config {
 	t.Helper()
-	_, loaded, err := loadWorkerConfig(nil, []string{"MARGINCE_ENV=dev", "MARGINCE_DSN=postgres://boot-test"})
+	t.Cleanup(func() { compose.UseConfig(nil) })
+	_, loaded, err := bootWorkerConfig(nil, []string{"MARGINCE_ENV=dev", "MARGINCE_DSN=postgres://boot-test"})
 	if err != nil {
 		t.Fatalf("loading the worker's settings: %v", err)
 	}

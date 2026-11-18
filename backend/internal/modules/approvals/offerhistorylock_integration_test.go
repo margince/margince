@@ -14,6 +14,7 @@ import (
 )
 
 func TestAnEmptyProposalHistorySerializesCompetingReadings(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	target := e.seedCompany(t)
 	ctx, cancel := context.WithCancel(e.asAgent(t))

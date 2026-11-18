@@ -83,6 +83,7 @@ func (e *stagingEnv) subjectOf(t *testing.T, id ids.ApprovalID) *ids.UUID {
 // member a row the first owns — invisible to them under decidable's own gate,
 // and undecidable by them, with nothing saying why their card never appeared.
 func TestTwoMembersStagingOneIdentityKeepTheirOwnProposal(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	other := e.secondMember(t)
 	card := nameOnlyCard()
@@ -112,6 +113,7 @@ func TestTwoMembersStagingOneIdentityKeepTheirOwnProposal(t *testing.T) {
 // two members it must expire only the proposer's own: a colleague's pending
 // card is not a stale version of this one.
 func TestSupersessionUnderOneIdentityLeavesTheOtherMembersProposalPending(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	other := e.secondMember(t)
 
@@ -142,6 +144,7 @@ func TestSupersessionUnderOneIdentityLeavesTheOtherMembersProposalPending(t *tes
 // refuses a colleague's proposal, and the colleague sees no offer and no reason
 // for its absence.
 func TestOneMembersDeclineDoesNotRefuseAnotherMembersProposal(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	other := e.secondMember(t)
 	card := nameOnlyCard()
@@ -175,6 +178,7 @@ func TestOneMembersDeclineDoesNotRefuseAnotherMembersProposal(t *testing.T) {
 // Without this assertion the fix above could be "scope everything" and nothing
 // would say the inbox had stopped being shared.
 func TestASharedKindStillMatchesAcrossMembers(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	other := e.secondMember(t)
 	target := ids.NewV7()
@@ -217,6 +221,7 @@ func TestASharedKindStillMatchesAcrossMembers(t *testing.T) {
 // The decline is the one with teeth: forgotten, the next pass re-offers exactly
 // what a human refused.
 func TestASubjectlessProposalStillRemembersItsOwnDecline(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	card := nameOnlyCard()
 	// A HUMAN principal carries no OnBehalfOf, so the row it stages holds NULL —

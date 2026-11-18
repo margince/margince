@@ -162,17 +162,16 @@ func TestAnInstallationWithNoIngressPublishesNothing(t *testing.T) {
 
 // The handler reads the COMPOSED set and serves the field.
 //
-// Everything above shapes a slice the caller hands in, which leaves the one line
-// the whole seam rides on — `publishedCaptureSources(ComposedExtensions())` —
-// asserted by nothing: drop it, or narrow the set it reads to units that also
-// declare a channel, and every other test here stays green while a unit's rows go
-// back to showing raw provenance. So this one goes through the real wiring
+// Everything above shapes a slice the caller hands in. That leaves the one line
+// the whole seam rides on, `publishedCaptureSources(h.extensions.Units())`,
+// asserted by nothing. Drop it, and every other test here stays green while a
+// unit's rows go back to showing raw provenance. So this one goes through the real wiring
 // (`composeUnit`) and the real handler, and reads the response a client gets.
 func TestTheDirectoryServesTheComposedUnitsCaptureSources(t *testing.T) {
-	composeUnit(t, unitWithIngress("probe-unit", "probe-system"))
+	composed := composeUnit(unitWithIngress("probe-unit", "probe-system"))
 
 	recorder := httptest.NewRecorder()
-	channelProvidersHandlers{}.ListChannelProviders(
+	channelProvidersHandlers{extensions: composed}.ListChannelProviders(
 		recorder,
 		httptest.NewRequest(http.MethodGet, "/v1/channel-providers", nil),
 	)

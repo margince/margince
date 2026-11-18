@@ -75,6 +75,7 @@ var pairRestore = storekit.RestoreWith{
 }
 
 func TestThePartnershipPairIsNeverHalfWritten(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := asAdmin(e)
 

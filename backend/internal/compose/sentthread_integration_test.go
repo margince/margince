@@ -20,11 +20,13 @@ import (
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestReplyJoinsSentMailBeforeMailboxEcho(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	address := seatAddress(t, e, e.Rep1)
 	root := "opening@counterparty.test"
@@ -35,7 +37,7 @@ func TestReplyJoinsSentMailBeforeMailboxEcho(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	adapter := newCommsAdapter(e.Pool, nil, SendPath{PublicBaseURL: toolSurfaceBaseURL, Delivery: &recordingStager{}})
+	adapter := newCommsAdapter(e.Pool, nil, nil, SendPath{PublicBaseURL: toolSurfaceBaseURL, Delivery: &recordingStager{}})
 	sent, err := adapter.SendEmail(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms), anchor, agents.SendEmailArgs{To: []string{"pat@counterparty.example"}, Subject: "Re: Angebot", Body: "I will send the draft.", ConsentPurpose: "transactional"})
 	if err != nil {
 		t.Fatal(err)
@@ -82,6 +84,7 @@ func TestReplyJoinsSentMailBeforeMailboxEcho(t *testing.T) {
 }
 
 func TestJoinedSentMailNeedsSemanticSettlement(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name, body, verdict, remaining string
 		owed                           bool
@@ -95,7 +98,7 @@ func TestJoinedSentMailNeedsSemanticSettlement(t *testing.T) {
 			o.contact(t, "Pat Buyer", "pat@customer.example")
 			anchor := o.capture(t, owedMail{from: "pat@customer.example", to: o.seat, subject: "Please send pricing", messageID: "pricing-request@customer.example", at: o.now.Add(-3 * time.Hour)})
 
-			adapter := newCommsAdapter(o.e.Pool, nil, SendPath{PublicBaseURL: toolSurfaceBaseURL, Delivery: &recordingStager{}})
+			adapter := newCommsAdapter(o.e.Pool, nil, nil, SendPath{PublicBaseURL: toolSurfaceBaseURL, Delivery: &recordingStager{}})
 			sender := o.e.As(o.owner, []ids.UUID{o.e.Team1}, integration.SchedulerPerms)
 			sent, err := adapter.SendEmail(sender, anchor, agents.SendEmailArgs{To: []string{"pat@customer.example"}, Subject: "Re: Please send pricing", Body: "Let me know which pricing you need.", ConsentPurpose: "transactional"})
 			if err != nil {
@@ -130,7 +133,7 @@ func TestJoinedSentMailNeedsSemanticSettlement(t *testing.T) {
 				t.Fatal(err)
 			}
 			brain := ai.NewFakeClient().Script(string(reply))
-			settler := NewRequestSettler(o.e.Pool, inRefs{inner: brain, shown: []shownBy{requestShown}}, func() time.Time { return o.now }, slog.Default())
+			settler := NewRequestSettler(o.e.Pool, inRefs{inner: brain, ownerDSN: testdb.For(t).OwnerDSN, shown: []shownBy{requestShown}}, func() time.Time { return o.now }, slog.Default())
 			for range 2 {
 				if err := settler.RunWorkspace(o.judge(), 1); err != nil {
 					t.Fatal(err)
@@ -164,6 +167,7 @@ func TestJoinedSentMailNeedsSemanticSettlement(t *testing.T) {
 }
 
 func TestSentThreadJoinKeepsActorAndContentBoundaries(t *testing.T) {
+	t.Parallel()
 	for _, name := range []string{"agent send", "selected sender", "selected other member", "full references"} {
 		t.Run(name, func(t *testing.T) {
 			e := integration.Setup(t)
@@ -185,7 +189,7 @@ func TestSentThreadJoinKeepsActorAndContentBoundaries(t *testing.T) {
 				actor.Type, actor.ID, actor.OnBehalfOf = principal.PrincipalAgent, "agent:test-mail", e.Rep1
 				sender = principal.WithActor(sender, actor)
 			}
-			adapter := newCommsAdapter(e.Pool, nil, SendPath{PublicBaseURL: toolSurfaceBaseURL, Delivery: &recordingStager{}})
+			adapter := newCommsAdapter(e.Pool, nil, nil, SendPath{PublicBaseURL: toolSurfaceBaseURL, Delivery: &recordingStager{}})
 			sent, err := adapter.SendEmail(sender, anchor, agents.SendEmailArgs{To: []string{"pat@counterparty.example"}, Subject: "Re: Angebot", Body: "I will send the draft.", ConsentPurpose: "transactional"})
 			if err != nil {
 				t.Fatal(err)

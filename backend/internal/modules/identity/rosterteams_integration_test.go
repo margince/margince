@@ -22,6 +22,7 @@ import (
 )
 
 func TestRosterCarriesTeamsForAnAdminAndForNobodyElse(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "roster-teams")
 	ctx := context.Background()
 
@@ -68,6 +69,7 @@ func TestRosterCarriesTeamsForAnAdminAndForNobodyElse(t *testing.T) {
 }
 
 func TestAnArchivedTeamLeavesTheRoster(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "roster-archived-team")
 
 	sales, err := e.svc.CreateTeam(e.wsCtx(e.admin), e.admin, "DACH Sales")
@@ -123,6 +125,7 @@ func findRosterUser(t *testing.T, e *revocationEnv, actor Identity, includeInact
 // carrying no permissions, so an object gate alone would refuse it by accident
 // rather than on purpose, and one careless constructor would end that.
 func TestTheRosterRefusesACallerWhoIsNotAMember(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "roster-non-member")
 
 	buyerCtx := principal.WithActor(
@@ -164,6 +167,7 @@ func TestTheRosterRefusesACallerWhoIsNotAMember(t *testing.T) {
 // refused the other, so a failure here cannot be a seat that was refused
 // everything.
 func TestTheSingleMemberReadIsForMemberAdministratorsOnly(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "roster-single-read")
 
 	if _, err := e.svc.ListUsers(e.wsCtx(e.member), ListUsersInput{}); err != nil {
@@ -186,6 +190,7 @@ func TestTheSingleMemberReadIsForMemberAdministratorsOnly(t *testing.T) {
 // the real writer rather than an UPDATE, so the row is the one production
 // produces.
 func TestAskingToIncludeInactiveDoesNotWidenAMembersRoster(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "roster-include-inactive")
 
 	// A THIRD seat is deactivated, so e.member survives as a caller who holds no
@@ -239,6 +244,7 @@ func carriesUser(rows []userRow, id ids.UUID) bool {
 // A delegate holding a write verb and not read still gets the row back after the write.
 // Demanding read there would commit a deactivation and then answer 403.
 func TestTheMemberReadFollowsAnyAdministrationVerbNotReadAlone(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "roster-write-verb-read")
 	deleter := deleteOnlyMemberAdmin(t, e)
 	if _, err := e.svc.GetUser(e.wsCtx(deleter), deleter, e.member.UserID); err != nil {
@@ -267,6 +273,7 @@ func deleteOnlyMemberAdmin(t *testing.T, e *revocationEnv) Identity {
 }
 
 func TestTeamSearchTreatsPercentAndUnderscoreAsTypedText(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "roster-team-search")
 	for _, name := range []string{"100% Club", "Sales_EU", "Plain Team"} {
 		if _, err := e.svc.CreateTeam(e.wsCtx(e.admin), e.admin, name); err != nil {

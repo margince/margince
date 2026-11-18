@@ -66,6 +66,7 @@ func (e *dedupeEnv) holdEmploymentLock(ctx context.Context, t *testing.T, contac
 // capture waiting for the lock IS capture refusing to decide from a read
 // somebody else is invalidating.
 func TestCaptureWaitsOnTheContactsEmploymentLock(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -101,6 +102,7 @@ func TestCaptureWaitsOnTheContactsEmploymentLock(t *testing.T) {
 // for every contact on a domain who reads as having none. It answered from a
 // snapshot taken before it had locked anybody.
 func TestTheDomainBacklogWaitsOnEachContactsEmploymentLock(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -209,6 +211,7 @@ func (e *dedupeEnv) seedUnmarkedIncumbent(ctx context.Context, t *testing.T) ids
 // reconsider the ids it was handed — leaving them employed once and unmarked,
 // which is the state this whole lock exists to prevent.
 func TestTheDomainCandidateListDoesNotPreJudgeWhoNeedsAnEmployment(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 

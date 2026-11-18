@@ -113,6 +113,7 @@ func dispatchFor(t *testing.T, e *integration.Env, source, seat ids.UUID) Commit
 }
 
 func TestAMailboxBaselineWithholdsSuggestionsStrictlyBeforeItsLocalDate(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name, day, zone string
 		want            CommitmentOutcome
@@ -151,6 +152,7 @@ func TestAMailboxBaselineWithholdsSuggestionsStrictlyBeforeItsLocalDate(t *testi
 }
 
 func TestAMailboxBaselineLeavesExistingWorkAndRepeatsTheSameAnswer(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	raw := threadMail(seatAddress(t, e, e.Rep1), "existing@buyer.test", baselineMail, "")
 	captureMailVia(t, e, e.Rep1, "gmail", raw)
@@ -181,6 +183,7 @@ func TestAMailboxBaselineLeavesExistingWorkAndRepeatsTheSameAnswer(t *testing.T)
 }
 
 func TestAMailboxBaselineAppliesOnlyWhenEveryDeliveringMailboxOfTheSeatExcludes(t *testing.T) {
+	t.Parallel()
 	for _, both := range []bool{false, true} {
 		t.Run(map[bool]string{false: "one of two mailboxes", true: "both mailboxes"}[both], func(t *testing.T) {
 			e := integration.Setup(t)
@@ -205,6 +208,7 @@ func TestAMailboxBaselineAppliesOnlyWhenEveryDeliveringMailboxOfTheSeatExcludes(
 }
 
 func TestAMailboxBaselineNeverWithholdsAnotherSeatsWork(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	to := seatAddress(t, e, e.Rep1) + ", " + seatAddress(t, e, e.Rep2)
 	raw := threadMail(to, "shared@buyer.test", baselineMail, "")
@@ -221,6 +225,7 @@ func TestAMailboxBaselineNeverWithholdsAnotherSeatsWork(t *testing.T) {
 }
 
 func TestAMailboxBaselineNeedsProofOfTheDeliveringMailbox(t *testing.T) {
+	t.Parallel()
 	for _, legacy := range []bool{false, true} {
 		t.Run(map[bool]string{false: "no provenance", true: "provenance in captured_by only"}[legacy], func(t *testing.T) {
 			e := integration.Setup(t)
@@ -241,6 +246,7 @@ func TestAMailboxBaselineNeedsProofOfTheDeliveringMailbox(t *testing.T) {
 }
 
 func TestAMailboxBaselineDoesNotGovernAMeeting(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seatAddress(t, e, e.Rep1)
 	setBaseline(t, e, e.Rep1, "gmail", "2026-10-20", "Europe/Berlin")
@@ -263,6 +269,7 @@ type labelledConnector struct{ plainSyncConnector }
 func (labelledConnector) AccountLabel(auth connector.Auth) (string, error) { return string(auth), nil }
 
 func TestAMailboxBaselineSetAfterARebindLeavesThePreviousAccountsMail(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	oldAddress := seatAddress(t, e, e.Rep1)
 	captureMailVia(t, e, e.Rep1, "gmail", threadMail(oldAddress, "old-account@buyer.test", baselineMail, ""))
@@ -292,6 +299,7 @@ func TestAMailboxBaselineSetAfterARebindLeavesThePreviousAccountsMail(t *testing
 }
 
 func TestAMailboxBaselineReadsTheDateOnTheSeatsOwnCopy(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	to := seatAddress(t, e, e.Rep1) + ", " + seatAddress(t, e, e.Rep2)
 	captureMailVia(t, e, e.Rep1, "gmail", threadMail(to, "two-dates@buyer.test", "Sat, 10 Oct 2026 09:00:00 +0000", ""))

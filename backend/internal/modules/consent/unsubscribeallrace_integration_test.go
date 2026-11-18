@@ -27,7 +27,6 @@ package consent
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 	"time"
 
@@ -39,6 +38,7 @@ import (
 )
 
 func TestUnsubscribeAllStopsAPurposeGrantedWhileItWasRunning(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	token := seedPreferenceToken(t, e)
 	ctx := context.Background()
@@ -168,10 +168,11 @@ func waitUntilBlockedByPID(t *testing.T, prober *pgx.Conn, holderPID, want int) 
 // wait for it. That is the mechanism itself rather than a race for the symptom:
 // a deadlock test would have to lose a coin toss to fail.
 func TestOneContactsConsentWritesDoNotInterleave(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	ctx := context.Background()
 
-	holder, err := pgx.Connect(ctx, os.Getenv("MARGINCE_TEST_DSN"))
+	holder, err := pgx.Connect(ctx, testdb.For(t).OwnerDSN)
 	if err != nil {
 		t.Fatalf("opening the holding connection: %v", err)
 	}

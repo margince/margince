@@ -55,6 +55,7 @@ func finishWith(ctx context.Context, store *Store, readID ids.UUID, facts *Trans
 }
 
 func TestAMeetingKeepsItsSummaryWhenALaterReadingWritesNone(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	store := e.store(nil)
@@ -89,6 +90,7 @@ func TestAMeetingKeepsItsSummaryWhenALaterReadingWritesNone(t *testing.T) {
 }
 
 func TestAReadingSeesNoSummaryALaterReadingWrote(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	store := e.store(nil)
@@ -113,6 +115,7 @@ func TestAReadingSeesNoSummaryALaterReadingWrote(t *testing.T) {
 }
 
 func TestTheStoreRefusesASummaryThatCitesALineTheTranscriptLacks(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	store := e.store(nil)

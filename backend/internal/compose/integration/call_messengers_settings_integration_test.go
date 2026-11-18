@@ -49,6 +49,7 @@ func patchCallMessenger(t *testing.T, e *apptest.AppEnv, key string, on bool) in
 }
 
 func TestCallMessengersAreOnByDefaultAndEachSwitchMovesOnlyItsOwnKey(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 

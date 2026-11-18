@@ -48,6 +48,7 @@ func (e *scoutEnv) buyerPair(t *testing.T, company ids.UUID, at time.Time) {
 }
 
 func TestMeetingsAndProposalsDoNotEstablishBuyerIntent(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	e.now = time.Date(2026, 6, 15, 12, 0, 0, 0, time.UTC)
 	company := e.SeedCompany(t, "Maple Studio", &e.Rep1)
@@ -69,6 +70,7 @@ func TestMeetingsAndProposalsDoNotEstablishBuyerIntent(t *testing.T) {
 }
 
 func TestAmbiguousBuyerEmploymentRetiresANewDealProposal(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	e.now = time.Date(2026, 6, 15, 12, 0, 0, 0, time.UTC)
 	company := e.SeedCompany(t, "Maple Studio", nil)
@@ -93,6 +95,7 @@ func TestAmbiguousBuyerEmploymentRetiresANewDealProposal(t *testing.T) {
 }
 
 func TestCopiedDocumentsCountOnceAndRevisionsRemainCited(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	e.now = time.Date(2026, 6, 15, 12, 0, 0, 0, time.UTC)
 	company := e.SeedCompany(t, "Maple Studio", nil)

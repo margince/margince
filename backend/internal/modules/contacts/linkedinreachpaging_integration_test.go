@@ -89,6 +89,7 @@ func (e *dedupeEnv) readReachPage(t *testing.T, limit int, cursor *string) (int,
 }
 
 func TestTheReachWalkReturnsEveryTiedAccountOnce(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	placed := e.seedReachNetwork(t)
 
@@ -130,6 +131,7 @@ func TestTheReachWalkReturnsEveryTiedAccountOnce(t *testing.T) {
 }
 
 func TestAReachCursorFromAnotherWalkIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	e.seedReachNetwork(t)
 	// The webhook history's position: well-formed, ours, and no place in this

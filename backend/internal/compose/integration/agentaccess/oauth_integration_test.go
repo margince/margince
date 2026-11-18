@@ -259,6 +259,7 @@ func (o *oauthEnv) postToken(t *testing.T, form url.Values) (int, map[string]any
 }
 
 func TestOAuthHandshakeMintsAWorkingPassport(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 
 	// Discovery names the endpoints and S256.
@@ -304,6 +305,7 @@ func TestOAuthHandshakeMintsAWorkingPassport(t *testing.T) {
 // existing session must never mint a code, and the consent POST is
 // bound to the nonce the form armed.
 func TestOAuthConsentGateBlocksSilentAuthorization(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 	q := url.Values{
 		"response_type": {"code"}, "client_id": {o.clientID},
@@ -368,6 +370,7 @@ func TestOAuthConsentGateBlocksSilentAuthorization(t *testing.T) {
 }
 
 func TestOAuthRefusesDowngradesAndPrivilegedClients(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 
 	// No confidential clients, ever: a request for a secret is registered
@@ -433,6 +436,7 @@ func TestOAuthRefusesDowngradesAndPrivilegedClients(t *testing.T) {
 // audience is validated against the configured canonical resource before any
 // code exists — a refused audience must mint nothing.
 func TestAuthorizeRefusesAForeignResourceBeforeMintingACode(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 	status, body := o.authorizeRaw(t, url.Values{"resource": {"https://attacker.example/mcp"}})
 	if status != http.StatusBadRequest || !strings.Contains(body, "invalid_target") {
@@ -472,6 +476,7 @@ func sha256Hex(raw string) string {
 }
 
 func TestOAuthRegistersAClientSendingStandardMetadata(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 
 	var registered struct {

@@ -72,6 +72,7 @@ SELECT i.table_name, i.column_name, d.column_name
 // in both directions: a pair nobody classified is a finding, and a line whose pair has
 // been resolved fails until it goes.
 func TestEveryPolymorphicPairAnswersForItsRecord(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)
@@ -291,6 +292,7 @@ func catalogRows[T any](
 // The fixture pair shares a constraint name with a foreign key on another
 // table. A census joined on the name alone would drop it.
 func TestThePolymorphicCensusFindsAPairNobodyClassified(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)

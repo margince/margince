@@ -65,6 +65,7 @@ func storedName(t *testing.T, svc *Service, userID ids.UUID) string {
 }
 
 func TestCorrectingYourNameWritesTheSeatItsAuditAndItsEvent(t *testing.T) {
+	t.Parallel()
 	svc, ctx, userID := seatChoosingALanguage(t)
 
 	seat, err := svc.SaveMyDisplayName(ctx, "Ada Lovelace")
@@ -120,6 +121,7 @@ func TestCorrectingYourNameWritesTheSeatItsAuditAndItsEvent(t *testing.T) {
 }
 
 func TestABlankOrOverlongNameIsRefused(t *testing.T) {
+	t.Parallel()
 	svc, ctx, userID := seatChoosingALanguage(t)
 	before := storedName(t, svc, userID)
 
@@ -151,6 +153,7 @@ func TestABlankOrOverlongNameIsRefused(t *testing.T) {
 }
 
 func TestAnAgentMayNotRenameItsGrantor(t *testing.T) {
+	t.Parallel()
 	svc, ctx, userID := seatChoosingALanguage(t)
 	before := storedName(t, svc, userID)
 
@@ -170,6 +173,7 @@ func TestAnAgentMayNotRenameItsGrantor(t *testing.T) {
 }
 
 func TestADeactivatedSeatMayNotRenameItself(t *testing.T) {
+	t.Parallel()
 	svc, ctx, userID := seatChoosingALanguage(t)
 	before := storedName(t, svc, userID)
 
@@ -204,6 +208,7 @@ func TestADeactivatedSeatMayNotRenameItself(t *testing.T) {
 // write, and a serial test cannot open that window. It is held by review and by
 // the comment at the query, not here.
 func TestARefusedRenameWritesNoLedger(t *testing.T) {
+	t.Parallel()
 	svc, ctx, userID := seatChoosingALanguage(t)
 	beforeAudits, beforeEvents := displayNameLedger(t, svc, userID)
 

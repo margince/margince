@@ -23,6 +23,7 @@ const seatCopyFollowUp = "and the countersigned annex too"
 // turn, whichever copy the reply answers. The answered copy is the anchor, and
 // so is the other one.
 func TestAReplyThreadHoldsAMailBothMailboxesCapturedOnce(t *testing.T) {
+	t.Parallel()
 	s := newSeatCopyEnv(t, seatCopyPostures{first: true, second: true})
 	s.first(t)
 	s.second(t)

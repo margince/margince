@@ -74,6 +74,7 @@ func (e *privacyEnv) listedUnder(ctx context.Context, t *testing.T, filters Lead
 }
 
 func TestTheLinkOfferMatchesTheClaimedDomainBeforeTheName(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	ctx := e.linker(e.owner, principal.RowScopeOwn)
 	byDomain := e.factCompany(ctx, t, CreateCompanyInput{
@@ -121,6 +122,7 @@ func TestTheLinkOfferMatchesTheClaimedDomainBeforeTheName(t *testing.T) {
 
 // A link kept by a domain is re-checked when the lead's key moves or is cleared, as when its name moves.
 func TestALinkByDomainFollowsTheLeadsKey(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	ctx := e.linker(e.owner, principal.RowScopeOwn)
 	company := e.factCompany(ctx, t, CreateCompanyInput{
@@ -157,6 +159,7 @@ func TestALinkByDomainFollowsTheLeadsKey(t *testing.T) {
 // Only a claim counts: a domain written on no company, or one the company
 // released, leaves the offer to the name.
 func TestOnlyAClaimedDomainMatchesALead(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	ctx := e.linker(e.owner, principal.RowScopeOwn)
 	released := e.factCompany(ctx, t, CreateCompanyInput{
@@ -183,6 +186,7 @@ func TestOnlyAClaimedDomainMatchesALead(t *testing.T) {
 
 // The installation's own company is never offered by the domain it claims.
 func TestTheAnchorCompanyIsNeverOfferedByDomain(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	ctx := e.linker(e.owner, principal.RowScopeOwn)
 	anchor := e.factCompany(ctx, t, CreateCompanyInput{
@@ -208,6 +212,7 @@ func TestTheAnchorCompanyIsNeverOfferedByDomain(t *testing.T) {
 }
 
 func TestALeadListsUnderTheFactsOfItsLinkedCompanyElseItsOwnIndustry(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	ctx := e.linker(e.owner, principal.RowScopeOwn)
 	company := e.factCompany(ctx, t, CreateCompanyInput{
@@ -264,6 +269,7 @@ func TestALeadListsUnderTheFactsOfItsLinkedCompanyElseItsOwnIndustry(t *testing.
 }
 
 func TestASeatWithoutCompanyReadKeepsTheTypedIndustryAndIsRefusedTheDials(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	ctx := e.linker(e.owner, principal.RowScopeOwn)
 	company := e.factCompany(ctx, t, CreateCompanyInput{DisplayName: "Quarry Works", Industry: new("mining_metals")})
@@ -297,6 +303,7 @@ func TestASeatWithoutCompanyReadKeepsTheTypedIndustryAndIsRefusedTheDials(t *tes
 // A company the reader's row scope does not reach counts as no company. The
 // read shows none of its facts, and no dial selects by them.
 func TestACompanyOutsideTheRowScopeLendsTheLeadNoFacts(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	ownerCtx := e.linker(e.owner, principal.RowScopeOwn)
 	company := e.factCompany(ownerCtx, t, CreateCompanyInput{
@@ -350,6 +357,7 @@ func TestACompanyOutsideTheRowScopeLendsTheLeadNoFacts(t *testing.T) {
 }
 
 func TestQualifyingCarriesTheTypedIndustryOnlyToACompanyWithNone(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	owner := e.linker(e.owner, principal.RowScopeOwn)
 	readOnlyCompany := e.linkerWith(e.owner, principal.RowScopeOwn, map[string]principal.ObjectGrant{
@@ -426,6 +434,7 @@ func (e *privacyEnv) industryAudits(ctx context.Context, t *testing.T, company i
 // A lead's typed industry is written and cleared through the lead's own update
 // path, which audits it like any other field.
 func TestALeadsIndustryIsWrittenAndClearedThroughTheUpdatePath(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	ctx := e.linker(e.owner, principal.RowScopeOwn)
 	lead := e.factLead(ctx, t, e.owner, CreateLeadInput{Email: new("rae@typed.test")})
@@ -455,6 +464,7 @@ func TestALeadsIndustryIsWrittenAndClearedThroughTheUpdatePath(t *testing.T) {
 
 // A list narrows the default work queue as it narrows a sorted page.
 func TestAListNarrowsTheLeadWorkQueue(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	ctx := e.linker(e.owner, principal.RowScopeOwn)
 	member := e.factLead(ctx, t, e.owner, CreateLeadInput{Email: new("in@list.test")})

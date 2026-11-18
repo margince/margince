@@ -16,6 +16,7 @@ import (
 )
 
 func TestCurrentRequestReadAdmitsBeforeLimitingAndRechecksSourceAccess(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	query := ids.NewV7().String()
 	want := seedEmailRequest(t, e, query+" Please send the report", "commitment", OwedVerdictAsksUs)
@@ -73,6 +74,7 @@ func TestCurrentRequestReadAdmitsBeforeLimitingAndRechecksSourceAccess(t *testin
 }
 
 func TestCurrentRequestsKeepEachReadersDispositionAndReplyWake(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	id := seedEmailRequest(t, e, "Please send prices", "commitment", OwedVerdictAsksUs)
 	at := requestInstant.Add(time.Hour)

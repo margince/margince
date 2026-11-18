@@ -14,24 +14,19 @@ package capture
 
 import (
 	"context"
-	"os"
 	"sort"
 	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/pipelinetrace"
 )
 
 func ownerConn(t *testing.T) *pgx.Conn {
 	t.Helper()
-	dsn := os.Getenv("MARGINCE_TEST_DSN")
-	if dsn == "" {
-		t.Fatal("MARGINCE_TEST_DSN not set — run `make db-up` " +
-			"(integration tests fail loudly, they never skip)")
-	}
-	conn, err := pgx.Connect(context.Background(), dsn)
+	conn, err := pgx.Connect(context.Background(), testdb.For(t).OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,6 +39,7 @@ func ownerConn(t *testing.T) *pgx.Conn {
 }
 
 func TestTheStageCheckAdmitsExactlyTheStoredStages(t *testing.T) {
+	t.Parallel()
 	// The registry says which stages capture writes; the column's CHECK says
 	// which it will accept. A stage in one and not the other is either a write
 	// that fails at runtime — and, on the capture transaction, fails the whole
@@ -70,6 +66,7 @@ func TestTheStageCheckAdmitsExactlyTheStoredStages(t *testing.T) {
 }
 
 func TestTheRetentionHoursAgreeWithTheSweep(t *testing.T) {
+	t.Parallel()
 	// The vocabulary reports RetentionHours to a client, and the sweep deletes
 	// on TraceWindowHours. If they disagree, the surface tells a member their
 	// record is kept for longer than it is — and the rung that says "no longer

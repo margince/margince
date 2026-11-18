@@ -100,6 +100,7 @@ func seatOn(t *testing.T, e *Env, contact ids.ContactID, deal ids.DealID) {
 // would see one contact and report a finding about the customer that is really
 // a fact about this reader.
 func TestAnAccountWithHiddenContactsIsUnknownRatherThanSingleThreaded(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Halden Werke", nil)
 	companyID := ids.From[ids.CompanyKind](company)
@@ -160,6 +161,7 @@ func TestAnAccountWithHiddenContactsIsUnknownRatherThanSingleThreaded(t *testing
 // "unknown" to every account, which would be a different defect wearing the
 // same green.
 func TestAnAccountWithOneVisibleContactAndNothingHiddenIsSingleThreaded(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Solo Contact GmbH", nil)
 	companyID := ids.From[ids.CompanyKind](company)
@@ -189,6 +191,7 @@ func TestAnAccountWithOneVisibleContactAndNothingHiddenIsSingleThreaded(t *testi
 // and not unknown. A manager acts differently on "nobody recorded" than on
 // "one contact carries it".
 func TestAnAccountWithNoRecordedContactsSaysSo(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Untouched AG", nil)
 	companyID := ids.From[ids.CompanyKind](company)
@@ -214,6 +217,7 @@ func TestAnAccountWithNoRecordedContactsSaysSo(t *testing.T) {
 // Seeing ENOUGH is safe to report whatever is hidden: hidden contacts can only
 // add to a count that already clears the floor.
 func TestEnoughVisibleContactsIsMultiThreadedEvenWithSomethingHidden(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Broad Coverage SE", nil)
 	companyID := ids.From[ids.CompanyKind](company)
@@ -253,6 +257,7 @@ func TestEnoughVisibleContactsIsMultiThreadedEvenWithSomethingHidden(t *testing.
 // the edges instead would clear the threading floor on a single contact and
 // report an account as broadly covered when one contact carries all of it.
 func TestOneContactOnThreeDealsIsOneRelationship(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Repeated Seat Ltd", nil)
 	companyID := ids.From[ids.CompanyKind](company)
@@ -287,6 +292,7 @@ func TestOneContactOnThreeDealsIsOneRelationship(t *testing.T) {
 // company with three project stakeholders as having nobody — and no other test
 // here seeds a project, so the arm could be deleted green.
 func TestAProjectStakeholderCountsTowardTheAccount(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Delivery Only KG", nil)
 	companyID := ids.From[ids.CompanyKind](company)
@@ -324,6 +330,7 @@ func TestAProjectStakeholderCountsTowardTheAccount(t *testing.T) {
 // caller can name — and the incompleteness flag then reports something about a
 // company they were never admitted to.
 func TestAnAccountTheReaderCannotOpenIsRefused(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS),
 		principal.Principal{
@@ -346,6 +353,7 @@ func TestAnAccountTheReaderCannotOpenIsRefused(t *testing.T) {
 // A caller without the edge grant is told what was withheld, rather than served
 // an empty account that reads as an uncovered one.
 func TestAccountCoverageIsNamedRatherThanEmptyWithoutTheEdgeGrant(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Edge Gated NV", nil)
 	companyID := ids.From[ids.CompanyKind](company)

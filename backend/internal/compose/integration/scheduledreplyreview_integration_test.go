@@ -23,6 +23,7 @@ import (
 )
 
 func TestReviewingAReplyReleasesTheMessageButANewerReplyPausesItAgain(t *testing.T) {
+	t.Parallel()
 	for _, newer := range []bool{false, true} {
 		t.Run(map[bool]string{false: "reviewed", true: "new reply"}[newer], func(t *testing.T) {
 			p := setupPreflight(t)
@@ -63,6 +64,7 @@ func TestReviewingAReplyReleasesTheMessageButANewerReplyPausesItAgain(t *testing
 }
 
 func TestAPrivateReplyToAColleagueDoesNotPauseTheSendersMessage(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.stakeADeal(t)

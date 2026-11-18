@@ -34,6 +34,8 @@ type installationSettingsHandlers struct {
 	// pool reads the jurisdiction page in one transaction
 	// (handlers_installation_jurisdiction.go).
 	pool *pgxpool.Pool
+	// extensions names the unit that ships each compiled-in pack.
+	extensions *Extensions
 	// configuredProviders carries the external sign-in providers this DEPLOYMENT
 	// mounted, injected by the option that wires them. Empty is the honest
 	// answer for a deployment that composed none, and the screen then offers
@@ -75,7 +77,7 @@ func (h installationSettingsHandlers) read(ctx context.Context) (crmcontracts.In
 	if err != nil {
 		return crmcontracts.InstallationSettings{}, err
 	}
-	return h.toContract(s), nil
+	return h.toContract(ctx, s), nil
 }
 
 // GetAuthenticationPolicy answers the sign-in half on its own grant.
@@ -238,7 +240,7 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 	if h.afterSave != nil {
 		h.afterSave()
 	}
-	httperr.WriteJSON(w, http.StatusOK, h.toContract(s))
+	httperr.WriteJSON(w, http.StatusOK, h.toContract(r.Context(), s))
 }
 
 // toContract maps the stored values onto the wire shape, and adds the one field
@@ -248,7 +250,7 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 //
 // The lock reason and its facts are sent only when the lock has prose. An empty
 // reason, or one off the contract's enum, tells a client nothing.
-func (h installationSettingsHandlers) toContract(s identity.InstallationSettings) crmcontracts.InstallationSettings {
+func (h installationSettingsHandlers) toContract(ctx context.Context, s identity.InstallationSettings) crmcontracts.InstallationSettings {
 	out := crmcontracts.InstallationSettings{
 		Name:                 s.Name,
 		Timezone:             s.Timezone,
@@ -271,7 +273,7 @@ func (h installationSettingsHandlers) toContract(s identity.InstallationSettings
 		SignInProviders:            h.signInProviders(s.EnabledOidcProviders),
 		Operations:                 crmcontracts.OperationSettings(s.Operations),
 		AgentAllowances:            toAgentAllowances(s.AgentAllowances, s.AgentRoleAllowances, h.clock()),
-		Locks:                      loadedLocks(identity.Settings()),
+		Locks:                      loadedLocks(ctx, identity.Settings()),
 	}
 	dateFormat := crmcontracts.InstallationSettingsDateFormat(s.DateFormat)
 	timeFormat := crmcontracts.InstallationSettingsTimeFormat(s.TimeFormat)

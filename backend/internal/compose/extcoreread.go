@@ -261,7 +261,7 @@ func dealInput(q extension.DealQuery) (deals.ListDealsInput, error) {
 type extensionCompanies struct{ core extensionCore }
 
 func (c extensionCompanies) store() *contacts.Store {
-	return contacts.NewStore(InstallationDB(c.core.deps.pool))
+	return contacts.NewStore(InstallationDB(c.core.deps.pool)).WithCompanyTypes(c.core.deps.composed.CompanyTypes())
 }
 
 func (c extensionCompanies) Get(ctx context.Context, id string) (crm.Company, error) {

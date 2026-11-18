@@ -52,6 +52,7 @@ func (q *queryEnv) seedRoleHops(t *testing.T) roleHopFixture {
 }
 
 func TestADealIsSelectedByThePartnerThatBroughtItIn(t *testing.T) {
+	t.Parallel()
 	q := setupQuery(t)
 	f := q.seedRoleHops(t)
 
@@ -75,6 +76,7 @@ func TestADealIsSelectedByThePartnerThatBroughtItIn(t *testing.T) {
 }
 
 func TestACompanyIsSelectedByItsParentAndItsSubsidiaries(t *testing.T) {
+	t.Parallel()
 	q := setupQuery(t)
 	f := q.seedRoleHops(t)
 

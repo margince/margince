@@ -44,7 +44,7 @@ func newEvidenceAuthorshipWorker(pool *pgxpool.Pool, log *slog.Logger) *evidence
 	return &evidenceAuthorshipWorker{
 		deals:    deals.NewStore(db, DealsInstallation()),
 		own:      ownDomainReader{store: capture.NewOwnDomainStore(db)},
-		identity: identity.NewService(pool),
+		identity: IdentityService(pool),
 		log:      log,
 	}
 }

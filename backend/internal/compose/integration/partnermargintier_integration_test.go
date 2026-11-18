@@ -51,6 +51,7 @@ func assertTierWithheld(t *testing.T, p crmcontracts.Partner) {
 }
 
 func TestAMaskedSeatReadsThePartnerRegisterWithoutTheTier(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	tier := "tier2_20"
 	company := ids.From[ids.CompanyKind](e.SeedPartnerCompany(t, "Northgate Partners", &tier, nil))
@@ -103,6 +104,7 @@ func marginMaskedWriter() principal.Permissions {
 // which is the only answer that works, since a masked writer can never name it
 // and refusing would turn its every unrelated edit into a 422.
 func TestAMaskedWriterEditsAPartnerWithoutWipingTheTier(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	tier := "tier2_20"
 	// Owned by the writer, because write authority over the company is what the
@@ -135,6 +137,7 @@ func TestAMaskedWriterEditsAPartnerWithoutWipingTheTier(t *testing.T) {
 // A null on a nullable partner field clears it. The tier sets the commission
 // rate, so a cleared tier must stop accruing. The empty string is no clear.
 func TestAnExplicitNullClearsTheTierAndTheNextStepForAnUnmaskedWriter(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	tier := "tier1_15"
 	company := ids.From[ids.CompanyKind](e.SeedPartnerCompany(t, "Vestergaard", &tier, nil))
@@ -165,6 +168,7 @@ func TestAnExplicitNullClearsTheTierAndTheNextStepForAnUnmaskedWriter(t *testing
 // A masked writer sends back the null it was handed for the tier. That null
 // names no decision, so the tier stays.
 func TestAMaskedWritersNullTierDoesNotClearIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	tier := "tier2_20"
 	company := ids.From[ids.CompanyKind](e.SeedPartnerCompany(t, "Northgate Partners", &tier, &e.Rep1))

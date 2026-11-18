@@ -40,6 +40,7 @@ import (
 // being turned away at a door that wants something — it is a credential that
 // was deliberately narrowed being held to the narrowing.
 func TestAPassportWithoutTheReadScopeIsRefusedOnTheRestDoor(t *testing.T) {
+	t.Parallel()
 	e, _ := boundedApp(t, "read-scope-rest", 100)
 	seedContacts(t, e, 2)
 

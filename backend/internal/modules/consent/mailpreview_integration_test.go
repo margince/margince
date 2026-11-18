@@ -26,6 +26,7 @@ func confirmRequestWith(e *channelConsentEnv, h Handlers, body string) *httptest
 }
 
 func TestAConfirmRequestBodyPicksTheLanguageOfTheMail(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 	stager := &recordingStager{}
@@ -39,6 +40,7 @@ func TestAConfirmRequestBodyPicksTheLanguageOfTheMail(t *testing.T) {
 }
 
 func TestThePreviewAnswersTheMailWithEveryLanguageOnOffer(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 	stager := &recordingStager{}
@@ -79,6 +81,7 @@ func TestThePreviewAnswersTheMailWithEveryLanguageOnOffer(t *testing.T) {
 }
 
 func TestThePageALinkOpensAsksInTheLanguageItsMailWasWrittenIn(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 	vault := &recordingVault{}

@@ -33,6 +33,7 @@ import (
 // a cf_* predicate AND evaluate it to the right rows, through the server
 // compose actually assembles — no hand-built store.
 func TestAFilterOverHTTPAcceptsAndEvaluatesACustomFieldFilter(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithOptions(t, compose.WithSchemaPool(integration.SchemaPool(t)))
 	e.BootstrapWorkspace(t)
 
@@ -109,6 +110,7 @@ func TestAFilterOverHTTPAcceptsAndEvaluatesACustomFieldFilter(t *testing.T) {
 // store-level suite cannot — the two surfaces resolving the same vocabulary
 // is exactly what the regression above proved is not automatic.
 func TestTheFilterVocabularyOverHTTPOffersWhatAFilterAccepts(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithOptions(t, compose.WithSchemaPool(integration.SchemaPool(t)))
 	e.BootstrapWorkspace(t)
 
@@ -255,6 +257,7 @@ func TestTheFilterVocabularyOverHTTPOffersWhatAFilterAccepts(t *testing.T) {
 // saved segment naming it becomes a read-time error. Both are asserted here,
 // against a field retired through the operation that really retires it.
 func TestARetiredCustomFieldLeavesTheVocabularyAndKeepsEvaluating(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithOptions(t, compose.WithSchemaPool(integration.SchemaPool(t)))
 	e.BootstrapWorkspace(t)
 

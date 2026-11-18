@@ -34,6 +34,7 @@ const retireAgentSeatMigration = "core/1788508281_the_seeded_agent_seat_is_retir
 
 // TestRetiringTheAgentSeatSurvivesAReferencingRow is the case a DELETE fails on.
 func TestRetiringTheAgentSeatSurvivesAReferencingRow(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)
@@ -101,6 +102,7 @@ func TestRetiringTheAgentSeatSurvivesAReferencingRow(t *testing.T) {
 // together, and a predicate that caught more than that would silently
 // deactivate a runner somebody is using.
 func TestRetiringTheAgentSeatLeavesARealAgentIdentityAlone(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)
@@ -153,6 +155,7 @@ func TestRetiringTheAgentSeatLeavesARealAgentIdentityAlone(t *testing.T) {
 // the safe direction — the row comes back live but inert, since it holds no
 // password, no role, and no passport can name it.
 func TestRetiringTheAgentSeatRoundTrips(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)

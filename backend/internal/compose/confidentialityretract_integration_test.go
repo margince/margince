@@ -36,6 +36,7 @@ import (
 // — predated the verdict about it, so refusing at creation time alone would
 // have prevented none of them.
 func TestAPersonalVerdictRetractsTheContactCaptureAlreadyMade(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const aunt = "aunt@family.test"
 	activityID := seedHeldThreadMail(t, e, "thread-family", aunt, "Geburtstag")
@@ -59,6 +60,7 @@ func TestAPersonalVerdictRetractsTheContactCaptureAlreadyMade(t *testing.T) {
 // not: silence about a thread is not evidence of a business relationship, and
 // reading it as one is what kept a founder's private clinic in the CRM.
 func TestAPersonalVerdictKeepsAContactWhoAlsoWritesAboutBusiness(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const both = "cousin@family.test"
 	businessActivity := seedHeldThreadMail(t, e, "thread-business", both, "Angebot")
@@ -85,6 +87,7 @@ func TestAPersonalVerdictKeepsAContactWhoAlsoWritesAboutBusiness(t *testing.T) {
 // retraction read the unjudged thread as business and kept the record, so the
 // clinic and its blood-test results sat in the CRM.
 func TestAPersonalVerdictRetractsAContactWhoseOtherThreadWasNeverJudged(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const clinic = "clinic@health.test"
 	privateActivity := seedHeldThreadMail(t, e, "thread-results", clinic, "Blood test results")
@@ -105,6 +108,7 @@ func TestAPersonalVerdictRetractsAContactWhoseOtherThreadWasNeverJudged(t *testi
 // personal runs the retraction again, and resolving it ordinary is the business
 // evidence the test above is missing.
 func TestAPersonalVerdictWaitsWhileAnotherThreadIsStillPending(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const pending = "unsure@family.test"
 	privateActivity := seedHeldThreadMail(t, e, "thread-private-b", pending, "Privat")
@@ -128,6 +132,7 @@ func TestAPersonalVerdictWaitsWhileAnotherThreadIsStillPending(t *testing.T) {
 // evidence would retract exactly the contacts the workspace has already agreed
 // are its own.
 func TestAPersonalVerdictKeepsAContactWhoseOtherThreadIsOpenToTheWorkspace(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const known = "partner@business.test"
 	privateActivity := seedHeldThreadMail(t, e, "thread-private-c", known, "Privat")
@@ -152,6 +157,7 @@ func TestAPersonalVerdictKeepsAContactWhoseOtherThreadIsOpenToTheWorkspace(t *te
 // to every colleague. Nobody decided that; it fell out of the order the two
 // passes happened to run in.
 func TestAPersonalVerdictRetractsAContactAMachinePromoted(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const promoted = "doctor@health.test"
 	activityID := seedHeldThreadMail(t, e, "thread-promoted", promoted, "Befund")
@@ -180,6 +186,7 @@ func TestAPersonalVerdictRetractsAContactAMachinePromoted(t *testing.T) {
 // decision, and a classifier's opinion about one conversation does not overrule
 // it.
 func TestAPersonalVerdictKeepsAContactAHumanPublished(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const published = "advisor@health.test"
 	activityID := seedHeldThreadMail(t, e, "thread-published", published, "Privat")
@@ -198,6 +205,7 @@ func TestAPersonalVerdictKeepsAContactAHumanPublished(t *testing.T) {
 // A record a human touched is theirs. A classifier's opinion about one
 // conversation does not overrule somebody having decided they want it.
 func TestAPersonalVerdictKeepsAContactAHumanEdited(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const edited = "friend@family.test"
 	activityID := seedHeldThreadMail(t, e, "thread-edited", edited, "Privat")
@@ -242,6 +250,7 @@ func seedCapturedContact(t *testing.T, e *integration.Env, email string) ids.Con
 // thread stopped protecting its contact — a regression against the rule the
 // previous spelling got right by accident.
 func TestAPersonalVerdictKeepsAContactWhoseOtherThreadTheOwnerHeldThemselves(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const held = "berater@kanzlei.test"
 	privateActivity := seedHeldThreadMail(t, e, "thread-private-d", held, "Privat")
@@ -266,6 +275,7 @@ func TestAPersonalVerdictKeepsAContactWhoseOtherThreadTheOwnerHeldThemselves(t *
 // reading actor_type alone sees a machine's own record and archives a contact
 // somebody was asked about and said yes to.
 func TestAPersonalVerdictKeepsAContactAHumanApproved(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const approved = "kontakt@partner.test"
 	activityID := seedHeldThreadMail(t, e, "thread-approved", approved, "Privat")

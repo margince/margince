@@ -310,6 +310,7 @@ func (r *erasureRace) assertNothingSentSince(t *testing.T, n int) {
 // answers 200 before reading anything, and still reads no byte, and the
 // delivery is not recorded as delivered.
 func TestAnErasureBetweenLoadingAWebhookBodyAndSendingItStopsTheSend(t *testing.T) {
+	t.Parallel()
 	for name, send := range map[string]func(t *testing.T, r *erasureRace){
 		"the first attempt": func(t *testing.T, r *erasureRace) {
 			r.contactUpdated(t)
@@ -337,6 +338,7 @@ func TestAnErasureBetweenLoadingAWebhookBodyAndSendingItStopsTheSend(t *testing.
 
 // With no erasure, the first attempt and a retry deliver the body.
 func TestAWebhookWithNoErasureIsDelivered(t *testing.T) {
+	t.Parallel()
 	for name, send := range map[string]func(t *testing.T, r *erasureRace){
 		"the first attempt": func(t *testing.T, r *erasureRace) { r.contactUpdated(t) },
 		"a retry": func(t *testing.T, r *erasureRace) {
@@ -362,6 +364,7 @@ func TestAWebhookWithNoErasureIsDelivered(t *testing.T) {
 // The send check waits for it, reads the erased row once it commits, and
 // refuses. The erasure commits only once the check is seen waiting.
 func TestASendCheckWaitsForAnUncommittedErasureAndRefuses(t *testing.T) {
+	t.Parallel()
 	r := setupErasureRace(t)
 	owner := integration.OwnerConn(t)
 	committed := make(chan error, 1)

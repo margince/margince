@@ -44,6 +44,7 @@ func stageAdvance(t *testing.T, svc *approvals.Service, e *Env, deal ids.UUID) (
 // rejected, or redeemed — a week-old agent intention must be re-proposed
 // against fresh state, not green-lit from a stale inbox row.
 func TestApprovalExpiryClosesTheDecisionGate(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	pipeline, open, _ := DealFixture(t, e)
@@ -81,6 +82,7 @@ func TestApprovalExpiryClosesTheDecisionGate(t *testing.T) {
 // the redemption TTL no longer authorizes the replay, while a fresh
 // decision does — exactly once.
 func TestRedemptionWindowExpiresTheDecision(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	pipeline, open, _ := DealFixture(t, e)

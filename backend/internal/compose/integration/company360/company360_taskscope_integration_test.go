@@ -29,6 +29,7 @@ import (
 // exactly like a project with nothing outstanding. A rep reads the account as
 // calm and moves on, and the task stays overdue.
 func TestCompany360_WorkWhoseOnlyOverdueTaskIsWithheldSaysSo(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	companyID := e.SeedCompany(t, "Quiet Account", nil)
 	projectID := seedProject(t, e, companyID, "Depot retrofit")
@@ -55,6 +56,7 @@ func TestCompany360_WorkWhoseOnlyOverdueTaskIsWithheldSaysSo(t *testing.T) {
 // and flag everything": a visible task is still the reason, and the withheld
 // one beside it still sets the flag.
 func TestCompany360_AVisibleTaskIsStillTheReasonWhenAnotherIsWithheld(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	companyID := e.SeedCompany(t, "Mixed Account", nil)
 	projectID := seedProject(t, e, companyID, "Fleet retrofit")

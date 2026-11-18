@@ -15,6 +15,7 @@ import (
 )
 
 func TestRetiredSeatsLeaveNewMailClassificationButKeepCalendarAttendance(t *testing.T) {
+	t.Parallel()
 	ctx, pool := meetingTenureEnv(t)
 	for _, removed := range []bool{false, true} {
 		if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {

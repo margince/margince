@@ -27,6 +27,7 @@ import (
 )
 
 func TestAMixedGraphBatchLocksItsHistoricalTargetsBeforeItsFirstFold(t *testing.T) {
+	t.Parallel()
 	b := setupBackfillWire(t)
 	run := strandedBackfill(t, b)
 	var contactsIDs []ids.UUID

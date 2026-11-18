@@ -25,13 +25,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// leadSLAClock is the clock the derived SLA fields are read against. A
-// package variable rather than a Store field because the scanner that
-// derives them has no store in hand; tests pin it.
-var leadSLAClock = time.Now
-
-// slaNowKey carries the instant one list read judges SLA state and the age of
-// qualification evidence against.
+// slaNowKey carries the instant SLA state, response stamps and the age of
+// qualification evidence are judged against. It rides the context because the
+// scanners and SQL builders that read it have no store in hand.
 type slaNowKey struct{}
 
 // withPinnedSLANow fixes the SLA instant for everything built from ctx, so the
@@ -46,7 +42,7 @@ func slaNow(ctx context.Context) time.Time {
 	if pinned, ok := ctx.Value(slaNowKey{}).(time.Time); ok {
 		return pinned
 	}
-	return leadSLAClock().UTC()
+	return time.Now().UTC()
 }
 
 // leadSLAFields derives the wire's sla_deadline_at and sla_state from the
@@ -65,7 +61,7 @@ func leadSLAFields(policy leadSLAPolicy, routedAt *time.Time, createdAt time.Tim
 	if firstResponseAt != nil {
 		return &deadline, nil
 	}
-	now := leadSLAClock().UTC()
+	now := policy.asOf
 	state := crmcontracts.LeadSlaStateLeadSlaStateWithinTarget
 	switch {
 	case now.After(deadline):
@@ -100,11 +96,10 @@ func leadTakesFirstResponseSQL(alias, at string) string {
 // columns, with the same arithmetic leadSLAFields applies in Go: the list
 // and the row must agree about which leads are overdue.
 //
-// The instant is the application clock, bound as a parameter, never the
-// database's now(): the row's sla_state is derived against leadSLAClock, and
-// a filter reading a different clock — the container's, seconds adrift, or
-// the other side of a boundary crossed mid-request — would return an at_risk
-// row whose own payload says breached.
+// The instant is slaNow, bound as a parameter, never the database's now(). The
+// row's sla_state is derived against slaNow. A filter on another clock (the
+// container's, seconds adrift) would return an at_risk row whose own payload
+// says breached.
 //
 // With the target switched off no lead is in any SLA state, so the filter
 // matches nothing rather than pretending a default target.
@@ -301,7 +296,7 @@ func leadTouchesFor(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, deadline 
 // It reads (id, true) when one is configured and can still work the queue.
 // The scan and the delivery of its event share it.
 func IntakeSeat(ctx context.Context, tx pgx.Tx) (ids.UUID, bool, error) {
-	return unassignedEscalationTarget(ctx, tx, config.Bound())
+	return unassignedEscalationTarget(ctx, tx, config.Bound(ctx), slog.Default())
 }
 
 // unassignedEscalationTarget reads the configured intake seat: (id, true) for a
@@ -309,7 +304,7 @@ func IntakeSeat(ctx context.Context, tx pgx.Tx) (ids.UUID, bool, error) {
 // but is no active colleague also logs a warning. The read is the ungated machinery
 // one, since the SLA sweep runs as the system principal. A value that will not
 // decode is an error: somebody wrote the row around its validator.
-func unassignedEscalationTarget(ctx context.Context, tx pgx.Tx, cfg *config.Config) (ids.UUID, bool, error) {
+func unassignedEscalationTarget(ctx context.Context, tx pgx.Tx, cfg *config.Config, log *slog.Logger) (ids.UUID, bool, error) {
 	configured, err := config.StoredApplyTx(ctx, tx, cfg, UnassignedEscalationUserID)
 	if err != nil {
 		return ids.UUID{}, false, fmt.Errorf("load the unassigned escalation seat: %w", err)
@@ -328,7 +323,7 @@ func unassignedEscalationTarget(ctx context.Context, tx pgx.Tx, cfg *config.Conf
 	// principal — and its eligibility half is exactly the question.
 	if err := auth.EnsureAssignee(ctx, tx, id); err != nil {
 		if errors.As(err, new(*auth.AssigneeNotAllowedError)) {
-			warnSeatAnswersNobody(ctx, cfg)
+			warnSeatAnswersNobody(ctx, cfg, log)
 			return ids.UUID{}, false, nil
 		}
 		return ids.UUID{}, false, fmt.Errorf("check the unassigned escalation seat: %w", err)
@@ -339,11 +334,11 @@ func unassignedEscalationTarget(ctx context.Context, tx pgx.Tx, cfg *config.Conf
 // warnSeatAnswersNobody names the setting and where its value comes from. No
 // save checks a boot value against the colleagues, so this is where an operator
 // learns the seat they set answers for nothing.
-func warnSeatAnswersNobody(ctx context.Context, cfg *config.Config) {
+func warnSeatAnswersNobody(ctx context.Context, cfg *config.Config, log *slog.Logger) {
 	source := "the database"
-	if origin, locked := cfg.Locked(UnassignedEscalationUserID.Key()); locked {
+	if origin, locked := cfg.Locked(ctx, UnassignedEscalationUserID.Key()); locked {
 		source = origin.String()
 	}
-	slog.WarnContext(ctx, "contacts: the unassigned escalation seat is not an active colleague, so a breach on a lead with no owner, or whose owner has left, escalates to nobody",
+	log.WarnContext(ctx, "contacts: the unassigned escalation seat is not an active colleague, so a breach on a lead with no owner, or whose owner has left, escalates to nobody",
 		"setting", UnassignedEscalationUserID.Key(), "origin", source)
 }

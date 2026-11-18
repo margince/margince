@@ -68,6 +68,7 @@ func (e *dedupeEnv) assertRecheckRetires(ctx context.Context, t *testing.T, pair
 }
 
 func TestTheRecheckKeepsATaggedAddressPairUntilTheAddressMoves(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	incumbent := e.plainContact(ctx, t, "Ab", "ab@example.com")
@@ -84,6 +85,7 @@ func TestTheRecheckKeepsATaggedAddressPairUntilTheAddressMoves(t *testing.T) {
 }
 
 func TestTheRecheckKeepsADigraphNamePairUntilTheNameMoves(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	incumbent := e.plainContact(ctx, t, "Björn Beispiel", "one@first.test")
@@ -99,6 +101,7 @@ func TestTheRecheckKeepsADigraphNamePairUntilTheNameMoves(t *testing.T) {
 }
 
 func TestTheRecheckKeepsASubdomainPairUntilTheDomainGoes(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	holder := e.createNamedCompany(ctx, t, "Example Group", "example.com")
@@ -114,6 +117,7 @@ func TestTheRecheckKeepsASubdomainPairUntilTheDomainGoes(t *testing.T) {
 }
 
 func TestADeeperSubdomainPairsWithAHeldIntermediateDomain(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	holder := e.createNamedCompany(ctx, t, "Example Europe", "eu.example.com")
@@ -126,6 +130,7 @@ func TestADeeperSubdomainPairsWithAHeldIntermediateDomain(t *testing.T) {
 }
 
 func TestEveryContactOnOneAddressBaseIsPaired(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	first := e.plainContact(ctx, t, "Ab", "ab@example.com")
@@ -139,6 +144,7 @@ func TestEveryContactOnOneAddressBaseIsPaired(t *testing.T) {
 }
 
 func TestAContactOnTwoAddressBasesPairsWithBothHolders(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	one := e.plainContact(ctx, t, "Ab", "ab@example.com")
@@ -211,6 +217,7 @@ func (e *dedupeEnv) colleagueSees(t *testing.T, name, email string) colleagueOut
 // A record the caller cannot see changes nothing the caller is told, while the
 // pair with it is still filed for whoever can see both.
 func TestAHiddenAddressVariantChangesNothingTheCallerIsTold(t *testing.T) {
+	t.Parallel()
 	without := setupDedupe(t)
 	baseline := without.colleagueSees(t, "Zed Unrelated", "ab+x@example.com")
 
@@ -232,6 +239,7 @@ func TestAHiddenAddressVariantChangesNothingTheCallerIsTold(t *testing.T) {
 
 // A hidden holder ranked first does not mask a visible one.
 func TestAHiddenFirstVariantDoesNotMaskAVisibleOne(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	hidden := e.plainContact(e.as(), t, "Ab", "ab@example.com")
 	e.hideFromOther(e.as(), t, hidden)
@@ -247,6 +255,7 @@ func TestAHiddenFirstVariantDoesNotMaskAVisibleOne(t *testing.T) {
 }
 
 func TestPromotingALeadOnATaggedAddressCreatesAndPairs(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	incumbent := e.plainContact(ctx, t, "Ab", "ab@example.com")
@@ -268,6 +277,7 @@ func TestPromotingALeadOnATaggedAddressCreatesAndPairs(t *testing.T) {
 }
 
 func TestPromotingALeadOnAnExactAddressStillAdoptsOnlyThatContact(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.plainContact(ctx, t, "Ab", "ab@example.com")

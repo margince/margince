@@ -30,7 +30,6 @@ package integration
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -43,6 +42,7 @@ import (
 )
 
 func TestNoDealLandsOnAStageBeingRemoved(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 
@@ -252,7 +252,7 @@ func rowArgs(id []ids.UUID) []any {
 func freshConnection(t *testing.T) *pgx.Conn {
 	t.Helper()
 	ctx := context.Background()
-	conn, err := pgx.Connect(ctx, os.Getenv("MARGINCE_TEST_DSN"))
+	conn, err := pgx.Connect(ctx, testdb.For(t).OwnerDSN)
 	if err != nil {
 		t.Fatalf("dialling this round's own connection: %v", err)
 	}

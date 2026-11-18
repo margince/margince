@@ -183,9 +183,9 @@ func channelProviderFactsFor(registered []string, sending map[string]connector.C
 // The label is DERIVED from the id rather than declared, which is the same
 // decision providerLabel documents: this endpoint is readable by every
 // authenticated seat, and a derived name cannot carry text somebody typed.
-func unitChannelFacts(reserved map[string]bool) ([]channelProviderFacts, error) {
+func unitChannelFacts(exts []extension.Extension, reserved map[string]bool) ([]channelProviderFacts, error) {
 	var out []channelProviderFacts
-	for _, ext := range ComposedExtensions() {
+	for _, ext := range exts {
 		for _, ch := range ext.Channels {
 			if !ch.CredentialModel.Valid() {
 				// The registry column has its own CHECK, so an undeclared model

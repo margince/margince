@@ -50,6 +50,7 @@ var routeStatePerms = principal.Permissions{
 // were refused. A user's agent reads its user's ledger. Automatic work holding
 // the same id reads nothing, over one fixture with one set of permissions.
 func TestTheIntroductionLedgerAnswersAUsersAgentAndRefusesAutomaticWork(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := e.SeedContact(t, "Marit Vermittelt", &e.Rep1)
 	store := introductions.NewStore(e.DB(), time.Now)
@@ -82,6 +83,7 @@ func TestTheIntroductionLedgerAnswersAUsersAgentAndRefusesAutomaticWork(t *testi
 // Asserted directly because it is the premise, not the behaviour: the guards
 // themselves are covered through their real callers above and below.
 func TestRequireHumanIsWhatSeparatesAnAgentFromItsHuman(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	human := e.As(e.Rep1, []ids.UUID{e.Team1}, routeStatePerms)
 	agent := e.AgentFor(t, e.Rep1, []ids.UUID{e.Team1}, routeStatePerms)
@@ -125,6 +127,7 @@ func TestRequireHumanIsWhatSeparatesAnAgentFromItsHuman(t *testing.T) {
 // the edge. The edge itself still shows: an employment they may see is a true
 // fact, and only the company on the far side of it is a separate question.
 func TestAnEmployerNameNeedsTheCompanyGrant(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Vertraulich GmbH", &e.Rep1)
 	contact := e.SeedContact(t, "Pia Angestellt", &e.Rep1)
@@ -178,6 +181,7 @@ func TestAnEmployerNameNeedsTheCompanyGrant(t *testing.T) {
 // An agent reads a contact page as its user left it, so a moment that user put
 // away stays away. Passportless work has no reader and sees the moment.
 func TestAnAgentReadsItsUsersDismissal(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := e.SeedContact(t, "Rune Verstummt", &e.Rep1)
 
@@ -254,6 +258,7 @@ func TestAnAgentReadsItsUsersDismissal(t *testing.T) {
 // The fixture acknowledges as the human first. A baseline nobody has set makes
 // both arms answer nil, and the test would pass on an empty table.
 func TestAnAgentDoesNotReadItsHumansLastVisit(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := e.SeedContact(t, "Siri Gesehen", &e.Rep1)
 

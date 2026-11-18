@@ -66,6 +66,7 @@ func judgeThreadPersonal(ctx context.Context, t *testing.T, db *database.DB, sou
 }
 
 func TestAPersonalThreadsEarlierFilesAreWithheldOnceItsWindowCloses(t *testing.T) {
+	t.Parallel()
 	ctx, db, tag := captureWorkspace(t)
 	blob := blobstore.NewMemory()
 	address := "thread-" + tag + "@example.com"
@@ -106,6 +107,7 @@ func TestAPersonalThreadsEarlierFilesAreWithheldOnceItsWindowCloses(t *testing.T
 // Inside the window nothing is touched: the verdict can still be overruled, and
 // a withheld file cannot come back.
 func TestAPersonalThreadsFilesStayWhileItsWindowIsOpen(t *testing.T) {
+	t.Parallel()
 	ctx, db, tag := captureWorkspace(t)
 	blob := blobstore.NewMemory()
 	address := "thread-" + tag + "@example.com"
@@ -124,6 +126,7 @@ func TestAPersonalThreadsFilesStayWhileItsWindowIsOpen(t *testing.T) {
 // A message from an address the verdict never saw is not the conversation it
 // judged, so its file stays.
 func TestAPersonalThreadVerdictDoesNotReachASenderItNeverSaw(t *testing.T) {
+	t.Parallel()
 	ctx, db, tag := captureWorkspace(t)
 	blob := blobstore.NewMemory()
 	address := "thread-" + tag + "@example.com"
@@ -142,6 +145,7 @@ func TestAPersonalThreadVerdictDoesNotReachASenderItNeverSaw(t *testing.T) {
 // An owner who shares the thread after all has overruled the verdict, and its
 // files stay however long ago the verdict was.
 func TestAnOverruledPersonalThreadKeepsItsFiles(t *testing.T) {
+	t.Parallel()
 	ctx, db, tag := captureWorkspace(t)
 	blob := blobstore.NewMemory()
 	address := "thread-" + tag + "@example.com"
@@ -188,6 +192,7 @@ func requireQueuedForDeletion(ctx context.Context, t *testing.T, db *database.DB
 // Archiving hides an attachment and keeps its object, so an archived file on a
 // personal thread is withheld like any other, and stays archived.
 func TestAnArchivedFileOnAPersonalThreadIsWithheldToo(t *testing.T) {
+	t.Parallel()
 	ctx, db, tag := captureWorkspace(t)
 	blob := blobstore.NewMemory()
 	address := "thread-" + tag + "@example.com"
@@ -212,6 +217,7 @@ func TestAnArchivedFileOnAPersonalThreadIsWithheldToo(t *testing.T) {
 // inside the strip's own transaction, a thread shared back in between is no
 // longer due.
 func TestTheRecheckSeesAThreadSharedAfterTheScan(t *testing.T) {
+	t.Parallel()
 	ctx, db, tag := captureWorkspace(t)
 	blob := blobstore.NewMemory()
 	address := "thread-" + tag + "@example.com"
@@ -257,6 +263,7 @@ func TestTheRecheckSeesAThreadSharedAfterTheScan(t *testing.T) {
 // nothing left to cut out by its bytes, so the original keeps only its
 // headers, and the message behind it in the queue is not held up.
 func TestAFileWhoseObjectIsGoneIsStillWithheld(t *testing.T) {
+	t.Parallel()
 	ctx, db, tag := captureWorkspace(t)
 	blob := blobstore.NewMemory()
 	address := "thread-" + tag + "@example.com"
@@ -286,6 +293,7 @@ func TestAFileWhoseObjectIsGoneIsStillWithheld(t *testing.T) {
 // object instead of the bytes. It is put back from the object first, then
 // withheld, so no stanza is left naming an object the reaper will delete.
 func TestASlimmedOriginalIsRestoredThenWithheld(t *testing.T) {
+	t.Parallel()
 	ctx, db, tag := captureWorkspace(t)
 	blob := blobstore.NewMemory()
 	address := "thread-" + tag + "@example.com"
@@ -327,6 +335,7 @@ func TestASlimmedOriginalIsRestoredThenWithheld(t *testing.T) {
 // The verdict job's stage runs the strip when an object store is wired and
 // skips it when none is.
 func TestTheVerdictJobStripsPrivateThreadFilesOnlyWithAnObjectStore(t *testing.T) {
+	t.Parallel()
 	ctx, db, tag := captureWorkspace(t)
 	blob := blobstore.NewMemory()
 	address := "thread-" + tag + "@example.com"

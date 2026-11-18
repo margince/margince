@@ -48,6 +48,7 @@ func (o *owedEnv) messageMove(t *testing.T, message ids.ActivityID) crmcontracts
 }
 
 func TestAChatMessageCarriesWhoseMoveItIs(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	buyer := o.contact(t, "Pat Buyer", "pat@customer.example")
 

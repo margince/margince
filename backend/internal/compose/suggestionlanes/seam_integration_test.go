@@ -138,6 +138,7 @@ func walk[T any](
 // Past the decision lane's census, each suggestion kind's tail read reaches
 // every suggestion its count names, once each.
 func TestEachSuggestionTailReachesEverySuggestionItsCountNames(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedSuggestions(t, e, pastTheCensus)
 	ctx := e.Admin()

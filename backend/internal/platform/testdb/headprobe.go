@@ -8,7 +8,6 @@ package testdb
 import (
 	"context"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 
@@ -18,49 +17,11 @@ import (
 	"github.com/margince/margince/backend/migrations"
 )
 
-// CloneDBEnv is how a lane declares that this process's database is a
-// throwaway clone it created from the migrated template for this package
-// alone, and names it.
-//
-// The value is the DATABASE NAME, not a boolean, and the difference is the
-// whole safety of the skip. Two callers inside the lane reach EnsureSchema
-// with a database that is NOT the package's clone:
-//
-//   - make test-integration-serial runs every package against margince_test
-//     ITSELF, the template each clone is copied from. Skipping the rebuild
-//     there lets one package's residue persist into the template and get
-//     file-copied into every later clone.
-//   - tools/extmigrategate creates its own throwaway database mid-process and
-//     migrates it through EnsureSchema, DEPENDING on the rebuild to strip the
-//     lane clone's extension objects — its file comment states that as the
-//     gate's premise.
-//
-// A boolean inherited from the lane's environment would have let the skip run
-// in both. Comparing the name against current_database() refuses any database
-// this process was not handed, and costs nothing.
-//
-// Unset means rebuild. That direction is not an accident either: a lane that
-// forgets to declare its clone runs slower, while one that wrongly claims a
-// shared database corrupts every package after it.
-const CloneDBEnv = "MARGINCE_TEST_CLONE_DB"
-
-// lookupCloneDB reads the lane's declaration. An empty value is treated as an
-// absent one: a lane that expands an unset variable into the environment has
-// declared nothing, and reading "" as a database name would compare it against
-// current_database() and refuse in a second, less obvious place.
-func lookupCloneDB() (string, bool) {
-	declared, ok := os.LookupEnv(CloneDBEnv)
-	if !ok || declared == "" {
-		return "", false
-	}
-	return declared, true
-}
-
 // ledgerColumns is what the probe reads out of a tracking table, and the
 // preflight counts these three by name.
 //
 // A template can predate content digests. Check the columns before reading them
-// so EnsureSchema can refuse that clone with a rebuild command.
+// so the first copy is refused with a rebuild command.
 var ledgerColumns = []string{"version", "name", "content_digest"}
 
 // preflightSQL answers, in one round trip, the two questions that decide
@@ -78,47 +39,24 @@ const preflightSQL = `
 	           AND table_name IN ('schema_migrations_core', 'schema_migrations_custom')
 	           AND column_name = ANY($1))`
 
-// reusableClone proves that the declared lane clone has this binary's migration
-// ledger and no test rows. A reason refuses that clone before any schema drop.
-// A database the lane did not declare has no reason and may be rebuilt.
-//
-// This checks the ledger, not hand-made DDL. The lane bounds that gap by copying
-// a template built by its migrator into a private database for each package.
-func reusableClone(ctx context.Context, owner *pgx.Conn) (bool, string, error) {
-	declared, ok := lookupCloneDB()
-	if !ok {
-		return false, "", nil
-	}
-	var current string
-	var columns int
-	if err := owner.QueryRow(ctx, preflightSQL, ledgerColumns).Scan(&current, &columns); err != nil {
-		return false, "", fmt.Errorf("probing the test database for a reusable schema: %w", err)
-	}
-	if current != declared {
-		// Silent: see above. A suite that made its own database mid-process is
-		// the intended shape here, not a mistake. What a SILENT refusal would
-		// otherwise hide — a lane that exported the wrong name, turning the skip
-		// off across every package — is caught by its own gate in
-		// headprobe_integration_test.go instead.
-		return false, "", nil
-	}
+// headAndEmpty proves that a copy of the template carries this binary's
+// migration ledger and no rows. columns is the preflight's ledger column count.
+func headAndEmpty(ctx context.Context, owner *pgx.Conn, columns int) (string, error) {
 	if want := 2 * len(ledgerColumns); columns != want {
-		return false, ledgerRebuildReason(fmt.Sprintf("the migration ledger has %d of the %d columns the probe reads; this database did not record content digests", columns, want)), nil
+		return ledgerRebuildReason(fmt.Sprintf("the migration ledger has %d of the %d columns the probe reads; this database did not record content digests", columns, want)), nil
 	}
-	if reason, err := ledgerAtHead(ctx, owner); err != nil {
-		return false, "", err
-	} else if reason != "" {
-		return false, ledgerRebuildReason(reason), nil
+	if reason, err := ledgerAtHead(ctx, owner); err != nil || reason != "" {
+		if reason != "" {
+			reason = ledgerRebuildReason(reason)
+		}
+		return reason, err
 	}
 	// A role that cannot read a relation cannot prove the clone empty.
 	reason, err := schemaEmpty(ctx, owner)
 	if err != nil {
-		return false, fmt.Sprintf("the clone could not be proved empty; check the template owner’s SELECT privileges and the schema: %v", err), nil
+		return fmt.Sprintf("the clone could not be proved empty; check the template owner’s SELECT privileges and the schema: %v", err), nil
 	}
-	if reason != "" {
-		return false, reason, nil
-	}
-	return true, "", nil
+	return reason, nil
 }
 
 func ledgerRebuildReason(reason string) string {
@@ -128,6 +66,15 @@ func ledgerRebuildReason(reason string) string {
 // ledgerAtHead compares what each tracking table recorded against what this
 // binary embeds, and returns the first disagreement in words.
 func ledgerAtHead(ctx context.Context, owner *pgx.Conn) (string, error) {
+	extra, err := testExtensionNamespaces()
+	if err != nil {
+		return "", err
+	}
+	return ledgerAtHeadWith(ctx, owner, extra)
+}
+
+// ledgerAtHeadWith is ledgerAtHead with extra as the composed extensions.
+func ledgerAtHeadWith(ctx context.Context, owner *pgx.Conn, extra []dbmigrate.Namespace) (string, error) {
 	core, err := migrations.Core()
 	if err != nil {
 		return "", fmt.Errorf("loading the embedded core migrations: %w", err)
@@ -135,10 +82,6 @@ func ledgerAtHead(ctx context.Context, owner *pgx.Conn) (string, error) {
 	custom, err := migrations.Custom()
 	if err != nil {
 		return "", fmt.Errorf("loading the embedded custom migrations: %w", err)
-	}
-	extra, err := testExtensionNamespaces()
-	if err != nil {
-		return "", err
 	}
 	if reason, err := unlistedExtensionLedger(ctx, owner, extra); err != nil || reason != "" {
 		return reason, err
@@ -248,7 +191,7 @@ type probedTable struct {
 	rowSecurity bool
 }
 
-// probedTables lists the relations a reset acts on, each with its row-security
+// probedTables lists the data tables (dataTables), each with its row-security
 // setting, in ONE catalog read.
 //
 // One read and not two, because the list the probe SCANS and the list it vets
@@ -260,7 +203,7 @@ type probedTable struct {
 func probedTables(ctx context.Context, owner *pgx.Conn) ([]probedTable, error) {
 	rows, err := owner.Query(ctx,
 		`SELECT quote_ident(n.nspname) || '.' || quote_ident(c.relname), c.relrowsecurity `+
-			resetTables+` ORDER BY n.nspname, c.relname`)
+			dataTables+` ORDER BY n.nspname, c.relname`)
 	if err != nil {
 		return nil, fmt.Errorf("listing data tables to prove the clone is empty: %w", err)
 	}
@@ -283,13 +226,10 @@ func probedTables(ctx context.Context, owner *pgx.Conn) ([]probedTable, error) {
 // rowRuleRefusal names the relations whose rows a row-level rule can hide from
 // this probe, and is a refusal rather than a note.
 //
-// EXISTS over a table with row-level security enabled answers about the ROLE
-// running the query: a role that bypasses RLS is shown every row, one that does
-// not is shown only what the policies admit, and under FORCE not even the owner
-// is exempt. The same clone then reads empty to one lane and populated to the
-// next, while EnsureSchema baselines every table size on whichever answer it
-// got. A relation the probe cannot ask about the table itself is one it declines
-// to vouch for.
+// EXISTS over a table with row-level security answers about the role running
+// the query, not about the table. Under FORCE not even the owner is exempt.
+// The same template then reads empty to one lane and populated to the next. A relation the probe cannot ask about the table itself is one it
+// declines to vouch for.
 func rowRuleRefusal(tables []probedTable) string {
 	var filtered []string
 	for _, table := range tables {
@@ -304,21 +244,10 @@ func rowRuleRefusal(tables []probedTable) string {
 		len(filtered), summarise(filtered))
 }
 
-// schemaEmpty proves that every table a reset acts on currently holds no rows.
-//
-// EnsureSchema records emptySizes right after this, and reclaimBloat measures
-// every later reset against that baseline — so a baseline taken over populated
-// tables makes the reclaim compare growth against rows that were already
-// there, for the life of the process. "At head" does not imply "empty": until
-// PR #1994 the bench targets seeded a quarter of a million rows into the
-// template every clone is copied from, and the unconditional rebuild this skip
-// removes is what laundered that.
-//
-// It asks the same resetTables fragment the reset itself acts on, so a table
-// the reset would empty can never be one this probe does not look at. And the
-// verdict is only worth what the read behind it is worth, which is why the row
-// rules come first: an EXISTS the catalog says can be filtered proves nothing
-// about the table it ran against.
+// schemaEmpty proves that every data table (dataTables) holds no rows. A
+// template that holds rows hands them to every test's copy. The row rules are
+// checked first: an EXISTS the catalog says can be filtered proves nothing about
+// the table it ran against.
 func schemaEmpty(ctx context.Context, owner *pgx.Conn) (string, error) {
 	tables, err := probedTables(ctx, owner)
 	if err != nil {

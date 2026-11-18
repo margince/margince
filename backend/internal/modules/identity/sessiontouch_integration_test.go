@@ -18,6 +18,7 @@ import (
 )
 
 func TestAuthenticateTouchesSessionWithAbsoluteExpiryCap(t *testing.T) {
+	t.Parallel()
 	for _, capped := range []bool{false, true} {
 		name := "idle-window"
 		if capped {
@@ -65,6 +66,7 @@ func TestAuthenticateTouchesSessionWithAbsoluteExpiryCap(t *testing.T) {
 }
 
 func TestAuthenticateDenialDoesNotTouchSession(t *testing.T) {
+	t.Parallel()
 	for _, reason := range []string{"revoked", "idle-expired", "absolute-expired"} {
 		t.Run(reason, func(t *testing.T) {
 			e := setupRevocationEnv(t, "touch-denial")
@@ -98,6 +100,7 @@ func TestAuthenticateDenialDoesNotTouchSession(t *testing.T) {
 }
 
 func TestAuthenticateLoadsGrantsBeforeLockingSession(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "touch-lock-order")
 	token := e.signIn(t, "device")
 	held, err := e.owner.Begin(t.Context())

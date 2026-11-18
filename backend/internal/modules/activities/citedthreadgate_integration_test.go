@@ -60,6 +60,7 @@ func (c *citedThreads) limit(t *testing.T, activity ids.UUID) {
 // reader may read that evidence. A cited message the reader may not read has
 // no verdict at all.
 func TestACitedThreadSettlesOnlyOnEvidenceTheReaderMayRead(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	c := &citedThreads{
 		e: e, store: NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws))), at: requestInstant,

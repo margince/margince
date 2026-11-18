@@ -25,6 +25,7 @@ import (
 )
 
 func TestManagementSeesEveryRowAndAdministersNothing(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "management-role")
 	ctx := context.Background()
 

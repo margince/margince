@@ -135,6 +135,7 @@ func project360Service(e *Env, now time.Time) *project360.Service {
 }
 
 func TestProject360AssemblesEverySectionFromTheRealWriters(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedProject360(t, e)
 	now := time.Now().UTC()
@@ -254,6 +255,7 @@ func assertProject360Counts(t *testing.T, page crmcontracts.Project360) {
 }
 
 func TestProject360OmitsAndNamesTheSectionTheCallerMayNotRead(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedProject360(t, e)
 	svc := project360Service(e, time.Now().UTC())
@@ -278,6 +280,7 @@ func TestProject360OmitsAndNamesTheSectionTheCallerMayNotRead(t *testing.T) {
 // sight" has three spellings here: no grant (refused), an archived project
 // (not found, as the live-only read answers), and an id that names nothing.
 func TestProject360RefusesACallerWithNoSightOfTheProject(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedProject360(t, e)
 	svc := project360Service(e, time.Now().UTC())
@@ -311,6 +314,7 @@ func TestProject360RefusesACallerWithNoSightOfTheProject(t *testing.T) {
 // is workspace-readable by every seat (auth/tableclass.go), so the deal arm
 // has no refusable case to seed; the clause it carries is the deal list's own.
 func TestProject360CoverageCountsOnlyWhatTheCallerMaySee(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedProject360(t, e)
 	svc := project360Service(e, time.Now().UTC())
@@ -334,6 +338,7 @@ func TestProject360CoverageCountsOnlyWhatTheCallerMaySee(t *testing.T) {
 }
 
 func TestProject360OmitsTheCompanyForACallerWithoutThatGrant(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedProject360(t, e)
 	svc := project360Service(e, time.Now().UTC())

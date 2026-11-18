@@ -81,6 +81,7 @@ func coachingOn(ctx context.Context, t *testing.T, e *Env, meeting ids.UUID) *cr
 
 // A lead reading their teammate's meeting is the case this exists for.
 func TestALeadReadingATeammatesMeetingIsCoached(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	meeting := coachingRoom(t, e, e.Rep2)
 	// Rep1 and Rep2 share Team1.
@@ -103,6 +104,7 @@ func TestALeadReadingATeammatesMeetingIsCoached(t *testing.T) {
 // So this holds the claim that IS this file's to make, by reading twice as one
 // contact: once with the coaching seam wired and once without.
 func TestCoachingAddsAnObjectAndChangesNothingElse(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	meeting := coachingRoom(t, e, e.Rep2)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, coachPerms())
@@ -149,6 +151,7 @@ func TestCoachingAddsAnObjectAndChangesNothingElse(t *testing.T) {
 // differs between their briefs beyond that is the caller-scoping every read on
 // this surface already has, which this deliberately does not assert.
 func TestOnlyTheLeadIsCoachedOnTheSameMeeting(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	meeting := coachingRoom(t, e, e.Rep2)
 	service := meetingBriefService(e)
@@ -176,6 +179,7 @@ func TestOnlyTheLeadIsCoachedOnTheSameMeeting(t *testing.T) {
 // the tree already makes for raising a coaching notice, and the one my earlier
 // row-scope rule would have got wrong.
 func TestARepIsNeverCoachedEvenOnATeammatesMeeting(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	meeting := coachingRoom(t, e, e.Rep2)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, repPerms())
@@ -186,6 +190,7 @@ func TestARepIsNeverCoachedEvenOnATeammatesMeeting(t *testing.T) {
 
 // A lead in the room coaching their rep through it is the ordinary case.
 func TestASeatedLeadIsStillCoached(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	meeting := coachingRoom(t, e, e.Rep2)
@@ -199,6 +204,7 @@ func TestASeatedLeadIsStillCoached(t *testing.T) {
 // A lead of another team gets the rep's brief, not a refusal. They asked for a
 // brief and a brief is what they may have.
 func TestALeadOfAnotherTeamReadsTheBriefWithoutCoaching(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	meeting := coachingRoom(t, e, e.Rep2)
 	// Rep3 is in Team2; Rep2 is in Team1.
@@ -214,6 +220,7 @@ func TestALeadOfAnotherTeamReadsTheBriefWithoutCoaching(t *testing.T) {
 
 // A meeting with nobody but the reader in it has nobody to coach.
 func TestALeadAloneInTheRoomIsNotCoached(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	meeting := coachingRoom(t, e, e.Rep1)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, coachPerms())
@@ -224,6 +231,7 @@ func TestALeadAloneInTheRoomIsNotCoached(t *testing.T) {
 
 // An agent on a lead's passport acts as that lead, so it gets what they get.
 func TestAnAgentActingForALeadGetsTheCoaching(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	meeting := coachingRoom(t, e, e.Rep2)
 	ctx := e.AgentFor(t, e.Rep1, []ids.UUID{e.Team1}, coachPerms())
@@ -239,6 +247,7 @@ func TestAnAgentActingForALeadGetsTheCoaching(t *testing.T) {
 // A composition that wired no membership seam projects no coaching. Fail
 // closed: the honest answer for a deployment that did not ask for it.
 func TestAServiceWithNoTeammatesSeamCoachesNobody(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	meeting := coachingRoom(t, e, e.Rep2)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, coachPerms())

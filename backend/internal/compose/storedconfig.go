@@ -4,15 +4,16 @@
 package compose
 
 // A stored setting a boot source sets is locked: it reads as that value and
-// refuses a change. Compose builds the stores that read stored settings from a
-// pool in many places, at boot and per job. So the program hands its loaded
-// configuration over once, and every one of them reads through it.
+// refuses a change. A composition holds the configuration its program loaded,
+// builds its stores over it and puts it on every context it serves. Work that
+// starts from a bare context reads the one the program bound for the process.
 
 import (
 	"context"
 	"errors"
 	"io/fs"
 	"log/slog"
+	"net/http"
 	"sync"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -25,29 +26,59 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// UseConfig hands compose the configuration this program loaded. A program
-// that reads stored settings calls it once, after Load and before it composes.
-// It binds the process's configuration, which the modules' package-level
-// readers take their locks from too.
-// The keys derived from its root key are bound with it.
+// UseConfig binds the configuration this program loaded for the process. A
+// program that reads stored settings calls it once, after Load and before it
+// composes. The keys derived from its root key are bound with it.
 func UseConfig(c *config.Config) {
 	config.Bind(c)
 	storekit.UseSuppressionKey(keyvault.DerivedKey(c, storekit.SuppressionKeyLabel))
 }
 
-// loadedConfig is the program's configuration, or for a process that loaded
-// none, such as a test composing stores, one where no boot source sets anything.
-func loadedConfig() *config.Config {
-	if c := config.Bound(); c != nil {
+// ConfigContext is ctx serving the program that loaded c, with the keys its
+// root key derives.
+func ConfigContext(ctx context.Context, c *config.Config) context.Context {
+	ctx = config.WithBound(ctx, c)
+	return storekit.WithSuppressionKey(ctx, keyvault.DerivedKey(c, storekit.SuppressionKeyLabel))
+}
+
+// composedConfig is the configuration of the program a composition serves.
+type composedConfig struct{ config *config.Config }
+
+// WithConfig hands the composition the configuration its program loaded. Every
+// request it serves reads its locks from that one.
+func WithConfig(c *config.Config) Option {
+	return func(s *Server, _ *pgxpool.Pool) { s.config = c }
+}
+
+// servingConfig puts c on the context of every request next serves.
+func servingConfig(c *config.Config, next http.Handler) http.Handler {
+	if c == nil {
+		return next
+	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		next.ServeHTTP(w, r.WithContext(ConfigContext(r.Context(), c)))
+	})
+}
+
+// loadedConfig is the configuration of the program ctx serves. A process that
+// loaded none, such as a test composing stores, reads one where no boot source
+// sets anything.
+func loadedConfig(ctx context.Context) *config.Config {
+	if c := config.Bound(ctx); c != nil {
 		return c
 	}
 	return unsetConfig()
 }
 
-// StoredConfig reads and saves stored settings through pool, under the locks
-// the loaded configuration sets.
+// StoredConfig reads and saves stored settings through pool. A call takes its
+// locks from the program its context serves, else from the one the process
+// bound.
 func StoredConfig(pool *pgxpool.Pool) *config.Config {
-	return loadedConfig().WithDatabase(NewSettingsStore(pool))
+	c := config.ProcessBound()
+	if c == nil {
+		c = unsetConfig()
+	}
+	return c.WithDatabase(NewSettingsStore(pool))
 }
 
 // WithVault is cfg sealing its secret settings in vault, under the workspace of

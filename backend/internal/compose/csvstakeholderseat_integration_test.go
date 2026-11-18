@@ -16,6 +16,7 @@ import (
 )
 
 func TestAContactAlreadySeatedOnADealIsNotSeatedAgainWhateverTheCallerCanListOf(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	pipeline, stage, _ := integration.DealFixture(t, e)
 	deal := e.SeedDeal(t, "Seated once", pipeline, stage, nil)

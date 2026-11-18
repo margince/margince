@@ -18,6 +18,7 @@ import (
 // is its first delivery, or an operator re-driving a failed run. The target can
 // have left by then, and a refused write would lose the breach for good.
 func TestAnEscalationWhoseTargetLeftStillWritesItsTask(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name, leave string
 		intakeSeat  bool

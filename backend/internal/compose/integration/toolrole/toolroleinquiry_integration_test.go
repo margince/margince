@@ -21,6 +21,7 @@ import (
 )
 
 func TestInquiryPreviewRequiresPermissionToCreateTheWorkItPlans(t *testing.T) {
+	t.Parallel()
 	recorded := newToolCheckRecorder()
 	const slug = "inquiry-preview-authority"
 	d := toolRoleApp(t, slug, compose.WithToolChecksRecordedForTest(recorded.note))
@@ -159,6 +160,7 @@ func inquiryAssignmentArgs(p *recordPool, apply bool) map[string]any {
 }
 
 func TestSelectedWebsiteInquiryToolUsesTheSavedPausedPolicy(t *testing.T) {
+	t.Parallel()
 	d := toolRoleApp(t, "selected-website-inquiry")
 	pool := &recordPool{fresh: map[string][]string{}, facts: map[string]map[string]string{}}
 	form := seedExistingWebsiteInquiry(sweepSeed{t: t, e: d.E, pool: pool})

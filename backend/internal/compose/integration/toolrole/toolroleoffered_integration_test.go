@@ -6,7 +6,6 @@
 package toolrole
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"maps"
@@ -33,6 +32,7 @@ type listingPass struct {
 // allows that role, and the matrix names every seeded role. It runs on every
 // PR, so a tools/list change shows against the committed matrix at once.
 func TestToolsListOffersEachSeededRoleItsAllowedCells(t *testing.T) {
+	t.Parallel()
 	d := toolRoleApp(t, "tool-role-cells")
 	var keys []string
 	for _, role := range apptest.SeededRoles(t, d.E) {
@@ -236,6 +236,7 @@ func holdPathDependentTools(t *testing.T, client *apptest.MCPClient, offered map
 // A role change reaches the next tools/list of a passport already issued: the
 // listing reads the grants afresh, as every call's admission does.
 func TestARoleChangeReachesTheNextToolsList(t *testing.T) {
+	t.Parallel()
 	d := apptest.SetupTwoDoors(t, "tool-role-change", nil, "read", "write")
 	user := "tool-role-change@fable.test"
 	apptest.AssignRoleTo(t, d.E, user, "rep")
@@ -363,12 +364,6 @@ func createRole(t *testing.T, e *apptest.AppEnv, key, edit string) {
 		key); err != nil {
 		t.Fatalf("creating role %s: %v", key, err)
 	}
-	// The database outlives this test, and a later sweep reads every role.
-	t.Cleanup(func() {
-		if _, err := e.Owner.Exec(context.Background(), `DELETE FROM role WHERE key = $1`, key); err != nil {
-			t.Errorf("removing role %s: %v", key, err)
-		}
-	})
 }
 
 // hiddenActionsNamed names each router whose listed schema speaks of an action

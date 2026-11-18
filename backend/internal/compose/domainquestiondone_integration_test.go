@@ -21,6 +21,7 @@ import (
 )
 
 func TestDomainQuestionDeferralPreservesTheReviewDestination(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
 	const domain = "deferred-question.test"
@@ -72,6 +73,7 @@ func TestDomainQuestionDeferralPreservesTheReviewDestination(t *testing.T) {
 }
 
 func TestFreshCapturedEvidenceReturnsADeferredDomainQuestion(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
 	const domain = "fresh-question.test"

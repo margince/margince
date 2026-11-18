@@ -77,6 +77,7 @@ func seedScoredLead(ctx context.Context, t *testing.T, store *Store) ids.LeadID 
 // score AND the breakdown that produced it, so a rep who opens a lead
 // nobody has touched still sees why it scored what it did.
 func TestACreatedLeadCarriesItsOwnExplanation(t *testing.T) {
+	t.Parallel()
 	ctx, store := newLeadScoreEnv(t)
 	leadID := seedScoredLead(ctx, t, store)
 
@@ -101,6 +102,7 @@ func TestACreatedLeadCarriesItsOwnExplanation(t *testing.T) {
 }
 
 func TestLeadReasonUsesTheCurrentTiedHistoryAndToleratesMalformedFactors(t *testing.T) {
+	t.Parallel()
 	ctx, store := newLeadScoreEnv(t)
 	leadID := seedScoredLead(ctx, t, store)
 	if _, err := store.SetLeadManualSignal(ctx, leadID, SetLeadManualSignalInput{
@@ -156,6 +158,7 @@ func TestLeadReasonUsesTheCurrentTiedHistoryAndToleratesMalformedFactors(t *test
 // hold the pre-override number — "Explain This Score" answering for a score
 // the lead no longer carries.
 func TestSettingAnOverrideLandsInTheSeriesAndKeepsTheMachineNumber(t *testing.T) {
+	t.Parallel()
 	ctx, store := newLeadScoreEnv(t)
 	leadID := seedScoredLead(ctx, t, store)
 
@@ -201,6 +204,7 @@ func TestSettingAnOverrideLandsInTheSeriesAndKeepsTheMachineNumber(t *testing.T)
 // Clearing the override resumes recompute, which appends its own entry —
 // so the series returns to a machine-explained point with no reason on it.
 func TestClearingAnOverrideReturnsTheSeriesToTheMachineScore(t *testing.T) {
+	t.Parallel()
 	ctx, store := newLeadScoreEnv(t)
 	leadID := seedScoredLead(ctx, t, store)
 
@@ -244,6 +248,7 @@ func TestClearingAnOverrideReturnsTheSeriesToTheMachineScore(t *testing.T) {
 // A manual signal counts toward the score and appears as its own labelled
 // factor — never blended into a machine one (AC-S7a).
 func TestAManualSignalCountsAndStaysItsOwnFactor(t *testing.T) {
+	t.Parallel()
 	ctx, store := newLeadScoreEnv(t)
 	leadID := seedScoredLead(ctx, t, store)
 
@@ -288,6 +293,7 @@ func TestAManualSignalCountsAndStaysItsOwnFactor(t *testing.T) {
 // for everything would make every auto-captured signal look like somebody's
 // judgement.
 func TestAManualFactorSaysWhoseJudgementItIsAndAMachineFactorDoesNot(t *testing.T) {
+	t.Parallel()
 	ctx, store := newLeadScoreEnv(t)
 	leadID := seedScoredLead(ctx, t, store)
 
@@ -332,6 +338,7 @@ func TestAManualFactorSaysWhoseJudgementItIsAndAMachineFactorDoesNot(t *testing.
 }
 
 func TestManualSignalReadReturnsTheStoredQualificationEvidence(t *testing.T) {
+	t.Parallel()
 	ctx, store := newLeadScoreEnv(t)
 	leadID := seedScoredLead(ctx, t, store)
 	confidence := float32(0.7)
@@ -364,6 +371,7 @@ func TestManualSignalReadReturnsTheStoredQualificationEvidence(t *testing.T) {
 // A manual signal is replaced whole, so one entered again with no confidence
 // holds none, whatever the one before it said.
 func TestAManualSignalEnteredAgainWithoutAConfidenceHoldsNone(t *testing.T) {
+	t.Parallel()
 	ctx, store := newLeadScoreEnv(t)
 	leadID := seedScoredLead(ctx, t, store)
 	confidence := float32(0.7)
@@ -400,6 +408,7 @@ func TestAManualSignalEnteredAgainWithoutAConfidenceHoldsNone(t *testing.T) {
 // the workspace by id alone. The refusal is ErrPermissionDenied, not
 // ErrNotFound: the lead is visibly readable, so there is no existence to hide.
 func TestARepCannotScoreALeadTheyDoNotOwn(t *testing.T) {
+	t.Parallel()
 	ctx, store, base := newLeadScoreEnvWithBase(t)
 
 	// Owned by the teammate, deliberately: an UNOWNED lead is writable by every
@@ -480,6 +489,7 @@ func TestARepCannotScoreALeadTheyDoNotOwn(t *testing.T) {
 // the lead is anonymized — rather than reaching into the privacy module's
 // own wiring, so it keeps holding if that wiring is refactored.
 func TestAnonymizingALeadRemovesItsScoreExplanation(t *testing.T) {
+	t.Parallel()
 	ctx, store := newLeadScoreEnv(t)
 	leadID := seedScoredLead(ctx, t, store)
 

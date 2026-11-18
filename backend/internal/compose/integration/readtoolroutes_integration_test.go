@@ -149,6 +149,7 @@ func memberOf(t *testing.T, answer json.RawMessage, member string) json.RawMessa
 // company's id, and seeding one is not cheap here. That type is left to its
 // own route tests.
 func TestRecordReadAndListRoutesAnswerAsTheirTools(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "record-read-doors", "read")
 	stages := apptest.DiscoverSeededPipeline(t, d.e)
 	company := createdRecord(t, d.e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Door Works"})
@@ -193,6 +194,7 @@ func TestRecordReadAndListRoutesAnswerAsTheirTools(t *testing.T) {
 // A tag, the tags list and a record's tags read the same on their routes and
 // tools.
 func TestTagRoutesAnswerAsTheirTools(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "tag-read-doors", "read")
 	contact := createdRecord(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Tamsin Tagged"})
 	tag := createdID(t, d.e, "/v1/tags", AnyMap{"name": "Door champion"})
@@ -220,6 +222,7 @@ func TestTagRoutesAnswerAsTheirTools(t *testing.T) {
 
 // A project's page reads the same on GET /projects/{id}/360 and read_project_360.
 func TestProjectPageRouteAnswersAsTheTool(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "project-page-doors", "read")
 	company := createdRecord(t, d.e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Door Projects"})
 	project := createdRecord(t, d.e, "/v1/projects", AnyMap{"name": "Door rollout", "company_id": company, "source": "manual"})
@@ -243,6 +246,7 @@ func TestProjectPageRouteAnswersAsTheTool(t *testing.T) {
 // The roster and the transports read the same on GET /users and
 // list_colleagues, and on GET /channel-providers and list_channel_providers.
 func TestRosterAndTransportRoutesAnswerAsTheirTools(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "roster-doors", "read")
 
 	// A second member and a deactivated one make the roster more than the

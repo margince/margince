@@ -15,6 +15,7 @@ import (
 )
 
 func TestRunTransparencyReadsAndPricesOneCorrelatedProductRun(t *testing.T) {
+	t.Parallel()
 	env := setupRateStore(t)
 	background := context.Background()
 	workspaceID, workspaceCtx := env.seedWorkspace(background, t)

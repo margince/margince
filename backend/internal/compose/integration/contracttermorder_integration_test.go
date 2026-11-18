@@ -54,6 +54,7 @@ func seedTermFixture(t *testing.T, e *Env) (company ids.CompanyID, byTerm []stri
 // it last and this fails. That inversion is the whole point: with the two
 // orderings agreeing, a test cannot tell which one produced the page.
 func TestTheContractListIsOrderedByTermNotByWriteTime(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company, wantOrder := seedTermFixture(t, e)
 
@@ -91,6 +92,7 @@ func TestTheContractListIsOrderedByTermNotByWriteTime(t *testing.T) {
 // A limit of 1 walks the boundary a row at a time, so the page that crosses it
 // is exercised rather than hoped for.
 func TestPagingContractsCrossesTheUndatedBoundaryExactlyOnce(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company, wantOrder := seedTermFixture(t, e)
 

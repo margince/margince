@@ -19,6 +19,7 @@ import (
 // the task is written. It reaches their own Worklist, not the unassigned queue.
 // An owner who can no longer hold work leaves it unassigned instead.
 func TestAnApprovedFollowUpIsTheDealOwnersOwnTask(t *testing.T) {
+	t.Parallel()
 	for name, c := range map[string]struct {
 		handOverTo func(e *reconcileEnv) *ids.UUID
 		want       func(e *reconcileEnv) string

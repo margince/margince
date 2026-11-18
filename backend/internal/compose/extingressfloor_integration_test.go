@@ -28,10 +28,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -49,52 +47,20 @@ const floorBotProvider = "probe_bot"
 func setupFloorIngress(t *testing.T) *ingressEnv {
 	t.Helper()
 	e := setupExtRuntime(t)
-	composeCapturingUnit(t, ingressUnit,
+	e.compose(composeCapturingUnit(ingressUnit,
 		[]extension.Channel{
 			{Provider: ingressProbeProvider, CredentialModel: extension.CredentialPerMember},
 			{Provider: floorBotProvider, CredentialModel: extension.CredentialWorkspaceBot},
 		},
 		extension.IngressSource{
 			System: ingressProbeSystem, Lands: []extension.RecordKind{extension.KindActivity},
-		})
-	bindCaptureForTest(t, e)
+		}))
+	e.composed.BindCapture(e.Pool, CaptureConfig{})
 	grantCapture(t, e, e.Rep1)
 	depositCredential(t, e, e.Rep1)
 	env := &ingressEnv{extRuntimeEnv: e, member: e.Rep1}
-	registerFloorTransports(t, env)
+	registerProbeTransport(t, env)
 	return env
-}
-
-// registerFloorTransports runs the real boot reconcile and takes both of the
-// unit's transports away afterwards. It is registerProbeTransport's twin and
-// differs only in clearing two providers instead of one; sharing that one would
-// leave the control transport's registry row behind for every later test in the
-// process to trip over.
-func registerFloorTransports(t *testing.T, e *ingressEnv) {
-	t.Helper()
-	t.Cleanup(func() {
-		activities.SetChannelProviders([]string{capture.ProviderTelegram})
-		comms.SetChannelProviders([]string{capture.ProviderTelegram})
-	})
-	if err := reconcileChannelProviders(context.Background(), e.Pool, []string{capture.ProviderTelegram}); err != nil {
-		t.Fatalf("registering the unit's transports: %v", err)
-	}
-	t.Cleanup(func() {
-		owner := integration.OwnerConn(t)
-		for _, provider := range []string{ingressProbeProvider, floorBotProvider} {
-			// In dependency order: the registry row is the foreign-key parent of
-			// every message filed on it and every identity bound on it.
-			for _, statement := range []string{
-				`DELETE FROM activity WHERE channel_provider = $1`,
-				`DELETE FROM contact_channel_identity WHERE provider = $1`,
-				`DELETE FROM channel_provider WHERE provider = $1`,
-			} {
-				if _, err := owner.Exec(context.Background(), statement, provider); err != nil {
-					t.Errorf("cleaning up after %s (%s): %v", provider, statement, err)
-				}
-			}
-		}
-	})
 }
 
 // setFloor flips the workspace mail-sharing posture through the real settings
@@ -164,6 +130,7 @@ func landOne(t *testing.T, e *ingressEnv, rec extension.Record) ids.UUID {
 // seat — which is what it was before the birth ladder could read whose credential
 // carried it.
 func TestTheWorkspaceFloorHoldsAMemberBoundChannelMessage(t *testing.T) {
+	t.Parallel()
 	e := setupFloorIngress(t)
 	setFloor(t, e, false)
 
@@ -185,6 +152,7 @@ func TestTheWorkspaceFloorHoldsAMemberBoundChannelMessage(t *testing.T) {
 // so it is born open. This is what holds the test above to the floor rather than
 // to the credential model alone.
 func TestAMemberBoundChannelMessageIsBornOpenWhileTheFloorIsUp(t *testing.T) {
+	t.Parallel()
 	e := setupFloorIngress(t)
 	setFloor(t, e, true)
 
@@ -202,6 +170,7 @@ func TestAMemberBoundChannelMessageIsBornOpenWhileTheFloorIsUp(t *testing.T) {
 // there is no member whose correspondence it could be held as, so a hold here
 // would produce the unreadable row rather than a private one.
 func TestTheFloorLeavesAWorkspaceBotsChannelMessageOpen(t *testing.T) {
+	t.Parallel()
 	e := setupFloorIngress(t)
 	setFloor(t, e, false)
 
@@ -225,6 +194,7 @@ func TestTheFloorLeavesAWorkspaceBotsChannelMessageOpen(t *testing.T) {
 // carries the addresses the hold is matched on, which is why this rung is not
 // dead for a unit transport even though a core channel connector carries none.
 func TestASeatsCounterpartyHoldReachesTheirOwnChat(t *testing.T) {
+	t.Parallel()
 	e := setupFloorIngress(t)
 	setFloor(t, e, true)
 	holdCounterparty(t, e, "held@example.test")
@@ -266,6 +236,7 @@ func holdCounterparty(t *testing.T, e *ingressEnv, address string) {
 
 // A sender who marked their own message is obeyed on a chat too.
 func TestASendersOwnMarkerHoldsAMemberBoundChannelMessage(t *testing.T) {
+	t.Parallel()
 	e := setupFloorIngress(t)
 	setFloor(t, e, true)
 
@@ -295,6 +266,7 @@ func TestASendersOwnMarkerHoldsAMemberBoundChannelMessage(t *testing.T) {
 // ingress established, before capture ran, that this member deposited this
 // unit's user-scoped secret and that the unit acted for them.
 func TestAMemberBoundChannelMessageRecordsTheMembersImport(t *testing.T) {
+	t.Parallel()
 	e := setupFloorIngress(t)
 	setFloor(t, e, false)
 
@@ -337,6 +309,7 @@ func recomputeAsWorkspace(t *testing.T, e *ingressEnv, id ids.UUID) error {
 // whose import it would be. The connecting admin is not that member: a channel
 // connection's connected_by is audit-only.
 func TestAWorkspaceBotsChannelMessageRecordsNoImport(t *testing.T) {
+	t.Parallel()
 	e := setupFloorIngress(t)
 	setFloor(t, e, false)
 
@@ -362,6 +335,7 @@ func TestAWorkspaceBotsChannelMessageRecordsNoImport(t *testing.T) {
 // can capture for themselves; admitting would hand a guessed source id the
 // content of a held conversation.
 func TestASecondMembersReplayEarnsNoImportOnAHeldChat(t *testing.T) {
+	t.Parallel()
 	e := setupFloorIngress(t)
 	setFloor(t, e, false)
 	grantCapture(t, e.extRuntimeEnv, e.Rep2)
@@ -405,6 +379,7 @@ func TestASecondMembersReplayEarnsNoImportOnAHeldChat(t *testing.T) {
 // is a pair rather than a claim: it has no import row, so the per-message write
 // still reaches it. The refusal follows the import row, not the kind.
 func TestAMemberBoundChatsAudienceIsNoLongerAPerMessageAnswer(t *testing.T) {
+	t.Parallel()
 	e := setupFloorIngress(t)
 	setFloor(t, e, true)
 

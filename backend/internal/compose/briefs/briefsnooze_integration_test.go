@@ -26,6 +26,7 @@ import (
 )
 
 func TestBriefSnoozeIsOwnerOnlyStampedAndConflictSafe(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 	owner := integration.OwnerConn(t)
 
@@ -96,6 +97,7 @@ func briefItemAudits(t *testing.T, owner *pgx.Conn, itemID ids.UUID) int {
 }
 
 func TestBriefSnoozedItemHidesUntilExpiryThenResurfaces(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 	owner := integration.OwnerConn(t)
 

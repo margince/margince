@@ -33,6 +33,7 @@ func readerThat(run func(context.Context, pgx.Tx) error) metricSpec {
 // A metric whose query fails is marked failed and the transaction stays
 // usable, so the metric after it on the same evaluation still reads.
 func TestAFailedMetricQueryLeavesTheOtherMetricsReadable(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	ctx := e.Admin()
 	failing := readerThat(func(ctx context.Context, tx pgx.Tx) error {
@@ -68,6 +69,7 @@ func TestAFailedMetricQueryLeavesTheOtherMetricsReadable(t *testing.T) {
 // Only a database failure is isolated. A refusal is still the caller's
 // answer for the whole evaluation.
 func TestARefusedMetricStillFailsTheEvaluation(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	ctx := e.Admin()
 	refused := readerThat(func(context.Context, pgx.Tx) error { return apperrors.ErrPermissionDenied })

@@ -89,6 +89,7 @@ func entryFor(ctx context.Context, t *testing.T, cfg *config.Config) config.Entr
 }
 
 func TestConfigStored_ABootSourceWinsOverTheRowAndLocksIt(t *testing.T) {
+	t.Parallel()
 	ctx, e, cfg := storedFixture(t, lockCapEnv+"=900")
 	open := unlocked(t, cfg, e)
 	if err := config.Save(ctx, open, lockCap, 500); err != nil {
@@ -115,6 +116,7 @@ func TestConfigStored_ABootSourceWinsOverTheRowAndLocksIt(t *testing.T) {
 }
 
 func TestConfigStored_WithoutABootSourceTheRowThenTheDefaultDecide(t *testing.T) {
+	t.Parallel()
 	ctx, e, cfg := storedFixture(t)
 	if v, o, err := config.StoredValWithSource(ctx, cfg, lockCap); err != nil || v != 100 || o.Source != config.SourceDefault {
 		t.Fatalf("default: %d %+v %v", v, o, err)
@@ -134,6 +136,7 @@ func TestConfigStored_WithoutABootSourceTheRowThenTheDefaultDecide(t *testing.T)
 }
 
 func TestConfigStored_TheGrantDecidesBeforeTheLock(t *testing.T) {
+	t.Parallel()
 	for _, environ := range [][]string{nil, {lockCapEnv + "=900"}} {
 		_, e, cfg := storedFixture(t, environ...)
 		none := e.As(e.AdminUser, nil, principal.Permissions{RowScope: principal.RowScopeAll})
@@ -152,6 +155,7 @@ func TestConfigStored_TheGrantDecidesBeforeTheLock(t *testing.T) {
 // Seed skips a boot-locked key, and a data reset still removes its row: first
 // boot never seeds one, so the reset matches first boot.
 func TestConfigStored_SeedSkipsABootLockedKeyAndResetClearsIt(t *testing.T) {
+	t.Parallel()
 	ctx, e, cfg := storedFixture(t, lockCapEnv+"=900")
 	def := cfg.StoredDefinitions()[0]
 	inTx := func(fn func(tx pgx.Tx) error) {
@@ -161,7 +165,7 @@ func TestConfigStored_SeedSkipsABootLockedKeyAndResetClearsIt(t *testing.T) {
 		}
 	}
 	inTx(func(tx pgx.Tx) error {
-		stored, err := settings.Seed(ctx, tx, def, json.RawMessage(`7`), cfg.BootLocked())
+		stored, err := settings.Seed(ctx, tx, def, json.RawMessage(`7`), cfg.BootLocked(ctx))
 		if stored {
 			t.Error("seed wrote a row under a boot-locked key")
 		}

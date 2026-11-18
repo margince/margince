@@ -57,7 +57,7 @@ func NewCommitmentSettleTrigger(pool *pgxpool.Pool, log *slog.Logger) *Commitmen
 	db := InstallationDB(pool)
 	return &CommitmentSettleTrigger{
 		db: db, approvals: NewApprovalsService(db), claims: contacts.NewStore(db), tasks: activities.NewStore(db),
-		identity: identity.NewService(pool), log: log,
+		identity: IdentityService(pool), log: log,
 	}
 }
 

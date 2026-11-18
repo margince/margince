@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/continuity"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -91,7 +91,7 @@ func withDrillLedger(ctx context.Context, dsn string,
 		return err
 	}
 	defer pool.Close()
-	db := database.Bind(pool, identity.NewService(pool).InstallationWorkspace)
+	db := database.Bind(pool, compose.IdentityService(pool).InstallationWorkspace)
 	return fn(principal.SystemActing(ctx, drillActor), continuity.NewStore(db))
 }
 

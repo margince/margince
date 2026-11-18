@@ -28,6 +28,7 @@ import (
 
 // TestAConfirmationRestsOnALiveLink is the lane's admit case.
 func TestAConfirmationRestsOnALiveLink(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.issueLinkRow(t, LinkRecordConfirmation, time.Now().Add(72*time.Hour), nil)
 
@@ -52,6 +53,7 @@ func TestAConfirmationRestsOnALiveLink(t *testing.T) {
 // TestAClaimedConfirmationWithNoLinkSupportsNothing is the refusal case, and it
 // is the one that matters: without it the category is a bypass.
 func TestAClaimedConfirmationWithNoLinkSupportsNothing(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 
 	got := e.resolve(t, commsauthz.Request{Context: commsauthz.CategoryRecordConfirmation})
@@ -66,6 +68,7 @@ func TestAClaimedConfirmationWithNoLinkSupportsNothing(t *testing.T) {
 // TestASpentLinkNoLongerSupportsAConfirmation — a link already followed is not
 // evidence for a second mail.
 func TestASpentLinkNoLongerSupportsAConfirmation(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	consumed := time.Now().Add(-time.Hour)
 	e.issueLinkRow(t, LinkRecordConfirmation, time.Now().Add(72*time.Hour), &consumed)
@@ -81,6 +84,7 @@ func TestASpentLinkNoLongerSupportsAConfirmation(t *testing.T) {
 // TestAnExpiredLinkNoLongerSupportsAConfirmation — a dead link makes the mail a
 // dead end for whoever receives it.
 func TestAnExpiredLinkNoLongerSupportsAConfirmation(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.issueLinkRow(t, LinkRecordConfirmation, time.Now().Add(-time.Hour), nil)
 
@@ -96,6 +100,7 @@ func TestAnExpiredLinkNoLongerSupportsAConfirmation(t *testing.T) {
 // different questions and arrive in different mails, so one must not evidence
 // the other.
 func TestAConfirmationLinkDoesNotSupportTheOtherKind(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.issueLinkRow(t, LinkRecordConfirmation, time.Now().Add(72*time.Hour), nil)
 
@@ -144,6 +149,7 @@ func plantNarrowObjection(t *testing.T, e *resolveEnv, contact ids.ContactID) {
 // answer unsupported here — refusing the confirmation the subject is owed
 // because it asked the wrong question of the wrong kind of row.
 func TestANarrowObjectionStillOwesTheSubjectLevelAcknowledgement(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	plantNarrowObjection(t, e, e.contact)
 
@@ -165,6 +171,7 @@ func TestANarrowObjectionStillOwesTheSubjectLevelAcknowledgement(t *testing.T) {
 // mistake — is caught here instead of by a contact receiving mail about a
 // refusal they never made.
 func TestNoLiveStopOwesNoAcknowledgement(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 
 	got := e.resolve(t, commsauthz.Request{Context: commsauthz.CategoryOptoutConfirmation})
@@ -201,6 +208,7 @@ func withdrawThroughThePress(t *testing.T, e *resolveEnv, key string, class Clas
 // withdraws a marketing purpose and records no suppression, and Decree 91/2020
 // Art. 20 owes it an acknowledgement all the same.
 func TestAWithdrawnMarketingPurposeOwesAnAcknowledgement(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	withdrawThroughThePress(t, e, "press-newsletter", ClassMarketing)
 
@@ -215,6 +223,7 @@ func TestAWithdrawnMarketingPurposeOwesAnAcknowledgement(t *testing.T) {
 // contact's own enquiries are not advertising, so withdrawing them is no
 // refusal the acknowledgement could confirm.
 func TestAWithdrawnCorrespondencePurposeOwesNoAcknowledgement(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	withdrawThroughThePress(t, e, "press-replies", ClassBusinessCorrespondence)
 
@@ -264,6 +273,7 @@ func plantLeadStop(t *testing.T, e *resolveEnv, kind string, revoked bool) ids.U
 
 // A lead's live objection is the evidence its receipt rests on.
 func TestALeadsLiveObjectionOwesAnAcknowledgement(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	lead := plantLeadStop(t, e, commsauthz.ReasonObjection, false)
 
@@ -276,6 +286,7 @@ func TestALeadsLiveObjectionOwesAnAcknowledgement(t *testing.T) {
 
 // A lead with no stop, a lifted one, or one that refused nothing is owed none.
 func TestALeadWithNoStandingRefusalOwesNoAcknowledgement(t *testing.T) {
+	t.Parallel()
 	for name, plant := range map[string]struct {
 		kind    string
 		revoked bool
@@ -297,6 +308,7 @@ func TestALeadWithNoStandingRefusalOwesNoAcknowledgement(t *testing.T) {
 // A live restriction is evidence for the notice of its lift alone. An ordinary
 // privacy notice to a restricted contact still needs its own live link.
 func TestARestrictionIsNoEvidenceForAnOrdinaryPrivacyNotice(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	if _, err := e.owner.Exec(context.Background(), `
 		INSERT INTO communication_suppression (contact_id, kind, source, captured_by, decided_by_level)

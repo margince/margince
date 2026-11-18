@@ -24,6 +24,7 @@ import (
 )
 
 func TestTheReviewPackCarriesTheContractsTheRequesterCanRead(t *testing.T) {
+	t.Parallel()
 	ctx, db, tag := captureWorkspace(t)
 	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blobstore.NewMemory()))
 	dealID := seedDealForFiles(ctx, t, db)

@@ -20,6 +20,7 @@ import (
 )
 
 func TestProjectPhaseApprovalDescribesTheActualWriter(t *testing.T) {
+	t.Parallel()
 	for _, reopen := range []bool{false, true} {
 		for _, rest := range []bool{false, true} {
 			t.Run(fmt.Sprintf("reopen=%t/rest=%t", reopen, rest), func(t *testing.T) {
@@ -96,6 +97,7 @@ func TestProjectPhaseApprovalDescribesTheActualWriter(t *testing.T) {
 }
 
 func TestProjectPhaseApprovalRefusesIncompleteAndChangedEffects(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct{ name, phase, reason, state string }{
 		{"unknown phase", "unsupported", "Reason", "incomplete"},
 		{"missing close reason", "closed", " ", "incomplete"},

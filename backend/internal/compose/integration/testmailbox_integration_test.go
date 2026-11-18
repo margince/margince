@@ -220,6 +220,7 @@ func (p *preflightEnv) dispatchTestMailboxOnce(t *testing.T, deliveryID ids.UUID
 }
 
 func TestTestMailboxConnectRefusedWhenTheFlagIsUnset(t *testing.T) {
+	t.Parallel()
 	// setupPreflightWithoutGoogleApp still wires a registry (WithKeyvault
 	// builds one) but never sets AllowTestMailbox, so test_mailbox is not
 	// registered on it — the same 422 an unknown provider gets.
@@ -231,6 +232,7 @@ func TestTestMailboxConnectRefusedWhenTheFlagIsUnset(t *testing.T) {
 }
 
 func TestTestMailboxFullLoop(t *testing.T) {
+	t.Parallel()
 	p := setupTestMailboxEnv(t)
 
 	status, connectionID := p.connectTestMailbox(t)

@@ -16,6 +16,7 @@ import (
 )
 
 func TestDisqualificationPreviewRequiresTheWritersRowAuthority(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	lead, inserted, err := e.store.CreateLead(ctx, CreateLeadInput{FullName: new("Shared lead"), Source: "manual", OwnerID: new(ids.From[ids.UserKind](e.otherRep))})

@@ -26,6 +26,7 @@ import (
 )
 
 func TestSuggestedTaskReceiptsReachTheHTTPAndToolWriters(t *testing.T) {
+	t.Parallel()
 	for _, transport := range []string{"http", "tool"} {
 		for _, stale := range []bool{false, true} {
 			t.Run(transport+map[bool]string{false: "/current", true: "/changed"}[stale], func(t *testing.T) {
@@ -90,6 +91,7 @@ func TestSuggestedTaskReceiptsReachTheHTTPAndToolWriters(t *testing.T) {
 }
 
 func TestTheServedExtensionRejectsReceiptWritesInItsWeakTransaction(t *testing.T) {
+	t.Parallel()
 	e := setupVerdicts(t)
 	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	at := time.Date(2026, 10, 12, 9, 0, 0, 0, time.UTC)
@@ -119,6 +121,7 @@ func TestTheServedExtensionRejectsReceiptWritesInItsWeakTransaction(t *testing.T
 }
 
 func TestExhaustedSuggestedTaskSerializationReturnsAConflictWithoutWrites(t *testing.T) {
+	t.Parallel()
 	e := setupVerdicts(t)
 	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	at := time.Date(2026, 10, 12, 9, 0, 0, 0, time.UTC)
@@ -136,11 +139,6 @@ func TestExhaustedSuggestedTaskSerializationReturnsAConflictWithoutWrites(t *tes
  BEGIN IF NEW.kind='task' THEN RAISE EXCEPTION USING ERRCODE='40001',MESSAGE='demo serialization failure'; END IF; RETURN NEW; END $$`); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() {
-		if _, err := owner.Exec(context.Background(), "DROP TRIGGER IF EXISTS reject_demo_task ON activity; DROP FUNCTION IF EXISTS reject_demo_task()"); err != nil {
-			t.Errorf("remove own database failure fixture: %v", err)
-		}
-	})
 	if _, err := owner.Exec(t.Context(), "CREATE TRIGGER reject_demo_task BEFORE INSERT ON activity FOR EACH ROW EXECUTE FUNCTION reject_demo_task()"); err != nil {
 		t.Fatal(err)
 	}

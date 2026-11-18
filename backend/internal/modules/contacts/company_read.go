@@ -44,7 +44,7 @@ func (s *Store) GetCompany(ctx context.Context, id ids.CompanyID, archived store
 	}
 	var out crmcontracts.Company
 	err = s.tx(ctx, func(tx pgx.Tx) (err error) {
-		out, err = getCompanyInTx(ctx, tx, id, archived, active)
+		out, err = getCompanyInTx(s.withRollupAsOf(ctx), tx, id, archived, active)
 		return err
 	})
 	return out, err
@@ -62,7 +62,7 @@ func (s *Store) GetCompany(ctx context.Context, id ids.CompanyID, archived store
 func (s *Store) GetCompanyTx(ctx context.Context, tx pgx.Tx, id ids.CompanyID,
 	archived storekit.ArchivedFilter, active CustomColumns,
 ) (crmcontracts.Company, error) {
-	return getCompanyInTx(ctx, tx, id, archived, active.cols)
+	return getCompanyInTx(s.withRollupAsOf(ctx), tx, id, archived, active.cols)
 }
 
 // getCompanyInTx is the shared body of the store-opened and
@@ -80,7 +80,7 @@ func getCompanyInTx(ctx context.Context, tx pgx.Tx, id ids.CompanyID,
 	// Sampled once for this read. The open-deal count and the pipeline total
 	// come from one rollup row read at this date. A response never pairs a
 	// count from one FX day with a total from the next.
-	asOf := rollupAsOf()
+	asOf := rollupAsOf(ctx)
 	// The contact count, on the single read too, so the page a list row opens
 	// into agrees with the row. Attached here rather than in readCompany: a
 	// write's before-image has no use for it.

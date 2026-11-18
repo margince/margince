@@ -103,6 +103,7 @@ func (f *justInFixture) justIn(t *testing.T, seat, contact ids.UUID) []ids.UUID 
 // Just in line shows it to that colleague alone, as the Worklist does. Mail
 // addressed to no seat and a chat message stay on the record for every reader.
 func TestJustInShowsOnlyTheReadersOwnUnansweredMail(t *testing.T) {
+	t.Parallel()
 	f := newJustInFixture(t)
 	contact := f.record(t)
 	repsMail := f.inbound(t, contact, "email", f.at, []ids.UUID{f.e.Rep1}, nil)
@@ -128,6 +129,7 @@ func TestJustInShowsOnlyTheReadersOwnUnansweredMail(t *testing.T) {
 // A mail is the one seat's in its To line. Two seats there make it nobody's,
 // so both see it. A seat only in Cc does not make it theirs.
 func TestJustInNamesTheSoleSeatInTheToLine(t *testing.T) {
+	t.Parallel()
 	f := newJustInFixture(t)
 	rep, admin, unconnected := f.e.Rep1, f.e.AdminUser, f.e.Rep2
 	for _, tc := range []struct {
@@ -156,6 +158,7 @@ func TestJustInNamesTheSoleSeatInTheToLine(t *testing.T) {
 // A colleague's newer mail must not take that place from the reader's own,
 // which a filter applied after the limit would let it do.
 func TestTheWriteButtonRepliesToTheReadersOwnWaitingThread(t *testing.T) {
+	t.Parallel()
 	f := newJustInFixture(t)
 	contact := f.record(t)
 	own := f.inbound(t, contact, "email", f.at, []ids.UUID{f.e.Rep1}, nil)

@@ -31,6 +31,7 @@ import (
 // here. Otherwise a fresh installation would score differently than the unit
 // tests say.
 func TestLeadOriginSeedMatchesTheScorerFixture(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	var seeded OriginIntents
 	if err := e.store.tx(e.ctx, func(tx pgx.Tx) (err error) {
@@ -57,6 +58,7 @@ func TestLeadOriginSeedMatchesTheScorerFixture(t *testing.T) {
 }
 
 func TestLeadSourceCRUDRefusesWhatTheContractPromises(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	created, err := e.store.CreateLeadSource(e.ctx, CreateLeadSourceInput{Label: "Trade show", Intent: SourceIntentHigh})
 	if err != nil {
@@ -117,6 +119,7 @@ func TestLeadSourceCRUDRefusesWhatTheContractPromises(t *testing.T) {
 // create and on correction, and a source value never moves the score. The list
 // filter and the counts still read the source column as before.
 func TestLeadSourceListNoLongerGovernsWritesOrTheScore(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	list, err := e.store.ListLeadSources(e.ctx)
 	if err != nil {
@@ -132,16 +135,6 @@ func TestLeadSourceListNoLongerGovernsWritesOrTheScore(t *testing.T) {
 	if _, err := e.store.UpdateLeadSource(e.ctx, ids.UUID(crawl.Id), UpdateLeadSourceInput{Active: &inactive}); err != nil {
 		t.Fatal(err)
 	}
-	// Reset keeps the source table; the adopted family is in use, so the store refuses its delete.
-	t.Cleanup(func() {
-		active := true
-		if _, err := e.store.UpdateLeadSource(e.ctx, ids.UUID(crawl.Id), UpdateLeadSourceInput{Active: &active}); err != nil {
-			t.Errorf("reactivating crawl: %v", err)
-		}
-		if _, err := e.owner.Exec(context.Background(), `DELETE FROM lead_source WHERE key = 'connector:apollo'`); err != nil {
-			t.Errorf("removing the adopted connector family: %v", err)
-		}
-	})
 	email := "vocab@example.test"
 	if _, _, err := e.store.CreateLead(e.ctx, CreateLeadInput{Email: &email, Source: "crawl"}); err != nil {
 		t.Fatalf("create with an inactive source err = %v, want it accepted: the list no longer governs writes", err)
@@ -273,6 +266,7 @@ func TestLeadSourceListNoLongerGovernsWritesOrTheScore(t *testing.T) {
 // Disqualifying records the reason and note on the lead, refuses a reason
 // that is not active, and the reason's lead_count and RESTRICT delete follow.
 func TestDisqualifyRecordsAnActiveReason(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	reasons, err := e.store.ListLeadDisqualifyReasons(e.ctx)
 	if err != nil {
@@ -322,6 +316,7 @@ func TestDisqualifyRecordsAnActiveReason(t *testing.T) {
 // the case where the key has to be right: the row is gone, so the event is the
 // only thing naming what a subscriber should drop.
 func TestEveryLeadVocabularyMutationPublishesItsChange(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 
 	published := func(eventType string) []string {
@@ -399,6 +394,7 @@ func TestEveryLeadVocabularyMutationPublishesItsChange(t *testing.T) {
 // the approval was consumed, not when the disqualify lands. A lead edited in
 // that window must lose to the compare rather than to timing.
 func TestDisqualifyRefusesAVersionThePinNoLongerNames(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	lead := e.seedLead(t, "pinned@example.test")
 
@@ -430,6 +426,7 @@ func TestDisqualifyRefusesAVersionThePinNoLongerNames(t *testing.T) {
 // does not spell the call the same way — which is what lets the unapproved
 // static-tier path keep working unchanged.
 func TestDisqualifyWithNoPinIsUnconditioned(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	lead := e.seedLead(t, "unpinned@example.test")
 
@@ -445,6 +442,7 @@ func TestDisqualifyWithNoPinIsUnconditioned(t *testing.T) {
 // A label names one reason, compared trimmed and case-folded: two spellings of
 // one reason would split a report on why leads were dropped.
 func TestADisqualifyReasonLabelIsHeldOnce(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	_, err := e.store.CreateLeadDisqualifyReason(e.ctx, CreateLeadDisqualifyReasonInput{Label: " no budget "})
 	if !errors.Is(err, apperrors.ErrConflict) {
@@ -458,12 +456,6 @@ func TestADisqualifyReasonLabelIsHeldOnce(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create reason: %v", err)
 	}
-	// Reset keeps the reason table, so the row would outlive this test.
-	t.Cleanup(func() {
-		if err := e.store.DeleteLeadDisqualifyReason(e.ctx, ids.UUID(custom.Id)); err != nil {
-			t.Errorf("removing the custom reason: %v", err)
-		}
-	})
 	if _, err := e.store.CreateLeadDisqualifyReason(e.ctx, CreateLeadDisqualifyReasonInput{Label: " procurement FREEZE "}); !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("a second spelling of a custom reason answered %v, want a conflict", err)
 	}

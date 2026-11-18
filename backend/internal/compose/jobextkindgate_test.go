@@ -45,14 +45,10 @@ func gateProbeDecl() extension.JobDeclaration {
 	}
 }
 
-// composeProbeJob registers one served extension job into this process's
-// composed set and restores the empty set afterwards. The set is process-wide (a
-// boot binding), so a test that left it behind would compose a phantom job into
-// every later test in this package — including the census tests, which would
-// then measure a fleet nobody deployed.
-func composeProbeJob(t *testing.T, d extension.JobDeclaration) {
+// composeProbeJob composes one served extension job.
+func composeProbeJob(t *testing.T, d extension.JobDeclaration) *Extensions {
 	t.Helper()
-	err := RegisterExtensions(
+	composed, err := RegisterExtensions(
 		[]extension.Extension{{
 			Name:        extension.Name(d.Unit),
 			Version:     "0.1.0",
@@ -65,14 +61,7 @@ func composeProbeJob(t *testing.T, d extension.JobDeclaration) {
 	if err != nil {
 		t.Fatalf("RegisterExtensions: %v", err)
 	}
-	t.Cleanup(func() {
-		setComposedJobs(nil)
-		setComposedTools(nil)
-		setComposedVerbs(nil)
-		if err := jobs.RegisterComposed(nil); err != nil {
-			t.Errorf("restoring the composed job table: %v", err)
-		}
-	})
+	return composed
 }
 
 // TestTheJobsGateFamilyAdmitsARegisteredExtensionKind is the whole family at
@@ -83,18 +72,18 @@ func composeProbeJob(t *testing.T, d extension.JobDeclaration) {
 // than only that it found something.
 func TestTheJobsGateFamilyAdmitsARegisteredExtensionKind(t *testing.T) {
 	d := gateProbeDecl()
-	composeProbeJob(t, d)
+	composed := composeProbeJob(t, d)
 
 	// Precondition, not decoration: if the declaration table did not gain the
 	// kinds, every arm below would agree about nothing and the census would pass
 	// for the wrong reason.
 	for _, kind := range []string{d.DispatcherKind(), d.ChildKind()} {
-		if _, declared := jobs.SpecFor(kind); !declared {
+		if _, declared := composed.declaredJobs().SpecFor(kind); !declared {
 			t.Fatalf("%s is not in the declaration table after RegisterExtensions — the composed set never registered", kind)
 		}
 	}
 
-	census, err := NewJobCensus()
+	census, err := jobCensusOf(composed)
 	if err != nil {
 		t.Fatalf("NewJobCensus: %v", err)
 	}
@@ -117,17 +106,18 @@ func TestTheJobsGateFamilyAdmitsARegisteredExtensionKind(t *testing.T) {
 // and send the reader to api/jobs.yaml, which does not name them and never will.
 func TestTheRegistrySPairingCheckAdmitsAComposedKind(t *testing.T) {
 	d := gateProbeDecl()
-	composeProbeJob(t, d)
+	cfg := censusJobConfig()
+	cfg.Extensions = composeProbeJob(t, d)
 
-	reg, _ := wireJobs(nil, discardLogger(), censusJobConfig())
+	reg, _ := wireJobs(nil, discardLogger(), cfg)
 	if err := reg.everyKindIsRegisteredWithItsDeclaredType(); err != nil {
 		t.Fatalf("the boot-time pairing check refuses a composed kind: %v", err)
 	}
-	if findings := misfiledKinds(reg.wired); len(findings) != 0 {
+	if findings := misfiledKinds(reg.jobTable, reg.wired); len(findings) != 0 {
 		t.Errorf("misfiledKinds reports %v over a composed set", findings)
 	}
-	if err := jobs.MustBeTotal(reg.kinds); err != nil {
-		t.Errorf("MustBeTotal refuses a boot whose composed kinds were declared through RegisterComposed: %v", err)
+	if err := reg.jobTable.MustBeTotal(reg.kinds); err != nil {
+		t.Errorf("MustBeTotal refuses a boot whose composed kinds the composition declared: %v", err)
 	}
 }
 
@@ -170,9 +160,9 @@ func TestAComposedDispatcherPublishesTheQueueItsRowsActuallyLandOn(t *testing.T)
 	if _, built := jobs.DeclaredQueues()[d.Queue]; !built {
 		t.Fatalf("%s is not a queue this installation builds — pick another non-default pool", d.Queue)
 	}
-	composeProbeJob(t, d)
+	table := composeProbeJob(t, d).declaredJobs()
 
-	dispatcher, ok := jobs.SpecFor(d.DispatcherKind())
+	dispatcher, ok := table.SpecFor(d.DispatcherKind())
 	if !ok {
 		t.Fatalf("%s is not declared", d.DispatcherKind())
 	}
@@ -191,7 +181,7 @@ func TestAComposedDispatcherPublishesTheQueueItsRowsActuallyLandOn(t *testing.T)
 		t.Errorf("the tick inserts on queue %q while the declaration publishes %q", opts.Queue, dispatcher.Queue)
 	}
 
-	child, ok := jobs.SpecFor(d.ChildKind())
+	child, ok := table.SpecFor(d.ChildKind())
 	if !ok {
 		t.Fatalf("%s is not declared", d.ChildKind())
 	}

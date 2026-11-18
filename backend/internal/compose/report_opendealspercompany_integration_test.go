@@ -21,6 +21,7 @@ import (
 )
 
 func TestOpenDealsPerCompanyCountsAnUnownedDealForATeamManager(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	companyID := e.seedID(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Unowned Co', 'manual', 'human:x')`)
 	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, company_id, amount_minor, currency, source, captured_by)

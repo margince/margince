@@ -96,6 +96,7 @@ func relationshipOf(t *testing.T, e *integration.Env, acct quietAccount) *crmcon
 }
 
 func TestAMeetingKeepsTheRelationshipOffAtRisk(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name      string
 		meetingAt func(now time.Time) time.Time
@@ -132,6 +133,7 @@ func TestAMeetingKeepsTheRelationshipOffAtRisk(t *testing.T) {
 // quiet. The meeting is the last one met, the last contact, and the contact's
 // last interaction for strength.
 func TestAPastMeetingNobodyReportedKeepsTheAccountInTouch(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	acct := seedQuietAccount(t, e)
 	metAt := acct.now.AddDate(0, 0, -3).Truncate(time.Second)
@@ -160,6 +162,7 @@ func TestAPastMeetingNobodyReportedKeepsTheAccountInTouch(t *testing.T) {
 // contact, and a canceled one is not contact at all — for the company rating
 // and for the contact strength fold alike.
 func TestAnOldOrCanceledMeetingLeavesTheRelationshipAtRisk(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	acct := seedQuietAccount(t, e)
 	captureMeetingWith(t, e, acct.contact, "evt-old-review", acct.now.AddDate(0, 0, -40))
@@ -197,6 +200,7 @@ func TestAnOldOrCanceledMeetingLeavesTheRelationshipAtRisk(t *testing.T) {
 // we had, marked held or not; a canceled one is not; and a row marked held
 // but dated ahead is not a booking to keep the account off at risk.
 func TestAMeetingCountsOnlyAsWhatItsStatusAndTimeSay(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name   string
 		status string
@@ -241,6 +245,7 @@ func TestAMeetingCountsOnlyAsWhatItsStatusAndTimeSay(t *testing.T) {
 // A reader who may see the account's contacts but not its activity gets no
 // meeting dates, and a rating that cannot reveal a meeting through its reason.
 func TestHealthWithoutTheActivityGrantNamesNoMeeting(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	acct := seedQuietAccount(t, e)
 	captureMeetingWith(t, e, acct.contact, "evt-hidden-review", acct.now.AddDate(0, 0, -21))
@@ -271,6 +276,7 @@ func TestHealthWithoutTheActivityGrantNamesNoMeeting(t *testing.T) {
 // A message dated ahead of the read, scheduled or mis-stamped, is not their
 // last word: the rating and the strip both read their newest real message.
 func TestAFutureDatedMessageHidesNotTheirLastRealOne(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	acct := seedQuietAccount(t, e)
 	inbound := "inbound"

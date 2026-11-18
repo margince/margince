@@ -27,13 +27,14 @@ const (
 	otherType    = "ext:acme-pack:distributor"
 )
 
-func declareAcmeTypes(t *testing.T) {
+// setupTyped is setupDedupe over a store whose composition declares acme-pack's types.
+func setupTyped(t *testing.T) *dedupeEnv {
 	t.Helper()
-	companytypes.Reset()
-	t.Cleanup(companytypes.Reset)
-	companytypes.Register("acme-pack", []extension.CompanyType{
+	e := setupDedupe(t)
+	e.store.WithCompanyTypes(companytypes.Of([]extension.Extension{{Name: "acme-pack", CompanyTypes: []extension.CompanyType{
 		{Type: "reseller", Label: "Reseller"}, {Type: "distributor", Label: "Distributor"},
-	})
+	}}}))
+	return e
 }
 
 func newTypedCompany(ctx context.Context, t *testing.T, e *dedupeEnv, name string) ids.CompanyID {
@@ -54,8 +55,8 @@ func wantFieldError(t *testing.T, err error, field, code string) {
 }
 
 func TestADeclaredExtensionTypeLandsInItsOwnFieldAndNotCoreList(t *testing.T) {
-	declareAcmeTypes(t)
-	e := setupDedupe(t)
+	t.Parallel()
+	e := setupTyped(t)
 	ctx := e.as()
 	id := newTypedCompany(ctx, t, e, "Reseller GmbH")
 
@@ -89,8 +90,8 @@ func TestADeclaredExtensionTypeLandsInItsOwnFieldAndNotCoreList(t *testing.T) {
 }
 
 func TestAnExtensionTypeNoUnitDeclaredIsRefused(t *testing.T) {
-	declareAcmeTypes(t)
-	e := setupDedupe(t)
+	t.Parallel()
+	e := setupTyped(t)
 	ctx := e.as()
 	id := newTypedCompany(ctx, t, e, "Undeclared GmbH")
 
@@ -111,8 +112,8 @@ func TestAnExtensionTypeNoUnitDeclaredIsRefused(t *testing.T) {
 }
 
 func TestACoreListStillRefusesAnExtensionValue(t *testing.T) {
-	declareAcmeTypes(t)
-	e := setupDedupe(t)
+	t.Parallel()
+	e := setupTyped(t)
 	ctx := e.as()
 	id := newTypedCompany(ctx, t, e, "Closed List GmbH")
 
@@ -122,8 +123,8 @@ func TestACoreListStillRefusesAnExtensionValue(t *testing.T) {
 }
 
 func TestEachSetIsReplacedWithoutTouchingTheOther(t *testing.T) {
-	declareAcmeTypes(t)
-	e := setupDedupe(t)
+	t.Parallel()
+	e := setupTyped(t)
 	ctx := e.as()
 	id := newTypedCompany(ctx, t, e, "Two Sets GmbH")
 
@@ -150,8 +151,8 @@ func TestEachSetIsReplacedWithoutTouchingTheOther(t *testing.T) {
 }
 
 func TestAnUnchangedSaveKeepsAnExtensionTypeItsUnitNoLongerDeclares(t *testing.T) {
-	declareAcmeTypes(t)
-	e := setupDedupe(t)
+	t.Parallel()
+	e := setupTyped(t)
 	ctx := e.as()
 	id := newTypedCompany(ctx, t, e, "Orphaned GmbH")
 	ext := []string{resellerType}
@@ -159,7 +160,7 @@ func TestAnUnchangedSaveKeepsAnExtensionTypeItsUnitNoLongerDeclares(t *testing.T
 		t.Fatal(err)
 	}
 
-	companytypes.Reset()
+	e.store.WithCompanyTypes(companytypes.Registry{})
 	if _, err := e.store.UpdateCompany(ctx, id, UpdateCompanyInput{ExtensionRelationshipTypes: &ext}); err != nil {
 		t.Fatalf("re-saving the type the company already carries: %v", err)
 	}
@@ -173,8 +174,8 @@ func TestAnUnchangedSaveKeepsAnExtensionTypeItsUnitNoLongerDeclares(t *testing.T
 }
 
 func TestPartnerStillNeedsItsRowWhenAnExtensionTypeIsSet(t *testing.T) {
-	declareAcmeTypes(t)
-	e := setupDedupe(t)
+	t.Parallel()
+	e := setupTyped(t)
 	ctx := asAdmin(e)
 	id := newTypedCompany(ctx, t, e, "Partner Reseller GmbH")
 	if _, err := e.store.UpsertPartner(ctx, UpsertPartnerInput{CompanyID: id, PartnerRole: "hosting"}); err != nil {
@@ -194,8 +195,8 @@ func TestPartnerStillNeedsItsRowWhenAnExtensionTypeIsSet(t *testing.T) {
 }
 
 func TestTheExtensionRelationshipTypeFilterTakesAnExtensionValue(t *testing.T) {
-	declareAcmeTypes(t)
-	e := setupDedupe(t)
+	t.Parallel()
+	e := setupTyped(t)
 	ctx := e.as()
 	typed := newTypedCompany(ctx, t, e, "Filtered In GmbH")
 	other := newTypedCompany(ctx, t, e, "Filtered Out GmbH")

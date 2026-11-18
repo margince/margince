@@ -38,6 +38,7 @@ func liveHeap() uint64 {
 // samples the live heap as each candidate's turn comes; an offer that carried
 // every payload would have all of them reachable at the first sample.
 func TestTheDrainHoldsOneStoredOriginalAtATime(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const (
 		candidates  = 12
@@ -86,6 +87,7 @@ func TestTheDrainHoldsOneStoredOriginalAtATime(t *testing.T) {
 // running beside the pass — is passed over: no marker, no count, no error, and
 // the candidates on either side of it are settled as usual.
 func TestTheDrainPassesOverAnOriginalRemovedBeforeItsTurn(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	first := seedReplayableMail(t, e, "msg-vanish-a", ccMessage)
 	gone := seedReplayableMail(t, e, "msg-vanish-b", ccMessage)
@@ -135,6 +137,7 @@ func TestTheDrainPassesOverAnOriginalRemovedBeforeItsTurn(t *testing.T) {
 // readStoredOriginal answers not-found for a row that does not exist, and the
 // bytes for one that does.
 func TestReadStoredOriginalAnswersWhetherTheRowIsOnFile(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedReplayableMail(t, e, "msg-read", ccMessage)
 	var rawID ids.UUID

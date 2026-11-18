@@ -87,6 +87,7 @@ func offeredForReview(t *testing.T, e *loadEnv, mail ids.UUID, at time.Time) boo
 // A machine's asks_us verdict is offered as a reply owed only on a mail read in
 // full. A mail whose text cannot be checked is neither listed nor taken.
 func TestOnlyAMailReadInFullIsOfferedAsAReplyOwed(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	at := requestInstant.Add(time.Hour)
 	for _, completeness := range []string{"complete", "partial", "unverifiable", "unassessed"} {
@@ -111,6 +112,7 @@ func TestOnlyAMailReadInFullIsOfferedAsAReplyOwed(t *testing.T) {
 // A human who reviewed the classification read the mail themselves, so their
 // verdict stands on a mail Margince can no longer check.
 func TestAHumanReviewedVerdictIsOfferedOnAMailThatCannotBeChecked(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	mail := seedEmailRequest(t, e, "Could you send the contract?", "commitment", OwedVerdictInformsUs)
 	reviewer := e.asSeat(e.rep)
@@ -127,6 +129,7 @@ func TestAHumanReviewedVerdictIsOfferedOnAMailThatCannotBeChecked(t *testing.T) 
 // A reminder taken before the mail turned unverifiable stays its holder's: the
 // holder can still replay the take.
 func TestAReminderTakenBeforeTheTextWasLostStillReplays(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	mail := seedEmailRequest(t, e, "Please send slots", "meeting", OwedVerdictAsksUs)
 	holder := e.asSeat(e.rep)
@@ -147,6 +150,7 @@ func TestAReminderTakenBeforeTheTextWasLostStillReplays(t *testing.T) {
 // An open reminder on a request the settlement pass will never judge says so,
 // and names our last reply in the conversation.
 func TestAReminderMarginceCannotCheckSaysSoAndNamesOurReply(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	mail := seedEmailRequest(t, e, "Please send the offer", "commitment", OwedVerdictAsksUs)
 	taken, _, err := storeKnowing(e).LogActivity(e.asSeat(e.other), LogActivityInput{Kind: "task", RequestActivityID: &mail, Source: "manual"})
@@ -201,6 +205,7 @@ func ourReplyTo(t *testing.T, e *loadEnv, request ids.UUID, at time.Time) ids.UU
 // Our last reply is our own mail. A call, a held meeting or the customer's
 // later mail answers the request too, and none of them is a reply we sent.
 func TestOurLastReplyIsNeverACallAMeetingOrTheirMail(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	mail := seedEmailRequestFiledUnder(t, e, "Please send the offer", "commitment", OwedVerdictAsksUs, requestCounterparty,
@@ -313,6 +318,7 @@ func citedSettled(t *testing.T, e *loadEnv, mail ids.UUID, at time.Time) bool {
 // stands. On a mail Margince cannot check, the answer settles the citation,
 // unless a human reviewed the verdict.
 func TestACitedRequestStaysOpenOnlyWhileItsVerdictStands(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	at := requestInstant.Add(24 * time.Hour)
 	for _, completeness := range []string{"complete", "partial", "unverifiable"} {

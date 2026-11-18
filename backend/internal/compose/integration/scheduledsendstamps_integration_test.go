@@ -17,6 +17,7 @@ import (
 // row was written. A client renders the 201 directly, so a zero time there shows
 // a message created in the year 1.
 func TestASchedulingAnswersWithTheStampsTheRowHolds(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 

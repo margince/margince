@@ -23,6 +23,7 @@ import (
 // the read scope, writes refused without the write scope, revocation as
 // the kill switch.
 func TestEndToEnd_passportBearerSurface(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -111,6 +112,7 @@ func TestEndToEnd_passportBearerSurface(t *testing.T) {
 // releases — the agent's own attempt to approve it is refused; human-only
 // config ops reject the agent outright.
 func TestEndToEnd_agentWritesGovernedOnREST(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -220,6 +222,7 @@ func TestEndToEnd_agentWritesGovernedOnREST(t *testing.T) {
 // bootstrap admin is a full seat that mutates; flipping the workspace to
 // read seats turns the same authenticated call into a 403.
 func TestEndToEnd_readSeatCannotMutate(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 

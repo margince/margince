@@ -14,6 +14,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/sweepreach"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -59,6 +60,7 @@ func linksOf(ctx context.Context, t *testing.T, tx pgx.Tx, contact ids.UUID) int
 }
 
 func TestErasingAContactRemovesItsLinksAndOnlyThose(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	tx := subjectColumnsTx(ctx, t)
 	s := seedLinkedSubjects(ctx, t, tx)
@@ -78,10 +80,11 @@ func TestErasingAContactRemovesItsLinksAndOnlyThose(t *testing.T) {
 }
 
 func TestAnonymizingAContactByRetentionRemovesItsLinks(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	tx := subjectColumnsTx(ctx, t)
 	s := seedLinkedSubjects(ctx, t, tx)
-	if err := purgeAnonymizedContactJudgments(ctx, tx, s.erased, nil); err != nil {
+	if err := purgeAnonymizedContactJudgments(ctx, tx, sweepreach.Set{}, s.erased, nil); err != nil {
 		t.Fatalf("purging the anonymized contact's judgments: %v", err)
 	}
 	if n := linksOf(ctx, t, tx, s.erased); n != 0 {

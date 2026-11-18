@@ -79,6 +79,7 @@ func (w *failingFlushWriter) FlushError() error {
 // runs, and a store that then also fails the write-back (memory, seeded
 // with real bytes) still leaves the response streamLogo already decided.
 func TestCompanyLogoLogsRatherThanFailsWhenTheFlushErrors(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	blob := blobstore.NewMemory()
 	handlers := contacts.NewHandlers(e.DB()).WithBlobstore(blob)
@@ -124,6 +125,7 @@ func seedLoggedCompany(ctx context.Context, t *testing.T, e *Env, blob blobstore
 }
 
 func TestCompanyLogoStreamsTheStoredMarkUnderNonExecutableHeaders(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	blob := blobstore.NewMemory()
 	handlers := contacts.NewHandlers(e.DB()).WithBlobstore(blob)
@@ -174,6 +176,7 @@ func TestCompanyLogoStreamsTheStoredMarkUnderNonExecutableHeaders(t *testing.T) 
 // read the wide one would stream a real, correct-looking PNG of the wrong
 // picture, which no header or status check can see.
 func TestTheLogoIconEndpointStreamsTheIconSlotAndNotTheWideOne(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	blob := blobstore.NewMemory()
 	handlers := contacts.NewHandlers(e.DB()).WithBlobstore(blob)
@@ -195,6 +198,7 @@ func TestTheLogoIconEndpointStreamsTheIconSlotAndNotTheWideOne(t *testing.T) {
 }
 
 func TestCompanyLogoRemovesLegacyTransparentCanvasAtTheDisplayBoundary(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	blob := blobstore.NewMemory()
 	ctx := e.Admin()
@@ -231,6 +235,7 @@ func TestCompanyLogoRemovesLegacyTransparentCanvasAtTheDisplayBoundary(t *testin
 // computes a crop writes it back over the object it read, so this proves the
 // SECOND read finds already-tight bytes and needs no further write.
 func TestCompanyLogoWritesBackATrimmedLegacyLogoSoTheNextReadNeedsNoCrop(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	blob := newCountingBlobstore()
 	handlers := contacts.NewHandlers(e.DB()).WithBlobstore(blob)
@@ -303,6 +308,7 @@ func TestCompanyLogoWritesBackATrimmedLegacyLogoSoTheNextReadNeedsNoCrop(t *test
 // even opening it in blob storage. countingBlobstore is shared with
 // knowledgeorphan_integration_test.go.
 func TestCompanyLogoAnswers304WithoutTouchingBlobStorageWhenTheClientAlreadyHasIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	blob := newCountingBlobstore()
 	handlers := contacts.NewHandlers(e.DB()).WithBlobstore(blob)
@@ -519,6 +525,7 @@ func waitForNotFound(t *testing.T, blob blobstore.Store, key string) {
 // up one goroutine per reader, all racing to write the identical bytes to the
 // identical key.
 func TestCompanyLogoWriteBackCoalescesConcurrentReadersOfTheSameUntrimmedKey(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	inner := newCountingBlobstore()
 	blob := newGatedBlobstore(inner)
@@ -578,6 +585,7 @@ func TestCompanyLogoWriteBackCoalescesConcurrentReadersOfTheSameUntrimmedKey(t *
 // replace that lands mid-Put gets its own resurrected object collected, not
 // left for nothing to ever reference again.
 func TestCompanyLogoWriteBackCollectsItsOwnObjectWhenAReplaceRacesTheWrite(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	inner := newCountingBlobstore()
 	blob := newGatedBlobstore(inner)
@@ -659,6 +667,7 @@ func TestCompanyLogoWriteBackCollectsItsOwnObjectWhenAReplaceRacesTheWrite(t *te
 // the response is already on the wire, and the object at key still holds the
 // correct, if untrimmed, picture for the next read to try again against.
 func TestCompanyLogoWriteBackLogsRatherThanFailsWhenThePutErrors(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	inner := newCountingBlobstore()
 	blob := newGatedBlobstore(inner)
@@ -730,6 +739,7 @@ func TestCompanyLogoWriteBackLogsRatherThanFailsWhenThePutErrors(t *testing.T) {
 // replacement, so nothing serves the resurrected object; it is logged rather
 // than retried inline.
 func TestCompanyLogoWriteBackLogsRatherThanFailsWhenTheCollectingDeleteErrors(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	inner := newCountingBlobstore()
 	blob := newGatedBlobstore(inner)
@@ -806,6 +816,7 @@ func TestCompanyLogoWriteBackLogsRatherThanFailsWhenTheCollectingDeleteErrors(t 
 }
 
 func TestCompanyLogoIs404WithoutOneAnd501WithoutAnObjectStore(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	blob := blobstore.NewMemory()
 	ctx := e.Admin()
@@ -857,6 +868,7 @@ func TestCompanyLogoIs404WithoutOneAnd501WithoutAnObjectStore(t *testing.T) {
 // url away with nothing failing, and the screen would silently be back to a
 // monogram per row.
 func TestTheCompaniesListCarriesEachRowsLogoURL(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	blob := blobstore.NewMemory()
 	ctx := e.Admin()
@@ -903,6 +915,7 @@ func TestTheCompaniesListCarriesEachRowsLogoURL(t *testing.T) {
 // once must not be left with a weaker promise than one that fetched fresh —
 // that is how the next visit becomes another round trip.
 func TestALogoResponseSaysItsBytesWillNeverChange(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	blob := blobstore.NewMemory()
 	handlers := contacts.NewHandlers(e.DB()).WithBlobstore(blob)

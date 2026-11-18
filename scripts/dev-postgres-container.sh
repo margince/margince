@@ -36,6 +36,8 @@ if [[ $# -ne 1 ]]; then
 fi
 port="$1"
 
+# PG_SERVICE names the compose service, postgres unless the caller asks for
+# postgres-test, the integration lanes' server.
 # The compose service label as well as the port: a container publishing 15432
 # that is not this stack's postgres is somebody else's server, and running the
 # seed inside it is the failure this exists to stop, one host over.
@@ -51,7 +53,7 @@ port="$1"
 # script exists to remove.
 if ! listed="$(docker ps \
   --filter "publish=${port}" \
-  --filter "label=com.docker.compose.service=postgres" \
+  --filter "label=com.docker.compose.service=${PG_SERVICE:-postgres}" \
   --format '{{.ID}} {{.Names}}' 2>&1)"; then
   echo "FAIL: docker could not be asked which container publishes :${port}:" >&2
   printf '  %s\n' "$listed" >&2

@@ -79,6 +79,7 @@ func forecastHistory(t *testing.T, e *Env, at time.Time) forecasting.ConversionH
 // outcome it is helping to predict, which is the circularity the whole
 // sufficiency reading exists to avoid.
 func TestTheConversionRateExcludesThePeriodBeingAssessed(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	st := seedForecastFXPipeline(t, e)
 	at := midQuarter
@@ -107,6 +108,7 @@ func TestTheConversionRateExcludesThePeriodBeingAssessed(t *testing.T) {
 // A deal older than the window is a different business, and counting it would
 // let a rate from four years ago set the pipeline a team is told to build.
 func TestTheConversionRateIgnoresDealsOlderThanItsWindow(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	st := seedForecastFXPipeline(t, e)
 	at := midQuarter
@@ -127,6 +129,7 @@ func TestTheConversionRateIgnoresDealsOlderThanItsWindow(t *testing.T) {
 // entry must be one period's OWN won total. A series that read the same window
 // four times would take a median of one quarter wearing four votes.
 func TestTheComparableSeriesReadsEachPrecedingPeriodSeparately(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	st := seedForecastFXPipeline(t, e)
 	at := midQuarter
@@ -158,6 +161,7 @@ func TestTheComparableSeriesReadsEachPrecedingPeriodSeparately(t *testing.T) {
 // query answering both would make the median the value of everything that
 // closed rather than of what was won.
 func TestAComparablePeriodTotalsOnlyWhatItWon(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	st := seedForecastFXPipeline(t, e)
 	at := midQuarter

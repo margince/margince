@@ -19,6 +19,7 @@ import (
 )
 
 func TestCompanyCounts_ListAndSingleReadAgreeWithTheEdges(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	acme := e.SeedCompany(t, "Acme Counts", nil)
 	quiet := e.SeedCompany(t, "Quiet Counts", nil)
@@ -83,6 +84,7 @@ func TestCompanyCounts_ListAndSingleReadAgreeWithTheEdges(t *testing.T) {
 // is absent from the wire, not zero. The contact count is an edge fact and
 // stays.
 func TestCompanyCounts_UngatedRoleSeesContactsButNoDealCount(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	acme := e.SeedCompany(t, "Gated Counts", nil)
 	staff := e.SeedContact(t, "Works At Gated", nil)
@@ -151,6 +153,7 @@ func TestCompanyCounts_UngatedRoleSeesContactsButNoDealCount(t *testing.T) {
 // contact. The deal count is the account's whole open pipeline, as the
 // company page's tile sums it (PO-EXT-10, founder decision 2026-08-18).
 func TestCompanyCounts_FollowTheCallersRowScope(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	// The account is unowned, so it is visible at every scope tier.
 	acme := e.SeedCompany(t, "Shared Counts", nil)
@@ -218,6 +221,7 @@ func TestCompanyCounts_FollowTheCallersRowScope(t *testing.T) {
 // The object grant comes first: no deal:read, no deal count — even with
 // computed_field:read — and no contact:read, no contact count. Absent, not 0.
 func TestCompanyCounts_ObjectGrantGatesEachCount(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	acme := e.SeedCompany(t, "Grant Gated", nil)
 	perms := rollupCompanyReadPerms(principal.RowScopeAll)

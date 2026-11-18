@@ -20,6 +20,7 @@ import (
 // every connection; a user's own rule binds the connections that user
 // granted, and a colleague's mailbox goes on capturing the same sender.
 func TestAnExclusionKeepsAMessageOutBeforeAnythingIsStored(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	store := capture.NewExclusionStore(e.DB())
@@ -122,6 +123,7 @@ func TestAnExclusionKeepsAMessageOutBeforeAnythingIsStored(t *testing.T) {
 // a dozen senders on a dozen domains, and naming them one at a time is a list
 // nobody finishes.
 func TestAContainerRuleKeepsOutMailFiledWhereTheOwnerRulesOut(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, syncInContainer := env.e, env.syncInContainer
 	store := capture.NewExclusionStore(e.DB())
@@ -169,6 +171,7 @@ func TestAContainerRuleKeepsOutMailFiledWhereTheOwnerRulesOut(t *testing.T) {
 // The database refuses a workspace one too; this is the refusal a human gets,
 // which names the field and says why rather than answering 500.
 func TestAContainerRuleIsTheMailboxOwnersAlone(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	store := capture.NewExclusionStore(e.DB())

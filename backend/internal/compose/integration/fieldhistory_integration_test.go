@@ -90,6 +90,7 @@ func seedAuditDiffRow(t *testing.T, e *Env, entityType string, entityID ids.UUID
 }
 
 func TestFieldHistoryGatesOnReadPermissionAndVisibility(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	// Capture-private to Rep1: a contact is readable by every seat unless
 	// its capture is private, so that is the state the out-of-scope
@@ -117,6 +118,7 @@ func TestFieldHistoryGatesOnReadPermissionAndVisibility(t *testing.T) {
 }
 
 func TestFieldHistoryProjectsDiffsNewestFirst(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contactID := e.SeedContact(t, "Diff Subject", nil)
 	// SeedContact's own create-audit row is stamped at real "now"; the two
@@ -156,6 +158,7 @@ func TestFieldHistoryProjectsDiffsNewestFirst(t *testing.T) {
 }
 
 func TestFieldHistoryActorAndFieldFilters(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contactID := e.SeedContact(t, "Filter Subject", nil)
 	base := time.Now().Add(-time.Minute).UTC().Truncate(time.Microsecond)
@@ -200,6 +203,7 @@ func TestFieldHistoryActorAndFieldFilters(t *testing.T) {
 }
 
 func TestFieldHistoryPaginationPreservesRowBoundaries(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	// SeedCompany's own create audit row (before=nil, after={display_name})
 	// is a real projected third row — create carries honest field images,
@@ -273,6 +277,7 @@ func TestFieldHistoryPaginationPreservesRowBoundaries(t *testing.T) {
 // the generic owner-scoped auth.EnsureVisible, which does not even know
 // the "activity" table.
 func TestFieldHistoryForActivityDispatchesToLinkWalkVisibility(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	// The activity's own visibility rides its link to this contact, which
 	// is capture-private to Rep1 — the state that excludes Rep3 below.
@@ -331,6 +336,7 @@ func TestFieldHistoryForActivityDispatchesToLinkWalkVisibility(t *testing.T) {
 // every caller, including the unbounded admin; only changes made after
 // the scrub project.
 func TestFieldHistoryStopsAtErasureBoundary(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contactID := e.SeedContact(t, "Selma Subject", nil)
 	// Pre-erasure PII images, backdated so the erasure tombstone (stamped
@@ -378,6 +384,7 @@ func TestFieldHistoryStopsAtErasureBoundary(t *testing.T) {
 // erase tombstone, or the erased PII projects straight back out of the
 // twin's field history.
 func TestFieldHistoryErasureBoundsCollateralScrubs(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contactID := e.SeedContact(t, "Selma Subject", nil)
 	const twinEmail = "selma.twin@example.test"
@@ -427,6 +434,7 @@ func TestFieldHistoryErasureBoundsCollateralScrubs(t *testing.T) {
 // counts, export receipts) must not fabricate field entries, while the
 // honest create/update rows around them still project.
 func TestFieldHistoryProjectsOnlyFieldImageVerbs(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contactID := e.SeedContact(t, "Meta Subject", nil)
 	base := time.Now().Add(time.Hour).UTC().Truncate(time.Microsecond)
@@ -472,13 +480,14 @@ func TestFieldHistoryProjectsOnlyFieldImageVerbs(t *testing.T) {
 // projection allowlist admits cannot fabricate field changes that never
 // happened on the record.
 func TestFieldHistoryExcludesRetentionArchiveMeta(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	SeedRetentionPolicies(t, e)
 	_, _, staleDeal, _ := seedOverAgeRecords(t, e)
 
 	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(os.Stderr, nil)))
 	SettleIntoInstall(t, e)
-	if err := svc.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
+	if err := svc.EvaluateInstallation(RetentionPassCtx(context.Background(), e.WS)); err != nil {
 		t.Fatalf("retention pass: %v", err)
 	}
 
@@ -514,6 +523,7 @@ func TestFieldHistoryExcludesRetentionArchiveMeta(t *testing.T) {
 }
 
 func TestFieldHistoryHonestEmptyForVisibleRecordWithNoMatches(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contactID := e.SeedContact(t, "Quiet Subject", nil)
 	ghost := "field_that_never_changed"
@@ -530,6 +540,7 @@ func TestFieldHistoryHonestEmptyForVisibleRecordWithNoMatches(t *testing.T) {
 
 // Enrichment history names only the company columns the real writer changes.
 func TestEnrichmentWritesProjectAsRealColumnDiffs(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 
 	description := "An independent description written by a member."

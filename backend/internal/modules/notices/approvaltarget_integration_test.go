@@ -14,6 +14,7 @@ import (
 // A notice asking for a decision opens the decision, whatever record it was
 // written about; any other notice keeps its record.
 func TestTheCentreOpensTheDecisionAnApprovalNoticeAsksFor(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 	approval := ids.NewV7()
 	asking, err := e.store.Create(e.engineCtx(), NewNotice{

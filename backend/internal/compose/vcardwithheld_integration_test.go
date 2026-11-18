@@ -21,6 +21,7 @@ import (
 // capture event queues nothing for it. TestAMailedCardQueuesItsImport is the
 // other arm: the same trigger queues a card whose bytes were kept.
 func TestAWithheldCardQueuesNoImport(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
 	ctx := e.Admin()

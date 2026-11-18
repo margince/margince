@@ -79,6 +79,7 @@ func skipReasons(skipped []crmcontracts.BulkSkip) map[openapi_types.UUID]crmcont
 }
 
 func TestABulkReassignWritesEachRecordsOwnAuditRowAndEventUnderOneBatch(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	items := seedBulkContacts(t, e, e.Rep1, 5)
 
@@ -112,6 +113,7 @@ func TestABulkReassignWritesEachRecordsOwnAuditRowAndEventUnderOneBatch(t *testi
 }
 
 func TestAPreviewExcludesWhatTheExecutionSkipsAndWritesNothing(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	own := seedBulkContacts(t, e, e.Rep1, 2)
 	colleagues := seedBulkContacts(t, e, e.Rep2, 1)
@@ -174,6 +176,7 @@ func assertReasons(t *testing.T, door string, got, want map[openapi_types.UUID]c
 }
 
 func TestANamedOwnerWhoMayNotOwnRecordsRefusesTheWholeChange(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	items := seedBulkContacts(t, e, e.Rep1, 2)
 	e.WsExec(t, `UPDATE app_user SET status = 'suspended' WHERE id = $1`, e.Rep3)
@@ -192,6 +195,7 @@ func TestANamedOwnerWhoMayNotOwnRecordsRefusesTheWholeChange(t *testing.T) {
 }
 
 func TestTheInstallationsOwnCompanyIsLeftOutOfABulkArchive(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := contacts.NewStore(e.DB()).WithInstallationRenamer(installationRenamer(e.Pool))
 	anchor, err := store.SaveCompany(e.Admin(), contacts.SaveCompanyInput{DisplayName: "Ourselves GmbH"})
@@ -227,6 +231,7 @@ func TestTheInstallationsOwnCompanyIsLeftOutOfABulkArchive(t *testing.T) {
 }
 
 func TestAChangeOfMoreThanTenNeedsItsPreviewsTokenAndTheTokenOpensOneExecution(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	items := seedBulkContacts(t, e, e.Rep1, 12)
 	selection := items[:11]
@@ -274,6 +279,7 @@ func refusedWithCode(err error, code string) bool {
 }
 
 func TestARecordEditedAfterThePreviewIsSkippedNotOverwritten(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	items := seedBulkContacts(t, e, e.Rep1, 2)
 	engine := bulkEngineFor(e)
@@ -301,6 +307,7 @@ func TestARecordEditedAfterThePreviewIsSkippedNotOverwritten(t *testing.T) {
 // A row the database refuses mid-change rolls back to its own savepoint: the
 // change goes on, and the rows around it land.
 func TestARowTheDatabaseRefusesLeavesTheOtherRowsChanged(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	items := seedBulkContacts(t, e, e.Rep1, 3)
 	refused := items[1]
@@ -310,11 +317,6 @@ func TestARowTheDatabaseRefusesLeavesTheOtherRowsChanged(t *testing.T) {
 		ids.UUID(refused.Id))); err != nil {
 		t.Fatalf("installing the refusal: %v", err)
 	}
-	t.Cleanup(func() {
-		if _, err := owner.Exec(context.Background(), `ALTER TABLE contact DROP CONSTRAINT IF EXISTS bulk_test_refuses_one`); err != nil {
-			t.Errorf("removing the refusal: %v", err)
-		}
-	})
 
 	out, err := bulkEngineFor(e).Execute(e.Admin(), bulkChange{
 		recordType: crmcontracts.BulkRecordTypeContact, verb: crmcontracts.BulkVerbArchive, items: items,
@@ -332,6 +334,7 @@ func TestARowTheDatabaseRefusesLeavesTheOtherRowsChanged(t *testing.T) {
 }
 
 func TestADeadlockedAttemptRunsOnceMoreAndNoMore(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	engine := bulkEngineFor(e)
 	deadlock := &pgconn.PgError{Code: "40P01", Message: "deadlock detected"}
@@ -356,6 +359,7 @@ func TestADeadlockedAttemptRunsOnceMoreAndNoMore(t *testing.T) {
 // A caller whose role may not change the record type at all is refused the
 // whole change, rather than told every row is someone else's.
 func TestACallerWithoutTheGrantIsRefusedTheWholeChange(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := contacts.NewStore(e.DB())
 	company, err := store.CreateCompany(e.Admin(), contacts.CreateCompanyInput{DisplayName: "Grantless AG", Source: "manual"})
@@ -377,6 +381,7 @@ func TestACallerWithoutTheGrantIsRefusedTheWholeChange(t *testing.T) {
 // the execution, the execution must not archive B in its place — it may change
 // only what the user was shown.
 func TestAnExecutionNeverChangesARecordItsPreviewExcluded(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := contacts.NewStore(e.DB())
 	first, err := store.CreateCompany(e.Admin(), contacts.CreateCompanyInput{DisplayName: "First GmbH", Source: "manual"})
@@ -442,6 +447,7 @@ func TestAnExecutionNeverChangesARecordItsPreviewExcluded(t *testing.T) {
 // budget left and together do not: exactly one commits, and the counter
 // ends at the limit rather than past it.
 func TestTwoConcurrentChangesCannotBothSpendTheSameRemainder(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	meter := agentvolume.New(redistest.Client(t), agentvolume.Limits{Writes: 30}, agentvolume.DefaultWindow)
 	engine := newBulkEngine(e.DB(), auth.NewGate(nil, auth.WithVolumeMeter(meter)))
@@ -484,6 +490,7 @@ func TestTwoConcurrentChangesCannotBothSpendTheSameRemainder(t *testing.T) {
 // A confirmation nobody spent is deleted once it lapses, by the hourly
 // transport retention pass, whether or not anyone previews again.
 func TestTheRetentionPassDeletesLapsedConfirmationsAndKeepsLiveOnes(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	engine := bulkEngineFor(e)
 	for range 2 {
@@ -509,6 +516,7 @@ func TestTheRetentionPassDeletesLapsedConfirmationsAndKeepsLiveOnes(t *testing.T
 // A reservation for a change that then fails to commit is given back, so the
 // agent is not charged for records that never changed.
 func TestAChangeThatDoesNotCommitGivesItsReservationBack(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	meter := agentvolume.New(redistest.Client(t), agentvolume.Limits{Writes: 30}, agentvolume.DefaultWindow)
 	engine := newBulkEngine(e.DB(), auth.NewGate(nil, auth.WithVolumeMeter(meter)))
@@ -519,11 +527,6 @@ func TestAChangeThatDoesNotCommitGivesItsReservationBack(t *testing.T) {
 		`ALTER TABLE bulk_operation ADD CONSTRAINT bulk_test_refuses_every_batch CHECK (changed_count < 0) NOT VALID`); err != nil {
 		t.Fatalf("installing the refusal: %v", err)
 	}
-	t.Cleanup(func() {
-		if _, err := owner.Exec(context.Background(), `ALTER TABLE bulk_operation DROP CONSTRAINT IF EXISTS bulk_test_refuses_every_batch`); err != nil {
-			t.Errorf("removing the refusal: %v", err)
-		}
-	})
 
 	if _, err := engine.Execute(agent, reassignTo(e.Rep2, items)); err == nil {
 		t.Fatal("the change committed although its batch row was refused")

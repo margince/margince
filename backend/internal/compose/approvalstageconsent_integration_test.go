@@ -27,6 +27,7 @@ import (
 )
 
 func TestAgentSendStagingRefusesConsentAndRollsBackTypedRecipients(t *testing.T) {
+	t.Parallel()
 	for _, kind := range []string{"send_email", "send_company_email"} {
 		for _, rest := range []bool{false, true} {
 			t.Run(kind+map[bool]string{false: "/tool", true: "/rest"}[rest], func(t *testing.T) {
@@ -81,6 +82,7 @@ func TestAgentSendStagingRefusesConsentAndRollsBackTypedRecipients(t *testing.T)
 }
 
 func TestComposedApprovalServiceStillReleasesAStepUp(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	passport := e.SeedPassport(t, integration.OwnerConn(t), "step up")
 	live, err := identity.NewService(e.Pool).AuthenticateAgentByID(sightContext(e), ids.From[ids.PassportKind](passport))
@@ -109,6 +111,7 @@ func TestComposedApprovalServiceStillReleasesAStepUp(t *testing.T) {
 }
 
 func TestAgentInvitationStagingChecksTheAttendeesConsent(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.GrantRole(t, e.Rep1, "admin")
 	passport := e.SeedPassport(t, integration.OwnerConn(t), "invite authority")

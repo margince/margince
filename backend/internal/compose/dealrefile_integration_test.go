@@ -9,7 +9,6 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
-	"os"
 	"slices"
 	"strings"
 	"testing"
@@ -167,6 +166,7 @@ func (f dealRefileFixture) runPaged(t *testing.T, args CapturedDealRefileArgs, p
 }
 
 func TestAContactEventReconsidersCapturedMailAndMeetingsAfterCohortResolution(t *testing.T) {
+	t.Parallel()
 	f := newDealRefileFixture(t, 0)
 	integration.ApplyRiverSchema(t)
 	args := f.enqueue(t, "contact.created", f.contact)
@@ -197,6 +197,7 @@ func TestAContactEventReconsidersCapturedMailAndMeetingsAfterCohortResolution(t 
 }
 
 func TestDealReconsiderationContinuesBeyondItsFirstPage(t *testing.T) {
+	t.Parallel()
 	f := newDealRefileFixture(t, refileTestPage+1)
 	integration.ApplyRiverSchema(t)
 	passes := f.runPaged(t, f.enqueue(t, "contact.created", f.contact), refileTestPage)
@@ -209,6 +210,7 @@ func TestDealReconsiderationContinuesBeyondItsFirstPage(t *testing.T) {
 }
 
 func TestAmbiguousDealReconsiderationWritesNoLinkOrQuestion(t *testing.T) {
+	t.Parallel()
 	f := newDealRefileFixture(t, 0)
 	integration.ApplyRiverSchema(t)
 	company := ids.From[ids.CompanyKind](f.company)
@@ -241,6 +243,7 @@ func captureRefileMeeting(t *testing.T, o *owedEnv, event string) ids.UUID {
 }
 
 func TestDealReconsiderationKeepsAHumanFiling(t *testing.T) {
+	t.Parallel()
 	f := newDealRefileFixture(t, 0)
 	integration.ApplyRiverSchema(t)
 	company := ids.From[ids.CompanyKind](f.o.e.SeedCompany(t, "Other customer", nil))
@@ -264,6 +267,7 @@ func TestDealReconsiderationKeepsAHumanFiling(t *testing.T) {
 // A colleague's "not about this deal" holds for the pass. The declined mail
 // stays off the deal, and the meeting the same pass reconsiders lands on it.
 func TestDealReconsiderationLeavesADeclinedDealOff(t *testing.T) {
+	t.Parallel()
 	f := newDealRefileFixture(t, 0)
 	integration.ApplyRiverSchema(t)
 	e := f.o.e
@@ -280,6 +284,7 @@ func TestDealReconsiderationLeavesADeclinedDealOff(t *testing.T) {
 }
 
 func TestTheRecoverySweepQueuesTheSameFiniteReconsideration(t *testing.T) {
+	t.Parallel()
 	f := newDealRefileFixture(t, 0)
 	integration.ApplyRiverSchema(t)
 	var envelope events.Envelope
@@ -338,6 +343,7 @@ func TestTheRecoverySweepQueuesTheSameFiniteReconsideration(t *testing.T) {
 // topic check existed. It takes the link back when the model says the mail is
 // not about the deal.
 func TestTheRecoveryPassRechecksAnOlderSuggestedLink(t *testing.T) {
+	t.Parallel()
 	f := newDealRefileFixture(t, 0)
 	integration.ApplyRiverSchema(t)
 	e := f.o.e
@@ -368,6 +374,7 @@ func TestTheRecoveryPassRechecksAnOlderSuggestedLink(t *testing.T) {
 }
 
 func TestLeadPromotionReconsidersMailAndMeetingsCapturedBeforeTheDeal(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.e.GrantRole(t, o.owner, "rep")
 	o.e.GrantRole(t, o.e.AdminUser, "admin")
@@ -402,6 +409,7 @@ func TestLeadPromotionReconsidersMailAndMeetingsCapturedBeforeTheDeal(t *testing
 }
 
 func TestADealCreatedEventFilesPreviouslyCapturedResolvedActivities(t *testing.T) {
+	t.Parallel()
 	f := newDealRefileFixture(t, 0)
 	integration.ApplyRiverSchema(t)
 	worker := newCapturedDealRefileWorker(f.o.e.Pool, aboutEveryDeal)
@@ -424,6 +432,7 @@ func TestADealCreatedEventFilesPreviouslyCapturedResolvedActivities(t *testing.T
 }
 
 func TestALateCompanyChangeRetainsBothAuditedCompaniesAndTheCurrentOne(t *testing.T) {
+	t.Parallel()
 	f := newDealRefileFixture(t, 0)
 	e := f.o.e
 	integration.ApplyRiverSchema(t)
@@ -465,6 +474,7 @@ func TestALateCompanyChangeRetainsBothAuditedCompaniesAndTheCurrentOne(t *testin
 }
 
 func TestReopeningADealReconsidersActivitiesAClosedDealCouldNotTake(t *testing.T) {
+	t.Parallel()
 	f := newDealRefileFixture(t, 0)
 	e := f.o.e
 	integration.ApplyRiverSchema(t)
@@ -504,6 +514,7 @@ func TestReopeningADealReconsidersActivitiesAClosedDealCouldNotTake(t *testing.T
 }
 
 func TestDealReconsiderationAdvancesPastAFullPageOfAmbiguousActivities(t *testing.T) {
+	t.Parallel()
 	f := newDealRefileFixture(t, refileTestPage+1)
 	e := f.o.e
 	company := ids.From[ids.CompanyKind](f.company)
@@ -542,6 +553,7 @@ func TestDealReconsiderationAdvancesPastAFullPageOfAmbiguousActivities(t *testin
 }
 
 func TestDealReconsiderationRecordsARowFaultAndContinues(t *testing.T) {
+	t.Parallel()
 	f := newDealRefileFixture(t, 0)
 	e := f.o.e
 	integration.ApplyRiverSchema(t)
@@ -550,11 +562,7 @@ func TestDealReconsiderationRecordsARowFaultAndContinues(t *testing.T) {
 	if _, err := worker.repairCohorts(ctx, []ids.UUID{f.contact}); err != nil {
 		t.Fatal(err)
 	}
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	if ownerDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN is required by the integration lane")
-	}
-	owner, err := testdb.Pool(t.Context(), ownerDSN)
+	owner, err := testdb.Pool(t.Context(), testdb.For(t).OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -562,11 +570,6 @@ func TestDealReconsiderationRecordsARowFaultAndContinues(t *testing.T) {
 	if _, err := owner.Exec(t.Context(), `ALTER TABLE activity_link ADD CONSTRAINT `+constraint+` CHECK (activity_id<>'`+f.mail.String()+`'::uuid OR deal_id IS NULL)`); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() {
-		if _, err := owner.Exec(context.Background(), `ALTER TABLE activity_link DROP CONSTRAINT IF EXISTS `+constraint); err != nil {
-			t.Error(err)
-		}
-	})
 	args := f.enqueue(t, "deal.created", f.deal)
 	f.run(t, args)
 	if e.WsCount(t, `SELECT count(*) FROM activity_link WHERE activity_id=$1 AND deal_id=$2`, f.meeting, f.deal) != 1 {
@@ -585,6 +588,7 @@ func TestDealReconsiderationRecordsARowFaultAndContinues(t *testing.T) {
 }
 
 func TestAFutureDatedEmailAgesOutWithoutDroppingAnUpcomingMeeting(t *testing.T) {
+	t.Parallel()
 	f := newDealRefileFixture(t, 0)
 	e := f.o.e
 	future := f.o.customerWrites(t, "pat@refile.example", "A sender-stated future date", time.Date(2100, 1, 4, 9, 0, 0, 0, time.UTC))

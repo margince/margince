@@ -161,6 +161,7 @@ func notesTranscripts(t *testing.T, e *integration.SearchEnv) int {
 // as a transcript of that meeting, and the activity writer queues its reading.
 // A second sync opens no Doc again.
 func TestMeetingNotesLandOnceAsATranscriptAndQueueAReading(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	meeting, _, _ := meetingWithNotes(t, env)
@@ -222,6 +223,7 @@ func TestMeetingNotesLandOnceAsATranscriptAndQueueAReading(t *testing.T) {
 // A Doc taken off the event is archived from the meeting at the next calendar
 // sync, and the notes reader never opens it.
 func TestANotesDocTakenOffTheEventIsNotRead(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	meeting, feed, syncCalendar := meetingWithNotes(t, env)
@@ -252,6 +254,7 @@ func TestANotesDocTakenOffTheEventIsNotRead(t *testing.T) {
 // A Docs grant on another Google account than the calendar's reads nothing:
 // notes are read only for the meetings of the account that granted them.
 func TestANotesGrantOnAnotherAccountReadsNothing(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	meetingWithNotes(t, env)
@@ -271,6 +274,7 @@ func TestANotesGrantOnAnotherAccountReadsNothing(t *testing.T) {
 // scopes, which is what Connections reads to say the row cannot read notes.
 // The next sync opens nothing until the owner connects again.
 func TestARefusedNotesGrantAsksTheOwnerToReconnect(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	meetingWithNotes(t, env)
@@ -308,6 +312,7 @@ func TestARefusedNotesGrantAsksTheOwnerToReconnect(t *testing.T) {
 // before a Doc was taken off the event does not land. Neither does text when
 // the organizer's domain is not among the trusted domains handed in.
 func TestNotesLandOnlyOnEvidenceStillTrueAtTheWrite(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	meeting, feed, syncCalendar := meetingWithNotes(t, env)
@@ -357,6 +362,7 @@ func landing(user, meeting ids.UUID, domain string) activities.MeetingNotesInput
 // whose calendar is on that same domain. Webmail is nobody's own domain, so
 // the Doc is not recorded on the meeting and nothing is read.
 func TestAnOutsiderOnTheSeatsWebmailDomainCannotPlantNotes(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	const seat, outsider = "ada.rep@gmail.com", "mallory@gmail.com"
@@ -380,6 +386,7 @@ func TestAnOutsiderOnTheSeatsWebmailDomainCannotPlantNotes(t *testing.T) {
 // The company stops claiming the organizer's domain after the Doc was
 // recorded. The reader asks the trusted domains again and opens nothing.
 func TestNotesAreNotReadOnceTheOrganizersDomainIsNoLongerOurs(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	meetingWithNotes(t, env)
@@ -416,6 +423,7 @@ func readsActivity(t *testing.T, e *integration.SearchEnv, user, activity ids.UU
 // audience, whichever seat read the Doc. A colleague on the invitation reads
 // it; a colleague who was not invited does not.
 func TestATranscriptIsReadByWhoeverReadsItsMeeting(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	meeting, _, _ := meetingWithNotes(t, env)
@@ -467,6 +475,7 @@ func transcriptID(t *testing.T, e *integration.SearchEnv, fileID string) ids.UUI
 // A Doc taken off the event and attached again is live on the meeting again,
 // and the notes reader opens it.
 func TestANotesDocAttachedAgainIsReadAgain(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	meeting, feed, syncCalendar := meetingWithNotes(t, env)
@@ -493,6 +502,7 @@ func TestANotesDocAttachedAgainIsReadAgain(t *testing.T) {
 // Two colleagues' syncs land one Doc at once. The second waits for the first
 // and finds its transcript, rather than failing on the transcript's key.
 func TestTwoSyncsLandingOneDocAtOnceLandItOnce(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	meeting, _, _ := meetingWithNotes(t, env)
@@ -557,6 +567,7 @@ func waitForALockWait(t *testing.T, e *integration.SearchEnv) {
 }
 
 func TestNotesKeepAnExistingMeetingOutcome(t *testing.T) {
+	t.Parallel()
 	for _, status := range []string{"held", "canceled", "no_show"} {
 		t.Run(status, func(t *testing.T) {
 			env := newCaptureEnv(t)
@@ -595,6 +606,7 @@ func notesWriter(t *testing.T, e *integration.SearchEnv, user ids.UUID) context.
 }
 
 func TestNotesCanLandWithoutAuthorityToChangeTheMeeting(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	meeting, _, _ := meetingWithNotes(t, env)
@@ -618,6 +630,7 @@ func TestNotesCanLandWithoutAuthorityToChangeTheMeeting(t *testing.T) {
 }
 
 func TestMeetingNotesHintEndsWhenTheDocumentBecomesATranscript(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	meeting, _, _ := meetingWithNotes(t, env)
 	e := env.e

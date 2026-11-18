@@ -109,7 +109,7 @@ type vcardIngestWorker struct {
 }
 
 func newVCardIngestWorker(pool *pgxpool.Pool, blob blobstore.Store, log *slog.Logger) *vcardIngestWorker {
-	return &vcardIngestWorker{pool: pool, blob: blob, users: identity.NewService(pool), log: log}
+	return &vcardIngestWorker{pool: pool, blob: blob, users: IdentityService(pool), log: log}
 }
 
 // Work imports one message's cards.
@@ -203,7 +203,7 @@ func (w *vcardIngestWorker) asMailboxGrantor(ctx context.Context, args VCardInge
 	// A boot value wins over the row, as it does for the signature pass. NULL
 	// when no boot source sets it, so the COALESCE reads on to the row.
 	var booted *bool
-	if v, ok := config.BootVal(loadedConfig(), capture.SignatureEnrich); ok {
+	if v, ok := config.BootVal(ctx, loadedConfig(ctx), capture.SignatureEnrich); ok {
 		booted = &v
 	}
 	var grantedBy ids.UUID

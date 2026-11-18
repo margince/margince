@@ -28,6 +28,7 @@ import (
 // row with the first and not the second can tell you a slow host was involved
 // without telling you the answer was cut off.
 func TestTheCallTraceRecordsWhichUpstreamServedAndHowItStopped(t *testing.T) {
+	t.Parallel()
 	env := setupRateStore(t)
 	ctx := context.Background()
 	ws, ctx := env.seedWorkspace(ctx, t)
@@ -73,6 +74,7 @@ func TestTheCallTraceRecordsWhichUpstreamServedAndHowItStopped(t *testing.T) {
 // being backfilled with the provider we called — the distinction the whole
 // column exists to draw.
 func TestACallWithNoReportedUpstreamStoresNoUpstream(t *testing.T) {
+	t.Parallel()
 	env := setupRateStore(t)
 	ctx := context.Background()
 	ws, ctx := env.seedWorkspace(ctx, t)
@@ -109,6 +111,7 @@ func TestACallWithNoReportedUpstreamStoresNoUpstream(t *testing.T) {
 // into Go. A regression here is invisible — ” and NULL both read as "no error"
 // to a human skimming the column, and only a query filtering IS NULL notices.
 func TestACallWithoutAnErrorStoresNullRatherThanEmptyText(t *testing.T) {
+	t.Parallel()
 	env := setupRateStore(t)
 	ctx := context.Background()
 	ws, ctx := env.seedWorkspace(ctx, t)

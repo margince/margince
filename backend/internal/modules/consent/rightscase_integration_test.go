@@ -77,6 +77,7 @@ func casesFor(t *testing.T, e *channelConsentEnv) []caseRow {
 // work whose evidence is missing; a submission without its case is the defect
 // this slice closes.
 func TestACorrectionProposalOpensARectificationCase(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedMarketingPurpose(t, e)
 	link := issueLink(t, e)
@@ -129,6 +130,7 @@ func TestACorrectionProposalOpensARectificationCase(t *testing.T) {
 // AN ERASURE REQUEST IS ART. 17, and it opens its own case beside any
 // correction in the same submit.
 func TestAnErasureRequestOpensAnErasureCaseWithAReceipt(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedMarketingPurpose(t, e)
 	link := issueLink(t, e)
@@ -157,6 +159,7 @@ func TestAnErasureRequestOpensAnErasureCaseWithAReceipt(t *testing.T) {
 // THE DEADLINE IS ONE CALENDAR MONTH FROM RECEIPT, not thirty days and not one
 // month from whenever the row happened to be written.
 func TestTheDeadlineIsOneCalendarMonthFromReceipt(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedMarketingPurpose(t, e)
 	link := issueLink(t, e)
@@ -193,6 +196,7 @@ func TestTheDeadlineIsOneCalendarMonthFromReceipt(t *testing.T) {
 // most of them. This is a unit test rather than an integration one because the
 // receipt time it needs is a February the fixture cannot arrange.
 func TestOneCalendarMonthFollowsTheShortMonths(t *testing.T) {
+	t.Parallel()
 	for _, c := range []struct {
 		name     string
 		received time.Time
@@ -251,6 +255,7 @@ func TestOneCalendarMonthFollowsTheShortMonths(t *testing.T) {
 // writer itself with the submission the first submit filed — the path a retry
 // inside the transaction would take, and the one the unique index has to hold.
 func TestAReplayedProposalOpensNoSecondCase(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedMarketingPurpose(t, e)
 	link := issueLink(t, e)
@@ -307,6 +312,7 @@ func TestAReplayedProposalOpensNoSecondCase(t *testing.T) {
 // not a request under Art. 16 or 17, and a case opened for it would put work in
 // the DPO's queue that nobody asked for.
 func TestAMarketingAnswerAloneOpensNoCase(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedMarketingPurpose(t, e)
 	link := issueLink(t, e)
@@ -355,6 +361,7 @@ func santiago(t *testing.T) *time.Location {
 // which is exactly the property under test. What can be tested honestly is the
 // judgement: which refusals count as a collision.
 func TestOnlyAReceiptCollisionIsWorthRedrawing(t *testing.T) {
+	t.Parallel()
 	for _, c := range []struct {
 		name string
 		err  error
@@ -421,6 +428,7 @@ func TestOnlyAReceiptCollisionIsWorthRedrawing(t *testing.T) {
 // wrong. The proof is in the error that comes back — the foreign-key fault the
 // first attempt hit, not the abort a second one would have reported.
 func TestAFailureThatIsNotAReceiptCollisionIsNotRedrawn(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	// A subject with no contact row, so the insert fails on the foreign key.
 	stranger := ids.From[ids.ContactKind](ids.NewV7())

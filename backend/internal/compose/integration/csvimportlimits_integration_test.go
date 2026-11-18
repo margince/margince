@@ -58,6 +58,7 @@ func overlongFile(t *testing.T, object string, targets []string) string {
 // commit that stops part-way. The census is every target the profile offers,
 // so a target added later is held to the same rule.
 func TestAnOverlongCellInAnyTargetIsReportedByTheTestRunAndNotTheCommit(t *testing.T) {
+	t.Parallel()
 	for _, object := range []string{"company", "contact", "lead"} {
 		t.Run(object, func(t *testing.T) {
 			e := setupImportApp(t)

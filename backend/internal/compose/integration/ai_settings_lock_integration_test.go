@@ -31,6 +31,7 @@ func envBinding(model string) string {
 // binding or provider entry is refused, and the binding read back saves as a
 // no-op.
 func TestAIRoutingSetByEnvIsLockedAgainstAChange(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithEnv(t, []string{envBinding("env-model")})
 	e.BootstrapWorkspace(t)
 
@@ -59,6 +60,7 @@ func TestAIRoutingSetByEnvIsLockedAgainstAChange(t *testing.T) {
 // back lifted onto its provider. That reading resends as a no-op, though it is
 // not the decoded boot value field for field.
 func TestABootBindingInThePerLaneShapeResendsAsANoOp(t *testing.T) {
+	t.Parallel()
 	lane := func(model string) string {
 		return `{"provider":"openai_compatible","model":"` + model + `","base_url":"https://openrouter.ai/api"}`
 	}
@@ -79,6 +81,7 @@ func TestABootBindingInThePerLaneShapeResendsAsANoOp(t *testing.T) {
 // The environment may spell a task reset to the product's values as {}, which
 // a save drops; the overrides read back still resend as a no-op.
 func TestAITaskOverridesSetByEnvAreLockedAgainstAChange(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithEnv(t, []string{
 		`MARGINCE_AI_TASK_OVERRIDES={"capture_classify":{"thinking":"high"},"cold_start":{}}`,
 	})
@@ -106,6 +109,7 @@ func TestAITaskOverridesSetByEnvAreLockedAgainstAChange(t *testing.T) {
 }
 
 func TestAIBudgetSetByEnvIsLockedAgainstAChange(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithEnv(t, []string{
 		`MARGINCE_AI_BUDGET={"tokens_per_full_user":5000,"company_monthly_tokens":777}`,
 	})
@@ -140,6 +144,7 @@ func TestAIBudgetSetByEnvIsLockedAgainstAChange(t *testing.T) {
 }
 
 func TestAIPriceSyncSetByEnvIsLockedAgainstAChange(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithEnv(t, []string{`MARGINCE_AI_PRICE_SYNC={"auto_sync":false}`})
 	e.BootstrapWorkspace(t)
 
@@ -161,17 +166,17 @@ func TestAIPriceSyncSetByEnvIsLockedAgainstAChange(t *testing.T) {
 }
 
 // Every role resolves the binding it serves through the boot value, over a
-// binding an admin saved before the operator set one. Not parallel: the
-// binding is the process's own.
+// binding an admin saved before the operator set one.
 func TestABootSetBindingIsTheOneAnInstallationServes(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 	if _, err := store.Replace(e.adminRoutingCtx(), parsedRouting(t, "fake-stored")); err != nil {
 		t.Fatalf("storing the binding: %v", err)
 	}
-	apptest.BindEnv(t, []string{envBinding("fake-env")})
+	boot := compose.ConfigContext(context.Background(), apptest.LoadEnv(t, []string{envBinding("fake-env")}))
 
-	cfg, err := compose.ResolveRouting(context.Background(), e.Pool, "", config.Static(nil), discard())
+	cfg, err := compose.ResolveRouting(boot, e.Pool, "", config.Static(nil), discard())
 	if err != nil {
 		t.Fatalf("ResolveRouting: %v", err)
 	}

@@ -43,6 +43,7 @@ func collectionsPerms() principal.Permissions {
 }
 
 func TestDynamicList_membershipIsRowScopedToTheCaller(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
 
@@ -97,6 +98,7 @@ func TestDynamicList_membershipIsRowScopedToTheCaller(t *testing.T) {
 }
 
 func TestDynamicList_reEvaluatesLiveAsRecordsChange(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, collectionsPerms())
@@ -147,6 +149,7 @@ func TestDynamicList_reEvaluatesLiveAsRecordsChange(t *testing.T) {
 }
 
 func TestDynamicList_rejectsInvalidDefinition(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, collectionsPerms())
@@ -179,6 +182,7 @@ func TestDynamicList_rejectsInvalidDefinition(t *testing.T) {
 }
 
 func TestSavedView_roundTripsAndIsPerUser(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, collectionsPerms())
@@ -275,6 +279,7 @@ func TestSavedView_roundTripsAndIsPerUser(t *testing.T) {
 // dynamicsegment_singleconn_integration_test.go owns that claim, over a pool
 // capped at one connection.
 func TestSavedView_filterIsValidatedWhenWrittenNotWhenExported(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, collectionsPerms())
@@ -328,6 +333,7 @@ func TestSavedView_filterIsValidatedWhenWrittenNotWhenExported(t *testing.T) {
 //
 // This is the branch the update path's own comment claims and nothing exercised.
 func TestSavedView_anArchivedViewIsNotFoundBeforeItsFilterIsJudged(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, collectionsPerms())
@@ -359,6 +365,7 @@ func TestSavedView_anArchivedViewIsNotFoundBeforeItsFilterIsJudged(t *testing.T)
 // wrong field name survived in them for as long as it did: a refusal nobody
 // reads is a refusal nobody notices is wrong.
 func TestListAndSavedViewShapeRefusalsNameTheirOwnField(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, collectionsPerms())
@@ -426,6 +433,7 @@ func jsonEqual(t *testing.T, a, b map[string]any) bool {
 // the filter is judged by the project segment engine and the row clears the
 // resource CHECK.
 func TestSavedViewOverProjectsIsStoredAndReadBack(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, collectionsPerms())

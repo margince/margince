@@ -20,16 +20,15 @@ import (
 func TestTheSetAsideReadNeedsItsDeclarationAndBoundsABatch(t *testing.T) {
 	user, contact := ids.NewV7().String(), ids.NewV7().String()
 	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
-	binding := extensionRuntimeBinding{pool: &pgxpool.Pool{}}
+	binding := extensionRuntimeBinding{pool: &pgxpool.Pool{}, composed: composeReader(extension.SystemReadDeals)}
 
-	composeReader(t, extension.SystemReadDeals)
 	undeclared := deliveryRuntimeFor(ctx, "dealmirror", "1.0.0", "subscription/mirror", binding)
 	defer undeclared.release()
 	if _, err := undeclared.SetAside().Contact(ctx, extension.UserID(user), contact); !errors.Is(err, extension.ErrUndeclaredRead) {
 		t.Errorf("an undeclared Contact: err = %v, want ErrUndeclaredRead", err)
 	}
 
-	composeReader(t, extension.SystemReadSetAside)
+	binding.composed = composeReader(extension.SystemReadSetAside)
 	attended := runtimeFor(ctx, "dealmirror", "1.0.0", "tool/probe", binding)
 	defer attended.release()
 	if _, err := attended.SetAside().Contact(ctx, extension.UserID(user), contact); !errors.Is(err, extension.ErrAttendedRead) {

@@ -43,6 +43,7 @@ import (
 // everyone reading the bus — the send stops, and every consumer that mirrored
 // the record goes on believing a rep is still standing behind it.
 func TestRevokingACarriedVouchAnnouncesEveryRowItTookBack(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	survivor := seedOverrideContact(t, e, "Carry Survivor")
 
@@ -84,6 +85,7 @@ func TestRevokingACarriedVouchAnnouncesEveryRowItTookBack(t *testing.T) {
 // family lock and the revoke never queues, which the wait reports; leave the
 // walk short and the third record keeps a live row, which the count reports.
 func TestAMergeCannotCarryAVouchPastTheRevokeTakingItBack(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	middle := seedOverrideContact(t, e, "Chain Middle")
 	last := seedOverrideContact(t, e, "Chain Last")
@@ -124,6 +126,7 @@ func TestAMergeCannotCarryAVouchPastTheRevokeTakingItBack(t *testing.T) {
 // leaves the original standing on the retired record, where the SAR export
 // and anything that un-merges still finds a live vouch.
 func TestRevokingACarriedCopyTakesBackItsOriginalToo(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	survivor := seedOverrideContact(t, e, "Copy Survivor")
 
@@ -287,6 +290,7 @@ func liftedOverrideStreams(t *testing.T, e *channelConsentEnv) map[ids.UUID]ids.
 // nothing on the survivor saying so. One audit row per row taken back, on the
 // contact that row belongs to, is what keeps each record's history complete.
 func TestRevokingAVouchAuditsEveryContactTheChainReached(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	survivor := seedOverrideContact(t, e, "Audit Survivor")
 

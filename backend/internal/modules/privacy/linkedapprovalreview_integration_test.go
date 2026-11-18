@@ -31,6 +31,7 @@ func seedDecidedApproval(ctx context.Context, t *testing.T, tx pgx.Tx, summary, 
 }
 
 func TestTheReviewPageNamesUnprovenApprovalsAndCorrectsProvedOnes(t *testing.T) {
+	t.Parallel()
 	ctx := principal.SystemActing(context.Background(), "privacy_test")
 	tx := subjectColumnsTx(ctx, t)
 	subject, _, _ := seedDedupePairs(ctx, t, tx)

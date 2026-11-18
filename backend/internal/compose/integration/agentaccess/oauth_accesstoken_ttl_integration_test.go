@@ -52,6 +52,7 @@ func withinAMinuteOf(got, want time.Duration) bool {
 
 // A chosen lifetime shortens the code exchange's passport AND every rotation's.
 func TestAChosenAccessTokenTTLShortensBothMintsOfAConnection(t *testing.T) {
+	t.Parallel()
 	const chosen = 15 * time.Minute
 	o := setupOAuth(t)
 	setAccessTokenTTL(t, o, chosen)
@@ -81,6 +82,7 @@ func TestAChosenAccessTokenTTLShortensBothMintsOfAConnection(t *testing.T) {
 // A change reaches the next token minted without a restart: a connection
 // exchanged under the default renews under the new lifetime.
 func TestAChangedAccessTokenTTLReachesTheNextRotation(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 
 	code := o.authorize(t, url.Values{"scope": {"read write offline_access"}})
@@ -107,6 +109,7 @@ func TestAChangedAccessTokenTTLReachesTheNextRotation(t *testing.T) {
 // An installation nobody tuned keeps minting the 30-day passport, the posture
 // every connector had before this was a setting.
 func TestAnUntouchedAccessTokenTTLKeepsThePassportDefault(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 
 	code := o.authorize(t, url.Values{"scope": {"read write offline_access"}})
@@ -122,6 +125,7 @@ func TestAnUntouchedAccessTokenTTLKeepsThePassportDefault(t *testing.T) {
 // A lifetime the passport mint would refuse is refused when it is SET, rather
 // than on the first handshake of a connector nobody is watching.
 func TestAnOutOfRangeAccessTokenTTLIsRefusedWhenSet(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 	for _, minutes := range []int{1, 91 * 24 * 60} {
 		if status := o.Call(t, "PATCH", "/v1/installation/settings", integration.AnyMap{

@@ -64,6 +64,7 @@ func seedTriagedDomain(t *testing.T, e *apptest.AppEnv, company, domain, status,
 }
 
 func TestTheCompanyDoorAnswersWhichDomainsWereTriagedIntoIt(t *testing.T) {
+	t.Parallel()
 	e := triageEnv(t)
 
 	var company struct {
@@ -112,6 +113,7 @@ func TestTheCompanyDoorAnswersWhichDomainsWereTriagedIntoIt(t *testing.T) {
 }
 
 func TestACompanyNobodyTriagedIntoIsAnsweredRatherThanRefused(t *testing.T) {
+	t.Parallel()
 	e := triageEnv(t)
 
 	var company struct {
@@ -137,6 +139,7 @@ func TestACompanyNobodyTriagedIntoIsAnsweredRatherThanRefused(t *testing.T) {
 }
 
 func TestTheCompanyDoorHidesACompanyThatIsNotThere(t *testing.T) {
+	t.Parallel()
 	e := triageEnv(t)
 
 	// Existence-hidden exactly as getCompany hides it. An empty list here would

@@ -38,7 +38,7 @@ func (s *Store) sharedMergeReviewsForDecision(ctx context.Context, tx pgx.Tx) (b
 	if err := settings.ShareLockForDecision(ctx, tx, SharedMergeReviews.Key()); err != nil {
 		return false, err
 	}
-	return config.StoredApplyTx(ctx, tx, s.bootConfig(), SharedMergeReviews)
+	return config.StoredApplyTx(ctx, tx, s.bootConfig(ctx), SharedMergeReviews)
 }
 
 func (s *Store) sharedMergeReviews(ctx context.Context) (bool, error) {
@@ -67,7 +67,7 @@ func (h Handlers) GetContactCaseSettings(w http.ResponseWriter, r *http.Request)
 		writeStoreErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, crmcontracts.ContactCaseSettings{Enabled: on, Locks: h.settingLocks(SharedMergeReviews)})
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.ContactCaseSettings{Enabled: on, Locks: h.settingLocks(r.Context(), SharedMergeReviews)})
 }
 
 // UpdateContactCaseSettings implements PUT /dedupe/settings (admin, human only).
@@ -80,6 +80,6 @@ func (h Handlers) UpdateContactCaseSettings(w http.ResponseWriter, r *http.Reque
 		writeStoreErr(w, r, err)
 		return
 	}
-	req.Locks = h.settingLocks(SharedMergeReviews)
+	req.Locks = h.settingLocks(r.Context(), SharedMergeReviews)
 	httperr.WriteJSON(w, http.StatusOK, req)
 }

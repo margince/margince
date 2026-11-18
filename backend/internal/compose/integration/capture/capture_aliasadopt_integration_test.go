@@ -56,6 +56,7 @@ func aliasOnlyMail(deliveredTo, from, msgID string) []byte {
 // the claim, the first is adopted: it gets its import row and the question its
 // thread was owed.
 func TestTheMailThatArrivedBeforeAnAliasWasClaimedIsAdopted(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	setPosture(t, env, env.e.Rep1, capturemod.PostureClassified)
 
@@ -85,6 +86,7 @@ func TestTheMailThatArrivedBeforeAnAliasWasClaimedIsAdopted(t *testing.T) {
 // forever with nothing scheduled to free it — the very defect adoption exists
 // to fix, moved into a different mailbox.
 func TestAdoptingIntoASharedMailboxOpensNoQuestionAndHoldsNothing(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	allowSharedPosture(t, env.e)
 	setPosture(t, env, env.e.Rep1, capturemod.PostureShared)
@@ -110,6 +112,7 @@ func TestAdoptingIntoASharedMailboxOpensNoQuestionAndHoldsNothing(t *testing.T) 
 // never becomes an identity in the first place. The claim is what adoption
 // keys on, so the forgery refusal covers both.
 func TestAForgedDeliveryAdoptsNothing(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	setPosture(t, env, env.e.Rep1, capturemod.PostureClassified)
 	const victim = "victim@customer.example"
@@ -149,6 +152,7 @@ func forgedDeliveryMail(victim, from, msgID string) []byte {
 // NOT wired into that door, so the message stays stranded until the sweep runs.
 // That is the shape the sweep exists for.
 func TestTheSweepAdoptsMailStrandedBeforeTheAddressWasKnown(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	setPosture(t, env, env.e.Rep1, capturemod.PostureClassified)
 	const late = "founder@late-claim.example"

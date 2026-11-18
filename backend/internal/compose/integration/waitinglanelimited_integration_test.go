@@ -18,6 +18,7 @@ import (
 // list, while its open twin on the same contact reaches them. Rep3 is
 // addressed by both, so the limited one's absence is the audience's doing.
 func TestALimitedWaitingMailStaysOffAColleaguesWaitingList(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	dana := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 	mail := func(thread, audience string) ids.UUID {

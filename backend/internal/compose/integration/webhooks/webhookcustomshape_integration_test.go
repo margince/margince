@@ -67,6 +67,7 @@ func (we *webhookEnv) auditMentions(t *testing.T, needle string) bool {
 }
 
 func TestAShapedSubscriptionDeliversItsHeadersAndRenderedBodySigned(t *testing.T) {
+	t.Parallel()
 	we := setupWebhooks(t)
 	rcv := newReceiver(t, http.StatusOK)
 	now := clocktest.Now(t)
@@ -118,6 +119,7 @@ func TestAShapedSubscriptionDeliversItsHeadersAndRenderedBodySigned(t *testing.T
 }
 
 func TestAReplacedHeaderReachesTheRetryAndAKeptOneStays(t *testing.T) {
+	t.Parallel()
 	we := setupWebhooks(t)
 	rcv := newReceiver(t, http.StatusUnauthorized)
 	now := clocktest.Now(t).Truncate(time.Microsecond)
@@ -170,6 +172,7 @@ func TestAReplacedHeaderReachesTheRetryAndAKeptOneStays(t *testing.T) {
 }
 
 func TestInputThatCouldMisdirectADeliveryIsRefused(t *testing.T) {
+	t.Parallel()
 	we := setupWebhooks(t)
 	for _, tc := range []struct {
 		name  string
@@ -201,6 +204,7 @@ func TestInputThatCouldMisdirectADeliveryIsRefused(t *testing.T) {
 }
 
 func TestARedirectIsAFailedAttemptAndIsNotFollowed(t *testing.T) {
+	t.Parallel()
 	we := setupWebhooks(t)
 	rcv := newReceiver(t, http.StatusMovedPermanently)
 	now := clocktest.Now(t)
@@ -220,6 +224,7 @@ func TestARedirectIsAFailedAttemptAndIsNotFollowed(t *testing.T) {
 }
 
 func TestABodyOverTheCapIsParkedUnsentAndCannotBeReplayed(t *testing.T) {
+	t.Parallel()
 	we := setupWebhooks(t)
 	rcv := newReceiver(t, http.StatusOK)
 	now := clocktest.Now(t)
@@ -250,6 +255,7 @@ func TestABodyOverTheCapIsParkedUnsentAndCannotBeReplayed(t *testing.T) {
 }
 
 func TestPreviewRendersASampleOfTheEventWithTheDeliveryEngine(t *testing.T) {
+	t.Parallel()
 	we := setupWebhooks(t)
 	var preview struct {
 		Body        string `json:"body"`
@@ -281,6 +287,7 @@ func TestPreviewRendersASampleOfTheEventWithTheDeliveryEngine(t *testing.T) {
 }
 
 func TestABodyThatRendersEmptyIsSentAndCanBeReplayed(t *testing.T) {
+	t.Parallel()
 	we := setupWebhooks(t)
 	rcv := newReceiver(t, http.StatusInternalServerError)
 	now := clocktest.Now(t)
@@ -307,6 +314,7 @@ func TestABodyThatRendersEmptyIsSentAndCanBeReplayed(t *testing.T) {
 }
 
 func TestADeliveryNamesItsRecordAndLinksToItsPage(t *testing.T) {
+	t.Parallel()
 	we := setupWebhooks(t)
 	rcv := newReceiver(t, http.StatusOK)
 	now := clocktest.Now(t)
@@ -336,6 +344,7 @@ func TestADeliveryNamesItsRecordAndLinksToItsPage(t *testing.T) {
 }
 
 func TestAContactIsLinkedButNotNamed(t *testing.T) {
+	t.Parallel()
 	we := setupWebhooks(t)
 	rcv := newReceiver(t, http.StatusOK)
 	now := clocktest.Now(t)
@@ -361,6 +370,7 @@ func TestAContactIsLinkedButNotNamed(t *testing.T) {
 }
 
 func TestADeliveryNamesTheRecordsOwnerAndLeavesItEmptyWithoutOne(t *testing.T) {
+	t.Parallel()
 	we := setupWebhooks(t)
 	rcv := newReceiver(t, http.StatusOK)
 	now := clocktest.Now(t)

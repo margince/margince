@@ -29,6 +29,7 @@ func (e *dedupeEnv) createOverTheWire(t *testing.T, body string) *httptest.Respo
 }
 
 func TestALinkedInURLWriteReadsBackUnderBothNames(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	rec := e.createOverTheWire(t, `{"full_name":"Lina Url","source":"manual","linkedin_url":"http://linkedin.com/in/lina-url/"}`)
 	if rec.Code != http.StatusCreated {
@@ -56,6 +57,7 @@ func TestALinkedInURLWriteReadsBackUnderBothNames(t *testing.T) {
 }
 
 func TestLinkedInURLAndSocialLinkedInNamingTwoProfilesAreRefused(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	rec := e.createOverTheWire(t, `{"full_name":"Two Profiles","source":"manual",`+
 		`"linkedin_url":"https://www.linkedin.com/in/one","social":{"linkedin":"https://www.linkedin.com/in/two"}}`)
@@ -65,6 +67,7 @@ func TestLinkedInURLAndSocialLinkedInNamingTwoProfilesAreRefused(t *testing.T) {
 }
 
 func TestADuplicateWrittenThroughLinkedInURLIsFiledAsATwin(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	first := e.createWithLinkedIn(ctx, t, "Tove Twin", "tove@example.com", "https://www.linkedin.com/in/tove-twin")
@@ -82,6 +85,7 @@ func TestADuplicateWrittenThroughLinkedInURLIsFiledAsATwin(t *testing.T) {
 }
 
 func TestANameOnlyContactRequestIsRefusedBeforeWriting(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	response := e.createOverTheWire(t, `{"full_name":"Name Only","source":"manual"}`)
 	if response.Code != http.StatusUnprocessableEntity || !strings.Contains(response.Body.String(), "contact_channel_required") {

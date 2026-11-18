@@ -24,6 +24,7 @@ import (
 // moved. A pending row staged before the pin is pinned when decided instead,
 // while an approved row with no digest still refuses to redeem.
 func TestAContextPinRefusesARowWhoseContextMovedOrWasNeverPinned(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name    string
 		mutate  func(e *stagingEnv, t *testing.T, digest *string, rows []ids.UUID)
@@ -87,6 +88,7 @@ func tagDeciderPerms() principal.Permissions {
 }
 
 func TestADeniedContextPinWithholdsOnePreviewWithoutBreakingTheInbox(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	passport := e.seedPassport(t)
 	denied := ids.Nil
@@ -132,6 +134,7 @@ func TestADeniedContextPinWithholdsOnePreviewWithoutBreakingTheInbox(t *testing.
 }
 
 func TestOnlyASingleApprovalReadBuildsItsPreviewAsOne(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	passport := e.seedPassport(t)
 	var reads []bool

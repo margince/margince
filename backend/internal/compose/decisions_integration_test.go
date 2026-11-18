@@ -26,6 +26,7 @@ import (
 // outcome closes that task with the note and changes nothing on the deal.
 // After that, the same decision starts a new task.
 func TestADecisionIsOneTaskUntilItsOutcomeIsRecorded(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	start := clocktest.Now(t).UTC().Truncate(time.Second)
 	_, _, open := seedInitiativeDeals(t, e, start)
@@ -120,6 +121,7 @@ func TestADecisionIsOneTaskUntilItsOutcomeIsRecorded(t *testing.T) {
 // owns, of its industry. A selection that holds no deal answers no decision,
 // never the unnarrowed list.
 func TestTheDecisionListFollowsTheReviewSelection(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	start := clocktest.Now(t).UTC().Truncate(time.Second)
 	_, _, open := seedInitiativeDeals(t, e, start)
@@ -201,6 +203,7 @@ func TestTheDecisionListFollowsTheReviewSelection(t *testing.T) {
 // A selection reads deals, so it needs the deal read grant. A filter through a
 // company the role masks would name what the mask hid.
 func TestADecisionSelectionHonoursTheReadersGrants(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	seam := newSalesDecisions(InstallationDB(e.Pool))
 	manufacturing := "manufacturing"

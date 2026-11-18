@@ -86,6 +86,7 @@ func domainCapturedBy(ctx context.Context, t *testing.T, e *dedupeEnv, companyID
 }
 
 func TestUpdateCompanyDomainsReplaceSet(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
@@ -136,6 +137,7 @@ func TestUpdateCompanyDomainsReplaceSet(t *testing.T) {
 }
 
 func TestUpdateCompanyDomainConflictIsTyped409(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	owner, err := e.store.CreateCompany(ctx, CreateCompanyInput{
@@ -165,6 +167,7 @@ func TestUpdateCompanyDomainConflictIsTyped409(t *testing.T) {
 }
 
 func TestUpdateCompanyClearsAllDomains(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
@@ -188,6 +191,7 @@ func TestUpdateCompanyClearsAllDomains(t *testing.T) {
 }
 
 func TestUpdateCompanyDeduplicatesDomainInput(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
@@ -217,6 +221,7 @@ func TestUpdateCompanyDeduplicatesDomainInput(t *testing.T) {
 }
 
 func TestUpdateCompanyKeepingOwnDomainIsNoFalseConflict(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
@@ -251,6 +256,7 @@ func TestUpdateCompanyKeepingOwnDomainIsNoFalseConflict(t *testing.T) {
 // (patch_test.go) — which is why this test stays green even if the de-duplication
 // is removed, now that this caller bumps updated_at once.
 func TestUpdateCompanyAcceptsDomainsAndRelationshipTypesTogether(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{

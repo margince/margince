@@ -25,6 +25,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
+	"github.com/margince/margince/backend/internal/platform/redistest"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -38,15 +39,10 @@ type busEnv struct {
 
 func setup(t *testing.T) *busEnv {
 	t.Helper()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	redisAddr := os.Getenv("MARGINCE_TEST_REDIS")
-	if ownerDSN == "" || appDSN == "" || redisAddr == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN / MARGINCE_TEST_REDIS not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	ctx := t.Context()
 
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatalf("connecting as owner: %v", err)
 	}
@@ -55,18 +51,6 @@ func setup(t *testing.T) *busEnv {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	// Brought to head once per test process; every later test resets the data
-	// only — the discipline backend/gates/integrationmigrateonce_test.go enforces
-	// module-wide. Either way the app pool below gets the GRANT USAGE ON SCHEMA
-	// public TO margince_app it depends on: EnsureSchema issues it when it
-	// rebuilds the schema, and a lane clone inherits it from the migration that
-	// grants it (core 0015) when EnsureSchema reuses one.
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatalf("migrating the test schema: %v", err)
-	}
-	if err := testdb.Reset(ctx, owner); err != nil {
-		t.Fatalf("resetting test data: %v", err)
-	}
 
 	// The relay needs a workspace row only because fixtures reference one
 	// in their envelopes; the outbox itself is infra-owned (no RLS).
@@ -76,26 +60,13 @@ func setup(t *testing.T) *busEnv {
 		t.Fatalf("seeding workspace: %v", err)
 	}
 
-	pool, err := testdb.OwnPool(ctx, appDSN)
+	pool, err := testdb.OwnPool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatalf("opening app pool: %v", err)
 	}
 	t.Cleanup(pool.Close)
 
-	rdb := redis.NewClient(&redis.Options{Addr: redisAddr, DB: testdb.RedisDB(t)})
-	if err := rdb.Ping(ctx).Err(); err != nil {
-		t.Fatalf("redis at %s unreachable — run `make db-up`: %v", redisAddr, err)
-	}
-	if err := rdb.FlushDB(ctx).Err(); err != nil {
-		t.Fatalf("flushing test redis db: %v", err)
-	}
-	t.Cleanup(func() {
-		if err := rdb.Close(); err != nil {
-			t.Errorf("closing redis client: %v", err)
-		}
-	})
-
-	return &busEnv{pool: pool, rdb: rdb, ws: ws}
+	return &busEnv{pool: pool, rdb: redistest.Client(t), ws: ws}
 }
 
 func testLogger() *slog.Logger {
@@ -156,6 +127,7 @@ func (e *busEnv) streamEventIDs(t *testing.T, stream string) []string {
 }
 
 func TestRelayShipsACommittedRowExactlyOnceInSteadyState(t *testing.T) {
+	t.Parallel()
 	e := setup(t)
 	env := e.stage(t, "contact.created", ids.NewV7())
 
@@ -188,6 +160,7 @@ func TestRelayShipsACommittedRowExactlyOnceInSteadyState(t *testing.T) {
 }
 
 func TestRelayCrashBeforeStampRepublishes_atLeastOnce(t *testing.T) {
+	t.Parallel()
 	e := setup(t)
 	env := e.stage(t, "deal.created", ids.NewV7())
 
@@ -235,6 +208,7 @@ func TestRelayCrashBeforeStampRepublishes_atLeastOnce(t *testing.T) {
 }
 
 func TestRelayPreservesCommitOrderPerEntity(t *testing.T) {
+	t.Parallel()
 	e := setup(t)
 	entity := ids.NewV7()
 	first := e.stage(t, "contact.created", entity)
@@ -291,6 +265,7 @@ func consumeUntil(t *testing.T, s *Subscriber, deadline time.Duration, done func
 }
 
 func TestSubscriberDeliversEveryEntryAndAcksIt(t *testing.T) {
+	t.Parallel()
 	e := setup(t)
 	e.stage(t, "contact.created", ids.NewV7())
 	// A second entry on the same stream. This used to be another tenant's, and
@@ -336,6 +311,7 @@ func TestSubscriberDeliversEveryEntryAndAcksIt(t *testing.T) {
 }
 
 func TestSubscriberReclaimRedeliversAfterHandlerCrash(t *testing.T) {
+	t.Parallel()
 	e := setup(t)
 	env := e.stage(t, "lead.created", ids.NewV7())
 	if _, err := e.relay(t).relayBatch(t.Context()); err != nil {
@@ -370,6 +346,7 @@ func TestSubscriberReclaimRedeliversAfterHandlerCrash(t *testing.T) {
 }
 
 func TestSubscriberEnsuresEverySpecGroup(t *testing.T) {
+	t.Parallel()
 	e := setup(t)
 	noop := func(context.Context, kevents.Envelope) error { return nil }
 	for _, group := range kevents.Groups() {
@@ -403,6 +380,7 @@ func TestSubscriberEnsuresEverySpecGroup(t *testing.T) {
 // succeeded (so a crash there re-runs, never drops), and a mark once it
 // has (so the third delivery is absorbed).
 func TestDedupeMarksOnlyAfterTheEffectSucceeded(t *testing.T) {
+	t.Parallel()
 	e := setup(t)
 	env := e.stage(t, "contact.created", ids.NewV7())
 	markKey := dedupeKey("cg:context-graph", env)

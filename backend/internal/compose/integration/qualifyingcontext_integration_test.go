@@ -13,6 +13,7 @@ import (
 )
 
 func TestARecordedRequestKeepsItsDealScopeAndSendsNothing(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	stages := apptest.DiscoverSeededPipeline(t, c.AppEnv)
 	requested := apptest.StakeOnOpenDeal(t, c.AppEnv, "Requested negotiation", stages, c.contactID)

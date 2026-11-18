@@ -106,6 +106,7 @@ func capturedEnvelope(t *testing.T, activity ids.UUID) events.Envelope {
 // whose insert disagree compiles and then panics on the first mailed card.
 // Nothing short of actually inserting the job says so.
 func TestAMailedCardQueuesItsImport(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	// The queue's own tables: this test asserts on a row River writes, so the
 	// schema it writes into has to exist.
@@ -149,6 +150,7 @@ func TestAMailedCardQueuesItsImport(t *testing.T) {
 // before the trigger's insert was fixed. The two messages differ in nothing but
 // the audience, so what the admit arm proves is that the audience is the reason.
 func TestOnlyWorkspaceReadableMailLendsItsCard(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 
@@ -199,6 +201,7 @@ func cardKeysOf(ctx context.Context, t *testing.T, w *vcardIngestWorker, activit
 // resolves nothing at all, which is what a mutation of the switch clause turned
 // it into.
 func TestAMailedCardObeysTheMailboxsOwnSwitch(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 
@@ -225,8 +228,8 @@ func TestAMailedCardObeysTheMailboxsOwnSwitch(t *testing.T) {
 
 // A mailbox that never chose follows the workspace default. A boot-set default
 // wins over the row in the card path's SQL, as it does in the signature pass.
-// Not parallel: the binding is the process's own.
 func TestABootSetMailReadingDefaultBindsTheCardPath(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	activity := seedCardMail(ctx, t, e, e.Rep1, "workspace")
@@ -239,9 +242,7 @@ func TestABootSetMailReadingDefaultBindsTheCardPath(t *testing.T) {
 		t.Fatalf("with the saved default on, the import was refused: %v", err)
 	}
 
-	before := config.Bound()
-	UseConfig(bootConfigForTest(t, config.RoleWorker, "MARGINCE_CAPTURE_SIGNATURE_ENRICH=false"))
-	t.Cleanup(func() { UseConfig(before) })
+	ctx = ConfigContext(ctx, bootConfigForTest(t, config.RoleWorker, "MARGINCE_CAPTURE_SIGNATURE_ENRICH=false"))
 	if _, err := grantorOf(ctx, e, activity); err == nil {
 		t.Fatal("a boot-set default of off still granted the import over the saved row")
 	}
@@ -286,6 +287,7 @@ var errNoActorBound = errors.New("the import context carries no actor")
 // touches: a real notice row a contact's Worklist would actually show, not an
 // audit row nothing renders.
 func TestAStagingFailureRaisesAWorklistNoticeForTheImporter(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	worker := newVCardIngestWorker(e.Pool, blobstore.NewMemory(), quietIngestLog())
 	activity := ids.NewV7()
@@ -322,6 +324,7 @@ func TestAStagingFailureRaisesAWorklistNoticeForTheImporter(t *testing.T) {
 // dedupe key this floods the importer's Worklist with one identical line per
 // attempt.
 func TestARetriedStagingFailureRaisesOnlyOneNotice(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	worker := newVCardIngestWorker(e.Pool, blobstore.NewMemory(), quietIngestLog())
 	activity := ids.NewV7()

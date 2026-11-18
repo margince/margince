@@ -23,6 +23,7 @@ import (
 )
 
 func TestContactMergePreviewMatchesProfileEvidenceSurvivorship(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.AdminUser, nil, integration.AdminPerms)
 	var contactIDs []ids.UUID
@@ -113,6 +114,7 @@ func TestContactMergePreviewMatchesProfileEvidenceSurvivorship(t *testing.T) {
 }
 
 func TestContactMergePreviewProtectsAndPreservesSignatureEvidence(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.AdminUser, nil, integration.AdminPerms)
 	var contactIDs []ids.UUID
@@ -180,6 +182,7 @@ func TestContactMergePreviewProtectsAndPreservesSignatureEvidence(t *testing.T) 
 }
 
 func TestContactMergePreviewDoesNotReadUnchangedTargetProfileEvidence(t *testing.T) {
+	t.Parallel()
 	for _, withSource := range []bool{false, true} {
 		t.Run(map[bool]string{false: "empty source", true: "different source field"}[withSource], func(t *testing.T) {
 			e := integration.Setup(t)
@@ -220,6 +223,7 @@ func TestContactMergePreviewDoesNotReadUnchangedTargetProfileEvidence(t *testing
 }
 
 func TestContactMergePreviewHonorsProfileVerdicts(t *testing.T) {
+	t.Parallel()
 	for _, verdict := range []string{ai.VerdictCorrected, ai.VerdictSuppressed, ai.VerdictConfirmed} {
 		t.Run(verdict, func(t *testing.T) {
 			e := integration.Setup(t)

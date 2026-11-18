@@ -42,6 +42,7 @@ func citing(id ids.UUID) []crmcontracts.CompanyBriefSentence {
 // The reader who may read the message gets the row that opens it: the same
 // subject, the same access word, naming the same activity.
 func TestACitedMessageCarriesItsRowForAReaderWhoMayReadIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	contact := e.SeedContact(t, "Frédéric Buyer", &e.Rep1)
@@ -86,6 +87,7 @@ func TestACitedMessageCarriesItsRowForAReaderWhoMayReadIt(t *testing.T) {
 // because a refusal test on its own passes against a reader who could never see
 // anything.
 func TestACitedMessageCarriesNoRowForAReaderOutsideItsAudience(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	colleague := e.As(e.Rep3, []ids.UUID{e.Team2}, activityLifecyclePerms)
@@ -137,6 +139,7 @@ func TestACitedMessageCarriesNoRowForAReaderOutsideItsAudience(t *testing.T) {
 // A seat with no activity grant reads no rows at all, and the response still
 // renders: the citations are simply not openable.
 func TestASeatWithoutTheActivityGrantGetsNoRows(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	contact := e.SeedContact(t, "Frédéric Buyer", &e.Rep1)
@@ -174,6 +177,7 @@ func TestASeatWithoutTheActivityGrantGetsNoRows(t *testing.T) {
 // what says so. Nothing here filters by kind before the read — evidence carries
 // no kind word — so this is the case that proves the filter is real.
 func TestACitedNoteCarriesNoEmailRow(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	contact := e.SeedContact(t, "Frédéric Buyer", &e.Rep1)

@@ -50,6 +50,7 @@ func (e *loadEnv) mailFiledUnderBoth(t *testing.T, subject string, buyer, rep id
 // The buyer wrote to the rep, and both have a record the message is filed
 // under. The row names the buyer, while the addressed rep owes the reply.
 func TestAWaitingRowNamesWhoWroteNotWhoReceived(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	buyer, rep := e.buyerAndRepContacts(t)
 	activity := e.mailFiledUnderBoth(t, "Anfrage Entwicklungsteam", buyer, rep, &buyer)
@@ -66,6 +67,7 @@ func TestAWaitingRowNamesWhoWroteNotWhoReceived(t *testing.T) {
 // Without a resolved sender, a contact that is somebody's seat is still the
 // last choice: the rep's own record is never the buyer.
 func TestAWaitingRowNeverNamesASeatWhenACustomerIsFiled(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	buyer, rep := e.buyerAndRepContacts(t)
 	activity := e.mailFiledUnderBoth(t, "Question without a resolved sender", buyer, rep, nil)
@@ -78,6 +80,7 @@ func TestAWaitingRowNeverNamesASeatWhenACustomerIsFiled(t *testing.T) {
 // Two customers on one message, neither a seat: the one who wrote is named,
 // not the colleague of theirs on copy whose record happens to sort first.
 func TestAWaitingRowNamesTheSenderAmongCustomers(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	buyer, copied := e.buyerAndRepContacts(t)
 	e.exec(t, `DELETE FROM contact_email WHERE contact_id = $1`, copied)

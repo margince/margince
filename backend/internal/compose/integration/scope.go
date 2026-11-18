@@ -31,7 +31,7 @@ import (
 // integration tests that import this package, so importing compose back from a
 // non-test file here is an import cycle — which is why the shape moved down to
 // the kernel rather than the fixture moving up.
-func RetentionPassCtx(ws ids.UUID) context.Context {
-	ctx := principal.WithWorkspaceID(context.Background(), ws)
+func RetentionPassCtx(parent context.Context, ws ids.UUID) context.Context {
+	ctx := principal.WithWorkspaceID(parent, ws)
 	return principal.SystemActing(ctx, "system")
 }

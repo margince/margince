@@ -66,7 +66,7 @@ func newDealVerdictPass(pool *pgxpool.Pool, brain completer, log *slog.Logger) d
 		pool: pool, brain: brain, log: log,
 		deals: deals.NewStore(InstallationDB(pool), DealsInstallation()).
 			WithOwnDomains(ownDomainReader{store: capture.NewOwnDomainStore(InstallationDB(pool))}),
-		users:     identity.NewService(pool),
+		users:     IdentityService(pool),
 		notes:     activities.NewStore(InstallationDB(pool)),
 		assurance: assurance.NewStore(InstallationDB(pool)),
 		now:       func() time.Time { return time.Now().UTC() },
@@ -214,7 +214,7 @@ func ownerVerdictSwitches(ctx context.Context, tx pgx.Tx, owner ids.UUID) (map[s
 		out[correction] = mode == approvals.ModeAuto
 	}
 	// An admin may stop every stage move for the installation.
-	moves, err := config.StoredApplyTx(ctx, tx, config.Bound(), deals.StageAutopilotEnabled)
+	moves, err := config.StoredApplyTx(ctx, tx, config.Bound(ctx), deals.StageAutopilotEnabled)
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading whether deals may move: %w", err)
 	}

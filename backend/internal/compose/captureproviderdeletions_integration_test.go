@@ -49,6 +49,7 @@ func mailboxJSON(t *testing.T, w http.ResponseWriter, value map[string]any) {
 }
 
 func TestProviderSyncCapturesAndRemovesTheRealStoredEmailKey(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name, provider, outlookCase string
 		kept                        bool

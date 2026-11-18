@@ -77,6 +77,7 @@ func consentStateOf(t *testing.T, e *channelConsentEnv, purpose ids.PurposeID) s
 // request order would stop there and drop the suppression, which is the one
 // thing somebody in that state most needs this page to do.
 func TestASaveRecordsItsWithdrawalsEvenWhenAGrantIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	archiveConsentSubject(t, e.owner, "contact", e.contact.UUID)
 	token := seedPreferenceToken(t, e)
@@ -123,6 +124,7 @@ func TestASaveRecordsItsWithdrawalsEvenWhenAGrantIsRefused(t *testing.T) {
 // decide it by accident; the withdrawals-first pass would decide it the other
 // way, so it is settled explicitly before anything is written.
 func TestAPurposeNamedTwiceInOneSaveSettlesOnTheWithdrawal(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	token := seedPreferenceToken(t, e)
 
@@ -143,6 +145,7 @@ func TestAPurposeNamedTwiceInOneSaveSettlesOnTheWithdrawal(t *testing.T) {
 
 // The ordinary case still works: a save of unambiguous choices records them all.
 func TestASaveRecordsEveryDistinctChoice(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	token := seedPreferenceToken(t, e)
 

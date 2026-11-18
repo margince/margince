@@ -48,6 +48,7 @@ func workClient(t *testing.T, e *integration.Env) *river.Client[pgx.Tx] {
 }
 
 func TestASiteReadAsksWhatTheCompanyPubliclyRuns(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
 	company := insertCompany(t, e, e.Rep1, "acme.example", "")
@@ -79,6 +80,7 @@ func TestASiteReadAsksWhatTheCompanyPubliclyRuns(t *testing.T) {
 // the args are not nullable, so the failure would be a panic inside a lane
 // whose whole contract is that it cannot fail the read.
 func TestASiteReadWithNoCompanyQueuesNoLookup(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
 	worker, _ := newDeepReadTestWorker(e, acmeDeepSite(), acmeDeepBrain())
@@ -103,6 +105,7 @@ func TestASiteReadWithNoCompanyQueuesNoLookup(t *testing.T) {
 // answer in the ledger the status poll reads — otherwise the button says
 // "queued" and nothing ever says anything else.
 func TestALookupWithNoEnricherConfiguredRecordsWhatItCouldNotRead(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := insertCompany(t, e, e.Rep1, "acme.example", "")
 	worker := &technicalEnrichWorker{pool: e.Pool, enricher: nil}

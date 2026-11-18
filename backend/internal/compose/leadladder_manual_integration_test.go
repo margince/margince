@@ -29,6 +29,7 @@ import (
 )
 
 func TestManualMeetingClimbsTheLeadLadder(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	lead := ids.NewV7()
@@ -116,6 +117,7 @@ func TestManualMeetingClimbsTheLeadLadder(t *testing.T) {
 // earn Contacted — through the same real writer and workflow as the meeting
 // above, because the mapping dropping any of it would strand the lead on New.
 func TestManualNoteMarksTheLeadContacted(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	lead := ids.NewV7()

@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -36,6 +37,7 @@ import (
 // would hide message #1 and leave the rest on the timeline with full bodies:
 // "noise is not shown" defeated by sending two emails instead of one.
 func TestANoiseVerdictHidesEveryMessageThatSenderWrote(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	// All three carry List-Unsubscribe, so the redaction half below is reachable
 	// too — that corroboration is per-message (migration 0137), while the
@@ -45,7 +47,7 @@ func TestANoiseVerdictHidesEveryMessageThatSenderWrote(t *testing.T) {
 	third := seedBulkCapturedMail(t, e, "bulk@flood.example", "offer three")
 	dispositionID := seedPendingDisposition(t, e, "bulk@flood.example", "flood.example", first)
 
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindSpam}}
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{dispositionID.String(): capture.KindSpam}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
@@ -81,6 +83,7 @@ func TestANoiseVerdictHidesEveryMessageThatSenderWrote(t *testing.T) {
 // provider-attested, never linked to a contact, and it stops applying entirely
 // once the workspace has written to that address.
 func TestAForgedSenderCannotReachTheWorkspacesOwnCorrespondence(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	victim := "bigcustomer@corp.example"
 
@@ -91,7 +94,7 @@ func TestAForgedSenderCannotReachTheWorkspacesOwnCorrespondence(t *testing.T) {
 	forged := seedCapturedMail(t, e, victim, "🚀 buy followers now")
 	dispositionID := seedPendingDisposition(t, e, victim, "corp.example", forged)
 
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindSpam}}
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{dispositionID.String(): capture.KindSpam}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
@@ -148,11 +151,12 @@ func seedOutboundMail(t *testing.T, e *integration.Env, to, subject string) ids.
 // still collects it. A message whose original outlives its text is unfinished
 // work, not finished work, and nothing else in the system would ever collect it.
 func TestRedactionCollectsMailWhoseOriginalOutlivedItsText(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	activityID := seedBulkCapturedMail(t, e, "loud@bulk.example", "offer")
 	dispositionID := seedPendingDisposition(t, e, "loud@bulk.example", "bulk.example", activityID)
 
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindSpam}}
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{dispositionID.String(): capture.KindSpam}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
@@ -184,12 +188,13 @@ func TestRedactionCollectsMailWhoseOriginalOutlivedItsText(t *testing.T) {
 // that it is bulk — is hidden and stays hidden. It is never destroyed, however
 // long the undo window runs out.
 func TestANoiseVerdictWithoutBulkCorroborationHidesButNeverDestroys(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	// seedCapturedMail, NOT seedBulkCapturedMail: an ordinary message.
 	activityID := seedCapturedMail(t, e, "real.contact@partner.example", "about the contract")
 	dispositionID := seedPendingDisposition(t, e, "real.contact@partner.example", "partner.example", activityID)
 
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindSpam}}
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{dispositionID.String(): capture.KindSpam}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
@@ -236,11 +241,12 @@ func stripActivityContent(t *testing.T, e *integration.Env, id ids.UUID) {
 // the real owner of that address ever sends afterwards, unseen, with the
 // "reply to recover" escape unreachable because the victim's mail is invisible.
 func TestANoiseVerdictCannotReachMailSentLongAfterIt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	poisoned := seedCapturedMail(t, e, "cfo@bigcorp.example", "🚀 crypto deals")
 	dispositionID := seedPendingDisposition(t, e, "cfo@bigcorp.example", "bigcorp.example", poisoned)
 
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindSpam}}
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{dispositionID.String(): capture.KindSpam}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
@@ -342,6 +348,7 @@ func resolveAsNoise(t *testing.T, e *integration.Env, id ids.UUID) {
 // Mutation: drop the role arm from noiseMailScope and this fails at the first
 // assertion, the blast still visible.
 func TestABlastIsHiddenThoughItCopiesAContact(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 
 	blast := seedBulkCapturedMail(t, e, "bulk@flood.example", "offer one")
@@ -351,7 +358,7 @@ func TestABlastIsHiddenThoughItCopiesAContact(t *testing.T) {
 	fileUnderAs(t, e, blast, copied, "cc")
 
 	dispositionID := seedPendingDisposition(t, e, "bulk@flood.example", "flood.example", blast)
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindSpam}}
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{dispositionID.String(): capture.KindSpam}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
@@ -367,6 +374,7 @@ func TestABlastIsHiddenThoughItCopiesAContact(t *testing.T) {
 // above narrows and must not repeal. Without this the narrowing could refuse
 // everybody's link and look correct.
 func TestTheSendersOwnRecordStillCallsTheSweepOff(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 
 	mail := seedBulkCapturedMail(t, e, "bulk@flood.example", "offer one")
@@ -374,7 +382,7 @@ func TestTheSendersOwnRecordStillCallsTheSweepOff(t *testing.T) {
 	fileUnderAs(t, e, mail, sender, "from")
 
 	dispositionID := seedPendingDisposition(t, e, "bulk@flood.example", "flood.example", mail)
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindSpam}}
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{dispositionID.String(): capture.KindSpam}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
@@ -457,11 +465,13 @@ func (d *decidingBrain) Complete(ctx context.Context, req model.Request) (model.
 // watched the sender's whole domain get suppressed for every colleague, on the
 // strength of a read that was already stale when it was used.
 func TestAnOwnerDecidingDuringTheModelCallIsNotOverruled(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	first := seedBulkCapturedMail(t, e, "dana.olsen@partner.example", "quarterly note")
 	dispositionID := seedPendingDisposition(t, e, "dana.olsen@partner.example", "partner.example", first)
 
 	scripted := &scriptedVerdictBrain{
+		ownerDSN: testdb.For(t).OwnerDSN,
 		verdicts: map[string]string{dispositionID.String(): capture.KindNewsletter},
 	}
 	brain := &decidingBrain{inner: scripted, record: func() {
@@ -518,6 +528,7 @@ func TestAnOwnerDecidingDuringTheModelCallIsNotOverruled(t *testing.T) {
 // goroutine racing a goroutine, and it fails when the lock is absent rather
 // than when a machine is slow.
 func TestASenderDecisionAndItsReaderSerializeOnOneKey(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 

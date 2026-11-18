@@ -11,7 +11,6 @@ package contacts
 
 import (
 	"context"
-	"os"
 	"sync"
 	"testing"
 
@@ -22,6 +21,7 @@ import (
 )
 
 func TestACohortRepairWaitsForTheActivityBeforeItLocksTheContact(t *testing.T) {
+	t.Parallel()
 	for name, seed := range map[string]func(e *dedupeEnv, ctx context.Context, t *testing.T, email string) ids.ActivityID{
 		"mail": func(e *dedupeEnv, ctx context.Context, t *testing.T, email string) ids.ActivityID {
 			return e.seedCapturedMail(ctx, t, email, "from")
@@ -68,6 +68,7 @@ func TestACohortRepairWaitsForTheActivityBeforeItLocksTheContact(t *testing.T) {
 // activity's holder may be waiting for that contact. The busy activity is left
 // for the next pass.
 func TestACohortRepairOnAHeldContactSkipsABusyActivity(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	const email = "held@cohort.test"
@@ -134,7 +135,7 @@ func (e *dedupeEnv) ensureContact(ctx context.Context, t *testing.T, email strin
 // which backend waits on which.
 func observerConn(t *testing.T) *pgx.Conn {
 	t.Helper()
-	conn, err := pgx.Connect(context.Background(), os.Getenv("MARGINCE_TEST_DSN"))
+	conn, err := pgx.Connect(context.Background(), testdb.For(t).OwnerDSN)
 	if err != nil {
 		t.Fatalf("connecting the lock observer: %v", err)
 	}

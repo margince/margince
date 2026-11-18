@@ -17,7 +17,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/weekly"
-	"github.com/margince/margince/backend/internal/modules/identity"
 )
 
 // addWeeklyReviewJobs registers the weekly retrospective's pass. Its own
@@ -34,7 +33,7 @@ func addWeeklyReviewJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger,
 		// principal, so it must be able to answer the membership question.
 		engine:   newWeeklyEngine(pool),
 		pool:     pool,
-		users:    identity.NewService(pool),
+		users:    IdentityService(pool),
 		now:      time.Now,
 		log:      log,
 		narrator: narrator,

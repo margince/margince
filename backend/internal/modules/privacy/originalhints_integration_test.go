@@ -17,6 +17,7 @@ import (
 )
 
 func TestOriginalHintSQLNeverExcludesAnExistingContentMatch(t *testing.T) {
+	t.Parallel()
 	e := setupSARIdentifiers(t)
 	ctx := originalstore.Bind(e.ctx, e.db, blobstore.NewMemory())
 	mentions := []string{"a@b", "sam@example.test", "A.CASE@EXAMPLE.TEST", "long.name+tag@other.example.test", "Kate@example.test", "İbrahim@example.test", "søren@example.test"}

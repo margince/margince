@@ -40,6 +40,7 @@ import (
 )
 
 func TestErasingARecipientEmptiesAndStopsTheirScheduledMail(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 
@@ -85,6 +86,7 @@ func TestErasingARecipientEmptiesAndStopsTheirScheduledMail(t *testing.T) {
 // by a route the sent-message projection cannot take: a scheduled send has no
 // activity and no delivery row, so all three of that query's clauses miss it.
 func TestASubjectAccessExportCarriesTheMailNobodyHasSentYet(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 
@@ -126,6 +128,7 @@ func TestASubjectAccessExportCarriesTheMailNobodyHasSentYet(t *testing.T) {
 // blind-copied on it. A projection that satisfied one half would look correct
 // against a single-recipient fixture.
 func TestABlindCopiedSubjectSeesTheirOwnMailAndNobodyElsesAddress(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 

@@ -42,6 +42,7 @@ func owingVietnameseReceipt(t *testing.T, e *channelConsentEnv, stager Confirmat
 // TestAReceiptPrintsWhenTheRefusalArrivedAndWhenSendingStopped records a call
 // taken two hours before it was typed in.
 func TestAReceiptPrintsWhenTheRefusalArrivedAndWhenSendingStopped(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 	stager := &recordingStager{}
@@ -77,6 +78,7 @@ func TestAReceiptPrintsWhenTheRefusalArrivedAndWhenSendingStopped(t *testing.T) 
 // TestARefusalCannotArriveAfterItIsRecorded. A time later than the record is a
 // typing mistake, and the receipt would print it as fact.
 func TestARefusalCannotArriveAfterItIsRecorded(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 	owingVietnameseReceipt(t, e, &recordingStager{})
@@ -121,6 +123,7 @@ func (p *probingStager) QueueConfirmationTx(ctx context.Context, tx pgx.Tx, in C
 // its receipt answers while no other connection can. So the two commit
 // together, and the receipt goes out the moment they do (Art. 20.3).
 func TestTheReceiptIsQueuedInsideTheRefusalsTransaction(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 	stager := &probingStager{outside: e.owner}

@@ -27,6 +27,7 @@ import (
 // that admits only one of them forces the other two out of the record they are
 // working in.
 func TestThreeCompaniesWorkOneProjectAndEachPageFindsIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	compA := e.SeedCompany(t, "Alpha Werke", nil)
@@ -92,6 +93,7 @@ func TestThreeCompaniesWorkOneProjectAndEachPageFindsIt(t *testing.T) {
 // work nobody is doing, reachable from no company page — so it is refused, and
 // the refusal names the field.
 func TestTheLastCompanyCannotBeTakenOffAProject(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	compA := e.SeedCompany(t, "Alpha Werke", nil)
@@ -127,6 +129,7 @@ func TestTheLastCompanyCannotBeTakenOffAProject(t *testing.T) {
 // reaching project_company through it could attach a company to a project they
 // cannot write, or archive the last one.
 func TestTheGenericRelationshipSurfaceRefusesAProjectCompany(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	company := e.SeedCompany(t, "Alpha Werke", nil)
@@ -154,6 +157,7 @@ func TestTheGenericRelationshipSurfaceRefusesAProjectCompany(t *testing.T) {
 // A company still holding deals on the project cannot be taken off it: a deal
 // names a company AND a project, and the two must agree.
 func TestACompanyWithDealsOnTheProjectCannotBeTakenOff(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	compA := e.SeedCompany(t, "Alpha Werke", nil)

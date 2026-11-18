@@ -16,6 +16,7 @@ import (
 // A FactsOnly read keeps each row's mail facts and reads none of what a screen
 // draws beside a row. The same rows read both ways agree on the facts.
 func TestAFactsOnlyReadKeepsTheMailFactsAndReadsNoAffordances(t *testing.T) {
+	t.Parallel()
 	e := setupPromises(t)
 	note := e.seedLinkedNote(t, e.rep)
 	mail := ids.NewV7()
@@ -60,6 +61,7 @@ func TestAFactsOnlyReadKeepsTheMailFactsAndReadsNoAffordances(t *testing.T) {
 // A LinkedFactsOnly read is the facts read with each row's links, which a task
 // row is drawn from. The links agree with the full read's.
 func TestALinkedFactsReadKeepsTheLinksAndReadsNoAffordances(t *testing.T) {
+	t.Parallel()
 	e := setupPromises(t)
 	note := e.seedLinkedNote(t, e.rep)
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))

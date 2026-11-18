@@ -57,6 +57,7 @@ func ownLeadByItsCreator(t *testing.T, e *apptest.AppEnv, lead string) {
 // A lead nobody owns has nobody to ask. Once someone owns it, the next held
 // meeting asks them.
 func TestAnOwnerlessLeadGetsNoQualifyTaskUntilSomeoneOwnsIt(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	lead := createdID(t, e, "/v1/leads", AnyMap{"full_name": "Lena Prospect", "email": "lena@prospect.example"})
@@ -74,6 +75,7 @@ func TestAnOwnerlessLeadGetsNoQualifyTaskUntilSomeoneOwnsIt(t *testing.T) {
 // A qualify task filed before its lead had an owner is nobody's. The next held
 // meeting hands it to the owner instead of letting it block their task.
 func TestAnUnassignedQualifyTaskGoesToTheLeadsOwner(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	lead := createdID(t, e, "/v1/leads", AnyMap{"full_name": "Lena Prospect", "email": "lena@prospect.example"})

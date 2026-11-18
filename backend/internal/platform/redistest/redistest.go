@@ -10,7 +10,6 @@
 package redistest
 
 import (
-	"os"
 	"testing"
 
 	"github.com/redis/go-redis/v9"
@@ -18,16 +17,12 @@ import (
 	"github.com/margince/margince/backend/internal/platform/testdb"
 )
 
-// Client returns a flushed Redis client on the isolated integration db the
-// parallel runner assigned this package — see testdb.RedisDB. It fails loudly
-// (never skips) when Redis is not provisioned — the same posture the DB fixtures
-// take.
+// Client returns a flushed Redis client on the database testdb.RedisDB leased
+// this test. A second call in the same test reaches the same database. It fails
+// loudly (never skips) when Redis is not provisioned, as the DB fixtures do.
 func Client(t *testing.T) *redis.Client {
 	t.Helper()
-	addr := os.Getenv("MARGINCE_TEST_REDIS")
-	if addr == "" {
-		t.Fatal("MARGINCE_TEST_REDIS not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	addr := testdb.RedisAddr(t)
 	rdb := redis.NewClient(&redis.Options{Addr: addr, DB: testdb.RedisDB(t)})
 	// Register cleanup immediately, before the fatal Ping/FlushDB paths, so
 	// a setup failure still closes the client instead of leaking it.
@@ -37,7 +32,7 @@ func Client(t *testing.T) *redis.Client {
 		}
 	})
 	if err := rdb.Ping(t.Context()).Err(); err != nil {
-		t.Fatalf("redis at %s unreachable — run `make db-up`: %v", addr, err)
+		t.Fatalf("redis at %s unreachable: run `make db-up`: %v", addr, err)
 	}
 	if err := rdb.FlushDB(t.Context()).Err(); err != nil {
 		t.Fatalf("flushing test redis db: %v", err)

@@ -19,6 +19,7 @@ import (
 // put when its human loses Admin or an admin edits a role. The lower limit
 // refuses at once, and nothing starts the window again.
 func TestARoleChangeKeepsTheCountAndMovesOnlyTheLimit(t *testing.T) {
+	t.Parallel()
 	at := time.Date(2026, 10, 14, 10, 0, 0, 0, time.UTC)
 	src := &scriptedSource{policy: rolePolicy()}
 	meter := NewWithClock(redistest.Client(t), Limits{}, DefaultWindow, frozen(&at)).WithPolicySource(src)
@@ -45,6 +46,7 @@ func TestARoleChangeKeepsTheCountAndMovesOnlyTheLimit(t *testing.T) {
 
 // One usage read judges each holder against its own roles.
 func TestUsageJudgesEachHolderByItsOwnRoles(t *testing.T) {
+	t.Parallel()
 	at := time.Date(2026, 10, 14, 10, 0, 0, 0, time.UTC)
 	meter := NewWithClock(redistest.Client(t), Limits{}, DefaultWindow, frozen(&at)).
 		WithPolicySource(&scriptedSource{policy: rolePolicy()})

@@ -33,7 +33,6 @@ package integration
 import (
 	"context"
 	"net/url"
-	"os"
 	"testing"
 	"time"
 
@@ -107,11 +106,7 @@ func setupTxSeam(t *testing.T) txSeamFixture {
 // unset), so this stays the shipped pool with one named difference.
 func singleConnPool(t *testing.T) *pgxpool.Pool {
 	t.Helper()
-	dsn := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if dsn == "" {
-		t.Fatal("MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
-	u, err := url.Parse(dsn)
+	u, err := url.Parse(testdb.For(t).AppDSN)
 	if err != nil {
 		t.Fatalf("parsing the app DSN: %v", err)
 	}
@@ -160,6 +155,7 @@ func (f txSeamFixture) requireCatalogAnswers(t *testing.T, object string) {
 }
 
 func TestGetContactTxRunsOnTheCallersOnlyConnection(t *testing.T) {
+	t.Parallel()
 	f := setupTxSeam(t)
 	col := f.defineTxSeamField(t, "contact", "Tier")
 
@@ -194,6 +190,7 @@ func TestGetContactTxRunsOnTheCallersOnlyConnection(t *testing.T) {
 }
 
 func TestGetCompanyTxRunsOnTheCallersOnlyConnection(t *testing.T) {
+	t.Parallel()
 	f := setupTxSeam(t)
 	col := f.defineTxSeamField(t, "company", "Segment")
 
@@ -228,6 +225,7 @@ func TestGetCompanyTxRunsOnTheCallersOnlyConnection(t *testing.T) {
 }
 
 func TestUpdateDealTxRunsOnTheCallersOnlyConnection(t *testing.T) {
+	t.Parallel()
 	f := setupTxSeam(t)
 	pipeline, stage, _ := DealFixture(t, f.e)
 	col := f.defineTxSeamField(t, "deal", "Renewal Risk")
@@ -269,6 +267,7 @@ func TestUpdateDealTxRunsOnTheCallersOnlyConnection(t *testing.T) {
 // read before the transaction ride the create.
 
 func TestCreateContactTxRunsOnTheCallersOnlyConnection(t *testing.T) {
+	t.Parallel()
 	f := setupTxSeam(t)
 	col := f.defineTxSeamField(t, "contact", "Tier")
 	active, err := f.contacts.ActiveCreateColumns(f.ctx, "contact")
@@ -293,6 +292,7 @@ func TestCreateContactTxRunsOnTheCallersOnlyConnection(t *testing.T) {
 }
 
 func TestCreateCompanyTxRunsOnTheCallersOnlyConnection(t *testing.T) {
+	t.Parallel()
 	f := setupTxSeam(t)
 	col := f.defineTxSeamField(t, "company", "Segment")
 	active, err := f.contacts.ActiveCreateColumns(f.ctx, "company")
@@ -317,6 +317,7 @@ func TestCreateCompanyTxRunsOnTheCallersOnlyConnection(t *testing.T) {
 }
 
 func TestCreateLeadTxRunsOnTheCallersOnlyConnection(t *testing.T) {
+	t.Parallel()
 	f := setupTxSeam(t)
 	col := f.defineTxSeamField(t, "lead", "Segment")
 	active, err := f.contacts.ActiveCreateColumns(f.ctx, "lead")
@@ -344,6 +345,7 @@ func TestCreateLeadTxRunsOnTheCallersOnlyConnection(t *testing.T) {
 }
 
 func TestCreateDealTxRunsOnTheCallersOnlyConnection(t *testing.T) {
+	t.Parallel()
 	f := setupTxSeam(t)
 	pipeline, stage, _ := DealFixture(t, f.e)
 	col := f.defineTxSeamField(t, "deal", "Renewal Risk")

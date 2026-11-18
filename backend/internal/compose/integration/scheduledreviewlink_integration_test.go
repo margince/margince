@@ -44,6 +44,7 @@ func scheduledList(t *testing.T, c *consentEnv) []scheduledRow {
 
 // A HELD MESSAGE NAMES ITS REVIEW.
 func TestAHeldMessageCarriesTheRouteToItsReview(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 
 	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {
@@ -93,6 +94,7 @@ func TestAHeldMessageCarriesTheRouteToItsReview(t *testing.T) {
 // It does NOT pin the held-status filter in stampReviews; the test below that
 // does is TestARescheduledMessageNamesNoReview.
 func TestAnOrdinaryScheduledMessageNamesNoReview(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 
 	// First the refusal, so a live review exists to be mis-stamped.
@@ -146,6 +148,7 @@ func TestAnOrdinaryScheduledMessageNamesNoReview(t *testing.T) {
 // whole time — so a row still naming the closed review would be offering a
 // route to work somebody has already finished.
 func TestAMessageWhoseReviewIsOverNamesItNoMore(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 
 	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {
@@ -192,6 +195,7 @@ func TestAMessageWhoseReviewIsOverNamesItNoMore(t *testing.T) {
 // at a moment that has passed — and the rep would be sent to work about a
 // message they have already moved.
 func TestARescheduledMessageNamesNoReview(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 
 	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {

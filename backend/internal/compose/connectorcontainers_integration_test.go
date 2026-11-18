@@ -63,6 +63,7 @@ func (c *listingConnector) ListContainers(
 // The happy path, and the thing it really asserts: the registry read THIS
 // seat's connection and handed its credential to the connector.
 func TestListContainersResolvesTheSeatsOwnCredential(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedListableConnection(t, e, e.Rep1, []byte(`{"mailbox":"INBOX"}`))
 
@@ -87,6 +88,7 @@ func TestListContainersResolvesTheSeatsOwnCredential(t *testing.T) {
 // ABSENT: whether somebody else's mailbox exists is not a thing to confirm,
 // and an empty list would read as "your mailbox has no folders".
 func TestListContainersAnswersAbsentForASeatWithNoConnection(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 
 	r := capture.NewRegistry(InstallationDB(e.Pool), nil, nil, nil)
@@ -102,6 +104,7 @@ func TestListContainersAnswersAbsentForASeatWithNoConnection(t *testing.T) {
 // A colleague's connection is not this seat's to enumerate: the read matches
 // on the caller, so the answer is absence rather than somebody else's folders.
 func TestListContainersDoesNotReachAColleaguesMailbox(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedListableConnection(t, e, e.Rep1, []byte(`{"mailbox":"INBOX"}`))
 
@@ -139,6 +142,7 @@ func seedListableConnection(t *testing.T, e *integration.Env, owner ids.UUID, au
 // These are the two arms that need a database to reach, which is why they sit
 // here rather than beside the refusals.
 func TestListConnectorContainersOverHTTP(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedListableConnection(t, e, e.Rep1, []byte(`{"mailbox":"INBOX"}`))
 

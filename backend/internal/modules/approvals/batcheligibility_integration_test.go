@@ -64,6 +64,7 @@ func (e *stagingEnv) listedIDs(ctx context.Context, t *testing.T, in ListInput) 
 // the batch probe decides, beside rows that pass. The count and every page of
 // the list must agree, and both must leave each excluded row out.
 func TestTheCountAndTheListExcludeEachUndecidableRowAlike(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	seeder := newDealSeeder(t, e)
 	colleague := e.secondRep(t)
@@ -142,6 +143,7 @@ func (c *countingTx) Exec(ctx context.Context, sql string, args ...any) (pgconn.
 // A full batch over two owners' deals and cited notes costs one statement for
 // the citations and one for the deals. Each row answers as it does alone.
 func TestABatchIsDecidedInOneStatementPerSourceAndAgreesRowByRow(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	seeder := newDealSeeder(t, e)
 	colleague := e.secondRep(t)

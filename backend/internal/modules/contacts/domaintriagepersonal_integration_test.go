@@ -50,6 +50,7 @@ func (e *dedupeEnv) assertHeldForAHuman(ctx context.Context, t *testing.T, domai
 // A personal page that names its owner's employer reads like a founder's brand.
 // Neither files the domain on the company, and a later mail maps to none.
 func TestASiteNamingTheSendersEmployerIsHeldForAHuman(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.openTriageFirst(ctx, t, "jonas@lindqvist.example", "Jonas Lindqvist", "lindqvist.example")
@@ -67,6 +68,7 @@ func TestASiteNamingTheSendersEmployerIsHeldForAHuman(t *testing.T) {
 // A founder's own company under a brand unrelated to the founder-name domain.
 // A machine cannot tell it from an employer, so it is held too.
 func TestAFoundersBrandOnTheirNameDomainIsHeldForAHuman(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.openTriageFirst(ctx, t, "john@johnsmith.example", "John Smith", "johnsmith.example")
@@ -76,6 +78,7 @@ func TestAFoundersBrandOnTheirNameDomainIsHeldForAHuman(t *testing.T) {
 // A site that names its own domain is still the company. That holds even when
 // the domain is also its founder's surname, because a read site outranks a name.
 func TestASiteNamingItsOwnDomainStaysTheCompanyOfItsFounder(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.openTriageFirst(ctx, t, "alexander@baumert.example", "Alexander Baumert", "baumert.example")
@@ -91,6 +94,7 @@ func TestASiteNamingItsOwnDomainStaysTheCompanyOfItsFounder(t *testing.T) {
 // Old mail goes to a human before any automatic verdict settles the domain,
 // a refusal as much as a company.
 func TestStaleEvidenceKeepsAnAutomaticPersonalVerdictOpen(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.openTriageFirst(ctx, t, "greta@vogel.example", "Greta Vogel", "vogel.example")

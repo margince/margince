@@ -19,6 +19,7 @@ import (
 )
 
 func TestRemovingAMemberMovesListsAndArchivesViews(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	manager := memberManagerFor(t, e)
 	store := collections.NewStore(e.DB())
@@ -68,6 +69,7 @@ func TestRemovingAMemberMovesListsAndArchivesViews(t *testing.T) {
 }
 
 func TestRemovingAMemberWithOnlyPersonalViewsNeedsNoReceiver(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	manager := memberManagerFor(t, e)
 	permissions := integration.AdminWithSignals

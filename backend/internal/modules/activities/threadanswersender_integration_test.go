@@ -15,6 +15,7 @@ import (
 // Mail to a second correspondent on the same thread, or a Bcc copy, leaves the
 // customer unanswered; a reply that copies them answers.
 func TestAReplyOnTheThreadToSomebodyElseDoesNotAnswerTheSender(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)

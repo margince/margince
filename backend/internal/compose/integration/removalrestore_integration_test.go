@@ -91,6 +91,7 @@ func (f restoreFixture) tagProvenance(t *testing.T, tag ids.TagID, contact ids.U
 }
 
 func TestARemovedTagComesBackAsItWasAssigned(t *testing.T) {
+	t.Parallel()
 	f := newRestoreFixture(t)
 	tag := f.tag(t, "Undo Me")
 	contact := f.taggedByRep(t, tag, "Tagged By Rep")
@@ -124,6 +125,7 @@ func TestARemovedTagComesBackAsItWasAssigned(t *testing.T) {
 }
 
 func TestATagRestoreRefusesATaggingThatMovedOn(t *testing.T) {
+	t.Parallel()
 	f := newRestoreFixture(t)
 	tag := f.tag(t, "Moving On")
 	contact := f.taggedByRep(t, tag, "Retagged")
@@ -155,6 +157,7 @@ func TestATagRestoreRefusesATaggingThatMovedOn(t *testing.T) {
 }
 
 func TestATagRestoreHidesARemovalThatIsNotTheCallers(t *testing.T) {
+	t.Parallel()
 	f := newRestoreFixture(t)
 	tag, otherTag := f.tag(t, "Whose Removal"), f.tag(t, "Another Word")
 	contact := f.taggedByRep(t, tag, "Removed By Admin")
@@ -238,6 +241,7 @@ func (f restoreFixture) memberProvenance(t *testing.T, list ids.ListID, contact 
 }
 
 func TestARemovedMemberComesBackAsItWasAdded(t *testing.T) {
+	t.Parallel()
 	f := newRestoreFixture(t)
 	list, contact := f.shortlistByRep(t, "Fair Leads")
 	added := f.memberProvenance(t, list, contact)
@@ -279,6 +283,7 @@ func TestARemovedMemberComesBackAsItWasAdded(t *testing.T) {
 }
 
 func TestAMemberRestoreRefusesAMembershipThatMovedOn(t *testing.T) {
+	t.Parallel()
 	f := newRestoreFixture(t)
 	list, contact := f.shortlistByRep(t, "Moving Members")
 
@@ -308,6 +313,7 @@ func TestAMemberRestoreRefusesAMembershipThatMovedOn(t *testing.T) {
 }
 
 func TestAMemberRestoreHidesARemovalThatIsNotTheCallers(t *testing.T) {
+	t.Parallel()
 	f := newRestoreFixture(t)
 	list, contact := f.shortlistByRep(t, "Whose Removal")
 	otherList, _ := f.shortlistByRep(t, "Another List")
@@ -342,6 +348,7 @@ func TestAMemberRestoreHidesARemovalThatIsNotTheCallers(t *testing.T) {
 }
 
 func TestAnErasedMembersNoteLeavesNoCopyAndItsRemovalCannotComeBack(t *testing.T) {
+	t.Parallel()
 	f := newRestoreFixture(t)
 	list, contact := f.shortlistByRep(t, "Erased Subject")
 	removal := f.removeMember(f.e.Admin(), t, list, contact)
@@ -366,6 +373,7 @@ func TestAnErasedMembersNoteLeavesNoCopyAndItsRemovalCannotComeBack(t *testing.T
 // A change whose transaction began before the removal's carries an earlier
 // occurred_at, and still counts as later: it was written after.
 func TestATagRestoreSeesAChangeFromATransactionThatBeganFirst(t *testing.T) {
+	t.Parallel()
 	f := newRestoreFixture(t)
 	tag := f.tag(t, "Long Transaction")
 	contact := f.taggedByRep(t, tag, "Raced")
@@ -393,6 +401,7 @@ func TestATagRestoreSeesAChangeFromATransactionThatBeganFirst(t *testing.T) {
 }
 
 func TestATagRemovalCannotComeBackOnceItsRecordIsErased(t *testing.T) {
+	t.Parallel()
 	f := newRestoreFixture(t)
 	tag := f.tag(t, "Erased Record")
 	contact := f.taggedByRep(t, tag, "Erased Tagged Subject")

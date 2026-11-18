@@ -66,6 +66,7 @@ func engineOverClaims(fx *autoFixture, provider *countingProvider) *WorkflowEngi
 }
 
 func TestTwoIdenticalInstancesMintOneTask(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	fx.seedAutomation(t, routeLeadName)
 	fx.seedAutomation(t, routeLeadName)
@@ -115,6 +116,7 @@ func TestTwoIdenticalInstancesMintOneTask(t *testing.T) {
 }
 
 func TestDifferentParamsEachApply(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	// Two genuinely different parameterizations: the due dates differ, so
 	// each is its own effect and both must land.
@@ -137,6 +139,7 @@ func TestDifferentParamsEachApply(t *testing.T) {
 }
 
 func TestRedeliveryAppliesNothingNew(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	fx.seedAutomation(t, routeLeadName)
 

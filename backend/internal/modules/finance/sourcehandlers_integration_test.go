@@ -97,11 +97,6 @@ type sourceAdmin struct {
 func setupSourceAdmin(t *testing.T) *sourceAdmin {
 	t.Helper()
 	e := setupFinance(t)
-	// The package's tests share one database, and readConnection takes the
-	// newest live connection. Retiring the earlier tests' connections keeps a
-	// disconnect here from surfacing one of theirs.
-	e.ownerExec(t, `UPDATE finance_connection SET archived_at = now()
-		 WHERE id <> $1 AND archived_at IS NULL`, e.connection)
 	queue := &recordingQueue{}
 	return &sourceAdmin{
 		financeEnv: e,
@@ -168,6 +163,7 @@ func decode[T any](t *testing.T, rec *httptest.ResponseRecorder) T {
 }
 
 func TestTheSourceCardShowsTheLiveConnectionAndWhatIsOnOffer(t *testing.T) {
+	t.Parallel()
 	a := setupSourceAdmin(t)
 
 	rec := call(a.admin(), http.MethodGet, "", a.handlers.GetFinanceSource)
@@ -191,6 +187,7 @@ func TestTheSourceCardShowsTheLiveConnectionAndWhatIsOnOffer(t *testing.T) {
 }
 
 func TestABuildWithoutSourcesAnswersNotImplemented(t *testing.T) {
+	t.Parallel()
 	a := setupSourceAdmin(t)
 	bare := Handlers{store: a.store}
 	expect(t, call(a.admin(), http.MethodPut, `{"provider":"test_ledger"}`, bare.ConnectFinanceSource),
@@ -201,6 +198,7 @@ func TestABuildWithoutSourcesAnswersNotImplemented(t *testing.T) {
 // A source that cannot be read is refused before any row exists, so the sweep
 // never meets a connection it fails on every six hours.
 func TestConnectingAnUnreadableSourceLeavesNothingBehind(t *testing.T) {
+	t.Parallel()
 	a := setupSourceAdmin(t)
 	ctx := a.admin()
 	expect(t, call(ctx, http.MethodDelete, "", a.handlers.DisconnectFinanceSource), http.StatusNoContent, "")
@@ -230,10 +228,11 @@ func TestConnectingAnUnreadableSourceLeavesNothingBehind(t *testing.T) {
 }
 
 func TestConnectingRecordsOneSourceAndQueuesItsFirstSync(t *testing.T) {
+	t.Parallel()
 	a := setupSourceAdmin(t)
 	ctx := a.admin()
 	expect(t, call(ctx, http.MethodDelete, "", a.handlers.DisconnectFinanceSource), http.StatusNoContent, "")
-	mark := auditWatermark(a.ctx, t, a.financeEnv)
+	disconnected := auditRowsByEntity(a.ctx, t, a.financeEnv)[entityConnection]
 
 	rec := call(ctx, http.MethodPut, `{"provider":"other_ledger"}`, a.handlers.ConnectFinanceSource)
 	expect(t, rec, http.StatusOK, "")
@@ -244,7 +243,7 @@ func TestConnectingRecordsOneSourceAndQueuesItsFirstSync(t *testing.T) {
 	if a.queue.queued != 1 {
 		t.Errorf("%d syncs queued, want the first one", a.queue.queued)
 	}
-	if got := auditRowsByEntity(a.ctx, t, a.financeEnv, mark)[entityConnection]; got != 1 {
+	if got := auditRowsByEntity(a.ctx, t, a.financeEnv)[entityConnection] - disconnected; got != 1 {
 		t.Errorf("%d connection audit rows, want the create", got)
 	}
 
@@ -260,6 +259,7 @@ func TestConnectingRecordsOneSourceAndQueuesItsFirstSync(t *testing.T) {
 }
 
 func TestOnlyAHumanWithTheIntegrationsGrantConnects(t *testing.T) {
+	t.Parallel()
 	a := setupSourceAdmin(t)
 	body := `{"provider":"test_ledger"}`
 
@@ -284,24 +284,25 @@ func TestOnlyAHumanWithTheIntegrationsGrantConnects(t *testing.T) {
 // Disconnecting keeps the mirrored rows and stops the sync; a second disconnect
 // finds nothing to do and says so with the same answer.
 func TestDisconnectingStopsTheSyncAndAuditsTheTransition(t *testing.T) {
+	t.Parallel()
 	a := setupSourceAdmin(t)
 	ctx := a.admin()
-	mark := auditWatermark(a.ctx, t, a.financeEnv)
 
 	expect(t, call(ctx, http.MethodDelete, "", a.handlers.DisconnectFinanceSource), http.StatusNoContent, "")
 	if status := a.connectionStatus(t, a.connection); status != statusDisconnected {
 		t.Errorf("connection status = %q, want %q", status, statusDisconnected)
 	}
-	if got := auditRowsByEntity(a.ctx, t, a.financeEnv, mark)[entityConnection]; got != 1 {
+	if got := auditRowsByEntity(a.ctx, t, a.financeEnv)[entityConnection]; got != 1 {
 		t.Errorf("%d connection audit rows, want the one transition", got)
 	}
 	expect(t, call(ctx, http.MethodDelete, "", a.handlers.DisconnectFinanceSource), http.StatusNoContent, "")
-	if got := auditRowsByEntity(a.ctx, t, a.financeEnv, mark)[entityConnection]; got != 1 {
+	if got := auditRowsByEntity(a.ctx, t, a.financeEnv)[entityConnection]; got != 1 {
 		t.Errorf("%d connection audit rows after a disconnect with nothing connected, want still 1", got)
 	}
 }
 
 func TestASyncIsQueuedOnlyForAConnectedSource(t *testing.T) {
+	t.Parallel()
 	a := setupSourceAdmin(t)
 	ctx := a.admin()
 

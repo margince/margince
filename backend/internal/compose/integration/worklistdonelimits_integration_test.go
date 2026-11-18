@@ -16,6 +16,7 @@ import (
 )
 
 func TestAWorklistDoneBreakingItsDeclaredLimitsIsA422NamingRows(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Done Refusals", "admin@donerefusals.test", "Admin")
 

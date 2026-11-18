@@ -27,6 +27,7 @@ package integration
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"slices"
 	"testing"
 	"time"
@@ -64,6 +65,7 @@ import (
 // by the encoder-agreement test in the agents package, but not against a live
 // handler.
 func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
@@ -79,9 +81,8 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		`{"record_type":"company","fields":{"display_name":"Conformance GmbH"}}`)
 	lead := createThroughTheToolSurface(ctx, t, registry,
 		`{"record_type":"lead","fields":{"email":"lead@conformance.example"}}`)
-	deal := createThroughTheToolSurface(ctx, t, registry,
-		`{"record_type":"deal","fields":{"name":"Conformance renewal","pipeline_id":"`+
-			pipeline.String()+`","stage_id":"`+open.String()+`"}}`)
+	deal := createThroughTheToolSurface(ctx, t, registry, fmt.Sprintf(
+		`{"record_type":"deal","fields":{"name":"Conformance renewal","pipeline_id":%q,"stage_id":%q}}`, pipeline, open))
 	activity := createThroughTheToolSurface(ctx, t, registry,
 		`{"record_type":"activity","fields":{"kind":"note","body":"to be relinked"}}`)
 	// The vocabulary half: coined here so update_tag below has a word to rename.
@@ -684,6 +685,7 @@ func coinTagThroughTheToolSurface(ctx context.Context, t *testing.T, registry *a
 // it is shown failing: a schema deliberately declaring a member no result
 // carries has to be reported, against a REAL answer rather than a fixture.
 func TestTheConformanceCheckFailsAgainstAMisdeclaredSchema(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	DealFixture(t, e)
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
@@ -779,6 +781,7 @@ func snapshotBriefRun(ctx context.Context, t *testing.T, e *Env) briefs.BriefRun
 // It asserts the property rather than the call count, so a later fixture that
 // covers the crossing some other way keeps it.
 func TestTheBriefFixtureCoversBothDaysTheReadCanAskFor(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, AdminPerms)
 	snapshotBriefRun(ctx, t, e)

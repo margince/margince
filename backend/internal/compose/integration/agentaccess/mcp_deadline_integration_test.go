@@ -74,6 +74,7 @@ func (h *heldDraft) Complete(ctx context.Context, _ model.Request) (model.Respon
 // the connector edge's status recorder both wrap it. Lose either and this call
 // dies mid-write with a response the client can never complete.
 func TestASlowToolCallOutlivesTheServersWriteDeadline(t *testing.T) {
+	t.Parallel()
 	held := newHeldDraft()
 	e := setupConnectorWith(t, compose.WithReplyDraft(held))
 

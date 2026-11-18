@@ -79,6 +79,7 @@ func readContactNetwork(t *testing.T, e *integration.Env, contact ids.UUID) crmc
 }
 
 func TestBothNetworkSurfacesCountEveryColleagueWithoutAMailbox(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name, precision string
 		seats           int

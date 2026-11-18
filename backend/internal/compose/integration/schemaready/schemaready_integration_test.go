@@ -61,17 +61,19 @@ func unitMigrations() fstest.MapFS {
 }
 
 func TestReadyMeansTheComposedUnitsSchemaIsApplied(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
-	if err := compose.RegisterExtensions([]extension.Extension{{
+	composed, err := compose.RegisterExtensions([]extension.Extension{{
 		Name:        unitName,
 		Version:     "1.0.0",
 		Description: "A synthetic unit, composed only for this suite's own test binary.",
 		Migrations:  unitMigrations(),
-	}}, nil, nil); err != nil {
+	}}, nil, nil)
+	if err != nil {
 		t.Fatalf("registering the synthetic extension set: %v", err)
 	}
 
-	e := apptest.SetupApp(t)
+	e := apptest.SetupAppComposing(t, composed)
 	namespace, err := dbmigrate.NamespaceFor(unitName)
 	if err != nil {
 		t.Fatalf("resolving the unit's namespace: %v", err)
@@ -81,7 +83,7 @@ func TestReadyMeansTheComposedUnitsSchemaIsApplied(t *testing.T) {
 	if status := readyz(t, e); status != http.StatusServiceUnavailable {
 		t.Fatalf("GET /readyz = %d with %s never applied, want 503", status, namespace)
 	}
-	short := pending(ctx, t, e)
+	short := pending(ctx, t, e, composed)
 	if len(short) != 1 || short[0].Namespace != namespace || !short[0].Untracked {
 		t.Fatalf("the probe reports %+v, want one untracked shortfall on %s — read through the APP pool, "+
 			"so this also fails if the runtime role cannot read the tracking tables at all", short, namespace)
@@ -90,12 +92,12 @@ func TestReadyMeansTheComposedUnitsSchemaIsApplied(t *testing.T) {
 	// 2 — applied, and BEHIND. The state a check asking only "does the
 	// namespace exist" reports ready for, which is the deployment shape this
 	// whole check was filed about.
-	applyThrough(ctx, t, e, namespace, 1)
+	applyThrough(ctx, t, e, composed, namespace, 1)
 	if status := readyz(t, e); status != http.StatusServiceUnavailable {
 		t.Fatalf("GET /readyz = %d with %s applied to 0001 and 0002 outstanding, want 503 — "+
 			"the tracking table EXISTS here, so this is the case the cheap check cannot see", status, namespace)
 	}
-	short = pending(ctx, t, e)
+	short = pending(ctx, t, e, composed)
 	if len(short) != 1 || short[0].Untracked || len(short[0].Missing) != 1 || short[0].Missing[0] != "0002" {
 		t.Fatalf("the probe reports %+v, want %s missing exactly 0002", short, namespace)
 	}
@@ -103,11 +105,11 @@ func TestReadyMeansTheComposedUnitsSchemaIsApplied(t *testing.T) {
 	// 3 — applied. The same running process answers ready, with no restart:
 	// the failure was a state of the database, and the operator's fix is to
 	// migrate it.
-	applyThrough(ctx, t, e, namespace, 2)
+	applyThrough(ctx, t, e, composed, namespace, 2)
 	if status := readyz(t, e); status != http.StatusOK {
 		t.Fatalf("GET /readyz = %d once %s is at head, want 200 — the process must recover without a restart", status, namespace)
 	}
-	if short = pending(ctx, t, e); len(short) != 0 {
+	if short = pending(ctx, t, e, composed); len(short) != 0 {
 		t.Fatalf("the probe still reports %+v with every namespace at head", short)
 	}
 }
@@ -121,9 +123,9 @@ func readyz(t *testing.T, e *apptest.AppEnv) int {
 // pending asks the same question the probe asks, through the APP pool, so the
 // answer names the namespace — the probe body carries only the check's name,
 // because the detail belongs in the server log.
-func pending(ctx context.Context, t *testing.T, e *apptest.AppEnv) []dbmigrate.Shortfall {
+func pending(ctx context.Context, t *testing.T, e *apptest.AppEnv, composed *compose.Extensions) []dbmigrate.Shortfall {
 	t.Helper()
-	ns, err := composedNamespace(t)
+	ns, err := composedNamespace(t, composed)
 	if err != nil {
 		t.Fatalf("assembling the unit's namespace: %v", err)
 	}
@@ -134,9 +136,9 @@ func pending(ctx context.Context, t *testing.T, e *apptest.AppEnv) []dbmigrate.S
 	return short
 }
 
-func composedNamespace(t *testing.T) (dbmigrate.Namespace, error) {
+func composedNamespace(t *testing.T, composed *compose.Extensions) (dbmigrate.Namespace, error) {
 	t.Helper()
-	namespaces, err := dbmigrate.ExtensionNamespaces(compose.ComposedExtensions())
+	namespaces, err := dbmigrate.ExtensionNamespaces(composed.Units())
 	if err != nil {
 		return dbmigrate.Namespace{}, err
 	}
@@ -153,9 +155,9 @@ func composedNamespace(t *testing.T) (dbmigrate.Namespace, error) {
 //
 // e.Owner is the migration owner the harness already holds — the same role
 // cmd/migrate connects as, and the only one that may create a table in ext.
-func applyThrough(ctx context.Context, t *testing.T, e *apptest.AppEnv, namespace string, n int) {
+func applyThrough(ctx context.Context, t *testing.T, e *apptest.AppEnv, composed *compose.Extensions, namespace string, n int) {
 	t.Helper()
-	full, err := composedNamespace(t)
+	full, err := composedNamespace(t, composed)
 	if err != nil {
 		t.Fatalf("assembling the unit's namespace: %v", err)
 	}

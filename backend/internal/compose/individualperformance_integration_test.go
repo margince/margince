@@ -106,6 +106,7 @@ func requireRefusedIndividual(t *testing.T, what string, status int, code string
 }
 
 func TestIndividualPerformanceOffRefusesABreakdownByOwnerAndKeepsARepsOwn(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	seedWinsByThreeOwners(t, e)
 	e.addMembers(t, e.Team2, "third@forecast.test")
@@ -127,6 +128,7 @@ func TestIndividualPerformanceOffRefusesABreakdownByOwnerAndKeepsARepsOwn(t *tes
 }
 
 func TestIndividualPerformanceOffRefusesAFilterOrScopeNamingAColleague(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	seedWinsByThreeOwners(t, e)
 	e.addMembers(t, e.Team2, "third@forecast.test")
@@ -152,6 +154,7 @@ func TestIndividualPerformanceOffRefusesAFilterOrScopeNamingAColleague(t *testin
 
 // A grouping by the seat a meeting is credited to is a breakdown by colleague too.
 func TestIndividualPerformanceOffRefusesAGroupingByMeetingHost(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	e.addMembers(t, e.Team2, "third@forecast.test")
 	reader := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
@@ -173,6 +176,7 @@ func TestIndividualPerformanceOffRefusesAGroupingByMeetingHost(t *testing.T) {
 }
 
 func TestIndividualPerformanceOffRefusesATypedQueryByOwner(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	amount := int64(100_000)
 	for range 7 {
@@ -196,6 +200,7 @@ func TestIndividualPerformanceOffRefusesATypedQueryByOwner(t *testing.T) {
 // three. So the floor counts who contributes to the answer, not who is on the
 // team.
 func TestIndividualPerformanceOffRefusesAFilteredTotalOneColleagueMakesUp(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	members := e.addMembers(t, e.Team1, "two@forecast.test", "three@forecast.test")
 	e.seedWinIn(t, e.Rep1, "EUR")
@@ -221,6 +226,7 @@ func TestIndividualPerformanceOffRefusesAFilteredTotalOneColleagueMakesUp(t *tes
 // A departed colleague's sales still belong to them, so they do not lift a
 // total over the floor.
 func TestIndividualPerformanceOffDoesNotCountADepartedColleague(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	members := e.addMembers(t, e.Team1, "two@forecast.test", "three@forecast.test")
 	e.seedWinIn(t, members[0], "EUR")
@@ -239,6 +245,7 @@ func TestIndividualPerformanceOffDoesNotCountADepartedColleague(t *testing.T) {
 // The reporting framework marks every colleague's fact withheld, on the rule
 // live readings, captured editions and evidence all share.
 func TestIndividualPerformanceOffWithholdsEveryColleaguesFact(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	admin := e.dealReadCtx(e.Rep1, nil, principal.RowScopeAll)
 	marked := func() []reporting.Fact {
@@ -279,6 +286,7 @@ func (e *forecastEnv) exportShare(reader context.Context, t *testing.T, token st
 // it lists only the reader's own deals, on the same resolver the screen reads
 // through.
 func TestIndividualPerformanceOffClearsColleaguesFromAShareExport(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	members := e.addMembers(t, e.Team2, "two@forecast.test", "three@forecast.test")
 	e.seedDealClosingWithin(t, "Mine", &e.Rep1, 100_000)
@@ -318,6 +326,7 @@ func TestIndividualPerformanceOffClearsColleaguesFromAShareExport(t *testing.T) 
 // A team of the reader and one colleague has a target that is in effect that
 // colleague's own. It is withheld while the switch is off.
 func TestIndividualPerformanceOffWithholdsATwoMemberTeamsTarget(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	at := time.Date(2026, 9, 29, 12, 0, 0, 0, time.UTC)
 	service := newReportingService(e.Pool, func() time.Time { return at })
@@ -368,6 +377,7 @@ func listsTarget(reader context.Context, t *testing.T, service *reporting.Servic
 // The target floor checks archived teams as it checks live ones. It lists only
 // teams with enough colleagues, so a small archived team's target stays withheld.
 func TestIndividualPerformanceOffFloorChecksArchivedTeams(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	reportingTeammate(t, e)
 	second := e.seedID(t, `INSERT INTO app_user (id, email, display_name) VALUES ($1, 'second@forecast.test', 'Second')`)
@@ -397,6 +407,7 @@ func TestIndividualPerformanceOffFloorChecksArchivedTeams(t *testing.T) {
 // A company of the reader and one live colleague has a target that is in
 // effect that colleague's own. It is withheld while the switch is off.
 func TestIndividualPerformanceOffWithholdsATwoMemberCompanysTarget(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	at := time.Date(2026, 9, 29, 12, 0, 0, 0, time.UTC)
 	service := newReportingService(e.Pool, func() time.Time { return at })
@@ -429,6 +440,7 @@ func TestIndividualPerformanceOffWithholdsATwoMemberCompanysTarget(t *testing.T)
 // switch is off. That holds even for a total made up of the reader's own deal,
 // because the rest of the team is one colleague. Two more live members lift it.
 func TestIndividualPerformanceOffWithholdsATwoMemberTeamsReadings(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	at := time.Date(2026, 1, 20, 12, 0, 0, 0, time.UTC)
 	service := newReportingService(e.Pool, func() time.Time { return at })
@@ -480,6 +492,7 @@ func TestIndividualPerformanceOffWithholdsATwoMemberTeamsReadings(t *testing.T) 
 // reads no captured movement for it and keeps none of its facts. The same two
 // captures show movement while the switch is on.
 func TestIndividualPerformanceOffWithholdsATwoMemberTeamsMovement(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	at := time.Date(2026, 9, 8, 12, 0, 0, 0, time.UTC)
 	now := func() time.Time { return at }

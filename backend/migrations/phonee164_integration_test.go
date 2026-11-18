@@ -26,6 +26,7 @@ const phoneRow = `
 	VALUES (uuidv7(), $1, 'manual', 'human:test')`
 
 func TestAStoredPhoneIsAnE164Number(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)

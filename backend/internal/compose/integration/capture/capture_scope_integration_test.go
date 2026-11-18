@@ -83,6 +83,7 @@ func newScopeCaptureRegistry(t *testing.T, e *integration.SearchEnv, fake *scope
 }
 
 func TestCaptureStagesAMergeForALeadCollidingWithAnotherTeamsLead(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	// A lead owned by team2's rep. Leads carry no capture privacy, so the
 	// team1 granting human reads it and the collision is theirs to resolve.
@@ -119,6 +120,7 @@ func TestCaptureStagesAMergeForALeadCollidingWithAnotherTeamsLead(t *testing.T) 
 }
 
 func TestCaptureSkipsAnActivityReplayWhoseIncumbentLeftTheGrantingHumansScope(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	// Capture-private to Rep3: the one state that hides a contact from the
 	// team1 granting human.
@@ -170,6 +172,7 @@ func TestCaptureSkipsAnActivityReplayWhoseIncumbentLeftTheGrantingHumansScope(t 
 // none leaves it empty. The foreign key refuses a key the catalog lacks, so the
 // sink needs no copy of the catalog.
 func TestCaptureFilesALeadUnderTheOriginTheConnectorCarries(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	fake := &scopeFake{records: []connector.NormalizedRecord{
 		{

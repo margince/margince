@@ -104,6 +104,7 @@ func mailTextOf(t *testing.T, e *integration.Env, id ids.UUID) (subject, body st
 const storedMailPrefix = "From: anna@customer.example\nTo: us@margince.test\n\n"
 
 func TestMailStoredWithoutItsCharsetReadsAgain(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	id := seedMisdecodedMail(t, e, "redecode-one@customer.example",
@@ -122,6 +123,7 @@ func TestMailStoredWithoutItsCharsetReadsAgain(t *testing.T) {
 
 // A replay settles: the second pass finds text that already reads and leaves it.
 func TestAReplayOfTheRedecodeChangesNothing(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	id := seedMisdecodedMail(t, e, "redecode-twice@customer.example",
@@ -140,6 +142,7 @@ func TestAReplayOfTheRedecodeChangesNothing(t *testing.T) {
 // Text that already reads is not rewritten, so mail captured today is untouched
 // by a pass over it.
 func TestMailThatAlreadyReadsIsLeftAlone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	id := seedMisdecodedMail(t, e, "redecode-none@customer.example",

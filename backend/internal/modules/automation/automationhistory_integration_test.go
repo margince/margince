@@ -57,6 +57,7 @@ func seedRunHistory(t *testing.T, fx *autoFixture, autoID ids.AutomationID) int 
 }
 
 func TestListRunsPagesNewestFirstScopedToTheInstance(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	store := NewAutomationStore(database.BindTo(fx.pool, ids.From[ids.WorkspaceKind](fx.ws)))
 	ctx := fx.humanCtx(fx.rep1, principal.RowScopeAll)
@@ -91,6 +92,7 @@ func TestListRunsPagesNewestFirstScopedToTheInstance(t *testing.T) {
 }
 
 func TestListRunsOutcomeFilterSpeaksTheWireVocabulary(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	store := NewAutomationStore(database.BindTo(fx.pool, ids.From[ids.WorkspaceKind](fx.ws)))
 	ctx := fx.humanCtx(fx.rep1, principal.RowScopeAll)
@@ -113,6 +115,7 @@ func TestListRunsOutcomeFilterSpeaksTheWireVocabulary(t *testing.T) {
 }
 
 func TestListRunsHidesAnAbsentAutomation(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	store := NewAutomationStore(database.BindTo(fx.pool, ids.From[ids.WorkspaceKind](fx.ws)))
 	ctx := fx.humanCtx(fx.rep1, principal.RowScopeAll)

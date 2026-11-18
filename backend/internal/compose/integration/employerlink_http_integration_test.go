@@ -16,6 +16,7 @@ import (
 // A retried create under its key answers the first contact and the first
 // employer, and makes no second company.
 func TestAContactCreatedWithACompanyReplaysItsFirstAnswer(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	headers := map[string]string{"Idempotency-Key": "contact-with-company"}
@@ -48,6 +49,7 @@ func TestAContactCreatedWithACompanyReplaysItsFirstAnswer(t *testing.T) {
 // The wire the company page, the New contact form and the signature card call.
 // Candidates, the address's company, the link, and create-and-link on a held domain.
 func TestTheEmployerLinkRoutesAnswerTheirContract(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	var company, contact, colleague AnyMap

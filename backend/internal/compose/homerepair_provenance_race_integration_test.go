@@ -21,6 +21,7 @@ import (
 )
 
 func TestReviewedLegacyCorrectionRechecksAccessAfterWaitingForItsSource(t *testing.T) {
+	t.Parallel()
 	f := seedLegacyRepair(t, false)
 	reader := f.e.As(f.e.Rep1, nil, integration.AdminPerms)
 	var task activities.HomeRepairTask
@@ -77,6 +78,7 @@ func TestReviewedLegacyCorrectionRechecksAccessAfterWaitingForItsSource(t *testi
 }
 
 func TestReviewedLegacyWritesWaitForAConcurrentPinBeforeDecidingPristineness(t *testing.T) {
+	t.Parallel()
 	for _, old := range []bool{false, true} {
 		t.Run(map[bool]string{false: "source correction", true: "archive"}[old], func(t *testing.T) {
 			f := seedLegacyRepair(t, old)

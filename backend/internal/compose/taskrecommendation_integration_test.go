@@ -20,6 +20,7 @@ import (
 )
 
 func TestASuggestedTaskIsCheckedAgainInsideItsWriter(t *testing.T) {
+	t.Parallel()
 	for _, change := range []string{"unchanged", "task", "meeting", "dismissed", "changed_subject"} {
 		t.Run(change, func(t *testing.T) {
 			e := setupVerdicts(t)
@@ -98,6 +99,7 @@ func suggestedTaskInput(t *testing.T, move *crmcontracts.DealStatusCardMove) act
 }
 
 func TestAReceiptReplayCannotCreateAnotherTaskAfterItsFirstTaskIsCompleted(t *testing.T) {
+	t.Parallel()
 	e := setupVerdicts(t)
 	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	at := time.Date(2026, 10, 12, 9, 0, 0, 0, time.UTC)
@@ -130,6 +132,7 @@ func TestAReceiptReplayCannotCreateAnotherTaskAfterItsFirstTaskIsCompleted(t *te
 // A follow-up accepted from a suggestion carries no date, and still shows in
 // its reader's own task lane: the lane Home and the Worklist read.
 func TestAnUndatedAcceptedFollowUpShowsWithTheReadersTasks(t *testing.T) {
+	t.Parallel()
 	e := setupVerdicts(t)
 	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	at := time.Date(2026, 10, 12, 9, 0, 0, 0, time.UTC)

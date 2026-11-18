@@ -51,6 +51,7 @@ func repPermsWithCompany() principal.Permissions {
 // the target. Accounts are readable by every seat, so the hidden target is
 // a capture-private company of the other team's rep.
 func TestFKTargetsRequireRowScopeVisibility(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 
@@ -127,6 +128,7 @@ func stageFor(t *testing.T, svc *approvals.Service, e *Env, kind string, targetT
 // target row's own/team scope on list, get, approve AND reject — an
 // undecidable approval reads as absent, in both directions.
 func TestApprovalAuthorityHonorsTargetRowScope(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	svc := approvals.NewService(e.DB())
@@ -177,6 +179,7 @@ func TestApprovalAuthorityHonorsTargetRowScope(t *testing.T) {
 // decidable rows out of the inbox: List pages past the scan window until
 // the display limit fills or the table is exhausted.
 func TestApprovalListPagesPastUndecidableBurst(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	svc := approvals.NewService(e.DB())

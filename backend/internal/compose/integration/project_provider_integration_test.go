@@ -49,6 +49,7 @@ func dealProvider(e *Env) *deals.Provider {
 // The agent seam takes a key the way the New project form does. A chosen key
 // passes the same refusal, and no key means one minted from the name.
 func TestTheAgentSeamChoosesAKeyUnderTheSameRefusal(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	p := projectProvider(e)
 	ctx := e.Admin()
@@ -81,6 +82,7 @@ func TestTheAgentSeamChoosesAKeyUnderTheSameRefusal(t *testing.T) {
 // The seam's create-read-update-archive round trip, with the provenance the
 // agent path stamps.
 func TestProjectThroughTheAgentSeam(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	p := projectProvider(e)
 	ctx := e.Admin()
@@ -132,6 +134,7 @@ func TestProjectThroughTheAgentSeam(t *testing.T) {
 // project column is refused by name. A starting phase is a contract field,
 // and the seam keeps the REST rule that no project starts closed.
 func TestTheAgentSeamCannotSetPhaseThroughAnUnrecognisedField(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	p := projectProvider(e)
 	company := e.SeedCompany(t, "Strict GmbH", nil)
@@ -160,6 +163,7 @@ func TestTheAgentSeamCannotSetPhaseThroughAnUnrecognisedField(t *testing.T) {
 // for an agent surface to grow its own laxer mapping; this pins that it has
 // not.
 func TestTheAgentSeamAppliesTheSameProjectRulesAsREST(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	p := projectProvider(e)
 	company := e.SeedCompany(t, "Rules GmbH", nil)
@@ -181,6 +185,7 @@ func TestTheAgentSeamAppliesTheSameProjectRulesAsREST(t *testing.T) {
 // An entity the seam does not serve must say so by name rather than fail
 // obscurely — the gate above it decides what to do with that answer.
 func TestTheAgentSeamNamesAnEntityItDoesNotServe(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	p := projectProvider(e)
 
@@ -202,6 +207,7 @@ func TestTheAgentSeamNamesAnEntityItDoesNotServe(t *testing.T) {
 // store's own gates, so a principal without the project grant is refused
 // here exactly as on the human path.
 func TestTheAgentSeamStillEnforcesTheProjectGrant(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	p := projectProvider(e)
 	company := e.SeedCompany(t, "Gated GmbH", nil)
@@ -237,6 +243,7 @@ func principalReadOnlyProject() principal.Permissions {
 // calls it to decide whether a move needs confirmation, so a wrong answer
 // here silently changes the autonomy tier of a real money-moving action.
 func TestTheAgentSeamAdvancesADealAndReportsTheStageSemantic(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	p := dealProvider(e)
 	ctx := e.Admin()
@@ -280,6 +287,7 @@ func TestTheAgentSeamAdvancesADealAndReportsTheStageSemantic(t *testing.T) {
 // error rather than an empty string it would read as "no special handling" —
 // that would resolve an unknown move to the most permissive tier.
 func TestTheAgentSeamRefusesToInventAStageSemantic(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	p := dealProvider(e)
 	DealFixture(t, e)

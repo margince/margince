@@ -74,6 +74,7 @@ func (e *qualifyingEnv) filedInbound(t *testing.T, role string) {
 // Mutation: drop the activity_participant join from inboundQualifyingEvent and
 // this passes — the verdict turns allowed on a message the contact only received.
 func TestBeingCopiedOnAMessageDoesNotMakeCorrespondenceLawful(t *testing.T) {
+	t.Parallel()
 	e := setupQualifying(t)
 
 	e.filedInbound(t, "cc")
@@ -89,6 +90,7 @@ func TestBeingCopiedOnAMessageDoesNotMakeCorrespondenceLawful(t *testing.T) {
 // A message filed under somebody who is named in NO participant row authorizes
 // nothing either. This is the same hole reached without a Cc: the link alone.
 func TestAMessageFiledUnderSomebodyWhoWroteNothingAuthorizesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupQualifying(t)
 
 	e.filedInbound(t, "")
@@ -106,6 +108,7 @@ func TestAMessageFiledUnderSomebodyWhoWroteNothingAuthorizesNothing(t *testing.T
 // Without this the two refusals above are satisfied by an arm that refuses
 // everybody, which is the failure mode a default-deny gate hides best.
 func TestTheAuthorOfAnInboundMessageStillMakesCorrespondenceLawful(t *testing.T) {
+	t.Parallel()
 	e := setupQualifying(t)
 
 	e.filedInbound(t, "from")
@@ -192,6 +195,7 @@ const (
 // Mutation: drop the meetingQualifyingEvent arm from latestQualifyingEvent and
 // this fails, the verdict still unknown.
 func TestAMeetingThatHappenedMakesCorrespondenceLawful(t *testing.T) {
+	t.Parallel()
 	e := setupQualifying(t)
 
 	e.attendedMeeting(t, -24*time.Hour, capturedMeeting, noAcceptanceState, namesNobody)
@@ -214,6 +218,7 @@ func TestAMeetingThatHappenedMakesCorrespondenceLawful(t *testing.T) {
 // Mutation: drop the occurredday.MeetingTookPlaceSQL clause from
 // capturedMeetingSQL and this fails.
 func TestAMeetingStillInTheDiaryIsNotEvidence(t *testing.T) {
+	t.Parallel()
 	for name, offset := range map[string]time.Duration{
 		"in four days": 4 * 24 * time.Hour,
 		"a year out":   365 * 24 * time.Hour,
@@ -241,6 +246,7 @@ func TestAMeetingStillInTheDiaryIsNotEvidence(t *testing.T) {
 // Mutation: drop the captured_by clause and this passes, which is the whole
 // forgery.
 func TestAHandLoggedMeetingIsNotEvidence(t *testing.T) {
+	t.Parallel()
 	e := setupQualifying(t)
 
 	e.attendedMeeting(t, -24*time.Hour, "human:"+e.user.String(), noAcceptanceState, namesNobody)
@@ -254,6 +260,7 @@ func TestAHandLoggedMeetingIsNotEvidence(t *testing.T) {
 
 // A meeting that was declined or abandoned is not evidence either.
 func TestADeclinedOrAbandonedMeetingIsNotEvidence(t *testing.T) {
+	t.Parallel()
 	for _, status := range []string{"no_show", "canceled"} {
 		t.Run(status, func(t *testing.T) {
 			e := setupQualifying(t)
@@ -280,6 +287,7 @@ func TestADeclinedOrAbandonedMeetingIsNotEvidence(t *testing.T) {
 //
 // Mutation: drop the counterparty_email clause and this passes.
 func TestARecordNamingASenderIsNotEvidenceWhateverItsKind(t *testing.T) {
+	t.Parallel()
 	e := setupQualifying(t)
 
 	e.attendedMeeting(t, -24*time.Hour, capturedMeeting, noAcceptanceState, "sender@example.com")
@@ -296,6 +304,7 @@ func TestARecordNamingASenderIsNotEvidenceWhateverItsKind(t *testing.T) {
 //
 // Mutation: render capturedMeetingSQL with now() and this fails.
 func TestAMeetingIsJudgedOnTheVerdictsClock(t *testing.T) {
+	t.Parallel()
 	e := setupQualifying(t)
 	meetsAt := clocktest.Now(t).Add(time.Hour)
 	e.attendedMeetingAt(t, meetsAt, false)
@@ -311,6 +320,7 @@ func TestAMeetingIsJudgedOnTheVerdictsClock(t *testing.T) {
 
 // A retained stamp for a future meeting follows the actual meeting time.
 func TestAMeetingStampedBeforeItHappensCountsOnlyOnceItIsPast(t *testing.T) {
+	t.Parallel()
 	e := setupQualifying(t)
 	meetsAt := clocktest.Now(t).Add(time.Hour)
 	meeting := e.attendedMeetingAt(t, meetsAt, false)
@@ -335,6 +345,7 @@ func TestAMeetingStampedBeforeItHappensCountsOnlyOnceItIsPast(t *testing.T) {
 // A meeting known only by its date has not taken place until the date is over.
 // It is evidence from the next day on, and not before.
 func TestADayMeetingIsEvidenceOnceItsDateEnds(t *testing.T) {
+	t.Parallel()
 	e := setupQualifying(t)
 	today := clocktest.Now(t).UTC()
 	e.attendedMeetingAt(t, today, true)
@@ -353,6 +364,7 @@ func TestADayMeetingIsEvidenceOnceItsDateEnds(t *testing.T) {
 // Without this the tests above are satisfied by an arm that allows nobody, which
 // is the failure mode a default-deny gate hides best.
 func TestSomebodyWithNoMeetingIsStillRefused(t *testing.T) {
+	t.Parallel()
 	e := setupQualifying(t)
 
 	if got := e.verdict(t); got.State == VerdictAllowed {
@@ -365,6 +377,7 @@ func TestSomebodyWithNoMeetingIsStillRefused(t *testing.T) {
 // it through the shared author rule. The message is then a request from the
 // recipient at that address, and from no other address on the contact.
 func TestASenderAddressOnAFiledMessageIsTheRecipientsRequest(t *testing.T) {
+	t.Parallel()
 	e := setupQualifying(t)
 	const sender = "pat.quinn@orchardline.example"
 	id, now := ids.NewV7(), clocktest.Now(t)

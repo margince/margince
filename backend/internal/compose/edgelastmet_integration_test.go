@@ -22,6 +22,7 @@ import (
 )
 
 func TestTheColleagueEdgeKnowsWhenThePairLastMet(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := time.Now().UTC().Truncate(time.Second)
 	dana := contactWithEmail(t, e, "Dana Met", "dana@met.example")
@@ -45,6 +46,7 @@ func TestTheColleagueEdgeKnowsWhenThePairLastMet(t *testing.T) {
 
 // A meeting the contact declined gives the pair no last meeting.
 func TestADeclinedMeetingGivesThePairNoLastMeeting(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := clocktest.Now(t).UTC().Truncate(time.Second)
 	dana := contactWithEmail(t, e, "Dana Declined", "dana@declined.example")

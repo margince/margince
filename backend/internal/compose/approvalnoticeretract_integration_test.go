@@ -45,6 +45,7 @@ func (a approvalNotifyEnv) unreadFor(t *testing.T, seat ids.UUID) int {
 // owner is told. Once it is decided, the owner's line no longer counts: the card
 // refuses when opened, and a badge that kept counting it would never clear.
 func TestADecidedApprovalTakesBackEveryDecidersNotice(t *testing.T) {
+	t.Parallel()
 	a := newApprovalNotifyEnv(t)
 	a.grantRole(t, a.e.AdminUser)
 	a.grantRole(t, a.e.Rep2)
@@ -90,6 +91,7 @@ func TestADecidedApprovalTakesBackEveryDecidersNotice(t *testing.T) {
 // twice: the retraction matches only lines not already taken back, so the
 // instant the first one wrote is the one that stands.
 func TestARedeliveredVerdictRetractsNothingTwice(t *testing.T) {
+	t.Parallel()
 	a := newApprovalNotifyEnv(t)
 	a.grantRole(t, a.e.AdminUser)
 
@@ -124,6 +126,7 @@ func TestARedeliveredVerdictRetractsNothingTwice(t *testing.T) {
 // would stall the group; retracting on one would take back the line the SAME
 // envelope just caused.
 func TestAStagingEnvelopeRetractsNothing(t *testing.T) {
+	t.Parallel()
 	a := newApprovalNotifyEnv(t)
 	a.grantRole(t, a.e.AdminUser)
 

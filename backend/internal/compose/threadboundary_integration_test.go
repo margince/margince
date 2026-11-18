@@ -32,6 +32,7 @@ func angebotThread(t *testing.T, e *integration.Env) string {
 }
 
 func TestAReplyOnANewTopicOpensItsOwnConversation(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	addr := angebotThread(t, e)
 	captureThreadMail(t, e, e.Rep1, subjectMail("Re: Rechnung März", addr, "invoice@counterparty.example", "Wed, 03 Jun 2026 08:00:00 +0000",
@@ -48,6 +49,7 @@ func TestAReplyOnANewTopicOpensItsOwnConversation(t *testing.T) {
 }
 
 func TestAReplyToTheNewTopicFollowsItWithoutRejoiningTheOldOne(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	addr := angebotThread(t, e)
 	captureThreadMail(t, e, e.Rep1, subjectMail("Rechnung März", addr, "invoice@counterparty.example", "Wed, 03 Jun 2026 08:00:00 +0000",
@@ -64,6 +66,7 @@ func TestAReplyToTheNewTopicFollowsItWithoutRejoiningTheOldOne(t *testing.T) {
 }
 
 func TestABareReplyPrefixDrawsNoBoundary(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	addr := angebotThread(t, e)
 	captureThreadMail(t, e, e.Rep1, subjectMail("Re:", addr, "blank@counterparty.example", "Wed, 03 Jun 2026 08:00:00 +0000",
@@ -77,6 +80,7 @@ func TestABareReplyPrefixDrawsNoBoundary(t *testing.T) {
 // The sender's own header names the parent. A message the seat never held cannot
 // draw the reply into its conversation, or let the reply move it.
 func TestAParentTheSeatDoesNotHoldDecidesNothing(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	captureThreadMail(t, e, e.Rep2, subjectMail("Angebot", seatAddress(t, e, e.Rep2), "foreign@counterparty.example", "Mon, 01 Jun 2026 08:00:00 +0000", ""))
 	captureThreadMail(t, e, e.Rep1, subjectMail("Re: Rechnung März", seatAddress(t, e, e.Rep1), "claimed@counterparty.example", "Tue, 02 Jun 2026 08:00:00 +0000",
@@ -94,6 +98,7 @@ func TestAParentTheSeatDoesNotHoldDecidesNothing(t *testing.T) {
 // conversation starts pending, which a classifier may later clear; the owner's decision
 // is carried so that it cannot.
 func TestAHeldConversationStaysHeldUnderANewTopic(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	addr := angebotThread(t, e)
 	owner := e.As(e.Rep1, nil, integration.AccountRepPerms)
@@ -117,6 +122,7 @@ func TestAHeldConversationStaysHeldUnderANewTopic(t *testing.T) {
 // A sender who names their reply after another conversation's key does not land in it.
 // The split refuses a key another message carries, and the reply stays with its parent.
 func TestASplitNeverTakesAKeyAnotherConversationCarries(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	addr := angebotThread(t, e)
 	// A conversation keyed on a root this seat never received.
@@ -133,6 +139,7 @@ func TestASplitNeverTakesAKeyAnotherConversationCarries(t *testing.T) {
 // A pending question is about the old conversation's message, so it is not carried: the
 // split conversation's own question names its own message.
 func TestASplitConversationAsksAboutItsOwnMessage(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	addr := angebotThread(t, e)
 	captureThreadMail(t, e, e.Rep1, subjectMail("Re: Rechnung März", addr, "invoice@counterparty.example", "Wed, 03 Jun 2026 08:00:00 +0000",
@@ -146,6 +153,7 @@ func TestASplitConversationAsksAboutItsOwnMessage(t *testing.T) {
 }
 
 func TestEditedReplySubjectsKeepTheirConversation(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct{ parent, reply string }{
 		{"[ERP-27] kickoff", "Re: kickoff"},
 		{"Signature requested", "Signature completed"},
@@ -168,6 +176,7 @@ func TestEditedReplySubjectsKeepTheirConversation(t *testing.T) {
 }
 
 func TestAReplyCannotBridgeSeparateTopics(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct{ subject, want string }{
 		{"Re: Rechnung März (was: Angebot)", "invoice@counterparty.example"},
 		{"Re:", "invoice@counterparty.example"},
@@ -193,6 +202,7 @@ func TestAReplyCannotBridgeSeparateTopics(t *testing.T) {
 }
 
 func TestAnEditedReplyWithOnlyItsParentHeaderJoinsTheParent(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	addr := angebotThread(t, e)
 	captureThreadMail(t, e, e.Rep1, subjectMail("Re: Angebot April!", addr, "edited@counterparty.example", "Wed, 03 Jun 2026 08:00:00 +0000", "answer@counterparty.example"))

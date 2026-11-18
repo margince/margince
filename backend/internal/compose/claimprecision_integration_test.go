@@ -22,6 +22,7 @@ import (
 // A claim read from a date-only note carries that precision, so a client draws
 // its source's date with no time. The write reads no source time and says instant.
 func TestAClaimCarriesThePrecisionOfItsSource(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := ids.From[ids.ContactKind](e.SeedContact(t, "Precision contact", &e.AdminUser))
 	quote := "I will send the rollout plan."

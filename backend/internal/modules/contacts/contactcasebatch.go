@@ -59,7 +59,7 @@ func (s *Store) contactCaseViews(ctx context.Context, tx pgx.Tx, ranked []caseSu
 }
 
 func (s *Store) renderContactCases(ctx context.Context, tx pgx.Tx, cases []contactCase, all []ids.UUID) ([]crmcontracts.ContactCase, error) {
-	policy, err := config.StoredApplyTx(ctx, tx, s.bootConfig(), SharedMergeReviews)
+	policy, err := config.StoredApplyTx(ctx, tx, s.bootConfig(ctx), SharedMergeReviews)
 	if err != nil {
 		return nil, err
 	}

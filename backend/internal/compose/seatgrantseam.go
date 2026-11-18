@@ -32,6 +32,6 @@ import (
 // gates commit together.
 func seatReadsLeads(_ *pgxpool.Pool) contacts.SeatReadsLeads {
 	return func(ctx context.Context, tx pgx.Tx, seat ids.UUID) (bool, error) {
-		return identity.SeatAllows(ctx, tx, ids.From[ids.UserKind](seat), "lead", principal.ActionRead)
+		return identity.SeatAllows(ctx, tx, installedRbacObjects(), ids.From[ids.UserKind](seat), "lead", principal.ActionRead)
 	}
 }

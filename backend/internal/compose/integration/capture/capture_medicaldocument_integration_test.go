@@ -47,6 +47,7 @@ func (b *medicalDocumentBrain) Complete(_ context.Context, req model.Request) (m
 }
 
 func TestAnUnreadMedicalDocumentKeepsItsPersonalClassification(t *testing.T) {
+	t.Parallel()
 	for _, kind := range []string{"personal", "ordinary"} {
 		t.Run(kind, func(t *testing.T) {
 			blob := blobstore.NewMemory()

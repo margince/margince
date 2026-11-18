@@ -114,6 +114,7 @@ func loggingRep(e *integration.Env) context.Context {
 // from, and a stamping that took one counterparty would draw neither while
 // every other surface still looked right.
 func TestAHandLoggedMailNamesTheRepAndEveryContactOnIt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := loggingRep(e)
 	alice := e.SeedContact(t, "Alice Müller", &e.Rep1)
@@ -160,6 +161,7 @@ func TestAHandLoggedMailNamesTheRepAndEveryContactOnIt(t *testing.T) {
 // for the rep would make every conversation look one-directional — which is
 // what the strength score's reciprocity term is computed from.
 func TestAnInboundMailPutsTheContactOnItAsTheSender(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := loggingRep(e)
 	alice := e.SeedContact(t, "Alice Müller", &e.Rep1)
@@ -200,6 +202,7 @@ func TestAnInboundMailPutsTheContactOnItAsTheSender(t *testing.T) {
 // counting it would let a rep's own notebook score as a relationship — which
 // is why the interaction kinds are a closed set rather than "anything linked".
 func TestANoteAboutSomebodyNamesNobodyAsHavingSpoken(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := loggingRep(e)
 	alice := e.SeedContact(t, "Alice Müller", &e.Rep1)

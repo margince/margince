@@ -33,6 +33,7 @@ import (
 )
 
 func TestAMemberBoundTransportWithNoMemberBehindItIsRefused(t *testing.T) {
+	t.Parallel()
 	owner, pool := setupCaptureDB(t)
 	ctx := context.Background()
 	ws := ids.NewV7()
@@ -77,6 +78,7 @@ func TestAMemberBoundTransportWithNoMemberBehindItIsRefused(t *testing.T) {
 // insert rather than of the DDL text: a CHECK read as a string is a claim about
 // the schema file, and this is a claim about what the database does.
 func TestANonMessageMayNotNameATransportAtAll(t *testing.T) {
+	t.Parallel()
 	owner, pool := setupCaptureDB(t)
 	ctx := context.Background()
 	ws := ids.NewV7()
@@ -138,6 +140,7 @@ const meetingKindForTest = "meeting"
 // because whose credential the transport spends decides what the message is born
 // as.
 func TestAnUnregisteredTransportIsRefusedByName(t *testing.T) {
+	t.Parallel()
 	owner, pool := setupCaptureDB(t)
 	ctx := context.Background()
 	ws := ids.NewV7()
@@ -181,7 +184,7 @@ func aCensusShapedRecord(provider string) connector.NormalizedRecord {
 }
 
 // registerTransport puts one transport in the registry under the credential
-// model named, and takes it, and everything filed on it, away afterwards.
+// model named.
 func registerTransport(t *testing.T, owner *pgx.Conn, provider, credential string) {
 	t.Helper()
 	if _, err := owner.Exec(context.Background(),
@@ -189,16 +192,4 @@ func registerTransport(t *testing.T, owner *pgx.Conn, provider, credential strin
 		 VALUES ($1, 'unit', $1, $2, true)`, provider, credential); err != nil {
 		t.Fatalf("registering the %s transport %s: %v", credential, provider, err)
 	}
-	t.Cleanup(func() {
-		// In dependency order: the registry row is the foreign-key parent of
-		// every message filed on it.
-		for _, statement := range []string{
-			`DELETE FROM activity WHERE channel_provider = $1`,
-			`DELETE FROM channel_provider WHERE provider = $1`,
-		} {
-			if _, err := owner.Exec(context.Background(), statement, provider); err != nil {
-				t.Errorf("cleaning up after %s (%s): %v", provider, statement, err)
-			}
-		}
-	})
 }

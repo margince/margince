@@ -215,6 +215,7 @@ func approverIsRep2(e *integration.Env) ids.UUID { return e.Rep2 }
 // The approver sees the company holding the lead's domain and the agent does
 // not. So the agent's promotion holds the typed name back instead of linking it.
 func TestAPromotionPreviewShowsWhatTheAgentsPromotionWillDo(t *testing.T) {
+	t.Parallel()
 	s := newPromotionSight(t, "rep", approverIsAdmin, "admin")
 	domain := "held-" + ids.NewV7().String()[24:] + ".test"
 	holder := s.company("Hidden Holder", s.e.AdminUser, domain)
@@ -247,6 +248,7 @@ func TestAPromotionPreviewShowsWhatTheAgentsPromotionWillDo(t *testing.T) {
 
 // The agent's promotion merges into a contact private to its human.
 func TestAnApproverWhoCannotOpenTheMergeTargetIsShownNothing(t *testing.T) {
+	t.Parallel()
 	s := newPromotionSight(t, "admin", approverIsRep2, "rep")
 	address := "kit@private-" + ids.NewV7().String()[24:] + ".test"
 	rep2 := ids.From[ids.UserKind](s.e.Rep2)
@@ -270,6 +272,7 @@ func TestAnApproverWhoCannotOpenTheMergeTargetIsShownNothing(t *testing.T) {
 // The approver cannot find the mail the agent cites. The card says so instead
 // of going stale, and an approver who can see the mail still approves it.
 func TestAPromotionCitingMailTheApproverCannotFindWaitsForOneWhoCan(t *testing.T) {
+	t.Parallel()
 	s := newPromotionSight(t, "admin", approverIsRep2, "rep")
 	mailbox := s.company("Mailbox Holder", s.e.Rep1, "")
 	s.hide(mailbox)
@@ -295,6 +298,7 @@ func TestAPromotionCitingMailTheApproverCannotFindWaitsForOneWhoCan(t *testing.T
 }
 
 func TestAPromotionPreviewKeepsTheFieldsTheApproversRoleMasks(t *testing.T) {
+	t.Parallel()
 	s := newPromotionSight(t, "admin", approverIsRep2, "rep")
 	viewer, _ := principal.Actor(s.approver)
 	viewer.Permissions.FieldMasks = []principal.FieldMask{
@@ -323,6 +327,7 @@ func TestAPromotionPreviewKeepsTheFieldsTheApproversRoleMasks(t *testing.T) {
 }
 
 func TestAPromotionStagedOnARevokedPassportIsNotReady(t *testing.T) {
+	t.Parallel()
 	s := newPromotionSight(t, "admin", approverIsAdmin, "admin")
 	rep1 := ids.From[ids.UserKind](s.e.Rep1)
 	lead := s.lead(contacts.CreateLeadInput{FullName: new("Rae Revoked"), Email: new("rae@gmail.com"), Source: "manual", OwnerID: &rep1})
@@ -337,6 +342,7 @@ func TestAPromotionStagedOnARevokedPassportIsNotReady(t *testing.T) {
 // A refresh retires the passport and mints its successor on the same
 // connection. The successor spends the call, so the preview still holds.
 func TestAPromotionOutlivesARefreshOfItsAgentsPassport(t *testing.T) {
+	t.Parallel()
 	for _, next := range []struct {
 		name    string
 		scopes  []string
@@ -379,6 +385,7 @@ func TestAPromotionOutlivesARefreshOfItsAgentsPassport(t *testing.T) {
 // A member's own proposal runs when its decider approves it, so the decider's
 // sight is still the one its preview shows.
 func TestAHumanStagedPromotionIsStillPreviewedAsItsDecider(t *testing.T) {
+	t.Parallel()
 	s := newPromotionSight(t, "rep", approverIsAdmin, "admin")
 	domain := "decider-" + ids.NewV7().String()[24:] + ".test"
 	s.hide(s.company("Decider Holder", s.e.AdminUser, domain))

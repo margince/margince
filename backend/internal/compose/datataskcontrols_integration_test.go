@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -32,6 +31,7 @@ func dataTaskReader(e *integration.Env) context.Context {
 }
 
 func TestDataTaskHTTPControlsRequireCurrentHumanAuthority(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	h := dataTaskHandlers{pool: e.Pool}
 	ctx := dataTaskReader(e)
@@ -51,10 +51,10 @@ func TestDataTaskHTTPControlsRequireCurrentHumanAuthority(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &unseeded); err != nil {
 		t.Fatal(err)
 	}
-	if rec.Code != 200 || len(unseeded.Data) != registeredDataTaskSteps(dataTaskCatalog(e.Pool, func() time.Time { return clocktest.Now(t) })) || unseeded.Data[0].Estimate != nil || unseeded.Data[0].Version != 0 {
+	if rec.Code != 200 || len(unseeded.Data) != registeredDataTaskSteps(dataTaskCatalog(e.Pool, nil, func() time.Time { return clocktest.Now(t) })) || unseeded.Data[0].Estimate != nil || unseeded.Data[0].Version != 0 {
 		t.Fatalf("unseeded=%s", rec.Body.String())
 	}
-	engine, err := newDataTaskEngine(e.Pool, "test", func() time.Time { return time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC) })
+	engine, err := newDataTaskEngine(e.Pool, nil, "test", func() time.Time { return time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC) })
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,8 +87,9 @@ func TestDataTaskHTTPControlsRequireCurrentHumanAuthority(t *testing.T) {
 }
 
 func TestDataTaskReadFailureNeverReturnsEmptyProgress(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
-	pool, err := testdb.OwnPool(t.Context(), os.Getenv("MARGINCE_TEST_APP_DSN"))
+	pool, err := testdb.OwnPool(t.Context(), testdb.For(t).AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,6 +102,7 @@ func TestDataTaskReadFailureNeverReturnsEmptyProgress(t *testing.T) {
 }
 
 func TestCorrectionFailureNoticeUsesCurrentOperatorGrants(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:test")
 	e.WsExec(t, `UPDATE role SET permissions=jsonb_set(permissions,'{objects,data_task}','{"read":false,"create":false,"update":false,"delete":false}'::jsonb) WHERE key='ops'`)
@@ -132,10 +134,11 @@ func TestCorrectionFailureNoticeUsesCurrentOperatorGrants(t *testing.T) {
 }
 
 func TestResumingCorrectionQueuesReconciliationImmediately(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
 	ctx := dataTaskReader(e)
-	engine, err := newDataTaskEngine(e.Pool, "test", func() time.Time { return clocktest.Now(t) })
+	engine, err := newDataTaskEngine(e.Pool, nil, "test", func() time.Time { return clocktest.Now(t) })
 	if err != nil {
 		t.Fatal(err)
 	}

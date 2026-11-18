@@ -74,6 +74,7 @@ func seedTwoPricedDeals(t *testing.T, e *integration.Env, status string) (compan
 // contribute nothing — a total is the one place a withheld figure reappears
 // whole, and it reappears without anything on screen saying it did.
 func TestTheAccountsWonLifetimeExcludesAMaskedDeal(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	company, _, _ := seedTwoPricedDeals(t, e, "won")
@@ -106,6 +107,7 @@ func TestTheAccountsWonLifetimeExcludesAMaskedDeal(t *testing.T) {
 // entirely would say the account has no business rather than that the size is
 // not this reader's to see.
 func TestTheAccountsPipelineBandNullsAMaskedAmount(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	company, mine, theirs := seedTwoPricedDeals(t, e, "open")
@@ -153,6 +155,7 @@ func TestTheAccountsPipelineBandNullsAMaskedAmount(t *testing.T) {
 // what this reader may price puts theirs behind — which is what makes the
 // order an assertion rather than a coincidence.
 func TestTheConnectionsCardDoesNotRankByAMaskedAmount(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	company, mine, theirs := seedTwoPricedDeals(t, e, "open")

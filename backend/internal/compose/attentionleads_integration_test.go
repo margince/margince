@@ -88,6 +88,7 @@ func taskTitles(page crmcontracts.Worklist) []string {
 }
 
 func TestBareLeadsDoNotCreateWorkButPlannedLeadTasksRemain(t *testing.T) {
+	t.Parallel()
 	for _, tracked := range []bool{false, true} {
 		t.Run(map[bool]string{false: "target off", true: "target on"}[tracked], func(t *testing.T) {
 			e := integration.Setup(t)
@@ -150,6 +151,7 @@ func TestBareLeadsDoNotCreateWorkButPlannedLeadTasksRemain(t *testing.T) {
 }
 
 func TestImportedLeadCreationDoesNotTriggerIntakeWorkflows(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.WsExec(t, `INSERT INTO automation (key, name, trigger, action, params, enabled)
  VALUES ('route_lead', 'Follow up', '{"event_type":"lead.created"}', '{"kind":"create_task"}', '{}', true),
@@ -194,6 +196,7 @@ func leadCreatedEnvelope(t *testing.T, lead ids.UUID) kevents.Envelope {
 }
 
 func TestLegacyImportFollowupsStayOutButPlannedTasksAndEditsRemain(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.WsExec(t, `INSERT INTO automation (key, name, trigger, action, params, enabled)
  VALUES ('route_lead', 'Follow up', '{"event_type":"lead.created"}', '{"kind":"create_task"}', '{}', true)`)

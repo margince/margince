@@ -15,6 +15,6 @@ import (
 )
 
 func (p capturedTextPurger) FlagSubjectReviewTx(ctx context.Context, tx pgx.Tx, subject ids.ContactID, sources []privacy.ErasureReviewSource) error {
-	_, err := privacyreview.FlagTx(ctx, tx, notices.NewStore(p.db), subject.String(), sources)
+	_, err := privacyreview.FlagTx(ctx, tx, installedRbacObjects(), notices.NewStore(p.db), subject.String(), sources)
 	return err
 }

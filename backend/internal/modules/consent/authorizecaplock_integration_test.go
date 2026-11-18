@@ -22,7 +22,6 @@ package consent
 
 import (
 	"context"
-	"os"
 	"reflect"
 	"sync"
 	"testing"
@@ -30,6 +29,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -41,7 +41,7 @@ import (
 // held while the code under test runs on a different backend.
 func holdingSession(t *testing.T) *pgx.Conn {
 	t.Helper()
-	holder, err := pgx.Connect(context.Background(), os.Getenv("MARGINCE_TEST_DSN"))
+	holder, err := pgx.Connect(context.Background(), testdb.For(t).OwnerDSN)
 	if err != nil {
 		t.Fatalf("opening the holding connection: %v", err)
 	}
@@ -133,6 +133,7 @@ func testMessagingRules(t *testing.T, rules messagingrules.Rules) jurisdiction.C
 }
 
 func TestIdenticalMessagingRulesShareAJurisdiction(t *testing.T) {
+	t.Parallel()
 	labelled := messagingrules.Rules{Version: 1, SubjectPrefix: "[QC]"}
 	unlabelled := messagingrules.Rules{Version: 1}
 	labelledCode := testMessagingRules(t, labelled)
@@ -217,6 +218,7 @@ func (e *capEnv) transmitForAddress(address string, attempt int) commsauthz.Tran
 // count before the other's decision lands, and the ceiling is exceeded by
 // however many are running.
 func TestADispatchWaitsForTheAddressCapLock(t *testing.T) {
+	t.Parallel()
 	e := setupCap(t)
 	e.seedMarketingSubject(t)
 	gate := e.cappedGate(t, 3)
@@ -261,6 +263,7 @@ func TestADispatchWaitsForTheAddressCapLock(t *testing.T) {
 // What it says: the key is derived from the address, and one busy mailbox does
 // not serialize every advertising send in the installation.
 func TestADispatchToAnotherAddressIsNotHeldBehindThisOne(t *testing.T) {
+	t.Parallel()
 	e := setupCap(t)
 	e.seedMarketingSubject(t)
 	gate := e.cappedGate(t, 3)
@@ -323,6 +326,7 @@ func TestADispatchToAnotherAddressIsNotHeldBehindThisOne(t *testing.T) {
 // dispatch that counted first is holding a number taken before the row existed
 // and allows. The difference is the whole defect.
 func TestTheCountIsTakenAfterTheLockNotBeforeIt(t *testing.T) {
+	t.Parallel()
 	e := setupCap(t)
 	e.seedMarketingSubject(t)
 	gate := e.cappedGate(t, 1)
@@ -384,6 +388,7 @@ func TestTheCountIsTakenAfterTheLockNotBeforeIt(t *testing.T) {
 // enough, and a version that hoped they would passed cleanly with the lock
 // deleted.
 func TestTwoConcurrentDispatchesCannotBothTakeTheLastSlot(t *testing.T) {
+	t.Parallel()
 	e := setupCap(t)
 	e.seedMarketingSubject(t)
 	gate := e.cappedGate(t, 2)

@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -30,7 +31,7 @@ func markedVendor(t *testing.T, e *integration.Env, sender, domain string) {
 	t.Helper()
 	mail := seedCapturedMail(t, e, sender, "Free audit")
 	row := seedPendingDisposition(t, e, sender, domain, mail)
-	runVerdict(t, e, &scriptedVerdictBrain{verdicts: map[string]string{row.String(): capture.KindVendorPitch}})
+	runVerdict(t, e, &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{row.String(): capture.KindVendorPitch}})
 	if mark, _, _ := markOf(t, e, sender); mark != "vendor_marketing" {
 		t.Fatalf("setup: %s carries mark %q, want vendor_marketing", sender, mark)
 	}
@@ -71,7 +72,7 @@ func sendFiled(t *testing.T, e *integration.Env, sourceID, address, thread, body
 
 func liftMarks(t *testing.T, e *integration.Env) {
 	t.Helper()
-	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN}, CaptureConfig{}, slog.Default())
 	if err := engine.LiftVendorMarksWorkspace(principal.WithWorkspaceID(context.Background(), e.WS)); err != nil {
 		t.Fatalf("lifting vendor marks: %v", err)
 	}
@@ -91,6 +92,7 @@ func markWrites(t *testing.T, e *integration.Env, email string) (audits, events 
 }
 
 func TestAnAutomaticVendorMarkEndsOnceTheWorkspaceWritesToTheContact(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const sender = "dana@seo-growth.example"
 	markedVendor(t, e, sender, "seo-growth.example")
@@ -120,6 +122,7 @@ func TestAnAutomaticVendorMarkEndsOnceTheWorkspaceWritesToTheContact(t *testing.
 }
 
 func TestAHandSetMarkSurvivesCorrespondence(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const sender = "kai@listbuilder.example"
 	markedVendor(t, e, sender, "listbuilder.example")
@@ -142,6 +145,7 @@ func TestAHandSetMarkSurvivesCorrespondence(t *testing.T) {
 }
 
 func TestOneDecliningReplyDoesNotEndTheMark(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const sender = "lee@coldreach.example"
 	markedVendor(t, e, sender, "coldreach.example")
@@ -155,6 +159,7 @@ func TestOneDecliningReplyDoesNotEndTheMark(t *testing.T) {
 }
 
 func TestAVendorsAnswerToOurDeclineDoesNotEndItsMark(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const sender = "ines@coldreach.example"
 	markedVendor(t, e, sender, "coldreach.example")
@@ -169,6 +174,7 @@ func TestAVendorsAnswerToOurDeclineDoesNotEndItsMark(t *testing.T) {
 }
 
 func TestOnlyMailAfterTheMarkAndFiledUnderTheContactEndsIt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const sender, other = "pia@mixedmail.example", "someone@elsewhere.example"
 	markedVendor(t, e, sender, "mixedmail.example")
@@ -193,6 +199,7 @@ func TestOnlyMailAfterTheMarkAndFiledUnderTheContactEndsIt(t *testing.T) {
 }
 
 func TestAnAddressThatMovedAwayLeavesTheOldContactsMark(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const sender = "rae@moved.example"
 	markedVendor(t, e, sender, "moved.example")
@@ -225,6 +232,7 @@ func TestAnAddressThatMovedAwayLeavesTheOldContactsMark(t *testing.T) {
 }
 
 func TestLaterMailFromAMarkedContactClearsAnAutomaticMarkOnceTheyAnswer(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const sender = "robin@outreach.example"
 	markedVendor(t, e, sender, "outreach.example")
@@ -240,6 +248,7 @@ func TestLaterMailFromAMarkedContactClearsAnAutomaticMarkOnceTheyAnswer(t *testi
 // A marked contact's request is not a buyer waiting, and the lane has it again
 // once the mark is gone.
 func TestWorklistProducersExcludeMarkedSendersEvenWithACompanyLink(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	pat := o.contact(t, "Pat Seller", "pat@seller.example")
 	asked := o.customerWrites(t, "pat@seller.example", "Pricing for next year", o.now.Add(-3*time.Hour))
@@ -309,6 +318,7 @@ func TestWorklistProducersExcludeMarkedSendersEvenWithACompanyLink(t *testing.T)
 // The reconnect lane reads the contact's mark and nothing else about a vendor:
 // the per-owner ledger keeps its vendor_pitch kind after the mark is cleared.
 func TestTheReconnectLaneFollowsTheMarkNotTheLedgerKind(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const sender = "sam@bulkreach.example"
 	markedVendor(t, e, sender, "bulkreach.example")

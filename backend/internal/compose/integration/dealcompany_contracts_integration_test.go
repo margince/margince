@@ -28,10 +28,12 @@ import (
 )
 
 func TestAnAgreementRacingADealCompanyChangeRechecksTheCompany(t *testing.T) {
+	t.Parallel()
 	contractCompanyRace(t, false)
 }
 
 func TestAnAgreementUpdateRacingADealCompanyChangeRechecksTheCompany(t *testing.T) {
+	t.Parallel()
 	contractCompanyRace(t, true)
 }
 
@@ -107,6 +109,7 @@ func contractCompanyRace(t *testing.T, update bool) {
 }
 
 func TestALegacyContractWithADifferentCompanyCanBeRepairedByItsAdministrator(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	companyA, companyB := e.SeedCompany(t, "Original company", nil), e.SeedCompany(t, "Other company", nil)
@@ -127,6 +130,7 @@ func TestALegacyContractWithADifferentCompanyCanBeRepairedByItsAdministrator(t *
 }
 
 func TestFilingAgainstALegacyAgreementUsesTheAgreementsCompany(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	companyA := e.SeedCompany(t, "Agreement company", &e.Rep2)
 	companyB := e.SeedCompany(t, "Deal company", &e.Rep1)
@@ -159,6 +163,7 @@ func TestFilingAgainstALegacyAgreementUsesTheAgreementsCompany(t *testing.T) {
 }
 
 func TestACompanyOwnerCanRepairALegacyAgreementOnAnotherOwnersDeal(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	companyA := e.SeedCompany(t, "Agreement company", &e.Rep1)

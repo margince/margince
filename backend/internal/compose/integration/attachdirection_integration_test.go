@@ -44,6 +44,7 @@ var attachDirectionPerms = principal.Permissions{
 }
 
 func TestAReadShareNamesTheCompanyAndCannotFileOntoIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	// Capture-private, which is what makes the share rep1's ONLY path to the
 	// row: a plain company is readable by every seat, and then every outcome

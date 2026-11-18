@@ -38,6 +38,7 @@ func captureSuggestionCopy(t *testing.T, e *integration.Env, sink *capture.Sink,
 }
 
 func TestConversationSuggestionsFillTheVisiblePageAfterFilteringNewerMessages(t *testing.T) {
+	t.Parallel()
 	e, sink, anchor := suggestionScanFixture(t)
 	var newest []string
 	for index := range 35 {
@@ -72,6 +73,7 @@ func TestConversationSuggestionsFillTheVisiblePageAfterFilteringNewerMessages(t 
 }
 
 func TestConversationSuggestionsDiscloseNoAddressFromUnreadableMessageContent(t *testing.T) {
+	t.Parallel()
 	e, sink, anchor := suggestionScanFixture(t)
 	captureSuggestionCopy(t, e, sink, "bob@buyer.test")
 	owner, err := sink.ConversationSuggestions(e.Admin(), anchor)
@@ -89,6 +91,7 @@ func TestConversationSuggestionsDiscloseNoAddressFromUnreadableMessageContent(t 
 }
 
 func TestConversationSuggestionsReportTheExhaustedScanBudget(t *testing.T) {
+	t.Parallel()
 	e, sink, anchor := suggestionScanFixture(t)
 	captureSuggestionCopy(t, e, sink, "older@buyer.test")
 	// One copy is captured and the rest are copies of its rows. Each is a

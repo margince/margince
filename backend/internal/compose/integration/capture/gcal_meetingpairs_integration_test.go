@@ -218,6 +218,7 @@ func withLockDetail(err error) string {
 }
 
 func TestTwoSeatsFirstSyncsRacingFileOneMeeting(t *testing.T) {
+	t.Parallel()
 	p := newPairEnv(t)
 	start := captureNow.AddDate(0, 0, -3).Truncate(time.Hour)
 	p.book(start)
@@ -249,6 +250,7 @@ func TestTwoSeatsFirstSyncsRacingFileOneMeeting(t *testing.T) {
 }
 
 func TestALostRaceRowFoldsOnTheNextSync(t *testing.T) {
+	t.Parallel()
 	p := newPairEnv(t)
 	start := captureNow.AddDate(0, 0, -3).Truncate(time.Hour)
 	organiser, _ := p.loseRace(t, start)
@@ -261,6 +263,7 @@ func TestALostRaceRowFoldsOnTheNextSync(t *testing.T) {
 }
 
 func TestAMovedMeetingSyncedByTheGuestFirstFoldsOnTheOrganisersSync(t *testing.T) {
+	t.Parallel()
 	p := newPairEnv(t)
 	start := captureNow.AddDate(0, 0, -3).Truncate(time.Hour)
 	p.book(start)
@@ -282,6 +285,7 @@ func TestAMovedMeetingSyncedByTheGuestFirstFoldsOnTheOrganisersSync(t *testing.T
 // A human recorded the outcome on the guest's row, so that row stays and the
 // organiser's row is retired onto it.
 func TestAHumanWorkedOwnRowSurvivesAndTakesTheCopy(t *testing.T) {
+	t.Parallel()
 	p := newPairEnv(t)
 	start := captureNow.AddDate(0, 0, -3).Truncate(time.Hour)
 	_, guest := p.loseRace(t, start)
@@ -299,6 +303,7 @@ func TestAHumanWorkedOwnRowSurvivesAndTakesTheCopy(t *testing.T) {
 
 // Both rows carry human work, so neither retires and both stay.
 func TestAPairNeitherSideCanRetireStaysTwo(t *testing.T) {
+	t.Parallel()
 	p := newPairEnv(t)
 	start := captureNow.AddDate(0, 0, -3).Truncate(time.Hour)
 	organiser, guest := p.loseRace(t, start)
@@ -315,6 +320,7 @@ func TestAPairNeitherSideCanRetireStaysTwo(t *testing.T) {
 // After a live fold both seats see the meeting's hour as busy. The survivor
 // lists the guest only the folded row named.
 func TestALiveFoldKeepsBothSeatsBusyAndEveryGuest(t *testing.T) {
+	t.Parallel()
 	p := newPairEnv(t)
 	start := captureNow.AddDate(0, 0, -3).Truncate(24 * time.Hour).Add(10 * time.Hour)
 	organiser, guest := p.loseRace(t, start)
@@ -351,6 +357,7 @@ func TestALiveFoldKeepsBothSeatsBusyAndEveryGuest(t *testing.T) {
 // Mutation: drop carryMeetingDocumentLinksTx from RetireMeetingCopyTx and the
 // link stays on the archived copy.
 func TestAFoldMovesTheCopysNotesLinksToTheSurvivor(t *testing.T) {
+	t.Parallel()
 	p := newPairEnv(t)
 	start := captureNow.AddDate(0, 0, -3).Truncate(time.Hour)
 	organiser, guest := p.loseRace(t, start)

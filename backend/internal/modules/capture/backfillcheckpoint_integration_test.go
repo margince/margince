@@ -63,6 +63,7 @@ func (p *checkpointHistory) BackfillPage(ctx context.Context, _ connector.Auth, 
 }
 
 func TestHistoryCheckpointsCommitCountsOnceAcrossPageFailure(t *testing.T) {
+	t.Parallel()
 	provider := &checkpointHistory{}
 	ctx, reg, id := admissionRunWith(t, provider)
 	queue := &recordedBackfillQueue{generations: map[ids.UUID]int64{}}
@@ -97,6 +98,7 @@ func TestHistoryCheckpointsCommitCountsOnceAcrossPageFailure(t *testing.T) {
 }
 
 func TestCancelledHistoryRejectsItsInFlightCheckpoint(t *testing.T) {
+	t.Parallel()
 	provider := &checkpointHistory{}
 	ctx, reg, id := admissionRunWith(t, provider)
 	actor, ok := principal.Actor(ctx)
@@ -127,6 +129,7 @@ func TestCancelledHistoryRejectsItsInFlightCheckpoint(t *testing.T) {
 }
 
 func TestReconnectedHistoryEndsBeforeSavingItsCheckpoint(t *testing.T) {
+	t.Parallel()
 	provider := &checkpointHistory{}
 	ctx, reg, id := admissionRunWith(t, provider)
 	provider.beforeCheckpoint = func() error { _, err := reg.Connect(ctx, "gmail", connector.Auth("replacement-grant")); return err }
@@ -171,6 +174,7 @@ func (p *dripCheckpointHistory) BackfillPage(ctx context.Context, _ connector.Au
 }
 
 func TestSavedProgressKeepsAThrottledImportAlivePastTheFailureLimit(t *testing.T) {
+	t.Parallel()
 	provider := &dripCheckpointHistory{}
 	ctx, reg, id := admissionRunWith(t, provider)
 	owner, _ := setupCaptureDB(t)

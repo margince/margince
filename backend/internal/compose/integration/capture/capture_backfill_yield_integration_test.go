@@ -152,6 +152,7 @@ func (m *mailPageConnector) walkAtOnce(ctx context.Context, sink connector.Sink)
 }
 
 func TestBackfillCountsOnlyTheCounterpartiesItsOwnPagesCreated(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	seedCaptureRole(t, e)
 	// The production wiring, because the counters under test are filled by the
@@ -230,6 +231,7 @@ func TestBackfillCountsOnlyTheCounterpartiesItsOwnPagesCreated(t *testing.T) {
 }
 
 func TestBackfillYieldsAreVisibleWhileThePageRuns(t *testing.T) {
+	t.Parallel()
 	// The counterparty half of the live tally. The Sink counts a contact or an
 	// company as it creates one, so the two numbers beside "emails
 	// captured" have to move during the page as well — a screen where only the
@@ -338,6 +340,7 @@ func readBackfillYieldColumns(t *testing.T, e *integration.SearchEnv, id ids.UUI
 }
 
 func TestBackfillYieldsSurviveATransientFault(t *testing.T) {
+	t.Parallel()
 	// A page that fails transiently is retried from the committed cursor, and
 	// capture is idempotent: every message it already captured replays as
 	// created=false and never reaches the counterparty resolver again. So the
@@ -417,6 +420,7 @@ func yieldFixture() [][]byte {
 }
 
 func TestBackfillYieldsSurviveACancelUnderTheRunningPage(t *testing.T) {
+	t.Parallel()
 	// The user stops the import while the page is still walking. Every write
 	// that carries the run's STATE is fenced on the live statuses, so after the
 	// cancel none of them match — and the page's counterparties, which exist
@@ -473,6 +477,7 @@ func TestBackfillYieldsSurviveACancelUnderTheRunningPage(t *testing.T) {
 }
 
 func TestBackfillYieldsAreCreditedOnceAtTheRetryCeiling(t *testing.T) {
+	t.Parallel()
 	// A page that fails transiently AT the ceiling runs two writes: the
 	// failure ladder and the terminal one. When both credited the yields, the
 	// run reported twice the contacts it actually created.
@@ -547,6 +552,7 @@ func seedBackfillFailuresAtCeiling(t *testing.T, e *integration.SearchEnv, id id
 }
 
 func TestRetriedCreationCreditsCountOnce(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	seedCaptureRole(t, e)
 	registry := compose.NewCaptureRegistry(e.Pool, newTestKeyvault(t, e), compose.CaptureConfig{})
@@ -638,6 +644,7 @@ func TestRetriedCreationCreditsCountOnce(t *testing.T) {
 
 // A completed run repairs drift left by legacy counter writers.
 func TestACompletedImportReconcilesItsCreationLedger(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	seedCaptureRole(t, e)
 	registry := compose.NewCaptureRegistry(e.Pool, newTestKeyvault(t, e), compose.CaptureConfig{})
@@ -759,6 +766,7 @@ func replayCreationLedger(t *testing.T, e *integration.SearchEnv, id ids.UUID) {
 }
 
 func TestConcurrentCreationsAreAllCounted(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	seedCaptureRole(t, e)
 	registry := compose.NewCaptureRegistry(e.Pool, newTestKeyvault(t, e), compose.CaptureConfig{})
@@ -802,6 +810,7 @@ func TestConcurrentCreationsAreAllCounted(t *testing.T) {
 
 // New credits add to legacy counts even when no ledger evidence remains for them.
 func TestACountTheLedgerCannotSeeIsKept(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	seedCaptureRole(t, e)
 	registry := compose.NewCaptureRegistry(e.Pool, newTestKeyvault(t, e), compose.CaptureConfig{})

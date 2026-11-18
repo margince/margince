@@ -145,6 +145,7 @@ func (f reportFixture) runTask(t *testing.T) {
 }
 
 func TestTheDeliveryReportTaskStepsAnEngagedLeadBackAndKeepsEverythingElse(t *testing.T) {
+	t.Parallel()
 	f := newReportFixture(t)
 	importer := new("mirror:hubspot")
 	conn := integration.OwnerConn(t)
@@ -219,6 +220,7 @@ func TestTheDeliveryReportTaskStepsAnEngagedLeadBackAndKeepsEverythingElse(t *te
 // Who counts as a human hand is the audit actor's call: status_set_by reads
 // "human" for every actor but the system.
 func TestTheDeliveryReportTaskKeepsOnlyAStatusAHumanHandPlacedBeforeTheBounce(t *testing.T) {
+	t.Parallel()
 	f := newReportFixture(t)
 	actingFor := func(p principal.Principal) context.Context {
 		p.Permissions = integration.AdminPerms
@@ -265,6 +267,7 @@ func TestTheDeliveryReportTaskKeepsOnlyAStatusAHumanHandPlacedBeforeTheBounce(t 
 }
 
 func TestTheDeliveryReportTaskPagesOverRowsItKeepsAndRollsBackWithItsBatch(t *testing.T) {
+	t.Parallel()
 	f := newReportFixture(t)
 	importer := new("mirror:hubspot")
 	lead := f.lead(t, "Paged Lead")
@@ -310,6 +313,7 @@ func TestTheDeliveryReportTaskPagesOverRowsItKeepsAndRollsBackWithItsBatch(t *te
 }
 
 func TestAnImportedBounceNoticeIsRefusedAtTheWriteDoorAndLeavesTheLeadAlone(t *testing.T) {
+	t.Parallel()
 	f := newReportFixture(t)
 	lead := f.lead(t, "Door Lead")
 	_, baseline := f.state(t, lead)

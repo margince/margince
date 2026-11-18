@@ -19,6 +19,7 @@ import (
 )
 
 func TestEveryAnalyticsReaderRequiresThePopulationGrant(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	amount := int64(100_000)
 	e.seedOpenDeal(t, "Restricted population", 20, &e.Rep1, &amount)

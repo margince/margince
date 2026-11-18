@@ -17,6 +17,7 @@ import (
 )
 
 func TestCommitmentWhoseSourceIsArchivedDuringReadingCreatesNothing(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	contact := e.SeedContact(t, "Ines Huber", &e.Rep1)

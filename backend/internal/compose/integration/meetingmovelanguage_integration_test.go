@@ -19,6 +19,7 @@ import (
 )
 
 func TestDealMovementReadUsesBaseLanguageAndPreservesItsSource(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	deal, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{Name: "Original deal", PipelineID: pipeline, StageID: open, Source: "manual"})

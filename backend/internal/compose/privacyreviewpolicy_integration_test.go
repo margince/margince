@@ -24,6 +24,7 @@ import (
 )
 
 func TestErasureExplainsMissingReviewerAndRollsBack(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	subject := e.SeedContact(t, "Anna Berg", nil)
 	company := e.SeedCompany(t, "Review company", nil)
@@ -43,6 +44,7 @@ func TestErasureExplainsMissingReviewerAndRollsBack(t *testing.T) {
 }
 
 func TestErasureFlagsCompanyTemplatesWithoutChangingThem(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.WsExec(t, `INSERT INTO role_assignment(user_id,role_id) SELECT $1,id FROM role WHERE key='admin'`, e.AdminUser)
 	subject := e.SeedContact(t, "Anna Berg", nil)
@@ -71,6 +73,7 @@ func TestErasureFlagsCompanyTemplatesWithoutChangingThem(t *testing.T) {
 }
 
 func TestErasureFlagsAnInactiveMembersSignatureWithoutOpeningTheControllersOwn(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	memberManagerFor(t, e)
 	subject := e.SeedContact(t, "Anna Berg", nil)
@@ -97,6 +100,7 @@ func TestErasureFlagsAnInactiveMembersSignatureWithoutOpeningTheControllersOwn(t
 }
 
 func TestMarkerCorrectionDefersAWriteConflictWithoutAbortingItsTransaction(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	record := legacyWeeklyCopies(t, e, "")
 	contact, company := e.SeedContact(t, "Ordinary contact", nil), e.SeedCompany(t, "Ordinary company", nil)
@@ -135,6 +139,7 @@ func TestMarkerCorrectionDefersAWriteConflictWithoutAbortingItsTransaction(t *te
 }
 
 func TestMarkerCorrectionDefersAReadLockOnARightsRequest(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	request := legacyRequestAuditCopies(t, e)
 	company := e.SeedCompany(t, "Ordinary company", nil)
@@ -171,6 +176,7 @@ func TestMarkerCorrectionDefersAReadLockOnARightsRequest(t *testing.T) {
 }
 
 func TestAReadSeatCannotBeTheControllerForErasureOrMissedReceipts(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	memberManagerFor(t, e)
 	e.WsExec(t, `UPDATE app_user SET seat_type='read' WHERE id=$1`, e.AdminUser)

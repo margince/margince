@@ -108,6 +108,7 @@ func sentWithout(t *testing.T, relay *countingMailer, kept, gone string) {
 // A promise settled after its decision was queued takes that decision out of
 // the mail; the other decision still waiting is mailed.
 func TestADecisionWhosePromiseWasSettledIsNotMailedWhileTheOtherIs(t *testing.T) {
+	t.Parallel()
 	a, relay, worker := newDecisionMailEnv(t)
 	gone := stagePromisedDecision(t, a, a.e.AdminUser, "Send the pricing")
 	kept := stagePromisedDecision(t, a, a.e.AdminUser, "Send the contract")
@@ -121,6 +122,7 @@ func TestADecisionWhosePromiseWasSettledIsNotMailedWhileTheOtherIs(t *testing.T)
 
 // A source the decider may no longer open takes its decision out of the mail.
 func TestADecisionWhoseSourceTheDeciderMayNoLongerOpenIsNotMailed(t *testing.T) {
+	t.Parallel()
 	a, relay, worker := newDecisionMailEnv(t)
 	gone := stagePromisedDecision(t, a, a.e.Rep1, "Send the pricing")
 	kept := stagePromisedDecision(t, a, a.e.Rep1, "Send the contract")
@@ -137,6 +139,7 @@ func TestADecisionWhoseSourceTheDeciderMayNoLongerOpenIsNotMailed(t *testing.T) 
 // One decision shown in a morning's body and quoted by its digest is one row
 // of the basis. The basis takes it once, excludes nothing, and holds.
 func TestOneDecisionInTheBodyAndTheDigestIsOneBasisRow(t *testing.T) {
+	t.Parallel()
 	a, _, _ := newDecisionMailEnv(t)
 	decision := stagePromisedDecision(t, a, a.e.AdminUser, "Send the pricing")
 	items := []morningItem{{source: "approval", id: decision.approval.String()}}

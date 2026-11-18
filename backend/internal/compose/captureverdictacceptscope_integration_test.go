@@ -72,6 +72,7 @@ func (s stagedSenderCard) filedOntoContact(t *testing.T) int {
 // The address belongs to a contact private to a rep in another team. The
 // accept is refused, no mail is filed onto it, and the card still waits.
 func TestAcceptingASenderWhoseContactTheDeciderCannotSeeIsRefused(t *testing.T) {
+	t.Parallel()
 	s := stageSenderCard(t, func(e *integration.Env) ids.UUID { return e.Rep3 })
 
 	if _, err := s.svc.Decide(s.decider(), s.approval, true, nil); !errors.Is(err, apperrors.ErrNotFound) {
@@ -88,6 +89,7 @@ func TestAcceptingASenderWhoseContactTheDeciderCannotSeeIsRefused(t *testing.T) 
 // The write asks again for a contact hidden after the precheck answered: run
 // with no precheck in front of it, the effect alone files nothing.
 func TestTheAcceptedSenderWriteRefusesAContactTheDeciderCannotSee(t *testing.T) {
+	t.Parallel()
 	s := stageSenderCard(t, func(e *integration.Env) ids.UUID { return e.Rep3 })
 	writeOnly := approvals.NewService(s.DB())
 	writeOnly.WithEffect(counterpartyProposalKind, counterpartyAcceptEffect(writeOnly, newCounterpartyStore(s.Pool),
@@ -103,6 +105,7 @@ func TestTheAcceptedSenderWriteRefusesAContactTheDeciderCannotSee(t *testing.T) 
 
 // The contact is the decider's own, so the accept files the mail onto it.
 func TestAcceptingASenderWhoseContactTheDeciderCanSeeFilesTheMail(t *testing.T) {
+	t.Parallel()
 	s := stageSenderCard(t, func(e *integration.Env) ids.UUID { return e.Rep1 })
 
 	if _, err := s.svc.Decide(s.decider(), s.approval, true, nil); err != nil {
@@ -116,6 +119,7 @@ func TestAcceptingASenderWhoseContactTheDeciderCanSeeFilesTheMail(t *testing.T) 
 // A read-only share shows the decider the contact. It gives no right to file
 // mail onto it or publish it, which is what accepting would do.
 func TestAcceptingASenderWhoseContactIsSharedReadOnlyIsRefused(t *testing.T) {
+	t.Parallel()
 	s := stageSenderCard(t, func(e *integration.Env) ids.UUID { return e.Rep3 })
 	s.WsExec(t, `INSERT INTO record_grant (record_type, record_id, subject_type, subject_id, access, granted_by)
 		VALUES ('contact', $1, 'user', $2, 'read', $3)`, s.contact, s.Rep1, s.Rep3)
@@ -131,6 +135,7 @@ func TestAcceptingASenderWhoseContactIsSharedReadOnlyIsRefused(t *testing.T) {
 // The card is about one sender. An edit that names another address is
 // refused before the decision, so the card still waits.
 func TestAnEditThatRetargetsTheSenderIsRefused(t *testing.T) {
+	t.Parallel()
 	s := stageSenderCard(t, func(e *integration.Env) ids.UUID { return e.Rep1 })
 	edited := []byte(`{"email":"someone@else.example","domain":"else.example","display_name":"Someone"}`)
 
@@ -146,6 +151,7 @@ func TestAnEditThatRetargetsTheSenderIsRefused(t *testing.T) {
 // The sender's domain belongs to a company private to a rep in another team.
 // Accepting would employ the sender there, so it is refused and no edge lands.
 func TestAcceptingASenderWhoseCompanyTheDeciderCannotSeeIsRefused(t *testing.T) {
+	t.Parallel()
 	s := stageSenderCard(t, func(e *integration.Env) ids.UUID { return e.Rep1 })
 	company := s.SeedCompany(t, "Brandt GmbH", &s.Rep3)
 	s.WsExec(t, `INSERT INTO company_domain (company_id, domain, is_primary, source, captured_by)
@@ -163,6 +169,7 @@ func TestAcceptingASenderWhoseCompanyTheDeciderCannotSeeIsRefused(t *testing.T) 
 // A held lead on the sender's address is promoted by the accept only for a
 // decider who may promote one. The write runs as the system, which may.
 func TestAcceptingASenderPromotesTheirLeadOnlyForADeciderWhoMay(t *testing.T) {
+	t.Parallel()
 	for name, mayPromote := range map[string]bool{"may not": false, "may": true} {
 		t.Run(name, func(t *testing.T) {
 			s := stageSenderCard(t, func(e *integration.Env) ids.UUID { return e.Rep1 })

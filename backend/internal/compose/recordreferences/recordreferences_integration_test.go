@@ -72,6 +72,7 @@ func referenceResponse(t *testing.T, response *httptest.ResponseRecorder) []crmc
 }
 
 func TestRecordReferencesMatchDetailReadsAndKeepArchivedNames(t *testing.T) {
+	t.Parallel()
 	for _, kind := range []string{"contact", "company", "lead", "deal", "project"} {
 		t.Run(kind, func(t *testing.T) {
 			e := integration.Setup(t)
@@ -114,6 +115,7 @@ func TestRecordReferencesMatchDetailReadsAndKeepArchivedNames(t *testing.T) {
 }
 
 func TestRecordReferencesPreserveBoundsOrderAndObjectDenials(t *testing.T) {
+	t.Parallel()
 	for _, kind := range []string{"contact", "company", "lead", "deal", "project"} {
 		t.Run(kind, func(t *testing.T) {
 			e := integration.Setup(t)
@@ -168,6 +170,7 @@ func TestRecordReferencesPreserveBoundsOrderAndObjectDenials(t *testing.T) {
 }
 
 func TestRecordReferencesOmitPrivateContactsLikeDetailReads(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	fixture := makeReferenceFixture(t, e, "contact", "Private reference")
 	id := ids.From[ids.ContactKind](fixture.id)
@@ -196,6 +199,7 @@ func TestRecordReferencesOmitPrivateContactsLikeDetailReads(t *testing.T) {
 }
 
 func TestRecordReferenceStatementCountDoesNotGrowWithIDs(t *testing.T) {
+	t.Parallel()
 	for _, kind := range []string{"contact", "company", "lead", "deal", "project"} {
 		t.Run(kind, func(t *testing.T) {
 			e := integration.Setup(t)
@@ -223,6 +227,7 @@ func TestRecordReferenceStatementCountDoesNotGrowWithIDs(t *testing.T) {
 }
 
 func TestRecordReferencesRejectMalformedRequests(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	router := referenceRouter(e)
 	for _, tc := range []struct {
@@ -243,6 +248,7 @@ func TestRecordReferencesRejectMalformedRequests(t *testing.T) {
 }
 
 func TestRecordReferencesPreserveNamesWhenOtherFieldsAreMasked(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	fixture := makeReferenceFixture(t, e, "deal", "Masked amount deal")
 	perms := integration.AdminPerms
@@ -263,6 +269,7 @@ func TestRecordReferencesPreserveNamesWhenOtherFieldsAreMasked(t *testing.T) {
 }
 
 func TestRecordReferencesFollowTheDetailReadersScope(t *testing.T) {
+	t.Parallel()
 	for _, kind := range []string{"contact", "company", "lead", "deal", "project"} {
 		t.Run(kind, func(t *testing.T) {
 			e := integration.Setup(t)
@@ -291,6 +298,7 @@ func TestRecordReferencesFollowTheDetailReadersScope(t *testing.T) {
 }
 
 func TestRecordReferencesKeepNamesOfMergedRecords(t *testing.T) {
+	t.Parallel()
 	for _, kind := range []string{"contact", "company"} {
 		t.Run(kind, func(t *testing.T) {
 			e := integration.Setup(t)

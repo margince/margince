@@ -11,6 +11,7 @@ import "testing"
 // with no status, or still booked, is awaiting its outcome and is no
 // conversation to follow up on.
 func TestFollowUpReconcileGroundsOnlyOnAHeldMeeting(t *testing.T) {
+	t.Parallel()
 	e := setupReconcile(t)
 	for _, status := range []string{"", "booked"} {
 		unreported := e.SeedDeal(t, "Met, nobody reported it ("+status+")", e.pipeline, e.open, &e.Rep1)

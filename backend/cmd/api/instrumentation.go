@@ -17,11 +17,11 @@ import (
 // already wrapped by the units' handlers. The boot logger it hands the units
 // sits on the bare handler, so a unit's own diagnostics never pass through a
 // unit's wrapper. The caller defers compose.FlushInstrumentation.
-func startInstrumentation(ctx context.Context, cfg apiConfig, stdout io.Writer) error {
+func startInstrumentation(ctx context.Context, composed *compose.Extensions, cfg apiConfig, stdout io.Writer) error {
 	bootHandler, err := httpserver.LogHandler(stdout, cfg.logLevel, cfg.logFormat)
 	if err != nil {
 		return err
 	}
-	compose.StartInstrumentation(ctx, "api", slog.New(bootHandler))
+	compose.StartInstrumentation(ctx, composed, "api", slog.New(bootHandler))
 	return nil
 }

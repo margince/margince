@@ -24,6 +24,7 @@ import (
 )
 
 func TestLegacySystemTaskTextRepairIsBoundedAtomicAndPreservesUserWording(t *testing.T) {
+	t.Parallel()
 	for _, mode := range []string{"commit", "rollback"} {
 		t.Run(mode, func(t *testing.T) {
 			e := integration.Setup(t)

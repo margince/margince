@@ -27,6 +27,7 @@ import (
 )
 
 func TestTheFormListShowsArchivedFormsOnlyWhenAskedTo(t *testing.T) {
+	t.Parallel()
 	e := setupFormsApp(t)
 	createForm(t, e, integration.AnyMap{"name": "Live", "sender": "browser", "allowed_origins": []string{siteOrigin}})
 	retired := createForm(t, e, integration.AnyMap{"name": "Retired", "sender": "server"})
@@ -60,6 +61,7 @@ func TestTheFormListShowsArchivedFormsOnlyWhenAskedTo(t *testing.T) {
 // A form keeps the privacy notice it shows under it and the policy it links to,
 // and an explicit null takes both away again.
 func TestAFormKeepsItsPrivacyNoticeUntilItIsCleared(t *testing.T) {
+	t.Parallel()
 	e := setupFormsApp(t)
 	notice, policy := "We use your details to answer your request.", siteOrigin+"/privacy"
 	form := createForm(t, e, integration.AnyMap{
@@ -98,6 +100,7 @@ func tallyHeaders(secret string, body []byte) map[string]string {
 }
 
 func TestABuilderSecretPastedAgainReplacesTheOldOne(t *testing.T) {
+	t.Parallel()
 	e := setupFormsApp(t)
 	form := createForm(t, e, integration.AnyMap{"name": "Tally", "sender": "tally", "sender_secret": "tally-secret-number-one"})
 	body := []byte(`{"eventId":"ta-1","eventType":"FORM_RESPONSE","data":{"fields":[
@@ -125,6 +128,7 @@ func TestABuilderSecretPastedAgainReplacesTheOldOne(t *testing.T) {
 }
 
 func TestATallyFormSetUpWithoutASecretGetsOneMintedToTypeIntoTally(t *testing.T) {
+	t.Parallel()
 	e := setupFormsApp(t)
 	form := createForm(t, e, integration.AnyMap{"name": "Tally", "sender": "tally"})
 	if form.SigningSecret == nil || *form.SigningSecret == "" {
@@ -148,6 +152,7 @@ func TestATallyFormSetUpWithoutASecretGetsOneMintedToTypeIntoTally(t *testing.T)
 }
 
 func TestAWebflowFormWaitsForTheSecretWebflowIssues(t *testing.T) {
+	t.Parallel()
 	e := setupFormsApp(t)
 	var form struct {
 		createdForm
@@ -173,6 +178,7 @@ func TestAWebflowFormWaitsForTheSecretWebflowIssues(t *testing.T) {
 }
 
 func TestASaveNamingAnUnknownLeadOriginIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupFormsApp(t)
 	body := integration.AnyMap{"name": "Contact", "sender": "browser", "allowed_origins": []string{siteOrigin}, "lead_origin": "no-such-origin"}
 	if status := e.Call(t, "POST", "/v1/web-forms", body, nil, nil); status != http.StatusUnprocessableEntity {
@@ -188,6 +194,7 @@ func TestASaveNamingAnUnknownLeadOriginIsRefused(t *testing.T) {
 // The forms are workspace settings behind the integrations grant, so a rep who
 // holds none can neither list one nor make one.
 func TestARepWithoutTheIntegrationsGrantCannotListOrMakeAForm(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := webformsmod.NewStore(e.DB(), slog.New(slog.DiscardHandler)).WithVault(keyvault.NewMemory())
 	rep := e.As(e.Rep1, nil, integration.RepPerms)

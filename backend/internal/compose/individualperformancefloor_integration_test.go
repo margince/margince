@@ -72,6 +72,7 @@ func teamScopeBody(team ids.UUID) string {
 }
 
 func TestIndividualPerformanceOffWithholdsATeamThatANestedTeamLeavesToOneMember(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	teams := e.seedNestedTeams(t)
 	reader := e.dealReadCtx(e.Rep1, nil, principal.RowScopeAll)
@@ -98,6 +99,7 @@ func TestIndividualPerformanceOffWithholdsATeamThatANestedTeamLeavesToOneMember(
 }
 
 func TestIndividualPerformanceOffDoesNotSubtractAnArchivedTeam(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	teams := e.seedNestedTeams(t)
 	reader := e.dealReadCtx(e.Rep1, nil, principal.RowScopeAll)
@@ -111,6 +113,7 @@ func TestIndividualPerformanceOffDoesNotSubtractAnArchivedTeam(t *testing.T) {
 }
 
 func TestIndividualPerformanceOffWithholdsATypedQueryOverANestedTeamsParent(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	teams := e.seedNestedTeams(t)
 	amount := int64(100_000)
@@ -136,6 +139,7 @@ func TestIndividualPerformanceOffWithholdsATypedQueryOverANestedTeamsParent(t *t
 // Three teams that share members pairwise: together they give each
 // colleague's figure, so each is withheld.
 func TestIndividualPerformanceOffWithholdsThreePairwiseTeamsForecasts(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	members := e.addMembers(t, e.Team1, "anna@floor.test", "ben@floor.test")
 	anna, ben := members[0], members[1]
@@ -171,6 +175,7 @@ func TestIndividualPerformanceOffWithholdsThreePairwiseTeamsForecasts(t *testing
 }
 
 func TestIndividualPerformanceOffWithholdsANestedTeamsParentReadings(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	teams := e.seedNestedTeams(t)
 	service := newReportingService(e.Pool, func() time.Time { return time.Date(2026, 1, 20, 12, 0, 0, 0, time.UTC) })
@@ -197,6 +202,7 @@ func TestIndividualPerformanceOffWithholdsANestedTeamsParentReadings(t *testing.
 }
 
 func TestIndividualPerformanceOffWithholdsANestedTeamsParentTarget(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	teams := e.seedNestedTeams(t)
 	service := newReportingService(e.Pool, func() time.Time { return time.Date(2026, 9, 29, 12, 0, 0, 0, time.UTC) })
@@ -225,6 +231,7 @@ func TestIndividualPerformanceOffWithholdsANestedTeamsParentTarget(t *testing.T)
 
 // The floor subtracts the teams whose totals a reader may ask for, and no others.
 func TestTheFloorSubtractsTheTeamsTheScopeResolverAccepts(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	seat := e.addMembers(t, e.Team1, "seat@floor.test")[0]
 	e.seedTeam(t, "Second", seat)
@@ -262,6 +269,7 @@ func TestTheFloorSubtractsTheTeamsTheScopeResolverAccepts(t *testing.T) {
 // with no figure hides nothing. A seller on no team, whom taking a team's
 // total away would leave alone, is withheld.
 func TestIndividualPerformanceOffJudgesTheCompanyTotalByItsContributors(t *testing.T) {
+	t.Parallel()
 	e := setupForecast(t)
 	members := e.addMembers(t, e.Team1, "anna@floor.test", "ben@floor.test")
 	e.joinTeam(t, e.Team1, e.Rep3)

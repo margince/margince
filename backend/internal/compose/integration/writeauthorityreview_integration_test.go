@@ -65,6 +65,7 @@ func grantsAtTeamScope(objects ...string) principal.Permissions {
 // and renewal — so a `read` share of one deal carried write on all of its
 // agreements.
 func TestAReadShareOfADealCannotRewriteItsContracts(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	owner := e.As(e.Rep3, []ids.UUID{e.Team2}, grantsAtTeamScope("deal", "company", "contract"))
@@ -138,6 +139,7 @@ func TestAReadShareOfADealCannotRewriteItsContracts(t *testing.T) {
 // module's existing one: the approval is invisible, and both Get and Decide
 // answer not-found rather than 403.
 func TestAReadShareOfARecordCannotDecideAChangeStagedAgainstIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	svc := approvals.NewService(e.DB())
 	owner := e.As(e.Rep3, []ids.UUID{e.Team2}, grantsAtTeamScope("contact", "approval"))
@@ -177,6 +179,7 @@ func TestAReadShareOfARecordCannotDecideAChangeStagedAgainstIt(t *testing.T) {
 // record had ever been shared with — read-only — delete a colleague's `write`
 // grant on it.
 func TestAReadShareCannotRevokeSomebodyElsesShare(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	svc := identity.NewService(e.Pool)
 	owner := e.As(e.Rep3, []ids.UUID{e.Team2}, grantsAtTeamScope("contact"))
@@ -211,6 +214,7 @@ func TestAReadShareCannotRevokeSomebodyElsesShare(t *testing.T) {
 // able to do anything with the record would be the only one unable to give it
 // back.
 func TestAReadOnlySeatCanStillDeclineItsOwnShare(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	svc := identity.NewService(e.Pool)
 	owner := e.As(e.Rep3, []ids.UUID{e.Team2}, grantsAtTeamScope("contact"))
@@ -236,6 +240,7 @@ func TestAReadOnlySeatCanStillDeclineItsOwnShare(t *testing.T) {
 // The row half probed for sight, so a `read` share of a company let its holder
 // reclassify it as a partner.
 func TestAReadShareOfACompanyCannotMakeItAPartner(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := e.As(e.Rep3, []ids.UUID{e.Team2}, grantsAtTeamScope("company", "partner"))
 	holder := e.As(e.Rep1, []ids.UUID{e.Team1}, grantsAtTeamScope("company", "partner"))

@@ -121,6 +121,7 @@ func (e *SearchEnv) seedExportFixture(t *testing.T) exportFixture {
 }
 
 func TestExportBundleCompleteAndValidOpenFormat(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	f := e.seedExportFixture(t)
 
@@ -193,6 +194,7 @@ func TestExportBundleCompleteAndValidOpenFormat(t *testing.T) {
 // bundle; what stays out is the other rep's capture-private contact and
 // account, and everything reachable only through them.
 func TestExportRowScopeExcludesInvisibleRecords(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	f := e.seedExportFixture(t)
 	for _, private := range []struct {
@@ -270,6 +272,7 @@ func TestExportRowScopeExcludesInvisibleRecords(t *testing.T) {
 // RBAC bounds what the export contains: an object with no read grant is
 // omitted from the bundle entirely, not silently dumped.
 func TestExportOmitsObjectsWithoutReadGrant(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	e.seedExportFixture(t)
 
@@ -319,6 +322,7 @@ func keys(m map[string][]byte) []string {
 // the export does not is the same disclosure through a quieter door — and the
 // export is the door that puts the whole table on somebody's disk.
 func TestTheBundleWithholdsImagesAnErasureCertifiedGone(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	f := e.seedExportFixture(t)
 
@@ -360,6 +364,7 @@ func TestTheBundleWithholdsImagesAnErasureCertifiedGone(t *testing.T) {
 // has: audience does not yield to it (auth.ActivityContentClause), and this is
 // the test that says so for the bundle.
 func TestAnAdminExportCarriesNoHeldAttachmentOrAuditImage(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	e.seedExportFixture(t)
 
@@ -426,6 +431,7 @@ func TestAnAdminExportCarriesNoHeldAttachmentOrAuditImage(t *testing.T) {
 // The rep here is bounded (row_scope=team) and is the actor on the audit row,
 // so the entity arm refuses the row and only the own-trail arm can admit it.
 func TestARepsOwnAuditTrailStopsAtALimitedMessage(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	f := e.seedExportFixture(t)
 

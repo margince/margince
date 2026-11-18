@@ -31,6 +31,7 @@ func markSentBySystem(t *testing.T, id ids.UUID) {
 // model call and files no signal. The same fixture from a human sender is offered, and
 // the trace names the arm for the first.
 func TestAThreadOfOnlySendingSystemMailIsNotRead(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := e.SeedCompany(t, "Notifier Inc", &e.Rep1)
 	at := traceReadClock.Add(-48 * time.Hour)
@@ -62,6 +63,7 @@ func TestAThreadOfOnlySendingSystemMailIsNotRead(t *testing.T) {
 // notice sits on another account, because its address was imported as a contact
 // there. A human sender writes from the real one, so the thread reaches one account.
 func TestASendingSystemMessageDoesNotPullAThreadOntoItsCompany(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	real := e.SeedCompany(t, "Real Customer", &e.Rep1)
 	notifier := e.SeedCompany(t, "Notifier Inc", &e.Rep1)

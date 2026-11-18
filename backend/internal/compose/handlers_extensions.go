@@ -34,7 +34,10 @@ import (
 // extensionsHandlers serves the inventory. It holds NO state: every value it
 // reports is process-level and already recorded by the boot, so a field here
 // would be a second copy that could go stale against the accessors.
-type extensionsHandlers struct{}
+type extensionsHandlers struct {
+	// extensions is the composition the inventory describes.
+	extensions *Extensions
+}
 
 // ListExtensions (GET /v1/extensions). Gated on extension_access.read.
 //
@@ -52,12 +55,12 @@ type extensionsHandlers struct{}
 //
 // Agents never reach it at all: the operation is `x-agent-access: human-only`,
 // enforced by the generated policy table before this runs.
-func (extensionsHandlers) ListExtensions(w http.ResponseWriter, r *http.Request) {
+func (h extensionsHandlers) ListExtensions(w http.ResponseWriter, r *http.Request) {
 	if err := auth.Require(r.Context(), "extension_access", principal.ActionRead); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
-	units := composedExtensionInventory(ComposedExtensions(), ComposedVerbs(), servedExtensionJobs())
+	units := composedExtensionInventory(h.extensions.Units(), h.extensions.Verbs(), h.extensions.servedJobs())
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.ExtensionDirectory{Extensions: units})
 }
 
@@ -90,10 +93,10 @@ func composedExtensionInventory(exts []extension.Extension, verbs []extension.Ve
 
 // unitRbacObjects collects the distinct objects this unit's operations gate on.
 //
-// Read off the VERBS rather than off the RBAC registry, deliberately. The
-// registry (policy.RegisteredObjects) knows every registered name but not which
-// unit declared it — the `ext_<unit>_` prefix looks like it would answer that
-// and does not, because the namespace is not injective: a hyphenated unit name
+// Read off the verbs rather than off the RBAC vocabulary. The vocabulary
+// (identity.RbacObjects) knows every registered name but not which unit
+// declared it. The `ext_<unit>_` prefix does not answer that, because the
+// namespace is not injective: a hyphenated unit name
 // underscores, so `crm-demo`/`widget` and `crm`/`demo_widget` derive one name
 // (see extrbac.go). Splitting the prefix back apart would attribute an object to
 // the wrong unit; the verb carries its declaring unit as data and cannot.

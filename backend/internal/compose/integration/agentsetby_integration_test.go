@@ -17,6 +17,7 @@ import (
 // A rule says which passport it stops with, while one stands behind it. A user
 // editing the rule makes it theirs, and the field goes.
 func TestARuleNamesThePassportThatTurnedItOn(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "agent-rule-setter", "read", "write")
 	rule := answerID(t, settingsAct(t, d, "create_automation", map[string]any{"request_body": AnyMap{
 		"key": "assign_lead_owner", "name": "Assign leads", "params": AnyMap{},
@@ -46,6 +47,7 @@ func TestARuleNamesThePassportThatTurnedItOn(t *testing.T) {
 // The user's own seat says an agent set the zone until the user chooses. The roster
 // never carries it, so a colleague does not learn who works through an agent.
 func TestATimeZoneSaysItsAgentOnTheUsersOwnSeatOnly(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "agent-zone-wire", "read", "write")
 	ownAct(t, d, "save_timezone", map[string]any{"request_body": AnyMap{"timezone": "Europe/Berlin", "source": "agent"}})
 	setBy := func() *string {
@@ -80,6 +82,7 @@ func TestATimeZoneSaysItsAgentOnTheUsersOwnSeatOnly(t *testing.T) {
 
 // A passport's body over the limit is told the limit on every route the gate fronts.
 func TestAnAgentsBodyOverTheLimitNamesIt(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "agent-body-limit", "read", "write")
 	var problem struct {
 		Code   string `json:"code"`

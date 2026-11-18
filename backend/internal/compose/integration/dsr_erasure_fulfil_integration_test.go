@@ -91,6 +91,7 @@ func dsrValidationField(t *testing.T, body []byte) string {
 // "SELECT ... WHERE id = $1 found no row" ErrNotFound the real eraser returns —
 // and the request must stay open, never certify a deletion that never ran.
 func TestFulfillErasureHTTPRefusesASyntacticallyValidButNonexistentSubject(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	h, store, id := setupErasureDSR(t, e, ids.NewV7().String())
 
@@ -121,6 +122,7 @@ func TestFulfillErasureHTTPRefusesASyntacticallyValidButNonexistentSubject(t *te
 // anonymize-in-place premise is wrong and the handler's ErrNotFound refusal is
 // blocking a re-fulfil idempotency actually requires to succeed.
 func TestFulfillErasureHTTPIsIdempotentAcrossTwoFulfilments(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contactID := e.SeedContact(t, "Erasure Subject", nil)
 	h, store, id := setupErasureDSR(t, e, contactID.String())
@@ -149,6 +151,7 @@ func TestFulfillErasureHTTPIsIdempotentAcrossTwoFulfilments(t *testing.T) {
 // evidence, as one opened before it does. Mutation: read only the dispute the
 // request held before the update, and the creation image is redacted.
 func TestAnErasureThatOpensADisputeKeepsTheRequestHistory(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contactID := e.SeedContact(t, "Disputed Erasure Subject", nil)
 	h, _, id := setupErasureDSR(t, e, contactID.String())
@@ -188,6 +191,7 @@ func erasureAnswerOf(t *testing.T, e *Env, store *consent.Store, id ids.UUID) st
 // Mutation: report a wired object store as uncounted whatever it destroyed,
 // or let the contact update run on an anonymised row, and this answers erased.
 func TestAnErasureOfAnAlreadyErasedContactAnswersNothingHeld(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contactID := e.SeedContact(t, "Already Erased", nil)
 	// Wired as production wires it: an object store and nothing in it for this
@@ -269,6 +273,7 @@ func dsrRowLockHeld(t *testing.T, e *Env, id ids.UUID) bool {
 // probe observes the lock while it must be held; a bare fulfil would complete
 // too fast to catch the window at all.
 func TestFulfillErasureHoldsTheRequestLockedAcrossTheErase(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contactID := e.SeedContact(t, "Locked Subject", nil)
 

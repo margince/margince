@@ -104,6 +104,7 @@ func containsLine(lines []string, want string) bool {
 // they name: the history window, and the reversal read-back. A mismatch there is
 // not a wrong answer, it is every read of the record failing outright.
 func TestAnEdgelessCallerReadsBothWindowsWithoutAnUnboundPlaceholder(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := e.SeedContact(t, "Ada Employed", nil)
 	company := e.SeedCompany(t, "Employer GmbH", nil)
@@ -137,6 +138,7 @@ func TestAnEdgelessCallerReadsBothWindowsWithoutAnUnboundPlaceholder(t *testing.
 }
 
 func TestEdgeHistoryShowsAnEmploymentOnBothEnds(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := e.SeedContact(t, "Ada Employed", nil)
 	company := e.SeedCompany(t, "Employer GmbH", nil)
@@ -158,6 +160,7 @@ func TestEdgeHistoryShowsAnEmploymentOnBothEnds(t *testing.T) {
 }
 
 func TestEdgeHistoryShowsACoSellEdgeOnBothCompanies(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ours := e.SeedCompany(t, "Our Side GmbH", nil)
 	theirs := e.SeedCompany(t, "Their Side AG", nil)
@@ -175,6 +178,7 @@ func TestEdgeHistoryShowsACoSellEdgeOnBothCompanies(t *testing.T) {
 }
 
 func TestEdgeHistoryWithholdsAnEdgeWhoseOtherEndIsInvisible(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := e.SeedContact(t, "Ada Employed", nil)
 	company := e.SeedCompany(t, "Secret Holdings GmbH", nil)
@@ -202,6 +206,7 @@ func TestEdgeHistoryWithholdsAnEdgeWhoseOtherEndIsInvisible(t *testing.T) {
 }
 
 func TestEdgeHistoryFillsAFullPageDespiteInvisibleEdges(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := e.SeedContact(t, "Ada Employed", nil)
 	// Twenty-five of the contact's own rows, dated into the past so the three
@@ -237,6 +242,7 @@ func TestEdgeHistoryFillsAFullPageDespiteInvisibleEdges(t *testing.T) {
 }
 
 func TestEdgeHistoryStopsAtTheAnchorsOwnScrubTombstone(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := e.SeedContact(t, "Ada Employed", nil)
 	company := e.SeedCompany(t, "Employer GmbH", nil)
@@ -261,6 +267,7 @@ func TestEdgeHistoryStopsAtTheAnchorsOwnScrubTombstone(t *testing.T) {
 }
 
 func TestEdgeHistoryWithholdsAnErasedSubjectsEdgesFromTheOtherEnd(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := e.SeedContact(t, "Selma Subject", nil)
 	company := e.SeedCompany(t, "Employer GmbH", nil)
@@ -285,6 +292,7 @@ func TestEdgeHistoryWithholdsAnErasedSubjectsEdgesFromTheOtherEnd(t *testing.T) 
 }
 
 func TestEdgeHistoryWithholdsAnEdgeWhoseOtherEndCarriesAScrubTombstone(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := e.SeedContact(t, "Ada Employed", nil)
 	company := e.SeedCompany(t, "Employer GmbH", nil)
@@ -307,6 +315,7 @@ func TestEdgeHistoryWithholdsAnEdgeWhoseOtherEndCarriesAScrubTombstone(t *testin
 }
 
 func TestEdgeHistoryStillShowsAnUnlinkedEdge(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := e.SeedContact(t, "Ada Employed", nil)
 	company := e.SeedCompany(t, "Employer GmbH", nil)
@@ -336,6 +345,7 @@ func TestEdgeHistoryStillShowsAnUnlinkedEdge(t *testing.T) {
 }
 
 func TestEdgeHistoryInterleavesWithTheRecordsOwnRowsAcrossPages(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := e.SeedContact(t, "Ada Employed", nil)
 	company := e.SeedCompany(t, "Employer GmbH", nil)

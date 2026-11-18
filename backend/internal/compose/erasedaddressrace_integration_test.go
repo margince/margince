@@ -25,6 +25,7 @@ import (
 )
 
 func TestALeadCreatedDuringAnErasureNeverKeepsTheErasedAddress(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := context.Background()
 	subject, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{

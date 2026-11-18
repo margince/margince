@@ -90,6 +90,7 @@ func seedEnrichContact(t *testing.T, e *integration.Env, email, body string) ids
 }
 
 func TestSignatureEnrichPass(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	body := "Hi,\n\nsounds good.\n\nBest,\nBob Contact\nCTO\n+49 30 1234567\nAcme GmbH"
 	contact := seedEnrichContact(t, e, "bob@acme.example", body)
@@ -234,6 +235,7 @@ func (f *faultyEnrichBrain) Complete(context.Context, model.Request) (model.Resp
 }
 
 func TestSignatureEnrichAbsorbsModelFailures(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	// Two due candidates, so a pass that kept walking after a deferral asks
 	// twice and a stop asks once.
@@ -305,6 +307,7 @@ func enrichEvidenceCount(t *testing.T, e *integration.Env, email string) int {
 // by hand could spell the key any way at all and would prove nothing about
 // whether the pass can find a real one.
 func TestASignatureDoesNotOverwriteACorrectedField(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	body := "Hi,\n\nsounds good.\n\nBest,\nBob Contact\nCTO\n+49 30 1234567\nAcme GmbH"
 	contact := seedEnrichContact(t, e, "corrected@acme.example", body)
@@ -361,6 +364,7 @@ func TestASignatureDoesNotOverwriteACorrectedField(t *testing.T) {
 // test is the comparison against the pass's own limit, and that comparison is
 // the same one at 2 as at 100.
 func TestAFullPassAsksForAContinuation(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name       string
 		contacts   int
@@ -402,6 +406,7 @@ func TestAFullPassAsksForAContinuation(t *testing.T) {
 // budget ran out, so a follow-on would hit the same wall at once — and the
 // candidate set was full, which is the signal that would otherwise fire.
 func TestABudgetStopAsksForNoContinuation(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	body := "Hi,\n\nsounds good.\n\nBest,\nBob Contact\nCTO\nAcme GmbH"
 	for i := range 2 {
@@ -437,6 +442,7 @@ func (b *budgetStoppedBrain) Complete(context.Context, model.Request) (model.Res
 // every one spending the model budget, and River's attempt cap unable to see
 // it because nothing ever fails.
 func TestAPassThatMovedNobodyAsksForNoContinuation(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	body := "Hi,\n\nsounds good.\n\nBest,\nBob Contact\nCTO\nAcme GmbH"
 	for i := range 2 {
@@ -480,6 +486,7 @@ func (b *unparseableBrain) Complete(context.Context, model.Request) (model.Respo
 // the lock held stands down, and a race would prove it on the runs where it
 // happened to lose.
 func TestAPassStandsDownWhileAnotherHoldsTheInstallation(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	body := "Hi,\n\nsounds good.\n\nBest,\nBob Contact\nCTO\nAcme GmbH"
 	seedEnrichContact(t, e, "contended@acme.example", body)
@@ -526,6 +533,7 @@ func TestAPassStandsDownWhileAnotherHoldsTheInstallation(t *testing.T) {
 // And it is the LOCK that stood the pass down, not an empty fixture: the same
 // seed, with nobody holding, enriches.
 func TestThePassRunsWhenNobodyHoldsTheInstallation(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	body := "Hi,\n\nsounds good.\n\nBest,\nBob Contact\nCTO\nAcme GmbH"
 	seedEnrichContact(t, e, "uncontended@acme.example", body)
@@ -546,6 +554,7 @@ func TestThePassRunsWhenNobodyHoldsTheInstallation(t *testing.T) {
 // leave the next one able to run — the failure would be an installation that
 // enriches once and then goes quiet until the worker restarts.
 func TestThePassReleasesWhatItHeld(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	body := "Hi,\n\nsounds good.\n\nBest,\nBob Contact\nCTO\nAcme GmbH"
 	seedEnrichContact(t, e, "first@acme.example", body)
@@ -636,6 +645,7 @@ const foreignSignatureBody = "Hallo Judith,\n\ngerne.\n\nViele Grüße\nMarcus S
 	"PARTNER MANAGER DACH\nOther Company GmbH\nSomestreet 7"
 
 func TestASignatureIsNotReadOffAMessageTheContactDidNotSend(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := seedForeignSignature(t, e)
 
@@ -675,6 +685,7 @@ func TestASignatureIsNotReadOffAMessageTheContactDidNotSend(t *testing.T) {
 }
 
 func TestABackfilledSenderRowIsReadByItsAddressNotItsContactID(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := seedForeignSignature(t, e)
 
@@ -712,6 +723,7 @@ func TestABackfilledSenderRowIsReadByItsAddressNotItsContactID(t *testing.T) {
 }
 
 func TestAForeignSignatureUnderTheirOwnIsNotReadAsTheirs(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	// Their own message — they really did send it — but the block at the foot
 	// is a forwarded colleague's. The sender predicate admits the mail; only
@@ -743,6 +755,7 @@ func TestAForeignSignatureUnderTheirOwnIsNotReadAsTheirs(t *testing.T) {
 }
 
 func TestFieldsWrittenOffAnotherSendersSignatureAreTakenBack(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := seedForeignSignature(t, e)
 
@@ -810,6 +823,7 @@ func TestFieldsWrittenOffAnotherSendersSignatureAreTakenBack(t *testing.T) {
 }
 
 func TestARetractionLeavesATitleSomebodyChangedAfterwards(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := seedForeignSignature(t, e)
 
@@ -865,6 +879,7 @@ func TestARetractionLeavesATitleSomebodyChangedAfterwards(t *testing.T) {
 // comparison it replaces, so it must be left alone — and it must not raise, or
 // one odd row would fail every pass after it.
 func TestTheRetractionMatchesOnlyCanonicalActivityRefs(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := seedForeignSignature(t, e)
 

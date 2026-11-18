@@ -83,6 +83,7 @@ func reconcileHeldContacts(t *testing.T, e *integration.Env) {
 }
 
 func TestAClearedThreadPublishesTheContactItsHoldKept(t *testing.T) {
+	t.Parallel()
 	e := setupWithOwnMailbox(t)
 	const email = "einkauf@heldfirst.example"
 	held := seedHeldExchange(t, e, email, "thr-held-first")
@@ -109,6 +110,7 @@ func TestAClearedThreadPublishesTheContactItsHoldKept(t *testing.T) {
 // The thread clears before the sender is judged: the verdict publishes at
 // once, and the end state is the one the other order reaches.
 func TestAThreadClearedBeforeItsSenderIsJudgedEndsTheSame(t *testing.T) {
+	t.Parallel()
 	e := setupWithOwnMailbox(t)
 	const email = "einkauf@clearedfirst.example"
 	held := seedHeldExchange(t, e, email, "thr-cleared-first")
@@ -122,6 +124,7 @@ func TestAThreadClearedBeforeItsSenderIsJudgedEndsTheSame(t *testing.T) {
 // Mail the owner sent to an address that never answered is kept the owner's
 // for that reason once the hold ends.
 func TestAClearedThreadKeepsTheNoAnswerRuleForMailTheOwnerSent(t *testing.T) {
+	t.Parallel()
 	e := setupWithOwnMailbox(t)
 	const email = "prospect@heldoutbound.example"
 	held := seedHeldExchange(t, e, email, "thr-held-outbound")
@@ -141,6 +144,7 @@ func TestAClearedThreadKeepsTheNoAnswerRuleForMailTheOwnerSent(t *testing.T) {
 // A second answer about the same sender came from another held thread. One
 // thread clearing does not end the hold the other still makes.
 func TestAContactStaysHeldWhileAnotherThreadHoldsIt(t *testing.T) {
+	t.Parallel()
 	e := setupWithOwnMailbox(t)
 	const email = "partner@twothreads.example"
 	first := seedHeldExchange(t, e, email, "thr-two-a")
@@ -158,6 +162,7 @@ func TestAContactStaysHeldWhileAnotherThreadHoldsIt(t *testing.T) {
 // An owner who makes a released contact private again decided it. A later
 // release over the same sender is no answer to that.
 func TestTheOwnersOwnPrivateChoiceSurvivesALaterRelease(t *testing.T) {
+	t.Parallel()
 	e := setupWithOwnMailbox(t)
 	const email = "berater@ownerchoice.example"
 	held := seedHeldExchange(t, e, email, "thr-owner-choice")
@@ -177,6 +182,7 @@ func TestTheOwnersOwnPrivateChoiceSurvivesALaterRelease(t *testing.T) {
 
 // A thread judged sensitive keeps holding, and so does its contact.
 func TestASensitiveThreadKeepsItsContactHeld(t *testing.T) {
+	t.Parallel()
 	e := setupWithOwnMailbox(t)
 	const email = "anwalt@sensitive.example"
 	held := seedHeldExchange(t, e, email, "thr-sensitive")
@@ -201,6 +207,7 @@ func clearedWithoutRelease(t *testing.T, e *integration.Env, email string, held 
 }
 
 func TestTheReconcilingPassReleasesAHoldNoReleaseReached(t *testing.T) {
+	t.Parallel()
 	e := setupWithOwnMailbox(t)
 	const email = "einkauf@missedrelease.example"
 	held := seedHeldExchange(t, e, email, "thr-missed")
@@ -213,6 +220,7 @@ func TestTheReconcilingPassReleasesAHoldNoReleaseReached(t *testing.T) {
 }
 
 func TestTheHeldContactTaskReleasesAcrossPagesAndReplaysSafely(t *testing.T) {
+	t.Parallel()
 	e := setupWithOwnMailbox(t)
 	const email = "einkauf@historic.example"
 	held := seedHeldExchange(t, e, email, "thr-historic")
@@ -258,6 +266,7 @@ func TestTheHeldContactTaskReleasesAcrossPagesAndReplaysSafely(t *testing.T) {
 // The owner shares a thread the classifier has not answered yet. The hold the
 // open question made ends with the share.
 func TestAnOwnersShareReleasesTheContactTheThreadHeld(t *testing.T) {
+	t.Parallel()
 	e := setupWithOwnMailbox(t)
 	const email = "einkauf@ownershare.example"
 	held := seedHeldExchange(t, e, email, "thr-owner-share")
@@ -275,6 +284,7 @@ func TestAnOwnersShareReleasesTheContactTheThreadHeld(t *testing.T) {
 // A confidential thread that arrives after the address was judged gets no
 // ledger row of its own. It still holds the contact when the first thread clears.
 func TestConfidentialMailAfterASettledVerdictKeepsTheContactHeld(t *testing.T) {
+	t.Parallel()
 	e := setupWithOwnMailbox(t)
 	const email = "einkauf@latehold.example"
 	first := seedHeldExchange(t, e, email, "thr-late-a")
@@ -299,6 +309,7 @@ func seedSettledDisposition(t *testing.T, e *integration.Env, email, status stri
 // A contact with a second address is released only when that address is a
 // proven business contact too. Any other answer about it keeps the hold.
 func TestASecondAddressWithAnyOtherAnswerKeepsTheContactHeld(t *testing.T) {
+	t.Parallel()
 	kind := func(k string) *string { return &k }
 	cases := []struct {
 		name, status string
@@ -350,6 +361,7 @@ func releaseUnder(e *integration.Env, email string, id ids.ContactID) error {
 
 // A contended release retries without publishing. Its next attempt reads the owner's hold.
 func TestAReleaseWaitsForAnOwnerHoldingTheThreadAgain(t *testing.T) {
+	t.Parallel()
 	e := setupWithOwnMailbox(t)
 	const email = "einkauf@rehold.example"
 	held := seedHeldExchange(t, e, email, "thr-rehold")
@@ -379,6 +391,7 @@ func TestAReleaseWaitsForAnOwnerHoldingTheThreadAgain(t *testing.T) {
 // New mail from the address while a release runs waits for the release. So it
 // never falls between what the release read and what it wrote.
 func TestNewMailFromTheAddressWaitsForARunningRelease(t *testing.T) {
+	t.Parallel()
 	e := setupWithOwnMailbox(t)
 	const email = "einkauf@newmail.example"
 	held := seedHeldExchange(t, e, email, "thr-newmail")

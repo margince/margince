@@ -26,12 +26,14 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 func TestAnOrdinaryThreadIsOpenedForTheWorkspace(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	activityID := seedHeldThreadMail(t, e, "thread-ordinary", "einkauf@kunde.example", "Nachbestellung")
 	threadID := seedThreadQuestion(t, e, "thread-ordinary", activityID)
@@ -48,6 +50,7 @@ func TestAnOrdinaryThreadIsOpenedForTheWorkspace(t *testing.T) {
 }
 
 func TestASensitiveThreadStaysHeldAndNamesWhy(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	activityID := seedHeldThreadMail(t, e, "thread-personnel", "kanzlei@example.test", "Unterlagen")
 	threadID := seedThreadQuestion(t, e, "thread-personnel", activityID)
@@ -83,6 +86,7 @@ func activityAudienceReason(t *testing.T, e *integration.Env, id ids.UUID) strin
 }
 
 func TestAnOpeningAnswerBelowTheFloorHoldsTheThread(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	activityID := seedHeldThreadMail(t, e, "thread-unsure", "someone@example.test", "Frage")
 	threadID := seedThreadQuestion(t, e, "thread-unsure", activityID)
@@ -101,6 +105,7 @@ func TestAnOpeningAnswerBelowTheFloorHoldsTheThread(t *testing.T) {
 }
 
 func TestAHoldingAnswerNeedsNoConfidence(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	activityID := seedHeldThreadMail(t, e, "thread-lowlegal", "counsel@example.test", "Sache")
 	threadID := seedThreadQuestion(t, e, "thread-lowlegal", activityID)
@@ -117,7 +122,7 @@ func TestAHoldingAnswerNeedsNoConfidence(t *testing.T) {
 // test's idea of it.
 func runConfidentiality(t *testing.T, e *integration.Env, threadID ids.UUID, kind string, confidence float64) {
 	t.Helper()
-	brain := &scriptedConfidentialityBrain{kind: kind, confidence: confidence, id: threadID}
+	brain := &scriptedConfidentialityBrain{ownerDSN: testdb.For(t).OwnerDSN, kind: kind, confidence: confidence, id: threadID}
 	engine := NewConfidentialityVerdictEngine(e.Pool, brain, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("confidentiality pass: %v", err)
@@ -188,6 +193,7 @@ func seedThreadQuestion(t *testing.T, e *integration.Env, threadKey string, acti
 // with. A brain that answered from its own field would pass even if the
 // request carried the wrong thread, or no thread at all.
 type scriptedConfidentialityBrain struct {
+	ownerDSN   string
 	kind       string
 	confidence float64
 	id         ids.UUID
@@ -205,7 +211,7 @@ func (s *scriptedConfidentialityBrain) Complete(ctx context.Context, req model.R
 		return model.Response{}, fmt.Errorf(
 			"confidentiality prompt declared no data boundary, or fenced %d threads rather than one", len(askedFor))
 	}
-	underTest, err := refOfRecord(ctx, req, threadShown, s.id.String())
+	underTest, err := refOfRecord(ctx, s.ownerDSN, req, threadShown, s.id.String())
 	if err != nil {
 		return model.Response{}, err
 	}
@@ -256,6 +262,7 @@ func seedHeldThreadMail(t *testing.T, e *integration.Env, threadKey, from, subje
 }
 
 func TestOneSeatsVerdictDoesNotPublishAColleaguesHeldMessage(t *testing.T) {
+	t.Parallel()
 	// The per-owner model, at the point where it is easiest to break. A thread
 	// reaching two mailboxes is two contacts's correspondence: each seat gets its
 	// own ledger row, each may conclude differently, and the message ends at
@@ -312,6 +319,7 @@ func importVerdictFor(t *testing.T, e *integration.Env, activityID, user ids.UUI
 }
 
 func TestAHeldMailboxIsNeverAskedAndNeverOpened(t *testing.T) {
+	t.Parallel()
 	// The strongest privacy setting the product offers. `held` means "hold this
 	// whatever a classifier concludes", and the audience derivation evaluates a
 	// verdict BEFORE a posture — so a cleared answer about a held mailbox's mail
@@ -328,7 +336,7 @@ func TestAHeldMailboxIsNeverAskedAndNeverOpened(t *testing.T) {
 	// Running one anyway is the assertion: an engine that opened the question
 	// would clear the message here.
 	engine := NewConfidentialityVerdictEngine(e.Pool, &scriptedConfidentialityBrain{
-		kind: confidentialityOrdinary, confidence: 0.99,
+		ownerDSN: testdb.For(t).OwnerDSN, kind: confidentialityOrdinary, confidence: 0.99,
 	}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("confidentiality pass: %v", err)
@@ -377,6 +385,7 @@ func countThreadQuestions(t *testing.T, e *integration.Env, threadKey string) in
 // was asked to judge a blank prompt and its answer was recorded as if it had
 // read the conversation.
 func TestAThreadWhoseMessageWasErasedRetiresRatherThanBeingJudgedOnNothing(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	activityID := seedHeldThreadMail(t, e, "thread-erased", "kunde@example.test", "Angebot")
 	threadID := seedThreadQuestion(t, e, "thread-erased", activityID)
@@ -424,6 +433,7 @@ func TestAThreadWhoseMessageWasErasedRetiresRatherThanBeingJudgedOnNothing(t *te
 // message put under a statutory hold after its question opened leaves the
 // classifier reading nothing while the row still looks answerable.
 func TestAThreadPointedAtRestrictedMailIsNotJudgedOnAnEmptyPrompt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	activityID := seedHeldThreadMail(t, e, "thread-restricted", "kunde@example.test", "Angebot")
 	threadID := seedThreadQuestion(t, e, "thread-restricted", activityID)
@@ -467,6 +477,7 @@ func TestAThreadPointedAtRestrictedMailIsNotJudgedOnAnEmptyPrompt(t *testing.T) 
 // TestAReadableThreadIsStillClaimed is the admit case for the two refusals
 // above: a filter that refused everything would pass both of them.
 func TestAReadableThreadIsStillClaimed(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	activityID := seedHeldThreadMail(t, e, "thread-readable", "kunde@example.test", "Angebot")
 	threadID := seedThreadQuestion(t, e, "thread-readable", activityID)
@@ -496,6 +507,7 @@ func TestAReadableThreadIsStillClaimed(t *testing.T) {
 // unique ledger row stops a second one being opened. In the demo database that
 // is 230 messages held on threads their own verdict called ordinary.
 func TestAnOrdinaryVerdictOpensTheSiblingsTheClassifierDidNotRead(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const customer = "einkauf@kunde.example"
 	const lawyer = "anwalt@kanzlei.example"
@@ -562,6 +574,7 @@ func TestAnOrdinaryVerdictOpensTheSiblingsTheClassifierDidNotRead(t *testing.T) 
 // wrote which part, so a holding verdict takes every message — including the
 // one from a sender it never read, which an opening verdict must not touch.
 func TestAHoldingVerdictHoldsEverySibling(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	judged := seedHeldThreadMail(t, e, "thread-personnel", "hr@kunde.example", "Kündigung")
 	fromLawyer := seedHeldThreadMail(t, e, "thread-personnel", "anwalt@kanzlei.example", "Aufhebung")
@@ -587,6 +600,7 @@ func TestAHoldingVerdictHoldsEverySibling(t *testing.T) {
 // TestOneSeatsSiblingStampDoesNotPublishAColleaguesHeldMessage is the per-owner
 // model at the point the wider stamp could break it.
 func TestOneSeatsSiblingStampDoesNotPublishAColleaguesHeldMessage(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const customer = "einkauf@kunde.example"
 	judged := seedHeldThreadMail(t, e, "thread-two-seats", customer, "Nachbestellung")
@@ -613,6 +627,7 @@ func TestOneSeatsSiblingStampDoesNotPublishAColleaguesHeldMessage(t *testing.T) 
 // customer must not open, on that evidence alone, an unread message the seat
 // WROTE to somebody else on the same thread.
 func TestAnOutboundSiblingIsJudgedByItsOwnPartyNotOpenedOnATrade(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const customer = "einkauf@kunde.example"
 	const lawyer = "anwalt@kanzlei.example"
@@ -654,6 +669,7 @@ func TestAnOutboundSiblingIsJudgedByItsOwnPartyNotOpenedOnATrade(t *testing.T) {
 // reached must end held too, rather than sitting undecided forever with the
 // ledger saying the question is over.
 func TestAThirdSenderCohortIsHeldRatherThanLeftUndecided(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	judged := seedHeldThreadMail(t, e, "thread-three", "a@kunde.example", "Erste")
 	second := seedHeldThreadMail(t, e, "thread-three", "b@kunde.example", "Zweite")
@@ -706,6 +722,7 @@ func TestAThirdSenderCohortIsHeldRatherThanLeftUndecided(t *testing.T) {
 // the demo database that is 230 rows. Nothing re-asks, because the question is
 // answered and the ledger row is unique.
 func TestALegacyClearedThreadFinishesTheMessagesItLeftBehind(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const customer = "einkauf@kunde.example"
 	const lawyer = "anwalt@kanzlei.example"
@@ -754,6 +771,7 @@ func TestALegacyClearedThreadFinishesTheMessagesItLeftBehind(t *testing.T) {
 // the rows it would select are exactly the rows its own write removes from the
 // selection.
 func TestFinishingSettledThreadsIsIdempotent(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const customer = "einkauf@kunde.example"
 	judged := seedHeldThreadMail(t, e, "thread-twice", customer, "Nachbestellung")
@@ -800,6 +818,7 @@ func TestFinishingSettledThreadsIsIdempotent(t *testing.T) {
 // starving every repairable thread behind it. The failure is silent: the sweep
 // reports success having done nothing, forever.
 func TestArchivedMessagesDoNotStarveTheSweep(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const customer = "einkauf@kunde.example"
 
@@ -867,6 +886,7 @@ func TestArchivedMessagesDoNotStarveTheSweep(t *testing.T) {
 // took it — and must not, on finding a party the owner's decision predates,
 // hand their thread back to the classifier.
 func TestAnOwnersSharedThreadIsNotReopenedByTheRepair(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const customer = "einkauf@kunde.example"
 	const lawyer = "anwalt@kanzlei.example"

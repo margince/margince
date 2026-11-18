@@ -91,6 +91,7 @@ func (w *loggedDealWorld) call(at time.Time) activities.LogActivityInput {
 }
 
 func TestAReachedCallFilesOnTheOnlyOpenDealAndMovesItsClock(t *testing.T) {
+	t.Parallel()
 	w := newLoggedDealWorld(t, 1)
 	at := time.Date(2026, 1, 10, 9, 0, 0, 0, time.UTC)
 	logged, _, err := w.store.LogActivity(w.Admin(), w.call(at))
@@ -114,6 +115,7 @@ func TestAReachedCallFilesOnTheOnlyOpenDealAndMovesItsClock(t *testing.T) {
 }
 
 func TestLoggedDealFilingDistinguishesNoDealARequiredChoiceAndExplicitNone(t *testing.T) {
+	t.Parallel()
 	for _, count := range []int{0, 1, 2} {
 		t.Run(fmt.Sprintf("open deals %d", count), func(t *testing.T) {
 			w := newLoggedDealWorld(t, count)
@@ -155,6 +157,7 @@ func TestLoggedDealFilingDistinguishesNoDealARequiredChoiceAndExplicitNone(t *te
 }
 
 func TestLoggedDealFilingPreservesTheChosenDealAmongSeveral(t *testing.T) {
+	t.Parallel()
 	w := newLoggedDealWorld(t, 2)
 	in := w.call(time.Date(2026, 1, 10, 9, 0, 0, 0, time.UTC))
 	in.DealFiling = &crmcontracts.ActivityDealFiling{RecordType: "company", RecordId: crmcontracts.Id(w.company.UUID)}
@@ -172,6 +175,7 @@ func TestLoggedDealFilingPreservesTheChosenDealAmongSeveral(t *testing.T) {
 }
 
 func TestTheActivityDatasourceUsesTheSameSingleDealRule(t *testing.T) {
+	t.Parallel()
 	w := newLoggedDealWorld(t, 1)
 	at := time.Date(2026, 1, 10, 9, 0, 0, 0, time.UTC)
 	logged, err := compose.NewProviderFor(w.DB()).Create(w.Admin(), datasource.CreateInput{
@@ -190,6 +194,7 @@ func TestTheActivityDatasourceUsesTheSameSingleDealRule(t *testing.T) {
 }
 
 func TestLoggedDealFilingThroughTheHTTPFormAndWriteRoutes(t *testing.T) {
+	t.Parallel()
 	e := setupRelationships(t)
 	if status := e.Call(t, "POST", "/v1/relationships", AnyMap{
 		"kind": "employment", "contact_id": e.contactID, "company_id": e.companyID,
@@ -243,6 +248,7 @@ func TestLoggedDealFilingThroughTheHTTPFormAndWriteRoutes(t *testing.T) {
 }
 
 func TestDealFilingHonorsDealReadPermission(t *testing.T) {
+	t.Parallel()
 	for _, count := range []int{0, 1, 2} {
 		t.Run(fmt.Sprint(count), func(t *testing.T) {
 			w := newLoggedDealWorld(t, count)
@@ -272,6 +278,7 @@ func TestDealFilingHonorsDealReadPermission(t *testing.T) {
 }
 
 func TestDealFilingRefusesAnUnrelatedCompanyContext(t *testing.T) {
+	t.Parallel()
 	w := newLoggedDealWorld(t, 1)
 	other := w.SeedCompany(t, "Unrelated account", &w.AdminUser)
 	in := w.call(time.Date(2026, 1, 10, 9, 0, 0, 0, time.UTC))
@@ -305,6 +312,7 @@ func (w *loggedDealWorld) requireFilingFault(ctx context.Context, t *testing.T, 
 
 // A chosen deal has to be an open deal of the record the form started on.
 func TestDealFilingRefusesAChosenDealOfAnotherCompany(t *testing.T) {
+	t.Parallel()
 	w := newLoggedDealWorld(t, 2)
 	w.WsExec(t, `UPDATE deal SET company_id = $2 WHERE id = $1`, w.deals[1], w.SeedCompany(t, "Unrelated account", &w.AdminUser))
 	in := w.call(time.Date(2026, 1, 10, 9, 0, 0, 0, time.UTC))
@@ -316,6 +324,7 @@ func TestDealFilingRefusesAChosenDealOfAnotherCompany(t *testing.T) {
 
 // A filing named on a meeting that was not held is refused, never dropped.
 func TestDealFilingRefusesAMeetingNotHeld(t *testing.T) {
+	t.Parallel()
 	w := newLoggedDealWorld(t, 1)
 	at := time.Date(2026, 1, 10, 9, 0, 0, 0, time.UTC)
 	in := w.call(at)
@@ -326,6 +335,7 @@ func TestDealFilingRefusesAMeetingNotHeld(t *testing.T) {
 
 // An import stays unfiled by itself, and a filing somebody names on it lands.
 func TestAnImportedCallIsFiledOnlyWhenAFilingIsNamed(t *testing.T) {
+	t.Parallel()
 	w := newLoggedDealWorld(t, 1)
 	in := w.call(time.Date(2026, 1, 10, 9, 0, 0, 0, time.UTC))
 	in.SourceSystem, in.SourceID = new("mirror:csv"), new("row-1")
@@ -350,6 +360,7 @@ func TestAnImportedCallIsFiledOnlyWhenAFilingIsNamed(t *testing.T) {
 
 // The automatic link does not push a request at the ceiling over it.
 func TestACallAtTheLinkCeilingStaysUnfiled(t *testing.T) {
+	t.Parallel()
 	w := newLoggedDealWorld(t, 1)
 	in := w.call(time.Date(2026, 1, 10, 9, 0, 0, 0, time.UTC))
 	for len(in.Links) < activities.MaxLinks {
@@ -366,6 +377,7 @@ func TestACallAtTheLinkCeilingStaysUnfiled(t *testing.T) {
 }
 
 func TestRecordingAnExistingMeetingFilesTheSameActivityOnItsDeal(t *testing.T) {
+	t.Parallel()
 	for _, count := range []int{1, 2} {
 		t.Run(fmt.Sprint(count), func(t *testing.T) {
 			w := newLoggedDealWorld(t, count)
@@ -403,6 +415,7 @@ func TestRecordingAnExistingMeetingFilesTheSameActivityOnItsDeal(t *testing.T) {
 }
 
 func TestConcurrentCallsCanFileOnTheSameDealWithoutALockUpgrade(t *testing.T) {
+	t.Parallel()
 	w := newLoggedDealWorld(t, 1)
 	start, results := make(chan struct{}), make(chan error, 2)
 	for i := range 2 {
@@ -424,6 +437,7 @@ func TestConcurrentCallsCanFileOnTheSameDealWithoutALockUpgrade(t *testing.T) {
 }
 
 func TestAnOlderClientLeavesAnAmbiguousCallUnfiled(t *testing.T) {
+	t.Parallel()
 	w := newLoggedDealWorld(t, 2)
 	logged, _, err := w.store.LogActivity(w.Admin(), w.call(time.Date(2026, 1, 10, 9, 0, 0, 0, time.UTC)))
 	if err != nil {
@@ -435,6 +449,7 @@ func TestAnOlderClientLeavesAnAmbiguousCallUnfiled(t *testing.T) {
 }
 
 func TestACompanyCallMayIncludeAContactFromAnotherCompany(t *testing.T) {
+	t.Parallel()
 	w := newLoggedDealWorld(t, 1)
 	partner := companyIDOf(w.SeedCompany(t, "Partner account", &w.AdminUser))
 	guest := ContactIDOf(w.SeedContact(t, "Partner attendee", &w.AdminUser))
@@ -464,6 +479,7 @@ func TestACompanyCallMayIncludeAContactFromAnotherCompany(t *testing.T) {
 }
 
 func TestConcurrentMeetingOutcomesFileBothMeetingsOnTheSameDeal(t *testing.T) {
+	t.Parallel()
 	w := newLoggedDealWorld(t, 1)
 	colleague := ContactIDOf(w.SeedContact(t, "Second attendee", &w.AdminUser))
 	if _, err := w.Contacts.CreateRelationship(w.Admin(), contacts.CreateRelationshipInput{
@@ -506,6 +522,7 @@ func TestConcurrentMeetingOutcomesFileBothMeetingsOnTheSameDeal(t *testing.T) {
 }
 
 func TestCancelingABookedMeetingDoesNotFileItAsARecordedMeeting(t *testing.T) {
+	t.Parallel()
 	w := newLoggedDealWorld(t, 1)
 	in := w.call(time.Date(2026, 1, 10, 9, 0, 0, 0, time.UTC))
 	in.Kind, in.CallOutcome, in.MeetingStatus = "meeting", nil, new("booked")

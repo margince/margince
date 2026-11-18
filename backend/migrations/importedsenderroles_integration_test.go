@@ -102,6 +102,7 @@ func auditCount(ctx context.Context, t *testing.T, conn *pgx.Conn, activity stri
 // deletes or moves NOTHING else — the bare header rows and the seat row are
 // the fixed writer's own shape and stay exactly as written.
 func TestAnImportedEmailsSenderIsWhoItsHeadersName(t *testing.T) {
+	t.Parallel()
 	dsn, _ := dsns(t)
 	conn := connect(t, dsn)
 	headSchema(t, conn)
@@ -164,6 +165,7 @@ func TestAnImportedEmailsSenderIsWhoItsHeadersName(t *testing.T) {
 
 // What the repair must not touch, each control one rule.
 func TestTheSenderRoleFixLeavesTheRestAlone(t *testing.T) {
+	t.Parallel()
 	dsn, _ := dsns(t)
 	conn := connect(t, dsn)
 	headSchema(t, conn)

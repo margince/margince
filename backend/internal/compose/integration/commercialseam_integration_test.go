@@ -34,6 +34,7 @@ var commercialRep = principal.Permissions{
 // every seat, so its offers are too. Who may change one, or read a commission,
 // is the deal's owner and team.
 func TestTheCommercialRecordsTakeTheirDealsScopeOnTheSeam(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	fx := seedAccrualFixture(t, e, "tier2_20")
 	winAndDeliver(t, e, fx)

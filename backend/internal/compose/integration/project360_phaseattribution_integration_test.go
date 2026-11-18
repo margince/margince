@@ -50,6 +50,7 @@ func phaseHistoryOf(t *testing.T, e *Env, id ids.ProjectID) []crmcontracts.Proje
 }
 
 func TestPhaseHistoryNamesTheAgentTheColleagueAndTheClient(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	colleague := seedWorkspaceUser(t, e, "Ada Authority")
 	passport := seedGrantedPassport(t, e, colleague, "Claude")
@@ -86,6 +87,7 @@ func TestPhaseHistoryNamesTheAgentTheColleagueAndTheClient(t *testing.T) {
 }
 
 func TestPhaseHistoryNamesAHumanAndNeverInventsASystemMove(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Human GmbH", nil)
 	p := seedProject(e.Admin(), t, e, "Human-run rollout", company, &e.Rep1)
@@ -117,6 +119,7 @@ func TestPhaseHistoryNamesAHumanAndNeverInventsASystemMove(t *testing.T) {
 }
 
 func TestPhaseHistoryIgnoresALinkToAnotherProjectsAuditRow(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Crossed GmbH", nil)
 	a := seedProject(e.Admin(), t, e, "Project A", company, &e.Rep1)
@@ -139,6 +142,7 @@ func TestPhaseHistoryIgnoresALinkToAnotherProjectsAuditRow(t *testing.T) {
 }
 
 func TestPhaseHistoryNamesTheSystemOnlyForTheSystemPrincipal(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "System GmbH", nil)
 	p := seedProject(e.Admin(), t, e, "System-run rollout", company, &e.Rep1)

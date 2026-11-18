@@ -135,6 +135,7 @@ func (f *liveListFixture) outsider() context.Context {
 }
 
 func TestALiveListRecordsWhoEnteredAndWhoLeftAtTheCheckThatSawIt(t *testing.T) {
+	t.Parallel()
 	f := newLiveListFixture(t)
 	f.check(t)
 	contact := f.contactTitled(t, "Bea Buyer", "Buyer")
@@ -159,6 +160,7 @@ func TestALiveListRecordsWhoEnteredAndWhoLeftAtTheCheckThatSawIt(t *testing.T) {
 }
 
 func TestTheFirstCheckTakesTheMembersWithoutRecordingThemAsJoining(t *testing.T) {
+	t.Parallel()
 	f := newLiveListFixture(t)
 	f.contactTitled(t, "Early Buyer", "Buyer")
 	checks := f.check(t)
@@ -174,6 +176,7 @@ func TestTheFirstCheckTakesTheMembersWithoutRecordingThemAsJoining(t *testing.T)
 }
 
 func TestAReaderWhoCannotSeeTheRecordSeesNeitherItsChangeNorItsCount(t *testing.T) {
+	t.Parallel()
 	f := newLiveListFixture(t)
 	f.check(t)
 	f.visitedAnHourAgo(f.rep1(), t, f.e.Rep1)
@@ -210,6 +213,7 @@ func TestAReaderWhoCannotSeeTheRecordSeesNeitherItsChangeNorItsCount(t *testing.
 }
 
 func TestAChangedFilterIsComparedAgainstTheLastCheckUnderItsNewVersion(t *testing.T) {
+	t.Parallel()
 	f := newLiveListFixture(t)
 	buyer := f.contactTitled(t, "Old Match", "Buyer")
 	seller := f.contactTitled(t, "New Match", "Seller")
@@ -246,6 +250,7 @@ func TestAChangedFilterIsComparedAgainstTheLastCheckUnderItsNewVersion(t *testin
 }
 
 func TestACheckResumesWithTheListsNeverOrLongestUnchecked(t *testing.T) {
+	t.Parallel()
 	f := newLiveListFixture(t)
 	f.check(t)
 	later, err := f.store.CreateList(f.e.Admin(), collections.CreateListInput{
@@ -265,6 +270,7 @@ func TestACheckResumesWithTheListsNeverOrLongestUnchecked(t *testing.T) {
 }
 
 func TestSinceLastVisitCountsFromTheVisitBefore(t *testing.T) {
+	t.Parallel()
 	f := newLiveListFixture(t)
 	f.check(t)
 	reader := f.rep1()
@@ -312,6 +318,7 @@ func (f *liveListFixture) pulseOf(ctx context.Context, t *testing.T) crmcontract
 }
 
 func TestAutomaticWorkIsNotAVisit(t *testing.T) {
+	t.Parallel()
 	f := newLiveListFixture(t)
 	agent := principal.WithActor(principal.WithWorkspaceID(context.Background(), f.e.WS), principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:test", UserID: f.e.Rep1, TeamIDs: []ids.UUID{f.e.Team1},
@@ -323,6 +330,7 @@ func TestAutomaticWorkIsNotAVisit(t *testing.T) {
 }
 
 func TestErasureTakesTheSubjectOutOfTheLastCheck(t *testing.T) {
+	t.Parallel()
 	f := newLiveListFixture(t)
 	subject := f.contactTitled(t, "Erasable Buyer", "Buyer")
 	f.check(t)

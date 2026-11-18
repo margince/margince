@@ -115,6 +115,7 @@ func assertOneDealCounted(t *testing.T, figure string, money crmcontracts.Money)
 }
 
 func TestTheProjectHeadersWonMoneyExcludesAMaskedDeal(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	project := seedPricedProjectDeals(t, e, "won")
 	header := projectHeader(t, e, project, projectMaskedRepPerms)
@@ -126,6 +127,7 @@ func TestTheProjectHeadersWonMoneyExcludesAMaskedDeal(t *testing.T) {
 // two must move together: a mask reaching one total and not the other puts the
 // same figure back on the same page.
 func TestTheProjectHeadersOpenMoneyExcludesAMaskedDeal(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	project := seedPricedProjectDeals(t, e, "open")
 	header := projectHeader(t, e, project, projectMaskedRepPerms)
@@ -140,6 +142,7 @@ func TestTheProjectHeadersOpenMoneyExcludesAMaskedDeal(t *testing.T) {
 // the page cannot, which is a difference in the CONTRACT rather than in the
 // rule the two apply.
 func TestTheProjectHeaderReadsZeroWhereEveryDealsMoneyIsMasked(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	project := seedPricedProjectDeals(t, e, "won")
 	perms := projectMaskedRepPerms

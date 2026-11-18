@@ -79,6 +79,7 @@ func enumKey(members map[string]bool) string {
 // Transport enums come from the registry. Bot bindings retain their schema-owned
 // set; profile fields and writing evidence retain their independent LinkedIn meaning.
 func TestNoContractEnumSpellsARegisteredTransport(t *testing.T) {
+	t.Parallel()
 	integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	ctx := context.Background()
@@ -137,6 +138,7 @@ func TestNoContractEnumSpellsARegisteredTransport(t *testing.T) {
 // legal-page kinds are home/impressum/team), and a test that has to be taught
 // which node to look at is a list again.
 func TestActivityKindTableMatchesTheContractKindEnum(t *testing.T) {
+	t.Parallel()
 	integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	ctx := context.Background()

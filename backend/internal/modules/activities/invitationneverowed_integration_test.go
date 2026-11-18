@@ -60,6 +60,7 @@ func offeredOnTheRecord(t *testing.T, e *loadEnv, id ids.UUID, ownDomains ...str
 }
 
 func TestAColleaguesInvitationIsNeverOwedAReply(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	invitation := invitationAsking(t, e)
 	e.exec(t, `UPDATE activity SET invitation_sender = $2 WHERE id = $1`, invitation, e.other)
@@ -72,6 +73,7 @@ func TestAColleaguesInvitationIsNeverOwedAReply(t *testing.T) {
 }
 
 func TestAnInvitationForAMeetingAlreadyHeldIsNeverOwedAReply(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	held := invitationAsking(t, e)
 	meetingWithUID(t, e, held, requestInstant.Add(-24*time.Hour))
@@ -93,6 +95,7 @@ func TestAnInvitationForAMeetingAlreadyHeldIsNeverOwedAReply(t *testing.T) {
 // A reminder the request pass filed before the invitation was known to be a
 // colleague's is retired by the next pass.
 func TestTheRequestPassRetiresAReminderForAColleaguesInvitation(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	invitation := invitationAsking(t, e)
 	pass := func() {
@@ -124,6 +127,7 @@ func TestTheRequestPassRetiresAReminderForAColleaguesInvitation(t *testing.T) {
 // The record's request reads apply the Worklist's colleague test: mail from one
 // of our own domains is not a customer waiting on the deal.
 func TestTheRecordOffersNoColleaguesMailAsARequest(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	links := []ActivityLinkInput{{EntityType: "contact", EntityID: e.buyer(t)}}
 	colleague := seedEmailRequestFiledUnder(t, e, "Can you send the report?", "commitment", OwedVerdictAsksUs,
@@ -151,6 +155,7 @@ func TestTheRecordOffersNoColleaguesMailAsARequest(t *testing.T) {
 // A reminder for an invitation whose meeting has begun is retired too. So is
 // one for an invitation from our own domain that carries no seat stamp.
 func TestTheRequestPassRetiresRemindersForHeldAndOwnDomainInvitations(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	held := invitationAsking(t, e)
 	links := []ActivityLinkInput{{EntityType: "contact", EntityID: e.buyer(t)}}
@@ -181,6 +186,7 @@ func TestTheRequestPassRetiresRemindersForHeldAndOwnDomainInvitations(t *testing
 // invitation for a meeting already held asked for an RSVP, never for words, so
 // there is nothing to judge.
 func TestTheSettlementPassJudgesNoInvitationThatIsNeverOwed(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	held := invitationAsking(t, e)
 	meetingWithUID(t, e, held, requestInstant.Add(-24*time.Hour))
@@ -202,6 +208,7 @@ func TestTheSettlementPassJudgesNoInvitationThatIsNeverOwed(t *testing.T) {
 // The response rate counts replies to customers waiting on a written answer.
 // An answer to an invitation that is never owed one is not such a reply.
 func TestTheResponseRateCountsNoAnswerToANeverOwedInvitation(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	from, to := requestInstant.Add(-24*time.Hour), requestInstant.Add(24*time.Hour)
 	before, err := metricsStore(e).ResponseWindow(e.as(), from, to)
@@ -233,6 +240,7 @@ func TestTheResponseRateCountsNoAnswerToANeverOwedInvitation(t *testing.T) {
 // A company finding that cites an invitation for a held meeting says no question
 // is waiting: SettledCitations reads it as settled, as the Worklist does.
 func TestACitedInvitationForAHeldMeetingIsSettled(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	held := invitationAsking(t, e)
 	meetingWithUID(t, e, held, requestInstant.Add(-24*time.Hour))
@@ -259,6 +267,7 @@ func TestACitedInvitationForAHeldMeetingIsSettled(t *testing.T) {
 // A weekly meeting is one UID and many occurrences. An invitation for an
 // occurrence already held is never owed a reply, though later ones lie ahead.
 func TestAnInvitationForAHeldOccurrenceOfASeriesIsNeverOwed(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	uid := "weekly-" + ids.NewV7().String() + "@google.com"
 	held, ahead := requestInstant.Add(-24*time.Hour).UTC(), requestInstant.Add(6*24*time.Hour).UTC()
@@ -288,6 +297,7 @@ func TestAnInvitationForAHeldOccurrenceOfASeriesIsNeverOwed(t *testing.T) {
 // An all-day series names its occurrence by date: the mail writes 20260912 and
 // the meeting's key holds that day's midnight in UTC. The two still meet.
 func TestAnInvitationForAHeldAllDayOccurrenceIsNeverOwed(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	uid := "offsite-" + ids.NewV7().String() + "@google.com"
 	held, ahead := requestInstant.AddDate(0, 0, -1), requestInstant.AddDate(0, 0, 6)

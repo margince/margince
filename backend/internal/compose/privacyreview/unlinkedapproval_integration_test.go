@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
@@ -88,11 +89,12 @@ func runThroughEngine(ctx context.Context, t *testing.T, e *integration.Env, ste
 }
 
 func TestEveryReviewerIsToldOnceAndTheBatchCommits(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	grantAdmin(t, e, e.AdminUser, e.Rep1)
 	unproven, audit := emptiedApproval(t, e, "company", e.SeedCompany(t, "Unproven target", nil))
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
-	step := UnlinkedApprovalReviewStep(notices.NewStore(e.DB()))
+	step := UnlinkedApprovalReviewStep(notices.NewStore(e.DB()), identity.RbacObjects{})
 	runThroughEngine(ctx, t, e, step)
 	for _, reviewer := range []ids.UUID{e.AdminUser, e.Rep1} {
 		if n := e.WsCount(t, approvalHistoryReviews+` AND recipient_user_id=$2`, unproven, reviewer); n != 1 {
@@ -108,6 +110,7 @@ func TestEveryReviewerIsToldOnceAndTheBatchCommits(t *testing.T) {
 }
 
 func TestALinkProvedAfterTheCorrectionStepIsCorrectedByTheReviewStep(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	grantAdmin(t, e, e.AdminUser)
 	subject := e.SeedContact(t, "Erased Subject", nil)
@@ -120,7 +123,7 @@ func TestALinkProvedAfterTheCorrectionStepIsCorrectedByTheReviewStep(t *testing.
 		_, err := storekit.AuditWithEvidence(e.Admin(), tx, "erase", "contact", subject, nil, nil, map[string]any{"cause": "contact_erasure"})
 		return err
 	})
-	if changed, err := runBatch(ctx, e, UnlinkedApprovalReviewStep(notices.NewStore(e.DB()))); err != nil || changed != 1 {
+	if changed, err := runBatch(ctx, e, UnlinkedApprovalReviewStep(notices.NewStore(e.DB()), identity.RbacObjects{})); err != nil || changed != 1 {
 		t.Fatalf("the review step changed %d rows: %v", changed, err)
 	}
 	if e.WsCount(t, keptImage, audit) != 0 || e.WsCount(t, approvalHistoryReviews, approval) != 0 {
@@ -129,11 +132,12 @@ func TestALinkProvedAfterTheCorrectionStepIsCorrectedByTheReviewStep(t *testing.
 }
 
 func TestNoReviewerRefusesTheBatchAndWritesNothing(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.WsExec(t, `DELETE FROM role_assignment ra USING role r WHERE ra.role_id=r.id AND r.key IN ('admin','ops')`)
 	unproven, _ := emptiedApproval(t, e, "company", e.SeedCompany(t, "Unproven target", nil))
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
-	_, err := runBatch(ctx, e, UnlinkedApprovalReviewStep(notices.NewStore(e.DB())))
+	_, err := runBatch(ctx, e, UnlinkedApprovalReviewStep(notices.NewStore(e.DB()), identity.RbacObjects{}))
 	if _, ok := errors.AsType[*UnavailableError](err); !ok {
 		t.Fatalf("a missing reviewer must refuse the batch: %v", err)
 	}

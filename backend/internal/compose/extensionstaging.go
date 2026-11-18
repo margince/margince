@@ -126,7 +126,7 @@ func (t extensionTool) subjectRowExists(ctx context.Context, id ids.UUID) error 
 	// read per call for the same reason: the ordering between binding and
 	// building a registry cannot matter, only the ordering against the first
 	// call.
-	pool := boundExtensionRuntime().pool
+	pool := t.composed.binding().pool
 	if pool == nil {
 		return errors.New("compose: no pool is bound for the extension runtime, so a staged row could not be " +
 			"proven to exist — and an approval against an unprovable row is one nobody can release")

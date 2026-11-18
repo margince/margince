@@ -70,6 +70,7 @@ func sendableTarget(ctx context.Context, t *testing.T, e *contractVisEnv, status
 }
 
 func TestErasureAfterLoadingADeliveryPreventsItsPost(t *testing.T) {
+	t.Parallel()
 	for _, status := range []string{"pending", "retrying"} {
 		t.Run(status, func(t *testing.T) {
 			e := setupContractVis(t)
@@ -104,6 +105,7 @@ func TestErasureAfterLoadingADeliveryPreventsItsPost(t *testing.T) {
 }
 
 func TestAFailedSendCheckBacksOffWithoutPosting(t *testing.T) {
+	t.Parallel()
 	e := setupContractVis(t)
 	ctx := e.asHolding(map[string]principal.ObjectGrant{rbacObject: {Read: true, Update: true}})
 	receiver, posts := countingReceiver(t)
@@ -128,6 +130,7 @@ func TestAFailedSendCheckBacksOffWithoutPosting(t *testing.T) {
 }
 
 func TestAnAbandonedPendingDeliveryCanBeClaimedOnlyAfterItsLeaseWindow(t *testing.T) {
+	t.Parallel()
 	e := setupContractVis(t)
 	ctx := e.asHolding(map[string]principal.ObjectGrant{rbacObject: {Read: true, Update: true}})
 	receiver, posts := countingReceiver(t)

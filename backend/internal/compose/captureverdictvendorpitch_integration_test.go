@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 )
 
 // markOf reads the relationship mark and its setter for the contact holding an
@@ -67,6 +68,7 @@ func listedAddresses(t *testing.T, e *integration.Env, in contacts.ListContactsI
 }
 
 func TestAVendorPitchFromAStrangerBecomesAMarkedContactTheDefaultListsLeaveOut(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const vendor, prospect = "dana.keller@seo-growth.example", "buyer@realco.example"
 
@@ -75,7 +77,7 @@ func TestAVendorPitchFromAStrangerBecomesAMarkedContactTheDefaultListsLeaveOut(t
 	prospectMail := seedCapturedMail(t, e, prospect, "Interested in your product")
 	prospectRow := seedPendingDisposition(t, e, prospect, "realco.example", prospectMail)
 
-	runVerdict(t, e, &scriptedVerdictBrain{verdicts: map[string]string{
+	runVerdict(t, e, &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{
 		vendorRow.String():   capture.KindVendorPitch,
 		prospectRow.String(): capture.KindContact,
 	}})
@@ -112,6 +114,7 @@ func TestAVendorPitchFromAStrangerBecomesAMarkedContactTheDefaultListsLeaveOut(t
 }
 
 func TestAVendorPitchFromAnAddressTheWorkspaceWroteToIsAnOrdinaryContact(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const sender = "partner@supplier.example"
 
@@ -119,7 +122,7 @@ func TestAVendorPitchFromAnAddressTheWorkspaceWroteToIsAnOrdinaryContact(t *test
 	mail := seedCapturedMail(t, e, sender, "Our new offer")
 	row := seedPendingDisposition(t, e, sender, "supplier.example", mail)
 
-	runVerdict(t, e, &scriptedVerdictBrain{verdicts: map[string]string{row.String(): capture.KindVendorPitch}})
+	runVerdict(t, e, &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{row.String(): capture.KindVendorPitch}})
 
 	mark, _, found := markOf(t, e, sender)
 	if !found {
@@ -134,16 +137,17 @@ func TestAVendorPitchFromAnAddressTheWorkspaceWroteToIsAnOrdinaryContact(t *test
 }
 
 func TestAVendorPitchNeverMarksAContactThatAlreadyExists(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const sender = "known@vendorish.example"
 
 	mail := seedCapturedMail(t, e, sender, "Quick question")
 	row := seedPendingDisposition(t, e, sender, "vendorish.example", mail)
-	runVerdict(t, e, &scriptedVerdictBrain{verdicts: map[string]string{row.String(): capture.KindContact}})
+	runVerdict(t, e, &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{row.String(): capture.KindContact}})
 
 	again := seedCapturedMail(t, e, sender, "Our offer")
 	row2 := seedPendingDisposition(t, e, sender, "vendorish.example", again)
-	runVerdict(t, e, &scriptedVerdictBrain{verdicts: map[string]string{row2.String(): capture.KindVendorPitch}})
+	runVerdict(t, e, &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{row2.String(): capture.KindVendorPitch}})
 
 	if mark, _, _ := markOf(t, e, sender); mark != "" {
 		t.Errorf("a verdict marked a contact that already existed (%q); the decision that made it stands", mark)

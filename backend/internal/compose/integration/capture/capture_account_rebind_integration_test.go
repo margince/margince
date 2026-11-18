@@ -86,6 +86,7 @@ func startImportReconnectingMidPage(t *testing.T, e *integration.SearchEnv, acco
 // to the same account and the same import it always did — fencing it off would
 // report the import the human was told to repair as "cancelled".
 func TestAReauthOfTheSameAccountLetsAnInFlightPageCommit(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	status, scanned, cursor := startImportReconnectingMidPage(t, e, "same@example.com", "same@example.com")
 	if status != "running" {
@@ -100,6 +101,7 @@ func TestAReauthOfTheSameAccountLetsAnInFlightPageCommit(t *testing.T) {
 // a mailbox this connection no longer points at, so its counters and its cursor
 // are not history the new account gets to inherit.
 func TestRebindingToAnotherAccountFencesAnInFlightPage(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	status, scanned, cursor := startImportReconnectingMidPage(t, e, "first@example.com", "second@example.com")
 	if scanned != 0 || len(cursor) != 0 {
@@ -144,6 +146,7 @@ func connectAndSync(t *testing.T, registry *capturemod.Registry, e *integration.
 }
 
 func TestReconnectingADifferentAccountDropsTheFirstAccountsWatermark(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	seedCaptureRole(t, e)
 	registry := newTestCaptureRegistry(e, newTestKeyvault(t, e))
@@ -166,6 +169,7 @@ func TestReconnectingADifferentAccountDropsTheFirstAccountsWatermark(t *testing.
 }
 
 func TestReconnectingTheSameAccountKeepsItsWatermark(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	seedCaptureRole(t, e)
 	registry := newTestCaptureRegistry(e, newTestKeyvault(t, e))
@@ -188,6 +192,7 @@ func TestReconnectingTheSameAccountKeepsItsWatermark(t *testing.T) {
 // contact's opt-out must not silently start governing another contact's — in
 // either direction.
 func TestReconnectingADifferentAccountDropsTheFirstAccountsSignatureAnswer(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	seedCaptureRole(t, e)
 	registry := newTestCaptureRegistry(e, newTestKeyvault(t, e))
@@ -210,6 +215,7 @@ func TestReconnectingADifferentAccountDropsTheFirstAccountsSignatureAnswer(t *te
 }
 
 func TestReconnectingTheSameAccountKeepsItsSignatureAnswer(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	seedCaptureRole(t, e)
 	registry := newTestCaptureRegistry(e, newTestKeyvault(t, e))
@@ -248,6 +254,7 @@ func readSignatureAnswer(t *testing.T, e *integration.SearchEnv, connID ids.UUID
 }
 
 func TestANewAccountMayImportANarrowerWindowThanTheOldOne(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	seedCaptureRole(t, e)
 	registry := newTestCaptureRegistry(e, newTestKeyvault(t, e))

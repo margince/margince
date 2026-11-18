@@ -25,6 +25,7 @@ import (
 )
 
 func TestUnlinkedSignalFindingSurvivesReplayAndHonorsAResolution(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	e.now = time.Date(2026, 6, 15, 12, 0, 0, 0, time.UTC)
 	company := e.SeedCompany(t, "Maple Studio", nil)
@@ -77,6 +78,7 @@ func readSignalFindings(ctx context.Context, t *testing.T, e *scoutEnv) []assura
 }
 
 func TestLinkingOneBuyingSignalLeavesAnotherRequestAtTheCompanyOpen(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	e.now = time.Date(2026, 6, 15, 12, 0, 0, 0, time.UTC)
 	company := e.SeedCompany(t, "Maple Studio", nil)
@@ -119,6 +121,7 @@ func TestLinkingOneBuyingSignalLeavesAnotherRequestAtTheCompanyOpen(t *testing.T
 }
 
 func TestSignalAnswerDoesNotRequireDecidingAProposalTheReaderCannotSee(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	company := e.SeedCompany(t, "Maple Studio", nil)
 	e.buyerPair(t, company, e.daysAgo(2))
@@ -175,6 +178,7 @@ func TestSignalAnswerDoesNotRequireDecidingAProposalTheReaderCannotSee(t *testin
 }
 
 func TestFilingASignalRequiresPermissionToLinkAllOfItsEvidence(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	company := e.SeedCompany(t, "Maple Studio", nil)
 	source, buyer := e.buyingEmail(t, company, e.daysAgo(2))
@@ -216,6 +220,7 @@ func TestFilingASignalRequiresPermissionToLinkAllOfItsEvidence(t *testing.T) {
 }
 
 func TestAnUnreadableSignalCensusCannotClearFindingsOrClaimACompletePreview(t *testing.T) {
+	t.Parallel()
 	e := setupScout(t)
 	company := e.SeedCompany(t, "Maple Studio", nil)
 	source, buyer := e.buyingEmail(t, company, e.daysAgo(2))

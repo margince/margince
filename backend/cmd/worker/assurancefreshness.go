@@ -14,7 +14,6 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/margince/margince/backend/internal/compose"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 )
 
@@ -32,7 +31,7 @@ func startAssuranceFreshness(
 	logger *slog.Logger,
 	stdout io.Writer,
 ) {
-	marker := compose.NewAssuranceFreshness(pool, identity.NewService(pool))
+	marker := compose.NewAssuranceFreshness(pool, compose.IdentityService(pool))
 	if inserter != nil {
 		marker = marker.WithRescans(inserter)
 	}

@@ -66,6 +66,7 @@ type countedVault interface {
 }
 
 func TestAConnectRefusedInsideItsTransactionLeavesNoRowAndNoCredential(t *testing.T) {
+	t.Parallel()
 	ctx, _, _, ws := newCaptureRegistryFixture(t)
 	_, pool := setupCaptureDB(t)
 	db := database.BindTo(pool, ws)
@@ -96,6 +97,7 @@ func TestAConnectRefusedInsideItsTransactionLeavesNoRowAndNoCredential(t *testin
 }
 
 func TestASyncWhoseRoleIsTakenAwayMidRunWritesNoMessage(t *testing.T) {
+	t.Parallel()
 	ctx, connecting, vault, ws := newCaptureRegistryFixture(t)
 	id, err := connecting.Connect(ctx, "gmail", connector.Auth("fixture-token"))
 	if err != nil {
@@ -133,6 +135,7 @@ func (c verbConnector) Sync(ctx context.Context, _ connector.Auth, cursor connec
 }
 
 func TestARunWhoseRoleIsTakenAwayCancelsMovesAndRemovesNothing(t *testing.T) {
+	t.Parallel()
 	key := connector.NaturalKey{SourceSystem: "gmail", SourceID: "stored-" + ids.NewV7().String()}
 	for name, act := range map[string]func(context.Context, connector.Sink) error{
 		"cancel a meeting": func(ctx context.Context, sink connector.Sink) error {
@@ -198,6 +201,7 @@ func TestARunWhoseRoleIsTakenAwayCancelsMovesAndRemovesNothing(t *testing.T) {
 }
 
 func TestAReboundMailboxCannotWriteFromTheOldSync(t *testing.T) {
+	t.Parallel()
 	ctx, connecting, vault, ws := newCaptureRegistryFixture(t)
 	id, err := connecting.Connect(ctx, "gmail", connector.Auth("fixture-token"))
 	if err != nil {

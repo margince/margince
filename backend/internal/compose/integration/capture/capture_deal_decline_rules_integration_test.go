@@ -44,6 +44,7 @@ func ambiguousThread(t *testing.T, env captureEnv, key string) string {
 // may change the shared mail but cannot read that question, so "none of them"
 // is refused and declines nothing.
 func TestNoneOfThemAnswersOnlyAQuestionTheCallerCanRead(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	shareMailbox(t, env)
@@ -81,6 +82,7 @@ func TestNoneOfThemAnswersOnlyAQuestionTheCallerCanRead(t *testing.T) {
 // "None of them" declines the deals the question offered when it was asked.
 // A deal archived since is still declined; one opened since is not.
 func TestNoneOfThemDeclinesTheDealsTheQuestionOffered(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -117,6 +119,7 @@ func compareIDs(a, b ids.UUID) int { return strings.Compare(a.String(), b.String
 // second decline, the mail is declined on that deal and kept by nobody. The
 // refile pass and the repair both file it on the deal its project now names.
 func TestTheLatestDecisionAboutADealHolds(t *testing.T) {
+	t.Parallel()
 	for _, pass := range []struct {
 		name string
 		run  func(*testing.T, captureEnv, dealWorld, ids.ActivityID)
@@ -181,6 +184,7 @@ func refile(t *testing.T, r repairer, mail ids.ActivityID) {
 // A project the reply took from its thread stays when its deal is declined.
 // That holds even when it is the deal's project and came after the deal link.
 func TestADeclineKeepsAProjectTheThreadFiled(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)

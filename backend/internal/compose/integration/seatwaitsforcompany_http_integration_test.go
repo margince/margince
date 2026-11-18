@@ -37,6 +37,7 @@ func seatRowsFor(t *testing.T, e *apptest.AppEnv, email string) int {
 }
 
 func TestNoSeatIsAddedUntilTheCompanyIsDescribedOverHTTP(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -62,10 +63,12 @@ func TestNoSeatIsAddedUntilTheCompanyIsDescribedOverHTTP(t *testing.T) {
 // RBAC before the company question, so a caller without user_admin.create
 // learns nothing about whether this installation has described itself.
 func TestARepIsRefusedASeatBeforeTheCompanyIsDescribed(t *testing.T) {
+	t.Parallel()
 	assertRepMayAddNoSeat(t, false)
 }
 
 func TestARepIsRefusedASeatOnceTheCompanyIsDescribed(t *testing.T) {
+	t.Parallel()
 	assertRepMayAddNoSeat(t, true)
 }
 

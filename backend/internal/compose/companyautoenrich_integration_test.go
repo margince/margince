@@ -23,6 +23,7 @@ import (
 )
 
 func TestACompanyEventQueuesTheEnrichPassNow(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	inserter, err := jobs.NewInserter(e.Pool, slog.Default())
 	if err != nil {

@@ -100,7 +100,7 @@ func liftNoticeOf(t *testing.T, l *confirmLaneEnv, stop ids.UUID, offered bool) 
 
 func dispatchNotice(t *testing.T, l *confirmLaneEnv, delivery ids.UUID, relay mailer.Mailer) comms.Outcome {
 	t.Helper()
-	dispatcher := newSendDispatcher(l.e.Pool, nil, sendPace{limit: 10, window: time.Minute, maxAge: time.Hour}, nil, nil, nil).
+	dispatcher := newSendDispatcher(l.e.Pool, nil, nil, sendPace{limit: 10, window: time.Minute, maxAge: time.Hour}, nil, nil, nil).
 		WithControllerRelay(ControllerRelayFor(relay), l.vault)
 	outcome, _, err := dispatcher.DispatchWithWait(sendWorkerScope(l.ctx), delivery)
 	if err != nil && outcome != comms.OutcomeRetry {
@@ -112,6 +112,7 @@ func dispatchNotice(t *testing.T, l *confirmLaneEnv, delivery ids.UUID, relay ma
 // The contact asked twice, so two restriction rows stand. The lift ends both,
 // as the notice says their data is processed again.
 func TestARestrictionEndsOnceItsLiftNoticeIsSentAndHeldMailIsReadThen(t *testing.T) {
+	t.Parallel()
 	l := setupConfirmLane(t)
 	restrictLaneContact(t, l)
 	stop := restrictLaneContact(t, l)
@@ -155,6 +156,7 @@ func TestARestrictionEndsOnceItsLiftNoticeIsSentAndHeldMailIsReadThen(t *testing
 // A restriction asked for while the lift notice waits is a newer objection.
 // The notice answers only the restrictions that stood when the admin asked.
 func TestARestrictionRecordedWhileTheLiftNoticeWaitsStays(t *testing.T) {
+	t.Parallel()
 	l := setupConfirmLane(t)
 	stop := restrictLaneContact(t, l)
 	delivery := askToLift(t, l, stop)
@@ -206,6 +208,7 @@ func laneWithAppClockOff(t *testing.T, l *confirmLaneEnv, skew time.Duration) {
 // The lift ends the restrictions that stood when the admin asked. It ends none
 // recorded after, whichever way the API host's clock is off.
 func TestALiftJudgesWhichRestrictionsStoodOnTheDatabaseClock(t *testing.T) {
+	t.Parallel()
 	for name, skew := range map[string]time.Duration{"app clock behind": -time.Minute, "app clock ahead": time.Minute} {
 		t.Run(name, func(t *testing.T) {
 			l := setupConfirmLane(t)
@@ -229,6 +232,7 @@ func TestALiftJudgesWhichRestrictionsStoodOnTheDatabaseClock(t *testing.T) {
 }
 
 func TestARestrictionStaysWhileItsLiftNoticeFailsAndSaysWhy(t *testing.T) {
+	t.Parallel()
 	l := setupConfirmLane(t)
 	stop := restrictLaneContact(t, l)
 	delivery := askToLift(t, l, stop)
@@ -258,6 +262,7 @@ func TestARestrictionStaysWhileItsLiftNoticeFailsAndSaysWhy(t *testing.T) {
 
 // Only a human admin lifts a restriction, as only one records it.
 func TestOnlyAnAdminSignedInAsksToLiftARestriction(t *testing.T) {
+	t.Parallel()
 	l := setupConfirmLane(t)
 	stop := restrictLaneContact(t, l)
 	for name, ctx := range map[string]context.Context{
@@ -279,6 +284,7 @@ func TestOnlyAnAdminSignedInAsksToLiftARestriction(t *testing.T) {
 // The receipt commits on its own. When the lift that follows it fails, the stop
 // shows the notice as sent, no second lift is offered, and the sweep ends it.
 func TestTheSweepEndsARestrictionWhoseSentNoticeTheReceiptCouldNotLift(t *testing.T) {
+	t.Parallel()
 	l := setupConfirmLane(t)
 	stop := restrictLaneContact(t, l)
 	delivery := askToLift(t, l, stop)
@@ -309,6 +315,7 @@ func TestTheSweepEndsARestrictionWhoseSentNoticeTheReceiptCouldNotLift(t *testin
 
 // A second lift while a notice waits would send the contact a second notice.
 func TestASecondLiftIsRefusedWhileTheNoticeWaits(t *testing.T) {
+	t.Parallel()
 	l := setupConfirmLane(t)
 	stop := restrictLaneContact(t, l)
 	askToLift(t, l, stop)
@@ -394,6 +401,7 @@ func newestRestriction(t *testing.T, l *confirmLaneEnv) ids.UUID {
 // A restriction can begin its transaction before the lift and take the stop
 // lock after it. It is a newer objection, so the lift's notice does not end it.
 func TestARestrictionThatTookTheStopLockAfterTheLiftStays(t *testing.T) {
+	t.Parallel()
 	l := setupConfirmLane(t)
 	ctx, cancel := context.WithTimeout(l.e.Admin(), 30*time.Second)
 	defer cancel()
@@ -422,6 +430,7 @@ func TestARestrictionThatTookTheStopLockAfterTheLiftStays(t *testing.T) {
 // A lift can begin its transaction before a restriction and take the stop lock
 // after it. The restriction stood when the lift was queued, so the notice ends it.
 func TestALiftThatTookTheStopLockAfterARestrictionEndsIt(t *testing.T) {
+	t.Parallel()
 	l := setupConfirmLane(t)
 	ctx, cancel := context.WithTimeout(l.e.Admin(), 30*time.Second)
 	defer cancel()
@@ -452,6 +461,7 @@ func TestALiftThatTookTheStopLockAfterARestrictionEndsIt(t *testing.T) {
 // A merge after the lift request carries the restriction onto the survivor.
 // The copy stood when its original did, so the lift notice ends it too.
 func TestALiftNoticeEndsTheRestrictionAMergeCarriedOntoTheSurvivor(t *testing.T) {
+	t.Parallel()
 	l := setupConfirmLane(t)
 	stop := restrictLaneContact(t, l)
 	askToLift(t, l, stop)

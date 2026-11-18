@@ -71,6 +71,7 @@ func employAtAccount(t *testing.T, e *Env, f scopeFixture) {
 }
 
 func TestCompany360ListsTheAccountsLiveProjectsWorkInMotionFirst(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedTwoEngagementAccount(t, e)
 	if _, err := e.Projects.AdvanceProjectPhase(e.Admin(), f.erp, projects.AdvanceProjectPhaseInput{ToPhase: "pursuing"}); err != nil {
@@ -107,6 +108,7 @@ func TestCompany360ListsTheAccountsLiveProjectsWorkInMotionFirst(t *testing.T) {
 // company with no projects and a caller who may not see them are different
 // facts, and the page must not render them the same way.
 func TestBothPagesNameTheProjectsSectionWhenTheCallerLacksTheGrant(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedTwoEngagementAccount(t, e)
 	employAtAccount(t, e, f)
@@ -148,6 +150,7 @@ func containsContactSection(names []crmcontracts.Contact360SectionsOmitted, want
 // names one project, and employment then brings the employer's other one —
 // without a second row for the project both routes reach.
 func TestContact360ListsTheProjectsAContactIsPartOf(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedTwoEngagementAccount(t, e)
 	svc := contactRoomService(e)
@@ -194,6 +197,7 @@ func TestContact360ListsTheProjectsAContactIsPartOf(t *testing.T) {
 // unscoped fold of the same account still carries it, so the narrowing is
 // the scope's doing.
 func TestAccountDraftScopedToAProjectGroundsOnItAndNotTheOther(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedTwoEngagementAccount(t, e)
 	employAtAccount(t, e, f)
@@ -269,6 +273,7 @@ func recentAccountIDs(recent []accountdraft.ActIn) map[string]bool {
 
 // The contact drafter's mirror of the account case.
 func TestContactDraftScopedToAProjectGroundsOnItAndNotTheOther(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedTwoEngagementAccount(t, e)
 	employAtAccount(t, e, f)
@@ -315,6 +320,7 @@ func TestContactDraftScopedToAProjectGroundsOnItAndNotTheOther(t *testing.T) {
 // under, so an agent catching up on the company learns which bodies of work
 // the correspondence belongs to.
 func TestAssembledContextOnTheAccountReportsRelatedProjects(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedTwoEngagementAccount(t, e)
 	retriever := search.NewRetriever(search.NewStore(harnessDB(e.Pool, e.WS)), nil)
@@ -346,6 +352,7 @@ func TestAssembledContextOnTheAccountReportsRelatedProjects(t *testing.T) {
 // one create, and the retention evidence that makes it business
 // correspondence lands in the same transaction.
 func TestLoggingAnActivityWithAContactAndAProjectLinkWritesBothAndTheEvidence(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedTwoEngagementAccount(t, e)
 	subject := "Cutover date confirmed"
@@ -388,6 +395,7 @@ func countLinks(t *testing.T, e *Env, activityID ids.UUID, column string, target
 // company's projects through the contact who works there. The admit case runs
 // first, so the refusal below cannot pass against a read that admits nobody.
 func TestContact360WithholdsTheEmployersProjectWhenTheEmploymentEdgeIsOutOfScope(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedTwoEngagementAccount(t, e)
 	employAtAccount(t, e, f)

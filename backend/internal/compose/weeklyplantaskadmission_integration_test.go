@@ -16,6 +16,7 @@ import (
 )
 
 func TestWeeklyPlanCapacityRequiresCurrentAutomaticResponsibility(t *testing.T) {
+	t.Parallel()
 	for _, stale := range []bool{false, true} {
 		t.Run(map[bool]string{false: "wrong recipient", true: "old source"}[stale], func(t *testing.T) {
 			e := integration.Setup(t)

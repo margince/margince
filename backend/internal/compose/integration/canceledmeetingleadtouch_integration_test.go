@@ -40,6 +40,7 @@ func callOff(t *testing.T, e *Env, meeting ids.ActivityID, status string) {
 }
 
 func TestANoShowIsNotALeadsLastActivity(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	now := time.Now().UTC().Truncate(time.Second)
 	name := "Touch Lead"

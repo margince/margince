@@ -17,6 +17,7 @@ import (
 )
 
 func TestNotificationEligibilityRefusesMissingExpiredAndUnrepresentedDecisions(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	id, err := e.svc.Stage(e.forRep(), StageInput{
 		Kind: "fx_rate_proposal", ProposedChange: []byte(`{}`), DiffHash: "notification-expiry",
@@ -53,6 +54,7 @@ func TestNotificationEligibilityRefusesMissingExpiredAndUnrepresentedDecisions(t
 }
 
 func TestNotificationAndMaintenancePropagateUnavailableTransactions(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	tx, err := e.pool.Begin(t.Context())
 	if err != nil {

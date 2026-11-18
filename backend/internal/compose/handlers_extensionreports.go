@@ -22,7 +22,7 @@ import (
 func (h analyticsQueryHandlers) ListExtensionReports(w http.ResponseWriter, r *http.Request) {
 	engine := newReportEngine(h.db.Pool())
 	data := []crmcontracts.ExtensionReport{}
-	for _, report := range registeredReports() {
+	for _, report := range h.extensions.reports() {
 		answer, ok, err := engine.runRegistered(r.Context(), report, h.floor)
 		if errors.Is(err, apperrors.ErrPermissionDenied) || (err == nil && !ok) {
 			continue

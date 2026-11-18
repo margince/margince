@@ -85,6 +85,7 @@ func storeSubjectOriginal(t *testing.T, e *integration.Env, blob blobstore.Store
 }
 
 func TestARolledBackOriginalErasureKeepsTheObjectAndTheRetryQueuesIt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	email := "original-subject@example.test"
 	contact := seedContactWithAddress(t, e, "Original subject", email)
@@ -133,6 +134,7 @@ func TestARolledBackOriginalErasureKeepsTheObjectAndTheRetryQueuesIt(t *testing.
 // The erasure commits without touching the store. A delete the store refuses
 // leaves the key queued, and the next pass deletes the bytes.
 func TestARefusedDeleteOfAnErasedOriginalIsRetriedByTheNextReap(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	email := "delete-subject@example.test"
 	contact := seedContactWithAddress(t, e, "Delete subject", email)
@@ -157,6 +159,7 @@ func TestARefusedDeleteOfAnErasedOriginalIsRetriedByTheNextReap(t *testing.T) {
 }
 
 func TestSubjectExportsHydrateOnlyReleasedOriginals(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	email := "export-subject@example.test"
 	contact := seedContactWithAddress(t, e, "Export subject", email)
@@ -194,6 +197,7 @@ func TestSubjectExportsHydrateOnlyReleasedOriginals(t *testing.T) {
 }
 
 func TestOriginalSubjectHintsDoNotDownloadUnrelatedEvidence(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	blob := &failingOriginalBlob{Store: blobstore.NewMemory()}
 	subject := seedContactWithAddress(t, e, "Indexed subject", "alice@first.example.test")
@@ -223,6 +227,7 @@ func TestOriginalSubjectHintsDoNotDownloadUnrelatedEvidence(t *testing.T) {
 }
 
 func TestMissingOriginalDoesNotBlockTheDocumentLinkRepairCursor(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	blob := blobstore.NewMemory()
 	ctx := originalstore.Bind(asConnectorFor(e.Admin(), "connector:imap", e.AdminUser), e.DB(), blob)

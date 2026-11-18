@@ -60,6 +60,7 @@ func (e *revocationEnv) mintOwnPassport(t *testing.T, human Identity, scopes []s
 // human's own passports are buried under rotation debris carrying the same
 // name and no way to tell which is live.
 func TestAConnectionIsListedOncePerConnectionNotOncePerRotation(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "passport-list-rotation")
 	fixture := e.connectOAuth(t)
 
@@ -127,6 +128,7 @@ func TestAConnectionIsListedOncePerConnectionNotOncePerRotation(t *testing.T) {
 // passport has a NULL grant, so the bare column would collapse all of them into
 // one row and silently hide credentials a human still holds.
 func TestMintedPassportsAreNeverFoldedIntoEachOther(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "passport-list-unbound")
 	first := e.mintOwnPassport(t, e.admin, []string{"read"})
 	second := e.mintOwnPassport(t, e.admin, []string{"read", "write"})
@@ -154,6 +156,7 @@ func TestMintedPassportsAreNeverFoldedIntoEachOther(t *testing.T) {
 // rather than merely making a collision improbable. Drop the leading
 // `oauth_grant_id IS NULL` from the DISTINCT ON and one of these rows vanishes.
 func TestAPassportAndAGrantSharingAnIDAreStillTwoRows(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "passport-list-collision")
 	minted := e.mintOwnPassport(t, e.admin, []string{"read"})
 	ctx := context.Background()

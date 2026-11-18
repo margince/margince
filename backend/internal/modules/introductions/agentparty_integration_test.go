@@ -31,6 +31,7 @@ func (e *introEnv) asAgentOf(t *testing.T, u ids.UUID) context.Context {
 // A user's agent reads, answers, completes and withdraws its user's asks, and
 // the audit row names the agent.
 func TestAUsersAgentActsOnTheirOwnAsks(t *testing.T) {
+	t.Parallel()
 	e := setupIntro(t)
 	id, err := e.store.Create(e.asUser(e.requester), e.ask())
 	if err != nil {
@@ -77,6 +78,7 @@ func TestAUsersAgentActsOnTheirOwnAsks(t *testing.T) {
 // A colleague's agent is as much a stranger to an ask as the colleague is, and
 // automatic work holding a party's id is no party.
 func TestAnAgentOfAnotherUserAndAutomaticWorkAreStrangersToAnAsk(t *testing.T) {
+	t.Parallel()
 	e := setupIntro(t)
 	id, err := e.store.Create(e.asUser(e.requester), e.ask())
 	if err != nil {

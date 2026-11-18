@@ -101,6 +101,7 @@ func seedEvidence(t *testing.T, owner *pgx.Conn) evidenceRow {
 // Mutation: drop either REVOKE from the up migration and the matching case
 // stops being refused.
 func TestTheRuntimeRoleCannotRewriteAFinding(t *testing.T) {
+	t.Parallel()
 	ownerDSN, appDSN := dsns(t)
 	owner := connect(t, ownerDSN)
 	headSchema(t, owner)
@@ -149,6 +150,7 @@ func TestTheRuntimeRoleCannotRewriteAFinding(t *testing.T) {
 // instead. A permission cannot tell the sweep from a defect; a gate reading the
 // tree can.
 func TestTheAdminResetStillClearsTheEvidenceTables(t *testing.T) {
+	t.Parallel()
 	ownerDSN, appDSN := dsns(t)
 	owner := connect(t, ownerDSN)
 	headSchema(t, owner)
@@ -179,6 +181,7 @@ func TestTheAdminResetStillClearsTheEvidenceTables(t *testing.T) {
 // Mutation: drop either GRANT from the up migration and the matching statement
 // starts being refused.
 func TestErasureAndTheLeadCarryStillReachTheirColumns(t *testing.T) {
+	t.Parallel()
 	ownerDSN, appDSN := dsns(t)
 	owner := connect(t, ownerDSN)
 	headSchema(t, owner)

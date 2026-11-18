@@ -289,8 +289,8 @@ read_registry first
 check "$DEV_REDIS_DB_MIN" "$MINE_DB" "the slug's own recorded Redis database is reclaimed"
 check "8081" "$MINE_PORT" "and its own port"
 
-# A database recorded before the block moved is not reclaimed: it may now be the
-# integration lane's, and a suite that believes it owns the database flushes it.
+# A database recorded outside the block is not reclaimed: a stack takes its
+# database from the block and from nowhere else.
 mkdir -p "$tmp_root/stale"
 printf 'SLUG=stale\nFE_PORT=8089\nAPI_PORT=18089\nREDIS_DB=%s\n' \
       "$((DEV_REDIS_DB_MIN - 1))" >"$tmp_root/stale/env"

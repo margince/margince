@@ -44,6 +44,7 @@ func (p *pairEnv) wantHost(t *testing.T, meeting, want ids.UUID) {
 // The guest's calendar synced first, so its row became the meeting's. The
 // organiser's sync then finds that row and hands it to the organiser.
 func TestAGuestFirstMeetingIsHostedByItsOrganiser(t *testing.T) {
+	t.Parallel()
 	p := newPairEnv(t)
 	start := captureNow.AddDate(0, 0, -3).Truncate(time.Hour)
 	p.book(start)
@@ -57,6 +58,7 @@ func TestAGuestFirstMeetingIsHostedByItsOrganiser(t *testing.T) {
 // A human worked the guest's row, so it survives the fold, and the organiser
 // still becomes its host.
 func TestAWorkedGuestRowTakesTheOrganiserAsHost(t *testing.T) {
+	t.Parallel()
 	p := newPairEnv(t)
 	start := captureNow.AddDate(0, 0, -3).Truncate(time.Hour)
 	_, guest := p.loseRace(t, start)
@@ -73,6 +75,7 @@ func TestAWorkedGuestRowTakesTheOrganiserAsHost(t *testing.T) {
 // An organizer outside the team is no seat to host the meeting, so the first
 // calendar that synced it stays its host.
 func TestAnOutsideOrganiserKeepsTheFirstCalendarAsHost(t *testing.T) {
+	t.Parallel()
 	p := newPairEnv(t)
 	start := captureNow.AddDate(0, 0, -3).Truncate(time.Hour)
 	p.bookOrganizedBy(start, guestKnown)
@@ -86,6 +89,7 @@ func TestAnOutsideOrganiserKeepsTheFirstCalendarAsHost(t *testing.T) {
 // Credit on a synced meeting reads attendance, so moving its host to the
 // organizer credits the same seats and lists it under the same colleague.
 func TestAnOrganiserHostMovesNoCredit(t *testing.T) {
+	t.Parallel()
 	p := newPairEnv(t)
 	start := captureNow.AddDate(0, 0, -3).Truncate(time.Hour)
 	p.book(start)

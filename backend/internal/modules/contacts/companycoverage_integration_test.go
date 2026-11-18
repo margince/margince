@@ -28,6 +28,7 @@ func (failingCatalog) ActiveColumns(context.Context, string) ([]fieldcatalog.Col
 // What a company's offered values, outside-id adoption and read-through-a-
 // transaction refuse, and the events a company's erasure stages.
 func TestCompanyOfferedValuesAdoptionAndListRefuseWhatTheyMust(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	ctx := e.as(e.owner, principal.RowScopeAll)
 

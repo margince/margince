@@ -22,6 +22,7 @@ import (
 )
 
 func TestBriefReadServesAReassignedDealLikeTheDealReadDoes(t *testing.T) {
+	t.Parallel()
 	b := setupBrief(t)
 	owner := integration.OwnerConn(t)
 	// A team-scoped rep, not the all-scope fixture: an unbounded principal

@@ -29,6 +29,7 @@ func wordingOf(t *testing.T, e *channelConsentEnv) (*string, *string) {
 // more: nothing is demonstrated when somebody takes consent back, so requiring
 // a sentence there would leave a contact unable to opt out.
 func TestAWithdrawalNeedsNoWording(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 
 	if _, err := e.store.Record(e.ctx, RecordInput{
@@ -46,6 +47,7 @@ func TestAWithdrawalNeedsNoWording(t *testing.T) {
 
 // TestAGrantRecordsTheWordingVerbatim is what the whole rule is for.
 func TestAGrantRecordsTheWordingVerbatim(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	shown := "Yes, email me about events. I can unsubscribe at any time."
 
@@ -76,6 +78,7 @@ func TestAGrantRecordsTheWordingVerbatim(t *testing.T) {
 // one nobody would notice losing. This writes the row the writer will not,
 // straight past Go, and expects the database to refuse it.
 func TestThePairCheckRefusesAHalfRecordedWording(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 
 	_, err := e.owner.Exec(e.ctx, `

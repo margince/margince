@@ -49,6 +49,7 @@ func listContactsNames(t *testing.T, e *apptest.AppEnv, query string) []string {
 }
 
 func TestTagModeAnySelectsARecordCarryingEitherTag(t *testing.T) {
+	t.Parallel()
 	e := tagEnv(t)
 	tagA, tagB := taggedTrio(t, e)
 
@@ -59,6 +60,7 @@ func TestTagModeAnySelectsARecordCarryingEitherTag(t *testing.T) {
 }
 
 func TestTagModeAllSelectsOnlyARecordCarryingEveryTag(t *testing.T) {
+	t.Parallel()
 	e := tagEnv(t)
 	tagA, tagB := taggedTrio(t, e)
 
@@ -69,6 +71,7 @@ func TestTagModeAllSelectsOnlyARecordCarryingEveryTag(t *testing.T) {
 }
 
 func TestTagModeNoneSelectsARecordCarryingNeitherTag(t *testing.T) {
+	t.Parallel()
 	e := tagEnv(t)
 	tagA, _ := taggedTrio(t, e)
 
@@ -84,6 +87,7 @@ func TestTagModeNoneSelectsARecordCarryingNeitherTag(t *testing.T) {
 // of the named words, which is what the mode says. A NOT EXISTS that had been
 // written as a negation inside the subquery would drop it.
 func TestTagModeNoneSelectsARecordWithNoTagsAtAll(t *testing.T) {
+	t.Parallel()
 	e := tagEnv(t)
 	tagA, _ := taggedTrio(t, e)
 	createContactWithTag(t, e, "Carries Nothing")
@@ -104,6 +108,7 @@ func TestTagModeNoneSelectsARecordWithNoTagsAtAll(t *testing.T) {
 // it describes a slice no reader can construct, and after a merge releases a
 // name a re-coined word would otherwise drag the old tag's records along.
 func TestFilteringByAnArchivedTagSelectsNothing(t *testing.T) {
+	t.Parallel()
 	e := tagEnv(t)
 	tag := createTag(t, e, "Retired Filter")
 	createContactWithTag(t, e, "Tagged Before Retirement", tag)
@@ -121,6 +126,7 @@ func TestFilteringByAnArchivedTagSelectsNothing(t *testing.T) {
 // A mode the enum does not admit is refused, not defaulted. Treating a typo as
 // `any` would hand back a wider slice than the caller asked for.
 func TestAnUnknownTagModeIsRefused(t *testing.T) {
+	t.Parallel()
 	e := tagEnv(t)
 	tagA, _ := taggedTrio(t, e)
 
@@ -133,6 +139,7 @@ func TestAnUnknownTagModeIsRefused(t *testing.T) {
 // The mode alone is not a filter: with no tag named there is nothing to
 // combine, and every record stays in the page.
 func TestATagModeWithoutTagsFiltersNothing(t *testing.T) {
+	t.Parallel()
 	e := tagEnv(t)
 	taggedTrio(t, e)
 
@@ -147,6 +154,7 @@ func TestATagModeWithoutTagsFiltersNothing(t *testing.T) {
 // shipping the filter alone hides tags on exactly the screens where they
 // explain why a row is in the list.
 func TestAListRowCarriesItsOwnTags(t *testing.T) {
+	t.Parallel()
 	e := tagEnv(t)
 	tagA, _ := taggedTrio(t, e)
 
@@ -193,6 +201,7 @@ func TestAListRowCarriesItsOwnTags(t *testing.T) {
 // An archived tag is not drawn on a list. A retired word is not in the picker,
 // so a chip for it sends a reader somewhere they cannot go.
 func TestAListRowOmitsArchivedTags(t *testing.T) {
+	t.Parallel()
 	e := tagEnv(t)
 	live := createTag(t, e, "Still Live")
 	retired := createTag(t, e, "Since Retired")
@@ -227,6 +236,7 @@ func TestAListRowOmitsArchivedTags(t *testing.T) {
 // finding the records that carry it, and without it a reader has to know the
 // vocabulary already.
 func TestSearchFindsATagByName(t *testing.T) {
+	t.Parallel()
 	e := tagEnv(t)
 	createTag(t, e, "Key Account")
 
@@ -254,6 +264,7 @@ func TestSearchFindsATagByName(t *testing.T) {
 // A retired word is not a search hit: it is not in the picker, so a hit on one
 // leads to a page nobody can act on.
 func TestSearchOmitsAnArchivedTag(t *testing.T) {
+	t.Parallel()
 	e := tagEnv(t)
 	tag := createTag(t, e, "Retired Word")
 

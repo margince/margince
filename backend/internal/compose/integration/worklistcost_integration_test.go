@@ -51,29 +51,24 @@ type stageDelta struct {
 }
 
 // meterRead keeps both meters on the same read, so statements
-// outside the stages remain visible.
+// outside the stages remain visible. The stage log is this read's own, so
+// reads its parallel siblings run add nothing to it.
 func meterRead(ctx context.Context, t *testing.T, read func(context.Context) error) (stageDelta, database.StatementCost) {
 	t.Helper()
 	ctx, meter := database.WithStatementMeter(ctx)
-	before := attention.StageCosts()
+	ctx, stages := attention.WithStageCostLog(ctx)
 	if err := read(ctx); err != nil {
 		t.Fatal(err)
 	}
-	after := attention.StageCosts()
 	delta := stageDelta{runs: map[attention.StageKey]uint64{}, byKey: map[attention.StageKey]int64{}}
-	for key, cost := range after {
-		runs := cost.DB.Count() - before[key].DB.Count()
-		if runs == 0 {
-			continue
-		}
-		delta.runs[key] = runs
-		delta.byKey[key] = cost.Statements - before[key].Statements
-		delta.statements += delta.byKey[key]
-		delta.exchanges += cost.Exchanges - before[key].Exchanges
-		delta.clipped += cost.Clipped - before[key].Clipped
-		t.Logf("%s %-28s %3d statements, %3d exchanges, %6.2f ms pgx", key.Read, key.Stage, delta.byKey[key],
-			cost.Exchanges-before[key].Exchanges,
-			(cost.DB.Sum()-before[key].DB.Sum())*1000)
+	for key, cost := range stages.Costs() {
+		delta.runs[key] = cost.DB.Count()
+		delta.byKey[key] = cost.Statements
+		delta.statements += cost.Statements
+		delta.exchanges += cost.Exchanges
+		delta.clipped += cost.Clipped
+		t.Logf("%s %-28s %3d statements, %3d exchanges, %6.2f ms pgx", key.Read, key.Stage, cost.Statements,
+			cost.Exchanges, cost.DB.Sum()*1000)
 	}
 	return delta, meter.Cost()
 }
@@ -114,6 +109,7 @@ func meteredAttention(t *testing.T, e *Env, at time.Time) (*attention.Service, *
 // The stages of one worklist read account for every statement the pool's
 // tracer saw for it, and the read opens its snapshot once.
 func TestAWorklistReadsStatementsAddUpToWhatThePoolSaw(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	seedOpenTask(t, e)
 	service, trips := meteredAttention(t, e, clocktest.Now(t).UTC())
@@ -193,6 +189,7 @@ var homeStages = []string{
 }
 
 func TestHomesReadStaysWithinItsStatementAndRoundTripBudgets(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	seedOpenTask(t, e)
 	service, trips := meteredAttention(t, e, clocktest.Now(t).UTC())
@@ -236,6 +233,7 @@ func TestHomesReadStaysWithinItsStatementAndRoundTripBudgets(t *testing.T) {
 // Team exceptions reads the assembled day inside its own snapshot. Its stages
 // are charged to it once, never to a read nested in it.
 func TestTeamExceptionsChargesTheDayItReadsToItselfOnce(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	seedOpenTask(t, e)
 	at := clocktest.Now(t).UTC()

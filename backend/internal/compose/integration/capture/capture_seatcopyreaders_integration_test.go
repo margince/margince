@@ -22,6 +22,7 @@ import (
 )
 
 func TestEveryMailReaderShowsBothCopiesAsTheReadersOwn(t *testing.T) {
+	t.Parallel()
 	s := newSeatCopyEnv(t, seatCopyPostures{first: true, second: true})
 	s.first(t)
 	s.second(t)
@@ -34,6 +35,7 @@ func TestEveryMailReaderShowsBothCopiesAsTheReadersOwn(t *testing.T) {
 }
 
 func TestEveryMailReaderShowsAOneCopyReaderThatCopy(t *testing.T) {
+	t.Parallel()
 	s := newSeatCopyEnv(t, seatCopyPostures{first: true, second: false})
 	s.first(t)
 	s.second(t)

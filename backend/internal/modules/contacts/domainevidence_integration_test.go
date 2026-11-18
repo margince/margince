@@ -40,6 +40,7 @@ func (e *dedupeEnv) lastEvidenceAt(ctx context.Context, t *testing.T, domain str
 // or the business closed — so the verdict is withheld for a human rather than
 // attaching a decade of contacts to whoever owns the domain currently.
 func TestStaleEvidenceWithholdsTheCompanyInsteadOfMintingIt(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	old := time.Now().AddDate(-(staleEvidenceYears + 2), 0, 0)
@@ -86,6 +87,7 @@ func TestStaleEvidenceWithholdsTheCompanyInsteadOfMintingIt(t *testing.T) {
 // The pair is FILED, never merged and never refused — a father and son at one
 // firm are two real records that share a name.
 func TestCapturingASecondContactOfTheSameNameFilesAReviewPair(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	first, err := e.store.EnsureCounterparty(ctx,
@@ -123,6 +125,7 @@ func TestCapturingASecondContactOfTheSameNameFilesAReviewPair(t *testing.T) {
 // and waves the whole question through — the one direction this gate must not
 // fail in.
 func TestAFutureDatedHeaderDoesNotPassAsFreshEvidence(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	old := time.Now().AddDate(-(staleEvidenceYears + 2), 0, 0)
@@ -160,6 +163,7 @@ func TestAFutureDatedHeaderDoesNotPassAsFreshEvidence(t *testing.T) {
 // the domain and withholding the company it had earned. That failure is silent:
 // the domain simply goes on waiting, with nothing recorded to say why.
 func TestASenderWhoseClockRunsFastIsStillEvidence(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	old := time.Now().AddDate(-(staleEvidenceYears + 2), 0, 0)
@@ -199,6 +203,7 @@ func TestASenderWhoseClockRunsFastIsStillEvidence(t *testing.T) {
 // recent senders is the dangerous direction: the max then comes from an older
 // message and withholds a company the recent mail had earned.
 func TestASubdomainSenderIsEvidenceAboutTheDomain(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	old := time.Now().AddDate(-(staleEvidenceYears + 2), 0, 0)
@@ -232,6 +237,7 @@ func TestASubdomainSenderIsEvidenceAboutTheDomain(t *testing.T) {
 // message the crawl reads a stale timestamp, withholds the domain and clears the
 // cursor — while the newer mail that should have rearmed it was never recorded.
 func TestMailOnAnOpenQuestionStillDatesTheDomain(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	old := time.Now().AddDate(-(staleEvidenceYears + 2), 0, 0)
@@ -271,6 +277,7 @@ func TestMailOnAnOpenQuestionStillDatesTheDomain(t *testing.T) {
 // this the gate could withhold everything and every other test here would still
 // pass, because they all leave occurred_at NULL.
 func TestRecentEvidenceStillMintsTheCompany(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	recent := time.Now().AddDate(0, -2, 0)
@@ -300,6 +307,7 @@ func TestRecentEvidenceStillMintsTheCompany(t *testing.T) {
 // domain again is exactly the evidence that was missing, so the question
 // reopens and the next crawl may answer it.
 func TestNewMailReopensADomainWithheldForStaleEvidence(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	old := time.Now().AddDate(-(staleEvidenceYears + 2), 0, 0)

@@ -28,6 +28,7 @@ import (
 )
 
 func TestAContactIsFoundThroughTheCompanyTheyWorkAt(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	werke := seedSearchCompany(t, e, "Quedlinburg Werke")
 	anna := seedSearchContact(t, e, "Anna Schmidt")
@@ -54,6 +55,7 @@ func TestAContactIsFoundThroughTheCompanyTheyWorkAt(t *testing.T) {
 // A contact whose own name matches is the contact branch's, once and without
 // an employer, and it precedes every contact found only through one.
 func TestAContactMatchedByItsOwnTextAppearsOnceAndFirst(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	werke := seedSearchCompany(t, e, "Quedlinburg Werke")
 	meier := seedSearchContact(t, e, "Karl Quedlinburg")
@@ -73,6 +75,7 @@ func TestAContactMatchedByItsOwnTextAppearsOnceAndFirst(t *testing.T) {
 // Two matched employers, and two current rows at one of them, still make one
 // contact: the hit names the employer that matched best.
 func TestAContactAtTwoMatchedCompaniesAppearsOnce(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	better := seedSearchCompany(t, e, "Quedlinburg Quedlinburg Werke")
 	weaker := seedSearchCompany(t, e, "Quedlinburg Logistik")
@@ -112,6 +115,7 @@ func TestAContactAtTwoMatchedCompaniesAppearsOnce(t *testing.T) {
 // Currency is employment.IsCurrentSQL's: a notice period still works there, a
 // past departure or a former status does not, and only employment counts.
 func TestOnlyACurrentEmploymentFindsAContact(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	werke := seedSearchCompany(t, e, "Quedlinburg Werke")
 	notice := seedSearchContact(t, e, "Nina Notice")
@@ -144,6 +148,7 @@ func TestOnlyACurrentEmploymentFindsAContact(t *testing.T) {
 // The installation's own company is not an account to find, and its staff are
 // its employees: typing its name must not list every colleague.
 func TestTheOwnCompanyFindsNoOne(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	own := e.SeedID(t, `INSERT INTO company (id, display_name, is_anchor, source, captured_by)
 		VALUES ($1, 'Quedlinburg Consulting', true, 'manual', 'human:x')`)
@@ -159,6 +164,7 @@ func TestTheOwnCompanyFindsNoOne(t *testing.T) {
 // Each of the three gates drops the arm on its own, and none of them fails the
 // search.
 func TestTheEmployerArmNeedsEveryGrant(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	werke := seedSearchCompany(t, e, "Quedlinburg Werke")
 	anna := seedSearchContact(t, e, "Anna Schmidt")
@@ -178,6 +184,7 @@ func TestTheEmployerArmNeedsEveryGrant(t *testing.T) {
 // The arm reads under both row scopes: a private contact stays hidden behind a
 // public employer, and a private company seeds no one.
 func TestTheEmployerArmKeepsBothRowScopes(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	public := seedSearchCompany(t, e, "Quedlinburg Werke")
 	private := e.SeedID(t, `INSERT INTO company (id, display_name, owner_id, visibility, source, captured_by)
@@ -205,6 +212,7 @@ func TestTheEmployerArmKeepsBothRowScopes(t *testing.T) {
 // An operator query is composed, not typed: `-zzz` matches nearly every
 // company, so it reaches no one through one.
 func TestAnOperatorQueryFindsNoOneThroughAnEmployer(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	werke := seedSearchCompany(t, e, "Quedlinburg Werke")
 	anna := seedSearchContact(t, e, "Anna Schmidt")
@@ -227,6 +235,7 @@ func TestAnOperatorQueryFindsNoOneThroughAnEmployer(t *testing.T) {
 // The grouped cap counts contacts, own-text matches first, and says the type
 // holds more exactly when more contacts matched than the page carries.
 func TestAGroupedPageCapsContactsFoundThroughEmployers(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	werke := seedSearchCompany(t, e, "Quedlinburg Werke")
 	own := seedSearchContact(t, e, "Karl Quedlinburg")
@@ -258,6 +267,7 @@ func TestAGroupedPageCapsContactsFoundThroughEmployers(t *testing.T) {
 }
 
 func TestARankedWalkWithEmployeesReturnsEachContactOnce(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	werke := seedSearchCompany(t, e, "Quedlinburg Werke")
 	own := map[ids.UUID]bool{}
@@ -303,6 +313,7 @@ func TestARankedWalkWithEmployeesReturnsEachContactOnce(t *testing.T) {
 // A company hit carries the URL its record carries, through the reader compose
 // wires, and nothing when the company wears no logo.
 func TestACompanyHitCarriesItsLogo(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	key := "logos/quedlinburg-werke.png"
 	branded := e.SeedID(t, `INSERT INTO company (id, display_name, logo_object_key, logo_origin, source, captured_by)
@@ -329,6 +340,7 @@ func TestACompanyHitCarriesItsLogo(t *testing.T) {
 // The handler turns a decoded with_employees into the arm, and the wire carries
 // the employer it found. Decoding the query is the generated wrapper's.
 func TestTheSearchEndpointFindsEmployeesWhenAsked(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	werke := seedSearchCompany(t, e, "Quedlinburg Werke")
 	anna := seedSearchContact(t, e, "Anna Schmidt")
@@ -408,6 +420,7 @@ func contactIDs(page search.Page) []ids.UUID {
 // seeds employment by statement; this one proves the writers the app uses
 // produce rows the arm finds.
 func TestThePaletteFindsTheStaffOfACompanyMadeThroughTheApp(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	var company struct {

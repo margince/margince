@@ -55,6 +55,7 @@ func seedAsAdmin(t *testing.T, e *integration.Env, fn func(context.Context, pgx.
 }
 
 func TestIntroPathNamesBothEndsOfTheRouteAndSaysWhenItWasCapped(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 
@@ -96,6 +97,7 @@ func TestIntroPathNamesBothEndsOfTheRouteAndSaysWhenItWasCapped(t *testing.T) {
 }
 
 func TestIntroPathRefusesAnAccountTheCallerCannotRead(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 
@@ -107,6 +109,7 @@ func TestIntroPathRefusesAnAccountTheCallerCannotRead(t *testing.T) {
 }
 
 func TestTheAtRiskSweepReportsItsOwnReach(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	seedOpenDeal(t, e)
@@ -131,6 +134,7 @@ func TestTheAtRiskSweepReportsItsOwnReach(t *testing.T) {
 }
 
 func TestTheRiskRetrieverDropsTheSectionNotTheAnswerWhenTheDealIsRefused(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 
@@ -253,6 +257,7 @@ func coverageDeniedPerms() principal.Permissions {
 // healthy. Testing it through the real lister rather than a stub is the point —
 // a handed-in flag proves the warning, never that anything sets it.
 func TestTheAtRiskSweepSaysADealCouldNotBeAssessedRatherThanCallingItClean(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seedOpenDeal(t, e)
 
@@ -285,6 +290,7 @@ func TestTheAtRiskSweepSaysADealCouldNotBeAssessedRatherThanCallingItClean(t *te
 // is what the assistant leads with — "the champion has left" — so a section that
 // silently comes back empty produces a summary that reads as reassurance.
 func TestTheRiskRetrieverCarriesTheWithholdingRatherThanAnEmptySection(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	deal := seedOpenDeal(t, e)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, coverageDeniedPerms())
@@ -348,6 +354,7 @@ func contactDeniedPerms() principal.Permissions {
 // that started returning half-populated seats here would be a disclosure
 // regression wearing the shape of an improvement.
 func TestCoverageWithoutContactReadIsRefusedRatherThanUnnamed(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	dealID := seedOpenDeal(t, e)
 	ppl := contacts.NewStore(InstallationDB(e.Pool))

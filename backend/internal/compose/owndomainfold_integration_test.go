@@ -72,6 +72,7 @@ func runFoldTasks(t *testing.T, e *integration.Env) {
 // the colleague's login is unicode. Capture's Go check keeps the stamp, so the
 // read arm must open on it, and close once the domain stops being ours.
 func TestTheSenderArmFoldsAnOwnDomainTypedInUnicode(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	own := capture.NewOwnDomainStore(InstallationDB(e.Pool))
 	if _, err := own.Add(e.Admin(), "Bücher.Example"); err != nil {
@@ -104,6 +105,7 @@ func TestTheSenderArmFoldsAnOwnDomainTypedInUnicode(t *testing.T) {
 // and the colleague's login is stored punycode. A subdomain login is ours too,
 // as owndomain.Set.Covers says.
 func TestTheSenderArmFoldsTheOwnCompanyDomain(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	website := "https://bücher.example"
 	if _, err := e.Contacts.SaveCompany(e.Admin(), contacts.SaveCompanyInput{DisplayName: "Bücher GmbH", Website: &website}); err != nil {
@@ -133,6 +135,7 @@ func TestTheSenderArmFoldsTheOwnCompanyDomain(t *testing.T) {
 // Rows written before the folded columns existed are read as outsiders until
 // the fold task writes them, and then the same as new rows.
 func TestTheFoldTaskFoldsRowsWrittenBeforeTheColumns(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	if _, err := capture.NewOwnDomainStore(InstallationDB(e.Pool)).Add(e.Admin(), "bücher.example"); err != nil {
 		t.Fatal(err)
@@ -159,11 +162,12 @@ func TestTheFoldTaskFoldsRowsWrittenBeforeTheColumns(t *testing.T) {
 
 // The reply path names the same colleague for every spelling of her address.
 func TestAReplyIsNeverAddressedToAColleagueAtAnInternationalOwnDomain(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	if _, err := capture.NewOwnDomainStore(InstallationDB(e.Pool)).Add(e.Admin(), "bücher.example"); err != nil {
 		t.Fatal(err)
 	}
-	comms := newCommsAdapter(e.Pool, nil, SendPath{})
+	comms := newCommsAdapter(e.Pool, nil, nil, SendPath{})
 	for _, colleague := range []string{"anna@bücher.example", "ANNA@BÜCHER.EXAMPLE", "anna@xn--bcher-kva.example"} {
 		_, err := comms.ReplyAddress(e.Admin(), seedMeetingWith(t, e, colleague))
 		var refusal *activities.NoReplyAddressError
@@ -185,6 +189,7 @@ func TestAReplyIsNeverAddressedToAColleagueAtAnInternationalOwnDomain(t *testing
 // on the punycode spelling. A website reduces to whatever host it carried, so
 // the anchor's row keeps the unicode.
 func TestClaimingThePunycodeOfTheAnchorsDomainIsRefused(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	website := "https://bücher.example"
 	anchor, err := e.Contacts.SaveCompany(e.Admin(),

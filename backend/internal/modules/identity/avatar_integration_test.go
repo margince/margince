@@ -89,6 +89,7 @@ func textOrNull(s *string) string {
 }
 
 func TestAnUploadWinsOverTheGooglePicture(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "avatar-upload-wins")
 	me := e.admin.UserID
 	if written, _ := fillFromGoogle(t, e, me, "ws/avatar/google-1.png"); !written {
@@ -125,6 +126,7 @@ func TestAnUploadWinsOverTheGooglePicture(t *testing.T) {
 }
 
 func TestADeletePinsTheSeatToInitialsUntilTheNextUpload(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "avatar-delete-pins")
 	e.svc.now = func() time.Time { return avatarNoon }
 	me := e.admin.UserID
@@ -156,6 +158,7 @@ func TestADeletePinsTheSeatToInitialsUntilTheNextUpload(t *testing.T) {
 }
 
 func TestRemovingAPictureTheSeatNeverHadStillKeepsGoogleOut(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "avatar-delete-empty")
 	me := e.admin.UserID
 	for range 2 {
@@ -172,6 +175,7 @@ func TestRemovingAPictureTheSeatNeverHadStillKeepsGoogleOut(t *testing.T) {
 }
 
 func TestTheGooglePictureRefreshesWhileItIsTheSeatsPicture(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "avatar-google-refresh")
 	me := e.admin.UserID
 	fillFromGoogle(t, e, me, "ws/avatar/google-1.png")
@@ -194,6 +198,7 @@ func TestTheGooglePictureRefreshesWhileItIsTheSeatsPicture(t *testing.T) {
 }
 
 func TestAnyMemberReadsAColleaguesPicture(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "avatar-read")
 	rep := inviteAndLogin(t, e, "rep@acme.test", "Rep One")
 	fillFromGoogle(t, e, e.admin.UserID, "ws/avatar/google-1.png")
@@ -216,6 +221,7 @@ func TestAnyMemberReadsAColleaguesPicture(t *testing.T) {
 }
 
 func TestTheSweepSeesOnlyPictureKeysNoSeatNames(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "avatar-sweep")
 	fillFromGoogle(t, e, e.admin.UserID, "ws/avatar/google-1.png")
 	unreferenced, err := e.svc.UnreferencedAvatarKeys(systemCtx(e), []string{"ws/avatar/google-1.png", "ws/avatar/orphan.png"})
@@ -230,6 +236,7 @@ func TestTheSweepSeesOnlyPictureKeysNoSeatNames(t *testing.T) {
 // The session is minted while the fill still waits on the picture host. A slow
 // or dead host costs the seat its picture, never the sign-in.
 func TestASignInOffersItsPictureWithoutWaitingForTheFill(t *testing.T) {
+	t.Parallel()
 	svc, _, userID, email := seedSSOEnv(t, "avatar-sign-in")
 	type offer struct {
 		user ids.UserID
@@ -264,6 +271,7 @@ func TestASignInOffersItsPictureWithoutWaitingForTheFill(t *testing.T) {
 // Every mapping that renders a seat (SeatUser, wireUser, meResponse and /users/names)
 // carries its picture's URL, and every self-service save answers with its zone too.
 func TestEveryReadThatNamesASeatCarriesItsPictureURL(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "avatar-wire")
 	rep := inviteAndLogin(t, e, "rep@acme.test", "Rep One")
 	me := e.wsCtx(rep)

@@ -27,6 +27,7 @@ type tagListWire struct {
 }
 
 func TestALiveListOnAMergedAwayTagReportsItInsteadOfReadingHealthy(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithOptions(t,
 		compose.WithSchemaPool(integration.SchemaPool(t)), compose.WithListsEnabled(true))
 	apptest.BootstrapWorkspaceSession(t, e, "Tag Live List", "admin@taglivelist.test", "Admin")

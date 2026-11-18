@@ -9,7 +9,6 @@ package contacts
 // the origin is, and the filter, sort and importer paths that read it.
 
 import (
-	"context"
 	"errors"
 	"slices"
 	"testing"
@@ -27,24 +26,6 @@ func scoreOf(intent SourceIntent) int {
 	return ScoreLeadDetail("", intent, nil, time.Time{}).Score
 }
 
-// keepOriginCatalogAsSeeded undoes what a test did to the origin list when it
-// ends. A reset keeps the list, as it keeps every administered vocabulary, so
-// a retired or extra origin would otherwise change the next test's world.
-func keepOriginCatalogAsSeeded(t *testing.T, e *promoteConsentEnv) {
-	t.Helper()
-	t.Cleanup(func() {
-		for _, statement := range []string{
-			`UPDATE lead SET origin = NULL WHERE origin IN (SELECT key FROM lead_origin WHERE NOT system)`,
-			`DELETE FROM lead_origin WHERE NOT system`,
-			`UPDATE lead_origin SET active = true`,
-		} {
-			if _, err := e.owner.Exec(context.Background(), statement); err != nil {
-				t.Errorf("restoring the origin list: %v", err)
-			}
-		}
-	})
-}
-
 func newLead(t *testing.T, e *promoteConsentEnv, in CreateLeadInput) crmcontracts.Lead {
 	t.Helper()
 	if in.Source == "" {
@@ -58,8 +39,8 @@ func newLead(t *testing.T, e *promoteConsentEnv, in CreateLeadInput) crmcontract
 }
 
 func TestLeadOriginCatalogRefusesWhatTheContractPromises(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
-	keepOriginCatalogAsSeeded(t, e)
 	created, err := e.store.CreateLeadOrigin(e.ctx, CreateLeadOriginInput{Label: "Trade show", Intent: SourceIntentHigh})
 	if err != nil {
 		t.Fatalf("create: %v", err)
@@ -109,8 +90,8 @@ func TestLeadOriginCatalogRefusesWhatTheContractPromises(t *testing.T) {
 // An imported lead scores the same as a typed one with the same origin. A lead
 // with no origin scores neutral whatever its source says.
 func TestOnlyTheOriginScoresALead(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
-	keepOriginCatalogAsSeeded(t, e)
 	referral, cold, event := "referral", "cold_outreach", "event"
 	sources := []string{"manual", "import", "crawl", "connector:apollo:a-1"}
 	for i, source := range sources {
@@ -145,8 +126,8 @@ func TestOnlyTheOriginScoresALead(t *testing.T) {
 }
 
 func TestAnOriginMustBeAnActiveCatalogKey(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
-	keepOriginCatalogAsSeeded(t, e)
 	unknown, partner := "no_such_origin", "partner"
 	var unknownErr *UnknownLeadOriginError
 	if _, _, err := e.store.CreateLead(e.ctx, CreateLeadInput{Source: "manual", Origin: &unknown}); !errors.As(err, &unknownErr) {
@@ -187,8 +168,8 @@ func TestAnOriginMustBeAnActiveCatalogKey(t *testing.T) {
 }
 
 func TestAHumanScoreOverrideOutlivesAnOriginChange(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
-	keepOriginCatalogAsSeeded(t, e)
 	cold, referral := "cold_outreach", "referral"
 	lead := newLead(t, e, CreateLeadInput{Origin: &cold})
 	id := ids.From[ids.LeadKind](ids.UUID(lead.Id))
@@ -209,8 +190,8 @@ func TestAHumanScoreOverrideOutlivesAnOriginChange(t *testing.T) {
 // An importer's wording resolves to a catalog key by key or label, or stays in
 // the note with the origin empty. A later file never replaces what the lead has.
 func TestAnImportedOriginResolvesOrStaysAsANote(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
-	keepOriginCatalogAsSeeded(t, e)
 	for wording, want := range map[string]string{"Referral": "referral", " " + "cold outreach ": "cold_outreach", "LINKEDIN": "linkedin"} {
 		lead := newLead(t, e, CreateLeadInput{OriginHint: wording})
 		if lead.Origin == nil || *lead.Origin != want || lead.OriginDetail != nil {
@@ -245,8 +226,8 @@ func TestAnImportedOriginResolvesOrStaysAsANote(t *testing.T) {
 // key that prefixes another match only themselves, and the list agrees with the
 // origin each lead reads back.
 func TestTheOriginFilterMatchesExactlyWhatTheLeadsRead(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
-	keepOriginCatalogAsSeeded(t, e)
 	for key, label := range map[string]string{"event%": "Event percent", "event_x": "Event underscore", "back\\slash": "Backslash"} {
 		if _, err := e.store.CreateLeadOrigin(e.ctx, CreateLeadOriginInput{Key: key, Label: label}); err != nil {
 			t.Fatalf("create origin %q: %v", key, err)

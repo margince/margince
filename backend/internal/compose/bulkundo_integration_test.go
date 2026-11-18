@@ -110,6 +110,7 @@ func surroundings(t *testing.T, e *integration.Env, s surroundedContact) (live, 
 }
 
 func TestUndoingABulkArchiveBringsBackEachContactWithItsTagsListsAndLinks(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seeded := seedSurroundedContacts(t, e, 5)
 	engine := bulkEngineFor(e)
@@ -153,6 +154,7 @@ func TestUndoingABulkArchiveBringsBackEachContactWithItsTagsListsAndLinks(t *tes
 }
 
 func TestTheUndoOfAnArchiveShowsTheOwnerTheRecordsComeBackTo(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	items := seedBulkContacts(t, e, e.Rep1, 2)
 	engine := bulkEngineFor(e)
@@ -181,6 +183,7 @@ func TestTheUndoOfAnArchiveShowsTheOwnerTheRecordsComeBackTo(t *testing.T) {
 }
 
 func TestUndoingABulkReassignHandsEachContactBackToItsOwner(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	items := seedBulkContacts(t, e, e.Rep1, 3)
 	engine := bulkEngineFor(e)
@@ -204,6 +207,7 @@ func TestUndoingABulkReassignHandsEachContactBackToItsOwner(t *testing.T) {
 }
 
 func TestAnUndoLeavesAContactEditedSinceTheBatch(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	items := seedBulkContacts(t, e, e.Rep1, 2)
 	engine := bulkEngineFor(e)
@@ -233,6 +237,7 @@ func TestAnUndoLeavesAContactEditedSinceTheBatch(t *testing.T) {
 }
 
 func TestAnUndoLeavesAnErasedContactArchived(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seeded := seedSurroundedContacts(t, e, 2)
 	engine := bulkEngineFor(e)
@@ -258,6 +263,7 @@ func TestAnUndoLeavesAnErasedContactArchived(t *testing.T) {
 }
 
 func TestAnUndoLeavesAContactWhoseEmailAnotherContactHoldsNow(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seeded := seedSurroundedContacts(t, e, 2)
 	engine := bulkEngineFor(e)
@@ -289,6 +295,7 @@ func TestAnUndoLeavesAContactWhoseEmailAnotherContactHoldsNow(t *testing.T) {
 }
 
 func TestAnUndoRestoresTheRecordAndNamesAMembershipWhoseListWasArchived(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	seeded := seedSurroundedContacts(t, e, 1)
 	engine := bulkEngineFor(e)
@@ -315,6 +322,7 @@ func TestAnUndoRestoresTheRecordAndNamesAMembershipWhoseListWasArchived(t *testi
 }
 
 func TestABulkChangeIsUndoneOnceAndAnUndoIsNotUndone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	engine := bulkEngineFor(e)
 	moved, err := engine.Execute(e.Admin(), reassignTo(e.Rep2, seedBulkContacts(t, e, e.Rep1, 1)))
@@ -336,6 +344,7 @@ func TestABulkChangeIsUndoneOnceAndAnUndoIsNotUndone(t *testing.T) {
 // Two undos that both read the change as not yet undone still produce one: the
 // second meets the unique index when it records itself.
 func TestTheOnceRuleHoldsWhenTheFastCheckWasPassed(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	engine := bulkEngineFor(e)
 	moved, err := engine.Execute(e.Admin(), reassignTo(e.Rep2, seedBulkContacts(t, e, e.Rep1, 1)))
@@ -355,6 +364,7 @@ func TestTheOnceRuleHoldsWhenTheFastCheckWasPassed(t *testing.T) {
 }
 
 func TestOnlyTheRequesterOrAnAdminReadsOrUndoesABatch(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	engine := bulkEngineFor(e)
 	rep1 := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.RepPerms)
@@ -386,6 +396,7 @@ func TestOnlyTheRequesterOrAnAdminReadsOrUndoesABatch(t *testing.T) {
 }
 
 func TestAnUndoAboveTenNeedsItsPreviewsToken(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	engine := bulkEngineFor(e)
 	items := seedBulkContacts(t, e, e.Rep1, 11)
@@ -418,6 +429,7 @@ func TestAnUndoAboveTenNeedsItsPreviewsToken(t *testing.T) {
 // An undo's token confirms that undo and nothing else, even an execution
 // naming the very same records at the very same versions.
 func TestAnUndoTokenDoesNotConfirmAForwardChange(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	engine := bulkEngineFor(e)
 	seeded := seedSurroundedContacts(t, e, 2)
@@ -450,6 +462,7 @@ func restoreIn(t *testing.T, e *integration.Env, restore func(tx pgx.Tx) (storek
 }
 
 func TestEachSingleRecordRestoreEmitsItsEventAndNamesTheArchive(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	contact := ids.From[ids.ContactKind](e.SeedContact(t, "Restored Contact", nil))
@@ -497,6 +510,7 @@ func TestEachSingleRecordRestoreEmitsItsEventAndNamesTheArchive(t *testing.T) {
 }
 
 func TestASingleRecordRestoreRefusesAMergedOrLiveContact(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	source := ids.From[ids.ContactKind](e.SeedContact(t, "Merged Away", nil))

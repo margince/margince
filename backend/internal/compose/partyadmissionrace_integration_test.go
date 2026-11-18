@@ -39,6 +39,7 @@ func (a *afterPartyAuthorityRead) EffectiveAuthority(ctx context.Context, worksp
 }
 
 func TestConcurrentPartyAdmissionsKeepTheSharedFilingLimit(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	var copied []string
 	for index := range 30 {
@@ -69,6 +70,7 @@ func TestConcurrentPartyAdmissionsKeepTheSharedFilingLimit(t *testing.T) {
 }
 
 func TestAnAdmissionTakesTheSeatBeforeItSharesTheActivity(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	sink := newCaptureSink(e.Pool, CaptureConfig{})
 	ref := capturePartiesMailUsing(t, e, sink.WithEnsurer(nil, nil), partyMailProof{outbound: true, sentByOwner: true}, "Buyer <buyer@buyer.test>", "", "Could we discuss the product requirements?")
@@ -113,6 +115,7 @@ func TestAnAdmissionTakesTheSeatBeforeItSharesTheActivity(t *testing.T) {
 }
 
 func TestAnOlderAdmissionCannotRetireNewerSourceEvidence(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	captured := newCaptureSink(e.Pool, CaptureConfig{}).WithEnsurer(nil, nil)
 	rec := partiesMailRecord(t, e, partyMailProof{outbound: true, sentByOwner: true}, "Bob Buyer <bob@buyer.test>", "", "Could we discuss the product requirements?")
@@ -170,6 +173,7 @@ func (a *authorityBeforeRecords) EffectiveAuthorityTx(ctx context.Context, tx pg
 // records. Admission reads authority before it locks a record, so the two
 // cannot wait on each other in a cycle.
 func TestPartyAdmissionReadsAuthorityBeforeItLocksARecord(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	captured := newCaptureSink(e.Pool, CaptureConfig{}).WithEnsurer(nil, nil)
 	ref := capturePartiesMailUsing(t, e, captured, partyMailProof{outbound: true, sentByOwner: true}, "Bob Buyer <bob@buyer.test>", "", "Could we discuss the product requirements?")

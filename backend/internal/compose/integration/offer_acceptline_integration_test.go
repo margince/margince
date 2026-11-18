@@ -59,6 +59,7 @@ func stageLine(t *testing.T, e *Env, offerID crmcontracts.Id, position int) ids.
 }
 
 func TestAcceptOfferLineItemFlipsStagedIntoTheTotals(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	dealID := e.SeedDeal(t, "Staged-line deal", pipeline, open, &e.Rep1)

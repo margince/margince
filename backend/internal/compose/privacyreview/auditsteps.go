@@ -22,13 +22,13 @@ type AuditPage func(context.Context, pgx.Tx, ids.UUID, ids.UUID, int, privacy.Co
 
 // UnlinkedApprovalReviewStep asks the privacy reviewers to check each approval
 // history no erasure is proved for. Each audit row that raised a review counts as a change.
-func UnlinkedApprovalReviewStep(store *notices.Store) datatask.Step {
+func UnlinkedApprovalReviewStep(store *notices.Store, rbac identity.RbacObjects) datatask.Step {
 	step := AuditSteps(func(ctx context.Context, tx pgx.Tx, after, until ids.UUID, limit int, country privacy.CountryReader) (privacy.HistoricalAuditPage, error) {
 		page, err := privacy.UnlinkedApprovalHistoryPageTx(ctx, tx, after, until, limit, country)
 		if err != nil || len(page.Review) == 0 {
 			return page, err
 		}
-		flagged, err := FlagTx(ctx, tx, store, UnprovenSubjectScope, page.Review)
+		flagged, err := FlagTx(ctx, tx, rbac, store, UnprovenSubjectScope, page.Review)
 		page.Changed += flagged
 		return page, err
 	})[0]

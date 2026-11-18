@@ -31,6 +31,7 @@ func bareInbound(t *testing.T, owner *pgx.Conn, contact ids.UUID, address string
 // proves the contact. Mail from an address another contact once held is not
 // theirs to count.
 func TestTheInboundClockSkipsMailFromABareMovedAddress(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	holder := e.SeedContact(t, "New Holder", &e.Rep1)

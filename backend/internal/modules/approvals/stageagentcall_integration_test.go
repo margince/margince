@@ -117,6 +117,7 @@ func (e *stagingEnv) asDecider() context.Context {
 // what makes that true — the redemption would have refused the cross-credential
 // id anyway, but only after the agent had been sent to present it.
 func TestAnAgentCallIsOnlyOfferedApprovalsItsOwnCredentialHolds(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	target := e.seedCompany(t)
 	in := e.agentCall(target)
@@ -183,6 +184,7 @@ func (e *stagingEnv) agentWithoutPassport() context.Context {
 // buys nothing, so the call has to be asked again rather than pointed at a
 // decision the redemption will refuse.
 func TestAnAgentCallWhoseApprovalOutlivedItsWindowIsAskedAgain(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	target := e.seedCompany(t)
 	in := e.agentCall(target)
@@ -226,6 +228,7 @@ func TestAnAgentCallWhoseApprovalOutlivedItsWindowIsAskedAgain(t *testing.T) {
 // first, so the pile drains deterministically instead of the same row being
 // offered until it happens to be spent.
 func TestLegacyDuplicateApprovalsAreOfferedOnceEachAndOldestFirst(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	target := e.seedCompany(t)
 	in := e.agentCall(target)
@@ -299,6 +302,7 @@ func (e *stagingEnv) stageDuplicateInTx(ctx context.Context, t *testing.T, in St
 // agent would satisfy every unit test while handing the credential back its own
 // proposal to release.
 func TestAStagedAgentCallCarriesThePassportThatMadeIt(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	target := e.seedCompany(t)
 	passport := e.seedPassport(t)
@@ -329,6 +333,7 @@ func TestAStagedAgentCallCarriesThePassportThatMadeIt(t *testing.T) {
 // PassportID from the authenticated passport. The point is that it is refused by
 // the ROW's own writer rather than by every caller having been careful.
 func TestAnAgentWithNoPassportIsRefusedTheStaging(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	target := e.seedCompany(t)
 
@@ -360,6 +365,7 @@ func TestAnAgentWithNoPassportIsRefusedTheStaging(t *testing.T) {
 // without a binding to check, because the caller presents none either. Refused
 // at the entry point, it is handed nothing and writes nothing.
 func TestAPassportLessAgentIsRefusedTheSecondTimeToo(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	target := e.seedCompany(t)
 	in := e.agentCall(target)
@@ -390,6 +396,7 @@ func TestAPassportLessAgentIsRefusedTheSecondTimeToo(t *testing.T) {
 // The summary's parts are stored cleaned beside the joined line, and the read
 // returns them as staged.
 func TestAStagedCallKeepsItsSummaryPartsCleaned(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	passport := e.seedPassport(t)
 	in := e.agentCall(e.seedCompany(t))

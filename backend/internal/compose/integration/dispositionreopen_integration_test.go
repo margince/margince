@@ -41,6 +41,7 @@ func waitsForAt(t *testing.T, e *Env, user ids.UUID, subject string, at time.Tim
 }
 
 func TestAMessageSnoozedUntilTheyReplyComesBackWhenTheyDo(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	const thread = "thread-reopen-reply"
 	const subject = "Waiting on their answer"
@@ -88,6 +89,7 @@ func TestAMessageSnoozedUntilTheyReplyComesBackWhenTheyDo(t *testing.T) {
 // negative the lift alone decides: the same set-down, an inbound on a DIFFERENT
 // thread, and the original still hidden. Together they pin both directions.
 func TestAReplySnoozeOnAThreadThatGetsNoNewInboundStillHolds(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	const subject = "Still waiting on them"
 	contact := seedWaitingContact(t, e)
@@ -114,6 +116,7 @@ func TestAReplySnoozeOnAThreadThatGetsNoNewInboundStillHolds(t *testing.T) {
 // that lifts a snooze has to be gated the same, or the snooze becomes a side
 // channel around it.
 func TestAReplyThisReaderCannotSeeDoesNotLiftTheirSnooze(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	const thread = "thread-reopen-private"
 	const subject = "Waiting on a private thread"
@@ -144,6 +147,7 @@ func TestAReplyThisReaderCannotSeeDoesNotLiftTheirSnooze(t *testing.T) {
 // the whole thread identity rather than the customer. Mail from the same contact
 // about something else is not the answer the rep was waiting for.
 func TestAnUnrelatedThreadIsNotTheReplyBeingWaitedFor(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	const subject = "Waiting on the contract"
 	contact := seedWaitingContact(t, e)
@@ -167,6 +171,7 @@ func TestAnUnrelatedThreadIsNotTheReplyBeingWaitedFor(t *testing.T) {
 // TestOurOwnReplyDoesNotLiftAMessageSnooze is the direction guard. A rep who
 // sets a message down and then sends a chaser has not been replied to.
 func TestOurOwnReplyDoesNotLiftAMessageSnooze(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	const thread = "thread-reopen-ours"
 	const subject = "Waiting after our chaser"
@@ -189,6 +194,7 @@ func TestOurOwnReplyDoesNotLiftAMessageSnooze(t *testing.T) {
 
 // TestAMessageSnoozedUntilAMeetingComesBackAfterIt is the second condition.
 func TestAMessageSnoozedUntilAMeetingComesBackAfterIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	const subject = "Answer after the demo"
 	seedWaitingMessage(t, e, "thread-reopen-meeting", "inbound", subject,
@@ -215,6 +221,7 @@ func TestAMessageSnoozedUntilAMeetingComesBackAfterIt(t *testing.T) {
 // same reason: a rep waiting on something that will now never happen must not
 // wait forever.
 func TestACancelledMeetingReturnsTheMessage(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	const subject = "Answer after the cancelled demo"
 	seedWaitingMessage(t, e, "thread-reopen-cancelled", "inbound", subject,
@@ -247,6 +254,7 @@ func TestACancelledMeetingReturnsTheMessage(t *testing.T) {
 // that quietly widened it to the workspace would take a colleague's message off
 // their day with nothing on any screen to say who did it.
 func TestAnEventSnoozeStaysTheSnoozersOwn(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	const subject = "Mine to wait on"
 	seedWaitingMessage(t, e, "thread-reopen-mine", "inbound", subject,
@@ -273,6 +281,7 @@ func TestAnEventSnoozeStaysTheSnoozersOwn(t *testing.T) {
 // engine refuses. Both writers answer this identically because both tables hold
 // the same CHECK, and a client that learns one vocabulary must not meet another.
 func TestAMessageSnoozeShapeIsRefused(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	const subject = "Shape check"
 	seedWaitingMessage(t, e, "thread-reopen-shape", "inbound", subject,

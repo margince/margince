@@ -72,6 +72,7 @@ func seedWorkspaceUser(t *testing.T, e *Env, displayName string) ids.UUID {
 }
 
 func TestRecordHistoryGatesOnPrincipalPermissionAndVisibility(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	// Captured privately by Rep1: a contact is otherwise readable by every
 	// seat with the grant, so the out-of-scope assertion needs a private
@@ -106,6 +107,7 @@ func TestRecordHistoryGatesOnPrincipalPermissionAndVisibility(t *testing.T) {
 }
 
 func TestRecordHistoryRendersEveryActorChronologically(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contactID := e.SeedContact(t, "History Subject", nil)
 	uma := seedWorkspaceUser(t, e, "Uma Underwriter")
@@ -206,6 +208,7 @@ func TestRecordHistoryRendersEveryActorChronologically(t *testing.T) {
 // audit_log.evidence, which this read never selects), so the erase line is
 // honest disclosure, not a leak.
 func TestRecordHistoryErasureBoundaryServesOnlyTheTombstone(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contactID := e.SeedContact(t, "Selma Subject", nil)
 	past := time.Now().Add(-2 * time.Hour).UTC().Truncate(time.Microsecond)
@@ -263,6 +266,7 @@ func TestRecordHistoryErasureBoundaryServesOnlyTheTombstone(t *testing.T) {
 // twice. Newest first is the order the surface reads, so the walk starts at the
 // most recent change and ends at the record's genesis.
 func TestRecordHistoryKeysetWalksNewestFirstWithoutOverlap(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	// SeedContact's create row is the true oldest line and is therefore served
 	// LAST; two forward-dated updates make three rows total.
@@ -315,6 +319,7 @@ func TestRecordHistoryKeysetWalksNewestFirstWithoutOverlap(t *testing.T) {
 // is a cursor positioned past the record's final row: the full gate stack
 // still runs, and the scan matches nothing.
 func TestRecordHistoryHonestEmptyPageBeyondTheFinalRow(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contactID := e.SeedContact(t, "Quiet Subject", nil)
 
@@ -355,6 +360,7 @@ func TestRecordHistoryHonestEmptyPageBeyondTheFinalRow(t *testing.T) {
 // pre-erasure line withheld, the erase line itself served with empty
 // images, and the pre-erasure email never surfacing in any entry.
 func TestRecordHistoryErasureBoundsCollateralScrubs(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contactID := e.SeedContact(t, "Selma Subject", nil)
 	const twinEmail = "selma.twin@example.test"
@@ -427,6 +433,7 @@ func TestRecordHistoryErasureBoundsCollateralScrubs(t *testing.T) {
 }
 
 func TestRecordHistoryMalformedCursorIsAClientFault(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contactID := e.SeedContact(t, "Cursor Subject", nil)
 	bad := "%%%not-a-cursor"
@@ -452,6 +459,7 @@ func TestRecordHistoryMalformedCursorIsAClientFault(t *testing.T) {
 // silently did nothing would still return it at one of those two ends, and the
 // case would pass over a `WHERE` nobody wired.
 func TestRecordHistoryAnswersOneVerbWithoutAWalk(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contactID := e.SeedContact(t, "Filtered Subject", nil)
 	actor := seedWorkspaceUser(t, e, "Vera Verb")
@@ -496,6 +504,7 @@ func TestRecordHistoryAnswersOneVerbWithoutAWalk(t *testing.T) {
 // the other is a mistyped request, and a caller who reads an empty page for it
 // concludes something false about their data.
 func TestRecordHistoryAnswersAnEmptyPageForAVerbThisRecordNeverSaw(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contactID := e.SeedContact(t, "Refusal Subject", nil)
 

@@ -10,17 +10,20 @@ import (
 	"io"
 	"log/slog"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func TestWebsiteAddressWritersQueueThroughTheConfiguredProductionBinding(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
@@ -28,20 +31,11 @@ func TestWebsiteAddressWritersQueueThroughTheConfiguredProductionBinding(t *test
 	if err != nil {
 		t.Fatal(err)
 	}
-	geocodeBinding.mu.Lock()
-	previous := geocodeBinding.enqueue
-	geocodeBinding.enqueue = nil
-	geocodeBinding.mu.Unlock()
-	t.Cleanup(func() {
-		geocodeBinding.mu.Lock()
-		geocodeBinding.enqueue = previous
-		geocodeBinding.mu.Unlock()
-	})
-	server := Server{contactsStore: e.Contacts, contactsHandlers: contacts.NewHandlers(e.DB()), log: logger}
+	server := Server{contactsStore: e.Contacts, contactsHandlers: contacts.NewHandlers(e.DB()), log: logger, queues: &storeQueues{}}
 	server.wireOnboardingSurface(e.Pool)
 	WithDeepRead(inserter, nil)(&server, e.Pool)
 	stores := map[string]*contacts.Store{
-		"approval":          newCounterpartyStore(e.Pool),
+		"approval":          newCounterpartyStoreAt(e.Pool, func() time.Time { return clocktest.Now(t) }, server.queues),
 		"company form":      server.companyHandlers.store,
 		"site confirmation": server.siteReadHandlers.engine.contacts,
 	}

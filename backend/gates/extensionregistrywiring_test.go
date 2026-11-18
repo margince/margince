@@ -11,10 +11,14 @@ package gates
 // built without it skips every extension table, and nothing at the call site
 // says so. This fails on a production build site that does not carry it.
 //
-// Four shapes are judged:
+// Six shapes are judged:
 //   - an eraser, retention service or privacy handlers built outside the
 //     privacy module needs `.WithExtensions(` on its chain;
 //   - a contacts chain that carries a grant carrier (the merge wiring) needs it too;
+//   - a contacts handler set or provider needs `.WithCompanyTypes(`, or it
+//     refuses every extension company type a caller sends it;
+//   - an identity service built outside identity needs `.WithRbacObjects(`, or
+//     it drops every grant on an extension object;
 //   - a `privacy.UntoldLead` literal needs an `Extensions` field;
 //   - the plain `AssembleSAR` serves no extension table, so it must not appear.
 
@@ -39,7 +43,7 @@ func TestEveryProductionEraserCarriesTheExtensionRegistry(t *testing.T) {
 	t.Parallel()
 	root := gatekit.ModuleRoot(t)
 	var sites, missing []wiringSite
-	err := gatekit.WalkDir(filepath.Join(root, "internal"), func(path string, d fs.DirEntry, walkErr error) error {
+	walk := func(path string, d fs.DirEntry, walkErr error) error {
 		if walkErr != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return walkErr
 		}
@@ -56,12 +60,14 @@ func TestEveryProductionEraserCarriesTheExtensionRegistry(t *testing.T) {
 		sites = append(sites, found...)
 		missing = append(missing, lacking...)
 		return nil
-	})
-	if err != nil {
-		t.Fatal(err)
+	}
+	for _, dir := range []string{"internal", "cmd"} {
+		if err := gatekit.WalkDir(filepath.Join(root, dir), walk); err != nil {
+			t.Fatal(err)
+		}
 	}
 	for _, m := range missing {
-		t.Errorf("%s:%d %s\n\tHand it the extension registry (compose.ExtensionData()), or its extension tables are skipped without a sign.",
+		t.Errorf("%s:%d %s\n\tHand it the composition's extension registry, or what the units declare is skipped without a sign.",
 			m.path, m.line, m.what)
 	}
 	if len(sites) < 7 {
@@ -74,6 +80,7 @@ func TestEveryProductionEraserCarriesTheExtensionRegistry(t *testing.T) {
 func judgeRegistryWiring(rel string, file *ast.File) (sites, missing []wiringSite) {
 	inPrivacy := strings.HasPrefix(rel, "internal/modules/privacy/")
 	inContacts := strings.HasPrefix(rel, "internal/modules/contacts/")
+	inIdentity := strings.HasPrefix(rel, "internal/modules/identity/")
 	chains := map[ast.Node]map[string]bool{}
 	ast.Inspect(file, func(n ast.Node) bool {
 		call, ok := n.(*ast.CallExpr)
@@ -109,6 +116,10 @@ func judgeRegistryWiring(rel string, file *ast.File) (sites, missing []wiringSit
 				judge("privacy."+name+" is built without .WithExtensions(...)", methods["WithExtensions"])
 			case !inContacts && methods["WithGrantCarrier"]:
 				judge("a merge-capable contacts chain (it carries a grant carrier) has no .WithExtensions(...)", methods["WithExtensions"])
+			case !inContacts && qualifier == "contacts" && (name == "NewHandlers" || name == "NewProvider"):
+				judge("contacts."+name+" is built without .WithCompanyTypes(...)", methods["WithCompanyTypes"])
+			case !inIdentity && qualifier == "identity" && (name == "NewService" || name == "NewServiceFor"):
+				judge("identity."+name+" is built without .WithRbacObjects(...)", methods["WithRbacObjects"])
 			case !inPrivacy && qualifier == "privacy" && name == "AssembleSAR":
 				judge("privacy.AssembleSAR serves no extension table; call AssembleSARWithExtensions", false)
 			}

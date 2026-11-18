@@ -55,6 +55,7 @@ func patchOperations(t *testing.T, e *integration.Env, h installationSettingsHan
 }
 
 func TestTheWorkerSchedulesAndPacesByWhatAnAdminSaved(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	h := installationSettingsHandlers{store: identity.NewInstallationSettings(e.DB(), NewSettingsStore(e.Pool), StoredConfig(e.Pool))}
 	// The settings are installation-wide and this database is shared, so the
@@ -96,6 +97,7 @@ func TestTheWorkerSchedulesAndPacesByWhatAnAdminSaved(t *testing.T) {
 // Zero is the off an address sweep admits, and anything from one to just
 // under five minutes is refused rather than run as a near-busy loop.
 func TestAnOperatingValueOutsideItsRangeIsRefused(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	h := installationSettingsHandlers{store: identity.NewInstallationSettings(e.DB(), NewSettingsStore(e.Pool), StoredConfig(e.Pool))}
 	for _, body := range []string{

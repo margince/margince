@@ -20,6 +20,7 @@ import (
 )
 
 func TestReviewedRepairArchivesOnlyProvenUntouchedAutomaticWork(t *testing.T) {
+	t.Parallel()
 	for _, state := range []string{"pristine", "human_created", "edited", "reopened", "missing_creation_proof", "pinned"} {
 		t.Run(state, func(t *testing.T) {
 			e := integration.Setup(t)
@@ -115,6 +116,7 @@ func TestReviewedRepairArchivesOnlyProvenUntouchedAutomaticWork(t *testing.T) {
 }
 
 func TestRepairPreviewUsesAdmissionWithoutChangingWork(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	asOf := time.Date(2026, 3, 1, 12, 0, 0, 0, time.UTC)
 	for _, daysOld := range []int{1, 90} {

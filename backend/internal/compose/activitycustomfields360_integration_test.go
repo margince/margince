@@ -21,6 +21,7 @@ import (
 // The account page's timeline reads through the activity list, so it carries
 // the custom-field values the list does.
 func TestTheCompanyTimelineCarriesActivityCustomFieldValues(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	catalog := customfields.NewService(e.Pool, integration.SchemaPool(t))
 	field, err := catalog.Create(e.As(e.Rep1, nil, integration.CustomFieldAdminPerms), customfields.FieldSpec{

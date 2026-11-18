@@ -53,6 +53,7 @@ func (fx *autoFixture) pauser(notices *pauseNotices) (*RulePauser, context.Conte
 }
 
 func TestAPauseDecidedOnAnOlderVersionLeavesTheRuleAlone(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	list := ids.NewV7()
 	rule := fx.listRule(t, fx.rep1, list)
@@ -75,6 +76,7 @@ func TestAPauseDecidedOnAnOlderVersionLeavesTheRuleAlone(t *testing.T) {
 }
 
 func TestEachRuleIsPausedAndToldInItsOwnTransaction(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	list := ids.NewV7()
 	untold := fx.listRule(t, fx.rep1, list)

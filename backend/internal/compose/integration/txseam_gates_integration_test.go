@@ -97,6 +97,7 @@ func assertSameRefusal(t *testing.T, storeOpened, callerOpened error) {
 }
 
 func TestBothContactCreatesRefuseTheSameThings(t *testing.T) {
+	t.Parallel()
 	f := setupGates(t)
 	valid := contacts.CreateContactInput{FullName: "Ada Lovelace", Source: "manual"}
 
@@ -132,6 +133,7 @@ func TestBothContactCreatesRefuseTheSameThings(t *testing.T) {
 }
 
 func TestBothCompanyCreatesRefuseTheSameThings(t *testing.T) {
+	t.Parallel()
 	f := setupGates(t)
 	valid := contacts.CreateCompanyInput{DisplayName: "Analytical Engines", Source: "manual"}
 
@@ -165,6 +167,7 @@ func TestBothCompanyCreatesRefuseTheSameThings(t *testing.T) {
 }
 
 func TestBothLeadCreatesRefuseTheSameThings(t *testing.T) {
+	t.Parallel()
 	f := setupGates(t)
 	email := "jean@bartik.test"
 	valid := contacts.CreateLeadInput{Email: &email, Status: "new", Source: "manual"}
@@ -198,6 +201,7 @@ func TestBothLeadCreatesRefuseTheSameThings(t *testing.T) {
 }
 
 func TestBothDealCreatesRefuseTheSameThings(t *testing.T) {
+	t.Parallel()
 	f := setupGates(t)
 	valid := deals.CreateDealInput{Name: "Difference Engine", PipelineID: f.pipeline, StageID: f.stage, Source: "manual"}
 

@@ -78,6 +78,7 @@ func (p *preflightEnv) withholdBytes(t *testing.T, file string) {
 }
 
 func TestAScheduledMessageReadsBackWhatAnEditRebuildsItFrom(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t, compose.WithBlobstore(blobstore.NewMemory()))
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 

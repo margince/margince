@@ -24,6 +24,7 @@ import (
 )
 
 func TestTheOwnerIdentityEndpointsRoundTripAClaim(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -97,6 +98,7 @@ func TestTheOwnerIdentityEndpointsRoundTripAClaim(t *testing.T) {
 }
 
 func TestAMalformedOwnerIdentityIsRefusedRatherThanStored(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -114,6 +116,7 @@ func TestAMalformedOwnerIdentityIsRefusedRatherThanStored(t *testing.T) {
 }
 
 func TestWithdrawingAnIdentityThatIsNotYoursAnswersNotFound(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 

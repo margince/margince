@@ -81,6 +81,7 @@ func captureOneChannelMessage(t *testing.T, c *telegramEnv, u telegramUpdate) id
 // hiding the control in the browser, because the browser hiding a button stops
 // no API client.
 func TestNarrowingAChannelMessageToParticipantsIsRefused(t *testing.T) {
+	t.Parallel()
 	c := setupTelegramConnected(t)
 	id := captureOneChannelMessage(t, c,
 		telegramUpdate{updateID: 7301, messageID: 41, senderID: 770301, username: "orphan", firstName: "Ann", text: "Do you still ship to Vienna?"})
@@ -112,6 +113,7 @@ func TestNarrowingAChannelMessageToParticipantsIsRefused(t *testing.T) {
 // blocked this too would be a ban on narrowing channel messages, which is a
 // different rule with a different justification — and one nobody has asked for.
 func TestNarrowingAChannelMessageToSelectedStillWorks(t *testing.T) {
+	t.Parallel()
 	c := setupTelegramConnected(t)
 	id := captureOneChannelMessage(t, c,
 		telegramUpdate{updateID: 7302, messageID: 42, senderID: 770302, username: "selected", firstName: "Bo", text: "Sending the PO now."})

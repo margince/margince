@@ -27,6 +27,7 @@ import (
 // never a company, mail infrastructure is neither while its activity stands,
 // and a lookalike sender no rule corroborates is an ordinary counterparty.
 func TestCaptureTierGateSuppressesWhatIsNotACounterparty(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	t.Run("free-mail defers the contact and never names a company", func(t *testing.T) {
@@ -128,6 +129,7 @@ func TestCaptureTierGateSuppressesWhatIsNotACounterparty(t *testing.T) {
 // someone spares their later bulk mail; a forged From:owner buys nothing; and
 // outranking T2 never promotes a free-mail domain into a company.
 func TestCaptureTierGateLetsCorrespondencePrecedeSuppression(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync, syncSent := env.e, env.sync, env.syncSent
 	t.Run("writing to an address spares its later bulk mail from suppression", func(t *testing.T) {
@@ -255,6 +257,7 @@ func TestCaptureTierGateLetsCorrespondencePrecedeSuppression(t *testing.T) {
 //
 // The message is kept and stays visible. What is refused is the record.
 func TestCaptureTierGateMintsNoContactForARoleMailbox(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync, syncSent := env.e, env.sync, env.syncSent
 	for _, tc := range []struct {
@@ -302,6 +305,7 @@ func TestCaptureTierGateMintsNoContactForARoleMailbox(t *testing.T) {
 // live-row index quietly absorbs each write, and the verdict pass re-answers a
 // settled question for as long as the mailbox keeps writing.
 func TestCaptureTierGateAsksAboutARoleMailboxOnlyOnce(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync, syncSent := env.e, env.sync, env.syncSent
 	const addr = "billing@recur.example"
@@ -353,6 +357,7 @@ func TestCaptureTierGateAsksAboutARoleMailboxOnlyOnce(t *testing.T) {
 // the attendees stay recorded as participants, which is what they are. What is
 // withheld is the contact.
 func TestCaptureTierGateMintsNoContactForACalendarInvite(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, syncSent := env.e, env.syncSent
 
@@ -397,6 +402,7 @@ func TestCaptureTierGateMintsNoContactForACalendarInvite(t *testing.T) {
 
 // Attested recipient intent is independent of what an incoming header claims.
 func TestCaptureTierGateDistinguishesAttestedIntentFromForgedReplies(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync, syncSent := env.e, env.sync, env.syncSent
 	requireContacts := func(t *testing.T, address string, want int) {
@@ -453,6 +459,7 @@ func TestCaptureTierGateDistinguishesAttestedIntentFromForgedReplies(t *testing.
 }
 
 func TestCaptureTierGateSuppressesAMachineLocalpartWithoutLosingTheMessage(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 
@@ -478,6 +485,7 @@ func TestCaptureTierGateSuppressesAMachineLocalpartWithoutLosingTheMessage(t *te
 // question — without which one forged message would bar an address from ever
 // becoming a record, while its later mail went neither judged nor hidden.
 func TestCaptureTierGateReopensASenderWhoseNoiseVerdictHasAged(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 
@@ -546,6 +554,7 @@ func (discardSendStager) StageTx(context.Context, pgx.Tx, activities.DeliveryReq
 // workspace sent it — therefore has to be written by the send itself, or a
 // prospect the CRM emailed first is a stranger when they reply.
 func TestCaptureTierGateHonorsCorrespondenceFromACRMOriginatedSend(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	ctx := e.AsFullUser()
@@ -659,6 +668,7 @@ func TestCaptureTierGateHonorsCorrespondenceFromACRMOriginatedSend(t *testing.T)
 // production capture runs inside a River job, so the condition is exercised
 // there and nowhere a test can watch it.
 func TestCaptureDoesNotReEnrichACompanyItAlreadyHas(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync, syncSent := env.e, env.sync, env.syncSent
 
@@ -700,6 +710,7 @@ func TestCaptureDoesNotReEnrichACompanyItAlreadyHas(t *testing.T) {
 // it is how a real import ended up with a customer-grade record for a firm that
 // had cold-mailed the founder.
 func TestCaptureTierGateRefusesToAdmitASenderTheOwnerDeclined(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync, syncSent := env.e, env.sync, env.syncSent
 
@@ -776,6 +787,7 @@ func TestCaptureTierGateRefusesToAdmitASenderTheOwnerDeclined(t *testing.T) {
 // declining, and the sender talks themselves out of the CRM — a suppression
 // anybody can trigger on anybody by writing one sentence.
 func TestCaptureTierGateReadsOnlyWhatTheOwnerActuallyWrote(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync, syncSent := env.e, env.sync, env.syncSent
 
@@ -805,6 +817,7 @@ func TestCaptureTierGateReadsOnlyWhatTheOwnerActuallyWrote(t *testing.T) {
 // "known counterparty, create the contact": the contact the verdict declined
 // would appear the moment support@ wrote again. The kind is what stops that.
 func TestCaptureTierGateNeverMintsAContactForADecidedRoleMailbox(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	const addr = "support@respacio.example"
@@ -864,6 +877,7 @@ func TestCaptureTierGateNeverMintsAContactForADecidedRoleMailbox(t *testing.T) {
 // question at the chokepoint every writer passes. This is the test that says so
 // — without it the two writers are one comment apart from disagreeing.
 func TestAVerdictOnAFreeMailSenderMintsTheContactAndNoCompany(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 

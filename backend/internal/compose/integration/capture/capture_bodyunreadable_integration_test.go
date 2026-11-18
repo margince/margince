@@ -45,6 +45,7 @@ func winmailOnly(msgID string) []byte {
 // activity read serve it to a reader of the body. A reader the content is
 // withheld from learns nothing of it.
 func TestAMailWhoseTextCouldNotBeReadSaysSo(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	env.sync(t, winmailOnly("winmail-1@acme.example"))

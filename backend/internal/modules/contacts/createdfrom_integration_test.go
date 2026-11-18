@@ -77,6 +77,7 @@ func (e *privacyEnv) createFrom(ctx context.Context, source ids.UUID, email stri
 }
 
 func TestAContactAnAgentReadsOutOfANoteNamesThatNote(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	note := e.ownersNote(t)
 
@@ -97,6 +98,7 @@ func TestAContactAnAgentReadsOutOfANoteNamesThatNote(t *testing.T) {
 }
 
 func TestACreateNamingANoteTheCallerCannotReadIsNotFound(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	note := e.ownersNote(t)
 
@@ -116,6 +118,7 @@ func TestACreateNamingANoteTheCallerCannotReadIsNotFound(t *testing.T) {
 }
 
 func TestTheSourceIsWithheldFromAReaderWhoCannotOpenIt(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	note := e.ownersNote(t)
 	created, err := e.createFrom(e.sourceReader(e.owner, principal.PrincipalAgent, true), note, "lucy.held@kunde.example")
@@ -147,6 +150,7 @@ func TestTheSourceIsWithheldFromAReaderWhoCannotOpenIt(t *testing.T) {
 // The approval preview answers what the write will answer. A staged create
 // naming a note its human cannot read must not preview as ready.
 func TestThePreviewRefusesASourceItsCreatorCannotRead(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	note := e.ownersNote(t)
 	creator, ok := principal.Actor(e.sourceReader(e.teammate, principal.PrincipalHuman, true))

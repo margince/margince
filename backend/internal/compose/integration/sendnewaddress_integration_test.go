@@ -125,6 +125,7 @@ func (e *newAddressEnv) contactsHolding(t *testing.T, address string) []string {
 // answers 422 recipient_not_on_file. Commit the preview's transaction and the
 // contact exists before anybody pressed Send.
 func TestASendToANewAddressMakesOneContactOwnedByTheSender(t *testing.T) {
+	t.Parallel()
 	e := setupNewAddress(t)
 	const address = "new.buyer@prospect.test"
 
@@ -162,6 +163,7 @@ func TestASendToANewAddressMakesOneContactOwnedByTheSender(t *testing.T) {
 // Mutation: skip the identity check in typedRecipientFileable and the create
 // refuses the claimed address, which fails the send.
 func TestASendToAKnownAddressReusesTheContact(t *testing.T) {
+	t.Parallel()
 	e := setupNewAddress(t)
 	const address = "known@customer.test"
 	var contact struct {
@@ -190,6 +192,7 @@ func TestASendToAKnownAddressReusesTheContact(t *testing.T) {
 // A lead holding the address is the recipient. The send makes no contact and
 // converts nobody: somebody is a lead or a contact, and only a human converts.
 func TestASendToALeadsAddressLeavesTheLeadALead(t *testing.T) {
+	t.Parallel()
 	e := setupNewAddress(t)
 	const address = "lead@prospect.test"
 	var lead struct {

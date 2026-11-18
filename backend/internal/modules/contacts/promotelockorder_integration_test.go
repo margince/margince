@@ -99,6 +99,7 @@ func assertLandedOn(t *testing.T, got promoteResult, want ids.ContactID) {
 // so the merge rewrites the lead row after it has locked the source. A promote
 // that held the lead and then waited on the source closed the cycle.
 func TestPromoteRacingAContactMergeBothComplete(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	ctx := context.Background()
 	source := e.createContactWithEmail(t, "Source Contact", "racing@example.test")
@@ -149,6 +150,7 @@ func TestPromoteRacingAContactMergeBothComplete(t *testing.T) {
 // moves the lead's address to the survivor. The promotion must not merge into
 // the retired contact, nor answer it as missing, but start again on the survivor.
 func TestPromoteStartsAgainWhenItsMatchMovesBeforeTheLock(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	ctx := context.Background()
 	retired := e.createContactWithEmail(t, "Retired Contact", "moving@example.test")

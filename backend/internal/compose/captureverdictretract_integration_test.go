@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -29,6 +30,7 @@ import (
 // may have been minted a contact under an earlier, looser creation rule, and
 // hiding their mail alone would leave that record standing for good.
 func TestANoiseVerdictRetractsTheContactItsSenderAlreadyHad(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	// A machine address settles before the model; this exercises a model verdict.
 	const junk = "updates@spesen.example"
@@ -36,7 +38,7 @@ func TestANoiseVerdictRetractsTheContactItsSenderAlreadyHad(t *testing.T) {
 	mail := seedCapturedMail(t, e, junk, "Ihre Abrechnung")
 	dispositionID := seedPendingDisposition(t, e, junk, "spesen.example", mail)
 
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindTransactional}}
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{dispositionID.String(): capture.KindTransactional}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
@@ -58,6 +60,7 @@ func TestANoiseVerdictRetractsTheContactItsSenderAlreadyHad(t *testing.T) {
 // the classifier called one message, and their record is not the verdict's to
 // take — the same bound the domain suppression draws.
 func TestANoiseVerdictLeavesACorrespondedSendersContact(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	// A named localpart: a role address (billing@, support@) settles on the
 	// deterministic rung and would never reach the noise arm this test is about.
@@ -67,7 +70,7 @@ func TestANoiseVerdictLeavesACorrespondedSendersContact(t *testing.T) {
 	mail := seedCapturedMail(t, e, supplier, "monthly statement")
 	dispositionID := seedPendingDisposition(t, e, supplier, "lieferant.example", mail)
 
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindTransactional}}
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{dispositionID.String(): capture.KindTransactional}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
@@ -89,6 +92,7 @@ func TestANoiseVerdictLeavesACorrespondedSendersContact(t *testing.T) {
 // business kept the record every time. A private clinic and its blood-test
 // results sat in a shared CRM because the founder had replied to his own doctor.
 func TestAPersonalVerdictRetractsTheContactEvenWhenTheOwnerWroteToThem(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const clinic = "maximum.clinic@health.example"
 	contactID := seedCaptureOnlyContact(t, e, clinic, e.Rep1)
@@ -96,7 +100,7 @@ func TestAPersonalVerdictRetractsTheContactEvenWhenTheOwnerWroteToThem(t *testin
 	mail := seedCapturedMail(t, e, clinic, "Blood test results of May")
 	dispositionID := seedPendingDisposition(t, e, clinic, "health.example", mail)
 
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindPersonal}}
+	brain := &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN, verdicts: map[string]string{dispositionID.String(): capture.KindPersonal}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
@@ -119,6 +123,7 @@ func TestAPersonalVerdictRetractsTheContactEvenWhenTheOwnerWroteToThem(t *testin
 // the record minted for THEM; a colleague who captured the same address keeps
 // theirs, exactly as their mail keeps arriving.
 func TestAKeepOutRetractsOnlyTheDecidersOwnContact(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const sender = "noreply@portal.example"
 	colleagues := seedCaptureOnlyContact(t, e, sender, e.Rep2)
@@ -128,7 +133,7 @@ func TestAKeepOutRetractsOnlyTheDecidersOwnContact(t *testing.T) {
 	seedSenderOverride(t, e, e.Rep1, sender, "keep_out")
 
 	// No scripted verdict: the owner's decision answers before any model.
-	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{ownerDSN: testdb.For(t).OwnerDSN}, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
@@ -147,6 +152,7 @@ func TestAKeepOutRetractsOnlyTheDecidersOwnContact(t *testing.T) {
 // standing keep_out the same way, while a later `real` verdict outranks the
 // stale noise row.
 func TestTheReconcileSweepRetractsContactsANoiseVerdictAlreadyCovered(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	covered := seedCaptureOnlyContact(t, e, "news@blast.example", e.Rep1)
 	seedSettledNoiseRow(t, e, "news@blast.example", capture.KindNewsletter)
@@ -357,6 +363,7 @@ func seedSettledPersonalThread(t *testing.T, e *integration.Env, threadKey strin
 // The record is owner-scoped, so no colleague ever saw it. The promise is that
 // a private correspondent gets no record at all.
 func TestTheReconcileSweepRetractsAContactAPrivateThreadEarnedAfterItsVerdict(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 
 	// The thread settles personal, and the contact arrives afterwards — the

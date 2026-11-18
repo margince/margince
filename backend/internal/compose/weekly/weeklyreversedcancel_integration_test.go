@@ -22,6 +22,7 @@ import (
 // The week leaves out a cancellation a repair reversed. The meeting counts as
 // booked once, not again for its reopening.
 func TestAReversedCalendarCancellationCountsNoSecondBooking(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	seedLeadFor(t, e, "Funnel", e.Rep1)
 	booked, host := "booked", ids.From[ids.UserKind](e.Rep1)
@@ -66,6 +67,7 @@ func TestAReversedCalendarCancellationCountsNoSecondBooking(t *testing.T) {
 // A connector booking cancelled by the same calendar event is two ordinary
 // transitions, and the week counts the booking.
 func TestAConnectorBookingLaterCancelledStillCountsAsABooking(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	seedLeadFor(t, e, "Funnel", e.Rep1)
 	booked, host := "booked", ids.From[ids.UserKind](e.Rep1)

@@ -18,6 +18,7 @@ import (
 // changes nothing on it. The host cannot see that contact, so the booking is
 // refused, and no owner or employment is written before the refusal.
 func TestABookingOnAPrivateContactTheHostCannotSeeIsRefusedAndChangesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
 	apptest.EnableGoogleBookingPage(t, e)

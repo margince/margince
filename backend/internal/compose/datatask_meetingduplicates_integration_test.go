@@ -35,6 +35,7 @@ func seedCalendarCopy(t *testing.T, e *integration.Env, seat ids.UUID, calendar 
 // import names the syncing seat by an address it proved. A sync today binds to
 // it then. Any copy whose retirement would lose something stays live.
 func TestTheMeetingDuplicatesTaskRetiresOnlyACleanProvenCopy(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name    string
 		unnamed bool
@@ -117,6 +118,7 @@ func meetingDuplicatesEstimate(ctx context.Context, t *testing.T, e *integration
 // Another seat on the copy does not keep it when that seat imports the
 // survivor with the same posture. Retiring the copy loses that seat nothing.
 func TestTheMeetingDuplicatesTaskRetiresACopyWhoseOtherImporterHoldsTheSurvivor(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	held := importMeeting(t, e, "human:"+e.Rep1.String())

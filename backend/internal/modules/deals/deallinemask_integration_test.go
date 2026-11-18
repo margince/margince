@@ -39,6 +39,7 @@ func (e *reviewEnv) maskedSeller() context.Context {
 // a quantity beside a catalogue price would rebuild the amount. The products
 // read and the line writes hold the same mask.
 func TestAMaskedReaderGetsNoNumberOfTheLines(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, _ := twoStagePipeline(t, e.configEnv)
 	bananas := seedPricedProduct(t, e, "Bananas", 200, "EUR")
@@ -79,6 +80,7 @@ func TestAMaskedReaderGetsNoNumberOfTheLines(t *testing.T) {
 // Only a reader who may read the amount is told what it means. The comparison
 // with an accepted offer's gross would disclose the amount to anyone else.
 func TestAMaskedReaderIsNotToldTheAmountBasis(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, _ := twoStagePipeline(t, e.configEnv)
 	if _, err := e.store.UpdateDeal(e.productCtx(), dealID, UpdateDealInput{AmountMinor: new(int64(100_000)), Currency: new("EUR")}); err != nil {
@@ -100,6 +102,7 @@ func TestAMaskedReaderIsNotToldTheAmountBasis(t *testing.T) {
 // Every flow that patches the deal row meets the same refusal on a deal
 // priced from lines; only the lines' own writer passes it.
 func TestNoPatchWritesTheMoneyOfALinesDeal(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, _ := twoStagePipeline(t, e.configEnv)
 	bananas := seedPricedProduct(t, e, "Bananas", 200, "EUR")
@@ -123,6 +126,7 @@ func TestNoPatchWritesTheMoneyOfALinesDeal(t *testing.T) {
 // The nightly verdict does not reprice a deal its lines price: the amount
 // correction is dropped, not applied and not failed.
 func TestAnAmountVerdictLeavesALinesDealAlone(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, _ := twoStagePipeline(t, e.configEnv)
 	bananas := seedPricedProduct(t, e, "Bananas", 200, "EUR")
@@ -151,6 +155,7 @@ func TestAnAmountVerdictLeavesALinesDealAlone(t *testing.T) {
 // masked from the amount reads its header only, through the single read and
 // through the deal's offer list.
 func TestAMaskedReaderGetsNoNumberOfAnOffer(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, _ := twoStagePipeline(t, e.configEnv)
 	bananas := seedPricedProduct(t, e, "Bananas", 200, "EUR")

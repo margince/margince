@@ -54,6 +54,7 @@ func setupWeekly(t *testing.T) *weekEnv {
 // morning's overnight window, so a Friday weekly landing there would silently
 // reset what Saturday's brief counts as "changed overnight".
 func TestAWeeklyNeverBecomesTheLatestMorningBrief(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	owner := integration.OwnerConn(t)
 
@@ -79,6 +80,7 @@ func TestAWeeklyNeverBecomesTheLatestMorningBrief(t *testing.T) {
 // which is why the weekly cannot hang off them. A past week that quietly loses
 // a line because somebody cleaned up a deal is a record nobody can trust.
 func TestAPastWeekSurvivesItsDealsBeingDeleted(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	owner := integration.OwnerConn(t)
 	ctx := context.Background()
@@ -164,6 +166,7 @@ func TestAPastWeekSurvivesItsDealsBeingDeleted(t *testing.T) {
 // second. The dispatcher ticks more than once on purpose so a worker that was
 // down still backfills; the constraint is what makes that safe.
 func TestASecondAssemblyInOneWeekReadsTheFirst(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	owner := integration.OwnerConn(t)
 
@@ -194,6 +197,7 @@ func TestASecondAssemblyInOneWeekReadsTheFirst(t *testing.T) {
 
 // Another rep's week is never served as mine.
 func TestAnotherRepsWeekIsNeverServedAsMine(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 
 	if _, _, err := e.engine.AssembleFor(e.repCtx, weekClock); err != nil {
@@ -209,6 +213,7 @@ func TestAnotherRepsWeekIsNeverServedAsMine(t *testing.T) {
 // retrospective of a week still in progress would be rewritten every day it
 // ran.
 func TestTheReviewMeasuresTheWeekThatClosed(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	owner := integration.OwnerConn(t)
 
@@ -233,6 +238,7 @@ func TestTheReviewMeasuresTheWeekThatClosed(t *testing.T) {
 // twice, and the list already excluded it, so the number and the lines
 // disagreed by exactly the deals that mattered most.
 func TestTheMovedCountAgreesWithTheMovedLines(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	owner := integration.OwnerConn(t)
 	ctx := context.Background()
@@ -305,6 +311,7 @@ func TestTheMovedCountAgreesWithTheMovedLines(t *testing.T) {
 // week against everything due in it can print "4 of 2", which is not a number
 // anybody can act on.
 func TestDeliveredNeverExceedsPromised(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	owner := integration.OwnerConn(t)
 
@@ -332,6 +339,7 @@ func TestDeliveredNeverExceedsPromised(t *testing.T) {
 // The sentence is a SECOND write onto a committed review, and it is
 // idempotent by replacement: a later pass is a correction, not an addition.
 func TestTheWeeksSentenceIsWrittenAndReplaced(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 
 	review, _, err := e.engine.AssembleFor(e.repCtx, weekClock)
@@ -365,6 +373,7 @@ func TestTheWeeksSentenceIsWrittenAndReplaced(t *testing.T) {
 // sentence. Collapsing that into "no sentence" would make an honest quiet week
 // indistinguishable from a week nobody looked at.
 func TestAPassThatFoundNothingStillStampsTheWeek(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 
 	review, _, err := e.engine.AssembleFor(e.repCtx, weekClock)
@@ -388,6 +397,7 @@ func TestAPassThatFoundNothingStillStampsTheWeek(t *testing.T) {
 
 // Another rep's review is never narratable, even with its id in hand.
 func TestAnotherRepsWeekCannotBeNarrated(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 
 	review, _, err := e.engine.AssembleFor(e.repCtx, weekClock)
@@ -412,6 +422,7 @@ func TestAnotherRepsWeekCannotBeNarrated(t *testing.T) {
 // bytes — a caller that reaches Narrate without going through the parser would
 // otherwise learn the ceiling from a driver error at 06:00 on a Monday.
 func TestTheWriterRefusesProseTheColumnCannotHold(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 
 	review, _, err := e.engine.AssembleFor(e.repCtx, weekClock)
@@ -437,6 +448,7 @@ func TestTheWriterRefusesProseTheColumnCannotHold(t *testing.T) {
 // sat in it — so the same meeting moved between reps' weeks depending on how it
 // reached the CRM, and a rep whose calendar syncs automatically showed none.
 func TestTheWeekCountsMeetingsByHostRatherThanByWhoFiledThem(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	owner := integration.OwnerConn(t)
 	inWeek := weekClock.AddDate(0, 0, -3)
@@ -484,6 +496,7 @@ func TestTheWeekCountsMeetingsByHostRatherThanByWhoFiledThem(t *testing.T) {
 // account credited a meeting that had nothing to do with it, and a review of a
 // closed week changed its answer every time somebody added a task.
 func TestAMeetingsNextStepMustBeRaisedInsideTheWeek(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	owner := integration.OwnerConn(t)
 	inWeek := weekClock.AddDate(0, 0, -3)
@@ -523,6 +536,7 @@ func TestAMeetingsNextStepMustBeRaisedInsideTheWeek(t *testing.T) {
 // A day meeting began with its date, though it is stored at that date's noon.
 // So a task raised from it that morning is its next step.
 func TestADayMeetingsNextStepMayBeRaisedTheMorningOfItsDate(t *testing.T) {
+	t.Parallel()
 	e := setupWeekly(t)
 	owner := integration.OwnerConn(t)
 	year, month, day := weekClock.AddDate(0, 0, -3).UTC().Date()

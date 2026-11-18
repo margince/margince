@@ -31,6 +31,7 @@ import (
 )
 
 func TestAnOwnedDealBeyondOtherOwnersScanBudgetStillReachesHome(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	pipeline, stage, _ := integration.DealFixture(t, e)
 	at := clocktest.Now(t)
@@ -137,6 +138,7 @@ func TestAnOwnedDealBeyondOtherOwnersScanBudgetStillReachesHome(t *testing.T) {
 }
 
 func TestOwnershipScopesTheOverdueScanAtEveryQuietWindow(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	pipeline, stage, _ := integration.DealFixture(t, e)
 	at := clocktest.Now(t)

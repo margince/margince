@@ -88,6 +88,7 @@ func (e *dedupeEnv) liveCompaniesNamed(ctx context.Context, t *testing.T, name s
 // The Baqend case: baqend.com and speedkit.com both resolved to "Baqend GmbH"
 // and became two records four minutes apart.
 func TestANameMatchWaitsForExplicitDomainAdoption(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -181,6 +182,7 @@ func imageDomains(t *testing.T, image map[string]any) []string {
 // the legal form, so "Baqend" gets its own record, and the pair goes to the
 // review queue for a human to merge.
 func TestABareBrandNameCreatesAndFilesThePairForReview(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -199,6 +201,7 @@ func TestABareBrandNameCreatesAndFilesThePairForReview(t *testing.T) {
 }
 
 func TestADifferentNameCreatesItsOwnCompany(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -216,6 +219,7 @@ func TestADifferentNameCreatesItsOwnCompany(t *testing.T) {
 // Two companies already carry the name, so choosing one would be choosing by
 // uuid. Nothing is created and the question waits for a human.
 func TestSeveralCompaniesOfOneNameHoldTheQuestion(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -250,6 +254,7 @@ func TestSeveralCompaniesOfOneNameHoldTheQuestion(t *testing.T) {
 // The installation's own company is never a name twin. Adopting onto it would
 // make the new domain one of the workspace's own, and its senders colleagues.
 func TestADomainNamedLikeTheOwnCompanyDoesNotJoinIt(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -271,6 +276,7 @@ func TestADomainNamedLikeTheOwnCompanyDoesNotJoinIt(t *testing.T) {
 // A twin the resolving seat may not write receives nothing: the verdict is
 // refused, no domain lands on the twin, and no second record is minted.
 func TestATwinTheSeatCannotWriteIsNotJoined(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 
 	twin, err := e.store.CreateCompany(e.asOther(), CreateCompanyInput{

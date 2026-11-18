@@ -7,7 +7,6 @@ package compose
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -21,20 +20,21 @@ import (
 )
 
 func TestCorrectionMetricsReadTheLedgerAndSurfaceTransportFailure(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
-	ctx, engine, err := dataTaskJobEngine(t.Context(), e.Pool)
+	ctx, engine, err := dataTaskJobEngine(t.Context(), e.Pool, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if err := engine.Seed(ctx); err != nil {
 		t.Fatal(err)
 	}
-	section := dataTaskMetricsSection(e.Pool)
+	section := dataTaskMetricsSection(e.Pool, nil)
 	var out bytes.Buffer
 	if err := section(t.Context(), &out); err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"margince_data_task_read_success 1", fmt.Sprintf(`margince_data_task_steps{status="pending"} %d`, registeredDataTaskSteps(dataTaskCatalog(e.Pool, func() time.Time { return clocktest.Now(t) })))} {
+	for _, want := range []string{"margince_data_task_read_success 1", fmt.Sprintf(`margince_data_task_steps{status="pending"} %d`, registeredDataTaskSteps(dataTaskCatalog(e.Pool, nil, func() time.Time { return clocktest.Now(t) })))} {
 		if !strings.Contains(out.String(), want) {
 			t.Fatalf("missing %q: %s", want, &out)
 		}
@@ -54,6 +54,7 @@ func TestCorrectionMetricsReadTheLedgerAndSurfaceTransportFailure(t *testing.T) 
 }
 
 func TestCorrectionControlRejectsMalformedAndUnknownRequests(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	h := dataTaskHandlers{pool: e.Pool}
 	for _, tc := range []struct {
@@ -77,6 +78,7 @@ func TestCorrectionControlRejectsMalformedAndUnknownRequests(t *testing.T) {
 }
 
 func TestOwnerCorrectionCommandsRefuseInvalidActionsAndUnreadableLedger(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	if _, err := DataTaskOperation(t.Context(), e.Pool, "execute"); err == nil {
 		t.Fatal("unknown command accepted")
@@ -85,7 +87,7 @@ func TestOwnerCorrectionCommandsRefuseInvalidActionsAndUnreadableLedger(t *testi
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(progress) != registeredDataTaskSteps(dataTaskCatalog(e.Pool, func() time.Time { return clocktest.Now(t) })) || progress[0].Version != 0 || progress[0].Estimate != nil {
+	if len(progress) != registeredDataTaskSteps(dataTaskCatalog(e.Pool, nil, func() time.Time { return clocktest.Now(t) })) || progress[0].Version != 0 || progress[0].Estimate != nil {
 		t.Fatalf("unseeded estimate invented progress: %+v", progress)
 	}
 	hideDataTaskLedger(t)
@@ -100,9 +102,4 @@ func hideDataTaskLedger(t *testing.T) {
 	if _, err := owner.Exec(t.Context(), `ALTER TABLE data_task_run RENAME TO data_task_run_unavailable_probe`); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() {
-		if _, err := owner.Exec(context.Background(), `ALTER TABLE data_task_run_unavailable_probe RENAME TO data_task_run`); err != nil {
-			t.Errorf("restore correction ledger: %v", err)
-		}
-	})
 }

@@ -70,6 +70,7 @@ func readBriefRun(t *testing.T, e *apptest.AppEnv) annotatedBrief {
 // THE ADMIT CASE. Without it every refusal below could be satisfied by an
 // endpoint that refuses everyone.
 func TestAnAnnotationWithVerifiableCitationsIsWritten(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	run := seedRunWithItems(t, e)
@@ -109,6 +110,7 @@ func TestAnAnnotationWithVerifiableCitationsIsWritten(t *testing.T) {
 // is what carries that difference, and it is the whole reason two columns exist
 // rather than one.
 func TestAQuietNightIsStampedEvenWithNothingToSay(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	seedRunWithItems(t, e)
@@ -132,6 +134,7 @@ func TestAQuietNightIsStampedEvenWithNothingToSay(t *testing.T) {
 // THE REFUSAL THE PLAN NAMES: a model supplies uuids as text, and a uuid that
 // parses is not a uuid that means anything.
 func TestACitationOutsideTheItemsOwnEvidenceRefusesTheWholeWrite(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	run := seedRunWithItems(t, e)
@@ -163,6 +166,7 @@ func TestACitationOutsideTheItemsOwnEvidenceRefusesTheWholeWrite(t *testing.T) {
 }
 
 func TestAnItemFromAnotherRunCannotBeAnnotated(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	seedRunWithItems(t, e)
@@ -182,6 +186,7 @@ func TestAnItemFromAnotherRunCannotBeAnnotated(t *testing.T) {
 }
 
 func TestAnnotatingWithNoRunTodayIsRefused(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	// Deliberately no POST /v1/brief: this rep has no run today.
@@ -197,6 +202,7 @@ func TestAnnotatingWithNoRunTodayIsRefused(t *testing.T) {
 }
 
 func TestASecondPassReplacesTheFirstRatherThanAppending(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	run := seedRunWithItems(t, e)
@@ -224,6 +230,7 @@ func TestASecondPassReplacesTheFirstRatherThanAppending(t *testing.T) {
 }
 
 func TestProseBeyondTheCeilingIsRefusedWithSomethingActionable(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	seedRunWithItems(t, e)
@@ -245,6 +252,7 @@ func TestProseBeyondTheCeilingIsRefusedWithSomethingActionable(t *testing.T) {
 // prose reaches the rep's screen unchecked, under the same agent tag a grounded
 // finding carries.
 func TestAFindingThatCitesNothingIsRefused(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	run := seedRunWithItems(t, e)
@@ -269,6 +277,7 @@ func TestAFindingThatCitesNothingIsRefused(t *testing.T) {
 // under the new pass's stamp: the rep would read last night's explanation of a
 // reply that has since been answered, dated tonight.
 func TestASecondPassClearsFindingsItDoesNotRestate(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	run := seedRunWithItems(t, e)

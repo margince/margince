@@ -28,7 +28,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/corefeatures"
@@ -53,7 +52,7 @@ func NewRegistryFor(db *database.DB, send SendPath) *agents.Registry {
 	// The gate resolves seats through identity, and identity binds the same
 	// handle: a registry built for a named workspace must not admit through a
 	// service that resolves a different one.
-	return registryWithGate(db, auth.NewGate(identity.NewServiceFor(db)), nil, send, companyEnricher{}, nil, nil, nil,
+	return registryWithGate(db, auth.NewGate(identityServiceFor(db)), nil, send, companyEnricher{}, nil, nil, nil,
 		meetingBriefReader(newMeetingBriefService(db)), slog.Default(), registryFeatures{})
 }
 
@@ -68,15 +67,19 @@ type registryFeatures struct {
 	served       *Server
 	// reclaim deletes a retired offer rendering where no Server holds the store.
 	reclaim deals.RetiredRendering
+	// extensions is the composition whose units' tools join the surface.
+	extensions *Extensions
+	// queues is what a released approval's stores enqueue through.
+	queues *storeQueues
 }
 
 func registryWithDraftBrain(pool *pgxpool.Pool, brain completer, send SendPath, features registryFeatures) *agents.Registry {
 	db := InstallationDB(pool)
 	brief := meetingBriefReader(newMeetingBriefService(db))
 	if brain == nil {
-		return registryWithGate(db, auth.NewGate(identity.NewService(pool)), nil, send, companyEnricher{}, nil, nil, nil, brief, slog.Default(), features)
+		return registryWithGate(db, auth.NewGate(IdentityService(pool)), nil, send, companyEnricher{}, nil, nil, nil, brief, slog.Default(), features)
 	}
-	return registryWithGate(db, auth.NewGate(identity.NewService(pool)), newReplyDrafter(pool, brain, nil), send, companyEnricher{}, nil, nil, nil, brief, slog.Default(), features)
+	return registryWithGate(db, auth.NewGate(IdentityService(pool)), newReplyDrafter(pool, brain, nil), send, companyEnricher{}, nil, nil, nil, brief, slog.Default(), features)
 }
 
 // registryWithGate composes the tool surface. The volume budget charger arrives as
@@ -101,13 +104,13 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	opts = append(opts, agents.WithCallAvailability(coreCallAvailability(features.coreFeatures)), withContractTierFloor(), agents.WithToolGate(clientCheckGate(pool, log)),
 		agents.WithIdempotency(toolIdempotency(pool)), agents.WithReplayReader(provider),
 		agents.WithBaseLanguage(installationLanguage(pool)),
-		agents.WithSeatNamer(seatNamer(identity.NewServiceFor(db))), agents.WithActivityListCalendar(activityListCalendar(captureHealthRegistry(db))),
+		agents.WithSeatNamer(seatNamer(identityServiceFor(db))), agents.WithActivityListCalendar(activityListCalendar(captureHealthRegistry(db))),
 		agents.WithChangeWords(agentChangeWords(db)),
 		agents.WithContactCaseMerger(contactCaseMergerSeam(db)),
 		agents.WithDealTaskSettler(dealclosetasks.New(activities.NewStore(db), db)),
 		agents.WithRecordSidecars(recordSidecars(db)))
 	// Approval decisions need the same registered effects as the HTTP path.
-	approvalsSvc := decidingApprovalsService(pool, send, log)
+	approvalsSvc := decidingApprovalsService(pool, send, log, features.queues)
 	registry := agents.NewRegistry(approvalsAdapter{svc: approvalsSvc}, gate, opts...)
 	agents.RegisterCoreTools(registry, provider, provider, provider, newConsumerMailSeam(db),
 		openDuplicatesFor(pool), tagOfferSeam(db))
@@ -148,7 +151,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	// One engine ranks search_records and resolves an intent tool's record_name.
 	recordSearch := recordSearchSeam(pool)
 	agents.RegisterIntentTools(registry, retriever, meetingBrief, recordSearch, provider, meetingReadiness{store: activities.NewStore(db)})
-	agents.RegisterChannelProviderTools(registry, channelProviderDirectory{})
+	agents.RegisterChannelProviderTools(registry, channelProviderDirectory{composed: features.extensions})
 	agents.RegisterContextSearchTool(registry, provider, retriever)
 	agents.RegisterRecordSearchTool(registry, provider, recordSearch)
 	agents.RegisterReportEvidenceTool(registry, provider, reportEvidenceSeam{
@@ -171,13 +174,13 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	agents.RegisterNetworkTools(registry, whoKnowsLister(pool, newContactsStore(InstallationDB(pool))), coverageReader(pool, newContactsStore(InstallationDB(pool))),
 		introPathLister(pool),
 		atRiskLister(pool, newContactsStore(InstallationDB(pool))))
-	comms := newCommsAdapter(pool, drafter, send)
+	comms := newCommsAdapter(pool, features.extensions, drafter, send)
 	comms.firstDrafts = features.firstDrafts
 	agents.RegisterCommsTools(registry, comms, provider)
-	agents.RegisterMeetingInvitationTool(registry, newCommsAdapter(pool, drafter, send), provider)
+	agents.RegisterMeetingInvitationTool(registry, newCommsAdapter(pool, features.extensions, drafter, send), provider)
 	agents.RegisterClientCheckTool(registry, log)
 	agents.RegisterRouters(registry)
-	registerComposedTools(registry)
+	registerComposedTools(registry, features.extensions)
 	return registry
 }
 
@@ -261,8 +264,8 @@ func reportToolRunner(engine *reportEngine) agents.ReportRunner {
 
 // decidingApprovalsService adds send-dependent releases to tool decisions.
 // Its logger retains failures that happen after a decision commits.
-func decidingApprovalsService(pool *pgxpool.Pool, send SendPath, log *slog.Logger) *approvals.Service {
-	svc := NewApprovalsServiceWithEffects(pool)
+func decidingApprovalsService(pool *pgxpool.Pool, send SendPath, log *slog.Logger, queues *storeQueues) *approvals.Service {
+	svc := approvalsServiceTelling(pool, &siteLeadNoticeLane{}, queues)
 	registerLateApprovalEffects(svc, pool, send)
 	if log != nil {
 		svc = svc.WithLogger(log)

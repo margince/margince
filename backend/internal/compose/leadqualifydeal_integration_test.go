@@ -25,6 +25,7 @@ import (
 )
 
 func TestQualifyOpensTheDealAndSeatsTheContactInOneTransaction(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	admin := e.Admin()
 	dealsStore := deals.NewStore(e.DB(), DealsInstallation())
@@ -102,6 +103,7 @@ func TestQualifyOpensTheDealAndSeatsTheContactInOneTransaction(t *testing.T) {
 // relationships is refused the whole qualify-with-deal, not handed an edge
 // through a side door.
 func TestQualifyWithDealNeedsTheRelationshipGrant(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	admin := e.Admin()
 	dealsStore := deals.NewStore(e.DB(), DealsInstallation())
@@ -141,6 +143,7 @@ func TestQualifyWithDealNeedsTheRelationshipGrant(t *testing.T) {
 }
 
 func TestQualifyRollsBackWhenTheDealIsRefused(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	admin := e.Admin()
 	dealsStore := deals.NewStore(e.DB(), DealsInstallation())
@@ -229,6 +232,7 @@ func TestQualifyRollsBackWhenTheDealIsRefused(t *testing.T) {
 // OwnerExact seam; without it CreateDealTx's actor fallback silently gave
 // the queue's deal to whoever clicked Qualify.
 func TestQualifyInheritsTheLeadOwnerExactly(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	admin := e.Admin()
 	owner := integration.OwnerConn(t)

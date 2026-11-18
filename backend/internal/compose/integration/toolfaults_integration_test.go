@@ -23,6 +23,7 @@ import (
 // Every record type with an id, flag or number filter. Partner takes only
 // words, so it has no operand that can be malformed.
 func TestAMistypedListFilterIsTheCallersMistakeOnEveryRecordType(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, AdminPerms)
@@ -44,6 +45,7 @@ func TestAMistypedListFilterIsTheCallersMistakeOnEveryRecordType(t *testing.T) {
 }
 
 func TestAPassportWithoutReadIsToldWhichPermissionIsMissing(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Read Scope", "readscope@fable.test", "Admin")
 	draftOnly := apptest.PassportBearer(t, e, "draft-only agent", "draft")

@@ -15,6 +15,7 @@ import (
 // A teammate who left is a former teammate. One who stays is not. A colleague
 // who left another team is nobody's former teammate here.
 func TestAFormerTeammateIsSomebodyWhoLeftTheReadersTeam(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "former-teammates")
 	sales, err := e.svc.CreateTeam(e.wsCtx(e.admin), e.admin, "DACH Sales")
 	if err != nil {

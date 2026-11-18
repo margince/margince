@@ -35,7 +35,7 @@ type teammatesSeam struct{ svc *identity.Service }
 
 // newTeammatesSeam builds the membership reader over the identity module.
 func newTeammatesSeam(pool *pgxpool.Pool) teammatesSeam {
-	return teammatesSeam{svc: identity.NewService(pool)}
+	return teammatesSeam{svc: IdentityService(pool)}
 }
 
 // SharesLiveTeamWithCaller carries no caller argument on purpose: identity reads

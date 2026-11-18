@@ -168,6 +168,7 @@ func memberFigure(value *int) int {
 // Each member's qualified and unanswered leads are the governed readings'
 // values for that member alone, credited to each lead's owner now.
 func TestSdrTeamMembersCountLeadsByTheReadingsOwnRules(t *testing.T) {
+	t.Parallel()
 	f := newSdrLeadTeam(t)
 	e := f.e
 	manager := f.as(f.manager)
@@ -197,6 +198,7 @@ func TestSdrTeamMembersCountLeadsByTheReadingsOwnRules(t *testing.T) {
 // A target is held against the month an evaluation with a monthly basis reads,
 // and only for the member who has one.
 func TestSdrTeamMembersHoldOnlyTheirOwnMonthlyTarget(t *testing.T) {
+	t.Parallel()
 	f := newSdrLeadTeam(t)
 	e := f.e
 	manager := f.as(f.manager)
@@ -239,6 +241,7 @@ func TestSdrTeamMembersHoldOnlyTheirOwnMonthlyTarget(t *testing.T) {
 // lead read for leads, target read for targets. A grant taken away shows on
 // the next read.
 func TestSdrTeamMembersWithholdEachFigureByTheReadersGrant(t *testing.T) {
+	t.Parallel()
 	f := newSdrLeadTeam(t)
 	manager := f.as(f.manager)
 	for _, tc := range []struct {
@@ -281,6 +284,7 @@ func TestSdrTeamMembersWithholdEachFigureByTheReadersGrant(t *testing.T) {
 // Rep1 under their own row scope reads their own row and no colleague's, and
 // a team lead reads the team they lead.
 func TestSdrTeamMembersFollowTheReadersReach(t *testing.T) {
+	t.Parallel()
 	f := newSdrLeadTeam(t)
 	e := f.e
 	own := sectionsReader(e, e.Rep1, []ids.UUID{e.Team1}, principal.RowScopeOwn)
@@ -312,6 +316,7 @@ func TestSdrTeamMembersFollowTheReadersReach(t *testing.T) {
 // With individual performance off the review names no member, and the
 // evidence and export of the team's readings name no colleague either.
 func TestSdrTeamMembersNameNobodyWhileIndividualPerformanceIsOff(t *testing.T) {
+	t.Parallel()
 	f := newSdrLeadTeam(t)
 	e := f.e
 	e.showIndividualPerformance(t, false)
@@ -340,6 +345,7 @@ func TestSdrTeamMembersNameNobodyWhileIndividualPerformanceIsOff(t *testing.T) {
 // A team's list of waiting handoffs says who submitted each only while the
 // installation shows individual performance, and always to the submitter.
 func TestSdrWaitingHandoffsNameNoColleagueSubmitterWhileIndividualPerformanceIsOff(t *testing.T) {
+	t.Parallel()
 	f := newSdrTeamFixture(t)
 	e := f.e
 	f.submitAs(t, e.Rep1, "Rep1's prospect")
@@ -384,6 +390,7 @@ func TestSdrWaitingHandoffsNameNoColleagueSubmitterWhileIndividualPerformanceIsO
 // with a decision that gave no reason included. So the drill-down holds the
 // same population as the figure.
 func TestSdrTeamReasonsAddUpToTheirOutcome(t *testing.T) {
+	t.Parallel()
 	f := newSdrTeamFixture(t)
 	e := f.e
 	for _, name := range []string{"First returned", "Second returned"} {
@@ -421,6 +428,7 @@ func TestSdrTeamReasonsAddUpToTheirOutcome(t *testing.T) {
 // A reader who may read activities and not leads still learns the meetings
 // held, and nothing of the handoffs, which are kept with the leads.
 func TestSdrTeamReviewKeepsMeetingsForAReaderWithoutLeadRead(t *testing.T) {
+	t.Parallel()
 	f := newSdrTeamFixture(t)
 	e := f.e
 	f.submitAs(t, e.Rep1, "Handed on")
@@ -448,6 +456,7 @@ func withMask(ctx context.Context, field string, condition principal.MaskConditi
 // does so on the reading, on every member's row and on the target.
 // Counted over the leads the mask leaves, it would read as measured.
 func TestSdrTeamMembersWithholdAFigureAFieldMaskReaches(t *testing.T) {
+	t.Parallel()
 	f := newSdrLeadTeam(t)
 	e := f.e
 	// A mask never binds an unbounded seat, so the reader is a team lead.
@@ -505,6 +514,7 @@ func TestSdrTeamMembersWithholdAFigureAFieldMaskReaches(t *testing.T) {
 // A seat that may read activities and not leads still gets the meetings
 // booked ahead from the summary, and is told the handoffs are withheld.
 func TestSdrSummaryAnswersUpcomingMeetingsWithoutLeadRead(t *testing.T) {
+	t.Parallel()
 	f := newSdrTeamFixture(t)
 	e := f.e
 	f.submitAs(t, e.Rep1, "Handed on")

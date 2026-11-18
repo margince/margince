@@ -24,6 +24,7 @@ var reviewableRecheckCountry = sync.OnceValue(func() string {
 })
 
 func TestTheRecheckKeepsTheSetWhileNothingChanged(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	delivery, authorize := e.stagedMarketingDelivery(t)
 	issued := authorize(1)
@@ -41,6 +42,7 @@ func TestTheRecheckKeepsTheSetWhileNothingChanged(t *testing.T) {
 // The answer stays a refusal, and the recheck still records a new set. The
 // requirement check reads the rule packs of the set it is given.
 func TestACountryChangedBeforeTheWireRecordsANewSet(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	delivery, authorize := e.stagedMarketingDelivery(t)
 	issued := authorize(1)

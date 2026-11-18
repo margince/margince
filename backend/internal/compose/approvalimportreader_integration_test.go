@@ -23,6 +23,7 @@ import (
 )
 
 func TestImportReviewShowsTheActorsTagEffectsToAReaderWithoutUpdateGrant(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.GrantRole(t, e.AdminUser, "admin")
 	ctx := importAdmin(e)

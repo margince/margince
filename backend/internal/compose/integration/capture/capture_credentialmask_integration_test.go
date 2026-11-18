@@ -46,6 +46,7 @@ func portalAccessMail() []byte {
 // masked, so no reader of the mail and no search finds them. The provider
 // original keeps them until its own retention ends.
 func TestACapturedMailStoresItsCredentialsMasked(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	env.sync(t, portalAccessMail())
@@ -148,6 +149,7 @@ func importedBy(t *testing.T, e *integration.SearchEnv, activityID, user ids.UUI
 // Cc and guesses the password; they get a row of their own. Only a party the
 // stored row names joins it.
 func TestMaskedTextIsNoProofThatTwoMailboxesHoldOneMessage(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	syncOther := secondMailbox(t, e, e.Rep3)
@@ -188,6 +190,7 @@ func TestMaskedTextIsNoProofThatTwoMailboxesHoldOneMessage(t *testing.T) {
 // line. Text a sender typed as "[masked]" with nothing masked keeps the
 // equality proof.
 func TestAMaskedReplayNeedsAnAttestedRecipient(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	syncOther := secondMailbox(t, e, e.Rep3)
@@ -216,6 +219,7 @@ func TestAMaskedReplayNeedsAnAttestedRecipient(t *testing.T) {
 // On the masked path, as on the text path, the stored files must be ones the
 // arriving copy carried.
 func TestAMaskedReplayNeedsTheSameFiles(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	seedCaptureRole(t, e)
 	seedCaptureRoleFor(t, e, e.Rep3)

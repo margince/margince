@@ -78,6 +78,7 @@ func estimateThreadHolds(ctx context.Context, t *testing.T, e *integration.Env, 
 }
 
 func TestTheThreadHoldTaskClosesOpenedMessagesOnceAndOnlyUnderAClosingVerdict(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	held := seedOpenedUnderVerdict(t, e, "task-held", capture.VerdictHeld, capture.VerdictCleared, 2)
@@ -146,6 +147,7 @@ func TestTheThreadHoldTaskClosesOpenedMessagesOnceAndOnlyUnderAClosingVerdict(t 
 // One RecordOutcomeOnThreadTx call takes 500 rows, so a longer thread needs a
 // second batch for the rest.
 func TestALongHeldThreadClosesOverSeveralBatches(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	messages := seedOpenedUnderVerdict(t, e, "task-long", capture.VerdictHeld, capture.VerdictCleared, 620)

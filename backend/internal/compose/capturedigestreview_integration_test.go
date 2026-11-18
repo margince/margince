@@ -169,6 +169,7 @@ func (b *backfillWireEnv) seedDuplicatePair(t *testing.T, name, email, dupName, 
 // the store refused. The approvals half has had this case since the seam
 // landed; this is its twin.
 func TestTheDigestCountsOnlyTheDuplicatesItsReaderCouldOpen(t *testing.T) {
+	t.Parallel()
 	b := setupBackfillWire(t)
 	now := time.Now().UTC()
 
@@ -197,6 +198,7 @@ func TestTheDigestCountsOnlyTheDuplicatesItsReaderCouldOpen(t *testing.T) {
 // pending approval in the workspace and wrote that number into every payload,
 // so a reader holding no deal grant was told how many deal decisions exist.
 func TestTheDigestCountsOnlyDecisionsRequestedFromItsReader(t *testing.T) {
+	t.Parallel()
 	b := setupBackfillWire(t)
 	deal := b.seedDecidableDeal(t)
 	b.stageCloseDateProposal(t, deal)
@@ -231,6 +233,7 @@ func TestTheDigestCountsOnlyDecisionsRequestedFromItsReader(t *testing.T) {
 // would say "nothing is waiting for you", which is a claim this build cannot
 // make about a reader whose queues it never asked about.
 func TestAnUnwiredDigestReportsNothingWaitingRatherThanEverything(t *testing.T) {
+	t.Parallel()
 	b := setupBackfillWire(t)
 	e := b.env
 	b.stageCloseDateProposal(t, b.seedDecidableDeal(t))
@@ -296,6 +299,7 @@ func (r readsContacts) AdmittedAuthority(ctx context.Context, ws, human, _ ids.U
 // Duplicate contacts count as the one review the Worklist shows for them,
 // however many pairs join the group.
 func TestTheDigestCountsAGroupOfDuplicateContactsOnce(t *testing.T) {
+	t.Parallel()
 	b := setupBackfillWire(t)
 	for range 3 {
 		if _, err := b.env.Contacts.CreateContact(b.env.Admin(), contacts.CreateContactInput{

@@ -74,6 +74,7 @@ func atWaitingInstant(e *Env) *activities.Store {
 // put it down. That is why the personal states live in their own table keyed on
 // the reader, and why this test asserts BOTH halves of the same fixture.
 func TestOneRepsSnoozeDoesNotHideTheRowFromAnother(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	seedWaitingMessage(t, e, "thread-snooze-mine", "inbound", "Snoozed by one",
 		waitingInstant.Add(-3*24*time.Hour))
@@ -106,6 +107,7 @@ func TestOneRepsSnoozeDoesNotHideTheRowFromAnother(t *testing.T) {
 // branch of the anti-join, and a rule that held for one state and not the other
 // would pass a suite that only tested snooze.
 func TestOneRepsNotMineDoesNotHideTheRowFromAnother(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	seedWaitingMessage(t, e, "thread-notmine", "inbound", "Not mine to answer",
 		waitingInstant.Add(-3*24*time.Hour))
@@ -135,6 +137,7 @@ func TestOneRepsNotMineDoesNotHideTheRowFromAnother(t *testing.T) {
 // And nothing may land: a reader-state row written for a message the caller
 // cannot open would say, on their next read, that something is there.
 func TestSettingAsideAMessageTheReaderCannotSeeIsRefusedAsAbsent(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	seedWaitingMessage(t, e, "thread-unreadable", "inbound", "Held from this reader",
 		waitingInstant.Add(-3*24*time.Hour))
@@ -187,6 +190,7 @@ func TestSettingAsideAMessageTheReaderCannotSeeIsRefusedAsAbsent(t *testing.T) {
 // NOT SALES BINDS EVERYBODY, which is the opposite reach and the reason there
 // are two tables rather than one with a flag.
 func TestNotSalesHidesTheThreadFromEveryone(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	seedWaitingMessage(t, e, "thread-notsales", "inbound", "Procurement newsletter",
 		waitingInstant.Add(-3*24*time.Hour))
@@ -208,6 +212,7 @@ func TestNotSalesHidesTheThreadFromEveryone(t *testing.T) {
 // A SNOOZE LIFTS ON ITS OWN MOMENT, driven by the read instant rather than by
 // waiting for a wall clock to catch up.
 func TestASnoozeLiftsWhenItsMomentPasses(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	seedWaitingMessage(t, e, "thread-snooze-lifts", "inbound", "Back on Thursday",
 		waitingInstant.Add(-3*24*time.Hour))
@@ -243,6 +248,7 @@ func TestASnoozeLiftsWhenItsMomentPasses(t *testing.T) {
 // PICKING IT BACK UP is the undo behind every set-aside verb, and it clears the
 // reader's own state without touching the thread's.
 func TestPickingUpRestoresTheRowToItsOwnReaderOnly(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	seedWaitingMessage(t, e, "thread-undo", "inbound", "Picked back up",
 		waitingInstant.Add(-3*24*time.Hour))
@@ -269,6 +275,7 @@ func TestPickingUpRestoresTheRowToItsOwnReaderOnly(t *testing.T) {
 // already holds, and answering an error would make an undo button fail on a row
 // somebody else had already restored.
 func TestPickingUpAMessageNobodySetAsideIsTheSameSuccess(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	seedWaitingMessage(t, e, "thread-undo-noop", "inbound", "Never put down",
 		waitingInstant.Add(-3*24*time.Hour))
@@ -286,6 +293,7 @@ func TestPickingUpAMessageNobodySetAsideIsTheSameSuccess(t *testing.T) {
 // A SNOOZE INTO THE PAST is refused rather than stored. Storing it would write
 // a row that hides nothing, and read to the rep as a snooze that did not take.
 func TestASnoozeIntoThePastIsRefused(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	seedWaitingMessage(t, e, "thread-snooze-past", "inbound", "Already gone",
 		waitingInstant.Add(-3*24*time.Hour))
@@ -312,6 +320,7 @@ func TestASnoozeIntoThePastIsRefused(t *testing.T) {
 // queue. Keying on the thread is what makes "this conversation is not sales"
 // mean what it says.
 func TestAJudgedThreadStaysJudgedWhenTheSenderWritesAgain(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := seedWaitingContact(t, e)
 	seedWaitingMessageLinked(t, e, "thread-recurring", "inbound", "Newsletter issue 41",
@@ -346,6 +355,7 @@ func TestAJudgedThreadStaysJudgedWhenTheSenderWritesAgain(t *testing.T) {
 // workspace's own reply — could be given durable state plus an audit row and a
 // public event, and the rows would sit in two tables no read ever consults.
 func TestOnlyAnInboundMessageCarriesADisposition(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := seedWaitingContact(t, e)
 	seedWaitingMessageLinked(t, e, "thread-outbound-probe", "inbound", "A real wait",

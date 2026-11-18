@@ -51,6 +51,7 @@ func syncMeeting(t *testing.T, env captureEnv, msgID string) {
 // nobody created — which is the state that refused a partner the workspace was
 // meeting.
 func TestTheGuestOnACapturedMeetingBecomesAContact(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 
@@ -71,6 +72,7 @@ func TestTheGuestOnACapturedMeetingBecomesAContact(t *testing.T) {
 // unreturned. Without this the test above is satisfied by a ladder that creates
 // for everybody, which is what the exchange requirement exists to prevent.
 func TestOneOrdinaryMessageStillCreatesNobody(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 

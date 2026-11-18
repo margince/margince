@@ -24,7 +24,7 @@ func (h aiAdminHandlers) GetAiBudget(w http.ResponseWriter, r *http.Request) {
 		httperr.Write(w, r, err)
 		return
 	}
-	out.Locks = loadedLocks([]config.Any{ai.BudgetSettings})
+	out.Locks = loadedLocks(r.Context(), []config.Any{ai.BudgetSettings})
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
@@ -42,7 +42,7 @@ func (h aiAdminHandlers) ReplaceAiBudget(w http.ResponseWriter, r *http.Request)
 		httperr.Write(w, r, err)
 		return
 	}
-	out.Locks = loadedLocks([]config.Any{ai.BudgetSettings})
+	out.Locks = loadedLocks(r.Context(), []config.Any{ai.BudgetSettings})
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 

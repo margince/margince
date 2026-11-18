@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 )
 
 // EarlyPool opens a pool onto the app database BEFORE the harness boots, for the
@@ -24,7 +25,7 @@ import (
 // *testing.T has no reason to sit in either one of them.
 func EarlyPool(t *testing.T) *pgxpool.Pool {
 	t.Helper()
-	pool, err := database.NewPool(context.Background(), AppDSN(t))
+	pool, err := database.NewPool(context.Background(), testdb.For(t).AppDSN)
 	if err != nil {
 		t.Fatalf("opening the pre-boot pool: %v", err)
 	}

@@ -20,6 +20,7 @@ import (
 )
 
 func TestSubscribeResetReceivesThePublishedWorkspace(t *testing.T) {
+	t.Parallel()
 	ctx, rdb := purgeTestRedis(t)
 	ws := ids.NewV7()
 	got := make(chan ids.UUID, 1)
@@ -77,6 +78,7 @@ func TestSubscribeResetReceivesThePublishedWorkspace(t *testing.T) {
 // to keep delivering every reset that arrives afterward, or one publisher's
 // encoding drift silently stops cache flushing for every workspace.
 func TestSubscribeResetSkipsAMalformedPayloadAndKeepsDelivering(t *testing.T) {
+	t.Parallel()
 	ctx, rdb := purgeTestRedis(t)
 	ws := ids.NewV7()
 	got := make(chan ids.UUID, 1)
@@ -137,6 +139,7 @@ func TestSubscribeResetSkipsAMalformedPayloadAndKeepsDelivering(t *testing.T) {
 // a subscriber that never comes back, so the done channel is what actually
 // proves the exit rather than the test merely returning.
 func TestSubscribeResetReturnsPromptlyAfterCancel(t *testing.T) {
+	t.Parallel()
 	ctx, rdb := purgeTestRedis(t)
 	runCtx, cancel := context.WithCancel(ctx)
 	ready := make(chan struct{})

@@ -16,6 +16,7 @@ import (
 )
 
 func TestACommittedInputEditIsUnknownUntilItsMarkerRuns(t *testing.T) {
+	t.Parallel()
 	e := setupFreshness(t)
 	env := e.editDeal(t, e.faulted, 3700000)
 	if f := e.freshness(t); f.Known {
@@ -33,6 +34,7 @@ func TestACommittedInputEditIsUnknownUntilItsMarkerRuns(t *testing.T) {
 }
 
 func TestACompleteCheckReadsCommittedInputsWithoutTheConsumer(t *testing.T) {
+	t.Parallel()
 	e := setupFreshness(t)
 	e.editDeal(t, e.faulted, 3800000)
 	if err := e.scan(t); err != nil {
@@ -44,6 +46,7 @@ func TestACompleteCheckReadsCommittedInputsWithoutTheConsumer(t *testing.T) {
 }
 
 func TestAnUndeliveredEditDuringTheCheckCannotBeClearedByIt(t *testing.T) {
+	t.Parallel()
 	e := setupFreshness(t)
 	duringRead := func(ctx context.Context, tx pgx.Tx, at time.Time, coverage []assurance.SourceCoverage) ([]assurance.Subject, error) {
 		subjects, err := AssuranceSubjects(ctx, tx, at, coverage)
@@ -59,6 +62,7 @@ func TestAnUndeliveredEditDuringTheCheckCannotBeClearedByIt(t *testing.T) {
 }
 
 func TestWorkCreatedAfterTheCheckLeavesItsInputsUnread(t *testing.T) {
+	t.Parallel()
 	e := setupFreshness(t)
 	if err := e.run(t); err != nil {
 		t.Fatal(err)
@@ -69,6 +73,7 @@ func TestWorkCreatedAfterTheCheckLeavesItsInputsUnread(t *testing.T) {
 }
 
 func TestAnIncompleteCheckLeavesCommittedInputsUnread(t *testing.T) {
+	t.Parallel()
 	e := setupFreshness(t)
 	e.editDeal(t, e.faulted, 4000000)
 	unavailable := func(context.Context, pgx.Tx, time.Time) []assurance.SourceCoverage {
@@ -85,6 +90,7 @@ func TestAnIncompleteCheckLeavesCommittedInputsUnread(t *testing.T) {
 }
 
 func TestARunWithoutOutboxTrackingIsUnknownUntilTheNextCheck(t *testing.T) {
+	t.Parallel()
 	e := setupFreshness(t)
 	e.WsExec(t, `UPDATE assurance_run SET outbox_inputs_tracked = false`)
 	if f := e.freshness(t); f.Known {

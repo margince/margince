@@ -17,6 +17,7 @@ import (
 )
 
 func TestLinkedCorrectionReachesIntroductionsAndDecidedApprovals(t *testing.T) {
+	t.Parallel()
 	ctx := principal.SystemActing(context.Background(), "privacy_test")
 	tx := subjectColumnsTx(ctx, t)
 	subject, _, _ := seedDedupePairs(ctx, t, tx)
@@ -52,6 +53,7 @@ func TestLinkedCorrectionReachesIntroductionsAndDecidedApprovals(t *testing.T) {
 }
 
 func TestRequestIdentityIsKeptUntilOlderLinkedImagesAreCorrected(t *testing.T) {
+	t.Parallel()
 	ctx := principal.SystemActing(context.Background(), "privacy_test")
 	tx := subjectColumnsTx(ctx, t)
 	subject, _, _ := seedDedupePairs(ctx, t, tx)
@@ -87,6 +89,7 @@ func TestRequestIdentityIsKeptUntilOlderLinkedImagesAreCorrected(t *testing.T) {
 }
 
 func TestLinkedCorrectionKeepsDisputedRequestCopies(t *testing.T) {
+	t.Parallel()
 	ctx := principal.SystemActing(context.Background(), "privacy_test")
 	tx := subjectColumnsTx(ctx, t)
 	subject, _, _ := seedDedupePairs(ctx, t, tx)
@@ -113,6 +116,7 @@ func TestLinkedCorrectionKeepsDisputedRequestCopies(t *testing.T) {
 type auditPageForTest func(context.Context, pgx.Tx, ids.UUID, ids.UUID, int, CountryReader) (HistoricalAuditPage, error)
 
 func TestHistoricalEntryProofCannotRedactAnotherEntryOnTheSameRecord(t *testing.T) {
+	t.Parallel()
 	ctx := principal.SystemActing(context.Background(), "privacy_test")
 	tx := subjectColumnsTx(ctx, t)
 	record := ids.NewV7()
@@ -135,6 +139,7 @@ func TestHistoricalEntryProofCannotRedactAnotherEntryOnTheSameRecord(t *testing.
 }
 
 func TestTheLinkedMatcherDoesNotInferASubjectFromAnEditableWeeklyLabel(t *testing.T) {
+	t.Parallel()
 	ctx := principal.SystemActing(context.Background(), "privacy_test")
 	tx := subjectColumnsTx(ctx, t)
 	subject, _, _ := seedDedupePairs(ctx, t, tx)
@@ -158,6 +163,7 @@ func TestTheLinkedMatcherDoesNotInferASubjectFromAnEditableWeeklyLabel(t *testin
 }
 
 func TestDeletedBuyerCommentCopiesRespectTheDealHoldAndLaterHistory(t *testing.T) {
+	t.Parallel()
 	ctx := principal.SystemActing(context.Background(), "privacy_test")
 	tx := subjectColumnsTx(ctx, t)
 	deal, room, participant := seedLegacyErasedSeat(ctx, t, tx, true)
@@ -196,6 +202,7 @@ func TestDeletedBuyerCommentCopiesRespectTheDealHoldAndLaterHistory(t *testing.T
 // A session an older erasure deleted keeps no audit copy once the seat's
 // erasure is known.
 func TestDeletedBuyerSessionCopiesAreRedacted(t *testing.T) {
+	t.Parallel()
 	ctx := principal.SystemActing(context.Background(), "privacy_test")
 	tx := subjectColumnsTx(ctx, t)
 	_, _, participant := seedLegacyErasedSeat(ctx, t, tx, false)

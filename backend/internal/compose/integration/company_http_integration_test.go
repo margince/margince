@@ -83,6 +83,7 @@ func wellFormedCompany() AnyMap {
 // The gate's whole contract: a bare installation has not described itself, and
 // the SAME GET answers the company once a human has saved it.
 func TestCompanyIs404UntilAHumanSavesItOverHTTP(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -126,6 +127,7 @@ func TestCompanyIs404UntilAHumanSavesItOverHTTP(t *testing.T) {
 // or whitespace-only, is a 422 that NAMES that field — the human is told which
 // answer is missing rather than left to guess.
 func TestCompanyRequiredFieldsAreNamedIndividually(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -169,6 +171,7 @@ func TestCompanyRequiredFieldsAreNamedIndividually(t *testing.T) {
 // Website is optional and forgiving of what a human types, but an answer that
 // could not name a host is refused rather than stored.
 func TestCompanyWebsiteIsOptionalAndNormalised(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -209,6 +212,7 @@ func TestCompanyWebsiteIsOptionalAndNormalised(t *testing.T) {
 // Saving twice is an UPDATE of the installation's own company — never a second
 // one. An optional field sent empty is cleared; one omitted is left as it was.
 func TestCompanySavingTwiceUpdatesTheAnchorOverHTTP(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -272,6 +276,7 @@ func TestCompanySavingTwiceUpdatesTheAnchorOverHTTP(t *testing.T) {
 }
 
 func TestCompanyContextScopesAreBoundedOverHTTP(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -310,6 +315,7 @@ func TestCompanyContextScopesAreBoundedOverHTTP(t *testing.T) {
 // it. A write-scoped passport is still refused.
 // Renaming the installation stays an administrator's, so a human names it first.
 func TestAnAgentSavesTheCompanyAsAgentNotAsAHuman(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -344,6 +350,7 @@ func TestAnAgentSavesTheCompanyAsAgentNotAsAHuman(t *testing.T) {
 // A null on a profile field clears it, as an empty string does. A null on the
 // website names nothing the company can be without, so it is refused.
 func TestACompanyProfileFieldClearsOnNull(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	body := wellFormedCompany()

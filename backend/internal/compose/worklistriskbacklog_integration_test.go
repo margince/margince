@@ -156,6 +156,7 @@ func (w *waitingBacklog) mailOnDeal(t *testing.T, deal ids.UUID, subject string,
 // its reader's list, and one that came back since its Done returns. The claims
 // share one seed, its cost, and the Done on a card runs last.
 func TestABacklogPastEveryScanCapIsWalkedToItsEnd(t *testing.T) {
+	t.Parallel()
 	b := seedRiskBacklog(t)
 	r := b.r
 	for i := range plannedCapForTest + 6 {

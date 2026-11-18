@@ -43,6 +43,7 @@ func createManualLead(t *testing.T, e *apptest.AppEnv) leadScoreRecord {
 }
 
 func TestEndToEnd_aLeadOriginChangeThatMovedTheScoreGoesBack(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	created := createManualLead(t, e)
@@ -71,6 +72,7 @@ func TestEndToEnd_aLeadOriginChangeThatMovedTheScoreGoesBack(t *testing.T) {
 // Under a Commercial Judgement override the rescore moves the machine value and
 // leaves the human's number alone, so the restore must do the same.
 func TestEndToEnd_aLeadOriginChangeUnderAnOverrideGoesBack(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	created := createManualLead(t, e)

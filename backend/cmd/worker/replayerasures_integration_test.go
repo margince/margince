@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/dbsettings"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -37,14 +38,15 @@ const restoredAddress = "geloescht@betroffene.example"
 // an erasure, so the contact's rows came back and the suppression list lost
 // the entry. Only the journal in the object store still names the address.
 func TestReplayErasuresTakesAgainWhatARestoreBroughtBack(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
-	eraser := journalledEraser(t, e)
+	environ, eraser := journalledEraser(t, e)
 	eraseAndExport(t, e, eraser, seedContactWithAddress(t, e, restoredAddress))
 
 	rollBackSuppressionList(t)
 	restored := seedContactWithAddress(t, e, restoredAddress)
 
-	out, err := replayErasures(t, e)
+	out, err := replayErasures(t, e, environ)
 	if err != nil {
 		t.Fatalf("replay-erasures: %v", err)
 	}
@@ -59,14 +61,15 @@ func TestReplayErasuresTakesAgainWhatARestoreBroughtBack(t *testing.T) {
 // A contact known only by a chat account carries no address. The replay
 // matches the account itself, as the erasure hashed it.
 func TestReplayErasuresTakesAgainAContactKnownOnlyByAChatAccount(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
-	eraser := journalledEraser(t, e)
+	environ, eraser := journalledEraser(t, e)
 	eraseAndExport(t, e, eraser, seedContactWithChatAccount(t, e))
 
 	rollBackSuppressionList(t)
 	restored := seedContactWithChatAccount(t, e)
 
-	out, err := replayErasures(t, e)
+	out, err := replayErasures(t, e, environ)
 	if err != nil {
 		t.Fatalf("replay-erasures: %v", err)
 	}
@@ -81,15 +84,16 @@ func TestReplayErasuresTakesAgainAContactKnownOnlyByAChatAccount(t *testing.T) {
 // The journal ends at its last export. The command says when, so the operator
 // knows which erasures to take again by hand.
 func TestReplayErasuresSaysWhichErasuresItCannotCover(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
-	eraser := journalledEraser(t, e)
+	environ, eraser := journalledEraser(t, e)
 	eraseAndExport(t, e, eraser, seedContactWithAddress(t, e, restoredAddress))
 	manifest, err := eraser.ReadJournalManifest(e.Admin())
 	if err != nil {
 		t.Fatalf("reading the manifest: %v", err)
 	}
 
-	out, err := replayErasures(t, e)
+	out, err := replayErasures(t, e, environ)
 	if err != nil {
 		t.Fatalf("replay-erasures: %v", err)
 	}
@@ -104,13 +108,14 @@ func TestReplayErasuresSaysWhichErasuresItCannotCover(t *testing.T) {
 // An empty journal is most often a store pointed at the wrong place. The
 // operator has to say it is right before the replay reports a clean pass.
 func TestReplayErasuresRefusesAnEmptyJournalUnlessTold(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
-	configureObjectStore(t)
+	environ := objectStoreIn(t.TempDir())
 
-	if _, err := replayErasures(t, e); !errors.Is(err, compose.ErrReplayJournalEmpty) {
+	if _, err := replayErasures(t, e, environ); !errors.Is(err, compose.ErrReplayJournalEmpty) {
 		t.Fatalf("err = %v, want an empty journal refused", err)
 	}
-	out, err := replayErasures(t, e, "--empty-journal-ok")
+	out, err := replayErasures(t, e, environ, "--empty-journal-ok")
 	if err != nil {
 		t.Fatalf("replay-erasures --empty-journal-ok: %v", err)
 	}
@@ -122,11 +127,10 @@ func TestReplayErasuresRefusesAnEmptyJournalUnlessTold(t *testing.T) {
 // Without the object store the journal cannot be read. A pass over the
 // rolled-back list alone would report a clean run it cannot vouch for.
 func TestReplayErasuresRefusesToRunWithoutTheObjectStore(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
-	t.Setenv(blobstore.EnvEndpoint, "")
-	t.Setenv(blobstore.EnvPath, "")
 
-	if _, err := replayErasures(t, e, "--empty-journal-ok"); !errors.Is(err, compose.ErrReplayNeedsObjectStore) {
+	if _, err := replayErasures(t, e, objectStoreIn(""), "--empty-journal-ok"); !errors.Is(err, compose.ErrReplayNeedsObjectStore) {
 		t.Fatalf("err = %v, want the replay refused for want of the journal", err)
 	}
 }
@@ -138,6 +142,7 @@ const workerProgramEnv = "MARGINCE_TEST_WORKER_PROGRAM"
 // worker's whole boot. The boot registers extensions once per process, so the
 // test runs it in a child process of its own.
 func TestTheWorkerProgramRunsReplayErasures(t *testing.T) {
+	t.Parallel()
 	if os.Getenv(workerProgramEnv) != "" {
 		if err := run(t.Context(), []string{"replay-erasures", "--empty-journal-ok"}, os.Stdout); err != nil {
 			t.Fatalf("worker replay-erasures: %v", err)
@@ -149,21 +154,21 @@ func TestTheWorkerProgramRunsReplayErasures(t *testing.T) {
 		t.Fatal(err)
 	}
 	integration.Setup(t)
-	configureObjectStore(t)
 	child := exec.CommandContext(t.Context(), os.Args[0], "-test.run=^TestTheWorkerProgramRunsReplayErasures$", "-test.v")
-	child.Env = append(os.Environ(), workerProgramEnv+"=1", "MARGINCE_ENV=dev",
-		dbsettings.DSN.Env()+"="+os.Getenv("MARGINCE_TEST_APP_DSN"))
+	child.Env = append(objectStoreIn(t.TempDir()), workerProgramEnv+"=1", "MARGINCE_ENV=dev",
+		dbsettings.DSN.Env()+"="+testdb.For(t).AppDSN)
 	out, err := child.CombinedOutput()
 	if err != nil || !strings.Contains(string(out), "holds no entry") {
 		t.Fatalf("worker replay-erasures: %v\n%s\nwant the empty journal named", err, out)
 	}
 }
 
-// replayErasures runs the command through the worker's own dispatch.
-func replayErasures(t *testing.T, e *integration.Env, flags ...string) (string, error) {
+// replayErasures runs the command through the worker's own dispatch, under
+// environ.
+func replayErasures(t *testing.T, e *integration.Env, environ []string, flags ...string) (string, error) {
 	t.Helper()
 	vault := newTestVault(t, e)
-	settings, err := configtest.Load(t, "", config.Environ(), nil, blobstore.Settings()...)
+	settings, err := configtest.Load(t, "", environ, nil, blobstore.Settings()...)
 	if err != nil {
 		t.Fatalf("loading the blobstore settings: %v", err)
 	}
@@ -177,15 +182,16 @@ func replayErasures(t *testing.T, e *integration.Env, flags ...string) (string, 
 	return out.String(), err
 }
 
-// journalledEraser points the command at a filesystem object store and returns
-// the eraser the api would build over the same store.
-func journalledEraser(t *testing.T, e *integration.Env) *privacy.Eraser {
+// journalledEraser answers the environment that points the command at a
+// filesystem object store, and the eraser the api would build over that store.
+func journalledEraser(t *testing.T, e *integration.Env) ([]string, *privacy.Eraser) {
 	t.Helper()
-	store, err := blobstore.NewFilesystem(configureObjectStore(t))
+	dir := t.TempDir()
+	store, err := blobstore.NewFilesystem(dir)
 	if err != nil {
 		t.Fatalf("opening the object store: %v", err)
 	}
-	return compose.ComposedEraser(e.Pool, store, nil)
+	return objectStoreIn(dir), compose.ComposedEraser(e.Pool, store, nil)
 }
 
 func eraseAndExport(t *testing.T, e *integration.Env, eraser *privacy.Eraser, contact ids.UUID) {
@@ -198,12 +204,10 @@ func eraseAndExport(t *testing.T, e *integration.Env, eraser *privacy.Eraser, co
 	}
 }
 
-func configureObjectStore(t *testing.T) string {
-	t.Helper()
-	dir := t.TempDir()
-	t.Setenv(blobstore.EnvEndpoint, "")
-	t.Setenv(blobstore.EnvPath, dir)
-	return dir
+// objectStoreIn is this process's environment with the object store at dir;
+// an empty dir names none.
+func objectStoreIn(dir string) []string {
+	return append(config.Environ(), blobstore.EnvEndpoint+"=", blobstore.EnvPath+"="+dir)
 }
 
 func newTestVault(t *testing.T, e *integration.Env) keyvault.Vault {

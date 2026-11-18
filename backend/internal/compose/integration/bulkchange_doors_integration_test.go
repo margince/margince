@@ -163,6 +163,7 @@ func reassignContacts(owner string, items []bulkItemDTO) AnyMap {
 }
 
 func TestBothDoorsChangeASmallSelectionDirectlyUnderOneBatch(t *testing.T) {
+	t.Parallel()
 	e, _, doors := bulkDoorsApp(t, "bulk-small", agentvolume.Limits{})
 	colleague := seedColleague(t, e)
 	for _, door := range doors {
@@ -201,6 +202,7 @@ func assertTheAuditLogFindsTheBatch(t *testing.T, e *apptest.AppEnv, batchID str
 }
 
 func TestBothDoorsNeedTheirPreviewsTokenAboveTenAndSpendItOnce(t *testing.T) {
+	t.Parallel()
 	e, _, doors := bulkDoorsApp(t, "bulk-token", agentvolume.Limits{})
 	colleague, other := seedColleague(t, e), seedColleague(t, e)
 	for _, door := range doors {
@@ -229,6 +231,7 @@ func TestBothDoorsNeedTheirPreviewsTokenAboveTenAndSpendItOnce(t *testing.T) {
 }
 
 func TestBothDoorsSkipARecordEditedAfterThePreview(t *testing.T) {
+	t.Parallel()
 	e, _, doors := bulkDoorsApp(t, "bulk-stale", agentvolume.Limits{})
 	colleague := seedColleague(t, e)
 	for _, door := range doors {
@@ -251,6 +254,7 @@ func TestBothDoorsSkipARecordEditedAfterThePreview(t *testing.T) {
 // first answer; the tool door refuses to replay an answer that names no record
 // it can re-check, which the tool surface does for every such answer.
 func TestARetriedExecutionIsNotASecondChange(t *testing.T) {
+	t.Parallel()
 	e, _, doors := bulkDoorsApp(t, "bulk-retry", agentvolume.Limits{})
 	colleague := seedColleague(t, e)
 	for _, door := range doors {
@@ -272,6 +276,7 @@ func TestARetriedExecutionIsNotASecondChange(t *testing.T) {
 }
 
 func TestBothDoorsReassignAndArchiveDeals(t *testing.T) {
+	t.Parallel()
 	e, _, doors := bulkDoorsApp(t, "bulk-deals", agentvolume.Limits{})
 	colleague := seedColleague(t, e)
 	stages := apptest.DiscoverSeededPipeline(t, e)

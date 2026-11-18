@@ -24,6 +24,7 @@ func (e *introEnv) storedCount(t *testing.T) int {
 // The contract counts characters, so a Vietnamese reason is held to the same
 // number as an English one, and text past it is refused rather than cut.
 func TestAnAskCountsCharactersAndRefusesWhatIsTooLong(t *testing.T) {
+	t.Parallel()
 	e := setupIntro(t)
 	cases := []struct {
 		name   string
@@ -68,6 +69,7 @@ func TestAnAskCountsCharactersAndRefusesWhatIsTooLong(t *testing.T) {
 }
 
 func TestAnAnswerAndAWithdrawalRefuseAReasonOverTheLimit(t *testing.T) {
+	t.Parallel()
 	e := setupIntro(t)
 	id, err := e.store.Create(e.asUser(e.requester), e.ask())
 	if err != nil {
@@ -92,6 +94,7 @@ func TestAnAnswerAndAWithdrawalRefuseAReasonOverTheLimit(t *testing.T) {
 // An ask that states neither enum is a contact typing with no fallback, and
 // the store records exactly that.
 func TestAnAskThatStatesNoEnumIsStoredAsHumanWithNoFallback(t *testing.T) {
+	t.Parallel()
 	e := setupIntro(t)
 	req := e.ask()
 	req.NoteGeneratedBy, req.FallbackPolicy = "", ""

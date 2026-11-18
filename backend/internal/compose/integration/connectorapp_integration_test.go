@@ -63,6 +63,7 @@ func googleAppStore(t *testing.T, e *SearchEnv) *capture.ConnectorAppStore {
 // because the reader is where a redaction would live and the row is what an
 // operator with database access actually sees.
 func TestTheStoredGoogleAppHoldsARefAndNeverTheSecret(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := e.captureAdmin()
 	const secret = "GOCSPX-super-secret-value"
@@ -93,6 +94,7 @@ func TestTheStoredGoogleAppHoldsARefAndNeverTheSecret(t *testing.T) {
 // matters is the bytes that land in the sink: a redaction that stops being
 // applied leaves the declaration looking correct.
 func TestTheAuditTrailOfAGoogleAppChangeCarriesNoRef(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := e.captureAdmin()
 
@@ -124,6 +126,7 @@ func TestTheAuditTrailOfAGoogleAppChangeCarriesNoRef(t *testing.T) {
 // transport — a test that read the setting and unsealed by hand would prove the
 // vault works and nothing about whether the app reaches the flow that needs it.
 func TestTheStoredGoogleAppIsWhatTheConnectTransportResolves(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := e.captureAdmin()
 	store := googleAppStore(t, e)
@@ -146,6 +149,7 @@ func TestTheStoredGoogleAppIsWhatTheConnectTransportResolves(t *testing.T) {
 // An installation with no app resolves nothing, and that is not an error: the
 // connect surface says so rather than failing.
 func TestNoGoogleAppResolvesToNothingRatherThanAnError(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 
 	_, ok, err := googleAppStore(t, e).Credentials(e.captureAdmin(), capture.AppProviderGoogle)
@@ -163,6 +167,7 @@ func TestNoGoogleAppResolvesToNothingRatherThanAnError(t *testing.T) {
 // one no operator can find to delete, and it stays decryptable by anything
 // holding the root key.
 func TestRotatingTheGoogleAppRetiresTheOldSecret(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := e.captureAdmin()
 	store := googleAppStore(t, e)
@@ -191,6 +196,7 @@ func TestRotatingTheGoogleAppRetiresTheOldSecret(t *testing.T) {
 // Removing clears the app and destroys the secret, and removing an absent one
 // succeeds: the caller asked for a state and that state already holds.
 func TestRemovingTheGoogleAppIsIdempotentAndDestroysTheSecret(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := e.captureAdmin()
 	store := googleAppStore(t, e)
@@ -224,6 +230,7 @@ func TestRemovingTheGoogleAppIsIdempotentAndDestroysTheSecret(t *testing.T) {
 // key, which would otherwise surface much later as an opaque invalid_client from
 // Google on somebody's first connect.
 func TestAMalformedClientIDIsRefusedWithoutSealingAnything(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := e.captureAdmin()
 
@@ -247,6 +254,7 @@ func TestAMalformedClientIDIsRefusedWithoutSealingAnything(t *testing.T) {
 // sealing leaves a credential in the vault that no ref names, which is the
 // failure an error-only assertion cannot see.
 func TestAnUnprivilegedSeatCannotStoreAGoogleApp(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	before := googleSealedCount(t, e)
 
@@ -335,6 +343,7 @@ func assertVaultRefGone(ctx context.Context, t *testing.T, e *SearchEnv, ref, wh
 // different questions: Read tells a contact what is configured, this unseals the
 // secret and hands the server what it needs to talk to Google.
 func TestGoogleAppCredentialsResolveTheSealedSecret(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := e.captureAdmin()
 	store := googleAppStore(t, e)
@@ -371,6 +380,7 @@ func TestGoogleAppCredentialsResolveTheSealedSecret(t *testing.T) {
 // generated enforces it: oapi-codegen emits no validation, and the decoder caps
 // only the whole body.
 func TestGoogleAppRefusesAnOversizedHalfWithoutSealingIt(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := e.captureAdmin()
 	store := googleAppStore(t, e)

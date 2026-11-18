@@ -46,6 +46,7 @@ type entitlement struct {
 }
 
 func TestLicenseEntitlementCountsTheSeatsThatAct(t *testing.T) {
+	t.Parallel()
 	// The posture is injected, because no token this repository can mint is
 	// accepted by the bundled keyset. What is REAL here is the seat count and
 	// the verdict the server reaches with it — the half a fixture cannot fake.
@@ -160,6 +161,7 @@ func TestLicenseEntitlementCountsTheSeatsThatAct(t *testing.T) {
 // an admin their entitlement surface was broken rather than that they hold no
 // license.
 func TestTheEntitlementSurfaceAnswersAnUnlicensedInstallation(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithOptions(t, compose.WithLicensePosture(func() licensecheck.Posture {
 		return licensecheck.Posture{State: licensecheck.StateAbsent, CheckedAt: time.Now()}
 	}))
@@ -185,6 +187,7 @@ var licenseReaderPerms = principal.Permissions{
 // refused before a single row is counted, so no seat count can reach a principal
 // who may not have it.
 func TestTheSeatCountRefusesAPrincipalWithoutTheLicenseGrant(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, licenseReaderPerms)
 

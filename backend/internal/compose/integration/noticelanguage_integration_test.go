@@ -24,6 +24,7 @@ import (
 )
 
 func TestTheBacklogNoticeIsWrittenInTheInstallationsBaseLanguage(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.Admin()
 

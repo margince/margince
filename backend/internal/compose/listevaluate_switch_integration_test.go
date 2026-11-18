@@ -18,6 +18,7 @@ import (
 // With lists switched off the Live List check records nothing, so no list
 // history grows and no list.evaluated event leaves; switched on, it checks.
 func TestTheLiveListCheckRunsOnlyWhileListsAreOn(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	list, err := NewCollectionsStore(e.Pool).CreateList(e.Admin(), collections.CreateListInput{
 		Name: "Everyone", EntityType: "contact", ListType: "dynamic", Sharing: "workspace",

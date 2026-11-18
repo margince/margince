@@ -22,16 +22,15 @@ import (
 func TestTheMailReadNeedsItsDeclarationAndAnUnattendedCall(t *testing.T) {
 	deal := ids.NewV7().String()
 	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
-	binding := extensionRuntimeBinding{pool: &pgxpool.Pool{}}
+	binding := extensionRuntimeBinding{pool: &pgxpool.Pool{}, composed: composeReader(extension.SystemReadDeals)}
 
-	composeReader(t, extension.SystemReadDeals)
 	undeclared := deliveryRuntimeFor(ctx, "dealmirror", "1.0.0", "subscription/mirror", binding)
 	defer undeclared.release()
 	if _, err := undeclared.Activities().Mail(ctx, extension.UserID(ids.NewV7().String()), deal, extension.MailQuery{}); !errors.Is(err, extension.ErrUndeclaredRead) {
 		t.Errorf("an undeclared Mail: err = %v, want ErrUndeclaredRead", err)
 	}
 
-	composeReader(t, extension.SystemReadActivities)
+	binding.composed = composeReader(extension.SystemReadActivities)
 	attended := runtimeFor(ctx, "dealmirror", "1.0.0", "tool/probe", binding)
 	defer attended.release()
 	if _, err := attended.Activities().Mail(ctx, extension.UserID(ids.NewV7().String()), deal, extension.MailQuery{}); !errors.Is(err, extension.ErrAttendedRead) {

@@ -50,6 +50,7 @@ func billingRolesAt(t *testing.T, companyID ids.UUID) []string {
 }
 
 func TestMergingTwoBillingContactsKeepsBothTheirRoles(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 
@@ -98,6 +99,7 @@ func TestMergingTwoBillingContactsKeepsBothTheirRoles(t *testing.T) {
 }
 
 func TestMergingTwoBillingContactsCollapsesTheSameRoleOnce(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 
@@ -134,6 +136,7 @@ func TestMergingTwoBillingContactsCollapsesTheSameRoleOnce(t *testing.T) {
 }
 
 func TestMergingTwoCompaniesKeepsBothBillingRolesOfOneContact(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 

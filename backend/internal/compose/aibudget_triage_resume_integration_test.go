@@ -27,6 +27,7 @@ import (
 )
 
 func TestDomainTriageReadResumesAfterBudgetDeferral(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	next := time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC)
 

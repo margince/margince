@@ -26,6 +26,7 @@ import (
 )
 
 func TestATeamLeadsInboxCarriesTheirTeammatesStagedDecision(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	svc := approvals.NewService(e.DB())
@@ -49,6 +50,7 @@ func TestATeamLeadsInboxCarriesTheirTeammatesStagedDecision(t *testing.T) {
 }
 
 func TestASeatUnderOwnScopeSeesOnlyItsOwn(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	svc := approvals.NewService(e.DB())

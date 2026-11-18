@@ -104,6 +104,7 @@ func (e *dedupeEnv) archived(ctx context.Context, t *testing.T, id ids.CompanyID
 // Both halves land, and the second half is the one that makes the first stick:
 // the company does not come back on the next message from the same domain.
 func TestRejectingACompanyArchivesItAndKeepsTheDomainFromMintingAnother(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.asRejector()
 	company := e.seedCompanyOnDomain(ctx, t, "Expensify Ltd", "expensify.test")
@@ -156,6 +157,7 @@ func TestRejectingACompanyArchivesItAndKeepsTheDomainFromMintingAnother(t *testi
 // took a 403 on the second. Here the refusal lands with nothing written, which
 // is what one transaction buys.
 func TestRejectingNeedsBothTheArchiveAndTheDomainAuthority(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	seed := e.asRejector()
 	company := e.seedCompanyOnDomain(seed, t, "Expensify Ltd", "expensify.test")
@@ -209,6 +211,7 @@ func (e *dedupeEnv) asHalfSeat(grant principal.ObjectGrant) context.Context {
 // tomorrow on the one that was never refused. There is no parameter to get
 // wrong now, and this is the case that fails if one is ever added back.
 func TestRejectingRefusesTheDomainTheCompanyUsesNow(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.asRejector()
 	company := e.seedCompanyOnDomain(ctx, t, "Kestner GmbH", "old.test")
@@ -245,6 +248,7 @@ func TestRejectingRefusesTheDomainTheCompanyUsesNow(t *testing.T) {
 // refusal would stop anything. Archiving it silently would do half of what the
 // button promises and say the other half happened.
 func TestRejectingACompanyWithNoDomainIsRefusedAndLeavesItAlone(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.asRejector()
 	company := e.seedCompanyOnDomain(ctx, t, "Typed By Hand Ltd", "")

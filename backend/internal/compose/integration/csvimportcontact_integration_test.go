@@ -31,6 +31,7 @@ import (
 // introduces on its own — an email is a child row, so a comparison that reads
 // the record's flat fields finds no `email` and calls every row changed.
 func TestCSVImportOfKnownContactsCreatesContacts(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	contactsBefore := importedContactCount(t, e)
 	leadsBefore := leadCount(t, e)
@@ -100,6 +101,7 @@ func TestCSVImportOfKnownContactsCreatesContacts(t *testing.T) {
 // keying a contact file on its addresses. What must never happen is the preview
 // promising one disposition and the commit producing another.
 func TestCSVImportOfAClaimedEmailPreviewsWhatTheCommitDoes(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 
 	first, status := importjobtest.UploadCSV(t, e, "contact", prospectCSV)
@@ -163,6 +165,7 @@ func TestCSVImportOfAClaimedEmailPreviewsWhatTheCommitDoes(t *testing.T) {
 // previous CSV run — because that is the case the importer's identity map
 // cannot help with, and the one every real migration hits.
 func TestCSVImportLinksContactsToTheirEmployers(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	for _, name := range []string{"Analytical Engines", "Bletchley Ltd"} {
 		if status := e.Call(t, http.MethodPost, "/v1/companies",
@@ -234,6 +237,7 @@ func TestCSVImportLinksContactsToTheirEmployers(t *testing.T) {
 // for deciding it. Two different legal entities linked by a guess is a wrong
 // answer nobody sees; a missing link is one the report names.
 func TestCSVImportDoesNotLinkAcrossLegalForms(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	if status := e.Call(t, http.MethodPost, "/v1/companies",
 		map[string]any{"source": "manual", "display_name": "Northwind GmbH"}, nil, nil); status != http.StatusCreated {
@@ -286,6 +290,7 @@ func TestCSVImportDoesNotLinkAcrossLegalForms(t *testing.T) {
 // that link as resolvable would promise something the commit cannot do, which is
 // the disagreement the whole dry run exists to prevent.
 func TestCSVImportDoesNotPromiseLinksForRowsThatWillNotLand(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	if status := e.Call(t, http.MethodPost, "/v1/companies",
 		map[string]any{"source": "manual", "display_name": "Analytical Engines"}, nil, nil); status != http.StatusCreated {
@@ -345,6 +350,7 @@ func TestCSVImportDoesNotPromiseLinksForRowsThatWillNotLand(t *testing.T) {
 // looks like is a contact told that a second Kelvin Systems exists, which is a
 // company they will then go and create.
 func TestCSVImportLinksACompanyWhoseTwoNamesAreTheSame(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	if status := e.Call(t, http.MethodPost, "/v1/companies",
 		map[string]any{"source": "manual", "display_name": "Kelvin Systems", "legal_name": "Kelvin Systems"},
@@ -372,6 +378,7 @@ func TestCSVImportLinksACompanyWhoseTwoNamesAreTheSame(t *testing.T) {
 // matches display_name or legal_name, and it must stop at "more than one".
 // Split, the first could pass against a read that matched everything.
 func TestCSVImportResolvesALegalNameAndRefusesASharedOne(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	if status := e.Call(t, http.MethodPost, "/v1/companies",
 		map[string]any{"source": "manual", "display_name": "Faraday", "legal_name": "Faraday Electrical AG"},
@@ -435,6 +442,7 @@ func importOneEmployer(t *testing.T, e *apptest.AppEnv, company string) importRe
 // The run was still reported as undone. Somebody undoing a wrong correction was
 // told it had been taken back while it stood.
 func TestUndoingAnUpdateOnlyRunSaysWhatItDidNotReverse(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	mapping := map[string]string{"Email": "email", "Full Name": "full_name", "Title": "title"}
 
@@ -527,6 +535,7 @@ func contactTitle(t *testing.T, e *apptest.AppEnv, email string) string {
 // A file whose contacts an undone import made can be staged and run again. The
 // undo archived them, so their addresses are free to be created once more.
 func TestAnUndoneImportCanBeStagedAndRunAgain(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	mapping := map[string]string{"Email": "email", "Full Name": "full_name", "Title": "title"}
 	const file = "Email,Full Name,Title\nada@lovelace.example,Ada Lovelace,Analyst\n"
@@ -564,6 +573,7 @@ func TestAnUndoneImportCanBeStagedAndRunAgain(t *testing.T) {
 
 // A Latin-1 file is refused at the upload with a 422 that names the file.
 func TestUploadRefusesAFileThatIsNotUTF8(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	latin1 := "Email,Full Name\nrene@example.test,Ren\xe9 Dupont\n"
 
@@ -580,6 +590,7 @@ func TestUploadRefusesAFileThatIsNotUTF8(t *testing.T) {
 // skips it with its reason, and the commit skips the same row. The report a
 // reader approves is the one the import carries out.
 func TestCSVImportSkipsARowWithASendingSystemsAddressInPreviewAndCommit(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	contactsBefore := importedContactCount(t, e)
 	const file = "Email,Full Name,First Name,Last Name\n" +

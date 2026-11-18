@@ -31,6 +31,7 @@ func ownRecordArchivePerms() principal.Permissions {
 // contact, writable all the same, stays a manager's to archive. The read says
 // which before anyone presses Archive.
 func TestTheOwnerOfAContactArchivesIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	rep := asTeam1Member(e, e.Rep1, ownRecordArchivePerms())
 	mine := ids.From[ids.ContactKind](e.SeedContact(t, "Mine Example", &e.Rep1))
@@ -60,6 +61,7 @@ func TestTheOwnerOfAContactArchivesIt(t *testing.T) {
 
 // The same rule on a company.
 func TestTheOwnerOfACompanyArchivesIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	rep := asTeam1Member(e, e.Rep1, ownRecordArchivePerms())
 	mine := ids.From[ids.CompanyKind](e.SeedCompany(t, "Mine GmbH", &e.Rep1))
@@ -87,6 +89,7 @@ func TestTheOwnerOfACompanyArchivesIt(t *testing.T) {
 // A rep who names themselves owner of a teammate's contact has not been given
 // it, so it stays a manager's to archive.
 func TestAContactTheRepNamedThemselvesOwnerOfStaysTheManagersToArchive(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	rep := asTeam1Member(e, e.Rep1, ownRecordArchivePerms())
 	me := ids.From[ids.UserKind](e.Rep1)

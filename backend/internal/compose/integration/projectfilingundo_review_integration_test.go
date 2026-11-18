@@ -32,6 +32,7 @@ import (
 // A legal hold on the project an activity was filed under outranks the undo: the
 // writer refuses it by name and the trigger refuses a direct delete of the proof.
 func TestAFilingUnderAHeldProjectIsNotUndone(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := FreshOwnerConn(t)
 	f := filedUnderAProject(t, e)
@@ -62,6 +63,7 @@ func TestAFilingUnderAHeldProjectIsNotUndone(t *testing.T) {
 // each state of the activity's links, the database refuses the clear exactly when
 // the Go fragments say something still keeps the activity.
 func TestTheUndoTriggersAgreeWithTheGoPredicates(t *testing.T) {
+	t.Parallel()
 	for name, tc := range map[string]struct {
 		arrange func(t *testing.T, e *Env, f projectStampFixture)
 	}{
@@ -106,6 +108,7 @@ func TestTheUndoTriggersAgreeWithTheGoPredicates(t *testing.T) {
 // A member who can see the activity but not the project learns neither its name
 // nor the words of a decision about it, and the write agrees with the read.
 func TestAProjectTheMemberCannotSeeIsUnnamedAndStillHoldsTheActivity(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := filedUnderAProject(t, e)
 	contact := e.SeedContact(t, "Visible Contact", &e.Rep1)
@@ -149,6 +152,7 @@ func TestAProjectTheMemberCannotSeeIsUnnamedAndStillHoldsTheActivity(t *testing.
 
 // A seat holding only a project grant is refused the read, as for any activity read.
 func TestTheFilingReadNeedsTheActivityReadGrant(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := filedUnderAProject(t, e)
 	noActivities := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
@@ -162,6 +166,7 @@ func TestTheFilingReadNeedsTheActivityReadGrant(t *testing.T) {
 
 // A decider with no display name is told what to fix, not refused as a stranger.
 func TestAnUnnamedMemberIsToldToSetADisplayName(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := filedUnderAProject(t, e)
 	e.WsExec(t, `UPDATE app_user SET display_name = '' WHERE id = $1`, e.AdminUser)
@@ -177,6 +182,7 @@ func TestAnUnnamedMemberIsToldToSetADisplayName(t *testing.T) {
 // Whether a credential's own release of a project relink can be taken back is a
 // question about the activity's state.
 func TestAProjectRelinkIsReleasableOnlyWhileTheUndoCouldTakeItBack(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := FreshOwnerConn(t)
 	f := seedThreadFixture(t, e, owner)
@@ -242,6 +248,7 @@ func TestAProjectRelinkIsReleasableOnlyWhileTheUndoCouldTakeItBack(t *testing.T)
 // evidence landed would leave evidence on an unclassed row. The undo takes the
 // deal's lock first, so it waits for the win and then reads its evidence.
 func TestAnUndoWaitsForADealWinInFlightAndThenRefuses(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := FreshOwnerConn(t)
 	ctx := context.Background()
@@ -315,6 +322,7 @@ func waitUntilBlockedBy(t *testing.T, holder interface {
 // A credential files an activity under a project as its colleague could in the
 // app, also while an erasure is open on the activity's contact. Nothing waits.
 func TestACredentialFilesAnActivityUnderErasureAsItsColleagueCould(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := FreshOwnerConn(t)
 	f := seedThreadFixture(t, e, owner)
@@ -355,6 +363,7 @@ func staysUndoable(e *Env, named []ids.UUID, project ids.UUID) (bool, error) {
 // reading of the holds and its clearing of the class: the undo holds the project
 // FOR SHARE, so it waits for the hold and then refuses.
 func TestAnUndoWaitsForALegalHoldBeingPlacedAndThenRefuses(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := FreshOwnerConn(t)
 	ctx := context.Background()
@@ -386,6 +395,7 @@ func TestAnUndoWaitsForALegalHoldBeingPlacedAndThenRefuses(t *testing.T) {
 // An open erasure request covering a contact on the activity keeps the class, on
 // the write and on the read alike.
 func TestAFilingUnderAnOpenErasureRequestIsNotUndone(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := filedUnderAProject(t, e)
 	contact := e.SeedContact(t, "Erasure Subject", &e.Rep1)
@@ -408,6 +418,7 @@ func TestAFilingUnderAnOpenErasureRequestIsNotUndone(t *testing.T) {
 // A caller who may not read deals is told that something else keeps the activity,
 // not that a deal does.
 func TestACallerWithoutTheDealGrantIsNotToldWhichDealKeepsTheActivity(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := filedUnderAProject(t, e)
 	deal := seedStampFixture(t, e)

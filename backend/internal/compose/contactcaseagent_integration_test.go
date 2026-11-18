@@ -36,6 +36,7 @@ func (s caseRepSeat) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUI
 }
 
 func TestAnAgentsCaseMergeKeepsEveryOtherOwnersAccess(t *testing.T) {
+	t.Parallel()
 	c := setupCases(t)
 	members := c.seedCase(t, c.e.Rep1, c.e.Rep2, c.e.Rep3)
 	c.setPolicy(t, true)

@@ -15,6 +15,7 @@ import (
 )
 
 func TestPublicBookingRefusesArchivedRecipientBeforeConsent(t *testing.T) {
+	t.Parallel()
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
 	apptest.EnableGoogleBookingPage(t, e)
@@ -54,6 +55,7 @@ func TestPublicBookingRefusesArchivedRecipientBeforeConsent(t *testing.T) {
 // stays honest whichever way this installation is wired: a staged mail leaves a
 // delivery behind, and the outcome must agree with it.
 func TestTheMarketingOutcomeAgreesWithWhatWasActuallyStaged(t *testing.T) {
+	t.Parallel()
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
 	apptest.EnableGoogleBookingPage(t, e)
@@ -111,6 +113,7 @@ func TestTheMarketingOutcomeAgreesWithWhatWasActuallyStaged(t *testing.T) {
 // timeline, so the send path's derivation has nothing to read. A rep answering
 // somebody who booked a meeting with them was refused as writing to a stranger.
 func TestAPublicBookingRecordsTheInquiryThatAuthorisesAnsweringIt(t *testing.T) {
+	t.Parallel()
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
 	apptest.EnableGoogleBookingPage(t, e)

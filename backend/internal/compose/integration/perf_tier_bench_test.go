@@ -114,6 +114,7 @@ func benchDatabase(t *testing.T) *pgx.Conn {
 }
 
 func TestPerfBudgetsHoldOnSeededVolumeTier(t *testing.T) {
+	t.Parallel()
 	spec, ok := benchTiers[search.BenchTier(envOr("MARGINCE_BENCH_TIER", string(search.BenchTierSMB)))]
 	if !ok {
 		t.Fatalf("MARGINCE_BENCH_TIER must be one of smb, mid_market")

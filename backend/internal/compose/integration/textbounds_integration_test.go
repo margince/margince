@@ -20,6 +20,7 @@ import (
 )
 
 func TestNewCustomTextFieldsKeepTheSharedDocumentBound(t *testing.T) {
+	t.Parallel()
 	f := setupCFV(t)
 	column := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Long note", Type: customfields.TypeText, Source: "manual"})
 	atLimit := strings.Repeat("界", values.TextDocumentCharacters)
@@ -43,6 +44,7 @@ func TestNewCustomTextFieldsKeepTheSharedDocumentBound(t *testing.T) {
 }
 
 func TestCompanyDescriptionsAdmitTheWholeDocumentWithoutTruncation(t *testing.T) {
+	t.Parallel()
 	f := setupCFV(t)
 	atLimit := strings.Repeat("界", values.TextDocumentCharacters)
 	created, err := f.store.CreateCompany(f.ctx, contacts.CreateCompanyInput{
@@ -69,6 +71,7 @@ func TestCompanyDescriptionsAdmitTheWholeDocumentWithoutTruncation(t *testing.T)
 }
 
 func TestAnUpgradeBoundsCustomTextWithoutChangingEarlierValues(t *testing.T) {
+	t.Parallel()
 	f := setupCFV(t)
 	// Created while every column exists: the guard downs also drop columns the contact writer fills.
 	created, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{FullName: "Earlier custom text", Source: "manual"})

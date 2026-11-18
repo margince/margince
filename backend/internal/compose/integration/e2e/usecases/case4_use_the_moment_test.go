@@ -99,6 +99,7 @@ func (s *scenario) queryPlan(t *testing.T, plan string) agents.QueryWorkspaceRes
 // #2728: the grammar was served and unreachable to a tools-only client, so an
 // assistant had no way to learn that a radius search existed at all.
 func TestCase4TheAssistantCanDiscoverThatAddressesAreSearchableByDistance(t *testing.T) {
+	t.Parallel()
 	s := boot(t, scopesRead)
 
 	got := s.MCP.CallOK(t, "describe_query_vocabulary", nil)
@@ -160,6 +161,7 @@ func advertisesOperator(t *testing.T, document json.RawMessage, target, field, o
 // everything, and an unanswerable radius says so rather than returning an
 // unordered list that looks ordered.
 func TestCase4NearbyCompaniesComeBackNearestFirstAndSayHowComplete(t *testing.T) {
+	t.Parallel()
 	s := boot(t, scopesRead)
 
 	// Three inside the radius at DIFFERENT distances, plus Munich which must be
@@ -260,6 +262,7 @@ func distanceOf(t *testing.T, rows map[ids.UUID]agents.QueryWorkspaceRow, id ids
 // plan looks answerable — but this product does not geocode where contacts live,
 // so there is nothing to measure from.
 func TestCase4ARadiusItCannotMeasureSaysSoInsteadOfAnsweringAnyway(t *testing.T) {
+	t.Parallel()
 	s := boot(t, scopesRead)
 	s.seedLocatedCompany(t, "Dom Digital GmbH", "Köln", cologneLat, cologneLon, s.Rep)
 
@@ -287,6 +290,7 @@ func TestCase4ARadiusItCannotMeasureSaysSoInsteadOfAnsweringAnyway(t *testing.T)
 // thirds of the accounts in the demo CRM belong to somebody other than the
 // caller, so this is the common case rather than an edge.
 func TestCase4EveryCompanySaysWhoOwnsItByName(t *testing.T) {
+	t.Parallel()
 	s := boot(t, scopesRead)
 
 	mine := s.seedLocatedCompany(t, "Dom Digital GmbH", "Köln", cologneLat, cologneLon, s.Rep)

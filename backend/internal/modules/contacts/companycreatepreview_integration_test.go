@@ -21,6 +21,7 @@ import (
 )
 
 func TestCompanyCreationPreviewMatchesDomainsOwnerAndAddressQueue(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	actor, ok := principal.Actor(ctx)
@@ -60,6 +61,7 @@ func TestCompanyCreationPreviewMatchesDomainsOwnerAndAddressQueue(t *testing.T) 
 }
 
 func TestCompanyCreationPreviewCanNameAReadOnlyReviewCandidate(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	existing, err := e.store.CreateCompany(ctx, CreateCompanyInput{DisplayName: "Preview Systems GmbH", Source: "manual", OwnerID: new(ids.From[ids.UserKind](e.otherRep))})

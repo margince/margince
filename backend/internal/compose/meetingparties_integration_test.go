@@ -92,6 +92,7 @@ func outcomeRow(t *testing.T, queue []crmcontracts.WorklistItem, meeting ids.UUI
 // The colleague is linked first and sorts first by name, so a reading that took
 // either would name our own employee as the customer.
 func TestAMeetingOwedAnAnswerNamesItsCustomerTheirAccountAndItsHost(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	anchor, err := e.Contacts.SaveCompany(e.Admin(), contacts.SaveCompanyInput{DisplayName: "Ourselves GmbH"})
 	if err != nil {
@@ -147,6 +148,7 @@ func TestAMeetingOwedAnAnswerNamesItsCustomerTheirAccountAndItsHost(t *testing.T
 // colleague's private customer, first by name, is skipped for another reader
 // and named for the colleague who may see them.
 func TestAMeetingNamesOnlyACustomerTheReaderMaySee(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	hidden := partiesContact(t, e, "Alex Private", e.Rep3, nil)
 	visibility := "owner"
@@ -179,6 +181,7 @@ func TestAMeetingNamesOnlyACustomerTheReaderMaySee(t *testing.T) {
 
 // Where a contact works is told only about a contact the reader may see.
 func TestAContactsEmployerIsWithheldWithTheContact(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	acme, err := e.Contacts.CreateCompany(e.Admin(), contacts.CreateCompanyInput{DisplayName: "Acme"})
 	if err != nil {
@@ -209,6 +212,7 @@ func TestAContactsEmployerIsWithheldWithTheContact(t *testing.T) {
 // A reader without the company grant is refused the employer read, and their
 // meeting row still names the customer with no account beside it.
 func TestAReaderWhoMayNotReadCompaniesSeesTheMeetingRowWithoutAnAccount(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	acme, err := e.Contacts.CreateCompany(e.Admin(), contacts.CreateCompanyInput{DisplayName: "Acme"})
 	if err != nil {
@@ -248,6 +252,7 @@ func TestAReaderWhoMayNotReadCompaniesSeesTheMeetingRowWithoutAnAccount(t *testi
 // reader who may not read edges is shown the first outside participant by
 // name, our own employee included, so a hidden edge never decides who is named.
 func TestAHiddenEmploymentEdgeDoesNotDecideWhoAMeetingWasWith(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	anchor, err := e.Contacts.SaveCompany(e.Admin(), contacts.SaveCompanyInput{DisplayName: "Ourselves GmbH"})
 	if err != nil {
@@ -283,6 +288,7 @@ func TestAHiddenEmploymentEdgeDoesNotDecideWhoAMeetingWasWith(t *testing.T) {
 // A reader who may not read activities is told about nobody, and the page
 // around them still stands.
 func TestAReaderWhoMayNotReadActivitiesIsToldTheMeetingWasWithNobody(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	customer := partiesContact(t, e, "Zed Customer", ids.UUID{}, nil)
 	meeting := partiesMeeting(e.Admin(), t, e, "Kickoff", customer)
@@ -377,6 +383,7 @@ func trustOwnDomain(t *testing.T, e *integration.Env) {
 // with no seat and no own-company employment, is never the meeting's contact.
 // The meeting is not on the lane.
 func TestAColleaguesContactOnTheOwnDomainIsNeverAMeetingsContact(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	trustOwnDomain(t, e)
 	colleague := addressedContact(t, e, "Colleague Bea", "bea@"+colleagueTestDomain)
@@ -399,6 +406,7 @@ func TestAColleaguesContactOnTheOwnDomainIsNeverAMeetingsContact(t *testing.T) {
 // A meeting with only a colleague's address on it leaves the lane. The same
 // meeting with a customer on it stays, names them and carries its room.
 func TestAMeetingAmongColleaguesLeavesKeepMomentum(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	trustOwnDomain(t, e)
 	customer := addressedContact(t, e, "Ines Buyer", "ines@customer.test")
@@ -437,6 +445,7 @@ func TestAMeetingAmongColleaguesLeavesKeepMomentum(t *testing.T) {
 // A meeting whose only guest the reader may not see stays on the lane and
 // names nobody. A row-scope rule never hides a customer meeting.
 func TestAMeetingWhoseOnlyGuestIsHiddenStaysOnTheLane(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	trustOwnDomain(t, e)
 	hidden := addressedContact(t, e, "Alex Private", "alex@customer.test")
@@ -462,6 +471,7 @@ func TestAMeetingWhoseOnlyGuestIsHiddenStaysOnTheLane(t *testing.T) {
 // A seat's login on an untrusted domain is still a colleague. It is not
 // named, and a meeting with nobody else on it leaves the lane.
 func TestAMemberLoginOffTheOwnDomainIsAColleague(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	login := "b@" + colleagueTestDomain
 	record := addressedContact(t, e, "Rep Two", login)
@@ -483,6 +493,7 @@ func TestAMemberLoginOffTheOwnDomainIsAColleague(t *testing.T) {
 // Deal Scout's held-meeting walk reaches no company through a colleague on
 // the own domain, whatever employer their contact record names.
 func TestHeldMeetingAmongColleaguesReachesNoCompany(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	trustOwnDomain(t, e)
 	acme, err := e.Contacts.CreateCompany(e.Admin(), contacts.CreateCompanyInput{DisplayName: "Acme"})
@@ -532,6 +543,7 @@ func ptrContact(id ids.UUID) *ids.ContactID {
 // The invited address decides. A customer whose contact also carries an
 // address on the own domain is still the customer at this meeting.
 func TestAContactsOtherOwnDomainAddressDoesNotMakeTheGuestAColleague(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	trustOwnDomain(t, e)
 	contact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{
@@ -559,6 +571,7 @@ func TestAContactsOtherOwnDomainAddressDoesNotMakeTheGuestAColleague(t *testing.
 // Meetings among colleagues are left out before the lane's read limit, so a
 // full morning of them never pushes a customer meeting off the lane.
 func TestACustomerMeetingAfterAFullCeilingOfInternalOnesIsOnTheLane(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	trustOwnDomain(t, e)
 	for i := range 48 {
@@ -578,6 +591,7 @@ func TestACustomerMeetingAfterAFullCeilingOfInternalOnesIsOnTheLane(t *testing.T
 // A guest the reader may not see counts as outside, whatever a hidden record
 // says. The lane then tells the reader nothing about the guest.
 func TestHiddenEvidenceAboutAGuestDoesNotMoveTheMeeting(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	trustOwnDomain(t, e)
 	anchor, err := e.Contacts.SaveCompany(e.Admin(), contacts.SaveCompanyInput{DisplayName: "Ourselves GmbH"})

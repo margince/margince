@@ -4,8 +4,6 @@
 package sweepreach
 
 import (
-	"context"
-	"errors"
 	"maps"
 	"strings"
 	"testing"
@@ -51,6 +49,7 @@ func TestTheEraseStatementNumbersItsPlaceholdersFromItsArguments(t *testing.T) {
 }
 
 func TestASetIsRefusedWholeWhenOneEntryIsWrong(t *testing.T) {
+	t.Parallel()
 	company := reach.Table{Name: "invoice", Links: []reach.Link{{Column: "company_id", Record: reach.Company}}}
 	for _, c := range []struct {
 		name string
@@ -62,55 +61,28 @@ func TestASetIsRefusedWholeWhenOneEntryIsWrong(t *testing.T) {
 		{"invalid table", []Owned{{Owner: "a", Table: reach.Table{Name: "invoice"}}}, "declares no link"},
 	} {
 		t.Run(c.name, func(t *testing.T) {
-			before := installed.tables
-			err := Install(c.set)
+			t.Parallel()
+			set, err := NewSet(c.set)
 			if err == nil || !strings.Contains(err.Error(), c.want) {
-				t.Fatalf("Install() = %v, want an error containing %q", err, c.want)
+				t.Fatalf("NewSet() = %v, want an error containing %q", err, c.want)
 			}
-			if len(installed.tables) != len(before) {
-				t.Fatal("a refused set changed the installed one")
+			if len(set.Tables()) != 0 {
+				t.Fatal("a refused set declares tables")
 			}
 		})
-	}
-}
-
-// A process that never installed the set refuses to merge or erase, rather
-// than running over no tables and reporting success.
-func TestAnUnsealedSetRefusesTheMergeAndTheErasure(t *testing.T) {
-	installed.mu.Lock()
-	sealed := installed.sealed
-	installed.sealed = false
-	installed.mu.Unlock()
-	t.Cleanup(func() {
-		installed.mu.Lock()
-		installed.sealed = sealed
-		installed.mu.Unlock()
-	})
-
-	if _, err := Relink(context.Background(), nil, reach.Company, ids.NewV7(), ids.NewV7()); !errors.Is(err, ErrNotSealed) {
-		t.Errorf("Relink() = %v, want ErrNotSealed", err)
-	}
-	if _, err := Erase(context.Background(), nil, ids.NewV7(), "erased"); !errors.Is(err, ErrNotSealed) {
-		t.Errorf("Erase() = %v, want ErrNotSealed", err)
 	}
 }
 
 // The dependents check of a merge skips the columns Relink moves, so the two
 // must agree per record kind.
 func TestTheMovedColumnsAreTheOnesRelinkMovesForThatKind(t *testing.T) {
-	installed.mu.Lock()
-	tables, sealed := installed.tables, installed.sealed
-	installed.mu.Unlock()
-	t.Cleanup(func() {
-		installed.mu.Lock()
-		installed.tables, installed.sealed = tables, sealed
-		installed.mu.Unlock()
-	})
-	if err := Install([]Owned{{Owner: "a", Schema: "ext", Table: reach.Table{Name: "ext_a_note", Links: []reach.Link{
+	t.Parallel()
+	set, err := NewSet([]Owned{{Owner: "a", Schema: "ext", Table: reach.Table{Name: "ext_a_note", Links: []reach.Link{
 		{Column: "company_id", Record: reach.Company},
 		{Column: "contact_id", Record: reach.Contact},
 		{Column: "record_id", KindColumn: "record_type"},
-	}}}}); err != nil {
+	}}}})
+	if err != nil {
 		t.Fatal(err)
 	}
 	column := func(name string) Column { return Column{Schema: "ext", Table: "ext_a_note", Name: name} }
@@ -121,7 +93,7 @@ func TestTheMovedColumnsAreTheOnesRelinkMovesForThatKind(t *testing.T) {
 		reach.Contact: {column("contact_id"): {}, column("record_id"): pair},
 		reach.Lead:    {column("record_id"): pair},
 	} {
-		moved, err := MovedColumns(record)
+		moved, err := set.MovedColumns(record)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -129,7 +101,7 @@ func TestTheMovedColumnsAreTheOnesRelinkMovesForThatKind(t *testing.T) {
 			t.Errorf("a %s merge moves %v, want %v", record, moved, want)
 		}
 	}
-	if _, err := MovedColumns("activity"); err == nil {
+	if _, err := set.MovedColumns("activity"); err == nil {
 		t.Error("MovedColumns accepted a record kind no merge moves")
 	}
 }

@@ -47,6 +47,7 @@ func dealAmountMask(condition principal.MaskCondition) principal.FieldMask {
 }
 
 func TestAMaskedSeatReadsNoCommissionEntryPricedFromTheDealAmount(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	fx := seedAccrualFixture(t, e, "tier2_20")
 	winAndDeliver(t, e, fx)
@@ -95,6 +96,7 @@ func TestAMaskedSeatReadsNoCommissionEntryPricedFromTheDealAmount(t *testing.T) 
 // the group closure could not answer this: "the deals you may write" is a
 // question the entry has no column for.
 func TestAConditionedDealMaskLeavesTheEntriesOfDealsTheSeatMayWrite(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	fx := seedAccrualFixture(t, e, "tier2_20")
 	winAndDeliver(t, e, fx)

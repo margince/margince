@@ -93,6 +93,7 @@ func minuteOffsets(from, to, step int) string {
 }
 
 func TestOverdueScheduledSendsReadsOnlyTheDueIndexRange(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := context.Background()
 	source := scheduleBerlinSend(t, e)

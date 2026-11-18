@@ -49,7 +49,7 @@ func (s Server) searchSummary(ctx context.Context) (crmcontracts.HealthSource, [
 
 func (s Server) updatesSummary(ctx context.Context) (crmcontracts.HealthSource, []crmcontracts.HealthFinding, error) {
 	source := healthSource("updates", "data_task")
-	engine, err := newDataTaskEngine(s.dataTaskHandlers.pool, buildinfo.ReleaseVersion, s.dataTaskHandlers.now)
+	engine, err := newDataTaskEngine(s.dataTaskHandlers.pool, s.extensions, buildinfo.ReleaseVersion, s.dataTaskHandlers.now)
 	if err != nil {
 		return source, nil, err
 	}

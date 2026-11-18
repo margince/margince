@@ -23,6 +23,7 @@ import (
 // A stale second RecordSent (a network partition or GC pause outliving a
 // redelivered attempt) must not clobber the first attempt's real receipt.
 func TestRecordSentOnAnAlreadySentDeliveryIsABenignNoOp(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	id := e.stage(t, e.baseInput(e.activity, "msg-sent-twice@example.com"))
 	if _, err := e.store.Load(e.ctx, id); err != nil {
@@ -47,6 +48,7 @@ func TestRecordSentOnAnAlreadySentDeliveryIsABenignNoOp(t *testing.T) {
 
 // A stale second Park must not clobber the first Park's reason.
 func TestParkOnAnAlreadyParkedDeliveryIsABenignNoOp(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	id := e.stage(t, e.baseInput(e.activity, "msg-parked-twice@example.com"))
 	if _, err := e.store.Load(e.ctx, id); err != nil {
@@ -73,6 +75,7 @@ func TestParkOnAnAlreadyParkedDeliveryIsABenignNoOp(t *testing.T) {
 // resurrect the delivery as sent — the cross-transition race, not just the
 // same-transition one.
 func TestRecordSentOnAParkedDeliveryIsABenignNoOp(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	id := e.stage(t, e.baseInput(e.activity, "msg-parked-then-sent@example.com"))
 	if _, err := e.store.Load(e.ctx, id); err != nil {
@@ -99,6 +102,7 @@ func TestRecordSentOnAParkedDeliveryIsABenignNoOp(t *testing.T) {
 // report arriving after a newer attempt already closed the delivery must
 // not reopen it.
 func TestRecordFailureOnAnAlreadySentDeliveryReportsErrTerminal(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	id := e.stage(t, e.baseInput(e.activity, "msg-failure-after-sent@example.com"))
 	if _, err := e.store.Load(e.ctx, id); err != nil {

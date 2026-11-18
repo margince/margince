@@ -255,7 +255,7 @@ func addControllerPayloadSweepJob(reg *jobRegistry, pool *pgxpool.Pool, cfg JobR
 	}
 	db := InstallationDB(pool)
 	worker := newControllerPayloadSweepWorker(
-		identity.NewService(pool),
+		IdentityService(pool),
 		comms.NewStore(db, time.Now, activities.NewStore(db)),
 		controllerPayloads{v: cfg.ControllerVault},
 		receiptAlarm{db: db},

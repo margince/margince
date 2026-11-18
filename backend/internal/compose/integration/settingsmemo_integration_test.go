@@ -20,6 +20,7 @@ import (
 // A transaction reads a setting's row once, however many readers ask. A write
 // through the settings store makes the next read see the new value.
 func TestASettingIsReadOncePerTransactionAndAgainAfterItsWriter(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := settings.New(e.Pool, settings.NewRegistry(identity.Timezone))
 	ctx := e.As(e.AdminUser, nil, principal.Permissions{
@@ -56,6 +57,7 @@ func TestASettingIsReadOncePerTransactionAndAgainAfterItsWriter(t *testing.T) {
 // A writer reads the row again after its lock. A value its transaction
 // remembered from before another writer's commit is not what it writes over.
 func TestASettingWriteIsNotFooledByWhatItsTransactionReadBeforeTheLock(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := settings.New(e.Pool, settings.NewRegistry(identity.Timezone))
 	ctx := e.As(e.AdminUser, nil, principal.Permissions{

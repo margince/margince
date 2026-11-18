@@ -64,6 +64,7 @@ func setupBriefingLane(t *testing.T) *briefingLaneEnv {
 }
 
 func TestAMorningWithNoRunReadsAsAnEmptyLaneNotARefusal(t *testing.T) {
+	t.Parallel()
 	b := setupBriefingLane(t)
 
 	// The rep has never had a brief. The engine answers not-found, and this
@@ -96,6 +97,7 @@ func TestAMorningWithNoRunReadsAsAnEmptyLaneNotARefusal(t *testing.T) {
 // test pins the wiring so the value cannot silently become something else; the
 // day the two instants diverge, it starts telling them apart on its own.
 func TestTheLaneCarriesTheRunsDataCutoff(t *testing.T) {
+	t.Parallel()
 	b := setupBriefingLane(t)
 	seedBriefingLaneDeals(t, b)
 	// Seeded through the real writer, which is what puts both instants on the
@@ -124,6 +126,7 @@ func TestTheLaneCarriesTheRunsDataCutoff(t *testing.T) {
 }
 
 func TestAnAnsweredBriefingItemLeavesTheLane(t *testing.T) {
+	t.Parallel()
 	b := setupBriefingLane(t)
 	seedBriefingLaneDeals(t, b)
 
@@ -167,6 +170,7 @@ func TestAnAnsweredBriefingItemLeavesTheLane(t *testing.T) {
 }
 
 func TestASetAsideBriefingItemComesBackWhenItsWindowPasses(t *testing.T) {
+	t.Parallel()
 	b := setupBriefingLane(t)
 	seedBriefingLaneDeals(t, b)
 
@@ -218,6 +222,7 @@ func TestASetAsideBriefingItemComesBackWhenItsWindowPasses(t *testing.T) {
 // they had just deleted — and counting toward the day's total for the rest of
 // the local day, because a brief is one run per rep per day.
 func TestADeletedDealTakesItsBriefingRowWithIt(t *testing.T) {
+	t.Parallel()
 	b := setupBriefingLane(t)
 	seedBriefingLaneDeals(t, b)
 
@@ -291,6 +296,7 @@ func seedBriefingLaneDeals(t *testing.T, b *briefingLaneEnv) {
 }
 
 func TestAnEarlierDaysSnoozeStillHoldsTheWorklistRiskAndUndoRestoresIt(t *testing.T) {
+	t.Parallel()
 	b := setupBriefingLane(t)
 	seedBriefingLaneDeals(t, b)
 	run, err := b.engine.SnapshotRun(b.repCtx, b.now)

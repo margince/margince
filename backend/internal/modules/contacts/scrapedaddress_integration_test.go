@@ -65,6 +65,7 @@ func storedProfileValue(ctx context.Context, t *testing.T, s *Store, id ids.Comp
 }
 
 func TestASiteReadSplitsTheAddressItCreatesACompanyWith(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	queued := countGeocodes(e.store)
@@ -95,6 +96,7 @@ func TestASiteReadSplitsTheAddressItCreatesACompanyWith(t *testing.T) {
 
 // Each populated part must protect the whole address from automatic fills.
 func TestASiteReadLeavesAnAddressSomebodyStartedAlone(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	protected := map[string]bool{}
@@ -133,6 +135,7 @@ func TestASiteReadLeavesAnAddressSomebodyStartedAlone(t *testing.T) {
 }
 
 func TestASiteReadWritesNoAddressItCannotSplit(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{DisplayName: "Unsplit Glass", Source: "manual"})
@@ -156,6 +159,7 @@ func TestASiteReadWritesNoAddressItCannotSplit(t *testing.T) {
 }
 
 func TestEveryAutomatedReadSplitsTheAddressAndQueuesALookup(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	for name, apply := range map[string]func(ids.CompanyID) error{
@@ -187,6 +191,7 @@ func TestEveryAutomatedReadSplitsTheAddressAndQueuesALookup(t *testing.T) {
 }
 
 func TestTheReadPreviewShowsTheAddressPartsTheWriterWouldFill(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	empty, err := e.store.CreateCompany(ctx, CreateCompanyInput{DisplayName: "Preview Empty", Source: "manual"})
@@ -243,6 +248,7 @@ func TestTheReadPreviewShowsTheAddressPartsTheWriterWouldFill(t *testing.T) {
 }
 
 func TestTheCompanyFormSplitsTheAddressItIsGiven(t *testing.T) {
+	t.Parallel()
 	a := newAnchorEnv(t)
 	queued := countGeocodes(a.store)
 	save := func(address string) {
@@ -287,6 +293,7 @@ func TestTheCompanyFormSplitsTheAddressItIsGiven(t *testing.T) {
 }
 
 func TestOnlyAnAdministratorSavesTheCompanyAddress(t *testing.T) {
+	t.Parallel()
 	a := newAnchorEnv(t)
 	actor, ok := principal.Actor(a.ctx)
 	if !ok {
@@ -305,6 +312,7 @@ func TestOnlyAnAdministratorSavesTheCompanyAddress(t *testing.T) {
 }
 
 func TestCompanyAddressPreviewKeepsObjectRowAndFieldScope(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{DisplayName: "Private Preview", Source: "manual", OwnerID: new(ids.From[ids.UserKind](e.rep))})

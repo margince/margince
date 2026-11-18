@@ -20,6 +20,7 @@ import (
 )
 
 func TestTheContactPageNamesTheColleagueAnAgentCreatedItFor(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	agent := e.AgentFor(t, e.Rep1, []ids.UUID{e.Team1}, roomPerms)
 	created, err := e.Contacts.CreateContact(agent, contacts.CreateContactInput{FullName: "Met At An Event", Source: "manual"})

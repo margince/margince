@@ -59,6 +59,7 @@ func unansweredSubjects(t *testing.T, e *integration.Env, now time.Time) []strin
 // meeting held yesterday morning sits before today's start, so the old boundary
 // dropped it overnight while its status was still unset.
 func TestAMeetingLeftUnansweredYesterdayIsStillAskedAbout(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := todayAt(14 * time.Hour)
 	bookCustomerMeeting(t, e, "Yesterday morning", now.AddDate(0, 0, -1).Truncate(24*time.Hour).Add(9*time.Hour), "")
@@ -80,6 +81,7 @@ func TestAMeetingLeftUnansweredYesterdayIsStillAskedAbout(t *testing.T) {
 // stops asking, so a reader coming back from a quiet month gets a queue they can
 // clear instead of a history of everything never answered.
 func TestTheOutcomeLaneReachesBackAFortnightAndNoFurther(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := todayAt(14 * time.Hour)
 	bookCustomerMeeting(t, e, "Last week", now.AddDate(0, 0, -7), "")
@@ -97,6 +99,7 @@ func TestTheOutcomeLaneReachesBackAFortnightAndNoFurther(t *testing.T) {
 // status at all, so a predicate reading `= 'booked'` empties this lane on
 // exactly the installations whose calendars are connected.
 func TestAnAnsweredMeetingLeavesTheOutcomeLane(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := todayAt(14*time.Hour).AddDate(0, 0, -1)
 	at := now.Truncate(24 * time.Hour).Add(9 * time.Hour)
@@ -128,6 +131,7 @@ func TestAnAnsweredMeetingLeavesTheOutcomeLane(t *testing.T) {
 // longest would never appear. The lane would look busy and complete while
 // hiding the very rows it exists to surface.
 func TestABacklogDeeperThanThePageStillLeadsWithTheOldest(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := todayAt(20 * time.Hour)
 	// Comfortably more unanswered meetings than the lane's cap of twelve,

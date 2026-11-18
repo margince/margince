@@ -24,6 +24,7 @@ import (
 )
 
 func TestAnUnactionableEntryIsAckedRatherThanRetried(t *testing.T) {
+	t.Parallel()
 	e := setup(t)
 	e.stage(t, "contact.created", ids.NewV7())
 	if _, err := e.relay(t).relayBatch(t.Context()); err != nil {
@@ -62,6 +63,7 @@ func TestAnUnactionableEntryIsAckedRatherThanRetried(t *testing.T) {
 // A handler reporting every error as unactionable would ack away the ordering
 // race this bus absorbs.
 func TestAnOrdinaryFailureStaysPending(t *testing.T) {
+	t.Parallel()
 	e := setup(t)
 	e.stage(t, "contact.created", ids.NewV7())
 	if _, err := e.relay(t).relayBatch(t.Context()); err != nil {

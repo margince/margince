@@ -74,6 +74,7 @@ func (w dealWatch) verdicts(t *testing.T, deal ids.UUID) map[ids.UUID]crmcontrac
 // card and the deal's own ordering use. A day deadline is stored as the end of
 // that local day, so a promise due today is not late until the day is over.
 func TestADealCommitmentIsOverdueOnceItsDeadlineHasPassed(t *testing.T) {
+	t.Parallel()
 	w := seedDealWatch(t)
 	zone := setInstallationZone(t, w.Env, "Asia/Ho_Chi_Minh")
 	yesterday := time.Date(2026, time.March, 9, 23, 59, 59, 0, zone)
@@ -100,6 +101,7 @@ func TestADealCommitmentIsOverdueOnceItsDeadlineHasPassed(t *testing.T) {
 // value is marked with the stated sum. A deposit, a monthly price and the
 // deal's own value are not.
 func TestADealCommitmentNamingAnotherTotalIsMarked(t *testing.T) {
+	t.Parallel()
 	w := seedDealWatch(t)
 	deal := w.pricedDeal(t)
 	lower := w.promiseDue(t, deal, "We committed to proceeding with the Standard package at €42,000.", nil)
@@ -121,6 +123,7 @@ func TestADealCommitmentNamingAnotherTotalIsMarked(t *testing.T) {
 
 // A deal with no value is compared with nothing, whatever the words state.
 func TestADealWithNoValueMarksNoCommitment(t *testing.T) {
+	t.Parallel()
 	w := seedDealWatch(t)
 	claim := w.promiseDue(t, w.deal, "We committed to the package at €42,000.", nil)
 	if row := w.verdicts(t, w.deal)[claim]; row.DiffersFromDeal != nil {

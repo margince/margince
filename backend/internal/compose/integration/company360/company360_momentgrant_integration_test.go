@@ -36,6 +36,7 @@ func withActivityReadOnly(base principal.Permissions) principal.Permissions {
 }
 
 func TestTheAccountCardWithholdsItsLogVerbFromAReaderWhoCannotLog(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	companyID := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))

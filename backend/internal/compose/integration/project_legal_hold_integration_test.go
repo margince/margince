@@ -114,6 +114,7 @@ func derivedRows(t *testing.T, e *Env, activity ids.UUID) (embeddings, participa
 }
 
 func TestErasureKeepsASubjectOnlyNoteFiledUnderAHeldProject(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedProjectHoldFixture(t, e)
 	subject := e.SeedContact(t, "Delivery Contact", nil)
@@ -145,6 +146,7 @@ func TestErasureKeepsASubjectOnlyNoteFiledUnderAHeldProject(t *testing.T) {
 }
 
 func TestRetentionSweepSkipsAnOverAgeNoteLinkedOnlyToAHeldProject(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	SeedRetentionPolicies(t, e)
 	f := seedProjectHoldFixture(t, e)
@@ -157,7 +159,7 @@ func TestRetentionSweepSkipsAnOverAgeNoteLinkedOnlyToAHeldProject(t *testing.T) 
 
 	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(os.Stderr, nil)))
 	SettleIntoInstall(t, e)
-	if err := svc.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
+	if err := svc.EvaluateInstallation(RetentionPassCtx(context.Background(), e.WS)); err != nil {
 		t.Fatal(err)
 	}
 

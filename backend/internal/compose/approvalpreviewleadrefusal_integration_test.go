@@ -20,6 +20,7 @@ import (
 )
 
 func TestLeadDisqualificationRefusesUnavailableContext(t *testing.T) {
+	t.Parallel()
 	for _, changeLead := range []bool{false, true} {
 		t.Run(fmt.Sprintf("changed-lead=%t", changeLead), func(t *testing.T) {
 			e := integration.Setup(t)

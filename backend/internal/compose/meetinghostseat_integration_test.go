@@ -32,6 +32,7 @@ func organizedBy(t *testing.T, e *integration.Env, meeting ids.UUID, address str
 }
 
 func TestAMeetingRowIsHostedByItsOrganizerNotTheCalendarThatSyncedFirst(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	customer := partiesContact(t, e, "Customer Buyer", ids.UUID{}, nil)
 	// Rep2's calendar stored every meeting here, so Rep2 is each one's
@@ -67,6 +68,7 @@ func TestAMeetingRowIsHostedByItsOrganizerNotTheCalendarThatSyncedFirst(t *testi
 // organizer's team view holds the row. The guest can still change the meeting,
 // as the colleague whose calendar stored it.
 func TestAFoldedMeetingRowIsOwnedByItsOrganiser(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	customer := partiesContact(t, e, "Customer Buyer", e.Rep1, nil)
 	meeting := partiesMeeting(e.As(e.Rep3, []ids.UUID{e.Team2}, integration.AdminPerms), t, e, "Quarterly review", customer)

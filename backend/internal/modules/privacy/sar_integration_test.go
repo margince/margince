@@ -18,7 +18,6 @@ package privacy
 
 import (
 	"context"
-	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -54,13 +53,9 @@ var retiredAt = time.Date(2026, 3, 1, 9, 0, 0, 0, time.UTC)
 
 func setupSARIdentifiers(t *testing.T) *sarIdentifierEnv {
 	t.Helper()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -69,13 +64,6 @@ func setupSARIdentifiers(t *testing.T) *sarIdentifierEnv {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	// To head before anything else touches this database: testdb.Pool refuses
-	// until EnsureSchema has run, and EnsureSchema still REBUILDS whenever it
-	// cannot prove the database is a fresh lane clone — so a seed written
-	// before it would be dropped rather than reset.
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 
 	ws, user := ids.NewV7(), ids.NewV7()
 	contact := ids.New[ids.ContactKind]()
@@ -95,14 +83,12 @@ func setupSARIdentifiers(t *testing.T) *sarIdentifierEnv {
 	}
 	seedIdentifierPairs(ctx, t, owner, contact)
 
-	pool, err := testdb.Pool(ctx, appDSN)
+	pool, err := testdb.Pool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Registered where the pool is handed out, before the test adds any cleanup
 	// of its own, so it runs last and sees a package that has genuinely stopped.
-	// The pool outlives the test now, so a goroutine still holding a connection
-	// would go on writing into the database the NEXT test just reset.
 	testdb.AssertPoolsQuiesced(t)
 
 	return &sarIdentifierEnv{
@@ -221,6 +207,7 @@ func ident(contact ids.ContactID, shape string) string {
 // identifier sections, because the obligation is the same in each: the section
 // exports archived rows, so it owes the archival state that tells them apart.
 func TestTheSARExportDistinguishesARetiredBindingFromALiveOne(t *testing.T) {
+	t.Parallel()
 	e := setupSARIdentifiers(t)
 
 	pkg, err := AssembleSAR(e.ctx, e.db, e.contact)

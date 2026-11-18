@@ -98,6 +98,7 @@ func storedAuthorization(t *testing.T, e *integration.SearchEnv, id ids.UUID) js
 }
 
 func TestColleagueMailToAnEnrolledSharedMailboxIsReadByItsReaderTeamOnly(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	adminSeat := colleague(t, e, "admin@myco.example")
@@ -164,6 +165,7 @@ func TestColleagueMailToAnEnrolledSharedMailboxIsReadByItsReaderTeamOnly(t *test
 }
 
 func TestASharedMailboxRefusesAHistoryImportItHasNoOwnerToStart(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	admin := internalMailAdmin(e, colleague(t, e, "admin@myco.example"))

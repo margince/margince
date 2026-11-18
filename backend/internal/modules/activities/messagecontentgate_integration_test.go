@@ -146,6 +146,7 @@ func (e *loadEnv) admitted(ctx context.Context, t *testing.T, gate clauseRendere
 // The message gate answers as the content gate on every task-free row and
 // refuses every other, for each row scope and principal kind.
 func TestTheMessageContentGateIsTheContentGateOnTaskFreeRows(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	private := e.privateContactOf(t, e.other)
 	sources := map[int]ids.UUID{theirSource: ids.NewV7(), ownSource: ids.NewV7()}

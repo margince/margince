@@ -28,6 +28,7 @@ func refusalNames(problem customFieldProblem, field, code string) bool {
 }
 
 func TestARecordWriteNeverDropsACustomFieldKey(t *testing.T) {
+	t.Parallel()
 	e := schemaWiredEnv(t)
 	status, field, problem := createCustomField(t, e, integration.AnyMap{
 		"object": "contact", "label": "Nickname", "type": "text", "source": "manual",

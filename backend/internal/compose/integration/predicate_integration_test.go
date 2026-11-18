@@ -28,6 +28,7 @@ var contactFilterFields = map[string]storekit.Field{
 }
 
 func TestPredicateEngineFiltersRealRowsWithinRowScope(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	mineMatch := e.SeedContact(t, "Anna Renewal", &e.Rep1)
 	foreignMatch := e.SeedContact(t, "Bruno Renewal", &e.Rep3)
@@ -152,6 +153,7 @@ func TestPredicateEngineFiltersRealRowsWithinRowScope(t *testing.T) {
 // the scalar column agrees with it against real rows rather than against a
 // golden string.
 func TestNeqReturnsTheRowsWhoseColumnWasNeverSet(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	// Seeded through the real writer, then the column is nulled: CreateContact
 	// stamps the calling seat as owner when the body names none, so "seed with

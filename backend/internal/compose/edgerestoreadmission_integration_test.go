@@ -101,6 +101,7 @@ func answeredAbsent(t *testing.T, err error, probe string) {
 // The other end is a company this caller cannot read, so the link's entry is not
 // an entry of the contact's history for them — and the reverse cannot say so.
 func TestALinkWhoseOtherEndTheCallerCannotSeeIsNotReversible(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Ada Employed", nil)
 	company := e.SeedCompany(t, "Secret Holdings GmbH", nil)
@@ -122,6 +123,7 @@ func TestALinkWhoseOtherEndTheCallerCannotSeeIsNotReversible(t *testing.T) {
 // and dates. Reversing it from the company's page would act on data an Art. 17
 // certificate said was gone, so the entry is not served there at all.
 func TestALinkWhoseOtherEndWasErasedIsNotReversible(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Selma Subject", nil)
 	company := e.SeedCompany(t, "Employer GmbH", nil)
@@ -145,6 +147,7 @@ func TestALinkWhoseOtherEndWasErasedIsNotReversible(t *testing.T) {
 // record whose history is open, and a target row admitted by its id alone would
 // let the executor write a record the caller never addressed.
 func TestAnEntryFromAnotherRecordsHistoryIsNotReversible(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	subject := e.SeedContact(t, "Ada Addressed", nil)
 	stranger := e.SeedContact(t, "Otto Elsewhere", nil)
@@ -167,6 +170,7 @@ func TestAnEntryFromAnotherRecordsHistoryIsNotReversible(t *testing.T) {
 // The control. A link the caller CAN see reverses, so the three refusals above
 // are the admission answering and not everything being refused.
 func TestALinkTheCallerCanSeeIsReversible(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Ada Employed", nil)
 	company := e.SeedCompany(t, "Employer GmbH", nil)

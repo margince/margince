@@ -14,6 +14,7 @@ import (
 )
 
 func TestContactToolsRequireAChannelAndAcceptLinkedIn(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.As(e.AdminUser, nil, AdminPerms)
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})

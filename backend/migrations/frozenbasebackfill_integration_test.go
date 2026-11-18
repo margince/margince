@@ -123,6 +123,7 @@ func frozenBaseOf(t *testing.T, conn *pgx.Conn, deal ids.UUID) *int64 {
 }
 
 func TestTheFrozenBaseBackfillSurvivesATwoDecimalBaseCurrency(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)
@@ -162,6 +163,7 @@ func TestTheFrozenBaseBackfillSurvivesATwoDecimalBaseCurrency(t *testing.T) {
 }
 
 func TestTheFrozenBaseBackfillLeavesARowItCannotConvert(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)

@@ -13,7 +13,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -40,7 +39,7 @@ type meetingDeliveryWorker struct {
 }
 
 func (w *meetingDeliveryWorker) Work(ctx context.Context, _ *river.Job[MeetingDeliveryArgs]) error {
-	pass, err := installationJobCtx(ctx, identity.NewService(w.pool))
+	pass, err := installationJobCtx(ctx, IdentityService(w.pool))
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
@@ -58,7 +57,7 @@ func addMeetingDeliveryJob(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerCo
 		return nil
 	}
 	reminders := newScheduledSendWorker(pool, cfg.SendDelivery, cfg.SendBlob, cfg.SendOrigin, cfg.DisabledCoreFeatures...)
-	reminders.store = reminders.store.WithSendAuthority(workerMailAuthority(cfg.SendRegistry))
+	reminders.store = reminders.store.WithSendAuthority(workerMailAuthority(cfg.SendRegistry, cfg.Extensions))
 	addDeclaredWorker[MeetingDeliveryArgs](reg, &meetingDeliveryWorker{pool: pool, registry: cfg.GmailRegistry, vault: cfg.ControllerVault, origin: cfg.SendOrigin, reminders: reminders})
 	return periodicFor(cfg, MeetingDeliveryArgs{})
 }

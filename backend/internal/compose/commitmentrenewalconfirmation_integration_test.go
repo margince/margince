@@ -18,6 +18,7 @@ import (
 )
 
 func TestReportedRenewalDoesNotChangeAnExistingTaskDeadline(t *testing.T) {
+	t.Parallel()
 	f := setupRenewalPrivacy(t, 0.95)
 	now := time.Date(2026, 10, 18, 12, 0, 0, 0, time.UTC)
 	source, _, err := f.e.Activities.LogActivity(f.e.Admin(), activities.LogActivityInput{

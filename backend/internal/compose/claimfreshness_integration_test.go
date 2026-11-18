@@ -21,6 +21,7 @@ import (
 )
 
 func TestPreviouslyAdmittedClaimsNeedCurrentSourceOrHumanAdoption(t *testing.T) {
+	t.Parallel()
 	for _, kind := range []string{"commitment_ours", "commitment_theirs"} {
 		states := []string{"old", "renewed", "manual"}
 		if kind == "commitment_ours" {
@@ -130,6 +131,7 @@ func adoptHistoricalClaimTask(t *testing.T, e *integration.Env, claim crmcontrac
 }
 
 func TestAutomaticCommitmentPinFollowsAssigneeAcrossViews(t *testing.T) {
+	t.Parallel()
 	for _, pinByAssignee := range []bool{true, false} {
 		t.Run(map[bool]string{true: "assignee", false: "manager"}[pinByAssignee], func(t *testing.T) {
 			e := integration.Setup(t)

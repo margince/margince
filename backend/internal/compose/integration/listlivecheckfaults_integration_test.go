@@ -73,6 +73,7 @@ func (f *liveListFixture) checkWhileHeld(t *testing.T, statement string, args ..
 }
 
 func TestAnErasureBetweenTheFilterAndTheWriteLeavesNoTrace(t *testing.T) {
+	t.Parallel()
 	f := newLiveListFixture(t)
 	f.check(t)
 	subject := f.contactTitled(t, "Racing Buyer", "Buyer")
@@ -98,6 +99,7 @@ func TestAnErasureBetweenTheFilterAndTheWriteLeavesNoTrace(t *testing.T) {
 }
 
 func TestAFilterThatNoLongerCompilesIsCheckedInvalidAndTheRestStillRun(t *testing.T) {
+	t.Parallel()
 	f := newLiveListFixture(t)
 	broken, err := f.store.CreateList(f.e.Admin(), collections.CreateListInput{
 		Name: "Once valid", EntityType: "contact", ListType: "dynamic", Sharing: "workspace", Definition: titleIs("Seller"),
@@ -122,6 +124,7 @@ func TestAFilterThatNoLongerCompilesIsCheckedInvalidAndTheRestStillRun(t *testin
 }
 
 func TestEachListIsStampedWithItsOwnCheckTime(t *testing.T) {
+	t.Parallel()
 	f := newLiveListFixture(t)
 	other, err := f.store.CreateList(f.e.Admin(), collections.CreateListInput{
 		Name: "Sellers", EntityType: "contact", ListType: "dynamic", Sharing: "workspace", Definition: titleIs("Seller"),

@@ -39,6 +39,7 @@ func namedOn(t *testing.T, e *Env, activity, contact ids.UUID) int {
 // row standing, so the activity's link named him and its participants still
 // named her.
 func TestRelinkRemovesTheDisplacedParticipantWhenTheTargetIsAlreadyOne(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.As(e.Rep1, nil, AdminPerms)
 	her, him := e.SeedContact(t, "Ingrid Sattler", nil), e.SeedContact(t, "Tomas Berg", nil)
@@ -88,6 +89,7 @@ func TestRelinkRemovesTheDisplacedParticipantWhenTheTargetIsAlreadyOne(t *testin
 // qualified for the rewrite, and the second collided with the first on
 // uq_activity_participant.
 func TestRelinkMergesSeveralDisplacedParticipantsWithoutColliding(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.As(e.Rep1, nil, AdminPerms)
 	her, other := e.SeedContact(t, "Ingrid Sattler", nil), e.SeedContact(t, "Petra Lang", nil)
@@ -139,6 +141,7 @@ func TestRelinkMergesSeveralDisplacedParticipantsWithoutColliding(t *testing.T) 
 // the different-role case above cannot reach, and the one that decides whether
 // "merge" means merge or means duplicate.
 func TestRelinkDeletesTheDisplacedParticipantWhenTheTargetHoldsItsShape(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.As(e.Rep1, nil, AdminPerms)
 	her, him := e.SeedContact(t, "Ingrid Sattler", nil), e.SeedContact(t, "Tomas Berg", nil)

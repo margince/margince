@@ -42,14 +42,16 @@ type systemReadEnv struct {
 	deal ids.UUID
 	// roles are the record roles a user and a team may hold on the deal.
 	roles map[crmcontracts.AssignmentSubjectKind]ids.UUID
+	// composed is the test's own composition: the dealmirror unit, bound to the
+	// test's database.
+	composed *Extensions
 }
 
 func setupSystemRead(t *testing.T) *systemReadEnv {
 	t.Helper()
 	e := integration.Setup(t)
-	bindRuntimeForTest(t, e.Pool, nil)
-	composeReader(t, extension.SystemReadDeals, extension.SystemReadAuthority, extension.SystemReadDirectory)
 	s := &systemReadEnv{Env: e}
+	s.declare(extension.SystemReadDeals, extension.SystemReadAuthority, extension.SystemReadDirectory)
 	for _, seat := range []ids.UUID{e.AdminUser, e.Rep1, e.Rep3} {
 		s.grant(t, seat, dealReaderGrants)
 	}
@@ -86,6 +88,13 @@ func setupSystemRead(t *testing.T) *systemReadEnv {
 	s.assign(t, crmcontracts.AssignmentSubjectKindUser, e.Rep1)
 	s.assign(t, crmcontracts.AssignmentSubjectKindUser, e.Rep2)
 	return s
+}
+
+// declare makes the dealmirror unit declare reads, in a composition bound to
+// the test's database.
+func (s *systemReadEnv) declare(reads ...extension.SystemRead) {
+	s.composed = composeReader(reads...)
+	s.composed.BindRuntime(s.Pool, nil)
 }
 
 // grant gives seat a role of its own carrying permissions.
@@ -137,7 +146,7 @@ func (s *systemReadEnv) read(t *testing.T, fn func(context.Context, pgx.Tx) erro
 // returned.
 func (s *systemReadEnv) onDelivery(t *testing.T, fn func(context.Context, extension.Runtime) error) {
 	t.Helper()
-	sub := ComposedSubscription{Unit: "dealmirror", Version: "1.0.0", Sub: extension.Subscription{
+	sub := ComposedSubscription{Unit: "dealmirror", Version: "1.0.0", composed: s.composed, Sub: extension.Subscription{
 		Name: "mirror", Events: []string{string(crmcontracts.DealUpdated)},
 		Handle: func(ctx context.Context, rt extension.Runtime, d extension.Delivery) error {
 			if rt.Caller() != (extension.Caller{}) {
@@ -189,6 +198,7 @@ func userIDs(rs []extension.Responsible) []extension.UserID {
 func asUser(id ids.UUID) extension.UserID { return extension.UserID(id.String()) }
 
 func TestADeliveryReadsTheDealItHeardAbout(t *testing.T) {
+	t.Parallel()
 	s := setupSystemRead(t)
 	closeOn := time.Date(2031, time.March, 14, 0, 0, 0, 0, time.UTC)
 	s.WsExec(t, `UPDATE deal SET expected_close_date = $2 WHERE id = $1`, s.deal, closeOn)
@@ -228,6 +238,7 @@ func TestADeliveryReadsTheDealItHeardAbout(t *testing.T) {
 // A currency with no minor unit prints no decimals, which a unit could not
 // know without the core's table of currencies.
 func TestAZeroDecimalAmountIsShownWithoutDecimals(t *testing.T) {
+	t.Parallel()
 	s := setupSystemRead(t)
 	for currency, want := range map[string]string{"JPY": "1,200,000 JPY", "VND": "1,200,000 VND"} {
 		s.WsExec(t, `UPDATE deal SET currency = $2 WHERE id = $1`, s.deal, currency)
@@ -250,6 +261,7 @@ func TestAZeroDecimalAmountIsShownWithoutDecimals(t *testing.T) {
 }
 
 func TestADealThatIsGoneReadsAsNotFound(t *testing.T) {
+	t.Parallel()
 	s := setupSystemRead(t)
 	erased := s.deal
 	s.WsExec(t, `DELETE FROM deal WHERE id = $1`, erased)
@@ -273,6 +285,7 @@ func TestADealThatIsGoneReadsAsNotFound(t *testing.T) {
 }
 
 func TestTheResponsibleAreTheOwnerTheAssigneesAndTheAssignedTeamsLiveMembers(t *testing.T) {
+	t.Parallel()
 	s := setupSystemRead(t)
 	desk, closed := ids.NewV7(), ids.NewV7()
 	s.WsExec(t, `INSERT INTO team (id, name) VALUES ($1, 'Fleet desk'), ($2, 'Closed desk')`, desk, closed)
@@ -305,6 +318,7 @@ func TestTheResponsibleAreTheOwnerTheAssigneesAndTheAssignedTeamsLiveMembers(t *
 }
 
 func TestCanReadAnswersUnderTheColleaguesOwnGrants(t *testing.T) {
+	t.Parallel()
 	s := setupSystemRead(t)
 	if !s.canRead(t, s.Rep1, dealCardFields...) {
 		t.Error("a colleague who may read every deal was refused")
@@ -320,6 +334,7 @@ func TestCanReadAnswersUnderTheColleaguesOwnGrants(t *testing.T) {
 
 // An agent seat is no colleague a unit may show a deal to, whatever it holds.
 func TestCanReadAnswersNoForAnAgentSeat(t *testing.T) {
+	t.Parallel()
 	s := setupSystemRead(t)
 	agent := s.seat(t, "reader-agent@example.test", "active", true)
 	s.grant(t, agent, dealReaderGrants)
@@ -329,6 +344,7 @@ func TestCanReadAnswersNoForAnAgentSeat(t *testing.T) {
 }
 
 func TestAnOwnerWhoseRoleMasksTheAmountMayNotReadIt(t *testing.T) {
+	t.Parallel()
 	s := setupSystemRead(t)
 	// A mask binds only a bounded role, so Rep3 reads its own deals alone, and
 	// sees this one by owning it.
@@ -354,6 +370,7 @@ func TestAnOwnerWhoseRoleMasksTheAmountMayNotReadIt(t *testing.T) {
 }
 
 func TestCanReadRefusesAQuestionItCannotAnswer(t *testing.T) {
+	t.Parallel()
 	s := setupSystemRead(t)
 	s.onDelivery(t, func(ctx context.Context, rt extension.Runtime) error {
 		for name, ask := range map[string]struct {
@@ -376,6 +393,7 @@ func TestCanReadRefusesAQuestionItCannotAnswer(t *testing.T) {
 // responsible list in order. Colleagues the probe refuses must not use up the
 // list before one it admits.
 func TestColleaguesTheProbeRefusesDoNotCrowdOutOneItAdmits(t *testing.T) {
+	t.Parallel()
 	s := setupSystemRead(t)
 	const invitesPerCall = 100
 	desk := ids.NewV7()
@@ -412,6 +430,7 @@ func TestColleaguesTheProbeRefusesDoNotCrowdOutOneItAdmits(t *testing.T) {
 }
 
 func TestEmailsAnswerActiveHumanMembersOnly(t *testing.T) {
+	t.Parallel()
 	s := setupSystemRead(t)
 	s.WsExec(t, `UPDATE app_user SET status = 'deactivated' WHERE id = $1`, s.Rep2)
 	agent := s.seat(t, "mail-agent@example.test", "active", true)
@@ -442,8 +461,9 @@ func TestEmailsAnswerActiveHumanMembersOnly(t *testing.T) {
 // On a call somebody is behind, a system read could hand that caller what their
 // own grants withhold, so every one of them refuses.
 func TestASystemReadIsRefusedOnACallThatHasACaller(t *testing.T) {
+	t.Parallel()
 	s := setupSystemRead(t)
-	rt := runtimeFor(s.Admin(), "dealmirror", "1.0.0", "tool/probe", boundExtensionRuntime())
+	rt := runtimeFor(s.Admin(), "dealmirror", "1.0.0", "tool/probe", s.composed.binding())
 	defer rt.release()
 	ctx := context.Background()
 	deal := extension.EntityRef{Type: "deal", ID: s.deal.String()}
@@ -462,10 +482,11 @@ func TestASystemReadIsRefusedOnACallThatHasACaller(t *testing.T) {
 // A signed-in human may ask about themselves, and the answer is their own
 // grants', not the permissions the request carried.
 func TestAnAttendedCanReadAnswersTheCallerUnderTheirOwnGrants(t *testing.T) {
+	t.Parallel()
 	s := setupSystemRead(t)
 	deal := extension.EntityRef{Type: "deal", ID: s.deal.String()}
 	for user, want := range map[ids.UUID]bool{s.Rep1: true, s.Rep2: false} {
-		rt := runtimeFor(s.As(user, nil, integration.AdminPerms), "dealmirror", "1.0.0", "tool/probe", boundExtensionRuntime())
+		rt := runtimeFor(s.As(user, nil, integration.AdminPerms), "dealmirror", "1.0.0", "tool/probe", s.composed.binding())
 		shown, err := rt.Authority().CanRead(context.Background(), asUser(user), deal, []string{"name"})
 		rt.release()
 		if err != nil {
@@ -480,6 +501,7 @@ func TestAnAttendedCanReadAnswersTheCallerUnderTheirOwnGrants(t *testing.T) {
 // A deal id no row holds is no deal anyone may open, even for a colleague
 // whose row scope is every deal.
 func TestCanReadAnswersNoForADealThatDoesNotExist(t *testing.T) {
+	t.Parallel()
 	s := setupSystemRead(t)
 	var shown bool
 	s.onDelivery(t, func(ctx context.Context, rt extension.Runtime) error {
@@ -508,6 +530,7 @@ func (s *systemReadEnv) canWrite(t *testing.T, user ids.UUID, deal ids.UUID) boo
 }
 
 func TestCanWriteAnswersUnderTheColleaguesOwnGrants(t *testing.T) {
+	t.Parallel()
 	s := setupSystemRead(t)
 	writer := s.seat(t, "writer@example.test", "active", false)
 	s.grant(t, writer, dealWriterGrants)
@@ -528,6 +551,7 @@ func TestCanWriteAnswersUnderTheColleaguesOwnGrants(t *testing.T) {
 
 // The write scope and both verbs decide, not the update verb alone.
 func TestCanWriteNeedsTheRowScopeAndTheReadVerb(t *testing.T) {
+	t.Parallel()
 	s := setupSystemRead(t)
 	ownOnly := s.seat(t, "own@example.test", "active", false)
 	s.grant(t, ownOnly, `{"objects":{"deal":{"read":true,"update":true}},"row_scope":"own"}`)
@@ -543,6 +567,7 @@ func TestCanWriteNeedsTheRowScopeAndTheReadVerb(t *testing.T) {
 
 // A read seat changes nothing, whatever its role holds, even on its own deal.
 func TestCanWriteRefusesAReadSeat(t *testing.T) {
+	t.Parallel()
 	s := setupSystemRead(t)
 	reader := s.seat(t, "reader@example.test", "active", false)
 	s.grant(t, reader, dealWriterGrants)
@@ -561,12 +586,13 @@ func TestCanWriteRefusesAReadSeat(t *testing.T) {
 
 // On an attended call CanWrite answers its human caller about themselves.
 func TestAnAttendedCanWriteAnswersTheCaller(t *testing.T) {
+	t.Parallel()
 	s := setupSystemRead(t)
 	writer := s.seat(t, "writer@example.test", "active", false)
 	s.grant(t, writer, dealWriterGrants)
 	deal := extension.EntityRef{Type: "deal", ID: s.deal.String()}
 	for user, want := range map[ids.UUID]bool{writer: true, s.Rep1: false} {
-		rt := runtimeFor(s.As(user, nil, integration.AdminPerms), "dealmirror", "1.0.0", "tool/probe", boundExtensionRuntime())
+		rt := runtimeFor(s.As(user, nil, integration.AdminPerms), "dealmirror", "1.0.0", "tool/probe", s.composed.binding())
 		writable, err := rt.Authority().CanWrite(context.Background(), asUser(user), deal)
 		rt.release()
 		if err != nil {
@@ -576,7 +602,7 @@ func TestAnAttendedCanWriteAnswersTheCaller(t *testing.T) {
 			t.Errorf("CanWrite about %s = %v, want %v", user, writable, want)
 		}
 	}
-	rt := runtimeFor(s.As(writer, nil, integration.AdminPerms), "dealmirror", "1.0.0", "tool/probe", boundExtensionRuntime())
+	rt := runtimeFor(s.As(writer, nil, integration.AdminPerms), "dealmirror", "1.0.0", "tool/probe", s.composed.binding())
 	defer rt.release()
 	if _, err := rt.Authority().CanWrite(context.Background(), asUser(s.Rep1), deal); !errors.Is(err, extension.ErrAttendedRead) {
 		t.Errorf("CanWrite about a colleague on an attended call: err = %v, want ErrAttendedRead", err)

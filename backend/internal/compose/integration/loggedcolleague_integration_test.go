@@ -64,6 +64,7 @@ func (e *Env) whoKnows(t *testing.T, activityID, contact ids.UUID) map[ids.UUID]
 }
 
 func TestALoggedMeetingCountsForTheColleagueWhoAttended(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := e.SeedContact(t, "Dana Attendee", nil)
 
@@ -89,6 +90,7 @@ func TestALoggedMeetingCountsForTheColleagueWhoAttended(t *testing.T) {
 }
 
 func TestALoggedMeetingNamingTheLoggerAsAttendeeKeepsOneRowForThem(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := e.SeedContact(t, "Ola Attendee", nil)
 
@@ -105,6 +107,7 @@ func TestALoggedMeetingNamingTheLoggerAsAttendeeKeepsOneRowForThem(t *testing.T)
 }
 
 func TestALoggedMeetingRefusesAnAttendeeWhoIsNotAnActiveColleague(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := e.SeedContact(t, "Kim Attendee", nil)
 	owner := OwnerConn(t)
@@ -135,6 +138,7 @@ func TestALoggedMeetingRefusesAnAttendeeWhoIsNotAnActiveColleague(t *testing.T) 
 }
 
 func TestReadingAMeetingNamesTheColleaguesWhoTookPart(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := e.SeedContact(t, "Lea Attendee", nil)
 	meeting, err := e.logMeetingWithColleagues(t, contact, "Quarterly review", e.Rep2)
@@ -159,6 +163,7 @@ func TestReadingAMeetingNamesTheColleaguesWhoTookPart(t *testing.T) {
 }
 
 func TestAWithheldMeetingNamesNoColleagues(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	reader := e.As(e.Rep3, []ids.UUID{e.Team2}, activityLifecyclePerms)
@@ -191,6 +196,7 @@ func TestAWithheldMeetingNamesNoColleagues(t *testing.T) {
 }
 
 func TestAnActivityReadNamesNoBlindCopiedColleague(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := e.SeedContact(t, "Ines Recipient", nil)
 	subject, outbound := "Renewal terms", "outbound"

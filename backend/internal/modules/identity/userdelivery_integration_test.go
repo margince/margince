@@ -27,6 +27,7 @@ import (
 // that collapsed them would silently freeze today's default for everybody who
 // ever opened the settings page.
 func TestNeverChosenIsNotTheSameAsChoosingNone(t *testing.T) {
+	t.Parallel()
 	svc, ctx, _ := seatChoosingALanguage(t)
 
 	fresh, err := svc.MyDelivery(ctx)
@@ -53,6 +54,7 @@ func TestNeverChosenIsNotTheSameAsChoosingNone(t *testing.T) {
 // the settings page is exactly where that mistake costs somebody their mail
 // without anybody choosing it.
 func TestAnOmittedFieldIsLeftAlone(t *testing.T) {
+	t.Parallel()
 	svc, ctx, _ := seatChoosingALanguage(t)
 
 	email, none := DeliveryEmail, DeliveryNone
@@ -82,6 +84,7 @@ func TestAnOmittedFieldIsLeftAlone(t *testing.T) {
 // A settings page saves on every render, and a ledger full of changes nobody
 // made is a ledger nobody can read.
 func TestASaveThatChangesNothingWritesNothing(t *testing.T) {
+	t.Parallel()
 	svc, ctx, userID := seatChoosingALanguage(t)
 
 	email := DeliveryEmail
@@ -106,6 +109,7 @@ func TestASaveThatChangesNothingWritesNothing(t *testing.T) {
 
 // A choice outside the vocabulary is refused rather than stored.
 func TestAnUnknownDeliveryChoiceIsRefused(t *testing.T) {
+	t.Parallel()
 	svc, ctx, _ := seatChoosingALanguage(t)
 
 	pigeon := "carrier_pigeon"

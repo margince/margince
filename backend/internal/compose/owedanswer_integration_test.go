@@ -265,6 +265,7 @@ func (o *owedEnv) classifier() principal.Principal {
 // A reply that lost its thread still answers: a new thread key, "Re:" and the
 // sender's address. Capture keeps the two on separate threads.
 func TestAReplyThatLostItsThreadAnswersTheMail(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
 	asked := o.customerWrites(t, "pat@customer.example", "Invoice March", o.now.Add(-3*time.Hour))
@@ -287,6 +288,7 @@ func TestAReplyThatLostItsThreadAnswersTheMail(t *testing.T) {
 // What does not answer: another subject, a forward, a copy the sender cannot
 // see, and a reply to somebody else.
 func TestOnlyASameSubjectReplyToTheSenderAnswers(t *testing.T) {
+	t.Parallel()
 	cases := map[string]func(o *owedEnv, subject string){
 		"another subject": func(o *owedEnv, _ string) {
 			o.weWrite(t, owedMail{to: "pat@customer.example", subject: "Re: Something else", at: o.now.Add(-time.Hour)})
@@ -320,6 +322,7 @@ func TestOnlyASameSubjectReplyToTheSenderAnswers(t *testing.T) {
 
 // A copy the sender CAN see answers: Cc is a recipient row.
 func TestAReplyCopyingTheSenderAnswers(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
 	asked := o.customerWrites(t, "pat@customer.example", "Contract draft", o.now.Add(-3*time.Hour))
@@ -335,6 +338,7 @@ func TestAReplyCopyingTheSenderAnswers(t *testing.T) {
 // Two "Re: Invoice" mails from two senders are two conversations: answering
 // one leaves the other owed.
 func TestTwoSameSubjectMailsFromTwoSendersNeverClearEachOther(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
 	o.contact(t, "Robin Buyer", "robin@other.example")
@@ -357,6 +361,7 @@ func TestTwoSameSubjectMailsFromTwoSendersNeverClearEachOther(t *testing.T) {
 // A call or a held meeting with the sender answers them. The same with a
 // colleague of theirs does not.
 func TestACallOrHeldMeetingWithTheSenderAnswers(t *testing.T) {
+	t.Parallel()
 	for _, kind := range []string{string(crmcontracts.ActivityKindCall), string(crmcontracts.ActivityKindMeeting)} {
 		t.Run(kind, func(t *testing.T) {
 			o := setupOwed(t)
@@ -380,6 +385,7 @@ func TestACallOrHeldMeetingWithTheSenderAnswers(t *testing.T) {
 // listed under informs_us. A request a human accepted stays, whatever the
 // verdict.
 func TestMailJudgedToAskNothingIsHiddenWithItsFigure(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
 	report := o.customerWrites(t, "pat@customer.example", "Monthly report", o.now.Add(-3*time.Hour))
@@ -435,6 +441,7 @@ func TestMailJudgedToAskNothingIsHiddenWithItsFigure(t *testing.T) {
 // the horizon included: it is off the lane and no longer owed on its badge, and
 // /worklist/hidden counts it as past_horizon.
 func TestTheBadgeAndTheLaneAgreeOnEveryOwedMail(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	// One sender per answered case: a call with a sender answers every earlier
 	// mail of theirs, so a shared sender would let one answer mask another.
@@ -519,6 +526,7 @@ func TestTheBadgeAndTheLaneAgreeOnEveryOwedMail(t *testing.T) {
 // row only, with no recipient rows. It still answers a mail whose thread it
 // lost, whatever casing the caller gave the recipient.
 func TestAReplySentFromMarginceAnswersThroughItsCounterparty(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	pat := o.contact(t, "Pat Buyer", "pat@customer.example")
 	asked := o.customerWrites(t, "pat@customer.example", "Renewal", o.now.Add(-3*time.Hour))
@@ -544,6 +552,7 @@ func TestAReplySentFromMarginceAnswersThroughItsCounterparty(t *testing.T) {
 // The response time is measured to the same answer: a reply that lost its
 // thread counts as answered, at the time it was sent.
 func TestTheResponseTimeCountsAReplyThatLostItsThread(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
 	store := activities.NewStore(o.e.DB())
@@ -568,6 +577,7 @@ func TestTheResponseTimeCountsAReplyThatLostItsThread(t *testing.T) {
 // another seat: the row going quiet would disclose that they exist. The same
 // evidence the whole workspace can read does answer.
 func TestPrivateEvidenceDoesNotAnswerAnotherSeatsMail(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	pat := o.contact(t, "Pat Buyer", "pat@customer.example")
 	asked := o.customerWrites(t, "pat@customer.example", "Invoice June", o.now.Add(-4*time.Hour))
@@ -610,6 +620,7 @@ func TestPrivateEvidenceDoesNotAnswerAnotherSeatsMail(t *testing.T) {
 // A message whose From names our mailbox but that the provider never filed as
 // sent answers nothing. The attested reply does.
 func TestASpoofedReplyAnswersNothing(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
 	asked := o.customerWrites(t, "pat@customer.example", "Bank details", o.now.Add(-3*time.Hour))
@@ -627,6 +638,7 @@ func TestASpoofedReplyAnswersNothing(t *testing.T) {
 // The sender is their contact, not one address: a reply to another address
 // of the same contact answers. Capture still files the two on two threads.
 func TestAReplyToAnotherAddressOfTheSenderAnswers(t *testing.T) {
+	t.Parallel()
 	o := setupOwed(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example", "pat.private@home.example")
 	asked := o.customerWrites(t, "pat@customer.example", "Offer", o.now.Add(-3*time.Hour))
@@ -643,6 +655,7 @@ func TestAReplyToAnotherAddressOfTheSenderAnswers(t *testing.T) {
 // either capture order: an id says when a row was captured, not which message
 // came first.
 func TestASameSecondReplyIsNotAnAnswer(t *testing.T) {
+	t.Parallel()
 	for _, replyFirst := range []bool{false, true} {
 		name := map[bool]string{false: "mail captured first", true: "reply captured first"}[replyFirst]
 		t.Run(name, func(t *testing.T) {

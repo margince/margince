@@ -54,6 +54,7 @@ func repWithoutTheEdge() principal.Permissions {
 }
 
 func TestARoleRefusedTheEdgeSeesTheAccountPageWithoutItsEdgesAndIsToldSo(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
@@ -142,6 +143,7 @@ func TestARoleRefusedTheEdgeSeesTheAccountPageWithoutItsEdgesAndIsToldSo(t *test
 // graph could withhold the employment group while the roster beside it listed
 // exactly who worked at the account.
 func TestTheContactRosterAndItsDealRolesAreWithheldWithTheEdgeGrant(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)

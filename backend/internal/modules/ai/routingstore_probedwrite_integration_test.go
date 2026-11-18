@@ -54,6 +54,7 @@ func notServedAt(t *testing.T, location, modelID string, onFirstAsk func(path st
 }
 
 func TestALocationMoveIsProbedAgainstABindingWrittenWhileGoogleWasAsked(t *testing.T) {
+	t.Parallel()
 	e := setupRateStore(t)
 	_, wsCtx := e.seedWorkspace(context.Background(), t)
 	ctx := routingWriter(wsCtx)
@@ -97,6 +98,7 @@ func TestALocationMoveIsProbedAgainstABindingWrittenWhileGoogleWasAsked(t *testi
 // A document another write moves during every probe round is never stored
 // unprobed: the save gives up as stale and leaves the stored location alone.
 func TestALocationMoveOutpacedOnEveryRoundIsRefusedAsStale(t *testing.T) {
+	t.Parallel()
 	e := setupRateStore(t)
 	_, wsCtx := e.seedWorkspace(context.Background(), t)
 	ctx := routingWriter(wsCtx)

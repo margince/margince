@@ -26,24 +26,18 @@ import (
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
-// composeIngressFor publishes a composed set in which one unit declares one
-// ingress source, and restores whatever was composed before.
-//
-// It writes the same store RegisterExtensions writes, because that store is
-// what the port reads: a second copy kept for tests could describe a unit that
-// is not serving, which is the reason composedIngressFor reads this one.
-func composeIngressFor(t *testing.T, unit string, sources ...extension.IngressSource) {
-	t.Helper()
-	composeCapturingUnit(t, unit, nil, sources...)
+// composeIngressFor is a composition in which one unit declares the given
+// ingress sources.
+func composeIngressFor(unit string, sources ...extension.IngressSource) *Extensions {
+	return composeCapturingUnit(unit, nil, sources...)
 }
 
 // composeCapturingUnit is the same, for a unit that also SUPPLIES a transport.
 // The two are one function because what a unit may file is decided by both
 // declarations together: the source it captures from, and the channel it is
 // allowed to name on a message.
-func composeCapturingUnit(t *testing.T, unit string, channels []extension.Channel, sources ...extension.IngressSource) {
-	t.Helper()
-	composeUnit(t, extension.Extension{
+func composeCapturingUnit(unit string, channels []extension.Channel, sources ...extension.IngressSource) *Extensions {
+	return composeUnit(extension.Extension{
 		Name:     extension.Name(unit),
 		Version:  "1.0.0",
 		Ingress:  sources,
@@ -62,28 +56,24 @@ func composeCapturingUnit(t *testing.T, unit string, channels []extension.Channe
 // their credential under.
 const ingressTestSecretKey = "api-token"
 
-// composeUnit publishes one composed unit and restores what was composed
-// before, rather than clearing: a test that cleared would leave a sibling
-// describing an installation that composes nothing.
-func composeUnit(t *testing.T, unit extension.Extension) {
-	t.Helper()
-	previous := ComposedExtensions()
-	setComposedExtensions([]extension.Extension{unit})
-	t.Cleanup(func() { setComposedExtensions(previous) })
+// composeUnit is a composition holding one unit, as RegisterExtensions holds
+// the set it validated.
+func composeUnit(unit extension.Extension) *Extensions {
+	return &Extensions{units: []extension.Extension{unit}}
 }
 
 // A unit that declares no user-scoped secret has no way for a member to consent
 // to it, so there is nobody it may act for — and the refusal is answered
 // without a query, because the composed declaration already settles it.
 func TestAUnitWithNoUserScopedSecretCanActForNobody(t *testing.T) {
-	composeUnit(t, extension.Extension{
+	composed := composeUnit(extension.Extension{
 		Name:    "probe-unit",
 		Version: "1.0.0",
 		Ingress: []extension.IngressSource{{
 			System: "probe-system", Lands: []extension.RecordKind{extension.KindActivity},
 		}},
 	})
-	_, err := ingestingRuntime(t).Ingest(context.Background(),
+	_, err := ingestingRuntime(composed).Ingest(context.Background(),
 		extension.UserID(ids.NewV7().String()), aRecord())
 	if !errors.Is(err, extension.ErrForbidden) {
 		t.Fatalf("err = %v, want ErrForbidden — consent is a credential under a DECLARED key, and this unit declares none", err)
@@ -97,8 +87,7 @@ func TestAUnitWithNoUserScopedSecretCanActForNobody(t *testing.T) {
 // that must be answered BEFORE a query, so a pool that could serve one would
 // weaken the assertion rather than strengthen it — if any of these ever reached
 // the database, the test would panic instead of passing.
-func ingestingRuntime(t *testing.T) *callRuntime {
-	t.Helper()
+func ingestingRuntime(composed *Extensions) *callRuntime {
 	rt := unattendedRuntimeFor(
 		principal.WithWorkspaceID(context.Background(), ids.NewV7()),
 		"probe-unit", "1.0.0", "job", extensionRuntimeBinding{
@@ -107,6 +96,7 @@ func ingestingRuntime(t *testing.T) *callRuntime {
 			// case in this file stops before the pool is dialled.
 			pool:        &pgxpool.Pool{},
 			captureSink: &capture.Sink{},
+			composed:    composed,
 		},
 	)
 	return rt
@@ -146,8 +136,8 @@ func TestAnUndeclaredIngressSourceIsRefused(t *testing.T) {
 		}},
 	} {
 		t.Run(name, func(t *testing.T) {
-			composeIngressFor(t, "probe-unit", declared...)
-			_, err := ingestingRuntime(t).Ingest(context.Background(), extension.UserID(ids.NewV7().String()), aRecord())
+			composed := composeIngressFor("probe-unit", declared...)
+			_, err := ingestingRuntime(composed).Ingest(context.Background(), extension.UserID(ids.NewV7().String()), aRecord())
 			if !errors.Is(err, extension.ErrIngressNotDeclared) {
 				t.Fatalf("err = %v, want ErrIngressNotDeclared", err)
 			}
@@ -160,10 +150,10 @@ func TestAnUndeclaredIngressSourceIsRefused(t *testing.T) {
 // the ledger's answer to "which unit produced this" is only as good as this
 // lookup.
 func TestAnIngressSourceBelongsToTheUnitThatDeclaredIt(t *testing.T) {
-	composeIngressFor(t, "another-unit", extension.IngressSource{
+	composed := composeIngressFor("another-unit", extension.IngressSource{
 		System: "probe-system", Lands: []extension.RecordKind{extension.KindActivity},
 	})
-	_, err := ingestingRuntime(t).Ingest(context.Background(), extension.UserID(ids.NewV7().String()), aRecord())
+	_, err := ingestingRuntime(composed).Ingest(context.Background(), extension.UserID(ids.NewV7().String()), aRecord())
 	if !errors.Is(err, extension.ErrIngressNotDeclared) {
 		t.Fatalf("err = %v, want ErrIngressNotDeclared — a source declared by a sibling unit is not this unit's", err)
 	}
@@ -173,10 +163,10 @@ func TestAnIngressSourceBelongsToTheUnitThatDeclaredIt(t *testing.T) {
 // that has a caller has two authorities in play. Refused before anything is
 // spent, which is why this test needs no database either.
 func TestAnAttendedInvocationCannotIngest(t *testing.T) {
-	composeIngressFor(t, "probe-unit", extension.IngressSource{
+	composed := composeIngressFor("probe-unit", extension.IngressSource{
 		System: "probe-system", Lands: []extension.RecordKind{extension.KindActivity},
 	})
-	rt := ingestingRuntime(t)
+	rt := ingestingRuntime(composed)
 	rt.unattended = false
 
 	_, err := rt.Ingest(context.Background(), extension.UserID(ids.NewV7().String()), aRecord())
@@ -195,10 +185,10 @@ func TestAnAttendedInvocationCannotIngest(t *testing.T) {
 // then wait for a connection this Runtime is holding. On a small pool that does
 // not fail; it hangs.
 func TestAnIngestInsideTheUnitsOwnTransactionIsRefused(t *testing.T) {
-	composeIngressFor(t, "probe-unit", extension.IngressSource{
+	composed := composeIngressFor("probe-unit", extension.IngressSource{
 		System: "probe-system", Lands: []extension.RecordKind{extension.KindActivity},
 	})
-	rt := ingestingRuntime(t)
+	rt := ingestingRuntime(composed)
 	member := extension.UserID(ids.NewV7().String())
 
 	mustEnterTx(t, rt)
@@ -243,10 +233,10 @@ func mustEnterTx(t *testing.T, rt *callRuntime) {
 // check could still have capture's own acquire land after a sibling goroutine
 // took the connection.
 func TestAUnitCannotOpenATransactionWhileItIsIngesting(t *testing.T) {
-	composeIngressFor(t, "probe-unit", extension.IngressSource{
+	composed := composeIngressFor("probe-unit", extension.IngressSource{
 		System: "probe-system", Lands: []extension.RecordKind{extension.KindActivity},
 	})
-	rt := ingestingRuntime(t)
+	rt := ingestingRuntime(composed)
 	if err := rt.beginIngest(); err != nil {
 		t.Fatalf("claiming the ingest slot: %v", err)
 	}
@@ -262,10 +252,10 @@ func TestAUnitCannotOpenATransactionWhileItIsIngesting(t *testing.T) {
 // error: a sink assembled at the call from the pool alone would compile, run,
 // land activities and silently create no contacts.
 func TestARoleThatComposedNoCaptureRefusesByName(t *testing.T) {
-	composeIngressFor(t, "probe-unit", extension.IngressSource{
+	composed := composeIngressFor("probe-unit", extension.IngressSource{
 		System: "probe-system", Lands: []extension.RecordKind{extension.KindActivity},
 	})
-	rt := ingestingRuntime(t)
+	rt := ingestingRuntime(composed)
 	rt.deps.captureSink = nil
 
 	_, err := rt.Ingest(context.Background(), extension.UserID(ids.NewV7().String()), aRecord())
@@ -277,10 +267,10 @@ func TestARoleThatComposedNoCaptureRefusesByName(t *testing.T) {
 // The lifetime contract holds here as it does on every other capability: a
 // Runtime a handler stashed and used after its call is over ingests nothing.
 func TestAReleasedRuntimeCannotIngest(t *testing.T) {
-	composeIngressFor(t, "probe-unit", extension.IngressSource{
+	composed := composeIngressFor("probe-unit", extension.IngressSource{
 		System: "probe-system", Lands: []extension.RecordKind{extension.KindActivity},
 	})
-	rt := ingestingRuntime(t)
+	rt := ingestingRuntime(composed)
 	rt.release()
 
 	_, err := rt.Ingest(context.Background(), extension.UserID(ids.NewV7().String()), aRecord())
@@ -292,10 +282,10 @@ func TestAReleasedRuntimeCannotIngest(t *testing.T) {
 // The member is named by the unit, so the name is checked before it is used —
 // and a value that is not an id at all is the unit's mistake, answered as one.
 func TestAMemberIdThatIsNotAnIdIsRefusedBeforeAnyQuery(t *testing.T) {
-	composeIngressFor(t, "probe-unit", extension.IngressSource{
+	composed := composeIngressFor("probe-unit", extension.IngressSource{
 		System: "probe-system", Lands: []extension.RecordKind{extension.KindActivity},
 	})
-	_, err := ingestingRuntime(t).Ingest(context.Background(), "the-member-i-mean", aRecord())
+	_, err := ingestingRuntime(composed).Ingest(context.Background(), "the-member-i-mean", aRecord())
 	if !errors.Is(err, extension.ErrInvalid) {
 		t.Fatalf("err = %v, want ErrInvalid", err)
 	}
@@ -309,7 +299,7 @@ func TestAMemberIdThatIsNotAnIdIsRefusedBeforeAnyQuery(t *testing.T) {
 // own "a connector cannot claim to be another one" check pass by construction
 // rather than by this side remembering to keep the two equal.
 func TestProvenanceIsStampedFromTheUnitAndItsDeclaredSource(t *testing.T) {
-	rt := ingestingRuntime(t)
+	rt := ingestingRuntime(nil)
 	normalized := rt.normalized(aRecord(), extension.IngressSource{})
 
 	if want := "ext:probe-unit:probe-system"; normalized.Source != want {
@@ -342,7 +332,7 @@ func TestProvenanceIsStampedFromTheUnitAndItsDeclaredSource(t *testing.T) {
 // bridge test exists for.
 func TestTheConversionCarriesAWholeRecord(t *testing.T) {
 	rec := aRecord()
-	normalized := ingestingRuntime(t).normalized(rec, extension.IngressSource{})
+	normalized := ingestingRuntime(nil).normalized(rec, extension.IngressSource{})
 
 	// NormalizedRecord.Fields is the envelope's `any` — one shape per entity
 	// type — so what a landed activity is made of is only readable after this
@@ -385,7 +375,7 @@ func TestTheConversionCarriesAWholeRecord(t *testing.T) {
 // not survive it: capture's errors carry table names, constraint names and SQL
 // state, and a unit is other contacts's code.
 func TestIngressMapsRefusalsAndLeaksNoDetail(t *testing.T) {
-	rt := ingestingRuntime(t)
+	rt := ingestingRuntime(nil)
 	for name, probe := range map[string]struct {
 		in   error
 		want error

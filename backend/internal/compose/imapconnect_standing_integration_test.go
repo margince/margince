@@ -93,6 +93,7 @@ func startPlainIMAPServer(t *testing.T) (host string, port int) {
 }
 
 func TestStandingIMAPConnectTransport(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	// The registry resolves the member's live role, which must let capture write.
 	e.GrantRole(t, e.Rep1, "rep")

@@ -19,6 +19,7 @@ import (
 )
 
 func TestTheStageListCountsOnlyPartnersTheReaderMaySee(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	admin := asStageAdmin(e, stageAdminGrants())
 	companyID, _ := newPartnerCompany(admin, t, e, "Counted AG", UpsertPartnerInput{PartnerRole: "hosting"})
@@ -63,8 +64,8 @@ func TestTheStageListCountsOnlyPartnersTheReaderMaySee(t *testing.T) {
 }
 
 func TestTwoAdministratorsCannotRetireTheLastCandidateStagesTogether(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
-	keepPartnerStagesAsSeeded(t, e)
 	ctx := asStageAdmin(e, stageAdminGrants())
 	retired := false
 	for _, key := range []string{"contacted", "in_conversation", "fit_confirmed", "agreement_pending"} {

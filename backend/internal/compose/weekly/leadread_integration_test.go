@@ -18,6 +18,7 @@ import (
 )
 
 func TestAWeekRemembersWhetherItsLeadsWereMeasuredWithAuthority(t *testing.T) {
+	t.Parallel()
 	for _, readableAtFreeze := range []bool{false, true} {
 		t.Run(map[bool]string{false: "withheld at freeze", true: "withheld on read"}[readableAtFreeze], func(t *testing.T) {
 			e := setupWeekly(t)

@@ -60,6 +60,7 @@ func seedCompanyWithEvidence(ctx context.Context, t *testing.T, e *dedupeEnv) id
 }
 
 func TestListCompanyProfileFieldsReturnsConfirmedFieldsRowScoped(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := seedCompanyWithEvidence(ctx, t, e)
@@ -90,6 +91,7 @@ func TestListCompanyProfileFieldsReturnsConfirmedFieldsRowScoped(t *testing.T) {
 }
 
 func TestListCompanyFactsReturnsConfirmedFactsGroupedOrder(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := seedCompanyWithEvidence(ctx, t, e)

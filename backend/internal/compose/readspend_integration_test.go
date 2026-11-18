@@ -51,6 +51,7 @@ func agentReading(ctx context.Context, t *testing.T, scopes ...principal.Scope) 
 }
 
 func TestAnAgentWithoutEnrichReadsAPanelWithoutStartingAModelCall(t *testing.T) {
+	t.Parallel()
 	o := setupOffering(t)
 	company, _ := o.customer(t, "Spend Motors")
 	contact := o.SeedContact(t, "Spent Subject", &o.AdminUser)
@@ -97,6 +98,7 @@ func TestAnAgentWithoutEnrichReadsAPanelWithoutStartingAModelCall(t *testing.T) 
 // A room brief is written anew on every read, so only a caller who may spend
 // starts its model call.
 func TestARoomBriefStartsAModelCallOnlyForACallerWhoMaySpend(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	perms := integration.AdminPerms
 	perms.Objects = maps.Clone(perms.Objects)

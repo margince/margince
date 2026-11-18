@@ -57,10 +57,11 @@ func EmbedReindexWorkerForTest(pool *pgxpool.Pool, embedder search.Embedder) (ri
 }
 
 // FinanceSyncWorkerForTest builds the per-workspace finance sync worker
-// through addFinanceJobs, the registration the worker role makes.
-func FinanceSyncWorkerForTest(pool *pgxpool.Pool) (river.Worker[FinanceSyncArgs], error) {
+// through addFinanceJobs, the registration the worker role makes, over the
+// composition whose units supply the sources.
+func FinanceSyncWorkerForTest(pool *pgxpool.Pool, composed *Extensions) (river.Worker[FinanceSyncArgs], error) {
 	reg := newJobRegistry()
-	addFinanceJobs(reg, pool, JobRunnerConfig{}, slog.New(slog.DiscardHandler))
+	addFinanceJobs(reg, pool, JobRunnerConfig{Extensions: composed}, slog.New(slog.DiscardHandler))
 	var worker river.Worker[FinanceSyncArgs]
 	return worker, governedInto(reg, &worker)
 }

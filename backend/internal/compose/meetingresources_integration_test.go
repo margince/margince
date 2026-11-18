@@ -18,6 +18,7 @@ import (
 )
 
 func TestLegacyCalendarResourcesAreNotMeetingCounterparties(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	resource, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{
 		FullName: "A calendar room", Source: "manual", Emails: []contacts.ContactEmailInput{{Email: "room@resource.calendar.google.com", EmailType: "work", IsPrimary: true}},
@@ -71,6 +72,7 @@ func TestLegacyCalendarResourcesAreNotMeetingCounterparties(t *testing.T) {
 // A meeting whose only guest is an invited colleague has no outside party. A
 // stranger's address on the same kind of meeting does.
 func TestAnInvitedColleagueIsNoOutsidePartyToAMeeting(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const colleague = "invited@colleague.example"
 	invitedColleague(t, e, colleague)

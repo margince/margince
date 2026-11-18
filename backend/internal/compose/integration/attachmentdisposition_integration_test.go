@@ -32,6 +32,7 @@ import (
 // adding an inline preview has to confront the fact that a captured channel file
 // comes from an untrusted sender rather than trip over it.
 func TestDownloadedAttachmentIsSavedNotRendered(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling).WithBlobstore(blobstore.NewMemory())
 	ctx := e.Admin()
@@ -75,6 +76,7 @@ func TestDownloadedAttachmentIsSavedNotRendered(t *testing.T) {
 // path has always run sender-supplied names through this; an upload is the same
 // untrusted string arriving by a different door.
 func TestAnUploadedFilenameIsSanitizedBeforeItIsStored(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling).WithBlobstore(blobstore.NewMemory())
 	ctx := e.Admin()

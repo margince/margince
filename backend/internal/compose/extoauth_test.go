@@ -289,9 +289,8 @@ func newExtFlow(t *testing.T, v *vendor, onGrantErr error) *extFlow {
 		f.granted = append(f.granted, grant)
 		return onGrantErr
 	}
-	setComposedExtensions([]extension.Extension{{Name: "ledger", Version: "0.1.0", OAuthApps: []extension.OAuthApp{app}}})
-	t.Cleanup(func() { setComposedExtensions(nil) })
 	f.h = connectorHandlers{
+		extensions:     &Extensions{units: []extension.Extension{{Name: "ledger", Version: "0.1.0", OAuthApps: []extension.OAuthApp{app}}}},
 		authority:      adminAuthority{},
 		signer:         newStateSigner([]byte(testStateKey)),
 		publicBaseURL:  "https://app.test",
@@ -484,19 +483,18 @@ func TestConnectRefusesANonAdminAnUnknownAppAndAnAppWithNoStoredClient(t *testin
 // A unit reads only its own apps' grants: a neighbour's provider reads as no
 // app at all.
 func TestAUnitCannotReachAnotherUnitsOAuthGrant(t *testing.T) {
-	setComposedExtensions([]extension.Extension{
+	composed := &Extensions{units: []extension.Extension{
 		{Name: "ledger", Version: "0.1.0", OAuthApps: []extension.OAuthApp{booksApp("https://auth.ledgerly.test/token")}},
 		{Name: "neighbour", Version: "0.1.0"},
-	})
-	t.Cleanup(func() { setComposedExtensions(nil) })
-	rt := runtimeFor(extAdminCtx(), "neighbour", "0.1.0", "tool/probe", extensionRuntimeBinding{})
+	}}
+	rt := runtimeFor(extAdminCtx(), "neighbour", "0.1.0", "tool/probe", extensionRuntimeBinding{composed: composed})
 	if _, err := rt.OAuthAccessToken(context.Background(), "books"); !errors.Is(err, extension.ErrNoSuchOAuthApp) {
 		t.Fatalf("OAuthAccessToken(books) from a neighbour = %v, want ErrNoSuchOAuthApp", err)
 	}
 	if err := rt.OAuthDisconnect(context.Background(), "books"); !errors.Is(err, extension.ErrNoSuchOAuthApp) {
 		t.Fatalf("OAuthDisconnect(books) from a neighbour = %v, want ErrNoSuchOAuthApp", err)
 	}
-	own := runtimeFor(extAdminCtx(), "ledger", "0.1.0", "tool/probe", extensionRuntimeBinding{})
+	own := runtimeFor(extAdminCtx(), "ledger", "0.1.0", "tool/probe", extensionRuntimeBinding{composed: composed})
 	if _, err := own.OAuthAccessToken(context.Background(), "books"); !errors.Is(err, errExtensionRuntimeUnwired) {
 		t.Fatalf("the declaring unit = %v, want past the declaration check to the unwired binding", err)
 	}

@@ -37,6 +37,7 @@ func (e *dedupeEnv) createLead(ctx context.Context, t *testing.T, name, email, c
 // A second lead that reads like the first — same company, a near spelling
 // of the name, no shared exact key — lands on the queue as a LEAD pair.
 func TestNearMatchLeadCreateLeavesAnOpenLeadCandidate(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	first := e.createLead(ctx, t, "Jonas Petersen", "jonas@nordwind.test", "Nordwind Logistik")
@@ -67,6 +68,7 @@ func TestNearMatchLeadCreateLeavesAnOpenLeadCandidate(t *testing.T) {
 // addresses are two prospects until proven otherwise: below the threshold,
 // nothing is proposed.
 func TestUnrelatedLeadsAreNotProposed(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.createLead(ctx, t, "Anna Weber", "anna@alpha.test", "Alpha GmbH")
@@ -80,6 +82,7 @@ func TestUnrelatedLeadsAreNotProposed(t *testing.T) {
 // pointer, its timeline is on the survivor, and the survivor took the key it
 // lacked.
 func TestDedupeLeadMergeArm(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	first := e.createLead(ctx, t, "Mira Holt", "", "Holt & Co")
@@ -172,6 +175,7 @@ func (e *dedupeEnv) seedLeadConsent(ctx context.Context, t *testing.T, lead ids.
 // flips the survivor's grant, with a proof event; and the proof rows travel
 // with the state, so the survivor's grants stay actionable.
 func TestLeadMergeCarriesWithdrawalAndProof(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	newsletter := e.seedPurpose(ctx, t, "newsletter")
@@ -215,6 +219,7 @@ func TestLeadMergeCarriesWithdrawalAndProof(t *testing.T) {
 // Merging {A,B} leaves no open pair naming A: {A,C} can no longer be decided
 // and is retired rather than offered as a merge that can only fail.
 func TestLeadMergeRetiresOtherPairsNamingTheLoser(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	a := e.createLead(ctx, t, "Tomas Berg", "tomas@berg.test", "Berg Bau")
@@ -259,6 +264,7 @@ func TestLeadMergeRetiresOtherPairsNamingTheLoser(t *testing.T) {
 // The id is the useful half beyond the badge: a reader who learns the lead was
 // merged wants the lead it was merged INTO, which is the next thing they ask.
 func TestAMergedAwayLeadNamesTheLeadItWasMergedInto(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	survivor := e.createLead(ctx, t, "Karin Vogt", "karin@vogt.test", "Vogt KG")

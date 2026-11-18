@@ -13,6 +13,7 @@ import (
 )
 
 func TestCSVEmployerConflictSkipsOnlyTheRefusedRow(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	for _, company := range []map[string]any{
 		{"source": "manual", "display_name": "Named Works"},
@@ -39,6 +40,7 @@ func TestCSVEmployerConflictSkipsOnlyTheRefusedRow(t *testing.T) {
 }
 
 func TestCSVImplicitEmployerIsRecordedForUndo(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	before := len(companyRows(t, e))
 	profile, _ := importjobtest.UploadCSV(t, e, "contact", "Email,Full Name,Company\nbuyer@undo-work.test,Dana Buyer,Undo Works\n")
@@ -61,6 +63,7 @@ func TestCSVImplicitEmployerIsRecordedForUndo(t *testing.T) {
 }
 
 func TestCSVContactUsesConfiguredConsumerDomains(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	if s := e.Call(t, http.MethodPost, "/v1/capture/consumer-mail-domains", map[string]string{"domain": "mail-provider.test", "kind": "extra"}, nil, nil); s != http.StatusCreated {
 		t.Fatalf("domain: %d", s)
@@ -92,6 +95,7 @@ func TestCSVContactUsesConfiguredConsumerDomains(t *testing.T) {
 }
 
 func TestCSVReferencesFindEmployersCreatedByEarlierContacts(t *testing.T) {
+	t.Parallel()
 	for _, ref := range []string{"Orion Research", "orion-research.test"} {
 		t.Run(ref, func(t *testing.T) {
 			e := setupImportApp(t)
@@ -121,6 +125,7 @@ func TestCSVReferencesFindEmployersCreatedByEarlierContacts(t *testing.T) {
 }
 
 func TestCSVPlannedEmployerDomainsDoNotInventAliasCompanies(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	profile, status := importjobtest.UploadCSV(t, e, "contact", "Name,Email,Company,Company Ref\nDana,dana@orion-alias.test,Orion Research,\nRobin,robin@orion-alias.test,Another Name,\nTaylor,taylor@other.test,,Another Name\n")
 	if status != http.StatusOK {

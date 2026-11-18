@@ -80,6 +80,7 @@ func setupPlan(t *testing.T) *planEnv {
 // and the answer is NOT FOUND rather than a refusal: whether a colleague has
 // planned their week is itself something a stranger may not learn.
 func TestAnotherRepsPlanIsNotFound(t *testing.T) {
+	t.Parallel()
 	e := setupPlan(t)
 
 	if _, err := e.store.StartWeek(e.rep1Ctx, planClock); err != nil {
@@ -97,6 +98,7 @@ func TestAnotherRepsPlanIsNotFound(t *testing.T) {
 // shared live team — the same question that decides whether a lead may open a
 // rep's queue.
 func TestATeammateReadsThePlanAndAnOutsiderDoesNot(t *testing.T) {
+	t.Parallel()
 	e := setupPlan(t)
 
 	if _, err := e.store.StartWeek(e.rep1Ctx, planClock); err != nil {
@@ -114,6 +116,7 @@ func TestATeammateReadsThePlanAndAnOutsiderDoesNot(t *testing.T) {
 
 // The lead's ONE write, and the only path that touches somebody else's row.
 func TestALeadAnswersARequestAndAnOutsiderCannot(t *testing.T) {
+	t.Parallel()
 	e := setupPlan(t)
 
 	commitment := planCommitment(t, e, e.rep1Ctx, "Call the Weber buyer")
@@ -153,6 +156,7 @@ func TestALeadAnswersARequestAndAnOutsiderCannot(t *testing.T) {
 // no argument by which they could — the state write resolves the plan from the
 // caller, so a lead calling it reaches only their own week.
 func TestALeadCannotSettleSomebodyElsesCommitment(t *testing.T) {
+	t.Parallel()
 	e := setupPlan(t)
 
 	commitment := planCommitment(t, e, e.rep1Ctx, "Send the proposal")
@@ -169,6 +173,7 @@ func TestALeadCannotSettleSomebodyElsesCommitment(t *testing.T) {
 // would flip from missed to done and the frozen review would stop matching the
 // plan beside it.
 func TestClosingTheWeekTwiceAnswersTheSameCounts(t *testing.T) {
+	t.Parallel()
 	e := setupPlan(t)
 
 	// Last week's plan: two commitments, one done.
@@ -219,6 +224,7 @@ func TestClosingTheWeekTwiceAnswersTheSameCounts(t *testing.T) {
 // it, and counting it against a rep teaches them to leave dead commitments open
 // rather than say so.
 func TestADroppedCommitmentIsNeitherOwedNorKept(t *testing.T) {
+	t.Parallel()
 	e := setupPlan(t)
 
 	lastWeek := planClock.AddDate(0, 0, -7)
@@ -245,6 +251,7 @@ func TestADroppedCommitmentIsNeitherOwedNorKept(t *testing.T) {
 // A help request lands exactly one audit row and one event, like every other
 // mutation in this tree.
 func TestAHelpRequestLandsOneAuditRowAndOneEvent(t *testing.T) {
+	t.Parallel()
 	e := setupPlan(t)
 	owner := integration.OwnerConn(t)
 	ctx := context.Background()
@@ -272,6 +279,7 @@ func TestAHelpRequestLandsOneAuditRowAndOneEvent(t *testing.T) {
 
 // Withdrawing a request must not page a lead a second time.
 func TestWithdrawingARequestEmitsNoSecondHelpEvent(t *testing.T) {
+	t.Parallel()
 	e := setupPlan(t)
 	owner := integration.OwnerConn(t)
 	ctx := context.Background()
@@ -328,6 +336,7 @@ func countRows(t *testing.T, conn *pgx.Conn, ctx context.Context, query string, 
 // fields on a commitment that were never the rep's to throw away. So the
 // assertion is not only that the label moved: it is that the answer survived.
 func TestCorrectingACommitmentKeepsWhatItWasNotAbout(t *testing.T) {
+	t.Parallel()
 	e := setupPlan(t)
 	id := planCommitment(t, e, e.rep1Ctx, "Call the Aster buyer on Monday")
 
@@ -363,6 +372,7 @@ func TestCorrectingACommitmentKeepsWhatItWasNotAbout(t *testing.T) {
 // Only what is PRESENT changes. A rep fixing a label must not lose the date
 // they never mentioned.
 func TestCorrectingOneFieldLeavesTheOthersAlone(t *testing.T) {
+	t.Parallel()
 	e := setupPlan(t)
 	due := planClock.AddDate(0, 0, 2)
 	written, err := e.store.AddCommitment(e.rep1Ctx, planClock,
@@ -393,6 +403,7 @@ func TestCorrectingOneFieldLeavesTheOthersAlone(t *testing.T) {
 // And a date can be CLEARED, which is a different request from not mentioning
 // it. Something to do this week, rather than by a day.
 func TestADueDateCanBeCleared(t *testing.T) {
+	t.Parallel()
 	e := setupPlan(t)
 	due := planClock.AddDate(0, 0, 2)
 	written, err := e.store.AddCommitment(e.rep1Ctx, planClock,
@@ -420,6 +431,7 @@ func TestADueDateCanBeCleared(t *testing.T) {
 // wrote a particular thing on their week is itself something a stranger may not
 // learn.
 func TestCorrectingSomebodyElsesCommitmentIsNotFound(t *testing.T) {
+	t.Parallel()
 	e := setupPlan(t)
 	id := planCommitment(t, e, e.rep1Ctx, "rep1's own")
 
@@ -436,6 +448,7 @@ func TestCorrectingSomebodyElsesCommitmentIsNotFound(t *testing.T) {
 // something they did not is a false record, and bumping the version would move
 // a row a concurrent reader is holding.
 func TestACorrectionLandsOneAuditRowAndANoOpLandsNone(t *testing.T) {
+	t.Parallel()
 	e := setupPlan(t)
 	owner := integration.OwnerConn(t)
 	ctx := context.Background()
@@ -481,6 +494,7 @@ func commitmentByID(t *testing.T, plan weeklyplan.Plan, id ids.UUID) weeklyplan.
 // A closed week is frozen into a review that has already been counted, so its
 // commitments stop being editable — the same refusal the settle path makes.
 func TestCorrectingACommitmentOnAClosedWeekIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupPlan(t)
 	id := planCommitment(t, e, e.rep1Ctx, "written while the week was open")
 
@@ -506,6 +520,7 @@ func TestCorrectingACommitmentOnAClosedWeekIsRefused(t *testing.T) {
 // retry must not move the time the rep finished it or file a change that did
 // not happen.
 func TestMarkingACommitmentDoneTwiceKeepsItsFinishTimeAndFilesOneAuditRow(t *testing.T) {
+	t.Parallel()
 	e := setupPlan(t)
 	owner := integration.OwnerConn(t)
 	ctx := context.Background()
@@ -547,6 +562,7 @@ func TestMarkingACommitmentDoneTwiceKeepsItsFinishTimeAndFilesOneAuditRow(t *tes
 // Presses that arrive together are still one fact: the repeat is judged against
 // the row as it stands once the lock is held, not as it read before it.
 func TestConcurrentDonePressesFileOneAuditRow(t *testing.T) {
+	t.Parallel()
 	e := setupPlan(t)
 	owner := integration.OwnerConn(t)
 	ctx := context.Background()

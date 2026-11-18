@@ -20,6 +20,7 @@ import (
 // first row of its carry chain, and a chain whose first row is gone reads
 // unknown.
 func TestTheKeptStopBackfillHashesTheAddressAndReadsTheChain(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	resetSchema(t, conn)
@@ -60,7 +61,7 @@ func TestTheKeptStopBackfillHashesTheAddressAndReadsTheChain(t *testing.T) {
 		kept).Scan(&address, &hash); err != nil {
 		t.Fatal(err)
 	}
-	if address == nil || *address != keptAddress || hash == nil || *hash != storekit.SuppressionHash(keptAddress) {
+	if address == nil || *address != keptAddress || hash == nil || *hash != storekit.SuppressionHash(ctx, keptAddress) {
 		t.Errorf("the kept stop holds address %v and hash %v, want the address and the send check's hash", address, hash)
 	}
 	if err := conn.QueryRow(ctx, `SELECT address, address_hash FROM communication_suppression WHERE id = $1`,

@@ -75,7 +75,7 @@ func addPrivacyRetentionJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunner
 		return NewRetentionServiceFor(db, cfg.Blobstore, log).WithPayloadVault(privacyPayloads(cfg.ControllerVault))
 	}
 	addDeclaredWorker[PrivacyRetentionArgs](reg, &privacyRetentionWorker{
-		pool: pool, retention: retention, identity: identity.NewService(pool),
+		pool: pool, retention: retention, identity: IdentityService(pool),
 	})
 	return periodicFor(cfg, PrivacyRetentionArgs{})
 }

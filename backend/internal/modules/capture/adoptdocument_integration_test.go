@@ -15,6 +15,7 @@ import (
 )
 
 func TestAnAdoptedMessageCarryingADocumentDoesNotInheritAnOpeningVerdict(t *testing.T) {
+	t.Parallel()
 	ctx, pool := meetingTenureEnv(t)
 	for _, c := range []struct {
 		name   string

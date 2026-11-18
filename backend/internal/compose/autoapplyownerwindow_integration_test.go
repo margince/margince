@@ -54,6 +54,7 @@ func decisionChanges() map[string]func(e *closeDateEnv, t *testing.T) {
 }
 
 func TestAnOwnerWhoLeavesBeforeTheDecisionGetsNoAutomaticChange(t *testing.T) {
+	t.Parallel()
 	for name, change := range decisionChanges() {
 		t.Run(name, func(t *testing.T) {
 			e := setupCloseDate(t)
@@ -85,6 +86,7 @@ func TestAnOwnerWhoLeavesBeforeTheDecisionGetsNoAutomaticChange(t *testing.T) {
 }
 
 func TestAnOwnerWhoLeavesBeforeTheEffectGetsNoAutomaticChange(t *testing.T) {
+	t.Parallel()
 	for name, change := range ownerChanges {
 		t.Run(name, func(t *testing.T) {
 			e := setupCloseDate(t)
@@ -230,6 +232,7 @@ func (e *closeDateEnv) applyObserved(t *testing.T, policy *observedPolicy) (ids.
 // and before the effect's redemption locks anything. Neither can then deadlock
 // with a member's removal.
 func TestAnAutomaticApplyBindsTheOwnerBeforeItLocksARecord(t *testing.T) {
+	t.Parallel()
 	e := setupCloseDate(t)
 	var locksAtBind []int
 	policy := &observedPolicy{beforeBind: func(ctx context.Context, tx pgx.Tx) error {
@@ -264,6 +267,7 @@ func waitsForTheApply(t *testing.T, change func(ctx context.Context) error) bool
 // the deal waits for the write. Neither can commit under a write that already
 // decided on the state before it.
 func TestAChangeToTheOwnerWaitsForAnAutomaticApplyInFlight(t *testing.T) {
+	t.Parallel()
 	for name, change := range map[string]func(e *closeDateEnv) func(ctx context.Context) error{
 		"switch turned off": switchesOff,
 		"handed to a colleague": func(e *closeDateEnv) func(ctx context.Context) error {

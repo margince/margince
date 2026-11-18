@@ -35,6 +35,7 @@ func seedLogoCompany(ctx context.Context, t *testing.T, e *dedupeEnv, name, doma
 }
 
 func TestSetCompanyLogoRecordsTheMarkItsProvenanceAndItsURL(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := seedLogoCompany(ctx, t, e, "Voltaq Systems GmbH", "voltaq.test")
@@ -120,6 +121,7 @@ func TestSetCompanyLogoRecordsTheMarkItsProvenanceAndItsURL(t *testing.T) {
 }
 
 func TestSetCompanyLogoNeverReplacesTheOneAContactSet(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := seedLogoCompany(ctx, t, e, "Nordwind Energie AG", "nordwind.test")
@@ -166,6 +168,7 @@ func TestSetCompanyLogoNeverReplacesTheOneAContactSet(t *testing.T) {
 }
 
 func TestSetCompanyLogoHandsBackTheObjectItSuperseded(t *testing.T) {
+	t.Parallel()
 	// Each resolve stores its own object, so a re-read leaves the previous
 	// one referenced by nothing. The write is the only place still holding
 	// the pre-write key, so it is the only place that can name it for the
@@ -205,6 +208,7 @@ func TestSetCompanyLogoHandsBackTheObjectItSuperseded(t *testing.T) {
 }
 
 func TestCompanyLogoIsRowScopedLikeEveryOtherRead(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	owner := e.as()
 	companyID := seedLogoCompany(owner, t, e, "Fremdfirma GmbH", "fremd.test")

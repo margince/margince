@@ -19,6 +19,7 @@ import (
 )
 
 func TestScanFailuresKeepTheirWrittenLanguage(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct{ language, worker, model string }{
 		{"en", "No worker", "The model's answer"},
 		{"de", "Es ist kein Worker", "Die Antwort des Modells"},

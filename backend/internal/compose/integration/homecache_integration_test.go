@@ -43,6 +43,7 @@ func served(ctx context.Context, t *testing.T, c *homecache.Cache, reader ids.UU
 }
 
 func TestACachedHomeAnswerIsServedToItsReaderUntilTheFenceMoves(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	c := homecache.New(e.Pool)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
@@ -65,6 +66,7 @@ func TestACachedHomeAnswerIsServedToItsReaderUntilTheFenceMoves(t *testing.T) {
 // A read that began before its reader's write and stores after it would hand
 // the reader the day as it was before they acted.
 func TestAnAnswerComputedBeforeItsReadersWriteIsNeverServed(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	c := homecache.New(e.Pool)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
@@ -91,6 +93,7 @@ func TestAnAnswerComputedBeforeItsReadersWriteIsNeverServed(t *testing.T) {
 
 // Expiry writes nothing, so it bounds the answer's life instead.
 func TestAnAnswerLivesNoLongerThanTheNextGrantToExpire(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	c := homecache.New(e.Pool)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
@@ -114,6 +117,7 @@ func TestAnAnswerLivesNoLongerThanTheNextGrantToExpire(t *testing.T) {
 // A snooze runs out without a write, so an answer that hid the snoozed item is
 // not served past the moment it comes back.
 func TestAnAnswerLivesNoLongerThanTheNextSnoozeToEnd(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	c := homecache.New(e.Pool)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, AdminPerms)
@@ -148,6 +152,7 @@ func TestAnAnswerLivesNoLongerThanTheNextSnoozeToEnd(t *testing.T) {
 }
 
 func TestACachedFirstPageEndsWithTheWalkItStarted(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	c := homecache.New(e.Pool)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
@@ -168,6 +173,7 @@ func TestACachedFirstPageEndsWithTheWalkItStarted(t *testing.T) {
 // Home may lag background work by its five minutes, so a machine's write ends
 // neither answer.
 func TestAMachineWriteLeavesTheCachedReceiptAndWorklist(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	c := homecache.New(e.Pool)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
@@ -184,6 +190,7 @@ func TestAMachineWriteLeavesTheCachedReceiptAndWorklist(t *testing.T) {
 }
 
 func TestAnAnswerNearTheEndOfItsLifeIsServedAndReadAgainBehindIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	c := homecache.New(e.Pool)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
@@ -212,6 +219,7 @@ func TestAnAnswerNearTheEndOfItsLifeIsServedAndReadAgainBehindIt(t *testing.T) {
 }
 
 func TestAnAnswerPastItsLifeIsServedStaleUntilItsGraceEnds(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	c := homecache.New(e.Pool)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
@@ -250,6 +258,7 @@ func TestAnAnswerPastItsLifeIsServedStaleUntilItsGraceEnds(t *testing.T) {
 }
 
 func TestAReceiptPastItsLifeIsReadFresh(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	c := homecache.New(e.Pool)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
@@ -274,6 +283,7 @@ func TestAReceiptPastItsLifeIsReadFresh(t *testing.T) {
 // A background refresh that began before a reader's miss must not replace the
 // newer answer that miss kept.
 func TestAnOlderAnswerNeverReplacesANewerOne(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	c := homecache.New(e.Pool)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
@@ -295,6 +305,7 @@ func TestAnOlderAnswerNeverReplacesANewerOne(t *testing.T) {
 // The cache only saves work. A kept answer this build cannot read, written by an
 // older one, is passed over for the fresh read, which is kept in its place.
 func TestAnUnreadableKeptAnswerIsServedFreshAndReplaced(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	c := homecache.New(e.Pool)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
@@ -321,6 +332,7 @@ func TestAnUnreadableKeptAnswerIsServedFreshAndReplaced(t *testing.T) {
 
 // /metrics counts each Home read Serve answered, so the hit rate is measured.
 func TestServeCountsItsHitsAndMissesOnMetrics(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	c := homecache.New(e.Pool)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)

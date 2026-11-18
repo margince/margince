@@ -71,6 +71,7 @@ func seedManagerRoles(t *testing.T, e *integration.Env, users ...ids.UUID) {
 // AssembleTeamFor, because everything between the two is what was broken: the
 // query that lists the teams, the seat it acts as, and the members it counts.
 func TestTheTeamSnapshotJobWritesAWeek(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	w := teamSnapshotWorker(e)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
@@ -101,6 +102,7 @@ func TestTheTeamSnapshotJobWritesAWeek(t *testing.T) {
 // so a worker whose engine has no membership seam refuses its own snapshot from
 // the second tick onward, and the workspace job fails forever.
 func TestASecondTickOfTheTeamSnapshotJobSucceeds(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	w := teamSnapshotWorker(e)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
@@ -128,6 +130,7 @@ func TestASecondTickOfTheTeamSnapshotJobSucceeds(t *testing.T) {
 }
 
 func TestATeamWaitsForAFailedMemberAndUsesAnAuthorizedLead(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	w := teamSnapshotWorker(e)
 	// Only the second member is authorized to read a team review.

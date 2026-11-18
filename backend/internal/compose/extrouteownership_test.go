@@ -46,13 +46,12 @@ func TestOneUnitCannotInheritAnothersHandlerByNamingItsVerb(t *testing.T) {
 		t.Fatalf("both units declare %s — this test needs two distinct routes", alpha.ServedPath())
 	}
 
-	// The real served set, through the real global: only alpha registered a
-	// handler for the verb.
-	withComposedVerbs(t, []extension.Verb{alpha, beta}, alpha)
+	// The real served set: only alpha registered a handler for the verb.
+	composed := withComposedVerbs([]extension.Verb{alpha, beta}, alpha)
 
 	invoked := ""
 	mux := http.NewServeMux()
-	routes, err := MountExtensionRoutes(mux, []extension.Verb{alpha, beta}, composedServedVerbs(),
+	routes, err := MountExtensionRoutes(mux, []extension.Verb{alpha, beta}, composed.servedVerbs(),
 		func(_ context.Context, name string, _ json.RawMessage) (json.RawMessage, error) {
 			invoked = name
 			return json.RawMessage(sealedEmptyResult), nil

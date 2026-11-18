@@ -131,6 +131,7 @@ func (s *standingEnv) onContactPage(t *testing.T, contact, row ids.UUID) bool {
 }
 
 func TestOffersEmailAndTheFilledToAreOneAnswer(t *testing.T) {
+	t.Parallel()
 	s := setupStanding(t)
 	s.WsExec(t, `INSERT INTO workspace_email_domain (domain, source, verified) VALUES ($1, 'admin', true)`, ownDomain)
 
@@ -205,6 +206,7 @@ func TestOffersEmailAndTheFilledToAreOneAnswer(t *testing.T) {
 // Our domain registered in punycode, a colleague's address spelled in Unicode.
 // A written-about row and an email row fold it by the one own-domain rule.
 func TestAUnicodeAddressAtOurPunycodeDomainIsAColleagueOnEveryRow(t *testing.T) {
+	t.Parallel()
 	s := setupStanding(t)
 	s.WsExec(t, `INSERT INTO workspace_email_domain (domain, source, verified) VALUES ($1, 'admin', true)`,
 		"xn--bcher-kva.example")
@@ -233,6 +235,7 @@ func TestAUnicodeAddressAtOurPunycodeDomainIsAColleagueOnEveryRow(t *testing.T) 
 // A contact carrying a seat's login in punycode is that seat, whose login is
 // stored in Unicode at a domain that is not ours. No row offers to write to it.
 func TestASeatsLoginInEitherSpellingIsNeverOffered(t *testing.T) {
+	t.Parallel()
 	s := setupStanding(t)
 	s.WsExec(t, `UPDATE app_user SET email = 'anna@bücher.example' WHERE id = $1`, s.Rep2)
 
@@ -245,6 +248,7 @@ func TestASeatsLoginInEitherSpellingIsNeverOffered(t *testing.T) {
 // An archived row is read through include_archived, while reply-recipient reads
 // live rows only. Both say no email.
 func TestAnArchivedRowOffersNoEmail(t *testing.T) {
+	t.Parallel()
 	s := setupStanding(t)
 	row := s.writtenAbout(t, "note", s.contactAt(t, "Emil Roth", "emil@buyer.test"))
 	if offers, _ := s.offeredOnEveryRead(t, row); !offers {
@@ -299,6 +303,7 @@ func draftedTo(ctx context.Context, t *testing.T, h activities.Handlers, row ids
 // A draft on a call fills To by the rule Write email uses: the one filed
 // contact, never the first-ranked participant.
 func TestADraftOnAWrittenAboutRowAddressesWhatWriteEmailOffers(t *testing.T) {
+	t.Parallel()
 	s := setupStanding(t)
 	ctx, h := s.reader(), s.replyHandlers()
 	one := s.writtenAbout(t, "call", s.contactAt(t, "Fay Lenz", "fay@buyer.test"))
@@ -318,6 +323,7 @@ func TestADraftOnAWrittenAboutRowAddressesWhatWriteEmailOffers(t *testing.T) {
 // A written-about row has no conversation to join, so a colleague who never
 // logged it is not told they are joining someone else's thread.
 func TestAWrittenAboutRowHasNoConversationStanding(t *testing.T) {
+	t.Parallel()
 	s := setupStanding(t)
 	outsider := s.As(s.Rep2, []ids.UUID{s.Team1}, principal.Permissions{
 		RoleKeys: []string{roleRep}, RowScope: principal.RowScopeAll,

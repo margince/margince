@@ -22,6 +22,7 @@ import (
 )
 
 func TestNewCopiedRecipientsAndMeetingGuestsReachTheExistingDealFiler(t *testing.T) {
+	t.Parallel()
 	for _, medium := range []string{"mail", "meeting"} {
 		t.Run(medium, func(t *testing.T) {
 			e := integration.Setup(t)

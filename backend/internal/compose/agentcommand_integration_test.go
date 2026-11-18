@@ -54,6 +54,7 @@ import (
 // A contract that adds an archivable type is covered here without anybody
 // extending a list.
 func TestTheRecordProviderServesExactlyTheSeamVocabulary(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	as := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	native := NewProvider(e.Pool)
@@ -134,6 +135,7 @@ func isSeamEntity(recordType string) bool {
 // The contact is seeded by the real writer under a rep whose team the agent's
 // granting human is not in, so nothing about the fixture is hand-made.
 func TestAnArchiveOfARowOutsideTheAgentsScopeStagesNothing(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	native := NewProvider(e.Pool)
 	staging := approvalsAdapter{svc: approvals.NewService(e.DB())}

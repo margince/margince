@@ -18,6 +18,7 @@ import (
 // A deal falls in one group by the link types it holds with other live deals.
 // The groups add up to every deal. A deal linked only to a company holds none.
 func TestGroupingDealsByLinkTypeCountsEveryDealOnce(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	pipeline, open, _ := integration.DealFixture(t, e)
 	store := deals.NewStore(e.DB(), installseam.Deals())

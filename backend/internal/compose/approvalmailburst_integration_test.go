@@ -72,6 +72,7 @@ func (e *noticeMailEnv) dealBeside(t *testing.T, name string) ids.UUID {
 // An agent's burst of approvals reaches its decider as one message, and the
 // jobs of the notices it carried send nothing more.
 func TestABurstOfApprovalsLeavesInOneMessage(t *testing.T) {
+	t.Parallel()
 	e := setupNoticeMail(t)
 	summaries := []string{"Fleet renewal date passed", "Harbor renewal date passed", "Depot renewal date passed"}
 	notices := e.stageBurst(t, summaries...)
@@ -100,6 +101,7 @@ func TestABurstOfApprovalsLeavesInOneMessage(t *testing.T) {
 
 // A notice the decider already answered on screen is not carried.
 func TestABurstLeavesOutWhatTheDeciderAlreadyRead(t *testing.T) {
+	t.Parallel()
 	e := setupNoticeMail(t)
 	notices := e.stageBurst(t, "Fleet renewal date passed", "Harbor renewal date passed")
 	e.e.WsExec(t, `UPDATE notice SET read_at = now() WHERE id = $1`, notices[1])

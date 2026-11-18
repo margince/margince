@@ -84,6 +84,7 @@ func setRoomExpiry(t *testing.T, e *apptest.AppEnv, roomID string, version int64
 // The Manage room dialog sends the end of the chosen day. A room opened today and
 // ended yesterday therefore asks for an instant before it existed.
 func TestAnExpiryBeforeTheRoomExistedEndsBuyerAccessAtTheTimeOfTheCall(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	room := openRoomWithABuyer(t, e)
@@ -100,6 +101,7 @@ func TestAnExpiryBeforeTheRoomExistedEndsBuyerAccessAtTheTimeOfTheCall(t *testin
 }
 
 func TestAPastExpiryAfterTheRoomExistedIsStoredAsSent(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	room := openRoomWithABuyer(t, e)
@@ -116,6 +118,7 @@ func TestAPastExpiryAfterTheRoomExistedIsStoredAsSent(t *testing.T) {
 }
 
 func TestARoomOpenedWithAPastExpiryIsStoredAfterItsCreation(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	stages := apptest.DiscoverSeededPipeline(t, e)
@@ -135,6 +138,7 @@ func TestARoomOpenedWithAPastExpiryIsStoredAfterItsCreation(t *testing.T) {
 // Sending the same past day again finds access already ended and changes
 // nothing. A cut short takes access away, so an archived deal still accepts it.
 func TestTheSamePastDaySentTwiceChangesNothingEvenOnAnArchivedDeal(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	room := openRoomWithABuyer(t, e)

@@ -61,6 +61,7 @@ func assertPausedForGuest(t *testing.T, body map[string]any) {
 // A page saved before the profile existed names no calendar. The host reads
 // it as blocked for want of one, and its guest reads it as paused.
 func TestAPageWithNoCalendarIsBlockedForTheHostAndPausedForTheGuest(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	saved := savePage(t, f, true)
 	if _, err := f.env.owner.Exec(f.ctx, `UPDATE booking_page SET scheduling_policy = NULL WHERE host_user_id = $1`, f.env.rep); err != nil {
@@ -79,6 +80,7 @@ func TestAPageWithNoCalendarIsBlockedForTheHostAndPausedForTheGuest(t *testing.T
 // A switched-on page whose calendar cannot take bookings is paused for its
 // guest, the same as a page the host switched off.
 func TestAPageIsPausedForItsGuestWhenItsCalendarIsBlocked(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	saved := savePage(t, f, true)
 	if live := guestProfile(t, f, *saved.Slug); live["paused"] != false || live["enabled"] != true {
@@ -98,6 +100,7 @@ func TestAPageIsPausedForItsGuestWhenItsCalendarIsBlocked(t *testing.T) {
 // The second read inside the booking answers a page paused since the first
 // one as the first read would: as an unknown page.
 func TestTheBookingsSecondReadAnswersAPausedPageAsUnknown(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	savePage(t, f, false)
 	rec := httptest.NewRecorder()
@@ -114,6 +117,7 @@ func TestTheBookingsSecondReadAnswersAPausedPageAsUnknown(t *testing.T) {
 // stays open on a switched-off page. It pauses only when the calendar cannot
 // take the booking it offers.
 func TestAProposalPausesOnlyForItsCalendar(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	savePage(t, f, true)
 	link, err := f.store.CreateProposal(f.ctx, crmcontracts.MeetingProposalRequest{ContactId: f.request.ContactId, AttendeeEmail: f.request.AttendeeEmail, Subject: "Walkthrough", DurationMinutes: 30})

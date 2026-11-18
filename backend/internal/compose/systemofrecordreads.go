@@ -41,14 +41,14 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 		contacts:   s.contactsStore,
 		exclusions: capture.NewExclusionStore(InstallationDB(pool)),
 	}
-	s.threadAudience = NewThreadAudienceSetter(pool)
+	s.threadAudience = threadAudienceSetterWith(pool, s.queues)
 	s.captureSenderHandlers = captureSenderHandlers{
 		db:         InstallationDB(pool),
 		store:      newSenderOverrideStore(pool),
 		threadPass: verdictPass(pool, ConfidentialityVerdictArgs{}.Kind()),
 	}
 	s.captureOwnerIdentityHandlers = captureOwnerIdentityHandlers{store: capture.NewOwnerIdentityStore(InstallationDB(pool))}
-	suggestionSink := sync.OnceValue(func() *capture.Sink { return newCaptureSink(pool, s.captureConfig) })
+	suggestionSink := sync.OnceValue(func() *capture.Sink { return newCaptureSink(pool, s.capturing()) })
 	s.conversationSuggestionHandlers = conversationSuggestionHandlers{read: func(ctx context.Context, anchor datasource.EntityRef) (capture.ConversationSuggestions, error) {
 		return suggestionSink().ConversationSuggestions(ctx, anchor)
 	}}

@@ -63,7 +63,7 @@ func voiceSeeders(s sweepSeed) map[string]func() string {
 			ID string `json:"id"`
 		}
 		s.call("POST", "/v1/voice-profiles/"+profile+"/builds", integration.AnyMap{"reason": "manual"}, nil, &queued)
-		worker, err := compose.VoiceBuildWorkerForTest(s.e.Pool, sweepVoiceModel)
+		worker, err := compose.VoiceBuildWorkerForTest(s.e.Pool, sweepServices.of(s.t, s.e).voiceModel)
 		if err != nil {
 			s.t.Fatalf("building the voice build worker: %v", err)
 		}

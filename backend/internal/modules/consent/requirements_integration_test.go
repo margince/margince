@@ -104,6 +104,7 @@ func judgedAs(
 // TestAnAdvertisingSubjectWithoutItsLabelIsAFinding is the register line this
 // closes.
 func TestAnAdvertisingSubjectWithoutItsLabelIsAFinding(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	store := labelledIn(t, e)
 	delivery, set := judgedAs(t, e, commsauthz.CategoryMarketing)
@@ -125,6 +126,7 @@ func TestAnAdvertisingSubjectWithoutItsLabelIsAFinding(t *testing.T) {
 // finding above must be about the missing label and not about the check
 // refusing everything.
 func TestALabelledAdvertisingSubjectIsNoFinding(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	store := labelledIn(t, e)
 	delivery, set := judgedAs(t, e, commsauthz.CategoryMarketing)
@@ -151,6 +153,7 @@ func TestALabelledAdvertisingSubjectIsNoFinding(t *testing.T) {
 // advertisement: a false statement made to satisfy a check, which is worse than
 // the omission it would be fixing.
 func TestAnInvoiceNeverCarriesTheAdvertisingLabel(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	store := labelledIn(t, e)
 	delivery, set := judgedAs(t, e, commsauthz.CategoryInvoiceOrPayment)
@@ -168,6 +171,7 @@ func TestAnInvoiceNeverCarriesTheAdvertisingLabel(t *testing.T) {
 // are the same value and different facts; the caller parks on a finding, so
 // answering one here would refuse lawful mail.
 func TestAnInstallationUnderNoPackOwesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	delivery, set := judgedAs(t, e, commsauthz.CategoryMarketing)
 
@@ -184,6 +188,7 @@ func TestAnInstallationUnderNoPackOwesNothing(t *testing.T) {
 // evidence rather than on evidence of absence would refuse deliveries this
 // check knows nothing about.
 func TestADeliveryTheEngineNeverJudgedOwesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	store := labelledIn(t, e)
 
@@ -207,6 +212,7 @@ func TestADeliveryTheEngineNeverJudgedOwesNothing(t *testing.T) {
 // Mutation: answer no finding as soon as any row is not marketing and the
 // first case fails.
 func TestEachAdvertisingRowOwesItsOwnLabel(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	store := labelledIn(t, e)
 	stamp := func(set, address string, labelled bool) {
@@ -254,6 +260,7 @@ func TestEachAdvertisingRowOwesItsOwnLabel(t *testing.T) {
 // delivery id alone picked among them, so a send authorized as marketing could
 // be judged by an earlier non-marketing row and go out unlabelled.
 func TestAStaleDecisionSetDoesNotJudgeThisSend(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	store := labelledIn(t, e)
 	delivery, stale := judgedAs(t, e, commsauthz.CategoryActiveDealFollowup)
@@ -299,6 +306,7 @@ func TestAStaleDecisionSetDoesNotJudgeThisSend(t *testing.T) {
 // send worker is a system principal and passes; a seat without the grant does
 // not.
 func TestACallerWhoCannotReadTheTimelineLearnsNothing(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	store := labelledIn(t, e)
 	delivery, set := judgedAs(t, e, commsauthz.CategoryMarketing)
@@ -319,6 +327,7 @@ func TestACallerWhoCannotReadTheTimelineLearnsNothing(t *testing.T) {
 // Mutation: return no finding from CheckMessage when any recipient is under the
 // baseline and this fails.
 func TestOneRecipientsPackLabelsTheWholeSubject(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	store := labelledIn(t, e)
 	delivery, set := judgedAs(t, e, commsauthz.CategoryMarketing, commsauthz.CategoryMarketing)

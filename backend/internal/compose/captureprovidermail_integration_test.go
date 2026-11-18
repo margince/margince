@@ -66,6 +66,7 @@ func providerMailRecord(t *testing.T, e *integration.Env, from, subject string, 
 }
 
 func TestProviderRemovalsRequireCurrentMappingsAndKeepOtherCopies(t *testing.T) {
+	t.Parallel()
 	for _, variant := range []string{"legacy", "replay fills legacy", "rebound account", "reconnected account", "another provider copy"} {
 		t.Run(variant, func(t *testing.T) {
 			e := integration.Setup(t)
@@ -114,6 +115,7 @@ func TestProviderRemovalsRequireCurrentMappingsAndKeepOtherCopies(t *testing.T) 
 }
 
 func TestMailboxDeletionRequiresItsAdmittedSeatAndProvider(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	rec := providerMailRecord(t, e, "friend@example.test", "Private note", e.Rep1)
 	ctx := threadConnectorCtx(e, e.Rep1)
@@ -147,6 +149,7 @@ func TestMailboxDeletionRequiresItsAdmittedSeatAndProvider(t *testing.T) {
 }
 
 func TestMailboxPurgeRechecksAColleagueClaimInsideTheEraseTransaction(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	rec := providerMailRecord(t, e, "friend@example.test", "Private note", e.Rep1, e.Rep2)
 	sourceCtx := threadConnectorCtx(e, e.Rep1)
@@ -190,6 +193,7 @@ func TestMailboxPurgeRechecksAColleagueClaimInsideTheEraseTransaction(t *testing
 }
 
 func TestMailboxDeletionPreservesMailWrittenByTheCRM(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	address := seatAddress(t, e, e.Rep1)
 	root := "crm-mail-root@counterparty.test"
@@ -198,7 +202,7 @@ func TestMailboxDeletionPreservesMailWrittenByTheCRM(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	adapter := newCommsAdapter(e.Pool, nil, SendPath{PublicBaseURL: toolSurfaceBaseURL, Delivery: &recordingStager{}})
+	adapter := newCommsAdapter(e.Pool, nil, nil, SendPath{PublicBaseURL: toolSurfaceBaseURL, Delivery: &recordingStager{}})
 	sent, err := adapter.SendEmail(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms), anchor, agents.SendEmailArgs{To: []string{"pat@counterparty.example"}, Subject: "Re: Angebot", Body: "I will send the draft.", ConsentPurpose: "transactional"})
 	if err != nil {
 		t.Fatal(err)

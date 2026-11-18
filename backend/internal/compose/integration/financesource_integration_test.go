@@ -112,6 +112,7 @@ func invoicesOn(t *testing.T, e *Env, company ids.CompanyID) int {
 }
 
 func TestConnectingAnAccountingSourceAsksItFirstAndAdmitsOne(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := financeAdmin(e)
 
@@ -151,6 +152,7 @@ func TestConnectingAnAccountingSourceAsksItFirstAndAdmitsOne(t *testing.T) {
 // A relinked customer's invoices move to the new company on the next sync,
 // although the source said nothing new about them.
 func TestARelinkedCustomersInvoicesFollowTheLink(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := financeStoreFor(e, testBooksSource{})
 	admin := connectAndSync(t, e, store)
@@ -190,6 +192,7 @@ func TestARelinkedCustomersInvoicesFollowTheLink(t *testing.T) {
 // Two companies each linked to an accounting customer, merged: both links
 // land on the survivor and the next sync files every invoice there.
 func TestAMergeOfTwoLinkedCompaniesKeepsBothLedgersOnTheSurvivor(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := financeStoreFor(e, testBooksSource{})
 	admin := connectAndSync(t, e, store)

@@ -18,6 +18,7 @@ import (
 // Every way pgx sends a statement reaches the meter through a real pool. That
 // is Query once its rows close, QueryRow, Exec, a batch, an error and a cancel.
 func TestThePoolMetersEveryWayAStatementIsSent(t *testing.T) {
+	t.Parallel()
 	ctx, pool := laneEnv(t)
 	ctx, meter := database.WithStatementMeter(ctx)
 
@@ -61,6 +62,7 @@ func TestThePoolMetersEveryWayAStatementIsSent(t *testing.T) {
 
 // A Query is recorded when its rows close, so its time holds the rows read.
 func TestAQueryIsRecordedWhenItsRowsClose(t *testing.T) {
+	t.Parallel()
 	ctx, pool := laneEnv(t)
 	ctx, meter := database.WithStatementMeter(ctx)
 
@@ -79,6 +81,7 @@ func TestAQueryIsRecordedWhenItsRowsClose(t *testing.T) {
 
 // A batch whose arguments cannot be encoded never reaches the server.
 func TestABatchThatFailsBeforeSendCountsNoStatement(t *testing.T) {
+	t.Parallel()
 	ctx, pool := laneEnv(t)
 	ctx, meter := database.WithStatementMeter(ctx)
 	batch := &pgx.Batch{}
@@ -94,6 +97,7 @@ func TestABatchThatFailsBeforeSendCountsNoStatement(t *testing.T) {
 
 // An explicit Prepare and a CopyFrom are each one statement.
 func TestAnExplicitPrepareAndACopyFromAreMetered(t *testing.T) {
+	t.Parallel()
 	ctx, pool := laneEnv(t)
 	conn, err := pool.Acquire(ctx)
 	if err != nil {

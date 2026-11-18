@@ -39,6 +39,7 @@ func bookingAt(start time.Time, contactID string, extra AnyMap) AnyMap {
 }
 
 func TestBookingConsentPassthrough(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupBookingApp(t)
 	purposeID := seededTransactionalPurposeID(t, e)
 
@@ -190,6 +191,7 @@ func assertConsentedBookingLandsGrantWithProof(t *testing.T, e *apptest.AppEnv, 
 // hold are the ones the database can state: the meeting landed, no confirmation
 // token was minted, and the withdrawal is exactly where it was.
 func TestARepsBookingSurvivesANewsletterTickForAWithdrawnContact(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupBookingApp(t)
 	transactional := seededTransactionalPurposeID(t, e)
 	marketing := seededMarketingPurposeID(t, e)
@@ -254,6 +256,7 @@ var registerRequestFirstCountry sync.Once
 // is that user asking, so under that rule its newsletter tick mints no link. As
 // with every other refused question, the meeting is still booked.
 func TestARepsBookingCannotAskForConsentNobodyRequested(t *testing.T) {
+	t.Parallel()
 	registerRequestFirstCountry.Do(func() {
 		messagingrules.Register(messagingrules.Rules{
 			Jurisdiction: requestFirstCountry, Version: 1, ConsentConfirmationNeedsRequest: true,

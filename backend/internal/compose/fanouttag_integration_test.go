@@ -47,8 +47,8 @@ type fanOutProbeWorker struct {
 }
 
 func (w *fanOutProbeWorker) Work(ctx context.Context, _ *river.Job[fanOutProbeArgs]) error {
-	err := dispatchWith(ctx, w.fleet, clientInsertMany(ctx),
-		workspaceSweepOpts(GmailWatchRenewArgs{}.Kind()), gmailWatchRenewArgsFor)
+	err := dispatchWith(ctx, jobs.Composed{}, w.fleet, clientInsertMany(ctx),
+		workspaceSweepOpts(jobs.Composed{}, GmailWatchRenewArgs{}.Kind()), gmailWatchRenewArgsFor)
 	if err == nil {
 		err = dispatchOne(ctx, w.pool, w.child, nil)
 	}
@@ -66,6 +66,7 @@ type inertWorker[T river.JobArgs] struct {
 func (inertWorker[T]) Work(context.Context, *river.Job[T]) error { return nil }
 
 func TestARealFanOutInsertCarriesTheSweepTagIntoRiversTagsColumn(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
 

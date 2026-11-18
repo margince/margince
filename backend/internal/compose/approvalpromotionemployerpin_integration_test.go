@@ -158,6 +158,7 @@ func requireSkew(t *testing.T, what string, err error) {
 }
 
 func TestAPromotionStagedOnABlockedDomainGoesStaleWhenTheBlockLifts(t *testing.T) {
+	t.Parallel()
 	eachPromotionDoor(t, func(t *testing.T, rest bool) {
 		p := newPinnedPromotion(t, rest, "human_qualify")
 		p.admit(contacts.DomainSuppressed, p.domain)
@@ -179,6 +180,7 @@ func TestAPromotionStagedOnABlockedDomainGoesStaleWhenTheBlockLifts(t *testing.T
 }
 
 func TestAPromotionApprovedOnABlockedDomainIsNotRedeemedOnceTheBlockLifts(t *testing.T) {
+	t.Parallel()
 	eachPromotionDoor(t, func(t *testing.T, rest bool) {
 		p := newPinnedPromotion(t, rest, "human_qualify")
 		p.admit(contacts.DomainSuppressed, p.domain)
@@ -193,6 +195,7 @@ func TestAPromotionApprovedOnABlockedDomainIsNotRedeemedOnceTheBlockLifts(t *tes
 }
 
 func TestAPromotionIsNotRedeemedOnceACompanyTakesItsDomain(t *testing.T) {
+	t.Parallel()
 	eachPromotionDoor(t, func(t *testing.T, rest bool) {
 		p := newPinnedPromotion(t, rest, "human_qualify")
 		id := p.stage()
@@ -211,6 +214,7 @@ func TestAPromotionIsNotRedeemedOnceACompanyTakesItsDomain(t *testing.T) {
 
 // The digest leaves out who reads it and every fact the decision does not read.
 func TestAPromotionStaysReadyAcrossReadersAndUnrelatedChanges(t *testing.T) {
+	t.Parallel()
 	eachPromotionDoor(t, func(t *testing.T, rest bool) {
 		p := newPinnedPromotion(t, rest, "human_qualify")
 		id := p.stage()
@@ -236,6 +240,7 @@ func TestAPromotionStaysReadyAcrossReadersAndUnrelatedChanges(t *testing.T) {
 // A row staged before the pin is pinned when a human first reads it, on the
 // context its agent sees, and then promotes as approved.
 func TestAPromotionStagedBeforeThePinIsPinnedWhenFirstRead(t *testing.T) {
+	t.Parallel()
 	eachPromotionDoor(t, func(t *testing.T, rest bool) {
 		p := newPinnedPromotion(t, rest, "human_qualify")
 		old := p.stage()
@@ -254,6 +259,7 @@ func TestAPromotionStagedBeforeThePinIsPinnedWhenFirstRead(t *testing.T) {
 }
 
 func TestAPromotionIsNotRedeemedOnceAContactTakesTheLeadsAddress(t *testing.T) {
+	t.Parallel()
 	eachPromotionDoor(t, func(t *testing.T, rest bool) {
 		p := newPinnedPromotion(t, rest, "human_qualify")
 		id := p.stage()
@@ -272,6 +278,7 @@ func TestAPromotionIsNotRedeemedOnceAContactTakesTheLeadsAddress(t *testing.T) {
 
 // An edit that changes what the promotion reads is pinned on the edited payload.
 func TestAnEditedPromotionRedeemsOnTheContextOfTheEdit(t *testing.T) {
+	t.Parallel()
 	eachPromotionDoor(t, func(t *testing.T, rest bool) {
 		p := newPinnedPromotion(t, rest, "human_qualify")
 		id := p.stage()
@@ -294,6 +301,7 @@ func TestAnEditedPromotionRedeemsOnTheContextOfTheEdit(t *testing.T) {
 
 // The evidence the card showed is the evidence the promotion must record.
 func TestAPromotionIsNotRedeemedOnceStrongerEvidenceArrives(t *testing.T) {
+	t.Parallel()
 	eachPromotionDoor(t, func(t *testing.T, rest bool) {
 		p := newPinnedPromotion(t, rest, "meeting_booked")
 		meeting := func(status string) {

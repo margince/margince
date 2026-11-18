@@ -15,9 +15,9 @@ import (
 	"github.com/margince/margince/backend/internal/platform/datatask"
 )
 
-func dataTaskMetricsSection(pool *pgxpool.Pool) func(context.Context, io.Writer) error {
+func dataTaskMetricsSection(pool *pgxpool.Pool, composed *Extensions) func(context.Context, io.Writer) error {
 	return func(ctx context.Context, w io.Writer) error {
-		ctx, engine, err := dataTaskJobEngine(ctx, pool)
+		ctx, engine, err := dataTaskJobEngine(ctx, pool, composed)
 		if err != nil {
 			return failedDataTaskRead(ctx, w, err)
 		}

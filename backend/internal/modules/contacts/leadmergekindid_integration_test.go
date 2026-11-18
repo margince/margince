@@ -21,6 +21,7 @@ import (
 )
 
 func TestALeadMergeCarriesWhatNamesTheRetiredLeadByKindAndID(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	survivor := e.createLead(ctx, t, "Ida Keller", "ida@keller.test", "Keller AG")

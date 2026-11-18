@@ -142,6 +142,7 @@ func tableExists(t *testing.T, dsn, table string) bool {
 }
 
 func TestRecreateDBCopiesTheTemplateAndStartsOverOnAnExistingDatabase(t *testing.T) {
+	t.Parallel()
 	maint, base, withDB := testDSNs(t)
 	tpl, clone := base+"_verbs_tpl", base+"_verbs_clone"
 	// Separate cleanups: a Fatalf in one (mustMigrate) must not skip the
@@ -165,6 +166,7 @@ func TestRecreateDBCopiesTheTemplateAndStartsOverOnAnExistingDatabase(t *testing
 }
 
 func TestDropDBSucceedsWhenTheDatabaseIsAbsent(t *testing.T) {
+	t.Parallel()
 	maint, base, _ := testDSNs(t)
 	name := base + "_verbs_never_created"
 	// drop_clone runs on every teardown path, including after a failed
@@ -176,6 +178,7 @@ func TestDropDBSucceedsWhenTheDatabaseIsAbsent(t *testing.T) {
 }
 
 func TestDropDBTerminatesLingeringSessions(t *testing.T) {
+	t.Parallel()
 	// Teardown runs right after a test process exits, when its backends may
 	// not have gone yet — and drop_clone now propagates failures, so a drop
 	// that could lose that race would fail the lane flakily. WITH (FORCE)
@@ -206,7 +209,29 @@ func TestDropDBTerminatesLingeringSessions(t *testing.T) {
 	}
 }
 
+func TestDropDBDropsTheTestCopiesNamedAfterIt(t *testing.T) {
+	t.Parallel()
+	maint, base, _ := testDSNs(t)
+	name := base + "_verbs_package"
+	leaked, unrelated := name+"_4242_7", name+"_keep"
+	for _, db := range []string{name, leaked, unrelated} {
+		t.Cleanup(func() { mustMigrate(t, "drop-db", "--dsn", maint, "--name", db) })
+		mustMigrate(t, "recreate-db", "--dsn", maint, "--name", db)
+	}
+
+	out := mustMigrate(t, "drop-db", "--dsn", maint, "--name", name)
+	if !strings.Contains(out, "dropped leaked test copy "+leaked) {
+		t.Errorf("drop-db printed %q, want it to name the leaked copy %s", out, leaked)
+	}
+	for db, want := range map[string]string{leaked: "false\n", unrelated: "true\n"} {
+		if got := mustMigrate(t, "db-exists", "--dsn", maint, "--name", db); got != want {
+			t.Errorf("db-exists %s after drop-db %s printed %q, want %q", db, name, got, want)
+		}
+	}
+}
+
 func TestDBExistsPrintsTheLiteralAnswerTheLaneParses(t *testing.T) {
+	t.Parallel()
 	// ensure_template string-compares this stdout — it is a wire contract
 	// between the binary and scripts/lib-testdb.sh, not cosmetics.
 	maint, base, _ := testDSNs(t)
@@ -223,6 +248,7 @@ func TestDBExistsPrintsTheLiteralAnswerTheLaneParses(t *testing.T) {
 }
 
 func TestDBVerbsQuoteNamesThatNeedIt(t *testing.T) {
+	t.Parallel()
 	maint, base, _ := testDSNs(t)
 	// Uppercase folds and the embedded quote breaks if the name is spliced
 	// unquoted; the exact string must round-trip create → probe → drop.
@@ -240,6 +266,7 @@ func TestDBVerbsQuoteNamesThatNeedIt(t *testing.T) {
 }
 
 func TestDBVerbsRejectNamesTheServerWouldTruncate(t *testing.T) {
+	t.Parallel()
 	// Postgres truncates identifiers over 63 bytes to their prefix, so an
 	// unchecked long --name would drop/create the database that owns that
 	// prefix — a database the caller never named. The verbs must refuse
@@ -277,6 +304,7 @@ func TestDBVerbsRejectNamesTheServerWouldTruncate(t *testing.T) {
 }
 
 func TestRecreateDBRefusesATemplateNamingTheDatabaseItself(t *testing.T) {
+	t.Parallel()
 	// recreate-db drops before it creates, so --template equal to --name
 	// would destroy the template and then copy from nothing. The refusal
 	// must come before the drop: the existing database survives.
@@ -296,6 +324,7 @@ func TestRecreateDBRefusesATemplateNamingTheDatabaseItself(t *testing.T) {
 }
 
 func TestDBVerbsRequireAName(t *testing.T) {
+	t.Parallel()
 	maint, _, _ := testDSNs(t)
 	for _, verb := range []string{"recreate-db", "drop-db", "db-exists"} {
 		if _, err := migrateCmd(t, verb, "--dsn", maint); err == nil || !strings.Contains(err.Error(), "--name") {
@@ -325,6 +354,7 @@ func TestDBVerbsRequireAName(t *testing.T) {
 // other: this test proves the namespaces are applied, the arch test proves
 // they are the composed set's.
 func TestUpAppliesAnExtensionNamespaceAndTheRiverIndex(t *testing.T) {
+	t.Parallel()
 	maint, base, withDB := testDSNs(t)
 	name := base + "_up_ext"
 	t.Cleanup(func() { mustMigrate(t, "drop-db", "--dsn", maint, "--name", name) })
@@ -397,6 +427,7 @@ func TestUpAppliesAnExtensionNamespaceAndTheRiverIndex(t *testing.T) {
 // would call an archived-only installation provisioned and withhold the
 // credential that could still bootstrap it.
 func TestWorkspaceExistsAnswersTheEntrypointsQuestion(t *testing.T) {
+	t.Parallel()
 	dsn := migratedDatabase(t, "_company_probe")
 
 	if out := mustMigrate(t, "workspace-exists", "--dsn", dsn); out != "false\n" {

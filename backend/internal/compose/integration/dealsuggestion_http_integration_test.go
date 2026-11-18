@@ -24,6 +24,7 @@ func seedScoutedCompany(t *testing.T, e *apptest.AppEnv) (companyID, suggestionI
 }
 
 func TestAnAcceptanceRetriedUnderItsKeyOpensOneDeal(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	companyID, suggestionID := seedScoutedCompany(t, e)

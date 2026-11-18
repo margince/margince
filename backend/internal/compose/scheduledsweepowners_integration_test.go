@@ -26,6 +26,7 @@ import (
 )
 
 func TestTwoMembersSweepsLeaveOneNoteOnEachOfTheirDeals(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	pipeline, stage, _ := integration.DealFixture(t, e)
 	quietSince := clocktest.Now(t).AddDate(0, 0, -90)
@@ -124,6 +125,7 @@ func (f sweepFixture) notesOn(t *testing.T, deal ids.UUID) int {
 // listed. A colleague's deal is refused, and so is a deal reassigned after
 // the run listed it.
 func TestAScheduledRunMayNotFileUnderADealItsMemberDoesNotOwn(t *testing.T) {
+	t.Parallel()
 	f := newSweepFixture(t, 90)
 	run := f.run(t, f.e.Rep1)
 
@@ -149,6 +151,7 @@ func TestAScheduledRunMayNotFileUnderADealItsMemberDoesNotOwn(t *testing.T) {
 // One note per deal and member a day. A note on two deals keeps the deal that
 // has none yet. A new passport for the same member does not lift the limit.
 func TestTheNoteLimitIsPerDealAndPerMember(t *testing.T) {
+	t.Parallel()
 	f := newSweepFixture(t, 90)
 	first, second := f.owned[f.e.Rep1], f.owned[f.e.Rep2]
 	f.e.WsExec(t, `UPDATE deal SET owner_id = $2 WHERE id = $1`, second, f.e.Rep1)
@@ -177,6 +180,7 @@ func TestTheNoteLimitIsPerDealAndPerMember(t *testing.T) {
 // The sweep's preflight and its tool read one window, so a deal quiet for 30
 // days is on the run's list either way.
 func TestADealQuietForThirtyDaysIsOnTheRunsList(t *testing.T) {
+	t.Parallel()
 	f := newSweepFixture(t, 30)
 	listed, err := slippingLister(f.e.Pool)(f.run(t, f.e.Rep1), runner.SweepQuietDays, nil)
 	if err != nil || len(listed) != 1 || listed[0].DealID != f.owned[f.e.Rep1] {

@@ -22,6 +22,7 @@ import (
 )
 
 func TestReviewedDataTaskRequiresActivationAndPreservesItsPreviousRun(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	task := datatask.Task{

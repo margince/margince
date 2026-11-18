@@ -37,6 +37,7 @@ import (
 )
 
 func TestTheAccessPackageCarriesWhatIsHeldAboutTheSubject(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := seedSubjectWithMail(t, e)
 
@@ -58,6 +59,7 @@ func TestTheAccessPackageCarriesWhatIsHeldAboutTheSubject(t *testing.T) {
 }
 
 func TestAssemblingAPackageNeedsTheTrustErasureNeeds(t *testing.T) {
+	t.Parallel()
 	// AssembleSAR's own two conditions: the contact.delete grant, and an
 	// unbounded row scope because Art. 15 owes the subject everything held
 	// rather than the slice one colleague may see.
@@ -77,6 +79,7 @@ func TestAssemblingAPackageNeedsTheTrustErasureNeeds(t *testing.T) {
 }
 
 func TestTheQueueGateIsWhatKeepsTheExportAdminOnly(t *testing.T) {
+	t.Parallel()
 	// The gap this route must not open. AssembleSAR admits any unbounded human
 	// holding contact.delete, and the seeded defaults give that to ops and
 	// management as well as admin — so the assembler ALONE is more open than the
@@ -114,6 +117,7 @@ func TestTheQueueGateIsWhatKeepsTheExportAdminOnly(t *testing.T) {
 }
 
 func TestAnAgentIsRefusedTheAccessPackageWhateverItsPassportCarries(t *testing.T) {
+	t.Parallel()
 	// The arm the object grant cannot express. An agent acting under a passport
 	// carries the granting human's live grants, so an admin's read-scoped
 	// passport would otherwise assemble a subject's entire record.
@@ -134,6 +138,7 @@ func TestAnAgentIsRefusedTheAccessPackageWhateverItsPassportCarries(t *testing.T
 }
 
 func TestOnlyAnAccessRequestHasAPackage(t *testing.T) {
+	t.Parallel()
 	// An erasure and a rectification are answered by their own paths. Handing
 	// back a subject's whole record to close a request that asked for something
 	// else is the export nobody asked for.
@@ -161,6 +166,7 @@ func TestOnlyAnAccessRequestHasAPackage(t *testing.T) {
 }
 
 func TestAnAccessRequestNamingNobodyHasNothingToAssemble(t *testing.T) {
+	t.Parallel()
 	// subject_ref is free text until somebody resolves it to a contact. The
 	// erasure path already refuses one that names nobody; the access path owes
 	// the same answer rather than a confusing one from further in.
@@ -184,6 +190,7 @@ func TestAnAccessRequestNamingNobodyHasNothingToAssemble(t *testing.T) {
 }
 
 func TestTheAssembledPackageIsSerializable(t *testing.T) {
+	t.Parallel()
 	// The seam hands bytes across, so a package that cannot be marshalled is a
 	// 500 on the one endpoint an officer needs under a statutory deadline.
 	e := Setup(t)
@@ -238,6 +245,7 @@ func downloadPackage(
 }
 
 func TestTheHandlerReadsTheRequestBeforeItAssemblesAnything(t *testing.T) {
+	t.Parallel()
 	// The ordering the whole design rests on. AssembleSAR admits ops and
 	// management; the queue's gate does not. Reading the request first is what
 	// makes the route admin-only, and swapping the two calls would leave every
@@ -260,6 +268,7 @@ func TestTheHandlerReadsTheRequestBeforeItAssemblesAnything(t *testing.T) {
 }
 
 func TestTheHandlerAnswersAnAdminWithThePackage(t *testing.T) {
+	t.Parallel()
 	// The admit case. Without it the refusals above could all pass against an
 	// authority that turns everybody away.
 	e := Setup(t)
@@ -282,6 +291,7 @@ func TestTheHandlerAnswersAnAdminWithThePackage(t *testing.T) {
 }
 
 func TestTheHandlerRefusesARequestOfTheWrongKind(t *testing.T) {
+	t.Parallel()
 	// An erasure is answered by its own path. Handing back a subject's whole
 	// record to close a request that asked for something else is the export
 	// nobody asked for.
@@ -308,6 +318,7 @@ func TestTheHandlerRefusesARequestOfTheWrongKind(t *testing.T) {
 }
 
 func TestTheHandlerRefusesARequestNamingNobody(t *testing.T) {
+	t.Parallel()
 	// subject_ref is free text until somebody resolves it to a contact id.
 	e := Setup(t)
 	request := seedAccessRequest(t, e, subjectAddress)
@@ -331,6 +342,7 @@ func (a seamAssembler) AssemblePackage(ctx context.Context, contactID ids.UUID) 
 }
 
 func TestAPackageForAMergedAwaySubjectIsTheSurvivors(t *testing.T) {
+	t.Parallel()
 	// The request names the record a merge later retired. The survivor holds
 	// the contact's live data, so the package is assembled for it, and the
 	// retired record still rides along as its predecessor.

@@ -119,7 +119,7 @@ func (s *Service) BootstrapInstallation(ctx context.Context, create func() (Inst
 		if err != nil {
 			return err
 		}
-		wsID, err = createInstallation(ctx, tx, s.config, in, originConfigured, seed, &discarded)
+		wsID, err = createInstallation(ctx, tx, s.rbac, s.config, in, originConfigured, seed, &discarded)
 		created = err == nil
 		return err
 	})
@@ -208,8 +208,8 @@ const (
 // untouched error paths into lines that read as changed to anything comparing
 // against the previous revision. The values it collects are a second OUTCOME of
 // a successful create, not a second result of the call.
-func createInstallation(ctx context.Context, tx pgx.Tx, c *config.Config, in InstallationBootstrap, origin provisioningOrigin, seed func(ctx context.Context, tx pgx.Tx) error, discarded *[]string) (ids.WorkspaceID, error) {
-	in = in.underBootValues(c)
+func createInstallation(ctx context.Context, tx pgx.Tx, rbac RbacObjects, c *config.Config, in InstallationBootstrap, origin provisioningOrigin, seed func(ctx context.Context, tx pgx.Tx) error, discarded *[]string) (ids.WorkspaceID, error) {
+	in = in.underBootValues(ctx, c)
 	boot := BootstrapInput{
 		WorkspaceName: in.CompanyName,
 		AdminEmail:    in.AdminEmail,
@@ -264,7 +264,7 @@ func createInstallation(ctx context.Context, tx pgx.Tx, c *config.Config, in Ins
 		origin == originConfigured, owndomain.StoredOfAddress(boot.AdminEmail)).Scan(&userID); err != nil {
 		return ids.WorkspaceID{}, err
 	}
-	if err := seedSystemRolesForBootstrap(ctx, tx, userID); err != nil {
+	if err := seedSystemRolesForBootstrap(ctx, tx, rbac, userID); err != nil {
 		return ids.WorkspaceID{}, err
 	}
 	// Any outstanding claim credential is retired here, on BOTH paths. The
@@ -362,14 +362,14 @@ func resolveBasis(in InstallationBootstrap, origin provisioningOrigin) (currency
 
 // underBootValues replaces what a boot source sets, so the bootstrap writes
 // and reports the value every reader answers.
-func (in InstallationBootstrap) underBootValues(c *config.Config) InstallationBootstrap {
-	if name, ok := config.BootVal(c, Name); ok {
+func (in InstallationBootstrap) underBootValues(ctx context.Context, c *config.Config) InstallationBootstrap {
+	if name, ok := config.BootVal(ctx, c, Name); ok {
 		in.CompanyName = name
 	}
-	if language, ok := config.BootVal(c, BaseLanguage); ok {
+	if language, ok := config.BootVal(ctx, c, BaseLanguage); ok {
 		in.BaseLanguage = language
 	}
-	if country, ok := config.BootVal(c, Country); ok {
+	if country, ok := config.BootVal(ctx, c, Country); ok {
 		in.Country = &country
 	}
 	return in
@@ -416,7 +416,7 @@ func seedInstallationIdentity(ctx context.Context, tx pgx.Tx, boot *config.Confi
 			return nil, err
 		}
 		// A boot-set key is neither seeded nor reported.
-		if _, locked := boot.Locked(key); !stored && !locked {
+		if _, locked := boot.Locked(ctx, key); !stored && !locked {
 			discarded = append(discarded, key)
 		}
 	}
