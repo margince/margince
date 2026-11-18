@@ -4,13 +4,10 @@
 import { type RefObject, useLayoutEffect } from "react";
 
 /**
- * Publishes the scroller's height as `--scrollerH` on the scroller, for a
- * sticky pane that caps itself to what the scroller shows. A shell banner
- * shortens the scroller, and a stylesheet's viewport units cannot see that.
- * Its scrollbar's width goes on the column as `--scrollerGutter`, so the top
- * bar can centre on the page's column as the scroller does.
- * `layout` names which of the shell's scrollers is mounted, so a switch
- * between them observes the new one.
+ * Publishes the scroller's height (`--scrollerH`, for a sticky pane) and, on
+ * the column, its scrollbar's width (`--scrollerGutter`, for the top bar). A
+ * banner shortens the scroller, which viewport units cannot see. `layout`
+ * names the mounted scroller, so a switch between them observes the new one.
  */
 export function usePublishedScrollerHeight(
   scroller: RefObject<HTMLElement | null>,

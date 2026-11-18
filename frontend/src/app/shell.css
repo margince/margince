@@ -173,9 +173,13 @@
       max(
         var(--pageGutter),
         (
-          100% - 2 * var(--cardEdge) - var(--scrollerGutter, 0px) -
+          100% -
+          2 *
+          var(--cardEdge) -
+          var(--scrollerGutter, 0px) -
           var(--pageMeasure, 100%)
-        ) / 2 +
+        ) /
+        2 +
         var(--pageGutter)
       )
     );
