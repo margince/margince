@@ -112,13 +112,25 @@ function StatusHeader({
   return (
     <div className="embedreindex-status">
       <Badge tone={tone}>{label}</Badge>
-      {data.reindex_needed && !isRunning && (
+      {data.reindex_needed && !isRunning && data.entities_pending > 0 && (
         <span className="t-caption">
           {t("embedreindex.entitiesPending", {
             count: formatNumber(data.entities_pending, locale),
           })}
         </span>
       )}
+      {/* The cause when the index was built with another model: the count
+          alone can read 0 while the badge still says a reindex is needed. */}
+      {!isRunning &&
+        data.populated_identity !== "" &&
+        data.populated_identity !== data.configured_identity && (
+          <span className="t-caption">
+            {t("embedreindex.modelMismatch", {
+              populated: data.populated_identity,
+              configured: data.configured_identity,
+            })}
+          </span>
+        )}
       {isRunning && (
         // F2 recovery: a run whose last worker died leaves the marker stuck at
         // reembedding with nothing behind it — this is the affordance that lets

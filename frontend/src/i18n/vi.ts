@@ -17823,6 +17823,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "embedreindex.statusReembedding": "Đang lập chỉ mục lại…",
   "embedreindex.lastProgress": "Tiến triển gần nhất {duration} trước",
   "embedreindex.entitiesPending": "{count} hồ sơ đang chờ",
+  "embedreindex.modelMismatch":
+    "Chỉ mục được tạo bằng {populated}. Tìm kiếm hiện dùng {configured}.",
   "embedreindex.workspacePending": "{count} đang chờ",
   "embedreindex.reviewCta": "Xem lại và lập chỉ mục lại",
   "embedreindex.rebuildCta": "Dựng lại chỉ mục",
