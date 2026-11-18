@@ -104,6 +104,7 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
     onSuccess: (data) => {
       applyOffer(data);
       setNewLine(EMPTY_NEW_LINE);
+      setBilling(EMPTY_LINE_BILLING);
       setPriceTouched(false);
       setProduct(null);
     },
