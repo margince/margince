@@ -219,7 +219,7 @@ export function ConfirmAdvanceModal({
     } else {
       onClosed?.(result, why);
       // Only after the close landed: a refused close completes nothing.
-      void closeTasks.complete(tasksToComplete);
+      void closeTasks.complete(asked.dealId, tasksToComplete);
     }
     dismiss();
   };
