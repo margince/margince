@@ -6273,6 +6273,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.standing.figure.amountByModel": "Do Margince đọc từ email",
   "deal.standing.figure.currencyGuessed":
     "Đơn vị tiền tệ là giả định, hãy kiểm tra",
+  "deal.standing.figure.offerInProgress":
+    "Báo giá {number} · phiên bản {revision} · {status}",
   "deal.standing.figure.next": "Bước tiếp theo",
   "standing.noneYet": "Chưa có",
   "deal.standing.figure.daysInStage": "Số ngày trong giai đoạn",

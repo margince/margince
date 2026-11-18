@@ -6444,6 +6444,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.standing.figure.offer": "Angebot {number} · Version {revision}",
   "deal.standing.figure.amountByModel": "Von Margince aus der Mail gelesen",
   "deal.standing.figure.currencyGuessed": "Währung angenommen, prüfe sie",
+  "deal.standing.figure.offerInProgress":
+    "Angebot {number} · Version {revision} · {status}",
   "deal.standing.figure.next": "Nächster Schritt",
   "standing.noneYet": "Noch nichts",
   "deal.standing.figure.daysInStage": "Tage in der Phase",

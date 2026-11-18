@@ -6410,6 +6410,8 @@ export const en = {
   "deal.standing.figure.offer": "Offer {number} · version {revision}",
   "deal.standing.figure.amountByModel": "Read by Margince from the email",
   "deal.standing.figure.currencyGuessed": "Currency assumed, check it",
+  "deal.standing.figure.offerInProgress":
+    "Offer {number} · version {revision} · {status}",
   "deal.standing.figure.next": "Next step",
   "standing.noneYet": "None yet",
   "deal.standing.figure.daysInStage": "Days in stage",
