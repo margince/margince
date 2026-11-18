@@ -17,7 +17,6 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/margince/margince/backend/internal/compose/promisekept"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -70,11 +69,6 @@ func (t *CommitmentSettleTrigger) HandleEvent(ctx context.Context, env events.En
 	ctx = principal.WithCorrelationID(principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: commitmentSettleActor,
 	}), env.Trace.CorrelationID)
-	if env.Type == eventActivityCaptured || env.Type == eventActivityUpdated {
-		if err := promisekept.Settle(ctx, t.claims, t.actingAs, t.log, env.Entity.ID); err != nil {
-			return err
-		}
-	}
 	switch env.Type {
 	case eventActivityUpdated:
 		var payload crmcontracts.PublicEventActivityUpdated

@@ -1451,36 +1451,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/claims/{id}/reopen": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Undo Margince marking a promise kept.
-         * @description Margince closes a promise on its own when an accepted invitation shows it was kept.
-         *     This opens that promise again, and Margince does not close it on the same evidence a
-         *     second time.
-         *
-         *     Only a promise Margince settled by itself can be opened this way. A promise a person
-         *     settled answers `409`, and so does a promise that is not settled. Opening a promise
-         *     that is already open is the same success. The caller needs the same access to the
-         *     contact as for settling.
-         */
-        post: operations["reopenKeptConversationClaim"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/claims/{id}/take-over": {
         parameters: {
             query?: never;
@@ -36969,8 +36939,14 @@ export interface components {
              * @description When a human typed over the machine. Set means the claim is theirs, not the extractor's.
              */
             corrected_at?: string | null;
-            /** @description Margince marked this promise kept on evidence, so the card offers an undo. False for a promise a person settled and for one that is open. */
-            settled_automatically?: boolean;
+            /** @description A read-only hint that this open promise to invite someone looks kept: a guest of that name at the same company accepted a later meeting this reader may open. Nothing is settled. The reader decides, through the settle verb. */
+            looks_kept?: {
+                /** Format: uuid */
+                meeting_id: string;
+                guest_name: string;
+                /** Format: date-time */
+                meeting_at: string;
+            };
             /**
              * Format: uuid
              * @description The task an extracted `commitment_ours` created, so completing either side completes both. Null for every other kind — a reminder about THEIR promise is a rep action, not an auto-task.
@@ -65542,31 +65518,6 @@ export interface operations {
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
-        };
-    };
-    reopenKeptConversationClaim: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The promise is open again, or already was. */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
         };
     };
     takeOverConversationClaim: {

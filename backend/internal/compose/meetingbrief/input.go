@@ -79,6 +79,9 @@ type Input struct {
 	// bounded and audience-gated. Also out of the sections prompt: the plan is
 	// what reads them.
 	Excerpts []ExcerptIn `json:"-"`
+	// LooksKept are promises of ours an accepted invitation shows are probably
+	// kept. They are not in Commitments, so nothing plans around them.
+	LooksKept []LooksKeptIn
 	// CompanyHistory is what other contacts at the room's company already
 	// exchanged with us in the last year, newest topics first per contact. It
 	// holds only rows this reader may open.
@@ -262,6 +265,7 @@ func FromMeeting(room meeting, perAttendee map[ids.UUID][]crmcontracts.Conversat
 		})
 		in.LastTouchAt = latest(in.LastTouchAt, attendee.LastTouch.occurred())
 		in.Commitments = append(in.Commitments, foldClaims(attendee.FullName, perAttendee[attendee.ContactID])...)
+		in.LooksKept = append(in.LooksKept, foldLooksKept(attendee.FullName, perAttendee[attendee.ContactID])...)
 	}
 	in.Commitments = foldSameClaims(in.Commitments)
 	return in
@@ -276,7 +280,7 @@ func FromMeeting(room meeting, perAttendee map[ids.UUID][]crmcontracts.Conversat
 func foldClaims(contactName string, found []crmcontracts.ConversationClaim) []ClaimIn {
 	out := make([]ClaimIn, 0, len(found))
 	for _, claim := range found {
-		if claim.Status == crmcontracts.ConversationClaimStatusDismissed || notCurrentPromise(claim) {
+		if claim.Status == crmcontracts.ConversationClaimStatusDismissed || notCurrentPromise(claim) || claim.LooksKept != nil {
 			continue
 		}
 		folded := ClaimIn{
@@ -294,6 +298,35 @@ func foldClaims(contactName string, found []crmcontracts.ConversationClaim) []Cl
 			folded.SourceLabel = *claim.SourceLabel
 		}
 		out = append(out, folded)
+	}
+	return out
+}
+
+// LooksKeptIn is an open promise of ours that an accepted invitation shows is
+// probably kept. It is no open driver of the meeting: the prep says it looks
+// kept, and the reader settles it.
+type LooksKeptIn struct {
+	ContactName string
+	Body        string
+	Guest       string
+	MeetingAt   Occurred
+	// SourceID is the conversation the promise was made in, which a line about
+	// it cites.
+	SourceID string
+}
+
+// foldLooksKept takes the promises the claims read marks as looking kept.
+func foldLooksKept(contactName string, found []crmcontracts.ConversationClaim) []LooksKeptIn {
+	var out []LooksKeptIn
+	for _, claim := range found {
+		if claim.LooksKept == nil || claim.Status != crmcontracts.ConversationClaimStatusOpen {
+			continue
+		}
+		out = append(out, LooksKeptIn{
+			ContactName: contactName, Body: claim.Body, Guest: claim.LooksKept.GuestName,
+			MeetingAt: Occurred{At: claim.LooksKept.MeetingAt},
+			SourceID:  ids.UUID(claim.SourceActivityId).String(),
+		})
 	}
 	return out
 }

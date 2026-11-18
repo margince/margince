@@ -77,47 +77,54 @@ function renderCard(claims: ConversationClaim[], tasks: string[] = []) {
 
 afterEach(cleanup);
 
-const KEPT: ConversationClaim = {
+const LOOKS_KEPT: ConversationClaim = {
   ...OWNERLESS,
-  status: "done",
-  settled_automatically: true,
+  looks_kept: {
+    meeting_id: "m-1",
+    guest_name: "Riley Reed",
+    meeting_at: "2026-08-30T10:00:00Z",
+  },
 };
 
-describe("a promise Margince marked kept", () => {
-  it("says so and reopens it with one press", async () => {
-    const pressed: string[] = [];
+describe("a promise that looks kept", () => {
+  it("names who accepted which meeting and marks it kept through the ordinary settle", async () => {
+    const settled: unknown[] = [];
     installFetchStub({
       "GET /me": meRoute({ activity: ["read"], contact: ["read", "update"] }),
-      "POST /claims/c-1/reopen": () => {
-        pressed.push("c-1");
+      "POST /claims/c-1/settle": (body) => {
+        settled.push(body);
         return new Response(null, { status: 204 });
       },
     });
-    renderCard([KEPT]);
-    expect(await screen.findByText(/Margince marked this kept/)).toBeTruthy();
+    renderCard([LOOKS_KEPT]);
+    expect(
+      await screen.findByText(
+        /Looks kept: Riley Reed accepted the 30 Aug meeting/,
+      ),
+    ).toBeTruthy();
     await userEvent
       .setup()
-      .click(await screen.findByRole("button", { name: "Undo" }));
-    await waitFor(() => expect(pressed).toEqual(["c-1"]));
+      .click(await screen.findByRole("button", { name: "Mark kept" }));
+    await waitFor(() => expect(settled).toEqual([{ outcome: "done" }]));
   });
 
-  it("offers no undo to a reader who may not update contacts", async () => {
+  it("offers no button to a reader who may not update contacts", async () => {
     installFetchStub({
       "GET /me": meRoute({ activity: ["read"], contact: ["read"] }),
     });
-    renderCard([KEPT]);
-    expect(await screen.findByText(/Margince marked this kept/)).toBeTruthy();
+    renderCard([LOOKS_KEPT]);
+    expect(await screen.findByText(/Looks kept/)).toBeTruthy();
     await act(async () => {});
-    expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Mark kept" })).toBeNull();
   });
 
-  it("is not claimed for a promise a person settled", async () => {
+  it("says nothing for a promise with no hint", async () => {
     installFetchStub({
       "GET /me": meRoute({ activity: ["read"], contact: ["read", "update"] }),
     });
-    renderCard([{ ...KEPT, settled_automatically: false }]);
+    renderCard([OWNERLESS]);
     await screen.findByRole("heading", { name: "Commitments" });
     await act(async () => {});
-    expect(screen.queryByText(/Margince marked this kept/)).toBeNull();
+    expect(screen.queryByText(/Looks kept/)).toBeNull();
   });
 });

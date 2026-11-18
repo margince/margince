@@ -362,6 +362,9 @@ func knownRecords(in Input) map[Evidence]string {
 	for _, topic := range in.CompanyHistory {
 		known[Evidence{EntityType: citeActivity, EntityID: topic.ID}] += claims.Source(topic)
 	}
+	for _, kept := range in.LooksKept {
+		known[Evidence{EntityType: citeActivity, EntityID: kept.SourceID}] += claims.Source(kept)
+	}
 	return known
 }
 
@@ -372,7 +375,7 @@ func knownRecords(in Input) map[Evidence]string {
 // for them.
 func meetingItself(in Input) string {
 	in.Deal, in.Attendees, in.Commitments = nil, nil, nil
-	in.Recent, in.PriorMeetings, in.History, in.CompanyHistory = nil, nil, nil, nil
+	in.Recent, in.PriorMeetings, in.History, in.CompanyHistory, in.LooksKept = nil, nil, nil, nil, nil
 	return claims.Source(in)
 }
 
@@ -398,6 +401,9 @@ func (in Input) subjects() *model.Subjects {
 	}
 	for _, topic := range in.CompanyHistory {
 		activities = append(activities, topic.ID)
+	}
+	for _, kept := range in.LooksKept {
+		activities = append(activities, kept.SourceID)
 	}
 	return model.SubjectsOf(contacts, activities)
 }

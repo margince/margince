@@ -45721,16 +45721,20 @@ type ConversationClaim struct {
 	// dropped from the product.
 	Kind ConversationClaimKind `json:"kind"`
 
+	// LooksKept A read-only hint that this open promise to invite someone looks kept: a guest of that name at the same company accepted a later meeting this reader may open. Nothing is settled. The reader decides, through the settle verb.
+	LooksKept *struct {
+		GuestName string             `json:"guest_name"`
+		MeetingAt time.Time          `json:"meeting_at"`
+		MeetingId openapi_types.UUID `json:"meeting_id"`
+	} `json:"looks_kept,omitempty"`
+
 	// NeedsReview Contradictory evidence exists for this claim. The surface shows both sources and asks — newest-wins is not a resolution.
 	NeedsReview bool       `json:"needs_review"`
 	OccurredAt  *time.Time `json:"occurred_at,omitempty"`
 
 	// OccurredPrecision How to read `occurred_at`, the source activity's time. `day` means only its date is known, so a client draws no time. `instant` when `occurred_at` is absent.
-	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
-
-	// SettledAutomatically Margince marked this promise kept on evidence, so the card offers an undo. False for a promise a person settled and for one that is open.
-	SettledAutomatically *bool              `json:"settled_automatically,omitempty"`
-	SourceActivityId     openapi_types.UUID `json:"source_activity_id"`
+	OccurredPrecision OccurredPrecision  `json:"occurred_precision"`
+	SourceActivityId  openapi_types.UUID `json:"source_activity_id"`
 
 	// SourceLabel How to name the source in a chip — the thread subject or the meeting title.
 	SourceLabel *string `json:"source_label,omitempty"`
@@ -98012,9 +98016,6 @@ type ServerInterface interface {
 	// Which messaging transports THIS installation has registered.
 	// (GET /channel-providers)
 	ListChannelProviders(w http.ResponseWriter, r *http.Request)
-	// Undo Margince marking a promise kept.
-	// (POST /claims/{id}/reopen)
-	ReopenKeptConversationClaim(w http.ResponseWriter, r *http.Request, id Id)
 	// Say a promise was kept, or that it no longer stands.
 	// (POST /claims/{id}/settle)
 	SettleConversationClaim(w http.ResponseWriter, r *http.Request, id Id)
@@ -102173,12 +102174,6 @@ func (_ Unimplemented) FileChannelMessage(w http.ResponseWriter, r *http.Request
 // Which messaging transports THIS installation has registered.
 // (GET /channel-providers)
 func (_ Unimplemented) ListChannelProviders(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Undo Margince marking a promise kept.
-// (POST /claims/{id}/reopen)
-func (_ Unimplemented) ReopenKeptConversationClaim(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -119558,40 +119553,6 @@ func (siw *ServerInterfaceWrapper) ListChannelProviders(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListChannelProviders(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// ReopenKeptConversationClaim operation middleware
-func (siw *ServerInterfaceWrapper) ReopenKeptConversationClaim(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ReopenKeptConversationClaim(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -157087,9 +157048,6 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/channel-providers", wrapper.ListChannelProviders)
-	})
-	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/claims/{id}/reopen", wrapper.ReopenKeptConversationClaim)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/claims/{id}/settle", wrapper.SettleConversationClaim)

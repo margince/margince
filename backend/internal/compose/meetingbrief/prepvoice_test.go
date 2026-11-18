@@ -6,6 +6,7 @@ package meetingbrief
 import (
 	"strings"
 	"testing"
+	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -99,5 +100,33 @@ func TestPrepDropsAnOpenPromiseThatIsNotCurrent(t *testing.T) {
 	want := "commitment_ours/done commitment_ours/open objection/open"
 	if strings.Join(seen, " ") != want {
 		t.Errorf("folded = %v, want %q", seen, want)
+	}
+}
+
+// An open promise that looks kept is no open driver of the meeting. The prep
+// says so once, in one plain line, and cites where the promise was made.
+func TestAPromiseThatLooksKeptIsNotAnOpenDriverAndIsSaidOnce(t *testing.T) {
+	claim := claimOf(crmcontracts.ConversationClaimKindCommitmentOurs, crmcontracts.ConversationClaimStatusOpen, false)
+	claim.SourceActivityId = openapi_types.UUID(ids.NewV7())
+	claim.LooksKept = &struct {
+		GuestName string             `json:"guest_name"`
+		MeetingAt time.Time          `json:"meeting_at"`
+		MeetingId openapi_types.UUID `json:"meeting_id"`
+	}{GuestName: "Riley Reed", MeetingAt: at(9)}
+	found := []crmcontracts.ConversationClaim{claim}
+
+	if open := foldClaims("Pat", found); len(open) != 0 {
+		t.Fatalf("a promise that looks kept still drives the prep: %+v", open)
+	}
+	kept := foldLooksKept("Pat", found)
+	if len(kept) != 1 {
+		t.Fatalf("looks kept = %d, want 1", len(kept))
+	}
+	lines := looksKeptLines(Input{Language: "en", LooksKept: kept})
+	if len(lines) != 1 || !strings.Contains(lines[0].Text, "Looks kept") || !strings.Contains(lines[0].Text, "Riley Reed") {
+		t.Fatalf("lines = %+v, want one plain looks-kept line naming the guest", lines)
+	}
+	if len(lines[0].Evidence) != 1 || lines[0].Evidence[0].EntityID != kept[0].SourceID {
+		t.Errorf("evidence = %+v, want the conversation the promise was made in", lines[0].Evidence)
 	}
 }

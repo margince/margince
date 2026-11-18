@@ -122,7 +122,7 @@ func Deterministic(in Input) []Section {
 		{Kind: crmcontracts.MeetingBriefSectionKindWhatChanged, Sentences: whatChangedSection(in, ranked)},
 		{Kind: crmcontracts.MeetingBriefSectionKindAttendees, Sentences: attendeesSection(in)},
 		{Kind: crmcontracts.MeetingBriefSectionKindRisks, Sentences: risksSection(in, ranked)},
-		{Kind: crmcontracts.MeetingBriefSectionKindCommitments, Sentences: briefCopyFor(in.Language).commitmentsSection(ranked)},
+		{Kind: crmcontracts.MeetingBriefSectionKindCommitments, Sentences: append(briefCopyFor(in.Language).commitmentsSection(ranked), looksKeptLines(in)...)},
 		{Kind: crmcontracts.MeetingBriefSectionKindDealState, Sentences: dealStateSection(in, ranked)},
 		{Kind: crmcontracts.MeetingBriefSectionKindTalkingPoints, Sentences: briefCopyFor(in.Language).talkingPointsSection(ranked)},
 		{Kind: crmcontracts.MeetingBriefSectionKindCompanyContext, Sentences: companyContextSection(in)},
@@ -449,6 +449,21 @@ func (said briefCopy) talkingPointLine(claim ClaimIn) string {
 	default:
 		return fmt.Sprintf(said.Say(sectionWords.Priority), said.whom(claim), claim.Body)
 	}
+}
+
+// looksKeptLines say once, plainly, that a promise looks kept and is no open
+// driver of this meeting.
+func looksKeptLines(in Input) []Sentence {
+	said := briefCopyFor(in.Language)
+	out := make([]Sentence, 0, len(in.LooksKept))
+	for _, kept := range in.LooksKept {
+		out = append(out, Sentence{
+			Text: fmt.Sprintf(said.Say(touchWords.LooksKept), kept.Body, kept.Guest,
+				occurredday.When(occurredday.Moment{At: kept.MeetingAt.At, DateOnly: kept.MeetingAt.DateOnly})),
+			Evidence: []Evidence{{EntityType: citeActivity, EntityID: kept.SourceID}},
+		})
+	}
+	return out
 }
 
 // companyContextSection recalls earlier meetings with this room; no history

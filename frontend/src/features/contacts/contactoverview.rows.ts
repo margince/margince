@@ -8,6 +8,7 @@ import {
 import { daysPast } from "../../format/lateness";
 import { type Locale, type Translator, translatePlural } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import type { LooksKept } from "./claimlookskept";
 import type { TakenOver } from "./claimtakeover";
 import { omitted } from "./contact360";
 
@@ -25,8 +26,8 @@ export type OverviewRow = Readonly<{
   // A promise of ours nobody holds, which the reader may take over.
   takeable?: boolean;
   takenBy?: TakenOver;
-  // Margince closed this promise on its own evidence; the card offers an undo.
-  autoKept?: boolean;
+  // An accepted invitation suggests this promise is kept; the reader decides.
+  looksKept?: LooksKept;
 }>;
 
 // --- Commitments ----------------------------------------------------------
@@ -50,7 +51,7 @@ type OpenLoop = Readonly<{
   quote?: string;
   takeable: boolean;
   takenBy?: TakenOver;
-  autoKept: boolean;
+  looksKept?: LooksKept;
 }>;
 
 /**
@@ -90,8 +91,12 @@ function openLoops(view: Contact360): readonly OpenLoop[] {
             claim.status === "open" &&
             !claim.task_activity_id &&
             !claim.taken_by_user_id,
-          autoKept:
-            claim.status === "done" && claim.settled_automatically === true,
+          looksKept: claim.looks_kept
+            ? {
+                guest: claim.looks_kept.guest_name,
+                at: claim.looks_kept.meeting_at,
+              }
+            : undefined,
           takenBy: claim.taken_at
             ? { name: claim.taken_by_name ?? null, at: claim.taken_at }
             : undefined,
@@ -129,7 +134,7 @@ export function commitmentRows(
       tick: loop.done,
       takeable: loop.takeable,
       takenBy: loop.takenBy,
-      autoKept: loop.autoKept,
+      looksKept: loop.looksKept,
     };
   });
 }

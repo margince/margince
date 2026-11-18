@@ -40,6 +40,7 @@ Return ONLY a JSON object: {"objective":{"text":"...","evidence":[{"entity_type"
 Write every word from the briefing and from nothing else. Never invent a fact, a name, a date or a number. If the briefing does not say it, do not write it.
 Each message says whether it is on this meeting's deal ("on_this_deal"), or names the other deal it is filed under and that deal's state. The objective and the opening serve this meeting's deal. A conversation about another deal is background only. Name a deal whose state is "lost" as lost and a "won" one as won, never as a live opportunity.
 ` + speakerRule + `
+"looks_kept" lists promises that an accepted invitation shows are probably kept. They are not open: never make one the objective, a risk or a question, and say once that it looks kept where it matters.
 "earlier_at_company" is what the company's other contacts already received from us. Never contradict it, and say plainly when the meeting would.
 Quote what contacts actually asked for. A question that would read the same about any other company is worthless — name the thing this account said, in their words where the briefing has them.
 Cite the refs the briefing gave you, in evidence only. A ref must never appear in the text a reader sees.
@@ -72,7 +73,9 @@ type PlanPrompt struct {
 	Moments     []PromptMoment `json:"account_moments,omitempty"`
 	// EarlierAtCompany is what the company's other contacts already received.
 	EarlierAtCompany []PromptCompanyTopic `json:"earlier_at_company,omitempty"`
-	Unknowns         []PromptUnknown      `json:"what_the_record_does_not_say,omitempty"`
+	// LooksKept are promises an accepted invitation shows are probably kept.
+	LooksKept []LooksKeptIn   `json:"looks_kept,omitempty"`
+	Unknowns  []PromptUnknown `json:"what_the_record_does_not_say,omitempty"`
 	// MeetingID is the activity every recommendation may cite when it rests on
 	// the meeting itself rather than on a conversation.
 	MeetingID string `json:"meeting_id"`
@@ -139,6 +142,7 @@ func planPromptOf(in Input, floor Plan) PlanPrompt {
 		Attendees:   in.Attendees,
 		Claims:      in.Commitments,
 		MeetingID:   in.ActivityID,
+		LooksKept:   in.LooksKept,
 	}
 	byActivity := map[string]ExcerptIn{}
 	for _, excerpt := range in.Excerpts {

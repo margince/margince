@@ -105,6 +105,9 @@ func citedActivities(in Input) map[string]citedActivity {
 	for _, topic := range in.CompanyHistory {
 		add(topic.ID, topic.Subject, topic.At)
 	}
+	for _, kept := range in.LooksKept {
+		add(kept.SourceID, "", Occurred{})
+	}
 	for _, claim := range in.Commitments {
 		var when Occurred
 		if claim.OccurredAt != nil {

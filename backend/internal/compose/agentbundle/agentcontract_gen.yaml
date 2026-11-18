@@ -34660,10 +34660,15 @@ components:
           type: [string, 'null']
           format: date-time
           description: When a human typed over the machine. Set means the claim is theirs, not the extractor's.
-        settled_automatically:
-          type: boolean
+        looks_kept:
+          type: object
           description: >-
-            Margince marked this promise kept on evidence, so the card offers an undo. False for a promise a person settled and for one that is open.
+            A read-only hint that this open promise to invite someone looks kept: a guest of that name at the same company accepted a later meeting this reader may open. Nothing is settled. The reader decides, through the settle verb.
+          required: [meeting_id, guest_name, meeting_at]
+          properties:
+            meeting_id: {type: string, format: uuid}
+            guest_name: {type: string}
+            meeting_at: {type: string, format: date-time}
         task_activity_id:
           type: [string, 'null']
           format: uuid
