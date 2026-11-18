@@ -67,10 +67,11 @@ func orderByOpenDealCount(ctx context.Context, arg func(any) int) (string, error
 	if !pipelineCountsVisible(ctx) {
 		return withheldSortValue, nil
 	}
+	// No open deal means no rollup row; the column prints 0, so it sorts as 0.
 	return storekit.SQLf(
-		`(SELECT pipeline_sort.open_deal_count
+		`coalesce((SELECT pipeline_sort.open_deal_count
 		    FROM company_open_pipeline_rollup($%d) pipeline_sort
-		   WHERE pipeline_sort.company_id = company.id)`, arg(rollupAsOf())), nil
+		   WHERE pipeline_sort.company_id = company.id), 0)`, arg(rollupAsOf())), nil
 }
 
 // withheldSortValue is what a column this caller may not see orders by: NULL,

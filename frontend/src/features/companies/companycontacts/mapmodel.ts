@@ -46,9 +46,10 @@ export type MapCopy = Readonly<{
   account: string;
   roles: Record<(typeof ROLES)[number], string>;
   otherRoles: string;
-  /** "{role} missing" — the words in a gap node. */
-  missing: (role: string) => string;
-  assign: string;
+  /** The words in a gap node, for the role nobody holds. */
+  missing: (role: (typeof ROLES)[number]) => string;
+  /** What a gap node adds under its words. */
+  unheld: string;
   engagement: Record<MapEngagement, string>;
   /** How an edge reads, given which way the conversation is owed. */
   awaitingReply: string;
@@ -241,8 +242,8 @@ function buildRoleLanes(
       nodes.push({
         id,
         kind: "gap",
-        label: copy.missing(copy.roles[role]),
-        sublabel: copy.assign,
+        label: copy.missing(role),
+        sublabel: copy.unheld,
       });
       ids.push(id);
     }

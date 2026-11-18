@@ -1,6 +1,6 @@
-import { EntityRef, useEntityName } from "../../components/entityref";
-import { useT } from "../../i18n";
-import type { EntityKind } from "../../lib/entity";
+import { useT } from "../i18n";
+import type { EntityKind } from "../lib/entity";
+import { EntityRef, useEntityName } from "./entityref";
 
 // The record a merge folded in, or folded this one into, by its name.
 // The name is read by id like any reference, so the record read decides
@@ -30,5 +30,19 @@ export function MergedRecordName({
         ? t("common.loading")
         : t("history.mergedRecordUnnamed")}
     </span>
+  );
+}
+
+// Where a merged-away record went, for the page an old link still lands on.
+export function MergedIntoLine({
+  kind,
+  id,
+}: Readonly<{ kind: EntityKind; id: string }>) {
+  const t = useT();
+  return (
+    <p>
+      <span>{t("history.field.merged_into_id")}</span>{" "}
+      <MergedRecordName kind={kind} id={id} />
+    </p>
   );
 }
