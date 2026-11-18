@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: scripts/prod.sh -->
 # Getting started
 
 This tutorial takes you from a new clone to a running Margince

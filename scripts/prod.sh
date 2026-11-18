@@ -35,12 +35,21 @@ project() {
 	printf 'margince-prod-%s' "$(cat "$state/project-id")"
 }
 
-# compose pins the mode, the loopback binding and its URL, because values
-# exported in the caller's shell outrank the stack's .env: MARGINCE_ENV=dev
-# would start dev mode, and MARGINCE_PORT=8090 would listen on every address.
+# compose loads the saved .env over the caller's shell, because Compose lets an
+# exported value outrank .env: an old MARGINCE_APP_PW would seed the database
+# with a password the next start does not know. Mode and binding are pinned on
+# top, so neither dev mode nor an open port can come from either.
 compose() {
-	MARGINCE_ENV= MARGINCE_PORT="127.0.0.1:$port" MARGINCE_PUBLIC_BASE_URL="http://localhost:$port" \
-		docker compose --project-directory "$stack" --project-name "$(project)" "$@"
+	(
+		if [[ -f "$state/.env" ]]; then
+			set -a
+			# shellcheck source=/dev/null
+			. "$state/.env"
+			set +a
+		fi
+		MARGINCE_ENV= MARGINCE_PORT="127.0.0.1:$port" MARGINCE_PUBLIC_BASE_URL="http://localhost:$port" \
+			docker compose --project-directory "$stack" --project-name "$(project)" "$@"
+	)
 }
 
 # write_env: the stack's settings, made once so a second run keeps its data.
