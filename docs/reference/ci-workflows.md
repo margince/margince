@@ -337,12 +337,13 @@ What a run does, after the `version` job checks the tag:
    every file the patch makes, so the committed `sboms/` files, which may be behind, are never uploaded.
 
    The changelog goes with the patch too. [`scripts/release_changelog.py`](../../scripts/release_changelog.py) builds it from the non-merge commit subjects since the patch base (`make test-release-changelog`). It lists the breaking, `feat`, `fix` and `perf` subjects, and the compare link shows the rest.
-2. `docker-image` builds the three role images through the bake file (`docker-bake.hcl`, `linux/amd64` +
-   `linux/arm64`, with `mode=max` provenance records). The builder stages compile for each target on the
-   host; only runtime layers run under emulation. `CACHE=gha` stores the layer cache per role.
-   `buildkit-cache-dance` + `actions/cache` carry the BuildKit cache mount across runs. The Corepack download is not cached: the image builds the pinned pnpm into a
-   layer. The 10 GB Actions cache drops entries older than some hours, so a release after a quiet night
-   starts cold.
+2. `docker-image` builds the three role images through `docker-bake.hcl` (`linux/amd64` + `linux/arm64`, `mode=max` provenance).
+   Builder stages compile on the host, and only runtime layers run under emulation. `CACHE=gha` keeps the layer
+   cache per role; `buildkit-cache-dance` + `actions/cache` keep the BuildKit cache mount. The pinned pnpm is baked
+   into a layer, so the Corepack download needs no cache.
+
+   GitHub deletes a cache entry no run read for 7 days. At the limit, 10 GB by default, it deletes the least
+   recently used. CI keeps the cache near that limit, so a release often starts cold.
 3. The images are pushed by digest, with no tag, to the target's registry. That is `registry.test.margince.com` or
    `registry.margince.com`, with the target's registry publisher token. The same builder bakes `bundle`. For each
    Linux platform, `build-archive` packs the bundle tree of `scripts/release-bundle.sh` with three SBOMs.

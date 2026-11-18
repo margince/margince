@@ -40,10 +40,13 @@ jobs:
           ref: ${{ inputs.ref }}
           persist-credentials: false
       # The version is given, so the shallow checkout needs no tags for git describe.
+      # Make expands SBOM_VERSION inside a recipe, so only a tag in the release grammar may reach it.
       - name: Generate the SBOMs at the release commit
         env:
           TAG: ${{ inputs.tag }}
-        run: make sbom SBOM_VERSION="$TAG"
+        run: |
+          bash scripts/release-tag-version.sh "$TAG" > /dev/null
+          make sbom SBOM_VERSION="$TAG"
       - uses: ./.github/actions/upload-artifact-retried
         with:
           name: ${{ inputs.artifact }}
