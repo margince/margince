@@ -156,7 +156,8 @@ func assertReplacedRowsMatch(ns Namespace, done map[string]LedgerRow) error {
 	}
 	for _, r := range ns.Baseline.Replaces {
 		row, ok := done[r.Version]
-		if !ok || shipped[r.Version] || (row.Name == r.Name && row.Digest != nil && *row.Digest == r.Digest) {
+		if !ok || shipped[r.Version] || (row.Name == r.Name && row.Digest != nil &&
+			(*row.Digest == r.Digest || pairedWith(ns.Name, r.Version, r.Digest, *row.Digest))) {
 			continue
 		}
 		return fmt.Errorf(

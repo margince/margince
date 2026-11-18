@@ -199,3 +199,27 @@ func TestPlanBaselineTellsAPartialHistoryWhatToDo(t *testing.T) {
 		}
 	}
 }
+
+// A row holding content an equivalence entry admits for that version passes
+// once the file is gone, as it did while the file shipped.
+func TestPlanBaselineAdmitsAnEquivalentDigestOfAReplacedVersionWhoseFileIsGone(t *testing.T) {
+	ns := baselineNamespace()
+	ns.Name = "baseline-equivalence-test"
+	ns.Migrations = ns.Migrations[2:]
+	b := ns.Baseline
+	earlier := b.Replaces[1]
+	earlier.Digest = "earlier"
+	equivalentContent[ns.Name] = map[string][]equivalence{
+		earlier.Version: {{applied: earlier.Digest, source: b.Replaces[1].Digest}},
+	}
+	t.Cleanup(func() { delete(equivalentContent, ns.Name) })
+
+	if _, err := planBaseline(ns, ledgerOf(b.Replaces[0], earlier)); err != nil {
+		t.Errorf("an admitted earlier digest was refused: %v", err)
+	}
+	unadmitted := earlier
+	unadmitted.Digest = "unadmitted"
+	if _, err := planBaseline(ns, ledgerOf(b.Replaces[0], unadmitted)); err == nil {
+		t.Error("a digest no entry admits was accepted")
+	}
+}
