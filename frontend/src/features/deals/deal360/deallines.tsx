@@ -27,6 +27,7 @@ import {
   EMPTY_LINE_BILLING,
   type LineBilling,
   lineBillingBody,
+  lineBillingOf,
   OfferLineBillingFields,
 } from "../offerlinebilling";
 import {
@@ -72,16 +73,6 @@ type DraftLine = LineRates & {
   catalogPriceMinor?: number;
 };
 
-function billingOfLine(line: DealLine): LineBilling {
-  return {
-    billingModel: line.billing_model ?? "",
-    billingIntervalMonths: line.billing_interval_months
-      ? String(line.billing_interval_months)
-      : "",
-    intervalCount: line.interval_count ? String(line.interval_count) : "",
-  };
-}
-
 function draftOf(line: DealLine, locale: Locale): DraftLine {
   return {
     key: line.id,
@@ -93,7 +84,7 @@ function draftOf(line: DealLine, locale: Locale): DraftLine {
         ? ""
         : writtenDecimal(String(line.quantity), locale),
     priceMinor: line.unit_price_minor ?? null,
-    billing: billingOfLine(line),
+    billing: lineBillingOf(line),
     discount_pct: typedText(line.discount_pct, locale),
     tax_rate: typedText(line.tax_rate, locale),
   };
@@ -148,7 +139,7 @@ function changedFields(saved: DealLine, draft: DraftLine, locale: Locale) {
   if (taxRate !== undefined && taxRate !== saved.tax_rate) {
     body.tax_rate = taxRate;
   }
-  const before = billingOfLine(saved);
+  const before = lineBillingOf(saved);
   if (JSON.stringify(before) !== JSON.stringify(draft.billing)) {
     const wire = lineBillingBody(draft.billing);
     body.billing_model = wire.billing_model ?? null;

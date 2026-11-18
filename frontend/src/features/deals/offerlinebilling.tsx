@@ -4,6 +4,7 @@
 import { useState } from "react";
 import { Field } from "../../design-system/atoms";
 import { Select } from "../../design-system/select";
+import type { LineBillingTerms } from "../../format/billingphrase";
 import { useT } from "../../i18n";
 import type { OfferLineItem, UpdateOfferLineItemRequest } from "./offers";
 import "./offers.css";
@@ -187,11 +188,15 @@ export function lineBillingPatch(value: LineBilling): LineBillingPatch | null {
   };
 }
 
-function lineBillingOf(line: OfferLineItem): LineBilling {
+// A line's saved terms as the controls hold them. No interval and no term
+// both read as empty, so 0 is never offered back as a choice.
+export function lineBillingOf(line: LineBillingTerms): LineBilling {
   return {
     billingModel: line.billing_model ?? "",
-    billingIntervalMonths: String(line.billing_interval_months ?? ""),
-    intervalCount: String(line.interval_count ?? ""),
+    billingIntervalMonths: line.billing_interval_months
+      ? String(line.billing_interval_months)
+      : "",
+    intervalCount: line.interval_count ? String(line.interval_count) : "",
   };
 }
 
@@ -248,7 +253,7 @@ export function BillingCell({
             setValue({ ...value, intervalCount: event.target.value })
           }
           onBlur={() => {
-            if (value.intervalCount !== String(line.interval_count ?? "")) {
+            if (value.intervalCount !== lineBillingOf(line).intervalCount) {
               commit(value);
             }
           }}
