@@ -25,6 +25,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
+	"github.com/margince/margince/backend/internal/platform/database/rowvalue"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -392,7 +393,7 @@ var shareExportColumns = []string{
 }
 
 // shareRowsCSV renders the rows, neutralising formula leads through the same
-// csvCell every other export in this package uses.
+// rowvalue.CSVScalar every other export uses.
 // selfCorrecting is the snapshot's own, repeated on each row so a sheet filtered
 // to some rows still says which definition they were frozen under. The range and
 // the contributions_limited flag and its reason are the shared headline's, repeated the same way.
@@ -408,15 +409,15 @@ func shareRowsCSV(frozen frozenForReader, selfCorrecting *bool) ([]byte, error) 
 	}
 	for _, row := range frozen.Rows {
 		record := []string{
-			csvCell(row.DealID), csvCell(row.DealName), csvCellPtr(row.Owner),
-			csvCellPtr(row.AmountMinor), csvCell(row.Currency),
+			rowvalue.CSVScalar(row.DealID), rowvalue.CSVScalar(row.DealName), csvCellPtr(row.Owner),
+			csvCellPtr(row.AmountMinor), rowvalue.CSVScalar(row.Currency),
 			csvCellPtr(row.BaseMinor), csvCellPtr(row.EffectiveClose),
-			csvCell(row.ProbabilitySource), csvCell(row.InWon), csvCell(row.InOpen),
-			csvCell(row.ExclusionReason),
+			rowvalue.CSVScalar(row.ProbabilitySource), rowvalue.CSVScalar(row.InWon), rowvalue.CSVScalar(row.InOpen),
+			rowvalue.CSVScalar(row.ExclusionReason),
 			csvCellPtr(row.WeightedMinor), csvCellPtr(row.TypedProbability), csvCellPtr(row.ChanceInUse),
-			csvCellPtr(row.EvidenceN), csvCell(strings.Join(row.Signals, ";")), csvCellPtr(row.Effect),
+			csvCellPtr(row.EvidenceN), rowvalue.CSVScalar(strings.Join(row.Signals, ";")), csvCellPtr(row.Effect),
 			csvCellPtr(selfCorrecting), csvCellPtr(row.SignalFacts), csvCellPtr(low), csvCellPtr(high),
-			csvCell(frozen.Limited), csvCell(frozen.Reason),
+			rowvalue.CSVScalar(frozen.Limited), rowvalue.CSVScalar(frozen.Reason),
 		}
 		if err := out.Write(record); err != nil {
 			return nil, fmt.Errorf("compose: writing an export row: %w", err)
@@ -448,9 +449,9 @@ func shareSummaryRecord(selfCorrecting *bool, low, high *int64, limitedReason st
 		case "range_high_minor":
 			record[index] = csvCellPtr(high)
 		case "contributions_limited":
-			record[index] = csvCell(true)
+			record[index] = rowvalue.CSVScalar(true)
 		case "contributions_limited_reason":
-			record[index] = csvCell(limitedReason)
+			record[index] = rowvalue.CSVScalar(limitedReason)
 		}
 	}
 	return record
@@ -466,5 +467,5 @@ func csvCellPtr[T any](v *T) string {
 	if v == nil {
 		return ""
 	}
-	return csvCell(*v)
+	return rowvalue.CSVScalar(*v)
 }

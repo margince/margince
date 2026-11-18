@@ -8282,6 +8282,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tasks.log.chooseRecord": "Anderen Datensatz wählen",
   "tasks.log.leftOpen":
     "Die Aktivität wurde erfasst. Die Aufgabe bleibt offen, bis alle Dateien angehängt sind. Versuche es erneut.",
+  "tasks.log.completeFailed":
+    "Die Aktivität wurde erfasst, aber die Aufgabe ist noch offen. Versuche es erneut, um sie abzuschließen.",
+  "tasks.log.completeRefused":
+    "Die Aktivität wurde erfasst, aber die Aufgabe konnte nicht abgeschlossen werden: {reason}",
+  "tasks.log.loggedOnly":
+    "Die Aktivität ist erfasst und kann hier nicht mehr geändert werden. Erfasse erneut, um die übrigen Schritte abzuschließen.",
   "tasks.log.markDone": "Aufgabe erledigen",
   "tasks.detail": "Aufgabe",
   "tasks.sourceEmail": "Ursprungs-E-Mail",

@@ -316,3 +316,50 @@ func TestASeatOrAShareChangedAfterThePreviewMakesTheRevisionStale(t *testing.T) 
 		})
 	}
 }
+
+func TestACaseMergeWaitsOnAnEmploymentWriterInsteadOfDeadlocking(t *testing.T) {
+	c := setupCases(t)
+	members := c.seedCase(t, c.e.Rep1, c.e.Rep1, c.e.Rep1)
+	survivor := members[0]
+	read := c.read(c.e.Admin(), t, survivor)
+
+	// An employment writer: it holds the survivor's employment lock, then
+	// reaches for the survivor's row, the order employer attach keeps.
+	owner := integration.FreshOwnerConn(t)
+	writer, err := owner.Begin(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := storekit.LockWriteIdentity(context.Background(), writer, "employment", survivor.String()); err != nil {
+		t.Fatal(err)
+	}
+	var holder int32
+	if err := writer.QueryRow(context.Background(), `SELECT pg_backend_pid()`).Scan(&holder); err != nil {
+		t.Fatal(err)
+	}
+	merged := make(chan error, 1)
+	go func() {
+		_, err := c.store.MergeContactCase(c.e.Admin(), survivor, caseDecision(read, members, survivor, c.e.Rep1))
+		merged <- err
+	}()
+	// Only a session queued behind this writer counts, so another test's
+	// lock waiter cannot end the wait early.
+	waitForAWaiterOn(t, owner, holder)
+	if t.Failed() {
+		t.FailNow()
+	}
+	// NOWAIT refuses at once if the merge holds the row. A plain lock would
+	// deadlock, and Postgres would pick which side to abort.
+	if _, err := writer.Exec(context.Background(), `SELECT id FROM contact WHERE id = $1 FOR UPDATE NOWAIT`, survivor); err != nil {
+		t.Fatalf("the merge held the survivor's row while it waited on the employment lock: %v", err)
+	}
+	if err := writer.Commit(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if err := <-merged; err != nil {
+		t.Fatalf("the case merge after the employment writer committed: %v", err)
+	}
+	if live := c.e.WsScalar(t, `SELECT count(*) FROM contact WHERE id = ANY($1) AND archived_at IS NULL`, members); live != "1" {
+		t.Errorf("%s members are live after the merge, want the survivor only", live)
+	}
+}
