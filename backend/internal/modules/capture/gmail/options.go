@@ -16,14 +16,8 @@ func (c *Connector) WithBounceSink(sink connector.BounceSink) *Connector {
 	return &copied
 }
 
-// BackfillTuning sizes one history page and its fetching. A zero field keeps
-// the built-in value; the lookahead never falls below the workers.
-type BackfillTuning struct {
-	PageSize, FetchWorkers, Lookahead int
-}
-
 // WithBackfillTuning returns a copy that walks history pages by t.
-func (c *Connector) WithBackfillTuning(t BackfillTuning) *Connector {
+func (c *Connector) WithBackfillTuning(t connector.BackfillTuning) *Connector {
 	copied := *c
 	copied.tuning = t
 	return &copied

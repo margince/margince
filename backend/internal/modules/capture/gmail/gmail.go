@@ -54,7 +54,7 @@ type Connector struct {
 	// dropped with the rest of the delivery-system mail.
 	bounces   connector.BounceSink
 	rawMemory *semaphore.Weighted
-	tuning    BackfillTuning
+	tuning    connector.BackfillTuning
 	// shared mints shared mailboxes' tokens; nil on a connector that reads none.
 	shared *SharedAuthorizer
 }

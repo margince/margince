@@ -32,6 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // gmailScopes are the Google scopes a Gmail connection requests: mail read for
@@ -175,6 +176,12 @@ var RatesModelPricing = config.Define(config.Spec[map[string]string]{
 	Key: "rates.model_pricing", Env: "MARGINCE_RATES_MODEL_PRICING", Type: config.Map(config.String), Roles: bothRoles,
 	Doc: "Ignored, with a warning at boot; kept so existing files load.",
 })
+
+// historyTuning is the history import's page size and fetching, as the
+// connectors take them.
+func (c CaptureConfig) historyTuning() connector.BackfillTuning {
+	return connector.BackfillTuning{PageSize: c.HistoryPageSize, FetchWorkers: c.HistoryFetchWorkers, Lookahead: c.HistoryLookahead}
+}
 
 // NewCaptureRegistry builds the connector registry; process roles register
 // their compiled-in connectors on it and drive SyncOnce. The vault seals and

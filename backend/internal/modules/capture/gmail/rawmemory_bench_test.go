@@ -48,7 +48,7 @@ func BenchmarkRawImportsShareMemoryBudget(b *testing.B) {
 		var walks sync.WaitGroup
 		for range 2 {
 			walks.Go(func() {
-				err := inOrder(b.Context(), BackfillTuning{}, 2*backfillFetchWorkers, func(ctx context.Context, _ int) (Message, error) {
+				err := inOrder(b.Context(), connector.BackfillTuning{}, 2*backfillFetchWorkers, func(ctx context.Context, _ int) (Message, error) {
 					return api.GetRaw(ctx, "test", "large")
 				}, func(_ int, msg Message, err error) error {
 					if err != nil {

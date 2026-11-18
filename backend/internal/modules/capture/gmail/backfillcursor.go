@@ -95,8 +95,9 @@ func (c *Connector) listHistoryPage(ctx context.Context, access, query, token st
 	if err != nil || prepared {
 		return cursor, err
 	}
+	pageSize, _, _ := c.tuning.Resolve(backfillPageSize, backfillFetchWorkers)
 	page, err := rateLimited(ctx, gate, func() (historyCursor, error) {
-		ids, next, err := c.api.ListAfter(ctx, access, query, token, c.tuning.pageSize())
+		ids, next, err := c.api.ListAfter(ctx, access, query, token, pageSize)
 		return historyCursor{IDs: ids, Next: &next}, err
 	})
 	if err != nil {

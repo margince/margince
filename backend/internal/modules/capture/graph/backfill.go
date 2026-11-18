@@ -25,6 +25,20 @@ import (
 // cursor and counters between pages, so this is also the resume granularity.
 const backfillPageSize = 100
 
+// maxBackfillFetchWorkers is Microsoft's limit of concurrent requests per
+// mailbox. Live sync and a send need requests of their own, so the built-in
+// two leave room for both; a setting may use all four.
+const maxBackfillFetchWorkers = 4
+
+// walk answers the page's page size and its walk, tuned by the installation.
+func (c *Connector) walk() (pageSize int, walk orderedfetch.Walk[[]byte]) {
+	pageSize, workers, lookahead := c.tuning.Resolve(backfillPageSize, backfillWalk.Workers)
+	walk = backfillWalk
+	walk.Workers = min(workers, maxBackfillFetchWorkers)
+	walk.Lookahead = max(lookahead, walk.Workers)
+	return pageSize, walk
+}
+
 // EstimateBackfill asks the provider how many messages the window holds.
 //
 // Never a floor: Graph answers an exact `$count` for the filter, so there is
@@ -67,7 +81,8 @@ func (c *Connector) BackfillPage(ctx context.Context, auth connector.Auth, after
 	if err != nil {
 		return connector.BackfillPageResult{}, err
 	}
-	msgs, next, err := c.api.ListAfter(ctx, access, after, pageToken, backfillPageSize)
+	pageSize, walk := c.walk()
+	msgs, next, err := c.api.ListAfter(ctx, access, after, pageToken, pageSize)
 	if err != nil {
 		return connector.BackfillPageResult{}, err
 	}
@@ -82,7 +97,7 @@ func (c *Connector) BackfillPage(ctx context.Context, auth connector.Auth, after
 			walked = append(walked, msg)
 		}
 	}
-	err = backfillWalk.InOrder(ctx, len(walked),
+	err = walk.InOrder(ctx, len(walked),
 		func(ctx context.Context, i int) ([]byte, error) {
 			// Through the folder the listing found it in, so a message moved to
 			// Junk Email since is refused by Graph instead of read.

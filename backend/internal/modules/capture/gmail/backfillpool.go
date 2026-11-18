@@ -125,39 +125,16 @@ func rateLimited[T any](ctx context.Context, g *rateGate, fn func() (T, error)) 
 	}
 }
 
-// pageSize is how many ids one history listing asks for.
-func (t BackfillTuning) pageSize() int {
-	if t.PageSize > 0 {
-		return t.PageSize
-	}
-	return backfillPageSize
-}
-
-// walkSize answers the fetches in flight and how far they may run ahead of the
-// captures. The lookahead never falls below the workers, or the extra workers
-// would sit idle.
-func (t BackfillTuning) walkSize() (workers, lookahead int) {
-	workers = backfillFetchWorkers
-	if t.FetchWorkers > 0 {
-		workers = t.FetchWorkers
-	}
-	lookahead = 2 * workers
-	if t.Lookahead > 0 {
-		lookahead = t.Lookahead
-	}
-	return workers, max(lookahead, workers)
-}
-
 // inOrder walks n messages with the tuned number of fetches in flight and
 // consumes them in listing order. budget covers fetch and consumption; a nil
 // budget skips accounting.
 func inOrder(
-	ctx context.Context, tuning BackfillTuning, n int,
+	ctx context.Context, tuning connector.BackfillTuning, n int,
 	fetch func(ctx context.Context, i int) (Message, error),
 	consume func(i int, v Message, err error) error,
 	budget *semaphore.Weighted, reservationBytes int64,
 ) error {
-	workers, lookahead := tuning.walkSize()
+	_, workers, lookahead := tuning.Resolve(backfillPageSize, backfillFetchWorkers)
 	walk := orderedfetch.Walk[Message]{
 		Workers: workers, Lookahead: lookahead,
 		Budget: budget, Reserve: reservationBytes, Retained: retainedRawBytes,

@@ -50,7 +50,7 @@ func TestDeclaredRawLengthReleasesRoomForTheNextFetch(t *testing.T) {
 	api := newTestAPI(t, server.Client(), server.URL)
 	budget := semaphore.NewWeighted(rawFetchReservation + 4096)
 	ids := []string{"first", "second"}
-	err := inOrder(t.Context(), BackfillTuning{}, len(ids), func(ctx context.Context, i int) (Message, error) {
+	err := inOrder(t.Context(), connector.BackfillTuning{}, len(ids), func(ctx context.Context, i int) (Message, error) {
 		return api.GetRaw(ctx, "test", ids[i])
 	}, func(i int, msg Message, err error) error {
 		if err != nil {
@@ -125,7 +125,7 @@ func TestConcurrentWalkersRespectTheProductionRawBudget(t *testing.T) {
 	results := make(chan error, 2)
 	for range 2 {
 		go func() {
-			results <- inOrder(ctx, BackfillTuning{}, 1, func(ctx context.Context, _ int) (Message, error) {
+			results <- inOrder(ctx, connector.BackfillTuning{}, 1, func(ctx context.Context, _ int) (Message, error) {
 				return api.GetRaw(ctx, "test", "mail")
 			}, func(_ int, msg Message, err error) error {
 				if err != nil {

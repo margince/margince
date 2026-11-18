@@ -51,24 +51,24 @@ var (
 		Doc: "Limit on history imports running at once across the installation. Use the same value in every process.",
 	})
 	CaptureHistoryPageSize = config.Define(config.Spec[int]{
-		Key: "capture.history_page_size", Env: "MARGINCE_CAPTURE_HISTORY_PAGE_SIZE", Type: config.Int, Default: config.Some(100), Roles: bothRoles,
+		Key: "capture.history_page_size", Env: "MARGINCE_CAPTURE_HISTORY_PAGE_SIZE", Type: config.Int, Default: config.Some(0), Roles: bothRoles,
 		Validate: func(value int) error {
-			if value < 1 || value > gmail.MaxBackfillPageSize {
-				return fmt.Errorf("must be between 1 and %d", gmail.MaxBackfillPageSize)
+			if value < 0 || value > gmail.MaxBackfillPageSize {
+				return fmt.Errorf("must be between 0 and %d", gmail.MaxBackfillPageSize)
 			}
 			return nil
 		},
-		Doc: "Gmail messages one history page lists, and so how many it works through before it saves its place. Applies to Gmail only; Microsoft pages stay at 100.",
+		Doc: "Messages one history page lists, and so how many it works through before it saves its place. 0 keeps the built-in 100 for Gmail and for Microsoft.",
 	})
 	CaptureHistoryFetchWorkers = config.Define(config.Spec[int]{
-		Key: "capture.history_fetch_workers", Env: "MARGINCE_CAPTURE_HISTORY_FETCH_WORKERS", Type: config.Int, Default: config.Some(4), Roles: bothRoles,
+		Key: "capture.history_fetch_workers", Env: "MARGINCE_CAPTURE_HISTORY_FETCH_WORKERS", Type: config.Int, Default: config.Some(0), Roles: bothRoles,
 		Validate: func(value int) error {
-			if value < 1 || value > 16 {
-				return errors.New("must be between 1 and 16")
+			if value < 0 || value > 16 {
+				return errors.New("must be between 0 and 16")
 			}
 			return nil
 		},
-		Doc: "Gmail messages one history page downloads at once. Memory held by downloads stays bounded however high this is. Applies to Gmail only; Microsoft allows four requests per mailbox and keeps two.",
+		Doc: "Messages one history page downloads at once. 0 keeps the built-in 4 for Gmail and 2 for Microsoft. Microsoft allows four requests at once per mailbox, so it never uses more than 4. Memory held by Gmail downloads stays bounded however high this is.",
 	})
 	CaptureHistoryLookahead = config.Define(config.Spec[int]{
 		Key: "capture.history_lookahead", Env: "MARGINCE_CAPTURE_HISTORY_LOOKAHEAD", Type: config.Int, Default: config.Some(0), Roles: bothRoles,
@@ -78,7 +78,7 @@ var (
 			}
 			return nil
 		},
-		Doc: "How many Gmail messages a history page may download ahead of the ones saved. 0 means twice the fetch workers; a value under the workers is raised to match.",
+		Doc: "How many messages a history page may download ahead of the ones saved. 0 means twice the fetch workers; a value under the workers is raised to match.",
 	})
 	CaptureHistoryPageDelay = config.Define(config.Spec[time.Duration]{
 		Key: "capture.history_page_delay", Env: "MARGINCE_CAPTURE_HISTORY_PAGE_DELAY", Type: config.Duration, Default: config.Some(time.Duration(0)), Roles: bothRoles,
