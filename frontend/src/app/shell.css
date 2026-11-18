@@ -821,7 +821,7 @@
  * round the orb, 2px off the rail's edges. */
 .rail .railagent {
   margin-inline: 0;
-  padding-block: var(--space-2);
+  padding-block: var(--space-1);
   border-radius: var(--r-lg);
   box-shadow: inset 0 0 0 1px var(--groundEdge);
   transition:
