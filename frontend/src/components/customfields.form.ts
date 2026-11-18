@@ -26,6 +26,11 @@ import { webUrl } from "../format/weburl";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import type { CfObject } from "../lib/customfields.logic";
 import { translatedLabel } from "../lib/labeltranslation";
+import {
+  readKindRecord,
+  searchKindRecords,
+  useRecordKindDirectory,
+} from "../lib/recordkinds";
 import { TEXT_LIMITS } from "../lib/textlimits_gen";
 import {
   type CreateField,
@@ -37,6 +42,8 @@ export type CustomField = components["schemas"]["CustomField"];
 
 export type BooleanLabels = { yes: string; no: string };
 
+type RecordKindDirectory = readonly components["schemas"]["RecordKindOption"][];
+
 // One active custom field → a form control keyed on its immutable column_name.
 // Custom fields are always nullable (backfilled NULL), so never required.
 export function customFieldToFormField(
@@ -44,6 +51,7 @@ export function customFieldToFormField(
   boolLabels: BooleanLabels,
   t: Translator,
   locale: Locale = "en",
+  kinds: RecordKindDirectory = [],
 ): CreateField {
   const base = {
     key: field.column_name,
@@ -97,8 +105,19 @@ export function customFieldToFormField(
       };
     case "text":
       return { ...base, type: "text", maxLength: TEXT_LIMITS.document };
-    case "record":
-      return { ...base, type: "text" };
+    case "record": {
+      // A record field keeps its one kind in `options`, as the server checks.
+      const kind = field.options?.[0] ?? "";
+      return {
+        ...base,
+        type: "text",
+        searchTargets: searchKindRecords(kind, kinds),
+        resolveSelected: {
+          scope: kind,
+          read: (id) => readKindRecord(kind, kinds, id),
+        },
+      };
+    }
     default:
       // Exhaustive at COMPILE time over the contract's closed set of six scalar
       // types (CUSTOM-FIELDS-PARAM-1): a seventh added to crm.yaml makes this
@@ -429,9 +448,13 @@ export function useObjectCustomFields(
     activity,
   );
   const boolLabels = { yes: t("field.yes"), no: t("field.no") };
+  // Asked only when a field points at a record, and kept for the session.
+  const kinds = useRecordKindDirectory(
+    fields.some((field) => field.type === "record"),
+  ).data?.data;
 
   const controls = fields.map((field) =>
-    customFieldToFormField(field, boolLabels, t, locale),
+    customFieldToFormField(field, boolLabels, t, locale, kinds),
   );
   const formFields: CreateField[] =
     controls.length === 0

@@ -25,6 +25,12 @@ export type SubField = {
 
 export type CreateField = {
   searchTargets?: (q: string) => Promise<RecordPickerCandidate[]>;
+  // Names the record a stored id points at, for a picker whose records are on
+  // no page the form loaded. `scope` keeps one kind's answers from another's.
+  resolveSelected?: Readonly<{
+    scope: string;
+    read: (id: string) => Promise<RecordPickerCandidate | null>;
+  }>;
   // A text field that offers existing records by name. See NameOffers.
   offers?: NameOffers;
   key: string;

@@ -15186,6 +15186,15 @@ export const en = {
     "The admin role keeps its rights to manage users, roles and teams, so the company can always be administered.",
   "roles.refusal.nameTaken":
     "Another role already has this name. Choose a different one.",
+  "roles.refusal.writeNeedsRead":
+    "Create, Update and Delete need Read. Turn Read on first.",
+  "roles.refusal.customRole": "Only built-in roles have shipped grants.",
+  "roles.restoreGrants": "Restore shipped grants",
+  "roles.restoreGrantsTitle": "Restore shipped grants for {name}?",
+  "roles.restoreGrantsBody":
+    "Every switch goes back to what Margince ships. Your changes to this role’s grants are lost.",
+  "roles.restoredGrantsToast": "Shipped grants restored for {name}",
+  "cf.recordKindHint": "The kinds come from installed extensions.",
   "extAccess.title": "Extensions and access",
   "extAccess.adminOnly":
     "This page requires permission to read installation extensions and roles. Your role lacks one or both.",

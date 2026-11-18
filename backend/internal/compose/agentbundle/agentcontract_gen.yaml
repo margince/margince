@@ -48501,13 +48501,20 @@ components:
     RoleDirectory:
       type: object
       additionalProperties: false
-      required: [roles]
+      required: [roles, verbs]
       description: >-
         Every role this workspace defines. Not paginated and deliberately not: the set is bounded by what an operator created (six seeded, plus a handful at most), the editor needs all of it to render, and a cursor over it would be ceremony over a complete answer.
       properties:
         roles:
           type: array
           items: {$ref: '#/components/schemas/Role'}
+        verbs:
+          type: object
+          description: >-
+            The verbs a role may hold on each object this installation can grant, core objects and enabled extension objects alike, Read first. An object that offers no Read has none in its list. An object absent here is one the installation cannot name, and a client draws it with all four.
+          additionalProperties:
+            type: array
+            items: {type: string, enum: [create, read, update, delete]}
     AssignableRoleDirectory:
       type: object
       additionalProperties: false

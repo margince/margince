@@ -3795,6 +3795,10 @@ func (stubs) RestoreRole(w nethttp.ResponseWriter, r *nethttp.Request, key strin
 	httperr.NotImplemented(w, r, "RestoreRole")
 }
 
+func (stubs) RestoreRoleGrants(w nethttp.ResponseWriter, r *nethttp.Request, key string, params crmcontracts.RestoreRoleGrantsParams) {
+	httperr.NotImplemented(w, r, "RestoreRoleGrants")
+}
+
 func (stubs) DescribeRouterActions(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.DescribeRouterActionsParams) {
 	httperr.NotImplemented(w, r, "DescribeRouterActions")
 }

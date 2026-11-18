@@ -48,6 +48,9 @@ const FIELD: Role = {
   },
 };
 
+// What the server offers: the audit log is read-only.
+const VERBS = { audit_log: ["read"] } as const;
+
 type Seat = Readonly<{ role?: Role; canUpdate?: boolean }>;
 
 function Body({
@@ -61,6 +64,7 @@ function Body({
       role={role}
       directory={[role]}
       units={units}
+      verbs={VERBS}
       canUpdate={canUpdate}
       canWiden
       writes={writes}
@@ -184,6 +188,62 @@ describe("RoleDetail permission grid", () => {
       expect(calls).toContainEqual({
         url: "/v1/roles/custom_field_sales/objects/deal",
         body: { ...READ, create: true },
+      }),
+    );
+  });
+
+  it("draws no switch for a verb the object does not offer", () => {
+    render();
+    expect(
+      screen.getByRole("switch", {
+        name: "Allow Field sales to Read Audit log",
+      }),
+    ).toBeTruthy();
+    for (const verb of ["Create", "Update", "Delete"]) {
+      expect(
+        screen.queryByRole("switch", {
+          name: `Allow Field sales to ${verb} Audit log`,
+        }),
+      ).toBeNull();
+    }
+  });
+
+  it("turns Read on with a write verb, and the writes off with Read", async () => {
+    const user = userEvent.setup();
+    const calls: { url: string; body: unknown }[] = [];
+    const full = { read: true, create: true, update: true, delete: true };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const req =
+          input instanceof Request ? input : new Request(String(input), init);
+        calls.push({ url: new URL(req.url).pathname, body: await req.json() });
+        return new Response(JSON.stringify({ ...FIELD, version: 8 }), {
+          headers: { "Content-Type": "application/json" },
+        });
+      }),
+    );
+    render([NOTES], {
+      role: { ...FIELD, objects: { ...FIELD.objects, deal: full } },
+    });
+    await user.click(
+      screen.getByRole("switch", { name: "Allow Field sales to Read Deals" }),
+    );
+    await waitFor(() =>
+      expect(calls).toContainEqual({
+        url: "/v1/roles/custom_field_sales/objects/deal",
+        body: NONE,
+      }),
+    );
+    await user.click(
+      screen.getByRole("switch", {
+        name: "Allow Field sales to Update Contacts",
+      }),
+    );
+    await waitFor(() =>
+      expect(calls).toContainEqual({
+        url: "/v1/roles/custom_field_sales/objects/contact",
+        body: { ...NONE, read: true, update: true },
       }),
     );
   });
