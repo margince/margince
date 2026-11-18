@@ -2,20 +2,20 @@ import "./reporting.css";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../../api/client";
-import { useIdempotencyKey } from "../../api/idempotencykey";
 import type { components } from "../../api/schema";
-import { useSingleFlight } from "../../api/singleflight";
 import { ifMatch } from "../../api/version";
 import { Button, Field, Textarea, TextInput } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { Modal } from "../../design-system/modal";
+import { useSinglePress } from "../../design-system/presslatch";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 import { type Departure, fromHere } from "../../lib/navigatefrom";
 import { throwProblem, unwrap } from "../../lib/problem";
 import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import { ReportComposition, useComposition } from "./reporting.composition";
+import { useCreateReport } from "./reporting.create";
 import { blocksOf } from "./reporting.layout";
 import type { ReportingReport, ReportingSelection } from "./reporting.model";
 import { reportRevisionsKey } from "./reporting.versions";
@@ -47,16 +47,14 @@ export function SaveReportingDialog({
   );
   const composition = useComposition(initialSelection);
   const { metrics, kept } = composition;
-  const singleFlight = useSingleFlight();
-  const idempotency = useIdempotencyKey();
+  const createReport = useCreateReport();
+  const singlePress = useSinglePress();
   const write = useMutation({
     mutationFn: async ({
       body,
       existing,
       asDraft,
-      key,
     }: {
-      key: string;
       body: components["schemas"]["ReportingReportInput"];
       existing?: { id: string; version: number };
       asDraft?: boolean;
@@ -69,24 +67,19 @@ export function SaveReportingDialog({
           }),
         );
       }
-      const response = existing
-        ? await api.PATCH("/analytics/reports/{id}", {
-            params: {
-              path: { id: existing.id },
-              ...ifMatch(existing.version),
-            },
-            body,
-          })
-        : await api.POST("/analytics/reports", {
-            params: { header: { "Idempotency-Key": key } },
-            body,
-          });
+      if (!existing) return createReport(body);
+      const response = await api.PATCH("/analytics/reports/{id}", {
+        params: {
+          path: { id: existing.id },
+          ...ifMatch(existing.version),
+        },
+        body,
+      });
       if (response.error) throwProblem(response.error);
       return response.data;
     },
     onMutate: fromHere,
     onSuccess: async (report, _vars, from) => {
-      idempotency.renew();
       await queryClient.invalidateQueries({ queryKey: ["reporting-reports"] });
       await queryClient.invalidateQueries({
         queryKey: ["reporting-report", report.id],
@@ -105,31 +98,22 @@ export function SaveReportingDialog({
   const draftOpen = report?.draft_revision !== undefined;
   const selection = composition.selection;
   const save = (asDraft: boolean) =>
-    singleFlight((settled) =>
-      write.mutate(
-        {
-          key: idempotency.key,
-          existing: report
-            ? { id: report.id, version: report.version }
-            : undefined,
-          asDraft,
-          body: {
-            name,
-            description,
-            audience,
-            audience_team_id:
-              audience === "team" ? selection.scope.id : undefined,
-            selection: {
-              ...selection,
-              metrics: [...metrics],
-              layout: kept,
-              blocks: blocksOf(kept),
-            },
-          },
+    write.mutate({
+      existing: report ? { id: report.id, version: report.version } : undefined,
+      asDraft,
+      body: {
+        name,
+        description,
+        audience,
+        audience_team_id: audience === "team" ? selection.scope.id : undefined,
+        selection: {
+          ...selection,
+          metrics: [...metrics],
+          layout: kept,
+          blocks: blocksOf(kept),
         },
-        { onSettled: settled },
-      ),
-    );
+      },
+    });
   const metadataChanged = renamedOrReshared(report, {
     name,
     description,
@@ -147,10 +131,10 @@ export function SaveReportingDialog({
       <form
         id={formId}
         className="form-stack"
-        onSubmit={(event) => {
+        onSubmit={singlePress((event) => {
           event.preventDefault();
           save(draftOpen);
-        }}
+        })}
       >
         <Field label={t("reporting.name")} required>
           {(field) => (

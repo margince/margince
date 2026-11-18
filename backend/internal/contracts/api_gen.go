@@ -51261,7 +51261,7 @@ type ForecastReadings struct {
 	ContributionsLimitedReason *string       `json:"contributions_limited_reason,omitempty"`
 	CurrentCall                *ForecastCall `json:"current_call,omitempty"`
 
-	// EligibleCount Deals considered, priced or not.
+	// EligibleCount Open deals due in the period, priced or not. Like the other counts, it says nothing about the won total.
 	EligibleCount int `json:"eligible_count"`
 
 	// EvidenceMinor Likely: open deals at `likely_threshold` percent or more whose close date somebody confirmed, counted in full. A provisional date is a guess, so it is excluded here and included in open_minor.
@@ -62662,7 +62662,9 @@ type ReportingForecastBasis struct {
 	// CallMinor The standing manager call for the quarter and scope, whatever measure the landing used. It stands beside the landing and is never added to it. Absent when nobody has made a call, and when one pipeline is selected, because a call covers every pipeline.
 	CallMinor *int64 `json:"call_minor,omitempty"`
 
-	// EligibleCount Deals the forecast considered, priced or not.
+	// EligibleCount Open deals due in the period, priced or not. The four counts (`eligible_count`,
+	// `priced_count`, `confirmed_date_count`, `fx_missing_count`) describe only those
+	// open deals; they do not say whether `won_minor` is complete.
 	EligibleCount int64 `json:"eligible_count" minimum:"0"`
 
 	// FxMissingCount Priced deals with no exchange rate to the base currency, left out of every total.

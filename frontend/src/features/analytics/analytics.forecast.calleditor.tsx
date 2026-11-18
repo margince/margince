@@ -3,7 +3,6 @@ import { useState } from "react";
 import { api } from "../../api/client";
 import { useIdempotencyKey } from "../../api/idempotencykey";
 import type { components } from "../../api/schema";
-import { useSingleFlight } from "../../api/singleflight";
 import { Button, Field, TextInput } from "../../design-system/atoms";
 import { MoneyInput } from "../../design-system/moneyinput";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
@@ -41,7 +40,6 @@ export function ForecastCallEditor({
   // The box keeps a refused text in view; the save waits until it reads.
   const [amountRefused, setAmountRefused] = useState(false);
 
-  const singleFlight = useSingleFlight();
   const idempotency = useIdempotencyKey();
   const save = useMutation({
     // Amount and note travel as VARIABLES. A mutation closing over its inputs
@@ -97,12 +95,7 @@ export function ForecastCallEditor({
             variant="primary"
             disabled={save.isPending || amountRefused}
             onClick={() =>
-              singleFlight((settled) =>
-                save.mutate(
-                  { amountMinor, note, key: idempotency.key },
-                  { onSettled: settled },
-                ),
-              )
+              save.mutate({ amountMinor, note, key: idempotency.key })
             }
           >
             {t("forecast.saveCall")}

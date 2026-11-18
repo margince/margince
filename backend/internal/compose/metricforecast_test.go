@@ -150,8 +150,7 @@ func TestTheComparisonTakesAManagerCallAsTheWholeQuarter(t *testing.T) {
 }
 
 func TestAMissingRateLeavesTheOpenTotalUnknown(t *testing.T) {
-	won := []forecasting.Contribution{{InWon: true, ExclusionReason: forecasting.ExcludedFxMissing}}
-	readings := forecasting.Readings{OpenMinor: 50_000, FxMissingCount: 1, Contributions: won}
+	readings := forecasting.Readings{OpenMinor: 50_000, FxMissingCount: 1, Contributions: []forecasting.Contribution{{InWon: true, ExclusionReason: forecasting.ExcludedFxMissing}}}
 	facts, err := forecastOpenFacts(crmcontracts.ReportingContext{}, nil, readings)
 	if err != nil {
 		t.Fatal(err)

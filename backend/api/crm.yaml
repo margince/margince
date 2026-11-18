@@ -65874,7 +65874,10 @@ components:
           type: integer
           format: int64
           minimum: 0
-          description: Deals the forecast considered, priced or not.
+          description: |
+            Open deals due in the period, priced or not. The four counts (`eligible_count`,
+            `priced_count`, `confirmed_date_count`, `fx_missing_count`) describe only those
+            open deals; they do not say whether `won_minor` is complete.
         priced_count:
           type: integer
           format: int64
@@ -67838,7 +67841,7 @@ components:
             the sum rounded once — the two differ by up to one minor unit per deal.
         eligible_count:
           type: integer
-          description: Deals considered, priced or not.
+          description: Open deals due in the period, priced or not. Like the other counts, it says nothing about the won total.
         priced_count:
           type: integer
           description: >-

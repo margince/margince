@@ -2,7 +2,6 @@ import { REPORTING_FIXTURE_ZONE } from "../../testing/reporting.fixtures";
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import {
-  act,
   cleanup,
   fireEvent,
   render,
@@ -86,10 +85,12 @@ it("saves the full selected graph layout and context", async () => {
     expect.any(URL),
   );
 });
-it("stores a report once when Save report is pressed twice in one frame", async () => {
+it("stores a report once when its form is submitted twice before the answer", async () => {
   const user = userEvent.setup({ delay: null });
-  const saved = vi.fn();
-  const write = vi.fn(() => jsonResponse(reportingStoryReport));
+  let answer: (response: Response) => void = () => {};
+  const write = vi.fn(
+    () => new Promise<Response>((resolve) => (answer = resolve)),
+  );
   installFetchStub({
     ...reportingStoryRoutes(),
     "POST /analytics/reports": write,
@@ -99,7 +100,7 @@ it("stores a report once when Save report is pressed twice in one frame", async 
       <SaveReportingDialog
         selection={reportingStoryEvaluation.selection}
         onClose={() => {}}
-        onSaved={saved}
+        onSaved={() => {}}
       />
     </StoryProviders>,
   );
@@ -107,15 +108,14 @@ it("stores a report once when Save report is pressed twice in one frame", async 
     await screen.findByRole("textbox", { name: "Report name" }),
     "Friday review",
   );
-  const save = screen.getByRole("button", { name: "Save report" });
-  act(() => {
-    fireEvent.click(save);
-    fireEvent.click(save);
-  });
-  await waitFor(() => expect(saved).toHaveBeenCalled());
-  await act(() => new Promise((resolve) => setTimeout(resolve, 50)));
-  expect(write).toHaveBeenCalledOnce();
-  expect(saved).toHaveBeenCalledOnce();
+  const form = screen
+    .getByRole("textbox", { name: "Report name" })
+    .closest("form");
+  if (!form) throw new Error("the dialog has no form");
+  fireEvent.submit(form);
+  fireEvent.submit(form);
+  await waitFor(() => expect(write).toHaveBeenCalledOnce());
+  answer(jsonResponse(reportingStoryReport));
 });
 it("draws a saved layout's sections under their titles", async () => {
   const laidOutEvaluation = {

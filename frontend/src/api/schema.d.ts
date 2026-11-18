@@ -48334,7 +48334,9 @@ export interface components {
             call_minor?: number;
             /**
              * Format: int64
-             * @description Deals the forecast considered, priced or not.
+             * @description Open deals due in the period, priced or not. The four counts (`eligible_count`,
+             *     `priced_count`, `confirmed_date_count`, `fx_missing_count`) describe only those
+             *     open deals; they do not say whether `won_minor` is complete.
              */
             eligible_count: number;
             /**
@@ -49542,7 +49544,7 @@ export interface components {
              * @description Each open deal at its stage probability, rounded PER DEAL and then summed. Not the sum rounded once — the two differ by up to one minor unit per deal.
              */
             weighted_minor: number;
-            /** @description Deals considered, priced or not. */
+            /** @description Open deals due in the period, priced or not. Like the other counts, it says nothing about the won total. */
             eligible_count: number;
             /** @description How many carried an amount. The gap to eligible_count is what the money readings do not cover: an unpriced deal is real pipeline contributing zero. */
             priced_count: number;
