@@ -43,11 +43,11 @@ func TestACursorKeyInYearZeroIsMalformed(t *testing.T) {
 	}
 	key := "0000-01-01"
 	token := mustEncodeOpaque(t, Cursor{
-		CreatedAt: time.Date(2026, 7, 11, 12, 0, 0, 0, time.UTC), ID: ids.NewV7(),
+		Scope: "list", CreatedAt: time.Date(2026, 7, 11, 12, 0, 0, 0, time.UTC), ID: ids.NewV7(),
 		SortField: "cf_renewal", SortKey: &key,
 	})
 	arg, _ := keysetArgs()
-	_, err = s.KeysetClause(token, arg)
+	_, err = s.KeysetClause("list", token, arg)
 	if _, ok := errors.AsType[*MalformedCursorError](err); !ok {
 		t.Fatalf("err = %v, want MalformedCursorError", err)
 	}

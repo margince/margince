@@ -45964,7 +45964,7 @@ type CreateCompanyRequest struct {
 
 	// Description A description of what the company does.
 	Description *string               `json:"description,omitempty"`
-	DisplayName string                `json:"display_name"`
+	DisplayName string                `json:"display_name" singleline:"true"`
 	Domains     *[]CompanyDomainInput `json:"domains,omitempty"`
 
 	// Email The company's general address, for example info@example.com. It never creates or matches a contact.
@@ -45972,7 +45972,7 @@ type CreateCompanyRequest struct {
 
 	// Industry An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description.
 	Industry  *string `json:"industry,omitempty"`
-	LegalName *string `json:"legal_name,omitempty"`
+	LegalName *string `json:"legal_name,omitempty" singleline:"true"`
 
 	// LinkedinUrl Canonical LinkedIn company URL, held to the rule the update holds it to. website_url is derived and refused here.
 	LinkedinUrl     *string             `json:"linkedin_url,omitempty"`
@@ -46053,9 +46053,9 @@ type CreateContactRequest struct {
 	// CreatedFromActivityId The note, mail or quick capture this contact was read out of. An agent that creates a contact from a record names it here, so a reader can check where the name and title came from. The caller must be able to read it (404 `not_found` otherwise, never 403).
 	CreatedFromActivityId *openapi_types.UUID  `json:"created_from_activity_id,omitempty"`
 	Emails                *[]ContactEmailInput `json:"emails,omitempty"`
-	FirstName             *string              `json:"first_name,omitempty"`
-	FullName              string               `json:"full_name"`
-	LastName              *string              `json:"last_name,omitempty"`
+	FirstName             *string              `json:"first_name,omitempty" singleline:"true"`
+	FullName              string               `json:"full_name" singleline:"true"`
+	LastName              *string              `json:"last_name,omitempty" singleline:"true"`
 
 	// LinkedinUrl The contact's LinkedIn profile link (https://www.linkedin.com/in/<name>). Writes the same stored value as `social.linkedin`; a request naming both with different profiles is refused with 422 `linkedin_url_conflicts_with_social`.
 	LinkedinUrl *string              `json:"linkedin_url,omitempty"`
@@ -46077,7 +46077,7 @@ type CreateContactRequest struct {
 
 	// SourceSystem Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused).
 	SourceSystem         *string                `json:"source_system,omitempty"`
-	Title                *string                `json:"title,omitempty"`
+	Title                *string                `json:"title,omitempty" singleline:"true"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
@@ -46178,7 +46178,7 @@ type CreateDealRequest struct {
 
 	// ExpectedCloseDate Deals are born open, so a date before today is rejected 422 (INV-CLOSE-PAST, formulas §11).
 	ExpectedCloseDate *openapi_types.Date `json:"expected_close_date,omitempty"`
-	Name              string              `json:"name"`
+	Name              string              `json:"name" singleline:"true"`
 	OwnerId           *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// PartnerAttribution `sourced` or `influenced`. Naming a partner without this field attributes the deal `sourced`; an attribution for a deal naming no partner is refused 422.
@@ -46407,20 +46407,20 @@ type CreateLeadOriginRequest struct {
 
 	// Key Optional; derived from the label (lowercased, non-alphanumerics collapsed to `_`) when absent. Must be unique.
 	Key       *string `json:"key,omitempty"`
-	Label     string  `json:"label"`
+	Label     string  `json:"label" singleline:"true"`
 	SortOrder *int    `json:"sort_order,omitempty"`
 }
 
 // CreateLeadRequest defines model for CreateLeadRequest.
 type CreateLeadRequest struct {
 	CandidateCompanyKey *string `json:"candidate_company_key,omitempty"`
-	CompanyName         *string `json:"company_name,omitempty"`
+	CompanyName         *string `json:"company_name,omitempty" singleline:"true"`
 
 	// ContactId Older clients may still send this field. The request is refused with 409 `contact_holds_email`; open a deal when a contact has a new opportunity.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	ContactId *openapi_types.UUID  `json:"contact_id,omitempty"`
 	Email     *openapi_types.Email `json:"email,omitempty"`
-	FullName  *string              `json:"full_name,omitempty"`
+	FullName  *string              `json:"full_name,omitempty" singleline:"true"`
 
 	// Industry An industry code, or text the server maps to one, as it maps a company's industry. Text that names no code is `422` `not_a_known_value`.
 	Industry *string `json:"industry,omitempty"`
@@ -46461,7 +46461,7 @@ type CreateLeadRequest struct {
 
 	// Status The activity-driven ladder: new → contacted (we reached out) → engaged (they answered or a meeting is booked/held) → promoted (qualified: a contact exists) | disqualified. contacted and engaged are set by the system from captured activity and may be set by hand.
 	Status               *CreateLeadRequestStatus `json:"status,omitempty"`
-	Title                *string                  `json:"title,omitempty"`
+	Title                *string                  `json:"title,omitempty" singleline:"true"`
 	AdditionalProperties map[string]interface{}   `json:"-"`
 }
 
@@ -46475,7 +46475,7 @@ type CreateLeadSourceRequest struct {
 
 	// Key Optional; derived from the label (lowercased, non-alphanumerics collapsed to `_`) when absent. Must be unique.
 	Key       *string `json:"key,omitempty"`
-	Label     string  `json:"label"`
+	Label     string  `json:"label" singleline:"true"`
 	SortOrder *int    `json:"sort_order,omitempty"`
 }
 
@@ -46491,12 +46491,12 @@ type CreateLegalEntityRequest struct {
 
 	// DefaultLanguage ISO 639-1, for example `de`.
 	DefaultLanguage *string `json:"default_language,omitempty"`
-	DisplayName     string  `json:"display_name"`
+	DisplayName     string  `json:"display_name" singleline:"true"`
 
 	// Iban Spaces are removed and letters upper-cased before the check.
 	Iban      *string `json:"iban,omitempty"`
 	Imprint   *string `json:"imprint,omitempty"`
-	LegalName string  `json:"legal_name"`
+	LegalName string  `json:"legal_name" singleline:"true"`
 
 	// Offering What a further legal entity sells and to whom, the offering a company can be judged against.
 	// The default entity's offering is the company profile, so these stay null there and a write to
@@ -46570,7 +46570,7 @@ type CreateOfferTemplateRequest struct {
 	IsDefault *bool                  `json:"is_default,omitempty"`
 	Layout    map[string]interface{} `json:"layout"`
 	Locale    *string                `json:"locale,omitempty"`
-	Name      string                 `json:"name"`
+	Name      string                 `json:"name" singleline:"true"`
 }
 
 // CreateOutcomeReviewRequest defines model for CreateOutcomeReviewRequest.
@@ -46656,15 +46656,15 @@ type CreateProductRequest struct {
 	// DefaultTaxRate Percent; defaults to 0.
 	DefaultTaxRate *float64 `json:"default_tax_rate,omitempty" minimum:"0"`
 	Description    *string  `json:"description,omitempty"`
-	Name           string   `json:"name"`
-	Sku            *string  `json:"sku,omitempty"`
+	Name           string   `json:"name" singleline:"true"`
+	Sku            *string  `json:"sku,omitempty" singleline:"true"`
 	Source         string   `json:"source"`
 
 	// TaxCategory Which tax rate the product takes. Omit or send null to leave it unclassified.
 	TaxCategory *CreateProductRequestTaxCategory `json:"tax_category,omitempty"`
 
 	// Unit A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`), or any other unit as typed text. A known spelling such as `Stunde` or `hours` is stored as its key. Defaults to `piece`.
-	Unit           *string `json:"unit,omitempty"`
+	Unit           *string `json:"unit,omitempty" singleline:"true"`
 	UnitPriceMinor int64   `json:"unit_price_minor" minimum:"0"`
 }
 
@@ -46712,7 +46712,7 @@ type CreateProjectRequest struct {
 
 	// Key The key the creator chose; omitted or null to have the server mint one. Read-only after create.
 	Key     *string             `json:"key,omitempty"`
-	Name    string              `json:"name"`
+	Name    string              `json:"name" singleline:"true"`
 	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// Phase The phase the project starts in; initiative when omitted.
@@ -46844,7 +46844,7 @@ type CreateRoleRequest struct {
 
 // CreateSavedViewRequest defines model for CreateSavedViewRequest.
 type CreateSavedViewRequest struct {
-	Name  string                 `json:"name"`
+	Name  string                 `json:"name" singleline:"true"`
 	Query map[string]interface{} `json:"query"`
 
 	// Resource The list a saved view is over: one of core's lists, or `ext:<unit>:<kind>` for a kind an extension declared. One schema for the record, the create body and the list filter, so the three cannot drift.
@@ -46916,7 +46916,7 @@ type CreateStageRequestSemantic string
 type CreateTagRequest struct {
 	Color       *CreateTagRequestColor `json:"color,omitempty"`
 	Description *string                `json:"description,omitempty"`
-	Name        string                 `json:"name"`
+	Name        string                 `json:"name" singleline:"true"`
 }
 
 // CreateTagRequestColor defines model for CreateTagRequest.Color.
@@ -68391,7 +68391,7 @@ type UpdateCompanyRequest struct {
 
 	// Description A description of what the company does. Absent leaves it untouched; an empty string clears it, the same spelling every other nullable text field on this record uses.
 	Description *string `json:"description,omitempty"`
-	DisplayName *string `json:"display_name,omitempty"`
+	DisplayName *string `json:"display_name,omitempty" singleline:"true"`
 
 	// Domains Replace-set of the company's live domains (add new, archive removed, flip is_primary). Absent = untouched; an empty array clears all domains.
 	Domains *[]CompanyDomainInput `json:"domains,omitempty"`
@@ -68404,7 +68404,7 @@ type UpdateCompanyRequest struct {
 
 	// Industry An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description.
 	Industry  *string `json:"industry,omitempty"`
-	LegalName *string `json:"legal_name,omitempty"`
+	LegalName *string `json:"legal_name,omitempty" singleline:"true"`
 
 	// Lifecycle Where the account stands with us (ADR-0079). Absent = untouched. `live` (the agreed first scope is in use) is accepted only from a signed-in user; any other caller gets 422 `lifecycle_live_needs_a_human`.
 	Lifecycle *UpdateCompanyRequestLifecycle `json:"lifecycle,omitempty"`
@@ -68495,9 +68495,9 @@ type UpdateContactRequest struct {
 	// here. Sending an empty array removes them all, which is a real answer — a
 	// contact who no longer has a working address is a fact worth recording.
 	Emails    *[]ContactEmailInput `json:"emails,omitempty"`
-	FirstName *string              `json:"first_name,omitempty"`
-	FullName  *string              `json:"full_name,omitempty"`
-	LastName  *string              `json:"last_name,omitempty"`
+	FirstName *string              `json:"first_name,omitempty" singleline:"true"`
+	FullName  *string              `json:"full_name,omitempty" singleline:"true"`
+	LastName  *string              `json:"last_name,omitempty" singleline:"true"`
 
 	// LinkedinUrl The contact's LinkedIn profile link (https://www.linkedin.com/in/<name>). Writes the same stored value as `social.linkedin`; null or "" removes it. A request naming both with different profiles is refused with 422 `linkedin_url_conflicts_with_social`.
 	LinkedinUrl *string             `json:"linkedin_url,omitempty"`
@@ -68521,7 +68521,7 @@ type UpdateContactRequest struct {
 
 	// Social Merged into the stored links: a key not sent keeps its link, and a key sent as "" or null removes it. Only github, linkedin and twitter are taken; any other key is refused with 422 `social_platform_unknown`. linkedin takes only a LinkedIn profile link (https://www.linkedin.com/in/<name>).
 	Social *map[string]interface{} `json:"social,omitempty"`
-	Title  *string                 `json:"title,omitempty"`
+	Title  *string                 `json:"title,omitempty" singleline:"true"`
 
 	// Visibility Who may see this contact: `workspace` for everyone in the company,
 	// `owner` for the contact named by `owner_id` alone.
@@ -68713,7 +68713,7 @@ type UpdateDealRequest struct {
 
 	// LostReason Refused 422 `set_by_advance`; the reason travels with the advance to a lost stage.
 	LostReason *string             `json:"lost_reason,omitempty"`
-	Name       *string             `json:"name,omitempty"`
+	Name       *string             `json:"name,omitempty" singleline:"true"`
 	OwnerId    *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// PartnerAttribution `sourced` or `influenced`. Naming a partner without this field attributes the deal `sourced`; an attribution for a deal naming no partner is refused 422.
@@ -69133,7 +69133,7 @@ type UpdateLeadOriginRequest struct {
 
 	// Intent What the scorer makes of a lead from this origin (the deprecated lead source list carries the same field, which nothing reads): high adds the high-intent points, low subtracts the low-intent penalty, neutral does neither.
 	Intent    *LeadSourceIntent `json:"intent,omitempty"`
-	Label     *string           `json:"label,omitempty"`
+	Label     *string           `json:"label,omitempty" singleline:"true"`
 	SortOrder *int              `json:"sort_order,omitempty"`
 }
 
@@ -69144,9 +69144,9 @@ type UpdateLeadOriginRequest struct {
 type UpdateLeadRequest struct {
 	// CandidateCompanyKey Loose ABM routing key. Format: lowercased registrable domain when known (`acme.com`), else a slug of company_name. Never a company FK.
 	CandidateCompanyKey *string              `json:"candidate_company_key,omitempty"`
-	CompanyName         *string              `json:"company_name,omitempty"`
+	CompanyName         *string              `json:"company_name,omitempty" singleline:"true"`
 	Email               *openapi_types.Email `json:"email,omitempty"`
-	FullName            *string              `json:"full_name,omitempty"`
+	FullName            *string              `json:"full_name,omitempty" singleline:"true"`
 
 	// Industry An industry code, or text the server maps to one, as it maps a company's industry. Text that names no code is `422` `not_a_known_value`. Null clears it.
 	Industry *string `json:"industry,omitempty"`
@@ -69193,7 +69193,7 @@ type UpdateLeadRequest struct {
 
 	// Status A human may place an open lead on any open step, forwards or back; the system only ever moves forwards.
 	Status               *UpdateLeadRequestStatus `json:"status,omitempty"`
-	Title                *string                  `json:"title,omitempty"`
+	Title                *string                  `json:"title,omitempty" singleline:"true"`
 	AdditionalProperties map[string]interface{}   `json:"-"`
 }
 
@@ -69225,7 +69225,7 @@ type UpdateLeadSourceRequest struct {
 
 	// Intent What the scorer makes of a lead from this origin (the deprecated lead source list carries the same field, which nothing reads): high adds the high-intent points, low subtracts the low-intent penalty, neutral does neither.
 	Intent    *LeadSourceIntent `json:"intent,omitempty"`
-	Label     *string           `json:"label,omitempty"`
+	Label     *string           `json:"label,omitempty" singleline:"true"`
 	SortOrder *int              `json:"sort_order,omitempty"`
 }
 
@@ -69237,10 +69237,10 @@ type UpdateLegalEntityRequest struct {
 	Bic               *string             `json:"bic,omitempty"`
 	Country           *string             `json:"country,omitempty"`
 	DefaultLanguage   *string             `json:"default_language,omitempty"`
-	DisplayName       *string             `json:"display_name,omitempty"`
+	DisplayName       *string             `json:"display_name,omitempty" singleline:"true"`
 	Iban              *string             `json:"iban,omitempty"`
 	Imprint           *string             `json:"imprint,omitempty"`
-	LegalName         *string             `json:"legal_name,omitempty"`
+	LegalName         *string             `json:"legal_name,omitempty" singleline:"true"`
 
 	// Offering What a further legal entity sells and to whom, the offering a company can be judged against.
 	// The default entity's offering is the company profile, so these stay null there and a write to
@@ -69358,7 +69358,7 @@ type UpdateOfferTemplateRequest struct {
 	IsDefault bool                   `json:"is_default"`
 	Layout    map[string]interface{} `json:"layout"`
 	Locale    string                 `json:"locale"`
-	Name      string                 `json:"name"`
+	Name      string                 `json:"name" singleline:"true"`
 }
 
 // UpdatePartnerStageRequest defines model for UpdatePartnerStageRequest.
@@ -69396,12 +69396,12 @@ type UpdateProductRequest struct {
 	Currency       *string                            `json:"currency,omitempty"`
 	DefaultTaxRate *float64                           `json:"default_tax_rate,omitempty" minimum:"0"`
 	Description    *string                            `json:"description,omitempty"`
-	Name           *string                            `json:"name,omitempty"`
-	Sku            *string                            `json:"sku,omitempty"`
+	Name           *string                            `json:"name,omitempty" singleline:"true"`
+	Sku            *string                            `json:"sku,omitempty" singleline:"true"`
 
 	// TaxCategory Which tax rate the product takes. Omit to leave it unchanged; send null to say nobody has classified it.
 	TaxCategory    *UpdateProductRequestTaxCategory `json:"tax_category,omitempty"`
-	Unit           *string                          `json:"unit,omitempty"`
+	Unit           *string                          `json:"unit,omitempty" singleline:"true"`
 	UnitPriceMinor *int64                           `json:"unit_price_minor,omitempty" minimum:"0"`
 }
 
@@ -69425,7 +69425,7 @@ type UpdateProductRequestTaxCategory string
 type UpdateProjectRequest struct {
 	Description          *string                `json:"description,omitempty"`
 	EndedAt              *openapi_types.Date    `json:"ended_at,omitempty"`
-	Name                 *string                `json:"name,omitempty"`
+	Name                 *string                `json:"name,omitempty" singleline:"true"`
 	OwnerId              *openapi_types.UUID    `json:"owner_id,omitempty"`
 	StartedAt            *openapi_types.Date    `json:"started_at,omitempty"`
 	TargetEndDate        *openapi_types.Date    `json:"target_end_date,omitempty"`
@@ -69510,7 +69510,7 @@ type UpdateRoleRequestRowScope string
 
 // UpdateSavedViewRequest A partial update; omitted fields keep their stored value.
 type UpdateSavedViewRequest struct {
-	Name  *string                 `json:"name,omitempty"`
+	Name  *string                 `json:"name,omitempty" singleline:"true"`
 	Query *map[string]interface{} `json:"query,omitempty"`
 }
 
@@ -69606,7 +69606,7 @@ type UpdateStageRequestSemantic string
 type UpdateTagRequest struct {
 	Color       *UpdateTagRequestColor `json:"color,omitempty"`
 	Description *string                `json:"description,omitempty"`
-	Name        *string                `json:"name,omitempty"`
+	Name        *string                `json:"name,omitempty" singleline:"true"`
 
 	// Suggestible Turns suggestions of this tag on or off. Turning them on needs a description, sent here or already held.
 	Suggestible *bool `json:"suggestible,omitempty"`
@@ -73443,6 +73443,9 @@ type AnchorRecordType string
 
 // ApprovalToken defines model for ApprovalToken.
 type ApprovalToken = string
+
+// AssetRevision defines model for AssetRevision.
+type AssetRevision = string
 
 // BriefProjectId defines model for BriefProjectId.
 type BriefProjectId = openapi_types.UUID
@@ -81178,8 +81181,8 @@ type NameSeatsParams struct {
 
 // GetUserAvatarParams defines parameters for GetUserAvatar.
 type GetUserAvatarParams struct {
-	// V The revision token `avatar_url` carries. Only a token naming the current picture makes the answer cacheable for a day.
-	V *string `form:"v,omitempty" json:"v,omitempty"`
+	// V The revision token the picture's URL carries. Only a token naming the current picture makes the answer cacheable for a day.
+	V *AssetRevision `form:"v,omitempty" json:"v,omitempty"`
 }
 
 // HandOverUserWorkParams defines parameters for HandOverUserWork.

@@ -126,7 +126,7 @@ func TimelineCursor(ctx context.Context, last crmcontracts.Activity) (string, er
 		return "", err
 	}
 	key := last.OccurredAt.Format(time.RFC3339Nano)
-	return sorted.EncodePageCursor(&key, last.CreatedAt, ids.UUID(last.Id))
+	return sorted.EncodePageCursor("activities", &key, last.CreatedAt, ids.UUID(last.Id))
 }
 
 // timelineSort resolves the order one read runs in: the caller's spec where

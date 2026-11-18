@@ -8747,6 +8747,8 @@ export interface paths {
          *     An `email` on the erasure list answers 422 naming `email` with code `address_erased`.
          *     A lead for somebody who is already a contact is refused with 409 `contact_holds_email`:
          *     open a deal on the contact instead.
+         *     A body with none of `full_name`, `email`, `phone`, `linkedin_url` or `company_name`
+         *     answers 422 `lead_identity_required`.
          */
         post: operations["createLead"];
         delete?: never;
@@ -62823,6 +62825,8 @@ export interface components {
         CaptureProvider: "gmail" | "gcal" | "gdocs" | "graph" | "graphcal" | "imap" | "test_mailbox";
         /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
         Id: string;
+        /** @description The revision token the picture's URL carries. Only a token naming the current picture makes the answer cacheable for a day. */
+        AssetRevision: string;
         /**
          * @description The act that staged a set of proposals together (`Approval.bundle_id`). It names a
          *     grouping over approval rows, not a resource of its own — there is nothing to GET, and a
@@ -93332,8 +93336,8 @@ export interface operations {
     getUserAvatar: {
         parameters: {
             query?: {
-                /** @description The revision token `avatar_url` carries. Only a token naming the current picture makes the answer cacheable for a day. */
-                v?: string;
+                /** @description The revision token the picture's URL carries. Only a token naming the current picture makes the answer cacheable for a day. */
+                v?: components["parameters"]["AssetRevision"];
             };
             header?: never;
             path: {

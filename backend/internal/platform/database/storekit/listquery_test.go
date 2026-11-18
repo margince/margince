@@ -122,7 +122,7 @@ func TestKeysetClause_DefaultCursorRoundTrip(t *testing.T) {
 	token := mustEncodePageCursor(t, def, nil, at, id)
 
 	arg, args := keysetArgs()
-	clause, err := def.KeysetClause(token, arg)
+	clause, err := def.KeysetClause("list", token, arg)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -145,7 +145,7 @@ func TestKeysetClause_SortedCursorRoundTrip(t *testing.T) {
 	token := mustEncodePageCursor(t, s, &key, at, id)
 
 	arg, args := keysetArgs()
-	clause, err := s.KeysetClause(token, arg)
+	clause, err := s.KeysetClause("list", token, arg)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -166,7 +166,7 @@ func TestKeysetClause_DescendingComparesBelow(t *testing.T) {
 	key := "10"
 	token := mustEncodePageCursor(t, s, &key, time.Date(2026, 7, 11, 12, 0, 0, 0, time.UTC), ids.NewV7())
 	arg, _ := keysetArgs()
-	clause, err := s.KeysetClause(token, arg)
+	clause, err := s.KeysetClause("list", token, arg)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -182,7 +182,7 @@ func TestKeysetClause_NullKeyContinuesInsideNullTail(t *testing.T) {
 	}
 	token := mustEncodePageCursor(t, s, nil, time.Date(2026, 7, 11, 12, 0, 0, 0, time.UTC), ids.NewV7())
 	arg, _ := keysetArgs()
-	clause, err := s.KeysetClause(token, arg)
+	clause, err := s.KeysetClause("list", token, arg)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -221,7 +221,7 @@ func TestKeysetClause_SortMismatchIsTypedMismatch(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			token := mustEncodePageCursor(t, c.mintedBy, &key, at, id)
 			arg, _ := keysetArgs()
-			_, err := c.readBy.KeysetClause(token, arg)
+			_, err := c.readBy.KeysetClause("list", token, arg)
 			if _, ok := errors.AsType[*CursorSortMismatchError](err); !ok {
 				t.Fatalf("err = %v, want CursorSortMismatchError", err)
 			}
@@ -256,9 +256,9 @@ func TestKeysetClause_UnparseableSortKeyIsMalformed(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			token := mustEncodeOpaque(t, Cursor{CreatedAt: at, ID: id, SortField: field, SortKey: &badKey})
+			token := mustEncodeOpaque(t, Cursor{Scope: "list", CreatedAt: at, ID: id, SortField: field, SortKey: &badKey})
 			arg, _ := keysetArgs()
-			_, err = s.KeysetClause(token, arg)
+			_, err = s.KeysetClause("list", token, arg)
 			if _, ok := errors.AsType[*MalformedCursorError](err); !ok {
 				t.Fatalf("sort key %q under %s: err = %v, want MalformedCursorError", badKey, field, err)
 			}
@@ -286,7 +286,7 @@ func TestKeysetClause_CoreKindKeysRoundTrip(t *testing.T) {
 			key := tc.key
 			token := mustEncodePageCursor(t, s, &key, at, id)
 			arg, _ := keysetArgs()
-			clause, err := s.KeysetClause(token, arg)
+			clause, err := s.KeysetClause("list", token, arg)
 			if err != nil {
 				t.Fatalf("KeysetClause(%s key %q): %v", field, key, err)
 			}
@@ -404,7 +404,7 @@ func TestKeysetClause_UndecodableTokenIsMalformed(t *testing.T) {
 	for name, s := range map[string]*ListSort{"default list": def, "sorted list": sorted} {
 		t.Run(name, func(t *testing.T) {
 			arg, _ := keysetArgs()
-			_, err := s.KeysetClause("not-a-valid-base64url-token!!", arg)
+			_, err := s.KeysetClause("list", "not-a-valid-base64url-token!!", arg)
 			if _, ok := errors.AsType[*MalformedCursorError](err); !ok {
 				t.Fatalf("err = %v, want MalformedCursorError — an undecodable token must not reach "+
 					"the query, where Postgres would answer a 500 for a caller's typo", err)
@@ -418,7 +418,7 @@ func TestKeysetClause_UndecodableTokenIsMalformed(t *testing.T) {
 // the test rather than leaving an empty token to be asserted against.
 func mustEncodePageCursor(t *testing.T, s *ListSort, sortKey *string, at time.Time, id ids.UUID) string {
 	t.Helper()
-	token, err := s.EncodePageCursor(sortKey, at, id)
+	token, err := s.EncodePageCursor("list", sortKey, at, id)
 	if err != nil {
 		t.Fatalf("minting a page cursor: %v", err)
 	}

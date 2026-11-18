@@ -93,3 +93,69 @@ func TestDownloadHeadersCarryTheRealNameOfANonASCIIFile(t *testing.T) {
 		}
 	}
 }
+
+func TestIfMatchVersionRefusesAPresentButEmptyHeader(t *testing.T) {
+	cases := []struct {
+		name   string
+		header []string
+		ok     bool
+		status int
+	}{
+		{"absent", nil, true, 200},
+		{"integer", []string{"7"}, true, 200},
+		{"empty", []string{""}, false, 422},
+		{"second line empty", []string{"7", ""}, false, 422},
+		{"zero", []string{"0"}, false, 422},
+		{"quoted", []string{`"7"`}, false, 422},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			r := httptest.NewRequest("PATCH", "/v1/things/1", nil)
+			for _, v := range tc.header {
+				r.Header.Add("If-Match", v)
+			}
+			_, ok := IfMatchVersion(w, r)
+			if ok != tc.ok || (!ok && w.Code != tc.status) {
+				t.Fatalf("ok=%v status=%d, want ok=%v status=%d", ok, w.Code, tc.ok, tc.status)
+			}
+		})
+	}
+}
+
+func TestDecodeRefusesBodiesThatAreNotValidUTF8OrSpellALoneSurrogate(t *testing.T) {
+	for name, body := range map[string]string{
+		"invalid bytes":    "{\"name\":\"bad \xff\xfe\xc3(\"}",
+		"lone high":        `{"name":"\ud800"}`,
+		"lone low":         `{"name":"x\udc00"}`,
+		"broken pair":      `{"name":"\ud83dx"}`,
+		"in a nested name": `{"a":{"name":"\ud800"}}`,
+	} {
+		if ok, status := decodeInto(t, body); ok || status != 422 {
+			t.Errorf("%s: ok=%v status=%d, want refusal 422", name, ok, status)
+		}
+	}
+	if ok, _ := decodeInto(t, `{"name":"Zoë 😀"}`); !ok {
+		t.Error("a valid pair and valid UTF-8 were refused")
+	}
+}
+
+func TestDecodeRefusesALineBreakInASingleLineField(t *testing.T) {
+	type body struct {
+		Name  string `json:"name" singleline:"true"`
+		Notes string `json:"notes"`
+	}
+	for raw, wantOK := range map[string]bool{
+		`{"name":"a\nb"}`:                 false,
+		`{"name":"a\u202eb"}`:             false,
+		`{"name":"ok","notes":"a\nb\tc"}`: true,
+	} {
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest("POST", "/v1/things", strings.NewReader(raw))
+		var into body
+		ok := Decode(w, r, &into)
+		if ok != wantOK || (!ok && (w.Code != 422 || !strings.Contains(w.Body.String(), `"name"`))) {
+			t.Errorf("%s: ok=%v status=%d body=%s", raw, ok, w.Code, w.Body.String())
+		}
+	}
+}
