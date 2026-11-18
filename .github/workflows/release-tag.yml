@@ -12,7 +12,7 @@
 # candidate deploys nothing today either way.
 #
 # WHAT A RELEASE CARRIES. The three images, pushed to ghcr.io/margince as
-# ghcr.io/margince/<role>:<tag>; one server bundle per Linux platform (the same
+# ghcr.io/margince/<role>:<release>, the tag without its v; one server bundle per Linux platform (the same
 # binaries and SPA as files, with the units and nginx files a server needs);
 # a compose folder running the images on one host, pinned to their digests;
 # the source SBOMs; images.txt, naming each image by digest; and SHA256SUMS over
@@ -56,6 +56,7 @@ jobs:
       issues: read
     outputs:
       version: ${{ steps.v.outputs.version }}
+      release: ${{ steps.v.outputs.release }}
       prerelease: ${{ steps.v.outputs.prerelease }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -264,10 +265,13 @@ jobs:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GHCR_USER: ${{ github.actor }}
         run: echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+      # The images and the programs carry the release without the v of the
+      # tag, as VERSION and dist do: margincectl reads it from each program's
+      # --version line and takes no v.
       - name: Bake and push the images
         env:
           REPO: ghcr.io/margince
-          VERSION: ${{ needs.version.outputs.version }}
+          VERSION: ${{ needs.version.outputs.release }}
           PLATFORMS: linux/amd64,linux/arm64
           MARGINCE_BUILD_REVISION: ${{ github.sha }}
         run: |
@@ -284,13 +288,14 @@ jobs:
           cat dist/release/images.txt
       - name: Bake and pack the server bundles
         env:
-          VERSION: ${{ needs.version.outputs.version }}
+          VERSION: ${{ needs.version.outputs.release }}
+          TAG: ${{ needs.version.outputs.version }}
           PLATFORMS: linux/amd64,linux/arm64
           MARGINCE_BUILD_REVISION: ${{ github.sha }}
         run: |
           set -euo pipefail
           docker buildx bake bundle
-          bash scripts/release-bundle.sh "$VERSION" "$MARGINCE_BUILD_REVISION" dist/bundle dist/release
+          bash scripts/release-bundle.sh "$TAG" "$MARGINCE_BUILD_REVISION" dist/bundle dist/release
       # The compose folder pins the digests just pushed, and is started here so
       # one that packs but does not serve fails the release, not a host.
       - name: Pack the compose folder and start it
@@ -409,6 +414,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
           VERSION: ${{ needs.version.outputs.version }}
+          RELEASE: ${{ needs.version.outputs.release }}
           PRERELEASE: ${{ needs.version.outputs.prerelease }}
           REVISION: ${{ github.sha }}
         run: |
@@ -418,8 +424,8 @@ jobs:
           # An unquoted heredoc for the version and the revision; every other
           # backtick and dollar is escaped.
           cat > install.md <<NOTES
-          **Containers.** \`ghcr.io/margince/api:$VERSION\`, \`ghcr.io/margince/worker:$VERSION\`
-          and \`ghcr.io/margince/web:$VERSION\`, for linux/amd64 and linux/arm64. \`images.txt\`
+          **Containers.** \`ghcr.io/margince/api:$RELEASE\`, \`ghcr.io/margince/worker:$RELEASE\`
+          and \`ghcr.io/margince/web:$RELEASE\`, for linux/amd64 and linux/arm64. \`images.txt\`
           names each by digest. \`margince-$VERSION-compose.tar.gz\` runs them on one host with
           Docker Compose, pinned to those digests. Deploy them with
           [docs/how-to/deploy-margince.md](https://github.com/margince/margince/blob/main/docs/how-to/deploy-margince.md).

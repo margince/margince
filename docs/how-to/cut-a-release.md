@@ -84,7 +84,8 @@ git push origin v1.0.0
 `release-tag.yml` then checks the tag, the draft and the blockers, and refuses a commit that
 `merge-attest` judged bad. Then it builds the release and signs it, and only then publishes the page:
 
-1. It pushes the three images to `ghcr.io/margince`, tagged with the version.
+1. It pushes the three images to `ghcr.io/margince`, tagged with the version without its `v`, such as
+   `1.0.0`. The programs report that version too, as `VERSION` does.
 2. It packs one server bundle for each Linux platform, with
    [`scripts/release-bundle.sh`](../../scripts/release-bundle.sh). Each bundle and the api and worker images carry
    `THIRD-PARTY-NOTICES.txt`, the license texts of the Go modules the programs link. It is written by

@@ -31,6 +31,10 @@ accepts() {
 		printf 'FAIL: %s did not report version=%s (%s)\n' "$tag" "$tag" "$reason"
 		FAILURES=$((FAILURES + 1))
 	fi
+	if [[ "$out" != *"release=${tag#v}"* ]]; then
+		printf 'FAIL: %s did not report release=%s, the version without its v\n' "$tag" "${tag#v}"
+		FAILURES=$((FAILURES + 1))
+	fi
 	if [[ "$out" != *"prerelease=$want"* ]]; then
 		printf 'FAIL: %s reported the wrong shelf, wanted prerelease=%s, because %s\n' \
 			"$tag" "$want" "$reason"

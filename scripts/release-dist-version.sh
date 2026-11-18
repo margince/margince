@@ -21,12 +21,12 @@ typed="${2-}"
 case "$ref" in
 refs/tags/*)
 	tag="${ref#refs/tags/}"
-	bash "$(dirname "$0")/release-tag-version.sh" "$tag" >/dev/null
+	read_tag="$(bash "$(dirname "$0")/release-tag-version.sh" "$tag")"
 	if [[ "$tag" == *-* ]]; then
 		echo "release-dist-version: $tag is a pre-release; the dist service has none." >&2
 		exit 1
 	fi
-	version="${tag#v}"
+	version="$(sed -n 's/^release=//p' <<<"$read_tag")"
 	;;
 refs/heads/main)
 	version="$typed"
