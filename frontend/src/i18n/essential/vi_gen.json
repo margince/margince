@@ -4489,6 +4489,8 @@
   "setup.caption.calendarSkipped": "Đã bỏ qua khi thiết lập.",
   "setup.caption.calendarNeedsVendor": "Cần Google hoặc Microsoft.",
   "setup.caption.waitsAdmin": "Đang chờ quản trị viên.",
+  "setup.caption.registerApp": "Cần ứng dụng Google hoặc Microsoft của công ty bạn.",
+  "setup.action.registerApp": "Thiết lập ứng dụng",
   "setup.caption.mailReconnect": "Kết nối đã hết hạn.",
   "setup.caption.calendarReconnect": "Đã hết hạn hoặc không thể đặt lịch.",
   "setup.caption.voice": "Cần thêm khoảng {n} từ do bạn viết.",

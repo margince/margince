@@ -174,6 +174,7 @@ function reads(overrides: Partial<SetupReads> = {}): SetupReads {
     now: Date.parse("2026-11-05T12:00:00Z"),
     modelReady: null,
     personal: null,
+    registersApps: false,
     ...overrides,
   };
 }
@@ -265,6 +266,46 @@ describe("deriveSetupSteps", () => {
       { id: "mail", state: "open", blocked: true, reason: "waitsAdmin" },
       { id: "calendar", state: "open", blocked: true, reason: "waitsAdmin" },
       { id: "booking", state: "open", blocked: true, reason: "needsCalendar" },
+    ]);
+  });
+
+  it("sends the reader who sets up the company app to do it, rather than to wait", () => {
+    const steps = deriveSetupSteps(
+      reads({
+        registersApps: true,
+        connectors: roster([], {
+          gmail: "app_missing",
+          graph: "app_unusable",
+          imap: "unsupported",
+        }),
+      }),
+    );
+
+    expect(
+      steps.map(({ id, state, page, blocked, reason }) => ({
+        id,
+        state,
+        page,
+        blocked,
+        reason,
+      })),
+    ).toEqual([
+      {
+        id: "mail",
+        state: "current",
+        page: "authentication",
+        blocked: false,
+        reason: "registerApp",
+      },
+      {
+        id: "calendar",
+        state: "open",
+        page: "authentication",
+        blocked: false,
+        reason: "registerApp",
+      },
+      expect.objectContaining({ id: "voice" }),
+      expect.objectContaining({ id: "booking", reason: "needsCalendar" }),
     ]);
   });
 
@@ -666,6 +707,52 @@ describe("useSetupChecklist", () => {
       wrapper,
     });
     expect(signedInAgain.result.current.hidden).toBe(false);
+  });
+});
+
+describe("a seat that sets up the company apps", () => {
+  it("is sent to register the missing app, and a seat without the grant waits", async () => {
+    const appless = () =>
+      jsonResponse({
+        data: [],
+        providers: MAIL_PROVIDERS.map((provider) => ({
+          provider,
+          reason: provider === "imap" ? "unsupported" : "app_missing",
+        })),
+      });
+    serve({
+      "/connectors": appless,
+      "/voice-profiles": () => jsonResponse({ data: [] }),
+      "/scheduling/profile": () => jsonResponse(scheduling(false)),
+    });
+    const holder: GrantSpec = {
+      ...VOICE_WRITER,
+      authentication_policy: ["read"],
+      capture_settings: ["read", "update"],
+    };
+    const calendarOf = async (allow: GrantSpec) => {
+      const { result, unmount } = renderHook(
+        () => useSetupChecklist(settingsReach(meFixture({ allow }))),
+        { wrapper: wrapperFor(allow) },
+      );
+      await waitFor(() => expect(result.current.settled).toBe(true));
+      const step = result.current.steps.find(
+        (entry) => entry.id === "calendar",
+      );
+      unmount();
+      return step;
+    };
+
+    expect(await calendarOf(holder)).toMatchObject({
+      page: "authentication",
+      blocked: false,
+      reason: "registerApp",
+    });
+    expect(await calendarOf(VOICE_WRITER)).toMatchObject({
+      page: "connections",
+      blocked: true,
+      reason: "waitsAdmin",
+    });
   });
 });
 

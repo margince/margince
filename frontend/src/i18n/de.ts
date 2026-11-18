@@ -17618,6 +17618,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "setup.caption.calendarSkipped": "Bei der Einrichtung übersprungen.",
   "setup.caption.calendarNeedsVendor": "Braucht Google oder Microsoft.",
   "setup.caption.waitsAdmin": "Wartet auf einen Admin.",
+  "setup.caption.registerApp":
+    "Braucht die Google- oder Microsoft-App deines Unternehmens.",
+  "setup.action.registerApp": "App einrichten",
   "setup.caption.mailReconnect": "Verbindung abgelaufen.",
   "setup.caption.calendarReconnect": "Abgelaufen oder kann nicht buchen.",
   "setup.caption.voice": "Braucht noch etwa {n} eigene Wörter.",

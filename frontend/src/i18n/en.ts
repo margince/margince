@@ -17460,6 +17460,8 @@ export const en = {
   "setup.caption.calendarSkipped": "Skipped during setup.",
   "setup.caption.calendarNeedsVendor": "Needs Google or Microsoft.",
   "setup.caption.waitsAdmin": "Waits on an administrator.",
+  "setup.caption.registerApp": "Needs your company’s Google or Microsoft app.",
+  "setup.action.registerApp": "Set up app",
   "setup.caption.mailReconnect": "Connection expired.",
   "setup.caption.calendarReconnect": "Expired or cannot add bookings.",
   "setup.caption.voice": "Needs about {n} more words you wrote.",

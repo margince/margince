@@ -76,6 +76,7 @@ const REASON: Readonly<
   skipped: "setup.caption.calendarSkipped",
   needsVendor: "setup.caption.calendarNeedsVendor",
   waitsAdmin: "setup.caption.waitsAdmin",
+  registerApp: "setup.caption.registerApp",
   needsCalendar: "setup.caption.bookingNeedsCalendar",
 };
 
@@ -260,6 +261,16 @@ function StepAction({ step }: Readonly<{ step: SetupStep }>) {
         }
       >
         {t(voiceCopy(step).action)}
+      </Button>
+    );
+  }
+  if (step.reason === "registerApp") {
+    return (
+      <Button
+        variant={step.state === "current" ? "primary" : undefined}
+        onClick={() => navigate(settingsHref(step.page, "apps"))}
+      >
+        {t("setup.action.registerApp")}
       </Button>
     );
   }
