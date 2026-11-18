@@ -116,6 +116,21 @@ func ciIntegrationJobs(t *testing.T, workflow string) int {
 	return n
 }
 
+// ciTestParallel reads the LANE_TEST_PARALLEL the integration shard runs with,
+// and reports whether the workflows set one at all.
+func ciTestParallel(t *testing.T, workflow string) (int, bool) {
+	t.Helper()
+	m := regexp.MustCompile(`(?m)^\s*LANE_TEST_PARALLEL:\s*(\S+)\s*$`).FindStringSubmatch(workflow)
+	if m == nil {
+		return 0, false
+	}
+	n, err := strconv.Atoi(m[1])
+	if err != nil || n <= 0 {
+		t.Fatalf("the merge-gate workflows set LANE_TEST_PARALLEL=%q, which is not a positive count", m[1])
+	}
+	return n, true
+}
+
 // laneService is the compose service the integration lanes connect to.
 const laneService = "postgres-test"
 
@@ -198,8 +213,12 @@ func TestTheLaneFitsInsideTheClusterItRunsAgainst(t *testing.T) {
 	}
 	// Each parallel test has a database of its own, so it opens the owner and
 	// app pools again.
-	if parallel := laneTerm(t, script, "LANE_TEST_PARALLEL"); perPackage < parallel*2*perPool {
-		t.Fatalf("LANE_CONNS_PER_PACKAGE=%d is below LANE_TEST_PARALLEL=%d tests x 2 pools x LANE_POOL_MAX_CONNS=%d", perPackage, parallel, perPool)
+	parallel := laneTerm(t, script, "LANE_TEST_PARALLEL_MAX")
+	if perPackage < parallel*2*perPool {
+		t.Fatalf("LANE_CONNS_PER_PACKAGE=%d is below LANE_TEST_PARALLEL_MAX=%d tests x 2 pools x LANE_POOL_MAX_CONNS=%d", perPackage, parallel, perPool)
+	}
+	if ci, set := ciTestParallel(t, gateWorkflows(t)); set && ci > parallel {
+		t.Fatalf("the merge-gate workflows set LANE_TEST_PARALLEL=%d, over the LANE_TEST_PARALLEL_MAX=%d the budget is sized for", ci, parallel)
 	}
 
 	demand := laneConnectionDemand(t, jobs)

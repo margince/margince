@@ -8,12 +8,12 @@ package privacy
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
@@ -22,6 +22,7 @@ import (
 // A mail may itself be titled "Erased", so the subject cannot mark a reminder
 // that erasure already reached.
 func TestErasingAMessageErasesTheReminderThatQuotesIt(t *testing.T) {
+	t.Parallel()
 	for _, title := range []string{"Re: Angebot", erasedActivitySubject} {
 		t.Run(title, func(t *testing.T) {
 			env := setupSARIdentifiers(t)
@@ -38,6 +39,7 @@ func TestErasingAMessageErasesTheReminderThatQuotesIt(t *testing.T) {
 // Capture files a reminder while it holds the source row. An erasure that
 // starts inside that window must still reach the reminder once it commits.
 func TestErasingAMessageReachesTheReminderCaptureIsFiling(t *testing.T) {
+	t.Parallel()
 	env := setupSARIdentifiers(t)
 	message := seedSubjectActivity(t, env)
 	capture, err := env.owner.Begin(env.ctx)
@@ -89,7 +91,7 @@ func erasePurgingContent(env *sarIdentifierEnv, message ids.UUID) error {
 // finished; either way the window under test has been entered.
 func waitForErasureToQueue(t *testing.T, env *sarIdentifierEnv, done chan error) {
 	t.Helper()
-	probe, err := pgx.Connect(env.ctx, os.Getenv("MARGINCE_TEST_DSN"))
+	probe, err := pgx.Connect(env.ctx, testdb.For(t).OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}

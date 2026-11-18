@@ -158,11 +158,12 @@ db_admin() {
 #                         fixture opens parse the same DSNs with pgx.ParseConfig,
 #                         which forwards an unknown pool_* key to the server and
 #                         dies with `FATAL: unrecognized configuration parameter`.
-#   LANE_TEST_PARALLEL    how many tests of one package run at once, handed to
-#                         go test as -parallel. Each test has a database of its
-#                         own, so each opens its own pools.
+#   LANE_TEST_PARALLEL_MAX  the most tests of one package that run at once,
+#                         handed to go test as -parallel. Each test has a
+#                         database of its own, so each opens its own pools. A
+#                         caller may set LANE_TEST_PARALLEL lower, as CI does.
 #   LANE_CONNS_PER_PACKAGE  what one package may hold at once:
-#                           LANE_TEST_PARALLEL x (2 x LANE_POOL_MAX_CONNS + 8)
+#                           LANE_TEST_PARALLEL_MAX x (2 x LANE_POOL_MAX_CONNS + 8)
 #                           = 3 x (2 x 8 + 8) = 72. Per test that is the owner
 #                           and app pools testdb keys by DSN, plus 8 for the
 #                           connections a fixture dials itself.
@@ -172,11 +173,11 @@ db_admin() {
 #                         superuser_reserved_connections (3), and an operator's
 #                         own psql or a metrics scrape while the lane runs (3).
 #
-# At CI's 8 jobs: 8 x (72 + 1) + 8 = 592, under the 600 postgres-test allows.
+# At 8 jobs: 8 x (72 + 1) + 8 = 592, under the 600 postgres-test allows.
 # Raise the concurrency and every term moves with it. That is the point: the
 # guard reads these, not a number somebody wrote down once.
 LANE_POOL_MAX_CONNS=8
-LANE_TEST_PARALLEL=3
+LANE_TEST_PARALLEL_MAX=3
 LANE_CONNS_PER_PACKAGE=72
 LANE_FIXED_CONNS=8
 
@@ -193,6 +194,11 @@ LANE_FIXED_CONNS=8
 # like a passing one, and the serial lane fails outright on any SKIP.
 declare_lane_budget() {
   local jobs="${1:?declare_lane_budget needs a job count}"
+  LANE_TEST_PARALLEL="${LANE_TEST_PARALLEL:-$LANE_TEST_PARALLEL_MAX}"
+  if ! [[ "$LANE_TEST_PARALLEL" =~ ^[1-9][0-9]*$ ]] || (( LANE_TEST_PARALLEL > LANE_TEST_PARALLEL_MAX )); then
+    echo "LANE_TEST_PARALLEL=$LANE_TEST_PARALLEL must be a count from 1 to $LANE_TEST_PARALLEL_MAX: the connection budget is sized for that ceiling" >&2
+    exit 1
+  fi
   LANE_CONN_BUDGET=$(( jobs * (LANE_CONNS_PER_PACKAGE + 1) + LANE_FIXED_CONNS ))
   export LANE_CONN_BUDGET
   export MARGINCE_TEST_POOL_MAX_CONNS="$LANE_POOL_MAX_CONNS"
