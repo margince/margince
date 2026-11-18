@@ -21369,6 +21369,8 @@ export const en = {
   "lead.filterRefused": "Your role cannot narrow leads by {dial}.",
   "lead.timeline.received": "{at} · received",
   "lead.timeline.weReplied": "You replied",
+  "lead.timeline.markedContacted": "Marked contacted by {user}",
+  "lead.timeline.markedContactedNoName": "Marked contacted",
   "lead.timeline.repliedIn": "{at} · in {span}",
   "lead.timeline.lastContact": "{at} · last contact",
   "lead.timeline.booked": "{at} · booked",

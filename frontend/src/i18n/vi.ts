@@ -21072,6 +21072,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.filterRefused": "Vai trò hiện tại không lọc được lead theo {dial}.",
   "lead.timeline.received": "{at} · đã nhận",
   "lead.timeline.weReplied": "Bạn đã trả lời",
+  "lead.timeline.markedContacted": "{user} đã đánh dấu là đã liên hệ",
+  "lead.timeline.markedContactedNoName": "Đã đánh dấu là đã liên hệ",
   "lead.timeline.repliedIn": "{at} · sau {span}",
   "lead.timeline.lastContact": "{at} · liên hệ gần nhất",
   "lead.timeline.booked": "{at} · đã đặt",

@@ -205,16 +205,16 @@ func applyObservedPhone(ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 		}
 	}
 
-	// is_primary only when this type has no live primary left: the partial
-	// unique index permits exactly one, and claiming it from a number this
-	// statement said nothing about would silently re-rank the record.
+	// is_primary only when the contact has no live primary number left: the
+	// partial unique index permits exactly one, and claiming it from a number
+	// this statement said nothing about would silently re-rank the record.
 	tag, err := tx.Exec(ctx, `
 		INSERT INTO contact_phone
 		  (contact_id, phone, phone_type, is_primary, position, source, captured_by, observed_at, superseded_phone_id)
 		SELECT $1, $2, $3,
 		  NOT EXISTS (
 			SELECT 1 FROM contact_phone
-			WHERE contact_id = $1 AND phone_type = $3 AND is_primary AND archived_at IS NULL),
+			WHERE contact_id = $1 AND is_primary AND archived_at IS NULL),
 		  COALESCE((SELECT MAX(position) + 1 FROM contact_phone
 			WHERE contact_id = $1 AND archived_at IS NULL), 0),
 		  $4, $5, $6, $7

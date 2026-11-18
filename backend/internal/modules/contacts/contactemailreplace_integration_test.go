@@ -11,10 +11,10 @@ package contacts
 // Postgres can answer. Two partial unique indexes decide all of it:
 //
 //	uq_contact_email_dedupe   (email) WHERE archived_at IS NULL
-//	uq_contact_email_primary  (contact_id, email_type) WHERE is_primary AND archived_at IS NULL
+//	uq_contact_email_primary  (contact_id) WHERE is_primary AND archived_at IS NULL
 //
-// The second one is per email_type, NOT one primary per contact, and a
-// spreadsheet correcting somebody's work address walks straight into both.
+// The second one holds one primary per contact, and a spreadsheet correcting
+// somebody's work address walks straight into both.
 
 import (
 	"errors"
@@ -58,10 +58,10 @@ func TestReplacingTheWorkEmailCorrectsIt(t *testing.T) {
 }
 
 // The file names one address; the contact holds two of different types. The
-// address the file never mentioned survives, and it keeps its OWN primary flag —
-// the slot is per email_type, so demoting every retained row would silently
-// strip a contact's primary personal address for naming a work one.
-func TestReplacingOneAddressKeepsTheOtherTypesPrimary(t *testing.T) {
+// address the file never mentioned survives, and the file's address takes the
+// contact's one primary — the slot is per contact, so the retained personal
+// address arrives demoted.
+func TestReplacingOneAddressMovesTheContactsOnePrimary(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -69,7 +69,7 @@ func TestReplacingOneAddressKeepsTheOtherTypesPrimary(t *testing.T) {
 		FullName: "Grace Hopper",
 		Emails: []ContactEmailInput{
 			{Email: "grace@work.example", EmailType: "work", IsPrimary: true, Position: 1},
-			{Email: "grace@home.example", EmailType: "personal", IsPrimary: true, Position: 2},
+			{Email: "grace@home.example", EmailType: "personal", IsPrimary: false, Position: 2},
 		},
 		Source: "test",
 	})
@@ -77,12 +77,10 @@ func TestReplacingOneAddressKeepsTheOtherTypesPrimary(t *testing.T) {
 		t.Fatalf("create contact: %v", err)
 	}
 
-	// What an import produces: the file's one work address, plus every stored
-	// address it did not name, carried through unchanged.
 	updated, err := e.store.UpdateContact(ctx, ids.From[ids.ContactKind](ids.UUID(contact.Id)), UpdateContactInput{
 		Emails: []ContactEmailInput{
 			{Email: "grace@new.example", EmailType: "work", IsPrimary: true, Position: 1},
-			{Email: "grace@home.example", EmailType: "personal", IsPrimary: true, Position: 2},
+			{Email: "grace@home.example", EmailType: "personal", IsPrimary: false, Position: 2},
 		},
 		Source: "test",
 	})
@@ -93,15 +91,93 @@ func TestReplacingOneAddressKeepsTheOtherTypesPrimary(t *testing.T) {
 	if len(rows) != 2 {
 		t.Fatalf("emails = %+v, want the corrected work address and the untouched personal one", rows)
 	}
-	primaries := map[string]string{}
+	if primary := primaryEmails(rows); len(primary) != 1 || primary[0] != "grace@new.example" {
+		t.Fatalf("primaries = %v, want only the corrected address", primary)
+	}
+}
+
+// Primary is one choice across types: ticking it on an address of another type
+// moves it, and the address the app writes to follows.
+func TestPrimaryMovesAcrossTypesAndTheAppFollows(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+
+	contact, err := e.store.CreateContact(ctx, CreateContactInput{
+		FullName: "Katherine Johnson",
+		Emails: []ContactEmailInput{
+			{Email: "kj@work.example", EmailType: "work", IsPrimary: true, Position: 0},
+			{Email: "kj@other.example", EmailType: "other", IsPrimary: false, Position: 1},
+			{Email: "kj@home.example", EmailType: "personal", IsPrimary: false, Position: 2},
+		},
+		Source: "test",
+	})
+	if err != nil {
+		t.Fatalf("create contact: %v", err)
+	}
+	id := ids.From[ids.ContactKind](ids.UUID(contact.Id))
+
+	updated, err := e.store.UpdateContact(ctx, id, UpdateContactInput{
+		Emails: []ContactEmailInput{
+			{Email: "kj@work.example", EmailType: "work", IsPrimary: false, Position: 0},
+			{Email: "kj@other.example", EmailType: "other", IsPrimary: true, Position: 1},
+			{Email: "kj@home.example", EmailType: "personal", IsPrimary: false, Position: 2},
+		},
+		Source: "test",
+	})
+	if err != nil {
+		t.Fatalf("moving the primary to the other-type address: %v", err)
+	}
+	if primary := primaryEmails(liveEmailRows(updated)); len(primary) != 1 || primary[0] != "kj@other.example" {
+		t.Fatalf("primaries = %v, want only the address that was ticked", primary)
+	}
+	if updated.PrimaryEmail == nil || string(*updated.PrimaryEmail) != "kj@other.example" {
+		t.Fatalf("primary_email = %v, want the ticked address", updated.PrimaryEmail)
+	}
+}
+
+// A new contact's only address is primary whether or not the writer said so,
+// and with several addresses and none marked the first by position is.
+func TestANewContactsFirstAddressIsPrimary(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+
+	only, err := e.store.CreateContact(ctx, CreateContactInput{
+		FullName: "Dorothy Vaughan",
+		Emails:   []ContactEmailInput{{Email: "dv@only.example", EmailType: "work", Position: 0}},
+		Source:   "test",
+	})
+	if err != nil {
+		t.Fatalf("create contact: %v", err)
+	}
+	if primary := primaryEmails(liveEmailRows(only)); len(primary) != 1 || primary[0] != "dv@only.example" {
+		t.Fatalf("primaries = %v, want the only address", primary)
+	}
+
+	many, err := e.store.CreateContact(ctx, CreateContactInput{
+		FullName: "Mary Jackson",
+		Emails: []ContactEmailInput{
+			{Email: "mj@second.example", EmailType: "work", Position: 1},
+			{Email: "mj@first.example", EmailType: "personal", Position: 0},
+		},
+		Source: "test",
+	})
+	if err != nil {
+		t.Fatalf("create contact: %v", err)
+	}
+	if primary := primaryEmails(liveEmailRows(many)); len(primary) != 1 || primary[0] != "mj@first.example" {
+		t.Fatalf("primaries = %v, want the address at position 0", primary)
+	}
+}
+
+// primaryEmails lists the addresses marked primary.
+func primaryEmails(rows []crmcontracts.ContactEmail) []string {
+	var out []string
 	for _, row := range rows {
 		if row.IsPrimary {
-			primaries[string(row.EmailType)] = string(row.Email)
+			out = append(out, string(row.Email))
 		}
 	}
-	if primaries["work"] != "grace@new.example" || primaries["personal"] != "grace@home.example" {
-		t.Fatalf("primaries = %v, want one per type and the personal one untouched", primaries)
-	}
+	return out
 }
 
 // An address another contact holds is refused, and the target contact's own rows
@@ -247,10 +323,10 @@ func TestSwappingWhichWorkAddressIsPrimary(t *testing.T) {
 	}
 }
 
-// A request that marks two addresses of one type primary is a contradiction the
-// caller can fix, so it is refused before any write with an error that names the
-// type — not the bare conflict uq_contact_email_primary would answer with.
-func TestTwoPrimaryAddressesOfOneTypeIsRefusedByType(t *testing.T) {
+// A request that marks two addresses primary, whatever their types, is a
+// contradiction the caller can fix, so it is refused before any write with a
+// typed error — not the bare conflict uq_contact_email_primary would answer with.
+func TestTwoPrimaryAddressesAreRefusedWhateverTheirTypes(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -266,16 +342,23 @@ func TestTwoPrimaryAddressesOfOneTypeIsRefusedByType(t *testing.T) {
 	_, err = e.store.UpdateContact(ctx, ids.From[ids.ContactKind](ids.UUID(contact.Id)), UpdateContactInput{
 		Emails: []ContactEmailInput{
 			{Email: "ada@work.example", EmailType: "work", IsPrimary: true, Position: 0},
-			{Email: "ada@office.example", EmailType: "work", IsPrimary: true, Position: 1},
+			{Email: "ada@home.example", EmailType: "personal", IsPrimary: true, Position: 1},
 		},
 		Source: "test",
 	})
 	var conflict *PrimaryConflictError
 	if !errors.As(err, &conflict) {
-		t.Fatalf("two work primaries → %v, want PrimaryConflictError", err)
+		t.Fatalf("a work and a personal primary → %v, want PrimaryConflictError", err)
 	}
-	if conflict.Type != "work" {
-		t.Fatalf("conflict names type %q, want work", conflict.Type)
+	if _, err := e.store.CreateContact(ctx, CreateContactInput{
+		FullName: "Ada Again",
+		Emails: []ContactEmailInput{
+			{Email: "again@work.example", EmailType: "work", IsPrimary: true, Position: 0},
+			{Email: "again@home.example", EmailType: "personal", IsPrimary: true, Position: 1},
+		},
+		Source: "test",
+	}); !errors.As(err, &conflict) && !errors.As(err, new(*PrimaryConflictError)) {
+		t.Fatalf("creating with two primaries → %v, want PrimaryConflictError", err)
 	}
 }
 

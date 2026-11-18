@@ -259,7 +259,7 @@ func (s *Store) updateLeadInTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in
 	if err := refuseErasedLeadEmail(ctx, tx, current, in); err != nil {
 		return crmcontracts.Lead{}, err
 	}
-	if err := stampHumanFirstResponse(ctx, p, current, in); err != nil {
+	if err := stampHumanFirstResponse(ctx, tx, p, current, in); err != nil {
 		return crmcontracts.Lead{}, err
 	}
 	if err := stampStatusSetBy(ctx, p, current, in); err != nil {

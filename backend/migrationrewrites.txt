@@ -165,3 +165,4 @@
 1795048712_the_decision_country_source_is_bounded.up.sql | * | replaces the two text guards on communication_decision; the guards act on later writes only, and it changes no existing row
 1795048712_the_decision_country_source_is_bounded.down.sql | * | restores the two earlier text guards on communication_decision; it changes no existing row
 1795048714_the_confirmation_country_is_bounded.up.sql | * | adds the two text guards on lawful_basis_confirmation; the guards act on later writes only, and it changes no existing row
+1795101202_a_contact_has_one_primary_address_and_one_primary_number.up.sql | contact_email, contact_phone | only rows that are an extra live primary of a contact holding more than one are demoted, so the set is the contacts with a primary of two types, which is a fraction of the contacts and each statement is one indexed pass

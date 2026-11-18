@@ -33593,7 +33593,7 @@ export interface components {
              */
             email_type: "work" | "personal" | "other";
             /**
-             * @description At most one primary per type (DB-enforced).
+             * @description At most one primary address per contact, whatever its type (DB-enforced). primary_email follows it. A second primary in one request is refused with 409 multiple_primary.
              * @default false
              */
             is_primary: boolean;
@@ -34508,7 +34508,10 @@ export interface components {
              * @enum {string}
              */
             email_type: "work" | "personal" | "other";
-            /** @default false */
+            /**
+             * @description The one primary address of the contact, whatever its type. More than one row marked primary is refused with 409 `multiple_primary`. A new contact whose rows name none gets its first row as primary.
+             * @default false
+             */
             is_primary: boolean;
             /** @default 0 */
             position: number;
@@ -34524,7 +34527,10 @@ export interface components {
              * @enum {string}
              */
             phone_type: "work" | "mobile" | "home" | "other";
-            /** @default false */
+            /**
+             * @description The one primary number of the contact, whatever its type. More than one row marked primary is refused with 409 `multiple_primary`.
+             * @default false
+             */
             is_primary: boolean;
             /** @default 0 */
             position: number;
@@ -45514,6 +45520,11 @@ export interface components {
              * @description First real response to this lead: an outbound activity, a human status change off `new`, or an explicit disposition. A cold-outbound auto-touch does NOT satisfy it.
              */
             readonly first_response_at?: string | null;
+            /**
+             * Format: uuid
+             * @description The person whose status move off `new` wrote `first_response_at`, with no activity behind it. Null when an activity or a disposition wrote the stamp, or when none is set. Moving the lead back to `new` before any activity is logged clears both.
+             */
+            readonly first_response_marked_by?: string | null;
             /**
              * Format: date-time
              * @description Derived, not stored: COALESCE(routed_at, created_at) + first_response_target_minutes (formulas §18.1). Null on a terminal lead, which owes no first response.

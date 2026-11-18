@@ -21637,6 +21637,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.filterRefused": "Deine Rolle kann Leads nicht nach {dial} eingrenzen.",
   "lead.timeline.received": "{at} · eingegangen",
   "lead.timeline.weReplied": "Du hast geantwortet",
+  "lead.timeline.markedContacted": "Als kontaktiert markiert von {user}",
+  "lead.timeline.markedContactedNoName": "Als kontaktiert markiert",
   "lead.timeline.repliedIn": "{at} · in {span}",
   "lead.timeline.lastContact": "{at} · letzter Kontakt",
   "lead.timeline.booked": "{at} · gebucht",

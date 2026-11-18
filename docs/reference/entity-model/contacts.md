@@ -846,7 +846,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `email_domain_folded` | `text` |  |  |
 | `email_type` | `text`, default `'work'::text` | yes | One of `work`, `personal`, `other`. |
 | `from_correspondence` | `boolean`, default `true` | yes |  |
-| `is_primary` | `boolean`, default `false` | yes | At most one primary per type (DB-enforced). |
+| `is_primary` | `boolean`, default `false` | yes | At most one primary address per contact, whatever its type (DB-enforced). primary_email follows it. A second primary in one request is refused with 409 multiple_primary. |
 | `position` | `integer`, default `0` | yes | Explicit ordering. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Server-stamped from the authenticated principal (human:<uuid> \| agent:<id> \| connector:<name>); never client-supplied. |

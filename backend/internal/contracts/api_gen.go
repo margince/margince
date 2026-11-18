@@ -44656,7 +44656,7 @@ type ContactEmail struct {
 	EmailType ContactEmailEmailType `json:"email_type"`
 	Id        openapi_types.UUID    `json:"id"`
 
-	// IsPrimary At most one primary per type (DB-enforced).
+	// IsPrimary At most one primary address per contact, whatever its type (DB-enforced). primary_email follows it. A second primary in one request is refused with 409 multiple_primary.
 	IsPrimary bool `json:"is_primary"`
 
 	// Position Explicit ordering.
@@ -44674,8 +44674,10 @@ type ContactEmailInput struct {
 	// Email An address whose local part names a sending system (noreply@, notifications@, receipts@ and the like) is refused with 422 `email_names_no_one`: nobody answers there, so it names no contact.
 	Email     openapi_types.Email         `json:"email"`
 	EmailType *ContactEmailInputEmailType `json:"email_type,omitempty"`
-	IsPrimary *bool                       `json:"is_primary,omitempty"`
-	Position  *int                        `json:"position,omitempty"`
+
+	// IsPrimary The one primary address of the contact, whatever its type. More than one row marked primary is refused with 409 `multiple_primary`. A new contact whose rows name none gets its first row as primary.
+	IsPrimary *bool `json:"is_primary,omitempty"`
+	Position  *int  `json:"position,omitempty"`
 }
 
 // ContactEmailInputEmailType defines model for ContactEmailInput.EmailType.
@@ -45175,6 +45177,7 @@ type ContactPhonePhoneType string
 // ContactPhoneInput One phone number on a contact, as a writer supplies it. One schema for create and
 // update, so the two cannot describe a number differently.
 type ContactPhoneInput struct {
+	// IsPrimary The one primary number of the contact, whatever its type. More than one row marked primary is refused with 409 `multiple_primary`.
 	IsPrimary *bool                       `json:"is_primary,omitempty"`
 	Phone     string                      `json:"phone"`
 	PhoneType *ContactPhoneInputPhoneType `json:"phone_type,omitempty"`
@@ -54688,6 +54691,9 @@ type Lead struct {
 
 	// FirstResponseAt First real response to this lead: an outbound activity, a human status change off `new`, or an explicit disposition. A cold-outbound auto-touch does NOT satisfy it.
 	FirstResponseAt *time.Time `json:"first_response_at,omitempty"`
+
+	// FirstResponseMarkedBy The person whose status move off `new` wrote `first_response_at`, with no activity behind it. Null when an activity or a disposition wrote the stamp, or when none is set. Moving the lead back to `new` before any activity is logged clears both.
+	FirstResponseMarkedBy *openapi_types.UUID `json:"first_response_marked_by,omitempty"`
 
 	// FromContactId The contact an older lead was created from, and null for every newly created lead.
 	FromContactId *openapi_types.UUID `json:"from_contact_id,omitempty"`
@@ -92395,6 +92401,14 @@ func (a *Lead) UnmarshalJSON(b []byte) error {
 		delete(object, "first_response_at")
 	}
 
+	if raw, found := object["first_response_marked_by"]; found {
+		err = json.Unmarshal(raw, &a.FirstResponseMarkedBy)
+		if err != nil {
+			return fmt.Errorf("error reading 'first_response_marked_by': %w", err)
+		}
+		delete(object, "first_response_marked_by")
+	}
+
 	if raw, found := object["from_contact_id"]; found {
 		err = json.Unmarshal(raw, &a.FromContactId)
 		if err != nil {
@@ -92881,6 +92895,13 @@ func (a Lead) MarshalJSON() ([]byte, error) {
 		object["first_response_at"], err = json.Marshal(a.FirstResponseAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'first_response_at': %w", err)
+		}
+	}
+
+	if a.FirstResponseMarkedBy != nil {
+		object["first_response_marked_by"], err = json.Marshal(a.FirstResponseMarkedBy)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'first_response_marked_by': %w", err)
 		}
 	}
 

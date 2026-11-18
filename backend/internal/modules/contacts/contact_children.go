@@ -36,7 +36,7 @@ import (
 // merge dispute is settled by.
 //
 // Order is load-bearing: archive first, then insert. The reverse would put two
-// is_primary rows of one type on the record while both are live, which the
+// is_primary rows on the record while both are live, which the
 // schema answers with a bare conflict.
 //
 //nolint:cyclop // the rename added no branch: this body is what it was under the old noun.
@@ -77,13 +77,13 @@ func replaceContactEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, 
 	}
 	// Retained rows are re-placed BEFORE the new addresses land, and demotions
 	// before promotions within that. uq_contact_email_primary allows one primary
-	// per (contact_id, email_type), and both movements meet it:
+	// per contact, and both movements meet it:
 	//
-	// A swap of which of two same-type rows is primary travels this loop with both
-	// rows retained; promoting the incoming one while the stored one is still
-	// primary is two live primaries of one type for the length of a statement,
-	// which the index refuses. So does a corrected export, where the stored
-	// primary is carried through demoted and the file's new one promoted.
+	// A swap of which of two rows is primary travels this loop with both rows
+	// retained; promoting the incoming one while the stored one is still
+	// primary is two live primaries for the length of a statement, which the
+	// index refuses. So does a corrected export, where the stored primary is
+	// carried through demoted and the file's new one promoted.
 	//
 	// Demoting first empties the slot every later write — this loop's promotions
 	// and the archive-then-insert below alike — is about to claim.
@@ -152,7 +152,7 @@ func liveContactEmails(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) 
 // write" contract true instead of documentary. Values are written back
 // in place so everything downstream handles only normalized strings.
 //
-// It also refuses a set that marks two rows of one type primary. This is the
+// It also refuses a set that marks two addresses, or two numbers, primary. This is the
 // one seam create, update and vCard import all pass through, so the intent
 // behind uq_contact_{email,phone}_primary is enforced here once rather than at
 // each writer, and the contradiction is answered with a typed refusal before
@@ -175,14 +175,10 @@ func parseContactContacts(emails []ContactEmailInput, phones []ContactPhoneInput
 		}
 		phones[i].Phone = parsed.String()
 	}
-	if err := ensureOnePrimaryPerType("address", emails, func(e ContactEmailInput) (string, bool) {
-		return e.EmailType, e.IsPrimary
-	}); err != nil {
+	if err := ensureOnePrimary("address", emails, func(e ContactEmailInput) bool { return e.IsPrimary }); err != nil {
 		return err
 	}
-	return ensureOnePrimaryPerType("phone number", phones, func(p ContactPhoneInput) (string, bool) {
-		return p.PhoneType, p.IsPrimary
-	})
+	return ensureOnePrimary("phone number", phones, func(p ContactPhoneInput) bool { return p.IsPrimary })
 }
 
 //nolint:unparam // the same shape as its siblings; see writeContactSocial.
