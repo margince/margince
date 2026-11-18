@@ -60,8 +60,8 @@ func BumpDueByMailboxes(ctx context.Context, pool *pgxpool.Pool, provider string
 		ws := ids.From[ids.WorkspaceKind](wsID)
 		err := database.WithWorkspaceTx(wsCtx, pool, func(tx pgx.Tx) error {
 			matched, err := makeDueNowTx(ctx, tx,
-				`c.provider = @provider AND c.status IN ('connected','error') AND c.sync_cursor->>'email' = ANY(@emails)`,
-				pgx.NamedArgs{"provider": provider, "emails": emails})
+				`c.provider = @pushed_provider AND c.status IN ('connected','error') AND c.sync_cursor->>'email' = ANY(@emails)`,
+				pgx.NamedArgs{"pushed_provider": provider, "emails": emails})
 			if err != nil {
 				return err
 			}
