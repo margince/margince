@@ -10,8 +10,8 @@ import type { MessageKey } from "../../../i18n/en";
 import { dealStageMoveKeys } from "../../../lib/activitykeys";
 import { undoRefusalKey } from "../../../lib/historyundo";
 import { problemMessageOf } from "../../../lib/problem";
+import { useRecordHistory } from "../../../lib/recordhistory";
 import { useRecordRestore } from "../../../lib/recordrestore";
-import { useRecordHistory } from "../../records/historyentries";
 
 type Deal = components["schemas"]["Deal"];
 type AuditHistoryEntry = components["schemas"]["AuditHistoryEntry"];
