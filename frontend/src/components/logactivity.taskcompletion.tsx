@@ -3,8 +3,9 @@ import { Checkbox } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { unwrap } from "../lib/problem";
+import { problemMessageOf, problemStatus, unwrap } from "../lib/problem";
 import type { useTaskUpdate } from "./taskwrite";
+import { completeFailureKey } from "./taskwritefollowup";
 
 export function TaskCompletionChoice({
   enabled,
@@ -59,11 +60,27 @@ export async function completeLoggedTask(
   }
 }
 
+// A retry helps when the task moved on (it reads the task again) or nothing
+// answered. A refusal, such as no right to the task, says the server's reason.
+function retryHelps(cause: unknown): boolean {
+  const status = problemStatus(cause);
+  return (
+    completeFailureKey(cause) === "worklist.verb.completeStale" ||
+    status === 0 ||
+    status >= 500
+  );
+}
+
 export function LogErrorLine({ error }: Readonly<{ error: unknown }>) {
   const t = useT();
-  return error instanceof TaskLeftOpenError ? (
-    <ErrorLine>{t("tasks.log.completeFailed")}</ErrorLine>
-  ) : (
-    <ErrorLine error={error} />
+  if (!(error instanceof TaskLeftOpenError)) return <ErrorLine error={error} />;
+  return (
+    <ErrorLine>
+      {retryHelps(error.cause)
+        ? t("tasks.log.completeFailed")
+        : t("tasks.log.completeRefused", {
+            reason: problemMessageOf(error.cause, t),
+          })}
+    </ErrorLine>
   );
 }

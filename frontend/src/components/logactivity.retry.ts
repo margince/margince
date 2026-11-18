@@ -3,6 +3,7 @@
 
 import { useRef } from "react";
 import type { components } from "../api/schema";
+import { ProblemError } from "../lib/problem";
 
 type CreateBody = components["schemas"]["CreateActivityRequest"];
 
@@ -12,18 +13,20 @@ type LoggedActivity = Readonly<{
   linkedDealIds: readonly string[];
 }>;
 
-// The server answers a key it has stored only for a byte-identical body. The
-// body is rebuilt per try, and occurred_at reads the clock, so it is the field to pin.
+// The server answers a key it has stored only for a byte-identical body. An
+// instant's occurred_at is read off the clock per try; a chosen day is the draft's.
 function sameApartFromStamp(sent: CreateBody, built: CreateBody): boolean {
+  const clockStamped =
+    sent.occurred_precision === "instant" &&
+    built.occurred_precision === "instant";
   const unstamped = (body: CreateBody) =>
-    JSON.stringify({ ...body, occurred_at: undefined });
+    JSON.stringify(clockStamped ? { ...body, occurred_at: undefined } : body);
   return unstamped(sent) === unstamped(built);
 }
 
 // The first create's answer, kept under its idempotency key, so a retry after a
-// later step failed posts no second create. Until an answer arrives, the body
-// sent under the key is kept too: a lost answer may hide a stored create.
-// An edited draft still goes out as edited: the server releases a refused key.
+// later step failed posts no second create. A body whose answer was lost is kept
+// too, since the server may have stored it. An edited draft still goes out as edited.
 export function useCreateOncePerKey() {
   const created = useRef<LoggedActivity | null>(null);
   const sent = useRef<{ key: string; body: CreateBody } | null>(null);
@@ -39,7 +42,14 @@ export function useCreateOncePerKey() {
         ? earlier.body
         : built;
     sent.current = { key, body };
-    const answer = await create(body);
+    let answer: components["schemas"]["Activity"];
+    try {
+      answer = await create(body);
+    } catch (error) {
+      // An answered refusal stored nothing and releases the key.
+      if (error instanceof ProblemError) sent.current = null;
+      throw error;
+    }
     created.current = {
       key,
       id: answer.id,

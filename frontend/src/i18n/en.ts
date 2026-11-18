@@ -8281,6 +8281,10 @@ export const en = {
     "The activity was logged. The task stays open until all files attach; retry to finish.",
   "tasks.log.completeFailed":
     "The activity was logged, but the task is still open. Retry to close it.",
+  "tasks.log.completeRefused":
+    "The activity was logged, but the task could not be closed: {reason}",
+  "tasks.log.loggedOnly":
+    "The activity is logged and can no longer be changed here. Log again to finish the steps that are left.",
   "tasks.log.markDone": "Mark task done",
   "tasks.detail": "Task",
   "tasks.sourceEmail": "Source email",

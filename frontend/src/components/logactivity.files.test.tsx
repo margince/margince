@@ -64,7 +64,7 @@ type Behaviour = Readonly<{
   // The contact page's Documents count, mounted beside the form.
   docs?: ReturnType<typeof contactDocuments>;
   // How many task completions the server answers with a 500 before one lands.
-  completionFailures?: { left: number };
+  completionFailures?: { left: number; status?: number; detail?: string };
   // How many creates the server stores and then loses the answer to.
   lostCreateAnswers?: { left: number };
   // How many creates the server refuses with a 422, storing nothing.
@@ -134,10 +134,16 @@ function stubApi(behaviour: Behaviour = {}): Call[] {
       const failures = behaviour.completionFailures;
       if (failures && failures.left > 0) {
         failures.left -= 1;
+        const status = failures.status ?? 500;
         return answer(
           jsonResponse(
-            { type: "about:blank", title: "Internal", status: 500 },
-            500,
+            {
+              type: "about:blank",
+              title: "Refused",
+              status,
+              detail: failures.detail,
+            },
+            status,
           ),
         );
       }
@@ -217,6 +223,15 @@ const uploaded = (calls: Call[]) =>
 
 const created = (calls: Call[]) =>
   calls.some((call) => call.key === "POST /activities");
+
+const LOGGED_ONLY =
+  "The activity is logged and can no longer be changed here. Log again to finish the steps that are left.";
+
+// The create bodies in the order they were sent.
+const createBodies = (calls: Call[]) =>
+  calls
+    .filter((call) => call.key === "POST /activities")
+    .map((call) => JSON.parse(call.text ?? "{}"));
 
 const creates = (calls: Call[]) =>
   calls.filter((call) => call.key === "POST /activities").length;
@@ -431,6 +446,9 @@ it("says the task is still open when only its completion fails, and a retry only
     ),
   ).toBeTruthy();
   expect(creates(calls)).toBe(1);
+  // The logged words can no longer be edited, so no edit is lost on the retry.
+  expect(screen.queryByRole("textbox", { name: "Subject" })).toBeNull();
+  expect(screen.getByText(LOGGED_ONLY)).toBeTruthy();
   await user.click(screen.getByRole("button", { name: "Log" }));
   await waitFor(() =>
     expect(completions(calls).map((call) => call.outcome)).toEqual([500, 200]),
@@ -470,9 +488,7 @@ it("keeps a partially attached outcome open and retries only its missing file", 
   expect(calls.some((call) => call.key === "PATCH /activities/task-one")).toBe(
     false,
   );
-  expect(
-    screen.getByRole("textbox", { name: "Subject" }).getAttribute("value"),
-  ).not.toBe("");
+  expect(screen.getByText(LOGGED_ONLY)).toBeTruthy();
   refused.clear();
   await user.click(screen.getByRole("button", { name: "Log" }));
   await waitFor(() =>
@@ -522,4 +538,62 @@ it("sends an edited draft as edited after the server refused the create", async 
   await waitFor(() => expect(creates(calls)).toBe(2));
   const retry = calls.filter((call) => call.key === "POST /activities")[1];
   expect(retry?.text).toContain('"subject":"Kickoff with Brandt IT"');
+});
+
+it("says why the task stays open when the server refuses its completion", async () => {
+  const calls = stubApi({
+    completionFailures: {
+      left: 1,
+      status: 403,
+      detail: "You may not change this task.",
+    },
+  });
+  renderForm(true);
+  await logWith([pdf("outcome.pdf")]);
+  expect(
+    await screen.findByText(
+      "The activity was logged, but the task could not be closed: You may not change this task.",
+    ),
+  ).toBeTruthy();
+  expect(completions(calls)).toHaveLength(1);
+  expect(screen.queryByText(/Retry to close it/)).toBeNull();
+});
+
+it("sends a backdated entry's changed day after its answer was lost", async () => {
+  const calls = stubApi({ lostCreateAnswers: { left: 1 } });
+  renderForm();
+  const user = userEvent.setup();
+  const subject = await screen.findByRole("textbox", { name: "Subject" });
+  fireEvent.change(subject, { target: { value: "Kickoff with Brandt IT" } });
+  const date = screen.getByRole("textbox", { name: "Date" });
+  await user.tripleClick(date);
+  await user.keyboard("10/07/2026");
+  await user.click(screen.getByRole("button", { name: "Log" }));
+  await screen.findByRole("alert");
+  await user.tripleClick(date);
+  await user.keyboard("03/07/2026");
+  await user.click(screen.getByRole("button", { name: "Log" }));
+  await waitFor(() => expect(creates(calls)).toBe(2));
+  expect(createBodies(calls).map((body) => body.occurred_at)).toEqual([
+    "2026-07-10T12:00:00Z",
+    "2026-07-03T12:00:00Z",
+  ]);
+});
+
+it("stamps a fresh time on a retry after the server refused the create", async () => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  const calls = stubApi({ refusedCreates: { left: 1 } });
+  renderForm();
+  const user = userEvent.setup();
+  fireEvent.change(await screen.findByRole("textbox", { name: "Subject" }), {
+    target: { value: "Kickoff with Brandt IT" },
+  });
+  await user.click(screen.getByRole("button", { name: "Log" }));
+  await screen.findByRole("alert");
+  vi.setSystemTime(Date.now() + 60_000);
+  await user.click(screen.getByRole("button", { name: "Log" }));
+  await waitFor(() => expect(creates(calls)).toBe(2));
+  const [refused, retry] = createBodies(calls);
+  expect(retry.occurred_precision).toBe("instant");
+  expect(retry.occurred_at).not.toBe(refused.occurred_at);
 });

@@ -3331,6 +3331,8 @@
   "tasks.log.chooseRecord": "Chọn bản ghi khác",
   "tasks.log.leftOpen": "Đã ghi hoạt động. Công việc vẫn mở cho đến khi đính kèm đủ tệp; hãy thử lại để hoàn tất.",
   "tasks.log.completeFailed": "Đã ghi hoạt động, nhưng công việc vẫn còn mở. Hãy thử lại để đóng công việc.",
+  "tasks.log.completeRefused": "Đã ghi hoạt động, nhưng không thể đóng công việc: {reason}",
+  "tasks.log.loggedOnly": "Hoạt động đã được ghi và không thể sửa ở đây nữa. Hãy ghi lại để hoàn tất các bước còn lại.",
   "tasks.log.markDone": "Đánh dấu công việc đã xong",
   "tasks.detail": "Việc cần làm",
   "tasks.sourceEmail": "Email nguồn",
