@@ -7,10 +7,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
 import { HistoryFieldDiff } from "./historyfielddiff";
 
-function show(node: ReactNode) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
+function show(
+  node: ReactNode,
+  client = new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+) {
   return rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">{node}</LocaleProvider>
@@ -87,6 +87,32 @@ describe("HistoryFieldDiff names the records a change points at", () => {
     expect(await screen.findByText("Negotiation")).toBeTruthy();
     expect(screen.getByText("Qualified")).toBeTruthy();
     expect(screen.queryByText(NEGOTIATION)).toBeNull();
+  });
+
+  it("names a stage from the pipelines the page holds, with no second read", async () => {
+    serveNames();
+    const client = new QueryClient();
+    client.setQueryData(
+      ["pipelines", "all"],
+      [
+        {
+          id: "p-1",
+          name: "Sales",
+          stages: [{ id: QUALIFIED, name: "Qualified" }],
+        },
+      ],
+    );
+    show(
+      <HistoryFieldDiff
+        field="stage_id"
+        oldValue={null}
+        newValue={QUALIFIED}
+        values={values}
+      />,
+      client,
+    );
+    expect(await screen.findByText("Qualified")).toBeTruthy();
+    expect(vi.mocked(fetch)).not.toHaveBeenCalled();
   });
 
   it("names an owner as a colleague", async () => {

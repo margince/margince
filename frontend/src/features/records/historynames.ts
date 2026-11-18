@@ -2,15 +2,20 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQueries, useQuery } from "@tanstack/react-query";
+import { useCallback } from "react";
+import type { components } from "../../api/schema";
 import { entityNameObserverQuery } from "../../components/entityref.queries";
 import { useLocale } from "../../i18n";
 import { translatedPipeline } from "../../lib/labeltranslation";
 import { useMemberNames } from "../../lib/membernames";
 import {
+  pipelinesOptions,
   pipelinesWithArchivedOptions,
   stageNames,
 } from "../../lib/pipelines.queries";
 import { isUuid } from "../../lib/uuid";
+
+type Pipeline = components["schemas"]["Pipeline"];
 
 // What an id stored in a history field points at, read through the reader the
 // rest of the page names that kind of record with.
@@ -47,13 +52,24 @@ export function useHistoryNameOf(
         ? ids.map((id) => entityNameObserverQuery(kind, id))
         : [],
   });
-  const stages = useQuery({
-    ...pipelinesWithArchivedOptions,
-    enabled: kind === "stage" && ids.length > 0,
-    select: (pipelines) =>
+  const nameStages = useCallback(
+    (pipelines: readonly Pipeline[]) =>
       stageNames(
         pipelines.map((pipeline) => translatedPipeline(pipeline, locale)),
       ),
+    [locale],
+  );
+  // The live pipelines the page already holds name most stages, read from the
+  // cache without a fetch. Only an id they lack asks for the archived ones.
+  const live = useQuery({
+    ...pipelinesOptions,
+    enabled: false,
+    select: nameStages,
+  });
+  const archived = useQuery({
+    ...pipelinesWithArchivedOptions,
+    enabled: kind === "stage" && ids.some((id) => !live.data?.has(id)),
+    select: nameStages,
   });
   const named = new Map(members);
   records.forEach((read, index) => {
@@ -62,5 +78,5 @@ export function useHistoryNameOf(
       named.set(id, read.data);
     }
   });
-  return (id) => named.get(id) ?? stages.data?.get(id);
+  return (id) => named.get(id) ?? live.data?.get(id) ?? archived.data?.get(id);
 }
