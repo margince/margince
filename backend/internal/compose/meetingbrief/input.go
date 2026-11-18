@@ -300,8 +300,8 @@ func foldClaims(contactName string, found []crmcontracts.ConversationClaim) []Cl
 
 // notCurrentPromise is an open promise the claims read marks as not current
 // (needs_review folds in the commitment admission). The commitments card, the
-// worklist and the project rollup list only current promises, so a prep that
-// planned on this one would name work they no longer show.
+// worklist and the project rollup list only current promises. A prep must not
+// plan on work they no longer show.
 func notCurrentPromise(claim crmcontracts.ConversationClaim) bool {
 	promise := claim.Kind == crmcontracts.ConversationClaimKindCommitmentOurs ||
 		claim.Kind == crmcontracts.ConversationClaimKindCommitmentTheirs

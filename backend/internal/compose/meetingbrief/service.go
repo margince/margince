@@ -338,16 +338,11 @@ func (s *Service) assembleInput(ctx context.Context, activityID ids.UUID, reques
 		if err != nil {
 			return err
 		}
-		companyTopics, companyWithheld, err = s.companyHistory(ctx, tx, loaded, scope, s.now().UTC(), history)
-		if err != nil {
-			return err
-		}
 		seats, err = s.readSeats(ctx, tx, activityID)
 		if err != nil {
 			return err
 		}
-		excerpts, err = s.readExcerpts(ctx, tx,
-			excerptTargets(clusterThreads(threadsOf(history), zone)))
+		excerpts, companyTopics, companyWithheld, err = s.readBodiesAndCompany(ctx, tx, loaded, scope, zone, history)
 		if err != nil {
 			return err
 		}
@@ -378,6 +373,19 @@ func (s *Service) assembleInput(ctx context.Context, activityID ids.UUID, reques
 	}
 	fileUnderDeal(&in)
 	return in, viewScope, nil
+}
+
+// readBodiesAndCompany is the second evidence pass: the bodies of the threads
+// the arc picked, and what the company's other contacts already received.
+func (s *Service) readBodiesAndCompany(
+	ctx context.Context, tx pgx.Tx, room meeting, scope *ids.ProjectID, zone *time.Location, history []HistoryIn,
+) ([]ExcerptIn, []CompanyTopicIn, int, error) {
+	excerpts, err := s.readExcerpts(ctx, tx, excerptTargets(clusterThreads(threadsOf(history), zone)))
+	if err != nil {
+		return nil, nil, 0, err
+	}
+	topics, withheld, err := s.companyHistory(ctx, tx, room, scope, s.now().UTC(), history)
+	return excerpts, topics, withheld, err
 }
 
 // resolveScope resolves the project the brief's reads are narrowed by.

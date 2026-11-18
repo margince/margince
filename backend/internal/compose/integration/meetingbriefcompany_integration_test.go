@@ -43,8 +43,8 @@ func companyContextOf(t *testing.T, e *Env, meeting ids.UUID) (text string, with
 	return out.String(), withheldNamed
 }
 
-// A prep for a new contact names what colleagues' contacts at the same company
-// already received, leaves out what this reader may not open, and leaves out a
+// A prep for a new contact names what the company's other contacts already
+// received. It leaves out what this reader may not open. It also leaves out a
 // booking tool's confirmation mail.
 func TestMeetingBriefTellsWhatTheCompanyAlreadyReceivedFromOtherContacts(t *testing.T) {
 	e := Setup(t)

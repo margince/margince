@@ -34,11 +34,11 @@ const keptByInvitationReason = "invitation_accepted"
 
 // KeptByAcceptedGuest lists the open promises of ours that this meeting kept.
 //
-// A promise to invite a named person is kept when a live meeting, made after
-// the promise was written, has that person as a guest who accepted. The
-// promise's own contact must be on the meeting too. The full name is matched
-// on word boundaries, each part at least three letters. A promise a person
-// reopened after an automatic settlement stays open.
+// A promise to invite a named person is kept when a live meeting has that
+// person as a guest who accepted. The meeting must be made after the promise.
+// The promise's own contact must be on the meeting too. The full name is
+// matched on word boundaries, each part at least three letters. A promise a
+// person reopened after an automatic settlement stays open.
 func (s *Store) KeptByAcceptedGuest(ctx context.Context, meetingID ids.UUID) ([]ids.UUID, error) {
 	var claims []ids.UUID
 	err := s.tx(ctx, func(tx pgx.Tx) error {

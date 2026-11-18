@@ -7,9 +7,9 @@ package meetingbrief
 // received. A new contact's own records say nothing about it, and the reader can
 // walk in and contradict a statement the company has had for months.
 //
-// The history is the same read as the room's own (readHistoryOf), over the other
-// current contacts at the room's company, so row scope, the content audience and
-// the exchange predicate are not restated here.
+// The history is the room's own read (readHistoryOf) over the other current
+// contacts at the company. Row scope, audience and the exchange predicate stay
+// in that one reader.
 
 import (
 	"context"

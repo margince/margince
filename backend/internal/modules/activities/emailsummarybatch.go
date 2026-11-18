@@ -70,12 +70,9 @@ func EmailSummariesByIDBatch(
 
 	out := make(map[ids.UUID]crmcontracts.EmailSummary, len(activityIDs))
 	for _, activity := range admitted {
-		// RowEmailSummary rather than a second assembler: the row a search hit
-		// shows and the row a timeline shows are the same row, and two
-		// projections of it would drift the moment either grew a field.
-		// The summary the page carries is the row RECORD() already built,
-		// counts and all — not a second call to RowEmailSummary, which would
-		// rebuild it from the activity and drop the count just applied.
+		// A search hit and a timeline row are the same row, so one projection
+		// serves both. The summary on the page already holds the counts, and
+		// rebuilding it would drop them.
 		if activity.EmailSummary != nil {
 			out[ids.UUID(activity.Id)] = *activity.EmailSummary
 		}
@@ -83,10 +80,10 @@ func EmailSummariesByIDBatch(
 	return out, nil
 }
 
-// VoicesByIDBatch answers who wrote each of these activities, for THIS caller.
-// A row the caller may not read, that is gone, or that records no author is
-// absent: who wrote a row is part of its content. Brief inputs read it so a
-// quoted line is credited to its writer and not to the page's contact.
+// VoicesByIDBatch answers who wrote each of these activities, for this caller.
+// A row the caller may not read, or that records no author, is absent, because
+// who wrote a row is part of its content. Brief inputs read it so a quoted line
+// is credited to its writer.
 func VoicesByIDBatch(
 	ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, asOf time.Time,
 ) (map[ids.UUID]*crmcontracts.ActivityVoice, error) {
@@ -105,8 +102,8 @@ func VoicesByIDBatch(
 
 // readAdmittedByID reads the rows of these ids that the caller may read in
 // full, with their mail facts and voices filled. It returns nil when there is
-// nothing to read or the seat has no activity.read: a batch enriching a page
-// must not fail the page over a row the reader was never entitled to.
+// nothing to read or the seat has no activity.read. A batch enriching a page
+// must not fail it over a row the reader may not open.
 func readAdmittedByID(
 	ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, asOf time.Time, kindClause string,
 ) ([]crmcontracts.Activity, error) {

@@ -27,8 +27,8 @@ func voiced(kind crmcontracts.ActivityAuthorKind, role *crmcontracts.ActivityVoi
 	}
 }
 
-// The model is told who wrote each recent message, from the same author
-// projection the contact brief reads, so the contact is never credited with
+// The model is told who wrote each recent message, from the author projection
+// the contact brief reads. The contact is never credited with
 // the reader's own proposal.
 func TestRecentMessagesNameTheirSpeakerAndNotTheTransport(t *testing.T) {
 	author := crmcontracts.ActivityVoiceContactRoleAuthor
@@ -80,8 +80,8 @@ func claimOf(kind crmcontracts.ConversationClaimKind, status crmcontracts.Conver
 	return crmcontracts.ConversationClaim{Kind: kind, Status: status, NeedsReview: review, Body: "invite Pat"}
 }
 
-// A promise the claims read marks not current is no open obligation, the same
-// as on the commitments card; a settled one still reads as settled.
+// A promise the claims read marks not current is no open obligation, as on the
+// commitments card. A settled one still reads as settled.
 func TestPrepDropsAnOpenPromiseThatIsNotCurrent(t *testing.T) {
 	ours, theirs := crmcontracts.ConversationClaimKindCommitmentOurs, crmcontracts.ConversationClaimKindCommitmentTheirs
 	open, done := crmcontracts.ConversationClaimStatusOpen, crmcontracts.ConversationClaimStatusDone
