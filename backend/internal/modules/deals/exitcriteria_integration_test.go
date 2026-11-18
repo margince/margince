@@ -34,7 +34,7 @@ import (
 func openStage(t *testing.T, e *configEnv, semantic StageSemantic) ids.StageID {
 	t.Helper()
 	ctx := e.as()
-	pipeline, err := e.store.CreatePipeline(ctx, CreatePipelineInput{Name: "Sales " + ids.NewV7().String(), Stages: closingPair()})
+	pipeline, err := e.store.CreatePipeline(ctx, CreatePipelineInput{Name: "Sales " + ids.NewV7().String()})
 	if err != nil {
 		t.Fatalf("seeding a pipeline: %v", err)
 	}
