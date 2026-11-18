@@ -16,6 +16,7 @@ import type { NarrationEntry, ResumePoint } from "./conversation-types";
 type OnboardingState = components["schemas"]["OnboardingState"];
 type CompanyProfile = components["schemas"]["CompanyProfile"];
 type CorpusSummary = components["schemas"]["VoiceCorpusSummary"];
+type CorpusSource = components["schemas"]["VoiceCorpusSource"];
 type CompanySiteRead = components["schemas"]["CompanySiteRead"];
 
 export type VoiceRestoreProbe = Readonly<{
@@ -23,7 +24,13 @@ export type VoiceRestoreProbe = Readonly<{
   built: boolean;
   /** The server corpus meter; null when no voice profile exists yet. */
   summary: CorpusSummary | null;
+  /** The samples the meter counts, so the step lists them after a reload. */
+  sources: readonly CorpusSource[];
 }>;
+
+/** The probe's query key; a corpus change marks it stale, so re-entering the
+ * voice step lists what the server holds now. */
+export const VOICE_PROBE_KEY = ["onboarding-conv-voice"] as const;
 
 export type RestoreInputs = Readonly<{
   /** GET /onboarding/state; null when nothing was persisted (404). */

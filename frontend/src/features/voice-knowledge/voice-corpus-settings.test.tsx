@@ -257,12 +257,16 @@ describe("handing a file to the Settings voice card", () => {
     await userEvent.type(box, "Short sentences. Concrete nouns.");
     await userEvent.click(add);
 
+    // The label opens with the text's own words, so two pastes differ.
     expect(
-      await screen.findByText(/Pasted text: 640 words added/),
+      await screen.findByText(
+        "Pasted text – Short sentences. Concrete nouns.: 640 words added",
+        { exact: false },
+      ),
     ).toBeTruthy();
     expect(bodies[0]).toMatchObject({
       kind: "other",
-      source_label: "Pasted text",
+      source_label: "Pasted text – Short sentences. Concrete nouns.",
       content: "Short sentences. Concrete nouns.",
     });
     expect(String(bodies[0]?.source_ref)).toMatch(/^voice:paste:/);
@@ -286,7 +290,7 @@ describe("handing a file to the Settings voice card", () => {
     await userEvent.click(screen.getByRole("button", { name: "Add text" }));
 
     expect(
-      await screen.findByText(/Pasted text could not be added/),
+      await screen.findByText(/Pasted text – some words could not be added/),
     ).toBeTruthy();
     expect(box).toHaveProperty("value", "some words");
     expect(screen.getByRole("button", { name: "Add text" })).toHaveProperty(

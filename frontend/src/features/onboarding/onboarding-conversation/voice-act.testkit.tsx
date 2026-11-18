@@ -19,34 +19,23 @@ import {
 } from "./conversation-machine";
 import { VoiceAct } from "./voice-act";
 
-// The voice act's test harness: wire fixtures, a fetch stub that answers the
-// voice routes the way the server does, and the act mounted on the real machine.
+// The voice act's test harness. It holds wire fixtures, a fetch stub that
+// answers the voice routes as the server does, and the act on the real machine.
 
 export type CorpusPreview = components["schemas"]["VoiceCorpusPreviewResult"];
 export type CorpusSummary = components["schemas"]["VoiceCorpusSummary"];
 export type IngestStats = components["schemas"]["VoiceIngestStats"];
 
 // The two build cases below narrate a poll, so each raises two of its waiters
-// to 4000ms to outlast it. A test may spend the SUM of its waiters' budgets
-// without any one of them failing, and the heavier of the two spends 12000ms —
-// past the suite's own ceiling, which is derived for tests that wait at the
-// default. So they state their own, the way read-conclusion.test.tsx and
-// onboarding-restore.test.tsx already do: the raised waiters, the defaults
-// beside them, and the SAME measured allowance for the work between them that
-// the suite ceiling uses, so the two rest on one measurement rather than on a
-// round number picked here. Without it the test fails while every waiter in it
-// is still inside its budget, and the failure names the test rather than the
-// poll that was slow (issue 1144).
+// to 4000ms to outlast it. A test may spend the sum of its waiters' budgets,
+// and the heavier case spends 12000ms. That is past the suite's own ceiling,
+// which is derived for tests that wait at the default. So these tests state
+// their own ceiling from the same measured allowance the suite uses.
 export const POLL_WAITER_MS = 4000;
-// The count a dropped file produces is rendered at the END of a chain — read
-// the file, parse it, POST /sources, take the summary back, re-render — and
-// the default async-util timeout covers a render, not a round trip. Under the
-// sharded suite that chain outran 1000ms and the failure read as "Unable to
-// find an element with the text: 900 words", which is the count being late
-// rather than wrong: the panel is mounted in the dump, the number is simply
-// not there yet. Given the poll's allowance for the same reason the polls have
-// it — the assertion is about the VALUE, and what it waits on is somebody
-// else's latency.
+// The count a dropped file produces renders at the end of a round trip: read
+// the file, POST /sources, take the summary back, re-render. The default
+// async-util timeout covers a render only. Under the sharded suite that chain
+// outran 1000ms, so the waiter gets the poll's allowance.
 export const INGEST_WAITER_MS = POLL_WAITER_MS;
 export const BUILD_TEST_MS =
   POLL_WAITER_MS * 2 + ASYNC_UTIL_TIMEOUT_MS * 4 + SLOWEST_MEASURED_TEST_MS;
@@ -112,10 +101,10 @@ export const documentStats: IngestStats = {
 };
 
 // Build poll rows: only the fields the hook reads; the stub serves them as
-// plain JSON exactly like the server would.
-// What the server sends when an installation has no AI provider bound: the
-// one sentence that separates "open a setting" from "try again", and the
-// reason a reader retried a build that could never succeed.
+// plain JSON, as the server would.
+// What the server sends when an installation has no AI provider bound. This
+// sentence separates "open a setting" from "try again". Without it a reader
+// retried a build that could never succeed.
 export const UNCONFIGURED_DETAIL =
   "Voice training needs an AI provider, and none is set up yet, so the build did not run. An administrator adds a provider under Settings → AI models → Providers; build again once that is done.";
 
@@ -123,9 +112,9 @@ export type BuildRow = {
   id: string;
   status: string;
   stage: string | null;
-  /** The server's own words about a terminal outcome. Optional here exactly
-   * as it is on the wire — absent is what a build with nothing to add sends,
-   * and the screen must read correctly either way. */
+  /** The server's own words about a terminal outcome, optional as on the
+   * wire. A build with nothing to add sends none, and the screen must read
+   * correctly either way. */
   status_detail?: string;
 };
 
@@ -139,10 +128,9 @@ export const candidateVersion = {
   stats_json: { word_count: 1240 },
 };
 
-// A version carrying every optional field parseVoiceInsights reads — the
-// result scene's own structure (the sample card, the measured dimensions,
-// the reading) is pinned against this, independent of the parser's own
-// tests.
+// A version carrying every optional field parseVoiceInsights reads. The result
+// scene's structure (sample card, measured dimensions, reading) is pinned
+// against it, apart from the parser's own tests.
 export const richVersion = {
   profile_version: 5,
   status: "active",
@@ -199,6 +187,8 @@ export type StubOptions = {
   version?: unknown;
   /** Whether /installation/setup reports a model bound; bound by default. */
   modelReady?: boolean;
+  /** The meter the sources GET reports once a sample is removed. */
+  afterRemove?: CorpusSummary;
 };
 
 export function delay(ms: number): Promise<void> {
@@ -252,7 +242,7 @@ async function answerIngest(
   }
   return jsonResponse(
     {
-      source: { id: `source-${cursor.ingestIndex}` },
+      source: { id: `source-${cursor.ingestIndex}`, version: 1 },
       summary: ingest.summary,
       ingest_stats: ingest.stats,
     },
@@ -334,6 +324,13 @@ async function answer(
   }
   if (request.method === "POST" && path.endsWith("/sources")) {
     return answerIngest(request, options, cursor);
+  }
+  if (request.method === "DELETE" && path.includes("/sources/")) {
+    return jsonResponse({ id: path.slice(path.lastIndexOf("/") + 1) });
+  }
+  if (request.method === "GET" && path.endsWith("/sources")) {
+    const summary = options.afterRemove ?? summaryOf(0);
+    return jsonResponse({ data: [], summary, page: { next_cursor: null } });
   }
   if (request.method === "POST" && path.endsWith("/builds")) {
     return answerBuildStart(options, cursor);

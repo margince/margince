@@ -145,6 +145,8 @@ function collectScene(overrides: {
       fileRef={overrides.fileRef ?? createRef<HTMLInputElement>()}
       onFiles={() => undefined}
       onAddPaste={overrides.onAddPaste ?? (() => undefined)}
+      onRemove={() => undefined}
+      removing={null}
       onBuild={overrides.onBuild ?? (() => undefined)}
       onSkip={() => undefined}
       canBuild={overrides.canBuild ?? false}
@@ -227,6 +229,8 @@ describe("the collect scene's distilling panel", () => {
       manifest: [
         {
           ref: "u1",
+          id: "u1",
+          version: 1,
           label: "notes.md",
           keptWords: 1200,
           inputWords: 1200,
@@ -315,6 +319,8 @@ describe("the collect scene's corpus floor meter", () => {
           fileRef={createRef<HTMLInputElement>()}
           onFiles={() => undefined}
           onAddPaste={() => undefined}
+          onRemove={() => undefined}
+          removing={null}
           onBuild={() => undefined}
           onSkip={() => undefined}
           canBuild

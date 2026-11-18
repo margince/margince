@@ -70,7 +70,7 @@ const profile: CompanyProfile = {
   display_name: "Gradion",
 };
 
-const emptyVoice = { built: false, summary: null };
+const emptyVoice = { built: false, summary: null, sources: [] };
 
 function words(total: number) {
   return {
@@ -83,6 +83,7 @@ function words(total: number) {
       source_count: 1,
       register_words: {},
     },
+    sources: [],
   };
 }
 

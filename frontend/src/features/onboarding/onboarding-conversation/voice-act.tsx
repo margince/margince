@@ -38,6 +38,7 @@ import { ConversationWorkbench } from "./workbench";
 // separate rail transcript to keep in step with it.
 
 type CorpusSummary = components["schemas"]["VoiceCorpusSummary"];
+type CorpusSource = components["schemas"]["VoiceCorpusSource"];
 type VoiceProfileVersion = components["schemas"]["VoiceProfileVersion"];
 
 type VoiceActProps = Readonly<{
@@ -45,13 +46,25 @@ type VoiceActProps = Readonly<{
   dispatch: Dispatch<ConversationEvent>;
   /** The restore probe's server meter for a resumed session; null fresh. */
   initialSummary?: CorpusSummary | null;
+  /** The samples that meter counts; empty fresh. */
+  initialSources?: readonly CorpusSource[];
 }>;
 
-export function VoiceAct({ state, dispatch, initialSummary }: VoiceActProps) {
+export function VoiceAct({
+  state,
+  dispatch,
+  initialSummary,
+  initialSources,
+}: VoiceActProps) {
   const t = useT();
   const machine = useRef(state);
   machine.current = state;
-  const corpus = useVoiceCorpus({ state, dispatch, initialSummary });
+  const corpus = useVoiceCorpus({
+    state,
+    dispatch,
+    initialSummary,
+    initialSources,
+  });
   const build = useVoiceBuild({ dispatch, machine });
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -220,9 +233,9 @@ function boardHeading(
   };
 }
 
-// The fallback branch's own Continue: a failed build offers the retry the
-// machine still permits, a deferred one has already said so honestly in its
-// rail outcome and only waits for the human to move on.
+// The fallback branch's own Continue. A failed build offers the retry the
+// machine still permits. A deferred one has said so in its rail outcome and
+// only waits for the human to move on.
 function continueBarFor(
   state: ConversationState,
   build: ReturnType<typeof useVoiceBuild>,
@@ -289,6 +302,8 @@ function VoiceSurface({
         onAddPaste={(text) =>
           corpus.addPaste(text, t("ob.conv.voice.pasteSource"))
         }
+        onRemove={corpus.removeSample}
+        removing={corpus.removing}
         onBuild={() => build.start.mutate()}
         onSkip={() => dispatch({ type: "VOICE_SKIPPED" })}
         canBuild={canBuild}
@@ -334,7 +349,7 @@ function VoiceSurface({
       />
     );
   }
-  // Everything a scene does not own — a failed or deferred build — keeps
+  // Everything a scene does not own (a failed or deferred build) keeps
   // the corpus dossier, now carrying its own pinned Continue. The
   // build scene above has already claimed every building phase, so no
   // tracker runs here.

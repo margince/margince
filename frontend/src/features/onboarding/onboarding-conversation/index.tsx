@@ -29,7 +29,11 @@ import {
   initialConversationState,
 } from "./conversation-machine";
 import { InviteAct } from "./invite-act";
-import { restorePlan, type VoiceRestoreProbe } from "./restore";
+import {
+  restorePlan,
+  VOICE_PROBE_KEY,
+  type VoiceRestoreProbe,
+} from "./restore";
 import { TeamAct } from "./team-act";
 import { useStepAddress } from "./use-step-address";
 import type { WizardPersistInput } from "./use-wizard-state";
@@ -88,7 +92,7 @@ async function probeVoice(): Promise<VoiceRestoreProbe> {
   }
   const profileId = list.data.data[0]?.id;
   if (profileId === undefined) {
-    return { built: false, summary: null };
+    return { built: false, summary: null, sources: [] };
   }
   const [versions, sources] = await Promise.all([
     api.GET("/voice-profiles/{id}/versions", {
@@ -107,6 +111,7 @@ async function probeVoice(): Promise<VoiceRestoreProbe> {
   return {
     built: pickBuiltVersion(versions.data.data) !== null,
     summary: sources.data.summary,
+    sources: sources.data.data,
   };
 }
 
@@ -209,7 +214,7 @@ function useRestore(
     described !== undefined &&
     voiceProbeNeeded(wizard.data ?? null, described, mayDescribe);
   const voice = useQuery({
-    queryKey: ["onboarding-conv-voice"],
+    queryKey: VOICE_PROBE_KEY,
     queryFn: probeVoice,
     enabled: voiceNeeded,
   });
@@ -419,6 +424,7 @@ function CurrentAct({
           state={state}
           dispatch={dispatch}
           initialSummary={voice.data?.summary ?? null}
+          initialSources={voice.data?.sources ?? []}
         />
       );
     case "basis":

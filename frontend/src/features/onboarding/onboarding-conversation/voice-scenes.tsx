@@ -172,6 +172,8 @@ export function VoiceCollectScene({
   fileRef,
   onFiles,
   onAddPaste,
+  onRemove,
+  removing,
   onBuild,
   onSkip,
   canBuild,
@@ -184,6 +186,9 @@ export function VoiceCollectScene({
   fileRef: RefObject<HTMLInputElement | null>;
   onFiles: (event: ChangeEvent<HTMLInputElement>) => void;
   onAddPaste: (text: string) => void;
+  onRemove: (entry: CorpusManifestEntry) => void;
+  /** The source_ref of the sample being removed, or null. */
+  removing: string | null;
   onBuild: () => void;
   onSkip: () => void;
   canBuild: boolean;
@@ -295,6 +300,16 @@ export function VoiceCollectScene({
                       </small>
                     </span>
                     <Check className="ob-voice-source-check" aria-hidden />
+                    <Button
+                      aria-label={t("ob.conv.voice.removeSourceNamed", {
+                        name: entry.label,
+                      })}
+                      pending={removing === entry.ref}
+                      disabled={removing !== null}
+                      onClick={() => onRemove(entry)}
+                    >
+                      {t("ob.conv.voice.removeSource")}
+                    </Button>
                   </li>
                 ))}
               </ul>

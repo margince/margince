@@ -1,6 +1,7 @@
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { ProblemError } from "./problem";
+import { ifMatch } from "../api/version";
+import { ProblemError, unwrap } from "./problem";
 import { problemCode } from "./problembody";
 import { readCorpusFile } from "./voice-corpus-file";
 import { ensureProfileId } from "./voice-profile";
@@ -21,6 +22,7 @@ import { type RefusalReason, refusalOf } from "./voice-refusal";
 type CorpusPreview = components["schemas"]["VoiceCorpusPreviewResult"];
 type CorpusSummary = components["schemas"]["VoiceCorpusSummary"];
 type IngestStats = components["schemas"]["VoiceIngestStats"];
+type CorpusSource = components["schemas"]["VoiceCorpusSource"];
 type IngestRequest = components["schemas"]["IngestVoiceCorpusSourceRequest"];
 
 // The file extensions that are conversational by name. A CLIENT-side rule,
@@ -197,6 +199,8 @@ export type IntakeOutcome =
       kind: "ingested";
       ref: string;
       label: string;
+      /** The row the write landed in, whose id and version a removal names. */
+      source: CorpusSource;
       stats: IngestStats;
       summary: CorpusSummary;
       /** Kept-of-total is worth showing only where filtering discarded turns. */
@@ -338,6 +342,7 @@ async function ingest(
     kind: "ingested",
     ref: body.source_ref,
     label,
+    source: data.source,
     stats: data.ingest_stats,
     summary: data.summary,
     transcript,
@@ -465,4 +470,37 @@ export function intakeTranscript(
     true,
     onIssue,
   );
+}
+
+// Several pastes share one prefix, so each label carries its own opening
+// words; the cap keeps a paste with no spaces from filling the row.
+const PASTE_LABEL_WORDS = 6;
+const PASTE_LABEL_CHARS = 60;
+
+/** The label a pasted text is listed under: the prefix, then its first words. */
+export function pasteLabel(prefix: string, text: string): string {
+  const words = text.split(/\s+/).filter(Boolean);
+  const start = words.slice(0, PASTE_LABEL_WORDS).join(" ");
+  const cut = clamp(start, PASTE_LABEL_CHARS);
+  const more = words.length > PASTE_LABEL_WORDS || cut !== start;
+  return `${prefix} – ${cut}${more ? "…" : ""}`;
+}
+
+/** Removes one sample, then reads the corpus meter as it stands without it. */
+export async function removeSource(
+  sourceId: string,
+  version: number,
+): Promise<CorpusSummary> {
+  const profileId = await ensureProfileId();
+  unwrap(
+    await api.DELETE("/voice-profiles/{id}/sources/{sourceId}", {
+      params: { path: { id: profileId, sourceId }, ...ifMatch(version) },
+    }),
+  );
+  const after = unwrap(
+    await api.GET("/voice-profiles/{id}/sources", {
+      params: { path: { id: profileId } },
+    }),
+  );
+  return after.summary;
 }

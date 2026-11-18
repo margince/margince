@@ -128,6 +128,8 @@ type StubOptions = {
   voiceProfiles?: { id: string }[];
   voiceVersions?: { profile_version: number; status: string }[];
   corpusWords?: number;
+  /** GET .../sources rows: the samples behind `corpusWords`. */
+  sources?: { id: string; source_label: string; word_count: number }[];
   /** Words a live paste ingest (POST .../sources) adds on top of
    * `corpusWords`; every GET afterward reports the grown total. */
   pasteWords?: number;
@@ -277,6 +279,7 @@ function stubApi(options: StubOptions = {}) {
         const added = options.pasteWords ?? 0;
         wordsNow += added;
         return jsonResponse({
+          source: { id: "src-new", version: 1 },
           ingest_stats: { kept_words: added, input_words: added },
           summary: {
             total_words: wordsNow,
@@ -290,7 +293,12 @@ function stubApi(options: StubOptions = {}) {
       }
       if (path.includes("/voice-profiles/") && path.endsWith("/sources")) {
         return jsonResponse({
-          data: [],
+          data: (options.sources ?? []).map((row) => ({
+            ...row,
+            source_ref: `voice:upload:${row.id}`,
+            included: true,
+            version: 1,
+          })),
           summary: {
             total_words: wordsNow,
             target_words: 30000,
@@ -396,6 +404,25 @@ describe("restore into the conversational shell", () => {
     // now, and it reads the server's real total rather than starting at 0.
     expect(
       await screen.findByText("1,240 words", { exact: false }),
+    ).toBeTruthy();
+  });
+
+  it("a reload lists the samples the meter counts, each one removable", async () => {
+    stubApi({
+      state: stateRow({ step: "voice" }),
+      company: savedProfile,
+      voiceProfiles: [{ id: "018f3a1b-0000-7000-8000-0000000000f1" }],
+      corpusWords: 701,
+      sources: [
+        { id: "s1", source_label: "offer.pdf", word_count: 350 },
+        { id: "s2", source_label: "notes.txt", word_count: 351 },
+      ],
+    });
+    render(<OnboardingScreen />);
+
+    expect(await screen.findByText("offer.pdf")).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Remove notes.txt" }),
     ).toBeTruthy();
   });
 
@@ -589,10 +616,8 @@ describe("restore into the conversational shell", () => {
     ).toBeTruthy();
   });
 
-  // Skipping the voice act lands directly on the merged connect screen — mail
-  // and LinkedIn together, no separate network-ask act to pass through — and
-  // checkpoints step "connect" with the skip in one write: arriving here
-  // already shows everything, so there is nothing a reload could strand.
+  // The skip and step "connect" are one write, so a reload after skipping
+  // lands on the connect screen, mail and LinkedIn together.
   it("skipping the voice act lands on the merged connect screen and checkpoints it on arrival", async () => {
     const calls = stubApi({
       state: stateRow({ step: "voice" }),

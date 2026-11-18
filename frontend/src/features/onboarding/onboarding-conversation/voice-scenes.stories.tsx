@@ -53,6 +53,8 @@ function summary(totalWords: number, sources: number): CorpusSummary {
 const MANIFEST: readonly CorpusManifestEntry[] = [
   {
     ref: "src-1",
+    id: "src-1",
+    version: 1,
     label: "Sent mail, last quarter.mbox",
     keptWords: 2840,
     inputWords: 2840,
@@ -66,6 +68,8 @@ const MANIFEST: readonly CorpusManifestEntry[] = [
   },
   {
     ref: "src-2",
+    id: "src-2",
+    version: 1,
     label: "Kickoff call, Brandt Automotive.vtt",
     keptWords: 1380,
     inputWords: 4210,
@@ -104,6 +108,8 @@ function Collect({
         fileRef={fileRef}
         onFiles={() => {}}
         onAddPaste={() => {}}
+        onRemove={() => {}}
+        removing={null}
         onBuild={() => {}}
         onSkip={() => {}}
         canBuild={canBuild}

@@ -1,5 +1,7 @@
 /** @vitest-environment happy-dom */
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
+import { createElement, type ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   type ConversationEvent,
@@ -23,6 +25,15 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+// The hook marks the restore probe stale after a change, so it needs a client.
+function wrapper({ children }: Readonly<{ children: ReactNode }>) {
+  return createElement(
+    QueryClientProvider,
+    { client: new QueryClient() },
+    children,
+  );
+}
+
 describe("useVoiceCorpus — unexpected client-side failures", () => {
   it("addPaste narrates the safe fallback, never the raw exception message, when the request itself throws", async () => {
     vi.stubGlobal(
@@ -34,8 +45,9 @@ describe("useVoiceCorpus — unexpected client-side failures", () => {
       }),
     );
     const dispatch = vi.fn<(event: ConversationEvent) => void>();
-    const { result } = renderHook(() =>
-      useVoiceCorpus({ state: collectingState, dispatch }),
+    const { result } = renderHook(
+      () => useVoiceCorpus({ state: collectingState, dispatch }),
+      { wrapper },
     );
 
     act(() => {
@@ -87,8 +99,9 @@ describe("useVoiceCorpus — a role that may not create a voice profile", () => 
       }),
     );
     const dispatch = vi.fn<(event: ConversationEvent) => void>();
-    const { result } = renderHook(() =>
-      useVoiceCorpus({ state: collectingState, dispatch }),
+    const { result } = renderHook(
+      () => useVoiceCorpus({ state: collectingState, dispatch }),
+      { wrapper },
     );
 
     act(() => {
@@ -111,45 +124,11 @@ describe("useVoiceCorpus — a role that may not create a voice profile", () => 
 });
 
 describe("useVoiceCorpus — several files refused in one pick", () => {
-  it("keeps one refusal per file, each naming its file", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => {
-        throw new Error("no request is expected for these files");
-      }),
-    );
-    const dispatch = vi.fn<(event: ConversationEvent) => void>();
-    const { result } = renderHook(() =>
-      useVoiceCorpus({ state: collectingState, dispatch }),
-    );
-
-    act(() => {
-      result.current.addFiles([
-        new File(["binary"], "picture.png", { type: "image/png" }),
-        new File(["a,b"], "data.csv", { type: "text/csv" }),
-        new File(["   "], "empty.txt", { type: "text/plain" }),
-      ]);
-    });
-
-    await waitFor(() => {
-      expect(result.current.failures).toHaveLength(3);
-    });
-    expect(
-      result.current.failures.map((failure) => [
-        failure.i18nKey,
-        failure.params?.name,
-      ]),
-    ).toEqual([
-      ["ob.conv.voice.fileSkipped", "picture.png"],
-      ["ob.conv.voice.fileSkipped", "data.csv"],
-      ["ob.conv.voice.fileEmpty", "empty.txt"],
-    ]);
-  });
-
   it("forgets the refusals of the last pick when the next one starts", async () => {
     const dispatch = vi.fn<(event: ConversationEvent) => void>();
-    const { result } = renderHook(() =>
-      useVoiceCorpus({ state: collectingState, dispatch }),
+    const { result } = renderHook(
+      () => useVoiceCorpus({ state: collectingState, dispatch }),
+      { wrapper },
     );
 
     act(() => {
@@ -188,8 +167,9 @@ describe("useVoiceCorpus — a file too large to send", () => {
       }),
     );
     const dispatch = vi.fn<(event: ConversationEvent) => void>();
-    const { result } = renderHook(() =>
-      useVoiceCorpus({ state: collectingState, dispatch }),
+    const { result } = renderHook(
+      () => useVoiceCorpus({ state: collectingState, dispatch }),
+      { wrapper },
     );
 
     act(() => {

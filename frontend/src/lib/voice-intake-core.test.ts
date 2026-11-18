@@ -5,6 +5,7 @@ import {
   intakePaste,
   intakeTranscript,
   intakeUpload,
+  pasteLabel,
   routePreview,
   sourceRef,
 } from "./voice-intake-core";
@@ -492,5 +493,21 @@ describe("source_ref, against rows written by earlier versions", () => {
     expect(
       sourceRef("upload", "letter.txt", "words", new Set([other])),
     ).not.toBe(other);
+  });
+});
+
+describe("the label a pasted text is listed under", () => {
+  it("tells two pastes apart by their opening words", () => {
+    expect(pasteLabel("Pasted text", "Hello from Zoe.")).toBe(
+      "Pasted text – Hello from Zoe.",
+    );
+    expect(
+      pasteLabel("Pasted text", "One two three four five six seven eight"),
+    ).toBe("Pasted text – One two three four five six…");
+  });
+
+  it("caps a text with no spaces instead of listing all of it", () => {
+    const label = pasteLabel("Pasted text", "x".repeat(500));
+    expect(label).toBe(`Pasted text – ${"x".repeat(60)}…`);
   });
 });

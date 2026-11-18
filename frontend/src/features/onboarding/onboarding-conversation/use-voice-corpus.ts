@@ -1,11 +1,12 @@
+import { useQueryClient } from "@tanstack/react-query";
 import type { Dispatch } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { components } from "../../../api/schema";
 import { formatBytes, formatNumber } from "../../../format/format";
 import type { Locale } from "../../../i18n";
-import { useLocale } from "../../../i18n";
+import { useLocale, useT } from "../../../i18n";
 import type { MessageKey } from "../../../i18n/en";
-import { problemMessage } from "../../../lib/problem";
+import { problemMessage, problemMessageOf } from "../../../lib/problem";
 import { problemCode } from "../../../lib/problembody";
 import { PROBLEM_CODE_COPY } from "../../../lib/problemcodecopy";
 import { isAcceptedCorpusFile } from "../../../lib/voice-corpus-file";
@@ -14,6 +15,8 @@ import {
   intakeFile,
   intakePaste,
   intakeTranscript,
+  pasteLabel,
+  removeSource,
   sourceRef,
 } from "../../../lib/voice-intake-core";
 import {
@@ -25,6 +28,7 @@ import type {
   ConversationState,
 } from "./conversation-machine";
 import { diffCorpus, useNarrationQueue } from "./narration";
+import { VOICE_PROBE_KEY } from "./restore";
 import { excerptLines } from "./voice-excerpts";
 
 // The voice corpus of the conversational shell as one hook: intake (files
@@ -38,9 +42,13 @@ import { excerptLines } from "./voice-excerpts";
 type CorpusPreview = components["schemas"]["VoiceCorpusPreviewResult"];
 type CorpusSummary = components["schemas"]["VoiceCorpusSummary"];
 type IngestStats = components["schemas"]["VoiceIngestStats"];
+type CorpusSource = components["schemas"]["VoiceCorpusSource"];
 
 export type CorpusManifestEntry = Readonly<{
   ref: string;
+  /** The server row and its version, which a removal names. */
+  id: string;
+  version: number;
   label: string;
   /** Server-counted words that survived the speaker filter. */
   keptWords: number;
@@ -76,7 +84,25 @@ type UseVoiceCorpusArgs = Readonly<{
   /** The restore probe's server meter, so a resumed session's word count
    * (and the build gate) is honest before the first new ingest. */
   initialSummary?: CorpusSummary | null;
+  /** The restore probe's samples, so the list a reload shows matches the
+   * meter. Only included rows: an excluded one is not in the count. */
+  initialSources?: readonly CorpusSource[];
 }>;
+
+// A stored row carries no pre-filter count and no text. It lists as its kept
+// words alone and lends no lines to the distilling panel.
+function storedEntry(source: CorpusSource): CorpusManifestEntry {
+  return {
+    ref: source.source_ref,
+    id: source.id,
+    version: source.version,
+    label: source.source_label,
+    keptWords: source.word_count,
+    inputWords: source.word_count,
+    transcript: false,
+    lines: [],
+  };
+}
 
 const refusalKeys: Record<RefusalReason, MessageKey> = {
   unattributed: "ob.conv.voice.refusalUnattributed",
@@ -132,10 +158,16 @@ export function useVoiceCorpus({
   state,
   dispatch,
   initialSummary = null,
+  initialSources = [],
 }: UseVoiceCorpusArgs) {
   const { locale } = useLocale();
+  const t = useT();
+  const queryClient = useQueryClient();
   const [summary, setSummary] = useState<CorpusSummary | null>(initialSummary);
-  const [manifest, setManifest] = useState<readonly CorpusManifestEntry[]>([]);
+  const [manifest, setManifest] = useState<readonly CorpusManifestEntry[]>(() =>
+    initialSources.filter((source) => source.included).map(storedEntry),
+  );
+  const [removing, setRemoving] = useState<string | null>(null);
   const [asks, setAsks] = useState<readonly SpeakerAsk[]>([]);
   const [probesInFlight, setProbesInFlight] = useState(0);
   const [failures, setFailures] = useState<readonly VoiceIngestFailure[]>([]);
@@ -226,6 +258,7 @@ export function useVoiceCorpus({
         ...prev.filter((existing) => existing.ref !== entry.ref),
         entry,
       ]);
+      void queryClient.invalidateQueries({ queryKey: VOICE_PROBE_KEY });
       say(`react:${entry.ref}`, reactionKey, {
         kept: formatNumber(stats.kept_words, locale),
         total: formatNumber(stats.input_words, locale),
@@ -239,7 +272,7 @@ export function useVoiceCorpus({
       summaryRef.current = next;
       setSummary(next);
     },
-    [locale, queue, say],
+    [locale, queue, say, queryClient],
   );
 
   // One place the conversation learns what an intake attempt ended as: the
@@ -281,6 +314,8 @@ export function useVoiceCorpus({
         seq,
         {
           ref: outcome.ref,
+          id: outcome.source.id,
+          version: outcome.source.version,
           label: outcome.label,
           keptWords: outcome.stats.kept_words,
           inputWords: outcome.stats.input_words,
@@ -365,9 +400,12 @@ export function useVoiceCorpus({
     [dispatch, runIntake, skip],
   );
 
+  // The key stays on the bare prefix, so re-pasting a text updates its row.
+  // Only the label the list shows names the opening words.
   const addPaste = useCallback(
-    (text: string, label: string) => {
-      const ref = sourceRef("paste", label, text);
+    (text: string, prefix: string) => {
+      const ref = sourceRef("paste", prefix, text);
+      const label = pasteLabel(prefix, text);
       setFailures([]);
       dispatch({ type: "UPLOAD_ADDED", id: ref, name: label });
       runIntake(
@@ -440,9 +478,51 @@ export function useVoiceCorpus({
     [asks, runIntake],
   );
 
+  // The removal's summary is the newest corpus there is, so it outranks any
+  // ingest issued before it, as a later ingest would.
+  const removeSample = useCallback(
+    (entry: CorpusManifestEntry) => {
+      setFailures([]);
+      setRemoving(entry.ref);
+      ingestSeq.current += 1;
+      const seq = ingestSeq.current;
+      removeSource(entry.id, entry.version)
+        .then((next) => {
+          if (!mounted.current) {
+            return;
+          }
+          setManifest((prev) => prev.filter((row) => row.ref !== entry.ref));
+          if (seq > appliedSummarySeq.current) {
+            appliedSummarySeq.current = seq;
+            summaryRef.current = next;
+            setSummary(next);
+          }
+          void queryClient.invalidateQueries({ queryKey: VOICE_PROBE_KEY });
+        })
+        .catch((err: unknown) => {
+          if (mounted.current) {
+            noteFailure({
+              id: `remove:${entry.ref}`,
+              i18nKey: "ob.conv.voice.removeFailed",
+              params: { name: entry.label, detail: problemMessageOf(err, t) },
+            });
+          }
+        })
+        .finally(() => {
+          if (mounted.current) {
+            setRemoving(null);
+          }
+        });
+    },
+    [noteFailure, queryClient, t],
+  );
+
   return {
     summary,
     manifest,
+    removeSample,
+    /** The source_ref of the sample being removed, or null. */
+    removing,
     addFiles,
     addPaste,
     answerSpeaker,
