@@ -55,7 +55,7 @@ func TestMailFooterPreviewMatchesDeliveryWithoutCreatingLinks(t *testing.T) {
 			if preview.OffersUnsubscribe != tc.unsubscribe || len(preview.Disclosures) != 1 {
 				t.Fatalf("footer preview: %+v", preview)
 			}
-			delivered, err := store.deliverability(ctx, "Message", "Subject", []string{"buyer@example.test"}, surfaceFor(input.Context, input.MarketingPurpose, input.ConsentPurpose), ids.Nil, "")
+			delivered, err := store.deliverability(ctx, "Message", "Subject", []string{"buyer@example.test"}, nil, surfaceFor(input.Context, input.MarketingPurpose, input.ConsentPurpose), ids.Nil, "")
 			if err != nil {
 				t.Fatal(err)
 			}

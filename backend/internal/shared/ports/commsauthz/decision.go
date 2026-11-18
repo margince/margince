@@ -101,6 +101,10 @@ type Evidence struct {
 	// sets it at staging from the Authored* request fields; transmit reads
 	// the staged value, because the delivery keeps no authored text.
 	AuthoredOffer bool
+	// RecipientCountries are the countries the sender stated for this
+	// message's recipients. On a decision it holds that recipient's entry
+	// alone, which is what staging stores and transmit reads back.
+	RecipientCountries []CountryOverride
 }
 
 // Request is one message put to the engine.
@@ -186,6 +190,9 @@ type Decision struct {
 	ReasonCode  string
 	Basis       Basis
 	Evidence    Evidence
+	// Country is the recipient's country whose marketing rules judged this
+	// decision, empty for the baseline.
+	Country     string
 	Suppression string
 	Mode        Mode
 	// LegacyVerdict is what the old purpose gate said, so a disagreement is

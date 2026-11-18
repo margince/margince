@@ -823,6 +823,7 @@ var Declared = map[string][]string{
 	"POST /v1/dedupe/contact-cases/{contact_id}/merge":                         {},
 	"POST /v1/dedupe/contact-cases/{contact_id}/preview":                       {},
 	"POST /v1/emails":                                                          {},
+	"POST /v1/emails/recipient-countries":                                      {},
 	"POST /v1/emails:preview":                                                  {},
 	"POST /v1/emails:sign-off":                                                 {},
 	"POST /v1/embeddings/reindex":                                              {},

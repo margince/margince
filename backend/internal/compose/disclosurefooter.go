@@ -20,9 +20,11 @@ type disclosureAdapter struct {
 
 // DisclosuresFor keeps pack resolution in consent and rendering in activities.
 func (a disclosureAdapter) DisclosuresFor(
-	ctx context.Context, category string, recipients []string, entity ids.UUID, language string,
+	ctx context.Context, category string, recipients []string, countries []commsauthz.CountryOverride, entity ids.UUID, language string,
 ) ([]activities.DisclosureLine, error) {
-	owed, err := a.store.Disclosures(ctx, commsauthz.Category(category), recipients, entity, language)
+	owed, err := a.store.Disclosures(ctx, consent.DisclosureQuery{
+		Category: commsauthz.Category(category), Recipients: recipients, Countries: countries, Entity: entity, Language: language,
+	})
 	if err != nil {
 		return nil, err
 	}

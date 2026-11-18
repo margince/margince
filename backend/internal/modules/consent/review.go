@@ -89,6 +89,9 @@ type RefusedRecipient struct {
 	// PurposeID is the purpose the SEND resolved to, nil for a broad send —
 	// and nil, additively, for a snapshot written before this field existed.
 	PurposeID *ids.UUID `json:"purpose_id,omitempty"`
+	// Country is the recipient's country the refusal was judged under, empty
+	// for the baseline, so a confirmation never outlives a changed country.
+	Country string `json:"country,omitempty"`
 	// CanBeOverruled is the preview's own answer for this refusal. It is told
 	// to the sender and never stored: a stored copy would outlive the rule.
 	CanBeOverruled bool `json:"-"`
@@ -316,6 +319,7 @@ func refusedRecipientOf(d commsauthz.Decision) RefusedRecipient {
 		Category:      string(d.Resolved),
 		Requested:     string(d.Requested),
 		PurposeID:     d.PurposeID,
+		Country:       d.Country,
 		DealID:        zeroUUIDAsNull(d.Evidence.DealID),
 		SendingEntity: zeroUUIDAsNull(d.SendingEntity),
 		// The same answer the preview sends, so the composer picks the same

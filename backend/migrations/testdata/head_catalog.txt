@@ -7525,6 +7525,7 @@ public.mail_draft.mail_draft_pkey PRIMARY KEY (id)
 public.mail_draft.mail_draft_schedule_pair CHECK (((scheduled_at IS NULL) = (scheduled_tz IS NULL)))
 public.mail_draft.mail_draft_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.mail_draft.override_explanation text gen=- def=-
+public.mail_draft.recipient_countries jsonb gen=- def=-
 public.mail_draft.scheduled_at timestamp with time zone gen=- def=-
 public.mail_draft.scheduled_tz text gen=- def=-
 public.mail_draft.scheduled_wall timestamp without time zone gen=- def=-

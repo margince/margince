@@ -34,7 +34,7 @@ func (s *Store) PreviewMailFooter(ctx context.Context, origin SendOrigin, links 
 		return MailFooterPreview{}, err
 	}
 	lang := s.footerLanguage(ctx, in.Body, in.Subject)
-	owed, err := s.disclosuresFor(ctx, string(surface.disclosureCategory()), in.Recipients, in.SendingEntity, string(lang))
+	owed, err := s.disclosuresFor(ctx, string(surface.disclosureCategory()), in.Recipients, in.Evidence.RecipientCountries, in.SendingEntity, string(lang))
 	if err != nil {
 		return MailFooterPreview{}, err
 	}

@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/salutation"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 )
@@ -54,7 +55,7 @@ type DraftFinding struct {
 
 // CheckAdvertisingDraft answers what an advertising draft to recipients does
 // not meet. Recipients whose country no pack covers add nothing.
-func (s *Store) CheckAdvertisingDraft(ctx context.Context, recipients []string, subject, body string) ([]DraftFinding, error) {
+func (s *Store) CheckAdvertisingDraft(ctx context.Context, recipients []string, countries []commsauthz.CountryOverride, subject, body string) ([]DraftFinding, error) {
 	// The grant the send needs: the answer is about a message this caller is
 	// writing, and it reads each recipient's country to give it.
 	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
@@ -65,7 +66,7 @@ func (s *Store) CheckAdvertisingDraft(ctx context.Context, recipients []string, 
 		// One check per pack, however many recipients share it.
 		var codes []jurisdiction.Code
 		for _, address := range recipients {
-			country, err := recipientCountryOf(ctx, tx, connector.Recipient{Email: address})
+			country, err := recipientCountryStated(ctx, tx, connector.Recipient{Email: address}, countries)
 			if err != nil {
 				return err
 			}

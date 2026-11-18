@@ -274,6 +274,10 @@ func (g *Gate) decideOneIn(ctx context.Context, tx pgx.Tx, r connector.Recipient
 	// Not an id, so carried past the EvidenceChecked gate: transmit must judge
 	// the same words staging judged, whichever arm resolved the message.
 	decision.Evidence.AuthoredOffer = req.Evidence.AuthoredOffer
+	// This recipient's own statement only: a row never names another
+	// recipient's address.
+	decision.Evidence.RecipientCountries = commsauthz.CountryOverridesFor(req.Evidence.RecipientCountries, r.Email)
+	decision.Country = string(country.Code)
 	if err != nil {
 		return decision, err
 	}

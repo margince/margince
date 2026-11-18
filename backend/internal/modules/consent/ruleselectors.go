@@ -11,9 +11,9 @@ package consent
 // deadlines) follows the country of the sending legal entity. Each recipient of
 // a message is put to the marketing selector on their own.
 //
-// A recipient's country comes from the record and nothing else. An email
-// domain, the sender's country or the most permissive pack never stands in
-// for it. A recipient with no usable country, or one whose country no pack
+// A recipient's country comes from the record, unless the sender stated or
+// cleared it for this one message. An email domain, the sender's country or
+// the most permissive pack never stands in for it. A recipient with no usable country, or one whose country no pack
 // covers, gets the baseline: no pack obligations. Marketing still needs
 // consent, which the verdict asks everywhere. The send path adds the
 // unsubscribe surface whatever the country.
@@ -40,6 +40,11 @@ type CountrySource string
 
 // The sources, in the order the selector asks them.
 const (
+	// CountryFromSender is a country the sender stated for this message.
+	CountryFromSender CountrySource = "sender_override"
+	// CountryClearedBySender is a country the sender removed for this message:
+	// the baseline, even when the record states one.
+	CountryClearedBySender CountrySource = "sender_cleared"
 	// CountryFromContactAddress is the contact's own postal address.
 	CountryFromContactAddress CountrySource = "contact_address"
 	// CountryFromEmployerAddress is the address of the contact's current
@@ -49,6 +54,35 @@ const (
 	// under.
 	CountryFromLeadCompany CountrySource = "lead_company_address"
 )
+
+// statedCountry is the sender's statement about one recipient, if any. A
+// stated code that is not a country is no statement, so the record answers.
+func statedCountry(overrides []commsauthz.CountryOverride, r connector.Recipient) (RecipientCountry, bool) {
+	if r.Channel != nil {
+		return RecipientCountry{}, false
+	}
+	stated, ok := commsauthz.CountryOverrideFor(overrides, r.Email)
+	if !ok {
+		return RecipientCountry{}, false
+	}
+	if stated.Cleared() {
+		return RecipientCountry{Source: CountryClearedBySender}, true
+	}
+	code := jurisdiction.Code(strings.ToLower(strings.TrimSpace(stated.Country)))
+	if code.Validate() != nil {
+		return RecipientCountry{}, false
+	}
+	return RecipientCountry{Code: code, Source: CountryFromSender}, true
+}
+
+// recipientCountryStated is the marketing selector for an address on a
+// message: the sender's statement first, then the record.
+func recipientCountryStated(ctx context.Context, tx pgx.Tx, r connector.Recipient, overrides []commsauthz.CountryOverride) (RecipientCountry, error) {
+	if stated, ok := statedCountry(overrides, r); ok {
+		return stated, nil
+	}
+	return recipientCountryOf(ctx, tx, r)
+}
 
 // RecipientCountry is the marketing selector's answer for one recipient. The
 // zero value means the record states no usable country.

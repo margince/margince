@@ -10,6 +10,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 // Adapter answers activities' draft checks from consent's packs.
@@ -19,9 +20,9 @@ type Adapter struct {
 
 // CheckAdvertisingDraft answers what the draft does not meet.
 func (a Adapter) CheckAdvertisingDraft(
-	ctx context.Context, recipients []string, subject, body string,
+	ctx context.Context, recipients []string, countries []commsauthz.CountryOverride, subject, body string,
 ) ([]activities.DraftContentFinding, error) {
-	found, err := a.Store.CheckAdvertisingDraft(ctx, recipients, subject, body)
+	found, err := a.Store.CheckAdvertisingDraft(ctx, recipients, countries, subject, body)
 	if err != nil {
 		return nil, err
 	}
