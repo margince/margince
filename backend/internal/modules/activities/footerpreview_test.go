@@ -18,9 +18,9 @@ import (
 
 type previewUnsubscribeLinker struct{ calls, manageCalls int }
 
-func (l *previewUnsubscribeLinker) UnsubscribeToken(context.Context, string, string) (string, bool, error) {
+func (l *previewUnsubscribeLinker) UnsubscribeToken(_ context.Context, _, purposeKey string) (string, string, bool, error) {
 	l.calls++
-	return "fixture-token", true, nil
+	return "fixture-token", purposeKey, true, nil
 }
 
 func (l *previewUnsubscribeLinker) ManageToken(context.Context, string) (string, bool, error) {
