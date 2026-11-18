@@ -29,7 +29,6 @@ import (
 	"maps"
 	"slices"
 	"strings"
-	"sync"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -52,67 +51,38 @@ type FailureDetail struct {
 	Remedy string
 }
 
-// composedClasses is this process's extension failure vocabulary, keyed by River
-// kind and then by sentence.
+// composedFailureClasses validates one composition's failure vocabulary. It
+// answers it keyed by kind and then by sentence, and in declaration order.
 //
-// KEYED BY KIND because two units are entitled to the same class token: a
-// provider being unreachable is one failure with one honest name, and the second
-// unit to want it should not have to invent a worse one. The kind on the row says
-// which unit's vocabulary to read, so the tokens never have to be globally
-// unique — only unique within a kind, which is a rule about one unit's own
-// declaration and so a rule that unit can keep by itself.
-//
-// KEYED THEN BY SENTENCE because the sentence is what the row stores, and a read
-// starts from the row. See the file header for why the wire carries no class.
-//
-// Written once at boot and read on every failure list; the mutex guards that
-// ordering across the boot/serve boundary, as composed.go's does for kinds.
-var composedClasses struct {
-	mu     sync.RWMutex
-	byKind map[string]map[string]extension.FailureClass
-	// declared holds each kind's classes in DECLARATION ORDER, which the
-	// sentence-keyed table cannot: a map has no order, and the boot report reads
-	// this list to say what a unit declared in the order its author wrote it.
-	declared map[string][]extension.FailureClass
-}
-
-// RegisterComposedFailureClasses records the failure vocabulary of this
-// installation's composed extension jobs, one entry per River kind. The
-// composition root calls it once at boot.
-//
-// Validate-then-apply and REPLACE-rather-than-merge, for the reasons
-// RegisterComposed states for kinds: a set with one bad entry registers none, so
-// a refused boot cannot leave half a unit's vocabulary declared, and a process
-// has one composed set settled at boot rather than a table a later caller can
-// widen.
-func RegisterComposedFailureClasses(byKind map[string][]extension.FailureClass) error {
+// Keyed by kind because two units may share one class token. The kind on the
+// row says which unit's vocabulary to read. Keyed then by sentence because the
+// sentence is what the row stores, and a read starts from the row.
+func composedFailureClasses(byKind map[string][]extension.FailureClass) (
+	map[string]map[string]extension.FailureClass, map[string][]extension.FailureClass, error,
+) {
 	table := make(map[string]map[string]extension.FailureClass, len(byKind))
 	ordered := make(map[string][]extension.FailureClass, len(byKind))
 	for kind, classes := range byKind {
 		if !strings.HasPrefix(kind, extension.NamespacePrefix) {
-			return fmt.Errorf("jobs: %q is not an extension kind — the composed failure vocabulary declares the %s namespace and nothing else", kind, extension.NamespacePrefix)
+			return nil, nil, fmt.Errorf("jobs: %q is not an extension kind — the composed failure vocabulary declares the %s namespace and nothing else", kind, extension.NamespacePrefix)
 		}
 		if err := extension.ValidateFailureClasses(classes); err != nil {
-			return fmt.Errorf("jobs: kind %q: %w", kind, err)
+			return nil, nil, fmt.Errorf("jobs: kind %q: %w", kind, err)
 		}
 		bySentence := make(map[string]extension.FailureClass, len(classes))
 		for _, c := range classes {
 			if err := refuseCoreCollision(kind, c); err != nil {
-				return err
+				return nil, nil, err
 			}
 			if prior, dup := bySentence[c.Sentence]; dup {
-				return fmt.Errorf("jobs: kind %q declares one sentence for both %q and %q — the stored row carries the sentence alone, so two classes sharing one would be indistinguishable on read", kind, prior.Class, c.Class)
+				return nil, nil, fmt.Errorf("jobs: kind %q declares one sentence for both %q and %q — the stored row carries the sentence alone, so two classes sharing one would be indistinguishable on read", kind, prior.Class, c.Class)
 			}
 			bySentence[c.Sentence] = c
 		}
 		table[kind] = bySentence
 		ordered[kind] = slices.Clone(classes)
 	}
-	composedClasses.mu.Lock()
-	defer composedClasses.mu.Unlock()
-	composedClasses.byKind = table
-	composedClasses.declared = ordered
-	return nil
+	return table, ordered, nil
 }
 
 // refuseCoreCollision keeps the composed half from IMPERSONATING the core half.
@@ -158,25 +128,18 @@ func refuseCoreCollision(kind string, c extension.FailureClass) error {
 	return nil
 }
 
-// ComposedFailureClasses names the classes THIS process declares for one kind,
+// FailureClasses names the classes this composition declares for one kind,
 // in declaration order, and is empty for a kind that declared none.
 //
-// It exists for the boot report and the census, which answer what an
-// installation composed — the same question ComposedKinds answers for kinds. A
-// caller gets a copy of the values; the table is this process's declaration and
-// is not editable from outside the boot that settled it.
-func ComposedFailureClasses(kind string) []extension.FailureClass {
-	composedClasses.mu.RLock()
-	defer composedClasses.mu.RUnlock()
-	return slices.Clone(composedClasses.declared[kind])
+// A caller gets a copy, so the composition's table stays as the boot settled it.
+func (c Composed) FailureClasses(kind string) []extension.FailureClass {
+	return slices.Clone(c.declared[kind])
 }
 
-// ComposedFailureKinds names every kind THIS process declared a vocabulary for,
+// FailureKinds names every kind this composition declared a vocabulary for,
 // in kind order.
-func ComposedFailureKinds() []string {
-	composedClasses.mu.RLock()
-	defer composedClasses.mu.RUnlock()
-	return slices.Sorted(maps.Keys(composedClasses.byKind))
+func (c Composed) FailureKinds() []string {
+	return slices.Sorted(maps.Keys(c.classes))
 }
 
 // registeredFailureClass answers the class this installation registered for a
@@ -193,10 +156,8 @@ func ComposedFailureKinds() []string {
 // It is unexported because it answers a question only the write path in this
 // package asks. A reader asks VettedFailure, which starts from a stored string
 // rather than from a value a worker still holds.
-func registeredFailureClass(kind string, class extension.FailureClass) (extension.FailureClass, bool) {
-	composedClasses.mu.RLock()
-	defer composedClasses.mu.RUnlock()
-	registered, ok := composedClasses.byKind[kind][class.Sentence]
+func (c Composed) registeredFailureClass(kind string, class extension.FailureClass) (extension.FailureClass, bool) {
+	registered, ok := c.classes[kind][class.Sentence]
 	if !ok || registered != class {
 		return extension.FailureClass{}, false
 	}
@@ -217,7 +178,7 @@ func registeredFailureClass(kind string, class extension.FailureClass) (extensio
 // raw cause may have EMBEDDED a vetted sentence, and matching on the part that
 // happens to line up would carry the rest of that cause — the address, the record
 // — onto the wire on the strength of it.
-func VettedFailure(kind, stored string) (FailureDetail, bool) {
+func (c Composed) VettedFailure(kind, stored string) (FailureDetail, bool) {
 	if stored == "" {
 		return FailureDetail{}, false
 	}
@@ -234,13 +195,17 @@ func VettedFailure(kind, stored string) (FailureDetail, bool) {
 			return FailureDetail{Class: technical.class, Sentence: technical.sentence, Remedy: technical.remedy}, true
 		}
 	}
-	composedClasses.mu.RLock()
-	defer composedClasses.mu.RUnlock()
-	c, ok := composedClasses.byKind[kind][stored]
+	class, ok := c.classes[kind][stored]
 	if !ok {
 		return FailureDetail{}, false
 	}
-	return FailureDetail{Class: c.Class, Sentence: c.Sentence, Remedy: c.Remedy}, true
+	return FailureDetail{Class: class.Class, Sentence: class.Sentence, Remedy: class.Remedy}, true
+}
+
+// VettedFailure is Composed.VettedFailure over the core vocabulary alone, for a
+// reader whose kinds are all core.
+func VettedFailure(kind, stored string) (FailureDetail, bool) {
+	return Composed{}.VettedFailure(kind, stored)
 }
 
 // InLanguage retains the vetted failure classification across reader languages.

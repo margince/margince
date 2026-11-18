@@ -76,6 +76,14 @@ func RegisterExtensions(exts []extension.Extension, verbs []extension.Verb, jobD
 	if err != nil {
 		return nil, err
 	}
+	// The composed job kinds and their failure vocabulary, settled before any
+	// runner is built. The runner reads a composed kind's wall clock, queue,
+	// attempt cap and totality from this table. A unit's class that collides
+	// with a core one refuses the set here.
+	if composed.jobTable, err = jobs.NewComposed(
+		composedJobSpecs(composedSet), composedFailureClasses(exts, composedSet)); err != nil {
+		return nil, err
+	}
 	// The privacy registry and the tables the merge and the erasure reach,
 	// refused whole before anything is applied.
 	data, err := extensionprivacy.Registry(exts)
@@ -103,32 +111,6 @@ func RegisterExtensions(exts []extension.Extension, verbs []extension.Verb, jobD
 		compliancedocs.Register(e.Documents)
 	}
 	registerExtensionKinds(exts)
-	// Two fallible apply steps follow the packs, the composed job kinds and
-	// their failure vocabulary. A failure in either leaves the packs applied
-	// and the boot aborting, and an aborting boot serves nothing either way.
-	// The composed job kinds join the declaration table before any runner is
-	// built, because everything the runner then asks about them — the wall
-	// clock Govern hands River, the queue a fan-out child lands on, the
-	// attempt cap, the totality check that refuses an undeclared kind — is
-	// answered by jobs.SpecFor. Registering the workers first would mean
-	// registering them under the zero Spec, which is River's silent minute.
-	if err := jobs.RegisterComposed(composedJobSpecs(composedSet)); err != nil {
-		return nil, err
-	}
-	// The failure VOCABULARY follows the kinds, and for the same reason: the
-	// read that turns a stored sentence back into a class and a remedy asks
-	// jobs.VettedFailure by kind, and a kind with no vocabulary registered
-	// answers "unvettable" for a failure the unit classified perfectly well.
-	// Registering it after the specs keeps one boot order for both halves of
-	// what a composed kind is, rather than two that could drift.
-	//
-	// It can still refuse the set — a unit's class may collide with a core
-	// one — so the error is handled here. A boot that could not settle the
-	// vocabulary must abort rather than serve a surface that silently
-	// declines to classify.
-	if err := jobs.RegisterComposedFailureClasses(composedFailureClasses(exts, composedSet)); err != nil {
-		return nil, err
-	}
 	// The staged KINDS follow the tools, and for the same reason the failure
 	// vocabulary follows the job specs: a confirm-first verb the registry
 	// serves and the inbox cannot decide is a call that parks an approval

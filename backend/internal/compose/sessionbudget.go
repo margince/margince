@@ -32,6 +32,7 @@ func WriteJobProcessMetrics(w io.Writer) {
 
 type sessionBudgetWorker[T river.JobArgs] struct {
 	work        jobs.WorkOnly[T]
+	jobTable    jobs.Composed
 	slots       chan struct{}
 	withContext func(context.Context) context.Context
 }
@@ -44,7 +45,7 @@ func (w sessionBudgetWorker[T]) Work(ctx context.Context, job *river.Job[T]) err
 		ctx = context.WithValue(ctx, sessionBudgetKey{}, w.slots)
 	}
 	ctx = database.WithSessionBudget(ctx, takeSessionSlot)
-	return jobs.FaultForKind(ctx, job.Args.Kind(), w.work.Work(ctx, job))
+	return jobs.FaultForKind(ctx, w.jobTable, job.Args.Kind(), w.work.Work(ctx, job))
 }
 
 // Limit pinned connections before borrowing, so lock holders cannot exhaust the pool.

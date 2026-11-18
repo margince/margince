@@ -128,7 +128,7 @@ func TestAPostponedTickSuppressesTheNextDispatch(t *testing.T) {
 	// enqueues under, and a test that supplied its own opts would pass whatever
 	// the dispatcher does.
 	child := extJobWorkspaceArgs{JobKind: decl.ChildKind(), Workspace: e.WS}
-	if err := runner.Enqueue(context.Background(), child, workspaceSweepOpts(decl.ChildKind())); err != nil {
+	if err := runner.Enqueue(context.Background(), child, workspaceSweepOpts(composed.declaredJobs(), decl.ChildKind())); err != nil {
 		t.Fatalf("re-enqueueing the workspace's child while the first is postponed: %v", err)
 	}
 	if got := countJobRows(t, e.Pool, decl.ChildKind()); got != 1 {

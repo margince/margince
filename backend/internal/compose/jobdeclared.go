@@ -30,13 +30,13 @@ import (
 // declaration against gauges that may legitimately have nothing to say about
 // it. That is the opposite posture from the unrecognised families, which are
 // absent unless they have something to report.
-func writeDeclaredInfo(w io.Writer) error {
+func writeDeclaredInfo(w io.Writer, table jobs.Composed) error {
 	const name = "margince_job_declared_info"
 	if err := writeFamilyHeader(w, name,
 		"Every job kind the contract declares, present whether or not the job table currently holds a row of it -- the catalogue an alert joins against, so an idle kind can be told apart from one nobody wired. The value is always 1. queue is absent where a kind's insert options belong to its callers rather than to the contract; timeout_seconds is -1 where the kind deliberately runs without a deadline."); err != nil {
 		return err
 	}
-	for kind, spec := range jobs.Declared() {
+	for kind, spec := range table.Declared() {
 		if _, err := fmt.Fprintf(w, "%s{%s} 1\n", name, declaredLabels(kind, spec)); err != nil {
 			return err
 		}
@@ -149,8 +149,8 @@ func declaredTimeoutSeconds(p jobs.TimeoutPolicy) (int64, bool) {
 // It reports the CORE namespace only. An ext_ row this process cannot place is
 // a different situation with a different response, and it gets its own family
 // below rather than being folded in here.
-func writeUnrecognisedKindGauge(w io.Writer, rows []jobs.StateRow) error {
-	core, composed := undeclaredKindCounts(rows)
+func writeUnrecognisedKindGauge(w io.Writer, table jobs.Composed, rows []jobs.StateRow) error {
+	core, composed := undeclaredKindCounts(table, rows)
 	if err := writeUndeclaredFamily(w, "margince_job_unrecognised_kind",
 		"Jobs whose kind the contract does not declare -- rows of a kind that was removed, outliving it in River's job retention. Present only when such work exists; investigate rather than graph. These rows are also counted in the gauges above, which report what each queue is actually holding.",
 		core); err != nil {
@@ -201,10 +201,10 @@ func writeUndeclaredFamily(w io.Writer, name, help string, counts map[string]int
 // answer to "how much work of a kind nobody declares is in this table" as its
 // waiting rows are — and splits them by namespace, because the two readings
 // call for different responses (see writeUnrecognisedKindGauge).
-func undeclaredKindCounts(rows []jobs.StateRow) (core, composed map[string]int64) {
+func undeclaredKindCounts(table jobs.Composed, rows []jobs.StateRow) (core, composed map[string]int64) {
 	core, composed = map[string]int64{}, map[string]int64{}
 	for _, r := range rows {
-		if _, declared := jobs.SpecFor(r.Kind); declared {
+		if _, declared := table.SpecFor(r.Kind); declared {
 			continue
 		}
 		// The NAMESPACE, not the composed table: on a vanilla build that table

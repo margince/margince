@@ -48,6 +48,9 @@ const declaredJobKindFloor = 45
 // wiring without one.
 type JobCensus struct {
 	wired map[string]wiredWorker
+	// table is the declaration the wiring is held to: core kinds plus the
+	// composition's own.
+	table jobs.Composed
 	// cfg is the configuration the census wired, which the posture arm
 	// withholds one dependency at a time.
 	cfg JobRunnerConfig
@@ -73,7 +76,7 @@ func newJobCensus(composed *Extensions) (*JobCensus, error) {
 	// The periodic entries are the schedule half, which jobschedule_test.go
 	// owns kind by kind; the census is about what is REGISTERED.
 	reg, _ := wireJobs(nil, slog.New(slog.DiscardHandler), cfg)
-	return &JobCensus{wired: reg.wired, cfg: cfg}, nil
+	return &JobCensus{wired: reg.wired, table: reg.jobTable, cfg: cfg}, nil
 }
 
 // Validate reports every disagreement between the contract and the wiring at
@@ -107,7 +110,7 @@ func (c *JobCensus) Validate() error {
 // mapping here is what stops it being a second list beside the first.
 func (c *JobCensus) NilAfterLoggingWaivers() map[string]string {
 	waivers := map[string]string{}
-	for kind, spec := range jobs.Declared() {
+	for kind, spec := range c.table.Declared() {
 		entry, wired := c.wired[kind]
 		if !wired || spec.Fault.NilAfterLogging == "" {
 			continue
@@ -138,7 +141,7 @@ func bothGeneratedHalvesCameFromOneContract() []string {
 func (c *JobCensus) everyDeclaredKindIsWiredAndBack() []string {
 	var findings []string
 	declared := 0
-	for kind := range jobs.Declared() {
+	for kind := range c.table.Declared() {
 		declared++
 		if _, wired := c.wired[kind]; !wired {
 			findings = append(findings,
@@ -150,7 +153,7 @@ func (c *JobCensus) everyDeclaredKindIsWiredAndBack() []string {
 			"the contract declares only %d kinds, expected at least %d — every check below iterates the declaration, so a census over an empty one reports nothing and reads clean", declared, declaredJobKindFloor))
 	}
 	for _, kind := range slices.Sorted(maps.Keys(c.wired)) {
-		if _, ok := jobs.SpecFor(kind); !ok {
+		if _, ok := c.table.SpecFor(kind); !ok {
 			findings = append(findings,
 				kind+" is registered but api/jobs.yaml declares no such kind — it would run at River's silent one-minute default; declare it and run `make gen`")
 		}
@@ -164,7 +167,7 @@ func (c *JobCensus) everyDeclaredKindIsWiredAndBack() []string {
 // that inspected nothing would report nothing and read exactly like a fleet
 // whose every kind is filed correctly.
 func (c *JobCensus) everyKindIsWorkedByItsDeclaredArgsType() []string {
-	findings := misfiledKinds(c.wired)
+	findings := misfiledKinds(c.table, c.wired)
 	if len(c.wired) < declaredJobKindFloor {
 		findings = append(findings, fmt.Sprintf(
 			"only %d registrations were paired against their declared go_type, expected at least %d — the census wired almost nothing and this check would pass by asking nobody", len(c.wired), declaredJobKindFloor))
@@ -206,7 +209,7 @@ func (c *JobCensus) everyDerivedTimeoutStillEqualsItsConstant() []string {
 	constants := derivedTimeoutConstants()
 	resolved := map[string]bool{}
 	var findings []string
-	for kind, spec := range jobs.Declared() {
+	for kind, spec := range c.table.Declared() {
 		name := spec.Timeout.DerivedFrom
 		if name == "" {
 			continue
@@ -244,7 +247,7 @@ func (c *JobCensus) everyDerivedTimeoutStillEqualsItsConstant() []string {
 func (c *JobCensus) everyArgsOwnedKindCarriesItsOwnInsertOpts() []string {
 	var findings []string
 	checked := 0
-	for kind, spec := range jobs.Declared() {
+	for kind, spec := range c.table.Declared() {
 		if spec.OptsOwner != jobs.OptsArgs {
 			continue
 		}

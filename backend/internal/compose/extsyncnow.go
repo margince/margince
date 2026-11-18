@@ -68,7 +68,7 @@ func (r *callRuntime) SyncNow(ctx context.Context, job extension.JobName) error 
 		return fmt.Errorf("compose: opening the queue to ask for %s: %w", job, err)
 	}
 	child := decl.ChildKind()
-	opts, err := attendedChildOpts(child)
+	opts, err := attendedChildOpts(r.deps.composed.declaredJobs(), child)
 	if err != nil {
 		return err
 	}
@@ -113,14 +113,14 @@ func (x *Extensions) declaredJob(unit, job string) (extension.JobDeclaration, bo
 // This one is reached from a unit's handler, inside a member's request: the
 // same fault there would take down the call, or the worker, for a mistake in a
 // declaration nobody in that request can fix.
-func attendedChildOpts(childKind string) (*river.InsertOpts, error) {
-	spec := fanOutChildSpec(childKind)
+func attendedChildOpts(table jobs.Composed, childKind string) (*river.InsertOpts, error) {
+	spec := fanOutChildSpec(table, childKind)
 	if spec.OptsOwner != jobs.OptsFanOut {
 		return nil, fmt.Errorf(
 			"compose: %s declares an opts_owner other than fan_out, so its queue and attempt cap are not "+
 				"this helper's to set", childKind)
 	}
-	return jobs.QueuedAsKind(childKind, &river.InsertOpts{
+	return table.QueuedAsKind(childKind, &river.InsertOpts{
 		MaxAttempts: spec.MaxAttempts,
 		UniqueOpts:  river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},
 	}), nil

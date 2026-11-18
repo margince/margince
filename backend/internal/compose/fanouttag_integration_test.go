@@ -47,8 +47,8 @@ type fanOutProbeWorker struct {
 }
 
 func (w *fanOutProbeWorker) Work(ctx context.Context, _ *river.Job[fanOutProbeArgs]) error {
-	err := dispatchWith(ctx, w.fleet, clientInsertMany(ctx),
-		workspaceSweepOpts(GmailWatchRenewArgs{}.Kind()), gmailWatchRenewArgsFor)
+	err := dispatchWith(ctx, jobs.Composed{}, w.fleet, clientInsertMany(ctx),
+		workspaceSweepOpts(jobs.Composed{}, GmailWatchRenewArgs{}.Kind()), gmailWatchRenewArgsFor)
 	if err == nil {
 		err = dispatchOne(ctx, w.pool, w.child, nil)
 	}

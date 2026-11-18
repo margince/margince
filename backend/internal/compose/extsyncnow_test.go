@@ -115,13 +115,13 @@ func TestSyncNowFailsClosedAfterTheCallEnds(t *testing.T) {
 func TestAnAskedForRunCoalescesAndIsNotAFleetPass(t *testing.T) {
 	// A real composed child kind, because fanOutChildSpec reads the
 	// declaration table and a made-up kind would panic rather than answer.
-	kinds := fanOutChildren()
+	kinds := fanOutChildren(jobs.Composed{})
 	if len(kinds) == 0 {
 		t.Fatal("this build declares no fan-out child kinds, so this test would prove nothing")
 	}
 	var child string
 	for kind := range kinds {
-		if fanOutChildSpec(kind).OptsOwner == jobs.OptsFanOut {
+		if fanOutChildSpec(jobs.Composed{}, kind).OptsOwner == jobs.OptsFanOut {
 			child = kind
 			break
 		}
@@ -130,7 +130,7 @@ func TestAnAskedForRunCoalescesAndIsNotAFleetPass(t *testing.T) {
 		t.Fatal("no fan-out-owned child kind in this build")
 	}
 
-	asked, err := attendedChildOpts(child)
+	asked, err := attendedChildOpts(jobs.Composed{}, child)
 	if err != nil {
 		t.Fatalf("reading the opts for %s: %v", child, err)
 	}
@@ -146,7 +146,7 @@ func TestAnAskedForRunCoalescesAndIsNotAFleetPass(t *testing.T) {
 	// beside the sweep one would read as different-and-therefore-fine. It is
 	// also what the gauge reads — sweepTagPredicate is `'sweep' = ANY(tags)` —
 	// so this asks the question the gauge asks.
-	fleet := workspaceSweepOpts(child)
+	fleet := workspaceSweepOpts(jobs.Composed{}, child)
 	if !slices.Contains(fleet.Tags, jobs.SweepTag) {
 		t.Fatalf("the fleet sweep's opts carry tags %v, not the %q this test is checking the asked-for run is free of — "+
 			"the marker moved and this assertion is no longer about anything", fleet.Tags, jobs.SweepTag)

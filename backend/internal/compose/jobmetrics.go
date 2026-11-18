@@ -205,7 +205,7 @@ func workspaceLabelFor(r jobs.StateRow) string {
 // It returns an error because an io.Writer can fail. A scrape that
 // swallowed a refused write would serve a truncated exposition, which
 // parses as a smaller fleet rather than as a broken one.
-func writeJobMetrics(w io.Writer, snap jobs.Snapshot) error {
+func writeJobMetrics(w io.Writer, table jobs.Composed, snap jobs.Snapshot) error {
 	a := aggregate(snap.Rows)
 	depth, running := a.depth, a.running
 	discarded, cancelled := a.discarded, a.cancelled
@@ -213,7 +213,7 @@ func writeJobMetrics(w io.Writer, snap jobs.Snapshot) error {
 
 	// The catalogue leads: everything below it is a projection of whatever
 	// rows happen to exist, and this is the closed set they are read against.
-	if err := writeDeclaredInfo(w); err != nil {
+	if err := writeDeclaredInfo(w, table); err != nil {
 		return err
 	}
 	if err := writeQueueKindGauge(w, "margince_job_queue_depth",
@@ -245,13 +245,13 @@ func writeJobMetrics(w io.Writer, snap jobs.Snapshot) error {
 	if err := writeSweepUnitGauges(w, snap.Units); err != nil {
 		return err
 	}
-	if err := writeJobFailureGauge(w, snap.Failures); err != nil {
+	if err := writeJobFailureGauge(w, table, snap.Failures); err != nil {
 		return err
 	}
 	if err := writeUnrecognisedStateGauge(w, unrecognised); err != nil {
 		return err
 	}
-	return writeUnrecognisedKindGauge(w, snap.Rows)
+	return writeUnrecognisedKindGauge(w, table, snap.Rows)
 }
 
 func writeQueueKindGauge(w io.Writer, name, help string, series map[queueKindKey]int64) error {
@@ -413,7 +413,7 @@ func sortedKeysOf[K comparable, V any](series map[K]V, order func(a, b K) int) [
 // request's. The overlay section next door passes r.Context() and so runs
 // unbounded; this read is the one that needs the budget, because it scans a
 // table no index covers.
-func jobMetricsSection(read func(context.Context) (jobs.Snapshot, error)) func(context.Context, io.Writer) error {
+func jobMetricsSection(table jobs.Composed, read func(context.Context) (jobs.Snapshot, error)) func(context.Context, io.Writer) error {
 	return func(ctx context.Context, w io.Writer) error {
 		snap, err := read(ctx)
 		if err != nil {
@@ -422,6 +422,6 @@ func jobMetricsSection(read func(context.Context) (jobs.Snapshot, error)) func(c
 			// rest of the exposition is still true and still worth serving.
 			return nil
 		}
-		return writeJobMetrics(w, snap)
+		return writeJobMetrics(w, table, snap)
 	}
 }

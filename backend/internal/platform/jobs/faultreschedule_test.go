@@ -40,11 +40,10 @@ var transientClass = extension.FailureClass{
 // the change: the same cause that used to spend three attempts and leave a dead
 // row now reschedules, and the delay the unit asked for is the delay River gets.
 func TestATransientFailurePostponesTheTickInsteadOfFailingIt(t *testing.T) {
-	t.Cleanup(resetComposedFailureClasses)
-	registerForTest(t, transientClass)
+	table := registerForTest(t, transientClass)
 
 	cause := errors.New("dial tcp: lookup openapi.example: no such host")
-	returned := FaultForKind(t.Context(), unitKind,
+	returned := FaultForKind(t.Context(), table, unitKind,
 		extension.Reschedule(transientClass, 120*time.Second, cause))
 
 	var snooze *river.JobSnoozeError
@@ -69,10 +68,9 @@ func TestATransientFailurePostponesTheTickInsteadOfFailingIt(t *testing.T) {
 // snooze — which would put a provider's own text back onto a worker's return with
 // nothing in between. That is what this pins.
 func TestAPostponementCarriesNoneOfTheCausesTextOutOfTheSeam(t *testing.T) {
-	t.Cleanup(resetComposedFailureClasses)
-	registerForTest(t, transientClass)
+	table := registerForTest(t, transientClass)
 
-	returned := FaultForKind(t.Context(), unitKind, extension.Reschedule(transientClass, time.Minute,
+	returned := FaultForKind(t.Context(), table, unitKind, extension.Reschedule(transientClass, time.Minute,
 		errors.New("dial tcp: lookup openapi.example: no such host")))
 
 	if strings.Contains(returned.Error(), "openapi.example") {
@@ -88,8 +86,7 @@ func TestAPostponementCarriesNoneOfTheCausesTextOutOfTheSeam(t *testing.T) {
 // safe direction: an undeclared postponement would let a unit silence its own
 // dead work by asking nicely.
 func TestAPostponementIsRefusedForAClassThisInstallationNeverDeclared(t *testing.T) {
-	t.Cleanup(resetComposedFailureClasses)
-	registerForTest(t, transientClass)
+	table := registerForTest(t, transientClass)
 
 	undeclared := extension.FailureClass{
 		Class:    "provider_shrugged",
@@ -105,7 +102,7 @@ func TestAPostponementIsRefusedForAClassThisInstallationNeverDeclared(t *testing
 		{"no kind at all, as FaultContext has none", "", transientClass},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			returned := FaultForKind(t.Context(), tc.kind,
+			returned := FaultForKind(t.Context(), table, tc.kind,
 				extension.Reschedule(tc.class, time.Minute, errors.New("upstream said no")))
 
 			if _, ok := errors.AsType[*river.JobSnoozeError](returned); ok {
@@ -127,8 +124,7 @@ func TestAPostponementIsRefusedForAClassThisInstallationNeverDeclared(t *testing
 // without failing anything an operator could find, which is the silent outage
 // this area exists to prevent.
 func TestAPostponementIsHeldToTheSeamsOwnBounds(t *testing.T) {
-	t.Cleanup(resetComposedFailureClasses)
-	registerForTest(t, transientClass)
+	table := registerForTest(t, transientClass)
 
 	for _, tc := range []struct {
 		name string
@@ -146,7 +142,7 @@ func TestAPostponementIsHeldToTheSeamsOwnBounds(t *testing.T) {
 			slog.SetDefault(slog.New(slog.NewTextHandler(&logged, &slog.HandlerOptions{Level: slog.LevelWarn})))
 			t.Cleanup(func() { slog.SetDefault(restore) })
 
-			returned := FaultForKind(t.Context(), unitKind,
+			returned := FaultForKind(t.Context(), table, unitKind,
 				extension.Reschedule(transientClass, tc.ask, errors.New("provider unreachable")))
 
 			var snooze *river.JobSnoozeError
@@ -177,15 +173,14 @@ func TestAPostponementIsHeldToTheSeamsOwnBounds(t *testing.T) {
 // and it must carry the cause, because the class says what kind of thing broke
 // and never which host did not resolve.
 func TestAPostponementLogsAtWarnWithItsCauseAndItsDelay(t *testing.T) {
-	t.Cleanup(resetComposedFailureClasses)
-	registerForTest(t, transientClass)
+	table := registerForTest(t, transientClass)
 
 	var logged bytes.Buffer
 	restore := slog.Default()
 	slog.SetDefault(slog.New(slog.NewTextHandler(&logged, &slog.HandlerOptions{Level: slog.LevelWarn})))
 	t.Cleanup(func() { slog.SetDefault(restore) })
 
-	returned := FaultForKind(t.Context(), unitKind, extension.Reschedule(transientClass, 120*time.Second,
+	returned := FaultForKind(t.Context(), table, unitKind, extension.Reschedule(transientClass, 120*time.Second,
 		errors.New("dial tcp: lookup openapi.example: no such host")))
 
 	if _, ok := errors.AsType[*river.JobSnoozeError](returned); !ok {
@@ -212,9 +207,8 @@ func TestAPostponementLogsAtWarnWithItsCauseAndItsDelay(t *testing.T) {
 // inferred: the two halves render through one screen and it should be provable
 // that they cannot diverge on what a failure DOES, only on what it is called.
 func TestAPostponementIsNotAvailableToTheCoreVocabulary(t *testing.T) {
-	t.Cleanup(resetComposedFailureClasses)
 
-	returned := FaultForKind(t.Context(), unitKind, apperrors.ErrConflict)
+	returned := FaultForKind(t.Context(), Composed{}, unitKind, apperrors.ErrConflict)
 
 	if _, ok := errors.AsType[*river.JobSnoozeError](returned); ok {
 		t.Fatalf("a core sentinel postponed itself — only a declared composed class may choose that disposition")
@@ -226,10 +220,9 @@ func TestAPostponementIsNotAvailableToTheCoreVocabulary(t *testing.T) {
 // lapsed package and an unreadable answer all still become dead work, because
 // each of them needs somebody.
 func TestAnOrdinaryClassifiedFailureStillFails(t *testing.T) {
-	t.Cleanup(resetComposedFailureClasses)
-	registerForTest(t, transientClass)
+	table := registerForTest(t, transientClass)
 
-	returned := FaultForKind(t.Context(), unitKind,
+	returned := FaultForKind(t.Context(), table, unitKind,
 		extension.Failure(transientClass, errors.New("provider unreachable")))
 
 	if _, ok := errors.AsType[*river.JobSnoozeError](returned); ok {

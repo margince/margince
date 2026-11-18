@@ -56,24 +56,18 @@ func TestSyncNowQueuesTheUnitsOwnTickForTheCallersWorkspace(t *testing.T) {
 	}
 	decl := extension.JobDeclaration{Unit: syncNowUnit, Job: syncNowJob}
 	set := []composedJob{{decl: decl}}
-	// The DECLARATION table as well as the served set: attendedChildOpts reads
-	// the child kind's queue and attempt cap out of it, so a test that
-	// registered only the served half would be asking about a kind the job
-	// tier has never heard of.
-	if err := jobs.RegisterComposed(composedJobSpecs(set)); err != nil {
-		t.Fatalf("registering the composed job specs: %v", err)
+	// The declaration table as well as the served set: attendedChildOpts reads
+	// the child kind's queue and attempt cap from it.
+	table, err := jobs.NewComposed(composedJobSpecs(set), nil)
+	if err != nil {
+		t.Fatalf("declaring the composed job specs: %v", err)
 	}
-	t.Cleanup(func() {
-		if err := jobs.RegisterComposed(nil); err != nil {
-			t.Errorf("restoring the composed job specs: %v", err)
-		}
-	})
 
 	rt := &callRuntime{
 		unit:    syncNowUnit,
 		live:    true,
 		callCtx: principal.WithWorkspaceID(ctx, ws),
-		deps:    extensionRuntimeBinding{pool: pool, composed: &Extensions{jobs: set}},
+		deps:    extensionRuntimeBinding{pool: pool, composed: &Extensions{jobs: set, jobTable: table}},
 	}
 
 	if err := rt.SyncNow(ctx, syncNowJob); err != nil {

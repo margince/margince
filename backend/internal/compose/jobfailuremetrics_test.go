@@ -23,7 +23,7 @@ import (
 func renderFailures(t *testing.T, failures ...jobs.FailureCount) string {
 	t.Helper()
 	var buf bytes.Buffer
-	if err := writeJobFailureGauge(&buf, failures); err != nil {
+	if err := writeJobFailureGauge(&buf, jobs.Composed{}, failures); err != nil {
 		t.Fatalf("writeJobFailureGauge: %v", err)
 	}
 	return buf.String()
@@ -95,7 +95,7 @@ func TestTheFailureSeriesBoundIsWhatTheVocabulariesAllow(t *testing.T) {
 			jobs.FailureCount{Kind: kind, Stored: "nothing recognises this", Count: 1})
 	}
 	got := strings.Count(renderFailures(t, failures...), "margince_job_failures{kind=")
-	if bound := failureSeriesBound(len(kinds)); got > bound {
+	if bound := failureSeriesBound(jobs.Composed{}, len(kinds)); got > bound {
 		t.Errorf("the exposition published %d series against a stated bound of %d — "+
 			"a cardinality nobody can count is a cardinality nobody is keeping", got, bound)
 	}
