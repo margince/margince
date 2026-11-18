@@ -154,5 +154,5 @@
 1794844774_the_consent_request_and_frequency_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1794986141_a_forward_keeps_its_own_draft.down.sql | mail_draft | runs only on a rollback and deletes only forward drafts, which exist only since this release, at most one per author and forwarded message, so the set is small
 1794986142_the_forward_draft_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
-1794987954_the_draft_reason_is_bounded.up.sql | * | replaces the two text guards on mail_draft; the guards act on later writes only, and it changes no existing row
-1794987954_the_draft_reason_is_bounded.down.sql | * | restores the two earlier text guards on mail_draft; it changes no existing row
+1795014225_the_draft_reason_is_bounded.up.sql | * | replaces the two text guards on mail_draft; the guards act on later writes only, and it changes no existing row
+1795014225_the_draft_reason_is_bounded.down.sql | * | restores the two earlier text guards on mail_draft; it changes no existing row
