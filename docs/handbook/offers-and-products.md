@@ -57,7 +57,7 @@ You can add or remove lines only while the offer is a draft. After that, and on 
 Also called: line item, position, add an item to a quote.
 
 ### How do I send a quote to a customer?
-To send an offer in Margince, open the draft offer and click **Send**, then confirm "Send this offer to the buyer?". Sending marks the offer as sent and locks it: "The offer becomes read-only until the buyer responds."
+To send an offer in Margince, open the draft offer and click **Send**, then confirm "Mark this offer as sent?". Sending marks the offer as sent and locks this version for good. To change it later, click **Regenerate revision** for a new draft.
 
 **Send does not email anything.** Nothing leaves Margince when you click it; it records that this version is the one you are sending. To get the offer to the buyer, click **Render PDF** and open it with **View PDF**. Then send that file yourself: added to an email, or uploaded to the deal and added to its [Deal Room](deal-rooms.md). You cannot send an offer with no lines.
 

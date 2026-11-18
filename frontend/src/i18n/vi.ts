@@ -6867,8 +6867,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "offer.pickProduct": "Chọn sản phẩm",
   "offer.pickProductConfirm": "Sản phẩm: {name}",
   "offer.send": "Gửi",
-  "offer.sendConfirm": "Gửi báo giá này cho bên mua?",
-  "offer.sendBody": "Báo giá chuyển sang chỉ đọc cho đến khi bên mua phản hồi.",
+  "offer.sendConfirm": "Đánh dấu báo giá này là đã gửi?",
+  "offer.sendBody":
+    "Không có email nào được gửi đi, và phiên bản này bị khóa vĩnh viễn. Hãy tạo PDF và tự gửi cho bên mua.",
   "offer.accept": "Chấp nhận",
   "offer.acceptConfirm": "Đánh dấu báo giá này là đã chấp nhận?",
   "offer.acceptBody":

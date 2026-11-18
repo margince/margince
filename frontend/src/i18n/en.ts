@@ -7003,8 +7003,9 @@ export const en = {
   "offer.pickProduct": "Pick product",
   "offer.pickProductConfirm": "Product: {name}",
   "offer.send": "Send",
-  "offer.sendConfirm": "Send this offer to the buyer?",
-  "offer.sendBody": "The offer becomes read-only until the buyer responds.",
+  "offer.sendConfirm": "Mark this offer as sent?",
+  "offer.sendBody":
+    "Nothing is emailed, and this version is locked for good. Render the PDF and send it to the buyer yourself.",
   "offer.accept": "Accept",
   "offer.acceptConfirm": "Mark this offer as accepted?",
   "offer.acceptBody":

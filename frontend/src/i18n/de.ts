@@ -7047,9 +7047,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "offer.pickProduct": "Produkt auswählen",
   "offer.pickProductConfirm": "Produkt: {name}",
   "offer.send": "Senden",
-  "offer.sendConfirm": "Dieses Angebot an die Käuferseite senden?",
+  "offer.sendConfirm": "Dieses Angebot als gesendet markieren?",
   "offer.sendBody":
-    "Das Angebot ist schreibgeschützt, bis die Käuferseite antwortet.",
+    "Es wird keine E-Mail verschickt, und diese Version ist endgültig festgeschrieben. Erzeuge das PDF und sende es selbst an die Käuferseite.",
   "offer.accept": "Annehmen",
   "offer.acceptConfirm": "Dieses Angebot als angenommen markieren?",
   "offer.acceptBody":
