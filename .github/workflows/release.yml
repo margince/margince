@@ -3,8 +3,14 @@ name: Release
 # Draft, fill and publish a dist release. A plain tag vX.Y.Z starts it and
 # names the dist release X.Y.Z, the tag without its v. A run by hand names a tag
 # and builds the commit that tag names, so a release that failed, or a dist
-# service that did not get one, can be served again from the same source. The dist service holds server releases: role images, an
-# incremental patch, program archives and SBOMs. GitHub hosts none of that.
+# service that did not get one, can be served again from the same source. The
+# dist service holds server releases: role images, an incremental patch,
+# program archives and SBOMs. GitHub hosts none of that.
+#
+# Two dist services exist, each with its own registry and publisher tokens. A
+# tag push publishes to test. Only a run by hand reaches production, with
+# target production, so each production release is chosen by hand after test
+# took the same tag.
 #
 # A release is a decision somebody makes, so no branch push starts this lane.
 # A run on every push spent shared runner time on releases nobody asked for.
@@ -39,6 +45,12 @@ on:
         description: 'The release tag to build, such as v1.0.0. It must be on main, and its version above every release that went out.'
         required: true
         type: string
+      target:
+        description: 'The dist service: test (dist.test.margince.com) or production (dist.margince.com).'
+        required: true
+        type: choice
+        options: [test, production]
+        default: test
 
 permissions:
   contents: read
@@ -50,7 +62,8 @@ permissions:
 # service and must never be interrupted part-way, so it carries a group that
 # serializes instead of one that cancels.
 #
-# Each group is per tag, so it only decides runs of one tag. Runs of two tags
+# Each group is per target and tag, so it only decides runs of one tag on one
+# dist service. Runs of two tags
 # can overlap; the dist service then refuses the one whose version is not above
 # every release that went out.
 
@@ -58,12 +71,12 @@ env:
   # The release-management CLI image, private to another organization. Each job
   # pulls it with the RELEASE_TOOL_GHCR_TOKEN read token.
   RELEASE_MANAGEMENT_IMAGE: ghcr.io/gradionhq/margince-constellation/release-management:latest
-  # The dist service of the constellation deployment the release is drafted
-  # into. The CLI reads this variable directly and refuses a non-https URL.
-  # ONE constellation deployment exists (test.margince.com), so main and test
-  # both draft into it; this becomes a per-ref selection when a production
-  # constellation exists.
-  MARGINCE_RELEASE_MANAGEMENT_DIST_URL: https://dist.test.margince.com
+  # The dist service and the registry of the target. A tag push carries no
+  # inputs, so it lands on test. The CLI reads the dist URL directly and
+  # refuses a non-https one.
+  DIST_TARGET: ${{ inputs.target || 'test' }}
+  MARGINCE_RELEASE_MANAGEMENT_DIST_URL: ${{ inputs.target == 'production' && 'https://dist.margince.com' || 'https://dist.test.margince.com' }}
+  REGISTRY_HOST: ${{ inputs.target == 'production' && 'registry.margince.com' || 'registry.test.margince.com' }}
 
 jobs:
   draft:
@@ -73,7 +86,7 @@ jobs:
     timeout-minutes: 90
     # Superseded by a newer run of the same tag.
     concurrency:
-      group: ${{ github.workflow }}-draft-${{ inputs.tag || github.ref_name }}
+      group: ${{ github.workflow }}-draft-${{ inputs.target || 'test' }}-${{ inputs.tag || github.ref_name }}
       cancel-in-progress: true
     runs-on: ubuntu-24.04-arm
     permissions:
@@ -95,8 +108,17 @@ jobs:
         id: version
         env:
           TAG: ${{ inputs.tag || github.ref_name }}
+          # The secret NAME follows the target, so a missing production token
+          # reads as empty and never falls back to the test token.
+          DIST_TOKEN: ${{ secrets[inputs.target == 'production' && 'MARGINCE_PRODUCTION_DIST_PUBLISHER_TOKEN' || 'MARGINCE_DIST_PUBLISHER_TOKEN'] }}
+          AUTH_TOKEN: ${{ secrets[inputs.target == 'production' && 'MARGINCE_PRODUCTION_AUTH_PUBLISHER_TOKEN' || 'MARGINCE_AUTH_PUBLISHER_TOKEN'] }}
         run: |
           set -euo pipefail
+          if [ -z "$DIST_TOKEN" ] || [ -z "$AUTH_TOKEN" ]; then
+            echo "release: the $DIST_TARGET dist or registry publisher token is not set." >&2
+            echo "  Add both repository secrets for $MARGINCE_RELEASE_MANAGEMENT_DIST_URL, then run again." >&2
+            exit 1
+          fi
           bash scripts/release-tag-on-main.sh "$TAG"
           bash scripts/release-dist-version.sh "$TAG" >> "$GITHUB_OUTPUT"
           echo "revision=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
@@ -122,7 +144,7 @@ jobs:
         env:
           AFTER: ${{ steps.version.outputs.revision }}
           version: ${{ steps.version.outputs.version }}
-          MARGINCE_RELEASE_MANAGEMENT_DIST_TOKEN: ${{ secrets.MARGINCE_DIST_PUBLISHER_TOKEN }}
+          MARGINCE_RELEASE_MANAGEMENT_DIST_TOKEN: ${{ secrets[inputs.target == 'production' && 'MARGINCE_PRODUCTION_DIST_PUBLISHER_TOKEN' || 'MARGINCE_DIST_PUBLISHER_TOKEN'] }}
         run: |
           set -euo pipefail
           # The CLI picks the base; the script checks the record and fails
@@ -200,7 +222,7 @@ jobs:
     # The long half, and the reason cancellation is here at all: a newer run of
     # the same tag replaces this bake.
     concurrency:
-      group: ${{ github.workflow }}-bake-${{ inputs.tag || github.ref_name }}
+      group: ${{ github.workflow }}-bake-${{ inputs.target || 'test' }}-${{ inputs.tag || github.ref_name }}
       cancel-in-progress: true
     runs-on: ubuntu-24.04-arm
     permissions:
@@ -269,16 +291,16 @@ jobs:
         run: echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
       - name: Log in to the constellation registry
         env:
-          PUBLISHER_TOKEN: ${{ secrets.MARGINCE_AUTH_PUBLISHER_TOKEN }}
-        run: echo "$PUBLISHER_TOKEN" | docker login registry.test.margince.com -u _publisher --password-stdin
+          PUBLISHER_TOKEN: ${{ secrets[inputs.target == 'production' && 'MARGINCE_PRODUCTION_AUTH_PUBLISHER_TOKEN' || 'MARGINCE_AUTH_PUBLISHER_TOKEN'] }}
+        run: echo "$PUBLISHER_TOKEN" | docker login "$REGISTRY_HOST" -u _publisher --password-stdin
       - name: Bake and push the images, add them to the draft
         env:
-          REPO: registry.test.margince.com/margince
+          REPO: ${{ env.REGISTRY_HOST }}/margince
           VERSION: ${{ needs.draft.outputs.version }}
           PLATFORMS: linux/amd64,linux/arm64
           CACHE: gha
           MARGINCE_BUILD_REVISION: ${{ needs.draft.outputs.revision }}
-          MARGINCE_RELEASE_MANAGEMENT_DIST_TOKEN: ${{ secrets.MARGINCE_DIST_PUBLISHER_TOKEN }}
+          MARGINCE_RELEASE_MANAGEMENT_DIST_TOKEN: ${{ secrets[inputs.target == 'production' && 'MARGINCE_PRODUCTION_DIST_PUBLISHER_TOKEN' || 'MARGINCE_DIST_PUBLISHER_TOKEN'] }}
         run: |
           set -euo pipefail
           # The one path that must always stamp, proving it did — see
@@ -357,7 +379,7 @@ jobs:
     # mutual exclusion, not an ordering: which version reaches the dist service
     # first is not something a concurrency group can decide.
     concurrency:
-      group: ${{ github.workflow }}-publish-${{ inputs.tag || github.ref_name }}
+      group: ${{ github.workflow }}-publish-${{ inputs.target || 'test' }}-${{ inputs.tag || github.ref_name }}
       cancel-in-progress: false
     runs-on: ubuntu-24.04-arm
     permissions:
@@ -372,7 +394,7 @@ jobs:
       - name: Publish the release
         env:
           VERSION: ${{ needs.draft.outputs.version }}
-          MARGINCE_RELEASE_MANAGEMENT_DIST_TOKEN: ${{ secrets.MARGINCE_DIST_PUBLISHER_TOKEN }}
+          MARGINCE_RELEASE_MANAGEMENT_DIST_TOKEN: ${{ secrets[inputs.target == 'production' && 'MARGINCE_PRODUCTION_DIST_PUBLISHER_TOKEN' || 'MARGINCE_DIST_PUBLISHER_TOKEN'] }}
         run: |
           docker run --rm \
             -e MARGINCE_RELEASE_MANAGEMENT_DIST_URL \

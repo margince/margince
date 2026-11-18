@@ -315,8 +315,8 @@ nobody can get. So a newer run takes over only before signing starts, while `sbo
 
 ## `release.yml`
 
-It cuts a release in the dist service of the constellation deployment at `test.margince.com`. A dist
-release is a server deployment, which GitHub does not host. The GitHub release belongs to
+It cuts a release in a dist service: `dist.test.margince.com` on a tag push, or the `target` input of a manual
+dispatch, `test` or `production` (`dist.margince.com`). A dist release is a server deployment, which GitHub does not host. The GitHub release belongs to
 `release-tag.yml`, which owns the `github-release` job.
 
 Any `v*` tag push starts it, but only a plain `vX.Y.Z` tag drafts a release. `scripts/release-dist-version.sh`
@@ -344,11 +344,11 @@ What a run does:
      over the Corepack folder would hide it.
    - The 10 GB Actions cache of the repository drops entries older than some hours. So a release
      after a quiet night starts with an empty cache.
-3. The images are pushed by digest, with no tag, to `registry.test.margince.com/margince/<role>`, logged in
-   as the registry publisher (`MARGINCE_AUTH_PUBLISHER_TOKEN`). The same builder bakes `bundle`. For each
+3. The images are pushed by digest, with no tag, to the target's registry. That is `registry.test.margince.com` or
+   `registry.margince.com`, with the target's registry publisher token. The same builder bakes `bundle`. For each
    Linux platform, `build-archive` packs the bundle tree of `scripts/release-bundle.sh` with three SBOMs. One `add-artifacts --release <version>` call adds images and archives.
-4. The release is published with `publish-release --release <version>`. The dist uploads log in with the dist
-   publisher token (the `MARGINCE_DIST_PUBLISHER_TOKEN` secret).
+4. The release is published with `publish-release --release <version>`. The dist uploads use the target's dist
+   publisher token (`MARGINCE_DIST_PUBLISHER_TOKEN`, or `MARGINCE_PRODUCTION_DIST_PUBLISHER_TOKEN`).
 
 Where the patch starts, and why: [cut-a-release.md](../how-to/cut-a-release.md#where-the-patch-of-changes-starts).
 
