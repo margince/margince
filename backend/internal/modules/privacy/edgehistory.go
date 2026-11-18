@@ -307,7 +307,7 @@ func recordHistoryWindowSQL(typePos, idPos, fetchPos int, conds []string, edgeCT
 	}
 	if sideCTE != "" {
 		ctes = append(ctes, sideCTE)
-		arms = append(arms, sidecarArmSQL(edgeWhere, fetchPos))
+		arms = append(arms, sidecarArmSQL(conds, fetchPos))
 	}
 	if len(ctes) == 0 {
 		return own

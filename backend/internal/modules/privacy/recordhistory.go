@@ -310,7 +310,7 @@ func queryRecordHistoryWindow(ctx context.Context, tx pgx.Tx, f RecordHistoryFil
 		args = append(args, boundary.occurredAt, boundary.id)
 	}
 	if f.Action != nil {
-		conds = append(conds, fmt.Sprintf("a.action = $%d", len(args)+1))
+		conds = append(conds, fmt.Sprintf(actionCondPrefix+"$%d", len(args)+1))
 		args = append(args, *f.Action)
 	}
 	if useCursor {
@@ -335,7 +335,7 @@ func queryRecordHistoryWindow(ctx context.Context, tx pgx.Tx, f RecordHistoryFil
 	// call as `args...` may run after the slice is read — leaving the statement
 	// naming one more placeholder than the driver binds.
 	fetchPos := arg(fetch)
-	window := recordHistoryWindowSQL(typePos, idPos, fetchPos, conds, edgeCTE, sidecarSubjectCTE(f.EntityType, idPos))
+	window := recordHistoryWindowSQL(typePos, idPos, fetchPos, conds, edgeCTE, sidecarSubjectCTE(f.EntityType, idPos, f.Action))
 	rows, err := tx.Query(ctx, window, args...)
 	if err != nil {
 		return nil, err

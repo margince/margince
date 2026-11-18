@@ -340,10 +340,10 @@ func fieldHistorySpineWhere(f FieldHistoryFilter, boundary scrubBoundary, args [
 	// Qualified with the audit row's alias: the batch read joins app_user twice
 	// and `id` is a column on both, so a bare one is ambiguous.
 	//
-	// own pins the record's own rows. shared is what every arm takes, so a
-	// company's sidecar arm answers to the same verbs and boundary.
-	own = []string{"a.entity_type = $1", "a.entity_id = $2"}
-	shared = []string{"a.action = ANY($3)"}
+	// own pins the record's own rows and verbs. shared is what every arm takes, so
+	// a company's sidecar arm answers to the same boundary.
+	own = []string{"a.entity_type = $1", "a.entity_id = $2", "a.action = ANY($3)"}
+	shared = nil
 	args = append(args, f.EntityType, f.EntityID, fieldHistoryProjectedActionList)
 	if boundary.exists() {
 		shared = append(shared, fmt.Sprintf("(a.occurred_at, a.id) > ($%d, $%d)", len(args)+1, len(args)+2))

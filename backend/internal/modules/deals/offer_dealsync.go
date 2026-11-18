@@ -13,6 +13,7 @@ package deals
 import (
 	"context"
 	"fmt"
+	"maps"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -211,24 +212,35 @@ func acceptedOfferARR(ctx context.Context, tx pgx.Tx, offerID ids.OfferID) (int6
 
 // auditDealRepricing records the deal's own change, so its History reads the old
 // and the new value as it does for a manual edit. It announces deal.updated under
-// that row. The offer it came from rides the evidence, which keeps the images to
-// the deal's columns. An accept that moved no deal column writes nothing and
-// reports false. Any announcement is then the caller's.
+// that row, with every deal column and product the accept wrote, so a subscriber
+// never retains stale state. The offer it came from rides the evidence, which
+// keeps the images to the deal's columns. An accept that changed nothing on the
+// deal writes and announces nothing.
 func auditDealRepricing(ctx context.Context, tx pgx.Tx, dealID ids.DealID, offerID ids.OfferID,
-	w dealWrite, changed map[string]any,
-) (bool, error) {
-	if len(w.before) == 0 {
-		return false, nil
+	before, changed map[string]any,
+) error {
+	if len(changed) == 0 {
+		return nil
 	}
-	auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", "deal", dealID.UUID, w.before, w.after,
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", "deal", dealID.UUID, before, changed,
 		map[string]any{"offer_id": offerID.UUID})
 	if err != nil {
-		return false, fmt.Errorf("audit deal repricing from accepted offer: %w", err)
+		return fmt.Errorf("audit deal repricing from accepted offer: %w", err)
 	}
 	if err := storekit.EmitEvent(ctx, tx, auditID, dealID.UUID, crmcontracts.PublicEventDealUpdated{
 		ChangedFields: changed,
 	}); err != nil {
-		return false, fmt.Errorf("emit paired deal.updated: %w", err)
+		return fmt.Errorf("emit paired deal.updated: %w", err)
 	}
-	return true, nil
+	return nil
+}
+
+// withProducts adds the products a deal held to its before-image.
+func withProducts(before map[string]any, products []crmcontracts.DealProduct) map[string]any {
+	image := maps.Clone(before)
+	if image == nil {
+		image = map[string]any{}
+	}
+	image[productsField] = allocationImage(products)
+	return image
 }

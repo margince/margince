@@ -126,7 +126,8 @@ func diffAuditRowFields(row auditDiffRow, mask entityFieldMask, fieldFilter *str
 	// rows; this guard keeps the invariant with the diff itself, so no
 	// caller can ever project an erase tombstone's tallies or a merge's
 	// relink counts as field changes.
-	if !fieldHistoryProjectedActions[row.action] {
+	removedFact := row.sideField != nil && row.action == actionDelete
+	if !fieldHistoryProjectedActions[row.action] && !removedFact {
 		return nil
 	}
 	if row.sideField != nil {

@@ -48,10 +48,10 @@ func TestSidecarImagesShowARemovalAsTheValueGoing(t *testing.T) {
 }
 
 func TestOnlyACompanyHasSidecarRows(t *testing.T) {
-	if sidecarSubjectCTE("deal", 2) != "" || sidecarSubjectCTE("contact", 2) != "" {
+	if sidecarSubjectCTE("deal", 2, nil) != "" || sidecarSubjectCTE("contact", 2, nil) != "" {
 		t.Error("a record kind without sidecar tables got a sidecar branch")
 	}
-	cte := sidecarSubjectCTE(entityTypeCompany, 2)
+	cte := sidecarSubjectCTE(entityTypeCompany, 2, nil)
 	for _, table := range []string{"company_profile_field", "company_fact"} {
 		if !strings.Contains(cte, "audit_log a ON a.entity_type = '"+table+"'") {
 			t.Errorf("the sidecar branch does not read the audit rows of %s", table)

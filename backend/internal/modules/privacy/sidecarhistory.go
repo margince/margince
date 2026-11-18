@@ -27,11 +27,11 @@ const (
 // The first two branches follow the live sidecar row to its company. The third
 // finds every row of a removed fact. Its own row is gone, but the removal row
 // still names the company and field in its before-image.
-func sidecarSubjectCTE(entityType string, anchorPos int) string {
+func sidecarSubjectCTE(entityType string, anchorPos int, action *string) string {
 	if entityType != entityTypeCompany {
 		return ""
 	}
-	return fmt.Sprintf(`side AS (
+	return fmt.Sprintf(`side AS (SELECT * FROM (
 			SELECT a.id AS audit_id, f.field AS side_field
 			  FROM company_profile_field f
 			  JOIN audit_log a ON a.entity_type = 'company_profile_field' AND a.entity_id = f.id
@@ -47,12 +47,33 @@ func sidecarSubjectCTE(entityType string, anchorPos int) string {
 			  JOIN audit_log a ON a.entity_type = 'company_fact' AND a.entity_id = removed.entity_id
 			 WHERE removed.entity_type = 'company_fact' AND removed.action = 'delete'
 			   AND removed.before ->> 'company_id' = $%[1]d::text
-		)`, anchorPos)
+		) AS rows WHERE %t)`, anchorPos, sidecarActionKept(action))
+}
+
+// actionCondPrefix opens the record-history condition that filters on one audit
+// verb. The sidecar arm leaves it out and filters on the verb it renders.
+const actionCondPrefix = "a.action = "
+
+// sidecarActionKept reports whether sidecar rows pass a verb filter. They render
+// as an update of the company whatever the sidecar row did, so the filter reads
+// the rendered verb.
+func sidecarActionKept(action *string) bool {
+	return action == nil || *action == actionUpdate
 }
 
 // sidecarArmSQL is the record-history union arm over the `side` CTE, in the
 // window's column order.
-func sidecarArmSQL(where string, fetchPos int) string {
+func sidecarArmSQL(conds []string, fetchPos int) string {
+	var kept []string
+	for _, cond := range conds {
+		if !strings.HasPrefix(cond, actionCondPrefix) {
+			kept = append(kept, cond)
+		}
+	}
+	where := ""
+	if len(kept) > 0 {
+		where = "\n\t\t\tWHERE " + strings.Join(kept, " AND ")
+	}
 	return fmt.Sprintf(`
 			SELECT`+recordAuditColumns+`,
 				`+noEdgeSubjectColumns+`, s.side_field
@@ -81,6 +102,10 @@ func sidecarImages(field, action string, before, after map[string]any) (map[stri
 	return old, map[string]any{field: newValue}
 }
 
+// sidecarVerbs are the verbs the sidecar arm projects. They are the record's own
+// list plus the removal of a fact, which is the fact's value going.
+const sidecarVerbs = "(a.action = ANY($3) OR a.action = 'delete')"
+
 const fieldHistoryBatchColumns = `
 		a.id, a.action, a.actor_type, a.actor_id, a.passport_id, a.evidence,
 		a.occurred_at, a.before, a.after,
@@ -99,11 +124,11 @@ func fieldHistoryBatchSQL(entityType string, own, shared []string, limitPos int)
 			LIMIT $%d`, cols, from, strings.Join(conds, " AND "), limitPos)
 	}
 	ownArm := arm("NULL::text AS side_field", "audit_log a", append(slices.Clone(own), shared...))
-	side := sidecarSubjectCTE(entityType, 2)
+	side := sidecarSubjectCTE(entityType, 2, nil)
 	if side == "" {
 		return ownArm
 	}
-	sideArm := arm("s.side_field", "side s JOIN audit_log a ON a.id = s.audit_id", shared)
+	sideArm := arm("s.side_field", "side s JOIN audit_log a ON a.id = s.audit_id", append([]string{sidecarVerbs}, shared...))
 	return fmt.Sprintf(`WITH %s
 		SELECT * FROM ((%s) UNION ALL (%s)) AS spine
 		ORDER BY occurred_at DESC, id DESC
@@ -115,11 +140,11 @@ func fieldHistoryBatchSQL(entityType string, own, shared []string, limitPos int)
 func fieldHistoryExistsSQL(entityType string, own, shared []string) string {
 	ownProbe := fmt.Sprintf(`SELECT 1 FROM audit_log a WHERE %s`,
 		strings.Join(append(slices.Clone(own), shared...), " AND "))
-	side := sidecarSubjectCTE(entityType, 2)
+	side := sidecarSubjectCTE(entityType, 2, nil)
 	if side == "" {
 		return "SELECT EXISTS(" + ownProbe + ")"
 	}
 	return fmt.Sprintf(`WITH %s
 		SELECT EXISTS(%s) OR EXISTS(SELECT 1 FROM side s JOIN audit_log a ON a.id = s.audit_id WHERE %s)`,
-		side, ownProbe, strings.Join(shared, " AND "))
+		side, ownProbe, strings.Join(append([]string{sidecarVerbs}, shared...), " AND "))
 }
