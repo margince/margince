@@ -7,6 +7,7 @@ package integration
 
 import (
 	"context"
+	"maps"
 	"net/http"
 	"testing"
 
@@ -29,9 +30,7 @@ func TestAnOfferInAFileNamePreviewsAsTheSendDecides(t *testing.T) {
 	}
 	preview := func(files []string) bool {
 		body := AnyMap{"attachment_ids": files}
-		for k, v := range message {
-			body[k] = v
-		}
+		maps.Copy(body, message)
 		var answer struct {
 			Allowed bool `json:"allowed"`
 		}
