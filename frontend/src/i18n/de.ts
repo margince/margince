@@ -7287,8 +7287,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "vcardImport.working": "Karten werden gelesen…",
   "vcardImport.back": "Zurück zu den Kontakten",
   "vcardImport.noCards": "Die Datei enthält keine Karten.",
-  "vcardImport.failed":
-    "Die Karten konnten nicht importiert werden. Bitte versuche es erneut.",
+  "vcardImport.failed": "Die Karten wurden nicht importiert.",
   "vcardImport.outcome.created": "Hinzugefügt",
   "vcardImport.outcome.updated": "Aktualisiert",
   "vcardImport.outcome.needsReview": "Mögliches Duplikat",
@@ -23140,6 +23139,18 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "progress.serviceSales": "Services und Projekte",
   "progress.planned": "Offene Pipeline",
   "progress.plannedAt": "Offene Deals, Stand {at}",
+  "progress.scenarios": "Wo der Monat enden kann",
+  "progress.scenario.worst": "Schlechtester Fall",
+  "progress.scenario.worstWhy": "Wenn nichts mehr abschließt",
+  "progress.scenario.expected": "Erwartet",
+  "progress.scenario.best": "Bester Fall",
+  "progress.scenario.bestWhy": "Wenn jeder offene Deal des Monats abschließt",
+  "progress.scenarios.asOf": "Deals mit Stand {at}",
+  "progress.scenarios.unpriced":
+    "Deals ohne Betrag oder ohne Wechselkurs fehlen",
+  "progress.scenarios.limited": "Nur die Deals, die du siehst, zählen",
+  "progress.scenarios.yearUnavailable":
+    "Schlechtester, erwarteter und bester Fall gibt es für einen Monat. Die Prognose hat kein Jahr, aus dem sie sie lesen kann.",
   "progress.unclassified": "Nicht zugeordnet",
   "progress.unclassifiedDetail":
     "Dieser Umsatz ist keinem Produkt und keiner Dienstleistung zugeordnet.",

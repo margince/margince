@@ -62637,7 +62637,12 @@ type ReportingMetric struct {
 	// `landing`, so a won deal is never counted twice. A manager call is a
 	// whole-quarter figure and is never added to `won`.
 	TargetComparison *ReportingTargetComparison `json:"target_comparison,omitempty"`
-	TargetRevision   *int64                     `json:"target_revision,omitempty"`
+
+	// TargetDelta `target_actual` minus `target`, in the metric's unit: negative is still to reach,
+	// positive is above the target. Present with both. A client shows it and `attainment`
+	// as they are, and never works either out from the other figures.
+	TargetDelta    *float64 `json:"target_delta,omitempty"`
+	TargetRevision *int64   `json:"target_revision,omitempty"`
 
 	// TargetSource Present with `target`. `target`: a target set for this scope and
 	// period. `sales_goals`: the figure is a seller's monthly sales
@@ -64101,10 +64106,23 @@ type SalesProgress struct {
 	Planned SalesProgressAmount `json:"planned"`
 
 	// PlannedValuedAt When the open deals were valued and converted.
-	PlannedValuedAt time.Time          `json:"planned_valued_at"`
-	Scope           ReportingScope     `json:"scope"`
-	State           SalesProgressState `json:"state"`
-	Timezone        string             `json:"timezone"`
+	PlannedValuedAt time.Time `json:"planned_valued_at"`
+
+	// Scenarios Where a month may finish against its goal, read from the forecast of the same month and
+	// scope that GET /forecast reads. Given only for a month that has not ended, against a goal
+	// that is `set`. A year has none, because the forecast has no year period.
+	//
+	// - `worst` is the money already won, as if nothing more closes.
+	// - `expected` is the forecast landing under the installation's forward measure, the same
+	//   setting the Overview lands with. `landing` names the measure and what it rests on.
+	// - `best` is the money won plus every open deal expected in the month, at face value.
+	//
+	// Each case carries `delta_minor`, its amount minus the goal, signed as the reading's own
+	// `delta_minor`: negative is short of the goal.
+	Scenarios *SalesProgressScenarios `json:"scenarios,omitempty"`
+	Scope     ReportingScope          `json:"scope"`
+	State     SalesProgressState      `json:"state"`
+	Timezone  string                  `json:"timezone"`
 }
 
 // SalesProgressPeriodKind defines model for SalesProgress.Period.Kind.
@@ -64242,6 +64260,49 @@ type SalesProgressNextTask struct {
 	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
 	DueAt      *time.Time          `json:"due_at,omitempty"`
 	Subject    string              `json:"subject"`
+}
+
+// SalesProgressScenario defines model for SalesProgressScenario.
+type SalesProgressScenario struct {
+	AmountMinor int64 `json:"amount_minor"`
+
+	// DeltaMinor The amount minus the goal.
+	DeltaMinor int64 `json:"delta_minor"`
+}
+
+// SalesProgressScenarios Where a month may finish against its goal, read from the forecast of the same month and
+// scope that GET /forecast reads. Given only for a month that has not ended, against a goal
+// that is `set`. A year has none, because the forecast has no year period.
+//
+//   - `worst` is the money already won, as if nothing more closes.
+//   - `expected` is the forecast landing under the installation's forward measure, the same
+//     setting the Overview lands with. `landing` names the measure and what it rests on.
+//   - `best` is the money won plus every open deal expected in the month, at face value.
+//
+// Each case carries `delta_minor`, its amount minus the goal, signed as the reading's own
+// `delta_minor`: negative is short of the goal.
+type SalesProgressScenarios struct {
+	// AsOf When the deals were read.
+	AsOf time.Time             `json:"as_of"`
+	Best SalesProgressScenario `json:"best"`
+
+	// EligibleCount Deals the forecast read for the month.
+	EligibleCount int                   `json:"eligible_count" minimum:"0"`
+	Expected      SalesProgressScenario `json:"expected"`
+
+	// FxMissingCount Priced deals no exchange rate reached; their money is in no case.
+	FxMissingCount int `json:"fx_missing_count" minimum:"0"`
+
+	// Landing Where the period finishes if nothing changes, and what that answer rests on.
+	// The four money readings say what is IN the pipeline; none of them answers "what will we land on?", and a reader left to add two of them together picks the wrong two. This is that sum, made once and labelled with the measure it used.
+	Landing ForecastLanding `json:"landing"`
+
+	// PricedCount Of those, the deals with an amount.
+	PricedCount int `json:"priced_count" minimum:"0"`
+
+	// ScopeLimited True when the reader cannot see every deal of the scope, so each case is smaller than the scope's own.
+	ScopeLimited bool                  `json:"scope_limited"`
+	Worst        SalesProgressScenario `json:"worst"`
 }
 
 // SalesProgressSummaryRequest defines model for SalesProgressSummaryRequest.

@@ -288,6 +288,20 @@ func TestARowCarriesTheFileLineItCameFrom(t *testing.T) {
 	}
 }
 
+func TestRowNumbersCountRecordsNotFileLines(t *testing.T) {
+	mapping, sourceKey := leadMapping()
+	body := "Email,First Name\na@x.test,\"A\nB\nC\"\nb@x.test,B\n"
+	src := NewCSVSource(seedCSV(t, body), testCSVKey, ObjectLead, mapping, sourceKey)
+
+	rows, err := src.Rows(context.Background(), ObjectLead, 0, 10)
+	if err != nil {
+		t.Fatalf("Rows: %v", err)
+	}
+	if len(rows) != 2 || rows[0].Line != 2 || rows[1].Line != 3 {
+		t.Fatalf("rows = %+v, want rows 2 and 3 as a spreadsheet numbers them, not the file line 5", rows)
+	}
+}
+
 // A row's outcome carries the row's line into the report, so a skip the WRITER
 // refused is as findable as one the source disclosed.
 func TestASkipNamesTheLineTheRowCameFrom(t *testing.T) {
