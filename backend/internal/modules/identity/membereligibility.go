@@ -67,10 +67,10 @@ func refuseRemovedEmail(ctx context.Context, tx pgx.Tx, email string) error {
 // at a time.
 func typedLoginAddress(email string) string { return strings.ToLower(strings.TrimSpace(email)) }
 
-// sameLoginIdentity reports whether two spellings name one seat login: the
-// local parts match lowercased, and the domains match once folded, so a Unicode
-// domain, its punycode form and a trailing dot are one address, as SeatLoginIsSQL
-// reads them.
+// sameLoginIdentity reports whether two spellings name one seat login. The
+// local parts match lowercased and the domains match once folded, as
+// SeatLoginIsSQL reads them. A Unicode domain, its punycode form and a trailing
+// dot are one address.
 func sameLoginIdentity(a, b string) bool {
 	a, b = typedLoginAddress(a), typedLoginAddress(b)
 	if a == b {

@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	identityPasswordRule = "internal/modules/identity/service.go"
+	identityPasswordRule = "internal/modules/identity/passwordrule.go"
 	frontendPasswordRule = "../frontend/src/features/sign-in/passwordrule.ts"
 	frontendEnglishCopy  = "../frontend/src/i18n/en.ts"
 )

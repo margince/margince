@@ -16,9 +16,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// A contact archived while it held a primary address and a primary number of
-// each type comes back with one of each: the first by reading order. The index
-// ignores archived rows, so the old shape survives in them.
+// A contact archived with a primary address and number of each type comes back
+// with one of each, the first by reading order. The index ignores archived
+// rows, so the old shape survives in them.
 func TestRestoringAContactWithOldPerTypePrimariesKeepsTheFirstOfEach(t *testing.T) {
 	e := setupDedupe(t)
 	actor, ok := principal.Actor(e.as())
