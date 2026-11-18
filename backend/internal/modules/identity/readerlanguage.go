@@ -38,9 +38,10 @@ func ReaderLanguageForPrompt(ctx context.Context, pool *pgxpool.Pool) string {
 }
 
 // chosenLanguage is the display language the caller chose, carried on their
-// principal from sign-in. A system caller and a member who never chose have none.
+// principal from sign-in. An agent on a passport reads its granting human's
+// choice. A system caller and a member who never chose have none.
 func chosenLanguage(ctx context.Context) (textlang.Lang, bool) {
-	if actor, ok := principal.Actor(ctx); ok && actor.Type == principal.PrincipalHuman && (systemtext.HasLocale(ctx) || textlang.Known(actor.Locale)) {
+	if actor, ok := principal.Actor(ctx); ok && actor.HumanOrItsAgent() && (systemtext.HasLocale(ctx) || textlang.Known(actor.Locale)) {
 		return systemtext.Locale(ctx), true
 	}
 	return textlang.Unknown, false

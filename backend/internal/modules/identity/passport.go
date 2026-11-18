@@ -359,6 +359,9 @@ type AgentIdentity struct {
 	Roles        []string
 	Teams        []ids.TeamID
 	Permissions  principal.Permissions
+	// Locale is the display language the granting human chose, empty when
+	// they never did, so system text answers the agent as it answers them.
+	Locale string
 }
 
 // Principal renders the principal shape every store entry point enforces. The
@@ -376,6 +379,7 @@ func (a AgentIdentity) Principal() principal.Principal {
 		SeatType:     principal.SeatType(a.SeatType),
 		Scopes:       a.Scopes,
 		Areas:        a.Areas,
+		Locale:       a.Locale,
 		Permissions:  a.Permissions,
 	}
 }
@@ -398,8 +402,9 @@ func (s *Service) authenticateAgentWhere(ctx context.Context, tx pgx.Tx, predica
 	// oauth_grant_id is NULL for a locally minted passport, which the principal
 	// spells as a zero connection rather than a pointer nobody else carries.
 	var connection *ids.UUID
+	var locale *string
 	err = tx.QueryRow(ctx, agentAuthQuery(predicate), args...).
-		Scan(&a.PassportID, &a.OnBehalfOf, &scopes, &a.SeatType, &connection, &areas)
+		Scan(&a.PassportID, &a.OnBehalfOf, &scopes, &a.SeatType, &connection, &areas, &locale)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return AgentIdentity{}, apperrors.ErrNotFound
 	}
@@ -408,6 +413,9 @@ func (s *Service) authenticateAgentWhere(ctx context.Context, tx pgx.Tx, predica
 	}
 	if connection != nil {
 		a.ConnectionID = *connection
+	}
+	if locale != nil {
+		a.Locale = *locale
 	}
 	a.Scopes = principal.NewScopeSet()
 	for _, sc := range scopes {
