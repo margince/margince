@@ -19,7 +19,7 @@ workflow is outside the gate:
 | `pace.yml` | every push to `main` | No (runs after the merge) |
 | `scheduled.yml` | daily and weekly on `main` | No |
 | `sbom.yml` | manual dispatch only | No |
-| `release.yml` | `v*` tag push (no pre-release), manual dispatch | No |
+| `release.yml` | manual dispatch from `main` only | No |
 | `release-tag.yml` | `v*` tag push | No (runs on a tag, after every merge) |
 
 `ci.yml` and `cla.yml` run on `merge_group` too, because the queue asks for each required check again.
@@ -315,20 +315,19 @@ nobody can get. So a newer run takes over only before signing starts, while `sbo
 
 ## `release.yml`
 
-Manual dispatch only. It cuts a margince-constellation release with the version `1970.<build>`, in
-the dist service of the constellation deployment at `test.margince.com`. The year is pinned to 1970
-while this is a PoC, so these releases sort below any real dated release. The build is the
-workflow run number. A constellation release is a server deployment, which GitHub does not host.
-The GitHub release belongs to `release-tag.yml`, which owns the
-`github-release` job.
+It cuts a release in the dist service of the constellation deployment at `test.margince.com`. A dist
+release is a server deployment, which GitHub does not host. The GitHub release belongs to
+`release-tag.yml`, which owns the `github-release` job.
 
-A release is a decision someone makes; there is no push trigger. So the role images have no other
+Only a manual dispatch from `main` starts it, with a required `version` input such as `1.0.0`.
+`scripts/release-dispatch-version.sh` refuses a version that is not plain `x.y.z`, and any other ref
+(`make test-release-dispatch-version`). There is no push trigger. So the role images have no other
 build ([#1965](https://github.com/margince/margince/issues/1965)).
 
 What a run does:
 
 1. The CLI asks the dist service for the patch base (`resolve-patch-base --release`): the newest published
-   release on its line. It cuts the patch from the git commit of that release, and uploads it with `draft-release --release <version> --patch-base <version>`. The first release has no base: its patch is
+   release. It cuts the patch from the git commit of that release, and uploads it with `draft-release --release <version> --patch-base <version>`. The first release has no base: its patch is
    the whole tree, sent with `--first-release`. With the patch go the three SBOM files for the source tree, generated again at the release commit (`make sbom`).
    The dist service checks that the SBOM files cover every file the patch makes. So the committed `sboms/` files, which may be behind, are never uploaded.
 
@@ -344,9 +343,9 @@ What a run does:
      over the Corepack folder would hide it.
    - The 10 GB Actions cache of the repository drops entries older than some hours. So a release
      after a quiet night starts with an empty cache.
-3. The images are pushed to the constellation registry (`registry.test.margince.com/margince/<role>`).
-   They log in as the registry publisher through the `MARGINCE_AUTH_PUBLISHER_TOKEN` secret. They
-   are added to the draft with `add-artifacts --release <version>`, as references pinned by digest.
+3. The images are pushed by digest, with no tag, to `registry.test.margince.com/margince/<role>`, logged in
+   as the registry publisher (`MARGINCE_AUTH_PUBLISHER_TOKEN`). The same builder bakes `bundle`. For each
+   Linux platform, `build-archive` packs the three programs, `LICENSE` and the notices with three SBOMs. One `add-artifacts --release <version>` call adds images and archives.
 4. The release is published with `publish-release --release <version>`. The dist uploads log in with the dist
    publisher token (the `MARGINCE_DIST_PUBLISHER_TOKEN` secret).
 

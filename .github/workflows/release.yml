@@ -1,66 +1,39 @@
 name: Release
 
-# Draft a margince-constellation release, on a v* tag or by hand. The release
-# lives in the constellation dist service at test.margince.com, not on GitHub —
-# a constellation release is a server deployment (role images, an incremental
-# patch, SBOMs) and GitHub hosts none of that.
+# Draft, fill and publish a dist release, started by hand from main with the
+# version as input. The dist service holds server releases: role images, an
+# incremental patch, program archives and SBOMs. GitHub hosts none of that.
 #
-# This ran on every push to main: about 400 runs a week, roughly 10 runner-
-# minutes each on arm64, and three jobs drawn from the same org-wide ceiling of
-# 20 concurrent runners the PR gates queue in. ci.yml already explains what that
-# ceiling costs — a full-stack merge schedules 28 jobs against it, so overlapping
-# lanes turn a 9-minute gate into a much longer one and starve the PR lanes
-# behind them. Releasing on every commit spent that budget on a version nobody
-# asked for: the repository is under heavy development and has no real releases
-# yet, which is what the epoch-pinned 1970.* version says out loud. A release is
-# now a decision somebody makes: a v* tag, or a dispatch for a trial draft.
+# A release is a decision somebody makes, so nothing starts this lane on its
+# own. A run on every push spent shared runner time on releases nobody asked for.
 #
-# ONE TAG CUTS BOTH RELEASES. On a v* tag this lane drafts the dist release
-# release-tag.yml's GitHub release goes with, versioned by the fixed rule in
-# scripts/release-dist-version.sh: vX.Y.Z becomes YYYY.EDITION.Z. A pre-release
-# tag drafts nothing here, because the dist grammar has none. A dispatch keeps
-# the 1970.<run> trial version below.
+# The GitHub release is not here. It belongs to release-tag.yml, which runs on
+# a v* tag. Only that lane creates a GitHub release, so a release page cannot
+# appear twice for one build.
 #
-# The GitHub release is NOT here. It belongs to release-tag.yml, which runs on
-# a v* tag: a release page is named with a version somebody chose, and that
-# version is a semver tag rather than the YYYY.edition.bugfix string the dist
-# service orders on. Two release kinds, two schemes, one lane each — and only
-# release-tag.yml can create a GitHub release, so a release page cannot appear
-# under two spellings of the same build.
+# The flow: check the version, then draft the release with the patch, the
+# three source SBOMs and the changelog. Then bake the role images and the
+# server programs, add the images and one archive per platform, and publish.
+# The dist service publishes only a draft with the patch, the SBOMs and the
+# changelog.
 #
-# The flow, in order: draft the release versioned 1970.<build> (the build is
-# this workflow's run number, fitting the constellation YYYY.edition version
-# scheme; the year is pinned to the epoch FOR NOW so every PoC release orders
-# strictly below any real dated release) with the incremental patch, the
-# three freshly generated source-tree SBOMs and the changelog attached, then
-# build the three role images through the bake file (docker-bake.hcl), push
-# them to the constellation registry, add them to the draft as digest-pinned
-# image references, and finally publish the release. The dist service
-# publishes only a complete draft (patch, all three SBOMs and the changelog).
+# The release-management CLI runs every dist call against this checkout,
+# because the source the release describes lives here. Uploads use the dist
+# publisher token, which only CI holds.
 #
-# Both the patch cut and the release upload go through the release-management
-# CLI (a closed-source tool built and published from
-# gradionhq/margince-constellation as a private container image), run here
-# against this repo's checkout: the product source the release describes lives
-# here, so the release is cut here. The upload authenticates with the dist
-# publisher token (the MARGINCE_DIST_PUBLISHER_TOKEN secret — only CI holds
-# it) against the dist service URL below.
+# The patch starts at the patch base: the newest release that went out,
+# withdrawn included. resolve-patch-base names its version and git revision
+# from one dist row. With no release out yet, the patch is the whole tree.
 #
-# The patch starts at the patch base: the newest release that went out on the
-# release's line, withdrawn included, as the dist service records it. The release
-# CLI's resolve-patch-base names its version and git revision from one dist row,
-# the patch is cut from that revision, and the draft names that version as
-# --patch-base. With no release that went out, the release is the first one and
-# its patch is the whole tree.
-#
-# The changelog is built from every non-merge commit subject since that same
-# revision, through scripts/release_changelog.py, so it describes what the patch
-# carries.
-# The first release gets one fixed sentence.
+# The changelog lists every non-merge commit subject since that revision,
+# through scripts/release_changelog.py, so it describes what the patch carries.
 on:
-  push:
-    tags: ['v*']
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Dist version, x.y.z, such as 1.0.0. It must be above every release that went out.'
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -72,9 +45,8 @@ permissions:
 # service and must never be interrupted part-way, so it carries a group that
 # serializes instead of one that cancels.
 #
-# The groups matter far less now that a dispatch is the only trigger: two runs
-# overlap only when somebody starts a second one deliberately. They are kept
-# because that case still exists and the reasoning above still holds for it.
+# Two runs overlap only when somebody starts a second one by hand, and the
+# groups still decide that case.
 
 env:
   # The release-management CLI image, published :latest from constellation's
@@ -94,9 +66,8 @@ env:
 jobs:
   draft:
     name: Draft release
-    # A pre-release tag has no dist version, so the lane stops before it starts.
-    if: github.ref_type != 'tag' || !contains(github.ref_name, '-')
-    timeout-minutes: 30
+    # The upload can wait up to about 68 minutes for the dist service.
+    timeout-minutes: 90
     # Superseded by a newer run on the same ref: the tip is the commit worth
     # drafting.
     concurrency:
@@ -109,7 +80,7 @@ jobs:
       # default GITHUB_TOKEN.
       packages: read
     outputs:
-      version: ${{ steps.draft.outputs.version }}
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -117,6 +88,12 @@ jobs:
           # Full history so the patch base's revision resolves; the shallow
           # default carries only the release commit.
           fetch-depth: 0
+      # Somebody typed the version, so it is checked before any work starts.
+      - name: Check the version and the branch
+        id: version
+        env:
+          DISPATCH_VERSION: ${{ inputs.version }}
+        run: bash scripts/release-dispatch-version.sh "$DISPATCH_VERSION" "$GITHUB_REF" >> "$GITHUB_OUTPUT"
       - name: Log in to ghcr.io
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -135,20 +112,12 @@ jobs:
       - name: Generate the SBOMs at the release commit
         run: make sbom
       - name: Cut the patch and draft the release
-        id: draft
         env:
           AFTER: ${{ github.sha }}
+          version: ${{ steps.version.outputs.version }}
           MARGINCE_RELEASE_MANAGEMENT_DIST_TOKEN: ${{ secrets.MARGINCE_DIST_PUBLISHER_TOKEN }}
         run: |
           set -euo pipefail
-          # A tag names the release by the fixed rule. A dispatch is a trial
-          # draft, pinned to the epoch so it orders below any real release.
-          if [[ "$GITHUB_REF_TYPE" == tag ]]; then
-            version="$(bash scripts/release-dist-version.sh "$GITHUB_REF_NAME" | sed -n 's/^version=//p')"
-          else
-            version="1970.${GITHUB_RUN_NUMBER}"
-          fi
-          echo "version=$version" >> "$GITHUB_OUTPUT"
           # The CLI picks the base; the script checks the record and fails
           # closed on anything but a base or the first-release mark.
           docker run --rm \
@@ -166,10 +135,7 @@ jobs:
             patch_from=(--from "$base_revision")
             patch_base=(--patch-base "$base_version")
           fi
-          # The ref name is part of the patch filename; a branch name with a
-          # slash would make it a path into a directory that does not exist
-          # inside the CLI's mount, so flatten the separators.
-          patch_file="${GITHUB_REF_NAME//\//-}-$AFTER.patch"
+          patch_file="release-$version.patch"
           # The image ENTRYPOINT is the CLI (WORKDIR /work); mount the checkout
           # there and diff it with --repo. The image's own user is non-root and
           # does not own the runner's checkout, so run as the runner's uid/gid —
@@ -191,7 +157,7 @@ jobs:
           # came through another branch keeps its own subject. The script drops
           # invalid UTF-8 bytes and refuses a base with no subject since it; the
           # CLI refuses an empty or too large file before any request.
-          changelog_file="${GITHUB_REF_NAME//\//-}-$AFTER.changelog.md"
+          changelog_file="release-$version.changelog.md"
           if [ "$first_release" = true ]; then
             python3 scripts/release_changelog.py "$version" "$GITHUB_REPOSITORY" "$AFTER" > "$changelog_file"
           else
@@ -212,18 +178,17 @@ jobs:
             --sbom-spdx22 sboms/margince.spdx221.json \
             --sbom-spdx30 sboms/margince.spdx300.json
 
-  # Build the three role images through the bake file (docker-bake.hcl), push
-  # them to ghcr, and add all three to the drafted release in ONE add-artifacts
-  # call, each as a digest-pinned reference (the digest is the identity; the
-  # version tag is recorded for humans). A release needs every role, so the
-  # images land in the draft together or not at all.
+  # Bake the three role images and the server programs, and add them to the
+  # draft in one add-artifacts call. A release needs every role, and the dist
+  # service refuses a platform that arrives in parts.
   #
   # `docker-image`, not `image`: the check-image-pins gate key-anchors every
   # `image:` in a workflow as a container reference to digest-check, and that
   # includes a job id.
   docker-image:
     name: Build docker container
-    timeout-minutes: 60
+    # The bake, then one upload that can wait up to about 68 minutes.
+    timeout-minutes: 180
     needs: [draft]
     # The long half — and the reason cancellation is here at all. A bake for a
     # commit the tip has already replaced is work nobody reads.
@@ -317,26 +282,60 @@ jobs:
           # costs, and its .test.sh for what the guard refuses.
           VERSION="$(./scripts/release-version-stamped.sh "${VERSION:-}")"
           export VERSION
-          docker buildx bake --push \
-             --provenance "mode=max" \
-             --metadata-file bake-metadata.json
+          # The dist release names each image by digest, so no version tag is
+          # pushed. BuildKit refuses a tagged name with push-by-digest, so each
+          # role's name loses its tag here.
+          names=()
+          for role in api web worker; do
+            names+=(--set "$role.tags=$REPO/$role")
+          done
+          docker buildx bake "${names[@]}" \
+            --set '*.output=type=image,push-by-digest=true,push=true' \
+            --provenance "mode=max" \
+            --metadata-file bake-metadata.json
           images=()
           for role in api web worker; do
             digest="$(jq -er --arg role "$role" '.[$role]."containerimage.digest"' bake-metadata.json)"
-            images+=(--image "$role=$REPO/$role:$VERSION@$digest")
+            images+=(--image "$role=$REPO/$role@$digest")
+          done
+          # The same bundle bake as release-tag.yml, on this builder, so the
+          # programs come from the stages the images just built.
+          docker buildx bake bundle
+          archives=()
+          for platform in linux-amd64 linux-arm64; do
+            from="dist/bundle/${platform/-/_}"
+            tree="dist/archive-tree/$platform"
+            install -D -m 0755 -t "$tree" \
+              "$from/bin/margince-api" "$from/bin/margince-worker" "$from/bin/margince-migrate"
+            install -D -m 0644 -t "$tree" "$from/LICENSE"
+            install -D -m 0644 -t "$tree/licenses" "$from/licenses/THIRD-PARTY-NOTICES.txt"
+            docker run --rm \
+              --user "$(id -u):$(id -g)" \
+              -v "$PWD":/work \
+              -e HOME=/tmp \
+              "$RELEASE_MANAGEMENT_IMAGE" \
+              build-archive --platform "$platform" --tree "$tree" --out dist/archive
+            base="dist/archive/margince-$platform"
+            archives+=(--archive "$platform=$base.zip"
+              --archive-sbom "$platform:cyclonedx-json=$base.cdx.json"
+              --archive-sbom "$platform:spdx22-json=$base.spdx22.json"
+              --archive-sbom "$platform:spdx30-json=$base.spdx30.json")
           done
           docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            -v "$PWD":/work \
+            -e HOME=/tmp \
             -e MARGINCE_RELEASE_MANAGEMENT_DIST_URL \
             -e MARGINCE_RELEASE_MANAGEMENT_DIST_TOKEN \
             "$RELEASE_MANAGEMENT_IMAGE" \
-            add-artifacts --release "$VERSION" "${images[@]}"
+            add-artifacts --release "$VERSION" "${images[@]}" "${archives[@]}"
 
-  # Publish only after the images are attached, so a published release always
-  # carries its images even though the dist completeness gate only requires
-  # the patch, the SBOMs and the changelog.
+  # Publish only after the images and archives are attached. The dist service
+  # requires only the patch, the SBOMs and the changelog, so this order is ours.
   publish:
     name: Publish release
-    timeout-minutes: 30
+    # One request that can wait up to about 68 minutes.
+    timeout-minutes: 75
     needs: [draft, docker-image]
     # `cancel-in-progress: false` here and nowhere else: publishing mutates the
     # dist service, so a publish that has started always finishes. The group

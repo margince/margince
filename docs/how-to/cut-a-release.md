@@ -122,27 +122,48 @@ Two kinds of release live here, and they carry different versions:
 
 | | `release-tag.yml` | `release.yml` |
 |---|---|---|
-| Trigger | a `v*` tag | the same `v*` tag, or started by hand to test the lane |
-| Version | `v1.0.0` (semver) | `YYYY.edition.bugfix`, from the tag; a run by hand is `1970.<run>` |
+| Trigger | a `v*` tag | started by hand from `main` |
+| Version | `v1.0.0` (semver) | `1.0.0`, typed when the run starts |
 | Publishes to | the GitHub release page | the dist service at `dist.test.margince.com` |
-| Carries | the notes, the images on `ghcr.io`, a server bundle for each Linux platform, SBOMs, a signed `SHA256SUMS` | the patch of changes, SBOMs, a changelog, role images |
+| Carries | the notes, the images on `ghcr.io`, a server bundle for each Linux platform, SBOMs, a signed `SHA256SUMS` | the patch of changes, SBOMs, a changelog, role images, an archive of the programs for each Linux platform |
 
-The version form of the dist service does not accept a `v` prefix, so the two lanes use different names.
-`scripts/release-dist-version.sh` derives one from the other by a fixed rule, so the dist version can be
-worked out again from the tag:
+A tag does not start `release.yml`. The dist service accepts no `v` prefix, so the two lanes use different
+names.
 
-- `YYYY` is the year, in UTC, that `vX.Y.0` was tagged.
-- The edition is the place of `vX.Y.0` in that year's `.0` tags, in version order, counting from 1.
-- The last part is the patch, `Z`.
+### Start a dist release
 
-A patch keeps the year and edition of its `vX.Y.0`, so `v1.1.3` comes after `v1.1.0` in any year. A tag
-with an added part, such as `v1.0.0-rc.1`, makes no dist release.
+Start `release.yml` from `main` and type the version:
+
+```sh
+gh workflow run release.yml --ref main -f version=1.0.0
+```
+
+The version is three numbers, `x.y.z`, with no prefix, no ending and no part that starts with `0`.
+Before the lane drafts, [`scripts/release-dispatch-version.sh`](../../scripts/release-dispatch-version.sh)
+refuses any other form and any branch other than `main` (`make test-release-dispatch-version`).
+
+The dist service has one line of releases. A new version must be above every published release,
+withdrawn ones too. The release CLI refuses a lower version before the draft.
+
+### What the archive of a platform holds
+
+For `linux-amd64` and `linux-arm64` the lane writes a folder with `margince-api`, `margince-worker`,
+`margince-migrate`, `LICENSE` and `licenses/THIRD-PARTY-NOTICES.txt`. The files come from the same
+`bundle` bake as the server bundle of `release-tag.yml`. The programs hold code of other projects,
+and their licenses require the notices to go with each copy.
+
+`build-archive` of the release CLI turns each folder into an archive and three SBOM files.
+`add-artifacts` uploads both platforms, with the role images, in one call. The dist service refuses a
+platform that comes in parts.
+
+The role images are pushed with no version tag. The release names each image by its hash, as
+`<role>=<repository>@sha256:<hash>`.
 
 ### Where the patch of changes starts
 
-The patch of `release.yml` starts at the patch base. The patch base is the newest published release on
-the release's line, as the dist service records it. The line is `main` or one `lts/YYYY` branch. A withdrawn
-release was published, so it can be the base: an installation that runs it still gets the next patch.
+The patch of `release.yml` starts at the patch base. The patch base is the newest published release,
+as the dist service records it. A withdrawn release was published, so it can be the base: an installation that
+runs it still gets the next patch.
 
 The release CLI reads the base from the dist service with `resolve-patch-base --release`, given the version of
 the new release. It names the version and the git revision of one release. The lane cuts the patch from that
@@ -150,10 +171,10 @@ revision, and `draft-release` names that version as `--patch-base`. So the patch
 record and cannot disagree. The publisher uses `--release <version>` for
 `draft-release`, `add-artifacts` and `publish-release`.
 
-A lane that was cancelled or failed published nothing. So the next patch starts at the newest published release
-on the line, and it also carries the files of the lane that was skipped.
+A lane that was cancelled or failed published nothing. So the next patch starts at the newest published
+release, and it also carries the files of the lane that was skipped.
 
-If no release was ever published on `main`, the release is the first one. Its patch is the whole tree, and
+If no release was ever published, the release is the first one. Its patch is the whole tree, and
 `draft-release` marks it with `--first-release`.
 
 `scripts/release-patch-base.sh` reads the record of the release CLI. It accepts a base or the first-release mark,
