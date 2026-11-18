@@ -27,7 +27,7 @@ type RouteCandidate = components["schemas"]["ContactGraphRouteCandidate"];
 type RouteEvidence = components["schemas"]["ContactGraphRouteEvidence"];
 type Translate = ReturnType<typeof useT>;
 
-/** The job titles the graph knows for the people on the chain. */
+/** The job titles the graph knows for each name on the chain. */
 export type ChainRoles = Readonly<{
   via?: string;
   through?: string;
