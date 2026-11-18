@@ -497,11 +497,8 @@ internal/platform/httperr/faulttest/faulttest.go#package faulttest
 internal/platform/httperr/httperr.go#func Classify
 internal/platform/httperr/httperr.go#type DetailedError.Fields
 internal/platform/httperr/wire.go#const codeBodyTooLarge
-internal/platform/jobs/composed.go#var composed
-internal/platform/jobs/fault.go#func faultFor
 internal/platform/jobs/fault.go#func faultLogAttrs
 internal/platform/jobs/fault.go#var substitutes
-internal/platform/jobs/faultclass.go#var composedClasses
 internal/platform/jobs/faultreschedule_test.go#func TestAPostponementIsNotAvailableToTheCoreVocabulary
 internal/platform/jobs/faultreschedule_test.go#var transientClass
 internal/platform/jobs/spec.go#func DeclaredQueues

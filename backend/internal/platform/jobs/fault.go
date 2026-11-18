@@ -75,8 +75,8 @@ func FaultForKind(ctx context.Context, table Composed, kind string, err error) e
 	return table.faultFor(ctx, kind, err)
 }
 
-// faultFor is the one body both entry points share, so the two cannot drift into
-// two different orderings of the same decisions.
+// faultFor is the body both entry points share, so both take the same
+// decisions in the same order.
 func (c Composed) faultFor(ctx context.Context, kind string, err error) error {
 	if err == nil {
 		return nil
