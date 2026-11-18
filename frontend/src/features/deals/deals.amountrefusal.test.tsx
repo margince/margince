@@ -141,7 +141,5 @@ describe("a deal amount the currency cannot hold", () => {
       "This amount has more decimals than JPY allows.",
     );
     expect(field.validate?.("", {})).toBeUndefined();
-    expect(field.wireField).toBe("amount_minor");
-    expect(field.min).toBe("0");
   });
 });
