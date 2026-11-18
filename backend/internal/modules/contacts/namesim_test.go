@@ -94,12 +94,34 @@ func TestNormalizeCompanyNameStripsTrailingLegalSuffixes(t *testing.T) {
 	}
 }
 
+// A rep types the legal form in full as often as abbreviated. An unlisted form
+// keeps its word in the key, so the pair is not one brand. The queue then drops
+// it unless the two share an address or phone.
+func TestALegalFormWrittenInFullIsTheSameBrand(t *testing.T) {
+	for _, spelling := range []string{
+		"Maple Works Inc", "Maple Works Incorporated", "Maple Works Corporation",
+		"Maple Works Limited", "Maple Works Company Limited", "Maple Works JSC",
+		"Maple Works Pty Ltd", "Maple Works LLP", "Maple Works N.V.",
+	} {
+		if got := bestCompanyNamePairing("Maple Works", "", spelling, ""); !got.SameBrand {
+			t.Errorf("%q against Maple Works is not the same brand (key %q)",
+				spelling, NormalizeCompanyName(spelling))
+		}
+	}
+	if got := bestCompanyNamePairing("Alpha Systems", "", "Beta Systems", ""); got.SameBrand {
+		t.Error("Alpha Systems and Beta Systems share only a trade word, yet read as one brand")
+	}
+}
+
 func TestNormalizeCompanyNameKeepsASuffixThatIsTheName(t *testing.T) {
 	// Stripping every occurrence rather than the trailing token would
 	// erase the company: a firm called "Co" or "AG Systems" is not a
 	// suffix.
 	if got := NormalizeCompanyName("AG Systems"); got != "ag systems" {
 		t.Fatalf("NormalizeCompanyName(AG Systems) = %q, want %q", got, "ag systems")
+	}
+	if got := NormalizeCompanyName("Limited"); got != "limited" {
+		t.Fatalf("a lone suffix-shaped name was stripped to %q, want %q", got, "limited")
 	}
 	if got := NormalizeCompanyName("Co"); got != "co" {
 		t.Fatalf("a lone suffix-shaped name was stripped to %q, want %q", got, "co")
