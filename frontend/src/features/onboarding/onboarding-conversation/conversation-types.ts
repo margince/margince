@@ -92,8 +92,8 @@ export type ConversationQuestion = {
   params?: Record<string, string>;
   options: QuestionOption[];
   /** The subordinate local-dismiss action's label (humans outrank the
-   * reader: a clarify is never an unanswerable gate). Absent on questions
-   * that genuinely need an answer to proceed (the speaker ask). */
+   * reader: a question is never an unanswerable gate). Absent on a question
+   * whose dismissal would leave nothing true to record. */
   dismissLabelKey?: MessageKey;
 };
 

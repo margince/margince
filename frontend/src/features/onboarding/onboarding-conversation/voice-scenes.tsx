@@ -355,11 +355,14 @@ export function VoiceSpeakerScene({
   question,
   failures,
   onAnswer,
+  onSkip,
 }: Readonly<{
   question: ConversationQuestion;
   /** Other sources of the same pick that could not be added. */
   failures: readonly VoiceIngestFailure[];
   onAnswer: (questionId: string, value: string) => void;
+  /** Leaves this file out; offered when the question carries its label. */
+  onSkip: () => void;
 }>) {
   const t = useT();
   const group = useId();
@@ -412,7 +415,13 @@ export function VoiceSpeakerScene({
             onAnswer(question.id, picked);
           }
         }}
-      />
+      >
+        {question.dismissLabelKey !== undefined && (
+          <Button variant="ghost" onClick={onSkip}>
+            {t(question.dismissLabelKey)}
+          </Button>
+        )}
+      </WayOnward>
     </VoiceScene>
   );
 }

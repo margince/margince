@@ -397,6 +397,10 @@ export function useVoiceCorpus({
       question: {
         id: `speaker:${nextAsk.ref}`,
         i18nKey: "ob.conv.voice.speakerQuestion",
+        params: { name: nextAsk.label },
+        // A colleague's call, or one where the reader is not listed, has no
+        // honest answer among the options, so the file can be left out.
+        dismissLabelKey: "ob.conv.voice.speakerSkip",
         options: nextAsk.preview.speakers.map((speaker) => ({
           value: speaker.label,
           label: speaker.label,
@@ -411,9 +415,10 @@ export function useVoiceCorpus({
   }, [nextAsk, state.phase, state.pendingQuestion, dispatch, locale]);
 
   // The owner named themselves: ingest with the speaker filter, so only that
-  // speaker's server-counted words ever reach the meter.
+  // speaker's server-counted words ever reach the meter. Without a value the
+  // owner skipped the file, and nothing of it is sent.
   const answerSpeaker = useCallback(
-    (questionId: string, value: string) => {
+    (questionId: string, value: string | null) => {
       const ask = asks.find(
         (candidate) => `speaker:${candidate.ref}` === questionId,
       );
@@ -422,6 +427,9 @@ export function useVoiceCorpus({
       }
       setAsks((prev) => prev.filter((candidate) => candidate.ref !== ask.ref));
       setFailures([]);
+      if (value === null) {
+        return;
+      }
       runIntake(
         (stamp) =>
           intakeTranscript(ask.ref, ask.label, ask.content, value, stamp),

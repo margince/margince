@@ -13402,7 +13402,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "ob.conv.voice.skipped": "Schreibstil vorerst überspringen.",
   "ob.conv.voice.uploadAdded": "{name} hinzugefügt.",
   "ob.conv.voice.speakerQuestion":
-    "Dieses Transkript hat mehrere Sprechende. Wer davon bist du? Nur deine eigenen Worte zählen.",
+    "„{name}“ enthält mehrere Sprechende. Wer davon bist du? Nur deine eigenen Worte zählen.",
+  "ob.conv.voice.speakerSkip": "Datei überspringen",
   "ob.conv.voice.speakerOptionDetail": "Wörter: {words} · Beiträge: {turns}",
   "ob.conv.voice.speakerFoot": "Deine Wahl gilt nur für diese Datei.",
   "ob.conv.voice.speakerContinue": "Diese Person verwenden",

@@ -13050,7 +13050,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "ob.conv.voice.skipped": "Tạm bỏ qua giọng văn.",
   "ob.conv.voice.uploadAdded": "Đã thêm {name}.",
   "ob.conv.voice.speakerQuestion":
-    "Bản chép lời này có nhiều người nói. Bạn là người nào? Chỉ lời của chính bạn được tính.",
+    "“{name}” có nhiều người nói. Bạn là người nào? Chỉ lời của chính bạn được tính.",
+  "ob.conv.voice.speakerSkip": "Bỏ qua tệp này",
   "ob.conv.voice.speakerOptionDetail": "số từ: {words} · lượt nói: {turns}",
   "ob.conv.voice.speakerFoot": "Lựa chọn này chỉ áp dụng cho tệp này.",
   "ob.conv.voice.speakerContinue": "Dùng người nói này",

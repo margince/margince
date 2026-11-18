@@ -13326,7 +13326,8 @@ export const en = {
   "ob.conv.voice.skipped": "Skip voice for now.",
   "ob.conv.voice.uploadAdded": "Added {name}.",
   "ob.conv.voice.speakerQuestion":
-    "This transcript has several speakers. Which one is you? Only your own words count.",
+    "“{name}” has several speakers. Which one is you? Only your own words count.",
+  "ob.conv.voice.speakerSkip": "Skip this file",
   "ob.conv.voice.speakerOptionDetail": "words: {words} · turns: {turns}",
   "ob.conv.voice.speakerFoot": "Your choice applies to this file only.",
   "ob.conv.voice.speakerContinue": "Use this speaker",

@@ -85,6 +85,15 @@ export function VoiceAct({ state, dispatch, initialSummary }: VoiceActProps) {
     dispatch({ type: "QUESTION_ANSWERED", questionId, value });
     corpus.answerSpeaker(questionId, value);
   };
+  const handleSkipFile = (questionId: string) => {
+    dispatch({
+      type: "QUESTION_ANSWERED",
+      questionId,
+      value: "",
+      dismissed: true,
+    });
+    corpus.answerSpeaker(questionId, null);
+  };
 
   const presence = presenceFor(state);
 
@@ -106,6 +115,7 @@ export function VoiceAct({ state, dispatch, initialSummary }: VoiceActProps) {
       fileRef={fileRef}
       onFiles={onFiles}
       onAnswer={handleAnswer}
+      onSkipFile={handleSkipFile}
     />
   );
 
@@ -259,6 +269,7 @@ function VoiceSurface({
   fileRef,
   onFiles,
   onAnswer,
+  onSkipFile,
 }: Readonly<{
   state: ConversationState;
   dispatch: Dispatch<ConversationEvent>;
@@ -268,6 +279,7 @@ function VoiceSurface({
   fileRef: RefObject<HTMLInputElement | null>;
   onFiles: (event: ChangeEvent<HTMLInputElement>) => void;
   onAnswer: (questionId: string, value: string) => void;
+  onSkipFile: (questionId: string) => void;
 }>) {
   const t = useT();
   if (state.phase === "vo.collecting") {
@@ -297,11 +309,13 @@ function VoiceSurface({
     );
   }
   if (state.phase === "vo.speaker" && state.pendingQuestion !== null) {
+    const question = state.pendingQuestion;
     return (
       <VoiceSpeakerScene
-        question={state.pendingQuestion}
+        question={question}
         failures={corpus.failures}
         onAnswer={onAnswer}
+        onSkip={() => onSkipFile(question.id)}
       />
     );
   }

@@ -81,6 +81,27 @@ describe("the conversational voice act", () => {
     expect(await screen.findByText(/Kept 1,240 of 5,400 words/)).toBeTruthy();
   });
 
+  it("names the file it asks about, and lets the reader skip that file", async () => {
+    const calls = stubApi({ preview: conversationalPreview });
+    render(<VoiceHarness initial={collectingState()} />);
+    const user = userEvent.setup();
+
+    await uploadFile("call.vtt", "WEBVTT transcript content");
+
+    expect(
+      await screen.findByRole("heading", {
+        name: /“call\.vtt” has several speakers/,
+      }),
+    ).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Skip this file" }));
+
+    expect(
+      await screen.findByRole("button", { name: en["ob.conv.voice.browse"] }),
+    ).toBeTruthy();
+    expect(screen.queryByRole("radiogroup")).toBeNull();
+    expect(requestsTo(calls, "/sources", "POST")).toHaveLength(0);
+  });
+
   it("ingests a document directly and reacts with the server word count", async () => {
     const calls = stubApi({
       preview: documentPreview,

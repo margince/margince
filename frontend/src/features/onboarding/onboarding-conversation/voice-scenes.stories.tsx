@@ -234,6 +234,8 @@ export const CollectPhone: Story = {
 const SPEAKER_QUESTION: ConversationQuestion = {
   id: "speaker:src-2",
   i18nKey: "ob.conv.voice.speakerQuestion",
+  params: { name: "standup.vtt" },
+  dismissLabelKey: "ob.conv.voice.speakerSkip",
   options: [
     {
       value: "SPEAKER_00",
@@ -253,7 +255,8 @@ const SPEAKER_QUESTION: ConversationQuestion = {
 /**
  * Which voice in the transcript is the reader's own. Continue stays held until
  * one is picked: a speaker chosen by default would file somebody else's words as
- * this company's writing, and nothing downstream would ever say so.
+ * this company's writing, and nothing downstream would ever say so. Skip this
+ * file leaves the file out when none of the speakers is the reader.
  */
 export const SpeakerAsk: Story = {
   render: () => (
@@ -262,9 +265,15 @@ export const SpeakerAsk: Story = {
         question={SPEAKER_QUESTION}
         failures={[]}
         onAnswer={() => {}}
+        onSkip={() => {}}
       />
     </StoryProviders>
   ),
+};
+
+export const SpeakerAskDark: Story = {
+  ...SpeakerAsk,
+  globals: { theme: "dark" },
 };
 
 /** The same decision in German, where the option detail and the foot line both
@@ -276,6 +285,7 @@ export const SpeakerAskGerman: Story = {
         question={SPEAKER_QUESTION}
         failures={[]}
         onAnswer={() => {}}
+        onSkip={() => {}}
       />
     </StoryProviders>
   ),
