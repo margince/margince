@@ -309,7 +309,7 @@ jobs in the same transaction.
 
 Each workspace job leaves the set when it ends for good, and the job that empties the set hands the
 marker back. Every marker write **fences on the run ID**. So a slow job from a finished run cannot
-move the marker of the run that replaced it. Three things follow:
+move the marker of the run that replaced it. Four things follow:
 
 - **Margince stops a run when its binding changes.** The job carries
   the identity that held when it claimed the marker. A worker whose live embedder no
@@ -320,6 +320,8 @@ move the marker of the run that replaced it. Three things follow:
   has a result left to reach, and *used up its attempts* is one of those results. The `active` of
   `/readyz` takes on that smaller claim. The pending counts on the status endpoint are what tell an
   operator what is missing.
+- **A stopped run writes no model.** A run that a binding change stopped lets go of the marker, and the marker
+  keeps the model it named before. That run's target is a model no role serves any more.
 - **A marker left held has a way back.** A workspace job that is dropped or canceled can leave the
   marker held with nothing running. (River starts again a job that runs too long only if the job
   declares a time limit, and a workspace job declares none.) A confirm with `force` set takes a

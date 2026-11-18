@@ -61,10 +61,9 @@ type Service struct {
 	view Assembler
 	lane Completer
 	now  func() time.Time
-	// routingVersion identifies the model binding in the fingerprint, so
-	// re-pointing the lane rewrites briefs rather than leaving text attributed
-	// to a model that no longer writes it.
-	routingVersion string
+	// routingVersion names the model binding in the fingerprint. It is read per
+	// request, so a rebind rewrites the briefs the previous model wrote.
+	routingVersion func() string
 	// emailRows opens the messages the brief cites. Held rather than read
 	// inline because the brief is CACHED: what a citation says is one reader's
 	// to keep, and the message behind it is another reader's to receive, so it
@@ -91,8 +90,11 @@ func (s *Service) enrich(ctx context.Context, out crmcontracts.ContactBrief) (cr
 // model lane that writes it. lane may be nil: that is a deployment running no
 // model, and the deterministic floor is the answer.
 func NewService(
-	pool *pgxpool.Pool, view Assembler, lane Completer, routingVersion string, now func() time.Time,
+	pool *pgxpool.Pool, view Assembler, lane Completer, routingVersion func() string, now func() time.Time,
 ) *Service {
+	if routingVersion == nil {
+		routingVersion = func() string { return "" }
+	}
 	return &Service{pool: pool, view: view, lane: lane, routingVersion: routingVersion, now: now}
 }
 
@@ -130,7 +132,7 @@ func (s *Service) Get(ctx context.Context, contactID ids.ContactID, force bool) 
 	}
 	in := FromView(view)
 	lang := identity.BaseLanguageForPrompt(ctx, s.pool)
-	fingerprint, err := Fingerprint(in, s.routingVersion, lang)
+	fingerprint, err := Fingerprint(in, s.routingVersion(), lang)
 	if err != nil {
 		return crmcontracts.ContactBrief{}, err
 	}
