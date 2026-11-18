@@ -11,9 +11,6 @@ package compose
 // under it. Capture's equivalent is the CONNECTOR's word — the operator chose
 // it once, on a thing that exists, rather than a machine minting one per sync
 // window into a shared human-curated vocabulary.
-//
-// The other half of the question the ticket asked — "in this period" — is the
-// record's own created_at and needs no word at all.
 
 import (
 	"context"
