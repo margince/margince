@@ -3370,6 +3370,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "common.loading": "Đang tải…",
   "ref.nameLoadFailed": "Không thể tải tên",
   "ref.memberLeft": "{name} (đã nghỉ)",
+  "ref.leadUnnamed": "Lead chưa có tên",
   "roster.failedUsers": "Không thể tải danh sách thành viên.",
   "roster.failedTeams": "Không thể tải danh sách nhóm.",
   "owner.rosterFailed":
@@ -7116,7 +7117,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "vcardImport.working": "Đang đọc danh thiếp…",
   "vcardImport.back": "Quay lại Liên hệ",
   "vcardImport.noCards": "Tệp này không chứa danh thiếp nào.",
-  "vcardImport.failed": "Không thể nhập danh thiếp. Thử lại.",
+  "vcardImport.failed": "Danh thiếp chưa được nhập.",
   "vcardImport.outcome.created": "Đã thêm",
   "vcardImport.outcome.updated": "Đã cập nhật",
   "vcardImport.outcome.needsReview": "Có thể là bản trùng",
@@ -20226,6 +20227,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.hidden.setAside.detail":
     "Đã tạm hoãn hoặc đánh dấu không phải việc của bạn. Việc tạm hoãn sẽ tự quay lại.",
   "worklist.hidden.shown": "Danh sách công việc đang hiển thị {count} việc.",
+  "worklist.hidden.privateUnchecked_one":
+    "{count} email riêng tư chưa được AI kiểm tra",
+  "worklist.hidden.privateUnchecked_other":
+    "{count} email riêng tư chưa được AI kiểm tra",
   "worklist.hidden.rows.loading": "Đang tải thư bị giữ lại…",
   "worklist.hidden.rows.outOfReach":
     "Không thể đọc thư nào ở quy mô này. Có thể vẫn còn thư bị giữ lại.",
@@ -21742,6 +21747,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Người chịu trách nhiệm deal có thể nhờ bộ phận pháp lý rà soát deal, và một giai đoạn có thể yêu cầu pháp lý duyệt. Tắt sẽ ẩn cả hai và giữ mọi lần rà soát đã ghi.",
   "legalReview.settingsReadOnly": "Quản trị viên thay đổi cài đặt này.",
   "legalReview.notSaved": "Chưa lưu được cài đặt.",
+  "privateMailRequests.title": "Yêu cầu trong email riêng tư",
+  "privateMailRequests.switch": "Kiểm tra yêu cầu trong email riêng tư",
+  "privateMailRequests.hint":
+    "AI đọc email riêng tư để tìm yêu cầu mà khách hàng gửi tới bạn. Email được đánh dấu bảo mật hoặc được giữ lại có chủ ý thì không bao giờ được đọc.",
+  "privateMailRequests.readOnly": "Quản trị viên thay đổi cài đặt này.",
+  "privateMailRequests.notSaved": "Chưa lưu được cài đặt.",
   "stage.criteria.kindLegalReviewed": "Pháp lý đã duyệt",
   "legalReview.docUnavailable":
     "Bạn không mở được tệp này. Hãy hỏi đồng nghiệp đã yêu cầu rà soát.",
@@ -22527,6 +22538,18 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "progress.serviceSales": "Dịch vụ và dự án",
   "progress.planned": "Pipeline đang mở",
   "progress.plannedAt": "Deal đang mở tính đến {at}",
+  "progress.scenarios": "Tháng có thể kết thúc ở đâu",
+  "progress.scenario.worst": "Trường hợp xấu nhất",
+  "progress.scenario.worstWhy": "Nếu không chốt thêm deal nào",
+  "progress.scenario.expected": "Dự kiến",
+  "progress.scenario.best": "Best case",
+  "progress.scenario.bestWhy": "Nếu mọi deal đang mở của tháng đều chốt",
+  "progress.scenarios.asOf": "Deal tính đến {at}",
+  "progress.scenarios.unpriced":
+    "Không tính deal chưa có giá trị hoặc chưa có tỷ giá",
+  "progress.scenarios.limited": "Chỉ tính các deal bạn xem được",
+  "progress.scenarios.yearUnavailable":
+    "Trường hợp xấu nhất, dự kiến và tốt nhất chỉ có cho một tháng. Dự báo không có kỳ năm để đọc.",
   "progress.unclassified": "Chưa phân loại",
   "progress.unclassifiedDetail":
     "Doanh thu này chưa được phân loại theo sản phẩm hay dịch vụ.",

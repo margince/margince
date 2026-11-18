@@ -181,6 +181,7 @@ export function ApprovalRow({
     marketingPurpose: staged?.marketingPurpose,
     consentPurpose: staged?.consentPurpose,
     evidence: staged?.evidence,
+    draft: staged?.draft,
     enabled: !decided && staged !== undefined,
   });
 

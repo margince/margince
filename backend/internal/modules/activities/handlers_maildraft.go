@@ -72,6 +72,8 @@ func mailDraftContentFrom(req crmcontracts.MailDraftInput) (MailDraftContent, er
 		Context:       commsauthz.Category(valueOr(req.CommunicationContext)),
 		Schedule:      schedule,
 		EditorState:   valueOr(req.EditorState),
+		// The reason is the author's own words, kept as typed.
+		OverrideExplanation: valueOr(req.OverrideExplanation),
 	}, nil
 }
 
@@ -145,6 +147,10 @@ func withDraftSending(out *crmcontracts.MailDraft, d MailDraft) {
 	if d.Content.Context != "" {
 		claimed := crmcontracts.CommunicationContext(d.Content.Context)
 		out.CommunicationContext = &claimed
+	}
+	if d.Content.OverrideExplanation != "" {
+		explanation := d.Content.OverrideExplanation
+		out.OverrideExplanation = &explanation
 	}
 	if d.Content.Schedule != nil {
 		at, tz := d.Content.Schedule.At, d.Content.Schedule.TZ

@@ -7,13 +7,18 @@ import { useState } from "react";
 import { api } from "../../api/client";
 import { WrittenBy } from "../../components/citations.list";
 import { AiPending } from "../../design-system/aipending";
-import { Button } from "../../design-system/atoms";
+import { Button, StatCard } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody } from "../../design-system/panel";
+import { StatStrip } from "../../design-system/statstrip";
+import { formatAnalyticsMoney, formatDateTime } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
+import { analyticsSectionHref } from "../../lib/analytics.address";
 import { unwrap } from "../../lib/problem";
 import { OutlookProse, readableAssessment } from "./analytics.assessment";
+import { scopeKey } from "./analytics.context";
 import type { ProgressAsk, SalesProgress } from "./progress.queries";
+import { ProgressDelta } from "./progress.result";
 
 // "analytics" heads the key, so turning individual performance off drops the
 // summary with the figures it was written from. The figures it rests on are
@@ -117,5 +122,109 @@ export function ProgressSummary({
         )}
       </PanelBody>
     </Panel>
+  );
+}
+
+type Scenarios = NonNullable<SalesProgress["scenarios"]>;
+
+/**
+ * Where a month may finish against its goal: what is won, the forecast
+ * landing, and every open deal closing. The server states each case and its
+ * difference to the goal; this only formats them. A year has no forecast to
+ * read them from, and says so.
+ */
+export function ProgressScenarios({
+  progress,
+}: Readonly<{ progress: SalesProgress }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const { scenarios, currency } = progress;
+  if (progress.period.kind === "year")
+    return (
+      <p className="t-caption">{t("progress.scenarios.yearUnavailable")}</p>
+    );
+  if (!scenarios) return null;
+  // The forecast page reads the current month only, and lists the deals each
+  // case is made of.
+  const href =
+    progress.state === "current"
+      ? analyticsSectionHref(
+          "forecast",
+          new Map([
+            ["scope", scopeKey(progress.scope)],
+            ["pipeline", "all"],
+            ["period", "this_month"],
+          ]),
+        )
+      : undefined;
+  const card = (label: string, scenario: Scenarios["worst"], why: string) => (
+    <StatCard
+      label={label}
+      value={formatAnalyticsMoney(scenario.amount_minor, currency, locale)}
+      detail={
+        <>
+          <span>{why}</span>
+          <ProgressDelta
+            delta={scenario.delta_minor}
+            currency={currency}
+            open={false}
+          />
+        </>
+      }
+      href={href}
+      opens="forecast"
+    />
+  );
+  return (
+    <StatStrip
+      label={t("progress.scenarios")}
+      floor={<ScenarioFloor scenarios={scenarios} progress={progress} />}
+    >
+      {card(
+        t("progress.scenario.worst"),
+        scenarios.worst,
+        t("progress.scenario.worstWhy"),
+      )}
+      {card(
+        t("progress.scenario.expected"),
+        scenarios.expected,
+        t(`forecast.basis.${scenarios.landing.measure}`),
+      )}
+      {card(
+        t("progress.scenario.best"),
+        scenarios.best,
+        t("progress.scenario.bestWhy"),
+      )}
+    </StatStrip>
+  );
+}
+
+// When the deals were read, and what the cases leave out.
+function ScenarioFloor({
+  scenarios,
+  progress,
+}: Readonly<{ scenarios: Scenarios; progress: SalesProgress }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const missing = scenarios.eligible_count - scenarios.priced_count;
+  return (
+    <p className="t-caption">
+      {t("progress.scenarios.asOf", {
+        at: formatDateTime(scenarios.as_of, locale, progress.timezone),
+      })}
+      {scenarios.landing.caveat === "call_absent" &&
+        ` · ${t("forecast.callAbsentLine")}`}
+      {scenarios.landing.caveat === "call_below_actual" &&
+        ` · ${t("forecast.callBelowLine", {
+          won: formatAnalyticsMoney(
+            scenarios.landing.won_minor,
+            progress.currency,
+            locale,
+          ),
+        })}`}
+      {(missing > 0 || scenarios.fx_missing_count > 0) &&
+        ` · ${t("progress.scenarios.unpriced")}`}
+      {scenarios.scope_limited && ` · ${t("progress.scenarios.limited")}`}
+    </p>
   );
 }

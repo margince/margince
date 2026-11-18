@@ -282,7 +282,7 @@ func (s *Store) dealListQuery(ctx context.Context, tx pgx.Tx, in ListDealsInput,
 		vocab = dealListVocabulary(valuation)
 		in.valuation = valuation
 	}
-	pre, err := storekit.BuildListPrelude(ctx, "deal", vocab, active,
+	pre, err := storekit.BuildListPrelude(ctx, "deal", "deals", vocab, active,
 		in.Sort, in.Limit, in.Cursor, in.CustomFilters)
 	if err != nil {
 		return nil, nil, err

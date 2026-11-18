@@ -149,3 +149,29 @@ func remainingLanding(
 		RemainingMinor: remaining,
 	}, nil
 }
+
+// Scenarios are the three finishes a manager weighs a goal against. The worst
+// is where nothing more closes, the expected is the landing itself, and the
+// best is where every open deal closes.
+type Scenarios struct {
+	WorstMinor int64
+	Expected   Landing
+	BestMinor  int64
+}
+
+// ProjectScenarios answers the three finishes from one set of readings. The
+// expected case is ProjectLanding under the same measure and call, so the
+// Overview and Progress cannot state two landings for one period.
+func ProjectScenarios(readings Readings, measure ForwardMeasure, call *int64) (Scenarios, error) {
+	expected, err := ProjectLanding(readings, measure, call)
+	if err != nil {
+		return Scenarios{}, err
+	}
+	// OpenMinor, like the other remaining readings, holds no won deal, so the
+	// best case is a sum of two disjoint sets.
+	best, err := addMinor(readings.WonMinor, readings.OpenMinor)
+	if err != nil {
+		return Scenarios{}, err
+	}
+	return Scenarios{WorstMinor: readings.WonMinor, Expected: expected, BestMinor: best}, nil
+}

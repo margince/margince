@@ -102,6 +102,7 @@ The 1 table owned by `comms`, as the migrations build them. [Back to the entity 
 - `comms_outbound_provider_message`: `btree (user_id, provider, provider_message_id) WHERE (provider_message_id IS NOT NULL)`
 - `comms_outbound_workspace_activity_ix`: `btree (activity_id, id)`
 - `idx_comms_outbound_addressed`: `gin (comms_outbound_addressed(recipients, cc)) WHERE ((sender_kind = 'user') AND (status = 'sent') AND (user_id IS NOT NULL) AND (channel_user_id IS NULL))`
+- `idx_comms_outbound_connection`: `btree (connection_id) WHERE (connection_id IS NOT NULL)`
 - `idx_comms_outbound_parked`: `btree (user_id, parked_at DESC) WHERE (parked_at IS NOT NULL)`
 
 **Triggers**

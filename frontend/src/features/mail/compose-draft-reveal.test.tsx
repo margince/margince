@@ -11,7 +11,7 @@ import {
   isPreviewDoor,
   previewedAddresses,
 } from "../../testing/sendpermission.testkit";
-import { ComposeModal } from "./compose";
+import { ComposeWindow } from "./composewindow";
 
 // WHERE a finished draft leaves the reader.
 //
@@ -102,7 +102,7 @@ describe("where a finished draft leaves the reader", () => {
   it("brings the drafted body into view when the disclosure band raises it", async () => {
     stubRoutes();
     render(
-      <ComposeModal
+      <ComposeWindow
         intent="Discuss pricing"
         entityType="lead"
         entityId="l-1"

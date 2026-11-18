@@ -15,7 +15,7 @@ import (
 	"github.com/emersion/go-message/mail"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/modules/capture/htmltext"
+	"github.com/margince/margince/backend/internal/platform/htmltext"
 )
 
 // extractText returns the message's plain-text body, its link hosts and the

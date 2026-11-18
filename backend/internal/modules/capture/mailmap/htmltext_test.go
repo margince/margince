@@ -6,7 +6,7 @@ package mailmap
 import (
 	"testing"
 
-	"github.com/margince/margince/backend/internal/modules/capture/htmltext"
+	"github.com/margince/margince/backend/internal/platform/htmltext"
 )
 
 // bodyText is where the choice between the two MIME parts is made, and the

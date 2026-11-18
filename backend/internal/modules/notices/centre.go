@@ -88,7 +88,7 @@ func (s *Store) ListFor(ctx context.Context, limit int, cursor string) (CentrePa
 		// sentinel travels out unwrapped: httperr answers 422 for it, and a
 		// wrap would land it in the 500 lane with an admin looking for an
 		// outage that is not there.
-		position, decodeErr := storekit.DecodeCursor(cursor)
+		position, decodeErr := storekit.DecodeCursor("notices", cursor)
 		if decodeErr != nil {
 			return CentrePage{}, decodeErr
 		}
@@ -284,7 +284,7 @@ func trimToPage(items []CentreItem, limit int) ([]CentreItem, string, error) {
 	}
 	items = items[:limit]
 	last := items[len(items)-1]
-	next, err := storekit.EncodeCursor(last.CreatedAt, last.ID)
+	next, err := storekit.EncodeCursor("notices", last.CreatedAt, last.ID)
 	if err != nil {
 		return nil, "", err
 	}

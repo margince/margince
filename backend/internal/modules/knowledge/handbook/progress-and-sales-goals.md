@@ -19,6 +19,14 @@ The bar under the figure shows the sales won in their parts, with a line where t
 
 Click **View won deals** to open the won deals behind the figure.
 
+**Where the month may finish** shows for a running month with a set goal. It lists three cases, each with its difference to the goal:
+
+- **Worst case** is the sales already won, as if nothing more closes.
+- **Expected** is the forecast landing. It uses the **Projection basis** in the installation settings, the same as the Overview, and names it under the figure.
+- **Best case** adds every open deal expected in the month, at its full value.
+
+The cases come from the forecast for the same month and the same team member or team. In the month that runs today, a click on a case opens the forecast with its deals. A line under the cases says when the deals were read, and whether deals with no amount or no exchange rate are left out. The yearly view has no cases, because the forecast has no year.
+
 Under the result, **Product sales** and **Services and projects** split the sales won by what each deal is for. The split comes from the products on the deal and the kind of each product. **Open pipeline** is the value of open deals expected to close in the period. It is not weighted by probability and never counts for the goal. **Unclassified** appears when some revenue has no place. For example, a deal has no lines, or its lines add up to more than the deal value.
 
 A team view lists each team member in name order. Click a name to open the progress of that team member for the same period. Each row has a bar that shows how much of their goal that team member has reached.

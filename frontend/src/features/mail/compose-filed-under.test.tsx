@@ -6,7 +6,7 @@ import { render as rtlRender, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
-import { ComposeModal } from "./compose";
+import { ComposeWindow } from "./composewindow";
 
 // The way back to the record the message files under.
 //
@@ -85,7 +85,7 @@ describe("the record a draft files under", () => {
   it("offers it as a link the reader can follow to the record", async () => {
     stubRoutes();
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="contact"
         entityId="c-1"
         recordAddress="anna.weber@example.com"
@@ -103,7 +103,7 @@ describe("the record a draft files under", () => {
   it("says nothing when the composer writes under no record", async () => {
     stubRoutes();
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="contact"
         entityId={undefined as unknown as string}
         open

@@ -399,6 +399,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 **Indexes**
 
 - `capture_exclusion_pkey`: `unique, btree (id)`
+- `idx_capture_exclusion_connection`: `btree (connection_id) WHERE (connection_id IS NOT NULL)`
 - `idx_capture_exclusion_user`: `btree (user_id)`
 - `idx_capture_exclusion_value`: `btree (kind, value)`
 - `uq_capture_exclusion`: `unique, btree (scope, user_id, kind, value, connection_id) NULLS NOT DISTINCT`

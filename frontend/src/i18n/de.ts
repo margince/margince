@@ -3468,6 +3468,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "common.loading": "Wird geladen…",
   "ref.nameLoadFailed": "Name wurde nicht geladen",
   "ref.memberLeft": "{name} (ausgeschieden)",
+  "ref.leadUnnamed": "Lead ohne Namen",
   "roster.failedUsers": "Die Teammitglieder konnten nicht geladen werden.",
   "roster.failedTeams": "Die Teams konnten nicht geladen werden.",
   "owner.rosterFailed":
@@ -7287,8 +7288,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "vcardImport.working": "Karten werden gelesen…",
   "vcardImport.back": "Zurück zu den Kontakten",
   "vcardImport.noCards": "Die Datei enthält keine Karten.",
-  "vcardImport.failed":
-    "Die Karten konnten nicht importiert werden. Bitte versuche es erneut.",
+  "vcardImport.failed": "Die Karten wurden nicht importiert.",
   "vcardImport.outcome.created": "Hinzugefügt",
   "vcardImport.outcome.updated": "Aktualisiert",
   "vcardImport.outcome.needsReview": "Mögliches Duplikat",
@@ -20755,6 +20755,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.hidden.setAside.detail":
     "Zurückgestellt oder als nicht zuständig markiert. Zurückgestellte Einträge kommen automatisch zurück.",
   "worklist.hidden.shown": "Angezeigt in der Worklist: {count}.",
+  "worklist.hidden.privateUnchecked_one":
+    "{count} private E-Mail nicht von der KI geprüft",
+  "worklist.hidden.privateUnchecked_other":
+    "{count} private E-Mails nicht von der KI geprüft",
   "worklist.hidden.rows.loading": "Zurückgehaltene Nachrichten werden geladen…",
   "worklist.hidden.rows.outOfReach":
     "Bei dieser Menge konnte keine Nachricht gelesen werden. Einige Nachrichten werden möglicherweise trotzdem zurückgehalten.",
@@ -22329,6 +22333,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Verantwortliche Teammitglieder können einen Deal von der Rechtsabteilung prüfen lassen, und eine Phase kann deren Freigabe verlangen. Ist die Rechtsprüfung deaktiviert, ist beides ausgeblendet, und alle erfassten Prüfungen bleiben erhalten.",
   "legalReview.settingsReadOnly": "Diese Einstellung ändert ein Admin.",
   "legalReview.notSaved": "Einstellung wurde nicht gespeichert.",
+  "privateMailRequests.title": "Anfragen in privaten E-Mails",
+  "privateMailRequests.switch": "Private E-Mails auf Anfragen prüfen",
+  "privateMailRequests.hint":
+    "Die KI liest private E-Mails, um zu finden, worum ein Kunde euch bittet. Als vertraulich markierte oder bewusst zurückgehaltene E-Mails liest sie nie.",
+  "privateMailRequests.readOnly": "Diese Einstellung ändert ein Admin.",
+  "privateMailRequests.notSaved": "Einstellung wurde nicht gespeichert.",
   "stage.criteria.kindLegalReviewed": "Rechtlich freigegeben",
   "legalReview.docUnavailable":
     "Du kannst diese Datei nicht öffnen. Wende dich an das Teammitglied, das die Prüfung angefragt hat.",
@@ -23137,6 +23147,18 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "progress.serviceSales": "Services und Projekte",
   "progress.planned": "Offene Pipeline",
   "progress.plannedAt": "Offene Deals, Stand {at}",
+  "progress.scenarios": "Wo der Monat enden kann",
+  "progress.scenario.worst": "Schlechtester Fall",
+  "progress.scenario.worstWhy": "Wenn nichts mehr abschließt",
+  "progress.scenario.expected": "Erwartet",
+  "progress.scenario.best": "Bester Fall",
+  "progress.scenario.bestWhy": "Wenn jeder offene Deal des Monats abschließt",
+  "progress.scenarios.asOf": "Deals mit Stand {at}",
+  "progress.scenarios.unpriced":
+    "Deals ohne Betrag oder ohne Wechselkurs fehlen",
+  "progress.scenarios.limited": "Nur die Deals, die du siehst, zählen",
+  "progress.scenarios.yearUnavailable":
+    "Schlechtester, erwarteter und bester Fall gibt es für einen Monat. Die Prognose hat kein Jahr, aus dem sie sie lesen kann.",
   "progress.unclassified": "Nicht zugeordnet",
   "progress.unclassifiedDetail":
     "Dieser Umsatz ist keinem Produkt und keiner Dienstleistung zugeordnet.",

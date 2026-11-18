@@ -147,6 +147,10 @@ func (s *Store) importCardsFrom(ctx context.Context, entries []VCardEntry, sourc
 
 func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry, source ids.UUID) (VCardResult, error) {
 	result := VCardResult{Index: index, FullName: strings.TrimSpace(entry.FullName)}
+	if reason := cardRefusal(entry); reason != "" {
+		result.Outcome, result.Reason = VCardSkipped, reason
+		return result, nil
+	}
 	if result.FullName == "" {
 		result.Outcome = VCardSkipped
 		result.Reason = "the card states no name"
@@ -232,6 +236,10 @@ func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry,
 	// survive. The outcome it filled in is the answer; the error is only how the
 	// rollback was reached.
 	if errors.Is(err, errCardSourceNarrowed) {
+		return result, nil
+	}
+	if reason, refused := cardParseRefusal(err); refused {
+		result.Outcome, result.Reason, result.ContactID, result.Fields = VCardSkipped, reason, nil, nil
 		return result, nil
 	}
 	if err != nil {
@@ -353,11 +361,9 @@ func contactFromVCard(entry VCardEntry) CreateContactInput {
 // that had changed — and whether a stale value got fixed depended on whether
 // the details arrived by mail or on paper.
 //
-// The card's own date is when it was handed over, which is now: unlike a mail,
-// a .vcf carries no timestamp of its own, and the moment a human chose to
-// import it is the most honest thing available. That also makes a card the
-// newest statement on the record, which is the right answer — somebody is
-// holding it and typing it in.
+// The card's own date is its REV when it states a usable one. Otherwise it is
+// the moment a human chose to import it. That makes the card the newest
+// statement on the record, because somebody is holding it and typing it in.
 func (s *Store) fillFromVCard(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, entry VCardEntry) (cardStatement, error) {
 	card, err := readyObservedCard(ctx, tx, entry)
 	if err != nil {

@@ -7567,16 +7567,7 @@ paths:
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
-        '409':
-          description: |-
-            Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
-            When the refusal opened a review, `details` carries `review_id`, the
-            `available_actions` this caller may take, and `refusals`: each refused address
-            the caller named, with the engine's `reason_code`, resolved `category` and the
-            `requested_category` the caller claimed.
-          content:
-            application/problem+json:
-              schema: {$ref: '#/components/schemas/Problem'}
+        '409': {$ref: '#/components/responses/SendRefused'}
         '422': {$ref: '#/components/responses/SendValidationError'}
   /emails:
     post:
@@ -7623,16 +7614,7 @@ paths:
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
-        '409':
-          description: |-
-            Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
-            When the refusal opened a review, `details` carries `review_id`, the
-            `available_actions` this caller may take, and `refusals`: each refused address
-            the caller named, with the engine's `reason_code`, resolved `category` and the
-            `requested_category` the caller claimed.
-          content:
-            application/problem+json:
-              schema: {$ref: '#/components/schemas/Problem'}
+        '409': {$ref: '#/components/responses/SendRefused'}
         '422': {$ref: '#/components/responses/SendValidationError'}
   /scheduled-sends:
     get:
@@ -7886,16 +7868,7 @@ paths:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
         '404': {$ref: '#/components/responses/NotFound'}
-        '409':
-          description: |-
-            Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
-            When the refusal opened a review, `details` carries `review_id`, the
-            `available_actions` this caller may take, and `refusals`: each refused address
-            the caller named, with the engine's `reason_code`, resolved `category` and the
-            `requested_category` the caller claimed.
-          content:
-            application/problem+json:
-              schema: {$ref: '#/components/schemas/Problem'}
+        '409': {$ref: '#/components/responses/SendRefused'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /scheduling/invitations/{id}/availability:
     get:
@@ -8603,6 +8576,8 @@ paths:
         An `email` on the erasure list answers 422 naming `email` with code `address_erased`.
         A lead for somebody who is already a contact is refused with 409 `contact_holds_email`:
         open a deal on the contact instead.
+        A body with none of `full_name`, `email`, `phone`, `linkedin_url` or `company_name`
+        answers 422 `lead_identity_required`.
 
         Needs the passport permission Change records.
 
@@ -8651,7 +8626,8 @@ paths:
       description: |-
         The workspace's follow-up window: a message a seat sent to a customer that is still
         the last word after this many days comes back on the sender's worklist as a
-        follow-up. Read by every role; changed by admin/ops. Governed by the
+        follow-up. It also carries whether the AI checks private mail for requests owed an
+        answer. Read by every role; changed by admin/ops. Governed by the
         `installation_settings` RBAC object.
       responses:
         '200':
@@ -8665,7 +8641,7 @@ paths:
       tags: [Activities]
       operationId: updateFollowUpSettings
       security: [{bearerAuth: []}]
-      summary: Change the follow-up window (admin/ops).
+      summary: Change the follow-up window or the private-mail request check (admin/ops).
       requestBody:
         required: true
         content:
@@ -8682,7 +8658,7 @@ paths:
         '409': {$ref: '#/components/responses/SettingLocked'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
-        Change the follow-up window (admin/ops).
+        Change the follow-up window or the private-mail request check (admin/ops).
 
         Needs the passport permission Change records.
 
@@ -26682,6 +26658,18 @@ components:
       content:
         application/problem+json:
           schema: {$ref: '#/components/schemas/Problem'}
+    SendRefused:
+      description: |-
+        Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
+        When the refusal opened a review, `details` carries `review_id`, the
+        `available_actions` this caller may take, and `refusals`: each refused address
+        the caller named, with the engine's `reason_code`, resolved `category` and the
+        `requested_category` the caller claimed. `details.review` is the review exactly as
+        `GET /communication-reviews/{id}` serves it to this caller, so a client needs no second
+        request; it is absent when the caller may not read the review.
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/SendRefusal'}
     ControllerMailRefused:
       description: |-
         The installation cannot send its own mail (`conflict`), or the consent engine refuses this
@@ -41863,6 +41851,13 @@ components:
         scheduled_tz:
           type: [string, 'null']
           description: The IANA zone name `scheduled_at` was picked in. Required with `scheduled_at`.
+        override_explanation:
+          type: string
+          maxLength: 1000
+          description: |-
+            The reason the rep typed for sending this message past a refusal, kept so a reopened
+            composer still holds it. It grants nothing: the send still needs its own decision. Omit
+            it for none.
     MailDraft:
       type: object
       required: [id, anchor_type, anchor_id, to, cc, bcc, subject, body, version, agent_drafted, created_at, updated_at]
@@ -41917,6 +41912,10 @@ components:
         scheduled_tz:
           type: string
           description: The IANA zone `scheduled_at` was picked in. Present exactly when it is.
+        override_explanation:
+          type: string
+          maxLength: 1000
+          description: The reason the author typed for sending past a refusal. Absent when none was.
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}
     RescheduleSendRequest:
@@ -41940,7 +41939,8 @@ components:
       required: [to]
       description: |-
         What a composer is about to write, in the shape the engine judges. A `subject` and
-        `body` never reach a consent decision. When given, they are checked against the
+        `body` are read as the send reads them: words that make an offer (a discount, a quote,
+        a price) are judged as marketing even inside a reply. They are also checked against the
         advertising content rules of each recipient's jurisdiction pack and answered as
         `content_findings`.
       properties:
@@ -41976,11 +41976,21 @@ components:
         subject:
           type: string
           maxLength: 998
-          description: The draft's subject, checked only for `content_findings`.
+          description: The draft's subject, read for an offer as the send reads it and checked for `content_findings`.
         body:
           type: string
           maxLength: 200000
-          description: The draft's plain text, checked only for `content_findings`.
+          description: The draft's plain text, read for an offer as the send reads it and checked for `content_findings`.
+        html_body:
+          type: string
+          description: The draft's markup beside the plain text. Its visible text is read for an offer as the send reads it.
+        attachment_ids:
+          type: array
+          maxItems: 10
+          items: {type: string, format: uuid}
+          description: |-
+            The files the message will carry, by the ids `/attachments` gave them. Their names are
+            read for an offer as the send reads them. A file the send would refuse is refused here.
     PreviewAccountSendRequest:
       type: object
       required: [to, links]
@@ -42018,11 +42028,21 @@ components:
         subject:
           type: string
           maxLength: 998
-          description: The draft's subject, checked only for `content_findings`.
+          description: The draft's subject, read for an offer as the send reads it and checked for `content_findings`.
         body:
           type: string
           maxLength: 200000
-          description: The draft's plain text, checked only for `content_findings`.
+          description: The draft's plain text, read for an offer as the send reads it and checked for `content_findings`.
+        html_body:
+          type: string
+          description: The draft's markup beside the plain text. Its visible text is read for an offer as the send reads it.
+        attachment_ids:
+          type: array
+          maxItems: 10
+          items: {type: string, format: uuid}
+          description: |-
+            The files the message will carry, by the ids `/attachments` gave them. Their names are
+            read for an offer as the send reads them. A file the send would refuse is refused here.
     SendAuthorizationPreview:
       type: object
       required: [allowed, recipients]
@@ -43233,6 +43253,15 @@ components:
           minimum: 1
           maximum: 30
           description: Days a sent message may stay unanswered before its sender is reminded to follow up.
+        private_mail_requests:
+          type: boolean
+          description: |-
+            Whether the AI checks private mail for a request its reader owes an answer to
+            (`activities.private_mail_requests`, on by default). Only mail private by a
+            routine setting is checked; mail held as confidential, by a counterparty or
+            members-only hold, or by hand never is. A GET always carries it; a PATCH that
+            leaves it out leaves the setting unchanged. Only a human may change it, because
+            it decides which mail reaches a model.
     LeadSettings:
       type: object
       required: [first_response_enabled, first_response_target_minutes]
@@ -45332,6 +45361,13 @@ components:
         attainment:
           type: number
           format: double
+        target_delta:
+          type: number
+          format: double
+          description: |-
+            `target_actual` minus `target`, in the metric's unit: negative is still to reach,
+            positive is above the target. Present with both. A client shows it and `attainment`
+            as they are, and never works either out from the other figures.
         coverage:
           $ref: '#/components/schemas/ReportingCoverage'
         evidence:
@@ -45845,6 +45881,31 @@ components:
       properties:
         status: {type: string, enum: [ok, partial, withheld, not_started]}
         amount_minor: {type: integer, format: int64}
+    SalesProgressScenarios:
+      type: object
+      additionalProperties: false
+      required: [as_of, worst, expected, best, landing, eligible_count, priced_count, fx_missing_count, scope_limited]
+      description: |-
+        Where a month may finish against its goal, read from the forecast of the same month and
+        scope that GET /forecast reads. Given only for a month that has not ended, against a goal
+        that is `set`. A year has none, because the forecast has no year period.
+      properties:
+        as_of: {type: string, format: date-time, description: 'When the deals were read.'}
+        worst: {$ref: '#/components/schemas/SalesProgressScenario'}
+        expected: {$ref: '#/components/schemas/SalesProgressScenario'}
+        best: {$ref: '#/components/schemas/SalesProgressScenario'}
+        landing: {$ref: '#/components/schemas/ForecastLanding'}
+        eligible_count: {type: integer, minimum: 0, description: 'Deals the forecast read for the month.'}
+        priced_count: {type: integer, minimum: 0, description: 'Of those, the deals with an amount.'}
+        fx_missing_count: {type: integer, minimum: 0, description: 'Priced deals no exchange rate reached; their money is in no case.'}
+        scope_limited: {type: boolean, description: 'True when the reader cannot see every deal of the scope, so each case is smaller than the scope''s own.'}
+    SalesProgressScenario:
+      type: object
+      additionalProperties: false
+      required: [amount_minor, delta_minor]
+      properties:
+        amount_minor: {type: integer, format: int64}
+        delta_minor: {type: integer, format: int64, description: 'The amount minus the goal.'}
     SalesProgressCategories:
       type: object
       additionalProperties: false
@@ -45968,6 +46029,7 @@ components:
         evaluation:
           allOf: [{$ref: '#/components/schemas/ReportingEvaluation'}]
           description: The Analytics reading behind closed and planned revenue, the receipt `/analytics/evidence` takes.
+        scenarios: {$ref: '#/components/schemas/SalesProgressScenarios'}
         capabilities:
           type: object
           additionalProperties: false
@@ -47931,6 +47993,43 @@ components:
       additionalProperties:
         type: object
         additionalProperties: {type: string}
+    SendRefusal:
+      description: >-
+        A problem body whose `details` describe a refused send and the review it opened.
+      type: object
+      required: [status, code]
+      properties:
+        type: {type: string, format: uri, default: 'about:blank'}
+        title: {type: string}
+        status: {type: integer}
+        code: {type: string}
+        detail: {type: string}
+        instance: {type: string, format: uri}
+        details: {$ref: '#/components/schemas/SendRefusalDetails'}
+    SendRefusalDetails:
+      type: object
+      additionalProperties: true
+      description: Present when the refusal opened a review.
+      properties:
+        review_id: {type: string, format: uuid}
+        available_actions:
+          type: array
+          description: What this caller may do about the refusal, such as `direct_send`.
+          items: {type: string}
+        refusals:
+          type: array
+          description: Each refused address the caller named.
+          items: {$ref: '#/components/schemas/SendRefusalRecipient'}
+        review: {$ref: '#/components/schemas/CommunicationReview'}
+    SendRefusalRecipient:
+      type: object
+      required: [address, reason_code, can_be_overruled]
+      properties:
+        address: {type: string}
+        reason_code: {type: string}
+        can_be_overruled: {type: boolean, description: Whether a recorded reason may send this one message anyway.}
+        category: {type: string, description: The category the engine resolved.}
+        requested_category: {type: string, description: The category the sender claimed.}
     AnalyticsRefusal:
       description: >-
         A problem body whose `details` spell out an analytics refusal, present whenever the engine refused the question. A 400 the engine did not write — a malformed scope, a document outside the block grammar — carries the problem alone.
@@ -51962,6 +52061,14 @@ components:
             acknowledgement will name. Served rather than composed by the client: an instruction's
             claim is that a named human read particular words, and a client free to write its own
             would have the record assert an acknowledgement of text nobody published.
+        warnings:
+          type: array
+          items: {$ref: '#/components/schemas/OverrideWarning'}
+          description: |-
+            Every warning this review is served with to this reader; a decision may name any of their
+            versions and no other. `warning` is always among them. The sender of a held message is
+            also served the composer's short warning (`inline-v1`), which a decision from any other
+            reader is refused for naming.
     OverrideWarning:
       type: object
       description: |-
@@ -55974,7 +56081,7 @@ components:
         How much waiting work each hiding rule is keeping off one reader's queue, at one
         instant. Every count is of THREADS, matching what the queue counts: a customer who
         wrote three times is waiting once.
-      required: [as_of, shown, set_aside, not_sales, past_horizon, unlinked, colleagues, informs_us, truncated, clear]
+      required: [as_of, shown, set_aside, not_sales, past_horizon, unlinked, colleagues, informs_us, private_unchecked, truncated, clear]
       properties:
         as_of: {type: string, format: date-time, description: 'The instant every figure below was read at.'}
         shown:
@@ -56037,6 +56144,15 @@ components:
             that reason: one model call's opinion about a customer's mail ends the
             obligation, so a wrong verdict has to show up somewhere a lead can see it. A
             request a human accepted is never hidden by it, whatever the verdict.
+        private_unchecked:
+          type: integer
+          minimum: 0
+          description: |-
+            Threads `shown` counts whose mail no model will check for a request: mail held
+            on purpose (marked confidential, a counterparty or members-only hold, or by
+            hand), or any private mail while `activities.private_mail_requests` is off. Not
+            hidden, so `clear` ignores it. The queue ranks such mail as a request only when
+            the reader wrote on its conversation first.
         truncated:
           type: boolean
           description: |-

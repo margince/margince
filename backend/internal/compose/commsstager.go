@@ -217,11 +217,7 @@ func (s commsStager) RecordPendingReview(ctx context.Context, err error, intentI
 	if recordErr != nil || review.ID.IsZero() {
 		return pending.cause
 	}
-	return &consent.SendRefusedError{
-		ReviewID: review.ID, Cause: pending.cause,
-		// Decided here, because this is where the principal is known.
-		Actions: actionsForRefusal(ctx, review), Refusals: consent.BlockingRefusals(pending.set),
-	}
+	return s.authority.Refused(ctx, review, pending.set, pending.cause, actionsForRefusal(ctx, review))
 }
 
 // StageChannelTx is the same staging for a channel reply: the channel-shaped row

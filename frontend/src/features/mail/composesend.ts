@@ -366,13 +366,19 @@ export function useComposeSend({
   // because consent is owed to everyone who receives the message.
   const settledSubject = useSettledValue(fields.subject);
   const settledBody = useSettledValue(fields.body);
+  const settledHTML = useSettledValue(fields.html);
   const answer = useSendPermission({
     recipients: [...fields.to, ...fields.cc, ...fields.bcc],
     anchorActivityId: answering,
     links,
     context: claimedContext,
     evidence,
-    draft: { subject: settledSubject, body: settledBody },
+    draft: {
+      subject: settledSubject,
+      body: settledBody,
+      htmlBody: settledHTML,
+      attachmentIds: files.map((file) => file.id),
+    },
     enabled: open && !isChannelReply,
   });
   // Send waits for the sender to confirm a recipient with no lawful basis on record.
