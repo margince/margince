@@ -1234,8 +1234,8 @@ under [Certification by provider and model](#certification-by-provider-and-model
 | | |
 |---|---:|
 | Shipped invocation sites | 61 |
-| … best state `current` | 42 |
-| … best state `partial` | 1 |
+| … best state `current` | 43 |
+| … best state `partial` | 0 |
 | … best state `stale` | 17 |
 | … `absent` on every binding | 1 |
 | Scenarios in the corpus | 339 |
@@ -1349,7 +1349,7 @@ Which model to run each site on, and what that choice rests on.
 | [`report_setup/sales_goal_months`](#report_setupsales_goal_months) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `supported_degraded` | 1.00 | `current` | 2 | 6 |
 | [`request_settlement/request_settle`](#request_settlementrequest_settle) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 9 | 9 |
 | [`rewrite/rewrite`](#rewriterewrite) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `supported_degraded` | 1.00 | `current` | 4 | 4 |
-| [`signal_extract/thread_events`](#signal_extractthread_events) | `gemini · gemini-3.8-flash · cloud_frontier` | `certified` | 0.98 | `partial` | 57 | 14 |
+| [`signal_extract/thread_events`](#signal_extractthread_events) | `gemini · gemini-3.8-flash · cloud_frontier` | `certified` | 0.98 | `current` | 57 | 14 |
 | [`site_extract/profile`](#site_extractprofile) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `certified` | 1.00 | `current` | 5 | 11 |
 | [`site_fact_extract/page_facts`](#site_fact_extractpage_facts) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 13 |
 | [`site_triage/triage`](#site_triagetriage) | `gemini · gemini-3.5-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 5 | 13 |
@@ -1401,7 +1401,7 @@ record's own p50 and p95 are in the site tables.
 | `gemini` | `gemini-3.5-flash-lite` | `cloud_frontier` | 57 | 24 | 0 | 33 | 1407 | 1336 | 0.95 | 4842ms | 29 | 16 | 12 |
 | `gemini` | `gemini-3.6-flash` | `cloud_frontier` | 1 | 1 | 0 | 0 | 96 | 96 | 1.00 | 5109ms | 1 | 0 | 0 |
 | `gemini` | `gemini-3.6-flash` | `cloud_frontier` | 49 | 19 | 0 | 30 | 801 | 790 | 0.99 | 10104ms | 29 | 18 | 2 |
-| `gemini` | `gemini-3.8-flash` | `cloud_frontier` | 1 | 0 | 1 | 0 | 171 | 168 | 0.98 | 8006ms | 1 | 0 | 0 |
+| `gemini` | `gemini-3.8-flash` | `cloud_frontier` | 1 | 1 | 0 | 0 | 177 | 174 | 0.98 | 8261ms | 1 | 0 | 0 |
 | `gemini` | `gemini-3.8-flash` | `cloud_frontier` | 50 | 35 | 0 | 15 | 720 | 720 | 1.00 | 30194ms | 33 | 16 | 1 |
 | `openai_compatible` | `google/gemma-4-26b-a4b-it` | `cloud_frontier` | 6 | 0 | 0 | 6 | 189 | 166 | 0.88 | 15788ms | 1 | 1 | 4 |
 | `openai_compatible` | `google/gemma-4-31b-it` | `cloud_frontier` | 53 | 19 | 0 | 34 | 1398 | 1373 | 0.98 | 28492ms | 37 | 14 | 2 |
@@ -3335,7 +3335,7 @@ Records (4):
 #### `signal_extract`
 
 <details>
-<summary><code>signal_extract/thread_events</code>: 57 scenario(s), 14 record(s), best state partial</summary>
+<summary><code>signal_extract/thread_events</code>: 57 scenario(s), 14 record(s), best state current</summary>
 
 ##### `signal_extract/thread_events`
 
@@ -3412,7 +3412,7 @@ Records (14):
 | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/57 | `certified` | 24 | 24 | 1.00 | 2210ms | 3897ms | 24 | 0 | 0 | 0 |
 | `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/57 | `certified` | 24 | 24 | 1.00 | 1055ms | 1647ms | 24 | 0 | 0 | 0 |
 | `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/57 | `certified` | 168 | 168 | 1.00 | 5121ms | 8455ms | 168 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier` | `partial` | 55/57 | `certified` | 171 | 168 | 0.98 | 3400ms | 8006ms | 168 | 3 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier` | `current` | 57/57 | `certified` | 177 | 174 | 0.98 | 3525ms | 8261ms | 174 | 3 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/57 | `not_supported` | 168 | 164 | 0.98 | 2465ms | 4986ms | 164 | 3 | 1 | 0 |
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/57 | `not_supported` | 24 | 12 | 0.50 | 1825ms | 7662ms | 12 | 12 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/57 | `certified` | 24 | 24 | 1.00 | 1278ms | 2186ms | 24 | 0 | 0 | 0 |

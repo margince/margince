@@ -1,8 +1,8 @@
 {
   "totals": {
     "sites": 61,
-    "sites_best_current": 42,
-    "sites_best_partial": 1,
+    "sites_best_current": 43,
+    "sites_best_partial": 0,
     "sites_best_stale": 17,
     "sites_absent": 1,
     "scenarios": 339,
@@ -11164,13 +11164,13 @@
         "env": "cloud_frontier"
       },
       "sites": 1,
-      "sites_current": 0,
-      "sites_partial": 1,
+      "sites_current": 1,
+      "sites_partial": 0,
       "sites_stale": 0,
-      "runs": 171,
-      "passed": 168,
-      "reliability": 0.9824561403508771,
-      "slowest_p95_ms": 8006,
+      "runs": 177,
+      "passed": 174,
+      "reliability": 0.9830508474576272,
+      "slowest_p95_ms": 8261,
       "bands": {
         "certified": 1,
         "supported_degraded": 0,
@@ -25974,7 +25974,7 @@
       "key": "signal_extract/thread_events",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "partial",
+      "best_state": "current",
       "recommended": {
         "binding": {
           "provider": "gemini",
@@ -25982,8 +25982,8 @@
           "env": "cloud_frontier"
         },
         "band": "certified",
-        "reliability": 0.9824561403508771,
-        "state": "partial"
+        "reliability": 0.9830508474576272,
+        "state": "current"
       },
       "scenarios": [
         {
@@ -26702,17 +26702,17 @@
             "model": "gemini-3.8-flash",
             "env": "cloud_frontier"
           },
-          "state": "partial",
+          "state": "current",
           "band": "certified",
-          "scenarios_measured": 55,
+          "scenarios_measured": 57,
           "scenarios_total": 57,
-          "runs": 171,
-          "passed": 168,
-          "reliability": 0.9824561403508771,
-          "latency_p50_ms": 3400,
-          "latency_p95_ms": 8006,
+          "runs": 177,
+          "passed": 174,
+          "reliability": 0.9830508474576272,
+          "latency_p50_ms": 3525,
+          "latency_p95_ms": 8261,
           "reported": {
-            "accepted": 168,
+            "accepted": 174,
             "wrong_answer": 3,
             "invalid": 0,
             "abstained": 0
