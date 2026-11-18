@@ -316,3 +316,61 @@ func TestASeatOrAShareChangedAfterThePreviewMakesTheRevisionStale(t *testing.T) 
 		})
 	}
 }
+
+func TestACaseMergeWaitsOnAnEmploymentWriterInsteadOfDeadlocking(t *testing.T) {
+	c := setupCases(t)
+	members := c.seedCase(t, c.e.Rep1, c.e.Rep1, c.e.Rep1)
+	survivor := members[0]
+	read := c.read(c.e.Admin(), t, survivor)
+
+	// An employment writer: it holds the survivor's employment lock, then
+	// reaches for the survivor's row, the order employer attach keeps.
+	owner := integration.FreshOwnerConn(t)
+	writer, err := owner.Begin(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := storekit.LockWriteIdentity(context.Background(), writer, "employment", survivor.String()); err != nil {
+		t.Fatal(err)
+	}
+	merged := make(chan error, 1)
+	go func() {
+		_, err := c.store.MergeContactCase(c.e.Admin(), survivor, caseDecision(read, members, survivor, c.e.Rep1))
+		merged <- err
+	}()
+	waitForAdvisoryWaiter(t, owner)
+	// NOWAIT refuses at once if the merge holds the row. A plain lock would
+	// deadlock, and Postgres would pick which side to abort.
+	if _, err := writer.Exec(context.Background(), `SELECT id FROM contact WHERE id = $1 FOR UPDATE NOWAIT`, survivor); err != nil {
+		t.Fatalf("the merge held the survivor's row while it waited on the employment lock: %v", err)
+	}
+	if err := writer.Commit(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if err := <-merged; err != nil {
+		t.Fatalf("the case merge after the employment writer committed: %v", err)
+	}
+	if live := c.e.WsScalar(t, `SELECT count(*) FROM contact WHERE id = ANY($1) AND archived_at IS NULL`, members); live != "1" {
+		t.Errorf("%s members are live after the merge, want the survivor only", live)
+	}
+}
+
+// waitForAdvisoryWaiter returns once a session of this test's database waits
+// on an advisory lock: the merge parked behind the employment writer.
+func waitForAdvisoryWaiter(t *testing.T, owner *pgx.Conn) {
+	t.Helper()
+	deadline, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	for deadline.Err() == nil {
+		var waiting int
+		if err := owner.QueryRow(deadline, `SELECT count(*) FROM pg_locks
+ WHERE NOT granted AND locktype = 'advisory'
+   AND database = (SELECT oid FROM pg_database WHERE datname = current_database())`).Scan(&waiting); err != nil {
+			t.Fatal(err)
+		}
+		if waiting > 0 {
+			return
+		}
+	}
+	t.Fatal("the case merge never waited on the employment lock")
+}
