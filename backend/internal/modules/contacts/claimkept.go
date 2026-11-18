@@ -10,6 +10,7 @@ package contacts
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -34,9 +35,10 @@ const keptByInvitationReason = "invitation_accepted"
 // KeptByAcceptedGuest lists the open promises of ours that this meeting kept.
 //
 // A promise to invite a named person is kept when a live meeting, made after
-// the promise was written, has that person as a guest who accepted. The name
-// is matched whole and in full, so a first name alone settles nothing. A
-// promise a person already reopened after an automatic settlement stays open.
+// the promise was written, has that person as a guest who accepted. The
+// promise's own contact must be on the meeting too. The full name is matched
+// on word boundaries, each part at least three letters. A promise a person
+// reopened after an automatic settlement stays open.
 func (s *Store) KeptByAcceptedGuest(ctx context.Context, meetingID ids.UUID) ([]ids.UUID, error) {
 	var claims []ids.UUID
 	err := s.tx(ctx, func(tx pgx.Tx) error {
@@ -49,7 +51,10 @@ func (s *Store) KeptByAcceptedGuest(ctx context.Context, meetingID ids.UUID) ([]
 			  JOIN conversation_claim c ON c.kind = 'commitment_ours' AND c.status = 'open'
 			   AND c.archived_at IS NULL AND c.contact_id <> g.id
 			   AND c.body ~* '\yinvit'
-			   AND position(lower(g.full_name) in lower(c.body)) > 0
+			   AND c.body ~* ('\y' || regexp_replace(trim(g.full_name), '([^[:alnum:][:space:]])', '\\\1', 'g') || '\y')
+			   AND NOT EXISTS (SELECT 1 FROM regexp_split_to_table(trim(g.full_name), '\s+') part WHERE length(part) < 3)
+			   AND (EXISTS (SELECT 1 FROM activity_participant mine WHERE mine.activity_id = m.id AND mine.contact_id = c.contact_id)
+			        OR EXISTS (SELECT 1 FROM activity_link mine WHERE mine.activity_id = m.id AND mine.contact_id = c.contact_id))
 			  JOIN activity src ON src.id = c.source_activity_id AND src.archived_at IS NULL
 			 WHERE m.id = $1 AND m.kind = 'meeting' AND m.archived_at IS NULL
 			   AND m.meeting_status IS DISTINCT FROM 'canceled'
@@ -111,5 +116,42 @@ func (s *Store) ReopenAutoSettledClaim(ctx context.Context, claimID ids.UUID) er
 			return fmt.Errorf("this promise was settled by a person: %w", apperrors.ErrConflict)
 		}
 		return moveClaimStatus(ctx, tx, claimID, claimStatusDone, claimStatusOpen, nil)
+	})
+}
+
+// MeetingSeat is the internal seat that made a meeting: its organizer, else the
+// seat that captured it. Absent for a meeting an outside party invited us to.
+func (s *Store) MeetingSeat(ctx context.Context, meetingID ids.UUID) (ids.UUID, bool, error) {
+	var seat *ids.UUID
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `
+			SELECT coalesce(
+			  (SELECT p.user_id FROM activity_participant p
+			    WHERE p.activity_id = m.id AND p.role = 'organizer' AND p.user_id IS NOT NULL
+			    ORDER BY p.created_at, p.id LIMIT 1),
+			  CASE WHEN m.captured_by ~ '^human:[0-9a-f-]{36}$' THEN substr(m.captured_by, 7)::uuid END)
+			  FROM activity m WHERE m.id = $1`, meetingID).Scan(&seat)
+	})
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return ids.UUID{}, false, fmt.Errorf("read who made the meeting: %w", err)
+	}
+	if seat == nil {
+		return ids.UUID{}, false, nil
+	}
+	return *seat, true, nil
+}
+
+// EnsureClaimWritable answers whether the caller may write the contact a claim
+// is about, the gate a person's settle holds.
+func (s *Store) EnsureClaimWritable(ctx context.Context, claimID ids.UUID) error {
+	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
+		return err
+	}
+	return s.tx(ctx, func(tx pgx.Tx) error {
+		var contactID ids.UUID
+		if err := tx.QueryRow(ctx, `SELECT contact_id FROM conversation_claim WHERE id = $1`, claimID).Scan(&contactID); err != nil {
+			return fmt.Errorf("read the claim's contact: %w", err)
+		}
+		return auth.EnsureWritableLive(ctx, tx, "contact", contactID)
 	})
 }

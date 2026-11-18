@@ -95,10 +95,21 @@ func (t *CommitmentSettleTrigger) HandleEvent(ctx context.Context, env events.En
 }
 
 // settleKeptByMeeting closes the promises an accepted guest of this meeting
-// kept. The system writes it, so the audit row says it was automatic and names
-// the meeting, and the contact's owner can undo it.
+// kept. It acts only for a meeting an internal seat made, and only on contacts
+// that seat may write. The system writes it, so the audit row says it was
+// automatic and names the meeting.
 func (t *CommitmentSettleTrigger) settleKeptByMeeting(ctx context.Context, activityID ids.UUID) error {
 	asSystem, ok, err := t.actingAs(ctx, events.Actor{Type: string(principal.PrincipalSystem)})
+	if err != nil || !ok {
+		return err
+	}
+	seat, internal, err := t.claims.MeetingSeat(asSystem, activityID)
+	if err != nil || !internal {
+		return err
+	}
+	asSeat, ok, err := t.actingAs(ctx, events.Actor{
+		Type: string(principal.PrincipalHuman), ID: principal.HumanIDPrefix + seat.String(),
+	})
 	if err != nil || !ok {
 		return err
 	}
@@ -107,6 +118,12 @@ func (t *CommitmentSettleTrigger) settleKeptByMeeting(ctx context.Context, activ
 		return err
 	}
 	for _, claim := range kept {
+		if err := t.claims.EnsureClaimWritable(asSeat, claim); err != nil {
+			if refused(err) {
+				continue
+			}
+			return err
+		}
 		if err := t.claims.SettleKeptByEvidence(asSystem, claim, activityID); err != nil {
 			if refused(err) {
 				t.log.WarnContext(ctx, "kept promise settlement refused", "claim", claim, "err", err)

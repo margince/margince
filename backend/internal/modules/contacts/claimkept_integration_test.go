@@ -48,6 +48,8 @@ func keptPromise(t *testing.T, guest, answer string) keptFixture {
 		    VALUES ($1, 'meeting', 'Demo', 'manual', 'human:test', now() + interval '2 days', 'booked')`, []any{f.meeting}},
 		{`INSERT INTO activity_participant (activity_id, contact_id, role, response)
 		    VALUES ($1, $2, 'attendee', $3)`, []any{f.meeting, guestID, answer}},
+		{`INSERT INTO activity_participant (activity_id, contact_id, role)
+		    VALUES ($1, $2, 'attendee')`, []any{f.meeting, holder}},
 	} {
 		e.execAs(human, t, stmt.sql, stmt.args...)
 	}
@@ -131,5 +133,29 @@ func TestOnlyTheSystemSettlesOnEvidenceAndOnlyAutomaticSettlementsUndo(t *testin
 	}
 	if err := f.e.store.ReopenAutoSettledClaim(f.human, f.claim); err == nil {
 		t.Error("the undo opened a promise a person settled")
+	}
+}
+
+func TestAMeetingTheClaimsContactIsNotOnSettlesNothing(t *testing.T) {
+	f := keptPromise(t, "Riley Reed", "accepted")
+	f.e.execAs(f.human, t, `DELETE FROM activity_participant WHERE activity_id = $1 AND response IS NULL`, f.meeting)
+	if found := f.kept(t); len(found) != 0 {
+		t.Errorf("an unrelated meeting with a matching name kept %v", found)
+	}
+}
+
+func TestOnlyAnInternalSeatsMeetingCanSettle(t *testing.T) {
+	f := keptPromise(t, "Riley Reed", "accepted")
+	if _, internal, err := f.e.store.MeetingSeat(f.system, f.meeting); err != nil || internal {
+		t.Fatalf("an invitation from outside has a seat: %v / %v", internal, err)
+	}
+	f.e.execAs(f.human, t, `INSERT INTO activity_participant (activity_id, user_id, role)
+		VALUES ($1, $2, 'organizer')`, f.meeting, f.e.rep)
+	seat, internal, err := f.e.store.MeetingSeat(f.system, f.meeting)
+	if err != nil || !internal || seat != f.e.rep {
+		t.Fatalf("seat = %v %v %v, want the organizing colleague", seat, internal, err)
+	}
+	if err := f.e.store.EnsureClaimWritable(f.human, f.claim); err != nil {
+		t.Errorf("the organizing seat may write the claim's contact: %v", err)
 	}
 }
