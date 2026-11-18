@@ -45,6 +45,7 @@ import {
 import { ApprovalEvidence } from "../automations/approvalevidence";
 import {
   approvalAcceptLabel,
+  approvalEditable,
   approvalExpiryLabel,
   approvalKindLabel,
   decisionSkewKey,
@@ -340,6 +341,7 @@ export function DecisionsSection({
         // ACT; the body shows one proposal in the set.
         chips={(approval, shared) => ({
           canAccept: approvalAcceptable(approval),
+          canEdit: approvalEditable(approval.kind, approval.proposed_change),
           detail: <ApprovalEvidence approval={approval} />,
           acceptLabel: approvalAcceptLabel(
             shared.kind,
