@@ -7824,8 +7824,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.country.clear": "Bỏ quốc gia",
   "compose.country.useRecord": "Dùng quốc gia trong hồ sơ",
   "compose.country.row": "Quốc gia: {detail}",
-  "compose.country.fromSender": "{country}, do người gửi đặt cho thư này",
-  "compose.country.clearedBySender": "không có, người gửi đã bỏ cho thư này",
+  "compose.country.fromSender": "{country}, chọn riêng cho thư này",
+  "compose.country.clearedBySender": "không có, đã bỏ riêng cho thư này",
   "compose.colleagueUnnamed": "một đồng nghiệp",
   "compose.threadGoneTitle": "Không thể trả lời chuỗi thư",
   "compose.colleagueMailboxTitle":

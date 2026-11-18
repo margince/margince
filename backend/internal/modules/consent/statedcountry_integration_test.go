@@ -77,10 +77,14 @@ func TestAStatedCountryDecidesStagingAndTransmit(t *testing.T) {
 		source string
 		codes  func(packPair) []string
 	}{
-		"stated": {func(p packPair) string { return string(p.installation) }, string(CountryFromSender),
-			func(p packPair) []string { return []string{string(p.installation)} }},
-		"cleared": {func(packPair) string { return "" }, string(CountryClearedBySender),
-			func(packPair) []string { return nil }},
+		"stated": {
+			func(p packPair) string { return string(p.installation) }, string(CountryFromSender),
+			func(p packPair) []string { return []string{string(p.installation)} },
+		},
+		"cleared": {
+			func(packPair) string { return "" }, string(CountryClearedBySender),
+			func(packPair) []string { return nil },
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			e, p := statedEnv(t)
