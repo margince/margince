@@ -6547,7 +6547,7 @@ export const en = {
   "deal.acquisitionUnset": "Not set",
   "deal.acquisitionRetired": "(retired)",
   "deal.waitUntil": "Wait until",
-  "deal.fxBase": "Base {value} · rate {rate} as of {date}",
+  "deal.fxBase": "{value} · rate {rate} on {date}",
   "deal.archiveRefused":
     "Only the deal’s owner or a manager can archive this deal.",
   "contact.archiveRefused":

@@ -236,8 +236,14 @@ export function formatFinePercent(fraction: number, locale: Locale): string {
   }).format(fraction);
 }
 
-export function formatNumber(value: number, locale: Locale): string {
-  return new Intl.NumberFormat(INTL_LOCALE[locale]).format(value);
+export function formatNumber(
+  value: number,
+  locale: Locale,
+  maximumFractionDigits?: number,
+): string {
+  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+    maximumFractionDigits,
+  }).format(value);
 }
 
 // A measured span in hours, to one decimal and in the reader's unit word: a

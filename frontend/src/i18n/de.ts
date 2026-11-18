@@ -6589,7 +6589,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.acquisitionUnset": "Nicht festgelegt",
   "deal.acquisitionRetired": "(stillgelegt)",
   "deal.waitUntil": "Warten bis",
-  "deal.fxBase": "Basis {value} · Kurs {rate} vom {date}",
+  "deal.fxBase": "{value} · Kurs {rate} vom {date}",
   "deal.archiveRefused":
     "Nur der Verantwortliche des Deals oder eine Führungskraft kann diesen Deal archivieren.",
   "contact.archiveRefused":
