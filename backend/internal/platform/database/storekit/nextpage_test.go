@@ -30,8 +30,8 @@ func TestAPageWhoseCursorWillNotMintIsAnErrorNotAnEmptyPromise(t *testing.T) {
 	}
 	key := "Weber GmbH"
 	for name, mint := range map[string]func() (Page, error){
-		"the house sort":     func() (Page, error) { return nextPage(nil, nil, beyondJSON, ids.NewV7()) },
-		"a non-default sort": func() (Page, error) { return nextPage(sorted, &key, beyondJSON, ids.NewV7()) },
+		"the house sort":     func() (Page, error) { return nextPage(nil, "list", nil, beyondJSON, ids.NewV7()) },
+		"a non-default sort": func() (Page, error) { return nextPage(sorted, "list", &key, beyondJSON, ids.NewV7()) },
 	} {
 		t.Run(name, func(t *testing.T) {
 			page, err := mint()
@@ -50,7 +50,7 @@ func TestAPageWhoseCursorWillNotMintIsAnErrorNotAnEmptyPromise(t *testing.T) {
 // AND AN ORDINARY ROW STILL GETS BOTH, so the refusal above is not the only
 // thing this can do.
 func TestAnOrdinaryRowGetsTheFlagAndTheToken(t *testing.T) {
-	page, err := nextPage(nil, nil, time.Date(2026, 8, 25, 9, 0, 0, 0, time.UTC), ids.NewV7())
+	page, err := nextPage(nil, "list", nil, time.Date(2026, 8, 25, 9, 0, 0, 0, time.UTC), ids.NewV7())
 	if err != nil {
 		t.Fatalf("nextPage: %v", err)
 	}

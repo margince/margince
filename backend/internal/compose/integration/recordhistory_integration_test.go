@@ -328,7 +328,7 @@ func TestRecordHistoryHonestEmptyPageBeyondTheFinalRow(t *testing.T) {
 		t.Fatal("SeedContact must have audited its own create — harness drift")
 	}
 	last := full.Entries[len(full.Entries)-1]
-	pastTheEnd, err := storekit.EncodeCursor(last.OccurredAt, last.ID)
+	pastTheEnd, err := storekit.EncodeCursor("record_history", last.OccurredAt, last.ID)
 	if err != nil {
 		t.Fatalf("minting a cursor past the end: %v", err)
 	}

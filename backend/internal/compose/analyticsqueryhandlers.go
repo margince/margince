@@ -121,7 +121,7 @@ func (h analyticsQueryHandlers) ListReportRuns(
 ) {
 	var after *storekit.Cursor
 	if params.Cursor != nil && *params.Cursor != "" {
-		cursor, err := storekit.DecodeCursor(*params.Cursor)
+		cursor, err := storekit.DecodeCursor("analytics_queries", *params.Cursor)
 		if err != nil {
 			httperr.Write(w, r, err)
 			return
@@ -158,7 +158,7 @@ func (h analyticsQueryHandlers) ListReportRuns(
 	}
 	if more {
 		last := runs[len(runs)-1]
-		next, err := storekit.EncodeCursor(last.AskedAt, last.ID)
+		next, err := storekit.EncodeCursor("analytics_queries", last.AskedAt, last.ID)
 		if err != nil {
 			httperr.Write(w, r, err)
 			return

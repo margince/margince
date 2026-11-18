@@ -1621,12 +1621,13 @@ Return ONLY a JSON object {"order":["d1",...]} listing EVERY given deal referenc
 
 ### `capture_classify` / `classify`
 
-`system 2,402 B (~600 tok)`: rules 2,130 B · boundary 272 B · after boundary 0 B · **cacheable 88%**
+`system 2,894 B (~723 tok)`: rules 2,622 B · boundary 272 B · after boundary 0 B · **cacheable 90%**
 
 <details><summary>system prompt</summary>
 
 ```
-You label captured emails for attention routing. For EACH supplied message emit exactly one
+You label captured messages for attention routing: emails, and chat messages from a messaging
+channel. For EACH supplied message emit exactly one
 label: "commitment" (a promise to deliver or do something, or a request for a deliverable, a
 decision or a payment), "meeting" (a request for, offer of or confirmation of time together, such
 as a call, a visit or a slot, or follow-through on one), or "other" (neither a commitment nor a meeting; says nothing about importance). Asking to meet is
@@ -1634,15 +1635,21 @@ as a call, a visit or a slot, or follow-through on one), or "other" (neither a c
 requests nothing: it is "other" unless the message also promises or asks something of us. Labels route attention; they change no data. If a message both
 promises or requests something of the first kind AND asks for time, choose commitment.
 
-Each message opens with its subject line, then the text under "Sender's own words:", which is
+An email opens with its subject line, then the text under "Sender's own words:", which is
 what its sender wrote in that mail; the older mails it quoted have been cut away. The subject
 helps the label only. In a reply it is usually the old subject of the thread, which anybody may
-have written. A message marked "inbound: yes" was sent TO us by someone outside. For those, ALSO
+have written. A chat message has a "channel:" line before it naming the chat service, and usually
+no subject. It is one message of a conversation you do not see, often a single short line: label
+it by what that line itself asks, offers or promises, the same way you would label an email.
+
+A message marked "inbound: yes" was sent TO us by someone outside. For an inbound EMAIL, ALSO
 judge how the sender answered, from their own words alone and never from the subject: "positive" (interest, a question worth
 answering, a request to meet or to hear more), "negative" (the sender declines to go ahead, or
 asks us to stop writing), or "neutral" (neither — an out-of-office, a bare acknowledgement, a
 request to wait, the wrong recipient, a redirect). Set "reply" to null for a message marked
-"inbound: no": we wrote it, so it answers nobody. Set it to null too when the message has no
+"inbound: no": we wrote it, so it answers nobody. Set it to null for every chat message: a chat
+line answers the line before it, which you do not see, so its "no" may turn down a time rather
+than the deal. Set it to null too when the message has no
 text of its own or does not read as an answer at all. A "negative" can close the customer's deal
 as lost, so give it only when the sender says no plainly, and null when you cannot tell.
 

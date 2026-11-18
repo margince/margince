@@ -5,11 +5,14 @@ package activities
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // WithSettings binds the configuration the follow-up window is read and
@@ -35,9 +38,21 @@ func (h Handlers) UpdateFollowUpSettings(w http.ResponseWriter, r *http.Request)
 		writeStoreErr(w, r, errors.New("activities: the follow-up window is not wired; the installation cannot change it"))
 		return
 	}
+	// Which mail reaches a model is a human's to decide. An agent writing this
+	// could be steered by the very mail it would expose.
+	if actor, ok := principal.Actor(r.Context()); req.PrivateMailRequests != nil && (!ok || actor.Type != principal.PrincipalHuman) {
+		writeStoreErr(w, r, fmt.Errorf("activities: only a human may change %s: %w", PrivateMailRequests.Key(), apperrors.ErrPermissionDenied))
+		return
+	}
 	if err := config.Save(r.Context(), h.settings, FollowUpAfterDays, req.FollowUpAfterDays); err != nil {
 		writeStoreErr(w, r, err)
 		return
+	}
+	if req.PrivateMailRequests != nil {
+		if err := config.Save(r.Context(), h.settings, PrivateMailRequests, *req.PrivateMailRequests); err != nil {
+			writeStoreErr(w, r, err)
+			return
+		}
 	}
 	// The value just written, not a fresh read: an update grant without a
 	// read grant must not commit the change and then be told 403.
@@ -55,8 +70,13 @@ func (h Handlers) writeFollowUpSettings(w http.ResponseWriter, r *http.Request) 
 		writeStoreErr(w, r, err)
 		return
 	}
+	private, err := config.StoredVal(r.Context(), h.settings, PrivateMailRequests)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.FollowUpSettings{
-		FollowUpAfterDays: days, Locks: h.settingLocks(ConfigSettings()...),
+		FollowUpAfterDays: days, PrivateMailRequests: &private, Locks: h.settingLocks(ConfigSettings()...),
 	})
 }
 

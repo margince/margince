@@ -32,7 +32,8 @@ func (h Handlers) PreviewSendAuthorization(w http.ResponseWriter, r *http.Reques
 		writeStoreErr(w, r, err)
 		return
 	}
-	in.Subject, in.Body = deref(req.Subject), deref(req.Body)
+	in.Subject, in.Body, in.HTMLBody = deref(req.Subject), deref(req.Body), deref(req.HtmlBody)
+	in.AttachmentIDs = attachmentIDsFrom(req.AttachmentIds)
 	h.answerPreview(w, r, FromActivity(pathID[ids.ActivityKind](id)), in)
 }
 
@@ -56,7 +57,8 @@ func (h Handlers) PreviewAccountSendAuthorization(w http.ResponseWriter, r *http
 		writeStoreErr(w, r, err)
 		return
 	}
-	in.Subject, in.Body = deref(req.Subject), deref(req.Body)
+	in.Subject, in.Body, in.HTMLBody = deref(req.Subject), deref(req.Body), deref(req.HtmlBody)
+	in.AttachmentIDs = attachmentIDsFrom(req.AttachmentIds)
 	h.answerPreview(w, r, FromAccount(links), in)
 }
 

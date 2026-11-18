@@ -3370,6 +3370,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "common.loading": "Đang tải…",
   "ref.nameLoadFailed": "Không thể tải tên",
   "ref.memberLeft": "{name} (đã nghỉ)",
+  "ref.leadUnnamed": "Lead chưa có tên",
   "roster.failedUsers": "Không thể tải danh sách thành viên.",
   "roster.failedTeams": "Không thể tải danh sách nhóm.",
   "owner.rosterFailed":
@@ -7118,7 +7119,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "vcardImport.working": "Đang đọc danh thiếp…",
   "vcardImport.back": "Quay lại Liên hệ",
   "vcardImport.noCards": "Tệp này không chứa danh thiếp nào.",
-  "vcardImport.failed": "Không thể nhập danh thiếp. Thử lại.",
+  "vcardImport.failed": "Danh thiếp chưa được nhập.",
   "vcardImport.outcome.created": "Đã thêm",
   "vcardImport.outcome.updated": "Đã cập nhật",
   "vcardImport.outcome.needsReview": "Có thể là bản trùng",
@@ -14325,7 +14326,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "pipeline.reason.from_sending_systems":
     "chuỗi thư này chỉ có thư từ hệ thống gửi, như thông báo, nên không được đọc",
   "pipeline.reason.transport_not_read":
-    "bước này chỉ đọc email, còn tin nhắn đến qua kênh khác",
+    "bước này không đọc tin nhắn đến theo cách này",
   "pipeline.reason.sender_undecided":
     "lần kiểm tra người gửi vẫn chưa có kết quả, nên tin nhắn bị giữ lại",
   "pipeline.reason.archived": "tin nhắn đang trong kho lưu trữ",
@@ -20225,6 +20226,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.hidden.setAside.detail":
     "Đã tạm hoãn hoặc đánh dấu không phải việc của bạn. Việc tạm hoãn sẽ tự quay lại.",
   "worklist.hidden.shown": "Danh sách công việc đang hiển thị {count} việc.",
+  "worklist.hidden.privateUnchecked_one":
+    "{count} email riêng tư chưa được AI kiểm tra",
+  "worklist.hidden.privateUnchecked_other":
+    "{count} email riêng tư chưa được AI kiểm tra",
   "worklist.hidden.rows.loading": "Đang tải thư bị giữ lại…",
   "worklist.hidden.rows.outOfReach":
     "Không thể đọc thư nào ở quy mô này. Có thể vẫn còn thư bị giữ lại.",
@@ -21741,6 +21746,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Người chịu trách nhiệm deal có thể nhờ bộ phận pháp lý rà soát deal, và một giai đoạn có thể yêu cầu pháp lý duyệt. Tắt sẽ ẩn cả hai và giữ mọi lần rà soát đã ghi.",
   "legalReview.settingsReadOnly": "Quản trị viên thay đổi cài đặt này.",
   "legalReview.notSaved": "Chưa lưu được cài đặt.",
+  "privateMailRequests.title": "Yêu cầu trong email riêng tư",
+  "privateMailRequests.switch": "Kiểm tra yêu cầu trong email riêng tư",
+  "privateMailRequests.hint":
+    "AI đọc email riêng tư để tìm yêu cầu mà khách hàng gửi tới bạn. Email được đánh dấu bảo mật hoặc được giữ lại có chủ ý thì không bao giờ được đọc.",
+  "privateMailRequests.readOnly": "Quản trị viên thay đổi cài đặt này.",
+  "privateMailRequests.notSaved": "Chưa lưu được cài đặt.",
   "stage.criteria.kindLegalReviewed": "Pháp lý đã duyệt",
   "legalReview.docUnavailable":
     "Bạn không mở được tệp này. Hãy hỏi đồng nghiệp đã yêu cầu rà soát.",
@@ -21867,6 +21878,16 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Khách hàng đã viết {count} ngày trước và đang chờ phản hồi.",
   "deal.verdict.yourMoveDays_other":
     "Khách hàng đã viết {count} ngày trước và đang chờ phản hồi.",
+  "deal.verdict.youReplied": "Bạn đã trả lời",
+  "deal.verdict.teamReplied": "Nhóm của bạn đã trả lời",
+  "deal.verdict.youRepliedOn":
+    "Bạn đã trả lời vào {date}. Yêu cầu vẫn đang mở.",
+  "deal.verdict.teamRepliedOn":
+    "Nhóm của bạn đã trả lời vào {date}. Yêu cầu vẫn đang mở.",
+  "deal.verdict.youRepliedAsked":
+    "Bạn đã trả lời vào {date}. Vẫn còn được hỏi: {ask}",
+  "deal.verdict.teamRepliedAsked":
+    "Nhóm của bạn đã trả lời vào {date}. Vẫn còn được hỏi: {ask}",
   "deal.verdict.goneQuiet": "Im lặng",
   "deal.verdict.goneQuietSince":
     "Không có hoạt động kể từ {date}, nên deal được coi là đình trệ.",
@@ -22526,6 +22547,18 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "progress.serviceSales": "Dịch vụ và dự án",
   "progress.planned": "Pipeline đang mở",
   "progress.plannedAt": "Deal đang mở tính đến {at}",
+  "progress.scenarios": "Tháng có thể kết thúc ở đâu",
+  "progress.scenario.worst": "Trường hợp xấu nhất",
+  "progress.scenario.worstWhy": "Nếu không chốt thêm deal nào",
+  "progress.scenario.expected": "Dự kiến",
+  "progress.scenario.best": "Best case",
+  "progress.scenario.bestWhy": "Nếu mọi deal đang mở của tháng đều chốt",
+  "progress.scenarios.asOf": "Deal tính đến {at}",
+  "progress.scenarios.unpriced":
+    "Không tính deal chưa có giá trị hoặc chưa có tỷ giá",
+  "progress.scenarios.limited": "Chỉ tính các deal bạn xem được",
+  "progress.scenarios.yearUnavailable":
+    "Trường hợp xấu nhất, dự kiến và tốt nhất chỉ có cho một tháng. Dự báo không có kỳ năm để đọc.",
   "progress.unclassified": "Chưa phân loại",
   "progress.unclassifiedDetail":
     "Doanh thu này chưa được phân loại theo sản phẩm hay dịch vụ.",
@@ -22617,7 +22650,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "goals.propose.noModel":
     "Đề xuất các tháng cần một mô hình AI đã được thiết lập. Bạn vẫn có thể tự nhập từng tháng.",
   "goals.propose.noHistory":
-    "{name} chưa có doanh số đã chốt trong năm {year} hay năm trước đó để đọc ra quy luật. Hãy tự nhập từng tháng.",
+    "{name} chưa có tháng nào đã kết thúc có doanh số đã chốt trong năm {year} hay năm trước đó, nên chưa có quy luật để đọc. Hãy tự nhập từng tháng.",
   "goals.proposedByAi": "Do Margince đề xuất",
   "goals.monthsSum": "Các tháng cộng lại là {total}.",
   "goals.monthsMissing_one": "{count} tháng chưa đặt.",

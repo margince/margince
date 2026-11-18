@@ -218,7 +218,7 @@ func ListRecordHistory(ctx context.Context, db *database.DB, f RecordHistoryFilt
 	var cursor storekit.Cursor
 	useCursor := false
 	if f.Cursor != nil && *f.Cursor != "" {
-		c, err := storekit.DecodeCursor(*f.Cursor)
+		c, err := storekit.DecodeCursor("record_history", *f.Cursor)
 		if err != nil {
 			return RecordHistoryPage{}, err
 		}
@@ -252,7 +252,7 @@ func ListRecordHistory(ctx context.Context, db *database.DB, f RecordHistoryFilt
 		}
 		if len(rows) > limit {
 			rows = rows[:limit]
-			next, err := storekit.EncodeCursor(rows[limit-1].occurredAt, rows[limit-1].id)
+			next, err := storekit.EncodeCursor("record_history", rows[limit-1].occurredAt, rows[limit-1].id)
 			if err != nil {
 				return err
 			}

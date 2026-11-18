@@ -3389,6 +3389,7 @@ export const en = {
   // a destination.
   "ref.nameLoadFailed": "Name did not load",
   "ref.memberLeft": "{name} (left)",
+  "ref.leadUnnamed": "Unnamed lead",
   "roster.failedUsers": "Colleagues did not load.",
   "roster.failedTeams": "Teams did not load.",
   "owner.rosterFailed": "Colleagues did not load. Reload the page to pick one.",
@@ -7312,7 +7313,7 @@ export const en = {
   "vcardImport.working": "Reading cards…",
   "vcardImport.back": "Back to contacts",
   "vcardImport.noCards": "The file contains no cards.",
-  "vcardImport.failed": "The cards were not imported. Retry.",
+  "vcardImport.failed": "The cards were not imported.",
   "vcardImport.outcome.created": "Added",
   "vcardImport.outcome.updated": "Updated",
   "vcardImport.outcome.needsReview": "Possible duplicate",
@@ -10399,7 +10400,7 @@ export const en = {
   "import.reason.row_key_empty":
     "The “{column}” column is empty, so this row cannot be identified for re-import or undo.",
   "import.reason.row_key_repeated":
-    "The “{column}” value “{value}” is already used by line {line}. Each row needs its own, because it is what a re-import matches on and what an undo finds this row by.",
+    "The “{column}” value “{value}” is already used by row {line}. Each row needs its own, because it is what a re-import matches on and what an undo finds this row by.",
   "import.reason.size_band_invalid":
     "Employees “{value}” is not one of {allowed}.",
   "import.reason.tag_created":
@@ -14649,7 +14650,7 @@ export const en = {
   "pipeline.reason.from_sending_systems":
     "this thread holds only mail from sending systems, such as notifications, which is not read",
   "pipeline.reason.transport_not_read":
-    "this step reads email only, and the message arrived by another channel",
+    "this step does not read messages that arrived this way",
   "pipeline.reason.sender_undecided":
     "the sender check is still pending, so the message is held back",
   "pipeline.reason.archived": "the message is archived",
@@ -20494,6 +20495,10 @@ export const en = {
   "worklist.hidden.setAside.detail":
     "Snoozed or marked not yours. Snoozed items return automatically.",
   "worklist.hidden.shown": "The Worklist shows {count}.",
+  "worklist.hidden.privateUnchecked_one":
+    "{count} private email not checked by AI",
+  "worklist.hidden.privateUnchecked_other":
+    "{count} private emails not checked by AI",
   "worklist.hidden.rows.loading": "Loading the held-back messages…",
   "worklist.hidden.rows.outOfReach":
     "None could be read at this size. Some may still be held back.",
@@ -22041,6 +22046,12 @@ export const en = {
     "Deal owners can ask legal to review a deal, and a stage can require legal’s approval. Off hides both and keeps every review already recorded.",
   "legalReview.settingsReadOnly": "An admin changes this setting.",
   "legalReview.notSaved": "Setting was not saved.",
+  "privateMailRequests.title": "Requests in private mail",
+  "privateMailRequests.switch": "Check private mail for requests",
+  "privateMailRequests.hint":
+    "The AI reads private mail to find what a customer asks of its reader. Mail marked confidential or held on purpose is never read.",
+  "privateMailRequests.readOnly": "An admin changes this setting.",
+  "privateMailRequests.notSaved": "Setting was not saved.",
   "stage.criteria.kindLegalReviewed": "Legal approved",
   "legalReview.docUnavailable":
     "You cannot open this file. Ask the colleague who requested the review.",
@@ -22164,6 +22175,15 @@ export const en = {
     "The buyer wrote {count} day ago and is waiting for a reply.",
   "deal.verdict.yourMoveDays_other":
     "The buyer wrote {count} days ago and is waiting for a reply.",
+  "deal.verdict.youReplied": "You replied",
+  "deal.verdict.teamReplied": "Your team replied",
+  "deal.verdict.youRepliedOn":
+    "You replied on {date}. The request is still open.",
+  "deal.verdict.teamRepliedOn":
+    "Your team replied on {date}. The request is still open.",
+  "deal.verdict.youRepliedAsked": "You replied on {date}. Still asked: {ask}",
+  "deal.verdict.teamRepliedAsked":
+    "Your team replied on {date}. Still asked: {ask}",
   "deal.verdict.goneQuiet": "Gone quiet",
   "deal.verdict.goneQuietSince":
     "Nothing has happened since {date}, so the deal counts as stalled.",
@@ -22818,6 +22838,18 @@ export const en = {
   "progress.serviceSales": "Services and projects",
   "progress.planned": "Open pipeline",
   "progress.plannedAt": "Open deals as of {at}",
+  "progress.scenarios": "Where the month may finish",
+  "progress.scenario.worst": "Worst case",
+  "progress.scenario.worstWhy": "If nothing more closes",
+  "progress.scenario.expected": "Expected",
+  "progress.scenario.best": "Best case",
+  "progress.scenario.bestWhy": "If every open deal for the month closes",
+  "progress.scenarios.asOf": "Deals as of {at}",
+  "progress.scenarios.unpriced":
+    "Deals with no amount or no exchange rate are left out",
+  "progress.scenarios.limited": "Only the deals you can see are counted",
+  "progress.scenarios.yearUnavailable":
+    "Worst, expected and best cases are shown for a month. The forecast has no year to read them from.",
   "progress.unclassified": "Unclassified",
   "progress.unclassifiedDetail":
     "This revenue has no product or service classification.",
@@ -22910,7 +22942,7 @@ export const en = {
   "goals.propose.noModel":
     "Proposing months needs an AI model that is set up. You can still enter the months by hand.",
   "goals.propose.noHistory":
-    "{name} has no sales won in {year} or the year before to read a pattern from. Enter the months by hand.",
+    "{name} has no finished month with sales won in {year} or the year before, so there is no pattern to read. Enter the months by hand.",
   "goals.proposedByAi": "Proposed by Margince",
   "goals.monthsSum": "The months add up to {total}.",
   "goals.monthsMissing_one": "{count} month is not set.",

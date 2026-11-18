@@ -12,7 +12,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/modules/capture/htmltext"
+	"github.com/margince/margince/backend/internal/platform/htmltext"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 

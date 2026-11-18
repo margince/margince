@@ -168,7 +168,7 @@ func TestEmailRequestCreatesOneUndatedTaskThatReachesWhoMayReadItsMail(t *testin
 
 // A request in mail narrowed to its participants stays its assignee's alone:
 // the reminder must not open what the mail keeps closed. The automatic pass
-// files only workspace mail, so the rep takes this one by hand.
+// files no mail narrowed by hand, so the rep takes this one by hand.
 func TestEmailRequestFromNarrowedMailIsPersonal(t *testing.T) {
 	e := setupLoad(t)
 	source := seedEmailRequest(t, e, "Confidential pricing", "commitment", OwedVerdictAsksUs)

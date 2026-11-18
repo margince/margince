@@ -88,6 +88,7 @@ passing around inside the company; the German versions are the ones to sign.
 | --- | --- |
 | Does mail leave the company's systems? | The AI egress reference, which lists every AI task and whether its text can leave your installation |
 | Who decided this message was private, and when? | The message's audience reason, and the audit log |
+| Does the AI read private mail? | Only to find a request owed an answer, and only mail private by a routine setting. The AI never reads mail marked confidential or held by hand. It also skips mail held because of who it is with, or because only colleagues are on it. It waits until a thread's own privacy check is done. **Check private mail for requests**, under **Settings → AI models → Tasks**, turns this off; it is on at installation. Only a signed-in admin changes it, never an AI agent |
 | What was decided about the senders who write to me? | Settings → Connections → Activity → Sender decisions, per seat |
 | Can an administrator read a held message? | No. An administrator cannot open a held message |
 | What happens when the sorting model is down? | Everything stays held |

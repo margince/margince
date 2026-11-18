@@ -19,6 +19,8 @@ const (
 	followUpMaxDays = 30
 	// settingsAuditVerb is the audit action every activities settings change records.
 	settingsAuditVerb = "update"
+	// settingsObject is the RBAC object that guards every activities setting.
+	settingsObject = "installation_settings"
 )
 
 // FollowUpAfterDays is how long a message the reader sent may go unanswered
@@ -33,13 +35,28 @@ var FollowUpAfterDays = config.DefineStored(config.Spec[int]{
 	Max:     config.Some(followUpMaxDays),
 	Doc:     "Days a sent message may go without a reply before its sender is asked to follow up.",
 }, config.Store{
-	RBACObject: "installation_settings", AuditVerb: settingsAuditVerb,
+	RBACObject: settingsObject, AuditVerb: settingsAuditVerb,
 	MachineryApplied: true, // the worklist applies it to rows the reader is separately gated for
+})
+
+// PrivateMailRequests lets the owed-reply check read mail that is private for a
+// routine reason (routinePrivateReasons). Mail held for any other reason never
+// goes to a model, whatever this says. On by default: with mail sharing off, every new
+// mail is private, and without it no request in it would ever be found.
+var PrivateMailRequests = config.DefineStored(config.Spec[bool]{
+	Key:     "activities.private_mail_requests",
+	Env:     "MARGINCE_ACTIVITIES_PRIVATE_MAIL_REQUESTS",
+	Type:    config.Bool,
+	Default: config.Some(true),
+	Doc:     "Let the AI check whether private mail asks its reader for something. Only mail private because of a setting is checked; mail held for any other reason never is.",
+}, config.Store{
+	RBACObject: settingsObject, AuditVerb: settingsAuditVerb,
+	MachineryApplied: true, // the owed-reply pass reads it as the system, for every seat's mail
 })
 
 // ConfigSettings are this module's settings in the configuration registry.
 func ConfigSettings() []config.Any {
-	return []config.Any{FollowUpAfterDays}
+	return []config.Any{FollowUpAfterDays, InlineSendReview, PrivateMailRequests}
 }
 
 // followUpAfterDays reads the setting inside the caller's transaction, under
@@ -52,4 +69,16 @@ func followUpAfterDays(ctx context.Context, tx pgx.Tx) (int, error) {
 		return 0, fmt.Errorf("read %s: %w", FollowUpAfterDays.Key(), err)
 	}
 	return days, nil
+}
+
+// privateMailRequests reads PrivateMailRequests inside the caller's
+// transaction, so one pass judges every row by one answer.
+func privateMailRequests(ctx context.Context, tx pgx.Tx) (bool, error) {
+	on, err := database.Remember(tx, settings.ValueMemoKey(PrivateMailRequests.Key()), func() (bool, error) {
+		return config.StoredApplyTx(ctx, tx, config.Bound(), PrivateMailRequests)
+	})
+	if err != nil {
+		return false, fmt.Errorf("read %s: %w", PrivateMailRequests.Key(), err)
+	}
+	return on, nil
 }

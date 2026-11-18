@@ -18,7 +18,6 @@ package contacts
 // than a contact assembled out of the fields that happened to parse.
 
 import (
-	"bufio"
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
@@ -57,6 +56,19 @@ type VCardEntry struct {
 	// ModelRead marks a card a model read off a photo. importOneVCard never
 	// writes such a card, on any arm: it is reported for approval or skipped.
 	ModelRead bool `json:"model_read,omitempty"`
+	// Unreadable names the properties whose value was not text in any charset
+	// this reader knows. The card is reported, never imported without them.
+	Unreadable []string `json:"unreadable,omitempty"`
+}
+
+// vcardStoredProperties are the properties whose value a contact keeps, with
+// the word a reader knows each by. An unreadable one is reported by that word
+// instead of dropped.
+//
+//nolint:goconst // reader words for the report, not column or check names
+var vcardStoredProperties = map[string]string{
+	"FN": "name", "N": "name", "ORG": "company", "TITLE": "job title", "EMAIL": "email address",
+	"TEL": "phone number", "URL": "web address", "ADR": "address",
 }
 
 // VCardChannel is one address or number with the kind the card gave it.
@@ -119,7 +131,7 @@ func ParseVCards(r io.Reader) ([]VCardEntry, error) {
 	// count is short by one byte per line. The bytes actually read are the
 	// bound: one past it means the file was cut, and a prefix is not the file.
 	if raw.n > vcardMaxBytes {
-		return nil, fmt.Errorf("contacts: the vCard file exceeds %d bytes", vcardMaxBytes)
+		return nil, fmt.Errorf("the vCard file exceeds %d bytes", vcardMaxBytes)
 	}
 	var out []VCardEntry
 	var current *VCardEntry
@@ -135,7 +147,7 @@ func ParseVCards(r io.Reader) ([]VCardEntry, error) {
 			// answers 200. The structure has to be one this reader can account
 			// for, or it is refused whole.
 			if !strings.EqualFold(value, "VCARD") {
-				return nil, fmt.Errorf("contacts: this file begins a %q, which is not a vCard", value)
+				return nil, fmt.Errorf("the file holds a %q, which is not a vCard", value)
 			}
 			// A CARD THAT NEVER ENDED, one card short of the end of the file.
 			// Starting the next one over it dropped the unterminated card and
@@ -144,18 +156,18 @@ func ParseVCards(r io.Reader) ([]VCardEntry, error) {
 			// up. It is the same malformation the end-of-file case refuses, and
 			// it refuses the same way.
 			if current != nil {
-				return nil, errors.New("contacts: a vCard begins before the one before it ended")
+				return nil, errors.New("a card begins before the card above it has an END:VCARD line")
 			}
 			current = &VCardEntry{}
 		case "END":
 			if !strings.EqualFold(value, "VCARD") {
-				return nil, fmt.Errorf("contacts: this file ends a %q, which is not a vCard", value)
+				return nil, fmt.Errorf("the file holds a %q, which is not a vCard", value)
 			}
 			// And an END with nothing open. Ignoring it reads a file whose
 			// structure this parser cannot account for as one it can, which is
 			// the same silence one line along.
 			if current == nil {
-				return nil, errors.New("contacts: a vCard ends without having begun")
+				return nil, errors.New("an END:VCARD line has no BEGIN:VCARD before it")
 			}
 			out = append(out, *current)
 			current = nil
@@ -166,10 +178,10 @@ func ParseVCards(r io.Reader) ([]VCardEntry, error) {
 		}
 	}
 	if current != nil {
-		return nil, errors.New("contacts: the vCard file ends inside a card")
+		return nil, errors.New("a card in the file has no END:VCARD line")
 	}
 	if len(out) == 0 {
-		return nil, errors.New("contacts: the file holds no vCard")
+		return nil, errors.New("the file holds no vCard")
 	}
 	return out, nil
 }
@@ -184,61 +196,6 @@ func (c *countingReader) Read(p []byte) (int, error) {
 	n, err := c.r.Read(p)
 	c.n += n
 	return n, err
-}
-
-// unfoldVCardLines joins continuation lines, which is the first thing any vCard
-// reader must do: a long value is split across lines and the continuations are
-// marked by a leading space or tab, so a parser reading raw lines sees half an
-// address and a fragment.
-func unfoldVCardLines(r io.Reader) ([]string, error) {
-	scanner := bufio.NewScanner(r)
-	// A line may be as long as the file may be. An embedded photo on one unfolded
-	// line imports as it does folded. A file past the bound is refused below in
-	// the product's words, not the scanner's.
-	scanner.Buffer(make([]byte, 0, 64*1024), vcardMaxBytes+2)
-	var lines []string
-	// The line under construction is built in ONE builder rather than by
-	// re-appending to the slice's last element: `lines[n-1] += x` copies the
-	// whole accumulated line every time, which turns a file of many short
-	// continuations into quadratic work.
-	var folding strings.Builder
-	var open bool
-	flush := func() {
-		if open {
-			lines = append(lines, folding.String())
-			folding.Reset()
-			open = false
-		}
-	}
-	read := 0
-	for scanner.Scan() {
-		read += len(scanner.Bytes()) + 1
-		if read > vcardMaxBytes {
-			// The LimitReader above would otherwise hand back a prefix and this
-			// would parse it as though it were the file, silently importing
-			// part of an address book.
-			return nil, fmt.Errorf("contacts: the vCard file exceeds %d bytes", vcardMaxBytes)
-		}
-		if len(lines) > vcardMaxLines {
-			return nil, fmt.Errorf("contacts: the vCard file holds more than %d lines", vcardMaxLines)
-		}
-		line := strings.TrimRight(scanner.Text(), "\r")
-		if line == "" {
-			continue
-		}
-		if (line[0] == ' ' || line[0] == '\t') && open {
-			folding.WriteString(line[1:])
-			continue
-		}
-		flush()
-		folding.WriteString(line)
-		open = true
-	}
-	flush()
-	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("contacts: reading the vCard file: %w", err)
-	}
-	return lines, nil
 }
 
 // splitVCardLine breaks one unfolded line into its property name, its
@@ -275,7 +232,11 @@ func indexUnquoted(s string, sep byte) int {
 }
 
 func applyVCardProperty(entry *VCardEntry, name string, params []string, raw string) {
-	value := decodeVCardValue(params, raw)
+	value, readable := readVCardValue(params, raw)
+	if _, stored := vcardStoredProperties[name]; stored && !readable {
+		entry.Unreadable = append(entry.Unreadable, name)
+		return
+	}
 	switch name {
 	case "FN":
 		entry.FullName = strings.TrimSpace(value)
@@ -371,8 +332,16 @@ func storableRevision(at time.Time) *time.Time {
 
 // decodeVCardValue undoes the encodings a real-world card carries: the
 // quoted-printable of a 2.1-era exporter, its CHARSET, and vCard's own
-// backslash escapes.
+// backslash escapes. A value that cannot be read as text comes back empty;
+// readVCardValue says which case that was.
 func decodeVCardValue(params []string, raw string) string {
+	text, _ := readVCardValue(params, raw)
+	return text
+}
+
+// readVCardValue is decodeVCardValue with the answer to "was this readable",
+// which an empty value cannot give.
+func readVCardValue(params []string, raw string) (string, bool) {
 	value := raw
 	for _, p := range params {
 		upper := strings.ToUpper(p)
@@ -385,7 +354,8 @@ func decodeVCardValue(params []string, raw string) string {
 			}
 		}
 	}
-	return unescapeVCardText(vcardText(params, value))
+	text, ok := vcardText(params, value)
+	return unescapeVCardText(text), ok
 }
 
 func decodeQuotedPrintable(s string) string {

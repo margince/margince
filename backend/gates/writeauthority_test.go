@@ -100,8 +100,9 @@ const (
 // the probe is actually deciding, because that is always the answer: the probe
 // is not this mutation's own row gate.
 var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
-	"internal/modules/activities:ownCompanyTestScopes": "Read scopes classify a meeting counterparty; the only possible mutation is on the activity. No company is changed.",
-	"internal/modules/activities:readableContactScope": "Read scopes classify visible meeting participants. The outcome writer gates the activity separately and changes no contact.",
+	"internal/modules/activities:ownCompanyTestScopes":        "Read scopes classify a meeting counterparty; the only possible mutation is on the activity. No company is changed.",
+	"internal/modules/activities:readableContactScope":        "Read scopes classify visible meeting participants. The outcome writer gates the activity separately and changes no contact.",
+	"internal/modules/activities:withReadablePreviewSubjects": "Decides which recipients' records a send preview may name. The preview commits nothing, and no contact or lead changes; the send itself is gated at staging.",
 
 	"internal/modules/contacts:LockInquiryLeadTx":          "holds the lead or contact a website inquiry names while its task is assigned, so the record and task lock in one order. Nothing on the record changes here; a lead owner change is gated in the assignment plan by auth.EnsureClaimable or auth.EnsureAssignable, and the visibility probe hides a record the caller cannot see",
 	"internal/modules/contacts:LockInquiryContactTx":       "holds the lead or contact a website inquiry names while its task is assigned, so the record and task lock in one order. Nothing on the record changes here; a lead owner change is gated in the assignment plan by auth.EnsureClaimable or auth.EnsureAssignable, and the visibility probe hides a record the caller cannot see",

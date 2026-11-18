@@ -196,7 +196,7 @@ The 34 tables owned by `activities`, as the migrations build them. [Back to the 
 - `idx_activity_unfolded_counterparty`: `btree (activity_unfolded_counterparty(counterparty_email)) WHERE (activity_unfolded_counterparty(counterparty_email) IS NOT NULL)`
 - `idx_activity_unjudged`: `btree (occurred_at) WHERE ((owed_verdict IS NULL) AND (direction = 'inbound') AND (kind = ANY (ARRAY['email', 'message'])) AND (archived_at IS NULL) AND (audience = 'workspace') AND (restricted_at IS NULL))`
 - `idx_activity_unjudged_reply`: `btree (occurred_at) WHERE ((reply_verdict IS NULL) AND (direction = 'inbound') AND (kind = ANY (ARRAY['email', 'message'])) AND (archived_at IS NULL) AND (audience = 'workspace') AND (restricted_at IS NULL))`
-- `idx_activity_unlabeled`: `btree (occurred_at) WHERE ((capture_label IS NULL) AND (captured_by ~~ 'connector:%') AND (kind = 'email'))`
+- `idx_activity_unlabeled`: `btree (occurred_at) WHERE ((capture_label IS NULL) AND (captured_by ~~ 'connector:%') AND (kind = ANY (ARRAY['email', 'message'])))`
 - `uq_activity_domain_evidence_version`: `unique, btree (id, domain_evidence_version)`
 - `uq_activity_source`: `unique, btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL))`
 
@@ -1171,7 +1171,7 @@ The 34 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## mail_draft
 
-21 columns · primary key `(id)` · referenced by 0 foreign keys
+22 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1188,6 +1188,7 @@ The 34 tables owned by `activities`, as the migrations build them. [Back to the 
 | `editor_state` | `jsonb`, default `'{}'::jsonb` | yes |  |
 | `grounding` | `jsonb`, default `'[]'::jsonb` | yes | The records this draft was written from, which an agent draft records and a human draft leaves empty. |
 | `html_body` | `text` |  | The editor's markup beside the plain body, so reopening restores the formatting. |
+| `override_explanation` | `text` |  | The reason the author typed for sending past a refusal. |
 | `scheduled_at` | `timestamp with time zone` |  | The moment the author picked to send at, as saved. |
 | `scheduled_tz` | `text` |  | The IANA zone `scheduled_at` was picked in. |
 | `scheduled_wall` | `timestamp without time zone` |  |  |
@@ -1220,8 +1221,8 @@ The 34 tables owned by `activities`, as the migrations build them. [Back to the 
 **Triggers**
 
 - `mail_draft_author_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.author_id IS NOT NULL) AND true)) EXECUTE FUNCTION refuse_retired_member_work('author_id')`
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"subject": 20000, "anchor_type": 20000, "cc_addresses": 20000, "scheduled_tz": 20000, "to_addresses": 20000, "bcc_addresses": 20000, "communication_context": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"anchor_type":20000,"bcc_addresses":20000,"cc_addresses":20000,"communication_context":20000,"scheduled_tz":20000,"subject":20000,"to_addresses":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"subject": 20000, "anchor_type": 20000, "cc_addresses": 20000, "scheduled_tz": 20000, "to_addresses": 20000, "bcc_addresses": 20000, "communication_context": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"anchor_type":20000,"bcc_addresses":20000,"cc_addresses":20000,"communication_context":20000,"scheduled_tz":20000,"subject":20000,"to_addresses":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"subject": 20000, "anchor_type": 20000, "cc_addresses": 20000, "scheduled_tz": 20000, "to_addresses": 20000, "bcc_addresses": 20000, "override_explanation": 2000, "communication_context": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"anchor_type":20000,"bcc_addresses":20000,"cc_addresses":20000,"communication_context":20000,"override_explanation":2000,"scheduled_tz":20000,"subject":20000,"to_addresses":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"subject": 20000, "anchor_type": 20000, "cc_addresses": 20000, "scheduled_tz": 20000, "to_addresses": 20000, "bcc_addresses": 20000, "override_explanation": 2000, "communication_context": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"anchor_type":20000,"bcc_addresses":20000,"cc_addresses":20000,"communication_context":20000,"override_explanation":2000,"scheduled_tz":20000,"subject":20000,"to_addresses":20000}')`
 
 ## meeting_calendar_episode
 

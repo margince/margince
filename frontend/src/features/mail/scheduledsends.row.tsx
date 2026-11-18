@@ -253,6 +253,12 @@ export function SendRow({
     marketingPurpose: send.marketing_purpose,
     consentPurpose: send.consent_purpose,
     evidence: send.evidence,
+    draft: {
+      subject: send.subject,
+      body: send.body,
+      htmlBody: send.html_body,
+      attachmentIds: send.attachments?.map((file) => file.id),
+    },
     enabled: actionable,
   });
   return (

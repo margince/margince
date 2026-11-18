@@ -169,7 +169,7 @@ func ListFieldHistory(ctx context.Context, db *database.DB, f FieldHistoryFilter
 	var cursorID ids.UUID
 	useCursor := false
 	if f.Cursor != nil && *f.Cursor != "" {
-		c, err := storekit.DecodeCursor(*f.Cursor)
+		c, err := storekit.DecodeCursor("field_history", *f.Cursor)
 		if err != nil {
 			return FieldHistoryPage{}, err
 		}
@@ -243,7 +243,7 @@ func scanFieldHistorySpine(ctx context.Context, tx pgx.Tx, f FieldHistoryFilter,
 			// The scan cap keeps a filter that skips most rows from
 			// walking the whole spine in one call; more MAY match, and
 			// claiming so is the honest side to err on.
-			next, err := storekit.EncodeCursor(cursorTime, cursorID)
+			next, err := storekit.EncodeCursor("field_history", cursorTime, cursorID)
 			if err != nil {
 				return FieldHistoryPage{}, err
 			}
@@ -256,7 +256,7 @@ func scanFieldHistorySpine(ctx context.Context, tx pgx.Tx, f FieldHistoryFilter,
 				return FieldHistoryPage{}, err
 			}
 			if more {
-				next, err := storekit.EncodeCursor(cursorTime, cursorID)
+				next, err := storekit.EncodeCursor("field_history", cursorTime, cursorID)
 				if err != nil {
 					return FieldHistoryPage{}, err
 				}
