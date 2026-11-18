@@ -11,12 +11,11 @@ import (
 	"os/exec"
 	"strings"
 	"testing"
-
-	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"time"
 
 	"github.com/tetratelabs/wazero/sys"
 
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
 
