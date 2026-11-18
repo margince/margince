@@ -76,26 +76,7 @@ jobs:
       - name: The tag is on main
         env:
           TAG: ${{ github.ref_name }}
-        run: |
-          set -euo pipefail
-          # A release built from a commit that never merged is a release nobody
-          # reviewed. origin/main is asserted SEPARATELY from the ancestry it
-          # feeds: the checkout above is credential-less by now, so nothing here
-          # can fetch what is missing, and `merge-base` against an absent ref
-          # fails exactly as a tag off main does. One message per cause, or a
-          # fetch-depth regression reads as "your tag is not on main" and sends
-          # somebody to re-merge work that is already merged.
-          if ! git rev-parse --verify --quiet origin/main >/dev/null; then
-            echo "release-tag: origin/main is not in this checkout." >&2
-            echo "  The ancestry check cannot run, so this refuses rather than" >&2
-            echo "  passing blind. Check the checkout step's fetch-depth." >&2
-            exit 1
-          fi
-          if ! git merge-base --is-ancestor HEAD origin/main; then
-            echo "release-tag: $TAG does not point at a commit on main." >&2
-            echo "  Merge the work first, then tag the merge commit." >&2
-            exit 1
-          fi
+        run: bash scripts/release-tag-on-main.sh "$TAG"
 
       - name: LICENSE carries this release's values
         env:

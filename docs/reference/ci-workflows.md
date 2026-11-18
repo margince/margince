@@ -19,7 +19,7 @@ workflow is outside the gate:
 | `pace.yml` | every push to `main` | No (runs after the merge) |
 | `scheduled.yml` | daily and weekly on `main` | No |
 | `sbom.yml` | manual dispatch only | No |
-| `release.yml` | `v*` tag push (no pre-release), manual dispatch from `main` | No |
+| `release.yml` | `v*` tag push (drafts only for a plain `vX.Y.Z`), manual dispatch naming a tag | No |
 | `release-tag.yml` | `v*` tag push | No (runs on a tag, after every merge) |
 
 `ci.yml` and `cla.yml` run on `merge_group` too, because the queue asks for each required check again.
@@ -319,11 +319,11 @@ It cuts a release in the dist service of the constellation deployment at `test.m
 release is a server deployment, which GitHub does not host. The GitHub release belongs to
 `release-tag.yml`, which owns the `github-release` job.
 
-A `v*` tag without a pre-release part starts it, and the dist version is the tag without its `v`. A
-manual dispatch from `main` is the fallback, with a required `version` input such as `1.0.0`.
-`scripts/release-dist-version.sh` reads either one and refuses anything else (`make test-release-dist-version`).
-There is no branch push trigger. So the role images have no other
-build ([#1965](https://github.com/margince/margince/issues/1965)).
+Any `v*` tag push starts it, but only a plain `vX.Y.Z` tag drafts a release. `scripts/release-dist-version.sh`
+refuses a pre-release part, build metadata or a leading zero (`make test-release-dist-version`). The dist version
+is the tag without its `v`. A manual dispatch with a required `tag` input, such as `v1.0.0`, is the fallback.
+Either way the run builds the commit the tag names, and refuses a tag not on `main` (`make test-release-tag-on-main`).
+No branch push starts it, so the role images have no other build ([#1965](https://github.com/margince/margince/issues/1965)).
 
 What a run does:
 

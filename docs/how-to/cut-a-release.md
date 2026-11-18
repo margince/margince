@@ -123,8 +123,8 @@ Two kinds of release live here, and they carry different versions:
 
 | | `release-tag.yml` | `release.yml` |
 |---|---|---|
-| Trigger | a `v*` tag | the same `v*` tag with no added part, or started by hand from `main` |
-| Version | `v1.0.0` (semver) | `1.0.0`: the tag without its `v`, or typed for a run by hand |
+| Trigger | a `v*` tag | the same plain `vX.Y.Z` tag, or started by hand with that tag |
+| Version | `v1.0.0` (semver) | `1.0.0`: the tag without its `v` |
 | Publishes to | the GitHub release page | the dist service at `dist.test.margince.com` |
 | Carries | the notes, the images on `ghcr.io`, a server bundle for each Linux platform, SBOMs, a signed `SHA256SUMS` | the patch of changes, SBOMs, a changelog, role images, an archive of the programs for each Linux platform |
 
@@ -134,16 +134,20 @@ with an added part, such as `v1.0.0-rc.1`, makes no dist release.
 
 ### Start a dist release by hand
 
-If the run of a tag failed before its draft, start `release.yml` from `main` and type the version:
+If the run of a tag failed before its draft, start `release.yml` again and name the tag:
 
 ```sh
-gh workflow run release.yml --ref main -f version=1.0.0
+gh workflow run release.yml --ref main -f tag=v1.0.0
 ```
 
-The version is three numbers, `x.y.z`, with no prefix, no ending and no part that starts with `0`.
-Before the lane drafts, [`scripts/release-dist-version.sh`](../../scripts/release-dist-version.sh)
-reads the tag through `scripts/release-tag-version.sh`, or checks the typed version and the branch
-(`make test-release-dist-version`).
+The run builds the commit the tag names, never the tip of `main`, so the dist release describes the
+same source as the GitHub release. `--ref main` only picks the copy of the workflow that runs.
+
+Before the lane drafts, it refuses a tag that is not on `main`, as the GitHub release does. The check is
+[`scripts/release-tag-on-main.sh`](../../scripts/release-tag-on-main.sh) (`make test-release-tag-on-main`).
+Then [`scripts/release-dist-version.sh`](../../scripts/release-dist-version.sh) reads the version from the tag
+(`make test-release-dist-version`). The tag is `v` and three numbers,
+with no ending. A number may be `0`, but no number has a leading zero, such as `01`.
 
 The dist service has one line of releases. A new version must be above every published release,
 withdrawn ones too. The release CLI refuses a lower version before the draft.
@@ -178,7 +182,8 @@ record and cannot disagree. The publisher uses `--release <version>` for
 `draft-release`, `add-artifacts` and `publish-release`.
 
 A lane that was cancelled or failed published nothing. So the next patch starts at the newest published
-release, and it also carries the files of the lane that was skipped.
+release. It carries the changes of the skipped release that are still in the next one. A file that the skipped
+release added and a later commit removed is in neither tree, so no patch carries it.
 
 If no release was ever published, the release is the first one. Its patch is the whole tree, and
 `draft-release` marks it with `--first-release`.

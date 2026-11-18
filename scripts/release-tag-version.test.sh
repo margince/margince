@@ -31,8 +31,10 @@ accepts() {
 		printf 'FAIL: %s did not report version=%s (%s)\n' "$tag" "$tag" "$reason"
 		FAILURES=$((FAILURES + 1))
 	fi
-	if [[ "$out" != *"release=${tag#v}"* ]]; then
-		printf 'FAIL: %s did not report release=%s, the version without its v\n' "$tag" "${tag#v}"
+	# stdout alone, and exactly one release line: a substring match would let
+	# release=1.2.30 pass for v1.2.3.
+	if [[ "$(bash "$READER" "$tag" 2>/dev/null | grep '^release=')" != "release=${tag#v}" ]]; then
+		printf 'FAIL: %s did not report exactly release=%s on stdout\n' "$tag" "${tag#v}"
 		FAILURES=$((FAILURES + 1))
 	fi
 	if [[ "$out" != *"prerelease=$want"* ]]; then

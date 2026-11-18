@@ -1,8 +1,9 @@
 name: Release
 
 # Draft, fill and publish a dist release. A plain tag vX.Y.Z starts it and
-# names the dist release X.Y.Z, the tag without its v. A run by hand from main
-# is the fallback. The dist service holds server releases: role images, an
+# names the dist release X.Y.Z, the tag without its v. A run by hand names a tag
+# and builds the commit that tag names, so a release that failed, or a dist
+# service that did not get one, can be served again from the same source. The dist service holds server releases: role images, an
 # incremental patch, program archives and SBOMs. GitHub hosts none of that.
 #
 # A release is a decision somebody makes, so no branch push starts this lane.
@@ -34,8 +35,8 @@ on:
     tags: ['v*']
   workflow_dispatch:
     inputs:
-      version:
-        description: 'Dist version, x.y.z, such as 1.0.0. It must be above every release that went out.'
+      tag:
+        description: 'The release tag to build, such as v1.0.0. It must be on main, and its version above every release that went out.'
         required: true
         type: string
 
@@ -49,8 +50,9 @@ permissions:
 # service and must never be interrupted part-way, so it carries a group that
 # serializes instead of one that cancels.
 #
-# Two runs overlap only when somebody starts a second one by hand, and the
-# groups still decide that case.
+# Each group is per tag, so it only decides runs of one tag. Runs of two tags
+# can overlap; the dist service then refuses the one whose version is not above
+# every release that went out.
 
 env:
   # The release-management CLI image, private to another organization. Each job
@@ -66,32 +68,38 @@ env:
 jobs:
   draft:
     name: Draft release
-    if: github.ref_type != 'tag' || !contains(github.ref_name, '-')
+    if: ${{ !contains(inputs.tag || github.ref_name, '-') }}
     # The upload can wait up to about 68 minutes for the dist service.
     timeout-minutes: 90
-    # Superseded by a newer run on the same ref: the tip is the commit worth
-    # drafting.
+    # Superseded by a newer run of the same tag.
     concurrency:
-      group: ${{ github.workflow }}-draft-${{ github.ref }}
+      group: ${{ github.workflow }}-draft-${{ inputs.tag || github.ref_name }}
       cancel-in-progress: true
     runs-on: ubuntu-24.04-arm
     permissions:
       contents: read
     outputs:
       version: ${{ steps.version.outputs.version }}
+      revision: ${{ steps.version.outputs.revision }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          # The tag's commit, for a tag push and a run by hand alike.
+          ref: refs/tags/${{ inputs.tag || github.ref_name }}
           persist-credentials: false
-          # Full history so the patch base's revision resolves; the shallow
-          # default carries only the release commit.
+          # Full history so the patch base's revision resolves and the tag can
+          # be checked against main.
           fetch-depth: 0
-      # The tag or the typed version is checked before any work starts.
-      - name: Read the dist version
+      # The same checks as the GitHub release, before any work starts.
+      - name: The tag is on main and names a dist version
         id: version
         env:
-          DISPATCH_VERSION: ${{ inputs.version }}
-        run: bash scripts/release-dist-version.sh "$GITHUB_REF" "$DISPATCH_VERSION" >> "$GITHUB_OUTPUT"
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          set -euo pipefail
+          bash scripts/release-tag-on-main.sh "$TAG"
+          bash scripts/release-dist-version.sh "$TAG" >> "$GITHUB_OUTPUT"
+          echo "revision=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
       # The tool image belongs to another organization, which GITHUB_TOKEN cannot read.
       - name: Log in to ghcr.io
         env:
@@ -105,21 +113,14 @@ jobs:
       # Fresh SBOMs at the release commit, through the full pinned pipeline
       # (generate, normalize, supplement, parity, census, validate). The dist service
       # verifies that the SBOMs attest the bytes of every file the patch
-      # produces; both are derived from the same commit, so they agree by
-      # construction — the committed sboms/ may lag the tree and must not be
-      # uploaded as release artifacts.
-      # make sbom scans a git archive export, where export-subst writes the
-      # commit into REVISION. create-patch reads git objects and keeps the
-      # placeholder. Dist refuses a patch and SBOMs that disagree on a file, so
-      # the export keeps the placeholder too, until create-patch diffs the
-      # export itself.
-      - name: Keep the REVISION placeholder in the SBOM export
-        run: echo '/REVISION -export-subst' >> .git/info/attributes
+      # produces, so the committed sboms/, which may lag the tree, are never
+      # uploaded. Both read the git archive export, so REVISION holds the
+      # commit in each.
       - name: Generate the SBOMs at the release commit
         run: make sbom
       - name: Cut the patch and draft the release
         env:
-          AFTER: ${{ github.sha }}
+          AFTER: ${{ steps.version.outputs.revision }}
           version: ${{ steps.version.outputs.version }}
           MARGINCE_RELEASE_MANAGEMENT_DIST_TOKEN: ${{ secrets.MARGINCE_DIST_PUBLISHER_TOKEN }}
         run: |
@@ -196,10 +197,10 @@ jobs:
     # The bake, then one upload that can wait up to about 68 minutes.
     timeout-minutes: 180
     needs: [draft]
-    # The long half — and the reason cancellation is here at all. A bake for a
-    # commit the tip has already replaced is work nobody reads.
+    # The long half, and the reason cancellation is here at all: a newer run of
+    # the same tag replaces this bake.
     concurrency:
-      group: ${{ github.workflow }}-bake-${{ github.ref }}
+      group: ${{ github.workflow }}-bake-${{ inputs.tag || github.ref_name }}
       cancel-in-progress: true
     runs-on: ubuntu-24.04-arm
     permissions:
@@ -207,6 +208,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ needs.draft.outputs.revision }}
           persist-credentials: false
       # qemu runs the foreign runtime layers of the multi-platform bake; the
       # builder stages cross-compile on the native platform (the Dockerfiles
@@ -275,7 +277,7 @@ jobs:
           VERSION: ${{ needs.draft.outputs.version }}
           PLATFORMS: linux/amd64,linux/arm64
           CACHE: gha
-          MARGINCE_BUILD_REVISION: ${{ github.sha }}
+          MARGINCE_BUILD_REVISION: ${{ needs.draft.outputs.revision }}
           MARGINCE_RELEASE_MANAGEMENT_DIST_TOKEN: ${{ secrets.MARGINCE_DIST_PUBLISHER_TOKEN }}
         run: |
           set -euo pipefail
@@ -350,12 +352,12 @@ jobs:
     needs: [draft, docker-image]
     # `cancel-in-progress: false` here and nowhere else: publishing mutates the
     # dist service, so a publish that has started always finishes. The group
-    # bounds how many can be in flight — one publish at a time per ref, and a
+    # bounds how many can be in flight — one publish at a time per tag, and a
     # publish still pending when a newer one arrives gives up its place. It is a
     # mutual exclusion, not an ordering: which version reaches the dist service
     # first is not something a concurrency group can decide.
     concurrency:
-      group: ${{ github.workflow }}-publish-${{ github.ref }}
+      group: ${{ github.workflow }}-publish-${{ inputs.tag || github.ref_name }}
       cancel-in-progress: false
     runs-on: ubuntu-24.04-arm
     permissions:
