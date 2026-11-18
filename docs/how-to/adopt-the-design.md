@@ -140,16 +140,15 @@ Stories: update every changed story. The catalog test needs no new rows unless a
 ### Step 4: The shell (`shell.css`, `shell.tsx`, `topbar.css`, `agentrail.css`, `agent-edge.css`, `navlevel.tsx`)
 
 1. **The ground.** `.app` draws `--bgPage`, one flat colour.
-2. **Rail.** `--chrome` above the phone layout, with no edge and no dark ground.
+2. **Rail.** Above the phone layout it has no ground of its own, so `--bgPage` shows. It has no edge. Hover is the neutral `--railHover`.
    Closed, it is **56px**; open, 256px (`--railW` in `shell.css`). The tooltip rule in `shell.css`
    depends on the closed width.
 
    Rows are 34px, group labels are `.t-eyebrow` with only the first letter capital, and the orb sits
    last. `rail.test.tsx` and `ac.spec.ts` pin the 10 rows and their order, and those do not change.
-3. **Top bar.** It is 50px and uses `--chrome` with no hairline above the phone layout. The page is a
-   card beside it. At phone width it is `glass` with a hairline under it.
-   The breadcrumb sits left, the account menu right, and the `⌘K` field between them.
-   **Nothing from a record sits in it.**
+3. **Top bar.** It is 50px with no ground of its own and no hairline above the phone layout, beside the `--pageCard` card. At phone width it is `glass` with a hairline under it.
+   A record page's Back control comes first. The `⌘K` field follows, then the actions at the right.
+   Settings uses the same bar, and **nothing from a record sits in it.**
 4. **Settings second level.** On a settings route, the sidebar itself becomes the 210px column that carries the
    level (`SettingsRail`/`navlevel.tsx`).
    It uses the same surface.

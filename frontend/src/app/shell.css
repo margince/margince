@@ -75,18 +75,7 @@
      150–200ms). The column also animates a geometric property, so every frame
      re-lays-out the content beside it — a shorter run is cheaper as well as
      better. */
-  /* ONE reading column, and every capped page is capped at it — a settings
-     form, the Brief, a company or contact record alike. A page is either read
-     DOWN, where a measured line is the point and a label a monitor away from
-     its control is worse rather than wider, or scanned ACROSS, where a cap only
-     ever pushed columns off the right edge of a wide display. That is the whole
-     decision: which family a screen is in, decided in ONE place
-     (`GRIDDED_RECORD_SCREENS` and `GRIDDED_SCREENS` in app/nav.ts, because it is
-     a judgement made by opening the page) — never how wide its own measure is,
-     because two measures put the same sentence on two line lengths depending on
-     which page a reader opened it from.
-     The page head is never capped: full width on every screen, and a capped
-     column is centred under it. */
+  /* The reading column; only Settings is capped (app/readingcolumn.ts). */
   --pageColumn: 1280px;
 
   --railW: var(--railWShut);
@@ -277,11 +266,8 @@
      what is left. */
   flex: none;
 }
-/* THE PAGE'S MEASURE: what this page's content is allowed to be, published on
-   the column so the page's NAME and the page's body can only read one number.
-   Which pages have one at all is `GRIDDED_SCREENS` and `GRIDDED_RECORD_SCREENS`
-   in app/nav.ts; a record is in it like any other capped page, since carrying
-   more parts changes what stands inside the column and not how wide it is. */
+/* The page's measure, on the column, so the page's name and body read one
+   number. Only Settings has one (app/readingcolumn.ts). */
 .main-gridded {
   --pageMeasure: var(--pageColumn);
 }
@@ -1517,11 +1503,7 @@
 }
 
 /* A list screen is one full-height surface: the page itself does not scroll,
- * the table's own body does. This rule gives it the height and the same page
- * gutter as every other screen; whether it is also CAPPED is the column policy's
- * answer and not this rule's — a list is scanned across, so most of them are not
- * (`GRIDDED_SCREENS` in app/nav.ts names the one that is, and there the rule
- * above caps this wrap at --pageMeasure like any other page).
+ * the table's own body does. This rule gives it the height.
  *
  * Keyed off the wrap CARRYING a surface, not on it being the only child. An
  * `:only-child` rule states that the layout depends on the surface having no

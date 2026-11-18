@@ -37,6 +37,10 @@
     border-radius: 0;
     box-shadow: none;
   }
+  /* What stands beside the surface, a notice over it, keeps the page's inset. */
+  .scroll > .wrap:has(> .lt) > :not(.lt) {
+    margin: var(--pageGapTop) var(--pageGutter) 0;
+  }
 }
 
 /* ---- header: views, count, primary action ---- */
