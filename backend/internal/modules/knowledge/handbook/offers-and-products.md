@@ -177,7 +177,7 @@ For any other unit, pick **Other** and type it in **Other unit**. Margince shows
 
 **Billing period** shows only once **Billing** is **Recurring**, and then you must pick one.
 
-A product holds a name, a SKU if you want one, a description, a unit, a unit price and currency, and a default tax rate. It also holds its billing type: one-time or recurring, and for recurring, the period.
+A product holds a name, a SKU if you want one, a description, a unit, a unit price and currency, and a default tax rate, which is 0% when you leave it empty. It also holds its billing type: one-time or recurring, and for recurring, the period.
 
 You can leave product billing **unspecified**, which is not the same as one-time. Margince does not guess the type, so the product says "Not specified".
 

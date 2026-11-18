@@ -216,9 +216,12 @@ export function ProductsAdmin() {
               locale,
             ),
             currency: text(values.currency) || undefined,
-            default_tax_rate: text(values.default_tax_rate)
-              ? typedNumberOrNaN(text(values.default_tax_rate), locale)
-              : undefined,
+            // The column holds no null, and an empty field on create stores
+            // 0%, so an emptied field here says the same; an absent one says nothing.
+            default_tax_rate:
+              typeof values.default_tax_rate === "string"
+                ? typedNumberOrNaN(values.default_tax_rate || "0", locale)
+                : undefined,
             ...billingPatchOf(values),
             component_kind: componentKindOf(values.component_kind) ?? null,
             tax_category: taxCategoryOf(values.tax_category) ?? null,
