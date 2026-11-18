@@ -4,6 +4,7 @@
 package meetingbrief
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -18,7 +19,7 @@ func TestArcCopyKeepsDatesTitlesAndConversationCounts(t *testing.T) {
 		for _, title := range []string{"", "Original title"} {
 			for _, count := range []int{1, 3} {
 				line := said.arcSummary(ArcMoment{Title: title, From: instantOn(2), To: instantOn(5)}, count)
-				if !strings.Contains(line, "2026-08-02–2026-08-05") || (title != "" && !strings.Contains(line, title)) || (count == 3 && !strings.Contains(line, "3")) {
+				if !strings.Contains(line, augustDay(language, 2)+"–"+augustDay(language, 5)) || (title != "" && !strings.Contains(line, title)) || (count == 3 && !strings.Contains(line, "3")) {
 					t.Fatalf("%s lost arc facts: %s", language, line)
 				}
 				if language != "en" && strings.Contains(line, "conversation") {
@@ -51,4 +52,13 @@ func TestUngroundedAdvanceFallsBackInTheBriefLanguage(t *testing.T) {
 			t.Fatalf("%s lost grounded localized fallback: %+v", tc.language, got)
 		}
 	}
+}
+
+// augustDay is how each shipped language's locale notation writes a day of
+// August 2026.
+func augustDay(language string, day int) string {
+	if language == "de" {
+		return fmt.Sprintf("%02d.08.2026", day)
+	}
+	return fmt.Sprintf("%02d/08/2026", day)
 }

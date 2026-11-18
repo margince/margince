@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/contactcontext"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/shared/kernel/datenotation"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -38,6 +39,8 @@ type Input struct {
 	// Zone is the installation zone every "N days ago" in the brief is counted
 	// in: the zone the reader sees the dates in.
 	Zone *time.Location
+	// Dates is how the installation writes a day and a time, with Zone.
+	Dates datenotation.Notation `json:"-"`
 
 	Company string
 	Deal    *DealIn

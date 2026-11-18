@@ -229,8 +229,8 @@ func readableIDs(moment ArcMoment) []string {
 
 // arcSummary is the moment's one line: how much happened, over what stretch.
 func (said briefCopy) arcSummary(moment ArcMoment, conversations int) string {
-	span := moment.From.At.UTC().Format(time.DateOnly)
-	if end := moment.To.At.UTC().Format(time.DateOnly); end != span {
+	span := said.dates.Day(moment.From.At)
+	if end := said.dates.Day(moment.To.At); end != span {
 		span += "–" + end
 	}
 	if moment.Title == "" {

@@ -137,7 +137,7 @@ func TestAnOverduePromiseIsTheGoalOnceAndTheNextOneIsARisk(t *testing.T) {
 	})
 	sections := Deterministic(in)
 	goal := sectionOf(t, sections, crmcontracts.MeetingBriefSectionKindGoal)
-	if len(goal.Sentences) != 1 || !strings.Contains(goal.Sentences[0].Text, "overdue since 2026-08-08: send the security pack") {
+	if len(goal.Sentences) != 1 || !strings.Contains(goal.Sentences[0].Text, "overdue since 08/08/2026: send the security pack") {
 		t.Fatalf("goal = %+v, want the older overdue promise, dated", goal.Sentences)
 	}
 	risks := sectionOf(t, sections, crmcontracts.MeetingBriefSectionKindRisks)
@@ -246,7 +246,7 @@ func TestAColdRoomStillGetsAHeader(t *testing.T) {
 	if len(header.Sentences) != 2 {
 		t.Fatalf("got %d header sentences, want the meeting line and the quiet line", len(header.Sentences))
 	}
-	if header.Sentences[1].Text != "Nothing has been captured with anyone in this room before." {
+	if header.Sentences[1].Text != "Nothing has been captured with anyone in this meeting before." {
 		t.Errorf("quiet line is %q", header.Sentences[1].Text)
 	}
 }

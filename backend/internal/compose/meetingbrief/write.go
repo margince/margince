@@ -41,7 +41,7 @@ func (s *Service) write(ctx context.Context, in Input) writtenBrief {
 	// to DO about them, so the promise the goal names is also the promise the
 	// objective aims at. Sharing one set would have the plan silently skip
 	// whatever the sections had already used.
-	lang := string(briefCopyFor(in.Language).Lang())
+	lang := string(in.words().Lang())
 	floor := DeterministicPlan(in, rankClaims(in))
 	var (
 		out  writtenBrief
