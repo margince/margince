@@ -121,6 +121,7 @@ function MailOnlyFields({
   deadRecipients,
   filing,
   tagging,
+  marked,
 }: Readonly<{
   to: string[];
   onToChange: (next: string[]) => void;
@@ -149,6 +150,7 @@ function MailOnlyFields({
   /** Which project the message files under, beside the subject it tags. */
   filing: ReactNode;
   tagging: ReactNode;
+  marked?: Readonly<{ values: ReadonlySet<string>; label: string }>;
 }>) {
   const t = useT();
   return (
@@ -171,6 +173,7 @@ function MailOnlyFields({
         needTo={t("compose.emptyRecipients")}
         deadRecipients={deadRecipients}
         disabled={rejectionInFlight}
+        marked={marked}
       />
       <SubjectRow
         subject={subject}
@@ -275,6 +278,7 @@ export function ComposeHead({
   flagged,
   rejectionInFlight,
   onToEditing,
+  marked,
 }: Readonly<{
   fields: ComposeFields;
   savedDraft: ReturnType<typeof useSavedDraft>;
@@ -293,6 +297,8 @@ export function ComposeHead({
   flagged: ReadonlySet<MissingField>;
   rejectionInFlight: boolean;
   onToEditing: () => void;
+  /** Recipients a refused Send named, marked on their chips. */
+  marked?: Readonly<{ values: ReadonlySet<string>; label: string }>;
 }>) {
   const t = useT();
   const { account } = fields;
@@ -324,6 +330,7 @@ export function ComposeHead({
       )}
       {!dial.isChannelReply && (
         <MailOnlyFields
+          marked={marked}
           flagged={flagged}
           to={fields.to}
           onToChange={fields.setTo}

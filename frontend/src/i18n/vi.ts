@@ -8074,6 +8074,46 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "directSend.reason.contractual_necessity": "Nghĩa vụ hợp đồng",
   "directSend.reason.legal_obligation": "Nghĩa vụ pháp lý",
   "directSend.reason.other": "Khác",
+  "compose.sendAnyway.finding.objected": "{address} đã phản đối quảng cáo.",
+  "compose.sendAnyway.finding.withdrawn":
+    "{address} đã rút lại sự đồng ý cho loại thư này.",
+  "compose.sendAnyway.finding.askedToStop":
+    "{address} đã yêu cầu không liên hệ.",
+  "compose.sendAnyway.finding.restricted":
+    "Dữ liệu về {address} đang bị hạn chế xử lý.",
+  "compose.sendAnyway.finding.optedOut":
+    "{address} đã hủy nhận quảng cáo sau khi yêu cầu báo giá này.",
+  "compose.sendAnyway.finding.noReason":
+    "Chưa ghi nhận lý do liên hệ {address}.",
+  "compose.sendAnyway.finding.noPermission":
+    "Chưa ghi nhận quyền gửi quảng cáo cho {address}.",
+  "compose.sendAnyway.finding.footer":
+    "Chân trang email thiếu thông tin bắt buộc cho {address}.",
+  "compose.sendAnyway.finding.bounced": "{address} không nhận thư.",
+  "compose.sendAnyway.finding.tooMany":
+    "{address} đã đạt giới hạn thư quảng cáo.",
+  "compose.sendAnyway.finding.lawfulBasis":
+    "Chưa ghi nhận căn cứ pháp lý cho {address}.",
+  "compose.sendAnyway.finding.other":
+    "Không thể gửi tin nhắn này tới {address} ở dạng hiện tại.",
+  "compose.sendAnyway.finding.none":
+    "Không thể gửi tin nhắn này ở dạng hiện tại.",
+  "compose.sendAnyway.warning":
+    "Lần kiểm tra trước khi gửi vẫn chặn tin nhắn này. Vẫn gửi chỉ gửi tin nhắn này và không cho phép các tin nhắn sau. Tên, lý do của bạn và tin nhắn được lưu trong một bản ghi không thể chỉnh sửa.",
+  "compose.sendAnyway.editOnly": "Sửa tin nhắn hoặc bỏ địa chỉ này để gửi.",
+  "compose.sendAnyway.more_one": "Thêm {count} kết quả",
+  "compose.sendAnyway.more_other": "Thêm {count} kết quả",
+  "compose.sendAnyway.details": "Chi tiết",
+  "compose.sendAnyway.reasonLabel": "Lý do gửi",
+  "compose.sendAnyway.confirm": "Vẫn gửi",
+  "compose.sendAnyway.marked": "có trong cảnh báo",
+  "compose.sendAnyway.failed": "Chưa gửi được tin nhắn. Chọn Vẫn gửi lần nữa.",
+  "compose.sendAnyway.loading": "Đang tải kết quả kiểm tra…",
+  "compose.sendAnyway.loadFailed":
+    "Chưa tải được kết quả kiểm tra. Bản nháp vẫn được giữ. Thử lại.",
+  "compose.sendAnyway.retry": "Thử lại",
+  "compose.sendAnyway.unreviewed":
+    "Chưa gửi tin nhắn này. Bản nháp vẫn được giữ. Liên hệ quản trị viên để cập nhật Margince, rồi gửi lại.",
   "compose.reviewReference": "Phê duyệt",
   "compose.draftUnavailable":
     "Không thể soạn nháp bằng AI vì chưa cấu hình mô hình. Vẫn có thể tự viết email.",

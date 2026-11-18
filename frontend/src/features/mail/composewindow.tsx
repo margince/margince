@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useId, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 import { SendPermission } from "../../components/sendpermission";
 import { useT } from "../../i18n";
 import type { Transport } from "../../lib/contacttransports";
@@ -22,6 +22,7 @@ import { ComposeBlockers } from "./composeblockers";
 import { useDealChoice } from "./composedeal";
 import { useComposeFields } from "./composefields";
 import { useAccountRecipient, useComposeRecords } from "./composefiling";
+import { useInlineFlow, useInlineReview } from "./composeinlinereview";
 import { groundingOf } from "./composelinks";
 import type { ComposeProps } from "./composeprops";
 import { useRecipientOffer } from "./composerecipientoffer";
@@ -29,7 +30,8 @@ import { useDraftRestore, useSavedDraft } from "./composesaveddraft";
 import { savedFieldsOf } from "./composesaveddraftfields";
 
 import { ScheduleDialog } from "./composeschedule";
-import { useComposeSend } from "./composesend";
+import { type ComposeSend, useComposeSend } from "./composesend";
+import { InlineBlockers, markedRecipients } from "./composesendanyway";
 import { sendWording } from "./composesendhold";
 import {
   useAnswerTarget,
@@ -87,6 +89,7 @@ export function ComposeWindow({
   const bodyId = useId();
   const dial = useTransportDial({ open, transports, initialTransportId, kind });
   const { isChannelReply } = dial;
+  const { inline, reason } = useInlineFlow(open, isChannelReply);
   const fields = useComposeFields({
     initialMessage,
     initialReason,
@@ -164,6 +167,7 @@ export function ComposeWindow({
       setDealId: fields.account.setDealId,
       setProjectId: records.projectFiling.setProjectId,
     },
+    setOverrideExplanation: reason.setText,
   });
   const dealChoice = useDealChoice({
     open,
@@ -190,16 +194,21 @@ export function ComposeWindow({
       isChannelReply,
     },
     open,
-    fields: savedFieldsOf(fields, attached.files, {
-      ...groundingOf({
-        entityType,
-        replying: !newMessage,
-        contactIds: account.contactIds,
-        dealId: fields.account.dealId,
-        projectId,
-      }),
-      projectId: records.projectFiling.draftProjectId,
-    }),
+    fields: savedFieldsOf(
+      fields,
+      attached.files,
+      {
+        ...groundingOf({
+          entityType,
+          replying: !newMessage,
+          contactIds: account.contactIds,
+          dealId: fields.account.dealId,
+          projectId,
+        }),
+        projectId: records.projectFiling.draftProjectId,
+      },
+      reason.text,
+    ),
     replyTo: thread.anchorActivity,
     offeredRecipient: offer.standing.offeredAddress,
     initialIntent: askedIntent,
@@ -223,10 +232,12 @@ export function ComposeWindow({
     projectId,
     needsDeal: dealChoice.needsChoice,
     savedDraft,
+    inline,
     onSent,
     onClose,
   });
-  const sendPending = send.send.isPending;
+  const inlineReview = useInlineReview(inline, send);
+  const sendPending = inlineReview.sending;
   const voice = useVoiceDraft({
     open,
     fields,
@@ -253,7 +264,8 @@ export function ComposeWindow({
     control: voice.control,
   });
   const busy = sendPending || voice.rejectionInFlight;
-  const held = voice.rejectionInFlight || savedDraft.saving;
+  const locked = [voice.rejectionInFlight, inlineReview.pending].includes(true);
+  const held = locked || savedDraft.saving;
   // Every hold on the Send button, so Cmd/Ctrl+Enter waits for the same ones.
   const sendBlocked = [
     held,
@@ -347,7 +359,8 @@ export function ComposeWindow({
                 records={records}
                 accountCompanyId={accountCompanyId}
                 flagged={send.flagged}
-                rejectionInFlight={voice.rejectionInFlight}
+                marked={markedRecipients(inlineReview.review, fields, t)}
+                rejectionInFlight={locked}
                 onToEditing={settle}
               />
               <ComposeBody
@@ -364,6 +377,7 @@ export function ComposeWindow({
                 send={send}
                 sendBlocked={sendBlocked}
                 voice={voice}
+                locked={locked}
                 marksIn={markRow}
                 attach={
                   <AttachAction
@@ -372,7 +386,7 @@ export function ComposeWindow({
                     entityId={entityId}
                     chosen={attached.files}
                     onChange={attached.setFiles}
-                    disabled={voice.rejectionInFlight}
+                    disabled={locked}
                   />
                 }
               />
@@ -380,39 +394,28 @@ export function ComposeWindow({
             <AttachedFiles
               chosen={attached.files}
               onChange={attached.setFiles}
-              disabled={voice.rejectionInFlight}
+              disabled={locked}
             />
-            <ComposeBlockers
-              isChannelReply={isChannelReply}
-              fields={fields}
-              send={send}
-              anchorActivity={thread.anchorActivity}
-              dealChoice={dealChoice}
-              bodyKey={wording.body}
-              permission={(override, surface) => (
-                <SendPermission
-                  {...send.permission}
-                  refusal={
-                    send.permission.refusal && {
-                      ...send.permission.refusal,
-                      remedies: (
-                        <SendRefusalRemedies
-                          review={send.sendReview}
-                          onDirectSent={send.directSent}
-                          directOpen={send.directOpen}
-                          onDirectOpenChange={send.setDirectOpen}
-                        />
-                      ),
-                    }
-                  }
-                  override={override}
-                  picksReason={surface.picksReason}
-                  unclaimed={surface.unclaimed}
-                  namesRecipients
-                  onRecheck={send.permission.recheck}
-                />
-              )}
-            />
+            {inline ? (
+              <InlineBlockers
+                refusal={inlineReview.refusal}
+                sendUnavailable={fields.sendUnavailable}
+                bodyKey={wording.body}
+                state={inlineReview}
+                explanation={reason.text}
+                onExplanationChange={reason.setText}
+              />
+            ) : (
+              <ComposeBlockers
+                isChannelReply={isChannelReply}
+                fields={fields}
+                send={send}
+                anchorActivity={thread.anchorActivity}
+                dealChoice={dealChoice}
+                bodyKey={wording.body}
+                permission={legacyPermission(send)}
+              />
+            )}
           </div>
           <ComposeFoot
             scheduling={scheduling}
@@ -431,5 +434,35 @@ export function ComposeWindow({
         </ComposeFrame>
       )}
     </>
+  );
+}
+
+// The checked flow's status, with what the server offers after a refused Send.
+function legacyPermission(send: ComposeSend) {
+  return (
+    override: ReactNode,
+    surface: Readonly<{ picksReason: boolean; unclaimed: boolean }>,
+  ) => (
+    <SendPermission
+      {...send.permission}
+      refusal={
+        send.permission.refusal && {
+          ...send.permission.refusal,
+          remedies: (
+            <SendRefusalRemedies
+              review={send.sendReview}
+              onDirectSent={send.directSent}
+              directOpen={send.directOpen}
+              onDirectOpenChange={send.setDirectOpen}
+            />
+          ),
+        }
+      }
+      override={override}
+      picksReason={surface.picksReason}
+      unclaimed={surface.unclaimed}
+      namesRecipients
+      onRecheck={send.permission.recheck}
+    />
   );
 }

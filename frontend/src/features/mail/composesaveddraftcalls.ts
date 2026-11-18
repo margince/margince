@@ -35,6 +35,8 @@ export type SavedDraftFields = Readonly<{
   /** The send-later moment as the composer holds it: wall-clock text. */
   sendAt: string;
   sendSchedule?: ScheduleFields;
+  /** The reason typed for sending past a refusal; private to the author. */
+  overrideExplanation?: string;
   // Where an agent drafted it, so a restore files the send there rather than
   // wherever the composer was opened.
   //
@@ -150,6 +152,7 @@ export async function writeDraft(ask: SaveAsk): Promise<MailDraft> {
     communication_context: ask.fields.context || undefined,
     ...scheduleFields(ask.fields.sendAt, ask.fields.sendSchedule),
     editor_state: ask.fields.editorState,
+    override_explanation: ask.fields.overrideExplanation || undefined,
   };
   const keepalive =
     ask.keepalive === true &&

@@ -4,6 +4,7 @@
 package activities
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -85,5 +86,41 @@ func TestThePreviewCarriesTheSupportedAlternatives(t *testing.T) {
 	}
 	if none := out.Recipients[1].SupportedAlternatives; none != nil {
 		t.Errorf("supported_alternatives = %v, want absent", *none)
+	}
+}
+
+// The preview names refused recipients in the order the review and the 409
+// do: repair, the subject's stop, the footer, missing evidence. A recipient
+// the send reaches comes after every refusal.
+func TestThePreviewRanksRefusedRecipientsLikeTheReview(t *testing.T) {
+	t.Parallel()
+	refusal := func(address, code string) commsauthz.Decision {
+		return commsauthz.Decision{
+			Recipient:  connector.Recipient{Email: address},
+			Verdict:    commsauthz.VerdictDeny,
+			ReasonCode: code,
+			Mode:       commsauthz.ModeEnforce,
+		}
+	}
+	findings := refusal("footer-finding@a.test", commsauthz.ReasonNoEvidence)
+	findings.Evidence.FooterFindings = []commsauthz.FooterFinding{{Kind: "privacy"}}
+	out := previewResponse(SendPreview{Decisions: commsauthz.DecisionSet{Decisions: []commsauthz.Decision{
+		{Recipient: connector.Recipient{Email: "allowed@a.test"}, Verdict: commsauthz.VerdictAllow, ReasonCode: "allowed", Mode: commsauthz.ModeEnforce},
+		refusal("no-evidence@a.test", commsauthz.ReasonNoEvidence),
+		refusal("footer@a.test", commsauthz.ReasonFooterIncomplete),
+		findings,
+		refusal("objected@a.test", commsauthz.ReasonObjection),
+		refusal("bounced@a.test", commsauthz.ReasonHardBounce),
+	}}})
+	got := make([]string, 0, len(out.Recipients))
+	for _, r := range out.Recipients {
+		got = append(got, string(r.Address))
+	}
+	want := []string{
+		"bounced@a.test", "objected@a.test", "footer@a.test", "footer-finding@a.test",
+		"no-evidence@a.test", "allowed@a.test",
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("preview order %v, want %v", got, want)
 	}
 }

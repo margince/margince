@@ -8278,6 +8278,48 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "directSend.reason.contractual_necessity": "Vertragliche Verpflichtung",
   "directSend.reason.legal_obligation": "Rechtliche Verpflichtung",
   "directSend.reason.other": "Sonstiges",
+  "compose.sendAnyway.finding.objected": "{address} hat Werbung widersprochen.",
+  "compose.sendAnyway.finding.withdrawn":
+    "{address} hat die Einwilligung für diese Art von Nachricht widerrufen.",
+  "compose.sendAnyway.finding.askedToStop":
+    "{address} möchte nicht kontaktiert werden.",
+  "compose.sendAnyway.finding.restricted":
+    "Die Verarbeitung der Daten zu {address} ist eingeschränkt.",
+  "compose.sendAnyway.finding.optedOut":
+    "{address} hat nach der Angebotsanfrage Werbung abbestellt.",
+  "compose.sendAnyway.finding.noReason":
+    "Für {address} ist kein Grund zur Kontaktaufnahme erfasst.",
+  "compose.sendAnyway.finding.noPermission":
+    "Für {address} ist keine Werbeerlaubnis erfasst.",
+  "compose.sendAnyway.finding.footer":
+    "Der E-Mail-Fußzeile fehlen Angaben, die für {address} nötig sind.",
+  "compose.sendAnyway.finding.bounced": "{address} nimmt keine E-Mails an.",
+  "compose.sendAnyway.finding.tooMany":
+    "{address} hat die Grenze für Werbenachrichten erreicht.",
+  "compose.sendAnyway.finding.lawfulBasis":
+    "Für {address} ist keine Rechtsgrundlage erfasst.",
+  "compose.sendAnyway.finding.other":
+    "Diese Nachricht kann so nicht an {address} gesendet werden.",
+  "compose.sendAnyway.finding.none":
+    "Diese Nachricht kann so nicht gesendet werden.",
+  "compose.sendAnyway.warning":
+    "Die Versandprüfung blockiert diese Nachricht weiterhin. Trotzdem senden sendet nur diese Nachricht und erlaubt keine späteren. Dein Name, deine Begründung und die Nachricht werden in einem Eintrag gespeichert, der nicht geändert werden kann.",
+  "compose.sendAnyway.editOnly":
+    "Bearbeite die Nachricht oder entferne diese Empfangsadresse, um sie zu senden.",
+  "compose.sendAnyway.more_one": "{count} weiterer Befund",
+  "compose.sendAnyway.more_other": "{count} weitere Befunde",
+  "compose.sendAnyway.details": "Details",
+  "compose.sendAnyway.reasonLabel": "Grund für den Versand",
+  "compose.sendAnyway.confirm": "Trotzdem senden",
+  "compose.sendAnyway.marked": "im Hinweis genannt",
+  "compose.sendAnyway.failed":
+    "Die Nachricht wurde nicht gesendet. Wähle erneut Trotzdem senden.",
+  "compose.sendAnyway.loading": "Prüfergebnis wird geladen…",
+  "compose.sendAnyway.loadFailed":
+    "Das Prüfergebnis wurde nicht geladen. Dein Entwurf bleibt erhalten. Versuche es erneut.",
+  "compose.sendAnyway.retry": "Erneut versuchen",
+  "compose.sendAnyway.unreviewed":
+    "Diese Nachricht wurde nicht gesendet. Dein Entwurf bleibt erhalten. Wende dich an einen Admin, um Margince zu aktualisieren, und sende dann erneut.",
   "compose.reviewReference": "Prüfung",
   "compose.draftUnavailable":
     "KI-Entwürfe sind nicht verfügbar, da kein Modell konfiguriert ist. Die E-Mail lässt sich weiterhin selbst schreiben.",

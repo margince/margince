@@ -8274,6 +8274,47 @@ export const en = {
   "directSend.reason.contractual_necessity": "Contractual obligation",
   "directSend.reason.legal_obligation": "Legal obligation",
   "directSend.reason.other": "Other",
+  "compose.sendAnyway.finding.objected": "{address} objected to marketing.",
+  "compose.sendAnyway.finding.withdrawn":
+    "{address} withdrew consent for this kind of message.",
+  "compose.sendAnyway.finding.askedToStop":
+    "{address} asked not to be contacted.",
+  "compose.sendAnyway.finding.restricted":
+    "Processing of data about {address} is restricted.",
+  "compose.sendAnyway.finding.optedOut":
+    "{address} opted out after asking for this quote.",
+  "compose.sendAnyway.finding.noReason":
+    "No reason to contact {address} is on record.",
+  "compose.sendAnyway.finding.noPermission":
+    "No marketing permission is on record for {address}.",
+  "compose.sendAnyway.finding.footer":
+    "The email footer lacks details required for {address}.",
+  "compose.sendAnyway.finding.bounced": "{address} does not accept mail.",
+  "compose.sendAnyway.finding.tooMany":
+    "{address} reached the marketing message limit.",
+  "compose.sendAnyway.finding.lawfulBasis":
+    "No lawful basis is on record for {address}.",
+  "compose.sendAnyway.finding.other":
+    "This message cannot be sent to {address} as it stands.",
+  "compose.sendAnyway.finding.none":
+    "This message cannot be sent as it stands.",
+  "compose.sendAnyway.warning":
+    "The send check still blocks this message. Send anyway sends only this message and grants no permission for later ones. Your name, your reason and the message are kept in a record that cannot be edited.",
+  "compose.sendAnyway.editOnly":
+    "Edit the message or remove this recipient to send it.",
+  "compose.sendAnyway.more_one": "{count} more finding",
+  "compose.sendAnyway.more_other": "{count} more findings",
+  "compose.sendAnyway.details": "Details",
+  "compose.sendAnyway.reasonLabel": "Reason for sending",
+  "compose.sendAnyway.confirm": "Send anyway",
+  "compose.sendAnyway.marked": "named in the warning",
+  "compose.sendAnyway.failed": "The message was not sent. Retry Send anyway.",
+  "compose.sendAnyway.loading": "Loading the check result…",
+  "compose.sendAnyway.loadFailed":
+    "The check result was not loaded. Your draft is kept. Retry.",
+  "compose.sendAnyway.retry": "Retry",
+  "compose.sendAnyway.unreviewed":
+    "This message was not sent. Your draft is kept. Ask an admin to update Margince, then send again.",
   "compose.reviewReference": "Review",
   "compose.draftUnavailable":
     "AI drafting is unavailable because no model is configured. The email can still be written manually.",

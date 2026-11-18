@@ -16,7 +16,7 @@ import type { components } from "../../api/schema";
 // is worse than one that is absent.
 
 import { ProblemError } from "../../lib/problem";
-import { problemDetails } from "../../lib/problembody";
+import { isRecord, problemDetails } from "../../lib/problembody";
 import type { RefusedRecipient } from "../../lib/sendstatus";
 
 // SendReview is the work a refusal left behind, as a surface needs it.
@@ -79,6 +79,30 @@ export function heldSendReview(
     return null;
   }
   return { reviewId, actions: actionsIn(actions), refusals: [] };
+}
+
+type CommunicationReview = components["schemas"]["CommunicationReview"];
+
+// embeddedReviewOf reads the review a refusal carries in `details.review`, as
+// GET /communication-reviews/{id} serves it. Null from an older server, or
+// when the caller may not read the review.
+export function embeddedReviewOf(error: unknown): CommunicationReview | null {
+  if (!(error instanceof ProblemError)) return null;
+  const review = problemDetails(error.problem)?.review;
+  return isCommunicationReview(review) ? review : null;
+}
+
+// The fields every reader of a review leans on. A body without them is not
+// a review this build can draw, whatever else it holds.
+export function isCommunicationReview(
+  value: unknown,
+): value is CommunicationReview {
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    typeof value.state === "string" &&
+    Array.isArray(value.refusals)
+  );
 }
 
 // refusalsIn keeps each entry with an address and a reason. Dropping one

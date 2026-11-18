@@ -174,7 +174,7 @@ export function ComposeBlockers({
         isChannelReply={isChannelReply}
         bodyKey={bodyKey}
         sendUnavailable={fields.sendUnavailable}
-        send={send}
+        refusal={send.refusal}
       />
       <DraftContentNotice
         findings={send.permission.preview?.content_findings}

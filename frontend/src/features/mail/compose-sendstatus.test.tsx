@@ -22,7 +22,7 @@ import {
   WHY_ASK,
   WHY_LABEL,
 } from "./compose.testkit";
-import { refusalIsCurrent } from "./composesend";
+import { refusalIsCurrent } from "./composesendrequest";
 import { ComposeWindow } from "./composewindow";
 
 // The composer shows one status for the message. It is the engine's preview

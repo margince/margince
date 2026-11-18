@@ -104,7 +104,9 @@ func previewInputFrom(to []openapi_types.Email, category, marketing, purpose *st
 // a surface that re-derived either would be a second implementation of a rule
 // that decides whether mail reaches a contact.
 func previewResponse(preview SendPreview) crmcontracts.SendAuthorizationPreview {
-	set := preview.Decisions
+	// In the order the review and the 409 rank refusals, so the first refused
+	// recipient is the one every surface explains.
+	set := preview.Decisions.RankedForSender()
 	out := crmcontracts.SendAuthorizationPreview{
 		Allowed:         set.Allowed(),
 		Recipients:      make([]crmcontracts.SendAuthorizationPreviewRecipient, 0, len(set.Decisions)),

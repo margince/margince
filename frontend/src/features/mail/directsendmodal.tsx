@@ -41,7 +41,7 @@ type CommunicationReview = components["schemas"]["CommunicationReview"];
 // variable rather than closed over render state: a mutation reading the reason
 // from the component's scope would send whatever was typed when it resolved
 // rather than what was there when the director pressed confirm.
-type DirectSendCommand = Readonly<{
+export type DirectSendCommand = Readonly<{
   reviewId: string;
   reasonCode: string;
   explanation: string;
@@ -51,7 +51,7 @@ type DirectSendCommand = Readonly<{
   shownReasons: readonly string[];
 }>;
 
-async function directSend(command: DirectSendCommand): Promise<string> {
+export async function directSend(command: DirectSendCommand): Promise<string> {
   const { data, error, response } = await api.POST(
     "/communication-reviews/{id}/direct-send",
     {
@@ -62,11 +62,9 @@ async function directSend(command: DirectSendCommand): Promise<string> {
         warning_version: command.warningVersion,
         assessment_revision: command.assessmentRevision,
         shown_reasons: [...command.shownReasons],
-        // The tick IS the acknowledgement, and the server refuses a decision
-        // without one. It is sent as true because this function is only
-        // reachable from a confirm the director could not press until they
-        // ticked it — never defaulted, which would record a decision nobody
-        // made.
+        // The server refuses a decision without an acknowledgement. Each
+        // caller reaches this only from the press that is one. That is the
+        // modal's confirm once ticked, or Send anyway beside its warning.
         acknowledged: true,
       },
     },

@@ -134,25 +134,27 @@ describe("which state the engine's answer puts the composer in", () => {
   // The whole message is refused for one refused recipient, so the composer has
   // to choose WHICH refusal to show. Showing the liftable one first would send a
   // rep to write a justification that cannot help.
-  it("shows the refusal a rep cannot act on ahead of the one they can", () => {
+  // The server ranks the stop nobody lifts ahead of the one a rep can.
+  it("shows the refusal the server names first", () => {
     const { state, recipient } = decidingRecipient(
       preview(
+        answer({ address: "allowed@example.test", would_refuse: false }),
         answer({
-          address: "first@example.test",
-          would_refuse: true,
-          can_be_overruled: true,
-        }),
-        answer({
-          address: "second@example.test",
+          address: "objected@example.test",
           reason_code: "marketing_objection",
           decided_by: "subject",
           would_refuse: true,
           can_be_overruled: false,
         }),
+        answer({
+          address: "unproven@example.test",
+          would_refuse: true,
+          can_be_overruled: true,
+        }),
       ),
     );
     expect(state).toBe("refused");
-    expect(recipient?.address).toBe("second@example.test");
+    expect(recipient?.address).toBe("objected@example.test");
   });
 
   // A server that did not answer is not a server saying yes. Guessing
@@ -559,14 +561,14 @@ describe("one status for the message", () => {
       refusal: {
         refusals: [
           {
-            address: "a@x.test",
-            reasonCode: "no_marketing_consent",
-            canBeOverruled: true,
-          },
-          {
             address: "b@x.test",
             reasonCode: "consent_withdrawn",
             canBeOverruled: false,
+          },
+          {
+            address: "a@x.test",
+            reasonCode: "no_marketing_consent",
+            canBeOverruled: true,
           },
         ],
       },
@@ -716,9 +718,10 @@ describe("one status for the message", () => {
   });
 });
 
-describe("one rule picks the deciding refusal before and after Send", () => {
-  // Mixed kinds and overrulability, in an order no single rule would pass by
-  // accident: the preview and the refused Send must explain the same address.
+describe("the server's order picks the deciding refusal before and after Send", () => {
+  // The server ranks refusals in the preview and in a refused Send alike, so
+  // both explain the first one it names. Rows in an order no client-side rule
+  // would pick: a liftable refusal leads, a stop nothing lifts follows.
   const wire = [
     {
       address: "e@x.test",
@@ -726,27 +729,22 @@ describe("one rule picks the deciding refusal before and after Send", () => {
       can_be_overruled: true,
     },
     {
-      address: "c@x.test",
-      reason_code: "unknown_purpose",
+      address: "r@x.test",
+      reason_code: "frequency_cap_reached",
       can_be_overruled: false,
     },
     {
-      address: "p@x.test",
-      reason_code: "no_marketing_consent",
-      can_be_overruled: true,
-    },
-    {
-      address: "r@x.test",
-      reason_code: "frequency_cap_reached",
+      address: "c@x.test",
+      reason_code: "unknown_purpose",
       can_be_overruled: false,
     },
   ] as const;
 
   it.each([
-    [wire, "r@x.test"],
-    [wire.filter((w) => w.address !== "r@x.test"), "c@x.test"],
-    [wire.filter((w) => w.can_be_overruled), "p@x.test"],
-  ])("picks the same recipient from %#", (rows, expected) => {
+    [wire, "e@x.test"],
+    [wire.slice(1), "r@x.test"],
+    [wire.slice(2), "c@x.test"],
+  ])("explains the first refusal it names from %#", (rows, expected) => {
     const before = sendStatus({
       preview: preview(
         ...rows.map((row) =>

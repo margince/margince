@@ -96,6 +96,44 @@ export const Empty: Story = {
 };
 
 /**
+ * Some values marked for the reader: a refused send names two of the
+ * recipients, and their chips take the warning tint, in light and dark.
+ */
+export const Marked: Story = {
+  render: () => <MarkedDemo />,
+};
+
+export const MarkedDark: Story = {
+  globals: { theme: "dark" },
+  render: () => <MarkedDemo />,
+};
+
+function MarkedDemo() {
+  const [values, setValues] = useState<readonly string[]>([
+    "anna@acme.test",
+    "ben@acme.test",
+    "cara@acme.test",
+  ]);
+  return (
+    <div style={column}>
+      <Field label="To">
+        {(control) => (
+          <TokenInput
+            {...control}
+            values={values}
+            onChange={setValues}
+            marked={{
+              values: new Set(["anna@acme.test", "cara@acme.test"]),
+              label: "named in the warning",
+            }}
+          />
+        )}
+      </Field>
+    </div>
+  );
+}
+
+/**
  * Enough tokens to wrap. This is the case the frame's `height: auto` exists for:
  * `.input` declares a single-line height, so without the override the second row
  * is clipped and the tokens a reader added appear to have vanished.

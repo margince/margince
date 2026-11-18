@@ -206,6 +206,7 @@ export function AddressBlock({
   needTo,
   deadRecipients,
   disabled,
+  marked,
 }: Readonly<{
   to: string[];
   onToChange: (next: string[]) => void;
@@ -226,6 +227,8 @@ export function AddressBlock({
   /** The recipients on this draft that are known not to arrive. */
   deadRecipients: readonly string[];
   disabled?: boolean;
+  /** Recipients a refused Send named, marked on their chips. */
+  marked?: Readonly<{ values: ReadonlySet<string>; label: string }>;
 }>) {
   const t = useT();
   const plural = usePlural();
@@ -266,6 +269,7 @@ export function AddressBlock({
             suggestions={suggestions}
             onEditing={onToEditing}
             disabled={disabled}
+            marked={marked}
             placeholder={t("compose.recipientHint")}
           />
         )}
@@ -285,6 +289,7 @@ export function AddressBlock({
                 parse={parse("cc")}
                 suggestions={suggestions}
                 disabled={disabled}
+                marked={marked}
               />
             )}
           </Field>
@@ -301,6 +306,7 @@ export function AddressBlock({
                 parse={parse("bcc")}
                 suggestions={suggestions}
                 disabled={disabled}
+                marked={marked}
               />
             )}
           </Field>

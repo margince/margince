@@ -16,7 +16,6 @@ package compose
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -26,7 +25,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/platform/jobs"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -276,8 +274,7 @@ func refuseAtStaging(set commsauthz.DecisionSet) error {
 	if !set.HasAbsoluteDenial() && !anyEnforcedDenial(denied) {
 		return nil
 	}
-	return fmt.Errorf("consent: %d of %d recipients may not be written to (%s): %w",
-		len(denied), len(set.Decisions), denied[0].ReasonCode, apperrors.ErrConsentNotGranted)
+	return consent.StagingRefusal(set)
 }
 
 // anyEnforcedDenial reports whether a refusal was taken under a category this
