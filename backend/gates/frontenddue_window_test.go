@@ -6,9 +6,9 @@
 package gates
 
 // The task due-date box offers days inside the window the server accepts. The
-// frontend numbers are a declared mirror of values.DueYearsBack and
-// values.DueYearsAhead, and this fails when either side changes alone, or when
-// a constant disappears so the gate would read nothing.
+// frontend numbers mirror values.DueYearsBack and values.DueYearsAhead. This
+// fails when one side changes alone. It also fails when a constant disappears,
+// so the gate cannot read nothing.
 
 import (
 	"regexp"

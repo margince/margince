@@ -468,8 +468,8 @@ func capturedActivityInsert(ctx context.Context, rec connector.NormalizedRecord,
 	return query, args
 }
 
-// sensibleDue drops a due date outside the window every task writer shares, so
-// a mis-read year files an undated task instead of one on no list.
+// sensibleDue drops a due date outside the shared window. A mis-read year then
+// files an undated task instead of one on no list.
 func sensibleDue(due, now time.Time) time.Time {
 	if !due.IsZero() && !values.DueInWindow(due, now) {
 		return time.Time{}
