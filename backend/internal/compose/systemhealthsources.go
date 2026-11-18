@@ -38,7 +38,7 @@ func (s Server) jobsSummary(ctx context.Context) (crmcontracts.HealthSource, []c
 	source.ObservedAt = &now
 	source.Condition, source.Code = healthUnknown, "queue_checked"
 	source.Availability = healthUnobserved
-	return summarizeJobKinds(source, s.jobHealthHandlers.jobTable, rows)
+	return summarizeJobKinds(source, s.jobTable, rows)
 }
 
 func summarizeJobKinds(source crmcontracts.HealthSource, table jobs.Composed, rows []jobs.KindHealth) (crmcontracts.HealthSource, []crmcontracts.HealthFinding, error) {

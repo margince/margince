@@ -184,7 +184,7 @@ func (s *Server) bindExtensions() {
 	s.installationSettingsHandlers.extensions = s.extensions
 	s.dataTaskHandlers.extensions = s.extensions
 	s.analyticsQueryHandlers.extensions = s.extensions
-	s.jobHealthHandlers.jobTable = s.extensions.declaredJobs()
+	s.jobTable = s.extensions.declaredJobs()
 }
 
 // ExtensionsWithSubscriptionsForTest is a composition holding only listeners.
