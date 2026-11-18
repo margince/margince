@@ -183,7 +183,7 @@ also names the release a database part-way through those versions must reach fir
 - **The ledger holds every replaced version.** It records the baseline and does not run it.
 - **The ledger holds only some.** It stops before it changes anything and names the release to upgrade
   with first. Run that release's `migrate up`, then this one. The first release ships the first
-  baseline, so its `replaces.txt` says `release none`: no release has part of that history, and a
+  baseline, so its `replaces.txt` says `release none`. No release has part of that history. A
   database built from a commit between releases is built again (`make dev-fresh`).
 
 In the first two cases, migrations after the baseline then apply one by one. The replaced files stay in
