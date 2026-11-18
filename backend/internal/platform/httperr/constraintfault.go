@@ -42,6 +42,9 @@ func constraintFault(err error) (Fault, bool) {
 	if constraint, ok := storekit.CheckViolation(err); ok && constraint == "member_work_reference_retired" {
 		return Fault{Status: http.StatusConflict, Code: "conflict", Detail: "Choose a current member before assigning or reopening this work.", InfraCause: err}, true
 	}
+	if fault, ok := unnamedCustomerLinkFault(err); ok {
+		return fault, true
+	}
 
 	if fault, ok := retentionHoldFault(err); ok {
 		return fault, true
@@ -202,4 +205,20 @@ func referenceNotFoundDetail(err error) string {
 	}
 	return "an id in this request names no record of the kind its field references. Check each id " +
 		"against the kind its field expects; do not retry unchanged."
+}
+
+// unnamedCustomerLinkFault answers a write that moves an invoice or payment
+// mirrored before rows named their customer link. The checks bind every
+// rewrite, and a company merge moves such a row without naming a link.
+func unnamedCustomerLinkFault(err error) (Fault, bool) {
+	constraint, ok := storekit.CheckViolation(err)
+	if !ok || (constraint != "finance_invoice_names_its_customer_link" && constraint != "finance_payment_names_its_customer_link") {
+		return Fault{}, false
+	}
+	return Fault{
+		Status: http.StatusConflict, Code: "conflict",
+		Detail: "An invoice or payment on this company names no accounting customer, so it cannot move. " +
+			"Map the company's customer in the accounting connection and sync, or archive the company instead.",
+		InfraCause: err,
+	}, true
 }
