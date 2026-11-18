@@ -14,8 +14,8 @@ func probeSpec(absentRegistersAnyway bool, when ...string) Spec {
 	return Spec{Registration: Registration{When: when, AbsentRegistersAnyway: absentRegistersAnyway}}
 }
 
-// A kind that registers nothing without its model lane is a no-op while no
-// model is bound, with no error for River to retry, and works once one is.
+// A gated model job is a no-op while no model is bound, with no error for River
+// to retry. It works once one is.
 func TestAModelJobIsANoOpUntilAModelIsBound(t *testing.T) {
 	var ran bool
 	bound := false

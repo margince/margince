@@ -141,7 +141,7 @@ func NewRouter(cfg RoutingConfig, meter *Meter, budget BudgetPolicy, calls callS
 func NewUnboundRouter(meter *Meter, budget BudgetPolicy, calls callStore, capturePayloads bool, log *slog.Logger) *Router {
 	router := assembleRouter(nil, nil, "", meter, budget, calls, nil, capturePayloads, log)
 	router.restrictionsRequired = true
-	router.Unbind()
+	router.install(binding{public: NewPublicProfile("unconfigured", RoutingConfig{})})
 	return router
 }
 

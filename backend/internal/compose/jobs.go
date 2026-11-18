@@ -61,14 +61,13 @@ func sweepInsertOpts() *river.InsertOpts {
 //
 // WHICH of these a kind needs, and what an absent one costs it, is declared
 // per kind in api/jobs.yaml and resolved in jobschedule.go — not counted here.
-// A field below says what it IS and what its absence means for the pass that
-// reads it; the two postures that absence takes are the declaration's to
-// choose, and they are not interchangeable. Registers nothing means a row
-// nothing here could work is never queued at all; registers anyway keeps the
-// worker so a picked-up row fails with an actionable message instead of
-// rotting queued. The SAME field takes opposite postures on different kinds —
-// Embedder registers nothing for the drift sweep and anyway for a reindex —
-// which is why the posture is stated per kind and never per field.
+// A field below says what it is and what its absence means for its pass.
+// The declaration chooses between two postures. Registers nothing means a row
+// nothing here could work is never queued. Registers anyway keeps the worker,
+// so a picked-up row fails with an actionable message, not rotting queued.
+// One field takes opposite postures on different kinds: Embedder registers
+// nothing for the drift sweep and anyway for a reindex. So the posture is
+// stated per kind and never per field.
 type JobRunnerConfig struct {
 	DisabledCoreFeatures []string
 	DataTasksPace        time.Duration
@@ -91,11 +90,8 @@ type JobRunnerConfig struct {
 	DrainWindow time.Duration
 	// Paused snoozes every job while it answers true: an installation whose
 	// trial has ended does no background work. Nil never pauses.
-	Paused func(context.Context) bool
-	// ModelBound answers whether a model binding is served now. While it
-	// answers false, a kind that registers nothing without its model lane
-	// completes as a no-op. Nil means always bound.
-	ModelBound func() bool
+	Paused     func(context.Context) bool
+	ModelBound func() bool // unbound: gated model jobs no-op; nil is always bound
 	// SendBlob is the object store the send lane AND the document reading read
 	// attachment bytes from. Both need it for the same reason — the bytes are
 	// object-store references, never rows — so they share the field rather than

@@ -79,7 +79,7 @@ func faultFor(ctx context.Context, kind string, err error) error {
 	if err == nil {
 		return nil
 	}
-	// The refusal of an unbound model passes through untouched too: it names no
+	// The refusal of an unbound model passes through untouched. It names no
 	// tenant data, and Govern completes a quiet job on it without a fault line.
 	if errors.Is(err, httperr.ErrNotConfigured) {
 		return err

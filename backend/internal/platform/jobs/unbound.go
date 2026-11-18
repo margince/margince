@@ -13,20 +13,22 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
-// requestedModelWork names the gates of kinds somebody queued on purpose. While
-// no model is bound they still run and fail with their reason, because a
-// request that completes without doing anything reads as work that was done.
+// requestedModelWork names the gates of kinds a person queued. While no model
+// is bound they still run and fail with their reason. A request that completes
+// without doing anything reads as work that was done.
 var requestedModelWork = map[string]bool{
 	"DeepReadBrain": true, "DocumentExtractBrain": true, "TranscriptProposeBrain": true,
 	"AccountScanBrain": true, "VoiceBrain": true,
 }
+
+const embedderGate = "Embedder"
 
 // dependsOnModel says whether a registration gate names an AI lane. The
 // declaration already states this: a kind gated on a Brain, the Embedder or
 // the agent scheduler does model work.
 func dependsOnModel(when []string) bool {
 	for _, field := range when {
-		if strings.HasSuffix(field, "Brain") || field == "Embedder" || field == "AgentScheduler.Service" {
+		if strings.HasSuffix(field, "Brain") || field == embedderGate || field == "AgentScheduler.Service" {
 			return true
 		}
 	}

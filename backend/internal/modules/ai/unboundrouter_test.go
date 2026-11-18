@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/httperr"
-
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 

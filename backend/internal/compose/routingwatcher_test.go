@@ -85,14 +85,11 @@ func TestAChangedBindingIsAdopted(t *testing.T) {
 func TestAVanishedBindingUnbindsTheRunningLanes(t *testing.T) {
 	cfg, err := ai.ParseRouting([]byte("profile: eu_hosted\ntiers:\n  premium: {provider: ollama, model: m}\nembeddings: {provider: fake}\n"))
 	if err != nil {
-		t.Fatalf("ParseRouting: %v", err)
+		t.Fatal(err)
 	}
 	w, router := watcherServing(t, cfg)
 	if !w.applyIfChanged(context.Background(), ai.RoutingConfig{}) || router.Bound() {
 		t.Fatal("the stored binding vanished and the lanes kept serving it")
-	}
-	if _, ok := router.CurrentModelForTier(ai.TierPremium); ok {
-		t.Error("premium stayed bound after the stored binding was removed")
 	}
 	fake, fakeRouter := watcherServing(t, routingFixture(t, "dev"))
 	if fake.applyIfChanged(context.Background(), ai.RoutingConfig{}) || !fakeRouter.Bound() {

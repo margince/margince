@@ -138,7 +138,7 @@ func (w *RoutingWatcher) applyIfChanged(ctx context.Context, next ai.RoutingConf
 		if !w.target.Bound() || w.target.ServesOnlyFake() {
 			return false
 		}
-		w.target.Unbind()
+		w.target.Unbind() //nolint:contextcheck // clearing provider health is queued to a drain goroutine with its own deadline
 		w.log.InfoContext(ctx, "the stored model binding was removed; AI calls are refused until one is saved")
 		return true
 	}

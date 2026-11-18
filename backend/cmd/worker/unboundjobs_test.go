@@ -24,8 +24,8 @@ func (p modelProbe) Work(context.Context, *river.Job[modelProbe]) error {
 	return nil
 }
 
-// A worker booted with no binding runs its model jobs as clean no-ops, and the
-// same jobs work once the routing watcher binds the path they were wired from.
+// A worker booted with no binding runs its model jobs as clean no-ops. The same
+// jobs work once the routing watcher binds the path they were wired from.
 func TestModelJobsAreQuietUntilTheBootPathIsBound(t *testing.T) {
 	path, err := compose.NewModelPath(context.Background(), ai.RoutingConfig{}, nil, false, slog.New(slog.DiscardHandler))
 	if err != nil {

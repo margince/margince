@@ -180,8 +180,8 @@ func (r *Router) Bound() bool {
 	return r.binding().public.State != crmcontracts.AssistantProfileStateUnconfigured
 }
 
-// Unbind returns the Router to serving nothing, which is what removing the
-// stored binding means: the provider it named is not called again, and a call
+// Unbind returns the Router to serving nothing, as when the stored binding is
+// removed. The provider it named is not called again, and a call
 // is refused as on a role that booted with none.
 func (r *Router) Unbind() {
 	replaced := r.binding().providers()
@@ -204,8 +204,8 @@ func (r *Router) ServesOnlyFake() bool {
 }
 
 // refuseUnbound is the answer every model call gets before a binding exists:
-// the same 501 an operation answers on a role that wires no model. It rides
-// httperr, so each surface that returns the error as it came says exactly that.
+// the 501 an operation answers on a role that wires no model. It rides httperr,
+// so a surface that returns the error as it came says the same.
 func (r *Router) refuseUnbound() error {
 	if r.Bound() {
 		return nil
