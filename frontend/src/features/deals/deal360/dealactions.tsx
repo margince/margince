@@ -36,6 +36,7 @@ import { ShareAction } from "../../records/share";
 import { advanceNote } from "../dealprobability";
 import { archiveDeal } from "../deals.write";
 import { CorrectCloseDayAction } from "./correctcloseday";
+import { RestoreDealAction } from "./dealrestore";
 import { useDealCoverage } from "./usedealcoverage";
 import { useDealRecipientAddress } from "./usedealrecipient";
 import "./deal360.css";
@@ -168,6 +169,32 @@ function ReopenAction({
         }
       />
     </>
+  );
+}
+
+// An archived deal offers the way back where the archive was.
+function DealArchiveAction({
+  deal,
+  refusedReasonId,
+}: Readonly<{ deal: Deal; refusedReasonId?: string }>) {
+  const t = useT();
+  if (deal.archived_at) {
+    return <RestoreDealAction deal={deal} />;
+  }
+  return (
+    <ArchiveAction
+      requires={{ object: "deal", action: "delete" }}
+      archivable={deal.archivable ?? false}
+      refusedReason={t("deal.archiveRefused")}
+      disabledReasonId={refusedReasonId}
+      label={t("deal.archive")}
+      confirmText={t("deal.archiveConfirm")}
+      archivedMessage={t("record.archiveDone", { name: deal.name })}
+      archive={() => archiveDeal(deal)}
+      invalidate="deals"
+      recordKey="deal"
+      onArchived={(from) => from.closeOnto({ screen: "deals" })}
+    />
   );
 }
 
@@ -321,19 +348,7 @@ export function DealActions({
           </>
         )}
         {canWrite && (
-          <ArchiveAction
-            requires={{ object: "deal", action: "delete" }}
-            archivable={deal.archivable ?? false}
-            refusedReason={t("deal.archiveRefused")}
-            disabledReasonId={refusedReasonId}
-            label={t("deal.archive")}
-            confirmText={t("deal.archiveConfirm")}
-            archivedMessage={t("record.archiveDone", { name: deal.name })}
-            archive={() => archiveDeal(deal)}
-            invalidate="deals"
-            recordKey="deal"
-            onArchived={(from) => from.closeOnto({ screen: "deals" })}
-          />
+          <DealArchiveAction deal={deal} refusedReasonId={refusedReasonId} />
         )}
       </OverflowMenu>
     </>

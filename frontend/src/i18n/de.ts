@@ -3141,6 +3141,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "record.save": "Speichern",
   "record.saveDone": "„{name}“ gespeichert",
   "record.archiveDone": "„{name}“ archiviert",
+  "record.restoreDone": "„{name}“ wiederhergestellt",
   "record.archive": "Archivieren",
   "record.disqualify": "Disqualifizieren",
   "record.archiveConfirm":
@@ -6596,6 +6597,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "company.archiveRefused":
     "Nur der Verantwortliche des Unternehmens oder eine Führungskraft kann dieses Unternehmen archivieren.",
   "deal.archive": "Deal archivieren",
+  "deal.restore": "Deal wiederherstellen",
   "deal.archiveConfirm":
     "Das Archivieren entfernt diesen Deal aus den offenen Deals. Über den Verlauf kannst du den Deal zurückholen.",
   "deal.archivedReadOnly":

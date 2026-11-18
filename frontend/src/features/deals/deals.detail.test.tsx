@@ -672,7 +672,7 @@ describe("DealScreen — the stage stepper advances the deal", () => {
 describe("DealScreen — an archived deal keeps its verbs, refused", () => {
   beforeEach(() => localStorage.setItem("margince.workspaceSlug", "acme"));
 
-  it("shows Edit, Archive, Share and Reopen disabled, each reachable from the one sentence naming the archive", async () => {
+  it("shows Share and Reopen disabled, each reachable from the one sentence naming the archive", async () => {
     const d = deal({
       id: "x",
       status: "won",
@@ -686,7 +686,6 @@ describe("DealScreen — an archived deal keeps its verbs, refused", () => {
     // Each is awaited, not read in the tick the first arrived in. The note on
     // the same list in companies.header.test.tsx says why.
     const refused = [
-      await screen.findByTestId("archive-record"),
       await screen.findByTestId("share-record"),
       await screen.findByTestId("reopen-open"),
     ];

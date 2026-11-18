@@ -135,11 +135,13 @@ function dealBand({
 }
 
 // The pills under the deal's name: whose move it is, when a buyer is owed a
-// reply, then the deal's status.
+// reply, then the deal's status, and whether it is archived as the board card
+// says.
 function DealPulsePills({
   status,
+  archived,
   yourMove,
-}: Readonly<{ status: Deal["status"]; yourMove: boolean }>) {
+}: Readonly<{ status: Deal["status"]; archived: boolean; yourMove: boolean }>) {
   const t = useT();
   return (
     <>
@@ -149,6 +151,7 @@ function DealPulsePills({
         </Badge>
       )}
       <DealStatusBadge status={status} />
+      {archived && <Badge>{t("deal.archived")}</Badge>}
     </>
   );
 }
@@ -298,6 +301,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
               pulse={
                 <DealPulsePills
                   status={deal.status}
+                  archived={Boolean(deal.archived_at)}
                   yourMove={Boolean(
                     statusQuery.data && currentReplyTarget(statusQuery.data),
                   )}

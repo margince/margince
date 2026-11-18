@@ -3047,6 +3047,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "record.save": "Lưu",
   "record.saveDone": "Đã lưu “{name}”",
   "record.archiveDone": "Đã chuyển “{name}” vào kho lưu trữ",
+  "record.restoreDone": "Đã khôi phục “{name}”",
   "record.archive": "Chuyển vào kho lưu trữ",
   "record.disqualify": "Loại lead",
   "record.archiveConfirm":
@@ -6423,6 +6424,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "company.archiveRefused":
     "Chỉ chủ sở hữu công ty hoặc quản lý mới có thể lưu trữ công ty này.",
   "deal.archive": "Chuyển deal vào kho lưu trữ",
+  "deal.restore": "Khôi phục deal",
   "deal.archiveConfirm":
     "Khi chuyển vào kho lưu trữ, deal này sẽ không còn trong danh sách deal đang mở. Có thể khôi phục từ lịch sử của deal.",
   "deal.archivedReadOnly":

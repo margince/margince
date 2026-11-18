@@ -3052,6 +3052,7 @@ export const en = {
   "record.save": "Save",
   "record.saveDone": "“{name}” saved",
   "record.archiveDone": "“{name}” archived",
+  "record.restoreDone": "“{name}” restored",
   "record.archive": "Archive",
   "record.disqualify": "Disqualify",
   "record.archiveConfirm":
@@ -6554,6 +6555,7 @@ export const en = {
   "company.archiveRefused":
     "Only the company’s owner or a manager can archive this company.",
   "deal.archive": "Archive deal",
+  "deal.restore": "Restore deal",
   "deal.archiveConfirm":
     "Archiving removes this deal from open deals. You can bring it back from its history.",
   "deal.archivedReadOnly": "This deal is archived and takes no changes.",

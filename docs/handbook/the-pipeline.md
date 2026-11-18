@@ -382,9 +382,11 @@ To archive a deal, open it and choose **More actions** → **Archive deal**, or
 tick several on the list and use **Archive**. A Team lead, Management, Ops or
 Admin may archive a deal, and so may its owner if they created it or were given it.
 Archived deals leave every list and report. **Show archived** lets you see one,
-read-only. To bring one back (Team lead, Management, Ops or Admin), open it with
-**Show archived**, find the archive entry in its history and press **Undo**. A
-closed or archived deal has no box to tick for acting on many at once.
+read-only, with **Archived** beside its status. To bring one back (Team lead,
+Management, Ops or Admin), open it with **Show archived** and choose **More
+actions** → **Restore deal**. Pressing **Undo** on the archive entry in its
+history does the same. A closed or archived deal has no box to tick for acting
+on many at once.
 
 ### Can I merge two duplicate deals?
 No. Margince has no merge for deals: merging covers contacts, companies, and leads from a duplicate pair in the Worklist. When one deal was entered twice, keep the best one and archive the other with **More actions** → **Archive deal**. Archiving carries nothing over, so move what you need first. Link its emails to the deal you keep with **Relink**, and note anything else on that deal. Also called: duplicate deal, combine two opportunities.
