@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { ChevronLeft, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import {
   createContext,
   Fragment,
@@ -10,7 +10,6 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useLayoutEffect,
   useRef,
   useState,
 } from "react";
@@ -20,7 +19,6 @@ import { useHoverIntent } from "../design-system/hoverintent";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { useDisabledCoreFeatures } from "../lib/corefeatures";
-import { ariaKeyShortcuts, binding, shortcutTip } from "../lib/keymap";
 import { useReadsTeamProgress } from "../lib/progressreader";
 import { navigate, type Route, routeHash } from "../lib/router";
 import {
@@ -37,6 +35,7 @@ import {
 } from "./nav";
 import { useRowIntent } from "./navintent";
 import { type TipState, useRowTip } from "./navrowtip";
+import { NavTip } from "./navtip";
 
 // ONE navigation level, whatever its depth. The rail's ten destinations and the
 // entries of a section drilled into from them render through this, so the two
@@ -55,26 +54,6 @@ function navTipKey(level: NavTrailLevel, id: string): string {
 }
 
 const BACK_TIP_KEY = "rail-level-back";
-const TOGGLE_TIP_KEY = "rail-toggle";
-
-/**
- * A row's tooltip, at the row's right edge. Fixed to the viewport and placed
- * from the row's box, because the panel scrolls and would clip it.
- */
-function NavTip({ children }: Readonly<{ children: ReactNode }>) {
-  const tip = useRef<HTMLSpanElement>(null);
-  useLayoutEffect(() => {
-    const row = tip.current?.parentElement?.getBoundingClientRect();
-    if (!tip.current || !row) return;
-    tip.current.style.left = `${row.right}px`;
-    tip.current.style.top = `${row.top + row.height / 2}px`;
-  });
-  return (
-    <span className="navtip" role="tooltip" ref={tip}>
-      {children}
-    </span>
-  );
-}
 
 /** A level's destination rows. Back is a `.navitem` too, and stands outside them. */
 export const DESTINATION_ROW = ".navlevel .navwrap .navitem";
@@ -260,8 +239,7 @@ function NavLevelRow({
   const active = level.activeId === entry.id;
   const key = navTipKey(level, entry.id);
   const tip = useRowTip(state, { key, level, id: entry.id, label });
-  // A label keeps one line, so one too long for the open rail is cut and its
-  // tip carries all of it. Measured when raised: a cut renders nothing.
+  // A label the open rail cuts gets a tip that carries all of it.
   const labelBox = useRef<HTMLSpanElement>(null);
   const [cut, setCut] = useState(false);
   const raise = (by: "pointer" | "focus") => {
@@ -362,10 +340,8 @@ function NavLevelGroupView({
       role={labelId ? "group" : undefined}
       aria-labelledby={labelId}
     >
-      {/* Collapsed the label folds away and is hidden. The group is still
-          NAMED there: a hidden element referenced by `aria-labelledby` is read
-          for the name, which is the whole reason the name is wired this way
-          rather than taken from the content. */}
+      {/* Hidden when collapsed: `aria-labelledby` still reads a hidden
+          element, so the group keeps its name. */}
       {heading && (
         <div className="navheading" id={labelId}>
           {t(heading)}
@@ -446,51 +422,6 @@ function NavLevelBack({
         <NavTip>{label}</NavTip>
       )}
     </button>
-  );
-}
-
-/**
- * The sidebar's own width control, at the foot of the panel it folds.
- *
- * The visible word is the expanded state's alone: folded, the row is a glyph
- * whose name and tip say what a press does next.
- */
-export function NavRailToggle({
-  state,
-  onToggle,
-}: Readonly<{ state: TipState; onToggle: () => void }>) {
-  const t = useT();
-  const label = state.collapsed ? t("shell.expand") : t("shell.collapse");
-  const keys = binding("sidebar").keys;
-  const hover = useHoverIntent(
-    () => state.onTip(TOGGLE_TIP_KEY, "pointer"),
-    () => state.onTip(null),
-  );
-  return (
-    <div className="navwrap railfoot">
-      <button
-        type="button"
-        className="navitem navtoggle t-body"
-        aria-label={label}
-        aria-expanded={!state.collapsed}
-        aria-keyshortcuts={ariaKeyShortcuts(keys)}
-        onClick={onToggle}
-        onPointerEnter={hover.onPointerEnter}
-        onPointerLeave={hover.onPointerLeave}
-        onFocus={() => state.onTip(TOGGLE_TIP_KEY, "focus")}
-        onBlur={() => state.onTip(null)}
-      >
-        {state.collapsed ? (
-          <PanelLeftOpen aria-hidden />
-        ) : (
-          <PanelLeftClose aria-hidden />
-        )}
-        <span className="navlabel">{t("shell.collapse")}</span>
-        {state.collapsed && state.tip === TOGGLE_TIP_KEY && (
-          <NavTip>{shortcutTip(label, keys, t("shell.shortcuts.then"))}</NavTip>
-        )}
-      </button>
-    </div>
   );
 }
 

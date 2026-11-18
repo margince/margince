@@ -1,14 +1,11 @@
 /* ===== the top bar =====
  * The session's own strip: the trail, the search, and the contact. It is the
  * application's one bar and every screen has it (DESIGN.md §6); nothing that
- * belongs to a record sits in it. Beside the sidebar it is the same chrome as
- * the sidebar, and the content card's top edge is its only rule (app/shell.css).
+ * belongs to a record sits in it.
  *
  * It never scrolls: it is the first row of the content column's flex box and
  * the scroller is its sibling, which is cheaper than `position: sticky` and
- * cannot be defeated by a screen that establishes its own scroll container. At
- * phone width the page passes UNDER it, so there it is translucent with a blur
- * and a hairline (below). */
+ * cannot be defeated by a screen that establishes its own scroll container. */
 /* The search is centred on the content column while the trail fits its half;
    a longer trail grows into the room the end controls leave, up to its cap. */
 .topbar {
@@ -22,16 +19,14 @@
   /* The gap between the bar's glyphs, which a thumb's targets split (below). */
   --topbarGlyphGap: var(--space-2);
   flex: none;
-  /* One number for the strip's height, read by the sidebar's head too, so the
-     mark and the strip's controls share one centre line. */
+  /* The sidebar's head reads it too, so the two share one centre line. */
   height: var(--topbarH);
   /* The gutter, and no vertical padding: the strip's height is the token above
      and its children centre in it, so vertical padding only narrows the box the
      40px search already stands taller than. */
   padding: 0 var(--pageGutter);
-  /* At phone width the scroller reaches up behind this strip, and in flow but
-     pulled up it would paint over the bar. Below the phone nav (30) and the
-     modal overlay (50), which may both cover the strip. */
+  /* Over the phone scroller pulled up behind it; under the phone nav (30) and
+     the modal overlay (50). */
   position: relative;
   z-index: 20;
 }
@@ -151,8 +146,7 @@
 @media (max-width: 1100px) {
   .topbar {
     display: flex;
-    /* One gap for the whole strip, so the glyphs at the end and the items at
-       the start read as one rhythm rather than two. */
+    /* One gap for the whole strip, so the row reads as one rhythm. */
     gap: var(--topbarGlyphGap);
   }
   .topbar-lead {
@@ -229,9 +223,7 @@
   }
 }
 
-/* At phone width the page scrolls under the strip (app/shell.css), so the
-   strip is translucent, with the blur that keeps text readable through it and
-   a hairline under it. */
+/* At phone width the page scrolls under the strip (app/shell.css). */
 @media (max-width: 700px) {
   .topbar {
     --topbarGlyphGap: var(--space-1);

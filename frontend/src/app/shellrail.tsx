@@ -31,14 +31,10 @@ import {
   NAV,
   type NavSection,
 } from "./nav";
-import {
-  DESTINATION_ROW,
-  NavLevelView,
-  NavRailToggle,
-  useNavLevel,
-} from "./navlevel";
+import { DESTINATION_ROW, NavLevelView, useNavLevel } from "./navlevel";
 import { useNavTip } from "./navtip";
 import { usePopoverDismiss } from "./popover";
+import { NavRailToggle } from "./railtoggle";
 import type { ShellCounts } from "./shell";
 import { useSquareMark } from "./squaremark";
 

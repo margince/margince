@@ -100,11 +100,9 @@ function SkipToContent({
 // `main-record` adds nothing to that width and never appears without it — it
 // names the column's SCROLLER as a container, so the record's tab strip
 // measures the width content can use (shell.css, `container-name: work`).
-// Up to a tablet's width a 256px sidebar takes a quarter of the window or more.
 const RAIL_FOLDS_MAX_WIDTH = 1024;
 
-// A choice this browser stored wins in both directions; with none, a tablet
-// starts on the 56px rail. Nothing is written, so the default stays a default.
+// A stored choice wins; with none a tablet starts folded, and nothing is stored.
 function startsCollapsed(): boolean {
   const stored = readStored(STORAGE_KEYS.sidebarCollapsed);
   if (stored !== null) {
