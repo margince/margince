@@ -62,11 +62,11 @@ type literalWriter struct {
 // value writes v. typed asks for the type name on a struct literal, which a
 // slice element leaves out.
 func (w *literalWriter) value(v reflect.Value, typed bool) (string, error) {
-	if d, isDuration := v.Interface().(time.Duration); isDuration {
+	if d, isDuration := reflect.TypeAssert[time.Duration](v); isDuration {
 		w.usesTime = true
 		return duration(d), nil
 	}
-	if t, isTime := v.Interface().(time.Time); isTime {
+	if t, isTime := reflect.TypeAssert[time.Time](v); isTime {
 		w.usesTime = true
 		return instant(t), nil
 	}

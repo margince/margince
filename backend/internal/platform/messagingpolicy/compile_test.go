@@ -170,12 +170,12 @@ func TestTheDigestCoversTheExplanation(t *testing.T) {
 func TestEveryRulesFieldHasAKey(t *testing.T) {
 	keys := map[string]bool{}
 	layer := reflect.TypeFor[layerFile]()
-	for i := range layer.NumField() {
-		keys[layer.Field(i).Tag.Get("yaml")] = true
+	for field := range layer.Fields() {
+		keys[field.Tag.Get("yaml")] = true
 	}
 	rules := reflect.TypeFor[messaging.Rules]()
-	for i := range rules.NumField() {
-		name := rules.Field(i).Name
+	for field := range rules.Fields() {
+		name := field.Name
 		if name == "Provenance" || name == "Digest" {
 			continue
 		}

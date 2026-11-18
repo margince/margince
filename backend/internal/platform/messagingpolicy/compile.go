@@ -266,7 +266,8 @@ func digest(fsys fs.FS, sources []string) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("digest: %w", err)
 		}
-		fmt.Fprintf(sum, "%s\x00%d\x00", name, len(raw))
+		// hash.Hash.Write never returns an error.
+		sum.Write(fmt.Appendf(nil, "%s\x00%d\x00", name, len(raw)))
 		sum.Write(raw)
 	}
 	return hex.EncodeToString(sum.Sum(nil)), nil
