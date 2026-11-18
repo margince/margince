@@ -66,6 +66,7 @@ func TestCaptureAsksWhenAStakeholderHoldsSeatsAtTwoCompanies(t *testing.T) {
 	w.stakeholder(t, carol, acme)
 	w.stakeholder(t, carol, beta)
 
+	env.topic.answer = func(string) (string, float64) { return "about", 0.99 }
 	env.syncSent(t, map[string]bool{"cx2@myco.example": true},
 		email(captureOwner, "", "carol@consultancy.example", "cx2@myco.example", ""))
 
@@ -136,5 +137,23 @@ func TestCaptureFilesNothingOnAHeaderNamedSeat(t *testing.T) {
 	wantDeals(t, e, "cx7@stranger.example")
 	if n, _ := whichDealQuestions(t, e); n != 0 {
 		t.Fatalf("%d deal questions for unproven mail, want none", n)
+	}
+}
+
+// A consumer-mail provider authenticates its own domain, not the address in
+// the From line, so an aligned From at one proves nothing about its writer.
+func TestCaptureFilesNothingOnAnAlignedConsumerMailSpoof(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	w := newDealWorld(t, e)
+	carol := w.employee(t, "carol@gmail.com", w.company(t, "Consultancy"))
+	deal := w.deal(t, "Acme rollout")
+	w.stakeholder(t, carol, deal)
+
+	env.sync(t, authenticated(mailFrom("carol@gmail.com", "cx8@gmail.com", "", "rollout plan"), "gmail.com"))
+
+	wantDeals(t, e, "cx8@gmail.com")
+	if n, _ := whichDealQuestions(t, e); n != 0 {
+		t.Fatalf("%d deal questions for a consumer-mail From, want none", n)
 	}
 }

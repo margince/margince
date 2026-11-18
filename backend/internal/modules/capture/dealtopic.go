@@ -29,8 +29,9 @@ const (
 	DealBasisSoleOpenDeal DealBasis = "sole_open_deal"
 	DealBasisStakeholder  DealBasis = "stakeholder"
 	DealBasisAmbiguous    DealBasis = "ambiguous"
-	// DealBasisNamedStakeholder is a seat of a contact only a header names. It
-	// asks a colleague and never files by itself.
+	// DealBasisNamedStakeholder is a seat at another company that cannot file
+	// the mail alone. The contact is only named in a header, or holds seats on
+	// several deals. It asks a colleague, and the topic check never picks.
 	DealBasisNamedStakeholder DealBasis = "named_stakeholder"
 )
 

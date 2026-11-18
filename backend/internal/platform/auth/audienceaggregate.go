@@ -19,6 +19,12 @@ import (
 // tells them when it arrived. Neither shows a word of the message, and both
 // disclose it.
 //
+// One exception, a deal's own last-activity date. A private message filed on
+// the deal moves it. The deal timeline already lists that message to every
+// reader of the deal with its time and direction, and blanks the text. The date
+// adds nothing the timeline withholds. Contact and company dates stay
+// workspace-only, as does every other aggregate.
+//
 // Spelled once here rather than per module because four readers ask the same
 // question — relationship strength, deal health, the meeting brief and the
 // weekly digest — and a fifth will be written by somebody who greps for it. The

@@ -20,14 +20,17 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
-// ChecksumSQL is the count and newest date of the deal aliased d. It is NULL
-// for a deal with none, so such a deal keeps its stored checksum.
-func ChecksumSQL() string {
-	return `(SELECT concat_ws('|', count(*), max(pa.occurred_at))
-		   FROM activity_link pl JOIN activity pa ON pa.id = pl.activity_id
-		  WHERE pl.deal_id = d.id AND pa.archived_at IS NULL AND pa.kind = 'email'
-		    AND ` + auth.PrivateAudienceSQL("pa") + ` AND ` + relstrength.OriginIsEngagementSQL("pa") + `
-		 HAVING count(*) > 0)`
+// ChecksumSQL hashes the id, date and update time of the newest limit private
+// mails of the deal aliased d, the rows Read hands the verdict. It is NULL for
+// a deal with none, so such a deal keeps its stored checksum.
+func ChecksumSQL(limit int) string {
+	return fmt.Sprintf(`(SELECT md5(string_agg(concat_ws(':', r.id, r.occurred_at, r.updated_at), ',' ORDER BY r.occurred_at DESC, r.id DESC))
+		   FROM (SELECT pa.id, pa.occurred_at, pa.updated_at
+		           FROM activity_link pl JOIN activity pa ON pa.id = pl.activity_id
+		          WHERE pl.deal_id = d.id AND pa.archived_at IS NULL AND pa.kind = 'email'
+		            AND %s AND %s
+		          ORDER BY pa.occurred_at DESC, pa.id DESC LIMIT %d) r)`,
+		auth.PrivateAudienceSQL("pa"), relstrength.OriginIsEngagementSQL("pa"), limit)
 }
 
 // Read puts the newest limit private mails of the deal into in, oldest first.

@@ -16,6 +16,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/dealprivatemail"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
@@ -138,5 +139,49 @@ func TestAnOlderDealClockIsRefoldedByTheDataTaskQuery(t *testing.T) {
 	w.e.WsExec(t, `SELECT move_last_activity('deal'::regclass, $1)`, w.deal.UUID)
 	if n := w.e.WsCount(t, `SELECT count(*) FROM deal WHERE id = $1 AND last_activity_at IS NOT NULL`, w.deal.UUID); n != 1 {
 		t.Error("refolding the deal clock ignored the private mail filed on it")
+	}
+}
+
+// The deal's timeline already lists a withheld private mail with its time to a
+// reader outside its audience, and blanks its subject. The deal clock therefore
+// says nothing about the mail that the timeline does not.
+func TestTheTimelineAlreadyShowsAPrivateMailsTimeToANonParticipant(t *testing.T) {
+	w := newPrivateMailWorld(t)
+	w.privateMail(t, "inbound", 2, true)
+
+	entityType, entityID := "deal", ids.UUID(w.deal.UUID)
+	rows, _, err := w.e.Activities.ListActivities(w.e.As(w.e.Rep3, []ids.UUID{w.e.Team2}, AccountRepPerms), activities.ListActivitiesInput{
+		EntityType: &entityType, EntityID: &entityID,
+	})
+	if err != nil {
+		t.Fatalf("listing the deal's timeline: %v", err)
+	}
+	want := w.now.AddDate(0, 0, -2)
+	if len(rows) != 1 || !rows[0].OccurredAt.Equal(want) {
+		t.Fatalf("the timeline lists %d rows, want the withheld mail at %v", len(rows), want)
+	}
+	if rows[0].Subject != nil && *rows[0].Subject != "" {
+		t.Errorf("the withheld row carries the subject %q", *rows[0].Subject)
+	}
+}
+
+// The verdict reads the newest private mails. A change to any of them changes
+// the checksum that makes the deal due again, not only a change to the newest.
+func TestTheVerdictChecksumMovesWhenAnOlderPrivateMailChanges(t *testing.T) {
+	w := newPrivateMailWorld(t)
+	w.privateMail(t, "inbound", 5, true)
+	w.privateMail(t, "outbound", 1, true)
+	sum := func() string {
+		return w.e.WsScalar(t, `SELECT `+dealprivatemail.ChecksumSQL(20)+` FROM deal d WHERE d.id = $1`, w.deal.UUID)
+	}
+	before := sum()
+	if before == "" {
+		t.Fatal("two private mails give the deal no checksum part")
+	}
+	w.e.WsExec(t, `UPDATE activity SET occurred_at = occurred_at - interval '1 day' WHERE id = (
+		SELECT a.id FROM activity a JOIN activity_link l ON l.activity_id = a.id
+		 WHERE l.deal_id = $1 ORDER BY a.occurred_at ASC LIMIT 1)`, w.deal.UUID)
+	if after := sum(); after == before {
+		t.Error("changing the date of a mail that is not the newest left the checksum as it was")
 	}
 }

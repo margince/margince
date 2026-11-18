@@ -176,7 +176,7 @@ func decideByStakeholderElsewhere(ctx context.Context, tx pgx.Tx, facts dealFact
 	if len(facts.provenContacts) > 0 {
 		staked, err := candidates.OpenDealsOfStakeholders(ctx, tx, facts.provenContacts, 2)
 		if err != nil || len(staked) > 0 {
-			return withBasis(oneDeal(staked, WhichDeal{StakeholderIDs: facts.provenContacts}), DealBasisStakeholder, DealBasisAmbiguous), err
+			return withBasis(oneDeal(staked, WhichDeal{StakeholderIDs: facts.provenContacts}), DealBasisStakeholder, DealBasisNamedStakeholder), err
 		}
 	}
 	named, err := candidates.OpenDealsOfStakeholders(ctx, tx, facts.contacts, 1)
@@ -247,31 +247,41 @@ func oneDeal(deals []ids.UUID, question WhichDeal) DealVerdict {
 
 // Participant evidence survives the link cap; explicit contact filings also count.
 // The second answer is the contacts no header can forge. They are the From of
-// authenticated inbound mail, and the To and Cc of mail a colleague sent.
+// authenticated inbound mail, and the To and Cc of mail a colleague sent. The
+// sender check covers the domain, not the address, so a consumer-mail From
+// proves nothing.
 func mailContacts(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID) (all, proven []ids.UUID, err error) {
 	if !auth.ReadGranted(ctx, "contact") {
 		return nil, nil, nil
 	}
+	consumer, err := MatcherTx(ctx, tx)
+	if err != nil {
+		return nil, nil, err
+	}
 	rows, err := tx.Query(ctx, `
-		SELECT named.contact_id, bool_or(named.proven) FROM (
-		 SELECT p.contact_id, (`+correspondence.AuthenticatedInboundSQL("a")+` AND p.role = 'from'
-		        OR `+correspondence.OurOutboundSQL("a")+` AND p.role IN ('to', 'cc')) AS proven
+		SELECT named.contact_id, named.signed, named.sent, named.domain FROM (
+		 SELECT p.contact_id, (`+correspondence.AuthenticatedInboundSQL("a")+` AND p.role = 'from') AS signed,
+		        (`+correspondence.OurOutboundSQL("a")+` AND p.role IN ('to', 'cc')) AS sent,
+		        coalesce(p.address_domain_folded, '') AS domain
 		   FROM activity_participant p JOIN activity a ON a.id = p.activity_id WHERE p.activity_id=$1
-		 UNION ALL SELECT l.contact_id, false FROM activity_link l WHERE l.activity_id=$1 AND l.entity_type='contact'
+		 UNION ALL SELECT l.contact_id, false, false, '' FROM activity_link l WHERE l.activity_id=$1 AND l.entity_type='contact'
 		) named JOIN contact c ON c.id=named.contact_id AND c.archived_at IS NULL
-		GROUP BY named.contact_id ORDER BY named.contact_id`, activityID)
+		ORDER BY named.contact_id`, activityID)
 	if err != nil {
 		return nil, nil, fmt.Errorf("capture: reading the mail's participants: %w", err)
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var contact ids.UUID
-		var isProven bool
-		if err := rows.Scan(&contact, &isProven); err != nil {
+		var signed, sent bool
+		var domain string
+		if err := rows.Scan(&contact, &signed, &sent, &domain); err != nil {
 			return nil, nil, fmt.Errorf("capture: reading the mail's participants: %w", err)
 		}
-		all = append(all, contact)
-		if isProven {
+		if len(all) == 0 || all[len(all)-1] != contact {
+			all = append(all, contact)
+		}
+		if (sent || signed && !consumer.IsConsumer(domain)) && (len(proven) == 0 || proven[len(proven)-1] != contact) {
 			proven = append(proven, contact)
 		}
 	}
