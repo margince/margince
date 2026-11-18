@@ -151,7 +151,7 @@ test("selecting a contact fades what the route does not touch", () => {
 test("the panel says in words which route was chosen and what was not", () => {
   draw({ focusId: "p-1" });
   expect(screen.getByText(/Sofia Meier → Philipp Königs/)).not.toBeNull();
-  expect(screen.getByText(/developing/)).not.toBeNull();
+  expect(screen.getByText(/Königs · developing/)).not.toBeNull();
   // The rejected route is listed, so a reader can disagree with the pick.
   expect(screen.getByText(/Lars Meyer · cold/)).not.toBeNull();
 });

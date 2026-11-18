@@ -6,7 +6,8 @@
 
 import type { components } from "../../../api/schema";
 import { Badge } from "../../../design-system/atoms";
-import { Panel, PanelBody } from "../../../design-system/panel";
+import { PanelBody } from "../../../design-system/panel";
+import { StrengthMeter } from "../../../design-system/strengthmeter";
 import { SurfaceState } from "../../../design-system/surfacestate";
 import { formatDate } from "../../../format/format";
 import { useLocale, useT } from "../../../i18n";
@@ -76,13 +77,13 @@ function timeline(
 }
 
 /**
- * MomentsPanel is what moved in this relationship lately, earlier asks
- * included.
+ * MomentsTimeline is what moved in this relationship lately, earlier asks
+ * included: the body of the Progress card under its steps.
  *
  * A map says who is there, a moment says what moved. The change sentences are
  * the 360's own, so one derived change does not get two sets of words.
  */
-export function MomentsPanel({
+export function MomentsTimeline({
   view,
   asks = [],
 }: Readonly<{
@@ -114,31 +115,29 @@ export function MomentsPanel({
         ? ("withheld" as const)
         : ("empty" as const);
   return (
-    <Panel title={t("contact.network.momentsTitle")}>
-      {/* Where the movements are read from, which makes them evidence rather
-          than a summary. */}
-      <PanelBody>
-        <p className="t-sub">{t("contact.network.momentsSub")}</p>
-      </PanelBody>
-      <PanelBody>
-        <SurfaceState
-          state={state}
-          emptyLabel={t("contact.network.noMoments")}
-          loadingLabel={t("contact.network.title")}
-        >
-          <ol className="pn-moments">
-            {moments.map((moment) => (
-              <li
-                key={
-                  moment.kind === "ask"
-                    ? `ask-${moment.ask.id}`
-                    : `${moment.change.kind}-${moment.at}`
-                }
-                className="pn-moment"
-              >
-                <time className="pn-moment-when t-caption" dateTime={moment.at}>
-                  {formatDate(moment.at, locale, readerZone)}
-                </time>
+    <PanelBody>
+      <SurfaceState
+        state={state}
+        emptyLabel={t("contact.network.noMoments")}
+        loadingLabel={t("contact.network.title")}
+      >
+        <ol className="pn-moments">
+          {moments.map((moment) => (
+            <li
+              key={
+                moment.kind === "ask"
+                  ? `ask-${moment.ask.id}`
+                  : `${moment.change.kind}-${moment.at}`
+              }
+              className="pn-moment"
+              data-latest={
+                moment.kind === "change" && moment.latest ? "" : undefined
+              }
+            >
+              <time className="pn-moment-when t-caption" dateTime={moment.at}>
+                {formatDate(moment.at, locale, readerZone)}
+              </time>
+              <div className="pn-moment-body">
                 <p>
                   {moment.kind === "ask" ? (
                     <AskLine ask={moment.ask} />
@@ -153,22 +152,47 @@ export function MomentsPanel({
                     </>
                   )}
                 </p>
-              </li>
-            ))}
-          </ol>
-        </SurfaceState>
-        {/* Asks drawn while changes are withheld must not read as the whole
+                {moment.kind === "change" ? (
+                  <BucketShift change={moment.change} />
+                ) : null}
+              </div>
+            </li>
+          ))}
+        </ol>
+      </SurfaceState>
+      {/* Asks drawn while changes are withheld must not read as the whole
             story, so the refusal still shows under them. */}
-        {withheld && moments.length > 0 ? (
-          <SurfaceState
-            state="withheld"
-            emptyLabel={t("contact.network.noMoments")}
-            loadingLabel={t("contact.network.title")}
-          >
-            {null}
-          </SurfaceState>
-        ) : null}
-      </PanelBody>
-    </Panel>
+      {withheld && moments.length > 0 ? (
+        <SurfaceState
+          state="withheld"
+          emptyLabel={t("contact.network.noMoments")}
+          loadingLabel={t("contact.network.title")}
+        >
+          {null}
+        </SurfaceState>
+      ) : null}
+    </PanelBody>
+  );
+}
+
+// A move between bands, drawn as the two meters the map uses, so warming reads
+// at a glance. The sentence above already says it in words.
+function BucketShift({ change }: Readonly<{ change: Change }>) {
+  const t = useT();
+  if (!change.from_bucket || !change.to_bucket) {
+    return null;
+  }
+  return (
+    <span className="pn-shift" aria-hidden="true">
+      <StrengthMeter
+        band={change.from_bucket}
+        label={t(`contact.band.${change.from_bucket}`)}
+      />
+      <span>→</span>
+      <StrengthMeter
+        band={change.to_bucket}
+        label={t(`contact.band.${change.to_bucket}`)}
+      />
+    </span>
   );
 }

@@ -47,11 +47,7 @@ export function ContactOverview({
         onOpenTasks={openQueue}
         onAddTask={onAddTask}
       />
-      <ContactOpenTasks
-        view={view}
-        onAllTasks={openQueue}
-        onAddTask={onAddTask}
-      />
+      <ContactOpenTasks view={view} onAllTasks={openQueue} />
       <ContactHowItStands view={view} onOpenTab={onOpenTab} />
       <div className="pe-overview-grid">
         <div className="pe-overview-column">
