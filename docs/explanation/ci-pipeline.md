@@ -493,7 +493,7 @@ What each job of `ci.yml` checks: [ci-jobs.md](../reference/ci-jobs.md). `determ
 - **`deterministic-gates (unit)` stages `crm-hello` last.** After the merge gate it copies the fixture
   into `extensions/`, then runs the composed build, the tests of `cmd/` and every unit's own tests. Its
   coverage profile goes to `sonarcloud`, because the shard profiles cannot reach a unit's module.
-- **`INTEGRATION_JOBS=4`**, one per core of a runner: each package already runs 3 tests at once (`LANE_TEST_PARALLEL`), and 16 jobs ran out of memory.
+- **`INTEGRATION_JOBS=8`** and **`LANE_TEST_PARALLEL=1`**: 8 packages at once, one test each. More tests at once measured slower on a 4-core runner, and 16 jobs ran out of memory. A local run keeps 3 tests at once.
 - **`integration unit coverage`** exists because the shards run only the integration packages, and
   SonarCloud would see the rest at a false 0% for new code. It skips `backend/gates`, which has no code
   of its own: the tests of the code it reaches cover nearly all of it.

@@ -8,7 +8,6 @@ package privacy
 import (
 	"context"
 	"errors"
-
 	"testing"
 	"time"
 
