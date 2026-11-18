@@ -183,6 +183,9 @@ func (h Handlers) writeParticulars(w http.ResponseWriter, r *http.Request, p Con
 		writeConsentErr(w, r, err)
 		return
 	}
+	if languages == nil {
+		languages = []string{}
+	}
 	out := wireParticulars(p)
 	out.Locks = h.settingLocks(ControllerIdentity)
 	wireMeans := make([]crmcontracts.ContactMeans, 0, len(means))

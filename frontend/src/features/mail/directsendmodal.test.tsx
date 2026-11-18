@@ -65,7 +65,7 @@ describe("DirectSendModal", () => {
     // an empty version the server would reject with an error about a field the
     // director never saw.
     const confirm = screen.getByRole("button", {
-      name: /record the exception and send/i,
+      name: /send email/i,
     }) as HTMLButtonElement;
     expect(confirm.disabled).toBe(true);
   });
@@ -106,7 +106,7 @@ describe("DirectSendModal", () => {
     // is looking at.
     const confirm = () =>
       screen.getByRole("button", {
-        name: /record the exception and send/i,
+        name: /send email/i,
       }) as HTMLButtonElement;
 
     expect(confirm().disabled).toBe(true);
@@ -207,4 +207,48 @@ it("keeps the recorded reason locked while entering and leaving wording correcti
     "The contract requires this notice.",
   );
   expect(screen.getByRole("textbox", { name: "Explanation" })).toBeDisabled();
+});
+
+it("keeps the explanation but renews acknowledgement for an updated footer on the same message", async () => {
+  const user = userEvent.setup();
+  const original = { ...review, delivery_intent_id: "message-1" };
+  const { rerender } = open({ review: original });
+  await user.type(
+    screen.getByLabelText("Explanation"),
+    "They asked to move our appointment.",
+  );
+  await user.click(screen.getByRole("checkbox"));
+  rerender(
+    <QueryClientProvider client={new QueryClient()}>
+      <DirectSendModal
+        open
+        onClose={vi.fn()}
+        review={{
+          ...original,
+          id: "review-2",
+          refusals: [
+            {
+              address: "alex@example.test",
+              reason_code: "footer_incomplete",
+              footer_preview: ["Reply STOP."],
+              footer_findings: [
+                {
+                  kind: "advertiser_contact",
+                  language: "vi",
+                  missing_means: ["phone"],
+                },
+              ],
+            },
+          ],
+        }}
+      />
+    </QueryClientProvider>,
+  );
+  expect(screen.getByLabelText("Explanation")).toHaveValue(
+    "They asked to move our appointment.",
+  );
+  expect(screen.getByRole("checkbox")).not.toBeChecked();
+  expect(screen.getByText("Reply STOP.")).toBeVisible();
+  expect(screen.getByText(/Vietnamese/)).toHaveTextContent(/phone/i);
+  expect(screen.queryByText(/advertiser_contact/)).toBeNull();
 });

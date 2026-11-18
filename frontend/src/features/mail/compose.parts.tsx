@@ -1,23 +1,18 @@
-import { Ellipsis, ShieldAlert, Trash2 } from "lucide-react";
+import { Ellipsis, Trash2 } from "lucide-react";
 import { type ReactNode, useId, useState } from "react";
 import { EntityRef } from "../../components/entityref";
 import { SendMark } from "../../components/sendpermission";
-import { Button, Field } from "../../design-system/atoms";
+import { Button } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { DockedWindow, type DockState } from "../../design-system/dockedwindow";
 import { EmailText } from "../../design-system/emailtext";
 import { ErrorLine } from "../../design-system/errorline";
 import { IconAction } from "../../design-system/iconaction";
 import { RichText } from "../../design-system/richtext";
-import { Select } from "../../design-system/select";
 import { formatActivityWhen } from "../../format/activitywhen";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import {
-  asksWhy,
-  type CommunicationContext,
-  contextOptions,
-} from "../../lib/compose-context";
+import type { CommunicationContext } from "../../lib/compose-context";
 import {
   authorName,
   correspondenceSide,
@@ -35,37 +30,16 @@ import { FieldNeed } from "./composehead";
 import type { useSavedDraft } from "./composesaveddraft";
 import { SavedDraftFailure } from "./composesaveddraftnotices";
 import { ScheduleMenu, scheduledSendLabel } from "./composeschedule";
-import type { ComposeSend, MissingField } from "./composesend";
+import type { ComposeSend } from "./composesend";
 import { SignOffPreview } from "./composesignoff";
 import type { VoiceDraft } from "./composevoicedraft";
 import { SendRefusal } from "./sendrefusal";
-
-// sharedUnsubscribeAhead predicts the sharedUnsubscribe refusal (refusalOf).
-// A marketing send's unsubscribe link is one addressee's consent record, so a
-// second addressee is refused. The server rule stays the authority, keyed on
-// the marketing category, which a reply never carries.
-export function sharedUnsubscribeAhead(
-  to: string[],
-  cc: string[],
-  context: CommunicationContext | undefined,
-): boolean {
-  if (context !== "marketing") {
-    return false;
-  }
-  const addressees = new Set(
-    [...to, ...cc].map((address) => address.trim().toLowerCase()),
-  );
-  return addressees.size > 1;
-}
 
 // The mail-only send-time notice: a shared-unsubscribe-token risk. A channel
 // reply has no addressee list to warn about, so this renders nothing there.
 // The empty-recipient line belongs to the To field, not the foot of the drawer,
 // because that is closer to the thing to fix.
 export function MailSendNotices({
-  to,
-  cc,
-  context,
   newContacts = [],
 }: Readonly<{
   to: string[];
@@ -77,9 +51,6 @@ export function MailSendNotices({
   const t = useT();
   return (
     <>
-      {sharedUnsubscribeAhead(to, cc, context) && (
-        <ErrorLine standing>{t("compose.multiRecipientWarning")}</ErrorLine>
-      )}
       {newContacts.map((address) => (
         <Callout
           key={address}
@@ -212,7 +183,8 @@ export function ComposeFoot({
   // The address sentence has its own place under the button; the hold line
   // speaks only when no address is in the way.
   const { hold } = send;
-  const holdLine = !addressRefused && hold.line ? hold.line : undefined;
+  const holdLine =
+    !addressRefused && hold.blocks && hold.line ? hold.line : undefined;
   const heldBy = holdLine && hold.blocks ? holdId : undefined;
   return (
     <div className="compose-foot">
@@ -388,65 +360,6 @@ export function ComposeBody({
       {earlier}
       <CarriageNotice channel={channelLabel} blocks={carriageBlocks} />
     </>
-  );
-}
-
-// Why the reader is writing, asked where the record does not answer it. A
-// reply derives its category from the thread it answers, which the checks say.
-export function ComposeWhy({
-  anchorActivity,
-  flagged,
-  context,
-  onContextChange,
-}: Readonly<{
-  anchorActivity: Activity | undefined;
-  flagged: ReadonlySet<MissingField>;
-  context: CommunicationContext | "";
-  onContextChange: (next: CommunicationContext | "") => void;
-}>) {
-  const t = useT();
-  if (!asksWhy(anchorActivity)) {
-    return null;
-  }
-  const missing = context === "";
-  // One strip in the warning band: what is missing and why it matters, with
-  // the pick that fixes it at the end. Once picked it stays, without the warning.
-  return (
-    <div
-      className={
-        missing ? "compose-strip compose-strip-warning" : "compose-strip"
-      }
-    >
-      {missing && <ShieldAlert aria-hidden="true" />}
-      <p className="compose-strip-text">
-        {missing ? (
-          <>
-            <strong>{t("compose.whyMissing")}</strong>{" "}
-            {t("compose.whyMissingText")}
-          </>
-        ) : (
-          t("compose.why")
-        )}
-      </p>
-      <Field
-        className="compose-strip-field"
-        label={t("compose.why")}
-        labelHidden
-        error={flagged.has("context") ? t("compose.missingWhy") : undefined}
-      >
-        {(control) => (
-          <Select
-            {...control}
-            options={contextOptions(t).filter((o) => o.value !== "")}
-            value={context}
-            placeholder={t("compose.whyPick")}
-            onChange={(value) =>
-              onContextChange(value as CommunicationContext | "")
-            }
-          />
-        )}
-      </Field>
-    </div>
   );
 }
 

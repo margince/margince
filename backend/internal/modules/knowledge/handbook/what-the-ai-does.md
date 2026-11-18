@@ -15,7 +15,7 @@ Everything it suggests carries its evidence. Changes to your records either wait
 Also called: AI features, assistant, copilot, what can Margince AI do.
 
 ### Can the AI send email on my behalf?
-Inside the app, no: **Draft email** in the email composer writes a draft, and only you press **Send**. An outside agent you connected can send as you, at once, if it holds the **Send messages** permission. The screen where you allow that says it "sends messages as you, without asking first".
+Inside the app, no: **Draft email** in the email composer writes a draft, and only you press **Send**. An outside agent with **Send messages** permission can carry out your request to send without another click in Margince. If you did not ask it to send, it must ask you first. Permission alone does not approve a message; Margince cannot read the outside conversation. When Margince runs on its own, it stages sends for a human decision.
 
 Every send still needs recorded consent for its purpose. The Morning brief agent that runs during the night can never send.
 Also called: auto-send, send without asking, AI emails customers.

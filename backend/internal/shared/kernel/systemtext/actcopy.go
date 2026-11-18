@@ -144,7 +144,6 @@ var actDefinitions = map[string]Definition{
 	"act.verbs.delete_lead_source":                 {Words: langcopy.Phrase{En: "Delete lead source", De: "Lead-Quelle entfernen", Vi: "Xóa nguồn lead"}},
 	"act.verbs.delete_legal_entity_logo":           {Words: langcopy.Phrase{En: "Delete legal entity logo", De: "Logo einer Rechtseinheit entfernen", Vi: "Gỡ logo pháp nhân"}},
 	"act.verbs.demote_lead":                        {Words: langcopy.Phrase{En: "Demote lead", De: "Lead-Überführung rückgängig machen", Vi: "Hoàn tác chuyển đổi lead"}},
-	"act.verbs.direct_communication_send":          {Words: langcopy.Phrase{En: "Direct communication send", De: "Abgelehnte Nachricht auf Weisung senden", Vi: "Gửi tin nhắn bị từ chối theo quyết định của người dùng"}},
 	"act.verbs.discard_domain_question":            {Words: langcopy.Phrase{En: "Discard domain question", De: "Domain aus der eigenen Erfassung nehmen", Vi: "Loại tên miền khỏi việc thu thập của mình"}},
 	"act.verbs.discard_mail_draft":                 {Words: langcopy.Phrase{En: "Discard mail draft", De: "Nachrichtenentwurf verwerfen", Vi: "Hủy bản nháp tin nhắn"}},
 	"act.verbs.discard_reporting_report_draft":     {Words: langcopy.Phrase{En: "Discard reporting report draft", De: "Berichtsentwurf verwerfen", Vi: "Bỏ bản nháp báo cáo"}},

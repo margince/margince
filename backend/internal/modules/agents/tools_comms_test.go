@@ -518,6 +518,29 @@ func TestDraftEmailComposesAFirstMessageFromLinksAlone(t *testing.T) {
 	}
 }
 
+// An instruction to move an appointment names the requested follow-up on both
+// draft shapes, so the send can carry it as its communication_context.
+func TestDraftEmailNamesTheReasonAMovedAppointmentGives(t *testing.T) {
+	company := ids.NewV7()
+	tool := draftEmailTool{comms: &recordingComms{}, p: oneRecord(datasource.EntityCompany, company, `{}`, 1)}
+	for name, args := range map[string]string{
+		"first message": `{"links":[{"entity_type":"company","entity_id":"` + company.String() + `"}],"intent":"Termin verschieben"}`,
+		"reply":         `{"activity_id":"` + ids.NewV7().String() + `","intent":"please reschedule our call"}`,
+	} {
+		out, err := tool.Handle(context.Background(), json.RawMessage(args))
+		if err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		var got DraftEmailResult
+		if err := json.Unmarshal(out, &got); err != nil {
+			t.Fatalf("%s: decoding the draft: %v", name, err)
+		}
+		if got.CommunicationContext != "requested_followup" {
+			t.Errorf("%s: communication_context = %q, want requested_followup", name, got.CommunicationContext)
+		}
+	}
+}
+
 // The two shapes are alternatives, not a pair: a reply is filed where its
 // thread already is, so naming both leaves the filing ambiguous.
 func TestDraftEmailRefusesNeitherShapeAndBothAtOnce(t *testing.T) {

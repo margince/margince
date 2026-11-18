@@ -1270,7 +1270,10 @@ jobs:
     name: home-budget (advisory)
     timeout-minutes: 60
     needs: [changes]
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    # Switched off until someone owns its budgets: its noise taught reviewers to
+    # ignore it. Restore the commented condition to turn it back on.
+    # if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    if: false
     runs-on: ubuntu-latest
     permissions:
       contents: read

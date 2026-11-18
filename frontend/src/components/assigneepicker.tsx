@@ -41,7 +41,7 @@ type MemberStatus = components["schemas"]["User"]["status"];
  * seat that can write. An entry without the answer is offered, and the write
  * decides.
  */
-export function mayOwnRecords(entry: RosterEntry): boolean {
+function mayOwnRecords(entry: RosterEntry): boolean {
   if (!("display_name" in entry) || entry.is_agent) {
     return false;
   }

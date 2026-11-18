@@ -18,6 +18,7 @@ import {
   fillSendableForm,
   jsonResponse,
   pickWhy,
+  pressSend,
   problemResponse,
   render,
   stubRoutes,
@@ -93,17 +94,20 @@ function stubEngine(
   return sent;
 }
 
-/** One preview answer that waits until the test releases it. */
+/**
+ * One preview answer that waits until the test releases it. Each check that
+ * asks gets its own response, because a body can be read only once.
+ */
 function heldAnswer() {
-  let release: (answer: Response) => void = () => {
+  let release: (preview: Preview) => void = () => {
     throw new Error("No preview is waiting");
   };
-  const answer = new Promise<Response>((resolve) => {
+  const settled = new Promise<Preview>((resolve) => {
     release = resolve;
   });
   return {
-    answer,
-    release: (preview: Preview) => release(jsonResponse(preview)),
+    answer: () => settled.then((preview) => jsonResponse(preview)),
+    release: (preview: Preview) => release(preview),
   };
 }
 
@@ -145,7 +149,7 @@ describe("Send follows the check", () => {
   it("is off for a refusal, waits while the check runs, and frees once it allows", async () => {
     let held: ReturnType<typeof heldAnswer> | undefined;
     stubEngine((addresses) =>
-      held ? held.answer : refusedPreview(addresses[0] ?? "", OBJECTED),
+      held ? held.answer() : refusedPreview(addresses[0] ?? "", OBJECTED),
     );
     openComposer();
     await fillSendableForm();
@@ -230,7 +234,9 @@ describe("Send follows the check", () => {
   // recipients is not one about the message now on screen.
   it("does not free Send with the answer for the recipients before a change", async () => {
     let held: ReturnType<typeof heldAnswer> | undefined;
-    stubEngine((addresses) => (held ? held.answer : allowedPreview(addresses)));
+    stubEngine((addresses) =>
+      held ? held.answer() : allowedPreview(addresses),
+    );
     openComposer();
     await fillSendableForm();
     await screen.findByRole("button", { name: /recipients checked/i });
@@ -307,14 +313,15 @@ describe("a refusal a reason may lift", () => {
     );
     openComposer();
     await fillSendableForm();
-    await screen.findByText(WITH_REASON);
+    await screen.findByRole("button", { name: "Send with a reason…" });
+    expect(screen.queryByText(WITH_REASON)).toBeNull();
     const press = sendButton("Send with a reason…");
     expect(press).toBeEnabled();
 
     await userEvent.click(press);
     expect(
       await screen.findByRole("button", {
-        name: "Record the exception and send",
+        name: "Send email",
       }),
     ).toBeInTheDocument();
     expect(posted(sent)).toHaveLength(1);
@@ -322,13 +329,11 @@ describe("a refusal a reason may lift", () => {
     // Closed without sending, the next press reopens it and asks nothing new.
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
     await waitFor(() =>
-      expect(
-        screen.queryByRole("button", { name: "Record the exception and send" }),
-      ).toBeNull(),
+      expect(screen.queryByRole("button", { name: "Send email" })).toBeNull(),
     );
     await userEvent.click(sendButton("Send with a reason…"));
     await screen.findByRole("button", {
-      name: "Record the exception and send",
+      name: "Send email",
     });
     expect(posted(sent)).toHaveLength(1);
   });
@@ -348,5 +353,31 @@ describe("a refusal a reason may lift", () => {
       screen.queryByRole("button", { name: "Send with a recorded exception" }),
     ).toBeNull();
     expect(posted(sent)).toHaveLength(0);
+  });
+});
+
+describe("an older server's footer refusal", () => {
+  it("holds Send for the refused message and frees it once the message changes", async () => {
+    let presses = 0;
+    const sent = stubEngine((addresses) => allowedPreview(addresses), {
+      "POST /emails": () => {
+        presses += 1;
+        return presses === 1
+          ? problemResponse(
+              { code: "public_origin_unusable", title: "Unprocessable" },
+              422,
+            )
+          : jsonResponse({}, 202);
+      },
+    });
+    openComposer();
+    await fillSendableForm();
+    await pressSend();
+    await screen.findByText(/ask an administrator to update Margince/i);
+    expect(sendButton()).toBeDisabled();
+
+    await userEvent.type(screen.getByLabelText("Subject"), " again");
+    await pressSend();
+    await waitFor(() => expect(posted(sent)).toHaveLength(2));
   });
 });

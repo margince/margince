@@ -720,6 +720,7 @@ export const en = {
   "approval.preview.contextOptout": "Opt-out confirmation",
   "approval.preview.unsubscribeFooter":
     "Sending adds a recipient-specific unsubscribe link when the recipient has an applicable preference record. The private link is created at execution, not during review.",
+  "approval.preview.footerWarning": "Email footer warning",
   "approval.preview.disclosureText": "Disclosure appended when sent",
   "approval.preview.demoteArchive":
     "Restores the lead as Engaged and removes its qualification links. Archives the contact, its email addresses, phone numbers, channel identities and relationships; removes its tags and list memberships. Activities stay where they are.",
@@ -2986,6 +2987,7 @@ export const en = {
   "deal.card.moveTo": "Move to {stage}",
   "deal.card.markWon": "Mark won",
   "deal.card.markLost": "Mark lost",
+  "deal.card.changeCloseDate": "Change close date",
   "deal.card.closedReopen":
     "This deal is closed. Reopen it on its page to move it.",
   "deal.card.copyLink": "Copy link",
@@ -3377,6 +3379,9 @@ export const en = {
   "roster.failedUsers": "Colleagues did not load.",
   "roster.failedTeams": "Teams did not load.",
   "owner.rosterFailed": "Colleagues did not load. Reload the page to pick one.",
+  "ownerPick.change": "Change owner",
+  "ownerPick.search": "Search colleagues",
+  "ownerPick.done": "Assigned to {name}",
   "ref.notInRoster": "Currently assigned (no longer in the user list)",
 
   // A record search that ANSWERED and found nothing. Distinct from a search
@@ -5949,8 +5954,6 @@ export const en = {
   "lead.terminalDisqualified": "Disqualified. This lead is read-only.",
   "lead.marker": "Lead",
   "lead.assignToMe": "Assign to me",
-  "lead.assignChoose": "Choose a colleague",
-  "lead.assignNobodyElse": "No other user to assign this lead to.",
   "lead.saveOverride": "Save override",
   "lead.overrideScoreValue": "Score",
   "lead.trigger.inboundReply": "Inbound reply",
@@ -8044,6 +8047,7 @@ export const en = {
   "compose.why.contract": "Their contract",
   "compose.why.account": "Their customer relationship",
   "compose.why.marketing": "Marketing",
+  "sendPermission.stopWithReason": "Sending needs your reason",
   "sendPermission.refused": "Message cannot be sent",
   "sendPermission.sayWhy": "Record reason for contact",
   "sendPermission.unproven": "No recorded reason to contact this recipient",
@@ -8054,6 +8058,23 @@ export const en = {
   "sendPermission.missingContext": "This message needs one more detail",
   "sendPermission.missingPermission": "Permission needed for this message",
   "sendPermission.reason.chooseDeal": "Choose the deal for this follow-up.",
+  "sendPermission.reason.footerIncomplete":
+    "Read the footer details below. You can send this email with a recorded reason.",
+  "sendPermission.footer.language": "{detail} in {language}",
+  "sendPermission.footer.means": "{detail} with {methods}",
+  "sendPermission.footer.email": "an email address",
+  "sendPermission.footer.phone": "a phone number",
+  "sendPermission.footer.web": "a website or social link",
+  "sendPermission.footer.privacy": "privacy contact information",
+  "sendPermission.footer.advertiser": "advertiser contact information",
+  "sendPermission.footer.identity": "the company name and address",
+  "sendPermission.footer.unknown": "some company footer text",
+  "sendPermission.footer.title": "Email footer needs attention",
+  "sendPermission.footer.preview": "Company details included in this email",
+  "sendPermission.footer.omits": "This message will omit: {items}.",
+  "sendPermission.footer.objection": "opt-out instructions",
+  "sendPermission.footer.privateLink": "a private opt-out link",
+  "sendPermission.footer.publicLink": "a working opt-out link",
   "sendPermission.reason.lawfulBasisUnconfirmed":
     "No lawful basis is recorded for this contact, and the warning was not confirmed before sending.",
   "sendPermission.appliesTo": "This applies to {address}.",
@@ -8064,6 +8085,8 @@ export const en = {
   "compose.sendWithReason": "Send with a reason…",
   "compose.scheduleWithReason": "Schedule with a reason…",
   "compose.holdForCheck": "Send waits for the send check.",
+  "compose.legacyFooter":
+    "This server cannot send with a reason when company email details are missing. Your draft is kept. Ask an administrator to update Margince, then try again.",
   "compose.holdRefused":
     "Send is off. Fix what the check above names, or remove that recipient.",
   "compose.holdWithReason":
@@ -8098,21 +8121,21 @@ export const en = {
   "sendPermission.unanswered":
     "The send check did not complete. Sending runs the check again.",
   "sendPermission.reason.objected":
-    "The recipient objected to marketing, so no marketing goes to them. A reply or a message they asked for can still go.",
+    "The recipient objected to marketing. Sending this email does not lift their objection.",
   "sendPermission.reason.withdrawn":
-    "The recipient withdrew consent for this kind of message, so it cannot go to them.",
+    "The recipient withdrew consent for this kind of message. Sending this email does not restore consent.",
   "sendPermission.reason.restricted":
-    "The recipient’s data is under a processing restriction. Only security, privacy and opt-out notices can still go to them.",
+    "The recipient’s data is under a processing restriction. Sending this email does not lift the restriction.",
   "sendPermission.reason.askedUsToStop":
-    "The recipient asked not to be contacted. Only security, privacy and opt-out notices can still go to them.",
+    "The recipient asked not to be contacted. Sending this email does not change their request.",
   "sendPermission.reason.bounced":
     "This address does not accept mail. Correct the address; an override does not apply.",
   "sendPermission.reason.optedOutAfterRequest":
-    "The recipient opted out of marketing after asking for this quote. Confirm with them that they still want it, then record their new request.",
+    "The recipient opted out of marketing after requesting this quote. Sending this email does not change their choice.",
   "sendPermission.reason.permissionRequired":
-    "This marketing message has no recorded permission under the applicable rules. A staff exception cannot replace consent or the required evidence.",
+    "This marketing message has no recorded permission under the applicable rules. Record consent or the required evidence.",
   "sendPermission.reason.consentRequired":
-    "Marketing to a recipient in this country needs their prior consent. No exception can replace it.",
+    "Marketing to a recipient in this country needs their prior consent.",
   "sendPermission.reason.dealNotRequested":
     "A deal alone does not show the recipient asked for this negotiation. Their request, for example on a call or in a meeting, needs to be on record.",
   "sendPermission.reason.tooMany":
@@ -8193,8 +8216,10 @@ export const en = {
   "directSend.alreadySettled":
     "This has already been decided. Open the review for the outcome.",
   "directSend.couldNotOpen": "The review could not be opened. Retry.",
-  "directSend.title": "Send on your own authority",
-  "directSend.confirm": "Record the exception and send",
+  "directSend.title": "Send email with reason?",
+  "directSend.confirm": "Send email",
+  "directSend.changed":
+    "The email checks changed. Read the updated details and confirm again. Your reason is kept.",
   "directSend.failed":
     "The message was not sent. Your decision may already be recorded; open the review before deciding again.",
   "directSend.noWarningServed":
@@ -8224,8 +8249,6 @@ export const en = {
     "A message with an unsubscribe link goes to one recipient at a time, because the link is that recipient’s consent record. Send it once per recipient, with no Cc.",
   "compose.newContact":
     "{address} is on no record yet. Sending adds it as your contact.",
-  "compose.multiRecipientWarning":
-    "This purpose adds an unsubscribe link, so a send to more than one recipient is refused. Send it once per recipient, with no Cc.",
   "compose.relinkTitle": "Relink this activity",
   "compose.relinkTarget":
     "Search contacts, companies, deals, leads or projects",
@@ -9951,7 +9974,7 @@ export const en = {
   "settings.tierRead":
     "Read, summarize, draft: runs immediately and is fully logged.",
   "settings.tierSend":
-    "Send email, book meetings, update a contact or deal: runs immediately if the agent has that permission. Granting the permission is the approval.",
+    "Routine updates run automatically and can be undone. Clients must get approval or a direct instruction to send. Unattended sends wait for approval.",
   "settings.tierWait": "Enrichment from the web: waits in Approvals.",
   "settings.tierAdvance":
     "Advance or close a deal, or file activities under a project: runs immediately if the agent has that permission.",
@@ -12598,7 +12621,7 @@ export const en = {
     "Mail becomes contacts, companies and activities automatically.",
   "ob.s4.scope2Lead": "Sending is included.",
   "ob.s4.scope2Rest":
-    "Margince can send from this mailbox when you send, and when you give an agent a passport that allows sending. Giving that passport is the approval. You can withdraw it at any time.",
+    "Margince can send from this mailbox when you send or instruct your assistant to send. Send permission alone does not approve a message. Unattended sends wait for approval. Access can be withdrawn at any time.",
   "ob.s4.scope3Lead": "Data stays in your company.",
   "ob.s4.scope3Rest": "Export or delete everything at any time.",
   "ob.s4.scope4Lead": "Disconnect in one click.",
@@ -18098,7 +18121,8 @@ export const en = {
   "consent.scopeNote.read": "Sees what you can see",
   "consent.scopeNote.draft": "Prepares messages for your review",
   "consent.scopeNote.write": "Creates, edits and archives records as you",
-  "consent.scopeNote.send": "Sends messages as you, without asking first",
+  "consent.scopeNote.send":
+    "Allows sending; the client must get approval or a direct instruction first. Permission alone is not approval",
   "consent.scopeNote.enrich": "Runs AI work and buys contact data",
   "consent.scopesLegend": "What it may do",
   "consent.ceiling":
@@ -19637,9 +19661,6 @@ export const en = {
   "project.owner": "Owner",
   "project.ownerMe": "Me",
   "project.assignOwner": "Assign to a colleague",
-  "project.assignOwnerTitle": "Assign to a colleague",
-  "project.assignOwnerSearch": "Search colleagues",
-  "project.assignOwnerDone": "Assigned to {name}",
   "project.description": "Description",
   "project.targetEnd": "Target end date",
   "project.new": "New project",
@@ -21067,8 +21088,7 @@ export const en = {
   "firstRun.ignite.cannot": "Cannot",
   "firstRun.ignite.read": "read the company website and report what it found",
   "firstRun.ignite.draft": "draft in the voice you trained",
-  "firstRun.ignite.act":
-    "send anything or change a record without your approval",
+  "firstRun.ignite.act": "send without a direct instruction or approval",
   "firstRun.ignite.carryOn": "Continue",
   "firstRun.ignite.leaving": "Checking setup…",
   "firstRun.ai.foot":

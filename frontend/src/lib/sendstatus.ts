@@ -21,6 +21,7 @@ export type RefusedRecipient = Readonly<{
   requestedCategory?: string;
   /** The server's answer to whether a recorded reason may lift it. */
   canBeOverruled: boolean;
+  footerFindings?: readonly components["schemas"]["FooterFinding"][];
 }>;
 
 export type SendStatusKind =
@@ -49,6 +50,7 @@ const SEVERITY: readonly RefusalKind[] = [
   "missingPermission",
   "missingContext",
   "missingEvidence",
+  "missingFooter",
 ];
 
 /**
@@ -89,6 +91,7 @@ export function decidingRefusal(
 /** A preview recipient as a refusal. Absent overrulability is not a yes. */
 export function refusalOf(recipient: PreviewRecipient): RefusedRecipient {
   return {
+    footerFindings: recipient.footer_findings,
     address: recipient.address,
     reasonCode: recipient.reason_code,
     category: recipient.resolved_category,

@@ -16,13 +16,27 @@ func TestWireCarriesTheVoiceDegradedFlag(t *testing.T) {
 	t.Parallel()
 	draft := Draft{Subject: "s", Body: "b"}
 
-	degraded := Wire(draft, crmcontracts.WrittenByModel, true, "en")
+	degraded := Wire(draft, crmcontracts.WrittenByModel, true, "en", "")
 	if degraded.VoiceDegraded == nil || !*degraded.VoiceDegraded {
 		t.Fatal("a degraded voice load must be stamped on the wire draft")
 	}
 
-	clean := Wire(draft, crmcontracts.WrittenByModel, false, "en")
+	clean := Wire(draft, crmcontracts.WrittenByModel, false, "en", "")
 	if clean.VoiceDegraded == nil || *clean.VoiceDegraded {
 		t.Fatal("a clean load must stamp voice_degraded=false, not omit it")
+	}
+}
+
+// A draft asked to move an appointment names the requested follow-up, for the
+// composer to send with it. Any other instruction names no reason.
+func TestWireCarriesTheReasonTheInstructionNames(t *testing.T) {
+	t.Parallel()
+	draft := Draft{Subject: "s", Body: "b"}
+	moved := Wire(draft, crmcontracts.WrittenByModel, false, "de", "Termin verschieben")
+	if moved.CommunicationContext == nil || *moved.CommunicationContext != crmcontracts.CommunicationContextRequestedFollowup {
+		t.Fatalf("communication_context = %v, want requested_followup", moved.CommunicationContext)
+	}
+	if other := Wire(draft, crmcontracts.WrittenByModel, false, "en", "send the brochure"); other.CommunicationContext != nil {
+		t.Fatalf("an instruction naming no reason gave %v", *other.CommunicationContext)
 	}
 }

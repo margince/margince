@@ -107,6 +107,42 @@ export const WithAnItemInFlight: Story = {
   play: openPanel,
 };
 
+// A phone on its side caps the panel, which scrolls. A `busyLabel` or `reason`
+// puts its button in a wrapper, and every row still keeps the 24px WCAG target.
+export const CappedByAShortWindow: Story = {
+  render: () => (
+    <OverflowMenu label="More actions">
+      <Button>Edit</Button>
+      <Button>Merge with…</Button>
+      <Button>Share</Button>
+      <Button>Full history</Button>
+      <Button busyLabel="Saving…">Change close date</Button>
+      <Button busyLabel="Saving…">Change owner</Button>
+      <Button reason="An archived deal takes no writes.">Change amount</Button>
+      <Button>Move to stage</Button>
+      <Button>Mark won</Button>
+      <Button>Mark lost</Button>
+      <Button>Export</Button>
+      <Button variant="danger">Archive</Button>
+    </OverflowMenu>
+  ),
+  globals: { viewport: { value: "phoneOnItsSide" } },
+  tags: ["uat-phone-on-its-side"],
+  play: async (context) => {
+    await openPanel?.(context);
+    const panel = screen
+      .getByRole("button", { name: "Edit" })
+      .closest(".overflow-menu-items");
+    await expect(panel?.scrollHeight).toBeGreaterThan(panel?.clientHeight ?? 0);
+    for (const name of ["Change close date", "Change owner", "Change amount"]) {
+      const row = screen.getByRole("button", { name });
+      await expect(row.getBoundingClientRect().height).toBeGreaterThanOrEqual(
+        24,
+      );
+    }
+  },
+};
+
 // Inside a drawer the panel opens over the drawer, where a pointer reaches it.
 export const InsideADrawer: Story = {
   render: () => (

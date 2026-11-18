@@ -241,6 +241,12 @@ func (s *Store) RescheduleScheduledSend(ctx context.Context, id ids.UUID, sched 
 	if err != nil {
 		return ScheduledSend{}, err
 	}
+	// The version check below refuses a row that was held after this read.
+	if current.Status == ScheduledStatusHeld {
+		if err := mayReleaseHeld(ctx); err != nil {
+			return ScheduledSend{}, err
+		}
+	}
 
 	if err := s.tx(ctx, func(tx pgx.Tx) error {
 		return s.RescheduleInTx(ctx, tx, id, sched, expectedVersion, current, timer)

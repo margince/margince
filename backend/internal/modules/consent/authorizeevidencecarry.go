@@ -38,19 +38,25 @@ import (
 // to the reader, and the sparse form is what makes the column readable to a
 // human looking at a decision row.
 type stagedEvidence struct {
-	ActivityID     *ids.UUID `json:"activity_id,omitempty"`
-	DealID         *ids.UUID `json:"deal_id,omitempty"`
-	InvoiceID      *ids.UUID `json:"invoice_id,omitempty"`
-	ContractID     *ids.UUID `json:"contract_id,omitempty"`
-	ConsentEventID *ids.UUID `json:"consent_event_id,omitempty"`
-	BasisID        *ids.UUID `json:"basis_id,omitempty"`
-	LeadID         *ids.UUID `json:"lead_id,omitempty"`
+	PolicyRevision string                     `json:"policy_revision,omitempty"`
+	FooterDigest   string                     `json:"footer_digest,omitempty"`
+	FooterFindings []commsauthz.FooterFinding `json:"footer_findings,omitempty"`
+	ActivityID     *ids.UUID                  `json:"activity_id,omitempty"`
+	DealID         *ids.UUID                  `json:"deal_id,omitempty"`
+	InvoiceID      *ids.UUID                  `json:"invoice_id,omitempty"`
+	ContractID     *ids.UUID                  `json:"contract_id,omitempty"`
+	ConsentEventID *ids.UUID                  `json:"consent_event_id,omitempty"`
+	BasisID        *ids.UUID                  `json:"basis_id,omitempty"`
+	LeadID         *ids.UUID                  `json:"lead_id,omitempty"`
 }
 
 // evidenceJSON renders the evidence a caller named for storage on the decision
 // row. An empty Evidence renders as {}, which is the column's own default.
 func evidenceJSON(e commsauthz.Evidence) ([]byte, error) {
 	out, err := json.Marshal(stagedEvidence{
+		PolicyRevision: e.PolicyRevision,
+		FooterFindings: e.FooterFindings,
+		FooterDigest:   e.FooterDigest,
 		ActivityID:     nonZeroID(e.ActivityID),
 		DealID:         nonZeroID(e.DealID),
 		InvoiceID:      nonZeroID(e.InvoiceID),
@@ -82,6 +88,9 @@ func evidenceFrom(raw []byte) commsauthz.Evidence {
 		return commsauthz.Evidence{}
 	}
 	return commsauthz.Evidence{
+		PolicyRevision: in.PolicyRevision,
+		FooterFindings: in.FooterFindings,
+		FooterDigest:   in.FooterDigest,
 		ActivityID:     derefID(in.ActivityID),
 		DealID:         derefID(in.DealID),
 		InvoiceID:      derefID(in.InvoiceID),

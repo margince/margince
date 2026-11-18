@@ -14,6 +14,7 @@ import {
   findThreadChoice,
   jsonResponse,
   pickWhy,
+  pressSend,
   render,
   stubRoutes,
   WHY_ASK,
@@ -78,7 +79,7 @@ describe("what the composer says this message is", () => {
     await userEvent.tab();
     await userEvent.type(screen.getByLabelText("Subject"), "Re: quote");
     writeMessage("Body", "Attached.");
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
 
     await waitFor(() =>
       expect(
@@ -140,7 +141,7 @@ describe("what the composer says this message is", () => {
     await userEvent.tab();
     await userEvent.type(screen.getByLabelText("Subject"), "Re: quote");
     writeMessage("Body", "Attached.");
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
 
     await waitFor(() =>
       expect(
@@ -171,7 +172,7 @@ describe("what the composer says this message is", () => {
     await userEvent.type(screen.getByLabelText("Subject"), "Hello");
     writeMessage("Body", "First contact.");
     await pickWhy(WHY_LABEL.requestedFollowup);
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
 
     await waitFor(() =>
       expect(sent.find((r) => r.key === "POST /emails")).toBeTruthy(),
@@ -204,7 +205,7 @@ describe("what the composer says this message is", () => {
     await userEvent.tab();
     await userEvent.type(screen.getByLabelText("Subject"), "Hello");
     writeMessage("Body", "First contact.");
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
 
     expect(
       await screen.findByText("Select the reason for contact."),
@@ -634,7 +635,7 @@ it.each([false, true])(
     await userEvent.type(screen.getByLabelText("Subject"), "Meeting proposal");
     writeMessage("Body", "Please choose a time.");
     if (change) await pickWhy(WHY_LABEL.requestedFollowup);
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
     await waitFor(() =>
       expect(sent.find((r) => r.key === "POST /emails")).toBeTruthy(),
     );

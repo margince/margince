@@ -743,6 +743,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.preview.contextOptout": "Xác nhận hủy đăng ký",
   "approval.preview.unsubscribeFooter":
     "Khi gửi, hệ thống thêm liên kết hủy đăng ký riêng nếu người nhận có bản ghi tùy chọn phù hợp. Liên kết riêng được tạo khi thực hiện, không phải khi xem xét.",
+  "approval.preview.footerWarning": "Lưu ý về chân trang email",
   "approval.preview.disclosureText": "Thông tin công bố được thêm khi gửi",
   "approval.preview.demoteArchive":
     "Khôi phục lead về trạng thái Đã tương tác và xóa các liên kết xác định đủ điều kiện. Lưu trữ liên hệ, địa chỉ email, số điện thoại, danh tính kênh và các mối quan hệ; xóa thẻ và tư cách thành viên danh sách. Hoạt động giữ nguyên liên kết.",
@@ -2985,6 +2986,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.card.moveTo": "Chuyển sang {stage}",
   "deal.card.markWon": "Đánh dấu thắng",
   "deal.card.markLost": "Đánh dấu thua",
+  "deal.card.changeCloseDate": "Đổi ngày chốt",
   "deal.card.closedReopen":
     "Deal này đã đóng. Mở lại deal trên trang của deal để chuyển giai đoạn.",
   "deal.card.copyLink": "Sao chép liên kết",
@@ -3359,6 +3361,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "roster.failedTeams": "Không thể tải danh sách nhóm.",
   "owner.rosterFailed":
     "Không thể tải danh sách thành viên. Hãy tải lại trang để chọn một người.",
+  "ownerPick.change": "Đổi người chịu trách nhiệm",
+  "ownerPick.search": "Tìm đồng nghiệp",
+  "ownerPick.done": "Đã giao cho {name}",
   "ref.notInRoster":
     "Hiện đang được giao (không còn trong danh sách thành viên)",
   "picker.noMatch": "Không có kết quả phù hợp",
@@ -5864,8 +5869,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.terminalDisqualified": "Đã loại. Lead này ở chế độ chỉ xem.",
   "lead.marker": "Lead",
   "lead.assignToMe": "Giao cho tôi",
-  "lead.assignChoose": "Chọn một đồng nghiệp",
-  "lead.assignNobodyElse": "Không có thành viên nào khác để giao lead này.",
   "lead.saveOverride": "Lưu ghi đè",
   "lead.overrideScoreValue": "Điểm",
   "lead.trigger.inboundReply": "Thư trả lời đến",
@@ -7851,6 +7854,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.why.contract": "Hợp đồng của họ",
   "compose.why.account": "Quan hệ khách hàng của họ",
   "compose.why.marketing": "Tiếp thị",
+  "sendPermission.stopWithReason": "Cần lý do của bạn để gửi",
   "sendPermission.refused": "Không thể gửi tin nhắn",
   "sendPermission.sayWhy": "Ghi lý do liên hệ",
   "sendPermission.unproven":
@@ -7861,6 +7865,23 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "sendPermission.missingContext": "Tin nhắn này còn thiếu một thông tin",
   "sendPermission.missingPermission": "Cần được phép gửi thư này",
   "sendPermission.reason.chooseDeal": "Chọn giao dịch cho lần liên hệ lại này.",
+  "sendPermission.reason.footerIncomplete":
+    "Đọc thông tin chân trang bên dưới. Bạn có thể gửi email này kèm lý do được ghi lại.",
+  "sendPermission.footer.language": "{detail} bằng {language}",
+  "sendPermission.footer.means": "{detail} có {methods}",
+  "sendPermission.footer.email": "địa chỉ email",
+  "sendPermission.footer.phone": "số điện thoại",
+  "sendPermission.footer.web": "trang web hoặc liên kết mạng xã hội",
+  "sendPermission.footer.privacy": "thông tin liên hệ về quyền riêng tư",
+  "sendPermission.footer.advertiser": "thông tin liên hệ nhà quảng cáo",
+  "sendPermission.footer.identity": "tên và địa chỉ công ty",
+  "sendPermission.footer.unknown": "một phần thông tin chân trang công ty",
+  "sendPermission.footer.title": "Cần kiểm tra chân trang email",
+  "sendPermission.footer.preview": "Thông tin công ty trong email này",
+  "sendPermission.footer.omits": "Email này sẽ thiếu: {items}.",
+  "sendPermission.footer.objection": "hướng dẫn từ chối nhận email",
+  "sendPermission.footer.privateLink": "liên kết từ chối riêng",
+  "sendPermission.footer.publicLink": "liên kết từ chối hoạt động",
   "sendPermission.reason.lawfulBasisUnconfirmed":
     "Chưa có căn cứ xử lý được ghi nhận cho liên hệ này và cảnh báo chưa được xác nhận trước khi gửi.",
   "sendPermission.appliesTo": "Điều này áp dụng cho {address}.",
@@ -7871,6 +7892,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.sendWithReason": "Gửi kèm lý do…",
   "compose.scheduleWithReason": "Lên lịch kèm lý do…",
   "compose.holdForCheck": "Nút Gửi chờ bước kiểm tra gửi.",
+  "compose.legacyFooter":
+    "Máy chủ này chưa hỗ trợ gửi kèm lý do khi thiếu thông tin email của công ty. Bản nháp được giữ lại. Liên hệ quản trị viên để cập nhật Margince rồi thử lại.",
   "compose.holdRefused":
     "Không thể gửi. Hãy sửa điều bước kiểm tra ở trên nêu ra, hoặc bỏ người nhận đó.",
   "compose.holdWithReason":
@@ -7906,21 +7929,21 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "sendPermission.unanswered":
     "Lần kiểm tra trước khi gửi chưa hoàn tất. Khi gửi sẽ kiểm tra lại.",
   "sendPermission.reason.objected":
-    "Người nhận đã phản đối tin tiếp thị, nên không gửi tin tiếp thị cho họ. Thư trả lời hoặc thư họ đã yêu cầu vẫn có thể gửi.",
+    "Người nhận đã phản đối quảng cáo. Gửi email này không hủy bỏ sự phản đối của họ.",
   "sendPermission.reason.withdrawn":
-    "Người nhận đã rút lại sự đồng ý cho loại thư này, nên không thể gửi thư này cho họ.",
+    "Người nhận đã rút lại sự đồng ý cho loại thư này. Gửi email này không khôi phục sự đồng ý.",
   "sendPermission.reason.restricted":
-    "Dữ liệu của người nhận đang bị hạn chế xử lý. Chỉ thông báo bảo mật, quyền riêng tư và xác nhận hủy đăng ký mới có thể gửi cho họ.",
+    "Dữ liệu của người nhận đang bị hạn chế xử lý. Gửi email này không gỡ bỏ hạn chế đó.",
   "sendPermission.reason.askedUsToStop":
-    "Người nhận đã yêu cầu không được liên hệ. Chỉ thông báo bảo mật, quyền riêng tư và xác nhận hủy đăng ký mới có thể gửi cho họ.",
+    "Người nhận đã yêu cầu không liên hệ nữa. Gửi email này không thay đổi yêu cầu của họ.",
   "sendPermission.reason.bounced":
     "Địa chỉ này không nhận thư. Sửa lại địa chỉ; trường hợp này không thể bỏ qua.",
   "sendPermission.reason.optedOutAfterRequest":
-    "Người nhận đã từ chối tin tiếp thị sau khi yêu cầu báo giá này. Hãy xác nhận lại với họ rằng họ vẫn muốn nhận, rồi ghi nhận yêu cầu mới của họ.",
+    "Người nhận đã từ chối quảng cáo sau khi yêu cầu báo giá. Gửi email này không thay đổi lựa chọn của họ.",
   "sendPermission.reason.permissionRequired":
-    "Chưa có căn cứ cho phép gửi tin tiếp thị này theo quy tắc áp dụng. Ngoại lệ của nhân viên không thay thế sự đồng ý hoặc bằng chứng bắt buộc.",
+    "Chưa có căn cứ cho phép gửi tin tiếp thị này theo quy tắc áp dụng. Hãy ghi nhận sự đồng ý hoặc bằng chứng bắt buộc.",
   "sendPermission.reason.consentRequired":
-    "Tin tiếp thị gửi người nhận ở quốc gia này cần sự đồng ý trước của họ. Không có ngoại lệ nào thay thế được.",
+    "Tin tiếp thị gửi người nhận ở quốc gia này cần sự đồng ý trước của họ.",
   "sendPermission.reason.dealNotRequested":
     "Chỉ một giao dịch thì chưa cho thấy người nhận đã yêu cầu cuộc thương lượng này. Yêu cầu của họ, ví dụ qua cuộc gọi hoặc cuộc họp, cần được ghi nhận.",
   "sendPermission.reason.tooMany":
@@ -7991,8 +8014,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "directSend.alreadySettled":
     "Đã có quyết định cho mục này. Mở phần xem lại để xem kết quả.",
   "directSend.couldNotOpen": "Không thể mở phần xem lại. Thử lại.",
-  "directSend.title": "Gửi theo thẩm quyền của bạn",
-  "directSend.confirm": "Ghi nhận ngoại lệ và gửi",
+  "directSend.title": "Gửi email kèm lý do?",
+  "directSend.confirm": "Gửi email",
+  "directSend.changed":
+    "Kết quả kiểm tra email đã thay đổi. Đọc thông tin mới và xác nhận lại. Lý do của bạn vẫn được giữ.",
   "directSend.failed":
     "Không thể gửi tin nhắn. Quyết định có thể đã được ghi nhận; mở phần xem lại trước khi quyết định lại.",
   "directSend.noWarningServed":
@@ -8021,8 +8046,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Tin nhắn có liên kết hủy đăng ký chỉ gửi cho một người nhận mỗi lần, vì liên kết đó gắn với sự đồng ý của riêng người nhận đó. Gửi riêng cho từng người nhận, không dùng Cc.",
   "compose.newContact":
     "{address} chưa có trong hồ sơ nào. Khi gửi, địa chỉ này sẽ được thêm làm liên hệ của bạn.",
-  "compose.multiRecipientWarning":
-    "Mục đích này thêm liên kết hủy đăng ký, nên tin nhắn gửi cho nhiều hơn một người nhận sẽ bị từ chối. Gửi riêng cho từng người nhận, không dùng Cc.",
   "compose.relinkTitle": "Liên kết hoạt động với hồ sơ khác",
   "compose.relinkTarget": "Tìm liên hệ, công ty, deal, lead hoặc dự án",
   "compose.relinkNoVersion":
@@ -9680,7 +9703,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.tierRead":
     "Đọc, tóm tắt, soạn nháp: chạy ngay, ghi nhật ký đầy đủ.",
   "settings.tierSend":
-    "Gửi email, đặt lịch họp, cập nhật liên hệ hoặc deal: chạy ngay nếu agent có quyền đó. Cấp quyền chính là phê duyệt.",
+    "Cập nhật thường ngày tự động và có thể hoàn tác. Trợ lý phải có yêu cầu hoặc sự cho phép của bạn trước khi gửi; gửi tự động phải chờ duyệt.",
   "settings.tierWait": "Bổ sung dữ liệu từ web: chờ trong Phê duyệt.",
   "settings.tierAdvance":
     "Chuyển giai đoạn hoặc chốt deal, gắn hoạt động vào dự án: chạy ngay nếu trợ lý có quyền đó.",
@@ -12322,7 +12345,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "ob.s4.scope1Rest": "Thư tự động trở thành liên hệ, công ty và hoạt động.",
   "ob.s4.scope2Lead": "Bao gồm quyền gửi.",
   "ob.s4.scope2Rest":
-    "Margince có thể gửi từ hộp thư này khi bạn gửi, và khi bạn cấp cho một agent passport có quyền gửi. Cấp passport đó chính là phê duyệt. Có thể thu hồi passport bất cứ lúc nào.",
+    "Margince có thể gửi từ hộp thư này khi bạn tự gửi hoặc yêu cầu trực tiếp trợ lý gửi. Quyền gửi không phải là phê duyệt cho một tin nhắn. Gửi tự động phải chờ bạn duyệt. Có thể thu hồi quyền truy cập bất cứ lúc nào.",
   "ob.s4.scope3Lead": "Dữ liệu nằm trong công ty của bạn.",
   "ob.s4.scope3Rest": "Xuất hoặc xóa toàn bộ bất cứ lúc nào.",
   "ob.s4.scope4Lead": "Ngắt kết nối bằng một cú nhấp.",
@@ -17820,7 +17843,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "consent.scopeNote.write":
     "Tạo, sửa và chuyển hồ sơ vào kho lưu trữ với danh nghĩa của bạn",
   "consent.scopeNote.send":
-    "Gửi tin nhắn với danh nghĩa của bạn, không hỏi trước",
+    "Cho phép gửi; trợ lý phải nhận được sự cho phép hoặc yêu cầu trực tiếp trước khi gửi. Quyền gửi không phải là phê duyệt",
   "consent.scopeNote.enrich": "Chạy việc AI và mua dữ liệu liên hệ",
   "consent.scopesLegend": "Được làm những gì",
   "consent.ceiling":
@@ -19312,9 +19335,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "project.owner": "Người chịu trách nhiệm",
   "project.ownerMe": "Tôi",
   "project.assignOwner": "Giao cho một đồng nghiệp",
-  "project.assignOwnerTitle": "Giao cho một đồng nghiệp",
-  "project.assignOwnerSearch": "Tìm đồng nghiệp",
-  "project.assignOwnerDone": "Đã giao cho {name}",
   "project.description": "Mô tả",
   "project.targetEnd": "Ngày kết thúc dự kiến",
   "project.new": "Dự án mới",
@@ -20600,7 +20620,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "firstRun.ignite.read":
     "đọc trang web của công ty và báo cáo những gì tìm được",
   "firstRun.ignite.draft": "soạn theo giọng văn đã huấn luyện",
-  "firstRun.ignite.act": "gửi bất cứ thứ gì hay sửa hồ sơ khi bạn chưa duyệt",
+  "firstRun.ignite.act":
+    "gửi khi chưa có yêu cầu trực tiếp hoặc sự cho phép của bạn",
   "firstRun.ignite.carryOn": "Tiếp tục",
   "firstRun.ignite.leaving": "Đang kiểm tra thiết lập…",
   "firstRun.step.model": "Mô hình",
