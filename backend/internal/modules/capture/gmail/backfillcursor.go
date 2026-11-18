@@ -45,7 +45,7 @@ func parseHistoryCursor(token string) (historyCursor, bool, error) {
 }
 
 func (cursor historyCursor) validate() error {
-	if cursor.Next == nil || cursor.IDs == nil || len(cursor.IDs) > backfillPageSize {
+	if cursor.Next == nil || cursor.IDs == nil || len(cursor.IDs) > MaxBackfillPageSize {
 		return errors.New("gmail: incomplete or oversized history cursor")
 	}
 	seen := make(map[string]bool, len(cursor.IDs))
@@ -96,7 +96,7 @@ func (c *Connector) listHistoryPage(ctx context.Context, access, query, token st
 		return cursor, err
 	}
 	page, err := rateLimited(ctx, gate, func() (historyCursor, error) {
-		ids, next, err := c.api.ListAfter(ctx, access, query, token, backfillPageSize)
+		ids, next, err := c.api.ListAfter(ctx, access, query, token, c.tuning.pageSize())
 		return historyCursor{IDs: ids, Next: &next}, err
 	})
 	if err != nil {

@@ -27,11 +27,6 @@ const (
 	// each without spending the quota faster than a rate limit gives back.
 	backfillFetchWorkers = 4
 
-	// backfillLookahead bounds how far the fetches may run ahead of the
-	// captures. A full message can be tens of megabytes, so a slow capture must
-	// not let a whole page of downloads pile up in memory.
-	backfillLookahead = 2 * backfillFetchWorkers
-
 	// rateWaitInPage is the longest wait a page takes inside itself when Gmail
 	// says slow down. A longer wait ends the page instead, and the engine comes
 	// back after it, holding no worker meanwhile.
@@ -130,17 +125,41 @@ func rateLimited[T any](ctx context.Context, g *rateGate, fn func() (T, error)) 
 	}
 }
 
-// inOrder walks n messages with backfillFetchWorkers fetches in flight and
+// pageSize is how many ids one history listing asks for.
+func (t BackfillTuning) pageSize() int {
+	if t.PageSize > 0 {
+		return t.PageSize
+	}
+	return backfillPageSize
+}
+
+// walkSize answers the fetches in flight and how far they may run ahead of the
+// captures. The lookahead never falls below the workers, or the extra workers
+// would sit idle.
+func (t BackfillTuning) walkSize() (workers, lookahead int) {
+	workers = backfillFetchWorkers
+	if t.FetchWorkers > 0 {
+		workers = t.FetchWorkers
+	}
+	lookahead = 2 * workers
+	if t.Lookahead > 0 {
+		lookahead = t.Lookahead
+	}
+	return workers, max(lookahead, workers)
+}
+
+// inOrder walks n messages with the tuned number of fetches in flight and
 // consumes them in listing order. budget covers fetch and consumption; a nil
 // budget skips accounting.
 func inOrder(
-	ctx context.Context, n int,
+	ctx context.Context, tuning BackfillTuning, n int,
 	fetch func(ctx context.Context, i int) (Message, error),
 	consume func(i int, v Message, err error) error,
 	budget *semaphore.Weighted, reservationBytes int64,
 ) error {
+	workers, lookahead := tuning.walkSize()
 	walk := orderedfetch.Walk[Message]{
-		Workers: backfillFetchWorkers, Lookahead: backfillLookahead,
+		Workers: workers, Lookahead: lookahead,
 		Budget: budget, Reserve: reservationBytes, Retained: retainedRawBytes,
 	}
 	return walk.InOrder(ctx, n, fetch, consume)

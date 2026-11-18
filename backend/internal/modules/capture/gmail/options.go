@@ -16,6 +16,19 @@ func (c *Connector) WithBounceSink(sink connector.BounceSink) *Connector {
 	return &copied
 }
 
+// BackfillTuning sizes one history page and its fetching. A zero field keeps
+// the built-in value; the lookahead never falls below the workers.
+type BackfillTuning struct {
+	PageSize, FetchWorkers, Lookahead int
+}
+
+// WithBackfillTuning returns a copy that walks history pages by t.
+func (c *Connector) WithBackfillTuning(t BackfillTuning) *Connector {
+	copied := *c
+	copied.tuning = t
+	return &copied
+}
+
 // New returns a Gmail connector over the given OAuth + API surfaces.
 func New(oauth googleconn.Authorizer, api API) *Connector {
 	return &Connector{oauth: timedAuthorizer{oauth}, api: api, rawMemory: processRawMemory}
