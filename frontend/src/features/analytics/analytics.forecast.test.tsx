@@ -1,7 +1,9 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   cleanup,
+  fireEvent,
   render as rtlRender,
   screen,
   waitFor,
@@ -74,7 +76,7 @@ function readings(over: Record<string, unknown> = {}) {
 
 type StubOpts = {
   readings?: Record<string, unknown>;
-  onCall?: (body: Record<string, unknown>) => void;
+  onCall?: (body: Record<string, unknown>, key: string | null) => void;
   // Every URL the page READ from, so a test can assert what it asked for
   // rather than what its controls look like.
   onRead?: (url: string) => void;
@@ -97,7 +99,10 @@ function forecastStub(opts: StubOpts = {}) {
       const body = request
         ? await request.json()
         : JSON.parse(String(init?.body));
-      opts.onCall?.(body);
+      opts.onCall?.(
+        body,
+        request ? request.headers.get("Idempotency-Key") : null,
+      );
       return jsonResponse({ id: "c1", ...body }, 201);
     }
     if (url.includes("/forecast/assurance/exceptions")) {
@@ -416,6 +421,33 @@ describe("ForecastView", () => {
     await waitFor(() => expect(posted).toHaveLength(1));
     expect(posted[0].note).toBe("Two renewals slipped");
     expect(posted[0].currency).toBe("EUR");
+  });
+
+  it("stores a call once when Save forecast is pressed twice in one frame", async () => {
+    const posted: { key: string | null }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      forecastStub({ onCall: (_b, key) => posted.push({ key }) }),
+    );
+    render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
+
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: /Update forecast/i }),
+    );
+    const save = screen.getByRole("button", { name: /Save forecast/i });
+    act(() => {
+      fireEvent.click(save);
+      fireEvent.click(save);
+    });
+
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: /Save forecast/i }),
+      ).toBeNull(),
+    );
+    expect(posted).toHaveLength(1);
+    expect(posted[0].key).toBeTruthy();
   });
 
   // An empty note is NO note. Sent as "", it claims the author wrote something

@@ -85,7 +85,7 @@ func (e *callEnv) postCall(t *testing.T, body []byte) crmcontracts.ForecastCall 
 	t.Helper()
 	r := httptest.NewRequest(http.MethodPost, "/forecast/calls", bytes.NewReader(body)).WithContext(e.Admin())
 	w := httptest.NewRecorder()
-	e.handlers.RecordForecastCall(w, r)
+	e.handlers.RecordForecastCall(w, r, crmcontracts.RecordForecastCallParams{})
 	if w.Code != http.StatusCreated {
 		t.Fatalf("recording the call answered %d: %s", w.Code, w.Body.String())
 	}

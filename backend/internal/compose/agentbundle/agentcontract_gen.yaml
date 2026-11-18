@@ -11133,6 +11133,8 @@ paths:
       tags:
         - Reports
       operationId: createReportingReport
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       summary: Create reporting report
       responses:
         '201':
@@ -22956,6 +22958,8 @@ paths:
     post:
       tags: [Reports]
       operationId: recordForecastCall
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       security: [{bearerAuth: []}]
       summary: Record what somebody believes will close.
       description: |-
@@ -45482,7 +45486,8 @@ components:
             pipeline and quarter, or the reader may not read targets; a missing
             target is never zero. `fx_missing` means a deal amount has no
             exchange rate to the base currency, so the totals are incomplete
-            and no gap or coverage is given. `partial_visibility` means the
+            and no gap or coverage is given. When only an open deal lacks the rate,
+            `target` and `won` are still given. `partial_visibility` means the
             reader cannot see every deal of the population asked for, or a
             deal's amount, so its figures cannot stand against the scope's
             whole target.
@@ -45581,7 +45586,10 @@ components:
           type: integer
           format: int64
           minimum: 0
-          description: Deals the forecast considered, priced or not.
+          description: |-
+            Open deals due in the period, priced or not. The four counts (`eligible_count`,
+            `priced_count`, `confirmed_date_count`, `fx_missing_count`) describe only those
+            open deals; they do not say whether `won_minor` is complete.
         priced_count:
           type: integer
           format: int64
@@ -47066,7 +47074,7 @@ components:
             Each open deal at its stage probability, rounded PER DEAL and then summed. Not the sum rounded once — the two differ by up to one minor unit per deal.
         eligible_count:
           type: integer
-          description: Deals considered, priced or not.
+          description: Open deals due in the period, priced or not. Like the other counts, it says nothing about the won total.
         priced_count:
           type: integer
           description: >-

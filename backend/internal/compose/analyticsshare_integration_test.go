@@ -908,7 +908,7 @@ func TestASharedSnapshotCountsPricingRatherThanConversion(t *testing.T) {
 	// rows than the whole state and the count is shown to ride the same
 	// visibility clause as its siblings rather than to be taken over the table.
 	e.seedDealClosingWithin(t, "Another team's", &e.Rep3, priced)
-
+	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, owner_id, amount_minor, currency, fx_rate_to_base, status, closed_at, source, captured_by) VALUES ($1, 'Won', $2, $3, $4, $5, 'EUR', 1, 'won', now(), 'manual', 'human:x')`, e.pipeline, e.stages[20], e.Rep1, priced)
 	id := e.freezeWorkspace(t)
 	whole := e.readShared(snapshotWriterCtx(e.WS), t, id).Readings
 
