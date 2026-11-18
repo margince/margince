@@ -18293,6 +18293,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "embedreindex.statusReembedding": "Wird neu indexiert…",
   "embedreindex.lastProgress": "Letzter Fortschritt vor {duration}",
   "embedreindex.entitiesPending": "Ausstehende Datensätze: {count}",
+  "embedreindex.modelMismatch":
+    "Die letzte Neuindexierung lief mit {populated}. Die Suche nutzt jetzt {configured}.",
   "embedreindex.workspacePending": "Ausstehend: {count}",
   "embedreindex.reviewCta": "Prüfen und neu indexieren",
   "embedreindex.rebuildCta": "Index neu aufbauen",

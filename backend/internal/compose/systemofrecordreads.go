@@ -69,7 +69,7 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 	s.company360Svc = company360.NewService(pool, s.contactsStore, s.dealsStore, ProjectsStore(pool), NewApprovalsService(InstallationDB(pool)), time.Now).
 		WithActivityFields(activities.NewStore(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil))).
 		WithSignalWords(signalSummaryWords)
-	s.companyBriefSvc = companybrief.NewService(pool, s.company360Svc, s.contactsStore, nil, "", time.Now).
+	s.companyBriefSvc = companybrief.NewService(pool, s.company360Svc, s.contactsStore, nil, nil, time.Now).
 		WithEmailSummaries(emailRows(pool))
 	s.companyBriefHandlers = companybrief.NewHandlers(s.companyBriefSvc)
 	// The dossier reads the contacts store the 360 and the brief read, so the
@@ -77,10 +77,10 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 	// bind the api role's lanes; unbound, each serves its deterministic floor.
 	// The floors differ in kind (the dossier's describes, growth fit's abstains),
 	// so they are separate options.
-	s.companyDossierSvc = companydossier.NewService(pool, s.contactsStore, nil, "", time.Now).
+	s.companyDossierSvc = companydossier.NewService(pool, s.contactsStore, nil, nil, time.Now).
 		WithEmailSummaries(emailRows(pool))
 	s.companyGrowthFitSvc = companydossier.NewGrowthFitService(
-		pool, s.contactsStore, offeringConfirmed(s.contactsStore), nil, "", time.Now,
+		pool, s.contactsStore, offeringConfirmed(s.contactsStore), nil, nil, time.Now,
 	).WithEmailSummaries(emailRows(pool))
 	s.companyDossierHandlers = companydossier.NewHandlers(
 		s.companyDossierSvc, s.companyGrowthFitSvc,
