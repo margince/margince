@@ -56,14 +56,14 @@ export function configuredModelLabel(
 // configured model with. One hook so the gate, the read theatre and the
 // workbench cannot disagree about what is answering — and one ["ai-profile"]
 // cache entry, so naming it in three places still costs one request.
-export function useConfiguredModel(): string {
+export function useConfiguredModel(shown = true): string {
   const t = useT();
   // GET /ai/profile is gated on automation:update server-side, so a rep's
   // journey skips the read and names no model rather than drawing a 403.
   const canReadProfile = useCan("automation", "update");
   const profile = useQuery({
     queryKey: ["ai-profile"],
-    enabled: canReadProfile,
+    enabled: shown && canReadProfile,
     queryFn: async (): Promise<AiProfile> => {
       return unwrap(await api.GET("/ai/profile"));
     },
@@ -87,12 +87,12 @@ export function useConfiguredModel(): string {
  * this one. Both go through the same `["onboarding-conv-read", readId]` entry,
  * so naming it on five screens still costs one request.
  */
-function useSetupRuntime(): AiRunSummary | undefined {
+function useSetupRuntime(shown: boolean): AiRunSummary | undefined {
   const wizard = useQuery({
     queryKey: ["onboarding-conv-state"],
     queryFn: loadWizardState,
   });
-  const readId = wizard.data?.site_read_id ?? null;
+  const readId = shown ? (wizard.data?.site_read_id ?? null) : null;
   const read = useQuery({
     queryKey: ["onboarding-conv-read", readId],
     queryFn:
@@ -205,8 +205,11 @@ export function ConversationWorkbench({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const configured = useConfiguredModel();
-  const setupRuntime = useSetupRuntime();
+  // A member's journey reads no site and runs no research, so its band names
+  // neither: the status and the chip would describe the administrator's setup.
+  const showsRuntime = !railState.memberPath;
+  const configured = useConfiguredModel(showsRuntime);
+  const setupRuntime = useSetupRuntime(showsRuntime);
   const first = useFirstWorkbench();
   // Built here rather than per act, so four acts cannot drift into four
   // different ideas of where the journey is.
@@ -248,30 +251,32 @@ export function ConversationWorkbench({
         coreHidden={coreHidden}
         coreScale="work"
         anchor="start"
-        coreStateLabel={status}
+        coreStateLabel={showsRuntime ? status : undefined}
         aside={
           // The band's right slot, and the reason this screen can be trusted
           // about what it costs.
-          <AiRuntimeChip
-            runtime={runtime ?? setupRuntime}
-            configured={configured}
-            locale={locale}
-            labels={{
-              configured: t("ob.ai.configured"),
-              used: t("ob.ai.modelsUsed"),
-              route: t("ob.ai.route"),
-              calls: t("ob.ai.calls"),
-              tokens: t("ob.ai.tokens"),
-              latency: t("ob.ai.latency"),
-              estimatedCost: t("ob.ai.estimatedCost"),
-              partial: t("ob.ai.partialEstimate"),
-              awaiting: t("ob.ai.awaitingModel"),
-              unavailable: t("ob.ai.notAvailableYet"),
-              chip: t("ob.ai.runtimeChip"),
-              answering: t("ob.ai.answeringNow"),
-              scope: t("ob.ai.runScope"),
-            }}
-          />
+          showsRuntime && (
+            <AiRuntimeChip
+              runtime={runtime ?? setupRuntime}
+              configured={configured}
+              locale={locale}
+              labels={{
+                configured: t("ob.ai.configured"),
+                used: t("ob.ai.modelsUsed"),
+                route: t("ob.ai.route"),
+                calls: t("ob.ai.calls"),
+                tokens: t("ob.ai.tokens"),
+                latency: t("ob.ai.latency"),
+                estimatedCost: t("ob.ai.estimatedCost"),
+                partial: t("ob.ai.partialEstimate"),
+                awaiting: t("ob.ai.awaitingModel"),
+                unavailable: t("ob.ai.notAvailableYet"),
+                chip: t("ob.ai.runtimeChip"),
+                answering: t("ob.ai.answeringNow"),
+                scope: t("ob.ai.runScope"),
+              }}
+            />
+          )
         }
         progress={stageProgress}
         where={bandWhere}

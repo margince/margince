@@ -552,9 +552,9 @@ describe("onboarding gate", () => {
     );
   });
 
-  // ops holds automation:update, so its journey names the configured model:
-  // the model read follows the grant, not the admin role.
-  it("walks an ops seat with no row through the member journey, model named", async () => {
+  // ops holds automation:update, yet its journey reads no site, so the band
+  // names no model: what it shows follows the journey, not the grant.
+  it("walks an ops seat with no row through the member journey, no model chip", async () => {
     window.location.hash = "#/contacts";
     stubCompany(
       403,
@@ -568,9 +568,9 @@ describe("onboarding gate", () => {
     expect(await screen.findByText(/Train your writing voice/)).toBeTruthy();
     expect(window.location.hash).toBe("#/onboarding/voice");
     expect(companyReads()).toHaveLength(0);
-    await waitFor(() =>
-      expect(requestsEndingIn("/v1/ai/profile")).toHaveLength(1),
-    );
+    expect(
+      screen.queryByRole("button", { name: /^Active model and cost:/ }),
+    ).toBeNull();
   });
 
   it("leaves a non-admin on a read seat alone, whatever its journey says", async () => {
