@@ -22,9 +22,8 @@
   /* The gap between the bar's glyphs, which a thumb's targets split (below). */
   --topbarGlyphGap: var(--space-2);
   flex: none;
-  /* One number for the strip's height, read by the sidebar too: the head that
-     carries the logomark is sized against it so the first destination's row
-     begins exactly where this bar's rule ends. */
+  /* One number for the strip's height, read by the sidebar's head too, so the
+     mark and the strip's controls share one centre line. */
   height: var(--topbarH);
   /* The gutter, and no vertical padding: the strip's height is the token above
      and its children centre in it, so vertical padding only narrows the box the
@@ -36,7 +35,6 @@
   position: relative;
   z-index: 20;
 }
-/* Where you are. */
 .topbar-lead {
   display: flex;
   align-items: center;

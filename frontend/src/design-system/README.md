@@ -195,6 +195,10 @@ selector into every depth of `surfaces.css`, and leaves with `--remove '<selecto
 mark that has to hide what passes under it reads `var(--ground)`, the solid ground of the level it
 sits in.
 
+The app's own frame, the sidebar and the top bar round the content card, is level 1 wherever its
+parts nest. Its ground is `var(--chrome)`, named once in `surfaces.css`, so the frame that holds
+the card reads that token and never spells a rung.
+
 A host can draw a layer under its panes: a ring, a glow, `AmbientWaves` or a gradient. A pane on
 such a host paints that solid ground too. The generator lists those hosts in `UNDERLAY_HOSTS`, and
 the gate reads them from the tree. A part that keeps one rung at any depth, as the list toolbar
