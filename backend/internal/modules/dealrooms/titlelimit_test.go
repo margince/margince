@@ -13,8 +13,8 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
-// A title longer than its column is the caller's to shorten, refused at the
-// field before any write rather than by the database after one.
+// A title longer than its column is the caller's to shorten. It is refused at
+// the field before any write, not by the database after one.
 func TestARoomTitleOverItsLimitIsRefusedAtTheField(t *testing.T) {
 	t.Parallel()
 	long := strings.Repeat("t", values.TextLabelCharacters+1)

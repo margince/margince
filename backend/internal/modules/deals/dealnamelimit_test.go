@@ -12,8 +12,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
-// A deal name longer than its column is the caller's to shorten, refused at
-// the field before any write rather than by the database after one.
+// A deal name longer than its column is the caller's to shorten. It is refused
+// at the field before any write, not by the database after one.
 func TestADealNameOverItsLimitIsRefusedAtTheField(t *testing.T) {
 	long := strings.Repeat("n", values.TextLabelCharacters+1)
 	s := &Store{}

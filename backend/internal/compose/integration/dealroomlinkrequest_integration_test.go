@@ -5,8 +5,8 @@
 
 package integration
 
-// A buyer's ask for a new link is answered once the seller issues one: the
-// roster stops telling the seller to issue a link they already issued.
+// A buyer's ask for a new link is answered once the seller issues one. The
+// roster then stops asking the seller for a link they already issued.
 
 import (
 	"net/http"

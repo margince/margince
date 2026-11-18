@@ -127,7 +127,7 @@ function mailSent(participant: Participant): boolean {
 }
 
 // When the buyer asked for a link they have not been in since, read as the
-// room brief reads it; null once the ask is answered.
+// room brief reads it. Null once the ask is answered.
 function owedLinkAsk(participant: Participant): string | null {
   const asked = participant.link_requested_at;
   if (!asked) return null;
