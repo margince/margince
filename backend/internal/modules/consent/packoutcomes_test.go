@@ -19,25 +19,21 @@ import (
 // pack is built cannot move them unseen.
 
 // shippedPackCodes registers each shipped pack under a test code of its own.
-// The real country codes stay free for every other test in this binary.
+// The real country codes stay free for every other test in this binary. The
+// p codes sit outside the range testMessagingRules hands out (qm-qz, xa-xz).
 func shippedPackCodes(t *testing.T) map[string]jurisdiction.Code {
 	t.Helper()
-	codes := map[string]jurisdiction.Code{"de": "qd", "vn": "qv"}
 	packs := shippedPacks(t)
-	registerShipped.Do(func() {
-		for country, rules := range packs {
-			if code, known := codes[country]; known {
-				rules.Jurisdiction = code
-				messagingrules.Register(rules)
-			}
-		}
-	})
-	for country := range packs {
-		if _, known := codes[country]; !known {
-			t.Fatalf("the shipped pack %s has no test code; add one to shippedPackCodes", country)
-		}
+	if len(packs) != 2 {
+		t.Fatalf("%d packs ship; give each new one a test code here", len(packs))
 	}
-	return codes
+	registerShipped.Do(func() {
+		de, vn := packs["de"], packs["vn"]
+		de.Jurisdiction, vn.Jurisdiction = "pd", "pv"
+		messagingrules.Register(de)
+		messagingrules.Register(vn)
+	})
+	return map[string]jurisdiction.Code{"de": "pd", "vn": "pv"}
 }
 
 var registerShipped sync.Once
@@ -117,17 +113,28 @@ func TestTheShippedPacksFlagTheDraftsTheyFlaggedBeforeTheyWereCompiled(t *testin
 		want                           []string
 	}{
 		{"de", "de", "Angebot", "Das beste Angebot.", true, full, nil},
-		{"de", "de", "Angebot", "Hallo", true, ControllerParticulars{LegalName: "Acme GmbH"},
-			[]string{"controller_identity", "objection_route", "privacy_contact"}},
-		{"de", "de", "Rechnung", "Hallo", false, ControllerParticulars{LegalName: "Acme GmbH"},
-			[]string{"controller_identity", "privacy_contact"}},
+		{
+			"de", "de", "Angebot", "Hallo", true,
+			ControllerParticulars{LegalName: "Acme GmbH"},
+			[]string{"controller_identity", "objection_route", "privacy_contact"},
+		},
+		{
+			"de", "de", "Rechnung", "Hallo", false,
+			ControllerParticulars{LegalName: "Acme GmbH"},
+			[]string{"controller_identity", "privacy_contact"},
+		},
 		{"de", "vn", "Angebot", "Hallo", true, ControllerParticulars{}, []string{"objection_route"}},
 		{"vn", "vn", "[QC] Ưu đãi", vietnameseOffer, true, full, nil},
-		{"vn", "de", "Offer", "This is the best offer.", true, ControllerParticulars{LegalName: "Acme GmbH"},
+		{
+			"vn", "de", "Offer", "This is the best offer.", true,
+			ControllerParticulars{LegalName: "Acme GmbH"},
 			// The advertiser's block carries the controller's identity, so no
 			// line of its own is owed for it.
-			[]string{"advertiser_contact", "advertising_language_first", "claim_without_proof",
-				"foreign_advertiser", "objection_route", "privacy_contact", "subject_prefix"}},
+			[]string{
+				"advertiser_contact", "advertising_language_first", "claim_without_proof",
+				"foreign_advertiser", "objection_route", "privacy_contact", "subject_prefix",
+			},
+		},
 		{"vn", "vn", "Hóa đơn", vietnameseOffer, false, ControllerParticulars{}, []string{"controller_identity", "privacy_contact"}},
 	} {
 		got := sendFindings(t, shippedSend{
