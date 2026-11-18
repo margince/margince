@@ -33624,7 +33624,10 @@ export interface components {
              * @enum {string}
              */
             phone_type: "work" | "mobile" | "home" | "other";
-            /** @default false */
+            /**
+             * @description At most one primary number per contact, whatever its type (DB-enforced).
+             * @default false
+             */
             is_primary: boolean;
             /** @default 0 */
             position: number;

@@ -421,6 +421,7 @@ func TestTakingOnALeadClearsTheBreachItEarnedWhileUnowned(t *testing.T) {
 // unanswered lead is an explicit disposition and stamps it too.
 func TestFirstResponseFromHumanStatusChangeAndDisposition(t *testing.T) {
 	e := setupPromoteConsent(t)
+	e.enableFirstResponseSLA(t)
 	now := pinLeadAuditClock(t)
 	worked := e.seedLeadCreatedAt(t, "worked@example.test", now.Add(-time.Hour))
 	status := "contacted"
@@ -470,7 +471,11 @@ func TestFirstResponseFromHumanStatusChangeAndDisposition(t *testing.T) {
 	if closed.FirstResponseAt == nil {
 		t.Error("disqualifying is an explicit disposition and must stamp first_response_at")
 	}
-	requireStoredLeadClockAudit(e.ctx, t, e.store, worked)
+	kept := e.seedLeadCreatedAt(t, "kept-stamp@example.test", now.Add(-time.Hour))
+	if _, err := e.store.UpdateLead(e.ctx, kept, UpdateLeadInput{Status: &status}); err != nil {
+		t.Fatalf("update: %v", err)
+	}
+	requireStoredLeadClockAudit(e.ctx, t, e.store, kept)
 }
 
 // A reply logged on the lead answers it whatever a status move did: moving the

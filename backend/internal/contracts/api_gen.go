@@ -45161,7 +45161,9 @@ type ContactPhone struct {
 	ContactId  *openapi_types.UUID `json:"contact_id,omitempty"`
 	CreatedAt  *time.Time          `json:"created_at,omitempty"`
 	Id         openapi_types.UUID  `json:"id"`
-	IsPrimary  bool                `json:"is_primary"`
+
+	// IsPrimary At most one primary number per contact, whatever its type (DB-enforced).
+	IsPrimary bool `json:"is_primary"`
 
 	// Phone E.164 normalized.
 	Phone     string                `json:"phone"`

@@ -47590,7 +47590,7 @@ components:
         contact_id: { type: string, format: uuid }
         phone: { type: string, description: E.164 normalized. }
         phone_type: { type: string, enum: [work, mobile, home, other], x-extensible-enum: true, default: work }
-        is_primary: { type: boolean, default: false, description: At most one primary number per contact, whatever its type (DB-enforced). }
+        is_primary: { type: boolean, default: false, description: 'At most one primary number per contact, whatever its type (DB-enforced).' }
         position: { type: integer, default: 0 }
         source: { type: string }
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.' }

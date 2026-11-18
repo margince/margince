@@ -561,6 +561,19 @@ func TestAnOperatorResetHoldsTheSameLengthFloorAsEveryOtherRoute(t *testing.T) {
 	}
 }
 
+func TestAnOperatorResetRefusesBlankAndEmailPasswords(t *testing.T) {
+	e := setupRevocationEnv(t, "operator-reset-weak")
+	for code, weak := range map[string]string{"blank": strings.Repeat(" ", 12), "email": e.member.Email} {
+		err := withOperatorTx(t, e, func(tx pgx.Tx) error {
+			return OperatorResetPassword(context.Background(), tx, e.ws, e.member.Email, weak)
+		})
+		var parseErr *values.ParseError
+		if !errors.As(err, &parseErr) || parseErr.Code != code {
+			t.Errorf("an operator reset to %q gave %v, want a %s refusal", weak, err, code)
+		}
+	}
+}
+
 func TestAnOperatorResetRefusesAnAgentIdentity(t *testing.T) {
 	// An agent identity carries an address, so it is reachable by the email
 	// lookup, but it holds no password. Refused by name — letting the write
