@@ -42,8 +42,8 @@ func Undeclared(route, rawQuery string) *httperr.DetailedError {
 	if !known || rawQuery == "" {
 		return nil
 	}
-	// A key with a bad escape would be dropped by the parser, and the request
-	// would then run unfiltered, so a malformed query is refused whole.
+	// The parser drops a key with a bad escape. The request would then run
+	// unfiltered, so a malformed query is refused whole.
 	query, err := url.ParseQuery(rawQuery)
 	if err != nil {
 		return httperr.Validation("query", "invalid_parameter", "the query string is malformed; check its percent-escapes")
