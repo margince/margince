@@ -3,11 +3,12 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import { Check, RefreshCw, Send, Trash2, X } from "lucide-react";
+import { Check, RefreshCw, Send, X } from "lucide-react";
 import { useState } from "react";
 import { api } from "../../api/client";
 import { useIdempotencyKey } from "../../api/idempotencykey";
 import { ifMatch, requireVersion } from "../../api/version";
+import { ArchiveAction } from "../../components/archive";
 import { Button, Field, TextInput } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { ErrorLine } from "../../design-system/errorline";
@@ -301,45 +302,28 @@ export function isOpenDraft(offer: Offer): boolean {
 export function DiscardOfferAction({ offer }: Readonly<{ offer: Offer }>) {
   const t = useT();
   const queryClient = useQueryClient();
-  const [open, setOpen] = useState(false);
-
-  const mutation = useMutation({
-    mutationFn: async (version: number) =>
-      unwrap(
-        await api.DELETE("/offers/{id}", {
-          params: { path: { id: offer.id }, ...ifMatch(version) },
-        }),
-      ),
-    onMutate: fromHere,
-    onSuccess: (data, _version, from) => {
-      queryClient.setQueryData(["offer", offer.id], data);
-      void queryClient.invalidateQueries({
-        queryKey: ["deal-offers", offer.deal_id],
-      });
-      setOpen(false);
-      from.closeOnto({ screen: "deals", id: offer.deal_id });
-    },
-    onError: () => rereadOffer(queryClient, offer.id),
-  });
-
   return (
-    <>
-      <Button data-testid="discard-offer" onClick={() => setOpen(true)}>
-        <Trash2 aria-hidden /> {t("offer.discard")}
-      </Button>
-      <ConfirmModal
-        open={open}
-        onClose={() => setOpen(false)}
-        title={t("offer.discardConfirm")}
-        confirmLabel={t("offer.discard")}
-        confirmVariant="danger"
-        onConfirm={() => mutation.mutate(requireVersion(offer.version))}
-        pending={mutation.isPending}
-        error={mutation.isError ? problemMessageOf(mutation.error, t) : null}
-      >
-        <p className="t-body">{t("offer.discardBody")}</p>
-      </ConfirmModal>
-    </>
+    <ArchiveAction
+      requires={{ object: "offer", action: "delete" }}
+      label={t("offer.discard")}
+      confirmText={t("offer.discardBody")}
+      archivedMessage={t("record.archiveDone", { name: offer.offer_number })}
+      invalidate={[["deal-offers", offer.deal_id]]}
+      recordKey="offer"
+      onArchived={(from) =>
+        from.closeOnto({ screen: "deals", id: offer.deal_id })
+      }
+      archive={async () => {
+        const result = await api.DELETE("/offers/{id}", {
+          params: {
+            path: { id: offer.id },
+            ...ifMatch(requireVersion(offer.version)),
+          },
+        });
+        if (result.error) void rereadOffer(queryClient, offer.id);
+        return unwrap(result);
+      }}
+    />
   );
 }
 

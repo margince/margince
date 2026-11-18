@@ -60,10 +60,19 @@ const draftOffer = {
   updated_at: "2026-06-01T08:00:00Z",
 };
 
+// The deal the offer belongs to, named as the head panel's link reads it.
+const dealReference = {
+  data: [{ id: "d-1", name: "Warehouse rollout", archived: false }],
+};
+
 export const Draft: Story = {
   render: () => {
     installFetchStub({
-      "GET /me": meRoute({ deal: ["read", "update"] }),
+      "GET /me": meRoute({
+        deal: ["read", "update"],
+        offer: ["read", "update", "delete"],
+      }),
+      "GET /records/references": () => jsonResponse(dealReference),
       "GET /offers/o-1": () => jsonResponse(draftOffer),
       "GET /offer-templates": () => jsonResponse(emptyPage),
       "GET /products": () => jsonResponse(emptyPage),
@@ -80,7 +89,11 @@ export const Draft: Story = {
 export const Archived: Story = {
   render: () => {
     installFetchStub({
-      "GET /me": meRoute({ deal: ["read", "update"] }),
+      "GET /me": meRoute({
+        deal: ["read", "update"],
+        offer: ["read", "update", "delete"],
+      }),
+      "GET /records/references": () => jsonResponse(dealReference),
       "GET /offers/o-1": () =>
         jsonResponse({ ...draftOffer, archived_at: "2026-06-02T08:00:00Z" }),
       "GET /offer-templates": () => jsonResponse(emptyPage),
@@ -109,7 +122,11 @@ export const EditingTheHeader: Story = {
 export const DraftUnpricedLine: Story = {
   render: () => {
     installFetchStub({
-      "GET /me": meRoute({ deal: ["read", "update"] }),
+      "GET /me": meRoute({
+        deal: ["read", "update"],
+        offer: ["read", "update", "delete"],
+      }),
+      "GET /records/references": () => jsonResponse(dealReference),
       "GET /offers/o-1": () =>
         jsonResponse({
           ...draftOffer,
@@ -143,7 +160,11 @@ export const DraftUnpricedLine: Story = {
 export const Sent: Story = {
   render: () => {
     installFetchStub({
-      "GET /me": meRoute({ deal: ["read", "update"] }),
+      "GET /me": meRoute({
+        deal: ["read", "update"],
+        offer: ["read", "update", "delete"],
+      }),
+      "GET /records/references": () => jsonResponse(dealReference),
       "GET /offers/o-1": () =>
         jsonResponse({
           ...draftOffer,
@@ -180,7 +201,11 @@ export const Rejecting: Story = {
 export const RegeneratedWithAiDisclosure: Story = {
   render: () => {
     installFetchStub({
-      "GET /me": meRoute({ deal: ["read", "update"] }),
+      "GET /me": meRoute({
+        deal: ["read", "update"],
+        offer: ["read", "update", "delete"],
+      }),
+      "GET /records/references": () => jsonResponse(dealReference),
       "GET /offers/o-2": () =>
         jsonResponse({
           ...draftOffer,
@@ -228,7 +253,11 @@ export const RegeneratedWithAiDisclosure: Story = {
 export const PdfRendered: Story = {
   render: () => {
     installFetchStub({
-      "GET /me": meRoute({ deal: ["read", "update"] }),
+      "GET /me": meRoute({
+        deal: ["read", "update"],
+        offer: ["read", "update", "delete"],
+      }),
+      "GET /records/references": () => jsonResponse(dealReference),
       "GET /offers/o-1": () =>
         jsonResponse({
           ...draftOffer,
@@ -248,7 +277,11 @@ export const PdfRendered: Story = {
 export const PdfRenderUnavailable: Story = {
   render: () => {
     installFetchStub({
-      "GET /me": meRoute({ deal: ["read", "update"] }),
+      "GET /me": meRoute({
+        deal: ["read", "update"],
+        offer: ["read", "update", "delete"],
+      }),
+      "GET /records/references": () => jsonResponse(dealReference),
       "GET /offers/o-1": () => jsonResponse(draftOffer),
       "GET /offer-templates": () => jsonResponse(emptyPage),
       "GET /products": () => jsonResponse(emptyPage),
@@ -269,7 +302,11 @@ export const PdfRenderUnavailable: Story = {
 export const LoadError: Story = {
   render: () => {
     installFetchStub({
-      "GET /me": meRoute({ deal: ["read", "update"] }),
+      "GET /me": meRoute({
+        deal: ["read", "update"],
+        offer: ["read", "update", "delete"],
+      }),
+      "GET /records/references": () => jsonResponse(dealReference),
       "GET /offers/o-1": () =>
         jsonResponse(
           { title: "server error", detail: "offer unavailable" },

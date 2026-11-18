@@ -66,7 +66,7 @@ describe("discarding a draft offer", () => {
     const archives: Archive[] = [];
     serve(DRAFT, archives);
     const user = userEvent.setup();
-    await user.click(await screen.findByTestId("discard-offer"));
+    await user.click(await screen.findByTestId("archive-record"));
     await user.click(
       within(screen.getByRole("dialog")).getByRole("button", {
         name: "Discard draft",
@@ -79,7 +79,7 @@ describe("discarding a draft offer", () => {
   it("offers no discard once the offer is sent", async () => {
     serve({ ...DRAFT, status: "sent" });
     await screen.findByText("A-1001");
-    expect(screen.queryByTestId("discard-offer")).toBeNull();
+    expect(screen.queryByTestId("archive-record")).toBeNull();
   });
 });
 
@@ -91,7 +91,7 @@ describe("an archived offer", () => {
     for (const control of [
       "edit-offer-header",
       "send-offer",
-      "discard-offer",
+      "archive-record",
       "new-line-description",
       "render-pdf",
     ]) {
