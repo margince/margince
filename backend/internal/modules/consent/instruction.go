@@ -137,14 +137,7 @@ type Instruction struct {
 // already resolved, superseded or answered is a decision about a message that
 // is no longer waiting on one.
 func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInput) (Instruction, error) {
-	if err := requireAHumanAtTheKeyboard(ctx); err != nil {
-		return Instruction{}, err
-	}
-	if err := auth.Require(ctx, entityCommunicationException, principal.ActionCreate); err != nil {
-		return Instruction{}, err
-	}
-	var err error
-	in, err = in.Validated()
+	in, err := admitDirector(ctx, in)
 	if err != nil {
 		return Instruction{}, err
 	}
@@ -376,6 +369,35 @@ type directableReview struct {
 	// Refusals are the reasons the message was held, which decide whether this
 	// caller may direct past them (directableBy).
 	Refusals []RefusedRecipient
+}
+
+// admitDirector is DirectSend's checks on the caller and what they typed: a
+// human at the keyboard, the exception grant and a valid acknowledgement.
+func admitDirector(ctx context.Context, in DirectInput) (DirectInput, error) {
+	if err := requireAHumanAtTheKeyboard(ctx); err != nil {
+		return DirectInput{}, err
+	}
+	if err := auth.Require(ctx, entityCommunicationException, principal.ActionCreate); err != nil {
+		return DirectInput{}, err
+	}
+	return in.Validated()
+}
+
+// CheckDirection runs every check DirectSend runs, and writes nothing. The
+// direct-send door asks it before it tries the held message again, so a caller
+// who could not direct it cannot release it either.
+func (s *Store) CheckDirection(ctx context.Context, reviewID ids.UUID, in DirectInput) (DirectInput, error) {
+	in, err := admitDirector(ctx, in)
+	if err != nil {
+		return DirectInput{}, err
+	}
+	return in, s.db.Tx(ctx, func(tx pgx.Tx) error {
+		review, err := claimReviewForDirectionTx(ctx, tx, reviewID)
+		if err != nil {
+			return err
+		}
+		return review.admits(ctx, in)
+	})
 }
 
 // admits checks that this caller may direct the review as they read it. It

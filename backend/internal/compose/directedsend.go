@@ -41,8 +41,9 @@ func (s directedSendService) DirectAndSend(
 	if err != nil {
 		return crmcontracts.Activity{}, err
 	}
-	in, err = in.Validated()
-	if err != nil {
+	// Every check DirectSend runs comes first: only a caller who may direct the
+	// message may release it, even when a new grant would now allow it.
+	if in, err = s.consent.CheckDirection(ctx, reviewID, in); err != nil {
 		return crmcontracts.Activity{}, err
 	}
 	// A new grant can resolve the old refusal without a human exception.
