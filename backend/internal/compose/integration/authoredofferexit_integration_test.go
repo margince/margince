@@ -199,3 +199,43 @@ func (c *consentEnv) embeddedReviewMatchesTheGet(t *testing.T, refused refusedSe
 	}
 	return review
 }
+
+// A pitch the contact wrote stays theirs: a reschedule answering it queues on
+// the first click. A rep who quotes that pitch back endorses it, and the reply
+// is decided as an offer.
+func TestAQuotedPitchCountsOnlyWhenTheRepTypesItBack(t *testing.T) {
+	c := setupConsent(t)
+	c.useReviewableMarketingProfile(t)
+	const pitch = "Unser Angebot: 20 % Rabatt auf Ihre Lizenzen."
+	answer := func(body string) int {
+		var pitched struct {
+			ID string `json:"id"`
+		}
+		if status := c.Call(t, "POST", "/v1/activities", AnyMap{
+			"kind": "email", "subject": "Termin", "body": pitch, "direction": "inbound",
+			"links": []AnyMap{{"entity_type": "contact", "entity_id": c.contactID}},
+		}, nil, &pitched); status != http.StatusCreated {
+			t.Fatalf("logging the pitched inbound → %d", status)
+		}
+		return c.Call(t, "POST", "/v1/activities/"+pitched.ID+"/send-email", AnyMap{
+			"subject": "Re: Termin", "body": body, "to": []string{"subject@consent.test"},
+			"consent_purpose": "business_correspondence",
+		}, nil, nil)
+	}
+	if n := c.count(t, `SELECT count(*) FROM activity WHERE body LIKE '%Rabatt%'`); n != 0 {
+		t.Fatalf("%d activities carry the pitch before the test logs it", n)
+	}
+
+	if status := answer(exitReschedule); status != http.StatusAccepted {
+		t.Fatalf("a reschedule answering a pitch → %d, want 202 on the first click", status)
+	}
+	if n := c.count(t, `SELECT count(*) FROM activity WHERE direction = 'inbound' AND body LIKE '%Rabatt%'`); n != 1 {
+		t.Fatalf("%d inbound activities carry the pitch, want 1: the fixture proves nothing", n)
+	}
+	if n := c.count(t, `SELECT count(*) FROM communication_review`); n != 0 {
+		t.Fatalf("%d reviews after the reschedule, want none", n)
+	}
+	if status := answer(exitReschedule + "\n\n> " + pitch); status != http.StatusConflict {
+		t.Fatalf("a reply quoting the pitch back → %d, want 409", status)
+	}
+}
