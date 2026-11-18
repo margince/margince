@@ -13,8 +13,10 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -188,5 +190,41 @@ func TestAnOpenDealHasNoCloseDayToCorrect(t *testing.T) {
 	_, err := e.store.CorrectCloseDay(e.asDealWriter(), deal, CorrectCloseDayInput{ClosedOn: clocktest.Now(t).UTC()})
 	if _, ok := errors.AsType[*CloseDayOpenDealError](err); !ok {
 		t.Fatalf("an open deal answered %v, want deal_not_closed", err)
+	}
+}
+
+// The rate a close froze is part of what a deal is, on the single read and on
+// a list row alike, and a reopened deal carries none.
+func TestAClosedForeignDealCarriesTheRateItFroze(t *testing.T) {
+	e := setupClosedDealEnv(t)
+
+	read, err := e.store.GetDeal(e.asDealWriter(), e.deal, storekit.LiveOnly)
+	if err != nil {
+		t.Fatalf("reading the deal: %v", err)
+	}
+	listed, _, err := e.store.ListDeals(e.asDealWriter(), ListDealsInput{IDs: []ids.UUID{e.deal.UUID}})
+	if err != nil || len(listed) != 1 {
+		t.Fatalf("listing the deal: %d rows, %v", len(listed), err)
+	}
+	for surface, d := range map[string]crmcontracts.Deal{"read": read, "list": listed[0]} {
+		if d.FxRateToBase == nil || *d.FxRateToBase != "0.0060000000" {
+			t.Errorf("%s: fx_rate_to_base = %v, want the frozen 0.0060000000", surface, d.FxRateToBase)
+		}
+		if d.FxRateDate == nil || !d.FxRateDate.Equal(e.today) {
+			t.Errorf("%s: fx_rate_date = %v, want the close day %s", surface, d.FxRateDate, e.today.Format(time.DateOnly))
+		}
+	}
+
+	var open ids.StageID
+	if err := e.owner.QueryRow(t.Context(),
+		`SELECT id FROM stage WHERE pipeline_id = $1 AND semantic = 'open'`, read.PipelineId).Scan(&open); err != nil {
+		t.Fatalf("finding the open stage: %v", err)
+	}
+	reopened, err := e.store.AdvanceDeal(e.asDealWriter(), e.deal, AdvanceDealInput{ToStageID: open})
+	if err != nil {
+		t.Fatalf("reopening the deal: %v", err)
+	}
+	if reopened.FxRateToBase != nil || reopened.FxRateDate != nil {
+		t.Errorf("a reopened deal carries rate %v of %v, want neither", reopened.FxRateToBase, reopened.FxRateDate)
 	}
 }
