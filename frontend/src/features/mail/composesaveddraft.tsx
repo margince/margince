@@ -9,6 +9,7 @@ import {
 } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { components } from "../../api/schema";
+import { paragraphsFrom } from "../../design-system/richtext";
 import { type Toast, useOwnToast, useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import { problemCodeOf, problemMessageOf } from "../../lib/problem";
@@ -87,16 +88,22 @@ export function useDraftRestore(input: {
 }
 
 // Whether the reader put anything in the composer it did not put there itself.
-// The thread's counterparty in To and the reply subject are the composer's own
-// defaults, so a reply opened and closed untouched saves nothing. A file, a
-// reason or a send time is the reader's choice, and is kept like a word.
+// The thread's counterparty, the reply subject and a caller's opening message
+// (a forward's quote) are the composer's own defaults. A composer opened and
+// closed untouched saves nothing. A file, a reason or a send time is the
+// reader's choice, and is kept like a word.
 function wroteSomething(
   fields: SavedDraftFields,
-  defaults: Readonly<{ recipient?: string; subject: string; intent?: string }>,
+  defaults: Readonly<{
+    recipient?: string;
+    subject: string;
+    body: string;
+    intent?: string;
+  }>,
 ): boolean {
   const subject = stripEveryKeyTag(fields.subject).trim();
   return (
-    fields.body.trim() !== "" ||
+    fields.body.trim() !== defaults.body.trim() ||
     (fields.editorState?.intent ?? "").trim() !==
       (defaults.intent ?? "").trim() ||
     fields.cc.length > 0 ||
@@ -190,32 +197,35 @@ function savedDraftSettled(
     }>;
     held: boolean;
     restored: boolean;
-    // A read answering after the first keystroke restores nothing.
-    typed: boolean;
+    // The words on screen stay: the reader typed, or a caller opened with them.
+    keepsScreen: boolean;
   }>,
 ): boolean {
   const { read } = state;
   // A failed read leaves open whether a draft is held, so it never settles.
   if (!state.anchored) return true;
   if (!read.isSuccess || read.isFetching) return false;
-  return !state.held || state.restored || state.typed;
+  return !state.held || state.restored || state.keepsScreen;
 }
 
 // What the composer opens with: a draft is measured against it, and deleting
 // one puts it back.
 function composerDefaults(input: {
   initialIntent?: string;
+  initialMessage?: Readonly<{ subject: string; body: string }>;
   offeredRecipient: string | undefined;
   replyTo: Activity | undefined;
 }) {
+  const replying =
+    input.replyTo?.kind === "email" &&
+    input.replyTo.content_state !== "withheld";
   return {
     intent: input.initialIntent ?? "",
     recipient: input.offeredRecipient,
-    subject:
-      input.replyTo?.kind === "email" &&
-      input.replyTo.content_state !== "withheld"
-        ? replySubject(input.replyTo.subject ?? "")
-        : "",
+    subject: replying
+      ? replySubject(input.replyTo?.subject ?? "")
+      : (input.initialMessage?.subject ?? ""),
+    body: input.initialMessage?.body ?? "",
   };
 }
 
@@ -228,6 +238,8 @@ export function useSavedDraft(input: {
   /** The address the composer offered into To on its own. */
   offeredRecipient: string | undefined;
   initialIntent?: string;
+  /** The words a caller opened the composer with, such as a forward's quote. */
+  initialMessage?: Readonly<{ subject: string; body: string }>;
   /** Puts words in the composer: a saved draft's, or its opening defaults. */
   onRestore: (fields: SavedDraftFields) => void;
   onClose: () => void;
@@ -256,9 +268,9 @@ export function useSavedDraft(input: {
   const [changedElsewhere, setChangedElsewhere] = useState(false);
   const keyText = key.join(":");
   // Restored once per opening and per anchor, and never over words the reader
-  // has already started: a read answering after the first keystroke leaves the
-  // text alone and only holds the version, so the next save replaces it. A
-  // composer reopened still holding the saved words is a restored one too.
+  // has already started. A draft found under other words on screen asks which
+  // words win, so no save replaces words the reader never saw. A composer
+  // reopened still holding the saved words is a restored one too.
   const decided = useRef(new Set<string>());
   // Reopening the composer puts the draft back on screen with its own Delete,
   // so the "Draft saved" toast, if it is still up, has said its piece.
@@ -269,6 +281,10 @@ export function useSavedDraft(input: {
   }, [open, savedToast]);
   const onRestore = input.onRestore;
   const typed = wroteSomething(fields, defaults);
+  // A caller's opening words on a record are another message than the draft
+  // held there. A forward's draft is a forward of the same message.
+  const restores =
+    !typed && (defaults.body === "" || anchor?.type === "forward");
   useEffect(() => {
     if (!open) {
       decided.current.clear();
@@ -281,15 +297,16 @@ export function useSavedDraft(input: {
     decided.current.add(keyText);
     if (!read.data) return;
     const saved = fieldsOfDraft(read.data);
-    if (!typed) onRestore(saved);
-    if (!typed || sameFields(fields, saved)) setRestoredKey(keyText);
+    if (restores) onRestore(saved);
+    if (restores || sameFields(fields, saved)) setRestoredKey(keyText);
+    else setChangedElsewhere(true);
   }, [
     open,
     read.isSuccess,
     read.isFetching,
     read.data,
     keyText,
-    typed,
+    restores,
     fields,
     onRestore,
   ]);
@@ -300,8 +317,8 @@ export function useSavedDraft(input: {
       cc: [],
       bcc: [],
       subject: defaults.subject,
-      body: "",
-      html: "",
+      body: defaults.body,
+      html: defaults.body ? paragraphsFrom(defaults.body) : "",
       files: [],
       context: "",
       sendAt: "",
@@ -435,7 +452,7 @@ export function useSavedDraft(input: {
       read,
       held: held !== null,
       restored: restoredKey === keyText,
-      typed,
+      keepsScreen: !restores,
     }),
     changedElsewhere,
     saving: save.isPending,

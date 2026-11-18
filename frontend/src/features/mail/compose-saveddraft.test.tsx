@@ -500,6 +500,33 @@ describe("a saved draft", () => {
     );
   });
 
+  it("asks which words win when it lands under words the reader wrote", async () => {
+    let answer: (response: Response) => void = () => {};
+    const sent = stubRoutes({
+      "GET /mail-drafts": () =>
+        new Promise<Response>((resolve) => {
+          answer = resolve;
+        }),
+    });
+    render(composer(vi.fn()));
+    await screen.findByRole("combobox", { name: "To" });
+    writeMessage("Body", "Written before the read");
+
+    act(() => answer(jsonResponse(SAVED)));
+
+    expect(
+      await screen.findByText("Draft changed in another window"),
+    ).toBeTruthy();
+    expect(messageText("Body")).toBe("Written before the read");
+    expect(calls(sent, "PUT /mail-drafts")).toHaveLength(0);
+    await userEvent.click(
+      screen.getByRole("button", { name: "Load saved version" }),
+    );
+    await waitFor(() =>
+      expect(messageText("Body")).toBe("Half written before lunch"),
+    );
+  });
+
   it("keeps the composer open over a failed save once, and a second close discards", async () => {
     const onClose = vi.fn();
     const sent = stubRoutes({

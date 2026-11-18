@@ -60,17 +60,19 @@ export function groundedFiling(grounding: SavedDraftFields["grounding"]): {
   return { dealId: first("deal"), projectId: first("project") };
 }
 
-// A reply keeps its draft on the message it answers, a new message on the
-// record it was started from. A channel reply keeps none: the draft is a mail's
-// fields, and a chat message has no subject or addressee to hold.
+// A reply keeps its draft on the message it answers, a forward on the message
+// it carries. A new message keeps it on the record it was started from. A
+// channel reply keeps none: a chat message has no subject or addressee to hold.
 export function savedDraftAnchor(input: {
   answering: string | undefined;
+  forwarding?: string;
   entityType: RelinkKind;
   entityId: string;
   isChannelReply: boolean;
 }): SavedDraftAnchor | null {
   if (input.isChannelReply) return null;
   if (input.answering) return { type: "activity", id: input.answering };
+  if (input.forwarding) return { type: "forward", id: input.forwarding };
   return input.entityId ? { type: input.entityType, id: input.entityId } : null;
 }
 

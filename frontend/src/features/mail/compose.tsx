@@ -100,6 +100,7 @@ function DockedLauncher({
 // reply posts send-message and drops the subject, Cc and drafting.
 export function ComposeWindow({
   initialMessage,
+  forwarding,
   initialReason,
   initialDealId,
   activityId,
@@ -223,6 +224,7 @@ export function ComposeWindow({
   const savedDraft = useSavedDraft({
     where: {
       answering,
+      forwarding,
       entityType,
       entityId: edit ? "" : entityId,
       isChannelReply,
@@ -241,6 +243,7 @@ export function ComposeWindow({
     replyTo: thread.anchorActivity,
     offeredRecipient: offer.standing.offeredAddress,
     initialIntent: askedIntent,
+    initialMessage,
     onRestore: restoreFields,
     onClose,
   });
