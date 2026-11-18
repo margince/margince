@@ -77,7 +77,9 @@ export function LeadPanel({
             <span className="pn-route-rank pn-rank-best" aria-hidden="true">
               1
             </span>
-            <Eyebrow>{t("contact.intro.bestWayIn")}</Eyebrow>
+            <Eyebrow as="h3" size="xxsmall">
+              {t("contact.intro.bestWayIn")}
+            </Eyebrow>
             {/* The route's own band, in the map's words. The lead is the
                 best-ranked route, which need not be a strong one. */}
             <Badge
