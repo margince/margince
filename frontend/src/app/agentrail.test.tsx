@@ -534,9 +534,6 @@ describe("AgentRail", () => {
       ),
     );
     expect(container.querySelector(".arspend")).toBeNull();
-    // Whether the panel is open is a fact about the block rather than about the
-    // money, so the line the two share outlives the figure on it.
-    expect(container.querySelector(".arlast > .archev")).not.toBeNull();
   });
 
   // The exact figure, not merely a figure: 120 minor units of the summary's
@@ -557,11 +554,9 @@ describe("AgentRail", () => {
     );
     expect(paths.some((path) => path.endsWith("/ai/usage/summary"))).toBe(true);
     expect(paths.some((path) => path.endsWith("/ai/usage"))).toBe(false);
-    // And on the same line as the disclosure: one row of chrome, not a figure
-    // with a chevron half a line below it.
-    const foot = container.querySelector(".arlast");
-    expect(foot?.querySelector(".arspend")).not.toBeNull();
-    expect(foot?.querySelector(".archev")).not.toBeNull();
+    // In the words' own block, so it folds with the line and centres with it
+    // beside the orb on a short window.
+    expect(container.querySelector(".arwords > .arspend")).not.toBeNull();
   });
 
   // A priced month that cost under a cent is a real zero and draws one.
@@ -664,5 +659,21 @@ describe("AgentRail", () => {
       if (documentedDefaults.has(state)) continue;
       expect(css).toContain(`data-core-state="${state}"`);
     }
+  });
+
+  // The foot reads how open the rail is off `--railW` against the two widths
+  // the shell gives the column, so the two files have to name the same pair.
+  it("mirrors the rail's two widths from the shell", () => {
+    const sheet = (name: string) =>
+      readFileSync(join(dirname(fileURLToPath(import.meta.url)), name), "utf8");
+    const shell = sheet("shell.css");
+    const foot = sheet("agentrail.css");
+    const width = (css: string, pattern: RegExp) => css.match(pattern)?.[1];
+    const shut = width(shell, /\n\.app \{[^}]*?--railW: (\d+px);/);
+    const open = width(shell, /\n\.app\.railexpanded \{\s*--railW: (\d+px);/);
+    expect(shut).toBeDefined();
+    expect(open).toBeDefined();
+    expect(width(foot, /--arRailShut: (\d+px);/)).toBe(shut);
+    expect(width(foot, /--arRailOpen: (\d+px);/)).toBe(open);
   });
 });
