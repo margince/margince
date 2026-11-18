@@ -521,6 +521,8 @@ var citationVocabulary = map[string][]string{
 
 // citationNotFindings are prefixed constants the vocabulary must skip, each
 // with why. An allow code explains a send that went out, so no law is cited.
+//
+// gatekit:fixture the reason codes that are allows, not refusals
 var citationNotFindings = map[string]string{
 	"ReasonAllowed":           "the allow path's own code, never a refusal",
 	"ReasonAllowedByOverride": "an allow a seat ordered, never a refusal",
