@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useState } from "react";
-import { Field } from "../../design-system/atoms";
+import { type ReactNode, useState } from "react";
+import { Field, type FieldControl } from "../../design-system/atoms";
 import { Select } from "../../design-system/select";
 import type { LineBillingTerms } from "../../format/billingphrase";
 import { useT } from "../../i18n";
@@ -60,18 +60,48 @@ function withBillingModel(value: LineBilling, picked: string): LineBilling {
     : { billingModel: picked, billingIntervalMonths: "", intervalCount: "" };
 }
 
+type ControlName = FieldControl | Readonly<{ "aria-label": string }>;
+
+// On a form each control sits under its Field. In a table row the header
+// names the column, so `label` names each control's column and line instead.
+function Labelled({
+  column,
+  label,
+  children,
+}: Readonly<{
+  column: string;
+  label?: (column: string) => string;
+  children: (control: ControlName) => ReactNode;
+}>) {
+  return label ? (
+    children({ "aria-label": label(column) })
+  ) : (
+    <Field label={column}>{children}</Field>
+  );
+}
+
 export function OfferLineBillingFields({
   value,
   onChange,
+  label,
+  onTermTyped,
+  onTermBlur,
 }: Readonly<{
   value: LineBilling;
   onChange: (next: LineBilling) => void;
+  label?: (column: string) => string;
+  // Where the term is saved on blur: typing reaches onTermTyped, not onChange.
+  onTermTyped?: (intervalCount: string) => void;
+  onTermBlur?: () => void;
 }>) {
   const t = useT();
   const recurring = value.billingModel === "recurring";
+  const typed =
+    onTermTyped ??
+    ((intervalCount: string) => onChange({ ...value, intervalCount }));
   return (
     <>
-      <Field label={t("product.billingModel")}>
+      <Labelled column={t("product.billingModel")} label={label}>
         {(control) => (
           <Select
             {...control}
@@ -80,12 +110,12 @@ export function OfferLineBillingFields({
             options={billingModelOptions(t)}
           />
         )}
-      </Field>
+      </Labelled>
       {/* Both only where they mean something. A cadence beside a one-off price
           is a question with no answer, and showing it invites somebody to fill
           it in and be refused. */}
       {recurring && (
-        <Field label={t("product.billingInterval")}>
+        <Labelled column={t("product.billingInterval")} label={label}>
           {(control) => (
             <Select
               {...control}
@@ -96,25 +126,23 @@ export function OfferLineBillingFields({
               options={billingIntervalOptions(t)}
             />
           )}
-        </Field>
+        </Labelled>
       )}
       {recurring && (
-        <Field label={t("offer.committedPeriods")}>
+        <Labelled column={t("offer.committedPeriods")} label={label}>
           {(control) => (
             <input
               {...control}
-              data-testid="new-line-interval-count"
               type="number"
               min="1"
               step="1"
               className="input offers-line-periods"
               value={value.intervalCount}
-              onChange={(event) =>
-                onChange({ ...value, intervalCount: event.target.value })
-              }
+              onChange={(event) => typed(event.target.value)}
+              onBlur={onTermBlur}
             />
           )}
-        </Field>
+        </Labelled>
       )}
     </>
   );
@@ -210,7 +238,6 @@ export function BillingCell({
   label: (column: string) => string;
   onSave: (patch: UpdateOfferLineItemRequest) => void;
 }>) {
-  const t = useT();
   const [value, setValue] = useState(() => lineBillingOf(line));
   const commit = (next: LineBilling) => {
     setValue(next);
@@ -219,46 +246,19 @@ export function BillingCell({
       onSave(patch);
     }
   };
-  const recurring = value.billingModel === "recurring";
   return (
     <div className="offers-line-billing">
-      <Select
-        aria-label={label(t("product.billingModel"))}
-        testId={`line-billing-${line.id}`}
-        value={value.billingModel}
-        onChange={(picked) => commit(withBillingModel(value, picked))}
-        options={billingModelOptions(t)}
+      <OfferLineBillingFields
+        value={value}
+        label={label}
+        onChange={commit}
+        onTermTyped={(intervalCount) => setValue({ ...value, intervalCount })}
+        onTermBlur={() => {
+          if (value.intervalCount !== lineBillingOf(line).intervalCount) {
+            commit(value);
+          }
+        }}
       />
-      {recurring && (
-        <Select
-          aria-label={label(t("product.billingInterval"))}
-          testId={`line-billing-interval-${line.id}`}
-          value={value.billingIntervalMonths}
-          onChange={(picked) =>
-            commit({ ...value, billingIntervalMonths: picked })
-          }
-          options={billingIntervalOptions(t)}
-        />
-      )}
-      {recurring && (
-        <input
-          aria-label={label(t("offer.committedPeriods"))}
-          data-testid={`line-interval-count-${line.id}`}
-          type="number"
-          min="1"
-          step="1"
-          className="input offers-line-periods"
-          value={value.intervalCount}
-          onChange={(event) =>
-            setValue({ ...value, intervalCount: event.target.value })
-          }
-          onBlur={() => {
-            if (value.intervalCount !== lineBillingOf(line).intervalCount) {
-              commit(value);
-            }
-          }}
-        />
-      )}
     </div>
   );
 }
