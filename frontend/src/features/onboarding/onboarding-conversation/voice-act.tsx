@@ -129,11 +129,11 @@ export function VoiceAct({ state, dispatch, initialSummary }: VoiceActProps) {
           useFileDrop below); the board is what shows that now, since there
           is no rail thread left to ring. */}
       <div className={dragOver ? "ob-conv-dragover" : undefined}>{scene}</div>
-      {corpus.failure && (
-        <ErrorLine>
-          {t(corpus.failure.i18nKey, corpus.failure.params)}
+      {corpus.failures.map((failure) => (
+        <ErrorLine key={failure.id}>
+          {t(failure.i18nKey, failure.params)}
         </ErrorLine>
-      )}
+      ))}
     </ConversationWorkbench>
   );
 }

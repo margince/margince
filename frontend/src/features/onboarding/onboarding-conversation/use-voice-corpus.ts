@@ -57,10 +57,9 @@ type SpeakerAsk = Readonly<{
   preview: CorpusPreview;
 }>;
 
-/** What the board shows beside itself when a source could not be added: a
- * server refusal, a safe ingest-failed detail, or the unexpected-client-bug
- * fallback. The thread these used to narrate into is gone with the chat
- * rail, so this is now the only surface a reader sees the refusal on. */
+/** What the board shows for one source that could not be added: a server
+ * refusal, a safe ingest-failed detail, or the unexpected-client-bug
+ * fallback. The board is the only surface a reader sees the refusal on. */
 export type VoiceIngestFailure = Readonly<{
   id: string;
   i18nKey: MessageKey;
@@ -130,7 +129,15 @@ export function useVoiceCorpus({
   const [manifest, setManifest] = useState<readonly CorpusManifestEntry[]>([]);
   const [asks, setAsks] = useState<readonly SpeakerAsk[]>([]);
   const [probesInFlight, setProbesInFlight] = useState(0);
-  const [failure, setFailure] = useState<VoiceIngestFailure | null>(null);
+  const [failures, setFailures] = useState<readonly VoiceIngestFailure[]>([]);
+  // One line per source the current pick could not add, so a batch with
+  // three bad files names all three; a newer word on one source replaces it.
+  const noteFailure = useCallback((failure: VoiceIngestFailure) => {
+    setFailures((prev) => [
+      ...prev.filter((existing) => existing.id !== failure.id),
+      failure,
+    ]);
+  }, []);
   const summaryRef = useRef<CorpusSummary | null>(initialSummary);
   const mounted = useRef(true);
   useEffect(() => {
@@ -170,9 +177,9 @@ export function useVoiceCorpus({
     (id: string, err: unknown) => {
       console.error("voice corpus ingest failed unexpectedly", err);
       say(id, "ob.conv.voice.ingestUnexpected");
-      setFailure({ id, i18nKey: "ob.conv.voice.ingestUnexpected" });
+      noteFailure({ id, i18nKey: "ob.conv.voice.ingestUnexpected" });
     },
-    [say],
+    [say, noteFailure],
   );
 
   // A file that went nowhere is said on the board, the same notice a refusal
@@ -182,9 +189,9 @@ export function useVoiceCorpus({
     (name: string, reason: keyof typeof skipKeys) => {
       const id = `skip:${name}`;
       say(id, skipKeys[reason], { name });
-      setFailure({ id, i18nKey: skipKeys[reason], params: { name } });
+      noteFailure({ id, i18nKey: skipKeys[reason], params: { name } });
     },
-    [say],
+    [say, noteFailure],
   );
 
   // Concurrent ingests can settle out of order; each request is stamped at
@@ -244,7 +251,7 @@ export function useVoiceCorpus({
           outcome.problem,
         );
         dispatch({ type: "NARRATION", entry });
-        setFailure({
+        noteFailure({
           id: entry.id,
           i18nKey: entry.i18nKey,
           params: entry.params,
@@ -280,7 +287,7 @@ export function useVoiceCorpus({
         reactionKey,
       );
     },
-    [dispatch, recordIngest, skip],
+    [dispatch, noteFailure, recordIngest, skip],
   );
 
   // Each intake is stamped when its INGEST is issued, and only the
@@ -298,7 +305,6 @@ export function useVoiceCorpus({
       failureId: string,
     ): void => {
       setProbesInFlight((count) => count + 1);
-      setFailure(null);
       let seq = 0;
       start(() => {
         ingestSeq.current += 1;
@@ -325,6 +331,7 @@ export function useVoiceCorpus({
   // no reader for is refused by name, before anything is read.
   const addFiles = useCallback(
     (files: readonly File[]) => {
+      setFailures([]);
       for (const file of files) {
         if (!isAcceptedCorpusFile(file.name)) {
           skip(file.name, "type");
@@ -356,6 +363,7 @@ export function useVoiceCorpus({
   const addPaste = useCallback(
     (text: string, label: string) => {
       const ref = sourceRef("paste", label, text);
+      setFailures([]);
       dispatch({ type: "UPLOAD_ADDED", id: ref, name: label });
       runIntake(
         (stamp) => intakePaste(ref, label, text, stamp),
@@ -408,6 +416,7 @@ export function useVoiceCorpus({
         return;
       }
       setAsks((prev) => prev.filter((candidate) => candidate.ref !== ask.ref));
+      setFailures([]);
       runIntake(
         (stamp) =>
           intakeTranscript(ask.ref, ask.label, ask.content, value, stamp),
@@ -427,8 +436,8 @@ export function useVoiceCorpus({
     /** True while any probe, ingest, or speaker question is still open —
      * a build starting now would misrepresent what the voice is made of. */
     busy: probesInFlight > 0 || asks.length > 0,
-    /** The most recent source the corpus could not add; cleared the moment
-     * a new attempt starts. */
-    failure,
+    /** Each source of the latest pick the corpus could not add; cleared
+     * when the reader hands over the next file, paste or speaker answer. */
+    failures,
   };
 }

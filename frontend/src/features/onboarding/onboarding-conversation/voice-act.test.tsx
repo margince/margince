@@ -182,6 +182,28 @@ describe("the conversational voice act", () => {
     expect(requestsTo(calls, "/sources", "POST").length).toBe(0);
   });
 
+  it("names every file of one drop it could not take, one line each", async () => {
+    stubApi({});
+    render(<VoiceHarness initial={collectingState()} />);
+
+    dropOnWindow([
+      new File(["binary"], "photo.png", { type: "image/png" }),
+      new File(["a,b"], "sheet.csv", { type: "text/csv" }),
+      new File(["  "], "blank.txt", { type: "text/plain" }),
+    ]);
+
+    await waitFor(() => {
+      expect(screen.getAllByRole("alert")).toHaveLength(3);
+    });
+    expect(
+      screen.getAllByRole("alert").map((line) => line.textContent),
+    ).toEqual([
+      "I cannot read photo.png. Supported formats: .txt, .md, .pdf, .docx, .vtt, .srt, .json.",
+      "I cannot read sheet.csv. Supported formats: .txt, .md, .pdf, .docx, .vtt, .srt, .json.",
+      "There are no words in blank.txt, so nothing was counted.",
+    ]);
+  });
+
   it("takes a dropped PDF in as its text, on the same wire a text file uses", async () => {
     const calls = stubApi({
       preview: documentPreview,
