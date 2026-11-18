@@ -100,6 +100,48 @@ describe("ImapConnectPanel", () => {
     await waitFor(() => expect(onDone).toHaveBeenCalledTimes(1));
   });
 
+  // The card is for hosts other than Google's, so no real server is filled in
+  // for the reader to send a password to by accident.
+  it("starts with an empty host", () => {
+    installFetchStub({});
+    render(<ImapConnectPanel onDone={vi.fn()} onDismiss={() => {}} />);
+    expect(screen.getByLabelText("IMAP server *")).toHaveValue("");
+  });
+
+  it("names an out-of-range port on its field instead of greying the button", async () => {
+    const calls: unknown[] = [];
+    installFetchStub({
+      "POST /connectors/imap/connect": (body) => {
+        calls.push(body);
+        return jsonResponse({}, 500);
+      },
+    });
+    render(<ImapConnectPanel onDone={vi.fn()} onDismiss={() => {}} />);
+    await fillValidForm();
+    const port = screen.getByLabelText("Port");
+    await userEvent.clear(port);
+    await userEvent.type(port, "99999");
+    await userEvent.click(screen.getByRole("button", { name: "Connect" }));
+
+    expect(screen.getByText("From 1 to 65535")).toBeInTheDocument();
+    expect(screen.getByText("Out of range: Port")).toBeInTheDocument();
+    expect(calls).toHaveLength(0);
+  });
+
+  it("drops a failure once the reader changes what was sent", async () => {
+    installFetchStub({
+      "POST /connectors/imap/connect": () =>
+        jsonResponse({ code: "imap_unreachable", detail: "unreachable" }, 502),
+    });
+    render(<ImapConnectPanel onDone={vi.fn()} onDismiss={() => {}} />);
+    await fillValidForm();
+    await userEvent.click(screen.getByRole("button", { name: "Connect" }));
+    await screen.findByText(/could not be reached/i);
+
+    await userEvent.type(screen.getByLabelText("IMAP server *"), "x");
+    expect(screen.queryByText(/could not be reached/i)).toBeNull();
+  });
+
   // "Not now" closes THIS dialog without deciding anything — it never
   // contacts the server and never claims the whole required step as
   // skipped, which is a separate, more deliberate action the surface offers
@@ -289,7 +331,7 @@ describe("OAuthReturnPanel reading a reader-typed outcome", () => {
       await screen.findByText("The connection could not be confirmed."),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Connect again in Settings under Connections."),
+      screen.getByText("Select the account again below."),
     ).toBeInTheDocument();
   });
 });

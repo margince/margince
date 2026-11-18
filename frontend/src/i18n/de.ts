@@ -12607,8 +12607,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "ob.s4.microsoftFailed": "Microsoft-Verbindung nicht abgeschlossen",
   "ob.s4.connectVerifying": "Verbindung wird bestätigt…",
   "ob.s4.connectConfirmFailed": "Die Verbindung konnte nicht bestätigt werden.",
-  "ob.s4.connectRetry":
-    "Verbinde das Postfach erneut in den Einstellungen unter Verbindungen.",
+  "ob.s4.connectRetry": "Wähle das Konto unten noch einmal aus.",
   "ob.s4.connectDenied": "Zugriff abgelehnt. Es wurde nichts verbunden.",
   "ob.s4.googleUnverified":
     "Wenn Google vor einer „nicht verifizierten App“ warnt, wähle „Erweitert“ und dann „Weiter“. Die Seite von Google zeigt genau, was erlaubt wird.",

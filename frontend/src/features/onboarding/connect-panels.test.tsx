@@ -204,6 +204,20 @@ it("OAuthReturnPanel keeps the generic failure for an unrecognized outcome", asy
   ).toBeTruthy();
 });
 
+// Inside onboarding the return points at the step itself, where the same
+// accounts are offered, and Done puts every failure away.
+it("OAuthReturnPanel sends a failed consent back to the accounts below, with Done", async () => {
+  installFetchStub({ "GET /connectors": () => jsonResponse({ data: [] }) });
+  const onDone = vi.fn();
+  render(<OAuthReturnPanel outcome="error" provider="gmail" onDone={onDone} />);
+  expect(
+    await screen.findByText("Select the account again below."),
+  ).toBeInTheDocument();
+  expect(screen.queryByText(/Settings/)).toBeNull();
+  await userEvent.click(screen.getByRole("button", { name: "Done" }));
+  expect(onDone).toHaveBeenCalledTimes(1);
+});
+
 // The posture question rides the connect flow because the import reads a year
 // of mail. An answer given on a later screen arrives after every message it
 // was meant to govern. It is saved on the choice.

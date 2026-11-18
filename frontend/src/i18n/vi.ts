@@ -12271,7 +12271,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "ob.s4.microsoftFailed": "Không thể hoàn tất kết nối Microsoft",
   "ob.s4.connectVerifying": "Đang xác nhận kết nối…",
   "ob.s4.connectConfirmFailed": "Không thể xác nhận kết nối.",
-  "ob.s4.connectRetry": "Kết nối lại trong Cài đặt, mục Kết nối.",
+  "ob.s4.connectRetry": "Chọn lại tài khoản bên dưới.",
   "ob.s4.connectDenied": "Quyền truy cập bị từ chối. Chưa kết nối gì.",
   "ob.s4.googleUnverified":
     "Nếu Google cảnh báo “unverified app”, chọn Nâng cao (Advanced), rồi Tiếp tục (Continue). Màn hình của Google liệt kê chính xác những quyền được cấp.",

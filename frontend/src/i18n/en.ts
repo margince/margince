@@ -12533,7 +12533,7 @@ export const en = {
   "ob.s4.microsoftFailed": "Microsoft connection not completed",
   "ob.s4.connectVerifying": "Confirming connection…",
   "ob.s4.connectConfirmFailed": "The connection could not be confirmed.",
-  "ob.s4.connectRetry": "Connect again in Settings under Connections.",
+  "ob.s4.connectRetry": "Select the account again below.",
   "ob.s4.connectDenied": "Access was declined. Nothing was connected.",
   "ob.s4.googleUnverified":
     "If Google warns about an “unverified app”, select Advanced, then Continue. Google’s screen lists exactly what is granted.",
