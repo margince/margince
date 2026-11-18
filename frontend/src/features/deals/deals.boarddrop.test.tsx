@@ -7,7 +7,13 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DealsScreen } from "./deals";
-import { deal, render, stages, stubBackend } from "./deals.testkit";
+import {
+  deal,
+  dropOnStage,
+  render,
+  stages,
+  stubBackend,
+} from "./deals.testkit";
 
 afterEach(() => {
   cleanup();
@@ -35,19 +41,6 @@ const withLost = [
     ],
   },
 ];
-
-// jsdom carries no drag-and-drop, so the column's drop handler is dispatched
-// directly, as the board's drag ends.
-function dropOnStage(stageId: string, dealId: string) {
-  const column = document.querySelector(
-    `[data-stage="${stageId}"]`,
-  ) as HTMLElement;
-  const dropEvent = new Event("drop", { bubbles: true });
-  Object.assign(dropEvent, {
-    dataTransfer: { getData: () => dealId, setData: () => {} },
-  });
-  column.dispatchEvent(dropEvent);
-}
 
 async function boardWith(
   dealsOnBoard: Parameters<typeof stubBackend>[0],

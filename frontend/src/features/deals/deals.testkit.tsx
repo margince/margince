@@ -154,6 +154,19 @@ const LOSS_REASONS = [
   updated_at: "2026-10-01T08:00:00Z",
 }));
 
+// Drops a deal on a stage column the way the board's drag does. jsdom carries
+// no drag-and-drop, so the drop handler is dispatched directly.
+export function dropOnStage(stageId: string, dealId = "d1") {
+  const column = document.querySelector(
+    `[data-stage="${stageId}"]`,
+  ) as HTMLElement;
+  const dropEvent = new Event("drop", { bubbles: true });
+  Object.assign(dropEvent, {
+    dataTransfer: { getData: () => dealId, setData: () => {} },
+  });
+  column.dispatchEvent(dropEvent);
+}
+
 export function stubBackend(
   deals: Deal[],
   opts: {
