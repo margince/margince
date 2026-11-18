@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -34,10 +35,10 @@ func TestAnExclusionKeepsAMessageOutBeforeAnythingIsStored(t *testing.T) {
 
 	// The mailbox owner rules out one correspondent; the workspace rules out a
 	// whole domain.
-	if _, err := store.Add(owner, capture.ExclusionScopeUser, capture.ExclusionKindAddress, "Partner@Home.example"); err != nil {
+	if _, err := store.Add(owner, capture.ExclusionScopeUser, capture.ExclusionKindAddress, "Partner@Home.example", ids.Nil); err != nil {
 		t.Fatalf("user rule: %v", err)
 	}
-	if _, err := store.Add(admin, capture.ExclusionScopeWorkspace, capture.ExclusionKindDomain, "payroll.example"); err != nil {
+	if _, err := store.Add(admin, capture.ExclusionScopeWorkspace, capture.ExclusionKindDomain, "payroll.example", ids.Nil); err != nil {
 		t.Fatalf("workspace rule: %v", err)
 	}
 
@@ -108,7 +109,7 @@ func TestAnExclusionKeepsAMessageOutBeforeAnythingIsStored(t *testing.T) {
 	if err := store.Remove(owner, personal.ID); err != nil {
 		t.Errorf("the owner lifting their own rule: %v", err)
 	}
-	if _, err := store.Add(owner, capture.ExclusionScopeWorkspace, capture.ExclusionKindDomain, "x.example"); err == nil {
+	if _, err := store.Add(owner, capture.ExclusionScopeWorkspace, capture.ExclusionKindDomain, "x.example", ids.Nil); err == nil {
 		t.Error("a rep without the capture-settings grant added a workspace rule")
 	}
 }
@@ -127,7 +128,7 @@ func TestAContainerRuleKeepsOutMailFiledWhereTheOwnerRulesOut(t *testing.T) {
 	store := capture.NewExclusionStore(e.DB())
 	owner := humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead, principal.ScopeWrite})
 
-	if _, err := store.Add(owner, capture.ExclusionScopeUser, capture.ExclusionKindContainer, "gmail:Label_7"); err != nil {
+	if _, err := store.Add(owner, capture.ExclusionScopeUser, capture.ExclusionKindContainer, "gmail:Label_7", ids.Nil); err != nil {
 		t.Fatalf("container rule: %v", err)
 	}
 
@@ -179,7 +180,7 @@ func TestAContainerRuleIsTheMailboxOwnersAlone(t *testing.T) {
 			RowScope: principal.RowScopeAll,
 		},
 	})
-	_, err := store.Add(admin, capture.ExclusionScopeWorkspace, capture.ExclusionKindContainer, "gmail:Label_7")
+	_, err := store.Add(admin, capture.ExclusionScopeWorkspace, capture.ExclusionKindContainer, "gmail:Label_7", ids.Nil)
 	var invalid *capture.InvalidExclusionError
 	if !errors.As(err, &invalid) || invalid.Field != "scope" {
 		t.Fatalf("a workspace container rule = %v, want a refusal naming the scope — a label id means "+
@@ -188,7 +189,7 @@ func TestAContainerRuleIsTheMailboxOwnersAlone(t *testing.T) {
 	}
 	// The same admin may still set a workspace ADDRESS rule, so the refusal is
 	// about the kind rather than about this caller.
-	if _, err := store.Add(admin, capture.ExclusionScopeWorkspace, capture.ExclusionKindDomain, "payroll.example"); err != nil {
+	if _, err := store.Add(admin, capture.ExclusionScopeWorkspace, capture.ExclusionKindDomain, "payroll.example", ids.Nil); err != nil {
 		t.Errorf("the same caller setting a workspace domain rule: %v", err)
 	}
 }

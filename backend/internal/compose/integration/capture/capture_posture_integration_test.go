@@ -36,7 +36,7 @@ import (
 // registry, so the fixture exercises the gate the product ships.
 func setPosture(t *testing.T, env captureEnv, user ids.UUID, posture string) {
 	t.Helper()
-	if _, err := env.registry.SetMailPosture(seatContext(env.e, user), "gmail", posture, false); err != nil {
+	if _, err := env.registry.SetMailPosture(seatContext(env.e, user), capturemod.ProviderMailbox("gmail"), posture, false); err != nil {
 		t.Fatalf("setting the mailbox posture to %s: %v", posture, err)
 	}
 }
@@ -104,7 +104,7 @@ func TestASharedMailboxNeedsTheWorkspaceOptIn(t *testing.T) {
 	// Refused while the workspace has not opted in. Not a 403: the seat's
 	// authority over their own mailbox is not in question, the workspace's
 	// posture is.
-	_, err := env.registry.SetMailPosture(seatContext(e, e.Rep1), "gmail", capturemod.PostureShared, false)
+	_, err := env.registry.SetMailPosture(seatContext(e, e.Rep1), capturemod.ProviderMailbox("gmail"), capturemod.PostureShared, false)
 	if _, ok := errors.AsType[*capturemod.SharedPostureNotAllowedError](err); !ok {
 		t.Fatalf("asking for shared without the opt-in gave %v, want the opt-in refusal", err)
 	}
@@ -114,7 +114,7 @@ func TestASharedMailboxNeedsTheWorkspaceOptIn(t *testing.T) {
 
 	// And admitted once an admin turns it on.
 	allowSharedPosture(t, e)
-	if _, err := env.registry.SetMailPosture(seatContext(e, e.Rep1), "gmail", capturemod.PostureShared, false); err != nil {
+	if _, err := env.registry.SetMailPosture(seatContext(e, e.Rep1), capturemod.ProviderMailbox("gmail"), capturemod.PostureShared, false); err != nil {
 		t.Fatalf("asking for shared WITH the opt-in: %v", err)
 	}
 	if got := postureOf(t, e, e.Rep1); got != capturemod.PostureShared {
@@ -129,7 +129,7 @@ func TestNarrowingAMailboxNeverNeedsTheOptIn(t *testing.T) {
 	// Making them ask an admin first would be a product that argues with
 	// somebody protecting their own mail.
 	for _, posture := range []string{capturemod.PostureHeld, capturemod.PostureClassified} {
-		if _, err := env.registry.SetMailPosture(seatContext(e, e.Rep1), "gmail", posture, false); err != nil {
+		if _, err := env.registry.SetMailPosture(seatContext(e, e.Rep1), capturemod.ProviderMailbox("gmail"), posture, false); err != nil {
 			t.Fatalf("narrowing to %s without the opt-in: %v", posture, err)
 		}
 	}
@@ -403,7 +403,7 @@ func TestApplyingAPostureToHistoryNarrowsOnlyBackwards(t *testing.T) {
 
 	// Narrowing WITH apply_to_history reaches back over them.
 	if _, err := env.registry.SetMailPosture(
-		seatContext(e, e.Rep1), "gmail", capturemod.PostureHeld, true); err != nil {
+		seatContext(e, e.Rep1), capturemod.ProviderMailbox("gmail"), capturemod.PostureHeld, true); err != nil {
 		t.Fatalf("narrowing with apply_to_history: %v", err)
 	}
 	if n := openActivityCount(t, e); n != 0 {
@@ -413,7 +413,7 @@ func TestApplyingAPostureToHistoryNarrowsOnlyBackwards(t *testing.T) {
 	// And widening back does NOT reach: the messages were held for reasons that
 	// were true when they landed, and a posture change is not a review of them.
 	if _, err := env.registry.SetMailPosture(
-		seatContext(e, e.Rep1), "gmail", capturemod.PostureShared, true); err != nil {
+		seatContext(e, e.Rep1), capturemod.ProviderMailbox("gmail"), capturemod.PostureShared, true); err != nil {
 		t.Fatalf("widening with apply_to_history: %v", err)
 	}
 	if n := openActivityCount(t, e); n != 0 {
@@ -444,7 +444,7 @@ func TestNarrowingToClassifiedNeverLoosensAHeldMessage(t *testing.T) {
 
 	// Held over the whole history.
 	if _, err := env.registry.SetMailPosture(
-		seatContext(e, e.Rep1), "gmail", capturemod.PostureHeld, true); err != nil {
+		seatContext(e, e.Rep1), capturemod.ProviderMailbox("gmail"), capturemod.PostureHeld, true); err != nil {
 		t.Fatalf("holding the history: %v", err)
 	}
 	if got := importPostureOf(t, e, activityID, e.Rep1); got != capturemod.PostureHeld {
@@ -456,7 +456,7 @@ func TestNarrowingToClassifiedNeverLoosensAHeldMessage(t *testing.T) {
 	// Reaching it would be a widening wearing a narrowing's name, and the batch
 	// predicate is the only thing standing in the way.
 	if _, err := env.registry.SetMailPosture(
-		seatContext(e, e.Rep1), "gmail", capturemod.PostureClassified, true); err != nil {
+		seatContext(e, e.Rep1), capturemod.ProviderMailbox("gmail"), capturemod.PostureClassified, true); err != nil {
 		t.Fatalf("applying classified to history: %v", err)
 	}
 	if got := importPostureOf(t, e, activityID, e.Rep1); got != capturemod.PostureHeld {
@@ -502,7 +502,7 @@ func TestASecondMailboxDoesNotLendItsPostureToTheFirst(t *testing.T) {
 		t.Fatalf("connecting the second mailbox: %v", err)
 	}
 	if _, err := secondRegistry.SetMailPosture(
-		seatContext(e, e.Rep1), "graph", capturemod.PostureShared, false); err != nil {
+		seatContext(e, e.Rep1), capturemod.ProviderMailbox("graph"), capturemod.PostureShared, false); err != nil {
 		t.Fatalf("sharing the second mailbox: %v", err)
 	}
 
@@ -510,28 +510,6 @@ func TestASecondMailboxDoesNotLendItsPostureToTheFirst(t *testing.T) {
 	activityID := oneActivityID(t, e)
 	if got, reason := audienceOf(t, e, activityID); got != "participants" {
 		t.Fatalf("a second, shared mailbox lent its posture to the one that delivered: %q / %q", got, reason)
-	}
-}
-
-func TestARebindResetsThePostureToHeld(t *testing.T) {
-	env := newCaptureEnv(t)
-	e := env.e
-	allowSharedPosture(t, e)
-	setPosture(t, env, e.Rep1, capturemod.PostureShared)
-
-	// The same provider, reconnected against a DIFFERENT account. The seat
-	// chose `shared` for a mailbox that is now gone — a role inbox, say — and
-	// the account behind this row is somebody's personal mail. Inheriting the
-	// answer would publish that account's mail on arrival, with nobody asked.
-	env.conn.accountLabel = "personal@myco.example"
-	if _, err := env.registry.Connect(
-		humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead}),
-		"gmail", connector.Auth("refresh")); err != nil {
-		t.Fatalf("rebinding the mailbox: %v", err)
-	}
-
-	if got := postureOf(t, e, e.Rep1); got != capturemod.PostureHeld {
-		t.Fatalf("a rebind left the posture at %q; the previous mailbox's answer is not this one's to inherit", got)
 	}
 }
 

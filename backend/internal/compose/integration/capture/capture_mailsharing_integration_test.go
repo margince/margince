@@ -64,7 +64,7 @@ func TestMailSharingOffHoldsNewMailToItsParticipants(t *testing.T) {
 	if _, err := settingsStore.Update(optInCtx, capturemod.SettingsPatch{SharedPostureAllowed: &sharedOn}); err != nil {
 		t.Fatalf("allowing the shared posture: %v", err)
 	}
-	if _, err := registry.SetMailPosture(grantCtx, "graph", capturemod.PostureShared, false); err != nil {
+	if _, err := registry.SetMailPosture(grantCtx, capturemod.ProviderMailbox("graph"), capturemod.PostureShared, false); err != nil {
 		t.Fatalf("putting the mailbox in shared: %v", err)
 	}
 

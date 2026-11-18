@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 280565,
+    "tool_catalog_bytes": 280954,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 71546,
-    "largest_tool_bytes": 17802,
+    "approx_wire_tokens_total": 71644,
+    "largest_tool_bytes": 17890,
     "largest_tool": "read_details",
     "tool_catalog_composition": {
       "description_bytes": 54814,
-      "input_schema_bytes": 160925,
+      "input_schema_bytes": 161314,
       "output_schema_bytes": 52718,
-      "description_plus_input_schema_bytes": 215739
+      "description_plus_input_schema_bytes": 216128
     }
   },
   "tools": {
@@ -1388,6 +1388,11 @@
             },
             "address": {
               "description": "set_sender_decision, withdraw_sender_decision only",
+              "type": "string"
+            },
+            "connection_id": {
+              "description": "cancel_backfill, disconnect_mailbox, dismiss_mailbox_silence, set_context_tag, set_history_baseline, set_mail_posture, set_signature_enrichment only",
+              "format": "uuid",
               "type": "string"
             },
             "content_base64": {
@@ -8422,6 +8427,11 @@
               "format": "uuid",
               "type": "string"
             },
+            "connection_id": {
+              "description": "backfill_preview only",
+              "format": "uuid",
+              "type": "string"
+            },
             "contact_id": {
               "description": "meeting_proposals only",
               "format": "uuid",
@@ -11577,6 +11587,11 @@
                 "start_backfill",
                 "start_search_reindex"
               ],
+              "type": "string"
+            },
+            "connection_id": {
+              "description": "start_backfill only",
+              "format": "uuid",
               "type": "string"
             },
             "content_base64": {

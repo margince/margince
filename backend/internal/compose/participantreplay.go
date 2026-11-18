@@ -37,7 +37,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/graphcal"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
@@ -79,14 +78,13 @@ const (
 	sourceGraphCal = "graphcal"
 )
 
-// stampedMailboxLabelSQL is the account label of the mailbox that activity a's
-// connector stamp names, and empty when the stamp names no seat.
+// stampedMailboxLabelSQL is the account label of the first connected mailbox
+// that captured activity a, and empty when the stamp names no seat.
 var stampedMailboxLabelSQL = `coalesce((
 		         SELECT c.account_label
 		           FROM capture_connection c
-		          WHERE c.provider = split_part(a.captured_by, ':', 2)
-		            AND c.user_id::text = ` + auth.ConnectorSeatSQL("a") + `
-		          LIMIT 1), '')`
+		          WHERE ` + storekit.CapturingMailboxSQL("c", "a") + `
+		          ORDER BY c.created_at, c.id LIMIT 1), '')`
 
 // replayCandidate is one activity whose original is still on file.
 type replayCandidate struct {
@@ -156,8 +154,8 @@ func replayParticipantsBatch(ctx context.Context, pool *pgxpool.Pool, limit int,
 //
 // The mailbox owner and the format come from captured_by. The sink stamps it
 // from the authenticated principal as `connector:<name>:<user>`, never from a
-// record's claim. capture_connection is unique on (user_id, provider), so the
-// pair names one mailbox or none. A stamp naming no seat (a human-logged row, a
+// record's claim. The seat owns the row; which of its mailboxes delivered it
+// is storekit.CapturingMailboxSQL's answer. A stamp naming no seat (a human-logged row, a
 // bare `connector:gmail`) yields no owner, recorded rather than guessed.
 func selectReplayCandidates(ctx context.Context, tx pgx.Tx, limit int) ([]replayCandidate, error) {
 	// The stored LINK first, the key join only for a row carrying none: a

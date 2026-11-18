@@ -244,7 +244,7 @@ func (s *Store) applySignature(ctx context.Context, contactID ids.ContactID, sou
 func signatureSourceLimitedTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, sourceActivity ids.UUID, defaultEnabled bool) (limited bool, observedAt time.Time, err error) {
 	if _, err := tx.Exec(ctx, `
 		SELECT 1 FROM capture_connection cc, activity a
-		 WHERE a.id = $1 AND `+capturingMailboxSQL("a")+` FOR SHARE OF cc`, sourceActivity); err != nil {
+		 WHERE a.id = $1 AND a.restricted_at IS NULL AND `+storekit.CapturingMailboxSQL("cc", "a")+` FOR SHARE OF cc`, sourceActivity); err != nil {
 		return false, observedAt, fmt.Errorf("contacts: holding the signature's mailbox: %w", err)
 	}
 	if err := tx.QueryRow(ctx, `

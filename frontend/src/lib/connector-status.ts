@@ -61,6 +61,15 @@ export function missingSendGrant(
   return required !== undefined && !connection.scopes.includes(required);
 }
 
+/** Whether this connection's grant can send mail: a sending provider whose
+ *  granted scopes carry its send scope. */
+export function holdsSendGrant(
+  connection: Pick<CaptureConnection, "provider" | "scopes">,
+): boolean {
+  const required = SEND_SCOPES[connection.provider];
+  return required !== undefined && connection.scopes.includes(required);
+}
+
 /** Each contract status gets its own Badge tone. Collapsing reauth_required
  *  and error into the same tone is what made a dead mailbox and a merely-
  *  stale one indistinguishable at a glance. `disconnected` gets no tone (the

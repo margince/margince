@@ -49,7 +49,8 @@ func TestAScheduledSendCarriesEveryFieldOfItsInput(t *testing.T) {
 			ConsentEventID: ids.NewV7(),
 			BasisID:        ids.NewV7(),
 		},
-		SendingEntity: ids.NewV7(),
+		SendingEntity:  ids.NewV7(),
+		FromConnection: ids.NewV7(),
 	}
 
 	out, err := freezePayload(in).thaw()
@@ -80,6 +81,7 @@ func TestTheRoundTripFixtureLeavesNoFieldUnset(t *testing.T) {
 		OperatorReason:   "they asked at the fair",
 		Evidence:         commsauthz.Evidence{ActivityID: ids.NewV7()},
 		SendingEntity:    ids.NewV7(),
+		FromConnection:   ids.NewV7(),
 	}
 	v := reflect.ValueOf(in)
 	for i := range v.NumField() {

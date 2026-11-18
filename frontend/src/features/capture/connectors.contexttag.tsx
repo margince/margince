@@ -6,6 +6,7 @@ import { useSaveDraft } from "../../design-system/savepage";
 import { Select } from "../../design-system/select";
 import { SettingRow } from "../../design-system/settingrow";
 import { useT } from "../../i18n";
+import { mailboxParams } from "../../lib/connectors";
 import { unwrap } from "../../lib/problem";
 import { useTagVocabulary } from "../../lib/tags.queries";
 
@@ -29,7 +30,7 @@ export function ConnectorContextTagRow({
 }: Readonly<{ conn: CaptureConnection }>) {
   const t = useT();
   const vocabulary = useTagVocabulary();
-  const save = useSetConnectorContextTag(conn.provider);
+  const save = useSetConnectorContextTag(conn);
   const words = vocabulary.data?.tags ?? [];
   const chosen = conn.context_tag;
   // The empty string is "files nothing"; null is "not touched".
@@ -86,7 +87,7 @@ export function ConnectorContextTagRow({
   );
 }
 
-function useSetConnectorContextTag(provider: CaptureConnection["provider"]) {
+function useSetConnectorContextTag(conn: CaptureConnection) {
   const queryClient = useQueryClient();
   return useMutation({
     // Takes the new word as a VARIABLE rather than closing over the row's
@@ -96,7 +97,7 @@ function useSetConnectorContextTag(provider: CaptureConnection["provider"]) {
     mutationFn: async (tagID: string | null) => {
       unwrap(
         await api.PUT("/connectors/{provider}/context-tag", {
-          params: { path: { provider } },
+          params: mailboxParams(conn),
           body: { tag_id: tagID },
         }),
       );

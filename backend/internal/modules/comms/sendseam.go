@@ -112,7 +112,7 @@ func (d *Dispatcher) resolveSeam(ctx context.Context, del Delivery) (sendSeam, e
 			})
 		}}, nil
 	}
-	sender, auth, granted, err := d.resolver.Resolve(ctx, del.UserID, del.Provider)
+	sender, auth, granted, err := d.resolver.Resolve(ctx, del.UserID, del.Provider, del.ConnectionID)
 	if err != nil {
 		return sendSeam{}, err
 	}

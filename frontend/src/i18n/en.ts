@@ -7946,6 +7946,9 @@ export const en = {
   "compose.relatedToNone": "Nothing specific",
   "compose.relatedDeal": "Deal: {name}",
   "compose.aboutDeal": "Deal this follow-up is about",
+  "compose.from.label": "From",
+  "compose.from.automatic":
+    "Mailbox the conversation arrived in, or your default",
   "compose.aboutDealNone": "No deal",
   "compose.aboutDealUnavailable":
     "The contact’s deals could not be loaded. Write from the deal’s page instead.",
@@ -12313,7 +12316,11 @@ export const en = {
   "connectors.oauthNotConnected": "Nothing was connected",
 
   // The card's header verb, which opens the connect dialog (connectFlow.*).
-  "connectors.addOpen": "Add account",
+  "connectors.addOpen": "Add another mailbox",
+  "connectors.menu.useForNewMail": "Send new mail from this mailbox",
+  "connectors.defaultSender": "Sends new mail",
+  "connectors.oauthOtherAccount":
+    "You signed in with a different account than this mailbox, so nothing was changed. To connect that account too, use Add another mailbox.",
   "connectors.providerNotConfigured":
     "{provider} is not configured on this installation.",
 

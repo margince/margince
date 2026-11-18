@@ -45,6 +45,9 @@ type scheduledPayload struct {
 	// SendingEntity is the legal entity the scheduling resolved. A payload
 	// written before it was frozen has none, and the fire resolves one.
 	SendingEntity string `json:"sending_entity,omitempty"`
+	// FromConnection is the mailbox the sender chose. A payload with none
+	// leaves the choice to the fire, as an unchosen send does.
+	FromConnection string `json:"from_connection,omitempty"`
 }
 
 // frozenEvidence is the evidence block as it sits on a scheduled row. Ids as
@@ -144,6 +147,7 @@ func freezePayload(in SendEmailInput) scheduledPayload {
 		OperatorReason:   in.OperatorReason,
 		Evidence:         freezeEvidence(in.Evidence),
 		SendingEntity:    idText(in.SendingEntity),
+		FromConnection:   idText(in.FromConnection),
 	}
 }
 
@@ -160,11 +164,13 @@ func (p scheduledPayload) thaw() (SendEmailInput, error) {
 	if err != nil {
 		return SendEmailInput{}, err
 	}
-	var entity ids.UUID
-	if p.SendingEntity != "" {
-		if entity, err = ids.Parse(p.SendingEntity); err != nil {
-			return SendEmailInput{}, fmt.Errorf("scheduled send: sending entity %q: %w", p.SendingEntity, err)
-		}
+	entity, err := frozenID("sending entity", p.SendingEntity)
+	if err != nil {
+		return SendEmailInput{}, err
+	}
+	from, err := frozenID("sending mailbox", p.FromConnection)
+	if err != nil {
+		return SendEmailInput{}, err
 	}
 	// A category reserved for the installation's own notices can never
 	// legitimately be in a scheduled payload: the door that wrote it refuses
@@ -192,5 +198,18 @@ func (p scheduledPayload) thaw() (SendEmailInput, error) {
 		OperatorReason:   p.OperatorReason,
 		Evidence:         evidence,
 		SendingEntity:    entity,
+		FromConnection:   from,
 	}, nil
+}
+
+// frozenID reads an optional id off a payload; empty is the zero id.
+func frozenID(what, raw string) (ids.UUID, error) {
+	if raw == "" {
+		return ids.UUID{}, nil
+	}
+	id, err := ids.Parse(raw)
+	if err != nil {
+		return ids.UUID{}, fmt.Errorf("scheduled send: %s %q: %w", what, raw, err)
+	}
+	return id, nil
 }

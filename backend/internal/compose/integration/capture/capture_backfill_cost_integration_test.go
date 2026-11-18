@@ -15,6 +15,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
+	capturemod "github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -45,7 +46,7 @@ func TestHistoryImportReportsItsDatabaseWork(t *testing.T) {
 	if _, err := registry.Connect(actor, "gmail", connector.Auth("refresh")); err != nil {
 		t.Fatal(err)
 	}
-	run, err := registry.StartBackfill(actor, "gmail", ids.From[ids.UserKind](e.Rep1), 6, connector.BackfillEstimate{Messages: count}, enqueueNothing)
+	run, err := registry.StartBackfill(actor, capturemod.ProviderMailbox("gmail"), ids.From[ids.UserKind](e.Rep1), 6, connector.BackfillEstimate{Messages: count}, enqueueNothing)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -124,7 +125,7 @@ func TestHistoryImportStaysWithinItsRoundTripBudget(t *testing.T) {
 	if _, err := registry.Connect(actor, "gmail", connector.Auth("refresh")); err != nil {
 		t.Fatal(err)
 	}
-	run, err := registry.StartBackfill(actor, "gmail", ids.From[ids.UserKind](e.Rep1), 6, connector.BackfillEstimate{Messages: count}, enqueueNothing)
+	run, err := registry.StartBackfill(actor, capturemod.ProviderMailbox("gmail"), ids.From[ids.UserKind](e.Rep1), 6, connector.BackfillEstimate{Messages: count}, enqueueNothing)
 	if err != nil {
 		t.Fatal(err)
 	}

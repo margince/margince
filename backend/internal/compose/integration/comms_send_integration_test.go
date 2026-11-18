@@ -65,7 +65,7 @@ type stubMailbox struct {
 
 var _ comms.ConnectionResolver = stubMailbox{}
 
-func (m stubMailbox) Resolve(context.Context, ids.UserID, string) (connector.EmailSender, connector.Auth, []string, error) {
+func (m stubMailbox) Resolve(context.Context, ids.UserID, string, *ids.UUID) (connector.EmailSender, connector.Auth, []string, error) {
 	return m.sender, m.auth, []string{apptest.GmailSendScope}, nil
 }
 

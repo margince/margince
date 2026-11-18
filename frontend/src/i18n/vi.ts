@@ -7755,6 +7755,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.relatedToNone": "Không cụ thể",
   "compose.relatedDeal": "Thuộc deal: {name}",
   "compose.aboutDeal": "Deal mà thư theo dõi này nói về",
+  "compose.from.label": "Từ",
+  "compose.from.automatic":
+    "Hộp thư nhận cuộc trò chuyện, nếu không thì hộp thư mặc định",
   "compose.aboutDealNone": "Không có deal",
   "compose.aboutDealUnavailable":
     "Không tải được các deal của liên hệ. Hãy viết từ trang của deal.",
@@ -12041,7 +12044,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "connectors.oauthNotConnected": "Chưa kết nối được gì",
 
   // The card's header verb, which opens the connect dialog (connectFlow.*).
-  "connectors.addOpen": "Thêm tài khoản",
+  "connectors.addOpen": "Thêm hộp thư khác",
+  "connectors.menu.useForNewMail": "Gửi thư mới từ hộp thư này",
+  "connectors.defaultSender": "Gửi thư mới",
+  "connectors.oauthOtherAccount":
+    "Bạn đã đăng nhập bằng một tài khoản khác với hộp thư này nên không có gì thay đổi. Để kết nối cả tài khoản đó, hãy chọn Thêm hộp thư khác.",
   "connectors.providerNotConfigured":
     "Bản cài đặt này chưa cấu hình {provider}.",
 

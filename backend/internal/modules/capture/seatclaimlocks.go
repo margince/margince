@@ -15,14 +15,17 @@ import (
 )
 
 // lockConnectionClaimsTx takes the seat-address claim locks a change to one
-// connection needs: the label it holds now and the label it will hold. Read
+// connection needs: the label the row holds now and the label it will hold.
+// A zero connection is a mailbox being added, which holds no label yet. Read
 // before the row lock, as storekit.LockSeatAddressClaims requires.
-func lockConnectionClaimsTx(ctx context.Context, tx pgx.Tx, user ids.UUID, provider string, next *string) error {
+func lockConnectionClaimsTx(ctx context.Context, tx pgx.Tx, user, connection ids.UUID, next *string) error {
 	var current *string
-	err := tx.QueryRow(ctx, `SELECT account_label FROM capture_connection WHERE user_id = $1 AND provider = $2`,
-		user, provider).Scan(&current)
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		return fmt.Errorf("capture: reading the mailbox address a connection change touches: %w", err)
+	if !connection.IsZero() {
+		err := tx.QueryRow(ctx, `SELECT account_label FROM capture_connection WHERE id = $1 AND user_id = $2`,
+			connection, user).Scan(&current)
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf("capture: reading the mailbox address a connection change touches: %w", err)
+		}
 	}
 	var labels []string
 	for _, label := range []*string{current, next} {

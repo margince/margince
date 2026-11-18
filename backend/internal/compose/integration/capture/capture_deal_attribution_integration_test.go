@@ -147,7 +147,7 @@ func shareMailbox(t *testing.T, env captureEnv) {
 		t.Fatalf("allowing the shared posture: %v", err)
 	}
 	owner := humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead})
-	if _, err := env.registry.SetMailPosture(owner, "gmail", capturemod.PostureShared, false); err != nil {
+	if _, err := env.registry.SetMailPosture(owner, capturemod.ProviderMailbox("gmail"), capturemod.PostureShared, false); err != nil {
 		t.Fatalf("putting the mailbox in shared: %v", err)
 	}
 }

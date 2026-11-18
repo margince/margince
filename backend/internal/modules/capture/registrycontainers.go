@@ -33,11 +33,22 @@ import (
 // folders" rather than a fault the caller should retry.
 var ErrContainersUnsupported = errors.New("capture: this provider does not list folders")
 
-// ListContainers returns the folders or labels of this seat's connection.
+// ListContainers returns the folders or labels of the seat's connection
+// mailbox names.
 func (r *Registry) ListContainers(
-	ctx context.Context, name string, userID ids.UserID,
+	ctx context.Context, mailbox Mailbox, userID ids.UserID,
 ) ([]connector.NamedContainer, bool, error) {
-	return r.listContainersOf(ctx, name, `user_id = $1`, userID.UUID)
+	if _, err := r.containerLister(mailbox.Provider); err != nil {
+		return nil, false, err
+	}
+	match, err := r.resolveMemberMailbox(ctx, userID.UUID, mailbox)
+	if errors.Is(err, ErrNoConnection) {
+		return nil, false, apperrors.ErrNotFound
+	}
+	if err != nil {
+		return nil, false, err
+	}
+	return r.listContainersOf(ctx, mailbox.Provider, `id = $1`, match.id)
 }
 
 // listContainersOf lists the folders of the one connection that connection,
@@ -47,13 +58,9 @@ func (r *Registry) ListContainers(
 // one to exclude this morning. It costs one provider round trip, so the picker
 // asks for it when it opens rather than on every keystroke.
 func (r *Registry) listContainersOf(ctx context.Context, name, connection string, key ids.UUID) ([]connector.NamedContainer, bool, error) {
-	conn, err := r.connector(name)
+	lister, err := r.containerLister(name)
 	if err != nil {
 		return nil, false, err
-	}
-	lister, ok := conn.(connector.ContainerLister)
-	if !ok {
-		return nil, false, ErrContainersUnsupported
 	}
 	var credentialRef *string
 	var authBytes []byte
@@ -74,4 +81,19 @@ func (r *Registry) listContainersOf(ctx context.Context, name, connection string
 		return nil, false, resolveErr
 	}
 	return lister.ListContainers(ctx, auth)
+}
+
+// containerLister is the connector for name, when it can list folders.
+//
+//nolint:ireturn // returns the optional connector.ContainerLister seam by design
+func (r *Registry) containerLister(name string) (connector.ContainerLister, error) {
+	conn, err := r.connector(name)
+	if err != nil {
+		return nil, err
+	}
+	lister, ok := conn.(connector.ContainerLister)
+	if !ok {
+		return nil, ErrContainersUnsupported
+	}
+	return lister, nil
 }
