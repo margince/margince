@@ -23,6 +23,7 @@ import {
   joinMultiselectValue,
   splitMultiselectValue,
 } from "./create";
+import { amountRefusal } from "./moneyamountfield";
 
 export type CustomField = components["schemas"]["CustomField"];
 
@@ -33,7 +34,7 @@ export type BooleanLabels = { yes: string; no: string };
 export function customFieldToFormField(
   field: CustomField,
   boolLabels: BooleanLabels,
-  tooPrecise: (currency: string) => string,
+  t: Parameters<typeof amountRefusal>[0],
   locale = "en",
 ): CreateField {
   const base = {
@@ -55,13 +56,7 @@ export function customFieldToFormField(
         ...base,
         type: "number",
         toInput: (raw) => customFieldFormValue(field, raw),
-        validate: (value) => {
-          const code = field.currency ?? "";
-          return value.trim() !== "" &&
-            Number.isNaN(toMinorUnits(Number(value), code))
-            ? tooPrecise(code)
-            : undefined;
-        },
+        validate: (value) => amountRefusal(t, value, field.currency ?? ""),
       };
     case "multiselect":
       return {
@@ -409,12 +404,7 @@ export function useObjectCustomFields(
   const boolLabels = { yes: t("field.yes"), no: t("field.no") };
 
   const controls = fields.map((field) =>
-    customFieldToFormField(
-      field,
-      boolLabels,
-      (currency) => t("record.amountTooPrecise", { currency }),
-      locale,
-    ),
+    customFieldToFormField(field, boolLabels, t, locale),
   );
   const formFields: CreateField[] =
     controls.length === 0

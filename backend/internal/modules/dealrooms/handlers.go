@@ -113,7 +113,12 @@ func (h Handlers) UpdateDealRoom(w http.ResponseWriter, r *http.Request, id crmc
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	room, err := h.store.UpdateRoom(r.Context(), pathID(id), updateInput(req, httperr.ClearedFields(r), ifVersion))
+	in, err := updateInput(req, httperr.ClearedFields(r), ifVersion)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	room, err := h.store.UpdateRoom(r.Context(), pathID(id), in)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

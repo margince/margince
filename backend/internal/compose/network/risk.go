@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -299,9 +300,10 @@ func foldRisks(c DealCoverage, say langcopy.Spoken) []Risk {
 	//
 	// The finding still arrives the moment there is something to find: one
 	// captured touch is enough to make the count mean what it says.
+	// A contact may hold several roles on one deal, one seat each.
 	engaged := make([]ids.UUID, 0, len(c.Stakeholders))
 	for _, s := range c.Stakeholders {
-		if s.Engaged {
+		if s.Engaged && !slices.Contains(engaged, s.ContactID) {
 			engaged = append(engaged, s.ContactID)
 		}
 	}

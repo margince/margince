@@ -45,7 +45,8 @@ function ReadOnlyText({
 
 type TextKind = "text" | "email" | "number" | "date";
 
-function InlineTextControl({
+/** The one control a text field's edit dialog holds. */
+export function InlineTextControl({
   field,
   multiline,
   type,

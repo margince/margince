@@ -157,6 +157,33 @@ describe("the FX base line names the installation's base currency", () => {
   });
 });
 
+describe("the FX base line reads like the rows around it", () => {
+  afterEach(cleanup);
+
+  const line = (fxRateToBase: string, locale: "en" | "de") =>
+    render(
+      <LocaleProvider initial={locale}>
+        <FxLine
+          amountMinor={3_000_000}
+          baseCurrency="EUR"
+          fxRateToBase={fxRateToBase}
+          fxRateDate="2026-11-18"
+          locale={locale}
+        />
+      </LocaleProvider>,
+    ).container;
+
+  it("drops the stored rate's padding and names the day in words", () => {
+    expect(line("0.9200000000", "en").textContent).toBe(
+      "€27,600.00 · rate 0.92 on 18 Nov 2026",
+    );
+  });
+
+  it("rounds a long rate to four decimals in the reader's own digits", () => {
+    expect(line("1.1734567890", "de").textContent).toContain("Kurs 1,1735 vom");
+  });
+});
+
 // An offer is written in the DEAL's currency, so a deal nobody has priced has
 // nothing to write one in. The control stays visible and says why: creating the
 // offer in a currency the code picked would write an invented denomination onto

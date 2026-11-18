@@ -1692,6 +1692,7 @@
   "record.timeline": "History",
   "record.fieldRequired": "This field is required.",
   "record.amountTooPrecise": "This amount has more decimals than {currency} allows.",
+  "record.amountTooLarge": "This amount is too large to save.",
   "record.finishFieldEdit": "Save or cancel the current edit before closing details.",
   "record.save": "Save",
   "record.archived": "Archived",

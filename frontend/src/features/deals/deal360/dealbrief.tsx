@@ -1,5 +1,12 @@
 import { useState } from "react";
+import type { CreateField } from "../../../components/create";
+import { type RailEdit, useRailText } from "../../../components/railfield";
 import { Button } from "../../../design-system/atoms";
+import {
+  FieldEditDialog,
+  useFieldEditor,
+} from "../../../design-system/fieldeditdialog";
+import { InlineTextControl } from "../../../design-system/inlinetext";
 import {
   OverviewCard,
   OverviewText,
@@ -18,12 +25,12 @@ const COLLAPSED_LINES = 6;
  */
 export function DealBrief({
   brief,
-  onEdit,
+  edit,
 }: Readonly<{
   brief?: string | null;
-  // Opens the deal's fields where the brief is written; absent while the
-  // deal takes no writes from this reader.
-  onEdit?: () => void;
+  // The deal's field edit; absent while the deal takes no writes from this
+  // reader.
+  edit?: RailEdit;
 }>) {
   const t = useT();
   const [expanded, setExpanded] = useState(false);
@@ -38,11 +45,12 @@ export function DealBrief({
     <OverviewCard
       title={t("deal.brief.title")}
       action={
-        onEdit ? (
-          <Button variant="link" onClick={onEdit}>
-            {text ? t("deal.briefEdit") : t("deal.briefAdd")}
-          </Button>
-        ) : undefined
+        edit && (
+          <BriefAction
+            edit={edit}
+            verb={text ? t("deal.briefEdit") : t("deal.briefAdd")}
+          />
+        )
       }
       empty={text ? undefined : t("deal.briefEmpty")}
     >
@@ -70,5 +78,51 @@ export function DealBrief({
         </>
       ) : undefined}
     </OverviewCard>
+  );
+}
+
+function BriefAction({
+  edit,
+  verb,
+}: Readonly<{ edit: RailEdit; verb: string }>) {
+  const field = edit.fields.find((one) => one.key === "description");
+  return edit.canEdit && field ? (
+    <BriefEditor edit={edit} field={field} verb={verb} />
+  ) : null;
+}
+
+// The card's link opens the brief's own editor, saved like the details row.
+function BriefEditor({
+  edit,
+  field,
+  verb,
+}: Readonly<{ edit: RailEdit; field: CreateField; verb: string }>) {
+  const t = useT();
+  const { stored, canEdit, onEditingChange, onDirtyChange, onSave } =
+    useRailText(edit, field);
+  const { open, editing } = useFieldEditor(canEdit, onEditingChange);
+  return (
+    <>
+      <Button variant="link" onClick={() => editing(true)}>
+        {verb}
+      </Button>
+      <FieldEditDialog
+        open={open}
+        label={t("deal.brief")}
+        value={stored}
+        hint={field.hint}
+        onClose={() => editing(false)}
+        onSave={onSave}
+        onDirtyChange={onDirtyChange}
+      >
+        {(control) => (
+          <InlineTextControl
+            field={control}
+            multiline
+            maxLength={field.maxLength}
+          />
+        )}
+      </FieldEditDialog>
+    </>
   );
 }

@@ -2521,7 +2521,7 @@ export const en = {
   "history.verb.erase": "{subject} erased the record",
   "history.verb.anonymize": "{subject} anonymized the record",
   "history.verb.assign": "{subject} assigned the record",
-  "history.verb.advanceStage": "{subject} advanced the stage of the record",
+  "history.verb.advanceStage": "{subject} moved the record to another stage",
   "history.verb.advancePhase": "{subject} advanced the phase of the record",
   "history.verb.sendEmail": "{subject} sent an email for the record",
   "history.verb.consentGrant": "{subject} granted consent for the record",
@@ -2978,7 +2978,8 @@ export const en = {
   "board.ratesOn": "Rates {date}",
   "board.unpriced_one": "{count} not priced",
   "board.unpriced_other": "{count} not priced",
-  "board.totalsTip": "{total} open, {weighted} weighted at {probability}.",
+  "board.totalsTip":
+    "{total} open, {weighted} weighted by each deal’s probability.",
   "board.unpricedTip_one":
     "{count} deal has no price and is left out of both totals.",
   "board.unpricedTip_other":
@@ -2994,6 +2995,7 @@ export const en = {
   "deal.staged": "Staged",
   "deal.archived": "Archived",
   "deal.closes": "closes {date}",
+  "deal.closed": "closed {date}",
   "deal.undated": "no close date",
   "deal.lastMail": "Last email",
   "deal.mail.title": "Previous emails",
@@ -3032,6 +3034,7 @@ export const en = {
   "record.fieldRequired": "This field is required.",
   "record.amountTooPrecise":
     "This amount has more decimals than {currency} allows.",
+  "record.amountTooLarge": "This amount is too large to save.",
   "record.registration": "Registration",
   "record.leadProfileReadOnly": "LinkedIn cannot be changed on a lead.",
   "record.openProfile": "Open profile",
@@ -3049,6 +3052,7 @@ export const en = {
   "record.save": "Save",
   "record.saveDone": "“{name}” saved",
   "record.archiveDone": "“{name}” archived",
+  "record.restoreDone": "“{name}” restored",
   "record.archive": "Archive",
   "record.disqualify": "Disqualify",
   "record.archiveConfirm":
@@ -6116,6 +6120,13 @@ export const en = {
   "deals.confirm": "Confirm",
   "deals.cancel": "Cancel",
   "deals.advanced": "Moved to {stage}",
+  "deals.advancedProbability": "Moved to {stage} · probability now {percent}",
+  "deals.closedWon": "Closed as won",
+  "deals.closedWonProbability": "Closed as won · probability {percent}",
+  "deals.closedLost": "Closed as lost",
+  "deals.closedLostProbability": "Closed as lost · probability {percent}",
+  "deals.reopened": "Reopened in {stage}",
+  "deals.reopenedProbability": "Reopened in {stage} · probability {percent}",
 
   "deal.ownerKeep": "Keep current owner",
   "deal.ownerMe": "Assign to me",
@@ -6238,8 +6249,6 @@ export const en = {
     "Clear the figure to follow the stage again.",
   "deal.winProbability.reason.stageNamed": "the stage {name}",
   "deal.winProbability.reason.stageUnnamed": "the deal’s stage",
-  "deal.winProbability.setByStage":
-    "Probability set to {percent} by the stage {stage}",
   "deal.winProbability.band.90_plus": "90% or more",
   "deal.winProbability.band.60_89": "60 to 89%",
   "deal.winProbability.band.30_59": "30 to 59%",
@@ -6538,7 +6547,7 @@ export const en = {
   "deal.acquisitionUnset": "Not set",
   "deal.acquisitionRetired": "(retired)",
   "deal.waitUntil": "Wait until",
-  "deal.fxBase": "Base {value} · rate {rate} as of {date}",
+  "deal.fxBase": "{value} · rate {rate} on {date}",
   "deal.archiveRefused":
     "Only the deal’s owner or a manager can archive this deal.",
   "contact.archiveRefused":
@@ -6546,6 +6555,7 @@ export const en = {
   "company.archiveRefused":
     "Only the company’s owner or a manager can archive this company.",
   "deal.archive": "Archive deal",
+  "deal.restore": "Restore deal",
   "deal.archiveConfirm":
     "Archiving removes this deal from open deals. You can bring it back from its history.",
   "deal.archivedReadOnly": "This deal is archived and takes no changes.",
@@ -6626,6 +6636,13 @@ export const en = {
   "deals.bulkStage": "Move to stage",
   "deals.bulkStagePick": "Pick a stage",
   "deals.bulkMove": "Move",
+  "deals.bulkMoved_one": "{count} deal moved to {stage}.",
+  "deals.bulkMoved_other": "{count} deals moved to {stage}.",
+  "deals.bulkAlreadyThere_one": "{count} was already in {stage}.",
+  "deals.bulkAlreadyThere_other": "{count} were already in {stage}.",
+  "deals.bulkNothingToMove_one": "The selected deal is already in {stage}.",
+  "deals.bulkNothingToMove_other":
+    "All {count} selected deals are already in {stage}.",
   "deals.bulkFailed": "{count} not applied:",
   "deals.bulkFailedRow": "could not be saved",
   "bulk.selected_one": "{count} selected",
@@ -13495,9 +13512,8 @@ export const en = {
     "{steward} has paused this room. Your link remains valid, and you can continue once access resumes.",
   "buyer.expiredTitle": "Access has ended",
   "buyer.expiredBody":
-    "Access to this room has expired. Contact {steward}, or request a new link below.",
+    "Access to this room has expired. Contact {steward} if you need it again.",
   "buyer.eyebrow": "Deal Room",
-  "buyer.contact": "Your contact: {steward}.",
   "buyer.closed": "This room is closed. Its content is kept as a record.",
   "buyer.previewBannerTitle": "You are previewing this room",
   "buyer.previewBanner":
