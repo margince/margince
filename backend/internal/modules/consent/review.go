@@ -127,6 +127,8 @@ type Review struct {
 	Refusals    []RefusedRecipient
 	ReasonCode  string
 	Correction  *WordingCorrectionContext
+	// Warnings are the warnings this review is served with to its reader.
+	Warnings []OverrideWarning
 }
 
 // OpenReviewTx records one refusal, inside the transaction that refused.
@@ -270,6 +272,7 @@ func (s *Store) ReviewForReader(ctx context.Context, id ids.UUID) (Review, error
 			return err
 		}
 		out.State = openStateFor(out.State, out.Refusals)
+		out.Warnings = warningsServed(ctx, out.InitiatedBy, out.IntentID)
 		if err := s.nameReviewEntities(ctx, tx, out.Refusals); err != nil {
 			return err
 		}
@@ -480,6 +483,7 @@ func (s *Store) ReviewForInitiator(ctx context.Context, id ids.UUID) (Review, er
 			return err
 		}
 		out.State = openStateFor(out.State, out.Refusals)
+		out.Warnings = warningsServed(ctx, out.InitiatedBy, out.IntentID)
 		return s.nameReviewEntities(ctx, tx, out.Refusals)
 	})
 	return out, err

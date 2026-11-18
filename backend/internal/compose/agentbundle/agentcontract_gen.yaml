@@ -7567,16 +7567,7 @@ paths:
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
-        '409':
-          description: |-
-            Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
-            When the refusal opened a review, `details` carries `review_id`, the
-            `available_actions` this caller may take, and `refusals`: each refused address
-            the caller named, with the engine's `reason_code`, resolved `category` and the
-            `requested_category` the caller claimed.
-          content:
-            application/problem+json:
-              schema: {$ref: '#/components/schemas/Problem'}
+        '409': {$ref: '#/components/responses/SendRefused'}
         '422': {$ref: '#/components/responses/SendValidationError'}
   /emails:
     post:
@@ -7623,16 +7614,7 @@ paths:
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
-        '409':
-          description: |-
-            Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
-            When the refusal opened a review, `details` carries `review_id`, the
-            `available_actions` this caller may take, and `refusals`: each refused address
-            the caller named, with the engine's `reason_code`, resolved `category` and the
-            `requested_category` the caller claimed.
-          content:
-            application/problem+json:
-              schema: {$ref: '#/components/schemas/Problem'}
+        '409': {$ref: '#/components/responses/SendRefused'}
         '422': {$ref: '#/components/responses/SendValidationError'}
   /scheduled-sends:
     get:
@@ -7886,16 +7868,7 @@ paths:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
         '404': {$ref: '#/components/responses/NotFound'}
-        '409':
-          description: |-
-            Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
-            When the refusal opened a review, `details` carries `review_id`, the
-            `available_actions` this caller may take, and `refusals`: each refused address
-            the caller named, with the engine's `reason_code`, resolved `category` and the
-            `requested_category` the caller claimed.
-          content:
-            application/problem+json:
-              schema: {$ref: '#/components/schemas/Problem'}
+        '409': {$ref: '#/components/responses/SendRefused'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /scheduling/invitations/{id}/availability:
     get:
@@ -26657,6 +26630,18 @@ components:
       content:
         application/problem+json:
           schema: {$ref: '#/components/schemas/Problem'}
+    SendRefused:
+      description: |-
+        Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
+        When the refusal opened a review, `details` carries `review_id`, the
+        `available_actions` this caller may take, and `refusals`: each refused address
+        the caller named, with the engine's `reason_code`, resolved `category` and the
+        `requested_category` the caller claimed. `details.review` is the review exactly as
+        `GET /communication-reviews/{id}` serves it to this caller, so a client needs no second
+        request; it is absent when the caller may not read the review.
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/SendRefusal'}
     ControllerMailRefused:
       description: |-
         The installation cannot send its own mail (`conflict`), or the consent engine refuses this
@@ -47865,6 +47850,43 @@ components:
       additionalProperties:
         type: object
         additionalProperties: {type: string}
+    SendRefusal:
+      description: >-
+        A problem body whose `details` describe a refused send and the review it opened.
+      type: object
+      required: [status, code]
+      properties:
+        type: {type: string, format: uri, default: 'about:blank'}
+        title: {type: string}
+        status: {type: integer}
+        code: {type: string}
+        detail: {type: string}
+        instance: {type: string, format: uri}
+        details: {$ref: '#/components/schemas/SendRefusalDetails'}
+    SendRefusalDetails:
+      type: object
+      additionalProperties: true
+      description: Present when the refusal opened a review.
+      properties:
+        review_id: {type: string, format: uuid}
+        available_actions:
+          type: array
+          description: What this caller may do about the refusal, such as `direct_send`.
+          items: {type: string}
+        refusals:
+          type: array
+          description: Each refused address the caller named.
+          items: {$ref: '#/components/schemas/SendRefusalRecipient'}
+        review: {$ref: '#/components/schemas/CommunicationReview'}
+    SendRefusalRecipient:
+      type: object
+      required: [address, reason_code, can_be_overruled]
+      properties:
+        address: {type: string}
+        reason_code: {type: string}
+        can_be_overruled: {type: boolean, description: Whether a recorded reason may send this one message anyway.}
+        category: {type: string, description: The category the engine resolved.}
+        requested_category: {type: string, description: The category the sender claimed.}
     AnalyticsRefusal:
       description: >-
         A problem body whose `details` spell out an analytics refusal, present whenever the engine refused the question. A 400 the engine did not write — a malformed scope, a document outside the block grammar — carries the problem alone.
@@ -51896,6 +51918,14 @@ components:
             acknowledgement will name. Served rather than composed by the client: an instruction's
             claim is that a named human read particular words, and a client free to write its own
             would have the record assert an acknowledgement of text nobody published.
+        warnings:
+          type: array
+          items: {$ref: '#/components/schemas/OverrideWarning'}
+          description: |-
+            Every warning this review is served with to this reader; a decision may name any of their
+            versions and no other. `warning` is always among them. The sender of a held message is
+            also served the composer's short warning (`inline-v1`), which a decision from any other
+            reader is refused for naming.
     OverrideWarning:
       type: object
       description: |-

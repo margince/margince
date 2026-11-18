@@ -40370,6 +40370,12 @@ type CommunicationReview struct {
 	// while naming a different version.
 	Warning *OverrideWarning `json:"warning,omitempty"`
 
+	// Warnings Every warning this review is served with to this reader; a decision may name any of their
+	// versions and no other. `warning` is always among them. The sender of a held message is
+	// also served the composer's short warning (`inline-v1`), which a decision from any other
+	// reader is refused for naming.
+	Warnings *[]OverrideWarning `json:"warnings,omitempty"`
+
 	// WordingCorrection The current approved wording, visible only to its original human approver while the
 	// decision is unspent. The original reason remains on the instruction.
 	WordingCorrection *WordingCorrectionContext `json:"wording_correction,omitempty"`
@@ -49077,8 +49083,7 @@ type DirectCommunicationSendRequest struct {
 
 	// ShownReasons The refusal reason codes the director was shown, from the review's `refusals`. When the
 	// review's refusals changed since then, the decision is refused with `instruction_stale`
-	// and the director opens the review again. A refusal the subject made themselves (an
-	// objection, a withdrawal, a restriction or a request to stop) is never passed.
+	// and the director opens the review again.
 	ShownReasons *[]string `json:"shown_reasons,omitempty"`
 
 	// WarningVersion The compliance text they were shown. Recorded because a record naming no version cannot
@@ -65677,6 +65682,51 @@ type SendMessageRequest struct {
 // objected, so naming one here is refused (422 `invalid`).
 type SendMessageRequestCommunicationContext string
 
+// SendRefusal A problem body whose `details` describe a refused send and the review it opened.
+// The envelope is `Problem`'s, restated rather than composed with `allOf` so the breaking-change check can read it; a gate holds the two property sets equal.
+type SendRefusal struct {
+	Code   string  `json:"code"`
+	Detail *string `json:"detail,omitempty"`
+
+	// Details Present when the refusal opened a review.
+	Details  *SendRefusalDetails `json:"details,omitempty"`
+	Instance *string             `json:"instance,omitempty"`
+	Status   int                 `json:"status"`
+	Title    *string             `json:"title,omitempty"`
+	Type     *string             `json:"type,omitempty"`
+}
+
+// SendRefusalDetails Present when the refusal opened a review.
+type SendRefusalDetails struct {
+	// AvailableActions What this caller may do about the refusal, such as `direct_send`.
+	AvailableActions *[]string `json:"available_actions,omitempty"`
+
+	// Refusals Each refused address the caller named.
+	Refusals *[]SendRefusalRecipient `json:"refusals,omitempty"`
+
+	// Review What a refused send left behind. A SNAPSHOT of the engine's answer at the moment it was
+	// given — a reader asking why a message was refused on Tuesday needs Tuesday's answer, not
+	// what the consent rows say today.
+	Review               *CommunicationReview   `json:"review,omitempty"`
+	ReviewId             *openapi_types.UUID    `json:"review_id,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// SendRefusalRecipient defines model for SendRefusalRecipient.
+type SendRefusalRecipient struct {
+	Address string `json:"address"`
+
+	// CanBeOverruled Whether a recorded reason may send this one message anyway.
+	CanBeOverruled bool `json:"can_be_overruled"`
+
+	// Category The category the engine resolved.
+	Category   *string `json:"category,omitempty"`
+	ReasonCode string  `json:"reason_code"`
+
+	// RequestedCategory The category the sender claimed.
+	RequestedCategory *string `json:"requested_category,omitempty"`
+}
+
 // ServiceMemberRequest A member for an extension's unattended feed. No password and no way in.
 type ServiceMemberRequest struct {
 	DisplayName string `json:"display_name"`
@@ -73385,6 +73435,10 @@ type RetentionHeld = Problem
 
 // RoleCannotCapture RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type RoleCannotCapture = Problem
+
+// SendRefused A problem body whose `details` describe a refused send and the review it opened.
+// The envelope is `Problem`'s, restated rather than composed with `allOf` so the breaking-change check can read it; a gate holds the two property sets equal.
+type SendRefused = SendRefusal
 
 // SendValidationError RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type SendValidationError = Problem
@@ -93919,6 +93973,119 @@ func (a RenewContractRequest) MarshalJSON() ([]byte, error) {
 		object["value_minor"], err = json.Marshal(a.ValueMinor)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'value_minor': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for SendRefusalDetails. Returns the specified
+// element and whether it was found
+func (a SendRefusalDetails) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for SendRefusalDetails
+func (a *SendRefusalDetails) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for SendRefusalDetails to handle AdditionalProperties
+func (a *SendRefusalDetails) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["available_actions"]; found {
+		err = json.Unmarshal(raw, &a.AvailableActions)
+		if err != nil {
+			return fmt.Errorf("error reading 'available_actions': %w", err)
+		}
+		delete(object, "available_actions")
+	}
+
+	if raw, found := object["refusals"]; found {
+		err = json.Unmarshal(raw, &a.Refusals)
+		if err != nil {
+			return fmt.Errorf("error reading 'refusals': %w", err)
+		}
+		delete(object, "refusals")
+	}
+
+	if raw, found := object["review"]; found {
+		err = json.Unmarshal(raw, &a.Review)
+		if err != nil {
+			return fmt.Errorf("error reading 'review': %w", err)
+		}
+		delete(object, "review")
+	}
+
+	if raw, found := object["review_id"]; found {
+		err = json.Unmarshal(raw, &a.ReviewId)
+		if err != nil {
+			return fmt.Errorf("error reading 'review_id': %w", err)
+		}
+		delete(object, "review_id")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for SendRefusalDetails to handle AdditionalProperties
+func (a SendRefusalDetails) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.AvailableActions != nil {
+		object["available_actions"], err = json.Marshal(a.AvailableActions)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'available_actions': %w", err)
+		}
+	}
+
+	if a.Refusals != nil {
+		object["refusals"], err = json.Marshal(a.Refusals)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'refusals': %w", err)
+		}
+	}
+
+	if a.Review != nil {
+		object["review"], err = json.Marshal(a.Review)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'review': %w", err)
+		}
+	}
+
+	if a.ReviewId != nil {
+		object["review_id"], err = json.Marshal(a.ReviewId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'review_id': %w", err)
 		}
 	}
 

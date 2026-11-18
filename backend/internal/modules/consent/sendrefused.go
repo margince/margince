@@ -7,6 +7,7 @@ package consent
 // which recipients stopped the send and why.
 
 import (
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
@@ -27,6 +28,9 @@ type SendRefusedError struct {
 	// reason. The sender learns which address stopped and why. The caller
 	// named every one of these addresses.
 	Refusals []RefusedRecipient
+	// Review is the review as this caller would GET it, nil when they may not
+	// read it. A client then needs no second request to show the refusal.
+	Review *crmcontracts.CommunicationReview
 }
 
 func (e *SendRefusedError) Error() string {
@@ -77,6 +81,9 @@ func (e *SendRefusedError) FaultReference() map[string]any {
 	}
 	if len(e.Refusals) > 0 {
 		reference["refusals"] = refusalReference(e.Refusals)
+	}
+	if e.Review != nil {
+		reference["review"] = e.Review
 	}
 	return reference
 }

@@ -165,6 +165,12 @@ func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInpu
 		if err := mayDirect(ctx, in.ShownReasons, review.Refusals); err != nil {
 			return err
 		}
+		if !servesWarning(warningsServed(ctx, review.InitiatedBy, review.IntentID), in.WarningVersion) {
+			return &ValidationError{
+				Field:  "warning_version",
+				Reason: "this review was not shown with that warning; open it again and confirm the warning it shows",
+			}
+		}
 		// Recorded so the re-check at staging and dispatch knows which
 		// refusals this exception may answer (DecisionSet.ExceptionMayAnswer).
 		givenByAdmin := auth.AdminGranted(ctx)
@@ -374,6 +380,8 @@ type directableReview struct {
 	// IntentID is the held message this review is about, so the decision can
 	// fingerprint what the human is looking at.
 	IntentID ids.UUID
+	// InitiatedBy is the sender, who alone is served the composer's warning.
+	InitiatedBy ids.UUID
 	// Refusals are the reasons the message was held, which decide whether this
 	// caller may direct past them (directableBy).
 	Refusals []RefusedRecipient
@@ -392,10 +400,11 @@ func claimReviewForDirectionTx(ctx context.Context, tx pgx.Tx, id ids.UUID) (dir
 	err := tx.QueryRow(ctx, `
 		SELECT state, opened_at,
 		       coalesce(delivery_intent_id, '00000000-0000-0000-0000-000000000000'::uuid),
-		       coalesce(refusals, '[]'::jsonb)
+		       coalesce(refusals, '[]'::jsonb),
+		       coalesce(initiated_by, '00000000-0000-0000-0000-000000000000'::uuid)
 		  FROM communication_review
 		 WHERE id = $1 AND resolved_at IS NULL
-		 FOR UPDATE`, id).Scan(&out.State, &out.OpenedAt, &out.IntentID, &refusals)
+		 FOR UPDATE`, id).Scan(&out.State, &out.OpenedAt, &out.IntentID, &refusals, &out.InitiatedBy)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return directableReview{}, apperrors.ErrNotFound
 	}
@@ -460,8 +469,10 @@ func isDuplicateInstruction(err error) bool {
 }
 
 // servedWarningVersion reports whether a new instruction may name this
-// version: only the one this build serves now. A retired version still reads
-// back through OverrideWarningFor, for the records that name it.
+// version: one this build serves now. Whether the review was served with it is
+// DirectSend's question. A retired version still reads back through
+// OverrideWarningFor, for the records that name it.
 func servedWarningVersion(version string) bool {
-	return strings.TrimSpace(version) == OverrideWarningVersion
+	version = strings.TrimSpace(version)
+	return version == OverrideWarningVersion || version == InlineWarningVersion
 }

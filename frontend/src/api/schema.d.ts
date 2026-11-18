@@ -17751,9 +17751,11 @@ export interface paths {
          *     instruction rather than under the engine's permission. A subject asking later why they
          *     received it is shown the refusal AND the decision, never a grant nobody made.
          *
-         *     A SUBJECT'S OWN STOP IS NEVER PASSED. A review that holds an objection, a withdrawal, a
-         *     restriction or a request to stop is refused with 403, admin included, even beside a refusal
-         *     a decision could pass.
+         *     WHAT A DECISION CAN PASS is each refusal's declared remedy. A holder of the exception grant
+         *     may send one message past a policy refusal and past the subject's own objection, withdrawal,
+         *     restriction or request to stop; the stop stays on record and binds the next message. A hard
+         *     bounce and a recipient the engine cannot name declare no remedy: a review holding one is
+         *     refused with 403, admin included, because the address needs a real repair.
          *
          *     THE DECISION IS THE USER'S, taken in their own session. The row names them as the one who
          *     took it on. An agent or a connector is refused: it may read the review and send its user
@@ -50065,6 +50067,46 @@ export interface components {
             };
         };
         /**
+         * @description A problem body whose `details` describe a refused send and the review it opened.
+         *     The envelope is `Problem`'s, restated rather than composed with `allOf` so the breaking-change check can read it; a gate holds the two property sets equal.
+         */
+        SendRefusal: {
+            /**
+             * Format: uri
+             * @default about:blank
+             */
+            type: string;
+            title?: string;
+            status: number;
+            code: string;
+            detail?: string;
+            /** Format: uri */
+            instance?: string;
+            details?: components["schemas"]["SendRefusalDetails"];
+        };
+        /** @description Present when the refusal opened a review. */
+        SendRefusalDetails: {
+            /** Format: uuid */
+            review_id?: string;
+            /** @description What this caller may do about the refusal, such as `direct_send`. */
+            available_actions?: string[];
+            /** @description Each refused address the caller named. */
+            refusals?: components["schemas"]["SendRefusalRecipient"][];
+            review?: components["schemas"]["CommunicationReview"];
+        } & {
+            [key: string]: unknown;
+        };
+        SendRefusalRecipient: {
+            address: string;
+            reason_code: string;
+            /** @description Whether a recorded reason may send this one message anyway. */
+            can_be_overruled: boolean;
+            /** @description The category the engine resolved. */
+            category?: string;
+            /** @description The category the sender claimed. */
+            requested_category?: string;
+        };
+        /**
          * @description A problem body whose `details` spell out an analytics refusal, present whenever the engine refused the question. A 400 the engine did not write — a malformed scope, a document outside the block grammar — carries the problem alone.
          *     The envelope is `Problem`'s, restated rather than composed with `allOf` so the breaking-change check can read it; a gate holds the two property sets equal.
          */
@@ -54579,6 +54621,13 @@ export interface components {
              *     would have the record assert an acknowledgement of text nobody published.
              */
             warning?: components["schemas"]["OverrideWarning"];
+            /**
+             * @description Every warning this review is served with to this reader; a decision may name any of their
+             *     versions and no other. `warning` is always among them. The sender of a held message is
+             *     also served the composer's short warning (`inline-v1`), which a decision from any other
+             *     reader is refused for naming.
+             */
+            warnings?: components["schemas"]["OverrideWarning"][];
         };
         /**
          * @description The caution a human reads before overruling the engine, with the version that identifies
@@ -54661,8 +54710,7 @@ export interface components {
             /**
              * @description The refusal reason codes the director was shown, from the review's `refusals`. When the
              *     review's refusals changed since then, the decision is refused with `instruction_stale`
-             *     and the director opens the review again. A refusal the subject made themselves (an
-             *     objection, a withdrawal, a restriction or a request to stop) is never passed.
+             *     and the director opens the review again.
              */
             shown_reasons?: string[];
         };
@@ -62562,6 +62610,23 @@ export interface components {
             };
             content: {
                 "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /**
+         * @description Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
+         *     When the refusal opened a review, `details` carries `review_id`, the
+         *     `available_actions` this caller may take, and `refusals`: each refused address
+         *     the caller named, with the engine's `reason_code`, resolved `category` and the
+         *     `requested_category` the caller claimed. `details.review` is the review exactly as
+         *     `GET /communication-reviews/{id}` serves it to this caller, so a client needs no second
+         *     request; it is absent when the caller may not read the review.
+         */
+        SendRefused: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["SendRefusal"];
             };
         };
         /**
@@ -74044,21 +74109,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /**
-             * @description Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
-             *     When the refusal opened a review, `details` carries `review_id`, the
-             *     `available_actions` this caller may take, and `refusals`: each refused address
-             *     the caller named, with the engine's `reason_code`, resolved `category` and the
-             *     `requested_category` the caller claimed.
-             */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
+            409: components["responses"]["SendRefused"];
             422: components["responses"]["SendValidationError"];
         };
     };
@@ -74146,21 +74197,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /**
-             * @description Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
-             *     When the refusal opened a review, `details` carries `review_id`, the
-             *     `available_actions` this caller may take, and `refusals`: each refused address
-             *     the caller named, with the engine's `reason_code`, resolved `category` and the
-             *     `requested_category` the caller claimed.
-             */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
+            409: components["responses"]["SendRefused"];
             422: components["responses"]["SendValidationError"];
         };
     };
@@ -74517,21 +74554,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
-            /**
-             * @description Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
-             *     When the refusal opened a review, `details` carries `review_id`, the
-             *     `available_actions` this caller may take, and `refusals`: each refused address
-             *     the caller named, with the engine's `reason_code`, resolved `category` and the
-             *     `requested_category` the caller claimed.
-             */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
+            409: components["responses"]["SendRefused"];
             422: components["responses"]["ValidationError"];
         };
     };
