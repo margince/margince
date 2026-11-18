@@ -10,6 +10,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // For asks the check a send runs. An installation composed without an authority
@@ -19,7 +20,8 @@ func For(authority activities.SendAuthority) approvals.SendProbe {
 		if authority == nil {
 			return true, nil
 		}
-		provider, err := authority.SendableMailProvider(ctx)
+		// No chosen mailbox and no anchor: the default mailbox the send falls back to.
+		provider, _, err := authority.SendableMailbox(ctx, ids.UUID{}, ids.ActivityID{})
 		return provider != "", err
 	}
 }
