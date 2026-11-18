@@ -4,9 +4,12 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { entityNameObserverQuery } from "../../components/entityref.queries";
 import { useLocale } from "../../i18n";
-import { translatedLabel } from "../../lib/labeltranslation";
+import { translatedPipeline } from "../../lib/labeltranslation";
 import { useMemberNames } from "../../lib/membernames";
-import { pipelinesWithArchivedOptions } from "../../lib/pipelines.queries";
+import {
+  pipelinesWithArchivedOptions,
+  stageNames,
+} from "../../lib/pipelines.queries";
 import { isUuid } from "../../lib/uuid";
 
 // What an id stored in a history field points at, read through the reader the
@@ -48,16 +51,8 @@ export function useHistoryNameOf(
     ...pipelinesWithArchivedOptions,
     enabled: kind === "stage" && ids.length > 0,
     select: (pipelines) =>
-      new Map(
-        pipelines.flatMap((pipeline) =>
-          (pipeline.stages ?? []).map(
-            (stage) =>
-              [
-                stage.id,
-                translatedLabel(stage.name, stage.name_translations, locale),
-              ] as const,
-          ),
-        ),
+      stageNames(
+        pipelines.map((pipeline) => translatedPipeline(pipeline, locale)),
       ),
   });
   const named = new Map(members);

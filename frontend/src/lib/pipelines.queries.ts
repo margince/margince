@@ -15,6 +15,17 @@ export function defaultPipelineOf(
   return pipelines.find((each) => each.is_default) ?? pipelines[0];
 }
 
+/** Each stage's name by its id, across every pipeline given. */
+export function stageNames(
+  pipelines: readonly components["schemas"]["Pipeline"][],
+): Map<string, string> {
+  return new Map(
+    pipelines.flatMap((pipeline) =>
+      (pipeline.stages ?? []).map((stage) => [stage.id, stage.name] as const),
+    ),
+  );
+}
+
 // Cache raw pipelines together so list and record readers share the same read.
 export const pipelinesOptions = queryOptions({
   queryKey: ["pipelines", "all"],
