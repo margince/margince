@@ -5,6 +5,10 @@ import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  ASYNC_UTIL_TIMEOUT_MS,
+  SLOWEST_MEASURED_TEST_MS,
+} from "../../../vitest.budget";
 import { writeMessage } from "../../design-system/richtext-testing";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { meFixture } from "../../testing/mefixture";
@@ -26,6 +30,11 @@ import { ComposeWindow } from "./composewindow";
 // The email composer with the inline pilot switch on. Nothing is asked while
 // the rep writes, and Send is the check. A refusal comes back as a review,
 // drawn in place with one reason and Send anyway.
+
+// The in-flight and refreshed-review tests each chain eight waits, past the
+// default ceiling.
+const EIGHT_WAITS_TEST_MS =
+  ASYNC_UTIL_TIMEOUT_MS * 8 + SLOWEST_MEASURED_TEST_MS;
 
 const INLINE_TEXT =
   "The send check still blocks this message. Send anyway sends only this message and grants no permission for later ones. Your name, your reason and the message are kept in a record that cannot be edited.";
@@ -364,58 +373,62 @@ describe("the email composer with the switch on", () => {
     answer(jsonResponse({ ...activity202, id: "act-9" }, 201));
   });
 
-  it("holds the words, the close and the draft while Send anyway is out", async () => {
-    const user = userEvent.setup();
-    let answer: (response: Response) => void = () => {};
-    const sent = stubRoutes({
-      "GET /me": inlineMe,
-      "POST /emails": refused,
-      "POST /communication-reviews/r-1/direct-send": () =>
-        new Promise<Response>((resolve) => {
-          answer = resolve;
-        }),
-    });
-    const { queryClient } = render(<Composer />);
-    await waitFor(() =>
-      expect(screen.queryByRole("combobox", { name: WHY_ASK })).toBeNull(),
-    );
-    await fillInline(user);
-    await pressSend(user);
-    await user.type(await reasonField(), "Asked by phone.");
-    await waitFor(() => {
-      const last = sent
-        .filter((entry) => entry.key === "PUT /mail-drafts")
-        .at(-1);
-      expect(last?.body).toMatchObject({
-        override_explanation: "Asked by phone.",
+  it(
+    "holds the words, the close and the draft while Send anyway is out",
+    async () => {
+      const user = userEvent.setup();
+      let answer: (response: Response) => void = () => {};
+      const sent = stubRoutes({
+        "GET /me": inlineMe,
+        "POST /emails": refused,
+        "POST /communication-reviews/r-1/direct-send": () =>
+          new Promise<Response>((resolve) => {
+            answer = resolve;
+          }),
       });
-    });
-    await user.click(await sendAnyway());
-    await waitFor(() =>
-      expect(count(sent, "POST /communication-reviews/r-1/direct-send")).toBe(
-        1,
-      ),
-    );
-    const writesBefore = count(sent, "PUT /mail-drafts");
+      const { queryClient } = render(<Composer />);
+      await waitFor(() =>
+        expect(screen.queryByRole("combobox", { name: WHY_ASK })).toBeNull(),
+      );
+      await fillInline(user);
+      await pressSend(user);
+      await user.type(await reasonField(), "Asked by phone.");
+      await waitFor(() => {
+        const last = sent
+          .filter((entry) => entry.key === "PUT /mail-drafts")
+          .at(-1);
+        expect(last?.body).toMatchObject({
+          override_explanation: "Asked by phone.",
+        });
+      });
+      await user.click(await sendAnyway());
+      await waitFor(() =>
+        expect(count(sent, "POST /communication-reviews/r-1/direct-send")).toBe(
+          1,
+        ),
+      );
+      const writesBefore = count(sent, "PUT /mail-drafts");
 
-    expect(screen.getByLabelText("Subject")).toHaveProperty("disabled", true);
-    expect(screen.getByRole("button", { name: "Close" })).toHaveProperty(
-      "disabled",
-      true,
-    );
-    // An edit that still lands, such as the reason, writes no draft.
-    await user.type(await reasonField(), " Twice.");
-    writeMessage("Body", "Edited while it was out.");
-    answer(jsonResponse({ ...activity202, id: "act-9" }, 201));
+      expect(screen.getByLabelText("Subject")).toHaveProperty("disabled", true);
+      expect(screen.getByRole("button", { name: "Close" })).toHaveProperty(
+        "disabled",
+        true,
+      );
+      // An edit that still lands, such as the reason, writes no draft.
+      await user.type(await reasonField(), " Twice.");
+      writeMessage("Body", "Edited while it was out.");
+      answer(jsonResponse({ ...activity202, id: "act-9" }, 201));
 
-    expect(
-      await screen.findByText("Queued as a recorded exception."),
-    ).toBeTruthy();
-    expect(count(sent, "PUT /mail-drafts")).toBe(writesBefore);
-    expect(
-      queryClient.getQueryData(draftKey({ type: "contact", id: "c-1" })),
-    ).toBeNull();
-  });
+      expect(
+        await screen.findByText("Queued as a recorded exception."),
+      ).toBeTruthy();
+      expect(count(sent, "PUT /mail-drafts")).toBe(writesBefore);
+      expect(
+        queryClient.getQueryData(draftKey({ type: "contact", id: "c-1" })),
+      ).toBeNull();
+    },
+    EIGHT_WAITS_TEST_MS,
+  );
 
   it("detaches the review on an edit and sends the edited message anew", async () => {
     const user = userEvent.setup();
@@ -457,34 +470,38 @@ describe("the email composer with the switch on", () => {
     await waitFor(() => expect(onClose).toHaveBeenCalled());
   });
 
-  it("asks for a fresh press when the review comes back refreshed", async () => {
-    const user = userEvent.setup();
-    let decisions = 0;
-    const sent = stubRoutes({
-      "GET /me": inlineMe,
-      "POST /emails": refused,
-      "POST /communication-reviews/r-1/direct-send": () => {
-        decisions += 1;
-        return decisions === 1
-          ? refused({}, { ...REVIEW, assessment_revision: "rev-2" })
-          : jsonResponse({ ...activity202, id: "act-9" }, 201);
-      },
-    });
-    await openInline(sent);
-    await fillInline(user);
-    await pressSend(user);
-    await user.type(await reasonField(), "Asked by phone.");
-    await user.click(await sendAnyway());
-    expect(await screen.findByText(/The email checks changed/)).toBeTruthy();
-    expect(await reasonField()).toHaveProperty("value", "Asked by phone.");
-    expect(decisions).toBe(1);
-    await user.click(await sendAnyway());
-    await waitFor(() => expect(decisions).toBe(2));
-    const second = sent.filter(
-      (entry) => entry.key === "POST /communication-reviews/r-1/direct-send",
-    )[1];
-    expect(second?.body).toMatchObject({ assessment_revision: "rev-2" });
-  });
+  it(
+    "asks for a fresh press when the review comes back refreshed",
+    async () => {
+      const user = userEvent.setup();
+      let decisions = 0;
+      const sent = stubRoutes({
+        "GET /me": inlineMe,
+        "POST /emails": refused,
+        "POST /communication-reviews/r-1/direct-send": () => {
+          decisions += 1;
+          return decisions === 1
+            ? refused({}, { ...REVIEW, assessment_revision: "rev-2" })
+            : jsonResponse({ ...activity202, id: "act-9" }, 201);
+        },
+      });
+      await openInline(sent);
+      await fillInline(user);
+      await pressSend(user);
+      await user.type(await reasonField(), "Asked by phone.");
+      await user.click(await sendAnyway());
+      expect(await screen.findByText(/The email checks changed/)).toBeTruthy();
+      expect(await reasonField()).toHaveProperty("value", "Asked by phone.");
+      expect(decisions).toBe(1);
+      await user.click(await sendAnyway());
+      await waitFor(() => expect(decisions).toBe(2));
+      const second = sent.filter(
+        (entry) => entry.key === "POST /communication-reviews/r-1/direct-send",
+      )[1];
+      expect(second?.body).toMatchObject({ assessment_revision: "rev-2" });
+    },
+    EIGHT_WAITS_TEST_MS,
+  );
 
   it("keeps the reason in the saved draft and restores it", async () => {
     const user = userEvent.setup();
