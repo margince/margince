@@ -5138,6 +5138,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "email.detail.attachments_other": "{count} Anhänge",
   "email.detail.attachmentWithheld":
     "Nicht gespeichert, da die E-Mail privat ist.",
+  "email.detail.attachmentNotAddressed":
+    "Nicht gespeichert, da niemand aus deinem Team die E-Mail gesendet hat oder im An-Feld stand.",
   "email.detail.showQuoted": "Zitierten Verlauf anzeigen",
   "aiTask.name.reader_rendering": "Nachricht in deiner Sprache zeigen",
   "readerRendering.show": "In meiner Sprache zeigen",
@@ -14559,6 +14561,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "captureActivity.funnel.fault": "Fehlgeschlagen",
   "captureActivity.reason.internal_only":
     "Alle Beteiligten waren auf den Domains deines Unternehmens",
+  "captureActivity.reason.own_addresses_only":
+    "Alle Beteiligten waren deine eigenen Adressen, und es wurde keine Kunden-E-Mail weitergeleitet",
   "captureActivity.reason.deferral_capped":
     "Es folgt kein Ergebnis, da das Limit für offene Fragen erreicht war",
   "captureActivity.reason.noise_prior":
@@ -14630,6 +14634,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "pipeline.stage.claim_extraction": "Zusagen und offene Punkte",
   "pipeline.reason.internal_only":
     "alle Beteiligten waren auf den Domains deines Unternehmens",
+  "pipeline.reason.own_addresses_only":
+    "alle Beteiligten waren deine eigenen Adressen, und es wurde keine Kunden-E-Mail weitergeleitet",
   "pipeline.reason.invisible_incumbent":
     "sie passte zu einem Datensatz, den du nicht sehen kannst",
   "pipeline.reason.transactional_infra":

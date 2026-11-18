@@ -12454,6 +12454,24 @@ func (e EmailAccessStatus) Valid() bool {
 	}
 }
 
+// Defines values for EmailAttachmentSummaryWithheldReason.
+const (
+	EmailAttachmentSummaryWithheldReasonNotAddressed EmailAttachmentSummaryWithheldReason = "not_addressed"
+	EmailAttachmentSummaryWithheldReasonPrivate      EmailAttachmentSummaryWithheldReason = "private"
+)
+
+// Valid indicates whether the value is a known member of the EmailAttachmentSummaryWithheldReason enum.
+func (e EmailAttachmentSummaryWithheldReason) Valid() bool {
+	switch e {
+	case EmailAttachmentSummaryWithheldReasonNotAddressed:
+		return true
+	case EmailAttachmentSummaryWithheldReasonPrivate:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for EmailCalendarChangeAnswer.
 const (
 	EmailCalendarChangeAnswerAccepted  EmailCalendarChangeAnswer = "accepted"
@@ -39716,7 +39734,7 @@ type CaptureTraceEntry struct {
 	// OutcomeNow The bucket this message counts under today. Equal to `outcome` unless the message was deferred and the sender has since been judged: a `real` verdict reads as captured and a noise, rejected or suppressed one as suppressed, because the question that made the outcome provisional has been answered. The funnel counts are grouped by this same expression, so a list filtered on it agrees with the counters above it — they disagreed, and the screen said `SENT FOR A VERDICT 49` over forty-nine rows each reading `judged noise`.
 	OutcomeNow CaptureTraceEntryOutcomeNow `json:"outcome_now"`
 
-	// Reason A class this installation chose, never a provider's text and never content. The ones that change what the outcome MEANS: `deferral_capped` (no verdict is coming — a ceiling refused the question), `noise_prior` and `decided_prior` (it landed, but a prior decision means no record will appear), `internal_only`, `no_granting_human`, `invisible_incumbent`, `derivation_failed`.
+	// Reason A class this installation chose, never a provider's text and never content. The ones that change what the outcome MEANS: `deferral_capped` (no verdict is coming — a ceiling refused the question), `noise_prior` and `decided_prior` (it landed, but a prior decision means no record will appear), `internal_only`, `own_addresses_only` (every party was the mailbox owner's own address and no forwarded customer mail was found), `no_granting_human`, `invisible_incumbent`, `derivation_failed`.
 	Reason *string `json:"reason,omitempty"`
 
 	// Resolution What later became of a DEFERRED message's sender, read from the disposition ledger rather than copied into the trace: the ledger is keyed by sender and the trace by message, and one sender's answer covers several messages.
@@ -49478,12 +49496,18 @@ type EmailAccessStatus string
 type EmailAttachmentSummary struct {
 	ByteSize *int `json:"byte_size,omitempty"`
 
-	// BytesWithheld True when the message is private to its owner and the file was recorded by name, size and type only. There are no bytes to fetch.
+	// BytesWithheld True when the file was recorded by name, size and type only. There are no bytes to fetch; `withheld_reason` says why.
 	BytesWithheld *bool              `json:"bytes_withheld,omitempty"`
 	ContentType   *string            `json:"content_type,omitempty"`
 	Filename      string             `json:"filename"`
 	Id            openapi_types.UUID `json:"id"`
+
+	// WithheldReason Present when `bytes_withheld` is true. `private`: the message is private to its owner. `not_addressed`: no colleague here sent the message or was in its To line, so the bytes wait for a copy that was addressed to one.
+	WithheldReason *EmailAttachmentSummaryWithheldReason `json:"withheld_reason,omitempty"`
 }
+
+// EmailAttachmentSummaryWithheldReason Present when `bytes_withheld` is true. `private`: the message is private to its owner. `not_addressed`: no colleague here sent the message or was in its To line, so the bytes wait for a copy that was addressed to one.
+type EmailAttachmentSummaryWithheldReason string
 
 // EmailCalendarBefore defines model for EmailCalendarBefore.
 type EmailCalendarBefore struct {

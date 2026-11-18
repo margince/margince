@@ -6,7 +6,7 @@ The 34 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity
 
-89 columns · primary key `(id)` · referenced by 48 foreign keys
+90 columns · primary key `(id)` · referenced by 48 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -43,6 +43,7 @@ The 34 tables owned by `activities`, as the migrations build them. [Back to the 
 | `due_zone` | `text` |  |  |
 | `duration_seconds` | `integer` |  | Meeting/call only. |
 | `foreign_link` | `boolean` |  |  |
+| `forwarded_to_self` | `boolean`, default `false` | yes |  |
 | `guests_left_out` | `integer`, default `0` | yes | Meeting only: how many outside guests of a meeting past the party cap are not listed, because a crowded meeting keeps at most 200 by address. |
 | `has_calendar_part` | `boolean`, default `false` | yes |  |
 | `host_user_id` | `uuid` |  | Meeting only: the member of this company who held it. |

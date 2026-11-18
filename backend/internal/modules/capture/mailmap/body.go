@@ -16,6 +16,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/htmltext"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // extractText returns the message's plain-text body, its link hosts and the
@@ -33,6 +34,10 @@ func extractText(root *message.Entity) walkedBody {
 	walk.files.settle()
 	text, completeness := walk.text(), walk.completeness()
 	links, linksCut := walkLinks(walk.plain, walk.html)
+	forwarded := walk.forwardedOriginal()
+	if forwarded == nil {
+		forwarded = inlineForward(text)
+	}
 	if text == "" {
 		// A forward as attachment says nothing of its own; the original does.
 		// Its words are the original's, not the sender's, and the completeness
@@ -50,7 +55,7 @@ func extractText(root *message.Entity) walkedBody {
 	return walkedBody{
 		text: text, links: links, linksCut: linksCut,
 		parts: walk.files.parts, drops: walk.files.drops(), calendar: walk.calendar,
-		completeness: completeness,
+		completeness: completeness, forwarded: forwarded,
 	}
 }
 
@@ -64,6 +69,8 @@ type walkedBody struct {
 	drops        []PartDrop
 	calendar     calendarPart
 	completeness capture.BodyCompleteness
+	// forwarded is the original the mail forwards, held apart from its author.
+	forwarded *connector.ForwardedOriginal
 }
 
 // bodyText is the text a mail is read by: its plain part, or its HTML rendered

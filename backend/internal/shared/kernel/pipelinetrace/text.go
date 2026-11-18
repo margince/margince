@@ -56,6 +56,7 @@ func StageLabel(stage Stage) string {
 
 var reasonTexts = map[Reason]string{
 	ReasonInternalOnly:        "every party was on your own domains",
+	ReasonOwnAddressesOnly:    "every party was one of your own addresses, and it forwarded no customer's mail",
 	ReasonInvisibleIncumbent:  "it matched a record outside what you can see",
 	ReasonTransactionalInfra:  "the sender is mail infrastructure, not a company you work with",
 	ReasonTransactionalPrefix: "the sender looks like an automated mailer, not a contact",

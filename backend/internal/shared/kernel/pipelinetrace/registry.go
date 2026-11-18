@@ -114,7 +114,7 @@ var registrations = []Registration{{
 	SubjectKind: SubjectMessage,
 	Sources:     []Source{SourceStored},
 	Funnel:      true,
-	Reasons:     []Reason{ReasonInternalOnly, ReasonRecordNotAvailable},
+	Reasons:     []Reason{ReasonInternalOnly, ReasonOwnAddressesOnly, ReasonRecordNotAvailable},
 }, {
 	Stage:       StageActivityWrite,
 	Order:       50,

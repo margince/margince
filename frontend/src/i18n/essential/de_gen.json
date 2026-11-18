@@ -2239,6 +2239,7 @@
   "email.detail.attachments_one": "{count} Anhang",
   "email.detail.attachments_other": "{count} Anhänge",
   "email.detail.attachmentWithheld": "Nicht gespeichert, da die E-Mail privat ist.",
+  "email.detail.attachmentNotAddressed": "Nicht gespeichert, da niemand aus deinem Team die E-Mail gesendet hat oder im An-Feld stand.",
   "email.detail.showQuoted": "Zitierten Verlauf anzeigen",
   "aiTask.name.reader_rendering": "Nachricht in deiner Sprache zeigen",
   "readerRendering.show": "In meiner Sprache zeigen",
