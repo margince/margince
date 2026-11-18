@@ -110,7 +110,7 @@ func sendCapableCases(human context.Context) []sendCapableCase {
 		// A provider that cannot transmit at all has no send scope to hold;
 		// asking capture about it would be asking the wrong question.
 		{
-			"a provider that cannot send at all", human, "imap",
+			"a provider that cannot send at all", human, "carrier_pigeon",
 			&stubGrants{granted: []string{sendScope}}, false, nil, 0, false,
 		},
 		// A bot token carries no OAuth scope, so the per-user grant lookup has
@@ -436,8 +436,7 @@ func TestThePreflightAndRegistrationAgreeOnEveryAppSource(t *testing.T) {
 	}
 }
 
-// The QC mailbox is gated on its deployment flag alone. A provider that cannot
-// send has no app to ask about.
+// No app to ask about: the QC mailbox answers its flag, and IMAP always sends.
 func TestMailAppConfiguredWithoutAnAppToResolve(t *testing.T) {
 	for name, tc := range map[string]struct {
 		server   Server
@@ -446,7 +445,8 @@ func TestMailAppConfiguredWithoutAnAppToResolve(t *testing.T) {
 	}{
 		"the test mailbox, allowed":    {Server{captureConfig: CaptureConfig{AllowTestMailbox: true}}, testmailbox.Name, true},
 		"the test mailbox, disallowed": {Server{}, testmailbox.Name, false},
-		"a provider that cannot send":  {Server{gmailAppConfigured: true}, "imap", false},
+		"a provider that cannot send":  {Server{gmailAppConfigured: true}, "carrier_pigeon", false},
+		"an IMAP mailbox needs no app": {Server{}, "imap", true},
 	} {
 		t.Run(name, func(t *testing.T) {
 			got, err := tc.server.mailAppConfigured(context.Background(), tc.provider)

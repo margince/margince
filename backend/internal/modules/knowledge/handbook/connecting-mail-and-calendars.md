@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/capture/health.go frontend/src/app/capturehealthbanner.tsx frontend/src/features/capture/connectors.tsx frontend/src/features/capture/imap-connect-form.tsx frontend/src/features/capture/connectors.telegram.tsx frontend/src/features/capture/backfill.tsx backend/internal/modules/capture/registry_connections.go backend/internal/modules/capture/oauthflow backend/internal/modules/capture/backfill.go backend/internal/modules/capture/historybaseline.go frontend/src/features/capture/connection-service.tsx frontend/src/features/capture/connection-stop.tsx backend/internal/modules/capture/gdocs backend/internal/modules/capture/meetingnotes.go backend/internal/modules/capture/meetingnotesread.go backend/internal/modules/activities/meetingnotes.go backend/internal/compose/connectors_sharedconsent.go backend/internal/compose/connectors_picture.go -->
+<!-- describes: backend/internal/modules/capture/health.go frontend/src/app/capturehealthbanner.tsx frontend/src/features/capture/connectors.tsx frontend/src/features/capture/imap-connect-form.tsx frontend/src/features/capture/imap-send-fields.tsx frontend/src/features/capture/connectors.telegram.tsx frontend/src/features/capture/backfill.tsx backend/internal/modules/capture/registry_connections.go backend/internal/modules/capture/oauthflow backend/internal/modules/capture/backfill.go backend/internal/modules/capture/historybaseline.go frontend/src/features/capture/connection-service.tsx frontend/src/features/capture/connection-stop.tsx backend/internal/modules/capture/gdocs backend/internal/modules/capture/meetingnotes.go backend/internal/modules/capture/meetingnotesread.go backend/internal/modules/activities/meetingnotes.go backend/internal/compose/connectors_sharedconsent.go backend/internal/compose/connectors_picture.go -->
 # Connecting your mailbox and calendar
 
 Capture reads mail and meetings only from an account you connect. This page
@@ -24,11 +24,23 @@ Google also shares your account's picture. If that Google account is the address
 To connect any other mail host to Margince, open **Settings → Connections**, choose **Add account** and pick **Another mail host**. Then fill in the **Connect IMAP mailbox** form.
 1. Open **Settings**, then **Connections**.
 2. Choose **Add account**, pick **Another mail host**, then **Continue**.
-3. Fill **IMAP server**, **Port**, **Email address**, **App password**, **Mailbox** and **Messages per sync**, then press **Connect**.
-Use a password made for this one app. Missing fields show "Required: {fields}". An IMAP mailbox only captures: no calendar, Margince cannot send from it, and it has no past email import.
+3. Fill **IMAP server**, **Port**, **Email address**, **App password**, **Mailbox** and **Messages per sync**.
+4. To send mail from this mailbox too, tick **Send from this mailbox**. Then press **Connect**.
+Use a password made for this one app. Missing fields show "Required: {fields}". An IMAP mailbox has no calendar and no past email import.
 
 **Messages per sync** is the most one check reads. The first messages arrive a few minutes after you connect, not at once.
 Also called: connect Fastmail, connect my own mail server, app password.
+
+### How do I send from an IMAP mailbox?
+To send from an IMAP mailbox, tick **Send from this mailbox** on the **Connect IMAP mailbox** form. Margince then sends through the mailbox's SMTP server.
+- **SMTP server**: leave it empty to use the IMAP server.
+- **Security**: **SSL/TLS** uses port 465, **STARTTLS** uses port 587.
+- **SMTP port**: leave it empty to use the port that goes with **Security**.
+
+Margince logs in to the SMTP server with the same app password before it saves anything. Each mail you send gets a copy in the mailbox's **Sent** folder.
+A mailbox you connected without the tick stays read-only. To turn sending on later, press **Reconnect** and tick the box.
+Mail an agent drafts still waits for your approval, as it does for Gmail and Outlook.
+Also called: SMTP, send through my own mail server.
 
 ### How do I get an app password for IMAP?
 To get an app password, turn on two-step sign-in for your mail account, then create an app password in its security settings.
@@ -40,11 +52,14 @@ Margince seals the password and never shows it again. **Disconnect** deletes it,
 Also called: app-specific password, IMAP password, Gmail app password.
 
 ### Why does my IMAP mailbox not connect?
-When the **Connect IMAP mailbox** form refuses, the message under it says which of two things went wrong.
+When the **Connect IMAP mailbox** form refuses, the message under it says what went wrong.
 - "The mailbox rejected these credentials. Check host, email and app password.": a value is wrong, or you used your normal password.
 - "The mail server could not be reached. Check the host and port.": the server name or port is wrong, or the server is down.
-An IMAP server inside your own network is always unreachable, because Margince never connects to a private address.
-Also called: IMAP login failed, credentials rejected, mail server unreachable.
+- "The SMTP server rejected this login. Check the server, the security and the app password.": sending is ticked, and the SMTP server refused the login.
+- "The SMTP server could not be reached. Check the server and port.": sending is ticked, and its name, port or security is wrong.
+- "To send from this mailbox, its email address must be a plain address, such as name@example.com.": the login is not an email address.
+A mail server inside your own network is always unreachable, because Margince never connects to a private address.
+Also called: IMAP login failed, credentials rejected, mail server unreachable, SMTP login failed.
 
 ### How do I connect my calendar?
 To connect your calendar to Margince, tick **Calendar** when you connect your Google or Microsoft 365 account in **Settings → Connections**. Mail and calendar connect in one go.
@@ -107,7 +122,7 @@ calendar**. One account is one row, with what it brings in listed under it.
 |---|---|---|
 | **Google** | Mail from Gmail and meetings from Google Calendar, either or both. Meeting notes from Google Meet, if you connect them. | Yes |
 | **Microsoft 365** | Mail and calendar from Outlook on a Microsoft work account, either or both. | Yes |
-| **Another mail host** | "IMAP with an app password. Mail only, no calendar, no sending." | No |
+| **Another mail host** | "IMAP with an app password. Mail only, no calendar. Sending is optional." | If you tick **Send from this mailbox** |
 
 The company's **Telegram** bot lives on **Settings → Integrations**. It is one
 bot for the whole company, connected by an administrator.

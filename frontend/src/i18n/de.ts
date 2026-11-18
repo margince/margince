@@ -12407,6 +12407,20 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Das Postfach hat diese Zugangsdaten abgelehnt. Prüfe Server, E-Mail-Adresse und App-Passwort.",
   "connectors.imapUnreachable":
     "Der Mailserver war nicht erreichbar. Prüfe Server und Port.",
+  "connectors.imapSend": "Von diesem Postfach senden",
+  "connectors.imapSendHint":
+    "Mails, die du aus Margince sendest, gehen mit demselben App-Passwort über dieses Postfach raus. Eine Kopie landet im Ordner „Gesendet“.",
+  "connectors.imapSmtpHost": "Postausgangsserver (SMTP)",
+  "connectors.imapSmtpSecurity": "Verschlüsselung",
+  "connectors.imapSmtpTls": "SSL/TLS",
+  "connectors.imapSmtpStartTls": "STARTTLS",
+  "connectors.imapSmtpPort": "SMTP-Port",
+  "connectors.smtpLoginRejected":
+    "Der Postausgangsserver hat die Anmeldung abgelehnt. Prüfe Server, Verschlüsselung und App-Passwort.",
+  "connectors.smtpAddressInvalid":
+    "Um von diesem Postfach zu senden, muss die E-Mail-Adresse eine einfache Adresse sein, etwa name@example.com.",
+  "connectors.smtpUnreachable":
+    "Der Postausgangsserver war nicht erreichbar. Prüfe Server und Port.",
 
   // Das Telegram-Connector-Panel (Task 17, Design §9.1-§9.2): ein Bot
   // verbindet sich für den gesamten Workspace — kein OAuth-Handshake,
@@ -12704,17 +12718,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "E-Mails von dieser Domain wurden als Spam eingestuft",
 
   "ob.s4.googleFailed": "Google-Verbindung nicht abgeschlossen",
-  "ob.s4.imapHost": "IMAP-Host",
-  "ob.s4.imapHostPlaceholder": "imap.gmail.com",
-  "ob.s4.imapPort": "Port",
-  "ob.s4.imapEmail": "E-Mail",
-  "ob.s4.imapPassword": "App-Passwort", // NOSONAR: UI translation string, not a credential
-  "ob.s4.imapMailbox": "Postfach",
-  "ob.s4.imapMax": "Anzahl der neuesten E-Mails",
-  "ob.s4.imapHint":
-    "Nutze ein App-Passwort. Das App-Passwort wird verschlüsselt gespeichert und beim Trennen gelöscht.",
-  "ob.s4.imapConnect": "Testen und verbinden",
-  "ob.s4.accessToggle": "Erteilter Zugriff",
   "ob.s4.scope1Lead": "Lesezugriff.",
   "ob.s4.scope1Rest":
     "E-Mails werden automatisch zu Kontakten, Unternehmen und Aktivitäten.",
@@ -12725,7 +12728,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "ob.s4.scope3Rest": "Alles jederzeit exportieren oder löschen.",
   "ob.s4.scope4Lead": "Trennen mit einem Klick.",
   "ob.s4.scope4Rest": "Das CRM funktioniert weiter, erfasst aber nichts mehr.",
-  "ob.s4.connectFailed": "Postfach nicht verbunden",
   "ob.s4.notNow": "Nicht jetzt",
 
   "ob.conv.read.started": "Ich analysiere {host} und berichte, was ich finde.",
@@ -16363,7 +16365,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Outlook-Mail und -Kalender mit einem Geschäftskonto",
   "connectFlow.otherHost": "Anderer Mail-Anbieter",
   "connectFlow.otherHostDesc":
-    "IMAP mit einem App-Passwort. Nur Mail, kein Kalender, kein Senden.",
+    "IMAP mit einem App-Passwort. Nur Mail, kein Kalender. Senden ist optional.",
   "connectFlow.alreadyConnected": "Bereits verbunden.",
   "connectFlow.pickAccount": "Wähle zuerst ein Konto.",
   "connectFlow.titleVendor": "{vendor} verbinden",

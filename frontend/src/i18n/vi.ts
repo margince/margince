@@ -12089,6 +12089,20 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Hộp thư từ chối thông tin đăng nhập này. Kiểm tra máy chủ, email và mật khẩu ứng dụng.",
   "connectors.imapUnreachable":
     "Không thể kết nối tới máy chủ thư. Kiểm tra máy chủ và cổng.",
+  "connectors.imapSend": "Gửi từ hộp thư này",
+  "connectors.imapSendHint":
+    "Thư bạn gửi từ Margince sẽ đi qua hộp thư này bằng cùng mật khẩu ứng dụng. Một bản sao nằm trong thư mục Đã gửi.",
+  "connectors.imapSmtpHost": "Máy chủ thư đi (SMTP)",
+  "connectors.imapSmtpSecurity": "Bảo mật",
+  "connectors.imapSmtpTls": "SSL/TLS",
+  "connectors.imapSmtpStartTls": "STARTTLS",
+  "connectors.imapSmtpPort": "Cổng SMTP",
+  "connectors.smtpLoginRejected":
+    "Máy chủ thư đi đã từ chối đăng nhập này. Kiểm tra máy chủ, bảo mật và mật khẩu ứng dụng.",
+  "connectors.smtpAddressInvalid":
+    "Để gửi từ hộp thư này, địa chỉ email phải là một địa chỉ đơn giản, ví dụ name@example.com.",
+  "connectors.smtpUnreachable":
+    "Không thể kết nối tới máy chủ thư đi. Kiểm tra máy chủ và cổng.",
 
   // The Telegram connector panel (Task 17, design §9.1-§9.2): one bot
   // connects for the whole workspace — no OAuth handshake, a BotFather
@@ -12379,17 +12393,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Thư từ tên miền này được xác định là thư rác",
 
   "ob.s4.googleFailed": "Không thể hoàn tất kết nối Google",
-  "ob.s4.imapHost": "Máy chủ IMAP",
-  "ob.s4.imapHostPlaceholder": "imap.gmail.com",
-  "ob.s4.imapPort": "Cổng",
-  "ob.s4.imapEmail": "Email",
-  "ob.s4.imapPassword": "Mật khẩu ứng dụng",
-  "ob.s4.imapMailbox": "Hộp thư",
-  "ob.s4.imapMax": "Số email gần đây",
-  "ob.s4.imapHint":
-    "Dùng mật khẩu ứng dụng. Mật khẩu được mã hóa khi lưu và xóa khi ngắt kết nối.",
-  "ob.s4.imapConnect": "Kiểm tra và kết nối",
-  "ob.s4.accessToggle": "Quyền đã cấp",
   "ob.s4.scope1Lead": "Quyền đọc.",
   "ob.s4.scope1Rest": "Thư tự động trở thành liên hệ, công ty và hoạt động.",
   "ob.s4.scope2Lead": "Bao gồm quyền gửi.",
@@ -12399,7 +12402,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "ob.s4.scope3Rest": "Xuất hoặc xóa toàn bộ bất cứ lúc nào.",
   "ob.s4.scope4Lead": "Ngắt kết nối bằng một cú nhấp.",
   "ob.s4.scope4Rest": "CRM vẫn hoạt động nhưng ngừng thu thập.",
-  "ob.s4.connectFailed": "Không thể kết nối hộp thư",
   "ob.s4.notNow": "Để sau",
 
   "ob.conv.read.started": "Đang đọc {host}. Tôi sẽ báo lại những gì tìm thấy.",
@@ -15937,7 +15939,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "connectFlow.microsoft": "Thư và lịch Outlook trên tài khoản công việc",
   "connectFlow.otherHost": "Máy chủ thư khác",
   "connectFlow.otherHostDesc":
-    "IMAP với mật khẩu ứng dụng. Chỉ có thư, không có lịch, không gửi thư.",
+    "IMAP với mật khẩu ứng dụng. Chỉ có thư, không có lịch. Có thể bật gửi thư.",
   "connectFlow.alreadyConnected": "Đã được kết nối.",
   "connectFlow.pickAccount": "Hãy chọn một tài khoản trước.",
   "connectFlow.titleVendor": "Kết nối {vendor}",
