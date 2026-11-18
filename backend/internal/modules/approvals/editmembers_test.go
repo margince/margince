@@ -88,3 +88,15 @@ func TestAHandoverTakesNoEditToAnyMember(t *testing.T) {
 		}
 	}
 }
+
+func TestAShareRequestTakesNoEditAndNoAddedMember(t *testing.T) {
+	staged := json.RawMessage(`{"contact_id":"0190a1b2-0000-7000-8000-000000000001","owner_id":"0190a1b2-0000-7000-8000-000000000002","requester_id":"0190a1b2-0000-7000-8000-000000000003"}`)
+	if err := assertEditableMembers(approvalsubject.KindContactShare, staged, staged); err != nil {
+		t.Errorf("accepting the request as staged was refused: %v", err)
+	}
+	added := json.RawMessage(`{"contact_id":"0190a1b2-0000-7000-8000-000000000001","owner_id":"0190a1b2-0000-7000-8000-000000000002","requester_id":"0190a1b2-0000-7000-8000-000000000003","note":"please"}`)
+	var invalid *InvalidEditError
+	if err := assertEditableMembers(approvalsubject.KindContactShare, staged, added); !errors.As(err, &invalid) {
+		t.Errorf("an added member answered %v, want an invalid-edit refusal", err)
+	}
+}

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { editableSeed, editableStrings } from "./approvaleditor";
+import { editableSeed } from "./approvaleditor";
+import { editableStrings } from "./approvalkind";
 
 // What the inline editor OFFERS. A kind that declares its editable fields is
 // saying what a contact may change; everything else in the payload is what the
