@@ -35,6 +35,11 @@ func TestALayerThatOnlyTightensLoosensNothing(t *testing.T) {
 	if got := Loosened(base(), tighter); len(got) != 0 {
 		t.Errorf("a stricter layer was reported as loosening %v", got)
 	}
+	shorter := base()
+	shorter.FrequencyCap = &FrequencyCap{Messages: 1, Window: 12 * time.Hour}
+	if got := Loosened(base(), shorter); len(got) != 0 {
+		t.Errorf("one per 12h over three per day was reported as loosening %v", got)
+	}
 	if got := Loosened(base(), base()); len(got) != 0 {
 		t.Errorf("a layer that restates the one below was reported as loosening %v", got)
 	}
@@ -50,6 +55,8 @@ func TestEachLooserObligationIsNamed(t *testing.T) {
 		{"Disclosures", func(r *Rules) { r.Disclosures = r.Disclosures[:1] }},
 		{"FrequencyCap", func(r *Rules) { r.FrequencyCap = nil }},
 		{"FrequencyCap", func(r *Rules) { r.FrequencyCap = &FrequencyCap{Messages: 10, Window: 24 * time.Hour} }},
+		// A lower average over a longer window, and a bigger burst.
+		{"FrequencyCap", func(r *Rules) { r.FrequencyCap = &FrequencyCap{Messages: 4, Window: 48 * time.Hour} }},
 		{"MarketingExceptions", func(r *Rules) {
 			r.MarketingExceptions = []MarketingException{{Kind: ExistingCustomer, RequiresSimilarity: true}}
 		}},

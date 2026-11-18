@@ -83,9 +83,8 @@ func TestDisclosuresAccumulate(t *testing.T) {
 	}
 }
 
-// The tighter cap wins, compared as a RATE. Three per 24h is tighter than ten
-// per 24h and also tighter than four per hour — comparing raw counts would let
-// a high-count short-window cap look looser than it is.
+// The tighter cap wins. Three per 24h is tighter than ten per 24h and also
+// tighter than four per hour, which lets more through in every stretch.
 func TestTheTighterCapWinsByRate(t *testing.T) {
 	threePerDay := &FrequencyCap{Messages: 3, Window: 24 * time.Hour}
 	tenPerDay := &FrequencyCap{Messages: 10, Window: 24 * time.Hour}
@@ -280,6 +279,33 @@ func TestADegenerateCapDoesNotWinByArgumentOrder(t *testing.T) {
 
 	if tighterCap(broken, binding) != broken || tighterCap(binding, broken) != broken {
 		t.Error("a cap that cannot bind lost to a real one, or won only from one side")
+	}
+}
+
+// A cap is tighter only if it lets no more through in every stretch of time.
+// Two per 3h has the lower average and lets two out at once; one per hour lets
+// one out at once and more over a day. Neither holds the other, so the fold
+// answers a cap that holds both, whichever side each is on.
+func TestACapWithTheLowerRateAndTheBiggerBurstDoesNotWin(t *testing.T) {
+	hourly := &FrequencyCap{Messages: 1, Window: time.Hour}
+	burst := &FrequencyCap{Messages: 2, Window: 3 * time.Hour}
+	want := FrequencyCap{Messages: 1, Window: 3 * time.Hour}
+	for _, got := range []*FrequencyCap{tighterCap(hourly, burst), tighterCap(burst, hourly)} {
+		if *got != want {
+			t.Errorf("the fold of 1/1h and 2/3h is %+v, want %+v", *got, want)
+		}
+	}
+	// Two per hour against three per 1h24m: lower burst, lower rate, and
+	// still four through just after the first hour against three.
+	fast := &FrequencyCap{Messages: 2, Window: time.Hour}
+	slow := &FrequencyCap{Messages: 3, Window: 84 * time.Minute}
+	if got := tighterCap(fast, slow); got == fast || got == slow {
+		t.Errorf("one of 2/1h and 3/84m won although neither holds the other: %+v", *got)
+	}
+	// A cap that holds the other in every stretch still wins outright.
+	daily := &FrequencyCap{Messages: 1, Window: 24 * time.Hour}
+	if tighterCap(hourly, daily) != daily || tighterCap(daily, hourly) != daily {
+		t.Error("one per day lost to one per hour")
 	}
 }
 

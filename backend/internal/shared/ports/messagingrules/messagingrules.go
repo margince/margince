@@ -307,49 +307,6 @@ func shorterWindow(a, b time.Duration) time.Duration {
 	return a
 }
 
-// tighterCap picks the cap that permits fewer messages per unit of time. Nil
-// means uncapped, so a nil on either side yields the other's cap.
-func tighterCap(a, b *FrequencyCap) *FrequencyCap {
-	switch {
-	case a == nil:
-		return b
-	case b == nil:
-		return a
-	}
-	// A degenerate cap is the strictest thing there is, and it is handled
-	// FIRST rather than left to the comparison. Validate refuses one on the
-	// extension path, but Register is exported and a core-built value never
-	// sees Validate — and a zero window divided by a zero count is NaN, which
-	// loses every comparison and would hand back whichever cap happened to sit
-	// on the left. That made the fold's answer depend on the order the caller
-	// listed the countries in.
-	if degenerate(a) {
-		return a
-	}
-	if degenerate(b) {
-		return b
-	}
-	// Cross-multiplied rather than divided: exact, and it cannot produce NaN.
-	// Three per 24h is tighter than ten per 24h, and also tighter than four per
-	// hour. int64 nanoseconds against a message count stays far from overflow
-	// for any cap a statute could state.
-	left := int64(b.Messages) * int64(a.Window)
-	right := int64(a.Messages) * int64(b.Window)
-	if left != right {
-		if left < right {
-			return b
-		}
-		return a
-	}
-	// Equal rates are not equal burst: {1, 1h} and {24, 24h} permit the same
-	// average and a 24-message burst is not the same restriction as one an
-	// hour. The smaller allowance wins.
-	if b.Messages < a.Messages {
-		return b
-	}
-	return a
-}
-
 // degenerate reports a cap that cannot bind as written.
 func degenerate(c *FrequencyCap) bool { return c.Messages <= 0 || c.Window <= 0 }
 
