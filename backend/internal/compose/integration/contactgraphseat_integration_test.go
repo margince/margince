@@ -61,7 +61,7 @@ func TestContactGraphKeepsSeatsOutOfTheirCompanyLane(t *testing.T) {
 			VALUES ($1, 'employment', '`+p.String()+`', '`+company.String()+`', 'manual', 'human:x')`)
 	}
 	rep2 := e.As(e.Rep2, []ids.UUID{e.Team1}, AdminPerms)
-	if _, err := capture.NewOwnerIdentityStore(e.DB()).Add(rep2, capture.IdentityKindAddress, "rep2.home@private.example"); err != nil {
+	if _, err := capture.NewOwnerIdentityStore(e.DB()).AddConfirmed(rep2, capture.IdentityKindAddress, "rep2.home@private.example", true); err != nil {
 		t.Fatalf("adding the alias: %v", err)
 	}
 
@@ -107,7 +107,7 @@ func TestContactGraphReadsAPassportAgentAsItsUser(t *testing.T) {
 			VALUES ($1, 'employment', '`+p.String()+`', '`+company.String()+`', 'manual', 'human:x')`)
 	}
 	rep2 := e.As(e.Rep2, []ids.UUID{e.Team1}, AdminPerms)
-	if _, err := capture.NewOwnerIdentityStore(e.DB()).Add(rep2, capture.IdentityKindAddress, "rep2.home@private.example"); err != nil {
+	if _, err := capture.NewOwnerIdentityStore(e.DB()).AddConfirmed(rep2, capture.IdentityKindAddress, "rep2.home@private.example", true); err != nil {
 		t.Fatalf("adding the alias: %v", err)
 	}
 

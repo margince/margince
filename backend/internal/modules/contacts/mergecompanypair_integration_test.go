@@ -16,8 +16,8 @@ import (
 func TestADirectCompanyMergeKeepsTheOpenPairAsMerged(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	holder := e.createNamedCompany(ctx, t, "Example Group", "example.com")
-	created := e.createNamedCompany(ctx, t, "Cloudy", "cloudy.test", "cloud.example.com")
+	holder := e.createNamedCompany(ctx, t, "Example Group", "example-group.test")
+	created := e.createNamedCompany(ctx, t, "Cloudy", "cloudy.test", "cloud.example-group.test")
 	pair := e.openPairID(ctx, t, entityCompany, holder.UUID, created.UUID)
 	if pair.IsZero() {
 		t.Fatal("no open pair was filed, so the merge has nothing to settle")

@@ -4236,6 +4236,7 @@
   "elapsed.days": "{days} ngày trước",
   "aiRouting.lane.embeddings": "Tìm kiếm và truy xuất trên các hồ sơ",
   "aiTasks.whatItDoes": "{task}: tác vụ này làm gì",
+  "captureValue.consumerMail": "Tên miền thư cá nhân như gmail.com không dùng được ở đây.",
   "inquiry.notSpecified": "Chưa nêu",
   "inquiry.reason.legacyHandling": "Quy trình xử lý lead trước đó vẫn phụ trách yêu cầu này. Hãy xem kết quả trước khi tạo việc khác.",
   "inquiry.reason.owner": "Giữ người phụ trách hiện tại",

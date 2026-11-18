@@ -235,3 +235,23 @@ func TestCarveOutKeyKeepsASubdomainBaselineEntryAsWritten(t *testing.T) {
 		t.Errorf("an unlisted subdomain narrows to its registrable domain, got %q", got)
 	}
 }
+
+func TestIsShippedIgnoresWhatTheWorkspaceAddedAndHonoursItsCarveOuts(t *testing.T) {
+	m := New([]string{"regional-mail.example"}, []string{"gmx.net"})
+
+	if !m.IsShipped("gmail.com") {
+		t.Error("a shipped domain was not recognised as shipped")
+	}
+	if m.IsShipped("regional-mail.example") {
+		t.Error("a domain only the workspace added reads as shipped")
+	}
+	if !m.IsConsumer("regional-mail.example") {
+		t.Error("the added domain stopped being consumer mail")
+	}
+	if m.IsShipped("gmx.net") {
+		t.Error("a carved-out shipped domain still reads as shipped")
+	}
+	if m.IsShipped("acme.example") {
+		t.Error("an unknown domain reads as shipped")
+	}
+}

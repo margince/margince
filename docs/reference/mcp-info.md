@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 274.7 KB |
+| Tool catalog | 274.8 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 71739 |
+| Approx. wire tokens | 71744 |
 | Largest tool | `read_details` (17.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -1797,8 +1797,8 @@ and says the contact handed the card over. Use read_workspace topics capture_sen
 counterparty_holds and corpora to read first, run_research start_backfill to bring in old mail,
 run_research ask_corpus to ask a corpus, preview_import and commit_import to start an import, and
 change_tags to tag a record. (Runs immediately; the user's yes is needed for the actions
-add_consumer_mail_domain, add_workspace_email_domain, archive_corpus, disconnect_channel,
-disconnect_mailbox, import_vcards, lift_counterparty_hold, lift_exclusion,
+add_consumer_mail_domain, add_owner_identity, add_workspace_email_domain, archive_corpus,
+disconnect_channel, disconnect_mailbox, import_vcards, lift_counterparty_hold, lift_exclusion,
 remove_consumer_mail_domain, remove_workspace_email_domain, set_blocked_domain, set_mail_posture,
 set_sender_decision, share_counterparty_hold_history, undo_import_run, unlink_channel,
 withdraw_owner_identity, so tell them what the call will change and get it before calling, unless
