@@ -45040,6 +45040,25 @@ export interface components {
             language?: string;
             /** @description The recipient's country, lower-case ISO 3166-1 alpha-2, for `foreign_advertiser`. */
             country?: string;
+            provision?: components["schemas"]["CitedProvision"];
+        };
+        /**
+         * @description The law a finding or refusal rests on, as the recipient's own jurisdiction pack cites it
+         *     for the sending legal entity. Shown beside the engine's sentence; it decides nothing.
+         *     Absent when the pack cites no law for it, or when the citation may not be shown: the pack's
+         *     review is overdue or not yet done, or the law has not taken effect or has expired. On a
+         *     review it is the citation shown when the refusal was assessed, never today's.
+         */
+        CitedProvision: {
+            /** @description The law or decree, as a regulator cites it. Not translated. */
+            instrument: string;
+            /** @description The part of the instrument, such as "§ 7(2)". */
+            provision: string;
+            /**
+             * Format: uri
+             * @description The official published text, over https.
+             */
+            source_url: string;
         };
         /** @description An existing recipient record the caller can read. */
         CommunicationEvidenceSubject: {
@@ -45055,6 +45074,7 @@ export interface components {
             language: string;
             /** @description Missing contact methods, such as email, phone or web. */
             missing_means: string[];
+            provision?: components["schemas"]["CitedProvision"];
         };
         /** @description One recipient's answer. It describes the MESSAGE, never the contact's file. */
         SendAuthorizationPreviewRecipient: {
@@ -55182,6 +55202,8 @@ export interface components {
             /** Format: uuid */
             subject_id?: string;
             reason_code: string;
+            /** @description The law the recipient's pack cites for `reason_code`, as shown when the refusal was assessed. */
+            provision?: components["schemas"]["CitedProvision"];
             category?: string;
             /** Format: uuid */
             sending_entity_id?: string;

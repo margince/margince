@@ -122,15 +122,7 @@ func previewResponse(preview SendPreview) crmcontracts.SendAuthorizationPreview 
 			ReasonCode: d.ReasonCode,
 		}
 		if len(d.Evidence.FooterFindings) > 0 {
-			findings := make([]crmcontracts.FooterFinding, 0, len(d.Evidence.FooterFindings))
-			for _, finding := range d.Evidence.FooterFindings {
-				wireFinding := crmcontracts.FooterFinding(finding)
-				if wireFinding.MissingMeans == nil {
-					wireFinding.MissingMeans = []string{}
-				}
-				findings = append(findings, wireFinding)
-			}
-			entry.FooterFindings = &findings
+			entry.FooterFindings = wireFooterFindings(d.Evidence.FooterFindings)
 		}
 		if preview.readableSubjects[previewSubject{kind: d.SubjectKind, id: d.SubjectID}] {
 			entry.EvidenceSubject = &crmcontracts.CommunicationEvidenceSubject{
@@ -219,7 +211,32 @@ func wireContentFindings(findings []DraftContentFinding) *[]crmcontracts.DraftCo
 			country := f.Country
 			wire.Country = &country
 		}
+		wire.Provision = wireProvision(f.Provision)
 		out = append(out, wire)
 	}
 	return &out
+}
+
+// wireFooterFindings renders footer findings with their provisions. Missing
+// means are an empty list rather than null.
+func wireFooterFindings(findings []commsauthz.FooterFinding) *[]crmcontracts.FooterFinding {
+	out := make([]crmcontracts.FooterFinding, 0, len(findings))
+	for _, f := range findings {
+		means := f.MissingMeans
+		if means == nil {
+			means = []string{}
+		}
+		out = append(out, crmcontracts.FooterFinding{
+			Kind: f.Kind, Language: f.Language, MissingMeans: means, Provision: wireProvision(f.Provision),
+		})
+	}
+	return &out
+}
+
+// wireProvision renders a citation, or nil when none is shown.
+func wireProvision(p commsauthz.Provision) *crmcontracts.CitedProvision {
+	if !p.Cited() {
+		return nil
+	}
+	return &crmcontracts.CitedProvision{Instrument: p.Instrument, Provision: p.Provision, SourceUrl: p.SourceURL}
 }

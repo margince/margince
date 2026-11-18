@@ -11,9 +11,14 @@ package consent
 // sender established in its country, or outside it.
 
 import (
+	"context"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 )
@@ -85,6 +90,57 @@ func citationFor(code string, where citationContext) (messagingrules.Citation, c
 		return resolved, citationShown
 	}
 	return messagingrules.Citation{}, citationNotDeclared
+}
+
+// citationsFor resolves every code the recipient's pack cites, for the entity
+// the message goes out for, and keeps the ones shown. A pack that cites
+// nothing returns before the sender is read.
+func (g *Gate) citationsFor(ctx context.Context, tx pgx.Tx, country RecipientCountry, entity ids.UUID) (map[string]commsauthz.Provision, error) {
+	codes := citedCodes(country)
+	if len(codes) == 0 {
+		return nil, nil //nolint:nilnil // no citation is the answer for a pack that cites nothing
+	}
+	sender, err := g.store.senderCountryOf(ctx, tx, entity)
+	if err != nil {
+		return nil, err
+	}
+	return provisionsShown(codes, citationContext{Recipient: country, Sender: sender, At: g.store.now()}), nil
+}
+
+// citedCodes are the codes the recipient's own pack declares a citation for.
+func citedCodes(country RecipientCountry) []string {
+	rules, _, found := applicableRules(country.Code)
+	if !found {
+		return nil
+	}
+	codes := make([]string, 0, len(rules.Citations))
+	for _, declared := range rules.Citations {
+		codes = append(codes, declared.Code)
+	}
+	return codes
+}
+
+// provisionsShown keeps each code whose citation is shown at where. An
+// overdue, unreviewed or expired one is left out, and the surface then shows
+// its facts without a citation.
+func provisionsShown(codes []string, where citationContext) map[string]commsauthz.Provision {
+	out := make(map[string]commsauthz.Provision, len(codes))
+	for _, code := range codes {
+		if shown := shownProvision(code, where); shown.Cited() {
+			out[code] = shown
+		}
+	}
+	return out
+}
+
+// shownProvision is citationFor as a surface shows it: the provision when the
+// citation is shown, and the zero value for every other outcome.
+func shownProvision(code string, where citationContext) commsauthz.Provision {
+	cited, outcome := citationFor(code, where)
+	if outcome != citationShown {
+		return commsauthz.Provision{}
+	}
+	return commsauthz.Provision{Instrument: cited.Instrument, Provision: cited.Provision, SourceURL: cited.SourceURL}
 }
 
 // senderTerritoryHolds reports whether a citation's territory covers the

@@ -62090,6 +62090,22 @@ components:
         country:
           type: string
           description: The recipient's country, lower-case ISO 3166-1 alpha-2, for `foreign_advertiser`.
+        provision:
+          $ref: '#/components/schemas/CitedProvision'
+
+    CitedProvision:
+      type: object
+      description: |
+        The law a finding or refusal rests on, as the recipient's own jurisdiction pack cites it
+        for the sending legal entity. Shown beside the engine's sentence; it decides nothing.
+        Absent when the pack cites no law for it, or when the citation may not be shown: the pack's
+        review is overdue or not yet done, or the law has not taken effect or has expired. On a
+        review it is the citation shown when the refusal was assessed, never today's.
+      required: [instrument, provision, source_url]
+      properties:
+        instrument: { type: string, description: 'The law or decree, as a regulator cites it. Not translated.' }
+        provision: { type: string, description: 'The part of the instrument, such as "§ 7(2)".' }
+        source_url: { type: string, format: uri, description: 'The official published text, over https.' }
 
     CommunicationEvidenceSubject:
       type: object
@@ -62109,6 +62125,8 @@ components:
         kind: { type: string, description: 'Missing disclosure kind or unavailable private link. Unknown kinds remain visible as an unspecified footer omission.' }
         language: { type: string, description: 'Required language, or empty when no language is missing.' }
         missing_means: { type: array, items: { type: string }, description: 'Missing contact methods, such as email, phone or web.' }
+        provision:
+          $ref: '#/components/schemas/CitedProvision'
 
     SendAuthorizationPreviewRecipient:
       type: object
@@ -75544,6 +75562,9 @@ components:
         subject_kind: { type: string, enum: [contact, lead], x-extensible-enum: true }
         subject_id: { type: string, format: uuid }
         reason_code: { type: string }
+        provision:
+          allOf: [{ $ref: '#/components/schemas/CitedProvision' }]
+          description: The law the recipient's pack cites for `reason_code`, as shown when the refusal was assessed.
         category: { type: string }
         sending_entity_id: { type: string, format: uuid }
         sending_entity_name: { type: string }
