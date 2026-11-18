@@ -237,7 +237,7 @@ export function RejectOfferAction({ offer }: Readonly<{ offer: Offer }>) {
 // Regenerate a new draft revision from a sent offer. The 201 response is the
 // only place the AI provenance notice and diff summary appear. Every later
 // read of that offer returns them null. So the new draft's cache entry is
-// seeded from this response before navigating, and OfferScreen's query skips
+// seeded from this response before navigating. OfferScreen's query skips
 // its refetch on mount for an AI-generated draft (offers.tsx). The sent offer
 // stays sent or superseded on the server, never deleted. So unlike Send,
 // regenerate needs no confirm modal.
@@ -297,7 +297,7 @@ export function isOpenDraft(offer: Offer): boolean {
   return offer.status === "draft" && offer.archived_at == null;
 }
 
-// Discarding archives the draft: it leaves the deal's offers and the reader
+// Discarding archives the draft, which leaves the deal's offers. The reader
 // goes back to the deal, since nothing on this page can change any more.
 export function DiscardOfferAction({ offer }: Readonly<{ offer: Offer }>) {
   const t = useT();

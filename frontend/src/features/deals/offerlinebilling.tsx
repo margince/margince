@@ -192,11 +192,11 @@ type LineBillingPatch = Required<
 >;
 
 /**
- * The three controls as the wire takes them, for an offer-line update, or
+ * The three controls as the wire takes them, for an offer-line update. It is
  * null while a recurring line has no period yet, which the server refuses.
  *
- * Unlike a create, every field is named: the server judges the line as the
- * patch leaves it, so a field left out keeps a cadence or term the line no
+ * Unlike a create, every field is named. The server judges the line as the
+ * patch leaves it, and a field left out keeps a cadence or term the line no
  * longer means. A typed term goes as typed, so a bad one comes back refused
  * with the reason instead of being cleared.
  */

@@ -7,8 +7,8 @@ import { installFetchStub, meRoute } from "../../testing/story-utils";
 import { jsonResponse, type Offer, offer, render } from "./deals.testkit";
 import { type OfferLineItem, OfferScreen } from "./offers";
 
-// The draft offer's line editor as a user drives it: what each row lets a
-// reader see and change, and what the page shows when the server says no.
+// The draft offer's line editor as a user drives it. It covers what each row
+// lets a reader see and change, and what the page shows when the server says no.
 
 afterEach(cleanup);
 

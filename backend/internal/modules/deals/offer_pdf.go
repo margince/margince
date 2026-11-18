@@ -149,16 +149,8 @@ func resolvePDFLabels(locale string) pdfLabels {
 	}
 }
 
-// pdfFormatMinor renders an integer minor-unit amount as a decimal
-// display string with its currency code. Display-only: the money engine
-// itself (offer_totals.go) never touches a float, and this function never
-// re-derives the amount it formats.
-//
-// Money takes the decimal placement from values.MajorUnits, because the
-// PDF is the document a buyer receives and signs. A hard-coded /100 states an
-// offer priced in VND, JPY or KRW at a hundredth of its value — those
-// currencies have no minor unit, so their integer IS the amount — and states
-// a KWD offer at a hundred times, since a dinar has three.
+// pdfFormatMinor prints a stored minor-unit amount and never re-derives it.
+// Money places the decimals by values.MajorUnits, so VND and KWD print at value.
 func pdfFormatMinor(minor int64, currency string, labels pdfLabels) string {
 	return labels.format.Money(minor, currency)
 }
