@@ -20,8 +20,8 @@ import {
   isPreviewDoor,
   previewedAddresses,
 } from "../../testing/sendpermission.testkit";
-import { ComposeModal } from "./compose";
 import { REWRITE_ROUTE, rewrittenBody } from "./compose.testkit";
+import { ComposeWindow } from "./composewindow";
 
 // Drafting to a LEAD.
 //
@@ -124,7 +124,7 @@ describe("drafting to a lead", () => {
       "POST /leads/l-1/draft-email": () => jsonResponse(LEAD_DRAFT),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         intent="Follow up on our discussion"
         entityType="lead"
         entityId="l-1"
@@ -153,7 +153,7 @@ describe("drafting to a lead", () => {
       "POST /leads/l-1/draft-email": () => jsonResponse(LEAD_DRAFT),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="lead"
         entityId="l-1"
         recordAddress="dung.ly@newsky.example"
@@ -188,7 +188,7 @@ describe("drafting to a lead", () => {
       "PUT /mail-drafts": () => new Response(null, { status: 204 }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         intent="Follow up on our discussion"
         entityType="lead"
         entityId="l-1"
@@ -222,7 +222,7 @@ describe("drafting to a lead", () => {
       "POST /leads/l-1/draft-email": () => jsonResponse(LEAD_DRAFT),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         intent="Follow up on our discussion"
         entityType="lead"
         entityId="l-1"
@@ -251,7 +251,7 @@ describe("drafting to a lead", () => {
       "POST /leads/l-1/draft-email": () => jsonResponse({}, 501),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         intent="Follow up on our discussion"
         entityType="lead"
         entityId="l-1"

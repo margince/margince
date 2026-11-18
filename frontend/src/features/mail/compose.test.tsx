@@ -6,7 +6,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { messageText } from "../../design-system/richtext-testing";
 import { draftButton } from "../../testing/composedraft.testkit";
 import { contactDocuments } from "../../testing/contactdocuments";
-import { ComposeModal, RelinkModal } from "./compose";
 import {
   activity202,
   DISCLOSURE,
@@ -20,6 +19,8 @@ import {
   stubRoutes,
   WHY_ASK,
 } from "./compose.testkit";
+import { RelinkModal } from "./composerelink";
+import { ComposeWindow } from "./composewindow";
 
 afterEach(() => {
   cleanup();
@@ -293,7 +294,7 @@ describe("RelinkModal", () => {
   });
 });
 
-describe("ComposeModal", () => {
+describe("ComposeWindow", () => {
   it("fills To/Subject/Body from the AI draft", async () => {
     stubRoutes({
       "POST /activities/act-1/draft-email": () =>
@@ -304,7 +305,7 @@ describe("ComposeModal", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -339,7 +340,7 @@ describe("ComposeModal", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -372,7 +373,7 @@ describe("ComposeModal", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -399,7 +400,7 @@ describe("ComposeModal", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -430,7 +431,7 @@ describe("ComposeModal", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -461,7 +462,7 @@ describe("ComposeModal", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -489,7 +490,7 @@ describe("ComposeModal", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -524,7 +525,7 @@ describe("ComposeModal", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -546,7 +547,7 @@ describe("ComposeModal", () => {
       "POST /activities/act-1/draft-email": () => emptyResponse(501),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -568,7 +569,7 @@ describe("ComposeModal", () => {
   it("names every field it is waiting for, and sends nothing", async () => {
     const sent = stubRoutes();
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -606,7 +607,7 @@ describe("ComposeModal", () => {
       "POST /activities/act-1/send-email": () => jsonResponse(activity202, 202),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -652,7 +653,7 @@ describe("ComposeModal", () => {
         ),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -680,7 +681,7 @@ describe("ComposeModal", () => {
       "POST /activities/act-1/send-email": () => emptyResponse(501),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -705,7 +706,7 @@ describe("ComposeModal", () => {
       "POST /activities/act-1/send-email": () => emptyResponse(503),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -733,7 +734,7 @@ describe("ComposeModal", () => {
       "POST /activities/act-1/draft-email": () => emptyResponse(502),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"

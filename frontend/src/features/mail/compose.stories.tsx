@@ -17,8 +17,8 @@ import {
   type RouteMap,
   StoryProviders,
 } from "../../testing/story-utils";
-import { ComposeModal } from "./compose";
 import { RelinkModal } from "./composerelink";
+import { ComposeWindow } from "./composewindow";
 import { editSeedOf } from "./schedulededit";
 
 // The composer surface (draftEmail / sendEmail / relinkActivity) rendered off
@@ -135,7 +135,7 @@ function composeStory(routes: RouteMap) {
     });
     return (
       <StoryProviders>
-        <ComposeModal
+        <ComposeWindow
           activityId="act-1"
           entityType="contact"
           entityId="p-1"
@@ -424,7 +424,7 @@ function channelReplyStory(conversation: RouteMap[string]) {
     });
     return (
       <StoryProviders>
-        <ComposeModal
+        <ComposeWindow
           activityId="act-1"
           entityType="contact"
           entityId="p-1"
@@ -572,7 +572,7 @@ function headStory(transports?: readonly Transport[], extra: RouteMap = {}) {
     installFetchStub({ ...HEAD_ROUTES, ...extra });
     return (
       <StoryProviders>
-        <ComposeModal
+        <ComposeWindow
           entityType="contact"
           entityId="p-1"
           contactId="p-1"
@@ -719,7 +719,7 @@ export const EditingScheduled: Story = {
     installFetchStub(HEAD_ROUTES);
     return (
       <StoryProviders>
-        <ComposeModal
+        <ComposeWindow
           edit={SCHEDULED_EDIT}
           entityType="contact"
           entityId="p-1"

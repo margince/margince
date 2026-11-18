@@ -13,7 +13,6 @@ import {
   previewedAddresses,
   refusedPreview,
 } from "../../testing/sendpermission.testkit";
-import { ComposeModal } from "./compose";
 import {
   fillSendableForm,
   jsonResponse,
@@ -24,6 +23,7 @@ import {
   stubRoutes,
   WHY_LABEL,
 } from "./compose.testkit";
+import { ComposeWindow } from "./composewindow";
 
 // Send follows the engine's answer for the message as it stands. It waits
 // while a check runs or after one failed. It stays off for a refusal no reason
@@ -113,7 +113,7 @@ function heldAnswer() {
 
 function openComposer() {
   return render(
-    <ComposeModal
+    <ComposeWindow
       entityType="contact"
       entityId="c-1"
       contactId="c-1"
