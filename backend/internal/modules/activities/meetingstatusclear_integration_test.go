@@ -48,22 +48,25 @@ func TestAMeetingStatusClearedWithNullAsksForTheOutcomeAgain(t *testing.T) {
 // Clearing a status that is already none writes nothing, so the version holds.
 func TestClearingAnUnsetMeetingStatusChangesNothing(t *testing.T) {
 	e := setupSend(t)
-	subject := "Harbor review"
-	start := clocktest.Now(t).Add(-48 * time.Hour)
-	out, _, err := meetingStore(e).LogActivity(meetingCtx(e), LogActivityInput{
-		Kind: string(crmcontracts.ActivityKindMeeting), Subject: &subject, OccurredAt: &start, Source: "manual",
-	})
-	if err != nil {
-		t.Fatalf("logging the meeting: %v", err)
+	id := bookMeeting(t, e, "Harbor review", clocktest.Now(t).Add(-48*time.Hour))
+	cleared, err := meetingStore(e).UpdateActivity(meetingCtx(e), id, UpdateActivityInput{Clear: []string{auditFieldMeetingStatus}})
+	if err != nil || cleared.MeetingStatus != nil {
+		t.Fatalf("the first clear: status %v, err %v", cleared.MeetingStatus, err)
 	}
-	id := ids.From[ids.ActivityKind](ids.UUID(out.Id))
 
-	again, err := meetingStore(e).UpdateActivity(meetingCtx(e), id, UpdateActivityInput{Clear: []string{auditFieldMeetingStatus}})
-	if err != nil {
+	updates := func() (n int) {
+		if err := e.owner.QueryRow(context.Background(), `SELECT count(*) FROM audit_log
+			WHERE entity_type = 'activity' AND entity_id = $1 AND action = 'update'`, id.UUID).Scan(&n); err != nil {
+			t.Fatalf("counting audit rows: %v", err)
+		}
+		return n
+	}
+	before := updates()
+	if _, err := meetingStore(e).UpdateActivity(meetingCtx(e), id, UpdateActivityInput{Clear: []string{auditFieldMeetingStatus}}); err != nil {
 		t.Fatalf("clearing an unset status: %v", err)
 	}
-	if again.Version != out.Version {
-		t.Errorf("version moved from %d to %d on a clear of nothing", out.Version, again.Version)
+	if after := updates(); after != before {
+		t.Errorf("a clear of nothing wrote %d audit rows, want none", after-before)
 	}
 }
 
