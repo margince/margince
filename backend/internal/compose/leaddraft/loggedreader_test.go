@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/draftcore"
 	"github.com/margince/margince/backend/internal/compose/leaddraft"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 )
 
 type askedLogged struct {
@@ -52,7 +53,7 @@ func (r returnsLogged) NewestLoggedTouch(context.Context, draftcore.LoggedOn, ti
 // A lead with only an internal note on file is still written to as a stranger.
 // The same lead with a past meeting is followed up.
 func TestANoteOnlyLeadIsStillAFirstTouch(t *testing.T) {
-	now := time.Now()
+	now := clocktest.Now(t)
 	bodyFor := func(kind crmcontracts.ActivityKind) string {
 		t.Helper()
 		row := crmcontracts.Activity{Kind: kind, OccurredAt: now.Add(-48 * time.Hour), OccurredPrecision: "instant"}
