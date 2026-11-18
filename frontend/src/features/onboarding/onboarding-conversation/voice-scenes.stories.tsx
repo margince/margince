@@ -7,7 +7,10 @@ import type { components } from "../../../api/schema";
 import { VOICE_MIN_WORDS } from "../../../lib/voice-intake-core";
 import { StoryProviders } from "../../../testing/story-utils";
 import type { ConversationQuestion } from "./conversation-types";
-import type { CorpusManifestEntry } from "./use-voice-corpus";
+import type {
+  CorpusManifestEntry,
+  VoiceIngestFailure,
+} from "./use-voice-corpus";
 import {
   VoiceBuildScene,
   VoiceCollectScene,
@@ -80,6 +83,7 @@ function Collect({
   canBuild = false,
   startPending = false,
   startError = null,
+  failures = [],
   locale,
 }: Readonly<{
   corpus: CorpusSummary | null;
@@ -87,6 +91,7 @@ function Collect({
   canBuild?: boolean;
   startPending?: boolean;
   startError?: string | null;
+  failures?: readonly VoiceIngestFailure[];
   locale?: "de";
 }>) {
   const fileRef = useRef<HTMLInputElement | null>(null);
@@ -95,6 +100,7 @@ function Collect({
       <VoiceCollectScene
         summary={corpus}
         manifest={manifest}
+        failures={failures}
         fileRef={fileRef}
         onFiles={() => {}}
         onAddPaste={() => {}}
@@ -118,6 +124,38 @@ type Story = StoryObj<typeof VoiceCollectScene>;
 
 /** Nothing handed over yet: the drop target, and a meter with nothing in it. */
 export const CollectEmpty: Story = { render: () => <Collect corpus={null} /> };
+
+/** Three files of one pick it could not take, each named on its own line
+ *  under the buttons that took them. */
+export const CollectRefusedFiles: Story = {
+  render: () => (
+    <Collect
+      corpus={null}
+      failures={[
+        {
+          id: "skip:picture.png",
+          i18nKey: "ob.conv.voice.fileSkipped",
+          params: { name: "picture.png" },
+        },
+        {
+          id: "skip:data.csv",
+          i18nKey: "ob.conv.voice.fileSkipped",
+          params: { name: "data.csv" },
+        },
+        {
+          id: "skip:empty.txt",
+          i18nKey: "ob.conv.voice.fileEmpty",
+          params: { name: "empty.txt" },
+        },
+      ]}
+    />
+  ),
+};
+
+export const CollectRefusedFilesDark: Story = {
+  ...CollectRefusedFiles,
+  globals: { theme: "dark" },
+};
 
 /**
  * Short of the floor. The meter says how far off it is rather than only refusing
@@ -220,7 +258,11 @@ const SPEAKER_QUESTION: ConversationQuestion = {
 export const SpeakerAsk: Story = {
   render: () => (
     <StoryProviders>
-      <VoiceSpeakerScene question={SPEAKER_QUESTION} onAnswer={() => {}} />
+      <VoiceSpeakerScene
+        question={SPEAKER_QUESTION}
+        failures={[]}
+        onAnswer={() => {}}
+      />
     </StoryProviders>
   ),
 };
@@ -230,7 +272,11 @@ export const SpeakerAsk: Story = {
 export const SpeakerAskGerman: Story = {
   render: () => (
     <StoryProviders locale="de">
-      <VoiceSpeakerScene question={SPEAKER_QUESTION} onAnswer={() => {}} />
+      <VoiceSpeakerScene
+        question={SPEAKER_QUESTION}
+        failures={[]}
+        onAnswer={() => {}}
+      />
     </StoryProviders>
   ),
 };

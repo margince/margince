@@ -1,6 +1,5 @@
 import type { Dispatch } from "react";
 import { useEffect, useState } from "react";
-import { ErrorLine } from "../../../design-system/errorline";
 import { vendorOf } from "../../../format/connectorprovider";
 import { ordinalNumber } from "../../../format/format";
 import { useT } from "../../../i18n/index";
@@ -230,46 +229,38 @@ export function ConnectAct({
       title={t("ob.conv.connect.sceneTitle")}
       sub={t("ob.conv.connect.sceneSub")}
     >
-      {
-        <ConnectScene
-          vendor={vendor}
-          onVendorChange={setVendor}
-          askBusy={askBusy}
-          onAskBusyChange={setAskBusy}
-          onImapDone={settleResult}
-          onFinish={(skipped) => void finish(skipped)}
-          finishing={finishing}
-          wantsOvernight={wantsOvernight}
-          onWantsOvernightChange={chooseOvernight}
-          overnightFailed={overnightFailed}
-          linkedinStatus={state.linkedinStatus}
-          onLinkedinSave={saveLinkedin}
-          onLinkedinSkip={() => dispatch({ type: "LINKEDIN_SKIPPED" })}
-          linkedinPending={linkedin.isPending}
-          linkedinError={
-            linkedin.isError ? problemMessageOf(linkedin.error, t) : null
-          }
-          // A redirect already returned: what it could not do, shown inline whether or
-          // not this tab can vouch for the trip. A stale link still reports what the
-          // roster says.
-          returnPanel={
-            outcome !== undefined && !resultSettled ? (
-              <OAuthReturnPanel
-                outcome={outcome}
-                provider={returningProvider}
-                onDone={settleResult}
-              />
-            ) : null
-          }
-        />
-      }
-      {/* The consent narration and the picker prompt are said once, on the
-          scene itself now (the guarantees grid, each provider's own
-          disclosure). What survives from the thread is the one thing a
-          reader still has to act on: a finish that could not be recorded. */}
-      {finishFailed && (
-        <ErrorLine>{t("ob.conv.connect.persistFailed")}</ErrorLine>
-      )}
+      <ConnectScene
+        vendor={vendor}
+        onVendorChange={setVendor}
+        askBusy={askBusy}
+        onAskBusyChange={setAskBusy}
+        onImapDone={settleResult}
+        onFinish={(skipped) => void finish(skipped)}
+        finishing={finishing}
+        finishFailed={finishFailed}
+        wantsOvernight={wantsOvernight}
+        onWantsOvernightChange={chooseOvernight}
+        overnightFailed={overnightFailed}
+        linkedinStatus={state.linkedinStatus}
+        onLinkedinSave={saveLinkedin}
+        onLinkedinSkip={() => dispatch({ type: "LINKEDIN_SKIPPED" })}
+        linkedinPending={linkedin.isPending}
+        linkedinError={
+          linkedin.isError ? problemMessageOf(linkedin.error, t) : null
+        }
+        // A redirect already returned: what it could not do, shown inline whether or
+        // not this tab can vouch for the trip. A stale link still reports what the
+        // roster says.
+        returnPanel={
+          outcome !== undefined && !resultSettled ? (
+            <OAuthReturnPanel
+              outcome={outcome}
+              provider={returningProvider}
+              onDone={settleResult}
+            />
+          ) : null
+        }
+      />
     </ConversationWorkbench>
   );
 }

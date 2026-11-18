@@ -141,6 +141,7 @@ function collectScene(overrides: {
     <VoiceCollectScene
       summary={overrides.summary ?? null}
       manifest={overrides.manifest ?? []}
+      failures={[]}
       fileRef={overrides.fileRef ?? createRef<HTMLInputElement>()}
       onFiles={() => undefined}
       onAddPaste={overrides.onAddPaste ?? (() => undefined)}
@@ -310,6 +311,7 @@ describe("the collect scene's corpus floor meter", () => {
         <VoiceCollectScene
           summary={summaryOf(VOICE_MIN_WORDS)}
           manifest={[]}
+          failures={[]}
           fileRef={createRef<HTMLInputElement>()}
           onFiles={() => undefined}
           onAddPaste={() => undefined}

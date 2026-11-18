@@ -35,6 +35,7 @@ function renderConnectAct(
   linkedinStatus: ConversationState["linkedinStatus"] = "pending",
   phase: ConversationState["phase"] = "cn.consent",
   returningProvider?: string,
+  saves = true,
 ) {
   const state: ConversationState = {
     ...initialConversationState,
@@ -43,7 +44,7 @@ function renderConnectAct(
     linkedinStatus,
   };
   const dispatch = vi.fn();
-  const persist = vi.fn(async () => true);
+  const persist = vi.fn(async () => saves);
   const view = render(
     <QueryClientProvider
       client={
@@ -259,6 +260,32 @@ describe("the way onward", () => {
     renderConnectAct();
     const onward = screen.getByRole("button", { name: "Skip for now" });
     expect(onward.closest(".ob-stage-acts")).toBeTruthy();
+  });
+
+  // The board scrolls and the rail does not, so a refusal drawn under the
+  // scene lands below the fold while the pressed button just stops spinning.
+  it("says a finish that could not be saved beside the button pressed", async () => {
+    stubWithSession(
+      { "GET /connectors": () => jsonResponse({ data: [] }) },
+      {},
+    );
+    const { dispatch } = renderConnectAct(
+      undefined,
+      "pending",
+      "cn.consent",
+      undefined,
+      false,
+    );
+    const onward = screen.getByRole("button", { name: "Skip for now" });
+    await waitFor(() => expect(onward).not.toBeDisabled());
+    await userEvent.click(onward);
+
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toBe(en["ob.conv.connect.persistFailed"]);
+    expect(alert.closest(".ob-stage-acts")).toBe(
+      onward.closest(".ob-stage-acts"),
+    );
+    expect(dispatch).not.toHaveBeenCalledWith({ type: "CONNECT_DONE" });
   });
 });
 

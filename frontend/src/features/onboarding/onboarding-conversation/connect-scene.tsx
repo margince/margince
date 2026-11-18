@@ -17,7 +17,7 @@ import { captureRefusalOf, useConnectors } from "../../../lib/connectors";
 import { type AdminWait, waitsOnAdmin } from "../../../lib/setup-checklist";
 import { AlsoWorthDoing, type AlsoWorthDoingProps } from "./connect-also";
 import { AppWaitingPanel } from "./connect-app-missing";
-import { ConnectedStep } from "./connect-connected";
+import { ConnectedStep, WayCaption } from "./connect-connected";
 import {
   MAIL_PROVIDERS,
   type MailProvider,
@@ -121,6 +121,7 @@ export function ConnectScene({
   returnPanel,
   onFinish,
   finishing,
+  finishFailed,
   ...also
 }: Readonly<
   {
@@ -143,6 +144,8 @@ export function ConnectScene({
      */
     onFinish: (skipped: boolean) => void;
     finishing: boolean;
+    /** The last finish could not be saved. */
+    finishFailed: boolean;
   } & AlsoWorthDoingProps
 >) {
   const t = useT();
@@ -185,6 +188,7 @@ export function ConnectScene({
           mailbox={live.mailbox}
           also={<AlsoWorthDoing {...also} mailConnected />}
           finishing={finishing}
+          finishFailed={finishFailed}
           onFinish={() => onFinish(false)}
         />
       ) : (
@@ -233,6 +237,7 @@ export function ConnectScene({
             // connect is in flight, could persist a fact that is not so.
             held={held}
             finishing={finishing}
+            finishFailed={finishFailed}
             onSkip={() => onFinish(true)}
           />
         </>
@@ -342,17 +347,19 @@ function SkipWayOnward({
   caption,
   held,
   finishing,
+  finishFailed,
   onSkip,
 }: Readonly<{
   caption: string;
   held: boolean;
   finishing: boolean;
+  finishFailed: boolean;
   onSkip: () => void;
 }>) {
   const t = useT();
   return (
     <StageActions>
-      <span className="t-caption">{caption}</span>
+      <WayCaption caption={caption} finishFailed={finishFailed} />
       <Button
         variant="ghost"
         pending={finishing}

@@ -178,6 +178,8 @@ describe("the conversational voice act", () => {
     expect(alert.textContent).toBe(
       "I cannot read photo.png. Supported formats: .txt, .md, .pdf, .docx, .vtt, .srt, .json.",
     );
+    // Under the buttons that took the file, not at the foot of the board.
+    expect(alert.closest(".ob-voice-drop")).not.toBeNull();
     expect(requestsTo(calls, "/sources/preview", "POST").length).toBe(0);
     expect(requestsTo(calls, "/sources", "POST").length).toBe(0);
   });
@@ -202,6 +204,24 @@ describe("the conversational voice act", () => {
       "I cannot read sheet.csv. Supported formats: .txt, .md, .pdf, .docx, .vtt, .srt, .json.",
       "There are no words in blank.txt, so nothing was counted.",
     ]);
+  });
+
+  it("keeps a file it could not take in sight while it asks about a transcript", async () => {
+    stubApi({ preview: conversationalPreview });
+    render(<VoiceHarness initial={collectingState()} />);
+
+    dropOnWindow([
+      new File(["binary"], "photo.png", { type: "image/png" }),
+      new File(["WEBVTT"], "call.vtt", { type: "text/vtt" }),
+    ]);
+
+    await screen.findByRole("radiogroup");
+    const alert = screen.getByRole("alert");
+    expect(alert.textContent).toBe(
+      "I cannot read photo.png. Supported formats: .txt, .md, .pdf, .docx, .vtt, .srt, .json.",
+    );
+    // On the question's own scene, above its foot line.
+    expect(alert.closest(".ob-voice-scene")).not.toBeNull();
   });
 
   it("takes a dropped PDF in as its text, on the same wire a text file uses", async () => {

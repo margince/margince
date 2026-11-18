@@ -14,7 +14,10 @@ import { useLocale, useT } from "../../../i18n";
 import { ACCEPTED_CORPUS_ATTR } from "../../../lib/voice-corpus-file";
 import { VOICE_MIN_WORDS } from "../../../lib/voice-intake-core";
 import type { ConversationQuestion } from "./conversation-machine";
-import type { CorpusManifestEntry } from "./use-voice-corpus";
+import type {
+  CorpusManifestEntry,
+  VoiceIngestFailure,
+} from "./use-voice-corpus";
 import { VoiceDistillPanel } from "./voice-distill";
 import { VoiceScene } from "./voice-scenes.result";
 import { WayOnward } from "./way-onward";
@@ -122,6 +125,17 @@ function VoiceCorpusFloorMeter({
 // The meter under it says the same count in words, so the drawing is decoration.
 const PRINT_MIN_AMPLITUDE = 0.25;
 
+// The sources the latest pick could not add, one line each, drawn beside the
+// controls that took them: the board scrolls, and its foot is out of sight.
+function IntakeRefusals({
+  failures,
+}: Readonly<{ failures: readonly VoiceIngestFailure[] }>) {
+  const t = useT();
+  return failures.map((failure) => (
+    <ErrorLine key={failure.id}>{t(failure.i18nKey, failure.params)}</ErrorLine>
+  ));
+}
+
 function VoicePrintCard({
   words,
   ready,
@@ -153,6 +167,7 @@ function VoicePrintCard({
 export function VoiceCollectScene({
   summary,
   manifest,
+  failures,
   fileRef,
   onFiles,
   onAddPaste,
@@ -164,6 +179,7 @@ export function VoiceCollectScene({
 }: Readonly<{
   summary: CorpusSummary | null;
   manifest: readonly CorpusManifestEntry[];
+  failures: readonly VoiceIngestFailure[];
   fileRef: RefObject<HTMLInputElement | null>;
   onFiles: (event: ChangeEvent<HTMLInputElement>) => void;
   onAddPaste: (text: string) => void;
@@ -212,6 +228,7 @@ export function VoiceCollectScene({
                 {t("ob.conv.voice.pasteInstead")}
               </Button>
             </div>
+            <IntakeRefusals failures={failures} />
             {!pasteOpen && (
               <p className="ob-voice-drop-sub t-sub">
                 {t("ob.conv.voice.dropHint")}
@@ -333,9 +350,12 @@ export function VoiceCollectScene({
  */
 export function VoiceSpeakerScene({
   question,
+  failures,
   onAnswer,
 }: Readonly<{
   question: ConversationQuestion;
+  /** Other sources of the same pick that could not be added. */
+  failures: readonly VoiceIngestFailure[];
   onAnswer: (questionId: string, value: string) => void;
 }>) {
   const t = useT();
@@ -374,6 +394,7 @@ export function VoiceSpeakerScene({
           })}
         </div>
       </div>
+      <IntakeRefusals failures={failures} />
       <div className="ob-scene-foot">
         <p>{t("ob.conv.voice.speakerFoot")}</p>
       </div>

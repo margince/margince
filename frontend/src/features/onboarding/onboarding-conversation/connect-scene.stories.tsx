@@ -68,6 +68,7 @@ function scene(
   providers: ProviderAvailability[] = ALL_READY,
   allow: GrantSpec = READER,
   roster: () => Response = () => jsonResponse({ data: [], providers }),
+  finishFailed = false,
 ) {
   return () => {
     installFetchStub({
@@ -117,6 +118,7 @@ function scene(
           returnPanel={null}
           onFinish={() => {}}
           finishing={false}
+          finishFailed={finishFailed}
           wantsOvernight
           onWantsOvernightChange={() => {}}
           overnightFailed={false}
@@ -133,6 +135,17 @@ function scene(
 
 /** Nothing picked yet: the three accounts, and the network section below. */
 export const NothingConnected: Story = { render: scene(null) };
+
+/** Skip for now pressed and its save failed: the refusal stands beside the
+ *  button, where the caption was, wherever the board is scrolled. */
+export const SkipSaveFailed: Story = {
+  render: scene(null, ALL_READY, READER, undefined, true),
+};
+
+export const SkipSaveFailedDark: Story = {
+  ...SkipSaveFailed,
+  globals: { theme: "dark" },
+};
 
 /** Google picked: mail and calendar ticked, one press for both consents. */
 export const GoogleAsk: Story = { render: scene("google") };

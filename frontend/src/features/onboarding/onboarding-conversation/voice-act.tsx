@@ -5,7 +5,6 @@ import {
   ConnectAiFirst,
   isAiNotConnected,
 } from "../../../design-system/connectai";
-import { ErrorLine } from "../../../design-system/errorline";
 import { ordinalNumber } from "../../../format/format";
 import { useT } from "../../../i18n";
 import type { MessageKey } from "../../../i18n/en";
@@ -129,11 +128,6 @@ export function VoiceAct({ state, dispatch, initialSummary }: VoiceActProps) {
           useFileDrop below); the board is what shows that now, since there
           is no rail thread left to ring. */}
       <div className={dragOver ? "ob-conv-dragover" : undefined}>{scene}</div>
-      {corpus.failures.map((failure) => (
-        <ErrorLine key={failure.id}>
-          {t(failure.i18nKey, failure.params)}
-        </ErrorLine>
-      ))}
     </ConversationWorkbench>
   );
 }
@@ -281,6 +275,7 @@ function VoiceSurface({
       <VoiceCollectScene
         summary={corpus.summary}
         manifest={corpus.manifest}
+        failures={corpus.failures}
         fileRef={fileRef}
         onFiles={onFiles}
         onAddPaste={(text) =>
@@ -303,7 +298,11 @@ function VoiceSurface({
   }
   if (state.phase === "vo.speaker" && state.pendingQuestion !== null) {
     return (
-      <VoiceSpeakerScene question={state.pendingQuestion} onAnswer={onAnswer} />
+      <VoiceSpeakerScene
+        question={state.pendingQuestion}
+        failures={corpus.failures}
+        onAnswer={onAnswer}
+      />
     );
   }
   if (state.phase === "vo.building") {
