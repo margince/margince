@@ -83,7 +83,7 @@ func TestAnUploadedFilenameIsSanitizedBeforeItIsStored(t *testing.T) {
 	// A newline, a path separator and a right-to-left override: the three classes
 	// SafeFilename exists for, in one name.
 	body, ctype := apptest.MultipartAttachment(t, "contact", contact.String(),
-		"../etc/quo\u202ete\nreason=sent.pdf", []byte("PDF-BYTES"))
+		"../etc/quo\u202ete\nreason=sent.pdf", []byte("%PDF-1.4 BYTES"))
 	req := httptest.NewRequest(http.MethodPost, "/v1/attachments", body).WithContext(ctx)
 	req.Header.Set("Content-Type", ctype)
 	rec := httptest.NewRecorder()
