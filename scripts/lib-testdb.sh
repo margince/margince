@@ -176,8 +176,8 @@ db_admin() {
 # Raise the concurrency and every term moves with it. That is the point: the
 # guard reads these, not a number somebody wrote down once.
 LANE_POOL_MAX_CONNS=8
-LANE_TEST_PARALLEL=2
-LANE_CONNS_PER_PACKAGE=48
+LANE_TEST_PARALLEL=3
+LANE_CONNS_PER_PACKAGE=72
 LANE_FIXED_CONNS=8
 
 # declare_lane_budget <jobs> — export the ceiling the harness applies and the

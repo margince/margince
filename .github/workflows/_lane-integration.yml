@@ -305,7 +305,7 @@ jobs:
           # Keep the probe's PSI at 0.00 the test of this number. A slice that
           # starts stalling on reclaim again is this value asking to come down
           # further, and the log says so on every run without anyone bisecting.
-          INTEGRATION_JOBS: 8
+          INTEGRATION_JOBS: 4
         # The probe runs BESIDE the shard rather than around it because the
         # failure it exists to explain takes the runner with it: these shards are
         # killed mid-run with `exit 143`, and the job then skips every remaining
