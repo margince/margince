@@ -31,6 +31,9 @@ type DealCandidates interface {
 	// OpenDealsWithStakeholders is the company's open deals on which one of
 	// contacts is a stakeholder.
 	OpenDealsWithStakeholders(ctx context.Context, tx pgx.Tx, companyID ids.UUID, contacts []ids.UUID) ([]ids.UUID, error)
+	// OpenDealsOfStakeholders is up to limit open deals, at any company, on
+	// which one of contacts is a stakeholder.
+	OpenDealsOfStakeholders(ctx context.Context, tx pgx.Tx, contacts []ids.UUID, limit int) ([]ids.UUID, error)
 	// OpenDealsOfCompanyUpTo is up to limit open deals of one company, the
 	// candidates a topic check weighs for an ambiguous mail.
 	OpenDealsOfCompanyUpTo(ctx context.Context, tx pgx.Tx, companyID ids.UUID, limit int) ([]ids.UUID, error)
@@ -44,6 +47,9 @@ type WhichDeal struct {
 	// came from a project with several open deals.
 	CompanyID ids.UUID
 	ProjectID ids.UUID
+	// StakeholderIDs are the mail's contacts when the question came from their
+	// seats on deals at other companies; CompanyID is then zero.
+	StakeholderIDs []ids.UUID
 }
 
 // AskWhichDeal raises the one disambiguation for a mail, in the rule's
