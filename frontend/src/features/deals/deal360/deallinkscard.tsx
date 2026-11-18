@@ -17,6 +17,7 @@ import { useCanWriteRecord } from "../../../lib/capability";
 import { recordRoute } from "../../../lib/entity";
 import { useRecordTargets } from "../../../lib/recordtargets";
 import { routeHash } from "../../../lib/router";
+import { SEARCH_HIT_KIND_KEY } from "../../../lib/searchkinds";
 import {
   type LinkedRecordType,
   type LinkType,
@@ -53,7 +54,14 @@ export function DealLinksCard({
       title={t("deal.links.card")}
       action={
         canWrite && !adding ? (
-          <Button variant="ghost" onClick={() => setAdding(true)}>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              create.reset();
+              remove.reset();
+              setAdding(true);
+            }}
+          >
             {t("deal.links.add")}
           </Button>
         ) : undefined
@@ -114,6 +122,10 @@ function LinkRow({
     ? { type: link.to_type, id: link.to_id, name: link.to_name }
     : { type: link.from_type, id: link.from_id, name: link.from_name };
   const label = linkTypeLabel(types, link.link_type);
+  const direction = t(
+    outgoing ? "deal.links.outgoing" : "deal.links.incoming",
+    { type: label },
+  );
   const name = other.name ?? other.id;
   const route = recordRoute(other.type, other.id);
   const target = route ? (
@@ -124,9 +136,11 @@ function LinkRow({
   return (
     <OverviewRow
       title={target}
-      sub={t(outgoing ? "deal.links.outgoing" : "deal.links.incoming", {
-        type: label,
-      })}
+      sub={
+        isLinkEnd(other.type)
+          ? `${t(SEARCH_HIT_KIND_KEY[other.type])} · ${direction}`
+          : direction
+      }
       right={
         canWrite ? (
           <Button variant="ghost" pending={removing} onClick={onRemove}>
@@ -163,12 +177,16 @@ function AddLink({
   const chosen = startable.find((type) => type.name === typeName);
   const { search, kindOf } = useRecordTargets();
   // Only the records the chosen type may end on, so a pick is never one the
-  // server would refuse for its shape.
+  // server would refuse for its shape, and never the deal itself.
   const searchTargets = async (q: string) =>
     chosen
-      ? (await search(q)).filter((candidate) => {
+      ? (await search(q)).flatMap((candidate) => {
           const kind = kindOf(candidate.id);
-          return isLinkEnd(kind) && chosen.to.includes(kind);
+          return isLinkEnd(kind) &&
+            chosen.to.includes(kind) &&
+            candidate.id !== dealId
+            ? [{ ...candidate, detail: t(SEARCH_HIT_KIND_KEY[kind]) }]
+            : [];
         })
       : [];
   return (

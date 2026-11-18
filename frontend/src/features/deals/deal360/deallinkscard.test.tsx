@@ -8,6 +8,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 
+import { pickOption } from "../../../design-system/select-testing";
 import { en } from "../../../i18n/en";
 import { dealsQueryParams } from "../../../lib/deals.queries";
 import {
@@ -52,6 +53,12 @@ const links = [
 const linkTypes = [
   { name: "renews", label: "Renews", from: ["deal"], to: ["deal"] },
   {
+    name: "related_to",
+    label: "Related to",
+    from: ["deal"],
+    to: ["deal", "company", "contact"],
+  },
+  {
     name: "ext:finance-demo:follow_up_of",
     label: "Follow-up of",
     unit: "finance-demo",
@@ -60,9 +67,22 @@ const linkTypes = [
   },
 ];
 
+const hits = [
+  { type: "deal", id: DEAL, title: "Warehouse rollout" },
+  { type: "deal", id: RENEWAL, title: "Warehouse renewal" },
+  { type: "contact", id: ORIGINAL, title: "Bob Buyer" },
+];
+
 function mount(writable: boolean) {
   const removed: string[] = [];
   installFetchStub({
+    "GET /search": () =>
+      jsonResponse({ data: hits, page: { has_more: false } }),
+    "POST /record-links": () =>
+      jsonResponse(
+        { title: "A record cannot be linked to itself", status: 422 },
+        { status: 422 },
+      ),
     "GET /me": meRoute({ deal: ["read", "update"] } as never),
     "GET /record-links": () => jsonResponse({ data: links }),
     "GET /link-types": () => jsonResponse({ data: linkTypes }),
@@ -87,9 +107,61 @@ describe("DealLinksCard", () => {
     expect(await screen.findByText("Warehouse renewal")).toBeInTheDocument();
     expect(screen.getByText("Acme")).toBeInTheDocument();
     expect(
-      await screen.findByText("From this deal: Renews"),
+      await screen.findByText("Deal · From this deal: Renews"),
     ).toBeInTheDocument();
-    expect(screen.getByText("To this deal: Follow-up of")).toBeInTheDocument();
+    expect(
+      screen.getByText("Company · To this deal: Follow-up of"),
+    ).toBeInTheDocument();
+  });
+
+  it("names each hit's kind and leaves the deal itself out", async () => {
+    const user = userEvent.setup();
+    mount(true);
+    await user.click(
+      await screen.findByRole("button", { name: en["deal.links.add"] }),
+    );
+    await pickOption(
+      user,
+      screen.getByRole("combobox", { name: en["deal.links.type"] }),
+      "Related to",
+    );
+    await user.type(
+      screen.getByRole("searchbox", { name: en["deal.links.search"] }),
+      "Wa",
+    );
+    const options = await screen.findAllByRole("button", {
+      name: /^(Warehouse|Bob)/,
+    });
+    expect(options.map((option) => option.textContent)).toEqual([
+      "Warehouse renewalDeal",
+      "Bob BuyerContact",
+    ]);
+  });
+
+  it("starts a new link without the last one's refusal", async () => {
+    const user = userEvent.setup();
+    mount(true);
+    await user.click(
+      await screen.findByRole("button", { name: en["deal.links.add"] }),
+    );
+    await pickOption(
+      user,
+      screen.getByRole("combobox", { name: en["deal.links.type"] }),
+      "Related to",
+    );
+    await user.type(
+      screen.getByRole("searchbox", { name: en["deal.links.search"] }),
+      "Bo",
+    );
+    await user.click(await screen.findByRole("button", { name: /^Bob Buyer/ }));
+    const refusal = await screen.findByText(/linked to itself/);
+    await user.click(
+      screen.getByRole("button", { name: en["deal.links.cancel"] }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: en["deal.links.add"] }),
+    );
+    expect(refusal).not.toBeInTheDocument();
   });
 
   it("links each record under its own address, not the deal's", async () => {
