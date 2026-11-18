@@ -390,6 +390,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `mergequeuereach_test.go` | H3 | Every workflow that reports a check on a pull request also runs on the merge queue, unless it is waived as one no ruleset requires. |
 | `messagevoice_test.go` | H1 | Who wrote a message has one answer: Activity.voice. |
 | `messagingruleapplied_test.go` | H2 | Every obligation a messaging pack declares is one the engine applies, or one this file records as not yet applied and says why. |
+| `messagingtestcodes_test.go` | H2 | The messaging-rules registry panics when one code is registered twice in a process. |
 | `metricsuffix_test.go` | H2 | A `\_total` suffix means counter, in both directions. |
 | `migrationcitations_test.go` | H1 | No file acquires a citation of a migration version that does not exist. |
 | `modelverbenrich_test.go` | H2 | modelVerbsOffEnrich names the agent verbs marked always that spend another scope, and the source that shows why. |
