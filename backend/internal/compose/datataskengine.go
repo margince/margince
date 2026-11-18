@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/companyprofiles"
 	"github.com/margince/margince/backend/internal/compose/credentialrepair"
 	"github.com/margince/margince/backend/internal/compose/customerlinks"
+	"github.com/margince/margince/backend/internal/compose/dealclockrefold"
 	"github.com/margince/margince/backend/internal/compose/employmentrepair"
 	"github.com/margince/margince/backend/internal/compose/erasedseattraces"
 	"github.com/margince/margince/backend/internal/compose/initiativeenrolment"
@@ -138,7 +139,7 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		credentialrepair.DataTask(capture.NewPendingStore(InstallationDB(pool)).PurgeRawCaptureTx),
 		erasedseattraces.DataTask(),
 		newslettersDataTask(pool),
-		privateMailDealClockDataTask(),
+		dealclockrefold.DataTask(),
 		customerlinks.DataTask(),
 		qualifytasks.DuplicatesDataTask(now), qualifytasks.TextDataTask(),
 		companyprofiles.OfferDuplicatesTask(),

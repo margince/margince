@@ -40693,7 +40693,7 @@ export interface components {
             closed_at?: string | null;
             /**
              * Format: date-time
-             * @description The newest `occurred_at` at or before now of an activity filed under the deal, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. Drives the deterministic stalled flag. A message limited to its participants counts by its date alone, so a deal worked through private mail does not read as stalled. Its content, direction and sender stay with its audience, a message limited to a chosen set of people does not count, and no contact or account date moves for it.
+             * @description The newest `occurred_at` at or before now of an activity filed under the deal, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. Drives the deterministic stalled flag. A message limited to its participants counts by its date alone, so a deal worked through private mail does not read as stalled. Its content, direction and sender stay with its audience, a message limited to a chosen audience does not count, and no contact or company date moves for it.
              */
             last_activity_at?: string | null;
             /** @description Derived — no activity past the threshold (absolute duration). A booked workspace-audience meeting ahead keeps the deal off stalled until it starts or is called off. */

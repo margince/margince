@@ -68,10 +68,7 @@ func readDealFacts(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, re
 		facts.project = *project
 		return facts, nil
 	}
-	if facts.contacts, err = mailContacts(ctx, tx, activityID); err != nil {
-		return facts, err
-	}
-	if facts.provenContacts, err = provenMailContacts(ctx, tx, activityID); err != nil {
+	if facts.contacts, facts.provenContacts, err = mailContacts(ctx, tx, activityID); err != nil {
 		return facts, err
 	}
 	if facts.companies, err = mailCompanies(ctx, tx, activityID, facts.contacts); err != nil {
@@ -249,50 +246,39 @@ func oneDeal(deals []ids.UUID, question WhichDeal) DealVerdict {
 }
 
 // Participant evidence survives the link cap; explicit contact filings also count.
-func mailContacts(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID) ([]ids.UUID, error) {
+// The second answer is the contacts no header can forge. They are the From of
+// authenticated inbound mail, and the To and Cc of mail a colleague sent.
+func mailContacts(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID) (all, proven []ids.UUID, err error) {
 	if !auth.ReadGranted(ctx, "contact") {
-		return nil, nil
+		return nil, nil, nil
 	}
 	rows, err := tx.Query(ctx, `
-		SELECT named.contact_id FROM (
-		 SELECT p.contact_id FROM activity_participant p WHERE p.activity_id=$1
-		 UNION SELECT l.contact_id FROM activity_link l WHERE l.activity_id=$1 AND l.entity_type='contact'
+		SELECT named.contact_id, bool_or(named.proven) FROM (
+		 SELECT p.contact_id, (`+correspondence.AuthenticatedInboundSQL("a")+` AND p.role = 'from'
+		        OR `+correspondence.OurOutboundSQL("a")+` AND p.role IN ('to', 'cc')) AS proven
+		   FROM activity_participant p JOIN activity a ON a.id = p.activity_id WHERE p.activity_id=$1
+		 UNION ALL SELECT l.contact_id, false FROM activity_link l WHERE l.activity_id=$1 AND l.entity_type='contact'
 		) named JOIN contact c ON c.id=named.contact_id AND c.archived_at IS NULL
-		ORDER BY named.contact_id`, activityID)
+		GROUP BY named.contact_id ORDER BY named.contact_id`, activityID)
 	if err != nil {
-		return nil, fmt.Errorf("capture: reading the mail's participants: %w", err)
+		return nil, nil, fmt.Errorf("capture: reading the mail's participants: %w", err)
 	}
-	contacts, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
-	if err != nil {
-		return nil, fmt.Errorf("capture: reading the mail's participants: %w", err)
+	defer rows.Close()
+	for rows.Next() {
+		var contact ids.UUID
+		var isProven bool
+		if err := rows.Scan(&contact, &isProven); err != nil {
+			return nil, nil, fmt.Errorf("capture: reading the mail's participants: %w", err)
+		}
+		all = append(all, contact)
+		if isProven {
+			proven = append(proven, contact)
+		}
 	}
-	return contacts, nil
-}
-
-// provenMailContacts is the mail's contacts that a sender cannot add by typing
-// a header. They are the From of inbound mail with an authenticated sender, and
-// the To and Cc of mail a colleague sent. A Cc on a stranger's mail proves nothing.
-func provenMailContacts(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID) ([]ids.UUID, error) {
-	if !auth.ReadGranted(ctx, "contact") {
-		return nil, nil
+	if err := rows.Err(); err != nil {
+		return nil, nil, fmt.Errorf("capture: reading the mail's participants: %w", err)
 	}
-	rows, err := tx.Query(ctx, `
-		SELECT DISTINCT p.contact_id
-		  FROM activity a
-		  JOIN activity_participant p ON p.activity_id = a.id AND p.contact_id IS NOT NULL
-		  JOIN contact c ON c.id = p.contact_id AND c.archived_at IS NULL
-		 WHERE a.id = $1
-		   AND (`+correspondence.AuthenticatedInboundSQL("a")+` AND p.role = 'from'
-		        OR `+correspondence.OurOutboundSQL("a")+` AND p.role IN ('to', 'cc'))
-		 ORDER BY p.contact_id`, activityID)
-	if err != nil {
-		return nil, fmt.Errorf("capture: reading the mail's proven participants: %w", err)
-	}
-	contacts, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
-	if err != nil {
-		return nil, fmt.Errorf("capture: reading the mail's proven participants: %w", err)
-	}
-	return contacts, nil
+	return all, proven, nil
 }
 
 // mailCompanies is the customer companies the mail names, at most two: its

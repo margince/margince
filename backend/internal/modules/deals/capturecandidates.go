@@ -121,9 +121,13 @@ func openDealsStaked(ctx context.Context, tx pgx.Tx, company *ids.UUID, contacts
 // maxOfferedDeals bounds the deals one deal question records as offered.
 const maxOfferedDeals = 50
 
-// OfferedDeals answers the open deals a deal question offers: those of the
-// project when it names one, else those of the company.
-func (s *Store) OfferedDeals(ctx context.Context, tx pgx.Tx, projectID, companyID ids.UUID) ([]ids.UUID, error) {
+// OfferedDeals answers the open deals a deal question offers. They are the
+// project's when it names one, else the company's. With neither, they are the
+// deals the question's stakeholder contacts hold a seat on.
+func (s *Store) OfferedDeals(ctx context.Context, tx pgx.Tx, projectID, companyID ids.UUID, stakeholders []ids.UUID) ([]ids.UUID, error) {
+	if len(stakeholders) > 0 && projectID.IsZero() && companyID.IsZero() {
+		return s.OpenDealsOfStakeholders(ctx, tx, stakeholders, maxOfferedDeals)
+	}
 	if denied, err := candidateReadDenied(ctx); denied || err != nil {
 		return nil, err
 	}
@@ -136,12 +140,6 @@ func (s *Store) OfferedDeals(ctx context.Context, tx pgx.Tx, projectID, companyI
 	}
 	query := `SELECT d.id FROM deal d WHERE ` + owner + ` AND ` + openDealSQL + ` ORDER BY d.id LIMIT ` + arg(maxOfferedDeals)
 	return collectCandidates(ctx, tx, query, args...)
-}
-
-// OfferedDealsOfStakeholders answers the open deals a deal question offers when
-// the mail names no company: those the mail's contacts hold a seat on.
-func (s *Store) OfferedDealsOfStakeholders(ctx context.Context, tx pgx.Tx, contacts []ids.UUID) ([]ids.UUID, error) {
-	return openDealsStaked(ctx, tx, nil, contacts, maxOfferedDeals)
 }
 
 // candidateReadDenied answers whether the caller may not read deals at all. A

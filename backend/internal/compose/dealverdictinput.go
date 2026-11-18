@@ -17,6 +17,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/dealprivatemail"
 	"github.com/margince/margince/backend/internal/compose/dealverdict"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -44,7 +45,7 @@ func dealVerdictChecksumSQL() string {
 		d.win_probability_override, d.win_probability_set_by, d.stage_id,
 		(SELECT concat_ws('|', count(*), max(vo.updated_at)) FROM offer vo WHERE vo.deal_id = d.id),
 		(SELECT concat_ws('|', count(*), max(vh.changed_at)) FROM deal_stage_history vh WHERE vh.deal_id = d.id),
-		` + verdictLedgerSQL + `, ` + verdictOwnSideSQL() + `, ` + verdictPrivateMailSQL + `))`
+		` + verdictLedgerSQL + `, ` + verdictOwnSideSQL() + `, ` + dealprivatemail.ChecksumSQL() + `))`
 }
 
 // verdictLedgerSQL is the deal's criterion ledger as a custom criterion reads
@@ -53,16 +54,6 @@ func dealVerdictChecksumSQL() string {
 // concat_ws skips, so such a deal keeps its stored checksum.
 const verdictLedgerSQL = `(SELECT md5(string_agg(concat_ws(':', ev.id, ev.author_side, ev.met, ev.refuted_at), ',' ORDER BY ev.id))
 		   FROM deal_stage_evidence ev WHERE ev.deal_id = d.id)`
-
-// verdictPrivateMailSQL is the count and newest date of the deal's mail that
-// only its participants may read, which the prompt states by date and
-// direction. It is NULL for a deal with none, so such a deal keeps its stored
-// checksum.
-var verdictPrivateMailSQL = `(SELECT concat_ws('|', count(*), max(pa.occurred_at))
-		   FROM activity_link pl JOIN activity pa ON pa.id = pl.activity_id
-		  WHERE pl.deal_id = d.id AND pa.archived_at IS NULL AND pa.kind = 'email'
-		    AND ` + auth.PrivateAudienceSQL("pa") + ` AND ` + relstrength.OriginIsEngagementSQL("pa") + `
-		 HAVING count(*) > 0)`
 
 // verdictOwnSideSQL names the participants of the deal's mail and meetings
 // that stand on a trusted own domain. A buyer milestone and a held meeting are
@@ -171,32 +162,9 @@ func readVerdictActivities(ctx context.Context, tx pgx.Tx, deal ids.UUID, read *
 	return rows.Err()
 }
 
-// readVerdictPrivateMail reads the date of the deal's mail that
-// only its participants may read. Nothing else leaves the row.
 func readVerdictPrivateMail(ctx context.Context, tx pgx.Tx, deal ids.UUID, read *dealVerdictRead) error {
-	rows, err := tx.Query(ctx, `
-		SELECT a.occurred_at, greatest(a.created_at, l.created_at)
-		  FROM activity_link l JOIN activity a ON a.id = l.activity_id
-		 WHERE l.deal_id = $1 AND a.archived_at IS NULL AND a.kind = 'email'
-		   AND `+auth.PrivateAudienceSQL("a")+` AND `+relstrength.OriginIsEngagementSQL("a")+`
-		 ORDER BY a.occurred_at DESC, a.id DESC LIMIT $2`, deal, dealVerdictActivities)
-	if err != nil {
-		return fmt.Errorf("compose: reading the deal's private mail dates: %w", err)
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var mail dealverdict.PrivateMail
-		var arrived time.Time
-		if err := rows.Scan(&mail.OccurredAt, &arrived); err != nil {
-			return err
-		}
-		read.in.PrivateMail = append(read.in.PrivateMail, mail)
-		read.newestEvidenceAt = laterOf(read.newestEvidenceAt, arrived)
-	}
-	slices.Reverse(read.in.PrivateMail)
-	return rows.Err()
+	return dealprivatemail.Read(ctx, tx, deal, dealVerdictActivities, &read.in, &read.newestEvidenceAt)
 }
-
 func readVerdictOffers(ctx context.Context, tx pgx.Tx, deal ids.UUID, read *dealVerdictRead) error {
 	rows, err := tx.Query(ctx, `
 		SELECT gross_minor, currency::text, status, accepted_at IS NOT NULL, updated_at
