@@ -174,8 +174,8 @@ func TestAClearedCountryKeepsALiveObjection(t *testing.T) {
 // keeps the ones the sender's own country owes.
 func TestAClearedCountryKeepsTheSendersDuties(t *testing.T) {
 	e := setupChannelConsent(t)
-	testMessagingRules(t, messagingrules.Rules{
-		Jurisdiction: "zk", Version: 1,
+	code := testMessagingRules(t, messagingrules.Rules{
+		Version: 1,
 		Disclosures: []messagingrules.Disclosure{
 			{Kind: messagingrules.ControllerIdentity},
 			{Kind: messagingrules.ObjectionRoute, MarketingOnly: true},
@@ -184,9 +184,9 @@ func TestAClearedCountryKeepsTheSendersDuties(t *testing.T) {
 	stateParticulars(t, e, ControllerParticulars{
 		LegalName: "Beispiel GmbH", PostalAddress: "Hauptstraße 1", ObjectionRoute: "Reply STOP.",
 	})
-	livesIn(t, e, "zk")
+	livesIn(t, e, string(code))
 	store := e.store.WithInstallationCountry(
-		InstallationCountryFunc(func(context.Context, pgx.Tx) (jurisdiction.Code, error) { return "zk", nil }))
+		InstallationCountryFunc(func(context.Context, pgx.Tx) (jurisdiction.Code, error) { return code, nil }))
 	kinds := func(stated []commsauthz.CountryOverride) []string {
 		var out []string
 		if err := store.db.Tx(e.ctx, func(tx pgx.Tx) error {
