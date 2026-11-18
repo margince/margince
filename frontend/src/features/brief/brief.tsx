@@ -239,8 +239,8 @@ function PersonalMorning({
       <PageZones
         shape="aside"
         panes
-        className="brief-morning"
-        mainClassName="brief-main"
+        className="brief-morning arrive-stack"
+        mainClassName="brief-main arrive-stack"
         asideClassName="brief-rail"
         asideLabel={t("brief.rail")}
         main={

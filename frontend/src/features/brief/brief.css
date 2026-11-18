@@ -122,9 +122,12 @@
   flex-direction: column;
   gap: var(--space-6);
 }
-@media (max-width: 700px) {
-  .brief-frame {
-    padding-block-start: var(--space-6);
+/* The day block rises without fading: the browser counts content at opacity 0
+   as unpainted, and Home's paint budget is timed on this block. */
+@media (prefers-reduced-motion: no-preference) {
+  .brief-main > .brief-first {
+    animation-name: ds-arrive-rise;
+    animation-duration: var(--dur-move);
   }
 }
 .brief-morning > .brief-main {
