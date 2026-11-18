@@ -44,7 +44,7 @@ func (r *Router) buildPayload(ctx context.Context, req model.Request, resp model
 	// and a request-side aggregate budget keeps a long agent-loop message
 	// list from growing the row without limit even with every message
 	// individually under the field cap.
-	budget := captureBudget{remaining: maxCapturedRequestRunes}
+	budget := r.newCaptureBudget()
 	system := budget.take(req.System)
 	// model.Message carries no JSON tags, so marshaling it directly emits
 	// "Role"/"Content" — out of step with the lowercase "system"/"messages"
@@ -66,7 +66,7 @@ func (r *Router) buildPayload(ctx context.Context, req model.Request, resp model
 	if err != nil {
 		return nil, fmt.Errorf("ai: strip capture request: %w", err)
 	}
-	respDoc, err := json.Marshal(capturePayloadContent(resp.Text))
+	respDoc, err := json.Marshal(r.captureResponse(resp.Text))
 	if err != nil {
 		return nil, fmt.Errorf("ai: marshal capture response: %w", err)
 	}
@@ -110,9 +110,9 @@ const maxCapturedEmbedInputs = 200
 // ordering — capture must run strictly after Embed's strip — is what to
 // re-check if Embed is ever restructured.
 func (r *Router) buildEmbedPayload(req model.EmbedRequest, res model.Embeddings) *Payload {
-	budget := captureBudget{remaining: maxCapturedRequestRunes}
+	budget := r.newCaptureBudget()
 	n := len(req.Inputs)
-	truncatedInputs := n > maxCapturedEmbedInputs
+	truncatedInputs := !r.captureWhole && n > maxCapturedEmbedInputs
 	if truncatedInputs {
 		n = maxCapturedEmbedInputs
 	}
@@ -146,13 +146,24 @@ const maxCapturedRequestRunes = 48_000
 
 // captureBudget doles a shared rune allowance across the request's fields;
 // each take is also held to the per-field cap.
-type captureBudget struct{ remaining int }
+type captureBudget struct {
+	remaining int
+	whole     bool
+}
+
+// newCaptureBudget is the request allowance for one captured row.
+func (r *Router) newCaptureBudget() captureBudget {
+	return captureBudget{remaining: maxCapturedRequestRunes, whole: r.captureWhole}
+}
 
 // take scans s rune-by-rune up to its allowance rather than converting the
 // whole string to []rune first — a caller can hand it an input far larger
 // than any cap it will ever keep (a full document sent to embed, say), and
 // this must cost work proportional to what's KEPT, not to len(s).
 func (b *captureBudget) take(s string) string {
+	if b.whole {
+		return s
+	}
 	limit := min(maxCapturedPayloadRunes, b.remaining)
 	n := 0
 	for i := range s {
@@ -172,6 +183,13 @@ const captureTruncationMarker = "…[truncated]"
 
 // capturePayloadContent truncates one captured field to maxCapturedPayloadRunes,
 // appending a visible marker so a reader knows the trace is not the full text.
+func (r *Router) captureResponse(s string) string {
+	if r.captureWhole {
+		return s
+	}
+	return capturePayloadContent(s)
+}
+
 func capturePayloadContent(s string) string {
 	return textcut.RunesMarked(s, maxCapturedPayloadRunes, captureTruncationMarker)
 }
