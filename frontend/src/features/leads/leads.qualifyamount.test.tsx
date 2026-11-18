@@ -115,3 +115,46 @@ it("does not promise whole units in the hint", async () => {
   await newDealDialog();
   expect(screen.queryByText(/Whole units/)).toBeNull();
 });
+
+it("takes no amount before the base currency is known, then keeps the typed amount at its scale", async () => {
+  const user = steppedClock();
+  vi.setSystemTime(new Date("2026-10-05T12:00:00Z"));
+  const posted: unknown[] = [];
+  let answerCurrency: (response: Response) => void = () => {};
+  const currencyRead = new Promise<Response>((resolve) => {
+    answerCurrency = resolve;
+  });
+  stubFetch(async (url, method, request) => {
+    if (url.includes("/promote-preview"))
+      return jsonResponse({ outcome: "create", existing_deals: [] });
+    if (method === "POST" && url.includes("/promote")) {
+      posted.push(JSON.parse(await request.text()));
+      return jsonResponse({ contact: { id: "contact-one" }, merged: false });
+    }
+    if (url.includes("/installation/settings")) return currencyRead;
+    return jsonResponse({ data: [] });
+  });
+  render(
+    <QualifyDialog lead={lead} open onClose={vi.fn()} onQualified={vi.fn()} />,
+    new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+  );
+  await user.click(
+    await screen.findByRole("radio", { name: "Open a new deal" }),
+  );
+  const early = await screen.findByLabelText("Amount ()");
+  expect(early).toBeDisabled();
+  await user.type(early, "500");
+
+  answerCurrency(jsonResponse({ base_currency: "VND" }));
+  const amount = await screen.findByLabelText("Amount (VND)");
+  await waitFor(() => expect(amount).toBeEnabled());
+  expect(amount).toHaveValue(null);
+  await user.type(amount, "500");
+  await user.click(
+    screen.getByRole("button", { name: "Qualify and open deal" }),
+  );
+  await waitFor(() => expect(posted).toHaveLength(1));
+  expect(posted[0]).toMatchObject({
+    deal: { amount_minor: 500, currency: "VND" },
+  });
+});

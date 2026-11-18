@@ -31,7 +31,6 @@ import { useViewerZone } from "../../lib/viewerzone";
 import { useLeadCompanyNameReading } from "./leadcompany";
 import { leadIdentityName } from "./leadname";
 import {
-  amountState,
   dealBlock,
   ExistingQualificationDeal,
   openStagesOf,
@@ -264,15 +263,12 @@ function QualificationForm({
     });
   };
 
-  const { amountInvalid, amountWaitsForCurrency } = amountState(
-    amountMinor,
-    currency,
-  );
+  const amountInvalid = amountMinor !== null && amountMinor < 0;
   const refused = qualifyRefusals(qualify.error, t);
   const confirmation = qualificationConfirmState(
     { selectedDeal, withDeal, invalidSelection },
     preview,
-    { amountInvalid, amountWaitsForCurrency },
+    { amountInvalid },
     { nameSettling: company.settling && !dealName.trim() },
   );
   const name = leadIdentityName(lead);
@@ -358,18 +354,19 @@ function QualificationForm({
           </Field>
           <Field
             label={t("lead.qualify.amount", { currency: currency ?? "" })}
-            hint={t("lead.qualify.amountHint")}
-            error={
-              amountInvalid
-                ? t("create.amountNegative")
-                : amountWaitsForCurrency
-                  ? t("lead.qualify.amountNoCurrency")
-                  : refused.amount
-            }
+            hint={t(
+              currency
+                ? "lead.qualify.amountHint"
+                : "lead.qualify.amountNoCurrency",
+            )}
+            error={amountInvalid ? t("create.amountNegative") : refused.amount}
           >
             {(control) => (
               <MoneyInput
                 {...control}
+                // The scale is the currency's, so a figure typed before it is
+                // known would be stored at the two-digit fallback.
+                disabled={!currency}
                 valueMinor={amountMinor ?? 0}
                 blankWhenZero={amountMinor === null}
                 currency={currency ?? ""}

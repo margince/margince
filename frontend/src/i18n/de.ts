@@ -6124,7 +6124,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.qualify.amount": "Betrag ({currency})",
   "lead.qualify.amountHint": "Optional. In der Basiswährung der Installation.",
   "lead.qualify.amountNoCurrency":
-    "Die Basiswährung ist noch nicht geladen. Versuche es gleich erneut oder lass den Betrag leer.",
+    "Eingabe möglich, sobald die Basiswährung der Installation geladen ist.",
   "lead.qualify.why": "Warum",
   "lead.qualify.reasonReplied": "Grund: Der Lead hat am {at} geantwortet.",
   "lead.qualify.reasonMeetingBooked":

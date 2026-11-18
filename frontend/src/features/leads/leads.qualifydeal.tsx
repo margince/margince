@@ -142,7 +142,7 @@ export function ExistingQualificationDeal({
 export function qualificationConfirmState(
   deal: ReturnType<typeof qualificationDealState>,
   preview: { isPending: boolean; isFetching: boolean },
-  amount: { amountInvalid: boolean; amountWaitsForCurrency: boolean },
+  amount: { amountInvalid: boolean },
   // nameSettling: the deal would be named after a company name still being read.
   name: { nameSettling: boolean },
 ) {
@@ -152,10 +152,7 @@ export function qualificationConfirmState(
       preview.isPending ||
       preview.isFetching ||
       deal.invalidSelection ||
-      (deal.withDeal &&
-        (amount.amountInvalid ||
-          amount.amountWaitsForCurrency ||
-          name.nameSettling)) ||
+      (deal.withDeal && (amount.amountInvalid || name.nameSettling)) ||
       (Boolean(deal.selectedDeal) && preview.isFetching),
   };
 }
@@ -189,19 +186,6 @@ export function dealBlock(input: {
     name: input.name.trim() || null,
     amount_minor: priced ? input.amountMinor : null,
     currency: priced ? (input.currency ?? null) : null,
-  };
-}
-
-// amountState is what the amount does to the confirm. A negative one is
-// refused. One with no currency to carry it waits, because the server would
-// drop it on the way.
-export function amountState(
-  amountMinor: number | null,
-  currency: string | undefined,
-) {
-  return {
-    amountInvalid: amountMinor !== null && amountMinor < 0,
-    amountWaitsForCurrency: amountMinor !== null && !currency,
   };
 }
 

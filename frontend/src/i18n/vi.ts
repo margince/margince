@@ -5967,7 +5967,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.qualify.amountHint":
     "Không bắt buộc. Theo loại tiền cơ sở của bản cài đặt.",
   "lead.qualify.amountNoCurrency":
-    "Chưa tải xong loại tiền cơ sở. Thử lại sau giây lát, hoặc để trống số tiền.",
+    "Mở khi loại tiền cơ sở của bản cài đặt đã tải xong.",
   "lead.qualify.why": "Lý do",
   "lead.qualify.reasonReplied": "Lý do: lead đã trả lời vào {at}.",
   "lead.qualify.reasonMeetingBooked": "Lý do: đã đặt cuộc họp vào {at}.",

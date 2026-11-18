@@ -6049,7 +6049,7 @@ export const en = {
   "lead.qualify.amount": "Amount ({currency})",
   "lead.qualify.amountHint": "Optional. In the installation’s base currency.",
   "lead.qualify.amountNoCurrency":
-    "Base currency not loaded yet. Retry shortly, or leave the amount empty.",
+    "Opens once the installation’s base currency has loaded.",
   "lead.qualify.why": "Why",
   "lead.qualify.reasonReplied": "Reason: the lead replied on {at}.",
   "lead.qualify.reasonMeetingBooked": "Reason: a meeting was booked for {at}.",

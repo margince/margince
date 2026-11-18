@@ -154,7 +154,9 @@ days".
 
 An optional first-response target, **off by default**, runs 15 minutes to 7 days. When
 on, a lead that wrote to you by email or a website form shows as **On time**, **Due
-soon** or **Overdue**. A lead you typed in or imported gets no deadline.
+soon** or **Overdue**. That includes a lead you typed in, once such a message is linked to
+it. A lead without one, or one from a data import, gets no deadline. Mail from a data import
+does not count.
 
 ## Deals
 
