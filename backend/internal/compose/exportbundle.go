@@ -12,18 +12,13 @@ package compose
 
 import (
 	"archive/zip"
-	"database/sql/driver"
 	"encoding/csv"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
-	"strconv"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgtype"
-
-	"github.com/margince/margince/backend/internal/shared/kernel/formulacell"
+	"github.com/margince/margince/backend/internal/platform/database/rowvalue"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -99,7 +94,7 @@ func writeMemberCSV(dst io.Writer, m memberData) error {
 	record := make([]string, len(m.columns))
 	for _, row := range m.rows {
 		for i := range m.columns {
-			cell, err := driverCell(row[i])
+			cell, err := rowvalue.CSVCell(row[i])
 			if err != nil {
 				return fmt.Errorf("export %s.%s: %w", m.table, m.columns[i], err)
 			}
@@ -126,133 +121,18 @@ func writeJSON(zw *zip.Writer, name string, v any) error {
 	return enc.Encode(v)
 }
 
-// rowsAsMaps shapes a member's rows as column→value maps for the JSON
-// dump, re-embedding jsonb bytes as raw JSON (never base64) and uuids as
-// their canonical strings.
+// rowsAsMaps shapes a member's rows as column→value maps for the JSON dump,
+// each value normalized by rowvalue.Document.
 func rowsAsMaps(m memberData) []map[string]any {
 	out := make([]map[string]any, 0, len(m.rows))
 	for _, row := range m.rows {
 		rec := make(map[string]any, len(m.columns))
 		for i, col := range m.columns {
-			rec[col] = jsonValue(row[i])
+			rec[col] = rowvalue.Document(row[i])
 		}
 		out = append(out, rec)
 	}
 	return out
-}
-
-// jsonValue normalizes a driver value for the JSON dump and for a CSV cell
-// that holds JSON. It walks into jsonb objects and arrays, so a uuid inside an
-// array is a string there too.
-//
-//craft:ignore naked-any a driver row value spans every SQL type the exported tables carry; the switch narrows each
-func jsonValue(v any) any {
-	switch t := v.(type) {
-	case nil:
-		return nil
-	case [16]byte:
-		return ids.UUID(t).String()
-	case []byte:
-		return byteaText(t)
-	case pgtype.Interval:
-		return valuerJSON{t}
-	case pgtype.Bits:
-		return valuerJSON{t}
-	case []any:
-		out := make([]any, len(t))
-		for i, element := range t {
-			out[i] = jsonValue(element)
-		}
-		return out
-	case map[string]any:
-		out := make(map[string]any, len(t))
-		for key, element := range t {
-			out[key] = jsonValue(element)
-		}
-		return out
-	default:
-		return v
-	}
-}
-
-// valuerJSON spells a pgtype value as its Postgres text. Interval and Bits have
-// no JSON form of their own and would marshal as their struct fields.
-type valuerJSON struct{ driver.Valuer }
-
-func (v valuerJSON) MarshalJSON() ([]byte, error) {
-	text, err := v.Value()
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(text)
-}
-
-// byteaText is Postgres's hex text for a bytea, which an import reads back.
-// Raw bytes are not text, and as JSON they would not parse at all.
-func byteaText(b []byte) string {
-	return `\x` + hex.EncodeToString(b)
-}
-
-// driverCell renders a value pgx decoded from an exported column as one CSV
-// field. Numbers, intervals and bit strings keep the text Postgres prints; jsonb
-// objects, arrays and SQL arrays are compact JSON, guarded like any text.
-//
-//craft:ignore naked-any a driver row value spans every SQL type the exported tables carry; the switch narrows each
-func driverCell(v any) (string, error) {
-	switch t := v.(type) {
-	case pgtype.Numeric:
-		return valuerText(t)
-	case pgtype.Interval:
-		return valuerText(t)
-	case pgtype.Bits:
-		return valuerText(t)
-	case []any, map[string]any:
-		raw, err := json.Marshal(jsonValue(t))
-		if err != nil {
-			return "", err
-		}
-		return formulacell.Guard(string(raw)), nil
-	default:
-		return csvCell(v), nil
-	}
-}
-
-// valuerText is a pgtype value's Postgres text, or an empty cell for NULL.
-func valuerText(v driver.Valuer) (string, error) {
-	value, err := v.Value()
-	if err != nil || value == nil {
-		return "", err
-	}
-	text, ok := value.(string)
-	if !ok {
-		return "", fmt.Errorf("compose: %T rendered as %T, want text", v, value)
-	}
-	return text, nil
-}
-
-// csvCell renders a scalar as a single CSV field. Only the text branches are
-// guarded: a typed negative number must keep its sign without a quote.
-//
-//craft:ignore naked-any a driver row value spans every SQL type the exported tables carry; the switch narrows each
-func csvCell(v any) string {
-	switch t := v.(type) {
-	case nil:
-		return ""
-	case [16]byte:
-		return ids.UUID(t).String()
-	case []byte:
-		return byteaText(t)
-	case string:
-		return formulacell.Guard(t)
-	case time.Time:
-		return t.UTC().Format(time.RFC3339Nano)
-	case bool:
-		return strconv.FormatBool(t)
-	case float64:
-		return strconv.FormatFloat(t, 'f', -1, 64)
-	default:
-		return fmt.Sprint(t)
-	}
 }
 
 // bundleManifest describes the bundle: format, provenance, the members

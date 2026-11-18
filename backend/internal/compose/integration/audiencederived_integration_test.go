@@ -150,10 +150,8 @@ func TestASubjectAccessExportListsAHeldActivityWithoutItsText(t *testing.T) {
 	}
 
 	// The package renders a uuid column as the string a contact receiving the
-	// document can read, so the id keys these assertions directly. It used to
-	// arrive as the driver's own [16]byte and this loop converted it — which
-	// was the export handing a data subject sixteen numbers where an id
-	// belongs (privacy.readableValue).
+	// document can read, so the id keys these assertions directly. The driver's
+	// own [16]byte would hand a data subject sixteen numbers (rowvalue.Document).
 	rows := map[string]map[string]any{}
 	for _, row := range pkg.Activities {
 		id, ok := row["id"].(string)

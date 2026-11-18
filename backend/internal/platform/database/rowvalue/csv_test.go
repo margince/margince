@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package rowvalue
 
 import (
 	"encoding/json"
@@ -34,15 +34,20 @@ func TestAnExportCellSpellsEachDriverValueAsTheValueItHolds(t *testing.T) {
 		{"a jsonb string that opens a formula", []any{"=1+1"}, `["=1+1"]`},
 		{"a float", 0.92, "0.92"},
 		{"a large float is not in exponent form", 1e21, "1000000000000000000000"},
+		{"a jsonb integer above 2^53 keeps its digits", map[string]any{"n": json.Number("9007199254740993")}, `{"n":9007199254740993}`},
+		{"a negative jsonb number stays unquoted", json.Number("-5"), "-5"},
+		{"a negative int32 stays unquoted", int32(-7), "-7"},
+		{"an ampersand in jsonb stays as stored", map[string]any{"name": "A&B <x>"}, `{"name":"A&B <x>"}`},
+		{"a Stringer of user text is guarded", typedText("=1+1"), "'=1+1"},
 	}
 	for _, c := range cases {
-		got, err := driverCell(c.in)
+		got, err := CSVCell(c.in)
 		if err != nil {
 			t.Errorf("%s: %v", c.name, err)
 			continue
 		}
 		if got != c.want {
-			t.Errorf("%s: driverCell = %q, want %q", c.name, got, c.want)
+			t.Errorf("%s: CSVCell = %q, want %q", c.name, got, c.want)
 		}
 	}
 }
@@ -50,23 +55,14 @@ func TestAnExportCellSpellsEachDriverValueAsTheValueItHolds(t *testing.T) {
 func TestAJSONCellThatOpensAFormulaIsGuarded(t *testing.T) {
 	// A jsonb scalar string arrives as a Go string. A jsonb array is guarded as
 	// one cell, so only a lead at the start of the cell counts.
-	got, err := driverCell("=HYPERLINK(1)")
+	got, err := CSVCell("=HYPERLINK(1)")
 	if err != nil || got != "'=HYPERLINK(1)" {
-		t.Fatalf("driverCell = %q, %v; want the guarded literal", got, err)
+		t.Fatalf("CSVCell = %q, %v; want the guarded literal", got, err)
 	}
 }
 
-func TestTheJSONDumpSpellsAnIntervalAndANestedUUIDAsText(t *testing.T) {
-	member := ids.MustParse("0195f3a0-0000-7000-8000-000000000002")
-	raw, err := json.Marshal(jsonValue(map[string]any{
-		"wait":    pgtype.Interval{Days: 2, Valid: true},
-		"members": []any{[16]byte(member)},
-	}))
-	if err != nil {
-		t.Fatal(err)
-	}
-	want := `{"members":["` + member.String() + `"],"wait":"2 day 00:00:00"}`
-	if string(raw) != want {
-		t.Fatalf("dump = %s, want %s", raw, want)
-	}
-}
+// typedText stands for a driver type csvCell has no case for, whose text a
+// user typed.
+type typedText string
+
+func (t typedText) String() string { return string(t) }

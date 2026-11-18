@@ -42,6 +42,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/rowvalue"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -200,8 +201,9 @@ func readRowsByID(ctx context.Context, tx pgx.Tx, table string, columns []string
 	defer pgRows.Close()
 
 	var out [][]any
+	reader := rowvalue.NewReader()
 	for pgRows.Next() {
-		values, err := pgRows.Values()
+		values, err := reader.Values(pgRows)
 		if err != nil {
 			return nil, err
 		}

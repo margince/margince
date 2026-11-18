@@ -3,12 +3,12 @@
 
 //go:build integration
 
-package compose
+package rowvalue
 
-// Every column type the schema holds must leave an export as the value it
+// Every column type the schema holds must leave a document as the value it
 // holds, never as a Go struct the driver decoded it into. The census reads
-// every table's types from the catalog. The filtered export reaches extension
-// tables and custom-field columns that the bundle's member list does not name.
+// every table's types from the catalog, because exports reach extension tables
+// and custom-field columns no list in the code names.
 
 import (
 	"bytes"
@@ -16,6 +16,7 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"os"
 	"regexp"
 	"slices"
 	"strings"
@@ -24,9 +25,11 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 )
 
+// gatekit:fixture a sample value per Postgres base type, the census's input
+//
 // typeSamples is one non-NULL value per base type, as Postgres text. Enums and
 // arrays derive theirs from the catalog, so only a new base type needs a line.
 var typeSamples = map[string]string{
@@ -43,7 +46,7 @@ var typeSamples = map[string]string{
 	"int8":        "-5000",
 	"interval":    "1 day 02:00:00",
 	"json":        `{"score":0.5}`,
-	"jsonb":       `{"score":0.5,"ids":["0195f3a0-0000-7000-8000-000000000001"]}`,
+	"jsonb":       jsonbSample,
 	"numeric":     "0.92",
 	"pg_snapshot": "10:20:",
 	"text":        "Acme",
@@ -56,6 +59,10 @@ var typeSamples = map[string]string{
 	"xid8":        "42",
 }
 
+// jsonbSample holds an integer above 2^53 and an ampersand, which a float64
+// decode and an HTML-escaping encoder would each change.
+const jsonbSample = `{"ids":["0195f3a0-0000-7000-8000-000000000001"],"n":9007199254740993,"name":"A&B"}`
+
 // goStructCell matches what fmt.Sprint makes of a driver value with no text
 // form. That is a struct, a map, a nested slice, or a uuid's raw bytes.
 var goStructCell = regexp.MustCompile(`^\{[^"]*\}$|^map\[|^\[\[|^\[[0-9 ]+\]$`)
@@ -66,9 +73,9 @@ type columnType struct {
 }
 
 func TestEveryColumnTypeExportsAsTheValueItHolds(t *testing.T) {
-	e := integration.Setup(t)
 	ctx := context.Background()
-	census := schemaColumnTypes(ctx, t, e.Pool)
+	pool := censusPool(ctx, t)
+	census := schemaColumnTypes(ctx, t, pool)
 
 	selects := make([]string, 0, len(census))
 	columns := make([]string, 0, len(census))
@@ -86,42 +93,39 @@ func TestEveryColumnTypeExportsAsTheValueItHolds(t *testing.T) {
 		t.Fatalf("no sample for column types %v: add one to typeSamples", unsampled)
 	}
 
-	rows, err := e.Pool.Query(ctx, "SELECT "+strings.Join(selects, ", "))
-	if err != nil {
-		t.Fatal(err)
-	}
-	data := memberData{table: "census", columns: columns}
-	for rows.Next() {
-		values, err := rows.Values()
-		if err != nil {
-			t.Fatal(err)
-		}
-		data.rows = append(data.rows, values)
-	}
-	if err := rows.Err(); err != nil {
-		t.Fatal(err)
-	}
-
+	values := sampleRow(ctx, t, pool, selects)
 	var buf bytes.Buffer
-	if err := writeMemberCSV(&buf, data); err != nil {
+	cw := csv.NewWriter(&buf)
+	record := make([]string, len(values))
+	for i, value := range values {
+		cell, err := CSVCell(value)
+		if err != nil {
+			t.Fatalf("%s: %v", columns[i], err)
+		}
+		record[i] = cell
+	}
+	if err := cw.Write(record); err != nil {
 		t.Fatal(err)
 	}
+	cw.Flush()
 	records, err := csv.NewReader(&buf).ReadAll()
-	if err != nil || len(records) != 2 {
-		t.Fatalf("read back %d records, %v; want a header and one row", len(records), err)
+	if err != nil || len(records) != 1 {
+		t.Fatalf("read back %d records, %v; want one row", len(records), err)
 	}
 	var covered []string
-	for i, cell := range records[1] {
+	for i, cell := range records[0] {
 		switch {
 		case cell == "":
-			t.Errorf("%s: a non-NULL sample exported as an empty cell", records[0][i])
+			t.Errorf("%s: a non-NULL sample exported as an empty cell", columns[i])
+		case columns[i] == "jsonb" && cell != jsonbSample:
+			t.Errorf("jsonb: exported %s, want the stored %s", cell, jsonbSample)
 		case goStructCell.MatchString(cell):
-			t.Errorf("%s: exported as a Go value %q", records[0][i], cell)
+			t.Errorf("%s: exported as a Go value %q", columns[i], cell)
 		default:
-			covered = append(covered, records[0][i])
+			covered = append(covered, columns[i])
 		}
 	}
-	assertJSONDumpHoldsNoStruct(t, data)
+	assertDocumentHoldsNoStruct(t, columns, values)
 
 	want := make([]string, len(census))
 	for i, ct := range census {
@@ -132,26 +136,74 @@ func TestEveryColumnTypeExportsAsTheValueItHolds(t *testing.T) {
 	}
 }
 
-// assertJSONDumpHoldsNoStruct checks the dump: a pgtype struct marshals with
-// its Valid field, which no stored value carries.
-func assertJSONDumpHoldsNoStruct(t *testing.T, data memberData) {
+// assertDocumentHoldsNoStruct checks the JSON side: a pgtype struct marshals
+// with its Valid field, which no stored value carries.
+//
+//craft:ignore naked-any a row's values are []any by pgx's own contract
+func assertDocumentHoldsNoStruct(t *testing.T, columns []string, values []any) {
 	t.Helper()
-	for _, rec := range rowsAsMaps(data) {
-		for column, value := range rec {
-			raw, err := json.Marshal(value)
-			if err != nil {
-				t.Errorf("%s: the JSON dump cannot marshal %T: %v", column, value, err)
-				continue
-			}
-			if bytes.Contains(raw, []byte(`"Valid":`)) {
-				t.Errorf("%s: the JSON dump holds a Go struct %s", column, raw)
-			}
+	for i, value := range values {
+		raw, err := json.Marshal(Document(value))
+		if err != nil {
+			t.Errorf("%s: a document cannot marshal %T: %v", columns[i], value, err)
+			continue
+		}
+		if bytes.Contains(raw, []byte(`"Valid":`)) {
+			t.Errorf("%s: a document holds a Go struct %s", columns[i], raw)
 		}
 	}
 }
 
-// schemaColumnTypes is every distinct type a stored column of a public table
-// holds, in name order.
+// sampleRow reads one row of samples through a Reader, as every export does.
+//
+//craft:ignore naked-any a row's values are []any by pgx's own contract
+func sampleRow(ctx context.Context, t *testing.T, pool *pgxpool.Pool, selects []string) []any {
+	t.Helper()
+	rows, err := pool.Query(ctx, "SELECT "+strings.Join(selects, ", "))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	if !rows.Next() {
+		t.Fatalf("the sample query returned no row: %v", rows.Err())
+	}
+	values, err := NewReader().Values(rows)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return values
+}
+
+// censusPool is the app role's pool over a migrated schema, so values decode
+// with the type map production reads with.
+func censusPool(ctx context.Context, t *testing.T) *pgxpool.Pool {
+	t.Helper()
+	ownerDSN, appDSN := os.Getenv("MARGINCE_TEST_DSN"), os.Getenv("MARGINCE_TEST_APP_DSN")
+	if ownerDSN == "" || appDSN == "" {
+		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
+	}
+	owner, err := pgx.Connect(ctx, ownerDSN)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := owner.Close(ctx); err != nil {
+			t.Errorf("closing the owner connection: %v", err)
+		}
+	}()
+	if err := testdb.EnsureSchema(ctx, owner); err != nil {
+		t.Fatal(err)
+	}
+	pool, err := testdb.OwnPool(ctx, appDSN)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(pool.Close)
+	return pool
+}
+
+// schemaColumnTypes lists the distinct types the stored columns of public tables
+// hold, in name order.
 func schemaColumnTypes(ctx context.Context, t *testing.T, pool *pgxpool.Pool) []columnType {
 	t.Helper()
 	rows, err := pool.Query(ctx, `

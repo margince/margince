@@ -19,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/rowvalue"
 )
 
 // derivationOutcome is a resolved handle: definition, drill-through
@@ -125,7 +126,7 @@ func (e *reportEngine) fetchDerivation(ctx context.Context, report string, spec 
 		}
 		out.TotalRows = int(total)
 		for i, name := range plan.aggColumns {
-			out.Aggregates[name] = wireValue(values[i+1])
+			out.Aggregates[name] = rowvalue.Document(values[i+1])
 		}
 		return nil
 	})
@@ -373,14 +374,15 @@ func predicateFields(preds []boundExpr) []string {
 // column to its wire value positionally.
 func scanDerivationRows(pgRows pgx.Rows, columns []string) ([]map[string]any, error) {
 	var out []map[string]any
+	reader := rowvalue.NewReader()
 	for pgRows.Next() {
-		values, err := pgRows.Values()
+		values, err := reader.Values(pgRows)
 		if err != nil {
 			return nil, err
 		}
 		row := make(map[string]any, len(columns))
 		for i, col := range columns {
-			row[col] = wireValue(values[i])
+			row[col] = rowvalue.Document(values[i])
 		}
 		out = append(out, row)
 	}

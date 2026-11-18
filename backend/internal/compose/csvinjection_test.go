@@ -15,6 +15,8 @@ import (
 	"encoding/csv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/platform/database/rowvalue"
 )
 
 func TestCSVCellDefusesSpreadsheetFormulas(t *testing.T) {
@@ -29,37 +31,37 @@ func TestCSVCellDefusesSpreadsheetFormulas(t *testing.T) {
 		"\tstarts-with-tab",
 		"\rstarts-with-cr",
 	} {
-		got := csvCell(in)
+		got := rowvalue.CSVScalar(in)
 		if want := "'" + in; got != want {
-			t.Errorf("csvCell(%q) = %q, want the apostrophe-guarded literal %q", in, got, want)
+			t.Errorf("rowvalue.CSVScalar(%q) = %q, want the apostrophe-guarded literal %q", in, got, want)
 		}
 	}
 
 	// Only a bytea arrives as []byte, and it leaves as hex text: bytes that
 	// spell a formula cannot reach the cell as one.
-	if got := csvCell([]byte("=1+1")); got != `\x3d312b31` {
-		t.Errorf("csvCell([]byte(%q)) = %q, want the hex text %q", "=1+1", got, `\x3d312b31`)
+	if got := rowvalue.CSVScalar([]byte("=1+1")); got != `\x3d312b31` {
+		t.Errorf("rowvalue.CSVScalar([]byte(%q)) = %q, want the hex text %q", "=1+1", got, `\x3d312b31`)
 	}
 
 	// A value that is not a formula lead is passed through untouched:
 	// over-guarding would corrupt ordinary data and teach readers to ignore
 	// the apostrophe where it matters.
 	for _, safe := range []string{"Ada Lovelace", "acme corp", "", "1 Main St", "0.5x", "true"} {
-		if got := csvCell(safe); got != safe {
-			t.Errorf("csvCell(%q) = %q, want it unchanged", safe, got)
+		if got := rowvalue.CSVScalar(safe); got != safe {
+			t.Errorf("rowvalue.CSVScalar(%q) = %q, want it unchanged", safe, got)
 		}
 	}
 
 	// A bare phone number holds no formula a spreadsheet could run, so it exports raw.
-	if got := csvCell("+84901234567"); got != "+84901234567" {
-		t.Errorf("csvCell(%q) = %q, want the bare number", "+84901234567", got)
+	if got := rowvalue.CSVScalar("+84901234567"); got != "+84901234567" {
+		t.Errorf("rowvalue.CSVScalar(%q) = %q, want the bare number", "+84901234567", got)
 	}
 
 	// A typed numeric value is system-rendered, never attacker free text, so a
 	// legitimately negative amount keeps its sign without gaining a quote — the
 	// guard is scoped to the text branches for exactly this reason.
-	if got := csvCell(int64(-5000)); got != "-5000" {
-		t.Errorf("csvCell(int64(-5000)) = %q, want %q (a number, not a guarded formula)", got, "-5000")
+	if got := rowvalue.CSVScalar(int64(-5000)); got != "-5000" {
+		t.Errorf("rowvalue.CSVScalar(int64(-5000)) = %q, want %q (a number, not a guarded formula)", got, "-5000")
 	}
 }
 
