@@ -15,7 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// The reason a rep typed for sending anyway comes back with the draft, moves
+// The reason a rep typed for sending anyway comes back with the draft. It moves
 // only at the version the composer read, and stays off the audit trail.
 func TestADraftKeepsItsSendAnywayReasonUnderTheVersionCheck(t *testing.T) {
 	e := setupSend(t)

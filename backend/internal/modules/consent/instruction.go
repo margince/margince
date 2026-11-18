@@ -159,17 +159,8 @@ func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInpu
 		if err != nil {
 			return err
 		}
-		if err := (Review{Refusals: review.Refusals}).checkAcknowledgement(in.AssessmentRevision); err != nil {
+		if err := review.admits(ctx, in); err != nil {
 			return err
-		}
-		if err := mayDirect(ctx, in.ShownReasons, review.Refusals); err != nil {
-			return err
-		}
-		if !servesWarning(warningsServed(ctx, review.InitiatedBy, review.IntentID), in.WarningVersion) {
-			return &ValidationError{
-				Field:  "warning_version",
-				Reason: "this review was not shown with that warning; open it again and confirm the warning it shows",
-			}
 		}
 		// Recorded so the re-check at staging and dispatch knows which
 		// refusals this exception may answer (DecisionSet.ExceptionMayAnswer).
@@ -385,6 +376,25 @@ type directableReview struct {
 	// Refusals are the reasons the message was held, which decide whether this
 	// caller may direct past them (directableBy).
 	Refusals []RefusedRecipient
+}
+
+// admits checks that this caller may direct the review as they read it. It
+// asks for the revision they confirmed, the refusals they were shown and a
+// warning the review was served with.
+func (r directableReview) admits(ctx context.Context, in DirectInput) error {
+	if err := (Review{Refusals: r.Refusals}).checkAcknowledgement(in.AssessmentRevision); err != nil {
+		return err
+	}
+	if err := mayDirect(ctx, in.ShownReasons, r.Refusals); err != nil {
+		return err
+	}
+	if !servesWarning(warningsServed(ctx, r.InitiatedBy, r.IntentID), in.WarningVersion) {
+		return &ValidationError{
+			Field:  "warning_version",
+			Reason: "this review was not shown with that warning; open it again and confirm the warning it shows",
+		}
+	}
+	return nil
 }
 
 // claimReviewForDirectionTx takes the review this decision is about.

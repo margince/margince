@@ -16,8 +16,7 @@ import (
 )
 
 // A message whose To lacks its footer and whose Bcc objected names the
-// objection first, in the review and in the 409 alike, whatever order the
-// recipients were written in.
+// objection first. The review and the 409 agree, whatever the recipient order.
 func TestAMixedRefusalNamesTheObjectionFirst(t *testing.T) {
 	e := setupResolve(t)
 	e.seedPurpose(t, "newsletter", "marketing")

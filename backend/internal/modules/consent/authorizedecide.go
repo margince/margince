@@ -272,8 +272,8 @@ func (g *Gate) decideResolved(ctx context.Context, tx pgx.Tx, req commsauthz.Req
 }
 
 // verdictQuestion is the claim and purpose key an unsupported resolution puts
-// to the consent verdict. An offer is asked as marketing, under its purpose only
-// when that purpose is a marketing one: a correspondence key would let the
+// to the consent verdict. An offer is asked as marketing. Its purpose counts
+// only when it is a marketing one, because a correspondence key would let the
 // verdict allow the offer on a recent exchange.
 func verdictQuestion(ctx context.Context, tx pgx.Tx, req commsauthz.Request, res resolution) (commsauthz.Category, string, error) {
 	if !res.ReadAsOffer {

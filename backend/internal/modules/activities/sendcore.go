@@ -159,13 +159,10 @@ func (s *Store) prepareRenderedSend(ctx context.Context, origin SendOrigin, in S
 	}
 	signed := sign.under(in.Body)
 
-	// The files, resolved to snapshots while the sender's own read gate still
-	// applies. It runs before the transaction for the same reason the body work
-	// does — the transaction holds writes only — and it refuses the whole send
-	// when one file cannot be resolved, because a message carrying fewer files
-	// than the sender attached is one nobody is told is wrong.
-	// Before deliverability, because the file names are part of what the
-	// engine reads for an offer.
+	// The files, resolved to snapshots while the sender's read gate applies.
+	// One file that cannot be resolved refuses the send: a message with fewer
+	// files than attached is one nobody is told is wrong. Resolved before
+	// deliverability, because the engine reads the file names for an offer.
 	files, err := s.PreviewSendAttachments(ctx, in.AttachmentIDs)
 	if err != nil {
 		return PreparedSend{}, err

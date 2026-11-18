@@ -26,7 +26,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"slices"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -128,8 +127,7 @@ type Review struct {
 	Refusals    []RefusedRecipient
 	ReasonCode  string
 	Correction  *WordingCorrectionContext
-	// Warnings are the warnings this review is served with to its reader.
-	Warnings []OverrideWarning
+	Warnings    []OverrideWarning
 }
 
 // OpenReviewTx records one refusal, inside the transaction that refused.
@@ -301,28 +299,6 @@ func refusedRecipientsOf(set commsauthz.DecisionSet) []RefusedRecipient {
 		out = append(out, refusedRecipientOf(d))
 	}
 	return rankRefusals(out)
-}
-
-// rankRefusals orders refusals by what a sender must deal with first, keeping
-// the decision order within a rank: an address that needs repair, then the
-// subject's own stop, then a footer finding, then missing evidence or
-// permission. The review and the 409 both rank here, so they name the same one.
-func rankRefusals(refusals []RefusedRecipient) []RefusedRecipient {
-	slices.SortStableFunc(refusals, func(a, b RefusedRecipient) int { return refusalRank(a) - refusalRank(b) })
-	return refusals
-}
-
-func refusalRank(r RefusedRecipient) int {
-	switch {
-	case len(commsauthz.RemediesFor(r.ReasonCode)) == 0:
-		return 0
-	case commsauthz.LevelForReason(r.ReasonCode) == commsauthz.LevelSubject:
-		return 1
-	case r.ReasonCode == commsauthz.ReasonFooterIncomplete || len(r.FooterFindings) > 0:
-		return 2
-	default:
-		return 3
-	}
 }
 
 func refusedRecipientOf(d commsauthz.Decision) RefusedRecipient {
@@ -505,7 +481,6 @@ func (s *Store) ReviewForInitiator(ctx context.Context, id ids.UUID) (Review, er
 			return err
 		}
 		out.State = openStateFor(out.State, out.Refusals)
-		out.Warnings = warningsServed(ctx, out.InitiatedBy, out.IntentID)
 		return s.nameReviewEntities(ctx, tx, out.Refusals)
 	})
 	return out, err

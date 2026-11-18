@@ -54,9 +54,9 @@ func (e *SendRefusedError) Unwrap() error { return e.Cause }
 // The reference travels in the message instead, where a human and the MCP
 // surface read it.
 
-// Refused is the refusal a sender reads: the review's reference, the actions
-// the caller decided on, the blocking refusals, and the review as the sender
-// would GET it. A review they may not read is left out; the refusal stands.
+// Refused is the refusal a sender reads. It carries the review's reference,
+// the actions, the blocking refusals and the review as the sender would GET
+// it. A review they may not read is left out; the refusal stands.
 func (g *Gate) Refused(ctx context.Context, review Review, set commsauthz.DecisionSet, cause error, actions []string) *SendRefusedError {
 	refused := &SendRefusedError{ReviewID: review.ID, Cause: cause, Actions: actions, Refusals: BlockingRefusals(set)}
 	if served, err := g.ServedReview(ctx, review.ID); err == nil {

@@ -8,8 +8,8 @@ import (
 	"testing"
 )
 
-// The engine reads what the sender wrote for an offer: the typed subject and
-// body, not the rendered ones, and the names of the files they attached.
+// The engine reads what the sender wrote for an offer. That is the typed
+// subject and body, not the rendered ones, and the attached files' names.
 func TestTheEngineIsAskedAboutTheAuthoredTextAndTheFileNames(t *testing.T) {
 	m := outboundMessage{
 		in:    SendEmailInput{Recipients: []string{"dana@buyer.test"}, Subject: "Re: Termin", Body: "Siehe Anhang."},

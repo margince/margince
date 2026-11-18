@@ -32,9 +32,8 @@ var offerAmount = regexp.MustCompile(
 	`€\s?\d|\$\s?\d|\d[\d.,]*\s?(€|eur|usd|vnd|đ|\$)([^\p{L}\p{N}]|$)|\d+\s?%\s?(off|rabatt|giảm)([^\p{L}\p{N}]|$)`)
 
 // authoredOffer reports whether the words a sender wrote, or the names of the
-// files they attached, make an offer. Every line counts, a quoted one too: the
-// composer keeps the thread out of the authored body, so a quote marker there
-// is the sender's own typing.
+// files they attached, make an offer. A quoted line counts too. The composer
+// keeps the thread out of the authored body, so a quote marker is typed.
 func authoredOffer(subject, body string, fileNames []string) bool {
 	text := norm.NFC.String(strings.Join(append([]string{subject, body}, fileNames...), "\n"))
 	lowered := strings.ToLower(text)

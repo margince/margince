@@ -88,8 +88,8 @@ type resolution struct {
 //
 // An authored offer (Evidence.AuthoredOffer) skips arm 1: a reply into a thread
 // does not make a new offer correspondence. The live deal and a claim other than
-// a reply are asked as usual, then a quote the subject asked for, and otherwise
-// the message is marketing and the consent verdict decides.
+// a reply are asked as usual, then a quote the subject asked for. Otherwise the
+// message is marketing, and the consent verdict decides.
 //
 // Nothing here consults the caller's word before the record. A claim is
 // evidence about intent and never about lawfulness, so it is checked against

@@ -53,8 +53,8 @@ func (c *consentEnv) count(t *testing.T, query string) int {
 }
 
 // A reschedule goes out once. The same reply with an offer stops at Send with
-// its review in the 409, goes out once on the sender's own reason, and leaves
-// the next offer to be decided again.
+// its review in the 409. It goes out once on the sender's own reason, and the
+// next offer is decided again.
 func TestAnOfferInAReplyStopsAtSendAndGoesOnceOnAReason(t *testing.T) {
 	c := setupConsent(t)
 	c.useReviewableMarketingProfile(t)
