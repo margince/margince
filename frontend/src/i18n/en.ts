@@ -3825,7 +3825,6 @@ export const en = {
   "co.overview.otherOpen": "Other open tasks",
   "record.allTasks": "All tasks",
   "co.overview.latest": "Latest",
-  "co.overview.nothingOpen": "Nothing else open",
   "co.overview.for": "for {name}",
   "co.overview.noDate": "No date",
   "co.overview.allDeals": "All deals",
@@ -18236,45 +18235,31 @@ export const en = {
     "Some contacts at this company are not shown.",
   "contact.intro.askFirstName": "Ask {name} to introduce you",
   "contact.intro.heroDirect": "knows them directly",
-  "contact.intro.heroIndirect": "reaches them through {through}",
   "contact.intro.heroYou": "You",
   "contact.intro.heroDirectYou": "know them directly",
-  "contact.intro.heroIndirectYou": "reach them through {through}",
   "contact.intro.factReciprocal": "Reciprocal",
   "contact.intro.factOneSided": "One-sided",
   "contact.intro.factDirect": "Direct relationship",
   "contact.intro.factIndirect": "Through a colleague",
   "contact.intro.factReceipts_one": "{count} visible receipt",
   "contact.intro.factReceipts_other": "{count} visible receipts",
-  "contact.intro.verdictDirect":
-    "Ask {name}. They already correspond with this contact.",
-  "contact.intro.verdictOneSided":
-    "Ask {name}. They wrote to this contact; no reply is recorded.",
-  "contact.intro.verdictVia":
-    "Ask {name}. They reach this contact through {through}.",
-  "contact.intro.verdictDirectYou": "You already correspond with this contact.",
-  "contact.intro.verdictOneSidedYou":
-    "You wrote to this contact; no reply is recorded.",
-  "contact.intro.verdictViaYou": "You reach them through {through}.",
   // What stands where the ask would be on the reader's own route. The panel
   // is the page's one recommendation, so it says what to do rather than
   // leaving the strongest way in with no move under it.
   "contact.intro.ownRouteNoAsk":
     "No one to ask. Write to this contact directly.",
-  "contact.intro.evidenceEyebrow": "Evidence",
-  "contact.intro.evidenceExchanges": "Exchanges",
-  "contact.intro.evidenceWindow": "in 90 days",
   "contact.intro.evidenceFrom": "{count} from {name}",
   "contact.intro.evidenceFromYou": "{count} from you",
   "contact.intro.evidenceLastContact": "Last contact",
+  "contact.intro.bestWayIn": "Best way in",
+  "contact.intro.sameTeam": "same team",
+  "contact.intro.exchangesWindow": "Exchanges in 90 days",
   "contact.intro.lastToday": "Today",
   "contact.intro.lastYesterday": "Yesterday",
   "contact.intro.lastDays": "{days} days ago",
   "contact.intro.lastNever": "None in 90 days",
   "contact.intro.stripWhoMix": "{direct} direct · {indirect} via a contact",
   "contact.intro.stripWhoOwn": "Includes your own relationship",
-  "contact.intro.otherRoutesTitle": "Other routes",
-  "contact.intro.otherRoutesSub": "Ranked by two-way correspondence.",
   "contact.intro.relayDue": "due {date}",
   "contact.intro.stripDirect": "Direct relationship",
   "contact.intro.stripNoPath": "No one corresponds with this contact",
@@ -18293,7 +18278,6 @@ export const en = {
   "contact.intro.handoffOwner": "Next: {name}",
   "contact.intro.ownerColleague": "a colleague",
   "contact.intro.ownerNobody": "no one",
-  "contact.intro.relayTitle": "Introduction status",
   "contact.chapter.jump": "On this tab",
   "contact.chapter.wayIn": "Way in",
   "contact.chapter.whoAnswer":
@@ -18457,9 +18441,6 @@ export const en = {
   "contact.intro.alreadyRequested": "Already asked",
   "contact.intro.declined": "Declined before",
   "contact.intro.unavailable": "Not available",
-  "contact.network.momentsTitle": "What changed",
-  "contact.network.momentsSub":
-    "Changes read from the messages, and earlier intro requests.",
   "contact.network.noMoments": "No recent changes in this relationship.",
   "contact.change.repliedAfterGap": "They replied after {days} quiet days.",
   "contact.change.wentQuiet": "No activity for {days} days.",
@@ -21109,7 +21090,6 @@ export const en = {
   "contact.card.dealTitle": "The deal {name} decides",
   "contact.card.deals": "Deals",
   "contact.card.openTasks": "Open tasks",
-  "contact.card.noOpenTasks": "No open tasks",
   "contact.moment.doneToast":
     "Marked done. It comes back when either of you writes again.",
   "contact.card.understandingTitle": "Understanding {name}",
