@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/dealscout"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -46,7 +47,7 @@ func (o scoutDealOpener) reviveOne(ctx context.Context, suggestionID ids.UUID, d
 	basis := scoutBasis(suggestion, false)
 	return o.deals.ReviveLostDeal(ownerCtx, deals.ReviveLostDealInput{
 		SuggestionID: suggestionID, DealID: deal, Owner: owner, Basis: basis,
-		EvidenceHolds: scoutEvidenceHolds, Arrival: scoutEvidenceArrival,
+		EvidenceHolds: dealscout.EvidenceHolds, Arrival: scoutEvidenceArrival,
 		SwitchOn: func(ctx context.Context, tx pgx.Tx) (bool, error) {
 			mode, err := approvals.AutoApplyModeTx(ctx, tx, owner, deals.DealReviveKind)
 			return mode == approvals.ModeAuto, err

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package dealscout
 
 // What an opened deal rests on, asked again under the opening's own locks. The
 // cited evidence must still be readable by the whole workspace, and an amount
@@ -24,10 +24,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// scoutEvidenceHolds takes FOR SHARE on every cited item and the activities
+// EvidenceHolds takes FOR SHARE on every cited item and the activities
 // behind it, then asks Deal Scout's visibility rule of each again. An
 // explicit request holds on mail of any audience, as the scout admitted it.
-func scoutEvidenceHolds(ctx context.Context, tx pgx.Tx, evidence []deals.SuggestionEvidence) (bool, error) {
+func EvidenceHolds(ctx context.Context, tx pgx.Tx, evidence []deals.SuggestionEvidence) (bool, error) {
 	for _, item := range evidence {
 		activities, request, ok, err := lockCitedItem(ctx, tx, item)
 		if err != nil || !ok {
@@ -58,7 +58,7 @@ func lockCitedItem(ctx context.Context, tx pgx.Tx, item deals.SuggestionEvidence
 		       request.asked
 		  FROM signal s
 		  CROSS JOIN LATERAL (SELECT EXISTS (SELECT 1 FROM jsonb_array_elements(s.evidence) request_cite
-		         WHERE s.kind = 'new_opportunity' AND ` + explicitRequestCite("request_cite") + `) AS asked) request
+		         WHERE s.kind = 'new_opportunity' AND ` + ExplicitRequestCite("request_cite") + `) AS asked) request
 		 WHERE s.id = $1 AND s.status = 'open' AND s.archived_at IS NULL
 		   AND (s.visibility = 'workspace' OR (request.asked AND s.visibility = 'owner'))
 		   FOR SHARE OF s`
@@ -89,7 +89,7 @@ func citedSourceHolds(ctx context.Context, tx pgx.Tx, activity ids.UUID, request
 		return false, fmt.Errorf("compose: holding the evidence's links: %w", err)
 	}
 	var readable bool
-	err := tx.QueryRow(ctx, `SELECT `+workspaceEvidence("a")+` OR ($2 AND `+requestSource("a")+`)
+	err := tx.QueryRow(ctx, `SELECT `+WorkspaceEvidence("a")+` OR ($2 AND `+RequestSource("a")+`)
 	  FROM activity a WHERE a.id = $1 FOR SHARE OF a`, activity, request).Scan(&readable)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
@@ -174,13 +174,13 @@ func readScoutRequest(ctx context.Context, tx pgx.Tx, evidence []deals.Suggestio
 		}
 		var request scoutRequest
 		err := tx.QueryRow(ctx, `
-			SELECT s.summary, cite->'fields'->>'`+decisionDateKey+`', cite->'fields'->>'`+budgetQuoteKey+`',
+			SELECT s.summary, cite->'fields'->>'`+DecisionDateKey+`', cite->'fields'->>'`+BudgetQuoteKey+`',
 			       s.visibility = 'workspace' AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements(s.evidence) source_cite
 			         WHERE source_cite->>'source_type' = 'activity' AND NOT EXISTS (SELECT 1 FROM activity ca
-			           WHERE ca.id = `+storekit.CitedActivityID("source_cite")+` AND `+shareableRequestSource("ca", private)+`)),
+			           WHERE ca.id = `+storekit.CitedActivityID("source_cite")+` AND `+ShareableRequestSource("ca", private)+`)),
 			       now()
 			  FROM signal s, jsonb_array_elements(s.evidence) cite
-			 WHERE s.id = $1 AND s.kind = 'new_opportunity' AND `+explicitRequestCite("cite")+`
+			 WHERE s.id = $1 AND s.kind = 'new_opportunity' AND `+ExplicitRequestCite("cite")+`
 			 LIMIT 1`, *item.SignalID).Scan(&request.summary, &request.decisionDate, &request.budgetQuote,
 			&request.shareable, &request.now)
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -195,12 +195,12 @@ func readScoutRequest(ctx context.Context, tx pgx.Tx, evidence []deals.Suggestio
 	return scoutRequest{}, nil
 }
 
-// scoutPrefill is what an opened deal carries. A document gives its stated
+// Prefill is what an opened deal carries. A document gives its stated
 // amount. A shareable request gives its summary as the description and its
 // decision day. With no document amount it also gives its budget. Each value
 // from a request is marked as model-written. withheld reports a request whose
 // mail someone protected.
-func scoutPrefill(withheld *bool) func(context.Context, pgx.Tx, []deals.SuggestionEvidence) (deals.DealPrefill, error) {
+func Prefill(withheld *bool, today TodayFunc) func(context.Context, pgx.Tx, []deals.SuggestionEvidence) (deals.DealPrefill, error) {
 	return func(ctx context.Context, tx pgx.Tx, evidence []deals.SuggestionEvidence) (deals.DealPrefill, error) {
 		*withheld = false
 		amount, currency, err := scoutStatedAmount(ctx, tx, evidence)
@@ -219,11 +219,11 @@ func scoutPrefill(withheld *bool) func(context.Context, pgx.Tx, []deals.Suggesti
 		fill.Description = &request.summary
 		fill.ModelWritten = append(fill.ModelWritten, storekit.FieldStamp{Field: dealDescriptionField})
 		if request.decisionDate != nil {
-			today, err := installationToday(ctx, tx, request.now)
+			day, err := today(ctx, tx, request.now)
 			if err != nil {
 				return fill, err
 			}
-			fill.CloseDate = requestCloseDate(*request.decisionDate, today)
+			fill.CloseDate = RequestCloseDate(*request.decisionDate, day)
 		}
 		if fill.AmountMinor != nil || request.budgetQuote == nil {
 			return fill, nil
@@ -251,6 +251,9 @@ func withRequestBudget(ctx context.Context, tx pgx.Tx, fill deals.DealPrefill, q
 	}
 	return fill, nil
 }
+
+// TodayFunc is the installation's calendar day at an instant.
+type TodayFunc func(ctx context.Context, tx pgx.Tx, now time.Time) (time.Time, error)
 
 // The deal columns an opening marks as model-written.
 const (

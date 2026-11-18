@@ -19,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/dealscout"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -48,6 +49,12 @@ func newScoutDealOpener(pool *pgxpool.Pool, log *slog.Logger) scoutDealOpener {
 		activities: activities.NewStore(InstallationDB(pool)),
 		log:        log,
 	}
+}
+
+// OpenScoutedDeals opens or reopens a deal for every suggestion it may in the
+// workspace bound in ctx. The deal scout job runs it after each pass.
+func OpenScoutedDeals(ctx context.Context, pool *pgxpool.Pool, log *slog.Logger) (int, error) {
+	return newScoutDealOpener(pool, log).OpenWorkspace(ctx)
 }
 
 // openableSuggestion is one suggestion, the owner of its company, and the
@@ -143,7 +150,7 @@ func (o scoutDealOpener) openOne(ctx context.Context, s openableSuggestion) (ids
 	withheld := false
 	return o.deals.OpenSuggestedDeal(ownerCtx, deals.OpenSuggestedDealInput{
 		SuggestionID: s.id, Owner: s.owner, Basis: basis,
-		EvidenceHolds: scoutEvidenceHolds, Prefill: scoutPrefill(&withheld),
+		EvidenceHolds: dealscout.EvidenceHolds, Prefill: dealscout.Prefill(&withheld, installationToday),
 		SwitchOn: func(ctx context.Context, tx pgx.Tx) (bool, error) {
 			mode, err := approvals.AutoApplyModeTx(ctx, tx, s.owner, deals.DealOpenKind)
 			return mode == approvals.ModeAuto, err

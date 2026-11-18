@@ -10,20 +10,11 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/dealscout"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
-)
-
-// The facts a new_opportunity cite carries under "fields". Deal Scout reads an
-// explicit request as enough to open a deal on its own.
-const (
-	requestKindKey      = "request_kind"
-	budgetQuoteKey      = "budget_quote"
-	decisionDateKey     = "decision_date"
-	requestKindExplicit = "explicit_request"
-	requestKindNeed     = "need"
 )
 
 // keptFromThread is what a reading may file. A thread with mail private by a
@@ -35,7 +26,7 @@ func keptFromThread(events []extractedEvent, shared bool) []extractedEvent {
 		return events
 	}
 	return slices.DeleteFunc(slices.Clone(events), func(event extractedEvent) bool {
-		return event.Kind != extractKindOpportunity || event.RequestKind != requestKindExplicit
+		return event.Kind != extractKindOpportunity || event.RequestKind != dealscout.RequestKindExplicit
 	})
 }
 
@@ -46,13 +37,13 @@ func requestFacts(event extractedEvent, thread settledThread, cited ids.UUID) ma
 	if event.Kind != extractKindOpportunity || event.RequestKind == "" {
 		return nil
 	}
-	facts := map[string]any{requestKindKey: event.RequestKind}
+	facts := map[string]any{dealscout.RequestKindKey: event.RequestKind}
 	if event.DecisionDate != "" && validProposedDueDate(event.DecisionDate) {
-		facts[decisionDateKey] = event.DecisionDate
+		facts[dealscout.DecisionDateKey] = event.DecisionDate
 	}
 	message, found := citedMessage(thread, cited)
 	if span, ok := evidenceSpan(textlang.CurrentMessage(message.Body), event.BudgetQuote); found && ok {
-		facts[budgetQuoteKey] = span
+		facts[dealscout.BudgetQuoteKey] = span
 	}
 	return facts
 }

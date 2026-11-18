@@ -1,13 +1,19 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package dealscout
 
 import (
+	"context"
+	"fmt"
+	"strconv"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/dealverdict"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // The confidence each kind of evidence carries on its own. A sent proposal is
@@ -21,13 +27,13 @@ const (
 	scoutConfidenceCeiling  = 0.95
 )
 
-// draftSuggestion turns one chosen company's cited evidence, newest first, into
+// Draft turns one chosen company's cited evidence, newest first, into
 // the draft deals records. The read decided which evidence counts. This names
 // the lead kind and weighs the kinds present. The amount is the newest
 // document's stated amount with its currency. Without one, the newest explicit
 // request gives the budget, read in base when it names no currency. That
 // request also gives the decision day.
-func draftSuggestion(company []scoutItem, base string, today time.Time) deals.SuggestionDraft {
+func Draft(company []Item, base string, today time.Time) deals.SuggestionDraft {
 	draft := deals.SuggestionDraft{CompanyID: company[0].company}
 	present := map[string]bool{}
 	for _, it := range company {
@@ -39,7 +45,7 @@ func draftSuggestion(company []scoutItem, base string, today time.Time) deals.Su
 	}
 	for _, it := range company {
 		if draft.CloseDate == nil && it.decisionDate != nil {
-			draft.CloseDate = requestCloseDate(*it.decisionDate, today)
+			draft.CloseDate = RequestCloseDate(*it.decisionDate, today)
 		}
 		if draft.AmountMinor == nil && it.budgetQuote != nil {
 			if minor, currency, _, ok := dealverdict.QuotedBudget(*it.budgetQuote, base); ok {
@@ -78,12 +84,76 @@ func scoutConfidence(weights []float64) float64 {
 	return min(best+float64(len(weights)-1)*scoutConfidenceCorrob, scoutConfidenceCeiling)
 }
 
-// requestCloseDate is a request's decision day as a deal close date. It is nil
+// RequestCloseDate is a request's decision day as a deal close date. It is nil
 // when the day is no date or before today, since an open deal takes no past date.
-func requestCloseDate(day string, today time.Time) *time.Time {
+func RequestCloseDate(day string, today time.Time) *time.Time {
 	at, err := time.Parse(time.DateOnly, day)
 	if err != nil || at.Before(today) {
 		return nil
 	}
 	return &at
+}
+
+// Item is one cited piece of evidence about one chosen company.
+type Item struct {
+	company     ids.UUID
+	evidence    deals.SuggestionEvidence
+	amountMinor *int64
+	currency    *string
+	// decisionDate and budgetQuote are an explicit request's facts.
+	decisionDate, budgetQuote *string
+}
+
+// ReadEvidence answers the evidence each suggestion will cite, for at most
+// companyCap companies. One statement decides it all in the database. It picks
+// the evidence that counts, the companies it qualifies and those the cap keeps.
+// For the kept companies' documents it also reads what their readings stated.
+func ReadEvidence(ctx context.Context, tx pgx.Tx, since, now time.Time, companyCap int) ([]Item, error) {
+	query, args := EvidenceSQL(since, now, companyCap)
+	rows, err := tx.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("deal scout: reading the evidence: %w", err)
+	}
+	items, err := pgx.CollectRows(rows, scanItem)
+	if err != nil {
+		return nil, fmt.Errorf("deal scout: scanning the evidence: %w", err)
+	}
+	return items, nil
+}
+
+func scanItem(row pgx.CollectableRow) (Item, error) {
+	var it Item
+	var ref ids.UUID
+	var amount, currency *string
+	if err := row.Scan(&it.company, &it.evidence.Kind, &ref, &it.evidence.OccurredAt, &amount, &currency,
+		&it.decisionDate, &it.budgetQuote); err != nil {
+		return Item{}, err
+	}
+	switch it.evidence.Kind {
+	case deals.EvidenceMeeting:
+		it.evidence.ActivityID = &ref
+	case deals.EvidenceSignal:
+		it.evidence.SignalID = &ref
+	default:
+		it.evidence.AttachmentID = &ref
+	}
+	if amount != nil && currency != nil {
+		if minor, err := strconv.ParseInt(*amount, 10, 64); err == nil {
+			it.amountMinor, it.currency = &minor, currency
+		}
+	}
+	return it, nil
+}
+
+// ByCompany groups the rows, which arrive ordered by company.
+func ByCompany(items []Item) [][]Item {
+	var out [][]Item
+	for _, it := range items {
+		if n := len(out); n > 0 && out[n-1][0].company == it.company {
+			out[n-1] = append(out[n-1], it)
+			continue
+		}
+		out = append(out, []Item{it})
+	}
+	return out
 }

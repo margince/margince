@@ -517,25 +517,3 @@ func TestEveryEventKeyInTheExtractSchemaIsRequired(t *testing.T) {
 		}
 	}
 }
-
-// Routine-private mail gives up only an explicit request: a promise, a need or
-// an ended contract read there stays with that mail.
-func TestOnlyAnExplicitRequestIsKeptFromRoutinePrivateMail(t *testing.T) {
-	t.Parallel()
-	events := []extractedEvent{
-		{Kind: extractKindOpportunity, RequestKind: requestKindExplicit},
-		{Kind: extractKindOpportunity, RequestKind: requestKindNeed},
-		{Kind: extractKindCommitment},
-		{Kind: signalKindContractEnded},
-	}
-	if kept := keptFromThread(events, true); len(kept) != len(events) {
-		t.Fatalf("a shared thread kept %d of %d events", len(kept), len(events))
-	}
-	kept := keptFromThread(events, false)
-	if len(kept) != 1 || kept[0].RequestKind != requestKindExplicit {
-		t.Fatalf("routine-private mail kept %+v, want only the explicit request", kept)
-	}
-	if len(events) != 4 || events[1].RequestKind != requestKindNeed {
-		t.Fatal("filtering a reading changed the reading it was given")
-	}
-}

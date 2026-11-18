@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/dealscout"
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -61,7 +62,7 @@ func assuranceSignalSubjectsQuery(now time.Time, arg func(any) int) string {
  AND coalesce(`+deals.SuggestionFloorExpr("c.id")+`, '-infinity'::timestamptz) < source.occurred_at -- occurred_at raw: past the suggestion floor, a window's lower edge
  AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements(s.evidence) cite
   WHERE cite->>'source_type' = 'activity' AND NOT EXISTS (SELECT 1 FROM activity ca
-   WHERE ca.id = `+storekit.CitedActivityID("cite")+` AND `+workspaceEvidence("ca")+`))
- AND `+unlinkedCommercialMatter("s")+`
- ORDER BY s.id`, arg(now.Add(-dealScoutWindow)), arg(now), scoutBuyerSignal("s"))
+   WHERE ca.id = `+storekit.CitedActivityID("cite")+` AND `+dealscout.WorkspaceEvidence("ca")+`))
+ AND `+dealscout.UnlinkedCommercialMatter("s")+`
+ ORDER BY s.id`, arg(now.Add(-dealScoutWindow)), arg(now), dealscout.BuyerSignal("s"))
 }

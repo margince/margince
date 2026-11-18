@@ -19,15 +19,18 @@ package compose
 
 import (
 	"context"
+	"errors"
+	"log/slog"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
-	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // traceReadClock is fixed so "settled" is a property of the fixture rather than
@@ -196,58 +199,37 @@ func TestATraceReadOfAThreadWithNoConversationIsNotKnown(t *testing.T) {
 	}
 }
 
-// Mail private only by a mailbox setting is read while the switch lets a model
-// read such mail. The rule reports the thread as not shared, so only an
-// explicit request is kept from it. Mail someone protected is never read.
-func TestRoutinePrivateMailIsReadOnlyWhileTheSwitchIsOn(t *testing.T) {
+// A promise read from a thread with routine-private mail stays with that mail:
+// the dispatch refuses it and the legacy conversion reads nothing.
+func TestAPromiseInRoutinePrivateMailIsNeverFiled(t *testing.T) {
 	e := integration.Setup(t)
-	owner := integration.OwnerConn(t)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	at := traceReadClock.Add(-48 * time.Hour)
-	limited := func(key, reason string) {
-		t.Helper()
-		seedConversation(t, e, company, key, at, "workspace")
-		message := seedConversation(t, e, company, key, at.Add(time.Minute), "participants")
-		if _, err := owner.Exec(context.Background(), `UPDATE activity SET audience_reason = $2 WHERE id = $1`,
-			message, reason); err != nil {
+	cited := map[string]ids.UUID{}
+	for _, key := range []string{"thread-shared", "thread-routine"} {
+		cited[key] = seedConversation(t, e, company, key, at, "workspace")
+	}
+	limited := seedConversation(t, e, company, "thread-routine", at.Add(time.Minute), "participants")
+	e.WsExec(t, `UPDATE activity SET audience_reason = 'posture' WHERE id = $1`, limited)
+
+	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), signalScanActor)
+	x := NewSignalExtractor(e.Pool, nil, func() time.Time { return traceReadClock }, slog.Default())
+	for key, source := range cited {
+		thread := settledThread{Key: key, Messages: []threadMessage{{ID: source, Body: "Happy to continue."}}}
+		event := extractedEvent{Kind: extractKindCommitment, MessageID: source.String(), Quote: "Happy to continue."}
+		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+			legacy, err := legacyThread(ctx, tx, legacyCommitment{cited: source})
+			if err != nil {
+				return err
+			}
+			_, _, refused := x.emailCommitment(ctx, tx, thread, event, source, traceReadClock)
+			if private := key == "thread-routine"; (len(legacy.Messages) == 0) != private ||
+				errors.Is(refused, apperrors.ErrNotFound) != private {
+				t.Errorf("%s: legacy read %d messages, dispatch err %v", key, len(legacy.Messages), refused)
+			}
+			return nil
+		}); err != nil {
 			t.Fatal(err)
 		}
-	}
-	limited("thread-routine", activities.ReasonPosture)
-	limited("thread-protected", activities.ReasonManual)
-
-	offered := offeredKeys(t, e)
-	if !offered["thread-routine"] || offered["thread-protected"] {
-		t.Fatalf("offered %v, want the routine-private thread and not the protected one", offered)
-	}
-	as := e.Admin()
-	if err := database.WithWorkspaceTx(as, e.Pool, func(tx pgx.Tx) error {
-		reader, err := threadReaderNow(as, tx, "thread-routine")
-		if err == nil && (!reader.offered || reader.shared) {
-			t.Errorf("the rule reads the routine-private thread as offered=%v shared=%v, want offered and not shared",
-				reader.offered, reader.shared)
-		}
-		return err
-	}); err != nil {
-		t.Fatal(err)
-	}
-
-	if _, err := owner.Exec(context.Background(), `INSERT INTO setting (key, value) VALUES ($1, 'false'::jsonb)
-		ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`, activities.PrivateMailRequests.Key()); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { privateMailSwitchBack(t) })
-	if offeredKeys(t, e)["thread-routine"] {
-		t.Error("with the switch off the routine-private thread is still read")
-	}
-}
-
-// privateMailSwitchBack removes the stored private-mail switch, which is
-// installation-wide, so the next test reads the default again.
-func privateMailSwitchBack(t *testing.T) {
-	t.Helper()
-	if _, err := integration.OwnerConn(t).Exec(context.Background(), `DELETE FROM setting WHERE key = $1`,
-		activities.PrivateMailRequests.Key()); err != nil {
-		t.Errorf("restoring the private-mail switch: %v", err)
 	}
 }
