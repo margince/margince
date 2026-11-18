@@ -174,8 +174,8 @@ yourself."
 
 ### What a buyer sees, and what they never see
 A buyer in a Deal Room sees the room's title and welcome, its documents and its
-threads. They see the steward's name ("Your contact: {steward}.") and **their
-own** participant record.
+threads. They see the steward's name under **Your contact**, and **their own**
+participant record.
 
 A buyer never sees the deal, the company, the amount, any other participant, or
 anything else in your CRM.
