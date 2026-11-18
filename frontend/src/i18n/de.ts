@@ -17548,6 +17548,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "ob.conv.connect.useImap": "Anderen E-Mail-Anbieter nutzen",
   "ob.conv.connect.skipCaptionWaiting":
     "Deine Einrichtungsliste erinnert dich ans Verbinden, sobald {vendor} bereit ist.",
+  "ob.conv.connect.skipCaptionNotConfigured":
+    "In dieser Installation lässt sich kein Postfach verbinden, also geht es ohne Postfach weiter.",
   "ob.conv.connect.connectedTitle": "{vendor} ist verbunden",
   "ob.conv.connect.calendarNotConnected":
     "Nicht verbunden. Verbinde ihn jetzt oder später über deine Einrichtungsliste.",

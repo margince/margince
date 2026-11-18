@@ -17079,6 +17079,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "ob.conv.connect.useImap": "Dùng nhà cung cấp thư khác",
   "ob.conv.connect.skipCaptionWaiting":
     "Danh sách thiết lập sẽ nhắc bạn kết nối khi {vendor} sẵn sàng.",
+  "ob.conv.connect.skipCaptionNotConfigured":
+    "Bản cài đặt này không kết nối được hộp thư, nên hãy tiếp tục mà không cần hộp thư.",
   "ob.conv.connect.connectedTitle": "{vendor} đã được kết nối",
   "ob.conv.connect.calendarNotConnected":
     "Chưa kết nối. Kết nối ngay, hoặc sau đó từ danh sách thiết lập.",

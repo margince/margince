@@ -290,9 +290,18 @@ export const ConnectedCalendarMissing: Story = {
   ),
 };
 
-/** The roster read failed: said in red, with the one recovery. */
+/** The roster read failed: said in red, with the one recovery, and the skip
+ *  still open. */
 export const RosterFailed: Story = {
   render: scene(null, ALL_READY, READER, () =>
     jsonResponse({ code: "internal" }, 500),
+  ),
+};
+
+/** Mail capture is off on this installation: one calm sentence in place of the
+ *  accounts, no retry, and the skip open. */
+export const CaptureNotConfigured: Story = {
+  render: scene(null, ALL_READY, READER, () =>
+    jsonResponse({ code: "not_implemented" }, 501),
   ),
 };

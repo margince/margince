@@ -164,6 +164,56 @@ it("withholds every account when the roster fetch fails", async () => {
   ).toBeDisabled();
 });
 
+// The onboarding gate sends every other address back here, so a step that
+// holds its skip on a failed read has no exit at all.
+it("still lets the reader skip once the roster fetch has failed", async () => {
+  stubWithSession(
+    {
+      "GET /connectors": () => jsonResponse({ code: "internal" }, 500),
+    },
+    {},
+  );
+  const { persist } = renderConnectAct();
+
+  expect(
+    await screen.findByText(en["ob.conv.connect.rosterFailedTitle"]),
+  ).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Retry" })).toBeTruthy();
+  const skip = screen.getByRole("button", { name: "Skip for now" });
+  expect(skip).not.toBeDisabled();
+  await userEvent.click(skip);
+  await waitFor(() =>
+    expect(persist).toHaveBeenCalledWith(
+      expect.objectContaining({ step: "complete", connectSkipped: true }),
+    ),
+  );
+});
+
+// Mail capture switched off is an answer, not a failure: nothing to retry and
+// nothing to pick, and the step can still be left.
+it("says mail capture is off on an installation that never wired it", async () => {
+  stubWithSession(
+    {
+      "GET /connectors": () => jsonResponse({ code: "not_implemented" }, 501),
+    },
+    {},
+  );
+  renderConnectAct();
+
+  expect(await screen.findByText(en["connectors.notConfigured"])).toBeTruthy();
+  expect(
+    screen.queryByText(en["ob.conv.connect.rosterFailedTitle"]),
+  ).toBeNull();
+  expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
+  expect(screen.queryByRole("radio", { name: /Google/ })).toBeNull();
+  expect(
+    screen.getByText(en["ob.conv.connect.skipCaptionNotConfigured"]),
+  ).toBeTruthy();
+  expect(
+    screen.getByRole("button", { name: "Skip for now" }),
+  ).not.toBeDisabled();
+});
+
 // The mark tells a real return apart from a stale or bookmarked outcome URL
 // (see `returnedVendor` in connect-act.tsx). So it has to be written before
 // the redirect leaves, not after.

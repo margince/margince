@@ -17392,6 +17392,8 @@ export const en = {
   "ob.conv.connect.useImap": "Use another mail provider",
   "ob.conv.connect.skipCaptionWaiting":
     "Your setup checklist reminds you to connect once {vendor} is ready.",
+  "ob.conv.connect.skipCaptionNotConfigured":
+    "No mailbox can be connected on this installation, so go on without one.",
   "ob.conv.connect.connectedTitle": "{vendor} is connected",
   "ob.conv.connect.calendarNotConnected":
     "Not connected. Connect it now, or later from your setup checklist.",
