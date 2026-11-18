@@ -117,7 +117,6 @@ export function InstallHintNotice({
             </Button>
             {install.kind === "available" && (
               <InstallButton
-                variant="primary"
                 prompt={install.prompt}
                 onAnswered={(outcome) => {
                   if (outcome === "dismissed") dismiss();

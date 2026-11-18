@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useState } from "react";
-import { Button, type ButtonVariant } from "../design-system/atoms";
+import { Button } from "../design-system/atoms";
 import { useT } from "../i18n";
 import { logUnexpectedError } from "../lib/problem";
 import type { InstallOutcome } from "../lib/pwa";
@@ -11,11 +11,9 @@ import type { InstallOutcome } from "../lib/pwa";
 export function InstallButton({
   prompt,
   onAnswered,
-  variant,
 }: Readonly<{
   prompt: () => Promise<InstallOutcome>;
   onAnswered?: (outcome: InstallOutcome) => void;
-  variant?: Extract<ButtonVariant, "primary" | "ghost">;
 }>) {
   const t = useT();
   const [asking, setAsking] = useState(false);
@@ -34,7 +32,7 @@ export function InstallButton({
     );
   };
   return (
-    <Button variant={variant} pending={asking} onClick={ask}>
+    <Button pending={asking} onClick={ask}>
       {t("settings.installAppAction")}
     </Button>
   );
