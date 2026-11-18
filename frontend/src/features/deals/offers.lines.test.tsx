@@ -5,6 +5,7 @@ import {
   render as rtlRender,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -172,5 +173,76 @@ describe("a line row", () => {
     expect(screen.getByRole("button", { name: "Remove line 2" })).toBe(
       screen.getByTestId("remove-line-li-2"),
     );
+  });
+});
+
+describe("a refused line edit", () => {
+  const reason = "quantity must be greater than 0";
+  const refusal = {
+    status: 422,
+    body: {
+      title: "Unprocessable Entity",
+      detail: reason,
+      code: "validation_error",
+    },
+  };
+
+  it("puts the saved value back and keeps the reason in that row until the line saves", async () => {
+    let refuseLine1 = true;
+    const saved = { ...line1, quantity: 2, version: 2 };
+    const renamed = { ...line2, description: "Workshop day", version: 2 };
+    serve(draft([line1, line2]), (call) => {
+      if (call.url.endsWith("/li-2")) {
+        return { status: 200, body: draft([line1, renamed]) };
+      }
+      return refuseLine1
+        ? refusal
+        : { status: 200, body: draft([saved, renamed]) };
+    });
+    const user = userEvent.setup();
+    renderOffer();
+    await screen.findByText("ANG-2026-0007");
+    const quantity = () => screen.getByTestId("line-quantity-li-1");
+    const row1 = () => screen.getByTestId("line-row-li-1");
+
+    await user.clear(quantity());
+    await user.type(quantity(), "0");
+    await user.tab();
+    expect(await within(row1()).findByText(reason)).toBeTruthy();
+    expect(quantity()).toHaveProperty("value", "1");
+
+    const description = screen.getByTestId("line-description-li-2");
+    await user.type(description, " day");
+    await user.tab();
+    await waitFor(() =>
+      expect(screen.getByTestId("line-description-li-2")).toHaveProperty(
+        "value",
+        "Workshop day",
+      ),
+    );
+    expect(screen.getAllByText(reason)).toHaveLength(1);
+    expect(within(row1()).getByText(reason)).toBeTruthy();
+
+    refuseLine1 = false;
+    await user.clear(quantity());
+    await user.type(quantity(), "2");
+    await user.tab();
+    await waitFor(() => expect(screen.queryByText(reason)).toBeNull());
+    expect(quantity()).toHaveProperty("value", "2");
+  });
+
+  it("shows a refused removal in its row and leaves the line in place", async () => {
+    serve(draft([line1, line2]), () => refusal);
+    const user = userEvent.setup();
+    renderOffer();
+    await screen.findByText("ANG-2026-0007");
+
+    await user.click(screen.getByRole("button", { name: "Remove line 2" }));
+    expect(
+      await within(screen.getByTestId("line-row-li-2")).findByText(reason),
+    ).toBeTruthy();
+    expect(
+      within(screen.getByTestId("line-row-li-1")).queryByText(reason),
+    ).toBeNull();
   });
 });
