@@ -22074,6 +22074,7 @@ export const en = {
   "contact.handles.more_one": "+{count} more",
   "contact.handles.more_other": "+{count} more",
   "contact.handles.fewer": "Show fewer",
+  "record.reach.label": "Email and phone",
   "record.details.hideEmpty": "Hide empty fields",
   "record.verb.email": "Email",
   "record.verb.call": "Call",
