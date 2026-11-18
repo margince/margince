@@ -21,7 +21,7 @@ import { GroupedTimelineList } from "../../../design-system/timeline";
 import { TimelineFilterBar } from "../../../design-system/timelinefilterbar";
 import { groupChronology } from "../../../design-system/timelinegroups";
 import { useLocale, useT } from "../../../i18n";
-import { dealStageMoveKeys } from "../../../lib/activitykeys";
+import { invalidateRecord } from "../../../lib/recordwritekeys";
 import { useViewerZone } from "../../../lib/viewerzone";
 import { RecordHistoryTab } from "../../records/history";
 import {
@@ -117,13 +117,12 @@ export function DealHistoryTab({
               currency={deal.currency}
               restore={{
                 version: deal.version,
-                onRestored: () => {
-                  // A restored change may be a stage move, so the ladder's
-                  // stage reads are refetched with the record's.
-                  for (const queryKey of dealStageMoveKeys(deal.id)) {
-                    queryClient.invalidateQueries({ queryKey });
-                  }
-                },
+                // A restored change may be a stage move, so the ladder's
+                // stage reads are refetched with the record's.
+                onRestored: () =>
+                  invalidateRecord(queryClient, "deal", deal.id, {
+                    stageMove: true,
+                  }),
               }}
             />
           ) : (
