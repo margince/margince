@@ -267,6 +267,11 @@ export function useComposeSend({
     links,
     context: claimedContext,
     evidence,
+    recipientCountries: countriesOnMessage(fields.countries.stated, [
+      ...fields.to,
+      ...fields.cc,
+      ...fields.bcc,
+    ]),
     draft: {
       subject: settledSubject,
       body: settledBody,
@@ -276,7 +281,10 @@ export function useComposeSend({
     enabled: open && !isChannelReply && !inline,
   });
   // Send waits for the sender to confirm a recipient with no lawful basis on record.
-  const lawfulBasis = useLawfulBasisGate(answer.preview);
+  const lawfulBasis = useLawfulBasisGate(
+    answer.preview,
+    fields.countries.stated,
+  );
   // A consent refusal joins the engine's answer as one status, and only while
   // it is about this message. A stale one would sit red beside a newer check.
   const request = sendRequest(fields, {

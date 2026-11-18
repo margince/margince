@@ -55,6 +55,8 @@ export function useSendPermission(args: {
    * "unproven" about a message the send allows.
    */
   evidence?: components["schemas"]["CommunicationEvidence"];
+  /** The countries the sender stated, which the send's rules follow too. */
+  recipientCountries?: readonly components["schemas"]["RecipientCountry"][];
   /**
    * The message written so far, read for an offer as the send reads it and
    * checked against the advertising content rules of the recipients' packs.
@@ -99,6 +101,7 @@ export function useSendPermission(args: {
     args.marketingPurpose ?? "",
     args.consentPurpose ?? "",
     args.evidence ?? {},
+    args.recipientCountries ?? [],
     args.draft ?? {},
   ];
   const query = useQuery({
@@ -115,6 +118,9 @@ export function useSendPermission(args: {
         marketing_purpose: args.marketingPurpose,
         consent_purpose: args.consentPurpose,
         evidence: args.evidence,
+        recipient_countries: args.recipientCountries?.length
+          ? [...args.recipientCountries]
+          : undefined,
         subject: args.draft?.subject,
         body: args.draft?.body,
         html_body: args.draft?.htmlBody || undefined,

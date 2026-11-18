@@ -16126,6 +16126,24 @@ func (e LatestInboundKind) Valid() bool {
 	}
 }
 
+// Defines values for LawfulBasisConfirmationSubjectEntityType.
+const (
+	LawfulBasisConfirmationSubjectEntityTypeContact LawfulBasisConfirmationSubjectEntityType = "contact"
+	LawfulBasisConfirmationSubjectEntityTypeLead    LawfulBasisConfirmationSubjectEntityType = "lead"
+)
+
+// Valid indicates whether the value is a known member of the LawfulBasisConfirmationSubjectEntityType enum.
+func (e LawfulBasisConfirmationSubjectEntityType) Valid() bool {
+	switch e {
+	case LawfulBasisConfirmationSubjectEntityTypeContact:
+		return true
+	case LawfulBasisConfirmationSubjectEntityTypeLead:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for LeadIndustry.
 const (
 	LeadIndustryAerospaceDefense          LeadIndustry = "aerospace_defense"
@@ -54549,8 +54567,24 @@ type LawfulBasisConfirmation struct {
 type LawfulBasisConfirmationRequest struct {
 	// Subjects The records the preview marked `lawful_basis_missing`, as its `evidence_subject` names
 	// them. A pinned lead is named as the lead, never as a contact sharing its address.
-	Subjects []CommunicationEvidenceSubject `json:"subjects"`
+	Subjects []LawfulBasisConfirmationSubject `json:"subjects"`
 }
+
+// LawfulBasisConfirmationSubject One record to confirm, with the country the sender stated for it on the message, when
+// they stated one. The confirmation is recorded under the country the preview applied, and
+// staging spends it only for a send judged under that same country.
+type LawfulBasisConfirmationSubject struct {
+	EntityId   openapi_types.UUID                       `json:"entity_id"`
+	EntityType LawfulBasisConfirmationSubjectEntityType `json:"entity_type"`
+
+	// StatedCountry The country the sender stated for this recipient in `recipient_countries`. Omit it when
+	// they stated none; the record's country then applies. Only the user writing the message
+	// may send it.
+	StatedCountry *StatedCountry `json:"stated_country,omitempty"`
+}
+
+// LawfulBasisConfirmationSubjectEntityType defines model for LawfulBasisConfirmationSubject.EntityType.
+type LawfulBasisConfirmationSubjectEntityType string
 
 // Lead A thin, segregated prospect. Mirrors the `lead` table.
 type Lead struct {
@@ -67327,6 +67361,12 @@ type StartCompanySiteReadRequest struct {
 type StatedAmount struct {
 	AmountMinor int64  `json:"amount_minor"`
 	Currency    string `json:"currency"`
+}
+
+// StatedCountry defines model for StatedCountry.
+type StatedCountry struct {
+	// Country An ISO 3166-1 alpha-2 code, or null for a country the sender cleared.
+	Country *string `json:"country"`
 }
 
 // SubscriptionConfirmationPage The answer for a consent link: one named subscription and the contact's current answer to it.

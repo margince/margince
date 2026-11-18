@@ -61961,7 +61961,38 @@ components:
           description: |
             The records the preview marked `lawful_basis_missing`, as its `evidence_subject` names
             them. A pinned lead is named as the lead, never as a contact sharing its address.
-          items: { $ref: '#/components/schemas/CommunicationEvidenceSubject' }
+          items: { $ref: '#/components/schemas/LawfulBasisConfirmationSubject' }
+
+    LawfulBasisConfirmationSubject:
+      type: object
+      additionalProperties: false
+      description: |
+        One record to confirm, with the country the sender stated for it on the message, when
+        they stated one. The confirmation is recorded under the country the preview applied, and
+        staging spends it only for a send judged under that same country.
+      required: [entity_type, entity_id]
+      properties:
+        entity_type:
+          type: string
+          enum: [contact, lead]
+          x-extensible-enum: true
+        entity_id: { type: string, format: uuid }
+        stated_country:
+          allOf: [{ $ref: '#/components/schemas/StatedCountry' }]
+          description: |
+            The country the sender stated for this recipient in `recipient_countries`. Omit it when
+            they stated none; the record's country then applies. Only the user writing the message
+            may send it.
+
+    StatedCountry:
+      type: object
+      additionalProperties: false
+      required: [country]
+      properties:
+        country:
+          type: [string, 'null']
+          pattern: '^[A-Za-z]{2}$'
+          description: An ISO 3166-1 alpha-2 code, or null for a country the sender cleared.
 
     LawfulBasisConfirmation:
       type: object

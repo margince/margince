@@ -6972,6 +6972,7 @@ public.lawful_basis_confirmation acl=margince_owner=arwdDxt/margince_owner,margi
 public.lawful_basis_confirmation.confirmed_at timestamp with time zone NOT NULL gen=- def=now()
 public.lawful_basis_confirmation.confirmed_by uuid NOT NULL gen=- def=-
 public.lawful_basis_confirmation.contact_id uuid gen=- def=-
+public.lawful_basis_confirmation.country text gen=- def=-
 public.lawful_basis_confirmation.delivery_id uuid gen=- def=-
 public.lawful_basis_confirmation.expires_at timestamp with time zone NOT NULL gen=- def=-
 public.lawful_basis_confirmation.id uuid NOT NULL gen=- def=uuidv7()
@@ -6984,6 +6985,8 @@ public.lawful_basis_confirmation.lawful_basis_confirmation_pkey PRIMARY KEY (id)
 public.lawful_basis_confirmation.lawful_basis_confirmation_window CHECK ((expires_at > confirmed_at))
 public.lawful_basis_confirmation.lead_id uuid gen=- def=-
 public.lawful_basis_confirmation.spent_at timestamp with time zone gen=- def=-
+public.lawful_basis_confirmation.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.lawful_basis_confirmation FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"country": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"country":20000}')
+public.lawful_basis_confirmation.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.lawful_basis_confirmation FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"country": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"country":20000}')
 public.lawful_basis_confirmation_confirmed_by_cascade_idx CREATE INDEX lawful_basis_confirmation_confirmed_by_cascade_idx ON public.lawful_basis_confirmation USING btree (confirmed_by)
 public.lawful_basis_confirmation_contact_id_cascade_idx CREATE INDEX lawful_basis_confirmation_contact_id_cascade_idx ON public.lawful_basis_confirmation USING btree (contact_id)
 public.lawful_basis_confirmation_delivery CREATE INDEX lawful_basis_confirmation_delivery ON public.lawful_basis_confirmation USING btree (delivery_id) WHERE (delivery_id IS NOT NULL)

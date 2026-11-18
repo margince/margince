@@ -66,6 +66,11 @@ func statedCountry(overrides []commsauthz.CountryOverride, r connector.Recipient
 	if !ok {
 		return RecipientCountry{}, false
 	}
+	return statedCountryOf(stated)
+}
+
+// statedCountryOf reads one statement, whoever it is about.
+func statedCountryOf(stated commsauthz.CountryOverride) (RecipientCountry, bool) {
 	if stated.Cleared() {
 		return RecipientCountry{Source: CountryClearedBySender}, true
 	}
