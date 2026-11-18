@@ -12,7 +12,7 @@ export type MomentVerbKind =
  * `writesAnActivity` in backend/internal/compose/momentaction/withhold.go;
  * backend/gates/frontendwriteverbs_test.go fails when the two differ.
  */
-export const MOMENT_VERB_WRITES: Readonly<Record<MomentVerbKind, boolean>> = {
+export const MOMENT_VERB_WRITES = {
   log_activity: true,
   complete_task: true,
   draft_reply: true,
@@ -21,14 +21,22 @@ export const MOMENT_VERB_WRITES: Readonly<Record<MomentVerbKind, boolean>> = {
   open_meeting_brief: false,
   open_research: false,
   ask_colleague: false,
-};
+} as const satisfies Readonly<Record<MomentVerbKind, boolean>>;
 
-const knownVerbs = new Map<string, boolean>(Object.entries(MOMENT_VERB_WRITES));
+/**
+ * The verbs the server classifies as writing. A caller that always draws one
+ * verb names it by this type, so a reclassified verb fails to compile there.
+ */
+export type WritingMomentVerb = {
+  [K in MomentVerbKind]: (typeof MOMENT_VERB_WRITES)[K] extends true
+    ? K
+    : never;
+}[MomentVerbKind];
 
 /**
  * A kind this build does not know counts as a write, as in the server's own
  * refusal. So a new verb is not offered live before it is classified.
  */
-export function momentVerbWrites(kind: string): boolean {
-  return knownVerbs.get(kind) ?? true;
+export function momentVerbWrites(kind: MomentVerbKind): boolean {
+  return MOMENT_VERB_WRITES[kind] !== false;
 }

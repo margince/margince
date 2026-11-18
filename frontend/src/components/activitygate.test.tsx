@@ -7,39 +7,27 @@ import { cleanup, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { sessionOptions } from "../lib/session";
-import { MOMENT_VERB_WRITES, type MomentVerbKind } from "../lib/writeverbs";
 import { meFixture } from "../testing/mefixture";
-import { useVerbOffered } from "./activitygate";
+import { useWritingVerbOffered } from "./activitygate";
 
 afterEach(cleanup);
 
-function offeredTo(
-  allow: Parameters<typeof meFixture>[0],
-  kind: MomentVerbKind,
-): boolean {
+function offeredTo(allow: Parameters<typeof meFixture>[0]): boolean {
   const client = new QueryClient();
   client.setQueryData(sessionOptions.queryKey, meFixture(allow));
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={client}>{children}</QueryClientProvider>
   );
-  return renderHook(() => useVerbOffered(kind), { wrapper }).result.current;
+  return renderHook(() => useWritingVerbOffered("log_activity"), { wrapper })
+    .result.current;
 }
 
-describe("useVerbOffered", () => {
-  const kinds = Object.keys(MOMENT_VERB_WRITES) as MomentVerbKind[];
-
-  it("withholds exactly the verbs the server classifies as writing from a seat that may not create an activity", () => {
-    const withheld = kinds.filter(
-      (kind) => !offeredTo({ allow: { activity: ["read"] } }, kind),
-    );
-    // Both lists filter the same kinds in order, so they compare as they are.
-    expect(withheld).toEqual(kinds.filter((kind) => MOMENT_VERB_WRITES[kind]));
-    expect(withheld).toContain("log_activity");
-    expect(withheld).not.toContain("open_record");
+describe("useWritingVerbOffered", () => {
+  it("withholds a writing verb from a seat that may not create an activity", () => {
+    expect(offeredTo({ allow: { activity: ["read"] } })).toBe(false);
   });
 
-  it("offers every verb to a seat that may create an activity", () => {
-    const grant = { allow: { activity: ["read", "create"] as const } };
-    expect(kinds.every((kind) => offeredTo(grant, kind))).toBe(true);
+  it("offers a writing verb to a seat that may create an activity", () => {
+    expect(offeredTo({ allow: { activity: ["read", "create"] } })).toBe(true);
   });
 });

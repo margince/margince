@@ -10,13 +10,13 @@
 import { CheckSquare, FileText, Send } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
-import { useVerbOffered } from "../../components/activitygate";
+import { useActivityGate } from "../../components/activitygate";
 import { useClaimSettle } from "../../components/taskactions";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { stable } from "../../format/collate";
 import { useT } from "../../i18n";
-import type { MomentVerbKind } from "../../lib/writeverbs";
+import { type MomentVerbKind, momentVerbWrites } from "../../lib/writeverbs";
 import {
   basisAddsARecord,
   citationOpensRecord,
@@ -65,8 +65,8 @@ function MomentVerb({
   kind: MomentVerbKind;
   onAct: () => void;
 }>) {
-  const offered = useVerbOffered(kind);
-  if (!offered) {
+  const gate = useActivityGate();
+  if (momentVerbWrites(kind) && gate.refusalKey !== undefined) {
     return null;
   }
   return (

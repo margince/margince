@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { components } from "../../api/schema";
-import { useVerbOffered } from "../../components/activitygate";
+import { useWritingVerbOffered } from "../../components/activitygate";
 import { Button } from "../../design-system/atoms";
 import { useT } from "../../i18n";
 import { ComposeModal } from "./compose";
@@ -101,7 +101,7 @@ function ReplyAction({
     channelProvider,
   );
   // Every send writes an activity, which a seat without the grant is refused.
-  const writable = useVerbOffered("draft_reply", contact);
+  const writable = useWritingVerbOffered("draft_reply", contact);
   const answer = rowAnswer(kind);
   // A written-about row is withheld through `email_target`, which the server
   // leaves out for it, so only mail reaches the withheld branch below.

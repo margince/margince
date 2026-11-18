@@ -67,12 +67,12 @@ func frontendMomentVerbWrites(t *testing.T) map[string]bool {
 	if err != nil {
 		t.Fatalf("reading the frontend write-verb table: %v", err)
 	}
-	const opening = "MOMENT_VERB_WRITES: Readonly<Record<MomentVerbKind, boolean>> = {"
+	const opening = "MOMENT_VERB_WRITES = {"
 	start := indexAfter(string(source), opening)
 	if start < 0 {
 		t.Fatalf("%s no longer declares %q; this gate reads the table from that literal", frontendWriteVerbs, opening)
 	}
-	end := strings.Index(string(source)[start:], "};")
+	end := strings.Index(string(source)[start:], "} as const")
 	if end < 0 {
 		t.Fatalf("%s: the MOMENT_VERB_WRITES literal is unterminated", frontendWriteVerbs)
 	}

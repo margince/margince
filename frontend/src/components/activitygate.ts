@@ -5,7 +5,7 @@ import { useId } from "react";
 import type { MessageKey } from "../i18n/en";
 import { useCanWrite } from "../lib/capability";
 import { useMe } from "../lib/session";
-import { type MomentVerbKind, momentVerbWrites } from "../lib/writeverbs";
+import type { WritingMomentVerb } from "../lib/writeverbs";
 
 /**
  * Whether this reader may write activities (log, task, book), asked once for
@@ -46,15 +46,15 @@ export function useActivityGate(
 }
 
 /**
- * Whether a lone verb is offered: one that writes an activity and is refused
- * is not drawn. The verb names its kind, so the server's classification of it
- * (`momentVerbWrites`) decides whether the grant matters. `contact` is the
- * contact the write files under, where it names one.
+ * Whether a lone verb that writes an activity is offered; one refused is not
+ * drawn. `contact` is the contact the write files under, where it names one.
+ *
+ * `_verb` is read only by the compiler: it must be a kind the server counts as
+ * writing. The type import keeps the mirror table out of the Home chunk.
  */
-export function useVerbOffered(
-  kind: MomentVerbKind,
+export function useWritingVerbOffered(
+  _verb: WritingMomentVerb,
   contact?: { readonly attachable?: boolean },
 ): boolean {
-  const refused = useActivityGate(contact).refusalKey !== undefined;
-  return !(momentVerbWrites(kind) && refused);
+  return useActivityGate(contact).refusalKey === undefined;
 }
