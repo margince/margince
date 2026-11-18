@@ -10,10 +10,9 @@ import type { BoardDeal } from "./pipelineboard";
  * When the deal closes, on the card's figure line.
  *
  * Read as a calendar day in the record's zone, never as the instant midnight
- * UTC — that instant is the previous date for half the world. The tone marks
- * the DATE when it is one nobody confirmed or one already behind us, and says
- * so in words for a reader who does not get the colour; the deal strip states
- * the same fact the same two ways.
+ * UTC: that instant is the previous date for half the world. The tone marks a
+ * date nobody confirmed or one already behind us. Words say the same for a
+ * reader who does not get the colour, as the deal strip does.
  */
 function DealCloses({
   day,
