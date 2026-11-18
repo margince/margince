@@ -33525,6 +33525,40 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
+  /forecast/focus:
+    get:
+      tags: [Reports]
+      operationId: getForecastFocus
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      summary: The deals each team should work to meet its goal this quarter.
+      description: |
+        Read from the latest daily freeze of each team in the current quarter. The freeze ranks a
+        team's open priced deals when the team has a published goal for every month of the quarter.
+
+        Behind the goal, the list ranks deals by weighted amount, raised for each close-date risk.
+        On target, it lists only deals with a close-date risk, most risks first. A close-date risk
+        is a close date that passed, a provisional date, a date that kept moving, or a close within
+        a week with no next step. At most 20 deals, and the rank stays as frozen.
+
+        Each team needs the right to assert about its forecast, so a seat outside a team gets 404
+        for it. A deal the caller may not read is left out. A masked amount is left out of its row.
+        With individual performance off, a list shows only the reader's own deals and names no
+        owner. A team too small for that is refused when named and left out otherwise.
+      parameters:
+        - name: team
+          in: query
+          schema: { type: string, format: uuid }
+          description: One team. Omitted, every team whose list the caller may read.
+      x-mcp-tool: { verb: get_forecast_focus, router: read_reports, action: forecast_focus, tier: auto_execute, scope: read, served_by: route }
+      responses:
+        '200':
+          description: One list per team.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ForecastFocus' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /forecast/calls:
     get:
       tags: [Reports]
@@ -68013,6 +68047,65 @@ components:
         close_passed: { type: boolean }
         closes_in_days: { type: integer, minimum: 0, maximum: 7 }
       additionalProperties: false
+    ForecastFocus:
+      type: object
+      required: [period_start, period_end, teams, withheld]
+      properties:
+        period_start: { type: string, format: date }
+        period_end: { type: string, format: date }
+        withheld:
+          type: boolean
+          description: >-
+            True when a team's list is left out because the installation shows no individual
+            performance and the team is too small to show without naming a colleague.
+        teams:
+          type: array
+          description: One entry per team with a daily freeze this quarter, ordered by team id.
+          items: { $ref: '#/components/schemas/ForecastFocusTeam' }
+    ForecastFocusTeam:
+      type: object
+      required: [team_id, snapshot_id, taken_at, base_currency, status, deals]
+      properties:
+        team_id: { type: string, format: uuid }
+        snapshot_id: { type: string, format: uuid }
+        taken_at: { type: string, format: date-time }
+        base_currency: { type: string }
+        status:
+          type: string
+          enum: [behind, on_target, no_goal]
+          x-extensible-enum: true
+          description: >-
+            `behind`: the expected landing was under the team goal. `on_target`: it met the goal.
+            `no_goal`: a month of the quarter had no published goal for a member, so nothing was ranked.
+        deals:
+          type: array
+          items: { $ref: '#/components/schemas/ForecastFocusDeal' }
+    ForecastFocusDeal:
+      type: object
+      required: [rank, deal_id, deal_name, reason]
+      properties:
+        rank: { type: integer, minimum: 1, maximum: 20 }
+        deal_id: { type: string, format: uuid }
+        deal_name: { type: string }
+        owner_id: { type: string, format: uuid }
+        weighted_minor:
+          type: integer
+          format: int64
+          description: The deal's weighted amount in the base currency, as frozen. Absent when the amount is masked from the caller.
+        effective_close_date: { type: string, format: date }
+        reason: { $ref: '#/components/schemas/ForecastFocusReason' }
+    ForecastFocusReason:
+      type: object
+      description: The stored facts behind a rank. The score is never stored.
+      required: [close_provisional, signals]
+      properties:
+        closes_in_days:
+          type: integer
+          description: Days from the freeze to the expected close date, negative once that date passed.
+        close_provisional: { type: boolean }
+        signals:
+          type: array
+          items: { $ref: '#/components/schemas/ForecastRiskSignal' }
     ForecastStageChances:
       type: object
       required: [self_correcting, evidence_cutoff, prior_strength, stages]

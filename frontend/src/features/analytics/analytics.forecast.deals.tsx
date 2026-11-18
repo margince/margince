@@ -22,6 +22,7 @@ import {
   usePlural,
   useT,
 } from "../../i18n";
+import { signalSentence } from "../../lib/forecastsignals";
 import { usePipelines } from "../../lib/pipelines.queries";
 import type { AnalyticsScope } from "./analytics.context";
 import {
@@ -30,7 +31,6 @@ import {
   type ForecastReadings,
   useForecastContributions,
 } from "./forecast.queries";
-import { signalSentence } from "./forecast.signals";
 
 type T = ReturnType<typeof useT>;
 

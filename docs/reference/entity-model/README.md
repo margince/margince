@@ -31,7 +31,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 368 |
-| Columns | 4532 |
+| Columns | 4535 |
 | Foreign keys | 633 |
 | Owning areas | 40 |
 
@@ -332,8 +332,8 @@ erDiagram
 | [`finance_payment`](finance.md#finance_payment) | finance | 17 | 0 |
 | [`forecast_call`](forecasting.md#forecast_call) | forecasting | 14 | 2 |
 | [`forecast_capture_status`](forecasting.md#forecast_capture_status) | forecasting | 6 | 0 |
-| [`forecast_contribution`](forecasting.md#forecast_contribution) | forecasting | 38 | 0 |
-| [`forecast_snapshot`](forecasting.md#forecast_snapshot) | forecasting | 40 | 2 |
+| [`forecast_contribution`](forecasting.md#forecast_contribution) | forecasting | 40 | 0 |
+| [`forecast_snapshot`](forecasting.md#forecast_snapshot) | forecasting | 41 | 2 |
 | [`fx_rate`](deals.md#fx_rate) | deals | 6 | 0 |
 | [`geocode_cache`](contacts.md#geocode_cache) | contacts | 5 | 0 |
 | [`geocode_country_cache`](contacts.md#geocode_country_cache) | contacts | 4 | 0 |

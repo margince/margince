@@ -368,11 +368,13 @@ On **Home → Team** you get the team board and the coaching suggestions. The re
 
 **Team exceptions** shows money at risk, work nobody has taken, or the same thing failing again. Each row names **what it was judged against**, so you can see the bar instead of guessing it. You can take a row on from here.
 
+At **Team**, a switch above that panel opens **Close the gap**. It lists up to 20 open deals your team should work to meet its quarter goal. Behind the goal, the deals with the most weighted value come first, and a risk to the close date moves a deal up. On target, only deals whose close date is at risk are listed. A close date is at risk when it has passed, is not confirmed, keeps moving, or is within a week with no next step. **Why** lists those facts for each deal.
+
+Margince ranks a team once a day if two things hold. **Setup → Metric definitions** lists the team under **Record daily pipeline history**, for all pipelines. Every member has a goal for each month of the quarter.
+
 Your brief and digest stay personal. **Team**, **All**, and teammate views show shared work you may read, not a colleague's private messages or personal notices. A teammate's decision keeps its owner; it is not yours.
 
-**Team work needing attention** has a row per teammate: waiting on a reply, deals at risk, past due, promises due. Unassigned work gets its own row. **Changes by Margince on your team** counts, per teammate and kind, the deals Margince changed this week, their value and how many were undone.
-
-**Coaching suggestions** has at most one suggestion per teammate: the most urgent kind, not the one with the most work.
+**Team work needing attention** has a row per teammate: waiting on a reply, deals at risk, past due, promises due. Unassigned work gets its own row. **Changes by Margince on your team** counts, per teammate and kind, the deals Margince changed this week, their value and how many were undone. **Coaching suggestions** has at most one suggestion per teammate: the most urgent kind, not the one with the most work.
 
 **Hidden from the Worklist** lists the reasons work is held back, each with what it costs you:
 - **Too old for the Worklist**: no one decided this; the sender wrote months back and nobody answered
