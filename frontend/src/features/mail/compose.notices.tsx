@@ -5,7 +5,8 @@ import type { components } from "../../api/schema";
 import { Callout } from "../../design-system/callout";
 import { jurisdictionName } from "../../format/jurisdiction";
 import { languageName } from "../../format/languagename";
-import { useLocale, useT } from "../../i18n";
+import { type Locale, type Translator, useLocale, useT } from "../../i18n";
+import { CitedLaws } from "./citedlaw";
 
 // Two things the composer says about the draft in front of the reader, rather
 // than about the message they are writing.
@@ -90,30 +91,10 @@ export function DraftContentNotice({
 }: Readonly<{ findings?: readonly DraftContentFinding[] }>) {
   const t = useT();
   const { locale } = useLocale();
-  const lines = (findings ?? []).flatMap((finding) => {
-    if (finding.requirement === "claim_without_proof") {
-      return [
-        t("compose.contentFinding.claim", {
-          words: (finding.words ?? []).join(", "),
-        }),
-      ];
-    }
-    if (finding.requirement === "advertising_language_first") {
-      return [
-        t("compose.contentFinding.language", {
-          language: languageName(finding.language ?? "", locale),
-        }),
-      ];
-    }
-    if (finding.requirement === "foreign_advertiser") {
-      return [
-        t("compose.contentFinding.foreignAdvertiser", {
-          country: jurisdictionName(finding.country ?? "", locale),
-        }),
-      ];
-    }
-    return [finding.detail];
-  });
+  const lines = (findings ?? []).map((finding) => ({
+    text: findingText(finding, t, locale),
+    provision: finding.provision,
+  }));
   if (lines.length === 0) {
     return null;
   }
@@ -123,9 +104,34 @@ export function DraftContentNotice({
       kind="event"
       title={t("compose.contentFinding.title")}
     >
-      {lines.map((line) => (
-        <p key={line}>{line}</p>
+      {lines.map(({ text, provision }) => (
+        <p key={`${text}:${provision?.source_url ?? ""}`}>
+          {text} <CitedLaws provisions={[provision]} />
+        </p>
       ))}
     </Callout>
   );
+}
+
+function findingText(
+  finding: DraftContentFinding,
+  t: Translator,
+  locale: Locale,
+): string {
+  switch (finding.requirement) {
+    case "claim_without_proof":
+      return t("compose.contentFinding.claim", {
+        words: (finding.words ?? []).join(", "),
+      });
+    case "advertising_language_first":
+      return t("compose.contentFinding.language", {
+        language: languageName(finding.language ?? "", locale),
+      });
+    case "foreign_advertiser":
+      return t("compose.contentFinding.foreignAdvertiser", {
+        country: jurisdictionName(finding.country ?? "", locale),
+      });
+    default:
+      return finding.detail;
+  }
 }

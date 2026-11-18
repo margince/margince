@@ -30,6 +30,7 @@ import { sendPermissionReasonKey } from "../../format/sendpermissionreason";
 import { useLocale, useT } from "../../i18n";
 import { communicationContextLabel } from "../../lib/compose-context";
 import { throwProblem } from "../../lib/problem";
+import { CitedAttention, CitedLaws } from "./citedlaw";
 import { refusalCountryText } from "./refusalcountry";
 import { sendReviewOf } from "./sendreview";
 import { WordingCorrectionModal } from "./wordingcorrectionmodal";
@@ -257,7 +258,16 @@ export function DirectSendModal({
         <div
           key={`${refusal.address}-${refusal.subject_id ?? ""}-${refusal.category ?? ""}`}
         >
-          <p>{refusal.address}</p>
+          <p>
+            {refusal.provision ? (
+              <CitedAttention
+                address={refusal.address}
+                provision={refusal.provision}
+              />
+            ) : (
+              refusal.address
+            )}
+          </p>
           {refusalCountryText(refusal, t, locale) && (
             <p className="t-caption">
               {refusalCountryText(refusal, t, locale)}
@@ -349,7 +359,14 @@ function ConfirmationFooter({
         </div>
       ) : null}
       {refusal.footer_findings?.length ? (
-        <p>{footerFindingsText(refusal.footer_findings, t, locale)}</p>
+        <p>
+          {footerFindingsText(refusal.footer_findings, t, locale)}{" "}
+          <CitedLaws
+            provisions={refusal.footer_findings.map(
+              (finding) => finding.provision,
+            )}
+          />
+        </p>
       ) : null}
     </>
   );

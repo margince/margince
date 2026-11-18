@@ -24,6 +24,7 @@ import {
   useT,
 } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { CitedAttention, CitedLaws } from "./citedlaw";
 import { ComposeOutcome } from "./compose.parts";
 import type { InlineReview } from "./composeinlinereview";
 import type { Refusal } from "./composerefusal";
@@ -164,11 +165,18 @@ export function SendAnywayRows({
         live="status"
         id={warningId}
         title={
-          lead
-            ? t(findingKey(lead.reason_code), { address: lead.address })
-            : t("compose.sendAnyway.finding.none")
+          lead?.provision ? (
+            <CitedAttention address={lead.address} provision={lead.provision} />
+          ) : lead ? (
+            t(findingKey(lead.reason_code), { address: lead.address })
+          ) : (
+            t("compose.sendAnyway.finding.none")
+          )
         }
       >
+        {lead?.provision && (
+          <p>{t(findingKey(lead.reason_code), { address: lead.address })}</p>
+        )}
         <p>
           {t(
             state.canSendAnyway
@@ -235,12 +243,21 @@ function EveryFinding({
             {withCountry(refusal, t, locale)}
             {refusal.footer_findings?.length
               ? ` ${footerFindingsText(refusal.footer_findings, t, locale)}`
-              : null}
+              : null}{" "}
+            <CitedLaws provisions={provisionsOf(refusal)} />
           </li>
         ))}
       </ul>
     </Disclosure>
   );
+}
+
+// The law the refusal and each of its footer findings cite, where any does.
+function provisionsOf(refusal: RefusedRecipient) {
+  return [
+    refusal.provision,
+    ...(refusal.footer_findings ?? []).map((finding) => finding.provision),
+  ];
 }
 
 // The reason and the button. Keyed by the review's revision, so a refreshed
