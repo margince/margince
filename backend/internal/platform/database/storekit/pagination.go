@@ -111,13 +111,10 @@ type MalformedCursorError struct{}
 
 func (*MalformedCursorError) Error() string { return "store: malformed cursor" }
 
-// CursorSortMismatchError is the other cursor client fault: the token
-// decodes fine but was minted under a different sort (field or
-// direction) or for a different list, so its keyset tuple cannot continue
-// this list. Distinct
-// from MalformedCursorError because the contract's Cursor parameter
-// promises its own code (422 cursor_param_mismatch) for exactly this
-// case — the caller drops the cursor or restores the original sort.
+// CursorSortMismatchError is the other cursor client fault. The token
+// decodes fine but was minted under a different sort or for a different list.
+// The contract promises 422 cursor_param_mismatch for it, so it stays apart
+// from MalformedCursorError. The caller drops the cursor or restores the sort.
 type CursorSortMismatchError struct{}
 
 func (*CursorSortMismatchError) Error() string {

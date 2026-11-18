@@ -115,9 +115,9 @@ func deriveTable(doc *openapi3.T) (map[string]routeQuery, error) {
 const openQueryExtension = "x-open-query"
 
 // checksUndeclaredKeys says whether the server refuses a query key the
-// operation does not declare. An anonymous operation (`security: []`) is
-// reached by mail links, provider redirects and vendor webhooks that add keys
-// of their own, so it is left alone, as is one marked open.
+// operation does not declare. An anonymous operation (`security: []`) is left
+// alone. Mail links, provider redirects and vendor webhooks add keys of their
+// own. So is one marked open.
 func checksUndeclaredKeys(op *openapi3.Operation) bool {
 	if op.Security != nil && len(*op.Security) == 0 {
 		return false
