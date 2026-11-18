@@ -162,5 +162,5 @@
 1795025701_the_ruleset_digest_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795025702_the_ruleset_digest_checks_its_length.up.sql | * | replaces the two text guards on communication_decision; the guards act on later writes only, and it changes no existing row
 1795025702_the_ruleset_digest_checks_its_length.down.sql | * | restores the two earlier text guards on communication_decision; it changes no existing row
-1795014819_a_private_mail_moves_the_deal_clock.up.sql | * | the bodies are two read functions and the link insert trigger, re-created so a deal counts mail of every audience; it changes no existing row, and a data task refolds the stored deal clocks
-1795014819_a_private_mail_moves_the_deal_clock.down.sql | * | the down migration re-creates the read function and trigger as they were; it changes no existing row
+1795030235_a_private_mail_moves_the_deal_clock.up.sql | * | the bodies are two read functions and the link insert trigger, re-created so a deal counts mail of every audience; it changes no existing row, and a data task refolds the stored deal clocks
+1795030235_a_private_mail_moves_the_deal_clock.down.sql | * | the down migration re-creates the read function and trigger as they were; it changes no existing row
