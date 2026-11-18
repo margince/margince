@@ -6,24 +6,21 @@ import { Trash2 } from "lucide-react";
 import { useState } from "react";
 import { api } from "../../../api/client";
 import type { components } from "../../../api/schema";
+import type { ProductCandidate } from "../../../components/productsearch";
 import { Button, Field, TextInput } from "../../../design-system/atoms";
 import { Callout } from "../../../design-system/callout";
 import { ConfirmModal } from "../../../design-system/confirmmodal";
 import { IconAction } from "../../../design-system/iconaction";
 import { MoneyInput } from "../../../design-system/moneyinput";
-import {
-  RecordPicker,
-  type RecordPickerCandidate,
-} from "../../../design-system/recordpicker";
+import { RecordPicker } from "../../../design-system/recordpicker";
 import {
   typedNumberFault,
   typedNumberOrNaN,
   writtenDecimal,
 } from "../../../format/decimalinput";
-import { formatMoneyOrAbsent, formatNumber } from "../../../format/format";
-import { type Locale, useLocale, useT } from "../../../i18n";
+import { formatNumber } from "../../../format/format";
+import { type Locale, type Translator, useLocale, useT } from "../../../i18n";
 import type { MessageKey } from "../../../i18n/en";
-import { labelFor } from "../../../lib/labelfor";
 import { problemMessageOf, unwrap } from "../../../lib/problem";
 import { REPORTING_EVALUATION_KEY } from "../../../lib/reportingfigures";
 import {
@@ -32,6 +29,12 @@ import {
   lineBillingBody,
   OfferLineBillingFields,
 } from "../offerlinebilling";
+import {
+  discountFault,
+  type LineRates,
+  NewLineRates,
+  taxRateFault,
+} from "../offerlinerates";
 import { OfferCurrencyField } from "../offers.currencyfield";
 import { useProductCandidateSearch } from "../products";
 
@@ -56,7 +59,7 @@ export function useDealLines(dealId: string) {
 }
 
 /** One row the editor holds. `id` is the saved line, absent on a new one. */
-type DraftLine = {
+type DraftLine = LineRates & {
   key: string;
   id?: string;
   productId?: string;
@@ -64,8 +67,9 @@ type DraftLine = {
   quantity: string;
   priceMinor: number | null;
   billing: LineBilling;
-  // The product's name as the picker named it, for a line not saved yet.
+  // The product's name and price as the picker named them, for a line not saved yet.
   catalogName?: string;
+  catalogPriceMinor?: number;
 };
 
 function billingOfLine(line: DealLine): LineBilling {
@@ -90,7 +94,28 @@ function draftOf(line: DealLine, locale: Locale): DraftLine {
         : writtenDecimal(String(line.quantity), locale),
     priceMinor: line.unit_price_minor ?? null,
     billing: billingOfLine(line),
+    discount_pct: typedText(line.discount_pct, locale),
+    tax_rate: typedText(line.tax_rate, locale),
   };
+}
+
+function typedText(rate: number | null | undefined, locale: Locale): string {
+  return rate == null ? "" : writtenDecimal(String(rate), locale);
+}
+
+// Empty means the stored default, so an emptied rate is no change to send.
+function typedRate(text: string, locale: Locale): number | undefined {
+  return text.trim() === "" ? undefined : typedNumberOrNaN(text, locale);
+}
+
+const NO_RATES: LineRates = { discount_pct: "", tax_rate: "" };
+
+function lineFault(row: DraftLine, locale: Locale, t: Translator) {
+  return (
+    typedNumberFault(row.quantity, locale, t) ??
+    discountFault(row.discount_pct, locale, t) ??
+    taxRateFault(row.tax_rate, locale, t)
+  );
 }
 
 function quantityOf(text: string, locale: Locale): number | null {
@@ -113,6 +138,15 @@ function changedFields(saved: DealLine, draft: DraftLine, locale: Locale) {
   }
   if (draft.priceMinor !== (saved.unit_price_minor ?? null)) {
     body.unit_price_minor = draft.priceMinor;
+  }
+  // A typed tax rate drops the line's tax category, so only a changed one is sent.
+  const discount = typedRate(draft.discount_pct, locale);
+  if (discount !== undefined && discount !== saved.discount_pct) {
+    body.discount_pct = discount;
+  }
+  const taxRate = typedRate(draft.tax_rate, locale);
+  if (taxRate !== undefined && taxRate !== saved.tax_rate) {
+    body.tax_rate = taxRate;
   }
   const before = billingOfLine(saved);
   if (JSON.stringify(before) !== JSON.stringify(draft.billing)) {
@@ -150,7 +184,12 @@ function newLineBody(
     description: !row.productId || renamed ? row.description.trim() : undefined,
     quantity: quantityOf(row.quantity, locale),
     unit_price_minor:
-      row.priceMinor === null && row.productId ? undefined : row.priceMinor,
+      row.productId &&
+      (row.priceMinor === null || row.priceMinor === row.catalogPriceMinor)
+        ? undefined
+        : row.priceMinor,
+    discount_pct: typedRate(row.discount_pct, locale),
+    tax_rate: typedRate(row.tax_rate, locale),
     ...lineBillingBody(row.billing),
   };
 }
@@ -224,51 +263,6 @@ async function saveDraft(steps: readonly SaveStep[], start: DealCommercial) {
   return { state, saved: steps.length, total: steps.length } as SaveOutcome;
 }
 
-const MISSING_LABEL: Record<DealCommercial["missing"][number], MessageKey> = {
-  lines: "deal.lines.missing.lines",
-  quantity: "deal.lines.missing.quantity",
-  unit_price: "deal.lines.missing.unitPrice",
-  billing_model: "deal.lines.missing.billing",
-  interval_count: "deal.lines.missing.term",
-  tax_rate: "deal.lines.missing.taxRate",
-};
-
-/** What the deal's lines add up to, or why they do not yet. */
-export function DealLinesTotal({ state }: Readonly<{ state: DealCommercial }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  if (state.money_withheld) {
-    return <p className="t-caption">{t("deal.lines.withheld")}</p>;
-  }
-  if (state.complete) {
-    return (
-      <p className="t-body">
-        {t("deal.lines.committedNet", {
-          amount: formatMoneyOrAbsent(
-            state.committed_net_minor,
-            state.currency,
-            locale,
-          ),
-        })}
-      </p>
-    );
-  }
-  return (
-    <p className="t-caption">
-      {t("deal.lines.incomplete", {
-        known: formatMoneyOrAbsent(
-          state.known_committed_net_minor,
-          state.currency,
-          locale,
-        ),
-        missing: state.missing
-          .map((reason) => t(labelFor(MISSING_LABEL, reason)))
-          .join(", "),
-      })}
-    </p>
-  );
-}
-
 function DraftLineRow({
   row,
   currency,
@@ -324,6 +318,11 @@ function DraftLineRow({
           )}
         </Field>
       )}
+      <NewLineRates
+        value={row}
+        testIdPrefix="deal-line"
+        onChange={(update) => onChange(update(row))}
+      />
       <OfferLineBillingFields
         value={row.billing}
         onChange={(billing) => onChange({ ...row, billing })}
@@ -400,7 +399,13 @@ export function DealLinesEditor({
     setDraft((rows) => rows.map((row) => (row.key === key ? next : row)));
   const remove = (key: string) =>
     setDraft((rows) => rows.filter((row) => row.key !== key));
-  const addProduct = (candidate: RecordPickerCandidate) =>
+  const linesCurrency = state.currency ?? (currency || null);
+  // The rate card price is the line's start only in the lines' own currency.
+  const addProduct = (candidate: ProductCandidate) => {
+    const catalogPriceMinor =
+      candidate.currency === linesCurrency
+        ? candidate.unitPriceMinor
+        : undefined;
     setDraft((rows) => [
       ...rows,
       {
@@ -408,11 +413,14 @@ export function DealLinesEditor({
         productId: candidate.id,
         description: candidate.name,
         catalogName: candidate.name,
+        catalogPriceMinor,
         quantity: "",
-        priceMinor: null,
+        priceMinor: catalogPriceMinor ?? null,
         billing: EMPTY_LINE_BILLING,
+        ...NO_RATES,
       },
     ]);
+  };
   const addCustom = () => {
     if (!custom.trim()) {
       return;
@@ -425,6 +433,7 @@ export function DealLinesEditor({
         quantity: "",
         priceMinor: null,
         billing: { ...EMPTY_LINE_BILLING, billingModel: "one_time" },
+        ...NO_RATES,
       },
     ]);
     setCustom("");
@@ -439,9 +448,9 @@ export function DealLinesEditor({
       title={t("deal.lines.editTitle")}
       confirmLabel={t("deal.lines.save")}
       pending={save.isPending}
-      // A refused quantity would travel as no quantity, so the save waits.
+      // A refused figure would travel as no figure, so the save waits.
       confirmDisabled={draft.some(
-        (row) => typedNumberFault(row.quantity, locale, t) !== undefined,
+        (row) => lineFault(row, locale, t) !== undefined,
       )}
       error={save.error ? problemMessageOf(save.error, t) : partial}
       onConfirm={() => save.mutate()}
@@ -468,7 +477,7 @@ export function DealLinesEditor({
             <DraftLineRow
               key={row.key}
               row={row}
-              currency={state.currency ?? (currency || null)}
+              currency={linesCurrency}
               onChange={(next) => update(row.key, next)}
               onRemove={() => remove(row.key)}
             />

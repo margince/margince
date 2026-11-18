@@ -34,9 +34,9 @@ import { useProductCandidateSearch } from "../products";
 import {
   type DealCommercial,
   DealLinesEditor,
-  DealLinesTotal,
   useDealLines,
 } from "./deallines";
+import { DealLinesTotal } from "./deallinestotal";
 
 type DealProduct = components["schemas"]["DealProduct"];
 type DealProductList = components["schemas"]["DealProductListResponse"];
