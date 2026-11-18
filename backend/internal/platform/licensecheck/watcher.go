@@ -140,7 +140,7 @@ func (w *Watcher) recheckOnce(ctx context.Context) (err error) {
 			"err", err, "posture", string(before.State))
 		return fmt.Errorf("licensecheck: re-reading the license token: %w", err)
 	}
-	after, err := resolve(ctx, w.module, token, w.now(), w.env)
+	after, err := resolveWith(ctx, w.module, token, w.now(), w.env)
 	if err != nil {
 		w.log.ErrorContext(ctx, "re-checking the license failed; keeping the posture this process last resolved",
 			"err", err, "posture", string(before.State))

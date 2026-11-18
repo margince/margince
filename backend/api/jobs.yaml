@@ -762,7 +762,6 @@ kinds:
     timeout: 2m
     opts_owner: caller
     cadence: 15m
-    registration: {when: [SendRegistry, SendDelivery], absent: registers_nothing}
     args: {}
     fault:
       nil_after_logging: >-
@@ -784,7 +783,10 @@ kinds:
       vault past payload_expires_at, and a link that outlives its expiry is a
       credential to somebody's mailbox that nobody is watching. The index this
       reads already exists and until now nothing queried it. Cheap: one indexed
-      read, and on a healthy installation it finds nothing.
+      read, and on a healthy installation it finds nothing. The same pass raises
+      the missed opt-out receipts whose alarm failed. That needs only the
+      database, so the kind registers on every worker, with or without send
+      wiring.
 
   comms_scheduled_send:
     role: worker
