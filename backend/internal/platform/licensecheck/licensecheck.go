@@ -200,12 +200,10 @@ func (p Posture) Seats() (int, bool) {
 // "now" means here; the module checks expiry against the host's real clock
 // either way, which is the upstream contract and not ours to fake.
 //
-// The error return is reserved for a module that could not RUN — a malformed
-// blob, a trap, a framing nothing could unwrap. That is a fault in this build,
-// not a judgment about the license, and it is separate from the posture so a
-// caller can tell the two apart: a boot refuses on either, while a re-check
-// keeps the verdict it already has rather than reporting a license as refused on
-// the strength of an error nobody's license caused.
+// The error return is reserved for a module that could not RUN. That is a
+// malformed blob, a trap, a framing nothing could unwrap, or a run ctx stopped.
+// None is a judgment about the license, so it stays apart from the posture. A
+// boot refuses on either. A re-check keeps the verdict it already has.
 //
 // An empty token is absent rather than an error: a configured token that cannot
 // be READ is caught where it is read (deployconfig), so by the time a token
@@ -214,6 +212,11 @@ func (p Posture) Seats() (int, bool) {
 // env decides which authorities are honored (see issuers). A production
 // installation makes exactly one call, as it always has.
 func Resolve(ctx context.Context, token string, now time.Time, env runtimeenv.Environment) (Posture, error) {
+	return resolve(ctx, bundledModule, token, now, env)
+}
+
+// resolve is Resolve against a given module, so a test can run one that hangs.
+func resolve(ctx context.Context, module []byte, token string, now time.Time, env runtimeenv.Environment) (Posture, error) {
 	if strings.TrimSpace(token) == "" {
 		return Posture{State: StateAbsent, CheckedAt: now}, nil
 	}
@@ -222,13 +225,16 @@ func Resolve(ctx context.Context, token string, now time.Time, env runtimeenv.En
 	// "invalid issuer", which sends the operator after the wrong problem.
 	var first Posture
 	for _, authority := range issuers(env) {
-		result, err := check(ctx, bundledModule, authority, product, generation, token)
+		result, err := check(ctx, module, authority, product, generation, token)
 		switch {
 		case errors.Is(err, ErrVerdict):
 			if first.State == "" {
 				first = Posture{State: StateRejected, Reason: sanitizeReason(err.Error()), CheckedAt: now}
 			}
 			continue
+		case errors.Is(err, context.DeadlineExceeded), errors.Is(err, context.Canceled):
+			return Posture{}, fmt.Errorf("licensecheck: the license check was stopped before the bundled validation module (%s) answered: %w",
+				ModuleVersion(), err)
 		case err != nil:
 			return Posture{}, fmt.Errorf("licensecheck: the bundled validation module (%s) could not run: %s",
 				ModuleVersion(), sanitizeReason(err.Error()))

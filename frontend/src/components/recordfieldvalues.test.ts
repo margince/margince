@@ -9,8 +9,8 @@ const t = (
 ) => translate("en", key, params);
 
 const valueGroup: CreateField[] = [
-  { key: "amount", label: "create.amount", type: "number" },
-  { key: "expected_arr", label: "deal.expectedArr", type: "number" },
+  { key: "amount", label: "create.amount", type: "decimal" },
+  { key: "expected_arr", label: "deal.expectedArr", type: "decimal" },
   { key: "currency", label: "create.currency", type: "text" },
 ];
 

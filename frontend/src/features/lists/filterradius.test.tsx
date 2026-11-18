@@ -13,9 +13,13 @@ import { ValueControl } from "./filtervalue";
 
 afterEach(cleanup);
 
-function typeInto(seen: LeafValue[], initial: LeafValue = "") {
+function typeInto(
+  seen: LeafValue[],
+  initial: LeafValue = "",
+  locale: "en" | "de" = "en",
+) {
   render(
-    <StoryProviders>
+    <StoryProviders locale={locale}>
       <ValueControl
         type="distance"
         references={undefined}
@@ -86,5 +90,22 @@ describe("the radius value editor", () => {
     expect(screen.getByLabelText(en["filters.radius.km"])).toHaveValue("50");
     rerender(view(""));
     expect(screen.getByLabelText(en["filters.radius.lat"])).toHaveValue("");
+  });
+});
+
+// German writes the decimal comma: "48,77" is the latitude of Stuttgart.
+describe("the radius value editor in German", () => {
+  it("reads the centre and distance with a comma", async () => {
+    const seen: LeafValue[] = [];
+    typeInto(seen, "", "de");
+    const field = (name: string) => screen.findByLabelText(name);
+    fireEvent.change(await field("Breitengrad"), {
+      target: { value: "48,77" },
+    });
+    fireEvent.change(await field("Längengrad"), { target: { value: "9,18" } });
+    fireEvent.change(await field("Entfernung (km)"), {
+      target: { value: "12,5" },
+    });
+    expect(seen.at(-1)).toEqual({ lat: 48.77, lon: 9.18, radius_km: 12.5 });
   });
 });
