@@ -202,10 +202,8 @@ func (w *csvWriters) readPageEmails(ctx context.Context, rows []migration.Row) e
 // contactCollides answers whether this row names someone the caller can already
 // see, running the same ladder the create path runs.
 //
-// The visibility asymmetry with the company arm is real and is not an
-// oversight: DedupeContact answers ONE contact, not a ranked set, so there is no
-// candidate behind the winner for an invisible record to mask. The single match
-// is the only row to ask about, and asking about it is the whole filter.
+// Like the company arm, it asks about every ranked match. An invisible record
+// ranked first must not hide a visible one.
 func (w *csvWriters) contactCollides(ctx context.Context, row migration.Row) (bool, error) {
 	fields := textFields(row.Fields)
 	email := strings.TrimSpace(fields[fieldEmail])
@@ -241,8 +239,13 @@ func (w *csvWriters) contactCollides(ctx context.Context, row migration.Row) (bo
 		if err != nil || match.Decision == contacts.DecisionNoMatch {
 			return err
 		}
-		visible, err = auth.VisibleTo(ctx, tx, "contact", match.ContactID.UUID)
-		return err
+		matched := matchedContacts(match)
+		for _, id := range matched {
+			if visible, err = auth.VisibleTo(ctx, tx, "contact", id.UUID); err != nil || visible {
+				return err
+			}
+		}
+		return nil
 	}); err != nil {
 		named := email
 		if named == "" {
@@ -251,6 +254,19 @@ func (w *csvWriters) contactCollides(ctx context.Context, row migration.Row) (bo
 		return false, fmt.Errorf("import: checking %q against the contacts already held: %w", named, err)
 	}
 	return visible, nil
+}
+
+// matchedContacts is every contact the ladder matched, best first. An exact
+// collision carries no review list, so its own id stands for it.
+func matchedContacts(match contacts.ContactResolution) []ids.ContactID {
+	if len(match.Reviews) == 0 {
+		return []ids.ContactID{match.ContactID}
+	}
+	matched := make([]ids.ContactID, 0, len(match.Reviews))
+	for _, review := range match.Reviews {
+		matched = append(matched, review.ContactID)
+	}
+	return matched
 }
 
 // consumerMailList is the workspace's consumer-mail list, read on first use and

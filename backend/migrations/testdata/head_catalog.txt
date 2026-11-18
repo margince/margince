@@ -6326,6 +6326,7 @@ public.idx_contact_name_trigram_candidates CREATE INDEX idx_contact_name_trigram
 public.idx_contact_owner CREATE INDEX idx_contact_owner ON public.contact USING btree (owner_id) WHERE (archived_at IS NULL)
 public.idx_contact_phone_contact CREATE INDEX idx_contact_phone_contact ON public.contact_phone USING btree (contact_id)
 public.idx_contact_phone_dedupe_scan CREATE INDEX idx_contact_phone_dedupe_scan ON public.contact_phone USING btree (updated_at, id)
+public.idx_contact_phone_live_phone CREATE INDEX idx_contact_phone_live_phone ON public.contact_phone USING btree (phone) WHERE (archived_at IS NULL)
 public.idx_contact_search CREATE INDEX idx_contact_search ON public.contact USING gin (search_tsv)
 public.idx_contact_signature_enrich_state_activity CREATE INDEX idx_contact_signature_enrich_state_activity ON public.contact_signature_enrich_state USING btree (activity_id)
 public.idx_contact_signature_enrich_state_retry_activity CREATE INDEX idx_contact_signature_enrich_state_retry_activity ON public.contact_signature_enrich_state USING btree (retry_activity_id) WHERE (retry_activity_id IS NOT NULL)

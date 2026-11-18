@@ -13,32 +13,34 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// planNode is the part of an EXPLAIN node the test reads.
+// planNode is the part of an EXPLAIN node the test reads. Actual Rows is per
+// loop, and a parallel node reports the sum of its workers' loops.
 type planNode struct {
-	Type  string     `json:"Node Type"`
-	Loops int        `json:"Actual Loops"`
-	Plans []planNode `json:"Plans"`
+	Relation string     `json:"Relation Name"`
+	Rows     float64    `json:"Actual Rows"`
+	Loops    float64    `json:"Actual Loops"`
+	Plans    []planNode `json:"Plans"`
 }
 
-// mostProbedSubquery is the highest loop count of any subquery scan: how many
-// candidates the per-candidate point read of the contact row ran for.
-func (n planNode) mostProbedSubquery() int {
-	most := 0
-	if n.Type == "Subquery Scan" {
-		most = n.Loops
+// rowsRead sums the rows every node on these tables produced, workers included.
+func (n planNode) rowsRead(tables map[string]bool) (rows float64, nodes int) {
+	if tables[n.Relation] {
+		rows, nodes = n.Rows*n.Loops, 1
 	}
 	for _, child := range n.Plans {
-		most = max(most, child.mostProbedSubquery())
+		childRows, childNodes := child.rowsRead(tables)
+		rows, nodes = rows+childRows, nodes+childNodes
 	}
-	return most
+	return rows, nodes
 }
 
-// The candidate read does one point read per candidate. An employer's whole
-// staff must not become candidates, or an import filing contacts at one
-// company reads every earlier colleague for each new row.
+// A colleague at the candidate's employer is not a candidate by that alone. If
+// it were, an import filing contacts at one company would read every earlier
+// colleague for each new row.
 //
-// Mutation: drop the LIMIT in the same_employer branch of contactCandidateQuery.
-func TestTheCandidateReadStaysBoundedWhenManyContactsShareAnEmployer(t *testing.T) {
+// Mutation: restore the relationship branch of contactCandidateQuery, which
+// unions in every current colleague of @employer.
+func TestTheCandidateReadSkipsColleaguesWhoseNamesDoNotMatch(t *testing.T) {
 	e := setupDedupe(t)
 	employer := mustEmployer(t, e, "Crowded Works")
 	const staff = 3 * dedupeCandidateRows
@@ -59,7 +61,12 @@ func TestTheCandidateReadStaysBoundedWhenManyContactsShareAnEmployer(t *testing.
 	if err := json.Unmarshal(raw, &plans); err != nil || len(plans) != 1 {
 		t.Fatalf("reading the plan: %v", err)
 	}
-	if got := plans[0].Plan.mostProbedSubquery(); got > dedupeCandidateRows {
-		t.Fatalf("the candidate read probed %d candidates for %d colleagues, want at most %d", got, staff, dedupeCandidateRows)
+	rows, nodes := plans[0].Plan.rowsRead(map[string]bool{"contact": true, "relationship": true})
+	if nodes == 0 {
+		t.Fatalf("the plan reads neither contact nor relationship, so it measures nothing: %s", raw)
+	}
+	if rows > dedupeCandidateRows {
+		t.Fatalf("the candidate read took %.0f rows from contact and relationship for %d unrelated colleagues, want at most %d",
+			rows, staff, dedupeCandidateRows)
 	}
 }
