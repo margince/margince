@@ -5,6 +5,7 @@ import { useId } from "react";
 import type { MessageKey } from "../i18n/en";
 import { useCanWrite } from "../lib/capability";
 import { useMe } from "../lib/session";
+import { type MomentVerbKind, momentVerbWrites } from "../lib/writeverbs";
 
 /**
  * Whether this reader may write activities (log, task, book), asked once for
@@ -45,11 +46,15 @@ export function useActivityGate(
 }
 
 /**
- * Whether a lone verb that writes an activity is offered; one refused is not
- * drawn. `contact` is the contact the write files under, where it names one.
+ * Whether a lone verb is offered: one that writes an activity and is refused
+ * is not drawn. The verb names its kind, so the server's classification of it
+ * (`momentVerbWrites`) decides whether the grant matters. `contact` is the
+ * contact the write files under, where it names one.
  */
-export function useActivityWritable(contact?: {
-  readonly attachable?: boolean;
-}): boolean {
-  return useActivityGate(contact).refusalKey === undefined;
+export function useVerbOffered(
+  kind: MomentVerbKind,
+  contact?: { readonly attachable?: boolean },
+): boolean {
+  const refused = useActivityGate(contact).refusalKey !== undefined;
+  return !(momentVerbWrites(kind) && refused);
 }

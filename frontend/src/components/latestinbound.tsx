@@ -28,7 +28,7 @@ import { UNKNOWN_VALUE_LABEL } from "../lib/labelfor";
 import { useSourceOpener } from "../lib/opensource";
 import { unwrap } from "../lib/problem";
 import { readStored, STORAGE_KEYS, writeStored } from "../lib/storage";
-import { useActivityWritable } from "./activitygate";
+import { useVerbOffered } from "./activitygate";
 import "./latestinbound.css";
 import { itemWords, When } from "./latestinbound.words";
 
@@ -357,7 +357,7 @@ function TaskFromItem({
   const t = useT();
   const queryClient = useQueryClient();
   const { activity, kind, accepts_request } = latest;
-  const writable = useActivityWritable(scope.contact);
+  const writable = useVerbOffered("log_activity", scope.contact);
   const create = useMutation({
     mutationFn: async () => {
       const about = itemWords(activity).subject ?? kindLabel(kind, t);
