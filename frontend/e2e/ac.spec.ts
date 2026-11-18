@@ -1225,6 +1225,36 @@ test("AC-pipeline-12: a busy stage's column loads its next page on its own", asy
   await expect(loadMore).toHaveCount(0);
 });
 
+async function centreBetween(first: Locator, second: Locator) {
+  const midpoint = async (part: Locator) => {
+    const box = await part.boundingBox();
+    if (!box) throw new Error("a board part to drag between is not laid out");
+    return box.x + box.width / 2;
+  };
+  const between = ((await midpoint(first)) + (await midpoint(second))) / 2;
+  await first.evaluate((part, at) => {
+    const board = part.closest(".board");
+    if (!board) return;
+    const box = board.getBoundingClientRect();
+    board.scrollLeft += at - (box.left + box.width / 2);
+  }, between);
+}
+
+async function outsideBoard(...parts: Locator[]): Promise<string[]> {
+  const outside: string[] = [];
+  for (const part of parts) {
+    const off = await part.evaluate((element) => {
+      const board = element.closest(".board")?.getBoundingClientRect();
+      const box = element.getBoundingClientRect();
+      const x = box.left + box.width / 2;
+      const inside = board !== undefined && x > board.left && x < board.right;
+      return inside ? null : element.outerHTML.slice(0, 60);
+    });
+    if (off !== null) outside.push(off);
+  }
+  return outside;
+}
+
 test("AC-deal-6: a terminal-stage drop is a 🟡 confirm — nothing runs before Confirm", async ({
   page,
 }) => {
@@ -1234,9 +1264,12 @@ test("AC-deal-6: a terminal-stage drop is a 🟡 confirm — nothing runs before
   const card = page.locator('[data-deal="d-fleet"]');
   await expect(card).toBeVisible();
   const won = page.locator('[data-stage="s4"]');
-  // The board scrolls sideways and the terminal stage starts at this window's
-  // edge, so it is brought into view the way a rep scrolls to it before a drop.
-  await won.scrollIntoViewIfNeeded();
+  // A rep scrolls the board until both ends of the drag show.
+  await centreBetween(card, won);
+  expect(
+    await outsideBoard(card, won),
+    "the card and the Won column must both be on screen for a pointer drag",
+  ).toEqual([]);
   await card.dragTo(won);
   await expect(page.getByText("In die Phase Won verschieben?")).toBeVisible();
 
