@@ -11,7 +11,7 @@ import { reloadOnStaleBuild } from "./lib/stalebuild";
 
 reloadOnStaleBuild();
 restoreReturnRoute();
-// main.tsx runs after the window's load event and Chrome's install offer, so this script catches both.
+// main.tsx can run after the window's load event and Chrome's install offer, so this script catches both.
 listenForInstall();
 registerServiceWorker();
 if (parseHash(location.hash).screen === "analytics") {

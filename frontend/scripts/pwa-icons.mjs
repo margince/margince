@@ -41,10 +41,14 @@ function centreMark(reach) {
   let farthest = 0;
   for (const path of markGroup.querySelectorAll("path")) {
     const length = path.getTotalLength();
+    if (length === 0) continue;
     for (let at = 0; at <= length; at += length / 4000) {
       const point = path.getPointAtLength(at);
       farthest = Math.max(farthest, Math.hypot(point.x - cx, point.y - cy));
     }
+  }
+  if (farthest === 0) {
+    throw new Error("public/icon.svg's mark <g> draws nothing to scale");
   }
   const scale = reach / farthest;
   markGroup.setAttribute(

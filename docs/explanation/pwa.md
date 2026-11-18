@@ -10,7 +10,7 @@ what the parts are, what the service worker may do, and why its job is so small.
 
 | Part | Where | What it does |
 |---|---|---|
-| Manifest | `frontend/public/manifest.webmanifest` | names the app, its colors, `start_url` and `display: standalone`, which makes it something you can install. Its `shortcuts` are the links the launcher offers beside the app (Home, Worklist, Deals). Its `launch_handler` (`navigate-existing`) opens a launcher link or any other link in a window of the app that is already open, where Chromium supports it |
+| Manifest | `frontend/public/manifest.webmanifest` | names the app, its colors, `start_url` and `display: standalone`, which makes it something you can install. Its `shortcuts` are the links the launcher offers beside the app (Home, Worklist, Deals). A manifest is one fixed file and cannot change with the language, so the links are in English. Its `launch_handler` (`navigate-existing`) opens a launcher link or any other link in a window of the app that is already open, where Chromium supports it |
 | Icons | `frontend/public/`: `icon.svg`, `icon-192x192.png`, `icon-512x512.png`, `web-app-manifest-192x192.png`, `web-app-manifest-512x512.png`, `favicon.ico`, `favicon-96x96.png`, `apple-touch-icon.png` | The manifest offers `icon.svg` and the two `icon-*` files as `any`: the rounded square, shown as it is. The two `.png` files serve an installer that does not draw a vector image. It offers the two `web-app-manifest-*` files as `maskable`: the mark on a ground that fills the square, for a launcher that cuts its own shape. `pnpm gen:pwa-icons` (`frontend/scripts/pwa-icons.mjs`) draws all four `.png` files from `icon.svg`. The browser tab uses the favicons, and iOS uses `apple-touch-icon.png`. `frontend/src/app/sharepreview.test.ts` holds each icon to a file and each `.png` file to the size it declares. `frontend/src/lib/pwa-manifest.test.ts` holds the ground of each `maskable` file to `--accentBrand`, with its mark well inside the round safe zone in the middle. It also holds the edge of each `any` `.png` file clear outside its rounded square |
 | Service worker | source `frontend/src/offline/serviceworker.js`, written out as `/sw.js` by `frontend/scripts/vite-pwa.ts` | answers a page request the network could not complete with the offline page, and the offline page's own script; nothing else |
 | Offline page | `frontend/src/offline/page.ts` (the HTML), `present.ts` (block, retry, load again when the network is back), `entry.ts`, `offline.css`; written out as `/assets/offline-<hash>.html` | tells the reader the device cannot reach Margince, in their language, with a retry |
@@ -133,8 +133,8 @@ changes nothing else.
 frontend of an extension. So a second module that signs up a worker cannot come in without notice.
 
 `frontend/src/bootstrap.ts`, the entry script, calls `listenForInstall()` and
-`registerServiceWorker()`. `main.tsx` loads only after the window's `load` event, and Chrome can
-make its offer before then. `listenForInstall()` returns the function that undoes it. `useInstallState()`
+`registerServiceWorker()`. `main.tsx` can load after the window's `load` event, and Chrome can
+make its offer before it loads. `listenForInstall()` returns the function that undoes it. `useInstallState()`
 answers one of:
 
 | State | Meaning |
@@ -146,7 +146,8 @@ answers one of:
 | `manual-macos` | Safari 26 or later on a Mac, where File › Add to Dock is a step by hand |
 | `unavailable` | nothing this page can offer, including an app's own browser on iOS |
 
-Some iOS apps open a link in their own browser, as LinkedIn and Gmail do. That browser leaves
+Some iOS apps open a link in their own browser, as Facebook, Instagram, LinkedIn and the Google app
+do. That browser leaves
 `Safari/` out of its agent, and its share sheet cannot add to the home screen. So that agent reads
 as `unavailable`, and no row or notice offers steps that cannot work there.
 
@@ -222,11 +223,15 @@ standing notice is not read out at rest.
 
 - The shell records the first calendar day this device runs it, in the reader's zone. The notice
   never shows on that day.
-- From the next day it shows, or at once after the reader completes a task with the tick on Home.
+- From the next day it shows, or at once after the reader completes a task on Home. The round tick
+  and Done on the open task card both count.
 - "Not now", or a dismissal of the browser's install window opened from the notice, hides it for 30
   days (`INSTALL_HINT_SNOOZE_MS`).
 - The second dismissal hides it on this device for good.
-- Once the app is installed, the record says so and the notice never shows again.
+- Once the app is installed, the record says so and the notice never shows again. iOS is the
+  exception. Safari's tab and the app on the home screen keep their own storage, and Safari cannot
+  tell a page that the app is installed. So a Safari tab can still show the notice until the reader
+  turns it down twice.
 
 A stored value in another shape reads as never seen. When the notice goes, focus inside it moves to
 the page content, never to `<body>`.
