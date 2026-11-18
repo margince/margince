@@ -11,6 +11,7 @@ import (
 	"golang.org/x/text/unicode/norm"
 
 	"github.com/margince/margince/backend/internal/platform/htmltext"
+	"github.com/margince/margince/backend/internal/shared/kernel/mailsubject"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
@@ -49,8 +50,13 @@ func authoredOffer(subject, body string, fileNames []string) bool {
 }
 
 // withAuthoredOffer reads the authored words into the evidence. The engine
-// reads them itself, so no caller can vouch that a message makes no offer.
-func withAuthoredOffer(req commsauthz.Request) commsauthz.Request {
+// reads them itself, so no caller can vouch that a message makes no offer. A
+// subject that only carries the anchor's over is quoted, not written.
+func withAuthoredOffer(req commsauthz.Request, anchorSubject string) commsauthz.Request {
+	subject := req.AuthoredSubject
+	if anchorSubject != "" && mailsubject.Topic(subject) == mailsubject.Topic(anchorSubject) {
+		subject = ""
+	}
 	body := req.AuthoredBody
 	if req.AuthoredHTML != "" {
 		visible, cut := htmltext.Render(req.AuthoredHTML)
@@ -62,6 +68,6 @@ func withAuthoredOffer(req commsauthz.Request) commsauthz.Request {
 		}
 		body += "\n" + visible
 	}
-	req.Evidence.AuthoredOffer = authoredOffer(req.AuthoredSubject, body, req.AuthoredFileNames)
+	req.Evidence.AuthoredOffer = authoredOffer(subject, body, req.AuthoredFileNames)
 	return req
 }
