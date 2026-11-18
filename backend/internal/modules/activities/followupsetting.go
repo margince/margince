@@ -19,7 +19,7 @@ const (
 	followUpMaxDays = 30
 	// settingsAuditVerb is the audit action every activities settings change records.
 	settingsAuditVerb = "update"
-	// settingsObject is the grant that guards every activities setting.
+	// settingsObject is the RBAC object that guards every activities setting.
 	settingsObject = "installation_settings"
 )
 
