@@ -26,7 +26,7 @@ import { type Refusal, refusalOf } from "./composerefusal";
 import type { RelinkKind } from "./composerelink";
 import type { useSavedDraft } from "./composesaveddraft";
 import { scheduleFields } from "./composeschedule";
-import { sendHoldOf } from "./composesendhold";
+import { inlineSendHold, type SendHold, sendHoldOf } from "./composesendhold";
 import { dealOf, reasonEvidence, useReasonForAnchor } from "./reasonanchor";
 import { SCHEDULED_SCREEN } from "./scheduledqueue";
 import { sendReviewOf } from "./sendreview";
@@ -223,6 +223,19 @@ function messageOf(request: SendRequest): string {
   });
 }
 
+// The hold on Send. An older server's footer refusal holds it in both flows;
+// otherwise the inline flow asks nothing before the press.
+function holdOf(
+  inline: boolean,
+  legacyFooter: boolean,
+  permission: Parameters<typeof sendHoldOf>[0],
+  review: Parameters<typeof sendHoldOf>[1],
+): SendHold {
+  if (inline) return inlineSendHold(legacyFooter);
+  if (legacyFooter) return { blocks: true, withReason: false };
+  return sendHoldOf(permission, review);
+}
+
 // Both responses accept delivery; only 201 names a scheduled release.
 type SendOutcome =
   | { sent: false }
@@ -246,6 +259,7 @@ export function useComposeSend({
   projectId,
   needsDeal,
   savedDraft,
+  inline = false,
   onSent,
   onClose,
 }: Readonly<{
@@ -265,6 +279,11 @@ export function useComposeSend({
   projectId: string;
   needsDeal: boolean;
   savedDraft: ReturnType<typeof useSavedDraft>;
+  /**
+   * The send is the check: nothing is asked while the rep writes, no reason
+   * for contact or deal is required, and a refusal comes back as a review.
+   */
+  inline?: boolean;
   onSent?: () => void;
   onClose: () => void;
 }>) {
@@ -352,8 +371,8 @@ export function useComposeSend({
     subject: fields.subject,
     body: fields.body,
     context: fields.context,
-    asksContext: asksWhy(anchorActivity),
-    needsDeal,
+    asksContext: !inline && asksWhy(anchorActivity),
+    needsDeal: !inline && needsDeal,
   });
   const links = composedLinks(
     { entityType, entityId, dealId },
@@ -379,7 +398,7 @@ export function useComposeSend({
       htmlBody: settledHTML,
       attachmentIds: files.map((file) => file.id),
     },
-    enabled: open && !isChannelReply,
+    enabled: open && !isChannelReply && !inline,
   });
   // Send waits for the sender to confirm a recipient with no lawful basis on record.
   const lawfulBasis = useLawfulBasisGate(answer.preview);
@@ -414,10 +433,12 @@ export function useComposeSend({
     request,
     answer.preview,
   );
-  const hold: ReturnType<typeof sendHoldOf> =
-    shownRefusal === "legacyFooter"
-      ? { blocks: true, withReason: false }
-      : sendHoldOf(permission, refusedNow ? sendReview : null);
+  const hold = holdOf(
+    inline,
+    shownRefusal === "legacyFooter",
+    permission,
+    refusedNow ? sendReview : null,
+  );
   const [attempted, setAttempted] = useState(false);
   useEffect(() => {
     if (!open) {
@@ -443,6 +464,11 @@ export function useComposeSend({
       return;
     }
     if (hold.blocks) {
+      return;
+    }
+    // The press is the whole question: a refusal comes back as a review.
+    if (inline) {
+      send.mutate(request);
       return;
     }
     // The refusal is already about this message, so the press asks for the
@@ -478,6 +504,7 @@ export function useComposeSend({
     shownRefusal === "legacyFooter";
   return {
     send,
+    request,
     blocked,
     refusal: shownRefusal,
     sendReview,
