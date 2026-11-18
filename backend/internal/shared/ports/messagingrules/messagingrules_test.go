@@ -172,8 +172,9 @@ func TestTheRegistryHandsOutCopies(t *testing.T) {
 		MarketingExceptions: []MarketingException{{Kind: ExistingCustomer, RequiresSimilarity: true}},
 		FrequencyCap:        &FrequencyCap{Messages: 3, Window: 24 * time.Hour},
 		Instruments:         []Instrument{{Name: "Decree 1/2020", SourceURL: "https://example.org/decree"}},
-		Provenance:          Provenance{ReviewedAt: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC), Reviewer: "a"},
-		Citations:           []Citation{{Code: "frequency_cap_reached", Instrument: "Decree 1/2020", Provision: "Art. 1"}},
+		Provenance: Provenance{SourceCheckedAt: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+			ReviewedAt: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC), Reviewer: "a"},
+		Citations: []Citation{{Code: "frequency_cap_reached", Instrument: "Decree 1/2020", Provision: "Art. 1"}},
 	})
 
 	got, ok := For("qa")

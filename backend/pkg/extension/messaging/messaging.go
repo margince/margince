@@ -21,6 +21,9 @@
 //
 // These types are frozen published API from their first external consumer; they
 // evolve additively or through versioned successors, never in place (EXT-P3).
+// Additive means new fields, so an extension must write its literals of these
+// types keyed (Instrument{Name: ...}). An unkeyed literal stops compiling when
+// a field is added.
 //
 //margince:extension-surface
 package messaging

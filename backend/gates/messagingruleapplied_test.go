@@ -509,11 +509,21 @@ func callsRulesLookup(call *ast.CallExpr) bool {
 
 // citationVocabulary is where the codes a citation may explain are declared:
 // each package and the prefix its finding and refusal constants carry. The
-// packages are where the engine names what it reports; the prefixes keep a
-// column name or a phase out of the vocabulary.
+// prefixes keep a column name or a phase out of the vocabulary.
+//
+// consent's own Reason constants are left out. They name the reason a human
+// gives for a direct send (instruction.go) and the guard's verdicts. Neither is
+// a refusal or finding the engine reports.
 var citationVocabulary = map[string][]string{
 	"internal/shared/ports/commsauthz": {"Reason"},
 	"internal/modules/consent":         {"Block", "Draft", "Requirement"},
+}
+
+// citationNotFindings are prefixed constants the vocabulary must skip, each
+// with why. An allow code explains a send that went out, so no law is cited.
+var citationNotFindings = map[string]string{
+	"ReasonAllowed":           "the allow path's own code, never a refusal",
+	"ReasonAllowedByOverride": "an allow a seat ordered, never a refusal",
 }
 
 // footerFindingSources build commsauthz.FooterFinding values whose Kind is a
@@ -544,19 +554,30 @@ func TestACitationOfAnUnemittedCodeIsFound(t *testing.T) {
 	t.Parallel()
 	const src = `package probe
 var cited = []messaging.Citation{{Code: "frequency_cap_reached"}, {Code: "a_code_nobody_reports"}}
-var single = messaging.Citation{Code: "no_marketing_consent"}`
+var single = messaging.Citation{Code: "no_marketing_consent"}
+var reason = messaging.Citation{Code: "customer_requested_outside_crm"}
+var allowed = messaging.Citation{Code: "allowed"}`
 	fset := gatekit.SourceFileSet()
 	file, err := parser.ParseFile(fset, "probe.go", src, parser.SkipObjectResolution)
 	if err != nil {
 		t.Fatal(err)
 	}
 	declared := declaredCitationCodes(t, fset, []*ast.File{file})
-	if len(declared) != 3 {
-		t.Fatalf("the scan read %d citation codes from the probe, want 3: %v", len(declared), declared)
+	if len(declared) != 5 {
+		t.Fatalf("the scan read %d citation codes from the probe, want 5: %v", len(declared), declared)
 	}
-	findings := uncitableCodes(declared, emittedFindingCodes(t))
-	if len(findings) != 1 || !strings.Contains(findings[0], "a_code_nobody_reports") {
-		t.Errorf("want one finding naming the unreported code, got %v", findings)
+	// A human's direct-send reason and an allow code are codes in the tree,
+	// and neither is a refusal or finding a citation could explain.
+	findings := strings.Join(uncitableCodes(declared, emittedFindingCodes(t)), "\n")
+	for _, code := range []string{"a_code_nobody_reports", "customer_requested_outside_crm", `"allowed"`} {
+		if !strings.Contains(findings, code) {
+			t.Errorf("a citation of %s passed the gate; findings: %s", code, findings)
+		}
+	}
+	for _, code := range []string{"frequency_cap_reached", "no_marketing_consent"} {
+		if strings.Contains(findings, code) {
+			t.Errorf("a citation of the emitted code %s was refused: %s", code, findings)
+		}
 	}
 }
 
@@ -579,16 +600,26 @@ func uncitableCodes(declared map[string]string, emitted map[string]bool) []strin
 func emittedFindingCodes(t *testing.T) map[string]bool {
 	t.Helper()
 	codes := map[string]bool{}
+	skipped := map[string]bool{}
 	for dir, prefixes := range citationVocabulary {
 		found := 0
 		for _, file := range parseTreeUnder(t, gatekit.SourceFileSet(), dir) {
 			found += collectStringConsts(file, func(name, _ string) bool {
+				if _, skip := citationNotFindings[name]; skip {
+					skipped[name] = true
+					return false
+				}
 				return slices.ContainsFunc(prefixes, func(p string) bool { return strings.HasPrefix(name, p) })
 			}, codes)
 		}
 		if found == 0 {
 			t.Fatalf("%s declares no string constant named %v — the vocabulary moved, and every citation "+
 				"would read as explaining nothing", dir, prefixes)
+		}
+	}
+	for name := range citationNotFindings {
+		if !skipped[name] {
+			t.Fatalf("citationNotFindings names %s, which the vocabulary no longer declares — remove the entry", name)
 		}
 	}
 	if collectStringConsts(parseGo(t, rulesSurfaceFile), func(_, typ string) bool { return typ == "DisclosureKind" }, codes) == 0 {

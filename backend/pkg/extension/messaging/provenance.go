@@ -145,6 +145,9 @@ func (r Rules) validateCitations() error {
 	if len(r.Citations) > 0 && r.Provenance.ReviewedAt.IsZero() {
 		return errors.New("the rule set cites law and records no review — a draft rule cannot cite")
 	}
+	if checked := r.Provenance.SourceCheckedAt; len(r.Citations) > 0 && (checked.IsZero() || checked.After(r.Provenance.ReviewedAt)) {
+		return errors.New("the rule set cites law and its sources were not checked before its review")
+	}
 	cited := map[string][]Territory{}
 	for _, c := range r.Citations {
 		if strings.TrimSpace(c.Code) == "" || strings.TrimSpace(c.Code) != c.Code {

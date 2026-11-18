@@ -18,13 +18,16 @@ var (
 	reviewDue = citedOn.AddDate(1, 0, 0)
 	lawEnds   = citedOn.AddDate(0, 6, 0)
 	lawStarts = citedOn.AddDate(0, 2, 0)
+	// reviewTomorrow dates a review the day after the lookups below that ask
+	// before it.
+	reviewTomorrow = citedOn.AddDate(0, 1, 1)
 )
 
 // citingPacks registers two packs that cite the same refusal code under
 // different law, so a lookup that ignored the recipient would answer wrong.
 // Once per process: the registry refuses a second registration.
-var citingPacks = sync.OnceValue(func() [2]jurisdiction.Code {
-	reviewed := messagingrules.Provenance{ReviewedAt: citedOn, ReviewDue: reviewDue, Reviewer: "pack maintainers"}
+var citingPacks = sync.OnceValue(func() [3]jurisdiction.Code {
+	reviewed := messagingrules.Provenance{SourceCheckedAt: citedOn, ReviewedAt: citedOn, ReviewDue: reviewDue, Reviewer: "pack maintainers"}
 	instruments := []messagingrules.Instrument{
 		{Name: "Act A", Provision: "§1", SourceURL: "https://example.org/a"},
 		{Name: "Act B", SourceURL: "https://example.org/b", ExpiresFrom: lawEnds},
@@ -45,13 +48,19 @@ var citingPacks = sync.OnceValue(func() [2]jurisdiction.Code {
 			{Code: commsauthz.ReasonFrequencyCapReached, Instrument: "Act A", Provision: "§5"},
 		},
 	})
-	return [2]jurisdiction.Code{"ka", "kb"}
+	tomorrow := reviewed
+	tomorrow.ReviewedAt = reviewTomorrow
+	messagingrules.Register(messagingrules.Rules{
+		Jurisdiction: "kd", Version: 1, Instruments: instruments, Provenance: tomorrow,
+		Citations: []messagingrules.Citation{{Code: commsauthz.ReasonFrequencyCapReached, Instrument: "Act A"}},
+	})
+	return [3]jurisdiction.Code{"ka", "kb", "kd"}
 })
 
 func TestACitationIsResolvedAgainstTheRecipientsPackAndSender(t *testing.T) {
 	t.Parallel()
 	packs := citingPacks()
-	a, b := packs[0], packs[1]
+	a, b, reviewedLater := packs[0], packs[1], packs[2]
 	soon := citedOn.AddDate(0, 1, 0)
 	for _, tc := range []struct {
 		name      string
@@ -82,6 +91,10 @@ func TestACitationIsResolvedAgainstTheRecipientsPackAndSender(t *testing.T) {
 			citationContext{Recipient: RecipientCountry{Code: a}, At: lawEnds}, citationLawExpired, ""},
 		{"a law in force is cited", commsauthz.ReasonNoMarketingConsent,
 			citationContext{Recipient: RecipientCountry{Code: a}, At: soon}, citationShown, "§2"},
+		{"a review dated tomorrow approves nothing today", commsauthz.ReasonFrequencyCapReached,
+			citationContext{Recipient: RecipientCountry{Code: reviewedLater}, At: soon}, citationNotYetReviewed, ""},
+		{"the same pack cites once its review instant has come", commsauthz.ReasonFrequencyCapReached,
+			citationContext{Recipient: RecipientCountry{Code: reviewedLater}, At: reviewTomorrow}, citationShown, "§1"},
 		{"a law not yet in force is not", commsauthz.ReasonConsentWithdrawn,
 			citationContext{Recipient: RecipientCountry{Code: a}, At: soon}, citationNotInForce, ""},
 	} {

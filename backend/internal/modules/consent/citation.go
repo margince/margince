@@ -27,6 +27,9 @@ const (
 	// citationNotDeclared is no pack for the recipient, or none citing this
 	// code for this sender.
 	citationNotDeclared citationOutcome = "not_declared"
+	// citationNotYetReviewed is a pack whose review is dated after the lookup.
+	// A review that has not happened yet approves nothing.
+	citationNotYetReviewed citationOutcome = "not_yet_reviewed"
 	// citationReviewOverdue is a pack whose review fell due. The pack still
 	// applies; only its citations are withheld.
 	citationReviewOverdue citationOutcome = "review_overdue"
@@ -55,6 +58,9 @@ func citationFor(code string, where citationContext) (messagingrules.Citation, c
 	for _, declared := range rules.Citations {
 		if declared.Code != code || !senderTerritoryHolds(declared.Territory, rules.Jurisdiction, where.Sender) {
 			continue
+		}
+		if where.At.Before(rules.Provenance.ReviewedAt) {
+			return messagingrules.Citation{}, citationNotYetReviewed
 		}
 		if due := rules.Provenance.ReviewDue; !due.IsZero() && deadline.Passed(&due, where.At) {
 			return messagingrules.Citation{}, citationReviewOverdue

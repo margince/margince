@@ -298,8 +298,8 @@ func TestTransmitKeepsTheStagedDataProtectionCountry(t *testing.T) {
 }
 
 // TestADecisionRecordsTheDigestOfACompiledPack: both phases name the source the
-// pack was compiled from. The CHECK refuses a digest beside two codes, or in
-// any spelling but lower-case hex.
+// pack was compiled from. The CHECK refuses a digest beside two codes or no
+// version, or in any spelling but lower-case hex.
 func TestADecisionRecordsTheDigestOfACompiledPack(t *testing.T) {
 	e := setupResolve(t)
 	digest := strings.Repeat("5e", 32)
@@ -322,17 +322,20 @@ func TestADecisionRecordsTheDigestOfACompiledPack(t *testing.T) {
 			t.Errorf("the %s decision recorded digest %v, want %s", phase, recorded, digest)
 		}
 	}
+	version := 6
 	for _, bad := range []struct {
-		name   string
-		digest string
-		codes  []string
+		name    string
+		digest  string
+		version *int
+		codes   []string
 	}{
-		{"a digest beside a fold", digest, []string{"re", "rf"}},
-		{"a digest in upper case", strings.ToUpper(digest), []string{"re"}},
+		{"a digest beside a fold", digest, nil, []string{"re", "rf"}},
+		{"a digest in upper case", strings.ToUpper(digest), &version, []string{"re"}},
+		{"a digest with no version", digest, nil, []string{"re"}},
 	} {
 		if _, err := e.owner.Exec(context.Background(), `
-			UPDATE communication_decision SET ruleset_version = NULL, ruleset_digest = $2, ruleset_codes = $3
-			 WHERE delivery_id = $1`, delivery, bad.digest, bad.codes); err == nil {
+			UPDATE communication_decision SET ruleset_version = $2, ruleset_digest = $3, ruleset_codes = $4
+			 WHERE delivery_id = $1`, delivery, bad.version, bad.digest, bad.codes); err == nil {
 			t.Errorf("%s was accepted", bad.name)
 		}
 	}

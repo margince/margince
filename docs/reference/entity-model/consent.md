@@ -104,7 +104,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 - `communication_decision_instruction_shape`: `CHECK (((execution_authority = 'instruction') = (instruction_id IS NOT NULL)))`
 - `communication_decision_mode`: `CHECK ((mode = ANY (ARRAY['observe', 'warn', 'enforce'])))`
 - `communication_decision_phase`: `CHECK ((phase = ANY (ARRAY['staging', 'transmit'])))`
-- `communication_decision_ruleset_digest_shape`: `CHECK (((ruleset_digest IS NULL) OR ((ruleset_digest ~ '^[0-9a-f]{64}$') AND (COALESCE(array_length(ruleset_codes, 1), 0) = 1))))`
+- `communication_decision_ruleset_digest_shape`: `CHECK (((ruleset_digest IS NULL) OR ((ruleset_digest ~ '^[0-9a-f]{64}$') AND (ruleset_version IS NOT NULL) AND (COALESCE(array_length(ruleset_codes, 1), 0) = 1))))`
 - `communication_decision_ruleset_shape`: `CHECK ((((ruleset_codes IS NULL) OR (COALESCE(array_length(ruleset_codes, 1), 0) > 0)) AND ((ruleset_version IS NULL) OR (COALESCE(array_length(ruleset_codes, 1), 0) = 1))))`
 - `communication_decision_subject_kind`: `CHECK (((subject_kind IS NULL) OR (subject_kind = ANY (ARRAY['contact', 'lead']))))`
 - `communication_decision_subject_shape`: `CHECK (((subject_kind IS NULL) = (subject_id IS NULL)))`

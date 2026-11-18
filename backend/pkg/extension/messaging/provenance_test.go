@@ -19,7 +19,7 @@ func citingRules() Rules {
 			Name: "Gesetz gegen den unlauteren Wettbewerb", Provision: "§7",
 			SourceURL: "https://www.gesetze-im-internet.de/uwg_2004/__7.html",
 		}},
-		Provenance: Provenance{ReviewedAt: reviewedOn, Reviewer: "pack maintainers"},
+		Provenance: Provenance{SourceCheckedAt: reviewedOn, ReviewedAt: reviewedOn, Reviewer: "pack maintainers"},
 		Citations: []Citation{{
 			Code: "no_marketing_consent", Instrument: "Gesetz gegen den unlauteren Wettbewerb", Provision: "§7(2) Nr. 2",
 		}},
@@ -47,6 +47,8 @@ func TestACitationMustNameReviewedLawWithALinkableSource(t *testing.T) {
 		{"no provision anywhere", func(r *Rules) { r.Instruments[0].Provision, r.Citations[0].Provision = "", "" }},
 		{"an empty code", func(r *Rules) { r.Citations[0].Code = "" }},
 		{"an unknown territory", func(r *Rules) { r.Citations[0].Territory = "sender_on_the_moon" }},
+		{"sources never checked", func(r *Rules) { r.Provenance.SourceCheckedAt = time.Time{} }},
+		{"sources checked after the review", func(r *Rules) { r.Provenance.SourceCheckedAt = reviewedOn.AddDate(0, 0, 1) }},
 		{"a review naming nobody", func(r *Rules) { r.Provenance.Reviewer = "" }},
 		{"a review due before it happened", func(r *Rules) { r.Provenance.ReviewDue = reviewedOn.AddDate(0, 0, -1) }},
 		{"a second citation for every sender", func(r *Rules) {
