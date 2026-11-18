@@ -115,20 +115,17 @@ export function HiddenBacklogPanel({
             <HiddenFigures backlog={hidden.data} onOpenEmail={onOpenEmail} />
           )}
         </SurfaceState>
-        {/* Shown mail, not held back, so it stands outside `clear`: the queue
-            ranked it without knowing what it asks. Only over a read that
+        {/* Shown mail, so `clear` leaves it out; only over a read that
             answered, for the footer's reason. */}
-        {(state === "ready" || state === "empty") &&
-          hidden.data &&
-          hidden.data.private_unchecked > 0 && (
-            <p className="t-caption">
-              {plural(
-                "worklist.hidden.privateUnchecked",
-                hidden.data.private_unchecked,
-                { count: formatNumber(hidden.data.private_unchecked, locale) },
-              )}
-            </p>
-          )}
+        {hidden.isSuccess && hidden.data.private_unchecked > 0 && (
+          <p className="t-caption">
+            {plural(
+              "worklist.hidden.privateUnchecked",
+              hidden.data.private_unchecked,
+              { count: formatNumber(hidden.data.private_unchecked, locale) },
+            )}
+          </p>
+        )}
       </PanelBody>
     </Panel>
   );
