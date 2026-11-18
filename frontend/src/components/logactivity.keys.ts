@@ -51,8 +51,8 @@ export function activityLogKeys(
   return keys;
 }
 
-// The reads a failed log may have left stale: the task, the deal filing and the
-// open meeting can each have moved on under the form.
+// The reads a failed log may have left stale. The task, the deal filing and
+// the open meeting can each have moved on under the form.
 export function failedLogKeys(
   input: Readonly<{
     draft: ActivityDraft;
