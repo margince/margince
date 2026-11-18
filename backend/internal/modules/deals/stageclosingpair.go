@@ -10,6 +10,7 @@ package deals
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -22,14 +23,10 @@ import (
 const codeLastClosingStage = "last_closing_stage"
 
 func lastClosingStageError(semantic StageSemantic) error {
-	kind := "Lost"
-	if semantic == SemanticWon {
-		kind = "Won"
-	}
+	kind := strings.ToUpper(string(semantic[:1])) + string(semantic[1:])
 	return &values.ParseError{
 		Field: stageSemanticField, Code: codeLastClosingStage,
-		Message: fmt.Sprintf("A pipeline needs a %s stage to close deals as %s. Add another %s stage first.",
-			kind, kind, kind),
+		Message: fmt.Sprintf("A pipeline needs a %[1]s stage to close deals as %[1]s. Add another %[1]s stage first.", kind),
 	}
 }
 
