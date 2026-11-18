@@ -628,6 +628,12 @@
     transform: scale(var(--ob-core-scale, 1));
     padding-top: var(--space-6);
   }
+  /* Once the reader has work of their own, the orb is decoration whose row
+     stays put while the board scrolls under it. Hidden, never unmounted, for
+     the WebGL reason at `.ob-stage-core[data-hidden]`. */
+  .ob-stage[data-core="work"] .ob-stage-core {
+    display: none;
+  }
   /* And its one track may shrink below that line, or the stretch is undone. */
   .ob-stage-board {
     align-content: start;
