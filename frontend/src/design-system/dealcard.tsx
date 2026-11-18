@@ -170,11 +170,26 @@ function DealCardClose({
   zone,
 }: Readonly<{ deal: BoardDeal; closed?: string | null; zone: string }>) {
   const t = useT();
+  const { locale } = useLocale();
   if (closed !== undefined) {
     return <span className="deal-closes">{closed ?? t("deal.undated")}</span>;
   }
+  // When a won or lost deal closed: a fact, so it carries no warning tone.
   if (deal.closedAt !== undefined) {
-    return <DealClosed at={deal.closedAt} zone={zone} />;
+    return (
+      <span className="deal-closes">
+        {deal.closedAt
+          ? t("deal.closed", {
+              date: formatDayMonthNearYear(
+                deal.closedAt,
+                locale,
+                zone,
+                new Date(),
+              ),
+            })
+          : t("deal.undated")}
+      </span>
+    );
   }
   if (!deal.closeDate) {
     return <span className="deal-closes">{t("deal.undated")}</span>;
@@ -185,24 +200,6 @@ function DealCardClose({
       provisional={deal.closeDateProvisional ?? false}
       zone={zone}
     />
-  );
-}
-
-// When a won or lost deal closed: a fact, so it carries no warning tone.
-function DealClosed({
-  at,
-  zone,
-}: Readonly<{ at: string | null; zone: string }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  return (
-    <span className="deal-closes">
-      {at
-        ? t("deal.closed", {
-            date: formatDayMonthNearYear(at, locale, zone, new Date()),
-          })
-        : t("deal.undated")}
-    </span>
   );
 }
 
