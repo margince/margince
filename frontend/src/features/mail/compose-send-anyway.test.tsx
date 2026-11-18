@@ -447,6 +447,67 @@ describe("the email composer with the switch on", () => {
     expect(count(sent, "POST /communication-reviews/r-1/direct-send")).toBe(0);
   });
 
+  it(
+    "keeps the reason through a typo fix, sends once on it, and starts the next message empty",
+    async () => {
+      const user = userEvent.setup();
+      const onClose = vi.fn();
+      const second = { ...REVIEW, id: "r-2", assessment_revision: "rev-2" };
+      let sends = 0;
+      const sent = stubRoutes({
+        "GET /me": inlineMe,
+        "POST /emails": () => {
+          sends += 1;
+          return sends === 2
+            ? refused({ review_id: "r-2" }, second)
+            : refused();
+        },
+        "POST /communication-reviews/r-2/direct-send": () =>
+          jsonResponse({ ...activity202, id: "act-9" }, 201),
+      });
+      render(<Composer onClose={onClose} />);
+      await waitFor(() =>
+        expect(screen.queryByRole("combobox", { name: WHY_ASK })).toBeNull(),
+      );
+      await fillInline(user);
+      await pressSend(user);
+      await user.type(await reasonField(), "They asked for prices by phone.");
+      writeMessage("Body", "The prices you asked for, as promised.");
+      await waitFor(() =>
+        expect(
+          screen.queryByRole("button", { name: "Send anyway" }),
+        ).toBeNull(),
+      );
+      await pressSend(user);
+      expect(await reasonField()).toHaveProperty(
+        "value",
+        "They asked for prices by phone.",
+      );
+      await user.click(await sendAnyway());
+      await waitFor(() => expect(onClose).toHaveBeenCalled());
+      expect(
+        sent
+          .filter((entry) => entry.key.endsWith("/direct-send"))
+          .map((entry) => [entry.key, entry.body]),
+      ).toEqual([
+        [
+          "POST /communication-reviews/r-2/direct-send",
+          expect.objectContaining({
+            explanation: "They asked for prices by phone.",
+            assessment_revision: "rev-2",
+          }),
+        ],
+      ]);
+
+      cleanup();
+      await openInline(sent);
+      await fillInline(user);
+      await pressSend(user);
+      expect(await reasonField()).toHaveProperty("value", "");
+    },
+    EIGHT_WAITS_TEST_MS,
+  );
+
   it("sends the edited message when the finding is gone", async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
