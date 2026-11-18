@@ -6832,6 +6832,10 @@ export const en = {
   // The confirmation after an approval, and the way back to the change it
   // made. The undo lives on the RECORD — the history panel reverses the
   // update this approval wrote — so the verb says where it is going.
+  "decision.waitingForAgent": "Approved. Waiting for the agent to run it.",
+  "decision.mailboxBlocked":
+    "No connected mailbox can send. Approving would not send this email.",
+  "decision.fieldRequired": "Required",
   "decision.applied": "Applied",
   "decision.undoOnRecord": "Undo on record",
   "decision.status.approved": "Approved",
@@ -7176,6 +7180,12 @@ export const en = {
     "Arrow keys stage a decision: → accept · ← reject · ↑ edit · ↓ later · U undo · Enter sends staged decisions",
   "brief.deck.behind_one": "1 more behind",
   "brief.deck.behind_other": "{count} more behind",
+  "brief.deck.awaitingAgent_one":
+    "1 approved decision waits for its agent to run it.",
+  "brief.deck.awaitingAgent_other":
+    "{count} approved decisions wait for their agents to run them.",
+  "brief.deck.effectFailed_one": "1 approved decision did not run.",
+  "brief.deck.effectFailed_other": "{count} approved decisions did not run.",
   "brief.deck.staged_one": "1 decision staged",
   "brief.deck.staged_other": "{count} decisions staged",
   "brief.deck.commit": "Send staged decisions",
@@ -19594,6 +19604,8 @@ export const en = {
     "A recipient stopped marketing after you scheduled this. It will not send to them.",
   "sched.held.recipientReplied":
     "New mail came in from a recipient after you scheduled this follow-up. Read it before you send this.",
+  "sched.held.confirmSendsNow":
+    "Confirming sends this message now, not at the time it was scheduled for.",
   "sched.held.sendRefused":
     "A check blocked this message when it was due. Nothing was sent.",
   "sched.inZone": "in {zone}",
@@ -19870,6 +19882,9 @@ export const en = {
   "worklist.clear": "Nothing is waiting on you.",
   "worklist.clearFor": "Nothing is waiting on {name}.",
   "worklist.clearOfUrgent": "No urgent work.",
+  "worklist.clearDecisionsWaiting":
+    "Nothing due today. Decisions are waiting for you.",
+  "worklist.clearDecisionsOpen": "Open Decisions",
   "worklist.clearOfTasksToday":
     "No tasks due today or overdue. Later tasks are under Upcoming and backlog.",
   "worklist.clearOfWhatWasRead": "No items in the sources that loaded.",

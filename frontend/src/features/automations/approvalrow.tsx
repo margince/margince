@@ -33,8 +33,8 @@ import {
   ProblemError,
   unwrap,
 } from "../../lib/problem";
-import { navigate } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
+import { useUnsavedGuard } from "../../lib/unsavedclaims";
 import { useSendPermission } from "../../lib/usesendpermission";
 import { ApprovalDetailModal } from "./approvaldetail";
 import {
@@ -50,9 +50,15 @@ import {
   approvalLabel,
   decisionSkewKey,
   editableStrings,
+  requiredMailFields,
 } from "./approvalkind";
+import {
+  announceApproval,
+  editedAwayFromProposal,
+  MailboxBlocked,
+} from "./approvalmail";
 import { rowLabels, useApprovalDisplay } from "./approvalproposal";
-import { approvalAcceptable } from "./approvalresponsibility";
+import { approvalAcceptable, mailCannotBeSent } from "./approvalresponsibility";
 import { stagedSendOf } from "./approvalsend";
 import { ApprovalDecider, ApprovalTarget } from "./approvaltarget";
 import {
@@ -185,6 +191,10 @@ export function ApprovalRow({
     enabled: !decided && staged !== undefined,
   });
 
+  // The server marks a mail its sender cannot send. approvalAcceptable then
+  // withholds the verbs here and on every other surface that decides it.
+  const mailboxBlocked = mailCannotBeSent(approval, decided);
+
   // An agent-drafted mail to a recipient with no lawful basis on record waits
   // for the approver to confirm the warning, as the composer does.
   const lawfulBasis = useLawfulBasisGate(permission.preview);
@@ -206,23 +216,6 @@ export function ApprovalRow({
     approval.target_entity_id,
   );
 
-  // An undo like any other: it lives ACTION_TOAST_MS, held while hovered or
-  // focused. Only on approve: a rejection changed nothing to put back.
-  const showUndoOffer = (verdict: "approve" | "reject") => {
-    if (verdict !== "approve" || !undoTarget) {
-      return;
-    }
-    // The verb goes through `action`: the region draws it on its own ground,
-    // and withdraws the message once it has been pressed.
-    toast.show(t("decision.applied"), {
-      action: {
-        kind: "undo",
-        label: t("decision.undoOnRecord"),
-        onAct: () => navigate(undoTarget),
-      },
-    });
-  };
-
   const decide = useMutation({
     mutationFn: async (input: {
       verdict: "approve" | "reject";
@@ -243,12 +236,13 @@ export function ApprovalRow({
         }),
       );
     },
-    onSuccess: (_data, input) => {
+    onSuccess: (data, input) => {
       void invalidateApprovalViews(queryClient);
       for (const queryKey of extraInvalidateKeys ?? []) {
         queryClient.invalidateQueries({ queryKey });
       }
-      showUndoOffer(input.verdict);
+      if (input.verdict === "approve")
+        announceApproval(toast, t, data, undoTarget);
     },
     onError: (error) => {
       const problem = error instanceof ProblemError ? error.problem : null;
@@ -299,15 +293,29 @@ export function ApprovalRow({
     setEditing(true);
   };
 
+  const acceptable = approvalAcceptable(approval);
+  // A mail must say something: the fields it cannot send without.
+  const required = requiredMailFields(staged !== undefined, strings);
+
+  // The editor closes only once the server took the decision, so a refusal
+  // leaves the typed text where it was.
+  // Typed text the decision panel's Escape, X and backdrop must ask about.
+  useUnsavedGuard(
+    editedAwayFromProposal(editing, strings, change, draft),
+    `approval-edit:${approval.id}`,
+  );
+
   const approveEdited = () => {
-    if (!approvalAcceptable(approval)) return;
+    if (!acceptable) return;
     lawfulBasis.gate(() => {
       held.announce();
-      decide.mutate({
-        verdict: "approve",
-        editedPayload: { ...change, ...draft },
-      });
-      setEditing(false);
+      decide.mutate(
+        {
+          verdict: "approve",
+          editedPayload: { ...change, ...draft },
+        },
+        { onSuccess: () => setEditing(false) },
+      );
     });
   };
 
@@ -378,7 +386,8 @@ export function ApprovalRow({
       editor={
         editing ? (
           <StagedEditor
-            disabled={!approvalAcceptable(approval)}
+            disabled={!acceptable}
+            required={required}
             acceptLabel={approvalAcceptLabel(
               approval.kind,
               plural,
@@ -400,7 +409,7 @@ export function ApprovalRow({
         ) : undefined
       }
       onAccept={
-        approvalAcceptable(approval)
+        acceptable
           ? () =>
               lawfulBasis.gate(() => {
                 held.announce();
@@ -431,6 +440,7 @@ export function ApprovalRow({
             decided={decided}
             disabled={decide.isPending}
           />
+          <MailboxBlocked blocked={mailboxBlocked} />
           {!decided && staged !== undefined && (
             <SendPermission
               preview={permission.preview}

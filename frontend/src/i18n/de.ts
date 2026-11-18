@@ -6863,6 +6863,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "decision.evidenceSource.unknown": "Quelle",
   "decision.detailAsked": "Angefragt",
   "decision.detailDecided": "Entschieden",
+  "decision.waitingForAgent": "Freigegeben. Der Agent führt es noch aus.",
+  "decision.mailboxBlocked":
+    "Kein verbundenes Postfach kann senden. Die Freigabe würde diese E-Mail nicht versenden.",
+  "decision.fieldRequired": "Pflichtfeld",
   "decision.applied": "Übernommen",
   "decision.undoOnRecord": "Am Datensatz rückgängig machen",
   "decision.status.approved": "Freigegeben",
@@ -7171,6 +7175,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Pfeiltasten merken eine Entscheidung vor: → annehmen · ← ablehnen · ↑ bearbeiten · ↓ später · U rückgängig · Enter sendet vorgemerkte Entscheidungen",
   "brief.deck.behind_one": "1 weitere dahinter",
   "brief.deck.behind_other": "{count} weitere dahinter",
+  "brief.deck.awaitingAgent_one":
+    "1 freigegebene Entscheidung wartet auf ihren Agenten.",
+  "brief.deck.awaitingAgent_other":
+    "{count} freigegebene Entscheidungen warten auf ihre Agenten.",
+  "brief.deck.effectFailed_one":
+    "1 freigegebene Entscheidung wurde nicht ausgeführt.",
+  "brief.deck.effectFailed_other":
+    "{count} freigegebene Entscheidungen wurden nicht ausgeführt.",
   "brief.deck.staged_one": "1 Entscheidung vorgemerkt",
   "brief.deck.staged_other": "{count} Entscheidungen vorgemerkt",
   "brief.deck.commit": "Vorgemerkte Entscheidungen senden",
@@ -19768,6 +19780,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Jemand unter den Empfangenden hat nach der Planung Werbung gestoppt. An diese Adresse wird sie nicht gesendet.",
   "sched.held.recipientReplied":
     "Nach der Planung kam neue Mail von jemandem unter den Empfangenden. Lies sie, bevor du dieses Follow-up sendest.",
+  "sched.held.confirmSendsNow":
+    "Wenn du bestätigst, wird die Nachricht jetzt gesendet, nicht zur geplanten Zeit.",
   "sched.held.sendRefused":
     "Eine Prüfung hat die Nachricht bei Fälligkeit blockiert. Es wurde nichts gesendet.",
   "sched.inZone": "in {zone}",
@@ -20099,6 +20113,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.clear": "Nichts wartet auf dich.",
   "worklist.clearFor": "Nichts wartet auf {name}.",
   "worklist.clearOfUrgent": "Keine dringende Arbeit.",
+  "worklist.clearDecisionsWaiting":
+    "Heute nichts fällig. Entscheidungen warten auf dich.",
+  "worklist.clearDecisionsOpen": "Entscheidungen öffnen",
   "worklist.clearOfTasksToday":
     "Keine Aufgaben fällig heute oder überfällig. Spätere Aufgaben stehen unter Anstehend und Rückstand.",
   "worklist.clearOfWhatWasRead": "Keine Einträge in den geladenen Quellen.",

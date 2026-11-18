@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 274.4 KB |
+| Tool catalog | 274.6 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 71644 |
+| Approx. wire tokens | 71715 |
 | Largest tool | `read_details` (17.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -32,11 +32,11 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 51.5 KB | 18% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 53.5 KB | 19% | Yes, every step |
+| Output schemas | 51.6 KB | 18% | **No**: a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 53.7 KB | 19% | Yes, every step |
 | Input schemas | 157.5 KB | 57% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 4% | Partly |
-| **Description + input schema** | **211.1 KB** | **76%** | **the recurring cost** |
+| **Description + input schema** | **211.2 KB** | **76%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -84,7 +84,7 @@ descriptions and input schemas are what each step pays for.
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 342 |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 275 |
 | [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 891 |
-| [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 429 |
+| [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 465 |
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 524 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 395 |
 | [`find_records`](#find_records) | Find records | yes |  | 2033 |
@@ -4430,17 +4430,19 @@ Renders its result in [`ui://margince/create-followups.html`](#create_followups_
 Answer staged actions for the colleague asking you: approve, which lets the change happen, or
 reject, which discards it. Name staged_action_id for one action, or bundle_id for every
 still-waiting proposal one act staged together. The verdict is theirs — take an explicit approve
-or reject rather than deciding what they would have wanted. Approving is what makes the change real,
-including sending a message that was only drafted; a rejection cannot be taken back. You may approve
-your own proposal only when it is a change that would have gone straight through but for a human's
-earlier edit — no deal close, no relink, no tag merge, no schema change, no send; the rest is
-theirs to release in the CRM. An item already answered, or lapsed, is reported as such and nothing
-is written; each bundle member is answered and reported on its own, and a bundle holding none of
-theirs reads as not found. read_approval when they have not seen what it holds; list_approvals is
-where both ids come from. If the proposal is your OWN refused call, approving does not perform it
-— re-issue that same call with approval_id set. (Runs immediately; the user's yes is needed for
-the actions bundle, one, so tell them what the call will change and get it before calling, unless
-they asked for this call themselves; requires passport scope "write".)
+or reject rather than deciding what they would have wanted. Approving runs a change the system
+staged now, including sending a message that was only drafted. Approving a call an agent staged only
+lets that agent repeat it: the item then reads awaiting_agent and nothing has changed until it does.
+A rejection cannot be taken back. You may approve your own proposal only when it is a change that
+would have gone straight through but for a human's earlier edit — no deal close, no relink, no tag
+merge, no schema change, no send; the rest is theirs to release in the CRM. An item already
+answered, or lapsed, is reported as such and nothing is written; each bundle member is answered and
+reported on its own, and a bundle holding none of theirs reads as not found. read_approval when they
+have not seen what it holds; list_approvals is where both ids come from. If the proposal is your OWN
+refused call, approving does not perform it — re-issue that same call with approval_id set. (Runs
+immediately; the user's yes is needed for the actions bundle, one, so tell them what the call will
+change and get it before calling, unless they asked for this call themselves; requires passport
+scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -5282,6 +5284,9 @@ Renders its result in [`ui://margince/approval-queue.html`](#approval_queue_view
         "approvals": {
           "items": {
             "properties": {
+              "awaiting_agent": {
+                "type": "boolean"
+              },
               "bundle_id": {
                 "format": "uuid",
                 "type": "string"
@@ -5435,6 +5440,9 @@ Renders its result in [`ui://margince/approval-queue.html`](#approval_queue_view
                 "type": "array"
               },
               "diff_hash": {
+                "type": "string"
+              },
+              "effect_failure": {
                 "type": "string"
               },
               "effects": {
@@ -6927,6 +6935,9 @@ Renders its result in [`ui://margince/approval.html`](#approval_view), visible t
   "properties": {
     "data": {
       "properties": {
+        "awaiting_agent": {
+          "type": "boolean"
+        },
         "bundle_id": {
           "format": "uuid",
           "type": "string"
@@ -7080,6 +7091,9 @@ Renders its result in [`ui://margince/approval.html`](#approval_view), visible t
           "type": "array"
         },
         "diff_hash": {
+          "type": "string"
+        },
+        "effect_failure": {
           "type": "string"
         },
         "effects": {

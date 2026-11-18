@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 280954,
+    "tool_catalog_bytes": 281241,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 71644,
+    "approx_wire_tokens_total": 71715,
     "largest_tool_bytes": 17890,
     "largest_tool": "read_details",
     "tool_catalog_composition": {
-      "description_bytes": 54814,
+      "description_bytes": 54959,
       "input_schema_bytes": 161314,
-      "output_schema_bytes": 52718,
-      "description_plus_input_schema_bytes": 216128
+      "output_schema_bytes": 52860,
+      "description_plus_input_schema_bytes": 216273
     }
   },
   "tools": {
@@ -3784,7 +3784,7 @@
           "readOnlyHint": false,
           "title": "Approve or reject staged actions"
         },
-        "description": "Answer staged actions for the colleague asking you: approve, which lets the change happen, or reject, which discards it. Name staged_action_id for one action, or bundle_id for every still-waiting proposal one act staged together. The verdict is theirs — take an explicit approve or reject rather than deciding what they would have wanted. Approving is what makes the change real, including sending a message that was only drafted; a rejection cannot be taken back. You may approve your own proposal only when it is a change that would have gone straight through but for a human's earlier edit — no deal close, no relink, no tag merge, no schema change, no send; the rest is theirs to release in the CRM. An item already answered, or lapsed, is reported as such and nothing is written; each bundle member is answered and reported on its own, and a bundle holding none of theirs reads as not found. read_approval when they have not seen what it holds; list_approvals is where both ids come from. If the proposal is your OWN refused call, approving does not perform it — re-issue that same call with approval_id set. (Runs immediately; the user's yes is needed for the actions bundle, one, so tell them what the call will change and get it before calling, unless they asked for this call themselves; requires passport scope \"write\".)",
+        "description": "Answer staged actions for the colleague asking you: approve, which lets the change happen, or reject, which discards it. Name staged_action_id for one action, or bundle_id for every still-waiting proposal one act staged together. The verdict is theirs — take an explicit approve or reject rather than deciding what they would have wanted. Approving runs a change the system staged now, including sending a message that was only drafted. Approving a call an agent staged only lets that agent repeat it: the item then reads awaiting_agent and nothing has changed until it does. A rejection cannot be taken back. You may approve your own proposal only when it is a change that would have gone straight through but for a human's earlier edit — no deal close, no relink, no tag merge, no schema change, no send; the rest is theirs to release in the CRM. An item already answered, or lapsed, is reported as such and nothing is written; each bundle member is answered and reported on its own, and a bundle holding none of theirs reads as not found. read_approval when they have not seen what it holds; list_approvals is where both ids come from. If the proposal is your OWN refused call, approving does not perform it — re-issue that same call with approval_id set. (Runs immediately; the user's yes is needed for the actions bundle, one, so tell them what the call will change and get it before calling, unless they asked for this call themselves; requires passport scope \"write\".)",
         "inputSchema": {
           "properties": {
             "bundle_id": {
@@ -4576,6 +4576,9 @@
                 "approvals": {
                   "items": {
                     "properties": {
+                      "awaiting_agent": {
+                        "type": "boolean"
+                      },
                       "bundle_id": {
                         "format": "uuid",
                         "type": "string"
@@ -4729,6 +4732,9 @@
                         "type": "array"
                       },
                       "diff_hash": {
+                        "type": "string"
+                      },
+                      "effect_failure": {
                         "type": "string"
                       },
                       "effects": {
@@ -6181,6 +6187,9 @@
           "properties": {
             "data": {
               "properties": {
+                "awaiting_agent": {
+                  "type": "boolean"
+                },
                 "bundle_id": {
                   "format": "uuid",
                   "type": "string"
@@ -6334,6 +6343,9 @@
                   "type": "array"
                 },
                 "diff_hash": {
+                  "type": "string"
+                },
+                "effect_failure": {
                   "type": "string"
                 },
                 "effects": {

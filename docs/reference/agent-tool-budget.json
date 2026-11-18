@@ -31,7 +31,7 @@
   "catalog": {
     "tools": 48,
     "system_frame_tokens": 672,
-    "tokens": 51295,
+    "tokens": 51332,
     "median_tool_tokens": 797,
     "mean_tool_tokens": 1068
   },
@@ -213,7 +213,7 @@
     },
     {
       "name": "decide_approvals",
-      "tokens": 429
+      "tokens": 465
     },
     {
       "name": "annotate_brief",

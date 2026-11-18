@@ -28,6 +28,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/mailprobe"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -251,6 +252,7 @@ func registerLateApprovalEffects(svc *approvals.Service, pool *pgxpool.Pool, sen
 		svc.WithStagePrecheck(kind, agentMailPrecheck(store, gate))
 	}
 	svc.WithStagePrecheck(operationSendMessage, agentChannelPrecheck(store, gate))
+	svc.WithSendProbe(mailprobe.For(send.SendAuthority))
 	for kind, late := range lateApprovalEffects {
 		svc.WithEffect(kind, late.effect(svc, store, gate, send.Delivery))
 		svc.WithPrecheck(kind, late.precheck(store, gate, send.Delivery))

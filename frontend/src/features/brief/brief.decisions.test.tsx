@@ -258,3 +258,40 @@ describe("waiting on you", () => {
     expect(screen.queryByText(en["brief.deck.empty"])).toBeNull();
   });
 });
+
+describe("a mail its sender cannot send", () => {
+  const unsendable = { mailbox_send_capable: false };
+
+  it("offers no approve on a single decision", () => {
+    render(
+      <DecisionsSection
+        items={deckItems([proposal("ap-1", "Reply to Anna", unsendable)])}
+        nowMs={NOW}
+        state="ready"
+        onAlreadyDecided={() => undefined}
+      />,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: en["brief.approval.approve"] }),
+    ).toBeNull();
+  });
+
+  it("offers no approve on a bundle that holds one", () => {
+    render(
+      <DecisionsSection
+        items={deckItems([
+          proposal("ap-1", "Reply to Anna", { bundle_id: "b1" }),
+          proposal("ap-2", "Reply to Bo", { bundle_id: "b1", ...unsendable }),
+        ])}
+        nowMs={NOW}
+        state="ready"
+        onAlreadyDecided={() => undefined}
+      />,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: en["brief.approval.approve"] }),
+    ).toBeNull();
+  });
+});

@@ -68,6 +68,19 @@ export function sendReviewOf(error: unknown): SendReview | null {
   };
 }
 
+// heldSendReview reads the review a held scheduled message names, or null
+// when none stands over it. The row carries no refusals; the modal reads them
+// from the review itself.
+export function heldSendReview(
+  reviewId: string | null | undefined,
+  actions: unknown,
+): SendReview | null {
+  if (!reviewId) {
+    return null;
+  }
+  return { reviewId, actions: actionsIn(actions), refusals: [] };
+}
+
 // refusalsIn keeps each entry with an address and a reason. Dropping one
 // malformed entry is safe: the status never reads fewer refusals as ready.
 function refusalsIn(raw: unknown): readonly RefusedRecipient[] {
