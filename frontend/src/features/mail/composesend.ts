@@ -161,7 +161,7 @@ function sendRequest(
       to,
       // Keep the editor's markup; omit only an empty alternative.
       html_body: html.trim() === "" ? undefined : html,
-      from_connection_id: fields.fromConnection || undefined,
+      from_connection_id: fields.from.connectionId || undefined,
       cc: cc.length ? cc : undefined,
       bcc: bcc.length ? bcc : undefined,
       attachment_ids: attachmentIds,

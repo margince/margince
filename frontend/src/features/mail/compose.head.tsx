@@ -318,8 +318,8 @@ export function ComposeHead({
       {dial.isChannelReply && <ChannelReplyFiling activityId={activityId} />}
       {!dial.isChannelReply && (
         <FromMailboxRow
-          value={fields.fromConnection}
-          onChange={fields.setFromConnection}
+          value={fields.from.connectionId}
+          onChange={fields.from.setConnectionId}
         />
       )}
       {!dial.isChannelReply && (

@@ -1,11 +1,19 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useState } from "react";
 import { Field } from "../../design-system/atoms";
 import { Select } from "../../design-system/select";
 import { providerName } from "../../format/connectorprovider";
 import { useT } from "../../i18n";
 import { sendingMailboxes, useConnectors } from "../../lib/connectors";
+
+/** The sender's mailbox the mail goes out from, the composer's own field.
+ *  Empty leaves the choice to the server. */
+export function useFromMailbox() {
+  const [connectionId, setConnectionId] = useState("");
+  return { connectionId, setConnectionId };
+}
 
 /** Which of the sender's mailboxes the mail goes out from. Shown only when
  *  more than one can send. The empty choice leaves it to the server: a reply
