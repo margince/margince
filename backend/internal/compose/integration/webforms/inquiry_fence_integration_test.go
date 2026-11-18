@@ -65,6 +65,33 @@ func TestAHandlingCutoverRefusesAnIntakeWithoutAcknowledgingOrLosingIt(t *testin
 	}
 }
 
+// Each intake holds the form's lease while it lands, so posts sent together
+// queue behind it instead of turning visitors away.
+func TestPostsSentTogetherAreAllAccepted(t *testing.T) {
+	e := setupFormsApp(t)
+	form := createForm(t, e, integration.AnyMap{"name": "Together", "sender": "browser", "allowed_origins": []string{siteOrigin}})
+	emails := []string{"together-1@visitor.example", "together-2@visitor.example", "together-3@visitor.example"}
+	start := make(chan struct{})
+	answers := make(chan formAnswer, len(emails))
+	for _, email := range emails {
+		go func() {
+			<-start
+			answers <- browserPost(t, e, form.FormKey, url.Values{"email": {email}, "message": {"Please call"}}, siteOrigin)
+		}()
+	}
+	close(start)
+	for range emails {
+		if answer := <-answers; answer.Status != http.StatusAccepted {
+			t.Errorf("a post sent beside others = %d %s", answer.Status, answer.Body)
+		}
+	}
+	for _, email := range emails {
+		if count, _, _ := leadsWithEmail(t, e, email); count != 1 {
+			t.Errorf("%s landed %d leads, want 1", email, count)
+		}
+	}
+}
+
 func TestLegacyLeadHandlersWaitForTheAcceptedWebsiteNote(t *testing.T) {
 	e := setupFormsApp(t)
 	form := createForm(t, e, integration.AnyMap{"name": "Inquiries", "sender": "browser", "allowed_origins": []string{siteOrigin}})

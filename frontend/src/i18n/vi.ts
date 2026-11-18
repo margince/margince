@@ -2942,6 +2942,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "action.booking": "Trang đặt lịch",
 
   "common.fieldInvalid": "Kiểm tra giá trị này và thử lại.",
+  "common.phone.needsCountryCode":
+    "Hãy bắt đầu số bằng mã quốc gia, ví dụ +49 hoặc 0049.",
+  "common.phone.malformed":
+    "Đây không phải số điện thoại. Hãy viết mã quốc gia và 8 đến 15 chữ số, ví dụ +49 30 1234567, không kèm số máy lẻ.",
+  "common.phone.empty": "Nhập số điện thoại.",
   "common.fieldTooLongMax": "{field}: tối đa {max} ký tự.",
   "common.valueTooLongMax": "Giá trị này có tối đa {max} ký tự.",
   "common.valueTooLong": "Giá trị này quá dài.",
@@ -3032,6 +3037,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "record.fieldsRetry": "Thử lại",
 
   "record.companyRoutingKey": "Khóa định tuyến công ty",
+  "record.companyRoutingKeyWhy": "Khóa định tuyến công ty dùng để làm gì",
+  "record.companyRoutingKeyHelp":
+    "Tên miền web của công ty, ví dụ example.com, hoặc một tên ngắn của công ty. Quy tắc phân bổ lead có thể so khớp với nó, và tên miền mà một công ty trong Margince đang giữ sẽ gợi ý công ty đó.",
   "record.finishFieldEdit":
     "Lưu hoặc hủy chỉnh sửa hiện tại trước khi đóng chi tiết.",
   "record.save": "Lưu",
@@ -3492,6 +3500,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "unit.companies": "công ty",
   "unit.deals": "deal",
   "unit.leads": "lead",
+  "unit.contact": "liên hệ",
+  "unit.company": "công ty",
+  "unit.lead": "lead",
   "unit.worklistItems": "việc và cam kết",
   "unit.partners": "đối tác",
   "unit.products": "sản phẩm",
@@ -5700,7 +5711,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Vai trò hiện tại không có quyền thay đổi cài đặt này.",
   "leadHandling.firstResponse": "Mục tiêu phản hồi đầu tiên",
   "leadHandling.firstResponseHint":
-    "Mặc định tắt. Khi bật, mọi lead đang mở có hạn trả lời, danh sách có thêm chế độ xem Quá hạn, và lead quá hạn được xếp trước.",
+    "Mặc định tắt. Khi bật, mọi lead đang mở đã liên hệ qua email hoặc biểu mẫu trang web có hạn trả lời, danh sách có thêm chế độ xem Quá hạn, và lead quá hạn được xếp trước.",
   "leadHandling.targetMinutes": "Mục tiêu (phút)",
   "leadHandling.targetOutOfRange":
     "Nhập số phút nguyên từ 15 đến 10.080 (7 ngày).",
@@ -5724,6 +5735,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.bulkDisqualifyTitle_other": "Loại {count} lead?",
   "lead.bulkDisqualifyBody":
     "Đóng với lý do “{reason}”. Mỗi lead vẫn giữ nguyên hồ sơ, và không thể mở lại tất cả trong một bước.",
+  "lead.bulkAssignedDone_one": "Đã giao {count} lead cho {owner}.",
+  "lead.bulkAssignedDone_other": "Đã giao {count} lead cho {owner}.",
+  "lead.bulkDisqualifiedDone_one": "Đã loại {count} lead.",
+  "lead.bulkDisqualifiedDone_other": "Đã loại {count} lead.",
   "lead.bulkFailed": "Không thể áp dụng cho {count} lead:",
   "lead.bulkFailedRow": "không thể lưu",
   "lead.bulkOutcomeConflict": "người khác đã thay đổi trong lúc đó",
@@ -5802,6 +5817,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.demoteReason": "Lý do (ghi vào nhật ký hoạt động)",
   "lead.demoteReasonRequired": "Nhập lý do trước.",
   "lead.demoteConfirm": "Hủy xác nhận",
+  "lead.demoteContactHasDeal":
+    "Liên hệ đang gắn với một deal, nên không thể hủy xác nhận này. Hãy gỡ họ khỏi nhóm quyết định mua của deal trước, hoặc giữ liên hệ.",
   "lead.reopen": "Mở lại",
   "lead.writeRefused": "Không thể lưu thay đổi",
   "lead.reopenDialog": "Mở lại lead này?",
@@ -5910,7 +5927,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.evidenceNote": "Ghi chú bằng chứng (không bắt buộc)",
   "lead.segregationTitle": "Lead được giữ tách biệt với liên hệ",
   "lead.segregation":
-    "Khi xác nhận đủ điều kiện, lead sẽ trở thành liên hệ. Muốn xử lý một liên hệ đã có như lead, mở liên hệ đó và chọn “Xử lý như lead”.",
+    "Khi xác nhận đủ điều kiện, lead sẽ trở thành liên hệ. Khi một liên hệ có cơ hội kinh doanh mới, hãy tạo một deal.",
   "lead.segregationDismiss": "Ẩn thông báo này",
   "list.emptyMine": "Bạn không chịu trách nhiệm {unit} nào.",
   "list.showAll": "Hiển thị tất cả",
@@ -5920,7 +5937,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.viewNew": "Mới",
   "lead.viewNewUnassigned": "Mới và chưa giao",
   "lead.viewUnassigned": "Chưa giao",
-  "lead.viewNeedsFollowUp": "Cần liên hệ lại",
+  "lead.viewContacted": "Đã liên hệ",
   "lead.viewEngaged": "Đang trao đổi",
   "lead.ladder": "Trạng thái lead",
   "lead.ladder.automatic": "{label} · đặt tự động",
@@ -5948,8 +5965,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.qualify.dealName": "Tên deal",
   "lead.qualify.amount": "Số tiền ({currency})",
   "lead.qualify.amountHint":
-    "Không bắt buộc. Số nguyên theo loại tiền cơ sở của bản cài đặt.",
-  "lead.qualify.amountInvalid": "Nhập một số hoặc để trống.",
+    "Không bắt buộc. Theo loại tiền cơ sở của bản cài đặt.",
   "lead.qualify.amountNoCurrency":
     "Chưa tải xong loại tiền cơ sở. Thử lại sau giây lát, hoặc để trống số tiền.",
   "lead.qualify.why": "Lý do",
@@ -7182,9 +7198,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "create.region": "Tỉnh hoặc vùng",
   "create.postalCode": "Mã bưu chính",
   "create.country": "Mã quốc gia (ISO 3166)",
-  "lead.fillFromContact": "Điền từ liên hệ",
-  "lead.fillFromContactSearch": "Tìm liên hệ theo tên hoặc email",
-  "lead.create.fromContact": "Đã điền từ liên hệ này.",
   "create.companyName": "Công ty",
   "create.companyPicked": "Thêm liên hệ vào công ty có sẵn này.",
   "create.companyNew":
@@ -7234,7 +7247,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "common.duplicate.leadHolds":
     "Một lead đã có địa chỉ email hoặc hồ sơ LinkedIn này, nên chưa tạo liên hệ nào.",
   "common.duplicate.contactHolds":
-    "Một liên hệ đã có địa chỉ email hoặc hồ sơ LinkedIn này, nên chưa tạo lead nào. Với cơ hội mới, hãy tạo một deal cho liên hệ đó.",
+    "Một liên hệ đã có địa chỉ email hoặc hồ sơ LinkedIn này, và mỗi người chỉ là lead hoặc liên hệ. Với cơ hội mới, hãy tạo một deal cho liên hệ đó.",
   "contact.leadHeld.title": "Đây đã là một lead.",
   "contact.leadHeld.body":
     "Ai cũng chỉ là lead hoặc liên hệ, không bao giờ là cả hai. Hãy chuyển đổi lead thành liên hệ; lịch sử của lead sẽ đi theo.",

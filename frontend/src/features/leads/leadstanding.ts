@@ -20,6 +20,8 @@ export type LeadStanding = Readonly<{
   word: string;
   // The one sentence the call rests on.
   sentence: string;
+  // What a rep wrote about the call, drawn under the sentence.
+  note?: string;
   tone: ReadingTone;
 }>;
 
@@ -126,6 +128,7 @@ export function leadStanding(
       sentence: reason
         ? t("lead.standing.closedFor", { reason })
         : t("lead.standing.closedUnreasoned"),
+      note: lead.disqualify_note?.trim() || undefined,
       tone: "neutral",
     };
   }

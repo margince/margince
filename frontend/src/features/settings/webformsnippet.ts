@@ -91,13 +91,26 @@ export function browserSnippet(form: WebForm, url: string): string {
   ].join("\n");
 }
 
-// serverSnippet signs one JSON post the way a server form verifies it.
+// serverSnippet signs one JSON post the way a server form verifies it. A busy
+// form (503) has written nothing, so the lead is sent again, freshly signed.
 export function serverSnippet(form: WebForm, url: string): string {
   return [
     'import crypto from "node:crypto";',
     "",
     "export async function sendLead(fields) {",
     "  const body = JSON.stringify(fields);",
+    "  for (let attempt = 1; ; attempt++) {",
+    "    const response = await post(body);",
+    "    if (response.ok) return;",
+    "    if (response.status !== 503 || attempt === 3) {",
+    '      throw new Error("Margince refused the lead: " + response.status);',
+    "    }",
+    '    const wait = Number(response.headers.get("Retry-After")) || 1;',
+    "    await new Promise((resolve) => setTimeout(resolve, wait * 1000));",
+    "  }",
+    "}",
+    "",
+    "function post(body) {",
     "  const timestamp = Math.floor(Date.now() / 1000).toString();",
     '  const nonce = crypto.randomBytes(16).toString("hex");',
     `  const signed = \`${SIGNING_SCOPE}\\n${SIGNING_SLUG}\\n${form.form_key}\\n\${timestamp}\\n\${nonce}\\n\${body}\`;`,
@@ -105,7 +118,7 @@ export function serverSnippet(form: WebForm, url: string): string {
     `    .createHmac("sha256", process.env.${SECRET_VARIABLE})`,
     "    .update(signed)",
     '    .digest("hex");',
-    `  const response = await fetch("${url}", {`,
+    `  return fetch("${url}", {`,
     '    method: "POST",',
     "    headers: {",
     '      "Content-Type": "application/json",',
@@ -115,7 +128,6 @@ export function serverSnippet(form: WebForm, url: string): string {
     "    },",
     "    body,",
     "  });",
-    '  if (!response.ok) throw new Error("Margince refused the lead: " + response.status);',
     "}",
   ].join("\n");
 }

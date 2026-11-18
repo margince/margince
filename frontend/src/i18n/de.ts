@@ -3034,6 +3034,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "action.booking": "Buchungsseite",
 
   "common.fieldInvalid": "Prüfe diesen Wert und versuche es erneut.",
+  "common.phone.needsCountryCode":
+    "Beginne die Nummer mit der Ländervorwahl, etwa +49 oder 0049.",
+  "common.phone.malformed":
+    "Das ist keine Telefonnummer. Schreibe die Ländervorwahl und 8 bis 15 Ziffern, etwa +49 30 1234567, ohne Durchwahl-Zusatz.",
+  "common.phone.empty": "Gib eine Telefonnummer ein.",
   "common.fieldTooLongMax": "{field}: höchstens {max} Zeichen.",
   "common.valueTooLongMax": "Dieser Wert darf höchstens {max} Zeichen haben.",
   "common.valueTooLong": "Dieser Wert ist zu lang.",
@@ -3125,6 +3130,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "record.fieldsRetry": "Erneut versuchen",
 
   "record.companyRoutingKey": "Zuordnungsschlüssel des Unternehmens",
+  "record.companyRoutingKeyWhy": "Wofür der Zuordnungsschlüssel ist",
+  "record.companyRoutingKeyHelp":
+    "Die Webdomain des Unternehmens, etwa example.com, oder ein kurzer Name dafür. Regeln zur Lead-Zuweisung können darauf prüfen, und eine Domain, die ein Unternehmen in Margince hat, schlägt dieses Unternehmen vor.",
   "record.finishFieldEdit":
     "Speichere oder verwirf die aktuelle Änderung, bevor du die Details schließt.",
   "record.save": "Speichern",
@@ -3604,6 +3612,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "unit.companies": "Unternehmen",
   "unit.deals": "Deals",
   "unit.leads": "Leads",
+  "unit.contact": "Kontakt",
+  "unit.company": "Unternehmen",
+  "unit.lead": "Lead",
   "unit.worklistItems": "Aufgaben und Zusagen",
   "unit.partners": "Partner",
   "unit.products": "Produkte",
@@ -5852,7 +5863,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "leadHandling.readOnly": "Deine Rolle darf diese Einstellung nicht ändern.",
   "leadHandling.firstResponse": "Zielzeit für die erste Antwort",
   "leadHandling.firstResponseHint":
-    "Standardmäßig deaktiviert. Ist die Zielzeit aktiviert, erhält jeder offene Lead eine Antwortfrist, die Liste bekommt die Ansicht „Überfällig“, und überfällige Leads stehen oben.",
+    "Standardmäßig deaktiviert. Ist die Zielzeit aktiviert, erhält jeder offene Lead, der dir per E-Mail oder über ein Website-Formular geschrieben hat, eine Antwortfrist, die Liste bekommt die Ansicht „Überfällig“, und überfällige Leads stehen oben.",
   "leadHandling.targetMinutes": "Zielzeit (Minuten)",
   "leadHandling.targetOutOfRange":
     "Gib eine ganze Zahl an Minuten von 15 bis 10.080 (7 Tage) ein.",
@@ -5878,6 +5889,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.bulkDisqualifyTitle_other": "{count} Leads disqualifizieren?",
   "lead.bulkDisqualifyBody":
     "Geschlossen mit dem Grund „{reason}“. Jeder Lead behält seinen Datensatz, und die Leads lassen sich nicht in einem Schritt wieder öffnen.",
+  "lead.bulkAssignedDone_one": "{count} Lead an {owner} zugewiesen.",
+  "lead.bulkAssignedDone_other": "{count} Leads an {owner} zugewiesen.",
+  "lead.bulkDisqualifiedDone_one": "{count} Lead disqualifiziert.",
+  "lead.bulkDisqualifiedDone_other": "{count} Leads disqualifiziert.",
   "lead.bulkFailed": "{count} nicht übernommen:",
   "lead.bulkFailedRow": "nicht gespeichert",
   "lead.bulkOutcomeConflict": "inzwischen von jemand anderem geändert",
@@ -5959,6 +5974,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.demoteReason": "Grund (wird im Audit-Log erfasst)",
   "lead.demoteReasonRequired": "Gib zuerst einen Grund ein.",
   "lead.demoteConfirm": "Zurücknehmen",
+  "lead.demoteContactHasDeal":
+    "Der Kontakt ist an einem Deal beteiligt, daher lässt sich diese Qualifizierung nicht zurücknehmen. Entferne ihn zuerst aus dem Buying Center des Deals, oder behalte den Kontakt.",
   "lead.reopen": "Wieder öffnen",
   "lead.writeRefused": "Änderung nicht gespeichert",
   "lead.reopenDialog": "Lead wieder öffnen?",
@@ -6068,7 +6085,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.evidenceNote": "Notiz zum Beleg (optional)",
   "lead.segregationTitle": "Leads bleiben von Kontakten getrennt",
   "lead.segregation":
-    "Qualifizierst du einen Lead, wird er zum Kontakt. Um einen vorhandenen Kontakt als Lead zu bearbeiten, öffne den Kontakt und wähle „Als Lead bearbeiten“.",
+    "Qualifizierst du einen Lead, wird er zum Kontakt. Hat ein Kontakt ein neues Geschäft, lege einen Deal an.",
   "lead.segregationDismiss": "Hinweis ausblenden",
   "list.emptyMine": "Keine {unit}, für die du verantwortlich bist.",
   "list.showAll": "Alle anzeigen",
@@ -6078,7 +6095,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.viewNew": "Neu",
   "lead.viewNewUnassigned": "Neu und nicht zugewiesen",
   "lead.viewUnassigned": "Nicht zugewiesen",
-  "lead.viewNeedsFollowUp": "Follow-up nötig",
+  "lead.viewContacted": "Kontaktiert",
   "lead.viewEngaged": "Im Gespräch",
   "lead.ladder": "Lead-Status",
   "lead.ladder.automatic": "{label} · automatisch",
@@ -6105,9 +6122,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.qualify.stage": "Phase",
   "lead.qualify.dealName": "Deal-Name",
   "lead.qualify.amount": "Betrag ({currency})",
-  "lead.qualify.amountHint":
-    "Optional. Ganze Einheiten in der Basiswährung der Installation.",
-  "lead.qualify.amountInvalid": "Gib eine Zahl ein oder lass das Feld leer.",
+  "lead.qualify.amountHint": "Optional. In der Basiswährung der Installation.",
   "lead.qualify.amountNoCurrency":
     "Die Basiswährung ist noch nicht geladen. Versuche es gleich erneut oder lass den Betrag leer.",
   "lead.qualify.why": "Warum",
@@ -6267,7 +6282,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "field.unset": "Nicht festgelegt",
   "deal.standing.figure.offer": "Angebot {number} · Version {revision}",
   "deal.standing.figure.next": "Nächster Schritt",
-  "standing.noneYet": "Noch keiner",
+  "standing.noneYet": "Noch nichts",
   "deal.standing.figure.daysInStage": "Tage in der Phase",
   "deal.standing.figure.daysToClose": "Tage bis Abschluss",
   "deal.standing.figure.openedOn": "eröffnet am {date}",
@@ -7357,9 +7372,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "create.region": "Bundesland oder Region",
   "create.postalCode": "Postleitzahl",
   "create.country": "Ländercode (ISO 3166)",
-  "lead.fillFromContact": "Aus einem Kontakt übernehmen",
-  "lead.fillFromContactSearch": "Kontakte nach Name oder E-Mail suchen",
-  "lead.create.fromContact": "Aus diesem Kontakt übernommen.",
   "create.companyName": "Unternehmen",
   "create.companyPicked":
     "Ordnet den Kontakt diesem bestehenden Unternehmen zu.",
@@ -7410,7 +7422,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "common.duplicate.leadHolds":
     "Ein Lead hat diese E-Mail-Adresse oder dieses LinkedIn-Profil schon, daher wurde kein Kontakt angelegt.",
   "common.duplicate.contactHolds":
-    "Ein Kontakt hat diese E-Mail-Adresse oder dieses LinkedIn-Profil schon, daher wurde kein Lead angelegt. Für ein neues Geschäft mit ihm lege beim Kontakt einen Deal an.",
+    "Ein Kontakt hat diese E-Mail-Adresse oder dieses LinkedIn-Profil schon, und jemand ist entweder Lead oder Kontakt. Für ein neues Geschäft mit ihm lege beim Kontakt einen Deal an.",
   "contact.leadHeld.title": "Das ist schon ein Lead.",
   "contact.leadHeld.body":
     "Jemand ist ein Lead oder ein Kontakt, nie beides. Wandle den Lead in einen Kontakt um; der Verlauf des Leads geht mit.",

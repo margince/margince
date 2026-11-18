@@ -239,7 +239,7 @@ func sourceNote(shapes map[datasource.EntityType]reflect.Type, patch bool) []str
 		return nil
 	}
 	if patch {
-		return []string{"`source` on a lead is the administered lead-source key (see Settings › Data model); a patch corrects it, and the score follows."}
+		return []string{"`source` on a lead is the administered lead-source key (see Settings › Leads); a patch corrects it, and the score follows."}
 	}
 	return []string{"`source` is accepted but overwritten — this surface stamps its own provenance."}
 }
