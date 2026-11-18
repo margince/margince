@@ -20037,6 +20037,39 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.manager.kind.review_backlog": "Tồn đọng cần xem lại",
   "worklist.manager.kind.general": "Khác",
   "worklist.board.title": "Việc của nhóm cần chú ý",
+  "worklist.gap.rankedOn": "Xếp hạng ngày {date}.",
+  "worklist.gap.masked_one":
+    "{count} deal bị ẩn vì bạn không được xem giá trị của các deal đó.",
+  "worklist.gap.masked_other":
+    "{count} deal bị ẩn vì bạn không được xem giá trị của các deal đó.",
+  "worklist.gap.withheld":
+    "Hiệu suất cá nhân đang tắt, nên không hiển thị danh sách nêu deal của thành viên khác.",
+  "worklist.gap.tabs": "Góc nhìn nhóm",
+  "worklist.gap.exceptionsTab": "Ngoại lệ",
+  "worklist.gap.tab": "Thu hẹp khoảng cách",
+  "worklist.gap.title": "Thu hẹp khoảng cách",
+  "worklist.gap.loading": "Đang tải các deal đã xếp hạng…",
+  "worklist.gap.empty":
+    "Chưa nhóm nào có danh sách xếp hạng. Margince xếp hạng deal mỗi ngày một lần cho từng nhóm được ghi nhận.",
+  "worklist.gap.behind":
+    "Nhóm đang chậm so với mục tiêu quý. Hãy xử lý các deal này trước.",
+  "worklist.gap.onTarget":
+    "Nhóm đang đạt mục tiêu quý. Các deal này có thể trượt khỏi quý.",
+  "worklist.gap.nothingAtRisk":
+    "Nhóm đang đạt mục tiêu, và không deal mở nào có ngày chốt gặp rủi ro.",
+  "worklist.gap.noGoal":
+    "Nhóm này chưa có mục tiêu cho mọi tháng trong quý, nên chưa có deal nào được xếp hạng.",
+  "worklist.gap.rank": "Hạng",
+  "worklist.gap.deal": "Deal",
+  "worklist.gap.owner": "Phụ trách",
+  "worklist.gap.weighted": "Có trọng số",
+  "worklist.gap.why": "Lý do",
+  "worklist.gap.closesToday": "Chốt hôm nay",
+  "worklist.gap.closesIn_one": "Chốt sau {count} ngày",
+  "worklist.gap.closesIn_other": "Chốt sau {count} ngày",
+  "worklist.gap.closedAgo_one": "Ngày chốt đã qua {count} ngày",
+  "worklist.gap.closedAgo_other": "Ngày chốt đã qua {count} ngày",
+  "worklist.gap.provisional": "Ngày chốt chưa được xác nhận",
   "worklist.exceptions.title": "Ngoại lệ của nhóm",
   "worklist.handled.title": "Lịch sử thay đổi",
   "worklist.walk.arrived":

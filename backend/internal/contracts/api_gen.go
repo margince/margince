@@ -13615,6 +13615,27 @@ func (e ForecastContributionProbabilitySource) Valid() bool {
 	}
 }
 
+// Defines values for ForecastFocusTeamStatus.
+const (
+	ForecastFocusTeamStatusBehind   ForecastFocusTeamStatus = "behind"
+	ForecastFocusTeamStatusNoGoal   ForecastFocusTeamStatus = "no_goal"
+	ForecastFocusTeamStatusOnTarget ForecastFocusTeamStatus = "on_target"
+)
+
+// Valid indicates whether the value is a known member of the ForecastFocusTeamStatus enum.
+func (e ForecastFocusTeamStatus) Valid() bool {
+	switch e {
+	case ForecastFocusTeamStatusBehind:
+		return true
+	case ForecastFocusTeamStatusNoGoal:
+		return true
+	case ForecastFocusTeamStatusOnTarget:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ForecastLandingCaveat.
 const (
 	ForecastLandingCaveatLandingCaveatCallAbsent      ForecastLandingCaveat = "call_absent"
@@ -51163,6 +51184,60 @@ type ForecastEnforcementPreview struct {
 	UnknownCount int `json:"unknown_count"`
 }
 
+// ForecastFocus defines model for ForecastFocus.
+type ForecastFocus struct {
+	PeriodEnd   openapi_types.Date `json:"period_end"`
+	PeriodStart openapi_types.Date `json:"period_start"`
+
+	// Teams One entry per team with a daily freeze this quarter, ordered by team id.
+	Teams []ForecastFocusTeam `json:"teams"`
+
+	// Withheld True when a team's list is left out because the installation shows no individual performance and the team is too small to show without naming a colleague.
+	Withheld bool `json:"withheld"`
+}
+
+// ForecastFocusDeal defines model for ForecastFocusDeal.
+type ForecastFocusDeal struct {
+	DealId             openapi_types.UUID  `json:"deal_id"`
+	DealName           string              `json:"deal_name"`
+	EffectiveCloseDate *openapi_types.Date `json:"effective_close_date,omitempty"`
+	OwnerId            *openapi_types.UUID `json:"owner_id,omitempty"`
+	Rank               int                 `json:"rank" maximum:"20" minimum:"1"`
+
+	// Reason The stored facts behind a rank. The score is never stored.
+	Reason ForecastFocusReason `json:"reason"`
+
+	// WeightedMinor The deal's weighted amount in the base currency, as frozen. Absent when the amount is masked from the caller.
+	WeightedMinor *int64 `json:"weighted_minor,omitempty"`
+}
+
+// ForecastFocusReason The stored facts behind a rank. The score is never stored.
+type ForecastFocusReason struct {
+	CloseProvisional bool `json:"close_provisional"`
+
+	// ClosesInDays Days from the caller's day to the expected close date, negative once that date passed.
+	ClosesInDays *int                 `json:"closes_in_days,omitempty"`
+	Signals      []ForecastRiskSignal `json:"signals"`
+}
+
+// ForecastFocusTeam defines model for ForecastFocusTeam.
+type ForecastFocusTeam struct {
+	BaseCurrency string              `json:"base_currency"`
+	Deals        []ForecastFocusDeal `json:"deals"`
+
+	// MaskedCount Ranked deals left out because their amount is masked from the caller. The rest are numbered from 1 again, since a masked deal's place in the order would tell its size.
+	MaskedCount int                `json:"masked_count" minimum:"0"`
+	SnapshotId  openapi_types.UUID `json:"snapshot_id"`
+
+	// Status `behind`: the expected landing was under the team goal. `on_target`: it met the goal. `no_goal`: a month of the quarter had no published goal for a member, so nothing was ranked, or the caller may not read the team's goal, so neither standing nor list is shown.
+	Status  ForecastFocusTeamStatus `json:"status"`
+	TakenAt time.Time               `json:"taken_at"`
+	TeamId  openapi_types.UUID      `json:"team_id"`
+}
+
+// ForecastFocusTeamStatus `behind`: the expected landing was under the team goal. `on_target`: it met the goal. `no_goal`: a month of the quarter had no published goal for a member, so nothing was ranked, or the caller may not read the team's goal, so neither standing nor list is shown.
+type ForecastFocusTeamStatus string
+
 // ForecastLanding Where the period finishes if nothing changes, and what that answer rests on.
 // The four money readings say what is IN the pipeline; none of them answers "what will we land on?", and a reader left to add two of them together picks the wrong two. This is that sum, made once and labelled with the measure it used.
 type ForecastLanding struct {
@@ -78249,6 +78324,12 @@ type RecordForecastCallParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// GetForecastFocusParams defines parameters for GetForecastFocus.
+type GetForecastFocusParams struct {
+	// Team One team. Omitted, every team whose list the caller may read.
+	Team *openapi_types.UUID `form:"team,omitempty" json:"team,omitempty"`
+}
+
 // GetForecastMovementParams defines parameters for GetForecastMovement.
 type GetForecastMovementParams struct {
 	// From The opening snapshot.
@@ -98861,6 +98942,9 @@ type ServerInterface interface {
 	// Record what somebody believes will close.
 	// (POST /forecast/calls)
 	RecordForecastCall(w http.ResponseWriter, r *http.Request, params RecordForecastCallParams)
+	// The deals each team should work to meet its goal this quarter.
+	// (GET /forecast/focus)
+	GetForecastFocus(w http.ResponseWriter, r *http.Request, params GetForecastFocusParams)
 	// What moved the forecast between two snapshots, and which deals moved it.
 	// (GET /forecast/movement)
 	GetForecastMovement(w http.ResponseWriter, r *http.Request, params GetForecastMovementParams)
@@ -103949,6 +104033,12 @@ func (_ Unimplemented) ListForecastCalls(w http.ResponseWriter, r *http.Request,
 // Record what somebody believes will close.
 // (POST /forecast/calls)
 func (_ Unimplemented) RecordForecastCall(w http.ResponseWriter, r *http.Request, params RecordForecastCallParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The deals each team should work to meet its goal this quarter.
+// (GET /forecast/focus)
+func (_ Unimplemented) GetForecastFocus(w http.ResponseWriter, r *http.Request, params GetForecastFocusParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -134191,6 +134281,47 @@ func (siw *ServerInterfaceWrapper) RecordForecastCall(w http.ResponseWriter, r *
 	handler.ServeHTTP(w, r)
 }
 
+// GetForecastFocus operation middleware
+func (siw *ServerInterfaceWrapper) GetForecastFocus(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetForecastFocusParams
+
+	// ------------- Optional query parameter "team" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "team", r.URL.Query(), &params.Team, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "team"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "team", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetForecastFocus(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetForecastMovement operation middleware
 func (siw *ServerInterfaceWrapper) GetForecastMovement(w http.ResponseWriter, r *http.Request) {
 
@@ -157843,6 +157974,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/forecast/calls", wrapper.RecordForecastCall)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/forecast/focus", wrapper.GetForecastFocus)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/forecast/movement", wrapper.GetForecastMovement)

@@ -154,6 +154,8 @@ type Contribution struct {
 	// InLost marks a deal that closed lost: in no reading, kept so a movement
 	// can name the loss instead of calling it pushed out.
 	InLost bool
+	// Focus is the deal's place on its team's focus list, nil off the list.
+	Focus *Focus
 	// Why an eligible deal contributed no money. Named rather than left to be
 	// inferred from a nil amount, because "we have no price" and "we could not
 	// convert it" are different facts and a reader is owed which one.

@@ -22775,6 +22775,37 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/forecast/focus": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The deals each team should work to meet its goal this quarter.
+         * @description Read from the latest daily freeze of each team in the current quarter. The freeze ranks a
+         *     team's open priced deals when the team has a published goal for every month of the quarter.
+         *
+         *     Behind the goal, the list ranks deals by weighted amount, raised for each close-date risk.
+         *     On target, it lists only deals with a close-date risk, most risks first. A close-date risk
+         *     is a close date that passed, a provisional date, a date that kept moving, or a close within
+         *     a week with no next step. At most 20 deals, and the rank stays as frozen.
+         *
+         *     Each team needs the right to assert about its forecast, so a seat outside a team gets 404
+         *     for it. A deal the caller may not read is left out. A masked amount is left out of its row.
+         *     With individual performance off, a list shows only the reader's own deals and names no
+         *     owner. A team too small for that is refused when named and left out otherwise.
+         */
+        get: operations["getForecastFocus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/forecast/calls": {
         parameters: {
             query?: never;
@@ -49656,6 +49687,56 @@ export interface components {
             stage_id?: string;
             close_passed?: boolean;
             closes_in_days?: number;
+        };
+        ForecastFocus: {
+            /** Format: date */
+            period_start: string;
+            /** Format: date */
+            period_end: string;
+            /** @description True when a team's list is left out because the installation shows no individual performance and the team is too small to show without naming a colleague. */
+            withheld: boolean;
+            /** @description One entry per team with a daily freeze this quarter, ordered by team id. */
+            teams: components["schemas"]["ForecastFocusTeam"][];
+        };
+        ForecastFocusTeam: {
+            /** @description Ranked deals left out because their amount is masked from the caller. The rest are numbered from 1 again, since a masked deal's place in the order would tell its size. */
+            masked_count: number;
+            /** Format: uuid */
+            team_id: string;
+            /** Format: uuid */
+            snapshot_id: string;
+            /** Format: date-time */
+            taken_at: string;
+            base_currency: string;
+            /**
+             * @description `behind`: the expected landing was under the team goal. `on_target`: it met the goal. `no_goal`: a month of the quarter had no published goal for a member, so nothing was ranked, or the caller may not read the team's goal, so neither standing nor list is shown.
+             * @enum {string}
+             */
+            status: "behind" | "on_target" | "no_goal";
+            deals: components["schemas"]["ForecastFocusDeal"][];
+        };
+        ForecastFocusDeal: {
+            rank: number;
+            /** Format: uuid */
+            deal_id: string;
+            deal_name: string;
+            /** Format: uuid */
+            owner_id?: string;
+            /**
+             * Format: int64
+             * @description The deal's weighted amount in the base currency, as frozen. Absent when the amount is masked from the caller.
+             */
+            weighted_minor?: number;
+            /** Format: date */
+            effective_close_date?: string;
+            reason: components["schemas"]["ForecastFocusReason"];
+        };
+        /** @description The stored facts behind a rank. The score is never stored. */
+        ForecastFocusReason: {
+            /** @description Days from the caller's day to the expected close date, negative once that date passed. */
+            closes_in_days?: number;
+            close_provisional: boolean;
+            signals: components["schemas"]["ForecastRiskSignal"][];
         };
         ForecastStageChances: {
             /** @description The installation setting `forecast_self_correcting`. False means every chance in use is the typed one. */
@@ -98481,6 +98562,33 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ForecastMovement"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getForecastFocus: {
+        parameters: {
+            query?: {
+                /** @description One team. Omitted, every team whose list the caller may read. */
+                team?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One list per team. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForecastFocus"];
                 };
             };
             401: components["responses"]["Unauthorized"];

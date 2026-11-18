@@ -552,6 +552,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /forecast/assurance/exceptions` | listInputChecks | The open findings this caller can see. | Read records | at once |
 | `POST /forecast/assurance/exceptions/{id}/resolve` | resolveInputCheck | Answer a finding from the nightly input check. | Change records | at once |
 | `GET /forecast/movement` | getForecastMovement | What moved the forecast between two snapshots, and which deals moved it. | Read records | at once |
+| `GET /forecast/focus` | getForecastFocus | The deals each team should work to meet its goal this quarter. | Read records | at once |
 | `GET /forecast/calls` | listForecastCalls | What this period's forecast has been called, newest first. | Read records | at once |
 | `POST /forecast/calls` | recordForecastCall | Record what somebody believes will close. | Change records | at once |
 | `GET /forecast/shares` | listForecastShares | List the share links you issued that still serve. | Read records | at once |

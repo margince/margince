@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 281241,
+    "tool_catalog_bytes": 281335,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 71715,
+    "approx_wire_tokens_total": 71739,
     "largest_tool_bytes": 17890,
     "largest_tool": "read_details",
     "tool_catalog_composition": {
       "description_bytes": 54959,
-      "input_schema_bytes": 161314,
+      "input_schema_bytes": 161408,
       "output_schema_bytes": 52860,
-      "description_plus_input_schema_bytes": 216273
+      "description_plus_input_schema_bytes": 216367
     }
   },
   "tools": {
@@ -10094,6 +10094,7 @@
                 "analytics_schema",
                 "company_coverage",
                 "evidence",
+                "forecast_focus",
                 "question_card_answer",
                 "question_card_records",
                 "report_revisions",
@@ -10478,6 +10479,11 @@
                 "live",
                 "open"
               ],
+              "type": "string"
+            },
+            "team": {
+              "description": "forecast_focus only",
+              "format": "uuid",
               "type": "string"
             },
             "view": {

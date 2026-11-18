@@ -22888,6 +22888,30 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
+  /forecast/focus:
+    get:
+      tags: [Reports]
+      operationId: getForecastFocus
+      security: [{bearerAuth: []}]
+      summary: The deals each team should work to meet its goal this quarter.
+      description: |-
+        Read from the latest daily freeze of each team in the current quarter. The freeze ranks a
+        team's open priced deals when the team has a published goal for every month of the quarter.
+      parameters:
+        - name: team
+          in: query
+          schema: {type: string, format: uuid}
+          description: One team. Omitted, every team whose list the caller may read.
+      responses:
+        '200':
+          description: One list per team.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ForecastFocus'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /forecast/calls:
     get:
       tags: [Reports]
@@ -47203,6 +47227,67 @@ components:
         close_passed: {type: boolean}
         closes_in_days: {type: integer, minimum: 0, maximum: 7}
       additionalProperties: false
+    ForecastFocus:
+      type: object
+      required: [period_start, period_end, teams, withheld]
+      properties:
+        period_start: {type: string, format: date}
+        period_end: {type: string, format: date}
+        withheld:
+          type: boolean
+          description: >-
+            True when a team's list is left out because the installation shows no individual performance and the team is too small to show without naming a colleague.
+        teams:
+          type: array
+          description: One entry per team with a daily freeze this quarter, ordered by team id.
+          items: {$ref: '#/components/schemas/ForecastFocusTeam'}
+    ForecastFocusTeam:
+      type: object
+      required: [team_id, snapshot_id, taken_at, base_currency, status, deals, masked_count]
+      properties:
+        masked_count:
+          type: integer
+          minimum: 0
+          description: >-
+            Ranked deals left out because their amount is masked from the caller. The rest are numbered from 1 again, since a masked deal's place in the order would tell its size.
+        team_id: {type: string, format: uuid}
+        snapshot_id: {type: string, format: uuid}
+        taken_at: {type: string, format: date-time}
+        base_currency: {type: string}
+        status:
+          type: string
+          enum: [behind, on_target, no_goal]
+          description: >-
+            `behind`: the expected landing was under the team goal. `on_target`: it met the goal. `no_goal`: a month of the quarter had no published goal for a member, so nothing was ranked, or the caller may not read the team's goal, so neither standing nor list is shown.
+        deals:
+          type: array
+          items: {$ref: '#/components/schemas/ForecastFocusDeal'}
+    ForecastFocusDeal:
+      type: object
+      required: [rank, deal_id, deal_name, reason]
+      properties:
+        rank: {type: integer, minimum: 1, maximum: 20}
+        deal_id: {type: string, format: uuid}
+        deal_name: {type: string}
+        owner_id: {type: string, format: uuid}
+        weighted_minor:
+          type: integer
+          format: int64
+          description: The deal's weighted amount in the base currency, as frozen. Absent when the amount is masked from the caller.
+        effective_close_date: {type: string, format: date}
+        reason: {$ref: '#/components/schemas/ForecastFocusReason'}
+    ForecastFocusReason:
+      type: object
+      description: The stored facts behind a rank. The score is never stored.
+      required: [close_provisional, signals]
+      properties:
+        closes_in_days:
+          type: integer
+          description: Days from the caller's day to the expected close date, negative once that date passed.
+        close_provisional: {type: boolean}
+        signals:
+          type: array
+          items: {$ref: '#/components/schemas/ForecastRiskSignal'}
     ForecastStageChances:
       type: object
       required: [self_correcting, evidence_cutoff, prior_strength, stages]

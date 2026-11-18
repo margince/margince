@@ -20310,6 +20310,39 @@ export const en = {
   "worklist.manager.kind.review_backlog": "Review backlog",
   "worklist.manager.kind.general": "Other",
   "worklist.board.title": "Team work needing attention",
+  "worklist.gap.rankedOn": "Ranked on {date}.",
+  "worklist.gap.masked_one":
+    "{count} deal is left out because you may not see its amount.",
+  "worklist.gap.masked_other":
+    "{count} deals are left out because you may not see their amounts.",
+  "worklist.gap.withheld":
+    "Individual performance is off, so lists that would name a colleague’s deals are not shown.",
+  "worklist.gap.tabs": "Team view",
+  "worklist.gap.exceptionsTab": "Exceptions",
+  "worklist.gap.tab": "Close the gap",
+  "worklist.gap.title": "Close the gap",
+  "worklist.gap.loading": "Loading the ranked deals…",
+  "worklist.gap.empty":
+    "No team has a ranked list yet. Margince ranks deals once a day for each captured team.",
+  "worklist.gap.behind":
+    "The team is behind its quarter goal. Work these deals first.",
+  "worklist.gap.onTarget":
+    "The team is on target for the quarter. These deals could slip out of it.",
+  "worklist.gap.nothingAtRisk":
+    "The team is on target, and no open deal has a close date at risk.",
+  "worklist.gap.noGoal":
+    "This team has no goal for every month of the quarter, so no deals are ranked.",
+  "worklist.gap.rank": "Rank",
+  "worklist.gap.deal": "Deal",
+  "worklist.gap.owner": "Owner",
+  "worklist.gap.weighted": "Weighted",
+  "worklist.gap.why": "Why",
+  "worklist.gap.closesToday": "Closes today",
+  "worklist.gap.closesIn_one": "Closes in {count} day",
+  "worklist.gap.closesIn_other": "Closes in {count} days",
+  "worklist.gap.closedAgo_one": "Close date {count} day ago",
+  "worklist.gap.closedAgo_other": "Close date {count} days ago",
+  "worklist.gap.provisional": "Close date not confirmed",
   "worklist.exceptions.title": "Team exceptions",
   "worklist.handled.title": "Change history",
   "worklist.walk.arrived":

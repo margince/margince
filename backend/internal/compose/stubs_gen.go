@@ -2367,6 +2367,10 @@ func (stubs) RecordForecastCall(w nethttp.ResponseWriter, r *nethttp.Request, pa
 	httperr.NotImplemented(w, r, "RecordForecastCall")
 }
 
+func (stubs) GetForecastFocus(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetForecastFocusParams) {
+	httperr.NotImplemented(w, r, "GetForecastFocus")
+}
+
 func (stubs) GetForecastMovement(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetForecastMovementParams) {
 	httperr.NotImplemented(w, r, "GetForecastMovement")
 }

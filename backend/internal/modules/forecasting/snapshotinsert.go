@@ -13,7 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func (s *Store) insertSnapshot(ctx context.Context, tx pgx.Tx, in NewSnapshot, landing Landing, capturedBy string) (ids.UUID, error) {
+func (s *Store) insertSnapshot(ctx context.Context, tx pgx.Tx, in NewSnapshot, landing Landing, focus *FocusList, capturedBy string) (ids.UUID, error) {
 	//craft:ignore naked-any pgx binds heterogeneous scalar values at the SQL boundary.
 	arguments := []any{
 		in.Period.StartDate, in.Period.EndDate, in.Scope.Kind, in.Scope.ID,
@@ -28,6 +28,11 @@ func (s *Store) insertSnapshot(ctx context.Context, tx pgx.Tx, in NewSnapshot, l
 	}
 	arguments = append(arguments, frozenRange(in.Readings.Range)...)
 	arguments = append(arguments, frozenLandingColumns(landing)...)
+	var onTarget *bool
+	if focus != nil {
+		onTarget = &focus.OnTarget
+	}
+	arguments = append(arguments, onTarget)
 	query := `INSERT INTO forecast_snapshot
         (period_start,period_end,scope_kind,scope_id,taken_at,local_day,trigger,definition_version,
         base_currency,won_minor,evidence_minor,open_minor,weighted_minor,
@@ -35,7 +40,7 @@ func (s *Store) insertSnapshot(ctx context.Context, tx pgx.Tx, in NewSnapshot, l
         pipeline_id,population_fingerprint,forward_measure,input_fingerprint,
         self_correcting,evidence_cutoff,risk_signals_version,likely_threshold,
         range_low_minor,range_high_minor,range_runs,range_quantiles,range_version,
-        landing_measure,landing_call_minor) VALUES (` + storekit.Placeholders(arguments) + `) RETURNING id`
+        landing_measure,landing_call_minor,focus_on_target) VALUES (` + storekit.Placeholders(arguments) + `) RETURNING id`
 	var id ids.UUID
 	if err := tx.QueryRow(ctx, query, arguments...).Scan(&id); err != nil {
 		return ids.Nil, fmt.Errorf("forecasting: writing the snapshot: %w", err)

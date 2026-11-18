@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { translate, translatePlural } from "../../i18n";
-import { type RiskSignal, signalSentence } from "./forecast.signals";
+import { translate, translatePlural } from "../i18n";
+import { type RiskSignal, signalSentence } from "./forecastsignals";
 
 const STAGE = "018f0000-0000-7000-8000-0000000000aa";
 

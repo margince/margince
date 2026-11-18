@@ -5857,11 +5857,16 @@ public.forecast_contribution.deal_id uuid NOT NULL gen=- def=-
 public.forecast_contribution.effective_close_date date gen=- def=-
 public.forecast_contribution.evidence_n integer gen=- def=-
 public.forecast_contribution.exclusion_reason text gen=- def=-
+public.forecast_contribution.focus_rank smallint gen=- def=-
+public.forecast_contribution.focus_reason jsonb gen=- def=-
 public.forecast_contribution.forecast_contribution_amount_currency_pair CHECK (((amount_minor IS NULL) = (currency IS NULL)))
 public.forecast_contribution.forecast_contribution_amount_minor_js_safe CHECK (((amount_minor >= '-9007199254740991'::bigint) AND (amount_minor <= '9007199254740991'::bigint)))
 public.forecast_contribution.forecast_contribution_base_minor_js_safe CHECK (((base_minor >= '-9007199254740991'::bigint) AND (base_minor <= '9007199254740991'::bigint)))
 public.forecast_contribution.forecast_contribution_evidence_n_is_a_tally CHECK (((evidence_n IS NULL) OR (evidence_n >= 0)))
 public.forecast_contribution.forecast_contribution_exclusion_reason_check CHECK (((exclusion_reason IS NULL) OR (exclusion_reason = ANY (ARRAY['unpriced'::text, 'fx_missing'::text, 'out_of_period'::text, 'not_eligible'::text]))))
+public.forecast_contribution.forecast_contribution_focus_rank_in_list CHECK (((focus_rank IS NULL) OR ((focus_rank >= 1) AND (focus_rank <= 20))))
+public.forecast_contribution.forecast_contribution_focus_reason_object CHECK (((focus_reason IS NULL) OR (jsonb_typeof(focus_reason) = 'object'::text)))
+public.forecast_contribution.forecast_contribution_focus_reason_pair CHECK (((focus_rank IS NULL) = (focus_reason IS NULL)))
 public.forecast_contribution.forecast_contribution_is_frozen CREATE TRIGGER forecast_contribution_is_frozen BEFORE UPDATE ON public.forecast_contribution FOR EACH ROW EXECUTE FUNCTION forecast_contribution_is_frozen()
 public.forecast_contribution.forecast_contribution_pkey PRIMARY KEY (id)
 public.forecast_contribution.forecast_contribution_probability_is_a_percent CHECK (((stage_probability IS NULL) OR ((stage_probability >= 0) AND (stage_probability <= 100))))
@@ -5924,6 +5929,7 @@ public.forecast_snapshot.definition_version text NOT NULL gen=- def=-
 public.forecast_snapshot.eligible_count integer NOT NULL gen=- def=-
 public.forecast_snapshot.evidence_cutoff timestamp with time zone gen=- def=-
 public.forecast_snapshot.evidence_minor bigint NOT NULL gen=- def=-
+public.forecast_snapshot.focus_on_target boolean gen=- def=-
 public.forecast_snapshot.forecast_snapshot_best_case_minor_js_safe CHECK (((best_case_minor >= '-9007199254740991'::bigint) AND (best_case_minor <= '9007199254740991'::bigint)))
 public.forecast_snapshot.forecast_snapshot_call_fkey FOREIGN KEY (call_id) REFERENCES forecast_call(id) ON DELETE SET NULL
 public.forecast_snapshot.forecast_snapshot_counts_are_tallies CHECK (((eligible_count >= 0) AND (priced_count >= 0) AND (confirmed_date_count >= 0) AND (fx_missing_count >= 0) AND (priced_count <= eligible_count) AND (confirmed_date_count <= eligible_count) AND (fx_missing_count <= eligible_count)))

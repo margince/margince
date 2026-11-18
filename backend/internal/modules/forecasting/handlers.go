@@ -78,7 +78,20 @@ type Handlers struct {
 	stageChances StageChancesFunc
 	// readerRows narrows per-deal rows to what the reader may see one by one.
 	readerRows ReaderRowsFunc
-	now        func() time.Time
+	// goalReadable answers whether the reader may read a team's goal.
+	goalReadable GoalReadableFunc
+	now          func() time.Time
+}
+
+// GoalReadableFunc answers whether the reader may read the goal of scope.
+// Injected, because goals belong to reporting.
+type GoalReadableFunc func(ctx context.Context, tx pgx.Tx, scope crmcontracts.ReportingScope) (bool, error)
+
+// WithGoalReadable binds the goal check a focus list's standing passes.
+// Unbound, the focus read refuses rather than show a goal unchecked.
+func (h Handlers) WithGoalReadable(readable GoalReadableFunc) Handlers {
+	h.goalReadable = readable
+	return h
 }
 
 // WithCallBaseline keeps a baseline with every call recorded through these
