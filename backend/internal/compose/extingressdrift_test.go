@@ -43,8 +43,8 @@ import (
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
-// waivedEnvelopeFields are the envelope fields a unit deliberately does not
-// supply, each with the reason: a waiver is a decision, not a name in a list.
+// waivedEnvelopeFields are the envelope fields a unit does not supply. Each
+// carries its reason, because a waiver is a decision, not a name in a list.
 var waivedEnvelopeFields = gatekit.Waive(map[string]string{
 	"Forwarded":         "the original a seat forwarded to its own connected mailbox, read only by the core sink from that mailbox; an extension has no seat mailbox to forward to",
 	"ProviderMessageID": "an opaque Gmail or Graph mailbox id used only for core connection deletion. Extension sources have no core mailbox connection or deletion namespace; an empty value adds no mailbox mapping",
