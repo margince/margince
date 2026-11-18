@@ -60,9 +60,8 @@ func (s *Store) WithdrawalTokenForEmail(
 				`SELECT id, key FROM consent_purpose WHERE lower(btrim(key)) = $1 AND archived_at IS NULL`,
 				commsauthz.NormalizedPurposeKey(purposeKey)).Scan(&purposeID, &storedKey); {
 			case errors.Is(scanErr, pgx.ErrNoRows):
-				// A key no live purpose carries: the all-marketing scope is the
-				// honest fallback, and it is the wider of the two, so the link
-				// never stops less than the recipient expects.
+				// A key no live purpose carries falls back to all marketing. That
+				// scope is the wider one, so the link never stops less than expected.
 			case scanErr != nil:
 				return fmt.Errorf("consent: resolving the purpose for the unsubscribe link: %w", scanErr)
 			default:

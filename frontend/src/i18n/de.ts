@@ -13459,7 +13459,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "prefs.unsub.allAfterBody":
     "Antworten auf Ihre eigenen Nachrichten sowie Sicherheits- und Servicenachrichten erhalten Sie weiterhin.",
   "prefs.unsub.allDoneBody":
-    "Von diesem Absender erhalten Sie keine Marketing-E-Mails mehr.",
+    "Von diesem Unternehmen erhalten Sie keine Marketing-E-Mails mehr.",
   "prefs.unsub.linkLead":
     "Mit einem Klick stoppen Sie die E-Mails, mit denen dieser Link kam.",
   "prefs.purpose.business_correspondence": "Direkte Korrespondenz",
