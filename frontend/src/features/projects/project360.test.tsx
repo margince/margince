@@ -741,6 +741,63 @@ describe("a commitment's tick", () => {
   });
 });
 
+describe("the Next bar's task write", () => {
+  it("says a task changed elsewhere when Snooze is refused as stale", async () => {
+    const row = {
+      activity_id: "a-next",
+      subject: "Confirm the depot slot",
+      due_at: "2099-09-11T09:00:00Z",
+      due_has_time: false,
+      version: 7,
+      assignee_id: null,
+      assignee_name: null,
+      overdue: false,
+    };
+    projectsBackend({
+      view: project360({
+        commitments: { data: [row], page: { has_more: false } },
+      }),
+      respond: async (url, method) => {
+        if (url.endsWith("/v1/me")) {
+          return jsonResponse(
+            meFixture({
+              allow: {
+                project: ["read", "update"],
+                activity: ["read", "update"],
+              },
+            }),
+          );
+        }
+        if (method === "PATCH" && url.includes("/v1/activities/a-next")) {
+          return jsonResponse(
+            {
+              type: "about:blank",
+              title: "Stale",
+              status: 409,
+              code: "version_skew",
+            },
+            409,
+          );
+        }
+        return null;
+      },
+    });
+    render(<ProjectScreen id={project().id} />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: /^Snooze/ }),
+    );
+
+    const alerts = await screen.findAllByRole("alert");
+    expect(
+      alerts.some((alert) =>
+        alert.textContent?.includes(en["common.versionSkew"]),
+      ),
+    ).toBe(true);
+    expect(screen.getAllByRole("button", { name: "Reload" }).length).toBe(1);
+  });
+});
+
 // A phase a newer server added still reads in the head's badge, not as a blank.
 describe("a phase this build does not know", () => {
   it("names it with the neutral label in the head and the details", async () => {

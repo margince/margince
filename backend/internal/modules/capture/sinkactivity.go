@@ -398,7 +398,7 @@ func (s *Sink) upsertActivity(
 		return ids.ActivityID{}, false, err
 	}
 	var id ids.ActivityID
-	query, args := capturedActivityInsert(ctx, rec, fields, birth)
+	query, args := capturedActivityInsert(ctx, rec, fields, birth, s.clock())
 	err := tx.QueryRow(ctx, query, args...).Scan(&id)
 	if err == nil {
 		// Field-level provenance (B-E02.12) for the content fields this
@@ -446,7 +446,7 @@ func (s *Sink) upsertActivity(
 	return id, false, nil
 }
 
-func capturedActivityInsert(ctx context.Context, rec connector.NormalizedRecord, fields ActivityFields, birth birthDecision) (string, []any) {
+func capturedActivityInsert(ctx context.Context, rec connector.NormalizedRecord, fields ActivityFields, birth birthDecision, now time.Time) (string, []any) {
 	occurredAt := fields.OccurredAt
 	audience, audienceReason := birth.bornAudience()
 	// The label reads the opening: an envelope block is English in any language.
@@ -458,7 +458,7 @@ func capturedActivityInsert(ctx context.Context, rec connector.NormalizedRecord,
 		fields.occurredPrecision(),
 		nullableID(fields.InvitationFromSeat),
 		nullableString(fields.AgendaFingerprint),
-		nullableID(fields.AssigneeID), nullableTime(sensibleDue(fields.DueAt)),
+		nullableID(fields.AssigneeID), nullableTime(sensibleDue(fields.DueAt, now)),
 		nullableString(fields.CalendarUID),
 		fields.CalendarEvent,
 		fields.forwardedFrom != nil,
@@ -470,8 +470,8 @@ func capturedActivityInsert(ctx context.Context, rec connector.NormalizedRecord,
 
 // sensibleDue drops a due date outside the window every task writer shares, so
 // a mis-read year files an undated task instead of one on no list.
-func sensibleDue(due time.Time) time.Time {
-	if !due.IsZero() && !values.DueInWindow(due, time.Now()) {
+func sensibleDue(due, now time.Time) time.Time {
+	if !due.IsZero() && !values.DueInWindow(due, now) {
 		return time.Time{}
 	}
 	return due

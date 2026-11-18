@@ -6,6 +6,7 @@
 package activities
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
@@ -57,7 +58,7 @@ func TestTaskIntentSurvivesAnUnrelatedEditAndClearsWithTheDeadline(t *testing.T)
 	}
 }
 
-func TestAnImplausibleDueDateIsRefusedOnCreateAndOnMoveButAnUnmovedOldOneStays(t *testing.T) {
+func TestAnImplausibleDueDateIsRefusedOnCreateAndOnMove(t *testing.T) {
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	store := e.store(nil)
@@ -76,6 +77,29 @@ func TestAnImplausibleDueDateIsRefusedOnCreateAndOnMoveButAnUnmovedOldOneStays(t
 	soon := clocktest.Now(t).Add(48 * time.Hour)
 	if _, err := store.UpdateActivity(ctx, id, UpdateActivityInput{DueAt: &soon}); err != nil {
 		t.Fatalf("UpdateActivity to a near date: %v", err)
+	}
+}
+
+// The writer refuses an absurd due date now, so a row from before the rule is
+// planted with raw SQL. Editing a field that is not the due date must not be
+// refused for it.
+func TestAnUnmovedLegacyDueDateStaysEditableAndCanBeCompleted(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+	store := e.store(nil)
+	task, _, err := store.LogActivity(ctx, LogActivityInput{Kind: "task", Subject: new("Old promise")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.owner.Exec(context.Background(), `UPDATE activity SET due_at = '1900-01-01T09:30:00Z' WHERE id = $1`, task.Id); err != nil {
+		t.Fatalf("planting the legacy due date: %v", err)
+	}
+	id := ids.From[ids.ActivityKind](ids.UUID(task.Id))
+	if _, err := store.UpdateActivity(ctx, id, UpdateActivityInput{Subject: new("Old promise, reworded")}); err != nil {
+		t.Fatalf("editing the subject of a legacy-dated task: %v", err)
+	}
+	if _, err := store.UpdateActivity(ctx, id, UpdateActivityInput{IsDone: new(true)}); err != nil {
+		t.Fatalf("completing a legacy-dated task: %v", err)
 	}
 }
 

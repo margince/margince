@@ -4,12 +4,9 @@
 
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { afterEach, expect, test } from "vitest";
-import {
-  TaskDetailDialog,
-  TaskQuickActions,
-  useTaskUpdate,
-} from "../../components/taskactions";
+import { TaskDetailDialog, useTaskUpdate } from "../../components/taskactions";
 import { en } from "../../i18n/en";
 import { taskWriteKeys } from "../../lib/activitykeys";
 import {
@@ -112,29 +109,67 @@ test("Done on a task that is gone says it was refused instead of staying silent"
   expect(screen.queryByRole("button", { name: "Reload" })).toBeNull();
 });
 
-test("while one task write is in flight, the verbs of every task on the page are held", () => {
-  const update = {
-    mutate: () => {},
-    isPending: true,
-    variables: { id: "task-other" },
-  } as unknown as Parameters<typeof TaskQuickActions>[0]["update"];
+function TwoTasksOnePage() {
+  const update = useTaskUpdate(taskWriteKeys("contact", "c-1"));
+  const [open, setOpen] = useState("task-1");
+  return (
+    <>
+      <button type="button" onClick={() => setOpen("task-2")}>
+        switch
+      </button>
+      <TaskDetailDialog
+        key={open}
+        activityId={open}
+        readOnly={false}
+        onClose={() => {}}
+        update={update}
+        openerFor={() => undefined}
+      />
+    </>
+  );
+}
+
+test("while a write on one task is in flight, every write control of another task is held", async () => {
+  const user = userEvent.setup();
+  let release: (response: Response) => void = () => {};
+  const task = (id: string) =>
+    jsonResponse({
+      id,
+      kind: "task",
+      writable: true,
+      subject: `Task ${id}`,
+      due_at: "2099-09-11T21:59:59Z",
+      occurred_at: "2026-09-08T09:00:00Z",
+      is_done: false,
+      captured_by: "human:u-1",
+      version: 3,
+    });
+  installFetchStub({
+    "GET /me": meRoute({ activity: ["read", "update"] }, { seat: "full" }),
+    "GET /activities/task-1": () => task("task-1"),
+    "GET /activities/task-2": () => task("task-2"),
+    "PATCH /activities/task-1": () =>
+      new Promise<Response>((resolve) => {
+        release = resolve;
+      }),
+  });
   render(
     <StoryProviders>
-      <TaskQuickActions
-        activityId="task-1"
-        version={3}
-        dueAt="2099-09-11T21:59:59Z"
-        update={update}
-      />
+      <TwoTasksOnePage />
     </StoryProviders>,
   );
 
+  await user.click(await screen.findByRole("button", { name: "Done" }));
+  await user.click(screen.getByRole("button", { name: "switch" }));
+  await screen.findByText("Task task-2");
+
+  for (const name of ["Done", "Snooze 1 day"]) {
+    expect(screen.getByRole("button", { name }).hasAttribute("disabled")).toBe(
+      true,
+    );
+  }
   expect(
-    screen.getByRole("button", { name: "Done" }).hasAttribute("disabled"),
+    screen.getByRole("textbox", { name: "Move to" }).hasAttribute("disabled"),
   ).toBe(true);
-  expect(
-    screen
-      .getByRole("button", { name: "Snooze 1 day" })
-      .hasAttribute("disabled"),
-  ).toBe(true);
+  release(jsonResponse({ id: "task-1", version: 4 }));
 });

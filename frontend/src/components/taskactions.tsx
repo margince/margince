@@ -200,7 +200,7 @@ export function TaskDueDatePick({
   update: ReturnType<typeof useTaskUpdate>;
 }>) {
   const t = useT();
-  const pending = update.isPending && update.variables?.id === activityId;
+  const pending = update.isPending;
   const readerZone = useViewerZone();
   // Seeded from the task's own day and time in the INSTALLATION's zone,
   // matching what the meta line above reads it in: a picker opening on a
@@ -461,7 +461,7 @@ function TaskDetailActions({
 
 // Drawn outside the verbs. A task changed elsewhere is refetched as done or
 // gone, and its verbs vanish; the refusal must outlive them.
-function TaskWriteFailure({
+export function TaskWriteFailure({
   taskId,
   update,
 }: Readonly<{
