@@ -25,6 +25,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -192,5 +193,61 @@ func TestATraceReadOfAThreadWithNoConversationIsNotKnown(t *testing.T) {
 	}
 	if reading.Known {
 		t.Error("the trace claims to know a conversation that was never captured")
+	}
+}
+
+// Mail private only by a mailbox setting is read while the switch lets a model
+// read such mail. The rule reports the thread as not shared, so only an
+// explicit request is kept from it. Mail someone protected is never read.
+func TestRoutinePrivateMailIsReadOnlyWhileTheSwitchIsOn(t *testing.T) {
+	e := integration.Setup(t)
+	owner := integration.OwnerConn(t)
+	company := e.SeedCompany(t, "Acme", &e.Rep1)
+	at := traceReadClock.Add(-48 * time.Hour)
+	limited := func(key, reason string) {
+		t.Helper()
+		seedConversation(t, e, company, key, at, "workspace")
+		message := seedConversation(t, e, company, key, at.Add(time.Minute), "participants")
+		if _, err := owner.Exec(context.Background(), `UPDATE activity SET audience_reason = $2 WHERE id = $1`,
+			message, reason); err != nil {
+			t.Fatal(err)
+		}
+	}
+	limited("thread-routine", activities.ReasonPosture)
+	limited("thread-protected", activities.ReasonManual)
+
+	offered := offeredKeys(t, e)
+	if !offered["thread-routine"] || offered["thread-protected"] {
+		t.Fatalf("offered %v, want the routine-private thread and not the protected one", offered)
+	}
+	as := e.Admin()
+	if err := database.WithWorkspaceTx(as, e.Pool, func(tx pgx.Tx) error {
+		reader, err := threadReaderNow(as, tx, "thread-routine")
+		if err == nil && (!reader.offered || reader.shared) {
+			t.Errorf("the rule reads the routine-private thread as offered=%v shared=%v, want offered and not shared",
+				reader.offered, reader.shared)
+		}
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := owner.Exec(context.Background(), `INSERT INTO setting (key, value) VALUES ($1, 'false'::jsonb)
+		ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`, activities.PrivateMailRequests.Key()); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { privateMailSwitchBack(t) })
+	if offeredKeys(t, e)["thread-routine"] {
+		t.Error("with the switch off the routine-private thread is still read")
+	}
+}
+
+// privateMailSwitchBack removes the stored private-mail switch, which is
+// installation-wide, so the next test reads the default again.
+func privateMailSwitchBack(t *testing.T) {
+	t.Helper()
+	if _, err := integration.OwnerConn(t).Exec(context.Background(), `DELETE FROM setting WHERE key = $1`,
+		activities.PrivateMailRequests.Key()); err != nil {
+		t.Errorf("restoring the private-mail switch: %v", err)
 	}
 }

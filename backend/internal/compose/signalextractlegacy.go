@@ -23,6 +23,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -180,9 +181,12 @@ func legacyCommitmentsOwed(ctx context.Context, tx pgx.Tx) ([]legacyCommitment, 
 }
 
 // threadReaderQuery asks the extractor's own rule about one conversation as it
-// stands NOW: the account it reaches, and whether it is private to a member.
-var threadReaderQuery = conversationCTE(" AND a.thread_key = $1") + `
-		SELECT c.one_company::uuid, CASE WHEN c.shared THEN NULL ELSE c.private_owner::uuid END
+// stands now. It answers the account it reaches and the member it is private
+// to. It also says whether every message is shared rather than routine-private.
+func threadReaderQuery(private bool) string {
+	return conversationCTE(" AND a.thread_key = $1", private) + `
+		SELECT c.one_company::uuid, CASE WHEN c.shared THEN NULL ELSE c.private_owner::uuid END,
+		       c.every_message_open
 		  FROM conversation c
 		 WHERE ` + threadHasAHumanSender + `
 		   AND ` + threadReachesOneAccount + `
@@ -190,6 +194,7 @@ var threadReaderQuery = conversationCTE(" AND a.thread_key = $1") + `
 		   AND ` + threadIsFullyOpen + `
 		   AND ` + threadIsFullyRead + `
 		   AND ` + threadHasANamedReader
+}
 
 // legacyThread is the cited message and the five before it on its thread. A
 // message since archived or held, or a thread the extractor would not read
@@ -209,11 +214,11 @@ func legacyThread(ctx context.Context, tx pgx.Tx, legacy legacyCommitment) (sett
 	if err != nil {
 		return settledThread{}, fmt.Errorf("signal extract: reading a commitment signal's message: %w", err)
 	}
-	company, privateTo, offered, err := threadReaderNow(ctx, tx, *key)
-	if err != nil || !offered {
+	reader, err := threadReaderNow(ctx, tx, *key)
+	if err != nil || !reader.offered || !reader.shared {
 		return settledThread{}, err
 	}
-	thread.CompanyID, thread.PrivateTo, thread.Key = company, privateTo, *key
+	thread.CompanyID, thread.PrivateTo, thread.Key = reader.company, reader.privateTo, *key
 	messages, err := threadWindow(ctx, tx, *key, &at, &legacy.cited, &legacy.cited)
 	if err != nil {
 		return settledThread{}, err
@@ -222,23 +227,35 @@ func legacyThread(ctx context.Context, tx pgx.Tx, legacy legacyCommitment) (sett
 	return thread, err
 }
 
+// threadReader is what the rule says about one conversation at this moment.
+// offered is false when the rule would not read it at all. shared is false
+// when some message is private by a routine setting.
+type threadReader struct {
+	company, privateTo ids.UUID
+	offered, shared    bool
+}
+
 // threadReaderNow is the account a conversation reaches and the one member it
-// is private to, if any, as the rule reads it at this moment — and false when
-// the rule would not read the conversation at all. The commitment dispatch
-// asks it inside the transaction that files, because a conversation can be
-// made private, or reach another account, while the model is reading it.
-func threadReaderNow(ctx context.Context, tx pgx.Tx, key string) (ids.UUID, ids.UUID, bool, error) {
-	var company ids.UUID
+// is private to, if any, as the rule reads it at this moment. The commitment
+// dispatch asks it inside the transaction that files. A conversation can be
+// made private, or reach another account, while the model reads it.
+func threadReaderNow(ctx context.Context, tx pgx.Tx, key string) (threadReader, error) {
+	private, err := activities.ModelReadsPrivateMailTx(ctx, tx)
+	if err != nil {
+		return threadReader{}, err
+	}
+	var reader threadReader
 	var privateTo *ids.UUID
-	err := tx.QueryRow(ctx, threadReaderQuery, key).Scan(&company, &privateTo)
+	err = tx.QueryRow(ctx, threadReaderQuery(private), key).Scan(&reader.company, &privateTo, &reader.shared)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return ids.UUID{}, ids.UUID{}, false, nil
+		return threadReader{}, nil
 	}
 	if err != nil {
-		return ids.UUID{}, ids.UUID{}, false, fmt.Errorf("signal extract: asking the rule about a conversation: %w", err)
+		return threadReader{}, fmt.Errorf("signal extract: asking the rule about a conversation: %w", err)
 	}
-	if privateTo == nil {
-		return company, ids.UUID{}, true, nil
+	if privateTo != nil {
+		reader.privateTo = *privateTo
 	}
-	return company, *privateTo, true, nil
+	reader.offered = true
+	return reader, nil
 }

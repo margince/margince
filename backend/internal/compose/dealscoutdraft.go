@@ -4,6 +4,9 @@
 package compose
 
 import (
+	"time"
+
+	"github.com/margince/margince/backend/internal/compose/dealverdict"
 	"github.com/margince/margince/backend/internal/modules/deals"
 )
 
@@ -19,10 +22,12 @@ const (
 )
 
 // draftSuggestion turns one chosen company's cited evidence, newest first, into
-// the draft deals records. Which evidence counts was decided by the read; this
-// only names the lead kind, weighs the kinds present, and takes the amount of
-// the newest document whose reading stated one with its currency.
-func draftSuggestion(company []scoutItem) deals.SuggestionDraft {
+// the draft deals records. The read decided which evidence counts. This names
+// the lead kind and weighs the kinds present. The amount is the newest
+// document's stated amount with its currency. Without one, the newest explicit
+// request gives the budget, read in base when it names no currency. That
+// request also gives the decision day.
+func draftSuggestion(company []scoutItem, base string, today time.Time) deals.SuggestionDraft {
 	draft := deals.SuggestionDraft{CompanyID: company[0].company}
 	present := map[string]bool{}
 	for _, it := range company {
@@ -30,6 +35,16 @@ func draftSuggestion(company []scoutItem) deals.SuggestionDraft {
 		draft.Evidence = append(draft.Evidence, it.evidence)
 		if draft.AmountMinor == nil && it.amountMinor != nil && it.currency != nil {
 			draft.AmountMinor, draft.Currency = it.amountMinor, it.currency
+		}
+	}
+	for _, it := range company {
+		if draft.CloseDate == nil && it.decisionDate != nil {
+			draft.CloseDate = requestCloseDate(*it.decisionDate, today)
+		}
+		if draft.AmountMinor == nil && it.budgetQuote != nil {
+			if minor, currency, _, ok := dealverdict.QuotedBudget(*it.budgetQuote, base); ok {
+				draft.AmountMinor, draft.Currency = &minor, &currency
+			}
 		}
 	}
 	var weights []float64
@@ -61,4 +76,14 @@ func scoutConfidence(weights []float64) float64 {
 		best = max(best, weight)
 	}
 	return min(best+float64(len(weights)-1)*scoutConfidenceCorrob, scoutConfidenceCeiling)
+}
+
+// requestCloseDate is a request's decision day as a deal close date. It is nil
+// when the day is no date or before today, since an open deal takes no past date.
+func requestCloseDate(day string, today time.Time) *time.Time {
+	at, err := time.Parse(time.DateOnly, day)
+	if err != nil || at.Before(today) {
+		return nil
+	}
+	return &at
 }

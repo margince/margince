@@ -113,6 +113,10 @@ func threadWindow(
 	if err != nil || anchor == nil {
 		return nil, err
 	}
+	judgeable, err := activities.JudgeableAudienceTx(ctx, tx, "activity")
+	if err != nil {
+		return nil, err
+	}
 	// The remainder is measured in the same statement that cuts the body:
 	// asked for afterwards it would be a second read of a row that may have
 	// changed, and the number would then describe a different message from the
@@ -137,7 +141,7 @@ func threadWindow(
 		           -- refuses a conversation any of whose messages is limited, so
 		           -- this arm only ever fires on a narrowing that landed inside
 		           -- the pass, and a short window is the right answer to it.
-		           AND `+activities.AutomaticMailContent("activity")+`
+		           AND `+judgeable+`
 		           AND (id = $7 OR EXISTS (SELECT 1 FROM activity window_anchor
 		                 WHERE window_anchor.id = $7 AND `+activities.SameCorrespondenceSQL("activity", "window_anchor", "$8::text", "")+`))
 		           -- Null means no bound: the newest window, which is the
@@ -179,12 +183,16 @@ func threadWindow(
 // correspondence's company domain. It is through when set, else the
 // thread's newest proven message, else its newest. Nil when none is readable.
 func windowAnchor(ctx context.Context, tx pgx.Tx, key string, through *ids.UUID) (*ids.UUID, string, error) {
+	judgeable, err := activities.JudgeableAudienceTx(ctx, tx, "activity")
+	if err != nil {
+		return nil, "", err
+	}
 	var anchor ids.UUID
 	var counterparty string
-	err := tx.QueryRow(ctx, `
+	err = tx.QueryRow(ctx, `
 		SELECT id, coalesce(counterparty_email, '') FROM activity
 		 WHERE thread_key = $1 AND kind = 'email' AND archived_at IS NULL
-		   AND `+activities.AutomaticMailContent("activity")+` AND ($2::uuid IS NULL OR id = $2)
+		   AND `+judgeable+` AND ($2::uuid IS NULL OR id = $2)
 		 ORDER BY `+correspondence.ProvenSQL("activity")+` DESC, occurred_at DESC, id DESC
 		 LIMIT 1`, key, through).Scan(&anchor, &counterparty)
 	if errors.Is(err, pgx.ErrNoRows) {

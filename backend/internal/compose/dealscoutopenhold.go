@@ -12,25 +12,29 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/dealverdict"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // scoutEvidenceHolds takes FOR SHARE on every cited item and the activities
-// behind it, then asks Deal Scout's visibility rule of each again.
+// behind it, then asks Deal Scout's visibility rule of each again. An
+// explicit request holds on mail of any audience, as the scout admitted it.
 func scoutEvidenceHolds(ctx context.Context, tx pgx.Tx, evidence []deals.SuggestionEvidence) (bool, error) {
 	for _, item := range evidence {
-		activities, ok, err := lockCitedItem(ctx, tx, item)
+		activities, request, ok, err := lockCitedItem(ctx, tx, item)
 		if err != nil || !ok {
 			return false, err
 		}
 		for _, activity := range activities {
-			held, err := workspaceReadable(ctx, tx, activity)
+			held, err := citedSourceHolds(ctx, tx, activity, request)
 			if err != nil || !held {
 				return false, err
 			}
@@ -39,47 +43,54 @@ func scoutEvidenceHolds(ctx context.Context, tx pgx.Tx, evidence []deals.Suggest
 	return true, nil
 }
 
-// lockCitedItem holds one cited item and answers the activities it rests on.
-func lockCitedItem(ctx context.Context, tx pgx.Tx, item deals.SuggestionEvidence) ([]ids.UUID, bool, error) {
+// lockCitedItem holds one cited item and answers the activities it rests on,
+// and whether it is an explicit request.
+func lockCitedItem(ctx context.Context, tx pgx.Tx, item deals.SuggestionEvidence) ([]ids.UUID, bool, bool, error) {
 	var query string
 	var ref ids.UUID
 	switch {
 	case item.ActivityID != nil:
-		return []ids.UUID{*item.ActivityID}, true, nil
+		return []ids.UUID{*item.ActivityID}, false, true, nil
 	case item.SignalID != nil:
 		ref = *item.SignalID
 		query = `SELECT array(SELECT (` + storekit.CitedActivityID("cite") + `)::uuid
-		          FROM jsonb_array_elements(s.evidence) cite WHERE cite->>'source_type' = 'activity')
+		          FROM jsonb_array_elements(s.evidence) cite WHERE cite->>'source_type' = 'activity'),
+		       request.asked
 		  FROM signal s
-		 WHERE s.id = $1 AND s.status = 'open' AND s.archived_at IS NULL AND s.visibility = 'workspace'
+		  CROSS JOIN LATERAL (SELECT EXISTS (SELECT 1 FROM jsonb_array_elements(s.evidence) request_cite
+		         WHERE s.kind = 'new_opportunity' AND ` + explicitRequestCite("request_cite") + `) AS asked) request
+		 WHERE s.id = $1 AND s.status = 'open' AND s.archived_at IS NULL
+		   AND (s.visibility = 'workspace' OR (request.asked AND s.visibility = 'owner'))
 		   FOR SHARE OF s`
 	case item.AttachmentID != nil:
 		ref = *item.AttachmentID
-		query = `SELECT ARRAY[at.activity_id] FROM attachment at
+		query = `SELECT ARRAY[at.activity_id], false FROM attachment at
 		 WHERE at.id = $1 AND at.archived_at IS NULL AND NOT at.bytes_withheld
 		   FOR SHARE OF at`
 	default:
-		return nil, false, nil
+		return nil, false, false, nil
 	}
 	var activities []ids.UUID
-	err := tx.QueryRow(ctx, query, ref).Scan(&activities)
+	var request bool
+	err := tx.QueryRow(ctx, query, ref).Scan(&activities, &request)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, false, nil
+		return nil, false, false, nil
 	}
 	if err != nil {
-		return nil, false, fmt.Errorf("compose: holding the evidence a deal opens on: %w", err)
+		return nil, false, false, fmt.Errorf("compose: holding the evidence a deal opens on: %w", err)
 	}
-	return activities, true, nil
+	return activities, request, true, nil
 }
 
-// workspaceReadable holds one activity and its links, and asks whether the
-// whole workspace may still read it.
-func workspaceReadable(ctx context.Context, tx pgx.Tx, activity ids.UUID) (bool, error) {
+// citedSourceHolds holds one activity and its links. It asks whether the whole
+// workspace may still read it, or for a request whether it is still live.
+func citedSourceHolds(ctx context.Context, tx pgx.Tx, activity ids.UUID, request bool) (bool, error) {
 	if _, err := tx.Exec(ctx, `SELECT 1 FROM activity_link WHERE activity_id = $1 FOR SHARE`, activity); err != nil {
 		return false, fmt.Errorf("compose: holding the evidence's links: %w", err)
 	}
 	var readable bool
-	err := tx.QueryRow(ctx, `SELECT `+workspaceEvidence("a")+` FROM activity a WHERE a.id = $1 FOR SHARE OF a`, activity).Scan(&readable)
+	err := tx.QueryRow(ctx, `SELECT `+workspaceEvidence("a")+` OR ($2 AND `+requestSource("a")+`)
+	  FROM activity a WHERE a.id = $1 FOR SHARE OF a`, activity, request).Scan(&readable)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
 	}
@@ -141,3 +152,109 @@ func quoteBackedAmount(value, currency string, quote *string) (*int64, *string) 
 	}
 	return &minor, &currency
 }
+
+// scoutRequest is the newest explicit request among a deal's evidence, read
+// under the opening's locks. shareable is false when its mail is protected.
+type scoutRequest struct {
+	summary                   string
+	decisionDate, budgetQuote *string
+	shareable, found          bool
+	now                       time.Time
+}
+
+// readScoutRequest reads the newest explicit request the evidence cites.
+func readScoutRequest(ctx context.Context, tx pgx.Tx, evidence []deals.SuggestionEvidence) (scoutRequest, error) {
+	private, err := activities.ModelReadsPrivateMailTx(ctx, tx)
+	if err != nil {
+		return scoutRequest{}, err
+	}
+	for _, item := range evidence {
+		if item.SignalID == nil {
+			continue
+		}
+		var request scoutRequest
+		err := tx.QueryRow(ctx, `
+			SELECT s.summary, cite->'fields'->>'`+decisionDateKey+`', cite->'fields'->>'`+budgetQuoteKey+`',
+			       s.visibility = 'workspace' AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements(s.evidence) source_cite
+			         WHERE source_cite->>'source_type' = 'activity' AND NOT EXISTS (SELECT 1 FROM activity ca
+			           WHERE ca.id = `+storekit.CitedActivityID("source_cite")+` AND `+shareableRequestSource("ca", private)+`)),
+			       now()
+			  FROM signal s, jsonb_array_elements(s.evidence) cite
+			 WHERE s.id = $1 AND s.kind = 'new_opportunity' AND `+explicitRequestCite("cite")+`
+			 LIMIT 1`, *item.SignalID).Scan(&request.summary, &request.decisionDate, &request.budgetQuote,
+			&request.shareable, &request.now)
+		if errors.Is(err, pgx.ErrNoRows) {
+			continue
+		}
+		if err != nil {
+			return scoutRequest{}, fmt.Errorf("compose: rereading the request a deal opens on: %w", err)
+		}
+		request.found = true
+		return request, nil
+	}
+	return scoutRequest{}, nil
+}
+
+// scoutPrefill is what an opened deal carries. A document gives its stated
+// amount. A shareable request gives its summary as the description and its
+// decision day. With no document amount it also gives its budget. Each value
+// from a request is marked as model-written. withheld reports a request whose
+// mail someone protected.
+func scoutPrefill(withheld *bool) func(context.Context, pgx.Tx, []deals.SuggestionEvidence) (deals.DealPrefill, error) {
+	return func(ctx context.Context, tx pgx.Tx, evidence []deals.SuggestionEvidence) (deals.DealPrefill, error) {
+		*withheld = false
+		amount, currency, err := scoutStatedAmount(ctx, tx, evidence)
+		if err != nil {
+			return deals.DealPrefill{}, err
+		}
+		fill := deals.DealPrefill{AmountMinor: amount, Currency: currency}
+		request, err := readScoutRequest(ctx, tx, evidence)
+		if err != nil || !request.found {
+			return fill, err
+		}
+		if !request.shareable {
+			*withheld = true
+			return fill, nil
+		}
+		fill.Description = &request.summary
+		fill.ModelWritten = append(fill.ModelWritten, storekit.FieldStamp{Field: dealDescriptionField})
+		if request.decisionDate != nil {
+			today, err := installationToday(ctx, tx, request.now)
+			if err != nil {
+				return fill, err
+			}
+			fill.CloseDate = requestCloseDate(*request.decisionDate, today)
+		}
+		if fill.AmountMinor != nil || request.budgetQuote == nil {
+			return fill, nil
+		}
+		return withRequestBudget(ctx, tx, fill, *request.budgetQuote)
+	}
+}
+
+// withRequestBudget sets the amount a request's budget words state. Words
+// naming no currency are read in the base currency. The currency is then marked
+// as model-written too, so the rep sees it is a guess.
+func withRequestBudget(ctx context.Context, tx pgx.Tx, fill deals.DealPrefill, quote string) (deals.DealPrefill, error) {
+	base, err := identity.BaseCurrencyAppliedTx(ctx, tx)
+	if err != nil {
+		return fill, err
+	}
+	minor, currency, assumed, ok := dealverdict.QuotedBudget(quote, base)
+	if !ok {
+		return fill, nil
+	}
+	fill.AmountMinor, fill.Currency = &minor, &currency
+	fill.ModelWritten = append(fill.ModelWritten, storekit.FieldStamp{Field: dealAmountField})
+	if assumed {
+		fill.ModelWritten = append(fill.ModelWritten, storekit.FieldStamp{Field: dealCurrencyField})
+	}
+	return fill, nil
+}
+
+// The deal columns an opening marks as model-written.
+const (
+	dealDescriptionField = "description"
+	dealAmountField      = "amount_minor"
+	dealCurrencyField    = "currency"
+)

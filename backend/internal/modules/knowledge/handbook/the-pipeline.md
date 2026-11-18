@@ -339,7 +339,11 @@ Margince may move an open deal to a later stage when the customer's own words me
 
 ## Deals Margince opens and reopens
 
-A customer may ask for an offer at a company with no open deal. Margince then opens a deal for the company's owner at the first stage. When the company's last closed deal was lost, Margince reopens that deal instead, for its owner. It counts only messages that reached Margince after the deal was lost.
+A customer may ask for an offer at a company with no open deal. Margince then opens a deal for the company's owner at the first stage. One clear request for a quotation or a proposal from a contact at the company is enough. When the company's last closed deal was lost, Margince reopens that deal instead, for its owner. It counts only messages that reached Margince after the deal was lost.
+
+Margince fills a new deal from the request. The amount is the budget the email states, and the close date is the day the customer decides. **What this deal is** says what the customer asked for. Margince marks each of these until someone edits it. A budget with no currency is read in the base currency and marked **Currency assumed, check it**.
+
+Private email counts too. Email private only because of a mailbox setting counts in full while **Check private mail for requests** is on. The deal then shows what the customer asked for. Email someone protected still opens the deal, but the deal shows nothing from it.
 
 Both show on **Home** with **Undo**. Undo of a reopen closes the deal as lost again, with its earlier reason. See [Deals the customer supports](deals-the-customer-supports.md#when-a-lost-deals-customer-comes-back). Also called: revive a lost deal, automatic new deal.
 

@@ -139,28 +139,31 @@ func (o scoutDealOpener) openOne(ctx context.Context, s openableSuggestion) (ids
 	if err != nil {
 		return ids.Nil, err
 	}
-	basis := scoutBasis(suggestion)
+	basis := scoutBasis(suggestion, false)
+	withheld := false
 	return o.deals.OpenSuggestedDeal(ownerCtx, deals.OpenSuggestedDealInput{
 		SuggestionID: s.id, Owner: s.owner, Basis: basis,
-		EvidenceHolds: scoutEvidenceHolds, Amount: scoutStatedAmount,
+		EvidenceHolds: scoutEvidenceHolds, Prefill: scoutPrefill(&withheld),
 		SwitchOn: func(ctx context.Context, tx pgx.Tx) (bool, error) {
 			mode, err := approvals.AutoApplyModeTx(ctx, tx, s.owner, deals.DealOpenKind)
 			return mode == approvals.ModeAuto, err
 		},
 		Record: func(ctx context.Context, tx pgx.Tx, deal, _ ids.UUID) error {
-			return o.recordOnTimeline(ctx, tx, deal, suggestion.CompanyName, basis)
+			return o.recordOnTimeline(ctx, tx, deal, suggestion.CompanyName, scoutBasis(suggestion, withheld))
 		},
 		AsOwner: ownersAgentTx(o.users, s.owner, marginceActorID),
 	})
 }
 
 // scoutBasis is the receipt's reason: each cited item as the reader knows it,
-// with its date, newest first as the suggestion lists them.
-func scoutBasis(s deals.Suggestion) string {
+// with its date, newest first as the suggestion lists them. The receipt shows
+// it only to the owner it was written for. The timeline note shows it to every
+// reader of the deal, so with withheld it names each item by its kind alone.
+func scoutBasis(s deals.Suggestion, withheld bool) string {
 	parts := make([]string, 0, len(s.Evidence))
 	for _, item := range s.Evidence {
 		title := strings.TrimSpace(item.Title)
-		if title == "" {
+		if title == "" || withheld {
 			title = item.Kind
 		}
 		parts = append(parts, fmt.Sprintf("%s (%s, %s)", title, item.Kind, item.OccurredAt.UTC().Format(time.DateOnly)))

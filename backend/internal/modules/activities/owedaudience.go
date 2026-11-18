@@ -29,11 +29,18 @@ var routinePrivateReasons = []string{
 func judgeableAudienceSQL(alias string, includePrivate bool) string {
 	audience := auth.WorkspaceAudienceSQL(alias)
 	if includePrivate {
-		audience = `(` + audience + ` OR (` + alias + `.audience = '` + audienceParticipants + `'
-   AND ` + alias + `.audience_reason IN ('` + strings.Join(routinePrivateReasons, "', '") + `')
-   AND ` + threadverdict.SettledUnheldSQL(alias) + `))`
+		audience = `(` + audience + ` OR ` + routinePrivateSQL(alias) + `)`
 	}
 	return `(` + audience + ` AND ` + alias + `.restricted_at IS NULL)`
+}
+
+// routinePrivateSQL is whether activity alias is private only by a routine
+// setting and its thread's verdict has landed without a hold. A missing reason
+// reads as false, never null, so a negated test still refuses the row.
+func routinePrivateSQL(alias string) string {
+	return `(` + alias + `.audience = '` + audienceParticipants + `'
+   AND coalesce(` + alias + `.audience_reason, '') IN ('` + strings.Join(routinePrivateReasons, "', '") + `')
+   AND ` + threadverdict.SettledUnheldSQL(alias) + `)`
 }
 
 // withheldColumns renders the waiting queue's model-free fallback columns for
@@ -73,4 +80,17 @@ func JudgeableAudienceTx(ctx context.Context, tx pgx.Tx, alias string) (string, 
 		return "", err
 	}
 	return judgeableAudienceSQL(alias, private), nil
+}
+
+// JudgeableAudience is judgeableAudienceSQL for a reader outside the module
+// that composes it into fixed SQL, with the setting read by
+// ModelReadsPrivateMailTx in the same transaction.
+func JudgeableAudience(alias string, includePrivate bool) string {
+	return judgeableAudienceSQL(alias, includePrivate)
+}
+
+// ModelReadsPrivateMailTx reads whether mail private for a routine reason may
+// go to a model in this installation.
+func ModelReadsPrivateMailTx(ctx context.Context, tx pgx.Tx) (bool, error) {
+	return privateMailRequests(ctx, tx)
 }

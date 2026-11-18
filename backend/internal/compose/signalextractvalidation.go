@@ -87,10 +87,17 @@ func extractSchema(thread settledThread) json.RawMessage {
 					"commercial_role": schema.Enum(commercialRoleBuyer, commercialRoleSupplier, commercialRolePartner, commercialRoleProvider, commercialRoleUnknown).
 						Describe("The external counterparty’s source-established role relative to our company. Our own purchase makes them supplier. Use unknown unless the source text establishes their specific role; relaying an unidentified company’s need alone does not establish a partner relationship."),
 					extractionConfidenceKey: schema.Number(),
+					requestKindKey: schema.Enum("", requestKindExplicit, requestKindNeed).
+						Describe("For new_opportunity: explicit_request when the buyer asks us outright for a quotation, proposal, offer, RFI, RFQ or vendor brief; need for any other need. Empty for other kinds."),
+					budgetQuoteKey: schema.String().
+						Describe("For new_opportunity: the cited message's own words that state their budget, copied exactly, or empty."),
+					decisionDateKey: schema.String().
+						Describe("For new_opportunity: the day they say they decide or need it by, as YYYY-MM-DD resolved against the message date, or empty."),
 				},
 				paramKind, "message_id", "summary", claimQuoteKey, "due_date", "promiser_ref", extractionConfidenceKey,
 				commitmentMeaningField, "restated_message_id", "restated_quote", commitmentRecipientsKey,
 				"buyer_ref", "commercial_role", "lifecycle_scope", "workstream",
+				requestKindKey, budgetQuoteKey, decisionDateKey,
 			)),
 		},
 		"events",

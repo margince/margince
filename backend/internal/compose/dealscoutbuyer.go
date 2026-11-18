@@ -25,7 +25,8 @@ func scoutBuyerSignal(signal string) string {
    WHERE other_job.contact_id = buyer_party.contact_id
     AND other_job.company_id <> buyer_job.company_id
     AND ` + buyerEmployment("other_job", "buyer_source") + `)
-  AND ` + workspaceEvidence("buyer_source") + `)`
+  AND (` + workspaceEvidence("buyer_source") + `
+   OR (` + explicitRequestCite("buyer_cite") + ` AND ` + requestSource("buyer_source") + `)))`
 }
 
 func buyerEmployment(alias, activity string) string {

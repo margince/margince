@@ -8,13 +8,15 @@ package compose
 // to deals as a suggestion.
 //
 // A verified buyer request and a commitment establish the commercial matter.
+// So does one explicit request for a quotation from a verified buyer.
 // Meetings and documents corroborate it without assigning a buyer of their own.
 //
 // Only evidence the whole workspace may read is used: an activity with the
 // workspace audience on a thread nobody holds, and a signal visible to the
 // workspace whose cited messages are the same. A suggestion built from private
 // evidence would tell colleagues, by its mere existence, about mail they may
-// not read.
+// not read. An explicit request is the one exception: it opens a deal from
+// private mail too. The opener decides what of that mail the deal shows.
 
 import (
 	"context"
@@ -26,6 +28,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -55,6 +58,8 @@ type scoutItem struct {
 	evidence    deals.SuggestionEvidence
 	amountMinor *int64
 	currency    *string
+	// decisionDate and budgetQuote are an explicit request's facts.
+	decisionDate, budgetQuote *string
 }
 
 // RunDealScout runs one pass inside the caller's transaction, as the system
@@ -84,9 +89,17 @@ func scoutPass(ctx context.Context, tx pgx.Tx, now time.Time, companyCap int) (D
 	if err != nil {
 		return pass, err
 	}
+	base, err := identity.BaseCurrencyAppliedTx(ctx, tx)
+	if err != nil {
+		return pass, err
+	}
+	today, err := installationToday(ctx, tx, now)
+	if err != nil {
+		return pass, err
+	}
 	for _, company := range byCompany(items) {
 		pass.Considered++
-		draft := draftSuggestion(company)
+		draft := draftSuggestion(company, base, today)
 		if draft.DuplicateOf, err = contacts.OpenDuplicateCompaniesTx(ctx, tx, draft.CompanyID); err != nil {
 			return pass, err
 		}
@@ -123,7 +136,8 @@ func scanScoutItem(row pgx.CollectableRow) (scoutItem, error) {
 	var it scoutItem
 	var ref ids.UUID
 	var amount, currency *string
-	if err := row.Scan(&it.company, &it.evidence.Kind, &ref, &it.evidence.OccurredAt, &amount, &currency); err != nil {
+	if err := row.Scan(&it.company, &it.evidence.Kind, &ref, &it.evidence.OccurredAt, &amount, &currency,
+		&it.decisionDate, &it.budgetQuote); err != nil {
 		return scoutItem{}, err
 	}
 	switch it.evidence.Kind {

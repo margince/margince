@@ -6088,6 +6088,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.winProbability.band.zero": "0%",
   "field.unset": "Chưa có",
   "deal.standing.figure.offer": "Báo giá {number} · phiên bản {revision}",
+  "deal.standing.figure.amountByModel": "Do Margince đọc từ email",
+  "deal.standing.figure.currencyGuessed":
+    "Đơn vị tiền tệ là giả định, hãy kiểm tra",
   "deal.standing.figure.next": "Bước tiếp theo",
   "standing.noneYet": "Chưa có",
   "deal.standing.figure.daysInStage": "Số ngày trong giai đoạn",
@@ -19604,6 +19607,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.committee.foot":
     "{named} người được nêu tên · {engaged}/{named} đang tương tác",
   "deal.brief.title": "Deal này là gì",
+  "deal.brief.byModel": "Do Margince viết từ email của khách hàng",
   "deal.room.open": "Mở",
   "deal.room.setUp": "Thiết lập",
   "deal.room.none": "Chưa có phòng",

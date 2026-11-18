@@ -76,6 +76,9 @@ func readDealForCaller(ctx context.Context, tx pgx.Tx, id ids.DealID, archived s
 	if err := attachClosingOccurrence(ctx, tx, id, &d); err != nil {
 		return crmcontracts.Deal{}, err
 	}
+	if err := attachModelWritten(ctx, tx, id, &d); err != nil {
+		return crmcontracts.Deal{}, err
+	}
 	return finishDealForCaller(ctx, tx, d)
 }
 

@@ -37,9 +37,14 @@ func dealScoutSQL(since, now time.Time, companyCap int) (string, []any) {
 	     AND abs(extract(epoch FROM c.occurred_at - o.occurred_at)) <= $` + fmt.Sprint(pairSeconds) + `
 	   WHERE o.signal_kind = 'new_opportunity'
 	   ORDER BY o.company_id, o.occurred_at DESC, c.occurred_at DESC
+	), requests AS (
+	  SELECT DISTINCT ON (company_id) company_id, ref AS opportunity, occurred_at
+	    FROM deduped WHERE signal_kind = 'new_opportunity' AND request
+	   ORDER BY company_id, occurred_at DESC, ref
 	), chosen AS (
 	  SELECT company_id FROM (
-	    SELECT company_id, occurred_at FROM pairs) qualifying
+	    SELECT company_id, occurred_at FROM pairs
+	    UNION ALL SELECT company_id, occurred_at FROM requests) qualifying
 	   GROUP BY company_id
 	   ORDER BY max(occurred_at) DESC, company_id
 	   LIMIT $` + fmt.Sprint(arg(companyCap)) + `
@@ -48,9 +53,11 @@ func dealScoutSQL(since, now time.Time, companyCap int) (string, []any) {
 	    FROM deduped ev JOIN chosen USING (company_id)
 	   WHERE ev.kind <> 'signal'
 	      OR ev.ref IN (SELECT p.opportunity FROM pairs p WHERE p.company_id = ev.company_id
-	                    UNION SELECT p.commitment FROM pairs p WHERE p.company_id = ev.company_id)
+	                    UNION SELECT p.commitment FROM pairs p WHERE p.company_id = ev.company_id
+	                    UNION SELECT r.opportunity FROM requests r WHERE r.company_id = ev.company_id)
 	)
-	SELECT cited.company_id, cited.kind, cited.ref, cited.stamp, reading.amount, reading.currency
+	SELECT cited.company_id, cited.kind, cited.ref, cited.stamp, reading.amount, reading.currency,
+	       cited.decision_date, cited.budget_quote
 	  FROM cited
 	  LEFT JOIN LATERAL (
 	    SELECT (SELECT f->>'Value' FROM jsonb_array_elements(x.fields) f
@@ -73,14 +80,18 @@ func scoutEvidenceSQL(in func(string) string, document string) string {
 	placed := occurredday.StartSQL("a")
 	return `
 	  SELECT mc.company_id, 'meeting' AS kind, a.id AS ref, a.occurred_at, a.occurred_at AS stamp,
-	         NULL::text AS signal_kind, a.id::text AS source_identity, NULL::text AS matter
+	         NULL::text AS signal_kind, a.id::text AS source_identity, NULL::text AS matter,
+	         false AS request, NULL::text AS decision_date, NULL::text AS budget_quote
 	    FROM (` + activities.HeldMeetingCounterparties() + `) mc
 	    JOIN activity a ON a.id = mc.activity_id
 	   WHERE ` + workspaceEvidence("a") + ` AND ` + in(placed) + `
 	     AND ` + scoutCandidate("mc.company_id", placed) + `
 	  UNION ALL
-	  SELECT s.resolved_company_id, 'signal', s.id, source.occurred_at, source.stamp, s.kind, s.id::text, source.matter
+	  SELECT s.resolved_company_id, 'signal', s.id, source.occurred_at, source.stamp, s.kind, s.id::text, source.matter,
+	         asked.cite IS NOT NULL, asked.cite->'fields'->>'` + decisionDateKey + `', asked.cite->'fields'->>'` + budgetQuoteKey + `'
 	    FROM signal s
+	    LEFT JOIN LATERAL (SELECT request_cite AS cite FROM jsonb_array_elements(s.evidence) request_cite
+	           WHERE s.kind = 'new_opportunity' AND ` + explicitRequestCite("request_cite") + ` LIMIT 1) asked ON true
 	    CROSS JOIN LATERAL (SELECT ` + storekit.CitedActivityTime("s.evidence") + ` AS occurred_at,
          ` + storekit.CitedActivityStamp("s.evidence") + ` AS stamp,
          (SELECT CASE WHEN count(DISTINCT coalesce(nullif(m.thread_key, ''), m.id::text)) = 1
@@ -90,15 +101,17 @@ func scoutEvidenceSQL(in func(string) string, document string) string {
           WHERE matter_cite->>'source_type' = 'activity') AS matter) source
 	   WHERE s.kind IN ('new_opportunity', 'commitment_made')
 	     AND (s.kind <> 'new_opportunity' OR (` + scoutBuyerSignal("s") + ` AND ` + unlinkedCommercialMatter("s") + `))
-	     AND s.status = 'open' AND s.archived_at IS NULL AND s.visibility = 'workspace'
+	     AND s.status = 'open' AND s.archived_at IS NULL
+	     AND (s.visibility = 'workspace' OR (asked.cite IS NOT NULL AND s.visibility = 'owner'))
 	     AND ` + in("source.occurred_at" /* occurred_at raw: a signal's cited time is placed already */) + `
 	     AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements(s.evidence) cite
 	           WHERE cite->>'source_type' = 'activity' AND NOT EXISTS (SELECT 1 FROM activity ca
-	             WHERE ca.id = ` + storekit.CitedActivityID("cite") + ` AND ` + workspaceEvidence("ca") + `))
+	             WHERE ca.id = ` + storekit.CitedActivityID("cite") + ` AND (` + workspaceEvidence("ca") + `
+	               OR (asked.cite IS NOT NULL AND ` + requestSource("ca") + `))))
 	     AND ` + scoutCandidate("s.resolved_company_id", "source.occurred_at" /* occurred_at raw: a signal's cited time is placed already */) + `
 	  UNION ALL
 	  SELECT filed.company_id, 'attachment', at.id, a.occurred_at, a.occurred_at, NULL,
-	         coalesce(nullif(at.checksum, ''), at.id::text), NULL::text
+	         coalesce(nullif(at.checksum, ''), at.id::text), NULL::text, false, NULL::text, NULL::text
 	    FROM attachment at
 	    JOIN activity a ON a.id = at.activity_id
 	    JOIN (` + activities.CompanyReachSet() + `) filed ON filed.activity_id = a.id
@@ -113,6 +126,27 @@ func scoutEvidenceSQL(in func(string) string, document string) string {
 func workspaceEvidence(alias string) string {
 	return fmt.Sprintf(`(`+auth.WorkspaceAudienceSQL("%[1]s")+` AND %[1]s.archived_at IS NULL AND NOT %[2]s)`,
 		alias, capture.CounterpartyHeldOn(alias))
+}
+
+// requestSource admits the message an explicit request was read from, whatever
+// its audience. A buyer asking for a quotation opens a deal even from protected
+// mail. The opener decides what of it reaches the deal (shareableRequestSource).
+func requestSource(alias string) string {
+	return alias + `.archived_at IS NULL AND ` + alias + `.restricted_at IS NULL`
+}
+
+// shareableRequestSource is whether what a request's mail says may reach the
+// deal. Either the whole workspace reads it, or it is private only by a routine
+// setting that the installation lets a model read. Mail someone protected
+// opens the deal and gives it nothing.
+func shareableRequestSource(alias string, private bool) string {
+	return `(` + workspaceEvidence(alias) + ` OR (` + alias + `.archived_at IS NULL AND ` +
+		activities.JudgeableAudience(alias, private) + ` AND NOT ` + capture.CounterpartyHeldOn(alias) + `))`
+}
+
+// explicitRequestCite is whether a signal cite records an explicit request.
+func explicitRequestCite(cite string) string {
+	return `(` + cite + `->'fields'->>'` + requestKindKey + `' = '` + requestKindExplicit + `')`
 }
 
 // scoutCandidate narrows evidence to companies that may be offered a

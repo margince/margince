@@ -13,6 +13,7 @@ package deals
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -136,4 +137,17 @@ func scanDeal(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmcontr
 	stalled := IsStalled(status, d.CreatedAt, d.LastActivityAt, waitUntil, meetingAhead, time.Now().UTC())
 	d.Stalled = &stalled
 	return d, nil
+}
+
+// attachModelWritten names the deal's fields a model wrote and nobody edited
+// since, for the ONE-deal read: the record page is where a rep checks them.
+func attachModelWritten(ctx context.Context, tx pgx.Tx, id ids.DealID, d *crmcontracts.Deal) error {
+	var fields []string
+	if err := tx.QueryRow(ctx, `SELECT `+storekit.AgentWrittenFieldsSQL(dealTable, "$1::uuid"), id).Scan(&fields); err != nil {
+		return fmt.Errorf("deals: reading which fields a model wrote: %w", err)
+	}
+	if len(fields) > 0 {
+		d.AiWrittenFields = &fields
+	}
+	return nil
 }

@@ -27,8 +27,16 @@ import (
 // about. scope narrows the messages it reads — empty for the pass, which wants
 // every conversation, and one thread's key for the trace, which wants one and
 // must not aggregate the installation to find it.
-func conversationCTE(scope string) string {
-	return conversationHead + scope + conversationTail
+//
+// private is the installation's switch for mail private by a routine setting
+// (activities.ModelReadsPrivateMailTx), read in the caller's transaction.
+func conversationCTE(scope string, private bool) string {
+	return conversationHead + `
+			       NOT EXISTS (SELECT 1 FROM activity t
+			                    WHERE t.thread_key = a.thread_key AND t.kind = 'email'
+			                      AND t.archived_at IS NULL
+			                      AND (` + activities.JudgeableAudience("t", private) + `) IS NOT TRUE) AS every_message_judgeable` +
+		conversationBody + scope + conversationTail
 }
 
 // The CTE either side of the scope, as package-level text rather than one
@@ -129,6 +137,10 @@ var conversationHead = `
 			                    WHERE t.thread_key = a.thread_key AND t.kind = 'email'
 			                      AND t.archived_at IS NULL
 			                      AND ` + "NOT (" + auth.WorkspaceAudienceSQL("t") + ")" + `) AS every_message_open,
+			       -- With the switch on, mail private only by a routine setting
+			       -- may reach the model too. conversationCTE adds that column.`
+
+var conversationBody = `,
 			       -- Every message read in full. A message not read in full may be
 			       -- the withdrawal of an older one, so a window without it is not
 			       -- the current conversation. Tested before the cap, so blocked
@@ -194,7 +206,10 @@ const (
 	// No message on the thread limited from the summary's readers. A thread
 	// summarised while one of its messages is withheld from that summary's
 	// audience is a partial account presented as a whole one.
-	threadIsFullyOpen = `c.every_message_open`
+	// A thread whose limited messages are private only by a routine setting
+	// passes while the installation lets a model read such mail. Only an
+	// explicit request is kept from it (keptFromRoutinePrivate).
+	threadIsFullyOpen = `(c.every_message_open OR c.every_message_judgeable)`
 
 	// Every message on the thread read in full, so the window is the whole
 	// current conversation and not an older subset of it.
@@ -244,7 +259,8 @@ const (
 // first.
 //
 // $1 settled instant, $2 per-pass cap, $3 refusal cap, $4 park cutoff.
-var dueThreadsQuery = conversationCTE("") + `		SELECT c.thread_key, c.one_company::uuid, c.newest, c.message_count,
+func dueThreadsQuery(private bool) string {
+	return conversationCTE("", private) + `		SELECT c.thread_key, c.one_company::uuid, c.newest, c.message_count,
 		       CASE WHEN c.shared THEN NULL ELSE c.private_owner::uuid END,
 		       -- The two ends a previous read reached, so this one can tell new
 		       -- mail from a backfill. Both null on a thread never scanned.
@@ -275,6 +291,7 @@ var dueThreadsQuery = conversationCTE("") + `		SELECT c.thread_key, c.one_compan
 		   AND ` + threadHasMoved + `
 		 ORDER BY c.newest DESC
 		 LIMIT $2`
+}
 
 // threadOfferQuery answers the SAME arms for ONE conversation, so the trace can
 // say which of them the thread failed rather than "not read".
@@ -287,7 +304,8 @@ var dueThreadsQuery = conversationCTE("") + `		SELECT c.thread_key, c.one_compan
 // pass cap and is unused here, which is what keeps the bind positions identical
 // to the queue's — the arms carry their own $N and a renumbering would mean two
 // spellings of each.
-var threadOfferQuery = conversationCTE(" AND a.thread_key = $5") + `
+func threadOfferQuery(private bool) string {
+	return conversationCTE(" AND a.thread_key = $5", private) + `
 		SELECT ` + threadHasAHumanSender + `,
 		       ` + threadReachesOneAccount + `,
 		       ` + threadIsOneBodyOfWork + `,
@@ -301,6 +319,7 @@ var threadOfferQuery = conversationCTE(" AND a.thread_key = $5") + `
 		  FROM conversation c
 		  LEFT JOIN signal_thread_scan s ON s.thread_key = c.thread_key
 		 LIMIT $2`
+}
 
 // threadOfferPassCap keeps threadOfferQuery's $2 bound. The query reads ONE
 // thread key, so it returns one row whatever this says; it exists so the arms
