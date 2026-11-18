@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
+import { valueFor } from "./labelfor";
 
 export type MomentVerbKind =
   components["schemas"]["ContactMomentAction"]["kind"];
@@ -38,5 +39,5 @@ export type WritingMomentVerb = {
  * refusal. So a new verb is not offered live before it is classified.
  */
 export function momentVerbWrites(kind: MomentVerbKind): boolean {
-  return MOMENT_VERB_WRITES[kind] !== false;
+  return valueFor<MomentVerbKind, boolean>(MOMENT_VERB_WRITES, kind, true);
 }
