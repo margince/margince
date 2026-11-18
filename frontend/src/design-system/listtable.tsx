@@ -15,7 +15,7 @@ import {
   useFrozenEdge,
 } from "./listtable.layout";
 import { orderedColumns, useColumnOrder } from "./listtable.order";
-import { fitsOnePage, holdsCount, usePaging } from "./listtable.paging";
+import { fitsOnePage, usePaging } from "./listtable.paging";
 import {
   applyView,
   clearAll,
@@ -390,7 +390,6 @@ export function ListTable<Row>({
       emptyNote={emptyNote}
     />
   );
-  const held = holdsCount(bodyOwnsPaging, pending, dials, rows.length);
   const emptyBlock = (
     <div className="lt-emptyline">
       <EmptyState>{emptyLine}</EmptyState>
@@ -420,7 +419,7 @@ export function ListTable<Row>({
               sortedBy: sortedColumn(columns, sort)?.header,
             })
       }
-      holdCount={held}
+      holdCount={holdsCount(bodyOwnsPaging, pending, dials, rows.length)}
       action={action}
       caption={caption}
       search={search}
@@ -468,9 +467,7 @@ export function ListTable<Row>({
         <ListGrid
           scrollerRef={(node) => {
             scroller.current = node;
-            if (bodyRef) {
-              bodyRef.current = node;
-            }
+            if (bodyRef) bodyRef.current = node;
           }}
           region={region}
           frozen={frozen}
