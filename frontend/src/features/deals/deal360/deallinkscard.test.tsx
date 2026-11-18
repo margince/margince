@@ -81,7 +81,7 @@ function mount(writable: boolean) {
     "POST /record-links": () =>
       jsonResponse(
         { title: "A record cannot be linked to itself", status: 422 },
-        { status: 422 },
+        422,
       ),
     "GET /me": meRoute({ deal: ["read", "update"] } as never),
     "GET /record-links": () => jsonResponse({ data: links }),
