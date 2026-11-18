@@ -97,3 +97,8 @@ Jurisdiction settings page lists and serves them when the installation is set to
 
 `de_test.go` checks every claim above. A changed span, condition, disclosure or window is a change
 to legal content. Edit the test in the same commit, and say in the PR body which statute moved.
+
+The messaging rules live in `policy/`, as Markdown with front matter. `gen-messaging-rules`
+compiles them into `messagingrules_gen.go`: run `go generate` here, or `make -C backend gen`. Each
+policy file names pairs of fixture drafts in `policy/fixtures/`, one that must raise a finding and
+one that must not. The consent tests in the backend run each pair through the engine's own checks.

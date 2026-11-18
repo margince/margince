@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
+	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 )
 
@@ -120,29 +121,16 @@ func (s *Store) DisclosuresFor(
 	if err != nil {
 		return nil, err
 	}
-	var owed []messagingrules.Disclosure
-	if senderRules, _, found := applicableRules(senderCountry); found {
-		owed = appendOwed(owed, senderRules.Disclosures, true)
-	}
-	layout := disclosureLayout{language: q.Language}
+	countries := make([]jurisdiction.Code, 0, len(q.Recipients))
 	for _, address := range q.Recipients {
 		country, err := recipientCountryOf(ctx, tx, connector.Recipient{Email: address})
 		if err != nil {
 			return nil, err
 		}
-		if marketingRules, _, found := applicableRules(country.Code); found {
-			owed = appendOwed(owed, marketingRules.Disclosures, false)
-			// One body leads with one language, so the first recipient's
-			// pack that names one decides it.
-			if layout.packLanguage == "" {
-				layout.packLanguage = marketingRules.DisclosureLanguage
-			}
-			layout.refusalLast = layout.refusalLast || marketingRules.RefusalSectionLast
-		}
-		if rules, follows := recipientDataProtection(country.Code); follows {
-			owed = appendOwed(owed, rules.Disclosures, true)
-		}
+		countries = append(countries, country.Code)
 	}
+	owed, layout := owedDisclosures(senderCountry, countries)
+	layout.language = q.Language
 	if len(owed) == 0 {
 		return nil, nil
 	}
@@ -162,6 +150,32 @@ func (s *Store) DisclosuresFor(
 	layout.marketing = q.Category == commsauthz.CategoryMarketing
 	layout.baseLanguage = s.mailLanguage(ctx, tx)
 	return layoutDisclosures(owed, controllerOf(installation, entity), layout), nil
+}
+
+// owedDisclosures answers what one body owes under the pack of the sending
+// entity's country and the pack of each recipient's, and how the recipients'
+// packs lay it out.
+func owedDisclosures(sender jurisdiction.Code, recipients []jurisdiction.Code) ([]messagingrules.Disclosure, disclosureLayout) {
+	var owed []messagingrules.Disclosure
+	if senderRules, _, found := applicableRules(sender); found {
+		owed = appendOwed(owed, senderRules.Disclosures, true)
+	}
+	var layout disclosureLayout
+	for _, code := range recipients {
+		if marketingRules, _, found := applicableRules(code); found {
+			owed = appendOwed(owed, marketingRules.Disclosures, false)
+			// One body leads with one language, so the first recipient's
+			// pack that names one decides it.
+			if layout.packLanguage == "" {
+				layout.packLanguage = marketingRules.DisclosureLanguage
+			}
+			layout.refusalLast = layout.refusalLast || marketingRules.RefusalSectionLast
+		}
+		if rules, follows := recipientDataProtection(code); follows {
+			owed = appendOwed(owed, rules.Disclosures, true)
+		}
+	}
+	return owed, layout
 }
 
 // appendOwed adds the declared disclosures of one selector's pack: the

@@ -133,7 +133,7 @@ TEST_SHUFFLE_NOTE = $(if $(TEST_SHUFFLE_SEED),@echo "$@: test order -shuffle=$(T
 
 .DEFAULT_GOAL := help
 
-.PHONY: mcp-inaccessible perfdoc config-gen extdoc-gen extdoc-check help check check-static build fetch-test-deps test test-cached test-uncached test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-roles test-integration-serial lint lint-base lint-strict lint-modules lint-tool arch-lint vet gen gen-workflow mcp-apps-vocab drift generators-twice composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln vendor-live tools tools-go hooks
+.PHONY: mcp-inaccessible perfdoc config-gen extdoc-gen extdoc-check messaging-rules-drift help check check-static build fetch-test-deps test test-cached test-uncached test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-roles test-integration-serial lint lint-base lint-strict lint-modules lint-tool arch-lint vet gen gen-workflow mcp-apps-vocab drift generators-twice composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln vendor-live tools tools-go hooks
 
 help: ## List targets with their descriptions (the default goal)
 	@grep -hE '^[a-zA-Z][a-zA-Z0-9_-]*:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
@@ -877,6 +877,7 @@ gen: mcp-apps-vocab handbook-embed ## Regenerate everything derived from the con
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-worklist -contract api/worklist-kinds.yaml \
 		-out-go internal/compose/attention/kinds_gen.go -out-frontend ../frontend/src/lib/worklistkinds.gen.ts
 	$(GOWORK_ROOT) $(GO) run ./internal/compose/aicert/decisioncertcmd -out internal/modules/ai/decisioncert_gen.go
+	$(GOWORK_ROOT) $(GO) run ./tools/gen-messaging-rules -root ..
 
 # Every file the settings registry is the source of: the settings tables in
 # docs/reference/configuration.md, config/margince.example.yaml,
@@ -894,7 +895,12 @@ extdoc-gen: ## Regenerate the extensions page tables from the extension package
 extdoc-check: ## Fail when the extensions page tables differ from the extension package
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-extdoc -check
 
-drift: ## Fail when a committed generated file drifted from what its generator produces
+# Each pack's messaging rules, compiled from its policy/ folder. -check writes
+# nothing: it fails a policy that does not compile or whose generated file is stale.
+messaging-rules-drift: ## Fail when a pack's policy does not compile or its messagingrules_gen.go is stale
+	$(GOWORK_ROOT) $(GO) run ./tools/gen-messaging-rules -root .. -check
+
+drift: messaging-rules-drift ## Fail when a committed generated file drifted from what its generator produces
 	@# The generators rewrite every output, and Go replays a cached test result
 	@# only while the files it read keep their mtime; an unchanged output keeps it.
 	@../scripts/keep-unchanged-mtimes.sh save ../.tmp/drift-mtimes
@@ -910,10 +916,10 @@ drift: ## Fail when a committed generated file drifted from what its generator p
 	# page went on publishing an older machine's numbers under a date no record
 	# held. A page that is merely stale says so; one that disagrees with its own
 	# source reads as current and is believed.
-	git diff --exit-code -- '*_gen.go' '*_gen.json' internal/compose/agentbundle/agentcontract_gen.yaml internal/compose/agentbundle/agentindex_gen.txt internal/contracts/ ../config/margince.schema.json ../config/margince.example.yaml ../config/margince.defaults.yaml ../.env.example ../docs/reference/configuration.md '../extensions/*/manifest.generated.json' internal/modules/agents/apps/forbidden.json internal/modules/agents/apps/actions.json 'internal/modules/knowledge/handbook/*.md' ../docs/reference/performance-budgets.md ../docs/reference/benchmark.md ../docs/reference/ai-provider-outages.md ../frontend/src/lib/worklistkinds.gen.ts
+	git diff --exit-code -- '*_gen.go' '*_gen.json' internal/compose/agentbundle/agentcontract_gen.yaml internal/compose/agentbundle/agentindex_gen.txt internal/contracts/ ../config/margince.schema.json ../config/margince.example.yaml ../config/margince.defaults.yaml ../.env.example ../docs/reference/configuration.md '../extensions/*/manifest.generated.json' internal/modules/agents/apps/forbidden.json internal/modules/agents/apps/actions.json 'internal/modules/knowledge/handbook/*.md' ../docs/reference/performance-budgets.md ../docs/reference/benchmark.md ../docs/reference/ai-provider-outages.md ../frontend/src/lib/worklistkinds.gen.ts '../extensions/*/messagingrules_gen.go'
 	# Untracked generated outputs are absent from git diff, including files a
 	# generator recreates after a committed deletion.
-	@u="$$(git ls-files --others --exclude-standard -- '../extensions/*/manifest.generated.json' '*_gen.json')"; \
+	@u="$$(git ls-files --others --exclude-standard -- '../extensions/*/manifest.generated.json' '../extensions/*/messagingrules_gen.go' '*_gen.json')"; \
 		[ -z "$$u" ] || { echo "drift: uncommitted generated artifact(s):" >&2; echo "$$u" >&2; exit 1; }
 	# Same blind spot, same guard: a handbook page copied in by handbook-embed
 	# and never `git add`ed is untracked, so the diff above sees nothing while
