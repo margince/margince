@@ -3039,7 +3039,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "record.companyRoutingKey": "Khóa định tuyến công ty",
   "record.companyRoutingKeyWhy": "Khóa định tuyến công ty dùng để làm gì",
   "record.companyRoutingKeyHelp":
-    "Tên miền web của công ty, ví dụ example.com. Quy tắc phân bổ có thể so khớp với nó, và Margince gợi ý công ty đang giữ tên miền đó.",
+    "Tên miền web của công ty, ví dụ example.com, hoặc dạng rút gọn của tên công ty khi chưa biết tên miền. Quy tắc phân bổ có thể so khớp với nó, và Margince gợi ý công ty đang giữ tên miền đó.",
   "record.finishFieldEdit":
     "Lưu hoặc hủy chỉnh sửa hiện tại trước khi đóng chi tiết.",
   "record.save": "Lưu",
