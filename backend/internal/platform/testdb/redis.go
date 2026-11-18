@@ -197,7 +197,7 @@ func readComposeFile() ([]byte, error) {
 		return nil, err
 	}
 	for {
-		body, err := os.ReadFile(filepath.Join(dir, composeFile))
+		body, err := os.ReadFile(filepath.Join(dir, composeFile)) // #nosec G304 -- the repository's own compose file, found by walking up from the test's directory
 		if err == nil {
 			return body, nil
 		}
