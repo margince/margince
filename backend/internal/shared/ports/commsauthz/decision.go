@@ -98,7 +98,7 @@ type Evidence struct {
 	// refuses a recipient address the lead does not hold.
 	LeadID ids.UUID
 	// AuthoredOffer says the words the sender wrote make an offer. The engine
-	// sets it at staging from AuthoredSubject and AuthoredBody; transmit reads
+	// sets it at staging from the Authored* request fields; transmit reads
 	// the staged value, because the delivery keeps no authored text.
 	AuthoredOffer bool
 }
@@ -140,6 +140,9 @@ type Request struct {
 	// signature and footer a send adds. Empty for a notice no sender wrote.
 	AuthoredSubject string
 	AuthoredBody    string
+	// AuthoredFileNames are the names of the files the sender attached, which
+	// say what a message offers as plainly as its body does.
+	AuthoredFileNames []string
 	// HTMLBody is the markup alternative, carried for the reason
 	// TransmitRequest carries it: the fingerprint stamped here is what the
 	// transmit phase compares against, so a field missing from one side is a

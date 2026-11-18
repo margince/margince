@@ -54,7 +54,7 @@ func TestACcRecipientAdvertisedToGetsTheAdvertisingDuties(t *testing.T) {
 	store.publicBaseURL = "https://mail.example.test"
 	derive := func(in SendEmailInput) (sendDeliverability, error) {
 		t.Helper()
-		surface, err := surfaceForRecipients(context.Background(), in, SendOrigin{}, nil, gate)
+		surface, err := surfaceForRecipients(context.Background(), in, SendOrigin{}, nil, nil, gate)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -95,7 +95,7 @@ func TestAReplyToItsOwnThreadStaysCorrespondence(t *testing.T) {
 		"a@example.test": commsauthz.CategoryReplyToInbound,
 	}}
 	in := SendEmailInput{Context: commsauthz.CategoryReplyToInbound, Recipients: []string{"a@example.test"}}
-	surface, err := surfaceForRecipients(context.Background(), in, SendOrigin{}, nil, gate)
+	surface, err := surfaceForRecipients(context.Background(), in, SendOrigin{}, nil, nil, gate)
 	if err != nil {
 		t.Fatal(err)
 	}
