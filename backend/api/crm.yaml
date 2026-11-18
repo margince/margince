@@ -3952,6 +3952,7 @@ paths:
     get:
       tags: [Companies]
       operationId: getCompanyLogo
+      x-open-query: true
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: get_company_logo, router: read_details, action: company_logo, tier: auto_execute, scope: read, served_by: route }
       summary: Stream a company's logo image.
@@ -3986,6 +3987,7 @@ paths:
     get:
       tags: [Companies]
       operationId: getCompanyLogoIcon
+      x-open-query: true
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: get_company_logo_icon, router: read_details, action: company_logo_icon, tier: auto_execute, scope: read, served_by: route }
       summary: Stream a company's square logo icon.
@@ -10816,16 +10818,7 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
-        '409':
-          description: |
-            Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
-            When the refusal opened a review, `details` carries `review_id`, the
-            `available_actions` this caller may take, and `refusals`: each refused address
-            the caller named, with the engine's `reason_code`, resolved `category` and the
-            `requested_category` the caller claimed.
-          content:
-            application/problem+json:
-              schema: { $ref: '#/components/schemas/Problem' }
+        '409': { $ref: '#/components/responses/SendRefused' }
         '422': { $ref: '#/components/responses/SendValidationError' }
 
   /emails:
@@ -10900,16 +10893,7 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
-        '409':
-          description: |
-            Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
-            When the refusal opened a review, `details` carries `review_id`, the
-            `available_actions` this caller may take, and `refusals`: each refused address
-            the caller named, with the engine's `reason_code`, resolved `category` and the
-            `requested_category` the caller claimed.
-          content:
-            application/problem+json:
-              schema: { $ref: '#/components/schemas/Problem' }
+        '409': { $ref: '#/components/responses/SendRefused' }
         '422': { $ref: '#/components/responses/SendValidationError' }
 
   /scheduled-sends:
@@ -11179,16 +11163,7 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '409':
-          description: |
-            Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
-            When the refusal opened a review, `details` carries `review_id`, the
-            `available_actions` this caller may take, and `refusals`: each refused address
-            the caller named, with the engine's `reason_code`, resolved `category` and the
-            `requested_category` the caller claimed.
-          content:
-            application/problem+json:
-              schema: { $ref: '#/components/schemas/Problem' }
+        '409': { $ref: '#/components/responses/SendRefused' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /public/record-previews/{record_type}/{id}:
@@ -13104,6 +13079,8 @@ paths:
         An `email` on the erasure list answers 422 naming `email` with code `address_erased`.
         A lead for somebody who is already a contact is refused with 409 `contact_holds_email`:
         open a deal on the contact instead.
+        A body with none of `full_name`, `email`, `phone`, `linkedin_url` or `company_name`
+        answers 422 `lead_identity_required`.
       x-mcp-tool: { verb: create_record, record_type: lead, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -18622,6 +18599,7 @@ paths:
     get:
       tags: [Reports]
       operationId: explainReport
+      x-open-query: true
       x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: '"Explain This Number" — resolve a derivation handle to its definition + source rows.'
       description: |
@@ -19947,6 +19925,7 @@ paths:
     get:
       tags: [Companies]
       operationId: getLegalEntityLogo
+      x-open-query: true
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: get_legal_entity_logo, router: read_details, action: legal_entity_logo, tier: auto_execute, scope: read, served_by: route }
       summary: Stream a legal entity's logo image.
@@ -26183,9 +26162,11 @@ paths:
         instruction rather than under the engine's permission. A subject asking later why they
         received it is shown the refusal AND the decision, never a grant nobody made.
 
-        A SUBJECT'S OWN STOP IS NEVER PASSED. A review that holds an objection, a withdrawal, a
-        restriction or a request to stop is refused with 403, admin included, even beside a refusal
-        a decision could pass.
+        WHAT A DECISION CAN PASS is each refusal's declared remedy. A holder of the exception grant
+        may send one message past a policy refusal and past the subject's own objection, withdrawal,
+        restriction or request to stop; the stop stays on record and binds the next message. A hard
+        bounce and a recipient the engine cannot name declare no remedy: a review holding one is
+        refused with 403, admin included, because the address needs a real repair.
 
         THE DECISION IS THE USER'S, taken in their own session. The row names them as the one who
         took it on. An agent or a connector is refused: it may read the review and send its user
@@ -29457,11 +29438,7 @@ paths:
         `no-cache`, so a stale URL never pins the new bytes. `If-None-Match` with the
         `ETag` answers 304.
       parameters:
-        - name: v
-          in: query
-          required: false
-          description: The revision token `avatar_url` carries. Only a token naming the current picture makes the answer cacheable for a day.
-          schema: { type: string, maxLength: 64 }
+        - $ref: '#/components/parameters/AssetRevision'
       responses:
         '200':
           description: The picture's bytes.
@@ -38927,6 +38904,12 @@ components:
       required: true
       schema: { type: string, format: uuid }
       description: Opaque resource id (UUID; ordering semantics are not exposed).
+    AssetRevision:
+      name: v
+      in: query
+      required: false
+      description: The revision token the picture's URL carries. Only a token naming the current picture makes the answer cacheable for a day.
+      schema: { type: string, maxLength: 64 }
     BundleId:
       name: bundle_id
       in: path
@@ -39229,6 +39212,18 @@ components:
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }
+    SendRefused:
+      description: |
+        Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
+        When the refusal opened a review, `details` carries `review_id`, the
+        `available_actions` this caller may take, and `refusals`: each refused address
+        the caller named, with the engine's `reason_code`, resolved `category` and the
+        `requested_category` the caller claimed. `details.review` is the review exactly as
+        `GET /communication-reviews/{id}` serves it to this caller, so a client needs no second
+        request; it is absent when the caller may not read the review.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/SendRefusal' }
     ControllerMailRefused:
       description: |
         The installation cannot send its own mail (`conflict`), or the consent engine refuses this
@@ -48303,7 +48298,7 @@ components:
       type: object
       required: [full_name, source]
       properties:
-        full_name: { type: string, maxLength: 120 }
+        full_name: { x-single-line: true, type: string, maxLength: 120 }
         created_from_activity_id:
           type: [string, 'null']
           format: uuid
@@ -48312,9 +48307,9 @@ components:
             agent that creates a contact from a record names it here, so a
             reader can check where the name and title came from. The caller
             must be able to read it (404 `not_found` otherwise, never 403).
-        first_name: { type: [string, 'null'], maxLength: 120 }
-        last_name: { type: [string, 'null'], maxLength: 120 }
-        title: { type: [string, 'null'], maxLength: 120 }
+        first_name: { x-single-line: true, type: [string, 'null'], maxLength: 120 }
+        last_name: { x-single-line: true, type: [string, 'null'], maxLength: 120 }
+        title: { x-single-line: true, type: [string, 'null'], maxLength: 120 }
         owner_id: { type: [string, 'null'], format: uuid }
         linkedin_url:
           type: [string, 'null']
@@ -48660,10 +48655,10 @@ components:
             Marks the contact (`vendor_marketing`) or clears the mark (null). The mark records
             who set it, so a mark set by hand is never lifted by the automatic check that
             lifts the mark the sender check set.
-        full_name: { type: string, maxLength: 120 }
-        first_name: { type: [string, 'null'], maxLength: 120 }
-        last_name: { type: [string, 'null'], maxLength: 120 }
-        title: { type: [string, 'null'], maxLength: 120 }
+        full_name: { x-single-line: true, type: string, maxLength: 120 }
+        first_name: { x-single-line: true, type: [string, 'null'], maxLength: 120 }
+        last_name: { x-single-line: true, type: [string, 'null'], maxLength: 120 }
+        title: { x-single-line: true, type: [string, 'null'], maxLength: 120 }
         owner_id: { type: [string, 'null'], format: uuid }
         visibility:
           type: string
@@ -49066,12 +49061,12 @@ components:
       type: object
       required: [display_name, source]
       properties:
-        display_name: { type: string, maxLength: 120 }
+        display_name: { x-single-line: true, type: string, maxLength: 120 }
         linkedin_url:
           type: [string, 'null']
           description: Canonical LinkedIn company URL, held to the rule the update holds it to. website_url is derived and refused here.
           pattern: '^https://([a-z]{2,3}\.)?linkedin\.com/company/[^/?#]+/?$'
-        legal_name: { type: [string, 'null'], maxLength: 500 }
+        legal_name: { x-single-line: true, type: [string, 'null'], maxLength: 500 }
         phone: { type: [string, 'null'], description: "The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number." }
         email: { type: [string, 'null'], format: email, description: "The company's general address, for example info@example.com. It never creates or matches a contact." }
         description: { type: [string, 'null'], maxLength: 20000, description: A description of what the company does. }
@@ -49098,8 +49093,8 @@ components:
           type: [string, 'null']
           description: Canonical LinkedIn company URL. Null clears it. website_url is derived and refused here.
           pattern: '^https://([a-z]{2,3}\.)?linkedin\.com/company/[^/?#]+/?$'
-        display_name: { type: string, maxLength: 120 }
-        legal_name: { type: [string, 'null'], maxLength: 500 }
+        display_name: { x-single-line: true, type: string, maxLength: 120 }
+        legal_name: { x-single-line: true, type: [string, 'null'], maxLength: 500 }
         phone: { type: [string, 'null'], description: "The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number." }
         email: { type: [string, 'null'], format: email, description: "The company's general address, for example info@example.com. It never creates or matches a contact." }
         description: { type: [string, 'null'], maxLength: 20000, description: 'A description of what the company does. Absent leaves it untouched; an empty string clears it, the same spelling every other nullable text field on this record uses.' }
@@ -56526,7 +56521,7 @@ components:
       type: object
       required: [name, pipeline_id, stage_id, source]
       properties:
-        name: { type: string }
+        name: { x-single-line: true, type: string }
         amount_minor: { type: [integer, 'null'], format: int64, minimum: 0, description: 'The deal''s one-off price in minor units of `currency`. Below zero is refused with 422 `amount_negative`.' }
         currency: { type: [string, 'null'], pattern: '^[A-Z]{3}$' }
         expected_arr_minor: { type: [integer, 'null'], format: int64, description: 'Expected annual recurring revenue in minor units of `currency`. Null means no recurring component, which is not zero.' }
@@ -56590,7 +56585,7 @@ components:
     UpdateDealRequest:
       type: object
       properties:
-        name: { type: string }
+        name: { x-single-line: true, type: string }
         amount_minor: { type: [integer, 'null'], format: int64, minimum: 0, description: 'The deal''s one-off price in minor units of `currency`. Below zero is refused with 422 `amount_negative`.' }
         currency: { type: [string, 'null'], pattern: '^[A-Z]{3}$' }
         expected_arr_minor: { type: [integer, 'null'], format: int64, description: 'Expected annual recurring revenue in minor units of `currency`. Null means no recurring component, which is not zero.' }
@@ -57477,7 +57472,7 @@ components:
       type: object
       required: [name, company_id, source]
       properties:
-        name: { type: string }
+        name: { x-single-line: true, type: string }
         company_id: { type: string, format: uuid }
         owner_id: { type: [string, 'null'], format: uuid }
         description: { type: [string, 'null'] }
@@ -57544,7 +57539,7 @@ components:
         file mail under a project, so changing it would stop mail already sent with it
         from filing.
       properties:
-        name: { type: string }
+        name: { x-single-line: true, type: string }
         owner_id: { type: [string, 'null'], format: uuid }
         description: { type: [string, 'null'] }
         started_at: { type: [string, 'null'], format: date }
@@ -61326,6 +61321,13 @@ components:
         scheduled_tz:
           type: [string, 'null']
           description: The IANA zone name `scheduled_at` was picked in. Required with `scheduled_at`.
+        override_explanation:
+          type: string
+          maxLength: 1000
+          description: |
+            The reason the rep typed for sending this message past a refusal, kept so a reopened
+            composer still holds it. It grants nothing: the send still needs its own decision. Omit
+            it for none.
 
     MailDraft:
       type: object
@@ -61386,6 +61388,10 @@ components:
         scheduled_tz:
           type: string
           description: The IANA zone `scheduled_at` was picked in. Present exactly when it is.
+        override_explanation:
+          type: string
+          maxLength: 1000
+          description: The reason the author typed for sending past a refusal. Absent when none was.
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
 
@@ -61426,7 +61432,8 @@ components:
       required: [to]
       description: |
         What a composer is about to write, in the shape the engine judges. A `subject` and
-        `body` never reach a consent decision. When given, they are checked against the
+        `body` are read as the send reads them: words that make an offer (a discount, a quote,
+        a price) are judged as marketing even inside a reply. They are also checked against the
         advertising content rules of each recipient's jurisdiction pack and answered as
         `content_findings`.
       properties:
@@ -61462,11 +61469,21 @@ components:
         subject:
           type: string
           maxLength: 998
-          description: The draft's subject, checked only for `content_findings`.
+          description: The draft's subject, read for an offer as the send reads it and checked for `content_findings`.
         body:
           type: string
           maxLength: 200000
-          description: The draft's plain text, checked only for `content_findings`.
+          description: The draft's plain text, read for an offer as the send reads it and checked for `content_findings`.
+        html_body:
+          type: string
+          description: The draft's markup beside the plain text. Its visible text is read for an offer as the send reads it.
+        attachment_ids:
+          type: array
+          maxItems: 10
+          items: { type: string, format: uuid }
+          description: |
+            The files the message will carry, by the ids `/attachments` gave them. Their names are
+            read for an offer as the send reads them. A file the send would refuse is refused here.
 
     PreviewAccountSendRequest:
       type: object
@@ -61505,11 +61522,21 @@ components:
         subject:
           type: string
           maxLength: 998
-          description: The draft's subject, checked only for `content_findings`.
+          description: The draft's subject, read for an offer as the send reads it and checked for `content_findings`.
         body:
           type: string
           maxLength: 200000
-          description: The draft's plain text, checked only for `content_findings`.
+          description: The draft's plain text, read for an offer as the send reads it and checked for `content_findings`.
+        html_body:
+          type: string
+          description: The draft's markup beside the plain text. Its visible text is read for an offer as the send reads it.
+        attachment_ids:
+          type: array
+          maxItems: 10
+          items: { type: string, format: uuid }
+          description: |
+            The files the message will carry, by the ids `/attachments` gave them. Their names are
+            read for an offer as the send reads them. A file the send would refuse is refused here.
 
     LawfulBasisConfirmationRequest:
       type: object
@@ -62174,12 +62201,12 @@ components:
     CreateLeadRequest:
       type: object
       properties:
-        full_name: { type: [string, 'null'] }
+        full_name: { x-single-line: true, type: [string, 'null'] }
         email: { type: [string, 'null'], format: email }
         phone: { type: [string, 'null'], description: "E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes." }
         linkedin_url: { type: [string, 'null'], description: 'Normalized LinkedIn profile URL — the E12.11 exact-match dedupe key for LinkedIn-captured leads.' }
-        title: { type: [string, 'null'] }
-        company_name: { type: [string, 'null'] }
+        title: { x-single-line: true, type: [string, 'null'] }
+        company_name: { x-single-line: true, type: [string, 'null'] }
         industry: { type: [string, 'null'], maxLength: 2000, description: 'An industry code, or text the server maps to one, as it maps a company''s industry. Text that names no code is `422` `not_a_known_value`.' }
         candidate_company_key: { type: [string, 'null'] }
         project_id: { type: [string, 'null'], format: uuid }
@@ -62219,11 +62246,11 @@ components:
         "disqualified ⇒ archived" is enforced on that one path); `promoted` is reachable only via
         POST /leads/{id}/promote. Both terminal states are therefore excluded from this enum.
       properties:
-        full_name: { type: [string, 'null'] }
+        full_name: { x-single-line: true, type: [string, 'null'] }
         email: { type: [string, 'null'], format: email }
         phone: { type: [string, 'null'], description: "E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes." }
-        title: { type: [string, 'null'] }
-        company_name: { type: [string, 'null'] }
+        title: { x-single-line: true, type: [string, 'null'] }
+        company_name: { x-single-line: true, type: [string, 'null'] }
         industry: { type: [string, 'null'], maxLength: 2000, description: 'An industry code, or text the server maps to one, as it maps a company''s industry. Text that names no code is `422` `not_a_known_value`. Null clears it.' }
         candidate_company_key: { type: [string, 'null'], description: 'Loose ABM routing key. Format: lowercased registrable domain when known (`acme.com`), else a slug of company_name. Never a company FK.' }
         project_id: { type: [string, 'null'], format: uuid, description: 'The body of work this lead belongs to; carries no same-company guard, also for a lead linked to a company.' }
@@ -62926,7 +62953,7 @@ components:
       type: object
       required: [label]
       properties:
-        label: { type: string, minLength: 1 }
+        label: { x-single-line: true, type: string, minLength: 1 }
         key: { type: string, description: 'Optional; derived from the label (lowercased, non-alphanumerics collapsed to `_`) when absent. Must be unique.' }
         intent: { $ref: '#/components/schemas/LeadSourceIntent' }
         sort_order: { type: integer }
@@ -62934,7 +62961,7 @@ components:
     UpdateLeadOriginRequest:
       type: object
       properties:
-        label: { type: string, minLength: 1 }
+        label: { x-single-line: true, type: string, minLength: 1 }
         intent: { $ref: '#/components/schemas/LeadSourceIntent' }
         sort_order: { type: integer }
         active: { type: boolean }
@@ -62976,7 +63003,7 @@ components:
       type: object
       required: [label]
       properties:
-        label: { type: string, minLength: 1 }
+        label: { x-single-line: true, type: string, minLength: 1 }
         key: { type: string, description: 'Optional; derived from the label (lowercased, non-alphanumerics collapsed to `_`) when absent. Must be unique.' }
         intent: { $ref: '#/components/schemas/LeadSourceIntent' }
         sort_order: { type: integer }
@@ -62984,7 +63011,7 @@ components:
     UpdateLeadSourceRequest:
       type: object
       properties:
-        label: { type: string, minLength: 1 }
+        label: { x-single-line: true, type: string, minLength: 1 }
         intent: { $ref: '#/components/schemas/LeadSourceIntent' }
         sort_order: { type: integer }
         active: { type: boolean }
@@ -64379,7 +64406,7 @@ components:
         # Bounded because the server bounds it: leading and inner whitespace is
         # collapsed before the length is measured, so a name that fits once
         # normalized is accepted even when it was typed longer.
-        name: { type: string, maxLength: 64 }
+        name: { x-single-line: true, type: string, maxLength: 64 }
         color: { type: [string, 'null'], enum: [teal, amber, rose, slate, sky, violet, lime, orange, null] }
         description: { type: [string, 'null'] }
 
@@ -64510,7 +64537,7 @@ components:
 
         The name cannot be cleared. A tag without one cannot be applied or read.
       properties:
-        name: { type: string, maxLength: 64 }
+        name: { x-single-line: true, type: string, maxLength: 64 }
         color: { type: string, enum: [teal, amber, rose, slate, sky, violet, lime, orange, none] }
         description: { type: string }
         suggestible:
@@ -66702,14 +66729,14 @@ components:
       required: [resource, name, query]
       properties:
         resource: { $ref: '#/components/schemas/SavedViewTarget' }
-        name: { type: string }
+        name: { x-single-line: true, type: string }
         query: { type: object, additionalProperties: true }
 
     UpdateSavedViewRequest:
       type: object
       description: A partial update; omitted fields keep their stored value.
       properties:
-        name: { type: string }
+        name: { x-single-line: true, type: string }
         query: { type: object, additionalProperties: true }
 
     SavedViewListResponse:
@@ -67391,6 +67418,12 @@ components:
         reader_rendering_available:
           type: boolean
           description: Whether this human caller may use the configured activity reader-rendering lane. Absent or false keeps generated text original until an explicit request.
+        inline_send_review:
+          type: boolean
+          description: |
+            The `activities.inline_send_review` setting: whether the email composer is decided at
+            Send, with a refusal shown inline from the embedded review. Absent or false keeps the
+            check while writing and the confirmation dialog.
         analytics_startup: { $ref: '#/components/schemas/AnalyticsStartup' }
         user: { $ref: '#/components/schemas/User' }
         workspace_name:
@@ -68896,6 +68929,46 @@ components:
       additionalProperties:
         type: object
         additionalProperties: { type: string }
+    SendRefusal:
+      description: >-
+        A problem body whose `details` describe a refused send and the review it opened.
+
+        The envelope is `Problem`'s, restated rather than composed with `allOf` so the
+        breaking-change check can read it; a gate holds the two property sets equal.
+      type: object
+      required: [status, code]
+      properties:
+        type: { type: string, format: uri, default: about:blank }
+        title: { type: string }
+        status: { type: integer }
+        code: { type: string }
+        detail: { type: string }
+        instance: { type: string, format: uri }
+        details: { $ref: '#/components/schemas/SendRefusalDetails' }
+    SendRefusalDetails:
+      type: object
+      additionalProperties: true
+      description: Present when the refusal opened a review.
+      properties:
+        review_id: { type: string, format: uuid }
+        available_actions:
+          type: array
+          description: What this caller may do about the refusal, such as `direct_send`.
+          items: { type: string }
+        refusals:
+          type: array
+          description: Each refused address the caller named.
+          items: { $ref: '#/components/schemas/SendRefusalRecipient' }
+        review: { $ref: '#/components/schemas/CommunicationReview' }
+    SendRefusalRecipient:
+      type: object
+      required: [address, reason_code, can_be_overruled]
+      properties:
+        address: { type: string }
+        reason_code: { type: string }
+        can_be_overruled: { type: boolean, description: Whether a recorded reason may send this one message anyway. }
+        category: { type: string, description: The category the engine resolved. }
+        requested_category: { type: string, description: The category the sender claimed. }
     AnalyticsRefusal:
       description: >-
         A problem body whose `details` spell out an analytics refusal, present whenever the
@@ -72156,8 +72229,8 @@ components:
       type: object
       required: [display_name, legal_name, country]
       properties:
-        display_name: { type: string, maxLength: 120 }
-        legal_name: { type: string, maxLength: 500 }
+        display_name: { x-single-line: true, type: string, maxLength: 120 }
+        legal_name: { x-single-line: true, type: string, maxLength: 500 }
         country: { type: string, description: 'Lower-case ISO 3166-1 alpha-2, for example `de`.' }
         address: { $ref: '#/components/schemas/LegalEntityAddress' }
         vat_id: { type: string, maxLength: 200 }
@@ -72174,8 +72247,8 @@ components:
       type: object
       description: A field left out keeps its value; a field sent as an empty string is cleared.
       properties:
-        display_name: { type: string, maxLength: 120 }
-        legal_name: { type: string, maxLength: 500 }
+        display_name: { x-single-line: true, type: string, maxLength: 120 }
+        legal_name: { x-single-line: true, type: string, maxLength: 500 }
         country: { type: string }
         address: { $ref: '#/components/schemas/LegalEntityAddress' }
         vat_id: { type: string, maxLength: 200 }
@@ -74914,6 +74987,14 @@ components:
             acknowledgement will name. Served rather than composed by the client: an instruction's
             claim is that a named human read particular words, and a client free to write its own
             would have the record assert an acknowledgement of text nobody published.
+        warnings:
+          type: array
+          items: { $ref: '#/components/schemas/OverrideWarning' }
+          description: |
+            Every warning this review is served with to this reader; a decision may name any of their
+            versions and no other. `warning` is always among them. The sender of a held message is
+            also served the composer's short warning (`inline-v1`), which a decision from any other
+            reader is refused for naming.
 
     OverrideWarning:
       type: object
@@ -75015,8 +75096,7 @@ components:
           description: |
             The refusal reason codes the director was shown, from the review's `refusals`. When the
             review's refusals changed since then, the decision is refused with `instruction_stale`
-            and the director opens the review again. A refusal the subject made themselves (an
-            objection, a withdrawal, a restriction or a request to stop) is never passed.
+            and the director opens the review again.
 
     ConfirmSubmission:
       type: object
@@ -76780,10 +76860,10 @@ components:
       type: object
       required: [name, unit_price_minor, currency, source]
       properties:
-        name: { type: string }
-        sku: { type: [string, 'null'] }
+        name: { x-single-line: true, type: string }
+        sku: { x-single-line: true, type: [string, 'null'] }
         description: { type: [string, 'null'], maxLength: 20000 }
-        unit: { type: [string, 'null'], description: "A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`), or any other unit as typed text. A known spelling such as `Stunde` or `hours` is stored as its key. Defaults to `piece`." }
+        unit: { x-single-line: true, type: [string, 'null'], description: "A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`), or any other unit as typed text. A known spelling such as `Stunde` or `hours` is stored as its key. Defaults to `piece`." }
         unit_price_minor: { type: integer, format: int64, minimum: 0 }
         billing_model: { type: [string, 'null'], enum: [one_time, recurring, null], description: 'Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.' }
         billing_interval_months: { type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.' }
@@ -76799,10 +76879,10 @@ components:
       type: object
       description: Any subset; omit a field to leave it unchanged. A price change never re-prices existing offer lines (they hold snapshots).
       properties:
-        name: { type: string }
-        sku: { type: [string, 'null'] }
+        name: { x-single-line: true, type: string }
+        sku: { x-single-line: true, type: [string, 'null'] }
         description: { type: [string, 'null'], maxLength: 20000 }
-        unit: { type: string }
+        unit: { x-single-line: true, type: string }
         unit_price_minor: { type: integer, format: int64, minimum: 0 }
         billing_model: { type: [string, 'null'], enum: [one_time, recurring, not_specified, null], description: 'Whether this price repeats. Send `not_specified` to say nobody has classified it — an omitted field and a JSON null both mean "leave the classification alone", which is why clearing it needs a word of its own. Reading a product back, this field is never `not_specified`: it is one_time, recurring, or null.' }
         billing_interval_months: { type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.' }
@@ -77487,7 +77567,7 @@ components:
       type: object
       required: [name, layout]
       properties:
-        name: { type: string }
+        name: { x-single-line: true, type: string }
         locale: { type: [string, 'null'], default: de-DE }
         is_default: { type: [boolean, 'null'], description: Defaults to false. }
         layout: { type: object, additionalProperties: true }
@@ -77497,7 +77577,7 @@ components:
       description: Full replace via PUT (unlike updateProduct's merge-PATCH) — every writable field must be supplied; omitting one resets it, it is not left unchanged.
       required: [name, locale, is_default, layout]
       properties:
-        name: { type: string }
+        name: { x-single-line: true, type: string }
         locale: { type: string }
         is_default: { type: boolean }
         layout: { type: object, additionalProperties: true }

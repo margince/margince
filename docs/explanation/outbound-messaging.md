@@ -223,8 +223,9 @@ the text lands. Both write a row per recipient into `communication_decision`.
 The answer is no by default, and an allow rests on evidence, never on a purpose key the caller
 supplies. The engine resolves a kind from what the send is: the thread it answers, the invoice it is
 about, the template it uses. It then checks what that kind requires. A reply is allowed because this
-recipient is on the thread the subject opened. An invoice goes to the company's billing contact,
-or to the buyer on the deal when the company has none.
+recipient is on the thread the subject opened. An offer in the words or file names the sender wrote
+(`consent/authoredoffer.go`) needs a live deal, a requested quote or marketing consent instead.
+An invoice goes to the company's billing contact, or to the deal's buyer when the company has none.
 
 A marketing mail still needs consent, and there a `requires_double_opt_in` purpose needs a confirmed
 `consent_event`. A send whose kind nothing supports is `review`, never a silent pass.
@@ -232,9 +233,8 @@ A marketing mail still needs consent, and there a `requires_double_opt_in` purpo
 The engine must tell an **answer** (park: a human can do something about it) from a **fault** (retry:
 the question could not be asked). Reading one as the other silently loses good mail.
 
-The rest of the engine is in
-[privacy-and-consent.md](privacy-and-consent.md#the-authorization-engine-consent). It covers consent
-revoked by kind, and `communication_suppression`. It covers the messages that still reach a subject
+The rest of the engine is in [privacy-and-consent.md](privacy-and-consent.md#the-authorization-engine-consent).
+It covers consent revoked by kind, and `communication_suppression`. It covers the messages that still reach a subject
 whose data use is limited (`security_notice`, `privacy_notice`, `optout_confirmation`). And it covers
 the modes for turning it on step by step (`consent.authorization_modes`, `observe`, `warn`). A fixed
 set of reason codes (`absoluteDenials` in `commsauthz`) refuses in every mode.

@@ -7,7 +7,6 @@ import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { entityTimelineKeys } from "../../lib/activitykeys";
-import { ComposeModal } from "./compose";
 import {
   fillSendableForm,
   jsonResponse,
@@ -17,6 +16,7 @@ import {
   stubRoutes,
 } from "./compose.testkit";
 import { draftKey } from "./composesaveddraftcalls";
+import { ComposeWindow } from "./composewindow";
 
 // A message sent past its refusal as a recorded exception is a sent message.
 // The composer closes the way a normal send closes it, so nothing on screen
@@ -101,7 +101,7 @@ describe("sending with a recorded exception", () => {
     function Composer() {
       const [open, setOpen] = useState(true);
       return (
-        <ComposeModal
+        <ComposeWindow
           entityType="contact"
           entityId="c-1"
           contactId="c-1"

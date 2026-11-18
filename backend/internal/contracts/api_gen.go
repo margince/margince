@@ -40370,6 +40370,12 @@ type CommunicationReview struct {
 	// while naming a different version.
 	Warning *OverrideWarning `json:"warning,omitempty"`
 
+	// Warnings Every warning this review is served with to this reader; a decision may name any of their
+	// versions and no other. `warning` is always among them. The sender of a held message is
+	// also served the composer's short warning (`inline-v1`), which a decision from any other
+	// reader is refused for naming.
+	Warnings *[]OverrideWarning `json:"warnings,omitempty"`
+
 	// WordingCorrection The current approved wording, visible only to its original human approver while the
 	// decision is unspent. The original reason remains on the instruction.
 	WordingCorrection *WordingCorrectionContext `json:"wording_correction,omitempty"`
@@ -45958,7 +45964,7 @@ type CreateCompanyRequest struct {
 
 	// Description A description of what the company does.
 	Description *string               `json:"description,omitempty"`
-	DisplayName string                `json:"display_name"`
+	DisplayName string                `json:"display_name" singleline:"true"`
 	Domains     *[]CompanyDomainInput `json:"domains,omitempty"`
 
 	// Email The company's general address, for example info@example.com. It never creates or matches a contact.
@@ -45966,7 +45972,7 @@ type CreateCompanyRequest struct {
 
 	// Industry An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description.
 	Industry  *string `json:"industry,omitempty"`
-	LegalName *string `json:"legal_name,omitempty"`
+	LegalName *string `json:"legal_name,omitempty" singleline:"true"`
 
 	// LinkedinUrl Canonical LinkedIn company URL, held to the rule the update holds it to. website_url is derived and refused here.
 	LinkedinUrl     *string             `json:"linkedin_url,omitempty"`
@@ -46047,9 +46053,9 @@ type CreateContactRequest struct {
 	// CreatedFromActivityId The note, mail or quick capture this contact was read out of. An agent that creates a contact from a record names it here, so a reader can check where the name and title came from. The caller must be able to read it (404 `not_found` otherwise, never 403).
 	CreatedFromActivityId *openapi_types.UUID  `json:"created_from_activity_id,omitempty"`
 	Emails                *[]ContactEmailInput `json:"emails,omitempty"`
-	FirstName             *string              `json:"first_name,omitempty"`
-	FullName              string               `json:"full_name"`
-	LastName              *string              `json:"last_name,omitempty"`
+	FirstName             *string              `json:"first_name,omitempty" singleline:"true"`
+	FullName              string               `json:"full_name" singleline:"true"`
+	LastName              *string              `json:"last_name,omitempty" singleline:"true"`
 
 	// LinkedinUrl The contact's LinkedIn profile link (https://www.linkedin.com/in/<name>). Writes the same stored value as `social.linkedin`; a request naming both with different profiles is refused with 422 `linkedin_url_conflicts_with_social`.
 	LinkedinUrl *string              `json:"linkedin_url,omitempty"`
@@ -46071,7 +46077,7 @@ type CreateContactRequest struct {
 
 	// SourceSystem Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused).
 	SourceSystem         *string                `json:"source_system,omitempty"`
-	Title                *string                `json:"title,omitempty"`
+	Title                *string                `json:"title,omitempty" singleline:"true"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
@@ -46172,7 +46178,7 @@ type CreateDealRequest struct {
 
 	// ExpectedCloseDate Deals are born open, so a date before today is rejected 422 (INV-CLOSE-PAST, formulas §11).
 	ExpectedCloseDate *openapi_types.Date `json:"expected_close_date,omitempty"`
-	Name              string              `json:"name"`
+	Name              string              `json:"name" singleline:"true"`
 	OwnerId           *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// PartnerAttribution `sourced` or `influenced`. Naming a partner without this field attributes the deal `sourced`; an attribution for a deal naming no partner is refused 422.
@@ -46401,20 +46407,20 @@ type CreateLeadOriginRequest struct {
 
 	// Key Optional; derived from the label (lowercased, non-alphanumerics collapsed to `_`) when absent. Must be unique.
 	Key       *string `json:"key,omitempty"`
-	Label     string  `json:"label"`
+	Label     string  `json:"label" singleline:"true"`
 	SortOrder *int    `json:"sort_order,omitempty"`
 }
 
 // CreateLeadRequest defines model for CreateLeadRequest.
 type CreateLeadRequest struct {
 	CandidateCompanyKey *string `json:"candidate_company_key,omitempty"`
-	CompanyName         *string `json:"company_name,omitempty"`
+	CompanyName         *string `json:"company_name,omitempty" singleline:"true"`
 
 	// ContactId Older clients may still send this field. The request is refused with 409 `contact_holds_email`; open a deal when a contact has a new opportunity.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	ContactId *openapi_types.UUID  `json:"contact_id,omitempty"`
 	Email     *openapi_types.Email `json:"email,omitempty"`
-	FullName  *string              `json:"full_name,omitempty"`
+	FullName  *string              `json:"full_name,omitempty" singleline:"true"`
 
 	// Industry An industry code, or text the server maps to one, as it maps a company's industry. Text that names no code is `422` `not_a_known_value`.
 	Industry *string `json:"industry,omitempty"`
@@ -46455,7 +46461,7 @@ type CreateLeadRequest struct {
 
 	// Status The activity-driven ladder: new → contacted (we reached out) → engaged (they answered or a meeting is booked/held) → promoted (qualified: a contact exists) | disqualified. contacted and engaged are set by the system from captured activity and may be set by hand.
 	Status               *CreateLeadRequestStatus `json:"status,omitempty"`
-	Title                *string                  `json:"title,omitempty"`
+	Title                *string                  `json:"title,omitempty" singleline:"true"`
 	AdditionalProperties map[string]interface{}   `json:"-"`
 }
 
@@ -46469,7 +46475,7 @@ type CreateLeadSourceRequest struct {
 
 	// Key Optional; derived from the label (lowercased, non-alphanumerics collapsed to `_`) when absent. Must be unique.
 	Key       *string `json:"key,omitempty"`
-	Label     string  `json:"label"`
+	Label     string  `json:"label" singleline:"true"`
 	SortOrder *int    `json:"sort_order,omitempty"`
 }
 
@@ -46485,12 +46491,12 @@ type CreateLegalEntityRequest struct {
 
 	// DefaultLanguage ISO 639-1, for example `de`.
 	DefaultLanguage *string `json:"default_language,omitempty"`
-	DisplayName     string  `json:"display_name"`
+	DisplayName     string  `json:"display_name" singleline:"true"`
 
 	// Iban Spaces are removed and letters upper-cased before the check.
 	Iban      *string `json:"iban,omitempty"`
 	Imprint   *string `json:"imprint,omitempty"`
-	LegalName string  `json:"legal_name"`
+	LegalName string  `json:"legal_name" singleline:"true"`
 
 	// Offering What a further legal entity sells and to whom, the offering a company can be judged against.
 	// The default entity's offering is the company profile, so these stay null there and a write to
@@ -46564,7 +46570,7 @@ type CreateOfferTemplateRequest struct {
 	IsDefault *bool                  `json:"is_default,omitempty"`
 	Layout    map[string]interface{} `json:"layout"`
 	Locale    *string                `json:"locale,omitempty"`
-	Name      string                 `json:"name"`
+	Name      string                 `json:"name" singleline:"true"`
 }
 
 // CreateOutcomeReviewRequest defines model for CreateOutcomeReviewRequest.
@@ -46650,15 +46656,15 @@ type CreateProductRequest struct {
 	// DefaultTaxRate Percent; defaults to 0.
 	DefaultTaxRate *float64 `json:"default_tax_rate,omitempty" minimum:"0"`
 	Description    *string  `json:"description,omitempty"`
-	Name           string   `json:"name"`
-	Sku            *string  `json:"sku,omitempty"`
+	Name           string   `json:"name" singleline:"true"`
+	Sku            *string  `json:"sku,omitempty" singleline:"true"`
 	Source         string   `json:"source"`
 
 	// TaxCategory Which tax rate the product takes. Omit or send null to leave it unclassified.
 	TaxCategory *CreateProductRequestTaxCategory `json:"tax_category,omitempty"`
 
 	// Unit A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`), or any other unit as typed text. A known spelling such as `Stunde` or `hours` is stored as its key. Defaults to `piece`.
-	Unit           *string `json:"unit,omitempty"`
+	Unit           *string `json:"unit,omitempty" singleline:"true"`
 	UnitPriceMinor int64   `json:"unit_price_minor" minimum:"0"`
 }
 
@@ -46706,7 +46712,7 @@ type CreateProjectRequest struct {
 
 	// Key The key the creator chose; omitted or null to have the server mint one. Read-only after create.
 	Key     *string             `json:"key,omitempty"`
-	Name    string              `json:"name"`
+	Name    string              `json:"name" singleline:"true"`
 	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// Phase The phase the project starts in; initiative when omitted.
@@ -46838,7 +46844,7 @@ type CreateRoleRequest struct {
 
 // CreateSavedViewRequest defines model for CreateSavedViewRequest.
 type CreateSavedViewRequest struct {
-	Name  string                 `json:"name"`
+	Name  string                 `json:"name" singleline:"true"`
 	Query map[string]interface{} `json:"query"`
 
 	// Resource The list a saved view is over: one of core's lists, or `ext:<unit>:<kind>` for a kind an extension declared. One schema for the record, the create body and the list filter, so the three cannot drift.
@@ -46910,7 +46916,7 @@ type CreateStageRequestSemantic string
 type CreateTagRequest struct {
 	Color       *CreateTagRequestColor `json:"color,omitempty"`
 	Description *string                `json:"description,omitempty"`
-	Name        string                 `json:"name"`
+	Name        string                 `json:"name" singleline:"true"`
 }
 
 // CreateTagRequestColor defines model for CreateTagRequest.Color.
@@ -49077,8 +49083,7 @@ type DirectCommunicationSendRequest struct {
 
 	// ShownReasons The refusal reason codes the director was shown, from the review's `refusals`. When the
 	// review's refusals changed since then, the decision is refused with `instruction_stale`
-	// and the director opens the review again. A refusal the subject made themselves (an
-	// objection, a withdrawal, a restriction or a request to stop) is never passed.
+	// and the director opens the review again.
 	ShownReasons *[]string `json:"shown_reasons,omitempty"`
 
 	// WarningVersion The compliance text they were shown. Recorded because a record naming no version cannot
@@ -56367,6 +56372,9 @@ type MailDraft struct {
 	HtmlBody  *string            `json:"html_body,omitempty"`
 	Id        openapi_types.UUID `json:"id"`
 
+	// OverrideExplanation The reason the author typed for sending past a refusal. Absent when none was.
+	OverrideExplanation *string `json:"override_explanation,omitempty"`
+
 	// ScheduledAt The moment the author picked to send at, as saved. It may have passed since; the
 	// draft schedules nothing. Absent when none was picked.
 	ScheduledAt *time.Time `json:"scheduled_at,omitempty"`
@@ -56447,6 +56455,11 @@ type MailDraftInput struct {
 
 	// HtmlBody The editor's markup beside the plain body, so reopening restores the formatting.
 	HtmlBody *string `json:"html_body,omitempty"`
+
+	// OverrideExplanation The reason the rep typed for sending this message past a refusal, kept so a reopened
+	// composer still holds it. It grants nothing: the send still needs its own decision. Omit
+	// it for none.
+	OverrideExplanation *string `json:"override_explanation,omitempty"`
 
 	// ScheduledAt The moment the rep picked to send at, checked as the send checks it: with
 	// `scheduled_tz`, at most 90 days ahead. Saving schedules nothing. Omit both for none.
@@ -56561,6 +56574,11 @@ type MeResponse struct {
 
 	// DataResetAvailable True when this installation armed `operations.allow_data_reset` in its deployment file. It is the SAME value `POST /admin/reset-data` gates on, so a client never renders an action for a route that would answer 404. Absent or false means the capability does not exist here — the compiled default in every posture, dev included.
 	DataResetAvailable *bool `json:"data_reset_available,omitempty"`
+
+	// InlineSendReview The `activities.inline_send_review` setting: whether the email composer is decided at
+	// Send, with a refusal shown inline from the embedded review. Absent or false keeps the
+	// check while writing and the confirmation dialog.
+	InlineSendReview *bool `json:"inline_send_review,omitempty"`
 
 	// InstallationBrand The installation's own company as every seat already sees it on screen: its name and its marks, for the app's brand block. Absent until the installation has described itself. Deliberately nothing else — the rest of the company profile (`getAnchorCompany`) is an administrator's read, and this projection is not a way around it.
 	InstallationBrand *InstallationBrand `json:"installation_brand,omitempty"`
@@ -59243,7 +59261,11 @@ type PreferenceCenterRefusedReason string
 // PreviewAccountSendRequest PreviewSendRequest plus the `links` an anchor would otherwise have supplied — the
 // records this new conversation would belong to.
 type PreviewAccountSendRequest struct {
-	// Body The draft's plain text, checked only for `content_findings`.
+	// AttachmentIds The files the message will carry, by the ids `/attachments` gave them. Their names are
+	// read for an offer as the send reads them. A file the send would refuse is refused here.
+	AttachmentIds *[]openapi_types.UUID `json:"attachment_ids,omitempty"`
+
+	// Body The draft's plain text, read for an offer as the send reads it and checked for `content_findings`.
 	Body                 *string               `json:"body,omitempty"`
 	CommunicationContext *CommunicationContext `json:"communication_context,omitempty"`
 
@@ -59255,23 +59277,31 @@ type PreviewAccountSendRequest struct {
 	ConsentPurpose *string                `json:"consent_purpose,omitempty"`
 	Evidence       *CommunicationEvidence `json:"evidence,omitempty"`
 
+	// HtmlBody The draft's markup beside the plain text. Its visible text is read for an offer as the send reads it.
+	HtmlBody *string `json:"html_body,omitempty"`
+
 	// Links The records the message would be filed under. They are read through the caller's
 	// own row scope before the engine sees them, so naming a record the caller cannot
 	// open is refused here rather than answered about.
 	Links            []ActivityLinkInput `json:"links"`
 	MarketingPurpose *string             `json:"marketing_purpose,omitempty"`
 
-	// Subject The draft's subject, checked only for `content_findings`.
+	// Subject The draft's subject, read for an offer as the send reads it and checked for `content_findings`.
 	Subject *string               `json:"subject,omitempty"`
 	To      []openapi_types.Email `json:"to"`
 }
 
 // PreviewSendRequest What a composer is about to write, in the shape the engine judges. A `subject` and
-// `body` never reach a consent decision. When given, they are checked against the
+// `body` are read as the send reads them: words that make an offer (a discount, a quote,
+// a price) are judged as marketing even inside a reply. They are also checked against the
 // advertising content rules of each recipient's jurisdiction pack and answered as
 // `content_findings`.
 type PreviewSendRequest struct {
-	// Body The draft's plain text, checked only for `content_findings`.
+	// AttachmentIds The files the message will carry, by the ids `/attachments` gave them. Their names are
+	// read for an offer as the send reads them. A file the send would refuse is refused here.
+	AttachmentIds *[]openapi_types.UUID `json:"attachment_ids,omitempty"`
+
+	// Body The draft's plain text, read for an offer as the send reads it and checked for `content_findings`.
 	Body *string `json:"body,omitempty"`
 
 	// CommunicationContext What the sender says this message is. Checked against the record, never believed:
@@ -59290,10 +59320,13 @@ type PreviewSendRequest struct {
 	// Evidence Records the caller names in support of this message. Checked, never trusted.
 	Evidence *CommunicationEvidence `json:"evidence,omitempty"`
 
+	// HtmlBody The draft's markup beside the plain text. Its visible text is read for an offer as the send reads it.
+	HtmlBody *string `json:"html_body,omitempty"`
+
 	// MarketingPurpose Which marketing purpose, when the context is `marketing`.
 	MarketingPurpose *string `json:"marketing_purpose,omitempty"`
 
-	// Subject The draft's subject, checked only for `content_findings`.
+	// Subject The draft's subject, read for an offer as the send reads it and checked for `content_findings`.
 	Subject *string `json:"subject,omitempty"`
 
 	// To The addressees. Cc and Bcc join this list at send, and both are asked about
@@ -65753,6 +65786,51 @@ type SendMessageRequest struct {
 // objected, so naming one here is refused (422 `invalid`).
 type SendMessageRequestCommunicationContext string
 
+// SendRefusal A problem body whose `details` describe a refused send and the review it opened.
+// The envelope is `Problem`'s, restated rather than composed with `allOf` so the breaking-change check can read it; a gate holds the two property sets equal.
+type SendRefusal struct {
+	Code   string  `json:"code"`
+	Detail *string `json:"detail,omitempty"`
+
+	// Details Present when the refusal opened a review.
+	Details  *SendRefusalDetails `json:"details,omitempty"`
+	Instance *string             `json:"instance,omitempty"`
+	Status   int                 `json:"status"`
+	Title    *string             `json:"title,omitempty"`
+	Type     *string             `json:"type,omitempty"`
+}
+
+// SendRefusalDetails Present when the refusal opened a review.
+type SendRefusalDetails struct {
+	// AvailableActions What this caller may do about the refusal, such as `direct_send`.
+	AvailableActions *[]string `json:"available_actions,omitempty"`
+
+	// Refusals Each refused address the caller named.
+	Refusals *[]SendRefusalRecipient `json:"refusals,omitempty"`
+
+	// Review What a refused send left behind. A SNAPSHOT of the engine's answer at the moment it was
+	// given — a reader asking why a message was refused on Tuesday needs Tuesday's answer, not
+	// what the consent rows say today.
+	Review               *CommunicationReview   `json:"review,omitempty"`
+	ReviewId             *openapi_types.UUID    `json:"review_id,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// SendRefusalRecipient defines model for SendRefusalRecipient.
+type SendRefusalRecipient struct {
+	Address string `json:"address"`
+
+	// CanBeOverruled Whether a recorded reason may send this one message anyway.
+	CanBeOverruled bool `json:"can_be_overruled"`
+
+	// Category The category the engine resolved.
+	Category   *string `json:"category,omitempty"`
+	ReasonCode string  `json:"reason_code"`
+
+	// RequestedCategory The category the sender claimed.
+	RequestedCategory *string `json:"requested_category,omitempty"`
+}
+
 // ServiceMemberRequest A member for an extension's unattended feed. No password and no way in.
 type ServiceMemberRequest struct {
 	DisplayName string `json:"display_name"`
@@ -68328,7 +68406,7 @@ type UpdateCompanyRequest struct {
 
 	// Description A description of what the company does. Absent leaves it untouched; an empty string clears it, the same spelling every other nullable text field on this record uses.
 	Description *string `json:"description,omitempty"`
-	DisplayName *string `json:"display_name,omitempty"`
+	DisplayName *string `json:"display_name,omitempty" singleline:"true"`
 
 	// Domains Replace-set of the company's live domains (add new, archive removed, flip is_primary). Absent = untouched; an empty array clears all domains.
 	Domains *[]CompanyDomainInput `json:"domains,omitempty"`
@@ -68341,7 +68419,7 @@ type UpdateCompanyRequest struct {
 
 	// Industry An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description.
 	Industry  *string `json:"industry,omitempty"`
-	LegalName *string `json:"legal_name,omitempty"`
+	LegalName *string `json:"legal_name,omitempty" singleline:"true"`
 
 	// Lifecycle Where the account stands with us (ADR-0079). Absent = untouched. `live` (the agreed first scope is in use) is accepted only from a signed-in user; any other caller gets 422 `lifecycle_live_needs_a_human`.
 	Lifecycle *UpdateCompanyRequestLifecycle `json:"lifecycle,omitempty"`
@@ -68432,9 +68510,9 @@ type UpdateContactRequest struct {
 	// here. Sending an empty array removes them all, which is a real answer — a
 	// contact who no longer has a working address is a fact worth recording.
 	Emails    *[]ContactEmailInput `json:"emails,omitempty"`
-	FirstName *string              `json:"first_name,omitempty"`
-	FullName  *string              `json:"full_name,omitempty"`
-	LastName  *string              `json:"last_name,omitempty"`
+	FirstName *string              `json:"first_name,omitempty" singleline:"true"`
+	FullName  *string              `json:"full_name,omitempty" singleline:"true"`
+	LastName  *string              `json:"last_name,omitempty" singleline:"true"`
 
 	// LinkedinUrl The contact's LinkedIn profile link (https://www.linkedin.com/in/<name>). Writes the same stored value as `social.linkedin`; null or "" removes it. A request naming both with different profiles is refused with 422 `linkedin_url_conflicts_with_social`.
 	LinkedinUrl *string             `json:"linkedin_url,omitempty"`
@@ -68458,7 +68536,7 @@ type UpdateContactRequest struct {
 
 	// Social Merged into the stored links: a key not sent keeps its link, and a key sent as "" or null removes it. Only github, linkedin and twitter are taken; any other key is refused with 422 `social_platform_unknown`. linkedin takes only a LinkedIn profile link (https://www.linkedin.com/in/<name>).
 	Social *map[string]interface{} `json:"social,omitempty"`
-	Title  *string                 `json:"title,omitempty"`
+	Title  *string                 `json:"title,omitempty" singleline:"true"`
 
 	// Visibility Who may see this contact: `workspace` for everyone in the company,
 	// `owner` for the contact named by `owner_id` alone.
@@ -68650,7 +68728,7 @@ type UpdateDealRequest struct {
 
 	// LostReason Refused 422 `set_by_advance`; the reason travels with the advance to a lost stage.
 	LostReason *string             `json:"lost_reason,omitempty"`
-	Name       *string             `json:"name,omitempty"`
+	Name       *string             `json:"name,omitempty" singleline:"true"`
 	OwnerId    *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// PartnerAttribution `sourced` or `influenced`. Naming a partner without this field attributes the deal `sourced`; an attribution for a deal naming no partner is refused 422.
@@ -69070,7 +69148,7 @@ type UpdateLeadOriginRequest struct {
 
 	// Intent What the scorer makes of a lead from this origin (the deprecated lead source list carries the same field, which nothing reads): high adds the high-intent points, low subtracts the low-intent penalty, neutral does neither.
 	Intent    *LeadSourceIntent `json:"intent,omitempty"`
-	Label     *string           `json:"label,omitempty"`
+	Label     *string           `json:"label,omitempty" singleline:"true"`
 	SortOrder *int              `json:"sort_order,omitempty"`
 }
 
@@ -69081,9 +69159,9 @@ type UpdateLeadOriginRequest struct {
 type UpdateLeadRequest struct {
 	// CandidateCompanyKey Loose ABM routing key. Format: lowercased registrable domain when known (`acme.com`), else a slug of company_name. Never a company FK.
 	CandidateCompanyKey *string              `json:"candidate_company_key,omitempty"`
-	CompanyName         *string              `json:"company_name,omitempty"`
+	CompanyName         *string              `json:"company_name,omitempty" singleline:"true"`
 	Email               *openapi_types.Email `json:"email,omitempty"`
-	FullName            *string              `json:"full_name,omitempty"`
+	FullName            *string              `json:"full_name,omitempty" singleline:"true"`
 
 	// Industry An industry code, or text the server maps to one, as it maps a company's industry. Text that names no code is `422` `not_a_known_value`. Null clears it.
 	Industry *string `json:"industry,omitempty"`
@@ -69130,7 +69208,7 @@ type UpdateLeadRequest struct {
 
 	// Status A human may place an open lead on any open step, forwards or back; the system only ever moves forwards.
 	Status               *UpdateLeadRequestStatus `json:"status,omitempty"`
-	Title                *string                  `json:"title,omitempty"`
+	Title                *string                  `json:"title,omitempty" singleline:"true"`
 	AdditionalProperties map[string]interface{}   `json:"-"`
 }
 
@@ -69162,7 +69240,7 @@ type UpdateLeadSourceRequest struct {
 
 	// Intent What the scorer makes of a lead from this origin (the deprecated lead source list carries the same field, which nothing reads): high adds the high-intent points, low subtracts the low-intent penalty, neutral does neither.
 	Intent    *LeadSourceIntent `json:"intent,omitempty"`
-	Label     *string           `json:"label,omitempty"`
+	Label     *string           `json:"label,omitempty" singleline:"true"`
 	SortOrder *int              `json:"sort_order,omitempty"`
 }
 
@@ -69174,10 +69252,10 @@ type UpdateLegalEntityRequest struct {
 	Bic               *string             `json:"bic,omitempty"`
 	Country           *string             `json:"country,omitempty"`
 	DefaultLanguage   *string             `json:"default_language,omitempty"`
-	DisplayName       *string             `json:"display_name,omitempty"`
+	DisplayName       *string             `json:"display_name,omitempty" singleline:"true"`
 	Iban              *string             `json:"iban,omitempty"`
 	Imprint           *string             `json:"imprint,omitempty"`
-	LegalName         *string             `json:"legal_name,omitempty"`
+	LegalName         *string             `json:"legal_name,omitempty" singleline:"true"`
 
 	// Offering What a further legal entity sells and to whom, the offering a company can be judged against.
 	// The default entity's offering is the company profile, so these stay null there and a write to
@@ -69295,7 +69373,7 @@ type UpdateOfferTemplateRequest struct {
 	IsDefault bool                   `json:"is_default"`
 	Layout    map[string]interface{} `json:"layout"`
 	Locale    string                 `json:"locale"`
-	Name      string                 `json:"name"`
+	Name      string                 `json:"name" singleline:"true"`
 }
 
 // UpdatePartnerStageRequest defines model for UpdatePartnerStageRequest.
@@ -69333,12 +69411,12 @@ type UpdateProductRequest struct {
 	Currency       *string                            `json:"currency,omitempty"`
 	DefaultTaxRate *float64                           `json:"default_tax_rate,omitempty" minimum:"0"`
 	Description    *string                            `json:"description,omitempty"`
-	Name           *string                            `json:"name,omitempty"`
-	Sku            *string                            `json:"sku,omitempty"`
+	Name           *string                            `json:"name,omitempty" singleline:"true"`
+	Sku            *string                            `json:"sku,omitempty" singleline:"true"`
 
 	// TaxCategory Which tax rate the product takes. Omit to leave it unchanged; send null to say nobody has classified it.
 	TaxCategory    *UpdateProductRequestTaxCategory `json:"tax_category,omitempty"`
-	Unit           *string                          `json:"unit,omitempty"`
+	Unit           *string                          `json:"unit,omitempty" singleline:"true"`
 	UnitPriceMinor *int64                           `json:"unit_price_minor,omitempty" minimum:"0"`
 }
 
@@ -69362,7 +69440,7 @@ type UpdateProductRequestTaxCategory string
 type UpdateProjectRequest struct {
 	Description          *string                `json:"description,omitempty"`
 	EndedAt              *openapi_types.Date    `json:"ended_at,omitempty"`
-	Name                 *string                `json:"name,omitempty"`
+	Name                 *string                `json:"name,omitempty" singleline:"true"`
 	OwnerId              *openapi_types.UUID    `json:"owner_id,omitempty"`
 	StartedAt            *openapi_types.Date    `json:"started_at,omitempty"`
 	TargetEndDate        *openapi_types.Date    `json:"target_end_date,omitempty"`
@@ -69447,7 +69525,7 @@ type UpdateRoleRequestRowScope string
 
 // UpdateSavedViewRequest A partial update; omitted fields keep their stored value.
 type UpdateSavedViewRequest struct {
-	Name  *string                 `json:"name,omitempty"`
+	Name  *string                 `json:"name,omitempty" singleline:"true"`
 	Query *map[string]interface{} `json:"query,omitempty"`
 }
 
@@ -69543,7 +69621,7 @@ type UpdateStageRequestSemantic string
 type UpdateTagRequest struct {
 	Color       *UpdateTagRequestColor `json:"color,omitempty"`
 	Description *string                `json:"description,omitempty"`
-	Name        *string                `json:"name,omitempty"`
+	Name        *string                `json:"name,omitempty" singleline:"true"`
 
 	// Suggestible Turns suggestions of this tag on or off. Turning them on needs a description, sent here or already held.
 	Suggestible *bool `json:"suggestible,omitempty"`
@@ -73381,6 +73459,9 @@ type AnchorRecordType string
 // ApprovalToken defines model for ApprovalToken.
 type ApprovalToken = string
 
+// AssetRevision defines model for AssetRevision.
+type AssetRevision = string
+
 // BriefProjectId defines model for BriefProjectId.
 type BriefProjectId = openapi_types.UUID
 
@@ -73464,6 +73545,10 @@ type RetentionHeld = Problem
 
 // RoleCannotCapture RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type RoleCannotCapture = Problem
+
+// SendRefused A problem body whose `details` describe a refused send and the review it opened.
+// The envelope is `Problem`'s, restated rather than composed with `allOf` so the breaking-change check can read it; a gate holds the two property sets equal.
+type SendRefused = SendRefusal
 
 // SendValidationError RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type SendValidationError = Problem
@@ -81111,8 +81196,8 @@ type NameSeatsParams struct {
 
 // GetUserAvatarParams defines parameters for GetUserAvatar.
 type GetUserAvatarParams struct {
-	// V The revision token `avatar_url` carries. Only a token naming the current picture makes the answer cacheable for a day.
-	V *string `form:"v,omitempty" json:"v,omitempty"`
+	// V The revision token the picture's URL carries. Only a token naming the current picture makes the answer cacheable for a day.
+	V *AssetRevision `form:"v,omitempty" json:"v,omitempty"`
 }
 
 // HandOverUserWorkParams defines parameters for HandOverUserWork.
@@ -93998,6 +94083,119 @@ func (a RenewContractRequest) MarshalJSON() ([]byte, error) {
 		object["value_minor"], err = json.Marshal(a.ValueMinor)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'value_minor': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for SendRefusalDetails. Returns the specified
+// element and whether it was found
+func (a SendRefusalDetails) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for SendRefusalDetails
+func (a *SendRefusalDetails) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for SendRefusalDetails to handle AdditionalProperties
+func (a *SendRefusalDetails) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["available_actions"]; found {
+		err = json.Unmarshal(raw, &a.AvailableActions)
+		if err != nil {
+			return fmt.Errorf("error reading 'available_actions': %w", err)
+		}
+		delete(object, "available_actions")
+	}
+
+	if raw, found := object["refusals"]; found {
+		err = json.Unmarshal(raw, &a.Refusals)
+		if err != nil {
+			return fmt.Errorf("error reading 'refusals': %w", err)
+		}
+		delete(object, "refusals")
+	}
+
+	if raw, found := object["review"]; found {
+		err = json.Unmarshal(raw, &a.Review)
+		if err != nil {
+			return fmt.Errorf("error reading 'review': %w", err)
+		}
+		delete(object, "review")
+	}
+
+	if raw, found := object["review_id"]; found {
+		err = json.Unmarshal(raw, &a.ReviewId)
+		if err != nil {
+			return fmt.Errorf("error reading 'review_id': %w", err)
+		}
+		delete(object, "review_id")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for SendRefusalDetails to handle AdditionalProperties
+func (a SendRefusalDetails) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.AvailableActions != nil {
+		object["available_actions"], err = json.Marshal(a.AvailableActions)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'available_actions': %w", err)
+		}
+	}
+
+	if a.Refusals != nil {
+		object["refusals"], err = json.Marshal(a.Refusals)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'refusals': %w", err)
+		}
+	}
+
+	if a.Review != nil {
+		object["review"], err = json.Marshal(a.Review)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'review': %w", err)
+		}
+	}
+
+	if a.ReviewId != nil {
+		object["review_id"], err = json.Marshal(a.ReviewId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'review_id': %w", err)
 		}
 	}
 

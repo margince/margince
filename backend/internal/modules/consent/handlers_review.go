@@ -11,6 +11,7 @@ package consent
 // better than the bare error code it replaced.
 
 import (
+	"context"
 	"net/http"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -26,12 +27,28 @@ import (
 // that decided scope here would be a second answer to a question the store
 // already answers, and the two would disagree the first time either changed.
 func (h Handlers) GetCommunicationReview(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	review, err := h.store.ReviewForReader(r.Context(), ids.UUID(id))
+	review, err := h.store.ServedReview(r.Context(), ids.UUID(id))
 	if err != nil {
 		writeConsentErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, wireReview(review))
+	httperr.WriteJSON(w, http.StatusOK, review)
+}
+
+// ServedReview is the review as GET /communication-reviews/{id} serves it to
+// this caller. A refusal that embeds its review reads it here, so the two
+// answers share one scope, one redaction and one set of actions.
+func (s *Store) ServedReview(ctx context.Context, id ids.UUID) (crmcontracts.CommunicationReview, error) {
+	review, err := s.ReviewForReader(ctx, id)
+	if err != nil {
+		return crmcontracts.CommunicationReview{}, err
+	}
+	return wireReview(review), nil
+}
+
+// ServedReview is Store.ServedReview, for the send path that holds the gate.
+func (g *Gate) ServedReview(ctx context.Context, id ids.UUID) (crmcontracts.CommunicationReview, error) {
+	return g.store.ServedReview(ctx, id)
 }
 
 // wireReview renders a review for the rep who asked for it.
@@ -111,6 +128,11 @@ func wireReview(review Review) crmcontracts.CommunicationReview {
 	out.Warning = &crmcontracts.OverrideWarning{
 		Version: warning.Version, Text: warning.Text,
 	}
+	warnings := make([]crmcontracts.OverrideWarning, 0, len(review.Warnings))
+	for _, served := range review.Warnings {
+		warnings = append(warnings, crmcontracts.OverrideWarning{Version: served.Version, Text: served.Text})
+	}
+	out.Warnings = &warnings
 	if correction := review.Correction; correction != nil {
 		out.WordingCorrection = &crmcontracts.WordingCorrectionContext{
 			InstructionId: openapi_types.UUID(correction.InstructionID), Version: correction.Version,

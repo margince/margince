@@ -8747,6 +8747,8 @@ export interface paths {
          *     An `email` on the erasure list answers 422 naming `email` with code `address_erased`.
          *     A lead for somebody who is already a contact is refused with 409 `contact_holds_email`:
          *     open a deal on the contact instead.
+         *     A body with none of `full_name`, `email`, `phone`, `linkedin_url` or `company_name`
+         *     answers 422 `lead_identity_required`.
          */
         post: operations["createLead"];
         delete?: never;
@@ -17752,9 +17754,11 @@ export interface paths {
          *     instruction rather than under the engine's permission. A subject asking later why they
          *     received it is shown the refusal AND the decision, never a grant nobody made.
          *
-         *     A SUBJECT'S OWN STOP IS NEVER PASSED. A review that holds an objection, a withdrawal, a
-         *     restriction or a request to stop is refused with 403, admin included, even beside a refusal
-         *     a decision could pass.
+         *     WHAT A DECISION CAN PASS is each refusal's declared remedy. A holder of the exception grant
+         *     may send one message past a policy refusal and past the subject's own objection, withdrawal,
+         *     restriction or request to stop; the stop stays on record and binds the next message. A hard
+         *     bounce and a recipient the engine cannot name declare no remedy: a review holding one is
+         *     refused with 403, admin included, because the address needs a real repair.
          *
          *     THE DECISION IS THE USER'S, taken in their own session. The row names them as the one who
          *     took it on. An agent or a connector is refused: it may read the review and send its user
@@ -44402,6 +44406,12 @@ export interface components {
             scheduled_at?: string | null;
             /** @description The IANA zone name `scheduled_at` was picked in. Required with `scheduled_at`. */
             scheduled_tz?: string | null;
+            /**
+             * @description The reason the rep typed for sending this message past a refusal, kept so a reopened
+             *     composer still holds it. It grants nothing: the send still needs its own decision. Omit
+             *     it for none.
+             */
+            override_explanation?: string;
         };
         /** @description One rep's unsent message, readable by its author and nobody else. Not an activity. */
         MailDraft: {
@@ -44446,6 +44456,8 @@ export interface components {
             scheduled_at?: string;
             /** @description The IANA zone `scheduled_at` was picked in. Present exactly when it is. */
             scheduled_tz?: string;
+            /** @description The reason the author typed for sending past a refusal. Absent when none was. */
+            override_explanation?: string;
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */
@@ -44480,7 +44492,8 @@ export interface components {
         CommunicationContext: "reply_to_inbound" | "requested_followup" | "precontract_quote" | "active_deal_followup" | "customer_service" | "account_notice" | "contract_notice" | "invoice_or_payment" | "marketing";
         /**
          * @description What a composer is about to write, in the shape the engine judges. A `subject` and
-         *     `body` never reach a consent decision. When given, they are checked against the
+         *     `body` are read as the send reads them: words that make an offer (a discount, a quote,
+         *     a price) are judged as marketing even inside a reply. They are also checked against the
          *     advertising content rules of each recipient's jurisdiction pack and answered as
          *     `content_findings`.
          */
@@ -44510,10 +44523,17 @@ export interface components {
             consent_purpose?: string;
             /** @description Records the caller names in support of this message. Checked, never trusted. */
             evidence?: components["schemas"]["CommunicationEvidence"];
-            /** @description The draft's subject, checked only for `content_findings`. */
+            /** @description The draft's subject, read for an offer as the send reads it and checked for `content_findings`. */
             subject?: string;
-            /** @description The draft's plain text, checked only for `content_findings`. */
+            /** @description The draft's plain text, read for an offer as the send reads it and checked for `content_findings`. */
             body?: string;
+            /** @description The draft's markup beside the plain text. Its visible text is read for an offer as the send reads it. */
+            html_body?: string;
+            /**
+             * @description The files the message will carry, by the ids `/attachments` gave them. Their names are
+             *     read for an offer as the send reads them. A file the send would refuse is refused here.
+             */
+            attachment_ids?: string[];
         };
         /**
          * @description PreviewSendRequest plus the `links` an anchor would otherwise have supplied — the
@@ -44538,10 +44558,17 @@ export interface components {
              */
             consent_purpose?: string;
             evidence?: components["schemas"]["CommunicationEvidence"];
-            /** @description The draft's subject, checked only for `content_findings`. */
+            /** @description The draft's subject, read for an offer as the send reads it and checked for `content_findings`. */
             subject?: string;
-            /** @description The draft's plain text, checked only for `content_findings`. */
+            /** @description The draft's plain text, read for an offer as the send reads it and checked for `content_findings`. */
             body?: string;
+            /** @description The draft's markup beside the plain text. Its visible text is read for an offer as the send reads it. */
+            html_body?: string;
+            /**
+             * @description The files the message will carry, by the ids `/attachments` gave them. Their names are
+             *     read for an offer as the send reads them. A file the send would refuse is refused here.
+             */
+            attachment_ids?: string[];
         };
         LawfulBasisConfirmationRequest: {
             /**
@@ -49184,6 +49211,12 @@ export interface components {
             license_lapsed?: boolean;
             /** @description Whether this human caller may use the configured activity reader-rendering lane. Absent or false keeps generated text original until an explicit request. */
             reader_rendering_available?: boolean;
+            /**
+             * @description The `activities.inline_send_review` setting: whether the email composer is decided at
+             *     Send, with a refusal shown inline from the embedded review. Absent or false keeps the
+             *     check while writing and the confirmation dialog.
+             */
+            inline_send_review?: boolean;
             analytics_startup?: components["schemas"]["AnalyticsStartup"];
             user: components["schemas"]["User"];
             /** @description The installation's company name (the installation.name setting). Shown as the typed-confirmation target of the "Reset data" action — the exact string that endpoint validates. */
@@ -50125,6 +50158,46 @@ export interface components {
             [key: string]: {
                 [key: string]: string;
             };
+        };
+        /**
+         * @description A problem body whose `details` describe a refused send and the review it opened.
+         *     The envelope is `Problem`'s, restated rather than composed with `allOf` so the breaking-change check can read it; a gate holds the two property sets equal.
+         */
+        SendRefusal: {
+            /**
+             * Format: uri
+             * @default about:blank
+             */
+            type: string;
+            title?: string;
+            status: number;
+            code: string;
+            detail?: string;
+            /** Format: uri */
+            instance?: string;
+            details?: components["schemas"]["SendRefusalDetails"];
+        };
+        /** @description Present when the refusal opened a review. */
+        SendRefusalDetails: {
+            /** Format: uuid */
+            review_id?: string;
+            /** @description What this caller may do about the refusal, such as `direct_send`. */
+            available_actions?: string[];
+            /** @description Each refused address the caller named. */
+            refusals?: components["schemas"]["SendRefusalRecipient"][];
+            review?: components["schemas"]["CommunicationReview"];
+        } & {
+            [key: string]: unknown;
+        };
+        SendRefusalRecipient: {
+            address: string;
+            reason_code: string;
+            /** @description Whether a recorded reason may send this one message anyway. */
+            can_be_overruled: boolean;
+            /** @description The category the engine resolved. */
+            category?: string;
+            /** @description The category the sender claimed. */
+            requested_category?: string;
         };
         /**
          * @description A problem body whose `details` spell out an analytics refusal, present whenever the engine refused the question. A 400 the engine did not write — a malformed scope, a document outside the block grammar — carries the problem alone.
@@ -54641,6 +54714,13 @@ export interface components {
              *     would have the record assert an acknowledgement of text nobody published.
              */
             warning?: components["schemas"]["OverrideWarning"];
+            /**
+             * @description Every warning this review is served with to this reader; a decision may name any of their
+             *     versions and no other. `warning` is always among them. The sender of a held message is
+             *     also served the composer's short warning (`inline-v1`), which a decision from any other
+             *     reader is refused for naming.
+             */
+            warnings?: components["schemas"]["OverrideWarning"][];
         };
         /**
          * @description The caution a human reads before overruling the engine, with the version that identifies
@@ -54723,8 +54803,7 @@ export interface components {
             /**
              * @description The refusal reason codes the director was shown, from the review's `refusals`. When the
              *     review's refusals changed since then, the decision is refused with `instruction_stale`
-             *     and the director opens the review again. A refusal the subject made themselves (an
-             *     objection, a withdrawal, a restriction or a request to stop) is never passed.
+             *     and the director opens the review again.
              */
             shown_reasons?: string[];
         };
@@ -62635,6 +62714,23 @@ export interface components {
             };
         };
         /**
+         * @description Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
+         *     When the refusal opened a review, `details` carries `review_id`, the
+         *     `available_actions` this caller may take, and `refusals`: each refused address
+         *     the caller named, with the engine's `reason_code`, resolved `category` and the
+         *     `requested_category` the caller claimed. `details.review` is the review exactly as
+         *     `GET /communication-reviews/{id}` serves it to this caller, so a client needs no second
+         *     request; it is absent when the caller may not read the review.
+         */
+        SendRefused: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["SendRefusal"];
+            };
+        };
+        /**
          * @description The installation cannot send its own mail (`conflict`), or the consent engine refuses this
          *     mail to this contact (`consent_not_granted`).
          */
@@ -62747,6 +62843,8 @@ export interface components {
         CaptureProvider: "gmail" | "gcal" | "gdocs" | "graph" | "graphcal" | "imap" | "test_mailbox";
         /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
         Id: string;
+        /** @description The revision token the picture's URL carries. Only a token naming the current picture makes the answer cacheable for a day. */
+        AssetRevision: string;
         /**
          * @description The act that staged a set of proposals together (`Approval.bundle_id`). It names a
          *     grouping over approval rows, not a resource of its own — there is nothing to GET, and a
@@ -74114,21 +74212,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /**
-             * @description Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
-             *     When the refusal opened a review, `details` carries `review_id`, the
-             *     `available_actions` this caller may take, and `refusals`: each refused address
-             *     the caller named, with the engine's `reason_code`, resolved `category` and the
-             *     `requested_category` the caller claimed.
-             */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
+            409: components["responses"]["SendRefused"];
             422: components["responses"]["SendValidationError"];
         };
     };
@@ -74216,21 +74300,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /**
-             * @description Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
-             *     When the refusal opened a review, `details` carries `review_id`, the
-             *     `available_actions` this caller may take, and `refusals`: each refused address
-             *     the caller named, with the engine's `reason_code`, resolved `category` and the
-             *     `requested_category` the caller claimed.
-             */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
+            409: components["responses"]["SendRefused"];
             422: components["responses"]["SendValidationError"];
         };
     };
@@ -74587,21 +74657,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
-            /**
-             * @description Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
-             *     When the refusal opened a review, `details` carries `review_id`, the
-             *     `available_actions` this caller may take, and `refusals`: each refused address
-             *     the caller named, with the engine's `reason_code`, resolved `category` and the
-             *     `requested_category` the caller claimed.
-             */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
+            409: components["responses"]["SendRefused"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -93298,8 +93354,8 @@ export interface operations {
     getUserAvatar: {
         parameters: {
             query?: {
-                /** @description The revision token `avatar_url` carries. Only a token naming the current picture makes the answer cacheable for a day. */
-                v?: string;
+                /** @description The revision token the picture's URL carries. Only a token naming the current picture makes the answer cacheable for a day. */
+                v?: components["parameters"]["AssetRevision"];
             };
             header?: never;
             path: {

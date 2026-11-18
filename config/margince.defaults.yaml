@@ -57,6 +57,7 @@ work_dir: .tmp/aitask
 
 activities:
   follow_up_after_days: 2
+  inline_send_review: false
   private_mail_requests: true
 
 ai:

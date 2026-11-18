@@ -21,8 +21,8 @@ import {
   isPreviewDoor,
   previewedAddresses,
 } from "../../testing/sendpermission.testkit";
-import { ComposeModal } from "./compose";
 import { pressSend } from "./compose.testkit";
+import { ComposeWindow } from "./composewindow";
 
 // WHICH WAY a message leaves, asked inside the one composer.
 //
@@ -122,7 +122,7 @@ function drawer(
   open = true,
 ) {
   return (
-    <ComposeModal
+    <ComposeWindow
       entityType="contact"
       entityId="p-1"
       contactId="p-1"
@@ -280,7 +280,7 @@ describe("the composer's transport dial", () => {
   // reader writing into a conversation they did not choose.
   it("says so when the conversation a caller named is gone", async () => {
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="contact"
         entityId="p-1"
         contactId="p-1"

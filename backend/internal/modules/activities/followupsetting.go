@@ -54,7 +54,7 @@ var PrivateMailRequests = config.DefineStored(config.Spec[bool]{
 
 // ConfigSettings are this module's settings in the configuration registry.
 func ConfigSettings() []config.Any {
-	return []config.Any{FollowUpAfterDays, PrivateMailRequests}
+	return []config.Any{FollowUpAfterDays, InlineSendReview, PrivateMailRequests}
 }
 
 // followUpAfterDays reads the setting inside the caller's transaction, under

@@ -59,6 +59,9 @@ type MailDraftContent struct {
 	Context       commsauthz.Category
 	Schedule      *SendSchedule
 	EditorState   crmcontracts.MailDraftEditorState
+	// OverrideExplanation is the reason the author typed for sending past a
+	// refusal. Kept with the words; it grants nothing until they send.
+	OverrideExplanation string
 }
 
 // MailDraft is one saved draft.
@@ -92,11 +95,15 @@ const (
 	// line and mailbox lengths), counted in characters.
 	maxDraftSubject = 998
 	maxDraftAddress = 320
+	// maxDraftExplanation is the direct send's own cap on an explanation.
+	maxDraftExplanation = 1000
+	fieldExplanation    = "override_explanation"
 )
 
 const mailDraftColumns = `id, anchor_type, anchor_id, to_addresses, cc_addresses, bcc_addresses,
 	subject, body, html_body, version, agent_drafted, grounding, attachment_ids,
-	communication_context, ` + scheduleInstantSQL + ` AS scheduled_at, scheduled_tz, scheduled_wall, created_at, updated_at, editor_state`
+	communication_context, ` + scheduleInstantSQL + ` AS scheduled_at, scheduled_tz, scheduled_wall, created_at, updated_at, editor_state,
+	override_explanation`
 
 // InvalidMailDraftError refuses a draft the store will not keep.
 type InvalidMailDraftError struct {
@@ -211,7 +218,7 @@ func mailDraftArgs(author ids.UUID, anchor MailDraftAnchor, content MailDraftCon
 		"to": addressLine(content.To), "cc": addressLine(content.Cc), fieldBcc: addressLine(content.Bcc),
 		fieldSubject: content.Subject, fieldBody: content.Body, argHTML: nullableText(content.HTMLBody),
 		"attachments": content.AttachmentIDs, "context": nullableText(string(content.Context)),
-		"at": at, argZone: tz, argWall: wall,
+		"at": at, argZone: tz, argWall: wall, fieldExplanation: nullableText(content.OverrideExplanation),
 	}
 }
 
@@ -221,9 +228,9 @@ func insertMailDraft(ctx context.Context, tx pgx.Tx, author ids.UUID, anchor Mai
 	row := tx.QueryRow(ctx, `
  INSERT INTO mail_draft(id,author_id,anchor_type,anchor_id,to_addresses,cc_addresses,
  bcc_addresses,subject,body,html_body,attachment_ids,communication_context,
- scheduled_at,scheduled_tz,scheduled_wall,editor_state)
+ scheduled_at,scheduled_tz,scheduled_wall,editor_state,override_explanation)
  SELECT @id,@author,@anchor_type,@anchor_id,@to,@cc,@bcc,@subject,@body,@html,
- @attachments,@context,planned.instant,COALESCE(planned.timezone,@zone),planned.wall_time,@editor
+ @attachments,@context,planned.instant,COALESCE(planned.timezone,@zone),planned.wall_time,@editor,@override_explanation
  FROM public.update_intent_time(NULL,NULL,NULL,@wall::text::timestamp,@zone,@at) AS planned
  WHERE true
  ON CONFLICT(author_id,anchor_type,anchor_id) DO NOTHING
@@ -254,7 +261,7 @@ func replaceMailDraft(ctx context.Context, tx pgx.Tx, author ids.UUID, anchor Ma
  (scheduled_at,scheduled_tz,scheduled_wall)=(
  SELECT planned.instant,COALESCE(planned.timezone,@zone),planned.wall_time
  FROM public.update_intent_time(scheduled_wall,scheduled_tz,scheduled_at,@wall::text::timestamp,@zone,@at) AS planned),
- editor_state=@editor,version=version+1,agent_drafted=false,updated_at=now()
+ editor_state=@editor,override_explanation=@override_explanation,version=version+1,agent_drafted=false,updated_at=now()
  WHERE author_id=@author AND anchor_type=@anchor_type AND anchor_id=@anchor_id AND version=@version
  RETURNING `+mailDraftColumns, args)
 	saved, err := scanMailDraft(row)
@@ -356,6 +363,9 @@ func validateDraft(anchor MailDraftAnchor, content MailDraftContent, now time.Ti
 	if utf8.RuneCountInString(content.Subject) > maxDraftSubject {
 		return &InvalidMailDraftError{Field: fieldSubject, Reason: fmt.Sprintf("is longer than %d characters", maxDraftSubject)}
 	}
+	if utf8.RuneCountInString(content.OverrideExplanation) > maxDraftExplanation {
+		return &InvalidMailDraftError{Field: fieldExplanation, Reason: fmt.Sprintf("is longer than %d characters", maxDraftExplanation)}
+	}
 	return validateDraftSending(content, now)
 }
 
@@ -413,11 +423,12 @@ func scanMailDraft(row pgx.Row) (MailDraft, error) {
 		at         *time.Time
 		wall       *time.Time
 		tz         *string
+		explained  *string
 	)
 	err := row.Scan(&out.ID, &anchorType, &out.Anchor.ID, &out.Content.To, &out.Content.Cc,
 		&out.Content.Bcc, &out.Content.Subject, &out.Content.Body, &html, &out.Version,
 		&out.AgentDrafted, &grounding, &out.Content.AttachmentIDs, &claimed, &at, &tz, &wall,
-		&out.CreatedAt, &out.UpdatedAt, &out.Content.EditorState)
+		&out.CreatedAt, &out.UpdatedAt, &out.Content.EditorState, &explained)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return MailDraft{}, apperrors.ErrNotFound
 	}
@@ -435,6 +446,7 @@ func scanMailDraft(row pgx.Row) (MailDraft, error) {
 		out.Grounding = append(out.Grounding, MailDraftAnchor(ground))
 	}
 	out.Content.Context = commsauthz.Category(orEmpty(claimed))
+	out.Content.OverrideExplanation = orEmpty(explained)
 	schedule, err := readSchedule(at, tz, wall)
 	if err != nil {
 		return MailDraft{}, err
