@@ -17172,6 +17172,19 @@ export const en = {
     "Enter one email address, for example name@example.com.",
   "captureValue.refusedDomain":
     "Enter a bare domain such as example.com, with no address, scheme or path.",
+  "captureValue.ownDomain": "{value} is your own domain.",
+  "captureValue.alreadyShipped": "{value} is already on the shipped list.",
+  "captureValue.consumerMail":
+    "A consumer mail domain such as gmail.com cannot be used here.",
+  "captureValue.askTitle": "Already on file",
+  "captureValue.askConsumerList":
+    "{value} is the domain of {company}. Mail from it will no longer create a company. Add anyway?",
+  "captureValue.askCompanyDomain":
+    "{value} is the domain of {company}. Mail with it will no longer be captured. Add anyway?",
+  "captureValue.askContactAddress":
+    "{value} is a contact's address. Mail with it will no longer be captured. Add anyway?",
+  "captureValue.aCompany": "a company on file",
+  "captureValue.addAnyway": "Add anyway",
   "captureExclusions.scope.user": "Your mailboxes",
   "captureExclusions.scope.workspace": "Whole company",
   "captureExclusions.kind.address": "Address",

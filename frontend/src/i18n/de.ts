@@ -17310,6 +17310,20 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Gib eine einzelne E-Mail-Adresse ein, zum Beispiel name@beispiel.example.",
   "captureValue.refusedDomain":
     "Gib nur die Domain ein, etwa beispiel.example, ohne Adresse, Schema oder Pfad.",
+  "captureValue.ownDomain": "{value} ist deine eigene Domain.",
+  "captureValue.alreadyShipped":
+    "{value} steht schon auf der mitgelieferten Liste.",
+  "captureValue.consumerMail":
+    "Eine Domain für private Mail wie gmail.com kann hier nicht verwendet werden.",
+  "captureValue.askTitle": "Schon vorhanden",
+  "captureValue.askConsumerList":
+    "{value} ist die Domain von {company}. Mail von dort legt dann keine Firma mehr an. Trotzdem hinzufügen?",
+  "captureValue.askCompanyDomain":
+    "{value} ist die Domain von {company}. Mail damit wird dann nicht mehr erfasst. Trotzdem hinzufügen?",
+  "captureValue.askContactAddress":
+    "{value} ist die Adresse eines Kontakts. Mail damit wird dann nicht mehr erfasst. Trotzdem hinzufügen?",
+  "captureValue.aCompany": "einer Firma im System",
+  "captureValue.addAnyway": "Trotzdem hinzufügen",
   "captureExclusions.scope.user": "Deine Postfächer",
   "captureExclusions.scope.workspace": "Gesamtes Unternehmen",
   "captureExclusions.kind.address": "Adresse",

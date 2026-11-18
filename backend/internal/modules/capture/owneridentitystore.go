@@ -153,6 +153,13 @@ func scanOwnerIdentity(row pgx.CollectableRow) (OwnerIdentity, error) {
 // claim binds only their own mail. Idempotent on the folded value, so re-adding
 // answers the existing row rather than refusing.
 func (s *OwnerIdentityStore) Add(ctx context.Context, kind, raw string) (OwnerIdentity, error) {
+	return s.AddConfirmed(ctx, kind, raw, false)
+}
+
+// AddConfirmed is Add for a caller that may carry the answer to the question a
+// value already on file raises: a contact's address or a company's domain is
+// stored only when confirmed. A consumer-mail domain is refused either way.
+func (s *OwnerIdentityStore) AddConfirmed(ctx context.Context, kind, raw string, confirmed bool) (OwnerIdentity, error) {
 	actor, err := seatItself(ctx)
 	if err != nil {
 		return OwnerIdentity{}, err
@@ -163,6 +170,9 @@ func (s *OwnerIdentityStore) Add(ctx context.Context, kind, raw string) (OwnerId
 	}
 	var out OwnerIdentity
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := checkIdentityClaim(ctx, tx, kind, value, confirmed); err != nil {
+			return err
+		}
 		if kind == IdentityKindAddress {
 			if err := storekit.LockSeatAddressClaims(ctx, tx, value); err != nil {
 				return err

@@ -15,6 +15,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -51,6 +52,32 @@ func parseCompanyDomains(domains []CompanyDomainInput) error {
 			return err
 		}
 		domains[i].Domain = parsed.String()
+	}
+	return nil
+}
+
+// refuseConsumerCompanyDomains refuses a typed consumer-mail domain on a
+// company's domain list; an import or sync keeps its source's own domains. A domain already live on `self` is kept: the claim predates the
+// refusal and an unrelated edit must not trip on it. The zero `self` is a create.
+func (s *Store) refuseConsumerCompanyDomains(ctx context.Context, tx pgx.Tx, self ids.CompanyID, domains []CompanyDomainInput) error {
+	if len(domains) == 0 || !typedWrite(ctx) {
+		return nil
+	}
+	consumer, err := s.consumerMailMatcher(ctx, tx)
+	if err != nil {
+		return err
+	}
+	live := map[string]bool{}
+	if self != (ids.CompanyID{}) {
+		if live, _, _, err = readLiveDomains(ctx, tx, self); err != nil {
+			return err
+		}
+	}
+	for _, d := range domains {
+		if consumer.IsConsumer(d.Domain) && !live[d.Domain] {
+			return httperr.Validation("domains", "consumer_mail_domain",
+				d.Domain+" is a consumer mail domain and cannot be a company's domain")
+		}
 	}
 	return nil
 }

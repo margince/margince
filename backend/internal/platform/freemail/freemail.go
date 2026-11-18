@@ -185,6 +185,13 @@ func (m *Matcher) IsConsumer(domain string) bool {
 	}
 }
 
+// IsShipped reports whether the shipped baseline alone makes the domain
+// consumer mail, after the workspace's carve-outs. A domain that is consumer
+// mail only because the workspace added it answers false.
+func (m *Matcher) IsShipped(domain string) bool {
+	return (&Matcher{never: m.never}).IsConsumer(domain)
+}
+
 // normalizedSet folds a configured list into a lookup set, dropping blanks.
 func normalizedSet(domains []string) map[string]struct{} {
 	set := make(map[string]struct{}, len(domains))

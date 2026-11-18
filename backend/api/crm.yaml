@@ -20864,6 +20864,10 @@ paths:
         binds only your own mail. Not retroactive — mail already captured under the old reading
         stays, and a contact already minted from an alias stays until it is merged or removed.
         Idempotent on the folded value.
+
+        A consumer-mail domain is refused with 422 `consumer_mail_domain` as a whole domain. A company's
+        domain or a contact's address answers 409 `domain_needs_confirmation` (`details.role`,
+        `details.company_name`); the same request with `confirm: true` stores it.
       x-mcp-tool: { verb: add_owner_identity, router: change_capture, action: add_owner_identity, tier: auto_execute, scope: write, served_by: route }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       requestBody:
@@ -20878,6 +20882,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/CaptureOwnerIdentity' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /capture/owner-identities/{id}:
@@ -23596,6 +23601,11 @@ paths:
         because that is what the matcher keys on. Idempotent on the domain: re-adding returns the
         existing entry and changing an entry's kind updates it, since a domain cannot be both
         added and carved out. Audit-only write (no event stream, EVT-NOEVT-3).
+
+        An `extra` entry is refused with 422 for the workspace's own domain (`own_domain`) and for a
+        domain the shipped list already holds (`already_on_shipped_list`). For the domain of a company
+        on file it answers 409 `domain_needs_confirmation` with `details.company_name`; the same
+        request with `confirm: true` stores it.
       requestBody:
         required: true
         content:
@@ -23612,6 +23622,7 @@ paths:
               schema: { $ref: '#/components/schemas/ConsumerMailDomain' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /capture/consumer-mail-domains/{id}:
@@ -43060,6 +43071,9 @@ components:
       properties:
         domain: { type: string, description: 'A mail domain; normalized to its registrable form before it is stored.' }
         kind: { type: string, enum: [extra, never] }
+        confirm:
+          type: boolean
+          description: 'Set after the person answered the 409 `domain_needs_confirmation` question with yes. Without it the same request is refused again.'
     ConsumerMailDomainListResponse:
       type: object
       required: [data]
@@ -44580,6 +44594,9 @@ components:
       properties:
         kind: { $ref: '#/components/schemas/CaptureOwnerIdentityKind' }
         value: { type: string, maxLength: 320, description: 'An email address, or a bare domain.' }
+        confirm:
+          type: boolean
+          description: 'Set after the person answered the 409 `domain_needs_confirmation` question with yes. Without it the same request is refused again.'
     WorkspaceEmailDomainListResponse:
       type: object
       required: [data]

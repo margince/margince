@@ -170,6 +170,11 @@ func (s *Store) updateCompanyInTx(
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}
+	if in.Domains != nil {
+		if err := s.refuseConsumerCompanyDomains(ctx, tx, id, *in.Domains); err != nil {
+			return crmcontracts.Company{}, err
+		}
+	}
 	if p.Empty() {
 		if err := storekit.EnsureIfMatch(ctx, tx, "company", id.UUID, in.IfVersion); err != nil {
 			return crmcontracts.Company{}, err
