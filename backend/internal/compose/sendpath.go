@@ -25,6 +25,7 @@ package compose
 import (
 	"context"
 	"fmt"
+	"github.com/margince/margince/backend/internal/compose/mailprobe"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -251,7 +252,7 @@ func registerLateApprovalEffects(svc *approvals.Service, pool *pgxpool.Pool, sen
 		svc.WithStagePrecheck(kind, agentMailPrecheck(store, gate))
 	}
 	svc.WithStagePrecheck(operationSendMessage, agentChannelPrecheck(store, gate))
-	svc.WithSendProbe(mailboxProbe(send.SendAuthority))
+	svc.WithSendProbe(mailprobe.For(send.SendAuthority))
 	for kind, late := range lateApprovalEffects {
 		svc.WithEffect(kind, late.effect(svc, store, gate, send.Delivery))
 		svc.WithPrecheck(kind, late.precheck(store, gate, send.Delivery))
@@ -353,16 +354,4 @@ func (c ColleagueDomains) Covers(ctx context.Context) (func(address string) bool
 		return nil, fmt.Errorf("compose: reading who counts as a colleague: %w", err)
 	}
 	return own.Covers, nil
-}
-
-// mailboxProbe asks the check a send runs. An installation composed without an
-// authority runs no pre-flight, so every mailbox counts as able to send.
-func mailboxProbe(authority activities.SendAuthority) approvals.SendProbe {
-	return func(ctx context.Context) (bool, error) {
-		if authority == nil {
-			return true, nil
-		}
-		provider, err := authority.SendableMailProvider(ctx)
-		return provider != "", err
-	}
 }
