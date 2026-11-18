@@ -5,18 +5,8 @@ import { LogOut } from "lucide-react";
 import { Callout } from "../design-system/callout";
 import { useT } from "../i18n";
 import { problemMessageOf } from "../lib/problem";
-import {
-  BUILD_REVISION,
-  CORE_RELEASE,
-  comparableRelease,
-  SPA_RELEASE,
-  shortRevision,
-} from "../lib/release";
 import { useLogout } from "../lib/session";
 import type { RowSeat } from "./accountseats";
-
-// The sign-out row, and the build this bundle was made from. The help menu
-// prints the build, and a problem report names its release.
 
 /**
  * The way out, with the guard against a second POST while the first is in
@@ -52,74 +42,5 @@ export function SignOutRow({ seat }: Readonly<{ seat: RowSeat }>) {
         </div>
       )}
     </>
-  );
-}
-
-/**
- * What this bundle knows of its build. A stamped core release marks an instance
- * build, whose own release may still be unstamped.
- */
-export type BuildRelease =
-  | Readonly<{ kind: "instance"; core: string; instance?: string }>
-  | Readonly<{ kind: "core"; release: string }>
-  | Readonly<{ kind: "unstamped"; revision?: string }>;
-
-export function buildRelease(): BuildRelease {
-  if (comparableRelease(CORE_RELEASE)) {
-    return {
-      kind: "instance",
-      core: CORE_RELEASE,
-      instance: comparableRelease(SPA_RELEASE) ? SPA_RELEASE : undefined,
-    };
-  }
-  return comparableRelease(SPA_RELEASE)
-    ? { kind: "core", release: SPA_RELEASE }
-    : { kind: "unstamped", revision: shortRevision(BUILD_REVISION) };
-}
-
-/**
- * The release a problem report names. The tracker is the core's, so an instance
- * build names the core release it pins, and an unstamped one its commit.
- */
-export function reportedRelease(build: BuildRelease): string | undefined {
-  switch (build.kind) {
-    case "instance":
-      return build.core;
-    case "core":
-      return build.release;
-    default:
-      return build.revision;
-  }
-}
-
-/**
- * The build, so a reader reporting a problem can say which one they are on. A
- * statement, not a row: `role="none"` keeps it out of the menu's items. An
- * instance build names both repositories, even when they agree.
- */
-export function AccountRelease() {
-  const t = useT();
-  const build = buildRelease();
-  const lines: string[] = [];
-  if (build.kind === "instance") {
-    if (build.instance) {
-      lines.push(t("shell.instanceVersion", { version: build.instance }));
-    }
-    lines.push(t("shell.coreVersion", { version: build.core }));
-  } else if (build.kind === "core") {
-    lines.push(t("shell.version", { version: build.release }));
-  } else {
-    lines.push(
-      build.revision
-        ? t("shell.help.devBuildRevision", { revision: build.revision })
-        : t("shell.help.devBuild"),
-    );
-  }
-  return (
-    <div className="acctversion t-caption" role="none">
-      {lines.map((line) => (
-        <div key={line}>{line}</div>
-      ))}
-    </div>
   );
 }
