@@ -50,8 +50,8 @@ export function recordKindLabel(
 
 type RecordKindOption = components["schemas"]["RecordKindOption"];
 
-// The column a kind's records are named by: `name` where the kind declares one,
-// else the first column of its natural key, else its first declared column.
+// The column a kind's records are named by. That is `name` where the kind
+// declares one, else the first column of its natural key, else its first column.
 function nameColumn(kind: RecordKindOption): string | undefined {
   return (
     kind.fields.find((field) => field.name === "name")?.name ??
@@ -91,8 +91,8 @@ async function previewKind(
 }
 
 /**
- * The search a picker over one extension kind runs: records whose name column
- * contains the typed text, through the same row-scoped preview the filter page
+ * The search a picker over one extension kind runs. It finds records whose name
+ * column contains the typed text, through the row-scoped preview the filter page
  * reads. A kind this reader may not read is absent from the directory and finds
  * nothing.
  */

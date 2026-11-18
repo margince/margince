@@ -23,9 +23,9 @@ import (
 var errNotSystemRole = fmt.Errorf("%w: only a role the product ships has shipped grants", apperrors.ErrConflict)
 
 // shippedObjects is the grant map a system role starts with on a new
-// installation: the seeded core grants, plus each registered extension default
-// for that role. It is what the seed writes, so a restore ends where a new
-// installation begins.
+// installation. It holds the seeded core grants and each registered extension
+// default for that role. The seed writes the same set, so a restore ends where
+// a new installation begins.
 func shippedObjects(roleKey string) map[string]storedGrant {
 	core, _ := policy.ShippedGrants(roleKey)
 	out := make(map[string]storedGrant, len(core))

@@ -51,8 +51,8 @@ func TestOnlyAnObjectThatOffersReadNeedsIt(t *testing.T) {
 	}
 }
 
-// Every shipped role holds only verbs its object offers, and the offered set is
-// what the editor draws, so a shipped grant can never sit on a hidden switch.
+// Every shipped role holds only verbs its object offers. The editor draws the
+// offered set, so a shipped grant never sits on a hidden switch.
 func TestShippedGrantsStayInsideOfferedVerbs(t *testing.T) {
 	for roleKey := range defaults {
 		shipped, _ := ShippedGrants(roleKey)
@@ -71,8 +71,8 @@ func TestShippedGrantsStayInsideOfferedVerbs(t *testing.T) {
 }
 
 // A verb the code checks must be one the editor can grant. The scan reads the
-// checks written with a literal object and a literal action, and a hidden
-// switch for a checked verb would make that check unsatisfiable by any new role.
+// checks written with a literal object and a literal action. A hidden switch
+// for a checked verb would make that check unsatisfiable by any new role.
 func TestEveryLiteralGateCheckIsOffered(t *testing.T) {
 	scope := gatekit.Scope{
 		Roots:   []string{"internal"},
