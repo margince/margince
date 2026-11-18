@@ -52,12 +52,21 @@ func repliedMove(said statusCopy, f facts, request crmcontracts.Activity, reply 
 		evidenceOf(request, fmt.Sprintf(said.Say(statusWords.Request), said.subjectOf(request))))
 }
 
-// repliedReason says when we replied, and quotes what is still asked when the
-// settlement pass recorded it.
+// repliedReason says who replied and when, then what is left. That is the ask
+// the settlement pass quoted, or the reminder to mark done. A reader who may
+// not change the reminder learns only that the request is open.
 func (said statusCopy) repliedReason(f facts, reply crmcontracts.RequestReply) string {
 	when := said.since(f.now, occurredday.Moment{At: reply.RepliedAt, DateOnly: occurredday.IsDay(reply.RepliedPrecision)}, f.loc)
-	if reply.StillAsked != nil {
-		return fmt.Sprintf(said.Say(statusWords.RepliedAsked), when, *reply.StillAsked)
+	who := statusWords.RepliedTeam
+	if reply.ByReader {
+		who = statusWords.RepliedYou
 	}
-	return fmt.Sprintf(said.Say(statusWords.Replied), when)
+	rest := said.Say(statusWords.RepliedOpen)
+	switch {
+	case reply.StillAsked != nil:
+		rest = fmt.Sprintf(said.Say(statusWords.RepliedAsked), *reply.StillAsked)
+	case reply.ReminderId != nil:
+		rest = said.Say(statusWords.RepliedMarkDone)
+	}
+	return fmt.Sprintf(said.Say(who), when) + " " + rest
 }

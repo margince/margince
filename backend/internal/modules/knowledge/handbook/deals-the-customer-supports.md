@@ -58,9 +58,9 @@ Margince closes an open deal as lost, with the reason **Stopped responding**, af
 Also called: deal closed automatically, auto-lost, reopen a deal Margince closed, why is my deal lost.
 
 ### What does "You replied" on a deal mean?
-A customer's request on a deal stays open after you reply. A reply such as "Thanks, I will check" may not answer it. While your reply is the newest message on the request's thread, the deal says **You replied** with the date, not **Your move**. **Team reply owed** does not show then.
+A customer's request on a deal stays open after you reply. A reply such as "Thanks, I will check" may not answer it. While your reply is the newest message on the request's thread, the deal says **You replied** with the date, not **Your move**. When a colleague replied, it says **Your team replied**. A reply that never reached them, or came back, does not count.
 
-If Margince found that the request still asks for something, the deal quotes it. The **Next** bar offers **Done**, which marks the request's reminder done and closes the request. A new message from the customer on that thread makes it your move again.
+**Team reply owed** does not show then, and History no longer marks the request **Needs reply**. If Margince found that the request still asks for something, the deal quotes it. If you may change the request's reminder, the **Next** bar offers **Done**, which marks it done and closes the request. A new message from the customer on that thread makes it your move again. A deal that has gone quiet still says so first.
 Also called: already answered, reply sent, close the reminder.
 
 ## When the customer names a date, a price or a decision

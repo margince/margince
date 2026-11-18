@@ -63,9 +63,9 @@ SELECT a.id, coalesce(delivery.status, ''), delivery.reason,
  delivery.sent_at, delivery.bounced_at, delivery.bounce_reason, coalesce(delivery.attachments, '[]'::jsonb),
  `+ControllerSendSQL+`,
  `+moveSQL(in, mailKinds)+`, `+openRequestReminderSQL+`,
- our_reply.replied_at, our_reply.replied_precision, our_reply.still_asked, our_reply.reminder_id, our_reply.reminder_version
+ our_reply.replied_at, our_reply.replied_precision, our_reply.still_asked, our_reply.reminder_id, our_reply.reminder_version, our_reply.by_reader
  FROM activity a LEFT JOIN comms_outbound delivery ON delivery.activity_id = a.id
- LEFT JOIN LATERAL (`+ourReplySQL(in.asOf, InGatedSetSQL(emailStateReadable, "reminder_row"))+`) our_reply ON true
+ LEFT JOIN LATERAL (`+ourReplySQL(in.asOf, InGatedSetSQL(emailStateReadable, "reminder_row"), in.replyByReader)+`) our_reply ON true
  WHERE a.id IN (SELECT id FROM `+emailStateCandidates+`)`, args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading email states: %w", err)
@@ -85,7 +85,14 @@ SELECT a.id, coalesce(delivery.status, ''), delivery.reason,
 		state.OurReply = reply.contract(openapi_types.UUID(id))
 		out[id] = state
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	rows.Close()
+	if err := keepWritableReminders(ctx, tx, out); err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 // moveSQL is whose move the mail on alias a is, as its History badge reads.
@@ -94,9 +101,13 @@ SELECT a.id, coalesce(delivery.status, ''), delivery.reason,
 // the queue and the waiting_reply filter apply (withinWaitingHorizonSQL). Past
 // it the request is no longer current work unless a human kept it, so it reads
 // none. The mail stays on the timeline; none does not mean answered.
+//
+// A request we replied to (ourReplySQL) reads none too, so the badge says
+// what the deal card says. The request itself stays open.
 func moveSQL(in moveBinding, kinds string) string {
 	return `CASE WHEN coalesce(` + owedSQL(in.asOf, in.ownDomains, neverRelaxed, neverRelaxed, neverRelaxed) + ` AND ` +
-		withinWaitingHorizonSQL(in.asOf, in.horizon) + `, false)
+		withinWaitingHorizonSQL(in.asOf, in.horizon) + `
+     AND NOT EXISTS (` + ourReplySQL(in.asOf, "false", "false") + `), false)
    THEN '` + string(crmcontracts.EmailSummaryMoveNeedsReply) + `'
    WHEN coalesce(` + awaitingTheirAnswerSQL(in.asOf, in.sentByReader, in.laterContent, kinds) + `, false)
    THEN '` + string(crmcontracts.EmailSummaryMoveWaitingForThem) + `'
@@ -106,6 +117,8 @@ func moveSQL(in moveBinding, kinds string) string {
 // moveBinding is what moveSQL reads, already bound as parameters.
 type moveBinding struct {
 	asOf, ownDomains, sentByReader, laterContent, horizon string
+	// replyByReader is sentByReaderSQL over the reply row ourReplySQL reads.
+	replyByReader string
 }
 
 // moveInputs binds what moveSQL reads about the reader and the instant. Only
@@ -128,12 +141,14 @@ func moveInputsGatedBy(ctx context.Context, tx pgx.Tx, arg func(any) int, asOf t
 	if err != nil {
 		return moveBinding{}, err
 	}
+	reader, addresses := fmt.Sprintf("$%d", arg(readerOrNobody(ctx))), fmt.Sprintf("$%d", arg([]string{}))
 	return moveBinding{
-		asOf:         fmt.Sprintf("$%d::timestamptz", arg(asOf)),
-		ownDomains:   ownDomains,
-		sentByReader: sentByReaderSQL(fmt.Sprintf("$%d", arg(readerOrNobody(ctx))), fmt.Sprintf("$%d", arg([]string{}))),
-		laterContent: laterContent,
-		horizon:      storekit.WaitingHorizonSQL(asOf, arg),
+		asOf:          fmt.Sprintf("$%d::timestamptz", arg(asOf)),
+		ownDomains:    ownDomains,
+		sentByReader:  sentByReaderSQL(reader, addresses),
+		replyByReader: sentByReaderOn("reply_row", reader, addresses),
+		laterContent:  laterContent,
+		horizon:       storekit.WaitingHorizonSQL(asOf, arg),
 	}, nil
 }
 

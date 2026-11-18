@@ -53791,9 +53791,10 @@ components:
         One rule decides it, so the deal card, its risk line and its next move agree on whose
         move it is. The request itself stays open until its reminder is done or a settlement
         verdict records it settled.
-      required: [request_activity_id, replied_at, replied_precision]
+      required: [request_activity_id, replied_at, replied_precision, by_reader]
       properties:
         request_activity_id: { type: string, format: uuid, description: The request we replied to. }
+        by_reader: { type: boolean, description: The reader sent the reply. False when a colleague did. }
         replied_at: { type: string, format: date-time, description: When our newest reply on the thread happened. }
         replied_precision: { $ref: '#/components/schemas/OccurredPrecision' }
         still_asked:
@@ -53802,7 +53803,7 @@ components:
         reminder_id:
           type: string
           format: uuid
-          description: The request's unfinished reminder, when this reader may read it. Marking it done settles the request. `reminder_version` comes with it, for that write.
+          description: The request's unfinished reminder, when this reader may change it. Marking it done settles the request. `reminder_version` comes with it, for that write.
         reminder_version: { $ref: '#/components/schemas/RowVersion' }
       additionalProperties: false
 

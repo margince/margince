@@ -3297,7 +3297,10 @@ type RelationshipStrengthBucket string
 // move it is. The request itself stays open until its reminder is done or a settlement
 // verdict records it settled.
 type RequestReply struct {
-	// ReminderId The request's unfinished reminder, when this reader may read it. Marking it done settles the request. `reminder_version` comes with it, for that write.
+	// ByReader The reader sent the reply. False when a colleague did.
+	ByReader bool `json:"by_reader"`
+
+	// ReminderId The request's unfinished reminder, when this reader may change it. Marking it done settles the request. `reminder_version` comes with it, for that write.
 	ReminderId *string `json:"reminder_id,omitempty"`
 
 	// ReminderVersion Monotonic row version, incremented by the server on every mutation (data-model §1.3a).

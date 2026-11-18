@@ -32,6 +32,7 @@ const replied = {
     request_activity_id: "demo-mail",
     replied_at: "2026-09-02T17:00:00Z",
     replied_precision: "instant",
+    by_reader: true,
     reminder_id: "demo-reminder",
     reminder_version: 2,
   },

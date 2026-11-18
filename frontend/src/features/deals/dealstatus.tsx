@@ -476,8 +476,10 @@ function ReminderDone({
 }>) {
   const t = useT();
   const canUpdateTask = useCanWrite("activity", "update");
+  // History draws the request's badge from the same rule, so it refreshes too.
   const done = useTaskDone(reminder.id, reminder.version, [
     ["deal-status", dealId],
+    ["activities"],
   ]);
   if (!canUpdateTask) {
     return <MoveButton dealId={dealId} move={move} />;

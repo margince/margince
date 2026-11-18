@@ -3,6 +3,7 @@
 
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
+import { useQuery } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
@@ -20,6 +21,19 @@ type DealStatusCard = components["schemas"]["DealStatusCard"];
 const request = "00000000-0000-7000-8000-000000000001";
 const reminder = "00000000-0000-7000-8000-000000000002";
 const asOf = "2026-08-24T12:00:00Z";
+
+// Stands in for the deal's History, which reads its rows under ["activities"].
+let historyReads = 0;
+function HistoryRead() {
+  useQuery({
+    queryKey: ["activities", "deal", "demo-deal"],
+    queryFn: () => {
+      historyReads += 1;
+      return [];
+    },
+  });
+  return null;
+}
 
 afterEach(() => {
   cleanup();
@@ -39,6 +53,7 @@ function repliedCard(): DealStatusCard {
       request_activity_id: request,
       replied_at: "2026-08-21T18:00:00Z",
       replied_precision: "instant",
+      by_reader: true,
       reminder_id: reminder,
       reminder_version: 4,
     },
@@ -74,8 +89,10 @@ function show(
       jsonResponse({ stakeholders: [], risks: [] }),
     [`PATCH /activities/${reminder}`]: (body) => onPatch(body),
   });
+  historyReads = 0;
   render(
     <StoryProviders>
+      <HistoryRead />
       <DealStatusCardPanel
         deal={{ id: "demo-deal", name: "Demo deal" }}
         onOpenEmail={vi.fn()}
@@ -85,10 +102,11 @@ function show(
   return onPatch;
 }
 
-it("offers Done on the reminder once we replied, and marks it done", async () => {
+it("offers Done on the reminder once we replied, marks it done and refreshes History", async () => {
   const patch = show(repliedCard(), ["read", "create", "update"]);
   await userEvent.click(await screen.findByRole("button", { name: "Done" }));
   await waitFor(() => expect(patch).toHaveBeenCalledWith({ is_done: true }));
+  await waitFor(() => expect(historyReads).toBeGreaterThan(1));
   expect(
     screen.getByRole("button", { name: "Open the message" }),
   ).toBeVisible();

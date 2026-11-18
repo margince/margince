@@ -38097,6 +38097,8 @@ export interface components {
              * @description The request we replied to.
              */
             request_activity_id: string;
+            /** @description The reader sent the reply. False when a colleague did. */
+            by_reader: boolean;
             /**
              * Format: date-time
              * @description When our newest reply on the thread happened.
@@ -38107,7 +38109,7 @@ export interface components {
             still_asked?: string;
             /**
              * Format: uuid
-             * @description The request's unfinished reminder, when this reader may read it. Marking it done settles the request. `reminder_version` comes with it, for that write.
+             * @description The request's unfinished reminder, when this reader may change it. Marking it done settles the request. `reminder_version` comes with it, for that write.
              */
             reminder_id?: string;
             reminder_version?: components["schemas"]["RowVersion"];

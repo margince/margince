@@ -14,12 +14,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// repliedRequest is a current request with a reminder that our reply, sent
-// at repliedAt, answered. reminder is nil when the reader may not read it.
+// repliedRequest is a current request with a reminder that the reader's reply,
+// sent at repliedAt, answered. reminder is nil when the reader may not change it.
 func repliedRequest(repliedAt time.Time, reminder *openapi_types.UUID, stillAsked *string) crmcontracts.Activity {
 	request := inboundMail(repliedAt.Add(-4 * time.Hour))
 	reply := &crmcontracts.RequestReply{
-		RequestActivityId: request.Id, RepliedAt: repliedAt,
+		RequestActivityId: request.Id, RepliedAt: repliedAt, ByReader: true,
 		RepliedPrecision: crmcontracts.OccurredPrecisionOccurredPrecisionInstant, StillAsked: stillAsked,
 	}
 	if reminder != nil {
@@ -64,8 +64,8 @@ func TestARepliedRequestQuotesWhatIsStillAsked(t *testing.T) {
 	}
 }
 
-// A reader who may not read the reminder keeps the reminder rung. It still
-// says that we replied, and names only the readable request.
+// A reader who may not change the reminder keeps the reminder rung. It says
+// that we replied and names only the request, never a reminder to mark done.
 func TestAReplyWhoseReminderIsHiddenNamesOnlyTheRequest(t *testing.T) {
 	request := repliedRequest(testNow.AddDate(0, 0, -1), nil, nil)
 	f := facts{deal: openDeal(), now: testNow, loc: time.UTC, currentRequests: []crmcontracts.Activity{request}}
@@ -73,11 +73,21 @@ func TestAReplyWhoseReminderIsHiddenNamesOnlyTheRequest(t *testing.T) {
 	if mv.Action != ActionDraftEmail || (*mv.Arguments)[argActivityID] != request.Id {
 		t.Fatalf("a hidden reminder offered %s on %v", mv.Action, mv.Arguments)
 	}
-	if !strings.HasPrefix(mv.Reason, "You replied yesterday.") {
-		t.Fatalf("the move does not say we replied: %q", mv.Reason)
+	if mv.Reason != "You replied yesterday. The request is still open." {
+		t.Fatalf("the move asks for a reminder the reader cannot change: %q", mv.Reason)
 	}
 	if card := composeDeterministic(f, mv); card.ReplyTo != nil || card.OurReply == nil || card.OurReply.ReminderId != nil {
 		t.Fatal("the card must say we replied without naming the hidden reminder")
+	}
+}
+
+func TestAColleaguesReplyIsTheTeams(t *testing.T) {
+	reminder := openapi_types.UUID(ids.NewV7())
+	request := repliedRequest(testNow.AddDate(0, 0, -2), &reminder, nil)
+	request.EmailSummary.OurReply.ByReader = false
+	f := facts{deal: openDeal(), now: testNow, loc: time.UTC, currentRequests: []crmcontracts.Activity{request}}
+	if mv := decideMove(f); !strings.HasPrefix(mv.Reason, "Your team replied 2 days ago.") {
+		t.Fatalf("a colleague's reply reads as the reader's: %q", mv.Reason)
 	}
 }
 

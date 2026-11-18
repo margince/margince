@@ -72,22 +72,27 @@ func owedRulesSQL(asOf, ownDomains, informsStillOwed, unjudgedResponseStillOwed,
 	   OR (` + unjudgedResponseStillOwed + ` AND a.owed_verdict IS NULL))
 	 AND ((` + requestIntentOf(accepted) + `)
 	   OR (` + notSettledBySQL(asOf) + `
-	       AND NOT EXISTS (SELECT 1 FROM activity newer WHERE ` + newerInboundSQL("a", asOf) + `)
+	       AND NOT EXISTS (SELECT 1 FROM activity newer WHERE ` + newerInboundSQL(asOf) + `)
 	       AND NOT ` + answeredSQL("a", asOf) + `))`
 }
 
-// newerInboundSQL is a message under alias newer on the thread of the inbound
-// row under alias a. It came in after the row under alias after, and has begun
-// by asOf.
-func newerInboundSQL(after, asOf string) string {
+// newerInboundSQL is a message under alias newer that came in after the inbound
+// row under alias a, on its thread, and has begun by asOf.
+func newerInboundSQL(asOf string) string {
+	return inboundOnThreadSQL(asOf) + `
+	           AND (newer.occurred_at, newer.id) > (a.occurred_at, a.id)`
+}
+
+// inboundOnThreadSQL is a message under alias newer that came in on the thread
+// of the inbound row under alias a and has begun by asOf.
+func inboundOnThreadSQL(asOf string) string {
 	return `newer.thread_key = a.thread_key
 	           AND newer.kind = a.kind
 	           AND newer.kind IN ('email', 'message')
 	           AND newer.channel_provider IS NOT DISTINCT FROM a.channel_provider
 	           AND newer.direction = 'inbound'
 	           AND newer.archived_at IS NULL
-	           AND ` + occurredday.BegunSQL("newer", asOf) + `
-	           AND (newer.occurred_at, newer.id) > (` + after + `.occurred_at, ` + after + `.id)`
+	           AND ` + occurredday.BegunSQL("newer", asOf)
 }
 
 // notSettledBySQL keeps the inbound row under alias a unless its kept stamp

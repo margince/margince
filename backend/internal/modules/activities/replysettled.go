@@ -58,7 +58,7 @@ func stampReplySettled(ctx context.Context, tx pgx.Tx, limit int) (int, error) {
 	}
 	read, err := tx.Query(ctx, `
 		SELECT a.id, coalesce(least(
-		         (SELECT min(newer.occurred_at) FROM activity newer WHERE `+newerInboundSQL("a", "'infinity'::timestamptz")+`),
+		         (SELECT min(newer.occurred_at) FROM activity newer WHERE `+newerInboundSQL("'infinity'::timestamptz")+`),
 		         `+storekit.ThreadAnsweredAtSQL("a")+`), 'infinity')
 		  FROM activity a WHERE a.id = ANY($1)`, batch)
 	if err != nil {
