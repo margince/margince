@@ -114,6 +114,7 @@ describe("an offer made from the deal", () => {
             line_net_minor: 20_000,
             line_tax_minor: 0,
             line_total_minor: 20_000,
+            price_grounded: true,
             created_at: AT,
             updated_at: AT,
           },
