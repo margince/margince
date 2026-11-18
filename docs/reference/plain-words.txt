@@ -1072,7 +1072,6 @@ plant
 platform
 plural
 plus
-poc
 pod
 point
 policy
