@@ -45,8 +45,9 @@ export function OverviewCard({
             {emptyAction}
           </div>
         )}
+        {/* A div, because a caller's foot may be a paragraph of its own. */}
         {foot && (
-          <p
+          <div
             className={
               footTone === "warn"
                 ? "overviewcard-foot overviewcard-foot-warn"
@@ -54,7 +55,7 @@ export function OverviewCard({
             }
           >
             {foot}
-          </p>
+          </div>
         )}
       </div>
     </Panel>
