@@ -178,7 +178,7 @@ func (s *Store) ResendInvitation(ctx context.Context, roomID ids.DealRoomID, par
 			return fmt.Errorf("answer deal room link request: %w", err)
 		}
 		auditID, err := storekit.Audit(ctx, tx, "invite", participantObject, participantID.UUID,
-			nil, map[string]any{fieldRoomID: roomID.UUID, "resent": true, "link_requested_at": nil})
+			nil, map[string]any{fieldRoomID: roomID.UUID, "resent": true, fieldLinkRequestedAt: nil})
 		if err != nil {
 			return fmt.Errorf("audit deal room resend: %w", err)
 		}

@@ -7,10 +7,11 @@ import (
 	"strings"
 	"testing"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr/faulttest"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 // A title longer than its column is the caller's to shorten. It is refused at
