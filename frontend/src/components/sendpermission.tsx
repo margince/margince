@@ -10,7 +10,7 @@ import { formatNumber } from "../format/format";
 import {
   type RefusalKind,
   type RefusalSurface,
-  sendPermissionReasonKey,
+  refusalSentenceKey,
 } from "../format/sendpermissionreason";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -320,7 +320,7 @@ function RefusalDetail({
   const t = useT();
   const hintFor = (refused: RefusedRecipient | undefined) =>
     t(
-      sendPermissionReasonKey(
+      refusalSentenceKey(
         refused?.reasonCode,
         surface,
         refused && remedyCategoryOf(refused),

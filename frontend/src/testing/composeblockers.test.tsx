@@ -18,7 +18,7 @@ import {
   newContactsOf,
   reasonTargetOf,
 } from "../features/mail/composeblockers";
-import { sendPermissionReasonKey } from "../format/sendpermissionreason";
+import { refusalSentenceKey } from "../format/sendpermissionreason";
 import { meFixture } from "./mefixture";
 import {
   allowedPreview,
@@ -581,16 +581,16 @@ describe("a reply the thread gives no reason for", () => {
   });
 
   it("names the missing reason, not an unknown purpose, where no reason was given", () => {
+    expect(refusalSentenceKey("unknown_purpose", { unclaimed: true })).toBe(
+      "sendPermission.reason.noReasonFact",
+    );
     expect(
-      sendPermissionReasonKey("unknown_purpose", { unclaimed: true }),
-    ).toBe("sendPermission.reason.noReasonFact");
-    expect(
-      sendPermissionReasonKey("unknown_purpose", {
+      refusalSentenceKey("unknown_purpose", {
         unclaimed: true,
         picksReason: true,
       }),
     ).toBe("sendPermission.reason.noReason");
-    expect(sendPermissionReasonKey("unknown_purpose")).toBe(
+    expect(refusalSentenceKey("unknown_purpose")).toBe(
       "sendPermission.reason.unknownPurposeFact",
     );
   });
