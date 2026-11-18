@@ -15,6 +15,7 @@ import { useT } from "../i18n";
 import { type RequiredGrant, useGrantRefused } from "../lib/capability";
 import { fromHere } from "../lib/navigatefrom";
 import type { Route } from "../lib/router";
+import { mergeSentence } from "./merge.sentence";
 import "../design-system/querystates.css";
 
 // The shared "Merge into…" affordance (P-2): a human direct call that folds
@@ -24,29 +25,6 @@ import "../design-system/querystates.css";
 // + If-Match precondition, survivor Contact/Company back), so this stays
 // resource-agnostic: the screen supplies the search transport, the merge
 // transport, and where the survivor's 360 lives.
-
-export type MergeSide = Readonly<{ name: string; detail?: string }>;
-
-// Each side reads as its name and its detail line. So the question before a
-// merge, and the answer after it, tell apart two records that share a name.
-function mergeSideLabel(t: ReturnType<typeof useT>, side: MergeSide): string {
-  return side.detail
-    ? t("merge.recordDetail", { name: side.name, detail: side.detail })
-    : side.name;
-}
-
-// The question asked before a merge, or the answer after it.
-export function mergeSentence(
-  t: ReturnType<typeof useT>,
-  key: "merge.confirm" | "merge.done",
-  source: MergeSide,
-  target: MergeSide,
-): string {
-  return t(key, {
-    source: mergeSideLabel(t, source),
-    target: mergeSideLabel(t, target),
-  });
-}
 
 export function MergeAction<Survivor extends { id: string }>({
   label,

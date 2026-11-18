@@ -18,12 +18,12 @@ import { type Locale, useLocale, useT } from "../i18n";
 import type { CfObject } from "../lib/customfields.logic";
 import { translatedLabel } from "../lib/labeltranslation";
 import { TEXT_LIMITS } from "../lib/textlimits_gen";
+import { amountRefusal } from "./amountrefusal";
 import {
   type CreateField,
   joinMultiselectValue,
   splitMultiselectValue,
 } from "./create";
-import { amountRefusal } from "./moneyamountfield";
 
 export type CustomField = components["schemas"]["CustomField"];
 
