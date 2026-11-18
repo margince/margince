@@ -92,10 +92,14 @@ type Reader struct {
 // NewReader builds a Reader whose json codecs keep each number's stored digits.
 func NewReader() *Reader {
 	types := pgtype.NewMap()
-	jsonType := &pgtype.Type{Name: "json", OID: pgtype.JSONOID,
-		Codec: &pgtype.JSONCodec{Marshal: json.Marshal, Unmarshal: unmarshalExact}}
-	jsonbType := &pgtype.Type{Name: "jsonb", OID: pgtype.JSONBOID,
-		Codec: &pgtype.JSONBCodec{Marshal: json.Marshal, Unmarshal: unmarshalExact}}
+	jsonType := &pgtype.Type{
+		Name: "json", OID: pgtype.JSONOID,
+		Codec: &pgtype.JSONCodec{Marshal: json.Marshal, Unmarshal: unmarshalExact},
+	}
+	jsonbType := &pgtype.Type{
+		Name: "jsonb", OID: pgtype.JSONBOID,
+		Codec: &pgtype.JSONBCodec{Marshal: json.Marshal, Unmarshal: unmarshalExact},
+	}
 	types.RegisterType(jsonType)
 	types.RegisterType(jsonbType)
 	types.RegisterType(&pgtype.Type{Name: "_json", OID: pgtype.JSONArrayOID, Codec: &pgtype.ArrayCodec{ElementType: jsonType}})
