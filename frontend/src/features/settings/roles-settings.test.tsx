@@ -432,7 +432,7 @@ describe("RolesSettings", () => {
       expect(calls).toContainEqual({
         method: "PATCH",
         url: "/v1/roles/custom_field_sales/objects/deal",
-        body: { ...NONE, create: true },
+        body: { ...NONE, read: true, create: true },
         ifMatch: "7",
       }),
     );
@@ -501,6 +501,42 @@ describe("RolesSettings", () => {
         }),
       ),
     );
+  });
+
+  it("restores a built-in role's shipped grants, and offers none on a custom role", async () => {
+    const user = userEvent.setup();
+    const calls: Call[] = [];
+    vi.stubGlobal("fetch", backend(calls));
+    render(<RolesSettings />);
+
+    const admin = await openRole(user, "Admin");
+    await user.click(
+      admin.getByRole("button", { name: en["roles.restoreGrants"] }),
+    );
+    expect(calls).toEqual([]);
+    const confirm = within(
+      await screen.findByRole("dialog", { name: /Restore shipped grants for/ }),
+    );
+    expect(confirm.getByText(en["roles.restoreGrantsBody"])).toBeTruthy();
+    await user.click(
+      confirm.getByRole("button", { name: en["roles.restoreGrants"] }),
+    );
+    await waitFor(() =>
+      expect(calls).toContainEqual(
+        expect.objectContaining({
+          method: "POST",
+          url: "/v1/roles/admin/restore-grants",
+          ifMatch: String(ADMIN.version),
+        }),
+      ),
+    );
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+    const custom = await openRole(user, "Field sales");
+    expect(
+      custom.queryByRole("button", { name: en["roles.restoreGrants"] }),
+    ).toBeNull();
   });
 
   // The live list drops a role once it is archived. Its drawer keeps it, so

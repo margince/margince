@@ -944,6 +944,7 @@ var Declared = map[string][]string{
 	"POST /v1/roles":                                                           {},
 	"POST /v1/roles/{key}/archive":                                             {},
 	"POST /v1/roles/{key}/restore":                                             {},
+	"POST /v1/roles/{key}/restore-grants":                                      {},
 	"POST /v1/scheduled-sends/{id}/cancel":                                     {},
 	"POST /v1/scheduling/invitations":                                          {},
 	"POST /v1/scheduling/profile/shared":                                       {},

@@ -15263,6 +15263,18 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Admin-Rolle behält ihre Rechte, Nutzende, Rollen und Teams zu verwalten, damit das Unternehmen immer verwaltet werden kann.",
   "roles.refusal.nameTaken":
     "Eine andere Rolle hat bereits diesen Namen. Wähle einen anderen.",
+  "roles.refusal.writeNeedsRead":
+    "Erstellen, Ändern und Löschen brauchen Lesen. Schalte zuerst Lesen ein.",
+  "roles.refusal.customRole":
+    "Nur eingebaute Rollen haben mitgelieferte Rechte.",
+  "roles.restoreGrants": "Mitgelieferte Rechte wiederherstellen",
+  "roles.restoreGrantsTitle":
+    "Mitgelieferte Rechte für {name} wiederherstellen?",
+  "roles.restoreGrantsBody":
+    "Jeder Schalter geht auf den mitgelieferten Stand zurück. Deine Änderungen an den Rechten dieser Rolle gehen verloren.",
+  "roles.restoredGrantsToast":
+    "Mitgelieferte Rechte für {name} wiederhergestellt",
+  "cf.recordKindHint": "Die Arten stammen aus installierten Erweiterungen.",
   "extAccess.title": "Erweiterungen und Zugriff",
   "extAccess.adminOnly":
     "Diese Seite erfordert die Berechtigung, Erweiterungen und Rollen der Installation zu lesen. Deiner Rolle fehlt eine davon oder beide.",

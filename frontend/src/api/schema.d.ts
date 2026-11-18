@@ -20383,6 +20383,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/roles/{key}/restore-grants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The role key of a role the product ships. */
+                key: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Put a shipped role's grants back to the ones the product ships. Human-only.
+         * @description Replaces the whole `objects` map of a system role (`is_system: true`) with the grants a
+         *     new installation seeds for it, extension defaults included. Grants on objects the
+         *     installation cannot name are dropped with the rest. Name, row scope and field masks are
+         *     left as they are. A custom role has nothing shipped to return to (409 `custom_role`).
+         *
+         *     Gated on `role_admin.update`. A restore that turns any verb on is admin only (403
+         *     `widening_requires_admin`), like any other widening. `If-Match` is required: a missing
+         *     or malformed one is refused 422 and a stale one 409 `version_skew`.
+         *
+         *     The audit row names the role and the before and after grant of each object that moved.
+         *     No public event is emitted, for the reason `setRoleObjectGrant` gives. Live sessions are
+         *     not revoked.
+         */
+        post: operations["restoreRoleGrants"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/roles/{key}/objects/{object}": {
         parameters: {
             query?: never;
@@ -20424,6 +20458,10 @@ export interface paths {
          *     because refusing stored data costs a member their session; on this WRITE path the
          *     opposite is true — refusing input an admin just typed costs them a correction, and
          *     storing a typo would create a grant nobody can ever satisfy and no screen can explain.
+         *
+         *     A grant with Create, Update or Delete on and Read off is refused 422 `write_needs_read`,
+         *     unless the object offers no Read (`verbs` on `listRoles`). Every write shows the record it
+         *     wrote, so a write without Read could act on rows its holder is never shown.
          *
          *     Gated on `role_admin.update`. Turning a verb OFF is open to every holder of the grant.
          *     Turning one ON is admin only (403 `widening_requires_admin`), which is also how a newly
@@ -50638,6 +50676,10 @@ export interface components {
         /** @description Every role this workspace defines. Not paginated and deliberately not: the set is bounded by what an operator created (six seeded, plus a handful at most), the editor needs all of it to render, and a cursor over it would be ceremony over a complete answer. */
         RoleDirectory: {
             roles: components["schemas"]["Role"][];
+            /** @description The verbs a role may hold on each object this installation can grant, core objects and enabled extension objects alike, Read first. An object that offers no Read has none in its list. An object absent here is one the installation cannot name, and a client draws it with all four. */
+            verbs: {
+                [key: string]: ("create" | "read" | "update" | "delete")[];
+            };
         };
         AssignableRoleDirectory: {
             roles: components["schemas"]["AssignableRole"][];
@@ -94049,6 +94091,53 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    restoreRoleGrants: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The `version` of the role you read. A restore replaces every grant, so the write never goes out without it. */
+                "If-Match": string;
+            };
+            path: {
+                /** @description The role key of a role the product ships. */
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The role with its shipped grants. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Role"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description `unknown_role` — no live role has this key. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `version_skew`, or `custom_role` — only a role the product ships has shipped grants. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
         };
     };
     setRoleObjectGrant: {

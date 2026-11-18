@@ -30081,6 +30081,59 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
 
+  /roles/{key}/restore-grants:
+    parameters:
+      - name: key
+        in: path
+        required: true
+        schema: { type: string, minLength: 1, maxLength: 64 }
+        description: The role key of a role the product ships.
+    post:
+      tags: [Identity]
+      operationId: restoreRoleGrants
+      security: [ { cookieAuth: [] } ]   # human session only — see listRoles
+      x-agent-access: human-only
+      x-human-only-reason: security
+      parameters:
+        - name: If-Match
+          in: header
+          required: true
+          schema: { type: string }
+          description: The `version` of the role you read. A restore replaces every grant, so the write never goes out without it.
+      summary: Put a shipped role's grants back to the ones the product ships. Human-only.
+      description: |
+        Replaces the whole `objects` map of a system role (`is_system: true`) with the grants a
+        new installation seeds for it, extension defaults included. Grants on objects the
+        installation cannot name are dropped with the rest. Name, row scope and field masks are
+        left as they are. A custom role has nothing shipped to return to (409 `custom_role`).
+
+        Gated on `role_admin.update`. A restore that turns any verb on is admin only (403
+        `widening_requires_admin`), like any other widening. `If-Match` is required: a missing
+        or malformed one is refused 422 and a stale one 409 `version_skew`.
+
+        The audit row names the role and the before and after grant of each object that moved.
+        No public event is emitted, for the reason `setRoleObjectGrant` gives. Live sessions are
+        not revoked.
+      responses:
+        '200':
+          description: The role with its shipped grants.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Role' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: '`unknown_role` — no live role has this key.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '409':
+          description: '`version_skew`, or `custom_role` — only a role the product ships has shipped grants.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /roles/{key}/objects/{object}:
     parameters:
       - name: key
@@ -30126,6 +30179,10 @@ paths:
         because refusing stored data costs a member their session; on this WRITE path the
         opposite is true — refusing input an admin just typed costs them a correction, and
         storing a typo would create a grant nobody can ever satisfy and no screen can explain.
+
+        A grant with Create, Update or Delete on and Read off is refused 422 `write_needs_read`,
+        unless the object offers no Read (`verbs` on `listRoles`). Every write shows the record it
+        wrote, so a write without Read could act on rows its holder is never shown.
 
         Gated on `role_admin.update`. Turning a verb OFF is open to every holder of the grant.
         Turning one ON is admin only (403 `widening_requires_admin`), which is also how a newly
@@ -69731,7 +69788,7 @@ components:
     RoleDirectory:
       type: object
       additionalProperties: false
-      required: [roles]
+      required: [roles, verbs]
       description: >-
         Every role this workspace defines. Not paginated and deliberately not: the set is
         bounded by what an operator created (six seeded, plus a handful at most), the editor
@@ -69740,6 +69797,16 @@ components:
         roles:
           type: array
           items: { $ref: '#/components/schemas/Role' }
+        verbs:
+          type: object
+          description: >-
+            The verbs a role may hold on each object this installation can grant, core objects
+            and enabled extension objects alike, Read first. An object that offers no Read has
+            none in its list. An object absent here is one the installation cannot name, and a
+            client draws it with all four.
+          additionalProperties:
+            type: array
+            items: { type: string, enum: [create, read, update, delete], x-extensible-enum: true }
 
     AssignableRoleDirectory:
       type: object
