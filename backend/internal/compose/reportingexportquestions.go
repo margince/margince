@@ -82,10 +82,7 @@ func keptAnswerRows(question crmcontracts.ReportingCardQuestion, answer crmcontr
 				continue
 			}
 			unit, currency, coverage := money.of(measure, row)
-			value := csvAnswerNumber(row[column])
-			if minor, isNumber := row[column].(float64); isNumber && unit == reportingMoney {
-				value = reportingcsv.Major(&minor, currency)
-			}
+			value := reportingcsv.AnswerCell(row[column], unit == reportingMoney, currency)
 			if coverage != "ok" {
 				value = ""
 			}
@@ -137,18 +134,4 @@ func groupLabel(groupBy []string, row map[string]any, labels *crmcontracts.Analy
 		}
 	}
 	return strings.Join(parts, " · ")
-}
-
-// csvAnswerNumber writes a measure as the analytics answer carried it.
-//
-//craft:ignore naked-any an answer row's values are schemaless JSON, decoded as any
-func csvAnswerNumber(value any) string {
-	switch number := value.(type) {
-	case nil:
-		return ""
-	case float64:
-		return reportingCSVNumber(&number)
-	default:
-		return formulacell.Guard(fmt.Sprint(number))
-	}
 }

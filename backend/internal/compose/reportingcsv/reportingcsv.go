@@ -6,6 +6,7 @@
 package reportingcsv
 
 import (
+	"fmt"
 	"math"
 	"strconv"
 	"strings"
@@ -13,6 +14,7 @@ import (
 	"unicode"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/formulacell"
 	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
@@ -99,4 +101,21 @@ func IDOf(english string) string {
 		}
 	}
 	return english
+}
+
+// AnswerCell writes one measure of an analytics answer, money in major units.
+//
+//craft:ignore naked-any an answer row's values are schemaless JSON, decoded as any
+func AnswerCell(value any, money bool, currency string) string {
+	switch number := value.(type) {
+	case nil:
+		return ""
+	case float64:
+		if money {
+			return Major(&number, currency)
+		}
+		return strconv.FormatFloat(number, 'f', -1, 64)
+	default:
+		return formulacell.Guard(fmt.Sprint(number))
+	}
 }
