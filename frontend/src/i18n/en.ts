@@ -21107,7 +21107,6 @@ export const en = {
   "contact.card.dealTitle": "The deal {name} decides",
   "contact.card.deals": "Deals",
   "contact.card.openTasks": "Open tasks",
-  "contact.card.noOpenTasks": "No open tasks",
   "contact.moment.doneToast":
     "Marked done. It comes back when either of you writes again.",
   "contact.card.understandingTitle": "Understanding {name}",

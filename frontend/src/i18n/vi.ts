@@ -20806,7 +20806,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.card.dealTitle": "Deal {name} quyết định",
   "contact.card.deals": "Deal",
   "contact.card.openTasks": "Việc cần làm đang mở",
-  "contact.card.noOpenTasks": "Không có việc cần làm đang mở",
   "contact.moment.doneToast":
     "Đã đánh dấu xong. Mục này sẽ quay lại khi một trong hai bên viết tiếp.",
   "contact.card.understandingTitle": "Hiểu {name}",

@@ -21356,7 +21356,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.card.dealTitle": "Deal von {name}",
   "contact.card.deals": "Deals",
   "contact.card.openTasks": "Offene Aufgaben",
-  "contact.card.noOpenTasks": "Keine offenen Aufgaben",
   "contact.moment.doneToast":
     "Als erledigt markiert. Es kommt wieder, sobald eine Seite erneut schreibt.",
   "contact.card.understandingTitle": "{name} verstehen",
