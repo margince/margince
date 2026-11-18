@@ -103,8 +103,8 @@ export function InlineBlockers({
 
 /**
  * What a refused Send left in the composer: the server's leading finding with
- * the short warning, and, where the server lets this sender decide, one
- * reason and Send anyway for the whole message.
+ * the short warning. Where the server lets this sender decide, one reason and
+ * Send anyway cover the whole message.
  */
 export function SendAnywayRows({
   state,
@@ -276,8 +276,8 @@ function ReasonRow({
 
 /**
  * A button that answers only a press begun on it. The Send press that brought
- * it up, a double click's second half or a held key's repeat started before
- * it was drawn, so none of them reaches `onPress`. A click with no pointer,
+ * it up started before it was drawn. So did a double click's second half and
+ * a held key's repeat, and none of them reaches `onPress`. A click with no pointer,
  * as a screen reader sends, counts while the button has focus.
  */
 function FreshPressButton({

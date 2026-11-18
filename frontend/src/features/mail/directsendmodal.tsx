@@ -63,9 +63,8 @@ export async function directSend(command: DirectSendCommand): Promise<string> {
         assessment_revision: command.assessmentRevision,
         shown_reasons: [...command.shownReasons],
         // The server refuses a decision without an acknowledgement. Each
-        // caller reaches this only from the press that is one: this modal's
-        // confirm, live once the tick is set, or the composer's Send anyway
-        // beside the warning it names.
+        // caller reaches this only from the press that is one. That is the
+        // modal's confirm once ticked, or Send anyway beside its warning.
         acknowledged: true,
       },
     },

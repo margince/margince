@@ -22,9 +22,9 @@ import {
 } from "./compose.testkit";
 import { ComposeWindow } from "./composewindow";
 
-// The email composer with the inline pilot switch on: nothing is asked while
-// the rep writes, Send is the check, and a refusal comes back as a review the
-// composer draws in place with one reason and Send anyway.
+// The email composer with the inline pilot switch on. Nothing is asked while
+// the rep writes, and Send is the check. A refusal comes back as a review,
+// drawn in place with one reason and Send anyway.
 
 const INLINE_TEXT =
   "The send check still blocks this message. Send anyway sends only this message and grants no permission for later ones. Your name, your reason and the message are kept in a record that cannot be edited.";

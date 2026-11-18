@@ -280,8 +280,8 @@ export function useComposeSend({
   needsDeal: boolean;
   savedDraft: ReturnType<typeof useSavedDraft>;
   /**
-   * The send is the check: nothing is asked while the rep writes, no reason
-   * for contact or deal is required, and a refusal comes back as a review.
+   * The send is the check. Nothing is asked while the rep writes, and no
+   * reason for contact or deal is required. A refusal comes back as a review.
    */
   inline?: boolean;
   onSent?: () => void;

@@ -20,8 +20,8 @@ type CommunicationReview = components["schemas"]["CommunicationReview"];
 
 /**
  * The composer's short warning. A decision may name only a version the review
- * was served with, and this build knows the words of this one alone, so any
- * other version leaves the finding with no Send anyway.
+ * was served with. This build knows the words of this one alone, so any other
+ * version leaves the finding with no Send anyway.
  */
 export const INLINE_WARNING_VERSION = "inline-v1";
 
@@ -33,8 +33,8 @@ type Reviewed = Readonly<{
   actions: readonly SendReviewAction[];
 }>;
 
-// A newer review a refused decision points at: embedded, named by id, or the
-// same review read again when the server says the decision went stale.
+// A newer review a refused decision points at: embedded or named by id. A
+// stale decision reads the same review again.
 async function refreshedReview(
   error: unknown,
   current: Reviewed,
