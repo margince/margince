@@ -4,7 +4,10 @@
 package ai
 
 import (
+	"net/http"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/platform/httperr"
 
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -24,8 +27,12 @@ func TestAnUnboundRouterServesOnceItIsRebound(t *testing.T) {
 		t.Fatal("an unbound router reports a model for the premium tier")
 	}
 	req := model.Request{Messages: []model.Message{{Role: "user", Content: "hello"}}}
-	if _, _, err := r.Complete(wsContext(t), TaskRateExtract, req); err == nil {
-		t.Fatal("a call on an unbound router succeeded, want a refusal")
+	_, _, err := r.Complete(wsContext(t), TaskRateExtract, req)
+	if fault, ok := httperr.Classify(err); !ok || fault.Status != http.StatusNotImplemented || fault.Code != "not_implemented" {
+		t.Fatalf("a call on an unbound router answered %v (%+v), want the 501 an unwired surface gives", err, fault)
+	}
+	if _, err := r.Embed(wsContext(t), model.EmbedRequest{}); err == nil {
+		t.Fatal("an embed on an unbound router succeeded, want a refusal")
 	}
 
 	if err := r.Rebind(parsed(t, rebindFrom)); err != nil {

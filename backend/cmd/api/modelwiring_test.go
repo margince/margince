@@ -22,6 +22,7 @@ import (
 	"io"
 	"log/slog"
 	"maps"
+	"net/http"
 	"strings"
 	"testing"
 
@@ -29,6 +30,8 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 func discardLogger() *slog.Logger {
@@ -60,6 +63,12 @@ func TestAnUnboundBootAdoptsTheBindingSavedAfterwards(t *testing.T) {
 	// binding must get one. The pool is only stored, never dialled.
 	if compose.NewRoutingWatcher(&pgxpool.Pool{}, modelPath, nil, discardLogger()) == nil {
 		t.Fatal("a role booted without a binding got no routing watcher, so a saved binding would wait for a restart")
+	}
+
+	// A wired surface answers what an unwired one did: a 501, not a model error.
+	_, laneErr := modelPath.Rewrite.Complete(context.Background(), model.Request{})
+	if fault, ok := httperr.Classify(laneErr); !ok || fault.Status != http.StatusNotImplemented {
+		t.Fatalf("a lane call on an unbound path answered %v, want a 501", laneErr)
 	}
 
 	bound, err := ai.ParseRouting([]byte(`profile: eu_hosted

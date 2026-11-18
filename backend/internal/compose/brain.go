@@ -218,6 +218,10 @@ func (m ModelPath) RoutingVersion() string {
 	return m.router.RoutingVersion()
 }
 
+// Bound reports whether the lanes serve a binding now. A path with no router
+// (the DB-less fakes) always does.
+func (m ModelPath) Bound() bool { return m.router == nil || m.router.Bound() }
+
 func (m ModelPath) WithAgentTokenSpend(spend ai.AgentTokenSpender) ModelPath {
 	if m.router != nil {
 		m.router.WithAgentTokenSpend(spend)

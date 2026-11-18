@@ -10,8 +10,11 @@ package ai
 // different lifetimes now that the second can change under the first.
 
 import (
+	"net/http"
 	"slices"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -171,6 +174,25 @@ func (r *Router) install(next binding) {
 // Empty on a Router assembled without one, which is every unit fixture and an
 // installation whose keys come from the environment alone.
 func (r *Router) CredentialVersion() string { return r.binding().credentialVersion }
+
+// Bound reports whether the Router serves a stored or declared binding. An
+// unbound one refuses every call and is what an installation without AI holds.
+func (r *Router) Bound() bool {
+	return r.binding().public.State != crmcontracts.AssistantProfileStateUnconfigured
+}
+
+// refuseUnbound is the answer every model call gets before a binding exists:
+// the same 501 an operation answers on a role that wires no model. It rides
+// httperr, so each surface that returns the error as it came says exactly that.
+func (r *Router) refuseUnbound() error {
+	if r.Bound() {
+		return nil
+	}
+	return &httperr.DetailedError{
+		Status: http.StatusNotImplemented, Code: "not_implemented",
+		Detail: "no AI model is bound yet; save one under Settings, AI models",
+	}
+}
 
 // ConfiguredProfile is the public profile of the binding served now, so the
 // profile reads follow a rebind the way the lanes do.

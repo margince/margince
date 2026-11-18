@@ -176,6 +176,9 @@ func assembleRouter(clients map[Tier]model.Client, embedder model.Client, profil
 // the resolved tier's binding supplies it. It is exactly one logical
 // call — mint, attempt, flush.
 func (r *Router) Complete(ctx context.Context, task Task, req model.Request) (model.Response, RouteInfo, error) {
+	if err := r.refuseUnbound(); err != nil {
+		return model.Response{}, RouteInfo{}, err
+	}
 	ladder, ok := taskLadders[task]
 	if !ok {
 		return model.Response{}, RouteInfo{}, fmt.Errorf("ai: unknown task %q", task)
