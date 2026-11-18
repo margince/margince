@@ -111,18 +111,17 @@ var columnValueShapes = map[string]analyticsquery.ColumnShape{
 	// anyone would write it.
 	deals.StalledSQL("t"):        analyticsquery.ShapeBoolean,
 	deals.PartnerSourcedSQL("t"): analyticsquery.ShapeBoolean,
-	// Held by TestEveryIDNamedFieldReadsAnIDShapedColumn.
-	colRowID:               analyticsquery.ShapeID,
-	colOwnerID:             analyticsquery.ShapeID,
-	colPipelineID:          analyticsquery.ShapeID,
-	colStageID:             analyticsquery.ShapeID,
-	colCompanyID:           analyticsquery.ShapeID,
-	colPartnerCompanyID:    analyticsquery.ShapeID,
-	colProjectID:           analyticsquery.ShapeID,
-	colProjectCustomer:     analyticsquery.ShapeID,
-	colCreditedSeat:        analyticsquery.ShapeID,
-	colMeetingCreditedSeat: analyticsquery.ShapeID,
-	activityProjectIDExpr:  analyticsquery.ShapeID,
+	// Record ids, held by TestEveryIDNamedFieldReadsAnIDShapedColumn.
+	colRowID: analyticsquery.ShapeID, colOwnerID: analyticsquery.ShapeID, colPipelineID: analyticsquery.ShapeID,
+	colStageID: analyticsquery.ShapeID, colCompanyID: analyticsquery.ShapeID, colPartnerCompanyID: analyticsquery.ShapeID,
+	colProjectID: analyticsquery.ShapeID, colProjectCustomer: analyticsquery.ShapeID, colCreditedSeat: analyticsquery.ShapeID,
+	colMeetingCreditedSeat: analyticsquery.ShapeID, activityProjectIDExpr: analyticsquery.ShapeID,
+}
+
+// valueShape is the shape of the column a filter or dimension name reads.
+func (s reportSpec) valueShape(name string) analyticsquery.ColumnShape {
+	expr, _ := predicateExpr(s, name)
+	return columnValueShapes[expr]
 }
 
 func schemaVersion(entities map[string]analyticsquery.Entity) string {

@@ -268,12 +268,19 @@ func Store[A Answer](
 	return nil
 }
 
+// forgetTimeout bounds a forget, which runs before a write's status is sent.
+// It is one upsert, so a writer never waits longer than this for their answer.
+const forgetTimeout = 5 * time.Second
+
 // Forget ends every answer these readers were computed before now, including
-// one a read already in flight stores afterwards.
+// one a read already in flight stores afterwards. It follows a committed write,
+// so a caller who has left must not cancel it and leave their Home stale.
 func (c *Cache) Forget(ctx context.Context, readers []ids.UUID) error {
 	if len(readers) == 0 {
 		return nil
 	}
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), forgetTimeout)
+	defer cancel()
 	err := database.WithWorkspaceTx(ctx, c.pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
 			INSERT INTO home_read_forgotten (reader_id, at)

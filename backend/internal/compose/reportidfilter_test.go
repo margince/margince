@@ -4,16 +4,12 @@
 package compose
 
 import (
-	"errors"
 	"maps"
-	"net/http"
 	"slices"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
-	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // idShapeGaps names each id field of the corpus whose expression the id check
@@ -60,38 +56,15 @@ func TestTheIDShapeCensusCatchesAnIDColumnItDoesNotKnow(t *testing.T) {
 	}
 }
 
-func TestAMalformedIDFilterIsRefusedAsTheCallersMistake(t *testing.T) {
+func TestAReportSpecReadsItsIDFiltersAsIDShaped(t *testing.T) {
 	spec := prebuiltReports["deals-by-stage"]
-	for _, filter := range []string{fieldPipelineID, fieldOwnerID, fieldCompanyID} {
-		err := requireIDFilterValues(spec, map[string]any{filter: "undefined"})
-		var refusal *FilterIDValueError
-		if !errors.As(err, &refusal) || refusal.Filter != filter {
-			t.Fatalf("%s=undefined: err = %v, want a FilterIDValueError naming the filter", filter, err)
+	for name, want := range map[string]analyticsquery.ColumnShape{
+		fieldPipelineID: analyticsquery.ShapeID, fieldOwnerID: analyticsquery.ShapeID, fieldStageID: analyticsquery.ShapeID,
+		fieldStatus: analyticsquery.ShapeText, "unknown": analyticsquery.ShapeText,
+	} {
+		if got := spec.valueShape(name); got != want {
+			t.Errorf("deals-by-stage %s reads shape %q, want %q", name, got, want)
 		}
-		fault, ok := httperr.Classify(err)
-		if !ok || fault.Status != http.StatusUnprocessableEntity || fault.Code != reportFieldNotAllowedCode {
-			t.Errorf("%s=undefined answers %d %q, want 422 %s", filter, fault.Status, fault.Code, reportFieldNotAllowedCode)
-		}
-		if fault.InfraCause != nil {
-			t.Errorf("%s=undefined carries an infrastructure cause, which is logged as an ERROR", filter)
-		}
-	}
-}
-
-func TestAWellFormedOrNonIDFilterPassesTheIDCheck(t *testing.T) {
-	spec := prebuiltReports["deals-by-stage"]
-	filters := map[string]any{
-		fieldPipelineID: ids.NewV7().String(),
-		fieldOwnerID:    nil,
-		fieldStatus:     "won",
-		"unknown":       "undefined",
-	}
-	if err := requireIDFilterValues(spec, filters); err != nil {
-		t.Fatalf("a canonical id, an unset id and a text filter were refused: %v", err)
-	}
-	var notBindable *FilterValueNotAllowedError
-	if err := requireIDFilterValues(spec, map[string]any{fieldPipelineID: true}); !errors.As(err, &notBindable) {
-		t.Errorf("a yes-or-no for an id filter: err = %v, want FilterValueNotAllowedError", err)
 	}
 }
 

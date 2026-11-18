@@ -15,7 +15,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // reportFieldNotAllowedCode is the ONE 422 code crm.yaml declares for this
@@ -93,13 +92,8 @@ func (e *FieldNotAllowedError) MessageFault() (code, message string) {
 // call, not a preference: crm.yaml declares BOTH 404 and 422 on runReport, and
 // scopes the 422 to "the plan failed validation (out-of-vocabulary field,
 // invalid aggregate)" — about the plan's FIELDS. `report` is the path parameter
-// naming the resource, so a key that names nothing is a 404 (P3). An earlier
-// pass made this a 422 on the reasoning that a static catalog has no row scope
-// to hide behind; the integration lane caught it, and the contract settles it.
-//
-// What was actually wrong survives the correction: the refusal used to name
-// nothing available, so a caller could not tell a typo from a denial. The keys
-// ride in the message now.
+// naming the resource, so a key that names nothing is a 404 (P3). The served
+// keys ride in the message, so a caller can tell a typo from a denial.
 type UnknownReportError struct {
 	Report string
 	Served []string
@@ -128,13 +122,8 @@ func (e *UnknownReportError) Unwrap() error { return apperrors.ErrNotFound }
 // Telling a caller their field is out of vocabulary when it is not would send
 // them hunting for a spelling that was never wrong.
 //
-// It exists because the alternative is worse than a bad message. A value the
-// driver cannot encode used to travel all the way to Postgres, fail there, and
-// arrive back as an unclassified fault — which httperr can only mask as an
-// opaque 500 (the mask is correct; a database error's text is not a client's
-// business). So the caller most likely to trip it — one who spelled a year the
-// way JSON spells a year, `2026` rather than `"2026"` — was told the server had
-// broken, and an agent reading that retries the same call forever.
+// Without it, a value the driver cannot encode, such as `2026` for "2026",
+// fails in Postgres as an opaque 500 that an agent retries forever.
 type FilterValueNotAllowedError struct {
 	Filter string
 	// Kind is the shape that arrived, named so the message can be concrete
@@ -148,53 +137,11 @@ func (e *FilterValueNotAllowedError) Error() string {
 }
 
 // MessageFault reuses the contract's one declared 422 code, for the reason
-// EmptyReportPlanError records above.
-//
-// The message names the fix rather than the rule: a caller who sent a number
-// needs "quote it", not a taxonomy of accepted shapes they must map their value
-// onto themselves.
+// EmptyReportPlanError records above. The message names the fix, not the rule.
 func (e *FilterValueNotAllowedError) MessageFault() (code, message string) {
 	return reportFieldNotAllowedCode,
 		e.Error() + " — " + analyticsquery.QuoteAsTextAdvice +
 			", or send true/false for a yes-or-no filter"
-}
-
-// FilterIDValueError refuses text that names no record in a filter over ids.
-// Bound as it is, Postgres would refuse it as a database fault, which the
-// operator's log reads as a server error.
-type FilterIDValueError struct{ Filter, Value string }
-
-func (e *FilterIDValueError) Error() string {
-	return fmt.Sprintf("report: this report's `%s` %s", slotFilters, analyticsquery.NotAnID(e.Filter, e.Value))
-}
-
-// MessageFault reuses the contract's one declared 422 code, for the reason
-// EmptyReportPlanError records below.
-func (e *FilterIDValueError) MessageFault() (code, message string) {
-	return reportFieldNotAllowedCode, e.Error() + " — " + analyticsquery.IDValueAdvice
-}
-
-// requireIDFilterValues refuses a value that no id column can hold, so a
-// malformed id never reaches a statement. A drill-through handle pins
-// dimensions too, so a name resolves as either.
-//
-//craft:ignore naked-any filter values are the decoded JSON plan, schemaless by design
-func requireIDFilterValues(spec reportSpec, filters map[string]any) error {
-	for _, key := range slices.Sorted(maps.Keys(filters)) {
-		expr, named := predicateExpr(spec, key)
-		value := filters[key]
-		if !named || value == nil || columnValueShapes[expr] != analyticsquery.ShapeID {
-			continue
-		}
-		text, ok := value.(string)
-		if !ok {
-			return &FilterValueNotAllowedError{Filter: key, Kind: analyticsquery.JSONShapeOf(value)}
-		}
-		if _, err := ids.Parse(text); err != nil {
-			return &FilterIDValueError{Filter: key, Value: text}
-		}
-	}
-	return nil
 }
 
 // reportFilterValue admits a caller's filter value, or refuses it as their

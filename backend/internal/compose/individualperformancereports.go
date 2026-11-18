@@ -104,7 +104,7 @@ func requireIndividualQuestion(
 func requireNamedQuestion(
 	ctx context.Context, tx pgx.Tx, spec reportSpec, requested RequestedScope, groupBy []string, filters map[string]any,
 ) error {
-	if err := requireIDFilterValues(spec, filters); err != nil {
+	if err := analyticsquery.RequireIDValues(filters, reportFieldNotAllowedCode, spec.valueShape); err != nil {
 		return err
 	}
 	if err := requireNamedRecords(ctx, tx, spec, requested, filters); err != nil {

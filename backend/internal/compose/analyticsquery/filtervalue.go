@@ -20,7 +20,6 @@ import (
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // QuoteAsTextAdvice is the fix, in the caller's own terms: the spelling that
@@ -31,30 +30,6 @@ const QuoteAsTextAdvice = `quote the value as text (a period like "2026" or "202
 // arrived, and which filter would not take it.
 func CannotCompare(shape, field string) string {
 	return fmt.Sprintf("cannot compare %s against %s", shape, httperr.QuoteCaller(field))
-}
-
-// IDValueAdvice is the spelling a filter over a column of record ids takes.
-const IDValueAdvice = "send the record's id in the canonical 8-4-4-4-12 hex form"
-
-// NotAnID is the first half of both doors' refusal of text that is no record id.
-func NotAnID(field, value string) string {
-	return fmt.Sprintf("%s takes a record id, and %s is not one", httperr.QuoteCaller(field), httperr.QuoteCaller(value))
-}
-
-// idValueRefusal refuses text that no id column can hold. Bound as it is,
-// Postgres would refuse it as a database fault, which the operator's log
-// reads as a server error.
-//
-//craft:ignore naked-any a filter value arrives from caller JSON
-func idValueRefusal(field string, shape ColumnShape, value any) error {
-	text, ok := value.(string)
-	if shape != ShapeID || !ok {
-		return nil
-	}
-	if _, err := ids.Parse(text); err == nil {
-		return nil
-	}
-	return &RefusalError{Kind: RefusalInvalid, Message: "filters " + NotAnID(field, text), Suggest: IDValueAdvice}
 }
 
 // JSONShapeOf names an arrived value in the caller's own vocabulary.
