@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer reports the description 'an account with a named exec sponsor' on Strategic Accts, which is the surviving word, but the criterion requires the meaning to be reported on Strategic Account (the spelling that goes), so the description is attached to the wrong word.",
+  "model": "claude-haiku-5-5",
+  "criterion": "Criterion 3. The answer reports that the word which survives, Strategic Account, now carries the meaning the user asked for — an account with a named exec sponsor. Any wording of that meaning will do, in any language. Answer no if the answer never reports the description at all, and no if the description it reports belongs to the word that goes. Read the spelling, not the answer's own account of the fold: the meaning must be reported on Strategic Account. An answer that reports it on Strategic Accts answers no, also when that answer itself calls Strategic Accts the survivor.",
+  "answer": "Strategic Account is on 41 accounts and Strategic Accts on 3.\n\nI have folded it the way you asked: Strategic Account goes into Strategic Accts, so Strategic Accts is the word that survives. The records already carry it.\n\nStrategic Accts now reads: an account with a named exec sponsor."
+}
