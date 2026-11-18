@@ -137,7 +137,7 @@ function BrandBlock() {
       <div className="railhead">
         <WorkspaceChip />
         <AppLink className="ws" href={start} aria-label={homeLabel}>
-          <Heading size="small" as="div" className="ws-name">
+          <Heading size="xsmall" as="div" className="ws-name">
             {t("shell.logoAria")}
           </Heading>
         </AppLink>
@@ -156,7 +156,7 @@ function BrandBlock() {
       >
         {/* `as="div"`: the workspace name is the rail's identity, not a section
             of the page, so an h5 here would be a level nothing opened. */}
-        <Heading size="small" as="div" className="ws-name">
+        <Heading size="xsmall" as="div" className="ws-name">
           {installation.display_name}
         </Heading>
         {nameTip}

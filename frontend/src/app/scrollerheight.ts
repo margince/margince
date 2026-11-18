@@ -7,6 +7,8 @@ import { type RefObject, useLayoutEffect } from "react";
  * Publishes the scroller's height as `--scrollerH` on the scroller, for a
  * sticky pane that caps itself to what the scroller shows. A shell banner
  * shortens the scroller, and a stylesheet's viewport units cannot see that.
+ * Its scrollbar's width goes on the column as `--scrollerGutter`, so the top
+ * bar can centre on the page's column as the scroller does.
  * `layout` names which of the shell's scrollers is mounted, so a switch
  * between them observes the new one.
  */
@@ -20,8 +22,19 @@ export function usePublishedScrollerHeight(
     if (element === null || typeof ResizeObserver === "undefined") {
       return;
     }
-    const publish = () =>
+    const publish = () => {
       element.style.setProperty("--scrollerH", `${element.clientHeight}px`);
+      const edges = getComputedStyle(element);
+      const gutter =
+        element.offsetWidth -
+        element.clientWidth -
+        Number.parseFloat(edges.borderLeftWidth) -
+        Number.parseFloat(edges.borderRightWidth);
+      element.parentElement?.style.setProperty(
+        "--scrollerGutter",
+        `${Math.max(0, gutter)}px`,
+      );
+    };
     publish();
     const observer = new ResizeObserver(publish);
     observer.observe(element);

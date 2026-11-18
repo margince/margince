@@ -155,6 +155,7 @@
 /* Above phone width the content is a card set in the sidebar's chrome. */
 @media (width > 700px) {
   .app:not(.railless) {
+    --cardEdge: 1px;
     background: var(--chrome);
   }
   .app:not(.railless) .main {
@@ -162,8 +163,22 @@
   }
   .app:not(.railless) .scroll {
     background: var(--bgPage);
-    border: 1px solid var(--groundEdge);
+    border: var(--cardEdge) solid var(--groundEdge);
     border-radius: var(--r-lg);
+  }
+  /* The trail starts on the line the page's column starts on in the card. */
+  .app:not(.railless) .topbar {
+    padding-inline: calc(
+      var(--cardEdge) +
+      max(
+        var(--pageGutter),
+        (
+          100% - 2 * var(--cardEdge) - var(--scrollerGutter, 0px) -
+          var(--pageMeasure, 100%)
+        ) / 2 +
+        var(--pageGutter)
+      )
+    );
   }
   /* An advisory strip is chrome, above the card. */
   .app:not(.railless) .appbanner {
@@ -438,6 +453,7 @@
   column-gap: var(--space-2);
   /* The containing block of the name's stretched link (`.rail .ws::after`). */
   position: relative;
+  isolation: isolate;
   flex: none;
   height: var(--topbarH);
   /* A breath between the head and the first destination: without it the row
@@ -451,14 +467,18 @@
     "mark name"
     "mark by";
 }
-/* Expanded, the head is a card; collapsed, the mark alone. */
+/* The press target's ground, under the mark and the name. */
 .rail .railhead::before {
   content: "";
   position: absolute;
-  inset: var(--space-1) calc(-1 * var(--space-1));
-  border: 1px solid var(--groundEdge);
+  z-index: -1;
+  inset: var(--space-1) 0;
   border-radius: var(--r-sm);
   pointer-events: none;
+  transition: background var(--dur-state) var(--ease-in-out);
+}
+.rail .railhead:has(.ws:hover)::before {
+  background: color-mix(in srgb, var(--textPrimary) 4%, var(--ground));
 }
 /* brand block */
 .rail .ws {
@@ -477,7 +497,7 @@
 .rail .ws::after {
   content: "";
   position: absolute;
-  inset: var(--space-1) calc(-1 * var(--space-1));
+  inset: var(--space-1) 0;
   border-radius: inherit;
 }
 .rail .ws:focus-visible {
@@ -542,14 +562,13 @@
 .rail .ws-company {
   grid-area: by;
   font: var(--fontBodySmall);
+  color: var(--textSecondary);
 }
 
 /* What collapsing folds away; the column clips it as it narrows. */
-.rail .railhead::before,
 .rail :is(.ws-name, .ws-company, .navlabel) {
   transition: var(--railWords);
 }
-.rail.collapsed .railhead::before,
 .rail.collapsed :is(.ws-name, .ws-company, .navlabel, .navheading, .navlead) {
   opacity: 0;
   visibility: hidden;
