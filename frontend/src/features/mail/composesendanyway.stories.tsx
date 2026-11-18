@@ -42,6 +42,7 @@ function stateOf(overrides: Partial<InlineReview> = {}): InlineReview {
     canSendAnyway: true,
     confirm: () => {},
     pending: false,
+    sending: false,
     changed: false,
     failed: false,
     ...overrides,

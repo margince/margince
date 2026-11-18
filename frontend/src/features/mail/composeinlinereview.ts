@@ -163,6 +163,9 @@ export function useInlineReview(inline: boolean, send: ComposeSend) {
     canSendAnyway,
     confirm,
     pending: decide.isPending,
+    /** The message is on its way: the Send or the Send anyway decision. It
+     *  holds the draft, the words and close as a Send does. */
+    sending: send.send.isPending || decide.isPending,
     changed: refreshed?.from === error,
     failed: ownDecision && decide.isError && refreshed?.from !== error,
   };

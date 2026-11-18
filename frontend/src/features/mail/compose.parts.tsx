@@ -296,6 +296,7 @@ export function ComposeBody({
   voice,
   marksIn,
   attach,
+  locked = false,
 }: Readonly<{
   bodyId: string;
   fields: ComposeFields;
@@ -316,10 +317,12 @@ export function ComposeBody({
   marksIn: Element | null;
   /** The paperclip, among the editor's own marks. */
   attach: ReactNode;
+  /** A write about these words is in flight, so they cannot change. */
+  locked?: boolean;
 }>) {
   const t = useT();
   const richTextLabels = useRichTextLabels();
-  const frozen = voice.rejectionInFlight;
+  const frozen = voice.rejectionInFlight || locked;
   return (
     <>
       {mail && (

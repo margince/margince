@@ -242,7 +242,7 @@ export function ComposeWindow({
     onClose,
   });
   const inlineReview = useInlineReview(inline, send);
-  const sendPending = send.send.isPending;
+  const sendPending = inlineReview.sending;
   const voice = useVoiceDraft({
     open,
     fields,
@@ -269,7 +269,8 @@ export function ComposeWindow({
     control: voice.control,
   });
   const busy = sendPending || voice.rejectionInFlight;
-  const held = voice.rejectionInFlight || savedDraft.saving;
+  const locked = [voice.rejectionInFlight, inlineReview.pending].includes(true);
+  const held = locked || savedDraft.saving;
   // Every hold on the Send button, so Cmd/Ctrl+Enter waits for the same ones.
   const sendBlocked = [
     held,
@@ -364,7 +365,7 @@ export function ComposeWindow({
                 accountCompanyId={accountCompanyId}
                 flagged={send.flagged}
                 marked={markedRecipients(inlineReview.review, fields, t)}
-                rejectionInFlight={voice.rejectionInFlight}
+                rejectionInFlight={locked}
                 onToEditing={settle}
               />
               <ComposeBody
@@ -381,6 +382,7 @@ export function ComposeWindow({
                 send={send}
                 sendBlocked={sendBlocked}
                 voice={voice}
+                locked={locked}
                 marksIn={markRow}
                 attach={
                   <AttachAction
@@ -389,7 +391,7 @@ export function ComposeWindow({
                     entityId={entityId}
                     chosen={attached.files}
                     onChange={attached.setFiles}
-                    disabled={voice.rejectionInFlight}
+                    disabled={locked}
                   />
                 }
               />
@@ -397,7 +399,7 @@ export function ComposeWindow({
             <AttachedFiles
               chosen={attached.files}
               onChange={attached.setFiles}
-              disabled={voice.rejectionInFlight}
+              disabled={locked}
             />
             {inline ? (
               <InlineBlockers

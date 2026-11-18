@@ -20,6 +20,7 @@ import {
   stubRoutes,
   WHY_ASK,
 } from "./compose.testkit";
+import { draftKey } from "./composesaveddraftcalls";
 import { ComposeWindow } from "./composewindow";
 
 // The email composer with the inline pilot switch on. Nothing is asked while
@@ -361,6 +362,59 @@ describe("the email composer with the switch on", () => {
       ),
     );
     answer(jsonResponse({ ...activity202, id: "act-9" }, 201));
+  });
+
+  it("holds the words, the close and the draft while Send anyway is out", async () => {
+    const user = userEvent.setup();
+    let answer: (response: Response) => void = () => {};
+    const sent = stubRoutes({
+      "GET /me": inlineMe,
+      "POST /emails": refused,
+      "POST /communication-reviews/r-1/direct-send": () =>
+        new Promise<Response>((resolve) => {
+          answer = resolve;
+        }),
+    });
+    const { queryClient } = render(<Composer />);
+    await waitFor(() =>
+      expect(screen.queryByRole("combobox", { name: WHY_ASK })).toBeNull(),
+    );
+    await fillInline(user);
+    await pressSend(user);
+    await user.type(await reasonField(), "Asked by phone.");
+    await waitFor(() => {
+      const last = sent
+        .filter((entry) => entry.key === "PUT /mail-drafts")
+        .at(-1);
+      expect(last?.body).toMatchObject({
+        override_explanation: "Asked by phone.",
+      });
+    });
+    await user.click(await sendAnyway());
+    await waitFor(() =>
+      expect(count(sent, "POST /communication-reviews/r-1/direct-send")).toBe(
+        1,
+      ),
+    );
+    const writesBefore = count(sent, "PUT /mail-drafts");
+
+    expect(screen.getByLabelText("Subject")).toHaveProperty("disabled", true);
+    expect(screen.getByRole("button", { name: "Close" })).toHaveProperty(
+      "disabled",
+      true,
+    );
+    // An edit that still lands, such as the reason, writes no draft.
+    await user.type(await reasonField(), " Twice.");
+    writeMessage("Body", "Edited while it was out.");
+    answer(jsonResponse({ ...activity202, id: "act-9" }, 201));
+
+    expect(
+      await screen.findByText("Queued as a recorded exception."),
+    ).toBeTruthy();
+    expect(count(sent, "PUT /mail-drafts")).toBe(writesBefore);
+    expect(
+      queryClient.getQueryData(draftKey({ type: "contact", id: "c-1" })),
+    ).toBeNull();
   });
 
   it("detaches the review on an edit and sends the edited message anew", async () => {
