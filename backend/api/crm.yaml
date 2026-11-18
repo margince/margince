@@ -2473,6 +2473,32 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /claims/{id}/reopen:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Contacts]
+      operationId: reopenKeptConversationClaim
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Undo Margince marking a promise kept.
+      description: |
+        Margince closes a promise on its own when an accepted invitation shows it was kept.
+        This opens that promise again, and Margince does not close it on the same evidence a
+        second time.
+
+        Only a promise Margince settled by itself can be opened this way. A promise a person
+        settled answers `409`, and so does a promise that is not settled. Opening a promise
+        that is already open is the same success. The caller needs the same access to the
+        contact as for settling.
+      responses:
+        '204': { description: 'The promise is open again, or already was.' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
   /claims/{id}/take-over:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -52066,6 +52092,11 @@ components:
           type: [string, 'null']
           format: date-time
           description: When a human typed over the machine. Set means the claim is theirs, not the extractor's.
+        settled_automatically:
+          type: boolean
+          description: >-
+            Margince marked this promise kept on evidence, so the card offers an undo.
+            False for a promise a person settled and for one that is open.
         task_activity_id:
           type: [string, 'null']
           format: uuid

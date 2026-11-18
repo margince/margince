@@ -20,11 +20,15 @@ import (
 // ActingAs builds the context a write runs under for an actor.
 type ActingAs func(ctx context.Context, by events.Actor) (context.Context, bool, error)
 
-// Settle closes the promises an accepted guest of this meeting kept. The system
-// writes it, so the audit row says it was automatic and names the meeting.
+// Settle closes the promises an accepted guest of this meeting kept, and opens
+// again those it closed on a meeting since called off. The system writes both,
+// so the audit row says it was automatic.
 func Settle(ctx context.Context, claims *contacts.Store, acting ActingAs, log *slog.Logger, meeting ids.UUID) error {
 	asSystem, ok, err := acting(ctx, events.Actor{Type: string(principal.PrincipalSystem)})
 	if err != nil || !ok {
+		return err
+	}
+	if err := claims.ReopenKeptByCalledOffMeeting(asSystem, meeting); err != nil {
 		return err
 	}
 	seat, internal, err := claims.MeetingSeat(asSystem, meeting)

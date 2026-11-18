@@ -12,15 +12,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"strconv"
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // Audit keys of an automatic settlement. The history and the undo read them.
@@ -31,8 +34,20 @@ const (
 	claimSettleReasonKey = "settle_reason"
 )
 
+// settledAutomaticallySQL is whether the latest settlement of claim row c was
+// the system's. c is the alias of conversation_claim in the caller's query.
+const settledAutomaticallySQL = `coalesce((
+	SELECT latest.after->>'` + claimSettledByKey + `' = '` + claimSettledAuto + `'
+	  FROM audit_log latest
+	 WHERE latest.entity_type = 'contact' AND latest.entity_id = c.contact_id
+	   AND latest.after->>'` + claimIDKey + `' = c.id::text AND latest.after->>'claim_status' = 'done'
+	 ORDER BY latest.occurred_at DESC, latest.id DESC LIMIT 1), false)`
+
 // keptByInvitationReason is the reason an accepted invitation records.
 const keptByInvitationReason = "invitation_accepted"
+
+// meetingCalledOffReason is the reason an automatic settlement was taken back.
+const meetingCalledOffReason = "meeting_called_off"
 
 // KeptByAcceptedGuest lists the open promises of ours that this meeting kept.
 //
@@ -76,6 +91,7 @@ func (s *Store) KeptByAcceptedGuest(ctx context.Context, meetingID ids.UUID) ([]
 			  JOIN activity src ON src.id = c.source_activity_id AND src.archived_at IS NULL
 			 WHERE m.id = $`+strconv.Itoa(meetingPos)+`  AND m.kind = 'meeting' AND m.archived_at IS NULL
 			   AND m.created_at >= src.occurred_at -- occurred_at raw: the meeting record's creation against the promise's moment, not an age
+			   AND `+relstrength.MeetingNotCalledOffSQL("m")+`
 			   AND `+scope+`
 			   AND NOT EXISTS (
 			     SELECT 1 FROM audit_log reopened
@@ -138,13 +154,7 @@ func (s *Store) ReopenAutoSettledClaim(ctx context.Context, claimID ids.UUID) er
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
 		var automatic bool
-		if err := tx.QueryRow(ctx, `
-			SELECT coalesce((
-			  SELECT a.after->>'`+claimSettledByKey+`' = '`+claimSettledAuto+`'
-			    FROM audit_log a
-			   WHERE a.entity_type = 'contact' AND a.after->>'`+claimIDKey+`' = $1::text
-			     AND a.after->>'claim_status' = 'done'
-			   ORDER BY a.occurred_at DESC, a.id DESC LIMIT 1), false)`, claimID).Scan(&automatic); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT coalesce((SELECT `+settledAutomaticallySQL+` FROM conversation_claim c WHERE c.id = $1), false)`, claimID).Scan(&automatic); err != nil {
 			return fmt.Errorf("read who settled the claim: %w", err)
 		}
 		if !automatic {
@@ -178,4 +188,53 @@ func (s *Store) MeetingSeat(ctx context.Context, meetingID ids.UUID) (ids.UUID, 
 		return ids.UUID{}, false, nil
 	}
 	return *seat, true, nil
+}
+
+// ReopenKeptConversationClaim implements (POST /claims/{id}/reopen).
+func (h Handlers) ReopenKeptConversationClaim(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	if err := h.store.ReopenAutoSettledClaim(r.Context(), ids.UUID(id)); err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// ReopenKeptByCalledOffMeeting opens again the promises the system settled on
+// the evidence of this meeting, once the meeting is called off. An accepted
+// invitation to a meeting that no longer happens proves nothing.
+func (s *Store) ReopenKeptByCalledOffMeeting(ctx context.Context, meetingID ids.UUID) error {
+	if actor, ok := principal.Actor(ctx); !ok || actor.Type != principal.PrincipalSystem {
+		return apperrors.ErrPermissionDenied
+	}
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
+		return err
+	}
+	return s.tx(ctx, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `
+			SELECT c.id FROM conversation_claim c
+			  JOIN activity m ON m.id = $1 AND m.archived_at IS NULL AND NOT `+relstrength.MeetingNotCalledOffSQL("m")+`
+			 WHERE c.status = 'done' AND c.archived_at IS NULL
+			   AND (SELECT latest.after->>'`+claimEvidenceKey+`'
+			          FROM audit_log latest
+			         WHERE latest.entity_type = 'contact' AND latest.entity_id = c.contact_id
+			           AND latest.after->>'`+claimIDKey+`' = c.id::text AND latest.after->>'claim_status' = 'done'
+			         ORDER BY latest.occurred_at DESC, latest.id DESC LIMIT 1) = $1::text
+			   AND `+settledAutomaticallySQL+`
+			 ORDER BY c.id`, meetingID)
+		if err != nil {
+			return fmt.Errorf("find the promises settled on a called-off meeting: %w", err)
+		}
+		claims, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+		if err != nil {
+			return fmt.Errorf("find the promises settled on a called-off meeting: %w", err)
+		}
+		for _, claim := range claims {
+			if err := moveClaimStatus(ctx, tx, claim, claimStatusDone, claimStatusOpen, map[string]any{
+				claimSettledByKey: claimSettledAuto, claimSettleReasonKey: meetingCalledOffReason,
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }

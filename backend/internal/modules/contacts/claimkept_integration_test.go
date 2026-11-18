@@ -11,6 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -20,6 +21,7 @@ type keptFixture struct {
 	system  context.Context
 	human   context.Context
 	claim   ids.UUID
+	contact ids.UUID
 	meeting ids.UUID
 }
 
@@ -32,6 +34,7 @@ func keptPromise(t *testing.T, guest, answer string) keptFixture {
 	system := principal.WithActor(human, principal.Principal{Type: principal.PrincipalSystem, ID: "system:test"})
 	f := keptFixture{e: e, system: system, human: human, claim: ids.NewV7(), meeting: ids.NewV7()}
 	holder, source, guestID := ids.NewV7(), ids.NewV7(), ids.NewV7()
+	f.contact = holder
 	for _, stmt := range []struct {
 		sql  string
 		args []any
@@ -171,5 +174,57 @@ func TestASeatWithoutWriteAccessToTheClaimsContactSettlesNothing(t *testing.T) {
 	}
 	if got := f.status(t); got != "open" {
 		t.Errorf("status = %q, want open", got)
+	}
+}
+
+func TestACalledOffMeetingKeepsNoPromiseAndTakesBackTheOneItKept(t *testing.T) {
+	f := keptPromise(t, "Riley Reed", "accepted")
+	if err := f.e.store.SettleKeptByEvidence(f.system, f.human, f.claim, f.meeting); err != nil {
+		t.Fatalf("settling: %v", err)
+	}
+	f.e.execAs(f.human, t, `UPDATE activity SET meeting_status = 'canceled' WHERE id = $1`, f.meeting)
+	if err := f.e.store.ReopenKeptByCalledOffMeeting(f.system, f.meeting); err != nil {
+		t.Fatalf("taking back: %v", err)
+	}
+	if got := f.status(t); got != "open" {
+		t.Errorf("status after the meeting was called off = %q, want open", got)
+	}
+	if found := f.kept(t); len(found) != 0 {
+		t.Errorf("a called-off meeting kept %v", found)
+	}
+}
+
+func TestAHumanSettledPromiseSurvivesACalledOffMeeting(t *testing.T) {
+	f := keptPromise(t, "Riley Reed", "accepted")
+	if err := f.e.store.SettleConversationClaim(f.human, f.claim, "done"); err != nil {
+		t.Fatal(err)
+	}
+	f.e.execAs(f.human, t, `UPDATE activity SET meeting_status = 'canceled' WHERE id = $1`, f.meeting)
+	if err := f.e.store.ReopenKeptByCalledOffMeeting(f.system, f.meeting); err != nil {
+		t.Fatal(err)
+	}
+	if got := f.status(t); got != "done" {
+		t.Errorf("status = %q, want done: a human settled it", got)
+	}
+}
+
+func TestTheClaimSaysItWasSettledAutomatically(t *testing.T) {
+	f := keptPromise(t, "Riley Reed", "accepted")
+	if err := f.e.store.SettleKeptByEvidence(f.system, f.human, f.claim, f.meeting); err != nil {
+		t.Fatal(err)
+	}
+	var claims []crmcontracts.ConversationClaim
+	if err := f.e.store.tx(f.human, func(tx pgx.Tx) error {
+		var err error
+		claims, err = f.e.store.ClaimsForContact(f.human, tx, ids.From[ids.ContactKind](f.contact), nil, 10)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if len(claims) != 1 || claims[0].SettledAutomatically == nil || !*claims[0].SettledAutomatically {
+		t.Fatalf("claims = %+v, want one marked settled automatically", claims)
+	}
+	if err := f.e.store.ReopenAutoSettledClaim(f.human, f.claim); err != nil {
+		t.Fatal(err)
 	}
 }

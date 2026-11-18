@@ -34660,6 +34660,10 @@ components:
           type: [string, 'null']
           format: date-time
           description: When a human typed over the machine. Set means the claim is theirs, not the extractor's.
+        settled_automatically:
+          type: boolean
+          description: >-
+            Margince marked this promise kept on evidence, so the card offers an undo. False for a promise a person settled and for one that is open.
         task_activity_id:
           type: [string, 'null']
           format: uuid
