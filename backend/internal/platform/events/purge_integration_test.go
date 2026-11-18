@@ -17,7 +17,6 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/margince/margince/backend/internal/platform/redistest"
-
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 )
 

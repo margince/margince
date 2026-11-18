@@ -28,8 +28,8 @@ func TestReconcileChannelProvidersInsertsAnUnseenProvider(t *testing.T) {
 	// a no-op for it and inserts a genuinely new one — standing in for "core
 	// ships a second channel connector" without adding one.
 	composed := &Extensions{}
-	if err := reconcileChannelProviders(ctx, e.Pool, []string{"telegram", "fake_core_channel"}, composed); err != nil {
-		t.Fatalf("reconcileChannelProviders: %v", err)
+	if err := reconcileComposedProviders(ctx, e.Pool, []string{"telegram", "fake_core_channel"}, composed); err != nil {
+		t.Fatalf("reconcileComposedProviders: %v", err)
 	}
 
 	var transport string
@@ -55,15 +55,15 @@ func TestReconcileChannelProvidersInsertsAnUnseenProvider(t *testing.T) {
 		t.Fatalf("querying activity_kind: %v", err)
 	}
 	if kindExists {
-		t.Fatal("reconcileChannelProviders minted an activity_kind row for a provider — a transport is not an interaction kind, " +
+		t.Fatal("reconcileComposedProviders minted an activity_kind row for a provider — a transport is not an interaction kind, " +
 			"and a boot that keeps inserting these will silently restore whatever the kind-narrowing migration removes")
 	}
 
 	// Idempotent: calling it again with the SAME set changes nothing and
 	// errors on nothing — a role that constructs the registry twice (the
 	// worker's one-shot backfill helper does) must not fail its second call.
-	if err := reconcileChannelProviders(ctx, e.Pool, []string{"telegram", "fake_core_channel"}, composed); err != nil {
-		t.Fatalf("reconcileChannelProviders, second call: %v", err)
+	if err := reconcileComposedProviders(ctx, e.Pool, []string{"telegram", "fake_core_channel"}, composed); err != nil {
+		t.Fatalf("reconcileComposedProviders, second call: %v", err)
 	}
 }
 
@@ -82,9 +82,9 @@ func TestReconcileChannelProvidersRefusesAProviderNameTheGrammarRejects(t *testi
 	// is how a name no installation could ever register got used as the stand-in
 	// for one that could.
 	composed := &Extensions{}
-	err := reconcileChannelProviders(ctx, e.Pool, []string{"fake-core-channel"}, composed)
+	err := reconcileComposedProviders(ctx, e.Pool, []string{"fake-core-channel"}, composed)
 	if err == nil {
-		t.Fatal("reconcileChannelProviders accepted a provider name the channel_provider grammar refuses; " +
+		t.Fatal("reconcileComposedProviders accepted a provider name the channel_provider grammar refuses; " +
 			"a name that cannot be stored must fail at boot, not become a provider the registry silently lacks")
 	}
 
@@ -105,8 +105,8 @@ func TestReconcileChannelProvidersNeverDeletesARetiredRow(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := context.Background()
 	composed := &Extensions{}
-	if err := reconcileChannelProviders(ctx, e.Pool, []string{}, composed); err != nil {
-		t.Fatalf("reconcileChannelProviders with an empty composed set: %v", err)
+	if err := reconcileComposedProviders(ctx, e.Pool, []string{}, composed); err != nil {
+		t.Fatalf("reconcileComposedProviders with an empty composed set: %v", err)
 	}
 
 	var count int
@@ -137,8 +137,8 @@ func TestReconcileChannelProvidersRegistersAUnitsDeclaredTransport(t *testing.T)
 		Provider: "mine_chat", CredentialModel: extension.CredentialPerMember, Send: (&capturedSend{}).send, Live: answersLive(true, nil),
 	})
 
-	if err := reconcileChannelProviders(ctx, e.Pool, []string{capture.ProviderTelegram}, composed); err != nil {
-		t.Fatalf("reconcileChannelProviders: %v", err)
+	if err := reconcileComposedProviders(ctx, e.Pool, []string{capture.ProviderTelegram}, composed); err != nil {
+		t.Fatalf("reconcileComposedProviders: %v", err)
 	}
 
 	var transport, credentialModel, label string
@@ -195,8 +195,8 @@ func TestReconcileChannelProvidersHonoursAUnitsDeclaredWorkspaceBotCredential(t 
 		Send: (&capturedSend{}).send, Live: answersLive(true, nil),
 	})
 
-	if err := reconcileChannelProviders(ctx, e.Pool, []string{capture.ProviderTelegram}, composed); err != nil {
-		t.Fatalf("reconcileChannelProviders: %v", err)
+	if err := reconcileComposedProviders(ctx, e.Pool, []string{capture.ProviderTelegram}, composed); err != nil {
+		t.Fatalf("reconcileComposedProviders: %v", err)
 	}
 
 	var transport, credentialModel string
@@ -224,8 +224,8 @@ func TestReconcileChannelProvidersRegistersACaptureOnlyUnitTransportAsUnsendable
 	owner := integration.OwnerConn(t)
 	composed := declaresTransport("mine", extension.Channel{Provider: "mine_chat", CredentialModel: extension.CredentialPerMember})
 
-	if err := reconcileChannelProviders(ctx, e.Pool, []string{capture.ProviderTelegram}, composed); err != nil {
-		t.Fatalf("reconcileChannelProviders: %v", err)
+	if err := reconcileComposedProviders(ctx, e.Pool, []string{capture.ProviderTelegram}, composed); err != nil {
+		t.Fatalf("reconcileComposedProviders: %v", err)
 	}
 
 	var supplies bool
@@ -259,7 +259,7 @@ func TestReconcileChannelProvidersRefusesAUnitThatShadowsACoreConnector(t *testi
 		Provider: capture.ProviderTelegram, CredentialModel: extension.CredentialPerMember, Send: (&capturedSend{}).send, Live: answersLive(true, nil),
 	})
 
-	err := reconcileChannelProviders(ctx, e.Pool, []string{capture.ProviderTelegram}, composed)
+	err := reconcileComposedProviders(ctx, e.Pool, []string{capture.ProviderTelegram}, composed)
 
 	if err == nil {
 		t.Fatal("a unit declaring the core's own transport was accepted; every reply on it would leave under the unit's credential")
@@ -300,7 +300,7 @@ func TestReconcileChannelProvidersRefusesAUnitThatSeizesARegisteredCoreTransport
 		Provider: "whatsapp", CredentialModel: extension.CredentialPerMember, Send: (&capturedSend{}).send, Live: answersLive(true, nil),
 	})
 
-	err := reconcileChannelProviders(ctx, e.Pool, []string{capture.ProviderTelegram}, composed)
+	err := reconcileComposedProviders(ctx, e.Pool, []string{capture.ProviderTelegram}, composed)
 
 	if err == nil {
 		t.Fatal("a unit seized a registered core transport it composed no connector for; every hand-logged conversation on it became repliable by the unit")

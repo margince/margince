@@ -30,6 +30,11 @@ func Bound(ctx context.Context) *Config {
 	if c, ok := ctx.Value(boundKey{}).(*Config); ok && c != nil {
 		return c
 	}
+	return ProcessBound()
+}
+
+// ProcessBound is the configuration the process bound, or nil before Bind.
+func ProcessBound() *Config {
 	return bound.Load()
 }
 

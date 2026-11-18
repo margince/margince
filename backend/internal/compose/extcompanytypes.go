@@ -54,7 +54,7 @@ func (c extensionCompanies) SetExtensionTypes(ctx context.Context, id string, ty
 	if err != nil {
 		return crm.Company{}, fmt.Errorf("%w: %q is not a UUID", extension.ErrInvalid, id)
 	}
-	unit, _ := c.core.deps.composed.unit(c.core.unit)
+	unit := c.core.deps.composed.unit(c.core.unit)
 	declared := unit.CompanyTypes
 	values := make([]string, 0, len(types))
 	for _, t := range types {

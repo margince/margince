@@ -9,6 +9,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/extensionprivacy"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/ports/compliancedocs"
@@ -54,18 +55,7 @@ func RegisterExtensions(exts []extension.Extension, verbs []extension.Verb, jobD
 	if err != nil {
 		return nil, err
 	}
-	rbacObjects, err := extensionRbacObjects(verbs)
-	if err != nil {
-		return nil, err
-	}
-	rbacDefaults, err := extensionRbacDefaults(verbs)
-	if err != nil {
-		return nil, err
-	}
-	if rbacObjects, rbacDefaults, err = withRecordKindRbac(exts, rbacObjects, rbacDefaults); err != nil {
-		return nil, err
-	}
-	if composed.rbac, err = NewRbacObjects(rbacObjects, rbacDefaults); err != nil {
+	if composed.rbac, err = composedRbac(exts, verbs); err != nil {
 		return nil, err
 	}
 	// Still the validate phase: joining a unit's Go job behavior to its
@@ -127,6 +117,23 @@ func RegisterExtensions(exts []extension.Extension, verbs []extension.Verb, jobD
 	composed.tools, composed.jobs = tools, composedSet
 	composed.subs = buildExtensionSubscriptions(composed, exts)
 	return composed, nil
+}
+
+// composedRbac is the RBAC vocabulary the composed verbs and record kinds add,
+// with the default grants each one carries.
+func composedRbac(exts []extension.Extension, verbs []extension.Verb) (identity.RbacObjects, error) {
+	rbacObjects, err := extensionRbacObjects(verbs)
+	if err != nil {
+		return identity.RbacObjects{}, err
+	}
+	rbacDefaults, err := extensionRbacDefaults(verbs)
+	if err != nil {
+		return identity.RbacObjects{}, err
+	}
+	if rbacObjects, rbacDefaults, err = withRecordKindRbac(exts, rbacObjects, rbacDefaults); err != nil {
+		return identity.RbacObjects{}, err
+	}
+	return NewRbacObjects(rbacObjects, rbacDefaults)
 }
 
 // validateExtensionSet preflights every unit and every capability —

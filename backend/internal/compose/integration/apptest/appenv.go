@@ -97,17 +97,17 @@ func SetupAppWithOptions(t *testing.T, opts ...compose.Option) *AppEnv {
 // composed, so the origin is known without booting twice.
 func SetupAppWithOriginOptions(t *testing.T, opts func(origin string) []compose.Option) *AppEnv {
 	t.Helper()
-	return setupApp(t, nil, opts)
+	return setupComposedApp(t, nil, opts)
 }
 
 // SetupAppComposing is SetupAppWithOptions serving a composition the suite
 // registered.
 func SetupAppComposing(t *testing.T, composed *compose.Extensions, opts ...compose.Option) *AppEnv {
 	t.Helper()
-	return setupApp(t, composed, func(string) []compose.Option { return opts })
+	return setupComposedApp(t, composed, func(string) []compose.Option { return opts })
 }
 
-func setupApp(t *testing.T, composed *compose.Extensions, opts func(origin string) []compose.Option) *AppEnv {
+func setupComposedApp(t *testing.T, composed *compose.Extensions, opts func(origin string) []compose.Option) *AppEnv {
 	t.Helper()
 	db := testdb.New(t)
 	ctx := context.Background()

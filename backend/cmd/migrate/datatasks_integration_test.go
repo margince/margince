@@ -28,10 +28,6 @@ import (
 func TestDataTasksExecuteRunsInProcessAndQueuesNothing(t *testing.T) {
 	t.Parallel()
 	dsn := migratedDatabase(t, "_dtexec")
-	operation := func(context.Context, *pgxpool.Pool, string) ([]datatask.Progress, error) {
-		t.Error("execute reached the operation that queues work for the worker")
-		return nil, errors.New("not here")
-	}
 	for name, c := range map[string]struct {
 		run  compose.DataTaskRun
 		fail bool
@@ -47,7 +43,11 @@ func TestDataTasksExecuteRunsInProcessAndQueuesNothing(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			called := false
-			command := dataTaskCommand{operation: operation, useConfig: func(*config.Config) {}}
+			command := dataTaskCommand{useConfig: func(*config.Config) {}}
+			command.operation = func(context.Context, *pgxpool.Pool, string) ([]datatask.Progress, error) {
+				t.Error("execute reached the operation that queues work for the worker")
+				return nil, errors.New("not here")
+			}
 			command.executor = func(context.Context, *pgxpool.Pool, int) (compose.DataTaskRun, error) {
 				called = true
 				return c.run, nil

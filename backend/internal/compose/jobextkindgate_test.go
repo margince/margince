@@ -83,7 +83,7 @@ func TestTheJobsGateFamilyAdmitsARegisteredExtensionKind(t *testing.T) {
 		}
 	}
 
-	census, err := newJobCensus(composed)
+	census, err := jobCensusOf(composed)
 	if err != nil {
 		t.Fatalf("NewJobCensus: %v", err)
 	}

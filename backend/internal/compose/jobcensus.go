@@ -63,11 +63,11 @@ type JobCensus struct {
 // declaration names, or a kind gated on the one it missed would be reported as
 // unwired when it is merely unconfigured here.
 func NewJobCensus() (*JobCensus, error) {
-	return newJobCensus(nil)
+	return jobCensusOf(nil)
 }
 
-// newJobCensus is NewJobCensus over a role that serves the composition's jobs.
-func newJobCensus(composed *Extensions) (*JobCensus, error) {
+// jobCensusOf is NewJobCensus over a role that serves the composition's jobs.
+func jobCensusOf(composed *Extensions) (*JobCensus, error) {
 	cfg := censusJobConfig()
 	cfg.Extensions = composed
 	if err := everyDeclaredDependencySupplied(cfg); err != nil {

@@ -51,7 +51,7 @@ import (
 // transport is a refusal an operator has to act on, and the caller that owns
 // the process's exit is where that decision belongs.
 func ReconcileChannelProviders(ctx context.Context, pool *pgxpool.Pool, composed *Extensions) error {
-	return reconcileChannelProviders(ctx, pool, CoreChannelProviders(), composed)
+	return reconcileComposedProviders(ctx, pool, CoreChannelProviders(), composed)
 }
 
 // CoreChannelProviders is every transport this binary compiled a CORE connector
@@ -92,11 +92,10 @@ func sendableCarriage(sendable []string, core map[string]connector.Carriage) map
 	return out
 }
 
-// reconcileChannelProviders upserts a channel_provider row for every transport
-// this binary composed — the core connectors passed in, plus every channel the
-// composed UNITS declare — carrying the display facts the discovery endpoint
-// publishes, then sets both packages' in-memory snapshots to the subset a reply
-// can actually leave on.
+// reconcileComposedProviders upserts a channel_provider row for every transport
+// this binary composed: the core connectors passed in and every channel a
+// composed unit declares. Each row carries the display facts the discovery
+// endpoint publishes. It then records the subset a reply can leave on.
 //
 // It is also where a unit shadowing a core connector is refused, because this is
 // the first point at which both sets exist (unitChannelFacts).
@@ -117,7 +116,7 @@ func sendableCarriage(sendable []string, core map[string]connector.Carriage) map
 // its row — activity and contact_channel_identity rows still reference it, the
 // FK would refuse the delete anyway, and ErrConnectorNotConfigured already
 // parks a send against it rather than needing the row gone.
-func reconcileChannelProviders(ctx context.Context, pool *pgxpool.Pool, providers []string, composed *Extensions) error {
+func reconcileComposedProviders(ctx context.Context, pool *pgxpool.Pool, providers []string, composed *Extensions) error {
 	var units []channelProviderFacts
 	if err := database.WithInfraTx(ctx, pool, func(tx pgx.Tx) error {
 		reserved, err := reservedCoreProviders(ctx, tx, providers)
