@@ -201,6 +201,7 @@ func TestOneProtectedSignalWithholdsTheTimelineTitles(t *testing.T) {
 	evidence := []deals.SuggestionEvidence{signal(newer), signal(older)}
 	prefill := func() deals.DealPrefill {
 		var fill deals.DealPrefill
+		//nolint:unparam // the shape is the clock dealscout.Prefill takes; this fixed day never fails
 		today := func(context.Context, pgx.Tx, time.Time) (time.Time, error) { return storekit.AsDate(e.now), nil }
 		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) (err error) {
 			fill, err = dealscout.Prefill(e.now, today)(e.Admin(), tx, evidence)

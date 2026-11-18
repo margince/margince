@@ -53,8 +53,10 @@ func TestADocumentAmountWinsOverABudgetAndAProtectedRequestGivesNothing(t *testi
 	if draft.AmountMinor == nil || *draft.AmountMinor != minor || *draft.Currency != eur || draft.CloseDate == nil {
 		t.Errorf("draft = %v %v %v, want the document's 12,500 EUR and the decision day", draft.AmountMinor, draft.Currency, draft.CloseDate)
 	}
-	protected := []Item{{evidence: deals.SuggestionEvidence{Kind: deals.EvidenceSignal},
-		request: &Request{BudgetQuote: &budget, DecisionDate: &day}}}
+	protected := []Item{{
+		evidence: deals.SuggestionEvidence{Kind: deals.EvidenceSignal},
+		request:  &Request{BudgetQuote: &budget, DecisionDate: &day},
+	}}
 	if draft := Draft(protected, "USD", today); draft.AmountMinor != nil || draft.CloseDate != nil {
 		t.Errorf("a protected request drafted %v / %v, want neither", draft.AmountMinor, draft.CloseDate)
 	}
