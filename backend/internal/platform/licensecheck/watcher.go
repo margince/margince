@@ -43,6 +43,7 @@ type TokenSource func(context.Context) (string, error)
 type Watcher struct {
 	source  TokenSource
 	now     func() time.Time
+	budget  time.Duration
 	log     *slog.Logger
 	env     runtimeenv.Environment
 	posture atomic.Pointer[Posture]
@@ -76,7 +77,7 @@ func NewWatcher(ctx context.Context, source TokenSource, now func() time.Time, l
 	if err != nil {
 		return nil, err
 	}
-	w := &Watcher{source: source, now: now, log: log, env: env}
+	w := &Watcher{source: source, now: now, budget: recheckBudget, log: log, env: env}
 	w.posture.Store(&resolved)
 	return w, nil
 }
@@ -117,7 +118,7 @@ func (w *Watcher) Recheck(ctx context.Context) error {
 	w.mu.Unlock()
 
 	// Not the caller's cancellation: callers who joined are waiting on this run.
-	detached, cancel := context.WithTimeout(context.WithoutCancel(ctx), recheckBudget)
+	detached, cancel := context.WithTimeout(context.WithoutCancel(ctx), w.budget)
 	run.err = w.recheckOnce(detached)
 	cancel()
 	w.mu.Lock()
