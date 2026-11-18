@@ -206,10 +206,11 @@ func (s *Store) AcceptOffer(ctx context.Context, id ids.OfferID, ifVersion *int6
 		}
 
 		dealID := ids.From[ids.DealKind](ids.UUID(current.DealId))
-		dealChanged, err := s.syncDealAmountFromOffer(ctx, tx, dealID, current)
+		dealSync, err := s.syncDealAmountFromOffer(ctx, tx, dealID, current)
 		if err != nil {
 			return err
 		}
+		dealChanged := dealSync.after
 		allocated, err := syncDealProductsFromOffer(ctx, tx, dealID, current)
 		if err != nil {
 			return err
@@ -224,6 +225,13 @@ func (s *Store) AcceptOffer(ctx context.Context, id ids.OfferID, ifVersion *int6
 		if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, offerAcceptedPayload(current)); err != nil {
 			return fmt.Errorf("emit offer.accepted: %w", err)
 		}
+		dealAuditID, err := auditDealRepricing(ctx, tx, dealID, id, dealSync)
+		if err != nil {
+			return err
+		}
+		if dealAuditID == ids.Nil {
+			dealAuditID = auditID
+		}
 		// The paired deal.updated carries the FULL set of deal columns the sync
 		// actually wrote — including the re-frozen fx_rate_to_base/fx_rate_date
 		// on a closed deal — so a subscriber never retains stale
@@ -231,7 +239,7 @@ func (s *Store) AcceptOffer(ctx context.Context, id ids.OfferID, ifVersion *int6
 		// held wrote none, and emits nothing: a deal.updated naming no field
 		// tells a subscriber the deal changed when it did not.
 		if len(dealChanged) > 0 {
-			if err := storekit.EmitEvent(ctx, tx, auditID, dealID.UUID, crmcontracts.PublicEventDealUpdated{
+			if err := storekit.EmitEvent(ctx, tx, dealAuditID, dealID.UUID, crmcontracts.PublicEventDealUpdated{
 				ChangedFields: dealChanged,
 			}); err != nil {
 				return fmt.Errorf("emit paired deal.updated: %w", err)
@@ -243,6 +251,22 @@ func (s *Store) AcceptOffer(ctx context.Context, id ids.OfferID, ifVersion *int6
 		return nil
 	})
 	return out, err
+}
+
+// auditDealRepricing records the deal's own change, so its History reads the old
+// and the new value the way it does for a manual edit. The offer it came from
+// rides the evidence, which keeps the images to the deal's columns. An accept
+// that moved no deal column writes no deal row and returns the zero id.
+func auditDealRepricing(ctx context.Context, tx pgx.Tx, dealID ids.DealID, offerID ids.OfferID, w dealWrite) (ids.UUID, error) {
+	if len(w.before) == 0 {
+		return ids.Nil, nil
+	}
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", "deal", dealID.UUID, w.before, w.after,
+		map[string]any{"offer_id": offerID.UUID})
+	if err != nil {
+		return ids.Nil, fmt.Errorf("audit deal repricing from accepted offer: %w", err)
+	}
+	return auditID, nil
 }
 
 // acceptedOfferImage is the accept's audit after-image: the offer's own

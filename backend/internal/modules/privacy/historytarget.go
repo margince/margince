@@ -61,7 +61,7 @@ func HistoryServesEntry(ctx context.Context, tx pgx.Tx, entityType string, entit
 		return false, err
 	}
 
-	window := recordHistoryWindowSQL(typePos, idPos, arg(1), conds, edgeCTE)
+	window := recordHistoryWindowSQL(typePos, idPos, arg(1), conds, edgeCTE, "")
 	var served bool
 	if err := tx.QueryRow(ctx,
 		`SELECT EXISTS (SELECT 1 FROM (`+window+`) AS target)`, args...).Scan(&served); err != nil {

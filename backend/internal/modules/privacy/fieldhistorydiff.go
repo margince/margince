@@ -111,6 +111,8 @@ type auditDiffRow struct {
 	occurredAt      time.Time
 	before          map[string]any
 	after           map[string]any
+	// sideField is the company field a profile-field or fact row was about.
+	sideField *string
 }
 
 // diffAuditRowFields projects one audit row into per-field entries:
@@ -126,6 +128,9 @@ func diffAuditRowFields(row auditDiffRow, mask entityFieldMask, fieldFilter *str
 	// relink counts as field changes.
 	if !fieldHistoryProjectedActions[row.action] {
 		return nil
+	}
+	if row.sideField != nil {
+		row.before, row.after, _ = sidecarImages(*row.sideField, row.action, row.before, row.after)
 	}
 	before := applyFieldMask(applyFieldMask(row.before, mask), writerBookkeepingKeys)
 	after := applyFieldMask(applyFieldMask(row.after, mask), writerBookkeepingKeys)
