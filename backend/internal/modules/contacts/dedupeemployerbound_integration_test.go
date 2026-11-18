@@ -19,10 +19,10 @@ import (
 // planNode is the part of an EXPLAIN node the test reads. Actual Rows is per
 // loop, and a parallel node reports the sum of its workers' loops.
 type planNode struct {
-	Relation string     `json:"Relation Name"`
-	Rows     float64    `json:"Actual Rows"`
-	Loops    float64    `json:"Actual Loops"`
-	Plans    []planNode `json:"Plans"`
+	Relation string     `json:"Relation Name"` //nolint:tagliatelle // Postgres's EXPLAIN key, not ours to rename
+	Rows     float64    `json:"Actual Rows"`   //nolint:tagliatelle // Postgres's EXPLAIN key, not ours to rename
+	Loops    float64    `json:"Actual Loops"`  //nolint:tagliatelle // Postgres's EXPLAIN key, not ours to rename
+	Plans    []planNode `json:"Plans"`         //nolint:tagliatelle // Postgres's EXPLAIN key, not ours to rename
 }
 
 // rowsRead sums the rows every node on these tables produced, workers included.
@@ -59,7 +59,7 @@ func TestTheCandidateReadSkipsColleaguesWhoseNamesDoNotMatch(t *testing.T) {
 		t.Fatalf("explaining the candidate read: %v", err)
 	}
 	var plans []struct {
-		Plan planNode `json:"Plan"`
+		Plan planNode `json:"Plan"` //nolint:tagliatelle // Postgres's EXPLAIN key, not ours to rename
 	}
 	if err := json.Unmarshal(raw, &plans); err != nil || len(plans) != 1 {
 		t.Fatalf("reading the plan: %v", err)
