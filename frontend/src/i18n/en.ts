@@ -9245,6 +9245,13 @@ export const en = {
   "settings.installAppDismissed":
     "Install Margince later from the browser’s menu or the install icon in its address bar.",
   "settings.installAppAction": "Install",
+  "settings.installAppManualMac":
+    "To install, choose “File”, then “Add to Dock”.",
+  "installHint.title": "Install Margince as an app",
+  "installHint.value":
+    "Opens from your home screen with one tap, in its own window. No app store, nothing to download.",
+  "installHint.manual": "Tap {share} “Share”, then “Add to Home Screen”.",
+  "installHint.notNow": "Not now",
   "role.admin": "Admin",
   "role.management": "Management",
   "role.manager": "Team lead",

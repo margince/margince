@@ -9288,6 +9288,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.installAppDismissed":
     "Installiere Margince später über das Menü des Browsers oder das Symbol zum Installieren in der Adressleiste.",
   "settings.installAppAction": "Installieren",
+  "settings.installAppManualMac":
+    "Zum Installieren wähle „Ablage“ und dann „Zum Dock hinzufügen“.",
+  "installHint.title": "Margince als App installieren",
+  "installHint.value":
+    "Öffnet sich mit einem Tipp auf dem Home-Bildschirm im eigenen Fenster. Kein App Store, nichts herunterzuladen.",
+  "installHint.manual":
+    "Tippe auf {share} „Teilen“ und dann auf „Zum Home-Bildschirm“.",
+  "installHint.notNow": "Nicht jetzt",
   "role.admin": "Admin",
   "role.management": "Geschäftsleitung",
   "role.manager": "Teamleitung",

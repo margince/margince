@@ -168,16 +168,23 @@ export function trialStandingOf(
  * without `license:read`: the lock screen reaches everyone through /me instead.
  */
 export function useTrialStanding(): TrialStanding | undefined {
-  const mayRead = useCan("license", "read");
-  const query = useLicenseEntitlement(mayRead);
   // Once a minute is plenty for a count in whole days.
   const now = useNow(60_000);
-  const trial = query.data?.trial;
+  const trial = useTrial();
   useRefreshAtTrialEnd(trial);
-  if (!mayRead || !trial) {
-    return undefined;
-  }
-  return trialStandingOf(trial, now);
+  return trial && trialStandingOf(trial, now);
+}
+
+/** The same standing at `now`, for a reader that schedules nothing. */
+export function useTrialStandingAt(now: number): TrialStanding | undefined {
+  const trial = useTrial();
+  return trial && trialStandingOf(trial, now);
+}
+
+function useTrial(): LicenseTrial | undefined {
+  const mayRead = useCan("license", "read");
+  const trial = useLicenseEntitlement(mayRead).data?.trial;
+  return mayRead ? trial : undefined;
 }
 
 // The longest delay a browser timer keeps; a longer one fires at once.

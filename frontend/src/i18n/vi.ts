@@ -9047,6 +9047,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.installAppDismissed":
     "Cài Margince sau qua menu của trình duyệt hoặc biểu tượng cài đặt trên thanh địa chỉ.",
   "settings.installAppAction": "Cài đặt",
+  "settings.installAppManualMac":
+    "Để cài ứng dụng, chọn “Tệp”, rồi “Thêm vào Dock”.",
+  "installHint.title": "Cài Margince thành ứng dụng",
+  "installHint.value":
+    "Mở bằng một lần chạm trên màn hình chính, trong cửa sổ riêng. Không cần cửa hàng ứng dụng, không phải tải xuống.",
+  "installHint.manual":
+    "Chạm {share} “Chia sẻ” (Share), rồi “Thêm vào MH chính” (Add to Home Screen).",
+  "installHint.notNow": "Để sau",
   "role.admin": "Quản trị",
   "role.management": "Quản lý",
   "role.manager": "Trưởng nhóm",
