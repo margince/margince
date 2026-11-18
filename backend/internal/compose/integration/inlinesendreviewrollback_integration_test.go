@@ -7,6 +7,7 @@ package integration
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"slices"
 	"strconv"
@@ -14,7 +15,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/margince/margince/backend/internal/compose/sendmetrics"
+	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 )
 
@@ -27,12 +29,39 @@ func setInlineSendReview(t *testing.T, c *consentEnv, on bool) {
 	}
 }
 
-// sendSeries reads one series of this process's send families.
-func sendSeries(t *testing.T, series string) int {
+const sendMetricsToken = "send-metrics-scrape"
+
+// setupScrapedConsent is setupConsent with a /metrics this test may scrape, so
+// the counts are read through the exposition the api serves.
+func setupScrapedConsent(t *testing.T) *consentEnv {
 	t.Helper()
-	var b strings.Builder
-	sendmetrics.WriteProcessMetrics(&b)
-	for line := range strings.SplitSeq(b.String(), "\n") {
+	e := apptest.SetupAppWithOptions(t, compose.WithOperatorMail(apptest.DiscardingMailer{}), compose.WithMetricsToken(sendMetricsToken))
+	apptest.BootstrapWorkspaceSession(t, e, "Inline Rollback", "dpo@fable.test", "Admin")
+	return seedConsentSubject(t, e)
+}
+
+// sendSeries reads one series off the served /metrics.
+func sendSeries(t *testing.T, c *consentEnv, series string) int {
+	t.Helper()
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, c.TS.URL+"/metrics", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Authorization", "Bearer "+sendMetricsToken)
+	resp, err := c.TS.Client().Do(req)
+	if err != nil {
+		t.Fatalf("scraping /metrics: %v", err)
+	}
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			t.Errorf("closing the scrape: %v", err)
+		}
+	}()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		t.Fatalf("scraping /metrics answered %d: %v", resp.StatusCode, err)
+	}
+	for line := range strings.SplitSeq(string(body), "\n") {
 		if value, ok := strings.CutPrefix(line, series+" "); ok {
 			n, err := strconv.Atoi(value)
 			if err != nil {
@@ -41,7 +70,7 @@ func sendSeries(t *testing.T, series string) int {
 			return n
 		}
 	}
-	t.Fatalf("no series %s", series)
+	t.Fatalf("/metrics serves no series %s", series)
 	return 0
 }
 
@@ -49,7 +78,7 @@ func sendSeries(t *testing.T, series string) int {
 // the inline composer still resolves through the legacy Send anyway dialog,
 // what the rep left behind stays readable, and the message goes once.
 func TestTurningTheInlineReviewOffLeavesItsOpenReviewResolvable(t *testing.T) {
-	c := setupConsent(t)
+	c := setupScrapedConsent(t)
 	c.useReviewableMarketingProfile(t)
 	setInlineSendReview(t, c, true)
 
@@ -59,8 +88,8 @@ func TestTurningTheInlineReviewOffLeavesItsOpenReviewResolvable(t *testing.T) {
 		legacySent   = `margince_email_send_anyway_total{flow="legacy",result="sent"}`
 		refusedTimed = `margince_email_send_decision_seconds_count{verdict="refused"}`
 	)
-	reviewsBefore, queuedBefore := sendSeries(t, inlineReview), sendSeries(t, inlineQueued)
-	sentBefore, timedBefore := sendSeries(t, legacySent), sendSeries(t, refusedTimed)
+	reviewsBefore, queuedBefore := sendSeries(t, c, inlineReview), sendSeries(t, c, inlineQueued)
+	sentBefore, timedBefore := sendSeries(t, c, legacySent), sendSeries(t, c, refusedTimed)
 
 	otherAnchor := logConsentInbound(t, c.AppEnv, c.contactID)
 	if status := c.Call(t, "PUT", "/v1/mail-drafts", AnyMap{
@@ -98,10 +127,10 @@ func TestTurningTheInlineReviewOffLeavesItsOpenReviewResolvable(t *testing.T) {
 	if status := c.Call(t, "POST", "/v1/activities/"+c.activityID+"/send-email", refused, nil, nil); status != http.StatusConflict {
 		t.Fatalf("pressing Send again answered %d, want the same refusal", status)
 	}
-	if got := sendSeries(t, inlineReview) - reviewsBefore; got != 1 {
+	if got := sendSeries(t, c, inlineReview) - reviewsBefore; got != 1 {
 		t.Errorf("one first Send and one repeat press counted %d inline reviews, want 1", got)
 	}
-	if got := sendSeries(t, refusedTimed) - timedBefore; got != 2 {
+	if got := sendSeries(t, c, refusedTimed) - timedBefore; got != 2 {
 		t.Errorf("the engine decided two presses and the histogram timed %d", got)
 	}
 	review := liveReviewID(t, c)
@@ -123,10 +152,10 @@ func TestTurningTheInlineReviewOffLeavesItsOpenReviewResolvable(t *testing.T) {
 	if deliveries != 1 {
 		t.Fatalf("the reviewed message was staged %d times, want once", deliveries)
 	}
-	if got := sendSeries(t, legacySent) - sentBefore; got != 1 {
+	if got := sendSeries(t, c, legacySent) - sentBefore; got != 1 {
 		t.Errorf("the legacy confirmation counted %d sent, want 1", got)
 	}
-	if got := sendSeries(t, inlineQueued) - queuedBefore; got != 0 {
+	if got := sendSeries(t, c, inlineQueued) - queuedBefore; got != 0 {
 		t.Errorf("a confirmation counted as %d first Sends", got)
 	}
 

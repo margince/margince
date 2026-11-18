@@ -183,7 +183,7 @@ func TestEachSendAnywayConfirmationCountsWhatItCameTo(t *testing.T) {
 }
 
 // Every label value a scrape carries comes from a closed set, and nothing the
-// sender typed or the engine stored about a person reaches the exposition.
+// sender typed or the engine stored about a contact reaches the exposition.
 func TestEveryLabelValueIsFromAClosedSet(t *testing.T) {
 	c := newCollector()
 	c.observeSend(humanCtx(), switchedTo(true), activities.SendOutcome{}, refusedSend(commsauthz.CategoryMarketing, consent.ActionDirectSend))
