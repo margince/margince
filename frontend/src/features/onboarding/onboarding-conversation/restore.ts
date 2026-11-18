@@ -46,8 +46,8 @@ export type RestoreInputs = Readonly<{
   /** The read the persisted site_read_id points at (only fetched while the
    * company act is still open); null when none was persisted or it is gone. */
   read: CompanySiteRead | null;
-  /** The OAuth return deep link (#/onboarding/connect/...) lands mid-journey
-   * and must reopen the connect act, exactly like the classic coordinator. */
+  /** The connect step's own address, and the OAuth return under it
+   * (#/onboarding/connect/...), reopen the connect act on a reload. */
   routeConnect: boolean;
   /** The recap entries below are sentences a reader reads, and the counts in
    * them are rendered here rather than at the renderer — a ThreadEntry's

@@ -416,6 +416,57 @@ describe("a member who may not train a voice", () => {
   });
 });
 
+describe("back from connect", () => {
+  const member = (target: "vo.collecting" | "vo.skipped") =>
+    run([
+      { type: "START", memberPath: true, companyConfirmed: true },
+      { type: "RESUME", target },
+    ]);
+
+  it("returns a skipped voice to collecting, so it can be trained after all", () => {
+    const state = run(
+      [{ type: "VOICE_DONE" }, { type: "CONNECT_BACK" }],
+      member("vo.skipped"),
+    );
+    expect(state).toMatchObject({ act: "voice", phase: "vo.collecting" });
+  });
+
+  it("returns a built voice to its result, where Continue still leads on", () => {
+    const state = run(
+      [
+        { type: "BUILD_STARTED", buildId: "b1" },
+        {
+          type: "BUILD_TERMINAL",
+          buildId: "b1",
+          status: "succeeded",
+          detail: null,
+        },
+        { type: "VOICE_DONE" },
+        { type: "CONNECT_BACK" },
+      ],
+      member("vo.collecting"),
+    );
+    expect(state).toMatchObject({ act: "voice", phase: "vo.result" });
+    expect(run([{ type: "VOICE_DONE" }], state)).toMatchObject({
+      act: "connect",
+      phase: "cn.consent",
+    });
+  });
+
+  it("is refused where the journey offers no voice step", () => {
+    const state = run([
+      {
+        type: "START",
+        memberPath: true,
+        companyConfirmed: true,
+        voiceStep: false,
+      },
+      { type: "RESUME" },
+    ]);
+    expect(conversationReducer(state, { type: "CONNECT_BACK" })).toBe(state);
+  });
+});
+
 describe("member path", () => {
   // A member's company was confirmed before they arrived: START opens in
   // co.confirmed and RESUME lands them on the first act that is theirs.

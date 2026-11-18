@@ -514,7 +514,7 @@ describe("onboarding gate", () => {
       });
       mount();
       expect(await screen.findByText(/Train your writing voice/)).toBeTruthy();
-      expect(window.location.hash).toBe("#/onboarding/company");
+      expect(window.location.hash).toBe("#/onboarding/voice");
       expect(companyReads()).toHaveLength(0);
     },
   );
@@ -566,7 +566,7 @@ describe("onboarding gate", () => {
     );
     mount();
     expect(await screen.findByText(/Train your writing voice/)).toBeTruthy();
-    expect(window.location.hash).toBe("#/onboarding/company");
+    expect(window.location.hash).toBe("#/onboarding/voice");
     expect(companyReads()).toHaveLength(0);
     await waitFor(() =>
       expect(requestsEndingIn("/v1/ai/profile")).toHaveLength(1),

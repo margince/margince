@@ -71,6 +71,7 @@ const legalPhases: Record<
   LINKEDIN_SAVED: new Set(["cn.consent"]),
   LINKEDIN_SKIPPED: new Set(["cn.consent"]),
   CONNECT_DONE: new Set(["cn.consent"]),
+  CONNECT_BACK: new Set(["cn.consent"]),
 };
 
 export function isLegal(
@@ -179,6 +180,9 @@ function eventGuards(
       return state.phase !== "vo.result" || state.lastBuildStatus === "failed";
     case "VOICE_REVISE":
       return state.lastBuildStatus === "succeeded";
+    // A journey that offers no voice act has no step before connect.
+    case "CONNECT_BACK":
+      return state.voiceStep;
     case "BUILD_STAGE":
       if (event.buildId !== state.activeBuildId) return false;
       // From vo.result only a deferred build resumes; while building, a poll

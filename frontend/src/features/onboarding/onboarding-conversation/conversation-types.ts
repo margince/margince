@@ -271,6 +271,9 @@ export type ConversationEvent =
   // A succeeded build the reader does not recognise as their own: back to
   // collecting, so more of their writing can go in before the next build.
   | { type: "VOICE_REVISE" }
+  // Back from connect to the voice act, where the reader left it: a built
+  // voice reopens on its result, anything else on collecting.
+  | { type: "CONNECT_BACK" }
   // Leaving the connect act ends the journey, as leaving the team act does:
   // the two are the terminal moves, one per way out.
   | { type: "CONNECT_DONE" };

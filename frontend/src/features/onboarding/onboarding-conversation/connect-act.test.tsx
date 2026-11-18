@@ -271,6 +271,33 @@ it("offers to skip before any consent round trip", () => {
   expect(screen.getByRole("button", { name: "Skip for now" })).toBeTruthy();
 });
 
+// The voice step stays reachable from here, by the same move the browser's
+// Back key makes.
+it("offers a way back to the voice step", async () => {
+  stubWithSession({ "GET /connectors": () => jsonResponse({ data: [] }) }, {});
+  const { dispatch } = renderConnectAct();
+  await userEvent.click(screen.getByRole("button", { name: en["ob.back"] }));
+  expect(dispatch).toHaveBeenCalledWith({ type: "CONNECT_BACK" });
+});
+
+it("offers no way back where the journey has no voice step", () => {
+  stubWithSession({ "GET /connectors": () => jsonResponse({ data: [] }) }, {});
+  const state: ConversationState = {
+    ...initialConversationState,
+    act: "connect",
+    phase: "cn.consent",
+    voiceStep: false,
+  };
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <LocaleProvider initial="en">
+        <ConnectAct state={state} dispatch={vi.fn()} persist={vi.fn()} />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  expect(screen.queryByRole("button", { name: en["ob.back"] })).toBeNull();
+});
+
 // After a successful consent it is no longer true, and recording the step as
 // skipped would persist a fact contradicted by the roster.
 it("stops offering the skip once consent has returned", async () => {
@@ -312,8 +339,8 @@ describe("the way onward", () => {
     expect(onward.closest(".ob-stage-acts")).toBeTruthy();
   });
 
-  // The board scrolls and the rail does not, so a refusal drawn under the
-  // scene lands below the fold while the pressed button just stops spinning.
+  // The board scrolls and the rail does not. A refusal drawn under the scene
+  // lands below the fold while the pressed button just stops spinning.
   it("says a finish that could not be saved beside the button pressed", async () => {
     stubWithSession(
       { "GET /connectors": () => jsonResponse({ data: [] }) },
@@ -517,9 +544,8 @@ it("grants nothing when the reader skips connecting a mailbox", async () => {
   const without = screen.getByRole("button", { name: "Skip for now" });
   await waitFor(() => expect(without).not.toBeDisabled());
   await userEvent.click(without);
-  // The agent reads their mail to build the brief, so authority over a mailbox
-  // that was never connected is authority over nothing — recorded as though
-  // the rep had agreed to something real.
+  // The agent reads their mail to build the brief. Authority over a mailbox
+  // that was never connected is authority over nothing, so none is recorded.
   await waitFor(() =>
     expect(dispatch).toHaveBeenCalledWith({ type: "CONNECT_DONE" }),
   );

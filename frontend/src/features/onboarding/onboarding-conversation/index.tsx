@@ -31,6 +31,7 @@ import {
 import { InviteAct } from "./invite-act";
 import { restorePlan, type VoiceRestoreProbe } from "./restore";
 import { TeamAct } from "./team-act";
+import { useStepAddress } from "./use-step-address";
 import type { WizardPersistInput } from "./use-wizard-state";
 import { useWizardStatePersist } from "./use-wizard-state";
 import { VoiceAct } from "./voice-act";
@@ -133,6 +134,8 @@ const actCheckpoints: ReadonlyMap<
   ["vo.collecting>vo.skipped", { step: "voice", voiceSkipped: true }],
   ["vo.result>cn.consent", { step: "connect" }],
   ["vo.skipped>cn.consent", { step: "connect" }],
+  ["cn.consent>vo.collecting", { step: "voice", voiceSkipped: false }],
+  ["cn.consent>vo.result", { step: "voice", voiceSkipped: false }],
 ]);
 
 function actCheckpoint(
@@ -324,6 +327,7 @@ export function OnboardingConversationScreen() {
     dispatch,
     route.id === "connect",
   );
+  useStepAddress(state, dispatch, route.id);
 
   // Act-transition checkpoints: the server remembers where the journey is,
   // so a mid-onboarding reload restores to the right act with recap. Only

@@ -1,5 +1,8 @@
+import { ArrowLeft } from "lucide-react";
 import type { Dispatch } from "react";
 import { useEffect, useState } from "react";
+import { Button } from "../../../design-system/atoms";
+import { StageActions } from "../../../design-system/onboarding-stage";
 import { vendorOf } from "../../../format/connectorprovider";
 import { ordinalNumber } from "../../../format/format";
 import { useT } from "../../../i18n/index";
@@ -117,7 +120,7 @@ export function ConnectAct({
     setVendor(null);
     setResultSettled(true);
     if (outcome !== undefined) {
-      navigateReplacing({ screen: "onboarding", id: "company" });
+      navigateReplacing({ screen: "onboarding", id: "connect" });
     }
   };
 
@@ -229,6 +232,18 @@ export function ConnectAct({
       title={t("ob.conv.connect.sceneTitle")}
       sub={t("ob.conv.connect.sceneSub")}
     >
+      {/* Before the scene, so it fills the rail first and stands leftmost. */}
+      {state.voiceStep && (
+        <StageActions>
+          <Button
+            variant="ghost"
+            disabled={askBusy || finishing}
+            onClick={() => dispatch({ type: "CONNECT_BACK" })}
+          >
+            <ArrowLeft aria-hidden /> {t("ob.back")}
+          </Button>
+        </StageActions>
+      )}
       <ConnectScene
         vendor={vendor}
         onVendorChange={setVendor}

@@ -458,6 +458,13 @@ function applyEvent(
           i18nKey: "ob.conv.voice.revise",
         },
       ]);
+    case "CONNECT_BACK":
+      return withEntries(state, {
+        act: "voice",
+        phase:
+          state.lastBuildStatus === "succeeded" ? "vo.result" : "vo.collecting",
+        pendingQuestion: null,
+      });
     // Neither resolution moves the act: both sections of the connect screen
     // stay on the same phase, and only mail's own consent gates CONNECT_DONE.
     case "LINKEDIN_SAVED":

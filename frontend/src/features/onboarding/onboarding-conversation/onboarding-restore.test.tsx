@@ -798,13 +798,14 @@ describe("finishing the connect act", () => {
     await waitFor(() => expect(without).not.toBeDisabled());
     await userEvent.click(without);
 
-    // The write failed: the failure is said out loud, nothing moved on.
+    // The write failed: the failure is said out loud, and the address still
+    // names the step.
     expect(
       await screen.findByText(
         /I could not save the setup completion\. Retry\./,
       ),
     ).toBeTruthy();
-    expect(window.location.hash).toBe("");
+    expect(window.location.hash).toBe("#/onboarding/connect");
 
     // The retry succeeds: how the step was left lands as the completion
     // itself, THEN the shell navigates.
