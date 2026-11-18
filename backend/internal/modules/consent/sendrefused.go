@@ -62,7 +62,7 @@ func BlockingRefusals(set commsauthz.DecisionSet) []RefusedRecipient {
 			out = append(out, refusedRecipientOf(d))
 		}
 	}
-	return out
+	return rankRefusals(out)
 }
 
 // FaultReference implements apperrors.ReferencedFault: the review this refusal

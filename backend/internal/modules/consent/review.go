@@ -26,6 +26,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -289,8 +290,7 @@ func (s *Store) ReviewForReader(ctx context.Context, id ids.UUID) (Review, error
 }
 
 // refusedRecipientsOf lifts the denied half of a decision set into what the row
-// stores. Order follows the set, so the first refusal is the one the summary
-// names.
+// stores, ranked, so the first refusal is the one the summary names.
 func refusedRecipientsOf(set commsauthz.DecisionSet) []RefusedRecipient {
 	denied := set.Denied()
 	if len(denied) == 0 {
@@ -300,7 +300,29 @@ func refusedRecipientsOf(set commsauthz.DecisionSet) []RefusedRecipient {
 	for _, d := range denied {
 		out = append(out, refusedRecipientOf(d))
 	}
-	return out
+	return rankRefusals(out)
+}
+
+// rankRefusals orders refusals by what a sender must deal with first, keeping
+// the decision order within a rank: an address that needs repair, then the
+// subject's own stop, then a footer finding, then missing evidence or
+// permission. The review and the 409 both rank here, so they name the same one.
+func rankRefusals(refusals []RefusedRecipient) []RefusedRecipient {
+	slices.SortStableFunc(refusals, func(a, b RefusedRecipient) int { return refusalRank(a) - refusalRank(b) })
+	return refusals
+}
+
+func refusalRank(r RefusedRecipient) int {
+	switch {
+	case len(commsauthz.RemediesFor(r.ReasonCode)) == 0:
+		return 0
+	case commsauthz.LevelForReason(r.ReasonCode) == commsauthz.LevelSubject:
+		return 1
+	case r.ReasonCode == commsauthz.ReasonFooterIncomplete || len(r.FooterFindings) > 0:
+		return 2
+	default:
+		return 3
+	}
 }
 
 func refusedRecipientOf(d commsauthz.Decision) RefusedRecipient {
