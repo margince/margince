@@ -94,6 +94,14 @@ func wireReview(review Review) crmcontracts.CommunicationReview {
 			category := refusal.Category
 			wire.Category = &category
 		}
+		if refusal.Country != "" {
+			country := refusal.Country
+			wire.Country = &country
+		}
+		if refusal.CountrySource != "" {
+			source := crmcontracts.RefusedRecipientCountrySource(refusal.CountrySource)
+			wire.CountrySource = &source
+		}
 		if refusal.SubjectKind != "" {
 			kind := crmcontracts.RefusedRecipientSubjectKind(refusal.SubjectKind)
 			wire.SubjectKind = &kind

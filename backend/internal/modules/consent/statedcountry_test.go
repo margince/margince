@@ -108,3 +108,36 @@ func TestANewRecipientCountryChangesTheAcknowledgement(t *testing.T) {
 		}
 	}
 }
+
+// The rep is shown the country and its source, and the revision they confirm
+// moves when either does.
+func TestTheServedReviewShowsTheCountryItWasJudgedUnder(t *testing.T) {
+	t.Parallel()
+	review := func(country, source string) Review {
+		return Review{Refusals: []RefusedRecipient{{
+			Address: "anna@example.test", ReasonCode: commsauthz.ReasonSubjectRequest,
+			Country: country, CountrySource: source,
+		}}}
+	}
+	recorded := review("de", string(CountryFromContactAddress))
+	wire := wireReview(recorded).Refusals[0]
+	if wire.Country == nil || *wire.Country != "de" || wire.CountrySource == nil || string(*wire.CountrySource) != "contact_address" {
+		t.Fatalf("served refusal country %v source %v, want de from the contact's address", wire.Country, wire.CountrySource)
+	}
+	for name, refreshed := range map[string]Review{
+		"stated":               review("at", string(CountryFromSender)),
+		"cleared":              review("", string(CountryClearedBySender)),
+		"same country, stated": review("de", string(CountryFromSender)),
+	} {
+		if refreshed.AssessmentRevision() == recorded.AssessmentRevision() {
+			t.Errorf("%s: the revision did not move", name)
+		}
+		served := wireReview(refreshed).Refusals[0]
+		if served.CountrySource == nil || string(*served.CountrySource) != refreshed.Refusals[0].CountrySource {
+			t.Errorf("%s: served source %v", name, served.CountrySource)
+		}
+	}
+	if cleared := wireReview(review("", string(CountryClearedBySender))).Refusals[0]; cleared.Country != nil {
+		t.Errorf("a cleared country was served as %q", *cleared.Country)
+	}
+}

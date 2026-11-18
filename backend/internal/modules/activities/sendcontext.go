@@ -126,8 +126,17 @@ func countryOverridesFrom(list *[]crmcontracts.RecipientCountry) ([]commsauthz.C
 		return nil, nil
 	}
 	out := make([]commsauthz.CountryOverride, 0, len(*list))
+	seen := make(map[string]bool, len(*list))
 	for _, entry := range *list {
 		stated := commsauthz.CountryOverride{Address: normalizeAddress(entry.Address)}
+		// One statement per recipient, so every reader of the list takes the
+		// same one.
+		if seen[stated.Address] {
+			return nil, &CommunicationContextError{
+				field: recipientCountriesField, Reason: "a recipient has more than one country stated; state each one once",
+			}
+		}
+		seen[stated.Address] = true
 		if entry.Country != nil {
 			stated.Country = strings.ToLower(strings.TrimSpace(*entry.Country))
 			if jurisdiction.Code(stated.Country).Validate() != nil {

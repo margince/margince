@@ -44467,7 +44467,9 @@ export interface components {
              *     and that recipient is judged under the baseline. A recipient with no entry keeps the country
              *     the record states. An entry whose address is not on `to`, `cc` or `bcc` is ignored. Nothing
              *     is written to the contact. Only the user writing the message may state one: an agent's or an
-             *     integration's request carrying this field is refused with 422 `invalid`.
+             *     integration's request carrying this field is refused with 422 `invalid`. Each address may
+             *     appear once, compared without case or surrounding space; a second entry is refused with 422
+             *     `invalid`.
              */
             recipient_countries?: components["schemas"]["RecipientCountry"][];
             /**
@@ -44761,7 +44763,8 @@ export interface components {
             /**
              * @description The countries the rep stated for recipients of this message, kept so a reopened composer
              *     still holds them. `country: null` is a country the rep cleared, which is not the same as no
-             *     entry. An entry whose address is not on `to`, `cc` or `bcc` is not kept.
+             *     entry. An entry whose address is not on `to`, `cc` or `bcc` is not kept. Each address may
+             *     appear once; a second entry is refused with 422 `invalid`.
              */
             recipient_countries?: components["schemas"]["RecipientCountry"][];
         };
@@ -44884,6 +44887,7 @@ export interface components {
              * @description The countries the sender states for this message's recipients, read as the send reads them:
              *     `country: null` clears a recipient's country, and a recipient with no entry keeps the record's.
              *     An agent's or an integration's preview carrying this field is refused with 422 `invalid`.
+             *     Each address may appear once; a second entry is refused with 422 `invalid`.
              */
             recipient_countries?: components["schemas"]["RecipientCountry"][];
             /** @description The draft's subject, read for an offer as the send reads it and checked for `content_findings`. */
@@ -44925,6 +44929,7 @@ export interface components {
              * @description The countries the sender states for this message's recipients, read as the send reads them:
              *     `country: null` clears a recipient's country, and a recipient with no entry keeps the record's.
              *     An agent's or an integration's preview carrying this field is refused with 422 `invalid`.
+             *     Each address may appear once; a second entry is refused with 422 `invalid`.
              */
             recipient_countries?: components["schemas"]["RecipientCountry"][];
             /** @description The draft's subject, read for an offer as the send reads it and checked for `content_findings`. */
@@ -45238,7 +45243,9 @@ export interface components {
              *     and that recipient is judged under the baseline. A recipient with no entry keeps the country
              *     the record states. An entry whose address is not on `to`, `cc` or `bcc` is ignored. Nothing
              *     is written to the contact. Only the user writing the message may state one: an agent's or an
-             *     integration's request carrying this field is refused with 422 `invalid`.
+             *     integration's request carrying this field is refused with 422 `invalid`. Each address may
+             *     appear once, compared without case or surrounding space; a second entry is refused with 422
+             *     `invalid`.
              */
             recipient_countries?: components["schemas"]["RecipientCountry"][];
             /**
@@ -55123,6 +55130,19 @@ export interface components {
             sending_entity_id?: string;
             sending_entity_name?: string;
             requested_category?: string;
+            /**
+             * @description The ISO 3166-1 alpha-2 code, in lower case, of the recipient's country whose sales-mail
+             *     rules judged this refusal. Absent when none applied: no country on record, or one the
+             *     sender cleared.
+             */
+            country?: string;
+            /**
+             * @description Where `country` came from: the contact's address, their employer's, the lead's company,
+             *     or the sender, who stated it (`sender_override`) or cleared it (`sender_cleared`) for this
+             *     message. Absent when no record or sender gave a country.
+             * @enum {string}
+             */
+            country_source?: "contact_address" | "employer_address" | "lead_company_address" | "sender_override" | "sender_cleared";
         };
         /**
          * @description What a refused send left behind. A SNAPSHOT of the engine's answer at the moment it was

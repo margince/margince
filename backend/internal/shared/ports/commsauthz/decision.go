@@ -191,10 +191,11 @@ type Decision struct {
 	Basis       Basis
 	Evidence    Evidence
 	// Country is the recipient's country whose marketing rules judged this
-	// decision, empty for the baseline.
-	Country     string
-	Suppression string
-	Mode        Mode
+	// decision, empty for the baseline. CountrySource says where it came from.
+	Country       string
+	CountrySource string
+	Suppression   string
+	Mode          Mode
 	// LegacyVerdict is what the old purpose gate said, so a disagreement is
 	// visible in the row rather than only in a metric.
 	LegacyVerdict string

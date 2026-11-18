@@ -387,8 +387,9 @@ func canonicalDraft(content MailDraftContent) MailDraftContent {
 	return content
 }
 
-// countriesOnTheDraft keeps one entry per address the draft holds, the last
-// one stated, so a removed recipient takes their country with them.
+// countriesOnTheDraft keeps the statements about addresses the draft holds, so
+// a removed recipient takes their country with them. countryOverridesFrom has
+// already refused a second statement about one address.
 func countriesOnTheDraft(content MailDraftContent) []commsauthz.CountryOverride {
 	held := map[string]bool{}
 	for _, line := range [][]string{content.To, content.Cc, content.Bcc} {
@@ -397,12 +398,10 @@ func countriesOnTheDraft(content MailDraftContent) []commsauthz.CountryOverride 
 		}
 	}
 	var out []commsauthz.CountryOverride
-	for i := len(content.RecipientCountries) - 1; i >= 0; i-- {
-		stated := content.RecipientCountries[i]
+	for _, stated := range content.RecipientCountries {
 		stated.Address = normalizeAddress(stated.Address)
 		if held[stated.Address] {
-			out = append([]commsauthz.CountryOverride{stated}, out...)
-			delete(held, stated.Address)
+			out = append(out, stated)
 		}
 	}
 	return out

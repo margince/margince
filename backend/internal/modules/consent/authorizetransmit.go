@@ -277,7 +277,7 @@ func (g *Gate) decideOneIn(ctx context.Context, tx pgx.Tx, r connector.Recipient
 	// This recipient's own statement only: a row never names another
 	// recipient's address.
 	decision.Evidence.RecipientCountries = commsauthz.CountryOverridesFor(req.Evidence.RecipientCountries, r.Email)
-	decision.Country = string(country.Code)
+	decision.Country, decision.CountrySource = string(country.Code), string(country.Source)
 	if err != nil {
 		return decision, err
 	}

@@ -22,7 +22,7 @@ func (r Review) MatchesAssessment(set commsauthz.DecisionSet) bool {
 	}
 	for i, now := range current {
 		before := r.Refusals[i]
-		if !sameRecipient(before, now) || before.ReasonCode != now.ReasonCode || before.PolicyRevision != now.PolicyRevision || before.Country != now.Country || !sameInstructionScope(before, now) {
+		if !sameRecipient(before, now) || before.ReasonCode != now.ReasonCode || before.PolicyRevision != now.PolicyRevision || before.Country != now.Country || before.CountrySource != now.CountrySource || !sameInstructionScope(before, now) {
 			return false
 		}
 	}
@@ -47,7 +47,7 @@ func (g *Gate) RefreshRefusal(ctx context.Context, set commsauthz.DecisionSet, i
 func (r Review) AssessmentRevision() string {
 	var parts []string
 	for _, refusal := range r.Refusals {
-		parts = append(parts, refusal.Address, refusal.SubjectKind, refusal.SubjectID, refusal.ReasonCode, string(refusal.claim()), refusal.FooterDigest, refusal.PolicyRevision, refusal.Country)
+		parts = append(parts, refusal.Address, refusal.SubjectKind, refusal.SubjectID, refusal.ReasonCode, string(refusal.claim()), refusal.FooterDigest, refusal.PolicyRevision, refusal.Country, refusal.CountrySource)
 		// The scope sameInstructionScope compares, by value: a pointer prints as an address.
 		parts = append(parts, optionalIDText(refusal.SendingEntity), optionalIDText(refusal.PurposeID), optionalIDText(refusal.DealID))
 		parts = append(parts, fmt.Sprintf("%q", refusal.FooterFindings), fmt.Sprintf("%q", refusal.FooterPreview))

@@ -90,6 +90,8 @@ describe("sending with a recorded exception", () => {
               address: "anna@example.test",
               reason_code: reason,
               can_be_overruled: true,
+              country: "vn",
+              country_source: "sender_override",
             },
           ],
         }),
@@ -131,6 +133,11 @@ describe("sending with a recorded exception", () => {
         name: "Send with a recorded exception",
       }),
     );
+    expect(
+      await screen.findByText(
+        "Country: Vietnam, set by the sender for this message",
+      ),
+    ).toBeTruthy();
     await userEvent.click(await screen.findByRole("checkbox"));
     await userEvent.type(
       screen.getByLabelText("Explanation"),

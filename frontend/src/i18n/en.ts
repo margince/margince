@@ -8016,6 +8016,10 @@ export const en = {
   "compose.country.reading": "Reading the record…",
   "compose.country.clear": "Clear country",
   "compose.country.useRecord": "Use the record’s country",
+  "compose.country.row": "Country: {detail}",
+  "compose.country.fromSender": "{country}, set by the sender for this message",
+  "compose.country.clearedBySender":
+    "none, cleared by the sender for this message",
   "compose.colleagueUnnamed": "a colleague",
   "compose.threadGoneTitle": "Thread cannot be answered",
   "compose.colleagueMailboxTitle": "This email is in a colleague’s mailbox",
