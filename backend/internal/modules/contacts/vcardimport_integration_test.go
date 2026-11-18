@@ -65,6 +65,33 @@ func TestImportingAnUnknownCardCreatesTheContactAndTheirEmployer(t *testing.T) {
 	assertVCardEmployment(ctx, t, e, *results[0].ContactID, "Fresh Start GmbH")
 }
 
+func TestACardWithAnUnstorableValueIsReportedAndTheRestOfTheFileImports(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+
+	results := importCards(ctx, t, e,
+		"BEGIN:VCARD\nFN:First Fine\nEMAIL:first@fine.example\nEND:VCARD\n"+
+			"BEGIN:VCARD\nFN:Second Bad\nEMAIL:not-an-email\nEND:VCARD\n"+
+			"BEGIN:VCARD\nFN:Third Bad\nEMAIL:third@fine.example\nTEL:0301234567\nEND:VCARD\n"+
+			"BEGIN:VCARD\nFN:Bj\xf6rn Fourth\nORG:M\xfcller\nEMAIL:fourth@fine.example\nEND:VCARD\n")
+
+	want := []VCardOutcome{VCardCreated, VCardSkipped, VCardSkipped, VCardCreated}
+	if len(results) != len(want) {
+		t.Fatalf("results = %+v, want one per card", results)
+	}
+	for i, outcome := range want {
+		if results[i].Outcome != outcome {
+			t.Errorf("card %d outcome = %v, want %v (%s)", i+1, results[i].Outcome, outcome, results[i].Reason)
+		}
+	}
+	if !strings.Contains(results[1].Reason, "not-an-email") || !strings.Contains(results[2].Reason, "0301234567") {
+		t.Errorf("reasons = %q / %q, want each to name its value", results[1].Reason, results[2].Reason)
+	}
+	if results[3].FullName != "Björn Fourth" {
+		t.Errorf("name = %q, want the Windows-1252 name read", results[3].FullName)
+	}
+}
+
 func TestImportingACardForAKnownAddressAppliesWhatTheCardStates(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()

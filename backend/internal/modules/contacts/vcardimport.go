@@ -147,6 +147,10 @@ func (s *Store) importCardsFrom(ctx context.Context, entries []VCardEntry, sourc
 
 func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry, source ids.UUID) (VCardResult, error) {
 	result := VCardResult{Index: index, FullName: strings.TrimSpace(entry.FullName)}
+	if reason := cardRefusal(entry); reason != "" {
+		result.Outcome, result.Reason = VCardSkipped, reason
+		return result, nil
+	}
 	if result.FullName == "" {
 		result.Outcome = VCardSkipped
 		result.Reason = "the card states no name"
@@ -232,6 +236,10 @@ func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry,
 	// survive. The outcome it filled in is the answer; the error is only how the
 	// rollback was reached.
 	if errors.Is(err, errCardSourceNarrowed) {
+		return result, nil
+	}
+	if reason, refused := cardParseRefusal(err); refused {
+		result.Outcome, result.Reason, result.ContactID, result.Fields = VCardSkipped, reason, nil, nil
 		return result, nil
 	}
 	if err != nil {

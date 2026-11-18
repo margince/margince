@@ -14,8 +14,8 @@ package migration
 // SkippedRow is one disclosed skip in the run report.
 type SkippedRow struct {
 	ExternalID string `json:"external_id"`
-	// Line is the file line the row came from, so the reader reading the report
-	// can go to it. Zero when the source has no file behind it.
+	// Line is the row number the row came from (the header is row 1, as in a
+	// spreadsheet), so the reader can go to it. Zero when the source has no file behind it.
 	Line   int    `json:"line,omitempty"`
 	Reason string `json:"reason"`
 	Column string `json:"column,omitempty"`

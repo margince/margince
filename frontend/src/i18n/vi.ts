@@ -7116,7 +7116,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "vcardImport.working": "Đang đọc danh thiếp…",
   "vcardImport.back": "Quay lại Liên hệ",
   "vcardImport.noCards": "Tệp này không chứa danh thiếp nào.",
-  "vcardImport.failed": "Không thể nhập danh thiếp. Thử lại.",
+  "vcardImport.failed": "Danh thiếp chưa được nhập.",
   "vcardImport.outcome.created": "Đã thêm",
   "vcardImport.outcome.updated": "Đã cập nhật",
   "vcardImport.outcome.needsReview": "Có thể là bản trùng",

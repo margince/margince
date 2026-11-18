@@ -7287,8 +7287,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "vcardImport.working": "Karten werden gelesen…",
   "vcardImport.back": "Zurück zu den Kontakten",
   "vcardImport.noCards": "Die Datei enthält keine Karten.",
-  "vcardImport.failed":
-    "Die Karten konnten nicht importiert werden. Bitte versuche es erneut.",
+  "vcardImport.failed": "Die Karten wurden nicht importiert.",
   "vcardImport.outcome.created": "Hinzugefügt",
   "vcardImport.outcome.updated": "Aktualisiert",
   "vcardImport.outcome.needsReview": "Mögliches Duplikat",

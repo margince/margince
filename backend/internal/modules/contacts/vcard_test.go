@@ -113,9 +113,14 @@ func TestParseVCardsReadsTheCardsExportersWrite(t *testing.T) {
 			},
 		},
 		{
-			name: "a value that is not text in any charset the card names is dropped",
-			card: "BEGIN:VCARD\nFN:Plain Contact\nTITLE;ENCODING=QUOTED-PRINTABLE:Gesch=E4ftsf=FChrer\nEND:VCARD\n",
-			want: VCardEntry{FullName: "Plain Contact"},
+			name: "a value that is not UTF-8 and names no charset is read as Windows-1252",
+			card: "BEGIN:VCARD\nFN:Bj\xf6rn Example\nORG:M\xfcller & S\xf6hne\nTITLE;ENCODING=QUOTED-PRINTABLE:Gesch=E4ftsf=FChrer\nEND:VCARD\n",
+			want: VCardEntry{FullName: "Björn Example", Company: "Müller & Söhne", Title: "Geschäftsführer"},
+		},
+		{
+			name: "a value in a charset this reader does not know is reported unreadable",
+			card: "BEGIN:VCARD\nFN:Plain Contact\nTITLE;CHARSET=SHIFT_JIS:\x83\x65\nEND:VCARD\n",
+			want: VCardEntry{FullName: "Plain Contact", Unreadable: []string{"TITLE"}},
 		},
 		{
 			name: "the preferred address wins, then the work address, then the first",
@@ -338,6 +343,9 @@ func assertVCardEntry(t *testing.T, got, want VCardEntry) {
 	}
 	if !reflect.DeepEqual(got.PostalAddress, want.PostalAddress) {
 		t.Errorf("postal address parts = %+v, want %+v", got.PostalAddress, want.PostalAddress)
+	}
+	if !reflect.DeepEqual(got.Unreadable, want.Unreadable) {
+		t.Errorf("unreadable = %v, want %v", got.Unreadable, want.Unreadable)
 	}
 	assertChannels(t, "emails", got.Emails, want.Emails)
 	assertChannels(t, "phones", got.Phones, want.Phones)
