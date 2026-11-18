@@ -78,17 +78,7 @@ func (s *Store) CheckAdvertisingDraft(ctx context.Context, recipients []string, 
 			return err
 		}
 		for _, code := range codes {
-			rules, _, found := applicableRules(code)
-			if !found {
-				continue
-			}
-			packFindings := draftFindings(contentRules{
-				language: rules.DisclosureLanguage, claims: rules.ClaimsNeedProof,
-			}, subject, body)
-			if rules.ForeignAdvertiserNeedsLocalAgency && sender != code {
-				packFindings = append(packFindings, foreignAdvertiser(code))
-			}
-			for _, f := range packFindings {
+			for _, f := range packDraftFindings(code, sender, subject, body) {
 				if !slices.ContainsFunc(findings, func(have DraftFinding) bool { return have.Detail == f.Detail }) {
 					findings = append(findings, f)
 				}
@@ -97,6 +87,22 @@ func (s *Store) CheckAdvertisingDraft(ctx context.Context, recipients []string, 
 		return nil
 	})
 	return findings, err
+}
+
+// packDraftFindings checks one draft against the content rules of the pack of
+// country code, for a sending entity established in sender. No pack, no finding.
+func packDraftFindings(code, sender jurisdiction.Code, subject, body string) []DraftFinding {
+	rules, _, found := applicableRules(code)
+	if !found {
+		return nil
+	}
+	findings := draftFindings(contentRules{
+		language: rules.DisclosureLanguage, claims: rules.ClaimsNeedProof,
+	}, subject, body)
+	if rules.ForeignAdvertiserNeedsLocalAgency && sender != code {
+		findings = append(findings, foreignAdvertiser(code))
+	}
+	return findings
 }
 
 // senderCountryTx is the country of the legal entity the caller sends for,

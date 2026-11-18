@@ -539,15 +539,43 @@ func TestEveryCitationExplainsACodeTheEngineEmits(t *testing.T) {
 	t.Parallel()
 	emitted := emittedFindingCodes(t)
 	declared := map[string]string{}
+	read := map[string]bool{}
 	for _, root := range []string{"../extensions", "../fixtures/extensions"} {
 		if _, err := os.Stat(root); err != nil {
 			continue
 		}
-		maps.Copy(declared, declaredCitationCodes(t, gatekit.SourceFileSet(), parseTreeUnder(t, gatekit.SourceFileSet(), root)))
+		files := parseTreeUnder(t, gatekit.SourceFileSet(), root)
+		for _, file := range files {
+			read[filepath.Clean(gatekit.SourceFileSet().Position(file.Package).Filename)] = true
+		}
+		maps.Copy(declared, declaredCitationCodes(t, gatekit.SourceFileSet(), files))
+	}
+	for _, compiled := range compiledRulesFiles(t) {
+		if !read[compiled] {
+			t.Errorf("%s holds a pack's compiled citations and the scan did not read it", compiled)
+		}
 	}
 	for _, finding := range uncitableCodes(declared, emitted) {
 		t.Error(finding)
 	}
+}
+
+// compiledRulesFiles are the files gen-messaging-rules writes, one beside each
+// policy folder. Their citations are Go literals like a hand-written pack's.
+func compiledRulesFiles(t *testing.T) []string {
+	t.Helper()
+	indexes, err := filepath.Glob("../extensions/*/policy/index.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(indexes) == 0 {
+		t.Fatal("no pack has a policy folder; the packs moved, and their compiled citations are unread")
+	}
+	out := make([]string, 0, len(indexes))
+	for _, index := range indexes {
+		out = append(out, filepath.Join(filepath.Dir(filepath.Dir(index)), "messagingrules_gen.go"))
+	}
+	return out
 }
 
 // TestACitationOfAnUnemittedCodeIsFound is the positive control. The shipped
