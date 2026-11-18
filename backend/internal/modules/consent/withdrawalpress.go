@@ -253,10 +253,11 @@ func (s *Store) StopForCredential(ctx context.Context, token string) (bool, erro
 // its scope is part of the credential, so a request naming a purpose outside
 // that scope is asking the link to exceed itself.
 //
-// A purpose outside the marketing classes answers "nothing changed" rather
-// than an error. The presser is a mailbox provider acting on a header, not a
-// contact who typed something wrong, and a 4xx would turn a press we simply
-// decline to widen into a delivery failure they retry.
+// A purpose outside the marketing classes is refused. Answering "nothing
+// changed" reported a press that stopped nothing as a success, and the page
+// told the presser their mail was already off. No link this product sends
+// names such a purpose on an all-marketing credential, so only an edited URL
+// reaches the refusal.
 func (s *Store) WithdrawMarketingNamed(
 	ctx context.Context, contactID ids.ContactID, key string,
 ) ([]string, error) {
@@ -271,7 +272,10 @@ func (s *Store) WithdrawMarketingNamed(
 		return nil, fmt.Errorf("consent: checking whether this link may stop that purpose: %w", err)
 	}
 	if !allowed {
-		return []string{}, nil
+		return nil, &ValidationError{
+			Field:  fieldKeyPurpose,
+			Reason: "this unsubscribe link stops marketing email, and the request names a purpose that is not marketing",
+		}
 	}
 	return s.PublicWithdrawAll(ctx, contactID, []string{key})
 }

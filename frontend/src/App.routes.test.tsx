@@ -81,6 +81,7 @@ describe("the address dispatch", () => {
       screens.UnsubscribeScreen,
       { token: "tok", purpose: "news" },
     ],
+    ["#/unsubscribe/tok?lang=en", screens.UnsubscribeScreen, { token: "tok" }],
     ["#/confirm/tok", screens.ConfirmDetailsScreen, { token: "tok" }],
     ["#/reset-password", screens.ResetRoute, {}],
     ["#/x/fork", screens.CustomRoute, { name: "fork" }],

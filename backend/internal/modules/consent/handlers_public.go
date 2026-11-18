@@ -114,6 +114,10 @@ const withdrawalStoppedPlaceholder = "stopped"
 // A named purpose is taken as given — it is the one the message was sent
 // under, and the mailbox provider naming it must not be second-guessed.
 //
+// A key the catalog never carried reads as unnamed. The mint widened that key
+// to all-marketing, so the press honours the same scope rather than stopping
+// nothing and answering success.
+//
 // Unnamed means "all of it", and the store decides WHICH inside the
 // transaction that withdraws them. Choosing here would be a selection made in
 // one transaction and acted on in another, and a purpose granted in that
@@ -122,8 +126,20 @@ func (h Handlers) unsubscribe(
 	ctx context.Context, contactID ids.ContactID, params crmcontracts.OneClickUnsubscribeParams,
 	viaCredential bool,
 ) ([]string, error) {
-	if params.Purpose != nil && strings.TrimSpace(*params.Purpose) != "" {
-		named := strings.ToLower(strings.TrimSpace(*params.Purpose))
+	named := ""
+	if params.Purpose != nil {
+		named = normalizedPurposeKey(*params.Purpose)
+	}
+	if named != "" {
+		catalogued, err := h.store.purposeCatalogued(ctx, named)
+		if err != nil {
+			return nil, err
+		}
+		if !catalogued {
+			named = ""
+		}
+	}
+	if named != "" {
 		if viaCredential {
 			// THE CREDENTIAL'S SCOPE BOUNDS WHAT THE REQUEST MAY NAME. A
 			// named-purpose credential has already had its own key written

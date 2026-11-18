@@ -34,40 +34,72 @@ import (
 // ok is false only when a credential already covers this address and scope, in
 // which case the previous link still works and there is nothing new to write
 // into the mail. The caller keeps the header it would otherwise have built.
+//
+// purpose is the key the links must name: the catalogued key for a named
+// credential, and empty for an all-marketing one. A link naming a key the
+// credential does not carry is a link whose page cannot find what it stops.
 func (s *Store) WithdrawalTokenForEmail(
 	ctx context.Context, recipientEmail, purposeKey string,
-) (token string, ok bool, err error) {
+) (token, purpose string, ok bool, err error) {
 	address := normalizeAddress(recipientEmail)
 	if address == "" {
-		return "", false, nil
+		return "", "", false, nil
 	}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		in := WithdrawalMintInput{Address: address, Scope: WithdrawalScopeAllMarketing}
 		if err := bindWithdrawalSubject(ctx, tx, &in); err != nil {
 			return err
 		}
-		if purposeKey != "" {
-			var purposeID ids.UUID
-			switch scanErr := tx.QueryRow(ctx,
-				`SELECT id FROM consent_purpose WHERE key = $1`, purposeKey).Scan(&purposeID); {
-			case errors.Is(scanErr, pgx.ErrNoRows):
-				// A key no purpose carries: the all-marketing scope is the
-				// honest fallback, and it is the wider of the two, so the link
-				// never stops less than the recipient expects.
-			case scanErr != nil:
-				return fmt.Errorf("consent: resolving the purpose for the unsubscribe link: %w", scanErr)
-			default:
-				in.Scope, in.PurposeID = WithdrawalScopeNamedPurpose, purposeID
-			}
+		// A key no purpose carries falls back to all-marketing: the wider of
+		// the two, so the link never stops less than the recipient expects.
+		purposeID, found, err := cataloguedPurposeTx(ctx, tx, purposeKey)
+		if err != nil {
+			return fmt.Errorf("consent: resolving the purpose for the unsubscribe link: %w", err)
+		}
+		if found {
+			in.Scope, in.PurposeID = WithdrawalScopeNamedPurpose, purposeID
+			purpose = normalizedPurposeKey(purposeKey)
 		}
 		var mintErr error
 		token, mintErr = s.ensureWithdrawalCredentialForSendTx(ctx, tx, in)
 		return mintErr
 	})
 	if err != nil {
-		return "", false, err
+		return "", "", false, err
 	}
-	return token, token != "", nil
+	return token, purpose, token != "", nil
+}
+
+// cataloguedPurposeTx answers the purpose a key names, archived or not, and
+// found=false for an empty key or one the catalog never carried.
+//
+// The mint and the press both ask it, so a key the mint widened to
+// all-marketing is a key the press widens too.
+func cataloguedPurposeTx(ctx context.Context, tx pgx.Tx, key string) (ids.UUID, bool, error) {
+	key = normalizedPurposeKey(key)
+	if key == "" {
+		return ids.UUID{}, false, nil
+	}
+	var id ids.UUID
+	err := tx.QueryRow(ctx, `SELECT id FROM consent_purpose WHERE key = $1`, key).Scan(&id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ids.UUID{}, false, nil
+	}
+	if err != nil {
+		return ids.UUID{}, false, err
+	}
+	return id, true, nil
+}
+
+// purposeCatalogued is cataloguedPurposeTx for a caller outside a transaction.
+func (s *Store) purposeCatalogued(ctx context.Context, key string) (bool, error) {
+	var found bool
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		_, found, err = cataloguedPurposeTx(ctx, tx, key)
+		return err
+	})
+	return found, err
 }
 
 // bindWithdrawalSubject attaches the record holding this address, when one

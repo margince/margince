@@ -265,7 +265,7 @@ func TestTheSendPathMintsAWorkingLinkForALeadOnlyAddress(t *testing.T) {
 		t.Fatalf("seeding the lead: %v", err)
 	}
 
-	token, ok, err := e.store.WithdrawalTokenForEmail(e.ctx, "header-lead@example.test", "")
+	token, _, ok, err := e.store.WithdrawalTokenForEmail(e.ctx, "header-lead@example.test", "")
 	if err != nil {
 		t.Fatalf("minting for the send path: %v", err)
 	}
@@ -300,7 +300,7 @@ func TestAContactWinsOverALeadHoldingTheSameAddress(t *testing.T) {
 		t.Fatalf("seeding the lead: %v", err)
 	}
 
-	token, ok, err := e.store.WithdrawalTokenForEmail(e.ctx, shared, "")
+	token, _, ok, err := e.store.WithdrawalTokenForEmail(e.ctx, shared, "")
 	if err != nil {
 		t.Fatalf("minting: %v", err)
 	}
@@ -535,15 +535,14 @@ func TestAnAllMarketingLinkRefusesToStopCorrespondenceByName(t *testing.T) {
 	// version of this called WithdrawMarketingNamed directly and passed with
 	// the routing guard disabled — it proved the store method works and said
 	// nothing about whether the press reaches it.
+	// Refused, not answered with an empty list. The page reads an empty list as
+	// "already switched off", and this press stopped nothing.
 	named := "business_correspondence"
 	stopped, err := Handlers{store: e.store}.unsubscribe(e.ctx, e.contact,
 		crmcontracts.OneClickUnsubscribeParams{Purpose: &named}, true)
-	if err != nil {
-		t.Fatalf("the press errored: %v", err)
-	}
-	if len(stopped) != 0 {
-		t.Errorf("an all-marketing link stopped %v — the recipient asked to leave a mailing "+
-			"list and would stop receiving replies to their own enquiries", stopped)
+	if _, refused := errors.AsType[*ValidationError](err); !refused {
+		t.Errorf("an all-marketing link naming correspondence answered %v, %v — want a refusal; "+
+			"stopping it would end replies to the recipient's own enquiries", stopped, err)
 	}
 
 	// And a purpose it MAY stop still stops, or the guard has just broken the

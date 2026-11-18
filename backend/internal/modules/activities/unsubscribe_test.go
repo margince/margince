@@ -11,7 +11,9 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 // The header keeps the machine endpoint. A mailbox provider POSTs it
@@ -216,5 +218,56 @@ func TestAManagelessRecipientFallsBackToTheStopCredential(t *testing.T) {
 	if !strings.Contains(links.manage, "wd_stop") {
 		t.Errorf("the manage link is %q — a recipient with no preference token must still be "+
 			"offered a page that can stop their mail", links.manage)
+	}
+}
+
+// A link with no purpose names none. The page reads an empty segment as a
+// broken link, and the press reads an empty query value as a key nobody holds.
+func TestAPurposeFreeLinkNamesNoPurpose(t *testing.T) {
+	links := unsubscribeLinksFor("https://crm.example.com",
+		unsubscribeTokens{stop: "tok", manage: "pref"}, " ", textlang.English)
+
+	if want := "https://crm.example.com/v1/public/preferences/tok/unsubscribe"; links.oneClick != want {
+		t.Errorf("oneClick = %q, want %q with no purpose query", links.oneClick, want)
+	}
+	if want := "https://crm.example.com/#/unsubscribe/tok?lang=en"; links.unsubscribe != want {
+		t.Errorf("unsubscribe = %q, want %q with no purpose segment", links.unsubscribe, want)
+	}
+}
+
+// wideningLinker answers the way the consent mint does for a key the catalog
+// never carried: a credential for all marketing, which names no purpose.
+type wideningLinker struct{}
+
+func (wideningLinker) UnsubscribeToken(context.Context, string, string) (string, string, bool, error) {
+	return "tok", "", true, nil
+}
+
+func (wideningLinker) ManageToken(context.Context, string) (string, bool, error) {
+	return "pref", true, nil
+}
+
+// The links name the purpose the CREDENTIAL stops, not the one the send asked
+// for. Echoing an unknown key put a purpose on the one-click URL that the
+// all-marketing credential behind it could not find.
+func TestTheLinksNameThePurposeTheCredentialStops(t *testing.T) {
+	store := (&Store{}).WithUnsubscribe(wideningLinker{})
+	store.publicBaseURL = "https://mail.example.test"
+	surface := unsubscribeSurface{category: commsauthz.CategoryMarketing, purposeKey: "no_such_purpose"}
+
+	got, err := store.deliverability(context.Background(), "Hello there", "Offer",
+		[]string{"an@example.test"}, surface, ids.Nil, textlang.English)
+	if err != nil {
+		t.Fatalf("deriving the message: %v", err)
+	}
+	for name, text := range map[string]string{
+		"header": got.listUnsubscribe, "transmitted": got.transmitted, "recorded": got.recorded,
+	} {
+		if strings.Contains(text, "no_such_purpose") {
+			t.Errorf("the %s names the key the credential does not carry: %q", name, text)
+		}
+	}
+	if !strings.HasSuffix(got.listUnsubscribe, "/tok/unsubscribe>") {
+		t.Errorf("header = %q, want the one-click URL with no purpose", got.listUnsubscribe)
 	}
 }

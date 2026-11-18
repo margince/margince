@@ -260,14 +260,14 @@ Merging them into one would put an endpoint that takes only POST behind a link r
 
 | Where | URL | Who clicks it |
 |---|---|---|
-| `List-Unsubscribe` header | `{base}/v1/public/preferences/{token}/unsubscribe?purpose=` | a mailbox provider, by POST, with no human |
-| Visible `Unsubscribe` link | `{base}/#/unsubscribe/{token}/{purpose}?lang=` | the recipient, who gets a page that asks before it does anything |
+| `List-Unsubscribe` header | `{base}/v1/public/preferences/{token}/unsubscribe[?purpose=]` | a mailbox provider, by POST, with no human |
+| Visible `Unsubscribe` link | `{base}/#/unsubscribe/{token}[/{purpose}]?lang=` | the recipient, who gets a page that asks before it does anything |
 | Visible `Manage preferences` link | `{base}/#/preferences/{token}?lang=` | the recipient, who gets every purpose |
 
 `activities.unsubscribeLinksFor` builds all three. So the header, both visible links, and the copy on
 the timeline with the token removed cannot name different tokens, purposes or languages. The two
-visible links are routes after a `#`. The SPA already serves its public pages that way. And the token
-stays out of ordinary web server access logs until the page calls the API with it.
+visible links are routes after a `#`, which keeps the token out of web server access logs. A link names
+the purpose its credential stops, and none for all marketing; the press reads an unknown key as none.
 
 The human page never revokes consent when it opens. Mail scanners and link checkers follow links in a
 mailbox with nobody there. That is the same reason RFC 8058 makes the machine endpoint take only POST.

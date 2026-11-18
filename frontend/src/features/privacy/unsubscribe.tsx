@@ -34,7 +34,7 @@ export function UnsubscribeScreen({
   purpose,
 }: Readonly<{ token?: string; purpose?: string }>) {
   const t = useT();
-  if (!token || !purpose) {
+  if (!token) {
     // A dead end IS the page rather than a notice on it, so it takes the shape
     // the locked purpose below takes: the answer as the heading, the reason
     // under it.
@@ -49,13 +49,15 @@ export function UnsubscribeScreen({
       </PublicPage>
     );
   }
-  return <UnsubscribeBody token={token} purpose={purpose} />;
+  return <UnsubscribeBody token={token} purpose={purpose || undefined} />;
 }
 
+// A link with no purpose stops all marketing. The send names a purpose only
+// when its credential has one, and the server enforces that scope either way.
 function UnsubscribeBody({
   token,
   purpose,
-}: Readonly<{ token: string; purpose: string }>) {
+}: Readonly<{ token: string; purpose?: string }>) {
   const t = useT();
   const queryClient = useQueryClient();
   const queryKey = ["preference-center", token];
@@ -90,11 +92,14 @@ function UnsubscribeBody({
   // closure: a passive effect can re-run this with a stale capture, and the
   // one thing that must not go stale is which purpose is being withdrawn.
   const unsubscribe = useMutation({
-    mutationFn: async (purposeKey: string) => {
+    mutationFn: async (purposeKey: string | undefined) => {
       const { data, error, response } = await api.POST(
         "/public/preferences/{token}/unsubscribe",
         {
-          params: { path: { token }, query: { purpose: purposeKey } },
+          params: {
+            path: { token },
+            query: purposeKey ? { purpose: purposeKey } : {},
+          },
         },
       );
       if (error) {
@@ -167,6 +172,17 @@ function UnsubscribeBody({
           {explainPublicError(center.error, t)}
         </Callout>
       </PublicPage>
+    );
+  }
+
+  if (purpose === undefined) {
+    return (
+      <AllMarketingBody
+        token={token}
+        stopped={stopped}
+        doneHeading={doneHeading}
+        unsubscribe={unsubscribe}
+      />
     );
   }
 
@@ -307,26 +323,82 @@ function StoppedBody({
   );
 }
 
+type Press = {
+  mutate: (key: string | undefined) => void;
+  isPending: boolean;
+  error: unknown;
+};
+
+// AllMarketingBody is the page a purpose-free link draws for a token that can
+// read. It offers the stop the link carries, which is all marketing.
+function AllMarketingBody({
+  token,
+  stopped,
+  doneHeading,
+  unsubscribe,
+}: Readonly<{
+  token: string;
+  stopped: string[] | null;
+  doneHeading: React.RefObject<HTMLHeadingElement | null>;
+  unsubscribe: Press;
+}>) {
+  const t = useT();
+  if (stopped !== null) {
+    return (
+      <StoppedBody stopped={stopped} heading={doneHeading}>
+        {stopped.length > 0 && <p>{t("prefs.oneClickDone")}</p>}
+        <ManageLink token={token} label={t("prefs.unsub.manage")} />
+      </StoppedBody>
+    );
+  }
+  return (
+    <PublicPage>
+      <Heading size="xlarge" className="t-display">
+        {t("prefs.unsub.title")}
+      </Heading>
+      <Card>
+        <Callout
+          tone="info"
+          kind="standing"
+          title={t("prefs.unsub.afterTitle")}
+        >
+          {t("prefs.unsubscribeAllHint")}
+        </Callout>
+        <div className="unsub-actions">
+          <Button
+            variant="primary"
+            pending={unsubscribe.isPending}
+            busyLabel={t("prefs.unsub.busy")}
+            onClick={() => unsubscribe.mutate(undefined)}
+          >
+            {t("prefs.unsubscribeAll")}
+          </Button>
+          <AppLink className="link-button" href={`#/preferences/${token}`}>
+            {t("prefs.unsub.seeAll")}
+          </AppLink>
+        </div>
+        <PressError error={unsubscribe.error} />
+      </Card>
+      <p className="unsub-privacy">{t("prefs.unsub.privacy")}</p>
+    </PublicPage>
+  );
+}
+
 // WithdrawOnlyBody is the page a link can draw when it may stop mail and may
 // not read anything.
 //
-// It states the purpose by KEY rather than by label, because the label lives
-// behind the read this credential does not have. A key is worse copy than a
-// label and better than a page that will not load.
+// It names no purpose: the label lives behind the read this credential does
+// not have, and a raw key is not copy. The press stops what the link carries.
 function WithdrawOnlyBody({
   purpose,
   stopped,
   doneHeading,
   unsubscribe,
 }: Readonly<{
-  purpose: string;
+  purpose?: string;
   stopped: string[] | null;
   doneHeading: React.RefObject<HTMLHeadingElement | null>;
-  unsubscribe: {
-    mutate: (key: string) => void;
-    isPending: boolean;
-    error: unknown;
-  };
+  unsubscribe: Press;
 }>) {
   const t = useT();
   if (stopped !== null) {
@@ -339,9 +411,6 @@ function WithdrawOnlyBody({
       </Heading>
       <p className="unsub-lead">{t("prefs.unsub.lead")}</p>
       <Card>
-        <p className="unsub-kind">
-          <Mail size={16} aria-hidden="true" /> {purpose}
-        </p>
         <Callout tone="info" title={t("prefs.unsub.afterTitle")}>
           {t("prefs.unsub.afterBody")}
         </Callout>
