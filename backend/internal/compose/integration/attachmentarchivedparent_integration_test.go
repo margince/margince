@@ -64,7 +64,7 @@ func TestUploadingOntoAnArchivedParentIsRefused(t *testing.T) {
 			_, err := store.UploadAttachment(ctx, activities.AttachmentInput{
 				EntityType: tc.entityType, EntityID: tc.id,
 				Filename: "offer.pdf", ContentType: "application/pdf",
-				Content: strings.NewReader("PDF-BYTES"),
+				Content: strings.NewReader("%PDF-1.4 BYTES"),
 			})
 			if !errors.Is(err, apperrors.ErrNotFound) {
 				t.Fatalf("upload onto an archived %s: got %v, want not found", tc.entityType, err)

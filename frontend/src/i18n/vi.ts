@@ -858,6 +858,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.preview.status": "Ngữ cảnh phê duyệt",
   "approval.preview.stale":
     "Hồ sơ đã thay đổi sau khi đề xuất được tạo. Yêu cầu đề xuất mới trước khi duyệt.",
+  "approval.editRetargeted":
+    "Chỉnh sửa này đổi bản ghi mà yêu cầu nói đến. Hãy duyệt hoặc từ chối yêu cầu như hiện có.",
   "approval.preview.incomplete":
     "Không thể hiển thị đầy đủ thay đổi. Yêu cầu đề xuất mới trước khi duyệt.",
   "approval.preview.unavailable":

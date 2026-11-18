@@ -168,12 +168,14 @@ func TestAChatIsReadOnlyFromAnImageTheReaderTakes(t *testing.T) {
 	ctx := env.Admin()
 	store := activities.NewStore(env.DB()).WithBlobstore(blobstore.NewMemory())
 	contact := env.SeedContact(t, "Not An Image", &env.AdminUser)
-	for _, file := range []struct{ name, mime string }{
-		{"chat.txt", "text/plain"}, {"chat.tiff", "image/tiff"}, {"chat.heic", "image/heic"},
+	for _, file := range []struct{ name, mime, body string }{
+		{"chat.txt", "text/plain", "not a png"},
+		{"chat.tiff", "image/tiff", "II*\x00 not a png"},
+		{"chat.heic", "image/heic", "\x00\x00\x00\x18ftypheic not a png"},
 	} {
 		att, err := store.UploadAttachment(ctx, activities.AttachmentInput{
 			EntityType: "contact", EntityID: contact, Filename: file.name, ContentType: file.mime,
-			Content: strings.NewReader("not a png"),
+			Content: strings.NewReader(file.body),
 		})
 		if err != nil {
 			t.Fatal(err)

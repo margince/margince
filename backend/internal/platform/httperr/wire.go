@@ -12,7 +12,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -359,7 +358,7 @@ func (d Download) WriteHeaders(w http.ResponseWriter) {
 		if d.Inline {
 			disposition = "inline"
 		}
-		w.Header().Set("Content-Disposition", fmt.Sprintf("%s; filename=%q", disposition, d.Filename))
+		w.Header().Set("Content-Disposition", disposition+dispositionFilename(d.Filename))
 	}
 	if d.Size > 0 {
 		w.Header().Set("Content-Length", strconv.FormatInt(d.Size, 10))

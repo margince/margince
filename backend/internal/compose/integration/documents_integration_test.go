@@ -171,13 +171,13 @@ func TestAnUploadedDocumentReachesTheAccountLibrary(t *testing.T) {
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, docUploadPerms)
 
 	onCompany, err := store.UploadAttachment(ctx, activities.AttachmentInput{
-		EntityType: "company", EntityID: company, Filename: "nda.pdf", Content: bytes.NewReader([]byte("bytes")),
+		EntityType: "company", EntityID: company, Filename: "nda.pdf", Content: bytes.NewReader([]byte("%PDF-1.4 bytes")),
 	})
 	if err != nil {
 		t.Fatalf("uploading against the company: %v", err)
 	}
 	onDeal, err := store.UploadAttachment(ctx, activities.AttachmentInput{
-		EntityType: "deal", EntityID: deal, Filename: "quote.pdf", Content: bytes.NewReader([]byte("bytes")),
+		EntityType: "deal", EntityID: deal, Filename: "quote.pdf", Content: bytes.NewReader([]byte("%PDF-1.4 bytes")),
 	})
 	if err != nil {
 		t.Fatalf("uploading against the deal: %v", err)
