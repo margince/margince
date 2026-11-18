@@ -6,12 +6,10 @@ package values
 import (
 	"testing"
 	"time"
-
-	"github.com/margince/margince/backend/internal/platform/clocktest"
 )
 
 func TestDueInWindowRefusesAbsurdYearsAndKeepsRealOnes(t *testing.T) {
-	now := clocktest.Now(t)
+	now := time.Date(2026, 7, 5, 10, 0, 0, 0, time.UTC)
 	cases := map[string]struct {
 		due  time.Time
 		want bool
