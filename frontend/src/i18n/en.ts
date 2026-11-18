@@ -7908,6 +7908,11 @@ export const en = {
   "compose.notAnAddress_other":
     "Not email addresses: {parts}. Correct them or remove them.",
   "compose.savedDraftLoad": "Load saved version",
+  "compose.savedDraftFoundTitle": "You have a saved draft here",
+  "compose.savedDraftFoundBody":
+    "It holds other words than the ones on screen. Open it to continue from it, or replace it with the text on screen.",
+  "compose.savedDraftLoadFound": "Open saved draft",
+  "compose.savedDraftReplace": "Replace it with this text",
   "compose.aiDisclosureTitle": "AI-assisted draft",
   "compose.aiDisclosureFallback":
     "This draft was written by AI. Review and edit it before sending.",

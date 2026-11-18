@@ -152,6 +152,7 @@ function mount(initial: SavedDraftFields, opening: Opening = {}) {
         where: {
           answering: undefined,
           forwarding: opening.forwarding,
+          prefilled: opening.initialMessage !== undefined,
           entityType: "contact",
           entityId: entityId ?? "p-1",
           isChannelReply: channel === true,
@@ -788,8 +789,8 @@ describe("a forward", () => {
   });
 });
 
-describe("a draft held under words the composer opened with", () => {
-  it("is asked about, never restored over them or saved over", async () => {
+describe("a composer a caller opened with its own words", () => {
+  it("reads no saved draft and writes none, so the record's draft stays", async () => {
     const written = stubDrafts(HELD, [savedAs]);
     const proposal = { subject: "Times to meet", body: "Pick a time" };
     const view = mount(
@@ -807,7 +808,8 @@ describe("a draft held under words the composer opened with", () => {
     });
     await pass(PAUSE_MS);
 
-    expect(view.result.current.changedElsewhere).toBe(true);
+    expect(vi.mocked(fetch)).not.toHaveBeenCalled();
+    expect(view.result.current.enabled).toBe(false);
     expect(view.onRestore).not.toHaveBeenCalled();
     expect(written).toHaveLength(0);
   });

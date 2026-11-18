@@ -63,9 +63,12 @@ export function groundedFiling(grounding: SavedDraftFields["grounding"]): {
 // A reply keeps its draft on the message it answers, a forward on the message
 // it carries. A new message keeps it on the record it was started from. A
 // channel reply keeps none: a chat message has no subject or addressee to hold.
+// Nor does a message a caller wrote in advance, such as a meeting proposal. It
+// is not the rep's draft for that record, and would replace it.
 export function savedDraftAnchor(input: {
   answering: string | undefined;
   forwarding?: string;
+  prefilled?: boolean;
   entityType: RelinkKind;
   entityId: string;
   isChannelReply: boolean;
@@ -73,6 +76,7 @@ export function savedDraftAnchor(input: {
   if (input.isChannelReply) return null;
   if (input.answering) return { type: "activity", id: input.answering };
   if (input.forwarding) return { type: "forward", id: input.forwarding };
+  if (input.prefilled) return null;
   return input.entityId ? { type: input.entityType, id: input.entityId } : null;
 }
 

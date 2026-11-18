@@ -501,29 +501,71 @@ describe("a saved draft", () => {
   });
 
   it("asks which words win when it lands under words the reader wrote", async () => {
-    let answer: (response: Response) => void = () => {};
-    const sent = stubRoutes({
-      "GET /mail-drafts": () =>
-        new Promise<Response>((resolve) => {
-          answer = resolve;
-        }),
-    });
-    render(composer(vi.fn()));
-    await screen.findByRole("combobox", { name: "To" });
-    writeMessage("Body", "Written before the read");
-
-    act(() => answer(jsonResponse(SAVED)));
-
-    expect(
-      await screen.findByText("Draft changed in another window"),
-    ).toBeTruthy();
+    const onClose = vi.fn();
+    const sent = foundUnderTyping(onClose);
+    await screen.findByText("You have a saved draft here");
     expect(messageText("Body")).toBe("Written before the read");
+
+    await userEvent.click(screen.getByRole("button", { name: "Close" }));
+    expect(onClose).not.toHaveBeenCalled();
     expect(calls(sent, "PUT /mail-drafts")).toHaveLength(0);
+
     await userEvent.click(
-      screen.getByRole("button", { name: "Load saved version" }),
+      screen.getByRole("button", { name: "Open saved draft" }),
     );
     await waitFor(() =>
       expect(messageText("Body")).toBe("Half written before lunch"),
+    );
+  });
+
+  it("is not deleted by discarding words it never held", async () => {
+    const onClose = vi.fn();
+    const sent = foundUnderTyping(onClose);
+    await screen.findByText("You have a saved draft here");
+
+    await userEvent.click(screen.getByRole("button", { name: "Delete draft" }));
+
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(calls(sent, "DELETE /mail-drafts/md-1")).toHaveLength(0);
+  });
+
+  it("is replaced only when the reader says so", async () => {
+    const sent = foundUnderTyping(vi.fn());
+    await screen.findByText("You have a saved draft here");
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Replace it with this text" }),
+    );
+
+    await waitFor(() =>
+      expect(calls(sent, "PUT /mail-drafts")).toHaveLength(1),
+    );
+    const put = calls(sent, "PUT /mail-drafts")[0];
+    expect(put?.headers.get("If-Match")).toBe("3");
+    expect(put?.body).toMatchObject({ body: "Written before the read" });
+  });
+
+  it("is not named to a send that carries other words", async () => {
+    const sent = foundUnderTyping(vi.fn(), {
+      "POST /emails": () => jsonResponse({ id: "act-9" }, 202),
+    });
+    await screen.findByText("You have a saved draft here");
+    await userEvent.type(
+      screen.getByRole("combobox", { name: "To" }),
+      "buyer@acme.test{enter}",
+    );
+    await userEvent.type(screen.getByLabelText("Subject"), "Pricing");
+    await pickOption(
+      userEvent.setup(),
+      screen.getByRole("combobox", { name: "Reason for contact" }),
+      "Follow-up they requested",
+    );
+
+    await pressSend();
+
+    await waitFor(() => expect(calls(sent, "POST /emails")).toHaveLength(1));
+    expect(calls(sent, "POST /emails")[0]?.body).not.toHaveProperty(
+      "mail_draft_id",
     );
   });
 
@@ -797,5 +839,76 @@ describe("a saved draft put back whole", () => {
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
     expect(calls(sent, "PUT /mail-drafts")).toHaveLength(2);
     expect(messageText("Body")).toBe("Half written before lunch");
+  });
+});
+
+// The saved draft lands only after the reader typed, so its words never
+// reached the screen.
+function foundUnderTyping(
+  onClose: () => void,
+  overrides: Record<string, Route> = {},
+): Sent[] {
+  let answer: (response: Response) => void = () => {};
+  const sent = stubRoutes({
+    "GET /mail-drafts": () =>
+      new Promise<Response>((resolve) => {
+        answer = resolve;
+      }),
+    ...overrides,
+  });
+  render(composer(onClose));
+  writeMessage("Body", "Written before the read");
+  act(() => answer(jsonResponse(SAVED)));
+  return sent;
+}
+
+describe("a composer opened with a caller's own words", () => {
+  const proposal = (onClose: () => void) => (
+    <ComposeModal
+      entityType="contact"
+      entityId="p-1"
+      contactId="p-1"
+      initialMessage={{ subject: "Times to meet", body: "Pick a time" }}
+      open
+      onClose={onClose}
+    />
+  );
+
+  it("closes without saving over the record's draft", async () => {
+    const onClose = vi.fn();
+    const sent = stubRoutes({ "GET /mail-drafts": () => jsonResponse(SAVED) });
+    render(proposal(onClose));
+    await waitFor(() => expect(messageText("Body")).toContain("Pick a time"));
+    writeMessage("Body", "Pick a time, Ada");
+
+    await userEvent.click(screen.getByRole("button", { name: "Close" }));
+
+    expect(onClose).toHaveBeenCalled();
+    expect(calls(sent, "GET /mail-drafts")).toHaveLength(0);
+    expect(calls(sent, "PUT /mail-drafts")).toHaveLength(0);
+  });
+
+  it("sends without naming the record's draft", async () => {
+    const sent = stubRoutes({
+      "GET /mail-drafts": () => jsonResponse(SAVED),
+      "POST /emails": () => jsonResponse({ id: "act-9" }, 202),
+    });
+    render(proposal(vi.fn()));
+    await userEvent.type(
+      await screen.findByRole("combobox", { name: "To" }),
+      "buyer@acme.test{enter}",
+    );
+    await pickOption(
+      userEvent.setup(),
+      screen.getByRole("combobox", { name: "Reason for contact" }),
+      "Follow-up they requested",
+    );
+
+    await pressSend();
+
+    await waitFor(() => expect(calls(sent, "POST /emails")).toHaveLength(1));
+    expect(calls(sent, "POST /emails")[0]?.body).not.toHaveProperty(
+      "mail_draft_id",
+    );
   });
 });

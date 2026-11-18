@@ -225,6 +225,7 @@ export function ComposeWindow({
     where: {
       answering,
       forwarding,
+      prefilled: initialMessage !== undefined,
       entityType,
       entityId: edit ? "" : entityId,
       isChannelReply,

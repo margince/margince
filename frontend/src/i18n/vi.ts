@@ -7716,6 +7716,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.notAnAddress_other":
     "Không phải địa chỉ email: {parts}. Sửa hoặc xóa.",
   "compose.savedDraftLoad": "Tải phiên bản đã lưu",
+  "compose.savedDraftFoundTitle": "Bạn có một bản nháp đã lưu ở đây",
+  "compose.savedDraftFoundBody":
+    "Bản nháp có nội dung khác với nội dung đang hiển thị. Mở bản nháp để tiếp tục, hoặc thay nó bằng nội dung đang hiển thị.",
+  "compose.savedDraftLoadFound": "Mở bản nháp đã lưu",
+  "compose.savedDraftReplace": "Thay bằng nội dung này",
   "compose.aiDisclosureTitle": "Bản nháp có AI hỗ trợ",
   "compose.aiDisclosureFallback":
     "Bản nháp này do AI viết. Xem lại và chỉnh sửa trước khi gửi.",

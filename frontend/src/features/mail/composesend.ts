@@ -380,7 +380,7 @@ export function useComposeSend({
     answering,
     isChannelReply,
     files,
-    heldDraftId: savedDraft.held?.id,
+    heldDraftId: savedDraft.onScreenId,
     context: claimedContext,
     evidence,
     links,
