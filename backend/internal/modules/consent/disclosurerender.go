@@ -152,9 +152,8 @@ func (s *Store) DisclosuresFor(
 	return layoutDisclosures(owed, controllerOf(installation, entity), layout), nil
 }
 
-// owedDisclosures answers what one body owes under the pack of the sending
-// entity's country and the pack of each recipient's, and how the recipients'
-// packs lay it out.
+// owedDisclosures answers what one body owes under the sender's pack and each
+// recipient's. It also answers how the recipients' packs lay the lines out.
 func owedDisclosures(sender jurisdiction.Code, recipients []jurisdiction.Code) ([]messagingrules.Disclosure, disclosureLayout) {
 	var owed []messagingrules.Disclosure
 	if senderRules, _, found := applicableRules(sender); found {

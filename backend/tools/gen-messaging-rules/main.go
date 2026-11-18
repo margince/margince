@@ -47,9 +47,9 @@ func run(root, dir string, check bool) error {
 	return errors.Join(failures...)
 }
 
-// unitsFrom answers the extension folders to compile. With -root every unit
-// that has a policy folder or a generated file is one, so a generated file
-// whose policy was deleted is found too.
+// unitsFrom answers the extension folders to compile. With -root a unit is any
+// folder with a policy or a generated file. So a generated file whose policy
+// was deleted is found too.
 func unitsFrom(root, dir string) ([]string, error) {
 	if (root == "") == (dir == "") {
 		return nil, errors.New("gen-messaging-rules: pass exactly one of -root and -dir")

@@ -175,9 +175,9 @@ func readLayer(fsys fs.FS, name string) (layerFile, []byte, error) {
 	return layer, body, nil
 }
 
-// mandatory refuses a layer that leaves out what a reviewer needs: the country
-// layer names its jurisdiction, version and creation date, and every layer
-// names at least one fixture pair.
+// mandatory refuses a layer that leaves out what a reviewer needs. The country
+// layer names its jurisdiction, version and creation date. Every layer names at
+// least one fixture pair.
 func mandatory(name string, layer layerFile) error {
 	if len(layer.Fixtures) == 0 {
 		return fmt.Errorf("%s names no fixtures; pair a draft that raises a finding with one that does not", name)

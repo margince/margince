@@ -12,14 +12,12 @@ import (
 // Loosened names each obligation of above that permits more than below does.
 // An empty answer means above is at least as strict as below everywhere.
 //
-// It asks the fold Strictest applies: above tightens below exactly when folding
-// the two changes nothing in above. A second set of comparisons here would be a
-// second answer to "which is stricter", and the two would drift. The fields
-// that describe a rule set rather than bind a send are left out, and so are
-// the orders of lists the engine reads as sets.
+// It asks the fold Strictest applies. above tightens below when folding the two
+// changes nothing in above. Fields that name a rule set and bind no send are
+// left out, and so is the order of lists the engine reads as sets.
 func Loosened(below, above Rules) []string {
-	folded := describedOnly(normalised(stricter(below, above)))
-	kept := describedOnly(normalised(above))
+	folded := bindingOnly(normalised(stricter(below, above)))
+	kept := bindingOnly(normalised(above))
 	foldedValue, keptValue := reflect.ValueOf(folded), reflect.ValueOf(kept)
 	var out []string
 	for i := range foldedValue.NumField() {
@@ -30,8 +28,8 @@ func Loosened(below, above Rules) []string {
 	return out
 }
 
-// describedOnly clears the fields that name a rule set and bind nothing.
-func describedOnly(r Rules) Rules {
+// bindingOnly clears the fields that name a rule set and bind nothing.
+func bindingOnly(r Rules) Rules {
 	r.Jurisdiction, r.Version, r.Instruments = "", 0, nil
 	r.Provenance, r.Citations, r.Digest = Provenance{}, nil, ""
 	return r

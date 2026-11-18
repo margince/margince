@@ -14,13 +14,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 )
 
-// The outcomes the engine gives under the shipped German and Vietnamese packs,
-// written as answers rather than read off the rules, so a change to how a pack
-// is built cannot move them unseen.
+// The outcomes the engine gives under the shipped German and Vietnamese packs.
+// They are written as answers, not read off the rules. So a change to how a
+// pack is built cannot move them unseen.
 
-// shippedPackCodes registers each shipped pack under a code of its own, so the
-// selectors below can be asked about it without claiming the real country code
-// for every other test in this binary.
+// shippedPackCodes registers each shipped pack under a test code of its own.
+// The real country codes stay free for every other test in this binary.
 func shippedPackCodes(t *testing.T) map[string]jurisdiction.Code {
 	t.Helper()
 	codes := map[string]jurisdiction.Code{"de": "qd", "vn": "qv"}

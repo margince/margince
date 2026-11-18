@@ -37,6 +37,8 @@ func splitFrontMatter(path string, raw []byte) (front, body []byte, err error) {
 
 // decodeStrict decodes front matter into out and refuses a key out does not
 // name, so a misspelt obligation fails instead of being dropped.
+//
+//craft:ignore naked-any yaml.Decoder.Decode takes any; each caller passes a pointer to its own key set
 func decodeStrict(path string, front []byte, out any) error {
 	decoder := yaml.NewDecoder(bytes.NewReader(front))
 	decoder.KnownFields(true)
@@ -111,8 +113,8 @@ type instrumentEntry struct {
 }
 
 // citationEntry names the law behind one engine code. territorial-test is
-// required and must be one of the Territory values: a test written as prose
-// is one the engine cannot decide, so it can never select a citation.
+// required and must be one of the Territory values. The engine cannot decide a
+// test written as prose, so such a test never selects a citation.
 //
 //nolint:tagliatelle // policy files spell their keys in kebab case
 type citationEntry struct {
