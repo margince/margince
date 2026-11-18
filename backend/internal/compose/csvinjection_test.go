@@ -35,11 +35,10 @@ func TestCSVCellDefusesSpreadsheetFormulas(t *testing.T) {
 		}
 	}
 
-	// The []byte branch (a jsonb / text driver value) is guarded identically to
-	// the string branch: a formula-leading []byte must gain exactly one
-	// apostrophe, not slip through as a live formula.
-	if got := csvCell([]byte("=1+1")); got != "'=1+1" {
-		t.Errorf("csvCell([]byte(%q)) = %q, want %q", "=1+1", got, "'=1+1")
+	// Only a bytea arrives as []byte, and it leaves as hex text: bytes that
+	// spell a formula cannot reach the cell as one.
+	if got := csvCell([]byte("=1+1")); got != `\x3d312b31` {
+		t.Errorf("csvCell([]byte(%q)) = %q, want the hex text %q", "=1+1", got, `\x3d312b31`)
 	}
 
 	// A value that is not a formula lead is passed through untouched:

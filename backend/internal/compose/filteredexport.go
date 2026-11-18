@@ -30,7 +30,6 @@ package compose
 import (
 	"bytes"
 	"context"
-	"encoding/csv"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -313,21 +312,7 @@ func renderExport(data memberData, format exportFileFormat) (body []byte, conten
 	var buf bytes.Buffer
 	switch format {
 	case exportFmtCSV:
-		cw := csv.NewWriter(&buf)
-		if err := cw.Write(data.columns); err != nil {
-			return nil, "", err
-		}
-		record := make([]string, len(data.columns))
-		for _, row := range data.rows {
-			for i := range data.columns {
-				record[i] = csvCell(row[i])
-			}
-			if err := cw.Write(record); err != nil {
-				return nil, "", err
-			}
-		}
-		cw.Flush()
-		if err := cw.Error(); err != nil {
+		if err := writeMemberCSV(&buf, data); err != nil {
 			return nil, "", err
 		}
 		return buf.Bytes(), "text/csv; charset=utf-8", nil
