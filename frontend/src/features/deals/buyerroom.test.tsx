@@ -236,7 +236,7 @@ describe("BuyerRoomScreen", () => {
   });
 
   // Expiry is the room's, not the link's: a new link opens the same ended
-  // room, so the page sends the buyer to their contact and offers no link.
+  // room. So the page sends the buyer to their contact and offers no link.
   it("an expired room names the contact and offers no new link", async () => {
     globalThis.sessionStorage.setItem("margince.room.session", "mdrs_session");
     stubRoom({

@@ -47,7 +47,7 @@ export type CommitteePerson = Omit<DealCoverageSeat, "role"> &
   Readonly<{ roles: string[] }>;
 
 /**
- * committeePeople folds the seats into one entry per contact: a contact may
+ * committeePeople folds the seats into one entry per contact. A contact may
  * hold several roles on one deal, and is still one person on the committee.
  */
 export function committeePeople(

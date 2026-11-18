@@ -62,7 +62,7 @@ function completionRequests(tasks: readonly Activity[]): BulkChangeRequest[] {
  * BULK_MAX_ITEMS. Each preview mints the confirm token its execute needs above
  * ten records. One note reports them all; its Undo reverses every batch.
  *
- * The listed tasks are read again first: a win stamps every activity on the
+ * The listed tasks are read again first. A win stamps every activity on the
  * deal, so the versions the dialog read are stale once the close lands. A
  * listed task no longer open is left out.
  */

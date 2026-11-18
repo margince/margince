@@ -69,7 +69,7 @@ export function WonWithoutContractFact({
   if (!label) {
     return null;
   }
-  // The detail replaces the label for `other`, and does not follow it:
+  // The detail replaces the label for `other`, and does not follow it.
   // "Something else: renewed on a handshake" says the category twice and
   // buries the only part written by a contact.
   if (!detail) {

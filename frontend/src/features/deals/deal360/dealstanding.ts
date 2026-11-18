@@ -203,9 +203,9 @@ export function closeTone(
 /**
  * When the deal entered each stage, from the advance rows of its field
  * history. A stage visited twice keeps its latest entry, because the time
- * spent there now runs from the last arrival. When the history is whole but
- * has no creation row (an import), the stage the first advance left is dated
- * by the deal's creation, as is the stage of a deal that never moved. A cut
+ * spent there now runs from the last arrival. A history may be whole but have
+ * no creation row (an import). Then the deal's creation dates the stage the
+ * first advance left, as it dates the stage of a deal that never moved. A cut
  * history dates nothing it cannot see.
  */
 export function stageEntries(

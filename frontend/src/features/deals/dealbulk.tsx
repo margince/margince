@@ -163,10 +163,10 @@ export function DealBulkBar({
 
   const moveStage = () => {
     // A deal already in the target stage is left alone. The server treats
-    // every advance as a transition — it writes a stage-history row and
-    // emits deal.stage_changed without asking whether anything moved — so
-    // sending one for a row already there would record a move that never
-    // happened, in the table the velocity reports read.
+    // every advance as a transition: it writes a stage-history row and emits
+    // deal.stage_changed without asking whether anything moved. One sent for
+    // a row already there would record a move that never happened, in the
+    // table the velocity reports read.
     const rows = deals.filter((deal) => deal.stage_id !== stageId);
     const toStageName =
       openStages.find((stage) => stage.id === stageId)?.name ?? "";

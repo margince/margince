@@ -63,8 +63,8 @@ export function RestoreDealAction({ deal }: Readonly<{ deal: Deal }>) {
   );
 }
 
-// Why the deal cannot come back from here: no archive entry this reader can
-// see, no version to pin, or the server's own reason the entry stays.
+// Why the deal cannot come back from here. This reader may see no archive
+// entry or no version to pin, or the server may give its own reason.
 function restoreRefusal(
   pending: boolean,
   entry: AuditHistoryEntry | undefined,

@@ -176,7 +176,7 @@ function AddLink({
   const [typeName, setTypeName] = useState("");
   const chosen = startable.find((type) => type.name === typeName);
   const { search, kindOf } = useRecordTargets();
-  // Only the records the chosen type may end on, so a pick is never one the
+  // Only the records the chosen type may end on. So a pick is never one the
   // server would refuse for its shape, and never the deal itself.
   const searchTargets = async (q: string) =>
     chosen

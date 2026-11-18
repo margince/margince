@@ -26,7 +26,7 @@ export function amountRefusal(
 /**
  * A deal's money amount, typed in major units of the form's `currency` (or
  * `currency` here when the form shows none). An amount that currency cannot
- * hold is refused under the field: converted, it is NaN, which a request sends
+ * hold is refused under the field. Converted, it is NaN, which a request sends
  * as null, and a null Expected ARR clears the stored one.
  */
 export function moneyAmountField(
