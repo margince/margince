@@ -126,6 +126,15 @@ function mailSent(participant: Participant): boolean {
   );
 }
 
+// When the buyer asked for a link they have not been in since, read as the
+// room brief reads it; null once the ask is answered.
+function owedLinkAsk(participant: Participant): string | null {
+  const asked = participant.link_requested_at;
+  if (!asked) return null;
+  const seen = participant.last_seen_at;
+  return !seen || Date.parse(asked) > Date.parse(seen) ? asked : null;
+}
+
 // Where the seat stands, as the badge at the row's end. A link asked for is
 // the one a rep has to act on, so it reads before signed in.
 function SeatBadge({
@@ -136,7 +145,7 @@ function SeatBadge({
   if (revoked) {
     return <Badge>{t("access.state.revokedBadge")}</Badge>;
   }
-  if (participant.link_requested_at) {
+  if (owedLinkAsk(participant)) {
     return <Badge tone="warning">{t("access.state.linkRequestedBadge")}</Badge>;
   }
   if (participant.has_signed_in) {
@@ -163,6 +172,7 @@ function ParticipantRow({
     participant.revoked_at !== null && participant.revoked_at !== undefined;
   const capability = CAPABILITIES.find((c) => c === participant.capability);
   const readingSoFar = useReadingSoFar(participant);
+  const linkAsk = owedLinkAsk(participant);
   return (
     <PanelRow
       className={revoked ? "access-row access-row-revoked" : "access-row"}
@@ -203,15 +213,11 @@ function ParticipantRow({
             {t("access.mail.failed")}
           </p>
         ) : null}
-        {participant.link_requested_at && !revoked ? (
+        {linkAsk && !revoked ? (
           <p className="t-caption access-row-request">
             <Link2 aria-hidden />
             {t("access.linkRequested", {
-              when: formatDateAbbrev(
-                participant.link_requested_at,
-                locale,
-                readerZone,
-              ),
+              when: formatDateAbbrev(linkAsk, locale, readerZone),
             })}
           </p>
         ) : null}
