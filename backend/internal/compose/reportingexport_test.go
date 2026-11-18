@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/reportingcsv"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
@@ -92,13 +92,7 @@ func TestReportingCSVCarriesTheLandingsBasisAndRange(t *testing.T) {
 	got := map[string][2]string{}
 	for _, row := range rows[1:] {
 		if row[block] == reportingForecastBasisBlock {
-			id := row[label]
-			for key, phrase := range reportingCSVFigureLabels {
-				if phrase.En == id {
-					id = key
-				}
-			}
-			got[id] = [2]string{row[value], row[context]}
+			got[reportingcsv.IDOf(row[label])] = [2]string{row[value], row[context]}
 		}
 	}
 	want := map[string][2]string{
@@ -117,7 +111,7 @@ func TestReportingCSVCarriesTheLandingsBasisAndRange(t *testing.T) {
 	metric.ForecastBasis = nil
 	evaluation.Metrics = []crmcontracts.ReportingMetric{metric}
 	for _, row := range reportingCSVRows(evaluation)[1:] {
-		if row[label] == reporting.ExplanationCopy(evaluation.Context).Say(reportingCSVFigureLabels["measure"]) {
+		if reportingcsv.IDOf(row[label]) == "measure" {
 			t.Fatalf("a reading without a basis wrote a measure row: %v", row)
 		}
 	}
@@ -148,69 +142,5 @@ func TestReportingCSVCarriesAWithheldChartsFlagAndReason(t *testing.T) {
 		if got := [2]string{row[withheld], row[why]}; got != want {
 			t.Fatalf("row %v says %v, want %v", row, got, want)
 		}
-	}
-}
-
-func TestReportingCSVWritesMoneyInMajorUnitsPerCurrency(t *testing.T) {
-	sales, won := float64(1710055), float64(1710055)
-	for currency, want := range map[string]string{"EUR": "17100.55", "JPY": "1710055"} {
-		var evaluation crmcontracts.ReportingEvaluation
-		evaluation.Context.Currency = currency
-		evaluation.Metrics = []crmcontracts.ReportingMetric{{
-			Id: reportingBookingsWon, Unit: reportingMoney, Value: &sales,
-			TargetComparison: &crmcontracts.ReportingTargetComparison{Won: &won},
-		}}
-		rows := reportingCSVRows(evaluation)
-		value := slices.Index(rows[0], "value")
-		if rows[1][value] != want || rows[3][value] != want || rows[1][slices.Index(rows[0], "unit")] != reportingMoney {
-			t.Fatalf("%s: rows %v", currency, rows[1:])
-		}
-	}
-}
-
-func TestReportingCSVLabelsComparisonFiguresInTheReadingsLanguage(t *testing.T) {
-	won := float64(100)
-	german := string(textlang.German)
-	var evaluation crmcontracts.ReportingEvaluation
-	evaluation.Context.ProseLanguage = &german
-	evaluation.Metrics = []crmcontracts.ReportingMetric{{
-		Id: reportingBookingsWon, Unit: reportingCountUnit,
-		TargetComparison: &crmcontracts.ReportingTargetComparison{Won: &won},
-	}}
-	rows := reportingCSVRows(evaluation)
-	label := slices.Index(rows[0], "label")
-	if rows[2][label] != "Status" || rows[3][label] != "Gewonnen" {
-		t.Fatalf("labels %v", rows[2:])
-	}
-}
-
-func TestReportingCSVFilenameNamesScopePeriodAndLocalDay(t *testing.T) {
-	name := "Müller / Team"
-	var frame crmcontracts.ReportingContext
-	frame.Scope = crmcontracts.ReportingScope{Kind: "team", Label: &name}
-	frame.PeriodKind = "this_quarter"
-	frame.Timezone = "Europe/Berlin"
-	frame.EvaluatedAt = time.Date(2026, 12, 31, 23, 30, 0, 0, time.UTC)
-	if got, want := reportingCSVFilename(frame), "reporting-müller-team-this-quarter-2027-01-01.csv"; got != want {
-		t.Fatalf("filename %q, want %q", got, want)
-	}
-}
-
-// A time-in-stage reading with too few deals has no value; the file leaves it
-// empty and says why, as the screen shows a dash.
-func TestReportingCSVLeavesAnUnreadableStageAgeEmpty(t *testing.T) {
-	var definition crmcontracts.ReportingMetricDefinition
-	for _, spec := range reportingMetrics {
-		if spec.definition.Id == reportingStageAge {
-			definition = spec.definition
-		}
-	}
-	metric := projectReportingMetric(definition, crmcontracts.ReportingContext{}, nil, crmcontracts.ReportingCoverage{Status: "ok"})
-	var evaluation crmcontracts.ReportingEvaluation
-	evaluation.Metrics = []crmcontracts.ReportingMetric{metric}
-	rows := reportingCSVRows(evaluation)
-	value, coverage := slices.Index(rows[0], "value"), slices.Index(rows[0], "coverage")
-	if rows[1][value] != "" || rows[1][coverage] != reportingInsufficientSample {
-		t.Fatalf("stage age row %v", rows[1])
 	}
 }

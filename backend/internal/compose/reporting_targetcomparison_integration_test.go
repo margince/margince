@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/reportingcsv"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
@@ -190,14 +191,8 @@ func comparisonCSV(t *testing.T, evaluation crmcontracts.ReportingEvaluation) ma
 		if record[1] != reportingTargetComparisonBlock {
 			continue
 		}
-		id := record[2]
-		for key, phrase := range reportingCSVFigureLabels {
-			if phrase.En == record[2] {
-				id = key
-			}
-		}
-		out[id] = record[3]
-		if id == "status" {
+		out[reportingcsv.IDOf(record[2])] = record[3]
+		if record[2] == reportingcsv.Labels["status"].En {
 			out["status"] = record[10]
 		}
 	}

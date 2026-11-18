@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/compose/reportingcsv"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/shared/kernel/formulacell"
@@ -83,7 +84,7 @@ func keptAnswerRows(question crmcontracts.ReportingCardQuestion, answer crmcontr
 			unit, currency, coverage := money.of(measure, row)
 			value := csvAnswerNumber(row[column])
 			if minor, isNumber := row[column].(float64); isNumber && unit == reportingMoney {
-				value = reportingCSVMajor(&minor, currency)
+				value = reportingcsv.Major(&minor, currency)
 			}
 			if coverage != "ok" {
 				value = ""

@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+// Package reportingcsv holds what the reporting CSV export writes that does not
+// depend on the evaluation: figure labels, amounts in major units and the file name.
+package reportingcsv
 
 import (
 	"math"
+	"strconv"
 	"strings"
 	"time"
 	"unicode"
@@ -14,11 +17,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
-// reportingCSVFigureLabels name the figures of a target comparison, a forecast
+// Labels name the figures of a target comparison, a forecast
 // basis and a chart's ends the way the panels do. The key stays the machine id
 // in the row's context.
-var reportingCSVFigureLabels = map[string]langcopy.Phrase{
-	comparisonStatusRow:  {En: "Status", De: "Status", Vi: "Trạng thái"},
+var Labels = map[string]langcopy.Phrase{
+	"status":             {En: "Status", De: "Status", Vi: "Trạng thái"},
 	"target":             {En: "Goal", De: "Ziel", Vi: "Mục tiêu"},
 	"landing":            {En: "Expected landing", De: "Erwartetes Ergebnis", Vi: "Kết quả dự kiến"},
 	"won":                {En: "Won", De: "Gewonnen", Vi: "Đã thắng"},
@@ -36,23 +39,22 @@ var reportingCSVFigureLabels = map[string]langcopy.Phrase{
 	"closing":            {En: "Closing", De: "Ende", Vi: "Cuối kỳ"},
 }
 
-// reportingCSVMajor writes an amount of minor units as major units, through the
-// one table that knows each currency's digits. A figure outside int64 keeps its
-// plain number rather than wrapping.
-func reportingCSVMajor(minor *float64, currency string) string {
+// Major writes an amount of minor units as major units, with the digits the
+// currency has. A figure outside int64 keeps its plain number rather than wrapping.
+func Major(minor *float64, currency string) string {
 	if minor == nil {
 		return ""
 	}
 	if math.IsNaN(*minor) || math.Abs(*minor) >= math.MaxInt64 {
-		return reportingCSVNumber(minor)
+		return strconv.FormatFloat(*minor, 'f', -1, 64)
 	}
 	return values.MajorUnits(int64(math.Round(*minor)), currency)
 }
 
-// reportingCSVFilename names the file for its scope, period and the evaluation's
+// Filename names the file for its scope, period and the evaluation's
 // day in the workspace zone, so exports of different questions never overwrite
 // each other.
-func reportingCSVFilename(frame crmcontracts.ReportingContext) string {
+func Filename(frame crmcontracts.ReportingContext) string {
 	zone, err := time.LoadLocation(frame.Timezone)
 	if err != nil {
 		zone = time.UTC
@@ -86,4 +88,15 @@ func fileNameWord(name string) string {
 		}
 	}
 	return strings.TrimSuffix(out.String(), "-")
+}
+
+// IDOf is the figure id whose English label is the given text, or the text
+// itself when none matches. A reader of the file in English uses it to find a row.
+func IDOf(english string) string {
+	for id, phrase := range Labels {
+		if phrase.En == english {
+			return id
+		}
+	}
+	return english
 }

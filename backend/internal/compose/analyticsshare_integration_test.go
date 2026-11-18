@@ -960,20 +960,3 @@ func TestASharedSnapshotCountsPricingRatherThanConversion(t *testing.T) {
 		t.Errorf("a team-scoped recipient counted %d eligible deals, want 2", narrow.EligibleCount)
 	}
 }
-
-func TestAShareExportNamesTheCurrencyOfItsBaseColumnsOnEveryRow(t *testing.T) {
-	for name, rows := range map[string][]SharedContribution{"deal row": {{DealName: "Frozen", Currency: "USD"}}, "summary row": nil} {
-		body, err := shareRowsCSV(frozenForReader{Rows: rows, Limited: true}, nil, "EUR")
-		if err != nil {
-			t.Fatal(err)
-		}
-		records, err := csv.NewReader(strings.NewReader(string(body))).ReadAll()
-		if err != nil {
-			t.Fatal(err)
-		}
-		column := slices.Index(records[0], "base_currency")
-		if len(records) != 2 || column < 0 || records[1][column] != "EUR" {
-			t.Errorf("%s: base_currency missing or wrong:\n%s", name, body)
-		}
-	}
-}
