@@ -5009,6 +5009,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "email.detail.attachments_one": "{count} tệp đính kèm",
   "email.detail.attachments_other": "{count} tệp đính kèm",
   "email.detail.attachmentWithheld": "Không lưu, vì email này là riêng tư.",
+  "email.detail.attachmentNotAddressed":
+    "Không lưu, vì không đồng nghiệp nào ở đây gửi email này hoặc có tên trong ô Đến.",
   "email.detail.showQuoted": "Hiển thị nội dung trích dẫn",
   "aiTask.name.reader_rendering": "Hiển thị tin nhắn bằng ngôn ngữ của bạn",
   "readerRendering.show": "Hiển thị bằng ngôn ngữ của tôi",
@@ -14191,6 +14193,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "captureActivity.funnel.fault": "Bị lỗi",
   "captureActivity.reason.internal_only":
     "Mọi bên tham gia đều dùng tên miền của công ty",
+  "captureActivity.reason.own_addresses_only":
+    "Mọi bên tham gia đều là địa chỉ của chính bạn, và không có email khách hàng nào được chuyển tiếp",
   "captureActivity.reason.deferral_capped":
     "Đã chạm giới hạn câu hỏi đang mở, nên sẽ không có kết quả",
   "captureActivity.reason.noise_prior":
@@ -14259,6 +14263,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "pipeline.stage.claim_extraction": "Cam kết và việc còn dở",
   "pipeline.reason.internal_only":
     "mọi bên tham gia đều dùng tên miền của công ty bạn",
+  "pipeline.reason.own_addresses_only":
+    "mọi bên tham gia đều là địa chỉ của chính bạn, và không có email khách hàng nào được chuyển tiếp",
   "pipeline.reason.invisible_incumbent":
     "tin nhắn khớp với một hồ sơ bạn không có quyền xem",
   "pipeline.reason.transactional_infra":

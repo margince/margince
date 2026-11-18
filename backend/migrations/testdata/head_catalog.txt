@@ -109,6 +109,7 @@ public.activity.due_wall timestamp without time zone gen=- def=-
 public.activity.due_zone text gen=- def=-
 public.activity.duration_seconds integer gen=- def=-
 public.activity.foreign_link boolean gen=- def=-
+public.activity.forwarded_to_self boolean NOT NULL gen=- def=false
 public.activity.guests_left_out integer NOT NULL gen=- def=0
 public.activity.has_calendar_part boolean NOT NULL gen=- def=false
 public.activity.home_read_fence_activity_reach CREATE TRIGGER home_read_fence_activity_reach AFTER UPDATE ON public.activity FOR EACH ROW WHEN (((old.audience IS DISTINCT FROM new.audience) OR ((old.restricted_at IS NULL) AND (new.restricted_at IS NOT NULL)) OR ((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL)) OR (old.assignee_id IS DISTINCT FROM new.assignee_id) OR ((old.sent_by_colleague IS NOT NULL) AND (old.sent_by_colleague IS DISTINCT FROM new.sent_by_colleague)) OR (old.captured_by IS DISTINCT FROM new.captured_by) OR (old.source_system IS DISTINCT FROM new.source_system) OR (old.source_activity_id IS DISTINCT FROM new.source_activity_id))) EXECUTE FUNCTION advance_home_read_fence()

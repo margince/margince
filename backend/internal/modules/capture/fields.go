@@ -9,6 +9,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/kernel/calendarevent"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // The typed Fields payloads a NormalizedRecord carries (the port keeps
@@ -76,6 +77,12 @@ type ActivityFields struct {
 	// received (asSentByColleagueTx), stored as activity.invitation_sender. It
 	// names an author only: no participant row, so it grants no reading.
 	InvitationFromSeat ids.UUID
+	// forwardedFrom is the original a seat forwarded to their own address
+	// (readForwardToSelfTx). Unexported so only the sink can state it: the
+	// ladder files the message under its sender as the seat's own choice.
+	forwardedFrom *connector.ForwardedOriginal
+	// forwardThread is the original's thread, whose verdicts judge the forward.
+	forwardThread string
 
 	// AssigneeID and DueAt are the task a unit filed for a colleague; zero for
 	// every other record. They are stored as the task's own columns, so the

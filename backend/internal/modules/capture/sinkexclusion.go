@@ -49,13 +49,8 @@ func (s *Sink) dropBeforeStoreTx(ctx context.Context, tx pgx.Tx, rec connector.N
 		}
 	}
 	if internal && !internalMailAdmitted(ctx) {
-		if err := s.logBreadcrumbTx(ctx, tx, actionCaptureInternalDropped, rec, reasonInternalOnly); err != nil {
-			return ctx, "", err
-		}
-		if err := s.traceTx(ctx, tx, rec, pipelinetrace.StageInternalDrop, TraceInternal, reasonInternalOnly); err != nil {
-			return ctx, "", err
-		}
-		return ctx, "all participants are on the workspace's own domains", nil
+		skip, err := s.dropInternalTx(ctx, tx, rec)
+		return ctx, skip, err
 	}
 	// A message the workspace or this mailbox's owner ruled out is not the
 	// CRM's to hold either.
@@ -83,6 +78,27 @@ func (s *Sink) dropBeforeStoreTx(ctx context.Context, tx pgx.Tx, rec connector.N
 	return ctx, "a capture exclusion rule keeps this message out (" + excluded + ")", nil
 }
 
+// dropInternalTx leaves the breadcrumb and trace of a message dropped as
+// internal, and answers the sentence its skip carries. Mail between the seat's
+// own addresses says so, because "your company's domains" would be a wrong why.
+func (s *Sink) dropInternalTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (string, error) {
+	if err := s.logBreadcrumbTx(ctx, tx, actionCaptureInternalDropped, rec, reasonInternalOnly); err != nil {
+		return "", err
+	}
+	own, err := ownAddressesOnlyTx(ctx, tx, rec)
+	if err != nil {
+		return "", err
+	}
+	reason, skip := reasonInternalOnly, "all participants are on the workspace's own domains"
+	if own {
+		reason, skip = reasonOwnAddressesOnly, skipOwnAddressesOnly
+	}
+	if err := s.traceTx(ctx, tx, rec, pipelinetrace.StageInternalDrop, TraceInternal, reason); err != nil {
+		return "", err
+	}
+	return skip, nil
+}
+
 var _ connector.PreStoreJudge = (*Sink)(nil)
 
 // DropBeforeStore runs the gates Upsert runs first — the colleagues-only gate
@@ -105,6 +121,14 @@ func (s *Sink) DropBeforeStore(ctx context.Context, rec connector.NormalizedReco
 		if err := s.refuseErasedChannelAccount(ctx, tx, rec.Counterparty); err != nil {
 			return err
 		}
+		// Headers cannot show a forward to self, which only its body carries.
+		// Only current mail is downloaded to look: history is not worth every
+		// note a seat ever sent themselves.
+		if s.currentMail(rec) && rec.Counterparty.FiledAsSent() {
+			if own, err := ownAddressesOnlyTx(ctx, tx, rec); err != nil || own {
+				return err
+			}
+		}
 		_, reason, err := s.dropBeforeStoreTx(ctx, tx, rec)
 		dropped = reason != ""
 		return err
@@ -113,6 +137,16 @@ func (s *Sink) DropBeforeStore(ctx context.Context, rec connector.NormalizedReco
 		return false, err
 	}
 	return dropped, nil
+}
+
+// currentMail reports mail that arrived inside the waiting horizon, as the
+// provider dates it or, failing that, as the message does.
+func (s *Sink) currentMail(rec connector.NormalizedRecord) bool {
+	arrived := rec.ProviderReceivedAt
+	if fields, ok := rec.Fields.(ActivityFields); ok && arrived.IsZero() {
+		arrived = fields.OccurredAt
+	}
+	return arrived.After(s.clock().AddDate(0, 0, -storekit.DefaultWaitingHorizonDays))
 }
 
 // excludedTx reports whether any address this message names — sender,

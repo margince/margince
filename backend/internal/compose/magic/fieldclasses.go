@@ -79,7 +79,7 @@ var internalColumns = map[string]map[string]bool{
 		"direction", "domain_evidence_version",
 		// The chosen local clocks surface as the due, remind and meeting intent objects.
 		"due_wall", "due_zone", "meeting_wall", "meeting_zone", "remind_wall", "remind_zone",
-		"done_at", "duration_seconds", "foreign_link", "has_calendar_part", "host_user_id",
+		"done_at", "duration_seconds", "foreign_link", "forwarded_to_self", "has_calendar_part", "host_user_id",
 		"inbound_sender_authenticated", "internal_mail_authorization", "invitation_sender", "kind",
 		"language", "legal_entity_id", "origin", "owed_ask", "owed_verdict_at", "owed_verdict_declined_at",
 		"owed_verdict_declined_ruleset", "raw", "raw_capture_id", "redacted_fields", "reply_settled_at", "reply_verdict_at",
