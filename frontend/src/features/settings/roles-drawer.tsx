@@ -15,7 +15,12 @@ import {
   roleRefusalOf,
   useAssignableRoles,
 } from "../../lib/roles.queries";
-import { RoleDetail, type RoleWrites, useRoleWrites } from "./roles-detail";
+import {
+  type ObjectVerbs,
+  RoleDetail,
+  type RoleWrites,
+  useRoleWrites,
+} from "./roles-detail";
 
 /** A role's kind, and whether it is archived: the row and the drawer say both. */
 export function RoleBadges({ role }: Readonly<{ role: Role }>) {
@@ -39,6 +44,7 @@ export function RoleDrawer({
   returnFocusTo,
   directory,
   units,
+  verbs,
   canUpdate,
   canMove,
   canRestore,
@@ -50,6 +56,7 @@ export function RoleDrawer({
   returnFocusTo: () => HTMLElement | null;
   directory: readonly Role[];
   units: readonly ExtensionUnit[];
+  verbs: ObjectVerbs;
   canUpdate: boolean;
   canMove: boolean;
   canRestore: boolean;
@@ -95,6 +102,22 @@ export function RoleDrawer({
             <span className="roles-drawer-badges">
               <RoleBadges role={current} />
             </span>
+            {current.is_system && !current.archived_at && canUpdate && (
+              <Button
+                disabled={writes.busy}
+                onClick={() =>
+                  writes.restoreGrants.mutate(
+                    { roleKey: current.key, version: current.version },
+                    {
+                      onSuccess: () =>
+                        toast.show(t("roles.restoredGrantsToast", { name })),
+                    },
+                  )
+                }
+              >
+                {t("roles.restoreGrants")}
+              </Button>
+            )}
             {moveVerb && (
               <Button
                 disabled={writes.busy}
@@ -139,6 +162,7 @@ export function RoleDrawer({
           role={current}
           directory={directory}
           units={units}
+          verbs={verbs}
           canUpdate={canUpdate}
           canWiden={canWiden}
           writes={writes}
@@ -155,6 +179,7 @@ function newest(role: Role, writes: RoleWrites): Role {
     writes.update.data,
     writes.setGrant.data,
     writes.move.data,
+    writes.restoreGrants.data,
   ].reduce<Role>(
     (best, answer) =>
       answer?.key === best.key && answer.version > best.version ? answer : best,

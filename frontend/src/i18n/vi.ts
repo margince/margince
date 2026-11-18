@@ -14857,6 +14857,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "roles.refusal.adminFloor":
     "Vai trò quản trị luôn giữ quyền quản lý thành viên, vai trò và nhóm, để công ty luôn có thể được quản trị.",
   "roles.refusal.nameTaken": "Đã có vai trò khác mang tên này. Chọn tên khác.",
+  "roles.refusal.writeNeedsRead":
+    "Tạo, Sửa và Xóa cần quyền Đọc. Hãy bật Đọc trước.",
+  "roles.refusal.customRole": "Chỉ vai trò có sẵn mới có quyền mặc định.",
+  "roles.restoreGrants": "Khôi phục quyền mặc định",
+  "roles.restoredGrantsToast": "Đã khôi phục quyền mặc định cho {name}",
+  "cf.recordKindHint": "Các loại này đến từ các tiện ích đã cài đặt.",
   "extAccess.title": "Tiện ích và quyền truy cập",
   "extAccess.adminOnly":
     "Trang này cần quyền đọc tiện ích mở rộng và vai trò của bản cài đặt. Vai trò hiện tại thiếu một hoặc cả hai quyền.",
