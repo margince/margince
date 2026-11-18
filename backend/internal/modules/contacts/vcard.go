@@ -64,6 +64,8 @@ type VCardEntry struct {
 // vcardStoredProperties are the properties whose value a contact keeps, with
 // the word a reader knows each by. An unreadable one is reported by that word
 // instead of dropped.
+//
+//nolint:goconst // reader words for the report, not column or check names
 var vcardStoredProperties = map[string]string{
 	"FN": "name", "N": "name", "ORG": "company", "TITLE": "job title", "EMAIL": "email address",
 	"TEL": "phone number", "URL": "web address", "ADR": "address",
