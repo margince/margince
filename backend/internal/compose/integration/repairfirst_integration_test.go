@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/comms"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -71,7 +72,7 @@ func (p *preflightEnv) bounceHard(t *testing.T) {
 		principal.Principal{Type: principal.PrincipalConnector, ID: "connector:gmail", UserID: user, OnBehalfOf: user},
 	), ids.NewV7())
 	db := compose.InstallationDB(p.Pool)
-	store := comms.NewStore(db, time.Now, activities.NewStore(db), comms.WithBounceObserver(bounceToConsent{}))
+	store := comms.NewStore(db, func() time.Time { return clocktest.Now(t) }, activities.NewStore(db), comms.WithBounceObserver(bounceToConsent{}))
 	if _, err := store.RecordBounce(reporter, connector.BounceReport{
 		MessageID: messageID, Recipient: "buyer@preflight.test", Kind: connector.BounceHard, Reason: "550 5.1.1 user unknown",
 	}); err != nil {
@@ -79,9 +80,9 @@ func (p *preflightEnv) bounceHard(t *testing.T) {
 	}
 }
 
-// A technical fault and a policy concern on one message: the sender is first
-// asked to repair the mailbox, then the dead address, and only then is the
-// policy concern offered as their own decision.
+// A message with a technical fault and a policy concern asks for the repair
+// first: the mailbox, then the dead address. Only then does the policy concern
+// offer Send anyway.
 func TestTheRepairComesBeforeThePolicyDecision(t *testing.T) {
 	p := setupPreflight(t)
 	c := &consentEnv{AppEnv: p.AppEnv, contactID: p.contactID, activityID: p.activityID}

@@ -33,9 +33,8 @@ func confirmationOf(r servedReview) AnyMap {
 }
 
 // An objection recorded after the sender read the review voids the decision
-// they were about to take. The held message keeps its words, the press is
-// answered with a fresh review naming the objection, and the sender decides
-// again on what they now see.
+// they were about to take. The held message keeps its words. The press gets a
+// fresh review naming the objection, and the sender decides again.
 func TestAnObjectionAfterTheReviewAsksTheSenderToDecideAgain(t *testing.T) {
 	c := setupConsent(t)
 	c.useReviewableMarketingProfile(t)

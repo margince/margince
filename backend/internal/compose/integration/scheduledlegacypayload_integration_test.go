@@ -10,16 +10,16 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 )
 
-// A version 2 row queued by an older build, before the sending entity, the
-// chosen mailbox and the stated countries were frozen into it, still fires and
-// sends once.
+// An older build queued version 2 rows without the sending entity, the chosen
+// mailbox or the stated countries. Such a row still fires and sends once.
 func TestAScheduledRowFromAnOlderBuildStillFires(t *testing.T) {
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.stakeADeal(t)
-	id := p.scheduleFor(t, time.Now().Add(2*time.Hour))
+	id := p.scheduleFor(t, clocktest.Now(t).Add(2*time.Hour))
 
 	var version int
 	var hadEntity bool

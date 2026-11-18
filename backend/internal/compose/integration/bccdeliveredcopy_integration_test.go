@@ -28,11 +28,10 @@ type footedRefusal struct {
 	FooterFindings []commsauthz.FooterFinding `json:"footer_findings"`
 }
 
-// An objection in Bcc, a To with no evidence and a footer the jurisdiction
-// owes but the installation cannot fill: the objection leads, the sender is
-// shown every finding, and one confirmation sends. The copy handed to the
-// provider names the blind copy only in the Bcc header Gmail strips, and
-// carries neither the sender's reason nor anyone's private link.
+// One message has an objection in Bcc, a To with no evidence and a footer
+// nobody can fill. The objection leads and the sender sees every finding. One
+// confirmation sends. The copy handed to the provider names the blind copy only
+// in the Bcc header Gmail strips. It carries no reason and no private link.
 func TestABlindObjectionLeadsAndTheDeliveredCopyKeepsTheBlindCopyPrivate(t *testing.T) {
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
