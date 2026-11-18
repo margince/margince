@@ -9,7 +9,7 @@ import {
   StoryProviders,
 } from "../../../testing/story-utils";
 import type { IntroRequest } from "../introrequests";
-import { MomentsPanel } from "./moments";
+import { MomentsTimeline } from "./moments";
 
 type Moments = Pick<
   components["schemas"]["Contact360"],
@@ -56,7 +56,7 @@ const moved: Moments = {
 function renderTimeline(view: Moments | undefined, asks: IntroRequest[]) {
   render(
     <StoryProviders>
-      <MomentsPanel view={view} asks={asks} />
+      <MomentsTimeline view={view} asks={asks} />
     </StoryProviders>,
   );
 }

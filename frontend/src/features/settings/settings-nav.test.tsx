@@ -246,6 +246,8 @@ const SEEDED_READ_PAGES = pagesNamed(
   "products",
   "capture",
   "knowledge",
+  // Asks for nothing, so it opens for every fixture here.
+  "about",
 );
 
 const SEEDED_OPS_PAGES = pagesNamed(
@@ -276,6 +278,7 @@ const SEEDED_OPS_PAGES = pagesNamed(
   "system-health",
   // The same installation_settings update, which lists where each setting comes from.
   "configuration",
+  "about",
 );
 
 describe("SettingsScreen page visibility", () => {

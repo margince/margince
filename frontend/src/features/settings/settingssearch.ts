@@ -219,6 +219,7 @@ const ALIASES: Partial<Record<SettingsPageId, readonly string[]>> = {
   ],
   extensions: ["units", "plugins", "modules", "extension"],
   reset: ["empty", "wipe", "delete everything", "danger"],
+  about: ["version", "build", "commit", "license", "licenses", "release"],
 };
 
 // The company-context card's own words. That card draws only where

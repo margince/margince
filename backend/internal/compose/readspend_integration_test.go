@@ -58,20 +58,20 @@ func TestAnAgentWithoutEnrichReadsAPanelWithoutStartingAModelCall(t *testing.T) 
 
 	for name, read := range map[string]func(ctx context.Context, lane *spendCountingLane) (crmcontracts.WrittenBy, error){
 		"the dossier": func(ctx context.Context, lane *spendCountingLane) (crmcontracts.WrittenBy, error) {
-			out, err := companydossier.NewService(o.Pool, o.Contacts, lane, "routing", clock).Get(ctx, company, false)
+			out, err := companydossier.NewService(o.Pool, o.Contacts, lane, func() string { return "routing" }, clock).Get(ctx, company, false)
 			return out.GeneratedBy, err
 		},
 		"the growth fit": func(ctx context.Context, lane *spendCountingLane) (crmcontracts.WrittenBy, error) {
-			out, err := companydossier.NewGrowthFitService(o.Pool, o.Contacts, offeringConfirmed(o.Contacts), lane, "routing", clock).Get(ctx, company, false)
+			out, err := companydossier.NewGrowthFitService(o.Pool, o.Contacts, offeringConfirmed(o.Contacts), lane, func() string { return "routing" }, clock).Get(ctx, company, false)
 			return out.GeneratedBy, err
 		},
 		"the company brief": func(ctx context.Context, lane *spendCountingLane) (crmcontracts.WrittenBy, error) {
 			view := company360.NewService(o.Pool, o.Contacts, o.Deals, o.Projects, approvals.NewService(o.DB()), clock)
-			out, err := companybrief.NewService(o.Pool, view, o.Contacts, lane, "routing", clock).Get(ctx, company, false)
+			out, err := companybrief.NewService(o.Pool, view, o.Contacts, lane, func() string { return "routing" }, clock).Get(ctx, company, false)
 			return out.GeneratedBy, err
 		},
 		"the contact brief": func(ctx context.Context, lane *spendCountingLane) (crmcontracts.WrittenBy, error) {
-			out, err := contactbrief.NewService(o.Pool, briefPageOf(contact), lane, "routing", clock).Get(ctx, ids.From[ids.ContactKind](contact), false)
+			out, err := contactbrief.NewService(o.Pool, briefPageOf(contact), lane, func() string { return "routing" }, clock).Get(ctx, ids.From[ids.ContactKind](contact), false)
 			return out.GeneratedBy, err
 		},
 	} {

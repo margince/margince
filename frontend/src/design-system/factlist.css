@@ -97,12 +97,15 @@
 .factlist-flat .factlist-row:not(.factlist-row-block) .factlist-value {
   overflow-wrap: anywhere;
 }
-/* An inline glyph or an edit pill's fill overhangs the value; keep it unclipped. */
+/* An inline glyph, an edit pill's fill or a button's focus ring overhangs the
+   value; keep it unclipped. */
 .factlist-flat
 .factlist-value:has(
   .icon-action-inline,
   .overflow-menu-inline,
-  .editable-value
+  .editable-value,
+  .btn,
+  .link-button
 ) {
   overflow: visible;
 }

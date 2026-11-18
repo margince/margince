@@ -5,6 +5,7 @@ import { readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { pngSize } from "../testing/png";
 
 const frontendRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const read = (file: string) => readFileSync(join(frontendRoot, file), "utf8");
@@ -52,9 +53,6 @@ const ORIGIN = "https://installation.invalid";
 const SHELL_AT_UNKNOWN_PATH = `${ORIGIN}/no/such/path`;
 const ATTRIBUTE_VALUE =
   /(?:^|\s)([\w:-]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))/g;
-const PNG_SIGNATURE = Buffer.from([
-  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
-]);
 
 function headTags(element: "meta" | "link"): Map<string, string>[] {
   const html = read("index.html").replace(/<!--[\s\S]*?-->/g, "");
@@ -164,17 +162,6 @@ function publicFile(icon: Icon): string {
   return join(frontendRoot, "public", icon.url.pathname);
 }
 
-function pngSize(file: string): string {
-  const bytes = readFileSync(file);
-  if (
-    !bytes.subarray(0, 8).equals(PNG_SIGNATURE) ||
-    bytes.toString("latin1", 12, 16) !== "IHDR"
-  ) {
-    throw new Error(`${file} is not a PNG`);
-  }
-  return `${bytes.readUInt32BE(16)}x${bytes.readUInt32BE(20)}`;
-}
-
 function robotsGroups(): RobotsGroup[] {
   const groups: RobotsGroup[] = [];
   for (const line of read("public/robots.txt").split("\n")) {
@@ -270,7 +257,8 @@ describe("every icon the shell and the manifest name ships at the size it claims
     );
     expect(pngs.length).toBeGreaterThan(0);
     for (const png of pngs) {
-      expect(pngSize(publicFile(png)), png.declaredBy).toBe(
+      const { width, height } = pngSize(publicFile(png));
+      expect(`${width}x${height}`, png.declaredBy).toBe(
         png.sizes?.toLowerCase(),
       );
     }

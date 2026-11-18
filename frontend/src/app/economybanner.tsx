@@ -9,15 +9,9 @@ import { unwrap } from "../lib/problem";
 import { routeHash } from "../lib/router";
 import { settingsHref } from "../lib/settingsrouting";
 
-export function EconomyBanner() {
-  const t = useT();
+export function useEconomyBand() {
   const canRead = useCan("ai_budget", "read");
   const enabled = useCanWrite("ai_budget", "update") && canRead;
-  const previousBand = useRef<string | undefined>(undefined);
-  const [occurrence, setOccurrence] = useState(0);
-  const [dismissedOccurrence, setDismissedOccurrence] = useState<string | null>(
-    null,
-  );
   const query = useQuery({
     queryKey: ["ai-budget"],
     enabled,
@@ -29,6 +23,19 @@ export function EconomyBanner() {
     },
   });
   const band = query.data?.band;
+  // The banner is advisory; errors stay on the accountable Settings card.
+  const warns = enabled && !query.isError && !!band && band !== "normal";
+  return { band, warns, known: !query.isLoading };
+}
+
+export function EconomyBanner() {
+  const t = useT();
+  const previousBand = useRef<string | undefined>(undefined);
+  const [occurrence, setOccurrence] = useState(0);
+  const [dismissedOccurrence, setDismissedOccurrence] = useState<string | null>(
+    null,
+  );
+  const { band, warns } = useEconomyBand();
   useEffect(() => {
     if (band !== previousBand.current) {
       previousBand.current = band;
@@ -36,14 +43,7 @@ export function EconomyBanner() {
     }
   }, [band]);
   const occurrenceKey = band ? `${band}:${occurrence}` : null;
-  // The banner is advisory; errors stay on the accountable Settings card.
-  if (
-    !enabled ||
-    query.isError ||
-    !band ||
-    band === "normal" ||
-    dismissedOccurrence === occurrenceKey
-  ) {
+  if (!warns || dismissedOccurrence === occurrenceKey) {
     return null;
   }
   return (

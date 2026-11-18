@@ -673,6 +673,7 @@ export const SystemHealthPage: Story = catalogPage("system-health");
 export const ConfigurationPage: Story = catalogPage("configuration");
 export const ExtensionsPage: Story = catalogPage("extensions");
 export const ResetPage: Story = catalogPage("reset");
+export const AboutPage: Story = catalogPage("about");
 
 // Company profile while the rollout keeps the company context unread: the card
 // draws nothing, and search offers none of its names.

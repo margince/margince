@@ -168,6 +168,16 @@ export function RelationshipMap({
 
   return (
     <div className="rmap-frame">
+      {/* The key to the line styles, in the band words the panel uses. The
+          drawing is hidden from a screen reader, so the key is too. */}
+      <p className="rmap-legend t-caption" aria-hidden="true">
+        {(["strong", "developing", "cold"] as const).map((band) => (
+          <span key={band}>
+            <i className={`rmap-legend-key rmap-legend-${band}`} />
+            {labels.band[band]}
+          </span>
+        ))}
+      </p>
       <div className="rmap" data-motion={still ? "none" : "in"}>
         <div className="rmap-scroll">
           {/* biome-ignore lint/a11y/useSemanticElements: the rule suggests
