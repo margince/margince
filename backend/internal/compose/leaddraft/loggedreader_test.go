@@ -6,6 +6,7 @@ package leaddraft_test
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -39,5 +40,36 @@ func TestALeadDraftReadsTheNewestLoggedTouchOfItsLead(t *testing.T) {
 	reader.err = errors.New("down")
 	if _, _, err := svc.Draft(humanCtx(), someLead, leaddraft.Request{}); err == nil {
 		t.Error("a failed logged-touch read still produced a draft")
+	}
+}
+
+type returnsLogged struct{ rows []crmcontracts.Activity }
+
+func (r returnsLogged) NewestLoggedTouch(context.Context, draftcore.LoggedOn, time.Time) ([]crmcontracts.Activity, error) {
+	return r.rows, nil
+}
+
+// A lead with only an internal note on file is still written to as a stranger.
+// The same lead with a past meeting is followed up.
+func TestANoteOnlyLeadIsStillAFirstTouch(t *testing.T) {
+	now := time.Now()
+	bodyFor := func(kind crmcontracts.ActivityKind) string {
+		t.Helper()
+		row := crmcontracts.Activity{Kind: kind, OccurredAt: now.Add(-48 * time.Hour), OccurredPrecision: "instant"}
+		svc := leaddraft.NewService(&leadReader{lead: lead(nil)}, &correspondence{rows: []crmcontracts.Activity{row}}, nil).
+			WithLoggedTouches(returnsLogged{rows: []crmcontracts.Activity{row}})
+		draft, _, err := svc.Draft(humanCtx(), someLead, leaddraft.Request{})
+		if err != nil {
+			t.Fatalf("drafting: %v", err)
+		}
+		return draft.Body
+	}
+	note, meeting := bodyFor(crmcontracts.ActivityKindNote), bodyFor(crmcontracts.ActivityKindMeeting)
+	const firstTouch = "for the first time"
+	if !strings.Contains(note, firstTouch) {
+		t.Errorf("a note-only lead's draft = %q, want the first-touch opener", note)
+	}
+	if strings.Contains(meeting, firstTouch) {
+		t.Errorf("a lead with a past meeting got the first-touch opener: %q", meeting)
 	}
 }
