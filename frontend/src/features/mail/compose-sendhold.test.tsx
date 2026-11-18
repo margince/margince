@@ -18,6 +18,7 @@ import {
   fillSendableForm,
   jsonResponse,
   pickWhy,
+  pressSend,
   problemResponse,
   render,
   stubRoutes,
@@ -371,14 +372,12 @@ describe("an older server's footer refusal", () => {
     });
     openComposer();
     await fillSendableForm();
-    await waitFor(() => expect(sendButton()).toBeEnabled());
-    await userEvent.click(sendButton());
+    await pressSend();
     await screen.findByText(/ask an administrator to update Margince/i);
     expect(sendButton()).toBeDisabled();
 
     await userEvent.type(screen.getByLabelText("Subject"), " again");
-    await waitFor(() => expect(sendButton()).toBeEnabled());
-    await userEvent.click(sendButton());
+    await pressSend();
     await waitFor(() => expect(posted(sent)).toHaveLength(2));
   });
 });

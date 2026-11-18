@@ -57,10 +57,14 @@ func runMachineAddressTask(ctx context.Context, t *testing.T, e *integration.Env
 	if err := engine.Seed(ctx); err != nil {
 		t.Fatal(err)
 	}
+	// A failed batch is retried after the wait the engine names, as the worker
+	// snoozes for it; the test clock moves on by that wait instead.
 	for range 20 {
-		if _, err := engine.Execute(ctx); err != nil {
+		outcome, err := engine.Execute(ctx)
+		if err != nil {
 			t.Fatal(err)
 		}
+		now = now.Add(outcome.Wait)
 	}
 }
 

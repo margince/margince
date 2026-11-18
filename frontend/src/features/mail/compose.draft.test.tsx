@@ -23,6 +23,7 @@ import {
   jsonResponse,
   PROVISIONAL_VOICE_PROFILE,
   pickWhy,
+  pressSend,
   problemResponse,
   REWRITE_ROUTE,
   render,
@@ -143,8 +144,7 @@ describe("ComposeModal draft binding", () => {
     await userEvent.click(draftButton());
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
     await pickWhy(WHY_LABEL.requestedFollowup);
-    await waitForSendReady();
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
 
     await waitFor(() =>
       expect(
@@ -405,8 +405,7 @@ describe("ComposeModal draft binding", () => {
     );
 
     await pickWhy(WHY_LABEL.requestedFollowup);
-    await waitForSendReady();
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
 
     await waitFor(() =>
       expect(
@@ -440,8 +439,7 @@ describe("ComposeModal draft binding", () => {
     writeMessage("Body", "");
     writeMessage("Body", "Written from scratch.");
     await pickWhy(WHY_LABEL.requestedFollowup);
-    await waitForSendReady();
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
 
     await waitFor(() =>
       expect(
@@ -553,8 +551,7 @@ describe("ComposeModal draft binding", () => {
     expect(await screen.findByText(/boom/i)).toBeTruthy();
 
     await pickWhy(WHY_LABEL.requestedFollowup);
-    await waitForSendReady();
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
 
     await waitFor(() =>
       expect(
@@ -591,8 +588,7 @@ describe("ComposeModal draft binding", () => {
     expect(messageText("Body")).toBe("Draft A body.");
 
     await pickWhy(WHY_LABEL.requestedFollowup);
-    await waitForSendReady();
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
     await waitFor(() =>
       expect(
         sent.some((r) => r.key === "POST /activities/act-1/send-email"),
@@ -858,8 +854,7 @@ describe("ComposeModal send refusals", () => {
     renderComposer(onClose);
     await screen.findByRole("combobox", { name: WHY_ASK });
     await fillSendableForm();
-    await waitForSendReady();
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
 
     await expectReconnect(onClose);
   });
@@ -880,8 +875,7 @@ describe("ComposeModal send refusals", () => {
     renderComposer(onClose);
     await screen.findByRole("combobox", { name: WHY_ASK });
     await fillSendableForm();
-    await waitForSendReady();
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
     expect(
       await screen.findByText(/ask an administrator to update Margince/i),
     ).toBeTruthy();
@@ -907,8 +901,7 @@ describe("ComposeModal send refusals", () => {
     renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
     await fillSendableForm();
-    await waitForSendReady();
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
 
     expect(
       await screen.findByText(/goes to one recipient at a time/i),
@@ -931,8 +924,7 @@ describe("ComposeModal send refusals", () => {
     renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
     await fillSendableForm();
-    await waitForSendReady();
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
 
     expect(await screen.findByText(/opaque server wording/i)).toBeTruthy();
   });
