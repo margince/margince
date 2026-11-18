@@ -12300,7 +12300,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectors.disconnectBodyMicrosoftNote":
     "Microsoft führt Margince möglicherweise weiterhin unter den verbundenen Apps deines Kontos. Entferne Margince dort, um den Zugriff vollständig zu widerrufen.",
   "connectors.errRateLimited":
-    "Der Anbieter drosselt Anfragen. Die Erfassung ist langsamer als sonst. Es geht nichts verloren.",
+    "Der Anbieter begrenzt die Anfragen. Die Erfassung ist langsamer als sonst. Es geht nichts verloren.",
   "connectors.errUnreachable":
     "Der Anbieter war nicht erreichbar. Es wird automatisch erneut versucht.",
   "connectors.errAuth":
@@ -21688,6 +21688,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "captureConcern.stalled": "Synchronisierung angehalten",
   "captureConcern.silent": "Keine neue E-Mail eingegangen",
   "captureConcern.roleCannotCapture": "Rolle darf keine E-Mails erfassen",
+  "captureConcern.nextTry": "Nächster Versuch um {time}",
+  "captureConcern.tryingNow": "Neuer Versuch läuft jetzt",
   "captureConcern.title": "{mailbox}: {concern}",
   "captureConcern.since": "Seit {since}",
   "captureConcern.more_one":

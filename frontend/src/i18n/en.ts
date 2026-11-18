@@ -12252,7 +12252,7 @@ export const en = {
   "connectors.disconnectBodyMicrosoftNote":
     "Microsoft may still list Margince among your account’s connected apps. Remove it there to revoke access fully.",
   "connectors.errRateLimited":
-    "The provider is throttling requests. Capture is slower than usual; nothing is lost.",
+    "The provider is limiting requests. Capture is slower than usual; nothing is lost.",
   "connectors.errUnreachable":
     "The provider could not be reached. Retrying automatically.",
   "connectors.errAuth":
@@ -21425,6 +21425,8 @@ export const en = {
   "captureConcern.stalled": "Sync has stopped",
   "captureConcern.silent": "No recent mail delivered",
   "captureConcern.roleCannotCapture": "Role cannot capture mail",
+  "captureConcern.nextTry": "Next try at {time}",
+  "captureConcern.tryingNow": "Trying again now",
   "captureConcern.title": "{mailbox}: {concern}",
   "captureConcern.since": "Since {since}",
   "captureConcern.more_one": "{count} more connection needs attention",
