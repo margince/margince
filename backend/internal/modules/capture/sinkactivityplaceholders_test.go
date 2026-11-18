@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -18,7 +19,7 @@ import (
 func TestTheCaptureInsertCountsItsOwnPlaceholders(t *testing.T) {
 	t.Parallel()
 	seconds := 9000
-	statement, args := capturedActivityInsert(context.Background(), connector.NormalizedRecord{}, ActivityFields{Kind: "meeting", DurationSeconds: &seconds}, birthDecision{})
+	statement, args := capturedActivityInsert(context.Background(), connector.NormalizedRecord{}, ActivityFields{Kind: "meeting", DurationSeconds: &seconds}, birthDecision{}, time.Time{})
 
 	listStart := strings.Index(statement, "(")
 	listEnd := strings.Index(statement, ")")

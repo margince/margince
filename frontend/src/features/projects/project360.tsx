@@ -22,6 +22,7 @@ import {
   snoozedDueAt,
   TaskCompleteCheck,
   TaskQuickActions,
+  TaskWriteFailure,
   useTaskUpdate,
 } from "../../components/taskactions";
 import { Badge, Button, OverflowMenu } from "../../design-system/atoms";
@@ -313,12 +314,15 @@ function useNextTaskVerbs(
   return {
     // No due date here: the bar draws its own Snooze beside Done.
     action: (
-      <TaskQuickActions
-        activityId={next.activityId}
-        version={next.version}
-        dueAt={null}
-        update={update}
-      />
+      <>
+        <TaskQuickActions
+          activityId={next.activityId}
+          version={next.version}
+          dueAt={null}
+          update={update}
+        />
+        <TaskWriteFailure taskId={next.activityId} update={update} />
+      </>
     ),
     snooze: next.dueAt
       ? {
@@ -337,7 +341,7 @@ function useNextTaskVerbs(
                 body: nextDue,
               });
           },
-          pending: update.isPending && update.variables?.id === next.activityId,
+          pending: update.isPending,
         }
       : undefined,
   };
