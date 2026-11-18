@@ -3101,6 +3101,8 @@
   "compose.relatedToNone": "Nichts Bestimmtes",
   "compose.relatedDeal": "Deal: {name}",
   "compose.aboutDeal": "Deal, um den es geht",
+  "compose.from.label": "Von",
+  "compose.from.automatic": "Postfach, in dem das Gespräch ankam, sonst Ihr Standard",
   "compose.aboutDealNone": "Kein Deal",
   "compose.aboutDealUnavailable": "Die Deals des Kontakts konnten nicht geladen werden. Schreib stattdessen von der Seite des Deals.",
   "compose.aboutDealPartial": "Hier stehen nicht alle Deals. Fehlt deiner, schreib von der Seite des Deals.",

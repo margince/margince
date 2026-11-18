@@ -42,6 +42,8 @@ type SendRequest = {
     body: string;
     // The markup beside the plain part, omitted when nothing was formatted.
     html_body?: string;
+    // The sender's mailbox, omitted when the server chooses.
+    from_connection_id?: string;
     to: string[];
     cc?: string[];
     bcc?: string[];
@@ -159,6 +161,7 @@ function sendRequest(
       to,
       // Keep the editor's markup; omit only an empty alternative.
       html_body: html.trim() === "" ? undefined : html,
+      from_connection_id: fields.fromConnection || undefined,
       cc: cc.length ? cc : undefined,
       bcc: bcc.length ? bcc : undefined,
       attachment_ids: attachmentIds,

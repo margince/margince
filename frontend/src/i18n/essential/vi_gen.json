@@ -3101,6 +3101,8 @@
   "compose.relatedToNone": "Không cụ thể",
   "compose.relatedDeal": "Thuộc deal: {name}",
   "compose.aboutDeal": "Deal mà thư theo dõi này nói về",
+  "compose.from.label": "Từ",
+  "compose.from.automatic": "Hộp thư nhận cuộc trò chuyện, nếu không thì hộp thư mặc định",
   "compose.aboutDealNone": "Không có deal",
   "compose.aboutDealUnavailable": "Không tải được các deal của liên hệ. Hãy viết từ trang của deal.",
   "compose.aboutDealPartial": "Không phải mọi deal đều có ở đây. Nếu thiếu deal của bạn, hãy viết từ trang của deal.",

@@ -13812,7 +13812,15 @@ export interface paths {
     };
     "/connectors/{provider}/disconnect": {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Which of the caller's mailboxes of this provider the call is about: the `id` of a
+                 *     `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+                 *     the caller holds one mailbox of the provider; with several, a call without it answers 422
+                 *     and names this parameter.
+                 */
+                connection_id?: components["parameters"]["CaptureConnectionId"];
+            };
             header?: never;
             path: {
                 /**
@@ -13989,7 +13997,15 @@ export interface paths {
     };
     "/connectors/{provider}/signature-enrichment": {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Which of the caller's mailboxes of this provider the call is about: the `id` of a
+                 *     `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+                 *     the caller holds one mailbox of the provider; with several, a call without it answers 422
+                 *     and names this parameter.
+                 */
+                connection_id?: components["parameters"]["CaptureConnectionId"];
+            };
             header?: never;
             path: {
                 /**
@@ -14085,7 +14101,15 @@ export interface paths {
     };
     "/connectors/{provider}/silence/dismiss": {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Which of the caller's mailboxes of this provider the call is about: the `id` of a
+                 *     `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+                 *     the caller holds one mailbox of the provider; with several, a call without it answers 422
+                 *     and names this parameter.
+                 */
+                connection_id?: components["parameters"]["CaptureConnectionId"];
+            };
             header?: never;
             path: {
                 /**
@@ -14124,7 +14148,15 @@ export interface paths {
     };
     "/connectors/{provider}/mail-posture": {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Which of the caller's mailboxes of this provider the call is about: the `id` of a
+                 *     `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+                 *     the caller holds one mailbox of the provider; with several, a call without it answers 422
+                 *     and names this parameter.
+                 */
+                connection_id?: components["parameters"]["CaptureConnectionId"];
+            };
             header?: never;
             path: {
                 /**
@@ -14173,7 +14205,15 @@ export interface paths {
     };
     "/connectors/{provider}/history-baseline": {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Which of the caller's mailboxes of this provider the call is about: the `id` of a
+                 *     `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+                 *     the caller holds one mailbox of the provider; with several, a call without it answers 422
+                 *     and names this parameter.
+                 */
+                connection_id?: components["parameters"]["CaptureConnectionId"];
+            };
             header?: never;
             path: {
                 /**
@@ -14224,7 +14264,15 @@ export interface paths {
     };
     "/connectors/{provider}/context-tag": {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Which of the caller's mailboxes of this provider the call is about: the `id` of a
+                 *     `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+                 *     the caller holds one mailbox of the provider; with several, a call without it answers 422
+                 *     and names this parameter.
+                 */
+                connection_id?: components["parameters"]["CaptureConnectionId"];
+            };
             header?: never;
             path: {
                 /**
@@ -14275,7 +14323,15 @@ export interface paths {
     };
     "/connectors/{provider}/backfill/preview": {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Which of the caller's mailboxes of this provider the call is about: the `id` of a
+                 *     `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+                 *     the caller holds one mailbox of the provider; with several, a call without it answers 422
+                 *     and names this parameter.
+                 */
+                connection_id?: components["parameters"]["CaptureConnectionId"];
+            };
             header?: never;
             path: {
                 /**
@@ -14318,7 +14374,15 @@ export interface paths {
     };
     "/connectors/{provider}/backfill": {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Which of the caller's mailboxes of this provider the call is about: the `id` of a
+                 *     `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+                 *     the caller holds one mailbox of the provider; with several, a call without it answers 422
+                 *     and names this parameter.
+                 */
+                connection_id?: components["parameters"]["CaptureConnectionId"];
+            };
             header?: never;
             path: {
                 /**
@@ -30638,6 +30702,14 @@ export interface components {
              */
             redirect_uri?: string;
             /**
+             * Format: uuid
+             * @description The caller's mailbox this consent repairs (Reconnect). The consent must name the same
+             *     account: a different one is refused, because it is another mailbox. Absent adds the
+             *     account the consent names as another mailbox, or repairs the one that account already
+             *     has. Ignored by credential providers.
+             */
+            connection_id?: string;
+            /**
              * @description Which surface the post-consent redirect lands on: `onboarding` lands on
              *     `/#/onboarding/connect/{outcome}/{provider}`, `settings` on
              *     `/#/settings/connections/{outcome}/{provider}` and `meetings` on
@@ -44025,6 +44097,15 @@ export interface components {
             timezone: string;
         };
         SendEmailRequest: {
+            /**
+             * Format: uuid
+             * @description The sender's own mailbox the message goes out from, the `id` of one of their
+             *     `CaptureConnection`s that can send. Omitted, a reply goes out from the mailbox the
+             *     conversation arrived in, and a new message from the mailbox they connected first. A mailbox
+             *     that is not the sender's, or cannot send, is refused with 422
+             *     `mailbox_not_send_capable`.
+             */
+            from_connection_id?: string | null;
             /** @description The subject line. Blank or only white space is refused with 422 `required`. */
             subject: string;
             /** @description The (possibly edited) final body that is sent. Blank or only white space is refused with 422 `required`. */
@@ -44726,6 +44807,12 @@ export interface components {
          *     otherwise have supplied — the records this new conversation belongs to.
          */
         SendCompanyEmailRequest: {
+            /**
+             * Format: uuid
+             * @description The sender's own mailbox the message goes out from, as on `SendEmailRequest`.
+             *     Omitted, it goes out from the mailbox they connected first.
+             */
+            from_connection_id?: string | null;
             /** @description The subject line. Blank or only white space is refused with 422 `required`. */
             subject: string;
             /** @description The (possibly edited) final body that is sent. Blank or only white space is refused with 422 `required`. */
@@ -62661,6 +62748,13 @@ export interface components {
         FactKey: string;
         /** @description The provider of an OAuth app a composed extension unit declares. Never `google` or `microsoft`: the boot refuses a unit that claims a core vendor's name. */
         ExtOAuthProvider: string;
+        /**
+         * @description Which of the caller's mailboxes of this provider the call is about: the `id` of a
+         *     `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+         *     the caller holds one mailbox of the provider; with several, a call without it answers 422
+         *     and names this parameter.
+         */
+        CaptureConnectionId: string;
         /**
          * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
          *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
@@ -85446,7 +85540,15 @@ export interface operations {
     };
     disconnectConnector: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Which of the caller's mailboxes of this provider the call is about: the `id` of a
+                 *     `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+                 *     the caller holds one mailbox of the provider; with several, a call without it answers 422
+                 *     and names this parameter.
+                 */
+                connection_id?: components["parameters"]["CaptureConnectionId"];
+            };
             header?: never;
             path: {
                 /**
@@ -85478,6 +85580,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listSharedMailboxes: {
@@ -85629,7 +85732,15 @@ export interface operations {
     };
     setConnectorSignatureEnrichment: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Which of the caller's mailboxes of this provider the call is about: the `id` of a
+                 *     `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+                 *     the caller holds one mailbox of the provider; with several, a call without it answers 422
+                 *     and names this parameter.
+                 */
+                connection_id?: components["parameters"]["CaptureConnectionId"];
+            };
             header?: never;
             path: {
                 /**
@@ -85668,12 +85779,13 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listConnectorContainers: {
         parameters: {
             query?: {
-                /** @description Administrator-only connection selection for internal operational mail enrollment. Omit to list the caller's own mailbox. */
+                /** @description The caller's own mailbox of this provider, the `id` of a `CaptureConnection`; omit it while they hold one. An administrator may also name a connection enrolled for internal operational mail. */
                 connection_id?: string;
             };
             header?: never;
@@ -85733,7 +85845,15 @@ export interface operations {
     };
     dismissConnectorSilence: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Which of the caller's mailboxes of this provider the call is about: the `id` of a
+                 *     `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+                 *     the caller holds one mailbox of the provider; with several, a call without it answers 422
+                 *     and names this parameter.
+                 */
+                connection_id?: components["parameters"]["CaptureConnectionId"];
+            };
             header?: never;
             path: {
                 /**
@@ -85778,7 +85898,15 @@ export interface operations {
     };
     setConnectorMailPosture: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Which of the caller's mailboxes of this provider the call is about: the `id` of a
+                 *     `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+                 *     the caller holds one mailbox of the provider; with several, a call without it answers 422
+                 *     and names this parameter.
+                 */
+                connection_id?: components["parameters"]["CaptureConnectionId"];
+            };
             header?: never;
             path: {
                 /**
@@ -85822,7 +85950,15 @@ export interface operations {
     };
     setConnectorHistoryBaseline: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Which of the caller's mailboxes of this provider the call is about: the `id` of a
+                 *     `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+                 *     the caller holds one mailbox of the provider; with several, a call without it answers 422
+                 *     and names this parameter.
+                 */
+                connection_id?: components["parameters"]["CaptureConnectionId"];
+            };
             header?: never;
             path: {
                 /**
@@ -85866,7 +86002,15 @@ export interface operations {
     };
     setConnectorContextTag: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Which of the caller's mailboxes of this provider the call is about: the `id` of a
+                 *     `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+                 *     the caller holds one mailbox of the provider; with several, a call without it answers 422
+                 *     and names this parameter.
+                 */
+                connection_id?: components["parameters"]["CaptureConnectionId"];
+            };
             header?: never;
             path: {
                 /**
@@ -85910,7 +86054,15 @@ export interface operations {
     };
     previewConnectorBackfill: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Which of the caller's mailboxes of this provider the call is about: the `id` of a
+                 *     `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+                 *     the caller holds one mailbox of the provider; with several, a call without it answers 422
+                 *     and names this parameter.
+                 */
+                connection_id?: components["parameters"]["CaptureConnectionId"];
+            };
             header?: never;
             path: {
                 /**
@@ -85950,6 +86102,7 @@ export interface operations {
             403: components["responses"]["RoleCannotCapture"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
             /** @description Provider unreachable — the estimate needs the provider (`code: provider_unreachable`). */
             502: {
                 headers: {
@@ -85963,7 +86116,15 @@ export interface operations {
     };
     getConnectorBackfillStatus: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Which of the caller's mailboxes of this provider the call is about: the `id` of a
+                 *     `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+                 *     the caller holds one mailbox of the provider; with several, a call without it answers 422
+                 *     and names this parameter.
+                 */
+                connection_id?: components["parameters"]["CaptureConnectionId"];
+            };
             header?: never;
             path: {
                 /**
@@ -85997,11 +86158,20 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     startConnectorBackfill: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Which of the caller's mailboxes of this provider the call is about: the `id` of a
+                 *     `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+                 *     the caller holds one mailbox of the provider; with several, a call without it answers 422
+                 *     and names this parameter.
+                 */
+                connection_id?: components["parameters"]["CaptureConnectionId"];
+            };
             header?: never;
             path: {
                 /**
@@ -86041,11 +86211,20 @@ export interface operations {
             403: components["responses"]["RoleCannotCapture"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     cancelConnectorBackfill: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Which of the caller's mailboxes of this provider the call is about: the `id` of a
+                 *     `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+                 *     the caller holds one mailbox of the provider; with several, a call without it answers 422
+                 *     and names this parameter.
+                 */
+                connection_id?: components["parameters"]["CaptureConnectionId"];
+            };
             header?: never;
             path: {
                 /**
@@ -86080,6 +86259,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getAttention: {

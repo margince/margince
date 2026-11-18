@@ -138,6 +138,8 @@ export function useComposeFields({
   // Copy rows holding a value may not be hidden, so they stay open once opened.
   const [bcc, setBcc] = useState<string[]>(edit?.bcc ?? []);
   const [copiesOpen, setCopiesOpen] = useState(() => holdsCopies(edit));
+  // The sender's mailbox the mail goes out from; empty leaves it to the server.
+  const [fromConnection, setFromConnection] = useState("");
   const [subject, setSubject] = useState(
     edit?.subject ?? initialMessage?.subject ?? "",
   );
@@ -426,6 +428,8 @@ export function useComposeFields({
     openCopies: () => setCopiesOpen(true),
     subject,
     setSubject,
+    fromConnection,
+    setFromConnection,
     body,
     html,
     intent,

@@ -49,6 +49,7 @@ export { WorkspaceBotPanel } from "./connectors.telegram";
 
 type CaptureConnection = components["schemas"]["CaptureConnection"];
 type CaptureMissing = components["schemas"]["SeatCapture"]["missing"];
+type Provider = CaptureConnection["provider"];
 
 // The roster as this card's list: one row per account.
 function MailRoster({
@@ -69,7 +70,7 @@ function MailRoster({
     <ProviderList>
       {accounts.map((account) => (
         <ConnectionAccountRow
-          key={account.key}
+          key={account.id}
           account={account}
           reconnectPrimary={
             firstBroken === undefined || account === firstBroken
@@ -140,11 +141,24 @@ function MailHeadAction({
   if (!offerAdd) {
     return null;
   }
+  // With a mailbox connected, the verb adds another account, never a second
+  // copy of one already there: that account's own Reconnect repairs it.
   return (
     <Button id={addId} onClick={onAdd}>
       {t("connectors.addOpen")}
     </Button>
   );
+}
+
+// A member may connect several accounts of one vendor, so once anything is
+// connected the add verb offers every account again. Before that it offers
+// what is left to add.
+function addOffer(canAdd: boolean, present: readonly Provider[]) {
+  const empty = present.length === 0;
+  return {
+    offered: canAdd && (!empty || canAddAccount(present)),
+    connected: empty ? present : [],
+  };
 }
 
 // The OAuth return's note, with its own "Connect calendar"; each account row
@@ -203,7 +217,8 @@ export function ConnectorsCard() {
   // lands every account looks free.
   const rosterKnown = connectors.isSuccess && !notConfigured;
   const empty = rosterKnown && rows.length === 0;
-  const offerAdd = rosterKnown && canConnect && canAddAccount(present);
+  const add = addOffer(rosterKnown && canConnect, present);
+  const offerAdd = add.offered;
   const titleId = useId();
   const addId = useId();
   // Adding a mailbox can take the verb away (every account connected, or the
@@ -268,7 +283,7 @@ export function ConnectorsCard() {
         open={adding !== null && offerAdd}
         onClose={() => setAdding(null)}
         startFrom={adding || undefined}
-        connected={present}
+        connected={add.connected}
         availability={connectors.data?.providers}
         onImap={() => setImapConnectOpen(true)}
         returnFocusTo={backToAdd}

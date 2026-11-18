@@ -6,7 +6,7 @@ import { useMutation, useQueries, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { isMailbox } from "../../format/connectorprovider";
-import { useConnectors } from "../../lib/connectors";
+import { mailboxParams, useConnectors } from "../../lib/connectors";
 import { throwProblem } from "../../lib/problem";
 
 type CaptureConnection = components["schemas"]["CaptureConnection"];
@@ -57,7 +57,7 @@ export function useContainers(
 ) {
   return useQueries({
     queries: mailboxes.map((mailbox) => ({
-      queryKey: ["connector-containers", mailbox.provider],
+      queryKey: ["connector-containers", mailbox.id],
       enabled,
       // One round trip per opening of the dialog, not per keystroke.
       staleTime: 60_000,
@@ -65,7 +65,7 @@ export function useContainers(
       queryFn: async () => {
         const { data, error, response } = await api.GET(
           "/connectors/{provider}/containers",
-          { params: { path: { provider: mailbox.provider } } },
+          { params: mailboxParams(mailbox) },
         );
         if (response.status === 404 || response.status === 501) {
           return { containers: [] };

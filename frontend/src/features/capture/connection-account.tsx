@@ -105,9 +105,11 @@ function useAccountActions(
   const vendor = vendorOfAccount(account);
   const present = servicesOf(account);
 
-  const reconnect = (provider: Provider) => {
+  // A Reconnect names the row it repairs, so a consent for another account is
+  // refused rather than taking this mailbox's place.
+  const reconnect = (provider: Provider, reconnects?: string) => {
     if (isOAuthConnectProvider(provider)) {
-      connect.mutate({ provider, returnTo: "settings" });
+      connect.mutate({ provider, returnTo: "settings", reconnects });
     } else if (provider === "imap") {
       onImapReconnect();
     }
@@ -123,12 +125,15 @@ function useAccountActions(
         (service) => service !== null && needsReconnect(service),
       );
     if (notesAlone && account.notes) {
-      reconnect(account.notes.provider);
+      reconnect(account.notes.provider, account.notes.id);
       return;
     }
     const input = vendor ? connectInputFor(vendor, present, "none") : null;
-    if (input) connect.mutate(input);
-    else if (account.mail) reconnect(account.mail.provider);
+    const repaired = [account.mail, account.calendar].find(
+      (service) => service?.provider === input?.provider,
+    );
+    if (input) connect.mutate({ ...input, reconnects: repaired?.id });
+    else if (account.mail) reconnect(account.mail.provider, account.mail.id);
   };
   const changeServices = (change: BringsInChange) => {
     const added =
@@ -277,6 +282,7 @@ function AccountDialogs({
       {vendor && mail && (
         <ImportPastEmailDialog
           provider={mail.provider}
+          connectionId={mail.id}
           initial={mail.backfill}
           baseline={
             <SettingList testId={`connector-${mail.provider}-import-baseline`}>

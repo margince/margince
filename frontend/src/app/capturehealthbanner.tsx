@@ -19,7 +19,7 @@ import {
   concernKey,
   rateLimited,
 } from "../lib/captureconcern";
-import { useConnectors } from "../lib/connectors";
+import { mailboxParams, useConnectors } from "../lib/connectors";
 import { problemMessageOf, unwrap } from "../lib/problem";
 import { useViewerZone } from "../lib/viewerzone";
 import { briefKey, magicKey, worklistKey } from "../lib/workkeys";
@@ -40,7 +40,7 @@ export function CaptureHealthBanner() {
         throw new Error(t("captureConcern.changed"));
       return unwrap(
         await api.POST("/connectors/{provider}/silence/dismiss", {
-          params: { path: { provider: connection.provider } },
+          params: mailboxParams(connection),
           body: { since: connection.concern_since },
         }),
       );

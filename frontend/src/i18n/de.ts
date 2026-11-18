@@ -7942,6 +7942,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.relatedToNone": "Nichts Bestimmtes",
   "compose.relatedDeal": "Deal: {name}",
   "compose.aboutDeal": "Deal, um den es geht",
+  "compose.from.label": "Von",
+  "compose.from.automatic":
+    "Postfach, in dem das Gespräch ankam, sonst Ihr Standard",
   "compose.aboutDealNone": "Kein Deal",
   "compose.aboutDealUnavailable":
     "Die Deals des Kontakts konnten nicht geladen werden. Schreib stattdessen von der Seite des Deals.",
@@ -12360,7 +12363,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectors.oauthNotConnected": "Nichts verbunden",
 
   // Der Button in der Kopfzeile der Karte, der den Verbindungsdialog öffnet.
-  "connectors.addOpen": "Konto hinzufügen",
+  "connectors.addOpen": "Weiteres Postfach hinzufügen",
+  "connectors.oauthOtherAccount":
+    "Sie haben sich mit einem anderen Konto als diesem Postfach angemeldet, daher wurde nichts geändert. Um dieses Konto auch zu verbinden, wählen Sie Weiteres Postfach hinzufügen.",
   "connectors.providerNotConfigured":
     "{provider} ist in dieser Installation nicht konfiguriert.",
 

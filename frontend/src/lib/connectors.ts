@@ -64,7 +64,9 @@ export function useConnectors(
       }
       return {
         notConfigured: false,
-        data: data.data,
+        // A body without the list reads as no mailboxes rather than breaking
+        // every reader that polls this one entry.
+        data: data.data ?? [],
         providers: data.providers ?? [],
         // A server that does not report the seat yet refuses nothing up front.
         captureAllowed: data.seat_capture?.allowed ?? true,
@@ -101,5 +103,29 @@ export function useMailboxConnected(): boolean {
   return (connectors.data?.data ?? []).some(
     (connection) =>
       connection.status === "connected" && isMailbox(connection.provider),
+  );
+}
+
+/** The path and query that name one of the reader's mailboxes. A member may
+ *  connect several accounts of one provider, so a call names the row by id. */
+export function mailboxParams(
+  connection: Readonly<Pick<CaptureConnection, "provider" | "id">>,
+) {
+  return {
+    path: { provider: connection.provider },
+    query: { connection_id: connection.id },
+  };
+}
+
+/** The reader's mailboxes a mail can go out from: connected mail rows of a
+ *  provider that sends. The composer offers a From choice only when there is
+ *  more than one. */
+export function sendingMailboxes(
+  connections: readonly CaptureConnection[],
+): CaptureConnection[] {
+  return connections.filter(
+    (c) =>
+      (c.provider === "gmail" || c.provider === "graph") &&
+      (c.status === "connected" || c.status === "error"),
   );
 }
