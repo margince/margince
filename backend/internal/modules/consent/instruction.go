@@ -88,7 +88,10 @@ const maxExplanationRunes = 1000
 // fieldReasonCode is the wire and audit name for which kind of reason a
 // decision carries. One spelling, because a client tells one refusal from
 // another on the exact string and an audit reader groups on it.
-const fieldReasonCode = "reason_code"
+const (
+	fieldReasonCode     = "reason_code"
+	fieldWarningVersion = "warning_version"
+)
 
 // InstructionValidity dates the original facts snapshot. Every execution checks
 // current support, including when this snapshot is older than the window.
@@ -228,9 +231,9 @@ func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInpu
 		// audit trail would outlive it.
 		if _, err := storekit.AuditEvent(ctx, tx, "create", "communication_instruction", out.ID,
 			map[string]any{
-				"review_id":       reviewID,
-				fieldReasonCode:   in.ReasonCode,
-				"warning_version": in.WarningVersion,
+				"review_id":         reviewID,
+				fieldReasonCode:     in.ReasonCode,
+				fieldWarningVersion: in.WarningVersion,
 				// WHICH GRANT ADMITTED THIS, named on the payload because the
 				// audit's own rule string is derived from the ENTITY and would
 				// read `communication_instruction.create` — a permission
@@ -349,7 +352,7 @@ func validateDirect(in DirectInput) error {
 	// acknowledgement of a version nothing publishes.
 	if !servedWarningVersion(in.WarningVersion) {
 		return &ValidationError{
-			Field: "warning_version",
+			Field: fieldWarningVersion,
 			Reason: "a decision records which warning the director was shown, and it must be one " +
 				"this installation serves",
 		}

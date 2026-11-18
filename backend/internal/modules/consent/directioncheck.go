@@ -54,7 +54,7 @@ func (r directableReview) admits(ctx context.Context, in DirectInput) error {
 	}
 	if !servesWarning(warningsServed(ctx, r.InitiatedBy, r.IntentID), in.WarningVersion) {
 		return &ValidationError{
-			Field:  "warning_version",
+			Field:  fieldWarningVersion,
 			Reason: "this review was not shown with that warning; open it again and confirm the warning it shows",
 		}
 	}
