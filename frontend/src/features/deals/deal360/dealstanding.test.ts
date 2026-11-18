@@ -244,6 +244,25 @@ describe("time in each stage", () => {
     expect(stageEntries(rows, created, false).has("s1")).toBe(false);
   });
 
+  it("dates the stage of a deal that never moved by the deal's creation", () => {
+    const created = deal({
+      created_at: "2026-06-01T00:00:00Z",
+      stage_id: "s1",
+    });
+    const entries = stageEntries([], created, true);
+    expect(entries.get("s1")).toBe("2026-06-01T00:00:00Z");
+    expect(
+      stageTimes({
+        stages,
+        currentId: "s1",
+        entries,
+        asOf: AS_OF,
+        zone: "UTC",
+      }).get("s1"),
+    ).toEqual({ days: 73, current: true });
+    expect(stageEntries([], created, false).size).toBe(0);
+  });
+
   it("keeps the latest arrival at a stage visited twice", () => {
     const entries = stageEntries(
       [
