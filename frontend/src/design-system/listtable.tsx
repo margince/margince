@@ -107,6 +107,7 @@ export function ListTable<Row>({
   notice,
   body,
   bodyOwnsPaging = false,
+  bodyEmpty = false,
   selection,
 }: Readonly<{
   rows: readonly Row[];
@@ -133,6 +134,11 @@ export function ListTable<Row>({
   body?: ReactNode;
   /** The alternate body carries its own count and continuation control. */
   bodyOwnsPaging?: boolean;
+  /**
+   * The body has settled with nothing in it. The grid's empty line, with its
+   * Clear filters, then heads the body, so both views say the same thing.
+   */
+  bodyEmpty?: boolean;
   /**
    * The count sentence for a body that owns its own paging.
    *
@@ -455,6 +461,11 @@ export function ListTable<Row>({
         </div>
       ) : body != null ? (
         <AnsweredSearch.Provider value={search?.answered}>
+          {bodyEmpty && !problem && (
+            <div className="lt-emptyline">
+              <EmptyState>{emptyLine}</EmptyState>
+            </div>
+          )}
           {body}
         </AnsweredSearch.Provider>
       ) : (

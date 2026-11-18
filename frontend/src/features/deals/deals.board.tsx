@@ -192,6 +192,17 @@ function uncountedStages(columns: ReadonlyMap<string, StageColumnRead>) {
   );
 }
 
+// Every column read answered with no card. No column yet is a board still
+// waiting on its pipeline, not an empty one.
+export function boardIsEmpty(stageColumns: ReturnType<typeof useStageColumns>) {
+  return (
+    stageColumns.columns.size > 0 &&
+    !stageColumns.isPending &&
+    stageColumns.error === null &&
+    stageColumns.deals.length === 0
+  );
+}
+
 // The board's count beside the page's name, once its pipeline and figures are in.
 // A sum of loaded cards that misses a column's deals says it counts the loaded.
 export function BoardHeadCount({

@@ -66,6 +66,7 @@ import type { Deal, Pipeline, Stage } from "./deals";
 import {
   BoardHeadCount,
   BoardReopenModal,
+  boardIsEmpty,
   DealBoardBody,
   useAdvanceDeal,
   useBoardInteractions,
@@ -433,6 +434,7 @@ export function DealsScreen({
         notice={<SavedViewsFailure resource="deals" />}
         body={boardBody}
         bodyOwnsPaging={boardBody !== undefined}
+        bodyEmpty={boardIsEmpty(stageColumns)}
         countScope={effectivePipeline?.name}
         bodyCount={
           boardBody && (
