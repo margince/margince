@@ -134,6 +134,10 @@ func readBody(w http.ResponseWriter, r *http.Request) (json.RawMessage, error) {
 //
 //craft:ignore naked-any the JSON deserialization seam: the decode target is whichever contract request struct the handler owns
 func decodeRaw(r *http.Request, raw json.RawMessage, into any, owned func(string) bool, closed bool) error {
+	if datasource.HasMalformedText(raw) {
+		return Validation("body", "malformed_json",
+			"the request body must be valid UTF-8 without unpaired surrogate escapes; resend it as UTF-8 text")
+	}
 	if datasource.HasCustomFieldMap(into) {
 		return decodeCustomFieldBody(r, raw, into, owned)
 	}
