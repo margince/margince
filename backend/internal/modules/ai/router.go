@@ -136,9 +136,8 @@ func NewRouter(cfg RoutingConfig, meter *Meter, budget BudgetPolicy, calls callS
 }
 
 // NewUnboundRouter builds a Router that serves no tier yet. A role that boots
-// before anyone has bound a model holds this one, so the routing watcher's
-// Rebind can bind it later instead of the role staying without AI until a
-// restart. Every call on it is refused the way a task with no bound tier is.
+// before anyone has bound a model holds this one, so the routing watcher can
+// bind it later. Every call on it is refused like a task with no bound tier.
 func NewUnboundRouter(meter *Meter, budget BudgetPolicy, calls callStore, capturePayloads bool, log *slog.Logger) *Router {
 	router := assembleRouter(nil, nil, "", meter, budget, calls, nil, capturePayloads, log)
 	router.restrictionsRequired = true

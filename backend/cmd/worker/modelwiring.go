@@ -30,8 +30,8 @@ type modelPathSpec struct {
 }
 
 // selectModelPath resolves the model path: a routing config for real
-// deployments, the offline fake behind an explicit dev flag, or a path over an
-// unbound router that serves nothing until a binding is saved.
+// deployments, or the offline fake behind an explicit dev flag. With neither it
+// is a path over an unbound router, which serves nothing until a binding is saved.
 func selectModelPath(ctx context.Context, spec modelPathSpec, pool *pgxpool.Pool, log *slog.Logger) (compose.ModelPath, error) {
 	// The stored binding, seeded from the routing file when this installation
 	// has none yet. Resolved before the switch rather than inside an arm,

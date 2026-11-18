@@ -91,11 +91,11 @@ func resolveModelPath(ctx context.Context, spec modelPathSpec, pool *pgxpool.Poo
 	return modelPathFor(ctx, cfg, spec, pool, log)
 }
 
-// modelPathFor wires the surfaces a resolved binding lights up: the declared
-// path for a bound installation, the offline fake behind an explicit dev flag,
-// or a path over an unbound router. Nothing is picked silently.
+// modelPathFor wires the surfaces a resolved binding lights up. A bound
+// installation gets its declared path, --ai-fake gets the offline fake, and
+// neither gets a path over an unbound router. Nothing is picked silently.
 //
-// The state and profile it returns are read per request: they answer with the
+// The state and profile it returns are read per request. They answer with the
 // binding the router serves now, which a rebind moves without a restart.
 func modelPathFor(ctx context.Context, cfg ai.RoutingConfig, spec modelPathSpec, pool *pgxpool.Pool, log *slog.Logger) (*compose.ModelPath, func() string, func() ai.PublicProfile, error) {
 	if !cfg.Unconfigured() {
@@ -192,8 +192,8 @@ func liveProfile(router *ai.Router, boot ai.PublicProfile, configured bool) func
 }
 
 // coldStartOptions wires the cold-start read-back's model surface over
-// an already-resolved model path: a real deployment or --ai-fake lights
-// it up, and so does a path whose router is not bound yet. Only a role that
+// an already-resolved model path. A real deployment or --ai-fake lights it
+// up, and so does a path whose router is not bound yet. Only a role that
 // resolved no path at all leaves the operation an explicit 501.
 func coldStartOptions(modelPath *compose.ModelPath) []compose.Option {
 	if modelPath == nil {

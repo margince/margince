@@ -10,8 +10,7 @@ import (
 )
 
 // A role that boots before any binding exists must pick up the one an admin
-// saves later: the router it holds refuses calls first and serves them after
-// Rebind, with no new router and no restart.
+// saves later. Its router refuses calls first and serves them after Rebind.
 func TestAnUnboundRouterServesOnceItIsRebound(t *testing.T) {
 	r := NewUnboundRouter(nil, DefaultMonthlyTokens, nil, false, nil)
 	r.meter = stubMeter{}

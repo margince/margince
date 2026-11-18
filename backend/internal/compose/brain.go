@@ -246,14 +246,14 @@ func (e *UnservableBindingError) Unwrap() error { return e.Cause }
 // AI.CapturePayloads posture and the process logger, never a stand-in.
 func NewModelPath(ctx context.Context, cfg ai.RoutingConfig, pool *pgxpool.Pool, capturePayloads bool, log *slog.Logger) (ModelPath, error) {
 	meter, calls := ai.NewMeter(InstallationDB(pool)), ai.NewCallMeter(InstallationDB(pool)).WithLogger(log)
-	// An unconfigured installation still gets a Router, bound to nothing: the
-	// routing watcher can then bind it when an admin saves a model, with no restart.
+	// An unconfigured installation still gets a Router, bound to nothing.
+	// The routing watcher binds it when an admin saves a model.
 	var router *ai.Router
 	if cfg.Unconfigured() {
 		router = ai.NewUnboundRouter(meter, NewSeatBudget(pool), calls, capturePayloads, log)
 	} else {
 		var err error
-		if router, err = ai.NewRouter(cfg, meter, NewSeatBudget(pool), calls, capturePayloads, log); err != nil {
+		if router, err = ai.NewRouter(cfg, meter, NewSeatBudget(pool), calls, capturePayloads, log); err != nil { //nolint:contextcheck // the provider tracker's drain goroutine owns its own deadline
 			return ModelPath{}, &UnservableBindingError{Cause: err}
 		}
 	}

@@ -124,13 +124,6 @@ func TestAWatcherWithNothingToRebindIsInert(t *testing.T) {
 	if w := NewRoutingWatcher(nil, &ModelPath{}, nil, log); w != nil {
 		t.Error("a watcher with no pool must be nil; there is nothing to read")
 	}
-	// A path over an unbound router is the ordinary boot of a fresh
-	// installation, and it DOES get a watcher: that is how the first binding
-	// reaches the running role.
-	unbound := modelPathForRouter(ai.NewUnboundRouter(nil, ai.DefaultMonthlyTokens, nil, false, nil), nil)
-	if w := NewRoutingWatcher(pool, &unbound, nil, log); w == nil {
-		t.Error("a role booted without a binding got no watcher, so a saved binding would wait for a restart")
-	}
 	var nothing *RoutingWatcher
 	nothing.Recheck(context.Background())
 	nothing.Run(context.Background())
@@ -195,26 +188,5 @@ func TestAFailedMarkerSeedIsRetriedAndStillAdopts(t *testing.T) {
 	if router.RoutingVersion() != next.RoutingVersion() {
 		t.Errorf("serving %q after a failed marker seed, want %q",
 			router.RoutingVersion(), next.RoutingVersion())
-	}
-}
-
-// A role that booted before anyone bound a model adopts the first binding the
-// same way it adopts a change: the watcher's decision rebinds the router every
-// lane of the model path rides.
-func TestAWatcherBindsARouterThatBootedUnbound(t *testing.T) {
-	router := ai.NewUnboundRouter(nil, ai.DefaultMonthlyTokens, nil, false, nil)
-	w := &RoutingWatcher{
-		target: router, log: slog.New(slog.DiscardHandler),
-		seedMarker: func(context.Context) error { return nil },
-	}
-	first := routingFixture(t, "first")
-	if !w.applyIfChanged(context.Background(), first) {
-		t.Fatal("the first stored binding was not adopted by a role that booted with none")
-	}
-	if router.RoutingVersion() != first.RoutingVersion() {
-		t.Errorf("router serves %q, want the saved binding %q", router.RoutingVersion(), first.RoutingVersion())
-	}
-	if w.applyIfChanged(context.Background(), first) {
-		t.Error("the same binding was adopted twice")
 	}
 }

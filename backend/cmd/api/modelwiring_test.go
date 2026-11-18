@@ -25,6 +25,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/ai"
 )
@@ -53,6 +55,11 @@ func TestAnUnboundBootAdoptsTheBindingSavedAfterwards(t *testing.T) {
 	}
 	if got := modelPath.RoutingVersion(); got != "" {
 		t.Fatalf("an unbound path reports routing version %q, want empty", got)
+	}
+	// The watcher is what binds that router later, so a role booted without a
+	// binding must get one. The pool is only stored, never dialled.
+	if compose.NewRoutingWatcher(&pgxpool.Pool{}, modelPath, nil, discardLogger()) == nil {
+		t.Fatal("a role booted without a binding got no routing watcher, so a saved binding would wait for a restart")
 	}
 
 	bound, err := ai.ParseRouting([]byte(`profile: eu_hosted
