@@ -101,7 +101,9 @@ describe("the contract row menu", () => {
     show(<CompanyContractsCard companyId="o-1" />);
 
     await user.click(
-      await screen.findByRole("button", { name: "Contract actions" }),
+      await screen.findByRole("button", {
+        name: "Actions for Framework agreement 2024",
+      }),
     );
 
     expect(screen.getByRole("button", { name: "Renew" })).toBeTruthy();
@@ -117,7 +119,9 @@ describe("the contract row menu", () => {
     show(<CompanyContractsCard companyId="o-1" />);
 
     await user.click(
-      await screen.findByRole("button", { name: "Contract actions" }),
+      await screen.findByRole("button", {
+        name: "Actions for Framework agreement 2024",
+      }),
     );
 
     // A terminal status has no valid transition out of it but superseded, and
@@ -140,7 +144,9 @@ describe("the contract row menu", () => {
     show(<CompanyContractsCard companyId="o-1" />);
 
     await user.click(
-      await screen.findByRole("button", { name: "Contract actions" }),
+      await screen.findByRole("button", {
+        name: "Actions for Framework agreement 2024",
+      }),
     );
 
     // refuseRenewalOfTerminal (contract_lifecycle.go): the ONE status renewal
@@ -161,7 +167,9 @@ describe("the contract row menu", () => {
     show(<CompanyContractsCard companyId="o-1" />);
 
     await user.click(
-      await screen.findByRole("button", { name: "Contract actions" }),
+      await screen.findByRole("button", {
+        name: "Actions for Framework agreement 2024",
+      }),
     );
 
     expect(screen.queryByRole("button", { name: "Renew" })).toBeNull();
@@ -180,7 +188,9 @@ describe("the contract row menu", () => {
 
     await screen.findByText("Framework agreement 2024");
     expect(
-      screen.queryByRole("button", { name: "Contract actions" }),
+      screen.queryByRole("button", {
+        name: "Actions for Framework agreement 2024",
+      }),
     ).toBeNull();
   });
 });

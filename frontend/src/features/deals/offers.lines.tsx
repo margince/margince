@@ -163,6 +163,9 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
       attempt(updateMutation);
       updateMutation.mutate({ lineItemId, patch });
     };
+  // Every row holds the same controls, so each is named for its line as well.
+  const cellLabel = (column: string, line: OfferLineItem) =>
+    t("offer.lineCell", { column, position: String(line.position) });
 
   const columns = [
     {
@@ -173,6 +176,7 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
           value={line.position}
           width={60}
           testId={`line-position-${line.id}`}
+          label={cellLabel(t("offer.position"), line)}
           onSave={(num) => saveLine(line.id)({ position: num })}
         />
       ),
@@ -181,14 +185,22 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
       key: "description",
       header: t("offer.description"),
       render: (line: OfferLineItem) => (
-        <DescriptionCell line={line} onSave={saveLine(line.id)} />
+        <DescriptionCell
+          line={line}
+          label={cellLabel(t("offer.description"), line)}
+          onSave={saveLine(line.id)}
+        />
       ),
     },
     {
       key: "unit",
       header: t("offer.unit"),
       render: (line: OfferLineItem) => (
-        <UnitCell line={line} onSave={saveLine(line.id)} />
+        <UnitCell
+          line={line}
+          label={cellLabel(t("offer.unit"), line)}
+          onSave={saveLine(line.id)}
+        />
       ),
     },
     {
@@ -199,6 +211,7 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
           value={line.quantity}
           width={90}
           testId={`line-quantity-${line.id}`}
+          label={cellLabel(t("offer.quantity"), line)}
           onSave={(num) => saveLine(line.id)({ quantity: num })}
         />
       ),
@@ -213,6 +226,7 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
           <UnitPriceCell
             line={line}
             currency={offer.currency}
+            label={cellLabel(t("offer.unitPrice"), line)}
             onSave={saveLine(line.id)}
           />
         ),
@@ -225,6 +239,7 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
           value={line.discount_pct}
           width={90}
           testId={`line-discount-${line.id}`}
+          label={cellLabel(t("offer.discountPct"), line)}
           check={(text) => discountFault(text, locale, t)}
           onSave={(num) => saveLine(line.id)({ discount_pct: num })}
         />
@@ -239,6 +254,7 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
             value={line.tax_rate}
             width={90}
             testId={`line-tax-rate-${line.id}`}
+            label={cellLabel(t("offer.taxRate"), line)}
             check={(text) => taxRateFault(text, locale, t)}
             onSave={(num) => saveLine(line.id)({ tax_rate: num })}
           />
@@ -271,6 +287,9 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
       render: (line: OfferLineItem) => (
         <Button
           data-testid={`remove-line-${line.id}`}
+          aria-label={t("offer.removeLineNamed", {
+            position: String(line.position),
+          })}
           disabled={removeMutation.isPending}
           onClick={() => {
             attempt(removeMutation);

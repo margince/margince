@@ -330,7 +330,7 @@ function ContractRow({
           </Badge>
         )}
         {(mayWrite || mayArchive || mayRenewThis) && (
-          <OverflowMenu label={t("contracts.rowMenu")}>
+          <OverflowMenu label={t("table.rowActions", { name: contract.title })}>
             {/* Menu items are Buttons, like every other menu in the product.
                 A bare <button> here drew as centred unstyled text inside a
                 panel that was otherwise the design system's. */}

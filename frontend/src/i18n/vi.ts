@@ -4446,7 +4446,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contracts.form.errTermOrder":
     "Kỳ hạn không thể kết thúc trước ngày bắt đầu.",
   "contracts.add": "Th\u00eam h\u1ee3p \u0111\u1ed3ng",
-  "contracts.rowMenu": "Thao t\u00e1c h\u1ee3p \u0111\u1ed3ng",
   "contracts.renew.title": "Gia hạn hợp đồng",
   "contracts.renew.hint":
     "Tạo hợp đồng mới với điều khoản riêng và đánh dấu hợp đồng này là đã bị thay thế. Chỉ giữ lại bên đối tác.",
@@ -6859,6 +6858,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "offer.lineTotal": "Thành tiền",
   "offer.unpriced": "chưa có giá, không tính vào tổng",
   "offer.removeLine": "Gỡ",
+  "offer.lineCell": "{column}, dòng {position}",
+  "offer.removeLineNamed": "Gỡ dòng {position}",
   "offer.pickProduct": "Chọn sản phẩm",
   "offer.pickProductConfirm": "Sản phẩm: {name}",
   "offer.send": "Gửi",

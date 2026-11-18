@@ -34,6 +34,7 @@ export function UnitPicker({
   blankLabel,
   testId,
   id,
+  label,
 }: Readonly<{
   value: UnitChoice;
   onChange: (next: UnitChoice, settled: boolean) => void;
@@ -43,6 +44,8 @@ export function UnitPicker({
   testId: string;
   // A surrounding Field's control id, whose label then names the list.
   id?: string;
+  // The list's name where no Field labels it, such as a cell in a row of lines.
+  label?: string;
 }>) {
   const t = useT();
   const options = unitOptions(t);
@@ -50,7 +53,7 @@ export function UnitPicker({
     <>
       <Select
         id={id}
-        aria-label={id === undefined ? t("offer.unit") : undefined}
+        aria-label={id === undefined ? (label ?? t("offer.unit")) : undefined}
         testId={testId}
         className="offers-line-unit"
         value={value.choice}

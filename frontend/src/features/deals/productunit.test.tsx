@@ -62,7 +62,11 @@ function line(unit: string): OfferLineItem {
 function renderCell(unit: string, saved: UpdateOfferLineItemRequest[]) {
   render(
     <LocaleProvider initial="de">
-      <UnitCell line={line(unit)} onSave={(patch) => saved.push(patch)} />
+      <UnitCell
+        line={line(unit)}
+        label="Einheit"
+        onSave={(patch) => saved.push(patch)}
+      />
     </LocaleProvider>,
   );
 }

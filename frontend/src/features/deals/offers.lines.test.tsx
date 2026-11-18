@@ -56,6 +56,8 @@ const line1 = {
   updated_at: "2026-06-01T08:00:00Z",
 };
 
+const line2 = { ...line1, id: "li-2", position: 2, description: "Workshop" };
+
 function draft(lines: Record<string, unknown>[]) {
   return {
     id: "o-1",
@@ -147,5 +149,28 @@ describe("the Add line form", () => {
       screen.queryByRole("combobox", { name: "Billing period" }),
     ).toBeNull();
     expect(screen.queryByRole("spinbutton", { name: "Periods" })).toBeNull();
+  });
+});
+
+describe("a line row", () => {
+  it("names each control after its column and its line", async () => {
+    serve(draft([line1, line2]), () => ({ status: 500, body: {} }));
+    renderOffer();
+    await screen.findByText("ANG-2026-0007");
+
+    for (const column of [
+      "Position",
+      "Description",
+      "Unit",
+      "Quantity",
+      "Unit price",
+      "Discount %",
+      "Tax %",
+    ]) {
+      expect(screen.getByLabelText(`${column}, line 2`)).toBeTruthy();
+    }
+    expect(screen.getByRole("button", { name: "Remove line 2" })).toBe(
+      screen.getByTestId("remove-line-li-2"),
+    );
   });
 });

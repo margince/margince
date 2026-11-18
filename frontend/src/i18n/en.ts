@@ -4519,7 +4519,6 @@ export const en = {
   "contracts.form.errNoName": "Enter a contract title.",
   "contracts.form.errTermOrder": "A term cannot end before it starts.",
   "contracts.add": "Add contract",
-  "contracts.rowMenu": "Contract actions",
   "contracts.renew.title": "Renew contract",
   "contracts.renew.hint":
     "Creates a new contract with its own terms and marks this one superseded. Only the counterparty is kept.",
@@ -6995,6 +6994,8 @@ export const en = {
   "offer.lineTotal": "Line total",
   "offer.unpriced": "unpriced, excluded from total",
   "offer.removeLine": "Remove",
+  "offer.lineCell": "{column}, line {position}",
+  "offer.removeLineNamed": "Remove line {position}",
   "offer.pickProduct": "Pick product",
   "offer.pickProductConfirm": "Product: {name}",
   "offer.send": "Send",
