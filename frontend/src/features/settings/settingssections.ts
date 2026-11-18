@@ -372,6 +372,7 @@ export const SETTINGS_SECTIONS = {
   configuration: ["configuration.title"],
   extensions: [],
   reset: ["settings.dangerZone", "settings.resetDataLabel"],
+  about: [],
 } as const satisfies Record<
   SettingsPageId,
   readonly MessageKey[] | Readonly<Record<string, readonly MessageKey[]>>
