@@ -13,8 +13,9 @@ package consent
 //
 // A recipient's country comes from the record, unless the sender stated or
 // cleared it for this one message. An email domain, the sender's country or
-// the most permissive pack never stands in for it. A recipient with no usable country, or one whose country no pack
-// covers, gets the baseline: no pack obligations. Marketing still needs
+// the most permissive pack never stands in for it. A recipient with no usable
+// country, or one whose country no pack covers, gets the baseline: no pack
+// obligations. Marketing still needs
 // consent, which the verdict asks everywhere. The send path adds the
 // unsubscribe surface whatever the country.
 
