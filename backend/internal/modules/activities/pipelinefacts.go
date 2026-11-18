@@ -22,6 +22,7 @@ package activities
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -48,7 +49,7 @@ import (
 // to: a decline stands only against the prompt that was declined.
 func ClassifyBacklogPredicate(rulesetParam string) string {
 	return `capture_label IS NULL
-	  AND captured_by LIKE 'connector:%' AND kind = 'email'
+	  AND captured_by LIKE 'connector:%' AND kind IN (` + classifiedKindsSQL() + `)
 	  AND archived_at IS NULL
 	  -- A limited message is not labelled. The label is derived from the
 	  -- message's subject and body and shown on a worklist the message's own
@@ -84,16 +85,19 @@ type PipelineFacts struct {
 	// link-less connector activity is precisely what "not linked yet" means.
 	HasContactLink bool
 
+	// Kind is the activity kind. The material-events rung reads it, because
+	// that pass reads mail only while the attention pass also reads chat.
+	Kind string
+
 	// CaptureLabel is the attention label, empty when unlabelled.
 	CaptureLabel string
 
 	// ClassifyEligible is the shared predicate's own answer for this row.
 	ClassifyEligible bool
 
-	// ClassifyReason names WHY it is ineligible, and is empty when it is
-	// eligible or already labelled. Four honest answers, not one: telling a
-	// member "the classifier reads email only" about an archived email would be
-	// a wrong why, which is worse than no why at all.
+	// ClassifyReason names why it is ineligible, and is empty when it is
+	// eligible or already labelled. One reason per exclusion: "does not read
+	// this transport" about an archived email would be a wrong why.
 	ClassifyReason pipelinetrace.Reason
 
 	// ThreadKey is the conversation this message belongs to, empty when it has
@@ -160,6 +164,7 @@ func (s *Store) ReadPipelineFacts(ctx context.Context, id ids.UUID, classifyRule
 		if threadKey != nil {
 			out.ThreadKey = *threadKey
 		}
+		out.Kind = kind
 		out.ClassifyEligible = eligible
 		out.ClassifyReason = classifyReason(classifySubject{
 			label: out.CaptureLabel, kind: kind, capturedBy: capturedBy,
@@ -174,10 +179,23 @@ func (s *Store) ReadPipelineFacts(ctx context.Context, id ids.UUID, classifyRule
 	return out, nil
 }
 
-// kindEmail is the ONE transport the attention classifier reads. Spelled once
-// because the predicate, the exclusion rule and the test all name it, and three
-// literals drift the day a second transport is admitted.
+// classifiedKinds are the activity kinds the attention classifier reads: mail
+// and connector-captured chat. The backlog predicate and the exclusion rule
+// both read this one list; idx_activity_unlabeled is built over the same kinds.
+var classifiedKinds = []string{kindEmail, KindMessage}
+
+// kindEmail is the mail kind, spelled once for this package.
 const kindEmail = "email"
+
+// classifiedKindsSQL renders classifiedKinds as the SQL list the predicate
+// tests. Each member is a compile-time literal.
+func classifiedKindsSQL() string {
+	quoted := make([]string, len(classifiedKinds))
+	for i, kind := range classifiedKinds {
+		quoted[i] = "'" + kind + "'"
+	}
+	return strings.Join(quoted, ", ")
+}
 
 // classifySubject is the row as the exclusion rules see it. A struct rather than
 // five parameters because two of them are booleans, and a call site reading
@@ -205,7 +223,7 @@ func classifyReason(in classifySubject) pipelinetrace.Reason {
 		return ""
 	case !isConnectorCaptured(in.capturedBy):
 		return pipelinetrace.ReasonNotConnectorCaptured
-	case in.kind != kindEmail:
+	case !slices.Contains(classifiedKinds, in.kind):
 		return pipelinetrace.ReasonTransportNotRead
 	case in.archived:
 		return pipelinetrace.ReasonArchived

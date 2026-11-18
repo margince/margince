@@ -12,11 +12,13 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"testing"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/capturelabel"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -98,6 +100,10 @@ func TestAConfirmedChatScreenshotLandsAsOneMessageWithTheImageAttached(t *testin
 	}
 	if n := f.env.WsCount(t, `SELECT count(*) FROM activity WHERE id = $1 AND captured_by LIKE '%attachment-extractor%'`, filed); n != 1 {
 		t.Fatal("an unedited chat text is not marked as read by the model")
+	}
+	backlog, err := f.store.UnlabeledCaptureMessages(f.env.Admin(), capturelabel.Ruleset, 500, 100)
+	if err != nil || slices.ContainsFunc(backlog, func(m activities.UnlabeledMessage) bool { return m.ID == filed }) {
+		t.Fatalf("a filed screenshot joined the attention-label backlog, which reads only connector capture: %v", err)
 	}
 	if n := f.env.WsCount(t, `SELECT count(*) FROM event_outbox o
 		  JOIN audit_log a ON a.id = (o.envelope->'trace'->>'audit_log_id')::uuid

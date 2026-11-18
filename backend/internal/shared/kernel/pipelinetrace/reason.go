@@ -13,12 +13,10 @@ package pipelinetrace
 // exists to remove. A class renders a full sentence from the catalog with no
 // payload at all.
 //
-// SCOPED BY STAGE. The catalog key is `<stage>.<reason>`, so the same code says
-// something stage-appropriate in each place it appears: ReasonTransportNotRead
-// under the classifier is "reads email only", and under the conversation reader
-// it is a different sentence about a different pass. Without the scope the two
-// would need differently-spelled constants saying nearly the same thing, and the
-// pair would drift.
+// Scoped by stage: the catalog key is `<stage>.<reason>`, so one code can say
+// something different per stage. ReasonTransportNotRead means "mail and chat
+// only" under the classifier and "mail only" under the conversation reader.
+// Without the scope the two would need two constants, and the pair would drift.
 type Reason string
 
 // Stored reasons. These are capture's own vocabulary, already written to
@@ -73,9 +71,9 @@ const (
 	ReasonJudgedRejected   Reason = "judged_rejected"
 	ReasonJudgedSuppressed Reason = "judged_suppressed"
 
-	// StageAttentionLabel. Six ways the backlog excludes a message, because a
-	// ladder that says "reads email only" about an ARCHIVED email gives a wrong
-	// why, which is worse than none.
+	// StageAttentionLabel. Six ways the backlog excludes a message. A ladder
+	// that says "does not read this transport" about an archived email gives a
+	// wrong why.
 	ReasonTransportNotRead     Reason = "transport_not_read"
 	ReasonSenderUndecided      Reason = "sender_undecided"
 	ReasonArchived             Reason = "archived"

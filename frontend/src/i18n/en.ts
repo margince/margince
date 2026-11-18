@@ -14641,7 +14641,7 @@ export const en = {
   "pipeline.reason.from_sending_systems":
     "this thread holds only mail from sending systems, such as notifications, which is not read",
   "pipeline.reason.transport_not_read":
-    "this step reads email only, and the message arrived by another channel",
+    "this step does not read messages that arrived this way",
   "pipeline.reason.sender_undecided":
     "the sender check is still pending, so the message is held back",
   "pipeline.reason.archived": "the message is archived",
