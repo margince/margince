@@ -91,12 +91,14 @@ hold_lock() {
 }
 
 up() {
-	local tag
-	tag="local-$(git -C "$root" rev-parse --short HEAD)"
+	local revision tag
+	# A source download has no .git; build-revision reads its REVISION instead.
+	revision="$(bash "$root/scripts/build-revision.sh" "$root")"
+	tag="local-${revision:0:7}"
 	hold_lock
 	echo "prod: building the api, web and worker images ($tag)"
 	(cd "$root" && REPO=margince-local VERSION="$tag" \
-		MARGINCE_BUILD_REVISION="$(git rev-parse HEAD)" \
+		MARGINCE_BUILD_REVISION="$revision" \
 		docker buildx bake api web worker --load)
 	bash "$root/scripts/release-compose.sh" --local "$tag" "$stack"
 	write_env

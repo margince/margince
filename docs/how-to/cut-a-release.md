@@ -55,6 +55,13 @@ part needs no draft, and its page holds only the generated half.
 
 ## Prepare the release commit
 
+Set `VERSION` at the repository root to the version, without the tag's `v`: one line, such as `1.3.0`
+for `v1.3.0`. `release-tag.yml` refuses a tag that `VERSION` does not name.
+
+Leave `REVISION` alone. It holds `$Format:%H$`, and `git archive` writes the commit there, so a
+GitHub source download names its own commit. A build reads it through `scripts/build-revision.sh`
+when it has no `.git`.
+
 Update the `Parameters` block of `LICENSE` and nothing else in the file:
 
 1. Set **Change Date** to the date the release goes public plus 2 years, as `YYYY-MM-DD`.
