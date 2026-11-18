@@ -53,12 +53,8 @@ permissions:
 # groups still decide that case.
 
 env:
-  # The release-management CLI image, published :latest from constellation's
-  # main (gradionhq/margince-constellation). NOTE: since this repo moved to the
-  # margince org, the job's default GITHUB_TOKEN can NO LONGER read that package
-  # — it is private and owned by another organisation. A release dispatched
-  # before a cross-org PAT (read:packages on gradionhq) is wired into the three
-  # `docker login ghcr.io` steps below WILL FAIL at login.
+  # The release-management CLI image, private to another organization. Each job
+  # pulls it with the RELEASE_TOOL_GHCR_TOKEN read token.
   RELEASE_MANAGEMENT_IMAGE: ghcr.io/gradionhq/margince-constellation/release-management:latest
   # The dist service of the constellation deployment the release is drafted
   # into. The CLI reads this variable directly and refuses a non-https URL.
@@ -81,9 +77,6 @@ jobs:
     runs-on: ubuntu-24.04-arm
     permissions:
       contents: read
-      # Pull the private release-management image from ghcr.io with the
-      # default GITHUB_TOKEN.
-      packages: read
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
@@ -99,10 +92,11 @@ jobs:
         env:
           DISPATCH_VERSION: ${{ inputs.version }}
         run: bash scripts/release-dist-version.sh "$GITHUB_REF" "$DISPATCH_VERSION" >> "$GITHUB_OUTPUT"
+      # The tool image belongs to another organization, which GITHUB_TOKEN cannot read.
       - name: Log in to ghcr.io
         env:
-          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.RELEASE_TOOL_GHCR_TOKEN }}
+          GHCR_USER: ${{ vars.RELEASE_TOOL_GHCR_USER }}
         run: echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
       # The SBOM pipeline pins its Python steps, the SPDX validator and the
       # lockfile census, to linux/amd64 (their dependency wheel hashes resolve
@@ -203,9 +197,6 @@ jobs:
     runs-on: ubuntu-24.04-arm
     permissions:
       contents: read
-      # Pull the private release-management image from ghcr.io; the baked
-      # images push to the constellation registry, not ghcr.
-      packages: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -259,14 +250,13 @@ jobs:
               ".buildx-mount-cache/tsbuildinfo": { "target": "/app/frontend/node_modules/.tmp", "id": "margince-tsbuildinfo" }
             }
           skip-extraction: ${{ steps.mount-cache.outputs.cache-hit }}
-      # ghcr only for pulling the private release-management CLI image; the
-      # baked images go to the constellation registry, authenticated as the
-      # registry publisher (the token-auth realm's reserved identity, whose
-      # grant admits push on margince/*).
+      # ghcr only for pulling the release-management CLI image; the baked
+      # images go to the constellation registry as the registry publisher.
+      # The tool image belongs to another organization, which GITHUB_TOKEN cannot read.
       - name: Log in to ghcr.io
         env:
-          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.RELEASE_TOOL_GHCR_TOKEN }}
+          GHCR_USER: ${{ vars.RELEASE_TOOL_GHCR_USER }}
         run: echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
       - name: Log in to the constellation registry
         env:
@@ -363,14 +353,12 @@ jobs:
     runs-on: ubuntu-24.04-arm
     permissions:
       contents: read
-      # Pull the private release-management image from ghcr.io with the
-      # default GITHUB_TOKEN.
-      packages: read
     steps:
+      # The tool image belongs to another organization, which GITHUB_TOKEN cannot read.
       - name: Log in to ghcr.io
         env:
-          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.RELEASE_TOOL_GHCR_TOKEN }}
+          GHCR_USER: ${{ vars.RELEASE_TOOL_GHCR_USER }}
         run: echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
       - name: Publish the release
         env:
