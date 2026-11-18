@@ -83,12 +83,16 @@ func (e *StagePipelineMismatchError) Error() string {
 	return "stage " + e.StageID.String() + " does not belong to the deal's pipeline"
 }
 
+// stagePipelineMismatchMessage is what a client shows; the stage id stays in
+// Error(), which only logs read.
+const stagePipelineMismatchMessage = "That stage belongs to another pipeline. Pick a stage of the pipeline the deal is in."
+
 // FieldFault refuses a target stage that belongs to another pipeline.
 func (e *StagePipelineMismatchError) FieldFault() (field, code, message string) {
 	if e.Field != "" {
-		return e.Field, "stage_not_in_pipeline", e.Error()
+		return e.Field, "stage_not_in_pipeline", stagePipelineMismatchMessage
 	}
-	return "to_stage_id", "stage_not_in_pipeline", e.Error()
+	return "to_stage_id", "stage_not_in_pipeline", stagePipelineMismatchMessage
 }
 
 // LostReasonRequiredError maps to 422 on advancing to a lost stage

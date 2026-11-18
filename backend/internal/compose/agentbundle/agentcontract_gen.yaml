@@ -6251,7 +6251,9 @@ paths:
         `422` with the code `closing_stage_before_open`; reorder the ladder with `reorderStages`
         instead. A `semantic` change keeps the ladder in shape itself: won and lost stages move
         behind the open ones, published as the same `pipeline.updated` position delta. A change
-        to either moves the pipeline's `version`.
+        to either moves the pipeline's `version`. Changing the `semantic` of a pipeline's only
+        live won (or lost) stage is refused `422` with the code `last_closing_stage` on
+        `semantic`: a pipeline keeps a way to win and a way to lose a deal.
 
         Needs the passport permission Change records.
 

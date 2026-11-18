@@ -232,11 +232,20 @@ func TestAWonStageRecordsTheProbabilityTheRowActuallyHolds(t *testing.T) {
 	requireAbsent(t, before, after, "name", "position")
 }
 
+// closingPair is a Won and a Lost stage parked past the open ones a test adds.
+// With them in place, the test's own stage may change type.
+func closingPair() []StageInput {
+	return []StageInput{
+		{Name: "Won", Position: 1000, Semantic: string(SemanticWon), WinProbability: 100},
+		{Name: "Lost", Position: 1001, Semantic: string(SemanticLost)},
+	}
+}
+
 // seedStage writes one open stage on a pipeline of its own, through the real
 // creators, and hands back its id.
 func (e *configEnv) seedStage(ctx context.Context, t *testing.T, name string, probability int) ids.StageID {
 	t.Helper()
-	pipeline, err := e.store.CreatePipeline(ctx, CreatePipelineInput{Name: "Sales " + name})
+	pipeline, err := e.store.CreatePipeline(ctx, CreatePipelineInput{Name: "Sales " + name, Stages: closingPair()})
 	if err != nil {
 		t.Fatalf("seeding the pipeline: %v", err)
 	}

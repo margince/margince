@@ -319,6 +319,9 @@ func (s *Store) UpdateStage(ctx context.Context, id ids.StageID, in UpdateStageI
 		if err := refuseAgentSemanticChange(ctx, current.semantic, in.Semantic); err != nil {
 			return err
 		}
+		if err := refuseLastClosingStageRetype(ctx, tx, id, pipelineID, current.semantic, in.Semantic); err != nil {
+			return err
+		}
 		if err := refuseTerminalWithCriteria(ctx, tx, id, current.semantic, in.Semantic); err != nil {
 			return err
 		}

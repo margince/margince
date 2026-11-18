@@ -6531,6 +6531,10 @@ export const en = {
     "You can log activity and add tasks. Changing this deal needs its owner to share it.",
   "deal.closedTakesNoStage":
     "This deal is closed. Reopen it to move it to another stage.",
+  "deal.pipelineRetired":
+    "This deal’s pipeline is retired, so its stages are read-only. Restore the pipeline in Settings to move the deal.",
+  "deal.stageOtherPipeline":
+    "That stage belongs to another pipeline. Pick a stage of the pipeline the deal is in.",
   "deal.reopen": "Reopen",
   "deal.reopenPick": "Move this deal back to an open stage",
   "deal.reopenConfirm": "Reopen",
@@ -11690,6 +11694,8 @@ export const en = {
   "translation.given": "{language}: {name}",
   "stage.name": "Name",
   "stage.semantic": "Stage type",
+  "stage.lastClosing":
+    "A pipeline needs a Won and a Lost stage. Add another of this type first.",
   "stage.winProb": "Win probability",
   "stage.semOpen": "Open",
   "stage.semWon": "Won",

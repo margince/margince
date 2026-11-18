@@ -35,6 +35,9 @@ export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   ["individual_performance_off", "common.individualPerformanceOff"],
   // The server's skew detail is English, worded for API and agent readers.
   ["version_skew", "common.versionSkew"],
+  // The detail names a stage or a kind of stage in English.
+  ["stage_not_in_pipeline", "deal.stageOtherPipeline"],
+  ["last_closing_stage", "stage.lastClosing"],
   // Every code httperr.Duplicate sends: its detail is one fixed API sentence
   // for all of them. backend/gates/frontendproblemcodecopy_test.go holds the set.
   ["duplicate_email", "common.duplicate.email"],
