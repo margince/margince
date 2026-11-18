@@ -1,7 +1,6 @@
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { ifMatch } from "../api/version";
-import { ProblemError, unwrap } from "./problem";
+import { ProblemError } from "./problem";
 import { problemCode } from "./problembody";
 import { readCorpusFile } from "./voice-corpus-file";
 import { ensureProfileId } from "./voice-profile";
@@ -284,9 +283,8 @@ function transcriptBody(
   };
 }
 
-// The first sample mints the profile, so a role that may not create one is
-// refused here. That is the server's answer and resolves as one; a body with
-// no problem code (a gateway's empty 502) is still a fault that rejects.
+// A role that may not create the profile is refused at the first sample, and
+// that answer resolves. A body with no problem code is still a fault.
 async function profileOrRefusal(
   ref: string,
   label: string,
@@ -484,23 +482,4 @@ export function pasteLabel(prefix: string, text: string): string {
   const cut = clamp(start, PASTE_LABEL_CHARS);
   const more = words.length > PASTE_LABEL_WORDS || cut !== start;
   return `${prefix} – ${cut}${more ? "…" : ""}`;
-}
-
-/** Removes one sample, then reads the corpus meter as it stands without it. */
-export async function removeSource(
-  sourceId: string,
-  version: number,
-): Promise<CorpusSummary> {
-  const profileId = await ensureProfileId();
-  unwrap(
-    await api.DELETE("/voice-profiles/{id}/sources/{sourceId}", {
-      params: { path: { id: profileId, sourceId }, ...ifMatch(version) },
-    }),
-  );
-  const after = unwrap(
-    await api.GET("/voice-profiles/{id}/sources", {
-      params: { path: { id: profileId } },
-    }),
-  );
-  return after.summary;
 }

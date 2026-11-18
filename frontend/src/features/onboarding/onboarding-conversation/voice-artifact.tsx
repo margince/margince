@@ -8,7 +8,7 @@ import type { MessageKey } from "../../../i18n/en";
 import { labelFor } from "../../../lib/labelfor";
 import type { BuildStage } from "./conversation-machine";
 import { bandLabelKeys } from "./narration";
-import { type CorpusManifestEntry, manifestCount } from "./use-voice-corpus";
+import { type CorpusManifestEntry, manifestCount } from "./voice-manifest";
 import { WayOnward } from "./way-onward";
 
 // The right panel of the voice act: the corpus manifest, the honest meter,

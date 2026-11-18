@@ -5,7 +5,6 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useId, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { ifMatch } from "../../api/version";
 import { Badge, Button, OverflowMenu } from "../../design-system/atoms";
 import { CellStack } from "../../design-system/cellstack";
 import { ConfirmModal } from "../../design-system/confirmmodal";
@@ -28,6 +27,7 @@ import { labelFor } from "../../lib/labelfor";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
 import { VOICE_MIN_WORDS } from "../../lib/voice-intake-core";
+import { deleteVoiceSample } from "../../lib/voice-sample-remove";
 
 type VoiceCorpusSource = components["schemas"]["VoiceCorpusSource"];
 type VoiceCorpusSummary = components["schemas"]["VoiceCorpusSummary"];
@@ -338,14 +338,7 @@ export function VoiceSamples({
   const meterId = useId();
   const remove = useMutation({
     mutationFn: async (sample: Readonly<{ id: string; version: number }>) => {
-      unwrap(
-        await api.DELETE("/voice-profiles/{id}/sources/{sourceId}", {
-          params: {
-            path: { id: profileId, sourceId: sample.id },
-            ...ifMatch(sample.version),
-          },
-        }),
-      );
+      await deleteVoiceSample(profileId, sample.id, sample.version);
     },
     onSuccess: () => {
       removed.current = true;

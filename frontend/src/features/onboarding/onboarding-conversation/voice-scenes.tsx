@@ -15,12 +15,9 @@ import { ACCEPTED_CORPUS_ATTR } from "../../../lib/voice-corpus-file";
 import { VOICE_MIN_WORDS } from "../../../lib/voice-intake-core";
 import { VOICE_SOURCE_MAX_BYTES } from "../../../lib/voice-refusal";
 import type { ConversationQuestion } from "./conversation-machine";
-import {
-  type CorpusManifestEntry,
-  manifestCount,
-  type VoiceIngestFailure,
-} from "./use-voice-corpus";
+import type { VoiceIngestFailure } from "./use-voice-corpus";
 import { VoiceDistillPanel } from "./voice-distill";
+import { type CorpusManifestEntry, manifestCount } from "./voice-manifest";
 import { VoiceScene } from "./voice-scenes.result";
 import { WayOnward } from "./way-onward";
 

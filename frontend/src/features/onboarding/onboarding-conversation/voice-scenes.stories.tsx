@@ -7,10 +7,8 @@ import type { components } from "../../../api/schema";
 import { VOICE_MIN_WORDS } from "../../../lib/voice-intake-core";
 import { StoryProviders } from "../../../testing/story-utils";
 import type { ConversationQuestion } from "./conversation-types";
-import type {
-  CorpusManifestEntry,
-  VoiceIngestFailure,
-} from "./use-voice-corpus";
+import type { VoiceIngestFailure } from "./use-voice-corpus";
+import type { CorpusManifestEntry } from "./voice-manifest";
 import {
   VoiceBuildScene,
   VoiceCollectScene,
@@ -258,12 +256,8 @@ const SPEAKER_QUESTION: ConversationQuestion = {
   ],
 };
 
-/**
- * Which voice in the transcript is the reader's own. Continue stays held until
- * one is picked: a speaker chosen by default would file somebody else's words as
- * this company's writing, and nothing downstream would ever say so. Skip this
- * file leaves the file out when none of the speakers is the reader.
- */
+/** Which voice in the transcript is the reader's own; a default would file
+ *  someone else's words. Skip this file leaves out a file with none of them. */
 export const SpeakerAsk: Story = {
   render: () => (
     <StoryProviders>

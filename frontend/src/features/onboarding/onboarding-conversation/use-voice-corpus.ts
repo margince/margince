@@ -2,13 +2,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { Dispatch } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { components } from "../../../api/schema";
-import { formatBytes, formatNumber } from "../../../format/format";
-import type { Locale, PluralTranslator } from "../../../i18n";
+import { formatNumber } from "../../../format/format";
 import { useLocale, useT } from "../../../i18n";
 import type { MessageKey } from "../../../i18n/en";
-import { problemMessage, problemMessageOf } from "../../../lib/problem";
-import { problemCode } from "../../../lib/problembody";
-import { PROBLEM_CODE_COPY } from "../../../lib/problemcodecopy";
+import { problemMessageOf } from "../../../lib/problem";
 import { isAcceptedCorpusFile } from "../../../lib/voice-corpus-file";
 import type { IntakeOutcome } from "../../../lib/voice-intake-core";
 import {
@@ -16,13 +13,9 @@ import {
   intakePaste,
   intakeTranscript,
   pasteLabel,
-  removeSource,
   sourceRef,
 } from "../../../lib/voice-intake-core";
-import {
-  type RefusalReason,
-  VOICE_SOURCE_MAX_BYTES,
-} from "../../../lib/voice-refusal";
+import { removeSource } from "../../../lib/voice-sample-remove";
 import type {
   ConversationEvent,
   ConversationState,
@@ -30,6 +23,8 @@ import type {
 import { diffCorpus, useNarrationQueue } from "./narration";
 import { VOICE_PROBE_KEY } from "./restore";
 import { excerptLines } from "./voice-excerpts";
+import { type CorpusManifestEntry, storedEntry } from "./voice-manifest";
+import { refusalEntry, skipKeys } from "./voice-refusal-line";
 
 // The voice corpus of the conversational shell as one hook: intake (files
 // and pasted text), the preview probe that decides what a source honestly
@@ -43,42 +38,6 @@ type CorpusPreview = components["schemas"]["VoiceCorpusPreviewResult"];
 type CorpusSummary = components["schemas"]["VoiceCorpusSummary"];
 type IngestStats = components["schemas"]["VoiceIngestStats"];
 type CorpusSource = components["schemas"]["VoiceCorpusSource"];
-
-export type CorpusManifestEntry = Readonly<{
-  ref: string;
-  /** The server row and its version, which a removal names. */
-  id: string;
-  version: number;
-  label: string;
-  /** Server-counted words that survived the speaker filter. */
-  keptWords: number;
-  /** Server-counted words of the whole source before filtering. */
-  inputWords: number;
-  /** Kept-of-total is shown only where filtering actually discarded turns. */
-  transcript: boolean;
-  /** Sentences of the reader's own prose, for the distilling panel to read
-   * back. Empty for a transcript: its text carries other speakers' turns, and
-   * which words are the reader's is decided on the server, not here. */
-  lines: readonly string[];
-}>;
-
-/** The count a Sources row shows; kept-of-total only for a filtered transcript. */
-export function manifestCount(
-  entry: CorpusManifestEntry,
-  plural: PluralTranslator,
-  locale: Locale,
-): string {
-  const kept = formatNumber(entry.keptWords, locale);
-  if (entry.transcript) {
-    return plural("ob.conv.voice.manifestKept", entry.inputWords, {
-      kept,
-      total: formatNumber(entry.inputWords, locale),
-    });
-  }
-  return plural("ob.conv.voice.manifestWords", entry.keptWords, {
-    words: kept,
-  });
-}
 
 type SpeakerAsk = Readonly<{
   ref: string;
@@ -107,71 +66,6 @@ type UseVoiceCorpusArgs = Readonly<{
   initialSources?: readonly CorpusSource[];
 }>;
 
-// A stored row carries no pre-filter count and no text. It lists as its kept
-// words alone and lends no lines to the distilling panel.
-function storedEntry(source: CorpusSource): CorpusManifestEntry {
-  return {
-    ref: source.source_ref,
-    id: source.id,
-    version: source.version,
-    label: source.source_label,
-    keptWords: source.word_count,
-    inputWords: source.word_count,
-    transcript: false,
-    lines: [],
-  };
-}
-
-const refusalKeys: Record<RefusalReason, MessageKey> = {
-  unattributed: "ob.conv.voice.refusalUnattributed",
-  speaker: "ob.conv.voice.refusalSpeaker",
-  unsupported: "ob.conv.voice.refusalUnsupported",
-  tooLarge: "ob.conv.voice.refusalTooLarge",
-};
-
-// Why a file went nowhere, in the room's own words. `type` is decided by name
-// before anything is read; the other two are what reading it found.
-const skipKeys: Record<
-  Extract<IntakeOutcome, { kind: "skipped" }>["reason"],
-  MessageKey
-> = {
-  type: "ob.conv.voice.fileSkipped",
-  empty: "ob.conv.voice.fileEmpty",
-  unreadable: "ob.conv.voice.fileUnreadable",
-};
-
-// The refusal category the core read off the 422 picks the honest line; a
-// refusal it did not recognize falls back to the server's own safe detail.
-function refusalEntry(
-  outcome: Extract<IntakeOutcome, { kind: "refused" }>,
-  locale: Locale,
-): Extract<ConversationEvent, { type: "NARRATION" }>["entry"] {
-  const { ref, reason, problem } = outcome;
-  if (reason !== null) {
-    return {
-      kind: "narration",
-      id: `refuse:${ref}`,
-      i18nKey: refusalKeys[reason],
-      params: {
-        name: outcome.label,
-        limit: formatBytes(VOICE_SOURCE_MAX_BYTES, locale),
-      },
-    };
-  }
-  // A code the catalog words (a role refused the grant) is said in the
-  // reader's language, never as the server's English detail.
-  const codeKey = PROBLEM_CODE_COPY.get(problemCode(problem) ?? "");
-  if (codeKey !== undefined) {
-    return { kind: "narration", id: `refuse:${ref}`, i18nKey: codeKey };
-  }
-  return {
-    kind: "narration",
-    id: `refuse:${ref}`,
-    i18nKey: "ob.conv.voice.ingestFailed",
-    params: { detail: problemMessage(problem) },
-  };
-}
-
 export function useVoiceCorpus({
   state,
   dispatch,
@@ -190,7 +84,7 @@ export function useVoiceCorpus({
   const [probesInFlight, setProbesInFlight] = useState(0);
   const [failures, setFailures] = useState<readonly VoiceIngestFailure[]>([]);
   // One line per source the current pick could not add, so a batch with
-  // three bad files names all three; a newer word on one source replaces it.
+  // three bad files names all three. A newer word on one source replaces it.
   const noteFailure = useCallback((failure: VoiceIngestFailure) => {
     setFailures((prev) => [
       ...prev.filter((existing) => existing.id !== failure.id),
@@ -455,7 +349,7 @@ export function useVoiceCorpus({
         i18nKey: "ob.conv.voice.speakerQuestion",
         params: { name: nextAsk.label },
         // A colleague's call, or one where the reader is not listed, has no
-        // honest answer among the options, so the file can be left out.
+        // right answer among the options, so the file can be left out.
         dismissLabelKey: "ob.conv.voice.speakerSkip",
         options: nextAsk.preview.speakers.map((speaker) => ({
           value: speaker.label,

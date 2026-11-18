@@ -19,7 +19,7 @@ import {
 
 type CorpusSummary = components["schemas"]["VoiceCorpusSummary"];
 type VoiceProfileVersion = components["schemas"]["VoiceProfileVersion"];
-type CorpusManifestEntry = import("./use-voice-corpus").CorpusManifestEntry;
+type CorpusManifestEntry = import("./voice-manifest").CorpusManifestEntry;
 
 // A minimal but contract-complete VoiceProfileVersion; profileJSON carries
 // only what the result board actually reads, `sample_drafts` swapped per

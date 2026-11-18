@@ -5,8 +5,8 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../../api/schema";
 import { VOICE_MIN_WORDS } from "../../../lib/voice-intake-core";
 import { StoryProviders } from "../../../testing/story-utils";
-import type { CorpusManifestEntry } from "./use-voice-corpus";
 import { VoiceActArtifact } from "./voice-artifact";
+import type { CorpusManifestEntry } from "./voice-manifest";
 import "../onboarding.css";
 import "./conversation.css";
 
