@@ -71,6 +71,7 @@ func TestAnAdminsAgentIsUnpacedAndAUsersIsPacedOnMCP(t *testing.T) {
 		if i <= ceiling {
 			t.Fatalf("the User's call %d was paced, before the ceiling of %d", i, ceiling)
 		}
+		inTwoWindows("User", began)
 		return
 	}
 	inTwoWindows("User", began)
