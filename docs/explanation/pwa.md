@@ -207,8 +207,8 @@ standing notice is not read out at rest.
   the same hooks the banners draw from (`useConnectivity`, `useCaptureConcerns`, `useEconomyBand`,
   `useReindexNeeded`, `useLicenseNotice`). A banner the reader put away for the session or the day
   still keeps the notice back.
-- **What:** both states end on a "Not now" button. In `available`, Install follows it as the
-  one filled button and calls `prompt()` inside the click. `manual-ios` shows the Share step with
+- **What:** both states end on a "Not now" button. In `available`, Install follows it and
+  calls `prompt()` inside the click. `manual-ios` shows the Share step with
   the Share icon, and no Install.
 
 `frontend/src/lib/installhint.ts` holds the schedule in one JSON record under

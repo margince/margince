@@ -16,7 +16,11 @@ import {
   type InstallHintRecord,
   parseInstallHint,
 } from "../lib/installhint";
-import type { InstallOutcome, InstallState } from "../lib/pwa";
+import {
+  type InstallOutcome,
+  type InstallState,
+  listenForInstall,
+} from "../lib/pwa";
 import {
   readStoredJson,
   removeStored,
@@ -29,14 +33,22 @@ import { InstallHint } from "./installhint";
 
 // The browser's install offer is the boundary: headless runs never make one.
 const browser = vi.hoisted(() => {
-  const offered: { install: InstallState } = {
+  const offered: { install: InstallState; real: boolean } = {
     install: { kind: "unavailable" },
+    real: false,
   };
   return offered;
 });
-vi.mock("../lib/pwa", () => ({
-  useInstallState: () => browser.install,
-}));
+vi.mock("../lib/pwa", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../lib/pwa")>();
+  return {
+    ...actual,
+    useInstallState: () => {
+      const state = actual.useInstallState();
+      return browser.real ? state : browser.install;
+    },
+  };
+});
 
 const NOW = Date.now();
 const TODAY = calendarDay(new Date(NOW), browserZone());
@@ -245,5 +257,62 @@ describe("the install hint on Home", () => {
     await waitFor(() => expect(title()).toBeNull());
     expect(stored()?.dismissals).toBe(2);
     expect(document.activeElement).toBe(screen.getByTestId("scroller"));
+  });
+});
+
+describe("the install hint inside the installed app", () => {
+  let stopListening = () => undefined;
+
+  function runsAs(standalone: boolean): void {
+    vi.stubGlobal("matchMedia", (query: string) => ({
+      matches:
+        query === "(pointer: coarse)" ||
+        (standalone && query === "(display-mode: standalone)"),
+      media: query,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    }));
+  }
+
+  function browserOffers(): void {
+    window.dispatchEvent(
+      Object.assign(new Event("beforeinstallprompt", { cancelable: true }), {
+        platforms: ["web"],
+        userChoice: Promise.resolve({ outcome: "dismissed", platform: "web" }),
+        prompt: async () => undefined,
+      }),
+    );
+  }
+
+  beforeEach(() => {
+    browser.real = true;
+    stopListening = listenForInstall();
+    seed({ firstDay: EARLIER });
+  });
+
+  afterEach(() => {
+    browser.real = false;
+    stopListening();
+    Reflect.deleteProperty(navigator, "standalone");
+  });
+
+  it("never shows in a standalone window, even with an offer and a due schedule", async () => {
+    runsAs(true);
+    browserOffers();
+    mount();
+    await waitFor(() => expect(stored()?.installed).toBe(true));
+    expect(title()).toBeNull();
+  });
+
+  it("never shows when iOS runs it from the home screen", async () => {
+    runsAs(false);
+    Object.defineProperty(navigator, "standalone", {
+      configurable: true,
+      value: true,
+    });
+    browserOffers();
+    mount();
+    await waitFor(() => expect(stored()?.installed).toBe(true));
+    expect(title()).toBeNull();
   });
 });

@@ -194,6 +194,16 @@ describe("the install state", () => {
     expect(state().kind).toBe("unavailable");
   });
 
+  it("still offers to install in a browser tab gone fullscreen", async () => {
+    vi.stubGlobal("matchMedia", (query: string) => ({
+      matches: query === "(display-mode: fullscreen)",
+      media: query,
+    }));
+    const { state } = await page();
+    offer("accepted");
+    expect(state().kind).toBe("available");
+  });
+
   it("is installed when the app runs standalone", async () => {
     displayMode(true);
     const { state } = await page();
