@@ -28,6 +28,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/dealrole"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // The citable record types. A brief may only point at things the reader can
@@ -121,7 +122,7 @@ func Deterministic(in Input) []Section {
 		{Kind: crmcontracts.MeetingBriefSectionKindWhatChanged, Sentences: whatChangedSection(in, ranked)},
 		{Kind: crmcontracts.MeetingBriefSectionKindAttendees, Sentences: attendeesSection(in)},
 		{Kind: crmcontracts.MeetingBriefSectionKindRisks, Sentences: risksSection(in, ranked)},
-		{Kind: crmcontracts.MeetingBriefSectionKindCommitments, Sentences: briefCopyFor(in.Language).commitmentsSection(ranked)},
+		{Kind: crmcontracts.MeetingBriefSectionKindCommitments, Sentences: append(briefCopyFor(in.Language).commitmentsSection(ranked), looksKeptLines(in)...)},
 		{Kind: crmcontracts.MeetingBriefSectionKindDealState, Sentences: dealStateSection(in, ranked)},
 		{Kind: crmcontracts.MeetingBriefSectionKindTalkingPoints, Sentences: briefCopyFor(in.Language).talkingPointsSection(ranked)},
 		{Kind: crmcontracts.MeetingBriefSectionKindCompanyContext, Sentences: companyContextSection(in)},
@@ -450,14 +451,37 @@ func (said briefCopy) talkingPointLine(claim ClaimIn) string {
 	}
 }
 
+// looksKeptLines say once, plainly, that a promise looks kept and is no open
+// driver of this meeting.
+func looksKeptLines(in Input) []Sentence {
+	said := briefCopyFor(in.Language)
+	out := make([]Sentence, 0, len(in.LooksKept))
+	for _, kept := range in.LooksKept {
+		out = append(out, Sentence{
+			Text: fmt.Sprintf(said.Say(touchWords.LooksKept), kept.Body, kept.Guest,
+				occurredday.When(occurredday.Moment{At: kept.MeetingAt.At, DateOnly: kept.MeetingAt.DateOnly})),
+			Evidence: []Evidence{{EntityType: citeActivity, EntityID: kept.SourceID}},
+		})
+	}
+	return out
+}
+
 // companyContextSection recalls earlier meetings with this room; no history
 // means no background section.
 func companyContextSection(in Input) []Sentence {
-	out := make([]Sentence, 0, len(in.PriorMeetings))
+	out := make([]Sentence, 0, len(in.PriorMeetings)+len(in.CompanyHistory))
 	for _, prior := range in.PriorMeetings {
 		out = append(out, Sentence{
 			Text:     briefCopyFor(in.Language).priorMeetingLine(prior, in.Now, in.Zone),
 			Evidence: []Evidence{{EntityType: citeActivity, EntityID: prior.ID}},
+		})
+	}
+	said := briefCopyFor(in.Language)
+	for _, topic := range in.CompanyHistory {
+		out = append(out, Sentence{
+			Text: fmt.Sprintf(said.Say(touchWords.EarlierAt), in.Company, topic.Contact, topic.Subject,
+				occurredday.When(occurredday.Moment{At: topic.At.At, DateOnly: topic.At.DateOnly})),
+			Evidence: []Evidence{{EntityType: citeActivity, EntityID: topic.ID}},
 		})
 	}
 	return out

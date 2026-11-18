@@ -45739,6 +45739,9 @@ type ConversationClaim struct {
 	// dropped from the product.
 	Kind ConversationClaimKind `json:"kind"`
 
+	// LooksKept A read-only hint that this open promise to invite someone looks kept: a guest of that name at the same company accepted a later meeting this reader may open. Nothing is settled. The reader decides, through the settle verb.
+	LooksKept *ConversationClaimLooksKept `json:"looks_kept,omitempty"`
+
 	// NeedsReview Contradictory evidence exists for this claim. The surface shows both sources and asks — newest-wins is not a resolution.
 	NeedsReview bool       `json:"needs_review"`
 	OccurredAt  *time.Time `json:"occurred_at,omitempty"`
@@ -45784,6 +45787,16 @@ type ConversationClaimStatus string
 // `communication_preference` is deliberately absent: observed-style inference is
 // dropped from the product.
 type ConversationClaimKind string
+
+// ConversationClaimLooksKept A read-only hint that this open promise to invite someone looks kept: a guest of that name at the same company accepted a later meeting this reader may open. Nothing is settled. The reader decides, through the settle verb.
+type ConversationClaimLooksKept struct {
+	GuestName string             `json:"guest_name"`
+	MeetingAt time.Time          `json:"meeting_at"`
+	MeetingId openapi_types.UUID `json:"meeting_id"`
+
+	// MeetingPrecision How to read `meeting_at`. `day` means only its date is known.
+	MeetingPrecision OccurredPrecision `json:"meeting_precision"`
+}
 
 // ConversationMemoryEntry One thread or meeting, condensed to what it was about (ADR-0097 D3).
 //
