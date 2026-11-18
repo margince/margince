@@ -421,6 +421,7 @@ public.communication_basis.note note
 public.communication_basis.thread_key document
 public.communication_decision.actor document
 public.communication_decision.basis document
+public.communication_decision.country_source document
 public.communication_decision.data_protection_country document
 public.communication_decision.execution_authority document
 public.communication_decision.legacy_verdict document

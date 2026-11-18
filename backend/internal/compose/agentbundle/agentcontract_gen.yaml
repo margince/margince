@@ -41736,7 +41736,8 @@ components:
             then follow in place of the one the record states. An entry with `country: null` clears it,
             and that recipient is judged under the baseline. A recipient with no entry keeps the country
             the record states. An entry whose address is not on `to`, `cc` or `bcc` is ignored. Nothing
-            is written to the contact.
+            is written to the contact. Only the user writing the message may state one: an agent's or an
+            integration's request carrying this field is refused with 422 `invalid`.
         consent_purpose:
           type: string
           description: |-
@@ -42127,6 +42128,7 @@ components:
           description: |-
             The countries the sender states for this message's recipients, read as the send reads them:
             `country: null` clears a recipient's country, and a recipient with no entry keeps the record's.
+            An agent's or an integration's preview carrying this field is refused with 422 `invalid`.
         subject:
           type: string
           maxLength: 998
@@ -42186,6 +42188,7 @@ components:
           description: |-
             The countries the sender states for this message's recipients, read as the send reads them:
             `country: null` clears a recipient's country, and a recipient with no entry keeps the record's.
+            An agent's or an integration's preview carrying this field is refused with 422 `invalid`.
         subject:
           type: string
           maxLength: 998
@@ -42467,7 +42470,8 @@ components:
             then follow in place of the one the record states. An entry with `country: null` clears it,
             and that recipient is judged under the baseline. A recipient with no entry keeps the country
             the record states. An entry whose address is not on `to`, `cc` or `bcc` is ignored. Nothing
-            is written to the contact.
+            is written to the contact. Only the user writing the message may state one: an agent's or an
+            integration's request carrying this field is refused with 422 `invalid`.
         consent_purpose:
           type: string
           description: |-

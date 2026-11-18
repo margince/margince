@@ -22,9 +22,7 @@ type disclosureAdapter struct {
 func (a disclosureAdapter) DisclosuresFor(
 	ctx context.Context, category string, recipients []string, countries []commsauthz.CountryOverride, entity ids.UUID, language string,
 ) ([]activities.DisclosureLine, error) {
-	owed, err := a.store.Disclosures(ctx, consent.DisclosureQuery{
-		Category: commsauthz.Category(category), Recipients: recipients, Countries: countries, Entity: entity, Language: language,
-	})
+	owed, err := a.store.Disclosures(ctx, consent.DisclosureQuery{Category: commsauthz.Category(category), Recipients: recipients, Countries: countries, Entity: entity, Language: language})
 	if err != nil {
 		return nil, err
 	}

@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 // Initial audience and members commit before the creation audit and event.
@@ -61,6 +62,9 @@ func recordInitialActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in
 	if in.Kind == KindMeeting && in.HostUserID != nil {
 		evidence[storekit.ExplicitMeetingHostEvidence] = in.HostUserID.UUID
 	}
+	if stated := statedCountriesEvidence(in.statedCountries); stated != nil {
+		evidence[recipientCountriesField] = stated
+	}
 	auditID, err := storekit.AuditWithEvidence(ctx, tx, "create", "activity", id.UUID, nil, after, evidence)
 	if err != nil {
 		return err
@@ -70,6 +74,23 @@ func recordInitialActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in
 		return err
 	}
 	return storekit.EmitEvent(ctx, tx, auditID, id.UUID, payload)
+}
+
+// statedCountriesEvidence names each recipient whose country the sender
+// stated, with the code or "cleared", so an auditor sees who moved a
+// recipient's jurisdiction on which message.
+func statedCountriesEvidence(stated []commsauthz.CountryOverride) map[string]string {
+	if len(stated) == 0 {
+		return nil
+	}
+	out := make(map[string]string, len(stated))
+	for _, o := range stated {
+		out[o.Address] = o.Country
+		if o.Cleared() {
+			out[o.Address] = "cleared"
+		}
+	}
+	return out
 }
 
 // inheritAudienceTx gives a new transcript the readers of the meeting it

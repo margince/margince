@@ -10709,9 +10709,9 @@ paths:
     post:
       tags: [Activities]
       operationId: resolveRecipientCountries
-      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      security: [ { cookieAuth: [] } ]
       x-agent-access: human-only
-      x-human-only-reason: covered   # an agent's send states its countries in recipient_countries, and read_record shows a contact's address
+      x-human-only-reason: covered   # read_record shows a contact's address and its employer's; only the user writing a send states a country
       summary: The country the record states for each address, and where it was read.
       description: |
         The country a message's marketing rules would follow for each address, read from the
@@ -61172,6 +61172,7 @@ components:
         source:
           type: [string, 'null']
           enum: [contact_address, employer_address, lead_company_address, null]
+          x-extensible-enum: true
           description: |
             The record the country was read from: the contact's own address, the address of
             their current primary employer, or the company a lead is filed under. Null with a
@@ -61377,7 +61378,8 @@ components:
             then follow in place of the one the record states. An entry with `country: null` clears it,
             and that recipient is judged under the baseline. A recipient with no entry keeps the country
             the record states. An entry whose address is not on `to`, `cc` or `bcc` is ignored. Nothing
-            is written to the contact.
+            is written to the contact. Only the user writing the message may state one: an agent's or an
+            integration's request carrying this field is refused with 422 `invalid`.
         consent_purpose:
           type: string
           description: |
@@ -61861,6 +61863,7 @@ components:
           description: |
             The countries the sender states for this message's recipients, read as the send reads them:
             `country: null` clears a recipient's country, and a recipient with no entry keeps the record's.
+            An agent's or an integration's preview carrying this field is refused with 422 `invalid`.
         subject:
           type: string
           maxLength: 998
@@ -61921,6 +61924,7 @@ components:
           description: |
             The countries the sender states for this message's recipients, read as the send reads them:
             `country: null` clears a recipient's country, and a recipient with no entry keeps the record's.
+            An agent's or an integration's preview carrying this field is refused with 422 `invalid`.
         subject:
           type: string
           maxLength: 998
@@ -62290,7 +62294,8 @@ components:
             then follow in place of the one the record states. An entry with `country: null` clears it,
             and that recipient is judged under the baseline. A recipient with no entry keeps the country
             the record states. An entry whose address is not on `to`, `cc` or `bcc` is ignored. Nothing
-            is written to the contact.
+            is written to the contact. Only the user writing the message may state one: an agent's or an
+            integration's request carrying this field is refused with 422 `invalid`.
         consent_purpose:
           type: string
           description: |
