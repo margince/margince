@@ -45726,6 +45726,9 @@ type ConversationClaim struct {
 		GuestName string             `json:"guest_name"`
 		MeetingAt time.Time          `json:"meeting_at"`
 		MeetingId openapi_types.UUID `json:"meeting_id"`
+
+		// MeetingPrecision How to read `meeting_at`. `day` means only its date is known.
+		MeetingPrecision OccurredPrecision `json:"meeting_precision"`
 	} `json:"looks_kept,omitempty"`
 
 	// NeedsReview Contradictory evidence exists for this claim. The surface shows both sources and asks — newest-wins is not a resolution.

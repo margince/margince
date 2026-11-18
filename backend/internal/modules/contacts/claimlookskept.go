@@ -64,7 +64,7 @@ func withLooksKept(ctx context.Context, tx pgx.Tx, claims []crmcontracts.Convers
 		guestScope = sqlAlwaysVisible
 	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT DISTINCT ON (c.id) c.id, m.id, g.full_name, m.occurred_at
+		SELECT DISTINCT ON (c.id) c.id, m.id, g.full_name, m.occurred_at, m.occurred_precision
 		  FROM conversation_claim c
 		  JOIN activity src ON src.id = c.source_activity_id
 		  JOIN activity m ON m.kind = 'meeting' AND m.archived_at IS NULL AND m.id <> src.id
@@ -91,6 +91,7 @@ func withLooksKept(ctx context.Context, tx pgx.Tx, claims []crmcontracts.Convers
 		Claim, Meeting ids.UUID
 		Guest          string
 		At             time.Time
+		Precision      crmcontracts.OccurredPrecision
 	}
 	hits, err := pgx.CollectRows(rows, pgx.RowToStructByPos[found])
 	if err != nil {
@@ -101,7 +102,10 @@ func withLooksKept(ctx context.Context, tx pgx.Tx, claims []crmcontracts.Convers
 			GuestName string             `json:"guest_name"`
 			MeetingAt time.Time          `json:"meeting_at"`
 			MeetingId openapi_types.UUID `json:"meeting_id"`
-		}{GuestName: hit.Guest, MeetingAt: hit.At, MeetingId: openapi_types.UUID(hit.Meeting)}
+
+			// MeetingPrecision How to read `meeting_at`. `day` means only its date is known.
+			MeetingPrecision crmcontracts.OccurredPrecision `json:"meeting_precision"`
+		}{GuestName: hit.Guest, MeetingAt: hit.At, MeetingId: openapi_types.UUID(hit.Meeting), MeetingPrecision: hit.Precision}
 	}
 	return nil
 }

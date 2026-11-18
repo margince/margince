@@ -324,7 +324,7 @@ func foldLooksKept(contactName string, found []crmcontracts.ConversationClaim) [
 		}
 		out = append(out, LooksKeptIn{
 			ContactName: contactName, Body: claim.Body, Guest: claim.LooksKept.GuestName,
-			MeetingAt: Occurred{At: claim.LooksKept.MeetingAt},
+			MeetingAt: Occurred{At: claim.LooksKept.MeetingAt, DateOnly: occurredday.IsDay(claim.LooksKept.MeetingPrecision)},
 			SourceID:  ids.UUID(claim.SourceActivityId).String(),
 		})
 	}

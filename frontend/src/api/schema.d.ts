@@ -36946,6 +36946,8 @@ export interface components {
                 guest_name: string;
                 /** Format: date-time */
                 meeting_at: string;
+                /** @description How to read `meeting_at`. `day` means only its date is known. */
+                meeting_precision: components["schemas"]["OccurredPrecision"];
             };
             /**
              * Format: uuid

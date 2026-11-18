@@ -34664,11 +34664,14 @@ components:
           type: object
           description: >-
             A read-only hint that this open promise to invite someone looks kept: a guest of that name at the same company accepted a later meeting this reader may open. Nothing is settled. The reader decides, through the settle verb.
-          required: [meeting_id, guest_name, meeting_at]
+          required: [meeting_id, guest_name, meeting_at, meeting_precision]
           properties:
             meeting_id: {type: string, format: uuid}
             guest_name: {type: string}
             meeting_at: {type: string, format: date-time}
+            meeting_precision:
+              allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+              description: How to read `meeting_at`. `day` means only its date is known.
         task_activity_id:
           type: [string, 'null']
           format: uuid

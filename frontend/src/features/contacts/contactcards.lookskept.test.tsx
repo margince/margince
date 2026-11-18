@@ -83,6 +83,7 @@ const LOOKS_KEPT: ConversationClaim = {
     meeting_id: "m-1",
     guest_name: "Riley Reed",
     meeting_at: "2026-08-30T10:00:00Z",
+    meeting_precision: "instant",
   },
 };
 
