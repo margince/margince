@@ -10,7 +10,12 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { components } from "../../api/schema";
 import { paragraphsFrom } from "../../design-system/richtext";
-import { type Toast, useOwnToast, useToast } from "../../design-system/toast";
+import {
+  type Toast,
+  undoAction,
+  useOwnToast,
+  useToast,
+} from "../../design-system/toast";
 import { useT } from "../../i18n";
 import { problemCodeOf, problemMessageOf } from "../../lib/problem";
 import type { ChosenFile } from "./composeattachments";
@@ -103,13 +108,18 @@ function deleteFromToast(input: {
   anchor: SavedDraftAnchor;
   id: string;
   t: ReturnType<typeof useT>;
+  fields: SavedDraftFields;
+  sends: number;
   onDeleted: () => void;
+  onRestored: (fields: SavedDraftFields) => void;
 }) {
   deleteDraft(input.id).then(
     () => {
       input.queryClient.setQueryData(draftKey(input.anchor), null);
       input.onDeleted();
-      input.toast.show(input.t("compose.savedDraftDeleted"));
+      input.toast.show(input.t("compose.savedDraftDeleted"), {
+        action: undoAction(input.t("common.undo"), () => restoreDeleted(input)),
+      });
     },
     (error: unknown) => {
       input.toast.show(problemMessageOf(error, input.t), {
@@ -117,6 +127,33 @@ function deleteFromToast(input: {
         sticky: true,
       });
     },
+  );
+}
+
+// A new draft with the same words: the server keeps no copy of a deleted one.
+// A draft written meanwhile refuses this as a conflict, which the toast names.
+function restoreDeleted(input: {
+  queryClient: QueryClient;
+  toast: Toast;
+  t: ReturnType<typeof useT>;
+  anchor: SavedDraftAnchor;
+  fields: SavedDraftFields;
+  sends: number;
+  onRestored: (fields: SavedDraftFields) => void;
+}) {
+  writeDraft({
+    anchor: input.anchor,
+    fields: input.fields,
+    version: undefined,
+    sends: input.sends,
+  }).then(
+    (saved) => {
+      input.queryClient.setQueryData(draftKey(input.anchor), saved);
+      input.onRestored(input.fields);
+      input.toast.show(input.t("compose.savedDraftRestored"));
+    },
+    (error: unknown) =>
+      input.toast.show(problemMessageOf(error, input.t), { tone: "danger" }),
   );
 }
 
@@ -236,7 +273,10 @@ export function useSavedDraft(input: {
               anchor: ask.anchor,
               id: saved.id,
               t,
+              fields: ask.fields,
+              sends: sends.current,
               onDeleted: onCleared,
+              onRestored: onRestore,
             });
           },
         },
@@ -269,7 +309,11 @@ export function useSavedDraft(input: {
   });
   const remove = useMutation({
     mutationFn: async (
-      target: Readonly<{ anchor: SavedDraftAnchor; id: string }>,
+      target: Readonly<{
+        anchor: SavedDraftAnchor;
+        id: string;
+        fields: SavedDraftFields;
+      }>,
     ) => {
       await deleteDraft(target.id);
       return target;
@@ -279,7 +323,19 @@ export function useSavedDraft(input: {
       setRestoredKey(null);
       setConflict(null);
       onCleared();
-      toast.show(t("compose.savedDraftDeleted"));
+      toast.show(t("compose.savedDraftDeleted"), {
+        action: undoAction(t("common.undo"), () =>
+          restoreDeleted({
+            queryClient,
+            toast,
+            t,
+            anchor: target.anchor,
+            fields: target.fields,
+            sends: sends.current,
+            onRestored: onRestore,
+          }),
+        ),
+      });
     },
   });
 
@@ -367,7 +423,8 @@ export function useSavedDraft(input: {
     // over the text once, and the line says a second close discards it.
     requestClose,
     remove: () => {
-      if (anchor && held) remove.mutate({ anchor, id: held.id });
+      if (anchor && held)
+        remove.mutate({ anchor, id: held.id, fields: fieldsOfDraft(held) });
     },
     removing: remove.isPending,
     /** What is on screen is what the saved draft holds. */
@@ -377,7 +434,10 @@ export function useSavedDraft(input: {
     discard: () => {
       if (save.isPending || remove.isPending) return;
       if (anchor && held && !changedElsewhere) {
-        remove.mutate({ anchor, id: held.id }, { onSuccess: onClose });
+        remove.mutate(
+          { anchor, id: held.id, fields: fieldsOfDraft(held) },
+          { onSuccess: onClose },
+        );
         return;
       }
       onCleared();

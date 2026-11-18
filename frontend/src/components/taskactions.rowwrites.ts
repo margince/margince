@@ -76,7 +76,7 @@ export type MeetingOutcomeWrite = {
   // Without it, two readers answering one meeting both succeed, and the
   // later one wins with no warning.
   version: number | undefined;
-  status: "held" | "no_show" | "canceled";
+  status: "held" | "no_show" | "canceled" | "booked";
   followUpTask?: components["schemas"]["ActivityFollowUpTask"];
   dealFiling?: components["schemas"]["ActivityDealFiling"];
   // Each sent only when given, so an answer alone never touches the notes.

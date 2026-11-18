@@ -442,6 +442,38 @@ describe("a saved draft", () => {
     await waitFor(() => expect(messageText("Body")).toBe(""));
   });
 
+  it("is written back by Undo after the trash deletes it, with the same words and recipients", async () => {
+    const onClose = vi.fn();
+    const sent = stubRoutes({
+      "GET /mail-drafts": () => jsonResponse(SAVED),
+      "DELETE /mail-drafts/md-1": () => new Response(null, { status: 204 }),
+      "PUT /mail-drafts": () => jsonResponse({ ...SAVED, id: "md-2" }),
+    });
+    render(composer(onClose));
+    await screen.findByText("Saved draft restored");
+
+    await userEvent.click(screen.getByRole("button", { name: "Delete draft" }));
+    expect(await screen.findByText("Saved draft deleted")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "Undo" }));
+
+    await waitFor(() =>
+      expect(calls(sent, "PUT /mail-drafts")).toHaveLength(1),
+    );
+    expect(calls(sent, "PUT /mail-drafts")[0]?.body).toMatchObject({
+      anchor_type: "contact",
+      anchor_id: "p-1",
+      to: ["buyer@acme.test"],
+      subject: "Pricing for 40 seats",
+      body: "Half written before lunch",
+    });
+    expect(
+      calls(sent, "PUT /mail-drafts")[0]?.headers.get("If-Match"),
+    ).toBeNull();
+    expect(await screen.findAllByText("Saved draft restored")).not.toHaveLength(
+      0,
+    );
+  });
+
   it("is deleted from the restored notice, and the fields empty", async () => {
     const sent = stubRoutes({
       "GET /mail-drafts": () => jsonResponse(SAVED),

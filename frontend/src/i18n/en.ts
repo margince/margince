@@ -20846,6 +20846,7 @@ export const en = {
   "worklist.verb.meetingNoShow": "No-show",
   "worklist.verb.meetingCanceled": "Did not happen",
   "worklist.verb.meetingOutcomeRecorded": "Meeting outcome recorded",
+  "worklist.verb.meetingCanceledRecorded": "Marked as not held (canceled).",
   "worklist.verb.meetingOutcomeFailed": "Outcome was not recorded. Retry.",
   "worklist.verb.meetingDayMissing":
     "That date does not exist in the company’s time zone. Pick another date.",

@@ -5,7 +5,7 @@ import type { QueryKey } from "@tanstack/react-query";
 import { useState } from "react";
 import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
-import { useToast } from "../design-system/toast";
+import { undoAction, useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { useCanWriteRecord } from "../lib/capability";
 import { problemFieldErrorsOf } from "../lib/problem";
@@ -131,20 +131,32 @@ export function MeetingOutcome({
   // An invitation can arrive after the row was read, so its refusal hides Cancel too.
   const [refusedAsManaged, setRefusedAsManaged] = useState(false);
   const record = useMeetingOutcome(invalidateKeys);
-  const answer = (status: "held" | "canceled") =>
+  const cancel = () =>
     record.mutate(
-      { id, version, status },
+      { id, version, status: "canceled" },
       {
-        onSuccess: () => toast.show(t("worklist.verb.meetingOutcomeRecorded")),
+        onSuccess: (saved) =>
+          toast.show(t("worklist.verb.meetingCanceledRecorded"), {
+            action: undoAction(t("common.undo"), () =>
+              // "booked" still asks for an outcome, and a PATCH cannot clear a
+              // status; the version is the one the cancel produced. The row
+              // may be gone by then, so a refusal is told here.
+              record
+                .mutateAsync({ id, version: saved.version, status: "booked" })
+                .catch(() =>
+                  toast.show(t("worklist.verb.meetingOutcomeFailed"), {
+                    tone: "danger",
+                  }),
+                ),
+            ),
+          }),
         // A refused write leaves the row as it was, which looks like a
         // click that did nothing.
         onError: (error) => {
-          const managed =
-            status === "canceled" &&
-            problemFieldErrorsOf(error).some(
-              (fault) => fault.code === "calendar_managed",
-            );
-          if (status === "canceled") setRefusedAsManaged(managed);
+          const managed = problemFieldErrorsOf(error).some(
+            (fault) => fault.code === "calendar_managed",
+          );
+          setRefusedAsManaged(managed);
           toast.show(
             t(
               managed
@@ -191,7 +203,7 @@ export function MeetingOutcome({
               ? t("worklist.verb.meetingCanceledFor", { subject: title })
               : undefined
           }
-          onClick={() => answer("canceled")}
+          onClick={cancel}
         >
           {t("worklist.verb.meetingCanceled")}
         </Button>

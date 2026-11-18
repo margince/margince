@@ -287,6 +287,33 @@ describe("MeetingOutcome", () => {
     ).toEqual([{ meeting_status: "held", body: "Budget approved" }]);
   });
 
+  it("says what Did not happen recorded and Undo writes the meeting back at the cancel's version", async () => {
+    const user = userEvent.setup();
+    const sent: Sent[] = [];
+    stubServer(sent);
+    renderCard();
+
+    await user.click(
+      screen.getByRole("button", { name: "Did not happen: Site visit" }),
+    );
+    expect(
+      await screen.findByText("Marked as not held (canceled)."),
+    ).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Undo" }));
+
+    await waitFor(() =>
+      expect(sent.filter((r) => r.method === "PATCH")).toHaveLength(2),
+    );
+    expect(
+      sent
+        .filter((request) => request.method === "PATCH")
+        .map((r) => [r.ifMatch, r.body]),
+    ).toEqual([
+      ["7", { meeting_status: "canceled" }],
+      ["8", { meeting_status: "booked" }],
+    ]);
+  });
+
   it("spins only Did not happen while its write runs", async () => {
     const user = userEvent.setup();
     vi.stubGlobal(
