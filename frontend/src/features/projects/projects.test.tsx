@@ -305,6 +305,43 @@ describe("ProjectsScreen", () => {
   });
 });
 
+describe("ProjectsScreen — the customer column", () => {
+  it("says a hidden customer is hidden and a missing one is a dash", async () => {
+    projectsBackend({
+      projects: [
+        project({
+          id: "pr-1",
+          name: "Hidden one",
+          company_id: null,
+          masked_fields: ["company_id"],
+        }),
+        project({ id: "pr-2", name: "Bare one", company_id: null }),
+      ],
+    });
+    render(<ProjectsScreen />);
+    await screen.findByText("Hidden one");
+    expect(screen.getAllByTestId("project-company-withheld")).toHaveLength(1);
+    expect(screen.getAllByTestId("project-company-none")).toHaveLength(1);
+  });
+
+  it("names a hidden customer on a phone row and draws nothing for a missing one", async () => {
+    stubWindowWidth(390);
+    projectsBackend({
+      projects: [
+        project({
+          id: "pr-1",
+          name: "Hidden one",
+          company_id: null,
+          masked_fields: ["company_id"],
+        }),
+      ],
+    });
+    render(<ProjectsScreen />);
+    const row = await phoneRowOf("Hidden one");
+    expect(row.caption).toEqual(["Hidden for your role"]);
+  });
+});
+
 describe("ProjectsScreen — a row on a phone", () => {
   it("ends the name's line in the phase and names the customer under it", async () => {
     stubWindowWidth(390);

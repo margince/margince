@@ -31,7 +31,7 @@ import { RecordView } from "../../design-system/recordview";
 import { omitted } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
 import { taskWriteKeys } from "../../lib/activitykeys";
-import { useCan } from "../../lib/capability";
+import { useCan, useCanWrite } from "../../lib/capability";
 import { labelFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
 import { useShortcut } from "../../lib/shortcuts";
@@ -126,6 +126,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
   // control describes itself by pointing at the same explanation.
   const readOnlyReason = useProjectVerbRefusal(project);
   const readOnly = Boolean(readOnlyReason);
+  const canCreateDeal = useCanWrite("deal", "create");
   // The task detail and the health dialog are owned here rather than by the
   // cards. One modal per page, so two cards cannot both put one on screen.
   const [openTask, setOpenTask] = useState<string | null>(null);
@@ -217,6 +218,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
           // re-checking, so `EnsureAttachable` proves the authority at the
           // moment of attaching.
           !readOnly &&
+          canCreateDeal &&
           (project.company_id ? (
             <NewDealAction
               companyId={project.company_id}
