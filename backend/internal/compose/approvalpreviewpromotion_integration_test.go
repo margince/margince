@@ -90,24 +90,20 @@ func TestPromotionApprovalNamesTheContactAndOptionalDeal(t *testing.T) {
 	}
 }
 
-// The preview names the industry a promotion writes to the linked company. It
-// names none where the company already holds one, as the promotion writes none.
+// The preview names the industry a promotion writes to the linked or created
+// company. It names none where the company already holds one, as the promotion writes none.
 func TestPromotionApprovalNamesTheIndustryItCarriesToTheCompany(t *testing.T) {
 	for _, tc := range []struct {
-		name string
-		held *string
-	}{{"a company with no industry", nil}, {"a company with one", new("education")}} {
+		name    string
+		held    *string
+		created bool
+	}{{"a company with no industry", nil, false}, {"a company with one", new("education"), false}, {"a company the promotion creates", nil, true}} {
 		t.Run(tc.name, func(t *testing.T) {
 			e := integration.Setup(t)
 			perms := integration.AdminPerms
 			perms.Objects = maps.Clone(perms.Objects)
 			perms.Objects["custom_field"] = principal.ObjectGrant{Read: true}
 			ctx := e.As(e.AdminUser, nil, perms)
-			company, err := e.Contacts.CreateCompany(ctx, contacts.CreateCompanyInput{DisplayName: "Harbor Clinic", Industry: tc.held, Source: "manual"})
-			if err != nil {
-				t.Fatal(err)
-			}
-			companyID := ids.From[ids.CompanyKind](ids.UUID(company.Id))
 			lead, _, err := e.Contacts.CreateLead(ctx, contacts.CreateLeadInput{
 				FullName: new("Ines Buyer"), Email: new("ines@harbor.test"), CompanyName: new("Harbor Clinic"),
 				Industry: new("Healthcare"), Source: "manual",
@@ -116,8 +112,16 @@ func TestPromotionApprovalNamesTheIndustryItCarriesToTheCompany(t *testing.T) {
 				t.Fatal(err)
 			}
 			leadID := ids.From[ids.LeadKind](ids.UUID(lead.Id))
-			if _, err := e.Contacts.LinkLeadCompany(ctx, leadID, companyID); err != nil {
-				t.Fatal(err)
+			var companyID ids.CompanyID
+			if !tc.created {
+				company, err := e.Contacts.CreateCompany(ctx, contacts.CreateCompanyInput{DisplayName: "Harbor Clinic", Industry: tc.held, Source: "manual"})
+				if err != nil {
+					t.Fatal(err)
+				}
+				companyID = ids.From[ids.CompanyKind](ids.UUID(company.Id))
+				if _, err := e.Contacts.LinkLeadCompany(ctx, leadID, companyID); err != nil {
+					t.Fatal(err)
+				}
 			}
 			raw, hash, err := diffhash.Canonical([]byte(fmt.Sprintf(`{"lead_id":%q,"trigger":"human_qualify"}`, lead.Id)))
 			if err != nil {
@@ -150,8 +154,15 @@ func TestPromotionApprovalNamesTheIndustryItCarriesToTheCompany(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if _, err := e.Contacts.QualifyLead(ctx, leadID, input); err != nil {
+			out, err := e.Contacts.QualifyLead(ctx, leadID, input)
+			if err != nil {
 				t.Fatal(err)
+			}
+			if tc.created {
+				if out.Contact.Employer == nil {
+					t.Fatal("the promotion created no employer for the contact")
+				}
+				companyID = ids.From[ids.CompanyKind](ids.UUID(out.Contact.Employer.CompanyId))
 			}
 			after, err := e.Contacts.GetCompany(ctx, companyID, storekit.LiveOnly)
 			if err != nil {

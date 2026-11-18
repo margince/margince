@@ -65,5 +65,5 @@ func checkHandlingPolicy(ctx context.Context, tx pgx.Tx, formID ids.UUID, curren
 
 // HandlingUnavailable is shared by form edits and the inquiry policy's HTTP write.
 func HandlingUnavailable() error {
-	return &httperr.DetailedError{Status: http.StatusServiceUnavailable, Code: httperr.WebsiteFormBusyCode, Detail: "this form is busy; try the same request again"}
+	return &httperr.DetailedError{Status: http.StatusServiceUnavailable, Code: httperr.WebsiteFormBusyCode, RetryAfterSeconds: 1, Detail: "this form is busy; try the same request again"}
 }

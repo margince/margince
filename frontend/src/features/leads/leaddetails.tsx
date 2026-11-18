@@ -17,6 +17,7 @@ import {
   CopyEmail,
   EmailFace,
 } from "../../design-system/contactlink";
+import { InfoTip } from "../../design-system/infotip";
 import { InlineChoice } from "../../design-system/inlinechoice";
 import { InlineText } from "../../design-system/inlinetext";
 import {
@@ -181,7 +182,7 @@ function useAboutRows(
   const text = (
     key: TextKey,
     label: MessageKey,
-    options: { required?: boolean; type?: "email" } = {},
+    options: { required?: boolean; type?: "email"; link?: ReactNode } = {},
   ): DetailRow => ({
     key,
     term: t(label),
@@ -191,6 +192,7 @@ function useAboutRows(
         label={t(label)}
         value={lead[key] ?? ""}
         type={options.type}
+        link={options.link}
         placeholder={t("field.unset")}
         canEdit={canEdit}
         readOnlyReason={reason}
@@ -258,7 +260,18 @@ function useAboutRows(
         />
       ),
     },
-    text("phone", "create.phone"),
+    // The number dials, as on a contact; the box around it still edits it.
+    text("phone", "create.phone", {
+      link: lead.phone && (
+        <ContactLink
+          kind="phone"
+          value={lead.phone}
+          record={{ entityType: "lead", entityId: lead.id }}
+          className="link-button lead-row-link"
+          textClassName="lead-row-link"
+        />
+      ),
+    }),
     {
       key: "origin",
       term: t("lead.origin"),
@@ -306,7 +319,19 @@ function useAboutRows(
         <span title={t("record.leadProfileReadOnly")}>{t("field.unset")}</span>
       ),
     },
-    text("candidate_company_key", "record.companyRoutingKey"),
+    {
+      ...text("candidate_company_key", "record.companyRoutingKey"),
+      term: (
+        <>
+          {t("record.companyRoutingKey")}
+          <InfoTip
+            label={t("record.companyRoutingKeyWhy")}
+            text={t("record.companyRoutingKeyHelp")}
+            mark="help"
+          />
+        </>
+      ),
+    },
     {
       key: "project_id",
       term: t("lead.project"),
