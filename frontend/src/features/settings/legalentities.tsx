@@ -97,6 +97,14 @@ type RowVerbs = Readonly<{
   onArchive: (entity: LegalEntity) => void;
 }>;
 
+// A further entity with no country sends under the installation's, which may
+// be the wrong law for it, so the list shows an admin the gap.
+function countryCell(entity: LegalEntity, t: Translator) {
+  if (entity.country) return entity.country.toUpperCase();
+  if (entity.is_default) return "";
+  return <Badge tone="warning">{t("legalEntities.countryMissing")}</Badge>;
+}
+
 function entityColumns(
   t: Translator,
   verbs: RowVerbs,
@@ -124,7 +132,7 @@ function entityColumns(
       key: "country",
       header: t("legalEntities.colCountry"),
       fold: "end",
-      render: (entity) => entity.country?.toUpperCase() ?? "",
+      render: (entity) => countryCell(entity, t),
     },
   ];
   if (!verbs.canEdit && !verbs.canArchive) return columns;

@@ -474,7 +474,7 @@ describe("ComposeWindow recipient", () => {
     const user = userEvent.setup();
     expect(await screen.findByText("dietmar@buyer.test")).toBeTruthy();
     await user.click(
-      screen.getByRole("button", { name: /dietmar@buyer.test/ }),
+      screen.getByRole("button", { name: /Remove dietmar@buyer.test/ }),
     );
 
     // Offering it again on the next render would make the field impossible to

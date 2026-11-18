@@ -6,6 +6,7 @@ import { localDateTimeValue } from "../../format/calendarday";
 import type { CommunicationContext } from "../../lib/compose-context";
 import { RELINK_KINDS, type RelinkKind } from "../../lib/recordtargets";
 import type { ChosenFile } from "./composeattachments";
+import type { RecipientCountry } from "./composecountries";
 import { type ScheduleFields, scheduleSourceOf } from "./composeschedule";
 import type { ScheduledSend } from "./scheduledqueue";
 
@@ -28,6 +29,7 @@ export type EditSeed = Readonly<{
   context: CommunicationContext | "";
   dealId: string;
   projectId: string;
+  recipientCountries?: readonly RecipientCountry[];
 }>;
 
 const isRelinkKind = (type: string): type is RelinkKind =>
@@ -95,6 +97,7 @@ export function editSeedOf(
     to: send.to,
     cc: send.cc ?? [],
     bcc: send.bcc ?? [],
+    recipientCountries: send.recipient_countries,
     subject: send.subject,
     body: send.body ?? "",
     html: send.html_body ?? paragraphsFrom(send.body ?? ""),
