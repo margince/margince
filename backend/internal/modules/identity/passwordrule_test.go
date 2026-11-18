@@ -4,7 +4,9 @@
 package identity
 
 import (
+	"encoding/json"
 	"errors"
+	"os"
 	"strings"
 	"testing"
 
@@ -54,7 +56,51 @@ func TestPasswordEmailErrorRefusesTheAccountAddressOnly(t *testing.T) {
 			t.Errorf("password %q = %v, want a new_password/email refusal", pw, err)
 		}
 	}
+	for _, pw := range []string{"someone@example.test.", "someone@EXAMPLE.test."} {
+		if err := passwordEmailError("new_password", pw, email); err == nil {
+			t.Errorf("password %q (trailing dot) was accepted for %s", pw, email)
+		}
+	}
+	const unicode = "anna@bücher.example"
+	for _, pw := range []string{"anna@xn--bcher-kva.example", "Anna@Bücher.example.", unicode} {
+		if err := passwordEmailError("new_password", pw, unicode); err == nil {
+			t.Errorf("password %q (punycode or Unicode spelling) was accepted for %s", pw, unicode)
+		}
+		if err := passwordEmailError("new_password", unicode, pw); err == nil {
+			t.Errorf("account %q was not matched by the password %s", pw, unicode)
+		}
+	}
+	if err := passwordEmailError("new_password", "anna@other.example", unicode); err != nil {
+		t.Errorf("another domain was refused: %v", err)
+	}
 	if err := passwordEmailError("new_password", "another@example.test", email); err != nil {
 		t.Errorf("a different address as password = %v, want nil", err)
+	}
+}
+
+// The corpus is shared with frontend/src/features/sign-in/passwordrule.test.ts,
+// so the two spellings of the rule are held to the same behaviour.
+func TestPasswordRuleMatchesTheSharedCorpus(t *testing.T) {
+	t.Parallel()
+	raw, err := os.ReadFile("testdata/passwordrule.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var corpus []struct{ Note, Password, Fault string }
+	if err := json.Unmarshal(raw, &corpus); err != nil {
+		t.Fatal(err)
+	}
+	if len(corpus) < 30 {
+		t.Fatalf("the corpus holds %d cases, want its full census", len(corpus))
+	}
+	for _, c := range corpus {
+		err := passwordRuleError("new_password", c.Password)
+		got := "ok"
+		if parseErr := new(values.ParseError); errors.As(err, &parseErr) {
+			got = parseErr.Code
+		}
+		if got != c.Fault {
+			t.Errorf("%s: refused as %q, the corpus says %q", c.Note, got, c.Fault)
+		}
 	}
 }

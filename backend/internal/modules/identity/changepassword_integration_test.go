@@ -572,6 +572,14 @@ func TestAnOperatorResetRefusesBlankAndEmailPasswords(t *testing.T) {
 			t.Errorf("an operator reset to %q gave %v, want a %s refusal", weak, err, code)
 		}
 	}
+	// The operator types the address in another spelling than the one stored.
+	err := withOperatorTx(t, e, func(tx pgx.Tx) error {
+		return OperatorResetPassword(context.Background(), tx, e.ws, strings.ToUpper(e.member.Email), e.member.Email)
+	})
+	var parseErr *values.ParseError
+	if !errors.As(err, &parseErr) || parseErr.Code != "email" {
+		t.Errorf("a reset to the stored address, typed in capitals, gave %v, want an email refusal", err)
+	}
 }
 
 func TestAnOperatorResetRefusesAnAgentIdentity(t *testing.T) {

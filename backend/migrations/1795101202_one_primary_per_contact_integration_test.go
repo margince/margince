@@ -25,11 +25,11 @@ func TestTheOnePrimaryMigrationKeepsTheAddressTheAppUsed(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loading core: %v", err)
 	}
-	through := namespaceThroughVersion(t, core, "1795101202")
+	through := namespaceThroughVersion(t, core, "1795101204")
 	if _, err := dbmigrate.Up(ctx, conn, through); err != nil {
 		t.Fatalf("up: %v", err)
 	}
-	if _, err := dbmigrate.Down(ctx, conn, through, 1); err != nil {
+	if _, err := dbmigrate.Down(ctx, conn, through, 3); err != nil {
 		t.Fatalf("restoring the per-type index: %v", err)
 	}
 

@@ -44,6 +44,12 @@ export type PasswordFault =
   | "password.blank"
   | "password.repeated";
 
+// White space as the server reads it (Go's unicode.IsSpace), spelled out because
+// String.trim also strips U+FEFF and not U+0085. passwordrule.test.ts holds this
+// to the corpus the server test reads.
+const BLANK =
+  /^[\t-\r \u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]+$/;
+
 export function passwordFault(password: string): PasswordFault | null {
   if (password.length === 0) {
     return null;
@@ -55,7 +61,7 @@ export function passwordFault(password: string): PasswordFault | null {
   if (length > MAX_PASSWORD) {
     return "password.tooLong";
   }
-  if (password.trim() === "") {
+  if (BLANK.test(password)) {
     return "password.blank";
   }
   if (new Set(password).size === 1) {

@@ -67,6 +67,22 @@ func refuseRemovedEmail(ctx context.Context, tx pgx.Tx, email string) error {
 // at a time.
 func typedLoginAddress(email string) string { return strings.ToLower(strings.TrimSpace(email)) }
 
+// sameLoginIdentity reports whether two spellings name one seat login: the
+// local parts match lowercased, and the domains match once folded, so a Unicode
+// domain, its punycode form and a trailing dot are one address, as SeatLoginIsSQL
+// reads them.
+func sameLoginIdentity(a, b string) bool {
+	a, b = typedLoginAddress(a), typedLoginAddress(b)
+	if a == b {
+		return true
+	}
+	domainA, domainB := owndomain.OfAddress(a), owndomain.OfAddress(b)
+	if domainA == "" || domainA != domainB {
+		return false
+	}
+	return a[:strings.LastIndex(a, "@")] == b[:strings.LastIndex(b, "@")]
+}
+
 // memberLoginArgs binds one typed address for a seat-login comparison: the
 // address as typed, and its domain folded the way the column stores it.
 func memberLoginArgs(email string) pgx.StrictNamedArgs {

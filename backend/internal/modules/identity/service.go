@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"time"
+	"unicode"
 	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
@@ -226,7 +227,7 @@ func passwordRuleError(field, pw string) error {
 			Code:    "length",
 			Message: fmt.Sprintf("the password must be %d–%d characters", minPasswordLen, maxPasswordLen),
 		}
-	case strings.TrimSpace(pw) == "":
+	case isBlank(pw):
 		return &values.ParseError{Field: field, Code: "blank", Message: "the password cannot be only spaces"}
 	case isOneRepeatedRune(pw):
 		return &values.ParseError{Field: field, Code: "repeated", Message: "the password cannot be one character repeated"}
@@ -235,13 +236,20 @@ func passwordRuleError(field, pw string) error {
 }
 
 // passwordEmailError refuses a password that is the account's own address, the
-// first guess anyone makes. The address is compared the way a login is, trimmed
-// and case-folded.
+// first guess anyone makes. The address is compared the way a login is, by
+// sameLoginIdentity.
 func passwordEmailError(field, pw, email string) error {
-	if strings.EqualFold(strings.TrimSpace(pw), strings.TrimSpace(email)) {
+	if sameLoginIdentity(pw, email) {
 		return &values.ParseError{Field: field, Code: "email", Message: "the password cannot be your email address"}
 	}
 	return nil
+}
+
+// isBlank is true when every code point is white space by unicode.IsSpace. The
+// browser spells the same set in passwordrule.ts; the golden corpus in
+// testdata/passwordrule.json holds both to it.
+func isBlank(pw string) bool {
+	return strings.IndexFunc(pw, func(r rune) bool { return !unicode.IsSpace(r) }) < 0
 }
 
 func isOneRepeatedRune(pw string) bool {

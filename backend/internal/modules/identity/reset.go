@@ -391,20 +391,18 @@ func OperatorResetPassword(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID,
 	if err := passwordRuleError("new_password", newPassword); err != nil {
 		return fmt.Errorf("identity: %w", err)
 	}
-	if err := passwordEmailError("new_password", newPassword, email); err != nil {
-		return fmt.Errorf("identity: %w", err)
-	}
 	hash, err := password.Hash(newPassword)
 	if err != nil {
 		return err
 	}
 	var userID ids.UserID
 	var isAgent bool
+	var storedEmail string
 	lookupErr := tx.QueryRow(ctx,
-		`SELECT u.id, u.is_agent FROM app_user u
+		`SELECT u.id, u.is_agent, u.email FROM app_user u
 		 WHERE `+storekit.SeatLoginIsSQL("u", "$1", "$2")+` AND u.archived_at IS NULL
 		 `+storekit.SeatLoginPrefersTypedSQL("u", "$1"),
-		typedLoginAddress(email), owndomain.OfAddress(email)).Scan(&userID, &isAgent)
+		typedLoginAddress(email), owndomain.OfAddress(email)).Scan(&userID, &isAgent, &storedEmail)
 	if errors.Is(lookupErr, pgx.ErrNoRows) {
 		return fmt.Errorf("identity: no user with email %q", email)
 	}
@@ -432,6 +430,9 @@ func OperatorResetPassword(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID,
 	// permits an agent to hold a password; the product simply never writes one.
 	if isAgent {
 		return fmt.Errorf("identity: %q is an agent identity, which has no password to reset", email)
+	}
+	if err := passwordEmailError("new_password", newPassword, storedEmail); err != nil {
+		return fmt.Errorf("identity: %w", err)
 	}
 	// An operator-chosen password is exactly the state the forced rotation
 	// exists for: the subject did not pick this credential and the operator
