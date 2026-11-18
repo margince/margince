@@ -21416,6 +21416,8 @@ export const en = {
   "captureConcern.stalled": "Sync has stopped",
   "captureConcern.silent": "No recent mail delivered",
   "captureConcern.roleCannotCapture": "Role cannot capture mail",
+  "captureConcern.rateLimited": "The provider is limiting requests",
+  "captureConcern.nextTry": "Next try at {time}",
   "captureConcern.title": "{mailbox}: {concern}",
   "captureConcern.since": "Since {since}",
   "captureConcern.more_one": "{count} more connection needs attention",

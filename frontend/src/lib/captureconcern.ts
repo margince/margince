@@ -14,13 +14,22 @@ export const CAPTURE_CONCERNS: Readonly<Record<Kind, MessageKey>> = {
   capture_silent: "captureConcern.silent",
 };
 
-/** The words for one concern. A sync refused for the member's role is a role
- *  to change, not a mailbox to mend, so it names that cause instead. */
+/** The words for one concern. A role refusal or a provider's rate limit names
+ *  its cause, because neither is a mailbox for the member to mend. */
 export function concernKey(
   concern: Kind,
   errorClass: string | null | undefined,
 ): MessageKey {
-  return errorClass === "forbidden"
-    ? "captureConcern.roleCannotCapture"
-    : labelFor(CAPTURE_CONCERNS, concern);
+  if (errorClass === "forbidden") return "captureConcern.roleCannotCapture";
+  if (rateLimited(concern, errorClass)) return "captureConcern.rateLimited";
+  return labelFor(CAPTURE_CONCERNS, concern);
+}
+
+/** A failing sync the provider is pacing. It retries by itself, so the screen
+ *  says when instead of asking the member to act. */
+export function rateLimited(
+  concern: Kind | undefined,
+  errorClass: string | null | undefined,
+): boolean {
+  return concern === "sync_failing" && errorClass === "rate_limited";
 }

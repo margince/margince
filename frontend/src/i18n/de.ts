@@ -21679,6 +21679,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "captureConcern.stalled": "Synchronisierung angehalten",
   "captureConcern.silent": "Keine neue E-Mail eingegangen",
   "captureConcern.roleCannotCapture": "Rolle darf keine E-Mails erfassen",
+  "captureConcern.rateLimited": "Der Anbieter begrenzt die Anfragen",
+  "captureConcern.nextTry": "Nächster Versuch um {time}",
   "captureConcern.title": "{mailbox}: {concern}",
   "captureConcern.since": "Seit {since}",
   "captureConcern.more_one":

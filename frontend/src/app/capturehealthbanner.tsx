@@ -7,7 +7,11 @@ import { ErrorLine } from "../design-system/errorline";
 import { providerName } from "../format/connectorprovider";
 import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
-import { CAPTURE_CONCERNS, concernKey } from "../lib/captureconcern";
+import {
+  CAPTURE_CONCERNS,
+  concernKey,
+  rateLimited,
+} from "../lib/captureconcern";
 import { useConnectors } from "../lib/connectors";
 import { problemMessageOf, unwrap } from "../lib/problem";
 import { useViewerZone } from "../lib/viewerzone";
@@ -59,6 +63,10 @@ export function CaptureHealthBanner() {
   const since = row.concern_since
     ? formatDateTime(row.concern_since, locale, readerZone)
     : "";
+  const nextTry =
+    rateLimited(row.concern, row.last_sync_error_class) && row.next_sync_due_at
+      ? formatDateTime(row.next_sync_due_at, locale, readerZone)
+      : "";
   return (
     <div className="appbanner">
       <Callout
@@ -89,6 +97,7 @@ export function CaptureHealthBanner() {
         }
       >
         {since && <p>{t("captureConcern.since", { since })}</p>}
+        {nextTry && <p>{t("captureConcern.nextTry", { time: nextTry })}</p>}
         {concerns.length > 1 && (
           <p>
             {plural("captureConcern.more", concerns.length - 1, {

@@ -21115,6 +21115,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "captureConcern.stalled": "Đồng bộ đã dừng",
   "captureConcern.silent": "Không nhận được thư gần đây",
   "captureConcern.roleCannotCapture": "Vai trò không được thu thập thư",
+  "captureConcern.rateLimited": "Nhà cung cấp đang giới hạn yêu cầu",
+  "captureConcern.nextTry": "Lần thử tiếp theo lúc {time}",
   "captureConcern.title": "{mailbox}: {concern}",
   "captureConcern.since": "Từ {since}",
   "captureConcern.more_one": "{count} kết nối khác cần chú ý",

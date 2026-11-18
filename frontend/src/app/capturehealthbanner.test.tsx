@@ -11,6 +11,7 @@ function mount(
   failure = false,
   extra?: string,
   dismissConflict = false,
+  sync: Record<string, string> = {},
 ) {
   let dismissed = false;
   const fetch = vi.fn(async (input: RequestInfo | URL) => {
@@ -41,6 +42,7 @@ function mount(
                   account_label: "mailbox@example.test",
                   concern,
                   concern_since: "2026-10-01T09:00:00Z",
+                  ...sync,
                 },
                 ...(extra
                   ? [
@@ -160,4 +162,28 @@ it("shows a refused dismissal and refreshes its health evidence", async () => {
   expect(
     screen.getByText("mailbox@example.test: No recent mail delivered"),
   ).toBeTruthy();
+});
+
+it("names a provider's rate limit and when the sync tries again", async () => {
+  mount("sync_failing", false, undefined, false, {
+    last_sync_error_class: "rate_limited",
+    next_sync_due_at: "2026-10-01T13:00:00Z",
+  });
+  expect(
+    await screen.findByText(
+      "mailbox@example.test: The provider is limiting requests",
+    ),
+  ).toBeTruthy();
+  expect(screen.getByText(/^Next try at /)).toBeTruthy();
+});
+
+it("keeps the plain failure words for a sync that fails another way", async () => {
+  mount("sync_failing", false, undefined, false, {
+    last_sync_error_class: "unreachable",
+    next_sync_due_at: "2026-10-01T13:00:00Z",
+  });
+  expect(
+    await screen.findByText("mailbox@example.test: Sync is failing"),
+  ).toBeTruthy();
+  expect(screen.queryByText(/^Next try at /)).toBeNull();
 });
