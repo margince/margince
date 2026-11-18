@@ -92,8 +92,8 @@ pass on its own.
 replaces the review under way, and a merge verdict can never be cancelled. Each queue entry has its own
 ref, so entries never get in each other's way in that group.
 
-`release.yml` and `sbom.yml` do not take from the runner budget. A merge triggers neither: `sbom.yml` starts
-by hand, and `release.yml` starts on a `v*` tag or by hand. They keep their job groups for the case of two
+The release workflows and `sbom.yml` do not take from the runner budget. A merge triggers none of them:
+`sbom.yml` and `release.yml` start by hand, and `release-tag.yml` starts on a `v*` tag. They keep their job groups for the case of two
 dispatch runs at once. There, a cancel must reach the costly steps that generate output. It must never reach
 the step that publishes or signs; see [the workflows beside the merge gate](../reference/ci-workflows.md).
 
@@ -186,7 +186,7 @@ What follows from this:
   matches the `images` scope. It runs the **`images (build only)`** job: a `docker buildx bake` of the
   default group (the three roles) that pushes nothing.
   - There are no registry credentials, no digest, and no release side effect. It answers "does it still
-    build", which nothing else asks now that `release.yml` runs only on a tag or by hand.
+    build", which nothing else asks now that the release workflows run only on a tag or by hand.
   - The scope is those three paths, not `backend/**` or `frontend/**`. The images copy build output, so
     a source change *can* break one without touching any of the three.
   - But a bake of three roles on every backend PR would cost most of what taking `release.yml` off
@@ -200,11 +200,11 @@ What follows from this:
 - A **CI PR still runs the full backend lane**, integration shards too, when it touches `ci.yml`, a
   `_lane-*.yml`, the `Makefile`, or `scripts/**`. Those change what a gate *does*, so the gates run again
   to prove they still pass under the new version.
-  - `release.yml` and `sbom.yml` sit outside `backend_db`, because neither runs a backend gate, so they
+  - The release workflows and `sbom.yml` sit outside `backend_db`, because none runs a backend gate, so they
     boot no Postgres shard. They still match `backend` (through `.github/**`) and `deps` (through
     `.github/workflows/**`). So the Go gates and the license gate run on them.
-  - Neither workflow proves itself on a schedule, since both only run by hand. The next user to start
-    one finds a change that made it fail. So start a PR that touches either from its branch before merging.
+  - None of them proves itself on a schedule. The next user to start one finds a change that made it fail.
+    So start `sbom.yml` from the branch of a PR that touches it. A release workflow publishes, so read its diff.
 - A **PR into `develop`** skips `integration`, `uat`, `live-boot`, `images` and `sonarcloud`, plus the
   test-input census. The `full_lane` output of `changes` is false only there. The `develop` into `main`
   pull request runs them under the usual path filters: [land-through-develop.md](../how-to/land-through-develop.md).
