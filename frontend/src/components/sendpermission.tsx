@@ -15,10 +15,8 @@ import {
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
-  decidingRefusal,
   previewStatus,
   type RefusedRecipient,
-  refusalOf,
   refusedStatus,
   remedyCategoryOf,
   type SendStatus,
@@ -91,10 +89,9 @@ export function decidingRecipient(
   // a deny is recorded and the send still goes. Drawing the verdict would talk
   // a rep out of lawful mail.
   const refusing = preview.recipients.filter((r) => r.would_refuse);
-  // The same rule picks the deciding refusal after a refused Send.
-  const refusals = refusing.map(refusalOf);
-  const deciding = decidingRefusal(refusals);
-  const recipient = deciding && refusing[refusals.indexOf(deciding)];
+  // The server ranks refusals, so the first is the deciding one, as it is
+  // after a refused Send.
+  const recipient = refusing[0];
   if (!recipient) return { state: "allowed" };
   // `can_be_overruled` and not `decided_by`: a frequency cap is the engine's
   // own reading, yet one message may pass it with a reason. Absent is not a yes.
