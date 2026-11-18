@@ -432,6 +432,7 @@ public.communication_decision.recipient_address document
 public.communication_decision.requested_category document
 public.communication_decision.resolved_category document
 public.communication_decision.ruleset_codes document
+public.communication_decision.ruleset_digest document
 public.communication_decision.subject_kind document
 public.communication_decision.suppression document
 public.communication_decision.verdict document

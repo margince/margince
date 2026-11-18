@@ -239,7 +239,7 @@ func (g *Gate) recordStagingDecisions(ctx context.Context, tx pgx.Tx, deliveryID
 			string(d.Resolved), string(d.Verdict), d.ReasonCode,
 			nullableBasis(d.Basis), nullableText(d.Suppression),
 			sum[:], string(d.Mode), by, evidence, authority, instructionID,
-			ruleset.Version, ruleset.Codes, zeroAsNull(d.SendingEntity), nullableText(d.PurposeKey),
+			ruleset.Version, ruleset.Codes, ruleset.Digest, zeroAsNull(d.SendingEntity), nullableText(d.PurposeKey),
 			groundNotice(d), groundOffer(d), groundSoldAt(d), dataProtectionStampFor(countries[i], protection),
 		}
 		_, err = tx.Exec(ctx, `
@@ -247,7 +247,7 @@ func (g *Gate) recordStagingDecisions(ctx context.Context, tx pgx.Tx, deliveryID
 			  (delivery_id, attempt, decision_set_id, recipient_address, subject_kind, subject_id,
 			   phase, requested_category, resolved_category, verdict, reason_code, basis, suppression,
 			   content_fingerprint, mode, actor, evidence, execution_authority, instruction_id,
-			   ruleset_version, ruleset_codes, legal_entity_id, purpose_key,
+			   ruleset_version, ruleset_codes, ruleset_digest, legal_entity_id, purpose_key,
 			   existing_customer_notice_id, existing_customer_offer_id, existing_customer_sold_at,
 			   data_protection_country)
 			VALUES (`+storekit.Placeholders(values)+`)

@@ -76,7 +76,7 @@ func (g *Gate) recordDecisions(ctx context.Context, tx pgx.Tx, req commsauthz.Tr
 			// for one recipient and directed for another did not go out on
 			// somebody's decision for both.
 			authorityFor(authority, d.Verdict), instructionFor(instruction, d.Verdict),
-			ruleset.Version, ruleset.Codes, zeroAsNull(d.SendingEntity), nullableText(d.PurposeKey),
+			ruleset.Version, ruleset.Codes, ruleset.Digest, zeroAsNull(d.SendingEntity), nullableText(d.PurposeKey),
 			groundNotice(d), groundOffer(d), groundSoldAt(d), protection,
 		}
 		tag, err := tx.Exec(ctx, `
@@ -84,7 +84,7 @@ func (g *Gate) recordDecisions(ctx context.Context, tx pgx.Tx, req commsauthz.Tr
 			  (delivery_id, attempt, decision_set_id, recipient_address, subject_kind, subject_id,
 			   phase, requested_category, resolved_category, verdict, reason_code, basis, suppression,
 			   content_fingerprint, legacy_verdict, mode, actor,
-			   execution_authority, instruction_id, ruleset_version, ruleset_codes,
+			   execution_authority, instruction_id, ruleset_version, ruleset_codes, ruleset_digest,
 			   legal_entity_id, purpose_key, existing_customer_notice_id, existing_customer_offer_id,
 			   existing_customer_sold_at, data_protection_country)
 			VALUES (`+storekit.Placeholders(values)+`)

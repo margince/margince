@@ -37,6 +37,12 @@ type (
 	FrequencyCap = pub.FrequencyCap
 	// Instrument is one law a rule set states, and when it took effect.
 	Instrument = pub.Instrument
+	// Provenance is who reviewed a rule set, and when.
+	Provenance = pub.Provenance
+	// Citation names the law behind one engine finding or refusal.
+	Citation = pub.Citation
+	// Territory narrows a citation to where the sender is established.
+	Territory = pub.Territory
 	// ExceptionKind names a route to lawful advertising without consent.
 	ExceptionKind = pub.ExceptionKind
 	// DisclosureKind names something a first message must carry.
@@ -65,6 +71,12 @@ const (
 	MeansEmail = pub.MeansEmail
 	// MeansPhone is a phone number.
 	MeansPhone = pub.MeansPhone
+	// AnySender cites whatever the sender's country.
+	AnySender = pub.AnySender
+	// SenderHere cites only a sender established in the pack's jurisdiction.
+	SenderHere = pub.SenderHere
+	// SenderElsewhere cites only a sender established outside it.
+	SenderElsewhere = pub.SenderElsewhere
 )
 
 var (
@@ -106,6 +118,7 @@ func clone(r Rules) Rules {
 		out.Disclosures[i].Means = slices.Clone(r.Disclosures[i].Means)
 	}
 	out.Instruments = slices.Clone(r.Instruments)
+	out.Citations = slices.Clone(r.Citations)
 	out.ClaimsNeedProof = slices.Clone(r.ClaimsNeedProof)
 	out.ConsentRequestFirstFor = slices.Clone(r.ConsentRequestFirstFor)
 
@@ -200,6 +213,9 @@ func stricter(a, b Rules) Rules {
 	// one carries none, and the decision records Applied.Codes instead — which
 	// Strictest returns for exactly this reason.
 	out.Version = 0
+	// Provenance, citations and digest describe one pack's source. A fold has
+	// none, and the citation lookup asks each recipient's own pack.
+	out.Provenance, out.Citations, out.Digest = Provenance{}, nil, ""
 	out.ReplyWindow = shorterWindow(a.ReplyWindow, b.ReplyWindow)
 	out.DealFollowUpWindow = shorterWindow(a.DealFollowUpWindow, b.DealFollowUpWindow)
 	// Every disclosure either side requires. An obligation one country imposes

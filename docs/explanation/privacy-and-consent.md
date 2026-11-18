@@ -470,8 +470,8 @@ duties. Marketing still needs consent, because the verdict asks for it everywher
 adds the unsubscribe link in every case. The email domain, the jurisdiction of the user who sends
 and the least strict pack never stand in for the recipient's jurisdiction.
 
-Each decision row records its recipient's ruleset (`ruleset_codes`, `ruleset_version`) and the
-`data_protection_country` of the user who sends. `CheckMessage` reads the codes back, so the advertising label is
+Each decision row records its recipient's ruleset (`ruleset_codes`, `ruleset_version`, and a compiled
+pack's `ruleset_digest`) and the `data_protection_country` of the user who sends. `CheckMessage` reads the codes back, so the advertising label is
 owed if any recipient's pack asks for it. One message goes to every recipient, so its foot carries
 each recipient's marketing duties.
 
