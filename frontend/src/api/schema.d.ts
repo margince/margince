@@ -44331,11 +44331,11 @@ export interface components {
             updated_at: string;
         };
         /**
-         * @description What the composer opened against: `activity` for a reply to that message, or the
-         *     record a new conversation starts from.
+         * @description What the composer opened against: `activity` for a reply to that message, `forward`
+         *     for that message sent on to someone new, or the record a new conversation starts from.
          * @enum {string}
          */
-        MailDraftAnchorType: "activity" | "contact" | "company" | "deal" | "lead" | "project";
+        MailDraftAnchorType: "activity" | "forward" | "contact" | "company" | "deal" | "lead" | "project";
         /** @description One record the draft was written from. A saved agent draft keeps these so the composer files the sent mail where the draft was grounded, rather than rebuilding links from whichever page it was opened on. */
         MailDraftGround: {
             anchor_type: components["schemas"]["MailDraftAnchorType"];

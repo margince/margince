@@ -5,7 +5,8 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
-import { cardRecords, editableStrings, StagedEditor } from "./approvaleditor";
+import { cardRecords, StagedEditor } from "./approvaleditor";
+import { editableStrings } from "./approvalkind";
 
 const roster = vi.hoisted(() => ({ isError: false }));
 

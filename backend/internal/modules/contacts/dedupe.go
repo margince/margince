@@ -12,6 +12,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/freemail"
+	"github.com/margince/margince/backend/internal/platform/namematch"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
@@ -300,7 +301,7 @@ func contactCandidateArgs(c ContactCandidate) pgx.NamedArgs {
 // result is in [0,1] and comparable against the threshold directly.
 func contactConfidence(c ContactCandidate, row contactCandidateRow) float64 {
 	name := dedupeNameWeight * contactNameSimilarity(c.FullName, row.fullName)
-	if !namesCorroborate(c.FullName, row.fullName) {
+	if !namematch.Corroborate(c.FullName, row.fullName) {
 		return name
 	}
 	return name + dedupeCompanyDomainWeight*companyMatch(c, row)

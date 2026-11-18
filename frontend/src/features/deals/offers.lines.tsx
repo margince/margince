@@ -10,8 +10,9 @@ import {
   RecordPicker,
   type RecordPickerCandidate,
 } from "../../design-system/recordpicker";
+import { typedNumberFault, typedNumberOrNaN } from "../../format/decimalinput";
 import { formatMoney } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import { labelFor } from "../../lib/labelfor";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import {
@@ -67,6 +68,7 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
   const [newLine, setNewLine] = useState<NewLineState>(EMPTY_NEW_LINE);
   const [billing, setBilling] = useState<LineBilling>(EMPTY_LINE_BILLING);
   const [priceTouched, setPriceTouched] = useState(false);
+  const [priceRefused, setPriceRefused] = useState(false);
   // Set by an Add that found "Other" with no unit typed; any unit change clears it.
   const [unitRefused, setUnitRefused] = useState(false);
   const [product, setProduct] = useState<RecordPickerCandidate | null>(null);
@@ -141,7 +143,6 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
       render: (line: OfferLineItem) => (
         <NumericCell
           value={line.position}
-          step="1"
           width={60}
           testId={`line-position-${line.id}`}
           onSave={(num) => saveLine(line.id)({ position: num })}
@@ -168,7 +169,6 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
       render: (line: OfferLineItem) => (
         <NumericCell
           value={line.quantity}
-          step="0.001"
           width={90}
           testId={`line-quantity-${line.id}`}
           onSave={(num) => saveLine(line.id)({ quantity: num })}
@@ -195,7 +195,6 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
       render: (line: OfferLineItem) => (
         <NumericCell
           value={line.discount_pct}
-          step="0.01"
           width={90}
           testId={`line-discount-${line.id}`}
           onSave={(num) => saveLine(line.id)({ discount_pct: num })}
@@ -209,7 +208,6 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
         <>
           <NumericCell
             value={line.tax_rate}
-            step="0.01"
             width={90}
             testId={`line-tax-rate-${line.id}`}
             onSave={(num) => saveLine(line.id)({ tax_rate: num })}
@@ -300,13 +298,15 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
               />
             )}
           </Field>
-          <Field label={t("offer.quantity")}>
+          <Field
+            label={t("offer.quantity")}
+            error={typedNumberFault(newLine.quantity, locale, t)}
+          >
             {(control) => (
               <input
                 {...control}
                 data-testid="new-line-quantity"
-                type="number"
-                step="0.001"
+                inputMode="decimal"
                 className="input offers-line-quantity"
                 value={newLine.quantity}
                 onChange={(event) =>
@@ -324,6 +324,7 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
                 {...control}
                 data-testid="new-line-unit-price"
                 currency={offer.currency}
+                onRefusedChange={setPriceRefused}
                 valueMinor={newLine.unit_price_minor}
                 onChangeMinor={(minor) => {
                   setPriceTouched(true);
@@ -360,24 +361,20 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
                 setUnitRefused(true);
                 return;
               }
+              // Each refused figure already names why under its field.
+              if (priceRefused || figuresRefused(newLine, locale, t)) {
+                return;
+              }
               addMutation.mutate({
                 product_id: product?.id ?? undefined,
                 description: newLine.description || undefined,
                 unit:
                   storedUnitOf(newLine.unit.choice, newLine.unit.other) ||
                   undefined,
-                quantity: Number(newLine.quantity),
+                ...newLineFigures(newLine, locale),
                 unit_price_minor: priceTouched
                   ? newLine.unit_price_minor
                   : undefined,
-                discount_pct:
-                  newLine.discount_pct === ""
-                    ? undefined
-                    : Number(newLine.discount_pct),
-                tax_rate:
-                  newLine.tax_rate === ""
-                    ? undefined
-                    : Number(newLine.tax_rate),
                 ...lineBillingBody(billing),
               });
             }}
@@ -389,4 +386,26 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
       </PanelBody>
     </Panel>
   );
+}
+
+function figuresRefused(
+  line: NewLineState,
+  locale: Locale,
+  t: Translator,
+): boolean {
+  return [line.quantity, line.discount_pct, line.tax_rate].some((text) =>
+    typedNumberFault(text, locale, t),
+  );
+}
+
+// An empty discount or tax rate is left out, so the stored default applies.
+function newLineFigures(line: NewLineState, locale: Locale) {
+  const optional = (text: string) =>
+    text === "" ? undefined : typedNumberOrNaN(text, locale);
+  return {
+    quantity:
+      line.quantity.trim() === "" ? 0 : typedNumberOrNaN(line.quantity, locale),
+    discount_pct: optional(line.discount_pct),
+    tax_rate: optional(line.tax_rate),
+  };
 }

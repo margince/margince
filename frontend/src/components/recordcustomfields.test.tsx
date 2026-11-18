@@ -85,8 +85,8 @@ it.each(["company", "contact", "deal", "lead"] as const)(
       WIKI,
     );
     await user.click(change);
-    const amount = screen.getByRole("spinbutton", { name: "Annual budget" });
-    expect((amount as HTMLInputElement).value).toBe("48000");
+    const amount = screen.getByRole("textbox", { name: "Annual budget" });
+    expect((amount as HTMLInputElement).value).toBe("48000.00");
     await user.clear(amount);
     await user.type(amount, "48000.5");
     await user.click(screen.getByRole("button", { name: "Save" }));
@@ -137,7 +137,7 @@ it("reads and edits a zero-decimal currency in whole units", async () => {
     name: "Change Annual budget JP¥48,000",
   });
   await user.click(change);
-  const amount = screen.getByRole("spinbutton", { name: "Annual budget" });
+  const amount = screen.getByRole("textbox", { name: "Annual budget" });
   expect((amount as HTMLInputElement).value).toBe("48000");
   await user.clear(amount);
   await user.type(amount, "48001");
@@ -157,7 +157,7 @@ it.each([
     await user.click(
       await screen.findByRole("button", { name: /^Change Annual budget/ }),
     );
-    const amount = screen.getByRole("spinbutton", { name: "Annual budget" });
+    const amount = screen.getByRole("textbox", { name: "Annual budget" });
     await user.clear(amount);
     await user.type(amount, typed);
     await user.click(screen.getByRole("button", { name: "Save" }));
@@ -182,10 +182,9 @@ it("keeps a link in place and pauses its edit while another field saves", async 
   await user.click(
     await screen.findByRole("button", { name: /^Change Annual budget/ }),
   );
-  await user.type(
-    screen.getByRole("spinbutton", { name: "Annual budget" }),
-    "1",
-  );
+  const amount = screen.getByRole("textbox", { name: "Annual budget" });
+  await user.clear(amount);
+  await user.type(amount, "48001");
   await user.click(screen.getByRole("button", { name: "Save" }));
   await waitFor(() => expect(sent).toHaveLength(1));
   expect(

@@ -19,6 +19,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/namematch"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -157,7 +158,7 @@ func leadConfidence(name, company, domain string, row leadCandidateRow) float64 
 		employer = 0.8
 	}
 	other := deref(row.fullName)
-	if !namesCorroborate(name, other) {
+	if !namematch.Corroborate(name, other) {
 		employer = 0
 	}
 	return dedupeNameWeight*nameSimilarity(name, other) + dedupeCompanyDomainWeight*employer

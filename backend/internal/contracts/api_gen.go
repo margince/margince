@@ -17233,6 +17233,7 @@ const (
 	MailDraftAnchorTypeCompany  MailDraftAnchorType = "company"
 	MailDraftAnchorTypeContact  MailDraftAnchorType = "contact"
 	MailDraftAnchorTypeDeal     MailDraftAnchorType = "deal"
+	MailDraftAnchorTypeForward  MailDraftAnchorType = "forward"
 	MailDraftAnchorTypeLead     MailDraftAnchorType = "lead"
 	MailDraftAnchorTypeProject  MailDraftAnchorType = "project"
 )
@@ -17247,6 +17248,8 @@ func (e MailDraftAnchorType) Valid() bool {
 	case MailDraftAnchorTypeContact:
 		return true
 	case MailDraftAnchorTypeDeal:
+		return true
+	case MailDraftAnchorTypeForward:
 		return true
 	case MailDraftAnchorTypeLead:
 		return true
@@ -56320,8 +56323,8 @@ type MailDraft struct {
 	AgentDrafted bool               `json:"agent_drafted"`
 	AnchorId     openapi_types.UUID `json:"anchor_id"`
 
-	// AnchorType What the composer opened against: `activity` for a reply to that message, or the
-	// record a new conversation starts from.
+	// AnchorType What the composer opened against: `activity` for a reply to that message, `forward`
+	// for that message sent on to someone new, or the record a new conversation starts from.
 	AnchorType MailDraftAnchorType `json:"anchor_type"`
 
 	// Attachments The chosen files the author can still attach, in the order chosen, so the composer
@@ -56364,8 +56367,8 @@ type MailDraft struct {
 	Version     int64     `json:"version"`
 }
 
-// MailDraftAnchorType What the composer opened against: `activity` for a reply to that message, or the
-// record a new conversation starts from.
+// MailDraftAnchorType What the composer opened against: `activity` for a reply to that message, `forward`
+// for that message sent on to someone new, or the record a new conversation starts from.
 type MailDraftAnchorType string
 
 // MailDraftEditorState The author's drafting purpose and presentation state, restored with the words. These client-supplied values grant no send permission and do not attest model execution.
@@ -56394,8 +56397,8 @@ type MailDraftEditorStateLanguage string
 type MailDraftGround struct {
 	AnchorId openapi_types.UUID `json:"anchor_id"`
 
-	// AnchorType What the composer opened against: `activity` for a reply to that message, or the
-	// record a new conversation starts from.
+	// AnchorType What the composer opened against: `activity` for a reply to that message, `forward`
+	// for that message sent on to someone new, or the record a new conversation starts from.
 	AnchorType MailDraftAnchorType `json:"anchor_type"`
 }
 
@@ -56404,8 +56407,8 @@ type MailDraftGround struct {
 type MailDraftInput struct {
 	AnchorId openapi_types.UUID `json:"anchor_id"`
 
-	// AnchorType What the composer opened against: `activity` for a reply to that message, or the
-	// record a new conversation starts from.
+	// AnchorType What the composer opened against: `activity` for a reply to that message, `forward`
+	// for that message sent on to someone new, or the record a new conversation starts from.
 	AnchorType MailDraftAnchorType `json:"anchor_type"`
 
 	// AttachmentIds The files the rep chose, by the ids `/attachments` gave them. A save replaces the

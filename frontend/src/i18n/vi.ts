@@ -858,6 +858,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.preview.status": "Ngữ cảnh phê duyệt",
   "approval.preview.stale":
     "Hồ sơ đã thay đổi sau khi đề xuất được tạo. Yêu cầu đề xuất mới trước khi duyệt.",
+  "approval.editRetargeted":
+    "Chỉnh sửa này đổi bản ghi mà yêu cầu nói đến. Hãy duyệt hoặc từ chối yêu cầu như hiện có.",
   "approval.preview.incomplete":
     "Không thể hiển thị đầy đủ thay đổi. Yêu cầu đề xuất mới trước khi duyệt.",
   "approval.preview.unavailable":
@@ -3008,6 +3010,17 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "record.edit": "Sửa",
 
   "record.fieldRequired": "Trường này bắt buộc.",
+  "amount.refused.ambiguous": "Nhập số tiền dưới dạng {whole} hoặc {decimal}.",
+  "amount.refused.ambiguousWhole": "Nhập số tiền dưới dạng {whole}.",
+  "amount.refused.grouping":
+    "Nhập số tiền không có dấu phân cách hàng nghìn, ví dụ {example}.",
+  "amount.refused.notNumber": "Nhập số tiền bằng chữ số, ví dụ {example}.",
+  "amount.refused.tooLarge": "Số tiền này quá lớn để lưu.",
+  "amount.refused.negative": "Nhập số tiền từ 0 trở lên.",
+  "number.refused.ambiguous": "Nhập số dưới dạng {whole} hoặc {fraction}.",
+  "number.refused.grouping":
+    "Nhập số không có dấu phân cách hàng nghìn, ví dụ {example}.",
+  "number.refused.notNumber": "Nhập một số, ví dụ {example}.",
   "record.amountTooPrecise":
     "Số tiền này có nhiều chữ số thập phân hơn mức {currency} cho phép.",
   "record.registration": "Thông tin đăng ký",
@@ -5917,7 +5930,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.qualify.amount": "Số tiền ({currency})",
   "lead.qualify.amountHint":
     "Không bắt buộc. Số nguyên theo loại tiền cơ sở của bản cài đặt.",
-  "lead.qualify.amountInvalid": "Nhập một số hoặc để trống.",
   "lead.qualify.amountNoCurrency":
     "Chưa tải xong loại tiền cơ sở. Thử lại sau giây lát, hoặc để trống số tiền.",
   "lead.qualify.why": "Lý do",
@@ -7716,6 +7728,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.notAnAddress_other":
     "Không phải địa chỉ email: {parts}. Sửa hoặc xóa.",
   "compose.savedDraftLoad": "Tải phiên bản đã lưu",
+  "compose.savedDraftFoundTitle": "Bạn có một bản nháp đã lưu ở đây",
+  "compose.savedDraftFoundBody":
+    "Bản nháp có nội dung khác với nội dung đang hiển thị. Mở bản nháp để tiếp tục, hoặc thay nó bằng nội dung đang hiển thị.",
+  "compose.savedDraftLoadFound": "Mở bản nháp đã lưu",
+  "compose.savedDraftReplace": "Thay bằng nội dung này",
   "compose.aiDisclosureTitle": "Bản nháp có AI hỗ trợ",
   "compose.aiDisclosureFallback":
     "Bản nháp này do AI viết. Xem lại và chỉnh sửa trước khi gửi.",
@@ -7964,6 +7981,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Tin nhắn này nêu một mục đích mà Margince không nhận ra. Chọn lý do liên hệ trong danh sách.",
   "sendPermission.reason.unknownPurposeFact":
     "Tin nhắn này nêu một mục đích mà Margince không nhận ra.",
+  "sendPermission.reason.noReason":
+    "Tin nhắn này không nêu lý do liên hệ, và chuỗi thư cũng không cho thấy lý do nào. Chọn lý do liên hệ trong danh sách.",
+  "sendPermission.reason.noReasonFact":
+    "Tin nhắn này không nêu lý do liên hệ, và chuỗi thư cũng không cho thấy lý do nào.",
   "sendPermission.reason.claimContradicts":
     "Lý do liên hệ bạn chọn không khớp với chuỗi thư này. Chọn lý do khác, hoặc để trống để Margince tự xác định từ chuỗi thư.",
   "sendPermission.reason.claimContradictsFact":
@@ -21115,6 +21136,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "captureConcern.stalled": "Đồng bộ đã dừng",
   "captureConcern.silent": "Không nhận được thư gần đây",
   "captureConcern.roleCannotCapture": "Vai trò không được thu thập thư",
+  "captureConcern.nextTry": "Lần thử tiếp theo lúc {time}",
+  "captureConcern.tryingNow": "Đang thử lại ngay",
   "captureConcern.title": "{mailbox}: {concern}",
   "captureConcern.since": "Từ {since}",
   "captureConcern.more_one": "{count} kết nối khác cần chú ý",

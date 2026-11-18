@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package contacts
+package namematch
 
 import "strings"
 
-// Colleagues who only share a given name are different contacts. A shared
-// employer or mail domain lifts a pair over the review bar only when the family
-// names agree and the given names are close.
+// Colleagues who only share a given name are different people. Two names
+// corroborate only when the family names agree and the given names are close.
 const (
 	familyNameAgreement = 0.9
 	givenNameAgreement  = 0.78
@@ -16,32 +15,31 @@ const (
 	givenNameSharedPrefix = 2
 )
 
-// namesCorroborate reports whether the two names may be scored together with an
-// employer signal. Without it a pair is held to its name weight alone, which is
-// below the review bar.
-func namesCorroborate(a, b string) bool {
-	givenA, familyA := splitContactName(a)
-	givenB, familyB := splitContactName(b)
+// Corroborate reports whether two full names may name one contact. Dedupe
+// scores a shared employer only for a pair that corroborates.
+func Corroborate(a, b string) bool {
+	givenA, familyA := SplitName(a)
+	givenB, familyB := SplitName(b)
 	if familyA == "" || familyB == "" {
 		return false
 	}
-	if familiesAgree(familyA, familyB) {
-		return givenNamesAgree(givenA, givenB)
+	if FamiliesAgree(familyA, familyB) {
+		return GivenNamesAgree(givenA, givenB)
 	}
 	// A suffix or a title kept by one source can push the family name out of
 	// reach. The whole name may still read as one contact.
 	return wholeNamesAgree(givenA, familyA, givenB, familyB)
 }
 
-// familiesAgree also compares the halves of a hyphenated family name, because
+// FamiliesAgree also compares the halves of a hyphenated family name, because
 // "Doe-Smith" and "Doe" name one family where a register keeps only one half.
-func familiesAgree(a, b string) bool {
-	if jaroWinkler(a, b) >= familyNameAgreement {
+func FamiliesAgree(a, b string) bool {
+	if JaroWinkler(a, b) >= familyNameAgreement {
 		return true
 	}
 	for partA := range strings.SplitSeq(a, "-") {
 		for partB := range strings.SplitSeq(b, "-") {
-			if (partA != a || partB != b) && jaroWinkler(partA, partB) >= familyNameAgreement {
+			if (partA != a || partB != b) && JaroWinkler(partA, partB) >= familyNameAgreement {
 				return true
 			}
 		}
@@ -53,12 +51,12 @@ func wholeNamesAgree(givenA, familyA, givenB, familyB string) bool {
 	if givenA == "" || givenB == "" {
 		return false
 	}
-	return jaroWinkler(givenA+" "+familyA, givenB+" "+familyB) >= wholeNameAgreement
+	return JaroWinkler(givenA+" "+familyA, givenB+" "+familyB) >= wholeNameAgreement
 }
 
-// givenNamesAgree treats a missing given name or an initial as compatible, and a
+// GivenNamesAgree treats a missing given name or an initial as compatible, and a
 // shortened form ("Alex", "Alexander") as the same name.
-func givenNamesAgree(a, b string) bool {
+func GivenNamesAgree(a, b string) bool {
 	if a == "" || b == "" {
 		return true
 	}
@@ -68,13 +66,13 @@ func givenNamesAgree(a, b string) bool {
 	if sharedPrefixRunes(a, b) >= givenNameSharedPrefix {
 		return true
 	}
-	return jaroWinkler(a, b) >= givenNameAgreement
+	return JaroWinkler(a, b) >= givenNameAgreement
 }
 
-// splitContactName returns the folded given part and family name. "Doe, Jon" is
+// SplitName returns the folded given part and family name. "Doe, Jon" is
 // read as "Jon Doe".
-func splitContactName(full string) (given, family string) {
-	name := letterFold.Replace(normalizeName(full))
+func SplitName(full string) (given, family string) {
+	name := letterFold.Replace(Fold(full))
 	if before, after, ok := strings.Cut(name, ","); ok {
 		name = after + " " + before
 	}

@@ -880,6 +880,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.preview.status": "Freigabekontext",
   "approval.preview.stale":
     "Dieser Eintrag wurde nach dem Vorschlag geändert. Fordere vor der Freigabe einen neuen Vorschlag an.",
+  "approval.editRetargeted":
+    "Diese Änderung betrifft einen anderen Datensatz. Gib die Anfrage unverändert frei oder lehne sie ab.",
   "approval.preview.incomplete":
     "Die vollständige Änderung kann nicht angezeigt werden. Fordere vor der Freigabe einen neuen Vorschlag an.",
   "approval.preview.unavailable":
@@ -3100,6 +3102,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "record.edit": "Bearbeiten",
 
   "record.fieldRequired": "Dieses Feld ist erforderlich.",
+  "amount.refused.ambiguous": "Gib den Betrag als {whole} oder {decimal} ein.",
+  "amount.refused.ambiguousWhole": "Gib den Betrag als {whole} ein.",
+  "amount.refused.grouping":
+    "Gib den Betrag ohne Tausendertrennzeichen ein, etwa {example}.",
+  "amount.refused.notNumber": "Gib den Betrag in Ziffern ein, etwa {example}.",
+  "amount.refused.tooLarge": "Dieser Betrag ist zu groß zum Speichern.",
+  "amount.refused.negative": "Gib einen Betrag von null oder mehr ein.",
+  "number.refused.ambiguous": "Gib die Zahl als {whole} oder {fraction} ein.",
+  "number.refused.grouping":
+    "Gib die Zahl ohne Tausendertrennzeichen ein, etwa {example}.",
+  "number.refused.notNumber": "Gib eine Zahl ein, etwa {example}.",
   "record.amountTooPrecise":
     "Dieser Betrag hat mehr Nachkommastellen, als {currency} zulässt.",
   "record.registration": "Registrierung",
@@ -6073,7 +6086,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.qualify.amount": "Betrag ({currency})",
   "lead.qualify.amountHint":
     "Optional. Ganze Einheiten in der Basiswährung der Installation.",
-  "lead.qualify.amountInvalid": "Gib eine Zahl ein oder lass das Feld leer.",
   "lead.qualify.amountNoCurrency":
     "Die Basiswährung ist noch nicht geladen. Versuche es gleich erneut oder lass den Betrag leer.",
   "lead.qualify.why": "Warum",
@@ -7903,6 +7915,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.notAnAddress_other":
     "Keine E-Mail-Adressen: {parts}. Korrigiere oder entferne sie.",
   "compose.savedDraftLoad": "Gespeicherte Fassung laden",
+  "compose.savedDraftFoundTitle": "Hier liegt ein gespeicherter Entwurf",
+  "compose.savedDraftFoundBody":
+    "Er enthält anderen Text als den auf dem Bildschirm. Öffne ihn, um mit ihm weiterzuarbeiten, oder ersetze ihn durch den Text auf dem Bildschirm.",
+  "compose.savedDraftLoadFound": "Gespeicherten Entwurf öffnen",
+  "compose.savedDraftReplace": "Durch diesen Text ersetzen",
   "compose.aiDisclosureTitle": "KI-gestützter Entwurf",
   "compose.aiDisclosureFallback":
     "Diesen Entwurf hat eine KI geschrieben. Prüfe und bearbeite den Entwurf vor dem Senden.",
@@ -8159,6 +8176,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Diese Nachricht nennt einen Zweck, den Margince nicht kennt. Wähle einen Kontaktgrund aus der Liste.",
   "sendPermission.reason.unknownPurposeFact":
     "Diese Nachricht nennt einen Zweck, den Margince nicht kennt.",
+  "sendPermission.reason.noReason":
+    "Diese Nachricht nennt keinen Kontaktgrund, und der Verlauf zeigt keinen. Wähle einen Kontaktgrund aus der Liste.",
+  "sendPermission.reason.noReasonFact":
+    "Diese Nachricht nennt keinen Kontaktgrund, und der Verlauf zeigt keinen.",
   "sendPermission.reason.claimContradicts":
     "Der gewählte Kontaktgrund passt nicht zu diesem Thread. Wähle einen anderen Grund oder lass das Feld leer, damit Margince ihn aus dem Thread liest.",
   "sendPermission.reason.claimContradictsFact":
@@ -12291,7 +12312,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectors.disconnectBodyMicrosoftNote":
     "Microsoft führt Margince möglicherweise weiterhin unter den verbundenen Apps deines Kontos. Entferne Margince dort, um den Zugriff vollständig zu widerrufen.",
   "connectors.errRateLimited":
-    "Der Anbieter drosselt Anfragen. Die Erfassung ist langsamer als sonst. Es geht nichts verloren.",
+    "Der Anbieter begrenzt die Anfragen. Die Erfassung ist langsamer als sonst. Es geht nichts verloren.",
   "connectors.errUnreachable":
     "Der Anbieter war nicht erreichbar. Es wird automatisch erneut versucht.",
   "connectors.errAuth":
@@ -21679,6 +21700,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "captureConcern.stalled": "Synchronisierung angehalten",
   "captureConcern.silent": "Keine neue E-Mail eingegangen",
   "captureConcern.roleCannotCapture": "Rolle darf keine E-Mails erfassen",
+  "captureConcern.nextTry": "Nächster Versuch um {time}",
+  "captureConcern.tryingNow": "Neuer Versuch läuft jetzt",
   "captureConcern.title": "{mailbox}: {concern}",
   "captureConcern.since": "Seit {since}",
   "captureConcern.more_one":

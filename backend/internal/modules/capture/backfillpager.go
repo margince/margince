@@ -311,7 +311,10 @@ func (r *Registry) commitBackfillPage(ctx context.Context, backfillID ids.UUID, 
 				if err := settleUnreadPeriodTx(ctx, tx, backfillID); err != nil {
 					return err
 				}
-				return reconcileBackfillCreationsTx(ctx, tx, backfillID)
+				if err := reconcileBackfillCreationsTx(ctx, tx, backfillID); err != nil {
+					return err
+				}
+				return retryWeatheredSyncTx(ctx, tx, backfillID)
 			}
 			return rescheduleBackfillTx(ctx, tx, backfillID, backfillPageDelay)
 		}

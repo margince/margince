@@ -109,6 +109,7 @@ describe("the probability a deal's edit opens on", () => {
   it("is empty while the deal follows its stage", () => {
     const seeded = dealEditRecord(
       deal({ win_probability: 40, win_probability_source: "stage" }),
+      "en",
     );
     expect(seeded.win_probability).toBe("");
   });
@@ -117,11 +118,13 @@ describe("the probability a deal's edit opens on", () => {
     expect(
       dealEditRecord(
         deal({ win_probability: 75, win_probability_source: "human" }),
+        "en",
       ).win_probability,
     ).toBe("75");
     expect(
       dealEditRecord(
         deal({ win_probability: 10, win_probability_source: "margince" }),
+        "en",
       ).win_probability,
     ).toBe("10");
   });
@@ -156,6 +159,8 @@ describe("mapDealUpdate", () => {
         expected_close_date: "2026-09-01",
       },
       { ...untouched, amount: "", currency: "", owner_id: "" },
+      [],
+      "en",
     );
     expect(body.amount_minor).toBe(212_000);
     expect(body.currency).toBe("EUR");
@@ -178,13 +183,15 @@ describe("mapDealUpdate", () => {
     const body = mapDealUpdate(
       { ...untouched, win_probability: "" },
       { ...untouched, win_probability: "60" },
+      [],
+      "en",
     );
 
     expect(body).toEqual({ win_probability: null });
   });
 
   it("sends nothing at all when the contact changed nothing", () => {
-    const body = mapDealUpdate(untouched, untouched);
+    const body = mapDealUpdate(untouched, untouched, [], "en");
 
     expect(Object.keys(body)).toEqual([]);
   });
@@ -204,7 +211,7 @@ describe("mapDealUpdate", () => {
       project_id: "",
     };
 
-    const body = mapDealUpdate({ ...bare, name: "Renamed" }, bare);
+    const body = mapDealUpdate({ ...bare, name: "Renamed" }, bare, [], "en");
 
     expect(Object.keys(body)).toEqual(["name"]);
     expect(body.name).toBe("Renamed");
@@ -228,6 +235,7 @@ describe("mapDealUpdate", () => {
         partner_attribution: "sourced",
       },
       ["partner_company_id"],
+      "en",
     );
     expect("partner_company_id" in body).toBe(false);
     // The attribution is withheld WITH its partner, so it goes too — returning
@@ -243,6 +251,8 @@ describe("mapDealUpdate", () => {
         partner_company_id: "p-1",
         partner_attribution: "sourced",
       },
+      [],
+      "en",
     );
     expect(body.partner_company_id).toBeNull();
     // The claim goes with the partner, server-side, as one fact. Naming its own
@@ -258,7 +268,12 @@ describe("mapDealUpdate", () => {
   it("re-sends the figure at the new scale when only the currency moved", () => {
     const priced = { ...untouched, amount: "10000", currency: "JPY" };
 
-    const body = mapDealUpdate({ ...priced, currency: "EUR" }, priced);
+    const body = mapDealUpdate(
+      { ...priced, currency: "EUR" },
+      priced,
+      [],
+      "en",
+    );
 
     expect(body.currency).toBe("EUR");
     expect(body.amount_minor).toBe(1_000_000);
@@ -266,7 +281,9 @@ describe("mapDealUpdate", () => {
 
   it("keeps an unpriced deal without a currency", () => {
     const bare = { ...untouched, amount: "", currency: "" };
-    expect(mapDealUpdate({ ...bare, currency: "EUR" }, bare)).toEqual({});
+    expect(mapDealUpdate({ ...bare, currency: "EUR" }, bare, [], "en")).toEqual(
+      {},
+    );
   });
 
   it("clears the currency with the last figure", () => {
@@ -276,7 +293,7 @@ describe("mapDealUpdate", () => {
       expected_arr: "",
       currency: "EUR",
     };
-    expect(mapDealUpdate({ ...priced, amount: "" }, priced)).toEqual({
+    expect(mapDealUpdate({ ...priced, amount: "" }, priced, [], "en")).toEqual({
       amount_minor: null,
       currency: null,
     });
@@ -294,6 +311,8 @@ describe("mapDealUpdate", () => {
         partner_company_id: "p-1",
         partner_attribution: "sourced",
       },
+      [],
+      "en",
     );
     expect(Object.keys(body)).toEqual(["partner_attribution"]);
     expect(body.partner_attribution).toBe("influenced");
@@ -317,6 +336,7 @@ describe("mapDealCreate", () => {
       },
       "p-1",
       "EUR",
+      "en",
     );
     expect(body.partner_company_id).toBe("partner-1");
     expect(body.partner_attribution).toBe("influenced");
@@ -333,13 +353,19 @@ describe("mapDealCreate", () => {
       { name: "x", stage_id: "s-1", partner_company_id: "partner-1" },
       "p-1",
       "EUR",
+      "en",
     );
     expect(body.partner_company_id).toBe("partner-1");
     expect(body.partner_attribution).toBeNull();
   });
 
   it("names no partner when none was picked", () => {
-    const body = mapDealCreate({ name: "x", stage_id: "s-1" }, "p-1", "EUR");
+    const body = mapDealCreate(
+      { name: "x", stage_id: "s-1" },
+      "p-1",
+      "EUR",
+      "en",
+    );
     expect(body.partner_company_id).toBeNull();
     expect(body.partner_attribution).toBeNull();
   });

@@ -1,5 +1,6 @@
 import type { components } from "../api/schema";
-import { toMinorUnits } from "../format/minorunits";
+import { typedMinorOrNaN } from "../format/minorunits";
+import type { Locale } from "../i18n";
 import { commercialMotion, dealPriority } from "./dealcommercialvalues";
 import { currencyBeside } from "./dealcurrency";
 
@@ -23,6 +24,7 @@ export function mapDealCreate(
   values: Record<string, unknown>,
   pipelineId: string,
   defaultCurrency: string,
+  locale: Locale,
 ): CreateDealRequest {
   const str = (v: unknown) => (typeof v === "string" ? v.trim() : "");
   const amount = str(values.amount);
@@ -32,9 +34,9 @@ export function mapDealCreate(
     name: str(values.name),
     pipeline_id: pipelineId,
     stage_id: str(values.stage_id),
-    amount_minor: amount ? toMinorUnits(Number(amount), currency) : null,
+    amount_minor: amount ? typedMinorOrNaN(amount, currency, locale) : null,
     expected_arr_minor: expectedArr
-      ? toMinorUnits(Number(expectedArr), currency)
+      ? typedMinorOrNaN(expectedArr, currency, locale)
       : null,
     currency: currencyBeside(currency, amount, expectedArr),
     company_id: str(values.company_id) || null,

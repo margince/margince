@@ -152,3 +152,5 @@
 1794844773_a_consent_names_its_request_and_its_frequency.up.sql | * | adds columns that are empty or take a constant default, checks and foreign keys NOT VALID, and replaces two text-bound triggers; no existing row is read or changed
 1794844773_a_consent_names_its_request_and_its_frequency.down.sql | * | drops the columns this migration added and restores the two text-bound triggers; no existing row is changed
 1794844774_the_consent_request_and_frequency_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1794986141_a_forward_keeps_its_own_draft.down.sql | mail_draft | runs only on a rollback and deletes only forward drafts, which exist only since this release, at most one per author and forwarded message, so the set is small
+1794986142_the_forward_draft_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing

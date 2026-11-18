@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 273.9 KB |
+| Tool catalog | 274.0 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 71535 |
+| Approx. wire tokens | 71538 |
 | Largest tool | `read_details` (17.4 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -95,7 +95,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
 | [`read_attention`](#read_attention) | See what needs attention | yes | [`ui://margince/attention.html`](#attention_view) | 365 |
 | [`read_context`](#read_context) | Get the story so far | yes | [`ui://margince/context.html`](#context_view) | 413 |
-| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 4437 |
+| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 4440 |
 | [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes | [`ui://margince/forecast.html`](#forecast_view) | 978 |
 | [`read_import`](#read_import) | Read an import run or the import format | yes |  | 235 |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 797 |
@@ -9185,6 +9185,7 @@ needs the user now, and read_record for a record's own fields.
       "description": "mail_draft only",
       "enum": [
         "activity",
+        "forward",
         "contact",
         "company",
         "deal",
