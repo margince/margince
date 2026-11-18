@@ -21,7 +21,7 @@ import type {
   ConversationState,
 } from "./conversation-machine";
 import { diffCorpus, useNarrationQueue } from "./narration";
-import { VOICE_PROBE_KEY } from "./restore";
+import { VOICE_PROBE_KEY, type VoiceRestoreProbe } from "./restore";
 import { excerptLines } from "./voice-excerpts";
 import { type CorpusManifestEntry, storedEntry } from "./voice-manifest";
 import { refusalEntry, skipKeys } from "./voice-refusal-line";
@@ -36,8 +36,8 @@ import { refusalEntry, skipKeys } from "./voice-refusal-line";
 
 type CorpusPreview = components["schemas"]["VoiceCorpusPreviewResult"];
 type CorpusSummary = components["schemas"]["VoiceCorpusSummary"];
-type IngestStats = components["schemas"]["VoiceIngestStats"];
 type CorpusSource = components["schemas"]["VoiceCorpusSource"];
+type Ingested = Extract<IntakeOutcome, { kind: "ingested" }>;
 
 type SpeakerAsk = Readonly<{
   ref: string;
@@ -46,9 +46,8 @@ type SpeakerAsk = Readonly<{
   preview: CorpusPreview;
 }>;
 
-/** What the board shows for one source that could not be added: a server
- * refusal, a safe ingest-failed detail, or the unexpected-client-bug
- * fallback. The board is the only surface a reader sees the refusal on. */
+/** One source that could not be added, as the board shows it: a refusal, a
+ *  safe ingest-failed detail, or the fallback for an unexpected client bug. */
 export type VoiceIngestFailure = Readonly<{
   id: string;
   i18nKey: MessageKey;
@@ -155,28 +154,50 @@ export function useVoiceCorpus({
   const ingestSeq = useRef(0);
   const appliedSummarySeq = useRef(0);
 
+  // The screen keeps the restore probe mounted, so an invalidation would read
+  // it again at once. Each change is written in, and a Back remount reads it.
+  const patchProbe = useCallback(
+    (change: (old: VoiceRestoreProbe) => Partial<VoiceRestoreProbe>) => {
+      queryClient.setQueryData<VoiceRestoreProbe>(VOICE_PROBE_KEY, (old) =>
+        old === undefined ? undefined : { ...old, ...change(old) },
+      );
+    },
+    [queryClient],
+  );
+
   const recordIngest = useCallback(
-    (
-      seq: number,
-      entry: CorpusManifestEntry,
-      stats: IngestStats,
-      next: CorpusSummary,
-      reactionKey: MessageKey,
-    ) => {
+    (seq: number, outcome: Ingested, reactionKey: MessageKey) => {
       if (!mounted.current) {
         return;
       }
+      const { ref, source, stats, summary: next } = outcome;
       setManifest((prev) => [
-        ...prev.filter((existing) => existing.ref !== entry.ref),
-        entry,
+        ...prev.filter((existing) => existing.ref !== ref),
+        {
+          ref,
+          id: source.id,
+          version: source.version,
+          label: outcome.label,
+          keptWords: stats.kept_words,
+          inputWords: stats.input_words,
+          transcript: outcome.transcript,
+          lines: outcome.transcript ? [] : excerptLines(outcome.content),
+        },
       ]);
-      void queryClient.invalidateQueries({ queryKey: VOICE_PROBE_KEY });
-      say(`react:${entry.ref}`, reactionKey, {
+      const newest = seq > appliedSummarySeq.current;
+      patchProbe((old) => ({
+        summary: newest ? next : old.summary,
+        sources: [
+          ...old.sources.filter((stored) => stored.source_ref !== ref),
+          source,
+        ],
+      }));
+      say(`react:${ref}`, reactionKey, {
         kept: formatNumber(stats.kept_words, locale),
         total: formatNumber(stats.input_words, locale),
         words: formatNumber(stats.kept_words, locale),
       });
-      if (seq <= appliedSummarySeq.current) {
+      if (!newest) {
         return;
       }
       appliedSummarySeq.current = seq;
@@ -184,7 +205,7 @@ export function useVoiceCorpus({
       summaryRef.current = next;
       setSummary(next);
     },
-    [locale, queue, say, queryClient],
+    [locale, queue, say, patchProbe],
   );
 
   // One place the conversation learns what an intake attempt ended as: the
@@ -222,22 +243,7 @@ export function useVoiceCorpus({
         ]);
         return;
       }
-      recordIngest(
-        seq,
-        {
-          ref: outcome.ref,
-          id: outcome.source.id,
-          version: outcome.source.version,
-          label: outcome.label,
-          keptWords: outcome.stats.kept_words,
-          inputWords: outcome.stats.input_words,
-          transcript: outcome.transcript,
-          lines: outcome.transcript ? [] : excerptLines(outcome.content),
-        },
-        outcome.stats,
-        outcome.summary,
-        reactionKey,
-      );
+      recordIngest(seq, outcome, reactionKey);
     },
     [dispatch, locale, noteFailure, recordIngest, skip],
   );
@@ -364,9 +370,8 @@ export function useVoiceCorpus({
     });
   }, [nextAsk, state.phase, state.pendingQuestion, dispatch, locale]);
 
-  // The owner named themselves: ingest with the speaker filter, so only that
-  // speaker's server-counted words ever reach the meter. Without a value the
-  // owner skipped the file, and nothing of it is sent.
+  // A named speaker filters the ingest, so only their words reach the meter.
+  // Without a value the owner skipped the file, and none of it is sent.
   const answerSpeaker = useCallback(
     (questionId: string, value: string | null) => {
       const ask = asks.find(
@@ -404,12 +409,16 @@ export function useVoiceCorpus({
             return;
           }
           setManifest((prev) => prev.filter((row) => row.ref !== entry.ref));
-          if (seq > appliedSummarySeq.current) {
+          const newest = seq > appliedSummarySeq.current;
+          patchProbe((old) => ({
+            summary: newest ? next : old.summary,
+            sources: old.sources.filter((source) => source.id !== entry.id),
+          }));
+          if (newest) {
             appliedSummarySeq.current = seq;
             summaryRef.current = next;
             setSummary(next);
           }
-          void queryClient.invalidateQueries({ queryKey: VOICE_PROBE_KEY });
         })
         .catch((err: unknown) => {
           if (mounted.current) {
@@ -426,7 +435,7 @@ export function useVoiceCorpus({
           }
         });
     },
-    [noteFailure, queryClient, t],
+    [noteFailure, patchProbe, t],
   );
 
   return {

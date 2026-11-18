@@ -1,5 +1,9 @@
 /** @vitest-environment happy-dom */
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  QueryClient,
+  QueryClientProvider,
+  useQuery,
+} from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { createElement, type ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -7,7 +11,9 @@ import {
   type ConversationEvent,
   initialConversationState,
 } from "./conversation-machine";
+import { VOICE_PROBE_KEY, type VoiceRestoreProbe } from "./restore";
 import { useVoiceCorpus } from "./use-voice-corpus";
+import { documentStats, stubApi, summaryOf } from "./voice-act.testkit";
 
 // ingest/classifyUpload never throw for a server refusal — that path
 // narrates through the server's own safe detail and resolves normally
@@ -25,7 +31,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-// The hook marks the restore probe stale after a change, so it needs a client.
+// The hook writes each change into the restore probe's cache, so it needs a client.
 function wrapper({ children }: Readonly<{ children: ReactNode }>) {
   return createElement(
     QueryClientProvider,
@@ -183,5 +189,55 @@ describe("useVoiceCorpus — a file too large to send", () => {
       i18nKey: "ob.conv.voice.refusalTooLarge",
       params: { name: "big.txt", limit: "1 MB" },
     });
+  });
+});
+
+describe("useVoiceCorpus — the restore probe the screen keeps mounted", () => {
+  it("takes an added and a removed sample without reading the probe again", async () => {
+    stubApi({
+      ingests: [{ stats: documentStats, summary: summaryOf(900) }],
+      afterRemove: summaryOf(0),
+    });
+    const client = new QueryClient();
+    client.setQueryData<VoiceRestoreProbe>(VOICE_PROBE_KEY, {
+      built: false,
+      summary: null,
+      sources: [],
+    });
+    const probe = vi.fn(async () => {
+      throw new Error("the probe was read again");
+    });
+    const dispatch = vi.fn<(event: ConversationEvent) => void>();
+    const { result } = renderHook(
+      () => {
+        useQuery({
+          queryKey: VOICE_PROBE_KEY,
+          queryFn: probe,
+          staleTime: Infinity,
+        });
+        return useVoiceCorpus({ state: collectingState, dispatch });
+      },
+      {
+        wrapper: ({ children }) =>
+          createElement(QueryClientProvider, { client }, children),
+      },
+    );
+    const cached = () =>
+      client.getQueryData<VoiceRestoreProbe>(VOICE_PROBE_KEY);
+
+    act(() => {
+      result.current.addPaste("A paragraph I actually wrote.", "Pasted text");
+    });
+    await waitFor(() => expect(cached()?.sources).toHaveLength(1));
+    expect(cached()?.summary?.total_words).toBe(900);
+
+    const [added] = result.current.manifest;
+    expect(added).toBeDefined();
+    if (added) {
+      act(() => result.current.removeSample(added));
+    }
+    await waitFor(() => expect(cached()?.sources).toEqual([]));
+    expect(cached()?.summary?.total_words).toBe(0);
+    expect(probe).not.toHaveBeenCalled();
   });
 });

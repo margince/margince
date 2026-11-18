@@ -28,8 +28,8 @@ export type VoiceRestoreProbe = Readonly<{
   sources: readonly CorpusSource[];
 }>;
 
-/** The probe's query key; a corpus change marks it stale, so re-entering the
- * voice step lists what the server holds now. */
+/** The probe's query key; the voice step writes each corpus change into it,
+ * so re-entering the step lists what the server holds now. */
 export const VOICE_PROBE_KEY = ["onboarding-conv-voice"] as const;
 
 export type RestoreInputs = Readonly<{
@@ -170,9 +170,8 @@ function resumeTarget(state: OnboardingState): ResumePoint {
   if (state.step === "team") {
     return "tm.ask";
   }
-  // step "voice": the act is still open, and lands straight on the collect
-  // scene with whatever corpus the server already holds. A skip recorded at
-  // this step was the way into connect, so that is where it lands.
+  // step "voice": the collect scene with the corpus the server holds, unless
+  // a skip recorded here already led on to connect.
   return state.voice_skipped ? "cn.consent" : "vo.collecting";
 }
 
@@ -227,10 +226,8 @@ function recapEntries(
   return entries;
 }
 
-// A member's company was confirmed before they arrived, so their plan always
-// opens confirmed. A first visit has no row and nothing to recap: the journey
-// opens at voice, or at connect for a role that may not train one. A returning member resumes where their row says, and the
-// OAuth return deep link reopens connect exactly as it does for a creator.
+// A member's plan opens confirmed: voice, or connect for a role that may not
+// train one, and a returning member resumes where their row says.
 function memberPlan(
   inputs: RestoreInputs,
   state: OnboardingState | null,
