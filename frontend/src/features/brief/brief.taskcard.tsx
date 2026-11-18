@@ -19,11 +19,13 @@ import {
   UserPlus,
 } from "lucide-react";
 import { MayBeDone } from "../../components/maybedone";
-import { RECORD_CHIP_ICONS } from "../../components/recordlinks";
+import {
+  RECORD_CHIP_ICONS,
+  RecordMarkChip,
+} from "../../components/recordlinks";
 import { useTaskDone } from "../../components/taskactions";
 import { TaskTypeChip } from "../../components/tasktype";
 import { Badge, Card } from "../../design-system/atoms";
-import { Avatar } from "../../design-system/avatar";
 import { IconAction } from "../../design-system/iconaction";
 import { Chip } from "../../design-system/readings";
 import { activityDay, activityTimeOfDay } from "../../format/activitywhen";
@@ -388,19 +390,14 @@ function TaskRecords({
   );
   return named.map((who) => {
     const appHref = link && who.href ? link(who.href) : undefined;
-    return who.mark === "avatar" ? (
-      <Chip
+    return (
+      <RecordMarkChip
         key={who.id}
-        dense
-        appHref={appHref}
-        lead={<Avatar name={who.label} identity={who.id} />}
-      >
-        {who.label}
-      </Chip>
-    ) : (
-      <Chip key={who.id} dense appHref={appHref} icon={who.mark}>
-        {who.label}
-      </Chip>
+        id={who.id}
+        name={who.label}
+        icon={who.mark === "avatar" ? undefined : who.mark}
+        href={appHref}
+      />
     );
   });
 }

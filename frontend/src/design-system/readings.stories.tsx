@@ -164,7 +164,7 @@ export const RecordChips: Story = {
 };
 
 // A name longer than its column breaks inside the chip; the short one beside it
-// keeps its one-line pill.
+// stays on one line.
 export const WrappedChipPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
@@ -197,6 +197,9 @@ export const WrappedChipPhone: Story = {
         lead={<Avatar name="Sonya Beck" identity="contact-sonya" />}
       >
         Sonya Beck
+      </Chip>
+      <Chip dense wrap icon={Mail}>
+        procurement.and.vendor.onboarding@weber.example
       </Chip>
     </div>
   ),

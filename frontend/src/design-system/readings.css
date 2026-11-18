@@ -125,9 +125,14 @@
   white-space: normal;
   overflow-wrap: anywhere;
 }
-/* The mark stays with the first line, flush in the corner, not centred on two. */
-.chip-wrap .chip-mark > * {
+/* The mark stays with the first line, not centred on two. An icon's box is one
+   line tall, so its glyph sits mid-line as it does in an unwrapped chip. */
+.chip-wrap .chip-mark > *,
+.chip-wrap > svg {
   align-self: flex-start;
+}
+.chip-wrap > svg {
+  block-size: 1lh;
 }
 .chip-link {
   text-decoration: none;

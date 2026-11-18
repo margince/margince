@@ -9,6 +9,7 @@ import {
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
+import { expectTextFits } from "../../testing/unbrokentext";
 import type { WorklistItem } from "../worklist/worklist.queries";
 import { SchedulePanel } from "./brief.schedule";
 
@@ -323,9 +324,7 @@ export const LongAttendeeNamePhone: Story = {
     const chip = (await canvas.findByText(LONG_NAME)).closest(".chip");
     const short = canvas.getByText("Lena Hartmann").closest(".chip");
     if (!chip || !short) throw new Error("an attendee is not a chip");
-    await expect(chip.getBoundingClientRect().right).toBeLessThanOrEqual(
-      panelBox.getBoundingClientRect().right,
-    );
+    await expectTextFits(chip, panelBox.getBoundingClientRect());
     await expect(chip.getBoundingClientRect().height).toBeGreaterThan(
       short.getBoundingClientRect().height,
     );
