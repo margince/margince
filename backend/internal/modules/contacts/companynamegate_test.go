@@ -202,7 +202,7 @@ func TestCompoundingDoesNotDecideIdentity(t *testing.T) {
 // maxLength in the contract, so one create can hand it a megabyte; unbounded,
 // that would pin every company-name writer in the workspace behind it.
 //
-// The 256-rune cap in personname.JaroWinkler bounds each call. This is about
+// The 256-rune cap in namematch.JaroWinkler bounds each call. This is about
 // the number of calls.
 func TestTheTokenLoopIsBounded(t *testing.T) {
 	huge := strings.Repeat("acme ", 20000)

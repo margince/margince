@@ -25,17 +25,17 @@ package contacts
 // one is consulted only where two names are COMPARED.
 
 import (
-	"github.com/margince/margince/backend/internal/platform/personname"
+	"github.com/margince/margince/backend/internal/platform/namematch"
 	"slices"
 	"strings"
 	"unicode"
 )
 
 // foldDStroke maps đ to d. U+0111 has no canonical decomposition, so
-// personname.Fold keeps it while Postgres f_unaccent maps it. Without this,
+// namematch.Fold keeps it while Postgres f_unaccent maps it. Without this,
 // "ĐẦU TƯ" folds to "đau tu" in Go and "dau tu" in the database.
 //
-// Not inside personname.Fold, which is pinned as the similarity metric's input
+// Not inside namematch.Fold, which is pinned as the similarity metric's input
 // (PO-PARAM-JW-2) and shared with contact and lead matching.
 func foldDStroke(s string) string {
 	if !strings.ContainsAny(s, "đĐ") {
@@ -170,7 +170,7 @@ func corroboratedMarket(raw string, fields []string, market marketForms) bool {
 
 // closesWith answers whether a name ends in this word.
 func closesWith(raw, word string) bool {
-	words := strings.FieldsFunc(personname.Fold(raw), nameWordSeparators)
+	words := strings.FieldsFunc(namematch.Fold(raw), nameWordSeparators)
 	return len(words) > 0 && words[len(words)-1] == word
 }
 

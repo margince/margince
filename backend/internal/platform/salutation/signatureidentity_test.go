@@ -36,7 +36,7 @@ func TestSignerOfTakesTheAddressAloneOnlyWhenNoOtherSignerShows(t *testing.T) {
 	}
 }
 
-func TestNameIsContactsKnowsTheSamePersonAndRefusesAnother(t *testing.T) {
+func TestNameIsContactsKnowsTheSameContactAndRefusesAnother(t *testing.T) {
 	t.Parallel()
 	for _, c := range []struct {
 		name, given, family, fullName, email string

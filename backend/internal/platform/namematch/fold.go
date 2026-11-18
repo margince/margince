@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Package personname compares people's names. Dedupe, capture and signature
-// reading ask it whether two spellings name one person.
-package personname
+// Package namematch compares the names of contacts. Dedupe, capture and signature
+// reading ask it whether two spellings name one contact.
+package namematch
 
 import (
 	"strings"

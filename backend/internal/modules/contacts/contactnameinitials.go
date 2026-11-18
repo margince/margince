@@ -4,7 +4,7 @@
 package contacts
 
 import (
-	"github.com/margince/margince/backend/internal/platform/personname"
+	"github.com/margince/margince/backend/internal/platform/namematch"
 	"strings"
 	"unicode"
 )
@@ -42,7 +42,7 @@ const initialsMaxLetters = 2
 
 // maxInitialsDisplayLen bounds the displays the repair reads: three tokens of
 // initials plus the separators between them.
-const maxInitialsDisplayLen = personname.MaxNameTokens*initialsMaxLetters + personname.MaxNameTokens - 1
+const maxInitialsDisplayLen = namematch.MaxNameTokens*initialsMaxLetters + namematch.MaxNameTokens - 1
 
 // initialsDisplayReplacement answers the local part that should replace a
 // stored full name. It does so only when capture derived that name from the

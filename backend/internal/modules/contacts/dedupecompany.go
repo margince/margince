@@ -13,7 +13,7 @@ import (
 	"cmp"
 	"context"
 	"fmt"
-	"github.com/margince/margince/backend/internal/platform/personname"
+	"github.com/margince/margince/backend/internal/platform/namematch"
 	"slices"
 	"strconv"
 	"strings"
@@ -362,7 +362,7 @@ func companyExactNameArms(args *[]any, c CompanyCandidate) []string {
 		// would fold it to the empty key and match every stored name that
 		// folds to nothing, which is the one pairing companyNamesAreTheSame
 		// refuses outright.
-		if collapseSpaces(personname.Fold(name)) == "" {
+		if collapseSpaces(namematch.Fold(name)) == "" {
 			continue
 		}
 		*args = append(*args, name)

@@ -17,7 +17,7 @@ package contacts
 // shared with contact and lead dedupe, where the character metric is right.
 
 import (
-	"github.com/margince/margince/backend/internal/platform/personname"
+	"github.com/margince/margince/backend/internal/platform/namematch"
 	"strings"
 )
 
@@ -192,7 +192,7 @@ func sameCompanyToken(a, b string) bool {
 	if max(lenA, lenB)-min(lenA, lenB) > companyFuzzyTokenLengthSlack {
 		return false
 	}
-	return personname.JaroWinkler(a, b) >= companyFuzzyTokenSimilarity
+	return namematch.JaroWinkler(a, b) >= companyFuzzyTokenSimilarity
 }
 
 // squashedCompanyName is the name with its word separators removed, so that where a

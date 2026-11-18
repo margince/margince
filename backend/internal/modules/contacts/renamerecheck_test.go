@@ -4,7 +4,7 @@
 package contacts
 
 import (
-	"github.com/margince/margince/backend/internal/platform/personname"
+	"github.com/margince/margince/backend/internal/platform/namematch"
 	"strings"
 	"testing"
 
@@ -55,20 +55,20 @@ func TestNameScoringIsBoundedAgainstAnAbsurdName(t *testing.T) {
 	left := "Acme " + strings.Repeat("x", 400_000)
 	right := "Acme " + strings.Repeat("y", 400_000)
 
-	score := nameSimilarity(personname.Fold(left), personname.Fold(right))
+	score := nameSimilarity(namematch.Fold(left), namematch.Fold(right))
 
 	// Asked of the WORK, not of a stopwatch. This test sits in the merge gate,
 	// where a clock bound differs between an idle laptop and a loaded runner.
-	// The bound truncates at personname.ScoringMaxRunes. So the
+	// The bound truncates at namematch.ScoringMaxRunes. So the
 	// absurd pair must score what their first 256 runes score. That equality
 	// answers the same on any machine, and an unbounded metric fails it.
 	capped := nameSimilarity(
-		personname.Fold(string([]rune(left)[:personname.ScoringMaxRunes])),
-		personname.Fold(string([]rune(right)[:personname.ScoringMaxRunes])),
+		namematch.Fold(string([]rune(left)[:namematch.ScoringMaxRunes])),
+		namematch.Fold(string([]rune(right)[:namematch.ScoringMaxRunes])),
 	)
 	if score != capped {
 		t.Fatalf("scoring 400k runes gave %v against %v for their first %d — "+
-			"the quadratic bound is gone", score, capped, personname.ScoringMaxRunes)
+			"the quadratic bound is gone", score, capped, namematch.ScoringMaxRunes)
 	}
 	// The bound caps the work, not the contract: the answer is still a score.
 	if score < 0 || score > 1 {
@@ -76,21 +76,21 @@ func TestNameScoringIsBoundedAgainstAnAbsurdName(t *testing.T) {
 	}
 }
 
-// The bound belongs to the metric alone. personname.Fold also produces
+// The bound belongs to the metric alone. namematch.Fold also produces
 // exact-match and grouping keys. Truncating there would make two distinct long
 // names one key, a match rather than a capped score.
 func TestNormalizingANameDoesNotTruncateIt(t *testing.T) {
 	long := "Acme " + strings.Repeat("x", 400_000)
-	if got := len([]rune(personname.Fold(long))); got < 400_000 {
-		t.Fatalf("personname.Fold truncated to %d runes — keys derived from it would collide", got)
+	if got := len([]rune(namematch.Fold(long))); got < 400_000 {
+		t.Fatalf("namematch.Fold truncated to %d runes — keys derived from it would collide", got)
 	}
 	// Two names that differ only past the bound: one score, still two keys.
-	a := strings.Repeat("a", personname.ScoringMaxRunes) + "left"
-	b := strings.Repeat("a", personname.ScoringMaxRunes) + "right"
+	a := strings.Repeat("a", namematch.ScoringMaxRunes) + "left"
+	b := strings.Repeat("a", namematch.ScoringMaxRunes) + "right"
 	if score := nameSimilarity(a, b); score != 1 {
 		t.Errorf("score = %.4f, want 1.0 — past the bound the metric sees one name", score)
 	}
-	if personname.Fold(a) == personname.Fold(b) {
+	if namematch.Fold(a) == namematch.Fold(b) {
 		t.Error("the two names produced one key — the bound leaked out of the metric")
 	}
 }
@@ -98,10 +98,10 @@ func TestNormalizingANameDoesNotTruncateIt(t *testing.T) {
 // A realistic name must never reach the bound at all.
 func TestAPlausibleNameIsFarInsideTheScoringBound(t *testing.T) {
 	plausible := "Internationale Handelsgesellschaft für Bauwesen und Anlagenbau GmbH & Co. KG"
-	normalized := personname.Fold(plausible)
-	if len([]rune(normalized)) >= personname.ScoringMaxRunes {
+	normalized := namematch.Fold(plausible)
+	if len([]rune(normalized)) >= namematch.ScoringMaxRunes {
 		t.Fatalf("a realistic name normalized to %d runes, at or past the %d bound — the bound is too tight",
-			len([]rune(normalized)), personname.ScoringMaxRunes)
+			len([]rune(normalized)), namematch.ScoringMaxRunes)
 	}
 	if !strings.HasSuffix(normalized, "kg") {
 		t.Errorf("normalized %q lost its tail", normalized)

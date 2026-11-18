@@ -18,7 +18,7 @@ import (
 // body of the mail it was read from. Body is nil when that mail is gone,
 // archived, restricted or emptied. NameGiven and NameFamily are the name the
 // same read wrote. HeaderName is the display before the pass first renamed the
-// contact, and Email their primary address.
+// contact, and Email the address they are reachable at.
 type SignatureFieldSource struct {
 	ID         ids.UUID
 	ContactID  ids.ContactID
@@ -55,7 +55,7 @@ func SignatureFieldSourcesTx(ctx context.Context, tx pgx.Tx, after ids.UUID, lim
 		                    AND au.actor_id = $5 AND au.before ? 'full_name'
 		                  ORDER BY au.occurred_at, au.id LIMIT 1), c.full_name),
 		       coalesce((SELECT e.email FROM contact_email e
-		                  WHERE e.contact_id = f.contact_id AND e.is_primary AND e.archived_at IS NULL LIMIT 1), '')
+		                  WHERE e.contact_id = f.contact_id AND e.archived_at IS NULL`+ReachableEmailOrder+` LIMIT 1), '')
 		  FROM contact_profile_field f
 		  JOIN contact c ON c.id = f.contact_id
 		  LEFT JOIN activity a ON a.id = `+sourceRefActivityID+`

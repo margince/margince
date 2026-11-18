@@ -45,7 +45,7 @@ func TestDomainLooksPersonalNeedsEveryKnownContactToExplainTheLabel(t *testing.T
 			label:    "mueller",
 			contacts: []DomainContact{{FullName: "Christina Müller", EmailLocals: []string{"cm"}}},
 			// "mueller" is a TRANSLITERATION of Müller, not an unaccenting of
-			// it: personname.Fold yields "muller". Whether to fold German
+			// it: namematch.Fold yields "muller". Whether to fold German
 			// digraphs is a question for the whole dedupe metric, not something
 			// to answer once, here.
 			want: false,

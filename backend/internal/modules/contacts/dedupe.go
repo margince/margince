@@ -6,7 +6,7 @@ package contacts
 import (
 	"context"
 	"fmt"
-	"github.com/margince/margince/backend/internal/platform/personname"
+	"github.com/margince/margince/backend/internal/platform/namematch"
 	"slices"
 
 	"github.com/jackc/pgx/v5"
@@ -301,7 +301,7 @@ func contactCandidateArgs(c ContactCandidate) pgx.NamedArgs {
 // result is in [0,1] and comparable against the threshold directly.
 func contactConfidence(c ContactCandidate, row contactCandidateRow) float64 {
 	name := dedupeNameWeight * contactNameSimilarity(c.FullName, row.fullName)
-	if !personname.Corroborate(c.FullName, row.fullName) {
+	if !namematch.Corroborate(c.FullName, row.fullName) {
 		return name
 	}
 	return name + dedupeCompanyDomainWeight*companyMatch(c, row)

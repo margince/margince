@@ -21,7 +21,7 @@ package contacts
 // and every draft that greets them repeats it.
 
 import (
-	"github.com/margince/margince/backend/internal/platform/personname"
+	"github.com/margince/margince/backend/internal/platform/namematch"
 	"strings"
 	"unicode"
 
@@ -167,7 +167,7 @@ func readableLocalPart(email string) (local string, tokens []string, ok bool) {
 	if hasRoleToken(local) {
 		return local, nil, false
 	}
-	tokens, complete := personname.LocalPartTokens(local)
+	tokens, complete := namematch.LocalPartTokens(local)
 	if len(tokens) == 0 || !complete {
 		return local, nil, false
 	}
@@ -221,11 +221,11 @@ func hasRoleToken(local string) bool {
 // Particles bind to the surname that follows them, so "Ludwig van Beethoven"
 // is Ludwig + "van Beethoven", not Ludwig van + Beethoven.
 func splitFirstLast(tokens []string) (string, string, bool) {
-	if len(tokens) < 2 || len(tokens) > personname.MaxNameTokens {
+	if len(tokens) < 2 || len(tokens) > namematch.MaxNameTokens {
 		return "", "", false
 	}
 	for _, token := range tokens {
-		if !personname.IsWordLike(token) {
+		if !namematch.IsWordLike(token) {
 			return "", "", false
 		}
 	}
@@ -245,7 +245,7 @@ func splitFirstLast(tokens []string) (string, string, bool) {
 	// second given name, or — in a family-name-first convention written without
 	// a comma — the given name itself, and NOTHING in the string says which.
 	// Two plausible readings mean the honest answer is that we do not know.
-	if len(tokens) == personname.MaxNameTokens && !nameParticles[strings.ToLower(tokens[1])] {
+	if len(tokens) == namematch.MaxNameTokens && !nameParticles[strings.ToLower(tokens[1])] {
 		return "", "", false
 	}
 	first := tokens[0]

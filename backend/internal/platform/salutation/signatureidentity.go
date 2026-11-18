@@ -9,8 +9,9 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/margince/margince/backend/internal/platform/personname"
+	"github.com/margince/margince/backend/internal/platform/namematch"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 // Signer says how a signature block names the contact.
@@ -32,9 +33,9 @@ const (
 // signer's. A line naming someone as "Name <address>" is a quote or header
 // line, and signs nothing.
 func SignerOf(block, fullName, email string) Signer {
-	folded := quotedSender.ReplaceAllString(personname.Fold(block), "")
+	folded := quotedSender.ReplaceAllString(namematch.Fold(block), "")
 	unaddressed := printedAddress.ReplaceAllString(folded, " ")
-	if namesAll(wordsOf(unaddressed), personname.Fold(fullName)) || lineNames(unaddressed, fullName) {
+	if namesAll(wordsOf(unaddressed), namematch.Fold(fullName)) || lineNames(unaddressed, fullName) {
 		return SignedByName
 	}
 	email = correspondence.Fold(email)
@@ -102,7 +103,7 @@ func holdsOtherAddress(folded, email string) bool {
 
 // NameIsContacts reports whether the given and family name read off a
 // signature name this contact. Their display name or their address must spell
-// the same person, as personname compares names.
+// the same contact, as namematch compares names.
 func NameIsContacts(given, family, fullName, email string) bool {
 	read := readName{given: readWords(given), family: readWords(family)}
 	if len(read.given) == 0 || len(read.family) == 0 {
@@ -112,7 +113,7 @@ func NameIsContacts(given, family, fullName, email string) bool {
 		return true
 	}
 	local, _, _ := strings.Cut(correspondence.Fold(email), "@")
-	tokens, ok := personname.LocalPartTokens(correspondence.LocalPartBase(local))
+	tokens, ok := namematch.LocalPartTokens(correspondence.LocalPartBase(local))
 	if !ok {
 		return false
 	}
@@ -139,12 +140,12 @@ func (r readName) namedBy(words []string, address bool) bool {
 		return address && slices.Contains(runTogether(r.given[0], strings.Join(r.family, "")), word)
 	}
 	for at, word := range words {
-		if !personname.FamiliesAgree(word, family) {
+		if !namematch.FamiliesAgree(word, family) {
 			continue
 		}
 		for other, candidate := range words {
 			if other != at && slices.ContainsFunc(r.given, func(g string) bool {
-				return personname.GivenNamesAgree(candidate, g) || nicknameOf(candidate, g)
+				return namematch.GivenNamesAgree(candidate, g) || nicknameOf(candidate, g)
 			}) {
 				return true
 			}
@@ -161,14 +162,14 @@ func sameGivenName(word, given string) bool {
 
 // runTogether lists the ways an address writes a whole name as one word.
 func runTogether(given, family string) []string {
-	initial := string([]rune(given)[:1])
+	initial := textcut.Runes(given, 1)
 	return []string{family, given + family, initial + family, family + given, family + initial}
 }
 
-// nameKey folds a name word as personname compares names, with umlauts written
+// nameKey folds a name word as namematch compares names, with umlauts written
 // out, so "Müller", "Muller" and "mueller" meet.
 func nameKey(word string) string {
-	return personname.Fold(personname.Digraphs(word))
+	return namematch.Fold(namematch.Digraphs(word))
 }
 
 func readWords(name string) []string {
@@ -177,7 +178,7 @@ func readWords(name string) []string {
 
 // headerWords is the display name as folded words, honorifics dropped.
 func headerWords(fullName string) []string {
-	given, family := personname.SplitName(personname.Digraphs(fullName))
+	given, family := namematch.SplitName(namematch.Digraphs(fullName))
 	if family == "" {
 		return nil
 	}

@@ -4,7 +4,7 @@
 package contacts
 
 import (
-	"github.com/margince/margince/backend/internal/platform/personname"
+	"github.com/margince/margince/backend/internal/platform/namematch"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -42,7 +42,7 @@ var legalSuffixes = map[string]bool{
 // one follows it — which is exactly the compound case and nothing else.
 var legalConnectives = map[string]bool{"&": true, "und": true, "and": true}
 
-// NormalizeContactName is the contact-name key: personname.Fold plus a
+// NormalizeContactName is the contact-name key: namematch.Fold plus a
 // collapse of internal whitespace. Both halves are
 // load-bearing and neither implies the other.
 //
@@ -52,11 +52,11 @@ var legalConnectives = map[string]bool{"&": true, "und": true, "and": true}
 // contact as "Anna Muster" — a key that kept the second space mints a second
 // record on the next crawl of an unchanged page.
 //
-// Not personname.Fold itself, which also feeds nameSimilarity. That input is
+// Not namematch.Fold itself, which also feeds nameSimilarity. That input is
 // pinned by PO-PARAM-JW-2 so the spec's worked examples stay reproducible.
 func NormalizeContactName(s string) string { return foldedNameKey(s) }
 
-// foldedNameKey is the key both dedupe lanes compare on: personname.Fold, no
+// foldedNameKey is the key both dedupe lanes compare on: namematch.Fold, no
 // ASCII apostrophe, and a collapse of internal whitespace.
 //
 // EXACTLY the ASCII apostrophe, because that is what the SQL arm in front of
@@ -67,7 +67,7 @@ func NormalizeContactName(s string) string { return foldedNameKey(s) }
 //
 // One helper because the contact lane and the company lane ask one question.
 func foldedNameKey(s string) string {
-	return collapseSpaces(strings.ReplaceAll(personname.Fold(s), "'", ""))
+	return collapseSpaces(strings.ReplaceAll(namematch.Fold(s), "'", ""))
 }
 
 // companyNamesAreTheSame answers whether two names are one name. Only case,
@@ -88,7 +88,7 @@ func collapseSpaces(s string) string { return strings.Join(strings.Fields(s), " 
 // beside NormalizeContactName and never replaces it. That key also feeds
 // locks, stored review hashes and other lanes, none of which may move.
 func digraphNameKey(s string) string {
-	return foldedNameKey(personname.Digraphs(s))
+	return foldedNameKey(namematch.Digraphs(s))
 }
 
 // contactNameSimilarity is nameSimilarity for the contact lane, taking the
@@ -96,11 +96,11 @@ func digraphNameKey(s string) string {
 // it: lead dedupe and site-contact routing keep nameSimilarity as it is.
 func contactNameSimilarity(a, b string) float64 {
 	plain := nameSimilarity(a, b)
-	digraph := nameSimilarity(personname.Digraphs(a), personname.Digraphs(b))
+	digraph := nameSimilarity(namematch.Digraphs(a), namematch.Digraphs(b))
 	return max(plain, digraph)
 }
 
-// NormalizeCompanyName is personname.Fold plus the PO-PARAM-1 legal-suffix
+// NormalizeCompanyName is namematch.Fold plus the PO-PARAM-1 legal-suffix
 // strip, applied only to the trailing token. "Co" inside "Coca Co" is a name,
 // and "Co" at the end is a suffix.
 //
@@ -108,7 +108,7 @@ func contactNameSimilarity(a, b string) float64 {
 // company may BE its suffix and an empty key would collide with every other
 // empty key.
 func NormalizeCompanyName(s string) string {
-	fields := strings.Fields(personname.Fold(strings.ReplaceAll(s, ",", " ")))
+	fields := strings.Fields(namematch.Fold(strings.ReplaceAll(s, ",", " ")))
 	strippedOne := false
 	for len(fields) > 1 {
 		last := undottedForm(fields[len(fields)-1])
@@ -132,7 +132,7 @@ func NormalizeCompanyName(s string) string {
 // undotted and space-joined, or "" when it strips none: "Acme GmbH & Co. KG"
 // reads "gmbh & co kg", and "Acme" reads "".
 func companyLegalForm(s string) string {
-	fields := strings.Fields(personname.Fold(strings.ReplaceAll(s, ",", " ")))
+	fields := strings.Fields(namematch.Fold(strings.ReplaceAll(s, ",", " ")))
 	core := strings.Fields(NormalizeCompanyName(s))
 	if len(core) >= len(fields) {
 		return ""
@@ -160,7 +160,7 @@ func undottedForm(word string) string {
 // nameSimilarity is `name_sim`: Jaro-Winkler over normalized input,
 // in [0,1].
 func nameSimilarity(a, b string) float64 {
-	return personname.JaroWinkler(personname.Fold(a), personname.Fold(b))
+	return namematch.JaroWinkler(namematch.Fold(a), namematch.Fold(b))
 }
 
 // exactNameKeySQL is the SQL side of the Go exact-name comparison, and BOTH
@@ -168,7 +168,7 @@ func nameSimilarity(a, b string) float64 {
 // cannot fold its two sides with different normalizations of one name.
 //
 // One function because there is one question. NormalizeContactName is
-// personname.Fold plus a whitespace collapse. companyNamesAreTheSame folds the
+// namematch.Fold plus a whitespace collapse. companyNamesAreTheSame folds the
 // same three things: case, accents and spacing. The company lane's
 // legal-suffix key is a DIFFERENT question and is not this one. See
 // CompanyCandidateScore.ExactName for why "Baqend GmbH" and "Baqend Inc" must

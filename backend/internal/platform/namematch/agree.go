@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package personname
+package namematch
 
 import "strings"
 
@@ -15,7 +15,7 @@ const (
 	givenNameSharedPrefix = 2
 )
 
-// Corroborate reports whether two full names may name one person. Dedupe
+// Corroborate reports whether two full names may name one contact. Dedupe
 // scores a shared employer only for a pair that corroborates.
 func Corroborate(a, b string) bool {
 	givenA, familyA := SplitName(a)

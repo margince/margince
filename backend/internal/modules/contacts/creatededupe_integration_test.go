@@ -418,11 +418,11 @@ func TestANameNobodySharesLeavesTheQueueEmpty(t *testing.T) {
 	}
 }
 
-// The name lane rests on this: any pair personname.Fold calls equal must reach
+// The name lane rests on this: any pair namematch.Fold calls equal must reach
 // the equality test. So the SQL candidate query has to admit it.
 //
 // Those are two different normalizations. SQL folds with lower + unaccent.
-// personname.Fold does Unicode full case folding, strips combining marks, and
+// namematch.Fold does Unicode full case folding, strips combining marks, and
 // trims. They may differ while SQL only narrows a candidate set for a score.
 // A lane that decides on equality cannot allow it. An approximate prefilter can
 // hide a row that is equal, and the lane then misses the duplicate.
