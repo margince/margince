@@ -9,6 +9,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/reportingcsv"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy/langcopytest"
 )
 
 func TestMajorWritesTheDigitsEachCurrencyHas(t *testing.T) {
@@ -36,9 +37,5 @@ func TestFilenameNamesScopePeriodAndLocalDay(t *testing.T) {
 }
 
 func TestLabelsSpeakEveryLanguage(t *testing.T) {
-	for id, phrase := range reportingcsv.Labels {
-		if phrase.En == "" || phrase.De == "" || phrase.Vi == "" {
-			t.Errorf("%s has a missing language: %+v", id, phrase)
-		}
-	}
+	langcopytest.Census(t, reportingcsv.Labels)
 }
