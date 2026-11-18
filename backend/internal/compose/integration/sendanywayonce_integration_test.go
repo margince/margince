@@ -68,9 +68,8 @@ func TestSendAnywayFromTwoTabsQueuesAndDeliversOneMessage(t *testing.T) {
 	}
 }
 
-// A send retried under its Idempotency-Key, as a client does after a timeout,
-// answers the recorded activity and queues nothing more. A Send anyway retried
-// the same way queues nothing more either.
+// A send or a Send anyway retried under its Idempotency-Key, as a client does
+// after a timeout, answers the recorded activity and queues nothing more.
 func TestASendRetriedUnderItsKeyQueuesOneMessage(t *testing.T) {
 	p, c, read := refusedOffer(t)
 	p.stakeADeal(t)
@@ -94,11 +93,14 @@ func TestASendRetriedUnderItsKeyQueuesOneMessage(t *testing.T) {
 
 	path := "/v1/communication-reviews/" + read.ID + "/direct-send"
 	anyway := map[string]string{"Idempotency-Key": "send-anyway-" + read.ID}
-	if status := c.Call(t, "POST", path, confirmationOf(read), anyway, nil); status != http.StatusCreated {
+	var decided, redecided struct {
+		ID string `json:"id"`
+	}
+	if status := c.Call(t, "POST", path, confirmationOf(read), anyway, &decided); status != http.StatusCreated {
 		t.Fatalf("Send anyway → %d, want 201", status)
 	}
-	if status := c.Call(t, "POST", path, confirmationOf(read), anyway, nil); status >= 500 {
-		t.Fatalf("the retried Send anyway → %d, want no server error", status)
+	if status := c.Call(t, "POST", path, confirmationOf(read), anyway, &redecided); status != http.StatusCreated || redecided.ID != decided.ID {
+		t.Fatalf("the retried Send anyway → %d %q, want the recorded 201 %q", status, redecided.ID, decided.ID)
 	}
 	if n := c.count(t, `SELECT count(*) FROM comms_outbound`); n != 2 {
 		t.Fatalf("%d messages queued after the retried Send anyway, want 2", n)
