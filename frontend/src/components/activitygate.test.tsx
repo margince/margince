@@ -32,9 +32,8 @@ describe("useVerbOffered", () => {
     const withheld = kinds.filter(
       (kind) => !offeredTo({ allow: { activity: ["read"] } }, kind),
     );
-    expect(withheld.sort()).toEqual(
-      kinds.filter((kind) => MOMENT_VERB_WRITES[kind]).sort(),
-    );
+    // Both lists filter the same kinds in order, so they compare as they are.
+    expect(withheld).toEqual(kinds.filter((kind) => MOMENT_VERB_WRITES[kind]));
     expect(withheld).toContain("log_activity");
     expect(withheld).not.toContain("open_record");
   });
