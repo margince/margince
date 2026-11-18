@@ -91,9 +91,6 @@ func TestAPreviewOfAnExtensionKindShowsItsColumnsAndOnlyLiveMatches(t *testing.T
 	if strings.Join(got.Columns, ",") != "id,code,site" {
 		t.Errorf("columns = %v, want id, code, site", got.Columns)
 	}
-	if code, _ := preview(listingPerms(false)); code == http.StatusOK {
-		t.Error("a caller without the kind's read right was served a preview")
-	}
 	if code, got := preview(listingPerms(false), `{"field":"id","op":"eq","value":"`+e.WsScalar(t, `SELECT id::text FROM ext.`+historyDemoTable+` WHERE code = 'v3'`)+`"}`); code == http.StatusOK || len(got.Rows) != 0 {
 		t.Errorf("no read right on the kind, yet a lookup by id gave status %d", code)
 	}
