@@ -26,6 +26,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -69,13 +70,26 @@ func TestACardWithAnUnstorableValueIsReportedAndTheRestOfTheFileImports(t *testi
 	e := setupDedupe(t)
 	ctx := e.as()
 
-	results := importCards(ctx, t, e,
-		"BEGIN:VCARD\nFN:First Fine\nEMAIL:first@fine.example\nEND:VCARD\n"+
-			"BEGIN:VCARD\nFN:Second Bad\nEMAIL:not-an-email\nEND:VCARD\n"+
-			"BEGIN:VCARD\nFN:Third Bad\nEMAIL:third@fine.example\nTEL:0301234567\nEND:VCARD\n"+
-			"BEGIN:VCARD\nFN:Bj\xf6rn Fourth\nORG:M\xfcller\nEMAIL:fourth@fine.example\nEND:VCARD\n")
+	entries, err := ParseVCards(strings.NewReader(
+		"BEGIN:VCARD\nFN:First Fine\nEMAIL:first@fine.example\nEND:VCARD\n" +
+			"BEGIN:VCARD\nFN:Second Bad\nEMAIL:not-an-email\nEND:VCARD\n" +
+			"BEGIN:VCARD\nFN:Third Bad\nEMAIL:third@fine.example\nTEL:0301234567\nEND:VCARD\n" +
+			"BEGIN:VCARD\nFN:Bj\xf6rn Fourth\nORG:M\xfcller\nEMAIL:fourth@fine.example\nEND:VCARD\n"))
+	if err != nil {
+		t.Fatalf("parsing: %v", err)
+	}
+	// A card that reaches the store with a country no contact may hold: the
+	// refusal comes from the write, inside the card's own transaction.
+	badCountry := address("Main St 1", "Berlin", "ZZ")
+	entries = append(entries,
+		VCardEntry{FullName: "Fifth Badcountry", PostalAddress: badCountry},
+		VCardEntry{FullName: "Sixth Fine", Emails: []VCardChannel{{Value: "sixth@fine.example", Kind: "work"}}})
+	results, err := e.store.ImportVCards(ctx, entries)
+	if err != nil {
+		t.Fatalf("importing: %v", err)
+	}
 
-	want := []VCardOutcome{VCardCreated, VCardSkipped, VCardSkipped, VCardCreated}
+	want := []VCardOutcome{VCardCreated, VCardSkipped, VCardSkipped, VCardCreated, VCardSkipped, VCardCreated}
 	if len(results) != len(want) {
 		t.Fatalf("results = %+v, want one per card", results)
 	}
@@ -86,11 +100,39 @@ func TestACardWithAnUnstorableValueIsReportedAndTheRestOfTheFileImports(t *testi
 	}
 	if !strings.Contains(results[1].Reason, "email address") || !strings.Contains(results[2].Reason, "phone number") ||
 		strings.Contains(results[1].Reason+results[2].Reason, "not-an-email") {
-		t.Errorf("reasons = %q / %q, want each to name its kind", results[1].Reason, results[2].Reason)
+		t.Errorf("reasons = %q / %q, want each to name its kind and no value", results[1].Reason, results[2].Reason)
 	}
 	if results[3].FullName != "Björn Fourth" {
 		t.Errorf("name = %q, want the Windows-1252 name read", results[3].FullName)
 	}
+	for _, refused := range []string{"Second Bad", "Third Bad", "Fifth Badcountry"} {
+		contacts, audits, events := rowsNamed(t, e, refused)
+		if contacts+audits+events != 0 {
+			t.Errorf("%s left %d contact, %d audit and %d outbox rows, want none", refused, contacts, audits, events)
+		}
+	}
+	if contacts, audits, events := rowsNamed(t, e, "Sixth Fine"); contacts != 1 || audits == 0 || events == 0 {
+		t.Errorf("the card after the refused one left %d contact, %d audit and %d outbox rows", contacts, audits, events)
+	}
+}
+
+func address(line1, city, country string) crmcontracts.Address {
+	return crmcontracts.Address{Line1: &line1, City: &city, Country: &country}
+}
+
+func rowsNamed(t *testing.T, e *dedupeEnv, name string) (contacts, audits, events int) {
+	t.Helper()
+	ctx := e.as()
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT
+		        (SELECT count(*) FROM contact WHERE full_name = $1),
+		        (SELECT count(*) FROM audit_log WHERE after::text LIKE '%' || $1 || '%'),
+		        (SELECT count(*) FROM event_outbox WHERE envelope::text LIKE '%' || $1 || '%')`,
+			name).Scan(&contacts, &audits, &events)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	return contacts, audits, events
 }
 
 func TestImportingACardForAKnownAddressAppliesWhatTheCardStates(t *testing.T) {

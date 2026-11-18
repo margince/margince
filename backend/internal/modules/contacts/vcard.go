@@ -214,6 +214,7 @@ func unfoldVCardLines(r io.Reader) ([]string, error) {
 	// continuations into quadratic work.
 	var folding strings.Builder
 	var open bool
+	var tail byte
 	flush := func() {
 		if open {
 			lines = append(lines, folding.String())
@@ -237,12 +238,26 @@ func unfoldVCardLines(r io.Reader) ([]string, error) {
 		if line == "" {
 			continue
 		}
+		if open && tail == '=' && quotedPrintableLine(folding.String()) {
+			// A soft line break: the "=" ends the physical line and the value
+			// goes on in the next one, with no leading space.
+			joined := folding.String()
+			folding.Reset()
+			folding.WriteString(joined[:len(joined)-1])
+			folding.WriteString(line)
+			tail = line[len(line)-1]
+			continue
+		}
 		if (line[0] == ' ' || line[0] == '\t') && open {
 			folding.WriteString(line[1:])
+			if len(line) > 1 {
+				tail = line[len(line)-1]
+			}
 			continue
 		}
 		flush()
 		folding.WriteString(line)
+		tail = line[len(line)-1]
 		open = true
 	}
 	flush()
@@ -250,6 +265,13 @@ func unfoldVCardLines(r io.Reader) ([]string, error) {
 		return nil, fmt.Errorf("reading the vCard file: %w", err)
 	}
 	return lines, nil
+}
+
+// quotedPrintableLine says whether an unfolded line's parameters declare
+// quoted-printable, the only encoding whose trailing "=" is a soft line break.
+func quotedPrintableLine(line string) bool {
+	colon := indexUnquoted(line, ':')
+	return colon > 0 && strings.Contains(strings.ToUpper(line[:colon]), "QUOTED-PRINTABLE")
 }
 
 // splitVCardLine breaks one unfolded line into its property name, its

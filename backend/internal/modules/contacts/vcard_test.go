@@ -118,6 +118,26 @@ func TestParseVCardsReadsTheCardsExportersWrite(t *testing.T) {
 			want: VCardEntry{FullName: "Björn Example", Company: "Müller & Söhne", Title: "Geschäftsführer"},
 		},
 		{
+			name: "Latin-1 text with an accent before a space is read as Western text",
+			card: "BEGIN:VCARD\nFN:Jos\xe9 da Silva\nEND:VCARD\n",
+			want: VCardEntry{FullName: "José da Silva"},
+		},
+		{
+			name: "Shift-JIS with no charset is unreadable rather than mojibake",
+			card: "BEGIN:VCARD\nFN:Plain Contact\nORG:\x93\x63\x92\x86\x82\xb1\x82\xf1\nEND:VCARD\n",
+			want: VCardEntry{FullName: "Plain Contact", Unreadable: []string{"ORG"}},
+		},
+		{
+			name: "GB2312 with no charset is unreadable rather than mojibake",
+			card: "BEGIN:VCARD\nFN:Plain Contact\nTITLE:\xd6\xd0\xb9\xfa\nEND:VCARD\n",
+			want: VCardEntry{FullName: "Plain Contact", Unreadable: []string{"TITLE"}},
+		},
+		{
+			name: "a quoted-printable soft line break joins the next line",
+			card: "BEGIN:VCARD\r\nFN;CHARSET=ISO-8859-1;ENCODING=QUOTED-PRINTABLE:Jos=E9=\r\n da Silva\r\nEND:VCARD\r\n",
+			want: VCardEntry{FullName: "José da Silva"},
+		},
+		{
 			name: "a value in a charset this reader does not know is reported unreadable",
 			card: "BEGIN:VCARD\nFN:Plain Contact\nTITLE;CHARSET=SHIFT_JIS:\x83\x65\nEND:VCARD\n",
 			want: VCardEntry{FullName: "Plain Contact", Unreadable: []string{"TITLE"}},

@@ -5,10 +5,12 @@ package contacts
 
 import (
 	"strings"
+	"unicode"
 	"unicode/utf8"
 
 	"golang.org/x/text/encoding"
 	"golang.org/x/text/encoding/charmap"
+	"golang.org/x/text/encoding/japanese"
 )
 
 // vcardCharsets are the CHARSET values a card's bytes are read in. vCard 2.1
@@ -37,12 +39,65 @@ func vcardText(params []string, value string) (text string, ok bool) {
 	if utf8.ValidString(value) {
 		return value, true
 	}
-	if vcardUTF8Labels[charset] {
+	if vcardUTF8Labels[charset] && plausiblyLatin(value) {
 		if decoded, err := charmap.Windows1252.NewDecoder().String(value); err == nil && utf8.ValidString(decoded) {
 			return decoded, true
 		}
 	}
 	return "", false
+}
+
+// plausiblyLatin says whether bytes that are not UTF-8 are more likely Western
+// text than Shift-JIS or GB2312. Guessing Windows-1252 for those would store
+// mojibake, so they are left unreadable and the card is reported.
+func plausiblyLatin(value string) bool {
+	for i := 0; i < len(value); i++ {
+		switch value[i] {
+		case 0x81, 0x8D, 0x8F, 0x90, 0x9D:
+			return false
+		}
+	}
+	return !looksShiftJIS(value) && !looksGB2312(value)
+}
+
+func looksShiftJIS(value string) bool {
+	decoded, err := japanese.ShiftJIS.NewDecoder().String(value)
+	if err != nil || strings.ContainsRune(decoded, utf8.RuneError) {
+		return false
+	}
+	han, kana := 0, 0
+	for _, r := range decoded {
+		switch {
+		case unicode.Is(unicode.Han, r):
+			han++
+		case unicode.Is(unicode.Hiragana, r), unicode.Is(unicode.Katakana, r):
+			kana++
+		}
+	}
+	// A single kanji after one accented letter reads as Latin text as often as
+	// Japanese, so it counts only with a kana, a second kanji, or a lead byte
+	// that Western text hardly uses.
+	return kana > 0 || han > 1 || (han > 0 && hasC1Byte(value))
+}
+
+// looksGB2312 finds a double-byte run in GB2312's own range, which Western text
+// seldom produces: two accented letters in a row.
+func looksGB2312(value string) bool {
+	for i := 0; i+1 < len(value); i++ {
+		if value[i] >= 0xA1 && value[i] <= 0xF7 && value[i+1] >= 0xA1 && value[i+1] <= 0xFE {
+			return true
+		}
+	}
+	return false
+}
+
+func hasC1Byte(value string) bool {
+	for i := 0; i < len(value); i++ {
+		if value[i] >= 0x80 && value[i] <= 0x9F {
+			return true
+		}
+	}
+	return false
 }
 
 func vcardCharset(params []string) string {

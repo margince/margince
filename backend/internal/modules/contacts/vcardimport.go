@@ -361,11 +361,9 @@ func contactFromVCard(entry VCardEntry) CreateContactInput {
 // that had changed — and whether a stale value got fixed depended on whether
 // the details arrived by mail or on paper.
 //
-// The card's own date is when it was handed over, which is now: unlike a mail,
-// a .vcf carries no timestamp of its own, and the moment a human chose to
-// import it is the most honest thing available. That also makes a card the
-// newest statement on the record, which is the right answer — somebody is
-// holding it and typing it in.
+// The card's own date is its REV when it states a usable one. Otherwise it is
+// the moment a human chose to import it, which makes the card the newest
+// statement on the record: somebody is holding it and typing it in.
 func (s *Store) fillFromVCard(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, entry VCardEntry) (cardStatement, error) {
 	card, err := readyObservedCard(ctx, tx, entry)
 	if err != nil {

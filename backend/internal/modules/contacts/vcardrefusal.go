@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -32,8 +33,8 @@ func cardRefusal(entry VCardEntry) string {
 }
 
 // valueRefusal states which kind of value on the card was refused and why. It
-// never repeats the value: the reason reaches logs, and an address or number of
-// a person is personal data there.
+// never repeats the value: the reason reaches logs, and an address or number is
+// personal data there.
 func valueRefusal(what string, err error) string {
 	if parse, ok := errors.AsType[*values.ParseError](err); ok {
 		return fmt.Sprintf("%s on this card is not valid: %s", what, parse.Message)
@@ -42,11 +43,24 @@ func valueRefusal(what string, err error) string {
 }
 
 // cardParseRefusal is the reason for a refusal that only the write could see,
-// such as a name or title the record cannot hold.
+// such as a country code or a name the record cannot hold. It covers the
+// errors a module declares as bad input; any other error is an infrastructure
+// failure and still aborts the file.
 func cardParseRefusal(err error) (string, bool) {
-	parse, ok := errors.AsType[*values.ParseError](err)
-	if !ok {
-		return "", false
+	if parse, ok := errors.AsType[*values.ParseError](err); ok {
+		return fmt.Sprintf("the %s is not valid: %s", parse.Field, parse.Message), true
 	}
-	return fmt.Sprintf("the %s is not valid: %s", parse.Field, parse.Message), true
+	if fault, ok := errors.AsType[apperrors.FieldFault](err); ok {
+		field, _, message := fault.FieldFault()
+		return fmt.Sprintf("the %s is not valid: %s", field, message), true
+	}
+	if faults, ok := errors.AsType[apperrors.FieldFaults](err); ok {
+		if first := faults.FieldFaults(); len(first) > 0 {
+			return fmt.Sprintf("the %s is not valid: %s", first[0].Field, first[0].Message), true
+		}
+	}
+	if errors.Is(err, apperrors.ErrInvalidArgument) {
+		return "a value on this card is not valid", true
+	}
+	return "", false
 }
