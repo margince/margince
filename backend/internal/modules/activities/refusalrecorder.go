@@ -12,6 +12,8 @@ package activities
 import (
 	"context"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -36,6 +38,30 @@ import (
 // looked like before holdforreview.go existed.
 type RefusalRecorder interface {
 	RecordPendingReview(ctx context.Context, err error, intentID ids.UUID) error
+}
+
+// HoldRefusalRecorder opens the review a refusal owes INSIDE the transaction
+// that holds an existing scheduled row.
+//
+// The scheduled fire needs this moment, not RefusalRecorder's. Its hold and its
+// review name one row version, and a review written after the hold committed
+// is lost to a crash in between: the retry finds the row held and never opens
+// it. Neither danger RefusalRecorder avoids applies here, because the hold
+// transaction is not the one that refused and the review rides its connection.
+//
+// A refusal that carries no review answers nil, and the hold stands alone.
+type HoldRefusalRecorder interface {
+	RecordReviewForHoldTx(ctx context.Context, tx pgx.Tx, refusal error, intentID ids.UUID) error
+}
+
+// recordReviewForHoldTx offers a held scheduled row's refusal to a stager that
+// keeps records. A stager that keeps none holds without a review.
+func recordReviewForHoldTx(ctx context.Context, tx pgx.Tx, stager DeliveryStager, refusal error, intentID ids.UUID) error {
+	recorder, ok := stager.(HoldRefusalRecorder)
+	if !ok {
+		return nil
+	}
+	return recorder.RecordReviewForHoldTx(ctx, tx, refusal, intentID)
 }
 
 // recordRefusal gives a stager that keeps records the chance to keep this one,

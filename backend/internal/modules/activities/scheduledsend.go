@@ -179,6 +179,9 @@ type ScheduledSend struct {
 	// review has since been answered, which is a row a rep can only cancel or
 	// reschedule now.
 	ReviewID ids.UUID
+	// ReviewActions is what the caller may do about that review; empty when
+	// they may only read it.
+	ReviewActions []string
 	// Links are the records an account-started message files itself under,
 	// frozen at composition. Empty on a reply, whose records come from its
 	// anchor; the ones a reply adds beyond those travel in also_links and are

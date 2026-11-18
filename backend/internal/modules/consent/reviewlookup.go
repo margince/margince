@@ -7,6 +7,7 @@ package consent
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -22,7 +23,8 @@ import (
 const fieldReviewID = "review_id"
 
 // LiveReviewsForIntents answers which review, if any, stands over each of these
-// held messages. It implements activities.ReviewLookup; compose binds it.
+// held messages, with its refusals so compose can say what the caller may do
+// about it. Compose binds it to activities.ReviewLookup.
 //
 // The grant is activity:read, the check the scheduled-send list makes before it
 // has any ids to ask about. The review's own grant would refuse the rep whose
@@ -34,20 +36,20 @@ const fieldReviewID = "review_id"
 // ReviewForReader hides that fact with a 404.
 func (s *Store) LiveReviewsForIntents(
 	ctx context.Context, intents []ids.UUID,
-) (map[ids.UUID]ids.UUID, error) {
+) (map[ids.UUID]Review, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, err
 	}
 	// A principal with no seat initiated no review, so the answer is empty
 	// without sending a zero uuid into the query.
 	seat := initiatingSeat(ctx)
-	out := make(map[ids.UUID]ids.UUID, len(intents))
+	out := make(map[ids.UUID]Review, len(intents))
 	if len(intents) == 0 || seat.IsZero() {
 		return out, nil
 	}
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
-			SELECT delivery_intent_id, id
+			SELECT delivery_intent_id, id, refusals
 			  FROM communication_review
 			 WHERE delivery_intent_id = ANY($1::uuid[])
 			   AND resolved_at IS NULL
@@ -57,11 +59,15 @@ func (s *Store) LiveReviewsForIntents(
 		}
 		defer rows.Close()
 		for rows.Next() {
-			var intent, review ids.UUID
-			if err := rows.Scan(&intent, &review); err != nil {
+			review := Review{InitiatedBy: seat}
+			var refusals []byte
+			if err := rows.Scan(&review.IntentID, &review.ID, &refusals); err != nil {
 				return err
 			}
-			out[intent] = review
+			if err := json.Unmarshal(refusals, &review.Refusals); err != nil {
+				return err
+			}
+			out[review.IntentID] = review
 		}
 		return rows.Err()
 	})

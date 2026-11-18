@@ -153,8 +153,8 @@ func (s *Store) stampReviews(ctx context.Context, rows []ScheduledSend) {
 		return
 	}
 	for i := range rows {
-		if id, ok := reviews[rows[i].ID]; ok {
-			rows[i].ReviewID = id
+		if review, ok := reviews[rows[i].ID]; ok {
+			rows[i].ReviewID, rows[i].ReviewActions = review.ID, review.Actions
 		}
 	}
 }
@@ -308,21 +308,11 @@ func (s *Store) RescheduleInTx(ctx context.Context, tx pgx.Tx, id ids.UUID, sche
 		if err := s.resolveHeld(ctx, tx, id); err != nil {
 			return err
 		}
-		// THE REVIEW STAYS LIVE, and that is a decision this slice reversed
-		// after tracing where a rescheduled message actually goes.
-		//
-		// Closing it here reads right — nothing is sent now, and the row is
-		// 'scheduled' again — and it loses the refusal. The fire path holds a
-		// refused message (scheduledsendfire.go, holdInTx) and opens NO review:
-		// only the staging path does that, through RecordPendingReview, and a
-		// timer-driven refire never reaches it. So a message closed here and
-		// refused again at its new moment would sit held with nothing routable
-		// in front of anybody — the exact silence the review exists to end.
-		//
-		// Left live it stays honest instead: the decision really is still
-		// outstanding, the message really is still going out, and if it is
-		// refused again OpenReviewTx upserts on the live-intent index and
-		// refreshes this row's refusals rather than opening a rival.
+		// THE REVIEW STAYS LIVE. The decision is still outstanding and the
+		// message is still going out. A decision recorded on it before the new
+		// moment is spent by the fire, a fire the engine allows closes it, and a
+		// fire refused again upserts it on the live-intent index rather than
+		// opening a rival (scheduledsendfire.go).
 		return timer.ScheduleTx(ctx, tx, id, keptAt)
 	}
 }

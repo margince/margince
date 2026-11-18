@@ -40,7 +40,14 @@ import (
 // id — which reads correctly as "no review stands over this", the same answer
 // every unrefused message gives.
 type ReviewLookup interface {
-	LiveReviewsForIntents(ctx context.Context, intents []ids.UUID) (map[ids.UUID]ids.UUID, error)
+	LiveReviewsForIntents(ctx context.Context, intents []ids.UUID) (map[ids.UUID]ReviewLink, error)
+}
+
+// ReviewLink is the review standing over one held message, and what the
+// caller may do about it in the words a refusal's available_actions uses.
+type ReviewLink struct {
+	ID      ids.UUID
+	Actions []string
 }
 
 // WithReviewLookup wires the consent-side read a held row uses to find the work

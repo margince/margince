@@ -92,6 +92,11 @@ func (s *Store) ResumeHeldSend(
 		if err := s.releaseHeldInTx(ctx, tx, id, ids.UUID(sent.Id)); err != nil {
 			return err
 		}
+		// A fire-time hold raised an inbox card; the message has gone, so the
+		// card has nothing left to ask.
+		if err := s.resolveHeld(ctx, tx, id); err != nil {
+			return err
+		}
 		// AND THE REVIEW, because this message has now gone.
 		//
 		// THE HOLE THIS CLOSES. Consuming an instruction resolves the review it
@@ -134,11 +139,12 @@ func (s *Store) readHeldForResume(ctx context.Context, id ids.UUID) (claimedSend
 // claimHeldForResume locks one held row, or reports that there is nothing to
 // resume.
 //
-// SCOPED TO send_refused, not to every hold. The other hold reasons stop a
-// message that was already a promise to send at a moment — one that missed its
-// window, or whose sender went inactive — and those resume through the
-// scheduled path by being re-armed, not by being fired now. A refusal hold is
-// the only one whose resolution is "send this, now, because somebody decided".
+// SCOPED TO THE ENGINE'S REFUSALS, not to every hold. The other hold reasons
+// stop a message that was already a promise to send at a moment — one that
+// missed its window, or whose sender went inactive — and those resume through
+// the scheduled path by being re-armed, not by being fired now. A refusal hold
+// is the only one whose resolution is "send this, now, because somebody
+// decided".
 func (s *Store) claimHeldForResume(ctx context.Context, tx pgx.Tx, id ids.UUID) (claimedSend, bool, error) {
 	return s.heldRow(ctx, tx, id, " FOR UPDATE")
 }
@@ -147,6 +153,10 @@ func (s *Store) claimHeldForResume(ctx context.Context, tx pgx.Tx, id ids.UUID) 
 func (s *Store) readHeldRow(ctx context.Context, tx pgx.Tx, id ids.UUID) (claimedSend, bool, error) {
 	return s.heldRow(ctx, tx, id, "")
 }
+
+// reviewableHoldReasons are the holds a review can stand over: the refusal an
+// immediate send froze, and the consent refusal a scheduled fire held.
+var reviewableHoldReasons = []string{HeldSendRefused, HeldConsentWithdrawn}
 
 // heldRow is the one query both spellings run, so the claim and the read cannot
 // come to disagree about which rows are resumable.
@@ -157,7 +167,7 @@ func (s *Store) heldRow(ctx context.Context, tx pgx.Tx, id ids.UUID, lock string
 		       origin_links, also_links, payload, payload_version, version,
 		       scheduled_by, nullif(payload->>'pending_draft_id', '')::uuid, created_at
 		  FROM scheduled_send
-		 WHERE id = $1 AND status = 'held' AND held_reason = $2`+lock, id, HeldSendRefused).
+		 WHERE id = $1 AND status = 'held' AND held_reason = ANY($2)`+lock, id, reviewableHoldReasons).
 		Scan(&c.ScheduledAt, &c.OriginKind, &c.Anchor,
 			&c.OriginLinks, &c.AlsoLinks, &c.Payload, &c.Version, &c.RowVersion, &c.ScheduledBy, &c.PendingDraftID, &c.CreatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {

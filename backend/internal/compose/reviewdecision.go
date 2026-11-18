@@ -67,9 +67,19 @@ type reviewLookup struct {
 	pool *pgxpool.Pool
 }
 
-// LiveReviewsForIntents implements activities.ReviewLookup.
+// LiveReviewsForIntents implements activities.ReviewLookup. The actions come
+// from actionsForRefusal, the rule a refusal's own answer uses, so a held row
+// offers exactly the move the refusal offered when the send was pressed.
 func (l reviewLookup) LiveReviewsForIntents(
 	ctx context.Context, intents []ids.UUID,
-) (map[ids.UUID]ids.UUID, error) {
-	return consent.NewStore(InstallationDB(l.pool)).LiveReviewsForIntents(ctx, intents)
+) (map[ids.UUID]activities.ReviewLink, error) {
+	reviews, err := consent.NewStore(InstallationDB(l.pool)).LiveReviewsForIntents(ctx, intents)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[ids.UUID]activities.ReviewLink, len(reviews))
+	for intent, review := range reviews {
+		out[intent] = activities.ReviewLink{ID: review.ID, Actions: actionsForRefusal(ctx, review)}
+	}
+	return out, nil
 }

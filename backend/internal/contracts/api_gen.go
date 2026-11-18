@@ -64716,6 +64716,11 @@ type ScheduledSend struct {
 	// sender reads this row.
 	OperatorReason *string `json:"operator_reason,omitempty"`
 
+	// ReviewActions What this caller may do about the review in `review_id`, in the words a refusal's
+	// `available_actions` uses. Absent or empty when they may only read it.
+	// `direct_send` sends the held message now on a recorded reason.
+	ReviewActions *[]string `json:"review_actions,omitempty"`
+
 	// ReviewId The review this message's refusal opened, when one stands. Null on every message
 	// nobody refused, and on a held row whose review has since been answered.
 	//

@@ -49,6 +49,7 @@ type commsStager struct {
 var (
 	_ activities.DeliveryStager        = commsStager{}
 	_ activities.ChannelDeliveryStager = commsStager{}
+	_ activities.HoldRefusalRecorder   = commsStager{}
 )
 
 // DeliveryMachinery is the ONE delivery path in both the shapes a message can be
@@ -218,6 +219,19 @@ func (s commsStager) RecordPendingReview(ctx context.Context, err error, intentI
 		return pending.cause
 	}
 	return s.authority.Refused(ctx, review, pending.set, pending.cause, actionsForRefusal(ctx, review))
+}
+
+// RecordReviewForHoldTx opens the same review RecordPendingReview does, on the
+// transaction that holds a scheduled row. Unlike it, a failure to record is
+// returned: the hold rolls back with it and the fire retries, so a held row is
+// never left without the review its refusal owes.
+func (s commsStager) RecordReviewForHoldTx(ctx context.Context, tx pgx.Tx, refusal error, intentID ids.UUID) error {
+	var pending *pendingReviewError
+	if !errors.As(refusal, &pending) || s.authority == nil {
+		return nil
+	}
+	_, err := consent.OpenReviewTx(ctx, tx, pending.set, intentID)
+	return err
 }
 
 // StageChannelTx is the same staging for a channel reply: the channel-shaped row
