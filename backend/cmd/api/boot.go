@@ -141,9 +141,6 @@ func fileReleaseHandbook(ctx context.Context, pool *pgxpool.Pool, logger *slog.L
 // Returns the bootstrap roots the later phases seed from, and the
 // license watcher whose posture baseComposeOptions reports.
 func bindInstallation(ctx context.Context, cfg apiConfig, pool *pgxpool.Pool, vault keyvault.Vault, logger *slog.Logger) (deployconfig.Bootstrap, *licensecheck.Watcher, error) {
-	if err := compose.BindExtensionObjectsFromConfig(ctx, cfg.settings); err != nil {
-		return deployconfig.Bootstrap{}, nil, err
-	}
 	files := cfg.settings.Files()
 	bootstrap, err := deployconfig.LoadBootstrapFiles(files.Base, files.ConfigFile)
 	if err != nil {
