@@ -27995,7 +27995,7 @@ components:
         kind: {type: string, enum: [extra, never]}
         confirm:
           type: boolean
-          description: 'Set after the person answered the 409 `domain_needs_confirmation` question with yes. Without it the same request is refused again.'
+          description: 'Set after the user answered the 409 `domain_needs_confirmation` question with yes. Without it the same request is refused again.'
     ConsumerMailDomainListResponse:
       type: object
       required: [data]
@@ -29185,7 +29185,7 @@ components:
         value: {type: string, maxLength: 320, description: 'An email address, or a bare domain.'}
         confirm:
           type: boolean
-          description: 'Set after the person answered the 409 `domain_needs_confirmation` question with yes. Without it the same request is refused again.'
+          description: 'Set after the user answered the 409 `domain_needs_confirmation` question with yes. Without it the same request is refused again.'
     WorkspaceEmailDomainListResponse:
       type: object
       required: [data]

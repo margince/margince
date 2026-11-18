@@ -29465,7 +29465,7 @@ export interface components {
             domain: string;
             /** @enum {string} */
             kind: "extra" | "never";
-            /** @description Set after the person answered the 409 `domain_needs_confirmation` question with yes. Without it the same request is refused again. */
+            /** @description Set after the user answered the 409 `domain_needs_confirmation` question with yes. Without it the same request is refused again. */
             confirm?: boolean;
         };
         ConsumerMailDomainListResponse: {
@@ -30713,7 +30713,7 @@ export interface components {
             kind: components["schemas"]["CaptureOwnerIdentityKind"];
             /** @description An email address, or a bare domain. */
             value: string;
-            /** @description Set after the person answered the 409 `domain_needs_confirmation` question with yes. Without it the same request is refused again. */
+            /** @description Set after the user answered the 409 `domain_needs_confirmation` question with yes. Without it the same request is refused again. */
             confirm?: boolean;
         };
         WorkspaceEmailDomainListResponse: {

@@ -147,6 +147,7 @@ func TestConsumerMailDomainsAnswerWhatIsAlreadyOnFile(t *testing.T) {
 
 	if status := e.Call(t, "POST", "/v1/companies", map[string]any{
 		"display_name": "Demo GmbH",
+		"source":       "manual",
 		"domains":      []map[string]any{{"domain": "demo-customer.test", "is_primary": true}},
 	}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("seeding the customer → %d, want 201", status)
@@ -178,6 +179,7 @@ func TestConsumerMailDomainIsRefusedWhereItNamesACompanyOrASeat(t *testing.T) {
 	var refusal domainProblemDTO
 	if status := e.Call(t, "POST", "/v1/companies", map[string]any{
 		"display_name": "Webmail GmbH",
+		"source":       "manual",
 		"domains":      []map[string]any{{"domain": "gmail.com", "is_primary": true}},
 	}, nil, &refusal); status != http.StatusUnprocessableEntity {
 		t.Fatalf("a company on gmail.com → %d, want 422", status)

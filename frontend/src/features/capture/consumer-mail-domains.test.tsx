@@ -230,7 +230,7 @@ describe("ConsumerMailDomainsCard", () => {
       return user;
     }
 
-    it("names the company and resends with confirm once the person says yes", async () => {
+    it("names the company and resends with confirm once the user says yes", async () => {
       const posts = addingWith((body) =>
         typeof body === "object" && body !== null && "confirm" in body
           ? json({ id: "cmd-2", domain: "demo.test", kind: "extra" }, 201)

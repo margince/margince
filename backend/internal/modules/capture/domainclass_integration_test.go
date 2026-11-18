@@ -84,8 +84,15 @@ func seedDemoCustomer(ctx context.Context, t *testing.T, db *database.DB) {
 func wantRefusal(t *testing.T, err error, status int, code string) *httperr.DetailedError {
 	t.Helper()
 	var refusal *httperr.DetailedError
-	if !errors.As(err, &refusal) || refusal.Status != status || refusal.Code != code {
+	if !errors.As(err, &refusal) || refusal.Status != status {
 		t.Fatalf("want %d %s, got %v", status, code, err)
+	}
+	got := refusal.Code
+	if len(refusal.Fields) == 1 {
+		got = refusal.Fields[0].Code
+	}
+	if got != code {
+		t.Fatalf("want %d %s, got code %s", status, code, got)
 	}
 	return refusal
 }

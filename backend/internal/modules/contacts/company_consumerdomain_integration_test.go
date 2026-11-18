@@ -5,7 +5,7 @@
 
 package contacts
 
-// A consumer-mail domain never names a company, so a typed claim of one on a
+// A consumer-mail domain never names a company. A typed claim of one on a
 // company's domain list is refused, on create and on edit alike.
 
 import (

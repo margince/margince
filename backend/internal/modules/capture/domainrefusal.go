@@ -62,8 +62,8 @@ func checkConsumerListEntry(ctx context.Context, tx pgx.Tx, domain, kind string,
 }
 
 // checkIdentityClaim refuses a claim that would switch off capture for a whole
-// consumer-mail domain, and asks before one that covers a contact or a company
-// already on file.
+// consumer-mail domain. It asks first when the claim covers a contact or a
+// company already on file.
 func checkIdentityClaim(ctx context.Context, tx pgx.Tx, kind, value string, confirmed bool) error {
 	var class DomainClass
 	var err error

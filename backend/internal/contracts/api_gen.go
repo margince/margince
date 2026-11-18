@@ -33248,7 +33248,7 @@ type ActivityVoiceContactRole string
 
 // AddConsumerMailDomainRequest defines model for AddConsumerMailDomainRequest.
 type AddConsumerMailDomainRequest struct {
-	// Confirm Set after the person answered the 409 `domain_needs_confirmation` question with yes. Without it the same request is refused again.
+	// Confirm Set after the user answered the 409 `domain_needs_confirmation` question with yes. Without it the same request is refused again.
 	Confirm *bool `json:"confirm,omitempty"`
 
 	// Domain A mail domain; normalized to its registrable form before it is stored.
@@ -46065,7 +46065,7 @@ type CreateCaptureExclusionRequest struct {
 
 // CreateCaptureOwnerIdentityRequest defines model for CreateCaptureOwnerIdentityRequest.
 type CreateCaptureOwnerIdentityRequest struct {
-	// Confirm Set after the person answered the 409 `domain_needs_confirmation` question with yes. Without it the same request is refused again.
+	// Confirm Set after the user answered the 409 `domain_needs_confirmation` question with yes. Without it the same request is refused again.
 	Confirm *bool `json:"confirm,omitempty"`
 
 	// Kind What the identity names. Its own schema rather than the exclusion's, which the two shared while they happened to hold the same two values: an exclusion can now also name a CONTAINER, and a container is not something a mailbox owner can BE.

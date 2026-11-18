@@ -48,8 +48,8 @@ type DomainClass struct {
 }
 
 // ClassifyDomainTx is the one answer to what a domain is to this workspace.
-// The own-domain list, the consumer-mail list, the other-address list and a
-// company's domain list all ask it, so none of them judges a domain its own way.
+// The own-domain list, the consumer-mail list and the other-address list ask
+// it. None of them judges a domain its own way.
 func ClassifyDomainTx(ctx context.Context, tx pgx.Tx, domain string) (DomainClass, error) {
 	domain = owndomain.Fold(domain)
 	if domain == "" {
@@ -109,6 +109,10 @@ func companyOfDomainTx(ctx context.Context, tx pgx.Tx, domain string) (DomainCla
 	}
 	if err != nil {
 		return DomainClass{}, fmt.Errorf("capture: looking up a company domain: %w", err)
+	}
+	// A caller who may not read companies still gets the question, without the name.
+	if !auth.ReadGranted(ctx, "company") {
+		return DomainClass{Role: DomainRoleCompany}, nil
 	}
 	visible, err := auth.VisibleTo(ctx, tx, "company", id)
 	if err != nil {

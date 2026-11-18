@@ -166,14 +166,9 @@ func (s *Store) updateCompanyInTx(
 		return crmcontracts.Company{}, err
 	}
 
-	by, err := stageCompanyReplaceSets(ctx, tx, id, current, in, p)
+	by, err := s.stageCompanyReplaceSets(ctx, tx, id, current, in, p)
 	if err != nil {
 		return crmcontracts.Company{}, err
-	}
-	if in.Domains != nil {
-		if err := s.refuseConsumerCompanyDomains(ctx, tx, id, *in.Domains); err != nil {
-			return crmcontracts.Company{}, err
-		}
 	}
 	if p.Empty() {
 		if err := storekit.EnsureIfMatch(ctx, tx, "company", id.UUID, in.IfVersion); err != nil {
@@ -347,7 +342,7 @@ func stampEditedDescriptionAuthor(ctx context.Context, tx pgx.Tx, id ids.Company
 // the audit row records the transition — the same shape as UpdateContact/social.
 // It answers with the captured-by principal those reconciles stamp, empty when
 // the edit touches neither set.
-func stageCompanyReplaceSets(ctx context.Context, tx pgx.Tx, id ids.CompanyID,
+func (s *Store) stageCompanyReplaceSets(ctx context.Context, tx pgx.Tx, id ids.CompanyID,
 	current crmcontracts.Company, in UpdateCompanyInput, p *storekit.Patch,
 ) (string, error) {
 	if in.RelationshipTypes == nil && in.ExtensionRelationshipTypes == nil && in.Domains == nil {
@@ -383,6 +378,9 @@ func stageCompanyReplaceSets(ctx context.Context, tx pgx.Tx, id ids.CompanyID,
 		// reconcile, and audit-after all see one row per host.
 		*in.Domains = dedupeDomains(*in.Domains)
 		if err := ensureCompanyDomainsUnclaimedExcept(ctx, tx, id, *in.Domains); err != nil {
+			return "", err
+		}
+		if err := s.refuseConsumerCompanyDomains(ctx, tx, id, *in.Domains); err != nil {
 			return "", err
 		}
 		// And elect the primary HERE, for the same reason and on the same

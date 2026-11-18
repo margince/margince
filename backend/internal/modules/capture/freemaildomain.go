@@ -152,10 +152,9 @@ func (s *FreemailDomainStore) Add(ctx context.Context, domain, kind string) (Fre
 	return s.AddConfirmed(ctx, domain, kind, false)
 }
 
-// AddConfirmed is Add for a caller that may carry the answer to the question
-// an `extra` entry for a company's domain raises. Without it that entry is
-// refused with a 409 naming the company; the own domain and an entry the shipped
-// list already holds are refused either way.
+// AddConfirmed is Add for a caller that may carry the answer to a question.
+// An `extra` entry for a company's domain needs it, or is refused with a 409
+// naming the company. The own domain and a shipped entry are refused either way.
 func (s *FreemailDomainStore) AddConfirmed(ctx context.Context, domain, kind string, confirmed bool) (FreemailDomain, error) {
 	// Which grant this write demands depends on what it turns out to be — a
 	// fresh `extra` contribution is create (every seat), everything else is
