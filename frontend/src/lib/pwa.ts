@@ -141,8 +141,8 @@ function getSnapshot(): InstallState {
 }
 
 /**
- * Keeps the browser's install offer for the app to present later. Called before
- * the first render, because the browser may make the offer before React mounts.
+ * Keeps the browser's install offer for the app to present later. Called from the
+ * entry script, because the browser may make the offer before main.tsx has loaded.
  */
 export function listenForInstall(): () => void {
   const listening = new AbortController();
@@ -176,15 +176,16 @@ export function registerServiceWorker(): void {
   if (!import.meta.env.PROD || !("serviceWorker" in navigator)) {
     return;
   }
-  window.addEventListener(
-    "load",
-    () => {
-      navigator.serviceWorker
-        .register(SERVICE_WORKER_URL, { scope: "/", updateViaCache: "none" })
-        .catch((reason: unknown) => {
-          console.warn("service worker registration failed", reason);
-        });
-    },
-    { once: true },
-  );
+  const register = () => {
+    navigator.serviceWorker
+      .register(SERVICE_WORKER_URL, { scope: "/", updateViaCache: "none" })
+      .catch((reason: unknown) => {
+        console.warn("service worker registration failed", reason);
+      });
+  };
+  if (document.readyState === "complete") {
+    register();
+    return;
+  }
+  window.addEventListener("load", register, { once: true });
 }

@@ -11,7 +11,7 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 import { LOCALES } from "../src/i18n";
 import { SERVICE_WORKER_URL } from "../src/lib/pwa";
 import spaConfig from "../vite.config";
-import { pwa, workerCacheName } from "./vite-pwa";
+import { apiNavigationPaths, pwa, workerCacheName } from "./vite-pwa";
 
 const ORIGIN = "https://margince.test";
 const RELEASE = "2026.9.1";
@@ -194,15 +194,28 @@ describe("the build", () => {
     expect(site.has("offline.html")).toBe(false);
   });
 
-  it("names the worker's cache for the release and for exactly what it holds", () => {
+  it("names the worker's cache for the release and for exactly what it holds", async () => {
     expect(settingsOf(emitted("sw.js")).cacheName).toBe(
       workerCacheName({
         release: RELEASE,
         page: emitted(pageFile()),
         workerSource: readFileSync(WORKER_SOURCE, "utf8"),
-        passThrough: Object.keys(spaConfig.server?.proxy ?? {}),
+        passThrough: await apiNavigationPaths(spaConfig.server?.proxy ?? {}),
       }),
     );
+  });
+
+  it("passes through the proxy keys the api answers, by whole segment, and none a navigation gets the app at", async () => {
+    const toApp = { target: "http://api", bypass: () => "/index.html" };
+    const toApi = { target: "http://api", bypass: () => undefined };
+    expect(
+      await apiNavigationPaths({
+        "/v1": "http://api",
+        "/files/": toApi,
+        "/r/": toApp,
+        "/book": toApp,
+      }),
+    ).toEqual(["/v1", "/files"]);
   });
 
   it("builds the same worker twice from the same tree", async () => {
@@ -391,6 +404,18 @@ describe("the service worker", () => {
       "/mcp-apps/create-followups.html",
       "/v1beta",
       "/setup-guide",
+    ]) {
+      const answer = await worker.request(url, "navigate");
+      expect(await answer?.text(), url).toBe(page());
+    }
+  });
+
+  it("gives the offline page to a failed navigation to a record card or a booking page, which the web tier serves as the app", async () => {
+    const worker = await installed();
+    worker.scope.fetch.mockRejectedValue(new TypeError("Failed to fetch"));
+    for (const url of [
+      "/r/deals/0b6f3c1e-5d2a-4c8e-9f10-2a3b4c5d6e7f",
+      "/book/anna-meyer",
     ]) {
       const answer = await worker.request(url, "navigate");
       expect(await answer?.text(), url).toBe(page());

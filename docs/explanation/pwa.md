@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/lib/pwa.ts frontend/src/offline/serviceworker.js frontend/src/offline/page.ts frontend/scripts/vite-pwa.ts frontend/public/manifest.webmanifest frontend/src/lib/connectivity.ts frontend/src/lib/installhint.ts frontend/src/app/installhint.tsx -->
+<!-- describes: frontend/src/lib/pwa.ts frontend/src/bootstrap.ts frontend/src/offline/serviceworker.js frontend/src/offline/page.ts frontend/scripts/vite-pwa.ts frontend/public/manifest.webmanifest frontend/src/lib/connectivity.ts frontend/src/lib/installhint.ts frontend/src/app/installhint.tsx -->
 # The app you can install: manifest, service worker, offline page
 
 Margince can be installed from the browser as an app. It gets its own window, its own icon and its
@@ -10,7 +10,7 @@ what the parts are, what the service worker may do, and why its job is so small.
 
 | Part | Where | What it does |
 |---|---|---|
-| Manifest | `frontend/public/manifest.webmanifest` | names the app, its colors, `start_url` and `display: standalone`, which makes it something you can install |
+| Manifest | `frontend/public/manifest.webmanifest` | names the app, its colors, `start_url` and `display: standalone`, which makes it something you can install; its `shortcuts` are the links the launcher offers beside the app (Home, Worklist, Deals) |
 | Icons | `frontend/public/`: `icon.svg`, `favicon.ico`, `favicon-96x96.png`, `apple-touch-icon.png`, `web-app-manifest-192x192.png` and `-512x512.png` | the icons the browser tab, iOS and the manifest name; `frontend/src/app/sharepreview.test.ts` holds each one to what it declares |
 | Service worker | source `frontend/src/offline/serviceworker.js`, written out as `/sw.js` by `frontend/scripts/vite-pwa.ts` | answers a page request the network could not complete with the offline page, and the offline page's own script; nothing else |
 | Offline page | `frontend/src/offline/page.ts` (the HTML), `present.ts` (block, retry, load again when the network is back), `entry.ts`, `offline.css`; written out as `/assets/offline-<hash>.html` | tells the reader the device cannot reach Margince, in their language, with a retry |
@@ -39,11 +39,15 @@ from the cache can pin no build. When the network works, the app always comes fr
 
 Page requests into what the API owns on this origin are never answered by the worker, not even
 offline. So an OAuth consent, an MCP `/.well-known` document or a webhook URL opened in a tab fails
-the way the browser fails it. `vite-pwa.ts` reads the list from the keys of the dev server's proxy
-in `frontend/vite.config.ts` (`/v1`, `/setup`, `/oauth`, `/mcp`, `/.well-known`, `/webhooks`,
-`/healthz`, `/readyz`, `/metrics`). It matches them by whole path part: the way the served app
-routes them, rather than the way the dev server does. `/mcp` and `/mcp/…` go to the network as they
-are. `/mcp-apps/…` is shipped files, so a failed page request there gets the offline page.
+the way the browser fails it. `apiNavigationPaths` in `vite-pwa.ts` reads the list from the keys of
+the dev server's proxy in `frontend/vite.config.ts`, and the built `sw.js` carries it. The worker
+matches the list by whole path part: the way the served app routes them, rather than the way the
+dev server does. `/mcp` and `/mcp/…` go to the network as they are.
+
+Some paths a page request opens in the app. A proxy key whose `bypass` hands a page request to the
+app stays out of the list. These are `/r/` for a record card and `/book` for a booking page. The
+nginx server answers a page request at both with the app as well, so a failed one there gets the
+offline page. The same holds for `/mcp-apps/…`, which is shipped files.
 
 The worker does **not** use `navigation preload`. With it on, the browser requests every page in
 scope before the worker decides, including the ones the worker then leaves alone. A page request
@@ -97,8 +101,8 @@ it: `frontend/scripts/vite-pwa.test.ts`.
 
 The page shows when the device cannot reach Margince at all. It carries one block per language the
 app ships, with the text from the `offline.*` keys of the catalogs. Its CSS is part of the page,
-with `tokens.css` and `base.css` built in. So its colors, type and button are the product's own in
-both themes.
+with `tokens.css` and `base.css` built in. So its colors and button are the product's own in both
+themes. It carries no font file, so its text shows in the device's own font.
 
 Its script is the one thing it loads. The site's content security policy allows no script written
 inside the page, so the script is a file of its own under `/assets/`. The worker answers it from the
@@ -119,16 +123,18 @@ normal link that loads the page again without the route.
 ## Sign-up and the install offer
 
 `registerServiceWorker()` in `frontend/src/lib/pwa.ts` signs up `/sw.js` with scope `/`. It does so
-only in a production build, and only where the browser has service workers. It also waits for the
-window's `load` event, so installing the worker never slows the app's first load. A failed sign-up
-is logged with `console.warn` and changes nothing else.
+only in a production build, and only where the browser has service workers. It signs up once the
+window's `load` event has fired, so installing the worker never slows the app's first load. It does
+so at once when `load` has already fired. A failed sign-up is logged with `console.warn` and
+changes nothing else.
 
 `frontend/census/rules/serviceworker-registrar.census.ts` fails any shipped module but `pwa.ts` that names
 `navigator.serviceWorker` in code. It reads every kind of script under `frontend/src` or the
 frontend of an extension. So a second module that signs up a worker cannot come in without notice.
 
-`listenForInstall()` runs from `main.tsx` before React shows the first screen, because the browser
-can make its offer before React starts. It returns the function that undoes it. `useInstallState()`
+`frontend/src/bootstrap.ts`, the entry script, calls `listenForInstall()` and
+`registerServiceWorker()`. `main.tsx` loads only after the window's `load` event, and Chrome can
+make its offer before then. `listenForInstall()` returns the function that undoes it. `useInstallState()`
 answers one of:
 
 | State | Meaning |
@@ -259,7 +265,6 @@ None of these ships today, and each needs its own decision before it ships:
   worker change needed while the app is open.
 - **Share target.** A `share_target` entry in the manifest, so a shared link or file can land in
   capture.
-- **Links for the launcher.** `shortcuts` in the manifest, for the list of links the launcher shows.
 - **Install images.** `screenshots` in the manifest, for the fuller install window.
 - **Offline data.** Reading records without a connection. This is the one that would change the rule
   above. It needs a design for data that is out of date and for writes made offline, before any

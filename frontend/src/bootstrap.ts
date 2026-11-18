@@ -3,6 +3,7 @@ import { registerStartupSession } from "./app/startup-session";
 import { loadEssentialLocale, loadLocale } from "./i18n/catalogs";
 import { preferredLocale } from "./i18n/locale";
 import { bootsOnEssentialCopy } from "./lib/essentialscreens";
+import { listenForInstall, registerServiceWorker } from "./lib/pwa";
 import { restoreReturnRoute } from "./lib/returnroute";
 import { parseHash } from "./lib/router";
 import { readPreparedAnalyticsSession } from "./lib/session.read";
@@ -10,6 +11,9 @@ import { reloadOnStaleBuild } from "./lib/stalebuild";
 
 reloadOnStaleBuild();
 restoreReturnRoute();
+// main.tsx runs after the window's load event and Chrome's install offer, so this script catches both.
+listenForInstall();
+registerServiceWorker();
 if (parseHash(location.hash).screen === "analytics") {
   void import("./App.analytics").catch((error: unknown) =>
     console.error("Analytics code could not be loaded", error),

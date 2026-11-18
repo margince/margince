@@ -251,7 +251,12 @@ describe("registering the service worker", () => {
     return spy;
   }
 
+  function pageState(state: DocumentReadyState) {
+    vi.spyOn(document, "readyState", "get").mockReturnValue(state);
+  }
+
   async function registerThenLoad() {
+    pageState("loading");
     vi.resetModules();
     const { registerServiceWorker } = await import("./pwa");
     registerServiceWorker();
@@ -261,6 +266,7 @@ describe("registering the service worker", () => {
   it("registers the root worker once the page has loaded, bypassing the HTTP cache", async () => {
     vi.stubEnv("PROD", true);
     const register = workerSupport(async () => ({}));
+    pageState("loading");
     vi.resetModules();
     const { registerServiceWorker } = await import("./pwa");
     registerServiceWorker();
@@ -270,6 +276,21 @@ describe("registering the service worker", () => {
       scope: "/",
       updateViaCache: "none",
     });
+  });
+
+  it("registers at once when the page loaded before the app's code ran", async () => {
+    vi.stubEnv("PROD", true);
+    const register = workerSupport(async () => ({}));
+    pageState("complete");
+    vi.resetModules();
+    const { registerServiceWorker } = await import("./pwa");
+    registerServiceWorker();
+    expect(register).toHaveBeenCalledExactlyOnceWith("/sw.js", {
+      scope: "/",
+      updateViaCache: "none",
+    });
+    window.dispatchEvent(new Event("load"));
+    expect(register).toHaveBeenCalledOnce();
   });
 
   it("registers nothing in a development build", async () => {
