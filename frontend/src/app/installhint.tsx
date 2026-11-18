@@ -32,8 +32,7 @@ export type HintedInstall = Extract<
   { kind: "available" | "manual-ios" }
 >;
 
-// Each banner's condition, before any dismissal it keeps; a read not answered
-// yet counts too, so the hint never draws and then gives way under a thumb.
+// A banner whose read is still out counts as ahead, so the hint never flashes.
 function useBannerAhead(now: number): boolean {
   const offline =
     useSyncExternalStore(subscribeConnectivity, connectivityNow) !== "online";

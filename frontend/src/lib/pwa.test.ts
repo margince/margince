@@ -235,9 +235,7 @@ describe("the install state", () => {
     displayMode(false);
     expect((await page(IPHONE_WEBVIEW, 5)).state().kind).toBe("unavailable");
     expect((await page(IPAD_WEBVIEW, 5)).state().kind).toBe("unavailable");
-    expect((await page(IPHONE_GOOGLE_APP, 5)).state().kind).toBe(
-      "unavailable",
-    );
+    expect((await page(IPHONE_GOOGLE_APP, 5)).state().kind).toBe("unavailable");
   });
 
   it("is added to the Dock by hand in Safari 26 on a Mac, and in no older Safari or other Mac browser", async () => {
