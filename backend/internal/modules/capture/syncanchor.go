@@ -32,11 +32,6 @@ import (
 // recorded gap is one the owner can ask for again.
 const anchorBinds = 3 * 31 * 24 * time.Hour
 
-// syncStart answers where this sync reads from, and records a gap when the
-// held anchor has stopped binding.
-//
-// Called before the pull, in the transaction that persists the anchor. A first
-// attempt and its retries then agree even when the first never returns.
 // anchorStart is where a first sync reads from, and whether the anchor it was
 // handed had stopped binding.
 type anchorStart struct {
@@ -61,6 +56,11 @@ func chooseAnchor(held *time.Time, window, now time.Time) anchorStart {
 	return anchorStart{from: window, lapsed: true}
 }
 
+// syncStart answers where this sync reads from, and records a gap when the
+// held anchor has stopped binding.
+//
+// Called before the pull, in the transaction that persists the anchor. A first
+// attempt and its retries then agree even when the first never returns.
 func (r *Registry) syncStart(
 	ctx context.Context, snapshot *syncSnapshot, held *time.Time,
 	d connector.Descriptor, now time.Time,
@@ -153,6 +153,37 @@ func recordUnreadPeriod(
 	// since SyncOnce read its generation. A caller told the period was recorded
 	// would leave the owner never hearing about it.
 	return tag.RowsAffected() == 1, nil
+}
+
+// NarrowSyncAnchor records from..to as unread and moves a held anchor to to,
+// in one transaction under the sync's generation fence.
+//
+// A connector calls it when the span from its anchor holds more mail than one
+// round can read. The retry then reads from to, and the owner can import the
+// rest. With no held anchor, as on a re-anchor after a lost watermark, only the
+// unread span is recorded.
+func (c *syncCheckpointer) NarrowSyncAnchor(ctx context.Context, from, to time.Time) error {
+	if !from.Before(to) {
+		return fmt.Errorf("capture: a narrowed anchor must move later, not from %s to %s: %w",
+			from.UTC().Format(time.RFC3339), to.UTC().Format(time.RFC3339), apperrors.ErrInvalidArgument)
+	}
+	connectionID, generation := c.snapshot.id, c.snapshot.generation
+	return c.registry.db.Tx(ctx, func(tx pgx.Tx) error {
+		recorded, err := recordUnreadPeriod(ctx, tx, connectionID, generation, from, to)
+		if err != nil {
+			return err
+		}
+		if !recorded {
+			return errSyncSuperseded
+		}
+		if _, err := tx.Exec(ctx, `
+			UPDATE capture_connection SET sync_anchor = $2
+			 WHERE id = $1 AND generation = $3 AND sync_anchor < $2`,
+			connectionID, to, generation); err != nil {
+			return fmt.Errorf("capture: moving the narrowed sync anchor: %w", err)
+		}
+		return nil
+	})
 }
 
 // releaseSyncAnchor drops the held anchor once a sync has stored a watermark.

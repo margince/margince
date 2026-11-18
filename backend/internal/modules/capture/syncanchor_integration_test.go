@@ -31,6 +31,9 @@ type anchorRecorder struct {
 	failUntil int
 	attempts  int
 	told      []time.Time
+	// narrowBy, when set, has each failing attempt narrow its anchor this much
+	// later first, as a round past the census cap does.
+	narrowBy time.Duration
 }
 
 // anchorProvider is in the connection table's provider CHECK and is taken by
@@ -46,12 +49,17 @@ func (c *anchorRecorder) Descriptor() connector.Descriptor {
 }
 
 func (c *anchorRecorder) SyncFrom(
-	_ context.Context, _ connector.Auth, cursor connector.Cursor,
+	ctx context.Context, _ connector.Auth, _ connector.Cursor,
 	from time.Time, _ connector.Sink,
 ) (connector.Cursor, error) {
 	c.attempts++
 	c.told = append(c.told, from)
 	if c.attempts <= c.failUntil {
+		if c.narrowBy > 0 {
+			if err := connector.NarrowSyncAnchor(ctx, from, from.Add(c.narrowBy)); err != nil {
+				return nil, err
+			}
+		}
 		return nil, connector.ErrUnreachable
 	}
 	return connector.Cursor(`{"watermark":"after-the-outage"}`), nil
@@ -123,6 +131,42 @@ func TestAnOutagePastTheBoundRecordsWhatNobodyRead(t *testing.T) {
 	// anchor held for 200 days would stream 200 days.
 	if !rec.told[1].Equal(wantTo) {
 		t.Errorf("the retry read from %s, want %s", rec.told[1], wantTo)
+	}
+}
+
+// A first sync whose window holds more than one round can read narrows its
+// anchor. The skipped span is recorded for the owner, and the retry reads from
+// the narrowed point rather than walking the oversized window again.
+func TestANarrowedAnchorRecordsTheSkippedSpanAndBindsTheRetry(t *testing.T) {
+	ctx, reg, _, _ := newCaptureRegistryFixture(t)
+	owner, _ := setupCaptureDB(t)
+	at := time.Date(2026, 3, 1, 9, 0, 0, 0, time.UTC)
+	reg.SetClock(func() time.Time { return at })
+	const narrowBy = 3 * 24 * time.Hour
+	rec := &anchorRecorder{window: 7 * 24 * time.Hour, failUntil: 1, narrowBy: narrowBy}
+	reg.Register(rec)
+
+	if err := syncOnceOf(ctx, t, reg, anchorProvider); !errors.Is(err, connector.ErrUnreachable) {
+		t.Fatalf("the narrowed attempt answered %v, want it to fail so a retry follows", err)
+	}
+	held := rec.told[0]
+	narrowed := held.Add(narrowBy)
+	at = at.Add(time.Hour)
+	if err := syncOnceOfExisting(ctx, t, reg, anchorProvider); err != nil {
+		t.Fatalf("the retry failed: %v", err)
+	}
+
+	if len(rec.told) != 2 || !rec.told[1].Equal(narrowed) {
+		t.Fatalf("the retry was told %v, want the narrowed point %s", rec.told, narrowed)
+	}
+	var from, to time.Time
+	if err := owner.QueryRow(ctx,
+		`SELECT unread_from, unread_to FROM capture_connection WHERE provider = $1`, anchorProvider).
+		Scan(&from, &to); err != nil {
+		t.Fatalf("reading the recorded period: %v", err)
+	}
+	if !from.Equal(held) || !to.Equal(narrowed) {
+		t.Errorf("the recorded period is %s to %s, want the skipped span %s to %s", from, to, held, narrowed)
 	}
 }
 

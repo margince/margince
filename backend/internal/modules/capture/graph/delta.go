@@ -98,7 +98,7 @@ const anchorSeenCap = 100_000
 
 // ErrAnchorTooLarge is an anchor round whose window holds more messages than
 // its census can hold. The round stops rather than certify a count it cannot
-// keep exact.
+// keep exact, and DeltaInit answers the bound a narrower round fits from.
 var ErrAnchorTooLarge = errors.New("graph: the anchor window holds more messages than one certified round can count")
 
 // ErrAnchorShort is a census that closed below the folder's tally. It is
@@ -152,8 +152,7 @@ func (c *AnchorCensus) count(id string, receivedAt time.Time, removed bool) erro
 		return nil
 	}
 	if len(c.seen) >= anchorSeenCap {
-		return fmt.Errorf("%w: more than %d messages since %s; run the history import for this mailbox, then re-anchor it",
-			ErrAnchorTooLarge, anchorSeenCap, c.After.UTC().Format(time.RFC3339))
+		return ErrAnchorTooLarge
 	}
 	c.seen[digest] = struct{}{}
 	return nil
@@ -215,6 +214,9 @@ func (a *httpAPI) DeltaInit(ctx context.Context, accessToken, folder string, aft
 		return "", err
 	}
 	deltaLink, err := a.deltaWalk(ctx, accessToken, start, census, visit)
+	if errors.Is(err, ErrAnchorTooLarge) {
+		return "", a.narrowAnchor(ctx, accessToken, folder, census)
+	}
 	if err != nil {
 		return "", err
 	}
