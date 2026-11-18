@@ -159,6 +159,7 @@ async function mount(
       </LocaleProvider>
     </QueryClientProvider>,
   );
+  return client;
 }
 
 const title = () => screen.queryByText(en["installHint.title"]);
@@ -265,6 +266,20 @@ describe("the install hint on Home", () => {
     expect(title()).toBeNull();
     answer({ monthly_tokens: 100, spent_tokens: 10, band: "normal" });
     expect(await screen.findByText(en["installHint.title"])).toBeTruthy();
+  });
+
+  it("hands focus to the page when a banner takes its place", async () => {
+    seed({ firstDay: EARLIER });
+    const client = await mount({ offer: offerEvent(unanswered()).event });
+    const notNow = await screen.findByRole("button", {
+      name: en["installHint.notNow"],
+    });
+    act(() => notNow.focus());
+    act(() => {
+      client.setQueryData(["connectors"], { data: [CONCERN] });
+    });
+    await waitFor(() => expect(title()).toBeNull());
+    expect(document.activeElement).toBe(screen.getByTestId("scroller"));
   });
 
   it("goes away for 30 days on Not now, handing focus to the page", async () => {

@@ -222,9 +222,8 @@ standing notice is not read out at rest.
 `STORAGE_KEYS.installHint` (`margince.installHint`). It is kept per `device`, so a new sign-in keeps it:
 
 - The shell records the first calendar day this device runs it, in the reader's zone. The notice
-  never shows on that day.
-- From the next day it shows, or at once after the reader completes a task on Home. The round tick
-  and Done on the open task card both count.
+  waits until the next day, unless the reader completes a task on Home first. The round tick and
+  Done on the open task card both count.
 - "Not now", or a dismissal of the browser's install window opened from the notice, hides it for 30
   days (`INSTALL_HINT_SNOOZE_MS`).
 - The second dismissal hides it on this device for good.

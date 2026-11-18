@@ -2,7 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Share } from "lucide-react";
-import { type RefObject, useEffect, useRef, useSyncExternalStore } from "react";
+import {
+  type RefObject,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useSyncExternalStore,
+} from "react";
 import { InstallButton } from "../components/installbutton";
 import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
@@ -96,22 +102,16 @@ export function InstallHintNotice({
 }>) {
   const t = useT();
   const box = useRef<HTMLDivElement>(null);
-  // The hint leaves the page on every answer, so focus inside it goes on to
-  // the page it stood over, never to <body>.
-  const handOnFocus = () => {
-    const active = document.activeElement;
-    if (
-      active === null ||
-      active === document.body ||
-      box.current?.contains(active)
-    ) {
-      scroller.current?.focus({ preventScroll: true });
-    }
-  };
-  const dismiss = () => {
-    handOnFocus();
-    onDismiss();
-  };
+  // Focus inside the hint goes on to the page however the hint leaves. A layout
+  // cleanup still sees the hint's nodes in place.
+  useLayoutEffect(() => {
+    const node = box.current;
+    return () => {
+      if (node?.contains(document.activeElement)) {
+        scroller.current?.focus({ preventScroll: true });
+      }
+    };
+  }, [scroller]);
   return (
     <div className="appbanner" ref={box}>
       <Callout
@@ -120,15 +120,14 @@ export function InstallHintNotice({
         title={t("installHint.title")}
         actions={
           <>
-            <Button variant="ghost" onClick={dismiss}>
+            <Button variant="ghost" onClick={onDismiss}>
               {t("installHint.notNow")}
             </Button>
             {install.kind === "available" && (
               <InstallButton
                 prompt={install.prompt}
                 onAnswered={(outcome) => {
-                  if (outcome === "dismissed") dismiss();
-                  else handOnFocus();
+                  if (outcome === "dismissed") onDismiss();
                 }}
               />
             )}

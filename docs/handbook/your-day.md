@@ -253,7 +253,7 @@ A meeting invitation shows **Accept**, **Maybe** and **Decline** in place of **R
 Also called: meeting invite, accept an invite, decline a meeting, rescheduled meeting, canceled meeting.
 
 ### Why does Home offer Margince as an app?
-On a phone, or another device you use by touch, Home can show **Install Margince as an app** at the top of the page. It never shows on the first day you use Margince on that device. It shows from the next day, or once you complete a task on Home. While another notice stands at the top of the page, it waits.
+On a phone, or another device you use by touch, Home can show **Install Margince as an app** at the top of the page. It waits until the day after you first use Margince on that device, unless you complete a task on Home first. While another notice stands at the top of the page, it waits.
 - **Install** opens your browser's own window to add Margince to the device. Once Margince is added, it opens as its own app and the notice does not come back.
 - On an iPhone the notice has no **Install**. It says to press **Share**, then **Add to Home Screen**. In another app's own browser the notice does not show, because that browser cannot add Margince.
 - **Not now**, or closing the browser's window, hides the notice for 30 days. After the second time, it does not show again on that device. The **Margince app** row in [your own settings](your-own-settings.md#account) stays either way.
