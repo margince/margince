@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -834,6 +835,16 @@ func (c *consentEnv) sendFrom(t *testing.T, activityID, purpose string) (int, st
 	return status, problem.Code, problem.Detail
 }
 
+var controllerIdentityCountry = sync.OnceValue(func() string {
+	messagingrules.Register(messagingrules.Rules{
+		Jurisdiction: "zm", Version: 1,
+		Disclosures: []messagingrules.Disclosure{
+			{Kind: messagingrules.ControllerIdentity},
+		},
+	})
+	return "zm"
+})
+
 // TestASentMessageCarriesTheDisclosuresItOwes is the end of the chain this
 // slice builds, proved through a real send rather than the seam.
 //
@@ -848,12 +859,7 @@ func TestASentMessageCarriesTheDisclosuresItOwes(t *testing.T) {
 
 	// A pack for a code no real jurisdiction claims, declaring one obligation,
 	// and the particulars that meet it.
-	messagingrules.Register(messagingrules.Rules{
-		Jurisdiction: "zm", Version: 1,
-		Disclosures: []messagingrules.Disclosure{
-			{Kind: messagingrules.ControllerIdentity},
-		},
-	})
+	country := controllerIdentityCountry()
 	if _, err := owner.Exec(context.Background(), `
 		INSERT INTO setting (key, value, updated_at) VALUES ($1, $2::jsonb, now())
 		ON CONFLICT (key) DO UPDATE SET value = excluded.value, updated_at = now()`,
@@ -864,8 +870,8 @@ func TestASentMessageCarriesTheDisclosuresItOwes(t *testing.T) {
 	// The country is a SETTING like the particulars, not a column: the engine
 	// resolves the applicable pack through identity.CountryOf, which reads it.
 	if _, err := owner.Exec(context.Background(), `
-		INSERT INTO setting (key, value, updated_at) VALUES ('installation.country', '"zm"'::jsonb, now())
-		ON CONFLICT (key) DO UPDATE SET value = excluded.value, updated_at = now()`); err != nil {
+		INSERT INTO setting (key, value, updated_at) VALUES ('installation.country', to_jsonb($1::text), now())
+		ON CONFLICT (key) DO UPDATE SET value = excluded.value, updated_at = now()`, country); err != nil {
 		t.Fatalf("placing the installation: %v", err)
 	}
 

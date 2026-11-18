@@ -2,6 +2,7 @@ import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
+import { amountRefusal } from "../../components/amountrefusal";
 import { ArchiveAction } from "../../components/archive";
 import { CreateAction, type CreateField } from "../../components/create";
 import { EditAction } from "../../components/edit";
@@ -12,7 +13,6 @@ import {
   listFetchLimit,
   useListQuery,
 } from "../../components/listquery";
-import { amountRefusal } from "../../components/moneyamountfield";
 import { Button, OverflowMenu } from "../../design-system/atoms";
 import { KeyedName } from "../../design-system/keyedname";
 import type { ListColumn } from "../../design-system/listtable";

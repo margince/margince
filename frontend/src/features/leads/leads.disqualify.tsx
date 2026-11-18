@@ -6,8 +6,8 @@ import { Field, Textarea } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
-import { invalidateClosedLead } from "../../lib/leadkeys";
 import { problemMessageOf, unwrap } from "../../lib/problem";
+import { invalidateClosedLead } from "./leadclose";
 import { useLeadDisqualifyReasons } from "./leadhandling";
 import { leadIdentityName } from "./leadname";
 

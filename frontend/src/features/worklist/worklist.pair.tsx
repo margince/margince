@@ -26,7 +26,7 @@
 import { type ReactNode, useState } from "react";
 import { ContactCaseReview } from "../../components/contactcase";
 import { EvidenceLine } from "../../components/contactcase.evidence";
-import { type MergeSide, mergeSentence } from "../../components/merge";
+import { type MergeSide, mergeSentence } from "../../components/merge.sentence";
 import { AppLink } from "../../design-system/applink";
 import { Button, Card } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
