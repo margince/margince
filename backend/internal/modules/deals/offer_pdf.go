@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/go-pdf/fpdf"
 
@@ -75,6 +76,11 @@ type pdfLabels struct {
 	units      map[string]string
 	validUntil string
 	dateLayout string
+	// The document's number separators, and its page footer with %d for the
+	// page and %s for the page count.
+	decimalSep string
+	groupSep   string
+	page       string
 }
 
 // resolvePDFLabels maps a locale to its label set. A German locale gets German
@@ -110,6 +116,9 @@ func resolvePDFLabels(locale string) pdfLabels {
 			},
 			validUntil: "Gültig bis",
 			dateLayout: "02.01.2006",
+			decimalSep: ",",
+			groupSep:   ".",
+			page:       "Seite %d von %s",
 		}
 	}
 	return pdfLabels{
@@ -140,6 +149,9 @@ func resolvePDFLabels(locale string) pdfLabels {
 		},
 		validUntil: "Valid until",
 		dateLayout: "2 January 2006",
+		decimalSep: ".",
+		groupSep:   ",",
+		page:       "Page %d of %s",
 	}
 }
 
@@ -153,12 +165,38 @@ func resolvePDFLabels(locale string) pdfLabels {
 // offer priced in VND, JPY or KRW at a hundredth of its value — those
 // currencies have no minor unit, so their integer IS the amount — and states
 // a KWD offer at a hundred times, since a dinar has three.
-func pdfFormatMinor(minor int64, currency string) string {
-	return values.MajorUnits(minor, currency) + " " + currency
+func pdfFormatMinor(minor int64, currency string, labels pdfLabels) string {
+	return pdfLocalizeNumber(values.MajorUnits(minor, currency), labels) + " " + currency
 }
 
-func pdfFormatQuantity(quantity float64) string {
-	return strconv.FormatFloat(quantity, 'f', -1, 64)
+func pdfFormatQuantity(quantity float64, labels pdfLabels) string {
+	return pdfLocalizeNumber(strconv.FormatFloat(quantity, 'f', -1, 64), labels)
+}
+
+func pdfFormatPercent(pct float64, labels pdfLabels) string {
+	return pdfLocalizeNumber(strconv.FormatFloat(pct, 'f', -1, 64), labels) + " %"
+}
+
+// pdfLocalizeNumber writes a plain decimal such as "-1234567.891" with the
+// document's group and decimal separators.
+func pdfLocalizeNumber(plain string, labels pdfLabels) string {
+	sign, digits := "", plain
+	if rest, ok := strings.CutPrefix(plain, "-"); ok {
+		sign, digits = "-", rest
+	}
+	whole, fraction, hasFraction := strings.Cut(digits, ".")
+	var out strings.Builder
+	out.WriteString(sign)
+	for i, digit := range whole {
+		if i > 0 && (len(whole)-i)%3 == 0 {
+			out.WriteString(labels.groupSep)
+		}
+		out.WriteRune(digit)
+	}
+	if hasFraction {
+		out.WriteString(labels.decimalSep + fraction)
+	}
+	return out.String()
 }
 
 // pdfOfferText reads one of the offer's own optional texts; null and an
@@ -252,12 +290,10 @@ func writeOfferPDFHeader(pdf *fpdf.Fpdf, tr pdfTranslator, o crmcontracts.Offer,
 	pdf.Ln(7)
 	pdf.SetFont(offerFontFamily, "", 11)
 	if displayName != "" {
-		pdf.Cell(0, 6, tr(displayName))
-		pdf.Ln(6)
+		pdf.MultiCell(0, 6, tr(displayName), "", "L", false)
 	}
 	if legalName != "" {
-		pdf.Cell(0, 6, tr(legalName))
-		pdf.Ln(6)
+		pdf.MultiCell(0, 6, tr(legalName), "", "L", false)
 	}
 	pdf.Ln(4)
 }
@@ -292,11 +328,11 @@ func writeOfferPDFTotals(pdf *fpdf.Fpdf, tr pdfTranslator, o crmcontracts.Offer,
 	pdf.Cell(0, 6, tr(labels.totals))
 	pdf.Ln(7)
 	pdf.SetFont(offerFontFamily, "", 11)
-	pdf.Cell(0, 6, tr(labels.net+": "+pdfFormatMinor(net, o.Currency)))
+	pdf.Cell(0, 6, tr(labels.net+": "+pdfFormatMinor(net, o.Currency, labels)))
 	pdf.Ln(6)
-	pdf.Cell(0, 6, tr(labels.tax+": "+pdfFormatMinor(tax, o.Currency)))
+	pdf.Cell(0, 6, tr(labels.tax+": "+pdfFormatMinor(tax, o.Currency, labels)))
 	pdf.Ln(6)
-	pdf.Cell(0, 6, tr(labels.gross+": "+pdfFormatMinor(gross, o.Currency)))
+	pdf.Cell(0, 6, tr(labels.gross+": "+pdfFormatMinor(gross, o.Currency, labels)))
 	pdf.Ln(6)
 }
 
@@ -363,6 +399,12 @@ func RenderOfferPDF(o crmcontracts.Offer, lines []crmcontracts.OfferLineItem, bu
 	pdf.SetMargins(16, 16, 16)
 	pdf.SetAutoPageBreak(true, 16)
 	registerOfferFont(pdf)
+	pdf.AliasNbPages("")
+	pdf.SetFooterFunc(func() {
+		pdf.SetY(-12)
+		pdf.SetFont(offerFontFamily, "", 8)
+		pdf.CellFormat(0, 5, tr(fmt.Sprintf(labels.page, pdf.PageNo(), "{nb}")), "", 0, "C", false, 0, "")
+	})
 	pdf.SetTitle(labels.title+" "+number, true)
 	pdf.SetCreator("margince", true)
 	pdf.SetAuthor(issuer.Name, true)

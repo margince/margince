@@ -50,10 +50,10 @@ func registerOfferFont(pdf *fpdf.Fpdf) {
 // pdfTextCheck collects the characters the font has no glyph for. It counts a
 // right-to-left letter as one too, since fpdf lays it out reversed.
 type pdfTextCheck struct {
-	faces   []*sfnt.Font
-	buf     sfnt.Buffer
-	seen    map[rune]bool
-	missing []rune
+	faces     []*sfnt.Font
+	buf       sfnt.Buffer
+	printable map[rune]bool
+	missing   []rune
 }
 
 func newPDFTextCheck() (*pdfTextCheck, error) {
@@ -61,25 +61,30 @@ func newPDFTextCheck() (*pdfTextCheck, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &pdfTextCheck{faces: faces, seen: map[rune]bool{}}, nil
+	return &pdfTextCheck{faces: faces, printable: map[rune]bool{}}, nil
 }
 
-// text records what s holds that cannot be printed and hands s back unchanged,
-// so every string a writer draws passes through it.
+// text records what s holds that cannot be printed, and hands s back with each
+// such character as "?". fpdf's width tables stop at U+FFFF and index past
+// them, so an emoji must never reach a draw call; the render is refused anyway.
 func (c *pdfTextCheck) text(s string) string {
-	for _, r := range s {
-		if c.seen[r] {
-			continue
+	return strings.Map(func(r rune) rune {
+		ok, seen := c.printable[r]
+		if !seen {
+			ok = c.hasGlyph(r)
+			c.printable[r] = ok
+			if !ok {
+				c.missing = append(c.missing, r)
+			}
 		}
-		c.seen[r] = true
-		if !c.printable(r) {
-			c.missing = append(c.missing, r)
+		if !ok {
+			return '?'
 		}
-	}
-	return s
+		return r
+	}, s)
 }
 
-func (c *pdfTextCheck) printable(r rune) bool {
+func (c *pdfTextCheck) hasGlyph(r rune) bool {
 	if unicode.IsControl(r) {
 		return true
 	}

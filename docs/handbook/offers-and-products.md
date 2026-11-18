@@ -61,7 +61,7 @@ Send removes a PDF made from the draft, so make it again after sending; the new 
 Also called: email the proposal, issue the quote.
 
 ### How do I print or download an offer?
-To print an offer or save it as a file, open the offer and choose **Render PDF**, then **View PDF** once it shows. Print or download the PDF from your browser; Margince has no print button of its own. The PDF holds the offer's valid-until day, intro text, lines, totals and terms text, plus the template's header and footer. Each line shows its quantity and unit, unit price and discount, then its own net, tax rate with tax, and total.
+To print an offer or save it as a file, open the offer and choose **Render PDF**, then **View PDF** once it shows. Print or download the PDF from your browser; Margince has no print button of its own. The PDF holds the offer's valid-until day, intro text, lines, totals and terms text, plus the template's header and footer. Each line shows its quantity and unit, unit price and discount, then its own net, tax rate with tax, and total. Amounts use the number format of the PDF's language, a line never splits across two pages, and each page is numbered.
 The **View PDF** button does not show when the offer's buyer is a company you cannot open, because the stored PDF may print its name. This is true even for a PDF you made yourself. Changing a draft's buyer removes its PDF; make it again for the new buyer.
 
 Also called: print a quote, offer PDF, download the proposal, export an offer.

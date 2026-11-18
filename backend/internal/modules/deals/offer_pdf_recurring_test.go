@@ -36,9 +36,9 @@ func TestRenderOfferPDF_ARecurringLineShowsItsCadenceAndCommitment(t *testing.T)
 	}
 	drawn := pdfDrawnText(t, pdf)
 	for _, needle := range []string{
-		"1 x 1000.00 EUR per month", // the cadence beside the price
-		"Term: 12 x 1 months",       // the periods committed to
-		"Committed: 12000.00 EUR",   // net across the term
+		"1 x 1,000.00 EUR per month", // the cadence beside the price
+		"Term: 12 x 1 months",        // the periods committed to
+		"Committed: 12,000.00 EUR",   // net across the term
 	} {
 		if !bytes.Contains(drawn, []byte(needle)) {
 			t.Errorf("PDF missing %q", needle)

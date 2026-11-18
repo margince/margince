@@ -4,6 +4,7 @@
 package deals
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -65,6 +66,81 @@ func TestRenderOfferPDF_PrintsValidUntil(t *testing.T) {
 		}
 		if drawn := string(pdfDrawnText(t, pdf)); !strings.Contains(drawn, want) {
 			t.Errorf("%s: the PDF must print %q:\n%s", locale, want, drawn)
+		}
+	}
+}
+
+// A long description wraps inside the margins instead of running off the page.
+func TestRenderOfferPDF_ALongDescriptionWraps(t *testing.T) {
+	description := "Opening " + strings.Repeat("implementation workshop ", 16) + "Closing"
+	line := crmcontracts.OfferLineItem{Position: 1, Description: description, Quantity: 1, UnitPriceMinor: 100}
+	pdf, err := RenderOfferPDF(testRenderOffer(100, 0, 100), []crmcontracts.OfferLineItem{line}, nil, issuedBy("Margince GmbH"), "en", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	drawn := string(pdfDrawnText(t, pdf))
+	opening, closing := strings.Index(drawn, "Opening"), strings.Index(drawn, "Closing")
+	if opening < 0 || closing < opening || !strings.ContainsAny(drawn[opening:closing], "\r\n") {
+		t.Fatalf("the description must print whole, over more than one line:\n%s", drawn)
+	}
+}
+
+// A line's description and its price stay on one page, and every page says
+// which page of how many it is.
+func TestRenderOfferPDF_KeepsEachLineOnOnePageAndNumbersThePages(t *testing.T) {
+	var lines []crmcontracts.OfferLineItem
+	for position := 1; position <= 60; position++ {
+		lines = append(lines, crmcontracts.OfferLineItem{
+			Position: position, Description: fmt.Sprintf("Bulk line %02d", position), Quantity: 1, UnitPriceMinor: 100,
+		})
+	}
+	pdf, err := RenderOfferPDF(testRenderOffer(6000, 0, 6000), lines, nil, issuedBy("Margince GmbH"), "de-DE", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	drawn := string(pdfDrawnText(t, pdf))
+	if !strings.Contains(drawn, "Seite 1 von 3") || !strings.Contains(drawn, "Seite 3 von 3") {
+		t.Fatalf("the pages must be numbered 1 to 3 of 3:\n%s", drawn)
+	}
+	for position := 1; position <= 60; position++ {
+		start := strings.Index(drawn, fmt.Sprintf("Bulk line %02d", position))
+		price := strings.Index(drawn[start:], "1 x 1,00 EUR")
+		if start < 0 || price < 0 || strings.Contains(drawn[start:start+price], "Seite ") {
+			t.Fatalf("line %d and its price must share a page:\n%s", position, drawn)
+		}
+	}
+}
+
+// Amounts and quantities use the document's separators, and a currency with no
+// minor unit prints none.
+func TestRenderOfferPDF_FormatsNumbersForTheDocumentsLanguage(t *testing.T) {
+	o := testRenderOffer(3938, 0, 3938)
+	o.Currency = "JPY"
+	line := crmcontracts.OfferLineItem{Position: 1, Description: "Licence", Quantity: 1234567.891, UnitPriceMinor: 3938}
+	for locale, want := range map[string][]string{
+		"de-DE": {"1.234.567,891 x 3.938 JPY", "Nettobetrag: 3.938 JPY"},
+		"en":    {"1,234,567.891 x 3,938 JPY", "Net: 3,938 JPY"},
+	} {
+		pdf, err := RenderOfferPDF(o, []crmcontracts.OfferLineItem{line}, nil, issuedBy("Margince GmbH"), locale, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		drawn := string(pdfDrawnText(t, pdf))
+		for _, needle := range want {
+			if !strings.Contains(drawn, needle) {
+				t.Errorf("%s: the PDF must print %q:\n%s", locale, needle, drawn)
+			}
+		}
+	}
+}
+
+func TestPDFLocalizeNumber(t *testing.T) {
+	german := resolvePDFLabels("de-DE")
+	for plain, want := range map[string]string{
+		"0": "0", "999": "999", "1000": "1.000", "-1234567.891": "-1.234.567,891", "12.5": "12,5",
+	} {
+		if got := pdfLocalizeNumber(plain, german); got != want {
+			t.Errorf("pdfLocalizeNumber(%q) = %q, want %q", plain, got, want)
 		}
 	}
 }

@@ -72,8 +72,8 @@ func TestRenderOfferPDF_IncludesOfferDataAndStoredTotals(t *testing.T) {
 
 	mustContain := []string{
 		"A-1042", "Revision 2", "Acme GmbH", "Margince GmbH",
-		"Consulting Day", "2 x 500.00 EUR", "Setup Fee",
-		"1234.56 EUR", "234.56 EUR", "1469.12 EUR",
+		"Consulting Day", "2 x 500,00 EUR", "Setup Fee",
+		"1.234,56 EUR", "234,56 EUR", "1.469,12 EUR",
 	}
 	for _, needle := range mustContain {
 		if !bytes.Contains(drawn, []byte(needle)) {
@@ -129,11 +129,11 @@ func TestRenderOfferPDF_UsesStoredTotalsNeverRecomputes(t *testing.T) {
 		t.Fatalf("RenderOfferPDF() error = %v", err)
 	}
 	drawn := pdfDrawnText(t, pdf)
-	if !bytes.Contains(drawn, []byte("9999.99 EUR")) {
-		t.Fatalf("PDF must render the offer's STORED net total (9999.99 EUR), got:\n%s", drawn)
+	if !bytes.Contains(drawn, []byte("9.999,99 EUR")) {
+		t.Fatalf("PDF must render the offer's STORED net total (9.999,99 EUR), got:\n%s", drawn)
 	}
-	if bytes.Contains(drawn, []byte("1234.56 EUR")) {
-		t.Fatalf("PDF must NOT contain a freshly re-derived total from the lines (1234.56 EUR); it must use the stored figure only:\n%s", drawn)
+	if bytes.Contains(drawn, []byte("1.234,56 EUR")) {
+		t.Fatalf("PDF must NOT contain a freshly re-derived total from the lines (1.234,56 EUR); it must use the stored figure only:\n%s", drawn)
 	}
 }
 
@@ -168,6 +168,8 @@ func TestRenderOfferPDF_PrintsLatinCyrillicAndGreekTextAsTyped(t *testing.T) {
 // right-to-left letter counts as one, since fpdf would lay it out reversed.
 func TestRenderOfferPDF_RefusesTextItCannotPrint(t *testing.T) {
 	o := testRenderOffer(100000, 19000, 119000)
+	intro, terms := "Wrapped intro 😀", "Wrapped terms 🎉"
+	o.IntroText, o.TermsText = &intro, &terms
 	lines := []crmcontracts.OfferLineItem{
 		{Position: 1, Description: "Tư vấn 李 محمد 🚀", Quantity: 1, UnitPriceMinor: 100000},
 	}
@@ -177,7 +179,7 @@ func TestRenderOfferPDF_RefusesTextItCannotPrint(t *testing.T) {
 	if !ok || fault.Status != http.StatusUnprocessableEntity || fault.Code != "offer_pdf_unprintable_text" {
 		t.Fatalf("an unprintable line must refuse with 422 offer_pdf_unprintable_text, got %+v (err %v)", fault, err)
 	}
-	for _, named := range []string{"李", "م", "🚀"} {
+	for _, named := range []string{"李", "م", "🚀", "😀", "🎉"} {
 		if !strings.Contains(fault.Detail, named) {
 			t.Errorf("the refusal must name %q: %s", named, fault.Detail)
 		}

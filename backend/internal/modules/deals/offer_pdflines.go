@@ -8,7 +8,6 @@ package deals
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/go-pdf/fpdf"
@@ -25,27 +24,48 @@ func writeOfferPDFLineItems(pdf *fpdf.Fpdf, tr pdfTranslator, lines []crmcontrac
 	pdf.Ln(7)
 	pdf.SetFont(offerFontFamily, "", 10)
 	for _, li := range lines {
-		pdf.Cell(0, 5, tr(fmt.Sprintf("%d. %s", li.Position, li.Description)))
-		pdf.Ln(5)
-		for _, text := range pdfLineTexts(li, currency, labels) {
-			pdf.Cell(0, 5, tr(text))
-			pdf.Ln(5)
+		texts := append([]string{fmt.Sprintf("%d. %s", li.Position, li.Description)}, pdfLineTexts(li, currency, labels)...)
+		for i := range texts {
+			texts[i] = tr(texts[i])
+		}
+		keepOnOnePage(pdf, texts, pdfLineHeight)
+		for _, text := range texts {
+			pdf.MultiCell(0, pdfLineHeight, text, "", "L", false)
 		}
 	}
 	pdf.Ln(2)
+}
+
+const pdfLineHeight = 5
+
+// keepOnOnePage starts a new page when the wrapped texts would not fit on this
+// one. So a line's description and its price never split across pages. A block
+// taller than a page is left to break where it must.
+func keepOnOnePage(pdf *fpdf.Fpdf, texts []string, lineHeight float64) {
+	width, pageHeight := pdf.GetPageSize()
+	left, top, right, _ := pdf.GetMargins()
+	_, bottom := pdf.GetAutoPageBreak()
+	rows := 0
+	for _, text := range texts {
+		rows += len(pdf.SplitText(text, width-left-right))
+	}
+	height := float64(rows) * lineHeight
+	if pdf.GetY()+height > pageHeight-bottom && height <= pageHeight-top-bottom {
+		pdf.AddPage()
+	}
 }
 
 // pdfLineTexts are the lines printed under a line's description. A line whose
 // price could not be grounded prints its quantity alone: its zero price is a
 // sentinel, never an amount to show a buyer.
 func pdfLineTexts(li crmcontracts.OfferLineItem, currency string, labels pdfLabels) []string {
-	quantity := strings.TrimSpace(pdfFormatQuantity(li.Quantity) + " " + pdfUnitName(li.Unit, labels))
+	quantity := strings.TrimSpace(pdfFormatQuantity(li.Quantity, labels) + " " + pdfUnitName(li.Unit, labels))
 	if li.PriceGrounded != nil && !*li.PriceGrounded {
 		return []string{quantity}
 	}
-	price := quantity + " x " + pdfFormatMinor(li.UnitPriceMinor, currency)
+	price := quantity + " x " + pdfFormatMinor(li.UnitPriceMinor, currency, labels)
 	if li.DiscountPct != 0 {
-		price += " | " + labels.discount + " " + pdfFormatPercent(li.DiscountPct)
+		price += " | " + labels.discount + " " + pdfFormatPercent(li.DiscountPct, labels)
 	}
 	if cadence := pdfLineCadence(li, labels); cadence != "" {
 		price += " " + cadence
@@ -53,9 +73,9 @@ func pdfLineTexts(li crmcontracts.OfferLineItem, currency string, labels pdfLabe
 	texts := []string{price}
 	if li.LineNetMinor != nil && li.LineTaxMinor != nil && li.LineTotalMinor != nil {
 		texts = append(texts, fmt.Sprintf("%s %s | %s %s %s | %s %s",
-			labels.lineNet, pdfFormatMinor(*li.LineNetMinor, currency),
-			labels.tax, pdfFormatPercent(li.TaxRate), pdfFormatMinor(*li.LineTaxMinor, currency),
-			labels.lineTotal, pdfFormatMinor(*li.LineTotalMinor, currency)))
+			labels.lineNet, pdfFormatMinor(*li.LineNetMinor, currency, labels),
+			labels.tax, pdfFormatPercent(li.TaxRate, labels), pdfFormatMinor(*li.LineTaxMinor, currency, labels),
+			labels.lineTotal, pdfFormatMinor(*li.LineTotalMinor, currency, labels)))
 	}
 	if commitment := pdfLineCommitment(li, currency, labels); commitment != "" {
 		texts = append(texts, commitment)
@@ -70,10 +90,6 @@ func pdfUnitName(unit string, labels pdfLabels) string {
 		return name
 	}
 	return unit
-}
-
-func pdfFormatPercent(pct float64) string {
-	return strconv.FormatFloat(pct, 'f', -1, 64) + " %"
 }
 
 // pdfLineCadence is how often a recurring line's price repeats, "" for a line
@@ -117,5 +133,5 @@ func pdfLineCommitment(li crmcontracts.OfferLineItem, currency string, labels pd
 	if err != nil {
 		return term
 	}
-	return term + " | " + labels.committed + ": " + pdfFormatMinor(committed, currency)
+	return term + " | " + labels.committed + ": " + pdfFormatMinor(committed, currency, labels)
 }
