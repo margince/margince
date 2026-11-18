@@ -466,7 +466,7 @@
   border-radius: var(--r-sm);
   transition: background var(--dur-state) var(--ease-in-out);
 }
-.rail .railhead:has(.ws:hover) {
+.rail .railhead:hover {
   background: color-mix(in srgb, var(--textPrimary) 4%, var(--ground));
 }
 /* Only an installation's head has the second line. A head without it stays one
