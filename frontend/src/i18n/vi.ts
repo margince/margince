@@ -5009,6 +5009,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "email.detail.attachments_one": "{count} tệp đính kèm",
   "email.detail.attachments_other": "{count} tệp đính kèm",
   "email.detail.attachmentWithheld": "Không lưu, vì email này là riêng tư.",
+  "email.detail.attachmentNotAddressed":
+    "Không lưu, vì không đồng nghiệp nào ở đây gửi email này hoặc có tên trong ô Đến.",
   "email.detail.showQuoted": "Hiển thị nội dung trích dẫn",
   "aiTask.name.reader_rendering": "Hiển thị tin nhắn bằng ngôn ngữ của bạn",
   "readerRendering.show": "Hiển thị bằng ngôn ngữ của tôi",
@@ -6692,6 +6694,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "decision.evidenceSource.unknown": "Nguồn",
   "decision.detailAsked": "Đã hỏi",
   "decision.detailDecided": "Đã quyết định",
+  "decision.waitingForAgent": "Đã duyệt. Đang chờ tác nhân thực hiện.",
+  "decision.mailboxBlocked":
+    "Không có hộp thư nào đã kết nối có thể gửi. Duyệt sẽ không gửi được email này.",
+  "decision.fieldRequired": "Bắt buộc",
   "decision.applied": "Đã áp dụng",
   "decision.undoOnRecord": "Hoàn tác trên hồ sơ",
   "decision.status.approved": "Đã duyệt",
@@ -6998,6 +7004,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Phím mũi tên chọn một quyết định: → chấp nhận · ← từ chối · ↑ sửa · ↓ để sau · U hoàn tác · Enter gửi các quyết định đã chọn",
   "brief.deck.behind_one": "Còn 1 mục phía sau",
   "brief.deck.behind_other": "Còn {count} mục phía sau",
+  "brief.deck.awaitingAgent_one":
+    "1 quyết định đã duyệt đang chờ tác nhân thực hiện.",
+  "brief.deck.awaitingAgent_other":
+    "{count} quyết định đã duyệt đang chờ tác nhân thực hiện.",
+  "brief.deck.effectFailed_one": "1 quyết định đã duyệt chưa được thực hiện.",
+  "brief.deck.effectFailed_other":
+    "{count} quyết định đã duyệt chưa được thực hiện.",
   "brief.deck.staged_one": "1 quyết định đã chọn",
   "brief.deck.staged_other": "{count} quyết định đã chọn",
   "brief.deck.commit": "Gửi quyết định đã chọn",
@@ -14180,6 +14193,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "captureActivity.funnel.fault": "Bị lỗi",
   "captureActivity.reason.internal_only":
     "Mọi bên tham gia đều dùng tên miền của công ty",
+  "captureActivity.reason.own_addresses_only":
+    "Mọi bên tham gia đều là địa chỉ của chính bạn, và không có email khách hàng nào được chuyển tiếp",
   "captureActivity.reason.deferral_capped":
     "Đã chạm giới hạn câu hỏi đang mở, nên sẽ không có kết quả",
   "captureActivity.reason.noise_prior":
@@ -14248,6 +14263,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "pipeline.stage.claim_extraction": "Cam kết và việc còn dở",
   "pipeline.reason.internal_only":
     "mọi bên tham gia đều dùng tên miền của công ty bạn",
+  "pipeline.reason.own_addresses_only":
+    "mọi bên tham gia đều là địa chỉ của chính bạn, và không có email khách hàng nào được chuyển tiếp",
   "pipeline.reason.invisible_incumbent":
     "tin nhắn khớp với một hồ sơ bạn không có quyền xem",
   "pipeline.reason.transactional_infra":
@@ -19263,6 +19280,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Một địa chỉ nhận đã dừng nhận tiếp thị sau khi bạn lên lịch. Thư sẽ không gửi đến địa chỉ đó.",
   "sched.held.recipientReplied":
     "Có thư mới từ bên nhận sau khi bạn lên lịch thư theo dõi này. Hãy đọc thư đó trước khi gửi.",
+  "sched.held.confirmSendsNow":
+    "Khi bạn xác nhận, tin nhắn sẽ được gửi ngay bây giờ, không theo giờ đã hẹn.",
   "sched.held.sendRefused":
     "Một bước kiểm tra đã chặn tin nhắn này khi đến giờ gửi. Không có gì được gửi.",
   "sched.inZone": "theo giờ {zone}",
@@ -19587,6 +19606,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.clear": "Không có việc nào đang chờ bạn.",
   "worklist.clearFor": "Không có việc nào đang chờ {name}.",
   "worklist.clearOfUrgent": "Không có việc gấp.",
+  "worklist.clearDecisionsWaiting":
+    "Hôm nay không có việc đến hạn. Có quyết định đang chờ bạn.",
+  "worklist.clearDecisionsOpen": "Mở Quyết định",
   "worklist.clearOfTasksToday":
     "Không có việc đến hạn hôm nay hoặc quá hạn. Việc sau đó nằm trong Sắp tới và tồn đọng.",
   "worklist.clearOfWhatWasRead": "Các nguồn đã tải không có việc nào.",

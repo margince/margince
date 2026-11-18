@@ -252,6 +252,12 @@ func (s *Service) recordEffectRan(ctx context.Context, id ids.ApprovalID) {
 // passport records who asked; its human decider authorizes the effect.
 func serverProposed(a row) bool { return a.PassportID == nil || humanAcceptedKinds[a.Kind] }
 
+// agentRedeems reports whether approving this row only lets the staging agent
+// repeat its call. Every other approval runs its effect when it is decided. A
+// step-up is agent-minted and still runs on decision, so serverProposed alone
+// does not answer this.
+func agentRedeems(a row) bool { return !serverProposed(a) && a.Kind != KindVolumeRelease }
+
 // decideInTx runs the decision inside the caller's transaction: the
 // decide-authority + row-scope gate, the pending guard, the optional
 // modify-then-approve edit, the status write, and the write shape. It

@@ -24,7 +24,8 @@ type Reason string
 // can close the set the surface may render.
 const (
 	// StageInternalDrop.
-	ReasonInternalOnly Reason = "internal_only"
+	ReasonInternalOnly     Reason = "internal_only"
+	ReasonOwnAddressesOnly Reason = "own_addresses_only"
 
 	// StageActivityWrite.
 	ReasonInvisibleIncumbent Reason = "invisible_incumbent"

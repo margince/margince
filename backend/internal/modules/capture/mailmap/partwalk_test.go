@@ -7,11 +7,13 @@ package mailmap
 // goes through Parse and ToRecord, the path every connector takes.
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/htmltext"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 const walkOwner = "m@example.com"
@@ -231,6 +233,117 @@ func TestParseReadsTheTextOfAForwardedOriginal(t *testing.T) {
 			t.Errorf("body = %q, want the doubly nested original left unopened", msg.body)
 		}
 	})
+}
+
+// The original's headers are the forwarder's to edit. They are kept as a record
+// of their own, never as the forward's author or a party to it.
+func TestParseKeepsAForwardedOriginalApartFromTheAuthor(t *testing.T) {
+	original := []string{
+		"From: Bea Kunde <Bea@Customer.example>",
+		"Subject: Angebot",
+		"Message-ID: <original@customer.example>",
+		"Date: Mon, 2 Nov 2026 09:00:00 +0100",
+		"Content-Type: text/plain; charset=utf-8",
+		"",
+		"the original answer",
+	}
+	cases := map[string][]byte{
+		"as an attachment":          forwarded(`attachment; filename="original.eml"`, original...),
+		"as an unnamed inline part": forwarded("inline", original...),
+	}
+	for name, raw := range cases {
+		t.Run(name, func(t *testing.T) {
+			msg, err := Parse(raw, walkOwner)
+			if err != nil {
+				t.Fatalf("Parse: %v", err)
+			}
+			rec := msg.ToRecord("imap", raw)
+			want := connector.ForwardedOriginal{
+				From: "bea@customer.example", DisplayName: "Bea Kunde", Subject: "Angebot",
+				MessageID: "original@customer.example", Date: "Mon, 2 Nov 2026 09:00:00 +0100",
+			}
+			if rec.Forwarded == nil || *rec.Forwarded != want {
+				t.Fatalf("Forwarded = %+v, want %+v", rec.Forwarded, want)
+			}
+			assertOriginalIsNoParty(t, msg, rec, want.From)
+		})
+	}
+}
+
+func assertOriginalIsNoParty(t *testing.T, msg Message, rec connector.NormalizedRecord, original string) {
+	t.Helper()
+	if msg.from != "a@example.org" || rec.Counterparty.Email != "a@example.org" {
+		t.Errorf("author = %q, counterparty = %q, want the forwarder a@example.org", msg.from, rec.Counterparty.Email)
+	}
+	if slices.Contains(rec.Addresses, original) {
+		t.Errorf("Addresses = %v, want the original's sender left out", rec.Addresses)
+	}
+	for _, p := range rec.Participants {
+		if p.Email == original {
+			t.Errorf("Participants name the original's sender %q", original)
+		}
+	}
+}
+
+func TestParseReadsAMarkedInlineForward(t *testing.T) {
+	cases := map[string]struct {
+		text []string
+		want *connector.ForwardedOriginal
+	}{
+		"Gmail": {text: []string{
+			"see below", "", "---------- Forwarded message ---------",
+			"From: Bea Kunde <bea@customer.example>", "Date: Mon, 2 Nov 2026 at 09:00",
+			"Subject: Angebot", "To: <a@example.org>", "", "the original answer",
+		}, want: &connector.ForwardedOriginal{
+			From: "bea@customer.example", DisplayName: "Bea Kunde", Subject: "Angebot", Date: "Mon, 2 Nov 2026 at 09:00", Inline: true,
+		}},
+		"Outlook in German": {text: []string{
+			"-----Ursprüngliche Nachricht-----",
+			"Von: Bea Kunde [mailto:bea@customer.example]", "Gesendet: Montag, 2. November 2026 09:00",
+			"Betreff: Angebot", "", "the original answer",
+		}, want: &connector.ForwardedOriginal{
+			From: "bea@customer.example", DisplayName: "Bea Kunde", Subject: "Angebot", Date: "Montag, 2. November 2026 09:00", Inline: true,
+		}},
+		"Outlook's underscore line": {text: []string{
+			"FYI", "", "________________________________", "From: Bea Kunde <bea@customer.example>",
+			"Sent: Monday, November 2, 2026 9:00 AM", "To: A <a@example.org>", "Subject: Angebot",
+		}, want: &connector.ForwardedOriginal{
+			From: "bea@customer.example", DisplayName: "Bea Kunde", Subject: "Angebot", Date: "Monday, November 2, 2026 9:00 AM", Inline: true,
+		}},
+		"Outlook's underscore line in German": {text: []string{
+			"________________________________", "Von: Bea Kunde <bea@customer.example>",
+			"Gesendet: Montag, 2. November 2026 09:00", "An: A <a@example.org>", "Betreff: Angebot",
+		}, want: &connector.ForwardedOriginal{
+			From: "bea@customer.example", DisplayName: "Bea Kunde", Subject: "Angebot", Date: "Montag, 2. November 2026 09:00", Inline: true,
+		}},
+		"a rendered HTML label": {text: []string{
+			"Begin forwarded message:", "", "*From:* bea@customer.example", "*Subject:* Angebot",
+		}, want: &connector.ForwardedOriginal{From: "bea@customer.example", Subject: "Angebot", Inline: true}},
+		"a From line with no marker is a quote": {text: []string{
+			"as she wrote:", "From: Bea Kunde <bea@customer.example>",
+		}},
+		"a From line past the header block is a quote": {text: []string{
+			"---------- Forwarded message ---------", "Subject: Angebot", "", "a", "b", "c", "d", "e", "f",
+			"From: Bea Kunde <bea@customer.example>",
+		}},
+	}
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			raw := crlf(append([]string{
+				"From: A <a@example.org>", "To: " + walkOwner, "Subject: Fwd: Angebot",
+				"Message-ID: <fwd@example.org>", "Content-Type: text/plain; charset=utf-8", "",
+			}, c.text...)...)
+			msg, err := Parse(raw, walkOwner)
+			if err != nil {
+				t.Fatalf("Parse: %v", err)
+			}
+			rec := msg.ToRecord("imap", raw)
+			if (rec.Forwarded == nil) != (c.want == nil) || (c.want != nil && *rec.Forwarded != *c.want) {
+				t.Fatalf("Forwarded = %+v, want %+v", rec.Forwarded, c.want)
+			}
+			assertOriginalIsNoParty(t, msg, rec, "bea@customer.example")
+		})
+	}
 }
 
 func TestParseMarksAnOpaqueBodyUnreadable(t *testing.T) {

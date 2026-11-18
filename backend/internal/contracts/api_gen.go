@@ -12454,6 +12454,24 @@ func (e EmailAccessStatus) Valid() bool {
 	}
 }
 
+// Defines values for EmailAttachmentSummaryWithheldReason.
+const (
+	EmailAttachmentSummaryWithheldReasonNotAddressed EmailAttachmentSummaryWithheldReason = "not_addressed"
+	EmailAttachmentSummaryWithheldReasonPrivate      EmailAttachmentSummaryWithheldReason = "private"
+)
+
+// Valid indicates whether the value is a known member of the EmailAttachmentSummaryWithheldReason enum.
+func (e EmailAttachmentSummaryWithheldReason) Valid() bool {
+	switch e {
+	case EmailAttachmentSummaryWithheldReasonNotAddressed:
+		return true
+	case EmailAttachmentSummaryWithheldReasonPrivate:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for EmailCalendarChangeAnswer.
 const (
 	EmailCalendarChangeAnswerAccepted  EmailCalendarChangeAnswer = "accepted"
@@ -35704,6 +35722,12 @@ type Approval struct {
 	// AssigneeInactive For a pending commitment, whether its named task assignee cannot receive the task. True for deactivated, archived, missing, or agent seats. An invited colleague can. Absent for an unassigned proposal. This is current decision context, not a change to the staged assignee.
 	AssigneeInactive *bool `json:"assignee_inactive,omitempty"`
 
+	// AwaitingAgent True on an approved proposal that an agent staged and has not yet redeemed. The decision
+	// only lets the agent repeat its call within the redemption window; nothing has changed on
+	// any record until it does. Absent on every other row, including one whose effect ran
+	// during the decision.
+	AwaitingAgent *bool `json:"awaiting_agent,omitempty"`
+
 	// BundleId The act that staged this proposal together with its siblings: today, a website read's company facts and the leads it published. Null for a proposal staged on its own. It is a grouping id, not a foreign key: there is no
 	// bundle entity, and every member keeps its own diff hash, version pin, expiry and
 	// verdict (ADR-0036 — the staged row IS the authority object). Decide the whole set with
@@ -35737,8 +35761,13 @@ type Approval struct {
 	Id        openapi_types.UUID `json:"id"`
 
 	// Kind Examples: coldstart | send_email | advance_deal | promote_lead | overnight | deal_follow_up | commitment_task.
-	Kind       string              `json:"kind"`
-	OnBehalfOf *openapi_types.UUID `json:"on_behalf_of,omitempty"`
+	Kind string `json:"kind"`
+
+	// MailboxSendCapable `false` on a pending mail proposal whose sender, the account the release runs as, has no
+	// connected mailbox that can transmit, so approving could only be refused. Absent
+	// otherwise.
+	MailboxSendCapable *bool               `json:"mailbox_send_capable,omitempty"`
+	OnBehalfOf         *openapi_types.UUID `json:"on_behalf_of,omitempty"`
 
 	// Preview A current, authorized explanation of the exact staged effect. It never grants permission or supplies execution arguments. Before values are answered only when the current record still has the staged version; stale records require restaging. Pending proposals alone carry this review-time projection. An approval attempt with stale context returns version_skew. Incomplete, unavailable or conflicting context returns 422 with approval_preview_incomplete, approval_preview_unavailable or approval_preview_conflict respectively, without recording a decision. An agent's proposal is explained as the agent whose retry runs it. When that effect touches a record the reader cannot open, the state is needs_wider_sight, nothing of the plan is shown, and an approval attempt returns 403 with approval_needs_wider_sight.
 	Preview *ApprovalPreview `json:"preview,omitempty"`
@@ -39765,7 +39794,7 @@ type CaptureTraceEntry struct {
 	// OutcomeNow The bucket this message counts under today. Equal to `outcome` unless the message was deferred and the sender has since been judged: a `real` verdict reads as captured and a noise, rejected or suppressed one as suppressed, because the question that made the outcome provisional has been answered. The funnel counts are grouped by this same expression, so a list filtered on it agrees with the counters above it — they disagreed, and the screen said `SENT FOR A VERDICT 49` over forty-nine rows each reading `judged noise`.
 	OutcomeNow CaptureTraceEntryOutcomeNow `json:"outcome_now"`
 
-	// Reason A class this installation chose, never a provider's text and never content. The ones that change what the outcome MEANS: `deferral_capped` (no verdict is coming — a ceiling refused the question), `noise_prior` and `decided_prior` (it landed, but a prior decision means no record will appear), `internal_only`, `no_granting_human`, `invisible_incumbent`, `derivation_failed`.
+	// Reason A class this installation chose, never a provider's text and never content. The ones that change what the outcome MEANS: `deferral_capped` (no verdict is coming — a ceiling refused the question), `noise_prior` and `decided_prior` (it landed, but a prior decision means no record will appear), `internal_only`, `own_addresses_only` (every party was the mailbox owner's own address and no forwarded customer mail was found), `no_granting_human`, `invisible_incumbent`, `derivation_failed`.
 	Reason *string `json:"reason,omitempty"`
 
 	// Resolution What later became of a DEFERRED message's sender, read from the disposition ledger rather than copied into the trace: the ledger is keyed by sender and the trace by message, and one sender's answer covers several messages.
@@ -49550,12 +49579,18 @@ type EmailAccessStatus string
 type EmailAttachmentSummary struct {
 	ByteSize *int `json:"byte_size,omitempty"`
 
-	// BytesWithheld True when the message is private to its owner and the file was recorded by name, size and type only. There are no bytes to fetch.
+	// BytesWithheld True when the file was recorded by name, size and type only. There are no bytes to fetch; `withheld_reason` says why.
 	BytesWithheld *bool              `json:"bytes_withheld,omitempty"`
 	ContentType   *string            `json:"content_type,omitempty"`
 	Filename      string             `json:"filename"`
 	Id            openapi_types.UUID `json:"id"`
+
+	// WithheldReason Present when `bytes_withheld` is true. `private`: the message is private to its owner. `not_addressed`: no colleague here sent the message or was in its To line, so the bytes wait for a copy that was addressed to one.
+	WithheldReason *EmailAttachmentSummaryWithheldReason `json:"withheld_reason,omitempty"`
 }
+
+// EmailAttachmentSummaryWithheldReason Present when `bytes_withheld` is true. `private`: the message is private to its owner. `not_addressed`: no colleague here sent the message or was in its To line, so the bytes wait for a copy that was addressed to one.
+type EmailAttachmentSummaryWithheldReason string
 
 // EmailCalendarBefore defines model for EmailCalendarBefore.
 type EmailCalendarBefore struct {
@@ -64740,6 +64775,11 @@ type ScheduledSend struct {
 	// OperatorReason What the sender typed when a first message was ambiguous, frozen with it. Only its
 	// sender reads this row.
 	OperatorReason *string `json:"operator_reason,omitempty"`
+
+	// ReviewActions What this caller may do about the review in `review_id`, in the words a refusal's
+	// `available_actions` uses. Absent or empty when they may only read it.
+	// `direct_send` sends the held message now on a recorded reason.
+	ReviewActions *[]string `json:"review_actions,omitempty"`
 
 	// ReviewId The review this message's refusal opened, when one stands. Null on every message
 	// nobody refused, and on a held row whose review has since been answered.

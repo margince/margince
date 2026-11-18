@@ -28014,7 +28014,7 @@ export interface components {
              * @enum {string}
              */
             outcome_now: "captured" | "internal" | "suppressed" | "deferred" | "fault";
-            /** @description A class this installation chose, never a provider's text and never content. The ones that change what the outcome MEANS: `deferral_capped` (no verdict is coming — a ceiling refused the question), `noise_prior` and `decided_prior` (it landed, but a prior decision means no record will appear), `internal_only`, `no_granting_human`, `invisible_incumbent`, `derivation_failed`. */
+            /** @description A class this installation chose, never a provider's text and never content. The ones that change what the outcome MEANS: `deferral_capped` (no verdict is coming — a ceiling refused the question), `noise_prior` and `decided_prior` (it landed, but a prior decision means no record will appear), `internal_only`, `own_addresses_only` (every party was the mailbox owner's own address and no forwarded customer mail was found), `no_granting_human`, `invisible_incumbent`, `derivation_failed`. */
             reason?: string | null;
             /**
              * Format: uuid
@@ -30289,8 +30289,13 @@ export interface components {
             filename: string;
             byte_size?: number | null;
             content_type?: string | null;
-            /** @description True when the message is private to its owner and the file was recorded by name, size and type only. There are no bytes to fetch. */
+            /** @description True when the file was recorded by name, size and type only. There are no bytes to fetch; `withheld_reason` says why. */
             readonly bytes_withheld?: boolean;
+            /**
+             * @description Present when `bytes_withheld` is true. `private`: the message is private to its owner. `not_addressed`: no colleague here sent the message or was in its To line, so the bytes wait for a copy that was addressed to one.
+             * @enum {string}
+             */
+            readonly withheld_reason?: "private" | "not_addressed";
         };
         /**
          * @description Who reads this message, and what this caller may do about that. `can_change` and
@@ -44533,6 +44538,12 @@ export interface components {
              *     this id still gets 404 if the review is not theirs to see.
              */
             review_id?: string | null;
+            /**
+             * @description What this caller may do about the review in `review_id`, in the words a refusal's
+             *     `available_actions` uses. Absent or empty when they may only read it.
+             *     `direct_send` sends the held message now on a recorded reason.
+             */
+            review_actions?: string[];
             /** Format: int64 */
             version: number;
             /** Format: date-time */
@@ -53821,6 +53832,19 @@ export interface components {
             effect_failed_at?: string | null;
             /** @description The sentence a reader is shown about that failure, written for them and never copied from the executor's error. Present exactly when `effect_failed_at` is. */
             effect_failure?: string | null;
+            /**
+             * @description `false` on a pending mail proposal whose sender, the account the release runs as, has no
+             *     connected mailbox that can transmit, so approving could only be refused. Absent
+             *     otherwise.
+             */
+            mailbox_send_capable?: boolean;
+            /**
+             * @description True on an approved proposal that an agent staged and has not yet redeemed. The decision
+             *     only lets the agent repeat its call within the redemption window; nothing has changed on
+             *     any record until it does. Absent on every other row, including one whose effect ran
+             *     during the decision.
+             */
+            awaiting_agent?: boolean;
             /** Format: date-time */
             created_at: string;
         };

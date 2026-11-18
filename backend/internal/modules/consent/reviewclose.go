@@ -29,10 +29,8 @@ package consent
 // module nor approvals and an erasure must not depend on a seam a deployment
 // could leave unwired.
 //
-// A reschedule closes nothing. A moved message is still going out and its
-// decision is still outstanding. The fire path that carries it opens no review
-// of its own. Closing here would leave a message that is refused at its new
-// moment held with no review open. See activities' RescheduleInTx.
+// A reschedule closes a review nobody has decided. One holding a recorded
+// decision stays live, because the fire at the new moment spends it.
 //
 // One function serves every direction. They differ only in what the row says
 // afterwards, and a call site per direction is a fresh chance to spell the
@@ -59,6 +57,8 @@ type ReviewClosure struct {
 	State string
 	// Because is the sentence the audit records: why the review ended.
 	Because string
+	// UnlessDirected leaves a review standing when a decision is recorded on it.
+	UnlessDirected bool
 }
 
 // ClosedByCancellation is a message nobody will send.
@@ -79,6 +79,17 @@ func ClosedBySending() ReviewClosure {
 	return ReviewClosure{
 		State:   ReviewResolved,
 		Because: "the message was sent once the engine allowed it",
+	}
+}
+
+// ClosedByMoving is a message moved to a new moment before anybody decided it.
+// Cancelled, because nothing was sent; the next fire opens a fresh review if
+// it is refused again.
+func ClosedByMoving() ReviewClosure {
+	return ReviewClosure{
+		State:          ReviewCancelled,
+		Because:        "the message was moved to a new time before anybody decided it",
+		UnlessDirected: true,
 	}
 }
 
@@ -116,6 +127,17 @@ func CloseReviewForIntentTx(
 	}
 	if err != nil {
 		return fmt.Errorf("consent: claiming the review for this message: %w", err)
+	}
+	if closure.UnlessDirected {
+		var directed bool
+		if err := tx.QueryRow(ctx, `
+			SELECT EXISTS (SELECT 1 FROM communication_instruction
+			                WHERE review_id = $1 AND status = 'directed')`, reviewID).Scan(&directed); err != nil {
+			return fmt.Errorf("consent: asking whether this review was decided: %w", err)
+		}
+		if directed {
+			return nil
+		}
 	}
 	// The row is already locked, so this cannot lose a race with anything.
 	if _, err := tx.Exec(ctx, `

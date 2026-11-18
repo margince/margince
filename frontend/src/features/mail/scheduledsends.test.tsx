@@ -30,6 +30,8 @@ type Send = {
   updated_at: string;
   held_reason?: string;
   anchor_activity_id?: string;
+  review_id?: string;
+  review_actions?: string[];
 };
 
 // The reader's own zone, whatever machine this runs on. Every zone assertion
@@ -238,6 +240,33 @@ it("prints no held reason for a reason this build does not know", async () => {
   await screen.findByText(/ops@acme\.test and 2 more/);
   expect(document.querySelector(".scheduledsends-held")).toBeNull();
   expect(screen.queryByText(en["common.unknownValue"])).toBeNull();
+});
+
+// A held message whose refusal opened a review offers the confirm the server
+// says this reader may make, and says that confirming sends it now.
+it("offers the review a held message's refusal opened", async () => {
+  mount([
+    {
+      ...HELD,
+      review_id: "019f7e65-fbf7-7114-b114-40af4af63af0",
+      review_actions: ["direct_send"],
+    },
+  ]);
+  expect(
+    await screen.findByRole("button", { name: en["directSend.open"] }),
+  ).toBeTruthy();
+  expect(screen.getByText(en["sched.held.confirmSendsNow"])).toBeTruthy();
+});
+
+// The id alone is a pointer, never permission: without the server's action
+// the row offers nothing to press.
+it("offers no confirm on a review the reader may only read", async () => {
+  mount([{ ...HELD, review_id: "019f7e65-fbf7-7114-b114-40af4af63af0" }]);
+  await screen.findByText(/ops@acme\.test and 2 more/);
+  expect(
+    screen.queryByRole("button", { name: en["directSend.open"] }),
+  ).toBeNull();
+  expect(screen.queryByText(en["sched.held.confirmSendsNow"])).toBeNull();
 });
 
 it("counts the recipients it is not listing", async () => {

@@ -5139,6 +5139,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "email.detail.attachments_other": "{count} Anhänge",
   "email.detail.attachmentWithheld":
     "Nicht gespeichert, da die E-Mail privat ist.",
+  "email.detail.attachmentNotAddressed":
+    "Nicht gespeichert, da niemand aus deinem Team die E-Mail gesendet hat oder im An-Feld stand.",
   "email.detail.showQuoted": "Zitierten Verlauf anzeigen",
   "aiTask.name.reader_rendering": "Nachricht in deiner Sprache zeigen",
   "readerRendering.show": "In meiner Sprache zeigen",
@@ -6861,6 +6863,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "decision.evidenceSource.unknown": "Quelle",
   "decision.detailAsked": "Angefragt",
   "decision.detailDecided": "Entschieden",
+  "decision.waitingForAgent": "Freigegeben. Der Agent führt es noch aus.",
+  "decision.mailboxBlocked":
+    "Kein verbundenes Postfach kann senden. Die Freigabe würde diese E-Mail nicht versenden.",
+  "decision.fieldRequired": "Pflichtfeld",
   "decision.applied": "Übernommen",
   "decision.undoOnRecord": "Am Datensatz rückgängig machen",
   "decision.status.approved": "Freigegeben",
@@ -7169,6 +7175,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Pfeiltasten merken eine Entscheidung vor: → annehmen · ← ablehnen · ↑ bearbeiten · ↓ später · U rückgängig · Enter sendet vorgemerkte Entscheidungen",
   "brief.deck.behind_one": "1 weitere dahinter",
   "brief.deck.behind_other": "{count} weitere dahinter",
+  "brief.deck.awaitingAgent_one":
+    "1 freigegebene Entscheidung wartet auf ihren Agenten.",
+  "brief.deck.awaitingAgent_other":
+    "{count} freigegebene Entscheidungen warten auf ihre Agenten.",
+  "brief.deck.effectFailed_one":
+    "1 freigegebene Entscheidung wurde nicht ausgeführt.",
+  "brief.deck.effectFailed_other":
+    "{count} freigegebene Entscheidungen wurden nicht ausgeführt.",
   "brief.deck.staged_one": "1 Entscheidung vorgemerkt",
   "brief.deck.staged_other": "{count} Entscheidungen vorgemerkt",
   "brief.deck.commit": "Vorgemerkte Entscheidungen senden",
@@ -14566,6 +14580,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "captureActivity.funnel.fault": "Fehlgeschlagen",
   "captureActivity.reason.internal_only":
     "Alle Beteiligten waren auf den Domains deines Unternehmens",
+  "captureActivity.reason.own_addresses_only":
+    "Alle Beteiligten waren deine eigenen Adressen, und es wurde keine Kunden-E-Mail weitergeleitet",
   "captureActivity.reason.deferral_capped":
     "Es folgt kein Ergebnis, da das Limit für offene Fragen erreicht war",
   "captureActivity.reason.noise_prior":
@@ -14637,6 +14653,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "pipeline.stage.claim_extraction": "Zusagen und offene Punkte",
   "pipeline.reason.internal_only":
     "alle Beteiligten waren auf den Domains deines Unternehmens",
+  "pipeline.reason.own_addresses_only":
+    "alle Beteiligten waren deine eigenen Adressen, und es wurde keine Kunden-E-Mail weitergeleitet",
   "pipeline.reason.invisible_incumbent":
     "sie passte zu einem Datensatz, den du nicht sehen kannst",
   "pipeline.reason.transactional_infra":
@@ -19762,6 +19780,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Jemand unter den Empfangenden hat nach der Planung Werbung gestoppt. An diese Adresse wird sie nicht gesendet.",
   "sched.held.recipientReplied":
     "Nach der Planung kam neue Mail von jemandem unter den Empfangenden. Lies sie, bevor du dieses Follow-up sendest.",
+  "sched.held.confirmSendsNow":
+    "Wenn du bestätigst, wird die Nachricht jetzt gesendet, nicht zur geplanten Zeit.",
   "sched.held.sendRefused":
     "Eine Prüfung hat die Nachricht bei Fälligkeit blockiert. Es wurde nichts gesendet.",
   "sched.inZone": "in {zone}",
@@ -20093,6 +20113,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.clear": "Nichts wartet auf dich.",
   "worklist.clearFor": "Nichts wartet auf {name}.",
   "worklist.clearOfUrgent": "Keine dringende Arbeit.",
+  "worklist.clearDecisionsWaiting":
+    "Heute nichts fällig. Entscheidungen warten auf dich.",
+  "worklist.clearDecisionsOpen": "Entscheidungen öffnen",
   "worklist.clearOfTasksToday":
     "Keine Aufgaben fällig heute oder überfällig. Spätere Aufgaben stehen unter Anstehend und Rückstand.",
   "worklist.clearOfWhatWasRead": "Keine Einträge in den geladenen Quellen.",
