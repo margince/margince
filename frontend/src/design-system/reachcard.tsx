@@ -35,13 +35,14 @@ export function ReachLine({
   mark?: ReactNode;
 }>) {
   const Glyph = kind === "email" ? Mail : Phone;
-  const tip = useTruncationTooltipAround<HTMLSpanElement>(text);
+  const { ref, trigger, tip } =
+    useTruncationTooltipAround<HTMLSpanElement>(text);
   return (
     <span className="reachline">
       <Glyph aria-hidden="true" className="reachline-glyph" />
-      <span className="reachline-handle" ref={tip.ref} {...tip.trigger}>
+      <span className="reachline-handle" ref={ref} {...trigger}>
         {children}
-        {tip.tip}
+        {tip}
       </span>
       {caption && <span className="reachline-kind t-caption">{caption}</span>}
       {mark}
