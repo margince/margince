@@ -7,7 +7,7 @@ import { Button } from "../../../design-system/atoms";
 import { useToast } from "../../../design-system/toast";
 import { useT } from "../../../i18n";
 import type { MessageKey } from "../../../i18n/en";
-import { dealRecordKeys } from "../../../lib/activitykeys";
+import { dealStageMoveKeys } from "../../../lib/activitykeys";
 import { undoRefusalKey } from "../../../lib/historyundo";
 import { problemMessageOf } from "../../../lib/problem";
 import { useRecordRestore } from "../../../lib/recordrestore";
@@ -29,7 +29,7 @@ export function RestoreDealAction({ deal }: Readonly<{ deal: Deal }>) {
   const restore = useRecordRestore({
     onSuccess: () => {
       for (const queryKey of [
-        ...dealRecordKeys(deal.id),
+        ...dealStageMoveKeys(deal.id),
         ["deals"],
         ["record-history", "deal", deal.id],
       ]) {

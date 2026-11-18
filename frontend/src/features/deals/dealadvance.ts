@@ -6,7 +6,7 @@ import { api } from "../../api/client";
 import { ifMatch, requireVersion } from "../../api/version";
 import { undoAction, useToast } from "../../design-system/toast";
 import { useLocale, useT } from "../../i18n";
-import { dealRecordKeys, dealWinKeys } from "../../lib/activitykeys";
+import { dealStageMoveKeys, dealWinKeys } from "../../lib/activitykeys";
 import { unwrap } from "../../lib/problem";
 import type { AdvanceInput } from "./deal360/confirmadvance";
 import { advanceNote } from "./dealprobability";
@@ -84,7 +84,7 @@ export function useAdvanceDeal() {
         queryClient.setQueryData(["deal", input.dealId], record);
       }
       queryClient.invalidateQueries({ queryKey: ["deals"] });
-      for (const queryKey of dealRecordKeys(input.dealId)) {
+      for (const queryKey of dealStageMoveKeys(input.dealId)) {
         queryClient.invalidateQueries({ queryKey });
       }
       // A win moves the deal's project into delivery in the same server

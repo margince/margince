@@ -140,9 +140,14 @@ export function dealRecordKeys(dealId: string): QueryKey[] {
   return [
     dealKey(dealId),
     dealOutcomeReviewsKey(dealId),
-    dealStageHistoryKey(dealId),
     ...derivedRecordKeys("deal", dealId),
   ];
+}
+
+// The reads a write that can move the deal's stage invalidates: the record's,
+// and its stage moves. An edit that moves no stage leaves those unread.
+export function dealStageMoveKeys(dealId: string): QueryKey[] {
+  return [...dealRecordKeys(dealId), dealStageHistoryKey(dealId)];
 }
 
 // The reads written FROM a record, by the key its own page reads it under.

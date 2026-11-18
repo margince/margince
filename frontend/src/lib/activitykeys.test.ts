@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   dealRecordKeys,
+  dealStageMoveKeys,
   dealWinKeys,
   derivedRecordKeys,
   entityTimelineKeys,
@@ -87,13 +88,25 @@ describe("which reads a write to the record itself invalidates", () => {
     // deal, each captioned as this closing's or an earlier one by comparing it
     // with the deal's own closing_occurrence_id. A write that moves one half of
     // that comparison and not the other is what leaves a closing somebody has
-    // reviewed showing as unreviewed. The stage moves count the days in stage.
+    // reviewed showing as unreviewed.
     expect(dealRecordKeys("d1")).toEqual([
       ["deal", "d1"],
       ["deals", "d1", "outcome-reviews"],
-      ["deal-stage-history", "d1"],
       ["deal-status", "d1"],
       ["lists", "record", "deal", "d1"],
+    ]);
+  });
+
+  it("reaches the stage moves only from a write that can move the stage", () => {
+    // Days in stage counts from the stage moves. A name or amount edit moves
+    // no stage, so it leaves that read alone.
+    expect(dealStageMoveKeys("d1")).toEqual([
+      ...dealRecordKeys("d1"),
+      ["deal-stage-history", "d1"],
+    ]);
+    expect(dealRecordKeys("d1")).not.toContainEqual([
+      "deal-stage-history",
+      "d1",
     ]);
   });
 

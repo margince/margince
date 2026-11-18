@@ -26,7 +26,7 @@ import { VerbWord } from "../../../design-system/iconaction";
 import { ListPopover } from "../../../design-system/listpopover";
 import { useToast } from "../../../design-system/toast";
 import { useLocale, useT } from "../../../i18n";
-import { dealRecordKeys } from "../../../lib/activitykeys";
+import { dealStageMoveKeys } from "../../../lib/activitykeys";
 import { useCanWriteRecord } from "../../../lib/capability";
 import { unwrap } from "../../../lib/problem";
 import { navigate } from "../../../lib/router";
@@ -143,7 +143,7 @@ function ReopenAction({
           locale,
         ),
       );
-      for (const queryKey of dealRecordKeys(dealId)) {
+      for (const queryKey of dealStageMoveKeys(dealId)) {
         queryClient.invalidateQueries({ queryKey });
       }
       queryClient.invalidateQueries({ queryKey: ["deals"] });

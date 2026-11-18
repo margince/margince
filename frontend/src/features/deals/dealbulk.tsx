@@ -11,7 +11,7 @@ import { useToast } from "../../design-system/toast";
 import { stable } from "../../format/collate";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
-import { dealRecordKeys } from "../../lib/activitykeys";
+import { dealStageMoveKeys } from "../../lib/activitykeys";
 import { ProblemError, problemMessageOf, unwrap } from "../../lib/problem";
 
 type Deal = components["schemas"]["Deal"];
@@ -131,7 +131,7 @@ export function DealBulkBar({
         if (outcome.error !== undefined) {
           continue;
         }
-        for (const queryKey of dealRecordKeys(outcome.id)) {
+        for (const queryKey of dealStageMoveKeys(outcome.id)) {
           queryClient.invalidateQueries({ queryKey });
         }
       }
