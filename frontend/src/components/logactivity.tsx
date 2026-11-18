@@ -2,7 +2,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import { useIdempotencyKey } from "../api/idempotencykey";
-import { ifMatch, requireVersion } from "../api/version";
 import { Button, Checkbox, Field, TextInput } from "../design-system/atoms";
 import {
   DateInput,
@@ -10,7 +9,6 @@ import {
   isISODate,
   isoOrBlank,
 } from "../design-system/dateinput";
-import { ErrorLine } from "../design-system/errorline";
 import { refuseUnreadableField } from "../design-system/formvalidity";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useSinglePress } from "../design-system/presslatch";
@@ -37,7 +35,11 @@ import { ActivityBodyField } from "./activitybodyfield";
 import { TaskAssigneeField } from "./assigneepicker";
 import { LogActivityEntries } from "./extensionentries";
 import { ActivityKindField } from "./logactivity.kindfield";
-import { TaskCompletionChoice } from "./logactivity.taskcompletion";
+import {
+  completeLoggedTask,
+  LogErrorLine,
+  TaskCompletionChoice,
+} from "./logactivity.taskcompletion";
 import { assignedRecord } from "./recordassignments.queries";
 import { TaskTypeField } from "./tasktype";
 import "./logactivity.css";
@@ -59,6 +61,7 @@ import {
   useRecordOfMeeting,
 } from "./logactivity.openmeeting";
 import { PolishWording } from "./logactivity.polish";
+import { useCreateOncePerKey } from "./logactivity.retry";
 import {
   attachLoggedFiles,
   LogActivityFilesField,
@@ -67,6 +70,7 @@ import {
   useReportUnattached,
 } from "./logactivityfiles";
 import { MeetingAttendeeFields } from "./meetingattendees";
+import { useTaskUpdate } from "./taskwrite";
 import { useUnsavedGuard } from "./unsaved";
 
 export type OpeningKind = "note" | "task" | "call";
@@ -145,6 +149,8 @@ export function LogActivityForm({
   const bodyRows = transcript ? 10 : banded ? 8 : 3;
 
   const { key: idempotencyKey, renew: renewKey } = useIdempotencyKey();
+  const createOnce = useCreateOncePerKey();
+  const taskUpdate = useTaskUpdate([]);
   const log = useMutation({
     mutationKey: ["activity-log", entityId],
     // Pass the zone with the mutation so a stale render cannot store the wrong day.
@@ -170,22 +176,24 @@ export function LogActivityForm({
           linkedDealIds: input.record.linkedDealIds ?? [],
         };
       }
-      const created = unwrap(
-        await api.POST("/activities", {
-          params: { header: { "Idempotency-Key": input.idempotencyKey } },
-          body: {
-            ...activityRequestBody(
-              input.draft,
-              entityType,
-              entityId,
-              input.zone,
-              input.attendees,
-            ),
-            ...(input.inheritSourceLinks ? { links: undefined } : {}),
-            ...(recordsMeeting ? { records_meeting_id: recordsMeeting } : {}),
-          },
-        }),
-        t,
+      const created = await createOnce(input.idempotencyKey, async () =>
+        unwrap(
+          await api.POST("/activities", {
+            params: { header: { "Idempotency-Key": input.idempotencyKey } },
+            body: {
+              ...activityRequestBody(
+                input.draft,
+                entityType,
+                entityId,
+                input.zone,
+                input.attendees,
+              ),
+              ...(input.inheritSourceLinks ? { links: undefined } : {}),
+              ...(recordsMeeting ? { records_meeting_id: recordsMeeting } : {}),
+            },
+          }),
+          t,
+        ),
       );
       // After the create: a file needs the activity's id as its parent.
       const unattached = await attachLoggedFiles(
@@ -194,31 +202,12 @@ export function LogActivityForm({
         uploadedFiles.current,
       );
       if (input.completion && unattached.length === 0) {
-        const current = unwrap(
-          await api.GET("/activities/{id}", {
-            params: { path: { id: input.completion.id } },
-          }),
-          t,
-        );
-        if (!current.is_done) {
-          unwrap(
-            await api.PATCH("/activities/{id}", {
-              params: {
-                path: { id: input.completion.id },
-                ...ifMatch(requireVersion(current.version)),
-              },
-              body: { is_done: true, version: current.version },
-            }),
-            t,
-          );
-        }
+        await completeLoggedTask(taskUpdate, input.completion.id, t);
       }
       return {
         id: created.id,
         unattached,
-        linkedDealIds: (created.links ?? [])
-          .filter((link) => link.entity_type === "deal")
-          .map((link) => link.entity_id),
+        linkedDealIds: created.linkedDealIds,
       };
     },
     onError: (_error, input) => {
@@ -457,7 +446,7 @@ export function LogActivityForm({
         disabled={log.isPending}
       />
       {completionControl}
-      <ErrorLine error={log.error} />
+      <LogErrorLine error={log.error} />
       {actions}
     </form>
   );

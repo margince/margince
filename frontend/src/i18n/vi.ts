@@ -8074,6 +8074,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "tasks.log.chooseRecord": "Chọn bản ghi khác",
   "tasks.log.leftOpen":
     "Đã ghi hoạt động. Công việc vẫn mở cho đến khi đính kèm đủ tệp; hãy thử lại để hoàn tất.",
+  "tasks.log.completeFailed":
+    "Đã ghi hoạt động, nhưng công việc vẫn còn mở. Hãy thử lại để đóng công việc.",
   "tasks.log.markDone": "Đánh dấu công việc đã xong",
   "tasks.detail": "Việc cần làm",
   "tasks.sourceEmail": "Email nguồn",

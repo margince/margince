@@ -27,6 +27,9 @@ type Call = {
   key: string;
   form: FormData | null;
   outcome?: number | "dropped";
+  // A JSON write's body and precondition, as the server would read them.
+  json?: unknown;
+  ifMatch?: string | null;
 };
 
 const CREATED_ID = "act-kickoff";
@@ -57,6 +60,8 @@ type Behaviour = Readonly<{
   holdUploads?: Promise<void>;
   // The contact page's Documents count, mounted beside the form.
   docs?: ReturnType<typeof contactDocuments>;
+  // How many task completions the server answers with a 500 before one lands.
+  completionFailures?: { left: number };
 }>;
 
 function stubApi(behaviour: Behaviour = {}): Call[] {
@@ -98,7 +103,19 @@ function stubApi(behaviour: Behaviour = {}): Call[] {
         is_done: false,
         version: 1,
       });
-    if (key === "PATCH /activities/task-one")
+    if (key === "PATCH /activities/task-one") {
+      call.json = await request?.clone().json();
+      call.ifMatch = request?.headers.get("If-Match");
+      const failures = behaviour.completionFailures;
+      if (failures && failures.left > 0) {
+        failures.left -= 1;
+        return answer(
+          jsonResponse(
+            { type: "about:blank", title: "Internal", status: 500 },
+            500,
+          ),
+        );
+      }
       return answer(
         jsonResponse({
           id: "task-one",
@@ -107,6 +124,7 @@ function stubApi(behaviour: Behaviour = {}): Call[] {
           version: 2,
         }),
       );
+    }
     if (key === "POST /attachments") {
       await behaviour.holdUploads;
       const file = form?.get("file");
@@ -174,6 +192,12 @@ const uploaded = (calls: Call[]) =>
 
 const created = (calls: Call[]) =>
   calls.some((call) => call.key === "POST /activities");
+
+const creates = (calls: Call[]) =>
+  calls.filter((call) => call.key === "POST /activities").length;
+
+const completions = (calls: Call[]) =>
+  calls.filter((call) => call.key === "PATCH /activities/task-one");
 
 async function logWith(files: File[]) {
   const user = userEvent.setup();
@@ -362,12 +386,37 @@ it("logs a task outcome with its file and completes the task when selected", asy
   const calls = stubApi();
   renderForm(true);
   await logWith([pdf("outcome.pdf")]);
+  await waitFor(() => expect(completions(calls)).toHaveLength(1));
+  expect(uploaded(calls)).toEqual([["outcome.pdf", 201]]);
+  // The version goes in If-Match only; the update body declares no version.
+  expect(completions(calls)[0]).toMatchObject({
+    json: { is_done: true },
+    ifMatch: "1",
+  });
+  expect(completions(calls)[0]?.json).toStrictEqual({ is_done: true });
+});
+
+it("says the task is still open when only its completion fails, and a retry only closes it", async () => {
+  const calls = stubApi({ completionFailures: { left: 1 } });
+  renderForm(true);
+  const user = await logWith([pdf("outcome.pdf")]);
+  expect(
+    await screen.findByText(
+      "The activity was logged, but the task is still open. Retry to close it.",
+    ),
+  ).toBeTruthy();
+  expect(creates(calls)).toBe(1);
+  await user.click(screen.getByRole("button", { name: "Log" }));
+  await waitFor(() =>
+    expect(completions(calls).map((call) => call.outcome)).toEqual([500, 200]),
+  );
+  expect(creates(calls)).toBe(1);
+  expect(uploaded(calls)).toEqual([["outcome.pdf", 201]]);
   await waitFor(() =>
     expect(
-      calls.some((call) => call.key === "PATCH /activities/task-one"),
-    ).toBe(true),
+      screen.getByRole("textbox", { name: "Subject" }).getAttribute("value"),
+    ).toBe(""),
   );
-  expect(uploaded(calls)).toEqual([["outcome.pdf", 201]]);
 });
 
 it("keeps the task open when completion is unchecked", async () => {
@@ -411,4 +460,5 @@ it("keeps a partially attached outcome open and retries only its missing file", 
     ["outcome.pdf", 422],
     ["outcome.pdf", 201],
   ]);
+  expect(creates(calls)).toBe(1);
 });
