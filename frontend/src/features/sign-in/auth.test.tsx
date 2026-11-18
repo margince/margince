@@ -304,11 +304,11 @@ describe("AuthScreen login", () => {
       screen.queryByText(/encrypted|compliant|sovereign|your data is safe/i),
     ).toBeNull();
     // Off-site and in a new tab, so the typed email survives the click.
-    const terms = screen.getByRole("link", { name: "Terms" });
-    expect(terms.getAttribute("href")).toBe("https://margince.com/terms/");
-    expect(terms.getAttribute("target")).toBe("_blank");
-    expect(terms.getAttribute("rel")).toContain("noopener");
-    expect(screen.queryByRole("link", { name: "Privacy" })).toBeNull();
+    const privacy = screen.getByRole("link", { name: "Privacy" });
+    expect(privacy.getAttribute("href")).toBe("https://margince.com/privacy/");
+    expect(privacy.getAttribute("target")).toBe("_blank");
+    expect(privacy.getAttribute("rel")).toContain("noopener");
+    expect(screen.queryByRole("link", { name: "Terms" })).toBeNull();
   });
 
   // The theme is readable before anyone signs in, so it has to be changeable

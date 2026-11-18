@@ -2804,6 +2804,7 @@ export const en = {
   "shell.shortcuts.singleKeyOffHint": "Turn them on in Settings → Account.",
   "shell.more": "More",
   "shell.unknownPage": "Not found",
+  "shell.unavailableForRole": "Not available for your role.",
   "shell.closeMenu": "Close",
   // The agent panel's one promise, as opposed to its readings: what the agent
   // can REACH. Row scope bounds it on the server, and a guarantee nobody is
@@ -13285,7 +13286,7 @@ export const en = {
   // claims the installation's own configuration can contradict, on the screen a
   // CISO reads on the way in.
   "auth.legalProtected": "Access to this company is restricted.",
-  "auth.legalTerms": "Terms",
+  "auth.legalPrivacy": "Privacy",
   "auth.signingIn": "Signing in…",
   "auth.signIn": "Sign in",
   "auth.failed": "Sign-in failed",

@@ -6,12 +6,12 @@ import type { MessageKey } from "../i18n/en";
 type LegalLink = Readonly<{ key: string; labelKey: MessageKey; href: string }>;
 
 // Only a document that has an address is listed, so the sign-in screen never
-// links to a page that does not exist. Margince publishes its terms on its
-// website; no privacy notice has an address to point at yet.
+// links to a page that does not exist. Margince publishes its privacy notice
+// on its website; no terms page exists yet.
 export const LEGAL_LINKS: readonly LegalLink[] = [
   {
-    key: "terms",
-    labelKey: "auth.legalTerms",
-    href: "https://margince.com/terms/",
+    key: "privacy",
+    labelKey: "auth.legalPrivacy",
+    href: "https://margince.com/privacy/",
   },
 ];

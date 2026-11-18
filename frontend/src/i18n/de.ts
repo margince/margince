@@ -2915,6 +2915,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Aktiviere sie unter Einstellungen → Nutzerkonto.",
   "shell.more": "Mehr",
   "shell.unknownPage": "Nicht gefunden",
+  "shell.unavailableForRole": "Für Ihre Rolle nicht verfügbar.",
   "shell.closeMenu": "Schließen",
   "shell.agent.scope": "Margince liest nur, was du sehen kannst.",
   "shell.capture.importing": "Postfachverlauf wird importiert",
@@ -13307,7 +13308,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "auth.noMethodOffered":
     "Die Anmeldung für dieses Unternehmen läuft über einen Identitätsanbieter, der nicht verfügbar ist. Bitte wende dich an einen Admin, der die Einrichtung abschließen kann.",
   "auth.legalProtected": "Der Zugang zu diesem Unternehmen ist beschränkt.",
-  "auth.legalTerms": "Nutzungsbedingungen",
+  "auth.legalPrivacy": "Datenschutz",
   "auth.signingIn": "Wird angemeldet…",
   "auth.signIn": "Anmelden",
   "auth.failed": "Anmeldung fehlgeschlagen",

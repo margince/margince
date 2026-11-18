@@ -2824,6 +2824,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "shell.shortcuts.singleKeyOffHint": "Bật lại trong Cài đặt, mục Tài khoản.",
   "shell.more": "Thêm",
   "shell.unknownPage": "Không tìm thấy",
+  "shell.unavailableForRole": "Không khả dụng cho vai trò của bạn.",
   "shell.closeMenu": "Đóng",
   "shell.agent.scope": "Margince chỉ đọc những gì bạn xem được.",
   "shell.capture.importing": "Đang nhập lịch sử hộp thư",
@@ -12970,7 +12971,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   // claims the installation's own configuration can contradict, on the screen a
   // CISO reads on the way in.
   "auth.legalProtected": "Quyền truy cập vào công ty này bị giới hạn.",
-  "auth.legalTerms": "Điều khoản",
+  "auth.legalPrivacy": "Quyền riêng tư",
   "auth.signingIn": "Đang đăng nhập…",
   "auth.signIn": "Đăng nhập",
   "auth.failed": "Đăng nhập không thành công",
