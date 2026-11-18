@@ -27,8 +27,8 @@ const SOURCE_KEY: Partial<
 };
 
 /**
- * The country one recipient's marketing rules follow, on their chip: what the
- * record says and where it says it, and the sender's own setting for this
+ * The country one recipient's marketing rules follow, on their chip. It shows
+ * what the record says and where, and the sender's own setting for this
  * message. Nothing here writes to the contact.
  */
 export function RecipientCountryControl({

@@ -98,7 +98,7 @@ type RowVerbs = Readonly<{
 }>;
 
 // A further entity with no country sends under the installation's, which may
-// be the wrong law for it, so the list shows an admin the gap.
+// be the wrong law for it. The list shows an admin the gap.
 function countryCell(entity: LegalEntity, t: Translator) {
   if (entity.country) return entity.country.toUpperCase();
   if (entity.is_default) return "";

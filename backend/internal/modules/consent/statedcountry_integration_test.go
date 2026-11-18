@@ -153,8 +153,8 @@ func TestAnAgentMayNotStateARecipientsCountry(t *testing.T) {
 	}
 }
 
-// Clearing a country moves no objection: a recipient who asked us to stop is
-// refused the same with the country stated, cleared or left to the record.
+// Clearing a country moves no objection. A recipient who asked us to stop is
+// refused alike with the country stated, cleared or left to the record.
 func TestAClearedCountryKeepsALiveObjection(t *testing.T) {
 	e, p := statedEnv(t)
 	e.suppress(t, "subject_request")

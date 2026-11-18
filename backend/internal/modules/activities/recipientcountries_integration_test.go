@@ -16,7 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
-// A saved draft gives back a cleared country as cleared and keeps no entry for
+// A saved draft gives back a cleared country as cleared. It keeps no entry for
 // a recipient the author stated nothing about, or one no longer on the draft.
 func TestADraftKeepsAClearedCountryApartFromNone(t *testing.T) {
 	e := setupSend(t)

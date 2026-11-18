@@ -11,8 +11,8 @@ import (
 
 // StatedCountryError refuses a recipient country stated by anyone but the user
 // writing the message. A stated or cleared country can put a recipient under
-// laxer rules or none, so it is the user's correction of a wrong record, never
-// an agent's or an integration's.
+// laxer rules or none. It is the user's correction of a wrong record, never an
+// agent's or an integration's.
 type StatedCountryError struct{}
 
 func (*StatedCountryError) Error() string {

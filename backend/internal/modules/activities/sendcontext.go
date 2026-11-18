@@ -119,8 +119,8 @@ func evidenceFrom(in *crmcontracts.CommunicationEvidence) commsauthz.Evidence {
 }
 
 // countryOverridesFrom decodes the countries a sender stated. A null country
-// is one they cleared; a code that is not a country is refused rather than
-// read as cleared, which would quietly judge the recipient under the baseline.
+// is one they cleared. A code that is not a country is refused: read as
+// cleared, it would judge the recipient under the baseline unasked.
 func countryOverridesFrom(list *[]crmcontracts.RecipientCountry) ([]commsauthz.CountryOverride, error) {
 	if list == nil {
 		return nil, nil

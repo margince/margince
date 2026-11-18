@@ -98,10 +98,7 @@ var erasureColumnBaseline = map[string][]string{
 	// redaction leaves it standing. What it DOES clear on this table is the
 	// recipient address and the subject link, which is the identifying half.
 	"communication_decision": {
-		"basis",
-		// A closed vocabulary naming which record or statement gave the
-		// recipient's country; it holds no address and nothing the subject wrote.
-		"country_source",
+		"basis", "country_source",
 		// Two values, both this repository's own: the engine allowed the
 		// message, or a named human decided a refused one goes anyway. It says
 		// nothing about the subject — it says what the CONTROLLER did — and

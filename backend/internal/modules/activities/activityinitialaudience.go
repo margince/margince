@@ -77,7 +77,7 @@ func recordInitialActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in
 }
 
 // statedCountriesEvidence names each recipient whose country the sender
-// stated, with the code or "cleared", so an auditor sees who moved a
+// stated, with the code or "cleared". An auditor reads from it who moved a
 // recipient's jurisdiction on which message.
 func statedCountriesEvidence(stated []commsauthz.CountryOverride) map[string]string {
 	if len(stated) == 0 {
