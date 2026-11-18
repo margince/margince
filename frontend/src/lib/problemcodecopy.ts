@@ -25,6 +25,7 @@ export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   ["provider_unavailable", "common.providerUnavailable"],
   ["calendar_unavailable", "scheduling.calendarUnavailable"],
   ["permission_denied", "common.permissionDenied"],
+  ["consumer_mail_domain", "captureValue.consumerMail"],
   ["seat_tier_insufficient", "common.seatReadOnly"],
   ["trial_ended", "common.trialEnded"],
   ["license_lapsed", "common.licenseLapsed"],

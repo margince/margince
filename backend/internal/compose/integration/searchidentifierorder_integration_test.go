@@ -37,7 +37,7 @@ func TestAnAddressPrefixRanksItsLeadAndCompanyBeforeDomainFragments(t *testing.T
 	for _, domain := range []string{"examplecorp.net", "exampleconsulting.net", "examplecommerce.net"} {
 		identifierCompany(t, e, domain, domain, true)
 	}
-	target := identifierCompany(t, e, "The right company", "example.com", false)
+	target := identifierCompany(t, e, "The right company", "example.test", false)
 	lead, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{FullName: new("Lena"), Email: new("lena@example.com"), Source: "manual"})
 	if err != nil {
 		t.Fatal(err)
@@ -71,7 +71,7 @@ func TestAnAddressPrefixRanksItsLeadAndCompanyBeforeDomainFragments(t *testing.T
 func TestDomainClosenessOrdersBothGroupedAndRankedPages(t *testing.T) {
 	e := Setup(t)
 	identifierCompany(t, e, "Old long account", "exampleconsulting.net", false)
-	nearest := identifierCompany(t, e, "New close account", "example.com", false)
+	nearest := identifierCompany(t, e, "New close account", "example.test", false)
 	store := search.NewStore(e.DB())
 	perType := 3
 	grouped, err := store.Search(e.Admin(), search.Input{AddressCompanies: true, Query: "exam", Types: []string{"company"}, PerType: &perType})

@@ -19,9 +19,10 @@ import { ErrorLine } from "../design-system/errorline";
 import { type Fact, FactList } from "../design-system/factlist";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { QueryGate } from "../design-system/querystates";
-import { useT } from "../i18n";
+import { useLocale, useT } from "../i18n";
 import { useCanWrite } from "../lib/capability";
 import { unwrap } from "../lib/problem";
+import { useViewerZone } from "../lib/viewerzone";
 import { EditAction } from "./edit";
 import "../design-system/querystates.css";
 import { EntityRef } from "./entityref";
@@ -116,6 +117,9 @@ export function RelationshipRows({
   const t = useT();
   const queryClient = useQueryClient();
   const copy = scopeCopy(scope);
+  const { locale } = useLocale();
+  const zone = useViewerZone();
+  const datesOf = (rel: Relationship) => dateRange(rel, t, locale, zone);
   // The object half of each verb's gate, asked as the server asks it
   // (relationship:create on an add, :update on an edit, :delete on a
   // removal). A verb the role holds no grant for is withheld outright — there
@@ -178,7 +182,7 @@ export function RelationshipRows({
       ...(extra
         ? [{ key: "extra", term: extra.label, value: extra.render(rel) }]
         : []),
-      { key: "dates", term: t("rel.dates"), value: dateRange(rel, t) },
+      { key: "dates", term: t("rel.dates"), value: datesOf(rel) },
     ];
   };
 
@@ -196,7 +200,7 @@ export function RelationshipRows({
       {canUpdate && (
         <EditAction
           disabledReasonId={refusedReasonId}
-          label={t("record.edit")}
+          label={t(copy.edit)}
           savedMessage={t("rel.saveDone")}
           fields={relationshipEditFields}
           record={{
@@ -289,7 +293,7 @@ export function RelationshipRows({
     {
       key: "dates",
       header: t("rel.dates"),
-      render: (rel: Relationship) => dateRange(rel, t),
+      render: datesOf,
     },
     {
       key: "actions",
@@ -340,7 +344,7 @@ export function RelationshipRows({
           setRemoving(null);
           remove.reset();
         }}
-        title={t("rel.remove")}
+        title={t(copy.remove)}
         confirmLabel={t("rel.remove")}
         confirmVariant="danger"
         onConfirm={() => {

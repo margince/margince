@@ -337,7 +337,7 @@ describe("the deal's committee card", () => {
     );
     expect(
       await screen.findByRole("button", {
-        name: translate("en", "record.edit"),
+        name: translate("en", "rel.editStakeholder"),
       }),
     ).toBeInTheDocument();
     await user.click(await screen.findByTestId("remove-relationship"));

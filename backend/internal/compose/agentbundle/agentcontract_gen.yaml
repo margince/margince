@@ -14985,6 +14985,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/CaptureOwnerIdentity'}
         '401': {$ref: '#/components/responses/Unauthorized'}
+        '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /capture/owner-identities/{id}:
     parameters:
@@ -16039,6 +16040,7 @@ paths:
               schema: {$ref: '#/components/schemas/ConsumerMailDomain'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /capture/consumer-mail-domains/{id}:
     parameters:
@@ -27991,6 +27993,9 @@ components:
       properties:
         domain: {type: string, description: 'A mail domain; normalized to its registrable form before it is stored.'}
         kind: {type: string, enum: [extra, never]}
+        confirm:
+          type: boolean
+          description: 'Set after the user answered the 409 `domain_needs_confirmation` question with yes. Without it the same request is refused again.'
     ConsumerMailDomainListResponse:
       type: object
       required: [data]
@@ -29178,6 +29183,9 @@ components:
       properties:
         kind: {$ref: '#/components/schemas/CaptureOwnerIdentityKind'}
         value: {type: string, maxLength: 320, description: 'An email address, or a bare domain.'}
+        confirm:
+          type: boolean
+          description: 'Set after the user answered the 409 `domain_needs_confirmation` question with yes. Without it the same request is refused again.'
     WorkspaceEmailDomainListResponse:
       type: object
       required: [data]

@@ -154,7 +154,6 @@ reach features/contacts/contactbillingroles.stories.tsx features/companies/compa
 reach features/contacts/contactconfirm.tsx features/worklist/worklist.return.tsx
 reach features/contacts/contactconsentpanel.tsx features/privacy/consent.tsx
 reach features/contacts/contactdealrooms.tsx features/deals/dealroomaccess.tsx
-reach features/contacts/contactfacts.tsx features/companies/companycontacts/summary.tsx
 reach features/contacts/contactfiles.tsx features/voice-knowledge/adddocument.tsx
 reach features/contacts/contactimportaction.tsx features/import/importaddress.ts
 reach features/contacts/contactmaybedone.tsx features/records/record360/index.ts

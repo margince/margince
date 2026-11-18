@@ -380,6 +380,44 @@ describe("ProjectScreen", () => {
     expect(posted).toEqual({ to_phase: "pursuing", reason: null });
   });
 
+  it("shows the new phase from the move's answer and closes the dialog only once the page is read again", async () => {
+    const user = userEvent.setup();
+    let moved = false;
+    let releaseReread: (response: Response) => void = () => {};
+    projectsBackend({
+      respond: async (url, method) => {
+        if (method === "POST" && url.endsWith("/projects/pr-1/advance")) {
+          moved = true;
+          return jsonResponse(project({ phase: "pursuing" }));
+        }
+        if (moved && method === "GET" && url.endsWith("/projects/pr-1/360")) {
+          return new Promise<Response>((resolve) => {
+            releaseReread = resolve;
+          });
+        }
+        return null;
+      },
+    });
+    render(<ProjectScreen id="pr-1" />);
+    await screen.findByRole("heading", { name: "CRM rollout" });
+    await user.click(screen.getByTestId("project-step-pursuing"));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(within(dialog).getByRole("button", { name: "Move" }));
+
+    await waitFor(() => {
+      const here = [...document.querySelectorAll("[aria-current='step']")];
+      expect(
+        here.some((node) => node.textContent?.startsWith("Pursuing")),
+      ).toBe(true);
+    });
+    expect(screen.queryByRole("dialog")).toBeTruthy();
+
+    releaseReread(
+      jsonResponse(project360({ project: project({ phase: "pursuing" }) })),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
   // `writable` is what the server's write gate would answer on a mutation. A
   // reader who may open a project but not change it was offered Edit, Archive,
   // Assign and the phase stepper, and learned otherwise from a 403 after
@@ -700,6 +738,63 @@ describe("a commitment's tick", () => {
     expect(
       urls.filter((url) => url.includes(`/v1/activities/${row.activity_id}`)),
     ).toHaveLength(1);
+  });
+});
+
+describe("the Next bar's task write", () => {
+  it("says a task changed elsewhere when Snooze is refused as stale", async () => {
+    const row = {
+      activity_id: "a-next",
+      subject: "Confirm the depot slot",
+      due_at: "2099-09-11T09:00:00Z",
+      due_has_time: false,
+      version: 7,
+      assignee_id: null,
+      assignee_name: null,
+      overdue: false,
+    };
+    projectsBackend({
+      view: project360({
+        commitments: { data: [row], page: { has_more: false } },
+      }),
+      respond: async (url, method) => {
+        if (url.endsWith("/v1/me")) {
+          return jsonResponse(
+            meFixture({
+              allow: {
+                project: ["read", "update"],
+                activity: ["read", "update"],
+              },
+            }),
+          );
+        }
+        if (method === "PATCH" && url.includes("/v1/activities/a-next")) {
+          return jsonResponse(
+            {
+              type: "about:blank",
+              title: "Stale",
+              status: 409,
+              code: "version_skew",
+            },
+            409,
+          );
+        }
+        return null;
+      },
+    });
+    render(<ProjectScreen id={project().id} />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: /^Snooze/ }),
+    );
+
+    const alerts = await screen.findAllByRole("alert");
+    expect(
+      alerts.some((alert) =>
+        alert.textContent?.includes(en["common.versionSkew"]),
+      ),
+    ).toBe(true);
+    expect(screen.getAllByRole("button", { name: "Reload" }).length).toBe(1);
   });
 });
 

@@ -21,7 +21,8 @@ func TestANewCompanyOffersItsDomainContactsAndLinksOnlyTheTickedOnes(t *testing.
 	e := setupDedupe(t)
 	ctx := e.as()
 	// The company carries a consumer domain too: an address there must never match.
-	company := e.createNamedCompany(ctx, t, "Candco", "candco.test", "gmail.com")
+	company := e.createNamedCompany(ctx, t, "Candco", "candco.test")
+	e.addLegacyDomain(ctx, t, company, "gmail.com")
 
 	alice := e.legacyUnlinkedDomainContact(ctx, t, "Alice Able", "alice@candco.test")
 	bob := e.legacyUnlinkedDomainContact(ctx, t, "Bob Baker", "bob@candco.test")
