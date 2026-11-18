@@ -199,9 +199,9 @@ The **How was it won?** list offers these answers:
 - Other, which then needs **Details**, because "other" says nothing on its own
 
 This lets you answer "how many of our wins have no paper, and why". A win with a
-contract carries no reason at all, so your reports can tell the two apart. The
-reason shows on the deal's top line beside the won badge, with the detail you
-typed if the answer was Other.
+contract carries no reason at all, so your reports can tell the two apart.
+**How it stands** shows the reason beside the day the deal closed, with the
+details you typed for Other under it.
 
 One thing missing today: the contract form has no deal field. So attaching a contract to
 the deal you are winning takes a step the form does not offer. Many wins go
@@ -247,8 +247,8 @@ move when rates change.
 
 Reopening a closed deal is how a won or lost deal goes back into the pipeline.
 On a closed deal the stage ladder does nothing, and every stage is grey.
-**Reopen** sits in the header's **More actions** menu, which only appears on a
-won or lost deal. It asks which open stage to go back to. On the way it **clears
+**Reopen** sits in the header's **More actions** menu, and only on a won or
+lost deal. It asks which open stage to go back to. On the way it **clears
 the close date and the exchange rate fixed at close**, and the dialog does not
 tell you.
 

@@ -31,6 +31,7 @@ import { routeHash } from "../../../lib/router";
 import { latestWord } from "../../../lib/standinglatest";
 import { useViewerZone } from "../../../lib/viewerzone";
 import { DealStageLadder } from "../deals.stepper";
+import { wonReasonParts } from "../dealwinreason";
 import { DealFigures, DealTimeline } from "./dealfigures";
 import { closeWords } from "./dealheaderfacts";
 import { committeeRows } from "./dealoverviewrows";
@@ -128,18 +129,26 @@ export function DealHowItStands({
 /**
  * Won and lost are final, so a closed deal heads the card with its outcome and
  * the day it came. That holds whatever the last reading of the open deal said.
- * A lost deal names its reason beside the day, and its note goes under both as
- * the rep wrote it. An open deal has no outcome to head with.
+ * A loss, or a win without a contract, names its reason beside the day, and
+ * what the rep wrote goes under both. An open deal has no outcome to head with.
  */
 export function closedVerdict(
-  deal: Pick<Deal, "status" | "closed_at" | "lost_reason" | "lost_reason_code">,
+  deal: Pick<
+    Deal,
+    | "status"
+    | "closed_at"
+    | "lost_reason"
+    | "lost_reason_code"
+    | "won_without_contract_reason"
+    | "won_without_contract_detail"
+  >,
   { t, locale, zone }: Words,
   reasons?: readonly LossReason[],
 ): StandingVerdict | undefined {
   if (deal.status === "open") {
     return undefined;
   }
-  const why = deal.status === "lost" ? lostReasonParts(deal, reasons) : {};
+  const why = closeReason(deal, t, reasons);
   const lines = [
     deal.closed_at
       ? t("deal.standing.closedOn", {
@@ -154,6 +163,18 @@ export function closedVerdict(
     ...(why.note ? { note: why.note } : {}),
     tone: deal.status === "won" ? "success" : "neutral",
   };
+}
+
+function closeReason(
+  deal: Parameters<typeof closedVerdict>[0],
+  t: Translator,
+  reasons?: readonly LossReason[],
+): { label?: string; note?: string } {
+  if (deal.status === "lost") {
+    return lostReasonParts(deal, reasons);
+  }
+  const { label, detail } = wonReasonParts(deal, t);
+  return { label, note: detail };
 }
 
 // A won deal stands on a green rung and a lost one on a grey one, whatever

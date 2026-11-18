@@ -137,6 +137,39 @@ describe("a closed deal's verdict", () => {
     ).toBe(`${t("deal.standing.closedOn", { date: "13 May" })} · Price`);
   });
 
+  it("names how a deal won without a contract was won", () => {
+    expect(
+      closedVerdict(
+        deal({
+          status: "won",
+          closed_at: "2026-05-13T12:00:00Z",
+          won_without_contract_reason: "purchase_order",
+        }),
+        words,
+      ),
+    ).toEqual({
+      word: t("deals.statusWon"),
+      sentence: `${t("deal.standing.closedOn", { date: "13 May" })} · ${t("deals.winReasonPurchaseOrder")}`,
+      tone: "success",
+    });
+  });
+
+  it("sets an Other win's details under the headline", () => {
+    const verdict = closedVerdict(
+      deal({
+        status: "won",
+        closed_at: "2026-05-13T12:00:00Z",
+        won_without_contract_reason: "other",
+        won_without_contract_detail: "  Handshake at the fair  ",
+      }),
+      words,
+    );
+    expect(verdict?.sentence).toBe(
+      `${t("deal.standing.closedOn", { date: "13 May" })} · ${t("deals.winReasonOther")}`,
+    );
+    expect(verdict?.note).toBe("Handshake at the fair");
+  });
+
   it("claims no day an imported close does not carry", () => {
     expect(closedVerdict(deal({ status: "won" }), words)?.sentence).toBe(
       undefined,

@@ -3,7 +3,7 @@
 
 import type { components } from "../../api/schema";
 import { IdentityFact } from "../../design-system/identityline";
-import { useT } from "../../i18n";
+import { type Translator, useT } from "../../i18n";
 import { labelFor } from "../../lib/labelfor";
 import { WON_REASON_LABELS } from "../../lib/winreason";
 import "./dealstatus.css";
@@ -25,6 +25,27 @@ export type WonWithoutContract = Partial<
 >;
 
 /**
+ * How a won deal was won without a contract: the answer's label, and the
+ * details typed for `other`, the one answer that carries any. Empty for a deal
+ * not won, or won on a contract.
+ */
+export function wonReasonParts(
+  deal: WonWithoutContract,
+  t: Translator,
+): { label?: string; detail?: string } {
+  const reason = deal.won_without_contract_reason;
+  if (deal.status !== "won" || !reason) {
+    return {};
+  }
+  const detail =
+    reason === "other" ? deal.won_without_contract_detail?.trim() : undefined;
+  return {
+    label: t(labelFor(WON_REASON_LABELS, reason)),
+    ...(detail ? { detail } : {}),
+  };
+}
+
+/**
  * How a won deal was won, when it was won without a contract.
  *
  * The server treats this answer as load-bearing — the whole justification for
@@ -44,16 +65,13 @@ export function WonWithoutContractFact({
   deal,
 }: Readonly<{ deal: WonWithoutContract }>) {
   const t = useT();
-  const reason = deal.won_without_contract_reason;
-  if (deal.status !== "won" || !reason) {
+  const { label, detail } = wonReasonParts(deal, t);
+  if (!label) {
     return null;
   }
-  const label = t(labelFor(WON_REASON_LABELS, reason));
   // The detail replaces the label for `other`, and does not follow it:
   // "Something else: renewed on a handshake" says the category twice and
-  // buries the only part written by a contact. Every other reason is its own
-  // answer and carries no detail.
-  const detail = reason === "other" ? deal.won_without_contract_detail : null;
+  // buries the only part written by a contact.
   if (!detail) {
     return <IdentityFact>{label}</IdentityFact>;
   }
