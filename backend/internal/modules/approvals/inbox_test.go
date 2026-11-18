@@ -150,7 +150,7 @@ func TestPagingTheInboxSeesEveryRowExactlyOnce(t *testing.T) {
 			t.Fatal("has_more is true with no next_cursor — the client has no way to ask for the rest")
 		}
 		last := got[len(got)-1]
-		want, err := storekit.EncodeCursor(last.CreatedAt, last.ID.UUID)
+		want, err := storekit.EncodeCursor("approval_inbox", last.CreatedAt, last.ID.UUID)
 		if err != nil {
 			t.Fatalf("minting the expected token: %v", err)
 		}
@@ -290,7 +290,7 @@ func TestTheWholeTargetPairAndKindBind(t *testing.T) {
 	kind := "site_lead"
 	status := crmcontracts.ListApprovalsParamsStatusPending
 	limit := 25
-	cursor, err := storekit.EncodeCursor(time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC), ids.NewV7())
+	cursor, err := storekit.EncodeCursor("approval_inbox", time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC), ids.NewV7())
 	if err != nil {
 		t.Fatalf("minting the cursor: %v", err)
 	}

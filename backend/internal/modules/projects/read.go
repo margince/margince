@@ -169,7 +169,7 @@ func (s *Store) ListProjects(ctx context.Context, in ListProjectsInput) ([]crmco
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
-	pre, err := storekit.BuildListPrelude(ctx, projectObject, projectListFields, active,
+	pre, err := storekit.BuildListPrelude(ctx, projectObject, "projects", projectListFields, active,
 		in.Sort, in.Limit, in.Cursor, in.CustomFilters)
 	if err != nil {
 		return nil, storekit.Page{}, err

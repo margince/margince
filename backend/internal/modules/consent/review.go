@@ -127,6 +127,7 @@ type Review struct {
 	Refusals    []RefusedRecipient
 	ReasonCode  string
 	Correction  *WordingCorrectionContext
+	Warnings    []OverrideWarning
 }
 
 // OpenReviewTx records one refusal, inside the transaction that refused.
@@ -270,6 +271,7 @@ func (s *Store) ReviewForReader(ctx context.Context, id ids.UUID) (Review, error
 			return err
 		}
 		out.State = openStateFor(out.State, out.Refusals)
+		out.Warnings = warningsServed(ctx, out.InitiatedBy, out.IntentID)
 		if err := s.nameReviewEntities(ctx, tx, out.Refusals); err != nil {
 			return err
 		}
@@ -286,8 +288,7 @@ func (s *Store) ReviewForReader(ctx context.Context, id ids.UUID) (Review, error
 }
 
 // refusedRecipientsOf lifts the denied half of a decision set into what the row
-// stores. Order follows the set, so the first refusal is the one the summary
-// names.
+// stores, ranked, so the first refusal is the one the summary names.
 func refusedRecipientsOf(set commsauthz.DecisionSet) []RefusedRecipient {
 	denied := set.Denied()
 	if len(denied) == 0 {
@@ -297,7 +298,7 @@ func refusedRecipientsOf(set commsauthz.DecisionSet) []RefusedRecipient {
 	for _, d := range denied {
 		out = append(out, refusedRecipientOf(d))
 	}
-	return out
+	return rankRefusals(out)
 }
 
 func refusedRecipientOf(d commsauthz.Decision) RefusedRecipient {

@@ -3389,6 +3389,7 @@ export const en = {
   // a destination.
   "ref.nameLoadFailed": "Name did not load",
   "ref.memberLeft": "{name} (left)",
+  "ref.leadUnnamed": "Unnamed lead",
   "roster.failedUsers": "Colleagues did not load.",
   "roster.failedTeams": "Teams did not load.",
   "owner.rosterFailed": "Colleagues did not load. Reload the page to pick one.",
@@ -7310,7 +7311,7 @@ export const en = {
   "vcardImport.working": "Reading cards…",
   "vcardImport.back": "Back to contacts",
   "vcardImport.noCards": "The file contains no cards.",
-  "vcardImport.failed": "The cards were not imported. Retry.",
+  "vcardImport.failed": "The cards were not imported.",
   "vcardImport.outcome.created": "Added",
   "vcardImport.outcome.updated": "Updated",
   "vcardImport.outcome.needsReview": "Possible duplicate",
@@ -10397,7 +10398,7 @@ export const en = {
   "import.reason.row_key_empty":
     "The “{column}” column is empty, so this row cannot be identified for re-import or undo.",
   "import.reason.row_key_repeated":
-    "The “{column}” value “{value}” is already used by line {line}. Each row needs its own, because it is what a re-import matches on and what an undo finds this row by.",
+    "The “{column}” value “{value}” is already used by row {line}. Each row needs its own, because it is what a re-import matches on and what an undo finds this row by.",
   "import.reason.size_band_invalid":
     "Employees “{value}” is not one of {allowed}.",
   "import.reason.tag_created":
@@ -20488,6 +20489,10 @@ export const en = {
   "worklist.hidden.setAside.detail":
     "Snoozed or marked not yours. Snoozed items return automatically.",
   "worklist.hidden.shown": "The Worklist shows {count}.",
+  "worklist.hidden.privateUnchecked_one":
+    "{count} private email not checked by AI",
+  "worklist.hidden.privateUnchecked_other":
+    "{count} private emails not checked by AI",
   "worklist.hidden.rows.loading": "Loading the held-back messages…",
   "worklist.hidden.rows.outOfReach":
     "None could be read at this size. Some may still be held back.",
@@ -22035,6 +22040,12 @@ export const en = {
     "Deal owners can ask legal to review a deal, and a stage can require legal’s approval. Off hides both and keeps every review already recorded.",
   "legalReview.settingsReadOnly": "An admin changes this setting.",
   "legalReview.notSaved": "Setting was not saved.",
+  "privateMailRequests.title": "Requests in private mail",
+  "privateMailRequests.switch": "Check private mail for requests",
+  "privateMailRequests.hint":
+    "The AI reads private mail to find what a customer asks of its reader. Mail marked confidential or held on purpose is never read.",
+  "privateMailRequests.readOnly": "An admin changes this setting.",
+  "privateMailRequests.notSaved": "Setting was not saved.",
   "stage.criteria.kindLegalReviewed": "Legal approved",
   "legalReview.docUnavailable":
     "You cannot open this file. Ask the colleague who requested the review.",
@@ -22821,6 +22832,18 @@ export const en = {
   "progress.serviceSales": "Services and projects",
   "progress.planned": "Open pipeline",
   "progress.plannedAt": "Open deals as of {at}",
+  "progress.scenarios": "Where the month may finish",
+  "progress.scenario.worst": "Worst case",
+  "progress.scenario.worstWhy": "If nothing more closes",
+  "progress.scenario.expected": "Expected",
+  "progress.scenario.best": "Best case",
+  "progress.scenario.bestWhy": "If every open deal for the month closes",
+  "progress.scenarios.asOf": "Deals as of {at}",
+  "progress.scenarios.unpriced":
+    "Deals with no amount or no exchange rate are left out",
+  "progress.scenarios.limited": "Only the deals you can see are counted",
+  "progress.scenarios.yearUnavailable":
+    "Worst, expected and best cases are shown for a month. The forecast has no year to read them from.",
   "progress.unclassified": "Unclassified",
   "progress.unclassifiedDetail":
     "This revenue has no product or service classification.",

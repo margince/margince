@@ -182,6 +182,22 @@
           "minimum": 1,
           "maximum": 30,
           "default": 2
+        },
+        "inline_send_review": {
+          "description": "Decide a composed email at Send and show a refusal inline, instead of checking while it is written.",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": false
+        },
+        "private_mail_requests": {
+          "description": "Let the AI check whether private mail asks its reader for something. Only mail private because of a setting is checked; mail held for any other reason never is.",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": true
         }
       }
     },

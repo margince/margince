@@ -32,6 +32,13 @@ export type StagedSend = Readonly<{
   marketingPurpose?: string;
   consentPurpose?: string;
   evidence?: Evidence;
+  /** The words and files the mail carries, read for an offer as the send reads them. */
+  draft?: Readonly<{
+    subject?: string;
+    body?: string;
+    htmlBody?: string;
+    attachmentIds?: readonly string[];
+  }>;
 }>;
 
 function stringOf(value: unknown): string | undefined {
@@ -182,7 +189,19 @@ function sendQuestion(
     marketingPurpose,
     ...(consentPurpose ? { consentPurpose } : {}),
     ...(evidence ? { evidence } : {}),
+    draft: {
+      subject: stringOf(change.subject),
+      body: stringOf(change.body),
+      htmlBody: stringOf(change.html_body),
+      attachmentIds: idsOf(change.attachment_ids),
+    },
   };
+}
+
+function idsOf(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const out = value.filter((id): id is string => typeof id === "string");
+  return out.length ? out : undefined;
 }
 
 function evidenceOf(value: unknown): Evidence | undefined {

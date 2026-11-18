@@ -13,8 +13,8 @@ import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { draftButton } from "../../testing/composedraft.testkit";
 import { allowedPreview } from "../../testing/sendpermission.testkit";
-import { ComposeModal } from "./compose";
 import { findThreadChoice } from "./compose.testkit";
+import { ComposeWindow } from "./composewindow";
 
 // Whose conversation the composer is answering.
 //
@@ -145,7 +145,7 @@ describe("whose mailbox the composer is answering from", () => {
   ) {
     stubRoutes(mailboxRoutes(mailboxUserIds, standing));
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         open
@@ -205,7 +205,7 @@ describe("whose mailbox the composer is answering from", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         open
@@ -230,7 +230,7 @@ describe("whose mailbox the composer is answering from", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         open
@@ -252,7 +252,7 @@ describe("whose mailbox the composer is answering from", () => {
       "GET /me": () => emptyResponse(401),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         open
@@ -295,7 +295,7 @@ describe("whose mailbox the composer is answering from", () => {
       },
     });
     const view = render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         activityId="act-charlotte"
@@ -310,7 +310,7 @@ describe("whose mailbox the composer is answering from", () => {
     view.rerender(
       <QueryClientProvider client={view.queryClient}>
         <LocaleProvider initial="en">
-          <ComposeModal
+          <ComposeWindow
             entityType="company"
             entityId="company-1"
             activityId="act-mine"
@@ -339,7 +339,7 @@ describe("whose mailbox the composer is answering from", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         open

@@ -8,7 +8,6 @@ import {
 } from "../../../vitest.budget";
 import { pickOption } from "../../design-system/select-testing";
 import { draftButton } from "../../testing/composedraft.testkit";
-import { ComposeModal } from "./compose";
 import {
   jsonResponse,
   pickWhy,
@@ -17,6 +16,7 @@ import {
   WHY_LABEL,
   waitForSendReady,
 } from "./compose.testkit";
+import { ComposeWindow } from "./composewindow";
 
 // The project a reply files under, and the key it carries in the subject.
 
@@ -86,7 +86,7 @@ describe("the project a reply files under", () => {
 
   const openReply = async () => {
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="deal"
         entityId="d-1"

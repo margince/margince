@@ -52,18 +52,18 @@ func TestPromotingALeadThatNamesNobodyIsRefused(t *testing.T) {
 	}{
 		{
 			name: "no full_name and no email",
-			in:   CreateLeadInput{Title: new("VP Sales"), Source: "webform", Status: "new"},
+			in:   CreateLeadInput{CompanyName: new("Nordwind"), Title: new("VP Sales"), Source: "webform", Status: "new"},
 		},
 		{
 			// The one `FullName != nil` cannot see: a full_name is present,
 			// so a nil check calls this lead identified and the ladder then
 			// has nothing to match on.
 			name: "a present-but-empty full_name and no email",
-			in:   CreateLeadInput{FullName: new(""), Title: new("VP Sales"), Source: "webform", Status: "new"},
+			in:   CreateLeadInput{FullName: new(""), CompanyName: new("Nordwind"), Title: new("VP Sales"), Source: "webform", Status: "new"},
 		},
 		{
 			name: "a full_name that is only padding, and no email",
-			in:   CreateLeadInput{FullName: new("   "), Title: new("VP Sales"), Source: "webform", Status: "new"},
+			in:   CreateLeadInput{FullName: new("   "), CompanyName: new("Nordwind"), Title: new("VP Sales"), Source: "webform", Status: "new"},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

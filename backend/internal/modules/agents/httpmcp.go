@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
@@ -304,7 +305,9 @@ func (h *httpMCPHandler) servePost(w http.ResponseWriter, r *http.Request) {
 	}
 	defer release()
 	var req rpcRequest
-	if err := json.Unmarshal(body, &req); err != nil {
+	// Nested tool arguments are decoded later, past this point, so the whole
+	// request is held to the text rule once, here.
+	if err := json.Unmarshal(body, &req); err != nil || datasource.HasMalformedText(body) {
 		// The body is what normally decides the era, and this one does not
 		// decode, so the header is the only thing left that can say. A caller
 		// that named the modern revision gets the status that framing pins for

@@ -271,6 +271,9 @@ func (g *Gate) decideOneIn(ctx context.Context, tx pgx.Tx, r connector.Recipient
 	decision = decision.WithFooterFindings(req.Evidence.FooterFindings)
 	decision.Evidence.FooterPreview = req.Evidence.FooterPreview
 	decision.Evidence.FooterDigest = req.Evidence.FooterDigest
+	// Not an id, so carried past the EvidenceChecked gate: transmit must judge
+	// the same words staging judged, whichever arm resolved the message.
+	decision.Evidence.AuthoredOffer = req.Evidence.AuthoredOffer
 	if err != nil {
 		return decision, err
 	}

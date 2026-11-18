@@ -60,6 +60,10 @@ func owedReviewReadTx(ctx context.Context, tx pgx.Tx, after ids.UUID, exact *ids
 	if err != nil {
 		return nil, err
 	}
+	private, err := privateMailRequests(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
 	body, prior := arg(storedBodyReadRunes), arg(priorBodyLimit)
 	columns := storekit.SQLf(candidateColumns, body, 0, 0, prior)
 	exactArg := arg(exact)
@@ -73,17 +77,17 @@ func owedReviewReadTx(ctx context.Context, tx pgx.Tx, after ids.UUID, exact *ids
  AND NOT EXISTS(SELECT 1 FROM audit_log human WHERE human.entity_type='activity' AND human.entity_id=a.id
  AND human.actor_type='human' AND human.occurred_at>=a.owed_verdict_at),
  owed_thread.context_readable,
- `+provenance.MailBodyCompleteSQL("a")+` AND `+priorContextComplete+`
+ `+provenance.MailBodyCompleteSQL("a")+` AND `+priorContextComplete(private)+`
  FROM activity a CROSS JOIN LATERAL (%s) owed_thread
  LEFT JOIN LATERAL (SELECT prior.id, prior.subject, left(prior.body, $%d) AS body, prior.occurred_at
    FROM activity prior WHERE prior.id = owed_thread.prior_id) prior ON true
  LEFT JOIN activity_participant p ON p.activity_id=a.id
  WHERE a.direction='inbound' AND a.kind IN ('email','message') AND a.owed_verdict IS NOT NULL
- AND a.owed_verdict_at IS NOT NULL AND a.archived_at IS NULL AND `+auth.WorkspaceAudienceSQL("a")+` AND a.restricted_at IS NULL
+ AND a.owed_verdict_at IS NOT NULL AND a.archived_at IS NULL
  AND owed_thread.source_readable AND a.id>$%d AND ($%d::uuid IS NULL OR a.id=$%d)
  AND NOT EXISTS(SELECT 1 FROM activity_sales_state dismissed WHERE dismissed.thread_key=a.thread_key
  AND dismissed.kind=a.kind AND dismissed.channel_provider=coalesce(a.channel_provider,''))
- GROUP BY %s, owed_thread.context_readable ORDER BY a.id LIMIT $%d`, columns, owedThreadSQL(gate), prior, arg(after), exactArg, exactArg, candidateGroupBy, arg(min(max(limit, 1), 25)))
+ GROUP BY %s, owed_thread.context_readable ORDER BY a.id LIMIT $%d`, columns, owedThreadSQL(gate, private), prior, arg(after), exactArg, exactArg, candidateGroupBy, arg(min(max(limit, 1), 25)))
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
@@ -102,17 +106,17 @@ func owedReviewReadTx(ctx context.Context, tx pgx.Tx, after ids.UUID, exact *ids
 const owedThreadRow = "thread_row"
 
 // owedThreadSQL judges the source a and our earlier mail on its conversation
-// under one content gate. A message of ours is readable only while it is
-// workspace mail and not restricted, because its body goes to the model too.
+// under one content gate. A message of ours is readable only while the model
+// may read it (judgeableAudienceSQL), because its body goes to the model too.
 // It yields whether the source is readable, the newest readable earlier mail,
 // and whether every earlier mail is readable.
-func owedThreadSQL(gate string) string {
+func owedThreadSQL(gate string, includePrivate bool) string {
 	return `SELECT coalesce(bool_or(thread_row.id = a.id AND thread_row.readable), false) AS source_readable,
    (array_agg(thread_row.id ORDER BY thread_row.occurred_at DESC, thread_row.id DESC)
       FILTER (WHERE thread_row.id <> a.id AND thread_row.readable))[1] AS prior_id,
    coalesce(bool_and(thread_row.readable) FILTER (WHERE thread_row.id <> a.id), true) AS context_readable
   FROM (SELECT thread_row.id, thread_row.occurred_at,
-          (` + auth.WorkspaceAudienceSQL(owedThreadRow) + ` AND thread_row.restricted_at IS NULL AND (` + gate + `)) AS readable
+          (` + judgeableAudienceSQL(owedThreadRow, includePrivate) + ` AND (` + gate + `)) AS readable
         FROM activity thread_row
        WHERE thread_row.id = ANY(ARRAY(SELECT a.id UNION ALL SELECT earlier.id FROM activity earlier
          WHERE ` + ourOutboundInThisThread("earlier", "a") + `
