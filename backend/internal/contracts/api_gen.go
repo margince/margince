@@ -56357,6 +56357,9 @@ type MailDraft struct {
 	HtmlBody  *string            `json:"html_body,omitempty"`
 	Id        openapi_types.UUID `json:"id"`
 
+	// OverrideExplanation The reason the author typed for sending past a refusal. Absent when none was.
+	OverrideExplanation *string `json:"override_explanation,omitempty"`
+
 	// ScheduledAt The moment the author picked to send at, as saved. It may have passed since; the
 	// draft schedules nothing. Absent when none was picked.
 	ScheduledAt *time.Time `json:"scheduled_at,omitempty"`
@@ -56437,6 +56440,11 @@ type MailDraftInput struct {
 
 	// HtmlBody The editor's markup beside the plain body, so reopening restores the formatting.
 	HtmlBody *string `json:"html_body,omitempty"`
+
+	// OverrideExplanation The reason the rep typed for sending this message past a refusal, kept so a reopened
+	// composer still holds it. It grants nothing: the send still needs its own decision. Omit
+	// it for none.
+	OverrideExplanation *string `json:"override_explanation,omitempty"`
 
 	// ScheduledAt The moment the rep picked to send at, checked as the send checks it: with
 	// `scheduled_tz`, at most 90 days ahead. Saving schedules nothing. Omit both for none.

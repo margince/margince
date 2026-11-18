@@ -57,7 +57,7 @@ func (s directedSendService) DirectAndSend(
 		if refreshErr != nil {
 			return crmcontracts.Activity{}, refreshErr
 		}
-		return crmcontracts.Activity{}, refusedWithReview(ctx, s.gate, refreshed, pending)
+		return crmcontracts.Activity{}, s.gate.Refused(ctx, refreshed, pending.set, pending.cause, actionsForRefusal(ctx, refreshed))
 	}
 	if _, err := s.consent.DirectSend(ctx, reviewID, in); err != nil &&
 		!errors.Is(err, consent.ErrDecisionAlreadyRecorded) {

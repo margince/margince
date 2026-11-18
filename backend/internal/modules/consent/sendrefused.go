@@ -7,6 +7,8 @@ package consent
 // which recipients stopped the send and why.
 
 import (
+	"context"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -51,6 +53,17 @@ func (e *SendRefusedError) Unwrap() error { return e.Cause }
 //
 // The reference travels in the message instead, where a human and the MCP
 // surface read it.
+
+// Refused is the refusal a sender reads: the review's reference, the actions
+// the caller decided on, the blocking refusals, and the review as the sender
+// would GET it. A review they may not read is left out; the refusal stands.
+func (g *Gate) Refused(ctx context.Context, review Review, set commsauthz.DecisionSet, cause error, actions []string) *SendRefusedError {
+	refused := &SendRefusedError{ReviewID: review.ID, Cause: cause, Actions: actions, Refusals: BlockingRefusals(set)}
+	if served, err := g.ServedReview(ctx, review.ID); err == nil {
+		refused.Review = &served
+	}
+	return refused
+}
 
 // BlockingRefusals is the refused recipients whose answer actually stopped the
 // send. A deny the rollout mode only records did not stop it, so a sender told

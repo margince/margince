@@ -44400,6 +44400,12 @@ export interface components {
             scheduled_at?: string | null;
             /** @description The IANA zone name `scheduled_at` was picked in. Required with `scheduled_at`. */
             scheduled_tz?: string | null;
+            /**
+             * @description The reason the rep typed for sending this message past a refusal, kept so a reopened
+             *     composer still holds it. It grants nothing: the send still needs its own decision. Omit
+             *     it for none.
+             */
+            override_explanation?: string;
         };
         /** @description One rep's unsent message, readable by its author and nobody else. Not an activity. */
         MailDraft: {
@@ -44444,6 +44450,8 @@ export interface components {
             scheduled_at?: string;
             /** @description The IANA zone `scheduled_at` was picked in. Present exactly when it is. */
             scheduled_tz?: string;
+            /** @description The reason the author typed for sending past a refusal. Absent when none was. */
+            override_explanation?: string;
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */

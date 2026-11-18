@@ -111,7 +111,7 @@ func TheOverrideWarning() OverrideWarning {
 
 // warningsServed are the warnings a review is served with to this caller. The
 // modal's warning is served on every review. The composer's short one is served
-// only to the sender of a held message, the one reader the composer shows it to.
+// only to the sender of a held message, because the composer shows it to them.
 func warningsServed(ctx context.Context, initiatedBy, intentID ids.UUID) []OverrideWarning {
 	served := []OverrideWarning{TheOverrideWarning()}
 	if seat := initiatingSeat(ctx); !seat.IsZero() && seat == initiatedBy && !intentID.IsZero() {

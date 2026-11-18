@@ -12,6 +12,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -28,7 +29,7 @@ func offerEnv(t *testing.T) (*resolveEnv, ids.UUID) {
 	e := setupResolve(t)
 	e.livesIn(t, reviewableMarketingCountry())
 	e.seedPurpose(t, "newsletter", "marketing")
-	return e, e.inboundFrom(t, "their-question", e.address, time.Now().Add(-time.Hour))
+	return e, e.inboundFrom(t, "their-question", e.address, clocktest.Now(t).Add(-time.Hour))
 }
 
 func replyTo(anchor ids.UUID, body string) commsauthz.Request {
@@ -67,7 +68,7 @@ func TestAnOfferWrittenIntoAReplyIsJudgedAsAnOffer(t *testing.T) {
 	})
 	t.Run("an offer the contact asked for is a quote", func(t *testing.T) {
 		e, anchor := offerEnv(t)
-		e.recordRequest(t, time.Now().Add(-48*time.Hour), true)
+		e.recordRequest(t, clocktest.Now(t).Add(-48*time.Hour), true)
 		d := e.decide(t, replyTo(anchor, offerReply))
 		if d.Verdict != commsauthz.VerdictAllow || d.Resolved != commsauthz.CategoryPrecontractQuote {
 			t.Fatalf("decision = %s/%s %q, want an allowed quote", d.Verdict, d.Resolved, d.ReasonCode)

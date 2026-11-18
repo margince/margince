@@ -216,22 +216,7 @@ func (s commsStager) RecordPendingReview(ctx context.Context, err error, intentI
 	if recordErr != nil || review.ID.IsZero() {
 		return pending.cause
 	}
-	return refusedWithReview(ctx, s.authority, review, pending)
-}
-
-// refusedWithReview is the refusal a sender reads: the review's reference,
-// what this caller may do, and the review as they would GET it. A review this
-// caller may not read is left out, and the refusal still stands.
-func refusedWithReview(ctx context.Context, gate *consent.Gate, review consent.Review, pending *pendingReviewError) *consent.SendRefusedError {
-	refused := &consent.SendRefusedError{
-		ReviewID: review.ID, Cause: pending.cause,
-		// Decided here, because this is where the principal is known.
-		Actions: actionsForRefusal(ctx, review), Refusals: consent.BlockingRefusals(pending.set),
-	}
-	if served, err := gate.ServedReview(ctx, review.ID); err == nil {
-		refused.Review = &served
-	}
-	return refused
+	return s.authority.Refused(ctx, review, pending.set, pending.cause, actionsForRefusal(ctx, review))
 }
 
 // StageChannelTx is the same staging for a channel reply: the channel-shaped row
