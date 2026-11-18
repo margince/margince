@@ -2,10 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../api/schema";
-import { stripEveryKeyTag } from "../projects/projectrecord";
 import type { MailDraft, SavedDraftFields } from "./composesaveddraftcalls";
 import { fieldsOfDraft, sameFields } from "./composesaveddraftfields";
 import { replySubject } from "./replysubject";
+import { stripEveryKeyTag } from "./subjecttag";
 
 // The saved draft's rules that draw nothing: what counts as written, what a
 // close does, and when the draft has had its chance. The hook is composesaveddraft.tsx.
