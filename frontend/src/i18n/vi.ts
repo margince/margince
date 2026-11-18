@@ -3767,7 +3767,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.overview.otherOpen": "Việc cần làm khác đang mở",
   "record.allTasks": "Tất cả công việc",
   "co.overview.latest": "Mới nhất",
-  "co.overview.nothingOpen": "Không còn việc nào khác",
   "co.overview.for": "cho {name}",
   "co.overview.noDate": "Chưa có ngày",
   "co.overview.allDeals": "Tất cả deal",
@@ -20791,7 +20790,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.card.dealTitle": "Deal {name} quyết định",
   "contact.card.deals": "Deal",
   "contact.card.openTasks": "Việc cần làm đang mở",
-  "contact.card.noOpenTasks": "Không có việc cần làm đang mở",
   "contact.moment.doneToast":
     "Đã đánh dấu xong. Mục này sẽ quay lại khi một trong hai bên viết tiếp.",
   "contact.card.understandingTitle": "Hiểu {name}",

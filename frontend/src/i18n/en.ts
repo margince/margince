@@ -3825,7 +3825,6 @@ export const en = {
   "co.overview.otherOpen": "Other open tasks",
   "record.allTasks": "All tasks",
   "co.overview.latest": "Latest",
-  "co.overview.nothingOpen": "Nothing else open",
   "co.overview.for": "for {name}",
   "co.overview.noDate": "No date",
   "co.overview.allDeals": "All deals",
@@ -21091,7 +21090,6 @@ export const en = {
   "contact.card.dealTitle": "The deal {name} decides",
   "contact.card.deals": "Deals",
   "contact.card.openTasks": "Open tasks",
-  "contact.card.noOpenTasks": "No open tasks",
   "contact.moment.doneToast":
     "Marked done. It comes back when either of you writes again.",
   "contact.card.understandingTitle": "Understanding {name}",

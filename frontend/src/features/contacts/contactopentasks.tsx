@@ -15,7 +15,7 @@ import { nextBarChoice } from "./contacttoday";
 
 // The contact's open tasks under the Next bar, soonest due first as the 360
 // sends them, each with its Done tick. The task the bar draws is not listed
-// again.
+// again, and with nothing left the card is not drawn.
 
 type Contact360 = components["schemas"]["Contact360"];
 type Activity = components["schemas"]["Activity"];
@@ -23,22 +23,20 @@ type Activity = components["schemas"]["Activity"];
 export function ContactOpenTasks({
   view,
   onAllTasks,
-  onAddTask,
 }: Readonly<{
   view: Contact360;
   onAllTasks: () => void;
-  // Opens the task form on this contact; absent where the reader may not log.
-  onAddTask?: () => void;
 }>) {
   const t = useT();
   const contactId = view.contact.id;
   const taskUpdate = useTaskUpdate([["contact360", contactId], worklistKey]);
   const withheld = omitted(view, "next_steps");
-  const choice = nextBarChoice(view.moment, view);
-  const rows = withheld ? [] : choice.rest;
-  // The bar may hold the one open task, and then nothing else is.
-  const barHoldsOne =
-    choice.task !== undefined || choice.rest.length < openTaskCount(view);
+  const rows = withheld ? [] : nextBarChoice(view.moment, view).rest;
+  // Nothing left to list draws no card; Add task stays in the header and
+  // the Next panel.
+  if (!withheld && rows.length === 0) {
+    return null;
+  }
   return (
     <OverviewCard
       title={t("contact.card.openTasks")}
@@ -47,23 +45,7 @@ export function ContactOpenTasks({
           {t("record.allTasks")}
         </Button>
       }
-      empty={
-        withheld
-          ? t("state.withheld")
-          : t(
-              barHoldsOne
-                ? "co.overview.nothingOpen"
-                : "contact.card.noOpenTasks",
-            )
-      }
-      emptyAction={
-        !withheld &&
-        onAddTask && (
-          <Button variant="ghost" onClick={onAddTask}>
-            {t("contact.action.addTask")}
-          </Button>
-        )
-      }
+      empty={withheld ? t("state.withheld") : undefined}
     >
       {rows.length > 0 && (
         <OverviewList>
@@ -79,10 +61,6 @@ export function ContactOpenTasks({
       )}
     </OverviewCard>
   );
-}
-
-function openTaskCount(view: Contact360): number {
-  return (view.next_steps?.data ?? []).filter((task) => !task.is_done).length;
 }
 
 // A contact task as an Overview row reads it. Late by the same measure as the

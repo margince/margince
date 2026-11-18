@@ -3885,7 +3885,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.overview.otherOpen": "Weitere offene Aufgaben",
   "record.allTasks": "Alle Aufgaben",
   "co.overview.latest": "Zuletzt",
-  "co.overview.nothingOpen": "Sonst ist nichts offen",
   "co.overview.for": "für {name}",
   "co.overview.noDate": "Kein Datum",
   "co.overview.allDeals": "Alle Deals",
@@ -21338,7 +21337,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.card.dealTitle": "Deal von {name}",
   "contact.card.deals": "Deals",
   "contact.card.openTasks": "Offene Aufgaben",
-  "contact.card.noOpenTasks": "Keine offenen Aufgaben",
   "contact.moment.doneToast":
     "Als erledigt markiert. Es kommt wieder, sobald eine Seite erneut schreibt.",
   "contact.card.understandingTitle": "{name} verstehen",

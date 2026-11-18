@@ -13,6 +13,7 @@ import {
 import {
   type Commitment,
   CommitmentsCard,
+  commitmentsState,
   type Project360,
   ProjectContractsCard,
   ProjectDealsCard,
@@ -49,15 +50,17 @@ export function ProjectCards({
         <div id={PROJECT_DEALS_ANCHOR}>
           <ProjectDealsCard view={view} actions={newDeal} />
         </div>
-        <div id={PROJECT_COMMITMENTS_ANCHOR}>
-          <CommitmentsCard
-            view={view}
-            meId={me.data?.user.id}
-            tick={tick}
-            onOpenTask={onOpenTask}
-            onOpenAll={onOpenTasks}
-          />
-        </div>
+        {commitmentsState(view) !== "empty" && (
+          <div id={PROJECT_COMMITMENTS_ANCHOR}>
+            <CommitmentsCard
+              view={view}
+              meId={me.data?.user.id}
+              tick={tick}
+              onOpenTask={onOpenTask}
+              onOpenAll={onOpenTasks}
+            />
+          </div>
+        )}
       </div>
       <div className="project-cards-column">
         <div id={PROJECT_CONTRACTS_ANCHOR}>
