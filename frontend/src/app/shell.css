@@ -6,9 +6,11 @@
    content. `.app` still owns what only the frame can mean: the rail's width and
    the reading column. */
 :root {
-  /* The session strip's height, and the sidebar's head is exactly this band:
-     the two halves of the chrome share one centre line. */
+  /* The session strip's height; the sidebar's head is this band too. */
   --topbarH: 50px;
+  /* The sidebar's two widths (`--railW`). */
+  --railWShut: 56px;
+  --railWOpen: 256px;
   /* The page's own inset, spelled ONCE and used by every part of the frame that
      touches it: the strip, the heading, the screen's block, and the air under the
      strip — which the SCROLLER carries rather than each screen's own block, so a
@@ -59,10 +61,10 @@
   transform: none;
 }
 
-/* The sidebar is FLUSH to the viewport: full height and square. A sidebar is
- * the edge of the application, and an edge that floats as a card reads as a
- * panel someone could close. Above phone width the content is the card instead
- * (`.scroll`, below), and the sidebar and the top bar are one chrome around it. */
+/* The sidebar is FLUSH to the viewport: full height, square, separated from the
+ * content by a hairline rather than by a gap. A sidebar is the edge of the
+ * application, and an edge that floats as a card reads as a panel someone could
+ * close. Only the content column is inset, and it insets itself. */
 .app {
   /* One duration for the whole collapse choreography, so the column, the icons
      and the labels stay in step. */
@@ -87,7 +89,7 @@
      column is centred under it. */
   --pageColumn: 1280px;
 
-  --railW: 56px;
+  --railW: var(--railWShut);
   display: grid;
   grid-template-columns: var(--railW) 1fr;
   height: 100vh;
@@ -115,7 +117,7 @@
   }
 }
 .app.railexpanded {
-  --railW: 256px;
+  --railW: var(--railWOpen);
 }
 /* Reduce means reduce, not remove: the MOVEMENT goes (the column snaps to its
    new width), while the label's opacity crossfade stays. A fade is not motion,
@@ -150,8 +152,7 @@
   scrollbar-gutter: auto;
 }
 
-/* The sidebar's ground, under the top bar and round the card too: one chrome,
-   not two panels and a gap. */
+/* Above phone width the content is a card set in the sidebar's chrome. */
 @media (width > 700px) {
   .app:not(.railless) {
     background: var(--chrome);
@@ -159,13 +160,12 @@
   .app:not(.railless) .main {
     padding: 0 var(--space-2) var(--space-2) 0;
   }
-  /* Flush to the sidebar and the bar, so its edges are the only dividers. */
   .app:not(.railless) .scroll {
     background: var(--bgPage);
     border: 1px solid var(--groundEdge);
     border-radius: var(--r-lg);
   }
-  /* An advisory strip is chrome, so the card starts a step under it. */
+  /* An advisory strip is chrome, above the card. */
   .app:not(.railless) .appbanner {
     padding-bottom: var(--space-2);
   }
@@ -199,8 +199,6 @@
      by its `overflow: hidden`. The collapse is 200ms; correctness is worth more
      than those frames. */
 }
-/* The content area is the page ground: screens float their own cards on it
-   (hairlines, not shadows). */
 .scroll {
   flex: 1;
   overflow-y: auto;
@@ -235,10 +233,10 @@
      under the content. */
   position: relative;
 }
-/* At phone width the page scrolls UNDER the top strip: the scroller reaches up
-   behind the bar by exactly the bar's height and pads its content back down, so
-   a page's resting position is unchanged and what scrolls past the strip is
-   visible through it (app/topbar.css draws the translucency and the blur).
+/* The page scrolls UNDER the top strip: the scroller reaches up behind the bar
+   by exactly the bar's height and pads its content back down, so a page's
+   resting position is unchanged and what scrolls past the strip is visible
+   through it (app/topbar.css draws the translucency and the blur).
 
    `:has` guards the one case where this would hide something. An advisory strip
    between the bar and the scroller — the economy notice, the reindex notice — is
@@ -371,19 +369,14 @@
  * read as two shells.
  *
  * Top to bottom: brand, the destinations (or the entries of a section the
- * reader walked into), More at phone width, the agent (app/agentrail.tsx), then
- * the control that folds the panel.
- *
- * The collapse is one movement: every box keeps its geometry and the column
- * clips it; a state changes only opacity and the height of what folds away. */
+ * reader walked into), More at phone width, then the agent (app/agentrail.tsx)
+ * and the collapse control pinned to the foot. */
 .rail {
   background-color: var(--ground);
-  /* A row's glyph sits in a square the row's own height, which puts every
-     glyph on the 56px column's axis in both states. */
+  /* Each row's glyph centred in a square the row's height: the 56px axis. */
   --railGlyph: 18px;
   --railRowInset: calc((var(--controlHeight) - var(--railGlyph)) / 2);
-  /* Words arrive in the second half of an expand, so no word is seen while
-     its column is too narrow for it. */
+  /* Words fade in over the second half of an expand. */
   --railFade: calc(var(--dur-move) / 2);
   --railWords:
     opacity var(--railFade) var(--ease-in-out) var(--railFade), visibility 0s;
@@ -391,9 +384,7 @@
   flex-direction: column;
   gap: 1px;
   overflow-y: auto;
-  /* It scrolls in both states, so a long level's foot stays reachable. No
-     containment here: it would make this box the containing block of the
-     fixed tooltips (`.navtip`) and clip them. */
+  /* No containment: it would clip the fixed tooltips (`.navtip`). */
   overflow-x: hidden;
 }
 .rail.collapsed {
@@ -406,16 +397,27 @@
      and is held from both ends by app/chrome-layering.test.ts. */
   position: relative;
   z-index: 2;
-  /* And leave in the first half of a collapse; hidden at its end, so a screen
-     reader does not read words nobody can see. */
+  /* Fade out in the first half, hidden from a screen reader at the end. */
   --railWords:
     opacity var(--railFade) var(--ease-in-out), visibility 0s var(--dur-move);
 }
-/* One padding for both states, and the inset that leaves a 32px column at
-   56px. No top: the head is the top bar's band. */
+/* The inset leaves a 32px column at 56px; the head is the top bar's band. */
 .rail.expanded,
 .rail.collapsed {
   padding: 0 var(--space-3) var(--space-3);
+}
+/* Only the destinations scroll; the head and the foot stay. */
+.rail > .navlevel {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  margin-inline: calc(-1 * var(--space-3));
+  padding-inline: var(--space-3);
+  scrollbar-width: thin;
+}
+.rail.collapsed > .navlevel {
+  scrollbar-width: none;
 }
 
 .rail .navitem:focus-visible,
@@ -424,11 +426,9 @@
   outline-offset: -2px;
 }
 /* The head: a mark and a name, and under the name the line that says what an
-   installation runs on. Exactly the top bar's band, so the mark and the bar's
-   controls share one centre line.
+   installation runs on, in the top bar's band.
    A grid, so the mark spans both lines when there are two and the name and
-   attribution share one left edge. The mark's track is the rows' square, so it
-   stands on their glyphs' axis. */
+   attribution share one left edge whatever the mark's size. */
 .rail .railhead {
   display: grid;
   grid-template-columns: var(--controlHeight) minmax(0, 1fr);
@@ -436,10 +436,8 @@
   align-items: center;
   align-content: center;
   column-gap: var(--space-2);
-  /* The containing block of the card and of the name's stretched link. */
+  /* The containing block of the name's stretched link (`.rail .ws::after`). */
   position: relative;
-  /* Never shrinks: on a window shorter than the navigation, the column's
-     `flex-shrink: 1` took the overflow out of this item first. */
   flex: none;
   height: var(--topbarH);
   /* A breath between the head and the first destination: without it the row
@@ -453,8 +451,7 @@
     "mark name"
     "mark by";
 }
-/* Expanded, the head is a card holding the company and what it runs on;
-   collapsed it is the mark alone, so the card fades. */
+/* Expanded, the head is a card; collapsed, the mark alone. */
 .rail .railhead::before {
   content: "";
   position: absolute;
@@ -470,17 +467,18 @@
   align-items: center;
   text-decoration: none;
   color: var(--textPrimary);
+  border-radius: var(--r-sm);
   min-width: 0;
   overflow: hidden;
 }
-/* The name is the link, stretched over the card, so a press anywhere on it
-   goes home. The focus ring is drawn on the stretch for the same reason: it
-   rings the card, not the word. */
+/* The name is the link, stretched over the whole head, so a press anywhere on
+   the card goes home. The focus ring is drawn on the stretch for the same
+   reason: it rings the card, not the word. */
 .rail .ws::after {
   content: "";
   position: absolute;
   inset: var(--space-1) calc(-1 * var(--space-1));
-  border-radius: var(--r-sm);
+  border-radius: inherit;
 }
 .rail .ws:focus-visible {
   outline: none;
@@ -491,13 +489,11 @@
 }
 .rail .ws-chip {
   grid-area: mark;
-  width: var(--controlHeight);
-  height: var(--controlHeight);
 }
 /* The chip is drawn in the rail's head and, at phone width, in the top bar. */
 .ws-chip {
-  width: 40px;
-  height: 40px;
+  width: var(--controlHeight);
+  height: var(--controlHeight);
   border-radius: var(--r-control);
   overflow: hidden;
   /* Flat brand fill, no gradient and no lift: the mark is the one filled
@@ -529,8 +525,9 @@
   height: 100%;
   border-radius: 0;
 }
-/* One line each, whatever the name: an installation name runs to 200
-   characters. The whole name is the link's tooltip (shellrail.tsx). */
+/* One line, whatever the name: an installation name runs to 200 characters,
+   and a head that grew with it pushed every destination below it down. The
+   whole name is the link's tooltip (shellrail.tsx). */
 .rail :is(.ws-name, .ws-company) {
   min-width: 0;
   overflow: hidden;
@@ -539,15 +536,15 @@
 }
 /* The head's second line: what this installation runs on. It is a SIBLING of
    the brand anchor and not a child of it: the press target is the name, and
-   the attribution is not somewhere it should lead. Body S, because it is the
-   attribution under the name and not a second name. */
+   the attribution is not somewhere it should lead. */
+/* Body S, because this is the attribution under the name and not a second
+   name. At the body size it reads as a peer of the heading above it. */
 .rail .ws-company {
   grid-area: by;
   font: var(--fontBodySmall);
 }
 
-/* What a collapse folds away. Each clips at the column's edge and fades on
-   the column's clock. */
+/* What collapsing folds away; the column clips it as it narrows. */
 .rail .railhead::before,
 .rail :is(.ws-name, .ws-company, .navlabel) {
   transition: var(--railWords);
@@ -556,13 +553,10 @@
 .rail.collapsed :is(.ws-name, .ws-company, .navlabel, .navheading, .navlead) {
   opacity: 0;
   visibility: hidden;
-  /* An ellipsis would move along the shrinking edge; the clip stands still. */
   text-overflow: clip;
 }
 
 /* groups */
-/* The rows stand APART: at a 1px hairline they read as one ruled block and the
-   active row's pill looked like a band across a table. */
 .rail .navgroup {
   display: flex;
   flex-direction: column;
@@ -571,18 +565,24 @@
 /* A group is a section of the column, and the heading sits IN that space: the
    air above it belongs to the break, the air under it belongs to its rows.
    ONE break, spelled once: whatever a group is separated from — the group before
-   it, or the level's head — the interval is the same. Collapsed the break stays:
-   it is what says where one group ends and the next begins. */
+   it, or the level's head — the interval is the same, and two of them drifting
+   apart is how a column stops having a rhythm. Without the second selector the
+   level's own name sat against the search field and read as that field's label
+   rather than as the heading over the rows. Collapsed the field is gone and the
+   break is not: the margin belongs to the GROUP, so the way out of the section
+   still stands clear of the icons under it. */
 .rail .navgroup + .navgroup,
 .rail .navlead + .navgroup {
   margin-top: var(--space-5);
 }
 /* A quiet label over a group, not a heading competing with the rows under it:
-   sentence case, root type in the meta ink. Separated by space, not by a rule:
-   a label and a divider do the same job. */
+   sentence case, root type in the meta ink — the rows are what the eye is
+   looking for, and the ink is the whole difference between the label and them.
+   Not the uppercase eyebrow: ten places to go under three shouted labels read
+   as a form, and the mock sets these small and plain. The group is separated by
+   space, not by a rule: a label and a divider do the same job, and stacking
+   both says it twice. */
 .rail .navheading {
-  /* The rows' own height and inset, so a label sits on their rhythm and its
-     first letter on their glyphs' left edge. */
   display: flex;
   align-items: center;
   height: var(--controlHeight);
@@ -596,8 +596,7 @@
      answers no press. */
   cursor: default;
 }
-/* Collapsed a heading has no word to show, so it folds on the column's own
-   curve and the rows under it glide up rather than jump. */
+/* Collapsed, a heading folds on the column's curve, so the rows glide up. */
 .rail :is(.navheading, .navlead) {
   transition:
     height var(--dur-move) var(--ease-out),
@@ -612,8 +611,7 @@
   display: flex;
 }
 
-/* ONE geometry in both states: at 56px the row is the 32px square the column
-   leaves it, and the glyph keeps its x from the first frame to the last. */
+/* One geometry in both states: collapsed, the row is the 32px square left. */
 .rail .navitem {
   position: relative;
   display: flex;
@@ -654,14 +652,12 @@
 .rail.collapsed:not(.menuopen) .navitem.active {
   box-shadow: inset 0 0 0 1px var(--accentText);
 }
-/* One icon size in both states: a resizing glyph is the jitter. */
 .rail .navitem svg {
   width: var(--railGlyph);
   height: var(--railGlyph);
   flex: none;
 }
-/* One line: a label that wrapped would re-wrap on every frame of the
-   column's change. */
+/* One line, so a label never re-wraps while the column moves. */
 .rail .navlabel {
   flex: 1;
   min-width: 0;
@@ -684,8 +680,7 @@
 /* Collapsed-state tooltip (AC-shell-1d / WCAG 1.4.13): shown on hover AND
    keyboard focus, hoverable because it lives inside the hovered wrapper, and
    dismissed with Escape without moving focus. It is never the accessible
-   name — aria-label carries that in both states. Fixed, at the row's right
-   edge (navlevel.tsx `NavTip`), so the scrolling panel does not clip it. */
+   name — aria-label carries that in both states. */
 .rail .navtip {
   position: fixed;
   transform: translateY(-50%);
@@ -699,7 +694,6 @@
   z-index: 50;
 }
 
-/* No motion: the column snaps (`.app`), and its contents with it. */
 @media (prefers-reduced-motion: reduce) {
   .rail .railhead::before,
   .rail :is(.ws-name, .ws-company, .navlabel, .navheading, .navlead) {
@@ -811,8 +805,6 @@
   margin: var(--space-1) calc(-1 * var(--space-3)) 0;
   padding: 0 var(--space-2);
 }
-/* The control that folds the panel, last: a row like the destinations, so its
-   glyph stands on their axis, set off from the agent by air alone. */
 .rail .railfoot {
   flex: none;
   margin-top: var(--space-4);
