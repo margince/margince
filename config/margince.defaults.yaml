@@ -57,6 +57,7 @@ work_dir: .tmp/aitask
 
 activities:
   follow_up_after_days: 2
+  inline_send_review: false
 
 ai:
   budget: {"tokens_per_full_user":12000000,"company_monthly_tokens":null}

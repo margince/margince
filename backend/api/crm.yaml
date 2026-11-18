@@ -67318,6 +67318,12 @@ components:
         reader_rendering_available:
           type: boolean
           description: Whether this human caller may use the configured activity reader-rendering lane. Absent or false keeps generated text original until an explicit request.
+        inline_send_review:
+          type: boolean
+          description: |
+            The `activities.inline_send_review` setting: whether the email composer is decided at
+            Send, with a refusal shown inline from the embedded review. Absent or false keeps the
+            check while writing and the confirmation dialog.
         analytics_startup: { $ref: '#/components/schemas/AnalyticsStartup' }
         user: { $ref: '#/components/schemas/User' }
         workspace_name:

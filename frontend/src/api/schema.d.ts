@@ -49124,6 +49124,12 @@ export interface components {
             license_lapsed?: boolean;
             /** @description Whether this human caller may use the configured activity reader-rendering lane. Absent or false keeps generated text original until an explicit request. */
             reader_rendering_available?: boolean;
+            /**
+             * @description The `activities.inline_send_review` setting: whether the email composer is decided at
+             *     Send, with a refusal shown inline from the embedded review. Absent or false keeps the
+             *     check while writing and the confirmation dialog.
+             */
+            inline_send_review?: boolean;
             analytics_startup?: components["schemas"]["AnalyticsStartup"];
             user: components["schemas"]["User"];
             /** @description The installation's company name (the installation.name setting). Shown as the typed-confirmation target of the "Reset data" action — the exact string that endpoint validates. */

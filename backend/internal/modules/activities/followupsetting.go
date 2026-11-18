@@ -39,7 +39,7 @@ var FollowUpAfterDays = config.DefineStored(config.Spec[int]{
 
 // ConfigSettings are this module's settings in the configuration registry.
 func ConfigSettings() []config.Any {
-	return []config.Any{FollowUpAfterDays}
+	return []config.Any{FollowUpAfterDays, InlineSendReview}
 }
 
 // followUpAfterDays reads the setting inside the caller's transaction, under
