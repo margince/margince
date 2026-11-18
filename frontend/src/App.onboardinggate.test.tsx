@@ -334,6 +334,7 @@ describe("onboarding gate", () => {
     session: {
       seat?: "full" | "read";
       roles?: string[];
+      // Absent, the grants are a User's: a voice to train and mail to connect.
       allow?: GrantSpec;
       onboarding?: boolean;
     } = {},
@@ -348,7 +349,10 @@ describe("onboarding gate", () => {
               meFixture({
                 roles: session.roles ?? ["admin"],
                 seat: session.seat,
-                allow: session.allow,
+                allow: session.allow ?? {
+                  voice_profile: ["create"],
+                  activity: ["create"],
+                },
               }),
             ),
             { status: 200, headers: { "Content-Type": "application/json" } },
@@ -575,6 +579,37 @@ describe("onboarding gate", () => {
     ).toBeNull();
   });
 
+  // Read-only may neither train a voice nor connect a mailbox, so setup
+  // holds no step for it and Home opens.
+  it("leaves a Read-only member with no journey row on its route", async () => {
+    window.location.hash = "#/contacts";
+    stubCompany(
+      403,
+      { row: { code: "not_found" }, status: 404 },
+      {
+        roles: ["read_only"],
+        allow: { voice_profile: ["read"], activity: ["read"] },
+      },
+    );
+    mount();
+    await screen.findByRole("navigation", { name: "Primary navigation" });
+    expect(routeHash(parseHash(window.location.hash))).toBe("#/contacts");
+    expect(requestsEndingIn("/v1/onboarding/state")).toHaveLength(0);
+  });
+
+  it("walks a member who may only connect mail straight to that step", async () => {
+    window.location.hash = "#/contacts";
+    stubCompany(
+      403,
+      { row: { code: "not_found" }, status: 404 },
+      { roles: ["rep"], allow: { activity: ["create"] } },
+    );
+    mount();
+    await waitFor(() =>
+      expect(window.location.hash).toBe("#/onboarding/connect"),
+    );
+  });
+
   it("leaves a non-admin on a read seat alone, whatever its journey says", async () => {
     window.location.hash = "#/contacts";
     stubCompany(
@@ -700,7 +735,10 @@ describe("onboarding gate", () => {
     "never marks the next user finished from the last user's answer when %s",
     async (_, signsOut) => {
       window.location.hash = "#/contacts";
-      const first = meFixture({ roles: ["rep"] });
+      const first = meFixture({
+        roles: ["rep"],
+        allow: { voice_profile: ["create"], activity: ["create"] },
+      });
       const next = { ...first, user: { ...first.user, id: "next-user" } };
       let signedIn: typeof first | null = first;
       const rows: string[] = [];

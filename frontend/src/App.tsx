@@ -251,13 +251,7 @@ function AuthedApp({
     authed,
     { readProfile: false },
   );
-  const progress = useJourneyProgress(
-    authed,
-    authed &&
-      described === true &&
-      me.data?.authorization?.seat_type === "full",
-    me.data?.user?.id,
-  );
+  const progress = useJourneyProgress(authed, described, me.data?.user?.id);
   // The company's clock, for every record date under this boundary. Read
   // here rather than per screen so all of them agree, and gated on the session
   // for the same reason the company probe is: an unauthenticated read would
