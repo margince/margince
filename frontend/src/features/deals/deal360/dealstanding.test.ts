@@ -153,6 +153,18 @@ describe("the committee", () => {
     expect(committeeTone(committee)).toBe("warning");
   });
 
+  it("counts a contact in two roles once", () => {
+    const committee = committeeOf(
+      coverage([
+        seat("c1"),
+        { ...seat("c1"), role: "user" },
+        seat("c2", false),
+      ]),
+      false,
+    );
+    expect(committee).toEqual({ state: "read", named: 2, engaged: 1, gaps: 0 });
+  });
+
   it.each([
     [0, 0, "danger"],
     [1, 0, "danger"],

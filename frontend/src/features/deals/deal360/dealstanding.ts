@@ -15,7 +15,7 @@ import {
 import { calendarDaysUntil } from "../../../format/daysuntil";
 import { calendarDaysBetween } from "../../../format/format";
 import { messageFromOutside } from "../../../lib/messagevoice";
-import { ghostCount } from "./dealcommittee";
+import { committeePeople, ghostCount } from "./dealcommittee";
 
 type Deal = components["schemas"]["Deal"];
 type Stage = components["schemas"]["Stage"];
@@ -158,10 +158,11 @@ export function committeeOf(
   if (!coverage?.stakeholders || withheld) {
     return { state: "unknown" };
   }
+  const people = committeePeople(coverage.stakeholders);
   return {
     state: "read",
-    named: coverage.stakeholders.length,
-    engaged: coverage.stakeholders.filter((seat) => seat.engaged).length,
+    named: people.length,
+    engaged: people.filter((person) => person.engaged).length,
     gaps: ghostCount(coverage.risks ?? []),
   };
 }

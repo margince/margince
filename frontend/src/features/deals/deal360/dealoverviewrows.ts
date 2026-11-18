@@ -7,7 +7,7 @@ import { formatDayMonth, formatMoneyOrAbsent } from "../../../format/format";
 import { offerStatusLabel } from "../../../format/offerstatus";
 import type { Locale, Translator } from "../../../i18n";
 import type { MessageKey } from "../../../i18n/en";
-import { isGapRisk } from "./dealcommittee";
+import { committeePeople, isGapRisk } from "./dealcommittee";
 
 type Activity = components["schemas"]["Activity"];
 type Offer = components["schemas"]["Offer"];
@@ -98,10 +98,11 @@ export function committeeRows(
   roleLabel: (role: string) => string,
   wroteOn?: SeatWroteOn,
 ): Readonly<{ seats: CommitteeSeatRow[]; gaps: CommitteeGapRow[] }> {
-  const stakeholders = coverage?.stakeholders ?? [];
-  const seats = stakeholders.map((seat) => {
+  const people = committeePeople(coverage?.stakeholders ?? []);
+  const seats = people.map((seat) => {
+    const roles = seat.roles.filter(Boolean).map(roleLabel);
     const words = {
-      role: seat.role ? roleLabel(seat.role) : t("deal.committee.noRole"),
+      role: roles.length > 0 ? roles.join(", ") : t("deal.committee.noRole"),
       engagement: t(
         seat.engaged
           ? "deal.committee.legendEngaged"
@@ -127,7 +128,7 @@ export function committeeRows(
   // The committee dim counts gaps with the same predicate, so the rows and the
   // dim agree.
   const gaps = (coverage?.risks ?? []).filter(isGapRisk).map((risk, index) => {
-    const seat = missingSeat(risk.kind, stakeholders.length);
+    const seat = missingSeat(risk.kind, people.length);
     return {
       key: `${risk.kind}-${index}`,
       kind: risk.kind,

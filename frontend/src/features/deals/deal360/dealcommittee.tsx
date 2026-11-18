@@ -40,6 +40,31 @@ export function ghostCount(risks: readonly DealCoverageRisk[]): number {
   return risks.filter(isGapRisk).length;
 }
 
+type DealCoverageSeat = components["schemas"]["DealCoverageSeat"];
+
+/** A contact on the buying side with every role their seats hold. */
+export type CommitteePerson = Omit<DealCoverageSeat, "role"> &
+  Readonly<{ roles: string[] }>;
+
+/**
+ * committeePeople folds the seats into one entry per contact: a contact may
+ * hold several roles on one deal, and is still one person on the committee.
+ */
+export function committeePeople(
+  seats: readonly DealCoverageSeat[],
+): CommitteePerson[] {
+  const people = new Map<string, CommitteePerson>();
+  for (const { role, ...seat } of seats) {
+    const held = people.get(seat.contact_id);
+    if (held) {
+      held.roles.push(role);
+    } else {
+      people.set(seat.contact_id, { ...seat, roles: [role] });
+    }
+  }
+  return [...people.values()];
+}
+
 type Mark = "ours" | "engaged" | "quiet" | "gap";
 
 // The legend's order, which is the order the marks first appear on the card.

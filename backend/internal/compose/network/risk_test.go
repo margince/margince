@@ -61,6 +61,22 @@ func TestSingleThreadedIsTheReportingRuleVerbatim(t *testing.T) {
 	}
 }
 
+func TestOneContactInTwoRolesIsStillOneThread(t *testing.T) {
+	buyer := seat(true, "economic_buyer")
+	champion := buyer
+	champion.Role = roleChampion
+	c := DealCoverage{DealID: ids.NewV7(), EverTouched: true, Stakeholders: []deals.DealStakeholder{buyer, champion}}
+	for _, r := range foldRisks(c, testEnglish) {
+		if r.Kind == RiskSingleThreadedTheirs {
+			if len(r.ContactIDs) != 1 || r.ContactIDs[0] != buyer.ContactID {
+				t.Errorf("the single-threaded risk names %v, want the one contact %s", r.ContactIDs, buyer.ContactID)
+			}
+			return
+		}
+	}
+	t.Error("one engaged contact holding two seats is not flagged single-threaded")
+}
+
 func TestOurSideConcentrationNeedsBothVolumeAndDominance(t *testing.T) {
 	champion := seat(true, roleChampion)
 	other := seat(true, "user")
