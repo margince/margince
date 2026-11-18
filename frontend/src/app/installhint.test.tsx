@@ -135,17 +135,14 @@ afterEach(() => {
 });
 
 describe("the install hint on Home", () => {
-  it("offers to install from the second day, with the value and the browser's own dialog", async () => {
+  it("offers to install from the second day, with Not now before Install", async () => {
     seed({ firstDay: EARLIER });
     mount();
     expect(await screen.findByText(en["installHint.title"])).toBeTruthy();
     expect(screen.getByText(en["installHint.value"])).toBeTruthy();
     expect(
-      screen.getByRole("button", { name: en["settings.installAppAction"] }),
-    ).toBeTruthy();
-    expect(
-      screen.getByRole("button", { name: en["installHint.notNow"] }),
-    ).toBeTruthy();
+      screen.getAllByRole("button").map((button) => button.textContent),
+    ).toEqual([en["installHint.notNow"], en["settings.installAppAction"]]);
     expect(screen.queryByRole("alert")).toBeNull();
     expect(screen.queryByRole("status")).toBeNull();
   });
@@ -174,8 +171,8 @@ describe("the install hint on Home", () => {
     );
     expect(step.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
     expect(
-      screen.queryByRole("button", { name: en["settings.installAppAction"] }),
-    ).toBeNull();
+      screen.getAllByRole("button").map((button) => button.textContent),
+    ).toEqual([en["installHint.notNow"]]);
   });
 
   it("never shows where the reader points with a mouse", async () => {

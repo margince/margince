@@ -9216,7 +9216,7 @@ export const en = {
     "To install, choose “File”, then “Add to Dock”.",
   "installHint.title": "Install Margince as an app",
   "installHint.value":
-    "Opens from its own icon, without the browser’s bars, straight to Home.",
+    "Opens from your home screen with one tap, in its own window. No app store, nothing to download.",
   "installHint.manual": "Tap {share} “Share”, then “Add to Home Screen”.",
   "installHint.notNow": "Not now",
   "role.admin": "Admin",

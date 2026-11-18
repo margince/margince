@@ -9258,7 +9258,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Zum Installieren wähle „Ablage“ und dann „Zum Dock hinzufügen“.",
   "installHint.title": "Margince als App installieren",
   "installHint.value":
-    "Öffnet sich über ein eigenes Symbol, ohne Browserleisten, direkt auf Home.",
+    "Öffnet sich mit einem Tipp auf dem Home-Bildschirm im eigenen Fenster. Kein App Store, nichts herunterzuladen.",
   "installHint.manual":
     "Tippe auf {share} „Teilen“ und dann auf „Zum Home-Bildschirm“.",
   "installHint.notNow": "Nicht jetzt",

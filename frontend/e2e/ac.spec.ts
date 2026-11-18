@@ -594,8 +594,10 @@ for (const colorScheme of ["light", "dark"] as const) {
       const notNow = hint.getByRole("button", {
         name: de["installHint.notNow"],
       });
-      await install.focus();
+      await notNow.focus();
       await page.keyboard.press("Tab");
+      await expect(install).toBeFocused();
+      await page.keyboard.press("Shift+Tab");
       await expect(notNow).toBeFocused();
       await page.keyboard.press("Enter");
       await expect(hint).toHaveCount(0);

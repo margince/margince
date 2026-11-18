@@ -4,6 +4,7 @@
 import { Share } from "lucide-react";
 import { type RefObject, useEffect, useRef } from "react";
 import { InstallButton } from "../components/installbutton";
+import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { calendarDay } from "../format/calendarday";
 import { useNow } from "../format/now";
@@ -110,17 +111,22 @@ export function InstallHintNotice({
         kind="standing"
         title={t("installHint.title")}
         actions={
-          install.kind === "available" ? (
-            <InstallButton
-              prompt={install.prompt}
-              onAnswered={(outcome) => {
-                if (outcome === "dismissed") dismiss();
-                else handOnFocus();
-              }}
-            />
-          ) : undefined
+          <>
+            <Button variant="ghost" onClick={dismiss}>
+              {t("installHint.notNow")}
+            </Button>
+            {install.kind === "available" && (
+              <InstallButton
+                variant="primary"
+                prompt={install.prompt}
+                onAnswered={(outcome) => {
+                  if (outcome === "dismissed") dismiss();
+                  else handOnFocus();
+                }}
+              />
+            )}
+          </>
         }
-        dismiss={{ label: t("installHint.notNow"), onDismiss: dismiss }}
       >
         {install.kind === "available" ? t("installHint.value") : <ShareStep />}
       </Callout>

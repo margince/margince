@@ -9018,7 +9018,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Để cài ứng dụng, chọn “Tệp”, rồi “Thêm vào Dock”.",
   "installHint.title": "Cài Margince thành ứng dụng",
   "installHint.value":
-    "Mở từ biểu tượng riêng, không có thanh trình duyệt, vào thẳng Trang chủ.",
+    "Mở bằng một lần chạm trên màn hình chính, trong cửa sổ riêng. Không cần cửa hàng ứng dụng, không phải tải xuống.",
   "installHint.manual":
     "Chạm {share} “Chia sẻ” (Share), rồi “Thêm vào MH chính” (Add to Home Screen).",
   "installHint.notNow": "Để sau",
