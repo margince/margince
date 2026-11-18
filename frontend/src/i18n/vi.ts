@@ -3767,7 +3767,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.overview.otherOpen": "Việc cần làm khác đang mở",
   "record.allTasks": "Tất cả công việc",
   "co.overview.latest": "Mới nhất",
-  "co.overview.nothingOpen": "Không còn việc nào khác",
   "co.overview.for": "cho {name}",
   "co.overview.noDate": "Chưa có ngày",
   "co.overview.allDeals": "Tất cả deal",

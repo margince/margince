@@ -3825,7 +3825,6 @@ export const en = {
   "co.overview.otherOpen": "Other open tasks",
   "record.allTasks": "All tasks",
   "co.overview.latest": "Latest",
-  "co.overview.nothingOpen": "Nothing else open",
   "co.overview.for": "for {name}",
   "co.overview.noDate": "No date",
   "co.overview.allDeals": "All deals",
