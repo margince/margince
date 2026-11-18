@@ -177,3 +177,19 @@ func TestExtensionListAnswersTheHolderOfTheReadGrantAndRefusesTheRest(t *testing
 		t.Errorf("a caller without extension_access → %d, want 403", got)
 	}
 }
+
+func TestExtensionInventoryListsTheObjectsOfItsRecordKinds(t *testing.T) {
+	exts := []extension.Extension{{
+		Name: "finance-demo", Version: "1",
+		RecordKinds: []extension.RecordKindDeclaration{{Kind: "ledger_account"}},
+	}}
+	verbs := []extension.Verb{{Unit: "finance-demo", Route: "/ext/finance-demo/a", Method: "GET", RbacObject: "ext_finance_demo_ledger_account"}}
+	got := composedExtensionInventory(exts, verbs, nil)
+	if !slices.Equal(got[0].RbacObjects, []string{"ext_finance_demo_ledger_account"}) {
+		t.Errorf("objects = %v, want the kind's object once, even when a verb names it too", got[0].RbacObjects)
+	}
+	got = composedExtensionInventory(exts, nil, nil)
+	if !slices.Equal(got[0].RbacObjects, []string{"ext_finance_demo_ledger_account"}) {
+		t.Errorf("objects = %v, want the kind's object with no verb naming it", got[0].RbacObjects)
+	}
+}
