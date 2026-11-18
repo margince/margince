@@ -16,48 +16,23 @@ import {
   type CommunicationContext,
   contextFor,
 } from "../../lib/compose-context";
-import {
-  isConsentNotGranted,
-  ProblemError,
-  problemCodeOf,
-  problemFieldErrorsOf,
-  problemMessageOf,
-  throwProblem,
-} from "../../lib/problem";
+import { problemMessageOf, throwProblem } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import { useSendPermission } from "../../lib/usesendpermission";
 import type { ChosenFile } from "./composeattachments";
 import type { ComposeFields } from "./composefields";
 import { composedLinks, type Link, type SendGrounding } from "./composelinks";
+import { type Refusal, refusalOf } from "./composerefusal";
 import type { RelinkKind } from "./composerelink";
 import type { useSavedDraft } from "./composesaveddraft";
 import { scheduleFields } from "./composeschedule";
 import { sendHoldOf } from "./composesendhold";
+import { dealOf, reasonEvidence, useReasonForAnchor } from "./reasonanchor";
 import { SCHEDULED_SCREEN } from "./scheduledqueue";
 import { sendReviewOf } from "./sendreview";
 
 type Activity = components["schemas"]["Activity"];
 type Preview = components["schemas"]["SendAuthorizationPreview"];
-
-// The refusals a rep can act on, as opposed to failures. Anything else keeps
-// the server's own message, so this surface invents no copy for it.
-export type Refusal = "consent" | "mailbox" | "sharedUnsubscribe" | null;
-
-// Consent is a 409 naming itself, a mailbox that cannot send a 422 naming no
-// field, and a shared unsubscribe link a 422 field fault on the recipients.
-export function refusalOf(error: unknown): Refusal {
-  if (error instanceof ProblemError && isConsentNotGranted(error.problem)) {
-    return "consent";
-  }
-  if (problemCodeOf(error) === "mailbox_not_send_capable") {
-    return "mailbox";
-  }
-  const shared = problemFieldErrorsOf(error).some(
-    ({ field, code }) =>
-      field === "recipients" && code === "shared_unsubscribe_token",
-  );
-  return shared ? "sharedUnsubscribe" : null;
-}
 
 type SendRequest = {
   activityId?: string;
@@ -212,12 +187,26 @@ export function refusalIsCurrent(
   sent: SendRequest | undefined,
   now: SendRequest,
   preview: Preview | undefined,
+  directing = false,
 ): boolean {
   return (
     sent !== undefined &&
-    sent.answerAtSend === preview &&
+    (directing || sent.answerAtSend === preview) &&
     messageOf(sent) === messageOf(now)
   );
+}
+
+// An older server's footer refusal holds only the message it refused, so a
+// changed message or a new check can be sent again.
+function refusalStillShown(
+  refusal: Refusal,
+  sent: SendRequest | undefined,
+  now: SendRequest,
+  preview: Preview | undefined,
+): Refusal {
+  return refusal === "legacyFooter" && !refusalIsCurrent(sent, now, preview)
+    ? null
+    : refusal;
 }
 
 // The message a request sends, without the bookkeeping that names drafts. A
@@ -280,6 +269,7 @@ export function useComposeSend({
   const queryClient = useQueryClient();
   const toast = useToast();
   const { setSendUnavailable } = fields;
+  useReasonForAnchor(answering, fields);
   // What every sent message does next, whichever door sent it: the draft is
   // spent, the timeline reads again, and the composer closes.
   const finishSent = () => {
@@ -350,7 +340,6 @@ export function useComposeSend({
   const sendReview = sendReviewOf(send.error);
   const sendError =
     send.isError && refusal === null ? problemMessageOf(send.error, t) : null;
-  // The one place the claim is decided, so the mail and channel arms agree.
   const claimedContext = contextFor({
     anchor: anchorActivity,
     chosen: fields.context,
@@ -363,19 +352,15 @@ export function useComposeSend({
     asksContext: asksWhy(anchorActivity),
     needsDeal,
   });
-  // Spelled once for the send and for the question asked ahead of it.
   const links = composedLinks(
     { entityType, entityId, dealId },
     grounding,
     projectId,
   );
-  const contextDealId = (answering ? anchorActivity?.links : links)?.find(
-    (link) => link.entity_type === "deal",
-  )?.entity_id;
-  const evidence = contextDealId ? { deal_id: contextDealId } : undefined;
+  const contextDealId = dealOf(answering ? anchorActivity?.links : links);
+  const evidence = reasonEvidence(contextDealId, fields.meetingEvidence);
   // The engine's answer, asked while the rep writes. Bcc is in the question,
   // because consent is owed to everyone who receives the message.
-  // A marketing draft is checked against its recipients' content rules.
   const settledSubject = useSettledValue(fields.subject);
   const settledBody = useSettledValue(fields.body);
   const answer = useSendPermission({
@@ -384,10 +369,7 @@ export function useComposeSend({
     links,
     context: claimedContext,
     evidence,
-    draft:
-      claimedContext === "marketing"
-        ? { subject: settledSubject, body: settledBody }
-        : undefined,
+    draft: { subject: settledSubject, body: settledBody },
     enabled: open && !isChannelReply,
   });
   // Send waits for the sender to confirm a recipient with no lawful basis on record.
@@ -404,22 +386,30 @@ export function useComposeSend({
     links,
     answerAtSend: answer.preview,
   });
+  const [directOpen, setDirectOpen] = useState(false);
   const refusedNow =
     refusal === "consent" &&
-    refusalIsCurrent(send.variables, request, answer.preview);
+    refusalIsCurrent(
+      send.variables,
+      request,
+      answer.preview,
+      directOpen || sendReview?.actions.includes("direct_send"),
+    );
   const permission = {
     ...answer,
     refusal: refusedNow ? { refusals: sendReview?.refusals ?? [] } : null,
   };
-  // A channel reply asks no preview, so only its refused Send can hold it.
-  const hold = sendHoldOf(permission, refusedNow ? sendReview : null);
-  // The reason form for a refused message. A press of "Send with a reason"
-  // opens it once the server has said the message may be directed.
-  const [directOpen, setDirectOpen] = useState(false);
-  // Whether the reader has pressed Send. A form that reports gaps before then
-  // scolds a reader for not having finished typing.
+  const shownRefusal = refusalStillShown(
+    refusal,
+    send.variables,
+    request,
+    answer.preview,
+  );
+  const hold: ReturnType<typeof sendHoldOf> =
+    shownRefusal === "legacyFooter"
+      ? { blocks: true, withReason: false }
+      : sendHoldOf(permission, refusedNow ? sendReview : null);
   const [attempted, setAttempted] = useState(false);
-  // Each opening starts clean; a refusal belongs to the send it answered.
   useEffect(() => {
     if (!open) {
       setAttempted(false);
@@ -475,11 +465,12 @@ export function useComposeSend({
     carriageBlocked ||
     fields.sendUnavailable ||
     refusal === "mailbox" ||
-    refusal === "sharedUnsubscribe";
+    refusal === "sharedUnsubscribe" ||
+    shownRefusal === "legacyFooter";
   return {
     send,
     blocked,
-    refusal,
+    refusal: shownRefusal,
     sendReview,
     sendError,
     claimedContext,

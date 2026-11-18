@@ -7,7 +7,6 @@ package activities
 
 import (
 	"context"
-	"errors"
 	"strings"
 	"testing"
 
@@ -83,7 +82,7 @@ func TestAnObligationTheWorkspaceCannotMeetIsNotTheSameAsNoObligation(t *testing
 		if !line.Missing() {
 			t.Errorf("%+v reports itself meetable, want missing", line)
 		}
-		if got := unmeetable([]DisclosureLine{line}); len(got) != 1 || got[0] != "controller_identity" {
+		if got := unmeetable([]DisclosureLine{line}); len(got) != 1 || got[0].Kind != "controller_identity" {
 			t.Errorf("unmeetable(%+v) = %v, want [controller_identity]", line, got)
 		}
 	}
@@ -134,7 +133,7 @@ func TestADisclosureRidesAMessageCarryingNoUnsubscribeSurface(t *testing.T) {
 
 	got, err := store.deliverability(context.Background(), "As discussed.", "Re: your question",
 		[]string{"anna@example.test"},
-		unsubscribeSurface{category: commsauthz.CategoryReplyToInbound}, ids.Nil)
+		unsubscribeSurface{category: commsauthz.CategoryReplyToInbound}, ids.Nil, "")
 	if err != nil {
 		t.Fatalf("deriving the message: %v", err)
 	}
@@ -167,7 +166,7 @@ func TestADisclosureSurvivesEveryEarlyReturn(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			got, err := store.deliverability(context.Background(), "As discussed.", "Subject",
-				tc.recipients, unsubscribeSurface{category: commsauthz.CategoryMarketing}, ids.Nil)
+				tc.recipients, unsubscribeSurface{category: commsauthz.CategoryMarketing}, ids.Nil, "")
 			if err != nil {
 				t.Fatalf("deriving the message: %v", err)
 			}
@@ -187,7 +186,7 @@ func TestTheCategoryCrossesTheSeam(t *testing.T) {
 
 	if _, err := store.deliverability(context.Background(), "body", "subject",
 		[]string{"anna@example.test"},
-		unsubscribeSurface{category: commsauthz.CategoryMarketing}, ids.Nil); err != nil {
+		unsubscribeSurface{category: commsauthz.CategoryMarketing}, ids.Nil, ""); err != nil {
 		t.Fatalf("deriving the message: %v", err)
 	}
 	if len(stub.asked) != 1 || stub.asked[0] != string(commsauthz.CategoryMarketing) {
@@ -201,7 +200,7 @@ func TestTheCategoryCrossesTheSeam(t *testing.T) {
 func TestNoResolverWiredSendsWhatItAlwaysSent(t *testing.T) {
 	got, err := (&Store{}).deliverability(context.Background(), "As discussed.", "Subject",
 		[]string{"anna@example.test"},
-		unsubscribeSurface{category: commsauthz.CategoryMarketing}, ids.Nil)
+		unsubscribeSurface{category: commsauthz.CategoryMarketing}, ids.Nil, "")
 	if err != nil {
 		t.Fatalf("deriving the message: %v", err)
 	}
@@ -228,7 +227,7 @@ func TestTheMarkupAlternativeCarriesTheSameDisclosures(t *testing.T) {
 	// alternative ship without disclosures in the first place.
 	derived, err := store.deliverability(context.Background(), "As discussed.", "Subject",
 		[]string{"anna@example.test"},
-		unsubscribeSurface{category: commsauthz.CategoryReplyToInbound}, ids.Nil)
+		unsubscribeSurface{category: commsauthz.CategoryReplyToInbound}, ids.Nil, "")
 	if err != nil {
 		t.Fatalf("deriving the message: %v", err)
 	}
@@ -295,38 +294,18 @@ func TestAnExplicitCategoryIsNeverOverruled(t *testing.T) {
 	}
 }
 
-// TestASendOwingAnUnstatedParticularIsRefusedNotShippedShort is the defect
-// Codex found on this branch's first review.
-//
-// A German installation that stated a legal name and no postal address gets
-// back a controller_identity line with EMPTY text: the obligation applies and
-// cannot be met. The appender leaves it out of the body, which is the right
-// rendering — a message reading "unknown" where the controller's name belongs
-// discloses nothing. Leaving it out AND sending is the failure: the recipient
-// gets a message missing something the law required and nobody is told.
-func TestASendOwingAnUnstatedParticularIsRefusedNotShippedShort(t *testing.T) {
-	stub := &stubDisclosures{lines: []DisclosureLine{
-		{Kind: "controller_identity", Text: ""},
-	}}
-	store := (&Store{}).WithDisclosures(stub)
-
-	_, err := store.deliverability(context.Background(), "As discussed.", "Re: your question",
-		[]string{"anna@example.test"},
-		unsubscribeSurface{category: commsauthz.CategoryReplyToInbound}, ids.Nil)
-
-	var refusal *UndisclosableError
-	if !errors.As(err, &refusal) {
-		t.Fatalf("a send owing an unstatable disclosure returned %v, want an "+
-			"UndisclosableError — shipping it short is the whole defect", err)
+func TestAMissingDisclosureBecomesARecordedFooterFinding(t *testing.T) {
+	store := (&Store{}).WithDisclosures(&stubDisclosures{lines: []DisclosureLine{{Kind: "controller_identity"}}})
+	rendered, err := store.deliverability(context.Background(), "As discussed.", "Re: your question",
+		[]string{"anna@example.test"}, unsubscribeSurface{category: commsauthz.CategoryReplyToInbound}, ids.Nil, "")
+	if err != nil {
+		t.Fatal(err)
 	}
-	if len(refusal.Kinds) != 1 || refusal.Kinds[0] != "controller_identity" {
-		t.Errorf("the refusal names %v, want [controller_identity] so the operator "+
-			"knows which particular to state", refusal.Kinds)
+	if len(rendered.footerFindings) != 1 || rendered.footerFindings[0].Kind != "controller_identity" {
+		t.Fatalf("missing disclosure findings = %v", rendered.footerFindings)
 	}
-	field, code, _ := refusal.FieldFault()
-	if field == "" || code != "undisclosable_obligation" {
-		t.Errorf("FieldFault() = %q/%q, want a named field and undisclosable_obligation "+
-			"so this reaches the operator as a 422 rather than a 500", field, code)
+	if rendered.transmitted != "As discussed." {
+		t.Fatalf("body contains an invented disclosure: %q", rendered.transmitted)
 	}
 }
 
@@ -340,7 +319,7 @@ func TestAMetObligationStillSends(t *testing.T) {
 
 	got, err := store.deliverability(context.Background(), "As discussed.", "Re: your question",
 		[]string{"anna@example.test"},
-		unsubscribeSurface{category: commsauthz.CategoryReplyToInbound}, ids.Nil)
+		unsubscribeSurface{category: commsauthz.CategoryReplyToInbound}, ids.Nil, "")
 	if err != nil {
 		t.Fatalf("a fully stated installation was refused: %v", err)
 	}
@@ -365,7 +344,7 @@ func TestAVietnameseAdvertisingMailEndsWithTheAdvertiserThenTheRefusal(t *testin
 	store.publicBaseURL = "https://mail.example.test"
 
 	got, err := store.deliverability(context.Background(), "Ưu đãi tháng này dành cho quý khách.", "[QC] Ưu đãi",
-		[]string{"an@example.vn"}, unsubscribeSurface{category: commsauthz.CategoryMarketing}, ids.Nil)
+		[]string{"an@example.vn"}, unsubscribeSurface{category: commsauthz.CategoryMarketing}, ids.Nil, "")
 	if err != nil {
 		t.Fatalf("deriving the message: %v", err)
 	}
@@ -380,5 +359,13 @@ func TestAVietnameseAdvertisingMailEndsWithTheAdvertiserThenTheRefusal(t *testin
 	}
 	if !strings.Contains(rest, "/#/unsubscribe/tok/") || !strings.Contains(rest, "/#/preferences/tok") {
 		t.Errorf("the opt-out links %q do not carry the recipient's stop and preference links", rest)
+	}
+}
+
+func TestFooterEvidenceBindsTheRedactedLinkDestination(t *testing.T) {
+	first := footerEvidence(commsauthz.Evidence{}, sendDeliverability{}, "https://one.example.test/unsubscribe/token-redacted")
+	next := footerEvidence(commsauthz.Evidence{}, sendDeliverability{}, "https://two.example.test/unsubscribe/token-redacted")
+	if first.FooterDigest == next.FooterDigest {
+		t.Fatal("a changed rendered footer kept the original acknowledgement scope")
 	}
 }

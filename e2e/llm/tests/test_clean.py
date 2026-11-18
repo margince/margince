@@ -165,7 +165,7 @@ class RunClaudeTest(unittest.TestCase):
                "ANTHROPIC_API_KEY": "test-only"}
         with unittest.mock.patch.dict(os.environ, env):
             os.environ.pop("CLAUDE_CODE_DISABLE_AUTO_MEMORY", None)
-            judge._cli_asker("claude-haiku-4-5-20251001")("Does the answer name the pipeline?")
+            judge._cli_asker("claude-haiku-5-5")("Does the answer name the pipeline?")
         with open(self.seen_file, encoding="utf-8") as handle:
             seen = json.load(handle)
         self.assertFalse(check._inside_repo(seen["cwd"]))

@@ -5712,6 +5712,9 @@
           "body": {
             "type": "string"
           },
+          "communication_context": {
+            "type": "string"
+          },
           "in_reply_to_activity_id": {
             "type": "string",
             "format": "uuid"

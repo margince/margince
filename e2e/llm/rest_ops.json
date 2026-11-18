@@ -594,7 +594,6 @@
     "POST /v1/claims/{id}/take-over": "take_over_conversation_claim",
     "POST /v1/commissions/{id}/decide": "decide_commission_entry",
     "POST /v1/communication-reviews/{id}/context": "record_communication_context",
-    "POST /v1/communication-reviews/{id}/direct-send": "direct_communication_send",
     "POST /v1/companies": "create_record",
     "POST /v1/companies/{id}/ask": "ask_about_company",
     "POST /v1/companies/{id}/brief": "regenerate_company_brief",

@@ -240,10 +240,12 @@ func (s *Store) noteReembedProgress(ctx context.Context, run ids.UUID) error {
 // populated under what that run targeted. It is fenced on the run, so a pass
 // that outlived the run it belonged to cannot take the marker away from the run
 // that replaced it.
-func (s *Store) ReleaseReembedding(ctx context.Context, run ids.UUID) error {
+// ended is the error the run stopped on. A run cut short by ErrIdentityDrift
+// keeps populated_identity, because no role serves its target any more.
+func (s *Store) ReleaseReembedding(ctx context.Context, run ids.UUID, ended error) error {
 	// rls-exempt: deployment metadata, no workspace_id
 	return database.WithInfraTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
-		return releaseReembeddingTx(ctx, tx, run)
+		return releaseReembeddingTx(ctx, tx, run, !errors.Is(ended, ErrIdentityDrift))
 	})
 }
 
@@ -261,13 +263,15 @@ func (s *Store) ReleaseReembedding(ctx context.Context, run ids.UUID) error {
 // successes, deliberately — the cost of getting it wrong is a re-run, not a
 // corrupt store — so every reader inherits the weaker claim, /readyz included
 // (compose/embedreadyz.go says so where it reports it).
-func releaseReembeddingTx(ctx context.Context, tx pgx.Tx, run ids.UUID) error {
+//
+// stamp false keeps populated_identity, for a run cut short by drift.
+func releaseReembeddingTx(ctx context.Context, tx pgx.Tx, run ids.UUID, stamp bool) error {
 	_, err := tx.Exec(ctx, `
 		UPDATE embed_store_binding
-		SET populated_identity = reembedding_identity, status = 'idle',
-		    reembedding_run = NULL, reembedding_identity = NULL,
+		SET populated_identity = CASE WHEN $2 THEN reembedding_identity ELSE populated_identity END,
+		    status = 'idle', reembedding_run = NULL, reembedding_identity = NULL,
 		    updated_at = now()
-		WHERE reembedding_run = $1`, run)
+		WHERE reembedding_run = $1`, run, stamp)
 	if err != nil {
 		return fmt.Errorf("search: releasing the reembedding marker: %w", err)
 	}

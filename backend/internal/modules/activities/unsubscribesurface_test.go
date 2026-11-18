@@ -110,3 +110,13 @@ func TestTheLegacyLockedKeyAgreesWithConsent(t *testing.T) {
 			"unsubscribe surface from real bulk mail")
 	}
 }
+
+func TestALockedPurposeOffersNoPrivateLinkAfterCategoryResolution(t *testing.T) {
+	surface := surfaceFor(commsauthz.CategoryMarketing, "", "transactional")
+	if surface.privateLinks() {
+		t.Fatal("the locked purpose offers a private unsubscribe link")
+	}
+	if surface.disclosureCategory() != commsauthz.CategoryMarketing {
+		t.Fatal("link eligibility changed the resolved disclosure duties")
+	}
+}

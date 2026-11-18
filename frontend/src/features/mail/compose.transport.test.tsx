@@ -22,6 +22,7 @@ import {
   previewedAddresses,
 } from "../../testing/sendpermission.testkit";
 import { ComposeModal } from "./compose";
+import { pressSend } from "./compose.testkit";
 
 // WHICH WAY a message leaves, asked inside the one composer.
 //
@@ -209,7 +210,7 @@ describe("the composer's transport dial", () => {
 
     await screen.findByLabelText("Send via");
     writeMessage("Body", "On my way.");
-    await user.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend(user);
 
     await waitFor(() =>
       expect(
@@ -264,7 +265,7 @@ describe("the composer's transport dial", () => {
       screen.getByLabelText("Reason for contact"),
       "Active deal",
     );
-    await user.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend(user);
 
     await waitFor(() =>
       expect(sent.some((r) => r.key === "POST /emails")).toBe(true),
@@ -366,7 +367,7 @@ describe("a channel reply held to its carriage bounds", () => {
       ),
     ).toBeTruthy();
 
-    await user.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend(user);
 
     // A message that would only park at the door never goes to the door.
     expect(
@@ -383,7 +384,7 @@ describe("a channel reply held to its carriage bounds", () => {
     writeMessage("Body", "Here is the note.");
     await attach(user, /^Site_note\.txt/);
 
-    await user.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend(user);
 
     const req = await waitFor(() => {
       const found = sent.find(

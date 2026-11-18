@@ -250,6 +250,9 @@ type MergeRecordsResult struct {
 type DraftEmailResult struct {
 	Subject string `json:"subject"`
 	Body    string `json:"body"`
+	// CommunicationContext is what the instruction says the message is
+	// (draftreason), for the send to carry as its communication_context.
+	CommunicationContext string `json:"communication_context,omitempty"`
 	// InReplyToActivityID is echoed back because send_email needs it, and a
 	// caller that had to remember it across the two calls is a caller that can
 	// send a draft against the wrong thread. Absent on a FIRST message, which

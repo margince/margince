@@ -289,7 +289,7 @@ func (s *Service) pendingToDecide(ctx context.Context, tx pgx.Tx, p principal.Pr
 	// this module keeps everywhere. Before the status check, because what a
 	// credential may release is a question about the credential and not about
 	// how far this particular proposal has got.
-	if err := agentMayDecide(p, a, approve, s.ownReleaseFor(ctx, tx, a)); err != nil {
+	if err := agentMayDecide(ctx, p, a, approve, s.ownReleaseFor(ctx, tx, a)); err != nil {
 		return row{}, err
 	}
 	// An agent never edits what it releases, whoever staged it: what a credential

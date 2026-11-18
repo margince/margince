@@ -20,6 +20,7 @@ import {
   previewedAddresses,
 } from "../../testing/sendpermission.testkit";
 import { ComposeModal } from "./compose";
+import { pressSend } from "./compose.testkit";
 
 // What a sent message files under.
 //
@@ -208,7 +209,7 @@ describe("what a sent message files under", () => {
     await pickBy("Related to", "Deal: Acme Renewal");
     await fillBody();
     await pickBy("Reason for contact", "Active deal");
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
 
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
     // The deal is the assertion that fails without the fix: before it, the
@@ -251,7 +252,7 @@ describe("what a sent message files under", () => {
       (screen.getByLabelText("Subject") as HTMLInputElement).value,
     ).toContain("ERP-27");
     await pickBy("Reason for contact", "Active deal");
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
 
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
     // One choice, two effects: the same project id that scoped the draft
@@ -293,7 +294,7 @@ describe("what a sent message files under", () => {
     await pickBy("Related to", "Deal: Acme Renewal");
     await waitFor(() => expect(subject.value).toBe("Hello"));
     await pickBy("Reason for contact", "Active deal");
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
 
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
     expect(linksOf(sent)).toEqual([
@@ -385,7 +386,7 @@ describe("what a sent message files under", () => {
     );
     await fillBody();
     await pickBy("Reason for contact", "Active deal");
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
 
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
     expect(linksOf(sent)).toEqual([
@@ -412,7 +413,7 @@ describe("what a sent message files under", () => {
     await screen.findByLabelText("Related to");
     await fillBody();
     await pickBy("Reason for contact", "Active deal");
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
 
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
     // An unchosen deal is absent, not an empty entry: "no deal" is a real
@@ -441,7 +442,7 @@ describe("what a sent message files under", () => {
     await userEvent.tab();
     await fillBody();
     await pickBy("Reason for contact", "Active deal");
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
 
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
     const both = [
@@ -477,7 +478,7 @@ describe("what a sent message files under", () => {
     await userEvent.type(screen.getByLabelText("Bcc"), "SARA@acme.test");
     await userEvent.tab();
     await pickBy("Reason for contact", "Active deal");
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
 
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
     expect(linksOf(sent)).toEqual([
@@ -506,7 +507,7 @@ describe("what a sent message files under", () => {
     await userEvent.type(screen.getByLabelText("Bcc"), "sara@acme.test");
     await userEvent.tab();
     await pickBy("Reason for contact", "Active deal");
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
 
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
     expect(linksOf(sent)).toEqual([
@@ -534,7 +535,7 @@ describe("what a sent message files under", () => {
     await userEvent.type(screen.getByLabelText("Cc"), "noah@acme.test");
     await userEvent.tab();
     await pickBy("Reason for contact", "Active deal");
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
 
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
     const filed = [
@@ -586,7 +587,7 @@ describe("what a sent message files under", () => {
     await pickBy("Related to", "Deal: Acme Renewal");
     await fillBody();
     await pickBy("Reason for contact", "Active deal");
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
 
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
     expect(linksOf(sent)).toEqual([
@@ -619,7 +620,7 @@ describe("what a sent message files under", () => {
     await screen.findByLabelText("Subject");
     await fillBody();
     await pickBy("Reason for contact", "Active deal");
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
 
     await waitFor(() =>
       expect(

@@ -131,7 +131,7 @@ func (s *Server) wireContact360(pool *pgxpool.Pool) {
 	// that wires none serves the deterministic floor and says so in
 	// generated_by, rather than 501-ing on a workspace without a model.
 	s.contactBriefHandlers = contactbrief.NewHandlers(
-		contactbrief.NewService(pool, s.contact360Svc, nil, "", time.Now).
+		contactbrief.NewService(pool, s.contact360Svc, nil, nil, time.Now).
 			WithEmailSummaries(emailRows(pool)),
 	)
 	// The pre-meeting brief shares that composite read and adds the claim

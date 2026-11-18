@@ -87,11 +87,7 @@ func setupPreflightIn(t *testing.T, extra ...compose.Option) *preflightEnv {
 	if err != nil {
 		t.Fatalf("building the local vault: %v", err)
 	}
-	opts := append([]compose.Option{compose.WithKeyvault(vault), compose.WithOperatorMail(apptest.DiscardingMailer{})}, extra...)
-	// A marketing send derives a one-click unsubscribe link and refuses
-	// without a boot-configured base to build it from, so the fixture
-	// carries one — an install that can send at all has one.
-	opts = append(opts, compose.WithPublicBaseURL(preflightBaseURL))
+	opts := append([]compose.Option{compose.WithKeyvault(vault), compose.WithOperatorMail(apptest.DiscardingMailer{}), compose.WithPublicBaseURL(preflightBaseURL)}, extra...)
 	e := apptest.SetupAppWithOptions(t, opts...)
 	// This suite composes its OWN vault (a real local one, because the
 	// pre-flight it is about needs a credential custodian), and WithKeyvault

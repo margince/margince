@@ -206,6 +206,8 @@ var retired = gatekit.Waive(map[string]string{
 	"backend/migrations/core": "shipped migrations are never edited — the SQL that built the " +
 		"old names is the record of how the schema got here",
 	"backend/migrations/custom": "the same, one namespace over",
+	"backend/migrations/baseline": "written from the shipped migrations above, so it carries " +
+		"their names and comments",
 	"backend/migrationrewrites.txt": "each line opens with a shipped migration's file name, verbatim, " +
 		"and a shipped migration is never renamed",
 	"backend/migrations/renumbered.txt": "each line names a shipped migration, verbatim, at the " +
@@ -307,6 +309,7 @@ var retired = gatekit.Waive(map[string]string{
 		"record-noun.test.ts holds, which it cannot do without the German word for a human being",
 
 	"backend/gates/contactvocabulary_test.go": "this file names the word in order to refuse it",
+	"backend/gates/uiautonomyclaims_test.go":  "this gate quotes the retired slogan to forbid it",
 
 	// Surfe serves POST /v2/people/enrich and reads its subjects from a
 	// `people` array. That is the VENDOR's noun for its own API, and this

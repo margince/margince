@@ -167,5 +167,5 @@ func (s *Service) Draft(
 	if err != nil {
 		return crmcontracts.CompanyEmailDraft{}, nil, err
 	}
-	return contactdraft.Wire(draft, by, voice.Degraded, envelope.Language), grounding, nil
+	return contactdraft.Wire(draft, by, voice.Degraded, envelope.Language, req.Intent), grounding, nil
 }

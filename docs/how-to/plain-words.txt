@@ -1021,7 +1021,6 @@ run
 rung
 runtime
 safe
-safer
 safest
 said
 sale

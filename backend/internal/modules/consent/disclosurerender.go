@@ -33,6 +33,8 @@ import (
 
 // DisclosureLine is one obligation, rendered or recorded as unmeetable.
 type DisclosureLine struct {
+	MissingLanguage string
+	MissingMeans    []string
 	// Kind is the obligation the pack declared.
 	Kind string
 	// Text is what the message should carry. Empty exactly when the

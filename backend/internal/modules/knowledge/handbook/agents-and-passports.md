@@ -22,7 +22,7 @@ To connect your AI tool to Margince, open **Settings → AI assistants** and ans
 4. For a chat app, under **Whose plan is it?**, choose **My company’s** or **My own**. If the card says "First, your admin.", choose **Download guide for your admin** and send them the file. It holds their steps and your Margince address.
 5. To paste the address, a command or text for a file, choose **Copy address** or **Copy**.
 6. Follow the numbered steps the card shows for that one case.
-7. When Margince opens, sign in. **Authorize access** ticks all five permissions; under **Send messages** it says "Sends messages as you, without asking first". Clear any permissions the tool should not get, then choose **Authorize**.
+7. When Margince opens, sign in. **Authorize access** ticks all five permissions; **Send messages** sends only on your approval or request. Clear any permissions the tool should not get, then choose **Authorize**.
 To refuse, choose **Deny access**.
 Authorizing creates the connection, listed under **Your connections**, so you need no passport.
 Also called: connect Claude, let Claude access my CRM, connect ChatGPT, Copilot, Gemini, AI assistant, connector, MCP.
@@ -121,29 +121,24 @@ Also called: overnight agent, scheduled agent, background agent.
 
 ## The two tiers
 
-Every action an agent can take has one of two labels. The label applies no
-matter how the agent connects.
+Routine CRM updates happen automatically, with changes you can review and undo.
+Keeping records current should not mean approving every field change.
 
-**auto-execute.** An auto-execute action happens at once, with the agent named
-on it in the audit trail. This is the default, and it covers most of what an
-agent does. That is looking records up, searching, writing summaries, drafting, and
-ordinary field updates. It is also logging an activity, promoting a lead,
-archiving a record, and sending an email or a message.
+**auto-execute.** An action happens at once, with the agent named in the audit trail.
+This covers reading, searching, writing summaries, drafting and ordinary field updates.
+The agent still needs your permissions and access to the record.
 
-**confirm-first.** A confirm-first action does not happen. What the agent means
-to do is written down as an approval, and a human decides.
+**confirm-first.** The proposed action is saved as an approval and waits for a human decision.
 
-An agent on your passport does what you could do yourself in the app, without
-an approval. For it, only enriching from the web is confirm-first.
+### When can an agent send?
+A message needs human approval before it goes out. A request such as
+“send this email to Anna” counts as approval. Your connected assistant can carry it out
+without asking you to click Send again in Margince. It must ask first if you did not
+ask it to send. A passport's send permission alone is not approval of a message.
 
-### Why sending is not confirm-first by default
-A passport carries the seat, permissions and record visibility of the colleague who
-created it. So a send an agent can make is one that colleague could already make
-alone, in the app. Asking that same colleague to confirm it again would add a
-click without adding a check.
-
-What is kept behind a confirmation is narrower: the calls where the passport
-holder did not choose where they go.
+When Margince runs on its own, it stages sends for approval and pauses. After approval,
+only that staged call is released; another send needs its own approval. Routine updates
+continue to run automatically. Sending limits and access checks still apply.
 
 ### What actually waits for a human
 **Enriching from the web.** This includes reading a company's site. Here the
@@ -167,10 +162,7 @@ relinking it away does not remove that. A member can take the filing back with
 **Undo filing**; an agent cannot. See
 [Capture](capture.md#filing-under-a-project-starts-a-retention-clock).
 
-The **Autonomy tiers** card in **Settings → AI assistants**, on the **Agent rules** tab under **For developers**, states the same rule.
-It reads "Send email, book meetings, update a contact or deal: runs immediately if the
-agent has that permission. Granting the permission is the approval." and
-"Enrichment from the web: waits in Approvals."
+The **Autonomy tiers** card states the same rule. Find it in **Settings → AI assistants**, on the **Agent rules** tab under **For developers**. Routine updates run automatically. Connected clients must get your approval or request to send. Sends from runs working alone and enrichment from the web wait in **Approvals**.
 
 See [Approvals](approvals.md) for what happens to a card once it is staged.
 
@@ -217,8 +209,8 @@ in these cases:
 
 So an agent may answer a card staged for the colleague it acts for, its own
 proposal included, within the rules above. That is what the colleague could
-have answered in the app, and could put back later. A scheduled agent
-never answers a card at all, because nobody is watching it to have said yes.
+have answered in the app, and could put back later. An agent working alone
+cannot approve a card, because nobody is there to have said yes. It can still reject a proposal.
 
 **Raising its own allowance.** An agent can never answer a request to raise its
 own allowance, either way. A passport that could raise its own limit would have
@@ -253,9 +245,9 @@ record visibility, the same limit the colleague behind it has.
 
 ## What protects a send
 
-Agent sending is not held behind a confirmation by default. So it helps to know
-what *does* stand in the way. There are four things, and none of them is a
-click.
+Your request to send authorizes it without a second click in Margince. Connected
+clients must ask before sending without your request; the server cannot read their conversation.
+Runs working alone stage sends for a human decision. These four further checks still apply.
 
 **Consent, refused by default, per purpose.** A send is refused unless an
 active consent, with its evidence, exists for the *purpose* that send falls under. Consent

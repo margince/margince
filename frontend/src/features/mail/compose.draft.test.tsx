@@ -1,4 +1,5 @@
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -18,9 +19,11 @@ import {
   DISCLOSURE,
   emptyResponse,
   fillSendableForm,
+  footScheduleConfirm,
   jsonResponse,
   PROVISIONAL_VOICE_PROFILE,
   pickWhy,
+  pressSend,
   problemResponse,
   REWRITE_ROUTE,
   render,
@@ -28,6 +31,7 @@ import {
   stubRoutes,
   WHY_ASK,
   WHY_LABEL,
+  waitForSendReady,
 } from "./compose.testkit";
 
 afterEach(() => {
@@ -140,7 +144,7 @@ describe("ComposeModal draft binding", () => {
     await userEvent.click(draftButton());
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
     await pickWhy(WHY_LABEL.requestedFollowup);
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
 
     await waitFor(() =>
       expect(
@@ -401,7 +405,7 @@ describe("ComposeModal draft binding", () => {
     );
 
     await pickWhy(WHY_LABEL.requestedFollowup);
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
 
     await waitFor(() =>
       expect(
@@ -435,7 +439,7 @@ describe("ComposeModal draft binding", () => {
     writeMessage("Body", "");
     writeMessage("Body", "Written from scratch.");
     await pickWhy(WHY_LABEL.requestedFollowup);
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
 
     await waitFor(() =>
       expect(
@@ -494,6 +498,7 @@ describe("ComposeModal draft binding", () => {
     await userEvent.click(draftButton());
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
     await pickWhy(WHY_LABEL.requestedFollowup);
+    await waitForSendReady();
     // The form is sendable before the judgment starts, so the refusal below is
     // the rejection holding the draft rather than an unmet precondition.
     expect(
@@ -546,7 +551,7 @@ describe("ComposeModal draft binding", () => {
     expect(await screen.findByText(/boom/i)).toBeTruthy();
 
     await pickWhy(WHY_LABEL.requestedFollowup);
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
 
     await waitFor(() =>
       expect(
@@ -583,7 +588,7 @@ describe("ComposeModal draft binding", () => {
     expect(messageText("Body")).toBe("Draft A body.");
 
     await pickWhy(WHY_LABEL.requestedFollowup);
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
     await waitFor(() =>
       expect(
         sent.some((r) => r.key === "POST /activities/act-1/send-email"),
@@ -849,9 +854,36 @@ describe("ComposeModal send refusals", () => {
     renderComposer(onClose);
     await screen.findByRole("combobox", { name: WHY_ASK });
     await fillSendableForm();
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
 
     await expectReconnect(onClose);
+  });
+
+  it("explains an older server's footer refusal without promising an unusable override", async () => {
+    const onClose = vi.fn();
+    stubRoutes({
+      "POST /activities/act-1/send-email": () =>
+        problemResponse(
+          validationProblem(
+            "body",
+            "undisclosable_obligation",
+            "this message owes a disclosure (objection_route)",
+          ),
+          422,
+        ),
+    });
+    renderComposer(onClose);
+    await screen.findByRole("combobox", { name: WHY_ASK });
+    await fillSendableForm();
+    await pressSend();
+    expect(
+      await screen.findByText(/ask an administrator to update Margince/i),
+    ).toBeTruthy();
+    expect(screen.queryByText(/objection_route/)).toBeNull();
+    expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: /with a reason/i })).toBeNull();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("Subject")).toHaveValue("Hi there");
   });
 
   it("states the one-send-per-recipient rule on a shared unsubscribe token", async () => {
@@ -869,7 +901,7 @@ describe("ComposeModal send refusals", () => {
     renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
     await fillSendableForm();
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
 
     expect(
       await screen.findByText(/goes to one recipient at a time/i),
@@ -892,7 +924,7 @@ describe("ComposeModal send refusals", () => {
     renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
     await fillSendableForm();
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
 
     expect(await screen.findByText(/opaque server wording/i)).toBeTruthy();
   });
@@ -915,11 +947,7 @@ describe("ComposeModal send refusals", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: /Tomorrow morning/ }),
     );
-    const confirm = screen
-      .getAllByRole("button", { name: "Schedule send" })
-      .find((button) => !button.closest(".compose-sendmenu"));
-    if (!confirm) throw new Error("the foot offers no Schedule send");
-    await userEvent.click(confirm);
+    await userEvent.click(await footScheduleConfirm());
 
     await expectReconnect(onClose);
     const scheduled = sent.find(
@@ -928,10 +956,7 @@ describe("ComposeModal send refusals", () => {
     expect(JSON.stringify(scheduled?.body)).toContain("scheduled_at");
   });
 
-  it("warns about a second addressee before the send, not after it", async () => {
-    // Every purpose but transactional renders one recipient's unsubscribe link,
-    // so the server refuses a second addressee outright. Saying so after the
-    // round trip is strictly worse than saying so while the rep can still fix it.
+  it("uses the server assessment without an extra multi-recipient warning", async () => {
     const sent = stubRoutes();
     renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
@@ -943,9 +968,8 @@ describe("ComposeModal send refusals", () => {
     expect(screen.queryByText(/more than one recipient/i)).toBeNull();
     await pickWhy(WHY_LABEL.marketing);
 
-    // The warning bar above the foot says what it is.
-    expect(await screen.findByText(/more than one recipient/i)).toBeTruthy();
-    // A warning, not a gate, and nothing was sent to earn it.
+    await screen.findByRole("button", { name: /recipients checked/i });
+    expect(screen.queryByText(/more than one recipient/i)).toBeNull();
     expect(
       sent.some((r) => r.key === "POST /activities/act-1/send-email"),
     ).toBe(false);
