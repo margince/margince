@@ -4,14 +4,18 @@
 import { useClaimSettle } from "../../components/taskactions.rowwrites";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
+import { activityDay, type OccurredPrecision } from "../../format/activitywhen";
 import { formatDayMonth } from "../../format/format";
-import { UTC_ZONE } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { useViewerZone } from "../../lib/viewerzone";
 
 /** What a promise that looks kept points at: who accepted which meeting. */
-export type LooksKept = { guest: string; at: string; dayOnly: boolean };
+export type LooksKept = {
+  guest: string;
+  at: string;
+  precision: OccurredPrecision;
+};
 
 /**
  * A promise to invite someone that looks kept. The button is the ordinary
@@ -31,10 +35,12 @@ export function LooksKeptLine({
     <span className="pe-loop-quote t-caption">
       {t("commitment.looksKept", {
         name: looksKept.guest,
-        date: formatDayMonth(
+        date: activityDay(
           looksKept.at,
+          looksKept.precision,
           locale,
-          looksKept.dayOnly ? UTC_ZONE : zone,
+          zone,
+          formatDayMonth,
         ),
       })}{" "}
       {canSettle && (

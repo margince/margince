@@ -95,7 +95,7 @@ function openLoops(view: Contact360): readonly OpenLoop[] {
             ? {
                 guest: claim.looks_kept.guest_name,
                 at: claim.looks_kept.meeting_at,
-                dayOnly: claim.looks_kept.meeting_precision === "day",
+                precision: claim.looks_kept.meeting_precision,
               }
             : undefined,
           takenBy: claim.taken_at

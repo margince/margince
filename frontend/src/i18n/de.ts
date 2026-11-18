@@ -4588,7 +4588,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "commitment.takenOver": "{name} hat das am {date} übernommen",
   "commitment.takenOverUnnamed": "Übernommen am {date}",
   "commitment.looksKept":
-    "Sieht erledigt aus: {name} hat das Meeting am {date} angenommen.",
+    "Sieht erledigt aus: {name} hat den Termin am {date} angenommen.",
   "commitment.markKept": "Als erledigt markieren",
   "commitment.quote": "„{quote}“",
   "co.brief.by.model": "Von Margince geschrieben",
