@@ -59,22 +59,9 @@ func BumpDueByMailboxes(ctx context.Context, pool *pgxpool.Pool, provider string
 		wsCtx := principal.WithWorkspaceID(ctx, wsID)
 		ws := ids.From[ids.WorkspaceKind](wsID)
 		err := database.WithWorkspaceTx(wsCtx, pool, func(tx pgx.Tx) error {
-			// Upsert, not update: a connection that has never synced has no
-			// sidecar row yet — a push for it must still land.
-			rows, err := tx.Query(ctx, `
-				INSERT INTO capture_sync_state (connection_id, next_sync_at)
-				SELECT c.id, now()
-				FROM capture_connection c
-				WHERE c.provider = $1
-				  AND c.status IN ('connected','error')
-				  AND c.archived_at IS NULL
-				  AND c.sync_cursor->>'email' = ANY($2)
-				ON CONFLICT (connection_id) DO UPDATE SET next_sync_at = now()
-				RETURNING connection_id`, provider, emails)
-			if err != nil {
-				return err
-			}
-			matched, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+			matched, err := makeDueNowTx(ctx, tx,
+				`c.provider = @provider AND c.status IN ('connected','error') AND c.sync_cursor->>'email' = ANY(@emails)`,
+				pgx.NamedArgs{"provider": provider, "emails": emails})
 			if err != nil {
 				return err
 			}
@@ -88,4 +75,24 @@ func BumpDueByMailboxes(ctx context.Context, pool *pgxpool.Pool, provider string
 		}
 	}
 	return hits, errs
+}
+
+// makeDueNowTx brings the matching live connections' next sync forward to now
+// and returns them. It moves only the clock; the sync it starts writes the outcome.
+// An upsert, because a connection that never synced has no sidecar row yet.
+// match is a literal predicate over c (capture_connection) and s (capture_sync_state).
+func makeDueNowTx(ctx context.Context, tx pgx.Tx, match string, args pgx.NamedArgs) ([]ids.UUID, error) {
+	rows, err := tx.Query(ctx, `
+		INSERT INTO capture_sync_state (connection_id, next_sync_at)
+		SELECT c.id, now()
+		  FROM capture_connection c
+		  LEFT JOIN capture_sync_state s ON s.connection_id = c.id
+		 WHERE `+liveConnectionPredicate+` AND `+match+`
+		ON CONFLICT (connection_id) DO UPDATE
+		   SET next_sync_at = LEAST(capture_sync_state.next_sync_at, now())
+		RETURNING connection_id`, args)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
 }

@@ -61,16 +61,17 @@ const (
 	classForbidden errorClass = "forbidden"
 )
 
-// weatherClasses are the failures the provider's own state causes and later
-// lifts by itself. Any answer it gives proves such a failure has passed.
+// weatherClasses are the provider-side failures that a finished import's pages
+// make worth retrying at once: the provider answered those pages.
 var weatherClasses = []string{string(classRateLimited), string(classUnreachable)}
 
-// retryWeatheredSyncTx makes the run's connection due now when its last sync
-// failed on weather. The run's finished pages prove the provider answers again.
+// retryWeatheredSyncTx makes the run's own connection due now when its last
+// sync failed on weather. The sync's next result keeps or clears the class.
 func retryWeatheredSyncTx(ctx context.Context, tx pgx.Tx, backfillID ids.UUID) error {
-	return makeDueNowTx(ctx, tx,
+	_, err := makeDueNowTx(ctx, tx,
 		`c.id = (SELECT connection_id FROM capture_backfill WHERE id = @run) AND s.last_error_class = ANY(@weather)`,
 		pgx.NamedArgs{"run": backfillID, "weather": weatherClasses})
+	return err
 }
 
 // classifySyncError maps a connector failure onto the shared vocabulary. Any

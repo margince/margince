@@ -1,5 +1,6 @@
 import type { components } from "../api/schema";
 import type { MessageKey } from "../i18n/en";
+import { errorClassKey } from "./connector-status";
 import { labelFor } from "./labelfor";
 
 type Kind = components["schemas"]["CaptureConcernKind"];
@@ -21,7 +22,7 @@ export function concernKey(
   errorClass: string | null | undefined,
 ): MessageKey {
   if (errorClass === "forbidden") return "captureConcern.roleCannotCapture";
-  if (rateLimited(concern, errorClass)) return "captureConcern.rateLimited";
+  if (rateLimited(concern, errorClass)) return errorClassKey(errorClass);
   return labelFor(CAPTURE_CONCERNS, concern);
 }
 
