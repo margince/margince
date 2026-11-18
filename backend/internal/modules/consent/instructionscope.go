@@ -47,8 +47,28 @@ func sameRecipient(before, now RefusedRecipient) bool {
 }
 
 func sameInstructionScope(before, now RefusedRecipient) bool {
-	return (before.PolicyRevision == "" || before.PolicyRevision == now.PolicyRevision) && (before.FooterDigest == now.FooterDigest || before.FooterDigest == "" && len(before.FooterFindings) == 0) && commsauthz.SameFooterFindings(before.FooterFindings, now.FooterFindings) && before.claim() == now.claim() && sameOptionalID(before.SendingEntity, now.SendingEntity) &&
+	return sameWarningShown(before, now) && before.claim() == now.claim() && sameOptionalID(before.SendingEntity, now.SendingEntity) &&
 		sameOptionalID(before.PurposeID, now.PurposeID) && sameOptionalID(before.DealID, now.DealID)
+}
+
+// sameWarningShown reports whether a refusal still reads as it did when a human
+// was shown it: the recipient's stops, the footer omissions and the law cited.
+// AssessmentRevision hashes the same facts. A snapshot from before a fact was
+// stored has it empty and matches any current value.
+func sameWarningShown(before, now RefusedRecipient) bool {
+	return (before.PolicyRevision == "" || before.PolicyRevision == now.PolicyRevision) &&
+		(before.FooterDigest == now.FooterDigest || before.FooterDigest == "" && len(before.FooterFindings) == 0) &&
+		commsauthz.SameFooterFindings(before.FooterFindings, now.FooterFindings) &&
+		slices.Equal(citedLaw(before), citedLaw(now))
+}
+
+// citedLaw is the provision of the refusal and of each footer finding, in order.
+func citedLaw(refusal RefusedRecipient) []commsauthz.Provision {
+	out := []commsauthz.Provision{refusal.Provision}
+	for _, finding := range refusal.FooterFindings {
+		out = append(out, finding.Provision)
+	}
+	return out
 }
 
 func sameOptionalID(a, b *ids.UUID) bool {
@@ -65,7 +85,7 @@ func sameOptionalID(a, b *ids.UUID) bool {
 func everyRefusalWasShown(shown []RefusedRecipient, current commsauthz.DecisionSet) bool {
 	for _, now := range refusedRecipientsOf(current) {
 		if !slices.ContainsFunc(shown, func(before RefusedRecipient) bool {
-			return sameRecipient(before, now) && before.ReasonCode == now.ReasonCode && (before.PolicyRevision == "" || before.PolicyRevision == now.PolicyRevision) && (before.FooterDigest == now.FooterDigest || before.FooterDigest == "" && len(before.FooterFindings) == 0) && commsauthz.SameFooterFindings(before.FooterFindings, now.FooterFindings)
+			return sameRecipient(before, now) && before.ReasonCode == now.ReasonCode && sameWarningShown(before, now)
 		}) {
 			return false
 		}

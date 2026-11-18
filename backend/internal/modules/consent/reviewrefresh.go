@@ -74,12 +74,8 @@ func footerOmissions(findings []commsauthz.FooterFinding) []footerOmission {
 // shownProvisions are the citations the sender reads beside this refusal. A
 // changed citation asks for a new confirmation, as changed words do.
 func shownProvisions(refusal RefusedRecipient) []string {
-	shown := []commsauthz.Provision{refusal.Provision}
-	for _, f := range refusal.FooterFindings {
-		shown = append(shown, f.Provision)
-	}
 	var out []string
-	for _, p := range shown {
+	for _, p := range citedLaw(refusal) {
 		if p.Cited() {
 			out = append(out, p.Instrument, p.Provision, p.SourceURL)
 		}
