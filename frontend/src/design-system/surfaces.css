@@ -90,7 +90,8 @@
   .voicekind,
   .compose-reasons-card,
   .page-pane,
-  .analytics-sheet
+  .analytics-sheet,
+  .railagent
 ) {
   --ground: var(--ladder1Solid);
   --groundEdge: var(--ladder1Edge);
@@ -186,7 +187,8 @@
     .voicekind,
     .compose-reasons-card,
     .page-pane,
-    .analytics-sheet
+    .analytics-sheet,
+    .railagent
   )
   :where(
     .panel,
@@ -267,7 +269,8 @@
     .voicekind,
     .compose-reasons-card,
     .page-pane,
-    .analytics-sheet
+    .analytics-sheet,
+    .railagent
   ) {
   --ground: var(--ladder2);
   --groundEdge: var(--ladder2Edge);
@@ -363,7 +366,8 @@
     .voicekind,
     .compose-reasons-card,
     .page-pane,
-    .analytics-sheet
+    .analytics-sheet,
+    .railagent
   )
   :where(
     .panel,
@@ -444,7 +448,8 @@
     .voicekind,
     .compose-reasons-card,
     .page-pane,
-    .analytics-sheet
+    .analytics-sheet,
+    .railagent
   )
   :where(
     .panel,
@@ -525,7 +530,8 @@
     .voicekind,
     .compose-reasons-card,
     .page-pane,
-    .analytics-sheet
+    .analytics-sheet,
+    .railagent
   ) {
   --ground: var(--ladder3);
   --groundEdge: var(--ladder3Edge);
@@ -621,7 +627,8 @@
     .voicekind,
     .compose-reasons-card,
     .page-pane,
-    .analytics-sheet
+    .analytics-sheet,
+    .railagent
   )
   :where(
     .panel,
@@ -702,7 +709,8 @@
     .voicekind,
     .compose-reasons-card,
     .page-pane,
-    .analytics-sheet
+    .analytics-sheet,
+    .railagent
   )
   :where(
     .panel,
@@ -783,7 +791,8 @@
     .voicekind,
     .compose-reasons-card,
     .page-pane,
-    .analytics-sheet
+    .analytics-sheet,
+    .railagent
   )
   :where(
     .panel,
@@ -864,7 +873,8 @@
     .voicekind,
     .compose-reasons-card,
     .page-pane,
-    .analytics-sheet
+    .analytics-sheet,
+    .railagent
   ) {
   --ground: var(--ladder4);
   --groundEdge: var(--ladder4Edge);
@@ -1017,7 +1027,8 @@
     .voicekind,
     .compose-reasons-card,
     .page-pane,
-    .analytics-sheet
+    .analytics-sheet,
+    .railagent
   ) {
   --ground: var(--ladder2);
   --groundEdge: var(--ladder2Edge);
@@ -1134,7 +1145,8 @@
     .voicekind,
     .compose-reasons-card,
     .page-pane,
-    .analytics-sheet
+    .analytics-sheet,
+    .railagent
   )
   :where(
     .panel,
@@ -1215,7 +1227,8 @@
     .voicekind,
     .compose-reasons-card,
     .page-pane,
-    .analytics-sheet
+    .analytics-sheet,
+    .railagent
   ) {
   --ground: var(--ladder3);
   --groundEdge: var(--ladder3Edge);
@@ -1332,7 +1345,8 @@
     .voicekind,
     .compose-reasons-card,
     .page-pane,
-    .analytics-sheet
+    .analytics-sheet,
+    .railagent
   )
   :where(
     .panel,
@@ -1413,7 +1427,8 @@
     .voicekind,
     .compose-reasons-card,
     .page-pane,
-    .analytics-sheet
+    .analytics-sheet,
+    .railagent
   )
   :where(
     .panel,
@@ -1494,7 +1509,8 @@
     .voicekind,
     .compose-reasons-card,
     .page-pane,
-    .analytics-sheet
+    .analytics-sheet,
+    .railagent
   ) {
   --ground: var(--ladder4);
   --groundEdge: var(--ladder4Edge);
@@ -1638,7 +1654,8 @@
     .voicekind,
     .compose-reasons-card,
     .page-pane,
-    .analytics-sheet
+    .analytics-sheet,
+    .railagent
   ) {
   background-color: var(--ground);
 }
