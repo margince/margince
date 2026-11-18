@@ -89,13 +89,13 @@ func (h Handlers) RestoreRoleGrants(w http.ResponseWriter, r *http.Request, key 
 }
 
 // wireVerbs maps the verbs each grantable object offers onto the contract.
-func wireVerbs() map[string][]crmcontracts.RbacAction {
+func wireVerbs() map[string][]crmcontracts.RoleDirectoryVerbs {
 	offered := policy.OfferedVerbsByObject()
-	out := make(map[string][]crmcontracts.RbacAction, len(offered))
+	out := make(map[string][]crmcontracts.RoleDirectoryVerbs, len(offered))
 	for object, verbs := range offered {
-		wire := make([]crmcontracts.RbacAction, 0, len(verbs))
+		wire := make([]crmcontracts.RoleDirectoryVerbs, 0, len(verbs))
 		for _, verb := range verbs {
-			wire = append(wire, crmcontracts.RbacAction(verb))
+			wire = append(wire, crmcontracts.RoleDirectoryVerbs(verb))
 		}
 		out[object] = wire
 	}

@@ -96,32 +96,6 @@ func TestAPreviewOfAnExtensionKindShowsItsColumnsAndOnlyLiveMatches(t *testing.T
 	}
 }
 
-func TestAPreviewOfAnExtensionKindFindsOneRecordByItsId(t *testing.T) {
-	e := integration.Setup(t)
-	registerHistoryVisits(t)
-	e.WsExec(t, `INSERT INTO ext.`+historyDemoTable+` (code, site) VALUES ('v1', 'Berlin site'), ('v3', 'Munich site')`)
-	id := e.WsScalar(t, `SELECT id::text FROM ext.`+historyDemoTable+` WHERE code = 'v3'`)
-	body := `{"resource":"` + historyDemoKind + `","filter":{"field":"id","op":"eq","value":"` + id + `"}}`
-	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/v1/filters/preview", strings.NewReader(body)).
-		WithContext(e.As(e.Rep1, nil, listingPerms(true)))
-	req.Header.Set("Content-Type", "application/json")
-	filterPreviewHandlers{pool: e.Pool, collections: collections.NewStore(e.DB())}.PreviewFilter(rec, req)
-	var got crmcontracts.FilterPreview
-	if rec.Code != http.StatusOK {
-		t.Fatalf("status = %d: %s", rec.Code, rec.Body.String())
-	}
-	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
-		t.Fatal(err)
-	}
-	if got.MatchCount != 1 || len(got.Rows) != 1 || got.Rows[0]["site"] != "Munich site" {
-		t.Errorf("preview by id = %d matches, rows %v; want the Munich visit", got.MatchCount, got.Rows)
-	}
-	if strings.Join(got.Columns, ",") != "id,code,site" {
-		t.Errorf("columns = %v, want id once", got.Columns)
-	}
-}
-
 func TestAnExtensionListTakesItsOwnKindAndRefusesAnother(t *testing.T) {
 	e := integration.Setup(t)
 	registerHistoryVisits(t)

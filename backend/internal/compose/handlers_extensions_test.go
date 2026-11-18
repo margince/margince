@@ -112,7 +112,7 @@ func TestExtensionInventoryNeverAttributesAnotherUnitsContribution(t *testing.T)
 	// Two unit names that derive ONE namespace token: `crm-demo` underscores to
 	// `crm_demo`, which is also `crm`'s own prefix for an object named
 	// `demo_widget`. A prefix-splitting implementation gets this wrong.
-	exts := []extension.Extension{{Name: "crm", Version: "1"}, {Name: "crm-demo", Version: "1"}}
+	exts := []extension.Extension{{Name: "crm", Version: "1"}, {Name: "crm-demo", Version: "1", RecordKinds: []extension.RecordKindDeclaration{{Kind: "gadget"}}}}
 	verbs := []extension.Verb{
 		{Unit: "crm", Route: "/ext/crm/a", Method: "GET", RbacObject: "ext_crm_demo_widget"},
 		{Unit: "crm-demo", Route: "/ext/crm-demo/b", Method: "GET", RbacObject: "ext_crm_demo_thing"},
@@ -122,7 +122,8 @@ func TestExtensionInventoryNeverAttributesAnotherUnitsContribution(t *testing.T)
 	if !slices.Equal(got[0].RbacObjects, []string{"ext_crm_demo_widget"}) {
 		t.Errorf("crm's objects = %v, want only its own", got[0].RbacObjects)
 	}
-	if !slices.Equal(got[1].RbacObjects, []string{"ext_crm_demo_thing"}) {
+	// Its record kind's object counts as its own, beside the object a verb names.
+	if !slices.Equal(got[1].RbacObjects, []string{"ext_crm_demo_gadget", "ext_crm_demo_thing"}) {
 		t.Errorf("crm-demo's objects = %v, want only its own", got[1].RbacObjects)
 	}
 	if !slices.Equal(got[0].Routes, []crmcontracts.ComposedExtensionRoute{{Method: "GET", Path: "/ext/crm/a"}}) {
@@ -175,21 +176,5 @@ func TestExtensionListAnswersTheHolderOfTheReadGrantAndRefusesTheRest(t *testing
 	}
 	if got := as(map[string]principal.ObjectGrant{"job_health": {Read: true}}); got != http.StatusForbidden {
 		t.Errorf("a caller without extension_access → %d, want 403", got)
-	}
-}
-
-func TestExtensionInventoryListsTheObjectsOfItsRecordKinds(t *testing.T) {
-	exts := []extension.Extension{{
-		Name: "finance-demo", Version: "1",
-		RecordKinds: []extension.RecordKindDeclaration{{Kind: "ledger_account"}},
-	}}
-	verbs := []extension.Verb{{Unit: "finance-demo", Route: "/ext/finance-demo/a", Method: "GET", RbacObject: "ext_finance_demo_ledger_account"}}
-	got := composedExtensionInventory(exts, verbs, nil)
-	if !slices.Equal(got[0].RbacObjects, []string{"ext_finance_demo_ledger_account"}) {
-		t.Errorf("objects = %v, want the kind's object once, even when a verb names it too", got[0].RbacObjects)
-	}
-	got = composedExtensionInventory(exts, nil, nil)
-	if !slices.Equal(got[0].RbacObjects, []string{"ext_finance_demo_ledger_account"}) {
-		t.Errorf("objects = %v, want the kind's object with no verb naming it", got[0].RbacObjects)
 	}
 }

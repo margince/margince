@@ -48385,11 +48385,6 @@ components:
           description: Null clears the date — something to do this week, rather than by a day.
           type: [string, 'null']
           format: date
-    RbacAction:
-      type: string
-      description: >-
-        The four object-level verbs a grant carries. These are RBAC actions, not HTTP methods: the seat ceiling is clamped on the method independently, and the two diverge in both directions — a read-seat GET that the object grants, and a mutating route whose RBAC action is `read`.
-      enum: [create, read, update, delete]
     RbacObjectGrant:
       type: object
       additionalProperties: false
@@ -48454,7 +48449,7 @@ components:
             The verbs a role may hold on each object this installation can grant, core objects and enabled extension objects alike, Read first. An object that offers no Read has none in its list. An object absent here is one the installation cannot name, and a client draws it with all four.
           additionalProperties:
             type: array
-            items: {$ref: '#/components/schemas/RbacAction'}
+            items: {type: string, enum: [create, read, update, delete]}
     AssignableRoleDirectory:
       type: object
       additionalProperties: false

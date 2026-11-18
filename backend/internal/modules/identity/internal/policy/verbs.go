@@ -17,10 +17,9 @@ var verbOrder = []principal.Action{
 
 // OfferedVerbs lists the verbs a role may hold on an object, in editor order.
 //
-// A core object offers the verbs some seeded role holds on it. The seeds already
-// leave out a verb the product has no surface for (the admin document is "every
-// verb except where the product offers none"), so the shipped roles are the one
-// declaration; a gate holds every literal gate check in the code inside it.
+// A core object offers the verbs some seeded role holds on it. The seeds leave
+// out a verb the product has no surface for, and a test holds every literal
+// gate check in the code inside the offered set.
 // An extension object offers all four, because its unit's own gate decides.
 func OfferedVerbs(object string) []principal.Action {
 	if !IsCoreObject(object) {

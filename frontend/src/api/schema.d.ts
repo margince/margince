@@ -50678,7 +50678,7 @@ export interface components {
             roles: components["schemas"]["Role"][];
             /** @description The verbs a role may hold on each object this installation can grant, core objects and enabled extension objects alike, Read first. An object that offers no Read has none in its list. An object absent here is one the installation cannot name, and a client draws it with all four. */
             verbs: {
-                [key: string]: components["schemas"]["RbacAction"][];
+                [key: string]: ("create" | "read" | "update" | "delete")[];
             };
         };
         AssignableRoleDirectory: {

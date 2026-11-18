@@ -69801,7 +69801,7 @@ components:
             client draws it with all four.
           additionalProperties:
             type: array
-            items: { $ref: '#/components/schemas/RbacAction' }
+            items: { type: string, enum: [create, read, update, delete], x-extensible-enum: true }
 
     AssignableRoleDirectory:
       type: object

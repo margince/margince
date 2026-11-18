@@ -19930,30 +19930,6 @@ func (e QualifyingEventRecordKind) Valid() bool {
 	}
 }
 
-// Defines values for RbacAction.
-const (
-	RbacActionCreate RbacAction = "create"
-	RbacActionDelete RbacAction = "delete"
-	RbacActionRead   RbacAction = "read"
-	RbacActionUpdate RbacAction = "update"
-)
-
-// Valid indicates whether the value is a known member of the RbacAction enum.
-func (e RbacAction) Valid() bool {
-	switch e {
-	case RbacActionCreate:
-		return true
-	case RbacActionDelete:
-		return true
-	case RbacActionRead:
-		return true
-	case RbacActionUpdate:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for ReaderCalendar.
 const (
 	ReaderCalendarConnected    ReaderCalendar = "connected"
@@ -22033,6 +22009,30 @@ func (e RoleRowScope) Valid() bool {
 	case RoleRowScopeOwn:
 		return true
 	case RoleRowScopeTeam:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RoleDirectoryVerbs.
+const (
+	RoleDirectoryVerbsCreate RoleDirectoryVerbs = "create"
+	RoleDirectoryVerbsDelete RoleDirectoryVerbs = "delete"
+	RoleDirectoryVerbsRead   RoleDirectoryVerbs = "read"
+	RoleDirectoryVerbsUpdate RoleDirectoryVerbs = "update"
+)
+
+// Valid indicates whether the value is a known member of the RoleDirectoryVerbs enum.
+func (e RoleDirectoryVerbs) Valid() bool {
+	switch e {
+	case RoleDirectoryVerbsCreate:
+		return true
+	case RoleDirectoryVerbsDelete:
+		return true
+	case RoleDirectoryVerbsRead:
+		return true
+	case RoleDirectoryVerbsUpdate:
 		return true
 	default:
 		return false
@@ -60766,9 +60766,6 @@ type RaiseNoticeRequest struct {
 	RecipientUserId openapi_types.UUID `json:"recipient_user_id"`
 }
 
-// RbacAction The four object-level verbs a grant carries (data-model §2.4). These are RBAC actions, not HTTP methods: the seat ceiling is clamped on the method independently, and the two diverge in both directions — a read-seat GET that the object grants, and a mutating route whose RBAC action is `read`.
-type RbacAction string
-
 // RbacObjectGrant One object's effective CRUD grant, already merged across every role the principal holds (any role allowing an action allows it).
 type RbacObjectGrant struct {
 	Create bool `json:"create"`
@@ -63693,8 +63690,11 @@ type RoleDirectory struct {
 	Roles []Role `json:"roles"`
 
 	// Verbs The verbs a role may hold on each object this installation can grant, core objects and enabled extension objects alike, Read first. An object that offers no Read has none in its list. An object absent here is one the installation cannot name, and a client draws it with all four.
-	Verbs map[string][]RbacAction `json:"verbs"`
+	Verbs map[string][]RoleDirectoryVerbs `json:"verbs"`
 }
+
+// RoleDirectoryVerbs defines model for RoleDirectory.Verbs.
+type RoleDirectoryVerbs string
 
 // RouterActions The actions of one MCP router whose actions run REST routes.
 type RouterActions struct {

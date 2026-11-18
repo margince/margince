@@ -1829,6 +1829,7 @@
     "restoreRelationshipNudge": "contacts",
     "restoreReportingReportRevision": "reports",
     "restoreRole": "members",
+    "restoreRoleGrants": "members",
     "restoreTag": "tags",
     "restoreTagApplication": "tags",
     "resumeDealRoom": "deal_rooms",
