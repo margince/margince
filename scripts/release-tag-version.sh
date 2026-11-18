@@ -10,7 +10,11 @@
 # Usage: bash scripts/release-tag-version.sh v0.0.1
 # Prints, for appending to $GITHUB_OUTPUT:
 #   version=v0.0.1
+#   release=0.0.1
 #   prerelease=false
+#
+# `release` is the version a build stamps, VERSION holds and dist names: the
+# tag without its v. The v belongs to the git tag alone.
 set -euo pipefail
 
 tag="${1:-}"
@@ -58,4 +62,5 @@ prerelease=false
 case "$tag" in *-*) prerelease=true ;; esac
 
 echo "version=$tag"
+echo "release=${tag#v}"
 echo "prerelease=$prerelease"

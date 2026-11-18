@@ -64,10 +64,9 @@ type Service struct {
 	profile ProfileReader
 	lane    Completer
 	now     func() time.Time
-	// routingVersion identifies the model binding in the fingerprint, so
-	// re-pointing the lane rewrites briefs rather than leaving text
-	// attributed to a model that no longer writes it.
-	routingVersion string
+	// routingVersion names the model binding in the fingerprint. It is read per
+	// request, so a rebind rewrites the briefs the previous model wrote.
+	routingVersion func() string
 	// emailRows opens the messages the brief cites. Held rather than read
 	// inline because the brief is CACHED: the sentences are one reader's to
 	// keep, and the summary behind a citation is another reader's to receive,
@@ -102,7 +101,10 @@ func (s *Service) enrich(ctx context.Context, out crmcontracts.CompanyBrief) (cr
 // NewService binds the brief to the composite read it is written from and
 // the model lane that writes it. lane may be nil: that is a deployment
 // running no model, and the deterministic floor is the answer.
-func NewService(pool *pgxpool.Pool, view Assembler, profile ProfileReader, lane Completer, routingVersion string, now func() time.Time) *Service {
+func NewService(pool *pgxpool.Pool, view Assembler, profile ProfileReader, lane Completer, routingVersion func() string, now func() time.Time) *Service {
+	if routingVersion == nil {
+		routingVersion = func() string { return "" }
+	}
 	return &Service{pool: pool, view: view, profile: profile, lane: lane, routingVersion: routingVersion, now: now}
 }
 
@@ -173,7 +175,7 @@ func (s *Service) GetScoped(
 	}
 	lang := identity.BaseLanguageForPrompt(ctx, s.pool)
 	in = in.WordedIn(lang)
-	fingerprint, err := Fingerprint(in, s.routingVersion, lang)
+	fingerprint, err := Fingerprint(in, s.routingVersion(), lang)
 	if err != nil {
 		return crmcontracts.CompanyBrief{}, err
 	}

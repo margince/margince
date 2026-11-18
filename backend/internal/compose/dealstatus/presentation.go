@@ -53,7 +53,7 @@ func (s *Service) cardAndTimeline(
 		return crmcontracts.DealStatusCard{}, nil, err
 	}
 	in := project(canonical, mv)
-	fingerprint, err := Fingerprint(in, userID.UUID, s.routingVersion, f.now, f.loc, f.lang)
+	fingerprint, err := Fingerprint(in, userID.UUID, s.routing(), f.now, f.loc, f.lang)
 	if err != nil {
 		return crmcontracts.DealStatusCard{}, nil, err
 	}

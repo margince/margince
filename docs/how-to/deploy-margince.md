@@ -32,8 +32,8 @@ See [self-hosting](../explanation/self-hosting.md) for the role layout and [conf
 
 ## Pull a release
 
-Each `v*` release pushes `ghcr.io/margince/api:<tag>`, `ghcr.io/margince/worker:<tag>` and
-`ghcr.io/margince/web:<tag>`, for `linux/amd64` and `linux/arm64`. Pull each by the hash that `images.txt` on
+Each `v*` tag pushes `ghcr.io/margince/<role>:<version>` for `api`, `worker` and `web`, on `linux/amd64` and
+`linux/arm64`. The version is the tag without its `v`: `v1.0.0` pushes `1.0.0`. Pull each by the hash that `images.txt` on
 the release page names, so all three roles come from one release. The release page gives the `cosign verify`
 command that checks each one.
 
