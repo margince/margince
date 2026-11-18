@@ -8,8 +8,8 @@ import { useT } from "../../i18n";
 type CitedProvision = components["schemas"]["CitedProvision"];
 
 // The law a refusal or finding rests on, as the recipient's pack cites it. The
-// server sends one only while it may be shown, so its absence is the ordinary
-// case and the caller then shows its factual sentence alone.
+// server sends one only while it may be shown. Without one, the caller shows
+// its factual sentence alone.
 
 /** The provision, linked to its official text. Not translated. */
 export function CitedLaw({

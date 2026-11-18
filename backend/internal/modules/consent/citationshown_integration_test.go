@@ -6,8 +6,8 @@
 package consent
 
 // Which law a refusal or finding names, as the sender reads it. Each recipient
-// is cited from their own country's pack, only while the citation may be shown,
-// and a review keeps the citation it was assessed with.
+// is cited from their own country's pack, and only while it may be shown. A
+// review keeps the citation it was assessed with.
 
 import (
 	"context"
@@ -221,9 +221,9 @@ func TestACitationThatMayNotBeShownLeavesTheRefusalUncited(t *testing.T) {
 	}
 }
 
-// A review keeps the law it was assessed with. The pack that cited it has
-// since fallen due and the recipient moved to a market whose law differs, and
-// the review still names the first law and no other.
+// A review keeps the law it was assessed with. Since then the pack fell due
+// and the recipient moved to a market with other law. The review still names
+// the first law and no other.
 func TestAReviewKeepsTheCitationItWasAssessedWith(t *testing.T) {
 	e := citedEnv(t)
 	e.liveIn(t, e.address, citingPack(t, germanLaw, reviewedOnce, germanLaw.instrument()))
