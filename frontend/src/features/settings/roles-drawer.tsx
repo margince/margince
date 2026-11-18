@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useId, useRef } from "react";
+import { useId, useRef, useState } from "react";
 import { Badge, Button, Modal } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
+import { ConfirmModal } from "../../design-system/confirmmodal";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
 import { Heading } from "../../design-system/heading";
 import { useToast } from "../../design-system/toast";
@@ -67,6 +68,7 @@ export function RoleDrawer({
   const titleId = useId();
   const body = useRef<HTMLDivElement | null>(null);
   const writes = useRoleWrites();
+  const [confirmingRestore, setConfirmingRestore] = useState(false);
   const current = newest(role, writes);
   const name = roleLabel(t)(current.key, current.name);
   const moveVerb = moveOf(current, canMove, canRestore);
@@ -105,15 +107,7 @@ export function RoleDrawer({
             {current.is_system && !current.archived_at && canUpdate && (
               <Button
                 disabled={writes.busy}
-                onClick={() =>
-                  writes.restoreGrants.mutate(
-                    { roleKey: current.key, version: current.version },
-                    {
-                      onSuccess: () =>
-                        toast.show(t("roles.restoredGrantsToast", { name })),
-                    },
-                  )
-                }
+                onClick={() => setConfirmingRestore(true)}
               >
                 {t("roles.restoreGrants")}
               </Button>
@@ -157,6 +151,28 @@ export function RoleDrawer({
           )}
         </div>
       </DrawerHead>
+      <ConfirmModal
+        open={confirmingRestore}
+        onClose={() => setConfirmingRestore(false)}
+        title={t("roles.restoreGrantsTitle", { name })}
+        confirmLabel={t("roles.restoreGrants")}
+        confirmVariant="danger"
+        pending={writes.restoreGrants.isPending}
+        onConfirm={() =>
+          writes.restoreGrants.mutate(
+            { roleKey: current.key, version: current.version },
+            {
+              onSuccess: () => {
+                setConfirmingRestore(false);
+                toast.show(t("roles.restoredGrantsToast", { name }));
+              },
+              onError: () => setConfirmingRestore(false),
+            },
+          )
+        }
+      >
+        <p>{t("roles.restoreGrantsBody")}</p>
+      </ConfirmModal>
       <DrawerBody ref={body} className="roles-drawer-body">
         <RoleDetail
           role={current}

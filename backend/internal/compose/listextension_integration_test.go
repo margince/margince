@@ -65,8 +65,8 @@ func TestAPreviewOfAnExtensionKindShowsItsColumnsAndOnlyLiveMatches(t *testing.T
 	registerHistoryVisits(t)
 	e.WsExec(t, `INSERT INTO ext.`+historyDemoTable+` (code, site, archived_at) VALUES
 		('v1', 'Berlin site', NULL), ('v2', 'Berlin old', now()), ('v3', 'Munich site', NULL)`)
-	preview := func(perms principal.Permissions) (int, crmcontracts.FilterPreview) {
-		body := `{"resource":"` + historyDemoKind + `","filter":{"field":"site","op":"contains","value":"berlin"}}`
+	preview := func(perms principal.Permissions, leaf ...string) (int, crmcontracts.FilterPreview) {
+		body := `{"resource":"` + historyDemoKind + `","filter":` + append(leaf, `{"field":"site","op":"contains","value":"berlin"}`)[0] + `}`
 		rec := httptest.NewRecorder()
 		req := httptest.NewRequest(http.MethodPost, "/v1/filters/preview", strings.NewReader(body)).
 			WithContext(e.As(e.Rep1, nil, perms))
@@ -93,6 +93,9 @@ func TestAPreviewOfAnExtensionKindShowsItsColumnsAndOnlyLiveMatches(t *testing.T
 	}
 	if code, _ := preview(listingPerms(false)); code == http.StatusOK {
 		t.Error("a caller without the kind's read right was served a preview")
+	}
+	if code, got := preview(listingPerms(false), `{"field":"id","op":"eq","value":"`+e.WsScalar(t, `SELECT id::text FROM ext.`+historyDemoTable+` WHERE code = 'v3'`)+`"}`); code == http.StatusOK || len(got.Rows) != 0 {
+		t.Errorf("no read right on the kind, yet a lookup by id gave status %d", code)
 	}
 }
 

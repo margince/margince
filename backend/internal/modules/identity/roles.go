@@ -33,6 +33,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/identity/internal/policy"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -170,11 +171,11 @@ func (s *Service) SetRoleObjectGrant(ctx context.Context, actor Identity, roleKe
 	}
 	var updated roleRow
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := lockAuthorization(ctx, tx); err != nil {
+		live, err := lockAsRoleAdmin(ctx, tx, actor, principal.ActionUpdate)
+		if err != nil {
 			return err
 		}
-		var err error
-		if updated, err = applyRoleObjectGrant(ctx, tx, actor, roleKey, object, grant, ifVersion); err != nil {
+		if updated, err = applyRoleObjectGrant(ctx, tx, live, roleKey, object, grant, ifVersion); err != nil {
 			return err
 		}
 		return s.recheckRoleHoldersTx(ctx, tx, roleKey)
@@ -312,6 +313,25 @@ func grantAdded(before, after storedGrant) storedGrant {
 		Update: after.Update && !before.Update,
 		Delete: after.Delete && !before.Delete,
 	}
+}
+
+// lockAsRoleAdmin takes the authorization lock, then reads what the caller holds
+// now and asks the admission again. The request's identity was read before the
+// lock, so a demotion that committed in between is only seen here. It returns
+// the caller as the database holds them, and the widening checks use that one.
+func lockAsRoleAdmin(ctx context.Context, tx pgx.Tx, actor Identity, action principal.Action) (Identity, error) {
+	if err := lockAuthorization(ctx, tx); err != nil {
+		return actor, err
+	}
+	live := actor
+	var err error
+	if live.Roles, live.Teams, live.Permissions, err = loadGrants(ctx, tx, actor.UserID); err != nil {
+		return actor, err
+	}
+	if err := auth.Require(actorCtx(ctx, live), objectRoleAdmin, action); err != nil {
+		return actor, err
+	}
+	return live, nil
 }
 
 // refuseWideningUnlessAdmin refuses a caller who is not an admin a write that

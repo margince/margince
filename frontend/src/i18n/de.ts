@@ -15268,6 +15268,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "roles.refusal.customRole":
     "Nur eingebaute Rollen haben mitgelieferte Rechte.",
   "roles.restoreGrants": "Mitgelieferte Rechte wiederherstellen",
+  "roles.restoreGrantsTitle":
+    "Mitgelieferte Rechte für {name} wiederherstellen?",
+  "roles.restoreGrantsBody":
+    "Jeder Schalter geht auf den mitgelieferten Stand zurück. Deine Änderungen an den Rechten dieser Rolle gehen verloren.",
   "roles.restoredGrantsToast":
     "Mitgelieferte Rechte für {name} wiederhergestellt",
   "cf.recordKindHint": "Die Arten stammen aus installierten Erweiterungen.",

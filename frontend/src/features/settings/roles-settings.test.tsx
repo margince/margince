@@ -513,6 +513,14 @@ describe("RolesSettings", () => {
     await user.click(
       admin.getByRole("button", { name: en["roles.restoreGrants"] }),
     );
+    expect(calls).toEqual([]);
+    const confirm = within(
+      await screen.findByRole("dialog", { name: /Restore shipped grants for/ }),
+    );
+    expect(confirm.getByText(en["roles.restoreGrantsBody"])).toBeTruthy();
+    await user.click(
+      confirm.getByRole("button", { name: en["roles.restoreGrants"] }),
+    );
     await waitFor(() =>
       expect(calls).toContainEqual(
         expect.objectContaining({

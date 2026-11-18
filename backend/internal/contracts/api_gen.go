@@ -80778,12 +80778,8 @@ type SetRoleObjectGrantParams struct {
 
 // RestoreRoleGrantsParams defines parameters for RestoreRoleGrants.
 type RestoreRoleGrantsParams struct {
-	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
-	// the last-seen entity `version`. If the row's current `version` differs, the write is
-	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
-	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
-	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
-	IfMatch *IfMatch `json:"If-Match,omitempty"`
+	// IfMatch The `version` of the role you read. A restore replaces every grant, so the write never goes out without it.
+	IfMatch string `json:"If-Match"`
 }
 
 // DescribeRouterActionsParams defines parameters for DescribeRouterActions.
@@ -148563,23 +148559,27 @@ func (siw *ServerInterfaceWrapper) RestoreRoleGrants(w http.ResponseWriter, r *h
 
 	headers := r.Header
 
-	// ------------- Optional header parameter "If-Match" -------------
+	// ------------- Required header parameter "If-Match" -------------
 	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
-		var IfMatch IfMatch
+		var IfMatch string
 		n := len(valueList)
 		if n != 1 {
 			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
 			return
 		}
 
-		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
 		if err != nil {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
 			return
 		}
 
-		params.IfMatch = &IfMatch
+		params.IfMatch = IfMatch
 
+	} else {
+		err := fmt.Errorf("Header parameter If-Match is required, but not found")
+		siw.ErrorHandlerFunc(w, r, &RequiredHeaderError{ParamName: "If-Match", Err: err})
+		return
 	}
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

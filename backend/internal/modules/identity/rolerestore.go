@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 var errNotSystemRole = fmt.Errorf("%w: only a role the product ships has shipped grants", apperrors.ErrConflict)
@@ -55,13 +56,19 @@ func (s *Service) RestoreRoleGrants(ctx context.Context, actor Identity, roleKey
 	if err != nil {
 		return roleRow{}, err
 	}
+	if ifVersion == nil {
+		return roleRow{}, &values.ParseError{
+			Field: "If-Match", Code: "if_match_required",
+			Message: "a restore replaces every grant: send the role version you read in If-Match",
+		}
+	}
 	var restored roleRow
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := lockAuthorization(ctx, tx); err != nil {
+		live, err := lockAsRoleAdmin(ctx, tx, actor, principal.ActionUpdate)
+		if err != nil {
 			return err
 		}
-		var err error
-		if restored, err = restoreShippedGrants(ctx, tx, actor, roleKey, ifVersion); err != nil {
+		if restored, err = restoreShippedGrants(ctx, tx, live, roleKey, ifVersion); err != nil {
 			return err
 		}
 		return s.recheckRoleHoldersTx(ctx, tx, roleKey)

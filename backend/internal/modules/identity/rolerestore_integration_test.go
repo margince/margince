@@ -13,6 +13,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/identity/internal/policy"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 func TestAGrantWithAWriteAndNoReadIsRefusedUnlessTheObjectOffersNoRead(t *testing.T) {
@@ -45,7 +46,7 @@ func TestRestoringShippedGrantsReturnsASystemRoleToItsSeed(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	restored, err := e.svc.RestoreRoleGrants(ctx, e.admin, "rep", nil)
+	restored, err := e.svc.RestoreRoleGrants(ctx, e.admin, "rep", e.versionOf(t, "rep"))
 	if err != nil {
 		t.Fatalf("restore: %v", err)
 	}
@@ -73,10 +74,10 @@ func TestRestoringShippedGrantsRefusesACustomRoleAndAWideningNonAdmin(t *testing
 	e := setupRevocationEnv(t, "role-restore-refusals")
 	ctx := e.wsCtx(e.admin)
 	custom := e.customRole(t, "Field sales", "rep", nil)
-	if _, err := e.svc.RestoreRoleGrants(ctx, e.admin, custom, nil); !errors.Is(err, errNotSystemRole) {
+	if _, err := e.svc.RestoreRoleGrants(ctx, e.admin, custom, e.versionOf(t, custom)); !errors.Is(err, errNotSystemRole) {
 		t.Errorf("custom role: err = %v, want errNotSystemRole", err)
 	}
-	if _, err := e.svc.RestoreRoleGrants(ctx, e.admin, "no_such_role", nil); !errors.Is(err, errUnknownRole) {
+	if _, err := e.svc.RestoreRoleGrants(ctx, e.admin, "no_such_role", e.versionOf(t, "rep")); !errors.Is(err, errUnknownRole) {
 		t.Errorf("unknown role: err = %v, want errUnknownRole", err)
 	}
 	stale := int64(0)
@@ -88,7 +89,61 @@ func TestRestoringShippedGrantsRefusesACustomRoleAndAWideningNonAdmin(t *testing
 		t.Fatal(err)
 	}
 	editor := e.seat(t, "editor", e.customRole(t, "Role editor", "rep", map[string]storedGrant{objectRoleAdmin: fullGrant}))
-	if _, err := e.svc.RestoreRoleGrants(e.wsCtx(editor), editor, "rep", nil); !errors.Is(err, errWideningRequiresAdmin) {
+	if _, err := e.svc.RestoreRoleGrants(e.wsCtx(editor), editor, "rep", e.versionOf(t, "rep")); !errors.Is(err, errWideningRequiresAdmin) {
 		t.Errorf("widening restore by a non-admin: err = %v, want errWideningRequiresAdmin", err)
 	}
+}
+
+// The request's identity is read before the lock. A caller demoted in that
+// window holds the old identity, and every role write must see the new one.
+func TestARoleWriteByACallerDemotedBeforeTheLockIsRefused(t *testing.T) {
+	e := setupRevocationEnv(t, "role-demoted-caller")
+	ctx := e.wsCtx(e.admin)
+	custom := e.customRole(t, "Field sales", "rep", nil)
+	if _, err := e.svc.SetRoleObjectGrant(ctx, e.admin, "rep", "contact", storedGrant{}, nil); err != nil {
+		t.Fatal(err)
+	}
+	stale := e.seat(t, "second-admin", "admin")
+	if err := e.svc.ChangeUserRole(ctx, e.admin, stale.UserID, "rep"); err != nil {
+		t.Fatal(err)
+	}
+	if !stale.hasRole("admin") {
+		t.Fatal("the fixture's identity is not stale, so the test proves nothing")
+	}
+	sctx := e.wsCtx(stale)
+	refused := map[string]error{}
+	_, refused["restore grants"] = e.svc.RestoreRoleGrants(sctx, stale, "rep", e.versionOf(t, "rep"))
+	_, refused["set grant"] = e.svc.SetRoleObjectGrant(sctx, stale, custom, "contact", storedGrant{Read: true}, nil)
+	_, refused["create role"] = e.svc.CreateRole(sctx, stale, "rep", "Copy")
+	_, refused["update role"] = e.svc.UpdateRole(sctx, stale, custom, RoleChange{}, nil)
+	_, refused["archive role"] = e.svc.ArchiveRole(sctx, stale, custom)
+	_, refused["restore role"] = e.svc.RestoreRole(sctx, stale, custom)
+	for name, err := range refused {
+		if !errors.Is(err, apperrors.ErrPermissionDenied) {
+			t.Errorf("%s by a demoted caller: err = %v, want permission denied", name, err)
+		}
+	}
+}
+
+func TestRestoringShippedGrantsNeedsTheVersionTheReaderSaw(t *testing.T) {
+	e := setupRevocationEnv(t, "role-restore-version")
+	ctx := e.wsCtx(e.admin)
+	var parse *values.ParseError
+	if _, err := e.svc.RestoreRoleGrants(ctx, e.admin, "rep", nil); !errors.As(err, &parse) || parse.Field != "If-Match" {
+		t.Errorf("a restore with no version: err = %v, want a refusal naming If-Match", err)
+	}
+	stale := int64(0)
+	if _, err := e.svc.RestoreRoleGrants(ctx, e.admin, "rep", &stale); !errors.Is(err, apperrors.ErrVersionSkew) {
+		t.Errorf("a restore with a stale version: err = %v, want version skew", err)
+	}
+}
+
+// versionOf is the stored version of a role, as a reader of it would send.
+func (e *revocationEnv) versionOf(t *testing.T, key string) *int64 {
+	t.Helper()
+	var version int64
+	if err := e.owner.QueryRow(context.Background(), `SELECT version FROM role WHERE key = $1`, key).Scan(&version); err != nil {
+		t.Fatalf("reading the version of %s: %v", key, err)
+	}
+	return &version
 }

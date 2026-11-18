@@ -20403,8 +20403,8 @@ export interface paths {
          *     left as they are. A custom role has nothing shipped to return to (409 `custom_role`).
          *
          *     Gated on `role_admin.update`. A restore that turns any verb on is admin only (403
-         *     `widening_requires_admin`), like any other widening. Send the `version` you read in
-         *     `If-Match`; a stale one is refused 409 `version_skew`.
+         *     `widening_requires_admin`), like any other widening. `If-Match` is required: a missing
+         *     or malformed one is refused 422 and a stale one 409 `version_skew`.
          *
          *     The audit row names the role and the before and after grant of each object that moved.
          *     No public event is emitted, for the reason `setRoleObjectGrant` gives. Live sessions are
@@ -94096,15 +94096,9 @@ export interface operations {
     restoreRoleGrants: {
         parameters: {
             query?: never;
-            header?: {
-                /**
-                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
-                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
-                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
-                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
-                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
-                 */
-                "If-Match"?: components["parameters"]["IfMatch"];
+            header: {
+                /** @description The `version` of the role you read. A restore replaces every grant, so the write never goes out without it. */
+                "If-Match": string;
             };
             path: {
                 /** @description The role key of a role the product ships. */
@@ -94143,6 +94137,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            422: components["responses"]["ValidationError"];
         };
     };
     setRoleObjectGrant: {

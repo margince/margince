@@ -14861,6 +14861,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Tạo, Sửa và Xóa cần quyền Đọc. Hãy bật Đọc trước.",
   "roles.refusal.customRole": "Chỉ vai trò có sẵn mới có quyền mặc định.",
   "roles.restoreGrants": "Khôi phục quyền mặc định",
+  "roles.restoreGrantsTitle": "Khôi phục quyền mặc định cho {name}?",
+  "roles.restoreGrantsBody":
+    "Mọi công tắc trở về mặc định của Margince. Các thay đổi quyền của vai trò này sẽ mất.",
   "roles.restoredGrantsToast": "Đã khôi phục quyền mặc định cho {name}",
   "cf.recordKindHint": "Các loại này đến từ các tiện ích đã cài đặt.",
   "extAccess.title": "Tiện ích và quyền truy cập",

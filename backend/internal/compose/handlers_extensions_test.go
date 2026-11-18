@@ -122,7 +122,6 @@ func TestExtensionInventoryNeverAttributesAnotherUnitsContribution(t *testing.T)
 	if !slices.Equal(got[0].RbacObjects, []string{"ext_crm_demo_widget"}) {
 		t.Errorf("crm's objects = %v, want only its own", got[0].RbacObjects)
 	}
-	// Its record kind's object counts as its own, beside the object a verb names.
 	if !slices.Equal(got[1].RbacObjects, []string{"ext_crm_demo_gadget", "ext_crm_demo_thing"}) {
 		t.Errorf("crm-demo's objects = %v, want only its own", got[1].RbacObjects)
 	}
