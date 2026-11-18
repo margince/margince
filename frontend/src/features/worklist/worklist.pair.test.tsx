@@ -222,6 +222,27 @@ describe("deciding a duplicate pair on the row", () => {
     ).toMatch(new RegExp(`#/companies/${RIGHT}$`));
   });
 
+  it("draws no evidence line for a name match, which the card titles already show", () => {
+    const row = pairRow({ kind: "company" });
+    const { container } = draw({
+      ...row,
+      pair: row.pair && {
+        ...row.pair,
+        evidence: [
+          {
+            field: "display_name",
+            signal: "collide",
+            left_value: "Acme GmbH",
+            right_value: "ACME Gmbh",
+          },
+        ],
+      },
+    });
+
+    expect(screen.queryByText(/^Name:/)).toBeNull();
+    expect(container.querySelector(".worklist-pair-evidence")).toBeNull();
+  });
+
   it("refreshes both companies' document libraries once the merge lands", async () => {
     stubOk();
     const client = new QueryClient();

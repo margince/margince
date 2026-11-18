@@ -81,6 +81,12 @@ function keepLabel(
   return `${visible} — ${side.detail}`;
 }
 
+// The two names are the cards' own titles, so a name match repeats them.
+const TITLE_FIELDS: ReadonlySet<string> = new Set([
+  "display_name",
+  "full_name",
+]);
+
 const FAILURE_MESSAGES = {
   refused: "worklist.pair.refused",
   settled: "worklist.pair.alreadySettled",
@@ -172,6 +178,9 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
       }),
     );
   const confirmed = confirming ? merging(confirming) : null;
+  const evidence = pair.evidence.filter(
+    (line) => !TITLE_FIELDS.has(line.field),
+  );
   return (
     <div className="worklist-pair-review">
       {reviewing && (
@@ -217,12 +226,12 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
             : "worklist.pair.ask",
         )}
       </p>
-      {pair.evidence.length > 0 && (
+      {evidence.length > 0 && (
         <ul className="worklist-pair-evidence">
-          {pair.evidence.map((evidence) => (
+          {evidence.map((line) => (
             <EvidenceLine
-              key={`${evidence.field}-${evidence.signal}`}
-              evidence={evidence}
+              key={`${line.field}-${line.signal}`}
+              evidence={line}
             />
           ))}
         </ul>
