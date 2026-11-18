@@ -12,6 +12,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
@@ -65,7 +66,7 @@ func TestOverlappingHistoryImportsKeepSharedWorkDeferredAndLiveWorkPrompt(t *tes
 		}
 		queue(&run)
 	}
-	if _, err := b.registry.CancelBackfill(other, "gmail", ids.From[ids.UserKind](b.env.Rep2)); err != nil {
+	if _, err := b.registry.CancelBackfill(other, capture.ProviderMailbox("gmail"), ids.From[ids.UserKind](b.env.Rep2)); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := releaseTerminalImportWork(system, b.env.Pool); err != nil {
@@ -96,7 +97,7 @@ func TestOverlappingHistoryImportsKeepSharedWorkDeferredAndLiveWorkPrompt(t *tes
 	}
 	queue(&first)
 	assertPending(0)
-	if _, err := b.registry.CancelBackfill(b.human, "gmail", ids.From[ids.UserKind](b.env.Rep1)); err != nil {
+	if _, err := b.registry.CancelBackfill(b.human, capture.ProviderMailbox("gmail"), ids.From[ids.UserKind](b.env.Rep1)); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := releaseTerminalImportWork(system, b.env.Pool); err != nil {
@@ -124,7 +125,7 @@ func startSecondHistory(t *testing.T, b *backfillWireEnv) (context.Context, ids.
 	if _, err := b.registry.Connect(other, "gmail", connector.Auth("refresh")); err != nil {
 		t.Fatal(err)
 	}
-	second, err := b.registry.StartBackfill(other, "gmail", ids.From[ids.UserKind](b.env.Rep2), 6, connector.BackfillEstimate{Messages: 25}, func(context.Context, pgx.Tx, ids.UUID) error { return nil })
+	second, err := b.registry.StartBackfill(other, capture.ProviderMailbox("gmail"), ids.From[ids.UserKind](b.env.Rep2), 6, connector.BackfillEstimate{Messages: 25}, func(context.Context, pgx.Tx, ids.UUID) error { return nil })
 	if err != nil {
 		t.Fatal(err)
 	}

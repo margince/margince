@@ -15091,6 +15091,7 @@ paths:
   /connectors/{provider}/disconnect:
     parameters:
       - $ref: '#/components/parameters/CaptureProvider'
+      - $ref: '#/components/parameters/CaptureConnectionId'
     post:
       tags: [Connectors]
       operationId: disconnectConnector
@@ -15112,9 +15113,11 @@ paths:
         '204': {description: Disconnected (or already disconnected).}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /connectors/{provider}/signature-enrichment:
     parameters:
       - $ref: '#/components/parameters/CaptureProvider'
+      - $ref: '#/components/parameters/CaptureConnectionId'
     put:
       tags: [Connectors]
       operationId: setConnectorSignatureEnrichment
@@ -15142,6 +15145,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /connectors/{provider}/containers:
     parameters:
       - $ref: '#/components/parameters/CaptureProvider'
@@ -15152,7 +15156,8 @@ paths:
         - name: connection_id
           in: query
           required: false
-          description: Administrator-only connection selection for internal operational mail enrollment. Omit to list the caller's own mailbox.
+          description: >-
+            The caller's own mailbox of this provider, the `id` of a `CaptureConnection`; omit it while they hold one. An administrator may also name a connection enrolled for internal operational mail.
           schema: {type: string, format: uuid}
       summary: The folders or labels this mailbox has, to pick one to keep out of capture.
       description: |-
@@ -15184,6 +15189,7 @@ paths:
   /connectors/{provider}/silence/dismiss:
     parameters:
       - $ref: '#/components/parameters/CaptureProvider'
+      - $ref: '#/components/parameters/CaptureConnectionId'
     post:
       tags: [Connectors]
       operationId: dismissConnectorSilence
@@ -15217,6 +15223,7 @@ paths:
   /connectors/{provider}/mail-posture:
     parameters:
       - $ref: '#/components/parameters/CaptureProvider'
+      - $ref: '#/components/parameters/CaptureConnectionId'
     put:
       tags: [Connectors]
       operationId: setConnectorMailPosture
@@ -15247,6 +15254,7 @@ paths:
   /connectors/{provider}/history-baseline:
     parameters:
       - $ref: '#/components/parameters/CaptureProvider'
+      - $ref: '#/components/parameters/CaptureConnectionId'
     put:
       tags: [Connectors]
       operationId: setConnectorHistoryBaseline
@@ -15277,6 +15285,7 @@ paths:
   /connectors/{provider}/context-tag:
     parameters:
       - $ref: '#/components/parameters/CaptureProvider'
+      - $ref: '#/components/parameters/CaptureConnectionId'
     put:
       tags: [Connectors]
       operationId: setConnectorContextTag
@@ -15307,6 +15316,7 @@ paths:
   /connectors/{provider}/backfill/preview:
     parameters:
       - $ref: '#/components/parameters/CaptureProvider'
+      - $ref: '#/components/parameters/CaptureConnectionId'
     post:
       tags: [Capture]
       operationId: previewConnectorBackfill
@@ -15339,6 +15349,7 @@ paths:
         '403': {$ref: '#/components/responses/RoleCannotCapture'}
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
         '502':
           description: 'Provider unreachable — the estimate needs the provider (`code: provider_unreachable`).'
           content:
@@ -15347,6 +15358,7 @@ paths:
   /connectors/{provider}/backfill:
     parameters:
       - $ref: '#/components/parameters/CaptureProvider'
+      - $ref: '#/components/parameters/CaptureConnectionId'
     post:
       tags: [Capture]
       operationId: startConnectorBackfill
@@ -15376,6 +15388,7 @@ paths:
         '403': {$ref: '#/components/responses/RoleCannotCapture'}
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
     delete:
       tags: [Capture]
       operationId: cancelConnectorBackfill
@@ -15397,6 +15410,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /magic:
     get:
       tags: [Brief]
@@ -26424,6 +26438,16 @@ components:
         One fact's identity within its company, spelled `<field>:<value_key>` (e.g.
         `named_customer:acme-inc`). A fact is multi-valued, so `field` alone does not name a row and
         `value_key` alone is only unique within a field.
+    CaptureConnectionId:
+      name: connection_id
+      in: query
+      required: false
+      schema: {type: string, format: uuid}
+      description: |-
+        Which of the caller's mailboxes of this provider the call is about: the `id` of a
+        `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+        the caller holds one mailbox of the provider; with several, a call without it answers 422
+        and names this parameter.
     CaptureProvider:
       name: provider
       in: path
@@ -41501,6 +41525,15 @@ components:
       type: object
       required: [subject, body, to]
       properties:
+        from_connection_id:
+          type: [string, 'null']
+          format: uuid
+          description: |-
+            The sender's own mailbox the message goes out from, the `id` of one of their
+            `CaptureConnection`s that can send. Omitted, a reply goes out from the mailbox the
+            conversation arrived in, and a new message from the mailbox they connected first. A mailbox
+            that is not the sender's, or cannot send, is refused with 422
+            `mailbox_not_send_capable`.
         subject: {type: string, description: The subject line. Blank or only white space is refused with 422 `required`.}
         body: {type: string, description: The (possibly edited) final body that is sent. Blank or only white space is refused with 422 `required`.}
         html_body:
@@ -42141,6 +42174,12 @@ components:
         One account-started send. It is SendEmailRequest plus the `links` an anchor would
         otherwise have supplied — the records this new conversation belongs to.
       properties:
+        from_connection_id:
+          type: [string, 'null']
+          format: uuid
+          description: |-
+            The sender's own mailbox the message goes out from, as on `SendEmailRequest`.
+            Omitted, it goes out from the mailbox they connected first.
         subject: {type: string, description: The subject line. Blank or only white space is refused with 422 `required`.}
         body: {type: string, description: The (possibly edited) final body that is sent. Blank or only white space is refused with 422 `required`.}
         html_body:

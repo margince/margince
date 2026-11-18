@@ -47,7 +47,7 @@ func setupMailbox(t *testing.T) mailbox {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO capture_connection (user_id, provider, status, credential_ref, account_label, mail_posture)
 			VALUES ($1, 'gmail', 'connected', 'vault:test', $2, 'shared')
-			ON CONFLICT (user_id, provider) DO UPDATE SET account_label = $2, archived_at = NULL, mail_posture = 'shared'`,
+			ON CONFLICT (user_id, provider, lower(account_label)) WHERE user_id IS NOT NULL DO UPDATE SET account_label = $2, archived_at = NULL, mail_posture = 'shared'`,
 			m.owner, m.seat)
 		return err
 	}); err != nil {

@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 48,
     "system_frame_tokens": 672,
-    "tokens": 51190,
+    "tokens": 51287,
     "median_tool_tokens": 797,
-    "mean_tool_tokens": 1066
+    "mean_tool_tokens": 1068
   },
   "agents": [
     {
@@ -85,7 +85,7 @@
   "tool_cost": [
     {
       "name": "read_details",
-      "tokens": 4440
+      "tokens": 4462
     },
     {
       "name": "change_settings",
@@ -117,7 +117,7 @@
     },
     {
       "name": "change_capture",
-      "tokens": 1817
+      "tokens": 1870
     },
     {
       "name": "change_attention",
@@ -133,7 +133,7 @@
     },
     {
       "name": "run_research",
-      "tokens": 1344
+      "tokens": 1365
     },
     {
       "name": "change_compliance",

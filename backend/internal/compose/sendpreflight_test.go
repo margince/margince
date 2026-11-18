@@ -39,6 +39,18 @@ type stubGrants struct {
 	channelCalls int
 }
 
+// ChooseSendingMailbox offers one mailbox per provider holding GrantedScopesFor's scopes.
+func (s *stubGrants) ChooseSendingMailbox(ctx context.Context, user ids.UserID, _ ids.UUID, _ ids.ActivityID, providers []string, canSend func(capture.SendingMailbox) (bool, error)) (capture.SendingMailbox, error) {
+	for _, provider := range providers {
+		scopes, err := s.GrantedScopesFor(ctx, user, provider)
+		mailbox := capture.SendingMailbox{Provider: provider, ProviderScopes: scopes}
+		if can, canErr := canSend(mailbox); err != nil || canErr != nil || can {
+			return mailbox, errors.Join(err, canErr)
+		}
+	}
+	return capture.SendingMailbox{}, nil
+}
+
 func (s *stubGrants) GrantedScopesFor(_ context.Context, _ ids.UserID, provider string) ([]string, error) {
 	s.calls++
 	// Per provider when the case says so, which is what a choice BETWEEN
@@ -295,7 +307,7 @@ func TestSendableMailProviderNamesAMailboxTheSenderCanActuallySendFrom(t *testin
 				grants:            &stubGrants{grantedFor: tc.grantedFor},
 				mailAppConfigured: func(context.Context, string) (bool, error) { return true, nil },
 			}
-			got, err := authority.SendableMailProvider(human)
+			got, _, err := authority.SendableMailbox(human, ids.Nil, ids.ActivityID{})
 			if err != nil {
 				t.Fatalf("SendableMailProvider: %v", err)
 			}
@@ -318,7 +330,7 @@ func TestSendableMailProviderReportsALookupFaultRatherThanNoMailbox(t *testing.T
 		grants:            &stubGrants{err: wantErr},
 		mailAppConfigured: func(context.Context, string) (bool, error) { return true, nil },
 	}
-	got, err := authority.SendableMailProvider(human)
+	got, _, err := authority.SendableMailbox(human, ids.Nil, ids.ActivityID{})
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("SendableMailProvider error = %v, want the lookup fault", err)
 	}
@@ -376,7 +388,7 @@ func TestAStoredAppInstallationPassesTheSendPreflight(t *testing.T) {
 	}}
 	authority := mailboxAuthority{grants: &stubGrants{granted: []string{scope}}, mailAppConfigured: s.mailAppConfigured}
 
-	got, err := authority.SendableMailProvider(human)
+	got, _, err := authority.SendableMailbox(human, ids.Nil, ids.ActivityID{})
 	if err != nil {
 		t.Fatalf("SendableMailProvider: %v", err)
 	}

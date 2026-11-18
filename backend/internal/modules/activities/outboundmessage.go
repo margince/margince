@@ -62,6 +62,8 @@ type outboundMessage struct {
 	// — including a colleague's IMAP when we sent over Gmail, which used to be
 	// a second timeline row nothing could fold.
 	provider string
+	// connection is the sender's mailbox of provider the send goes out from.
+	connection ids.UUID
 }
 
 // htmlAlternativeNote marks a timeline row whose message also went out as
@@ -136,6 +138,7 @@ func (m outboundMessage) delivery(activityID ids.UUID, chain threading, origin S
 	return DeliveryRequest{
 		ActivityID:     ids.From[ids.ActivityKind](activityID),
 		Provider:       m.provider,
+		ConnectionID:   m.connection,
 		MessageID:      m.messageID,
 		Recipients:     m.to,
 		Cc:             m.in.Cc,

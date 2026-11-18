@@ -46,7 +46,7 @@ const codeWindowInvalid = "window_invalid"
 // still answers 200 with the message count when the cost read fails. The
 // concrete estimator satisfies it.
 type backfillEstimator interface {
-	EstimateBackfill(ctx context.Context, provider string, userID ids.UserID, scannedMessages int64) (costestimate.BackfillCost, error)
+	EstimateBackfill(ctx context.Context, mailbox capture.Mailbox, userID ids.UserID, scannedMessages int64) (costestimate.BackfillCost, error)
 }
 
 type backfillHandlers struct {
@@ -180,7 +180,7 @@ func (h backfillHandlers) servable(w http.ResponseWriter, r *http.Request, op st
 	return h.backfillWired(w, r, op) && mailboxOnly(w, r, provider, noMailHistory)
 }
 
-func (h backfillHandlers) PreviewConnectorBackfill(w http.ResponseWriter, r *http.Request, provider crmcontracts.CaptureProvider) {
+func (h backfillHandlers) PreviewConnectorBackfill(w http.ResponseWriter, r *http.Request, provider crmcontracts.CaptureProvider, params crmcontracts.PreviewConnectorBackfillParams) {
 	if !h.servable(w, r, "PreviewConnectorBackfill", provider) {
 		return
 	}
@@ -220,7 +220,7 @@ func (h backfillHandlers) PreviewConnectorBackfill(w http.ResponseWriter, r *htt
 		})
 		return
 	}
-	estimate, err := h.registry.EstimateBackfill(r.Context(), string(provider), userID, months)
+	estimate, err := h.registry.EstimateBackfill(r.Context(), capture.MailboxNamed(string(provider), params.ConnectionId), userID, months)
 	if err != nil {
 		h.writeBackfillError(w, r, err)
 		return
@@ -251,7 +251,7 @@ func (h backfillHandlers) PreviewConnectorBackfill(w http.ResponseWriter, r *htt
 		// prices low, which is the honest direction for a figure the mailbox owner
 		// is told is advisory: the alternative is inventing a multiplier for
 		// messages nobody counted.
-		cost, err := h.estimator.EstimateBackfill(r.Context(), string(provider), userID, int64(estimate.Messages))
+		cost, err := h.estimator.EstimateBackfill(r.Context(), capture.MailboxNamed(string(provider), params.ConnectionId), userID, int64(estimate.Messages))
 		if err != nil {
 			h.log.ErrorContext(r.Context(), "backfill preview cost estimate", "err", err)
 		} else {
@@ -272,7 +272,7 @@ func (h backfillHandlers) PreviewConnectorBackfill(w http.ResponseWriter, r *htt
 	httperr.WriteJSON(w, http.StatusOK, preview)
 }
 
-func (h backfillHandlers) StartConnectorBackfill(w http.ResponseWriter, r *http.Request, provider crmcontracts.CaptureProvider) {
+func (h backfillHandlers) StartConnectorBackfill(w http.ResponseWriter, r *http.Request, provider crmcontracts.CaptureProvider, params crmcontracts.StartConnectorBackfillParams) {
 	if !h.servable(w, r, "StartConnectorBackfill", provider) {
 		return
 	}
@@ -309,7 +309,7 @@ func (h backfillHandlers) StartConnectorBackfill(w http.ResponseWriter, r *http.
 	// client that skipped the preview starts with none (the bar shows counts
 	// only — honest, just less shaped).
 	var estimate connector.BackfillEstimate
-	previewed, err := h.registry.EstimateBackfill(r.Context(), string(provider), userID, months)
+	previewed, err := h.registry.EstimateBackfill(r.Context(), capture.MailboxNamed(string(provider), params.ConnectionId), userID, months)
 	if _, refused := errors.AsType[*capture.RoleCannotCaptureError](err); refused {
 		httperr.Write(w, r, err)
 		return
@@ -331,9 +331,9 @@ func (h backfillHandlers) StartConnectorBackfill(w http.ResponseWriter, r *http.
 	startOver := req.StartOver != nil && *req.StartOver
 	var run capture.BackfillRun
 	if req.InternalMailPreviewToken != nil {
-		run, err = h.beginInternalHistory(r.Context(), ws, string(provider), userID, months, estimate, *req.InternalMailPreviewToken)
+		run, err = h.beginInternalHistory(r.Context(), ws, capture.MailboxNamed(string(provider), params.ConnectionId), userID, months, estimate, *req.InternalMailPreviewToken)
 	} else {
-		run, err = h.begin(r.Context(), ws, string(provider), userID, months, estimate, startOver)
+		run, err = h.begin(r.Context(), ws, capture.MailboxNamed(string(provider), params.ConnectionId), userID, months, estimate, startOver)
 	}
 	if errors.Is(err, errBackfillEnqueue) {
 		h.log.ErrorContext(r.Context(), "backfill: enqueue", "err", err)
@@ -350,7 +350,7 @@ func (h backfillHandlers) StartConnectorBackfill(w http.ResponseWriter, r *http.
 	httperr.WriteJSON(w, http.StatusAccepted, h.statusPayload(&run))
 }
 
-func (h backfillHandlers) GetConnectorBackfillStatus(w http.ResponseWriter, r *http.Request, provider crmcontracts.CaptureProvider) {
+func (h backfillHandlers) GetConnectorBackfillStatus(w http.ResponseWriter, r *http.Request, provider crmcontracts.CaptureProvider, params crmcontracts.GetConnectorBackfillStatusParams) {
 	if !h.servable(w, r, "GetConnectorBackfillStatus", provider) {
 		return
 	}
@@ -358,7 +358,7 @@ func (h backfillHandlers) GetConnectorBackfillStatus(w http.ResponseWriter, r *h
 	if !ok {
 		return
 	}
-	run, err := h.registry.BackfillStatus(r.Context(), string(provider), userID)
+	run, err := h.registry.BackfillStatus(r.Context(), capture.MailboxNamed(string(provider), params.ConnectionId), userID)
 	if err != nil {
 		h.writeBackfillError(w, r, err)
 		return
@@ -366,7 +366,7 @@ func (h backfillHandlers) GetConnectorBackfillStatus(w http.ResponseWriter, r *h
 	httperr.WriteJSON(w, http.StatusOK, h.statusPayload(run))
 }
 
-func (h backfillHandlers) CancelConnectorBackfill(w http.ResponseWriter, r *http.Request, provider crmcontracts.CaptureProvider) {
+func (h backfillHandlers) CancelConnectorBackfill(w http.ResponseWriter, r *http.Request, provider crmcontracts.CaptureProvider, params crmcontracts.CancelConnectorBackfillParams) {
 	if !h.servable(w, r, "CancelConnectorBackfill", provider) {
 		return
 	}
@@ -374,7 +374,7 @@ func (h backfillHandlers) CancelConnectorBackfill(w http.ResponseWriter, r *http
 	if !ok {
 		return
 	}
-	run, err := h.registry.CancelBackfill(r.Context(), string(provider), userID)
+	run, err := h.registry.CancelBackfill(r.Context(), capture.MailboxNamed(string(provider), params.ConnectionId), userID)
 	if err != nil {
 		h.writeBackfillError(w, r, err)
 		return

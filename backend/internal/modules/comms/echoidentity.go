@@ -27,7 +27,7 @@ import (
 // owns the import rows, so compose injects it.
 // sentAt bounds the match to the account the connection held when the message
 // was sent.
-type EchoIdentity func(ctx context.Context, tx pgx.Tx, seat ids.UUID, provider, providerMessageID string, sentAt time.Time) (string, bool, error)
+type EchoIdentity func(ctx context.Context, tx pgx.Tx, seat ids.UUID, provider string, connection *ids.UUID, providerMessageID string, sentAt time.Time) (string, bool, error)
 
 // WithEchoIdentity hands the store the read that recovers an identity the
 // read-back could not.
@@ -50,6 +50,7 @@ type sentReceipt struct {
 	staged         string
 	seat           ids.UUID
 	provider       string
+	connection     *ids.UUID
 	providerSentID string
 	sentAt         time.Time
 }
@@ -86,7 +87,7 @@ func (s *Store) capturedEchoIdentity(callerCtx context.Context, sent sentReceipt
 			return err
 		}
 		var err error
-		stamped, _, err = s.echoIdentity(ctx, tx, sent.seat, sent.provider, sent.providerSentID, sent.sentAt)
+		stamped, _, err = s.echoIdentity(ctx, tx, sent.seat, sent.provider, sent.connection, sent.providerSentID, sent.sentAt)
 		return err
 	})
 	if err != nil {

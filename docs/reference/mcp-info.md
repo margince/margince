@@ -15,10 +15,10 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 274.0 KB |
+| Tool catalog | 274.3 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 71538 |
-| Largest tool | `read_details` (17.4 KB) |
+| Approx. wire tokens | 71635 |
+| Largest tool | `read_details` (17.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
 Those are the bytes on the wire: they carry each tool's output schema and the
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 51.5 KB | 18% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 53.5 KB | 19% | Yes, every step |
-| Input schemas | 157.1 KB | 57% | Yes, every step |
+| Input schemas | 157.5 KB | 57% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 4% | Partly |
-| **Description + input schema** | **210.6 KB** | **76%** | **the recurring cost** |
+| **Description + input schema** | **211.0 KB** | **76%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -70,7 +70,7 @@ descriptions and input schemas are what each step pays for.
 | [`change_access`](#change_access) | Share records and set up members and teams |  |  | 1074 |
 | [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 2821 |
 | [`change_attention`](#change_attention) | Act on proposals, notices and the weekly plan |  |  | 1775 |
-| [`change_capture`](#change_capture) | Decide what comes into the CRM |  |  | 1817 |
+| [`change_capture`](#change_capture) | Decide what comes into the CRM |  |  | 1870 |
 | [`change_compliance`](#change_compliance) | Record consent, stops, holds and privacy work |  |  | 1274 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
 | [`change_my_settings`](#change_my_settings) | Change the user's own preferences and voice |  |  | 867 |
@@ -95,7 +95,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
 | [`read_attention`](#read_attention) | See what needs attention | yes | [`ui://margince/attention.html`](#attention_view) | 365 |
 | [`read_context`](#read_context) | Get the story so far | yes | [`ui://margince/context.html`](#context_view) | 413 |
-| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 4440 |
+| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 4462 |
 | [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes | [`ui://margince/forecast.html`](#forecast_view) | 978 |
 | [`read_import`](#read_import) | Read an import run or the import format | yes |  | 235 |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 797 |
@@ -107,7 +107,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_view`](#read_view) | Read a view | yes |  | 1889 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2779 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
-| [`run_research`](#run_research) | Run AI work for your user |  |  | 1344 |
+| [`run_research`](#run_research) | Run AI work for your user |  |  | 1365 |
 | [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 487 |
 | [`send_outbound`](#send_outbound) | Send a message |  |  | 1678 |
 | [`update_record`](#update_record) | Update a record |  | [`ui://margince/update.html`](#update_view) | 626 |
@@ -1857,6 +1857,11 @@ they asked for this call themselves; requires passport scope "write".)
     },
     "address": {
       "description": "set_sender_decision, withdraw_sender_decision only",
+      "type": "string"
+    },
+    "connection_id": {
+      "description": "cancel_backfill, disconnect_mailbox, dismiss_mailbox_silence, set_context_tag, set_history_baseline, set_mail_posture, set_signature_enrichment only",
+      "format": "uuid",
       "type": "string"
     },
     "content_base64": {
@@ -9199,6 +9204,11 @@ needs the user now, and read_record for a record's own fields.
       "format": "uuid",
       "type": "string"
     },
+    "connection_id": {
+      "description": "backfill_preview only",
+      "format": "uuid",
+      "type": "string"
+    },
     "contact_id": {
       "description": "meeting_proposals only",
       "format": "uuid",
@@ -12501,6 +12511,11 @@ scope "enrich".)
         "start_backfill",
         "start_search_reindex"
       ],
+      "type": "string"
+    },
+    "connection_id": {
+      "description": "start_backfill only",
+      "format": "uuid",
       "type": "string"
     },
     "content_base64": {

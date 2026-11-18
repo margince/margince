@@ -2397,7 +2397,6 @@ public.capture_connection.connector_connection_pkey PRIMARY KEY (id)
 public.capture_connection.context_tag_id uuid gen=- def=-
 public.capture_connection.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.capture_connection.credential_ref text gen=- def=-
-public.capture_connection.default_sender boolean NOT NULL gen=- def=false
 public.capture_connection.generation integer NOT NULL gen=- def=0
 public.capture_connection.history_baseline_date date gen=- def=-
 public.capture_connection.history_baseline_set_at timestamp with time zone gen=- def=-
@@ -2426,8 +2425,7 @@ public.capture_connection.unread_to timestamp with time zone gen=- def=-
 public.capture_connection.user_id uuid gen=- def=-
 public.capture_connection.watch_expires_at timestamp with time zone gen=- def=-
 public.capture_connection.watch_ref text gen=- def=-
-public.capture_connection_member_mailbox CREATE UNIQUE INDEX capture_connection_member_mailbox ON public.capture_connection USING btree (user_id, provider, lower(COALESCE(account_label, ''::text))) WHERE (user_id IS NOT NULL)
-public.capture_connection_one_default_sender CREATE UNIQUE INDEX capture_connection_one_default_sender ON public.capture_connection USING btree (user_id) WHERE default_sender
+public.capture_connection_member_mailbox CREATE UNIQUE INDEX capture_connection_member_mailbox ON public.capture_connection USING btree (user_id, provider, lower(account_label)) NULLS NOT DISTINCT WHERE (user_id IS NOT NULL)
 public.capture_connection_shared_mailbox CREATE UNIQUE INDEX capture_connection_shared_mailbox ON public.capture_connection USING btree (provider, lower(account_label)) WHERE (user_id IS NULL)
 public.capture_counterparty_hold acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_counterparty_hold.capture_counterparty_hold_kind_check CHECK ((kind = ANY (ARRAY['address'::text, 'domain'::text])))

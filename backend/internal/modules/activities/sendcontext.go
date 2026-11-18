@@ -158,7 +158,8 @@ func replySendInput(req crmcontracts.SendEmailRequest) (SendEmailInput, error) {
 		req.To, req.Cc, req.Bcc, req.Subject, req.Body, req.HtmlBody, req.AttachmentIds,
 		legacyPurposeOf(req.ConsentPurpose), req.DraftRef,
 	))
-	in.MailDraftID = mailDraftIDOf(req.MailDraftId)
+	in.MailDraftID = optionalID(req.MailDraftId)
+	in.FromConnection = optionalID(req.FromConnectionId)
 	return in, nil
 }
 
@@ -174,7 +175,8 @@ func DecodeCompanyEmailRequest(req crmcontracts.SendCompanyEmailRequest) (SendEm
 		req.To, req.Cc, req.Bcc, req.Subject, req.Body, req.HtmlBody, req.AttachmentIds,
 		legacyPurposeOf(req.ConsentPurpose), req.DraftRef,
 	))
-	in.MailDraftID = mailDraftIDOf(req.MailDraftId)
+	in.MailDraftID = optionalID(req.MailDraftId)
+	in.FromConnection = optionalID(req.FromConnectionId)
 	return in, nil
 }
 

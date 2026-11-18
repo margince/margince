@@ -43387,6 +43387,12 @@ type ConnectConnectorRequest struct {
 	// failed calendar leaves the mail grant in place.
 	AlsoConnect *ConnectConnectorRequestAlsoConnect `json:"also_connect,omitempty"`
 
+	// ConnectionId The caller's mailbox this consent repairs (Reconnect). The consent must name the same
+	// account: a different one is refused, because it is another mailbox. Absent adds the
+	// account the consent names as another mailbox, or repairs the one that account already
+	// has. Ignored by credential providers.
+	ConnectionId *openapi_types.UUID `json:"connection_id,omitempty"`
+
 	// Imap Direct IMAP credentials (the `imap` provider only).
 	Imap *ImapCredentials `json:"imap,omitempty"`
 
@@ -65312,6 +65318,10 @@ type SendCompanyEmailRequest struct {
 	// Evidence Records the caller names in support of this send. Checked, never trusted.
 	Evidence *CommunicationEvidence `json:"evidence,omitempty"`
 
+	// FromConnectionId The sender's own mailbox the message goes out from, as on `SendEmailRequest`.
+	// Omitted, it goes out from the mailbox they connected first.
+	FromConnectionId *openapi_types.UUID `json:"from_connection_id,omitempty"`
+
 	// HtmlBody The same message as markup, or omitted for a plain-text send. It never
 	// REPLACES `body`: a message carrying both goes out as multipart/alternative
 	// with the plain part first, so a client that cannot render HTML still
@@ -65500,6 +65510,13 @@ type SendEmailRequest struct {
 
 	// Evidence Records the caller names in support of this send. Checked, never trusted.
 	Evidence *CommunicationEvidence `json:"evidence,omitempty"`
+
+	// FromConnectionId The sender's own mailbox the message goes out from, the `id` of one of their
+	// `CaptureConnection`s that can send. Omitted, a reply goes out from the mailbox the
+	// conversation arrived in, and a new message from the mailbox they connected first. A mailbox
+	// that is not the sender's, or cannot send, is refused with 422
+	// `mailbox_not_send_capable`.
+	FromConnectionId *openapi_types.UUID `json:"from_connection_id,omitempty"`
 
 	// HtmlBody The same message as markup, or omitted for a plain-text send. It never
 	// REPLACES `body`: a message carrying both goes out as multipart/alternative
@@ -73308,6 +73325,9 @@ type BriefProjectId = openapi_types.UUID
 // BundleId defines model for BundleId.
 type BundleId = openapi_types.UUID
 
+// CaptureConnectionId defines model for CaptureConnectionId.
+type CaptureConnectionId = openapi_types.UUID
+
 // CaptureProvider defines model for CaptureProvider.
 type CaptureProvider string
 
@@ -76100,6 +76120,42 @@ type ResolveConfirmSubmissionJSONBody struct {
 // ResolveConfirmSubmissionJSONBodyResolution defines parameters for ResolveConfirmSubmission.
 type ResolveConfirmSubmissionJSONBodyResolution string
 
+// CancelConnectorBackfillParams defines parameters for CancelConnectorBackfill.
+type CancelConnectorBackfillParams struct {
+	// ConnectionId Which of the caller's mailboxes of this provider the call is about: the `id` of a
+	// `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+	// the caller holds one mailbox of the provider; with several, a call without it answers 422
+	// and names this parameter.
+	ConnectionId *CaptureConnectionId `form:"connection_id,omitempty" json:"connection_id,omitempty"`
+}
+
+// GetConnectorBackfillStatusParams defines parameters for GetConnectorBackfillStatus.
+type GetConnectorBackfillStatusParams struct {
+	// ConnectionId Which of the caller's mailboxes of this provider the call is about: the `id` of a
+	// `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+	// the caller holds one mailbox of the provider; with several, a call without it answers 422
+	// and names this parameter.
+	ConnectionId *CaptureConnectionId `form:"connection_id,omitempty" json:"connection_id,omitempty"`
+}
+
+// StartConnectorBackfillParams defines parameters for StartConnectorBackfill.
+type StartConnectorBackfillParams struct {
+	// ConnectionId Which of the caller's mailboxes of this provider the call is about: the `id` of a
+	// `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+	// the caller holds one mailbox of the provider; with several, a call without it answers 422
+	// and names this parameter.
+	ConnectionId *CaptureConnectionId `form:"connection_id,omitempty" json:"connection_id,omitempty"`
+}
+
+// PreviewConnectorBackfillParams defines parameters for PreviewConnectorBackfill.
+type PreviewConnectorBackfillParams struct {
+	// ConnectionId Which of the caller's mailboxes of this provider the call is about: the `id` of a
+	// `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+	// the caller holds one mailbox of the provider; with several, a call without it answers 422
+	// and names this parameter.
+	ConnectionId *CaptureConnectionId `form:"connection_id,omitempty" json:"connection_id,omitempty"`
+}
+
 // ConnectorOAuthCallbackParams defines parameters for ConnectorOAuthCallback.
 type ConnectorOAuthCallbackParams struct {
 	// Code Provider authorization code (absent when the user denied consent).
@@ -76114,8 +76170,62 @@ type ConnectorOAuthCallbackParams struct {
 
 // ListConnectorContainersParams defines parameters for ListConnectorContainers.
 type ListConnectorContainersParams struct {
-	// ConnectionId Administrator-only connection selection for internal operational mail enrollment. Omit to list the caller's own mailbox.
+	// ConnectionId The caller's own mailbox of this provider, the `id` of a `CaptureConnection`; omit it while they hold one. An administrator may also name a connection enrolled for internal operational mail.
 	ConnectionId *openapi_types.UUID `form:"connection_id,omitempty" json:"connection_id,omitempty"`
+}
+
+// SetConnectorContextTagParams defines parameters for SetConnectorContextTag.
+type SetConnectorContextTagParams struct {
+	// ConnectionId Which of the caller's mailboxes of this provider the call is about: the `id` of a
+	// `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+	// the caller holds one mailbox of the provider; with several, a call without it answers 422
+	// and names this parameter.
+	ConnectionId *CaptureConnectionId `form:"connection_id,omitempty" json:"connection_id,omitempty"`
+}
+
+// DisconnectConnectorParams defines parameters for DisconnectConnector.
+type DisconnectConnectorParams struct {
+	// ConnectionId Which of the caller's mailboxes of this provider the call is about: the `id` of a
+	// `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+	// the caller holds one mailbox of the provider; with several, a call without it answers 422
+	// and names this parameter.
+	ConnectionId *CaptureConnectionId `form:"connection_id,omitempty" json:"connection_id,omitempty"`
+}
+
+// SetConnectorHistoryBaselineParams defines parameters for SetConnectorHistoryBaseline.
+type SetConnectorHistoryBaselineParams struct {
+	// ConnectionId Which of the caller's mailboxes of this provider the call is about: the `id` of a
+	// `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+	// the caller holds one mailbox of the provider; with several, a call without it answers 422
+	// and names this parameter.
+	ConnectionId *CaptureConnectionId `form:"connection_id,omitempty" json:"connection_id,omitempty"`
+}
+
+// SetConnectorMailPostureParams defines parameters for SetConnectorMailPosture.
+type SetConnectorMailPostureParams struct {
+	// ConnectionId Which of the caller's mailboxes of this provider the call is about: the `id` of a
+	// `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+	// the caller holds one mailbox of the provider; with several, a call without it answers 422
+	// and names this parameter.
+	ConnectionId *CaptureConnectionId `form:"connection_id,omitempty" json:"connection_id,omitempty"`
+}
+
+// SetConnectorSignatureEnrichmentParams defines parameters for SetConnectorSignatureEnrichment.
+type SetConnectorSignatureEnrichmentParams struct {
+	// ConnectionId Which of the caller's mailboxes of this provider the call is about: the `id` of a
+	// `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+	// the caller holds one mailbox of the provider; with several, a call without it answers 422
+	// and names this parameter.
+	ConnectionId *CaptureConnectionId `form:"connection_id,omitempty" json:"connection_id,omitempty"`
+}
+
+// DismissConnectorSilenceParams defines parameters for DismissConnectorSilence.
+type DismissConnectorSilenceParams struct {
+	// ConnectionId Which of the caller's mailboxes of this provider the call is about: the `id` of a
+	// `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+	// the caller holds one mailbox of the provider; with several, a call without it answers 422
+	// and names this parameter.
+	ConnectionId *CaptureConnectionId `form:"connection_id,omitempty" json:"connection_id,omitempty"`
 }
 
 // ListContactsParams defines parameters for ListContacts.
@@ -97627,16 +97737,16 @@ type ServerInterface interface {
 	ListConnectors(w http.ResponseWriter, r *http.Request)
 	// Cancel a running backfill — captured rows are retained.
 	// (DELETE /connectors/{provider}/backfill)
-	CancelConnectorBackfill(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
+	CancelConnectorBackfill(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params CancelConnectorBackfillParams)
 	// Backfill progress — the activation read.
 	// (GET /connectors/{provider}/backfill)
-	GetConnectorBackfillStatus(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
+	GetConnectorBackfillStatus(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params GetConnectorBackfillStatusParams)
 	// Start the bounded connect-time backfill.
 	// (POST /connectors/{provider}/backfill)
-	StartConnectorBackfill(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
+	StartConnectorBackfill(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params StartConnectorBackfillParams)
 	// Preview a backfill window — the scope before the spend.
 	// (POST /connectors/{provider}/backfill/preview)
-	PreviewConnectorBackfill(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
+	PreviewConnectorBackfill(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params PreviewConnectorBackfillParams)
 	// OAuth redirect callback — completes a mail/calendar connect.
 	// (GET /connectors/{provider}/callback)
 	ConnectorOAuthCallback(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params ConnectorOAuthCallbackParams)
@@ -97648,22 +97758,22 @@ type ServerInterface interface {
 	ListConnectorContainers(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params ListConnectorContainersParams)
 	// Set the word this connector files what it captures under.
 	// (PUT /connectors/{provider}/context-tag)
-	SetConnectorContextTag(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
+	SetConnectorContextTag(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params SetConnectorContextTagParams)
 	// Disconnect the calling user's mail/calendar capture.
 	// (POST /connectors/{provider}/disconnect)
-	DisconnectConnector(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
+	DisconnectConnector(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params DisconnectConnectorParams)
 	// Set the date this mailbox's automatic commitment suggestions start from.
 	// (PUT /connectors/{provider}/history-baseline)
-	SetConnectorHistoryBaseline(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
+	SetConnectorHistoryBaseline(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params SetConnectorHistoryBaselineParams)
 	// Set what this mailbox asks of the mail it brings in.
 	// (PUT /connectors/{provider}/mail-posture)
-	SetConnectorMailPosture(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
+	SetConnectorMailPosture(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params SetConnectorMailPostureParams)
 	// Set this mailbox's own answer to the nightly signature pass.
 	// (PUT /connectors/{provider}/signature-enrichment)
-	SetConnectorSignatureEnrichment(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
+	SetConnectorSignatureEnrichment(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params SetConnectorSignatureEnrichmentParams)
 	// Dismiss the owner's current mailbox silence warning.
 	// (POST /connectors/{provider}/silence/dismiss)
-	DismissConnectorSilence(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
+	DismissConnectorSilence(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params DismissConnectorSilenceParams)
 	// List the workspace's consent purposes (e.g. transactional, marketing_email, profiling).
 	// (GET /consent-purposes)
 	ListConsentPurposes(w http.ResponseWriter, r *http.Request)
@@ -102055,25 +102165,25 @@ func (_ Unimplemented) ListConnectors(w http.ResponseWriter, r *http.Request) {
 
 // Cancel a running backfill — captured rows are retained.
 // (DELETE /connectors/{provider}/backfill)
-func (_ Unimplemented) CancelConnectorBackfill(w http.ResponseWriter, r *http.Request, provider CaptureProvider) {
+func (_ Unimplemented) CancelConnectorBackfill(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params CancelConnectorBackfillParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Backfill progress — the activation read.
 // (GET /connectors/{provider}/backfill)
-func (_ Unimplemented) GetConnectorBackfillStatus(w http.ResponseWriter, r *http.Request, provider CaptureProvider) {
+func (_ Unimplemented) GetConnectorBackfillStatus(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params GetConnectorBackfillStatusParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Start the bounded connect-time backfill.
 // (POST /connectors/{provider}/backfill)
-func (_ Unimplemented) StartConnectorBackfill(w http.ResponseWriter, r *http.Request, provider CaptureProvider) {
+func (_ Unimplemented) StartConnectorBackfill(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params StartConnectorBackfillParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Preview a backfill window — the scope before the spend.
 // (POST /connectors/{provider}/backfill/preview)
-func (_ Unimplemented) PreviewConnectorBackfill(w http.ResponseWriter, r *http.Request, provider CaptureProvider) {
+func (_ Unimplemented) PreviewConnectorBackfill(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params PreviewConnectorBackfillParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -102097,37 +102207,37 @@ func (_ Unimplemented) ListConnectorContainers(w http.ResponseWriter, r *http.Re
 
 // Set the word this connector files what it captures under.
 // (PUT /connectors/{provider}/context-tag)
-func (_ Unimplemented) SetConnectorContextTag(w http.ResponseWriter, r *http.Request, provider CaptureProvider) {
+func (_ Unimplemented) SetConnectorContextTag(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params SetConnectorContextTagParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Disconnect the calling user's mail/calendar capture.
 // (POST /connectors/{provider}/disconnect)
-func (_ Unimplemented) DisconnectConnector(w http.ResponseWriter, r *http.Request, provider CaptureProvider) {
+func (_ Unimplemented) DisconnectConnector(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params DisconnectConnectorParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Set the date this mailbox's automatic commitment suggestions start from.
 // (PUT /connectors/{provider}/history-baseline)
-func (_ Unimplemented) SetConnectorHistoryBaseline(w http.ResponseWriter, r *http.Request, provider CaptureProvider) {
+func (_ Unimplemented) SetConnectorHistoryBaseline(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params SetConnectorHistoryBaselineParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Set what this mailbox asks of the mail it brings in.
 // (PUT /connectors/{provider}/mail-posture)
-func (_ Unimplemented) SetConnectorMailPosture(w http.ResponseWriter, r *http.Request, provider CaptureProvider) {
+func (_ Unimplemented) SetConnectorMailPosture(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params SetConnectorMailPostureParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Set this mailbox's own answer to the nightly signature pass.
 // (PUT /connectors/{provider}/signature-enrichment)
-func (_ Unimplemented) SetConnectorSignatureEnrichment(w http.ResponseWriter, r *http.Request, provider CaptureProvider) {
+func (_ Unimplemented) SetConnectorSignatureEnrichment(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params SetConnectorSignatureEnrichmentParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Dismiss the owner's current mailbox silence warning.
 // (POST /connectors/{provider}/silence/dismiss)
-func (_ Unimplemented) DismissConnectorSilence(w http.ResponseWriter, r *http.Request, provider CaptureProvider) {
+func (_ Unimplemented) DismissConnectorSilence(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params DismissConnectorSilenceParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -123434,8 +123544,24 @@ func (siw *ServerInterfaceWrapper) CancelConnectorBackfill(w http.ResponseWriter
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CancelConnectorBackfillParams
+
+	// ------------- Optional query parameter "connection_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "connection_id", r.URL.Query(), &params.ConnectionId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "connection_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "connection_id", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.CancelConnectorBackfill(w, r, provider)
+		siw.Handler.CancelConnectorBackfill(w, r, provider, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -123466,8 +123592,24 @@ func (siw *ServerInterfaceWrapper) GetConnectorBackfillStatus(w http.ResponseWri
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetConnectorBackfillStatusParams
+
+	// ------------- Optional query parameter "connection_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "connection_id", r.URL.Query(), &params.ConnectionId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "connection_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "connection_id", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetConnectorBackfillStatus(w, r, provider)
+		siw.Handler.GetConnectorBackfillStatus(w, r, provider, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -123500,8 +123642,24 @@ func (siw *ServerInterfaceWrapper) StartConnectorBackfill(w http.ResponseWriter,
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params StartConnectorBackfillParams
+
+	// ------------- Optional query parameter "connection_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "connection_id", r.URL.Query(), &params.ConnectionId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "connection_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "connection_id", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.StartConnectorBackfill(w, r, provider)
+		siw.Handler.StartConnectorBackfill(w, r, provider, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -123534,8 +123692,24 @@ func (siw *ServerInterfaceWrapper) PreviewConnectorBackfill(w http.ResponseWrite
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params PreviewConnectorBackfillParams
+
+	// ------------- Optional query parameter "connection_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "connection_id", r.URL.Query(), &params.ConnectionId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "connection_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "connection_id", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.PreviewConnectorBackfill(w, r, provider)
+		siw.Handler.PreviewConnectorBackfill(w, r, provider, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -123718,8 +123892,24 @@ func (siw *ServerInterfaceWrapper) SetConnectorContextTag(w http.ResponseWriter,
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SetConnectorContextTagParams
+
+	// ------------- Optional query parameter "connection_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "connection_id", r.URL.Query(), &params.ConnectionId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "connection_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "connection_id", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.SetConnectorContextTag(w, r, provider)
+		siw.Handler.SetConnectorContextTag(w, r, provider, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -123752,8 +123942,24 @@ func (siw *ServerInterfaceWrapper) DisconnectConnector(w http.ResponseWriter, r 
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DisconnectConnectorParams
+
+	// ------------- Optional query parameter "connection_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "connection_id", r.URL.Query(), &params.ConnectionId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "connection_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "connection_id", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.DisconnectConnector(w, r, provider)
+		siw.Handler.DisconnectConnector(w, r, provider, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -123786,8 +123992,24 @@ func (siw *ServerInterfaceWrapper) SetConnectorHistoryBaseline(w http.ResponseWr
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SetConnectorHistoryBaselineParams
+
+	// ------------- Optional query parameter "connection_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "connection_id", r.URL.Query(), &params.ConnectionId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "connection_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "connection_id", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.SetConnectorHistoryBaseline(w, r, provider)
+		siw.Handler.SetConnectorHistoryBaseline(w, r, provider, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -123820,8 +124042,24 @@ func (siw *ServerInterfaceWrapper) SetConnectorMailPosture(w http.ResponseWriter
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SetConnectorMailPostureParams
+
+	// ------------- Optional query parameter "connection_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "connection_id", r.URL.Query(), &params.ConnectionId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "connection_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "connection_id", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.SetConnectorMailPosture(w, r, provider)
+		siw.Handler.SetConnectorMailPosture(w, r, provider, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -123854,8 +124092,24 @@ func (siw *ServerInterfaceWrapper) SetConnectorSignatureEnrichment(w http.Respon
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SetConnectorSignatureEnrichmentParams
+
+	// ------------- Optional query parameter "connection_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "connection_id", r.URL.Query(), &params.ConnectionId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "connection_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "connection_id", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.SetConnectorSignatureEnrichment(w, r, provider)
+		siw.Handler.SetConnectorSignatureEnrichment(w, r, provider, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -123888,8 +124142,24 @@ func (siw *ServerInterfaceWrapper) DismissConnectorSilence(w http.ResponseWriter
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DismissConnectorSilenceParams
+
+	// ------------- Optional query parameter "connection_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "connection_id", r.URL.Query(), &params.ConnectionId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "connection_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "connection_id", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.DismissConnectorSilence(w, r, provider)
+		siw.Handler.DismissConnectorSilence(w, r, provider, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {

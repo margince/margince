@@ -12,6 +12,7 @@ package compose
 import (
 	"testing"
 
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/gmail"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
@@ -28,11 +29,11 @@ func (h *historyEnv) withdraw(t *testing.T, how string, mail ids.UUID) {
 	switch how {
 	case withdrawals[0]:
 		off := false
-		if _, err := registry.SetSignatureEnrichment(h.reader(), "gmail", &off); err != nil {
+		if _, err := registry.SetSignatureEnrichment(h.reader(), capture.ProviderMailbox("gmail"), &off); err != nil {
 			t.Errorf("switching the mailbox off: %v", err)
 		}
 	case withdrawals[1]:
-		if err := registry.Disconnect(h.reader(), "gmail"); err != nil {
+		if err := registry.Disconnect(h.reader(), capture.ProviderMailbox("gmail")); err != nil {
 			t.Errorf("disconnecting the mailbox: %v", err)
 		}
 	default:

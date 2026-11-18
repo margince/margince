@@ -227,7 +227,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_connection
 
-34 columns · primary key `(id)` · referenced by 3 foreign keys
+35 columns · primary key `(id)` · referenced by 4 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -245,6 +245,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `history_baseline_set_at` | `timestamp with time zone` |  |  |
 | `history_baseline_set_by` | `text` |  |  |
 | `history_baseline_tz` | `text` |  |  |
+| `keys_by_provider` | `boolean`, default `false` | yes |  |
 | `legal_entity_id` | `uuid` |  | Points at `legal_entity.id`. |
 | `mail_posture` | `text`, default `'classified'::text` | yes | What this mailbox asks of the mail it brings in. |
 | `provider` | `text` | yes | The mail/calendar/meeting-notes provider (A51 email+calendar parity). |
@@ -285,13 +286,12 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 - `capture_connection_provider_check`: `CHECK ((provider = ANY (ARRAY['gmail', 'gcal', 'gdocs', 'imap', 'graph', 'graphcal', 'whatsapp', 'telegram', 'offline_demo', 'test_mailbox'])))`
 - `capture_connection_shared_shape`: `CHECK ((((user_id IS NOT NULL) AND (reader_team_id IS NULL)) OR ((user_id IS NULL) AND (reader_team_id IS NOT NULL) AND (account_label IS NOT NULL) AND (mail_posture <> 'classified'))))`
 - `capture_connection_status_check`: `CHECK ((status = ANY (ARRAY['connected', 'disconnected', 'error', 'reauth_required'])))`
-- `capture_connection_unique`: `UNIQUE (user_id, provider)`
 - `capture_connection_unread_period_whole`: `CHECK ((((unread_from IS NULL) AND (unread_to IS NULL)) OR ((unread_from IS NOT NULL) AND (unread_to IS NOT NULL) AND (unread_from < unread_to))))`
 
 **Indexes**
 
+- `capture_connection_member_mailbox`: `unique, btree (user_id, provider, lower(account_label)) NULLS NOT DISTINCT WHERE (user_id IS NOT NULL)`
 - `capture_connection_shared_mailbox`: `unique, btree (provider, lower(account_label)) WHERE (user_id IS NULL)`
-- `capture_connection_unique`: `unique, btree (user_id, provider)`
 - `connector_connection_pkey`: `unique, btree (id)`
 - `idx_capture_connection`: `btree (provider, status) WHERE (archived_at IS NULL)`
 - `idx_capture_watch_renew`: `btree (watch_expires_at) WHERE ((watch_expires_at IS NOT NULL) AND (status = 'connected'))`

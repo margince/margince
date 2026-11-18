@@ -44,6 +44,8 @@ type mailboxGrants interface {
 	// — so it cannot be answered by the scope lookup above, and a pre-flight
 	// that tried would report every channel send as ungranted.
 	ChannelSendCapable(ctx context.Context, provider string) (bool, error)
+	ChooseSendingMailbox(ctx context.Context, userID ids.UserID, from ids.UUID, anchor ids.ActivityID, providers []string,
+		canSend func(capture.SendingMailbox) (bool, error)) (capture.SendingMailbox, error)
 }
 
 var _ mailboxGrants = (*capture.Registry)(nil)
@@ -123,34 +125,26 @@ func installSendPreflight(s *Server, pool *pgxpool.Pool) {
 	})(s, pool)
 }
 
-// SendableMailProvider names the mailbox this user's next send goes out
-// through: the first mail provider they hold a transmitting grant for.
-//
-// DERIVED from comms' own census rather than from a list here, so a vendor
-// added there is one this can already choose — and asked through SendCapable,
-// so "can this user send through it" is the same question in both directions
-// rather than two that could disagree.
-//
-// FIRST, in the census's own order, and that order is alphabetical rather than
-// meaningful. It matters only to somebody holding two sendable mailboxes at
-// once, which nothing in the product asks them to do and no surface lets them
-// choose between; until one does, a stable answer beats an arbitrary-looking
-// one that changes between sends. A rep with one mailbox — every rep today —
-// gets theirs.
-//
-// Empty means none of them can transmit, which the caller turns into the
-// refusal naming what to fix.
-func (m mailboxAuthority) SendableMailProvider(ctx context.Context) (string, error) {
-	for _, provider := range comms.MailSendProviders() {
-		capable, err := m.SendCapable(ctx, provider)
-		if err != nil {
-			return "", err
-		}
-		if capable {
-			return provider, nil
-		}
+// SendableMailbox names the mailbox this user's send goes out through, asked
+// of every live mailbox they hold (capture.Registry.ChooseSendingMailbox). Each
+// is asked what SendCapable asks of a provider: an app this deployment
+// configured, and a grant holding comms' own send scope. Empty means none can
+// transmit, which the caller turns into the refusal naming what to fix.
+func (m mailboxAuthority) SendableMailbox(ctx context.Context, from ids.UUID, anchor ids.ActivityID) (string, ids.UUID, error) {
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.UserID.IsZero() {
+		return "", ids.Nil, nil
 	}
-	return "", nil
+	chosen, err := m.grants.ChooseSendingMailbox(ctx, ids.From[ids.UserKind](actor.UserID), from, anchor, comms.MailSendProviders(),
+		func(mailbox capture.SendingMailbox) (bool, error) {
+			scope, _ := comms.SendScopeFor(mailbox.Provider)
+			configured, err := m.mailAppConfigured(ctx, mailbox.Provider)
+			return configured && slices.Contains(mailbox.ProviderScopes, scope), err
+		})
+	if err != nil {
+		return "", ids.Nil, err
+	}
+	return chosen.Provider, chosen.ID, nil
 }
 
 func (m mailboxAuthority) SendCapable(ctx context.Context, provider string) (bool, error) {

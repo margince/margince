@@ -36,6 +36,9 @@ type connectState struct {
 	User      ids.UUID
 	Provider  string
 	Nonce     string
+	// Connection is the mailbox a reconnect repairs, zero for an added one; the
+	// callback sets it to the row the grant lands on.
+	Connection ids.UUID
 	// Version names the state's own vintage, so a callback served by a newer
 	// build can honour a round-trip an older one started. Absent (zero) on
 	// every state minted before versioning existed.

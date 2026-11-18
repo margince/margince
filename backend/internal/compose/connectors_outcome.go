@@ -87,6 +87,9 @@ const (
 	// outcomeRoleCannotCapture lands a consent whose human lost the role to
 	// capture between starting it and coming back; an admin fixes it.
 	outcomeRoleCannotCapture = "role_cannot_capture"
+	// outcomeOtherAccount lands a reconnect whose consent named another account
+	// than the mailbox it repairs; that account is added as another mailbox.
+	outcomeOtherAccount = "other_account"
 )
 
 // writeConnectorUnavailable answers a connect request this deployment cannot

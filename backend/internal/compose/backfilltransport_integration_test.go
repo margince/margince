@@ -255,7 +255,7 @@ func (backfillFixedClock) Now() time.Time { return time.Date(2026, 7, 21, 12, 0,
 // without a broken database.
 type faultyEstimator struct{ err error }
 
-func (f faultyEstimator) EstimateBackfill(context.Context, string, ids.UserID, int64) (costestimate.BackfillCost, error) {
+func (f faultyEstimator) EstimateBackfill(context.Context, capture.Mailbox, ids.UserID, int64) (costestimate.BackfillCost, error) {
 	return costestimate.BackfillCost{}, f.err
 }
 
@@ -280,7 +280,7 @@ func TestAFlooredEstimateSaysSoOnThePreviewAndOnTheRun(t *testing.T) {
 
 	var preview crmcontracts.BackfillPreview
 	code, _ := b.do(b.human, t, func(w http.ResponseWriter, r *http.Request) {
-		b.handlers.PreviewConnectorBackfill(w, r, crmcontracts.CaptureProviderGmail)
+		b.handlers.PreviewConnectorBackfill(w, r, crmcontracts.CaptureProviderGmail, crmcontracts.PreviewConnectorBackfillParams{})
 	}, `{"window":"6m"}`, &preview)
 	if code != http.StatusOK {
 		t.Fatalf("preview = %d, want 200", code)
@@ -292,7 +292,7 @@ func TestAFlooredEstimateSaysSoOnThePreviewAndOnTheRun(t *testing.T) {
 
 	var started crmcontracts.BackfillStatus
 	code, _ = b.do(b.human, t, func(w http.ResponseWriter, r *http.Request) {
-		b.handlers.StartConnectorBackfill(w, r, crmcontracts.CaptureProviderGmail)
+		b.handlers.StartConnectorBackfill(w, r, crmcontracts.CaptureProviderGmail, crmcontracts.StartConnectorBackfillParams{})
 	}, `{"window":"6m"}`, &started)
 	if code != http.StatusAccepted && code != http.StatusOK {
 		t.Fatalf("start = %d, want the run to be accepted", code)
@@ -307,7 +307,7 @@ func TestAFlooredEstimateSaysSoOnThePreviewAndOnTheRun(t *testing.T) {
 	b.gmail.estimateFloor = false
 	var exact crmcontracts.BackfillPreview
 	if code, _ := b.do(b.human, t, func(w http.ResponseWriter, r *http.Request) {
-		b.handlers.PreviewConnectorBackfill(w, r, crmcontracts.CaptureProviderGmail)
+		b.handlers.PreviewConnectorBackfill(w, r, crmcontracts.CaptureProviderGmail, crmcontracts.PreviewConnectorBackfillParams{})
 	}, `{"window":"12m"}`, &exact); code != http.StatusOK {
 		t.Fatalf("preview of an exactly counted window = %d, want 200", code)
 	}
@@ -325,7 +325,7 @@ func TestBackfillPreviewDegradesOnEstimatorFault(t *testing.T) {
 
 	var out crmcontracts.BackfillPreview
 	code, _ := b.do(b.human, t, func(w http.ResponseWriter, r *http.Request) {
-		h.PreviewConnectorBackfill(w, r, crmcontracts.CaptureProviderGmail)
+		h.PreviewConnectorBackfill(w, r, crmcontracts.CaptureProviderGmail, crmcontracts.PreviewConnectorBackfillParams{})
 	}, `{"window":"6m"}`, &out)
 
 	if code != http.StatusOK {
@@ -408,19 +408,27 @@ func driveBackfillToTerminal(t *testing.T, b *backfillWireEnv, w *captureBackfil
 // one backfill op to this env's wired handler set, so a caller invokes the op
 // under test without re-reaching into the handler set for it.
 func (b *backfillWireEnv) previewBackfill(p crmcontracts.CaptureProvider) func(http.ResponseWriter, *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) { b.handlers.PreviewConnectorBackfill(w, r, p) }
+	return func(w http.ResponseWriter, r *http.Request) {
+		b.handlers.PreviewConnectorBackfill(w, r, p, crmcontracts.PreviewConnectorBackfillParams{})
+	}
 }
 
 func (b *backfillWireEnv) startBackfill(p crmcontracts.CaptureProvider) func(http.ResponseWriter, *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) { b.handlers.StartConnectorBackfill(w, r, p) }
+	return func(w http.ResponseWriter, r *http.Request) {
+		b.handlers.StartConnectorBackfill(w, r, p, crmcontracts.StartConnectorBackfillParams{})
+	}
 }
 
 func (b *backfillWireEnv) backfillStatus(p crmcontracts.CaptureProvider) func(http.ResponseWriter, *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) { b.handlers.GetConnectorBackfillStatus(w, r, p) }
+	return func(w http.ResponseWriter, r *http.Request) {
+		b.handlers.GetConnectorBackfillStatus(w, r, p, crmcontracts.GetConnectorBackfillStatusParams{})
+	}
 }
 
 func (b *backfillWireEnv) cancelBackfill(p crmcontracts.CaptureProvider) func(http.ResponseWriter, *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) { b.handlers.CancelConnectorBackfill(w, r, p) }
+	return func(w http.ResponseWriter, r *http.Request) {
+		b.handlers.CancelConnectorBackfill(w, r, p, crmcontracts.CancelConnectorBackfillParams{})
+	}
 }
 
 func TestBackfillWire(t *testing.T) {
@@ -446,16 +454,16 @@ func assertUnwiredAndAnonymousOpsAreRefused(t *testing.T, b *backfillWireEnv) {
 		unwired := backfillHandlers{}
 		for name, invoke := range map[string]func(http.ResponseWriter, *http.Request){
 			"preview": func(w http.ResponseWriter, r *http.Request) {
-				unwired.PreviewConnectorBackfill(w, r, crmcontracts.CaptureProviderGmail)
+				unwired.PreviewConnectorBackfill(w, r, crmcontracts.CaptureProviderGmail, crmcontracts.PreviewConnectorBackfillParams{})
 			},
 			"start": func(w http.ResponseWriter, r *http.Request) {
-				unwired.StartConnectorBackfill(w, r, crmcontracts.CaptureProviderGmail)
+				unwired.StartConnectorBackfill(w, r, crmcontracts.CaptureProviderGmail, crmcontracts.StartConnectorBackfillParams{})
 			},
 			"status": func(w http.ResponseWriter, r *http.Request) {
-				unwired.GetConnectorBackfillStatus(w, r, crmcontracts.CaptureProviderGmail)
+				unwired.GetConnectorBackfillStatus(w, r, crmcontracts.CaptureProviderGmail, crmcontracts.GetConnectorBackfillStatusParams{})
 			},
 			"cancel": func(w http.ResponseWriter, r *http.Request) {
-				unwired.CancelConnectorBackfill(w, r, crmcontracts.CaptureProviderGmail)
+				unwired.CancelConnectorBackfill(w, r, crmcontracts.CaptureProviderGmail, crmcontracts.CancelConnectorBackfillParams{})
 			},
 			"digest": func(w http.ResponseWriter, r *http.Request) {
 				unwired.GetMorningDigest(w, r, crmcontracts.GetMorningDigestParams{})
@@ -869,7 +877,7 @@ func TestTheNightlyReconcileRestoresAPagerAndDoesNotDoubleOne(t *testing.T) {
 // row live with no pager — the state a lost attempt produces.
 func strandedBackfill(t *testing.T, b *backfillWireEnv) ids.UUID {
 	t.Helper()
-	run, err := b.registry.StartBackfill(b.human, "gmail", ids.From[ids.UserKind](b.env.Rep1), 6, connector.BackfillEstimate{Messages: 25},
+	run, err := b.registry.StartBackfill(b.human, capture.ProviderMailbox("gmail"), ids.From[ids.UserKind](b.env.Rep1), 6, connector.BackfillEstimate{Messages: 25},
 		func(context.Context, pgx.Tx, ids.UUID) error { return nil })
 	if err != nil {
 		t.Fatalf("StartBackfill: %v", err)
@@ -904,10 +912,10 @@ func TestAnAgentStartsAndCancelsItsOwnUsersBackfill(t *testing.T) {
 	colleaguePassport := b.env.SeedPassportFor(t, integration.OwnerConn(t), "colleague's agent", b.env.Rep2)
 	colleague := b.env.AgentOnPassport(t, b.env.Rep2, []ids.UUID{b.env.Team1}, perms, ids.From[ids.PassportKind](colleaguePassport))
 	start := func(w http.ResponseWriter, r *http.Request) {
-		b.handlers.StartConnectorBackfill(w, r, crmcontracts.CaptureProviderGmail)
+		b.handlers.StartConnectorBackfill(w, r, crmcontracts.CaptureProviderGmail, crmcontracts.StartConnectorBackfillParams{})
 	}
 	cancel := func(w http.ResponseWriter, r *http.Request) {
-		b.handlers.CancelConnectorBackfill(w, r, crmcontracts.CaptureProviderGmail)
+		b.handlers.CancelConnectorBackfill(w, r, crmcontracts.CaptureProviderGmail, crmcontracts.CancelConnectorBackfillParams{})
 	}
 
 	if code, problem := b.do(colleague, t, start, `{"window":"6m"}`, nil); code == http.StatusAccepted || code == http.StatusOK {
