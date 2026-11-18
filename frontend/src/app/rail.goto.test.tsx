@@ -13,7 +13,7 @@ import {
   setSingleKeyShortcutsOn,
   useShortcutDispatcher,
 } from "../lib/shortcuts";
-import { meFixture } from "../testing/mefixture";
+import { meFixture, READS_RECORDS } from "../testing/mefixture";
 import { newClient, render, renderWith } from "../testing/shellharness";
 import { NAV } from "./nav";
 import { WorkspaceRail } from "./shell";
@@ -90,7 +90,10 @@ describe("a destination the installation turned off", () => {
     const client = newClient();
     client.setQueryData(
       ["me"],
-      meFixture({ settingsAvailability: { disabled_features: ["contacts"] } }),
+      meFixture({
+        allow: READS_RECORDS,
+        settingsAvailability: { disabled_features: ["contacts"] },
+      }),
     );
     window.location.hash = "#/home";
     renderHook(() => useShortcutDispatcher());

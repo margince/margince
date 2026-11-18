@@ -45,6 +45,7 @@ import { reloadReaderLanguageReads } from "./languagereads";
 import { ProfilePictureRow } from "./profilepicture";
 import { NameSettingRows, useAccountNames } from "./settings-names";
 import { SignatureSettingRow } from "./settingssignaturerow";
+import { SignedInDevicesPanel } from "./signeddevices";
 import { InstallSettingRow } from "./thisdevice";
 
 // The Account page as task cards, each one job a reader comes here to do. They
@@ -59,6 +60,7 @@ export function AccountSettings() {
     <>
       <ProfilePanel toast={toast} />
       <SignInPanel />
+      <SignedInDevicesPanel />
       <LanguagePanel />
       <BrowserPanel />
     </>

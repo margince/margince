@@ -8,11 +8,18 @@ import {
 } from "@tanstack/react-query";
 import { morningBriefOptions } from "../features/brief/brief.queries";
 import { addressFrom } from "../features/brief/brief.view";
+import { type AccessSnapshot, grants } from "../lib/accessgrants";
 import { handledForYouOptions } from "../lib/handled";
 import { magicOptions } from "../lib/magic.queries";
 import type { UrlParams } from "../lib/urlstate";
 import { homeDayOptions } from "../lib/worklistday";
 import { notePrefetched } from "./queryclient";
+
+// Unknown while the session probe is out, because Home's reads start ahead of it.
+// A reader who turns out to lack the grant never has them drawn.
+export function mayReadHomeDeals(me: AccessSnapshot): boolean {
+  return me === undefined || grants(me, "deal", "read");
+}
 
 // Home's morning reads, started with the session probe (App.tsx). The screen
 // commits only after React's Suspense reveal, and its queries start then.
@@ -22,6 +29,7 @@ import { notePrefetched } from "./queryclient";
 export function prefetchHome(
   client: QueryClient,
   params: UrlParams,
+  readsDeals: boolean,
 ): () => void {
   if (addressFrom(params).view !== "morning") {
     return () => undefined;
@@ -52,10 +60,14 @@ export function prefetchHome(
   prefetched(day.queryKey, () =>
     client.prefetchInfiniteQuery(day).then(release),
   );
-  prefetched(morningBriefOptions.queryKey, () =>
-    client.prefetchQuery(morningBriefOptions),
-  );
-  prefetched(magicOptions.queryKey, () => client.prefetchQuery(magicOptions));
+  // The server refuses both to a reader without `deal.read`, and a failed
+  // prefetch would leave an error in the cache for the screen to show.
+  if (readsDeals) {
+    prefetched(morningBriefOptions.queryKey, () =>
+      client.prefetchQuery(morningBriefOptions),
+    );
+    prefetched(magicOptions.queryKey, () => client.prefetchQuery(magicOptions));
+  }
   prefetched(handledForYouOptions.queryKey, () =>
     client.prefetchInfiniteQuery(handledForYouOptions),
   );

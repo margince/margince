@@ -5,8 +5,10 @@ import { describe, expect, it } from "vitest";
 import { grants, type RbacAction, type RbacObject } from "../lib/accessgrants";
 import {
   type CoreFeature,
+  FEATURE_READ_OBJECT,
   recordEnabled,
   screenEnabled,
+  unreadableCoreFeatures,
 } from "../lib/corefeatures";
 import { meFixture } from "../testing/mefixture";
 import { firstAvailableRoute, NAV, railTrail, walkUpTarget } from "./nav";
@@ -116,5 +118,51 @@ describe("disabled main-menu features", () => {
       settingsAvailability: { disabled_features: [] },
     });
     expect(grants(enabled, "deal", "create")).toBe(true);
+  });
+});
+
+describe("destinations the reader may not read", () => {
+  const COMPOSITE = ["home", "filters", "analytics", "progress", "goals"];
+
+  it("names the object each rail row needs, or says it gathers several", () => {
+    const composite = NAV.filter(
+      (item) =>
+        !FEATURE_READ_OBJECT.some(
+          ([feature]) => !screenEnabled(item.screen, [feature]),
+        ),
+    ).map((item) => item.screen);
+    expect(composite).toEqual(COMPOSITE);
+  });
+
+  it("leaves no read object for a feature that is not a destination", () => {
+    for (const [feature] of FEATURE_READ_OBJECT)
+      expect(FEATURES).toContain(feature);
+  });
+
+  it("takes a record destination off the rail when its read is not granted", () => {
+    const snapshot = meFixture({
+      roles: ["support"],
+      allow: { contact: ["read"], company: ["read"], lead: ["read"] },
+    });
+    const hidden = unreadableCoreFeatures(snapshot);
+    expect(hidden).toEqual(["deals", "projects"]);
+    const [primary] = railTrail({ screen: "home" }, undefined, hidden);
+    const rows = primary.groups.flatMap((group) =>
+      group.items.map((item) => item.id),
+    );
+    expect(rows).not.toContain("deals");
+    expect(rows).not.toContain("projects");
+    expect(rows).toEqual(expect.arrayContaining(["home", "contacts", "leads"]));
+  });
+
+  it("offers every destination to a reader who reads every record kind", () => {
+    const every = Object.fromEntries(
+      FEATURE_READ_OBJECT.map(([, object]) => [object, ["read"]]),
+    );
+    expect(unreadableCoreFeatures(meFixture({ allow: every }))).toEqual([]);
+  });
+
+  it("claims nothing before the snapshot has answered", () => {
+    expect(unreadableCoreFeatures(undefined)).toEqual([]);
   });
 });

@@ -303,16 +303,12 @@ describe("AuthScreen login", () => {
     expect(
       screen.queryByText(/encrypted|compliant|sovereign|your data is safe/i),
     ).toBeNull();
-    // Server paths, not app routes: both documents have to be readable BEFORE
-    // anyone authenticates, so they cannot sit behind the SPA router.
-    expect(screen.getByRole("link", { name: "Terms" })).toHaveProperty(
-      "pathname",
-      "/legal/terms",
-    );
-    expect(screen.getByRole("link", { name: "Privacy" })).toHaveProperty(
-      "pathname",
-      "/legal/privacy",
-    );
+    // Off-site and in a new tab, so the typed email survives the click.
+    const terms = screen.getByRole("link", { name: "Terms" });
+    expect(terms.getAttribute("href")).toBe("https://margince.com/terms/");
+    expect(terms.getAttribute("target")).toBe("_blank");
+    expect(terms.getAttribute("rel")).toContain("noopener");
+    expect(screen.queryByRole("link", { name: "Privacy" })).toBeNull();
   });
 
   // The theme is readable before anyone signs in, so it has to be changeable

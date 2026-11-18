@@ -13308,7 +13308,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Anmeldung für dieses Unternehmen läuft über einen Identitätsanbieter, der nicht verfügbar ist. Bitte wende dich an einen Admin, der die Einrichtung abschließen kann.",
   "auth.legalProtected": "Der Zugang zu diesem Unternehmen ist beschränkt.",
   "auth.legalTerms": "Nutzungsbedingungen",
-  "auth.legalPrivacy": "Datenschutz",
   "auth.signingIn": "Wird angemeldet…",
   "auth.signIn": "Anmelden",
   "auth.failed": "Anmeldung fehlgeschlagen",
@@ -16729,6 +16728,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Andere Geräte wurden abgemeldet, und verbundene Apps müssen neu verbunden werden.",
   "account.signOutHelp":
     "Beendet deine Sitzung in diesem Browser. Andere Geräte bleiben angemeldet.",
+  "account.devicesCard": "Angemeldete Geräte",
+  "account.devicesBrowserOn": "{browser} auf {system}",
+  "account.devicesUnknown": "Unbekanntes Gerät",
+  "account.devicesWhen": "Angemeldet {signedIn}. Zuletzt aktiv {lastActive}.",
+  "account.devicesThisOne": "Dieses Gerät",
+  "account.devicesSignOut": "Abmelden",
+  "account.devicesSignOutNamed": "{device} abmelden",
+  "account.devicesOthers": "Andere Geräte",
+  "account.devicesOthersHelp": "Beendet jede Sitzung außer dieser.",
+  "account.devicesSignOutOthers": "Alle anderen abmelden",
   "account.languageHelp":
     "Die Sprache von Menüs, Seiten und Nachrichten aus Margince. In deinem Konto gespeichert, sie gilt also auf jedem Gerät, auf dem du dich anmeldest.",
   "account.appearanceHelp":

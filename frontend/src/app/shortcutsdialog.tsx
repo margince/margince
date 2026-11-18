@@ -19,7 +19,7 @@ import type { MessageKey } from "../i18n/en";
 import {
   type CoreFeature,
   screenEnabled,
-  useDisabledCoreFeatures,
+  useHiddenCoreFeatures,
 } from "../lib/corefeatures";
 import { type BindingGroup, bindingCaps, capOf, KEYMAP } from "../lib/keymap";
 import { useSingleKeyShortcuts } from "../lib/shortcuts";
@@ -174,7 +174,7 @@ export function ShortcutsDialog({
   const t = useT();
   const titleId = useId();
   const singleKeys = useSingleKeyShortcuts();
-  const disabled = useDisabledCoreFeatures();
+  const disabled = useHiddenCoreFeatures();
   return (
     <Modal
       open={open}

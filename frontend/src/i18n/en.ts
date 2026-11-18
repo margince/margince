@@ -13286,7 +13286,6 @@ export const en = {
   // CISO reads on the way in.
   "auth.legalProtected": "Access to this company is restricted.",
   "auth.legalTerms": "Terms",
-  "auth.legalPrivacy": "Privacy",
   "auth.signingIn": "Signing in…",
   "auth.signIn": "Sign in",
   "auth.failed": "Sign-in failed",
@@ -16600,6 +16599,16 @@ export const en = {
     "Other devices were signed out and connected apps need connecting again.",
   "account.signOutHelp":
     "Ends your session in this browser. Other devices stay signed in.",
+  "account.devicesCard": "Signed-in devices",
+  "account.devicesBrowserOn": "{browser} on {system}",
+  "account.devicesUnknown": "Unknown device",
+  "account.devicesWhen": "Signed in {signedIn}. Last active {lastActive}.",
+  "account.devicesThisOne": "This device",
+  "account.devicesSignOut": "Sign out",
+  "account.devicesSignOutNamed": "Sign out {device}",
+  "account.devicesOthers": "Other devices",
+  "account.devicesOthersHelp": "Ends every session except this one.",
+  "account.devicesSignOutOthers": "Sign out all others",
   "account.languageHelp":
     "The language of menus, pages and messages from Margince. Saved to your account, so it follows you to every device you sign in on.",
   "account.appearanceHelp":

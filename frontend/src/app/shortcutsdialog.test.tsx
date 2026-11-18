@@ -18,7 +18,7 @@ import type { CoreFeature } from "../lib/corefeatures";
 import { bindingCaps, capOf, KEYMAP, shortcutCaps } from "../lib/keymap";
 import { setSingleKeyShortcutsOn } from "../lib/shortcuts";
 import { PRINTABLE_KEYS } from "../testing/keys";
-import { meFixture } from "../testing/mefixture";
+import { meFixture, READS_RECORDS } from "../testing/mefixture";
 import { ShortcutsDialog } from "./shortcutsdialog";
 
 afterEach(() => {
@@ -30,7 +30,10 @@ function renderDialog(disabled: readonly CoreFeature[] = []) {
   const client = new QueryClient();
   client.setQueryData(
     ["me"],
-    meFixture({ settingsAvailability: { disabled_features: [...disabled] } }),
+    meFixture({
+      allow: READS_RECORDS,
+      settingsAvailability: { disabled_features: [...disabled] },
+    }),
   );
   render(
     <QueryClientProvider client={client}>
