@@ -12,14 +12,12 @@
  * page passes UNDER it all the same — the scroller reaches up behind the strip
  * and pads its content clear of it (app/shell.css) — so the strip is
  * translucent with a blur behind it and shows what is sliding past. */
-/* The search is centred on the content column while the trail fits its half;
-   a longer trail grows into the room the end controls leave, up to its cap. */
+/* The search is centred on the content column while the end controls fit
+   their half. They never give way: a long trail ellipses in the room they leave. */
 .topbar {
   --topbarSearchW: min(420px, 34vw);
   display: grid;
-  grid-template-columns: minmax(min-content, 1fr) auto minmax(0, 1fr);
-  /* The query container `.topbar-lead` measures its cap against. */
-  container-type: inline-size;
+  grid-template-columns: minmax(0, 1fr) auto minmax(max-content, 1fr);
   align-items: center;
   gap: var(--space-3);
   /* The gap between the bar's glyphs, which a thumb's targets split (below). */
@@ -49,15 +47,6 @@
   align-items: center;
   gap: var(--space-2);
   min-width: 0;
-  /* The row less the search, its two gaps, and the bell and account control:
-     a trail longer than this ellipses rather than pushing them off the bar. */
-  max-width: calc(
-    100cqw -
-    var(--topbarSearchW) -
-    var(--space-2) -
-    2 *
-    (var(--space-3) + var(--controlHeight))
-  );
 }
 .topbar-trail {
   display: flex;
@@ -197,7 +186,6 @@
   }
   .topbar-lead {
     flex: 1;
-    max-width: none;
   }
   .topbar-searchslot {
     width: auto;
@@ -419,11 +407,8 @@
   white-space: nowrap;
   min-width: 0;
 }
-/* The words give way, never the count. The strip squeezes this chip before the
-   bell and the account chip, and German asks about a third more room for the
-   same sentence, so something has to yield at 1440px that does not at 1280.
-   The count is the whole point of the chip; the words repeat what the panel
-   says when it opens. */
+/* Where the strip has to squeeze this chip, the words give way and never the
+   count: the words repeat what the panel says when it opens. */
 .setup-reminder-word {
   min-width: 0;
   overflow: hidden;
