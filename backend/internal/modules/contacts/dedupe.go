@@ -264,9 +264,13 @@ var contactCandidateQuery = `
 		  SELECT p.id FROM contact p
 		   WHERE p.archived_at IS NULL AND ` + exactDigraphNameKeySQL("p.full_name") + ` = ` + exactDigraphNameKeySQL("@name") + `
 		  UNION
-		  SELECT r.contact_id FROM relationship r
-		   WHERE @employer::uuid IS NOT NULL AND r.company_id = @employer AND r.kind = 'employment'
-		     AND ` + employment.CurrentPrimarySQL("r") + ` AND r.archived_at IS NULL
+		  SELECT contact_id FROM (
+		    SELECT r.contact_id FROM relationship r JOIN contact ec ON ec.id = r.contact_id
+		     WHERE @employer::uuid IS NOT NULL AND r.company_id = @employer AND r.kind = 'employment'
+		       AND ` + employment.CurrentPrimarySQL("r") + ` AND r.archived_at IS NULL
+		     ORDER BY similarity(f_fold_apostrophes(lower(ec.full_name)), f_fold_apostrophes(lower(@name))) DESC, r.contact_id
+		     LIMIT @limit
+		  ) same_employer
 		  ) broader WHERE (SELECT count(*) FROM perfect) < @limit)
 		SELECT p.id, p.full_name, r.company_id, od.domain,
 		       ` + storekit.RequestAddressesSQL("p.id") + `
