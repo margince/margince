@@ -3068,7 +3068,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "board.ratesOn": "Kurse vom {date}",
   "board.unpriced_one": "{count} ohne Preis",
   "board.unpriced_other": "{count} ohne Preis",
-  "board.totalsTip": "{total} offen, {weighted} gewichtet mit {probability}.",
+  "board.totalsTip":
+    "{total} offen, {weighted} gewichtet mit der Abschlusschance jedes Deals.",
   "board.unpricedTip_one":
     "{count} Deal hat keinen Preis und zählt in keiner der beiden Summen.",
   "board.unpricedTip_other":

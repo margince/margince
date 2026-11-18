@@ -2977,7 +2977,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "board.unpriced_one": "{count} chưa định giá",
   "board.unpriced_other": "{count} chưa định giá",
   "board.totalsTip":
-    "{total} đang mở, {weighted} có trọng số theo {probability}.",
+    "{total} đang mở, {weighted} có trọng số theo xác suất của từng deal.",
   "board.unpricedTip_one":
     "{count} deal chưa có giá và không được tính vào hai tổng.",
   "board.unpricedTip_other":

@@ -2978,7 +2978,8 @@ export const en = {
   "board.ratesOn": "Rates {date}",
   "board.unpriced_one": "{count} not priced",
   "board.unpriced_other": "{count} not priced",
-  "board.totalsTip": "{total} open, {weighted} weighted at {probability}.",
+  "board.totalsTip":
+    "{total} open, {weighted} weighted by each deal’s probability.",
   "board.unpricedTip_one":
     "{count} deal has no price and is left out of both totals.",
   "board.unpricedTip_other":
