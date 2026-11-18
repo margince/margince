@@ -21,7 +21,7 @@ var InlineSendReview = config.DefineStored(config.Spec[bool]{
 	Type:    config.Bool,
 	Default: config.Some(false),
 	Doc:     "Decide a composed email at Send and show a refusal inline, instead of checking while it is written.",
-}, config.Store{RBACObject: "installation_settings", AuditVerb: settingsAuditVerb})
+}, config.Store{RBACObject: settingsObject, AuditVerb: settingsAuditVerb})
 
 // InlineSendReviewFor reads the switch for the caller on the context, through
 // the setting's own read gate. A seat that may not read installation settings
