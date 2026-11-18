@@ -333,12 +333,21 @@ func TestACaseMergeWaitsOnAnEmploymentWriterInsteadOfDeadlocking(t *testing.T) {
 	if err := storekit.LockWriteIdentity(context.Background(), writer, "employment", survivor.String()); err != nil {
 		t.Fatal(err)
 	}
+	var holder int32
+	if err := writer.QueryRow(context.Background(), `SELECT pg_backend_pid()`).Scan(&holder); err != nil {
+		t.Fatal(err)
+	}
 	merged := make(chan error, 1)
 	go func() {
 		_, err := c.store.MergeContactCase(c.e.Admin(), survivor, caseDecision(read, members, survivor, c.e.Rep1))
 		merged <- err
 	}()
-	waitForAdvisoryWaiter(t, owner)
+	// Only a session queued behind this writer counts, so another test's
+	// lock waiter cannot end the wait early.
+	waitForAWaiterOn(t, owner, holder)
+	if t.Failed() {
+		t.FailNow()
+	}
 	// NOWAIT refuses at once if the merge holds the row. A plain lock would
 	// deadlock, and Postgres would pick which side to abort.
 	if _, err := writer.Exec(context.Background(), `SELECT id FROM contact WHERE id = $1 FOR UPDATE NOWAIT`, survivor); err != nil {
@@ -353,24 +362,4 @@ func TestACaseMergeWaitsOnAnEmploymentWriterInsteadOfDeadlocking(t *testing.T) {
 	if live := c.e.WsScalar(t, `SELECT count(*) FROM contact WHERE id = ANY($1) AND archived_at IS NULL`, members); live != "1" {
 		t.Errorf("%s members are live after the merge, want the survivor only", live)
 	}
-}
-
-// waitForAdvisoryWaiter returns once a session of this test's database waits
-// on an advisory lock: the merge parked behind the employment writer.
-func waitForAdvisoryWaiter(t *testing.T, owner *pgx.Conn) {
-	t.Helper()
-	deadline, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	for deadline.Err() == nil {
-		var waiting int
-		if err := owner.QueryRow(deadline, `SELECT count(*) FROM pg_locks
- WHERE NOT granted AND locktype = 'advisory'
-   AND database = (SELECT oid FROM pg_database WHERE datname = current_database())`).Scan(&waiting); err != nil {
-			t.Fatal(err)
-		}
-		if waiting > 0 {
-			return
-		}
-	}
-	t.Fatal("the case merge never waited on the employment lock")
 }
