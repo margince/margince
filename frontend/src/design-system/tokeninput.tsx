@@ -108,6 +108,9 @@ export type TokenInputProps = Readonly<{
   parse?: TokenParse;
   placeholder?: string;
   disabled?: boolean;
+  /** Values drawn in the warning tone, with `label` read after each one, for a
+   *  set where some values need the reader's attention. */
+  marked?: Readonly<{ values: ReadonlySet<string>; label: string }>;
   id?: string;
   "aria-label"?: string;
   "aria-labelledby"?: string;
@@ -124,6 +127,7 @@ export function TokenInput({
   parse,
   placeholder,
   disabled,
+  marked,
   ...aria
 }: TokenInputProps) {
   const [typed, setTyped] = useState("");
@@ -242,6 +246,7 @@ export function TokenInput({
           value={value}
           offer={offers.get(value)}
           disabled={disabled}
+          mark={marked?.values.has(value) ? marked.label : undefined}
           onRemove={() => onChange(values.filter((v) => v !== value))}
         />
       ))}
@@ -294,11 +299,13 @@ function TokenChip({
   value,
   offer,
   disabled,
+  mark,
   onRemove,
 }: Readonly<{
   value: string;
   offer: TokenSuggestion | undefined;
   disabled: boolean | undefined;
+  mark: string | undefined;
   onRemove: () => void;
 }>) {
   const label = offer?.label;
@@ -315,7 +322,13 @@ function TokenChip({
     <>
       <span
         ref={ref}
-        className={card ? "token token-has-face" : "token"}
+        className={[
+          "token",
+          card && "token-has-face",
+          mark !== undefined && "token-marked",
+        ]
+          .filter(Boolean)
+          .join(" ")}
         {...anchor}
       >
         {card && (
@@ -328,6 +341,7 @@ function TokenChip({
         <span className={named ? "token-label" : "token-value"}>
           {named ? label : value}
         </span>
+        {mark !== undefined && <span className="sr-only">, {mark}</span>}
         <button
           type="button"
           className="token-remove"
