@@ -306,9 +306,8 @@ it, and one at 90% or more (the **Likely threshold** setting) with a confirmed
 close date counts as **Likely**.
 
 An open deal's card on the board shows its probability beside its value, with
-a small round mark that fills to match it. A closed deal's card shows none.
-It shows the day the deal closed in place of its expected close, with the year
-when that is not this year.
+a small round mark that fills to match it. A closed deal's card shows none. It
+shows the day it closed, not the expected one, with the year if not this year.
 
 ## Close dates Margince sets
 
@@ -384,11 +383,10 @@ Admin may archive a deal, and so may its owner if they created it or were given 
 Archived deals leave every list and report. **Show archived** lets you see one,
 read-only, with **Archived** beside its status.
 
-To bring one back (Team lead,
-Management, Ops or Admin), open it with **Show archived** and choose **More
-actions** → **Restore deal**. Pressing **Undo** on the archive entry in its
-history does the same. A closed or archived deal has no box to tick for acting
-on many at once.
+To bring one back (Team lead, Management, Ops or Admin), open it with **Show
+archived** and choose **More actions** → **Restore deal**. Pressing **Undo** on
+the archive entry in its history does the same. A closed or archived deal has no
+box to tick for acting on many at once.
 
 ### Can I merge two duplicate deals?
 No. Margince has no merge for deals: merging covers contacts, companies, and leads from a duplicate pair in the Worklist. When one deal was entered twice, keep the best one and archive the other with **More actions** → **Archive deal**. Archiving carries nothing over, so move what you need first. Link its emails to the deal you keep with **Relink**, and note anything else on that deal. Also called: duplicate deal, combine two opportunities.
