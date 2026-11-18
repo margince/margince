@@ -140,13 +140,13 @@ Stories: update every changed story. The catalog test needs no new rows unless a
 ### Step 4: The shell (`shell.css`, `shell.tsx`, `topbar.css`, `agentrail.css`, `agent-edge.css`, `navlevel.tsx`)
 
 1. **The ground.** `.app` draws `--bgPage`, one flat colour.
-2. **Rail.** `--chrome` above the phone layout, with no border and no dark ground.
+2. **Rail.** `--chrome` above the phone layout, with no edge and no dark ground.
    Closed, it is **56px**; open, 256px (`--railW` in `shell.css`). The tooltip rule in `shell.css`
    depends on the closed width.
 
    Rows are 34px, group labels are `.t-eyebrow` with only the first letter capital, and the orb sits
    last. `rail.test.tsx` and `ac.spec.ts` pin the 10 rows and their order, and those do not change.
-3. **Top bar.** It is 50px and paints `--chrome` with no hairline above the phone layout. The page is a
+3. **Top bar.** It is 50px and uses `--chrome` with no hairline above the phone layout. The page is a
    card beside it. At phone width it is `glass` with a hairline under it.
    The breadcrumb sits left, the account menu right, and the `⌘K` field between them.
    **Nothing from a record sits in it.**

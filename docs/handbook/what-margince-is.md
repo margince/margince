@@ -104,7 +104,7 @@ The sidebar has no counts or badges. The Worklist on Home shows those numbers.
 To get around Margince, use the sidebar on the left. Or press ⌘K (Ctrl+K on Windows and Linux) to open the command palette, and type where you want to go.
 1. Choose a screen in the sidebar, from **Home** at the top to **Sales goals** at the foot.
 2. Open **Settings** from the account menu at the top right.
-3. To hide the sidebar, choose **Collapse sidebar** at the foot of the sidebar, or press ⌘B (Ctrl+B). On a window 701 to 1024 pixels wide, the sidebar starts narrow until you choose **Expand sidebar**.
+3. To hide the sidebar, choose **Collapse sidebar** at the foot of the sidebar, or press ⌘B (Ctrl+B). On a window from `701px` to `1024px`, the sidebar starts narrow until you choose **Expand sidebar**.
 
 On a phone the sidebar turns into a bar at the foot of the screen. It holds **Home**, **Contacts**, **Deals**, the agent between them, and **More** for everything else.
 Also called: navigation, menu, nav bar.

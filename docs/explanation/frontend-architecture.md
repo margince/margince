@@ -239,14 +239,16 @@ labels.
 | Insights | `analytics`, `progress`, `goals` |
 
 The groups belong to the **open sidebar** alone. When the sidebar is small,
-each group title is hidden and takes no height (`.navheading` in `shell.css`). So the
+each group title is hidden and takes no space (`.navheading` in `shell.css`). So the
 `56px` rail is the plain list that [DESIGN.md](../../DESIGN.md#6-the-shell)
 shows; the open state adds to it. Whether the sidebar is small is a stored
 setting (`margince.sidebarCollapsed` in `localStorage`, read once when it first
-renders). With no stored choice, a window from 701 to 1024px wide starts with the
-sidebar small, and a wider one starts open; a stored choice wins both ways. The control
-that sets it sits at the foot of the sidebar, under the agent block, and `⌘B` does the
-same. The column moves between `256px` and `56px` over `--dur-move`.
+renders).
+
+With no stored choice, a window from `701px` to `1024px` starts with the
+sidebar small, and a wider one starts open. A stored choice wins both ways.
+The control that sets it sits at the foot of the sidebar, under the agent block.
+`⌘B` does the same. The column moves between `256px` and `56px` over `--dur-move`.
 
 At `≤700px` the same `<nav>` element becomes a bar of 5 places of the same
 size, fixed below the page. `MOBILE_PRIMARY` (`home`, `contacts`, `deals`) is on
@@ -322,7 +324,7 @@ too.
 
 ## Colour
 
-The app shell has a sidebar and a top bar on one `--chrome` surface, with the page as a card beside them, as
+The app shell has a sidebar and a top bar on one `--chrome` surface. The page is a card beside them, as
 [DESIGN.md](../../DESIGN.md#6-the-shell) and the top of `src/app/shell.css`
 state. It does not use the dark green field, so the marks on the rail use
 ordinary theme tokens, not `white-alpha` on a dark field.

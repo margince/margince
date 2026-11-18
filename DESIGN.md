@@ -388,36 +388,38 @@ and `min-width: 0`. A page never scrolls to the side; the thing that is too wide
 └────────┴───────────────────────────────────────────────────────────────┘
 ```
 
-- **The sidebar is light, never green**. Above the phone layout (wider than 700px) it paints the
-  `--chrome` token, the same solid surface as the top bar, with no border, no shadow and no corner.
+- **The sidebar is light, never green**. On a wide window (over `700px`) it uses `--chrome`, the
+  solid surface of the top bar. It has no edge, no shadow and no corner.
   The page is a rounded card against it (see Top bar). It is the same colour open and
-  folded, and in dark it is the same surface with the lights down. No screen or mock paints its ground
-  dark green or in the accent. The dark green `--bgInkField` is only for what passes over the page,
-  such as a tooltip. The only accent in the column is the current row and the workspace mark of a
-  company that has no logo of its own.
+  folded, and in dark it is the same surface with the lights down.
+- **No dark ground**: no screen or mock paints the sidebar dark green or in the accent. The dark green
+  `--bgInkField` is only for what passes over the page, such as a tooltip. The only accent in the
+  column is the current row and the workspace mark of a company that has no logo of its own.
 - **Its parts**: 256px open, 56px folded, and open is the default (the reader's last choice is kept).
   At the top is the workspace head: the company's mark in a 32px square and its name. The head has the
   top bar's height, so the mark and the bar's controls share one centre line. While open,
-  it is one card with an edge. Then come the rows, 32px each with an 18px icon. Their order is the
+  it is one card with an edge.
+- **Its rows**: they come the rows, 32px each with an 18px icon. Their order is the
   one `frontend/src/app/nav.ts` holds, under the group labels Records, Work and Insights.
 - **Its states**: the group labels are quiet sentence case. The current row is an accent tint with
-  accent text, in medium weight. The agent's orb is pinned to the foot, in a block with no chevron. Under it sits the control that
-  folds the sidebar: a row with the label **Collapse sidebar** while open, an icon with a tooltip
-  while folded. `⌘B` does the same, and a phone has neither.
+  accent text, in medium weight. The agent's orb is pinned to the foot, in a block with no chevron.
+- **The fold control**: it sits under the agent block. It is a row with the label **Collapse sidebar**
+  while open, and an icon with a tooltip while folded. `⌘B` does the same, and a phone has neither.
 - **Folding**: the column, the icons and the labels move as one. A label keeps one line and is cut at
   the edge, with its full text in the row's tooltip. A group label is hidden and takes no height
-  while folded. On a window 701 to 1024px wide with no stored choice, the sidebar starts folded; a
-  stored choice wins both ways.
+  while folded. On a window from `701px` to `1024px` with no stored choice, the sidebar starts folded.
+  A stored choice wins both ways.
 - The sidebar has no badges. The approval and task lists are lanes of the Worklist, which reports
   its counts on the page. Settings is not a row; it opens from the account menu.
 - While a settings route is open, the sidebar shows the settings second level: Overview, then the
   subject groups. It has its own width and its own head. It is the same column showing a
   different list. The level names itself with the heading over its first group, and the way out of
   it reads "Back to app". The agent's orb stays at the foot.
-- **Top bar**: 50px. Above the phone layout it paints `--chrome` with no hairline and no blur.
-  The page below it is a card (`--bgPage`, a `--groundEdge` hairline, `--r-lg` corners) flush against the
-  sidebar and the bar, inset `--space-2` on the right and bottom. At phone width the page scrolls
-  under the bar, which is translucent and blurred, with a hairline. The breadcrumb is on the left, the command
+- **Top bar**: 50px. On a wide window it uses `--chrome`, with no hairline and no blur.
+  The page below it is a card with `--bgPage`, a `--groundEdge` hairline and `--r-lg` corners. The card
+  touches the sidebar and the bar, and leaves `--space-2` free on the right and at the foot.
+- **Top bar on a phone**: the page scrolls under the bar. The bar is see-through and blurred, with a hairline.
+- **Top bar parts**: the breadcrumb is on the left, the command
   field in the middle (`⌘K`), and the reader's monogram on the right. It is the app's one bar, and
   every screen has it. Nothing of a record sits in it: the record's head and details are in
   the page.
