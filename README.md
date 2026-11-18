@@ -24,7 +24,8 @@ The [handbook](docs/handbook/README.md) explains the app for the teams who use i
 
 Get a release and start it with Docker Compose, as
 [docs/how-to/run-with-docker-compose.md](docs/how-to/run-with-docker-compose.md) says. Without a
-license token it runs a 14-day trial. To run it on servers of your own, start with
+license token it runs a 14-day trial. From a copy of this repository, `make prod` builds the
+images here and starts the same stack on your machine. To run it on servers of your own, start with
 [docs/how-to/deploy-margince.md](docs/how-to/deploy-margince.md).
 
 ## Run it from the source

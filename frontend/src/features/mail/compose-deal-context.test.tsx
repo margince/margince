@@ -7,7 +7,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { writeMessage } from "../../design-system/richtext-testing";
 import { pickOption } from "../../design-system/select-testing";
 import { ComposeModal } from "./compose";
-import { jsonResponse, pickWhy, render, stubRoutes } from "./compose.testkit";
+import {
+  jsonResponse,
+  pickWhy,
+  pressSend,
+  render,
+  stubRoutes,
+} from "./compose.testkit";
 import type { EditSeed } from "./schedulededit";
 
 // Which deal a message to a contact is about.
@@ -122,7 +128,7 @@ describe("the deal a message to a contact is about", () => {
       expect(linksOf(sent, "POST /emails:preview")).toEqual(filed),
     );
 
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
     await userEvent.click(await screen.findByRole("button", { name: "Send" }));
     await waitFor(() => expect(linksOf(sent, "POST /emails")).toEqual(filed));
   });
@@ -133,7 +139,7 @@ describe("the deal a message to a contact is about", () => {
     await pickWhy("Active deal");
     await screen.findByRole("combobox", { name: DEAL_PICK });
 
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
 
     expect(
       await screen.findByText("Choose the deal this follow-up is about."),
@@ -162,7 +168,7 @@ describe("the deal a message to a contact is about", () => {
     writeMessage("Body", "Picking this up again.");
     await pickWhy("Follow-up they requested");
 
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
     await userEvent.click(await screen.findByRole("button", { name: "Send" }));
 
     await waitFor(() =>
@@ -187,7 +193,7 @@ describe("the deal a message to a contact is about", () => {
     await pickWhy("Active deal");
     await screen.findByRole("combobox", { name: DEAL_PICK });
 
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
 
     expect(
       await screen.findByText("Choose the deal this follow-up is about."),
@@ -218,7 +224,7 @@ describe("the deal a message to a contact is about", () => {
         { entity_type: "contact", entity_id: "c-1" },
       ]),
     );
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
     expect(
       await screen.findByText("Choose the deal this follow-up is about."),
     ).toBeTruthy();
@@ -397,7 +403,7 @@ it("keeps the saved deal while its visible choices are still loading", async () 
       { entity_type: "contact", entity_id: "c-1" },
     ]),
   );
-  await user.click(screen.getByRole("button", { name: "Send" }));
+  await pressSend(user);
   expect(sent.some((item) => item.key === "POST /emails")).toBe(false);
   writeMessage("Body", "Edited while loading.");
   await user.click(screen.getByRole("button", { name: "Close" }));

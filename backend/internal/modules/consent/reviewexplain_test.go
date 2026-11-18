@@ -10,12 +10,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
-// Every refusal is explained by its own fact, and what the sentence offers is
-// what the remedy table declares. A stop offers no exception and says nobody
-// sends past it; a refusal with an exception says so.
-//
-// Mutation: hard-code "needs a recorded exception" for the objection again and
-// its case fails.
 func TestEveryRefusalExplanationFollowsTheRemedyTable(t *testing.T) {
 	t.Parallel()
 	for _, reason := range commsauthz.RefusalCodes() {
@@ -39,16 +33,16 @@ func TestEveryRefusalExplanationFollowsTheRemedyTable(t *testing.T) {
 	}
 }
 
-// A stop says what can still go to the contact.
-func TestAStopSaysWhatCanStillGo(t *testing.T) {
+func TestAStopExplainsThatTheRecordedPreferenceRemains(t *testing.T) {
 	t.Parallel()
-	for reason, still := range map[string]string{
-		commsauthz.ReasonObjection:      "a reply or a message they asked for still can",
-		commsauthz.ReasonSubjectRequest: "only security, privacy and opt-out notices still go",
-		commsauthz.ReasonRestricted:     "only security, privacy and opt-out notices still go",
+	for reason, unchanged := range map[string]string{
+		commsauthz.ReasonObjection:        "does not lift their objection",
+		commsauthz.ReasonSubjectRequest:   "does not change their request",
+		commsauthz.ReasonRestricted:       "does not lift it",
+		commsauthz.ReasonConsentWithdrawn: "does not restore consent",
 	} {
-		if why := whyAStatementCannotAnswer(reason); !strings.Contains(why, still) {
-			t.Errorf("%q does not say what can still go: %q", reason, why)
+		if why := whyAStatementCannotAnswer(reason); !strings.Contains(why, unchanged) {
+			t.Errorf("%q: %q", reason, why)
 		}
 	}
 }

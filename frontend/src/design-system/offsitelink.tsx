@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { ExternalLink } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 import { webUrl } from "../format/weburl";
+import { useT } from "../i18n";
 
 // A destination OFF our origin, drawn as a link when the address is one we may
 // follow and as plain text when it is not.
@@ -66,5 +68,22 @@ export function OffsiteLink({
     >
       {children}
     </a>
+  );
+}
+
+/**
+ * What a link that opens a new tab says of it: the words for a screen reader,
+ * and the glyph for everyone else. It goes last inside the link.
+ */
+export function NewTabMark({
+  className,
+  size,
+}: Readonly<{ className?: string; size?: number }>) {
+  const t = useT();
+  return (
+    <>
+      <span className="sr-only"> {t("common.opensNewTab")}</span>
+      <ExternalLink className={className} size={size} aria-hidden />
+    </>
   );
 }

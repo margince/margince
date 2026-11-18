@@ -46,9 +46,14 @@ func TestMarketingNeedsConsentOrASupportedStatutoryRoute(t *testing.T) {
 					if d.Verdict != commsauthz.VerdictDeny || d.ReasonCode != commsauthz.ReasonMarketingPermissionRequired {
 						t.Fatalf("marketing without a supported basis: %s %s", d.Verdict, d.ReasonCode)
 					}
+					// No standing override replaces the basis. A rep may still send
+					// one message past it with a recorded reason.
 					set := commsauthz.DecisionSet{Decisions: []commsauthz.Decision{d}}
-					if d.CanBeOverruledByCategory() || set.ExceptionMayAnswer(false) || set.ExceptionMayAnswer(true) {
-						t.Fatal("a staff instruction replaced the required marketing basis")
+					if d.CanBeOverruledByCategory() {
+						t.Fatal("a standing override replaced the required marketing basis")
+					}
+					if !set.ExceptionMayAnswer(false) {
+						t.Fatal("a rep may not send this one message with a recorded reason")
 					}
 				}
 			})
@@ -75,8 +80,8 @@ func TestCategoryOnlyLeadMarketingKeepsItsBoundaryAtStagingAndDispatch(t *testin
 		if decision.Requested != commsauthz.CategoryMarketing || decision.ReasonCode != commsauthz.ReasonMarketingPermissionRequired {
 			t.Fatalf("staging lost the lead's marketing claim: %+v", decision)
 		}
-		if set.ExceptionMayAnswer(true) {
-			t.Fatal("staging offered a staff exception")
+		if !set.ExceptionMayAnswer(false) {
+			t.Fatal("staging offered no one-message exception")
 		}
 		return nil
 	})
@@ -90,7 +95,7 @@ func TestCategoryOnlyLeadMarketingKeepsItsBoundaryAtStagingAndDispatch(t *testin
 		t.Fatal(err)
 	}
 	if ticket.Allowed || ticket.ConsentRefused {
-		t.Fatal("dispatch offered an exception for the lead's unsupported marketing")
+		t.Fatal("dispatch let the lead's unsupported marketing go with no decision behind it")
 	}
 	var requested, reason string
 	if err := e.owner.QueryRow(context.Background(), `SELECT requested_category, reason_code FROM communication_decision

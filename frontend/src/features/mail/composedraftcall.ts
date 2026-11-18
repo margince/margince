@@ -7,6 +7,7 @@ import type { components } from "../../api/schema";
 import type { ProjectScope } from "../../design-system/projectpicker";
 import type { useT } from "../../i18n";
 import type { Locale } from "../../i18n/locale";
+import type { CommunicationContext } from "../../lib/compose-context";
 import { throwProblem } from "../../lib/problem";
 import type { RewriteVerb } from "../../lib/rewrites";
 import { stripEveryKeyTag, withSubjectTag } from "../projects/projectrecord";
@@ -64,6 +65,8 @@ export type DraftResult =
             | "voice_profile_version"
             | "voice_degraded"
             | "language"
+            | "communication_context"
+            | "evidence"
           >
         >;
       // Account path only: a reply explains itself by the message it answers.
@@ -99,6 +102,37 @@ export type DraftAsk = Readonly<{
   rewrite?: boolean;
 }>;
 
+/**
+ * The reason a drafting instruction names. It fills an empty reason and
+ * replaces or clears one an earlier instruction set; a reason the sender
+ * picked stays.
+ */
+function takeDraftedReason(
+  drafted: Pick<
+    Extract<DraftResult, { available: true }>["draft"],
+    "communication_context" | "evidence"
+  >,
+  form: Readonly<{
+    fromInstruction: boolean;
+    context: CommunicationContext | "";
+    reasonFromDraft: boolean;
+    setContext: (next: CommunicationContext | "") => void;
+    setMeetingEvidence: (next: string | undefined) => void;
+    setReasonFromDraft: (next: boolean) => void;
+  }>,
+): void {
+  if (!form.fromInstruction || (form.context !== "" && !form.reasonFromDraft)) {
+    return;
+  }
+  const reason = drafted.communication_context;
+  if (!reason && !form.reasonFromDraft) return;
+  form.setContext(reason ?? "");
+  form.setMeetingEvidence(
+    reason ? (drafted.evidence?.activity_id ?? undefined) : undefined,
+  );
+  form.setReasonFromDraft(Boolean(reason));
+}
+
 export function fillFromDraft(
   result: Extract<DraftResult, { available: true }>,
   form: Readonly<{
@@ -118,6 +152,13 @@ export function fillFromDraft(
     setProvenance: (next: DraftProvenance) => void;
     setReasoning: (next: DraftReason[]) => void;
     setScope: (next: ProjectScope | undefined) => void;
+    // What an instruction says the message is (rewrite verbs say nothing).
+    fromInstruction: boolean;
+    context: CommunicationContext | "";
+    reasonFromDraft: boolean;
+    setContext: (next: CommunicationContext | "") => void;
+    setMeetingEvidence: (next: string | undefined) => void;
+    setReasonFromDraft: (next: boolean) => void;
   }>,
 ): boolean {
   const drafted = result.draft;
@@ -133,6 +174,8 @@ export function fillFromDraft(
   }
   const replacesBody = !form.body || form.rewrite === true;
   if (replacesBody) {
+    // The reason follows the words on screen, so a held-back draft names none.
+    takeDraftedReason(drafted, form);
     form.setBody(drafted.body);
     form.setServedBody(drafted.body);
     form.setDraftRef(drafted.draft_ref ?? null);

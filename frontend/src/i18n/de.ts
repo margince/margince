@@ -756,6 +756,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.preview.contextOptout": "Bestätigung der Abmeldung",
   "approval.preview.unsubscribeFooter":
     "Beim Versand wird ein empfängerbezogener Abmeldelink ergänzt, wenn ein entsprechender Präferenzdatensatz besteht. Der private Link wird erst bei der Ausführung erstellt, nicht bei der Prüfung.",
+  "approval.preview.footerWarning": "Hinweis zur E-Mail-Fußzeile",
   "approval.preview.disclosureText": "Beim Versand ergänzte Pflichtangabe",
   "approval.preview.demoteArchive":
     "Stellt den Lead als Engagiert wieder her und entfernt seine Qualifizierungsverknüpfungen. Archiviert den Kontakt, seine E-Mail-Adressen, Telefonnummern, Kanalidentitäten und Beziehungen; entfernt seine Tags und Listenzugehörigkeiten. Aktivitäten bleiben unverändert zugeordnet.",
@@ -2870,9 +2871,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "shell.license.refused": "Lizenz abgelehnt",
   "shell.signOutAria": "Abmelden",
   "shell.signOutErr": "Abmeldung fehlgeschlagen",
-  "shell.version": "Version {version}",
-  "shell.instanceVersion": "Installation {version}",
-  "shell.coreVersion": "Core {version}",
   "shell.collapse": "Seitenleiste einklappen",
   "shell.expand": "Seitenleiste ausklappen",
   "shell.accountAria": "Nutzerkonto",
@@ -2884,9 +2882,25 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "shell.help.resources": "Hilfe und Ressourcen",
   "shell.help.shortcuts": "Tastenkürzel",
   "shell.help.releaseNotes": "Versionshinweise",
-  "shell.help.licenses": "Lizenzen der Web-App",
-  "shell.help.devBuild": "Entwicklungs-Build",
-  "shell.help.devBuildRevision": "Entwicklungs-Build · {revision}",
+  "about.title": "Über Margince",
+  "about.version": "Version",
+  "about.devBuild": "Entwicklungs-Build",
+  "about.instanceBuild": "Installations-Build",
+  "about.coreRelease": "Core {version}",
+  "about.copyHint": "(In die Zwischenablage kopieren)",
+  "about.copiedVersion": "Version in die Zwischenablage kopiert",
+  "about.viewCommit": "Commit auf GitHub ansehen",
+  "about.copyrightTerm": "Copyright",
+  "about.links": "Links",
+  "about.copyRemedy": "Markiere die Version unten und kopiere sie von Hand.",
+  "about.license": "Lizenz",
+  "about.licenseName": "Business Source License 1.1",
+  "about.licenseConversion":
+    "Jede Version steht spätestens zwei Jahre nach ihrer Veröffentlichung unter der Apache License 2.0.",
+  "about.copyright": "© 2026 Gradion",
+  "about.website": "Website",
+  "about.source": "Quellcode",
+  "about.thirdParty": "Lizenzen von Drittanbietern",
   "shell.shortcuts.anywhere": "Überall",
   "shell.shortcuts.search": "Suche öffnen",
   "shell.shortcuts.sidebar": "Seitenleiste ein- oder ausblenden",
@@ -8043,6 +8057,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.why.contract": "Vertrag der Gegenseite",
   "compose.why.account": "Kundenbeziehung der Gegenseite",
   "compose.why.marketing": "Marketing",
+  "sendPermission.stopWithReason": "Senden braucht deine Begründung",
   "sendPermission.refused": "Nachricht kann nicht gesendet werden",
   "sendPermission.sayWhy": "Kontaktgrund erfassen",
   "sendPermission.unproven":
@@ -8054,6 +8069,24 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "sendPermission.missingContext": "Für diese Nachricht fehlt eine Angabe",
   "sendPermission.missingPermission": "Für diese Nachricht fehlt die Erlaubnis",
   "sendPermission.reason.chooseDeal": "Wähle den Deal für dieses Follow-up.",
+  "sendPermission.reason.footerIncomplete":
+    "Lies die Hinweise zur Fußzeile. Du kannst diese E-Mail mit einer dokumentierten Begründung senden.",
+  "sendPermission.footer.language": "{detail} auf {language}",
+  "sendPermission.footer.means": "{detail} mit {methods}",
+  "sendPermission.footer.email": "einer E-Mail-Adresse",
+  "sendPermission.footer.phone": "einer Telefonnummer",
+  "sendPermission.footer.web": "einer Website oder einem Social-Media-Link",
+  "sendPermission.footer.privacy": "Datenschutz-Kontaktangaben",
+  "sendPermission.footer.advertiser":
+    "Kontaktangaben des werbenden Unternehmens",
+  "sendPermission.footer.identity": "Name und Anschrift des Unternehmens",
+  "sendPermission.footer.unknown": "ein Teil der Unternehmensangaben",
+  "sendPermission.footer.title": "E-Mail-Fußzeile prüfen",
+  "sendPermission.footer.preview": "Unternehmensangaben in dieser E-Mail",
+  "sendPermission.footer.omits": "In dieser Nachricht fehlt: {items}.",
+  "sendPermission.footer.objection": "Abmeldehinweise",
+  "sendPermission.footer.privateLink": "ein persönlicher Abmeldelink",
+  "sendPermission.footer.publicLink": "ein funktionierender Abmeldelink",
   "sendPermission.reason.lawfulBasisUnconfirmed":
     "Für diesen Kontakt ist keine Rechtsgrundlage erfasst, und die Warnung wurde vor dem Senden nicht bestätigt.",
   "sendPermission.appliesTo": "Das betrifft {address}.",
@@ -8064,6 +8097,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.sendWithReason": "Mit Begründung senden…",
   "compose.scheduleWithReason": "Mit Begründung planen…",
   "compose.holdForCheck": "Senden wartet auf die Versandprüfung.",
+  "compose.legacyFooter":
+    "Diese Version von Margince kann E-Mails mit fehlenden Angaben zum Unternehmen noch nicht mit einer Begründung senden. Dein Entwurf bleibt erhalten. Frag einen Admin nach einem Update von Margince. Versuche es danach erneut.",
   "compose.holdRefused":
     "Senden ist gesperrt. Behebe, was die Prüfung oben nennt, oder entferne diese Empfangsadresse.",
   "compose.holdWithReason":
@@ -8102,21 +8137,21 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "sendPermission.unanswered":
     "Die Versandprüfung konnte nicht abgeschlossen werden. Beim Senden wird die Prüfung erneut ausgeführt.",
   "sendPermission.reason.objected":
-    "Die empfangende Person hat dem Marketing widersprochen, daher geht kein Marketing an sie. Eine Antwort oder eine Nachricht, um die sie gebeten hat, kann weiterhin gesendet werden.",
+    "Der Kontakt hat Werbung widersprochen. Der Versand dieser E-Mail hebt seinen Widerspruch nicht auf.",
   "sendPermission.reason.withdrawn":
-    "Die empfangende Person hat ihre Einwilligung für diese Art von Nachricht widerrufen, daher kann sie nicht an sie gesendet werden.",
+    "Der Kontakt hat seine Einwilligung für diese Art von Nachricht widerrufen. Der Versand dieser E-Mail stellt sie nicht wieder her.",
   "sendPermission.reason.restricted":
-    "Für die Daten der empfangenden Person gilt eine Einschränkung der Verarbeitung. Nur Sicherheits-, Datenschutz- und Abmeldehinweise können noch an sie gesendet werden.",
+    "Die Verarbeitung der Daten dieses Kontakts ist eingeschränkt. Der Versand dieser E-Mail hebt die Einschränkung nicht auf.",
   "sendPermission.reason.askedUsToStop":
-    "Die empfangende Person hat darum gebeten, nicht kontaktiert zu werden. Nur Sicherheits-, Datenschutz- und Abmeldehinweise können noch an sie gesendet werden.",
+    "Der Kontakt möchte nicht mehr kontaktiert werden. Der Versand dieser E-Mail ändert seinen Wunsch nicht.",
   "sendPermission.reason.bounced":
     "Diese Adresse nimmt keine E-Mails an. Korrigiere die Adresse. Eine Ausnahme ist hier nicht möglich.",
   "sendPermission.reason.optedOutAfterRequest":
-    "Die empfangende Person hat sich nach ihrer Anfrage vom Marketing abgemeldet. Kläre mit ihr, ob sie das Angebot noch möchte, und erfasse dann ihre neue Anfrage.",
+    "Der Kontakt hat nach der Angebotsanfrage Werbung abgelehnt. Der Versand dieser E-Mail ändert seine Entscheidung nicht.",
   "sendPermission.reason.permissionRequired":
-    "Für diese Marketingnachricht ist nach den geltenden Regeln keine Erlaubnis belegt. Eine Ausnahme durch Mitarbeitende ersetzt weder die Einwilligung noch die erforderlichen Nachweise.",
+    "Für diese Marketingnachricht ist nach den geltenden Regeln keine Erlaubnis belegt. Erfasse die Einwilligung oder die erforderlichen Nachweise.",
   "sendPermission.reason.consentRequired":
-    "Marketing an eine empfangende Person in diesem Land braucht ihre vorherige Einwilligung. Keine Ausnahme kann sie ersetzen.",
+    "Marketing an eine empfangende Person in diesem Land braucht ihre vorherige Einwilligung.",
   "sendPermission.reason.dealNotRequested":
     "Ein Deal allein zeigt nicht, dass die empfangende Person diese Verhandlung angefragt hat. Erfasst sein muss eine Anfrage der Person, zum Beispiel aus einem Anruf oder Termin.",
   "sendPermission.reason.tooMany":
@@ -8195,8 +8230,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Darüber wurde bereits entschieden. Öffne die Prüfung, um das Ergebnis zu sehen.",
   "directSend.couldNotOpen":
     "Die Prüfung konnte nicht geöffnet werden. Bitte versuche es erneut.",
-  "directSend.title": "Auf eigene Verantwortung senden",
-  "directSend.confirm": "Ausnahme erfassen und senden",
+  "directSend.title": "E-Mail mit Begründung senden?",
+  "directSend.confirm": "E-Mail senden",
+  "directSend.changed":
+    "Die E-Mail-Prüfung hat sich geändert. Lies die aktualisierten Hinweise und bestätige erneut. Deine Begründung bleibt erhalten.",
   "directSend.failed":
     "Die Nachricht konnte nicht gesendet werden. Deine Entscheidung ist möglicherweise schon erfasst. Öffne die Prüfung, bevor du erneut entscheidest.",
   "directSend.noWarningServed":
@@ -8227,8 +8264,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Eine Nachricht mit Abmeldelink geht immer nur an eine Adresse, da der Link der Einwilligungsnachweis genau dieser Adresse ist. Sende die Nachricht einzeln an jede Adresse, ohne Cc.",
   "compose.newContact":
     "{address} steht noch in keinem Datensatz. Beim Senden wird die Adresse als dein Kontakt angelegt.",
-  "compose.multiRecipientWarning":
-    "Ein Versand an mehr als eine Adresse wird abgelehnt, da dieser Zweck einen Abmeldelink hinzufügt. Sende die Nachricht einzeln an jede Adresse, ohne Cc.",
   "compose.relinkTitle": "Diese Aktivität neu verknüpfen",
   "compose.relinkTarget":
     "Kontakte, Unternehmen, Deals, Leads oder Projekte suchen",
@@ -9959,7 +9994,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.tierRead":
     "Lesen, zusammenfassen, entwerfen: läuft sofort und wird vollständig protokolliert.",
   "settings.tierSend":
-    "E-Mails senden, Termine buchen, einen Kontakt oder Deal ändern: läuft sofort, wenn der Agent diese Berechtigung hat. Mit der Berechtigung ist die Freigabe bereits erteilt.",
+    "Laufende Änderungen laufen automatisch und lassen sich rückgängig machen. Vor dem Versand braucht der Assistent deine Freigabe oder einen direkten Auftrag. Unbeaufsichtigter Versand wartet.",
   "settings.tierWait": "Anreicherung aus dem Web: wartet in Freigaben.",
   "settings.tierAdvance":
     "Deal-Phase ändern oder Deal abschließen, Aktivitäten einem Projekt zuordnen: läuft sofort, wenn der Agent die Berechtigung hat.",
@@ -12655,7 +12690,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "E-Mails werden automatisch zu Kontakten, Unternehmen und Aktivitäten.",
   "ob.s4.scope2Lead": "Senden ist enthalten.",
   "ob.s4.scope2Rest":
-    "Margince kann aus diesem Postfach senden, wenn du sendest und wenn du einem Agenten einen Passport gibst, der das Senden erlaubt. Mit diesem Passport ist die Freigabe bereits erteilt. Du kannst den Passport jederzeit entziehen.",
+    "Margince kann aus diesem Postfach senden, wenn du sendest oder deinen Assistenten direkt damit beauftragst. Die Sendeberechtigung allein gibt keine Nachricht frei. Unbeaufsichtigter Versand wartet auf Freigabe. Du kannst den Zugriff jederzeit entziehen.",
   "ob.s4.scope3Lead": "Die Daten bleiben in deinem Unternehmen.",
   "ob.s4.scope3Rest": "Alles jederzeit exportieren oder löschen.",
   "ob.s4.scope4Lead": "Trennen mit einem Klick.",
@@ -14078,6 +14113,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Erweiterungen in diesem Build und welche Rollen darauf zugreifen können.",
   "settings.page.reset.sub":
     "Daten dieser Installation löschen. Das kann nicht rückgängig gemacht werden.",
+  "settings.page.about.sub": "Version, Commit und Lizenz dieses Builds.",
   "settings.scope.self": "Nur du",
   "settings.scope.mixed": "Gemischt",
   "settings.scope.workspace": "Unternehmen",
@@ -14151,6 +14187,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "configuration.scope.changed": "Nicht Standard",
   "configuration.scope.outside": "Außerhalb der App gesetzt",
   "settings.tab.reset": "Daten zurücksetzen",
+  "settings.tab.about": "Über Margince",
   "settings.group.me": "Du",
   "settings.group.compliance": "Compliance",
   "settings.group.system": "System",
@@ -18295,7 +18332,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "consent.scopeNote.write":
     "Erstellt, bearbeitet und archiviert Datensätze in deinem Namen",
   "consent.scopeNote.send":
-    "Sendet Nachrichten in deinem Namen, ohne vorher zu fragen",
+    "Erlaubt den Versand; der Assistent muss vorher deine Freigabe oder einen direkten Auftrag erhalten. Die Berechtigung allein ist keine Freigabe",
   "consent.scopeNote.enrich": "Führt KI-Arbeit aus und kauft Kontaktdaten",
   "consent.scopesLegend": "Was das Tool tun darf",
   "consent.ceiling":
@@ -21150,8 +21187,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "die Website des Unternehmens analysieren und über die Befunde berichten",
   "firstRun.ignite.draft":
     "Entwürfe in dem Schreibstil schreiben, den du trainiert hast",
-  "firstRun.ignite.act":
-    "ohne deine Freigabe etwas senden oder einen Datensatz ändern",
+  "firstRun.ignite.act": "ohne direkten Auftrag oder Freigabe senden",
   "firstRun.ignite.carryOn": "Weiter",
   "firstRun.ignite.leaving": "Einrichtung wird geprüft…",
   "firstRun.step.model": "Modell",

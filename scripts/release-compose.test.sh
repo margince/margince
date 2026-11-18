@@ -88,6 +88,30 @@ if pack; then
 	fail "an image with no digest was packed, and a moved tag would change what the stack runs"
 fi
 
+# --- the unpacked folder `make prod` runs -------------------------------
+local_dir="$work/local/stack"
+mkdir -p "$local_dir"
+echo stale >"$local_dir/leftover"
+if ! bash "$PACKER" --local local-abc1234 "$local_dir" >"$work/out" 2>&1; then
+	fail "--local refused to write the folder: $(cat "$work/out")"
+fi
+for role in api web worker; do
+	if ! grep -qxF "    image: margince-local/$role:local-abc1234" "$local_dir/compose.yaml"; then
+		fail "--local does not run the $role image built from the checkout"
+	fi
+done
+for file in .env.example db-init.sh db-bootstrap.sql front.conf proxy.conf margince.yaml; do
+	if [[ ! -s "$local_dir/$file" ]]; then
+		fail "--local wrote no $file, which the stack mounts"
+	fi
+done
+if [[ -e "$local_dir/leftover" ]]; then
+	fail "--local kept a file from an earlier folder, which the stack could still read"
+fi
+if bash "$PACKER" --local "" "$local_dir" >"$work/out" 2>&1; then
+	fail "--local without a tag wrote a folder whose images name nothing"
+fi
+
 if [[ "$FAILURES" -gt 0 ]]; then
 	exit 1
 fi

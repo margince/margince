@@ -541,6 +541,27 @@ test("help and feedback and the keyboard shortcuts meet AA", async ({
   await expect(accountTrigger(page)).toBeFocused();
 });
 
+test("About Margince meets AA", async ({ page }) => {
+  await page.goto("/#/home");
+  await page.waitForLoadState("networkidle");
+  await accountTrigger(page).click();
+  await page
+    .locator(".topbar [role='menu']")
+    .first()
+    .getByRole("menuitem", { name: de["shell.helpMenu"] })
+    .press("ArrowRight");
+  await page
+    .getByRole("menu", { name: de["shell.helpMenu"] })
+    .getByRole("menuitem", { name: de["about.title"] })
+    .click();
+  const dialog = page.getByRole("dialog", { name: de["about.title"] });
+  await expect(dialog).toBeVisible();
+  await settleAnimations(page);
+  await expectNoAaViolations(page, "home — about margince");
+  await page.keyboard.press("Escape");
+  await expect(accountTrigger(page)).toBeFocused();
+});
+
 // Headless Chromium never offers to install, so the test makes the offer itself.
 for (const colorScheme of ["light", "dark"] as const) {
   test.describe(`the install hint on Home at 390px in ${colorScheme}`, () => {

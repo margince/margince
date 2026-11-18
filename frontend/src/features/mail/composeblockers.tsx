@@ -9,7 +9,7 @@ import { asksWhy } from "../../lib/compose-context";
 import { remedyCategoryOf } from "../../lib/sendstatus";
 import type { Activity } from "./compose";
 import { DraftContentNotice } from "./compose.notices";
-import { ComposeOutcome, ComposeWhy, MailSendNotices } from "./compose.parts";
+import { ComposeOutcome, MailSendNotices } from "./compose.parts";
 import { RecordConversationFact } from "./composecontextfact";
 import { ComposeDeal, type DealChoiceState } from "./composedeal";
 import type { ComposeFields } from "./composefields";
@@ -19,6 +19,8 @@ import {
   type ReasonTarget,
 } from "./composereason";
 import type { ComposeSend } from "./composesend";
+import { ComposeWhy } from "./composewhy";
+import { pickReason } from "./reasonanchor";
 
 type Preview = components["schemas"]["SendAuthorizationPreview"];
 
@@ -111,6 +113,7 @@ export function ComposeBlockers({
     : alternativeReasonOf(send.permission);
   // Until the message says why it is written, the engine has judged no reason.
   // Its missing-reason refusal would then ask the same question twice.
+  const chooseReason = pickReason(fields);
   const whyMissing = asksWhy(anchorActivity) && fields.context === "";
   const asksWhyAgain =
     whyMissing &&
@@ -120,9 +123,13 @@ export function ComposeBlockers({
     <div className="compose-blockers">
       <ComposeWhy
         anchorActivity={anchorActivity}
+        needsReason={
+          fields.context !== "" ||
+          sendStatus(send.permission).kind === "missingContext"
+        }
         flagged={send.flagged}
         context={fields.context}
-        onContextChange={fields.setContext}
+        onContextChange={chooseReason}
       />
       <ComposeDeal
         choice={dealChoice}
@@ -139,26 +146,25 @@ export function ComposeBlockers({
       )}
       {/* A channel reply asks no preview, so its status is only ever a
           refused Send. */}
-      {(!isChannelReply || send.permission.refusal) && !asksWhyAgain && (
-        <RecordConversationFact
-          target={alternative ? undefined : target}
-          chosen={send.claimedContext}
-          dealId={send.contextDealId}
-          renderOpener={(opener) =>
-            drawPermission(
-              alternative ? (
-                <ReasonSwitch
-                  reason={alternative}
-                  onSwitch={fields.setContext}
-                />
-              ) : (
-                opener
-              ),
-              asksWhy(anchorActivity),
-            )
-          }
-        />
-      )}
+      {send.refusal !== "legacyFooter" &&
+        (!isChannelReply || send.permission.refusal) &&
+        !asksWhyAgain && (
+          <RecordConversationFact
+            target={alternative ? undefined : target}
+            chosen={send.claimedContext}
+            dealId={send.contextDealId}
+            renderOpener={(opener) =>
+              drawPermission(
+                alternative ? (
+                  <ReasonSwitch reason={alternative} onSwitch={chooseReason} />
+                ) : (
+                  opener
+                ),
+                asksWhy(anchorActivity),
+              )
+            }
+          />
+        )}
       <ComposeOutcome
         isChannelReply={isChannelReply}
         bodyKey={bodyKey}

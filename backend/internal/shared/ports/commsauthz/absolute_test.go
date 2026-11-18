@@ -79,7 +79,7 @@ func TestOnlyANonAbsoluteMachineReadingCanBeOverruled(t *testing.T) {
 		}
 	}
 
-	// The subject's own act: nobody lifts it, and the surface must not suggest otherwise.
+	// The subject's own act: no standing override lifts it for later messages.
 	for _, reason := range []string{ReasonObjection, ReasonRestricted, ReasonConsentWithdrawn} {
 		d := Decision{Verdict: VerdictDeny, ReasonCode: reason}
 		if d.CanBeOverruled() {
