@@ -50,6 +50,8 @@ To reopen a won or lost deal in Margince, open it and choose **More actions** â†
 2. Choose **More actions** â†’ **Reopen**.
 3. Under **Move this deal back to an open stage**, pick a stage and press **Reopen**.
 
+On **Board**, dragging a won or lost card onto an open column opens the same dialog, with that column's stage picked. Nothing moves until you press **Reopen**. A closed card dropped on the other closed column stays where it is.
+
 Reopening clears the close date and the exchange rate fixed at close, and the dialog does not say so. It needs permission to change the deal, and you cannot reopen an archived deal. Also called: undo a close, reopen a lost deal.
 
 ### How do I bring back a deal that went cold?

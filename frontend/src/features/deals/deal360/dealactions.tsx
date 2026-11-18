@@ -22,8 +22,6 @@ import { ExtensionEntries } from "../../../components/extensionentries";
 import { LogActivityAction } from "../../../components/logactivity.action";
 import { searchCompanyContacts } from "../../../components/meetingattendees";
 import { Button, OverflowMenu } from "../../../design-system/atoms";
-import { ConfirmModal } from "../../../design-system/confirmmodal";
-import { ErrorLine } from "../../../design-system/errorline";
 import { VerbWord } from "../../../design-system/iconaction";
 import { ListPopover } from "../../../design-system/listpopover";
 import { useToast } from "../../../design-system/toast";
@@ -43,6 +41,7 @@ import { useDealRecipientAddress } from "./usedealrecipient";
 import "./deal360.css";
 import { AddToShortlistAction } from "../../../components/addtoshortlist";
 import { RequestLegalReviewAction } from "./deallegaltab";
+import { ReopenModal } from "./reopenmodal";
 
 type Deal = components["schemas"]["Deal"];
 type Stage = components["schemas"]["Stage"];
@@ -112,7 +111,6 @@ function ReopenAction({
   const toast = useToast();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [stageId, setStageId] = useState<string | null>(null);
   const reopen = useMutation({
     mutationKey: ["deal-edit", dealId],
     // Stage and version both ride the variables: a version read out of the
@@ -155,33 +153,16 @@ function ReopenAction({
       >
         {t("deal.reopen")}
       </Button>
-      <ConfirmModal
+      <ReopenModal
         open={open}
         onClose={() => setOpen(false)}
-        title={t("deal.reopenPick")}
-        confirmLabel={t("deal.reopenConfirm")}
-        confirmDisabled={!stageId}
+        openStages={openStages}
         pending={reopen.isPending}
-        onConfirm={() => {
-          if (stageId) {
-            reopen.mutate({ toStageId: stageId, version: dealVersion });
-          }
-        }}
-      >
-        <div className="d360-reopen-stages">
-          {openStages.map((s) => (
-            <Button
-              key={s.id}
-              aria-pressed={stageId === s.id}
-              data-testid={`reopen-stage-${s.id}`}
-              onClick={() => setStageId(s.id)}
-            >
-              {s.name}
-            </Button>
-          ))}
-        </div>
-        <ErrorLine error={reopen.error} />
-      </ConfirmModal>
+        error={reopen.error}
+        onConfirm={(toStage) =>
+          reopen.mutate({ toStageId: toStage.id, version: dealVersion })
+        }
+      />
     </>
   );
 }
