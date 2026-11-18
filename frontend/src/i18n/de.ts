@@ -6861,6 +6861,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "decision.evidenceSource.unknown": "Quelle",
   "decision.detailAsked": "Angefragt",
   "decision.detailDecided": "Entschieden",
+  "decision.waitingForAgent": "Freigegeben. Der Agent führt es noch aus.",
+  "decision.mailboxBlocked":
+    "Kein verbundenes Postfach kann senden. Die Freigabe würde diese E-Mail nicht versenden.",
+  "decision.fieldRequired": "Pflichtfeld",
   "decision.applied": "Übernommen",
   "decision.undoOnRecord": "Am Datensatz rückgängig machen",
   "decision.status.approved": "Freigegeben",
@@ -20093,6 +20097,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.clear": "Nichts wartet auf dich.",
   "worklist.clearFor": "Nichts wartet auf {name}.",
   "worklist.clearOfUrgent": "Keine dringende Arbeit.",
+  "worklist.clearDecisionsWaiting":
+    "Heute nichts fällig. Entscheidungen warten auf dich.",
+  "worklist.clearDecisionsOpen": "Entscheidungen öffnen",
   "worklist.clearOfTasksToday":
     "Keine Aufgaben fällig heute oder überfällig. Spätere Aufgaben stehen unter Anstehend und Rückstand.",
   "worklist.clearOfWhatWasRead": "Keine Einträge in den geladenen Quellen.",

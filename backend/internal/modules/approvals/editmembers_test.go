@@ -8,8 +8,10 @@ import (
 	"errors"
 	"maps"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/platform/approvalsubject"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func TestALinkedInMatchEditMayFlipOnlyItsTwoBoxes(t *testing.T) {
@@ -98,5 +100,49 @@ func TestAShareRequestTakesNoEditAndNoAddedMember(t *testing.T) {
 	var invalid *InvalidEditError
 	if err := assertEditableMembers(approvalsubject.KindContactShare, staged, added); !errors.As(err, &invalid) {
 		t.Errorf("an added member answered %v, want an invalid-edit refusal", err)
+	}
+}
+
+func TestAHeldDraftEditMayNotBlankItsSubjectOrBody(t *testing.T) {
+	cases := []struct {
+		name   string
+		kind   string
+		edited string
+		ok     bool
+	}{
+		{"both written", kindHeldDraft, `{"subject":"Hi","body":"Text"}`, true},
+		{"subject blank", kindHeldDraft, `{"subject":"  ","body":"Text"}`, false},
+		{"body empty", kindHeldDraft, `{"subject":"Hi","body":""}`, false},
+		{"other kind keeps its own rule", kindLinkedInMatch, `{"subject":""}`, true},
+	}
+	for _, tc := range cases {
+		err := assertMailHasText(tc.kind, json.RawMessage(tc.edited))
+		var invalid *InvalidEditError
+		if tc.ok && err != nil {
+			t.Errorf("%s: refused: %v", tc.name, err)
+		}
+		if !tc.ok && !errors.As(err, &invalid) {
+			t.Errorf("%s: got %v, want an InvalidEditError", tc.name, err)
+		}
+	}
+}
+
+func TestOnlyAnApprovedUnredeemedAgentStagingAwaitsTheAgent(t *testing.T) {
+	passport := ids.New[ids.PassportKind]()
+	cases := []struct {
+		name string
+		a    row
+		want bool
+	}{
+		{"agent staging, approved", row{Status: approvalStatusApproved, PassportID: &passport}, true},
+		{"already redeemed", row{Status: approvalStatusApproved, PassportID: &passport, ConsumedAt: new(time.Time)}, false},
+		{"window lapsed", row{Status: approvalStatusApproved, PassportID: &passport, EffectFailedAt: new(time.Time)}, false},
+		{"server proposed ran its effect", row{Status: approvalStatusApproved}, false},
+		{"still pending", row{Status: statusPending, PassportID: &passport}, false},
+	}
+	for _, tc := range cases {
+		if got := awaitsAgent(tc.a); got != tc.want {
+			t.Errorf("%s: awaitsAgent = %v, want %v", tc.name, got, tc.want)
+		}
 	}
 }

@@ -87,8 +87,10 @@ export function approvalAcceptable(
       conflicts?: readonly { blocks_approval: boolean }[];
     };
   }>,
+  sendable = true,
 ): boolean {
   return (
+    sendable &&
     approval.assignee_inactive !== true &&
     (!approval.preview ||
       ((approval.preview.version === 1 || approval.preview.version === 2) &&

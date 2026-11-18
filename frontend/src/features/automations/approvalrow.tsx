@@ -7,6 +7,7 @@ import { type ReactNode, useCallback, useState } from "react";
 import { api } from "../../api/client";
 import { useLawfulBasisGate } from "../../components/lawfulbasiswarning";
 import { SendPermission } from "../../components/sendpermission";
+import { AppLink } from "../../design-system/applink";
 import { Button, Card } from "../../design-system/atoms";
 import {
   DecisionCard,
@@ -50,6 +51,7 @@ import {
   approvalLabel,
   decisionSkewKey,
   editableStrings,
+  requiredMailFields,
 } from "./approvalkind";
 import { rowLabels, useApprovalDisplay } from "./approvalproposal";
 import { approvalAcceptable } from "./approvalresponsibility";
@@ -128,6 +130,56 @@ function statusLabels(
   };
 }
 
+// What an approve did, read from the server's answer. An agent's staging only
+// lets the agent repeat its call, so nothing is applied and nothing can be
+// undone yet.
+function announceApproval(
+  toast: ReturnType<typeof useToast>,
+  t: Translator,
+  decided: Approval,
+  undoTarget: ReturnType<typeof recordRoute>,
+) {
+  if (decided.awaiting_agent) {
+    toast.show(t("decision.waitingForAgent"));
+    return;
+  }
+  if (!undoTarget) {
+    return;
+  }
+  // The verb goes through `action`: the region draws it on its own ground, and
+  // withdraws the message once it has been pressed.
+  toast.show(t("decision.applied"), {
+    action: {
+      kind: "undo",
+      label: t("decision.undoOnRecord"),
+      onAct: () => navigate(undoTarget),
+    },
+  });
+}
+
+function mailboxCannotSend(
+  decided: boolean | undefined,
+  preview: ReturnType<typeof useSendPermission>["preview"],
+): boolean {
+  return !decided && preview?.mailbox_send_capable === false;
+}
+
+function MailboxBlocked({ blocked }: Readonly<{ blocked: boolean }>) {
+  const t = useT();
+  if (!blocked) return null;
+  return (
+    <ErrorLine
+      actions={
+        <AppLink href="#/settings/connections" className="link-button">
+          {t("compose.mailboxNotSendCapableGoto")}
+        </AppLink>
+      }
+    >
+      {t("decision.mailboxBlocked")}
+    </ErrorLine>
+  );
+}
+
 export function ApprovalRow({
   approval,
   decided,
@@ -185,6 +237,10 @@ export function ApprovalRow({
     enabled: !decided && staged !== undefined,
   });
 
+  // Approving a mail that no mailbox can send records a decision the send then
+  // refuses. The verbs wait until the server says it can go.
+  const mailboxBlocked = mailboxCannotSend(decided, permission.preview);
+
   // An agent-drafted mail to a recipient with no lawful basis on record waits
   // for the approver to confirm the warning, as the composer does.
   const lawfulBasis = useLawfulBasisGate(permission.preview);
@@ -206,23 +262,6 @@ export function ApprovalRow({
     approval.target_entity_id,
   );
 
-  // An undo like any other: it lives ACTION_TOAST_MS, held while hovered or
-  // focused. Only on approve: a rejection changed nothing to put back.
-  const showUndoOffer = (verdict: "approve" | "reject") => {
-    if (verdict !== "approve" || !undoTarget) {
-      return;
-    }
-    // The verb goes through `action`: the region draws it on its own ground,
-    // and withdraws the message once it has been pressed.
-    toast.show(t("decision.applied"), {
-      action: {
-        kind: "undo",
-        label: t("decision.undoOnRecord"),
-        onAct: () => navigate(undoTarget),
-      },
-    });
-  };
-
   const decide = useMutation({
     mutationFn: async (input: {
       verdict: "approve" | "reject";
@@ -243,12 +282,13 @@ export function ApprovalRow({
         }),
       );
     },
-    onSuccess: (_data, input) => {
+    onSuccess: (data, input) => {
       void invalidateApprovalViews(queryClient);
       for (const queryKey of extraInvalidateKeys ?? []) {
         queryClient.invalidateQueries({ queryKey });
       }
-      showUndoOffer(input.verdict);
+      if (input.verdict === "approve")
+        announceApproval(toast, t, data, undoTarget);
     },
     onError: (error) => {
       const problem = error instanceof ProblemError ? error.problem : null;
@@ -299,15 +339,23 @@ export function ApprovalRow({
     setEditing(true);
   };
 
+  const acceptable = approvalAcceptable(approval, !mailboxBlocked);
+  // A mail must say something: the fields it cannot send without.
+  const required = requiredMailFields(staged !== undefined, strings);
+
+  // The editor closes only once the server took the decision, so a refusal
+  // leaves the typed text where it was.
   const approveEdited = () => {
-    if (!approvalAcceptable(approval)) return;
+    if (!acceptable) return;
     lawfulBasis.gate(() => {
       held.announce();
-      decide.mutate({
-        verdict: "approve",
-        editedPayload: { ...change, ...draft },
-      });
-      setEditing(false);
+      decide.mutate(
+        {
+          verdict: "approve",
+          editedPayload: { ...change, ...draft },
+        },
+        { onSuccess: () => setEditing(false) },
+      );
     });
   };
 
@@ -378,7 +426,8 @@ export function ApprovalRow({
       editor={
         editing ? (
           <StagedEditor
-            disabled={!approvalAcceptable(approval)}
+            disabled={!acceptable}
+            required={required}
             acceptLabel={approvalAcceptLabel(
               approval.kind,
               plural,
@@ -400,7 +449,7 @@ export function ApprovalRow({
         ) : undefined
       }
       onAccept={
-        approvalAcceptable(approval)
+        acceptable
           ? () =>
               lawfulBasis.gate(() => {
                 held.announce();
@@ -431,6 +480,7 @@ export function ApprovalRow({
             decided={decided}
             disabled={decide.isPending}
           />
+          <MailboxBlocked blocked={mailboxBlocked} />
           {!decided && staged !== undefined && (
             <SendPermission
               preview={permission.preview}

@@ -15,7 +15,7 @@ import {
 } from "./worklist.bands";
 import { TeamBoard } from "./worklist.board";
 import { useWorklistPicks, WorklistBulkBar } from "./worklist.bulkdone";
-import { clearSentence } from "./worklist.clear";
+import { clearSentence, offersDecisions } from "./worklist.clear";
 import { TeamExceptionsPanel } from "./worklist.exceptions";
 import { HandledForYouPanel } from "./worklist.handled";
 import { WorklistHeader } from "./worklist.header";
@@ -43,6 +43,7 @@ import { rowIdentity } from "./worklist.rowidentity";
 import { TeamMarginceChangesPanel } from "./worklist.teamchanges";
 import { DayUnread, dayPartlyRead } from "./worklist.unread";
 import { UpcomingSection } from "./worklist.upcoming";
+import { decisionsWaiting } from "./worklist.views";
 import { WalkNotice } from "./worklist.walknotice";
 
 // A lead's guardrail below the day, loaded only for a reader who opens "all",
@@ -226,7 +227,15 @@ export function WorklistBody({
                 t,
                 hasMore,
                 view,
+                decisionsWaiting(day),
               )}
+              onOpenDecisions={decisionsOffer(day, queue, {
+                hasMore,
+                filter,
+                colleague,
+                view,
+                onView,
+              })}
             />
           ) : (
             // The queue, and beside it what the selected row is about.
@@ -338,16 +347,52 @@ export function WorklistBody({
   );
 }
 
+// The way from an empty Today to the decisions waiting, or nothing to offer.
+function decisionsOffer(
+  day: Worklist,
+  queue: readonly WorklistItem[],
+  at: {
+    hasMore: boolean;
+    filter: WorklistFilter;
+    colleague: string | null;
+    view: WorklistView;
+    onView: (next: WorklistView) => void;
+  },
+): (() => void) | undefined {
+  return offersDecisions(
+    dayPartlyRead(day, queue),
+    at.hasMore,
+    at.filter,
+    at.colleague,
+    at.view,
+    decisionsWaiting(day),
+  )
+    ? () => at.onView("decisions")
+    : undefined;
+}
+
 // A view with no rows says so in one line. An empty Decisions view keeps its
 // domain review launcher.
 function EmptyView({
   view,
   rows,
   sentence,
-}: Readonly<{ view: WorklistView; rows: RowContext; sentence: string }>) {
+  onOpenDecisions,
+}: Readonly<{
+  view: WorklistView;
+  rows: RowContext;
+  sentence: string;
+  onOpenDecisions?: () => void;
+}>) {
+  const t = useT();
   return (
     <>
       <p className="t-body worklist-clear">{sentence}</p>
+      {onOpenDecisions && (
+        <Button onClick={onOpenDecisions}>
+          {t("worklist.clearDecisionsOpen")}
+        </Button>
+      )}
       {view !== "today" && <ViewPanel view={view} items={[]} rows={rows} />}
     </>
   );

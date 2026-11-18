@@ -35686,6 +35686,12 @@ type Approval struct {
 	// AssigneeInactive For a pending commitment, whether its named task assignee cannot receive the task. True for deactivated, archived, missing, or agent seats. An invited colleague can. Absent for an unassigned proposal. This is current decision context, not a change to the staged assignee.
 	AssigneeInactive *bool `json:"assignee_inactive,omitempty"`
 
+	// AwaitingAgent True on an approved proposal that an agent staged and has not yet redeemed. The decision
+	// only lets the agent repeat its call within the redemption window; nothing has changed on
+	// any record until it does. Absent on every other row, including one whose effect ran
+	// during the decision.
+	AwaitingAgent *bool `json:"awaiting_agent,omitempty"`
+
 	// BundleId The act that staged this proposal together with its siblings: today, a website read's company facts and the leads it published. Null for a proposal staged on its own. It is a grouping id, not a foreign key: there is no
 	// bundle entity, and every member keeps its own diff hash, version pin, expiry and
 	// verdict (ADR-0036 — the staged row IS the authority object). Decide the whole set with
@@ -65315,8 +65321,12 @@ type SendAuthorizationPreview struct {
 	// ContentFindings What the draft's `subject` and `body` do not meet among the advertising content rules
 	// of the recipients' jurisdiction packs. Advisory: a finding never refuses the send.
 	// Empty when no subject or body was given, or when the message is not advertising.
-	ContentFindings *[]DraftContentFinding              `json:"content_findings,omitempty"`
-	Recipients      []SendAuthorizationPreviewRecipient `json:"recipients"`
+	ContentFindings *[]DraftContentFinding `json:"content_findings,omitempty"`
+
+	// MailboxSendCapable `false` when the caller has no connected mailbox that can transmit, so the send would
+	// be refused whatever the recipients' answers are. Absent when a mailbox can send.
+	MailboxSendCapable *bool                               `json:"mailbox_send_capable,omitempty"`
+	Recipients         []SendAuthorizationPreviewRecipient `json:"recipients"`
 }
 
 // SendAuthorizationPreviewRecipient One recipient's answer. It describes the MESSAGE, never the contact's file.

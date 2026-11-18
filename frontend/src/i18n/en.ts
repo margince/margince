@@ -6830,6 +6830,10 @@ export const en = {
   // The confirmation after an approval, and the way back to the change it
   // made. The undo lives on the RECORD — the history panel reverses the
   // update this approval wrote — so the verb says where it is going.
+  "decision.waitingForAgent": "Approved. Waiting for the agent to run it.",
+  "decision.mailboxBlocked":
+    "No connected mailbox can send. Approving would not send this email.",
+  "decision.fieldRequired": "Required",
   "decision.applied": "Applied",
   "decision.undoOnRecord": "Undo on record",
   "decision.status.approved": "Approved",
@@ -19864,6 +19868,9 @@ export const en = {
   "worklist.clear": "Nothing is waiting on you.",
   "worklist.clearFor": "Nothing is waiting on {name}.",
   "worklist.clearOfUrgent": "No urgent work.",
+  "worklist.clearDecisionsWaiting":
+    "Nothing due today. Decisions are waiting for you.",
+  "worklist.clearDecisionsOpen": "Open Decisions",
   "worklist.clearOfTasksToday":
     "No tasks due today or overdue. Later tasks are under Upcoming and backlog.",
   "worklist.clearOfWhatWasRead": "No items in the sources that loaded.",

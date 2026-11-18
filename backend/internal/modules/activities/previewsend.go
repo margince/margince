@@ -59,6 +59,9 @@ type SendPreview struct {
 	// ContentFindings are the content rules an advertising draft does not
 	// meet. Advice only: none of them changes a decision.
 	ContentFindings []DraftContentFinding
+	// MailboxUnavailable is true when the caller holds no mailbox that can
+	// transmit, the refusal the send itself would give.
+	MailboxUnavailable bool
 }
 
 // PreviewSendInput is a message a composer has not written yet.
@@ -138,6 +141,12 @@ func (s *Store) PreviewSend(ctx context.Context, origin SendOrigin, in PreviewSe
 	}
 	if preview.ContentFindings, err = s.draftContentFindings(ctx, in, preview.Decisions); err != nil {
 		return SendPreview{}, err
+	}
+	if _, err := s.sendableMailProvider(ctx); err != nil {
+		if _, none := errors.AsType[*MailboxNotSendCapableError](err); !none {
+			return SendPreview{}, err
+		}
+		preview.MailboxUnavailable = true
 	}
 	return s.withReadablePreviewSubjects(ctx, preview)
 }

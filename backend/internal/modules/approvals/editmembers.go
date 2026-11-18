@@ -96,3 +96,27 @@ func isJSONBool(raw json.RawMessage) bool {
 	trimmed := bytes.TrimSpace(raw)
 	return bytes.Equal(trimmed, []byte("true")) || bytes.Equal(trimmed, []byte("false"))
 }
+
+// assertMailHasText refuses an edit that blanks the subject or the body of a
+// held draft. Nobody meant to release such a message. The send would refuse
+// it only after the decision was recorded.
+func assertMailHasText(kind string, edited json.RawMessage) error {
+	if kind != kindHeldDraft {
+		return nil
+	}
+	members, err := jsonObjectMembers(edited)
+	if err != nil {
+		return &InvalidEditError{Cause: fmt.Errorf("the edit is not a JSON object: %w", err)}
+	}
+	for _, member := range []string{"subject", "body"} {
+		raw, present := members[member]
+		if !present {
+			continue
+		}
+		var text string
+		if json.Unmarshal(raw, &text) == nil && strings.TrimSpace(text) == "" {
+			return &InvalidEditError{Cause: fmt.Errorf("%s must not be empty", member)}
+		}
+	}
+	return nil
+}

@@ -39,6 +39,11 @@ export function viewCount(day: Worklist, view: WorklistView) {
   return pillFigure(day, "all", view);
 }
 
+/** Whether any decision waits, whatever view is open. */
+export function decisionsWaiting(day: Worklist): boolean {
+  return (viewCount(day, "decisions")?.count ?? 0) > 0;
+}
+
 /** The headline of one view: how much it holds, in its own unit. */
 export function viewHeadline(
   day: Worklist,

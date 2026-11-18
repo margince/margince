@@ -24,6 +24,7 @@ import { en } from "../../i18n/en";
 import type { Approval } from "../../lib/approvals.queries";
 import { magicKey, worklistKey } from "../../lib/workkeys";
 import {
+  allowedPreview,
   isPreviewDoor,
   refusedPreview,
 } from "../../testing/sendpermission.testkit";
@@ -484,6 +485,26 @@ describe("the offer to put an approved change back", () => {
     expect(globalThis.location.hash).toBe("#/deals/d1");
   });
 
+  // Approving an agent's staging only lets the agent repeat its call.
+  // "Applied" with an undo would describe a change nobody has made.
+  it("says the agent still has to run it, with no undo, while nothing has changed", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({ id: "ap1", status: "approved", awaiting_agent: true }),
+      ),
+    );
+    render(<ApprovalRow approval={closeDateApproval()} />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Approve" }));
+
+    expect(
+      await screen.findByText(en["decision.waitingForAgent"]),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(en["decision.applied"])).toBeNull();
+    expect(screen.queryByRole("button", { name: "Undo on record" })).toBeNull();
+  });
+
   // A rejection changed nothing, so there is nothing to put back and no offer.
   //
   // The absence is asserted only AFTER the reject call has actually gone out.
@@ -590,6 +611,72 @@ describe("whether the staged mail may go", () => {
         ? new URL(asked[0].url).pathname
         : "",
     ).toBe("/v1/activities/act-1/send-email:preview");
+  });
+
+  it("offers no approve, and says where to fix it, when no mailbox can send", async () => {
+    stubEngine(() =>
+      jsonResponse({
+        ...allowedPreview(["anna@example.test"]),
+        mailbox_send_capable: false,
+      }),
+    );
+    render(<ApprovalRow approval={heldDraft()} />);
+
+    expect(
+      await screen.findByText(en["decision.mailboxBlocked"]),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", {
+        name: en["compose.mailboxNotSendCapableGoto"],
+      }),
+    ).toHaveAttribute("href", "/#/settings/connections");
+    expect(
+      screen.queryByRole("button", { name: /^Email$|Approve/ }),
+    ).toBeNull();
+  });
+
+  it("refuses a blank subject or message in the editor", async () => {
+    stubEngine(() => jsonResponse(allowedPreview(["anna@example.test"])));
+    render(<ApprovalRow approval={heldDraft()} />);
+    await userEvent.click(await screen.findByRole("button", { name: "Edit" }));
+
+    await userEvent.clear(screen.getByLabelText(/Subject/));
+
+    expect(
+      screen.getAllByText(en["decision.fieldRequired"]).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getByRole("button", { name: en["decision.approveEdited"] }),
+    ).toBeDisabled();
+  });
+
+  it("keeps the edited text when the approve is refused", async () => {
+    const fetched = vi.fn(async (input: RequestInfo | URL) => {
+      const path =
+        input instanceof Request ? new URL(input.url).pathname : String(input);
+      if (isPreviewDoor(path)) {
+        return jsonResponse(allowedPreview(["anna@example.test"]));
+      }
+      return path.endsWith("/approve")
+        ? refused("reconnect your mailbox to enable sending")
+        : jsonResponse({ data: [] });
+    });
+    vi.stubGlobal("fetch", fetched);
+    render(<ApprovalRow approval={heldDraft()} />);
+    await userEvent.click(await screen.findByRole("button", { name: "Edit" }));
+    const subject = screen.getByLabelText(/Subject/);
+    await userEvent.clear(subject);
+    await userEvent.type(subject, "My own words");
+
+    await userEvent.click(
+      screen.getByRole("button", { name: en["decision.approveEdited"] }),
+    );
+
+    await waitFor(() => expect(approveCalls(fetched)).toBe(1));
+    expect(
+      await screen.findByText(/reconnect your mailbox/),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText(/Subject/)).toHaveValue("My own words");
   });
 
   // A decided row has nothing left to release, so there is nothing to ask.

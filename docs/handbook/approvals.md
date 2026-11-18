@@ -50,20 +50,21 @@ or a list of fields does not tell you what you are confirming.
 ### How do I approve an action in Margince?
 To approve a proposed change in Margince, open **Home** and show the **Worklist**. Find the approval row and choose **Decide**, then **Accept**. The open card on **Home** shows the proposal too, and its **View details** answers it.
 1. Open **Home** and choose **Show Worklist** if it is hidden.
-2. Set **Work type** to **Approvals** to see only approvals.
+2. Open the **Decisions** tab to see only approvals.
 3. On the row, choose **Decide**. The **Your decision** panel opens.
 4. Read the proposal and its evidence, then choose **Accept**.
 
 If it edited a record, the **Applied** message offers **Undo on record** to reverse it from the record's history; a sent email has no undo.
+When an agent asked for the change, approving only lets the agent run it. The message then reads "Approved. Waiting for the agent to run it." and offers no undo, because nothing has changed yet.
 A new contact, company or deal can be taken back with **Undo** on its "Created" entry in the record's history, which archives it.
 Also called: confirm, accept, sign off, OK an agent action.
 
 ### Where are my approvals?
 Margince has no approvals inbox of its own. Approvals waiting on you appear in three places:
-1. **Home → Worklist**: each approval is a row with **Decide**; set **Work type** to **Approvals** to filter.
+1. **Home → Worklist**: each approval is a row with **Decide**, under the **Decisions** tab.
 2. The agent panel (**Open agent panel**), in its **Approvals** section.
 3. On a company page, **Pending approvals**, with **Review {count} pending**; a deal page shows **Awaiting approval**.
-When nothing waits, the Worklist says "Nothing is waiting on you."
+When nothing is due today but decisions wait, **Today** says so and opens **Decisions**. When no decision waits, **Decisions** says "No decisions waiting for you."
 Also called: approval queue, pending decisions, inbox, to review.
 
 ### How do I edit a proposal before approving it?
@@ -374,7 +375,7 @@ yourself.
    - You decide the "{count} next steps awaiting review" yourself.
    - "Sent to {name} to confirm" waits in that colleague's Worklist, not yours.
    - A reading that found nothing says "Transcript read in full. No next steps found."
-7. Go to **Home → Worklist** and set **Work type** to **Approvals**.
+7. Go to **Home → Worklist** and open the **Decisions** tab.
    A full queue can hide a new proposal, so look for the subject you chose in step 3.
 8. Choose **Decide** and open the evidence. It shows the transcript lines the
    proposal was read from, word for word.
@@ -390,8 +391,8 @@ transcript proposes next steps; accepting a proposal is what creates its task.
 
 Staged items show up where the work is:
 
-- **Home → Worklist**, filtered by **Work type → Approvals**. When nothing waits
-  it says "Nothing is waiting on you."
+- **Home → Worklist**, under the **Decisions** tab. When no decision waits it
+  says "No decisions waiting for you."
 - The agent panel's **Approvals** section.
 - A company page's **Pending approvals** card, and a deal page's **Awaiting
   approval** panel.

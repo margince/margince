@@ -61752,6 +61752,11 @@ components:
             of the recipients' jurisdiction packs. Advisory: a finding never refuses the send.
             Empty when no subject or body was given, or when the message is not advertising.
           items: { $ref: '#/components/schemas/DraftContentFinding' }
+        mailbox_send_capable:
+          type: boolean
+          description: |
+            `false` when the caller has no connected mailbox that can transmit, so the send would
+            be refused whatever the recipients' answers are. Absent when a mailbox can send.
 
     DraftContentFinding:
       type: object
@@ -73896,6 +73901,13 @@ components:
           type: [string, 'null']
           description: |
             The sentence a reader is shown about that failure, written for them and never copied from the executor's error. Present exactly when `effect_failed_at` is.
+        awaiting_agent:
+          type: boolean
+          description: |
+            True on an approved proposal that an agent staged and has not yet redeemed. The decision
+            only lets the agent repeat its call within the redemption window; nothing has changed on
+            any record until it does. Absent on every other row, including one whose effect ran
+            during the decision.
         created_at: { type: string, format: date-time }
 
     ApproveRequest:
