@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MONEY_ABSENT } from "../format/format";
+import { translate } from "../i18n";
 import type { CustomField } from "./customfields.form";
 import {
   customFieldDisplay,
@@ -12,7 +13,10 @@ import {
 } from "./customfields.form";
 
 const BOOL_LABELS = { yes: "Yes", no: "No" };
-const TOO_PRECISE = (currency: string) => `Finer than ${currency}`;
+const T = (
+  key: Parameters<typeof translate>[1],
+  params?: Record<string, string>,
+) => translate("en", key, params);
 
 // A minimal active CustomField for one object; only the fields the form
 // derivation reads are set — the rest is filler the helpers never touch.
@@ -109,7 +113,7 @@ describe("customFieldToFormField", () => {
         type: "date",
       }),
       BOOL_LABELS,
-      TOO_PRECISE,
+      T,
     );
     expect(field.key).toBe("cf_renewal_date");
     expect(field.labelText).toBe("Renewal date");
@@ -126,7 +130,7 @@ describe("customFieldToFormField", () => {
       label_translations: { vi: "Dịch vụ" },
       option_translations: { Consulting: { vi: "Tư vấn" } },
     });
-    const vi = customFieldToFormField(services, BOOL_LABELS, TOO_PRECISE, "vi");
+    const vi = customFieldToFormField(services, BOOL_LABELS, T, "vi");
     expect(vi.labelText).toBe("Dịch vụ");
     expect(vi.options).toEqual([
       { value: "Consulting", label: "Tư vấn" },
@@ -137,7 +141,7 @@ describe("customFieldToFormField", () => {
       boolLabels: BOOL_LABELS,
     });
     expect(viReading).toBe("Tư vấn");
-    const en = customFieldToFormField(services, BOOL_LABELS, TOO_PRECISE, "en");
+    const en = customFieldToFormField(services, BOOL_LABELS, T, "en");
     expect(en.labelText).toBe("Services");
     expect(en.options?.[0]).toEqual({
       value: "Consulting",
@@ -147,8 +151,7 @@ describe("customFieldToFormField", () => {
 
   it("maps number to a number control", () => {
     expect(
-      customFieldToFormField(cf({ type: "number" }), BOOL_LABELS, TOO_PRECISE)
-        .type,
+      customFieldToFormField(cf({ type: "number" }), BOOL_LABELS, T).type,
     ).toBe("number");
   });
 
@@ -156,7 +159,7 @@ describe("customFieldToFormField", () => {
     const field = customFieldToFormField(
       cf({ type: "picklist", options: ["Direct", "Reseller", "Tender"] }),
       BOOL_LABELS,
-      TOO_PRECISE,
+      T,
     );
     expect(field.type).toBe("select");
     expect(field.options).toEqual([
@@ -168,9 +171,7 @@ describe("customFieldToFormField", () => {
 
   it("renders a record field as a text control that keeps the record id", () => {
     const record = cf({ type: "record", options: ["ext:alpha:visit"] });
-    expect(customFieldToFormField(record, BOOL_LABELS, TOO_PRECISE).type).toBe(
-      "text",
-    );
+    expect(customFieldToFormField(record, BOOL_LABELS, T).type).toBe("text");
     expect(customFieldsToBody({ cf_field: " 0f9e " }, [record])).toEqual({
       cf_field: "0f9e",
     });
@@ -180,7 +181,7 @@ describe("customFieldToFormField", () => {
     const field = customFieldToFormField(
       cf({ type: "boolean" }),
       BOOL_LABELS,
-      TOO_PRECISE,
+      T,
     );
     expect(field.type).toBe("select");
     expect(field.options).toEqual([
@@ -193,7 +194,7 @@ describe("customFieldToFormField", () => {
     const field = customFieldToFormField(
       cf({ type: "currency", currency: "EUR" }),
       BOOL_LABELS,
-      TOO_PRECISE,
+      T,
     );
     expect(field.type).toBe("number");
     // stored as bigint minor units; the form edits major units.
@@ -202,22 +203,29 @@ describe("customFieldToFormField", () => {
     expect(field.toInput?.(undefined)).toBe("");
   });
 
-  it("refuses an amount finer than the field's currency, by the currency's scale", () => {
+  it("refuses an amount the field's currency cannot hold, by the currency's scale", () => {
     const euro = customFieldToFormField(
       cf({ type: "currency", currency: "EUR" }),
       BOOL_LABELS,
-      TOO_PRECISE,
+      T,
     );
     const yen = customFieldToFormField(
       cf({ type: "currency", currency: "JPY" }),
       BOOL_LABELS,
-      TOO_PRECISE,
+      T,
     );
     expect(euro.validate?.("12.34", {})).toBeUndefined();
     expect(euro.validate?.("", {})).toBeUndefined();
-    expect(euro.validate?.("12.345", {})).toBe("Finer than EUR");
+    expect(euro.validate?.("12.345", {})).toBe(
+      "This amount has more decimals than EUR allows.",
+    );
+    expect(euro.validate?.("900000000000000", {})).toBe(
+      "This amount is too large to save.",
+    );
     expect(yen.validate?.("12", {})).toBeUndefined();
-    expect(yen.validate?.("12.5", {})).toBe("Finer than JPY");
+    expect(yen.validate?.("12.5", {})).toBe(
+      "This amount has more decimals than JPY allows.",
+    );
   });
 });
 
@@ -475,7 +483,7 @@ it("round-trips multiple choices with punctuation and distinguishes unchanged fr
     options: ["Fit, scope", "C++"],
     column_name: "cf_choices",
   });
-  const control = customFieldToFormField(field, BOOL_LABELS, TOO_PRECISE);
+  const control = customFieldToFormField(field, BOOL_LABELS, T);
   const selected = ["Fit, scope", "C++"];
   const input = control.toInput?.(selected);
   expect(input).toBe(JSON.stringify(selected));
