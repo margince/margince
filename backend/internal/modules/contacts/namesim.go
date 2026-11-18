@@ -28,6 +28,8 @@ const (
 // legalSuffixes is PO-PARAM-1: the trailing tokens company-name
 // normalization strips so "Acme Inc" and "Acme GmbH" both reduce to
 // "acme" and meet at the fuzzy tier for a human to judge.
+//
+//nolint:goconst // legal-form words; "company" here is not the record kind.
 var legalSuffixes = map[string]bool{
 	"inc": true, "llc": true, "ltd": true, "gmbh": true, "ag": true,
 	"sa": true, "sas": true, "bv": true, "oy": true, "plc": true,
