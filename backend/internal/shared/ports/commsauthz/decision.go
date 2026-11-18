@@ -140,6 +140,9 @@ type Request struct {
 	// signature and footer a send adds. Empty for a notice no sender wrote.
 	AuthoredSubject string
 	AuthoredBody    string
+	// AuthoredHTML is the markup the sender wrote beside the plain body. A
+	// client shows it, so its visible text is read for an offer too.
+	AuthoredHTML string
 	// AuthoredFileNames are the names of the files the sender attached, which
 	// say what a message offers as plainly as its body does.
 	AuthoredFileNames []string

@@ -191,6 +191,7 @@ func (m outboundMessage) authorization(origin SendOrigin) commsauthz.Request {
 		Body:              m.body,
 		AuthoredSubject:   m.in.Subject,
 		AuthoredBody:      m.in.Body,
+		AuthoredHTML:      m.in.HTMLBody,
 		AuthoredFileNames: fileNames(m.files),
 		// The markup alternative travels with the plain one: both are the
 		// message, and the fingerprint stamped from this request is what the

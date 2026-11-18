@@ -10,6 +10,7 @@ import (
 
 	"golang.org/x/text/unicode/norm"
 
+	"github.com/margince/margince/backend/internal/platform/htmltext"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
@@ -31,11 +32,15 @@ var offerStems = []string{"angebot", "rabatt", "gutschein", "preisliste"}
 var offerAmount = regexp.MustCompile(
 	`€\s?\d|\$\s?\d|\d[\d.,]*\s?(€|eur|usd|vnd|đ|\$)([^\p{L}\p{N}]|$)|\d+\s?%\s?(off|rabatt|giảm)([^\p{L}\p{N}]|$)`)
 
+// invisible drops the characters that render as nothing, so "Ange\u00adbot"
+// still reads as the word a recipient sees.
+var invisible = strings.NewReplacer("\u00ad", "", "\u200b", "", "\u200c", "", "\u200d", "", "\u2060", "", "\ufeff", "")
+
 // authoredOffer reports whether the words a sender wrote, or the names of the
 // files they attached, make an offer. A quoted line counts too. The composer
 // keeps the thread out of the authored body, so a quote marker is typed.
 func authoredOffer(subject, body string, fileNames []string) bool {
-	text := norm.NFC.String(strings.Join(append([]string{subject, body}, fileNames...), "\n"))
+	text := invisible.Replace(norm.NFC.String(strings.Join(append([]string{subject, body}, fileNames...), "\n")))
 	lowered := strings.ToLower(text)
 	return len(claimsIn(text, offerWords)) > 0 || offerAmount.MatchString(lowered) ||
 		slices.ContainsFunc(offerStems, func(stem string) bool { return strings.Contains(lowered, stem) })
@@ -44,6 +49,11 @@ func authoredOffer(subject, body string, fileNames []string) bool {
 // withAuthoredOffer reads the authored words into the evidence. The engine
 // reads them itself, so no caller can vouch that a message makes no offer.
 func withAuthoredOffer(req commsauthz.Request) commsauthz.Request {
-	req.Evidence.AuthoredOffer = authoredOffer(req.AuthoredSubject, req.AuthoredBody, req.AuthoredFileNames)
+	body := req.AuthoredBody
+	if req.AuthoredHTML != "" {
+		visible, _ := htmltext.Render(req.AuthoredHTML)
+		body += "\n" + visible
+	}
+	req.Evidence.AuthoredOffer = authoredOffer(req.AuthoredSubject, body, req.AuthoredFileNames)
 	return req
 }

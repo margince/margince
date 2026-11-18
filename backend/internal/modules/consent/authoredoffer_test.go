@@ -3,7 +3,11 @@
 
 package consent
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
+)
 
 // Each pair shares its routine text, so the one difference is whether the
 // sender wrote an offer.
@@ -40,5 +44,19 @@ func TestAnOfferCountsWhereverTheSenderWroteIt(t *testing.T) {
 				t.Errorf("authoredOffer = %v, want %v", got, c.want)
 			}
 		})
+	}
+}
+
+// A pitch that sits only in the markup is an offer: a client shows the markup,
+// so its visible text is what the recipient reads.
+func TestAnOfferInTheMarkupAloneIsAnOffer(t *testing.T) {
+	neutral := commsauthz.Request{AuthoredSubject: "Re: Termin", AuthoredBody: "Siehe unten."}
+	if withAuthoredOffer(neutral).Evidence.AuthoredOffer {
+		t.Fatal("a neutral message read as an offer: the fixture proves nothing")
+	}
+	pitched := neutral
+	pitched.AuthoredHTML = `<p>Siehe unten.</p><style>p{color:red}</style><p>Ihr <b>Sonder&shy;ange&shy;bot</b> f&uuml;r 2027</p>`
+	if !withAuthoredOffer(pitched).Evidence.AuthoredOffer {
+		t.Error("an offer in the markup alone did not read as an offer")
 	}
 }
