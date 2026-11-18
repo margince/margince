@@ -6675,7 +6675,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deals.bulkAlreadyThere_one": "{count} war schon in {stage}.",
   "deals.bulkAlreadyThere_other": "{count} waren schon in {stage}.",
   "deals.bulkNothingToMove_one": "Der ausgewählte Deal ist schon in {stage}.",
-  "deals.bulkNothingToMove_other": "Alle {count} ausgewählten Deals sind schon in {stage}.",
+  "deals.bulkNothingToMove_other":
+    "Alle {count} ausgewählten Deals sind schon in {stage}.",
   "deals.bulkFailed": "{count} nicht übernommen:",
   "deals.bulkFailedRow": "konnte nicht gespeichert werden",
   "bulk.selected_one": "{count} ausgewählt",
@@ -13541,9 +13542,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "{steward} hat diesen Raum pausiert. Ihr Link bleibt gültig, und Sie können weitermachen, sobald der Zugang fortgesetzt wird.",
   "buyer.expiredTitle": "Zugang beendet",
   "buyer.expiredBody":
-    "Der Zugang zu diesem Raum ist abgelaufen. Wenden Sie sich an {steward}, oder fordern Sie unten einen neuen Link an.",
+    "Der Zugang zu diesem Raum ist abgelaufen. Wenden Sie sich an {steward}, wenn Sie ihn wieder brauchen.",
   "buyer.eyebrow": "Deal Room",
-  "buyer.contact": "Ihre Ansprechperson: {steward}.",
   "buyer.closed":
     "Dieser Raum ist geschlossen. Die Inhalte bleiben als Aufzeichnung erhalten.",
   "buyer.previewBannerTitle": "Du siehst eine Vorschau dieses Raums",

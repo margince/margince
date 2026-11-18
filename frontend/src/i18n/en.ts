@@ -6636,7 +6636,8 @@ export const en = {
   "deals.bulkAlreadyThere_one": "{count} was already in {stage}.",
   "deals.bulkAlreadyThere_other": "{count} were already in {stage}.",
   "deals.bulkNothingToMove_one": "The selected deal is already in {stage}.",
-  "deals.bulkNothingToMove_other": "All {count} selected deals are already in {stage}.",
+  "deals.bulkNothingToMove_other":
+    "All {count} selected deals are already in {stage}.",
   "deals.bulkFailed": "{count} not applied:",
   "deals.bulkFailedRow": "could not be saved",
   "bulk.selected_one": "{count} selected",
@@ -13506,9 +13507,8 @@ export const en = {
     "{steward} has paused this room. Your link remains valid, and you can continue once access resumes.",
   "buyer.expiredTitle": "Access has ended",
   "buyer.expiredBody":
-    "Access to this room has expired. Contact {steward}, or request a new link below.",
+    "Access to this room has expired. Contact {steward} if you need it again.",
   "buyer.eyebrow": "Deal Room",
-  "buyer.contact": "Your contact: {steward}.",
   "buyer.closed": "This room is closed. Its content is kept as a record.",
   "buyer.previewBannerTitle": "You are previewing this room",
   "buyer.previewBanner":
