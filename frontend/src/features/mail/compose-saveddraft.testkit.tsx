@@ -14,8 +14,8 @@ import {
 } from "../../testing/sendpermission.testkit";
 import { ComposeWindow } from "./composewindow";
 
-// The rep's own unsent message, kept by the server: what the composer reads
-// back when it opens, writes when it closes, and hands the send to discard.
+// The rep's own unsent message, kept by the server. The composer reads it on
+// open and writes it on close, and a send discards it.
 
 export type MailDraft = components["schemas"]["MailDraft"];
 export type Sent = {
