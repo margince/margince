@@ -1203,6 +1203,9 @@ test("AC-pipeline-12: a busy stage's column loads its next page on its own", asy
   await expect(loadMore).toHaveCount(0);
 });
 
+// The note a won close leaves. A shown probability follows it after a "·".
+const closedWonNote = new RegExp(`^${de["deals.closedWon"]}`);
+
 test("AC-deal-6: a terminal-stage drop is a 🟡 confirm — nothing runs before Confirm", async ({
   page,
 }) => {
@@ -1223,14 +1226,14 @@ test("AC-deal-6: a terminal-stage drop is a 🟡 confirm — nothing runs before
   // with its contract is never asked.
   await expect(page.getByText("Wie wurde der Deal gewonnen?")).toBeVisible();
   // Still nothing has run: the drop is not applied while the dialog is open.
-  await expect(page.getByText("Nach Won verschoben")).toHaveCount(0);
+  await expect(page.getByText(closedWonNote)).toHaveCount(0);
 
   await page
     .getByRole("combobox", { name: "Wie wurde der Deal gewonnen?" })
     .click();
   await page.getByRole("option", { name: "Per Bestellung" }).click();
   await page.getByRole("button", { name: "Bestätigen" }).click();
-  await expect(page.getByText("Nach Won verschoben")).toBeVisible();
+  await expect(page.getByText(closedWonNote)).toBeVisible();
 });
 
 /** A board card's "…" trigger, reached from the card's own link with Tab. */
@@ -1283,7 +1286,7 @@ test("AC-deal-7: a card's menu asks the terminal confirm for Mark won, and Cance
     .click();
   await expect(page.getByText("In die Phase Won verschieben?")).toBeVisible();
   await expect(page.getByText("Wie wurde der Deal gewonnen?")).toBeVisible();
-  await expect(page.getByText("Nach Won verschoben")).toHaveCount(0);
+  await expect(page.getByText(closedWonNote)).toHaveCount(0);
 
   await page.getByRole("button", { name: "Abbrechen" }).click();
   await expect(page.getByText("In die Phase Won verschieben?")).toHaveCount(0);

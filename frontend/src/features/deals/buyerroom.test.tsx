@@ -235,6 +235,27 @@ describe("BuyerRoomScreen", () => {
     expect(screen.queryByText("Acme rollout")).not.toBeInTheDocument();
   });
 
+  // Expiry is the room's, not the link's: a new link opens the same ended
+  // room. So the page sends the buyer to their contact and offers no link.
+  it("an expired room names the contact and offers no new link", async () => {
+    globalThis.sessionStorage.setItem("margince.room.session", "mdrs_session");
+    stubRoom({
+      "GET /public/rooms/me": () =>
+        jsonResponse({ ...LIVE, access: "expired", room: undefined }),
+    });
+    render(<BuyerRoomScreen />);
+
+    await screen.findByText("Access has ended");
+    expect(
+      screen.getByText(
+        "Access to this room has expired. Contact Ada Admin if you need it again.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Request new link" }),
+    ).toBeNull();
+  });
+
   it("a dead link offers a fresh one by email, and the session is dropped on a 401", async () => {
     globalThis.location.hash = "#/room?c=mdr_used";
     const sent = stubRoom({
@@ -397,6 +418,27 @@ describe("BuyerRoomScreen", () => {
       ),
     ).toBeTruthy();
   });
+
+  it("a download the session no longer admits ends the session", async () => {
+    stubRoom({
+      "GET /public/rooms/documents/d-1/file": () =>
+        jsonResponse({ status: 401, code: "unauthorized" }, 401),
+    });
+    globalThis.sessionStorage.setItem("margince.room.session", "mdrs_session");
+    const user = userEvent.setup();
+    render(<BuyerRoomScreen />);
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: /Download Data processing agreement/i,
+      }),
+    );
+
+    await screen.findByText("This link no longer works");
+    expect(globalThis.sessionStorage.getItem("margince.room.session")).toBe(
+      null,
+    );
+  });
 });
 
 // Whether the reader may write and why they may not are one decision. They
@@ -486,7 +528,7 @@ describe("the hero the buyer lands on", () => {
       await screen.findByRole("heading", { name: "Acme rollout" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Welcome, Laura.")).toBeInTheDocument();
-    expect(screen.getByText("Your contact: Ada Admin.")).toBeInTheDocument();
+    expect(screen.getByText("Ada Admin")).toBeInTheDocument();
     const pill = screen.getByText("Live").closest(".badge");
     expect(pill).toHaveClass("badge-success");
     expect(pill?.querySelector(".badge-live-dot")).toBeInTheDocument();
@@ -501,8 +543,10 @@ describe("the hero the buyer lands on", () => {
     render(<BuyerRoomScreen />);
 
     const side = await screen.findByRole("complementary");
+    // Named once, under its eyebrow, not again in a sentence below.
+    expect(within(side).getByText("Your contact")).toBeInTheDocument();
     expect(within(side).getByText("Ada Admin")).toBeInTheDocument();
-    expect(within(side).getByText("Your contact: Ada Admin.")).toBeTruthy();
+    expect(within(side).queryByText(/Your contact:/)).toBeNull();
     expect(screen.getByText("Signed in as Laura Buyer.")).toBeInTheDocument();
   });
 

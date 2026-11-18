@@ -100,6 +100,11 @@ export type BoardDeal = BoardRecord & {
   closeDate?: string | null;
   closeDateProvisional?: boolean;
   /**
+   * When a won or lost deal closed, which the card states in place of the
+   * forecast. Null on a closed deal that carries no day; absent on an open one.
+   */
+  closedAt?: string | null;
+  /**
    * Who carries the deal: the seat's name, its user id to key the chip, and
    * its picture if it has one.
    * Null for a deal nobody owns and for one whose owner the caller could not

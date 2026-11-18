@@ -1,11 +1,5 @@
-import {
-  type InfiniteData,
-  type UseInfiniteQueryResult,
-  useInfiniteQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
-import { api, FIRST_PAGE } from "../../api/client";
 import type { components } from "../../api/schema";
 import {
   isMergeReference,
@@ -22,8 +16,9 @@ import type { EntityKind } from "../../lib/entity";
 import { historyFieldLabel } from "../../lib/historyfieldlabels";
 import { historyLine } from "../../lib/historyline";
 import { undoRefusalKey, VERSION_SKEW_CODE } from "../../lib/historyundo";
-import { type HistoryValueCtx, historyValue } from "../../lib/historyvalues";
-import { problemCodeOf, problemMessageOf, unwrap } from "../../lib/problem";
+import type { HistoryValueCtx } from "../../lib/historyvalues";
+import { problemCodeOf, problemMessageOf } from "../../lib/problem";
+import { useRecordHistory } from "../../lib/recordhistory";
 import { useRecordRestore } from "../../lib/recordrestore";
 import { useViewerId } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -33,7 +28,7 @@ import {
   provenanceOfEntry,
 } from "./history.logic";
 import { HistoryEdgeDetail } from "./historyedge";
-import { HistoryFieldDiff } from "./historyfielddiff";
+import { HistoryFieldDiff, HistoryFieldValue } from "./historyfielddiff";
 import { LeftBehindNotice, useLeftBehind } from "./historyleftbehind";
 import { historyRows } from "./historyreversal";
 import { actorName, ReversalPairRow } from "./historyreversalrow";
@@ -44,49 +39,6 @@ import "./history.css";
 // server's English sentence (historyline.ts).
 
 type AuditHistoryEntry = components["schemas"]["AuditHistoryEntry"];
-type AuditHistoryListResponse =
-  components["schemas"]["AuditHistoryListResponse"];
-
-export function useRecordHistory(
-  kind: EntityKind,
-  id: string,
-  // Whether to fetch at all. A caller that reads the history to describe ONE
-  // recorded event — the lead page naming what its promotion did — has nothing
-  // to read on a record where that event never happened, and a disabled query
-  // says so rather than paying for a page nothing renders. Defaults to on, so
-  // the History tab is unchanged.
-  enabled = true,
-  // One verb, for a caller describing a single recorded event. Without it that
-  // caller pages the whole trail looking for its row — and one that read only
-  // the first page got a confident wrong answer on exactly the records somebody
-  // worked hardest, because those are the ones with enough other rows to push
-  // it off. Absent means the whole history, which is what the History tab wants.
-  action?: string,
-): UseInfiniteQueryResult<InfiniteData<AuditHistoryListResponse>> {
-  return useInfiniteQuery({
-    // The verb is part of the key: a filtered read and the whole trail are
-    // different answers, and sharing a cache entry would serve one for the
-    // other depending on which mounted first.
-    queryKey: ["record-history", kind, id, action ?? null],
-    enabled,
-    initialPageParam: FIRST_PAGE,
-    queryFn: async ({ pageParam }) => {
-      return unwrap(
-        await api.GET("/records/{entity_type}/{id}/history", {
-          params: {
-            path: { entity_type: kind, id },
-            query: {
-              limit: 20,
-              ...(pageParam ? { cursor: pageParam } : {}),
-              ...(action ? { action } : {}),
-            },
-          },
-        }),
-      );
-    },
-    getNextPageParam: (last) => last?.page?.next_cursor ?? null,
-  });
-}
 
 // What one entry CHANGED, under the sentence saying that it did.
 //
@@ -309,12 +261,13 @@ function UndoButton({
               <li key={change.field} className="entry-field">
                 <span>{historyFieldLabel(change.field, t)}</span>
                 <span>
-                  {historyValue(
-                    change.field,
-                    change.oldValue,
-                    { currency, locale, zone: readerZone },
-                    change.oldPrecision,
-                  ) ?? t("history.cleared")}
+                  <HistoryFieldValue
+                    field={change.field}
+                    value={change.oldValue}
+                    precision={change.oldPrecision}
+                    values={{ currency, locale, zone: readerZone }}
+                    cleared={t("history.cleared")}
+                  />
                 </span>
               </li>
             ))}

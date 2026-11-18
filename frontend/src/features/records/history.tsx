@@ -12,11 +12,8 @@ import type { EntityKind } from "../../lib/entity";
 // here because "./history" is the name every record screen already reaches
 // for, and a split that renamed the door would touch six screens to say
 // nothing.
-export {
-  RecordHistory,
-  type RecordRestore,
-  useRecordHistory,
-} from "./historyentries";
+export { useRecordHistory } from "../../lib/recordhistory";
+export { RecordHistory, type RecordRestore } from "./historyentries";
 export {
   changeTimeline,
   FieldHistoryTimeline,

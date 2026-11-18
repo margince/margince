@@ -4,6 +4,7 @@ import type { components } from "../../api/schema";
 import { CreateAction, type CreateField } from "../../components/create";
 import { currencyField } from "../../components/currencyfield";
 import { useDealCreateFields } from "../../components/dealcreatefields";
+import { moneyAmountField } from "../../components/moneyamountfield";
 import { useOwnerPicker } from "../../components/recordowners";
 import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
@@ -15,6 +16,7 @@ import {
   pipelinesOptions,
 } from "../../lib/pipelines.queries";
 import { unwrap } from "../../lib/problem";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import { useProjectCreateForm } from "../projects/projects.create";
 
 /**
@@ -57,15 +59,18 @@ export function NewDealAction({
   }
 
   const fields: CreateField[] = [
-    { key: "name", label: "create.dealName", required: true },
     {
+      key: "name",
+      label: "create.dealName",
+      required: true,
+      maxLength: TEXT_LIMITS.label,
+    },
+    moneyAmountField(t, {
       key: "amount",
       label: "create.amount",
-      type: "number",
-      step: "0.01",
-      min: "0",
       wireField: "amount_minor",
-    },
+      currency: leading[0],
+    }),
     currencyField(leading, locale),
     {
       key: "stage_id",
