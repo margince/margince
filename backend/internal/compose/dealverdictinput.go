@@ -143,6 +143,7 @@ func readVerdictActivities(ctx context.Context, tx pgx.Tx, deal ids.UUID, read *
 func readVerdictPrivateMail(ctx context.Context, tx pgx.Tx, deal ids.UUID, read *dealVerdictRead) error {
 	return dealprivatemail.Read(ctx, tx, deal, dealVerdictActivities, &read.in, &read.newestEvidenceAt)
 }
+
 func readVerdictOffers(ctx context.Context, tx pgx.Tx, deal ids.UUID, read *dealVerdictRead) error {
 	rows, err := tx.Query(ctx, `
 		SELECT gross_minor, currency::text, status, accepted_at IS NOT NULL, updated_at
