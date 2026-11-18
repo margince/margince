@@ -692,6 +692,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `idx_contact_dedupe_scan`: `btree (updated_at, id) WHERE (archived_at IS NULL)`
 - `idx_contact_exact_digraph_name_key`: `btree (btrim(regexp_replace(replace(f_fold_apostrophes(lower(replace(replace(replace(NORMALIZE(lower(full_name), NFC), 'ä', 'ae'), 'ö', 'oe'), 'ü', 'ue'))), 'ς', 'σ'), '\s+', ' ', 'g'))) WHERE (archived_at IS NULL)`
 - `idx_contact_exact_name_key`: `btree (btrim(regexp_replace(replace(f_fold_apostrophes(lower(full_name)), 'ς', 'σ'), '\s+', ' ', 'g'))) WHERE (archived_at IS NULL)`
+- `idx_contact_family_name_key`: `btree ("substring"(btrim(regexp_replace(replace(f_fold_apostrophes(lower( CASE WHEN (full_name ~~ '%,%') THEN split_part(full_name, ',', 1) ELSE full_name END)), 'ς', 'σ'), '\s+', ' ', 'g')), '[^ ]+$')) WHERE (archived_at IS NULL)`
 - `idx_contact_from_lead`: `btree (converted_from_lead_id) WHERE (converted_from_lead_id IS NOT NULL)`
 - `idx_contact_keyed_address_hashes`: `btree (anonymized_address_key_id) WHERE (anonymized_address_key_id IS NOT NULL)`
 - `idx_contact_last_activity_keyset`: `btree (last_activity_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)`
@@ -928,6 +929,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `contact_phone_superseded_phone_ix`: `btree (superseded_phone_id) WHERE (superseded_phone_id IS NOT NULL)`
 - `idx_contact_phone_contact`: `btree (contact_id)`
 - `idx_contact_phone_dedupe_scan`: `btree (updated_at, id)`
+- `idx_contact_phone_live_phone`: `btree (phone) WHERE (archived_at IS NULL)`
 - `uq_contact_phone_primary`: `unique, btree (contact_id, phone_type) WHERE (is_primary AND (archived_at IS NULL))`
 
 **Triggers**

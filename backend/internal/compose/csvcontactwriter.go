@@ -24,7 +24,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/freemail"
@@ -239,13 +238,8 @@ func (w *csvWriters) contactCollides(ctx context.Context, row migration.Row) (bo
 		if err != nil || match.Decision == contacts.DecisionNoMatch {
 			return err
 		}
-		matched := matchedContacts(match)
-		for _, id := range matched {
-			if visible, err = auth.VisibleTo(ctx, tx, "contact", id.UUID); err != nil || visible {
-				return err
-			}
-		}
-		return nil
+		visible, err = contacts.AnyMatchVisible(ctx, tx, match)
+		return err
 	}); err != nil {
 		named := email
 		if named == "" {
@@ -254,19 +248,6 @@ func (w *csvWriters) contactCollides(ctx context.Context, row migration.Row) (bo
 		return false, fmt.Errorf("import: checking %q against the contacts already held: %w", named, err)
 	}
 	return visible, nil
-}
-
-// matchedContacts is every contact the ladder matched, best first. An exact
-// collision carries no review list, so its own id stands for it.
-func matchedContacts(match contacts.ContactResolution) []ids.ContactID {
-	if len(match.Reviews) == 0 {
-		return []ids.ContactID{match.ContactID}
-	}
-	matched := make([]ids.ContactID, 0, len(match.Reviews))
-	for _, review := range match.Reviews {
-		matched = append(matched, review.ContactID)
-	}
-	return matched
 }
 
 // consumerMailList is the workspace's consumer-mail list, read on first use and
