@@ -88,6 +88,8 @@ type Readings struct {
 	// outside every total. What the money covers is PricedCount minus
 	// FxMissingCount, and presenting a total without that figure invites the
 	// reading where every eligible deal was counted. CoverageNote says it.
+	// EligibleCount is the open deals due in the period; the other counts are
+	// parts of it.
 	EligibleCount      int
 	PricedCount        int
 	ConfirmedDateCount int
@@ -99,6 +101,19 @@ type Readings struct {
 
 	// Range is the central 80% of finishes, set by the assembler; nil if not drawn.
 	Range *Range
+}
+
+// WonFxMissingCount is the deals won in the period that carry an amount no
+// rate could convert. The won total is short by these deals, whatever the
+// open pipeline holds.
+func (r Readings) WonFxMissingCount() int {
+	n := 0
+	for _, c := range r.Contributions {
+		if c.InWon && c.ExclusionReason == ExcludedFxMissing {
+			n++
+		}
+	}
+	return n
 }
 
 // Contribution is one deal's part in one set of readings, with the membership
@@ -215,9 +230,10 @@ func Compute(period Period, in []Deal, rules Rules) (Readings, error) {
 		if err != nil {
 			return Readings{}, err
 		}
-		// A lost deal is in no reading, so no coverage count includes it; its
-		// contribution row is still kept for the snapshot.
-		if !deal.Lost {
+		// Coverage counts the open pipeline only: a won or lost deal is no open
+		// deal, so neither inflates "priced of open". Its contribution row is
+		// still kept for the snapshot.
+		if contribution.InOpen {
 			out.EligibleCount++
 			if deal.AmountMinor != nil {
 				out.PricedCount++

@@ -321,7 +321,7 @@ func sufficiencyToWire(in Sufficiency) crmcontracts.ForecastSufficiency {
 }
 
 // RecordForecastCall records what somebody believes will close.
-func (h Handlers) RecordForecastCall(w http.ResponseWriter, r *http.Request) {
+func (h Handlers) RecordForecastCall(w http.ResponseWriter, r *http.Request, _ crmcontracts.RecordForecastCallParams) {
 	var body crmcontracts.NewForecastCall
 	if !httperr.Decode(w, r, &body) {
 		return

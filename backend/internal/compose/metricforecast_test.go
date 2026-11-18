@@ -150,7 +150,8 @@ func TestTheComparisonTakesAManagerCallAsTheWholeQuarter(t *testing.T) {
 }
 
 func TestAMissingRateLeavesTheOpenTotalUnknown(t *testing.T) {
-	readings := forecasting.Readings{OpenMinor: 50_000, FxMissingCount: 1}
+	won := []forecasting.Contribution{{InWon: true, ExclusionReason: forecasting.ExcludedFxMissing}}
+	readings := forecasting.Readings{OpenMinor: 50_000, FxMissingCount: 1, Contributions: won}
 	facts, err := forecastOpenFacts(crmcontracts.ReportingContext{}, nil, readings)
 	if err != nil {
 		t.Fatal(err)
@@ -158,8 +159,8 @@ func TestAMissingRateLeavesTheOpenTotalUnknown(t *testing.T) {
 	if len(facts) != 1 || facts[0].Money != nil || facts[0].Row.Value != nil {
 		t.Fatalf("open total %+v, want it present and not a number: a short total reads as the whole", facts)
 	}
-	if !forecastOperands(forecasting.Period{}, readings, forecasting.Landing{}, false).FxMissing {
-		t.Fatal("the comparison was not told a rate is missing")
+	if o := forecastOperands(forecasting.Period{}, readings, forecasting.Landing{}, false); !o.FxMissingOpen || !o.FxMissingWon {
+		t.Fatalf("operands %+v, want the open pipeline and the won total each marked short of a rate", o)
 	}
 }
 

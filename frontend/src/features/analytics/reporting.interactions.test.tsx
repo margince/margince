@@ -2,7 +2,9 @@ import { REPORTING_FIXTURE_ZONE } from "../../testing/reporting.fixtures";
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import {
+  act,
   cleanup,
+  fireEvent,
   render,
   screen,
   waitFor,
@@ -83,6 +85,37 @@ it("saves the full selected graph layout and context", async () => {
     }),
     expect.any(URL),
   );
+});
+it("stores a report once when Save report is pressed twice in one frame", async () => {
+  const user = userEvent.setup({ delay: null });
+  const saved = vi.fn();
+  const write = vi.fn(() => jsonResponse(reportingStoryReport));
+  installFetchStub({
+    ...reportingStoryRoutes(),
+    "POST /analytics/reports": write,
+  });
+  render(
+    <StoryProviders>
+      <SaveReportingDialog
+        selection={reportingStoryEvaluation.selection}
+        onClose={() => {}}
+        onSaved={saved}
+      />
+    </StoryProviders>,
+  );
+  await user.type(
+    await screen.findByRole("textbox", { name: "Report name" }),
+    "Friday review",
+  );
+  const save = screen.getByRole("button", { name: "Save report" });
+  act(() => {
+    fireEvent.click(save);
+    fireEvent.click(save);
+  });
+  await waitFor(() => expect(saved).toHaveBeenCalled());
+  await act(() => new Promise((resolve) => setTimeout(resolve, 50)));
+  expect(write).toHaveBeenCalledOnce();
+  expect(saved).toHaveBeenCalledOnce();
 });
 it("draws a saved layout's sections under their titles", async () => {
   const laidOutEvaluation = {

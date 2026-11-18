@@ -1,7 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
+import { useIdempotencyKey } from "../../api/idempotencykey";
 import type { components } from "../../api/schema";
+import { useSingleFlight } from "../../api/singleflight";
 import { Button, Field, TextInput } from "../../design-system/atoms";
 import { MoneyInput } from "../../design-system/moneyinput";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
@@ -39,10 +41,16 @@ export function ForecastCallEditor({
   // The box keeps a refused text in view; the save waits until it reads.
   const [amountRefused, setAmountRefused] = useState(false);
 
+  const singleFlight = useSingleFlight();
+  const idempotency = useIdempotencyKey();
   const save = useMutation({
     // Amount and note travel as VARIABLES. A mutation closing over its inputs
     // sends what the last render saw, which is wrong when a save races a refetch.
-    mutationFn: async (call: { amountMinor: number; note: string }) => {
+    mutationFn: async (call: {
+      amountMinor: number;
+      note: string;
+      key: string;
+    }) => {
       const named = writableScope(selection.scope);
       if (!named) {
         // The editor is not rendered without a nameable population, so this is
@@ -51,6 +59,7 @@ export function ForecastCallEditor({
       }
       return unwrap(
         await api.POST("/forecast/calls", {
+          params: { header: { "Idempotency-Key": call.key } },
           body: {
             // The call is filed for the population and the window the reader is
             // looking at, so the call and the figure it came from agree. A call made
@@ -67,6 +76,7 @@ export function ForecastCallEditor({
       );
     },
     onSuccess: async () => {
+      idempotency.renew();
       // The readings carry the standing call, so they are stale the moment one
       // is recorded. The whole "forecast" prefix goes, not this population
       // alone: a workspace call changes what a team reading shows beneath it.
@@ -86,7 +96,14 @@ export function ForecastCallEditor({
           <Button
             variant="primary"
             disabled={save.isPending || amountRefused}
-            onClick={() => save.mutate({ amountMinor, note })}
+            onClick={() =>
+              singleFlight((settled) =>
+                save.mutate(
+                  { amountMinor, note, key: idempotency.key },
+                  { onSettled: settled },
+                ),
+              )
+            }
           >
             {t("forecast.saveCall")}
           </Button>

@@ -179,6 +179,8 @@ var replayableOperations = map[string]replayTarget{
 	"POST /v1/scheduling/invitations": {object: tableActivity, table: tableActivity, idPath: "id"},
 	"POST /v1/scheduling/proposals":   {object: tableActivity, table: tableActivity, idPath: "id"},
 	"POST /v1/analytics/decisions":    {object: tableActivity, table: tableActivity, idPath: "id"},
+	"POST /v1/forecast/calls":         {object: "forecast", rowNote: "the answer is the call the caller just recorded under their own write authority; it carries no deal or other row-scoped record"},    //nolint:goconst // the replay gates read this map's keys as string literals
+	"POST /v1/analytics/reports":      {object: "report_definition", rowNote: "the answer is the report the caller just created and owns; it carries no row-scoped record, only the selection they sent"}, //nolint:goconst // the replay gates read this map's keys as string literals
 	"PUT /v1/analytics/sales-goals/{owner_id}/{year}/draft": {
 		object: replaySalesTargetObject, moduleProbe: probeSalesGoalPlan, pathParam: salesGoalPlanOwnerParam, rowNote: salesGoalPlanReplayNote,
 	},
