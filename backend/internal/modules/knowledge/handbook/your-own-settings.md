@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/account-settings.tsx frontend/src/features/settings/signeddevices.tsx frontend/src/features/settings/notification-settings.tsx frontend/src/features/sign-in/mfasetup.tsx frontend/src/features/booking/booking-setup.tsx frontend/src/features/voice-knowledge/voice-dna.tsx frontend/src/features/capture/connection-settings.tsx backend/internal/modules/identity/mfa.go backend/internal/modules/activities/scheduling_profile.go frontend/src/features/settings/settingssignaturerow.tsx backend/internal/modules/contacts/emailsignature.go backend/internal/modules/activities/signature.go frontend/src/app/setup-reminder.tsx frontend/src/app/account.tsx backend/internal/modules/identity/avatar.go backend/internal/modules/identity/providerpicture.go backend/internal/modules/identity/federatedidentity.go backend/internal/compose/avatarprovider.go backend/internal/compose/connectors_picture.go frontend/src/lib/shortcuts.ts -->
+<!-- describes: frontend/src/features/settings/account-settings.tsx frontend/src/features/settings/signeddevices.tsx frontend/src/features/settings/notification-settings.tsx frontend/src/features/sign-in/mfasetup.tsx frontend/src/features/booking/booking-setup.tsx frontend/src/features/voice-knowledge/voice-dna.tsx frontend/src/features/capture/connection-settings.tsx backend/internal/modules/identity/mfa.go backend/internal/modules/activities/scheduling_profile.go frontend/src/features/settings/settingssignaturerow.tsx backend/internal/modules/contacts/emailsignature.go backend/internal/modules/activities/signature.go frontend/src/app/setup-reminder.tsx frontend/src/app/account.tsx backend/internal/modules/identity/avatar.go backend/internal/modules/identity/providerpicture.go backend/internal/modules/identity/federatedidentity.go backend/internal/compose/avatarprovider.go backend/internal/compose/connectors_picture.go frontend/src/lib/shortcuts.ts frontend/src/lib/setup-checklist.ts frontend/src/features/onboarding/onboarding-conversation/voice-scenes.tsx frontend/src/features/onboarding/onboarding-conversation/connect-scene.tsx -->
 # Your own settings
 
 Your own settings in Margince are the pages under **You** in Settings: **Account**, **Notifications**, **Meetings**, **Writing voice**, **AI assistants** and **Connections**. Everything here changes your own seat and nobody else's.
@@ -13,8 +13,16 @@ The pages are **Account**, **Notifications**, **Meetings**, **Writing voice**, *
 You can also press ⌘K (Ctrl+K) and type the page name, or a word such as "password", "language", "theme" or "mailbox".
 Also called: my profile, my account, preferences, user settings.
 
+### What happens the first time I sign in?
+The first time you sign in to Margince with a full seat, two steps come before the rest of the app: **Train your writing voice** and **Connect your mail and calendar**.
+1. On **Train your writing voice**, drop or browse files you wrote, or choose **Paste text instead**. Then choose **Build my voice profile**, or **Skip voice for now**.
+2. On **Connect your mail and calendar**, pick Google, Microsoft or **Other mail provider**. **Also worth doing now** offers your LinkedIn profile, your AI tool and **Prepare my Morning brief overnight**. Choose **Continue**, or **Skip for now**.
+
+Home opens after the second step. Samples you added are kept even if you skip or the build does not finish. Whatever you skipped waits under **Finish setup**, and you can change all of it later in Settings under **Writing voice**, **Connections** and **Account**.
+Also called: onboarding, first sign-in, welcome steps.
+
 ### How do I finish setting up Margince?
-To see what is left of your setup in Margince, open Settings and look at **Your setup** on **Overview**. It lists the steps. Connect your mail and your calendar, choose where you work and your language, and see what Margince may do. Then add writing samples and turn on your booking link.
+To see what is left of your setup in Margince, open Settings and look at **Your setup** on **Overview**. It lists up to nine steps, in this order: **Set up AI**, **Connect your mail**, **Connect your calendar**, **Choose where you work**, **Choose your language**, **See what Margince may do**, **Connect your AI tool**, **Train your writing voice** and **Turn on your booking link**. Which of them you see depends on your role: a step whose page you cannot change is left out.
 
 Every member sees the three personal steps, so a colleague invited to an existing workspace has them too. **Choose where you work** sets your time zone, and **Choose your language** sets the language, both on **Account**; the step's button takes you there. **See what Margince may do** opens a short note on what Margince reads and writes. It is done once you choose **Got it**, and this browser keeps it.
 

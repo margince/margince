@@ -12640,7 +12640,7 @@ export const en = {
     "It cannot read or annotate your Morning brief. Your records, Worklist and scheduled weekly review remain available.",
   "overnightGrant.saveFailedTitle": "Answer was not saved",
   "overnightGrant.saveFailed":
-    "Everything else is connected. After signing in, set this in Settings under Connections.",
+    "Everything else is connected. After signing in, set this in Settings under Account.",
   "overnightGrant.renewTitle": "Overnight authority expired",
   "overnightGrant.renew":
     "Turn this off and on again to renew it. Until then, your Morning brief is not prepared.",

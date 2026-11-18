@@ -12707,7 +12707,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Margince kann deinen Morgenbericht weder lesen noch mit Anmerkungen versehen. Deine Datensätze, die Worklist und der geplante Wochenrückblick bleiben verfügbar.",
   "overnightGrant.saveFailedTitle": "Antwort nicht gespeichert",
   "overnightGrant.saveFailed":
-    "Alles andere ist verbunden. Lege das nach der Anmeldung in den Einstellungen unter Verbindungen fest.",
+    "Alles andere ist verbunden. Lege das nach der Anmeldung in den Einstellungen unter Nutzerkonto fest.",
   "overnightGrant.renewTitle": "Vollmacht für die Nacht abgelaufen",
   "overnightGrant.renew":
     "Deaktiviere die Option und aktiviere sie erneut, um die Vollmacht zu erneuern. Bis dahin wird dein Morgenbericht nicht vorbereitet.",

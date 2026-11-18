@@ -12368,7 +12368,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Trợ lý AI không thể đọc hay thêm ghi chú vào Bản tin sáng. Các hồ sơ, Danh sách công việc và tổng kết tuần theo lịch vẫn sử dụng được.",
   "overnightGrant.saveFailedTitle": "Không thể lưu câu trả lời",
   "overnightGrant.saveFailed":
-    "Mọi thứ khác đã kết nối. Sau khi đăng nhập, thiết lập tùy chọn này trong Cài đặt, mục Kết nối.",
+    "Mọi thứ khác đã kết nối. Sau khi đăng nhập, thiết lập tùy chọn này trong Cài đặt, mục Tài khoản.",
   "overnightGrant.renewTitle": "Quyền qua đêm đã hết hạn",
   "overnightGrant.renew":
     "Tắt rồi bật lại tùy chọn này để gia hạn. Cho đến lúc đó, Margince sẽ không chuẩn bị Bản tin sáng.",
