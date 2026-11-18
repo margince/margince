@@ -8,12 +8,16 @@
 // The subject is a toMinorUnits call whose amount is a coercion of text:
 // Number, parseFloat, parseInt or a unary plus. The coercion is written in
 // place or held by a const. One passed through a function is left out.
+//
+// The rule also fails a hand-rolled reader: a `.replace` of a comma in a file
+// that scales money itself. Stripping commas read a German "1500,50" as 150050.
 
 import ts from "typescript";
 import { parseSource } from "../../scripts/lib/source-tree";
 import type { CensusFile, CensusRule } from "../tree";
 
 const OWNER = "src/format/minorunits.ts";
+const SCALES_MONEY = /\b(toMinorUnits|toMajorUnits|minorUnitDigits)\(/;
 const COERCIONS = new Set(["Number", "parseFloat", "parseInt"]);
 
 function isCoercion(node: ts.Expression): boolean {
@@ -39,7 +43,14 @@ function isCoercion(node: ts.Expression): boolean {
 function coercedScalings(source: ts.SourceFile, fileName: string): string[] {
   const coercedConsts = new Set<string>();
   const calls: ts.CallExpression[] = [];
+  const at = (node: ts.Node) =>
+    `${fileName}:${source.getLineAndCharacterOfPosition(node.getStart()).line + 1}`;
+  const commaReplaces: string[] = [];
+  const scalesMoney = SCALES_MONEY.test(source.text);
   const visit = (node: ts.Node) => {
+    if (scalesMoney && isCommaReplace(node)) {
+      commaReplaces.push(`${at(node)} replaces a comma`);
+    }
     if (
       ts.isVariableDeclaration(node) &&
       ts.isIdentifier(node.name) &&
@@ -58,7 +69,7 @@ function coercedScalings(source: ts.SourceFile, fileName: string): string[] {
     ts.forEachChild(node, visit);
   };
   visit(source);
-  return calls
+  const coerced = calls
     .filter((call) => {
       const amount = call.arguments[0];
       return (
@@ -67,10 +78,24 @@ function coercedScalings(source: ts.SourceFile, fileName: string): string[] {
           (ts.isIdentifier(amount) && coercedConsts.has(amount.text)))
       );
     })
-    .map(
-      (call) =>
-        `${fileName}:${source.getLineAndCharacterOfPosition(call.getStart()).line + 1}`,
-    );
+    .map(at);
+  return [...coerced, ...commaReplaces];
+}
+
+function isCommaReplace(node: ts.Node): boolean {
+  if (
+    !ts.isCallExpression(node) ||
+    !ts.isPropertyAccessExpression(node.expression) ||
+    !["replace", "replaceAll"].includes(node.expression.name.text)
+  ) {
+    return false;
+  }
+  const pattern = node.arguments[0];
+  return (
+    pattern !== undefined &&
+    (ts.isStringLiteral(pattern) || ts.isRegularExpressionLiteral(pattern)) &&
+    pattern.text.includes(",")
+  );
 }
 
 /** Every coerced scaling in planted text. */
@@ -90,7 +115,8 @@ export const rule: CensusRule = {
   floors: (corpus) =>
     corpus.length > 100 ? [] : ["fewer than 100 files were read"],
   visit: (file) =>
-    file.source && file.text.includes("toMinorUnits(")
+    file.source &&
+    (file.text.includes("toMinorUnits(") || SCALES_MONEY.test(file.text))
       ? coercedScalings(file.source, file.rel)
       : [],
   advice:

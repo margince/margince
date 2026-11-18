@@ -22,7 +22,7 @@ import { Select } from "../../design-system/select";
 import { useToast } from "../../design-system/toast";
 import { countryOptions } from "../../format/assignedcountries";
 import { todayIn } from "../../format/calendarday";
-import { typedNumberFault, typedNumberOrNaN } from "../../format/decimalinput";
+import { typedDecimalText, typedNumberFault } from "../../format/decimalinput";
 import { formatNumber } from "../../format/format";
 import { jurisdictionName } from "../../format/jurisdiction";
 import { useLocale, usePlural, useT } from "../../i18n";
@@ -144,7 +144,7 @@ function TaxRateModal({ onClose }: Readonly<{ onClose: () => void }>) {
           body: {
             country: input.country,
             category: input.category,
-            rate: String(typedNumberOrNaN(input.rate, locale)),
+            rate: typedDecimalText(input.rate, locale) ?? input.rate,
             valid_from: input.validFrom,
           },
         }),

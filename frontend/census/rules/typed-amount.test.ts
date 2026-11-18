@@ -18,6 +18,17 @@ describe("a typed amount scaled by coercion", () => {
       1,
     ],
     ["a number already", "toMinorUnits(value, currency);", 0],
+    [
+      "a comma stripped beside the scale",
+      'const d = minorUnitDigits(c); const s = text.replace(/[\\s,]/g, "");',
+      1,
+    ],
+    [
+      "a comma swapped beside the scale",
+      'toMajorUnits(m, c); const s = text.replace(",", ".");',
+      1,
+    ],
+    ["a comma replaced away from money", 'text.replace(",", ".");', 0],
     ["the adopted reader", "typedMinorUnits(text, currency, locale);", 0],
   ];
   for (const [name, source, expected] of planted) {

@@ -11,7 +11,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import {
-  parseTypedDecimal,
+  typedDecimalText,
   typedNumberFault,
   writtenDecimal,
 } from "../format/decimalinput";
@@ -187,9 +187,7 @@ function coerceWrite(field: CustomField, raw: string, locale: Locale): unknown {
     case "number":
       // Numeric round-trips as a string, so the digits keep their precision.
       // A refused text goes as typed, and the store refuses it by name.
-      return "value" in parseTypedDecimal(value, locale)
-        ? value.replace(",", ".")
-        : value;
+      return typedDecimalText(value, locale) ?? value;
     case "multiselect":
       return splitMultiselectValue(value, "json");
     case "boolean":

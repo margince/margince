@@ -416,3 +416,33 @@ describe("MoneyInput in German", () => {
     expect(onChangeMinor).toHaveBeenLastCalledWith(150_000);
   });
 });
+
+// A save outside a blur must still see the refusal: a form's
+// refuseUnreadableField reads the custom validity, and a button save reads
+// onRefusedChange.
+describe("MoneyInput refusal before blur", () => {
+  it("marks the box invalid and tells the caller while the text is refused", () => {
+    const onRefusedChange = vi.fn();
+    const onChangeMinor = vi.fn();
+    rtlRender(
+      <MoneyInput
+        currency="EUR"
+        valueMinor={1_000_000}
+        onChangeMinor={onChangeMinor}
+        onRefusedChange={onRefusedChange}
+        aria-label="Amount"
+      />,
+    );
+    const input = screen.getByLabelText("Amount") as HTMLInputElement;
+    for (const key of ["1", "1,", "1,5", "1,50", "1,500"]) {
+      fireEvent.change(input, { target: { value: key } });
+    }
+    expect(input.validity.customError).toBe(true);
+    expect(onRefusedChange).toHaveBeenLastCalledWith(true);
+    // The prefix "1,5" was committed on its way and is put back at once.
+    expect(onChangeMinor).toHaveBeenLastCalledWith(1_000_000);
+    fireEvent.change(input, { target: { value: "1500" } });
+    expect(input.validity.customError).toBe(false);
+    expect(onRefusedChange).toHaveBeenLastCalledWith(false);
+  });
+});

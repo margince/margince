@@ -411,6 +411,51 @@ describe("OfferLineEditor (OP-7/OP-13)", () => {
     expect(mutations[0].body).toMatchObject({ quantity: 2.5 });
   });
 
+  // Typed key by key, "1,500" passes "1,5" on its way. The cell saves on blur,
+  // so a prefix the box committed would be saved as €1.50.
+  it("saves nothing when a line's price text is refused", async () => {
+    const mutations: { method: string; url: string; body: unknown }[] = [];
+    stubOfferWithMutations(
+      { ...baseOffer, line_items: [existingLine] },
+      { ...baseOffer, line_items: [existingLine] },
+      mutations,
+    );
+    const user = userEvent.setup();
+    render(<OfferScreen id="o-1" />);
+    await screen.findByText("ANG-2026-0007");
+    const price = screen.getByTestId("line-unit-price-li-1");
+    await user.click(price);
+    await user.clear(price);
+    await user.type(price, "1,500");
+    await user.tab();
+    expect(
+      await screen.findByText("Enter the amount as 1500 or 1500.00."),
+    ).toBeTruthy();
+    expect(mutations).toHaveLength(0);
+  });
+
+  it("adds no line while the new line's price text is refused", async () => {
+    const mutations: { method: string; url: string; body: unknown }[] = [];
+    stubOfferWithMutations(
+      { ...baseOffer, line_items: [existingLine] },
+      { ...baseOffer, line_items: [existingLine] },
+      mutations,
+    );
+    const user = userEvent.setup();
+    render(<OfferScreen id="o-1" />);
+    await screen.findByText("ANG-2026-0007");
+    await user.type(screen.getByTestId("new-line-description"), "Seats");
+    await user.type(screen.getByTestId("new-line-quantity"), "3");
+    const price = screen.getByTestId("new-line-unit-price");
+    await user.clear(price);
+    await user.type(price, "1,500");
+    await user.click(screen.getByTestId("add-line"));
+    expect(
+      await screen.findByText("Enter the amount as 1500 or 1500.00."),
+    ).toBeTruthy();
+    expect(mutations).toHaveLength(0);
+  });
+
   it("removes a line using the delete response's recomputed totals", async () => {
     const afterRemove = {
       ...baseOffer,

@@ -116,3 +116,21 @@ export function typedNumberOrNaN(text: string, locale: Locale): number {
   const parsed = parseTypedDecimal(text, locale);
   return "value" in parsed ? parsed.value : Number.NaN;
 }
+
+/**
+ * An accepted text as the plain decimal a server reads ("12,5" is "12.5"), or
+ * undefined when refused. Kept as text: a rate's digits survive, and no tiny
+ * rate turns into an exponent the way String(number) writes it.
+ */
+export function typedDecimalText(
+  text: string,
+  locale: Locale,
+): string | undefined {
+  if ("refused" in parseTypedDecimal(text, locale)) {
+    return undefined;
+  }
+  const plain = text.trim().replace(/^\+/, "").replace(",", ".");
+  const [whole, fraction = ""] = plain.split(".");
+  const integer = whole === "" || whole === "-" ? `${whole}0` : whole;
+  return fraction === "" ? integer : `${integer}.${fraction}`;
+}

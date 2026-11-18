@@ -45,6 +45,7 @@ export function MoneyInput({
   onClear,
   display,
   onFocus,
+  onRefusedChange,
   ...rest
 }: Readonly<
   Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | "type"> & {
@@ -67,6 +68,9 @@ export function MoneyInput({
     // The amount as the page writes money, shown while the box is not being
     // edited. Focus brings back the plain number, which is what a reader types.
     display?: (minor: number) => string;
+    // Told whether the box holds text it refuses, for a save outside a form
+    // or dialog, where refuseUnreadableField cannot reach the box.
+    onRefusedChange?: (refused: boolean) => void;
   }
 >) {
   const t = useT();
@@ -119,6 +123,22 @@ export function MoneyInput({
     lastRenderedCurrency.current = currency;
   }, [valueMinor, currency, blankWhenZero, locale]);
 
+  // The refusal the text on screen earns now, before any blur shows it. It is
+  // the box's custom validity, so refuseUnreadableField stops a save past it.
+  const typedNow =
+    text.trim() === "" ? null : typedMinorUnits(text, currency, locale);
+  const pending = typedNow && "refused" in typedNow ? typedNow.refused : null;
+  const pendingMessage = pending ? t(pending.key, pending.params) : "";
+  const input = useRef<HTMLInputElement | null>(null);
+  // Every render: the face that holds the input changes with editing.
+  useEffect(() => {
+    input.current?.setCustomValidity(pendingMessage);
+  });
+  const refusedNow = pending !== null;
+  useEffect(() => {
+    onRefusedChange?.(refusedNow);
+  }, [refusedNow, onRefusedChange]);
+
   const startEdit = () => {
     setEditing(true);
     beforeEdit.current ??= {
@@ -166,6 +186,7 @@ export function MoneyInput({
   return (
     <>
       <TextInput
+        ref={input}
         type="text"
         inputMode="decimal"
         value={text}
@@ -188,17 +209,20 @@ export function MoneyInput({
             }
             return;
           }
+          // A refused text puts back the amount the edit began with, at once.
+          // A prefix committed key by key ("1.5" of "1.500") then never
+          // reaches a caller that saves on blur.
           const typed = typedMinorUnits(event.target.value, currency, locale);
           if ("minor" in typed) {
             commit(typed.minor);
+          } else {
+            restoreBeforeEdit();
           }
         }}
+        onInvalid={() => setRefusal(pending)}
         onBlur={(event) => {
-          const typed =
-            text.trim() === "" ? null : typedMinorUnits(text, currency, locale);
-          if (typed && "refused" in typed) {
-            restoreBeforeEdit();
-            setRefusal(typed.refused);
+          if (pending) {
+            setRefusal(pending);
           } else {
             setText(
               cleared.current
