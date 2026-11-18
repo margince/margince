@@ -168,6 +168,7 @@ needs an invitation of their own.
 A buyer who loses their link can ask for a new one from the room's sign-in
 page, with **Request new link**. The answer is always the same: "If that
 address was invited, a new link is on its way." The request always reaches you.
+
 But a new link is only mailed where the installation can send mail. If not,
 the Access panel shows "Asked for a new link {when}. Issue one and send it
 yourself." The note goes away once you issue a new link, or once the buyer
