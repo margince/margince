@@ -19,7 +19,7 @@ The bar under the figure shows the sales won in their parts, with a line where t
 
 Click **View won deals** to open the won deals behind the figure.
 
-For a month that still runs and has a set goal, **Where the month may finish** shows three cases, each with its difference to the goal:
+**Where the month may finish** shows for a running month with a set goal. It lists three cases, each with its difference to the goal:
 
 - **Worst case** is the sales already won, as if nothing more closes.
 - **Expected** is the forecast landing. It uses the **Projection basis** in the installation settings, the same as the Overview, and names it under the figure.
