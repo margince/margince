@@ -117,7 +117,9 @@ describe("DealRoomTab", () => {
       { deal_room: ["read", "create"] },
     );
     const user = userEvent.setup();
-    withProviders(<DealRoomTab dealId="deal-1" dealName="Acme Expansion" />);
+    withProviders(
+      <DealRoomTab dealWritable dealId="deal-1" dealName="Acme Expansion" />,
+    );
 
     await user.click(
       await screen.findByRole("button", { name: "Open a Deal Room" }),
