@@ -230,9 +230,9 @@ func TestTheirOwnSignatureIsRead(t *testing.T) {
 	if !signatureNamesContact("Viele Grüße\nJudith Andresen\nGeschäftsführerin", cand) {
 		t.Error("a contact's own signature was refused")
 	}
-	// By address alone, for a signature that prints the mail and not the name.
-	if !signatureNamesContact("Viele Grüße\njudith@example.test", cand) {
-		t.Error("a signature carrying only their address was refused")
+	// Their address beside another signer's is that signer's block, not theirs.
+	if signatureNamesContact("Best\nAlice Example\nFounder\nalice@example.com\njudith@example.test", cand) {
+		t.Error("another signer's block was read as theirs because it printed their address")
 	}
 }
 

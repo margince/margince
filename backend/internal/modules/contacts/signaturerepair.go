@@ -16,14 +16,19 @@ import (
 
 // SignatureFieldSource is one field the signature pass wrote, with the stored
 // body of the mail it was read from. Body is nil when that mail is gone,
-// archived, restricted or emptied.
+// archived, restricted or emptied. NameEvidence is the line the same read
+// took the name from. HeaderName is the display before the pass first renamed
+// the contact, and Email their primary address.
 type SignatureFieldSource struct {
-	ID        ids.UUID
-	ContactID ids.ContactID
-	Field     string
-	Value     string
-	Evidence  string
-	Body      *string
+	ID           ids.UUID
+	ContactID    ids.ContactID
+	Field        string
+	Value        string
+	Evidence     string
+	Body         *string
+	NameEvidence string
+	HeaderName   string
+	Email        string
 }
 
 // repairedSignatureFields are the fields the signature pass wrote off a mail,
@@ -37,13 +42,23 @@ func SignatureFieldSourcesTx(ctx context.Context, tx pgx.Tx, after ids.UUID, lim
 		return nil, err
 	}
 	rows, err := tx.Query(ctx, `
-		SELECT f.id, f.contact_id, f.field, f.value, f.evidence_snippet, a.body
+		SELECT f.id, f.contact_id, f.field, f.value, f.evidence_snippet, a.body,
+		       coalesce((SELECT n.evidence_snippet FROM contact_profile_field n
+		                  WHERE n.contact_id = f.contact_id AND n.source_ref = f.source_ref
+		                    AND n.source = $1 AND n.field = $4 LIMIT 1), ''),
+		       coalesce((SELECT au.before->>'full_name' FROM audit_log au
+		                  WHERE au.entity_type = 'contact' AND au.entity_id = f.contact_id
+		                    AND au.actor_id = $5 AND au.before ? 'full_name'
+		                  ORDER BY au.occurred_at, au.id LIMIT 1), c.full_name),
+		       coalesce((SELECT e.email FROM contact_email e
+		                  WHERE e.contact_id = f.contact_id AND e.is_primary AND e.archived_at IS NULL LIMIT 1), '')
 		  FROM contact_profile_field f
+		  JOIN contact c ON c.id = f.contact_id
 		  LEFT JOIN activity a ON a.id = `+sourceRefActivityID+`
 		       AND a.archived_at IS NULL AND a.restricted_at IS NULL
 		 WHERE `+repairedSignatureFields+` AND f.id > $2
 		 ORDER BY f.id
-		 LIMIT $3`, enrichSource, after, limit)
+		 LIMIT $3`, enrichSource, after, limit, columnFirstName, enrichCapturedBy)
 	if err != nil {
 		return nil, fmt.Errorf("contacts: paging the signature fields: %w", err)
 	}
