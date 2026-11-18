@@ -15,10 +15,10 @@ import type { UrlParams } from "../lib/urlstate";
 import { homeDayOptions } from "../lib/worklistday";
 import { notePrefetched } from "./queryclient";
 
-// Unknown while the session probe is out, because Home's reads start ahead of it.
-// A reader who turns out to lack the grant never has them drawn.
+// Fails closed while the session probe is out: the brief and the receipt need
+// `deal.read`, so they start only once the grant is known.
 export function mayReadHomeDeals(me: AccessSnapshot): boolean {
-  return me === undefined || grants(me, "deal", "read");
+  return me !== undefined && grants(me, "deal", "read");
 }
 
 // Home's morning reads, started with the session probe (App.tsx). The screen

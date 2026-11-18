@@ -6,7 +6,8 @@ import { afterEach, expect, it, vi } from "vitest";
 import { handledForYouOptions } from "../lib/handled";
 import { homeDayOptions } from "../lib/worklistday";
 import { quietRun, readingsDay } from "../testing/brief.fixtures";
-import { prefetchHome } from "./homeprefetch";
+import { meFixture, READS_RECORDS } from "../testing/mefixture";
+import { mayReadHomeDeals, prefetchHome } from "./homeprefetch";
 import { createQueryClient, liveOnMount } from "./queryclient";
 
 afterEach(() => vi.restoreAllMocks());
@@ -139,4 +140,10 @@ it("does not read the brief or the done-for-you receipt for a reader without dea
   );
   expect(paths.some((path) => path.endsWith("/brief"))).toBe(false);
   expect(paths.some((path) => path.endsWith("/magic"))).toBe(false);
+});
+
+it("starts the deal-only reads only once the grant is known", () => {
+  expect(mayReadHomeDeals(undefined)).toBe(false);
+  expect(mayReadHomeDeals(meFixture({}))).toBe(false);
+  expect(mayReadHomeDeals(meFixture({ allow: READS_RECORDS }))).toBe(true);
 });

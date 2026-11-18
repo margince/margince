@@ -8,7 +8,7 @@ import { QueryGate } from "../../design-system/querystates";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { formatDateTime } from "../../format/format";
 import { formatRelativeTime } from "../../format/relativetime";
-import { type Translator, useLocale, useT } from "../../i18n";
+import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import { deviceLabel } from "../../lib/devicelabel";
 import { problemMessageOf } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -29,6 +29,7 @@ function nameOf(session: MySession, t: Translator): string {
 // button, because the Sign out row above it ends it.
 export function SignedInDevicesPanel() {
   const t = useT();
+  const plural = usePlural();
   const sessions = useMySessions();
   const end = useEndSessions();
   return (
@@ -65,9 +66,15 @@ export function SignedInDevicesPanel() {
           );
         }}
       </QueryGate>
-      {end.isError && (
+      {(end.isError || (end.data ?? 0) > 0) && (
         <PanelBody>
-          <ErrorLine>{problemMessageOf(end.error, t)}</ErrorLine>
+          <ErrorLine>
+            {end.isError
+              ? problemMessageOf(end.error, t)
+              : plural("account.devicesFailed", end.data ?? 0, {
+                  count: String(end.data ?? 0),
+                })}
+          </ErrorLine>
         </PanelBody>
       )}
     </Panel>

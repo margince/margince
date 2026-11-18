@@ -16610,6 +16610,8 @@ export const en = {
   "account.devicesOthers": "Other devices",
   "account.devicesOthersHelp": "Ends every session except this one.",
   "account.devicesSignOutOthers": "Sign out all others",
+  "account.devicesFailed_one": "{count} device was not signed out. Retry.",
+  "account.devicesFailed_other": "{count} devices were not signed out. Retry.",
   "account.languageHelp":
     "The language of menus, pages and messages from Margince. Saved to your account, so it follows you to every device you sign in on.",
   "account.appearanceHelp":

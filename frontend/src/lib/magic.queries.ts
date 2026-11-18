@@ -47,7 +47,11 @@ export function fillsPage(
  * requires for the whole answer.
  */
 export function useMagic(enabled = true) {
-  return useQuery({ ...magicOptions, enabled });
+  return useQuery({
+    ...magicOptions,
+    enabled,
+    select: (receipt) => (enabled ? receipt : undefined),
+  });
 }
 
 /** The read useMagic makes, which Home's prefetch also starts. */

@@ -16739,6 +16739,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "account.devicesOthers": "Andere Geräte",
   "account.devicesOthersHelp": "Beendet jede Sitzung außer dieser.",
   "account.devicesSignOutOthers": "Alle anderen abmelden",
+  "account.devicesFailed_one":
+    "{count} Gerät wurde nicht abgemeldet. Wiederholen.",
+  "account.devicesFailed_other":
+    "{count} Geräte wurden nicht abgemeldet. Wiederholen.",
   "account.languageHelp":
     "Die Sprache von Menüs, Seiten und Nachrichten aus Margince. In deinem Konto gespeichert, sie gilt also auf jedem Gerät, auf dem du dich anmeldest.",
   "account.appearanceHelp":

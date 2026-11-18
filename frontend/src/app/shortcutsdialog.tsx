@@ -17,9 +17,9 @@ import { DECK_KEY_WORDS } from "../features/brief/brief.deckwords";
 import { type Translator, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
-  type CoreFeature,
   screenEnabled,
   useHiddenCoreFeatures,
+  type Withheld,
 } from "../lib/corefeatures";
 import { type BindingGroup, bindingCaps, capOf, KEYMAP } from "../lib/keymap";
 import { useSingleKeyShortcuts } from "../lib/shortcuts";
@@ -67,7 +67,7 @@ const pressedAlone = (key: string): readonly ShortcutWay[] => [
 function keymapGroup(
   group: BindingGroup,
   t: Translator,
-  disabled: readonly CoreFeature[],
+  disabled: readonly Withheld[],
 ): ShortcutGroup {
   const rows = new Map<MessageKey, Shortcut>();
   for (const entry of KEYMAP) {
@@ -104,7 +104,7 @@ function keymapGroup(
  */
 function shortcutGroups(
   t: Translator,
-  disabled: readonly CoreFeature[],
+  disabled: readonly Withheld[],
 ): readonly ShortcutGroup[] {
   return [
     ...GROUP_ORDER.map((group) => keymapGroup(group, t, disabled)),

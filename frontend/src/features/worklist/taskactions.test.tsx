@@ -21,7 +21,7 @@ import { useMe } from "../../lib/session";
 import { ViewerZoneProvider } from "../../lib/viewerzone";
 import { type WriteTo, WriteToProvider } from "../../lib/writeto";
 import { companyNamesAnswer } from "../../testing/companynames.testkit";
-import { meFixture } from "../../testing/mefixture";
+import { meFixture, READS_RECORDS } from "../../testing/mefixture";
 import { SourceHost } from "../../testing/sourcehost";
 import {
   installFetchStub,
@@ -44,7 +44,10 @@ afterEach(cleanup);
 
 function stubTask(sourceActivityId: string | null, capturedBy = "human:u-1") {
   installFetchStub({
-    "GET /me": meRoute({ activity: ["read", "update"] }, { seat: "full" }),
+    "GET /me": meRoute(
+      { ...READS_RECORDS, activity: ["read", "update"] },
+      { seat: "full" },
+    ),
     "GET /activities/task-1": () =>
       jsonResponse({
         id: "task-1",
@@ -134,7 +137,10 @@ test("a transcript refused on reopen is not painted from the cache", async () =>
   // sitting in `data`. Rendering that beside the error is what this holds.
   let refused = false;
   installFetchStub({
-    "GET /me": meRoute({ activity: ["read", "update"] }, { seat: "full" }),
+    "GET /me": meRoute(
+      { ...READS_RECORDS, activity: ["read", "update"] },
+      { seat: "full" },
+    ),
     "GET /activities/task-1": () =>
       jsonResponse({
         id: "task-1",
@@ -181,7 +187,10 @@ test("a transcript refused on reopen is not painted from the cache", async () =>
 
 test("a source that cannot be read says so instead of disappearing", async () => {
   installFetchStub({
-    "GET /me": meRoute({ activity: ["read", "update"] }, { seat: "full" }),
+    "GET /me": meRoute(
+      { ...READS_RECORDS, activity: ["read", "update"] },
+      { seat: "full" },
+    ),
     "GET /activities/task-1": () =>
       jsonResponse({
         id: "task-1",
@@ -207,7 +216,10 @@ test("a source that cannot be read says so instead of disappearing", async () =>
 // the same presentation endpoint the panel asks.
 function stubEmailRequest(parties: Record<string, unknown> = {}) {
   installFetchStub({
-    "GET /me": meRoute({ activity: ["read", "update"] }, { seat: "full" }),
+    "GET /me": meRoute(
+      { ...READS_RECORDS, activity: ["read", "update"] },
+      { seat: "full" },
+    ),
     "GET /activities/task-1": () =>
       jsonResponse({
         id: "task-1",
@@ -369,7 +381,10 @@ test("a task a colleague typed carries no AI mark", async () => {
 
 function stubFiledTask(links: { entity_type: string; entity_id: string }[]) {
   installFetchStub({
-    "GET /me": meRoute({ activity: ["read", "update"] }, { seat: "full" }),
+    "GET /me": meRoute(
+      { ...READS_RECORDS, activity: ["read", "update"] },
+      { seat: "full" },
+    ),
     "GET /activities/task-1": () =>
       jsonResponse({
         id: "task-1",
@@ -503,7 +518,10 @@ function stubNextSteps({
   routes = {},
 }: NextStepsCase = {}) {
   installFetchStub({
-    "GET /me": meRoute({ activity: ["read", "update"] }, { seat: "full" }),
+    "GET /me": meRoute(
+      { ...READS_RECORDS, activity: ["read", "update"] },
+      { seat: "full" },
+    ),
     "GET /activities/task-1": () =>
       jsonResponse({
         id: "task-1",
@@ -853,7 +871,10 @@ function openWarm({ isDone = false, readOnly = false } = {}) {
   });
   client.setQueryData(
     ["me"],
-    meFixture({ allow: { activity: ["read", "update"] }, seat: "full" }),
+    meFixture({
+      allow: { ...READS_RECORDS, activity: ["read", "update"] },
+      seat: "full",
+    }),
   );
   client.setQueryData(["activity", "src-1"], {
     id: "src-1",
@@ -943,7 +964,10 @@ test("Call logs the call inside the dialog, on the task's contact, and leaves th
   stubNextSteps({
     taskType: "reply_by_call",
     routes: {
-      "GET /me": meRoute({ activity: ["read", "create"] }, { seat: "full" }),
+      "GET /me": meRoute(
+        { ...READS_RECORDS, activity: ["read", "create"] },
+        { seat: "full" },
+      ),
       "POST /activities": (body) => {
         posted.push(body);
         return jsonResponse({ id: "a-9", kind: "call" }, 201);

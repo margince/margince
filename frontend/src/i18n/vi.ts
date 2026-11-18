@@ -16304,6 +16304,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "account.devicesOthers": "Các thiết bị khác",
   "account.devicesOthersHelp": "Kết thúc mọi phiên trừ phiên này.",
   "account.devicesSignOutOthers": "Đăng xuất tất cả thiết bị khác",
+  "account.devicesFailed_one": "{count} thiết bị chưa được đăng xuất. Thử lại.",
+  "account.devicesFailed_other":
+    "{count} thiết bị chưa được đăng xuất. Thử lại.",
   "account.languageHelp":
     "Ngôn ngữ của menu, trang và tin nhắn từ Margince. Được lưu vào tài khoản của bạn, nên áp dụng trên mọi thiết bị bạn đăng nhập.",
   "account.appearanceHelp":

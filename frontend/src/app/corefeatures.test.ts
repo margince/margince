@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { grants, type RbacAction, type RbacObject } from "../lib/accessgrants";
 import {
   type CoreFeature,
-  FEATURE_READ_OBJECT,
+  READ_REQUIREMENTS,
   recordEnabled,
   screenEnabled,
   unreadableCoreFeatures,
@@ -122,42 +122,64 @@ describe("disabled main-menu features", () => {
 });
 
 describe("destinations the reader may not read", () => {
-  const COMPOSITE = ["home", "filters", "analytics", "progress", "goals"];
+  const COMPOSITE = ["home", "filters"];
+  const named = (screen: string) =>
+    READ_REQUIREMENTS.some(([withheld]) =>
+      NAV.some(
+        (item) =>
+          item.screen === screen && !screenEnabled(item.screen, [withheld]),
+      ),
+    );
 
-  it("names the object each rail row needs, or says it gathers several", () => {
-    const composite = NAV.filter(
-      (item) =>
-        !FEATURE_READ_OBJECT.some(
-          ([feature]) => !screenEnabled(item.screen, [feature]),
-        ),
-    ).map((item) => item.screen);
-    expect(composite).toEqual(COMPOSITE);
+  it("names what each rail row needs, or says it gathers several reads", () => {
+    const unnamed = NAV.map((item) => item.screen).filter(
+      (screen) => !named(screen),
+    );
+    expect(unnamed).toEqual(COMPOSITE);
   });
 
-  it("leaves no read object for a feature that is not a destination", () => {
-    for (const [feature] of FEATURE_READ_OBJECT)
-      expect(FEATURES).toContain(feature);
-  });
-
-  it("takes a record destination off the rail when its read is not granted", () => {
+  it("takes a destination off the rail when its read is not granted", () => {
     const snapshot = meFixture({
       roles: ["support"],
       allow: { contact: ["read"], company: ["read"], lead: ["read"] },
     });
     const hidden = unreadableCoreFeatures(snapshot);
-    expect(hidden).toEqual(["deals", "projects"]);
     const [primary] = railTrail({ screen: "home" }, undefined, hidden);
     const rows = primary.groups.flatMap((group) =>
       group.items.map((item) => item.id),
     );
-    expect(rows).not.toContain("deals");
-    expect(rows).not.toContain("projects");
+    for (const gone of ["deals", "projects", "analytics", "progress", "goals"])
+      expect(rows).not.toContain(gone);
     expect(rows).toEqual(expect.arrayContaining(["home", "contacts", "leads"]));
   });
 
-  it("offers every destination to a reader who reads every record kind", () => {
+  it("offers Insights on either of its two reads, and Progress and Goals on their own", () => {
+    const rows = (allow: Parameters<typeof meFixture>[0]) => {
+      const [primary] = railTrail(
+        { screen: "home" },
+        undefined,
+        unreadableCoreFeatures(meFixture(allow)),
+      );
+      return primary.groups.flatMap((group) =>
+        group.items.map((item) => item.id),
+      );
+    };
+    expect(rows({ allow: { forecast: ["read"] } })).toContain("analytics");
+    expect(rows({ allow: { deal: ["read"] } })).toContain("analytics");
+    expect(rows({ allow: { sales_target: ["read"] } })).toContain("goals");
+    expect(rows({ allow: { sales_target: ["read"] } })).not.toContain(
+      "progress",
+    );
+    expect(rows({ allow: { report_definition: ["read"] } })).toContain(
+      "progress",
+    );
+  });
+
+  it("offers every destination to a reader who reads everything they need", () => {
     const every = Object.fromEntries(
-      FEATURE_READ_OBJECT.map(([, object]) => [object, ["read"]]),
+      READ_REQUIREMENTS.flatMap(([, objects]) =>
+        objects.map((object) => [object, ["read"]]),
+      ),
     );
     expect(unreadableCoreFeatures(meFixture({ allow: every }))).toEqual([]);
   });

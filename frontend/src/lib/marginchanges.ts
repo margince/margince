@@ -31,7 +31,13 @@ export type DealMarginceCheck = components["schemas"]["DealMarginceCheck"];
  * reader without `deal.read`, which the server requires to list them.
  */
 export function usePendingMarginceChanges(enabled = true) {
-  return useQuery({ ...pendingChangesQuery(), enabled });
+  // `select` as well: a revoked grant leaves the cached answer, which must not
+  // keep offering Undo.
+  return useQuery({
+    ...pendingChangesQuery(),
+    enabled,
+    select: (summary) => (enabled ? summary : undefined),
+  });
 }
 
 /** One deal's changes, newest first, a page at a time. */

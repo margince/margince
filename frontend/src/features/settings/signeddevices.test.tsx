@@ -161,3 +161,43 @@ it("says so when a session could not be ended", async () => {
   );
   expect(screen.getByText("Safari on iOS")).toBeInTheDocument();
 });
+
+it("tries every other session and says how many could not be signed out", async () => {
+  const user = userEvent.setup();
+  const tried: string[] = [];
+  const refuse = (id: string) => () => {
+    tried.push(id);
+    return new Response(
+      JSON.stringify({
+        status: 503,
+        code: "service_unavailable",
+        detail: "Down.",
+      }),
+      { status: 503, headers: { "content-type": "application/problem+json" } },
+    );
+  };
+  installFetchStub({
+    "GET /me": () => jsonResponse(meFixture({})),
+    "GET /me/sessions": () =>
+      jsonResponse({
+        sessions: [
+          session(THIS_ID, CHROME_MAC, true),
+          session(PHONE_ID, SAFARI_IPHONE),
+          session(LAPTOP_ID, CHROME_MAC),
+        ],
+      }),
+    [`DELETE /me/sessions/${PHONE_ID}`]: refuse(PHONE_ID),
+    [`DELETE /me/sessions/${LAPTOP_ID}`]: () => {
+      tried.push(LAPTOP_ID);
+      return new Response(null, { status: 204 });
+    },
+  });
+  draw();
+  await user.click(
+    await screen.findByRole("button", { name: "Sign out all others" }),
+  );
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "1 device was not signed out. Retry.",
+  );
+  expect([...tried].sort()).toEqual([PHONE_ID, LAPTOP_ID].sort());
+});

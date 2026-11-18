@@ -44,6 +44,14 @@ export const READS_RECORDS: GrantSpec = {
   project: ["read"],
 };
 
+/** Read access to everything a primary rail destination needs, Insights, Progress and Goals included. */
+export const READS_DESTINATIONS: GrantSpec = {
+  ...READS_RECORDS,
+  forecast: ["read"],
+  report_definition: ["read"],
+  sales_target: ["read"],
+};
+
 /** The zone the fixture user stores, for fixtures that need a zone string. */
 export const FIXTURE_TIMEZONE = "Europe/Berlin";
 

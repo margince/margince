@@ -27,7 +27,11 @@ export type Deal = components["schemas"]["Deal"];
 export function useMorningBrief(
   enabled = true,
 ): UseQueryResult<MorningBrief | null> {
-  return useQuery({ ...morningBriefOptions, enabled });
+  return useQuery({
+    ...morningBriefOptions,
+    enabled,
+    select: (run) => (enabled ? run : null),
+  });
 }
 
 /** The read useMorningBrief makes, which Home's prefetch also starts. */

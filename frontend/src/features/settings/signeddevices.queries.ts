@@ -20,20 +20,27 @@ export function useMySessions() {
 }
 
 /**
- * Ends the sessions named, one request each. A session that is already gone
- * answers 204 too, so a second press on a stale list cannot fail.
+ * Ends the sessions named, trying every one even when another fails. It answers
+ * how many could not be ended, and throws only when none could. A session that
+ * is already gone answers 204 too, so a stale list cannot fail.
  */
 export function useEndSessions() {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: async (sessionIds: readonly string[]) => {
-      for (const sessionId of sessionIds) {
-        unwrap(
-          await api.DELETE("/me/sessions/{sessionId}", {
-            params: { path: { sessionId } },
-          }),
-        );
-      }
+    mutationFn: async (sessionIds: readonly string[]): Promise<number> => {
+      const results = await Promise.allSettled(
+        sessionIds.map(async (sessionId) =>
+          unwrap(
+            await api.DELETE("/me/sessions/{sessionId}", {
+              params: { path: { sessionId } },
+            }),
+          ),
+        ),
+      );
+      const failures = results.filter((result) => result.status === "rejected");
+      if (failures.length > 0 && failures.length === results.length)
+        throw failures[0]?.reason;
+      return failures.length;
     },
     onSettled: () => client.invalidateQueries({ queryKey: MY_SESSIONS_KEY }),
   });

@@ -3,13 +3,14 @@
 
 import { useMemo } from "react";
 import { type AccessSnapshot, grants, type RbacObject } from "./accessgrants";
-import type { CoreFeature } from "./corefeaturepolicy";
+import type { CoreFeature, Withheld } from "./corefeaturepolicy";
 import { useMe } from "./session";
 
 export {
   type CoreFeature,
   recordEnabled,
   screenEnabled,
+  type Withheld,
 } from "./corefeaturepolicy";
 
 const NONE: readonly CoreFeature[] = [];
@@ -18,27 +19,34 @@ export function useDisabledCoreFeatures(): readonly CoreFeature[] {
   return useMe(false).data?.settings_availability?.disabled_features ?? NONE;
 }
 
-// The object whose read the server demands before it lists a feature's records.
-// The other features gather several objects (Home, Filters, Insights), so no one
-// grant decides them and each of their sections asks for its own.
-export const FEATURE_READ_OBJECT: readonly (readonly [
-  CoreFeature,
-  RbacObject,
+// What the server demands before a destination's first request answers. A list
+// is any-of. Home and Filters gather several reads, so no one grant decides
+// them and each of their sections asks for its own.
+export const READ_REQUIREMENTS: readonly (readonly [
+  Withheld,
+  readonly RbacObject[],
 ])[] = [
-  ["contacts", "contact"],
-  ["companies", "company"],
-  ["leads", "lead"],
-  ["deals", "deal"],
-  ["projects", "project"],
+  ["contacts", ["contact"]],
+  ["companies", ["company"]],
+  ["leads", ["lead"]],
+  ["deals", ["deal"]],
+  ["projects", ["project"]],
+  ["screen:analytics", ["forecast", "deal"]],
+  ["screen:progress", ["report_definition"]],
+  ["screen:goals", ["sales_target"]],
 ];
 
-/** The features this reader may not read, whatever the installation turned on. */
+/** What this reader may not read, whatever the installation turned on. */
 export function unreadableCoreFeatures(
   snapshot: AccessSnapshot,
-): readonly CoreFeature[] {
-  if (snapshot === undefined) return NONE;
-  return FEATURE_READ_OBJECT.flatMap(([feature, object]) =>
-    grants(snapshot, object, "read") ? [] : [feature],
+): readonly Withheld[] {
+  // No stated grants hides nothing: the probe has not answered, or the server is
+  // too old to send them. Only a stated refusal withholds a destination.
+  if (snapshot?.authorization === undefined) return [];
+  return READ_REQUIREMENTS.flatMap(([withheld, objects]) =>
+    objects.some((object) => grants(snapshot, object, "read"))
+      ? []
+      : [withheld],
   );
 }
 
@@ -47,7 +55,7 @@ export function unreadableCoreFeatures(
  * Used where a destination is offered: a sidebar row, a palette jump, a
  * shortcut. No one is sent to a screen the server refuses them.
  */
-export function useHiddenCoreFeatures(): readonly CoreFeature[] {
+export function useHiddenCoreFeatures(): readonly Withheld[] {
   const me = useMe(false).data;
   return useMemo(
     () => [

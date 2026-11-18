@@ -67,7 +67,7 @@ Margince says **Password changed** and signs you out on all your other computers
 <!-- opens: settings/account -->
 To sign out another device in Margince, open Settings → **Account** and find the **Signed-in devices** panel. Each line names the browser and system, when it signed in and when it was last active. Choose **Sign out** on the line you do not know.
 
-**Sign out all others** ends every session except the one you are using. This device is marked **This device** and has no button; use **Sign out** in the **Sign-in** panel to end it. Also called: log out other devices, lost phone, shared computer.
+**Sign out all others** ends every session except the one you are using. If some devices could not be signed out, Margince says how many; choose it again to retry. This device is marked **This device** and has no button; use **Sign out** in the **Sign-in** panel to end it. Also called: log out other devices, lost phone, shared computer.
 
 ### How do I turn on two-step sign-in?
 <!-- opens: settings/account -->
