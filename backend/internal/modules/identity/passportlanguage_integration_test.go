@@ -85,3 +85,21 @@ func setBaseLanguage(t *testing.T, e *revocationEnv, lang textlang.Lang) {
 		t.Fatalf("setting the base language to %s: %v", lang, err)
 	}
 }
+
+func TestAFailedBaseLanguageReadLeavesTheCallersTransactionUsable(t *testing.T) {
+	e := setupRevocationEnv(t, "passport-language-savepoint")
+	ctx := e.wsCtx(e.admin)
+	if err := e.svc.db.Tx(ctx, func(tx pgx.Tx) error {
+		// With only pg_catalog on the path, the settings table cannot be found.
+		if _, err := tx.Exec(ctx, `SET LOCAL search_path = pg_catalog`); err != nil {
+			return err
+		}
+		if got := BaseLanguageForRecord(ctx, tx); got != textlang.English {
+			t.Errorf("a failed read answers %q, want English", got)
+		}
+		var one int
+		return tx.QueryRow(ctx, `SELECT 1`).Scan(&one)
+	}); err != nil {
+		t.Fatalf("the caller's transaction broke after a failed base-language read: %v", err)
+	}
+}

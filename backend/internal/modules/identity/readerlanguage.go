@@ -48,30 +48,33 @@ func chosenLanguage(ctx context.Context) (textlang.Lang, bool) {
 }
 
 // readingLanguage is the language actor reads where no screen chose one: the
-// saved choice of its human, else the installation's base language. It is the
-// fallback ReaderLanguageForRecord gives a signed-in human, applied to a saved
-// column instead of a session.
+// saved choice of its human, else the installation's base language. That is
+// the fallback ReaderLanguageForRecord gives a signed-in human. A saved choice
+// binds every actor, a passportless agent included.
 func readingLanguage(ctx context.Context, tx pgx.Tx, actor principal.Principal, saved *string) textlang.Lang {
-	actor.Locale = ""
-	if saved != nil {
-		actor.Locale = *saved
+	if saved != nil && textlang.Known(*saved) {
+		return textlang.Lang(*saved)
 	}
-	// A request's display override belongs to whoever sent it, not to actor.
-	ctx = systemtext.WithLocale(principal.WithActor(ctx, actor), textlang.Unknown)
-	return ReaderLanguageForRecord(ctx, tx)
+	return BaseLanguageForRecord(principal.WithActor(ctx, actor), tx)
 }
 
-// ReadingLanguage is readingLanguage for work resumed as actor outside a
-// request, read from the saved choice of actor.UserID.
+// ReadingLanguage is ReadingLanguageTx in a transaction of its own.
 func (s *Service) ReadingLanguage(ctx context.Context, actor principal.Principal) (textlang.Lang, error) {
 	var lang textlang.Lang
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		var saved *string
-		if err := tx.QueryRow(ctx, `SELECT locale FROM app_user WHERE id = $1`, actor.UserID).Scan(&saved); err != nil {
-			return err
-		}
-		lang = readingLanguage(ctx, tx, actor, saved)
-		return nil
+		var err error
+		lang, err = ReadingLanguageTx(ctx, tx, actor)
+		return err
 	})
 	return lang, err
+}
+
+// ReadingLanguageTx is readingLanguage for an actor rebuilt outside a request,
+// read from the saved choice of actor.UserID.
+func ReadingLanguageTx(ctx context.Context, tx pgx.Tx, actor principal.Principal) (textlang.Lang, error) {
+	var saved *string
+	if err := tx.QueryRow(ctx, `SELECT locale FROM app_user WHERE id = $1`, actor.UserID).Scan(&saved); err != nil {
+		return textlang.Unknown, err
+	}
+	return readingLanguage(ctx, tx, actor, saved), nil
 }

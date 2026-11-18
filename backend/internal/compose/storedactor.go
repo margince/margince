@@ -92,7 +92,11 @@ func (s storedActor) rebuild(ctx context.Context, stored migration.StoredActor, 
 	actor.ConnectionID = stored.ConnectionID
 	actor.Scopes = live.within(scopes)
 	actor.Areas = live.areas
-	return s.withLanguage(ctx, actor)
+	if live.unbounded {
+		return s.withLanguage(ctx, actor)
+	}
+	actor.Locale = live.locale
+	return actor, nil
 }
 
 // withLanguage gives the rebuilt actor the language its human reads, so system
@@ -114,6 +118,8 @@ type livePassport struct {
 	scopes   principal.ScopeSet
 	// areas are where the live passport may act; all areas for none.
 	areas principal.WorkAreas
+	// locale is the language its re-authentication resolved for the human.
+	locale string
 	// unbounded marks an agent that presented no passport: no credential
 	// exists to narrow the verbs, so the human's authority alone governs.
 	unbounded bool
@@ -151,7 +157,7 @@ func (s storedActor) passportStillLive(ctx context.Context, stored migration.Sto
 	if err != nil {
 		return livePassport{}, false, fmt.Errorf("re-authenticating the stored passport: %w", err)
 	}
-	return livePassport{passport: live.PassportID.UUID, scopes: live.Scopes, areas: live.Areas}, true, nil
+	return livePassport{passport: live.PassportID.UUID, scopes: live.Scopes, areas: live.Areas, locale: live.Locale}, true, nil
 }
 
 // actAsRun binds the principal that queued an import attempt, and that
