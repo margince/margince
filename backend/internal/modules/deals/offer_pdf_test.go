@@ -165,13 +165,14 @@ func TestRenderOfferPDF_PrintsLatinCyrillicAndGreekTextAsTyped(t *testing.T) {
 }
 
 // A character the font cannot print refuses the render and is named. A
-// right-to-left letter counts as one, since fpdf would lay it out reversed.
+// right-to-left letter counts as one, since fpdf would lay it out reversed:
+// the font draws Hebrew, and still "ש" is refused.
 func TestRenderOfferPDF_RefusesTextItCannotPrint(t *testing.T) {
 	o := testRenderOffer(100000, 19000, 119000)
 	intro, terms := "Wrapped intro 😀", "Wrapped terms 🎉"
 	o.IntroText, o.TermsText = &intro, &terms
 	lines := []crmcontracts.OfferLineItem{
-		{Position: 1, Description: "Tư vấn 李 محمد 🚀", Quantity: 1, UnitPriceMinor: 100000},
+		{Position: 1, Description: "Tư vấn 李 محمد ש 🚀", Quantity: 1, UnitPriceMinor: 100000},
 	}
 
 	_, err := RenderOfferPDF(o, lines, nil, issuedBy("Margince GmbH"), "de-DE", nil)
@@ -179,7 +180,7 @@ func TestRenderOfferPDF_RefusesTextItCannotPrint(t *testing.T) {
 	if !ok || fault.Status != http.StatusUnprocessableEntity || fault.Code != "offer_pdf_unprintable_text" {
 		t.Fatalf("an unprintable line must refuse with 422 offer_pdf_unprintable_text, got %+v (err %v)", fault, err)
 	}
-	for _, named := range []string{"李", "م", "🚀", "😀", "🎉"} {
+	for _, named := range []string{"李", "م", "ש", "🚀", "😀", "🎉"} {
 		if !strings.Contains(fault.Detail, named) {
 			t.Errorf("the refusal must name %q: %s", named, fault.Detail)
 		}

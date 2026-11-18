@@ -16,8 +16,8 @@ import (
 	"unicode"
 
 	"github.com/go-pdf/fpdf"
-	"golang.org/x/image/font/sfnt"
-	"golang.org/x/text/unicode/bidi"
+
+	"github.com/margince/margince/backend/internal/platform/glyphcover"
 )
 
 const offerFontFamily = "LiberationSans"
@@ -29,17 +29,13 @@ var (
 	offerFontBold []byte
 )
 
-// offerFontFaces parses the two embedded faces once, for the glyph lookups.
-var offerFontFaces = sync.OnceValues(func() ([]*sfnt.Font, error) {
-	var faces []*sfnt.Font
-	for _, data := range [][]byte{offerFontRegular, offerFontBold} {
-		face, err := sfnt.Parse(data)
-		if err != nil {
-			return nil, fmt.Errorf("parse the offer PDF font: %w", err)
-		}
-		faces = append(faces, face)
+// offerTypeface parses the two embedded faces once, for the glyph lookups.
+var offerTypeface = sync.OnceValues(func() (*glyphcover.Typeface, error) {
+	typeface, err := glyphcover.Parse(offerFontRegular, offerFontBold)
+	if err != nil {
+		return nil, fmt.Errorf("parse the offer PDF font: %w", err)
 	}
-	return faces, nil
+	return typeface, nil
 })
 
 func registerOfferFont(pdf *fpdf.Fpdf) {
@@ -50,18 +46,17 @@ func registerOfferFont(pdf *fpdf.Fpdf) {
 // pdfTextCheck collects the characters the font has no glyph for. It counts a
 // right-to-left letter as one too, since fpdf lays it out reversed.
 type pdfTextCheck struct {
-	faces     []*sfnt.Font
-	buf       sfnt.Buffer
+	glyphs    *glyphcover.Lookup
 	printable map[rune]bool
 	missing   []rune
 }
 
 func newPDFTextCheck() (*pdfTextCheck, error) {
-	faces, err := offerFontFaces()
+	typeface, err := offerTypeface()
 	if err != nil {
 		return nil, err
 	}
-	return &pdfTextCheck{faces: faces, printable: map[rune]bool{}}, nil
+	return &pdfTextCheck{glyphs: typeface.Lookup(), printable: map[rune]bool{}}, nil
 }
 
 // text records what s holds that cannot be printed, and hands s back with each
@@ -85,18 +80,7 @@ func (c *pdfTextCheck) text(s string) string {
 }
 
 func (c *pdfTextCheck) hasGlyph(r rune) bool {
-	if unicode.IsControl(r) {
-		return true
-	}
-	if props, _ := bidi.LookupRune(r); props.Class() == bidi.R || props.Class() == bidi.AL {
-		return false
-	}
-	for _, face := range c.faces {
-		if glyph, err := face.GlyphIndex(&c.buf, r); err != nil || glyph == 0 {
-			return false
-		}
-	}
-	return true
+	return unicode.IsControl(r) || c.glyphs.PrintsLeftToRight(r)
 }
 
 func (c *pdfTextCheck) err() error {
