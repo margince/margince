@@ -6116,6 +6116,13 @@ export const en = {
   "deals.confirm": "Confirm",
   "deals.cancel": "Cancel",
   "deals.advanced": "Moved to {stage}",
+  "deals.advancedProbability": "Moved to {stage} · probability now {percent}",
+  "deals.closedWon": "Closed as won",
+  "deals.closedWonProbability": "Closed as won · probability {percent}",
+  "deals.closedLost": "Closed as lost",
+  "deals.closedLostProbability": "Closed as lost · probability {percent}",
+  "deals.reopened": "Reopened in {stage}",
+  "deals.reopenedProbability": "Reopened in {stage} · probability {percent}",
 
   "deal.ownerKeep": "Keep current owner",
   "deal.ownerMe": "Assign to me",
@@ -6238,8 +6245,6 @@ export const en = {
     "Clear the figure to follow the stage again.",
   "deal.winProbability.reason.stageNamed": "the stage {name}",
   "deal.winProbability.reason.stageUnnamed": "the deal’s stage",
-  "deal.winProbability.setByStage":
-    "Probability set to {percent} by the stage {stage}",
   "deal.winProbability.band.90_plus": "90% or more",
   "deal.winProbability.band.60_89": "60 to 89%",
   "deal.winProbability.band.30_59": "30 to 59%",

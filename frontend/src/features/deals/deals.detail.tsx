@@ -267,7 +267,10 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
             // the reader saw it, so a change made elsewhere fails loud.
             const input = { dealId: deal.id, version: deal.version, toStage };
             if (toStage.semantic === "open") {
-              advance.mutate(input);
+              advance.mutate({
+                ...input,
+                fromStage: stages.find((stage) => stage.id === deal.stage_id),
+              });
             } else {
               setPending(input);
             }

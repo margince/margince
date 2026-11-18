@@ -467,7 +467,7 @@ describe("DealScreen — the stage stepper advances the deal", () => {
     expect(await screen.findByText("Moved to Proposal")).toBeTruthy();
   });
 
-  it("says the probability the new stage set, in place of the bare move", async () => {
+  it("says the probability the new stage set beside the move", async () => {
     const d = deal({ id: "x", version: 7, stage_id: "s1" });
     vi.stubGlobal(
       "fetch",
@@ -486,9 +486,8 @@ describe("DealScreen — the stage stepper advances the deal", () => {
     await user.click(await screen.findByRole("button", { name: "Proposal" }));
 
     expect(
-      await screen.findByText("Probability set to 60% by the stage Proposal"),
+      await screen.findByText("Moved to Proposal · probability now 60%"),
     ).toBeTruthy();
-    expect(screen.queryByText("Moved to Proposal")).toBeNull();
   });
 
   // The deal's tags ride in the context rail, beside the seats, the deal room

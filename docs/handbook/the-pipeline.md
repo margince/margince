@@ -16,7 +16,7 @@ To move a deal to another stage in Margince, open the deal from **Deals** and cl
 3. On the board, open the card's **…** menu. Choose **Move to** the next stage, or **Move to stage** and pick one. You can also drag the card onto that stage's column.
 4. A move to a won or lost stage asks **Move to {stage}?**. Press **Confirm**, or **Cancel**.
 
-The move is saved at once ("Moved to {stage}"); there is no save button. The menu works with the keyboard and on a touch screen. Also called: advance a deal, change deal stage, progress an opportunity.
+The move is saved at once, with no save button. The note names the stage and the probability the deal now has ("Moved to Proposal · probability now 40%"). **Undo** on the note moves the deal back to the stage it came from. The menu works with the keyboard and on a touch screen. Also called: advance a deal, change deal stage, progress an opportunity.
 
 ### How do I move several deals to a stage at once?
 To move many deals at once, tick them on the **Deals** list and use **Move to stage** in the bar that appears.
@@ -301,7 +301,7 @@ it. A colleague's reads "set by" and their name. Empty the field to use the
 stage's again.
 
 A stage move sets it back to the new stage's and says so:
-"Probability set to 75% by the stage Negotiating". A won deal is at 100%, a lost one at 0%. The forecast weights each open deal by
+"Moved to Negotiating · probability now 75%". A won deal is at 100%, a lost one at 0%. The forecast weights each open deal by
 it, and one at 90% or more (the **Likely threshold** setting) with a confirmed
 close date counts as **Likely**.
 

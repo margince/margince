@@ -6194,6 +6194,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deals.confirm": "Bestätigen",
   "deals.cancel": "Abbrechen",
   "deals.advanced": "Nach {stage} verschoben",
+  "deals.advancedProbability":
+    "Nach {stage} verschoben · Abschlusschance jetzt {percent}",
+  "deals.closedWon": "Als gewonnen abgeschlossen",
+  "deals.closedWonProbability":
+    "Als gewonnen abgeschlossen · Abschlusschance {percent}",
+  "deals.closedLost": "Als verloren abgeschlossen",
+  "deals.closedLostProbability":
+    "Als verloren abgeschlossen · Abschlusschance {percent}",
+  "deals.reopened": "In {stage} wieder geöffnet",
+  "deals.reopenedProbability":
+    "In {stage} wieder geöffnet · Abschlusschance {percent}",
 
   "deal.ownerKeep": "Aktuelle Verantwortung behalten",
   "deal.ownerMe": "Mir zuweisen",
@@ -6271,8 +6282,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Leere das Feld, um wieder der Phase zu folgen.",
   "deal.winProbability.reason.stageNamed": "die Phase {name}",
   "deal.winProbability.reason.stageUnnamed": "die Phase des Deals",
-  "deal.winProbability.setByStage":
-    "Abschlusschance durch die Phase {stage} auf {percent} gesetzt",
   "deal.winProbability.band.90_plus": "90 % oder mehr",
   "deal.winProbability.band.60_89": "60 bis 89 %",
   "deal.winProbability.band.30_59": "30 bis 59 %",

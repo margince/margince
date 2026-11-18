@@ -91,6 +91,7 @@ describe("a drop on the board", () => {
     await waitFor(() => expect(advances).toHaveLength(1));
     expect(advances[0]).toEqual({ to_stage_id: "s2", status: "open" });
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(await screen.findByText("Reopened in Proposal")).toBeTruthy();
   });
 
   it("of a won deal cancelled at the Reopen question sends nothing", async () => {
@@ -137,5 +138,43 @@ describe("a drop on the board", () => {
 
     await waitFor(() => expect(advances).toHaveLength(1));
     expect(advances[0]).toEqual({ to_stage_id: "s2" });
+  });
+
+  it("between open stages says where it went and offers Undo back to where it was", async () => {
+    const user = userEvent.setup();
+    const advances: unknown[] = [];
+    const ifMatches: (string | null)[] = [];
+    vi.stubGlobal(
+      "fetch",
+      stubBackend([deal({ id: "d1", stage_id: "s1", version: 3 })], {
+        pipelines: withLost,
+        probabilitySet: {
+          win_probability: 40,
+          stage_name: "Proposal",
+          note: "Probability set to 40% by the stage Proposal.",
+        },
+        onAdvance: (body, ifMatch) => {
+          advances.push(body);
+          ifMatches.push(ifMatch);
+        },
+      }),
+    );
+    render(<DealsScreen />);
+    await waitFor(() =>
+      expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(),
+    );
+
+    dropOnStage("s2", "d1");
+
+    expect(
+      await screen.findByText("Moved to Proposal · probability now 40%"),
+    ).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Undo" }));
+    await waitFor(() => expect(advances).toHaveLength(2));
+    // Back where it came from, pinned to the version the move answered with.
+    expect(advances[1]).toEqual({ to_stage_id: "s1" });
+    expect(ifMatches[1]).toBe("4");
+    expect(await screen.findByText(/^Moved to Qualify/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
   });
 });

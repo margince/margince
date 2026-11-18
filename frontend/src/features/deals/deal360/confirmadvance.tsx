@@ -72,6 +72,8 @@ export type AdvanceInput = {
   toStage: Stage;
   // The deal is won or lost and this move takes it back to an open stage.
   reopens?: boolean;
+  // The stage the deal leaves, so a move between open stages can be undone.
+  fromStage?: Stage;
   lostReason?: string;
   // The reason a loss counts under, from the administered list. The note in
   // lostReason explains it.

@@ -33,7 +33,7 @@ import { navigate } from "../../../lib/router";
 import { useShortcut } from "../../../lib/shortcuts";
 import { RecordEmailVerb } from "../../records/recordemail";
 import { ShareAction } from "../../records/share";
-import { probabilitySetNote } from "../dealprobability";
+import { advanceNote } from "../dealprobability";
 import { archiveDeal } from "../deals.write";
 import { CorrectCloseDayAction } from "./correctcloseday";
 import { useDealCoverage } from "./usedealcoverage";
@@ -118,7 +118,7 @@ function ReopenAction({
     // reopen that pins the wrong version either fails for no reason the reader
     // can see or lands on a deal somebody else has since moved.
     mutationFn: async (input: {
-      toStageId: string;
+      toStage: Stage;
       version: number | undefined;
     }) => {
       return unwrap(
@@ -127,17 +127,21 @@ function ReopenAction({
             path: { id: dealId },
             ...ifMatch(requireVersion(input.version)),
           },
-          body: { to_stage_id: input.toStageId, status: "open" },
+          body: { to_stage_id: input.toStage.id, status: "open" },
         }),
         t,
       );
     },
-    onSuccess: (advanced) => {
+    onSuccess: (advanced, input) => {
       setOpen(false);
-      const note = probabilitySetNote(advanced, t, locale);
-      if (note) {
-        toast.show(note);
-      }
+      toast.show(
+        advanceNote(
+          advanced,
+          { toStage: input.toStage, reopens: true },
+          t,
+          locale,
+        ),
+      );
       for (const queryKey of dealRecordKeys(dealId)) {
         queryClient.invalidateQueries({ queryKey });
       }
@@ -160,7 +164,7 @@ function ReopenAction({
         pending={reopen.isPending}
         error={reopen.error}
         onConfirm={(toStage) =>
-          reopen.mutate({ toStageId: toStage.id, version: dealVersion })
+          reopen.mutate({ toStage, version: dealVersion })
         }
       />
     </>

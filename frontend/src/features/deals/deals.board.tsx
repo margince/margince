@@ -22,7 +22,7 @@ import {
   QueryGate,
   QueryStates,
 } from "../../design-system/querystates";
-import { useToast } from "../../design-system/toast";
+import { undoAction, useToast } from "../../design-system/toast";
 import { formatNumber } from "../../format/format";
 import { translatePlural, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
@@ -43,7 +43,7 @@ import { ReopenModal } from "./deal360/reopenmodal";
 import type { StageColumnRead, useStageColumns } from "./dealboard.queries";
 import { useCompanyMarks } from "./dealcompanymarks";
 import { DealPipelineBoard } from "./dealpipelineboard";
-import { probabilityReason, probabilitySetNote } from "./dealprobability";
+import { advanceNote, probabilityReason } from "./dealprobability";
 import type { Company, Deal, Pipeline, Stage } from "./deals";
 import { boardDealCount, buildColumns, stagesInOrder } from "./deals.columns";
 
@@ -86,7 +86,7 @@ export function useAdvanceDeal() {
   const t = useT();
   const { locale } = useLocale();
   const queryClient = useQueryClient();
-  return useMutation({
+  const advance = useMutation({
     // No single record: one instance serves every card on the board, and the
     // moving deal is known only at mutate() time. So the agent rail names the
     // write without naming a record (app/agentrail-copy.ts).
@@ -130,13 +130,36 @@ export function useAdvanceDeal() {
       for (const queryKey of dealWinKeys(deal)) {
         queryClient.invalidateQueries({ queryKey });
       }
-      // The probability note names the stage too, so it stands for the move.
+      const back = undoStage(input);
       toast.show(
-        probabilitySetNote(deal, t, locale) ??
-          t("deals.advanced", { stage: input.toStage.name }),
+        advanceNote(deal, input, t, locale),
+        back && deal
+          ? {
+              action: undoAction(t("common.undo"), () => {
+                advance.mutate({
+                  dealId: input.dealId,
+                  version: deal.version,
+                  toStage: back,
+                });
+              }),
+            }
+          : undefined,
       );
     },
   });
+  return advance;
+}
+
+// The stage an Undo moves the deal back to. Only a move between open stages
+// is taken back this way: a close asks why, and a reopen cleared how it closed.
+function undoStage(input: AdvanceInput): Stage | undefined {
+  const from = input.fromStage;
+  return from?.semantic === "open" &&
+    input.toStage.semantic === "open" &&
+    !input.reopens &&
+    from.id !== input.toStage.id
+    ? from
+    : undefined;
 }
 
 // Under a column's cards: its first read's wait or failure, then its "Load more".
@@ -421,7 +444,8 @@ export function useBoardInteractions({
       return Promise.resolve(false);
     }
     if (toStage.semantic === "open") {
-      return advance.mutateAsync({ dealId, version, toStage }).then(
+      const fromStage = stages.find((stage) => stage.id === drawn.stage_id);
+      return advance.mutateAsync({ dealId, version, toStage, fromStage }).then(
         () => true,
         () => false,
       );
