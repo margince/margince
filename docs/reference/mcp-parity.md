@@ -17,8 +17,8 @@ The last count answers the question of parity with the web app, so it leads this
 
 | Of the operations the web app calls | Count |
 |---|---:|
-| Open, and the agent does not ask first | 653 |
-| Open, and the agent asks first | 106 |
+| Open, and the agent does not ask first | 652 |
+| Open, and the agent asks first | 107 |
 | Pending | 0 |
 | Covered by another tool | 25 |
 | Closed for security | 141 |
@@ -49,7 +49,7 @@ Each operation is in one group. Ask first is a part of Open, so leave it out of 
 | [Business operations](#business-operations) | Sales work | 598 | 543 | 43 | 0 | 29 | 26 | 505 | 91.4% | 90.8% |
 | [Compliance and privacy](#compliance-and-privacy) | Compliance and privacy | 72 | 48 | 20 | 0 | 24 | 0 | 62 | 64.5% | 66.6% |
 | [Capture and connectors](#capture-and-connectors) | Email and calendar capture | 63 | 47 | 12 | 0 | 15 | 1 | 59 | 76.2% | 74.6% |
-| [Workspace settings a non-admin can reach](#workspace-settings-a-non-admin-can-reach) | Company settings | 88 | 68 | 4 | 0 | 12 | 8 | 73 | 82.1% | 77.2% |
+| [Workspace settings a non-admin can reach](#workspace-settings-a-non-admin-can-reach) | Company settings | 88 | 68 | 5 | 0 | 12 | 8 | 73 | 82.1% | 77.2% |
 | [Admin settings](#admin-settings) | Admin settings | 161 | 118 | 32 | 0 | 42 | 1 | 149 | 75.1% | 73.2% |
 | [The user's own account and security](#the-users-own-account-and-security) | My account | 32 | 18 | 5 | 0 | 11 | 2 | 29 | 58.6% | 56.2% |
 | [Agent governance](#agent-governance) | every passport, in no area | 28 | 8 | 0 | 0 | 19 | 1 | 28 | 28.5% | 28.5% |
@@ -137,7 +137,7 @@ Passport area: Company settings.
 | Exchange, tax and model rates | 2 | 1 | 0 | 0 | 0 | 1 | 1 | 100.0% | 50.0% |
 | Automations | 5 | 5 | 0 | 0 | 0 | 0 | 5 | 100.0% | 100.0% |
 | Members, teams and roles | 5 | 4 | 0 | 0 | 1 | 0 | 4 | 100.0% | 80.0% |
-| Capture and integration rules | 15 | 14 | 4 | 0 | 1 | 0 | 15 | 93.3% | 93.3% |
+| Capture and integration rules | 15 | 14 | 5 | 0 | 1 | 0 | 15 | 93.3% | 93.3% |
 | Web forms | 3 | 3 | 0 | 0 | 0 | 0 | 3 | 100.0% | 100.0% |
 | Webhooks | 4 | 0 | 0 | 0 | 4 | 0 | 3 | 0.0% | 0.0% |
 | Extensions | 3 | 0 | 0 | 0 | 0 | 3 | 3 | 0.0% | 0.0% |

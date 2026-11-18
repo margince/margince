@@ -101,8 +101,8 @@ func TestTheRecheckKeepsADigraphNamePairUntilTheNameMoves(t *testing.T) {
 func TestTheRecheckKeepsASubdomainPairUntilTheDomainGoes(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	holder := e.createNamedCompany(ctx, t, "Example Group", "example.com")
-	created := e.createNamedCompany(ctx, t, "Cloudy", "cloudy.test", "cloud.example.com")
+	holder := e.createNamedCompany(ctx, t, "Example Group", "example-group.test")
+	created := e.createNamedCompany(ctx, t, "Cloudy", "cloudy.test", "cloud.example-group.test")
 	pair := e.openPairID(ctx, t, entityCompany, holder.UUID, created.UUID)
 	e.assertRecheckKeeps(ctx, t, pair)
 
@@ -116,8 +116,8 @@ func TestTheRecheckKeepsASubdomainPairUntilTheDomainGoes(t *testing.T) {
 func TestADeeperSubdomainPairsWithAHeldIntermediateDomain(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	holder := e.createNamedCompany(ctx, t, "Example Europe", "eu.example.com")
-	created := e.createNamedCompany(ctx, t, "Team Site", "team.eu.example.com")
+	holder := e.createNamedCompany(ctx, t, "Example Europe", "eu.example-group.test")
+	created := e.createNamedCompany(ctx, t, "Team Site", "team.eu.example-group.test")
 	pair := e.openPairID(ctx, t, entityCompany, holder.UUID, created.UUID)
 	e.assertRecheckKeeps(ctx, t, pair)
 	if n := e.countInWorkspace(ctx, t, `SELECT count(*) FROM dedupe_candidate WHERE entity_type = 'company' AND confidence = 0`); n != 1 {

@@ -13569,6 +13569,10 @@ export interface paths {
          *     binds only your own mail. Not retroactive — mail already captured under the old reading
          *     stays, and a contact already minted from an alias stays until it is merged or removed.
          *     Idempotent on the folded value.
+         *
+         *     A consumer-mail domain is refused with 422 `consumer_mail_domain` as a whole domain. A company's
+         *     domain or a contact's address answers 409 `domain_needs_confirmation` (`details.role`,
+         *     `details.company_name`); the same request with `confirm: true` stores it.
          */
         post: operations["createCaptureOwnerIdentity"];
         delete?: never;
@@ -15849,6 +15853,11 @@ export interface paths {
          *     because that is what the matcher keys on. Idempotent on the domain: re-adding returns the
          *     existing entry and changing an entry's kind updates it, since a domain cannot be both
          *     added and carved out. Audit-only write (no event stream, EVT-NOEVT-3).
+         *
+         *     An `extra` entry is refused with 422 for the workspace's own domain (`own_domain`) and for a
+         *     domain the shipped list already holds (`already_on_shipped_list`). For the domain of a company
+         *     on file it answers 409 `domain_needs_confirmation` with `details.company_name`; the same
+         *     request with `confirm: true` stores it.
          */
         post: operations["addConsumerMailDomain"];
         delete?: never;
@@ -29456,6 +29465,8 @@ export interface components {
             domain: string;
             /** @enum {string} */
             kind: "extra" | "never";
+            /** @description Set after the user answered the 409 `domain_needs_confirmation` question with yes. Without it the same request is refused again. */
+            confirm?: boolean;
         };
         ConsumerMailDomainListResponse: {
             data: components["schemas"]["ConsumerMailDomain"][];
@@ -30702,6 +30713,8 @@ export interface components {
             kind: components["schemas"]["CaptureOwnerIdentityKind"];
             /** @description An email address, or a bare domain. */
             value: string;
+            /** @description Set after the user answered the 409 `domain_needs_confirmation` question with yes. Without it the same request is refused again. */
+            confirm?: boolean;
         };
         WorkspaceEmailDomainListResponse: {
             data: components["schemas"]["WorkspaceEmailDomain"][];
@@ -85674,6 +85687,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -88211,6 +88225,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };

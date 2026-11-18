@@ -59,10 +59,11 @@ export function useRecordProjectHealth(projectId: string) {
     // The project page carries the current reading in its own payload, so both
     // are invalidated: a card that refreshed while the header above it kept the
     // old judgement would be the page disagreeing with itself.
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: projectHealthKey(projectId) });
-      qc.invalidateQueries({ queryKey: project360Key(projectId) });
-    },
+    onSuccess: () =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: projectHealthKey(projectId) }),
+        qc.invalidateQueries({ queryKey: project360Key(projectId) }),
+      ]),
   });
 }
 
@@ -87,10 +88,11 @@ export function useCorrectProjectHealth(projectId: string) {
       }
       return data;
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: projectHealthKey(projectId) });
-      qc.invalidateQueries({ queryKey: project360Key(projectId) });
-    },
+    onSuccess: () =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: projectHealthKey(projectId) }),
+        qc.invalidateQueries({ queryKey: project360Key(projectId) }),
+      ]),
   });
 }
 
@@ -109,9 +111,10 @@ export function useUndoProjectHealth(projectId: string) {
       }
       return data;
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: projectHealthKey(projectId) });
-      qc.invalidateQueries({ queryKey: project360Key(projectId) });
-    },
+    onSuccess: () =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: projectHealthKey(projectId) }),
+        qc.invalidateQueries({ queryKey: project360Key(projectId) }),
+      ]),
   });
 }

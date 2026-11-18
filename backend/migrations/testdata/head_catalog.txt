@@ -5731,6 +5731,7 @@ public.finance_invoice.finance_invoice_customer_link_fk FOREIGN KEY (customer_li
 public.finance_invoice.finance_invoice_dunning_level_range CHECK (((dunning_level >= 0) AND (dunning_level <= 99)))
 public.finance_invoice.finance_invoice_fx_pair CHECK (((fx_rate_to_base IS NULL) = (fx_rate_date IS NULL)))
 public.finance_invoice.finance_invoice_gross_minor_js_safe CHECK (((gross_minor >= '-9007199254740991'::bigint) AND (gross_minor <= '9007199254740991'::bigint)))
+public.finance_invoice.finance_invoice_names_its_customer_link CHECK ((customer_link_id IS NOT NULL)) NOT VALID
 public.finance_invoice.finance_invoice_net_minor_js_safe CHECK (((net_minor >= '-9007199254740991'::bigint) AND (net_minor <= '9007199254740991'::bigint)))
 public.finance_invoice.finance_invoice_open_minor_js_safe CHECK (((open_minor >= '-9007199254740991'::bigint) AND (open_minor <= '9007199254740991'::bigint)))
 public.finance_invoice.finance_invoice_owner_key UNIQUE (id, connection_id, company_id)
@@ -5786,6 +5787,7 @@ public.finance_payment.finance_payment_connection_id_external_id_key UNIQUE (con
 public.finance_payment.finance_payment_customer_link_fk FOREIGN KEY (customer_link_id, connection_id, company_id) REFERENCES finance_customer_link(id, connection_id, company_id) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED
 public.finance_payment.finance_payment_invoice_fk FOREIGN KEY (invoice_id) REFERENCES finance_invoice(id) ON DELETE RESTRICT
 public.finance_payment.finance_payment_invoice_owner_fk FOREIGN KEY (invoice_id, connection_id, company_id) REFERENCES finance_invoice(id, connection_id, company_id) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED
+public.finance_payment.finance_payment_names_its_customer_link CHECK ((customer_link_id IS NOT NULL)) NOT VALID
 public.finance_payment.finance_payment_pkey PRIMARY KEY (id)
 public.finance_payment.finance_payment_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.finance_payment.id uuid NOT NULL gen=- def=uuidv7()

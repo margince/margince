@@ -493,5 +493,8 @@ func admitPatchedFields(ctx context.Context, tx pgx.Tx, current crmcontracts.Act
 	if err := in.admitPatchTime(current.Kind); err != nil {
 		return err
 	}
+	if err := in.admitPatchDueWindow(current); err != nil {
+		return err
+	}
 	return validateActivityDuration(in.DurationSeconds)
 }
