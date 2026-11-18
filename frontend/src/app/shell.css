@@ -154,34 +154,40 @@
 
 /* Above phone width the content is a card set in the sidebar's chrome. */
 @media (width > 700px) {
-  .app:not(.railless) {
+  /* On the root, so the strip's panels, portalled to the body, read it too. */
+  :root:has(.app:not(.railless)) {
     --cardEdge: 1px;
+    --barInsetEnd: calc(var(--space-2) + var(--cardEdge) + var(--pageGutter));
+  }
+  .app:not(.railless) {
     background: var(--chrome);
   }
   .app:not(.railless) .main {
-    padding: 0 var(--space-2) var(--space-2) 0;
+    padding-bottom: var(--space-2);
+  }
+  .app:not(.railless) :is(.scroll, .appbanner) {
+    margin-inline-end: var(--space-2);
   }
   .app:not(.railless) .scroll {
     background: var(--bgPage);
     border: var(--cardEdge) solid var(--groundEdge);
     border-radius: var(--r-lg);
   }
-  /* The trail starts on the line the page's column starts on in the card. */
   .app:not(.railless) .topbar {
-    padding-inline: calc(
-      var(--cardEdge) +
-      max(
-        var(--pageGutter),
-        (
-          100% -
-          2 *
-          var(--cardEdge) -
-          var(--scrollerGutter, 0px) -
-          var(--pageMeasure, 100%)
-        ) /
-        2 +
-        var(--pageGutter)
-      )
+    padding-inline: calc(var(--cardEdge) + var(--pageGutter)) var(--barInsetEnd);
+  }
+  /* The trail starts on the line the page's column starts on in the card. */
+  .app:not(.railless) .topbar-lead {
+    margin-inline-start: max(
+      0px,
+      (
+        100cqw +
+        2 *
+        var(--pageGutter) -
+        var(--scrollerGutter, 0px) -
+        var(--pageMeasure, calc(100cqw + 2 * var(--pageGutter)))
+      ) /
+      2
     );
   }
   /* An advisory strip is chrome, above the card. */
