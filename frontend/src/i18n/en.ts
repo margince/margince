@@ -22812,6 +22812,18 @@ export const en = {
   "progress.serviceSales": "Services and projects",
   "progress.planned": "Open pipeline",
   "progress.plannedAt": "Open deals as of {at}",
+  "progress.scenarios": "Where the month may finish",
+  "progress.scenario.worst": "Worst case",
+  "progress.scenario.worstWhy": "If nothing more closes",
+  "progress.scenario.expected": "Expected",
+  "progress.scenario.best": "Best case",
+  "progress.scenario.bestWhy": "If every open deal for the month closes",
+  "progress.scenarios.asOf": "Deals as of {at}",
+  "progress.scenarios.unpriced":
+    "Deals with no amount or no exchange rate are left out",
+  "progress.scenarios.limited": "Only the deals you can see are counted",
+  "progress.scenarios.yearUnavailable":
+    "Worst, expected and best cases are shown for a month. The forecast has no year to read them from.",
   "progress.unclassified": "Unclassified",
   "progress.unclassifiedDetail":
     "This revenue has no product or service classification.",

@@ -47951,6 +47951,13 @@ export interface components {
             target_source?: "target" | "sales_goals";
             /** Format: double */
             attainment?: number;
+            /**
+             * Format: double
+             * @description `target_actual` minus `target`, in the metric's unit: negative is still to reach,
+             *     positive is above the target. Present with both. A client shows it and `attainment`
+             *     as they are, and never works either out from the other figures.
+             */
+            target_delta?: number;
             coverage: components["schemas"]["ReportingCoverage"];
             evidence: components["schemas"]["ReportingEvidenceRef"];
             target_comparison?: components["schemas"]["ReportingTargetComparison"];
@@ -48286,6 +48293,47 @@ export interface components {
             amount_minor?: number;
         };
         /**
+         * @description Where a month may finish against its goal, read from the forecast of the same month and
+         *     scope that GET /forecast reads. Given only for a month that has not ended, against a goal
+         *     that is `set`. A year has none, because the forecast has no year period.
+         *
+         *     - `worst` is the money already won, as if nothing more closes.
+         *     - `expected` is the forecast landing under the installation's forward measure, the same
+         *       setting the Overview lands with. `landing` names the measure and what it rests on.
+         *     - `best` is the money won plus every open deal expected in the month, at face value.
+         *
+         *     Each case carries `delta_minor`, its amount minus the goal, signed as the reading's own
+         *     `delta_minor`: negative is short of the goal.
+         */
+        SalesProgressScenarios: {
+            /**
+             * Format: date-time
+             * @description When the deals were read.
+             */
+            as_of: string;
+            worst: components["schemas"]["SalesProgressScenario"];
+            expected: components["schemas"]["SalesProgressScenario"];
+            best: components["schemas"]["SalesProgressScenario"];
+            landing: components["schemas"]["ForecastLanding"];
+            /** @description Deals the forecast read for the month. */
+            eligible_count: number;
+            /** @description Of those, the deals with an amount. */
+            priced_count: number;
+            /** @description Priced deals no exchange rate reached; their money is in no case. */
+            fx_missing_count: number;
+            /** @description True when the reader cannot see every deal of the scope, so each case is smaller than the scope's own. */
+            scope_limited: boolean;
+        };
+        SalesProgressScenario: {
+            /** Format: int64 */
+            amount_minor: number;
+            /**
+             * Format: int64
+             * @description The amount minus the goal.
+             */
+            delta_minor: number;
+        };
+        /**
          * @description Closed revenue split by what each deal sold, from the category captured on its priced lines:
          *     software is a product sale and implementation a service. Other kinds, products nobody
          *     classified and the part no line carries are unresolved. The three parts add up to the
@@ -48399,6 +48447,7 @@ export interface components {
             members_withheld: boolean;
             /** @description The Analytics reading behind closed and planned revenue, the receipt `/analytics/evidence` takes. */
             evaluation?: components["schemas"]["ReportingEvaluation"];
+            scenarios?: components["schemas"]["SalesProgressScenarios"];
             capabilities: {
                 /** @description Whether the caller may set this scope's goals. */
                 write_goals: boolean;

@@ -18,6 +18,8 @@ import { vi as viCatalog } from "./vi";
 // name" from "missed translation" at a glance — an addition to any group
 // must be defensible on the same grounds as its neighbours.
 const KEPT_IN_ENGLISH = new Set<string>([
+  // ui-copy-style-vi.md retires the Vietnamese phrase for a best case.
+  "progress.scenario.best",
   // Product and protocol names, an example address and an example header name.
   "webhooks.body.preset.slack",
   "webhooks.body.preset.teams",

@@ -45267,6 +45267,13 @@ components:
         attainment:
           type: number
           format: double
+        target_delta:
+          type: number
+          format: double
+          description: |-
+            `target_actual` minus `target`, in the metric's unit: negative is still to reach,
+            positive is above the target. Present with both. A client shows it and `attainment`
+            as they are, and never works either out from the other figures.
         coverage:
           $ref: '#/components/schemas/ReportingCoverage'
         evidence:
@@ -45780,6 +45787,31 @@ components:
       properties:
         status: {type: string, enum: [ok, partial, withheld, not_started]}
         amount_minor: {type: integer, format: int64}
+    SalesProgressScenarios:
+      type: object
+      additionalProperties: false
+      required: [as_of, worst, expected, best, landing, eligible_count, priced_count, fx_missing_count, scope_limited]
+      description: |-
+        Where a month may finish against its goal, read from the forecast of the same month and
+        scope that GET /forecast reads. Given only for a month that has not ended, against a goal
+        that is `set`. A year has none, because the forecast has no year period.
+      properties:
+        as_of: {type: string, format: date-time, description: 'When the deals were read.'}
+        worst: {$ref: '#/components/schemas/SalesProgressScenario'}
+        expected: {$ref: '#/components/schemas/SalesProgressScenario'}
+        best: {$ref: '#/components/schemas/SalesProgressScenario'}
+        landing: {$ref: '#/components/schemas/ForecastLanding'}
+        eligible_count: {type: integer, minimum: 0, description: 'Deals the forecast read for the month.'}
+        priced_count: {type: integer, minimum: 0, description: 'Of those, the deals with an amount.'}
+        fx_missing_count: {type: integer, minimum: 0, description: 'Priced deals no exchange rate reached; their money is in no case.'}
+        scope_limited: {type: boolean, description: 'True when the reader cannot see every deal of the scope, so each case is smaller than the scope''s own.'}
+    SalesProgressScenario:
+      type: object
+      additionalProperties: false
+      required: [amount_minor, delta_minor]
+      properties:
+        amount_minor: {type: integer, format: int64}
+        delta_minor: {type: integer, format: int64, description: 'The amount minus the goal.'}
     SalesProgressCategories:
       type: object
       additionalProperties: false
@@ -45903,6 +45935,7 @@ components:
         evaluation:
           allOf: [{$ref: '#/components/schemas/ReportingEvaluation'}]
           description: The Analytics reading behind closed and planned revenue, the receipt `/analytics/evidence` takes.
+        scenarios: {$ref: '#/components/schemas/SalesProgressScenarios'}
         capabilities:
           type: object
           additionalProperties: false

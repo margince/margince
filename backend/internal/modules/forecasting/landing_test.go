@@ -12,6 +12,7 @@ package forecasting
 
 import (
 	"math"
+	"reflect"
 	"testing"
 )
 
@@ -221,5 +222,40 @@ func TestAMissingOrLowCallNamesItsBasisAndWarns(t *testing.T) {
 	}
 	if below.AmountMinor != 90 || below.Measure != MeasureManagerCall || below.Caveat != CaveatCallBelowActual {
 		t.Fatalf("a call of 90 lands %+v, want 90 as authored with the call_below_actual caveat", below)
+	}
+}
+
+// The worst case is what is won. The best adds every open deal at face value.
+// The expected case is the landing under the installation's measure. Open
+// is set apart from the Likely and weighted readings, so a best case built
+// from either of them fails here.
+func TestScenariosAreWonTheLandingAndWonPlusOpen(t *testing.T) {
+	t.Parallel()
+	readings := measured(400_00, 250_00, 180_00)
+	readings.OpenMinor = 520_00
+	call := int64(700_00)
+	for _, measure := range []ForwardMeasure{MeasureLikely, MeasureWeighted, MeasureManagerCall} {
+		got, err := ProjectScenarios(readings, measure, &call)
+		if err != nil {
+			t.Fatal(err)
+		}
+		landing, err := ProjectLanding(readings, measure, &call)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got.WorstMinor != 400_00 || got.BestMinor != 920_00 || !reflect.DeepEqual(got.Expected, landing) {
+			t.Fatalf("%s scenarios = %+v, want worst 40000, best 92000 and the expected case %+v", measure, got, landing)
+		}
+	}
+}
+
+// A best case that wraps would print a negative finish, so it refuses as the
+// landing does.
+func TestABestCaseThatWouldWrapRefuses(t *testing.T) {
+	t.Parallel()
+	readings := measured(math.MaxInt64-10, 0, 0)
+	readings.OpenMinor = 11
+	if _, err := ProjectScenarios(readings, MeasureLikely, nil); err == nil {
+		t.Fatal("a best case past the int64 range was answered, want the refusal")
 	}
 }
