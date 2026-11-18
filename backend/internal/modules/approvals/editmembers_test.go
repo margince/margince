@@ -100,3 +100,44 @@ func TestAShareRequestTakesNoEditAndNoAddedMember(t *testing.T) {
 		t.Errorf("an added member answered %v, want an invalid-edit refusal", err)
 	}
 }
+
+func TestAStagedMailEditMayNotBlankItsSubjectOrBody(t *testing.T) {
+	rest := func(body string) string {
+		return `{"operation":"sendEmail","path":"/activities/a1/send-email","body":` + body + `}`
+	}
+	cases := []struct {
+		name   string
+		kind   string
+		edited string
+		ok     bool
+	}{
+		{"held draft written", kindHeldDraft, `{"subject":"Hi","body":"Text"}`, true},
+		{"held draft subject blank", kindHeldDraft, `{"subject":"  ","body":"Text"}`, false},
+		{"held draft body empty", kindHeldDraft, `{"subject":"Hi","body":""}`, false},
+		{"send_email written", "send_email", rest(`{"subject":"Hi","body":"Text"}`), true},
+		{"send_email subject blank", "send_email", rest(`{"subject":"","body":"Text"}`), false},
+		{"send_email body blank", "send_email", rest(`{"subject":"Hi","body":" "}`), false},
+		{"send_company_email written", "send_company_email", rest(`{"subject":"Hi","body":"Text"}`), true},
+		{"send_company_email subject blank", "send_company_email", rest(`{"subject":" ","body":"Text"}`), false},
+		{"send_company_email body blank", "send_company_email", rest(`{"subject":"Hi","body":""}`), false},
+		{"tool-staged send_email blank", "send_email", `{"subject":"","body":"Text"}`, false},
+		{"held draft empty object", kindHeldDraft, `{}`, false},
+		{"held draft subject null", kindHeldDraft, `{"subject":null,"body":42}`, false},
+		{"held draft body missing", kindHeldDraft, `{"subject":"Hi"}`, false},
+		{"held draft body not a string", kindHeldDraft, `{"subject":"Hi","body":42}`, false},
+		{"send_email body object missing", "send_email", `{"operation":"sendEmail","path":"/x"}`, false},
+		{"send_email body null members", "send_company_email", rest(`{"subject":null,"body":null}`), false},
+		{"send_email body not a string", "send_email", rest(`{"subject":"Hi","body":["x"]}`), false},
+		{"other kind keeps its own rule", kindLinkedInMatch, `{"subject":""}`, true},
+	}
+	for _, tc := range cases {
+		err := assertMailHasText(tc.kind, json.RawMessage(tc.edited))
+		var invalid *InvalidEditError
+		if tc.ok && err != nil {
+			t.Errorf("%s: refused: %v", tc.name, err)
+		}
+		if !tc.ok && !errors.As(err, &invalid) {
+			t.Errorf("%s: got %v, want an InvalidEditError", tc.name, err)
+		}
+	}
+}

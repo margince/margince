@@ -62,6 +62,10 @@ export function DecideOutcome({
   );
 }
 
+function isBlank(value: string | undefined): boolean {
+  return (value ?? "").trim() === "";
+}
+
 /**
  * What the editor should START with for one field.
  *
@@ -100,6 +104,7 @@ export function editableSeed(entry: EditableField, staged: unknown): string {
  */
 export function StagedEditor({
   disabled,
+  required = [],
   acceptLabel,
   fields,
   draft,
@@ -112,6 +117,8 @@ export function StagedEditor({
   /** The records the proposed work is about; their named colleagues lead the doer picker. */
   records?: readonly AssignedRecord[];
   disabled?: boolean;
+  /** Fields that may not be sent blank. */
+  required?: readonly string[];
   acceptLabel?: string;
   fields: readonly EditableField[];
   draft: Record<string, string>;
@@ -121,6 +128,7 @@ export function StagedEditor({
   onCancel: () => void;
 }>) {
   const t = useT();
+  const blank = required.some((field) => isBlank(draft[field]));
   return (
     <div className="form-stack approval-editor" data-date-scope>
       {fields.map((entry) =>
@@ -136,6 +144,12 @@ export function StagedEditor({
           <Field
             key={entry.field}
             label={entry.label ? t(entry.label) : entry.field}
+            required={required.includes(entry.field)}
+            error={
+              required.includes(entry.field) && isBlank(draft[entry.field])
+                ? t("decision.fieldRequired")
+                : undefined
+            }
           >
             {(control) => (
               <EditorControl
@@ -156,7 +170,7 @@ export function StagedEditor({
           <Button
             variant="primary"
             pending={pending}
-            disabled={disabled}
+            disabled={disabled || blank}
             onClick={(event) => {
               if (!refuseUnreadableField(event.currentTarget)) {
                 onApprove();

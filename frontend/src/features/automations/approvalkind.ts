@@ -184,6 +184,18 @@ export function editableStrings(
     .map(([field]) => ({ field, as: "text" }) as const);
 }
 
+// The fields of a staged mail that may not go out blank.
+export function requiredMailFields(
+  isMail: boolean,
+  fields: readonly EditableField[],
+): string[] {
+  return isMail
+    ? fields
+        .map((entry) => entry.field)
+        .filter((field) => field === "subject" || field === "body")
+    : [];
+}
+
 // An approval the reader can only answer yes or no offers no Edit, on every
 // surface that shows it.
 export function approvalEditable(

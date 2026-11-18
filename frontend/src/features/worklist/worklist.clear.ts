@@ -29,6 +29,33 @@ import type { WorklistFilter } from "./worklist.queries";
 // sentence rather than to an id or a gap: a reader who cannot be named is a
 // question this line does not have to answer, and "Nothing is waiting on
 // 4f3c…" is worse than a sentence one word too general.
+// Today never lists decisions, so an empty Today must not say nothing waits.
+export function pointsToDecisions(
+  filter: WorklistFilter,
+  colleague: string | null,
+  view: WorklistView,
+  decisionsWaiting: boolean,
+): boolean {
+  return decisionsWaiting && view === "today" && !colleague && filter === "all";
+}
+
+// Only the sentence that names the decisions offers a way to them. A partial
+// read or a further page never gets it.
+export function offersDecisions(
+  partial: boolean,
+  hasMore: boolean,
+  filter: WorklistFilter,
+  colleague: string | null,
+  view: WorklistView,
+  decisionsWaiting: boolean,
+): boolean {
+  return (
+    !hasMore &&
+    !partial &&
+    pointsToDecisions(filter, colleague, view, decisionsWaiting)
+  );
+}
+
 export function clearSentence(
   partial: boolean,
   filter: WorklistFilter,
@@ -36,6 +63,7 @@ export function clearSentence(
   t: Translator,
   hasMore = false,
   view: WorklistView = "today",
+  decisionsWaiting = false,
 ): string {
   if (hasMore) return t("worklist.emptyPage");
   if (partial) {
@@ -44,6 +72,9 @@ export function clearSentence(
   // Decisions and System each say which kind of work is clear.
   if (view !== "today") {
     return t(`worklist.clear.${view}`);
+  }
+  if (pointsToDecisions(filter, colleague, view, decisionsWaiting)) {
+    return t("worklist.clearDecisionsWaiting");
   }
   if (filter === "tasks") {
     return t("worklist.clearOfTasksToday");

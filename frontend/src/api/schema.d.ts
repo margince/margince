@@ -53807,6 +53807,19 @@ export interface components {
             effect_failed_at?: string | null;
             /** @description The sentence a reader is shown about that failure, written for them and never copied from the executor's error. Present exactly when `effect_failed_at` is. */
             effect_failure?: string | null;
+            /**
+             * @description `false` on a pending mail proposal whose sender, the account the release runs as, has no
+             *     connected mailbox that can transmit, so approving could only be refused. Absent
+             *     otherwise.
+             */
+            mailbox_send_capable?: boolean;
+            /**
+             * @description True on an approved proposal that an agent staged and has not yet redeemed. The decision
+             *     only lets the agent repeat its call within the redemption window; nothing has changed on
+             *     any record until it does. Absent on every other row, including one whose effect ran
+             *     during the decision.
+             */
+            awaiting_agent?: boolean;
             /** Format: date-time */
             created_at: string;
         };

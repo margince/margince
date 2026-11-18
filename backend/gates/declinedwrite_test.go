@@ -51,6 +51,7 @@ var returningRow = regexp.MustCompile(`(?i)\bRETURNING\b`)
 // right not to look, each saying why. A reason describes the act, not the
 // missing check.
 var declinedWriteIsSilent = gatekit.Waive(map[string]string{
+	"backend/internal/modules/approvals/failureack.go:AcknowledgeEffectFailure":                  "writing the lapse a sweep has not yet recorded, only for a decider's own unredeemed row past its window: a row already marked, or not lapsed, is the common case, and the locked read that follows decides what the caller is told",
 	"backend/internal/modules/capture/syncstate.go:recordSyncSuccessTx":                          "restoring an errored connection after a successful sync: a connection already connected, archived or awaiting reauthorization keeps its newer state; the success itself is recorded independently in capture_sync_state",
 	"backend/internal/modules/comms/partysettle.go:SettlePartyAdmission":                         "acknowledging a sent delivery's party admission: a delivery no longer sent has no sent admission to settle, and clearing a flag already clear is idempotent",
 	"backend/internal/modules/privacy/retentionstops.go:pinStop":                                 "the anonymize holds the subject's stop lock, which a lift also takes, and read the stop live in the same transaction. The revoked_at predicate cannot decline; it keeps a lifted stop from ever being pinned if that changes",

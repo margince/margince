@@ -6692,6 +6692,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "decision.evidenceSource.unknown": "Nguồn",
   "decision.detailAsked": "Đã hỏi",
   "decision.detailDecided": "Đã quyết định",
+  "decision.waitingForAgent": "Đã duyệt. Đang chờ tác nhân thực hiện.",
+  "decision.mailboxBlocked":
+    "Không có hộp thư nào đã kết nối có thể gửi. Duyệt sẽ không gửi được email này.",
+  "decision.fieldRequired": "Bắt buộc",
   "decision.applied": "Đã áp dụng",
   "decision.undoOnRecord": "Hoàn tác trên hồ sơ",
   "decision.status.approved": "Đã duyệt",
@@ -6998,6 +7002,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Phím mũi tên chọn một quyết định: → chấp nhận · ← từ chối · ↑ sửa · ↓ để sau · U hoàn tác · Enter gửi các quyết định đã chọn",
   "brief.deck.behind_one": "Còn 1 mục phía sau",
   "brief.deck.behind_other": "Còn {count} mục phía sau",
+  "brief.deck.awaitingAgent_one":
+    "1 quyết định đã duyệt đang chờ tác nhân thực hiện.",
+  "brief.deck.awaitingAgent_other":
+    "{count} quyết định đã duyệt đang chờ tác nhân thực hiện.",
+  "brief.deck.effectFailed_one": "1 quyết định đã duyệt chưa được thực hiện.",
+  "brief.deck.effectFailed_other":
+    "{count} quyết định đã duyệt chưa được thực hiện.",
   "brief.deck.staged_one": "1 quyết định đã chọn",
   "brief.deck.staged_other": "{count} quyết định đã chọn",
   "brief.deck.commit": "Gửi quyết định đã chọn",
@@ -19587,6 +19598,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.clear": "Không có việc nào đang chờ bạn.",
   "worklist.clearFor": "Không có việc nào đang chờ {name}.",
   "worklist.clearOfUrgent": "Không có việc gấp.",
+  "worklist.clearDecisionsWaiting":
+    "Hôm nay không có việc đến hạn. Có quyết định đang chờ bạn.",
+  "worklist.clearDecisionsOpen": "Mở Quyết định",
   "worklist.clearOfTasksToday":
     "Không có việc đến hạn hôm nay hoặc quá hạn. Việc sau đó nằm trong Sắp tới và tồn đọng.",
   "worklist.clearOfWhatWasRead": "Các nguồn đã tải không có việc nào.",

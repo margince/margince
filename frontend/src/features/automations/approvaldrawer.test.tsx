@@ -132,3 +132,28 @@ it("explains an inactive assignment and refuses both task creation controls", as
   );
   expect(screen.getByRole("button", { name: "Create task" })).toBeDisabled();
 });
+
+it("asks before Escape throws away text typed in the editor", async () => {
+  const user = userEvent.setup();
+  openAt("pending", "commitment_task");
+  await user.click(
+    await screen.findByRole("button", { name: translate("en", "trust.edit") }),
+  );
+  await user.type(screen.getByRole("textbox", { name: /step/i }), " today");
+
+  await user.keyboard("{Escape}");
+
+  expect(await screen.findByText("Discard unsaved changes?")).toBeVisible();
+});
+
+it("closes on Escape without asking when nothing was typed", async () => {
+  const user = userEvent.setup();
+  openAt("pending", "commitment_task");
+  await user.click(
+    await screen.findByRole("button", { name: translate("en", "trust.edit") }),
+  );
+
+  await user.keyboard("{Escape}");
+
+  expect(screen.queryByText("Discard unsaved changes?")).toBeNull();
+});
