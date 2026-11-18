@@ -34,7 +34,7 @@ import type {
   UpdateOfferLineItemRequest,
 } from "./offers";
 import { EditableLineTable, useLineRefusals } from "./offers.linetable";
-import { searchProductCandidates } from "./products";
+import { useProductCandidateSearch } from "./products";
 import { isUnnamedOtherUnit, storedUnitOf, UnitPicker } from "./productunit";
 
 const EMPTY_NEW_LINE = {
@@ -65,6 +65,7 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
   const [product, setProduct] = useState<RecordPickerCandidate | null>(null);
   const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
   const labels = lineLabels(offer.currency, locale, t);
+  const searchProducts = useProductCandidateSearch();
   const refusals = useLineRefusals();
   const edit = (field: string, change: Partial<NewLineState>) => {
     setNewLine((prev) => ({ ...prev, ...change }));
@@ -252,7 +253,7 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
             <span className="t-label">{t("offer.pickProduct")}</span>
             <RecordPicker
               label={t("offer.pickProduct")}
-              searchTargets={searchProductCandidates}
+              searchTargets={searchProducts}
               selected={product}
               onPick={setProduct}
             />

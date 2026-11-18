@@ -16495,6 +16495,7 @@ export const en = {
   "product.unitOtherLabel": "Other unit",
   "product.unitOtherRequired": "Type the unit, or pick one from the list.",
   "product.unitPrice": "Unit price",
+  "product.candidatePrice": "{price} / {unit}",
   "product.currency": "Currency",
   "product.taxRate": "Default tax rate %",
   "product.billingModel": "Billing",

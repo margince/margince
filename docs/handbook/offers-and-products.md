@@ -45,7 +45,7 @@ The deal's value has no tax. The offer works out its tax on the day you send it,
 
 ### How do I add a product or a line to an offer?
 To add a line to an offer in Margince, open the draft offer and fill the **Add line** row in the **Line items** panel.
-1. Choose **Pick product** to copy a product from your rate card, or type the line yourself.
+1. Choose **Pick product** to copy a product from your rate card, or type the line yourself. Each product in the list shows its SKU and its rate card price.
 2. Fill **Description**, **Unit**, **Quantity** and **Unit price**; set **Discount %** and **Tax %** on the added line.
 3. For a line that repeats, set **Billing** to **Recurring**, a **Billing period**, and **Periods** agreed.
 4. Click **Add line**. To take a line out again, choose **Remove line** on its row.

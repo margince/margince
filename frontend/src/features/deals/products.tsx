@@ -76,7 +76,7 @@ async function fetchProductsPage(
 
 // The offer lines and the deal's products pick from the catalog through the
 // one search every surface shares.
-export { searchProductCandidates } from "../../components/productsearch";
+export { useProductCandidateSearch } from "../../components/productsearch";
 
 function editableProduct(p: Product, locale: Locale) {
   const unit = unitChoiceOf(p.unit);

@@ -33,7 +33,7 @@ import {
   OfferLineBillingFields,
 } from "../offerlinebilling";
 import { OfferCurrencyField } from "../offers.currencyfield";
-import { searchProductCandidates } from "../products";
+import { useProductCandidateSearch } from "../products";
 
 export type DealCommercial = components["schemas"]["DealCommercial"];
 type DealLine = components["schemas"]["DealLine"];
@@ -355,6 +355,7 @@ export function DealLinesEditor({
   onClose: () => void;
 }>) {
   const t = useT();
+  const searchProducts = useProductCandidateSearch();
   const { locale } = useLocale();
   const client = useQueryClient();
   const [draft, setDraft] = useState<DraftLine[]>(() =>
@@ -476,7 +477,7 @@ export function DealLinesEditor({
       )}
       <RecordPicker
         label={t("deal.lines.addProduct")}
-        searchTargets={searchProductCandidates}
+        searchTargets={searchProducts}
         onPick={addProduct}
       />
       <Field label={t("deal.lines.customItem")}>

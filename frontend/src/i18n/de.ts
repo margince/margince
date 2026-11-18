@@ -16624,6 +16624,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "product.unitOtherRequired":
     "Gib die Einheit ein oder wähle eine aus der Liste.",
   "product.unitPrice": "Einzelpreis",
+  "product.candidatePrice": "{price} / {unit}",
   "product.currency": "Währung",
   "product.taxRate": "Standardsteuersatz %",
   "product.billingModel": "Abrechnung",

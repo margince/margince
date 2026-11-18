@@ -180,7 +180,15 @@ describe("a deal priced from its lines", () => {
       [`GET /deals/${DEAL}/lines`]: () => jsonResponse(ESTIMATE),
       "GET /products": () =>
         jsonResponse({
-          data: [{ id: "p-banana", name: "Bananas" }],
+          data: [
+            {
+              id: "p-banana",
+              name: "Bananas",
+              unit: "piece",
+              unit_price_minor: 200,
+              currency: "EUR",
+            },
+          ],
           next_cursor: null,
           has_more: false,
         }),
@@ -219,6 +227,50 @@ describe("a deal priced from its lines", () => {
       description: "Ripe bananas",
       unit_price_minor: 180,
     });
+  });
+
+  it("tells products of one name apart by their SKU and rate card price", async () => {
+    show(ESTIMATE);
+    installFetchStub({
+      [`GET /deals/${DEAL}/products`]: () => jsonResponse({ data: [] }),
+      [`GET /deals/${DEAL}/lines`]: () => jsonResponse(ESTIMATE),
+      "GET /products": () =>
+        jsonResponse({
+          data: [
+            {
+              id: "p-eur",
+              name: "Widget",
+              sku: "W-EU",
+              unit: "piece",
+              unit_price_minor: 3333,
+              currency: "EUR",
+            },
+            {
+              id: "p-jpy",
+              name: "Widget",
+              sku: null,
+              unit: "hour",
+              unit_price_minor: 4000,
+              currency: "JPY",
+            },
+          ],
+          next_cursor: null,
+          has_more: false,
+        }),
+    });
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "Price from products" }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    await user.type(
+      within(dialog).getByRole("searchbox", { name: "Add a product" }),
+      "Wid",
+    );
+    expect(
+      await within(dialog).findByText("W-EU · €33.33 / Piece"),
+    ).toBeTruthy();
+    expect(within(dialog).getByText("JP¥4,000 / Hour")).toBeTruthy();
   });
 
   it("says which changes saved when one in the middle fails, and keeps the dialog open", async () => {
