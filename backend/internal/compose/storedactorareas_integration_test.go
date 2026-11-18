@@ -20,6 +20,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
@@ -67,5 +69,26 @@ func TestARunningSessionIsHeldToAreasNarrowedAfterItAuthenticated(t *testing.T) 
 	var off *auth.AreaOffError
 	if !errors.As(err, &off) || off.Area != "admin_settings" {
 		t.Fatalf("the next call after its passport was narrowed → %v, want refused in admin settings", err)
+	}
+}
+
+func TestResumedWorkReadsInItsHumansLanguage(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	human := principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1})
+	if _, err := identity.NewService(e.Pool).SaveMyLocale(principal.WithCorrelationID(human, ids.NewV7()), "vi"); err != nil {
+		t.Fatalf("saving the member's language: %v", err)
+	}
+	for _, stored := range []migration.StoredActor{
+		{Type: principal.PrincipalHuman, UserID: e.Rep1},
+		{Type: principal.PrincipalAgent, ID: "agent:queued", UserID: e.Rep1, PassportID: e.AgentPassport},
+	} {
+		actor, err := storedActor{authority: identity.NewService(e.Pool)}.rebuild(ctx, stored, principal.ScopeWrite)
+		if err != nil {
+			t.Fatalf("rebuilding the queued %s: %v", stored.Type, err)
+		}
+		if got := systemtext.Locale(principal.WithActor(ctx, actor)); got != textlang.Vietnamese {
+			t.Errorf("work resumed as a %s reads system text in %q, want vi", stored.Type, got)
+		}
 	}
 }

@@ -74,7 +74,7 @@ func (s storedActor) rebuild(ctx context.Context, stored migration.StoredActor, 
 		actor.OnBehalfOf = stored.OnBehalfOf
 	}
 	if stored.Type == principal.PrincipalHuman {
-		return actor, nil
+		return s.withLanguage(ctx, actor)
 	}
 	if stored.ID == "" {
 		return principal.Principal{}, fmt.Errorf("a stored agent actor for %s names no agent", human)
@@ -92,6 +92,17 @@ func (s storedActor) rebuild(ctx context.Context, stored migration.StoredActor, 
 	actor.ConnectionID = stored.ConnectionID
 	actor.Scopes = live.within(scopes)
 	actor.Areas = live.areas
+	return s.withLanguage(ctx, actor)
+}
+
+// withLanguage gives the rebuilt actor the language its human reads, so system
+// text in resumed work reads as it does in that human's own session.
+func (s storedActor) withLanguage(ctx context.Context, actor principal.Principal) (principal.Principal, error) {
+	lang, err := s.authority.ReadingLanguage(ctx, actor)
+	if err != nil {
+		return principal.Principal{}, fmt.Errorf("reading the language of %s: %w", actor.UserID, err)
+	}
+	actor.Locale = string(lang)
 	return actor, nil
 }
 

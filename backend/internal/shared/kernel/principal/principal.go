@@ -126,8 +126,9 @@ type Principal struct {
 	// Areas bound an agent the way Scopes do, by where it acts rather than how.
 	Areas WorkAreas
 
-	// Locale is the display language a human chose, empty when they never did;
-	// an agent carries its granting human's. It rides the principal so wording
+	// Locale is the display language a human chose, empty when they never did.
+	// An agent, and work resumed from a stored actor, carry the language their
+	// human reads, base language included. It rides the principal so wording
 	// written for the caller needs no query.
 	Locale string
 

@@ -359,8 +359,9 @@ type AgentIdentity struct {
 	Roles        []string
 	Teams        []ids.TeamID
 	Permissions  principal.Permissions
-	// Locale is the display language the granting human chose, empty when
-	// they never did, so system text answers the agent as it answers them.
+	// Locale is the language the granting human reads: their saved choice,
+	// else the installation's base language. No screen sits behind an agent
+	// to answer for a human who never chose.
 	Locale string
 }
 
@@ -414,9 +415,6 @@ func (s *Service) authenticateAgentWhere(ctx context.Context, tx pgx.Tx, predica
 	if connection != nil {
 		a.ConnectionID = *connection
 	}
-	if locale != nil {
-		a.Locale = *locale
-	}
 	a.Scopes = principal.NewScopeSet()
 	for _, sc := range scopes {
 		a.Scopes[principal.Scope(sc)] = struct{}{}
@@ -427,6 +425,7 @@ func (s *Service) authenticateAgentWhere(ctx context.Context, tx pgx.Tx, predica
 	if loadErr != nil {
 		return AgentIdentity{}, loadErr
 	}
+	a.Locale = string(readingLanguage(ctx, tx, a.Principal(), locale))
 	return a, nil
 }
 
