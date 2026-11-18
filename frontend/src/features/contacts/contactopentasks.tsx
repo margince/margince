@@ -2,13 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../api/schema";
-import { type OpenTask, OpenTaskRow } from "../../components/opentaskrow";
+import { OpenTaskRow, openTaskOf } from "../../components/opentaskrow";
 import { useTaskUpdate } from "../../components/taskactions";
 import { Button } from "../../design-system/atoms";
 import { OverviewCard, OverviewList } from "../../design-system/overviewcard";
-import { daysPast } from "../../format/lateness";
 import { useT } from "../../i18n";
-import { displayedSubject } from "../../lib/systemdisplay";
 import { worklistKey } from "../../lib/workkeys";
 import { omitted } from "./contact360";
 import { nextBarChoice } from "./contacttoday";
@@ -18,7 +16,6 @@ import { nextBarChoice } from "./contacttoday";
 // again, and with nothing left the card is not drawn.
 
 type Contact360 = components["schemas"]["Contact360"];
-type Activity = components["schemas"]["Activity"];
 
 export function ContactOpenTasks({
   view,
@@ -61,21 +58,4 @@ export function ContactOpenTasks({
       )}
     </OverviewCard>
   );
-}
-
-// A contact task as an Overview row reads it. Late by the same measure as the
-// "+N tasks" peek beside it.
-function openTaskOf(task: Activity, asOf: string, untitled: string): OpenTask {
-  return {
-    id: task.id,
-    subject: displayedSubject(task) ?? untitled,
-    due_at: task.due_at,
-    due_has_time: task.due_has_time,
-    overdue: task.due_at
-      ? daysPast(Date.parse(task.due_at), Date.parse(asOf)).late
-      : false,
-    assignee_id: task.assignee_id,
-    version: task.version,
-    writable: task.writable === true,
-  };
 }

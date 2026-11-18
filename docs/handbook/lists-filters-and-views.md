@@ -132,7 +132,7 @@ The columns you can sort on each Margince list are:
 - **Contacts**: Name, Email, Company, Owner, Last activity, Created.
 - **Companies**: Company, Description, Website, Contacts, Open deals, Lifecycle, Owner, Last activity, Created.
 - **Leads**: Name, Score, Status, Next step, Last activity, Origin, Owner, Created.
-- **Deals**: Name, Company, via partner, Stage, Value, Expected close, Last signal, Status, Owner.
+- **Deals**: Name, Company, **Referring partner**, Stage, Value, Expected close, Last signal, Status, Owner.
 - **Projects**: Project name, Company, Phase, Owner, Last activity.
 **Owner** sorts by the owner's name, with unassigned records last. You cannot sort by **Tags**, **Relationship type** or **Last email**. You can still pick a hidden column under **View** → **Sort**.
 Also called: sort options, order by column.

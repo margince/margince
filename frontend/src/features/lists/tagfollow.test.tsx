@@ -25,6 +25,7 @@ import {
   jsonResponse,
   meRoute,
   StoryProviders,
+  storyQueryClient,
 } from "../../testing/story-utils";
 
 // Applying a tag on a contact offers it to their company; applying one on a
@@ -194,9 +195,14 @@ describe("tagging a company offers the tag to its contacts", () => {
     },
   ];
 
-  function mountCompany(contactGrant: string[] = ["update"]) {
+  function mountCompany(
+    contactGrant: string[] = ["update"],
+    roster: readonly (typeof contacts)[number][] = contacts,
+    client = storyQueryClient(),
+  ) {
     const sent: { path: string; body: unknown }[] = [];
     const annaTagReads = { count: 0 };
+    const rosterReads = { count: 0, limits: [] as (string | null)[] };
     installFetchStub({
       "GET /me": meRoute({
         company: ["update"],
@@ -210,11 +216,14 @@ describe("tagging a company offers the tag to its contacts", () => {
       [`GET /records/company/${COMPANY}/tags`]: () =>
         jsonResponse({ data: [], withheld: false }),
       "POST /tags/t-1/apply": () => new Response(null, { status: 204 }),
-      "GET /contacts": () =>
-        jsonResponse({
-          data: contacts,
+      "GET /contacts": (_body, url) => {
+        rosterReads.count += 1;
+        rosterReads.limits.push(url.searchParams.get("limit"));
+        return jsonResponse({
+          data: roster,
           page: { has_more: false, next_cursor: null },
-        }),
+        });
+      },
       "POST /bulk/preview": (body) => {
         sent.push({ path: "preview", body });
         return jsonResponse({
@@ -238,7 +247,7 @@ describe("tagging a company offers the tag to its contacts", () => {
       },
     });
     render(
-      <StoryProviders>
+      <StoryProviders client={client}>
         <ToastProvider>
           <TagsPanel entityType="company" entityID={COMPANY} canEdit />
           {/* Anna's own panel, which the bulk change must refresh. */}
@@ -247,7 +256,7 @@ describe("tagging a company offers the tag to its contacts", () => {
         </ToastProvider>
       </StoryProviders>,
     );
-    return { sent, annaTagReads };
+    return { sent, annaTagReads, rosterReads, client };
   }
 
   // Eleven default waits in sequence, so it states its own ceiling.
@@ -255,7 +264,7 @@ describe("tagging a company offers the tag to its contacts", () => {
     timeout: ELEVEN_WAITS_TEST_MS,
   }, async () => {
     const user = userEvent.setup();
-    const { sent, annaTagReads } = mountCompany();
+    const { sent, annaTagReads, rosterReads } = mountCompany();
     await applyProductX(user);
     await waitFor(() => expect(annaTagReads.count).toBe(1));
 
@@ -270,6 +279,8 @@ describe("tagging a company offers the tag to its contacts", () => {
     });
     expect(clara).toBeChecked();
     expect(clara).toBeDisabled();
+    // One row decides the offer; the whole roster waits for the press.
+    expect(rosterReads.limits).toEqual(["1", "200"]);
     await user.click(chooser.getByRole("checkbox", { name: "Anna Weber" }));
     await user.click(chooser.getByRole("checkbox", { name: "Ben Ott" }));
     await user.click(
@@ -318,7 +329,7 @@ describe("tagging a company offers the tag to its contacts", () => {
 
   it("writes nothing to the contacts when the reader dismisses the offer", async () => {
     const user = userEvent.setup();
-    const { sent } = mountCompany();
+    const { sent, rosterReads } = mountCompany();
     await applyProductX(user);
 
     await user.click(
@@ -329,6 +340,29 @@ describe("tagging a company offers the tag to its contacts", () => {
       screen.queryByRole("button", { name: en["tags.offerContactsAccept"] }),
     ).toBeNull();
     expect(sent).toEqual([]);
+    expect(rosterReads.limits).toEqual(["1"]);
+  });
+
+  it("offers nothing when no contact works at the company now", async () => {
+    const user = userEvent.setup();
+    const { rosterReads, client } = mountCompany(["update"], []);
+    await applyProductX(user);
+
+    // The one-row read has answered "nobody", so the offer can no longer draw.
+    await waitFor(() =>
+      expect(
+        client
+          .getQueryCache()
+          .findAll({ queryKey: ["contacts", "employed-at", COMPANY] })
+          .map((query) => query.state.data),
+      ).toEqual([false]),
+    );
+    expect(rosterReads.count).toBe(1);
+    expect(
+      screen.queryByText(
+        en["tags.offerContactsTitle"].replace("{tag}", "Product X"),
+      ),
+    ).toBeNull();
   });
 
   // Tagging a contact is a write to the contact, which /bulk/preview refuses
