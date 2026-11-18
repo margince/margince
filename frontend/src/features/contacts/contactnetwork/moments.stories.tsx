@@ -6,7 +6,8 @@ import type { components } from "../../../api/schema";
 import { StoryProviders } from "../../../testing/story-utils";
 import type { IntroRequest } from "../introrequests";
 import "../contactnetwork.css";
-import { MomentsPanel } from "./moments";
+import { Panel } from "../../../design-system/panel";
+import { MomentsTimeline } from "./moments";
 
 // What moved in a relationship lately. The three states are the reason this
 // pane exists rather than a list: something moved, nothing did, and the reader
@@ -54,19 +55,21 @@ const declined: IntroRequest = {
 function card(view: Moments, asks: IntroRequest[] = []) {
   return () => (
     <StoryProviders>
-      <MomentsPanel view={view} asks={asks} />
+      <Panel>
+        <MomentsTimeline view={view} asks={asks} />
+      </Panel>
     </StoryProviders>
   );
 }
 
-const meta: Meta<typeof MomentsPanel> = {
+const meta: Meta<typeof MomentsTimeline> = {
   title: "Records/Contact 360/Network/What changed lately",
-  component: MomentsPanel,
+  component: MomentsTimeline,
   parameters: { layout: "padded" },
 };
 export default meta;
 
-type Story = StoryObj<typeof MomentsPanel>;
+type Story = StoryObj<typeof MomentsTimeline>;
 
 /** Something moved, and the newest change is the strip's reason to act. */
 export const Moved: Story = { render: card(moved) };

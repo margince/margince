@@ -224,13 +224,12 @@ describe("several ways in", () => {
     expect(await chapterAnswer(en["contact.chapter.wayIn"])).toBe(
       `3 routes: ${mix}.`,
     );
-    // The lead is the verdict panel's; the card under it lists the OTHER two,
-    // ranked as the second and third way in rather than as a new list of one.
-    expect(screen.getByText(en["contact.intro.otherRoutesTitle"])).toBeTruthy();
+    // The lead card ranks the OTHER two under the recommendation, as the
+    // second and third way in rather than as a new list of one.
     expect(routesPanel()).toBeNull();
-    const ranks = Array.from(document.querySelectorAll(".pn-route-rank")).map(
-      (rank) => rank.textContent,
-    );
+    const ranks = Array.from(
+      document.querySelectorAll(".pn-way .pn-routes .pn-route-rank"),
+    ).map((rank) => rank.textContent);
     expect(ranks).toEqual(["2", "3"]);
     // The strength meter carries its bucket as a word, so a reader who
     // cannot see three bars still gets the fact.
@@ -307,10 +306,13 @@ describe("the verdict and its evidence", () => {
       groups_omitted: [],
     });
 
-    await screen.findByText(
-      en["contact.intro.verdictDirect"].replace("{name}", "Sofia Meier"),
-    );
+    await screen.findByText(en["contact.intro.bestWayIn"]);
     expect(screen.getByText(en["contact.intro.lastYesterday"])).toBeTruthy();
+    expect(
+      screen.getByText(
+        `${en["contact.intro.factReciprocal"]} · ${en["contact.intro.factDirect"]}`,
+      ),
+    ).toBeTruthy();
     expect(
       screen.getByText(
         en["contact.intro.evidenceFrom"]
@@ -374,11 +376,20 @@ describe("the verdict and its evidence", () => {
       groups_omitted: [],
     });
 
-    await screen.findByText(
-      en["contact.intro.verdictVia"]
-        .replace("{name}", "Lena Hoff")
-        .replace("{through}", "Philipp Königs"),
-    );
+    // The chain draws the contact in between as a node of its own.
+    await screen.findByText(en["contact.intro.factIndirect"], {
+      exact: false,
+    });
+    expect(
+      Array.from(document.querySelectorAll(".pn-chain-node b")).map(
+        (name) => name.textContent,
+      ),
+    ).toEqual([
+      en["contact.intro.heroYou"],
+      "Lena Hoff",
+      "Philipp Königs",
+      anchor.label,
+    ]);
     expect(
       screen.getByText(en["contact.intro.lastDays"].replace("{days}", "6")),
     ).toBeTruthy();
@@ -411,10 +422,10 @@ describe("the verdict and its evidence", () => {
       groups_omitted: [],
     });
 
-    await screen.findByText(
-      en["contact.intro.verdictOneSided"].replace("{name}", "Martin Weber"),
-    );
-    expect(screen.getByText(en["contact.intro.factOneSided"])).toBeTruthy();
+    expect(
+      await screen.findByText(en["contact.intro.factOneSided"]),
+    ).toBeTruthy();
+    expect(screen.queryByText(en["contact.intro.factReciprocal"])).toBeNull();
     expect(screen.getByText(en["contact.intro.lastNever"])).toBeTruthy();
   });
 });
@@ -714,11 +725,15 @@ describe("the reader's own route", () => {
   it("is written in the second contact and offers no introduction", async () => {
     const { seatAnswered } = renderTab(reachedByReader([mine]));
 
+    // The chain starts at the reader, with no colleague between them.
     expect(
-      await screen.findByText(en["contact.intro.verdictDirectYou"]),
+      await screen.findByText(en["contact.intro.heroDirectYou"]),
     ).toBeTruthy();
-    expect(screen.getByText(en["contact.intro.heroYou"])).toBeTruthy();
-    expect(screen.getByText(en["contact.intro.heroDirectYou"])).toBeTruthy();
+    expect(
+      Array.from(document.querySelectorAll(".pn-chain-node b")).map(
+        (name) => name.textContent,
+      ),
+    ).toEqual([en["contact.intro.heroYou"], anchor.label]);
     // The counts speak to the reader too — the split legend named them beside
     // the contact, so one half of one line said "you" and the other said
     // "Demo Admin" about the same contact.
