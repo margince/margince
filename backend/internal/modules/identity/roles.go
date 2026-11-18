@@ -328,10 +328,25 @@ func lockAsRoleAdmin(ctx context.Context, tx pgx.Tx, actor Identity, action prin
 	if live.Roles, live.Teams, live.Permissions, err = loadGrants(ctx, tx, actor.UserID); err != nil {
 		return actor, err
 	}
-	if err := auth.Require(actorCtx(ctx, live), objectRoleAdmin, action); err != nil {
+	if err := requireRoleAdmin(actorCtx(ctx, live), action); err != nil {
 		return actor, err
 	}
 	return live, nil
+}
+
+// requireRoleAdmin spells each admission literally, so the grant-reachability
+// scan can resolve the verb of every call.
+func requireRoleAdmin(ctx context.Context, action principal.Action) error {
+	switch action {
+	case principal.ActionCreate:
+		return auth.Require(ctx, objectRoleAdmin, principal.ActionCreate)
+	case principal.ActionUpdate:
+		return auth.Require(ctx, objectRoleAdmin, principal.ActionUpdate)
+	case principal.ActionDelete:
+		return auth.Require(ctx, objectRoleAdmin, principal.ActionDelete)
+	default:
+		return auth.Require(ctx, objectRoleAdmin, principal.ActionRead)
+	}
 }
 
 // refuseWideningUnlessAdmin refuses a caller who is not an admin a write that
