@@ -10,6 +10,7 @@ import {
   RecordPicker,
   type RecordPickerCandidate,
 } from "../../design-system/recordpicker";
+import { typedNumberFault, typedNumberOrNaN } from "../../format/decimalinput";
 import { formatMoney } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { labelFor } from "../../lib/labelfor";
@@ -296,13 +297,15 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
               />
             )}
           </Field>
-          <Field label={t("offer.quantity")}>
+          <Field
+            label={t("offer.quantity")}
+            error={typedNumberFault(newLine.quantity, locale, t)}
+          >
             {(control) => (
               <input
                 {...control}
                 data-testid="new-line-quantity"
-                type="number"
-                step="0.001"
+                inputMode="decimal"
                 className="input offers-line-quantity"
                 value={newLine.quantity}
                 onChange={(event) =>
@@ -356,24 +359,36 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
                 setUnitRefused(true);
                 return;
               }
+              // Each refused figure already names why under its field.
+              const typed = [
+                newLine.quantity,
+                newLine.discount_pct,
+                newLine.tax_rate,
+              ];
+              if (typed.some((text) => typedNumberFault(text, locale, t))) {
+                return;
+              }
               addMutation.mutate({
                 product_id: product?.id ?? undefined,
                 description: newLine.description || undefined,
                 unit:
                   storedUnitOf(newLine.unit.choice, newLine.unit.other) ||
                   undefined,
-                quantity: Number(newLine.quantity),
+                quantity:
+                  newLine.quantity.trim() === ""
+                    ? 0
+                    : typedNumberOrNaN(newLine.quantity, locale),
                 unit_price_minor: priceTouched
                   ? newLine.unit_price_minor
                   : undefined,
                 discount_pct:
                   newLine.discount_pct === ""
                     ? undefined
-                    : Number(newLine.discount_pct),
+                    : typedNumberOrNaN(newLine.discount_pct, locale),
                 tax_rate:
                   newLine.tax_rate === ""
                     ? undefined
-                    : Number(newLine.tax_rate),
+                    : typedNumberOrNaN(newLine.tax_rate, locale),
                 ...lineBillingBody(billing),
               });
             }}

@@ -2,7 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Field } from "../../design-system/atoms";
-import { useT } from "../../i18n";
+import { typedNumberFault } from "../../format/decimalinput";
+import { useLocale, useT } from "../../i18n";
 import "./offers.css";
 
 /**
@@ -22,15 +23,18 @@ export function NewLineRates<T extends LineRates>({
   onChange: (update: (prev: T) => T) => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   return (
     <>
-      <Field label={t("offer.discountPct")}>
+      <Field
+        label={t("offer.discountPct")}
+        error={typedNumberFault(value.discount_pct, locale, t)}
+      >
         {(control) => (
           <input
             {...control}
             data-testid="new-line-discount"
-            type="number"
-            step="0.01"
+            inputMode="decimal"
             className="input offers-line-rate"
             value={value.discount_pct}
             onChange={(event) =>
@@ -42,13 +46,15 @@ export function NewLineRates<T extends LineRates>({
           />
         )}
       </Field>
-      <Field label={t("offer.taxRate")}>
+      <Field
+        label={t("offer.taxRate")}
+        error={typedNumberFault(value.tax_rate, locale, t)}
+      >
         {(control) => (
           <input
             {...control}
             data-testid="new-line-tax"
-            type="number"
-            step="0.01"
+            inputMode="decimal"
             className="input offers-line-rate"
             value={value.tax_rate}
             onChange={(event) =>

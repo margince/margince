@@ -10,6 +10,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import {
+  parseTypedDecimal,
+  typedNumberFault,
+  writtenDecimal,
+} from "../format/decimalinput";
 import { formatDateAbbrev, formatMoneyOrAbsent } from "../format/format";
 import {
   typedAmountFault,
@@ -51,7 +56,12 @@ export function customFieldToFormField(
   }));
   switch (field.type) {
     case "number":
-      return { ...base, type: "number" };
+      return {
+        ...base,
+        type: "decimal",
+        toInput: (raw) => customFieldFormValue(field, raw, locale),
+        validate: (value) => typedNumberFault(value, locale, t),
+      };
     case "date":
       return { ...base, type: "date" };
     case "currency":
@@ -155,6 +165,9 @@ export function customFieldFormValue(
   if (field.type === "currency") {
     return typedAmountText(Number(stored), field.currency ?? "", locale);
   }
+  if (field.type === "number") {
+    return writtenDecimal(String(stored).trim(), locale);
+  }
   return String(stored).trim();
 }
 
@@ -171,12 +184,18 @@ function coerceWrite(field: CustomField, raw: string, locale: Locale): unknown {
       const typed = typedMinorUnits(value, field.currency ?? "", locale);
       return "minor" in typed ? typed.minor : value;
     }
+    case "number":
+      // Numeric round-trips as a string, so the digits keep their precision.
+      // A refused text goes as typed, and the store refuses it by name.
+      return "value" in parseTypedDecimal(value, locale)
+        ? value.replace(",", ".")
+        : value;
     case "multiselect":
       return splitMultiselectValue(value, "json");
     case "boolean":
       return value === "true" ? true : value === "false" ? false : null;
     default:
-      // text / picklist / date / number (numeric round-trips as a string).
+      // text / picklist / date.
       return value;
   }
 }

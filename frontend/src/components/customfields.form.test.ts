@@ -146,10 +146,23 @@ describe("customFieldToFormField", () => {
     });
   });
 
-  it("maps number to a number control", () => {
+  it("maps number to a decimal text control", () => {
     expect(
       customFieldToFormField(cf({ type: "number" }), BOOL_LABELS, T).type,
-    ).toBe("number");
+    ).toBe("decimal");
+  });
+
+  // German groups thousands with a dot, so "1.500" reads two ways and is
+  // refused; one comma is the decimal sign, and the store gets a dot.
+  it("reads a number field the German way", () => {
+    const score = cf({ type: "number", column_name: "cf_score" });
+    const field = customFieldToFormField(score, BOOL_LABELS, T, "de");
+    expect(field.toInput?.("42.5")).toBe("42,5");
+    expect(field.validate?.("12,5")).toBeUndefined();
+    expect(field.validate?.("1.500")).toBe("Enter the number as 1500 or 1,5.");
+    expect(customFieldsToBody({ cf_score: "12,5" }, [score], "de")).toEqual({
+      cf_score: "12.5",
+    });
   });
 
   it("renders a picklist as a select of its options", () => {
