@@ -114,6 +114,11 @@ jobs:
           tag_date="$(git for-each-ref --format='%(taggerdate:short)' "refs/tags/$TAG")"
           bash scripts/release-license-stamped.sh "$TAG" "$tag_date" LICENSE
 
+      - name: VERSION names this release
+        env:
+          TAG: ${{ github.ref_name }}
+        run: bash scripts/release-version-file.sh "$TAG" VERSION
+
       - name: No open issue blocks a release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

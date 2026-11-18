@@ -375,10 +375,9 @@ default; a tag with an ending, such as `v1.0.0-rc.1`, becomes a `pre-release`. A
 read is refused in seconds, before anything is published.
 
 More checks share that first job. The tag points at a commit on `main`. `LICENSE` carries the
-release's Change Date and version, checked by
-[`scripts/release-license-stamped.sh`](../../scripts/release-license-stamped.sh)
-(`make test-release-license-stamped`). No open issue carries `release: blocker`. And
-the commit carries no failing `verdict` from `merge-attest`.
+release's Change Date and version ([`scripts/release-license-stamped.sh`](../../scripts/release-license-stamped.sh)).
+`VERSION` names the tag's version without its `v` ([`scripts/release-version-file.sh`](../../scripts/release-version-file.sh)).
+No open issue carries `release: blocker`. And the commit carries no failing `verdict` from `merge-attest`.
 
 The `draft` job then checks that a plain tag has a draft release with notes. It holds
 `contents: write` only to read: GitHub shows a draft to no token that cannot write.
