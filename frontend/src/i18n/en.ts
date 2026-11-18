@@ -15185,7 +15185,7 @@ export const en = {
   "roles.restoreGrants": "Restore shipped grants",
   "roles.restoreGrantsTitle": "Restore shipped grants for {name}?",
   "roles.restoreGrantsBody":
-    "Every switch goes back to what Margince ships. Your changes to this role's grants are lost.",
+    "Every switch goes back to what Margince ships. Your changes to this role’s grants are lost.",
   "roles.restoredGrantsToast": "Shipped grants restored for {name}",
   "cf.recordKindHint": "The kinds come from installed extensions.",
   "extAccess.title": "Extensions and access",
