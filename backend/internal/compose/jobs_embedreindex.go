@@ -108,7 +108,7 @@ func (w *embedReindexWorker) Work(ctx context.Context, job *river.Job[EmbedReind
 		// event carries the row) but there is no hook that can RETRY, and none
 		// that runs inside the row's own transaction, which is why the
 		// exhausted attempt does this before returning its error.
-		if err := w.store.ReleaseReembedding(ctx, job.Args.Run); err != nil {
+		if err := w.store.ReleaseReembedding(ctx, job.Args.Run, passErr); err != nil {
 			// Retried on every attempt but the last, and on the permanent paths
 			// too, deliberately: both of those guards short-circuit before any
 			// model call, so an attempt spent re-trying this write costs

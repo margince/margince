@@ -119,9 +119,9 @@ Rollback works for the same reason: the api states the release rather than advan
 going back to an older one needs no permission.
 
 **A half-finished api rollout breaks it.** The recorded release is last writer wins: whichever api
-records last decides what release the installation is, including an older one. A `1970.42` pod that
-restarts after `1970.43` recorded will put the record back to `1970.42`. Every correctly deployed
-`1970.43` worker then refuses to start
+records last decides what release the installation is, including an older one. A `1.0.0` pod that
+restarts after `1.1.0` recorded will put the record back to `1.0.0`. Every correctly deployed
+`1.1.0` worker then refuses to start
 ([#1735](https://github.com/margince/margince/issues/1735)).
 
 A refusing role logs both releases and the fix. A torn pull and a half-finished api rollout look

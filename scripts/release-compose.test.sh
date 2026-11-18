@@ -26,7 +26,7 @@ images() {
 	local n=0
 	for role in "$@"; do
 		n=$((n + 1))
-		echo "ghcr.io/margince/$role:v1.2.0@$(digest "$n")"
+		echo "ghcr.io/margince/$role:1.2.0@$(digest "$n")"
 	done >"$work/images.txt"
 }
 
@@ -49,7 +49,7 @@ for file in compose.yaml .env.example db-init.sh db-bootstrap.sql front.conf pro
 		fail "the folder has no $file, which the stack mounts or the operator starts from"
 	fi
 done
-for want in "ghcr.io/margince/api:v1.2.0@$(digest 1)" "ghcr.io/margince/web:v1.2.0@$(digest 2)" "ghcr.io/margince/worker:v1.2.0@$(digest 3)"; do
+for want in "ghcr.io/margince/api:1.2.0@$(digest 1)" "ghcr.io/margince/web:1.2.0@$(digest 2)" "ghcr.io/margince/worker:1.2.0@$(digest 3)"; do
 	if ! grep -qxF "    image: $want" "$top/compose.yaml"; then
 		fail "compose.yaml does not pin $want, so a host could pull another build"
 	fi
@@ -83,7 +83,7 @@ fi
 
 # --- a role named by tag alone -----------------------------------------------
 images api web worker
-sed -i.bak 's#^\(ghcr.io/margince/web:v1.2.0\)@.*#\1#' "$work/images.txt"
+sed -i.bak 's#^\(ghcr.io/margince/web:1.2.0\)@.*#\1#' "$work/images.txt"
 if pack; then
 	fail "an image with no digest was packed, and a moved tag would change what the stack runs"
 fi

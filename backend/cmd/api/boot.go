@@ -384,7 +384,7 @@ func modelSurfaceOptions(ctx context.Context, cfg apiConfig, bootstrap deploycon
 	// /readyz AI line all consume the same *compose.ModelPath rather than
 	// each running their own copy of the declared-routing/--ai-fake/
 	// neither switch (and, with it, their own Router, cache and budget).
-	modelPath, aiState, assistantProfile, routingVersion, err := resolveModelPath(
+	modelPath, aiState, assistantProfile, err := resolveModelPath(
 		ctx, modelPathSpecFrom(cfg, bootstrap), pool, logger,
 	)
 	if err != nil {
@@ -392,7 +392,7 @@ func modelSurfaceOptions(ctx context.Context, cfg apiConfig, bootstrap deploycon
 	}
 	modelPath.SetCompanyContextEnabled(compose.CompanyContextTasks(cfg.settings))
 	opts := []compose.Option{compose.WithAiPayloadCaptureFlag(config.Val(cfg.settings, ps.CapturePayloads))}
-	opts = append(opts, coldStartOptions(modelPath, routingVersion)...)
+	opts = append(opts, coldStartOptions(modelPath)...)
 	opts = append(opts, offerDraftOptions(pool, modelPath)...)
 	opts = append(opts, compose.WithAssistantProfile(aiState, assistantProfile))
 	// Unconditional, like the worker's: the counters belong to the PROCESS, not
