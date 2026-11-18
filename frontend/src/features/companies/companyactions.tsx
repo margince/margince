@@ -16,6 +16,7 @@ import {
   pipelinesOptions,
 } from "../../lib/pipelines.queries";
 import { unwrap } from "../../lib/problem";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import { useProjectCreateForm } from "../projects/projects.create";
 
 /**
@@ -58,7 +59,12 @@ export function NewDealAction({
   }
 
   const fields: CreateField[] = [
-    { key: "name", label: "create.dealName", required: true },
+    {
+      key: "name",
+      label: "create.dealName",
+      required: true,
+      maxLength: TEXT_LIMITS.label,
+    },
     moneyAmountField(t, {
       key: "amount",
       label: "create.amount",

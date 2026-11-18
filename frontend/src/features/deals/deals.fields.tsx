@@ -8,6 +8,7 @@ import type { LeadingCurrencies } from "../../format/currencychoices";
 import type { Locale } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { AcquisitionSource } from "../../lib/acquisitionsources.queries";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import type { Project } from "../projects/projects.form";
 import {
   dealCommercialFields,
@@ -137,7 +138,12 @@ export function dealEditFields(
     { value: "", label: t("deal.ownerUnassign") },
   ];
   return [
-    { key: "name", label: "create.dealName", required: true },
+    {
+      key: "name",
+      label: "create.dealName",
+      required: true,
+      maxLength: TEXT_LIMITS.label,
+    },
     moneyAmountField(t, {
       key: "amount",
       label: "create.amount",

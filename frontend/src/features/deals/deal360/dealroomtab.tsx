@@ -33,6 +33,7 @@ import { QueryStates } from "../../../design-system/querystates";
 import { useT } from "../../../i18n";
 import { useCanWrite, useCanWriteRecord } from "../../../lib/capability";
 import { problemMessageOf, unwrap } from "../../../lib/problem";
+import { TEXT_LIMITS } from "../../../lib/textlimits_gen";
 import { buyerLink, DealRoomAccess } from "../dealroomaccess";
 import { InviteDialog } from "../dealroomaccess.dialogs";
 import { DealRoomConversation } from "../dealroomconversation";
@@ -197,6 +198,7 @@ export function RoomText({
               <TextInput
                 {...control}
                 value={title}
+                maxLength={TEXT_LIMITS.label}
                 disabled={refusal !== undefined}
                 onChange={(e) => setTitle(e.target.value)}
               />
@@ -311,6 +313,7 @@ function OpenRoomCard({
             <TextInput
               {...control}
               value={title}
+              maxLength={TEXT_LIMITS.label}
               onChange={(e) => setTitle(e.target.value)}
             />
           )}

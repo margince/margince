@@ -111,6 +111,23 @@ describe("DealRoomTab", () => {
     ).toBeInTheDocument();
   });
 
+  it("stops a room title at the length the room can hold", async () => {
+    stubWithSession(
+      { "GET /deal-rooms": () => jsonResponse({ data: [], page: {} }) },
+      { deal_room: ["read", "create"] },
+    );
+    const user = userEvent.setup();
+    withProviders(<DealRoomTab dealId="deal-1" dealName="Acme Expansion" />);
+
+    await user.click(
+      await screen.findByRole("button", { name: "Open a Deal Room" }),
+    );
+    expect(await screen.findByLabelText(/Room title/)).toHaveAttribute(
+      "maxlength",
+      "120",
+    );
+  });
+
   it("a reader who may not create is offered no way to open a room", async () => {
     stubWithSession(
       { "GET /deal-rooms": () => jsonResponse({ data: [], page: {} }) },

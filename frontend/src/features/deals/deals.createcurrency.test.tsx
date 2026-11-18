@@ -213,6 +213,15 @@ describe("the New deal currency", () => {
     });
   });
 
+  it("stops a deal name at the length a deal can hold", async () => {
+    stubApi([]);
+    renderDeals();
+    const dialog = within(await screen.findByRole("dialog"));
+    expect(dialog.getByLabelText("Deal name *").getAttribute("maxlength")).toBe(
+      "120",
+    );
+  });
+
   it("makes the reader the owner when the owner is left alone", async () => {
     const posted: unknown[] = [];
     stubApi(posted);

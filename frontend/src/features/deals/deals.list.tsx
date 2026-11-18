@@ -39,6 +39,7 @@ import { usePipelines } from "../../lib/pipelines.queries";
 import { throwProblem, unwrap } from "../../lib/problem";
 import { useReReadMeWhen } from "../../lib/refusedfilters";
 import { useViewerId } from "../../lib/session";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import { useViewerZone } from "../../lib/viewerzone";
 import {
   SavedViewsFailure,
@@ -152,7 +153,12 @@ function DealCreateAction({
       listCreate={{ open: startOpen }}
       onValuesChange={(values) => setFormCompany(values.company_id ?? "")}
       fields={[
-        { key: "name", label: "create.dealName", required: true },
+        {
+          key: "name",
+          label: "create.dealName",
+          required: true,
+          maxLength: TEXT_LIMITS.label,
+        },
         moneyAmountField(t, {
           key: "amount",
           label: "create.amount",
