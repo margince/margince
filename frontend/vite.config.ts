@@ -313,6 +313,9 @@ export default defineConfig({
         // without this `pnpm dev` serves the registry and then 403s the very
         // module it imports.
         join(frontendRoot, "..", "extensions"),
+        // pnpm keeps the package store at the workspace root, and a font file
+        // a stylesheet names by url() is served from there, not pre-bundled.
+        join(frontendRoot, "..", "node_modules"),
         // A unit an installation imports sits in build/ or in the
         // installation's own folder, and the link above resolves to there.
         ...unitScreenDirs,
