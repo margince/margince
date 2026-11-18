@@ -22520,6 +22520,18 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "progress.serviceSales": "Dịch vụ và dự án",
   "progress.planned": "Pipeline đang mở",
   "progress.plannedAt": "Deal đang mở tính đến {at}",
+  "progress.scenarios": "Tháng có thể kết thúc ở đâu",
+  "progress.scenario.worst": "Trường hợp xấu nhất",
+  "progress.scenario.worstWhy": "Nếu không chốt thêm deal nào",
+  "progress.scenario.expected": "Dự kiến",
+  "progress.scenario.best": "Best case",
+  "progress.scenario.bestWhy": "Nếu mọi deal đang mở của tháng đều chốt",
+  "progress.scenarios.asOf": "Deal tính đến {at}",
+  "progress.scenarios.unpriced":
+    "Không tính deal chưa có giá trị hoặc chưa có tỷ giá",
+  "progress.scenarios.limited": "Chỉ tính các deal bạn xem được",
+  "progress.scenarios.yearUnavailable":
+    "Trường hợp xấu nhất, dự kiến và tốt nhất chỉ có cho một tháng. Dự báo không có kỳ năm để đọc.",
   "progress.unclassified": "Chưa phân loại",
   "progress.unclassifiedDetail":
     "Doanh thu này chưa được phân loại theo sản phẩm hay dịch vụ.",

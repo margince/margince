@@ -40,6 +40,8 @@ const won: Metric = {
   value: 30_000,
   target: 100_000,
   target_actual: 50_000,
+  target_delta: -50_000,
+  attainment: 50,
   coverage: { status: "ok", withheld: false },
   evidence: { metric: "bookings_won", context_id: "interval" },
 };

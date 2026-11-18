@@ -291,10 +291,11 @@ it("shows accepted handoffs alone and hides targets without an allocation", asyn
   expect(screen.queryByText("Progress against target")).not.toBeInTheDocument();
 });
 
+// The delta and the share are the server's; the card only words them.
 it.each([
-  { actual: 21600000, label: "€84,000 remaining" },
-  { actual: 34000000, label: "€40,000 above target" },
-])("shows target attainment with $label", ({ actual, label }) => {
+  { actual: 21600000, delta: -8400000, label: "€84,000 remaining" },
+  { actual: 34000000, delta: 4000000, label: "€40,000 above target" },
+])("shows target attainment with $label", ({ actual, delta, label }) => {
   const evaluation = {
     ...reportingStoryEvaluation,
     metrics: [
@@ -302,6 +303,8 @@ it.each([
         ...reportingStoryEvaluation.metrics[0],
         target: 30000000,
         target_actual: actual,
+        target_delta: delta,
+        attainment: (actual / 30000000) * 100,
       },
     ],
   };

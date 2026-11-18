@@ -5,13 +5,16 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/salesprogress"
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -64,4 +67,33 @@ func assembleForecast(
 		out.RiskSignalsVersion = assurance.RiskSignalsVersion
 	}
 	return out, nil
+}
+
+// progressForecast reads the month Progress states its scenarios from, by the
+// assembly, forward measure and call GET /forecast lands with.
+func progressForecast(store *forecasting.Store) salesprogress.ForecastReader {
+	return func(ctx context.Context, tx pgx.Tx, monthStart, asOf time.Time, scope forecasting.Scope) (salesprogress.Forecast, bool, error) {
+		period, base, err := ForecastPeriodAt(ctx, tx, forecasting.PeriodMonth, monthStart)
+		if err != nil {
+			return salesprogress.Forecast{}, false, err
+		}
+		assembly, err := ForecastAssemble(ctx, tx, period, scope, asOf, base)
+		if errors.As(err, new(auth.IndividualPerformanceOffError)) {
+			return salesprogress.Forecast{}, false, nil
+		}
+		if err != nil {
+			return salesprogress.Forecast{}, false, err
+		}
+		measure, err := ForecastForwardMeasure(ctx, tx)
+		if err != nil {
+			return salesprogress.Forecast{}, false, err
+		}
+		call, seen, err := forecastCallSeen(ctx, tx, store, period, assembly.Scope, false)
+		if err != nil {
+			return salesprogress.Forecast{}, false, err
+		}
+		return salesprogress.Forecast{
+			Readings: assembly.Readings, Measure: measure, Call: seenCall(call, seen), Limited: assembly.Limited,
+		}, true, nil
+	}
 }
