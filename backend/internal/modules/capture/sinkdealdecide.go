@@ -94,7 +94,7 @@ func decideDeal(ctx context.Context, tx pgx.Tx, facts dealFacts, candidates Deal
 		}
 		verdict.Candidates = []ids.UUID{verdict.Deal}
 	case verdict.Outcome == DealAmbiguous && verdict.Basis.NeedsTopicCheck():
-		open, err := candidates.OpenDealsOfCompanyUpTo(ctx, tx, verdict.Question.CompanyID, DealTopicCandidates)
+		open, err := topicCandidates(ctx, tx, candidates, verdict.Question)
 		if err != nil {
 			return DealVerdict{}, err
 		}
@@ -103,6 +103,16 @@ func decideDeal(ctx context.Context, tx pgx.Tx, facts dealFacts, candidates Deal
 		}
 	}
 	return verdict, nil
+}
+
+// topicCandidates is the open deals a topic check weighs for an ambiguous mail.
+// They are the company's, or the contacts' seats when no company stands behind
+// the question.
+func topicCandidates(ctx context.Context, tx pgx.Tx, candidates DealCandidates, question WhichDeal) ([]ids.UUID, error) {
+	if len(question.StakeholderIDs) > 0 {
+		return candidates.OpenDealsOfStakeholders(ctx, tx, question.StakeholderIDs, DealTopicCandidates)
+	}
+	return candidates.OpenDealsOfCompanyUpTo(ctx, tx, question.CompanyID, DealTopicCandidates)
 }
 
 // undeclinedDeals is deals less those a colleague declined for the mail.
@@ -148,6 +158,20 @@ func decideByRule(ctx context.Context, tx pgx.Tx, facts dealFacts, candidates De
 		deals, err := candidates.OpenDealsOfProject(ctx, tx, facts.project)
 		return withBasis(oneDeal(deals, WhichDeal{ProjectID: facts.project}), DealBasisProject, DealBasisProject), err
 	}
+	verdict, err := decideByCompany(ctx, tx, facts, candidates)
+	if err != nil || verdict.Outcome != DealNone || len(facts.contacts) == 0 {
+		return verdict, err
+	}
+	// Nothing at the mail's company decided. A seat on an open deal at another
+	// company still ties the mail to it, as for a consultant on a client's deal.
+	// Seats on two such deals are a question.
+	staked, err := candidates.OpenDealsOfStakeholders(ctx, tx, facts.contacts, 2)
+	return withBasis(oneDeal(staked, WhichDeal{StakeholderIDs: facts.contacts}), DealBasisStakeholder, DealBasisAmbiguous), err
+}
+
+// decideByCompany is the rungs that start from the mail's company: its thread,
+// its only open deal, and the stakeholders among several.
+func decideByCompany(ctx context.Context, tx pgx.Tx, facts dealFacts, candidates DealCandidates) (DealVerdict, error) {
 	if len(facts.companies) > 1 {
 		return DealVerdict{Outcome: DealConflictingFirms}, nil
 	}

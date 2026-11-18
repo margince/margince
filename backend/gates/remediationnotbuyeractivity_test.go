@@ -44,7 +44,13 @@ var recencyFloor = []string{
 	"last_activity_of_project",
 	"last_activity_of_activity",
 	"last_activity_of_company_activity",
+	"last_activity_of_deal_activity",
 }
+
+// dealClockFunctions count mail of every audience, because a message limited
+// to its participants still shows its deal was worked. They carry no audience
+// filter by design, and the census asserts that instead.
+var dealClockFunctions = []string{"last_activity_of_deal", "last_activity_of_deal_activity"}
 
 // recencyFunctionRe finds a recency function's definition or its drop, by the
 // prefix every one carries. A dropped function is not live, so it leaves the
@@ -96,6 +102,13 @@ func TestRecencyFunctionsExcludeRemediationWork(t *testing.T) {
 		// see, and a careless replace here would re-open that. Asserting it
 		// arm-for-arm means this gate fails rather than the privacy test
 		// failing somewhere else.
+		if slices.Contains(dealClockFunctions, name) {
+			if audience := strings.Count(body, "a.audience"); audience != 0 {
+				t.Errorf("%s: names the audience %d time(s) — a deal clock counts mail of every "+
+					"audience, so a copied workspace filter would hide private mail from it", name, audience)
+			}
+			continue
+		}
 		if audience := strings.Count(body, workspaceAudienceClause); audience < arms {
 			t.Errorf("%s: %d activity arm(s) but only %d audience filter(s) — a "+
 				"replacement copied from a stale definition dropped one",

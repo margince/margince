@@ -152,7 +152,10 @@ Margince puts a captured email on a deal by itself only when one deal, and no ot
 
 1. **The project.** An email filed under a project goes on that project's one open deal. If the project has no open deal, or several, the email goes on no deal. The company's deals are not asked.
 2. **Your thread.** Your own sent email in the thread is on a deal. The reply goes on that deal if it is the reply's company's deal.
-3. **The company.** If neither fits, the company's one open deal is suggested. With several open deals, a stakeholder on only one of them suggests it. An AI check reads the email and files it only when it is fully sure it is about that deal. Without an AI answer, the email waits for a later pass.
+3. **The company.** If neither fits, the company's one open deal is suggested. With several open deals, a stakeholder on only one of them suggests it.
+4. **A stakeholder elsewhere.** If the company has no open deal to suggest, a contact on the email who sits on the committee of one open deal at another company suggests that deal, such as a consultant working a client's deal. A contact on several such deals asks "Which deal is this about?". A seat that has ended counts for nothing.
+
+An AI check reads each suggestion and files the email only when it is fully sure it is about that deal. Without an AI answer, the email waits for a later pass.
 
 An email stays on no deal when nothing picks one of several open deals, or the AI check is not sure. It also stays off when its contacts work at two companies, or when a colleague said it is not about the deal that fits. An email already on a deal keeps it, and a deal you chose by hand is never changed.
 
@@ -170,7 +173,7 @@ Margince checks recent mail and meetings again when a deal opens or changes comp
 
 An hourly pass picks up work left behind; it uses the same waiting horizon as other automatic work. It also checks, once, the deal links Margince suggested on mail of the last 90 days before the AI check existed. A link the AI says is not about its deal comes off.
 
-An email only its participants can read still appears on the deal's timeline. It does not change the deal's last activity date.
+An email only its participants can read still appears on the deal's timeline. It moves the deal's last activity date, its last email and its stakeholder's engagement by date and direction only. Nobody else sees its subject or text, and no contact or company date moves.
 
 To put an email on a deal yourself, [use **Relink**](#how-do-i-move-an-email-to-the-right-contact-or-deal).
 

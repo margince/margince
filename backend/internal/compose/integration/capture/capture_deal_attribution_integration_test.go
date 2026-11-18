@@ -286,9 +286,9 @@ func TestCaptureFilesMailOnTheCustomersOnlyOpenDeal(t *testing.T) {
 	}
 }
 
-// Mail only its participants may read goes on the deal's timeline, but does
-// not move the deal's clock, which counts workspace mail alone.
-func TestCaptureFilesPrivateMailWithoutMovingTheDealsClock(t *testing.T) {
+// Mail only its participants may read goes on the deal's timeline and moves the
+// deal's clock, but no contact or company clock.
+func TestCaptureFilesPrivateMailAndMovesOnlyTheDealsClock(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -298,8 +298,14 @@ func TestCaptureFilesPrivateMailWithoutMovingTheDealsClock(t *testing.T) {
 	env.sync(t, mailFrom("alice@acme.example", "priv1@acme.example", "", "status"))
 
 	wantDeals(t, e, "priv1@acme.example", deal)
-	if last := lastActivity(t, e, deal); last != nil {
-		t.Fatalf("private mail moved the deal's last_activity_at to %v", last)
+	if last := lastActivity(t, e, deal); last == nil || !last.Equal(mailDay) {
+		t.Fatalf("deal last_activity_at = %v, want the private mail's time %v", last, mailDay)
+	}
+	if n := countRows(t, e, `SELECT count(*) FROM contact WHERE last_activity_at IS NOT NULL`); n != 0 {
+		t.Fatalf("private mail moved the clock of %d contacts, want none", n)
+	}
+	if n := countRows(t, e, `SELECT count(*) FROM company WHERE last_activity_at IS NOT NULL`); n != 0 {
+		t.Fatalf("private mail moved the clock of %d companies, want none", n)
 	}
 }
 

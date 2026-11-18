@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 )
@@ -29,6 +30,21 @@ func TestThePromptStatesTheLimitsTheGuardsHold(t *testing.T) {
 		}
 		if got[0].Outcome != want {
 			t.Errorf("a raise to %d%% under the stated limit = %q, want %q", probability, got[0].Outcome, want)
+		}
+	}
+}
+
+func TestAPrivateMailReachesThePromptByDirectionAndDateOnly(t *testing.T) {
+	t.Parallel()
+	in := guardInput()
+	in.PrivateMail = []PrivateMail{
+		{Direction: "inbound", OccurredAt: time.Date(2026, 8, 3, 9, 0, 0, 0, time.UTC)},
+		{Direction: "outbound", OccurredAt: time.Date(2026, 8, 4, 9, 0, 0, 0, time.UTC)},
+	}
+	prompt := Prompt(promptfence.New(), in)
+	for _, want := range []string{"A private email from the customer on 2026-08-03.", "A private email to the customer on 2026-08-04."} {
+		if !strings.Contains(prompt, want) {
+			t.Errorf("prompt does not state %q:\n%s", want, prompt)
 		}
 	}
 }

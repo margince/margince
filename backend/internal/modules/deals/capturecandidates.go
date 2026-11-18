@@ -76,10 +76,23 @@ func (s *Store) IsOpenDealOfCompanies(ctx context.Context, tx pgx.Tx, deal ids.U
 func (s *Store) OpenDealsWithStakeholders(
 	ctx context.Context, tx pgx.Tx, companyID ids.UUID, contacts []ids.UUID,
 ) ([]ids.UUID, error) {
+	return openDealsStaked(ctx, tx, &companyID, contacts, 2)
+}
+
+// OpenDealsOfStakeholders answers up to limit open deals, at any company, on
+// which one of contacts is a live stakeholder. A consultant's seat on a client's
+// deal links the mail to that deal, which their employer does not.
+func (s *Store) OpenDealsOfStakeholders(ctx context.Context, tx pgx.Tx, contacts []ids.UUID, limit int) ([]ids.UUID, error) {
+	return openDealsStaked(ctx, tx, nil, contacts, limit)
+}
+
+// openDealsStaked reads the deals a seat of one of contacts sits on, narrowed
+// to company when one is given and to limit rows.
+func openDealsStaked(ctx context.Context, tx pgx.Tx, company *ids.UUID, contacts []ids.UUID, limit int) ([]ids.UUID, error) {
 	if denied, err := candidateReadDenied(ctx); denied || err != nil {
 		return nil, err
 	}
-	args := []any{companyID, contacts}
+	args := []any{contacts}
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	edgeScope, err := auth.EdgeReadScope(ctx, "r", arg)
 	if errors.Is(err, apperrors.ErrPermissionDenied) {
@@ -91,13 +104,17 @@ func (s *Store) OpenDealsWithStakeholders(
 	if edgeScope == "" {
 		edgeScope = predicateAlways
 	}
+	companyClause := ""
+	if company != nil {
+		companyClause = fmt.Sprintf(" AND d.company_id = $%d", arg(*company))
+	}
 	return collectCandidates(ctx, tx, `SELECT d.id FROM deal d
-		 WHERE d.company_id = $1 AND `+openDealSQL+`
+		 WHERE `+openDealSQL+companyClause+`
 		   AND EXISTS (SELECT 1 FROM relationship r
 		                WHERE r.deal_id = d.id AND r.kind = 'deal_stakeholder'
-		                  AND r.contact_id = ANY($2) AND r.archived_at IS NULL
+		                  AND r.contact_id = ANY($1) AND r.archived_at IS NULL AND r.ended_at IS NULL
 		                  AND (`+edgeScope+`))
-		 ORDER BY d.id LIMIT 2`, args...)
+		 ORDER BY d.id LIMIT `+fmt.Sprintf("$%d", arg(limit)), args...)
 }
 
 // maxOfferedDeals bounds the deals one deal question records as offered.
@@ -118,6 +135,12 @@ func (s *Store) OfferedDeals(ctx context.Context, tx pgx.Tx, projectID, companyI
 	}
 	query := `SELECT d.id FROM deal d WHERE ` + owner + ` AND ` + openDealSQL + ` ORDER BY d.id LIMIT ` + arg(maxOfferedDeals)
 	return collectCandidates(ctx, tx, query, args...)
+}
+
+// OfferedDealsOfStakeholders answers the open deals a deal question offers when
+// the mail names no company: those the mail's contacts hold a seat on.
+func (s *Store) OfferedDealsOfStakeholders(ctx context.Context, tx pgx.Tx, contacts []ids.UUID) ([]ids.UUID, error) {
+	return openDealsStaked(ctx, tx, nil, contacts, maxOfferedDeals)
 }
 
 // candidateReadDenied answers whether the caller may not read deals at all. A

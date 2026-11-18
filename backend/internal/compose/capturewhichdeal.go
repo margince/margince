@@ -50,6 +50,7 @@ type whichDealAsker struct {
 // offeredDeals reads the open deals a question offers, from the deals module.
 type offeredDeals interface {
 	OfferedDeals(ctx context.Context, tx pgx.Tx, projectID, companyID ids.UUID) ([]ids.UUID, error)
+	OfferedDealsOfStakeholders(ctx context.Context, tx pgx.Tx, contacts []ids.UUID) ([]ids.UUID, error)
 }
 
 // Ask raises the question at most once per thread. The task is keyed on the
@@ -101,7 +102,7 @@ func (a whichDealAsker) Ask(ctx context.Context, tx pgx.Tx, q capture.WhichDeal)
 			in.Links = append(in.Links, activities.ActivityLinkInput{EntityType: string(record.kind), EntityID: record.id})
 		}
 	}
-	offered, err := a.deals.OfferedDeals(ctx, tx, q.ProjectID, q.CompanyID)
+	offered, err := a.offered(ctx, tx, q)
 	if err != nil {
 		return err
 	}
@@ -114,6 +115,15 @@ func (a whichDealAsker) Ask(ctx context.Context, tx pgx.Tx, q capture.WhichDeal)
 	writer := principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: whichDealActor, OnBehalfOf: seat})
 	_, _, err = a.tasks.LogActivityTx(writer, tx, in)
 	return err
+}
+
+// offered is the deals the question offers: the contacts' seats when no company
+// stands behind it, otherwise the project's or the company's open deals.
+func (a whichDealAsker) offered(ctx context.Context, tx pgx.Tx, q capture.WhichDeal) ([]ids.UUID, error) {
+	if len(q.StakeholderIDs) > 0 {
+		return a.deals.OfferedDealsOfStakeholders(ctx, tx, q.StakeholderIDs)
+	}
+	return a.deals.OfferedDeals(ctx, tx, q.ProjectID, q.CompanyID)
 }
 
 // respondent is the one colleague the mail names as responsible, or zero.
