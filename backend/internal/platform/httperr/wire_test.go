@@ -93,3 +93,32 @@ func TestDownloadHeadersCarryTheRealNameOfANonASCIIFile(t *testing.T) {
 		}
 	}
 }
+
+func TestIfMatchVersionRefusesAPresentButEmptyHeader(t *testing.T) {
+	cases := []struct {
+		name   string
+		header []string
+		ok     bool
+		status int
+	}{
+		{"absent", nil, true, 200},
+		{"integer", []string{"7"}, true, 200},
+		{"empty", []string{""}, false, 422},
+		{"second line empty", []string{"7", ""}, false, 422},
+		{"zero", []string{"0"}, false, 422},
+		{"quoted", []string{`"7"`}, false, 422},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			r := httptest.NewRequest("PATCH", "/v1/things/1", nil)
+			for _, v := range tc.header {
+				r.Header.Add("If-Match", v)
+			}
+			_, ok := IfMatchVersion(w, r)
+			if ok != tc.ok || (!ok && w.Code != tc.status) {
+				t.Fatalf("ok=%v status=%d, want ok=%v status=%d", ok, w.Code, tc.ok, tc.status)
+			}
+		})
+	}
+}

@@ -394,15 +394,21 @@ func StreamObject(w http.ResponseWriter, r *http.Request, obj StreamedObject, lo
 }
 
 // IfMatchVersion reads the optional If-Match row version (data-model
-// §1.3a: a bare integer, not a quoted ETag). Malformed input is a client
-// error, not last-write-wins.
+// §1.3a: a bare integer, not a quoted ETag). Malformed input, an empty value
+// included, is a client error, not last-write-wins.
 func IfMatchVersion(w http.ResponseWriter, r *http.Request) (*int64, bool) {
-	raw := r.Header.Get("If-Match")
-	if raw == "" {
+	values := r.Header.Values("If-Match")
+	if len(values) == 0 {
 		return nil, true
 	}
-	v, err := strconv.ParseInt(raw, 10, 64)
-	if err != nil || v < 1 {
+	// A present but empty header is a malformed version, never "no check", and
+	// a second header line would otherwise hide behind the first.
+	var v int64
+	var err error
+	if len(values) == 1 {
+		v, err = strconv.ParseInt(values[0], 10, 64)
+	}
+	if len(values) != 1 || err != nil || v < 1 {
 		Write(w, r, Validation("If-Match", "malformed_if_match", "If-Match carries the last-seen integer version"))
 		return nil, false
 	}
