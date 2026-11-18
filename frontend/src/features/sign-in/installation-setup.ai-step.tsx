@@ -94,8 +94,8 @@ type KeyTestResult = components["schemas"]["AiProviderKeyTestResult"];
 
 /**
  * What a key test that did not pass says about the key. A refusal means the key
- * is wrong. These three mean the vendor could not be asked or would not answer,
- * which says nothing about the key, so the reader may go on regardless.
+ * is wrong. These three mean the vendor could not be asked, which says nothing
+ * about the key, so the reader may go on regardless.
  */
 const INCONCLUSIVE_KEY_TESTS = new Set<string | undefined>([
   "rate_limited",
