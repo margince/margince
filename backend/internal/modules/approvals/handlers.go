@@ -362,21 +362,25 @@ func wire(ctx context.Context, a row, now time.Time) crmcontracts.Approval {
 	return out
 }
 
-// unredeemedPastWindow is an approved agent staging whose redemption window
-// closed with the agent never coming back and no sweep has marked yet.
-func unredeemedPastWindow(a row, now time.Time) bool {
+// unredeemedAgentStaging is an approved agent staging that has neither run nor
+// failed on record. The agent either still can come back or the window closed
+// without it, and lapsedUnmarkedSQL asks the same question of the table.
+func unredeemedAgentStaging(a row) bool {
 	return a.Status == approvalStatusApproved && agentRedeems(a) &&
-		a.ConsumedAt == nil && a.EffectRanAt == nil && a.EffectFailedAt == nil &&
-		redemptionLapsed(a, now)
+		a.ConsumedAt == nil && a.EffectRanAt == nil && a.EffectFailedAt == nil
+}
+
+// unredeemedPastWindow is such a staging whose window closed and which no
+// sweep has marked yet. Every reader gives it the failure the sweep will write.
+func unredeemedPastWindow(a row, now time.Time) bool {
+	return unredeemedAgentStaging(a) && redemptionLapsed(a, now)
 }
 
 // awaitsAgent is an approved proposal the staging agent has not redeemed. The
 // decision released no effect of its own, so nothing changes until the agent
 // comes back inside the redemption window.
 func awaitsAgent(a row, now time.Time) bool {
-	return a.Status == approvalStatusApproved && agentRedeems(a) &&
-		a.ConsumedAt == nil && a.EffectRanAt == nil && a.EffectFailedAt == nil &&
-		!redemptionLapsed(a, now)
+	return unredeemedAgentStaging(a) && !redemptionLapsed(a, now)
 }
 
 // wireEvidence maps the persisted evidence array onto the contract shape.

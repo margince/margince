@@ -200,6 +200,8 @@ type ListInput struct {
 	// failedDecider is FailedForDecider resolved to the acting user;
 	// set by List from the principal, never by a caller.
 	failedDecider *ids.UUID
+	// lapseCutoff is the instant a decision must precede to have lapsed unredeemed.
+	lapseCutoff time.Time
 	// actionableAt is the service clock reading Actionable resolved, so every
 	// batch of one read judges expiry at the same instant.
 	actionableAt *time.Time
@@ -231,6 +233,7 @@ func (s *Service) List(ctx context.Context, in ListInput) ([]row, storekit.Page,
 			return nil, storekit.Page{}, apperrors.ErrPermissionDenied
 		}
 		in.failedDecider = &p.UserID
+		in.lapseCutoff = s.now().UTC().Add(-redemptionTTL)
 	}
 	// Kept for the in-process seams, which pass their own limit; the HTTP
 	// binder clamps before it gets here.
@@ -384,7 +387,7 @@ func approvalWhere(in ListInput, from *keysetStart, arg func(any) int) string {
 		terms = append(terms, fmt.Sprintf("decided_at > $%d", arg(*in.DecidedAfter)))
 	}
 	if in.failedDecider != nil {
-		terms = append(terms, fmt.Sprintf("decided_by = $%d AND %s", arg(*in.failedDecider), stillFailing), noCompletedStageReplacement)
+		terms = append(terms, fmt.Sprintf("decided_by = $%d AND %s", arg(*in.failedDecider), stillFailing(fmt.Sprintf("$%d", arg(in.lapseCutoff)))), noCompletedStageReplacement)
 	}
 	if from != nil {
 		terms = append(terms, fmt.Sprintf("(created_at, id) < ($%d, $%d)", arg(from.createdAt), arg(from.id)))

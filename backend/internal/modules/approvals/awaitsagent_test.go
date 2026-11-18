@@ -5,6 +5,7 @@ package approvals
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -66,5 +67,16 @@ func TestALapsedUnredeemedStagingReadsAsFailedBeforeTheSweepMarksIt(t *testing.T
 	open.DecidedAt = new(now.Add(-time.Minute))
 	if got := wire(context.Background(), open, now); got.EffectFailedAt != nil || got.AwaitingAgent == nil {
 		t.Errorf("an open window reads as (%v, %v), want waiting and not failed", got.EffectFailedAt, got.AwaitingAgent)
+	}
+}
+
+// The table's lapse test excludes the kinds agentRedeems excludes. The sweep
+// and the lanes then never mark a step-up or a human agreement that ran.
+func TestTheLapseSqlExcludesWhatAgentRedeemsExcludes(t *testing.T) {
+	sql := lapsedUnmarkedSQL("$1")
+	for _, kind := range []string{KindVolumeRelease, approvalsubject.KindOwnershipTransfer} {
+		if !strings.Contains(sql, "'"+kind+"'") {
+			t.Errorf("lapsedUnmarkedSQL does not exclude %s: %s", kind, sql)
+		}
 	}
 }
