@@ -64,7 +64,7 @@ func TestMergeContact_relinkSurvivorshipAndReferentialIntegrity(t *testing.T) {
 	if n := e.WsCount(t, `SELECT count(*) FROM contact_email WHERE contact_id = $1`, tgt); n != 2 {
 		t.Errorf("survivor has %d emails, want both relinked", n)
 	}
-	// Primary demotion: exactly one primary email survives on B.
+	// Primary demotion: one primary email survives on B.
 	if n := e.WsCount(t, `SELECT count(*) FROM contact_email WHERE contact_id = $1 AND is_primary AND archived_at IS NULL`, tgt); n != 1 {
 		t.Errorf("survivor has %d primary emails, want exactly 1 (A's must demote)", n)
 	}
@@ -91,8 +91,8 @@ func TestMergeContact_relinkSurvivorshipAndReferentialIntegrity(t *testing.T) {
 	}
 }
 
-// The primary slot is per contact: a source primary of another type than the
-// target's does not become a second primary, and a target with none takes the
+// The primary slot is per contact. A source primary of another type than the
+// target's does not become a second primary. A target with none takes the
 // source's.
 func TestMergeContact_keepsOnePrimaryAcrossTypes(t *testing.T) {
 	e := Setup(t)

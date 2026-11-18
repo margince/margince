@@ -207,8 +207,8 @@ const (
 	maxPasswordLen = 256
 )
 
-// passwordRuleError is the ONE spelling of the password rule for every Go
-// caller that accepts a password: 12–256 runes, not blank after trimming, and
+// passwordRuleError is the password rule for every Go caller that accepts a
+// password: 12–256 runes, not blank after trimming, and
 // not one character repeated. Counted in RUNES: a four-emoji password is
 // sixteen bytes and would clear a byte floor of twelve while being a quarter of
 // the length the floor intends.

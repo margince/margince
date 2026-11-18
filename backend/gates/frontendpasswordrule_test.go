@@ -9,8 +9,8 @@ package gates
 // server refuses it again. Where the two disagree, a password the browser
 // accepts is refused with a message the screen has no text for, or the reverse.
 // frontend/src/features/sign-in/passwordrule.ts is a declared mirror of
-// passwordRuleError in the identity module: this gate compares the bounds, the
-// refusal reasons and the hint text, and fails when either side moves alone.
+// passwordRuleError in the identity module. This gate compares the bounds, the
+// refusal reasons and the hint text. It fails when either side moves alone.
 
 import (
 	"fmt"

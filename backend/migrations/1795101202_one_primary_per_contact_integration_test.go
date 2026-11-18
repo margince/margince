@@ -14,7 +14,7 @@ import (
 )
 
 // A contact that held a primary address of each type keeps the one the app
-// already used, and the per-contact index then refuses a second primary.
+// already used. The per-contact index then refuses a second primary.
 func TestTheOnePrimaryMigrationKeepsTheAddressTheAppUsed(t *testing.T) {
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)

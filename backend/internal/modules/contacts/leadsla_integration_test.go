@@ -478,9 +478,9 @@ func TestFirstResponseFromHumanStatusChangeAndDisposition(t *testing.T) {
 	requireStoredLeadClockAudit(e.ctx, t, e.store, kept)
 }
 
-// A reply logged on the lead answers it whatever a status move did: moving the
-// lead back to new keeps the stamp, and a reply earlier than a status stamp
-// takes the stamp over and drops the name.
+// A reply logged on the lead answers it whatever a status move did. Moving the
+// lead back to new keeps the stamp. A reply earlier than a status stamp takes
+// the stamp over and drops the name.
 func TestAReplyOnTheLeadOutlivesAMovedStatus(t *testing.T) {
 	e := setupPromoteConsent(t)
 	now := pinLeadAuditClock(t)

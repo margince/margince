@@ -62593,7 +62593,7 @@ components:
           format: uuid
           readOnly: true
           description: >-
-            The person whose status move off `new` wrote `first_response_at`, with no activity behind it.
+            The user whose status move off `new` wrote `first_response_at`, with no activity behind it.
             Null when an activity or a disposition wrote the stamp, or when none is set. Moving the lead back
             to `new` before any activity is logged clears both.
         sla_deadline_at: { type: [string, 'null'], format: date-time, readOnly: true, description: 'Derived, not stored: COALESCE(routed_at, created_at) + first_response_target_minutes (formulas §18.1). Null on a terminal lead, which owes no first response.' }

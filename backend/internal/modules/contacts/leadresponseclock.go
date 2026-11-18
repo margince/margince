@@ -27,15 +27,15 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// firstResponseMarkedByColumn names the person whose status move wrote the
+// firstResponseMarkedByColumn names the user whose status move wrote the
 // first-response stamp when no activity backs it.
 const firstResponseMarkedByColumn = "first_response_marked_by"
 
 // stampHumanFirstResponse adds the §18.1 first-response stamp to a patch
-// that moves the lead off `new` by a HUMAN's hand, and takes a stamp that move
-// wrote back when the lead returns to `new` with no response activity behind
-// it. An agent's status change is not a response, and a lead already answered
-// keeps its first stamp.
+// that moves the lead off `new` by a HUMAN's hand. It takes that stamp back when
+// the lead returns to `new` with no response activity behind it. An agent's
+// status change is not a response, and a lead already answered keeps its first
+// stamp.
 func stampHumanFirstResponse(ctx context.Context, tx pgx.Tx, p *storekit.Patch, current crmcontracts.Lead, in UpdateLeadInput) error {
 	if in.Status == nil {
 		return nil
@@ -58,8 +58,8 @@ func stampHumanFirstResponse(ctx context.Context, tx pgx.Tx, p *storekit.Patch, 
 }
 
 // releaseMarkedFirstResponse clears a stamp a status move wrote, unless a
-// response activity has been logged since: that activity answers the lead on
-// its own, by the same rule the stamp subscriber uses.
+// response activity has been logged since. That activity answers the lead on its
+// own, by the rule the stamp subscriber uses.
 func releaseMarkedFirstResponse(ctx context.Context, tx pgx.Tx, p *storekit.Patch, current crmcontracts.Lead) error {
 	if current.FirstResponseMarkedBy == nil || current.FirstResponseAt == nil {
 		return nil

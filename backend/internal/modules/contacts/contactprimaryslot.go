@@ -6,9 +6,8 @@ package contacts
 // The primary slot: at most one of a contact's email addresses, and at most one
 // of its phone numbers, may be primary, whatever their type.
 // uq_contact_email_primary and uq_contact_phone_primary hold that in the
-// database; the check here holds the intent behind them, refusing a
-// contradictory set before any write so the refusal can name the noun instead
-// of the bare conflict the index answers with.
+// database. The check here refuses a contradictory set before any write, so the
+// refusal names the noun instead of the bare conflict the index answers with.
 
 import "github.com/margince/margince/backend/internal/shared/apperrors"
 

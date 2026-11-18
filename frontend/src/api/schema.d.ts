@@ -45525,7 +45525,7 @@ export interface components {
             readonly first_response_at?: string | null;
             /**
              * Format: uuid
-             * @description The person whose status move off `new` wrote `first_response_at`, with no activity behind it. Null when an activity or a disposition wrote the stamp, or when none is set. Moving the lead back to `new` before any activity is logged clears both.
+             * @description The user whose status move off `new` wrote `first_response_at`, with no activity behind it. Null when an activity or a disposition wrote the stamp, or when none is set. Moving the lead back to `new` before any activity is logged clears both.
              */
             readonly first_response_marked_by?: string | null;
             /**

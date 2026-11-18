@@ -58,9 +58,8 @@ func TestReplacingTheWorkEmailCorrectsIt(t *testing.T) {
 }
 
 // The file names one address; the contact holds two of different types. The
-// address the file never mentioned survives, and the file's address takes the
-// contact's one primary — the slot is per contact, so the retained personal
-// address arrives demoted.
+// address the file never mentioned survives. The file's address takes the
+// contact's one primary, so the retained personal address arrives demoted.
 func TestReplacingOneAddressMovesTheContactsOnePrimary(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
@@ -135,8 +134,8 @@ func TestPrimaryMovesAcrossTypesAndTheAppFollows(t *testing.T) {
 	}
 }
 
-// A new contact's only address is primary whether or not the writer said so,
-// and with several addresses and none marked the first by position is.
+// A new contact's only address is primary whether or not the writer said so.
+// With several addresses and none marked, the first by position is.
 func TestANewContactsFirstAddressIsPrimary(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
@@ -324,8 +323,8 @@ func TestSwappingWhichWorkAddressIsPrimary(t *testing.T) {
 }
 
 // A request that marks two addresses primary, whatever their types, is a
-// contradiction the caller can fix, so it is refused before any write with a
-// typed error — not the bare conflict uq_contact_email_primary would answer with.
+// contradiction the caller can fix. It is refused before any write with a typed
+// error, not the bare conflict uq_contact_email_primary would answer with.
 func TestTwoPrimaryAddressesAreRefusedWhateverTheirTypes(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()

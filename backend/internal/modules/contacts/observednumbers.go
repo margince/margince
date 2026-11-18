@@ -205,9 +205,9 @@ func applyObservedPhone(ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 		}
 	}
 
-	// is_primary only when the contact has no live primary number left: the
-	// partial unique index permits exactly one, and claiming it from a number
-	// this statement said nothing about would silently re-rank the record.
+	// is_primary only when the contact has no live primary number left. The
+	// partial unique index permits one, and claiming it from a number this
+	// statement said nothing about would silently re-rank the record.
 	tag, err := tx.Exec(ctx, `
 		INSERT INTO contact_phone
 		  (contact_id, phone, phone_type, is_primary, position, source, captured_by, observed_at, superseded_phone_id)

@@ -56,7 +56,7 @@ Where your browser can add Margince to this device as an app, **This browser** a
 <!-- opens: settings/account -->
 To change your password in Margince, open Settings → **Account** and choose **Change password** in the **Password** row.
 1. Enter your **Current password**.
-2. Enter a **New password** of 12 to 256 characters, and type it again in **Confirm new password**. A password that is only spaces, one repeated character or your email address is refused, and the field says why.
+2. Enter a **New password** of 12 to 256 characters, and type it again in **Confirm new password**.
 3. Choose **Save new password**.
 
 Margince says **Password changed** and signs you out on all your other computers and phones. Forgot it? Use **Forgot password?** on the sign-in page where it is shown, or ask an administrator for a new link to set a password. Also called: reset my password, update login.

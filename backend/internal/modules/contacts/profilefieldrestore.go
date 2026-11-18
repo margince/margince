@@ -309,8 +309,8 @@ func restoreSupersededPhone(ctx context.Context, tx pgx.Tx, contactID ids.Contac
 	}
 
 	// The replacement first. Retiring it before the old row is revived is what
-	// keeps the primary slot free: the partial unique index permits exactly one
-	// live primary per contact, and reviving first would collide with it.
+	// keeps the primary slot free. The partial unique index permits one live
+	// primary per contact, and reviving first would collide with it.
 	tag, err := tx.Exec(ctx, `
 		UPDATE contact_phone SET archived_at = now()
 		 WHERE id = $1 AND archived_at IS NULL`, replacementID)

@@ -12,7 +12,7 @@ package contacts
 //
 //	uq_contact_phone_primary (contact_id) WHERE is_primary AND archived_at IS NULL
 //
-// One primary per contact, whatever the type — so a corrected work number walks
+// One primary per contact, whatever the type, so a corrected work number walks
 // straight into the slot the stored one still holds. There is deliberately no
 // dedupe index across contacts here, unlike addresses: a switchboard reaches
 // several contacts, and that is not a duplicate.
@@ -161,8 +161,8 @@ func TestSwappingWhichWorkPhoneIsPrimary(t *testing.T) {
 	}
 }
 
-// The same contradiction on numbers: two primaries, whatever their types, is
-// refused before any write, with a typed refusal rather than the bare conflict
+// The same contradiction on numbers: two primaries, whatever their types, are
+// refused before any write. The refusal is typed, not the bare conflict
 // uq_contact_phone_primary would answer with.
 func TestTwoPrimaryPhonesAreRefusedWhateverTheirTypes(t *testing.T) {
 	e := setupDedupe(t)
@@ -274,9 +274,9 @@ func TestDroppingOneTypeKeepsTheSurvivorsIdentity(t *testing.T) {
 }
 
 // A work primary corrected to a home primary while a second number keeps the
-// work type. A row can leave the primary slot by CHANGING TYPE, not only by
-// dropping primary, and landing every retained row demoted before raising the
-// primary is what lets this valid change go through.
+// work type. A row can leave the primary slot by changing type, not only by
+// dropping primary. Landing every retained row demoted before raising the
+// primary lets this valid change go through.
 func TestRetypingThePrimaryKeepsItPrimary(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()

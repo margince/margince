@@ -7019,7 +7019,6 @@ public.lead.lead_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id)
 public.lead.lead_disqualify_reason_id_fkey FOREIGN KEY (disqualify_reason_id) REFERENCES lead_disqualify_reason(id) ON DELETE RESTRICT
 public.lead.lead_email_norm CHECK (((email IS NULL) OR (email = lower(email))))
 public.lead.lead_first_response_follows_creation CHECK (((first_response_at IS NULL) OR (first_response_at >= created_at)))
-public.lead.lead_first_response_marked_by_fkey FOREIGN KEY (first_response_marked_by) REFERENCES app_user(id) ON DELETE SET NULL
 public.lead.lead_from_contact_id_fkey FOREIGN KEY (from_contact_id) REFERENCES contact(id) ON DELETE SET NULL
 public.lead.lead_merged_into_id_fkey FOREIGN KEY (merged_into_id) REFERENCES lead(id) ON DELETE SET NULL (merged_into_id)
 public.lead.lead_origin_detail_bounded CHECK (((origin_detail IS NULL) OR (length(origin_detail) <= 500)))

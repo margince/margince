@@ -54694,7 +54694,7 @@ type Lead struct {
 	// FirstResponseAt First real response to this lead: an outbound activity, a human status change off `new`, or an explicit disposition. A cold-outbound auto-touch does NOT satisfy it.
 	FirstResponseAt *time.Time `json:"first_response_at,omitempty"`
 
-	// FirstResponseMarkedBy The person whose status move off `new` wrote `first_response_at`, with no activity behind it. Null when an activity or a disposition wrote the stamp, or when none is set. Moving the lead back to `new` before any activity is logged clears both.
+	// FirstResponseMarkedBy The user whose status move off `new` wrote `first_response_at`, with no activity behind it. Null when an activity or a disposition wrote the stamp, or when none is set. Moving the lead back to `new` before any activity is logged clears both.
 	FirstResponseMarkedBy *openapi_types.UUID `json:"first_response_marked_by,omitempty"`
 
 	// FromContactId The contact an older lead was created from, and null for every newly created lead.
