@@ -37,6 +37,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -116,7 +117,7 @@ var historyColumns = `
 	LIMIT %[4]d`
 
 var historyCandidates = `a.archived_at IS NULL
-	  AND a.kind <> 'task'
+	  AND %[7]s
 	  AND a.id <> $%[1]d
 	  AND %[2]s
 	  AND %[3]s
@@ -171,7 +172,8 @@ func (s *Service) readHistory(
 	// Before the room, and happened by now: a brief read weeks early must not fold
 	// in what comes before the room. A meeting counts once it took place, as in priormeetings.go.
 	opens := fmt.Sprintf("$%d", arg(room.Opens))
-	happened := occurredday.HappenedSQL("a", fmt.Sprintf("$%d", arg(now)))
+	nowAt := fmt.Sprintf("$%d", arg(now))
+	happened := occurredday.HappenedSQL("a", nowAt)
 	reach := now
 	if room.Opens.Before(reach) {
 		reach = room.Opens
@@ -185,7 +187,8 @@ func (s *Service) readHistory(
 	}
 
 	candidates := fmt.Sprintf(historyCandidates,
-		roomPos, occurredday.WithinSQL("a", floor, opens), happened, attendeePos, scope, within)
+		roomPos, occurredday.WithinSQL("a", floor, opens), happened, attendeePos, scope, within,
+		relstrength.InteractionCountsAtSQL("a", nowAt))
 	// A held meeting's invitation mail is the meeting, as History reads it. Only
 	// behind a meeting every reader may open, so no readable mail hides behind one.
 	candidates += " AND " + activities.InvitationFoldSQL(candidates, auth.WorkspaceAudienceSQL("a")+" AND a.restricted_at IS NULL")
