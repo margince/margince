@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -61,7 +62,7 @@ func TestOnlyAHumansFirstSendIsCounted(t *testing.T) {
 	later := AnyMap{
 		"subject": "Monday morning", "body": "Written the night before.",
 		"to": []string{"buyer@preflight.test"}, "consent_purpose": "transactional",
-		"scheduled_at": time.Now().Add(2 * time.Hour).UTC().Format(time.RFC3339), "scheduled_tz": "Europe/Berlin",
+		"scheduled_at": clocktest.Now(t).Add(2 * time.Hour).UTC().Format(time.RFC3339), "scheduled_tz": "Europe/Berlin",
 	}
 	var scheduled struct {
 		ID string `json:"id"`
@@ -89,7 +90,7 @@ func TestOnlyAHumansFirstSendIsCounted(t *testing.T) {
 		activities.SendEmailInput{
 			Recipients: []string{"buyer@preflight.test"}, Subject: "From a tool", Body: "Sent by an agent.",
 			ConsentPurpose: "transactional",
-		}, time.Now().Add(-time.Minute), compose.SendOrigin{PublicBaseURL: preflightBaseURL})
+		}, clocktest.Now(t).Add(-time.Minute), compose.SendOrigin{PublicBaseURL: preflightBaseURL})
 	if err != nil && !errors.Is(err, apperrors.ErrConsentNotGranted) {
 		t.Fatalf("the agent's send through the tool path: %v", err)
 	}
