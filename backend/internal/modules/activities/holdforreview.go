@@ -76,9 +76,12 @@ import (
 
 // heldMessage is the held row a refusal binds to. reused says the seat already
 // held this message, so the press that refused it was a repeat of an earlier Send.
+// erased says a recipient was erased first, so nothing was held and no review
+// may be written: its refusals would store the erased address again.
 type heldMessage struct {
 	id     ids.UUID
 	reused bool
+	erased bool
 }
 
 // holdForReview freezes a refused message into a held scheduled_send and
@@ -138,7 +141,7 @@ func (s *Store) holdForReviewTx(ctx context.Context, origin SendOrigin, in SendE
 		alsoLinks:       alsoLinks,
 		payload:         payload,
 	}
-	result := heldMessage{id: ids.NewV7()}
+	var result heldMessage
 	now := s.now().UTC()
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		// LOCKED AGAINST A CONCURRENT ERASURE, FIRST.
@@ -181,6 +184,7 @@ func (s *Store) holdForReviewTx(ctx context.Context, origin SendOrigin, in SendE
 			// message was refused, which is true; what they do not get is a
 			// message to resume, which is correct — there is nobody left to
 			// send it to.
+			result = heldMessage{erased: true}
 			return nil
 		}
 		written, err := holdOrReuseTx(ctx, tx, held, prov, now, in.Subject)
