@@ -455,6 +455,7 @@
   "approval.preview.empty": "Chưa đặt",
   "approval.preview.status": "Ngữ cảnh phê duyệt",
   "approval.preview.stale": "Hồ sơ đã thay đổi sau khi đề xuất được tạo. Yêu cầu đề xuất mới trước khi duyệt.",
+  "approval.editRetargeted": "Chỉnh sửa này đổi bản ghi mà yêu cầu nói đến. Hãy duyệt hoặc từ chối yêu cầu như hiện có.",
   "approval.preview.incomplete": "Không thể hiển thị đầy đủ thay đổi. Yêu cầu đề xuất mới trước khi duyệt.",
   "approval.preview.unavailable": "Ngữ cảnh phê duyệt không có sẵn. Tải lại hoặc yêu cầu đề xuất mới.",
   "approval.preview.needsWiderSight": "Thay đổi này chạm đến các bản ghi bạn không mở được. Một đồng nghiệp xem được chúng phải quyết định.",

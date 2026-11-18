@@ -835,6 +835,8 @@ export const en = {
   "approval.preview.status": "Approval context",
   "approval.preview.stale":
     "This record changed after the proposal. Request a new proposal before approving.",
+  "approval.editRetargeted":
+    "This edit changes which record the request is about. Approve or reject it as it is.",
   "approval.preview.incomplete":
     "The full change cannot be shown. Request a new proposal before approving.",
   "approval.preview.unavailable":

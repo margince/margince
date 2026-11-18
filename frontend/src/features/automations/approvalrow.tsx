@@ -41,7 +41,6 @@ import {
   cardRecords,
   DecideOutcome,
   editableSeed,
-  editableStrings,
   StagedEditor,
 } from "./approvaleditor";
 import { ApprovalEvidence } from "./approvalevidence";
@@ -50,6 +49,7 @@ import {
   approvalExpiryLabel,
   approvalLabel,
   decisionSkewKey,
+  editableStrings,
 } from "./approvalkind";
 import { rowLabels, useApprovalDisplay } from "./approvalproposal";
 import { approvalAcceptable } from "./approvalresponsibility";

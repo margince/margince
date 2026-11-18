@@ -2,12 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // Package loggedtouch answers draftcore.LoggedTouchReader from the activities
-// store, so a draft counts a note or past meeting beyond its timeline page.
+// store, so a draft counts a past meeting beyond its timeline page.
 package loggedtouch
 
 import (
 	"context"
 	"errors"
+	"slices"
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/draftcore"
@@ -25,7 +26,9 @@ const recordContact = "contact"
 // draftcore.IsLoggedTouch, so every row it returns is one the draft counts.
 type Reader struct{ Store *activities.Store }
 
-// NewestLoggedTouch is the newest note or past meeting filed on the record. On
+// NewestLoggedTouch is the newest past meeting filed on the record. A note is
+// left out: it is no exchange (draftcore.CountsAsContact), and a newer note
+// must not hide an older meeting behind the one-row limit. On
 // a contact it is also the newest meeting they attended, which a calendar may
 // not have linked. A caller who may not read activity gets nothing, as the
 // draft's own view omits its timeline for them.
@@ -33,7 +36,7 @@ func (r Reader) NewestLoggedTouch(ctx context.Context, on draftcore.LoggedOn, no
 	recordType, id := on.RecordType, on.ID
 	filed, err := r.newest(ctx, activities.ListActivitiesInput{
 		EntityType: &recordType, EntityID: &id,
-		Kinds: []string{string(crmcontracts.ActivityKindNote), string(crmcontracts.ActivityKindMeeting)},
+		Kinds: []string{string(crmcontracts.ActivityKindMeeting)},
 	}, on, now)
 	if err != nil || on.RecordType != recordContact {
 		return filed, err
@@ -43,7 +46,15 @@ func (r Reader) NewestLoggedTouch(ctx context.Context, on draftcore.LoggedOn, no
 		PartyContactID: &party,
 		Kinds:          []string{string(crmcontracts.ActivityKindMeeting)},
 	}, on, now)
-	return append(filed, attended...), err
+	if err != nil {
+		return nil, err
+	}
+	for _, row := range attended {
+		if !slices.ContainsFunc(filed, func(seen crmcontracts.Activity) bool { return seen.Id == row.Id }) {
+			filed = append(filed, row)
+		}
+	}
+	return filed, nil
 }
 
 // newest is the one newest row of in, read as the draft reads.

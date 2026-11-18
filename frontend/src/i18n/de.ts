@@ -880,6 +880,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.preview.status": "Freigabekontext",
   "approval.preview.stale":
     "Dieser Eintrag wurde nach dem Vorschlag geändert. Fordere vor der Freigabe einen neuen Vorschlag an.",
+  "approval.editRetargeted":
+    "Diese Änderung betrifft einen anderen Datensatz. Gib die Anfrage unverändert frei oder lehne sie ab.",
   "approval.preview.incomplete":
     "Die vollständige Änderung kann nicht angezeigt werden. Fordere vor der Freigabe einen neuen Vorschlag an.",
   "approval.preview.unavailable":

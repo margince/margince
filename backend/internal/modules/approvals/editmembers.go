@@ -26,6 +26,8 @@ var editableMembers = map[string][]string{
 	kindLinkedInMatch: {"use_as_title", "use_as_employer"},
 	// A handover is answered yes or no, and its effect trusts every member.
 	approvalsubject.KindOwnershipTransfer: {},
+	// A share request is answered yes or no; every member names a record.
+	approvalsubject.KindContactShare: {},
 }
 
 // assertEditableMembers refuses an edit that changes a member its kind does not

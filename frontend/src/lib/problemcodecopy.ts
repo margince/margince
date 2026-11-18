@@ -16,6 +16,8 @@ export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   ["approval_preview_unavailable", "approval.preview.unavailable"],
   ["approval_preview_conflict", "approval.preview.resolveConflict"],
   ["approval_needs_wider_sight", "approval.preview.needsWiderSight"],
+  // An edit that moves an entity id; the detail names JSON paths.
+  ["retargeted", "approval.editRetargeted"],
   ["gateway_unavailable", "common.gatewayUnavailable"],
   ["assistant_unavailable", "common.assistantUnavailable"],
   ["provider_out_of_credit", "common.providerOutOfCredit"],

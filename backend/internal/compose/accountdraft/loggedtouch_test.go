@@ -14,19 +14,23 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// An account known only from a logged note is not written to as a stranger,
-// and silence_days counts from the note: the shared TIME rule says so to every
-// surface, so this one has to compute it that way too.
-func TestANoteOnlyAccountIsNotAFirstTouch(t *testing.T) {
+// An account with only an internal note is still a first touch.
+// One with a past meeting is not, and silence_days counts from the meeting.
+func TestANoteOnlyAccountIsAFirstTouch(t *testing.T) {
 	now := time.Date(2026, 8, 11, 9, 0, 0, 0, time.UTC)
 	body := "Met their COO at the trade fair."
-	view := crmcontracts.Company360{Activities: &crmcontracts.ActivityListResponse{Data: []crmcontracts.Activity{{
-		Id: openapi_types.UUID(ids.NewV7()), Kind: crmcontracts.ActivityKindNote,
-		Body: &body, OccurredAt: now.Add(-10 * 24 * time.Hour),
-	}}}}
+	view := func(kind crmcontracts.ActivityKind) crmcontracts.Company360 {
+		return crmcontracts.Company360{Activities: &crmcontracts.ActivityListResponse{Data: []crmcontracts.Activity{{
+			Id: openapi_types.UUID(ids.NewV7()), Kind: kind,
+			Body: &body, OccurredAt: now.Add(-10 * 24 * time.Hour),
+		}}}}
+	}
 
-	state := ConversationState(view, now, time.UTC)
+	if state := ConversationState(view(crmcontracts.ActivityKindNote), now, time.UTC); state.Band != convstate.BandNone {
+		t.Errorf("band = %v after a note and no exchange, want %v", state.Band, convstate.BandNone)
+	}
+	state := ConversationState(view(crmcontracts.ActivityKindMeeting), now, time.UTC)
 	if state.Band == convstate.BandNone || state.SilenceDays != 10 {
-		t.Errorf("state = %+v, want ten days since the note", state)
+		t.Errorf("state = %+v, want ten days since the meeting", state)
 	}
 }
