@@ -43,10 +43,10 @@ import (
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
-// waivedEnvelopeFields are the core envelope's fields a unit deliberately does
-// not supply, each with the reason it is absent. A waiver is a DECISION, so it
-// is spelled out rather than a name in a list.
+// waivedEnvelopeFields are the envelope fields a unit deliberately does not
+// supply, each with the reason: a waiver is a decision, not a name in a list.
 var waivedEnvelopeFields = gatekit.Waive(map[string]string{
+	"Forwarded":         "the original a seat forwarded to its own connected mailbox, read only by the core sink from that mailbox; an extension has no seat mailbox to forward to",
 	"ProviderMessageID": "an opaque Gmail or Graph mailbox id used only for core connection deletion. Extension sources have no core mailbox connection or deletion namespace; an empty value adds no mailbox mapping",
 	"CalendarAnswer":    "the core calendar connector attests its own mailbox owner response. An extension cannot assert a mailbox identity; nil leaves ordinary participant responses subject to the existing capture checks",
 	"EntityType":        "the port stamps it: one kind is landable, and a Record has one payload",
@@ -127,6 +127,8 @@ func TestThePublishedRecordMirrorsTheCaptureEnvelope(t *testing.T) {
 // alongside the declaration that makes it true". A unit does, so it is published
 // and bounded at the write door instead (refuseUndeclaredTransport).
 var waivedActivityFields = gatekit.Waive(map[string]string{
+	"forwardedFrom": "set only by the core sink for a vetted forward to a seat's own mailbox; an extension record is never one",
+	"forwardThread": "the forward's own thread, set only with forwardedFrom by the core sink",
 	"HasCalendarPart": "false is the right answer for a unit, not a missing one. It records what the " +
 		"core's MIME walk saw in a raw RFC822 message; a unit hands over an already-normalized " +
 		"record with no parts to walk, so it carried no calendar payload for anyone to have read. " +
