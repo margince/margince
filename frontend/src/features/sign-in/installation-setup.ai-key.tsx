@@ -157,7 +157,7 @@ export function AiKeyFields({
         <Field
           label={t("firstRun.ai.key")}
           hint={t("firstRun.ai.keyHint")}
-          error={keyFieldError(attempted, secret, undefined, t)}
+          error={keyFieldError(attempted, secret, refusal, t)}
         >
           {(control) => (
             <TextInput

@@ -245,9 +245,17 @@ func (e *UnservableBindingError) Unwrap() error { return e.Cause }
 // router's ai_call tracing (ai.NewRouter) — the deployment's
 // AI.CapturePayloads posture and the process logger, never a stand-in.
 func NewModelPath(ctx context.Context, cfg ai.RoutingConfig, pool *pgxpool.Pool, capturePayloads bool, log *slog.Logger) (ModelPath, error) {
-	router, err := ai.NewRouter(cfg, ai.NewMeter(InstallationDB(pool)), NewSeatBudget(pool), ai.NewCallMeter(InstallationDB(pool)).WithLogger(log), capturePayloads, log)
-	if err != nil {
-		return ModelPath{}, &UnservableBindingError{Cause: err}
+	meter, calls := ai.NewMeter(InstallationDB(pool)), ai.NewCallMeter(InstallationDB(pool)).WithLogger(log)
+	// An unconfigured installation still gets a Router, bound to nothing: the
+	// routing watcher can then bind it when an admin saves a model, with no restart.
+	var router *ai.Router
+	if cfg.Unconfigured() {
+		router = ai.NewUnboundRouter(meter, NewSeatBudget(pool), calls, capturePayloads, log)
+	} else {
+		var err error
+		if router, err = ai.NewRouter(cfg, meter, NewSeatBudget(pool), calls, capturePayloads, log); err != nil {
+			return ModelPath{}, &UnservableBindingError{Cause: err}
+		}
 	}
 	router.WithSubjectRestrictions(subjectRestrictions{pool: pool})
 	if err := seedEmbedBinding(ctx, search.NewStore(InstallationDB(pool)), router, log); err != nil {

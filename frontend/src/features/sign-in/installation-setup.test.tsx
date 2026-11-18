@@ -114,12 +114,23 @@ function mount(
   refuse: readonly string[] = [],
   /** The routing read's locks; given, the reader may read the routing. */
   routingLocks?: unknown[],
+  /** What the vendor says when the stored key is tested. */
+  keyTest: Record<string, unknown> = { ok: true, model_count: 3 },
 ) {
-  const writes: { url: string; body: unknown }[] = [];
+  const writes: { url: string; method: string; body: unknown }[] = [];
   const fetchMock = vi.fn(async (request: Request) => {
     const url = new URL(request.url).pathname;
+    // A question to the vendor, not a write: it changes nothing here.
+    if (request.method === "POST" && url.endsWith("/test")) {
+      return jsonResponse({ provider: "gemini", ...keyTest });
+    }
     if (request.method !== "GET") {
-      writes.push({ url, body: JSON.parse(await request.text()) });
+      const text = await request.text();
+      writes.push({
+        url,
+        method: request.method,
+        body: text ? JSON.parse(text) : undefined,
+      });
       if (refuse.some((p) => url.endsWith(p))) {
         return jsonResponse({ title: "refused" }, 500);
       }
@@ -454,6 +465,73 @@ describe("the first-run setup gate", () => {
     expect(writes[1].url).toBe("/v1/ai/routing");
   });
 
+  it("asks the vendor about the stored key before it binds any tier", async () => {
+    const user = userEvent.setup();
+    const { writes } = mount(setupReport(false, false));
+    await screen.findByText("Choose a model provider");
+    await user.type(screen.getByLabelText("API key"), "AIza-secret");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await screen.findByRole("heading", { name: "Model connected" });
+    const tested = vi
+      .mocked(globalThis.fetch)
+      .mock.calls.map(([request]) => (request as Request).url)
+      .findIndex((url) => url.endsWith("/ai/provider-keys/gemini/test"));
+    expect(tested).toBeGreaterThanOrEqual(0);
+    expect(writes.map((w) => w.url)).toEqual([
+      "/v1/ai/provider-keys/gemini",
+      "/v1/ai/routing",
+    ]);
+  });
+
+  it("binds nothing and removes the key when the vendor refuses it", async () => {
+    const user = userEvent.setup();
+    const { writes } = mount(setupReport(false, false), [], undefined, {
+      ok: false,
+      reason: "auth_failed",
+    });
+    await screen.findByText("Choose a model provider");
+    await user.type(screen.getByLabelText("API key"), "not-a-real-key");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+
+    expect(
+      await screen.findByText(
+        "The provider refused this key. Check it, then replace it.",
+      ),
+    ).toBeTruthy();
+    await waitFor(() =>
+      expect(writes.map((w) => `${w.method} ${w.url}`)).toEqual([
+        "PUT /v1/ai/provider-keys/gemini",
+        "DELETE /v1/ai/provider-keys/gemini",
+      ]),
+    );
+    expect(writes.some((w) => w.url === "/v1/ai/routing")).toBe(false);
+    expect(
+      screen.queryByRole("heading", { name: "Model connected" }),
+    ).toBeNull();
+    expect(screen.getByLabelText<HTMLInputElement>("API key").value).toBe(
+      "not-a-real-key",
+    );
+  });
+
+  it("offers Connect anyway when the vendor could not be asked, and binds on that press", async () => {
+    const user = userEvent.setup();
+    const { writes } = mount(setupReport(false, false), [], undefined, {
+      ok: false,
+      reason: "unreachable",
+    });
+    await screen.findByText("Choose a model provider");
+    await user.type(screen.getByLabelText("API key"), "AIza-secret");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+
+    await screen.findByText(
+      "The provider did not respond. Check the host and the network.",
+    );
+    expect(writes.some((w) => w.url === "/v1/ai/routing")).toBe(false);
+    await user.click(screen.getByRole("button", { name: "Connect anyway" }));
+    await screen.findByRole("heading", { name: "Model connected" });
+    expect(writes.at(-1)?.url).toBe("/v1/ai/routing");
+  });
+
   it("stores only the key when a boot source sets the routing, and says where", async () => {
     const user = userEvent.setup();
     const { writes } = mount(
@@ -644,6 +722,7 @@ describe("the first-run setup gate", () => {
     await waitFor(() => expect(writes.length).toBe(2));
     expect(writes[0]).toEqual({
       url: "/v1/ai/provider-keys/gemini_vertex",
+      method: "PUT",
       body: { service_account_json: keyFile },
     });
     const routing = writes[1].body as {

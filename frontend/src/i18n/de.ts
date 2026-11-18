@@ -10067,6 +10067,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "setup.step.aiDone": "{name} ist verbunden.",
   "setup.step.aiDoneUnnamed": "Ein KI-Tool ist verbunden.",
   "firstRun.ai.skip": "Nicht jetzt",
+  "firstRun.ai.connectAnyway": "Trotzdem verbinden",
   "ob.gate.noModelSub":
     "Noch ist kein KI-Anbieter eingerichtet, daher kann Margince deine Website nicht lesen. Gib die Angaben zu deinem Unternehmen selbst ein oder füge jetzt einen Schlüssel hinzu.",
   "ob.gate.addModel": "KI-Schlüssel hinzufügen",

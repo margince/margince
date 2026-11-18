@@ -135,6 +135,19 @@ func NewRouter(cfg RoutingConfig, meter *Meter, budget BudgetPolicy, calls callS
 	return router, nil
 }
 
+// NewUnboundRouter builds a Router that serves no tier yet. A role that boots
+// before anyone has bound a model holds this one, so the routing watcher's
+// Rebind can bind it later instead of the role staying without AI until a
+// restart. Every call on it is refused the way a task with no bound tier is.
+func NewUnboundRouter(meter *Meter, budget BudgetPolicy, calls callStore, capturePayloads bool, log *slog.Logger) *Router {
+	router := assembleRouter(nil, nil, "", meter, budget, calls, nil, capturePayloads, log)
+	router.restrictionsRequired = true
+	unbound := *router.binding()
+	unbound.public = NewPublicProfile("unconfigured", RoutingConfig{})
+	router.install(unbound)
+	return router
+}
+
 // assembleRouter is the seam unit tests inject fakes through.
 func assembleRouter(clients map[Tier]model.Client, embedder model.Client, profile Profile, meter usageStore, budget BudgetPolicy, calls callStore, meta map[Tier]routeMeta, capturePayloads bool, log *slog.Logger) *Router {
 	if log == nil {

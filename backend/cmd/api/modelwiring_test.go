@@ -33,23 +33,46 @@ func discardLogger() *slog.Logger {
 	return slog.New(slog.NewTextHandler(io.Discard, nil))
 }
 
-// TestResolveModelPathNeitherFlagIsUnconfigured proves the honest-absent
-// case: no declared routing file and no --ai-fake resolves to a nil
-// path and the unconfigured state, never a silent default provider.
-func TestResolveModelPathNeitherFlagIsUnconfigured(t *testing.T) {
+// An installation with no binding and no --ai-fake resolves a path over an
+// unbound router and reports unconfigured, never a silent default provider.
+// The routing watcher binds that same router when an admin saves a model, and
+// the state and profile then follow without a restart.
+func TestAnUnboundBootAdoptsTheBindingSavedAfterwards(t *testing.T) {
 	modelPath, state, profile, err := modelPathFor(context.Background(), ai.RoutingConfig{}, modelPathSpec{}, nil, discardLogger())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if modelPath != nil {
-		t.Fatalf("modelPath = %+v, want nil", modelPath)
+	if modelPath == nil || modelPath.Router() == nil {
+		t.Fatalf("modelPath = %+v, want a path over an unbound router", modelPath)
 	}
-	if state != compose.AIStateUnconfigured {
-		t.Fatalf("state = %q, want %q", state, compose.AIStateUnconfigured)
+	if got := state(); got != compose.AIStateUnconfigured {
+		t.Fatalf("state = %q, want %q", got, compose.AIStateUnconfigured)
 	}
 	if profile().State != "unconfigured" || profile().InferenceMode != "none" || len(profile().Providers) != 0 {
 		t.Fatalf("profile = %+v, want honest unconfigured posture", profile())
 	}
+	if got := modelPath.RoutingVersion(); got != "" {
+		t.Fatalf("an unbound path reports routing version %q, want empty", got)
+	}
+
+	bound, err := ai.ParseRouting([]byte(`profile: eu_hosted
+tiers:
+  premium: {provider: ollama, model: saved-large}
+embeddings: {provider: fake}
+`))
+	if err != nil {
+		t.Fatalf("ParseRouting: %v", err)
+	}
+	if err := modelPath.Router().Rebind(bound); err != nil {
+		t.Fatalf("Rebind: %v", err)
+	}
+	if got := state(); got != compose.AIStateConfigured {
+		t.Errorf("state after the binding was saved = %q, want %q", got, compose.AIStateConfigured)
+	}
+	if modelPath.RoutingVersion() == "" {
+		t.Error("the lanes still report no routing version after the binding was saved")
+	}
+	assertProfileModels(t, profile(), map[string]string{"premium": "saved-large"})
 }
 
 // TestResolveModelPathFakeArmBindsEveryLane proves --ai-fake resolves a
@@ -65,8 +88,8 @@ func TestResolveModelPathFakeArmBindsEveryLane(t *testing.T) {
 	if modelPath == nil {
 		t.Fatal("modelPath is nil, want a bound path")
 	}
-	if state != compose.AIStateFake {
-		t.Fatalf("state = %q, want %q", state, compose.AIStateFake)
+	if state() != compose.AIStateFake {
+		t.Fatalf("state = %q, want %q", state(), compose.AIStateFake)
 	}
 	if profile().State != "development" || profile().InferenceMode != "development" || len(profile().Providers) != 0 {
 		t.Fatalf("profile = %+v, want development posture without a fake provider label", profile())
@@ -138,8 +161,8 @@ embeddings: {provider: gemini, model: gemini-embedding-001, dimensions: 8}
 	if path == nil {
 		t.Fatal("no model path was wired")
 	}
-	if state != compose.AIStateFake {
-		t.Errorf("state = %q, want %q: a fallback that reports itself as configured hides canned answers", state, compose.AIStateFake)
+	if state() != compose.AIStateFake {
+		t.Errorf("state = %q, want %q: a fallback that reports itself as configured hides canned answers", state(), compose.AIStateFake)
 	}
 	// The same development posture the plain fake arm reports, and no provider
 	// label: the profile a reader sees must not name the vendor whose binding
@@ -162,8 +185,8 @@ func TestBoundRoutingOutranksTheFakeBrain(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if state != compose.AIStateConfigured {
-		t.Fatalf("state = %q, want %q: --ai-fake must not displace a stored binding", state, compose.AIStateConfigured)
+	if state() != compose.AIStateConfigured {
+		t.Fatalf("state = %q, want %q: --ai-fake must not displace a stored binding", state(), compose.AIStateConfigured)
 	}
 	if profile().State != "configured" {
 		t.Fatalf("profile().State = %q, want configured", profile().State)
@@ -182,8 +205,8 @@ func TestResolveModelPathBoundArmBindsEveryLane(t *testing.T) {
 	if modelPath == nil {
 		t.Fatal("modelPath is nil, want a bound path")
 	}
-	if state != compose.AIStateConfigured {
-		t.Fatalf("state = %q, want %q", state, compose.AIStateConfigured)
+	if state() != compose.AIStateConfigured {
+		t.Fatalf("state = %q, want %q", state(), compose.AIStateConfigured)
 	}
 	if profile().State != "configured" || profile().InferenceMode != "development" || len(profile().Providers) != 0 {
 		t.Fatalf("profile = %+v, want configured fake-file posture without a provider label", profile())
@@ -459,8 +482,8 @@ embeddings: {provider: fake}
 		return cfg
 	}
 	modelPath, state, profile, err := modelPathFor(context.Background(), parse(bound), modelPathSpec{}, nil, discardLogger())
-	if err != nil || state != compose.AIStateConfigured {
-		t.Fatalf("modelPathFor = state %q err %v, want a configured path", state, err)
+	if err != nil || state() != compose.AIStateConfigured {
+		t.Fatalf("modelPathFor = state %q err %v, want a configured path", state(), err)
 	}
 	bootVersion := modelPath.RoutingVersion()
 	if err := modelPath.Router().Rebind(parse(strings.ReplaceAll(bound, "first-", "second-"))); err != nil {
@@ -476,8 +499,8 @@ embeddings: {provider: fake}
 // then binds a servable model sees it named.
 func TestAFakeBootProfileFollowsTheBindingTheWatcherAdopts(t *testing.T) {
 	modelPath, state, profile, err := modelPathFor(context.Background(), ai.RoutingConfig{}, modelPathSpec{fakeBrain: true}, nil, discardLogger())
-	if err != nil || state != compose.AIStateFake {
-		t.Fatalf("modelPathFor = state %q err %v, want the fake path", state, err)
+	if err != nil || state() != compose.AIStateFake {
+		t.Fatalf("modelPathFor = state %q err %v, want the fake path", state(), err)
 	}
 	if got := profile().State; got != "development" {
 		t.Fatalf("fake boot profile state = %q, want development", got)
