@@ -146,7 +146,10 @@ describe("CompanyScreen — Relationships tab (P-5)", () => {
     );
     await userEvent.click(screen.getByTestId("add-relationship"));
 
-    await userEvent.type(screen.getByPlaceholderText("Search…"), "anna");
+    await userEvent.type(
+      screen.getByRole("searchbox", { name: "Contact" }),
+      "anna",
+    );
     vi.useFakeTimers();
     try {
       act(() => {
@@ -391,7 +394,7 @@ describe("CompanyScreen — relationship kinds by scope (P-5)", () => {
     expect(within(kinds).queryByText("Deal stakeholder")).toBeNull();
     await user.click(within(kinds).getByRole("option", { name: "Partner of" }));
 
-    await user.type(screen.getByPlaceholderText("Search…"), "acme");
+    await user.type(screen.getByRole("searchbox", { name: "Company" }), "acme");
     vi.useFakeTimers();
     try {
       act(() => {
