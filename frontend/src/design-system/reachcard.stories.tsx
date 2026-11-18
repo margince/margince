@@ -12,8 +12,8 @@ import {
 import { ContactLink, CopyEmail, EmailFace } from "./contactlink";
 import { ReachCard, ReachLine } from "./reachcard";
 
-// How to reach a record, as the card that opens its About: one line per
-// address or number, the kind at the edge, a long address broken at its "@".
+// How to reach a record, as the card that opens its About. One line per
+// address or number, its kind at the edge; a long address breaks at "@".
 const meta: Meta<typeof ReachCard> = {
   title: "Components/Text and data display/Reach card",
   component: ReachCard,

@@ -7,8 +7,8 @@ import type { DetailRow } from "./recorddetails";
 import "./reachcard.css";
 
 /**
- * Every way to reach a record, as one card in its details: a line per
- * address or number, each opened by its glyph, its kind at the card's edge.
+ * Every way to reach a record, as one card in its details. Each address or
+ * number is a line led by its glyph, with its kind at the card's edge.
  */
 export function ReachCard({ children }: Readonly<{ children: ReactNode }>) {
   return <div className="reachcard">{children}</div>;

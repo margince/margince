@@ -99,8 +99,8 @@ export function useContactAboutSections(view: Contact360): DetailSection[] {
       empty: !present,
     };
   };
-  // Every address and number shares one card; a kind with none folds as
-  // its own empty row, so "Show empty fields" still offers to add it.
+  // Every address and number shares one card. A kind with none folds as its
+  // own empty row, so "Show empty fields" still offers to add it.
   const reachKeys = [email && "emails", phone && "phones"].filter(
     (key): key is string => Boolean(key),
   );

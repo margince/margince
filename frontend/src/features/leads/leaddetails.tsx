@@ -159,7 +159,7 @@ function useLinkedCompanyRow(lead: Lead): DetailRow | null {
 // The read-only row never opens its editor, so nothing reaches this.
 async function refusedSave(): Promise<void> {}
 
-// The address and number share one card, as on a contact; one that is not
+// The address and number share one card, as on a contact. One that is not
 // set folds as its own empty row, so "Show empty fields" still offers it.
 function reachRows(
   lead: Lead,
