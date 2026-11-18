@@ -133,9 +133,11 @@ func TestAFoldedSetClaimsNoSingleJurisdiction(t *testing.T) {
 // country's law for a send two countries govern.
 func TestAFoldCarriesNoSinglePacksProvenance(t *testing.T) {
 	reviewed := Provenance{ReviewedAt: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC), Reviewer: "a"}
-	a := Rules{Jurisdiction: "aa", Version: 3, Provenance: reviewed,
+	a := Rules{
+		Jurisdiction: "aa", Version: 3, Provenance: reviewed,
 		Citations: []Citation{{Code: "frequency_cap_reached", Instrument: "Decree 1/2020"}},
-		Digest:    strings.Repeat("a", 64)}
+		Digest:    strings.Repeat("a", 64),
+	}
 	b := Rules{Jurisdiction: "bb", Version: 7}
 	got := stricter(a, b)
 	if got.Provenance != (Provenance{}) || got.Citations != nil || got.Digest != "" {
@@ -172,8 +174,10 @@ func TestTheRegistryHandsOutCopies(t *testing.T) {
 		MarketingExceptions: []MarketingException{{Kind: ExistingCustomer, RequiresSimilarity: true}},
 		FrequencyCap:        &FrequencyCap{Messages: 3, Window: 24 * time.Hour},
 		Instruments:         []Instrument{{Name: "Decree 1/2020", SourceURL: "https://example.org/decree"}},
-		Provenance: Provenance{SourceCheckedAt: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
-			ReviewedAt: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC), Reviewer: "a"},
+		Provenance: Provenance{
+			SourceCheckedAt: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+			ReviewedAt:      time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC), Reviewer: "a",
+		},
 		Citations: []Citation{{Code: "frequency_cap_reached", Instrument: "Decree 1/2020", Provision: "Art. 1"}},
 	})
 

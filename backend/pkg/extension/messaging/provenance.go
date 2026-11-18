@@ -150,18 +150,8 @@ func (r Rules) validateCitations() error {
 	}
 	cited := map[string][]Territory{}
 	for _, c := range r.Citations {
-		if strings.TrimSpace(c.Code) == "" || strings.TrimSpace(c.Code) != c.Code {
-			return fmt.Errorf("citation code %q is empty or padded", c.Code)
-		}
-		if err := c.Territory.Validate(); err != nil {
-			return fmt.Errorf("citation %q: %w", c.Code, err)
-		}
-		resolved, err := r.ResolveCitation(c)
-		if err != nil {
+		if err := r.validateCitation(c); err != nil {
 			return err
-		}
-		if err := validateSourceURL(resolved.SourceURL); err != nil {
-			return fmt.Errorf("citation %q: %w", c.Code, err)
 		}
 		for _, other := range cited[c.Code] {
 			if other == c.Territory || other == AnySender || c.Territory == AnySender {
@@ -169,6 +159,25 @@ func (r Rules) validateCitations() error {
 			}
 		}
 		cited[c.Code] = append(cited[c.Code], c.Territory)
+	}
+	return nil
+}
+
+// validateCitation checks one citation on its own: its code, its territory and
+// the provision and source it resolves to.
+func (r Rules) validateCitation(c Citation) error {
+	if strings.TrimSpace(c.Code) == "" || strings.TrimSpace(c.Code) != c.Code {
+		return fmt.Errorf("citation code %q is empty or padded", c.Code)
+	}
+	if err := c.Territory.Validate(); err != nil {
+		return fmt.Errorf("citation %q: %w", c.Code, err)
+	}
+	resolved, err := r.ResolveCitation(c)
+	if err != nil {
+		return err
+	}
+	if err := validateSourceURL(resolved.SourceURL); err != nil {
+		return fmt.Errorf("citation %q: %w", c.Code, err)
 	}
 	return nil
 }

@@ -69,34 +69,76 @@ func TestACitationIsResolvedAgainstTheRecipientsPackAndSender(t *testing.T) {
 		want      citationOutcome
 		provision string
 	}{
-		{"the instrument's own provision fills an empty one", commsauthz.ReasonFrequencyCapReached,
-			citationContext{Recipient: RecipientCountry{Code: a}, At: soon}, citationShown, "§1"},
-		{"the same code cites other law in another market", commsauthz.ReasonFrequencyCapReached,
-			citationContext{Recipient: RecipientCountry{Code: b}, At: soon}, citationShown, "§5"},
-		{"a recipient no pack covers has none", commsauthz.ReasonFrequencyCapReached,
-			citationContext{Recipient: RecipientCountry{Code: "yq"}, At: soon}, citationNotDeclared, ""},
-		{"a code the pack does not cite has none", commsauthz.ReasonHardBounce,
-			citationContext{Recipient: RecipientCountry{Code: a}, At: soon}, citationNotDeclared, ""},
-		{"a sender established here is not cited as foreign", DraftForeignAdvertiser,
-			citationContext{Recipient: RecipientCountry{Code: a}, Sender: a, At: soon}, citationNotDeclared, ""},
-		{"a sender established elsewhere is", DraftForeignAdvertiser,
-			citationContext{Recipient: RecipientCountry{Code: a}, Sender: b, At: soon}, citationShown, "§9"},
-		{"an unknown sender counts as elsewhere, as the finding does", DraftForeignAdvertiser,
-			citationContext{Recipient: RecipientCountry{Code: a}, At: soon}, citationShown, "§9"},
-		{"an overdue review withholds the pack's citations", commsauthz.ReasonFrequencyCapReached,
-			citationContext{Recipient: RecipientCountry{Code: a}, At: reviewDue.Add(time.Second)}, citationReviewOverdue, ""},
-		{"a review due this instant is not yet overdue", commsauthz.ReasonFrequencyCapReached,
-			citationContext{Recipient: RecipientCountry{Code: a}, At: reviewDue}, citationShown, "§1"},
-		{"an expired law withholds its own citation", commsauthz.ReasonNoMarketingConsent,
-			citationContext{Recipient: RecipientCountry{Code: a}, At: lawEnds}, citationLawExpired, ""},
-		{"a law in force is cited", commsauthz.ReasonNoMarketingConsent,
-			citationContext{Recipient: RecipientCountry{Code: a}, At: soon}, citationShown, "§2"},
-		{"a review dated tomorrow approves nothing today", commsauthz.ReasonFrequencyCapReached,
-			citationContext{Recipient: RecipientCountry{Code: reviewedLater}, At: soon}, citationNotYetReviewed, ""},
-		{"the same pack cites once its review instant has come", commsauthz.ReasonFrequencyCapReached,
-			citationContext{Recipient: RecipientCountry{Code: reviewedLater}, At: reviewTomorrow}, citationShown, "§1"},
-		{"a law not yet in force is not", commsauthz.ReasonConsentWithdrawn,
-			citationContext{Recipient: RecipientCountry{Code: a}, At: soon}, citationNotInForce, ""},
+		{
+			"the instrument's own provision fills an empty one", commsauthz.ReasonFrequencyCapReached,
+			citationContext{Recipient: RecipientCountry{Code: a}, At: soon},
+			citationShown, "§1",
+		},
+		{
+			"the same code cites other law in another market", commsauthz.ReasonFrequencyCapReached,
+			citationContext{Recipient: RecipientCountry{Code: b}, At: soon},
+			citationShown, "§5",
+		},
+		{
+			"a recipient no pack covers has none", commsauthz.ReasonFrequencyCapReached,
+			citationContext{Recipient: RecipientCountry{Code: "yq"}, At: soon},
+			citationNotDeclared, "",
+		},
+		{
+			"a code the pack does not cite has none", commsauthz.ReasonHardBounce,
+			citationContext{Recipient: RecipientCountry{Code: a}, At: soon},
+			citationNotDeclared, "",
+		},
+		{
+			"a sender established here is not cited as foreign", DraftForeignAdvertiser,
+			citationContext{Recipient: RecipientCountry{Code: a}, Sender: a, At: soon},
+			citationNotDeclared, "",
+		},
+		{
+			"a sender established elsewhere is", DraftForeignAdvertiser,
+			citationContext{Recipient: RecipientCountry{Code: a}, Sender: b, At: soon},
+			citationShown, "§9",
+		},
+		{
+			"an unknown sender counts as elsewhere, as the finding does", DraftForeignAdvertiser,
+			citationContext{Recipient: RecipientCountry{Code: a}, At: soon},
+			citationShown, "§9",
+		},
+		{
+			"an overdue review withholds the pack's citations", commsauthz.ReasonFrequencyCapReached,
+			citationContext{Recipient: RecipientCountry{Code: a}, At: reviewDue.Add(time.Second)},
+			citationReviewOverdue, "",
+		},
+		{
+			"a review due this instant is not yet overdue", commsauthz.ReasonFrequencyCapReached,
+			citationContext{Recipient: RecipientCountry{Code: a}, At: reviewDue},
+			citationShown, "§1",
+		},
+		{
+			"an expired law withholds its own citation", commsauthz.ReasonNoMarketingConsent,
+			citationContext{Recipient: RecipientCountry{Code: a}, At: lawEnds},
+			citationLawExpired, "",
+		},
+		{
+			"a law in force is cited", commsauthz.ReasonNoMarketingConsent,
+			citationContext{Recipient: RecipientCountry{Code: a}, At: soon},
+			citationShown, "§2",
+		},
+		{
+			"a review dated tomorrow approves nothing today", commsauthz.ReasonFrequencyCapReached,
+			citationContext{Recipient: RecipientCountry{Code: reviewedLater}, At: soon},
+			citationNotYetReviewed, "",
+		},
+		{
+			"the same pack cites once its review instant has come", commsauthz.ReasonFrequencyCapReached,
+			citationContext{Recipient: RecipientCountry{Code: reviewedLater}, At: reviewTomorrow},
+			citationShown, "§1",
+		},
+		{
+			"a law not yet in force is not", commsauthz.ReasonConsentWithdrawn,
+			citationContext{Recipient: RecipientCountry{Code: a}, At: soon},
+			citationNotInForce, "",
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()

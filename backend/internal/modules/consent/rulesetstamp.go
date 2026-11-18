@@ -35,7 +35,7 @@ type rulesetStampValue struct {
 	// Digest is the pack's source digest, non-nil only with Version and only
 	// for a pack compiled from a source. The tag keeps it out of a fingerprint
 	// taken before the field existed.
-	Digest *string `json:",omitempty"`
+	Digest *string `json:",omitempty"` //nolint:tagliatelle // the stamp's fields marshal under their Go names
 }
 
 // rulesetStamp answers what to record about the rules that judged this message.
