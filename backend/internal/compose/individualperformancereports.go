@@ -104,6 +104,9 @@ func requireIndividualQuestion(
 func requireNamedQuestion(
 	ctx context.Context, tx pgx.Tx, spec reportSpec, requested RequestedScope, groupBy []string, filters map[string]any,
 ) error {
+	if err := requireIDFilterValues(spec, filters); err != nil {
+		return err
+	}
 	if err := requireNamedRecords(ctx, tx, spec, requested, filters); err != nil {
 		return err
 	}
@@ -111,7 +114,7 @@ func requireNamedQuestion(
 }
 
 // filterSeat reads the seat a filter value names. A value that is no id
-// names nobody, and the query refuses it as the caller's mistyped value.
+// names nobody, and the filter's id check refuses it before any statement binds.
 //
 //craft:ignore naked-any the value is the decoded JSON plan's, schemaless by design
 func filterSeat(value any) (ids.UUID, bool) {

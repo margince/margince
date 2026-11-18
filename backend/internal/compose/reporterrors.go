@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // reportFieldNotAllowedCode is the ONE 422 code crm.yaml declares for this
@@ -156,6 +157,44 @@ func (e *FilterValueNotAllowedError) MessageFault() (code, message string) {
 	return reportFieldNotAllowedCode,
 		e.Error() + " — " + analyticsquery.QuoteAsTextAdvice +
 			", or send true/false for a yes-or-no filter"
+}
+
+// FilterIDValueError refuses text that names no record in a filter over ids.
+// Bound as it is, Postgres would refuse it as a database fault, which the
+// operator's log reads as a server error.
+type FilterIDValueError struct{ Filter, Value string }
+
+func (e *FilterIDValueError) Error() string {
+	return fmt.Sprintf("report: this report's `%s` %s", slotFilters, analyticsquery.NotAnID(e.Filter, e.Value))
+}
+
+// MessageFault reuses the contract's one declared 422 code, for the reason
+// EmptyReportPlanError records below.
+func (e *FilterIDValueError) MessageFault() (code, message string) {
+	return reportFieldNotAllowedCode, e.Error() + " — " + analyticsquery.IDValueAdvice
+}
+
+// requireIDFilterValues refuses a value that no id column can hold, so a
+// malformed id never reaches a statement. A drill-through handle pins
+// dimensions too, so a name resolves as either.
+//
+//craft:ignore naked-any filter values are the decoded JSON plan, schemaless by design
+func requireIDFilterValues(spec reportSpec, filters map[string]any) error {
+	for _, key := range slices.Sorted(maps.Keys(filters)) {
+		expr, named := predicateExpr(spec, key)
+		value := filters[key]
+		if !named || value == nil || columnValueShapes[expr] != analyticsquery.ShapeID {
+			continue
+		}
+		text, ok := value.(string)
+		if !ok {
+			return &FilterValueNotAllowedError{Filter: key, Kind: analyticsquery.JSONShapeOf(value)}
+		}
+		if _, err := ids.Parse(text); err != nil {
+			return &FilterIDValueError{Filter: key, Value: text}
+		}
+	}
+	return nil
 }
 
 // reportFilterValue admits a caller's filter value, or refuses it as their

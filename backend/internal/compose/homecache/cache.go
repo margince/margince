@@ -128,7 +128,7 @@ func Serve[A Answer](
 ) (answer A, stale bool, err error) {
 	kept, age, hit, err := Lookup[A](ctx, c, reader, read, key)
 	if err != nil {
-		slog.ErrorContext(ctx, "a kept Home answer could not be read; reading it fresh", "read", read, "error", err)
+		logFault(ctx, "a kept Home answer could not be read; reading it fresh", read, err)
 	}
 	stale = hit && age > Life
 	served := hit && (!stale || read == Worklist)
@@ -153,6 +153,17 @@ func Serve[A Answer](
 	return kept, stale, nil
 }
 
+// logFault logs a cache fault at ERROR, or at DEBUG when the caller has left.
+// A departed client is normal navigation, and an alert on errors must not fire
+// on it.
+func logFault(ctx context.Context, msg string, read Read, err error) {
+	level := slog.LevelError
+	if ctx.Err() != nil && (errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded)) {
+		level = slog.LevelDebug
+	}
+	slog.Log(ctx, level, msg, slog.String("read", string(read)), slog.Any("error", err))
+}
+
 // keepFresh assembles the answer and keeps it, stamped before it was read.
 func keepFresh[A Answer](
 	ctx context.Context, c *Cache, reader ids.UUID, read Read, key string,
@@ -164,7 +175,7 @@ func keepFresh[A Answer](
 		return out, err
 	}
 	if stampErr != nil {
-		slog.ErrorContext(ctx, "the Home fence could not be read; the answer is not kept", "read", read, "error", stampErr)
+		logFault(ctx, "the Home fence could not be read; the answer is not kept", read, stampErr)
 		return out, nil
 	}
 	walk, err := walkOf(out)
@@ -172,7 +183,7 @@ func keepFresh[A Answer](
 		err = Store(ctx, c, reader, read, key, stamp, walk, out)
 	}
 	if err != nil {
-		slog.ErrorContext(ctx, "a Home answer could not be kept", "read", read, "error", err)
+		logFault(ctx, "a Home answer could not be kept", read, err)
 	}
 	return out, nil
 }

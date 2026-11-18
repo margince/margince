@@ -4,6 +4,7 @@
 package compose
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"slices"
@@ -31,8 +32,8 @@ func forgetHomeOnWrite(cache *homecache.Cache, log *slog.Logger) crmcontracts.Mi
 			next.ServeHTTP(&forgettingWriter{ResponseWriter: w, forget: func() {
 				// The write has committed and its answer is the caller's; a
 				// failure here leaves their Home behind by at most homecache.Life
-				// plus homecache.StaleGrace.
-				if err := cache.Forget(r.Context(), writers); err != nil {
+				// plus homecache.StaleGrace. A client gone by now must not cause one.
+				if err := cache.Forget(context.WithoutCancel(r.Context()), writers); err != nil {
 					log.Error("ending a writer's cached Home", "err", err)
 				}
 			}}, r)
