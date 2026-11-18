@@ -8,6 +8,7 @@ import type { MarginceCoreState } from "../../../design-system/margince-core";
 import {
   OnboardingStage,
   type StageProgress,
+  useStageTitleRescue,
 } from "../../../design-system/onboarding-stage";
 import { type Translator, useLocale, useT } from "../../../i18n";
 import { useCan } from "../../../lib/capability";
@@ -141,7 +142,9 @@ function shownStore(): ShownStore {
  * shell appears. The company act opens on the full-screen gate, so a flag set
  * at the scope's own mount would flip before the first workbench rendered.
  */
-const WorkbenchShown = createContext<ShownStore>(shownStore());
+// Outside a scope no earlier stage is known, so every shell is the first: a
+// module-wide default store would carry one mount's history into the next.
+const WorkbenchShown = createContext<ShownStore | null>(null);
 
 export function WorkbenchEntranceScope({
   children,
@@ -157,9 +160,9 @@ export function WorkbenchEntranceScope({
 // mid-animation.
 function useFirstWorkbench(): boolean {
   const shown = useContext(WorkbenchShown);
-  const [first] = useState(() => !shown.seen());
+  const [first] = useState(() => shown === null || !shown.seen());
   useEffect(() => {
-    shown.markSeen();
+    shown?.markSeen();
   }, [shown]);
   return first;
 }
@@ -211,6 +214,7 @@ export function ConversationWorkbench({
   const configured = useConfiguredModel(showsRuntime);
   const setupRuntime = useSetupRuntime(showsRuntime);
   const first = useFirstWorkbench();
+  useStageTitleRescue(railState.phase, !first);
   // Built here rather than per act, so four acts cannot drift into four
   // different ideas of where the journey is.
   const stops = railStops(railState.memberPath, railState.voiceStep);

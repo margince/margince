@@ -467,6 +467,12 @@
   overflow-wrap: break-word;
 }
 
+/* The step line wears the smallest heading's type without being a heading. */
+.ob-stage-board > .ob-stage-eyebrow {
+  margin: 0;
+  font: var(--fontHeadingXXSmall);
+}
+
 .ob-stage-title {
   margin: 0;
   color: var(--textPrimary);

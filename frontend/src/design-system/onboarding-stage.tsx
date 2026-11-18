@@ -79,6 +79,27 @@ export function useStageTitleFocus(board: string | undefined): void {
 }
 
 /**
+ * The same hand-off for a flow whose boards place focus themselves: the title
+ * takes it only when focus fell to the body. With `arrival`, a stage mounting
+ * after an earlier one counts as a swap, because each step mounts its own.
+ */
+export function useStageTitleRescue(
+  board: string | undefined,
+  arrival: boolean,
+): void {
+  const shown = useRef(arrival ? undefined : board);
+  useEffect(() => {
+    const lost =
+      document.activeElement === null ||
+      document.activeElement === document.body;
+    if (lost && board !== undefined && shown.current !== board) {
+      document.getElementById(STAGE_TITLE_ID)?.focus();
+    }
+    shown.current = board;
+  }, [board]);
+}
+
+/**
  * The Core's element id, for a surface that has to send something TO it.
  *
  * The crawl's evidence flies into the orb, and the orb is not inside the canvas
@@ -398,10 +419,10 @@ export function OnboardingStage({
             className="ob-stage-board arrive-stack"
             {...boardRegion}
           >
+            {/* A line, not a heading: before the title it would open the
+                outline at level 2. */}
             {eyebrow === undefined ? null : (
-              <Eyebrow as="h2" size="xxsmall">
-                {eyebrow}
-              </Eyebrow>
+              <Eyebrow className="ob-stage-eyebrow">{eyebrow}</Eyebrow>
             )}
             {/* A STABLE id, because on a screen whose title is the question
                 itself the board below is answering this heading, and a control

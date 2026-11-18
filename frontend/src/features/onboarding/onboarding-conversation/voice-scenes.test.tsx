@@ -198,6 +198,33 @@ describe("VoiceCollectScene", () => {
     expect(screen.queryByLabelText("Paste the text you wrote here")).toBeNull();
   });
 
+  it("puts the cursor in the paste box when it opens, and Escape hands focus back", async () => {
+    const user = userEvent.setup();
+    collectScene({});
+    const opener = screen.getByRole("button", { name: "Paste text instead" });
+
+    await user.click(opener);
+    const field = screen.getByLabelText("Paste the text you wrote here");
+    expect(document.activeElement).toBe(field);
+
+    await user.keyboard("{Escape}");
+    expect(screen.queryByLabelText("Paste the text you wrote here")).toBeNull();
+    expect(document.activeElement).toBe(opener);
+  });
+
+  it("hands focus back to the opener once a paste is added", async () => {
+    const user = userEvent.setup();
+    collectScene({});
+    const opener = screen.getByRole("button", { name: "Paste text instead" });
+
+    await user.click(opener);
+    await user.keyboard("A paragraph I wrote.");
+    await user.click(
+      screen.getByRole("button", { name: "Add to writing samples" }),
+    );
+    expect(document.activeElement).toBe(opener);
+  });
+
   // Why the step is worth doing is available on the scene, behind its own
   // control rather than above the drop target. The control has to name what it
   // opens, and what it opens has to be the rationale — a disclosure whose body

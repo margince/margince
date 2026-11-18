@@ -124,8 +124,8 @@ function VoiceCorpusFloorMeter({
 // The meter under it says the same count in words, so the drawing is decoration.
 const PRINT_MIN_AMPLITUDE = 0.25;
 
-// The sources the latest pick could not add, one line each, drawn beside the
-// controls that took them: the board scrolls, and its foot is out of sight.
+// The sources the latest pick could not add, one line each, beside the
+// controls that took them. The board scrolls, and its foot is out of sight.
 function IntakeRefusals({
   failures,
 }: Readonly<{ failures: readonly VoiceIngestFailure[] }>) {
@@ -212,6 +212,23 @@ export function VoiceCollectScene({
       });
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteText, setPasteText] = useState("");
+  const pasteOpener = useRef<HTMLButtonElement>(null);
+  const pasteField = useRef<HTMLTextAreaElement>(null);
+  const pasteWasOpen = useRef(false);
+  // Opening the box puts the cursor in it; closing it unmounts the button
+  // just pressed, so focus goes back to the one that opened it.
+  useEffect(() => {
+    if (pasteOpen) {
+      pasteField.current?.focus();
+    } else if (pasteWasOpen.current) {
+      pasteOpener.current?.focus();
+    }
+    pasteWasOpen.current = pasteOpen;
+  }, [pasteOpen]);
+  const closePaste = () => {
+    setPasteText("");
+    setPasteOpen(false);
+  };
   return (
     <VoiceScene wide>
       <VoiceHeroBand />
@@ -237,7 +254,11 @@ export function VoiceCollectScene({
               <Button onClick={() => fileRef.current?.click()}>
                 {t("ob.conv.voice.browse")}
               </Button>
-              <Button variant="ghost" onClick={() => setPasteOpen(true)}>
+              <Button
+                ref={pasteOpener}
+                variant="ghost"
+                onClick={() => setPasteOpen(true)}
+              >
                 {t("ob.conv.voice.pasteInstead")}
               </Button>
             </div>
@@ -252,12 +273,18 @@ export function VoiceCollectScene({
             {pasteOpen && (
               <div className="ob-voice-paste">
                 <textarea
+                  ref={pasteField}
                   className="ob-voice-paste-area"
                   rows={5}
                   value={pasteText}
                   placeholder={t("ob.conv.voice.composer")}
                   aria-label={t("ob.conv.voice.composer")}
                   onChange={(event) => setPasteText(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Escape") {
+                      closePaste();
+                    }
+                  }}
                 />
                 <div className="ob-voice-drop-acts">
                   <Button
@@ -265,19 +292,12 @@ export function VoiceCollectScene({
                     disabled={pasteText.trim() === ""}
                     onClick={() => {
                       onAddPaste(pasteText.trim());
-                      setPasteText("");
-                      setPasteOpen(false);
+                      closePaste();
                     }}
                   >
                     {t("ob.conv.voice.pasteAdd")}
                   </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      setPasteText("");
-                      setPasteOpen(false);
-                    }}
-                  >
+                  <Button variant="ghost" onClick={closePaste}>
                     {t("ob.conv.voice.pasteDiscard")}
                   </Button>
                 </div>
