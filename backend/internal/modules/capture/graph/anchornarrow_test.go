@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -36,13 +37,20 @@ type spreadProvider struct {
 
 func newSpreadProvider(t *testing.T, n int) *spreadProvider {
 	t.Helper()
-	p := &spreadProvider{n: n, base: time.Now().UTC().Add(-time.Duration(n+60) * time.Minute).Truncate(time.Minute)}
+	p := &spreadProvider{n: n, base: clocktest.Now(t).Add(-time.Duration(n+60) * time.Minute).Truncate(time.Minute)}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/me/mailFolders/inbox/messages/delta", p.servePage)
 	mux.HandleFunc("/me/mailFolders/inbox/messages", p.serveTally)
 	p.srv = httptest.NewServer(mux)
 	t.Cleanup(p.srv.Close)
 	return p
+}
+
+// api reads p over HTTP at an hour past its newest message.
+func (p *spreadProvider) api() *httpAPI {
+	api := newHTTPAPI(p.srv.Client(), p.srv.URL, personalMailbox)
+	api.now = func() time.Time { return p.received(p.n).Add(time.Hour) }
+	return api
 }
 
 func (p *spreadProvider) received(i int) time.Time { return p.base.Add(time.Duration(i) * time.Minute) }
@@ -160,7 +168,7 @@ func (n *narrowRecorder) NarrowSyncAnchor(_ context.Context, from, to time.Time)
 func TestAFreshAnchorPastTheCapNarrowsBeforeWalking(t *testing.T) {
 	p := newSpreadProvider(t, anchorSeenCap+20_000)
 	pages := 0
-	_, err := NewAPI(p.srv.Client(), p.srv.URL).DeltaInit(context.Background(), "access", folderInbox, p.base, nil,
+	_, err := p.api().DeltaInit(context.Background(), "access", folderInbox, p.base, nil,
 		func(context.Context, DeltaPage) error { pages++; return nil })
 	assertNarrowed(t, p, err)
 	if pages != 0 {
@@ -174,7 +182,7 @@ func TestAnAnchorThatOutgrowsTheCapWhileWalkedNarrows(t *testing.T) {
 	p := newSpreadProvider(t, anchorSeenCap-1_000)
 	p.churn = 2_000
 	pages := 0
-	_, err := NewAPI(p.srv.Client(), p.srv.URL).DeltaInit(context.Background(), "access", folderInbox, p.base, nil,
+	_, err := p.api().DeltaInit(context.Background(), "access", folderInbox, p.base, nil,
 		func(context.Context, DeltaPage) error { pages++; return nil })
 	assertNarrowed(t, p, err)
 	if pages == 0 {
@@ -205,7 +213,7 @@ type narrowedFolder struct {
 // checks every message of the narrowed window was captured.
 func pullNarrowed(t *testing.T, p *spreadProvider) narrowedFolder {
 	t.Helper()
-	api := &pagedAPI{API: NewAPI(p.srv.Client(), p.srv.URL)}
+	api := &pagedAPI{API: p.api()}
 	conn := New(&fakeOAuth{access: "access-1"}, api)
 	recorder := &narrowRecorder{}
 	ctx := connector.WithSyncCheckpointer(context.Background(), recorder)
@@ -273,7 +281,7 @@ func TestAFolderThatTripsTheCapMidWalkDropsTheOversizedRound(t *testing.T) {
 // narrowing existed. A span skipped without a record is mail lost silently.
 func TestANarrowingNobodyRecordsStopsTheRound(t *testing.T) {
 	p := newSpreadProvider(t, anchorSeenCap+20_000)
-	api := &pagedAPI{API: NewAPI(p.srv.Client(), p.srv.URL)}
+	api := &pagedAPI{API: p.api()}
 	conn := New(&fakeOAuth{access: "access-1"}, api)
 
 	_, err := conn.pullFolder(context.Background(), "access", folderInbox, &cursorState{}, p.base, &recordingSink{}, owner)

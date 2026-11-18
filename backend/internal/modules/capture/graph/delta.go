@@ -268,7 +268,7 @@ func (a *httpAPI) anchorStart(folder string, after time.Time, resume *DeltaResum
 		paramFilter: {receivedAfterFilter(after)},
 		paramSelect: {"id,receivedDateTime"},
 	}
-	return newAnchorCensus(after, time.Now().UTC()),
+	return newAnchorCensus(after, a.now().UTC()),
 		a.root() + "/mailFolders/" + url.PathEscape(folder) + "/messages/delta?" + q.Encode(), nil
 }
 

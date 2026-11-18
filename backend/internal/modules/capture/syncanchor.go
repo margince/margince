@@ -203,7 +203,8 @@ func settleUnreadPeriodTx(ctx context.Context, tx pgx.Tx, backfillID ids.UUID) e
 		       unread_to   = CASE WHEN run.since <= c.unread_from THEN NULL ELSE LEAST(c.unread_to, run.since) END
 		  FROM (SELECT connection_id, after_date::timestamp AT TIME ZONE 'UTC' AS since, created_at
 		          FROM capture_backfill WHERE id = $1) run
-		 WHERE c.id = run.connection_id AND c.unread_from IS NOT NULL AND run.created_at >= c.unread_to`,
+		 WHERE c.id = run.connection_id AND c.archived_at IS NULL
+		   AND c.unread_from IS NOT NULL AND run.created_at >= c.unread_to`,
 		backfillID)
 	if err != nil {
 		return fmt.Errorf("capture: settling the unread period an import read: %w", err)
