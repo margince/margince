@@ -389,16 +389,12 @@ var shareExportColumns = []string{
 	"in_won", "in_open", "exclusion_reason",
 	"weighted_minor", "typed_probability", "chance_in_use", "evidence_n", "risk_signals", "risk_effect",
 	"self_correcting", "risk_signal_facts", "range_low_minor", "range_high_minor",
-	"contributions_limited", "contributions_limited_reason",
-	"base_currency",
+	"contributions_limited", "contributions_limited_reason", "base_currency",
 }
 
-// shareRowsCSV renders the rows, neutralising formula leads through the same
-// rowvalue.CSVScalar every other export uses.
-// selfCorrecting is the snapshot's own, repeated on each row so a sheet filtered
-// to some rows still says which definition they were frozen under. The range and
-// the contributions_limited flag and its reason are the shared headline's, repeated the same way.
-// baseCurrency names the currency of the base, weighted and range columns.
+// shareRowsCSV renders the rows through rowvalue.CSVScalar, which neutralises formula
+// leads. Snapshot-wide cells repeat on each row. A filtered sheet then still says
+// how it was frozen and the currency of its base, weighted and range columns.
 func shareRowsCSV(frozen frozenForReader, selfCorrecting *bool, baseCurrency string) ([]byte, error) {
 	var low, high *int64
 	if frozen.Range != nil {
@@ -419,8 +415,7 @@ func shareRowsCSV(frozen frozenForReader, selfCorrecting *bool, baseCurrency str
 			csvCellPtr(row.WeightedMinor), csvCellPtr(row.TypedProbability), csvCellPtr(row.ChanceInUse),
 			csvCellPtr(row.EvidenceN), rowvalue.CSVScalar(strings.Join(row.Signals, ";")), csvCellPtr(row.Effect),
 			csvCellPtr(selfCorrecting), csvCellPtr(row.SignalFacts), csvCellPtr(low), csvCellPtr(high),
-			rowvalue.CSVScalar(frozen.Limited), rowvalue.CSVScalar(frozen.Reason),
-			rowvalue.CSVScalar(baseCurrency),
+			rowvalue.CSVScalar(frozen.Limited), rowvalue.CSVScalar(frozen.Reason), rowvalue.CSVScalar(baseCurrency),
 		}
 		if err := out.Write(record); err != nil {
 			return nil, fmt.Errorf("compose: writing an export row: %w", err)
