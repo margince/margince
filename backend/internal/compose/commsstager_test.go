@@ -130,3 +130,21 @@ func TestTheStagingRefusalNamesNobody(t *testing.T) {
 		t.Errorf("the refusal names the recipient: %q", got)
 	}
 }
+
+// The staging refusal names the cause the review ranks first, not the first
+// recipient the engine decided about. A log or a client without the review
+// then reads the same first refusal as the composer.
+func TestStagingNamesTheRefusalTheReviewRanksFirst(t *testing.T) {
+	set := commsauthz.DecisionSet{Decisions: []commsauthz.Decision{
+		{Recipient: connector.Recipient{Email: "unproven@a.test"}, Verdict: commsauthz.VerdictReview, ReasonCode: commsauthz.ReasonNoEvidence, Mode: commsauthz.ModeEnforce},
+		{Recipient: connector.Recipient{Email: "objected@a.test"}, Verdict: commsauthz.VerdictDeny, ReasonCode: commsauthz.ReasonObjection, Mode: commsauthz.ModeEnforce},
+		{Recipient: connector.Recipient{Email: "bounced@a.test"}, Verdict: commsauthz.VerdictDeny, ReasonCode: commsauthz.ReasonHardBounce, Mode: commsauthz.ModeEnforce},
+	}}
+	err := refuseAtStaging(set)
+	if !errors.Is(err, apperrors.ErrConsentNotGranted) {
+		t.Fatalf("refuseAtStaging = %v, want a consent refusal", err)
+	}
+	if want := "(" + commsauthz.ReasonHardBounce + ")"; !strings.Contains(err.Error(), want) {
+		t.Errorf("refusal %q does not name %s", err.Error(), want)
+	}
+}

@@ -277,7 +277,16 @@ func refuseAtStaging(set commsauthz.DecisionSet) error {
 		return nil
 	}
 	return fmt.Errorf("consent: %d of %d recipients may not be written to (%s): %w",
-		len(denied), len(set.Decisions), denied[0].ReasonCode, apperrors.ErrConsentNotGranted)
+		len(denied), len(set.Decisions), leadingRefusal(set, denied), apperrors.ErrConsentNotGranted)
+}
+
+// leadingRefusal is the reason the review and the 409 name first, so a log
+// and a client without the review read the same cause.
+func leadingRefusal(set commsauthz.DecisionSet, denied []commsauthz.Decision) string {
+	if blocking := consent.BlockingRefusals(set); len(blocking) > 0 {
+		return blocking[0].ReasonCode
+	}
+	return denied[0].ReasonCode
 }
 
 // anyEnforcedDenial reports whether a refusal was taken under a category this
