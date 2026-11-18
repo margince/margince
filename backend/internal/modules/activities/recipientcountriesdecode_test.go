@@ -14,7 +14,7 @@ import (
 )
 
 // Two statements about one address, however it is spelled, are refused at
-// every door that takes them, so no reader of the list can pick a different one.
+// every door that takes them. No reader of the list can then pick another one.
 func TestEveryDoorRefusesTwoCountriesForOneRecipient(t *testing.T) {
 	de, at := "DE", "at"
 	twice := &[]crmcontracts.RecipientCountry{

@@ -45,7 +45,7 @@ func (e *resolveEnv) stagedReason(t *testing.T, req commsauthz.Request) string {
 	return d.ReasonCode
 }
 
-// A record outside the warning's law, and a country stated inside it: the
+// A record outside the warning's law, and a country stated inside it. The
 // preview warns, the confirmation is taken under the stated country, and
 // staging spends it.
 func TestAConfirmationFollowsAStatedCountryIntoTheWarning(t *testing.T) {
@@ -70,8 +70,8 @@ func TestAConfirmationFollowsAStatedCountryIntoTheWarning(t *testing.T) {
 	}
 }
 
-// A record inside the warning's law, and the other way round: a cleared
-// country owes no warning, and a confirmation given under one country is not
+// A record inside the warning's law, and the other way round. A cleared
+// country owes no warning. A confirmation given under one country is not
 // spent by a send judged under another.
 func TestAConfirmationIsSpentOnlyUnderItsOwnCountry(t *testing.T) {
 	e, _ := statedEnv(t)
