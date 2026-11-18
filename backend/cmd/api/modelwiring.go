@@ -172,7 +172,10 @@ func modelPathFor(ctx context.Context, cfg ai.RoutingConfig, spec modelPathSpec,
 func liveState(router *ai.Router, boot string) func() string {
 	bootVersion := router.RoutingVersion()
 	return func() string {
-		if boot != compose.AIStateConfigured && router.RoutingVersion() == bootVersion {
+		switch {
+		case !router.Bound():
+			return compose.AIStateUnconfigured
+		case boot == compose.AIStateFake && router.RoutingVersion() == bootVersion:
 			return boot
 		}
 		return compose.AIStateConfigured

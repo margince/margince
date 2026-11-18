@@ -141,9 +141,7 @@ func NewRouter(cfg RoutingConfig, meter *Meter, budget BudgetPolicy, calls callS
 func NewUnboundRouter(meter *Meter, budget BudgetPolicy, calls callStore, capturePayloads bool, log *slog.Logger) *Router {
 	router := assembleRouter(nil, nil, "", meter, budget, calls, nil, capturePayloads, log)
 	router.restrictionsRequired = true
-	unbound := *router.binding()
-	unbound.public = NewPublicProfile("unconfigured", RoutingConfig{})
-	router.install(unbound)
+	router.Unbind()
 	return router
 }
 
@@ -202,14 +200,10 @@ func (r *Router) serveCompletion(ctx context.Context, task Task, ladder []Tier, 
 	// survivable when it began announcing a start, because the start is
 	// committed durable state that only this flush closes.
 	//
-	// The binding is loaded HERE and not carried out of serveAttempt, so a
-	// rebind during the call files the trace under the configuration current at
-	// flush rather than the one that served it. That is pre-existing and
-	// unchanged by this defer — serveAttempt owns its own `b` and does not
-	// publish it — but the comment that used to sit here claimed the opposite,
-	// and a false claim about which configuration a trace names is worse than
-	// the gap it hid.
-	defer func() { r.flushDetached(ctx, r.binding(), lc) }()
+	// The binding is read here, at the start, as CompleteStructured does. A
+	// rebind during the call then files the trace under the binding the call
+	// started on, not the one current at flush.
+	defer r.flushDetached(ctx, r.binding(), lc)
 	return r.serveAttempt(ctx, lc, task, ladder, req, "")
 }
 

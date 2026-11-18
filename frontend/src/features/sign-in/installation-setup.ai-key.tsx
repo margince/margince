@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import { VertexLocationField } from "../../components/vertex-location";
 import { Field, TextInput } from "../../design-system/atoms";
@@ -28,6 +28,7 @@ function useRoutingLock() {
 
 export function useBindModels() {
   const locked = useRoutingLock().disabled;
+  const queryClient = useQueryClient();
   const bind = useMutation({
     // Same reasoning as the provider-key mutation: nothing here is a secret,
     // but the two settle together and a stale binding on screen after a
@@ -83,10 +84,13 @@ export function useBindModels() {
         }),
       );
     },
-    // No invalidation: re-reading the setup report moves the screen on, and
+    // The assistant profile follows the binding at once. The setup report does
+    // not: re-reading it moves the screen on, and
     // the binding is the moment the ignition marks. The refetch waits for the
     // reader to press past it (`onDone`); a reload mid-sequence finds
     // `ai_models` configured and loses nothing but the ceremony.
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["assistant-profile"] }),
   });
   // The lock travels as a variable, read by the render that drew the press.
   return {

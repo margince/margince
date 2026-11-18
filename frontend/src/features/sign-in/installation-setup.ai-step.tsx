@@ -262,6 +262,7 @@ export function AiStep({
     saveKey.reset();
     bind.reset();
     testKey.reset();
+    removeKey.reset();
     setKeyRefusal(undefined);
     saveKey.mutate(
       {
@@ -311,7 +312,10 @@ export function AiStep({
       <Panel title={panel?.title} actions={panel && actions}>
         <PanelBody className="form-stack">
           {panel && <PanelIntro>{panel.intro}</PanelIntro>}
-          <AiBindRefused keyError={saveKey.error} bindError={bind.error} />
+          <AiBindRefused
+            keyError={saveKey.error ?? removeKey.error}
+            bindError={bind.error}
+          />
           <Field label={t("firstRun.ai.provider")}>
             {(control) => (
               <Select

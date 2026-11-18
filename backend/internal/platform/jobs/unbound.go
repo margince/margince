@@ -5,10 +5,21 @@ package jobs
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	"github.com/riverqueue/river"
+
+	"github.com/margince/margince/backend/internal/platform/httperr"
 )
+
+// requestedModelWork names the gates of kinds somebody queued on purpose. While
+// no model is bound they still run and fail with their reason, because a
+// request that completes without doing anything reads as work that was done.
+var requestedModelWork = map[string]bool{
+	"DeepReadBrain": true, "DocumentExtractBrain": true, "TranscriptProposeBrain": true,
+	"AccountScanBrain": true, "VoiceBrain": true,
+}
 
 // dependsOnModel says whether a registration gate names an AI lane. The
 // declaration already states this: a kind gated on a Brain, the Embedder or
@@ -16,6 +27,15 @@ import (
 func dependsOnModel(when []string) bool {
 	for _, field := range when {
 		if strings.HasSuffix(field, "Brain") || field == "Embedder" || field == "AgentScheduler.Service" {
+			return true
+		}
+	}
+	return false
+}
+
+func isRequestedModelWork(when []string) bool {
+	for _, field := range when {
+		if requestedModelWork[field] {
 			return true
 		}
 	}
@@ -34,14 +54,23 @@ func (w quietWorker[T]) Work(ctx context.Context, job *river.Job[T]) error {
 	return w.work.Work(ctx, job)
 }
 
-// QuietWhileUnbound completes a model job as a no-op while no model is bound.
-// It applies to a kind that registers nothing without its lane: a role booted
-// with no model never ran it, and a bound-later role must not start failing it
-// first. A kind that registers anyway is a request somebody queued and still
-// runs, so it fails with its reason. A nil bound leaves the worker alone.
+// QuietWhileUnbound completes a gated model job as a no-op while no model is
+// bound, with no error for River to retry. A nil bound leaves the worker alone.
+// Kinds the declaration does not gate on a model lane are covered after the
+// call by quietOnUnboundRefusal.
 func QuietWhileUnbound[T river.JobArgs](w WorkOnly[T], s Spec, bound func() bool) WorkOnly[T] {
-	if bound == nil || s.Registration.AbsentRegistersAnyway || !dependsOnModel(s.Registration.When) {
+	if bound == nil || isRequestedModelWork(s.Registration.When) || !dependsOnModel(s.Registration.When) {
 		return w
 	}
 	return quietWorker[T]{work: w, bound: bound}
+}
+
+// quietOnUnboundRefusal turns the refusal an unbound router gives into a clean
+// completion, for a job that reached a model call. Requested model work keeps
+// its failure.
+func quietOnUnboundRefusal(err error, s Spec) error {
+	if errors.Is(err, httperr.ErrNotConfigured) && !isRequestedModelWork(s.Registration.When) {
+		return nil
+	}
+	return err
 }

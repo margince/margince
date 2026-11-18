@@ -16,6 +16,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"errors"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -548,5 +549,28 @@ func assertProfileModels(t *testing.T, profile ai.PublicProfile, want map[string
 	}
 	if !maps.Equal(got, want) {
 		t.Errorf("profile models = %v, want %v", got, want)
+	}
+}
+
+// Removing the stored binding unbinds the router, and the state and profile every
+// surface reads follow it.
+func TestARemovedBindingReadsUnconfiguredEverywhere(t *testing.T) {
+	cfg, err := ai.ParseRouting([]byte("profile: eu_hosted\ntiers:\n  premium: {provider: ollama, model: m}\nembeddings: {provider: fake}\n"))
+	if err != nil {
+		t.Fatalf("ParseRouting: %v", err)
+	}
+	modelPath, state, profile, err := modelPathFor(context.Background(), cfg, modelPathSpec{}, nil, discardLogger())
+	if err != nil || state() != compose.AIStateConfigured {
+		t.Fatalf("modelPathFor = state %q err %v, want a configured path", state(), err)
+	}
+	modelPath.Router().Unbind()
+	if got := state(); got != compose.AIStateUnconfigured {
+		t.Errorf("state after the binding was removed = %q, want unconfigured", got)
+	}
+	if got := profile().State; got != "unconfigured" {
+		t.Errorf("profile after the binding was removed = %q, want unconfigured", got)
+	}
+	if _, laneErr := modelPath.Rewrite.Complete(context.Background(), model.Request{}); !errors.Is(laneErr, httperr.ErrNotConfigured) {
+		t.Errorf("a lane call after removal answered %v, want the not-configured refusal", laneErr)
 	}
 }

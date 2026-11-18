@@ -10,7 +10,6 @@ package ai
 // different lifetimes now that the second can change under the first.
 
 import (
-	"net/http"
 	"slices"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -181,6 +180,29 @@ func (r *Router) Bound() bool {
 	return r.binding().public.State != crmcontracts.AssistantProfileStateUnconfigured
 }
 
+// Unbind returns the Router to serving nothing, which is what removing the
+// stored binding means: the provider it named is not called again, and a call
+// is refused as on a role that booted with none.
+func (r *Router) Unbind() {
+	replaced := r.binding().providers()
+	r.install(binding{public: NewPublicProfile("unconfigured", RoutingConfig{})})
+	r.cache.clear()
+	for _, provider := range replaced {
+		sharedProviderHealth.forget(provider)
+	}
+}
+
+// ServesOnlyFake reports whether every bound lane is the offline fake, the
+// dev binding a stored one never replaces by being absent.
+func (r *Router) ServesOnlyFake() bool {
+	for _, ref := range r.binding().boundModels() {
+		if ref.Provider != ProviderFake {
+			return false
+		}
+	}
+	return true
+}
+
 // refuseUnbound is the answer every model call gets before a binding exists:
 // the same 501 an operation answers on a role that wires no model. It rides
 // httperr, so each surface that returns the error as it came says exactly that.
@@ -188,10 +210,7 @@ func (r *Router) refuseUnbound() error {
 	if r.Bound() {
 		return nil
 	}
-	return &httperr.DetailedError{
-		Status: http.StatusNotImplemented, Code: "not_implemented",
-		Detail: "no AI model is bound yet; save one under Settings, AI models",
-	}
+	return httperr.ErrNotConfigured
 }
 
 // ConfiguredProfile is the public profile of the binding served now, so the

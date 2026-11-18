@@ -116,10 +116,17 @@ function mount(
   routingLocks?: unknown[],
   /** What the vendor says when the stored key is tested. */
   keyTest: Record<string, unknown> = { ok: true, model_count: 3 },
+  /** Whether the reader holds ai_routing:update, as an admin does. */
+  canBind = true,
 ) {
   const writes: { url: string; method: string; body: unknown }[] = [];
+  /** Every write and key test, in the order the server saw them. */
+  const order: string[] = [];
   const fetchMock = vi.fn(async (request: Request) => {
     const url = new URL(request.url).pathname;
+    if (request.method !== "GET") {
+      order.push(`${request.method} ${url}`);
+    }
     // A question to the vendor, not a write: it changes nothing here.
     if (request.method === "POST" && url.endsWith("/test")) {
       return jsonResponse({ provider: "gemini", ...keyTest });
@@ -143,7 +150,14 @@ function mount(
     // gave it, so the gate reads the session before it can hide the step.
     if (url.endsWith("/me")) {
       return jsonResponse(
-        meFixture({ allow: routingLocks ? { ai_routing: ["read"] } : {} }),
+        meFixture({
+          allow: {
+            ai_routing: [
+              ...(routingLocks ? (["read"] as const) : []),
+              ...(canBind ? (["update"] as const) : []),
+            ],
+          },
+        }),
       );
     }
     if (routingLocks && url.endsWith("/ai/routing")) {
@@ -168,7 +182,7 @@ function mount(
     </QueryClientProvider>
   );
   const { container } = render(<InstallationSetup />, { wrapper: Wrap });
-  return { writes, container, qc };
+  return { writes, order, container, qc };
 }
 
 /**
@@ -467,20 +481,28 @@ describe("the first-run setup gate", () => {
 
   it("asks the vendor about the stored key before it binds any tier", async () => {
     const user = userEvent.setup();
-    const { writes } = mount(setupReport(false, false));
+    const { order } = mount(setupReport(false, false));
     await screen.findByText("Choose a model provider");
     await user.type(screen.getByLabelText("API key"), "AIza-secret");
     await user.click(screen.getByRole("button", { name: "Continue" }));
     await screen.findByRole("heading", { name: "Model connected" });
-    const tested = vi
-      .mocked(globalThis.fetch)
-      .mock.calls.map(([request]) => (request as Request).url)
-      .findIndex((url) => url.endsWith("/ai/provider-keys/gemini/test"));
-    expect(tested).toBeGreaterThanOrEqual(0);
-    expect(writes.map((w) => w.url)).toEqual([
-      "/v1/ai/provider-keys/gemini",
-      "/v1/ai/routing",
+    expect(order).toEqual([
+      "PUT /v1/ai/provider-keys/gemini",
+      "POST /v1/ai/provider-keys/gemini/test",
+      "PUT /v1/ai/routing",
     ]);
+  });
+
+  it("shows nothing to a reader who may not bind a model", async () => {
+    const { qc } = mount(
+      setupReport(false, false),
+      [],
+      undefined,
+      undefined,
+      false,
+    );
+    await reportArrived(qc);
+    expect(screen.queryByText("Choose a model provider")).toBeNull();
   });
 
   it("binds nothing and removes the key when the vendor refuses it", async () => {
