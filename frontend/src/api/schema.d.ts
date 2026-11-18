@@ -30730,6 +30730,8 @@ export interface components {
              * @description The reader-team member who gets the follow-up work of mail whose sender no reader owns, and owns the contacts that mail creates. Null when none is named: mail whose sender no reader owns then creates no work and no contact.
              */
             backup_owner_id?: string | null;
+            /** @description A period no sync read: a first sync failed for longer than its held point, or the mailbox held more mail than one round can read. Importing the mailbox's history over it clears it. Absent when there is none. */
+            unread_period?: components["schemas"]["CaptureUnreadPeriod"];
         };
         SharedMailboxList: {
             items: components["schemas"]["SharedMailbox"][];
@@ -50636,7 +50638,7 @@ export interface components {
              */
             error_class?: string;
         };
-        /** @description The span between where a held first-sync anchor pointed and where the sync had to start instead. Both ends or neither: a start with no end is a period nobody can ask for again. */
+        /** @description The span between where a first sync was to read from and where it had to start instead. Both ends or neither: a start with no end is a period nobody can ask for again. */
         CaptureUnreadPeriod: {
             /**
              * Format: date-time
@@ -50676,7 +50678,7 @@ export interface components {
             /** @description Threads whose confidentiality question is still open, so their messages stay held. */
             threads_awaiting_verdict: number;
             /**
-             * @description A period no sync read, when a first sync failed for longer than the point it had held. Absent when there is none, which is the ordinary case.
+             * @description A period no sync read: a first sync failed for longer than the point it had held, or the mailbox held more mail than one round can read. A finished history import over it clears it. Absent when there is none, which is the ordinary case.
              *     It is reported because the alternative is a mailbox that looks synced and is missing a week. The backfill reaches this period, so the owner can ask for it back, and the dates are what they point it at.
              */
             unread_period?: components["schemas"]["CaptureUnreadPeriod"] | null;
