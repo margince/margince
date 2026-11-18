@@ -20,6 +20,7 @@ import {
   applyView,
   clearAll,
   filteredBy,
+  holdsCount,
   narrowedBy,
   type QueryDials,
   sortedColumn,
@@ -134,10 +135,7 @@ export function ListTable<Row>({
   body?: ReactNode;
   /** The alternate body carries its own count and continuation control. */
   bodyOwnsPaging?: boolean;
-  /**
-   * The body has settled with nothing in it. The grid's empty line, with its
-   * Clear filters, then heads the body, so both views say the same thing.
-   */
+  /** A settled body with nothing in it is headed by the grid's empty line. */
   bodyEmpty?: boolean;
   /**
    * The count sentence for a body that owns its own paging.
@@ -392,6 +390,12 @@ export function ListTable<Row>({
       emptyNote={emptyNote}
     />
   );
+  const held = holdsCount(bodyOwnsPaging, pending, dials, rows.length);
+  const emptyBlock = (
+    <div className="lt-emptyline">
+      <EmptyState>{emptyLine}</EmptyState>
+    </div>
+  );
 
   return (
     <ListSurface
@@ -416,9 +420,7 @@ export function ListTable<Row>({
               sortedBy: sortedColumn(columns, sort)?.header,
             })
       }
-      holdCount={
-        !bodyOwnsPaging && holdsCount(pending, narrowedBy(dials), rows.length)
-      }
+      holdCount={held}
       action={action}
       caption={caption}
       search={search}
@@ -456,16 +458,10 @@ export function ListTable<Row>({
     >
       <ListBulkBar selection={selection} all={all} hidden={!drawsOwnTable} />
       {short && !problem && rows.length === 0 ? (
-        <div className="lt-emptyline">
-          <EmptyState>{emptyLine}</EmptyState>
-        </div>
+        emptyBlock
       ) : body != null ? (
         <AnsweredSearch.Provider value={search?.answered}>
-          {bodyEmpty && !problem && (
-            <div className="lt-emptyline">
-              <EmptyState>{emptyLine}</EmptyState>
-            </div>
-          )}
+          {bodyEmpty && !problem && emptyBlock}
           {body}
         </AnsweredSearch.Provider>
       ) : (

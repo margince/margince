@@ -57,6 +57,7 @@ import {
   ConfirmAdvanceModal,
   type PendingAdvance,
 } from "./deal360/confirmadvance";
+import { useAdvanceDeal } from "./dealadvance";
 import {
   dealProjectFields,
   resolveDealProject,
@@ -68,7 +69,6 @@ import {
   BoardReopenModal,
   boardIsEmpty,
   DealBoardBody,
-  useAdvanceDeal,
   useBoardInteractions,
 } from "./deals.board";
 import { dealColumns } from "./deals.columns";

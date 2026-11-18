@@ -52,13 +52,13 @@ import { DealRoomTab } from "./deal360/dealroomtab";
 import { useDealTabCounts } from "./deal360/dealtabcounts";
 import { currentReplyTarget } from "./deal360/dealwaiting";
 import { useDealCoverage } from "./deal360/usedealcoverage";
+import { useAdvanceDeal } from "./dealadvance";
 import { DealAside } from "./dealaside";
 import { useDealEdit } from "./dealedit";
 import { DealFiles } from "./dealfiles";
 import { DealReferralLine } from "./dealpartner";
 import { DealProjectLine } from "./dealproject";
 import type { Deal, Offer, Stage } from "./deals";
-import { useAdvanceDeal } from "./deals.board";
 import { stagesInOrder } from "./deals.columns";
 import { DealDetailsDrawer } from "./deals.details";
 import { DealOverviewPane } from "./deals.overview";
@@ -134,9 +134,9 @@ function dealBand({
   return <p id={reasonId}>{reason}</p>;
 }
 
-// The pills under the deal's name: whose move it is, when a buyer is owed a
-// reply, then the deal's status, and whether it is archived as the board card
-// says.
+// The pills under the deal's name. They say whose move it is and when a buyer
+// is owed a reply. Then come the deal's status and, as on the board card,
+// whether it is archived.
 function DealPulsePills({
   status,
   archived,

@@ -1,4 +1,5 @@
 import type { Locale, Translator } from "../i18n";
+import { handScaledUnit } from "./compactscale";
 import { calendarDaysBetween } from "./format.dates";
 // The presentation edge (architecture/10 §1–3): everything here formats
 // ALREADY-stored values — minor units, UTC instants, IR-provided base
@@ -115,21 +116,6 @@ export function formatMoneyOrAbsent(
   );
 }
 
-const SCALES = {
-  thousand: 1_000,
-  million: 1_000_000,
-  billion: 1_000_000_000,
-} as const;
-// The scales Intl's compact notation does not abbreviate the way the locale
-// reads them: German has no short form for thousands ("12.345,6 $"), and
-// Vietnamese business usage is not CLDR's.
-const HAND_SCALED_UNITS: Partial<
-  Record<Locale, Partial<Record<keyof typeof SCALES, string>>>
-> = {
-  vi: { thousand: "K", million: " triệu", billion: " tỷ" },
-  de: { thousand: "\u00a0Tsd." },
-};
-
 /**
  * A money figure for a KPI SLOT: €428k rather than €428,000.00.
  *
@@ -157,13 +143,8 @@ export function formatMoneyCompact(
   if (!abbreviated && !Number.isInteger(major)) {
     return formatMoney(amountMinor, currency, locale);
   }
-  const magnitude =
-    Math.abs(major) >= SCALES.billion
-      ? "billion"
-      : Math.abs(major) >= SCALES.million
-        ? "million"
-        : "thousand";
-  const unit = abbreviated ? HAND_SCALED_UNITS[locale]?.[magnitude] : undefined;
+  const scaled = handScaledUnit(major, locale);
+  const unit = abbreviated ? scaled.unit : undefined;
   const formatter = new Intl.NumberFormat(INTL_LOCALE[locale], {
     style: "currency",
     currency,
@@ -181,7 +162,7 @@ export function formatMoneyCompact(
     roundingMode: "trunc",
   });
   if (unit === undefined) return formatter.format(major);
-  const parts = formatter.formatToParts(major / SCALES[magnitude]);
+  const parts = formatter.formatToParts(major / scaled.scale);
   const lastDigit = parts.reduce(
     (last, part, index) =>
       part.type === "integer" || part.type === "fraction" ? index : last,
