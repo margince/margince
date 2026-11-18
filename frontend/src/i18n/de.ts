@@ -7944,7 +7944,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.aboutDeal": "Deal, um den es geht",
   "compose.from.label": "Von",
   "compose.from.automatic":
-    "Postfach, in dem das Gespräch ankam, sonst Ihr Standard",
+    "Postfach, in dem das Gespräch ankam, sonst dein Standard",
   "compose.aboutDealNone": "Kein Deal",
   "compose.aboutDealUnavailable":
     "Die Deals des Kontakts konnten nicht geladen werden. Schreib stattdessen von der Seite des Deals.",
@@ -12367,7 +12367,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectors.menu.useForNewMail": "Neue Mails von diesem Postfach senden",
   "connectors.defaultSender": "Sendet neue Mails",
   "connectors.oauthOtherAccount":
-    "Sie haben sich mit einem anderen Konto als diesem Postfach angemeldet, daher wurde nichts geändert. Um dieses Konto auch zu verbinden, wählen Sie Weiteres Postfach hinzufügen.",
+    "Du hast dich mit einem anderen Konto als diesem Postfach angemeldet, daher wurde nichts geändert. Um dieses Konto auch zu verbinden, wähle Weiteres Postfach hinzufügen.",
   "connectors.providerNotConfigured":
     "{provider} ist in dieser Installation nicht konfiguriert.",
 
