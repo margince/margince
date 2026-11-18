@@ -239,7 +239,7 @@ It is due on a day the email names, such as "Deadline: 27 October", and has **No
 - The task takes the place of the email in your Worklist, and its source opens the email. If you can no longer open the email, you cannot read the task either.
 - Completing the task closes the request for every reader. Archiving it before it is done sends the request back to review, with no new task.
 - A reply closes only its own conversation, and does not prove the promised thing was sent. The task stays until someone handles it. When it is not clear whose task it is, Margince leaves the email for review.
-- Private mail is checked too, and its task is visible to you alone. The AI never reads mail marked confidential or held by hand. It also skips mail held because of who it is with, or because only colleagues are on it. Such mail counts as a request only when you wrote on its conversation first. An admin turns this off under **Settings → AI models → Tasks**, with **Check private mail for requests**. Then the AI reads no private mail.
+- Private mail is checked too, and its task is visible to you alone. The AI never reads mail marked confidential or held by hand. It also skips mail held because of who it is with, or because only colleagues are on it. Such mail counts as a request only when you wrote on its conversation first. An admin turns this off under **Settings → AI models → Tasks**, with **Check private mail for requests**, and the AI then reads no private mail.
 Also called: customer request, email nobody answered, email to-do, private email request.
 
 ### How do I answer a calendar invitation?
