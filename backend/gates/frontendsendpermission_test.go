@@ -17,9 +17,9 @@ package gates
 // same message.
 //
 // So every frontend file that names a send door either renders SendPermission
-// or is ratified here with what its silence costs. A surface that asks the
-// engine with the send itself, as the composer does with the inline review
-// switch on, counts when it draws the review the refused send carries.
+// or is ratified here with what its silence costs. The composer with the inline
+// review switch on asks the engine with the send itself. It counts when it draws
+// the review the refused send carries.
 //
 // The doors are DERIVED from the contract rather than listed: a send door is an
 // operation whose request body carries `operator_reason`, the field through
@@ -234,8 +234,8 @@ var rendersSendPermission = regexp.MustCompile(`<SendPermission[\s/>]`)
 var importsSendPermission = regexp.MustCompile(`from "[^"]*/sendpermission"`)
 
 // rendersSendReview and importsSendReview match the component that draws the
-// review a refused send carries, the answer of a surface that asks the engine
-// with the send itself rather than with a preview.
+// review a refused send carries. That is the answer of a surface that asks the
+// engine with the send itself.
 var (
 	rendersSendReview = regexp.MustCompile(`<(InlineBlockers|SendAnywayRows)[\s/>]`)
 	importsSendReview = regexp.MustCompile(`from "[^"]*/composesendanyway"`)
