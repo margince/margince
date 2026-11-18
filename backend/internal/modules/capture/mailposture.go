@@ -212,3 +212,31 @@ func refuseSharedWithoutOptInTx(ctx context.Context, tx pgx.Tx, posture string) 
 func mailPostureImage(provider, posture string) map[string]any {
 	return map[string]any{auditKeyProvider: provider, auditKeyPosture: posture}
 }
+
+// MailboxSettings is what the mail-posture route asks of one mailbox.
+type MailboxSettings struct {
+	// Posture is nil when the request leaves it as it is.
+	Posture        *string
+	ApplyToHistory bool
+	DefaultSender  bool
+}
+
+// SetMailboxSettings applies a posture, the default-sender mark, or both. A
+// request asking neither is refused.
+func (r *Registry) SetMailboxSettings(ctx context.Context, mb Mailbox, asked MailboxSettings) (ConnectionView, error) {
+	posture, applyToHistory, defaultSender := asked.Posture, asked.ApplyToHistory, asked.DefaultSender
+	if posture == nil && !defaultSender {
+		return ConnectionView{}, fmt.Errorf("capture: send a posture, default_sender, or both: %w", apperrors.ErrInvalidArgument)
+	}
+	var view ConnectionView
+	if posture != nil {
+		var err error
+		if view, err = r.SetMailPosture(ctx, mb, *posture, applyToHistory); err != nil {
+			return view, err
+		}
+	}
+	if defaultSender {
+		return r.SetDefaultSender(ctx, mb)
+	}
+	return view, nil
+}

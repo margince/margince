@@ -227,7 +227,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_connection
 
-35 columns · primary key `(id)` · referenced by 4 foreign keys
+36 columns · primary key `(id)` · referenced by 5 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -240,6 +240,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `connected_by` | `uuid` |  | Points at `app_user.id`. |
 | `context_tag_id` | `uuid` |  | Points at `tag.id`. |
 | `credential_ref` | `text` |  |  |
+| `default_sender` | `boolean`, default `false` | yes | True on the mailbox the member marked for new mail (`PUT /connectors/{provider}/mail-posture` with `default_sender`). |
 | `generation` | `integer`, default `0` | yes |  |
 | `history_baseline_date` | `date` |  |  |
 | `history_baseline_set_at` | `timestamp with time zone` |  |  |
@@ -291,6 +292,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 **Indexes**
 
 - `capture_connection_member_mailbox`: `unique, btree (user_id, provider, lower(account_label)) NULLS NOT DISTINCT WHERE (user_id IS NOT NULL)`
+- `capture_connection_one_default_sender`: `unique, btree (user_id) WHERE default_sender`
 - `capture_connection_shared_mailbox`: `unique, btree (provider, lower(account_label)) WHERE (user_id IS NULL)`
 - `connector_connection_pkey`: `unique, btree (id)`
 - `idx_capture_connection`: `btree (provider, status) WHERE (archived_at IS NULL)`
@@ -366,11 +368,12 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_exclusion
 
-7 columns · primary key `(id)` · referenced by 0 foreign keys
+8 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
+| `connection_id` | `uuid` |  | The mailbox a container rule matches in. |
 | `created_by` | `text` | yes |  |
 | `kind` | `text` | yes | One of `address`, `domain`, `container`. |
 | `scope` | `text` | yes | One of `workspace`, `user`. |
@@ -382,6 +385,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 | Columns | Table | When the parent goes |
 |---|---|---|
+| `connection_id` | `capture_connection` | deleting the parent deletes this row |
 | `user_id` | `app_user` | deleting the parent deletes this row |
 
 **Rules**
@@ -397,7 +401,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 - `capture_exclusion_pkey`: `unique, btree (id)`
 - `idx_capture_exclusion_user`: `btree (user_id)`
 - `idx_capture_exclusion_value`: `btree (kind, value)`
-- `uq_capture_exclusion`: `unique, btree (scope, user_id, kind, value) NULLS NOT DISTINCT`
+- `uq_capture_exclusion`: `unique, btree (scope, user_id, kind, value, connection_id) NULLS NOT DISTINCT`
 
 **Triggers**
 

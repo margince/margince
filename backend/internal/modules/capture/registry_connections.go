@@ -44,8 +44,8 @@ var ErrConnectorNotConfigured = errors.New("capture: no connector for this provi
 
 // sendableConnection is the row predicate both send-side lookups select on,
 // spelled once so the pre-flight and the transmission agree on what is live.
-// $3 names one connection. NULL asks for the member's first connected mailbox
-// of the provider.
+// $3 names one connection. NULL asks for the member's default of the provider:
+// the one they marked, else the first they connected.
 //
 // The status filter is SyncOnce's, and for the same reason: 'error' is a
 // degraded connection, not a dead one, and reading it as "no mailbox" would
@@ -54,7 +54,7 @@ var ErrConnectorNotConfigured = errors.New("capture: no connector for this provi
 const sendableConnection = `
 	 WHERE user_id = $1 AND provider = $2
 	   AND status IN ('connected','error') AND archived_at IS NULL AND ($3::uuid IS NULL OR id = $3)
-	 ORDER BY created_at, id LIMIT 1`
+	 ORDER BY default_sender DESC, created_at, id LIMIT 1`
 
 // GrantedScopesFor reports the scopes the PROVIDER says one user's live
 // connection holds — and resolves no credential.
@@ -179,7 +179,7 @@ func (r *Registry) connectionViews(ctx context.Context, includeBackfill bool) ([
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT c.id, c.provider, c.status, c.sync_cursor, c.watch_expires_at, c.provider_scopes,
-			       c.account_label, c.signature_enrich_enabled, c.mail_posture,
+			       c.account_label, c.signature_enrich_enabled, c.mail_posture, c.default_sender,
 			       c.history_baseline_date, c.history_baseline_tz, c.history_baseline_set_by, c.history_baseline_set_at,
 			       t.id, t.name, t.archived_at IS NOT NULL,
 			       s.last_synced_at, s.last_success_at, s.last_error_class, s.next_sync_at, s.failing_since,
@@ -205,7 +205,7 @@ func (r *Registry) connectionViews(ctx context.Context, includeBackfill bool) ([
 			var tagArchived *bool
 			var baseline historyBaselineColumns
 			if err := rows.Scan(&v.ID, &v.Provider, &v.Status, &v.Cursor, &v.WatchExpiresAt, &v.ProviderScopes,
-				&v.AccountLabel, &v.SignatureEnrichEnabled, &v.MailPosture,
+				&v.AccountLabel, &v.SignatureEnrichEnabled, &v.MailPosture, &v.DefaultSender,
 				&baseline.date, &baseline.timezone, &baseline.setBy, &baseline.setAt,
 				&tagID, &tagName, &tagArchived,
 				&v.LastSyncedAt, &v.LastSuccessAt, &v.LastErrorClass, &v.NextSyncDueAt, &v.FailingSince, &v.ConnectedAt, &v.SilenceDismissedSince, &v.LastDeliveryAt, &v.CalendarAccountLabel); err != nil {

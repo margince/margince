@@ -12364,6 +12364,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
 
   // Der Button in der Kopfzeile der Karte, der den Verbindungsdialog öffnet.
   "connectors.addOpen": "Weiteres Postfach hinzufügen",
+  "connectors.menu.useForNewMail": "Neue Mails von diesem Postfach senden",
+  "connectors.defaultSender": "Sendet neue Mails",
   "connectors.oauthOtherAccount":
     "Sie haben sich mit einem anderen Konto als diesem Postfach angemeldet, daher wurde nichts geändert. Um dieses Konto auch zu verbinden, wählen Sie Weiteres Postfach hinzufügen.",
   "connectors.providerNotConfigured":

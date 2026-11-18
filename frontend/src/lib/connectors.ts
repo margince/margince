@@ -7,6 +7,7 @@ import type { components } from "../api/schema";
 import { isMailbox } from "../format/connectorprovider";
 import type { MessageKey } from "../i18n/en";
 import { connectorsPollInterval } from "./capture-progress";
+import { holdsSendGrant } from "./connector-status";
 import { problemCode, throwProblem } from "./problem";
 import { captureRefusalCopy } from "./problemcodecopy";
 
@@ -117,15 +118,14 @@ export function mailboxParams(
   };
 }
 
-/** The reader's mailboxes a mail can go out from: connected mail rows of a
- *  provider that sends. The composer offers a From choice only when there is
- *  more than one. */
+/** The reader's mailboxes a mail can go out from: live rows whose grant holds
+ *  the send scope, as the server's pre-flight asks. The composer offers a From
+ *  choice only when there is more than one. */
 export function sendingMailboxes(
   connections: readonly CaptureConnection[],
 ): CaptureConnection[] {
   return connections.filter(
     (c) =>
-      (c.provider === "gmail" || c.provider === "graph") &&
-      (c.status === "connected" || c.status === "error"),
+      holdsSendGrant(c) && (c.status === "connected" || c.status === "error"),
   );
 }

@@ -138,6 +138,9 @@ function stubApi(connections: CaptureConnection[], opts: StubOpts = {}) {
       if (path.endsWith("/disconnect") && request.method === "POST") {
         return new Response(null, { status: 204 });
       }
+      if (path.endsWith("/mail-posture") && request.method === "PUT") {
+        return jsonResponse({ ...connections[0], default_sender: true });
+      }
       throw new Error(`unstubbed: ${request.method} ${path}`);
     }),
   );
@@ -849,6 +852,32 @@ describe("two mailboxes of one provider", () => {
     await userEvent.click(menus[1]);
     await userEvent.click(await screen.findByRole("button", { name: verb }));
   }
+
+  it("marks the pressed mailbox the one new mail goes out from", async () => {
+    const calls = stubApi([work, personal]);
+    render(<ConnectorsCard />);
+    await openSecondVerb("Send new mail from this mailbox");
+    await waitFor(() =>
+      expect(requestsTo(calls, "/mail-posture", "PUT")).toHaveLength(1),
+    );
+    const [chosen] = requestsTo(calls, "/mail-posture", "PUT");
+    expect(new URL(chosen.url).searchParams.get("connection_id")).toBe(
+      personal.id,
+    );
+    expect(await chosen.clone().json()).toMatchObject({ default_sender: true });
+  });
+
+  it("offers no sending choice when only one mailbox can send", async () => {
+    stubApi([work, { ...personal, scopes: [] }]);
+    render(<ConnectorsCard />);
+    const menus = await screen.findAllByRole("button", {
+      name: "More actions for Google",
+    });
+    await userEvent.click(menus[0]);
+    expect(
+      screen.queryByRole("button", { name: "Send new mail from this mailbox" }),
+    ).toBeNull();
+  });
 
   it("stops only the mailbox whose row was pressed", async () => {
     const calls = stubApi([work, personal]);

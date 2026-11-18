@@ -28050,6 +28050,12 @@ components:
             `POST /connectors/{provider}/backfill` and its estimate refuse with `422
             connector_unsupported`, so a client offers no import rather than one that fails.
         account_label: {type: [string, 'null'], description: 'Display-only name of the connected account (e.g. the mailbox address). Null when the connector does not report one.'}
+        default_sender:
+          type: boolean
+          description: |-
+            True on the mailbox the member marked for new mail
+            (`PUT /connectors/{provider}/mail-posture` with `default_sender`). Without a mark, new
+            mail goes out from the first connected mailbox that can send.
         status: {type: string, enum: [connected, disconnected, error, reauth_required], description: 'Connection state; `reauth_required` when the stored token expired/was revoked upstream.'}
         sync_cursor: {type: [string, 'null'], description: 'Opaque provider watermark (Gmail historyId / IMAP UID / Graph delta) for incremental capture; read-only.'}
         watch_expires_at: {type: [string, 'null'], format: date-time, description: 'Push/delta subscription renewal deadline (Gmail Pub/Sub / Graph change-notification), or null.'}
@@ -28160,9 +28166,17 @@ components:
     SetMailPostureRequest:
       type: object
       additionalProperties: false
-      required: [posture]
-      description: What one mailbox asks of the mail it brings in.
+      description: |-
+        What one mailbox asks of the mail it brings in, and whether new mail goes out from it.
+        Send `posture`, `default_sender`, or both; a body with neither is refused with 422.
       properties:
+        default_sender:
+          type: boolean
+          description: |-
+            `true` makes this mailbox the one the caller's new mail goes out from, and unmarks the
+            one that was. A reply still goes out from the mailbox the conversation arrived in.
+            `false` is ignored: a member always has a default, the first connected when none is
+            marked.
         posture:
           type: string
           enum: [shared, classified, held]
@@ -29004,6 +29018,10 @@ components:
           type: string
           description: >-
             The folded address or domain, or a provider-qualified container (`gmail:Label_12`, `graph:<folderId>`, `imap:INBOX/Family`) kept as the provider spells it.
+        connection_id:
+          type: [string, 'null']
+          format: uuid
+          description: The mailbox a container rule matches in. Null for every other rule.
         created_at: {type: string, format: date-time}
         created_by_name:
           type: [string, 'null']
@@ -29033,6 +29051,14 @@ components:
         scope: {$ref: '#/components/schemas/CaptureExclusionScope'}
         kind: {$ref: '#/components/schemas/CaptureExclusionKind'}
         value: {type: string, maxLength: 320, description: 'An email address, or a bare domain.'}
+        connection_id:
+          type: string
+          format: uuid
+          description: |-
+            For a `container` rule, the caller's mailbox the folder was picked from, the `id` of a
+            `CaptureConnection`. A label or folder id means another folder in another mailbox, so
+            the rule matches only there. Omit it while the caller holds one mailbox of the
+            provider; with several it is required. Ignored for other kinds.
     CaptureOwnerIdentityKind:
       type: string
       enum: [address, domain]
@@ -41531,7 +41557,7 @@ components:
           description: |-
             The sender's own mailbox the message goes out from, the `id` of one of their
             `CaptureConnection`s that can send. Omitted, a reply goes out from the mailbox the
-            conversation arrived in, and a new message from the mailbox they connected first. A mailbox
+            conversation arrived in, and a new message from the sender's default mailbox. A mailbox
             that is not the sender's, or cannot send, is refused with 422
             `mailbox_not_send_capable`.
         subject: {type: string, description: The subject line. Blank or only white space is refused with 422 `required`.}
@@ -42179,7 +42205,7 @@ components:
           format: uuid
           description: |-
             The sender's own mailbox the message goes out from, as on `SendEmailRequest`.
-            Omitted, it goes out from the mailbox they connected first.
+            Omitted, it goes out from the sender's default mailbox.
         subject: {type: string, description: The subject line. Blank or only white space is refused with 422 `required`.}
         body: {type: string, description: The (possibly edited) final body that is sent. Blank or only white space is refused with 422 `required`.}
         html_body:

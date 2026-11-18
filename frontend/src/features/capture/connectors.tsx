@@ -19,7 +19,11 @@ import {
   useConnectAccount,
 } from "../../lib/connect-account";
 import { canAddAccount, type FlowAccount } from "../../lib/connect-flow-draft";
-import { captureRefusalOf, useConnectors } from "../../lib/connectors";
+import {
+  captureRefusalOf,
+  sendingMailboxes,
+  useConnectors,
+} from "../../lib/connectors";
 import { problemMessageOf } from "../../lib/problem";
 import { type Route, useRoute } from "../../lib/router";
 import { type UrlParams, useUrlParams } from "../../lib/urlstate";
@@ -64,6 +68,7 @@ function MailRoster({
   onImapReconnect: () => void;
 }>) {
   const accounts = accountsOf(rows);
+  const offerDefaultSender = sendingMailboxes(rows).length > 1;
   // One primary per panel: the first broken account keeps a primary Reconnect.
   const firstBroken = accounts.find(offersReconnect);
   return (
@@ -81,6 +86,7 @@ function MailRoster({
               : null
           }
           canConnect={canConnect}
+          offerDefaultSender={offerDefaultSender}
           onImapReconnect={onImapReconnect}
         />
       ))}

@@ -24,7 +24,7 @@ const work: CaptureConnection = {
   provider: "gmail",
   can_backfill: true,
   status: "connected",
-  scopes: [],
+  scopes: ["https://www.googleapis.com/auth/gmail.send"],
   account_label: "rep@acme.test",
 };
 
@@ -46,6 +46,7 @@ export const TwoMailboxes: Story = {
                 ...work,
                 id: "018f3a1b-0000-7000-8000-0000000000c2",
                 provider: "graph",
+                scopes: ["Mail.Send"],
                 account_label: "rep@second.test",
               },
             ],

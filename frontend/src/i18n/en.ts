@@ -12316,6 +12316,8 @@ export const en = {
 
   // The card's header verb, which opens the connect dialog (connectFlow.*).
   "connectors.addOpen": "Add another mailbox",
+  "connectors.menu.useForNewMail": "Send new mail from this mailbox",
+  "connectors.defaultSender": "Sends new mail",
   "connectors.oauthOtherAccount":
     "You signed in with a different account than this mailbox, so nothing was changed. To connect that account too, use Add another mailbox.",
   "connectors.providerNotConfigured":

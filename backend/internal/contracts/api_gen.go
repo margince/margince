@@ -39018,6 +39018,11 @@ type CaptureConnection struct {
 	ContextTag *ConnectorContextTag `json:"context_tag,omitempty"`
 	CreatedAt  *time.Time           `json:"created_at,omitempty"`
 
+	// DefaultSender True on the mailbox the member marked for new mail
+	// (`PUT /connectors/{provider}/mail-posture` with `default_sender`). Without a mark, new
+	// mail goes out from the first connected mailbox that can send.
+	DefaultSender *bool `json:"default_sender,omitempty"`
+
 	// HistoryBaseline The local date this mailbox's automatic commitment suggestions start from. Absent when the
 	// owner chose none, which keeps the normal policy. Set and cleared through
 	// PUT /connectors/{provider}/history-baseline.
@@ -39216,7 +39221,9 @@ type CaptureCounterpartyHoldListResponse struct {
 
 // CaptureExclusion defines model for CaptureExclusion.
 type CaptureExclusion struct {
-	CreatedAt time.Time `json:"created_at"`
+	// ConnectionId The mailbox a container rule matches in. Null for every other rule.
+	ConnectionId *openapi_types.UUID `json:"connection_id,omitempty"`
+	CreatedAt    time.Time           `json:"created_at"`
 
 	// CreatedByName The display name of the member who added the rule. Null when no member added it (a
 	// system or connector rule) and when that member has been deactivated.
@@ -45924,6 +45931,12 @@ type CreateCaptureCounterpartyHoldRequestKind string
 
 // CreateCaptureExclusionRequest defines model for CreateCaptureExclusionRequest.
 type CreateCaptureExclusionRequest struct {
+	// ConnectionId For a `container` rule, the caller's mailbox the folder was picked from, the `id` of a
+	// `CaptureConnection`. A label or folder id means another folder in another mailbox, so
+	// the rule matches only there. Omit it while the caller holds one mailbox of the
+	// provider; with several it is required. Ignored for other kinds.
+	ConnectionId *openapi_types.UUID `json:"connection_id,omitempty"`
+
 	// Kind What the rule names. `address` and `domain` match the parties a message names; `container` matches where the provider FILED it — a Gmail label, a Graph folder, an IMAP mailbox.
 	// A container value is `<provider>:<id>`, where the id is the provider's own token and is stored exactly as given: `gmail:Label_12` (a system label is its name, `gmail:CATEGORY_PROMOTIONS`), `graph:<folderId>`, `imap:INBOX/Family`. Qualified because an id means nothing without the namespace it belongs to, and unfolded because a Graph folder id is base64url and an IMAP mailbox name is case-sensitive — folding either would merge two containers into one rule.
 	// A container rule is `user` scope only: the list belongs to the mailbox's owner, and a workspace rule would bind every colleague's connection to a place that does not exist there.
@@ -65319,7 +65332,7 @@ type SendCompanyEmailRequest struct {
 	Evidence *CommunicationEvidence `json:"evidence,omitempty"`
 
 	// FromConnectionId The sender's own mailbox the message goes out from, as on `SendEmailRequest`.
-	// Omitted, it goes out from the mailbox they connected first.
+	// Omitted, it goes out from the sender's default mailbox.
 	FromConnectionId *openapi_types.UUID `json:"from_connection_id,omitempty"`
 
 	// HtmlBody The same message as markup, or omitted for a plain-text send. It never
@@ -65513,7 +65526,7 @@ type SendEmailRequest struct {
 
 	// FromConnectionId The sender's own mailbox the message goes out from, the `id` of one of their
 	// `CaptureConnection`s that can send. Omitted, a reply goes out from the mailbox the
-	// conversation arrived in, and a new message from the mailbox they connected first. A mailbox
+	// conversation arrived in, and a new message from the sender's default mailbox. A mailbox
 	// that is not the sender's, or cannot send, is refused with 422
 	// `mailbox_not_send_capable`.
 	FromConnectionId *openapi_types.UUID `json:"from_connection_id,omitempty"`
@@ -65867,7 +65880,8 @@ type SetMailHistoryBaselineRequest struct {
 	Timezone *string `json:"timezone,omitempty"`
 }
 
-// SetMailPostureRequest What one mailbox asks of the mail it brings in.
+// SetMailPostureRequest What one mailbox asks of the mail it brings in, and whether new mail goes out from it.
+// Send `posture`, `default_sender`, or both; a body with neither is refused with 422.
 type SetMailPostureRequest struct {
 	// ApplyToHistory Also narrow the mail this mailbox ALREADY brought in, to match the new posture. Only
 	// narrows: a move towards `shared` leaves history where it is, because opening what was
@@ -65875,8 +65889,14 @@ type SetMailPostureRequest struct {
 	// human set to `selected` are never touched.
 	ApplyToHistory *bool `json:"apply_to_history,omitempty"`
 
+	// DefaultSender `true` makes this mailbox the one the caller's new mail goes out from, and unmarks the
+	// one that was. A reply still goes out from the mailbox the conversation arrived in.
+	// `false` is ignored: a member always has a default, the first connected when none is
+	// marked.
+	DefaultSender *bool `json:"default_sender,omitempty"`
+
 	// Posture See CaptureConnection.mail_posture. `shared` needs the workspace opt-in.
-	Posture SetMailPostureRequestPosture `json:"posture"`
+	Posture *SetMailPostureRequestPosture `json:"posture,omitempty"`
 }
 
 // SetMailPostureRequestPosture See CaptureConnection.mail_posture. `shared` needs the workspace opt-in.

@@ -2397,6 +2397,7 @@ public.capture_connection.connector_connection_pkey PRIMARY KEY (id)
 public.capture_connection.context_tag_id uuid gen=- def=-
 public.capture_connection.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.capture_connection.credential_ref text gen=- def=-
+public.capture_connection.default_sender boolean NOT NULL gen=- def=false
 public.capture_connection.generation integer NOT NULL gen=- def=0
 public.capture_connection.history_baseline_date date gen=- def=-
 public.capture_connection.history_baseline_set_at timestamp with time zone gen=- def=-
@@ -2426,6 +2427,7 @@ public.capture_connection.user_id uuid gen=- def=-
 public.capture_connection.watch_expires_at timestamp with time zone gen=- def=-
 public.capture_connection.watch_ref text gen=- def=-
 public.capture_connection_member_mailbox CREATE UNIQUE INDEX capture_connection_member_mailbox ON public.capture_connection USING btree (user_id, provider, lower(account_label)) NULLS NOT DISTINCT WHERE (user_id IS NOT NULL)
+public.capture_connection_one_default_sender CREATE UNIQUE INDEX capture_connection_one_default_sender ON public.capture_connection USING btree (user_id) WHERE default_sender
 public.capture_connection_shared_mailbox CREATE UNIQUE INDEX capture_connection_shared_mailbox ON public.capture_connection USING btree (provider, lower(account_label)) WHERE (user_id IS NULL)
 public.capture_counterparty_hold acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_counterparty_hold.capture_counterparty_hold_kind_check CHECK ((kind = ANY (ARRAY['address'::text, 'domain'::text])))
@@ -2455,6 +2457,7 @@ public.capture_digest.user_id uuid NOT NULL gen=- def=-
 public.capture_digest_pkey CREATE UNIQUE INDEX capture_digest_pkey ON public.capture_digest USING btree (id)
 public.capture_digest_user_id_digest_date_key CREATE UNIQUE INDEX capture_digest_user_id_digest_date_key ON public.capture_digest USING btree (user_id, digest_date)
 public.capture_exclusion acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.capture_exclusion.capture_exclusion_connection_id_fkey FOREIGN KEY (connection_id) REFERENCES capture_connection(id) ON DELETE CASCADE
 public.capture_exclusion.capture_exclusion_container_is_personal CHECK (((kind <> 'container'::text) OR (scope = 'user'::text) OR (value = ANY (ARRAY['gmail:CATEGORY_PROMOTIONS'::text, 'gmail:CATEGORY_SOCIAL'::text, 'gmail:CATEGORY_UPDATES'::text, 'gmail:CATEGORY_FORUMS'::text]))))
 public.capture_exclusion.capture_exclusion_kind_check CHECK ((kind = ANY (ARRAY['address'::text, 'domain'::text, 'container'::text])))
 public.capture_exclusion.capture_exclusion_pkey PRIMARY KEY (id)
@@ -2462,6 +2465,7 @@ public.capture_exclusion.capture_exclusion_scope_check CHECK ((scope = ANY (ARRA
 public.capture_exclusion.capture_exclusion_scope_user CHECK (((scope = 'user'::text) = (user_id IS NOT NULL)))
 public.capture_exclusion.capture_exclusion_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.capture_exclusion.capture_exclusion_value_check CHECK (((value <> ''::text) AND ((kind = 'container'::text) OR (value = lower(value)))))
+public.capture_exclusion.connection_id uuid gen=- def=-
 public.capture_exclusion.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.capture_exclusion.created_by text NOT NULL gen=- def=-
 public.capture_exclusion.id uuid NOT NULL gen=- def=uuidv7()
@@ -10652,7 +10656,7 @@ public.uq_brief_run_user_day CREATE UNIQUE INDEX uq_brief_run_user_day ON public
 public.uq_bulk_operation_undo_of CREATE UNIQUE INDEX uq_bulk_operation_undo_of ON public.bulk_operation USING btree (undo_of) WHERE (undo_of IS NOT NULL)
 public.uq_capture_backfill_admission_slot CREATE UNIQUE INDEX uq_capture_backfill_admission_slot ON public.capture_backfill USING btree (admission_slot) WHERE ((status = 'running'::text) AND (admission_slot IS NOT NULL))
 public.uq_capture_backfill_live CREATE UNIQUE INDEX uq_capture_backfill_live ON public.capture_backfill USING btree (connection_id) WHERE (status = ANY (ARRAY['queued'::text, 'running'::text]))
-public.uq_capture_exclusion CREATE UNIQUE INDEX uq_capture_exclusion ON public.capture_exclusion USING btree (scope, user_id, kind, value) NULLS NOT DISTINCT
+public.uq_capture_exclusion CREATE UNIQUE INDEX uq_capture_exclusion ON public.capture_exclusion USING btree (scope, user_id, kind, value, connection_id) NULLS NOT DISTINCT
 public.uq_capture_freemail_domain CREATE UNIQUE INDEX uq_capture_freemail_domain ON public.capture_freemail_domain USING btree (domain)
 public.uq_channel_connection_provider CREATE UNIQUE INDEX uq_channel_connection_provider ON public.channel_connection USING btree (provider) WHERE (archived_at IS NULL)
 public.uq_chat_link_channel CREATE UNIQUE INDEX uq_chat_link_channel ON public.chat_link USING btree (provider, channel_slug) WHERE (archived_at IS NULL)

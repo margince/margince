@@ -14,6 +14,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -25,15 +26,18 @@ import (
 // Message-ID under one provider message id, as two mailboxes on one thread do.
 type sharedMessageMailbox struct {
 	checkpointHistory
+	// containers are the folders the message sits in, in every mailbox.
+	containers []string
 }
 
 const sharedMessageID = "both-mailboxes@customer.test"
 
-func (*sharedMessageMailbox) Sync(ctx context.Context, _ connector.Auth, cursor connector.Cursor, sink connector.Sink) (connector.Cursor, error) {
+func (c *sharedMessageMailbox) Sync(ctx context.Context, _ connector.Auth, cursor connector.Cursor, sink connector.Sink) (connector.Cursor, error) {
 	rec := mailRecord(sharedMessageID, "buyer@customer.test", "buyer@customer.test", "work@mail.example", "other@mail.example")
 	rec.CapturedBy = "connector:gmail"
 	rec.ProviderMessageID = "provider-17"
-	if _, err := sink.Upsert(ctx, rec); err != nil {
+	rec.Containers = c.containers
+	if _, err := sink.Upsert(ctx, rec); err != nil && !errors.Is(err, connector.ErrSkip) {
 		return nil, err
 	}
 	return cursor, nil
@@ -41,6 +45,8 @@ func (*sharedMessageMailbox) Sync(ctx context.Context, _ connector.Auth, cursor 
 
 type twoMailboxes struct {
 	ctx         context.Context
+	db          *database.DB
+	connector   *sharedMessageMailbox
 	reg         *capture.Registry
 	seat        ids.UserID
 	work, other ids.UUID
@@ -53,7 +59,8 @@ func connectTwoMailboxes(t *testing.T) twoMailboxes {
 	_, pool := setupCaptureDB(t)
 	db := database.BindTo(pool, ws)
 	reg := capture.NewRegistry(db, capture.NewSink(db), fixtureAuthority{}, vault)
-	reg.Register(&sharedMessageMailbox{})
+	mailbox := &sharedMessageMailbox{}
+	reg.Register(mailbox)
 	actor, ok := principal.Actor(ctx)
 	if !ok {
 		t.Fatal("fixture actor missing")
@@ -69,7 +76,7 @@ func connectTwoMailboxes(t *testing.T) twoMailboxes {
 	if work == other {
 		t.Fatal("a second account landed on the first account's row")
 	}
-	return twoMailboxes{ctx: ctx, reg: reg, seat: ids.From[ids.UserKind](actor.UserID), work: work, other: other}
+	return twoMailboxes{ctx: ctx, db: db, connector: mailbox, reg: reg, seat: ids.From[ids.UserKind](actor.UserID), work: work, other: other}
 }
 
 func connectionStatus(t *testing.T, id ids.UUID) (status, label string) {
@@ -224,5 +231,132 @@ func TestAReplyGoesOutFromTheMailboxTheMessageArrivedIn(t *testing.T) {
 	}
 	if got := choose(ids.NewV7(), anchor); !got.IsZero() {
 		t.Errorf("a mailbox that is not the sender's chose %s, want none", got)
+	}
+}
+
+// importsOf counts the seat's import rows, the mail its mailboxes brought in.
+func importsOf(t *testing.T, seat ids.UserID) int {
+	t.Helper()
+	owner, _ := setupCaptureDB(t)
+	var n int
+	if err := owner.QueryRow(context.Background(), `SELECT count(*) FROM capture_import WHERE user_id = $1`, seat).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	return n
+}
+
+func TestAFolderRuleKeepsMailOutOfTheMailboxItWasPickedFromOnly(t *testing.T) {
+	m := connectTwoMailboxes(t)
+	m.connector.containers = []string{"gmail:Label_7"}
+	store := capture.NewExclusionStore(m.db)
+	if _, err := store.Add(m.ctx, capture.ExclusionScopeUser, capture.ExclusionKindContainer, "gmail:Label_7", ids.Nil); !errors.Is(err, capture.ErrMailboxAmbiguous) {
+		t.Fatalf("a folder rule naming no mailbox among two = %v, want the ask to name one", err)
+	}
+	if _, err := store.Add(m.ctx, capture.ExclusionScopeUser, capture.ExclusionKindContainer, "gmail:Label_7", m.work); err != nil {
+		t.Fatal(err)
+	}
+	if err := m.reg.SyncOnce(m.ctx, m.work); err != nil {
+		t.Fatal(err)
+	}
+	if got := importsOf(t, m.seat); got != 0 {
+		t.Fatalf("the excluded folder let %d messages in", got)
+	}
+	if err := m.reg.SyncOnce(m.ctx, m.other); err != nil {
+		t.Fatal(err)
+	}
+	if got := importsOf(t, m.seat); got != 1 {
+		t.Fatalf("the same label id in the other mailbox kept out %d of 1 message", 1-got)
+	}
+}
+
+func TestTheMailboxThatCapturedAMessageIsTheOneThatDeliveredIt(t *testing.T) {
+	m := connectTwoMailboxes(t)
+	owner, _ := setupCaptureDB(t)
+	capturing := func() []ids.UUID {
+		t.Helper()
+		rows, err := owner.Query(context.Background(), `
+			SELECT c.id FROM capture_connection c
+			  JOIN capture_import ci ON ci.user_id = $1
+			  JOIN activity a ON a.id = ci.activity_id
+			 WHERE `+storekit.CapturingMailboxSQL("c", "a")+` ORDER BY c.created_at`, m.seat)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+		if err != nil {
+			t.Fatal(err)
+		}
+		return got
+	}
+	if err := m.reg.SyncOnce(m.ctx, m.other); err != nil {
+		t.Fatal(err)
+	}
+	if got := capturing(); len(got) != 1 || got[0] != m.other {
+		t.Fatalf("capturing mailboxes = %v, want only the one that delivered it", got)
+	}
+	if err := m.reg.SyncOnce(m.ctx, m.work); err != nil {
+		t.Fatal(err)
+	}
+	if got := capturing(); len(got) != 2 {
+		t.Fatalf("capturing mailboxes = %v, want both once both delivered it", got)
+	}
+}
+
+func TestTheDefaultMailboxSendsNewMail(t *testing.T) {
+	m := connectTwoMailboxes(t)
+	other := capture.Mailbox{Provider: "gmail", ID: m.other}
+	if _, err := m.reg.SetMailboxSettings(m.ctx, other, capture.MailboxSettings{}); !errors.Is(err, apperrors.ErrInvalidArgument) {
+		t.Fatalf("a settings change naming nothing = %v, want it refused", err)
+	}
+	view, err := m.reg.SetMailboxSettings(m.ctx, other, capture.MailboxSettings{DefaultSender: true})
+	if err != nil || !view.DefaultSender {
+		t.Fatalf("marking the default = %+v, %v", view, err)
+	}
+	chosen, err := m.reg.ChooseSendingMailbox(m.ctx, m.seat, ids.Nil, ids.ActivityID{}, []string{"gmail"},
+		func(capture.SendingMailbox) (bool, error) { return true, nil })
+	if err != nil || chosen.ID != m.other {
+		t.Fatalf("a new mail goes out from %s, %v; want the marked default", chosen.ID, err)
+	}
+	if _, err := m.reg.SetMailboxSettings(m.ctx, capture.Mailbox{Provider: "gmail", ID: m.work}, capture.MailboxSettings{DefaultSender: true}); err != nil {
+		t.Fatal(err)
+	}
+	views, err := m.reg.Connections(m.ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, v := range views {
+		if v.DefaultSender != (v.ID == m.work) {
+			t.Fatalf("after moving the mark, %s default = %v", v.ID, v.DefaultSender)
+		}
+	}
+}
+
+func TestAColleaguesMailboxIsNotReachableByItsID(t *testing.T) {
+	m := connectTwoMailboxes(t)
+	owner, _ := setupCaptureDB(t)
+	colleague, theirs := ids.NewV7(), ids.NewV7()
+	if _, err := owner.Exec(context.Background(), `INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Colleague')`,
+		colleague, "colleague-"+colleague.String()+"@example.test"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := owner.Exec(context.Background(), `INSERT INTO capture_connection (id, user_id, provider, status, account_label, provider_scopes)
+		VALUES ($1, $2, 'gmail', 'connected', 'colleague@mail.example', '{}')`, theirs, colleague); err != nil {
+		t.Fatal(err)
+	}
+	mailbox := capture.Mailbox{Provider: "gmail", ID: theirs}
+	if _, err := m.reg.SetSignatureEnrichment(m.ctx, mailbox, nil); !errors.Is(err, capture.ErrNoConnection) {
+		t.Fatalf("setting a colleague's mailbox = %v, want it absent", err)
+	}
+	if _, err := m.reg.SetMailboxSettings(m.ctx, mailbox, capture.MailboxSettings{DefaultSender: true}); !errors.Is(err, capture.ErrNoConnection) {
+		t.Fatalf("marking a colleague's mailbox as default = %v, want it absent", err)
+	}
+	if _, _, _, err := m.reg.SenderFor(m.ctx, m.seat, mailbox); !errors.Is(err, capture.ErrNoConnection) {
+		t.Fatalf("sending through a colleague's mailbox = %v, want no connection", err)
+	}
+	if err := m.reg.Disconnect(m.ctx, mailbox); err != nil {
+		t.Fatal(err)
+	}
+	if status, _ := connectionStatus(t, theirs); status != "connected" {
+		t.Fatalf("disconnecting by a colleague's id left their mailbox %q", status)
 	}
 }

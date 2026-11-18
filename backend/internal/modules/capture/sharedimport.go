@@ -56,7 +56,7 @@ func mailboxImporter(connection ids.UUID) importer {
 // mailboxes for one delivery.
 const deliveringMailboxSQL = `c.id = coalesce(@delivering_connection::uuid, (SELECT m.id FROM capture_connection m
 	 WHERE m.user_id = @importer AND m.provider = @delivering_provider AND m.archived_at IS NULL
-	 ORDER BY m.status = 'disconnected', m.created_at, m.id LIMIT 1))`
+	 ORDER BY m.status = 'disconnected', m.default_sender DESC, m.created_at, m.id LIMIT 1))`
 
 // importerHoldsActivityTx answers whether the row is already this importer's:
 // the seat's standing, or the shared mailbox's own earlier import row.

@@ -12044,6 +12044,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
 
   // The card's header verb, which opens the connect dialog (connectFlow.*).
   "connectors.addOpen": "Thêm hộp thư khác",
+  "connectors.menu.useForNewMail": "Gửi thư mới từ hộp thư này",
+  "connectors.defaultSender": "Gửi thư mới",
   "connectors.oauthOtherAccount":
     "Bạn đã đăng nhập bằng một tài khoản khác với hộp thư này nên không có gì thay đổi. Để kết nối cả tài khoản đó, hãy chọn Thêm hộp thư khác.",
   "connectors.providerNotConfigured":

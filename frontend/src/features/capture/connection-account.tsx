@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CalendarDays, FileText, Mail, Send } from "lucide-react";
 import { useState } from "react";
+import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Button, OverflowMenu } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
@@ -32,7 +34,8 @@ import {
   needsReconnect,
   serviceReason,
 } from "../../lib/connector-status";
-import { problemMessageOf } from "../../lib/problem";
+import { mailboxParams } from "../../lib/connectors";
+import { problemMessageOf, throwProblem } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
 import { ImportPastEmailDialog } from "./backfill";
 import { type BringsInChange, BringsInDialog } from "./connection-bringsin";
@@ -171,6 +174,7 @@ export function ConnectionAccountRow({
   onImapReconnect,
   reconnectPrimary = true,
   canConnect = true,
+  offerDefaultSender = false,
 }: Readonly<{
   account: ConnectionAccount;
   /** A past-email window asked for at connect and held for the reader. */
@@ -182,6 +186,9 @@ export function ConnectionAccountRow({
   /** False when the reader's role or seat cannot capture: the server
    *  refuses every connect, reconnect and import, so none is offered. */
   canConnect?: boolean;
+  /** True when the reader holds more than one mailbox that can send, so which
+   *  one new mail goes out from is a choice. */
+  offerDefaultSender?: boolean;
 }>) {
   const t = useT();
   const { mail, calendar, notes } = account;
@@ -198,6 +205,14 @@ export function ConnectionAccountRow({
   const alert = accountAlert(account);
   const reasonKey = alert.reasonKey;
   const offerReconnect = canConnect && alert.offerReconnect;
+  const setDefaultSender = useSetDefaultSender();
+  const useForNewMail =
+    offerDefaultSender &&
+    mail &&
+    !mail.default_sender &&
+    !missingSendGrant(mail)
+      ? () => setDefaultSender.mutate(mail)
+      : undefined;
 
   return (
     <ProviderRow
@@ -228,6 +243,7 @@ export function ConnectionAccountRow({
           onBringsIn={() => actions.bringsIn.set(true)}
           onImport={() => actions.importing.set(true)}
           onReconnect={actions.reconnectAccount}
+          onUseForNewMail={useForNewMail}
           onDisconnect={actions.stopAll}
         />
       }
@@ -336,6 +352,7 @@ function AccountMenu({
   onBringsIn,
   onImport,
   onReconnect,
+  onUseForNewMail,
   onDisconnect,
 }: Readonly<{
   account: ConnectionAccount;
@@ -346,6 +363,8 @@ function AccountMenu({
   onBringsIn: () => void;
   onImport: () => void;
   onReconnect: () => void;
+  /** Absent unless this mailbox can become the one new mail goes out from. */
+  onUseForNewMail?: () => void;
   onDisconnect: () => void;
 }>) {
   const t = useT();
@@ -361,6 +380,11 @@ function AccountMenu({
       )}
       {canConnect && account.key !== "test_mailbox" && reconnectInMenu && (
         <Button onClick={onReconnect}>{t("connectors.reconnect")}</Button>
+      )}
+      {onUseForNewMail && (
+        <Button onClick={onUseForNewMail}>
+          {t("connectors.menu.useForNewMail")}
+        </Button>
       )}
       <Button variant="danger" onClick={onDisconnect}>
         {t("connectors.disconnect")}
@@ -400,6 +424,11 @@ function AccountFacts({ account }: Readonly<{ account: ConnectionAccount }>) {
           {t("connectors.bringsSend")}
         </Chip>
       )}
+      {mail?.default_sender && (
+        <Chip icon={Send} dense>
+          {t("connectors.defaultSender")}
+        </Chip>
+      )}
       {createdAt && (
         <span>
           {t("connectors.account.connectedOn", {
@@ -427,4 +456,21 @@ function ConnectRefusal({
   return connect.isError ? (
     <ErrorLine>{problemMessageOf(connect.error, t)}</ErrorLine>
   ) : null;
+}
+
+/** Marks one mailbox the one the reader's new mail goes out from. */
+function useSetDefaultSender() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (mail: CaptureConnection) => {
+      const { error } = await api.PUT("/connectors/{provider}/mail-posture", {
+        params: mailboxParams(mail),
+        body: { default_sender: true, apply_to_history: false },
+      });
+      if (error) {
+        throwProblem(error);
+      }
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["connectors"] }),
+  });
 }

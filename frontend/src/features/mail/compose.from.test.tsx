@@ -19,13 +19,14 @@ const work: CaptureConnection = {
   provider: "gmail",
   can_backfill: true,
   status: "connected",
-  scopes: [],
+  scopes: ["https://www.googleapis.com/auth/gmail.send"],
   account_label: "rep@acme.test",
 };
 const second: CaptureConnection = {
   ...work,
   id: "018f3a1b-0000-7000-8000-0000000000c2",
   provider: "graph",
+  scopes: ["Mail.Send"],
   account_label: "rep@second.test",
 };
 
@@ -56,7 +57,11 @@ describe("the From choice", () => {
   });
 
   it("draws nothing for a sender with one mailbox, or a calendar beside it", async () => {
-    stubRoster([work, { ...second, provider: "gcal" }]);
+    stubRoster([
+      work,
+      { ...second, provider: "gcal" },
+      { ...second, id: "018f3a1b-0000-7000-8000-0000000000c3", scopes: [] },
+    ]);
     renderWithQueryClient(
       <>
         <RosterRead />

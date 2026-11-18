@@ -461,8 +461,13 @@ func (h connectorHandlers) SetConnectorMailPosture(w http.ResponseWriter, r *htt
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
+	var posture *string
+	if req.Posture != nil {
+		posture = new(string(*req.Posture))
+	}
 	applyToHistory := req.ApplyToHistory != nil && *req.ApplyToHistory
-	view, err := h.registry.SetMailPosture(r.Context(), capture.MailboxNamed(string(provider), params.ConnectionId), string(req.Posture), applyToHistory)
+	asked := capture.MailboxSettings{Posture: posture, ApplyToHistory: applyToHistory, DefaultSender: req.DefaultSender != nil && *req.DefaultSender}
+	view, err := h.registry.SetMailboxSettings(r.Context(), capture.MailboxNamed(string(provider), params.ConnectionId), asked)
 	// A mailbox this caller has not connected is not theirs to configure, and
 	// answers as absent, for the reason the sibling above says.
 	if errors.Is(err, capture.ErrNoConnection) {

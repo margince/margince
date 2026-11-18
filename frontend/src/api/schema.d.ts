@@ -29455,6 +29455,12 @@ export interface components {
             /** @description Display-only name of the connected account (e.g. the mailbox address). Null when the connector does not report one. */
             account_label?: string | null;
             /**
+             * @description True on the mailbox the member marked for new mail
+             *     (`PUT /connectors/{provider}/mail-posture` with `default_sender`). Without a mark, new
+             *     mail goes out from the first connected mailbox that can send.
+             */
+            default_sender?: boolean;
+            /**
              * @description Connection state; `reauth_required` when the stored token expired/was revoked upstream.
              * @enum {string}
              */
@@ -29605,13 +29611,23 @@ export interface components {
             /** @description true or false is this mailbox's own answer; null follows the tenant default. */
             enabled: boolean | null;
         };
-        /** @description What one mailbox asks of the mail it brings in. */
+        /**
+         * @description What one mailbox asks of the mail it brings in, and whether new mail goes out from it.
+         *     Send `posture`, `default_sender`, or both; a body with neither is refused with 422.
+         */
         SetMailPostureRequest: {
+            /**
+             * @description `true` makes this mailbox the one the caller's new mail goes out from, and unmarks the
+             *     one that was. A reply still goes out from the mailbox the conversation arrived in.
+             *     `false` is ignored: a member always has a default, the first connected when none is
+             *     marked.
+             */
+            default_sender?: boolean;
             /**
              * @description See CaptureConnection.mail_posture. `shared` needs the workspace opt-in.
              * @enum {string}
              */
-            posture: "shared" | "classified" | "held";
+            posture?: "shared" | "classified" | "held";
             /**
              * @description Also narrow the mail this mailbox ALREADY brought in, to match the new posture. Only
              *     narrows: a move towards `shared` leaves history where it is, because opening what was
@@ -30474,6 +30490,11 @@ export interface components {
             kind: components["schemas"]["CaptureExclusionKind"];
             /** @description The folded address or domain, or a provider-qualified container (`gmail:Label_12`, `graph:<folderId>`, `imap:INBOX/Family`) kept as the provider spells it. */
             value: string;
+            /**
+             * Format: uuid
+             * @description The mailbox a container rule matches in. Null for every other rule.
+             */
+            connection_id?: string | null;
             /** Format: date-time */
             created_at: string;
             /**
@@ -30502,6 +30523,14 @@ export interface components {
             kind: components["schemas"]["CaptureExclusionKind"];
             /** @description An email address, or a bare domain. */
             value: string;
+            /**
+             * Format: uuid
+             * @description For a `container` rule, the caller's mailbox the folder was picked from, the `id` of a
+             *     `CaptureConnection`. A label or folder id means another folder in another mailbox, so
+             *     the rule matches only there. Omit it while the caller holds one mailbox of the
+             *     provider; with several it is required. Ignored for other kinds.
+             */
+            connection_id?: string;
         };
         /**
          * @description What the identity names. Its own schema rather than the exclusion's, which the two shared while they happened to hold the same two values: an exclusion can now also name a CONTAINER, and a container is not something a mailbox owner can BE.
@@ -44103,7 +44132,7 @@ export interface components {
              * Format: uuid
              * @description The sender's own mailbox the message goes out from, the `id` of one of their
              *     `CaptureConnection`s that can send. Omitted, a reply goes out from the mailbox the
-             *     conversation arrived in, and a new message from the mailbox they connected first. A mailbox
+             *     conversation arrived in, and a new message from the sender's default mailbox. A mailbox
              *     that is not the sender's, or cannot send, is refused with 422
              *     `mailbox_not_send_capable`.
              */
@@ -44812,7 +44841,7 @@ export interface components {
             /**
              * Format: uuid
              * @description The sender's own mailbox the message goes out from, as on `SendEmailRequest`.
-             *     Omitted, it goes out from the mailbox they connected first.
+             *     Omitted, it goes out from the sender's default mailbox.
              */
             from_connection_id?: string | null;
             /** @description The subject line. Blank or only white space is refused with 422 `required`. */
