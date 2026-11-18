@@ -1,19 +1,10 @@
-import { HoursSummary, ReplaceAddressConfirm } from "./meeting-link-actions";
-
-export { ReplaceAddressConfirm } from "./meeting-link-actions";
-
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ReactNode, useId, useState } from "react";
+import { type ReactNode, type Ref, useId, useRef, useState } from "react";
 import type { components } from "../../api/schema";
 import { AppLink } from "../../design-system/applink";
-import {
-  Button,
-  Field,
-  SegmentedControl,
-  TextInput,
-} from "../../design-system/atoms";
+import { Button, Field, TextInput } from "../../design-system/atoms";
 import { type Choice, ChoiceList } from "../../design-system/choicelist";
 import {
   DrawerBody,
@@ -24,6 +15,7 @@ import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { Modal } from "../../design-system/modal";
 import { ProviderMark } from "../../design-system/provider-mark";
+import { Select, type SelectOption } from "../../design-system/select";
 import {
   type PluralTranslator,
   type Translator,
@@ -39,13 +31,19 @@ import {
 import { useConnectors } from "../../lib/connectors";
 import { usePatchSchedulingProfile } from "../../lib/scheduling-profile-query";
 import { BookingAliasField } from "./booking-alias";
+import { HoursSummary, ReplaceAddressConfirm } from "./meeting-link-actions";
 import "./meeting-cards.css";
+
+export { ReplaceAddressConfirm } from "./meeting-link-actions";
 
 type Profile = components["schemas"]["SchedulingProfile"];
 
 // The limits crm.yaml gives SchedulingProfile.title and .location.
 const TITLE_MAX = 200;
 const LOCATION_MAX = 1000;
+const MIN_MINUTES = 15;
+const MAX_MINUTES = 480;
+const MAX_OFFERED = 16;
 const LENGTHS = ["15", "30", "45", "60", "90", "other"] as const;
 type Length = (typeof LENGTHS)[number];
 
@@ -84,12 +82,7 @@ const APP_TILE = {
   }>
 >;
 
-/**
- * Today's profile has no video field of its own, so the tiles map onto the two
- * it has. The app is video_call on with no location. The host's own place is
- * video_call off with one. None is off with neither. An absent video_call means
- * on.
- */
+// An absent video_call keeps the generated-video default.
 export function videoOf(
   profile: Pick<Profile, "video_call" | "location">,
 ): Video {
@@ -118,16 +111,32 @@ function draftOf(profile: Profile): LinkDraft {
   };
 }
 
+function parseLengths(value: string): number[] {
+  return value
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map(Number);
+}
+
+function validLengths(lengths: number[]): boolean {
+  return (
+    lengths.length <= MAX_OFFERED &&
+    new Set(lengths).size === lengths.length &&
+    lengths.every(
+      (length) =>
+        Number.isInteger(length) &&
+        length >= MIN_MINUTES &&
+        length <= MAX_MINUTES,
+    )
+  );
+}
+
 function minutesOf(draft: LinkDraft): number {
   return Number(draft.length === "other" ? draft.minutes : draft.length);
 }
 
-/**
- * What a save sends, against the profile the drawer opened on. The video pair
- * is written when the tile changed or the own address was edited. It is also
- * written when a video app is saved over a stored address. Otherwise the booking
- * would send that address beside the generated link.
- */
+// Saving a video app clears a stored address so guests never get both.
 export function linkChanges(
   original: Profile,
   draft: LinkDraft,
@@ -140,11 +149,9 @@ export function linkChanges(
   }
   const minutes = minutesOf(draft);
   if (minutes !== original.duration_minutes) changes.duration_minutes = minutes;
-  const offered = (draft.offered ?? (original.offered_lengths ?? []).join(", "))
-    .split(",")
-    .map((value) => value.trim())
-    .filter(Boolean)
-    .map(Number);
+  const offered = parseLengths(
+    draft.offered ?? (original.offered_lengths ?? []).join(", "),
+  );
   if (
     JSON.stringify(offered) !== JSON.stringify(original.offered_lengths ?? [])
   )
@@ -162,10 +169,7 @@ export function linkChanges(
   return changes;
 }
 
-/**
- * The one booking link, edited in a drawer: its name, address, length and how
- * the meeting is held. Mounted only while open, so a cancelled draft is gone.
- */
+// Mounting the form only while open discards cancelled drafts.
 export function MeetingLinkDrawer({
   open,
   onClose,
@@ -225,20 +229,18 @@ function LinkForm({
   const minutes = minutesOf(draft);
   const lengthError =
     draft.length === "other" &&
-    !(Number.isInteger(minutes) && minutes >= 15 && minutes <= 480)
+    !(
+      Number.isInteger(minutes) &&
+      minutes >= MIN_MINUTES &&
+      minutes <= MAX_MINUTES
+    )
       ? t("scheduling.lengthInvalid")
       : undefined;
-  const offered = (draft.offered ?? "")
-    .split(",")
-    .map((value) => value.trim())
-    .filter(Boolean)
-    .map(Number);
-  const offeredError =
-    offered.length > 16 ||
-    new Set(offered).size !== offered.length ||
-    offered.some(
-      (length) => !Number.isInteger(length) || length < 15 || length > 480,
-    );
+  const titleInput = useRef<HTMLInputElement>(null);
+  const minutesInput = useRef<HTMLInputElement>(null);
+  const offeredInput = useRef<HTMLInputElement>(null);
+  const locationInput = useRef<HTMLInputElement>(null);
+  const offeredError = !validLengths(parseLengths(draft.offered ?? ""));
   const locationError =
     draft.video === "own" && draft.location.trim() === ""
       ? t("scheduling.locationRequired")
@@ -246,7 +248,25 @@ function LinkForm({
   const titleMissing = draft.title.trim() === "";
   const update = (next: Partial<LinkDraft>) => setDraft({ ...draft, ...next });
   const submit = () => {
-    const changes = linkChanges(profile, draft);
+    const submitted = {
+      ...draft,
+      title: titleInput.current?.value ?? draft.title,
+      minutes: minutesInput.current?.value ?? draft.minutes,
+      offered: offeredInput.current?.value ?? draft.offered,
+      location: locationInput.current?.value ?? draft.location,
+    };
+    setDraft(submitted);
+    const minutes = minutesOf(submitted);
+    if (
+      !submitted.title.trim() ||
+      !Number.isInteger(minutes) ||
+      minutes < MIN_MINUTES ||
+      minutes > MAX_MINUTES ||
+      !validLengths(parseLengths(submitted.offered ?? "")) ||
+      (submitted.video === "own" && !submitted.location.trim())
+    )
+      return;
+    const changes = linkChanges(profile, submitted);
     if (Object.keys(changes).length === 0) {
       onClose();
       return;
@@ -259,13 +279,15 @@ function LinkForm({
         <Field
           label={t("scheduling.meetingName")}
           hint={t("scheduling.meetingNameHelp")}
+          error={titleMissing ? t("record.fieldRequired") : undefined}
         >
           {(control) => (
             <TextInput
               {...control}
               required
               maxLength={TITLE_MAX}
-              value={draft.title}
+              ref={titleInput}
+              defaultValue={draft.title}
               onChange={(event) => update({ title: event.target.value })}
             />
           )}
@@ -290,13 +312,21 @@ function LinkForm({
           </Field>
         )}
         {profile.slug && <BookingAliasField profile={profile} />}
-        <SegmentedControl
-          label={t("scheduling.col.length")}
-          options={LENGTHS}
-          value={draft.length}
-          labels={lengthLabels(t, plural)}
-          onChange={(length) => update({ length })}
-        />
+        <Field label={t("scheduling.col.length")}>
+          {(control) => (
+            <Select
+              {...control}
+              options={lengthOptions(t, plural)}
+              value={draft.length}
+              onChange={(next) => {
+                const length = LENGTHS.find((preset) => preset === next);
+                if (length !== undefined) {
+                  update({ length });
+                }
+              }}
+            />
+          )}
+        </Field>
         {draft.length === "other" ? (
           <Field
             label={t("scheduling.lengthMinutes")}
@@ -308,9 +338,10 @@ function LinkForm({
                 {...control}
                 type="number"
                 inputMode="numeric"
-                min={15}
-                max={480}
-                value={draft.minutes}
+                ref={minutesInput}
+                min={MIN_MINUTES}
+                max={MAX_MINUTES}
+                defaultValue={draft.minutes}
                 onChange={(event) => update({ minutes: event.target.value })}
               />
             )}
@@ -326,7 +357,8 @@ function LinkForm({
           {(control) => (
             <TextInput
               {...control}
-              value={draft.offered ?? ""}
+              ref={offeredInput}
+              defaultValue={draft.offered ?? ""}
               onChange={(event) => update({ offered: event.target.value })}
             />
           )}
@@ -336,6 +368,7 @@ function LinkForm({
           draft={draft}
           onChange={update}
           error={locationError}
+          locationRef={locationInput}
         />
         <HoursSummary
           notice={profile.notice_minutes}
@@ -347,14 +380,7 @@ function LinkForm({
         <Button onClick={onClose} disabled={save.isPending}>
           {t("create.cancel")}
         </Button>
-        <Button
-          variant="primary"
-          pending={save.isPending}
-          disabled={
-            offeredError || !!lengthError || !!locationError || titleMissing
-          }
-          onClick={submit}
-        >
+        <Button variant="primary" pending={save.isPending} onClick={submit}>
           {t("scheduling.saveLink")}
         </Button>
       </DrawerFoot>
@@ -366,20 +392,17 @@ function LinkForm({
   );
 }
 
-function lengthLabels(
+function lengthOptions(
   t: Translator,
   plural: PluralTranslator,
-): Record<Length, string> {
-  const minutes = (count: string) =>
-    plural("scheduling.minutes", Number(count), { count });
-  return {
-    "15": minutes("15"),
-    "30": minutes("30"),
-    "45": minutes("45"),
-    "60": minutes("60"),
-    "90": minutes("90"),
-    other: t("scheduling.lengthOther"),
-  };
+): SelectOption[] {
+  return LENGTHS.map((length) => ({
+    value: length,
+    label:
+      length === "other"
+        ? t("scheduling.lengthOther")
+        : plural("scheduling.minutes", Number(length), { count: length }),
+  }));
 }
 
 function VideoChoice({
@@ -387,9 +410,11 @@ function VideoChoice({
   draft,
   onChange,
   error,
+  locationRef,
 }: Readonly<{
   profile: Profile;
   draft: LinkDraft;
+  locationRef: Ref<HTMLInputElement>;
   onChange: (next: Partial<LinkDraft>) => void;
   error: string | undefined;
 }>) {
@@ -457,9 +482,10 @@ function VideoChoice({
             <TextInput
               {...control}
               required
+              ref={locationRef}
               placeholder={t("scheduling.locationExample")}
               maxLength={LOCATION_MAX}
-              value={draft.location}
+              defaultValue={draft.location}
               onChange={(event) => onChange({ location: event.target.value })}
             />
           )}

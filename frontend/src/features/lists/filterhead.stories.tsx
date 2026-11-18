@@ -3,11 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
-import {
-  Button,
-  OverflowMenu,
-  SegmentedControl,
-} from "../../design-system/atoms";
+import { Button, OverflowMenu } from "../../design-system/atoms";
+import { Select } from "../../design-system/select";
 import { StoryProviders } from "../../testing/story-utils";
 import { FocusedHead, FocusedPending, FocusedState } from "./filterhead";
 
@@ -42,17 +39,16 @@ export const WithControl: Story = {
       <FocusedHead
         title="New contact filter"
         control={
-          <SegmentedControl
-            options={["contacts", "companies", "deals", "leads"] as const}
+          <Select
+            options={[
+              { value: "contacts", label: "Contacts" },
+              { value: "companies", label: "Companies" },
+              { value: "deals", label: "Deals" },
+              { value: "leads", label: "Leads" },
+            ]}
             value="contacts"
             onChange={() => {}}
-            labels={{
-              contacts: "Contacts",
-              companies: "Companies",
-              deals: "Deals",
-              leads: "Leads",
-            }}
-            label="Record type"
+            aria-label="Record type"
           />
         }
       />

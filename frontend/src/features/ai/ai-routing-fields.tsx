@@ -50,6 +50,7 @@ export const PROVIDERS = [
 export const DECISION_PROVIDERS = [
   "jev",
   "jev_compatible",
+  "gemini_decision",
 ] as const satisfies readonly NamedProvider[];
 
 // The one-click binding the decision row offers on jev_compatible: OpenRouter's

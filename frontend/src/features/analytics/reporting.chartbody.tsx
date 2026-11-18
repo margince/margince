@@ -1,5 +1,5 @@
 import { Button, EmptyState } from "../../design-system/atoms";
-import { DataTable } from "../../design-system/datatable";
+import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { BarList } from "../../design-system/readings";
 import {
   BulletChart,
@@ -282,6 +282,7 @@ export function ChartBody({
                 },
                 {
                   key: "value",
+                  align: "end",
                   header: t("reporting.actual"),
                   render: (point) => format(point.value),
                 },
@@ -363,6 +364,20 @@ function GroupedBars({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const countColumns: DataTableColumn<ChartPoint>[] =
+    countHeader == null
+      ? []
+      : [
+          {
+            key: "count",
+            header: countHeader,
+            align: "end",
+            render: (point) =>
+              point.observations == null
+                ? MONEY_ABSENT
+                : formatAnalyticsNumber(point.observations, locale),
+          },
+        ];
   return (
     <>
       <BarList
@@ -398,21 +413,11 @@ function GroupedBars({
             },
             {
               key: "value",
+              align: "end",
               header: t("reporting.actual"),
               render: (point) => format(point.value),
             },
-            ...(countHeader == null
-              ? []
-              : [
-                  {
-                    key: "count",
-                    header: countHeader,
-                    render: (point: ChartPoint) =>
-                      point.observations == null
-                        ? MONEY_ABSENT
-                        : formatAnalyticsNumber(point.observations, locale),
-                  },
-                ]),
+            ...countColumns,
           ]}
         />
       </ChartTableDoor>

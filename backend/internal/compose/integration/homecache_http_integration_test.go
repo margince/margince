@@ -64,7 +64,7 @@ func TestHomeOpensOnItsCachedWorklistUntilTheFenceOrTheReadersWriteEndsIt(t *tes
 	var contact struct {
 		ID ids.UUID `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Fresh Lead"}, nil, &contact); status != http.StatusCreated {
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Fresh Lead"}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("POST contact → %d", status)
 	}
 	if !homeShows(t, e, "Call the quiet buyer") {

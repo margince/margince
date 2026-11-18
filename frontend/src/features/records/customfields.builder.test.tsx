@@ -46,7 +46,13 @@ function builder(
       </ToastProvider>
     </QueryClientProvider>,
   );
-  return { user, onSubmit, onCancel };
+  const pickType = (type: string) =>
+    pickOption(
+      user,
+      screen.getByRole("combobox", { name: en["cf.typeLabel"] }),
+      type,
+    );
+  return { user, onSubmit, onCancel, pickType };
 }
 
 describe("FieldBuilder", () => {
@@ -59,9 +65,9 @@ describe("FieldBuilder", () => {
   });
 
   it("shows the pending DDL preview reflecting the type", async () => {
-    const { user } = builder();
+    const { user, pickType } = builder();
     await user.type(screen.getByLabelText(/Label/i), "Contract end date");
-    await user.click(screen.getByRole("button", { name: /^Date$/i }));
+    await pickType("Date");
     expect(
       screen.getByText(
         /ALTER company ADD COLUMN cf_contract_end_date \(date\)/,
@@ -90,8 +96,8 @@ describe("FieldBuilder", () => {
   });
 
   it("reveals the ISO-4217 input for currency", async () => {
-    const { user } = builder();
-    await user.click(screen.getByRole("button", { name: /^Currency$/i }));
+    const { pickType } = builder();
+    await pickType("Currency");
     expect(screen.getByLabelText(/Currency code/i)).toBeInTheDocument();
   });
 
@@ -101,8 +107,8 @@ describe("FieldBuilder", () => {
       {},
       userEvent.setup({ advanceTimers: vi.advanceTimersByTime }),
     );
-    const { user } = view;
-    await user.click(screen.getByRole("button", { name: /^Picklist$/i }));
+    const { user, pickType } = view;
+    await pickType("Picklist");
     const removes = screen.getAllByRole("button", { name: /remove option/i });
     // start with one row; removing it is blocked
     await user.click(removes[removes.length - 1]);
@@ -117,9 +123,9 @@ describe("FieldBuilder", () => {
   });
 
   it("submits a well-formed draft on Confirm", async () => {
-    const { user, onSubmit } = builder();
+    const { user, onSubmit, pickType } = builder();
     await user.type(screen.getByLabelText(/Label/i), "Renewal date");
-    await user.click(screen.getByRole("button", { name: /^Date$/i }));
+    await pickType("Date");
     await user.click(screen.getByRole("button", { name: "Add field" }));
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -131,11 +137,9 @@ describe("FieldBuilder", () => {
   });
 
   it("submits a record field with the one kind it points at", async () => {
-    const { user, onSubmit } = builder();
+    const { user, onSubmit, pickType } = builder();
     await user.type(screen.getByLabelText(/Label/i), "Last visit");
-    await user.click(
-      screen.getByRole("button", { name: en["cf.type.record"] }),
-    );
+    await pickType(en["cf.type.record"]);
     const add = screen.getByRole("button", { name: "Add field" });
     expect(add).toBeDisabled();
     await pickOption(
@@ -170,9 +174,9 @@ describe("FieldBuilder", () => {
   });
 
   it("keeps Confirm disabled for a picklist whose only option is blank", async () => {
-    const { user } = builder();
+    const { user, pickType } = builder();
     await user.type(screen.getByLabelText(/Label/i), "Deal source");
-    await user.click(screen.getByRole("button", { name: /^Picklist$/i }));
+    await pickType("Picklist");
     // The single option row is left blank: a picklist with no real choice
     // must not be confirmable.
     expect(screen.getByRole("button", { name: "Add field" })).toBeDisabled();

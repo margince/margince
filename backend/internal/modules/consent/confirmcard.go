@@ -158,6 +158,7 @@ func fieldOriginsFor(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) ([
 type SubscriptionCard struct {
 	PurposeKey   string `json:"purpose_key"`
 	PurposeLabel string `json:"purpose_label"`
+	Frequency    string `json:"frequency"`
 	State        string `json:"state"`
 }
 
@@ -171,12 +172,12 @@ func (s *Store) consentCardFor(ctx context.Context, ref ConfirmRef) (Subscriptio
 	var card SubscriptionCard
 	err := database.WithInfraTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
-			SELECT cp.key, cp.label,
+			SELECT cp.key, cp.label, cp.frequency,
 			       coalesce((SELECT pc.state FROM contact_consent pc
 			                  WHERE pc.contact_id = $1 AND pc.purpose_id = cp.id), 'unknown')
 			  FROM consent_purpose cp
 			 WHERE cp.id = $2 AND cp.archived_at IS NULL`,
-			ref.ContactID, ref.PurposeID).Scan(&card.PurposeKey, &card.PurposeLabel, &card.State)
+			ref.ContactID, ref.PurposeID).Scan(&card.PurposeKey, &card.PurposeLabel, &card.Frequency, &card.State)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		// The purpose was archived after the link went out. The link is live

@@ -32,6 +32,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Only placeholders and punctuation, with no word to translate.
   "compose.aboutWhen",
   "sendPermission.recipientLine",
+  "privacynotice.purposeLine",
   "changes.check.outcome",
   "captureConcern.title",
   "companyReach.functionCount",
@@ -94,6 +95,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "aiProviders.name.openai",
   "aiProviders.name.gemini",
   "aiProviders.name.jev",
+  "aiProviders.name.geminiDecision",
   "aiProviders.name.ollama",
   "aiProviders.name.vllm",
   "aiProviderSettings.service.openrouter",

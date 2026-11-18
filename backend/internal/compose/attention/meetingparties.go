@@ -67,6 +67,42 @@ func (s *Service) nameTheOrganizers(ctx context.Context, rows []crmcontracts.Wor
 	return nil
 }
 
+// MeetingRooms answers who is in each of a set of meetings, under the caller's
+// own grants. A meeting the caller may not read is absent from the answer.
+type MeetingRooms interface {
+	WorklistMeetingRooms(ctx context.Context, meetingIDs []ids.UUID) (map[ids.UUID]crmcontracts.WorklistMeetingRoom, error)
+}
+
+// nameTheRooms puts who is in the room on every row about a meeting still
+// ahead. The row then says who it is with, not only what the calendar called it.
+func (s *Service) nameTheRooms(ctx context.Context, rows []crmcontracts.WorklistItem) error {
+	if s.rooms == nil {
+		return nil
+	}
+	var meetings []ids.UUID
+	for _, row := range rows {
+		if row.Source == sourceMeeting && row.Subject != nil {
+			meetings = append(meetings, ids.UUID(row.Subject.Id))
+		}
+	}
+	if len(meetings) == 0 {
+		return nil
+	}
+	rooms, err := s.rooms.WorklistMeetingRooms(ctx, meetings)
+	if err != nil {
+		return fmt.Errorf("attention: naming who is in the meetings: %w", err)
+	}
+	for i := range rows {
+		if rows[i].Source != sourceMeeting || rows[i].Subject == nil {
+			continue
+		}
+		if room, known := rooms[ids.UUID(rows[i].Subject.Id)]; known {
+			rows[i].Room = &room
+		}
+	}
+	return nil
+}
+
 // hostOnTheWire is the seat a meeting row's meeting came off, with its name
 // still to resolve; nil where no calendar claims the meeting. It reads the same
 // host id the row's owner is drawn from.

@@ -15,7 +15,6 @@ import { useCanWrite } from "../../lib/capability";
 import { usePipelines } from "../../lib/pipelines.queries";
 import { unwrap } from "../../lib/problem";
 import { REPORTING_EVALUATION_KEY } from "../../lib/reportingfigures";
-import { navigate } from "../../lib/router";
 import { useUrlParams } from "../../lib/urlstate";
 import { ReportingEvidenceDrawer } from "./analytics.drawers";
 import { ReportingCharts } from "./reporting.charts";
@@ -149,9 +148,13 @@ function PreparedRow({
         <SaveReportingDialog
           selection={selection}
           onClose={() => setSaving(false)}
-          onSaved={(saved) => {
+          onSaved={(saved, from) => {
             setSaving(false);
-            navigate({ screen: "analytics", id: "reports", id2: saved.id });
+            from.navigate({
+              screen: "analytics",
+              id: "reports",
+              id2: saved.id,
+            });
           }}
         />
       )}

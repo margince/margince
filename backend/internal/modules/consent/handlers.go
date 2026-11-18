@@ -137,7 +137,11 @@ func (h Handlers) CreateConsentPurpose(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	requiresDOI := req.RequiresDoubleOptIn != nil && *req.RequiresDoubleOptIn
-	purpose, err := h.store.CreatePurpose(r.Context(), req.Key, req.Label, requiresDOI)
+	frequency := ""
+	if req.Frequency != nil {
+		frequency = string(*req.Frequency)
+	}
+	purpose, err := h.store.CreatePurpose(r.Context(), req.Key, req.Label, requiresDOI, frequency)
 	if err != nil {
 		writeConsentErr(w, r, err)
 		return
@@ -254,6 +258,7 @@ func (h Handlers) SuppressContact(w http.ResponseWriter, r *http.Request, id crm
 	if req.Reason != nil {
 		in.Reason = *req.Reason
 	}
+	in.ReceivedAt = req.ReceivedAt
 	if err := h.store.Suppress(r.Context(), in); err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -345,12 +350,14 @@ func writeConsentErr(w http.ResponseWriter, r *http.Request, err error) {
 
 func wirePurpose(p Purpose) crmcontracts.ConsentPurpose {
 	class := crmcontracts.ConsentPurposeClass(p.Class)
+	frequency := crmcontracts.ConsentPurposeFrequency(p.Frequency)
 	return crmcontracts.ConsentPurpose{
 		Id:                  openapi_types.UUID(p.ID.UUID),
 		Key:                 p.Key,
 		Label:               p.Label,
 		RequiresDoubleOptIn: &p.RequiresDoubleOptIn,
 		Class:               &class,
+		Frequency:           &frequency,
 		CreatedAt:           p.CreatedAt,
 	}
 }

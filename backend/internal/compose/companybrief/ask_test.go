@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
+	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
 // openingTag matches the fence's opening marker, whatever promptfence names it
@@ -437,4 +438,24 @@ func texts(sentences []Sentence) []string {
 		out = append(out, sentence.Text)
 	}
 	return out
+}
+
+// The ask request sends the shape ParseBrief reads, and that shape admits a reply ParseBrief keeps.
+func TestTheAskRequestSendsTheShapeItsParserReads(t *testing.T) {
+	in := inputFixture()
+	req := AskRequest(crmcontracts.CompanyQuestionWhatsOpen, in, string(textlang.English))
+	if len(req.ResponseSchema) == 0 {
+		t.Fatal("the ask request carries no response schema, so a decoder may write any shape")
+	}
+	good := `{"sentences":[{"text":"The retrofit deal has stalled.","evidence":[{"entity_type":"deal","entity_id":"d1"}]}]}`
+	if kept, err := ParseBrief(good, briefCompanyID, in); err != nil || len(kept) != 1 {
+		t.Fatalf("the parser kept %d sentences of the well-formed reply (%v), want 1", len(kept), err)
+	}
+	if err := schema.ValidateJSON(req.ResponseSchema, good); err != nil {
+		t.Errorf("the schema refuses a reply the parser keeps: %v", err)
+	}
+	invented := strings.Replace(good, `"entity_type":"deal"`, `"entity_type":"lead"`, 1)
+	if err := schema.ValidateJSON(req.ResponseSchema, invented); err == nil {
+		t.Error("the schema admits a record type the answer cannot ground")
+	}
 }

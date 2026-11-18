@@ -20,6 +20,7 @@ never reaches the answer.
 | `jev` | `GET /v1/models` next to its endpoint (the TypeSafe model list), `Authorization: Bearer`, on the host the endpoint names, OpenRouter included | 200, with the model count |
 | `jev_compatible` on `openrouter.ai` | `GET https://openrouter.ai/api/v1/key`, `Authorization: Bearer` | 200, no count |
 | `jev_compatible` on another host | `POST {endpoint}` with body `{}`, `Authorization: Bearer` when a key is stored | 400 or 422, no count, reported as **not confirmed** (`key_confirmed: false`). A 200 fails: no Jev server answers an empty request |
+| `gemini_decision` | `GET /v1beta/models?pageSize=1` on the host of its endpoint, `x-goog-api-key` | 200, no count |
 
 The two `jev_compatible` rows are not the same because "compatible" promises only the Jev decision
 route. The OpenRouter model list is public and answers 200 to every key, so Test asks its key
@@ -48,4 +49,5 @@ The models the routing editor lists (`GET /v1/ai/available-models/{provider}`) c
 places. For `jev` they come from the TypeSafe list. For `jev_compatible` on OpenRouter they come
 from its catalog, asked with `output_modalities=all` (without it, the catalog leaves out Jev), and
 then cut down to `typesafe/*`. A decision server you run on your own shows no list, so the rows of
-the price sheet are the models it lists.
+the price sheet are the models it lists. For `gemini_decision` the list is `gemini-decision-1`, the
+one model Google names, and Margince asks Google nothing for it.

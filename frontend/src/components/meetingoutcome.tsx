@@ -10,12 +10,18 @@ import { useT } from "../i18n";
 import { useCanWriteRecord } from "../lib/capability";
 import { problemFieldErrorsOf } from "../lib/problem";
 import { worklistKey } from "../lib/workkeys";
-import { MeetingOutcomeDialog } from "./meetingoutcome.dialog";
+import {
+  type MeetingDialogMode,
+  MeetingOutcomeDialog,
+} from "./meetingoutcome.dialog";
 import { useMeetingOutcome } from "./taskactions";
 
 type Activity = components["schemas"]["Activity"];
 
-/** The outcome choice on a record page, for a meeting the server stamps as awaiting one. */
+/**
+ * The meeting verbs on a record page. The outcome choice shows while the
+ * server stamps the meeting as awaiting one; its notes show once it was held.
+ */
 export function RecordMeetingOutcome({
   activity,
   invalidateKeys,
@@ -24,8 +30,13 @@ export function RecordMeetingOutcome({
   invalidateKeys: readonly QueryKey[];
 }>) {
   const writable = useCanWriteRecord("activity", activity);
-  if (!(activity.awaiting_outcome && writable)) {
+  if (!writable) {
     return null;
+  }
+  if (!activity.awaiting_outcome) {
+    return (
+      <HeldMeetingNotes activity={activity} invalidateKeys={invalidateKeys} />
+    );
   }
   return (
     <MeetingOutcome
@@ -36,6 +47,64 @@ export function RecordMeetingOutcome({
       // The Worklist asks about the same meeting, so an answer here clears it there.
       invalidateKeys={[...invalidateKeys, worklistKey]}
     />
+  );
+}
+
+/**
+ * "Add notes" or "Edit notes" on a held meeting, so what was discussed can be
+ * written the day after. A live invitation keeps the meeting's notes, and the
+ * server refuses them from here, so such a meeting offers none.
+ */
+function HeldMeetingNotes({
+  activity,
+  invalidateKeys,
+}: Readonly<{
+  activity: Activity;
+  invalidateKeys: readonly QueryKey[];
+}>) {
+  const t = useT();
+  const [open, setOpen] = useState(false);
+  if (
+    activity.kind !== "meeting" ||
+    activity.meeting_status !== "held" ||
+    activity.calendar_managed === true ||
+    activity.content_state === "withheld"
+  ) {
+    return null;
+  }
+  const title = activity.subject ?? undefined;
+  const edits = Boolean(activity.body?.trim());
+  return (
+    <>
+      <Button
+        aria-label={
+          title
+            ? t(
+                edits
+                  ? "worklist.verb.meetingEditNotesFor"
+                  : "worklist.verb.meetingAddNotesFor",
+                { subject: title },
+              )
+            : undefined
+        }
+        onClick={() => setOpen(true)}
+      >
+        {t(
+          edits
+            ? "worklist.verb.meetingEditNotes"
+            : "worklist.verb.meetingAddNotes",
+        )}
+      </Button>
+      {open && (
+        <MeetingOutcomeDialog
+          id={activity.id}
+          title={title}
+          invalidateKeys={invalidateKeys}
+          mode="notes"
+          onClose={() => setOpen(false)}
+        />
+      )}
+    </>
   );
 }
 
@@ -58,7 +127,7 @@ export function MeetingOutcome({
 }>) {
   const t = useT();
   const toast = useToast();
-  const [open, setOpen] = useState<"held" | "notes" | undefined>();
+  const [open, setOpen] = useState<MeetingDialogMode | undefined>();
   // An invitation can arrive after the row was read, so its refusal hides Cancel too.
   const [refusedAsManaged, setRefusedAsManaged] = useState(false);
   const record = useMeetingOutcome(invalidateKeys);
@@ -90,8 +159,10 @@ export function MeetingOutcome({
   return (
     <>
       <span className="t-caption">{t("worklist.verb.meetingHowDidItGo")}</span>
+      {/* Only "Did not happen" writes from here; the other two open a
+          dialog, so they wait on its write without showing it as theirs. */}
       <Button
-        pending={record.isPending}
+        disabled={record.isPending}
         aria-label={
           title
             ? t("worklist.verb.meetingHeldFor", { subject: title })
@@ -102,13 +173,13 @@ export function MeetingOutcome({
         {t("worklist.verb.meetingHeld")}
       </Button>
       <Button
-        pending={record.isPending}
+        disabled={record.isPending}
         aria-label={
           title
             ? t("worklist.verb.meetingAddNotesFor", { subject: title })
             : undefined
         }
-        onClick={() => setOpen("notes")}
+        onClick={() => setOpen("edit")}
       >
         {t("worklist.verb.meetingAddNotes")}
       </Button>
@@ -130,7 +201,7 @@ export function MeetingOutcome({
           id={id}
           title={title}
           invalidateKeys={invalidateKeys}
-          outcomeOnly={open === "held"}
+          mode={open}
           onClose={() => setOpen(undefined)}
         />
       )}

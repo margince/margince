@@ -48,6 +48,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/aicert"
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/compose/aitasks/testmodel"
+	"github.com/margince/margince/backend/internal/compose/modelcontract"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 )
@@ -63,60 +64,11 @@ var aiPromptsPage = filepath.Join("..", "..", "..", "docs", "reference", "ai-pro
 // walk, so a page cannot describe a payload it does not match.
 var aiPromptsDoc = filepath.Join("..", "..", "..", "docs", "reference", "ai-prompts.json")
 
-// promptDocument is the published JSON.
-type promptDocument struct {
-	// Sites lists the registered sites this build sends a prompt from.
-	Sites []promptEntry `json:"sites"`
-}
-
-// promptEntry is one site, structured.
-type promptEntry struct {
-	Task string `json:"task"`
-	Site string `json:"site"`
-	// Batch answers whether one prompt ever holds untrusted text from several
-	// DIFFERENT authors. See the isolation constants for what each means.
-	// Isolation is derived from the request, except for the two sites whose
-	// own code declares one item per call.
-	Isolation string `json:"isolation"`
-	// Systems holds the distinct instructions the case issued, boundary marker
-	// canonicalised.
-	Systems []string `json:"systems"`
-	// AnswerSchema is the shape the completion must conform to, where the site
-	// constrains it. Per-call record ids are replaced by a placeholder.
-	AnswerSchema json.RawMessage `json:"answer_schema,omitempty"`
-	// SpansInScenario is how many separately fenced regions the first request
-	// carried FOR THIS SCENARIO. Not the site's capacity.
-	SpansInScenario int `json:"spans_in_scenario"`
-	// Calls is how many requests the case issued for one scenario.
-	Calls int `json:"calls"`
-	// The instruction broken into the three parts prompt-shape.md names, in
-	// bytes, plus the ~4-bytes-per-token estimate the window bounds use.
-	//
-	// CacheablePercent is RulesBytes over SystemBytes: the share a provider
-	// reusing a byte-identical prefix could reuse between two runs. Anything
-	// after the boundary sentence is unreachable for that purpose, however
-	// identical it is — which is why AfterBoundaryBytes is published beside it
-	// rather than folded away.
-	SystemBytes        int `json:"system_bytes"`
-	SystemTokens       int `json:"system_tokens_estimate"`
-	RulesBytes         int `json:"rules_bytes"`
-	BoundaryBytes      int `json:"boundary_bytes"`
-	AfterBoundaryBytes int `json:"after_boundary_bytes"`
-	CacheablePercent   int `json:"cacheable_percent"`
-	// DecisionQuestions is the site's decision form, for a site whose task
-	// declares one: the questions a decision model is asked before the ladder.
-	// The state each one reads is per scenario and is not published.
-	DecisionQuestions []decisionQuestion `json:"decision_questions,omitempty"`
-}
-
-// decisionQuestion is one question of a site's decision form, as its adapter
-// builds it from the committed fixture.
-type decisionQuestion struct {
-	Name         string            `json:"name"`
-	Type         string            `json:"type"`
-	Instructions string            `json:"instructions"`
-	Criteria     map[string]string `json:"criteria"`
-}
+type (
+	promptDocument   = modelcontract.Document
+	promptEntry      = modelcontract.Entry
+	decisionQuestion = modelcontract.DecisionQuestion
+)
 
 // isolation is what the page publishes about a site's exposure to a hostile
 // item, and it is DERIVED wherever it can be.
@@ -177,6 +129,9 @@ type sitePrompt struct {
 	requests int
 	// shape is what this site does with untrusted items.
 	shape isolation
+	// unschemed is how many of the case's requests ask for JSON in their
+	// instruction and carry no response schema to hold the model to it.
+	unschemed int
 	// decisions holds the DISTINCT decision questions the site's decision form
 	// asked across its scenarios, for the same reason systems holds every
 	// distinct instruction: a question that varied by scenario and was shown
@@ -241,6 +196,7 @@ func TestTheAIPromptsPageIsCurrent(t *testing.T) {
 				continue
 			}
 			got.decisions = appendDistinctQuestions(got.decisions, one.decisions)
+			got.unschemed += one.unschemed
 			for _, system := range one.systems {
 				if seenSystem[system] {
 					continue
@@ -265,8 +221,10 @@ func TestTheAIPromptsPageIsCurrent(t *testing.T) {
 		default:
 			got.shape = oneFencedItem
 		}
+		checkSchemaDeclared(t, key, got.unschemed > 0)
 		prompts = append(prompts, got)
 	}
+	checkDeclaredSchemalessReached(t, prompts)
 	if len(prompts) == 0 {
 		// Under-recognition is the one failure this must not have: an empty
 		// walk would rewrite the page to nothing and report success.
@@ -357,7 +315,11 @@ func readSitePrompt(census *aitasks.Registry, sc aicert.Scenario) (out sitePromp
 	}
 	var systems []string
 	seen := map[string]bool{}
+	unschemed := 0
 	for _, req := range recorder.Requests {
+		if strings.Contains(req.System+fmt.Sprint(req.Messages), "JSON") && len(req.ResponseSchema) == 0 {
+			unschemed++
+		}
 		canonical := promptfence.Canonicalize(req.System, req.System)
 		if seen[canonical] {
 			continue
@@ -377,6 +339,7 @@ func readSitePrompt(census *aitasks.Registry, sc aicert.Scenario) (out sitePromp
 		schema:    canonicalSchema(first.ResponseSchema),
 		spans:     spans,
 		requests:  len(recorder.Requests),
+		unschemed: unschemed,
 		decisions: decisionQuestionsOf(prepared),
 	}, refused, nil
 }
@@ -630,4 +593,41 @@ func declarationStillInTree(t *testing.T, sentence string) bool {
 		t.Fatalf("searching for the declaration %q: %v", sentence, err)
 	}
 	return found
+}
+
+// declaredSchemaless names the sites that ask for JSON and send no response
+// schema, against the sentence in their code that says why.
+// gatekit:fixture each site's own sentence for why its JSON reply has no schema. Expected data, checked to still exist.
+var declaredSchemaless = map[string]string{
+	"brief_ranking/rank": "carries no ResponseSchema: BoundToCandidates enforces",
+	"cert_judge/judge":   "It carries no ResponseSchema: its digest stamps every judged",
+}
+
+// checkSchemaDeclared holds a site whose request asks for JSON to send the
+// schema providers enforce at generation, or to say in its code why not.
+func checkSchemaDeclared(t *testing.T, key string, unschemed bool) {
+	t.Helper()
+	sentence, declared := declaredSchemaless[key]
+	switch {
+	case unschemed && !declared:
+		t.Errorf("site %s asks for JSON and sends no response schema: declare one from its reply struct, "+
+			"or say in its code why not and add that sentence to declaredSchemaless", key)
+	case declared && !unschemed:
+		t.Errorf("site %s is declared schemaless but every request now carries a schema; remove it from declaredSchemaless", key)
+	case declared && !declarationStillInTree(t, sentence):
+		t.Errorf("site %s is declared schemaless on the strength of %q, which is no longer in backend/", key, sentence)
+	}
+}
+
+func checkDeclaredSchemalessReached(t *testing.T, prompts []sitePrompt) {
+	t.Helper()
+	read := map[string]bool{}
+	for _, p := range prompts {
+		read[p.task+"/"+p.variant] = true
+	}
+	for key := range declaredSchemaless {
+		if !read[key] {
+			t.Errorf("declaredSchemaless names %s, which no corpus scenario reaches", key)
+		}
+	}
 }

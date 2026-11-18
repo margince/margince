@@ -74,14 +74,20 @@ const (
 	ModeEnforce Mode = "enforce"
 )
 
-// Evidence names the records a decision rests on, by id and never by content.
+// Evidence names sources and rendered-footer findings. Only the footer digest
+// and finding codes are persisted; FooterPreview is transient review text.
 // Every field is optional: which ones a category needs is the validator's
 // question, not this type's.
 type Evidence struct {
-	ActivityID ids.UUID
-	DealID     ids.UUID
-	InvoiceID  ids.UUID
-	ContractID ids.UUID
+	// FooterFindings are server-derived omissions in the rendered message.
+	FooterFindings []FooterFinding
+	FooterPreview  []string
+	PolicyRevision string
+	FooterDigest   string
+	ActivityID     ids.UUID
+	DealID         ids.UUID
+	InvoiceID      ids.UUID
+	ContractID     ids.UUID
 	// ConsentEventID is the proof row a marketing allow stands on.
 	ConsentEventID ids.UUID
 	// BasisID is a durable communication_basis row.
@@ -211,6 +217,14 @@ type Decision struct {
 	// claimed one fails. Only a preview fills them, and none is ever applied:
 	// the sender switches the reason and the engine is asked again.
 	SupportedAlternatives []Category
+
+	// LawfulBasisMissing says the recipient's pack has no legitimate-interest
+	// basis and the record holds neither their consent nor an agreement with
+	// them. Only a preview fills it, and it refuses nothing: the screen warns.
+	LawfulBasisMissing bool
+	// ConsentPurpose is the purpose a consent request to a LawfulBasisMissing
+	// recipient would ask about, zero when none can be asked.
+	ConsentPurpose ids.UUID
 }
 
 // DecisionSet holds the per-recipient answers for one delivery and phase.

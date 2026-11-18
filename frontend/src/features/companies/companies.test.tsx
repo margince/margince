@@ -1,4 +1,5 @@
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import {
   act,
   cleanup,
@@ -18,6 +19,7 @@ import {
 } from "../../testing/company.fixtures";
 import { stubFetch } from "../../testing/company.testkit";
 import { openFilterValues } from "../../testing/listquery.testkit";
+import { phoneRowOf, stubWindowWidth } from "../../testing/phonerow.testkit";
 import { CompaniesScreen } from "./companies";
 import { render } from "./companies.testkit";
 
@@ -469,5 +471,44 @@ describe("CompaniesScreen — dedupe view-existing link (P-16)", () => {
     );
     await user.click(screen.getByText("View existing record"));
     expect(window.location.hash).toBe("#/companies/01X");
+  });
+});
+
+describe("CompaniesScreen — a row on a phone", () => {
+  function listCompanies(rows: readonly (typeof company)[]) {
+    stubFetch(async () =>
+      jsonResponse({
+        data: rows,
+        page: { next_cursor: null, has_more: false },
+      }),
+    );
+    render(<CompaniesScreen />);
+  }
+
+  it("ends the name's line in the lifecycle and puts the website's host under it", async () => {
+    stubWindowWidth(390);
+    listCompanies([
+      {
+        ...company,
+        lifecycle: "customer",
+        website_url: "https://www.brandt.example/de",
+        description: "Fleet retrofits",
+      },
+    ]);
+    const row = await phoneRowOf("Brandt Automotive GmbH");
+    expect(row.end).toEqual(["Customer"]);
+    expect(row.caption).toEqual(["brandt.example"]);
+    expect(
+      within(row.row).queryByRole("link", { name: "brandt.example" }),
+    ).toBeNull();
+    expect(row.row).not.toHaveTextContent("Fleet retrofits");
+  });
+
+  it("leaves out a lifecycle nobody set and a website nobody recorded", async () => {
+    stubWindowWidth(390);
+    listCompanies([{ ...company, lifecycle: "unknown", website_url: null }]);
+    const row = await phoneRowOf("Brandt Automotive GmbH");
+    expect(row.end).toEqual([]);
+    expect(row.caption).toEqual([]);
   });
 });

@@ -13,6 +13,9 @@ package activities
 
 import (
 	"context"
+	"crypto/sha256"
+	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -162,10 +165,11 @@ func (s *Store) prepareRenderedSend(ctx context.Context, origin SendOrigin, in S
 	if err != nil {
 		return PreparedSend{}, err
 	}
-	derived, err := s.deliverability(ctx, signed, in.Subject, in.Recipients, surface, in.SendingEntity)
+	derived, err := s.deliverability(ctx, signed, in.Subject, in.Recipients, surface, in.SendingEntity, s.footerLanguage(ctx, in.Body, in.Subject))
 	if err != nil {
 		return PreparedSend{}, err
 	}
+	in.Evidence = footerEvidence(in.Evidence, derived, strings.TrimPrefix(derived.recorded, signed))
 	messageID := MintMessageID(s.messageIDDomain())
 
 	// The files, resolved to snapshots while the sender's own read gate still
@@ -284,4 +288,16 @@ func (s *Store) sendingEntity(ctx context.Context) (ids.UUID, error) {
 		return err
 	})
 	return entity, err
+}
+
+func footerEvidence(evidence commsauthz.Evidence, derived sendDeliverability, footer string) commsauthz.Evidence {
+	evidence.FooterPreview = nil
+	evidence.FooterFindings = derived.footerFindings
+	for _, line := range derived.disclosures {
+		if !line.Missing() {
+			evidence.FooterPreview = append(evidence.FooterPreview, line.Text)
+		}
+	}
+	evidence.FooterDigest = fmt.Sprintf("%x", sha256.Sum256([]byte(footer)))
+	return evidence
 }

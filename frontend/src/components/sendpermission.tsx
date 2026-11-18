@@ -5,6 +5,7 @@ import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { CommunicationStatus } from "../design-system/communicationstatus";
 import { Row } from "../design-system/stack";
+import { footerFindingsText } from "../format/footerfindings";
 import { formatNumber } from "../format/format";
 import {
   type RefusalKind,
@@ -22,6 +23,7 @@ import {
   remedyCategoryOf,
   type SendStatus,
 } from "../lib/sendstatus";
+import { LawfulBasisCallout } from "./lawfulbasiswarning";
 
 // What the engine decided about this message, said where the rep is writing it.
 //
@@ -94,9 +96,8 @@ export function decidingRecipient(
   const deciding = decidingRefusal(refusals);
   const recipient = deciding && refusing[refusals.indexOf(deciding)];
   if (!recipient) return { state: "allowed" };
-  // `can_be_overruled` and not `decided_by`, because the two disagree: a dead
-  // mailbox and a rolling frequency cap are the engine's own reading, and
-  // absolute. Absent means the server did not say, which is not a yes.
+  // `can_be_overruled` and not `decided_by`: a frequency cap is the engine's
+  // own reading, yet one message may pass it with a reason. Absent is not a yes.
   return {
     state: recipient.can_be_overruled ? "unproven" : "refused",
     recipient,
@@ -133,10 +134,26 @@ export function sendStatus({
   return previewStatus({ preview, asking, unanswered });
 }
 
+/**
+ * A refusal a recorded reason can pass reads as a warning. One nothing lifts,
+ * such as the recipient's own stop, reads as a danger, under "Message cannot be sent".
+ */
+function calloutLook(kind: RefusalKind, overrulable: boolean) {
+  const hardStop = kind === "restricted" && !overrulable;
+  const title: MessageKey =
+    kind === "restricted" && !hardStop
+      ? "sendPermission.stopWithReason"
+      : TITLE[kind];
+  return hardStop
+    ? { tone: "danger" as const, icon: ShieldAlert, title }
+    : { tone: "warning" as const, icon: ShieldQuestion, title };
+}
+
 const TITLE: Record<RefusalKind, MessageKey> = {
   missingContext: "sendPermission.missingContext",
   missingEvidence: "sendPermission.unproven",
   missingPermission: "sendPermission.missingPermission",
+  missingFooter: "sendPermission.footer.title",
   restricted: "sendPermission.refused",
 };
 
@@ -149,17 +166,7 @@ const TITLE: Record<RefusalKind, MessageKey> = {
  * grown by accident, and two spellings of a consent surface means one screen
  * tells a rep they may send while another says they may not, about one message.
  */
-export function SendPermission({
-  preview,
-  unanswered = false,
-  asking = false,
-  refusal,
-  onOverride,
-  override,
-  picksReason = false,
-  namesRecipients = false,
-  onRecheck,
-}: Readonly<{
+type SendPermissionProps = Readonly<{
   preview: Preview | undefined;
   /**
    * The question is in flight. Drawn rather than left silent, because silence
@@ -194,8 +201,34 @@ export function SendPermission({
    * here rather than by a press that cannot be made.
    */
   onRecheck?: () => void;
-}>) {
+}>;
+
+/**
+ * The engine's answer for this message, and the warning a recipient with no
+ * lawful basis on record owes. The warning stands even when the message may go.
+ */
+export function SendPermission(props: SendPermissionProps) {
+  return (
+    <>
+      <LawfulBasisCallout preview={props.preview} />
+      <PermissionNotice {...props} />
+    </>
+  );
+}
+
+function PermissionNotice({
+  preview,
+  unanswered = false,
+  asking = false,
+  refusal,
+  onOverride,
+  override,
+  picksReason = false,
+  namesRecipients = false,
+  onRecheck,
+}: SendPermissionProps) {
   const t = useT();
+  const { locale } = useLocale();
   const status = sendStatus({ preview, asking, unanswered, refusal });
   if (status.kind === "unavailable") {
     return <UncheckedNotice onRecheck={onRecheck} />;
@@ -216,17 +249,34 @@ export function SendPermission({
       ) : undefined))
     : undefined;
   const surface = { recordable: Boolean(control), picksReason };
+  const look = calloutLook(
+    status.kind,
+    status.deciding?.canBeOverruled === true,
+  );
   return (
     <Callout
-      tone={status.kind === "restricted" ? "danger" : "warning"}
+      tone={look.tone}
       kind={refusal ? "outcome" : "standing"}
       // `status` while the rep writes, so one who does not hear the answer
       // does not meet it at the Send button. A refused Send is an alert.
       live={refusal ? "alert" : "status"}
-      icon={status.kind === "restricted" ? ShieldAlert : ShieldQuestion}
-      title={t(TITLE[status.kind])}
+      icon={look.icon}
+      title={t(look.title)}
       actions={control ?? refusal?.remedies}
     >
+      {status.refused.some((item) => item.footerFindings?.length) ? (
+        <p>
+          {footerFindingsText(
+            [
+              ...new Set(
+                status.refused.flatMap((item) => item.footerFindings ?? []),
+              ),
+            ],
+            t,
+            locale,
+          )}
+        </p>
+      ) : null}
       <RefusalDetail
         status={status}
         named={namesRecipients}

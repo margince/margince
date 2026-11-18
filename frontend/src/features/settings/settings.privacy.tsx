@@ -17,6 +17,8 @@ import {
 } from "../privacy/privacy.corrections";
 import { ConsentPurposesCard } from "../privacy/privacy.purposes";
 import { RetentionCard } from "../privacy/retention";
+import { ArchivePurposeCard } from "./archivepurpose";
+import { ArchiveReviewCard } from "./archivereview";
 import { CustomerNoticesCard } from "./customernotices";
 import {
   PinRecordAction,
@@ -35,7 +37,13 @@ export function PrivacyLanes({ tab = "consent" }: Readonly<{ tab?: string }>) {
     case "customers":
       return <CustomerNoticesCard />;
     case "retention":
-      return <RetentionCard />;
+      return (
+        <>
+          <RetentionCard />
+          <ArchivePurposeCard />
+          <ArchiveReviewCard />
+        </>
+      );
     case "requests":
       return <RequestsPanel />;
     case "duties":

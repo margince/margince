@@ -23,7 +23,10 @@ type Contact = components["schemas"]["Contact"];
 // repeatable email and phone rows cost two clicks before a value can be typed.
 //
 // On a company's page the company is already chosen, so the box is left out.
-function quickCaptureFields(askCompany: boolean): CreateField[] {
+function quickCaptureFields(
+  askCompany: boolean,
+  t: (key: MessageKey) => string,
+): CreateField[] {
   return [
     {
       key: "full_name",
@@ -37,7 +40,17 @@ function quickCaptureFields(askCompany: boolean): CreateField[] {
       maxLength: TEXT_LIMITS.label,
     },
     ...(askCompany ? [contactCompanyField] : []),
-    { key: "profile_url", label: "create.linkedin" },
+    {
+      key: "profile_url",
+      label: "create.linkedin",
+      validate: (value, values) =>
+        !values?.full_name?.trim() ||
+        value.trim() ||
+        values?.email?.trim() ||
+        values?.phone?.trim()
+          ? undefined
+          : t("create.contactChannelRequired"),
+    },
     { key: "email", label: "create.email", type: "email" },
     { key: "phone", label: "create.phone" },
   ];
@@ -115,7 +128,7 @@ export function QuickCaptureAction({
         void refreshCompaniesAfterContact(queryClient);
       }}
       resolveExisting={(_code, id) => ({ screen: "contacts", id })}
-      fields={quickCaptureFields(company === undefined)}
+      fields={quickCaptureFields(company === undefined, t)}
     />
   );
 }

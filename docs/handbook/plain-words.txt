@@ -417,7 +417,6 @@ except
 exception
 exchange
 exclude
-execute
 exhausted
 exist
 expect

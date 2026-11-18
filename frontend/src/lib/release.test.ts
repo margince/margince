@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { comparableRelease, releaseSkew } from "./release";
+import { comparableRelease, releaseSkew, shortRevision } from "./release";
 
 // A typed table rather than it.each's positional tuples. The tuple form needed a
 // cast at the call site to pass `undefined` for a `string | undefined` parameter,
@@ -80,5 +80,16 @@ describe("comparableRelease", () => {
     expect(comparableRelease("")).toBe(false);
     expect(comparableRelease("dev")).toBe(false);
     expect(comparableRelease("1970.42")).toBe(true);
+  });
+});
+
+describe("shortRevision", () => {
+  it.each([
+    [undefined, undefined],
+    ["", undefined],
+    ["dev", undefined],
+    ["0123456789abcdef0123456789abcdef01234567", "0123456"],
+  ])("maps %j to %j", (revision, short) => {
+    expect(shortRevision(revision)).toBe(short);
   });
 });

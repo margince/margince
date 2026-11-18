@@ -11,6 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -62,6 +63,9 @@ type Store struct {
 	// missedReceipts tells the controller about a required opt-out receipt
 	// that will not go out on its own. Nil leaves only the log line.
 	missedReceipts MissedReceipts
+	// requestTasks writes the task a request from a subject owes
+	// (requesttask.go).
+	requestTasks RequestTasks
 }
 
 // NewStore binds the store to the pool every read and write runs through.
@@ -75,7 +79,10 @@ type Purpose struct {
 	Label               string
 	RequiresDoubleOptIn bool
 	Class               Class
-	CreatedAt           time.Time
+	// Frequency is how often the purpose's mail goes out, in the contract's
+	// ConsentPurposeFrequency words.
+	Frequency string
+	CreatedAt time.Time
 }
 
 type State struct {
@@ -128,7 +135,7 @@ func (s *Store) ListPurposes(ctx context.Context) ([]Purpose, error) {
 	var out []Purpose
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
-			SELECT id, key, label, requires_double_opt_in, class, created_at
+			SELECT id, key, label, requires_double_opt_in, class, frequency, created_at
 			FROM consent_purpose WHERE archived_at IS NULL ORDER BY key`)
 		if err != nil {
 			return err
@@ -136,7 +143,7 @@ func (s *Store) ListPurposes(ctx context.Context) ([]Purpose, error) {
 		defer rows.Close()
 		for rows.Next() {
 			var p Purpose
-			if err := rows.Scan(&p.ID, &p.Key, &p.Label, &p.RequiresDoubleOptIn, &p.Class, &p.CreatedAt); err != nil {
+			if err := rows.Scan(&p.ID, &p.Key, &p.Label, &p.RequiresDoubleOptIn, &p.Class, &p.Frequency, &p.CreatedAt); err != nil {
 				return err
 			}
 			out = append(out, p)
@@ -150,7 +157,7 @@ func (s *Store) ListPurposes(ctx context.Context) ([]Purpose, error) {
 // consent_config is the object that says so — it replaced a borrowed
 // pipeline.create, which let anyone who could add a pipeline stage define the
 // vocabulary every outreach decision is judged against.
-func (s *Store) CreatePurpose(ctx context.Context, key, label string, requiresDOI bool) (Purpose, error) {
+func (s *Store) CreatePurpose(ctx context.Context, key, label string, requiresDOI bool, frequency string) (Purpose, error) {
 	if err := auth.Require(ctx, "consent_config", principal.ActionCreate); err != nil {
 		return Purpose{}, err
 	}
@@ -158,14 +165,20 @@ func (s *Store) CreatePurpose(ctx context.Context, key, label string, requiresDO
 	if key == "" || strings.TrimSpace(label) == "" {
 		return Purpose{}, &ValidationError{Field: "key", Reason: "key and label are required"}
 	}
+	if frequency == "" {
+		frequency = string(crmcontracts.ConsentPurposeFrequencyMonthly)
+	}
+	if !crmcontracts.ConsentPurposeFrequency(frequency).Valid() {
+		return Purpose{}, &ValidationError{Field: "frequency", Reason: "pick weekly, monthly or quarterly"}
+	}
 	var p Purpose
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx, `
-			INSERT INTO consent_purpose (key, label, requires_double_opt_in)
-			VALUES ($1, $2, $3)
-			RETURNING id, key, label, requires_double_opt_in, class, created_at`,
-			key, label, requiresDOI).
-			Scan(&p.ID, &p.Key, &p.Label, &p.RequiresDoubleOptIn, &p.Class, &p.CreatedAt)
+			INSERT INTO consent_purpose (key, label, requires_double_opt_in, frequency)
+			VALUES ($1, $2, $3, $4)
+			RETURNING id, key, label, requires_double_opt_in, class, frequency, created_at`,
+			key, label, requiresDOI, frequency).
+			Scan(&p.ID, &p.Key, &p.Label, &p.RequiresDoubleOptIn, &p.Class, &p.Frequency, &p.CreatedAt)
 		if constraint, ok := storekit.UniqueViolation(err); ok && constraint == "consent_purpose_key_unique" {
 			return fmt.Errorf("purpose %q: %w", key, apperrors.ErrConflict)
 		}
@@ -302,6 +315,9 @@ type RecordInput struct {
 	// was pinned, an API caller stating their own wording — and those rows keep
 	// the weaker evidence they always had.
 	TextVersionID ids.UUID
+	// SubjectRequest is the contact's own request the confirmation answered,
+	// kept on the proof row; zero where none was on record.
+	SubjectRequest ids.UUID
 	// NeverOverrideExisting is the anonymous-capture rule: a public
 	// surface asserting "granted" must not flip a decision already on
 	// record — above all a WITHDRAWAL, which an attacker knowing only an
@@ -424,5 +440,5 @@ func (e *ValidationError) Error() string { return "consent: " + e.Field + ": " +
 // FieldFault is what lets every surface answer the refusal as the 422 it is,
 // without a handler having to know this module's error type.
 func (e *ValidationError) FieldFault() (field, code, message string) {
-	return e.Field, "invalid", e.Reason
+	return e.Field, codeInvalid, e.Reason
 }

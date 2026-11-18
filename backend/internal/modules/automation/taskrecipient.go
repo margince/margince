@@ -28,7 +28,7 @@ func validateTaskRecipientParam(params map[string]any) error {
 	return nil
 }
 
-func configuredTaskEffect(ctx context.Context, ex Executors, ev workflow.Event, subject string, dueAt time.Time) (workflow.Effect, error) {
+func configuredTaskEffect(ctx context.Context, ex Executors, ev workflow.Event, words taskWords, dueAt time.Time) (workflow.Effect, error) {
 	var params struct {
 		Recipient string `json:"recipient"`
 	}
@@ -41,9 +41,16 @@ func configuredTaskEffect(ctx context.Context, ex Executors, ev workflow.Event, 
 		if ev.OwnerID.IsZero() {
 			return workflow.Effect{}, workflow.Declined("the person authorizing the automation is unavailable")
 		}
-		return taskCreateEffectFor(ctx, ev, subject, dueAt, &ev.OwnerID, nil)
+		var fired firedFields
+		if ex.Provider != nil {
+			var err error
+			if fired, err = firedRecord(ctx, ex, ev); err != nil {
+				return workflow.Effect{}, err
+			}
+		}
+		return taskCreateEffectFor(ctx, ev, words, fired.title(), dueAt, &ev.OwnerID, nil)
 	}
-	return ownedTaskEffectNoKey(ctx, ex, ev, subject, dueAt)
+	return ownedTaskEffectNoKey(ctx, ex, ev, words, dueAt)
 }
 
 func taskRecipientSchema() map[string]any {

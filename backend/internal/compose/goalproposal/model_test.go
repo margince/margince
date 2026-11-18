@@ -6,6 +6,8 @@ package goalproposal
 import (
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
 func major(amounts ...int64) []*int64 {
@@ -87,5 +89,22 @@ func TestTheRequestShowsTheClosedRevenueAndTheYearlyGoal(t *testing.T) {
 	}
 	if !in.HasHistory() || (Input{Closed: []YearIn{{Year: 2026, Months: major(0, 0)}}}).HasHistory() {
 		t.Error("history is closed revenue above zero in some month, and nothing less")
+	}
+}
+
+func TestTheRequestSendsTheShapeItsParserReads(t *testing.T) {
+	req := Request(lastYearInput())
+	if len(req.ResponseSchema) == 0 {
+		t.Fatal("the goal request carries no response schema, so a decoder may write any shape")
+	}
+	if _, err := Parse(evenReply, lastYearInput()); err != nil {
+		t.Fatalf("the parser refused the even reply: %v", err)
+	}
+	if err := schema.ValidateJSON(req.ResponseSchema, evenReply); err != nil {
+		t.Errorf("the schema refuses a reply the parser keeps: %v", err)
+	}
+	fractional := strings.Replace(evenReply, "[100,", "[100.5,", 1)
+	if err := schema.ValidateJSON(req.ResponseSchema, fractional); err == nil {
+		t.Error("the schema admits a fractional month the parser refuses")
 	}
 }

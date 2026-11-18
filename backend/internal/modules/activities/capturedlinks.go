@@ -97,7 +97,7 @@ func (s *Store) RetireCapturedLinks(
 	rows, err := tx.Query(ctx, `
 		UPDATE attachment SET archived_at = now()
 		 WHERE entity_type = 'activity' AND entity_id = $1 AND category = '`+categoryLink+`'
-		   AND external_source_id = $2 AND archived_at IS NULL AND NOT (url = ANY($3::text[]))
+		   AND external_source_id = $2 AND archived_at IS NULL AND NOT (url = ANY(coalesce($3::text[], '{}')))
 		RETURNING id`, activityID, providerMessageKey(from), kept)
 	if err != nil {
 		return 0, fmt.Errorf("activities: archiving the links a source no longer lists: %w", err)
@@ -164,9 +164,7 @@ func (s *Store) RestoreCapturedLinks(
 		if err != nil {
 			return 0, fmt.Errorf("activities: auditing a restored link: %w", err)
 		}
-		// The row is back in the activity's listings, which is what created
-		// tells a subscriber that keeps its own index of a record's files.
-		if err := storekit.EmitEvent(ctx, tx, auditID, id, crmcontracts.PublicEventAttachmentCreated{
+		if err := storekit.EmitEvent(ctx, tx, auditID, id, crmcontracts.PublicEventAttachmentRestored{
 			ParentType: linkEntityActivity, ParentId: openapi_types.UUID(activityID.UUID),
 		}); err != nil {
 			return 0, fmt.Errorf("activities: announcing a restored link: %w", err)

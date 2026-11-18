@@ -1639,6 +1639,10 @@ func (stubs) PreviewControllerMail(w nethttp.ResponseWriter, r *nethttp.Request,
 	httperr.NotImplemented(w, r, "PreviewControllerMail")
 }
 
+func (stubs) ExportContactOptOutRecords(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ExportContactOptOutRecords")
+}
+
 func (stubs) SendPrivacyNotice(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "SendPrivacyNotice")
 }
@@ -2605,6 +2609,10 @@ func (stubs) DeleteCorpusDocument(w nethttp.ResponseWriter, r *nethttp.Request, 
 
 func (stubs) DownloadCorpusDocument(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "DownloadCorpusDocument")
+}
+
+func (stubs) ConfirmSendWithoutLawfulBasis(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ConfirmSendWithoutLawfulBasis")
 }
 
 func (stubs) ListLeadDisqualifyReasons(w nethttp.ResponseWriter, r *nethttp.Request) {
@@ -3719,6 +3727,14 @@ func (stubs) UpdateRetentionPolicy(w nethttp.ResponseWriter, r *nethttp.Request,
 	httperr.NotImplemented(w, r, "UpdateRetentionPolicy")
 }
 
+func (stubs) ListArchivedActivities(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListArchivedActivitiesParams) {
+	httperr.NotImplemented(w, r, "ListArchivedActivities")
+}
+
+func (stubs) DeleteArchivedActivities(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.DeleteArchivedActivitiesParams) {
+	httperr.NotImplemented(w, r, "DeleteArchivedActivities")
+}
+
 func (stubs) ListLegalHolds(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListLegalHoldsParams) {
 	httperr.NotImplemented(w, r, "ListLegalHolds")
 }
@@ -3853,6 +3869,10 @@ func (stubs) ReassignHandoff(w nethttp.ResponseWriter, r *nethttp.Request, id cr
 
 func (stubs) Search(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.SearchParams) {
 	httperr.NotImplemented(w, r, "Search")
+}
+
+func (stubs) AskSearchData(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "AskSearchData")
 }
 
 func (stubs) ListSharedMailboxes(w nethttp.ResponseWriter, r *nethttp.Request) {

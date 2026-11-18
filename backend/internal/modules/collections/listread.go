@@ -261,6 +261,7 @@ type HistoryEntry struct {
 	Actor             string
 	EntityType        *string
 	EntityID          *ids.UUID
+	EntityName        *string
 	Reason            *string
 	Note              *string
 	DefinitionVersion *int64
@@ -268,6 +269,12 @@ type HistoryEntry struct {
 	Name              *string
 	Definition        map[string]any
 	Sharing           *string
+	// Changes names what a revision changed against the version before it, in
+	// revisionChangesSQL's words; nil when no earlier version is kept.
+	Changes []string
+	// Previous holds the version before a revision, for what Changes names.
+	PreviousName       *string
+	PreviousDefinition map[string]any
 }
 
 // History pages through a list's changes, newest first. A membership change
@@ -331,21 +338,41 @@ func historySQL(ctx context.Context, list listRow, after *storekit.Cursor, limit
 	}
 	return fmt.Sprintf(`SELECT h.* FROM (
 		SELECT ev.id, 'member_' || ev.action AS kind, ev.occurred_at, ev.actor,
-		       ev.entity_type, ev.entity_id, ev.reason, ev.note, ev.definition_version,
-		       NULL::bigint AS version, NULL::text AS name, NULL::jsonb AS definition, NULL::text AS sharing
-		FROM list_member_event ev WHERE ev.list_id = $%[1]d AND %[2]s
+		       ev.entity_type, ev.entity_id, %[5]s AS entity_name, ev.reason, ev.note, ev.definition_version,
+		       NULL::bigint AS version, NULL::text AS name, NULL::jsonb AS definition, NULL::text AS sharing,
+		       NULL::text[] AS changes, NULL::text AS previous_name, NULL::jsonb AS previous_definition
+		FROM list_member_event ev %[6]s WHERE ev.list_id = $%[1]d AND %[2]s
 		UNION ALL
 		SELECT r.id, 'revised', r.changed_at, r.changed_by,
-		       NULL, NULL, NULL, NULL, NULL, r.version, r.name, r.definition, r.sharing
-		FROM list_revision r WHERE r.list_id = $%[1]d
+		       NULL, NULL, NULL, NULL, NULL, NULL, r.version, r.name, r.definition, r.sharing,
+		       %[7]s, p.name, p.definition
+		FROM list_revision r
+		LEFT JOIN list_revision p ON p.list_id = r.list_id AND p.version = r.version - 1
+		WHERE r.list_id = $%[1]d
 	) h %[3]s ORDER BY h.occurred_at DESC, h.id DESC LIMIT $%[4]d`,
-		listPos, visible, page, arg(limit+1)), nil
+		listPos, visible, page, arg(limit+1),
+		recordNameExpr(list.EntityType), recordNameJoin(list.EntityType, "ev.entity_id"), revisionChangesSQL), nil
 }
+
+// filterChangedSQL is whether revision r changed the filter of the version p
+// before it. The history and the visit summary both ask it, so they agree.
+const filterChangedSQL = `r.definition IS DISTINCT FROM p.definition`
+
+// revisionChangesSQL is what revision r changed against the version p before
+// it, as the contract's ListHistoryEntry.changes spells it; NULL with no p.
+const revisionChangesSQL = `CASE WHEN p.id IS NULL THEN NULL ELSE array_remove(ARRAY[
+		CASE WHEN r.name IS DISTINCT FROM p.name THEN 'name' END,
+		CASE WHEN r.purpose IS DISTINCT FROM p.purpose THEN 'purpose' END,
+		CASE WHEN ` + filterChangedSQL + ` THEN 'filter' END,
+		CASE WHEN (r.sharing, r.team_id) IS DISTINCT FROM (p.sharing, p.team_id) THEN 'sharing' END,
+		CASE WHEN r.steward_id IS DISTINCT FROM p.steward_id THEN 'steward' END
+	], NULL) END`
 
 func scanHistory(row pgx.CollectableRow) (HistoryEntry, error) {
 	var h HistoryEntry
-	err := row.Scan(&h.ID, &h.Kind, &h.OccurredAt, &h.Actor, &h.EntityType, &h.EntityID,
-		&h.Reason, &h.Note, &h.DefinitionVersion, &h.Version, &h.Name, &h.Definition, &h.Sharing)
+	err := row.Scan(&h.ID, &h.Kind, &h.OccurredAt, &h.Actor, &h.EntityType, &h.EntityID, &h.EntityName,
+		&h.Reason, &h.Note, &h.DefinitionVersion, &h.Version, &h.Name, &h.Definition, &h.Sharing,
+		&h.Changes, &h.PreviousName, &h.PreviousDefinition)
 	return h, err
 }
 

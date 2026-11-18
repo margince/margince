@@ -15,10 +15,10 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 273.5 KB |
+| Tool catalog | 273.9 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 71428 |
-| Largest tool | `read_details` (17.2 KB) |
+| Approx. wire tokens | 71535 |
+| Largest tool | `read_details` (17.4 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
 Those are the bytes on the wire: they carry each tool's output schema and the
@@ -33,10 +33,10 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 51.5 KB | 18% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 53.4 KB | 19% | Yes, every step |
-| Input schemas | 156.8 KB | 57% | Yes, every step |
+| Descriptions (incl. governance clause) | 53.5 KB | 19% | Yes, every step |
+| Input schemas | 157.1 KB | 57% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 4% | Partly |
-| **Description + input schema** | **210.2 KB** | **76%** | **the recurring cost** |
+| **Description + input schema** | **210.6 KB** | **76%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -85,17 +85,17 @@ descriptions and input schemas are what each step pays for.
 | [`commit_import`](#commit_import) | Commit an import |  |  | 275 |
 | [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 891 |
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 429 |
-| [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 517 |
+| [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 524 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 395 |
 | [`find_records`](#find_records) | Find records | yes |  | 2033 |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes | [`ui://margince/approval-queue.html`](#approval_queue_view) | 474 |
 | [`list_documents`](#list_documents) | List a record's documents or read one | yes |  | 331 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1012 |
-| [`read_analytics`](#read_analytics) | Write a report or query data | yes |  | 1020 |
+| [`read_analytics`](#read_analytics) | Write a report or query data | yes |  | 1067 |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
 | [`read_attention`](#read_attention) | See what needs attention | yes | [`ui://margince/attention.html`](#attention_view) | 365 |
 | [`read_context`](#read_context) | Get the story so far | yes | [`ui://margince/context.html`](#context_view) | 413 |
-| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 4397 |
+| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 4437 |
 | [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes | [`ui://margince/forecast.html`](#forecast_view) | 978 |
 | [`read_import`](#read_import) | Read an import run or the import format | yes |  | 235 |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 797 |
@@ -105,11 +105,11 @@ descriptions and input schemas are what each step pays for.
 | [`read_reports`](#read_reports) | Read sales reports | yes |  | 2784 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 358 |
 | [`read_view`](#read_view) | Read a view | yes |  | 1889 |
-| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2775 |
+| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2779 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 1344 |
-| [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 484 |
-| [`send_outbound`](#send_outbound) | Send a message |  |  | 1722 |
+| [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 487 |
+| [`send_outbound`](#send_outbound) | Send a message |  |  | 1678 |
 | [`update_record`](#update_record) | Update a record |  | [`ui://margince/update.html`](#update_view) | 626 |
 | [`whoami`](#whoami) | Who this passport acts for | yes |  | 129 |
 
@@ -4491,9 +4491,9 @@ today `slipping` — each left on its deal's timeline. A first email waits on th
 marked as drafted by an agent, until the human you act for sends it there; a reply, or one not_saved
 because they keep an unsent draft of their own, is not saved, so show it in full. slipping_deals
 covers the deals read_attention with view=slipping reports, at most 25. send_outbound sends an email
-once it is written. Keep the subject, body, to and the activity_id or links a message echoes; the
-send takes them unchanged. Each follow-up comes back with its deal_id and draft_activity_id. (Runs
-immediately; requires passport scope "draft".)
+once it is written. Keep the subject, body, to, the activity_id or links, and the
+communication_context a message echoes; the send takes them unchanged. Each follow-up comes back
+with its deal_id and draft_activity_id. (Runs immediately; requires passport scope "draft".)
 ```
 
 <details><summary>Input schema</summary>
@@ -6841,6 +6841,10 @@ read_reports for the standard metrics and named reports. Keep a saved query's id
       },
       "type": "array"
     },
+    "request_body": {
+      "description": "ask only: The chosen action's request body; read_workspace topic actions lists its shape",
+      "type": "object"
+    },
     "save": {
       "description": "query only: Persist the run; the answer then carries a citable run_id.",
       "type": "boolean"
@@ -6858,8 +6862,9 @@ read_reports for the standard metrics and named reports. Keep a saved query's id
       ]
     },
     "step": {
-      "description": "query: ask a question of the data; compose: build a report document from saved queries",
+      "description": "query: ask a typed question of the data; compose: build a report document from saved queries; ask: ask a plain-language data question",
       "enum": [
+        "ask",
         "compose",
         "query"
       ],
@@ -9054,7 +9059,7 @@ needs the user now, and read_record for a record's own fields.
 {
   "properties": {
     "action": {
-      "description": "read_workspace topic actions lists each action's body\nactivity_deal_filing: How a call or meeting logged from this record will be filed on a deal\nactivity_pipeline: Every ingress stage this message passed through, and why each did or did not run\nai_budget_preview: Preview an allowance change (ai_budget read/update)\nai_routing_preview: Preview affected features without calling a model (ai_routing read/update and ai_budget read)\nai_task_overrides_preview: Judge a draft of the overrides without saving it (ai_routing read and update)\nautomation_preview: Dry-run an automation's blast radius, writing nothing, sending nothing and staging no approval\nbackfill_preview: Preview a backfill window — the scope before the spend\ncapture_triage: Which mail domains were triaged into this company, and what each concluded\nchannel_link: The chat channel a deal or project is linked to, if any\ncommunication_review: What a refused send was refused for, and for whom\ncompany_brief: Deprecated: The standing company brief — what this company is, where it stands, and what changed\ncompany_contracts: The agreements this company holds, newest first (CONTRACT-WIRE-1)\ncompany_for_address: The company a contact at this email address would work at\ncompany_linkedin_reach: Which colleagues can get you in at this company\ncompany_logo: Stream a company's logo image\ncompany_logo_icon: Stream a company's square logo icon\ncompany_scan: What this company needs, as the model last judged it for this reader\ncontact_brief: The standing relationship brief — who this contact is commercially, what they care about, what changed\ncontact_consent: Read a contact's per-purpose consent state plus the append-only proof log\ncontact_consent_guard: May we write to this contact right now — per purpose and channel, with the reason\ncontact_overrides: List the contact's standing exceptions and their exact scope\ncontact_profile_fields: The evidence sidecar for this contact's enriched fields — each value with the verbatim snippet it was read from\ncontact_stops: List the stops that stand on this contact, and which ones you may take back\ncontract: One contract (CONTRACT-WIRE-3)\ncontroller_mail_preview: Show the exact mail `confirm-request` or `privacy-notice` would send, without sending it\ndeal_legal_reviews: The legal reviews asked for on this deal, newest first\ndeal_lines: The products and services a deal sells, and the value they add up to\ndeal_margince_changes: Every change Margince made to this deal, newest first\ndeal_products: The products a deal sells, with the value allocated to each\ndeal_room_brief: A short written brief of what the room's buyers did and what is waiting on the seller\ndeal_suggestion: Read one suggestion and its currently visible evidence\ndeal_suggestions: Open Deal Scout suggestions the caller may see, newest first\ndocument_extraction: The newest reading of this attachment — its progress, what it grounded, and what it honestly omitted\ndossier: What this company IS — assembled from its own facts, every sentence citing one\nenrichment_run: Read one asynchronous enrichment run and its safe status\nevidence: The receipt behind one cited record — where it came from, and what is missing\nfield_history: Per-field change history for one record, projected from audit_log before/after diffs\nfilter_preview: Count and sample what a filter would select, before it is saved (LVS-EXT-9)\nfinance_invoice_pdf: Open a mirrored invoice's own PDF, fetched from the accounting source\nforecast_assurance_preview: What a check would find, without recording any of it\nforecast_share_csv: The rows behind a shared reading, as CSV\nforecast_shared_reading: Open a shared forecast view\nforecast_shares: List the share links you issued that still serve\nforecast_stage_chances: The chance the forecast uses for each open stage, and the evidence behind it\ngrowth_fit: How well this company fits what we sell — banded, with both completeness counts\nhandled_for_you: What the product did on your behalf, so you can check it\nhandoff_assignee: Read the current receiver and reassignment version of a prospect handoff\nhidden_backlog: What the queue is not showing, and which rule is holding it back\nhidden_backlog_rows: Which threads one hiding rule is keeping off the queue\nimport_problems: Download the run's row problems as a CSV\nimport_template: Download the import template for this workspace\nintro_requests: The asks about this contact that the caller is party to\njob_health_history: Grouped totals and a bounded page of retained job failures\njurisdiction_document: Download one of the selected jurisdiction's documents\nknowledge_document: Download a document's own bytes\nlatest_weekly_review: The acting rep's most recent weekly review, or a named week's\nlead_promotion_preview: What promoting this lead would do — merge into an existing contact, or create one\nlead_score: Explain This Score — the weighted-factor decomposition behind a lead's score\nlead_signals: List current and superseded manual qualification signals\nlead_stops: List the stops that stand on this lead, and which ones you may take back\nlegal_entity_logo: Stream a legal entity's logo image\nlegal_review: One review with its pack and the deal's earlier reviews\nlegal_reviews: The reviewer's queue\nlink_candidates: Live contacts on this company's domains who do not work here yet\nmagic: What the machinery did, what it needs, what it could not finish, and what it is watching\nmagic_line_records: Every record one done line stands for, with what changed on each and whether it can be taken back\nmail_deal_repair_preview: Preview what the captured-mail deal repair does and leaves unresolved\nmail_draft: The caller's own unsent message for one place the composer opens\nmeeting_availability: Find alternative times for one existing invitation\nmeeting_proposals: List the acting host's open proposals and personal links for one contact\nmy_linkedin_reach: Which companies your imported network reaches\nnotice_case: One privacy notice owed, where the source is confirmed\nnotice_case_review: One contact's privacy-notice case — its source, whether a notice is owed, and by when\nnotice_source_evidence: Read accessible evidence for a contact source assessment\nnotice_source_preview: Preview what confirming a contact's source decides — whether a notice is owed and by when — without changing the case\nnotices: The acting user's own in-app notifications, newest first\noffer_pdf: Download the offer's most recently rendered PDF\noffered_values: What each source last offered for the company's fields, to show beside the value on the record\nownership_offer: The caller's open offer of this record\nownership_offer_candidates: The colleagues the caller may offer this record to\nownership_request: The caller's open request to be handed this record\npending_margince_changes: The changes Margince made to your deals in the last 7 days that you have not undone\nproduct_translations: The product's name and description in further languages\nproject_filing: What filing this activity under a project did to its retention, and whether it can be undone\nrelationship_nudge: Whether THIS reader has set a quiet contact aside or stopped following it\nresponse_metrics: How fast the workspace answers, how much of the queue it puts down, and how often an at-risk deal gets a next step\nscheduled_send: One of the caller's scheduled messages\nscheduled_sends: The caller's own messages waiting to be sent\nscheduling_calendars: List the current host's connected calendars for scheduling settings\nsite_read_logo: Stream the mark a website read resolved, before anything adopts it\ntag_suggestion: One open tag suggestion the caller may see, with the mail and notes it cites\nteam_board: One row per teammate — who is carrying what, so a lead can see where to help\nteam_exceptions: What is going wrong on this lead's team, and what it was judged against\nteam_margince_changes: What Margince changed on your team's deals\nteammate_weekly_plan: A teammate's plan for this week, for their lead\nvoice_source_preview: Dry-run one candidate source; detect its shape and speakers without storing anything\nwebsite_inquiry_preview: Preview inquiry deadlines and explicitly selected accepted submissions without writing\nweekly_plan: The caller's plan for this week — what they said they would do\nweekly_reviews: The weeks the acting rep has a review for, newest first\nwin_evidence: Whether the deal has the signed agreement a win rests on",
+      "description": "read_workspace topic actions lists each action's body\nactivity_deal_filing: How a call or meeting logged from this record will be filed on a deal\nactivity_pipeline: Every ingress stage this message passed through, and why each did or did not run\nai_budget_preview: Preview an allowance change (ai_budget read/update)\nai_routing_preview: Preview affected features without calling a model (ai_routing read/update and ai_budget read)\nai_task_overrides_preview: Judge a draft of the overrides without saving it (ai_routing read and update)\nautomation_preview: Dry-run an automation's blast radius, writing nothing, sending nothing and staging no approval\nbackfill_preview: Preview a backfill window — the scope before the spend\ncapture_triage: Which mail domains were triaged into this company, and what each concluded\nchannel_link: The chat channel a deal or project is linked to, if any\ncommunication_review: What a refused send was refused for, and for whom\ncompany_brief: Deprecated: The standing company brief — what this company is, where it stands, and what changed\ncompany_contracts: The agreements this company holds, newest first (CONTRACT-WIRE-1)\ncompany_for_address: The company a contact at this email address would work at\ncompany_linkedin_reach: Which colleagues can get you in at this company\ncompany_logo: Stream a company's logo image\ncompany_logo_icon: Stream a company's square logo icon\ncompany_scan: What this company needs, as the model last judged it for this reader\ncontact_brief: The standing relationship brief — who this contact is commercially, what they care about, what changed\ncontact_consent: Read a contact's per-purpose consent state plus the append-only proof log\ncontact_consent_guard: May we write to this contact right now — per purpose and channel, with the reason\ncontact_optout_records: Export this contact's registrations, refusals and opt-out receipts for an inspection\ncontact_overrides: List the contact's standing exceptions and their exact scope\ncontact_profile_fields: The evidence sidecar for this contact's enriched fields — each value with the verbatim snippet it was read from\ncontact_stops: List the stops that stand on this contact, and which ones you may take back\ncontract: One contract (CONTRACT-WIRE-3)\ncontroller_mail_preview: Show the exact mail `confirm-request` or `privacy-notice` would send, without sending it\ndeal_legal_reviews: The legal reviews asked for on this deal, newest first\ndeal_lines: The products and services a deal sells, and the value they add up to\ndeal_margince_changes: Every change Margince made to this deal, newest first\ndeal_products: The products a deal sells, with the value allocated to each\ndeal_room_brief: A short written brief of what the room's buyers did and what is waiting on the seller\ndeal_suggestion: Read one suggestion and its currently visible evidence\ndeal_suggestions: Open Deal Scout suggestions the caller may see, newest first\ndocument_extraction: The newest reading of this attachment — its progress, what it grounded, and what it honestly omitted\ndossier: What this company IS — assembled from its own facts, every sentence citing one\nenrichment_run: Read one asynchronous enrichment run and its safe status\nevidence: The receipt behind one cited record — where it came from, and what is missing\nfield_history: Per-field change history for one record, projected from audit_log before/after diffs\nfilter_preview: Count and sample what a filter would select, before it is saved (LVS-EXT-9)\nfinance_invoice_pdf: Open a mirrored invoice's own PDF, fetched from the accounting source\nforecast_assurance_preview: What a check would find, without recording any of it\nforecast_share_csv: The rows behind a shared reading, as CSV\nforecast_shared_reading: Open a shared forecast view\nforecast_shares: List the share links you issued that still serve\nforecast_stage_chances: The chance the forecast uses for each open stage, and the evidence behind it\ngrowth_fit: How well this company fits what we sell — banded, with both completeness counts\nhandled_for_you: What the product did on your behalf, so you can check it\nhandoff_assignee: Read the current receiver and reassignment version of a prospect handoff\nhidden_backlog: What the queue is not showing, and which rule is holding it back\nhidden_backlog_rows: Which threads one hiding rule is keeping off the queue\nimport_problems: Download the run's row problems as a CSV\nimport_template: Download the import template for this workspace\nintro_requests: The asks about this contact that the caller is party to\njob_health_history: Grouped totals and a bounded page of retained job failures\njurisdiction_document: Download one of the selected jurisdiction's documents\nknowledge_document: Download a document's own bytes\nlatest_weekly_review: The acting rep's most recent weekly review, or a named week's\nlead_promotion_preview: What promoting this lead would do — merge into an existing contact, or create one\nlead_score: Explain This Score — the weighted-factor decomposition behind a lead's score\nlead_signals: List current and superseded manual qualification signals\nlead_stops: List the stops that stand on this lead, and which ones you may take back\nlegal_entity_logo: Stream a legal entity's logo image\nlegal_review: One review with its pack and the deal's earlier reviews\nlegal_reviews: The reviewer's queue\nlink_candidates: Live contacts on this company's domains who do not work here yet\nmagic: What the machinery did, what it needs, what it could not finish, and what it is watching\nmagic_line_records: Every record one done line stands for, with what changed on each and whether it can be taken back\nmail_deal_repair_preview: Preview what the captured-mail deal repair does and leaves unresolved\nmail_draft: The caller's own unsent message for one place the composer opens\nmeeting_availability: Find alternative times for one existing invitation\nmeeting_proposals: List the acting host's open proposals and personal links for one contact\nmy_linkedin_reach: Which companies your imported network reaches\nnotice_case: One privacy notice owed, where the source is confirmed\nnotice_case_review: One contact's privacy-notice case — its source, whether a notice is owed, and by when\nnotice_source_evidence: Read accessible evidence for a contact source assessment\nnotice_source_preview: Preview what confirming a contact's source decides — whether a notice is owed and by when — without changing the case\nnotices: The acting user's own in-app notifications, newest first\noffer_pdf: Download the offer's most recently rendered PDF\noffered_values: What each source last offered for the company's fields, to show beside the value on the record\nownership_offer: The caller's open offer of this record\nownership_offer_candidates: The colleagues the caller may offer this record to\nownership_request: The caller's open request to be handed this record\npending_margince_changes: The changes Margince made to your deals in the last 7 days that you have not undone\nproduct_translations: The product's name and description in further languages\nproject_filing: What filing this activity under a project did to its retention, and whether it can be undone\nrelationship_nudge: Whether THIS reader has set a quiet contact aside or stopped following it\nresponse_metrics: How fast the workspace answers, how much of the queue it puts down, and how often an at-risk deal gets a next step\nscheduled_send: One of the caller's scheduled messages\nscheduled_sends: The caller's own messages waiting to be sent\nscheduling_calendars: List the current host's connected calendars for scheduling settings\nsite_read_logo: Stream the mark a website read resolved, before anything adopts it\ntag_suggestion: One open tag suggestion the caller may see, with the mail and notes it cites\nteam_board: One row per teammate — who is carrying what, so a lead can see where to help\nteam_exceptions: What is going wrong on this lead's team, and what it was judged against\nteam_margince_changes: What Margince changed on your team's deals\nteammate_weekly_plan: A teammate's plan for this week, for their lead\nvoice_source_preview: Dry-run one candidate source; detect its shape and speakers without storing anything\nwebsite_inquiry_preview: Preview inquiry deadlines and explicitly selected accepted submissions without writing\nweekly_plan: The caller's plan for this week — what they said they would do\nweekly_reviews: The weeks the acting rep has a review for, newest first\nwin_evidence: Whether the deal has the signed agreement a win rests on",
       "enum": [
         "activity_deal_filing",
         "activity_pipeline",
@@ -9076,6 +9081,7 @@ needs the user now, and read_record for a record's own fields.
         "contact_brief",
         "contact_consent",
         "contact_consent_guard",
+        "contact_optout_records",
         "contact_overrides",
         "contact_profile_fields",
         "contact_stops",
@@ -9260,7 +9266,7 @@ needs the user now, and read_record for a record's own fields.
       "type": "boolean"
     },
     "id": {
-      "description": "activity_pipeline, automation_preview, capture_triage, channel_link, communication_review, company_brief, company_contracts, company_linkedin_reach, company_logo, company_logo_icon, company_scan, contact_brief, contact_consent, contact_consent_guard, contact_overrides, contact_profile_fields, contact_stops, contract, controller_mail_preview, deal_legal_reviews, deal_lines, deal_margince_changes, deal_products, deal_room_brief, deal_suggestion, document_extraction, dossier, enrichment_run, evidence, finance_invoice_pdf, growth_fit, handoff_assignee, import_problems, intro_requests, knowledge_document, lead_promotion_preview, lead_score, lead_signals, lead_stops, legal_entity_logo, legal_review, link_candidates, magic_line_records, meeting_availability, notice_case, notice_case_review, notice_source_evidence, notice_source_preview, offer_pdf, offered_values, ownership_offer, ownership_offer_candidates, ownership_request, product_translations, project_filing, relationship_nudge, scheduled_send, tag_suggestion, voice_source_preview, website_inquiry_preview, win_evidence only",
+      "description": "activity_pipeline, automation_preview, capture_triage, channel_link, communication_review, company_brief, company_contracts, company_linkedin_reach, company_logo, company_logo_icon, company_scan, contact_brief, contact_consent, contact_consent_guard, contact_optout_records, contact_overrides, contact_profile_fields, contact_stops, contract, controller_mail_preview, deal_legal_reviews, deal_lines, deal_margince_changes, deal_products, deal_room_brief, deal_suggestion, document_extraction, dossier, enrichment_run, evidence, finance_invoice_pdf, growth_fit, handoff_assignee, import_problems, intro_requests, knowledge_document, lead_promotion_preview, lead_score, lead_signals, lead_stops, legal_entity_logo, legal_review, link_candidates, magic_line_records, meeting_availability, notice_case, notice_case_review, notice_source_evidence, notice_source_preview, offer_pdf, offered_values, ownership_offer, ownership_offer_candidates, ownership_request, product_translations, project_filing, relationship_nudge, scheduled_send, tag_suggestion, voice_source_preview, website_inquiry_preview, win_evidence only",
       "type": "string"
     },
     "kind": {
@@ -11843,7 +11849,10 @@ of the name topics is a prerequisite: each tool refuses an unknown name with the
 find_records to find a customer contact; colleagues are seats here. Use read_forecast with
 view=input_sources to learn whether a number can be trusted: how complete and current the data is.
 user_id is what assignee_id and owner_id take; never assign to an is_agent seat. Keep pipeline_id
-and stage_id for a deal. Take every name verbatim; a custom field is spelled cf_<slug>.
+and stage_id for a deal. Take every name verbatim; a custom field is spelled cf_<slug>. (Runs
+immediately; the user's yes is needed for the actions ai_call, ai_calls, member_retirement, so tell
+them what the call will surface and get it before calling, unless they asked for this call
+themselves.)
 ```
 
 <details><summary>Input schema</summary>
@@ -12093,6 +12102,7 @@ and stage_id for a deal. Take every name verbatim; a custom field is spelled cf_
         "change_state",
         "change_tags",
         "list_documents",
+        "read_analytics",
         "read_details",
         "read_reports",
         "read_workspace",
@@ -12547,12 +12557,13 @@ scope "enrich".)
 ```text
 Put a meeting on the host's calendar. invite creates the calendar event and the provider sends the
 invitation to every attendee: the contact, and any further addresses. invite reaches attendees
-outside the workspace, so name them and the time and get the user's yes first; the call stages for
-approval. Read check_availability before choosing a time. A start_intent (the user's local time)
-replaces start, and end moves with it so the meeting keeps its length. Use change_activities with
-log to record a meeting without inviting anyone, or one that already happened. Keep the invitation
-id and inspect its status before claiming it was delivered. A refused or failed invite invited
-nobody. (Governance: a human approves every call before it runs; requires passport scope "send".)
+outside the workspace. The call queues it and returns it pending, so name them and the time and get
+the user's yes first. Read check_availability before choosing a time. A start_intent (the user's
+local time) replaces start, and end moves with it so the meeting keeps its length. Use
+change_activities with log to record a meeting without inviting anyone, or one that already
+happened. Keep the invitation id and inspect its status before claiming it was delivered. A refused
+or failed invite invited nobody. (Governance: a human approves every call before it runs; requires
+passport scope "send".)
 ```
 
 <details><summary>Input schema</summary>
@@ -12672,23 +12683,22 @@ buyer reads at once, meeting_proposal makes an expiring scheduling link and mail
 change_invitation changes an invitation already sent, invite_member adds a member and mails their
 sign-in link where the installation can send mail, signature_template and my_signature set the
 sign-off every later mail carries, and double_opt_in, privacy_notice and details_confirmation mail a
-contact a link about their data: ask the user first. direct_send sends a message the engine refused
-and held: show the user the review's warning, call only once they have seen it and said yes, and
-give their reason. It names them as the one who took it on and you as the agent, and the refusal
-stays on record. Every recipient must have granted the consent purpose the call names. A sent
-message cannot be recalled, and by default nothing holds it: where an installation has raised a send
-to confirm first, the answer is a staged approval instead. chat_reply cannot start a conversation or
-choose a channel. Use draft_outbound first when the message does not exist yet, and
-change_activities with action=log to record that something was said rather than say it. Send the
-subject, body and activity_id or links the draft produced, and keep the staged approval id: the
-approval binds that exact message, so changed text needs a new one. email_new answers with the new
-conversation's activity_id. (Runs immediately; the user's yes is needed for the actions
-add_room_document, answer_invitation, change_invitation, chat_reply, deal_room_invite,
-deal_room_resend, details_confirmation, direct_send, double_opt_in, email_new, email_reply,
-invite_member, link_channel, meeting_proposal, my_signature, open_room_thread, privacy_notice,
-remove_room_document, reply_room_thread, resend_member_invite, resume_room, set_room_expiry,
-signature_template, update_room, update_room_document, so tell them what the call will change and
-get it before calling, unless they asked for this call themselves; requires passport scope "send".)
+contact a link about their data: ask the user first. A message the engine refused and held is sent
+anyway only by the user, in the app: show them the review and its warning. Every recipient must have
+granted the consent purpose the call names. A sent message cannot be recalled, and by default
+nothing holds it: where an installation has raised a send to confirm first, the answer is a staged
+approval instead. chat_reply cannot start a conversation or choose a channel. Use draft_outbound
+first when the message does not exist yet, and change_activities with action=log to record that
+something was said rather than say it. Send the subject, body and activity_id or links the draft
+produced, and keep the staged approval id: the approval binds that exact message, so changed text
+needs a new one. email_new answers with the new conversation's activity_id. (Runs immediately; the
+user's yes is needed for the actions add_room_document, answer_invitation, change_invitation,
+chat_reply, deal_room_invite, deal_room_resend, details_confirmation, double_opt_in, email_new,
+email_reply, invite_member, link_channel, meeting_proposal, my_signature, open_room_thread,
+privacy_notice, remove_room_document, reply_room_thread, resend_member_invite, resume_room,
+set_room_expiry, signature_template, update_room, update_room_document, so tell them what the call
+will change and get it before calling, unless they asked for this call themselves; requires passport
+scope "send".)
 ```
 
 <details><summary>Input schema</summary>
@@ -12716,7 +12726,6 @@ get it before calling, unless they asked for this call themselves; requires pass
         "deal_room_invite",
         "deal_room_resend",
         "details_confirmation",
-        "direct_send",
         "double_opt_in",
         "email_new",
         "email_reply",
@@ -12793,7 +12802,7 @@ get it before calling, unless they asked for this call themselves; requires pass
       "type": "object"
     },
     "id": {
-      "description": "add_room_document, answer_invitation, change_invitation, deal_room_invite, deal_room_resend, details_confirmation, direct_send, double_opt_in, link_channel, open_room_thread, privacy_notice, remove_room_document, reply_room_thread, resend_member_invite, resume_room, set_room_expiry, update_room, update_room_document only",
+      "description": "add_room_document, answer_invitation, change_invitation, deal_room_invite, deal_room_resend, details_confirmation, double_opt_in, link_channel, open_room_thread, privacy_notice, remove_room_document, reply_room_thread, resend_member_invite, resume_room, set_room_expiry, update_room, update_room_document only",
       "type": "string"
     },
     "idempotency_key": {
@@ -12853,7 +12862,7 @@ get it before calling, unless they asked for this call themselves; requires pass
       "type": "string"
     },
     "request_body": {
-      "description": "add_room_document, answer_invitation, change_invitation, deal_room_invite, details_confirmation, direct_send, double_opt_in, invite_member, link_channel, meeting_proposal, my_signature, open_room_thread, privacy_notice, reply_room_thread, set_room_expiry, signature_template, update_room, update_room_document only: The chosen action's request body; read_workspace topic actions lists its shape",
+      "description": "add_room_document, answer_invitation, change_invitation, deal_room_invite, details_confirmation, double_opt_in, invite_member, link_channel, meeting_proposal, my_signature, open_room_thread, privacy_notice, reply_room_thread, set_room_expiry, signature_template, update_room, update_room_document only: The chosen action's request body; read_workspace topic actions lists its shape",
       "type": "object"
     },
     "scheduled_at": {

@@ -110,6 +110,7 @@
     "askAboutCompany": "business",
     "askCorpus": "business",
     "askForWeeklyPlanHelp": "business",
+    "askSearchData": "business",
     "assessNoticeSource": "compliance",
     "assessSalesReview": "business",
     "assignLegalEntityMember": "admin_settings",
@@ -224,7 +225,6 @@
     "describeReportBlocks": "business",
     "describeReportVocabulary": "business",
     "describeRouterActions": "business",
-    "directCommunicationSend": "compliance",
     "discardDomainQuestion": "capture",
     "discardMailDraft": "business",
     "discardReportingReportDraft": "business",
@@ -264,6 +264,7 @@
     "explainReport": "business",
     "explainReportRunCell": "business",
     "explainReportingQuestionCard": "business",
+    "exportContactOptOutRecords": "compliance",
     "exportForecastShare": "business",
     "exportReportingEdition": "business",
     "exportReportingEvaluation": "business",
@@ -982,6 +983,7 @@
     "askAboutCompany": "companies",
     "askCorpus": "knowledge",
     "askForWeeklyPlanHelp": "worklist",
+    "askSearchData": "search",
     "assessNoticeSource": "privacy_notices",
     "assessSalesReview": "reports",
     "assignLeads": "leads",
@@ -1022,6 +1024,7 @@
     "confirmCompanyProfileField": "companies",
     "confirmMeetingReady": "worklist",
     "confirmMyTotp": "own_security",
+    "confirmSendWithoutLawfulBasis": "consent",
     "connectChannel": "connectors",
     "connectConnector": "connectors",
     "connectExtOauth": "extensions",
@@ -1109,6 +1112,7 @@
     "deleteAiProviderKey": "ai_models",
     "deleteAnchorCompanyLogo": "company_profile",
     "deleteAnchorCompanyLogoIcon": "company_profile",
+    "deleteArchivedActivities": "retention",
     "deleteAttachment": "documents",
     "deleteAutomation": "automations",
     "deleteCaptureCounterpartyHold": "capture_triage",
@@ -1192,6 +1196,7 @@
     "explainReport": "reports",
     "explainReportRunCell": "reports",
     "explainReportingQuestionCard": "reports",
+    "exportContactOptOutRecords": "consent",
     "exportForecastShare": "forecast",
     "exportReportingEdition": "reports",
     "exportReportingEvaluation": "reports",
@@ -1475,6 +1480,7 @@
     "listAiProviderKeys": "ai_models",
     "listApprovalPreferences": "agent_limits",
     "listApprovals": "agent_limits",
+    "listArchivedActivities": "retention",
     "listAssignableRoles": "members",
     "listAtRiskRelationships": "deals",
     "listAttachments": "documents",
@@ -2175,6 +2181,9 @@
     "ask_knowledge_corpus": [
       "knowledge"
     ],
+    "ask_search_data": [
+      "search"
+    ],
     "assess_sales_review": [
       "reports"
     ],
@@ -2475,9 +2484,6 @@
     "describe_views": [
       "search"
     ],
-    "direct_communication_send": [
-      "consent"
-    ],
     "discard_domain_question": [
       "capture_triage"
     ],
@@ -2594,6 +2600,9 @@
     ],
     "explain_reporting_question_card": [
       "reports"
+    ],
+    "export_contact_optout_records": [
+      "consent"
     ],
     "export_forecast_share": [
       "forecast"
@@ -4290,6 +4299,9 @@
     "ask_knowledge_corpus": [
       "business"
     ],
+    "ask_search_data": [
+      "business"
+    ],
     "assess_sales_review": [
       "business"
     ],
@@ -4582,9 +4594,6 @@
     "describe_views": [
       "business"
     ],
-    "direct_communication_send": [
-      "compliance"
-    ],
     "discard_domain_question": [
       "capture"
     ],
@@ -4701,6 +4710,9 @@
     ],
     "explain_reporting_question_card": [
       "business"
+    ],
+    "export_contact_optout_records": [
+      "compliance"
     ],
     "export_forecast_share": [
       "business"

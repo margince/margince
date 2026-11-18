@@ -129,7 +129,7 @@ func TestEveryProviderWithAKeyIsOneTheSealerCoversAndNamesAVariable(t *testing.T
 		}
 	}
 	for provider := range cloudKeyEnv {
-		if !covered[provider] {
+		if !covered[keySlotOf(provider)] {
 			t.Errorf("%s takes an api key but the sealer does not cover it — its key stays in the environment", provider)
 		}
 	}
@@ -218,6 +218,19 @@ func TestCloudProvidersBoundNamesEveryCloudVendorAndOnlyThose(t *testing.T) {
 		}
 	})
 
+	// Google's decision adapter sends the gemini key, so the lane demands the
+	// gemini slot rather than a slot of its own.
+	t.Run("a decisions lane on a borrowed key names the slot that holds it", func(t *testing.T) {
+		cfg := RoutingConfig{
+			Tiers:      map[Tier]ProviderConfig{"fast": {Provider: providerOllama}},
+			Embeddings: EmbeddingsConfig{ProviderConfig: ProviderConfig{Provider: providerOllama}},
+			Decisions:  &DecisionsConfig{Provider: providerGeminiDecision, Model: geminiDecisionModel},
+		}
+		if got := cfg.CloudProvidersBound(); !slices.Equal(got, []string{providerGemini}) {
+			t.Errorf("a gemini_decision lane reports %v, want [%s]", got, providerGemini)
+		}
+	})
+
 	// One vendor across several tiers is one entry, not three: the report asks
 	// which credentials are needed, and a duplicate would have onboarding
 	// waiting on a key it already holds.
@@ -238,5 +251,22 @@ func TestRemovingABootSetKeyIsLockedBeforeTheVaultIsAsked(t *testing.T) {
 	admin := keySeatCtx(principal.ObjectGrant{Read: true, Update: true})
 	if err := store.Remove(admin, providerGemini); !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("removing a boot-set key with no vault = %v, want a conflict", err)
+	}
+}
+
+// The gemini row is the one slot for the key gemini_decision sends, and says
+// so; no other row lends its key.
+func TestOnlyTheGeminiKeyIsSentByAnotherProvider(t *testing.T) {
+	for _, slot := range CloudProvidersNeedingKeys() {
+		want := []string(nil)
+		if slot == providerGemini {
+			want = []string{providerGeminiDecision}
+		}
+		if got := keyBorrowers(slot); !slices.Equal(got, want) {
+			t.Errorf("keyBorrowers(%s) = %v, want %v", slot, got, want)
+		}
+	}
+	if got := keySlotOf(providerGeminiDecision); got != providerGemini {
+		t.Errorf("keySlotOf(gemini_decision) = %q, want gemini", got)
 	}
 }

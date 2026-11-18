@@ -12,6 +12,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
@@ -82,7 +83,13 @@ func planInquiryTask(ctx context.Context, ev workflow.Event, policy crmcontracts
 	targetEvent.Entity = receipt.Target
 	system, source := provenance.WebsiteInquiryTaskSource(receipt.Key, receipt.Target.Type == datasource.EntityContact)
 	key := taskNaturalKey{System: system, ID: source}
-	effect, err := taskCreateEffectFor(ctx, targetEvent, policy.TaskTitle, due, nil, &key)
+	sender, ask := inquiryAsk(receipt.Activity)
+	effect, err := taskCreateEffectFor(ctx, targetEvent, taskWords{
+		subject: policy.TaskTitle,
+		why: func(name string) *systemtext.Component {
+			return systemtext.Sentence("request.asked", systemtext.Text(name), systemtext.Text(ask))
+		},
+	}, sender, due, nil, &key)
 	if err != nil {
 		return workflow.Effect{}, err
 	}

@@ -171,6 +171,34 @@ describe("what happened behind a row", () => {
   });
 });
 
+describe("the reason a row's maker wrote down", () => {
+  const why = {
+    text: "Anna Weber wrote that the rollout moves to March. Review the close date.",
+  };
+
+  it("leads the card and its details, before the due day", () => {
+    const task = row({ due_at: "2026-11-16T12:00:00Z", why });
+    expect(cardLine(task, t, clock)).toBe(why.text);
+    expect(happenedLines(task, t, clock)).toEqual({
+      lines: [why.text, "It is due on 16 Nov."],
+      told: true,
+    });
+  });
+
+  it("is not said twice where the task's own panel already reads it", () => {
+    const task = row({ due_at: "2026-11-16T12:00:00Z", why });
+    expect(happenedLines(task, t, clock, true)).toEqual({
+      lines: ["It is due on 16 Nov."],
+      told: true,
+    });
+  });
+
+  it("leaves a row without one to its own event", () => {
+    const task = row({ due_at: "2026-11-16T12:00:00Z" });
+    expect(cardLine(task, t, clock)).toBe("It is due on 16 Nov.");
+  });
+});
+
 describe("what waiting costs", () => {
   it("names the contact who keeps waiting", () => {
     expect(

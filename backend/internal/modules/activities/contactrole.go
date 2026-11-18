@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
@@ -50,7 +51,7 @@ func WithContactRole(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activit
 		  FROM activity_participant ap
 		 WHERE ap.activity_id = ANY($1)
 		   AND ap.role IN `+visiblePartyRolesSQL+`
-		   AND NOT `+unstatedContactSQL("ap")+`
+		   AND NOT `+auth.ParticipantUnstatedSQL("ap")+`
 		 GROUP BY ap.activity_id`, voiced, contact)
 	if err != nil {
 		return fmt.Errorf("activities: reading the page contact's part on its rows: %w", err)

@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -58,8 +59,9 @@ calendar.
 Some messages are shown with our own earlier message in the same thread, in a span marked
 context_for. Read it only to understand what the reply answers or leaves open; judge the reply's
 own words, never ours. A reply is asks_us when it leaves the recipient side something to do — a
-question to answer, a time to confirm, a point it defers or reserves. A reply that answers
-everything we asked and leaves nothing open is informs_us, however long it is.
+question to answer, a time to confirm, a point it defers or reserves. A reply that names a time
+in answer to our "when suits you?" still leaves the time to confirm, so it is asks_us. A reply that
+answers everything we asked and leaves nothing open is informs_us, however long it is.
 Judge only the sender's new words. Quoted earlier requests and signatures do not create a new
 obligation. Acknowledgements, returning a document, and "I will get back to you" are informs_us
 unless the new text separately asks the recipient to do something.
@@ -68,7 +70,37 @@ also asks for an answer or decision. Do not turn willingness to help into a requ
 A newsletter or mass promotion inviting all subscribers to book or buy is informs_us: a general
 call to action does not leave this recipient a pending obligation. A personal request directed
 to this recipient is still asks_us, including a supplier quote or a private errand. Commercial
-relevance is separate from whether the recipient has been asked to act.`
+relevance is separate from whether the recipient has been asked to act.
+
+For an asks_us verdict, also copy into "ask" the sender's own sentence that makes the request,
+exactly as written in the message: the same words and language, nothing added, at most 300
+characters. Copy only from the judged message, never from our earlier message or a quote. For an
+informs_us verdict, "ask" is the empty string.`
+
+// AskKey names the reply's quoted ask, which the schema declares and the
+// prompt asks for. AskLimit bounds it in characters: one request, not a mail.
+const (
+	AskKey   = "ask"
+	AskLimit = 300
+)
+
+// VerbatimAsk is the ask a verdict may keep: a span of the judged text within
+// AskLimit, on a message that asks us. Anything else is "", and the verdict
+// stands. A reminder may lack a quote; it never quotes words nobody wrote.
+func VerbatimAsk(verdict, ask, body string) string {
+	ask = oneSpaced(ask)
+	if verdict != activities.OwedVerdictAsksUs || ask == "" || utf8.RuneCountInString(ask) > AskLimit ||
+		!strings.Contains(oneSpaced(activities.SplitEmailBody(body).Main), ask) {
+		return ""
+	}
+	return ask
+}
+
+// oneSpaced folds every run of whitespace to one space, so a quote that
+// crossed a line break in the mail still matches it.
+func oneSpaced(text string) string {
+	return strings.Join(strings.Fields(text), " ")
+}
 
 // SystemFor names THIS call's data boundary; see promptfence.Fence.Rule.
 func SystemFor(fence promptfence.Fence) string {
@@ -119,7 +151,7 @@ func Prompt(fence promptfence.Fence, batch []activities.OwedCandidate) string {
 		message.WriteString("\n" + activities.SplitEmailBody(m.Body).Main)
 		prompt.WriteString(fence.WrapAttr("source_id", refs.For(m.ID.String()), message.String()) + "\n")
 	}
-	prompt.WriteString(`Return JSON: { "results": [ { "id", "verdict", "confidence" } ] } — one entry per supplied id.`)
+	prompt.WriteString(`Return JSON: { "results": [ { "id", "verdict", "ask", "confidence" } ] } — one entry per supplied id.`)
 	return prompt.String()
 }
 

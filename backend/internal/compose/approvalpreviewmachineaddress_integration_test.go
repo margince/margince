@@ -7,6 +7,7 @@ package compose
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
@@ -51,5 +52,37 @@ func TestAContactCreationOnASendingSystemsAddressShowsABlockingConflict(t *testi
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM contact_email WHERE email = 'signing-noreply@preview-machine.test'`); n != 0 {
 		t.Errorf("the preview stored the address %d times", n)
+	}
+}
+
+func TestANameOnlyContactApprovalShowsTheChannelChoices(t *testing.T) {
+	e := integration.Setup(t)
+	e.GrantRole(t, e.AdminUser, "admin")
+	ctx := e.As(e.AdminUser, nil, integration.AdminPerms)
+	raw, hash, err := diffhash.Canonical([]byte(`{"record_type":"contact","fields":{"full_name":"Name Only","source":"manual"}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	svc := NewApprovalsService(e.DB())
+	id, err := svc.Stage(ctx, approvals.StageInput{Kind: "create_record", TargetType: "contact", ProposedChange: raw, DiffHash: hash})
+	if err != nil {
+		t.Fatal(err)
+	}
+	proposal, err := svc.GetWire(ctx, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	preview := proposal.Preview
+	if preview == nil || preview.Conflicts == nil || len(*preview.Conflicts) != 1 {
+		t.Fatalf("missing validation conflict: %+v", preview)
+	}
+	conflict := (*preview.Conflicts)[0]
+	if conflict.Kind != "contact_channel_required" || !conflict.BlocksApproval {
+		t.Fatalf("name-only approval is not blocked: %+v", conflict)
+	}
+	for _, choice := range []string{"email", "phone", "LinkedIn"} {
+		if !strings.Contains(conflict.Summary, choice) {
+			t.Fatalf("missing %s in %q", choice, conflict.Summary)
+		}
 	}
 }

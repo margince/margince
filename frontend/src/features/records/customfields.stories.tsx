@@ -72,6 +72,14 @@ const dealFields: CustomField[] = [
 
 const noop = () => {};
 
+const pickType = async (canvasElement: HTMLElement, type: string) => {
+  await userEvent.click(
+    within(canvasElement).getByRole("combobox", { name: "Type" }),
+  );
+  const page = within(canvasElement.ownerDocument.body);
+  await userEvent.click(await page.findByRole("option", { name: type }));
+};
+
 export const BuilderText: Story = {
   render: () => (
     <StoryProviders>
@@ -121,7 +129,7 @@ export const BuilderCurrency: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.type(canvas.getByLabelText("Label"), "Ceiling");
-    await userEvent.click(canvas.getByRole("button", { name: "Currency" }));
+    await pickType(canvasElement, "Currency");
     await canvas.findByLabelText("Currency code");
   },
 };
@@ -142,7 +150,7 @@ export const BuilderPicklist: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.type(canvas.getByLabelText("Label"), "Stage reason");
-    await userEvent.click(canvas.getByRole("button", { name: "Picklist" }));
+    await pickType(canvasElement, "Picklist");
     const [first] = await canvas.findAllByLabelText("Option label");
     if (first === undefined) throw new Error("the picklist drew no option");
     await userEvent.type(first, "Budget");
@@ -366,9 +374,7 @@ export const CardObjectPickerPhone: Story = {
 const chooseMultiple: Story["play"] = async ({ canvasElement }) => {
   const canvas = within(canvasElement);
   await userEvent.type(canvas.getByLabelText("Label"), "Capabilities");
-  await userEvent.click(
-    canvas.getByRole("button", { name: "Multiple choice" }),
-  );
+  await pickType(canvasElement, "Multiple choice");
   const [first] = await canvas.findAllByLabelText("Option label");
   if (first === undefined) throw new Error("the choice list drew no option");
   await userEvent.type(first, "Fit, scope");

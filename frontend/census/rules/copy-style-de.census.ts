@@ -213,6 +213,7 @@ const RETIRED_WORD_KEPT = new Map<string, string>([
   ["oauthApp.google.for", "Google Workspace is a product name"],
   ["oauthApp.tenant", "Microsoft Entra labels the directory tenant Mandant"],
   ["aiProviders.name.geminiVertex", "Vertex AI is Google's product name"],
+  ["privacynotice.transfers.body", "Vertex AI is Google's product name"],
   [
     "aiProviderSettings.service.googleAiStudio",
     "Google AI Studio is Google's product name",

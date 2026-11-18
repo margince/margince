@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { fn } from "storybook/test";
+import { expect, fn, screen, userEvent, within } from "storybook/test";
 import { bookingConnection, bookingProfile } from "../../testing/book.testkit";
 import { jsonResponse } from "../../testing/story-utils";
 import { bookingFrame } from "./book.storykit";
@@ -33,7 +33,28 @@ export const GoogleCalendarDark: Story = {
   ...GoogleCalendar,
   globals: { theme: "dark" },
 };
-export const Phone: Story = { ...GoogleCalendar, tags: ["uat-phone"] };
+export const Phone: Story = {
+  ...GoogleCalendar,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+
+// The presets and Other, one list under the Length field.
+export const LengthChoices: Story = {
+  ...GoogleCalendar,
+  play: async () => {
+    const length = await screen.findByRole("combobox", { name: "Length" });
+    await userEvent.click(length);
+    const list = await screen.findByRole("listbox");
+    await expect(within(list).getAllByRole("option")).toHaveLength(6);
+    await expect(length).toHaveAttribute("aria-expanded", "true");
+  },
+};
+export const LengthChoicesPhone: Story = {
+  ...LengthChoices,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
 
 // The host's own room, with a length off the presets that opens on Other.
 export const OwnAddressOtherLength: Story = {
@@ -69,5 +90,37 @@ export const ReplaceAddress: Story = {
 };
 export const ReplaceAddressDark: Story = {
   ...ReplaceAddress,
+  globals: { theme: "dark" },
+};
+
+export const AdditionalLengths: Story = {
+  render: bookingFrame(
+    drawer({
+      ...bookingProfile,
+      video_call: true,
+      location: "",
+      offered_lengths: [15, 30, 45, 60, 90],
+    }),
+  ),
+};
+export const AdditionalLengthsDark: Story = {
+  ...AdditionalLengths,
+  globals: { theme: "dark" },
+};
+
+export const InvalidAdditionalLengths: Story = {
+  ...AdditionalLengths,
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    const field = await body.findByRole("textbox", {
+      name: "Additional meeting lengths",
+    });
+    await userEvent.clear(field);
+    await userEvent.type(field, "10");
+    await expect(field).toHaveAttribute("aria-invalid", "true");
+  },
+};
+export const InvalidAdditionalLengthsDark: Story = {
+  ...InvalidAdditionalLengths,
   globals: { theme: "dark" },
 };

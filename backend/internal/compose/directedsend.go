@@ -3,9 +3,6 @@
 
 package compose
 
-// Consent records a human exception; activities resumes the held message under
-// current checks. Compose joins them without a module importing its sibling.
-
 import (
 	"context"
 	"errors"
@@ -21,7 +18,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
-// directedSendService carries out a decision to send a refused message.
 type directedSendService struct {
 	consent  *consent.Store
 	sends    *activities.Store
@@ -29,7 +25,6 @@ type directedSendService struct {
 	delivery DeliveryMachinery
 }
 
-// DirectAndSend resumes a permitted message or records an eligible exception first.
 func (s directedSendService) DirectAndSend(
 	ctx context.Context, reviewID ids.UUID, in consent.DirectInput,
 ) (crmcontracts.Activity, error) {
@@ -42,6 +37,10 @@ func (s directedSendService) DirectAndSend(
 			Why: "this review holds no message to send — it was refused before the message could be kept",
 		}
 	}
+	previous, err := s.consent.ReviewForReader(ctx, reviewID)
+	if err != nil {
+		return crmcontracts.Activity{}, err
+	}
 	in, err = in.Validated()
 	if err != nil {
 		return crmcontracts.Activity{}, err
@@ -52,7 +51,14 @@ func (s directedSendService) DirectAndSend(
 	if !errors.Is(err, apperrors.ErrConsentNotGranted) {
 		return sent, err
 	}
-	// A retry may already have recorded the same unspent instruction.
+	var pending *pendingReviewError
+	if errors.As(err, &pending) && pending.set.ExceptionMayAnswer(false) && !previous.MatchesAssessment(pending.set) {
+		refreshed, refreshErr := s.gate.RefreshRefusal(ctx, pending.set, intent)
+		if refreshErr != nil {
+			return crmcontracts.Activity{}, refreshErr
+		}
+		return crmcontracts.Activity{}, &consent.SendRefusedError{ReviewID: refreshed.ID, Cause: pending.cause, Actions: actionsForRefusal(ctx, refreshed), Refusals: consent.BlockingRefusals(pending.set)}
+	}
 	if _, err := s.consent.DirectSend(ctx, reviewID, in); err != nil &&
 		!errors.Is(err, consent.ErrDecisionAlreadyRecorded) {
 		return crmcontracts.Activity{}, err
@@ -76,7 +82,6 @@ func (s directedSendService) CorrectWording(ctx context.Context, reviewID ids.UU
 	return s.sends.CorrectHeldWording(ctx, intent, in, consent.WordingCorrectorForReview(reviewID))
 }
 
-// newDirectedSendService wires the two modules and the machinery between them.
 func newDirectedSendService(pool *pgxpool.Pool, delivery DeliveryMachinery, send SendPath) directedSendService {
 	return directedSendService{
 		consent:  consent.NewStore(InstallationDB(pool)),

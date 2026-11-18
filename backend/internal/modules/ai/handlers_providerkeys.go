@@ -53,6 +53,7 @@ func (h Handlers) ListAiProviderKeys(w http.ResponseWriter, r *http.Request) {
 			Optional:       s.Optional,
 			CredentialKind: crmcontracts.AiProviderKeyStatusCredentialKind(s.CredentialKind),
 			PricedBy:       optionalPricedBy(s.PricedBy),
+			SentBy:         optionalSentBy(s.SentBy),
 			Usable:         s.Usable(),
 		})
 	}
@@ -149,6 +150,14 @@ func (h Handlers) DeleteAiProviderKey(w http.ResponseWriter, r *http.Request, pr
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// optionalSentBy leaves the field off for a key no other provider sends.
+func optionalSentBy(providers []string) *[]string {
+	if len(providers) == 0 {
+		return nil
+	}
+	return &providers
 }
 
 // optionalPricedBy leaves the field off for a provider that borrows no prices,

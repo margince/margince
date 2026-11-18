@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { testCosts } from "./lib/test-cost";
-import { partition } from "./vitest-shards";
+import { partition, shuffledTests } from "./vitest-shards";
 
 // Any corpus proves the split. check-shard-union.sh proves the same of each CI
 // run against vitest's discovery.
@@ -97,5 +97,23 @@ describe("the cost a test file is expected to have", () => {
     );
     const source = 'import type * as S from "./census.sweep";\n';
     expect(kindOf("swept.test.ts", source)).toBe("program");
+  });
+});
+
+describe("the test order a seed sets", () => {
+  it("keeps source order when no seed is set", () => {
+    expect(shuffledTests(undefined)).toEqual({});
+    expect(shuffledTests("")).toEqual({});
+  });
+
+  it("shuffles the tests and never the files, so the shards stay the same", () => {
+    expect(shuffledTests("11331")).toEqual({
+      shuffle: { files: false, tests: true },
+      seed: 11331,
+    });
+  });
+
+  it("refuses a seed that is not a whole number", () => {
+    expect(() => shuffledTests("on")).toThrow(/whole number/);
   });
 });

@@ -32,6 +32,9 @@ func (s *RetentionService) anonymizeLead(ctx context.Context, tx pgx.Tx, id ids.
 	if err := storekit.LockSubjectsStopAddresses(ctx, tx, id); err != nil {
 		return err
 	}
+	if err := refuseIfOptOutKeptNow(ctx, tx, "lead_id", id); err != nil {
+		return err
+	}
 	// BEFORE the UPDATE below nulls it: a suppression is detached onto the
 	// address it applies to, and the lead row is the only place that address
 	// still lives. Read after the scrub and the objection is orphaned.
@@ -169,6 +172,12 @@ func clearLeadCommunicationRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, a
 // it leaves a nameless row behind because consent evidence and objections are
 // kept against it, and a nameless row is no use to anyone selling.
 func (*RetentionService) archiveLead(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+	if err := storekit.LockStopKey(ctx, tx, id.String()); err != nil {
+		return err
+	}
+	if err := refuseIfOptOutKeptNow(ctx, tx, "lead_id", id); err != nil {
+		return err
+	}
 	_, err := tx.Exec(ctx, `UPDATE lead SET archived_at = now() WHERE id = $1 AND archived_at IS NULL`, id)
 	return err
 }

@@ -49,7 +49,8 @@ func TestAFilterOverHTTPAcceptsAndEvaluatesACustomFieldFilter(t *testing.T) {
 
 	var matching integration.AnyMap
 	if status := e.Call(t, "POST", "/v1/contacts", integration.AnyMap{
-		"full_name": "Match", "source": "manual",
+		"linkedin_url": apptest.ContactProfile(),
+		"full_name":    "Match", "source": "manual",
 	}, nil, &matching); status != http.StatusCreated {
 		t.Fatalf("create matching contact: status=%d body=%v", status, matching)
 	}
@@ -60,7 +61,8 @@ func TestAFilterOverHTTPAcceptsAndEvaluatesACustomFieldFilter(t *testing.T) {
 
 	var other integration.AnyMap
 	if status := e.Call(t, "POST", "/v1/contacts", integration.AnyMap{
-		"full_name": "Other", "source": "manual",
+		"linkedin_url": apptest.ContactProfile(),
+		"full_name":    "Other", "source": "manual",
 	}, nil, &other); status != http.StatusCreated {
 		t.Fatalf("create non-matching contact: status=%d body=%v", status, other)
 	}

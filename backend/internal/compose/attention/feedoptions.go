@@ -113,6 +113,13 @@ func (s *Service) WithMeetingOrganizers(o MeetingOrganizers) *Service {
 	return s
 }
 
+// WithMeetingRooms binds the reader that says who is in a meeting's room.
+// Unbound, a meeting row names its counterparty and no room.
+func (s *Service) WithMeetingRooms(r MeetingRooms) *Service {
+	s.rooms = r
+	return s
+}
+
 // WithDealMoves binds the reader that puts a deal's already-decided next step
 // on its queue row. An option for the reason WithDealFacts is one.
 //

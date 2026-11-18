@@ -15,8 +15,8 @@ import {
 } from "../../format/format";
 import { browserZone, dayInZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
+import { fromHere } from "../../lib/navigatefrom";
 import { unwrap } from "../../lib/problem";
-import { navigate } from "../../lib/router";
 import { useViewerZone } from "../../lib/viewerzone";
 import { useBookingIntent, useBookingTitle } from "./booking-common";
 import { throwBookingProblem } from "./booking-errors";
@@ -219,9 +219,11 @@ export function BookingGuestScreen({
       if (!data.invitation) throw new Error(t("scheduling.deliveryUnknown"));
       return data.invitation;
     },
-    onSuccess: (value) => {
+    onMutate: fromHere,
+    // Replacing: Back to the booked slot would offer to book it again.
+    onSuccess: (value, _input, from) => {
       if (value.management_token)
-        navigate({
+        from.navigateReplacing({
           screen: "book",
           id: `manage-${value.management_token}`,
         });

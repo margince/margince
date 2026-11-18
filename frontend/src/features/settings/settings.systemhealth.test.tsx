@@ -3,11 +3,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import "@testing-library/jest-dom/vitest";
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { stubClipboard } from "../../design-system/clipboard-testing";
+import { replaceDial } from "../../lib/urlstate";
 import { meFixture } from "../../testing/mefixture";
 import { defaultOperations } from "../../testing/operationsettings.fixtures";
 import { jsonResponse, render } from "../../testing/settings.testkit";
@@ -431,4 +432,85 @@ it("explains which company-page details a failed lookup can leave outdated", asy
   expect(
     screen.getByRole("button", { name: "Inspect background work" }),
   ).toBeVisible();
+});
+
+// Every history read, as the query it asked; the first page offers a second.
+function stubHistory(): URLSearchParams[] {
+  const fetcher = stub(attentionReport);
+  const others = fetcher.getMockImplementation();
+  const asked: URLSearchParams[] = [];
+  fetcher.mockImplementation(async (input, init) => {
+    const url = input instanceof Request ? input.url : String(input);
+    if (!url.includes("/admin/job-health/history"))
+      return others ? others(input, init) : jsonResponse({});
+    const query = new URL(url, "https://test.local").searchParams;
+    asked.push(query);
+    const first = !query.has("cursor");
+    return jsonResponse({
+      coverage: "retained_only",
+      observed_at: attentionReport.generated_at,
+      cutoff: attentionReport.generated_at,
+      window_start: attentionReport.generated_at,
+      groups: [],
+      runs: [],
+      has_more: first,
+      ...(first ? { next_cursor: "page-2" } : {}),
+      population_may_have_changed: false,
+    });
+  });
+  return asked;
+}
+
+const JOBS = "#/settings/system-health/diagnostics?section=settings.jobs";
+const pill = async (group: string, name: string) =>
+  within(await screen.findByRole("group", { name: group })).getByRole(
+    "button",
+    { name },
+  );
+
+it("keeps the failure history's state filter in the address, both ways", async () => {
+  const user = userEvent.setup();
+  const asked = stubHistory();
+  window.location.hash = JOBS;
+  render(<SystemHealthPage view="diagnostics" />);
+  await user.click(await pill("State", "Retrying"));
+  expect(window.location.hash).toContain("state=retryable");
+  // Back or Forward to an entry that names another state.
+  act(() => replaceDial("state", "cancelled"));
+  expect(await pill("State", "Canceled")).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await waitFor(() =>
+    expect(asked.map((query) => query.get("state"))).toContain("cancelled"),
+  );
+});
+
+it("keeps the pressed pill and the window when a state filter moves the history", async () => {
+  const user = userEvent.setup();
+  stubHistory();
+  window.location.hash = JOBS;
+  render(<SystemHealthPage view="diagnostics" />);
+  await user.click(await pill("Reporting window", "Last day"));
+  // Discarded runs lead the section, so this one also moves the history.
+  const discarded = await pill("State", "Discarded");
+  await user.click(discarded);
+  expect(window.location.hash).toContain("state=discarded");
+  await waitFor(() => expect(document.activeElement).toBe(discarded));
+  expect(await pill("Reporting window", "Last day")).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+});
+
+it("starts a changed filter on its first page", async () => {
+  const user = userEvent.setup();
+  const asked = stubHistory();
+  window.location.hash = JOBS;
+  render(<SystemHealthPage view="diagnostics" />);
+  await user.click(await screen.findByRole("button", { name: "Next page" }));
+  await waitFor(() => expect(asked.at(-1)?.get("cursor")).toBe("page-2"));
+  await user.click(await pill("State", "Retrying"));
+  await waitFor(() => expect(asked.at(-1)?.get("state")).toBe("retryable"));
+  expect(asked.at(-1)?.has("cursor")).toBe(false);
 });

@@ -88,6 +88,9 @@ func TestTheRepairRestoresTheInferenceASendDependsOn(t *testing.T) {
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	ctx := context.Background()
+	// Other suites here rewind or empty the shared schema, so the drift starts
+	// from head rather than from whatever the test before left.
+	headSchema(t, conn)
 
 	driftDatabase(t, conn)
 
@@ -112,6 +115,7 @@ func TestTheRepairIsANoOpOnADatabaseThatWasNeverDrifted(t *testing.T) {
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	ctx := context.Background()
+	headSchema(t, conn)
 
 	// The index's identity, not merely its presence. A repair that DROPped the
 	// correct index and CREATEd it again would leave a database that infers

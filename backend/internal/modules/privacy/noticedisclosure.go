@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
@@ -36,6 +37,8 @@ type NoticeSubject struct {
 type NoticeUse struct {
 	PurposeKey string
 	Basis      string
+	// Since is when a consent use was granted; nil for any other basis.
+	Since *time.Time
 }
 
 // NoticeRetention is one retention rule that acts on the subject's data.
@@ -217,7 +220,11 @@ func recordedUses(consent, bases []map[string]any) []NoticeUse {
 	}
 	for _, row := range consent {
 		if key, ok := row["purpose"].(string); ok && row["state"] == "granted" {
-			add(NoticeUse{PurposeKey: key, Basis: "consent"})
+			use := NoticeUse{PurposeKey: key, Basis: "consent"}
+			if at, ok := row["captured_at"].(time.Time); ok {
+				use.Since = &at
+			}
+			add(use)
 		}
 	}
 	now := time.Now()
@@ -246,7 +253,7 @@ func contactScopes(pkg SARPackage) []string {
 	if len(pkg.Activities) > 0 {
 		scopes = append(scopes, "activity")
 	}
-	if slices.ContainsFunc(pkg.Activities, func(row map[string]any) bool { return row["source_system"] == "transcript" }) {
+	if slices.ContainsFunc(pkg.Activities, func(row map[string]any) bool { return row["source_system"] == meetingoutcome.TranscriptSourceSystem }) {
 		scopes = append(scopes, "activity/transcript")
 	}
 	if len(pkg.RawCapture) > 0 {

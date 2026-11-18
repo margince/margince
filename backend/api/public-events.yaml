@@ -107,6 +107,7 @@ components:
         - attachment.created
         - attachment.updated
         - attachment.archived
+        - attachment.restored
         - engagement.reply
         - comms.delivery_bounced
         - notice.created
@@ -2070,6 +2071,11 @@ components:
           type: string
           format: date-time
           description: The first-response deadline that passed.
+        lead_name:
+          type: string
+          description: >-
+            The lead's name at breach time. The escalation names the lead it is about
+            without reading it back.
         escalation_target:
           type: string
           format: uuid
@@ -2266,6 +2272,30 @@ components:
           type: [integer, 'null']
           format: int64
           description: The stored size.
+
+    PublicEventAttachmentRestored:
+      type: object
+      x-event-type: attachment.restored
+      x-entity-type: attachment
+      x-version: 1
+      description: >-
+        Payload for attachment.restored. An archived file is back in the record's
+        listings, because the source that listed it lists it again. It is the
+        undo of attachment.archived for the same file, not a new file, so a
+        subscriber that counts uploads does not count it twice. It carries the
+        same shape as the other three, with the same omissions.
+      required:
+        - parent_type
+        - parent_id
+      additionalProperties: false
+      properties:
+        parent_type:
+          type: string
+          description: The kind of record the file hangs off.
+        parent_id:
+          type: string
+          format: uuid
+          description: The record the file hangs off.
 
     PublicEventActivityArchived:
       type: object

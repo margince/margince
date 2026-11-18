@@ -2,12 +2,8 @@
   "verb": "get_report_run",
   "checks": [
     "activity.read",
-    "company.read",
-    "deal.read",
-    "installation_settings.read",
-    "lead.read",
-    "project.read",
-    "relationship.read"
+    "activity.read,deal.read,lead.read,project.read",
+    "installation_settings.read"
   ],
   "takes": [
     "report_run"
