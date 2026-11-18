@@ -352,9 +352,8 @@ describe("Section switcher (the page title at phone width)", () => {
     expect(screen.queryByRole("button", { name: /change section/ })).toBeNull();
   });
 
-  // At phone width the switcher IS the heading: the control names the page and
-  // opens the others, so nothing above it repeats that name. The page is still
-  // named exactly once at heading level.
+  // At phone width the switcher is the heading: it names the page and opens the
+  // others. The page is still named once at heading level.
   it("stands as the page's heading at phone width", () => {
     stubPhoneViewport();
     render(<PageTitle route={deepRoute} section={fixtureSection("deep")} />);
@@ -497,8 +496,8 @@ describe("Shell", () => {
     expect(document.body.dataset.screen).toBe("analytics");
   });
 
-  // On a record the sidebar's row marks the list the record was opened from,
-  // and a list is not the page, so the row claims "true" and nothing claims it.
+  // On a record the sidebar's row marks the list the record was opened from.
+  // A list is not the page, so the row claims "true" and nothing claims page.
   it("claims no page on a record, with the sidebar's row yielding", () => {
     window.location.hash = "#/contacts/p-anna";
     const client = newClient();
@@ -513,7 +512,7 @@ describe("Shell", () => {
     expect(row?.getAttribute("aria-current")).toBe("true");
   });
 
-  // Where the row IS the page it keeps the stronger claim. Below the Filters
+  // Where the row is the page it keeps the stronger claim. Below the Filters
   // and views library the row only leads to the page, so it yields. More's
   // claim is phone-only, so it is rail.test.tsx's.
   it.each([
@@ -546,9 +545,8 @@ describe("Shell", () => {
   // surface, the shell mints it, so a screen that also prints its own title at
   // heading level is printing a duplicate rather than filling a gap.
   // Settings alone keeps the capped reading column; every other page, a record
-  // included, takes the card's full width. The marker is what the stylesheet
-  // keys the cap on, so a route landing in the wrong family is a layout
-  // regression that nothing else would catch.
+  // included, takes the card's full width. The stylesheet keys the cap on the
+  // marker, so a route in the wrong family is a layout regression.
   it.each([
     ["#/settings/account", true],
     ["#/companies/o-1", false],
@@ -572,16 +570,14 @@ describe("Shell", () => {
     expect(main?.className.includes("main-gridded")).toBe(capped);
   });
 
-  // A record page carries `main-record`: the class adds no width and only
-  // NAMES the column as a container, which is what lets the record's tab strip
-  // measure the column it spans.
+  // A record page carries `main-record`. The class adds no width; it names the
+  // column as a container, so the record's tab strip can measure the column it
+  // spans.
   //
-  // The name comes off the ROUTE rather than off whether a strip is drawn, so a
-  // page deeper INSIDE a record keeps it: `#/deals/<id>/room` is still that
-  // deal's column, and a container named on arrival cannot go missing on the
-  // one page of a record that reaches for it late. A page that is not a record
-  // at all names none — a list with its create form open, settings, the
-  // worklist.
+  // The name comes off the route, not off whether a strip is drawn. So a page
+  // inside a record keeps it: `#/deals/<id>/room` is still that deal's column.
+  // A page that is not a record names none: a list with its create form open,
+  // settings, the worklist.
   it.each([
     ["#/companies/o-1", true],
     ["#/contacts/p-1", true],
@@ -609,10 +605,7 @@ describe("Shell", () => {
   });
 
   // A unit's page is REACHED from settings, so the sidebar keeps the settings
-  // level on it. It did
-  // not: the rail fell back to the ten destinations, and following "Open" from a
-  // settings card swapped the whole sidebar out from under a reader whose URL
-  // and breadcrumb still read Settings.
+  // level on it.
   //
   // Asserted on what the rail SHOWS rather than on a class name, because the
   // class is a rendering detail and the level is the claim.
@@ -674,9 +667,8 @@ describe("Shell", () => {
     expect(container.querySelector(".pagetitle")).toBeNull();
   });
 
-  // The two pieces in the order the page is read: the bar is the first row of
-  // <main> and stays put, the name is inside the scroller and goes with the
-  // page.
+  // The bar is the first row of <main> and stays put. The page's name is inside
+  // the scroller and goes with the page.
   it("mounts the top bar above the scroller and the page's name inside it", () => {
     window.location.hash = "#/analytics";
     const { container } = render(

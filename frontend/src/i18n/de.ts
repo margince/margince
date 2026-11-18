@@ -2865,7 +2865,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "shell.companyLogoAria": "Home von {company}, läuft mit Margince",
   "shell.poweredBy": "Läuft mit Margince",
   "shell.searchEverything": "Suchen oder Margince fragen",
-  "shell.breadcrumbAria": "Navigationspfad",
   "shell.back": "Zurück",
   "shell.license.none": "Keine Lizenz",
   "shell.license.refused": "Lizenz abgelehnt",

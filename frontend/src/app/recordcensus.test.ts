@@ -11,9 +11,9 @@ import { RECORD_VIEW_SCREENS } from "./nav";
  * only fail SHORT: it sweeps five pages of six, every test passes, and nothing
  * in the run is shaped like a failure.
  *
- * `RECORD_VIEW_SCREENS` is the set the shell reads on every navigation to
- * decide whether a route is a record page, so a new record page cannot
- * ship without joining it. That makes it the one list the corpus can be checked
+ * The shell reads `RECORD_VIEW_SCREENS` on every navigation to decide whether
+ * a route is a record page. So a new record page cannot ship without joining
+ * it. That makes it the one list the corpus can be checked
  * AGAINST rather than merely kept beside.
  *
  * Here rather than in the specs because `nav.ts` reaches `custom.ts` and its

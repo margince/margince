@@ -59,10 +59,7 @@ export function PageTitle({
   const readsTeam = useReadsTeamProgress();
   const inSection = sectionHead(section, route);
   // On a screen that publishes a level, the page is the entry the reader
-  // opened, not the section they opened it from. The trail in the top bar and
-  // the sidebar's level name the section. Printing it here named the section
-  // twice and the surface never. A settings page read "Settings" above a
-  // heading reading "Settings", with the audit log under both.
+  // opened. The sidebar's level names the section it was opened from.
   const entryTitle = inSection
     ? entryLabel(inSection.entry, locale, t)
     : undefined;
@@ -107,9 +104,7 @@ export function PageTitle({
 
   // At phone width a section's page is its switcher. The control names the
   // page and opens the others, so it stands as the heading rather than under a
-  // heading repeating it. The page is still named once at heading level. The
-  // trail above it is the only other place the name appears, the same
-  // arithmetic as every other route.
+  // heading repeating it. The page is still named once at heading level.
   const switcher = phone && inSection && (
     <SectionSwitcher section={inSection.section} entry={inSection.entry} />
   );

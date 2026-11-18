@@ -4,10 +4,11 @@
 import { type RefObject, useLayoutEffect } from "react";
 
 /**
- * Publishes the scroller's height (`--scrollerH`, for a sticky pane) and, on
- * the column, its scrollbar's width (`--scrollerGutter`, for the top bar). A
- * banner shortens the scroller, which viewport units cannot see. `layout`
- * names the mounted scroller, so a switch between them observes the new one.
+ * Publishes the scroller's height as `--scrollerH` on the scroller, for a
+ * sticky pane that caps itself to what the scroller shows. A shell banner
+ * shortens the scroller, and a stylesheet's viewport units cannot see that.
+ * `layout` names which of the shell's scrollers is mounted, so a switch
+ * between them observes the new one.
  */
 export function usePublishedScrollerHeight(
   scroller: RefObject<HTMLElement | null>,
@@ -19,19 +20,8 @@ export function usePublishedScrollerHeight(
     if (element === null || typeof ResizeObserver === "undefined") {
       return;
     }
-    const publish = () => {
+    const publish = () =>
       element.style.setProperty("--scrollerH", `${element.clientHeight}px`);
-      const edges = getComputedStyle(element);
-      const gutter =
-        element.offsetWidth -
-        element.clientWidth -
-        Number.parseFloat(edges.borderLeftWidth) -
-        Number.parseFloat(edges.borderRightWidth);
-      element.parentElement?.style.setProperty(
-        "--scrollerGutter",
-        `${Math.max(0, gutter)}px`,
-      );
-    };
     publish();
     const observer = new ResizeObserver(publish);
     observer.observe(element);

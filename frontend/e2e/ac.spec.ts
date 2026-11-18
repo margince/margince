@@ -380,9 +380,7 @@ test("AC-shell-2: exactly one rail item is active and tracks the route", async (
 
 // One page-level heading per railed page, and it names the page. On a list, a
 // report or a settings surface the shell's page head mints it. On a RECORD the
-// record's own identity block IS it, and the head prints the trail back
-// instead — the name at heading level twice would leave a screen reader
-// choosing between two page titles for the same record.
+// record's own identity block is it, so the name is never at heading level twice.
 test("AC-shell-1k: one h1 per railed page, and on a record it is the record's own", async ({
   page,
 }) => {
@@ -394,12 +392,10 @@ test("AC-shell-1k: one h1 per railed page, and on a record it is the record's ow
   await expect(heading).toHaveCount(1);
   await expect(heading).toHaveText("Anna Weber");
   await expect(page.locator(".record-split-head h1")).toHaveText("Anna Weber");
-  // The trail that leads back to the list stands in the top bar, where it is
-  // true of the page rather than part of the document the reader is reading.
-  await expect(page.locator(".topbar .crumbs a").last()).toHaveText("Kontakte");
-  await expect(page.locator('.topbar [aria-current="page"]')).toHaveText(
-    "Anna Weber",
-  );
+  // The way back to the list is the top bar's Back control.
+  await expect(
+    page.locator(".topbar").getByRole("button", { name: de["shell.back"] }),
+  ).toBeVisible();
 
   // An id segment that names no record is the screen's own state, so it is named
   // in WORDS and never as the slug it is addressed by: #/settings/privacy is the

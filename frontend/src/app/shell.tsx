@@ -92,10 +92,9 @@ function SkipToContent({
   );
 }
 
-// The work column's own classes. `main-gridded` is the capped reading column;
-// `main-record` adds no width and names the column's SCROLLER as a container,
-// so the record's tab strip measures the width content can use (shell.css,
-// `container-name: work`).
+// The work column's own classes. `main-gridded` is the capped reading column.
+// `main-record` adds no width: it names the column's scroller as a container,
+// so the record's tab strip measures the width content can use (shell.css).
 const RAIL_FOLDS_MAX_WIDTH = 1024;
 
 // A stored choice wins; with none a tablet starts folded, and nothing is stored.
@@ -126,12 +125,8 @@ export function Shell({
 }>) {
   const route = useRoute();
   const railless = RAIL_LESS_SCREENS.has(route.screen);
-  // An extension unit's page is REACHED from settings and says so in its trail
-  // (`Settings / <unit>`), so it keeps the settings level in the sidebar. It did
-  // not: the rail fell back to the destinations, and following "Open" on a
-  // settings card swapped the whole sidebar out from under a reader whose URL
-  // and breadcrumb still said Settings. `activeRowFor` in app/nav.ts has always
-  // answered `settings` for a unit route; this is the other half of it.
+  // An extension unit's page is REACHED from settings, so it keeps the settings
+  // level in the sidebar, as `activeRowFor` in app/nav.ts answers `settings`.
   //
   // Conditioned on the descriptor RESOLVING, like the page title's own branch:
   // `#/ext/nonesuch` is a genuinely unknown page and belongs to nothing.
@@ -140,11 +135,9 @@ export function Shell({
   const leveled = route.screen === SETTINGS_SCREEN || onUnitPage;
   const { gridded, record } = useReadingColumn(route);
   const [collapsed, setCollapsed] = useState(startsCollapsed);
-  // What the sidebar's walk between levels remembers — where a walk OUT of a
-  // level returns to, and whether the level that arrives was asked for and takes
-  // focus. The shell holds it because the shell outlives every rail: the rail on
-  // a section route is a different component, mounted on the way in and gone
-  // again on the way out.
+  // What the sidebar's walk between levels remembers: where a walk out of a
+  // level returns to, and whether the arriving level takes focus. The shell
+  // holds it because it outlives every rail; a section route mounts another one.
   const walk = useNavWalk(route, !railless && !leveled);
   const [headSlot, setHeadSlot] = useState<HTMLElement | null>(null);
   const scroller = useRef<HTMLDivElement>(null);

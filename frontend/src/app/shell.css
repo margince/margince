@@ -22,8 +22,8 @@
 
 /* The sidebar's width, as a REGISTERED length. Declared rather than plain,
    because an unregistered custom property is a token string to the animation
-   engine: it flips at the halfway point instead of interpolating, and both the
-   grid column and the top bar's centred search read this one value. */
+   engine: it flips at the halfway point instead of interpolating, and the grid
+   column reads this one value. */
 @property --railW {
   syntax: "<length>";
   inherits: true;

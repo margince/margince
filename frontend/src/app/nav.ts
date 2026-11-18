@@ -199,10 +199,10 @@ export const MOBILE_PRIMARY: ReadonlySet<Screen> = new Set([
   "deals",
 ]);
 
-// The screens whose record page is drawn as a RecordView, keyed on the screen
-// and applied only when the route carries a RECORD id: `#/companies` is the
-// list, `#/companies/<id>` the record. The shell names that record's scroller
-// as a container, so the record's tab strip can span it.
+// The screens whose record page is drawn as a RecordView. It applies only when
+// the route carries a record id: `#/companies` is the list, `#/companies/<id>`
+// the record. The shell names that record's scroller as a container, so the
+// record's tab strip can span it.
 export const RECORD_VIEW_SCREENS: ReadonlySet<Screen> = new Set([
   "companies",
   "contacts",

@@ -2775,7 +2775,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "shell.companyLogoAria": "Trang chủ {company}, chạy trên Margince",
   "shell.poweredBy": "Chạy trên Margince",
   "shell.searchEverything": "Tìm kiếm hoặc hỏi Margince",
-  "shell.breadcrumbAria": "Đường dẫn điều hướng",
   "shell.back": "Quay lại",
   "shell.license.none": "Chưa có giấy phép",
   "shell.license.refused": "Giấy phép bị từ chối",

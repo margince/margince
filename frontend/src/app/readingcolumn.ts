@@ -4,13 +4,12 @@ import type { Route } from "../lib/router";
 import { opensReservedPage, RECORD_VIEW_SCREENS } from "./nav";
 
 /**
- * Which page keeps the capped reading column (settings alone), and whether the
- * page is a record.
+ * Whether the page keeps the capped reading column (settings alone), and
+ * whether it is a record.
  *
- * Decided from the screen ON THE PAGE, not the address. The screen is rendered
- * against a deferred route (App.tsx's ScreenView keeps the old screen up while
- * the next chunk loads), so a class keyed on the live route flipped a beat
- * before the screen changed.
+ * Read from the screen on the page, not the address. App.tsx's ScreenView
+ * keeps the old screen up while the next chunk loads. A class keyed on the
+ * live route would flip a beat before the screen changes.
  */
 export function useReadingColumn(route: Route): {
   gridded: boolean;

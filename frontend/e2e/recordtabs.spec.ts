@@ -91,11 +91,10 @@ test.describe("the record tab strip", () => {
   // TOGETHER under the broken rule, so any assertion comparing the two passes
   // in both states.
   //
-  // Every record here can fail it: the breakout lives in `@container work`,
-  // which `mainClasses` opens for the screens RECORD_VIEW_SCREENS names —
-  // the same set `./records` is censused against by
-  // `src/app/recordcensus.test.ts` — so every record swept here
-  // has a container to size itself from and something to overhang with. A
+  // Every record here can fail it: the breakout lives in `@container work`.
+  // `mainClasses` opens that container for the screens RECORD_VIEW_SCREENS
+  // names, the set `src/app/recordcensus.test.ts` holds `./records` against.
+  // So every record swept here has a container to size itself from. A
   // record left out of the sweep is a record nobody notices is not being
   // measured.
   //

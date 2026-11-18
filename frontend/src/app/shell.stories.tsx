@@ -53,8 +53,8 @@ import "../features/settings/settings.css";
 // fullscreen: the shell sizes itself to the viewport, so Storybook's default
 // canvas padding would clip the sidebar foot and misrepresent the layout — and
 // the foot is where the entitlement row reports the installation's seats. The
-// account block is NOT there any more; it stands at the end of the top bar's
-// trail (Shell/Account block), which is why every frame here renders that bar.
+// account block stands at the end of the top bar (Shell/Account block), which
+// is why every frame here renders that bar.
 const meta: Meta<typeof Shell> = {
   title: "Shell/Navigation shell",
   component: Shell,
@@ -112,8 +112,8 @@ export const Default: Story = {
 };
 
 /**
- * A named page: the heading starts and ends exactly where the card under it
- * does, both on the page gutter. Put a ruler on the left edge of the title and
+ * A named page: the heading starts and ends where the card under it does, both
+ * on the page gutter. Put a ruler on the left edge of the title and
  * the left edge of the card.
  */
 export const PageHeadOnItsColumn: Story = {
@@ -503,7 +503,6 @@ function LevelExample({
       <main className="main">
         <TopBar
           route={{ screen: "settings", id: tab, id2: sub }}
-          section={{ ...SETTINGS_SECTION, activeId: tab }}
           onOpenSearch={openSearch}
         />
         <div className="scroll" />
@@ -617,11 +616,7 @@ function PhoneSectionExample() {
     <div className="app railexpanded">
       <WorkspaceRail route={route} section={SETTINGS_SECTION} counts={COUNTS} />
       <main className="main">
-        <TopBar
-          route={route}
-          section={SETTINGS_SECTION}
-          onOpenSearch={openSearch}
-        />
+        <TopBar route={route} onOpenSearch={openSearch} />
         <div className="scroll">
           <PageTitle route={route} section={SETTINGS_SECTION} />
           <div className="wrap">
@@ -671,7 +666,6 @@ export const SectionPhoneGerman: Story = {
         name.getBoundingClientRect().top + firstLine / 2,
         0,
       );
-      expect(canvasElement.querySelector(".topbar .crumbs")).toBeNull();
     });
   },
 };

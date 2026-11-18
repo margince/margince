@@ -2755,7 +2755,6 @@ export const en = {
   "shell.companyLogoAria": "{company} home, powered by Margince",
   "shell.poweredBy": "Powered by Margince",
   "shell.searchEverything": "Search or ask Margince",
-  "shell.breadcrumbAria": "Breadcrumb",
   "shell.back": "Back",
   "shell.license.none": "No license",
   "shell.license.refused": "License refused",
