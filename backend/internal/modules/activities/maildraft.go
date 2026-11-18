@@ -37,6 +37,12 @@ type MailDraftAnchor struct {
 	ID   ids.UUID
 }
 
+// onMessage says the anchor is a message, answered or forwarded, rather than a record.
+// Both quote its content, so both pass its content gate.
+func (a MailDraftAnchor) onMessage() bool {
+	return a.Type == crmcontracts.MailDraftAnchorTypeActivity || a.Type == crmcontracts.MailDraftAnchorTypeForward
+}
+
 // MailDraftContent is the composer's fields as they stand. Addresses are
 // trimmed and lowercased on save and otherwise unchecked until the message is
 // sent — a draft may hold one half-typed.
@@ -298,10 +304,10 @@ func (s *Store) DiscardMailDraft(ctx context.Context, id ids.UUID) error {
 }
 
 // ensureDraftAnchorVisible asks whether the caller may still see what the
-// draft is about. A reply needs the conversation's content, so an activity is
-// probed through its content gate rather than the discover one.
+// draft is about. A reply or forward needs the message's content, so it is
+// probed through the content gate rather than the discover one.
 func ensureDraftAnchorVisible(ctx context.Context, tx pgx.Tx, anchor MailDraftAnchor) error {
-	if anchor.Type == crmcontracts.MailDraftAnchorTypeActivity {
+	if anchor.onMessage() {
 		return auth.EnsureActivityContentVisibleLive(ctx, tx, anchor.ID)
 	}
 	// Each record type lives in a table named for it (linktarget.go), and the
@@ -309,10 +315,10 @@ func ensureDraftAnchorVisible(ctx context.Context, tx pgx.Tx, anchor MailDraftAn
 	return auth.EnsureVisibleLive(ctx, tx, string(anchor.Type), anchor.ID)
 }
 
-// checkDraftAnchor admits the conversation a reply answers or a record a
-// message can be filed under — the timeline link's own vocabulary.
+// checkDraftAnchor admits the message a reply answers or a forward carries, or
+// a record a message can be filed under: the timeline link's own vocabulary.
 func checkDraftAnchor(anchor MailDraftAnchor) error {
-	if anchor.Type == crmcontracts.MailDraftAnchorTypeActivity || linkColumn(string(anchor.Type)) != "" {
+	if anchor.onMessage() || linkColumn(string(anchor.Type)) != "" {
 		return nil
 	}
 	return &InvalidMailDraftError{Field: fieldAnchorType, Reason: "is not a place a message can be written from"}

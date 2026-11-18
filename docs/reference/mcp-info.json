@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 280521,
+    "tool_catalog_bytes": 280531,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 71535,
-    "largest_tool_bytes": 17792,
+    "approx_wire_tokens_total": 71538,
+    "largest_tool_bytes": 17802,
     "largest_tool": "read_details",
     "tool_catalog_composition": {
       "description_bytes": 54814,
-      "input_schema_bytes": 160881,
+      "input_schema_bytes": 160891,
       "output_schema_bytes": 52718,
-      "description_plus_input_schema_bytes": 215695
+      "description_plus_input_schema_bytes": 215705
     }
   },
   "tools": {
@@ -8408,6 +8408,7 @@
               "description": "mail_draft only",
               "enum": [
                 "activity",
+                "forward",
                 "contact",
                 "company",
                 "deal",

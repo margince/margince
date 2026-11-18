@@ -7913,6 +7913,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.notAnAddress_other":
     "Keine E-Mail-Adressen: {parts}. Korrigiere oder entferne sie.",
   "compose.savedDraftLoad": "Gespeicherte Fassung laden",
+  "compose.savedDraftFoundTitle": "Hier liegt ein gespeicherter Entwurf",
+  "compose.savedDraftFoundBody":
+    "Er enthält anderen Text als den auf dem Bildschirm. Öffne ihn, um mit ihm weiterzuarbeiten, oder ersetze ihn durch den Text auf dem Bildschirm.",
+  "compose.savedDraftLoadFound": "Gespeicherten Entwurf öffnen",
+  "compose.savedDraftReplace": "Durch diesen Text ersetzen",
   "compose.aiDisclosureTitle": "KI-gestützter Entwurf",
   "compose.aiDisclosureFallback":
     "Diesen Entwurf hat eine KI geschrieben. Prüfe und bearbeite den Entwurf vor dem Senden.",
@@ -8169,6 +8174,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Diese Nachricht nennt einen Zweck, den Margince nicht kennt. Wähle einen Kontaktgrund aus der Liste.",
   "sendPermission.reason.unknownPurposeFact":
     "Diese Nachricht nennt einen Zweck, den Margince nicht kennt.",
+  "sendPermission.reason.noReason":
+    "Diese Nachricht nennt keinen Kontaktgrund, und der Verlauf zeigt keinen. Wähle einen Kontaktgrund aus der Liste.",
+  "sendPermission.reason.noReasonFact":
+    "Diese Nachricht nennt keinen Kontaktgrund, und der Verlauf zeigt keinen.",
   "sendPermission.reason.claimContradicts":
     "Der gewählte Kontaktgrund passt nicht zu diesem Thread. Wähle einen anderen Grund oder lass das Feld leer, damit Margince ihn aus dem Thread liest.",
   "sendPermission.reason.claimContradictsFact":
@@ -12301,7 +12310,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectors.disconnectBodyMicrosoftNote":
     "Microsoft führt Margince möglicherweise weiterhin unter den verbundenen Apps deines Kontos. Entferne Margince dort, um den Zugriff vollständig zu widerrufen.",
   "connectors.errRateLimited":
-    "Der Anbieter drosselt Anfragen. Die Erfassung ist langsamer als sonst. Es geht nichts verloren.",
+    "Der Anbieter begrenzt die Anfragen. Die Erfassung ist langsamer als sonst. Es geht nichts verloren.",
   "connectors.errUnreachable":
     "Der Anbieter war nicht erreichbar. Es wird automatisch erneut versucht.",
   "connectors.errAuth":
@@ -21689,6 +21698,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "captureConcern.stalled": "Synchronisierung angehalten",
   "captureConcern.silent": "Keine neue E-Mail eingegangen",
   "captureConcern.roleCannotCapture": "Rolle darf keine E-Mails erfassen",
+  "captureConcern.nextTry": "Nächster Versuch um {time}",
+  "captureConcern.tryingNow": "Neuer Versuch läuft jetzt",
   "captureConcern.title": "{mailbox}: {concern}",
   "captureConcern.since": "Seit {since}",
   "captureConcern.more_one":
