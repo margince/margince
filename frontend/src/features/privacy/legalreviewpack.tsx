@@ -5,6 +5,7 @@
 // so nobody briefs legal by hand. A document is listed only when this reader
 // can open it, and opens through the file's own gate.
 
+import { EntityRef } from "../../components/entityref";
 import { LegalReviewStatusBadge } from "../../components/legalreviewstatus";
 import { EmptyState } from "../../design-system/atoms";
 import { FieldGrid, FieldRow } from "../../design-system/fieldgrid";
@@ -117,6 +118,9 @@ function PackFacts({ packet }: Readonly<{ packet: Packet }>) {
     <Panel title={t("legalReview.packTitle")}>
       <PanelBody>
         <FieldGrid>
+          <FieldRow label={t("legalReview.packDeal")}>
+            <EntityRef kind="deal" id={deal.id} name={deal.name} />
+          </FieldRow>
           <FieldRow label={t("legalReview.packCompany")}>
             {deal.company_name ?? "—"}
           </FieldRow>
@@ -204,7 +208,7 @@ function OfferFields({ offer }: Readonly<{ offer: PacketOffer }>) {
           })}
         >
           {t("legalReview.offerLineText", {
-            quantity: line.quantity,
+            quantity: formatNumber(Number(line.quantity), locale),
             description: line.description,
             price: formatMoneyOrAbsent(
               line.unit_price_minor,
@@ -241,8 +245,23 @@ function LineTerms({ line }: Readonly<{ line: PacketOfferLine }>) {
   const plural = usePlural();
   const { locale } = useLocale();
   const billing = lineBillingPhrase(line, t, plural, locale);
+  const discount = Number(line.discount_pct ?? 0);
   return (
     <>
+      {discount !== 0 && (
+        <div className="t-caption">
+          {t("legalReview.offerLineDiscount", {
+            rate: formatNumber(discount, locale),
+          })}
+        </div>
+      )}
+      {line.tax_rate != null && (
+        <div className="t-caption">
+          {t("legalReview.offerLineTax", {
+            rate: formatNumber(Number(line.tax_rate), locale),
+          })}
+        </div>
+      )}
       {billing && <div className="t-caption">{billing}</div>}
       {line.staged && (
         <div className="t-caption">{t("legalReview.offerLineStaged")}</div>

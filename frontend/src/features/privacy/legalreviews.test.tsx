@@ -175,6 +175,38 @@ describe("one review", () => {
     expect(screen.getByText(en["legalReview.contractRenewal"])).toBeVisible();
   });
 
+  it("shows each offer line as the buyer reads it, and the note as written", async () => {
+    const shown = review({ note: "Check the cap.\nAnd the venue." });
+    const offer = shown.packet.offer;
+    if (!offer) throw new Error("the fixture carries an offer");
+    offer.lines[0] = { ...offer.lines[0], discount_pct: "12.50" };
+    stubWithSession(
+      {
+        "GET /legal-reviews/settings": legalOn,
+        [`GET /legal-reviews/${REVIEW_ID}`]: () => jsonResponse(shown),
+      },
+      REVIEWER,
+    );
+    mount(REVIEW_ID);
+
+    expect(
+      await screen.findByText(/^2 × Implementation at €37,815\.13/),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Discount 12.5%")).toBeInTheDocument();
+    expect(screen.getAllByText("Tax 19%")).toHaveLength(2);
+    expect(screen.getAllByText(en["legalReview.offerTotal"])).not.toHaveLength(
+      0,
+    );
+    expect(
+      screen.getByRole("link", { name: "Warehouse rollout" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Note: Check the cap.\nAnd the venue.", {
+        normalizer: (text) => text,
+      }),
+    ).toHaveClass("legalreview-note");
+  });
+
   it("does not let the requester answer their own review", async () => {
     stubWithSession(
       {
