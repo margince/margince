@@ -383,8 +383,11 @@ func inlineRelayLane(ctx context.Context, cfg apiConfig, pool *pgxpool.Pool, lic
 // surface over it, returning the path so the job-handoff lanes bind to the
 // same one.
 func modelSurfaceOptions(ctx context.Context, cfg apiConfig, bootstrap deployconfig.Bootstrap, pool *pgxpool.Pool, logger *slog.Logger) ([]compose.Option, *compose.ModelPath, error) {
-	// One resolution point: every consumer below shares one router and budget.
-	modelPath, aiState, assistantProfile, routingVersion, err := resolveModelPath(
+	// ONE resolution point: coldStartOptions, offerDraftOptions and the
+	// /readyz AI line all consume the same *compose.ModelPath rather than
+	// each running their own copy of the declared-routing/--ai-fake/
+	// neither switch (and, with it, their own Router, cache and budget).
+	modelPath, aiState, assistantProfile, err := resolveModelPath(
 		ctx, modelPathSpecFrom(cfg, bootstrap), pool, logger,
 	)
 	if err != nil {
@@ -392,7 +395,7 @@ func modelSurfaceOptions(ctx context.Context, cfg apiConfig, bootstrap deploycon
 	}
 	modelPath.SetCompanyContextEnabled(compose.CompanyContextTasks(cfg.settings))
 	opts := []compose.Option{compose.WithAiPayloadCaptureFlag(config.Val(cfg.settings, ps.CapturePayloads))}
-	opts = append(opts, coldStartOptions(modelPath, routingVersion)...)
+	opts = append(opts, coldStartOptions(modelPath)...)
 	opts = append(opts, offerDraftOptions(pool, modelPath)...)
 	opts = append(opts, compose.WithAssistantProfile(aiState, assistantProfile))
 	// Unconditional, like the worker's: the counters belong to the PROCESS, not

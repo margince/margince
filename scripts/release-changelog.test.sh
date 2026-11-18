@@ -82,7 +82,7 @@ Update dependency happy-dom to v20.14.6 (#14)
 ' 2026.1.1 margince/margince "$AFTER" 2026.1.0 "$BASE"
 
 expect "the first release gives one sentence and reads no subjects" \
-	"The first release on this line: the patch is the whole tree." 'feat(deals): a deal shows its next step (#10)
+	"The first release: the patch is the whole tree." 'feat(deals): a deal shows its next step (#10)
 ' 2026.1.0 margince/margince "$AFTER"
 
 expect "an invalid UTF-8 byte in a subject is dropped, not refused" "$(

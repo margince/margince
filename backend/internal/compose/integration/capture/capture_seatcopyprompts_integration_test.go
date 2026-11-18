@@ -59,7 +59,7 @@ func TestTheDealStatusCardHandsTheModelTheMailOnce(t *testing.T) {
 		lane := &promptLane{}
 		now := func() time.Time { return captureNow.Add(24 * time.Hour) }
 		svc := dealstatus.NewService(s.e.Pool, deals.NewStore(s.e.DB(), installseam.Deals()), activities.NewStore(s.e.DB()),
-			dealrooms.NewStore(s.e.DB()), now).WithLane(lane, "seat-copies")
+			dealrooms.NewStore(s.e.DB()), now).WithLane(lane, func() string { return "seat-copies" })
 		if _, err := svc.Get(briefReader(s.e, reader), deal, true); err != nil {
 			t.Fatalf("reading the deal card as %s: %v", reader, err)
 		}

@@ -1,9 +1,9 @@
 {
   "totals": {
     "sites": 62,
-    "sites_best_current": 44,
+    "sites_best_current": 43,
     "sites_best_partial": 0,
-    "sites_best_stale": 16,
+    "sites_best_stale": 17,
     "sites_absent": 2,
     "scenarios": 338,
     "records": 400,
@@ -378,7 +378,7 @@
             "env": "cloud_frontier"
           },
           "band": "not_supported",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -389,7 +389,7 @@
             },
             "same_model": false,
             "band": "not_supported",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 93,
@@ -1552,7 +1552,7 @@
             "env": "eu_hosted"
           },
           "band": "not_supported",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -1563,7 +1563,7 @@
             },
             "same_model": false,
             "band": "not_supported",
-            "state": "current",
+            "state": "stale",
             "measured_on": {
               "provider": "gemini",
               "model": "gemini-3.8-flash",
@@ -8633,7 +8633,7 @@
       "ready": 43,
       "usable_with_care": 16,
       "not_reliable_yet": 1,
-      "recheck_pending": 16,
+      "recheck_pending": 17,
       "models": [
         {
           "binding": {
@@ -8642,9 +8642,9 @@
             "env": "cloud_frontier"
           },
           "sites": 53,
-          "sites_current": 38,
+          "sites_current": 37,
           "sites_partial": 0,
-          "sites_stale": 15,
+          "sites_stale": 16,
           "runs": 1194,
           "passed": 1179,
           "reliability": 0.9874371859296482,
@@ -8663,9 +8663,9 @@
             "thinking_level": "low"
           },
           "sites": 51,
-          "sites_current": 36,
+          "sites_current": 35,
           "sites_partial": 0,
-          "sites_stale": 15,
+          "sites_stale": 16,
           "runs": 885,
           "passed": 885,
           "reliability": 1,
@@ -8973,7 +8973,7 @@
             "env": "cloud_frontier"
           },
           "band": "not_supported",
-          "state": "current",
+          "state": "stale",
           "runs": 36,
           "passed": 36,
           "records": 2
@@ -11289,9 +11289,9 @@
         "env": "cloud_frontier"
       },
       "sites": 56,
-      "sites_current": 38,
+      "sites_current": 37,
       "sites_partial": 0,
-      "sites_stale": 18,
+      "sites_stale": 19,
       "runs": 1353,
       "passed": 1321,
       "reliability": 0.9763488543976349,
@@ -11350,9 +11350,9 @@
         "env": "cloud_frontier"
       },
       "sites": 57,
-      "sites_current": 24,
+      "sites_current": 23,
       "sites_partial": 0,
-      "sites_stale": 33,
+      "sites_stale": 34,
       "runs": 1407,
       "passed": 1336,
       "reliability": 0.9495380241648899,
@@ -11412,9 +11412,9 @@
         "thinking_level": "low"
       },
       "sites": 51,
-      "sites_current": 36,
+      "sites_current": 35,
       "sites_partial": 0,
-      "sites_stale": 15,
+      "sites_stale": 16,
       "runs": 885,
       "passed": 885,
       "reliability": 1,
@@ -18875,17 +18875,8 @@
         "proof",
         "market"
       ],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.5-flash-lite",
-          "env": "cloud_frontier"
-        },
-        "band": "supported_degraded",
-        "reliability": 1,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "account_first_touch_with_a_deal_in_flight",
@@ -18913,9 +18904,9 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 3,
+          "scenarios_measured": 1,
           "scenarios_total": 3,
           "runs": 36,
           "passed": 36,
@@ -18928,7 +18919,17 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "2 scenarios it scored have changed since (the case and how a run is graded): an_unsigned_colleagues_mail_stays_out_of_an_account_draft, another_contacts_mail_stays_out_of_an_account_draft",
+          "stale_cause": {
+            "case_changed": [
+              "an_unsigned_colleagues_mail_stays_out_of_an_account_draft",
+              "another_contacts_mail_stays_out_of_an_account_draft"
+            ],
+            "grader_changed": [
+              "an_unsigned_colleagues_mail_stays_out_of_an_account_draft",
+              "another_contacts_mail_stays_out_of_an_account_draft"
+            ]
+          }
         },
         {
           "binding": {
@@ -18999,9 +19000,9 @@
             "model": "gemini-3.5-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 3,
+          "scenarios_measured": 1,
           "scenarios_total": 3,
           "runs": 39,
           "passed": 39,
@@ -19014,7 +19015,17 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "2 scenarios it scored have changed since (the case and how a run is graded): an_unsigned_colleagues_mail_stays_out_of_an_account_draft, another_contacts_mail_stays_out_of_an_account_draft",
+          "stale_cause": {
+            "case_changed": [
+              "an_unsigned_colleagues_mail_stays_out_of_an_account_draft",
+              "another_contacts_mail_stays_out_of_an_account_draft"
+            ],
+            "grader_changed": [
+              "an_unsigned_colleagues_mail_stays_out_of_an_account_draft",
+              "another_contacts_mail_stays_out_of_an_account_draft"
+            ]
+          }
         },
         {
           "binding": {
@@ -19060,9 +19071,9 @@
             "env": "cloud_frontier",
             "thinking_level": "low"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 3,
+          "scenarios_measured": 1,
           "scenarios_total": 3,
           "runs": 39,
           "passed": 39,
@@ -19075,7 +19086,17 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "2 scenarios it scored have changed since (the case and how a run is graded): an_unsigned_colleagues_mail_stays_out_of_an_account_draft, another_contacts_mail_stays_out_of_an_account_draft",
+          "stale_cause": {
+            "case_changed": [
+              "an_unsigned_colleagues_mail_stays_out_of_an_account_draft",
+              "another_contacts_mail_stays_out_of_an_account_draft"
+            ],
+            "grader_changed": [
+              "an_unsigned_colleagues_mail_stays_out_of_an_account_draft",
+              "another_contacts_mail_stays_out_of_an_account_draft"
+            ]
+          }
         },
         {
           "binding": {

@@ -29,7 +29,7 @@ func WithAIState(state string) Option {
 
 // WithAssistantProfile binds both public login posture and the operational
 // readiness line from the process's one routing decision.
-func WithAssistantProfile(state string, profile ai.PublicProfile) Option {
+func WithAssistantProfile(state string, profile func() ai.PublicProfile) Option {
 	return func(s *Server, _ *pgxpool.Pool) {
 		s.aiState = state
 		s.voiceHandlers = s.WithPublicProfile(profile)

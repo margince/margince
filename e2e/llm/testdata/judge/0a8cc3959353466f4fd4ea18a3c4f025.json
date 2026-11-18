@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer names Emsland Ventilbau and says its lifecycle was target before the change, but it does not explicitly say the earlier value was replaced by prospect, only that it was approved and the change applied.",
+  "model": "claude-haiku-5-5",
+  "criterion": "Criterion 2. The answer names Emsland Ventilbau as the company that somebody had already set to something else, says that earlier value was target, and says it was replaced by prospect. Answer no if the answer names a different company, says none of them had a value somebody set, gives a different earlier value, or does not say the earlier value was replaced. Judge only the company and its earlier value: whether the move to prospect has happened or still waits for approval is Criterion 1's question, so an answer that says target is to be replaced by prospect once approved answers yes here.",
+  "answer": "All four are now prospects. Emsland Ventilbau needed approval because its lifecycle was target, so I approved it and applied the change."
+}

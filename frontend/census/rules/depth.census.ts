@@ -106,6 +106,11 @@ export const NOT_DEPTH: readonly string[] = [
   // The capture mark while the agent is reading: a halo in the same tint as
   // the mark's fill. That is the state, not an elevation.
   "src/features/contacts/contactnetwork.css: box-shadow: 0 0 0 4px var(--accentLight)",
+  // The lit dot on the newest change in the Progress timeline: the same halo.
+  "src/features/contacts/contactnetwork.css: box-shadow: 0 0 0 4px var(--accentLight)",
+  // The ring that marks the contact at the end of the way-in chain. A gap in
+  // the chain's own ground sets it off the avatar. A mark, not a lift.
+  "src/features/contacts/contactnetwork.css: box-shadow: 0 0 0 3px var(--bgWell), 0 0 0 4px var(--accent)",
   // The pulse marking the finding a jump landed on: a ring that holds for a
   // beat and fades, layered beside the browser's own focus ring. Four values:
   // the keyframe set, plus the static ring that replaces it under reduced

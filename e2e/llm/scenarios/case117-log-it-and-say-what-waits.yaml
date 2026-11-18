@@ -67,7 +67,7 @@ must_not_mention:
   - "(?i)brandst(?:ä|ae)tter|rademacher|uphoff"
 
 judge:
-  - "Criterion 2. The answer keeps to what this task left waiting. It does not list, name or describe any waiting item that has nothing to do with this task, such as contact-card reviews for other people; a bare count of other waiting items that says nothing about what they are or whom they concern is a yes. Answer no if the answer lists, names or summarises an unrelated waiting item, for example by saying what kind of item it is or whom it is about."
+  - "Criterion 2. The answer keeps to what this task left waiting. This task is the coffee meeting with Jannik Feddersen of Husumer Windservice: the meeting, its quote and its follow-up task are this task's own items, and reporting them is a yes. It does not list, name or describe any waiting item that has nothing to do with this task, such as contact-card reviews for other people; a bare count of other waiting items that says nothing about what they are or whom they concern is a yes. Answer no if the answer lists, names or summarises an unrelated waiting item, for example by saying what kind of item it is or whom it is about."
 
 runs: 3
 pass_at: 2

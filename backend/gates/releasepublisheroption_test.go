@@ -13,7 +13,7 @@ import (
 
 func TestReleaseWorkflowSelectsPublisherReleasesWithReleaseOption(t *testing.T) {
 	t.Parallel()
-	wf := readWorkflowJobs(t, filepath.Join(workflowDir, "release.yml"))
+	wf := readWorkflowJobs(t, filepath.Join(workflowDir, "_release-dist.yml"))
 	commands := map[string]string{
 		"resolve-patch-base": `--release[[:space:]]+"\$version"`,
 		"draft-release":      `--release[[:space:]]+"\$version"`,
@@ -31,10 +31,10 @@ func TestReleaseWorkflowSelectsPublisherReleasesWithReleaseOption(t *testing.T) 
 			}
 		}
 		if calls == 0 {
-			t.Errorf("release.yml does not run %s; this check must cover every publisher release selector", command)
+			t.Errorf("_release-dist.yml does not run %s; this check must cover every publisher release selector", command)
 		}
 		if selected != calls {
-			t.Errorf("release.yml selects %d of %d %s calls with --release", selected, calls, command)
+			t.Errorf("_release-dist.yml selects %d of %d %s calls with --release", selected, calls, command)
 		}
 	}
 }
