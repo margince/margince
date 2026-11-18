@@ -198,8 +198,8 @@ func TestTheDirectoryPublishesAUnitsOwnCredentialModel(t *testing.T) {
 		Provider: "mine_chat", CredentialModel: extension.CredentialPerMember,
 		Send: (&capturedSend{}).send, Live: answersLive(true, nil),
 	})
-	if err := reconcileChannelProviders(ctx, e.Pool, []string{capture.ProviderTelegram}, composed); err != nil {
-		t.Fatalf("reconcileChannelProviders: %v", err)
+	if err := reconcileComposedProviders(ctx, e.Pool, []string{capture.ProviderTelegram}, composed); err != nil {
+		t.Fatalf("reconcileComposedProviders: %v", err)
 	}
 	if err := LoadChannelProviderDirectory(ctx, e.Pool, composed); err != nil {
 		t.Fatalf("loading the directory: %v", err)

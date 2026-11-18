@@ -33,7 +33,7 @@ import (
 // "what may this unit do". A parallel copy could describe a unit that is not
 // serving.
 func (x *Extensions) ingressFor(unit string) []extension.IngressSource {
-	declared, _ := x.unit(unit)
+	declared := x.unit(unit)
 	return declared.Ingress
 }
 
@@ -41,7 +41,7 @@ func (x *Extensions) ingressFor(unit string) []extension.IngressSource {
 // composition. It is ingressFor's twin for the same reason: what a unit may name
 // at a write door is what the boot reconciliation validated.
 func (x *Extensions) channelsFor(unit string) []extension.Channel {
-	declared, _ := x.unit(unit)
+	declared := x.unit(unit)
 	return declared.Channels
 }
 
@@ -55,7 +55,7 @@ func (x *Extensions) channelsFor(unit string) []extension.Channel {
 // authorizing a capability the current manifest does not describe. What an
 // operator can read has to be what the core acts on.
 func (x *Extensions) userSecretKeys(unit string) []string {
-	declared, _ := x.unit(unit)
+	declared := x.unit(unit)
 	var keys []string
 	for _, request := range declared.Secrets {
 		if request.Scope == extension.SecretScopeUser {

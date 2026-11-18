@@ -74,7 +74,11 @@ func loadedConfig(ctx context.Context) *config.Config {
 // locks from the program its context serves, else from the one the process
 // bound.
 func StoredConfig(pool *pgxpool.Pool) *config.Config {
-	return loadedConfig(context.Background()).WithDatabase(NewSettingsStore(pool))
+	c := config.ProcessBound()
+	if c == nil {
+		c = unsetConfig()
+	}
+	return c.WithDatabase(NewSettingsStore(pool))
 }
 
 // WithVault is cfg sealing its secret settings in vault, under the workspace of

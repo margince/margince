@@ -81,7 +81,7 @@ func (r *callRuntime) gatedRead(ctx context.Context, read extension.SystemRead, 
 	if !admitted {
 		return nil, extension.ErrAttendedRead
 	}
-	declared, _ := r.deps.composed.unit(r.unit)
+	declared := r.deps.composed.unit(r.unit)
 	if !slices.Contains(declared.SystemReads, read) {
 		return nil, fmt.Errorf("%w: add extension.SystemRead %q to it", extension.ErrUndeclaredRead, read)
 	}

@@ -289,7 +289,7 @@ func aChannelMessage(key, senderEmail, account string) extension.Record {
 // have if the boot reconcile did not write it.
 func registerProbeTransport(t *testing.T, e *ingressEnv) {
 	t.Helper()
-	if err := reconcileChannelProviders(context.Background(), e.Pool, []string{capture.ProviderTelegram}, e.composed); err != nil {
+	if err := reconcileComposedProviders(context.Background(), e.Pool, []string{capture.ProviderTelegram}, e.composed); err != nil {
 		t.Fatalf("registering the unit's transport: %v", err)
 	}
 }

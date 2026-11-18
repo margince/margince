@@ -114,17 +114,17 @@ func (x *Extensions) reports() []registeredReport {
 	return x.reportSet
 }
 
-// unit finds the named unit in the composition.
-func (x *Extensions) unit(name string) (extension.Extension, bool) {
+// unit finds the named unit in the composition, or the zero unit when it is absent.
+func (x *Extensions) unit(name string) extension.Extension {
 	if x == nil {
-		return extension.Extension{}, false
+		return extension.Extension{}
 	}
 	for _, ext := range x.units {
 		if string(ext.Name) == name {
-			return ext, true
+			return ext
 		}
 	}
-	return extension.Extension{}, false
+	return extension.Extension{}
 }
 
 // BindRuntime records what a unit's per-call Runtime reaches the installation

@@ -71,10 +71,10 @@ type ThreadAudienceSetter struct {
 // NewThreadAudienceSetter builds the setter over one database. Its releases
 // queue no follow-up work.
 func NewThreadAudienceSetter(pool *pgxpool.Pool) *ThreadAudienceSetter {
-	return newThreadAudienceSetter(pool, nil)
+	return threadAudienceSetterWith(pool, nil)
 }
 
-func newThreadAudienceSetter(pool *pgxpool.Pool, queues *storeQueues) *ThreadAudienceSetter {
+func threadAudienceSetterWith(pool *pgxpool.Pool, queues *storeQueues) *ThreadAudienceSetter {
 	return &ThreadAudienceSetter{
 		pool:     pool,
 		threads:  capture.NewThreadVerdictStore(InstallationDB(pool)),

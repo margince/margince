@@ -335,6 +335,27 @@ func stampEditedDescriptionAuthor(ctx context.Context, tx pgx.Tx, id ids.Company
 	return stampDescriptionAuthor(ctx, tx, id, editor)
 }
 
+// stageCompanyDomains checks a replacement domain set, collapses hosts that
+// normalize alike, and refuses a domain another company holds.
+func stageCompanyDomains(ctx context.Context, tx pgx.Tx, id ids.CompanyID, domains []CompanyDomainInput) ([]CompanyDomainInput, error) {
+	if err := parseCompanyDomains(domains); err != nil {
+		return nil, err
+	}
+	// Collapse hosts that normalize to the same domain so the probe,
+	// reconcile, and audit-after all see one row per host.
+	domains = dedupeDomains(domains)
+	if err := ensureCompanyDomainsUnclaimedExcept(ctx, tx, id, domains); err != nil {
+		return nil, err
+	}
+	// Elect the primary on this slice too. The reconcile elects on a copy, so the
+	// audit after-image built from this slice would otherwise show no primary.
+	live, err := livePrimaryDomain(ctx, tx, id)
+	if err != nil {
+		return nil, err
+	}
+	return electPrimary(domains, live), nil
+}
+
 // stageCompanyReplaceSets validates the domain and relationship-type replace-sets
 // up front, so a bad request fails before the version bump, and folds the
 // updated_at bump each of them rides into the patch: the reconciles happen
@@ -371,27 +392,11 @@ func (s *Store) stageCompanyReplaceSets(ctx context.Context, tx pgx.Tx, id ids.C
 		*in.ExtensionRelationshipTypes = deduped
 	}
 	if in.Domains != nil {
-		if err := parseCompanyDomains(*in.Domains); err != nil {
-			return "", err
-		}
-		// Collapse hosts that normalize to the same domain so the probe,
-		// reconcile, and audit-after all see one row per host.
-		*in.Domains = dedupeDomains(*in.Domains)
-		if err := ensureCompanyDomainsUnclaimedExcept(ctx, tx, id, *in.Domains); err != nil {
-			return "", err
-		}
-		// And elect the primary HERE, for the same reason and on the same
-		// slice. The reconcile elects one either way, but on a copy — so an
-		// election left to it lands on the row while the audit after-image,
-		// built from this slice, still reports the domain as ordinary. The
-		// trail would then say a company has no primary domain while the row
-		// says it does, and is_primary is exactly what admits that company to
-		// the website read the trail exists to explain.
-		live, err := livePrimaryDomain(ctx, tx, id)
+		domains, err := stageCompanyDomains(ctx, tx, id, *in.Domains)
 		if err != nil {
 			return "", err
 		}
-		*in.Domains = electPrimary(*in.Domains, live)
+		*in.Domains = domains
 	}
 	changed, err := companyReplaceSetsChanged(ctx, tx, id, in)
 	if err != nil {

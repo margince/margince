@@ -41,7 +41,7 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 		contacts:   s.contactsStore,
 		exclusions: capture.NewExclusionStore(InstallationDB(pool)),
 	}
-	s.threadAudience = newThreadAudienceSetter(pool, s.queues)
+	s.threadAudience = threadAudienceSetterWith(pool, s.queues)
 	s.captureSenderHandlers = captureSenderHandlers{
 		db:         InstallationDB(pool),
 		store:      newSenderOverrideStore(pool),

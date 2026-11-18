@@ -21,7 +21,6 @@ import (
 	"sync"
 	"syscall"
 	"time"
-
 	// Embedded tzdata: workspace timezones must resolve on scratch
 	// containers that ship no zoneinfo.
 	_ "time/tzdata"

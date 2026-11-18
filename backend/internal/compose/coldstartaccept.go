@@ -52,7 +52,7 @@ func NewApprovalsServiceWithEffects(pool *pgxpool.Pool) *approvals.Service {
 // refuses every site lead, which is right for the services that only stage.
 func approvalsServiceTelling(pool *pgxpool.Pool, notices *siteLeadNoticeLane, queues *storeQueues) *approvals.Service {
 	captureConfig := CaptureConfig{}
-	if loaded := config.Bound(context.Background()); loaded != nil {
+	if loaded := config.ProcessBound(); loaded != nil {
 		captureConfig = CaptureConfigFromDeploy(loaded, slog.Default())
 	}
 	captureConfig.queues = queues

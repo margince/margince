@@ -181,6 +181,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	defer stopViewRefresh()
 	opts = append(opts, viewOpts...)
 
+	//nolint:contextcheck // boot-time wiring: the handler and the directory it loads outlive any request context
 	apiHandler := compose.New(pool, logger, composed, opts...)
 	// Only now: the flush it listens with is captured while the options run.
 	resetLane.listen(ctx, modelPath)

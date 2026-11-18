@@ -39,31 +39,48 @@ type dataTaskCommand struct {
 	useConfig func(*config.Config)
 }
 
-func (c dataTaskCommand) run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
+// dataTaskArgs is one data-tasks command line, checked.
+type dataTaskArgs struct {
+	action     string
+	dsn        *dsnSettings
+	wait       bool
+	maxBatches int
+}
+
+func parseDataTaskArgs(args []string, stderr io.Writer) (dataTaskArgs, error) {
 	if len(args) == 0 {
-		return errors.New("usage: migrate data-tasks <status|estimate|run|execute> [--wait] [--max-batches n] --dsn <dsn>")
+		return dataTaskArgs{}, errors.New("usage: migrate data-tasks <status|estimate|run|execute> [--wait] [--max-batches n] --dsn <dsn>")
 	}
 	action := args[0]
 	if action != "status" && action != "estimate" && action != "run" && action != dataTasksExecute {
-		return fmt.Errorf("unknown data-tasks operation %q", action)
+		return dataTaskArgs{}, fmt.Errorf("unknown data-tasks operation %q", action)
 	}
 	fs := flag.NewFlagSet("data-tasks", flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	dsn, err := addDSNFlags(fs)
 	if err != nil {
-		return err
+		return dataTaskArgs{}, err
 	}
 	wait := fs.Bool("wait", false, "wait for background corrections to finish (run only)")
 	maxBatches := fs.Int("max-batches", 100000, "the most batches execute commits before it reports (execute only)")
 	if err := fs.Parse(args[1:]); err != nil {
-		return config.FlagFault(fs, err)
+		return dataTaskArgs{}, config.FlagFault(fs, err)
 	}
 	if *maxBatches < 1 {
-		return errors.New("--max-batches must be at least 1")
+		return dataTaskArgs{}, errors.New("--max-batches must be at least 1")
 	}
 	if *wait && action != "run" {
-		return errors.New("--wait requires data-tasks run")
+		return dataTaskArgs{}, errors.New("--wait requires data-tasks run")
 	}
+	return dataTaskArgs{action: action, dsn: dsn, wait: *wait, maxBatches: *maxBatches}, nil
+}
+
+func (c dataTaskCommand) run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
+	parsed, err := parseDataTaskArgs(args, stderr)
+	if err != nil {
+		return err
+	}
+	action, dsn := parsed.action, parsed.dsn
 	resolved, err := dsn.resolve(config.Environ())
 	if err != nil {
 		return err
@@ -85,13 +102,13 @@ func (c dataTaskCommand) run(ctx context.Context, args []string, stdout, stderr 
 			return fmt.Errorf("migrate: open original storage: %w", err)
 		}
 		ctx = originalstore.Bind(ctx, compose.InstallationDB(pool), blob)
-		return c.execute(ctx, pool, *maxBatches, stdout)
+		return c.execute(ctx, pool, parsed.maxBatches, stdout)
 	}
 	progress, err := c.operation(ctx, pool, action)
 	if err != nil {
 		return err
 	}
-	if *wait {
+	if parsed.wait {
 		progress, err = c.wait(ctx, pool, progress)
 		if err != nil {
 			return err
