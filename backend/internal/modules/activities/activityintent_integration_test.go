@@ -6,6 +6,7 @@
 package activities
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -53,4 +54,31 @@ func TestTaskIntentSurvivesAnUnrelatedEditAndClearsWithTheDeadline(t *testing.T)
 	if cleared.DueAt != nil || cleared.DueIntent != nil || cleared.RemindAt != nil || cleared.RemindIntent != nil {
 		t.Fatal("clearing the deadline kept its clock or following reminder")
 	}
+}
+
+func TestAnImplausibleDueDateIsRefusedOnCreateAndOnMoveButAnUnmovedOldOneStays(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+	store := e.store(nil)
+	ancient := time.Date(1900, 1, 1, 9, 30, 0, 0, time.UTC)
+	if _, _, err := store.LogActivity(ctx, LogActivityInput{Kind: "task", Subject: new("Typo"), DueAt: &ancient}); !isDueRefusal(err) {
+		t.Fatalf("LogActivity with a 1900 due date answered %v, want a due_at refusal", err)
+	}
+	task, _, err := store.LogActivity(ctx, LogActivityInput{Kind: "task", Subject: new("Real")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := ids.From[ids.ActivityKind](ids.UUID(task.Id))
+	if _, err := store.UpdateActivity(ctx, id, UpdateActivityInput{DueAt: &ancient}); !isDueRefusal(err) {
+		t.Fatalf("UpdateActivity to a 1900 due date answered %v, want a due_at refusal", err)
+	}
+	soon := time.Now().Add(48 * time.Hour)
+	if _, err := store.UpdateActivity(ctx, id, UpdateActivityInput{DueAt: &soon}); err != nil {
+		t.Fatalf("UpdateActivity to a near date: %v", err)
+	}
+}
+
+func isDueRefusal(err error) bool {
+	_, ok := errors.AsType[*DueOutOfRangeError](err)
+	return ok
 }

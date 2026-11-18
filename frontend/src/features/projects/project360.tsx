@@ -337,7 +337,7 @@ function useNextTaskVerbs(
                 body: nextDue,
               });
           },
-          pending: update.isPending && update.variables?.id === next.activityId,
+          pending: update.isPending,
         }
       : undefined,
   };

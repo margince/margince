@@ -11,6 +11,7 @@ import { StageLadder } from "../../design-system/stageladder";
 import { useT } from "../../i18n";
 import { labelFor } from "../../lib/labelfor";
 import { problemMessageOf, unwrap } from "../../lib/problem";
+import { project360Key } from "./project360.key";
 import {
   PHASE_LABEL,
   PROJECT_PHASES,
@@ -95,9 +96,19 @@ export function useAdvanceProject(onDone: () => void) {
         }),
       );
     },
-    onSuccess: (_data, move) => {
-      queryClient.invalidateQueries({ queryKey: ["project", move.projectId] });
-      queryClient.invalidateQueries({ queryKey: ["projects"] });
+    // Returned, so the dialog stays pending with Move disabled until the page
+    // has been read again; the answer is written to the page first, so the
+    // phase bar is right the moment the dialog closes.
+    onSuccess: async (project, move) => {
+      queryClient.setQueryData(project360Key(move.projectId), (view) =>
+        view ? { ...view, project } : view,
+      );
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["project", move.projectId],
+        }),
+        queryClient.invalidateQueries({ queryKey: ["projects"] }),
+      ]);
       onDone();
     },
   });

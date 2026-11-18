@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useId, useRef, useState } from "react";
 import type { components } from "../api/schema";
 import {
@@ -15,13 +16,14 @@ import { Heading } from "../design-system/heading";
 import { provenanceOf } from "../design-system/provenanceof";
 import { SourceEvidence } from "../design-system/sourceevidence";
 import { formatActivityWhen } from "../format/activitywhen";
-import { calendarDay } from "../format/calendarday";
+import { calendarDay, dueDayBounds } from "../format/calendarday";
 import { isoOrBlank } from "../format/datepattern";
 import { formatDue } from "../format/format";
 import { startOfDayInZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { taskDueChoice, taskDueFields } from "../lib/activitybody";
 import { useCanWriteRecord } from "../lib/capability";
+import { isVersionSkewOf } from "../lib/problem";
 import { isWebsiteInquiryTask } from "../lib/websiteinquiries";
 import { TaskTimeField } from "./followuptaskfields";
 import { mostSpecificFirst, RecordLinkChips } from "./recordlinks";
@@ -97,7 +99,7 @@ export function TaskCompleteCheck({
   const t = useT();
   const complete = useCompleteTask(update);
   const isThisTask = update.variables?.id === activityId;
-  const pending = update.isPending && isThisTask;
+  const pending = update.isPending;
   // A rejected PATCH re-enables the box, unchecked, like a click that did
   // nothing; this line is what tells the two apart.
   const failed = update.isError && isThisTask;
@@ -140,7 +142,10 @@ export function TaskQuickActions({
 }>) {
   const t = useT();
   const readerZone = useViewerZone();
-  const pending = update.isPending && update.variables?.id === activityId;
+  // Any task write through this `update` holds every verb: the page still
+  // draws the old next task until the write's reads land, and a press then
+  // would act on a row about to be replaced.
+  const pending = update.isPending;
   const complete = useCompleteTask(update);
   return (
     <>
@@ -218,6 +223,7 @@ export function TaskDueDatePick({
           <DateInput
             {...field}
             value={current}
+            {...dueDayBounds(readerZone)}
             disabled={pending}
             onChange={(event) => {
               const day = event.target.value;
@@ -446,9 +452,43 @@ function TaskDetailActions({
           </div>
         </div>
       )}
+      {!logging && <TaskWriteFailure taskId={task.id} update={update} />}
       {logging && (
         <TaskOutcomeForm task={task} onLogged={() => setLogging(false)} />
       )}
     </>
+  );
+}
+
+// Drawn outside the verbs: a task that changed elsewhere is refetched as done
+// or gone, which removes the verbs and would take the refusal with them.
+function TaskWriteFailure({
+  taskId,
+  update,
+}: Readonly<{
+  taskId: string;
+  update: ReturnType<typeof useTaskUpdate>;
+}>) {
+  const t = useT();
+  const queryClient = useQueryClient();
+  if (!update.isError || update.variables?.id !== taskId) return null;
+  return (
+    <ErrorLine
+      error={update.error}
+      actions={
+        isVersionSkewOf(update.error) && (
+          <Button
+            onClick={() => {
+              update.reset();
+              void queryClient.invalidateQueries({
+                queryKey: ["activity", taskId],
+              });
+            }}
+          >
+            {t("decision.reRead")}
+          </Button>
+        )
+      }
+    />
   );
 }

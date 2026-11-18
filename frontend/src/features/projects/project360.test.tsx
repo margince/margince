@@ -380,6 +380,44 @@ describe("ProjectScreen", () => {
     expect(posted).toEqual({ to_phase: "pursuing", reason: null });
   });
 
+  it("shows the new phase from the move's answer and closes the dialog only once the page is read again", async () => {
+    const user = userEvent.setup();
+    let moved = false;
+    let releaseReread: (response: Response) => void = () => {};
+    projectsBackend({
+      respond: async (url, method) => {
+        if (method === "POST" && url.endsWith("/projects/pr-1/advance")) {
+          moved = true;
+          return jsonResponse(project({ phase: "pursuing" }));
+        }
+        if (moved && method === "GET" && url.endsWith("/projects/pr-1/360")) {
+          return new Promise<Response>((resolve) => {
+            releaseReread = resolve;
+          });
+        }
+        return null;
+      },
+    });
+    render(<ProjectScreen id="pr-1" />);
+    await screen.findByRole("heading", { name: "CRM rollout" });
+    await user.click(screen.getByTestId("project-step-pursuing"));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(within(dialog).getByRole("button", { name: "Move" }));
+
+    await waitFor(() => {
+      const here = [...document.querySelectorAll("[aria-current='step']")];
+      expect(
+        here.some((node) => node.textContent?.startsWith("Pursuing")),
+      ).toBe(true);
+    });
+    expect(screen.queryByRole("dialog")).toBeTruthy();
+
+    releaseReread(
+      jsonResponse(project360({ project: project({ phase: "pursuing" }) })),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
   // `writable` is what the server's write gate would answer on a mutation. A
   // reader who may open a project but not change it was offered Edit, Archive,
   // Assign and the phase stepper, and learned otherwise from a 403 after
