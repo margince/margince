@@ -272,6 +272,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "users.handover.deals_one",
   "contracts.renew.deal",
   "contracts.deal",
+  "offer.deal",
 
   // A bare percentage, written the same way in Vietnamese.
   "deal.winProbability.band.zero",

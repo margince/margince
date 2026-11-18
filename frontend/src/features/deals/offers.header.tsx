@@ -40,7 +40,7 @@ async function searchCompanyCandidates(
   }));
 }
 
-function useOfferTemplates() {
+export function useOfferTemplates() {
   const readerScope = useHealthScope();
   return useQuery({
     queryKey: ["offer-templates-all", readerScope ?? ""],

@@ -128,7 +128,13 @@ export const Sent: Story = {
     installFetchStub({
       "GET /me": meRoute({ deal: ["read", "update"] }),
       "GET /offers/o-1": () =>
-        jsonResponse({ ...draftOffer, status: "sent", revision: 2 }),
+        jsonResponse({
+          ...draftOffer,
+          status: "sent",
+          revision: 2,
+          intro_text: "Thank you for your interest.\nHere is our offer.",
+          terms_text: "Payable within 30 days.",
+        }),
       "GET /offer-templates": () => jsonResponse(emptyPage),
     });
     return (

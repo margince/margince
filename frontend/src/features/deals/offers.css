@@ -48,3 +48,9 @@
 .offers-add-line {
   margin-top: var(--space-6);
 }
+
+/* An intro or terms text keeps the line breaks its author typed. */
+.offers-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

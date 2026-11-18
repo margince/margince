@@ -6998,6 +6998,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.offersEmpty": "Noch keine Angebote",
 
   "offer.backToDeal": "Zurück zum Deal",
+  "offer.deal": "Deal",
   "offer.totals": "Summen",
   "offer.net": "Netto",
   "offer.tax": "Steuer",

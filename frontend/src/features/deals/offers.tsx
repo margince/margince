@@ -27,6 +27,7 @@ import { OfferLinesPanel } from "./offers.fromdeal";
 // surface is its own because buyer_company_id needs the shared RecordPicker and
 // template_id a server-sourced select — EditAction/CreateField fits neither.
 import { EditOfferHeaderModal } from "./offers.header";
+import { OfferHeaderFields } from "./offers.summary";
 
 export type Offer = components["schemas"]["Offer"];
 
@@ -215,7 +216,9 @@ export function OfferScreen({ id }: Readonly<{ id: string }>) {
                 </>
               }
             >
-              {null}
+              <PanelBody>
+                <OfferHeaderFields offer={offer} />
+              </PanelBody>
             </Panel>
             <AiDisclosureBanner offer={offer} />
             <OfferTotalsPanel offer={offer} />

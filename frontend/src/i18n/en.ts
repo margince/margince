@@ -6955,6 +6955,7 @@ export const en = {
   "deal.offersEmpty": "No offers yet",
 
   "offer.backToDeal": "Back to deal",
+  "offer.deal": "Deal",
   "offer.totals": "Totals",
   "offer.net": "Net",
   "offer.tax": "Tax",

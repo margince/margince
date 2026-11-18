@@ -248,15 +248,34 @@ describe("OfferLineEditor (OP-7/OP-13)", () => {
     expect(screen.getByRole("heading", { name: "Line items" })).toBeTruthy();
   });
 
-  it("omits the line editor entirely once the offer leaves draft", async () => {
+  it("lists the lines read-only once the offer leaves draft", async () => {
     stubOffer({
       ...baseOffer,
       status: "sent",
-      line_items: [existingLine],
+      line_items: [{ ...existingLine, discount_pct: 12.5 }],
     });
     render(<OfferScreen id="o-1" />);
     await screen.findByText("ANG-2026-0007");
-    expect(screen.queryByRole("heading", { name: "Line items" })).toBeNull();
+    expect(screen.getByRole("heading", { name: "Line items" })).toBeTruthy();
+    expect(screen.getByText("Consulting hours")).toBeTruthy();
+    expect(screen.getByText("12.5")).toBeTruthy();
+    expect(screen.queryByTestId("new-line-description")).toBeNull();
+    expect(screen.queryByTestId("remove-line-li-1")).toBeNull();
+  });
+
+  it("shows the offer's revision, valid-until day, intro and terms", async () => {
+    stubOffer({
+      ...baseOffer,
+      status: "sent",
+      intro_text: "Dear buyer,\nhere is our offer.",
+      terms_text: "Payable in 30 days.",
+    });
+    render(<OfferScreen id="o-1" />);
+    await screen.findByText("ANG-2026-0007");
+    expect(screen.getByText("Revision")).toBeTruthy();
+    expect(screen.getByText("01/08/2026")).toBeTruthy();
+    expect(screen.getByText(/here is our offer/)).toBeTruthy();
+    expect(screen.getByText("Payable in 30 days.")).toBeTruthy();
   });
 
   it("refreshes totals from the add-line response, never a client-computed sum", async () => {
@@ -857,7 +876,7 @@ describe("offer lifecycle actions (OP-8/OP-9/OP-10)", () => {
     // Once sent, the send action and the draft-only affordances disappear.
     expect(screen.queryByTestId("send-offer")).toBeNull();
     expect(screen.queryByTestId("edit-offer-header")).toBeNull();
-    expect(screen.queryByRole("heading", { name: "Line items" })).toBeNull();
+    expect(screen.queryByTestId("new-line-description")).toBeNull();
   });
 
   it("renders a 422 detail verbatim when send is rejected (e.g. fx_rate_unavailable)", async () => {

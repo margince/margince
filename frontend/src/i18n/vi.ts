@@ -6819,6 +6819,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.offersEmpty": "Chưa có báo giá nào",
 
   "offer.backToDeal": "Quay lại deal",
+  "offer.deal": "Deal",
   "offer.totals": "Tổng cộng",
   "offer.net": "Trước thuế",
   "offer.tax": "Thuế",

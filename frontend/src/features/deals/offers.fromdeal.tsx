@@ -13,21 +13,30 @@ import { navigate } from "../../lib/router";
 import { useDealLines } from "./deal360/deallines";
 import type { Offer } from "./offers";
 import { OfferLineEditor } from "./offers.lines";
+import { OfferLinesTable } from "./offers.summary";
 
 /**
  * The lines part of an offer. An offer typed by hand is edited here while it
- * is a draft. An offer made from the deal's products changes only through the
- * deal. It says when the deal moved on, and a draft can take the lines again.
+ * is a draft; every other offer lists its lines read-only. An offer made from
+ * the deal's products changes only through the deal. It says when the deal
+ * moved on, and a draft can take the lines again.
  */
 export function OfferLinesPanel({ offer }: Readonly<{ offer: Offer }>) {
   if (offer.source_commercial_revision == null) {
-    return offer.status === "draft" ? <OfferLineEditor offer={offer} /> : null;
+    return offer.status === "draft" ? (
+      <OfferLineEditor offer={offer} />
+    ) : (
+      <OfferLinesTable offer={offer} />
+    );
   }
   return (
-    <DealSourcedLines
-      offer={offer}
-      revision={offer.source_commercial_revision}
-    />
+    <>
+      <DealSourcedLines
+        offer={offer}
+        revision={offer.source_commercial_revision}
+      />
+      <OfferLinesTable offer={offer} />
+    </>
   );
 }
 
