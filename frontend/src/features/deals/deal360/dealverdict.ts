@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { StandingVerdict } from "../../../design-system/howitstands";
+import { activityDay } from "../../../format/activitywhen";
 import { formatNumber } from "../../../format/format";
 import { formatDayMonthNearYear } from "../../../format/format.dates";
 import { type Locale, type Translator, translatePlural } from "../../../i18n";
@@ -33,6 +34,8 @@ function recordedVerdict(
   { deal, card, asOf }: DealStandingInputs,
   { t, locale, zone }: Words,
 ): StandingVerdict | undefined {
+  const day = (iso: string) =>
+    formatDayMonthNearYear(iso, locale, zone, new Date(asOf));
   const waiting = card ? waitingSince(card) : null;
   if (waiting) {
     const days = daysWaiting(waiting, asOf, zone);
@@ -47,8 +50,24 @@ function recordedVerdict(
       tone: "warning",
     };
   }
-  const day = (iso: string) =>
-    formatDayMonthNearYear(iso, locale, zone, new Date(asOf));
+  const replied = card?.our_reply;
+  if (replied) {
+    const date = activityDay(
+      replied.replied_at,
+      replied.replied_precision,
+      locale,
+      zone,
+      (at, locale, zone) =>
+        formatDayMonthNearYear(at, locale, zone, new Date(asOf)),
+    );
+    return {
+      word: t("deal.verdict.youReplied"),
+      sentence: replied.still_asked
+        ? t("deal.verdict.youRepliedAsked", { date, ask: replied.still_asked })
+        : t("deal.verdict.youRepliedOn", { date }),
+      tone: "neutral",
+    };
+  }
   if (deal.stalled) {
     return {
       word: t("deal.verdict.goneQuiet"),

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -19,8 +20,11 @@ import (
 // EmailRowState keeps obligation and delivery facts in one page-batched read.
 type EmailRowState struct {
 	RequestHasReminder bool
-	Delivery           DeliveryState
-	Move               crmcontracts.EmailSummaryMove
+	// OurReply is ourReplySQL on the row: nil unless we replied after the
+	// request and our reply is still the newest message on its thread.
+	OurReply *crmcontracts.RequestReply
+	Delivery DeliveryState
+	Move     crmcontracts.EmailSummaryMove
 }
 
 // EmailStatesFor reads obligation and delivery after the caller's content
@@ -37,16 +41,32 @@ func EmailStatesFor(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, asOf
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	wanted := arg(activityIDs)
-	in, err := moveInputs(ctx, tx, arg, asOf)
+	// Every mail on the rows' threads and each row's reminder share one
+	// content gate. The later mail the move walks is tested against it, and so
+	// is the reminder our reply names.
+	readable, err := auth.ContentReadableActivitiesSQL(ctx, threadNeedSQL(emailStateCandidates)+`
+	 UNION SELECT reminder_row.id FROM `+emailStateCandidates+` c
+	   JOIN activity reminder_row ON reminder_row.source_system = '`+EmailRequestTaskSource+`'
+	    AND reminder_row.source_activity_id = c.id`, arg)
 	if err != nil {
 		return nil, err
 	}
-	rows, err := tx.Query(ctx, `SELECT a.id, coalesce(delivery.status, ''), delivery.reason,
+	in, err := moveInputsGatedBy(ctx, tx, arg, asOf, InGatedSetSQL(emailStateReadable, "later"))
+	if err != nil {
+		return nil, err
+	}
+	rows, err := tx.Query(ctx, `WITH `+emailStateCandidates+` AS MATERIALIZED (
+  SELECT a.id, a.thread_key, a.kind, a.channel_provider FROM activity a
+   WHERE a.id = ANY(`+fmt.Sprintf("$%d", wanted)+`) AND a.restricted_at IS NULL),
+`+emailStateReadable+` AS MATERIALIZED (`+readable+`)
+SELECT a.id, coalesce(delivery.status, ''), delivery.reason,
  delivery.sent_at, delivery.bounced_at, delivery.bounce_reason, coalesce(delivery.attachments, '[]'::jsonb),
  `+ControllerSendSQL+`,
- `+moveSQL(in, mailKinds)+`, `+openRequestReminderSQL+`
+ `+moveSQL(in, mailKinds)+`, `+openRequestReminderSQL+`,
+ our_reply.replied_at, our_reply.replied_precision, our_reply.still_asked, our_reply.reminder_id, our_reply.reminder_version
  FROM activity a LEFT JOIN comms_outbound delivery ON delivery.activity_id = a.id
- WHERE a.id = ANY(`+fmt.Sprintf("$%d", wanted)+`) AND a.restricted_at IS NULL`, args...)
+ LEFT JOIN LATERAL (`+ourReplySQL(in.asOf, InGatedSetSQL(emailStateReadable, "reminder_row"))+`) our_reply ON true
+ WHERE a.id IN (SELECT id FROM `+emailStateCandidates+`)`, args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading email states: %w", err)
 	}
@@ -55,12 +75,14 @@ func EmailStatesFor(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, asOf
 	for rows.Next() {
 		var id ids.UUID
 		var state EmailRowState
-		if err := rows.Scan(&id, &state.Delivery.Status, &state.Delivery.Reason, &state.Delivery.SentAt,
+		var reply ourReplyRow
+		if err := rows.Scan(append([]any{&id, &state.Delivery.Status, &state.Delivery.Reason, &state.Delivery.SentAt,
 			&state.Delivery.BouncedAt, &state.Delivery.BounceReason, &state.Delivery.Files,
 			&state.Delivery.Controller, &state.Delivery.FromAddress, &state.Move,
-			&state.RequestHasReminder); err != nil {
+			&state.RequestHasReminder}, reply.targets()...)...); err != nil {
 			return nil, err
 		}
+		state.OurReply = reply.contract(openapi_types.UUID(id))
 		out[id] = state
 	}
 	return out, rows.Err()
@@ -176,6 +198,13 @@ SELECT a.id, `+moveSQL(in, mailKinds)+` FROM activity a
 	}
 	return out, rows.Err()
 }
+
+// The sets EmailStatesFor reads: the rows asked about, and the ids among
+// their threads and reminders that the reader may read.
+const (
+	emailStateCandidates = "email_state_candidates"
+	emailStateReadable   = "email_state_readable"
+)
 
 // The sets MailMovesFor reads: the mails asked about, and the ids among them
 // and their threads that the reader may read.

@@ -11,14 +11,38 @@ import { UNBROKEN_SUBJECT } from "../../testing/unbrokentext";
 import { DealStatusCardPanel } from "./dealstatus";
 
 type WrittenBy = components["schemas"]["WrittenBy"];
-type Situation = "task" | "request" | "covered";
+type Situation = "task" | "request" | "covered" | "replied";
+
+// Our reply after the request is the newest message on its thread, so the
+// move opens the reminder and the bar offers Done.
+const replied = {
+  next: {
+    action: "open_task",
+    reason:
+      "You replied 3 days ago. If nothing more is owed, mark the reminder done.",
+    arguments: { activity_id: "demo-reminder" },
+    evidence: [
+      {
+        activity_id: "demo-mail",
+        text: "Request: Meeting slots",
+      },
+    ],
+  },
+  our_reply: {
+    request_activity_id: "demo-mail",
+    replied_at: "2026-09-02T17:00:00Z",
+    replied_precision: "instant",
+    reminder_id: "demo-reminder",
+    reminder_version: 2,
+  },
+};
 
 function panel(
   writer: WrittenBy,
   situation: Situation = "task",
   subject = "Meeting slots",
 ) {
-  const request = situation !== "task";
+  const request = situation !== "task" && situation !== "replied";
   const next = request
     ? {
         action: situation === "covered" ? "draft_email" : "create_task",
@@ -77,6 +101,7 @@ function panel(
           },
           verdict: { standing: "live", because: { sentences: [] } },
           next,
+          ...(situation === "replied" ? replied : {}),
           ...(situation === "covered"
             ? { reply_to: "demo-mail", request_basis: next.basis }
             : {}),
@@ -121,6 +146,14 @@ export const RequestAlreadyCovered: Story = {
 };
 export const RequestAlreadyCoveredDark: Story = {
   ...RequestAlreadyCovered,
+  globals: { theme: "dark" },
+};
+
+export const RepliedOffersDone: Story = {
+  render: panel("deterministic", "replied"),
+};
+export const RepliedOffersDoneDark: Story = {
+  ...RepliedOffersDone,
   globals: { theme: "dark" },
 };
 

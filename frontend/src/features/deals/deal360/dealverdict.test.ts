@@ -73,6 +73,45 @@ describe("an open deal's verdict", () => {
     });
   });
 
+  it("says we replied, and when, once our reply is the newest message", () => {
+    const card: DealStatusCard = {
+      deal_id: "d1",
+      story: { sentences: [] },
+      generated_at: AS_OF,
+      generated_by: "deterministic",
+      our_reply: {
+        request_activity_id: "a1",
+        replied_at: "2026-05-27T18:00:00Z",
+        replied_precision: "instant",
+        reminder_id: "t1",
+        reminder_version: 2,
+      },
+    };
+    expect(verdictFor({ stalled: true }, card)).toEqual({
+      word: t("deal.verdict.youReplied"),
+      sentence: t("deal.verdict.youRepliedOn", { date: "27 May" }),
+      tone: "neutral",
+    });
+  });
+
+  it("quotes what is still asked after our reply", () => {
+    const card: DealStatusCard = {
+      deal_id: "d1",
+      story: { sentences: [] },
+      generated_at: AS_OF,
+      generated_by: "deterministic",
+      our_reply: {
+        request_activity_id: "a1",
+        replied_at: "2026-05-27T12:00:00Z",
+        replied_precision: "day",
+        still_asked: "send the signed order form",
+      },
+    };
+    expect(verdictFor({}, card).sentence).toBe(
+      "You replied on 27 May. Still asked: send the signed order form",
+    );
+  });
+
   it("calls a stalled deal gone quiet since its last activity", () => {
     expect(verdictFor({ stalled: true })).toEqual({
       word: t("deal.verdict.goneQuiet"),

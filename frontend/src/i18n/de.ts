@@ -22426,6 +22426,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Käuferseite hat vor {count} Tag geschrieben und wartet auf eine Antwort.",
   "deal.verdict.yourMoveDays_other":
     "Die Käuferseite hat vor {count} Tagen geschrieben und wartet auf eine Antwort.",
+  "deal.verdict.youReplied": "Du hast geantwortet",
+  "deal.verdict.youRepliedOn":
+    "Du hast am {date} geantwortet. Wenn nichts mehr offen ist, markiere es als erledigt.",
+  "deal.verdict.youRepliedAsked":
+    "Du hast am {date} geantwortet. Noch offen: {ask}",
   "deal.verdict.goneQuiet": "Verstummt",
   "deal.verdict.goneQuietSince":
     "Seit {date} gab es keine Aktivität, daher gilt der Deal als festgefahren.",

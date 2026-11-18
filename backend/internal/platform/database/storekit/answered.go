@@ -153,6 +153,16 @@ func ThreadAnsweredAtSQL(inbound string) string {
 	return "(SELECT min(" + arm.at + ") " + arm.from + ")"
 }
 
+// ThreadNewestReplySQL selects the id, occurred_at and occurred_precision of
+// our newest same-thread reply that reached the inbound row's sender and had
+// begun by until. It is the thread arm of AnsweredSQL, read for its newest
+// answer instead of its first.
+func ThreadNewestReplySQL(inbound, until string) string {
+	arm := threadAnswerArm(inbound, answerLater("answer_thread", inbound, until))
+	return "SELECT " + arm.id + " AS id, " + arm.at + " AS occurred_at, answer_thread.occurred_precision " + arm.from +
+		"\n\t  ORDER BY " + arm.at + " DESC, " + arm.id + " DESC LIMIT 1"
+}
+
 // NormalisedSubjectSQL is a subject with its reply prefixes and outer spaces
 // removed and inner runs of space folded, lower-cased. A forward prefix stays,
 // so "Fwd: Invoice" never equals "Invoice".

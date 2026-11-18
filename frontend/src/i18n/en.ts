@@ -22135,6 +22135,10 @@ export const en = {
     "The buyer wrote {count} day ago and is waiting for a reply.",
   "deal.verdict.yourMoveDays_other":
     "The buyer wrote {count} days ago and is waiting for a reply.",
+  "deal.verdict.youReplied": "You replied",
+  "deal.verdict.youRepliedOn":
+    "You replied on {date}. If nothing more is owed, mark it done.",
+  "deal.verdict.youRepliedAsked": "You replied on {date}. Still asked: {ask}",
   "deal.verdict.goneQuiet": "Gone quiet",
   "deal.verdict.goneQuietSince":
     "Nothing has happened since {date}, so the deal counts as stalled.",
