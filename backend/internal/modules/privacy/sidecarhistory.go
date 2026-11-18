@@ -3,10 +3,10 @@
 
 package privacy
 
-// A company's profile fields and facts live in sidecar tables and are audited
-// under the sidecar row's own id, so the company's own audit rows never name
-// them. Both history reads join those rows back to the company here and show
-// each as a change of the company field it states.
+// A company's profile fields and facts live in sidecar tables. They are audited
+// under the sidecar row's own id, so the company's own audit rows never name them.
+// Both history reads join those rows back to the company here. Each shows as a
+// change of the company field it states.
 
 import (
 	"fmt"
@@ -17,9 +17,7 @@ import (
 )
 
 const (
-	sidecarProfileFieldTable = "company_profile_field"
-	sidecarFactTable         = "company_fact"
-	sidecarValueKey          = "value"
+	sidecarValueKey = "value"
 )
 
 // sidecarSubjectCTE renders the `side` CTE: every audit row of the company's
@@ -27,7 +25,7 @@ const (
 // string means the kind has no sidecars.
 //
 // The first two branches follow the live sidecar row to its company. The third
-// finds every row of a removed fact, whose own row is gone: its removal row
+// finds every row of a removed fact. Its own row is gone, but the removal row
 // still names the company and field in its before-image.
 func sidecarSubjectCTE(entityType string, anchorPos int) string {
 	if entityType != entityTypeCompany {
@@ -35,21 +33,21 @@ func sidecarSubjectCTE(entityType string, anchorPos int) string {
 	}
 	return fmt.Sprintf(`side AS (
 			SELECT a.id AS audit_id, f.field AS side_field
-			  FROM %[1]s f
-			  JOIN audit_log a ON a.entity_type = '%[1]s' AND a.entity_id = f.id
-			 WHERE f.company_id = $%[3]d
+			  FROM company_profile_field f
+			  JOIN audit_log a ON a.entity_type = 'company_profile_field' AND a.entity_id = f.id
+			 WHERE f.company_id = $%[1]d
 			UNION ALL
 			SELECT a.id, f.field
-			  FROM %[2]s f
-			  JOIN audit_log a ON a.entity_type = '%[2]s' AND a.entity_id = f.id
-			 WHERE f.company_id = $%[3]d
+			  FROM company_fact f
+			  JOIN audit_log a ON a.entity_type = 'company_fact' AND a.entity_id = f.id
+			 WHERE f.company_id = $%[1]d
 			UNION ALL
 			SELECT a.id, removed.before ->> 'field'
 			  FROM audit_log removed
-			  JOIN audit_log a ON a.entity_type = '%[2]s' AND a.entity_id = removed.entity_id
-			 WHERE removed.entity_type = '%[2]s' AND removed.action = 'delete'
-			   AND removed.before ->> 'company_id' = $%[3]d::text
-		)`, sidecarProfileFieldTable, sidecarFactTable, anchorPos)
+			  JOIN audit_log a ON a.entity_type = 'company_fact' AND a.entity_id = removed.entity_id
+			 WHERE removed.entity_type = 'company_fact' AND removed.action = 'delete'
+			   AND removed.before ->> 'company_id' = $%[1]d::text
+		)`, anchorPos)
 }
 
 // sidecarArmSQL is the record-history union arm over the `side` CTE, in the
@@ -67,21 +65,20 @@ func sidecarArmSQL(where string, fetchPos int) string {
 
 // sidecarImages turns a sidecar row's images into the company's own: the field
 // name keyed to its value before and after. A write that moved no value (a
-// confirmation) yields empty images, so it reads as no change. The verb is
-// always an update of the company, whatever the sidecar row did.
-func sidecarImages(field, action string, before, after map[string]any) (map[string]any, map[string]any, string) {
+// confirmation) yields empty images, so it reads as no change.
+func sidecarImages(field, action string, before, after map[string]any) (map[string]any, map[string]any) {
 	if action == actionDelete {
-		return map[string]any{field: before[sidecarValueKey]}, nil, actionUpdate
+		return map[string]any{field: before[sidecarValueKey]}, nil
 	}
 	newValue, moved := after[sidecarValueKey]
 	if !moved {
-		return nil, nil, actionUpdate
+		return nil, nil
 	}
 	var old map[string]any
 	if oldValue, had := before[sidecarValueKey]; had {
 		old = map[string]any{field: oldValue}
 	}
-	return old, map[string]any{field: newValue}, actionUpdate
+	return old, map[string]any{field: newValue}
 }
 
 const fieldHistoryBatchColumns = `

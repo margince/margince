@@ -43,11 +43,10 @@ type dealWrite struct {
 // that prices the deal at what it was already priced at moved no forecast, and a
 // history row saying otherwise is a move a reconstruction would have to explain.
 //
-// It returns the deal columns the sync actually wrote, with what each held
-// before — nothing when it wrote nothing — so the caller can audit the deal's own
-// change and its paired deal.updated reports the complete delta: on a closed deal
-// that includes the re-frozen fx_rate_to_base/fx_rate_date, not just
-// amount_minor/currency.
+// It returns the deal columns the sync wrote, with what each held before, and
+// nothing when it wrote nothing. The caller audits the deal's own change from
+// that, and its paired deal.updated reports the complete delta. On a closed deal
+// that includes the re-frozen fx_rate_to_base and fx_rate_date.
 func (s *Store) syncDealAmountFromOffer(ctx context.Context, tx pgx.Tx,
 	dealID ids.DealID, offer crmcontracts.Offer,
 ) (dealWrite, error) {
@@ -208,4 +207,28 @@ func acceptedOfferARR(ctx context.Context, tx pgx.Tx, offerID ids.OfferID) (int6
 		return 0, false, err
 	}
 	return figures.ArrMinor, true, nil
+}
+
+// auditDealRepricing records the deal's own change, so its History reads the old
+// and the new value as it does for a manual edit. It announces deal.updated under
+// that row. The offer it came from rides the evidence, which keeps the images to
+// the deal's columns. An accept that moved no deal column writes nothing and
+// reports false. Any announcement is then the caller's.
+func auditDealRepricing(ctx context.Context, tx pgx.Tx, dealID ids.DealID, offerID ids.OfferID,
+	w dealWrite, changed map[string]any,
+) (bool, error) {
+	if len(w.before) == 0 {
+		return false, nil
+	}
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", "deal", dealID.UUID, w.before, w.after,
+		map[string]any{"offer_id": offerID.UUID})
+	if err != nil {
+		return false, fmt.Errorf("audit deal repricing from accepted offer: %w", err)
+	}
+	if err := storekit.EmitEvent(ctx, tx, auditID, dealID.UUID, crmcontracts.PublicEventDealUpdated{
+		ChangedFields: changed,
+	}); err != nil {
+		return false, fmt.Errorf("emit paired deal.updated: %w", err)
+	}
+	return true, nil
 }

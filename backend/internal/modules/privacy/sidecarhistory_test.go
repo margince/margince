@@ -13,25 +13,25 @@ func TestSidecarImagesStateTheCompanyFieldBeforeAndAfter(t *testing.T) {
 	before := map[string]any{"value": "abc", "source": "site_read"}
 	after := map[string]any{"value": "DE123456789", "source": "human"}
 
-	gotBefore, gotAfter, action := sidecarImages("register_vat", "update", before, after)
+	gotBefore, gotAfter := sidecarImages("register_vat", "update", before, after)
 
 	if !reflect.DeepEqual(gotBefore, map[string]any{"register_vat": "abc"}) ||
-		!reflect.DeepEqual(gotAfter, map[string]any{"register_vat": "DE123456789"}) || action != "update" {
-		t.Errorf("got %v -> %v as %q, want the field's value moving from abc to DE123456789 as an update", gotBefore, gotAfter, action)
+		!reflect.DeepEqual(gotAfter, map[string]any{"register_vat": "DE123456789"}) {
+		t.Errorf("got %v -> %v, want the field's value moving from abc to DE123456789", gotBefore, gotAfter)
 	}
 }
 
 func TestSidecarImagesReadACreationAsAnUpdateFromNothing(t *testing.T) {
-	gotBefore, gotAfter, action := sidecarImages("registered_address", "create", nil,
+	gotBefore, gotAfter := sidecarImages("registered_address", "create", nil,
 		map[string]any{"value": "Musterstrasse 1, 10115 Berlin"})
 
-	if gotBefore != nil || gotAfter["registered_address"] != "Musterstrasse 1, 10115 Berlin" || action != "update" {
-		t.Errorf("got %v -> %v as %q, want a first value shown as an update", gotBefore, gotAfter, action)
+	if gotBefore != nil || gotAfter["registered_address"] != "Musterstrasse 1, 10115 Berlin" {
+		t.Errorf("got %v -> %v, want a first value with nothing before it", gotBefore, gotAfter)
 	}
 }
 
 func TestSidecarImagesShowNoChangeForAConfirmation(t *testing.T) {
-	gotBefore, gotAfter, _ := sidecarImages("register_vat", "update",
+	gotBefore, gotAfter := sidecarImages("register_vat", "update",
 		map[string]any{"value": "DE123456789"}, map[string]any{"verified_by": "someone"})
 
 	if len(gotBefore) != 0 || len(gotAfter) != 0 {
@@ -40,10 +40,10 @@ func TestSidecarImagesShowNoChangeForAConfirmation(t *testing.T) {
 }
 
 func TestSidecarImagesShowARemovalAsTheValueGoing(t *testing.T) {
-	gotBefore, gotAfter, action := sidecarImages("employee_range", "delete", map[string]any{"value": "11-50"}, nil)
+	gotBefore, gotAfter := sidecarImages("employee_range", "delete", map[string]any{"value": "11-50"}, nil)
 
-	if gotBefore["employee_range"] != "11-50" || gotAfter != nil || action != "update" {
-		t.Errorf("got %v -> %v as %q, want 11-50 removed as an update", gotBefore, gotAfter, action)
+	if gotBefore["employee_range"] != "11-50" || gotAfter != nil {
+		t.Errorf("got %v -> %v, want 11-50 removed", gotBefore, gotAfter)
 	}
 }
 
@@ -52,7 +52,7 @@ func TestOnlyACompanyHasSidecarRows(t *testing.T) {
 		t.Error("a record kind without sidecar tables got a sidecar branch")
 	}
 	cte := sidecarSubjectCTE(entityTypeCompany, 2)
-	for _, table := range []string{sidecarProfileFieldTable, sidecarFactTable} {
+	for _, table := range []string{"company_profile_field", "company_fact"} {
 		if !strings.Contains(cte, "audit_log a ON a.entity_type = '"+table+"'") {
 			t.Errorf("the sidecar branch does not read the audit rows of %s", table)
 		}

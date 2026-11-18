@@ -19,8 +19,8 @@ import (
 const profileFieldContract = "../../../api/crm.yaml"
 
 // profileFieldsTheAPIAccepts is the field vocabulary of
-// PATCH /companies/{id}/profile-fields/{field}, read from the contract so a
-// field added there is held to the History without anyone listing it here.
+// PATCH /companies/{id}/profile-fields/{field}. It is read from the contract, so
+// a field added there is held to the History without a second list.
 func profileFieldsTheAPIAccepts(t *testing.T) []string {
 	t.Helper()
 	doc, err := openapi3.NewLoader().LoadFromFile(profileFieldContract)
@@ -45,21 +45,14 @@ func profileFieldsTheAPIAccepts(t *testing.T) []string {
 	return fields
 }
 
-// notShownInHistory names the profile fields the company History deliberately
-// leaves out. Empty today: every field a person can state is a field the company
-// changed, so a name added here has to say why that is not so.
-var notShownInHistory = map[string]string{}
-
-func TestEveryProfileFieldAPersonCanEditAppearsInTheCompanyHistory(t *testing.T) {
+// Every field the API accepts shows in both histories, old value and new.
+func TestEveryProfileFieldAUserCanEditAppearsInTheCompanyHistory(t *testing.T) {
 	e := Setup(t)
 	company := e.SeedCompany(t, "History Check GmbH", &e.Rep3)
 	companyID := ids.From[ids.CompanyKind](company)
 	fields := profileFieldsTheAPIAccepts(t)
 
 	for _, field := range fields {
-		if _, skipped := notShownInHistory[field]; skipped {
-			continue
-		}
 		first, second := "first "+field, "second "+field
 		for _, value := range []string{first, second} {
 			if _, err := e.Contacts.UpdateCompanyProfileField(e.Admin(), companyID, field,
@@ -96,9 +89,6 @@ func TestEveryProfileFieldAPersonCanEditAppearsInTheCompanyHistory(t *testing.T)
 		t.Fatalf("reading the full history: %v", err)
 	}
 	for _, field := range fields {
-		if _, skipped := notShownInHistory[field]; skipped {
-			continue
-		}
 		shown := false
 		for _, entry := range full.Entries {
 			if after, ok := entry.After[field]; ok && after == "second "+field {

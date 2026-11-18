@@ -152,7 +152,9 @@ func recordHistoryEntry(row recordAuditRow, mask entityFieldMask) RecordHistoryE
 		display = *row.actorDisplayName
 	}
 	if row.sideField != nil {
-		row.before, row.after, row.action = sidecarImages(*row.sideField, row.action, row.before, row.after)
+		row.before, row.after = sidecarImages(*row.sideField, row.action, row.before, row.after)
+		// Whatever the sidecar row did, the company was updated.
+		row.action = actionUpdate
 	}
 	before, after := applyFieldMask(row.before, mask), applyFieldMask(row.after, mask)
 	summary := composeRecordSummary(row.actorType, display, row.onBehalfOfName,

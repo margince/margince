@@ -130,7 +130,7 @@ func diffAuditRowFields(row auditDiffRow, mask entityFieldMask, fieldFilter *str
 		return nil
 	}
 	if row.sideField != nil {
-		row.before, row.after, _ = sidecarImages(*row.sideField, row.action, row.before, row.after)
+		row.before, row.after = sidecarImages(*row.sideField, row.action, row.before, row.after)
 	}
 	before := applyFieldMask(applyFieldMask(row.before, mask), writerBookkeepingKeys)
 	after := applyFieldMask(applyFieldMask(row.after, mask), writerBookkeepingKeys)

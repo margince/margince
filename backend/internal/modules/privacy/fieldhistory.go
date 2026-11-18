@@ -337,14 +337,11 @@ func latestScrubTombstone(ctx context.Context, tx pgx.Tx, entityType string, ent
 // and the has-more probe build on it, so the two can never disagree on
 // which rows are projectable.
 func fieldHistorySpineWhere(f FieldHistoryFilter, boundary scrubBoundary, args []any) (own, shared []string, _ []any) {
-	// QUALIFIED with the audit row's alias, because the batch read below joins
-	// app_user twice to resolve the actor's name and `id` is a column on both.
-	// Unqualified it is ambiguous, and Postgres refuses the statement rather
-	// than guessing — which is the good outcome, but only if the qualification
-	// is here where both readers share it.
+	// Qualified with the audit row's alias: the batch read joins app_user twice
+	// and `id` is a column on both, so a bare one is ambiguous.
 	//
-	// own pins the record's own rows; shared is what every arm takes, so the
-	// sidecar arm of a company answers to the same verbs and boundary.
+	// own pins the record's own rows. shared is what every arm takes, so a
+	// company's sidecar arm answers to the same verbs and boundary.
 	own = []string{"a.entity_type = $1", "a.entity_id = $2"}
 	shared = []string{"a.action = ANY($3)"}
 	args = append(args, f.EntityType, f.EntityID, fieldHistoryProjectedActionList)
